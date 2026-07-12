@@ -1,0 +1,4 @@
+CLAUDE.local.md
+*.local.md
+.env
+.env.*

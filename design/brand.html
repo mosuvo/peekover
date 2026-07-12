@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peekover — Brand Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Sometype+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFBF8;--panel:#F4F4EF;--ink:#16171F;--muted:#5D6070;--faint:#9A9DAC;--line:#E6E6DF;
+  --accent:#16171F;--accent-soft:#EDEDE4;--hl:#FFE94A;--hl-soft:#FFF6BF;--ok:#1F9D55;--warn:#B7791F;--del:#C43D3D;
+  --dark-paper:#14161F;--dark-ink:#EAEBF3;--dark-accent:#EAEBF3;--dark-hl:#FFD84D;
+  --sans:"Bricolage Grotesque",system-ui,sans-serif;--serif:"Literata",Georgia,serif;--mono:"Sometype Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);padding:52px 6vw 90px;line-height:1.5}
+header.hero{display:flex;align-items:center;gap:18px;margin-bottom:8px}
+h1{font-size:38px;letter-spacing:-.02em}
+.tag{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:19px;margin-bottom:46px}
+h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:44px 0 16px;padding-top:26px;border-top:1px solid var(--line)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.chip{border-radius:12px;border:1px solid var(--line);overflow:hidden}
+.chip .c{height:58px}
+.chip .t{padding:8px 10px;font:10.5px var(--mono);color:var(--muted);line-height:1.5}
+.chip .t b{display:block;font-family:var(--sans);font-size:11px;color:var(--ink)}
+.type p{margin-bottom:14px}
+.type .d{font:600 30px/1.15 var(--sans);letter-spacing:-.015em}
+.type .b{font:17px/1.7 var(--serif)}
+.type .m{font:13px var(--mono);color:var(--muted)}
+.type small{display:block;font:10.5px var(--mono);color:var(--faint);margin-top:2px}
+.card{border:1px solid var(--line);border-radius:14px;padding:20px}
+.voice{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.voice .card h3{font-size:12px;margin-bottom:12px;letter-spacing:.08em;text-transform:uppercase}
+.voice .yes h3{color:var(--ok)}.voice .no h3{color:var(--del)}
+.voice p{font-size:13.5px;color:var(--muted);margin-bottom:10px;line-height:1.55}
+.voice p b{color:var(--ink)}
+ul.list{list-style:none;font-size:13.5px;color:var(--muted);line-height:1.75}
+ul.list li{margin-bottom:8px;padding-left:16px;position:relative}
+ul.list li::before{content:"—";position:absolute;left:0;color:var(--hl);font-weight:700}
+ul.list b{color:var(--ink)}
+.tok{width:100%;border-collapse:collapse;font-size:12.5px}
+.tok td{padding:8px 12px;border-top:1px solid var(--line);color:var(--muted)}
+.tok td:first-child{font-family:var(--mono);font-size:11.5px;color:var(--ink);white-space:nowrap}
+mark{background:var(--hl);padding:0 3px;border-radius:3px}
+@media (max-width:760px){.voice{grid-template-columns:1fr}}
+@media print{body{padding:20px}h2{page-break-after:avoid}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <svg width="58" height="50" viewBox="0 0 60 52" aria-hidden="true">
+    <rect x="4" y="26" width="52" height="24" rx="5" fill="#FFE94A" stroke="#16171F" stroke-width="2.5"/>
+    <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/>
+    <circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/>
+  </svg>
+  <h1>Peekover — Brand Sheet v1</h1>
+</header>
+<p class="tag">Raw in. Reading out. · Free, for everyone, in plain sight.</p>
+
+<h2>The idea in one line</h2>
+<p style="max-width:70ch;font-size:15px;color:var(--muted)">Peekover is the trusted way to <b style="color:var(--ink)">read</b> the raw files computers (and AI agents) produce. The brand is a reader’s brand: paper, ink, and <mark>one highlighter</mark> — nothing else. Interactive things are ink underlined in highlighter; the restraint IS the identity. Playful where it greets you, invisible where you read.</p>
+
+<h2>Logo</h2>
+<ul class="list">
+  <li><b>The mark:</b> two eyes peeking over a yellow document. Three sacred shapes; size-specific renditions live in <b>peekover-icons.html</b>. Logo internals always use <b>fixed ink #16171F</b> and <b>fixed paper #FBFBF8</b> — never theme tokens — so contrast holds in dark mode.</li>
+  <li><b>The blink</b> (6s cycle) exists only in product UI and the website header — never in store icons or print.</li>
+  <li><b>Wordmark:</b> “Peekover” set in Bricolage Grotesque 700, letter-spacing −0.01em, one word, capital D and P.</li>
+  <li><b>Clear space</b> = one eye-radius; minimum size with wordmark = 24px tall.</li>
+</ul>
+
+<h2>Color — paper, ink, one highlighter. That’s all.</h2>
+<div class="sw">
+  <div class="chip"><div class="c" style="background:#FBFBF8;border-bottom:1px solid var(--line)"></div><div class="t"><b>Paper</b>#FBFBF8 · bg light</div></div>
+  <div class="chip"><div class="c" style="background:#16171F"></div><div class="t"><b>Ink</b>#16171F · text light</div></div>
+  <div class="chip"><div class="c" style="background:#FFE94A"></div><div class="t"><b>Highlighter</b>#FFE94A · the signature</div></div>
+  <div class="chip"><div class="c" style="background:linear-gradient(transparent 62%, #FFE94A 62%), #FBFBF8;display:grid;place-items:center;font:600 15px 'Literata',serif;color:#16171F">link</div><div class="t"><b>Interactive</b>ink + highlighter underline</div></div>
+  <div class="chip"><div class="c" style="background:#F4F4EF;border-bottom:1px solid var(--line)"></div><div class="t"><b>Panel</b>#F4F4EF · surfaces</div></div>
+  <div class="chip"><div class="c" style="background:#14161F"></div><div class="t"><b>Night paper</b>#14161F · bg dark</div></div>
+  <div class="chip"><div class="c" style="background:#EAEBF3;border-bottom:1px solid var(--line)"></div><div class="t"><b>Night ink</b>#EAEBF3 · text dark</div></div>
+  <div class="chip"><div class="c" style="background:#FFD84D"></div><div class="t"><b>Night highlighter</b>#FFD84D</div></div>
+  <div class="chip"><div class="c" style="background:#12141C;display:grid;place-items:center"><span style="background:linear-gradient(transparent 62%, #FFD84D 62%);font:600 15px 'Literata',serif;color:#EAEBF3;padding:0 4px">link</span></div><div class="t"><b>Night interactive</b>night ink + night highlighter</div></div>
+  <div class="chip"><div class="c" style="background:#1F9D55"></div><div class="t"><b>Live green</b>#1F9D55 · watch/ok</div></div>
+</div>
+<p style="margin-top:14px;font-size:12.5px;color:var(--muted)"><b style="color:var(--ink)">The yellow rule:</b> highlighter appears only at <i>signature moments</i> — logo, active TOC mark, progress bar, text <mark>marks</mark>, one accent per screen region. If yellow is everywhere, it is nowhere. Sepia theme swaps paper for #F6EEDF and ink for #3B2F1E. <b style="color:var(--ink)">Why not blue/indigo:</b> blurple is the documented “sea of sameness” in tech branding — a chromatic accent kept fighting the yellow (we tried orange, then red) — so there isn’t one. Monochrome + one highlighter is rarer than any accent color, and can never clash.</p>
+
+<h2>Typography</h2>
+<div class="cols type">
+  <div class="card">
+    <p class="d">Bricolage Grotesque<br>carries the voice.</p>
+    <small>DISPLAY &amp; UI · 400–700 · headings, chrome, buttons, labels. Chosen over Space Grotesk/Inter — the defaults of the current dev-tool wave.</small>
+  </div>
+  <div class="card">
+    <p class="b">Literata carries the reading — commissioned for continuous screen reading, and it shows at paragraph forty as much as paragraph one.</p>
+    <small>BODY · 400/600 + italic · default document face (user-switchable — 9 faces: Newsreader, Georgia, Source Serif 4, Spectral, Bitter, Atkinson Hyperlegible, Lexend, system)</small>
+  </div>
+  <div class="card">
+    <p class="m">Sometype Mono — code, file paths, tokens, kbd hints, metadata.</p>
+    <small>MONO · 400/500 · designed for code; never for prose</small>
+  </div>
+</div>
+
+<h2>Core tokens</h2>
+<table class="tok">
+  <tr><td>--r: 10px</td><td>Base radius. Cards 14px, pills 99px.</td></tr>
+  <tr><td>motion: 150–250ms ease</td><td>Every transition. Motion informs, never decorates. prefers-reduced-motion always respected.</td></tr>
+  <tr><td>reading column: 76ch</td><td>Default. Narrow 60 / Wide 94. Line-height 1.7, adjustable 1.3–2.2.</td></tr>
+  <tr><td>shadow</td><td>0 10px 30px rgba(22,23,31,.10) — one shadow, used sparingly (overlays, cards).</td></tr>
+  <tr><td>chrome opacity</td><td>Toolbar/status at 88–92% paper + blur. The document is always the most solid thing on screen.</td></tr>
+</table>
+
+<h2>Voice &amp; tone</h2>
+<div class="voice">
+  <div class="card yes">
+    <h3>Sounds like us</h3>
+    <p><b>“Raw in. Reading out.”</b> — short, declarative, confident.</p>
+    <p><b>“Your files never leave your machine.”</b> — trust stated as fact, not marketing.</p>
+    <p><b>“The # deserves better.”</b> — playful, but about the craft.</p>
+    <p><b>“Free, for everyone, in plain sight.”</b> — the deal, plainly.</p>
+  </div>
+  <div class="card no">
+    <h3>Doesn’t</h3>
+    <p><b>“Revolutionize your markdown workflow!”</b> — hype verbs, exclamation marks.</p>
+    <p><b>“Military-grade privacy.”</b> — vague superlatives; we show receipts instead.</p>
+    <p><b>“Unlock premium features.”</b> — there are none; never borrow freemium language.</p>
+    <p><b>Jokes at the reader’s expense.</b> The eyes are friendly, never snarky.</p>
+  </div>
+</div>
+
+<h2>Brand behaviors (the part people remember)</h2>
+<ul class="list">
+  <li><b>Trust is shown, not claimed:</b> the status bar reads “no network calls”; the network dot turns amber when the user makes one. Every marketing claim links to code.</li>
+  <li><b>The document is the hero:</b> chrome recedes, auto-hides, whispers. If a UI element competes with paragraph one, the element loses.</li>
+  <li><b>Peek = instant:</b> anything slower than “instant” is a bug in the brand, not just the product.</li>
+  <li><b>Free means free, permanently:</b> no ads, no tiers, no funnels — stated in the footer of everything.</li>
+</ul>
+
+</body>
+</html>

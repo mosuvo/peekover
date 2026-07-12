@@ -1,0 +1,13 @@
+name: AI workflow hygiene
+on:
+  pull_request:
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check memory freshness
+        run: STRICT=0 ./scripts/check-freshness.sh 5
+        # Set STRICT=1 to make stale memory fail the PR once the habit sticks.

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peekover — Icon Set</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Sometype+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFBF8;--panel:#F4F4EF;--ink:#16171F;--muted:#5D6070;--faint:#9A9DAC;
+  --line:#E6E6DF;--accent:#16171F;--hl:#FFE94A;--shadow:0 10px 30px rgba(22,23,31,.10);
+  --sans:"Bricolage Grotesque",system-ui,sans-serif;--mono:"Sometype Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);padding:52px 6vw 90px}
+h1{font-size:34px;letter-spacing:-.02em;display:flex;align-items:center;gap:14px}
+.sub{color:var(--muted);margin:10px 0 44px;max-width:64ch;line-height:1.6}
+h2{font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:46px 0 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.card{border:1px solid var(--line);border-radius:16px;padding:24px;background:var(--paper)}
+.card h3{font-size:13px;margin-bottom:4px}
+.card p{font-size:11.5px;color:var(--faint);line-height:1.55;margin-bottom:18px}
+.stage{display:flex;align-items:center;justify-content:center;gap:26px;padding:26px 10px;border-radius:12px;margin-bottom:10px}
+.stage.light{background:#fff;border:1px solid var(--line)}
+.stage.dark{background:#14161F}
+.stage.gray{background:#DEE1E6}
+.zoom{display:flex;align-items:flex-end;gap:22px;justify-content:center}
+.zoom figure{text-align:center}
+.zoom figcaption{font:10.5px var(--mono);color:var(--faint);margin-top:8px}
+.rules{columns:2;gap:34px;font-size:13.5px;color:var(--muted);line-height:1.7;max-width:900px}
+.rules li{margin:0 0 10px 16px;break-inside:avoid}
+.rules b{color:var(--ink)}
+code{font:11.5px var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.dl{margin-top:8px;font-size:11px;color:var(--accent)}
+@media (max-width:700px){.rules{columns:1}}
+</style>
+</head>
+<body>
+
+<h1>
+  <svg width="44" height="38" viewBox="0 0 60 52" aria-hidden="true">
+    <rect x="4" y="26" width="52" height="24" rx="5" fill="#FFE94A" stroke="#16171F" stroke-width="2.5"/>
+    <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <g><circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/></g>
+    <g><circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/></g>
+  </svg>
+  Peekover Icon Set
+</h1>
+<p class="sub">One mark, four renditions. The rule: as the canvas shrinks, detail leaves before character does — text lines go first, then outlines thicken, and at 16&nbsp;px the mark reduces to its three essential shapes: two eyes, one yellow document. Pupils always look slightly down-right, toward the page being read.</p>
+
+<h2>The four sizes — each drawn for its size, not scaled</h2>
+<div class="grid">
+
+  <div class="card">
+    <h3>128 px — store listing</h3>
+    <p>Full mark: eyes, pupils, document with two text lines. Strokes at 2.5 units. This is the master.</p>
+    <div class="stage light">
+      <svg width="128" height="111" viewBox="0 0 60 52">
+        <rect x="4" y="26" width="52" height="24" rx="5" fill="#FFE94A" stroke="#16171F" stroke-width="2.5"/>
+        <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+        <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+        <circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/>
+        <circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/>
+      </svg>
+    </div>
+    <div class="dl">peekover-icon-128.svg</div>
+  </div>
+
+  <div class="card">
+    <h3>48 px — extensions page</h3>
+    <p>One text line instead of two; strokes up to 3.2 so edges survive. Pupils grow 15%.</p>
+    <div class="stage light">
+      <svg width="48" height="42" viewBox="0 0 60 52">
+        <rect x="4" y="26" width="52" height="24" rx="6" fill="#FFE94A" stroke="#16171F" stroke-width="3.2"/>
+        <line x1="15" y1="38.5" x2="45" y2="38.5" stroke="#16171F" stroke-width="3.2" stroke-linecap="round" opacity=".55"/>
+        <circle cx="21" cy="16.5" r="9.5" fill="#FBFBF8" stroke="#16171F" stroke-width="3.2"/><circle cx="23.2" cy="18.8" r="4" fill="#16171F"/>
+        <circle cx="41" cy="16.5" r="9.5" fill="#FBFBF8" stroke="#16171F" stroke-width="3.2"/><circle cx="43.2" cy="18.8" r="4" fill="#16171F"/>
+      </svg>
+    </div>
+    <div class="dl">peekover-icon-48.svg</div>
+  </div>
+
+  <div class="card">
+    <h3>32 px — management UI</h3>
+    <p>Text lines gone. Strokes at 4; document corner radius up so the shape reads round, not fuzzy.</p>
+    <div class="stage light">
+      <svg width="32" height="28" viewBox="0 0 60 52">
+        <rect x="4" y="27" width="52" height="23" rx="7" fill="#FFE94A" stroke="#16171F" stroke-width="4"/>
+        <circle cx="21" cy="16" r="10" fill="#FBFBF8" stroke="#16171F" stroke-width="4"/><circle cx="23.4" cy="18.4" r="4.6" fill="#16171F"/>
+        <circle cx="41" cy="16" r="10" fill="#FBFBF8" stroke="#16171F" stroke-width="4"/><circle cx="43.4" cy="18.4" r="4.6" fill="#16171F"/>
+      </svg>
+    </div>
+    <div class="dl">peekover-icon-32.svg</div>
+  </div>
+
+  <div class="card">
+    <h3>16 px — toolbar &amp; favicon</h3>
+    <p>The brutal size. No outlines at all — three solid shapes: yellow bar, two ink-ringed eyes. Character survives; detail doesn’t.</p>
+    <div class="stage light">
+      <svg width="16" height="16" viewBox="0 0 16 16">
+        <rect x="0" y="9" width="16" height="7" rx="2.5" fill="#FFE94A"/>
+        <circle cx="5" cy="5.5" r="4.4" fill="#16171F"/><circle cx="5" cy="5.5" r="3" fill="#FBFBF8"/><circle cx="5.9" cy="6.4" r="1.5" fill="#16171F"/>
+        <circle cx="11" cy="5.5" r="4.4" fill="#16171F"/><circle cx="11" cy="5.5" r="3" fill="#FBFBF8"/><circle cx="11.9" cy="6.4" r="1.5" fill="#16171F"/>
+      </svg>
+    </div>
+    <div class="dl">peekover-icon-16.svg</div>
+  </div>
+</div>
+
+<h2>True-size lineup — every background a toolbar lives on</h2>
+<div class="card">
+  <div class="stage light zoom">
+    <figure><svg width="128" height="111" viewBox="0 0 60 52"><rect x="4" y="26" width="52" height="24" rx="5" fill="#FFE94A" stroke="#16171F" stroke-width="2.5"/><line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/><line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/><circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/><circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/></svg><figcaption>128</figcaption></figure>
+    <figure><svg width="48" height="42" viewBox="0 0 60 52"><rect x="4" y="26" width="52" height="24" rx="6" fill="#FFE94A" stroke="#16171F" stroke-width="3.2"/><line x1="15" y1="38.5" x2="45" y2="38.5" stroke="#16171F" stroke-width="3.2" stroke-linecap="round" opacity=".55"/><circle cx="21" cy="16.5" r="9.5" fill="#FBFBF8" stroke="#16171F" stroke-width="3.2"/><circle cx="23.2" cy="18.8" r="4" fill="#16171F"/><circle cx="41" cy="16.5" r="9.5" fill="#FBFBF8" stroke="#16171F" stroke-width="3.2"/><circle cx="43.2" cy="18.8" r="4" fill="#16171F"/></svg><figcaption>48</figcaption></figure>
+    <figure><svg width="32" height="28" viewBox="0 0 60 52"><rect x="4" y="27" width="52" height="23" rx="7" fill="#FFE94A" stroke="#16171F" stroke-width="4"/><circle cx="21" cy="16" r="10" fill="#FBFBF8" stroke="#16171F" stroke-width="4"/><circle cx="23.4" cy="18.4" r="4.6" fill="#16171F"/><circle cx="41" cy="16" r="10" fill="#FBFBF8" stroke="#16171F" stroke-width="4"/><circle cx="43.4" cy="18.4" r="4.6" fill="#16171F"/></svg><figcaption>32</figcaption></figure>
+    <figure><svg width="16" height="16" viewBox="0 0 16 16"><rect x="0" y="9" width="16" height="7" rx="2.5" fill="#FFE94A"/><circle cx="5" cy="5.5" r="4.4" fill="#16171F"/><circle cx="5" cy="5.5" r="3" fill="#FBFBF8"/><circle cx="5.9" cy="6.4" r="1.5" fill="#16171F"/><circle cx="11" cy="5.5" r="4.4" fill="#16171F"/><circle cx="11" cy="5.5" r="3" fill="#FBFBF8"/><circle cx="11.9" cy="6.4" r="1.5" fill="#16171F"/></svg><figcaption>16</figcaption></figure>
+  </div>
+  <div class="stage dark zoom">
+    <figure><svg width="128" height="111" viewBox="0 0 60 52"><rect x="4" y="26" width="52" height="24" rx="5" fill="#FFD84D" stroke="#0B0C12" stroke-width="2.5"/><line x1="14" y1="36" x2="46" y2="36" stroke="#0B0C12" stroke-width="2.5" stroke-linecap="round" opacity=".6"/><line x1="14" y1="43" x2="36" y2="43" stroke="#0B0C12" stroke-width="2.5" stroke-linecap="round" opacity=".6"/><circle cx="21" cy="17" r="9" fill="#EAEBF3" stroke="#0B0C12" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#0B0C12"/><circle cx="41" cy="17" r="9" fill="#EAEBF3" stroke="#0B0C12" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#0B0C12"/></svg><figcaption>128 · dark</figcaption></figure>
+    <figure><svg width="32" height="28" viewBox="0 0 60 52"><rect x="4" y="27" width="52" height="23" rx="7" fill="#FFD84D" stroke="#0B0C12" stroke-width="4"/><circle cx="21" cy="16" r="10" fill="#EAEBF3" stroke="#0B0C12" stroke-width="4"/><circle cx="23.4" cy="18.4" r="4.6" fill="#0B0C12"/><circle cx="41" cy="16" r="10" fill="#EAEBF3" stroke="#0B0C12" stroke-width="4"/><circle cx="43.4" cy="18.4" r="4.6" fill="#0B0C12"/></svg><figcaption>32 · dark</figcaption></figure>
+    <figure><svg width="16" height="16" viewBox="0 0 16 16"><rect x="0" y="9" width="16" height="7" rx="2.5" fill="#FFD84D"/><circle cx="5" cy="5.5" r="4.4" fill="#0B0C12"/><circle cx="5" cy="5.5" r="3" fill="#EAEBF3"/><circle cx="5.9" cy="6.4" r="1.5" fill="#0B0C12"/><circle cx="11" cy="5.5" r="4.4" fill="#0B0C12"/><circle cx="11" cy="5.5" r="3" fill="#EAEBF3"/><circle cx="11.9" cy="6.4" r="1.5" fill="#0B0C12"/></svg><figcaption>16 · dark</figcaption></figure>
+  </div>
+  <div class="stage gray zoom">
+    <figure><svg width="32" height="28" viewBox="0 0 60 52"><rect x="4" y="27" width="52" height="23" rx="7" fill="#FFE94A" stroke="#16171F" stroke-width="4"/><circle cx="21" cy="16" r="10" fill="#FBFBF8" stroke="#16171F" stroke-width="4"/><circle cx="23.4" cy="18.4" r="4.6" fill="#16171F"/><circle cx="41" cy="16" r="10" fill="#FBFBF8" stroke="#16171F" stroke-width="4"/><circle cx="43.4" cy="18.4" r="4.6" fill="#16171F"/></svg><figcaption>32 · chrome toolbar gray</figcaption></figure>
+    <figure><svg width="16" height="16" viewBox="0 0 16 16"><rect x="0" y="9" width="16" height="7" rx="2.5" fill="#FFE94A"/><circle cx="5" cy="5.5" r="4.4" fill="#16171F"/><circle cx="5" cy="5.5" r="3" fill="#FBFBF8"/><circle cx="5.9" cy="6.4" r="1.5" fill="#16171F"/><circle cx="11" cy="5.5" r="4.4" fill="#16171F"/><circle cx="11" cy="5.5" r="3" fill="#FBFBF8"/><circle cx="11.9" cy="6.4" r="1.5" fill="#16171F"/></svg><figcaption>16 · gray</figcaption></figure>
+  </div>
+</div>
+
+<h2>Construction rules</h2>
+<ul class="rules">
+  <li><b>Three shapes are sacred:</b> two eyes + one yellow document. Everything else is negotiable per size.</li>
+  <li><b>Detail exits in order:</b> second text line → first text line → outlines → done. Never remove an eye or the document.</li>
+  <li><b>Pupils look down-right</b> — toward the page. Centered pupils read as staring at the user; avoid.</li>
+  <li><b>The blink is UI-only.</b> Icons never animate in stores or toolbars; the blink lives in the product header and website.</li>
+  <li><b>Yellow is the constant:</b> <code>#FFE94A</code> light · <code>#FFD84D</code> dark. Ink: <code>#16171F</code> / <code>#0B0C12</code> on dark backgrounds.</li>
+  <li><b>Clear space</b> = one eye-radius on all sides. Nothing enters it, including the wordmark.</li>
+  <li><b>Never:</b> gradients, shadows, outlines around the whole mark, rotation, or recoloring the eyes.</li>
+  <li><b>Export:</b> ship PNGs rendered from these exact SVGs at 1× and 2× (Chrome wants 16/32/48/128 PNG in the manifest).</li>
+</ul>
+
+</body>
+</html>

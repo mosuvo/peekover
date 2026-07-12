@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peekover — Raw in. Reading out.</title>
+<meta name="description" content="The free, open-source browser extension that turns raw markdown into beautiful reading. Watch mode for AI agents, an editor, on-device AI — with zero network calls.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Sometype+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFBF8;--panel:#F4F4EF;--ink:#16171F;--muted:#5D6070;--faint:#9A9DAC;
+  --line:#E6E6DF;--code-bg:#F1F1EB;
+  --accent:#16171F;--accent-soft:#EDEDE4;
+  --hl:#FFE94A;--hl-soft:#FFF6BF;
+  --ok:#1F9D55;
+  --true-ink:#16171F;--true-paper:#FBFBF8; /* theme-independent constants */
+  --shadow:0 14px 40px rgba(22,23,31,.12);
+  --sans:"Bricolage Grotesque",system-ui,sans-serif;
+  --serif:"Literata",Georgia,serif;
+  --mono:"Sometype Mono",ui-monospace,monospace;
+}
+[data-theme="dark"]{
+  --paper:#12141C;--panel:#181B26;--ink:#EAEBF3;--muted:#A0A4B8;--faint:#6B6F84;
+  --line:#262A38;--code-bg:#1C2030;
+  --accent:#EAEBF3;--accent-soft:#232838;
+  --hl:#FFD84D;--hl-soft:#3A3413;
+  --ok:#4CC38A;
+  --shadow:0 18px 50px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.001s!important;transition-duration:.001s!important}}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;transition:background .3s,color .3s;overflow-x:hidden}
+a{color:inherit}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:min(5vw,44px)}
+section{padding:clamp(70px,9vw,116px) 0;scroll-margin-top:76px}
+section.tight{padding-top:clamp(20px,3vw,36px)}
+h2.sec{font-size:clamp(30px,4.6vw,48px);font-weight:800;letter-spacing:-.025em;line-height:1.04;margin-bottom:16px}
+p.sub{font-family:var(--serif);font-style:italic;font-size:clamp(15.5px,1.9vw,18.5px);color:var(--muted);max-width:58ch;margin-bottom:44px;line-height:1.65}
+.eyebrow{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;background:var(--hl);color:#3d3200;padding:6px 13px;border-radius:4px;margin-bottom:22px;transform:rotate(-1deg);box-shadow:2px 2px 0 #16171F}
+[data-theme="dark"] .eyebrow{color:#191504;box-shadow:2px 2px 0 rgba(0,0,0,.6)}
+mark{background:var(--hl);padding:0 4px;border-radius:3px;color:#26210a}
+[data-theme="dark"] mark{color:#191504}
+/* the ⭐ replacement: one consistent badge */
+.first{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.1em;background:var(--hl);color:#3d3200;border:1.5px solid #16171F;padding:1px 6px;border-radius:99px;vertical-align:2px;white-space:nowrap}
+[data-theme="dark"] .first{color:#191504;border-color:#191504}
+
+/* ===== scroll progress (the product's own highlighter bar) ===== */
+.pageprog{position:fixed;top:0;left:0;height:4px;background:var(--hl);width:0;z-index:60}
+
+/* ===== nav ===== */
+nav{position:fixed;inset:0 0 auto 0;height:64px;z-index:50;display:flex;align-items:center;gap:18px;padding:0 min(5vw,44px);background:color-mix(in srgb, var(--paper) 86%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em;text-decoration:none;flex:none}
+.logo svg{width:32px;height:28px}
+.navlinks{display:flex;gap:22px;margin-left:10px;font-size:13.5px;font-weight:600;color:var(--muted)}
+.navlinks a{text-decoration:none}
+.navlinks a:hover{color:var(--ink)}
+nav .right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.ghost{padding:9px 15px;border:1.5px solid var(--line);border-radius:10px;font-weight:700;font-size:13px;color:var(--muted);text-decoration:none;transition:.15s;background:var(--paper)}
+.ghost:hover{color:var(--ink);border-color:var(--ink);transform:translateY(-1px)}
+.cta{padding:10px 19px;background:var(--ink);color:var(--paper);border-radius:10px;font-weight:800;font-size:13.5px;text-decoration:none;transition:.15s;border:1.5px solid var(--ink)}
+.cta:hover{background:var(--hl);border-color:#16171F;color:#26210a;transform:translateY(-1px)}
+[data-theme="dark"] .cta{background:var(--hl);color:#191504;border-color:var(--hl)}
+[data-theme="dark"] .cta:hover{background:var(--paper);color:var(--ink);border-color:var(--hl)}
+.mode{width:38px;height:38px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;display:grid;place-items:center;transition:.2s}
+.mode:hover{border-color:var(--ink);transform:rotate(20deg)}
+.burger{display:none;width:38px;height:38px;border:1.5px solid var(--line);border-radius:10px;font-size:16px}
+.mnav{display:none;position:fixed;top:64px;left:0;right:0;z-index:49;background:var(--paper);border-bottom:1px solid var(--line);padding:14px min(5vw,44px) 20px;flex-direction:column;gap:4px}
+.mnav.open{display:flex}
+.mnav a{text-decoration:none;font-weight:700;font-size:15px;padding:11px 4px;border-bottom:1px solid var(--line)}
+@media (max-width:880px){.navlinks{display:none}.burger{display:grid;place-items:center}nav .ghost{display:none}}
+.peek .lid{transform-origin:center;animation:blink 6s infinite}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%,98%{transform:scaleY(.08)}}
+
+/* ===== hero ===== */
+.hero{padding-block:clamp(120px,16vh,170px) clamp(30px,4vw,50px);scroll-margin-top:0}
+.herogrid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(30px,4vw,60px);align-items:center}
+@media (max-width:980px){.herogrid{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(44px,7vw,86px);font-weight:800;letter-spacing:-.035em;line-height:.97}
+.hero h1 .flip{color:var(--accent);position:relative;display:inline-block}
+.hero h1 .flip::after{content:"";position:absolute;left:-2px;right:-2px;bottom:5px;height:.3em;background:var(--hl);z-index:-1;transform:rotate(-.6deg)}
+[data-theme="dark"] .hero h1 .flip{color:var(--hl)}
+[data-theme="dark"] .hero h1 .flip::after{display:none}
+.hero .lede{font-family:var(--serif);font-size:clamp(16px,1.9vw,19.5px);color:var(--muted);max-width:46ch;margin:24px 0 30px;line-height:1.65}
+.btnrow{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.big{padding:16px 26px;font-size:15.5px;border-radius:13px}
+.trust{display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:24px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.trust span::before{content:"✓ ";color:var(--ok);font-weight:700}
+
+/* hero demo window */
+.demo{border:1.5px solid var(--line);border-radius:18px;box-shadow:6px 6px 0 var(--hl), var(--shadow);overflow:hidden;background:var(--paper);transform:rotate(.6deg);transition:transform .3s}
+.demo:hover{transform:rotate(0)}
+[data-theme="dark"] .demo{border-color:var(--line);box-shadow:6px 6px 0 var(--hl-soft), var(--shadow)}
+.demo .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.demo .dot{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.demo .fname{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:6px;display:flex;align-items:center;gap:7px;min-width:0;white-space:nowrap;overflow:hidden}
+.livedot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite;flex:none}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent)}55%{box-shadow:0 0 0 6px transparent}}
+.demo .flipseg{margin-left:auto;display:flex;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--paper);flex:none}
+[data-theme="dark"] .demo .flipseg{border-color:var(--line)}
+.demo .flipseg button{padding:5px 13px;font-size:11px;font-weight:800;color:var(--muted)}
+.demo .flipseg button.on{background:var(--ink);color:var(--paper)}
+.panes{position:relative;min-height:348px}
+.pane{position:absolute;inset:0;padding:24px 28px;transition:opacity .45s ease}
+.pane.raw{font-family:var(--mono);font-size:12.5px;line-height:1.85;color:var(--muted);white-space:pre-wrap;opacity:1}
+.pane.pretty{font-family:var(--serif);opacity:0;pointer-events:none}
+.demo.rendered .pane.raw{opacity:0;pointer-events:none}
+.demo.rendered .pane.pretty{opacity:1;pointer-events:auto}
+.pane.pretty h3{font-size:25px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
+.pane.pretty p{font-size:14px;line-height:1.6;color:var(--muted);margin-bottom:10px}
+.pane.pretty .task{display:flex;gap:9px;align-items:center;font-size:13.5px;margin:5px 0}
+.pane.pretty .box{width:16px;height:16px;border-radius:5px;background:var(--accent);position:relative;flex:none}
+.pane.pretty .box::after{content:"";position:absolute;left:3.5px;top:4px;width:7px;height:3.5px;border:solid var(--paper);border-width:0 0 2px 2px;transform:rotate(-45deg)}
+.pane.pretty .box.off{background:transparent;border:2px solid var(--faint)}
+.pane.pretty .box.off::after{display:none}
+.prow{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-top:12px}
+.pane.pretty table{border-collapse:collapse;font-family:var(--sans);font-size:12px}
+.pane.pretty td,.pane.pretty th{border:1px solid var(--line);padding:5px 12px;text-align:left}
+.pane.pretty th{background:var(--panel);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.minidg{flex:none}
+.dg-b{fill:var(--paper);stroke:var(--ink);stroke-width:1.4}
+.dg-y{fill:var(--hl)}
+.dg-t{font:600 9.5px var(--sans);fill:var(--ink)}
+.dg-a{stroke:var(--muted);stroke-width:1.3}
+.democap{font-family:var(--mono);font-size:10.5px;color:var(--faint);text-align:center;margin-top:14px}
+
+/* ===== marquee (bleeds past viewport, spaced) ===== */
+.marqueewrap{margin:clamp(50px,7vw,86px) 0;overflow:visible}
+.marquee{background:var(--hl);color:#26210a;overflow:hidden;padding:13px 0;transform:rotate(-1.2deg);width:112vw;margin-left:-6vw;border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink)}
+[data-theme="dark"] .marquee{color:#191504;border-color:#191504}
+.marquee .track{display:flex;gap:44px;white-space:nowrap;font-weight:800;font-size:13.5px;letter-spacing:.1em;animation:scroll 28s linear infinite;width:max-content}
+@keyframes scroll{to{transform:translateX(-50%)}}
+
+/* ===== cards ===== */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:16px}
+.grid.g4{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.card{border:1.5px solid var(--line);border-radius:16px;padding:24px;background:var(--paper);transition:transform .22s ease,border-color .22s,box-shadow .22s}
+.card:hover{transform:translateY(-4px);border-color:var(--ink);box-shadow:5px 5px 0 var(--hl-soft)}
+.card .ic{font-size:21px;margin-bottom:13px;display:block}
+.card h3{font-size:16px;font-weight:800;margin-bottom:7px;letter-spacing:-.01em}
+.card p{font-size:13px;color:var(--muted);line-height:1.62}
+.card p code{font-family:var(--mono);font-size:.85em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.card.hlite{background:linear-gradient(140deg,var(--hl-soft),transparent 55%)}
+
+/* ===== AI split ===== */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,4vw,52px);align-items:stretch}
+@media (max-width:880px){.split{grid-template-columns:1fr}}
+.aichatd{border:1.5px solid var(--ink);border-radius:16px;overflow:hidden;box-shadow:6px 6px 0 var(--hl-soft);display:flex;flex-direction:column}
+[data-theme="dark"] .aichatd{border-color:var(--line)}
+.aichatd .h{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.aichatd .b{padding:18px;display:flex;flex-direction:column;gap:10px;flex:1}
+.aichatd .m{font-size:12.5px;line-height:1.55;padding:10px 13px;border-radius:12px;max-width:88%}
+.aichatd .u{align-self:flex-end;background:var(--accent-soft);border-bottom-right-radius:4px}
+.aichatd .a{align-self:flex-start;background:var(--panel);border-bottom-left-radius:4px}
+.typing{align-self:flex-start;display:flex;gap:4px;padding:12px 14px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:ty 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes ty{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.aichatd .net{padding:9px 16px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--faint);display:flex;align-items:center;gap:7px}
+.aichatd .netdot{width:7px;height:7px;border-radius:50%;background:var(--faint);transition:.3s}
+ul.checks{list-style:none;font-size:14px;color:var(--muted);line-height:1.68}
+ul.checks li{margin-bottom:13px;padding-left:26px;position:relative}
+ul.checks li::before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:800}
+ul.checks b{color:var(--ink)}
+
+/* ===== receipt v2 ===== */
+.receiptwrap{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(30px,5vw,60px);align-items:center}
+@media (max-width:880px){.receiptwrap{grid-template-columns:1fr}}
+.rstage{display:grid;place-items:center;padding:10px 0}
+.receipt{background:var(--true-paper);color:#6b6e7c;font-family:var(--mono);font-size:12.5px;padding:30px 26px 24px;width:min(360px,100%);transform:rotate(1.5deg);transition:transform .3s;position:relative;
+  filter:drop-shadow(0 18px 30px rgba(20,20,30,.28));
+  clip-path:polygon(0 8px,3% 0,6% 8px,9% 0,12% 8px,15% 0,18% 8px,21% 0,24% 8px,27% 0,30% 8px,33% 0,36% 8px,39% 0,42% 8px,45% 0,48% 8px,51% 0,54% 8px,57% 0,60% 8px,63% 0,66% 8px,69% 0,72% 8px,75% 0,78% 8px,81% 0,84% 8px,87% 0,90% 8px,93% 0,96% 8px,100% 0,100% calc(100% - 8px),97% 100%,94% calc(100% - 8px),91% 100%,88% calc(100% - 8px),85% 100%,82% calc(100% - 8px),79% 100%,76% calc(100% - 8px),73% 100%,70% calc(100% - 8px),67% 100%,64% calc(100% - 8px),61% 100%,58% calc(100% - 8px),55% 100%,52% calc(100% - 8px),49% 100%,46% calc(100% - 8px),43% 100%,40% calc(100% - 8px),37% 100%,34% calc(100% - 8px),31% 100%,28% calc(100% - 8px),25% 100%,22% calc(100% - 8px),19% 100%,16% calc(100% - 8px),13% 100%,10% calc(100% - 8px),7% 100%,4% calc(100% - 8px),1% 100%,0 calc(100% - 8px))}
+.receipt:hover{transform:rotate(0)}
+.receipt h4{font-size:13px;text-align:center;letter-spacing:.22em;color:var(--true-ink);margin-bottom:2px}
+.receipt .rsub{text-align:center;font-size:10px;letter-spacing:.08em;margin-bottom:14px}
+.receipt .rline{display:flex;justify-content:space-between;gap:12px;padding:5.5px 0;border-bottom:1px dashed #d8d5c8}
+.receipt .rline b{color:var(--true-ink);font-weight:600}
+.receipt .total{border-top:2px solid var(--true-ink);border-bottom:none;margin-top:8px;padding-top:9px;font-weight:700;color:var(--true-ink);font-size:13.5px}
+.receipt .stamp{position:absolute;right:14px;top:88px;border:2.5px solid var(--ok);color:var(--ok);font-weight:700;font-size:10px;letter-spacing:.14em;padding:5px 9px;border-radius:6px;transform:rotate(-12deg);opacity:.85}
+.receipt .barcode{margin:16px auto 4px;height:34px;width:78%;background:repeating-linear-gradient(90deg,var(--true-ink) 0 2px,transparent 2px 4px,var(--true-ink) 4px 7px,transparent 7px 9px,var(--true-ink) 9px 10px,transparent 10px 13px)}
+.receipt .thanks{text-align:center;font-size:10px;letter-spacing:.14em;margin-top:6px}
+
+/* ===== mid CTA band ===== */
+.band{background:var(--hl);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);padding:34px 0;transform:rotate(-.5deg);width:104vw;margin-left:-2vw}
+[data-theme="dark"] .band{border-color:#191504}
+.band .in{max-width:1120px;margin:0 auto;padding:0 min(5vw,44px);display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;color:#26210a}
+[data-theme="dark"] .band .in{color:#191504}
+.band b{font-size:clamp(18px,2.6vw,26px);font-weight:800;letter-spacing:-.015em}
+.band .cta{background:#16171F;color:#FBFBF8;border-color:#16171F}
+.band .cta:hover{background:#FBFBF8;border-color:#16171F;color:#16171F}
+
+/* ===== feature explorer ===== */
+.explorer{border:1.5px solid var(--ink);border-radius:20px;overflow:hidden;box-shadow:7px 7px 0 var(--hl-soft)}
+[data-theme="dark"] .explorer{border-color:var(--line)}
+.exhead{padding:20px 22px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.exsearch{flex:1;min-width:200px;display:flex;align-items:center;gap:10px;background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 14px}
+.exsearch input{flex:1;border:none;outline:none;background:none;color:var(--ink);font:14px var(--sans);min-width:0}
+.excount{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.tabs{display:flex;gap:7px;padding:14px 22px 0;flex-wrap:wrap}
+.tab{font-size:12px;font-weight:700;padding:7px 13px;border-radius:99px;border:1.5px solid var(--line);color:var(--muted);transition:.15s}
+.tab:hover{border-color:var(--ink);color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tab.gold.on{background:var(--hl);color:#3d3200;border-color:#16171F}
+.tab em{font-style:normal;opacity:.55;font-family:var(--mono);font-size:10px;margin-left:4px}
+.exbody{padding:22px;min-height:230px}
+.exgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:7px 22px}
+.exitem{font-size:13.5px;color:var(--muted);padding:7px 2px 7px 24px;position:relative;border-bottom:1px dashed var(--line);line-height:1.45}
+.exitem::before{content:"✓";position:absolute;left:2px;color:var(--ok);font-weight:800;font-size:12px}
+.exitem.st::before{content:"★";color:#C9A227}
+.exitem .cat{display:block;font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase}
+.exempty{color:var(--faint);font-size:14px;padding:30px;text-align:center;font-family:var(--serif);font-style:italic}
+.exfoot{padding:12px 22px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* ===== phase2 ===== */
+.p2{border:2.5px dashed var(--ink);border-radius:20px;padding:clamp(26px,4vw,40px);display:flex;gap:30px;align-items:center;flex-wrap:wrap}
+[data-theme="dark"] .p2{border-color:var(--line)}
+.p2 .files{font-family:var(--mono);font-size:13.5px;display:flex;gap:9px;flex-wrap:wrap}
+.p2 .f{border:1.5px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 13px;color:var(--muted)}
+.p2 .f.on{background:var(--hl);color:#26210a;border-color:#16171F;font-weight:700}
+[data-theme="dark"] .p2 .f.on{color:#191504}
+
+/* ===== principles (theme-independent ink) ===== */
+.principles{background:var(--true-ink);color:var(--true-paper);border-radius:22px;padding:clamp(30px,5vw,50px) clamp(24px,4vw,44px);border:1.5px solid var(--true-ink)}
+[data-theme="dark"] .principles{border-color:var(--line)}
+.principles h2{color:var(--true-paper)}
+.principles .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:26px;margin-top:32px}
+.principles .p b{display:block;font-size:15px;margin-bottom:7px;color:#FFE94A}
+.principles .p{font-size:13px;color:rgba(251,251,248,.68);line-height:1.65}
+
+/* ===== steps ===== */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:18px;counter-reset:st;margin-top:44px}
+.step{border:1.5px solid var(--line);border-radius:16px;padding:26px 24px 22px;counter-increment:st;position:relative}
+.step::before{content:counter(st);position:absolute;top:-15px;left:20px;width:30px;height:30px;background:var(--hl);color:#3d3200;border:2px solid #16171F;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px}
+[data-theme="dark"] .step::before{color:#191504;border-color:#191504}
+.step h3{font-size:15px;margin:6px 0 7px;font-weight:800}
+.step p{font-size:13px;color:var(--muted);line-height:1.6}
+
+/* ===== final + footer ===== */
+.finalcta{text-align:center}
+.finalcta h2{font-size:clamp(34px,5.5vw,62px);font-weight:800;letter-spacing:-.03em;line-height:1.03;margin-bottom:28px}
+footer{border-top:1.5px solid var(--line);padding:56px 0 40px;font-size:13px;color:var(--muted)}
+footer .cols{display:flex;gap:40px 70px;flex-wrap:wrap;justify-content:space-between}
+footer a{text-decoration:none}
+footer a:hover{background:var(--hl);color:#26210a;border-radius:3px}
+footer ul{list-style:none;line-height:2.15}
+footer h5{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+.repohint{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:26px;padding-top:18px;border-top:1px dashed var(--line)}
+.bigword{font-weight:800;font-size:clamp(64px,14vw,180px);letter-spacing:-.04em;line-height:1;color:var(--panel);-webkit-text-stroke:1.5px var(--line);text-align:center;user-select:none;margin-top:44px}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(20px);transition:.65s cubic-bezier(.2,.7,.3,1)}
+.rv.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<div class="pageprog" id="pageprog"></div>
+
+<nav>
+  <a class="logo" href="#top">
+    <svg class="peek" viewBox="0 0 60 52" aria-hidden="true">
+      <rect x="4" y="26" width="52" height="24" rx="5" fill="var(--hl)" stroke="#16171F" stroke-width="2.5"/>
+      <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+      <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+      <g class="lid"><circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/></g>
+      <g class="lid"><circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/></g>
+    </svg>
+    Peekover
+  </a>
+  <div class="navlinks">
+    <a href="#ai">AI-native</a><a href="#reading">Reading</a><a href="#editor">Editor</a><a href="#security">Security</a><a href="#everything">Everything</a>
+  </div>
+  <div class="right">
+    <button class="mode" onclick="flipTheme()" aria-label="Toggle dark mode" id="modeBtn">☾</button>
+    <a class="ghost" href="#" onclick="return false">★ GitHub</a>
+    <a class="cta" href="#" onclick="return false">Add to Chrome — Free</a>
+    <button class="burger" onclick="document.getElementById('mnav').classList.toggle('open')" aria-label="Menu">☰</button>
+  </div>
+</nav>
+<div class="mnav" id="mnav">
+  <a href="#ai" onclick="mclose()">AI-native</a><a href="#reading" onclick="mclose()">Reading</a><a href="#editor" onclick="mclose()">Editor</a><a href="#security" onclick="mclose()">Security</a><a href="#everything" onclick="mclose()">Everything</a><a href="#" onclick="mclose();return false">★ GitHub</a>
+</div>
+
+<!-- ================= HERO ================= -->
+<header class="hero wrap" id="top">
+  <div class="herogrid">
+    <div>
+      <span class="eyebrow">PEEK OVER YOUR DOCS!</span>
+      <h1>Raw in.<br><span class="flip">Reading</span> out.</h1>
+      <p class="lede">The free, open-source extension that turns raw markdown — including the piles of it your AI agents write — into beautiful, instant reading. Plus an editor. Plus on-device AI. With <b>zero network calls</b>.</p>
+      <div class="btnrow">
+        <a class="cta big" href="#" onclick="return false">Add to Chrome — it’s free, forever</a>
+        <a class="ghost big" href="#everything">See everything ↓</a>
+      </div>
+      <div class="trust">
+        <span>open source · MIT</span><span>no servers</span><span>no telemetry</span><span>&lt;150 ms render</span><span>Edge · Firefox · Brave too</span>
+      </div>
+    </div>
+    <div>
+      <div class="demo" id="demo">
+        <div class="bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="fname"><span class="livedot"></span>CLAUDE.md — watching</span>
+          <div class="flipseg">
+            <button id="dRaw" class="on" onclick="setDemo(false)">Raw</button>
+            <button id="dPretty" onclick="setDemo(true)">Peekover</button>
+          </div>
+        </div>
+        <div class="panes">
+          <div class="pane raw"># Project Aurora
+Your agent wrote this at **2:47 AM**.
+
+- [x] Ship the rate limiter
+- [x] Update the changelog
+- [ ] Review the API table
+
+| Task | Status |
+|------|--------|
+| API  | done   |
+| Docs | review |
+
+```mermaid
+flowchart LR
+  raw --> Peekover --> reading
+```</div>
+          <div class="pane pretty">
+            <h3>Project Aurora</h3>
+            <p>Your agent wrote this at <b>2:47 AM</b>.</p>
+            <div class="task"><span class="box"></span> Ship the rate limiter</div>
+            <div class="task"><span class="box"></span> Update the changelog</div>
+            <div class="task"><span class="box off"></span> Review the API table</div>
+            <div class="prow">
+              <table><tr><th>Task</th><th>Status</th></tr><tr><td>API</td><td>done</td></tr><tr><td>Docs</td><td>review</td></tr></table>
+              <svg class="minidg" width="180" height="52" viewBox="0 0 180 52" aria-hidden="true">
+                <rect class="dg-b" x="2" y="14" width="44" height="24" rx="6"/><text class="dg-t" x="24" y="29.5" text-anchor="middle">raw</text>
+                <line class="dg-a" x1="48" y1="26" x2="64" y2="26"/><path d="M64 26l-5-3v6z" fill="var(--muted)"/>
+                <rect class="dg-b dg-y" x="66" y="10" width="52" height="32" rx="8"/><text class="dg-t" x="92" y="29.5" text-anchor="middle">Peekover</text>
+                <line class="dg-a" x1="120" y1="26" x2="136" y2="26"/><path d="M136 26l-5-3v6z" fill="var(--muted)"/>
+                <rect class="dg-b" x="138" y="14" width="40" height="24" rx="6"/><text class="dg-t" x="158" y="29.5" text-anchor="middle">read</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="democap">← live demo · flips itself, or use the toggle</p>
+    </div>
+  </div>
+</header>
+
+<!-- ================= MARQUEE ================= -->
+<div class="marqueewrap" aria-hidden="true"><div class="marquee">
+  <div class="track">
+    <span>MARKDOWN → READING</span><span>✦</span><span>WATCH MODE FOR AI AGENTS</span><span>✦</span><span>ZERO NETWORK CALLS</span><span>✦</span><span>FREE FOREVER</span><span>✦</span><span>OPEN SOURCE</span><span>✦</span><span>78 FEATURES · 36 FIRSTS</span><span>✦</span>
+    <span>MARKDOWN → READING</span><span>✦</span><span>WATCH MODE FOR AI AGENTS</span><span>✦</span><span>ZERO NETWORK CALLS</span><span>✦</span><span>FREE FOREVER</span><span>✦</span><span>OPEN SOURCE</span><span>✦</span><span>78 FEATURES · 36 FIRSTS</span><span>✦</span>
+  </div>
+</div></div>
+
+<!-- ================= AI NATIVE ================= -->
+<section id="ai" class="wrap">
+  <span class="eyebrow rv">BUILT FOR THE AI ERA</span>
+  <h2 class="sec rv">Your agents write markdown all night.<br>This is where you read it.</h2>
+  <p class="sub rv">Claude Code, Cursor and friends produce CLAUDE.md files, specs, plans and changelogs faster than anyone can read them raw. Peekover was designed for exactly this. <span class="first">FIRST</span> marks what no other viewer ships.</p>
+  <div class="grid">
+    <div class="card hlite rv"><span class="ic">◉</span><h3>Watch mode <span class="first">FIRST</span></h3><p>Leave the file open — it re-renders the instant your agent saves, auto-scrolls to what’s new, and flashes the change. No refresh, no lost scroll position.</p></div>
+    <div class="card rv"><span class="ic">Δ</span><h3>Diff view <span class="first">FIRST</span></h3><p>See exactly what changed since your last look — inline or side-by-side, from locally kept snapshots. Audit every agent edit.</p></div>
+    <div class="card rv"><span class="ic">⇆</span><h3>Compare two files <span class="first">FIRST</span></h3><p>Spec v1 vs v2, plan vs reality — pick any two files in the folder and read the difference.</p></div>
+    <div class="card rv"><span class="ic">◈</span><h3>Agent-file awareness <span class="first">FIRST</span></h3><p><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.cursorrules</code> get a badge, tuned rendering, and watch + diff switched on automatically.</p></div>
+    <div class="card rv"><span class="ic">💬</span><h3>Transcript rendering <span class="first">FIRST</span></h3><p>Markdown session logs read like conversations — chat bubbles on, plain headings off, your choice.</p></div>
+    <div class="card rv"><span class="ic">✂</span><h3>Copy for AI <span class="first">FIRST</span></h3><p>One click copies any doc or section as clean, normalized markdown sized for a context window — plus a web-page → markdown clipper for feeding agents.</p></div>
+  </div>
+</section>
+
+<!-- ================= READING ================= -->
+<section id="reading" class="wrap">
+  <span class="eyebrow rv">READING, UPGRADED</span>
+  <h2 class="sec rv">Everything renders. <mark>Everything.</mark></h2>
+  <p class="sub rv">Full CommonMark + GFM and the whole extended family — plus navigation that makes a folder of markdown feel like a documentation site.</p>
+  <div class="grid">
+    <div class="card rv"><span class="ic">✒</span><h3>The whole syntax</h3><p>Tables, task lists, strikethrough, footnotes, abbreviations, definition lists, super/subscript, emoji shortnames, GitHub alerts, YAML frontmatter cards, sanitized inline HTML, MDX-aware — one battle-tested engine.</p></div>
+    <div class="card rv"><span class="ic">∑</span><h3>Math &amp; diagrams</h3><p>KaTeX (MathJax fallback), Mermaid with theme sync, Graphviz &amp; Vega, standalone <code>.mermaid</code>/<code>.dot</code> files, copy formulas as LaTeX <span class="first">FIRST</span>, per-diagram PNG/SVG export, smart cache: 50 diagrams reopen in &lt;1s.</p></div>
+    <div class="card rv"><span class="ic">{}</span><h3>Code, properly</h3><p>190+ languages, 14+ code themes, copy button, line numbers, word wrap, local language auto-detection, collapsible long blocks <span class="first">FIRST</span>.</p></div>
+    <div class="card hlite rv"><span class="ic">▤</span><h3>Project mode <span class="first">FIRST</span></h3><p>Open a folder: file tree, wiki-links + backlinks, relative links that navigate in place, cross-file full-text search, and a broken-link checker for the whole folder.</p></div>
+    <div class="card rv"><span class="ic">☰</span><h3>Navigation that follows you</h3><p>Scroll-spy TOC (a whisper-thin rail until you need it), in-document search with section context <span class="first">FIRST</span>, heading permalinks + text-fragment deep links <span class="first">FIRST</span>, hover previews, recents, pinned files, scroll-position memory.</p></div>
+    <div class="card rv"><span class="ic">◫</span><h3>Present &amp; interact</h3><p>Presentation mode (<code>---</code> = slide), export decks as standalone HTML <span class="first">FIRST</span>, sortable tables with copy-as-CSV/JSON <span class="first">FIRST</span>, and checkboxes that write back to the file <span class="first">FIRST</span>.</p></div>
+    <div class="card rv"><span class="ic">Aa</span><h3>Reading, your way</h3><p>9 research-picked fonts (Literata default; Atkinson Hyperlegible &amp; Lexend for accessibility), type size, line height, paragraph gap, 3 widths, focus mode, read-aloud, 30+ themes, custom CSS, per-file frontmatter overrides <span class="first">FIRST</span>, settings sync.</p></div>
+    <div class="card rv"><span class="ic">⚡</span><h3>Instant, always</h3><p>&lt;150 ms first render, 10 MB files stay smooth, no size limits (progressive loading), never a blank page — failures degrade to raw view. The whole extension: ≤5 MB.</p></div>
+    <div class="card rv"><span class="ic">🌐</span><h3>Any source</h3><p>Local files, remote URLs, GitHub/GitLab/Bitbucket raw links, drag-and-drop, paste-to-render scratchpad, render selection on any page — with granular per-origin permissions and a local-only master switch.</p></div>
+  </div>
+</section>
+
+<!-- ================= EDITOR ================= -->
+<section id="editor" class="wrap">
+  <span class="eyebrow rv">ONE KEYSTROKE AWAY</span>
+  <h2 class="sec rv">A reader first. An editor when you need it.</h2>
+  <p class="sub rv">Hit Edit and the page splits: markdown left, live preview right, scroll-synced.</p>
+  <div class="grid g4">
+    <div class="card rv"><span class="ic">✎</span><h3>Full editing kit</h3><p>Formatting toolbar, smart lists, regex find &amp; replace, snippets &amp; emoji picker, image paste (embed or save alongside), text transforms, markdownlint auto-format.</p></div>
+    <div class="card rv"><span class="ic">▦</span><h3>Visual table editor</h3><p>Build tables with a UI; paste CSV and it becomes markdown. Import HTML and Jupyter notebooks — all converted locally.</p></div>
+    <div class="card rv"><span class="ic">⟲</span><h3>Snapshots</h3><p>Autosave with local version history — restore or diff any snapshot. Nothing leaves your machine.</p></div>
+    <div class="card rv"><span class="ic">⇩</span><h3>Export &amp; publish</h3><p>Standalone HTML, DOCX with <b>editable equations</b>, typeset PDF, ZIP bundles, rich-text copy — plus Gist, GitHub, Medium &amp; Dev.to with <b>your own tokens</b>.</p></div>
+  </div>
+</section>
+
+<!-- ================= AI FEATURES ================= -->
+<section class="wrap">
+  <span class="eyebrow rv">✦ AI — OPT-IN, NEVER AUTOMATIC</span>
+  <div class="split">
+    <div>
+      <h2 class="sec rv">On-device first.<br>Your key for the rest.</h2>
+      <ul class="checks rv">
+        <li><b>On-device AI by default</b> — summarize, translate, proofread via the browser’s built-in model. No key, no cost, works offline.</li>
+        <li><b>Bring your own key</b> — Anthropic, OpenAI, Google, OpenRouter, or local Ollama. Calls go browser → provider. <b>We never proxy, never see keys or content.</b></li>
+        <li><b>Everything AI can do:</b> summarize · explain · chat with the document · rewrite with line-by-line diff accept/reject · translate · proofread · generate outlines, tables, diagrams &amp; alt-text · AI web-clipping.</li>
+        <li><b>The amber dot</b> — a visible network indicator fires on every outbound call, and a one-time explainer shows exactly what leaves your machine before any AI runs.</li>
+      </ul>
+    </div>
+    <div class="aichatd rv">
+      <div class="h">💬 Chat with this document <span style="margin-left:auto;font-weight:500;font-size:10px;color:var(--faint);font-family:var(--mono)">CLAUDE.md as context</span></div>
+      <div class="b">
+        <div class="m u">what did the agent change overnight?</div>
+        <div class="m a">Three commits: the rate-limiter plan moved to <b>done</b>, two new boundaries were added, and the changelog gained v0.4.1. <span style="color:var(--faint)">· sourced from your file</span></div>
+        <div class="m u">show me the risky one</div>
+        <div class="typing" id="typing"><i></i><i></i><i></i></div>
+        <div class="m a" id="lateMsg" style="display:none">The boundary change on <b>migrations/</b> — here’s the diff since your last look ↗</div>
+      </div>
+      <div class="net"><span class="netdot" id="landNet"></span> <span id="landNetText">no network calls</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SECURITY ================= -->
+<section id="security" class="wrap">
+  <span class="eyebrow rv">IN PLAIN SIGHT</span>
+  <div class="receiptwrap">
+    <div>
+      <h2 class="sec rv">Other extensions say “trust us.”<br>We show receipts.</h2>
+      <p class="sub rv">Extensions get sold, hijacked, and turned into adware — it happened to the most popular JSON viewer on the store. Peekover is architected so there’s nothing to betray you with.</p>
+      <ul class="checks rv">
+        <li><b>No servers, ever.</b> No backend to breach, no database to leak, no account to phish.</li>
+        <li><b>Zero network by default</b> — the only calls possible are ones <i>you</i> trigger, each with a visible indicator.</li>
+        <li><b>Minimal permissions</b>, requested per-origin at the moment of use — a published <code>PERMISSIONS.md</code> justifies every manifest line, and updates never silently add permissions.</li>
+        <li><b>Open source (MIT), reproducible builds</b> — byte-comparable to the store artifact, signed releases, published SBOM, locked dependencies, a threat model in the repo, and a security hall-of-fame.</li>
+        <li><b>The ownership pledge:</b> never sold, never ads or affiliate injection, never data collection. In writing, in the README.</li>
+      </ul>
+    </div>
+    <div class="rstage rv">
+      <div class="receipt" aria-label="Privacy receipt">
+        <h4>PEEKOVER ★ RECEIPT</h4>
+        <div class="rsub">— what we collect · printed locally —</div>
+        <div class="stamp">AUDITABLE ✓</div>
+        <div class="rline"><span>Your files uploaded</span><b>0</b></div>
+        <div class="rline"><span>Telemetry events</span><b>0</b></div>
+        <div class="rline"><span>Analytics scripts</span><b>0</b></div>
+        <div class="rline"><span>Ads / affiliate injections</span><b>0</b></div>
+        <div class="rline"><span>Accounts required</span><b>0</b></div>
+        <div class="rline"><span>Remote code loaded</span><b>0</b></div>
+        <div class="rline"><span>Network calls (default)</span><b>0</b></div>
+        <div class="rline total"><span>TOTAL COLLECTED</span><b>0</b></div>
+        <div class="rline"><span>Price</span><b>$0 — forever</b></div>
+        <div class="barcode" aria-hidden="true"></div>
+        <div class="thanks">THANK YOU FOR READING</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MID CTA BAND ================= -->
+<div class="band rv">
+  <div class="in">
+    <b>The extension that collects nothing. Costs nothing. Hides nothing.</b>
+    <a class="cta big" href="#" onclick="return false">Add to Chrome — Free</a>
+  </div>
+</div>
+
+<!-- ================= EVERYTHING EXPLORER ================= -->
+<section id="everything" class="wrap">
+  <span class="eyebrow rv">THE FULL LIST</span>
+  <h2 class="sec rv">Every feature. Searchable, of course.</h2>
+  <p class="sub rv">78 features matched against every competitor, 36 industry firsts — indexed the way Peekover indexes your docs. Type to find one, or browse by category.</p>
+  <div class="explorer rv">
+    <div class="exhead">
+      <div class="exsearch">🔍 <input id="exq" placeholder="Find a feature… try “diff”, “font”, or “export”" oninput="exRender()"></div>
+      <span class="excount" id="excount"></span>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="exbody"><div class="exgrid" id="exgrid"></div><div class="exempty" id="exempty" style="display:none">No feature by that name — yet. Suggest it on GitHub?</div></div>
+    <div class="exfoot"><span style="color:#C9A227;font-weight:800">★</span> = ships in no other markdown extension (verified July 2026) · <span style="color:var(--ok);font-weight:800">✓</span> = feature-parity with the best of every competitor</div>
+  </div>
+</section>
+
+<!-- ================= PHASE 2 ================= -->
+<section class="wrap tight">
+  <div class="p2 rv">
+    <div style="flex:1;min-width:260px">
+      <span class="eyebrow">NEXT: PHASE 2</span>
+      <h2 class="sec" style="font-size:clamp(22px,3vw,32px)">One trusted viewer for <i>every</i> raw file.</h2>
+      <p style="font-size:14px;color:var(--muted);max-width:52ch">The same reading experience, the same nothing-to-betray-you architecture — coming to JSON trees, JSONL agent logs, YAML, TOML and sortable CSV tables. Replace four extensions with one you can audit.</p>
+    </div>
+    <div class="files">
+      <span class="f on">.md</span><span class="f on">.mdx</span><span class="f on">.mermaid</span><span class="f">.json</span><span class="f">.jsonl</span><span class="f">.yaml</span><span class="f">.toml</span><span class="f">.csv</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PRINCIPLES ================= -->
+<section class="wrap tight">
+  <div class="principles rv">
+    <h2 class="sec">Free means free. Here’s the deal.</h2>
+    <div class="row">
+      <div class="p"><b>No price, no tiers</b>$0 today, $0 later. No “Pro” nags, no locked features, no trials.</div>
+      <div class="p"><b>No ads, no funnels</b>We will never inject, promote, or upsell. Not even our own stuff.</div>
+      <div class="p"><b>Never sold</b>Any ownership change voids the listing — expect releases only from this repo. It’s in the README.</div>
+      <div class="p"><b>Yours to inspect</b>MIT licensed, reproducible builds, annotated permissions. Fork it if we ever break the deal.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SETUP ================= -->
+<section class="wrap tight">
+  <span class="eyebrow rv">SETUP</span>
+  <h2 class="sec rv">Reading in under a minute.</h2>
+  <div class="steps">
+    <div class="step rv"><h3>Install</h3><p>One click from your browser’s store. Works on web markdown immediately — no permission needed yet.</p></div>
+    <div class="step rv"><h3>Flip one switch</h3><p>For local files, the guided setup deep-links you to “Allow access to file URLs” — and detects the flip the moment you make it.</p></div>
+    <div class="step rv"><h3>Peek</h3><p>Open any .md file, folder, or raw URL. That’s it — the tour (✨) shows you the rest.</p></div>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="finalcta wrap">
+  <svg width="86" height="74" viewBox="0 0 60 52" aria-hidden="true" style="margin-bottom:22px">
+    <rect x="4" y="26" width="52" height="24" rx="5" fill="var(--hl)" stroke="#16171F" stroke-width="2.5"/>
+    <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+    <g class="lid"><circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/></g>
+    <g class="lid"><circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/></g>
+  </svg>
+  <h2>Your files deserve<br>better than raw.</h2>
+  <div class="btnrow" style="justify-content:center">
+    <a class="cta big" href="#" onclick="return false">Add to Chrome — Free</a>
+    <a class="ghost big" href="#" onclick="return false">Edge</a>
+    <a class="ghost big" href="#" onclick="return false">Firefox</a>
+    <a class="ghost big" href="#" onclick="return false">★ Star on GitHub</a>
+  </div>
+  <p style="margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--faint)">Free, for everyone, in plain sight.</p>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <div class="logo" style="margin-bottom:12px">
+          <svg width="26" height="22" viewBox="0 0 60 52"><rect x="4" y="26" width="52" height="24" rx="5" fill="var(--hl)" stroke="#16171F" stroke-width="2.5"/><circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/><circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/></svg>
+          Peekover
+        </div>
+        <p style="max-width:30ch">Raw in. Reading out.<br>Made in plain sight. © 2026 · MIT</p>
+      </div>
+      <div><h5>This page</h5><ul><li><a href="#ai">AI-native reading</a></li><li><a href="#editor">Editor</a></li><li><a href="#security">Security</a></li><li><a href="#everything">Every feature</a></li></ul></div>
+      <div><h5>In the repo ↗</h5><ul><li><a href="#" onclick="return false">github.com/mosuvo/peekover</a></li><li><a href="#" onclick="return false">SECURITY.md · threat model</a></li><li><a href="#" onclick="return false">PERMISSIONS.md</a></li><li><a href="#" onclick="return false">Releases · changelog</a></li><li><a href="#" onclick="return false">Report a bug · translate</a></li></ul></div>
+    </div>
+    <p class="repohint">One page is all we ship — the docs live in the open-source repo, where you can verify them. That’s the point.</p>
+    <div class="bigword" aria-hidden="true">Peekover</div>
+  </div>
+</footer>
+
+<script>
+/* ---------- theme ---------- */
+function flipTheme(){
+  const h=document.documentElement;
+  h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';
+  document.getElementById('modeBtn').textContent=h.dataset.theme==='dark'?'☀':'☾';
+}
+function mclose(){document.getElementById('mnav').classList.remove('open')}
+/* ---------- scroll progress ---------- */
+addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  const max=h.scrollHeight-h.clientHeight;
+  document.getElementById('pageprog').style.width=(max>0?h.scrollTop/max*100:0)+'%';
+},{passive:true});
+/* ---------- hero flip ---------- */
+let userTouched=false;
+function setDemo(pretty,fromUser=true){
+  if(fromUser)userTouched=true;
+  document.getElementById('demo').classList.toggle('rendered',pretty);
+  document.getElementById('dRaw').classList.toggle('on',!pretty);
+  document.getElementById('dPretty').classList.toggle('on',pretty);
+}
+let flip=false;
+setInterval(()=>{if(!userTouched){flip=!flip;setDemo(flip,false)}},2800);
+/* ---------- chat typing + network pulse ---------- */
+setInterval(()=>{
+  const d=document.getElementById('landNet'),t=document.getElementById('landNetText');
+  d.style.background='#D99A2B';t.textContent='1 call → your API key (direct)';
+  setTimeout(()=>{
+    document.getElementById('typing').style.display='none';
+    document.getElementById('lateMsg').style.display='block';
+    d.style.background='var(--faint)';t.textContent='no network calls';
+  },1600);
+  setTimeout(()=>{
+    document.getElementById('lateMsg').style.display='none';
+    document.getElementById('typing').style.display='flex';
+  },6200);
+},8000);
+/* ---------- reveal ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
+
+/* ---------- feature explorer ---------- */
+const F={
+ "Rendering":[["CommonMark + full GFM"],["Tables, task lists, strikethrough, autolinks"],["Footnotes, abbreviations, definition lists"],["Super/subscript, highlight marks"],["Emoji shortnames → 😄"],["GitHub alerts (NOTE→CAUTION)"],["YAML frontmatter cards"],["Frontmatter sets theme/width/TOC per file",1],["MDX-aware, sanitized inline HTML"],["Smart typography + engine option toggles"],["Content-Type detection, per-origin patterns & encoding"],["Wiki-links [[…]] + backlinks panel",1]],
+ "Math & diagrams":[["KaTeX + MathJax fallback"],["Inline + block math"],["Copy as LaTeX / MathML",1],["Mermaid — all types, theme-synced"],["Graphviz DOT · Vega charts"],["Standalone .mermaid / .dot files"],["Per-diagram PNG/SVG export"],["Smart diagram cache + cache controls"],["No file-size limit, progressive load"],["Zoom/pan lightbox"],["Auto dark-mode media adaptation",1]],
+ "Code":[["190+ languages (Shiki)"],["14+ code themes"],["Copy, line numbers, wrap, line highlight"],["Local language auto-detect"],["Collapsible long blocks",1]],
+ "Sources":[["Local files & folders"],["Remote URLs · Git raw links"],["Drag-and-drop · paste scratchpad"],["Render selection on any page"],["Granular per-origin permissions"],["Local-only master switch"],["Web page → Markdown clipper",1],["Copy for AI (context-sized)",1]],
+ "Navigation":[["Scroll-spy TOC rail"],["Folder browser + pinned + recents"],["Project mode: local docs site",1],["Cross-file full-text search",1],["In-doc search with section context",1],["Broken-link checker",1],["Scroll-position memory"],["Progress bar, word count, read time"],["Link preview cards · image gallery"],["Zoom 50–400% · 3 reading widths"],["Heading permalinks + text-fragment links",1],["Footnote & wiki hover previews",1],["Checkboxes that write back to the file",1],["Table sort/filter + CSV/JSON copy",1],["Presentation mode"],["Deck export as standalone HTML",1],["Read-aloud (browser TTS)",1],["Raw toggle · print mode"],["Focus mode + document mini-map",1]],
+ "AI-workflow":[["Auto-reload on file change"],["Watch mode — live agent output",1],["Diff since your last look",1],["Compare any two files",1],["CLAUDE.md / AGENTS.md awareness",1],["Chat-transcript rendering",1],["Local MCP bridge (exploration)",1]],
+ "Theming":[["Light / dark / auto + sepia"],["GitHub-identical themes"],["30+ themes, contrast-checked"],["Custom CSS: global / origin / document"],["9 fonts incl. accessibility picks"],["Type size, line height, paragraph gap"],["Per-file & per-folder overrides"],["Settings export + sync"]],
+ "Editor":[["Split-pane, scroll-synced live preview"],["Visual table editor + CSV import"],["Toolbar + full keyboard shortcuts"],["Regex find & replace"],["markdownlint auto-format"],["Text transforms · snippets · emoji picker"],["Image paste (embed or save)"],["HTML & Jupyter import"],["Autosave + version snapshots"],["Document metrics panel"]],
+ "Export & publish":[["Standalone HTML (embedded images)"],["DOCX with editable equations"],["Typeset PDF · ZIP bundle"],["Copy as rich text / HTML / plain"],["Gist · GitHub · Medium · Dev.to (your tokens)"],["⌘S export shortcut + progress"]],
+ "AI (opt-in)":[["On-device: summarize, translate, proofread"],["BYOK: any provider, incl. local Ollama"],["Chat with the document"],["Rewrite with inline diff accept/reject"],["Explain selection"],["Generate outline / table / diagram / alt-text"],["AI web-clip"],["One-time consent explainer"],["Visible network indicator"]],
+ "Onboarding":[["Guided setup, permission auto-detected"],["Zero-config on web URLs"],["⌘K command palette"],["Customizable shortcuts + ? cheat-sheet"],["Extension-conflict detection"],["Feature-tour demo document"]],
+ "For everyone":[["8 languages at launch → 27 target"],["RTL support"],["WCAG 2.1 AA accessibility",1],["Reduced-motion respected"],["Chrome · Edge · Firefox · Brave · Opera · Vivaldi"]]
+};
+const ALL=[];Object.entries(F).forEach(([cat,items])=>items.forEach(([t,st])=>ALL.push({cat,t,st:!!st})));
+let curTab='Firsts';
+function buildTabs(){
+  const tabs=document.getElementById('tabs');
+  const firsts=ALL.filter(i=>i.st).length;
+  let html=`<button class="tab gold ${curTab==='Firsts'?'on':''}" onclick="setTab('Firsts')">★ Firsts <em>${firsts}</em></button>`;
+  html+=`<button class="tab ${curTab==='All'?'on':''}" onclick="setTab('All')">All <em>${ALL.length}</em></button>`;
+  for(const cat of Object.keys(F)) html+=`<button class="tab ${curTab===cat?'on':''}" onclick="setTab('${cat}')">${cat} <em>${F[cat].length}</em></button>`;
+  tabs.innerHTML=html;
+}
+function setTab(t){curTab=t;document.getElementById('exq').value='';buildTabs();exRender()}
+function exRender(){
+  const q=document.getElementById('exq').value.trim().toLowerCase();
+  let items=q ? ALL.filter(i=>i.t.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q))
+              : curTab==='All'?ALL : curTab==='Firsts'?ALL.filter(i=>i.st) : ALL.filter(i=>i.cat===curTab);
+  const grid=document.getElementById('exgrid');
+  grid.innerHTML=items.map(i=>`<div class="exitem ${i.st?'st':''}">${i.t}${(q||curTab==='All'||curTab==='Firsts')?`<span class="cat">${i.cat}</span>`:''}</div>`).join('');
+  document.getElementById('exempty').style.display=items.length?'none':'block';
+  document.getElementById('excount').textContent=q?`${items.length} match${items.length===1?'':'es'}`:`${ALL.length} features · ${ALL.filter(i=>i.st).length} firsts`;
+}
+buildTabs();exRender();
+</script>
+</body>
+</html>

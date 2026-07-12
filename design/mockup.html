@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peekover — reading view</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@300;400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Spectral:ital,wght@0,400;0,600;1,400&family=Bitter:ital,wght@0,400;0,600&family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Sometype+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ Peekover design tokens ============ */
+:root{
+  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
+  --line:#E6E6DF; --code-bg:#F1F1EB;
+  --accent:#16171F; --accent-soft:#ECECE3;
+  --hl:#FFE94A; --hl-soft:#FFF6BF;
+  --ok:#1F9D55; --ok-soft:#E4F5EB; --del:#B8512F; --del-soft:#F8E9E2;
+  --shadow:0 10px 30px rgba(22,23,31,.10);
+  --r:10px;
+  --serif:"Literata", Georgia, "Times New Roman", serif;
+  --sans:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --mono:"Sometype Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+[data-theme="dark"]{
+  --warn:#E0A83E;
+  --paper:#14161F; --panel:#191C28; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
+  --line:#272B3A; --code-bg:#1D2130;
+  --accent:#EAEBF3; --accent-soft:#232838;
+  --hl:#FFD84D; --hl-soft:#3A3413;
+  --ok:#4CC38A; --ok-soft:#15291F; --del:#E08663; --del-soft:#342016;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto} *{animation-duration:.001s!important;transition-duration:.001s!important}}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:var(--fs,17px);line-height:var(--lh,1.7);transition:background .25s,color .25s}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ============ Toolbar ============ */
+.toolbar{position:fixed;inset:0 0 auto 0;height:52px;z-index:40;display:flex;align-items:center;gap:12px;padding:0 14px;
+  background:color-mix(in srgb, var(--paper) 88%, transparent);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);font-family:var(--sans);font-size:13.5px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:-.01em;flex:none}
+.brand .peek{width:30px;height:26px}
+.crumb{color:var(--muted);display:flex;align-items:center;gap:6px;font-size:13px;min-width:0;white-space:nowrap;overflow:hidden}
+.crumb .sep{color:var(--faint)}
+.crumb .file{color:var(--ink);font-weight:600;background:linear-gradient(transparent 62%, var(--hl) 62%);padding:0 3px;border-radius:3px}
+.watch{display:flex;align-items:center;gap:6px;color:var(--ok);font-weight:600;font-size:12px;flex:none;
+  padding:4px 10px;border:1px solid color-mix(in srgb, var(--ok) 35%, transparent);border-radius:99px;cursor:pointer;transition:.15s}
+.watch:hover{background:var(--ok-soft)}
+.watch .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent)}55%{box-shadow:0 0 0 6px transparent}}
+.spacer{flex:1}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);flex:none}
+.seg button{padding:6px 14px;font-size:12.5px;font-weight:600;color:var(--muted);transition:.18s}
+.seg button.on{background:var(--ink);color:var(--paper)}
+.iconbtn{display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:8px;flex:none;
+  border:1px solid var(--line);background:var(--panel);font-weight:600;font-size:12.5px;color:var(--muted);transition:transform .15s,color .15s}
+.iconbtn:hover{color:var(--ink);transform:translateY(-1px)}
+.iconbtn.tourbtn{border-color:color-mix(in srgb, var(--accent) 40%, transparent);color:var(--accent)}
+kbd{font-family:var(--mono);font-size:10.5px;background:var(--paper);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1.5px 5px;color:var(--muted)}
+.progress{position:fixed;top:52px;left:0;height:3px;background:var(--hl);width:0;z-index:41;border-radius:0 3px 3px 0;transition:width .1s linear}
+@media (max-width:900px){.crumb,.watch{display:none}}
+
+/* ============ Layout ============ */
+.layout{display:grid;grid-template-columns:228px minmax(0,1fr) 56px;padding-top:52px;min-height:100vh;transition:grid-template-columns .25s ease}
+body.no-side .layout{grid-template-columns:0 minmax(0,1fr) 56px}
+body.toc-pinned .layout{grid-template-columns:228px minmax(0,1fr) 236px}
+body.no-side.toc-pinned .layout{grid-template-columns:0 minmax(0,1fr) 236px}
+body.no-side .side{opacity:0;pointer-events:none}
+@media (max-width:1080px){.layout{grid-template-columns:1fr!important}.side,.toc{display:none}}
+
+/* ----- folder sidebar ----- */
+.side{border-right:1px solid color-mix(in srgb, var(--line) 60%, transparent);padding:22px 12px;font-family:var(--sans);
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow:auto;transition:opacity .2s}
+.side h4,.toc h4{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:4px 8px 10px;font-weight:700}
+.tree{list-style:none;font-size:13px}
+.tree .row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;color:var(--muted);cursor:pointer;transition:.15s;width:100%;text-align:left;font-size:13px}
+.tree .row:hover{background:var(--panel);color:var(--ink)}
+.tree .row.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tree .glyph{font-family:var(--mono);font-size:11px;color:var(--faint);width:14px;text-align:center;flex:none;transition:transform .2s}
+.tree .folder.open > .row .glyph{transform:rotate(90deg)}
+.tree .nest{list-style:none;margin-left:18px;border-left:1px dashed var(--line);padding-left:6px;display:none}
+.tree .folder.open > .nest{display:block}
+.badge-new{margin-left:auto;font-size:9.5px;background:var(--hl);color:#3d3200;padding:1px 6px;border-radius:99px;font-weight:700}
+.sidefoot{margin-top:26px;padding:12px;border:1px dashed var(--line);border-radius:10px;font-size:11.5px;color:var(--faint);line-height:1.6}
+
+/* ----- TOC: rail + hover card ----- */
+.toc{font-family:var(--sans);position:sticky;top:52px;height:calc(100vh - 52px)}
+.tocrail{position:absolute;top:80px;right:20px;display:flex;flex-direction:column;gap:9px;align-items:flex-end}
+.tocrail span{display:block;width:16px;height:3px;border-radius:2px;background:var(--line);transition:.2s}
+.tocrail span.here{width:26px;background:var(--hl)}
+body.toc-pinned .tocrail{display:none}
+.tocinner{position:fixed;top:62px;right:10px;bottom:40px;width:222px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px;overflow:auto;opacity:0;pointer-events:none;transform:translateX(8px);transition:.22s ease}
+.toc:hover .tocinner,.toc:focus-within .tocinner{opacity:1;pointer-events:auto;transform:none}
+body.toc-pinned .tocinner{position:sticky;top:52px;height:calc(100vh - 52px);bottom:auto;right:auto;width:auto;opacity:1;pointer-events:auto;transform:none;border:none;border-radius:0;box-shadow:none;background:transparent;border-left:1px solid color-mix(in srgb, var(--line) 60%, transparent)}
+.pinbtn{color:var(--faint);font-size:12px;padding:3px 8px;border-radius:6px;border:1px solid transparent;line-height:1}
+.pinbtn:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
+body.toc-pinned .pinbtn{color:var(--accent);transform:rotate(45deg)}
+.toc ul{list-style:none}
+.toc a{display:block;padding:5px 10px;font-size:12.5px;color:var(--muted);text-decoration:none;border-radius:6px;border-left:2px solid transparent;transition:.15s}
+.toc a:hover{color:var(--ink)}
+.toc a.here{color:var(--ink);font-weight:600;background:linear-gradient(90deg, var(--hl-soft), transparent 85%);border-left-color:var(--hl)}
+.tocmeta{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);line-height:2}
+
+/* ============ Document ============ */
+.doc{max-width:76ch;margin:0 auto;padding:56px 32px 130px;width:100%}
+.doc.rawmode article{display:none}
+.raw{display:none}
+.doc.rawmode .raw{display:block}
+.raw pre{font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--muted);background:var(--code-bg);border:1px solid var(--line);border-radius:var(--r);padding:26px;overflow:auto;white-space:pre-wrap}
+.view{display:none}.view.on{display:block}
+.eyebrow{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+h1{font-family:var(--serif);font-weight:600;font-size:44px;line-height:1.12;letter-spacing:-.015em;margin-bottom:14px}
+.lede{font-size:20px;line-height:1.55;color:var(--muted);font-style:italic;margin-bottom:34px}
+h2{font-family:var(--serif);font-weight:600;font-size:27px;letter-spacing:-.01em;margin:52px 0 14px;scroll-margin-top:76px}
+.anchor{opacity:0;margin-left:8px;font-family:var(--sans);font-size:15px;color:var(--faint);text-decoration:none;transition:.15s;cursor:pointer}
+h2:hover .anchor{opacity:1}
+p{margin-bottom:var(--ps,16px)}
+a.link{color:var(--ink);text-decoration:none;background:linear-gradient(transparent 72%, var(--hl) 72%);padding:0 1px;transition:background .15s}
+a.link:hover{background:var(--hl);color:#26210a;border-radius:3px}
+mark{background:var(--hl);padding:0 3px;border-radius:3px;color:#26210a}
+[data-theme="dark"] mark{color:#191504}
+[data-theme="dark"] a.link{background:linear-gradient(transparent 88%, var(--hl) 88%)}
+[data-theme="dark"] .crumb .file{background:linear-gradient(transparent 86%, var(--hl) 86%)}
+.flash{animation:flash 1.6s ease}
+@keyframes flash{0%{background:var(--hl-soft)}100%{background:transparent}}
+
+.alert{display:flex;gap:12px;margin:24px 0;padding:13px 16px;border-radius:0 var(--r) var(--r) 0;background:color-mix(in srgb, var(--accent-soft) 55%, transparent);border-left:3px solid var(--accent);font-size:15px}
+.alert .tag{font-family:var(--sans);font-weight:700;font-size:11px;letter-spacing:.1em;color:var(--accent);padding-top:3px;flex:none}
+
+.tasks{list-style:none;margin:14px 0 8px}
+.tasks li{display:flex;align-items:flex-start;gap:11px;padding:7px 0;font-size:16.5px}
+.tasks input{appearance:none;width:19px;height:19px;margin-top:4px;border:2px solid var(--faint);border-radius:6px;cursor:pointer;position:relative;transition:.15s;flex:none}
+.tasks input:checked{background:var(--accent);border-color:var(--accent)}
+.tasks input:checked::after{content:"";position:absolute;left:3.5px;top:4px;width:8px;height:4.5px;border:solid var(--paper);border-width:0 0 2.5px 2.5px;transform:rotate(-45deg)}
+.tasks input:checked + span{color:var(--muted)}
+.tasks .writeback{font-family:var(--sans);font-size:10.5px;color:var(--ok);margin-left:8px;opacity:0;transition:.25s}
+.tasks .writeback.show{opacity:1}
+.hint{font-family:var(--sans);font-size:12px;color:var(--faint);margin-bottom:20px}
+
+.tablewrap{margin:22px 0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:14.5px;font-family:var(--sans)}
+th{text-align:left;background:var(--panel);padding:11px 16px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none}
+th:hover{color:var(--ink)}
+th .arr{color:var(--accent);font-size:10px;margin-left:4px}
+td{padding:11px 16px;border-top:1px solid var(--line)}
+td.num{font-family:var(--mono);font-size:13px}
+
+.codeblock{position:relative;margin:22px 0}
+.codeblock pre{font-family:var(--mono);font-size:13.5px;line-height:1.7;background:var(--code-bg);border:1px solid var(--line);border-radius:var(--r);padding:22px;overflow:auto}
+.codeblock .lang{position:absolute;top:10px;right:88px;font-family:var(--sans);font-size:10.5px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.copy{position:absolute;top:8px;right:8px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--muted);transition:.15s}
+.copy:hover{color:var(--ink)}
+.copy.ok{color:var(--ok);border-color:var(--ok)}
+.tok-k{color:var(--accent);font-weight:500}.tok-s{color:var(--ok)}.tok-c{color:var(--faint);font-style:italic}
+
+figure.diagram{margin:26px 0;padding:26px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);text-align:center;cursor:zoom-in;transition:.2s}
+figure.diagram:hover{border-color:var(--accent)}
+figure.diagram figcaption{font-family:var(--sans);font-size:12px;color:var(--faint);margin-top:14px}
+.dg-box{fill:var(--paper);stroke:var(--ink);stroke-width:1.5}
+.dg-hl{fill:var(--hl)}
+.dg-t{font:600 12.5px var(--sans);fill:var(--ink)}
+.dg-a{stroke:var(--muted);stroke-width:1.5;marker-end:url(#arr)}
+
+.math{margin:22px 0;padding:20px;text-align:center;font-family:var(--serif);font-style:italic;font-size:19px;background:var(--panel);border-radius:var(--r);border:1px solid var(--line)}
+blockquote{margin:24px 0;padding:4px 22px;border-left:3px solid var(--hl);color:var(--muted);font-style:italic;font-size:17.5px}
+sup.fn{color:var(--accent);cursor:pointer;font-family:var(--sans);font-size:11px;position:relative}
+.hovercard{position:absolute;bottom:145%;left:50%;transform:translateX(-50%) translateY(4px);width:250px;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:12px 14px;font-size:12.5px;font-style:normal;color:var(--muted);font-family:var(--sans);opacity:0;pointer-events:none;transition:.18s;line-height:1.5;z-index:10;text-align:left}
+sup.fn:hover .hovercard,sup.fn:focus .hovercard,.wiki:hover .hovercard,.wiki:focus .hovercard{opacity:1;transform:translateX(-50%) translateY(0)}
+.wiki{font-family:var(--sans);font-size:13.5px;background:var(--accent-soft);color:var(--accent);padding:2px 9px;border-radius:6px;text-decoration:none;font-weight:600;position:relative;cursor:pointer}
+
+/* transcript bubbles (agent view) */
+.chat{margin:20px 0;display:flex;flex-direction:column;gap:12px;font-family:var(--sans);font-size:14.5px}
+.msg{max-width:85%;padding:12px 16px;border-radius:14px;line-height:1.55}
+.msg.h{align-self:flex-end;background:var(--accent-soft);border:1px solid color-mix(in srgb, var(--accent) 22%, transparent);border-bottom-right-radius:4px}
+.msg.a{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg .who{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:block;margin-bottom:4px}
+
+/* json teaser */
+.jsonteaser{margin:24px 0;border:1px dashed var(--accent);border-radius:var(--r);padding:26px;font-family:var(--mono);font-size:13.5px;line-height:2;background:var(--panel)}
+.jk{color:var(--accent)}.jv{color:var(--ok)}.jn{color:var(--del)}
+.phase{display:inline-block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.1em;background:var(--hl);color:#3d3200;padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:middle}
+
+/* status bar */
+.status{position:fixed;bottom:0;left:0;right:0;height:30px;z-index:30;display:flex;align-items:center;gap:18px;padding:0 16px;font-family:var(--sans);font-size:11px;color:var(--faint);background:color-mix(in srgb, var(--paper) 92%, transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line);white-space:nowrap;overflow:hidden}
+.status .net{display:flex;align-items:center;gap:6px}
+.status .netdot{width:6px;height:6px;border-radius:50%;background:var(--faint)}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(10,10,16,.45);backdrop-filter:blur(3px);z-index:60;display:none;align-items:flex-start;justify-content:center;padding-top:14vh}
+.overlay.open{display:flex}
+.panelbox{background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;font-family:var(--sans);animation:pop .18s ease}
+@keyframes pop{from{transform:scale(.97) translateY(6px);opacity:0}to{transform:none;opacity:1}}
+.palette{width:min(560px,92vw)}
+.palette input{width:100%;padding:16px 18px;font:15px var(--sans);background:none;border:none;color:var(--ink);border-bottom:1px solid var(--line);outline:none}
+.palette ul{list-style:none;max-height:320px;overflow:auto;padding:8px}
+.palette li{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.palette li:hover{background:var(--accent-soft);color:var(--ink)}
+.palette li .k{margin-left:auto;display:flex;gap:4px}
+.palette .cat{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:10px 12px 4px}
+
+/* diff overlay */
+.diffbox{width:min(640px,92vw)}
+.diffbox header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:13.5px}
+.diffbox header .x{margin-left:auto;color:var(--faint);font-size:16px}
+.diff{font-family:var(--mono);font-size:13px;line-height:1.8;padding:18px;max-height:52vh;overflow:auto}
+.diff div{padding:1px 12px;border-radius:5px;white-space:pre-wrap}
+.diff .add{background:var(--ok-soft);color:var(--ok)}
+.diff .del{background:var(--del-soft);color:var(--del);text-decoration:line-through}
+.diff .ctx{color:var(--muted)}
+.diffbox footer{padding:12px 18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint)}
+
+/* presentation mode */
+.present{position:fixed;inset:0;z-index:80;background:var(--ink);color:var(--paper);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8vw;font-family:var(--serif)}
+.present.open{display:flex}
+.present .slide-eyebrow{font-family:var(--sans);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--hl);margin-bottom:22px}
+.present h2{font-size:clamp(34px,6vw,72px);font-weight:600;letter-spacing:-.02em;line-height:1.08;margin:0}
+.present p{font-family:var(--sans);font-size:clamp(15px,2vw,20px);color:color-mix(in srgb, var(--paper) 70%, transparent);margin-top:22px}
+.present .nav{position:fixed;bottom:30px;font-family:var(--sans);font-size:13px;color:color-mix(in srgb, var(--paper) 55%, transparent);display:flex;gap:20px;align-items:center}
+.present .nav button{color:inherit;font-size:20px;padding:4px 10px}
+.present .nav button:hover{color:var(--hl)}
+
+/* lightbox */
+.lightbox{position:fixed;inset:0;z-index:70;background:rgba(10,10,16,.75);display:none;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox svg{transform:scale(1.8)}
+
+/* toast */
+.toast{position:fixed;bottom:48px;left:50%;transform:translateX(-50%) translateY(16px);z-index:90;background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:13px;font-weight:500;padding:11px 18px;border-radius:10px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s;max-width:88vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast b{color:var(--hl)}
+
+/* tour */
+.tour-ring{position:fixed;z-index:75;border:3px solid var(--hl);border-radius:12px;box-shadow:0 0 0 9999px rgba(10,10,16,.5);pointer-events:none;transition:all .35s ease;display:none}
+.tour-ring.on{display:block}
+.tour-card{position:fixed;z-index:76;bottom:44px;left:50%;transform:translateX(-50%);width:min(430px,92vw);background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;font-family:var(--sans);display:none}
+.tour-card.on{display:block}
+.tour-card .step{font-size:10.5px;font-weight:700;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+.tour-card h5{font-size:15.5px;margin:6px 0 6px;font-weight:700}
+.tour-card p{font-size:13px;color:var(--muted);line-height:1.55;margin:0}
+.tour-card .btns{display:flex;gap:8px;margin-top:14px;align-items:center}
+.tour-card .btns .ghost{color:var(--faint);font-size:12.5px}
+.tour-card .btns .next{margin-left:auto;background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:8px;font-weight:600;font-size:12.5px}
+.tour-card .btns .next:hover{background:var(--accent)}
+
+/* first-run hint pill */
+.cornerpill{position:fixed;top:60px;left:10px;z-index:35;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 13px;border-radius:99px;display:none;box-shadow:var(--shadow)}
+.cornerpill:hover{color:var(--ink);background:var(--accent-soft)}
+body.no-side .cornerpill{display:block}
+@media (max-width:1080px){.cornerpill{display:none!important}}
+.hintpill{position:fixed;top:62px;right:16px;z-index:45;background:var(--ink);color:var(--paper);font-family:var(--sans);font-size:12.5px;font-weight:600;padding:9px 16px;border-radius:99px;box-shadow:var(--shadow);cursor:pointer;animation:pop .3s ease;display:flex;gap:8px;align-items:center}
+.hintpill:hover{background:var(--accent)}
+.hintpill .x{opacity:.6;font-weight:400}
+.peek .lid{transform-origin:center;animation:blink 6s infinite}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%,98%{transform:scaleY(.08)}}
+
+/* ===== sepia theme ===== */
+[data-theme="sepia"]{
+  --paper:#F6EEDF; --panel:#EFE4CF; --ink:#3B2F1E; --muted:#7A6A4F; --faint:#A6957A;
+  --line:#E2D5BC; --code-bg:#EFE5CF; --accent:#3B2F1E; --accent-soft:#E9DCC1;
+  --hl:#F5C33B; --hl-soft:#F5E5B0;
+}
+/* ===== reading options ===== */
+body.wide .doc{max-width:94ch}
+body.narrow .doc{max-width:60ch}
+body.focus .doc{line-height:1.8}
+/* ===== frontmatter ===== */
+.fm{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;font-family:var(--sans);opacity:.75}
+.fm span{font-size:10.5px;color:var(--faint);border:1px solid var(--line);padding:2px 9px;border-radius:99px}
+.fm b{color:var(--muted);font-weight:600}
+.fm span:first-child{background:var(--panel);color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:9.5px}
+/* ===== AI panel ===== */
+.aipanel{position:fixed;top:60px;right:14px;width:290px;z-index:55;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);font-family:var(--sans);display:none;overflow:hidden;animation:pop .18s ease}
+.aipanel.open{display:block}
+.aipanel header{padding:13px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px}
+.aipanel header .x{margin-left:auto;color:var(--faint)}
+.aipanel ul{list-style:none;padding:8px}
+.aipanel li{padding:9px 11px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;display:flex;gap:10px;align-items:center}
+.aipanel li:hover{background:var(--accent-soft);color:var(--ink)}
+.aipanel .byok{padding:11px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);line-height:1.6}
+.aipanel .byok b{color:var(--ok)}
+/* ===== TL;DR card ===== */
+.tldr{margin:0 0 26px;border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);background:var(--accent-soft);border-radius:var(--r);padding:15px 18px;font-family:var(--sans);font-size:14px;display:none;animation:pop .25s ease}
+.tldr.on{display:block}
+.tldr .t{font-size:10.5px;font-weight:700;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.tldr .t .src{margin-left:auto;font-weight:500;letter-spacing:0;text-transform:none;color:var(--faint)}
+/* ===== inline rewrite diff ===== */
+.rw{display:none;margin:16px 0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:15px}
+.rw.on{display:block;animation:pop .2s ease}
+.rw .l{padding:10px 16px}
+.rw .old{background:var(--del-soft);color:var(--del);text-decoration:line-through}
+.rw .new{background:var(--ok-soft)}
+.rw .bar{display:flex;gap:8px;padding:9px 12px;background:var(--panel);border-top:1px solid var(--line);font-family:var(--sans)}
+.rw .bar button{font-size:12px;font-weight:600;padding:6px 13px;border-radius:7px;border:1px solid var(--line)}
+.rw .bar .acc{background:var(--ink);color:var(--paper)}
+.rw .bar .acc:hover{background:var(--ok)}
+/* ===== editor split pane ===== */
+.editor{display:none;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-height:60vh;margin-top:8px}
+.doc.editmode .editor{display:grid}
+.doc.editmode article,.doc.editmode .raw{display:none!important}
+.editor textarea{border:none;outline:none;resize:none;background:var(--code-bg);color:var(--ink);font:13.5px/1.8 var(--mono);padding:22px;min-height:60vh}
+.editor .prev{padding:22px 26px;border-left:1px solid var(--line);overflow:auto;font-family:var(--serif)}
+.editor .prev h1{font-size:28px;margin-bottom:10px}
+.editor .prev h2{font-size:20px;margin:20px 0 8px}
+.editor .prev li{margin-left:20px}
+.editor .prev code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.edbar{display:none;font-family:var(--sans);margin-top:26px;gap:6px;align-items:center;flex-wrap:wrap}
+.doc.editmode .edbar{display:flex}
+.edbar button{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;color:var(--muted)}
+.edbar button:hover{color:var(--ink)}
+.edbar .lint{margin-left:auto;font-size:11.5px;color:var(--ok);font-weight:600}
+/* ===== find bar ===== */
+.findbar{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:55;width:min(440px,92vw);background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font-family:var(--sans);display:none;overflow:hidden;animation:pop .15s ease}
+.findbar.open{display:block}
+.findbar input{width:100%;border:none;outline:none;background:none;color:var(--ink);font:13.5px var(--sans);padding:12px 16px;border-bottom:1px solid var(--line)}
+.findbar ul{list-style:none;max-height:200px;overflow:auto;padding:6px}
+.findbar li{padding:8px 11px;border-radius:7px;font-size:12.5px;color:var(--muted);cursor:pointer;display:flex;gap:8px}
+.findbar li:hover{background:var(--accent-soft);color:var(--ink)}
+.findbar li .sec{margin-left:auto;color:var(--faint);font-size:11px}
+/* ===== cheatsheet ===== */
+.cheats{width:min(460px,92vw)}
+.cheats header{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px}
+.cheats ul{list-style:none;padding:12px 8px;columns:2;font-size:12.5px}
+.cheats li{display:flex;justify-content:space-between;gap:10px;padding:7px 12px;color:var(--muted);break-inside:avoid}
+/* ===== setup guide ===== */
+.setup{width:min(440px,92vw);padding:0}
+.setup .body{padding:22px;font-size:13.5px;color:var(--muted);line-height:1.6}
+.setup .step{display:flex;gap:12px;margin-top:14px;align-items:flex-start}
+.setup .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--hl);color:#3d3200;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;font-family:var(--sans)}
+.setup .switch{margin-top:18px;display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.setup .knob{width:38px;height:22px;border-radius:99px;background:var(--faint);position:relative;cursor:pointer;transition:.25s;flex:none}
+.setup .knob::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.25s}
+.setup .knob.on{background:var(--ok)}
+.setup .knob.on::after{left:19px}
+/* ===== figure tools ===== */
+figure.diagram{position:relative}
+.figtools{position:absolute;top:8px;right:8px;display:flex;gap:6px;opacity:0;transition:.2s;font-family:var(--sans)}
+figure.diagram:hover .figtools{opacity:1}
+.figtools button{font-size:10.5px;font-weight:600;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:4px 9px;color:var(--muted)}
+.figtools button:hover{color:var(--ink)}
+.netdot.busy{background:var(--warn);animation:pulse 1s infinite}
+
+/* ===== panel headers & collapse ===== */
+.panelhead{display:flex;align-items:center;margin:4px 4px 10px}
+.panelhead h4{margin:0 0 0 4px!important;flex:1}
+.collapsebtn{color:var(--faint);font-size:13px;padding:3px 8px;border-radius:6px;border:1px solid transparent;line-height:1}
+.collapsebtn:hover{color:var(--ink);border-color:var(--line);background:var(--panel)}
+/* ===== settings panel ===== */
+.settings{position:fixed;top:60px;right:14px;width:300px;z-index:56;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);font-family:var(--sans);display:none;overflow:hidden;animation:pop .18s ease}
+.settings.open{display:block}
+.settings header{padding:13px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px}
+.settings header .x{margin-left:auto;color:var(--faint)}
+.settings .rows{padding:12px 14px 14px;display:flex;flex-direction:column;gap:13px;max-height:62vh;overflow:auto}
+.srow{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.srow label{flex:1;font-weight:600;color:var(--ink)}
+.srow select{font:12.5px var(--sans);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 8px;max-width:150px}
+.stepper{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.stepper button{padding:5px 10px;font-size:12px;font-weight:700;color:var(--muted);background:var(--panel)}
+.stepper button:hover{color:var(--ink)}
+.stepper .val{padding:5px 9px;font-size:11.5px;color:var(--ink);min-width:44px;text-align:center;font-family:var(--mono)}
+.wseg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.wseg button{padding:5px 10px;font-size:11.5px;font-weight:600;color:var(--muted);background:var(--panel)}
+.wseg button.on{background:var(--ink);color:var(--paper)}
+/* ===== custom font dropdown ===== */
+.fdrop{position:relative;min-width:170px}
+.fbtn{display:flex;align-items:center;gap:8px;width:100%;justify-content:space-between;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 11px;text-align:left}
+.fbtn:hover{border-color:var(--faint)}
+.fbtn .chev{color:var(--faint);font-size:10px;flex:none;transition:transform .18s}
+.fdrop.open .fbtn .chev{transform:rotate(180deg)}
+.flist{position:absolute;top:calc(100% + 6px);right:0;width:230px;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);list-style:none;padding:6px;z-index:5;display:none;animation:pop .15s ease}
+.fdrop.open .flist{display:block}
+.flist li{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 11px;border-radius:7px;font-size:14.5px;color:var(--ink);cursor:pointer}
+.flist li:hover{background:var(--accent-soft)}
+.flist li.sel{background:var(--hl-soft)}
+.flist li em{font:10.5px var(--sans);font-style:normal;color:var(--faint);flex:none}
+.settings .note{padding:10px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--faint);line-height:1.6}
+/* ===== warning alert variant ===== */
+.alert.warn{background:color-mix(in srgb, var(--hl-soft) 55%, transparent);border-left-color:var(--warn)}
+.alert.warn .tag{color:var(--warn)}
+/* ===== find bar: scope tabs + replace ===== */
+.findtabs{display:flex;gap:4px;padding:8px 10px 0}
+.findtabs button{font-size:11px;font-weight:600;color:var(--muted);padding:5px 11px;border-radius:99px;border:1px solid var(--line)}
+.findtabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.findbar .rrow{display:none;border-bottom:1px solid var(--line)}
+.findbar.replace .rrow{display:flex}
+.findbar .rrow input{border-bottom:none;flex:1}
+.findbar .rrow button{font-size:11.5px;font-weight:600;color:var(--accent);padding:0 14px;flex:none}
+/* ===== backlinks ===== */
+.backlinks{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.backlinks h5{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:8px;font-weight:700}
+.backlinks a{display:block;font-size:11.5px;color:var(--muted);text-decoration:none;padding:4px 6px;border-radius:6px}
+.backlinks a:hover{background:var(--panel);color:var(--accent)}
+/* ===== drop zone ===== */
+.dropzone{position:fixed;inset:10px;z-index:95;border:3px dashed var(--accent);border-radius:18px;background:color-mix(in srgb, var(--paper) 82%, transparent);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;font-family:var(--sans);font-size:20px;font-weight:700;color:var(--accent);pointer-events:none}
+.dropzone.on{display:flex}
+.dropzone .in{text-align:center}
+.dropzone .in small{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:8px}
+/* ===== exports menu ===== */
+.exports{width:min(400px,92vw)}
+.exports header{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px;font-family:var(--sans)}
+.exports ul{list-style:none;padding:8px}
+.exports li{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;font-size:13.5px;color:var(--muted);cursor:pointer;font-family:var(--sans)}
+.exports li:hover{background:var(--accent-soft);color:var(--ink)}
+.exports li em{margin-left:auto;font-style:normal;font-size:10.5px;color:var(--faint)}
+/* ===== AI consent ===== */
+.consent{width:min(430px,92vw)}
+.consent .body{padding:20px 22px;font-family:var(--sans);font-size:13px;color:var(--muted);line-height:1.65}
+.consent .body b{color:var(--ink)}
+.consent .row{display:flex;gap:10px;align-items:flex-start;margin-top:12px}
+.consent .row .ic{flex:none;width:24px;text-align:center}
+.consent .btns{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--line);font-family:var(--sans)}
+.consent .btns .go{margin-left:auto;background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:8px;font-weight:600;font-size:12.5px}
+.consent .btns .go:hover{background:var(--accent)}
+.consent .btns .no{color:var(--faint);font-size:12.5px}
+/* ===== ai chat ===== */
+.aichat{display:none;flex-direction:column}
+.aipanel.chatmode ul,.aipanel.chatmode .byok{display:none}
+.aipanel.chatmode .aichat{display:flex}
+.aichat .log{max-height:250px;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:9px}
+.aichat .m{font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:11px;max-width:88%}
+.aichat .m.u{align-self:flex-end;background:var(--accent-soft);border-bottom-right-radius:4px}
+.aichat .m.b{align-self:flex-start;background:var(--panel);border-bottom-left-radius:4px}
+.aichat .inrow{display:flex;border-top:1px solid var(--line)}
+.aichat input{flex:1;border:none;outline:none;background:none;color:var(--ink);font:12.5px var(--sans);padding:11px 14px}
+.aichat .send{color:var(--accent);font-weight:700;padding:0 14px}
+.aichat .back{font-size:11px;color:var(--faint);padding:8px 14px;text-align:left;border-bottom:1px solid var(--line)}
+.aichat .back:hover{color:var(--ink)}
+@media print{
+  .toolbar,.side,.toc,.status,.progress,.hintpill,.figtools,.hint,.edbar{display:none!important}
+  .layout{display:block;padding-top:0}
+  .doc{max-width:100%;padding:0}
+  body{font-size:12pt}
+}
+</style>
+</head>
+<body>
+
+<!-- ======= Toolbar ======= -->
+<header class="toolbar">
+  <div class="brand" id="tBrand">
+    <svg class="peek" viewBox="0 0 60 52" aria-hidden="true">
+      <rect x="4" y="26" width="52" height="24" rx="5" fill="var(--hl)" stroke="#16171F" stroke-width="2.5"/>
+      <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+      <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+      <g class="lid"><circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/></g>
+      <g class="lid"><circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/></g>
+    </svg>
+    Peekover
+  </div>
+  <div class="crumb" title="~/projects/aurora/docs/"><span class="file" id="crumbFile">welcome.md</span></div>
+  <button class="watch" id="tWatch" onclick="simulateAgent()" title="Watch mode is live — click to simulate an agent edit"><span class="dot"></span>watching</button>
+  <div class="spacer"></div>
+  <button class="iconbtn tourbtn" id="tTour" onclick="startTour()">✨ Tour</button>
+  <button class="iconbtn" id="tAI" onclick="toggleAI()" style="color:var(--accent);border-color:color-mix(in srgb, var(--accent) 40%, transparent)">✦ AI</button>
+  <div class="seg" id="tMode" role="tablist" aria-label="View mode">
+    <button id="btnRead" class="on" onclick="setMode('read')">Read</button>
+    <button id="btnEdit" onclick="setMode('edit')">Edit</button>
+    <button id="btnRaw" onclick="setMode('raw')">Raw</button>
+  </div>
+  <button class="iconbtn" id="tSettings" onclick="toggleSettings()" aria-label="Reading settings — font, theme, spacing" title="Reading settings — font, theme, spacing">Aa</button>
+  <button class="iconbtn" id="tPal" onclick="openPalette()" aria-label="Command palette" title="Search &amp; commands (⌘K)"><kbd style="border:none;background:none;padding:0;font-size:12px;color:inherit">⌘K</kbd></button>
+</header>
+<div class="progress" id="prog"></div>
+<button class="hintpill" id="hintPill" onclick="startTour()">✨ Take the 60-second tour <span class="x" onclick="event.stopPropagation();dismissPill()">✕</span></button>
+
+<div class="layout">
+
+  <!-- ======= Folder sidebar ======= -->
+  <nav class="side" id="tTree" aria-label="Project files">
+    <div class="panelhead"><h4>Project</h4><button class="collapsebtn" onclick="toggleSide()" title="Collapse panel (⌘\\)" aria-label="Collapse file tree">«</button></div>
+    <ul class="tree">
+      <li class="folder open" id="fDocs">
+        <button class="row" onclick="toggleFolder('fDocs')"><span class="glyph">▸</span> docs</button>
+        <ul class="nest">
+          <li><button class="row active" data-file="welcome" onclick="openFile(this,'welcome','welcome.md')"><span class="glyph">#</span> welcome.md</button></li>
+          <li><button class="row" data-file="agent" onclick="openFile(this,'agent','CLAUDE.md')"><span class="glyph">#</span> CLAUDE.md <span class="badge-new">agent</span></button></li>
+          <li><button class="row" onclick="toast('<b>architecture.md</b> — every file opens instantly in the real product')"><span class="glyph">#</span> architecture.md</button></li>
+          <li><button class="row" onclick="toast('<b>changelog.md</b> — every file opens instantly in the real product')"><span class="glyph">#</span> changelog.md</button></li>
+        </ul>
+      </li>
+      <li class="folder" id="fSpecs">
+        <button class="row" onclick="toggleFolder('fSpecs')"><span class="glyph">▸</span> specs</button>
+        <ul class="nest">
+          <li><button class="row" onclick="toast('Project mode: relative links between files navigate in place')"><span class="glyph">#</span> 001-onboarding.md</button></li>
+        </ul>
+      </li>
+      <li><button class="row" data-file="json" onclick="openFile(this,'json','config.json')"><span class="glyph">{}</span> config.json <span class="badge-new" style="background:var(--accent-soft);color:var(--accent)">v2</span></button></li>
+      <li><button class="row" onclick="toast('<b>.csv</b> joins the family in Phase 2 — one trusted viewer for every raw file')"><span class="glyph">≡</span> data.csv</button></li>
+      <li><button class="row" onclick="openDiagramFile()"><span class="glyph">◇</span> flow.mermaid</button></li>
+    </ul>
+    <h4 style="margin-top:26px">Recent</h4>
+    <ul class="tree">
+      <li><button class="row" data-file="agent" onclick="openFile(this,'agent','CLAUDE.md')"><span class="glyph">#</span> CLAUDE.md <span style="margin-left:auto;font-size:9.5px;color:var(--faint)">2m</span></button></li>
+      <li><button class="row" onclick="toast('Recents are grouped by folder and domain in the product')"><span class="glyph">#</span> 001-onboarding.md <span style="margin-left:auto;font-size:9.5px;color:var(--faint)">1h</span></button></li>
+    </ul>
+    <h4 style="margin-top:26px">Pinned</h4>
+    <ul class="tree"><li><button class="row" onclick="toast('Pin any file or folder for instant access')"><span class="glyph">★</span> reading-list.md</button></li></ul>
+    <div class="sidefoot">Cross-file search, wiki-links and broken-link checks live here in the full product.</div>
+  </nav>
+
+  <!-- ======= Document ======= -->
+  <main class="doc" id="doc">
+    <div class="raw" aria-label="Raw markdown source">
+<pre># Welcome to Peekover
+
+&gt; Raw text goes in. **Reading** comes out.
+
+Your files never leave your machine — rendering
+happens locally, permissions stay minimal, and
+the source is open. [[architecture]] has details.
+
+## Reading, upgraded
+- [x] Table of contents that follows you
+- [x] Diagrams &amp; math, rendered
+- [ ] Presentation mode (⌘P)
+
+| Format | Renders in |
+|--------|-----------|
+| .md    | &lt; 150 ms  |
+| .json  | Phase 2   |
+
+```bash
+# edit anywhere — watch it here
+claude "draft the architecture doc"
+```
+
+$$ F = ma $$</pre>
+    </div>
+
+    <!-- ===== view: welcome.md ===== -->
+    <article class="view on" id="view-welcome">
+      <div class="fm" title="YAML frontmatter — it can even set this doc’s theme and width">
+        <span>frontmatter</span><span><b>theme:</b> auto</span><span><b>width:</b> normal</span><span><b>toc:</b> true</span>
+      </div>
+      <div class="tldr" id="tldr">
+        <div class="t">✦ TL;DR <span class="src" id="tldrSrc">on-device · Gemini Nano</span></div>
+        <div id="tldrBody"></div>
+      </div>
+      <p class="eyebrow">Getting started · 3 min read</p>
+      <h1>Welcome to Peekover</h1>
+      <p class="lede">Raw text goes in. Reading comes out. This page is a live tour of everything your markdown can look like — <strong>everything on it works</strong>.</p>
+
+      <div class="alert">
+        <span class="tag">NOTE</span>
+        <div>Your files never leave your machine. Rendering happens locally, permissions stay minimal, and <a class="link" href="#privacy">the source is open</a> — peek at it any time.</div>
+      </div>
+
+      <h2 id="s1">Reading, upgraded<a class="anchor" onclick="copyAnchor('s1')" title="Copy link to heading">#</a></h2>
+      <p>Peekover turns a wall of <mark>plain text</mark> into a page you actually want to read — typeset, navigable, and instant. Open a file, a folder, or a raw URL; the table of contents follows you, and <a class="link" href="#s3">watch mode</a> keeps the page live while your editor (or your AI agent<sup class="fn" tabindex="0">1<span class="hovercard"><strong>Footnote 1.</strong> Claude Code, Cursor, and friends write a lot of markdown. Peekover is where you read it — hover previews included.</span></sup>) writes.</p>
+
+      <p>It handles the whole GFM family: <del>old drafts get struck through</del>, emoji shortnames like <code style="font-family:var(--mono);font-size:.85em;background:var(--code-bg);padding:1px 5px;border-radius:4px">:rocket:</code> become 🚀, and alerts come in every flavor:</p>
+      <div class="alert warn">
+        <span class="tag">WARNING</span>
+        <div>Other viewers ship 11&nbsp;MB and phone home. Peekover does neither — see <a class="link" href="#privacy">the receipts</a>.</div>
+      </div>
+      <ul class="tasks" id="tasks">
+        <li><input type="checkbox" checked onchange="wb(this)"><span>Table of contents with scroll-spy</span><em class="writeback">saved to file ✓</em></li>
+        <li><input type="checkbox" checked onchange="wb(this)"><span>Diagrams, math &amp; 190+ code languages</span><em class="writeback">saved to file ✓</em></li>
+        <li><input type="checkbox" id="tCheck" onchange="wb(this)"><span>Try presentation mode <kbd>⌘P</kbd></span><em class="writeback">saved to file ✓</em></li>
+      </ul>
+      <p class="hint">↑ these checkboxes are real — tick one and Peekover writes the change back to your file.</p>
+
+      <h2 id="s2">Tables that behave<a class="anchor" onclick="copyAnchor('s2')">#</a></h2>
+      <p>Click a header to sort. Copy any table as CSV, JSON, or Markdown from its menu.</p>
+      <div class="tablewrap" id="tTable">
+        <table id="tbl">
+          <thead><tr>
+            <th onclick="sortTbl(0,this)">Format <span class="arr">▲</span></th>
+            <th onclick="sortTbl(1,this)">Renders in</th>
+            <th onclick="sortTbl(2,this)">Status</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>.md / .mdx</td><td class="num">&lt; 150 ms</td><td>Ready</td></tr>
+            <tr><td>.mermaid / .dot</td><td class="num">&lt; 1 s cached</td><td>Ready</td></tr>
+            <tr><td>.json / .jsonl</td><td class="num">—</td><td>Phase 2</td></tr>
+            <tr><td>.csv / .yaml</td><td class="num">—</td><td>Phase 2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="s3">Live while they write<a class="anchor" onclick="copyAnchor('s3')">#</a></h2>
+      <p>Point Peekover at the file your agent is writing and leave it open — the page updates as the file changes and can show a <a class="link" onclick="openDiff();return false" href="#s3">diff of what changed</a> since your last look. <strong>Try it:</strong> click the <span style="font-family:var(--sans);font-size:13px;color:var(--ok);font-weight:600">● watching</span> badge in the toolbar.</p>
+
+      <div class="codeblock">
+        <span class="lang">bash</span>
+        <button class="copy" onclick="copied(this)">Copy</button>
+        <pre><span class="tok-c"># edit anywhere — watch it here</span>
+<span class="tok-k">claude</span> <span class="tok-s">"draft the architecture doc"</span>
+<span class="tok-c" id="liveline"># welcome.md last updated 2 min ago</span></pre>
+      </div>
+      <div id="agentTarget"></div>
+
+      <figure class="diagram" onclick="openLightbox()" title="Click to zoom">
+        <div class="figtools">
+          <button onclick="event.stopPropagation();toast('Diagram copied as <b>PNG</b>')">PNG</button>
+          <button onclick="event.stopPropagation();toast('Diagram copied as <b>SVG</b>')">SVG</button>
+        </div>
+        <svg width="420" height="120" viewBox="0 0 420 120" role="img" aria-label="Flow: raw file to Peekover to reading" id="flowSvg">
+          <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+          <rect class="dg-box" x="10" y="40" width="110" height="42" rx="8"/>
+          <text class="dg-t" x="65" y="66" text-anchor="middle">raw .md</text>
+          <line class="dg-a" x1="122" y1="61" x2="160" y2="61"/>
+          <rect class="dg-box dg-hl" x="163" y="34" width="110" height="54" rx="10"/>
+          <text class="dg-t" x="218" y="66" text-anchor="middle">Peekover</text>
+          <line class="dg-a" x1="276" y1="61" x2="314" y2="61"/>
+          <rect class="dg-box" x="317" y="40" width="92" height="42" rx="8"/>
+          <text class="dg-t" x="363" y="66" text-anchor="middle">reading</text>
+        </svg>
+        <figcaption>Mermaid, Graphviz and friends render inline — this reopened from cache in 0.4 s. Click to zoom.</figcaption>
+      </figure>
+
+      <h2 id="s4">Math, quotes &amp; the small stuff<a class="anchor" onclick="copyAnchor('s4')">#</a></h2>
+      <div class="math" oncontextmenu="event.preventDefault();toast('Copied as LaTeX: <b>F = ma</b>')" title="Right-click to copy as LaTeX">F = ma = m·dv/dt&nbsp;&nbsp;<span style="color:var(--faint);font-size:14px">(right-click → copy as LaTeX)</span></div>
+      <blockquote>“The best interface for reading is the one you stop noticing.” — every Peekover design review, eventually</blockquote>
+      <p>Wiki-links resolve inside your folder — hover <span class="wiki" tabindex="0">[[architecture]]<span class="hovercard"><strong>architecture.md</strong> · docs/ · 6 min read<br>System overview, rendering pipeline, and the reasons behind every dependency.</span></span> — and every heading gets a <a class="link" onclick="copyAnchor('s4');return false" href="#s4">copyable deep link</a> that highlights the exact passage for whoever you send it to.</p>
+
+      <h2 id="privacy">In plain sight<a class="anchor" onclick="copyAnchor('privacy')">#</a></h2>
+      <p id="rwTarget">No servers. No telemetry. No network calls unless <em>you</em> make one — and a visible indicator when you do. The manifest is annotated line-by-line, builds are reproducible, and the whole project is MIT-licensed. That’s the deal: <mark>free, for everyone, in plain sight.</mark></p>
+      <div class="rw" id="rwBox">
+        <div class="l old">No servers. No telemetry. No network calls unless you make one.</div>
+        <div class="l new">Nothing phones home. The only network calls are the ones <em>you</em> trigger — and a visible indicator fires every time.</div>
+        <div class="bar">
+          <button class="acc" onclick="acceptRw()">Accept ✓</button>
+          <button onclick="rejectRw()">Reject</button>
+          <span style="margin-left:auto;font-size:11px;color:var(--faint);align-self:center">✦ rewrite · line-by-line accept, like a code review</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- ===== view: CLAUDE.md (agent-file awareness) ===== -->
+    <article class="view" id="view-agent">
+      <p class="eyebrow" style="color:var(--ok)">◈ Agent file detected · tuned rendering on</p>
+      <h1>CLAUDE.md</h1>
+      <p class="lede">Peekover recognizes agent files — CLAUDE.md, AGENTS.md, .cursorrules — and switches on watch mode, diff tracking, and transcript rendering automatically.</p>
+      <div class="alert"><span class="tag" style="color:var(--ok)">AGENT</span><div>This file steers your AI coding agent. Peekover keeps it live: edits by the agent appear here in real time, with a one-click diff of every change.</div></div>
+      <h2>Session transcripts read like conversations</h2>
+      <p>Markdown transcripts render as chat when you want them to — toggle back to plain headings any time.</p>
+      <div class="chat">
+        <div class="msg h"><span class="who">You</span>Add rate limiting to the public API, follow the plan in specs/003.</div>
+        <div class="msg a"><span class="who">Agent</span>Read progress.md — resuming at T3. Writing the middleware now; tests first per the workflow. I’ll update the tasks file as I go.</div>
+        <div class="msg h"><span class="who">You</span>Show me the diff when you’re done.</div>
+      </div>
+      <div class="codeblock">
+        <span class="lang">markdown</span>
+        <button class="copy" onclick="copied(this)">Copy</button>
+        <pre><span class="tok-c">## Boundaries</span>
+- NEVER touch: migrations/, *.lock, .env*
+- Ask first: schema changes, new dependencies
+<span class="tok-c">## Definition of Done</span>
+- Tests pass + lint clean + docs updated</pre>
+      </div>
+      <p><a class="link" href="#" onclick="openFileByKey('welcome');return false">← back to welcome.md</a></p>
+    </article>
+
+    <!-- ===== view: config.json (Phase 2 teaser) ===== -->
+    <article class="view" id="view-json">
+      <p class="eyebrow">config.json <span class="phase">PHASE 2</span></p>
+      <h1>One viewer for every raw file</h1>
+      <p class="lede">The same trusted, local-first reading experience — coming to .json, .jsonl, .yaml, .csv and .toml.</p>
+      <div class="jsonteaser">
+{<br>
+&nbsp;&nbsp;<span class="jk">"name"</span>: <span class="jv">"aurora"</span>,<br>
+&nbsp;&nbsp;<span class="jk">"trust"</span>: { <span class="jk">"telemetry"</span>: <span class="jn">false</span>, <span class="jk">"servers"</span>: <span class="jn">0</span> },<br>
+&nbsp;&nbsp;<span class="jk">"formats"</span>: [<span class="jv">"md"</span>, <span class="jv">"json"</span>, <span class="jv">"yaml"</span>, <span class="jv">"csv"</span>]<br>
+}
+      </div>
+      <p>Collapsible tree view, table view for arrays, first-class <strong>.jsonl</strong> for AI logs — same extension, same principles, zero new permissions.</p>
+      <p><a class="link" href="#" onclick="openFileByKey('welcome');return false">← back to welcome.md</a></p>
+    </article>
+
+    <!-- ===== Edit mode: split pane, live preview ===== -->
+    <div class="edbar" id="tEdbar">
+      <button onclick="edWrap('**')" title="Bold">B</button>
+      <button onclick="edWrap('*')" style="font-style:italic" title="Italic">I</button>
+      <button onclick="edWrap('`')" title="Code">&lt;/&gt;</button>
+      <button onclick="edInsert('\n- [ ] new task')" title="Task">☐ task</button>
+      <button onclick="edInsert('\n| col | col |\n|-----|-----|\n| a | b |')" title="Visual table editor">▦ table</button>
+      <button onclick="openFindReplace()" title="Find &amp; replace (regex)">⌕ replace</button>
+      <button onclick="toast('Snapshot <b>v3 · 2 min ago</b> restored — every save is versioned locally')">⟲ snapshots</button>
+      <button onclick="toast('markdownlint: heading levels fixed, trailing spaces trimmed')">✓ lint &amp; format</button>
+      <span class="lint">● 0 issues · autosaved</span>
+    </div>
+    <div class="editor" id="editor">
+      <textarea id="edSrc" spellcheck="false" aria-label="Markdown source"></textarea>
+      <div class="prev" id="edPrev" aria-label="Live preview"></div>
+    </div>
+  </main>
+
+  <!-- ======= TOC ======= -->
+  <aside class="toc" id="tToc" aria-label="On this page">
+    <div class="tocrail" id="tocRail" aria-hidden="true"></div>
+    <div class="tocinner">
+    <div class="panelhead"><h4>On this page</h4><button class="pinbtn" onclick="toggleToc()" title="Pin panel open (⌘B)" aria-label="Pin table of contents">📌</button></div>
+    <ul id="tocList">
+      <li><a href="#s1" class="here">Reading, upgraded</a></li>
+      <li><a href="#s2">Tables that behave</a></li>
+      <li><a href="#s3">Live while they write</a></li>
+      <li><a href="#s4">Math, quotes &amp; the small stuff</a></li>
+      <li><a href="#privacy">In plain sight</a></li>
+    </ul>
+    <div class="backlinks" id="tBacklinks">
+      <h5>Linked from</h5>
+      <a href="#" onclick="openFileByKey('agent');return false"># CLAUDE.md — “read the welcome doc first”</a>
+      <a href="#" onclick="toast('Backlinks resolve across the whole folder — Obsidian-style, no vault needed');return false"># 001-onboarding.md — “see [[welcome]]”</a>
+    </div>
+    <div class="tocmeta" id="tocMeta">412 words · 3 min<br><span id="lastChange">last change 2 min ago</span></div>
+    </div>
+  </aside>
+</div>
+
+<!-- ======= Status bar ======= -->
+<footer class="status" id="tStatus">
+  <span id="statusFile">welcome.md</span><span>UTF-8</span><span>GFM + math + mermaid</span>
+  <div class="spacer"></div>
+  <span class="net"><span class="netdot" id="netDot"></span> <span id="netText">no network calls</span></span>
+  <span>Peekover 0.1 · design mockup</span>
+</footer>
+
+<!-- ======= Command palette ======= -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeAll()">
+  <div class="panelbox palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    <input placeholder="Type a command or search this document…" id="palInput">
+    <div class="cat">Commands — every one of these works</div>
+    <ul>
+      <li onclick="closeAll();startPresent()">◫&nbsp; Start presentation mode <span class="k"><kbd>⌘</kbd><kbd>P</kbd></span></li>
+      <li onclick="closeAll();openDiff()">Δ&nbsp; Show diff since last snapshot <span class="k"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>D</kbd></span></li>
+      <li onclick="closeAll();toggleToc()">▤&nbsp; Pin / unpin table of contents <span class="k"><kbd>⌘</kbd><kbd>B</kbd></span></li>
+      <li onclick="closeAll();toggleSide()">☰&nbsp; Toggle file tree <span class="k"><kbd>⌘</kbd><kbd>\</kbd></span></li>
+      <li onclick="closeAll();flipTheme()">◐&nbsp; Switch theme <span class="k"><kbd>⌘</kbd><kbd>D</kbd></span></li>
+      <li onclick="closeAll();openExports()">⇩&nbsp; Export &amp; publish…</li>
+      <li onclick="closeAll();openCompare()">⇆&nbsp; Compare with architecture.md ⭐</li>
+      <li onclick="closeAll();toast('Clean markdown copied — sized for an LLM context window (mock)')">✂&nbsp; Copy for AI (clean markdown)</li>
+      <li onclick="closeAll();simulateAgent()">◈&nbsp; Simulate an agent edit (demo)</li>
+      <li onclick="closeAll();openFind()">🔍&nbsp; Find in document <span class="k"><kbd>⌘</kbd><kbd>F</kbd></span></li>
+      <li onclick="closeAll();setTheme('sepia')">🎨&nbsp; Theme: Sepia (30+ themes in product)</li>
+      <li onclick="closeAll();fontSize(1)">A&nbsp;+&nbsp; Larger type</li>
+      <li onclick="closeAll();fontSize(-1)">A&nbsp;−&nbsp; Smaller type</li>
+      <li onclick="closeAll();toggleWidth()">⟷&nbsp; Toggle reading width</li>
+      <li onclick="closeAll();focusMode()">◎&nbsp; Focus mode (hide everything)</li>
+      <li onclick="closeAll();readAloud()">🔊&nbsp; Read aloud (browser voice, free)</li>
+      <li onclick="closeAll();toast('Checked 14 relative links across the folder — <b>0 broken</b>')">🔗&nbsp; Check links in folder</li>
+      <li onclick="closeAll();toggleSettings()">⚙&nbsp; Reading settings — font, spacing, width</li>
+      <li onclick="closeAll();openSetup()">🛠&nbsp; Show setup guide</li>
+      <li onclick="closeAll();$('cheatsOverlay').classList.add('open')">⌨&nbsp; Keyboard shortcuts <span class="k"><kbd>?</kbd></span></li>
+      <li onclick="closeAll();window.print()">🖨&nbsp; Print (chrome auto-hidden)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======= Diff overlay ======= -->
+<div class="overlay" id="diffOverlay" onclick="if(event.target===this)closeAll()">
+  <div class="panelbox diffbox" role="dialog" aria-modal="true" aria-label="Diff since last snapshot">
+    <header>Δ&nbsp; welcome.md — since your last look <button class="x" onclick="closeAll()" aria-label="Close">✕</button></header>
+    <div class="diff">
+<div class="ctx">  ## Live while they write</div>
+<div class="del">- The page updates when the file changes.</div>
+<div class="add">+ The page updates as the file changes, scrolls to the</div>
+<div class="add">+ newest content, and shows a diff of every change.</div>
+<div class="ctx">  </div>
+<div class="add">+ &gt; New: agent edits get a subtle pulse so you never miss one.</div>
+    </div>
+    <footer>Snapshots are kept locally in your browser — nothing leaves your machine.</footer>
+  </div>
+</div>
+
+<!-- ======= Presentation mode ======= -->
+<div class="present" id="present" role="dialog" aria-modal="true" aria-label="Presentation">
+  <div class="slide-eyebrow" id="pEyebrow"></div>
+  <h2 id="pTitle"></h2>
+  <p id="pBody"></p>
+  <div class="nav">
+    <button onclick="slide(-1)" aria-label="Previous slide">←</button>
+    <span id="pCount"></span>
+    <button onclick="slide(1)" aria-label="Next slide">→</button>
+    <span style="opacity:.6">esc to exit</span>
+  </div>
+</div>
+
+<!-- ======= Lightbox ======= -->
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <svg width="420" height="120" viewBox="0 0 420 120" aria-hidden="true">
+    <rect class="dg-box" x="10" y="40" width="110" height="42" rx="8"/><text class="dg-t" x="65" y="66" text-anchor="middle">raw .md</text>
+    <line class="dg-a" x1="122" y1="61" x2="160" y2="61"/>
+    <rect class="dg-box dg-hl" x="163" y="34" width="110" height="54" rx="10"/><text class="dg-t" x="218" y="66" text-anchor="middle">Peekover</text>
+    <line class="dg-a" x1="276" y1="61" x2="314" y2="61"/>
+    <rect class="dg-box" x="317" y="40" width="92" height="42" rx="8"/><text class="dg-t" x="363" y="66" text-anchor="middle">reading</text>
+  </svg>
+</div>
+
+<!-- ======= AI panel ======= -->
+<div class="aipanel" id="aipanel" role="dialog" aria-label="AI actions">
+  <header>✦ AI — opt-in, never automatic <button class="x" onclick="toggleAI()" aria-label="Close">✕</button></header>
+  <ul>
+    <li onclick="aiSummarize()">📄&nbsp; Summarize this document</li>
+    <li onclick="aiRewrite()">✏️&nbsp; Rewrite selection (diff preview)</li>
+    <li onclick="chatGate()">💬&nbsp; Chat with this document</li>
+    <li onclick="aiCall('Explained in the side panel — selection + 3 lines of context')">💡&nbsp; Explain selection</li>
+    <li onclick="aiCall('Translated to Spanish — on-device, nothing sent anywhere','on-device · Translator API')">🌐&nbsp; Translate document</li>
+    <li onclick="aiCall('Proofread: 2 suggestions, both style — click to review','on-device · Proofreader API')">✓&nbsp; Proofread</li>
+    <li onclick="aiCall('Mermaid diagram generated from your description — inserted below the cursor')">◇&nbsp; Generate diagram from text</li>
+  </ul>
+  <div class="byok">Runs <b>on-device first</b> (Gemini Nano). Your own API key optional — calls go browser → provider, never proxied. Watch the status-bar dot when a call runs.</div>
+  <div class="aichat">
+    <button class="back" onclick="chatMode(false)">← back to actions</button>
+    <div class="log" id="chatLog">
+      <div class="m b">Ask me anything about <b>welcome.md</b> — I read the whole document as context.</div>
+    </div>
+    <div class="inrow"><input id="chatIn" placeholder="e.g. what does watch mode do?" onkeydown="if(event.key==='Enter')chatSend()"><button class="send" onclick="chatSend()">↑</button></div>
+  </div>
+</div>
+
+<!-- ======= Find in document ======= -->
+<div class="findbar" id="findbar">
+  <div class="findtabs">
+    <button id="scopeDoc" class="on" onclick="setScope('doc')">This document</button>
+    <button id="scopeFolder" onclick="setScope('folder')">Whole folder ⭐</button>
+  </div>
+  <input id="findInput" placeholder="Find in document… (results show their section)" oninput="doFind(this.value)">
+  <div class="rrow"><input id="replInput" placeholder="Replace with…"><button onclick="replaceAll()">Replace all</button></div>
+  <ul id="findList"></ul>
+</div>
+
+<!-- ======= Shortcut cheat-sheet ======= -->
+<div class="overlay" id="cheatsOverlay" onclick="if(event.target===this)closeAll()">
+  <div class="panelbox cheats" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <header>Keyboard shortcuts — press <kbd>?</kbd> anytime</header>
+    <ul>
+      <li>Command palette <span><kbd>⌘K</kbd></span></li>
+      <li>Presentation <span><kbd>⌘P</kbd></span></li>
+      <li>Diff view <span><kbd>⌘⇧D</kbd></span></li>
+      <li>Theme <span><kbd>⌘D</kbd></span></li>
+      <li>Table of contents <span><kbd>⌘B</kbd></span></li>
+      <li>File tree <span><kbd>⌘\</kbd></span></li>
+      <li>Find in document <span><kbd>⌘F</kbd></span></li>
+      <li>Read / Edit / Raw <span><kbd>⌘1·2·3</kbd></span></li>
+      <li>This sheet <span><kbd>?</kbd></span></li>
+      <li>Close anything <span><kbd>esc</kbd></span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======= Setup guide (onboarding) ======= -->
+<div class="overlay" id="setupOverlay" onclick="if(event.target===this)closeAll()">
+  <div class="panelbox setup" role="dialog" aria-modal="true" aria-label="Setup guide">
+    <header style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px;font-family:var(--sans)">One switch and you’re in</header>
+    <div class="body">
+      Peekover already works on web URLs. To read <b>local files</b>, Chrome needs one permission — the category’s #1 friction, solved with a guided flip:
+      <div class="step"><span class="n">1</span><span>Open <b>chrome://extensions</b> → Peekover → Details</span></div>
+      <div class="step"><span class="n">2</span><span>Flip <b>Allow access to file URLs</b> — try it here:</span></div>
+      <div class="switch">
+        <span class="knob" id="permKnob" onclick="flipPerm(this)" role="switch" aria-checked="false" tabindex="0"></span>
+        <span style="font-size:12.5px" id="permLabel">Allow access to file URLs — <b>off</b></span>
+      </div>
+      <div class="step" style="margin-top:16px"><span class="n">3</span><span>Done. Peekover detects the change and opens your file instantly.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= Export & publish ======= -->
+<div class="overlay" id="exportsOverlay" onclick="if(event.target===this)closeAll()">
+  <div class="panelbox exports" role="dialog" aria-modal="true" aria-label="Export and publish">
+    <header>⇩ Export &amp; publish — all client-side</header>
+    <ul>
+      <li onclick="exp('welcome.html — CSS inlined, images embedded')">◧&nbsp; HTML <em>single file</em></li>
+      <li onclick="exp('welcome.docx — native equations, diagrams as images')">▤&nbsp; Word / DOCX <em>editable math</em></li>
+      <li onclick="exp('welcome.pdf — typeset print pipeline')">⎙&nbsp; PDF <em>page numbers</em></li>
+      <li onclick="exp('welcome.zip — markdown + local copies of remote images')">▣&nbsp; ZIP bundle <em>portable</em></li>
+      <li onclick="exp('Copied as rich text — paste straight into Google Docs or Word')">✂&nbsp; Copy as rich text</li>
+      <li onclick="exp('Published to Gist — with <b>your</b> token, direct API call','net')">↗&nbsp; Publish to GitHub Gist <em>your token</em></li>
+      <li onclick="exp('Published to Medium / Dev.to — your token, direct call','net')">↗&nbsp; Publish to Medium · Dev.to <em>your token</em></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ======= AI consent (one-time) ======= -->
+<div class="overlay" id="consentOverlay" onclick="if(event.target===this)cancelConsent()">
+  <div class="panelbox consent" role="dialog" aria-modal="true" aria-label="Before AI runs">
+    <header style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px;font-family:var(--sans)">✦ Before any AI runs — here’s exactly what happens</header>
+    <div class="body">
+      <div class="row"><span class="ic">🖥</span><span><b>On-device first.</b> Summaries, translation and proofreading run locally (Gemini Nano). Nothing leaves this machine.</span></div>
+      <div class="row"><span class="ic">🔑</span><span><b>Your key, direct.</b> Bigger tasks use <b>your</b> API key, browser → provider. Peekover never proxies, stores, or sees it.</span></div>
+      <div class="row"><span class="ic">●</span><span><b>Always visible.</b> The status-bar dot turns amber during any network call — you can watch it happen.</span></div>
+    </div>
+    <div class="btns">
+      <button class="no" onclick="cancelConsent()">Not now</button>
+      <button class="go" onclick="grantConsent()">Got it — continue ✓</button>
+    </div>
+  </div>
+</div>
+
+<button class="cornerpill" id="filesPill" onclick="toggleSide()" title="Show file tree (⌘\\)">☰ Files</button>
+<div class="dropzone" id="dropzone"><div class="in">Drop to read<small>any .md, .mermaid — rendered before your finger leaves the trackpad</small></div></div>
+
+<!-- ======= Reading settings ======= -->
+<div class="settings" id="settings" role="dialog" aria-label="Reading settings">
+  <header>⚙ Reading settings <button class="x" onclick="toggleSettings()" aria-label="Close">✕</button></header>
+  <div class="rows">
+    <div class="srow"><label>Font</label>
+      <div class="fdrop" id="fdrop">
+        <button class="fbtn" onclick="fdToggle(event)" aria-haspopup="listbox" aria-expanded="false">
+          <span id="fdLabel" style="font-family:'Literata',Georgia,serif">Literata</span><span class="chev">▾</span>
+        </button>
+        <ul class="flist" role="listbox" aria-label="Reading font">
+          <li class="sel" onclick="pickFont('literata','Literata',this)" style="font-family:'Literata',Georgia,serif">Literata <em>reading default</em></li>
+          <li onclick="pickFont('newsreader','Newsreader',this)" style="font-family:'Newsreader',Georgia,serif">Newsreader <em>editorial</em></li>
+          <li onclick="pickFont('georgia','Georgia',this)" style="font-family:Georgia,serif">Georgia <em>classic</em></li>
+          <li onclick="pickFont('atkinson','Atkinson Hyperlegible',this)" style="font-family:'Atkinson Hyperlegible',Verdana,sans-serif">Atkinson <em>low vision</em></li>
+          <li onclick="pickFont('sourceserif','Source Serif 4',this)" style="font-family:'Source Serif 4',Georgia,serif">Source Serif 4 <em>workhorse</em></li>
+          <li onclick="pickFont('spectral','Spectral',this)" style="font-family:'Spectral',Georgia,serif">Spectral <em>elegant</em></li>
+          <li onclick="pickFont('bitter','Bitter',this)" style="font-family:'Bitter',Georgia,serif">Bitter <em>slab · screens</em></li>
+          <li onclick="pickFont('lexend','Lexend',this)" style="font-family:'Lexend',sans-serif">Lexend <em>dyslexia-friendly</em></li>
+          <li onclick="pickFont('system','System sans',this)" style="font-family:system-ui,sans-serif">System sans <em>native</em></li>
+        </ul>
+      </div>
+    </div>
+    <div class="srow"><label>Type size</label>
+      <div class="stepper"><button onclick="fontSize(-1)">−</button><span class="val" id="fsVal">17px</span><button onclick="fontSize(1)">+</button></div>
+    </div>
+    <div class="srow"><label>Line height</label>
+      <div class="stepper"><button onclick="lineH(-1)">−</button><span class="val" id="lhVal">1.7</span><button onclick="lineH(1)">+</button></div>
+    </div>
+    <div class="srow"><label>Paragraph gap</label>
+      <div class="stepper"><button onclick="paraS(-1)">−</button><span class="val" id="psVal">16px</span><button onclick="paraS(1)">+</button></div>
+    </div>
+    <div class="srow"><label>Width</label>
+      <div class="wseg" id="wseg">
+        <button onclick="widthMode('narrow',this)">Narrow</button>
+        <button class="on" onclick="widthMode('normal',this)">Normal</button>
+        <button onclick="widthMode('wide',this)">Wide</button>
+      </div>
+    </div>
+    <div class="srow"><label>Theme</label>
+      <div class="wseg">
+        <button onclick="setTheme('light')">Light</button>
+        <button onclick="setTheme('sepia')">Sepia</button>
+        <button onclick="setTheme('dark')">Dark</button>
+      </div>
+    </div>
+    <div class="srow"><label>Reader mode</label>
+      <div class="wseg"><button id="readerBtn" onclick="focusMode()">◎ Off</button></div>
+    </div>
+  </div>
+  <div class="note">Nine faces, chosen from readability research: Literata was designed for continuous screen reading; Atkinson Hyperlegible &amp; Lexend are the accessibility picks. Every setting can also be set per-file via frontmatter.</div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tour-ring" id="tourRing"></div>
+<div class="tour-card" id="tourCard">
+  <div class="step" id="tcStep"></div>
+  <h5 id="tcTitle"></h5>
+  <p id="tcBody"></p>
+  <div class="btns">
+    <button class="ghost" onclick="endTour()">Skip tour</button>
+    <button class="ghost" onclick="tourStep(-1)" id="tcPrev">← Back</button>
+    <button class="next" onclick="tourStep(1)" id="tcNext">Next →</button>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+let toastTimer;
+function toast(html){const t=$('toast');t.innerHTML=html;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600)}
+
+/* ---------- theme / mode / panels ---------- */
+function flipTheme(){const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark'}
+function setMode(m){
+  if((m==='raw'||m==='edit')&&currentView!=='welcome'){toast((m==='raw'?'Raw':'Edit')+' view is wired to <b>welcome.md</b> in this mockup');return}
+  const doc=$('doc');
+  doc.classList.toggle('rawmode',m==='raw');
+  doc.classList.toggle('editmode',m==='edit');
+  $('btnRead').classList.toggle('on',m==='read');
+  $('btnEdit').classList.toggle('on',m==='edit');
+  $('btnRaw').classList.toggle('on',m==='raw');
+  if(m==='raw')toast('This is the exact source — <b>Read</b> flips it back');
+  if(m==='edit'){initEditor();toast('Split-pane editor — <b>type on the left</b>, preview renders live')}
+}
+/* ---------- editor: naive live markdown preview ---------- */
+const seedMd=`# Welcome to Peekover
+
+Raw text goes in. **Reading** comes out.
+
+## Try editing me
+- Type on the left, the preview follows *instantly*
+- [x] Scroll sync and \`inline code\`
+- [ ] Toolbar below: bold, table, snapshots, lint
+
+> Every save is versioned locally — restore any snapshot.`;
+let edInit=false;
+function initEditor(){
+  if(!edInit){$('edSrc').value=seedMd;edInit=true;$('edSrc').addEventListener('input',()=>renderMd())}
+  renderMd();
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function renderMd(){
+  const lines=esc($('edSrc').value).split('\n');let out='',inList=false;
+  const inline=t=>t
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code>$1</code>');
+  for(const l of lines){
+    let m;
+    if(m=l.match(/^###?\s+(.*)/)){if(inList){out+='</ul>';inList=false}out+= l.startsWith('##')?`<h2>${inline(m[1])}</h2>`:`<h1>${inline(m[1])}</h1>`}
+    else if(m=l.match(/^- \[( |x)\]\s+(.*)/)){if(!inList){out+='<ul class="tasks">';inList=true}out+=`<li><input type="checkbox" ${m[1]==='x'?'checked':''} disabled style="opacity:.9"><span>${inline(m[2])}</span></li>`}
+    else if(m=l.match(/^-\s+(.*)/)){if(!inList){out+='<ul>';inList=true}out+=`<li>${inline(m[1])}</li>`}
+    else if(m=l.match(/^&gt;\s+(.*)/)){if(inList){out+='</ul>';inList=false}out+=`<blockquote>${inline(m[1])}</blockquote>`}
+    else if(l.trim()===''){if(inList){out+='</ul>';inList=false}}
+    else{if(inList){out+='</ul>';inList=false}out+=`<p>${inline(l)}</p>`}
+  }
+  if(inList)out+='</ul>';
+  $('edPrev').innerHTML=out;
+}
+function edWrap(w){
+  const ta=$('edSrc'),s=ta.selectionStart,e=ta.selectionEnd;
+  const sel=ta.value.slice(s,e)||'text';
+  ta.setRangeText(w+sel+w,s,e,'end');renderMd();ta.focus();
+}
+function edInsert(txt){const ta=$('edSrc');ta.setRangeText(txt,ta.selectionEnd,ta.selectionEnd,'end');renderMd();ta.focus();if(txt.includes('|'))toast('Table inserted — the full product opens a <b>visual table editor</b> here')}
+/* ---------- AI ---------- */
+function toggleAI(){$('settings').classList.remove('open');$('aipanel').classList.toggle('open')}
+function netBusy(label,ms){
+  $('netDot').classList.add('busy');$('netText').textContent=label;
+  setTimeout(()=>{$('netDot').classList.remove('busy');$('netText').textContent='no network calls'},ms);
+}
+function aiCall(msg,src){
+  toggleAI();
+  if(src&&src.startsWith('on-device')){toast('✦ '+msg+' <span style="opacity:.7">('+src+')</span>')}
+  else{netBusy('1 call → your API key (direct)',1600);setTimeout(()=>toast('✦ '+msg),700)}
+}
+function aiSummarize(){
+  toggleAI();
+  if(currentView!=='welcome')openFileByKey('welcome');
+  scrollTo({top:0,behavior:'smooth'});
+  const body=$('tldrBody');body.textContent='';$('tldr').classList.add('on');
+  const txt='Peekover renders raw markdown into typeset reading — locally, instantly, with watch mode and diffs for files your AI agents write. Free, open source, zero network calls.';
+  let i=0;const t=setInterval(()=>{body.textContent=txt.slice(0,i+=4);if(i>=txt.length)clearInterval(t)},18);
+}
+function aiRewrite(){
+  toggleAI();
+  if(currentView!=='welcome')openFileByKey('welcome');
+  $('rwBox').classList.add('on');
+  $('rwBox').scrollIntoView({block:'center',behavior:'smooth'});
+  netBusy('1 call → api (your key, direct)',1600);
+}
+function acceptRw(){
+  $('rwTarget').innerHTML='Nothing phones home. The only network calls are the ones <em>you</em> trigger — and a visible indicator fires every time. The manifest is annotated line-by-line, builds are reproducible, and the whole project is MIT-licensed. That’s the deal: <mark>free, for everyone, in plain sight.</mark>';
+  $('rwTarget').classList.add('flash');$('rwBox').classList.remove('on');toast('Rewrite accepted — <b>written back to the file</b>');
+}
+function rejectRw(){$('rwBox').classList.remove('on');toast('Rewrite discarded — your original stands')}
+
+/* ---------- 1. AI consent gate ---------- */
+let aiOK=false,pendingAI=null;
+function gate(f){return function(...a){if(!aiOK){pendingAI=()=>f.apply(null,a);closeAll();$('consentOverlay').classList.add('open');return}f.apply(null,a)}}
+function grantConsent(){aiOK=true;$('consentOverlay').classList.remove('open');toast('AI enabled for this session — <b>opt-in, never automatic</b>');if(pendingAI){const f=pendingAI;pendingAI=null;setTimeout(f,300)}}
+function cancelConsent(){pendingAI=null;$('consentOverlay').classList.remove('open')}
+/* ---------- chat with document ---------- */
+function chatMode(on){$('aipanel').classList.toggle('chatmode',on);if(on){$('aipanel').classList.add('open');$('chatIn').focus()}}
+const chatGate=gate(()=>{chatMode(true)});
+function chatSend(){
+  const inp=$('chatIn');const q=inp.value.trim();if(!q)return;
+  const log=$('chatLog');
+  log.insertAdjacentHTML('beforeend','<div class="m u">'+esc(q)+'</div>');
+  inp.value='';
+  netBusy('1 call → your API key (direct)',1500);
+  setTimeout(()=>{
+    log.insertAdjacentHTML('beforeend','<div class="m b">Watch mode keeps this page live while a file changes on disk — it re-renders instantly, flashes what’s new, and pairs with the diff view (⌘⇧D) so you can audit every change. <span style="color:var(--faint)">· sourced from “Live while they write”</span></div>');
+    log.scrollTop=log.scrollHeight;
+  },900);
+  log.scrollTop=log.scrollHeight;
+}
+/* ---------- 2. find scope + 7. replace ---------- */
+let scope='doc';
+function setScope(sc){scope=sc;$('scopeDoc').classList.toggle('on',sc==='doc');$('scopeFolder').classList.toggle('on',sc==='folder');$('findInput').placeholder=sc==='doc'?'Find in document… (results show their section)':'Search every markdown file in this folder…';doFind($('findInput').value)}
+const folderHits=[
+  ['architecture.md','“the rendering pipeline batches diagram work…”','Rendering'],
+  ['CLAUDE.md','“read the welcome doc before any task…”','Workflow'],
+  ['001-onboarding.md','“see [[welcome]] for the tour of features…”','Spec'],
+];
+function doFolderFind(q){
+  const list=$('findList');list.innerHTML='';
+  folderHits.forEach(h=>{
+    if((h[0]+h[1]).toLowerCase().includes(q.toLowerCase())||q.length<4){
+      const li=document.createElement('li');
+      li.innerHTML='<b style="color:var(--accent);font-weight:600">'+h[0]+'</b> '+esc(h[1])+'<span class="sec">'+h[2]+'</span>';
+      li.onclick=()=>{$('findbar').classList.remove('open');toast('Opening <b>'+h[0]+'</b> at the match — cross-file search, no index server')};
+      list.appendChild(li);
+    }
+  });
+  if(!list.children.length)list.innerHTML='<li style="cursor:default;color:var(--faint)">No matches in the folder</li>';
+}
+function openFindReplace(){openFind();$('findbar').classList.add('replace');$('findInput').placeholder='Find in editor… (regex supported)'}
+function replaceAll(){
+  const f=$('findInput').value,r=$('replInput').value;
+  if(!f){toast('Type something to find first');return}
+  const ta=$('edSrc');const n=(ta.value.split(f).length-1);
+  if(!n){toast('No matches for “'+esc(f)+'” in the editor');return}
+  ta.value=ta.value.split(f).join(r);renderMd();
+  $('findbar').classList.remove('open','replace');
+  toast('<b>'+n+'</b> replacement'+(n>1?'s':'')+' — regex &amp; case options in the product');
+}
+/* ---------- 3. compare two files ---------- */
+function openCompare(){
+  closeAll();
+  const box=$('diffOverlay').querySelector('.diffbox');
+  box.querySelector('header').innerHTML='⇆&nbsp; welcome.md ⟷ architecture.md <button class="x" onclick="closeAll()" aria-label="Close">✕</button>';
+  box.querySelector('.diff').innerHTML=
+    '<div class="ctx">  ## Rendering</div>'+
+    '<div class="del">- welcome.md: “diagrams render inline”</div>'+
+    '<div class="add">+ architecture.md: “diagrams render inline via a hash-keyed cache;</div>'+
+    '<div class="add">+ only changed diagrams re-render (first ~5s, cached &lt;1s)”</div>'+
+    '<div class="ctx">  </div>'+
+    '<div class="add">+ Only in architecture.md: ## Pipeline · ## Dependencies (and why)</div>';
+  box.querySelector('footer').textContent='Compare any two files in the folder — spec v1 vs v2, plan vs reality.';
+  $('diffOverlay').classList.add('open');
+}
+/* ---------- 4. standalone diagram file ---------- */
+function openDiagramFile(){
+  openFileByKey('welcome');
+  setTimeout(()=>{const f=document.querySelector('#view-welcome figure.diagram');f.scrollIntoView({block:'center',behavior:'smooth'});f.classList.remove('flash');void f.offsetWidth;f.classList.add('flash')},300);
+  toast('<b>.mermaid</b> · standalone diagram files render directly — .dot, .vega too');
+}
+/* ---------- 6. drag & drop ---------- */
+let dragTimer;
+addEventListener('dragover',e=>{e.preventDefault();$('dropzone').classList.add('on');clearTimeout(dragTimer);dragTimer=setTimeout(()=>$('dropzone').classList.remove('on'),900)});
+addEventListener('drop',e=>{e.preventDefault();$('dropzone').classList.remove('on');toast('<b>architecture.md</b> dropped — rendered instantly, zero setup')});
+/* ---------- 8. exports ---------- */
+function openExports(){closeAll();$('exportsOverlay').classList.add('open')}
+function exp(msg,net){closeAll();if(net)netBusy('1 call → api.github.com (your token)',1500);setTimeout(()=>toast('⇩ '+msg),net?600:0)}
+/* ---------- 10. scroll-position memory ---------- */
+const scrollMem={};
+aiSummarize=gate(aiSummarize);aiRewrite=gate(aiRewrite);aiCall=gate(aiCall);
+/* ---------- reading settings ---------- */
+const fontStacks={
+  literata:'"Literata", Georgia, serif',
+  newsreader:'"Newsreader", Georgia, serif',
+  georgia:'Georgia, "Times New Roman", serif',
+  atkinson:'"Atkinson Hyperlegible", Verdana, sans-serif',
+  sourceserif:'"Source Serif 4", Georgia, serif',
+  spectral:'"Spectral", Georgia, serif',
+  bitter:'"Bitter", Georgia, serif',
+  lexend:'"Lexend", "Segoe UI", sans-serif',
+  system:'system-ui, "Segoe UI", sans-serif'
+};
+function toggleSettings(){$('aipanel').classList.remove('open');$('settings').classList.toggle('open')}
+function setFont(k,label){document.documentElement.style.setProperty('--serif',fontStacks[k]);if(label)toast('Font: <b>'+label+'</b>')}
+function fdToggle(e){e.stopPropagation();const d=$('fdrop');const open=d.classList.toggle('open');d.querySelector('.fbtn').setAttribute('aria-expanded',open)}
+function pickFont(k,label,li){
+  setFont(k,label);
+  $('fdLabel').textContent=label;
+  $('fdLabel').style.fontFamily=fontStacks[k];
+  li.parentElement.querySelectorAll('li').forEach(x=>x.classList.remove('sel'));li.classList.add('sel');
+  $('fdrop').classList.remove('open');
+}
+document.addEventListener('click',e=>{const d=$('fdrop');if(d&&!d.contains(e.target))d.classList.remove('open')});
+let lh=1.7,ps=16;
+function lineH(d){lh=Math.min(2.2,Math.max(1.3,+(lh+d*0.1).toFixed(1)));document.body.style.setProperty('--lh',lh);$('lhVal').textContent=lh}
+function paraS(d){ps=Math.min(34,Math.max(6,ps+d*4));document.body.style.setProperty('--ps',ps+'px');$('psVal').textContent=ps+'px'}
+function widthMode(m,btn){document.body.classList.remove('narrow','wide');if(m!=='normal')document.body.classList.add(m);document.querySelectorAll('#wseg button').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');toast('Reading width: <b>'+m+'</b>')}
+/* ---------- reading options ---------- */
+function setTheme(t){document.documentElement.dataset.theme=t;toast('Theme: <b>'+t+'</b> — 30+ ship in the product, plus custom CSS')}
+let fs=17;
+function fontSize(d){fs=Math.min(23,Math.max(14,fs+d));document.body.style.setProperty('--fs',fs+'px');const v=$('fsVal');if(v)v.textContent=fs+'px';toast('Type size: <b>'+fs+'px</b>')}
+function toggleWidth(){widthMode(document.body.classList.contains('wide')?'normal':'wide')}
+function focusMode(){const on=document.body.classList.toggle('focus');document.body.classList.toggle('no-side',on);if(on)document.body.classList.remove('toc-pinned');
+  const b=$('readerBtn');if(b){b.classList.toggle('on',on);b.textContent=on?'◎ On':'◎ Off'}toast(on?'◎ Focus mode — just you and the words':'Focus mode off')}
+/* ---------- find in document ---------- */
+function openFind(){closeAll();$('findbar').classList.add('open');$('findInput').value='';$('findList').innerHTML='';$('findInput').focus()}
+function doFind(q){
+  if(scope==='folder'){doFolderFind(q||'');return}
+  const list=$('findList');list.innerHTML='';
+  if(!q||q.length<2)return;
+  const secs=[...document.querySelectorAll('#view-welcome h2')];
+  document.querySelectorAll('#view-welcome p').forEach(p=>{
+    const t=p.textContent;
+    const idx=t.toLowerCase().indexOf(q.toLowerCase());
+    if(idx>-1&&list.children.length<6){
+      let sec='—';for(const h of secs){if(h.compareDocumentPosition(p)&Node.DOCUMENT_POSITION_FOLLOWING)sec=h.textContent.replace('#','')}
+      const li=document.createElement('li');
+      li.innerHTML='“…'+esc(t.slice(Math.max(0,idx-18),idx+q.length+24))+'…”<span class="sec">'+esc(sec.trim())+'</span>';
+      li.onclick=()=>{$('findbar').classList.remove('open');p.scrollIntoView({block:'center',behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash')};
+      list.appendChild(li);
+    }
+  });
+  if(!list.children.length)list.innerHTML='<li style="cursor:default;color:var(--faint)">No matches in this document</li>';
+}
+/* ---------- read aloud ---------- */
+let speaking=false;
+function readAloud(){
+  if(!('speechSynthesis'in window)){toast('Read-aloud uses the browser voice — unavailable here');return}
+  if(speaking){speechSynthesis.cancel();speaking=false;toast('Read-aloud stopped');return}
+  const u=new SpeechSynthesisUtterance('Welcome to Peekover. Raw text goes in. Reading comes out.');
+  u.onend=()=>speaking=false;speechSynthesis.speak(u);speaking=true;
+  toast('🔊 Reading aloud — free browser voice, zero network. Run again to stop.');
+}
+/* ---------- setup guide ---------- */
+function openSetup(){closeAll();$('setupOverlay').classList.add('open')}
+function flipPerm(k){
+  const on=k.classList.toggle('on');k.setAttribute('aria-checked',on);
+  $('permLabel').innerHTML='Allow access to file URLs — <b>'+(on?'on ✓':'off')+'</b>';
+  if(on)setTimeout(()=>{closeAll();toast('Permission detected — <b>welcome.md opened</b>. That’s the whole setup.')},600);
+}
+function toggleSide(){document.body.classList.toggle('no-side')}
+function toggleToc(){const on=document.body.classList.toggle('toc-pinned');toast(on?'Contents <b>pinned</b> — always visible':'Contents unpinned — hover the right edge to peek')}
+
+/* ---------- file switching ---------- */
+let currentView='welcome';
+function openFile(btn,key,label){
+  document.querySelectorAll('.tree .row').forEach(r=>r.classList.remove('active'));
+  btn.classList.add('active');
+  showView(key,label);
+}
+function openFileByKey(key){
+  const btn=document.querySelector(`.tree .row[data-file="${key}"]`);
+  if(btn){document.querySelectorAll('.tree .row').forEach(r=>r.classList.remove('active'));btn.classList.add('active')}
+  showView(key,key==='welcome'?'welcome.md':key==='agent'?'CLAUDE.md':'config.json');
+}
+function showView(key,label){
+  if(currentView)scrollMem[currentView]=scrollY;
+  currentView=key;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  $('view-'+key).classList.add('on');
+  $('crumbFile').textContent=label;$('statusFile').textContent=label;
+  setMode('read');
+  const back=scrollMem[key]||0;
+  scrollTo({top:back});
+  if(back>300)toast('Picked up where you left off — <b>scroll position remembered</b>');
+  $('tocList').style.opacity=key==='welcome'?1:.35;
+  if(key==='agent')toast('◈ <b>Agent file</b> detected — tuned rendering, watch + diff enabled');
+  if(key==='json')toast('Phase 2 preview — JSON, YAML &amp; CSV join the same viewer');
+}
+function toggleFolder(id){$(id).classList.toggle('open')}
+
+/* ---------- scroll: progress + spy ---------- */
+const ids=['s1','s2','s3','s4','privacy'];
+function onScroll(){
+  const h=document.documentElement;
+  const max=h.scrollHeight-h.clientHeight;
+  $('prog').style.width=(max>0?(h.scrollTop/max*100):0)+'%';
+  if(currentView!=='welcome')return;
+  let cur=ids[0];
+  for(const id of ids){const el=$(id);if(el&&el.getBoundingClientRect().top<140)cur=id}
+  document.querySelectorAll('#tocList a').forEach(a=>a.classList.toggle('here',a.getAttribute('href')==='#'+cur));
+  document.querySelectorAll('#tocRail span').forEach((sp,i)=>sp.classList.toggle('here',ids[i]===cur));
+}
+const rail=$('tocRail');ids.forEach(()=>rail.insertAdjacentHTML('beforeend','<span></span>'));
+addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',onScroll);onScroll();
+
+/* ---------- doc interactions ---------- */
+function copied(btn){btn.textContent='Copied ✓';btn.classList.add('ok');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('ok')},1600)}
+function wb(input){const tag=input.parentElement.querySelector('.writeback');tag.classList.add('show');setTimeout(()=>tag.classList.remove('show'),1800)}
+function copyAnchor(id){toast('Deep link copied — <b>#'+id+'</b> highlights this section for anyone you send it to')}
+let dir=1;
+function sortTbl(col,th){
+  const tb=document.querySelector('#tbl tbody');
+  [...tb.rows].sort((a,b)=>dir*a.cells[col].textContent.localeCompare(b.cells[col].textContent,undefined,{numeric:true})).forEach(r=>tb.appendChild(r));
+  dir*=-1;
+  document.querySelectorAll('#tbl .arr').forEach(s=>s.remove());
+  th.insertAdjacentHTML('beforeend',` <span class="arr">${dir<0?'▼':'▲'}</span>`);
+}
+function openLightbox(){$('lightbox').classList.add('open')}
+
+/* ---------- live agent simulation ---------- */
+let simCount=0;
+function simulateAgent(){
+  if(currentView!=='welcome')openFileByKey('welcome');
+  simCount++;
+  const p=document.createElement('p');
+  p.className='flash';
+  p.innerHTML=simCount===1
+    ?'<mark>Just written by your agent:</mark> watch mode picked this paragraph up the instant it hit the disk — no refresh, no lost scroll position. Open the <a class="link" href="#" onclick="openDiff();return false">diff</a> to see exactly what changed.'
+    :'<mark>Another live update (#'+simCount+')</mark> — every change lands with a gentle flash so you never miss what the agent did.';
+  $('agentTarget').appendChild(p);
+  $('liveline').textContent='# welcome.md last updated 0 s ago ↻';
+  $('lastChange').textContent='last change 0 s ago';
+  p.scrollIntoView({block:'center',behavior:'smooth'});
+  toast('◈ File changed on disk — <b>rendered live</b>');
+}
+
+/* ---------- overlays ---------- */
+function openPalette(){closeAll();$('overlay').classList.add('open');$('palInput').value='';$('palInput').focus()}
+function openDiff(){closeAll();$('diffOverlay').classList.add('open')}
+function closeAll(){['overlay','diffOverlay','cheatsOverlay','setupOverlay'].forEach(i=>$(i).classList.remove('open'));$('present').classList.remove('open');$('lightbox').classList.remove('open');$('findbar').classList.remove('open','replace');$('aipanel').classList.remove('open','chatmode');$('settings').classList.remove('open');$('exportsOverlay').classList.remove('open');$('consentOverlay').classList.remove('open')}
+
+/* ---------- presentation mode ---------- */
+const slides=[
+  ['PEEKOVER','Raw in. Reading out.','Any markdown becomes a presentation — three dashes make a slide.'],
+  ['RENDERING','Everything just renders','Tables · Mermaid · math · 190+ languages · footnotes · task lists'],
+  ['AI-NATIVE','Live while agents write','Watch mode, diff view, and agent-file awareness built in.'],
+  ['THE DEAL','Free. For everyone.','Open source · no servers · no telemetry · in plain sight.'],
+];
+let sIdx=0;
+function startPresent(){sIdx=0;renderSlide();$('present').classList.add('open')}
+function slide(d){sIdx=Math.min(slides.length-1,Math.max(0,sIdx+d));renderSlide()}
+function renderSlide(){const s=slides[sIdx];$('pEyebrow').textContent=s[0];$('pTitle').textContent=s[1];$('pBody').textContent=s[2];$('pCount').textContent=(sIdx+1)+' / '+slides.length}
+
+/* ---------- keyboard ---------- */
+addEventListener('keydown',e=>{
+  const mod=e.metaKey||e.ctrlKey;
+  const typing=/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if(mod&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette()}
+  else if(mod&&e.key.toLowerCase()==='p'){e.preventDefault();startPresent()}
+  else if(mod&&e.key.toLowerCase()==='f'){e.preventDefault();openFind()}
+  else if(mod&&e.key.toLowerCase()==='b'){e.preventDefault();toggleToc()}
+  else if(mod&&e.key==='\\'){e.preventDefault();toggleSide()}
+  else if(mod&&e.key==='1'){e.preventDefault();setMode('read')}
+  else if(mod&&e.key==='2'){e.preventDefault();setMode('edit')}
+  else if(mod&&e.key==='3'){e.preventDefault();setMode('raw')}
+  else if(mod&&e.shiftKey&&e.key.toLowerCase()==='d'){e.preventDefault();openDiff()}
+  else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();flipTheme()}
+  else if(!typing&&e.key==='?'){e.preventDefault();closeAll();$('cheatsOverlay').classList.add('open')}
+  else if($('present').classList.contains('open')&&(e.key==='ArrowRight'||e.key===' ')){slide(1)}
+  else if($('present').classList.contains('open')&&e.key==='ArrowLeft'){slide(-1)}
+  else if(e.key==='Escape'){if(tourOn)endTour();else closeAll()}
+});
+
+/* ---------- first-run pill ---------- */
+function dismissPill(){$('hintPill').style.display='none'}
+setTimeout(()=>{const p=$('hintPill');if(p.style.display!=='none'&&!tourOn){p.style.transition='opacity .6s';/* keep visible; auto-hide after 20s */setTimeout(()=>{if(!tourOn)p.style.opacity=.55},20000)}},20000);
+
+/* ---------- guided tour ---------- */
+const steps=[
+  ['tBrand','Meet Peekover','The eyes peek over the doc — and yes, they blink. Everything in this mockup is the real design language: paper, ink, and one highlighter.'],
+  ['tMode','Read · Edit · Raw','The whole product in one control. <b>Edit</b> opens a split-pane editor with live preview; <b>Raw</b> shows the exact source. Try both after the tour (⌘1·2·3).'],
+  ['tAI','AI — opt-in, never automatic','Summarize, rewrite-with-diff, translate, proofread. On-device first; your own key for the rest, called directly. Watch the status-bar dot when a call runs.'],
+  ['tWatch','Watch mode','This file is being watched. Click the badge (after the tour) and a “freshly written by your agent” paragraph appears live, with a flash.'],
+  ['tSettings','Make reading yours','Font (research-picked defaults incl. Atkinson Hyperlegible &amp; Lexend), type size, line height, paragraph gap, width, themes — readability is personal, so everything adjusts.'],
+  ['tTree','A home for every file','Folders expand, files open in place. Note the <b>agent</b> badge on CLAUDE.md — Peekover recognizes agent files — and config.json teasing Phase 2.'],
+  ['tToc','A TOC that stays out of the way','By default it’s just a whisper — a rail of marks tracking your section. Hover to expand, 📌 (or ⌘B) to pin it open.'],
+  ['tCheck','Checkboxes that write back','Tick a task and Peekover saves the change to the file itself — no editor round-trip. Nobody else ships this.'],
+  ['tTable','Tables that behave','Click any header to sort. Copy as CSV, JSON or Markdown in the full product.'],
+  ['tPal','One palette, every command','⌘K opens it. Presentation mode, diff view, export, Copy-for-AI — every entry in it actually runs in this mockup.'],
+  ['tStatus','The trust story, always visible','“No network calls” isn’t a setting — it’s the status bar. Open source, no servers, no telemetry.'],
+];
+let tourOn=false,tIdx=0;
+function startTour(){dismissPill();tourOn=true;tIdx=0;showStep()}
+function tourStep(d){tIdx+=d;if(tIdx>=steps.length){endTour();toast('That’s the tour — <b>everything is clickable</b>. Try ⌘K or the watching badge.');return}if(tIdx<0)tIdx=0;showStep()}
+function showStep(){
+  const [id,title,body]=steps[tIdx];
+  const el=$(id);if(!el){tourStep(1);return}
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  setTimeout(()=>{
+    const r=el.getBoundingClientRect();
+    const ring=$('tourRing');
+    ring.style.left=(r.left-8)+'px';ring.style.top=(r.top-8)+'px';
+    ring.style.width=(r.width+16)+'px';ring.style.height=(r.height+16)+'px';
+    ring.classList.add('on');
+    $('tcStep').textContent='Feature '+(tIdx+1)+' of '+steps.length;
+    $('tcTitle').textContent=title;$('tcBody').innerHTML=body;
+    $('tcPrev').style.visibility=tIdx===0?'hidden':'visible';
+    $('tcNext').textContent=tIdx===steps.length-1?'Finish ✓':'Next →';
+    $('tourCard').classList.add('on');
+  },250);
+}
+function endTour(){tourOn=false;$('tourRing').classList.remove('on');$('tourCard').classList.remove('on')}
+addEventListener('resize',()=>{if(tourOn)showStep()});
+</script>
+</body>
+</html>
