@@ -7,7 +7,7 @@ A .md file opened via file:// or a raw URL renders as beautiful, themed, sanitiz
 
 ## In scope
 - WXT project init (TS, MV3), pnpm scripts matching AGENTS.md, CI green on lint+test+build
-- Content-script detection: file:// and GitHub/GitLab raw-host URLs, each requiring a markdown extension (.md|.markdown|…) to render — a raw-host URL without a markdown extension does not render; text/markdown responses
+- Content-script detection: file:// and GitHub/GitLab raw-host URLs, each requiring a markdown extension (.md|.markdown|…) to render — a raw-host URL without a markdown extension does not render
 - Pipeline v1: decode → markdown-it (CommonMark+GFM tables/tasklists/strikethrough/autolink)
   → DOMPurify (strict allowlist) → mount in shadow DOM
 - Reader shell v1: paper/ink theme from design/tokens.css, Literata via bundled font, 76ch column,
