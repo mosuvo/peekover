@@ -57,7 +57,9 @@ describe('mountReader — never leaves the page hidden with nothing shown', () =
       throw new Error('forced render failure');
     };
 
-    mountReader();
+    // NOT committed — a real render failure returns false, so runReader's floor
+    // (timer / final attempt) reveals the raw text rather than handing off to us.
+    expect(mountReader()).toBe(false);
 
     // The invariant: never both hidden AND nothing shown. Original text is still
     // visible (not display:none)...
@@ -76,7 +78,8 @@ describe('mountReader — never leaves the page hidden with nothing shown', () =
       host.attachShadow({ mode: 'open' });
     };
 
-    mountReader();
+    // Empty render is treated as failure -> not committed.
+    expect(mountReader()).toBe(false);
 
     expect(pre.style.display).not.toBe('none');
     expect(document.querySelector(HOST_TAG)).toBeNull();
@@ -86,7 +89,8 @@ describe('mountReader — never leaves the page hidden with nothing shown', () =
   it('hides the originals ONLY after a successful, non-empty render', () => {
     const pre = seedRawPage('# hello\n\nworld');
 
-    mountReader();
+    // A committed reader host -> true.
+    expect(mountReader()).toBe(true);
 
     // Success path: originals hidden, reader mounted with visible content.
     expect(pre.style.display).toBe('none');
@@ -98,7 +102,9 @@ describe('mountReader — never leaves the page hidden with nothing shown', () =
 
   it('leaves the page untouched when there is no readable source', () => {
     seedRawPage('   \n   ');
-    mountReader();
+    // The no-source no-op returns false — this is what tells runReader "not ready yet,
+    // keep waiting" instead of tearing the mount path down (the Gecko-timing fix).
+    expect(mountReader()).toBe(false);
     // No host injected, nothing hidden — a full no-op (existing guard preserved).
     expect(document.querySelector(HOST_TAG)).toBeNull();
   });
@@ -108,7 +114,8 @@ describe('mountReader — never leaves the page hidden with nothing shown', () =
     mountReader();
     const first = document.querySelector(HOST_TAG);
 
-    mountReader();
+    // Re-entry over a live reader counts as committed (visibility already ours) -> true.
+    expect(mountReader()).toBe(true);
 
     expect(document.querySelectorAll(HOST_TAG).length).toBe(1);
     expect(document.querySelector(HOST_TAG)).toBe(first);

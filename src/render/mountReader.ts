@@ -55,15 +55,30 @@ export function readPageSource(): string {
  * THEN hide the original nodes. A failure — a throw or an empty render — never
  * reaches the hide step, so it cannot leave the page hidden with nothing shown. On
  * failure we remove our host, which fully restores the browser's own rendering.
+ *
+ * Return value — did this call COMMIT a reader host? The document_start orchestrator
+ * (runReader) needs to tell "a source wasn't ready yet, try again later" apart from
+ * "a reader is up, hand off visibility": the former must keep the raw hidden and the
+ * backstops armed; committing reveal-and-teardown on the former is the Gecko timing
+ * bug (see docs/ai/decisions.md). So:
+ *   - `true`  — a reader host is committed: a fresh successful mount, the degraded
+ *               raw-fallback that mount() itself renders (non-empty shadow), OR the
+ *               idempotent already-mounted early return (re-entry over a live reader).
+ *   - `false` — ONLY the no-source no-op: no `<pre>`/text to read yet, page untouched.
+ * mountReader stays silent about `false` — runReader owns any breadcrumb. (A deeper
+ * render failure — mount() throwing past its own fallback, or an empty shadow — also
+ * returns `false` after restoring the page; runReader's floor then reveals the raw.)
  */
-export function mountReader(): void {
-  if (document.querySelector(HOST_TAG)) return;
+export function mountReader(): boolean {
+  // Re-entry over a live reader counts as committed — visibility is already ours.
+  if (document.querySelector(HOST_TAG)) return true;
 
   const source = readPageSource();
   // Guard (AGENTS.md #5 in spirit): if we cannot read a source, leave the page's
   // own rendering untouched rather than blanking it or guessing. Nothing is hidden
-  // yet at this point, so an early return is a full no-op.
-  if (!source.trim()) return;
+  // yet at this point, so an early return is a full no-op — and NOT committed, so
+  // the caller keeps waiting for a source rather than tearing the mount path down.
+  if (!source.trim()) return false;
 
   const host = document.createElement(HOST_TAG);
   // Minimal structural layout only (custom elements default to display:inline) —
@@ -87,11 +102,14 @@ export function mountReader(): void {
       if (child === host) continue;
       (child as HTMLElement).style.display = 'none';
     }
+    return true;
   } catch (err) {
     // Never-blank invariant: our host never got to hide anything, so removing it
     // restores the page to exactly what the browser originally showed. Dev-only
-    // signal; the user-facing error banner arrives with task 4.2.
+    // signal; the user-facing error banner arrives with task 4.2. Not committed —
+    // the caller's never-blank floor (timer / final attempt) reveals the raw text.
     console.warn('[peekover] reader mount failed; leaving original page', err);
     host.remove();
+    return false;
   }
 }

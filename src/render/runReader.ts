@@ -17,13 +17,18 @@
 // hidden and the reader is not up yet — so every path out of that window ends by
 // revealing something:
 //   - detection miss ..... we never hide; the page is completely untouched.
-//   - mount success ...... mountReader has already hidden the originals inline and put
+//   - mount commit ....... mountReader has already hidden the originals inline and put
 //                          the reader on screen; we drop the hide <style> (its job done).
-//   - mount failure ...... mountReader restored the originals (or never hid them); we
-//                          drop the hide <style> so the raw text is visible.
-//   - unforeseen throw ... a finally still drops the hide <style> (raw text visible).
-//   - mount never runs ... a safety timer + the window `load` event drop it anyway.
-// reveal() is idempotent and once-only, so these overlap harmlessly.
+//   - source not ready ... a mount attempt that finds no readable source yet is NOT a
+//                          failure: we keep the hide + backstops and retry at `load`.
+//                          (Committing reveal-and-teardown here was the Gecko bug.)
+//   - final give-up ...... the LAST attempt still finds no source: drop the hide <style>
+//                          (raw visible) + a console breadcrumb.
+//   - unforeseen throw ... the catch drops the hide <style> (raw visible), then rethrows.
+//   - mount never runs ... a safety timer floor drops the hide <style> anyway — WITHOUT
+//                          disarming the attempts, so a late mount can still take over.
+// finish() is idempotent and once-only, so the real-outcome paths overlap harmlessly;
+// the safety timer only ever reveals raw, never commits.
 
 // Relative (not '@/…') import: the vitest runner resolves no '@/' alias, and this
 // module is exercised directly by runReader.test.ts.
@@ -78,8 +83,9 @@ export function removeHideStyle(): void {
 export interface RunReaderOptions {
   /** Context gate (defaults to isRenderableContext against location.href). */
   isRenderable?: (url: string) => boolean;
-  /** The page-mutating mount step (defaults to mountReader). */
-  mount?: () => void;
+  /** The page-mutating mount step (defaults to mountReader). Returns whether it
+   *  COMMITTED a reader host (see mountReader) — `false` means "no source yet". */
+  mount?: () => boolean;
 }
 
 /**
@@ -87,14 +93,22 @@ export interface RunReaderOptions {
  *   1. Detect FIRST. On a miss, return without touching the DOM at all.
  *   2. Hide SECOND — synchronously, in the same task, before yielding, so the browser
  *      cannot paint the raw <pre>.
- *   3. Arm the safety backstops (timer + window `load`) that reveal the raw text if the
- *      mount never happens.
- *   4. Wait for the COMPLETE source (DOMContentLoaded) — reading a partially-streamed
- *      <pre> mid-parse would silently truncate a large document — then mount.
- *   5. However mount resolves, reveal(): drop the hide <style>. On success the originals
- *      are already inline-hidden by mountReader and the reader is up, so this just hands
- *      visibility control back to mount/the toggle; on failure it makes the raw text
- *      visible. A finally guarantees this even on an unforeseen throw.
+ *   3. Arm the safety timer — a never-blank FLOOR that reveals the raw text if nothing
+ *      has mounted, WITHOUT disarming the mount attempts (a later mount still takes
+ *      over; the raw flash in between is an accepted tradeoff, see docs/ai/decisions.md).
+ *   4. Try to mount at DOMContentLoaded, and AGAIN at `load`. The source is not always
+ *      readable at DOMContentLoaded (Gecko can have the raw <pre> empty until `load`),
+ *      so a no-source attempt is NOT a failure — it leaves the hide + backstops in place
+ *      and waits. Only a commit hands off, and only the final attempt gives up.
+ *   5. On a commit, finish(): cancel the backstops and drop the hide <style>. The
+ *      originals are already inline-hidden by mountReader and the reader is up, so this
+ *      just hands visibility control off to mount/the toggle.
+ *
+ * Why commit-aware (the invariant restored here): the OLD code revealed-and-tore-down on
+ * EVERY DOMContentLoaded attempt, including a "source wasn't ready yet" no-op — which on
+ * Firefox permanently killed the mount path and left raw text forever, silently. So:
+ * never commit reveal() on a no-source no-op — only on a real commit, a real throw, or
+ * the final backstop (which also leaves a console breadcrumb).
  */
 export function runReader(options: RunReaderOptions = {}): void {
   const isRenderable = options.isRenderable ?? isRenderableContext;
@@ -104,42 +118,70 @@ export function runReader(options: RunReaderOptions = {}): void {
   if (!isRenderable(location.href)) return;
   injectHideStyle();
 
-  let settled = false;
+  // Set once a reader host is committed (or we've given up): stops all backstops and
+  // further attempts. Distinct from "raw is revealed" — the safety timer can reveal the
+  // raw WITHOUT committing, so a slow-but-eventual mount still wins.
+  let committed = false;
 
-  // The single, idempotent exit. Cancels the backstops and drops the hide <style>.
-  // Guarded so success, failure, the timer and `load` can all call it and only the
-  // first wins — no double-toggle, no fighting the toggle's own post-mount control.
-  // (`timer` is referenced through this closure; it is initialized just below, before
-  // reveal can ever run.)
-  const reveal = (): void => {
-    if (settled) return;
-    settled = true;
+  const onLoad = (): void => tryMount(true);
+
+  // The single, idempotent hand-off, called only on a real outcome (commit / throw /
+  // final give-up). Cancels the backstops and drops the hide <style>; the toggle owns
+  // visibility from here. (`timer` is captured through this closure; it is initialized
+  // below, before any mount attempt — DOMContentLoaded/load are async, and the else
+  // branch's synchronous attempt runs after `timer` is set.)
+  const finish = (): void => {
+    if (committed) return;
+    committed = true;
     clearTimeout(timer);
-    window.removeEventListener('load', reveal);
+    window.removeEventListener('load', onLoad);
     removeHideStyle();
   };
 
-  // Mount, then reveal no matter what. mountReader already keeps the never-blank
-  // invariant internally (renders before hiding originals; restores them on failure);
-  // the finally is the belt-and-suspenders drop of the hide <style> for anything we did
-  // not foresee, so a throw here can never leave the page hidden with nothing shown.
-  const mountThenReveal = (): void => {
+  // One mount attempt. `final` = this is the last chance (the `load` attempt, or an
+  // already-past-readyState immediate attempt) — a no-source result then gives up with a
+  // breadcrumb, rather than waiting for a `load` that has already happened.
+  const tryMount = (final: boolean): void => {
+    if (committed) return;
+    let didCommit: boolean;
     try {
-      mount();
-    } finally {
-      reveal();
+      didCommit = mount();
+    } catch (err) {
+      // Never-blank over everything: mountReader never throws (it catches internally),
+      // so this is the belt-and-suspenders path for an unforeseen throw. Reveal, then
+      // stop — the throw surfaces to the caller / the event loop.
+      finish();
+      throw err;
     }
+    if (didCommit) {
+      finish(); // reader is up — hand visibility off to mount/the toggle.
+      return;
+    }
+    if (final) {
+      // Last attempt, and no source was ever readable. Reveal the raw and leave a light
+      // on for the next investigation — a SILENT give-up here is exactly what cost the
+      // Gecko-timing bug an investigation.
+      finish();
+      console.warn('Peekover: no readable source found');
+    }
+    // else (!didCommit && !final): source not ready yet. Keep the hide + backstops
+    // armed and wait for `load` (or the safety floor). This is the bug fix.
   };
 
-  // 3. Backstops: whichever fires first reveals the raw text if the mount never ran.
-  const timer = setTimeout(reveal, SAFETY_UNHIDE_MS);
-  window.addEventListener('load', reveal);
+  // 3. Safety FLOOR: reveal the raw text if nothing has mounted in time — but do NOT
+  //    disarm the mount attempts. A later successful mount still takes over (accepted
+  //    returned-flash tradeoff). Only removeHideStyle here; the attempts stay live.
+  const timer = setTimeout(() => {
+    if (!committed) removeHideStyle();
+  }, SAFETY_UNHIDE_MS);
+  window.addEventListener('load', onLoad);
 
-  // 4. Mount once the source is complete. At document_start readyState is 'loading', so
-  //    we wait for DOMContentLoaded; if we somehow ran later, mount immediately.
+  // 4. Attempt at DOMContentLoaded (source may not be ready — not final), and always
+  //    again at `load` (final). If we somehow ran past 'loading' already, the source is
+  //    complete, so that immediate attempt is the final one.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountThenReveal, { once: true });
+    document.addEventListener('DOMContentLoaded', () => tryMount(false), { once: true });
   } else {
-    mountThenReveal();
+    tryMount(true);
   }
 }

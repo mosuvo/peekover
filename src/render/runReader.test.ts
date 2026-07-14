@@ -68,6 +68,7 @@ describe('runReader — mount at document_start behind a hidden raw view', () =>
     let hideActiveAtMount = false;
     const mount = vi.fn(() => {
       hideActiveAtMount = !!document.getElementById(HIDE_STYLE_ID);
+      return true; // a committed mount (seam now returns a commit boolean).
     });
 
     runReader({ isRenderable: () => true, mount });
@@ -76,16 +77,19 @@ describe('runReader — mount at document_start behind a hidden raw view', () =>
     expect(hideActiveAtMount).toBe(true); // detect -> hide -> mount, in that order
   });
 
-  it('reveals the raw text when the mount does not take over the page (failure)', () => {
+  it('final attempt with no committable source: reveals the raw text + a breadcrumb', () => {
     const pre = seedRawPage('# hello');
-    // Simulate mountReader's failure/no-op shape: nothing mounted, originals untouched.
-    const mount = vi.fn(() => {});
+    // No source ever committable (mountReader returns false). readyState is 'complete',
+    // so this immediate attempt is the FINAL one — it must give up, not wait forever.
+    const mount = vi.fn(() => false);
 
     runReader({ isRenderable: () => true, mount });
 
     expect(document.getElementById(HIDE_STYLE_ID)).toBeNull(); // unhidden -> raw visible
     expect(pre.style.display).not.toBe('none');
     expect(document.body.contains(pre)).toBe(true);
+    // A silent give-up is what cost the Gecko-timing bug an investigation: leave a light on.
+    expect(warn).toHaveBeenCalledWith('Peekover: no readable source found');
   });
 
   it('still reveals if the mount throws unexpectedly (the finally backstop)', () => {
@@ -120,6 +124,38 @@ describe('runReader — mount at document_start behind a hidden raw view', () =>
     expect(pre.style.display).not.toBe('none');
   });
 
+  it('safety timer reveals raw WITHOUT disarming the mount — a late mount still takes over', () => {
+    vi.useFakeTimers();
+    setReadyState('loading'); // document_start: attempts deferred to DCL / load
+    const pre = seedRawPage('# hello');
+    // A slow source: not committable until the browser finishes streaming (mountReader
+    // returns false = "no source yet" until we flip this).
+    let sourceReady = false;
+    const mount = vi.fn(() => {
+      if (!sourceReady) return false;
+      const host = document.createElement('peekover-root');
+      host.attachShadow({ mode: 'open' }).appendChild(document.createElement('div'));
+      document.body.appendChild(host);
+      pre.style.display = 'none';
+      return true;
+    });
+
+    runReader({ isRenderable: () => true, mount });
+
+    // The safety FLOOR fires before load: raw is revealed, but the mount path is NOT
+    // disarmed — this is the accepted returned-flash tradeoff, not a give-up.
+    vi.advanceTimersByTime(SAFETY_UNHIDE_MS);
+    expect(document.getElementById(HIDE_STYLE_ID)).toBeNull(); // raw visible (floor)
+    expect(document.querySelector('peekover-root')).toBeNull(); // nothing mounted yet
+
+    // The source finally arrives and `load` fires: the late mount still takes over.
+    sourceReady = true;
+    window.dispatchEvent(new Event('load'));
+    expect(mount).toHaveBeenCalled();
+    expect(document.querySelector('peekover-root')).not.toBeNull();
+    expect(pre.style.display).toBe('none');
+  });
+
   it('a completed mount cancels the safety timer — no late double-toggle or flicker', () => {
     vi.useFakeTimers(); // readyState stays 'complete' -> mount runs synchronously
     const pre = seedRawPage('# hello');
@@ -129,6 +165,7 @@ describe('runReader — mount at document_start behind a hidden raw view', () =>
       host.attachShadow({ mode: 'open' }).appendChild(document.createElement('div'));
       document.body.appendChild(host);
       pre.style.display = 'none';
+      return true; // COMMITTED — mount seam now returns a commit boolean.
     });
 
     runReader({ isRenderable: () => true, mount });
@@ -143,6 +180,34 @@ describe('runReader — mount at document_start behind a hidden raw view', () =>
     expect(document.getElementById(HIDE_STYLE_ID)).toBeNull();
     expect(document.querySelectorAll('peekover-root').length).toBe(1);
     expect(pre.style.display).toBe('none');
+  });
+
+  it('waits for a source not readable at DOMContentLoaded, then mounts at load (Gecko timing)', () => {
+    // REGRESSION (the Firefox mount-timing bug): at document_start Gecko may have the
+    // <pre> source EMPTY at DOMContentLoaded and only readable by `load`. The DCL mount
+    // attempt is then a no-source no-op — and it must NOT reveal-and-teardown the mount
+    // path. The hide + backstops must survive so a later `load` attempt takes over.
+    setReadyState('loading'); // document_start: mount is deferred to DOMContentLoaded
+    document.body.innerHTML = ''; // empty body — no <pre> yet, as at document_start
+
+    runReader({ isRenderable: () => true }); // real mountReader
+
+    // DOMContentLoaded fires with the body STILL empty: a no-source no-op.
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    expect(document.querySelector('peekover-root')).toBeNull(); // nothing mounted yet
+    // ...and the mount path must still be alive: hide held, backstops still armed.
+    expect(document.getElementById(HIDE_STYLE_ID)).not.toBeNull();
+
+    // The browser finishes streaming the file: the <pre> appears, then `load` fires.
+    const pre = seedRawPage('# Title\n\nSome body text.');
+    window.dispatchEvent(new Event('load'));
+
+    // The reader takes over at load — reading mode, raw <pre> hidden, hide handed off.
+    const host = document.querySelector('peekover-root') as HTMLElement | null;
+    expect(host).not.toBeNull();
+    expect(host!.getAttribute('data-mode')).toBe('reading');
+    expect(pre.style.display).toBe('none');
+    expect(document.getElementById(HIDE_STYLE_ID)).toBeNull();
   });
 
   it('success with the REAL reader: mounts, neutralizes the hide, Raw toggle still works', () => {
