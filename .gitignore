@@ -7,3 +7,7 @@ CLAUDE.local.md
 node_modules
 .output
 .wxt
+
+# Vitest browser-mode failure artifacts (screenshots on failing tests)
+.vitest-attachments
+**/__screenshots__/

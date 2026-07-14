@@ -21,7 +21,11 @@
   them + lights the network indicator; lazy-load permitted media (loading="lazy" / IntersectionObserver).
   Depends on: reader shell + a minimal status-bar network indicator. Target: end of M1 (completes the
   core reader's security story); movable to M2 if scope tightens.
-- [ ] 5.1 10 golden fixtures + snapshot runner; wire into CI
+- [x] 5.1 10 golden fixtures + snapshot runner; wire into CI
+  - Part A: 9 fixture snapshots (tests/golden/) + a pinned-digest ~1MB huge-doc case;
+    CI-gated by Vitest's refuse-to-write-under-CI. Part B: in-browser mXSS re-check
+    (Vitest Browser Mode, real Chromium + Firefox via @vitest/browser-playwright) over
+    MALICIOUS_CASES + observable EXECUTION_CASES; `pnpm test:browser`, wired into ci.yml.
 - [ ] 5.2 Perf measurement on 1MB fixture recorded in progress.md
 - [ ] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)
 - [ ] 6.2 Update progress.md; run /retro if warranted

@@ -122,4 +122,117 @@ export const MALICIOUS_CASES: MaliciousCase[] = [
     html: `<math><mtext><table><mglyph><style><!--</style><img src=x onerror=alert(1)>`,
     forbidden: ['onerror', 'alert(', '<math', '<style'],
   },
+  // ---------------------------------------------------------------------------
+  // Appended for the in-browser mXSS re-check (task 5.1 part B / decisions.md
+  // 2026-07-14). These are engine-DIVERGENCE payloads: they lean on how a REAL
+  // HTML parser reparses foreign content (SVG/MathML), <template>/<noscript>
+  // boundaries, and <form>-in-<table> — behavior jsdom does not fully mirror.
+  // The point is to run the SAME assertions in real Chromium + Firefox, where a
+  // parser quirk jsdom hides would surface. All must be inert in every engine.
+  // ---------------------------------------------------------------------------
+  {
+    // MathML namespace confusion: <mglyph>/<style> inside an integration point
+    // can flip the tokenizer back to HTML in a real engine, "reviving" the img.
+    name: 'mXSS MathML mtext/mglyph namespace confusion',
+    html: `<math><mtext><mglyph><style></style><img src=x onerror=alert(1)></mglyph></mtext></math>`,
+    forbidden: ['onerror', 'alert(', '<math', '<style', '<mglyph'],
+  },
+  {
+    // SVG foreign-content breakout: a <p> (HTML) nested in <svg> forces the
+    // parser out of foreign content, a classic reparse divergence point.
+    name: 'mXSS SVG foreign-content <p> reparse',
+    html: `<svg><p><style><!--</style><img src=x onerror=alert(1)></p></svg>`,
+    forbidden: ['onerror', 'alert(', '<svg', '<style'],
+  },
+  {
+    // <svg><foreignObject> re-enters the HTML namespace — another reparse edge.
+    name: 'mXSS SVG foreignObject breakout',
+    html: `<svg><foreignObject><img src=x onerror=alert(1)></foreignObject></svg>`,
+    forbidden: ['onerror', 'alert(', '<svg', '<foreignobject'],
+  },
+  {
+    // <template> smuggles inert-until-adopted content; its .content lives in a
+    // separate document fragment engines parse differently from jsdom.
+    name: 'mXSS <template> content smuggling',
+    html: `<template><img src=x onerror=alert(1)><script>alert(2)</script></template><p>after</p>`,
+    forbidden: ['onerror', 'alert(', '<template', '<script'],
+    survives: ['after'],
+  },
+  {
+    // <noscript> is parsed as text when scripting is ENABLED (real browser) but
+    // as elements when disabled (jsdom default) — a canonical divergence.
+    name: 'mXSS <noscript> scripting-enabled divergence',
+    html: `<noscript><style></noscript><img src=x onerror=alert(1)></style></noscript><p>tail</p>`,
+    forbidden: ['onerror', 'alert(', '<style'],
+    survives: ['tail'],
+  },
+  {
+    // <form>-in-<table> foster-parenting: the inner <form>/<input> gets moved by
+    // the tree builder, historically a source of attribute-smuggling mXSS.
+    name: 'mXSS <form> in <table> foster-parenting',
+    html: `<table><form><input name=1 value=2><img src=x onerror=alert(1)></form></table>`,
+    forbidden: ['onerror', 'alert(', '<form'],
+  },
+  {
+    // DOM clobbering: an attacker-chosen name/id on <img>/<form> can shadow
+    // document/form properties (e.g. document.body, form.attributes). Neither
+    // `name` nor `id` is allow-listed, so both must be stripped.
+    name: 'DOM clobbering via name/id on <img> and <form>',
+    html: `<img name="attributes" id="body" src="x"><form id="attributes" name="nodeName"><input id="ownerDocument"></form>`,
+    forbidden: ['name=', 'id=', '<form', 'attributes', 'nodename'],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// EXECUTION cases — payloads whose neutralization is OBSERVABLE at runtime, used
+// only by the in-browser suite (tests/browser/). After sanitize() the result is
+// inserted into a live DOM; the test then asserts nothing executed. A vector that
+// slipped through would set `window.__peekoverPwned` (event handler / script body)
+// or leave a <script>/on* attribute in the live subtree. Every `html` uses only a
+// relative/invalid URL (src="x") so the suite needs ZERO network to run.
+// ---------------------------------------------------------------------------
+
+/** The global an escaped payload would set. Declared for the browser test. */
+declare global {
+  interface Window {
+    __peekoverPwned?: boolean;
+  }
+}
+
+export interface ExecutionCase {
+  /** Human label shown in the test name. */
+  name: string;
+  /** Untrusted HTML whose execution, if not neutralized, is observable. */
+  html: string;
+}
+
+export const EXECUTION_CASES: ExecutionCase[] = [
+  {
+    // img onerror fires on a failed load even when inserted via innerHTML — the
+    // most reliable "did a handler run?" probe.
+    name: 'img onerror sets the pwned flag',
+    html: `<img src="x" onerror="window.__peekoverPwned = true">`,
+  },
+  {
+    // SVG root onload fires on insertion in real engines.
+    name: 'svg onload sets the pwned flag',
+    html: `<svg onload="window.__peekoverPwned = true"><circle r="10"></circle></svg>`,
+  },
+  {
+    // iframe onload (no src -> about:blank, no network) fires on insertion.
+    name: 'iframe onload sets the pwned flag',
+    html: `<iframe onload="window.__peekoverPwned = true"></iframe>`,
+  },
+  {
+    // A raw <script> does NOT auto-run via innerHTML, but a surviving <script>
+    // element in the subtree is itself the failure — the test asserts none exist.
+    name: 'script body (element must not survive)',
+    html: `<script>window.__peekoverPwned = true</script>`,
+  },
+  {
+    // The mXSS reparse vector, now with an OBSERVABLE handler: proves the engine
+    // divergence payloads are inert in a live real-browser DOM, not just as text.
+    name: 'mXSS MathML/style reparse with live onerror',
+    html: `<math><mtext><mglyph><style></style><img src="x" onerror="window.__peekoverPwned = true"></mglyph></mtext></math>`,
+  },
 ];
