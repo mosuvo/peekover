@@ -203,6 +203,53 @@ export const READER_CSS = /* css */ `
 }
 .peekover-mode-toggle:hover{color:var(--ink);border-color:var(--faint)}
 
+/* ============ Remote-resource policy (block-by-default) ============ */
+/* A blocked remote image becomes this inert, themed placeholder (no src → cannot
+   fetch; the original URL rides on data-peekover-src for one-click restore). Inline
+   so it is valid inside a paragraph, and dashed to read as "withheld", not broken. */
+.peekover-remote{
+  display:inline-flex;align-items:baseline;gap:9px;
+  max-width:100%;margin:2px 0;padding:8px 13px;vertical-align:middle;
+  font-family:var(--sans);font-size:13px;color:var(--muted);
+  background:var(--panel);border:1px dashed var(--line);border-radius:var(--r);
+}
+.peekover-remote__badge{
+  flex:none;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--faint);
+}
+.peekover-remote__alt{font-style:italic;overflow-wrap:anywhere}
+
+/* Opt-in affordance: one pill in the top-left, mirroring the mode-toggle chrome
+   (top-right). Removes itself once clicked — a one-shot; reload re-blocks. */
+.peekover-remote-load{
+  position:fixed;top:16px;left:16px;z-index:2;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-remote-load:hover{color:var(--ink);border-color:var(--faint)}
+
+/* Network indicator: the "this view has now used the network" light. Ships HIDDEN
+   and is revealed ONLY when the host carries data-network="active" (set the moment
+   the user opts into a network action) — then it stays for the rest of the view. It
+   never shows otherwise (AGENTS.md #1). --del is the one warm accent — a deliberate,
+   honest signal that the zero-network default has been left. */
+.peekover-net{
+  position:fixed;bottom:16px;left:16px;z-index:2;display:none;
+  align-items:center;gap:8px;
+  font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.03em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:5px 12px 5px 11px;box-shadow:var(--shadow);
+}
+:host([data-network="active"]) .peekover-net{display:inline-flex}
+.peekover-net__dot{
+  flex:none;width:8px;height:8px;border-radius:50%;
+  background:var(--del);box-shadow:0 0 0 3px var(--del-soft);
+}
+
 /* ============ Render-failure banner (AGENTS.md #5, upgraded) ============ */
 /* A quiet left-accent alert (mockup .alert.warn) — a left border bar, NOT a heavy
    filled box. Shown ONLY on the failure path, above the raw source; a user-chosen

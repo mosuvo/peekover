@@ -1,9 +1,12 @@
-<!-- Covers: remote (https) images and relative images.
-     REMOTE-RESOURCE ANCHOR (task 5.1): this snapshot captures the CURRENT behavior —
-     image src passes through the sanitize allow-list unchanged (http/https src is
-     permitted; blocking remote loads is a later RENDER-LAYER policy, not a sanitize
-     strip — see decisions.md 2026-07-14 "Remote resources are BLOCKED by default").
-     When that policy lands, the diff against THIS snapshot documents the change. -->
+<!-- Covers: remote (https) images and a relative image, through the REMOTE-RESOURCE
+     POLICY (now landed). The snapshot in output/images.html is produced by the full
+     reader path — parse -> sanitize -> applyMediaPolicy against a file:// base URL —
+     so it shows the policy's real output: the two https images are BLOCKED (src moved
+     to data-peekover-src, the <img> swapped for an inert themed placeholder that
+     cannot fetch), and the ./assets relative image is LOCAL on a file:// page so it
+     survives with loading="lazy". Sanitize still permits http/https src on the allow-
+     list; blocking is a render-LAYER decision, not a sanitize strip (decisions.md
+     2026-07-14 "Remote resources are BLOCKED by default"). -->
 
 # Images
 

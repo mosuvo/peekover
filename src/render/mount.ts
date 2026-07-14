@@ -20,28 +20,11 @@ import {
   registerReaderSource,
   setReaderMode,
 } from './readerMode';
+import { applyMediaPolicy } from './mediaPolicy';
+import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
-
-/**
- * The single choke-point every rendered <img> passes through.
- *
- * M1: effectively a no-op — images load normally. This seam exists ONLY so the
- * remote-resource policy (tasks.md: "Remote-resource policy: block remote
- * images/resources by default; one-click opt-in … lazy-load permitted media")
- * has ONE place to hook block / lazy-load behaviour without re-cutting the mount
- * stage later. Do NOT implement blocking here now — that is the remote-resource
- * task's job. Build the seam, not the policy.
- *
- * @param root The mounted reader root to scan for media.
- */
-export function applyMediaPolicy(root: ParentNode): void {
-  // Enumerate the rendered images so the future policy has a defined hook point.
-  // Intentionally does nothing to them in M1.
-  const images = root.querySelectorAll('img');
-  void images;
-}
 
 /**
  * Get the host's shadow root, creating it once. A host may only be attached once
@@ -77,13 +60,29 @@ export function mount(source: string, host: HTMLElement): void {
     const root = document.createElement('div');
     root.className = 'peekover-reader';
     root.innerHTML = html;
-    applyMediaPolicy(root);
+    // Remote-resource policy (AGENTS.md #1). CRITICAL ORDERING: `root` is still
+    // DETACHED here (createElement, not yet in any document), so assigning innerHTML
+    // above fetched nothing — a detached subtree has no browsing context. We must
+    // neutralize remote media NOW, before the replaceChildren() below commits `root`
+    // into the live shadow tree, because that commit is the moment any surviving
+    // remote <img src> would fire its fetch. See mediaPolicy.ts (the load-bearing
+    // gotcha) and the no-leak test in mount.test.ts.
+    const baseUrl = host.ownerDocument?.baseURI || 'about:blank';
+    const blockedCount = applyMediaPolicy(root, baseUrl);
     // Commit the reader stylesheet + the minimal Raw/Reading control alongside the
     // content. The <style> is rebuilt each render because replaceChildren() drops the
     // previous one (task 4.1). The Raw view itself is NOT built here — readerMode
     // builds it lazily on first toggle (source as text, no reparse), so a document
     // that is never toggled keeps its untrusted source out of the shadow tree.
-    shadow.replaceChildren(buildReaderStyle(), buildModeToggle(host), root);
+    // The opt-in pill + (initially dark) network indicator are added ONLY when remote
+    // media was actually blocked — a document with none grows no such chrome and can
+    // never light the indicator.
+    const children: Node[] = [buildReaderStyle(), buildModeToggle(host)];
+    if (blockedCount > 0) {
+      children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
+    }
+    children.push(root);
+    shadow.replaceChildren(...children);
     registerReaderSource(host, source); // stash source for the lazy Raw view
     setReaderMode(host, 'reading'); // default view = the rendered document
     installToggleShortcut(); // idempotent; only active while our reader is mounted

@@ -8,12 +8,34 @@
 // in mount.fallback.test.ts (it needs a mocked stage).
 
 import { describe, it, expect } from 'vitest';
-import { mount, applyMediaPolicy } from './mount';
+import { mount } from './mount';
 
 function makeHost(): HTMLElement {
   const host = document.createElement('peekover-root');
   document.body.appendChild(host);
   return host;
+}
+
+/**
+ * Every element in the committed tree (light DOM + our shadow root) that carries a
+ * fetch-capable URL resolving to http(s) — the no-leak proxy. jsdom does not actually
+ * load subresources, so "no such element in the committed DOM" stands in for "no
+ * request fired": in a real engine, any connected element with a remote src/srcset
+ * WOULD have fetched on insertion.
+ */
+function remoteRefs(host: HTMLElement): string[] {
+  const refs: string[] = [];
+  const roots: ParentNode[] = [document, host.shadowRoot].filter(Boolean) as ParentNode[];
+  for (const rootNode of roots) {
+    for (const el of rootNode.querySelectorAll('*')) {
+      for (const attr of ['src', 'srcset']) {
+        const v = el.getAttribute(attr);
+        // http:, https:, or protocol-relative (which resolves to http(s) on any web page).
+        if (v && /^\s*(https?:|\/\/)/i.test(v)) refs.push(`${el.tagName}[${attr}]=${v}`);
+      }
+    }
+  }
+  return refs;
 }
 
 describe('mount — parse -> sanitize -> shadow DOM', () => {
@@ -78,19 +100,74 @@ describe('mount — parse -> sanitize -> shadow DOM', () => {
     expect(shadow.textContent).not.toContain('First');
   });
 
-  it('keeps a rendered <img> intact in M1 (media seam is a no-op)', () => {
+  it('blocks a remote <img> by default: src moves to data-peekover-src, no fetchable src', () => {
     const host = makeHost();
-    mount('![alt](https://example.com/i.png)', host);
-    const img = host.shadowRoot!.querySelector('img');
-    expect(img).not.toBeNull();
-    expect(img?.getAttribute('src')).toBe('https://example.com/i.png');
+    mount('![alt text](https://example.com/i.png "a title")', host);
+    const shadow = host.shadowRoot!;
+
+    // The <img> is gone — replaced by an inert placeholder (nothing to fetch).
+    expect(shadow.querySelector('img')).toBeNull();
+    const ph = shadow.querySelector('.peekover-remote');
+    expect(ph).not.toBeNull();
+    expect(ph?.getAttribute('data-peekover-src')).toBe('https://example.com/i.png');
+    expect(ph?.getAttribute('data-peekover-alt')).toBe('alt text');
+    expect(ph?.getAttribute('data-peekover-title')).toBe('a title');
+    // The placeholder shows the label + alt text.
+    expect(ph?.querySelector('.peekover-remote__badge')?.textContent).toBe('remote image');
+    expect(ph?.querySelector('.peekover-remote__alt')?.textContent).toBe('alt text');
   });
 
-  it('applyMediaPolicy does not throw and leaves images untouched (M1 seam)', () => {
-    const root = document.createElement('div');
-    root.innerHTML = '<img src="https://example.com/a.png"><img src="https://example.com/b.png">';
-    expect(() => applyMediaPolicy(root)).not.toThrow();
-    expect(root.querySelectorAll('img').length).toBe(2);
-    expect(root.querySelector('img')?.getAttribute('src')).toBe('https://example.com/a.png');
+  it('NO-LEAK: committing a doc of remote images leaves zero fetchable src/srcset', () => {
+    const host = makeHost();
+    // The REAL pipeline, committed to a live shadow the way mount() does. If any
+    // remote src survived to the live tree, a real browser would have fetched it.
+    mount(
+      [
+        '![one](https://example.com/1.png)',
+        '',
+        '![two](http://example.org/2.jpg)',
+        '',
+        'inline ![three](https://cdn.example.net/3.gif) here',
+      ].join('\n'),
+      host,
+    );
+    expect(remoteRefs(host)).toEqual([]);
+    // And the opt-in reports all three.
+    expect(host.shadowRoot!.querySelector('.peekover-remote-load')?.textContent).toBe(
+      '3 remote images blocked · Load',
+    );
+  });
+
+  it('opt-in restores the images (loading="lazy") and lights the network indicator', () => {
+    const host = makeHost();
+    mount('![pic](https://example.com/pic.png)', host);
+    const shadow = host.shadowRoot!;
+
+    // Pre-opt-in: indicator is not lit, no live <img>, and a network light exists but dark.
+    expect(host.hasAttribute('data-network')).toBe(false);
+    expect(shadow.querySelector('img')).toBeNull();
+    expect(shadow.querySelector('.peekover-net')).not.toBeNull();
+
+    const loadBar = shadow.querySelector<HTMLButtonElement>('.peekover-remote-load')!;
+    expect(loadBar).not.toBeNull();
+    loadBar.click();
+
+    // Post-opt-in: placeholder is now a real <img> with the original src + lazy loading,
+    // the indicator is lit, and the one-shot pill removed itself.
+    const img = shadow.querySelector('img');
+    expect(img?.getAttribute('src')).toBe('https://example.com/pic.png');
+    expect(img?.getAttribute('loading')).toBe('lazy');
+    expect(host.getAttribute('data-network')).toBe('active');
+    expect(shadow.querySelector('.peekover-remote')).toBeNull();
+    expect(shadow.querySelector('.peekover-remote-load')).toBeNull();
+  });
+
+  it('a document with no remote images shows no opt-in and no indicator', () => {
+    const host = makeHost();
+    mount('# Just text\n\nno images at all', host);
+    const shadow = host.shadowRoot!;
+    expect(shadow.querySelector('.peekover-remote-load')).toBeNull();
+    expect(shadow.querySelector('.peekover-net')).toBeNull();
+    expect(host.hasAttribute('data-network')).toBe(false);
   });
 });
