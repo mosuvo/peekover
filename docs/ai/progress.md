@@ -3,16 +3,34 @@
 *Updated: 2026-07-14.*
 
 ## Now (start here)
-**Active spec:** `specs/001-core-rendering/` — extension skeleton + core render pipeline.
-**State:** mid-M1 — SHELL GROUP + golden-fixtures/perf group (5.1, 5.2) + document_start
-first-paint pass + **remote-resource policy** complete. The reader is detect → hide-raw →
-mount@DOMContentLoaded → parse → sanitize → **block-remote-media** → themed reading → Raw
-toggle → never-blank fallback, on Chrome + Firefox, `permissions:[]`, ~270KB packed
-(zip 152.99 kB). 160 unit + 66 in-browser tests green.
-Next action = **trust docs 6.1/6.2** — `docs/trust/PERMISSIONS.md` v1 (every manifest line
-justified) + progress update; this closes the M1 feature group (spec 001).
+**M1 COMPLETE (spec 001 CLOSED 2026-07-14).** All 7 acceptance criteria green — verified with
+per-item evidence at milestone close: manual GUI gate confirmed both engines on the current build
+(themed render + toggle + no console errors), malicious-fixture inertness by test, ≤50 KB <150 ms
++ 1 MB honest-bound perf measured, `pnpm zip` 152.99 kB (Chrome) / 153.04 kB (Firefox) < 2 MB,
+PERMISSIONS.md accounts for every manifest line. Closing sanity pass: lint clean · 160 unit · 66
+in-browser green. The reader ships end-to-end: detect → hide-raw → mount@DOMContentLoaded → parse →
+sanitize → block-remote-media → themed reading → Raw toggle → never-blank fallback, Chrome + Firefox,
+`permissions:[]`, ~270 KB packed.
+
+**Active spec:** `specs/002-*` (to be created) — **Next action = M2 first task: file/folder sources
++ permissions UX** (product spec §11 build-order item 2: folder browser / project mode; the reader
+core M1 built is the thing folders now feed). Start a fresh session per WORKFLOW.md 5.3 (spec →
+plan → tasks gears) — do NOT start M2 implementation off this closing session.
+
+**Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
+core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
+milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TOC · 004 themes+settings ·
+005 watch+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly this is early
+foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-14 — **M1 CLOSED (spec 001 — core render pipeline).** Extension skeleton + reader
+  pipeline (detect → hide-raw → mount → parse → markdown-it/GFM → DOMPurify → shadow-DOM themed
+  reading → Raw toggle → block-remote-media → never-blank fallback) shipping on Chrome + Firefox,
+  `permissions:[]`, ~270 KB packed. All 7 acceptance criteria verified green with per-item evidence
+  (manual GUI gate both engines + tests + measured perf + zip < 2 MB + PERMISSIONS.md complete);
+  lint · 160 unit · 66 browser green. Retro captured (docs/ai/retro.md). Carried to M2: chunked/
+  virtualized render (large-doc first-paint lever) + GFM table-alignment restore. Now → M2.
 - 2026-07-14 — Fixed a pre-opt-in remote-image FETCH LEAK in the remote-resource policy
   (shipped in the commit below, caught at the human Network-tab gate, NOT by any test). Root
   cause: `mount()` built the reader root with `document.createElement('div')` + `root.innerHTML =
@@ -147,9 +165,9 @@ justified) + progress update; this closes the M1 feature group (spec 001).
     the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
-Immediate — remaining in M1 (spec 001), the final feature-group step:
-- Trust docs 6.x: docs/trust/PERMISSIONS.md v1 (every manifest line justified); progress update.
-  This closes M1's core-reader security story (zero-network default is now enforced AND demoable).
+Immediate — **M2 kickoff (spec 002): file/folder sources + permissions UX** (product spec §11
+build-order item 2). In a FRESH session per WORKFLOW.md 5.3: draft spec → plan → tasks (Gear 3),
+human approves each gate before code. M1 is closed; nothing in spec 001 remains open.
 
 Done in the golden-fixtures + perf group (spec 001, tasks 5.1/5.2), see Done above:
 - 5.1: 10 golden fixtures + snapshot runner in CI, plus the in-browser mXSS re-check

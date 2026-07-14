@@ -1,4 +1,5 @@
 # Tasks 001 — check off, add discovered tasks BELOW the line they came from
+*Spec CLOSED 2026-07-14 — all acceptance criteria green (see spec.md). Open sub-bullets below are M2-carried, not M1 blockers.*
 - [x] 1.1 Init WXT+TS project; pnpm scripts (dev/dev:firefox/build/zip/test/lint) all run clean
 - [x] 1.2 CI: .github/workflows/ci.yml → lint+test+build on PR (keep ai-hygiene.yml)
 - [x] 2.1 `isRenderableContext()` + tests (file:// ext match, content-type, raw-host allowlist)
@@ -54,5 +55,8 @@
     ~345ms, 1MB ~1187–1310ms. Spec-001 acceptance rewritten as a two-part gate, BOTH parts ticked:
     (i) typical ≤50KB <150ms; (ii) 1MB no-flash (both engines) + painted <1.7s honest bound. See
     progress.md table + decisions.md (2026-07-14 gate rescope). Chunked/virtualized render carried to M2.
-- [ ] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)
-- [ ] 6.2 Update progress.md; run /retro if warranted
+- [x] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)
+- [x] 6.2 Update progress.md; run /retro if warranted
+  - M1 milestone close: acceptance checklist re-verified with per-item evidence (all 7 green —
+    manual GUI gate confirmed both engines on current build, 2026-07-14), progress.md moved to
+    M1-complete + Now pointer set to M2, /retro captured in docs/ai/retro.md. Docs-only, one commit.

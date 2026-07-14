@@ -1,5 +1,5 @@
 # Spec 001 — Extension skeleton + core render pipeline
-*Gear 3 (spec+plan+tasks). Owner: mosuvo. Status: ready.*
+*Gear 3 (spec+plan+tasks). Owner: mosuvo. Status: CLOSED — M1 complete, all acceptance green (2026-07-14).*
 
 ## Goal
 A .md file opened via file:// or a raw URL renders as beautiful, themed, sanitized reading in
@@ -21,14 +21,20 @@ TOC, folder mode, settings UI, editor, AI, watch/diff, math/diagrams/code highli
 Shiki/KaTeX/Mermaid are explicitly NOT in this milestone despite being in the stack.
 
 ## Acceptance
-- [ ] `pnpm dev` → open fixture file:// doc → themed render, toggle works, no console errors
-- [ ] Same in `pnpm dev:firefox`
-- [ ] Malicious fixture (script/onerror/javascript: URLs) renders inert — verified by test
+- [x] `pnpm dev` → open fixture file:// doc → themed render, toggle works, no console errors
+      (manual-verified both engines, current build, 2026-07-14)
+- [x] Same in `pnpm dev:firefox` (manual-verified both engines, current build, 2026-07-14)
+- [x] Malicious fixture (script/onerror/javascript: URLs) renders inert — verified by test
+      (`tests/browser/sanitize.browser.test.ts` real Chromium+Firefox + `src/render/sanitize.test.ts`;
+      66 browser + 160 unit green, 2026-07-14)
 - [x] Typical doc (≤50 KB) first-paint: nav→paint median <150 ms (measured — 10 KB ~78–82 ms,
       50 KB ~118–122 ms; `scripts/perf-first-paint.ts --size`, noted in progress.md)
 - [x] 1 MB fixture: no raw-text flash (manual-verified, Chrome + Firefox) + reader painted within an
       honest bound <1.7 s (measured median ~1187–1310 ms; <150 ms is unreachable on a 1 MB file:// doc
       in the settled design — browser parse floor + complete-source requirement, see decisions.md
       2026-07-14. Chunked/virtualized render is the M2 lever for this number.)
-- [ ] `pnpm zip` artifact <2MB (leaves budget for later stages)
-- [ ] PERMISSIONS.md lists every manifest entry with a reason
+- [x] `pnpm zip` artifact <2MB (leaves budget for later stages) — Chrome 152.99 kB /
+      Firefox 153.04 kB (measured `pnpm zip` / `pnpm zip -b firefox`, 2026-07-14)
+- [x] PERMISSIONS.md lists every manifest entry with a reason — cross-checked against the
+      generated manifest: 13 `content_scripts.matches` + `run_at:document_start` + `permissions:[]`
+      + Firefox gecko keys all justified (`docs/trust/PERMISSIONS.md`, 2026-07-14)
