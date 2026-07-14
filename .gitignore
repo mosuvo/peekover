@@ -2,3 +2,8 @@ CLAUDE.local.md
 *.local.md
 .env
 .env.*
+
+# Node / WXT build artifacts
+node_modules
+.output
+.wxt
