@@ -4,20 +4,33 @@
 
 ## Now (start here)
 **Active spec:** `specs/001-core-rendering/` — extension skeleton + core render pipeline.
-**State:** mid-M1 — skeleton (1.x/2.x) and the pipeline group (3.1 parse, 3.2 sanitize) done.
-Next action = Task 3.3 (mount stage: shadow root, patch-on-rerender, <150ms perf harness).
+**State:** mid-M1 — the SHELL GROUP is complete. The reader is functionally done:
+detect → parse → sanitize → mount → themed reading → Raw toggle → never-blank fallback,
+on Chrome + Firefox, `permissions:[]`, ~266KB packed, 111 tests green.
+Next action = the golden-fixtures + perf group (tasks 5.1 / 5.2).
 
 ## Done
 - 2026-07-08..11 — Research, product spec (v2.1), full design system (design/), landing page
   (site/index.html), name verified+claimed (Peekover), this repo scaffolded.
+- 2026-07-14 — Reader shell group (M1), all pushed:
+  - 3.3 mount stage: parse→sanitize→shadow DOM, + hardening (restore the page if mount fails —
+    never blank).
+  - 4.1 design tokens, Literata bundled inline (zero-network), auto light/dark, 76ch column.
+  - 4.2 Raw/Reading toggle (pill + bare `\` shortcut) + render-error banner.
+  Net: the reader is end-to-end functional (Chrome + Firefox), `permissions:[]`, ~266KB packed,
+  111 tests green.
 
 ## Up next
-Remaining in M1 (spec 001):
-- Remote-resource policy (late M1, per tasks.md): block remote images/resources by default;
-  one-click opt-in that loads them + lights the network indicator; lazy-load permitted media.
-- Golden-fixture work (tasks 5.x) must ALSO (a) run the malicious fixtures through DOMPurify in
-  real Chrome + Firefox — the in-browser mXSS check logged in decisions.md — and (b) cover the
-  remote-resource block behavior.
+Immediate — golden-fixtures + perf group (spec 001, tasks 5.1/5.2):
+- 5.1: 10 golden fixtures + snapshot runner wired into CI. Must ALSO (a) run the malicious
+  fixtures through DOMPurify in a real Chrome + Firefox context — the scheduled in-browser mXSS
+  re-check logged in decisions.md — and (b) cover the remote-resource block behavior.
+- 5.2: perf measurement on a 1MB fixture, recorded here in progress.md.
+
+Then, remaining in M1 (spec 001):
+- Remote-resource policy (tasks.md): block remote images/resources by default; one-click opt-in
+  that loads them + lights the network indicator; lazy-load permitted media (loading="lazy" / IO).
+- Trust docs 6.x: docs/trust/PERMISSIONS.md v1 (every manifest line justified); progress update.
 
 Carried to M2:
 - Restore GFM table alignment safely (map to class, never inline style).
