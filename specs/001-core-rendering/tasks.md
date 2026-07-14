@@ -26,6 +26,11 @@
     CI-gated by Vitest's refuse-to-write-under-CI. Part B: in-browser mXSS re-check
     (Vitest Browser Mode, real Chromium + Firefox via @vitest/browser-playwright) over
     MALICIOUS_CASES + observable EXECUTION_CASES; `pnpm test:browser`, wired into ci.yml.
-- [ ] 5.2 Perf measurement on 1MB fixture recorded in progress.md
+- [x] 5.2 Perf measurement on 1MB fixture recorded in progress.md
+  - `pnpm perf` (scripts/perf-first-paint.ts): real headless-Chromium first-paint of the built
+    extension over the 1.12MB huge-doc, 7 runs (cold discarded). Local gate only, NOT in CI.
+    Result: nav→paint median ~1245ms — FAILS the <150ms gate (~8×), so spec acceptance box stays
+    UNTICKED. Breakdown in progress.md: browser's own 1MB raw-text load (~1s, document_idle) dominates,
+    not the pipeline. Measurement task — no src/ changes to chase the target.
 - [ ] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)
 - [ ] 6.2 Update progress.md; run /retro if warranted
