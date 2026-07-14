@@ -1,15 +1,29 @@
 // scripts/perf-first-paint.ts — task 5.2 measurement gate (NOT wired into CI).
 //
-// Measures the REAL, in-browser first-paint of the Peekover reader over the
-// ~1 MB huge-document fixture, in headless Chromium driving the actual built
-// extension. This is the end-to-end number the pure-pipeline perf test
+// Measures the REAL, in-browser first-paint of the Peekover reader over a
+// deterministic huge-document fixture, in headless Chromium driving the actual
+// built extension. This is the end-to-end number the pure-pipeline perf test
 // (src/render/pipeline.perf.test.ts) deliberately does NOT measure: that test
 // times parse+sanitize only, with no shadow-DOM mount, layout, style or paint.
 //
 // This is a MEASUREMENT task, not an optimization task. If the number misses the
-// <150 ms target we record it honestly with a breakdown; we do NOT touch src/ to
-// chase it. Nothing here is asserted in CI — wall-clock gates flake on shared
-// runners, so this stays a local, recorded gate (see docs/ai/progress.md).
+// target we record it honestly with a breakdown; we do NOT touch src/ to chase
+// it. Nothing here is asserted in CI — wall-clock gates flake on shared runners,
+// so this stays a local, recorded gate (see docs/ai/progress.md).
+//
+// FIXTURE SIZE (task 5.2b size-sweep). The gate was written pre-measurement for a
+// single 1 MB doc; to rescope it honestly against the TYPICAL document we sweep
+// several sizes. Pass `--size <value>` to pick the fixture:
+//   pnpm perf                 -> default 1 MB (1400 sections, the historical
+//                                fixture that pins the golden SHA-256 digest)
+//   pnpm perf -- --size 10kb  -> ~10 KB     pnpm perf -- --size 200kb -> ~200 KB
+//   pnpm perf -- --size 50kb  -> ~50 KB     pnpm perf -- --size 1mb   -> full 1 MB
+// Accepted forms: `10kb` / `50kb` / `200kb`, `1mb` / `full` (both = the default
+// 1400-section fixture), or a raw byte count. Non-default sizes derive a section
+// count from a deterministic bytes-per-section probe of buildHugeDoc() and report
+// the ACTUAL generated size; the default path calls buildHugeDoc() with NO
+// argument so the 1 MB fixture stays byte-identical to what the golden digest and
+// the prior 5.2/5.2b measurements pin. (`--` separates pnpm's args from ours.)
 //
 // Runner: `tsx` (package script "perf"). We use tsx rather than Node's native TS
 // type-stripping because this file is under tsconfig's `include` and so is type-
@@ -29,7 +43,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { buildHugeDoc } from '../tests/golden/hugeDoc';
+import { buildHugeDoc, HUGE_DOC_SECTIONS } from '../tests/golden/hugeDoc';
 
 // --- Constants ---------------------------------------------------------------
 
@@ -39,14 +53,19 @@ const EXT_DIR = path.resolve('.output', 'chrome-mv3');
 /** Total iterations; the FIRST (cold) run is printed but discarded from stats. */
 const ITERATIONS = 7;
 
-/** The user-facing acceptance gate from specs/001-core-rendering/spec.md. */
+/**
+ * The typical-document acceptance gate from specs/001-core-rendering/spec.md:
+ * nav->paint median < 150 ms. This is the bar the rescoped gate holds for docs
+ * up to ~50 KB; the 1 MB fixture is measured against its own honest bound (the
+ * number lands ~8x over 150 ms — see progress.md / decisions.md 2026-07-14).
+ */
 const GATE_MS = 150;
 
 /** First heading buildHugeDoc() emits — the render-succeeded sanity marker. */
 const EXPECTED_H1 = 'Peekover huge-document golden fixture';
 
-/** Floor on rendered <h2> sections; the fixture emits HUGE_DOC_SECTIONS (1400). */
-const MIN_SECTIONS = 1200;
+/** Default fixture: the historical 1 MB doc (buildHugeDoc()'s own default). */
+const DEFAULT_SECTIONS = HUGE_DOC_SECTIONS;
 
 // --- Types -------------------------------------------------------------------
 
@@ -184,8 +203,55 @@ function fmt(n: number | null): string {
   return n === null ? 'n/a' : `${n.toFixed(1)}ms`;
 }
 
+/** Human-readable byte size (KB under 1 MB, else MB). */
+function fmtBytes(n: number): string {
+  return n < 1_048_576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1_048_576).toFixed(2)} MB`;
+}
+
+/**
+ * Parse a `--size <value>` / `--size=<value>` CLI argument into a TARGET byte
+ * count, or null when the default (1 MB historical fixture) should be used.
+ * Accepts `1mb`/`full` (→ null = default), `Nkb`, `Nmb`, or a raw byte integer.
+ */
+function parseSizeArg(argv: string[]): number | null {
+  let raw: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--size') raw = argv[i + 1];
+    else if (a.startsWith('--size=')) raw = a.slice('--size='.length);
+  }
+  if (raw === undefined) return null;
+  const v = raw.trim().toLowerCase();
+  if (v === 'full' || v === '1mb' || v === '1m') return null; // default fixture
+  const m = /^(\d+(?:\.\d+)?)(kb|mb|k|m|b)?$/.exec(v);
+  if (!m) throw new Error(`--size: cannot parse "${raw}" (try 10kb | 50kb | 200kb | 1mb | <bytes>)`);
+  const num = parseFloat(m[1]);
+  const unit = m[2] ?? 'b';
+  const mult = unit === 'kb' || unit === 'k' ? 1024 : unit === 'mb' || unit === 'm' ? 1_048_576 : 1;
+  return Math.round(num * mult);
+}
+
+/**
+ * Deterministically map a target byte count to a buildHugeDoc() section count.
+ * Derives bytes-per-section from two probe generations (no Date/Math.random, so
+ * it stays reproducible), then rounds to the nearest whole section (min 1). The
+ * caller reports the ACTUAL generated length, so approximation here is fine.
+ */
+function sectionsForBytes(target: number): number {
+  const a = buildHugeDoc(100).length;
+  const b = buildHugeDoc(200).length;
+  const bytesPerSection = (b - a) / 100;
+  const header = a - bytesPerSection * 100;
+  return Math.max(1, Math.round((target - header) / bytesPerSection));
+}
+
 /** Run one iteration on a fresh page in the shared context; assert render succeeded. */
-async function runIteration(ctx: BrowserContext, fileUrl: string, i: number): Promise<Metrics> {
+async function runIteration(
+  ctx: BrowserContext,
+  fileUrl: string,
+  i: number,
+  sectionCount: number,
+): Promise<Metrics> {
   const page: Page = await ctx.newPage();
   const consoleErrors: string[] = [];
   page.on('console', (m) => {
@@ -208,9 +274,10 @@ async function runIteration(ctx: BrowserContext, fileUrl: string, i: number): Pr
     await page.close();
     throw new Error(`run ${i}: reader h1 mismatch — got ${JSON.stringify(sanity.h1)}, want "${EXPECTED_H1}"`);
   }
-  if (sanity.sections < MIN_SECTIONS) {
+  // buildHugeDoc emits exactly one <h2> per section; fewer rendered = truncation.
+  if (sanity.sections < sectionCount) {
     await page.close();
-    throw new Error(`run ${i}: only ${sanity.sections} sections rendered (< floor ${MIN_SECTIONS})`);
+    throw new Error(`run ${i}: only ${sanity.sections} sections rendered (< expected ${sectionCount})`);
   }
   if (consoleErrors.length) {
     await page.close();
@@ -234,14 +301,21 @@ async function runIteration(ctx: BrowserContext, fileUrl: string, i: number): Pr
 async function main(): Promise<void> {
   ensureBuild();
 
-  const source = buildHugeDoc();
+  // Choose the fixture size. No `--size` (or `--size 1mb`/`full`) => the default
+  // buildHugeDoc() fixture: 1400 sections, byte-identical to the golden digest.
+  const targetBytes = parseSizeArg(process.argv.slice(2));
+  const sectionCount = targetBytes === null ? DEFAULT_SECTIONS : sectionsForBytes(targetBytes);
+  const source =
+    targetBytes === null ? buildHugeDoc() : buildHugeDoc(sectionCount);
+
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'peekover-perf-'));
   const mdPath = path.join(tmpDir, 'huge.md'); // lowercase .md — manifest match patterns
   fs.writeFileSync(mdPath, source, 'utf8');
   const fileUrl = pathToFileURL(mdPath).href;
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'peekover-udd-'));
 
-  console.log(`[perf] fixture: ${(source.length / 1_048_576).toFixed(2)} MB markdown -> ${mdPath}`);
+  const sizeNote = targetBytes === null ? ' (default, matches golden digest)' : ` (--size target ${fmtBytes(targetBytes)})`;
+  console.log(`[perf] fixture: ${fmtBytes(source.length)} markdown, ${sectionCount} sections${sizeNote} -> ${mdPath}`);
   console.log(`[perf] extension: ${EXT_DIR}`);
   console.log(`[perf] iterations: ${ITERATIONS} (run 1 = cold, discarded from stats)\n`);
 
@@ -257,7 +331,7 @@ async function main(): Promise<void> {
   const results: Metrics[] = [];
   try {
     for (let i = 1; i <= ITERATIONS; i++) {
-      const m = await runIteration(ctx, fileUrl, i);
+      const m = await runIteration(ctx, fileUrl, i, sectionCount);
       results.push(m);
       const cold = i === 1 ? ' (cold, discarded)' : '';
       console.log(
@@ -291,7 +365,12 @@ async function main(): Promise<void> {
 
   const gateVal = median(aVals);
   const pass = gateVal < GATE_MS;
-  console.log(`\ngate: (a) median ${fmt(gateVal)} vs <${GATE_MS}ms target -> ${pass ? 'PASS' : 'FAIL'}`);
+  // The rescoped gate (spec 001) holds the <150 ms bar for TYPICAL docs (<=50 KB);
+  // the 1 MB fixture is judged against its own honest measured bound, not this line.
+  // Tolerance band (64 KB) so a ~50 KB target that generates a hair over 51200 B
+  // still reads as the typical-doc tier it represents.
+  const scope = source.length <= 64 * 1024 ? 'typical-doc gate' : 'large-doc (informational vs typical-doc gate)';
+  console.log(`\ngate [${fmtBytes(source.length)}, ${scope}]: (a) median ${fmt(gateVal)} vs <${GATE_MS}ms -> ${pass ? 'PASS' : 'FAIL'}`);
 }
 
 main().catch((err) => {

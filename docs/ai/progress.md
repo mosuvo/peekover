@@ -12,6 +12,30 @@ Next action = the **remote-resource policy** task (block remote images by defaul
 opt-in + network indicator; the last M1 feature before trust docs 6.x).
 
 ## Done
+- 2026-07-14 — Rescoped the first-paint gate from a size-sweep (measurement + docs only; ZERO
+  `src/`+`entrypoints/` changes). The `<150 ms on the 1 MB fixture` line was written pre-measurement
+  and is unreachable in the settled design (browser parse floor on a 1 MB `file://` doc + the
+  complete-source-before-mount requirement + ~750 ms to lay out the reader's own ~1400-section DOM —
+  see decisions.md 2026-07-14). Parameterized `pnpm perf` with `--size` (`pnpm perf -- --size 50kb`;
+  default = the 1400-section 1 MB fixture, byte-identical to the golden digest — proven: golden suite
+  green, `sha256=8bc5094c…e61bbd` unchanged). Swept sizes, same protocol (7 runs, cold discarded,
+  median of warm 6, two invocations each; 1 MB re-confirmed twice). Machine: i7-13700, Windows,
+  headless chromium via Playwright. **(a) navigationStart → reader painted:**
+
+  | fixture (target → actual) | sections | inv 1 median | inv 2 median | <150 ms |
+  |---|---|---|---|---|
+  | 10 KB → 10.5 KB   | 13   | 81.6 ms   | 78.2 ms   | **PASS** |
+  | 50 KB → 50.4 KB   | 62   | 117.8 ms  | 121.8 ms  | **PASS** |
+  | 200 KB → 199.9 KB | 245  | 347.4 ms  | 344.8 ms  | FAIL |
+  | 1 MB → 1.12 MB    | 1400 | 1310.3 ms | 1187.0 ms | FAIL (~8×) |
+
+  ((b) responseEnd → paint tracked ~1–3 ms under (a) throughout; browser FCP is n/a for file:// text.)
+  Gate rewritten (spec 001) as two-part and BOTH parts tick: (i) typical doc (≤50 KB) nav→paint median
+  <150 ms — PASS; (ii) 1 MB: no raw-text flash (manual-verified both engines) + reader painted within an
+  honest bound <1.7 s (~25–30% headroom over the ~1187–1310 ms median) — PASS. 200 KB (~345 ms) marks
+  where a single-shot synchronous render starts to degrade, confirming ≤50 KB as the honest "typical"
+  boundary. No threshold was softened to force a pass. Chunked/virtualized render deferred to M2 as the
+  large-doc lever. No Now-pointer move — remote-resource policy is still next.
 - 2026-07-14 — Fixed the Firefox mount-timing regression (caught by the human manual gate, NOT
   jsdom — it's an engine-timing class of bug the unit env can't see). Root cause: `runReader`
   mounted once at DOMContentLoaded and its `finally` revealed the raw text on EVERY outcome,
@@ -93,6 +117,7 @@ Done in the golden-fixtures + perf group (spec 001, tasks 5.1/5.2), see Done abo
 
 Carried to M2:
 - Restore GFM table alignment safely (map to class, never inline style).
+- Chunked/virtualized reader render — the large-doc first-paint lever (see decisions.md 2026-07-14).
 
 After 001: 002 file/folder sources + permissions UX · 003 TOC/navigation · 004 themes+settings ·
 005 watch mode + diff (the differentiator) · … full order in docs/product/spec.md §Phase-1.

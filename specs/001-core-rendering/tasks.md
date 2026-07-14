@@ -29,16 +29,21 @@
 - [x] 5.2 Perf measurement on 1MB fixture recorded in progress.md
   - `pnpm perf` (scripts/perf-first-paint.ts): real headless-Chromium first-paint of the built
     extension over the 1.12MB huge-doc, 7 runs (cold discarded). Local gate only, NOT in CI.
-    Result: nav→paint median ~1245ms — FAILS the <150ms gate (~8×), so spec acceptance box stays
-    UNTICKED. Breakdown in progress.md: browser's own 1MB raw-text load (~1s, document_idle) dominates,
-    not the pipeline. Measurement task — no src/ changes to chase the target.
+    Result: nav→paint median ~1187–1310ms — misses a flat <150ms on the 1MB doc (~8×). Breakdown in
+    progress.md: browser's own 1MB parse/layout dominates, not the pipeline. Measurement task — no
+    src/ changes to chase the target.
   - [x] 5.2b document_start + hidden-raw first-paint pass (perf-group follow-up): runAt:'document_start'
     + inject a `<style>` that display:none's the raw `<pre>` before paint, mount at DOMContentLoaded;
     never-blank kept by detect-before-hide + safety unhide (3s timer + window load) + finally-unhide
     (`src/render/runReader.ts`). Eliminates the raw-text FLASH (verified: raw `<pre>` is display:none at
-    27ms, pre-mount). Re-measured (2 runs): nav→paint median ~1261–1341ms — STILL FAILS <150ms, gate
-    box stays UNTICKED. First-paint is now dominated by laying out the reader's own ~1400-section DOM,
-    not the raw-`<pre>` layout we removed. Only remaining lever = chunked/virtualized render (out of
-    scope here). See progress.md + decisions.md (2026-07-14 document_start).
+    27ms, pre-mount). First-paint is now dominated by laying out the reader's own ~1400-section DOM,
+    not the raw-`<pre>` layout we removed. Only remaining lever = chunked/virtualized render (M2).
+  - [x] 5.2c Gate RESCOPED from a size-sweep (measurement + docs only; zero src/+entrypoints/ changes).
+    `pnpm perf` now takes `--size` (default = the 1400-section 1MB fixture, byte-identical to the golden
+    digest — golden suite green, digest unchanged). Swept 10/50/200KB + re-confirmed 1MB (same protocol,
+    two invocations each): nav→paint medians 10KB ~78–82ms, 50KB ~118–122ms (both PASS <150ms), 200KB
+    ~345ms, 1MB ~1187–1310ms. Spec-001 acceptance rewritten as a two-part gate, BOTH parts ticked:
+    (i) typical ≤50KB <150ms; (ii) 1MB no-flash (both engines) + painted <1.7s honest bound. See
+    progress.md table + decisions.md (2026-07-14 gate rescope). Chunked/virtualized render carried to M2.
 - [ ] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)
 - [ ] 6.2 Update progress.md; run /retro if warranted

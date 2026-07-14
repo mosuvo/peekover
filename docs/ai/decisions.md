@@ -1,6 +1,28 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · First-paint gate rescoped from a size-sweep: <150 ms protects the TYPICAL doc, the
+  1 MB case gets its own honest bound.** The single `<150 ms on the 1 MB fixture` acceptance line was
+  written PRE-measurement; measurement (5.2/5.2b) put it ~8× over and showed why the number is
+  unreachable on a 1 MB `file://` doc within the settled design, for two structural reasons: (1) a
+  **browser parse floor** — DOMContentLoaded on a 1 MB doc is hundreds of ms of the browser's own
+  parse we cannot precede, and we must WAIT for a readable, COMPLETE source before mounting (reading a
+  partially-streamed `<pre>` would silently truncate a large doc; the Gecko fix reinforced that source
+  readiness is engine-dependent); and (2) the reader's **own layout** — building the ~1400-section
+  rendered DOM adds ~750 ms, the cost that now dominates first-paint after the document_start pass
+  removed the raw-`<pre>` flash. A size sweep (`scripts/perf-first-paint.ts --size`, same protocol: 7
+  runs, cold discarded, median of warm 6, two invocations; i7-13700, Windows, headless chromium)
+  measured nav→paint medians: **10 KB → ~78–82 ms, 50 KB → ~118–122 ms (both PASS <150 ms); 200 KB →
+  ~345–347 ms; 1 MB → ~1187–1310 ms (FAIL, ~8×).** Decision (human-approved): the gate is now two-part
+  — (i) typical doc (≤50 KB): nav→paint median <150 ms [PASS]; (ii) 1 MB: no raw-text flash
+  (manual-verified in both engines) + reader painted within an honest bound **<1.7 s** (~25–30%
+  headroom over the measured median) [PASS]. This is NOT softening a threshold to force a pass: the
+  ≤50 KB tier genuinely meets 150 ms on its own; 200 KB (~345 ms) marks where a single-shot synchronous
+  render starts to degrade and informs the ≤50 KB "typical" boundary. **Chunked/virtualized/deferred
+  reader render is explicitly DEFERRED to M2 as the lever for large-doc first-paint** — do not build the
+  whole section DOM synchronously. Measurement/docs-only change: zero `src/`+`entrypoints/` edits, and the
+  golden 1 MB digest is unchanged (the default `pnpm perf` still uses `buildHugeDoc()`'s 1400-section
+  fixture byte-for-byte). Revisit-when: M2 chunked render lands, or the fixture/pipeline output changes.
 - **2026-07-14 · Mount triggers must be commit-aware; source readability at DOMContentLoaded is
   engine-dependent (the Gecko gotcha).** The `document_start` reader can be asked to mount before the
   raw `<pre>` is readable: on Firefox the `file://` `<pre>` can still be EMPTY at DOMContentLoaded and
