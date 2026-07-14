@@ -1,5 +1,5 @@
 # Product Specification — Markdown Reader/Editor Browser Extension
-### Product name: **Peekover** — *peek at your docs* (locked July 10, 2026)
+### Product name: **Peekover** — *peek over your docs* (locked July 2026)
 
 **Version:** Draft 2.1 · July 10, 2026 — product named Peekover
 **Status:** For build planning
@@ -300,7 +300,7 @@ Every choice below was re-checked against current comparisons. Rule: boring, bat
 | Layer | Choice | Why (verified) |
 |---|---|---|
 | Extension framework | **WXT** + TypeScript | The 2026 consensus default: actively maintained, Vite-based, first-class cross-browser builds (Chrome/Firefox/Edge/Safari) from one codebase, proven in 1M+-user production extensions. Plasmo is widely reported to be in maintenance mode — rejected. |
-| UI | **Svelte** (or Preact) | Smallest runtime → smallest package (NFR); no framework lock-in for content rendering |
+| UI (reader view) | **None — vanilla TS + CSS custom properties** | Smallest runtime → smallest package (NFR); the reader is the hot path and ships zero framework. A tiny framework (e.g. Preact) may be used only for heavier surfaces like the options page if ever needed. |
 | Markdown | **markdown-it** + plugin ecosystem (footnote, deflist, abbr, emoji, task-lists, anchor, front-matter, alerts) | The most battle-tested extensible JS parser; every needed syntax exists as a maintained plugin |
 | Sanitization | **DOMPurify** | Industry standard; core to the security claims |
 | Highlighting | **Shiki** (lazy-loaded) | VS Code-grade accuracy, 190+ langs; heavier than highlight.js, so it loads as a local async chunk — accuracy is worth it |
