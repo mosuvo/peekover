@@ -10,6 +10,10 @@
 - [ ] 3.3 mount stage: shadow root, patch-on-rerender, <150ms perf harness
 - [ ] 4.1 tokens.css import + light/dark auto; Literata subset bundled; 76ch reader column
 - [ ] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
+- [ ] Remote-resource policy: block remote images/resources by default; one-click opt-in that loads
+  them + lights the network indicator; lazy-load permitted media (loading="lazy" / IntersectionObserver).
+  Depends on: reader shell + a minimal status-bar network indicator. Target: end of M1 (completes the
+  core reader's security story); movable to M2 if scope tightens.
 - [ ] 5.1 10 golden fixtures + snapshot runner; wire into CI
 - [ ] 5.2 Perf measurement on 1MB fixture recorded in progress.md
 - [ ] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)

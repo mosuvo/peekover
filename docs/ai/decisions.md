@@ -1,6 +1,14 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Remote resources are BLOCKED by default.** Peekover does not load remote
+  images or any remote resource a document's HTML would fetch until the user opts in with one
+  click, which loads them AND lights the network indicator; permitted/local media is lazy-loaded
+  (native `loading="lazy"`, offscreen deferral). Why: makes the "zero network by default" promise
+  literally visible and demoable — core positioning, not a preference (AGENTS.md #1). The sanitize
+  allow-list is unchanged (it still permits http/https `src`); blocking is a RENDER-LAYER policy
+  (mount/shell decides what actually loads), not a sanitize strip. Revisit-when: never for the
+  default; the load mechanism may evolve.
 - **2026-07-14 · Dropped `id` and `align` from the sanitize allow-list.** The strict
   DOMPurify profile (`src/render/sanitize.ts`) no longer permits `id` or `align`. Why:
   `id` is a DOM-clobbering surface (attacker-controlled ids can shadow named
