@@ -5,7 +5,7 @@
 - [x] 2.2 Content script mounts a hello-shell in matched contexts, Chrome + Firefox
 - [x] 2.3 Firefox build → MV3 (WXT default is MV2) + gecko.id + data_collection none; Chrome manifest unaffected
 - [x] 3.1 pipeline.ts: decode+parse stages w/ markdown-it GFM set; unit tests
-- [ ] 3.2 sanitize.ts: DOMPurify strict profile (data-driven allowlist); malicious-fixture tests
+- [x] 3.2 sanitize.ts: DOMPurify strict profile (data-driven allowlist); malicious-fixture tests
 - [ ] 3.3 mount stage: shadow root, patch-on-rerender, <150ms perf harness
 - [ ] 4.1 tokens.css import + light/dark auto; Literata subset bundled; 76ch reader column
 - [ ] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
