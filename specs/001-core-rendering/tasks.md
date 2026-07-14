@@ -7,7 +7,9 @@
 - [x] 3.1 pipeline.ts: decode+parse stages w/ markdown-it GFM set; unit tests
 - [x] 3.2 sanitize.ts: DOMPurify strict profile (data-driven allowlist); malicious-fixture tests
   - [ ] M2: restore GFM table alignment safely (map to class, never inline style)
-- [ ] 3.3 mount stage: shadow root, patch-on-rerender, <150ms perf harness
+- [x] 3.3 mount stage: shadow root, patch-on-rerender, <150ms perf harness
+  - [ ] C12: patch-on-rerender is a DEFERRED optimization — M1 ships full innerHTML
+    replacement (correct + idempotent, no diffing dep). Revisit if re-render cost bites.
 - [ ] 4.1 tokens.css import + light/dark auto; Literata subset bundled; 76ch reader column
 - [ ] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
 - [ ] Remote-resource policy: block remote images/resources by default; one-click opt-in that loads
