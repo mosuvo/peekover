@@ -5,13 +5,33 @@
 ## Now (start here)
 **Active spec:** `specs/001-core-rendering/` — extension skeleton + core render pipeline.
 **State:** mid-M1 — SHELL GROUP + golden-fixtures/perf group (5.1, 5.2) + document_start
-first-paint pass complete. The reader is detect → hide-raw → mount@DOMContentLoaded → parse →
-sanitize → themed reading → Raw toggle → never-blank fallback, on Chrome + Firefox,
-`permissions:[]`, ~266KB packed. 137 unit + 62 in-browser tests green.
-Next action = the **remote-resource policy** task (block remote images by default + one-click
-opt-in + network indicator; the last M1 feature before trust docs 6.x).
+first-paint pass + **remote-resource policy** complete. The reader is detect → hide-raw →
+mount@DOMContentLoaded → parse → sanitize → **block-remote-media** → themed reading → Raw
+toggle → never-blank fallback, on Chrome + Firefox, `permissions:[]`, ~270KB packed
+(zip 152.96 kB). 159 unit + 62 in-browser tests green.
+Next action = **trust docs 6.1/6.2** — `docs/trust/PERMISSIONS.md` v1 (every manifest line
+justified) + progress update; this closes the M1 feature group (spec 001).
 
 ## Done
+- 2026-07-14 — Remote-resource policy (last M1 feature). Filled the `applyMediaPolicy` seam with
+  the block-by-default policy (AGENTS.md #1 made visible + demoable). New modules:
+  `src/render/mediaPolicy.ts` (classify/neutralize/restore) + `src/render/remoteMediaUi.ts` (opt-in
+  pill + network indicator); styles in `readerCss.ts` (tokens only). Per `<img>`, classified by the
+  scheme it RESOLVES to vs `document.baseURI`: http/https (incl. protocol-relative) → BLOCKED (URL →
+  `data-peekover-src`, `<img>` → inert themed placeholder), `file:` on a file page → allowed +
+  `loading="lazy"`, `data:`/`blob:` → inert. **The gotcha handled:** neutralization runs on the
+  DETACHED reader root (no browsing context → no fetch) BEFORE `replaceChildren()` commits it live —
+  a no-leak test commits the real pipeline to a live jsdom DOM and asserts zero fetchable src/srcset;
+  proven non-vacuous RED-first (no-op the policy → 3 remote `IMG[src]` leak) then GREEN on restore.
+  Opt-in is per PAGE-VIEW (`permissions:[]` = no storage → reload re-blocks): the "N remote images
+  blocked · Load" pill restores real `<img loading="lazy">` and lights a persistent
+  `data-network="active"` indicator that never shows otherwise. Raw view untouched. images.md golden
+  regenerated through the full reader path (src → data-peekover-src + placeholder markup); huge-doc
+  digest byte-identical (no images — verified). `pnpm perf` (default 1 MB) flat: (a) median 1242.5 ms,
+  within the prior ~1187–1310 ms band (the image-free fixture is unaffected). 159 unit + 62 browser
+  green, lint clean; content script 266.85 → 270.51 kB, zip 151.45 → 152.96 kB (well under budget).
+  Manual Chrome+Firefox verification (devtools Network tab) is on the human checklist. See
+  decisions.md 2026-07-14 (mechanics). tasks.md remote-resource task ticked.
 - 2026-07-14 — Rescoped the first-paint gate from a size-sweep (measurement + docs only; ZERO
   `src/`+`entrypoints/` changes). The `<150 ms on the 1 MB fixture` line was written pre-measurement
   and is unreachable in the settled design (browser parse floor on a 1 MB `file://` doc + the
@@ -106,10 +126,9 @@ opt-in + network indicator; the last M1 feature before trust docs 6.x).
     the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
-Immediate — remaining in M1 (spec 001):
-- Remote-resource policy (tasks.md): block remote images/resources by default; one-click opt-in
-  that loads them + lights the network indicator; lazy-load permitted media (loading="lazy" / IO).
+Immediate — remaining in M1 (spec 001), the final feature-group step:
 - Trust docs 6.x: docs/trust/PERMISSIONS.md v1 (every manifest line justified); progress update.
+  This closes M1's core-reader security story (zero-network default is now enforced AND demoable).
 
 Done in the golden-fixtures + perf group (spec 001, tasks 5.1/5.2), see Done above:
 - 5.1: 10 golden fixtures + snapshot runner in CI, plus the in-browser mXSS re-check

@@ -1,6 +1,38 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Remote-resource policy — implementation mechanics.** (Implements the
+  earlier default decision below.) Filled the `applyMediaPolicy` seam
+  (`src/render/mediaPolicy.ts`). **Neutralization happens in an INERT context, before
+  commit** — the load-bearing rule: inserting an `<img src="http…">` into the LIVE DOM
+  fires the fetch immediately, so stripping `src` *after* commit has already leaked the
+  request. `mount()` already builds the reader root DETACHED (`createElement` + `innerHTML`
+  — a detached subtree has no browsing context and fetches nothing), so we run the policy
+  on that root and only then `replaceChildren()` it into the live shadow tree. A `mount()`
+  no-leak test commits the real pipeline to a live jsdom DOM and asserts zero fetchable
+  `src`/`srcset` anywhere; non-vacuity was proven RED-first by no-oping the policy (3 remote
+  `IMG[src]` leaked) then GREEN on restore. **Classification is by the scheme a URL RESOLVES
+  to against the page URL** (`document.baseURI`), not string inspection: the SAME `./pic.png`
+  is *local* on a `file://` page (→ `loading="lazy"`, no network) but *remote* on a raw-git
+  `https://` page (→ blocked). http/https (incl. protocol-relative) → blocked; `file:` on a
+  file page → allowed+lazy; `data:`/`blob:`/unresolvable → inert (and `data:` is already
+  stripped from `<img src>` by sanitize's own hook). A blocked image's `<img>` is REMOVED and
+  replaced by an inert themed placeholder (`<span>`, valid inline; label + alt text); the URL
+  rides on `data-peekover-src` (+ `data-peekover-srcset` defensively — `srcset` is not in
+  sanitize's ALLOWED_ATTR today, so it does not survive, but the policy stays correct if that
+  changes). **Opt-in is per PAGE-VIEW, a direct consequence of `permissions:[]`** — there is no
+  storage, so preference cannot be persisted; the "N remote images blocked · Load" pill restores
+  the stored URLs as real `<img loading="lazy">` for this view only, and a reload re-blocks (the
+  pill's tooltip says so). **Network-indicator semantics:** a `data-network="active"` attribute on
+  the host (like `data-theme`/`data-mode`) that CSS keys a persistent corner light off; it is set
+  the moment the user opts in and stays for the rest of the view, and is NEVER shown otherwise
+  (chrome is added only when >0 images were blocked). Uses `--del` (the one warm accent) as an
+  honest "you have left the zero-network default" signal. **UX precedent:** the email-client
+  pattern ("images not shown · load images") — familiar, trust-building, and the exact shape users
+  already understand; our differentiator is that competing markdown viewers load remote media
+  by default. Raw view is untouched (policy applies to the rendered reader only). Revisit-when:
+  the load mechanism evolves (e.g. a settings-persisted allow, which needs storage → a permission),
+  or non-`<img>` remote media (audio/video/SVG-use) enters the allow-list.
 - **2026-07-14 · First-paint gate rescoped from a size-sweep: <150 ms protects the TYPICAL doc, the
   1 MB case gets its own honest bound.** The single `<150 ms on the 1 MB fixture` acceptance line was
   written PRE-measurement; measurement (5.2/5.2b) put it ~8× over and showed why the number is

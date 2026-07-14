@@ -17,10 +17,19 @@
     inline as base64 data: URIs, registered via FontFace API — zero network, no WAR. See
     decisions.md (2026-07-14 font strategy + theme deferral).
 - [x] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
-- [ ] Remote-resource policy: block remote images/resources by default; one-click opt-in that loads
+- [x] Remote-resource policy: block remote images/resources by default; one-click opt-in that loads
   them + lights the network indicator; lazy-load permitted media (loading="lazy" / IntersectionObserver).
   Depends on: reader shell + a minimal status-bar network indicator. Target: end of M1 (completes the
   core reader's security story); movable to M2 if scope tightens.
+  - Landed: `applyMediaPolicy` seam filled (`src/render/mediaPolicy.ts` classify/neutralize/restore
+    + `src/render/remoteMediaUi.ts` opt-in pill + network indicator). Neutralization on the DETACHED
+    reader root before commit (no fetch ever fires — no-leak test, red-first proven). Classify by
+    RESOLVED scheme vs `document.baseURI`: http/https (incl. protocol-relative) blocked -> inert themed
+    placeholder (src -> data-peekover-src); file: on a file page allowed + `loading="lazy"`. Opt-in is
+    per page-view (permissions:[] = no storage; reload re-blocks) and lights a persistent
+    `data-network="active"` indicator. images.md golden regenerated through the full reader path;
+    huge-doc digest unchanged. 159 unit + 62 browser green. See decisions.md 2026-07-14 (mechanics).
+    IntersectionObserver deferral not needed — native `loading="lazy"` covers M1.
 - [x] 5.1 10 golden fixtures + snapshot runner; wire into CI
   - Part A: 9 fixture snapshots (tests/golden/) + a pinned-digest ~1MB huge-doc case;
     CI-gated by Vitest's refuse-to-write-under-CI. Part B: in-browser mXSS re-check
