@@ -1,6 +1,17 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · The reader HIDES the page's original nodes (`display:none`), not detach.**
+  `mountReader` (src/render/mountReader.ts) sets inline `display:none` on the body's original
+  children rather than removing them, so task 4.2's Raw toggle can reveal them again without a
+  reload. This MUTATES the host page's DOM (inline display on body children). To keep the
+  never-blank invariant (AGENTS.md #5) on the real injection path, mountReader renders into its
+  shadow host and confirms non-empty content FIRST, and only THEN hides the originals; on any
+  throw — or an empty render — it removes the host and leaves the browser's own rendering exactly
+  as it was, so the user is never left with the page hidden AND nothing valid shown. (mount()'s
+  own throw→raw fallback can't see this hide step, hence the guard lives in mountReader; the core
+  was extracted from the entrypoint so it's unit-testable in jsdom.) Revisit-when: task 4.2 Raw
+  toggle implementation, which reads/reverses this `display:none`.
 - **2026-07-14 · Remote resources are BLOCKED by default.** Peekover does not load remote
   images or any remote resource a document's HTML would fetch until the user opts in with one
   click, which loads them AND lights the network indicator; permitted/local media is lazy-loaded
