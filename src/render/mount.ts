@@ -54,21 +54,33 @@ export function mount(source: string, host: HTMLElement): void {
   const shadow = shadowFor(host);
   try {
     // parse -> sanitize (AGENTS.md #3). The ONLY innerHTML assignment, and it is
-    // the sanitized string. Built fully detached, then committed last, so a throw
-    // anywhere above leaves the previously mounted content untouched until we swap.
+    // the sanitized string.
     const html = sanitize(parse(source));
+
+    // Remote-resource policy (AGENTS.md #1). LOAD-BEARING, and a trap that was already
+    // sprung once: the sanitized HTML is parsed into a <template>'s content — an INERT
+    // document with NO browsing context — so a remote <img src> is NOT fetched when it
+    // materializes. This is the property that actually prevents the leak. It is NOT
+    // "the node is detached": `document.createElement('div').innerHTML = html` DOES
+    // dispatch the fetch (that div is owned by THIS document, which has a browsing
+    // context), and synchronous removal afterward cannot cancel the in-flight request —
+    // that was the shipped bug, invisible to jsdom (it loads no subresources) and caught
+    // only at the human Network-tab gate. <template>.content (and DOMParser) are the
+    // engine-guaranteed inert contexts; createElement children are not. See mediaPolicy.ts
+    // and the real-engine guard tests/browser/remoteMedia.browser.test.ts.
+    const baseUrl = host.ownerDocument?.baseURI || 'about:blank';
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html; // parsed inert: no browsing context -> no remote fetch
+    const blockedCount = applyMediaPolicy(tpl.content, baseUrl);
+
+    // Only now, with remote media already neutralized, adopt the nodes into a reader
+    // root owned by the live document. Nothing fetch-capable remains (remote <img>s are
+    // now inert placeholders; file:/data:/blob: never hit the network), so this adoption
+    // and the replaceChildren() commit below put nothing on the wire. Built detached and
+    // committed last, so a throw anywhere above leaves the previous mount untouched.
     const root = document.createElement('div');
     root.className = 'peekover-reader';
-    root.innerHTML = html;
-    // Remote-resource policy (AGENTS.md #1). CRITICAL ORDERING: `root` is still
-    // DETACHED here (createElement, not yet in any document), so assigning innerHTML
-    // above fetched nothing — a detached subtree has no browsing context. We must
-    // neutralize remote media NOW, before the replaceChildren() below commits `root`
-    // into the live shadow tree, because that commit is the moment any surviving
-    // remote <img src> would fire its fetch. See mediaPolicy.ts (the load-bearing
-    // gotcha) and the no-leak test in mount.test.ts.
-    const baseUrl = host.ownerDocument?.baseURI || 'about:blank';
-    const blockedCount = applyMediaPolicy(root, baseUrl);
+    root.append(tpl.content);
     // Commit the reader stylesheet + the minimal Raw/Reading control alongside the
     // content. The <style> is rebuilt each render because replaceChildren() drops the
     // previous one (task 4.1). The Raw view itself is NOT built here — readerMode

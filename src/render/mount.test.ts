@@ -136,6 +136,10 @@ describe('mount — parse -> sanitize -> shadow DOM', () => {
 
   it('NO-LEAK: committing a doc of remote images leaves zero fetchable src/srcset', () => {
     const host = makeHost();
+    // DOM-SHAPE GUARD ONLY: jsdom loads no subresources, so this proves the committed
+    // tree holds nothing fetchable — NOT that zero bytes hit the wire. The real
+    // bytes-on-wire guard is tests/browser/remoteMedia.browser.test.ts (Resource Timing
+    // in real Chromium + Firefox); a leak upstream of the committed shape is invisible here.
     // The REAL pipeline, committed to a live shadow the way mount() does. If any
     // remote src survived to the live tree, a real browser would have fetched it.
     mount(
@@ -156,6 +160,10 @@ describe('mount — parse -> sanitize -> shadow DOM', () => {
   });
 
   it('ORDERING: neutralizes remote media BEFORE committing the tree (replaceChildren)', () => {
+    // DOM-SHAPE GUARD ONLY: this pins neutralize-before-commit at the replaceChildren
+    // seam, but the shipped leak fired UPSTREAM of it (at innerHTML, before commit), so
+    // this test stayed green through the whole bug. The bytes-on-wire guard is
+    // tests/browser/remoteMedia.browser.test.ts — trust that one for "no request fired".
     // The NO-LEAK test above inspects FINAL DOM state, so a policy that ran AFTER
     // replaceChildren would still pass it — yet in a real engine the remote <img>s
     // would already have fetched the instant they were inserted. jsdom fires no such

@@ -5,14 +5,22 @@
 // http/https `src` through the allow-list (decisions.md 2026-07-14 "Remote resources
 // are BLOCKED by default"); THIS module is what actually decides what loads.
 //
-// THE LOAD-BEARING GOTCHA (read twice): inserting an <img src="http://…"> into the
-// LIVE DOM fires the fetch immediately. So the neutralization MUST be complete before
-// the HTML ever reaches the live tree. mount() satisfies this by building the reader
-// root DETACHED (document.createElement + innerHTML — a detached subtree has no
-// browsing context and fetches nothing) and calling applyMediaPolicy() on it BEFORE
-// shadow.replaceChildren() commits it. A policy that stripped src AFTER commit would
-// have already leaked the request — that is a failed implementation, and the no-leak
-// test in mount.test.ts exists to keep it failed-if-reintroduced.
+// THE LOAD-BEARING GOTCHA (read twice; it has already bitten once): a remote
+// <img src="http://…"> fires its fetch the moment it materializes in a document that
+// has a BROWSING CONTEXT — and that includes nodes built via
+// `document.createElement(...).innerHTML = html`, because that element is owned by the
+// live document even while detached. "Detached subtree" is NOT the safe property; the
+// safe property is an INERT document with no browsing context. The engine-guaranteed
+// inert contexts are a <template>'s .content and DOMParser output — parsing the HTML
+// there loads no subresources. So mount() parses the sanitized HTML into a <template>,
+// runs applyMediaPolicy() on that inert fragment, and only then adopts the already-
+// neutralized nodes into the live tree. A policy that ran on a browsing-context node
+// (createElement) or stripped src AFTER commit has already put bytes on the wire — the
+// bug that shipped in the original remote-resource commit, invisible to the jsdom
+// DOM-shape tests (jsdom loads no subresources) and caught only at the human Network
+// tab. The real fetch guard therefore lives in tests/browser/remoteMedia.browser.test.ts
+// (Resource Timing in real Chromium + Firefox); mount.test.ts's NO-LEAK/ORDERING tests
+// still guard the committed DOM shape but cannot see bytes-on-wire.
 //
 // What the policy does, per rendered <img>:
 //   - remote  (resolves to http:/https:, incl. protocol-relative) → BLOCK: move the
