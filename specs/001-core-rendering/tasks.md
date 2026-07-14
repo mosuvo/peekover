@@ -10,7 +10,12 @@
 - [x] 3.3 mount stage: shadow root, patch-on-rerender, <150ms perf harness
   - [ ] C12: patch-on-rerender is a DEFERRED optimization — M1 ships full innerHTML
     replacement (correct + idempotent, no diffing dep). Revisit if re-render cost bites.
-- [ ] 4.1 tokens.css import + light/dark auto; Literata subset bundled; 76ch reader column
+- [x] 4.1 tokens.css import + light/dark auto; Literata subset bundled; 76ch reader column
+  - tokens + reader styles inject into the SHADOW ROOT (<style>, scoped to :host); light
+    default + dark via OS prefers-color-scheme (data-theme on host). Sepia + manual switch
+    DEFINED-but-dormant (settings milestone). Literata Latin subset (4 faces, ~86KB) bundled
+    inline as base64 data: URIs, registered via FontFace API — zero network, no WAR. See
+    decisions.md (2026-07-14 font strategy + theme deferral).
 - [ ] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
 - [ ] Remote-resource policy: block remote images/resources by default; one-click opt-in that loads
   them + lights the network indicator; lazy-load permitted media (loading="lazy" / IntersectionObserver).

@@ -29,6 +29,21 @@ describe('mount — parse -> sanitize -> shadow DOM', () => {
     expect([...items].map((li) => li.textContent)).toEqual(['one', 'two']);
   });
 
+  it('themes the reader: injects the token stylesheet + sets data-theme on the host', () => {
+    const host = makeHost();
+    mount('# Title', host);
+    const shadow = host.shadowRoot!;
+
+    // The tokens stylesheet is committed into the shadow root (not the page).
+    const style = shadow.querySelector('style');
+    expect(style?.textContent).toContain('--paper:#FBFBF8');
+    expect(style?.textContent).toContain('76ch');
+    // Auto theme applied to the host (light in jsdom — no matchMedia).
+    expect(host.getAttribute('data-theme')).toBe('light');
+    // Content still present alongside the style.
+    expect(shadow.querySelector('.peekover-reader h1')?.textContent).toBe('Title');
+  });
+
   it('renders formatted HTML, not raw text (bold, headings survive)', () => {
     const host = makeHost();
     mount('## Sub\n\nsome **bold** text', host);

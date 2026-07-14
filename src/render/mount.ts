@@ -13,6 +13,7 @@
 
 import { parse } from './parse';
 import { sanitize } from './sanitize';
+import { buildReaderStyle, initReaderRuntime } from '../theme/reader';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
@@ -71,12 +72,15 @@ export function mount(source: string, host: HTMLElement): void {
     root.className = 'peekover-reader';
     root.innerHTML = html;
     applyMediaPolicy(root);
-    shadow.replaceChildren(root);
+    // Commit the reader stylesheet alongside the content. The <style> is rebuilt
+    // each render because replaceChildren() drops the previous one (task 4.1).
+    shadow.replaceChildren(buildReaderStyle(), root);
+    initReaderRuntime(host);
   } catch (err) {
     // AGENTS.md #5: never a blank page. Degrade to the raw source as escaped text.
     // Dev-only signal; the user-facing error banner arrives with task 4.2.
     console.warn('[peekover] render failed; showing raw source', err);
-    mountRawFallback(source, shadow);
+    mountRawFallback(source, shadow, host);
   }
 }
 
@@ -85,9 +89,12 @@ export function mount(source: string, host: HTMLElement): void {
  * Uses textContent (not innerHTML), so the source is displayed literally and is
  * never parsed as HTML — safe even though the source is untrusted.
  */
-function mountRawFallback(source: string, shadow: ShadowRoot): void {
+function mountRawFallback(source: string, shadow: ShadowRoot, host: HTMLElement): void {
   const pre = document.createElement('pre');
   pre.className = 'peekover-raw';
   pre.textContent = source;
-  shadow.replaceChildren(pre);
+  // Theme the fallback too (paper/ink, mono) so a failed render still reads as
+  // Peekover rather than a bare white page. buildReaderStyle can't throw here.
+  shadow.replaceChildren(buildReaderStyle(), pre);
+  initReaderRuntime(host);
 }

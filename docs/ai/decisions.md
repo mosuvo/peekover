@@ -1,6 +1,30 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Fonts: Literata bundled INLINE as base64 `data:` URIs, registered via the
+  FontFace API.** The reader ships four Latin-subset Literata woff2 faces (400/700 × normal/italic,
+  ~86KB raw, OFL — `assets/fonts/`, license `assets/fonts/OFL.txt`). They are imported with Vite's
+  `?inline` suffix (relative paths, so the specifier resolves under both WXT and the vitest runner,
+  which has no `@/` alias) → embedded as base64 in the content-script bundle, and registered on
+  `document.fonts` via `new FontFace(...)` (`src/theme/fonts.ts`). Why inline over an extension URL:
+  zero-network becomes literal (no request at all, not even a chrome-extension:// fetch) AND it needs
+  no `web_accessible_resources`, so this styling task adds nothing to the manifest (AGENTS.md #4).
+  Why the FontFace API over an `@font-face` rule in the shadow root: Chromium does not reliably apply
+  `@font-face` declared inside a shadow tree, but faces on `document.fonts` participate in font
+  matching for the whole document incl. shadow trees, in both Chrome and Firefox; adding a face does
+  not restyle any host-page element, so it doesn't leak styling into the page. Cost: base64 inflates
+  the bundle ~33% over raw (packed zip ≈150KB total — far under the ≤5MB / <2MB-zip budgets).
+  Revisit-when: budget pressure, or a full-range (non-Latin) font need — then reconsider an
+  extension-URL + WAR delivery.
+- **2026-07-14 · Reader theme: light/dark ACTIVE via OS; sepia + manual switching DORMANT.** All
+  three themes are DEFINED in the shadow stylesheet (`src/theme/readerCss.ts`) with the exact
+  `design/tokens.css` values, keyed off a `data-theme` attribute on the shadow host. In M1 the runtime
+  (`src/theme/reader.ts`) only ever sets light or dark, driven by `prefers-color-scheme` (a single
+  matchMedia listener re-themes open readers when the OS flips). Sepia and manual/persisted selection
+  are intentionally left un-wired until the settings milestone (spec 004). Why define-but-dormant:
+  ships the correct token contract now so 004 only adds a selector, not new CSS. The full-bleed reader
+  paints via `:host{position:fixed;inset:0}` + `all:initial` (isolates the reader from host-page style
+  inheritance without touching the page). Revisit-when: spec 004 wires the theme/settings UI.
 - **2026-07-14 · The reader HIDES the page's original nodes (`display:none`), not detach.**
   `mountReader` (src/render/mountReader.ts) sets inline `display:none` on the body's original
   children rather than removing them, so task 4.2's Raw toggle can reveal them again without a
