@@ -1,6 +1,12 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Lowercase-only file:// match patterns.** `isRenderableContext()` is
+  case-insensitive, but the manifest `file:///*.<ext>` patterns are lowercase, so a local file with
+  an UPPERCASE extension (e.g. `README.MD`) won't trigger browser injection. Why: doubling every
+  file:// pattern to cover uppercase is a poor tradeoff for a rare case; raw hosts are host-matched
+  and unaffected, and most local files use lowercase extensions. Revisit-when: we next touch match
+  patterns (Firefox/manifest task 2.3 or folder-mode), or if a user actually reports it.
 - **2026-07-11 · Name: Peekover** (DocPeek withdrawn — live App Store collision). Eight-surface
   verification passed; domain peekover.dev owned+verified. Full record: names.md in design archive.
 - **2026-07-11 · Umbrella ship model:** repo under github.com/mosuvo/peekover (personal), org
