@@ -12,6 +12,23 @@ Next action = the **remote-resource policy** task (block remote images by defaul
 opt-in + network indicator; the last M1 feature before trust docs 6.x).
 
 ## Done
+- 2026-07-14 — Fixed the Firefox mount-timing regression (caught by the human manual gate, NOT
+  jsdom — it's an engine-timing class of bug the unit env can't see). Root cause: `runReader`
+  mounted once at DOMContentLoaded and its `finally` revealed the raw text on EVERY outcome,
+  including a "source wasn't ready yet" no-op. On Firefox the `file://` `<pre>` is still empty at
+  DCL (readable only by `load`), so that no-op `reveal()` dropped the hide `<style>`, cleared the
+  safety timer, and removed the `load` listener — the mount path was torn down and the user was
+  stuck on raw text forever, silently. This also corrected the record: the prior session's
+  "Firefox platform gap" was a misdiagnosis of this self-inflicted regression (remote and local
+  `.md` both failed by the same mechanism; the localhost-workaround research was unnecessary).
+  Fix shape: `mountReader` returns a commit boolean (`true` = committed, incl. degraded raw-fallback
+  + idempotent re-entry; `false` = the no-source no-op); `runReader.tryMount(final)` attempts at DCL
+  (not final → keep hide + backstops, wait) and again at `load` (final → reveal + one warn
+  breadcrumb); the safety timer becomes a pure never-blank FLOOR that reveals raw without disarming
+  the attempts (a late mount still wins). Test gap closed: a red-first regression test (empty body +
+  `readyState=loading` → DCL no-op → seed `<pre>` + `load` → reader mounts, raw hidden) plus both
+  timer directions. 139 unit + 62 browser green, lint clean, ~flat perf (a-median 1217 ms; Chromium
+  still mounts at DCL). See decisions.md (the Gecko gotcha). No pointer move — next action unchanged.
 - 2026-07-08..11 — Research, product spec (v2.1), full design system (design/), landing page
   (site/index.html), name verified+claimed (Peekover), this repo scaffolded.
 - 2026-07-14 — Reader shell group (M1), all pushed:

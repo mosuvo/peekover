@@ -1,6 +1,23 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Mount triggers must be commit-aware; source readability at DOMContentLoaded is
+  engine-dependent (the Gecko gotcha).** The `document_start` reader can be asked to mount before the
+  raw `<pre>` is readable: on Firefox the `file://` `<pre>` can still be EMPTY at DOMContentLoaded and
+  only becomes readable by `load`; Chromium has it by DCL. So a mount attempt that finds no source is
+  NOT a failure — it must leave the hide + backstops armed and retry at `load`, never assume-and-tear-
+  down. `mountReader` now returns a commit boolean (`true` = a reader host is committed, incl. the
+  degraded raw-fallback and the idempotent already-mounted re-entry; `false` = the no-source no-op),
+  and `runReader` only reveals-and-disarms on a real commit, an unforeseen throw, or the FINAL attempt
+  (which also logs one `console.warn` breadcrumb — the silent give-up is what cost this bug an
+  investigation). The safety timer is now a pure never-blank FLOOR: it reveals raw WITHOUT disarming
+  the attempts, so a late mount still takes over (accepted returned-flash tradeoff). **Correction of the
+  record:** Firefox `file://` content scripts DO work; the prior session's "Firefox platform gap" was a
+  MISDIAGNOSIS of this self-inflicted regression — remote (`raw.githubusercontent`) and local `.md` both
+  failed by the SAME mechanism (the old `finally { reveal() }` firing on a not-ready-yet DCL no-op),
+  and the localhost-workaround research it prompted was unnecessary. The original bug was introduced
+  with the document_start + hidden-raw pass (below). Revisit-when: we change the mount trigger timing,
+  or move off the DOMContentLoaded/`load` pair.
 - **2026-07-14 · Reader mounts at `document_start` behind a hidden raw view.** The content script
   now runs `runAt:'document_start'` (both browsers). Flow (`src/render/runReader.ts`): detect FIRST
   (URL gate; a miss leaves the page completely untouched), then SYNCHRONOUSLY inject a `<style>` that
