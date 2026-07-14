@@ -210,6 +210,34 @@ describe('runReader — mount at document_start behind a hidden raw view', () =>
     expect(document.getElementById(HIDE_STYLE_ID)).toBeNull();
   });
 
+  it("treats readyState 'interactive' as non-final: no source now waits for load, then mounts", () => {
+    // At document_start on Gecko the script can first run past 'loading' into
+    // 'interactive' — but `load` is still pending and the <pre> source may not be
+    // readable yet. Giving up on that immediate attempt (as a final one would) is
+    // premature: it must be a non-final attempt that leaves the hide + backstops armed
+    // and waits for the already-registered `load` listener.
+    setReadyState('interactive');
+    document.body.innerHTML = ''; // no <pre> yet — source not readable at the immediate attempt
+
+    runReader({ isRenderable: () => true }); // real mountReader
+
+    // The immediate 'interactive' attempt found no source — but must NOT give up:
+    // hide held, no breadcrumb, nothing torn down.
+    expect(document.querySelector('peekover-root')).toBeNull();
+    expect(document.getElementById(HIDE_STYLE_ID)).not.toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+
+    // The source finally streams in and `load` fires: the reader takes over.
+    const pre = seedRawPage('# Title\n\nSome body text.');
+    window.dispatchEvent(new Event('load'));
+
+    const host = document.querySelector('peekover-root') as HTMLElement | null;
+    expect(host).not.toBeNull();
+    expect(host!.getAttribute('data-mode')).toBe('reading');
+    expect(pre.style.display).toBe('none');
+    expect(document.getElementById(HIDE_STYLE_ID)).toBeNull();
+  });
+
   it('success with the REAL reader: mounts, neutralizes the hide, Raw toggle still works', () => {
     const source = '# Title\n\nSome body text.';
     seedRawPage(source);

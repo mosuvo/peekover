@@ -177,11 +177,13 @@ export function runReader(options: RunReaderOptions = {}): void {
   window.addEventListener('load', onLoad);
 
   // 4. Attempt at DOMContentLoaded (source may not be ready — not final), and always
-  //    again at `load` (final). If we somehow ran past 'loading' already, the source is
-  //    complete, so that immediate attempt is the final one.
+  //    again at `load` (final). If we ran past 'loading' already, attempt immediately —
+  //    but only 'complete' is final. At 'interactive' `load` is still pending and the
+  //    source may not be readable yet (the same Gecko window), so that attempt is NOT
+  //    final: a no-source result leaves the hide + backstops armed for the `load` listener.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => tryMount(false), { once: true });
   } else {
-    tryMount(true);
+    tryMount(document.readyState === 'complete');
   }
 }
