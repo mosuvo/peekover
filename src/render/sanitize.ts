@@ -43,19 +43,25 @@ export const ALLOWED_TAGS = [
  *                        `task-list-item`, `contains-task-list`)
  *  - type/checked/disabled  the task-list checkbox
  *  - colspan/rowspan     table cells
- *  - id                  forward-looking heading anchors (M2 anchor plugin)
- *  - align               forward-looking table alignment
  *
  * Deliberately absent: `style` (no inline CSS), `on*` (no event handlers),
  * `target`/`rel` (our links open in-place; no `target=_blank` can survive, so no
  * reverse-tabnabbing surface and no rel-adding hook is needed). data-* and aria-*
  * are also disabled below for a strictly minimal surface.
+ *
+ * `id` and `align` are intentionally NOT allowed in M1:
+ *  - `id` is a DOM-clobbering surface (an attacker-controlled `id` can shadow
+ *    named `document`/form properties and confuse later DOM lookups) and has no
+ *    M1 producer — heading anchors arrive in M2, where we generate the ids
+ *    ourselves and can re-allow `id` deliberately alongside them.
+ *  - `align` is dead weight: markdown-it emits table alignment as inline `style`
+ *    (which we strip), never as an `align` attribute, so allowing it does nothing.
+ *    GFM alignment is restored safely in M2 by mapping to a class (see tasks.md).
  */
 export const ALLOWED_ATTR = [
   'href', 'src', 'alt', 'title', 'class',
   'type', 'checked', 'disabled',
   'colspan', 'rowspan',
-  'id', 'align',
 ] as const;
 
 /**
@@ -83,15 +89,15 @@ export const ALLOWED_URI_REGEXP =
 const URL_ATTRS = new Set(['href', 'src', 'xlink:href']);
 
 /**
- * True if `value`'s URL scheme is `data:`, ignoring the leading C0 control and
- * space characters (code point <= 0x20) that browsers strip before resolving a
- * scheme — this defeats `\tdata:` / ` data:` obfuscation. Kept as a code-point
- * scan (no control chars in a regex literal) for clarity and lint-cleanliness.
+ * True if `value`'s URL scheme is `data:`. We remove EVERY control/space char
+ * (code point <= 0x20) throughout the value before the check, not just leading
+ * ones: browsers strip interior tab/LF/CR while resolving a scheme, so
+ * `da\tta:` / `d ata:` resolve to `data:` and must be denied too. This affects
+ * only the deny DECISION — the original attribute value is never rewritten.
  */
 function isDataUri(value: string): boolean {
-  let i = 0;
-  while (i < value.length && value.charCodeAt(i) <= 0x20) i++;
-  return value.slice(i, i + 5).toLowerCase() === 'data:';
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\u0000-\u0020]+/g, '').slice(0, 5).toLowerCase() === 'data:';
 }
 
 /**

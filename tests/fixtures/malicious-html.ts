@@ -86,6 +86,21 @@ export const MALICIOUS_CASES: MaliciousCase[] = [
     forbidden: ['data:image', 'base64'],
   },
   {
+    // Interior TAB obfuscation: `da\tta:` resolves to `data:` in a browser. The
+    // src (and its base64 payload) must be dropped — `base64` present in output
+    // would prove the attribute survived, so its absence proves the fix.
+    name: 'data: URL in img src with an interior TAB in the scheme',
+    html: `<img src="da\tta:image/svg+xml;base64,PHN2Zz48L3N2Zz4=">`,
+    forbidden: ['data:', 'base64', 'image/svg'],
+  },
+  {
+    // Same evasion on a href. `text/html` only appears if the href survived.
+    name: 'data: URL in a href with an interior TAB in the scheme',
+    html: `<a href="da\tta:text/html,payloadmarker">link</a>`,
+    forbidden: ['data:', 'text/html', 'payloadmarker'],
+    survives: ['link'],
+  },
+  {
     name: '<style> with CSS url(javascript:)',
     html: `<style>body{background:url("javascript:alert(1)")}</style><p>after</p>`,
     forbidden: ['<style', 'javascript:', 'alert('],

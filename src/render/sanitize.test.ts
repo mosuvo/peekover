@@ -30,13 +30,16 @@ describe('sanitize — strict DOMPurify profile', () => {
       ]);
     });
 
-    it('exposes the exact ALLOWED_ATTR set', () => {
+    it('exposes the exact ALLOWED_ATTR set (no id/align — inert & clobbering surface)', () => {
       expect([...ALLOWED_ATTR]).toEqual([
         'href', 'src', 'alt', 'title', 'class',
         'type', 'checked', 'disabled',
         'colspan', 'rowspan',
-        'id', 'align',
       ]);
+    });
+
+    it('does not allow id (DOM-clobbering surface, re-allowed with M2 anchors)', () => {
+      expect([...ALLOWED_ATTR]).not.toContain('id');
     });
 
     it('URL scheme policy: allows http/https/mailto/relative, denies javascript:/data:', () => {
@@ -125,11 +128,16 @@ describe('sanitize — strict DOMPurify profile', () => {
       expect(out).toContain('<sup>2</sup>');
     });
 
-    it('drops style/align inline styling from a table cell but keeps the cell', () => {
-      // markdown-it emits alignment as inline `style` (stripped); the cell text
-      // and structure must remain — degradation, not deletion.
+    it('drops table alignment in M1 but keeps the cell (degrade, not delete)', () => {
+      // markdown-it emits alignment as inline `style` (stripped), and `align` is
+      // no longer allow-listed — so no alignment survives in M1. The table must
+      // still render: cell text + structure remain intact. M2 restores alignment
+      // via a class (see tasks.md).
       const out = sanitize(parse('| L |\n|:--|\n| x |'));
       expect(out).not.toContain('style=');
+      expect(out).not.toContain('align=');
+      expect(out).not.toContain('text-align');
+      expect(out).toContain('<table>');
       expect(out).toContain('<td>x</td>');
     });
   });
