@@ -38,6 +38,23 @@ function remoteRefs(host: HTMLElement): string[] {
   return refs;
 }
 
+/**
+ * Same fetch-capable-URL proxy as remoteRefs, but scoped to a single node's own
+ * subtree (the node itself + descendants) rather than the live document. Used by the
+ * ordering test to inspect exactly the nodes handed to replaceChildren AT COMMIT TIME.
+ */
+function remoteRefsIn(node: Node): string[] {
+  const refs: string[] = [];
+  if (!(node instanceof Element)) return refs;
+  for (const el of [node, ...node.querySelectorAll('*')]) {
+    for (const attr of ['src', 'srcset']) {
+      const v = el.getAttribute(attr);
+      if (v && /^\s*(https?:|\/\/)/i.test(v)) refs.push(`${el.tagName}[${attr}]=${v}`);
+    }
+  }
+  return refs;
+}
+
 describe('mount — parse -> sanitize -> shadow DOM', () => {
   it('mounts rendered HTML into an OPEN shadow root', () => {
     const host = makeHost();
@@ -136,6 +153,41 @@ describe('mount — parse -> sanitize -> shadow DOM', () => {
     expect(host.shadowRoot!.querySelector('.peekover-remote-load')?.textContent).toBe(
       '3 remote images blocked · Load',
     );
+  });
+
+  it('ORDERING: neutralizes remote media BEFORE committing the tree (replaceChildren)', () => {
+    // The NO-LEAK test above inspects FINAL DOM state, so a policy that ran AFTER
+    // replaceChildren would still pass it — yet in a real engine the remote <img>s
+    // would already have fetched the instant they were inserted. jsdom fires no such
+    // request, so final-state checks are blind to this ordering. This test closes that
+    // gap by pinning the ordering itself: we patch the shadow root's replaceChildren
+    // and, at the moment of commit, walk the exact nodes being handed to it and assert
+    // the tree is ALREADY neutralized — not merely eventually.
+    const host = makeHost();
+    const proto = ShadowRoot.prototype;
+    const original = proto.replaceChildren;
+    const seenAtCommit: string[] = [];
+    let commits = 0;
+    proto.replaceChildren = function (this: ShadowRoot, ...nodes: Node[]) {
+      commits++;
+      for (const node of nodes) seenAtCommit.push(...remoteRefsIn(node));
+      return original.apply(this, nodes);
+    };
+    try {
+      mount(
+        ['![one](https://example.com/1.png)', '', '![two](http://example.org/2.jpg)'].join(
+          '\n',
+        ),
+        host,
+      );
+    } finally {
+      proto.replaceChildren = original; // restore for the rest of the suite
+    }
+
+    // The commit happened, and the subtree it committed carried zero fetch-capable
+    // remote refs: neutralize-before-commit, the ordering the module header requires.
+    expect(commits).toBeGreaterThan(0);
+    expect(seenAtCommit).toEqual([]);
   });
 
   it('opt-in restores the images (loading="lazy") and lights the network indicator', () => {
