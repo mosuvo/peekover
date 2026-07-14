@@ -1,8 +1,44 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · CORRECTION OF RECORD: "a detached node doesn't fetch" was FALSE in
+  Blink AND Gecko; the remote-resource commit shipped a real pre-opt-in fetch leak.** The
+  mechanics entry below claimed `mount()` was safe because it built the reader root
+  DETACHED (`document.createElement('div')` + `innerHTML`) before neutralizing. That
+  premise is wrong: a `createElement('div')` is owned by THIS document, which HAS a
+  browsing context, so assigning `root.innerHTML = html` dispatches the remote `<img>`
+  fetches AT THAT LINE — upstream of `applyMediaPolicy`, and synchronous removal
+  afterward does not cancel the in-flight request. So every remote image in a rendered
+  doc leaked one request on first paint, before any opt-in. **The property that actually
+  prevents the fetch is an INERT document with no browsing context** — a `<template>`'s
+  `.content` or `DOMParser` output, NOT "detached-ness". Probe evidence (throwaway
+  real-engine tests, both engines): a same-origin `<img>` mounted via the old path
+  produced Resource Timing entries for all three probe URLs in Chromium AND Firefox
+  (`http://localhost:PORT/__peekover_probe__/…`); parsing the same HTML into a
+  `<template>` produced zero. **Fix:** `mount()` now parses the sanitized HTML into a
+  `<template>`, runs `applyMediaPolicy()` on that inert fragment, then adopts the
+  already-neutralized nodes into the reader root (`root.append(tpl.content)`) and commits
+  as before — a remote `src` never materializes in a fetching document. `applyMediaPolicy`
+  already takes any `ParentNode`, so it accepts the `DocumentFragment` unchanged.
+  **Why it hid for a whole commit:** the class of bug is BYTES-ON-WIRE, and jsdom loads
+  no subresources — the `mount.test.ts` NO-LEAK (final-DOM-shape) and ORDERING
+  (neutralize-before-`replaceChildren`) tests both stayed GREEN through the entire leak,
+  because the leak fires at `innerHTML`, upstream of the DOM checkpoints they inspect.
+  It was caught only at the human Network-tab manual gate. **Standing rule going forward:
+  remote-media / zero-network guards MUST live in the browser project** (real Chromium +
+  Firefox, asserting on Resource Timing = bytes on wire), not jsdom —
+  `tests/browser/remoteMedia.browser.test.ts` is that guard (RED-first proven: 3 leaked
+  requests both engines pre-fix; GREEN post-fix; and it also asserts opt-in DOES fetch so
+  we did not over-correct). The jsdom NO-LEAK/ORDERING tests are kept but downgraded in
+  trust to DOM-shape guards (comments added). golden `images.html` unchanged (identical
+  neutralized output); sizes flat (content 270.58 kB, zip 152.99 kB); image-free 1 MB
+  perf flat (median ~1388 ms). Revisit-when: any new remote-media surface (audio/video,
+  SVG `<use>`, CSS `url()`), or the sanitize/mount seam changes how HTML reaches the DOM.
 - **2026-07-14 · Remote-resource policy — implementation mechanics.** (Implements the
-  earlier default decision below.) Filled the `applyMediaPolicy` seam
+  earlier default decision below. NOTE: the "detached subtree has no browsing context"
+  claim in this entry is CORRECTED by the entry above — the safe property is an inert
+  document, and the original implementation leaked; kept for history.) Filled the
+  `applyMediaPolicy` seam
   (`src/render/mediaPolicy.ts`). **Neutralization happens in an INERT context, before
   commit** — the load-bearing rule: inserting an `<img src="http…">` into the LIVE DOM
   fires the fetch immediately, so stripping `src` *after* commit has already leaked the

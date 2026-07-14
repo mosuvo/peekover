@@ -8,11 +8,32 @@
 first-paint pass + **remote-resource policy** complete. The reader is detect → hide-raw →
 mount@DOMContentLoaded → parse → sanitize → **block-remote-media** → themed reading → Raw
 toggle → never-blank fallback, on Chrome + Firefox, `permissions:[]`, ~270KB packed
-(zip 152.96 kB). 159 unit + 62 in-browser tests green.
+(zip 152.99 kB). 160 unit + 66 in-browser tests green.
 Next action = **trust docs 6.1/6.2** — `docs/trust/PERMISSIONS.md` v1 (every manifest line
 justified) + progress update; this closes the M1 feature group (spec 001).
 
 ## Done
+- 2026-07-14 — Fixed a pre-opt-in remote-image FETCH LEAK in the remote-resource policy
+  (shipped in the commit below, caught at the human Network-tab gate, NOT by any test). Root
+  cause: `mount()` built the reader root with `document.createElement('div')` + `root.innerHTML =
+  html` — that div is owned by the live (browsing-context) document, so both Blink and Gecko
+  dispatched the remote `<img>` fetches AT the innerHTML line, upstream of `applyMediaPolicy`, and
+  synchronous removal can't cancel an in-flight request. The "detached node doesn't fetch"
+  assumption was false; the safe property is an INERT document with no browsing context. Fix:
+  parse the sanitized HTML into a `<template>` (`.content` is inert), run `applyMediaPolicy` on
+  that fragment, then `root.append(tpl.content)` and commit as before — no fetch-capable node ever
+  materializes in a fetching document pre-opt-in. **This class of bug (bytes-on-wire) is invisible
+  to jsdom** (loads no subresources): the existing NO-LEAK + ORDERING tests stayed green through
+  the whole leak because it fires upstream of the DOM-shape checkpoints they inspect. New guard in
+  the browser project — `tests/browser/remoteMedia.browser.test.ts` asserts on the Resource Timing
+  buffer in real Chromium + Firefox: zero image requests before opt-in, requests DO fire after Load
+  (didn't over-correct). Proven RED-first (3 leaked requests both engines) → GREEN post-fix. jsdom
+  guards kept but commented down to DOM-shape-only; load-bearing comments in mount.ts + mediaPolicy.ts
+  corrected (inert document, not detached subtree). golden `images.html` byte-identical; 160 unit +
+  66 browser green, lint clean; content 270.51 → 270.58 kB, zip 152.96 → 152.99 kB; image-free 1 MB
+  perf flat (median ~1388 ms, within the noisy ~1187–1449 ms band). Standing rule recorded: remote-
+  media/zero-network guards live in the browser project henceforth. See decisions.md 2026-07-14
+  (correction of record). Manual re-check still owed by the human (Chrome + Firefox, Network tab).
 - 2026-07-14 — Remote-resource policy (last M1 feature). Filled the `applyMediaPolicy` seam with
   the block-by-default policy (AGENTS.md #1 made visible + demoable). New modules:
   `src/render/mediaPolicy.ts` (classify/neutralize/restore) + `src/render/remoteMediaUi.ts` (opt-in
