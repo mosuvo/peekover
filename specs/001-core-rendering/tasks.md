@@ -1,6 +1,6 @@
 # Tasks 001 — check off, add discovered tasks BELOW the line they came from
-- [ ] 1.1 Init WXT+TS project; pnpm scripts (dev/dev:firefox/build/zip/test/lint) all run clean
-- [ ] 1.2 CI: .github/workflows/ci.yml → lint+test+build on PR (keep ai-hygiene.yml)
+- [x] 1.1 Init WXT+TS project; pnpm scripts (dev/dev:firefox/build/zip/test/lint) all run clean
+- [x] 1.2 CI: .github/workflows/ci.yml → lint+test+build on PR (keep ai-hygiene.yml)
 - [ ] 2.1 `isRenderableContext()` + tests (file:// ext match, content-type, raw-host allowlist)
 - [ ] 2.2 Content script mounts a hello-shell in matched contexts, Chrome + Firefox
 - [ ] 3.1 pipeline.ts: decode+parse stages w/ markdown-it GFM set; unit tests
