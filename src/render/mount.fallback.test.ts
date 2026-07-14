@@ -50,6 +50,26 @@ describe('mount — fallback when a stage throws (never a blank page)', () => {
     expect(warn).toHaveBeenCalled();
   });
 
+  it('shows a quiet error banner above the raw source, and no toggle-able mode', () => {
+    const host = document.createElement('peekover-root');
+    document.body.appendChild(host);
+
+    mount('# whatever', host);
+
+    const shadow = host.shadowRoot!;
+    // Failure path = raw + a themed banner (AGENTS.md #5, upgraded from a dev warn).
+    const banner = shadow.querySelector('.peekover-alert');
+    expect(banner).not.toBeNull();
+    expect(banner?.textContent).toBe("Couldn't render this document — showing raw source.");
+    // Quiet/polite, not an assertive alarm.
+    expect(banner?.getAttribute('role')).toBe('status');
+    // Distinguishable from a user-chosen Raw view: failure carries NO data-mode
+    // (there is no rendered reading view to toggle to), so the shortcut stays inert.
+    expect(host.hasAttribute('data-mode')).toBe(false);
+    // The raw source is still shown (never a blank page).
+    expect(shadow.querySelector('pre.peekover-raw')?.textContent).toBe('# whatever');
+  });
+
   it('fallback is idempotent too (re-render leaves one root)', () => {
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);

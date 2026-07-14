@@ -16,7 +16,7 @@
     DEFINED-but-dormant (settings milestone). Literata Latin subset (4 faces, ~86KB) bundled
     inline as base64 data: URIs, registered via FontFace API — zero network, no WAR. See
     decisions.md (2026-07-14 font strategy + theme deferral).
-- [ ] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
+- [x] 4.2 Raw/Reading toggle + error-banner fallback path (test: throwing stage → raw view)
 - [ ] Remote-resource policy: block remote images/resources by default; one-click opt-in that loads
   them + lights the network indicator; lazy-load permitted media (loading="lazy" / IntersectionObserver).
   Depends on: reader shell + a minimal status-bar network indicator. Target: end of M1 (completes the

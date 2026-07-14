@@ -182,4 +182,35 @@ export const READER_CSS = /* css */ `
   background:var(--code-bg);border:1px solid var(--line);border-radius:var(--r);
   overflow:auto;white-space:pre-wrap;word-break:break-word;
 }
+
+/* ============ Raw <-> Reading toggle (task 4.2) ============ */
+/* View visibility is driven PURELY by data-mode on the host, so toggling is an
+   attribute flip — parse/sanitize never re-run. The failure path sets NO data-mode
+   (banner + raw is the only view there), so neither rule hides its raw <pre>. */
+:host([data-mode="reading"]) .peekover-raw{display:none}
+:host([data-mode="raw"]) .peekover-reader{display:none}
+
+/* One minimal pill, fixed in an unobtrusive corner. Styled from tokens (panel/ink/
+   line) — NOT the mockup's full toolbar. Stays put while the column scrolls; its
+   transition is neutralised under prefers-reduced-motion by the global rule above. */
+.peekover-mode-toggle{
+  position:fixed;top:16px;right:16px;z-index:2;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-mode-toggle:hover{color:var(--ink);border-color:var(--faint)}
+
+/* ============ Render-failure banner (AGENTS.md #5, upgraded) ============ */
+/* A quiet left-accent alert (mockup .alert.warn) — a left border bar, NOT a heavy
+   filled box. Shown ONLY on the failure path, above the raw source; a user-chosen
+   Raw view (via the toggle) has NO banner. */
+.peekover-alert{
+  max-width:76ch;margin:26px auto 0;padding:12px 16px;
+  font-family:var(--sans);font-size:14px;color:var(--ink);
+  background:var(--hl-soft);
+  border-left:3px solid var(--warn);border-radius:0 var(--r) var(--r) 0;
+}
 `;

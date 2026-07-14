@@ -1,6 +1,31 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Raw/Reading toggle: bare `\` shortcut; failure-raw and user-raw are
+  distinct; the Raw view is built lazily.** Task 4.2. The reader flips between the rendered
+  document ("Reading", default) and the original markdown as escaped text in the themed
+  `pre.peekover-raw` ("Raw"), invokable two ways: a focusable pill in the shadow root and a
+  keyboard shortcut. **Shortcut = a BARE backslash `\`** (`src/render/readerMode.ts`
+  `TOGGLE_KEY`): not a Ctrl/Cmd combo (the browser owns those), and not `/` or `'` (Firefox
+  quick-find) or a bare letter (collides with host-site shortcuts); `\` has no default
+  browser/OS action. Scoping (must never swallow keys on pages we didn't render): a single
+  document `keydown` listener installed once, only on the success path; it no-ops — and does
+  NOT preventDefault — unless a mounted host carries `data-mode`, ignores the event when focus
+  is in input/textarea/select/contenteditable, and rejects modifier chords. The listener is
+  only ever *added* inside our content script, which runs only in matched markdown contexts,
+  so it is absent on other pages entirely. **State** = a `data-mode` attribute on the shadow
+  host (`reading`|`raw`); CSS in `readerCss.ts` keys view visibility off it, so a toggle is a
+  pure attribute flip — parse/sanitize NEVER re-run (reader element identity holds across
+  toggles). **Lazy raw view:** the raw `<pre>` is built on first toggle (source as
+  `textContent`, no parse) and reused, so a never-toggled doc keeps its untrusted source out
+  of the shadow tree (this is also why the existing sanitize test — "no `alert(` in
+  innerHTML" — stays green). **Failure-raw vs user-raw are DISTINGUISHABLE:** the render-
+  failure fallback shows a quiet left-accent banner ("Couldn't render this document — showing
+  raw source.", `role="status"`, mockup `.alert.warn` styling) AND sets NO `data-mode` (there
+  is no reading view to toggle to, so the shortcut stays inert); a user-chosen Raw view is a
+  `data-mode` with NO banner. No persistence in M1 (mode resets per mount — persisted reading
+  prefs are spec 004). No manifest change (all in-content-script UI). Revisit-when: spec 004
+  settings UI (persist last mode), or a real toolbar milestone replaces the single pill.
 - **2026-07-14 · Fonts: Literata bundled INLINE as base64 `data:` URIs, registered via the
   FontFace API.** The reader ships four Latin-subset Literata woff2 faces (400/700 × normal/italic,
   ~86KB raw, OFL — `assets/fonts/`, license `assets/fonts/OFL.txt`). They are imported with Vite's

@@ -14,6 +14,12 @@
 import { parse } from './parse';
 import { sanitize } from './sanitize';
 import { buildReaderStyle, initReaderRuntime } from '../theme/reader';
+import {
+  buildModeToggle,
+  installToggleShortcut,
+  registerReaderSource,
+  setReaderMode,
+} from './readerMode';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
@@ -72,29 +78,50 @@ export function mount(source: string, host: HTMLElement): void {
     root.className = 'peekover-reader';
     root.innerHTML = html;
     applyMediaPolicy(root);
-    // Commit the reader stylesheet alongside the content. The <style> is rebuilt
-    // each render because replaceChildren() drops the previous one (task 4.1).
-    shadow.replaceChildren(buildReaderStyle(), root);
+    // Commit the reader stylesheet + the minimal Raw/Reading control alongside the
+    // content. The <style> is rebuilt each render because replaceChildren() drops the
+    // previous one (task 4.1). The Raw view itself is NOT built here — readerMode
+    // builds it lazily on first toggle (source as text, no reparse), so a document
+    // that is never toggled keeps its untrusted source out of the shadow tree.
+    shadow.replaceChildren(buildReaderStyle(), buildModeToggle(host), root);
+    registerReaderSource(host, source); // stash source for the lazy Raw view
+    setReaderMode(host, 'reading'); // default view = the rendered document
+    installToggleShortcut(); // idempotent; only active while our reader is mounted
     initReaderRuntime(host);
   } catch (err) {
-    // AGENTS.md #5: never a blank page. Degrade to the raw source as escaped text.
-    // Dev-only signal; the user-facing error banner arrives with task 4.2.
+    // AGENTS.md #5: never a blank page. Degrade to the raw source as escaped text,
+    // with a quiet user-facing banner (task 4.2). Dev-only signal kept alongside it.
     console.warn('[peekover] render failed; showing raw source', err);
     mountRawFallback(source, shadow, host);
   }
 }
 
 /**
- * The never-blank fallback: show the raw source as escaped plain text in a <pre>.
- * Uses textContent (not innerHTML), so the source is displayed literally and is
- * never parsed as HTML — safe even though the source is untrusted.
+ * The never-blank fallback: show the raw source as escaped plain text in a <pre>,
+ * preceded by a quiet, themed error banner. Uses textContent (not innerHTML), so the
+ * source is displayed literally and is never parsed as HTML — safe even though the
+ * source is untrusted.
+ *
+ * Failure-raw vs user-raw are deliberately DISTINGUISHABLE (see decisions.md): the
+ * failure view carries the banner AND no `data-mode` (there is no rendered reading
+ * view to toggle to), whereas the user's Raw view is a `data-mode` with no banner.
+ * We clear any stale `data-mode` here so a re-render that goes success -> failure
+ * can't leave the toggle shortcut thinking a reading view still exists.
  */
 function mountRawFallback(source: string, shadow: ShadowRoot, host: HTMLElement): void {
+  host.removeAttribute('data-mode');
+
+  const banner = document.createElement('div');
+  banner.className = 'peekover-alert';
+  banner.setAttribute('role', 'status'); // quiet/polite, not an alarming assertive alert
+  banner.textContent = "Couldn't render this document — showing raw source.";
+
   const pre = document.createElement('pre');
   pre.className = 'peekover-raw';
   pre.textContent = source;
+
   // Theme the fallback too (paper/ink, mono) so a failed render still reads as
   // Peekover rather than a bare white page. buildReaderStyle can't throw here.
-  shadow.replaceChildren(buildReaderStyle(), pre);
+  shadow.replaceChildren(buildReaderStyle(), banner, pre);
   initReaderRuntime(host);
 }
