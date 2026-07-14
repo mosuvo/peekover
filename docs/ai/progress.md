@@ -4,9 +4,10 @@
 
 ## Now (start here)
 **Active spec:** `specs/001-core-rendering/` — extension skeleton + core render pipeline.
-**State:** mid-M1 — SHELL GROUP + golden-fixtures/perf group (5.1, 5.2) complete. The reader is
-detect → parse → sanitize → mount → themed reading → Raw toggle → never-blank fallback, on
-Chrome + Firefox, `permissions:[]`, ~266KB packed. 128 unit + 62 in-browser tests green.
+**State:** mid-M1 — SHELL GROUP + golden-fixtures/perf group (5.1, 5.2) + document_start
+first-paint pass complete. The reader is detect → hide-raw → mount@DOMContentLoaded → parse →
+sanitize → themed reading → Raw toggle → never-blank fallback, on Chrome + Firefox,
+`permissions:[]`, ~266KB packed. 137 unit + 62 in-browser tests green.
 Next action = the **remote-resource policy** task (block remote images by default + one-click
 opt-in + network indicator; the last M1 feature before trust docs 6.x).
 
@@ -38,6 +39,30 @@ opt-in + network indicator; the last M1 feature before trust docs 6.x).
     Browser first-contentful-paint is not reported for file:// text here (printed as n/a).
   - Levers for a future optimization pass (out of scope for 5.2): earlier `runAt`, streaming/chunked
     mount, or not waiting on the browser's full raw-text layout before mounting.
+- 2026-07-14 — document_start + hidden-raw first-paint pass (perf group follow-up to 5.2). Two of
+  the 5.2 levers landed: the content script now runs at `runAt:'document_start'` and injects a
+  `<style>` (under `<html>`, since `<head>`/`<body>` may not exist yet) that sets the raw `<pre>` to
+  `display:none` BEFORE the browser can paint it, then mounts at DOMContentLoaded. Never-blank is
+  preserved by detect-before-hide + a safety unhide (3s timer + window `load`) + a finally that drops
+  the hide style on every mount outcome (`src/render/runReader.ts`). Re-measured with `pnpm perf`
+  (same protocol: 7 runs, cold discarded, median of warm 6), same machine as 5.2 (i7-13700, Windows,
+  headless chromium via Playwright), on the same 1.12 MB huge-doc fixture, TWO runs:
+  - **(a) navigationStart → reader painted: run-1 median 1261.5 ms, run-2 median 1340.7 ms.**
+    **(b) responseEnd → reader painted: run-1 median 1259.8 ms, run-2 median 1338.6 ms.**
+  - **Before → after: (a) ~1245 ms → ~1261–1341 ms. FLAT — no improvement, within run-to-run noise.**
+  - **GATE: still FAIL vs <150 ms (~8–9×). Acceptance box stays UNTICKED** (per plan: if it still
+    fails, record honestly and stop — no further optimization in this group).
+  - Why flat, verified (not assumed): a Playwright probe sampled the raw `<pre>` at 27 ms — well
+    before mount (`readerMountedYet:false`) — and found the hide `<style>` present and the `<pre>`
+    computing `display:none`. So the hide genuinely works in Chromium (the `<style>` under `<html>`
+    IS honored) and the raw-text flash is gone. But per-run marks show DCL/mount now fire at
+    ~470–590 ms (was after `load` ~1050 ms at `document_idle`), while first-paint still lands at
+    ~1260–1340 ms — the ~750 ms gap is the browser laying out the reader's OWN ~1400-section rendered
+    DOM. That cost, not the raw-`<pre>` layout we eliminated, now dominates first-paint on this
+    fixture. Value delivered: the raw-text flash is eliminated for every doc size (qualitative win,
+    manual-checked); the <150 ms number is unmoved.
+  - Only remaining lever for the number is chunked/virtualized/deferred reader render (don't build
+    the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
 Immediate — remaining in M1 (spec 001):

@@ -1,6 +1,29 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Reader mounts at `document_start` behind a hidden raw view.** The content script
+  now runs `runAt:'document_start'` (both browsers). Flow (`src/render/runReader.ts`): detect FIRST
+  (URL gate; a miss leaves the page completely untouched), then SYNCHRONOUSLY inject a `<style>` that
+  sets `body > :not(peekover-root){display:none !important}` — `display:none` (not visibility:hidden,
+  which still lays out) so the raw `<pre>` is kept out of layout and never paints. At document_start
+  `<head>`/`<body>` may not exist, so the `<style>` is parented to `documentElement` (`<html>`);
+  verified in Chromium that a `<style>` there IS honored (probe: raw `<pre>` computes `display:none`
+  at 27 ms, before mount). Then WAIT for DOMContentLoaded (a partially-streamed `<pre>` read would
+  silently truncate a large doc) and mount. **Never-blank mechanics (AGENTS.md #5, outranks the perf
+  target):** detect-before-hide; a safety unhide = a 3 s timer PLUS the window `load` event (whichever
+  first) that drops the hide `<style>` if the reader never mounts; and a `finally` that drops the hide
+  `<style>` on EVERY mount outcome — success (originals already inline-hidden by mountReader, reader
+  up → hand visibility to mount/toggle), failure (originals restored → raw visible), or an unforeseen
+  throw. reveal() is idempotent + once-only so the paths never fight the toggle. **Programmatic
+  injection (scripting + host_permissions, à la simov/markdown-viewer) was REJECTED** — `permissions:[]`
+  is settled ground truth. **Perf-gate metric (as measured by `scripts/perf-first-paint.ts`):** reader
+  first-paint = `performance.now()` at the 2nd rAF after `<peekover-root>` first has populated
+  open-shadow content, timeOrigin-relative; gate = (a) navigationStart→painted median < 150 ms on the
+  1.12 MB fixture. This change eliminates the raw-text FLASH for all sizes but did NOT move that number
+  (~1245 ms → ~1261–1341 ms, still FAIL): first-paint is now dominated by laying out the reader's own
+  ~1400-section rendered DOM, not the raw-`<pre>` layout we removed. Revisit-when: chunked/virtualized/
+  deferred reader render (the only remaining lever), or if the toggle ever needs to reveal the original
+  light-DOM nodes (it currently builds Raw inside the shadow root, so the hide/unhide never touches it).
 - **2026-07-14 · Raw/Reading toggle: bare `\` shortcut; failure-raw and user-raw are
   distinct; the Raw view is built lazily.** Task 4.2. The reader flips between the rendered
   document ("Reading", default) and the original markdown as escaped text in the themed

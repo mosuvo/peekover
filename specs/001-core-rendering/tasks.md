@@ -32,5 +32,13 @@
     Result: nav→paint median ~1245ms — FAILS the <150ms gate (~8×), so spec acceptance box stays
     UNTICKED. Breakdown in progress.md: browser's own 1MB raw-text load (~1s, document_idle) dominates,
     not the pipeline. Measurement task — no src/ changes to chase the target.
+  - [x] 5.2b document_start + hidden-raw first-paint pass (perf-group follow-up): runAt:'document_start'
+    + inject a `<style>` that display:none's the raw `<pre>` before paint, mount at DOMContentLoaded;
+    never-blank kept by detect-before-hide + safety unhide (3s timer + window load) + finally-unhide
+    (`src/render/runReader.ts`). Eliminates the raw-text FLASH (verified: raw `<pre>` is display:none at
+    27ms, pre-mount). Re-measured (2 runs): nav→paint median ~1261–1341ms — STILL FAILS <150ms, gate
+    box stays UNTICKED. First-paint is now dominated by laying out the reader's own ~1400-section DOM,
+    not the raw-`<pre>` layout we removed. Only remaining lever = chunked/virtualized render (out of
+    scope here). See progress.md + decisions.md (2026-07-14 document_start).
 - [ ] 6.1 docs/trust/PERMISSIONS.md v1 (every manifest line justified)
 - [ ] 6.2 Update progress.md; run /retro if warranted
