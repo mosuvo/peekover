@@ -3,6 +3,7 @@
 - [x] 1.2 CI: .github/workflows/ci.yml → lint+test+build on PR (keep ai-hygiene.yml)
 - [x] 2.1 `isRenderableContext()` + tests (file:// ext match, content-type, raw-host allowlist)
 - [x] 2.2 Content script mounts a hello-shell in matched contexts, Chrome + Firefox
+- [x] 2.3 Firefox build → MV3 (WXT default is MV2) + gecko.id + data_collection none; Chrome manifest unaffected
 - [ ] 3.1 pipeline.ts: decode+parse stages w/ markdown-it GFM set; unit tests
 - [ ] 3.2 sanitize.ts: DOMPurify strict profile (data-driven allowlist); malicious-fixture tests
 - [ ] 3.3 mount stage: shadow root, patch-on-rerender, <150ms perf harness

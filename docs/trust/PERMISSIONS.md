@@ -25,6 +25,13 @@ resources before any DOM is touched.
 | `https://gitlab.com/*/-/raw/*` | Render raw markdown in GitLab's raw file view; path-scoped to `/-/raw/` so Peekover is NOT injected across the rest of gitlab.com. | M1 / task 2.2 (2026-07-14) |
 | `https://bitbucket.org/*/raw/*` | Render raw markdown in Bitbucket's raw file view; path-scoped to `/raw/` so Peekover is NOT injected across the rest of bitbucket.org. | M1 / task 2.2 (2026-07-14) |
 
+### Firefox data collection declaration
+The Firefox build declares `browser_specific_settings.gecko.data_collection_permissions`
+= `{ required: ["none"] }` — **Peekover collects no data** (AGENTS.md #1/#2). Mozilla
+requires new extensions to declare their data practices; "none" is the collects-nothing
+value, shown to the user at install time. This key is Firefox-only and never appears in
+the Chrome manifest.
+
 ### file:// access note
 Injecting on `file://` pages requires the user to grant "Allow access to file URLs"
 in the browser's extension settings — a binary, user-controlled toggle. Peekover

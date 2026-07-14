@@ -1,6 +1,15 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-14 · Target MV3 on Firefox (over WXT's MV2 default).** Set `manifestVersion: 3`
+  in wxt.config.ts so the Firefox build is MV3, not WXT's default MV2; chose gecko.id
+  `peekover@peekover.dev` (stable, on-brand, we own the domain — required before an MV3 AMO
+  submission). Why: consistency with our MV3 / no-persistent-background security claim (spec §6),
+  and MV2 is legacy for new extensions. Firefox MV3 uses a non-persistent **event page**
+  (`background.scripts`), not a Chrome service worker — WXT emits the right shape from our
+  `defineBackground` automatically, so no background code changed. gecko keys are gated on
+  `browser === 'firefox'` so they never leak into the Chrome manifest. Revisit-when: AMO changes
+  ID rules, or we adopt a real background listener.
 - **2026-07-14 · Lowercase-only file:// match patterns.** `isRenderableContext()` is
   case-insensitive, but the manifest `file:///*.<ext>` patterns are lowercase, so a local file with
   an UPPERCASE extension (e.g. `README.MD`) won't trigger browser injection. Why: doubling every
