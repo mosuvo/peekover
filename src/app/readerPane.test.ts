@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createReaderPane, classifyReaderOutcome, type ReaderFile } from './readerPane';
+import { CONTAINED_CSS } from '../theme/readerCss';
 
 // Task 1.2 [§9 select-file-renders; §9 empty designed state — jsdom half].
 //
@@ -92,6 +93,19 @@ describe('reader pane (DOM controller)', () => {
     expect(host!.shadowRoot!.querySelector('h1')?.textContent).toContain('Heading');
     // No designed state is showing while real content renders.
     expect(pane.element.querySelector('[data-state]')).toBeNull();
+  });
+
+  it('renders CONTAINED — requests mount()`s contained mode so the reader stays in the pane', async () => {
+    // Intent-guard (jsdom can't prove GEOMETRY — see the browser test for that). It proves
+    // the pane OPTED IN: mount() injects CONTAINED_CSS as an extra <style> ONLY when called
+    // with { contained: true }, so its presence in the shadow root is a direct, cheap witness
+    // that the flag is still wired. If a refactor drops it, the pane silently reverts to the
+    // full-page-takeover bug — and this fails fast.
+    await pane.select(fileWith('# Heading'));
+
+    const host = pane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+    const styles = Array.from(host!.shadowRoot!.querySelectorAll('style'));
+    expect(styles.some((s) => s.textContent === CONTAINED_CSS)).toBe(true);
   });
 
   it('degrades an EMPTY file to the designed empty state — never blank, no mount host', async () => {

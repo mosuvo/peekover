@@ -14,6 +14,7 @@
 import { parse } from './parse';
 import { sanitize } from './sanitize';
 import { buildReaderStyle, initReaderRuntime } from '../theme/reader';
+import { CONTAINED_CSS } from '../theme/readerCss';
 import {
   buildModeToggle,
   installToggleShortcut,
@@ -25,6 +26,26 @@ import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
+
+/** Optional render modes for a mount. */
+export interface MountOptions {
+  /**
+   * Render CONTAINED within the host's own box instead of taking over the viewport.
+   * OFF by default → the content-script reader stays a full-page takeover, and mount()'s
+   * committed output is byte-identical to before this option existed. The app page's
+   * reader pane passes `true` so the reader renders inside the shell region rather than
+   * painting over it (see CONTAINED_CSS in theme/readerCss.ts).
+   */
+  contained?: boolean;
+}
+
+/** A <style> carrying the contained-mode override, injected AFTER the base reader
+ *  stylesheet so its equal-specificity rules win by source order (no !important). */
+function buildContainedStyle(): HTMLStyleElement {
+  const style = document.createElement('style');
+  style.textContent = CONTAINED_CSS;
+  return style;
+}
 
 /**
  * Get the host's shadow root, creating it once. A host may only be attached once
@@ -47,10 +68,12 @@ function shadowFor(host: HTMLElement): ShadowRoot {
  * correct (idempotent, no leaks) but not incremental. A diffing / morphdom-style
  * patch is a deliberately DEFERRED optimization; do not add that dependency now.
  *
- * @param source Raw markdown source text.
- * @param host   The element that owns the reader shadow root.
+ * @param source  Raw markdown source text.
+ * @param host    The element that owns the reader shadow root.
+ * @param options Render modes; `{ contained: true }` scopes the reader to the host's box
+ *                instead of the viewport. Omitted → byte-identical to the content-script path.
  */
-export function mount(source: string, host: HTMLElement): void {
+export function mount(source: string, host: HTMLElement, options: MountOptions = {}): void {
   const shadow = shadowFor(host);
   try {
     // parse -> sanitize (AGENTS.md #3). The ONLY innerHTML assignment, and it is
@@ -89,7 +112,12 @@ export function mount(source: string, host: HTMLElement): void {
     // The opt-in pill + (initially dark) network indicator are added ONLY when remote
     // media was actually blocked — a document with none grows no such chrome and can
     // never light the indicator.
-    const children: Node[] = [buildReaderStyle(), buildModeToggle(host)];
+    // Default (content-script) order is unchanged. When contained, a single extra
+    // <style> is inserted DIRECTLY AFTER the base sheet so its :host / chrome overrides
+    // win by source order; every other child, and their order, is identical.
+    const children: Node[] = [buildReaderStyle()];
+    if (options.contained) children.push(buildContainedStyle());
+    children.push(buildModeToggle(host));
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }
@@ -103,7 +131,7 @@ export function mount(source: string, host: HTMLElement): void {
     // AGENTS.md #5: never a blank page. Degrade to the raw source as escaped text,
     // with a quiet user-facing banner (task 4.2). Dev-only signal kept alongside it.
     console.warn('[peekover] render failed; showing raw source', err);
-    mountRawFallback(source, shadow, host);
+    mountRawFallback(source, shadow, host, options.contained);
   }
 }
 
@@ -119,7 +147,12 @@ export function mount(source: string, host: HTMLElement): void {
  * We clear any stale `data-mode` here so a re-render that goes success -> failure
  * can't leave the toggle shortcut thinking a reading view still exists.
  */
-function mountRawFallback(source: string, shadow: ShadowRoot, host: HTMLElement): void {
+function mountRawFallback(
+  source: string,
+  shadow: ShadowRoot,
+  host: HTMLElement,
+  contained = false,
+): void {
   host.removeAttribute('data-mode');
 
   const banner = document.createElement('div');
@@ -132,7 +165,12 @@ function mountRawFallback(source: string, shadow: ShadowRoot, host: HTMLElement)
   pre.textContent = source;
 
   // Theme the fallback too (paper/ink, mono) so a failed render still reads as
-  // Peekover rather than a bare white page. buildReaderStyle can't throw here.
-  shadow.replaceChildren(buildReaderStyle(), banner, pre);
+  // Peekover rather than a bare white page. buildReaderStyle can't throw here. The
+  // contained override rides along so a failed render in the reader pane stays in the
+  // pane too, never a full-page takeover. Default (no arg) → output byte-identical.
+  const children: Node[] = [buildReaderStyle()];
+  if (contained) children.push(buildContainedStyle());
+  children.push(banner, pre);
+  shadow.replaceChildren(...children);
   initReaderRuntime(host);
 }

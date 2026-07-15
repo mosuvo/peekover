@@ -261,3 +261,40 @@ export const READER_CSS = /* css */ `
   border-left:3px solid var(--warn);border-radius:0 var(--r) var(--r) 0;
 }
 `;
+
+// ============================================================================
+// CONTAINED variant — opt-in via mount(source, host, { contained: true }).
+// ============================================================================
+// READER_CSS above styles the shadow root as a FULL-PAGE takeover: :host is
+// position:fixed; inset:0, and the three chrome pills are position:fixed to the
+// viewport corners. That is exactly right for the CONTENT SCRIPT, where the reader
+// SHOULD cover the raw markdown document (mountReader also display:none's the page's
+// own nodes). It is WRONG for the app page's reader pane, where the same shadow root
+// lives inside a shell region — there the full-bleed :host paints OVER the header and
+// folder tree, and the fixed pills float at the window's corners.
+//
+// CONTAINED_CSS is injected as a SECOND <style>, AFTER READER_CSS, ONLY when a caller
+// passes { contained: true } (the app-page reader pane; never the content script). It
+// undoes exactly the two content-script escapes and nothing else:
+//
+//   1. :host returns to normal flow (position:relative; inset:auto), so it fills its
+//      PANE box instead of pinning to the viewport. Every other :host declaration
+//      (background, colour, overflow, typography) is inherited from READER_CSS.
+//   2. The three chrome pills switch position:fixed → position:absolute, so they
+//      anchor to the now-positioned :host — the pane's corners — keeping their
+//      top/right/bottom/left offsets. Switching fixed→absolute (rather than a
+//      transform / contain containing-block trick on :host) deliberately SIDESTEPS the
+//      known cross-engine quirks with fixed-positioned descendants: an absolutely
+//      positioned child of a position:relative ancestor is contained identically in
+//      Chromium and Firefox.
+//
+// Because it lives in a separate string injected only on the opt-in path, READER_CSS —
+// and therefore the content script's injected stylesheet — is left byte-for-byte
+// unchanged. Its rules come from a later <style> than READER_CSS, so equal-specificity
+// declarations (:host, .peekover-mode-toggle, …) win by source order — no !important.
+export const CONTAINED_CSS = /* css */ `
+:host{ position:relative; inset:auto; }
+.peekover-mode-toggle,
+.peekover-remote-load,
+.peekover-net{ position:absolute; }
+`;

@@ -171,8 +171,11 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // Ensure the host is the sole content child, then mount into it. Building the
       // host detached and committing last means a mount throw can't blank the pane —
       // mount() itself degrades to a raw <pre> inside the host's shadow root (#5).
+      // `contained: true` scopes the reader to this host's box: the M1 reader CSS styles
+      // :host as a full-page takeover (right for the content script, which covers the raw
+      // document), which would otherwise paint over the shell here. See CONTAINED_CSS.
       content.replaceChildren(host);
-      mount(outcome.text, host);
+      mount(outcome.text, host, { contained: true });
       return;
     }
     content.replaceChildren(buildState(doc, outcome));
