@@ -192,9 +192,9 @@ describe('folder grant → real OPFS handle → walk → render (Chromium full-f
 
       await app.openFolder();
 
-      // Chip shows the granted folder; the walked file is listed.
+      // Chip shows the granted folder; the walked file appears as a file treeitem.
       expect(container.querySelector('.peekover-app__chip')?.textContent).toContain('granted:');
-      const fileBtn = container.querySelector<HTMLButtonElement>('.peekover-app__file');
+      const fileBtn = container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]');
       expect(fileBtn?.textContent).toBe('notes.md');
 
       // Select it → the reader renders the file's real content through mount(). The click

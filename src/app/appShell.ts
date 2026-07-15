@@ -43,6 +43,7 @@ import {
   type FolderRecord,
   type RecentRecord,
 } from './store';
+import { createTreeView } from './treeView';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
@@ -128,16 +129,6 @@ const APP_CSS = /* css */ `
   border:1px solid var(--line); border-radius:999px; padding:.1rem .55rem; cursor:pointer;
 }
 .${SHELL_CLASS}__chip-revoke:hover{background:var(--accent-soft)}
-
-/* Folder body — flat file list (3.2; replaced by treeView in 3.3). */
-.${SHELL_CLASS}__files{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
-.${SHELL_CLASS}__file{
-  font:inherit; text-align:left; width:100%; color:var(--ink); background:transparent;
-  border:0; border-radius:6px; padding:.3rem .5rem; cursor:pointer;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.${SHELL_CLASS}__file:hover{background:var(--accent-soft)}
-.${SHELL_CLASS}__folder-empty{color:var(--muted); font-size:.85rem}
 `;
 
 /** Build the shell style element. */
@@ -297,7 +288,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     foldersContent.replaceChildren(wrap);
   }
 
-  /** Present the granted folder: chip + optional too-large notice + the folder body. */
+  /**
+   * Present the granted folder: the "granted: <name> — revoke" chip + the searchable,
+   * keyboard-operable file tree (treeView), which itself surfaces the "folder too large"
+   * state and the empty-folder / no-match designed states (never blank).
+   */
   function paintGranted(source: FolderSource): void {
     grantState = grant(source.name);
 
@@ -307,46 +302,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const chip = buildGrantChip(doc, grantState, () => void revokeAccess());
     if (chip) wrap.append(chip);
 
-    if (source.truncated) {
-      const notice = doc.createElement('p');
-      notice.className = `${SHELL_CLASS}__notice`;
-      notice.setAttribute('data-tone', 'warn');
-      notice.setAttribute('data-state', 'too-large');
-      notice.textContent = `This folder is very large — showing the first ${source.files.length} markdown files. Open a more specific folder to see everything.`;
-      wrap.append(notice);
-    }
+    const treeView = createTreeView(doc, {
+      files: source.files,
+      truncated: source.truncated,
+      onSelect: (file) => void selectFolderFile(file),
+    });
+    wrap.append(treeView.element);
 
-    wrap.append(presentFolderBody(source));
     foldersContent.replaceChildren(wrap);
-  }
-
-  /**
-   * Build the folder's file presentation. 3.2: a flat, real, clickable file list (or a
-   * designed empty state for a folder with no markdown). 3.3 swaps this ONE function for
-   * the pure-tree-backed `treeView` (search + keyboard nav) at the same seam.
-   */
-  function presentFolderBody(source: FolderSource): HTMLElement {
-    if (source.files.length === 0) {
-      const empty = doc.createElement('p');
-      empty.className = `${SHELL_CLASS}__folder-empty`;
-      empty.setAttribute('data-state', 'empty-folder');
-      empty.textContent = 'No markdown files in this folder.';
-      return empty;
-    }
-    const list = doc.createElement('ul');
-    list.className = `${SHELL_CLASS}__files`;
-    for (const file of source.files) {
-      const li = doc.createElement('li');
-      const btn = doc.createElement('button');
-      btn.type = 'button';
-      btn.className = `${SHELL_CLASS}__file`;
-      btn.textContent = file.path;
-      btn.title = file.path;
-      btn.addEventListener('click', () => void selectFolderFile(file));
-      li.append(btn);
-      list.append(li);
-    }
-    return list;
   }
 
   // --- grant flow ----------------------------------------------------------

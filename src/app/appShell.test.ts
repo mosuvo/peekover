@@ -169,9 +169,12 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     expect(chip!.textContent).toContain('my-notes');
     expect(chip!.querySelector('.peekover-app__chip-revoke')).not.toBeNull();
 
-    // The folder body lists the walked files (real, clickable presentation).
-    const files = container.querySelectorAll('.peekover-app__file');
-    expect([...files].map((f) => f.textContent)).toEqual(['a.md', 'docs/b.md']);
+    // The folder body is the searchable tree; the walked files appear as file treeitems.
+    const files = container.querySelectorAll('[role="treeitem"][data-kind="file"]');
+    expect([...files].map((f) => f.textContent).sort()).toEqual(['a.md', 'b.md']);
+    // …with their containing directory shown as a tree node.
+    expect(container.querySelector('[role="tree"]')).not.toBeNull();
+    expect(container.querySelector('.peekover-tree__dir')?.textContent).toContain('docs');
 
     // The folder was remembered (best-effort store write happened).
     expect(store.folders.map((f) => f.name)).toEqual(['my-notes']);
@@ -183,7 +186,7 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     const app = mountAppShell(container, { openFolder: openerReturning({ ok: true, source }), store });
     await app.openFolder();
 
-    const fileBtn = container.querySelector<HTMLButtonElement>('.peekover-app__file');
+    const fileBtn = container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]');
     fileBtn!.click();
     await flush();
 
@@ -208,7 +211,7 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     expect(tooLarge).not.toBeNull();
     expect(tooLarge!.textContent).toMatch(/very large|too large/i);
     // Still functional: the files it DID scan are listed (never a dead end).
-    expect(container.querySelector('.peekover-app__file')).not.toBeNull();
+    expect(container.querySelector('[role="treeitem"][data-kind="file"]')).not.toBeNull();
   });
 
   it('an EMPTY folder (no markdown) shows the designed empty-folder state, never blank', async () => {
@@ -261,7 +264,7 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     await app.openFolder();
 
     // Open a file first so the reader has content to clear.
-    container.querySelector<HTMLButtonElement>('.peekover-app__file')!.click();
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
     await flush();
 
     const revokeBtn = container.querySelector<HTMLButtonElement>('.peekover-app__chip-revoke');
