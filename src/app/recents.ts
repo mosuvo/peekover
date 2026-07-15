@@ -104,3 +104,52 @@ export function reorderPin<T extends PinLike>(list: readonly T[], id: string, to
   next.splice(clamped, 0, moved);
   return next;
 }
+
+// --- DISPLAY ordering (the recents/pins view renders THIS; it never re-derives order) ------
+//
+// IndexedDB `getAll` returns rows in primary-KEY order (a UUID), i.e. effectively unordered.
+// So the ordering the user sees is decided HERE, in the pure module, from the records' own
+// timestamps — the treeView/recents view renders the result and re-derives nothing (spec §5,
+// the M1 pure/DOM split). These operate on the STORED record shapes (which carry the time
+// fields); they stay decoupled by constraining only the fields they read.
+
+/** The recents fields display-ordering reads: identity (for dedup) + when it was opened. */
+export interface TimedRecent extends RecentLike {
+  openedAt: number;
+}
+
+/** The pin fields display-ordering reads: identity (for dedup) + when it was pinned. */
+export interface TimedPin extends PinLike {
+  pinnedAt: number;
+}
+
+/**
+ * The recents list as the UI shows it: dedup by identity keeping the FRESHEST `openedAt`,
+ * most-recent first, capped. This is `addRecent`'s move-to-front/cap policy applied to a
+ * whole unordered `getAll` result at once — so the store can be read back in any order and
+ * the view still shows a clean, bounded, most-recent-first list. Pure; input untouched.
+ */
+export function orderRecents<T extends TimedRecent>(list: readonly T[], cap: number = DEFAULT_RECENTS_CAP): T[] {
+  const freshest = new Map<string, T>();
+  for (const r of list) {
+    const key = recentKey(r);
+    const prev = freshest.get(key);
+    if (!prev || r.openedAt > prev.openedAt) freshest.set(key, r);
+  }
+  return [...freshest.values()].sort((a, b) => b.openedAt - a.openedAt).slice(0, Math.max(0, cap));
+}
+
+/**
+ * The pins list as the UI shows it: dedup by pin identity keeping the EARLIEST `pinnedAt`
+ * (pinning is idempotent — the first pin wins, matching `addPin`), ordered oldest-first so a
+ * pin keeps a stable position as new pins join at the bottom. Pure; input untouched.
+ */
+export function orderPins<T extends TimedPin>(list: readonly T[]): T[] {
+  const earliest = new Map<string, T>();
+  for (const p of list) {
+    const key = pinKey(p);
+    const prev = earliest.get(key);
+    if (!prev || p.pinnedAt < prev.pinnedAt) earliest.set(key, p);
+  }
+  return [...earliest.values()].sort((a, b) => a.pinnedAt - b.pinnedAt);
+}

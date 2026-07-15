@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mountAppShell, type AppStore } from './appShell';
 import type { ReaderFile } from './readerPane';
 import type { FolderSource, MarkdownFile, OpenFolderOutcome } from './folderSource';
-import type { FolderRecord, RecentRecord } from './store';
+import type { FolderRecord, RecentRecord, PinRecord } from './store';
 
 // Task 1.1: the app-page surface EXISTS and renders its skeleton + affordance.
 // Task 1.2: the shell wires selection → the reader pane (unchanged M1 mount()).
@@ -409,5 +409,218 @@ describe('appShell (group-4 drag-and-drop folder target)', () => {
 
     expect(container.querySelector('[data-state="read-only-snapshot"]')).not.toBeNull();
     expect(store.folders[0].handle).toBeUndefined();
+  });
+});
+
+// --- task 5.2: the recents/pins reopen hub + per-engine reopen (DOM-shape) -----------------
+//
+// The persisted recents/pins are SURFACED as a reopen hub, and re-opening a remembered folder
+// is ONE gesture that funnels through the SAME applyOutcome/paintGranted the CTA uses (reuse,
+// not duplication). Chromium (folder row carries a handle): the click drives the injected
+// reopenFromHandle (the real query→request→gate is proven in reopen.test.ts /
+// handlePersist.browser.test.ts). Firefox (no handle): the click re-opens the picker
+// ("pick this folder again"). Here we prove the DOM wiring with injected seams + a full
+// in-memory store (jsdom has no IndexedDB); the list ORDER is the pure recents module's job
+// (recents.test.ts).
+
+/** A full in-memory store (all read/write/pin methods) so the hub reflects real state. */
+function memStore(seed: {
+  folders?: FolderRecord[];
+  recents?: RecentRecord[];
+  pins?: PinRecord[];
+} = {}): AppStore & {
+  folders: FolderRecord[];
+  recents: RecentRecord[];
+  pins: PinRecord[];
+} {
+  const folders = [...(seed.folders ?? [])];
+  const recents = [...(seed.recents ?? [])];
+  const pins = [...(seed.pins ?? [])];
+  return {
+    folders,
+    recents,
+    pins,
+    putFolder: async (r) => {
+      const i = folders.findIndex((f) => f.id === r.id);
+      if (i >= 0) folders[i] = r;
+      else folders.push(r);
+    },
+    deleteFolder: async (id) => {
+      const i = folders.findIndex((f) => f.id === id);
+      if (i >= 0) folders.splice(i, 1);
+    },
+    putRecent: async (r) => void recents.push(r),
+    getFolders: async () => [...folders],
+    getRecents: async () => [...recents],
+    getPins: async () => [...pins],
+    putPin: async (r) => void pins.push(r),
+    deleteRecent: async (id) => {
+      const i = recents.findIndex((r) => r.id === id);
+      if (i >= 0) recents.splice(i, 1);
+    },
+    deletePin: async (id) => {
+      const i = pins.findIndex((p) => p.id === id);
+      if (i >= 0) pins.splice(i, 1);
+    },
+  };
+}
+
+function folderRow(over: Partial<FolderRecord> = {}): FolderRecord {
+  return { id: 'F1', name: 'notes', addedAt: 1, lastOpenedAt: 1, ...over };
+}
+
+describe('appShell (task 5.2 recents/pins reopen hub)', () => {
+  let container: HTMLElement;
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  it('surfaces persisted recents + pins as a hub on the landing screen', async () => {
+    const store = memStore({
+      folders: [folderRow({ id: 'F1', name: 'notes', handle: {} as FileSystemDirectoryHandle })],
+      recents: [{ id: 'r1', folderId: 'F1', path: 'a.md', name: 'a.md', openedAt: 100 }],
+      pins: [{ id: 'p1', kind: 'folder', folderId: 'F1', path: '', name: 'notes', pinnedAt: 50 }],
+    });
+    const app = mountAppShell(container, { store });
+    await app.refresh();
+
+    const hub = container.querySelector('.peekover-recents');
+    expect(hub).not.toBeNull();
+    expect(hub!.textContent).toContain('Recent');
+    expect(hub!.textContent).toContain('Pinned');
+    // The recent file and the pinned folder both surface as reopen entries.
+    const entries = [...container.querySelectorAll('.peekover-recents__entry')].map((e) => e.textContent);
+    expect(entries.join(' ')).toContain('a.md');
+    expect(entries.join(' ')).toContain('notes');
+  });
+
+  it('clicking a Chromium recent (folder has a handle) drives reopenFromHandle → chip + tree + selects the file', async () => {
+    const handle = {} as FileSystemDirectoryHandle;
+    const store = memStore({
+      folders: [folderRow({ id: 'F1', name: 'notes', handle })],
+      recents: [{ id: 'r1', folderId: 'F1', path: 'intro.md', name: 'intro.md', openedAt: 100 }],
+    });
+    let reopenedWith: FileSystemDirectoryHandle | null = null;
+    const source = sourceOf('notes', [mdFile('intro.md', '# Reopened heading\n\nbody')]);
+    const app = mountAppShell(container, {
+      store,
+      reopenFromHandle: async (h) => {
+        reopenedWith = h;
+        return { ok: true, source };
+      },
+    });
+    await app.refresh();
+
+    container.querySelector<HTMLButtonElement>('.peekover-recents__entry')!.click();
+    await flush();
+    await flush();
+
+    // The one-gesture re-grant ran with the rehydrated handle …
+    expect(reopenedWith).toBe(handle);
+    // … reusing the SAME grant branch: chip + tree appear.
+    expect(container.querySelector('.peekover-app__chip')?.textContent).toContain('granted:');
+    expect(container.querySelector('[role="treeitem"][data-kind="file"]')).not.toBeNull();
+    // … and the recent's file opened straight into the reader.
+    const host = container.querySelector<HTMLElement>('.peekover-app__reader__host');
+    expect(host?.shadowRoot?.querySelector('h1')?.textContent).toContain('Reopened heading');
+    // Reopen reused the folder record (no duplicate row minted).
+    expect(store.folders.filter((f) => f.id === 'F1')).toHaveLength(1);
+  });
+
+  it('clicking a Firefox recent (folder has NO handle) re-opens the picker, not reopenFromHandle', async () => {
+    const store = memStore({
+      folders: [folderRow({ id: 'F1', name: 'snap', handle: undefined })],
+      recents: [{ id: 'r1', folderId: 'F1', path: 'a.md', name: 'a.md', openedAt: 100 }],
+    });
+    let reopenCalls = 0;
+    let pickerCalls = 0;
+    const app = mountAppShell(container, {
+      store,
+      reopenFromHandle: async () => {
+        reopenCalls += 1;
+        return { ok: false, reason: 'error', message: 'x' };
+      },
+      openFolder: async () => {
+        pickerCalls += 1;
+        return { ok: true, source: sourceOf('snap', [mdFile('a.md')], { persistable: false }) };
+      },
+    });
+    await app.refresh();
+
+    // The entry shows the honest re-pick affordance (not greyed out).
+    const entry = container.querySelector<HTMLButtonElement>('.peekover-recents__entry')!;
+    expect(entry.dataset.reopen).toBe('repick');
+    entry.click();
+    await flush();
+
+    expect(reopenCalls).toBe(0); // no silent rehydrate attempt for a handle-less folder
+    expect(pickerCalls).toBe(1); // one gesture → the picker (pick this folder again)
+    expect(container.querySelector('.peekover-app__chip')?.textContent).toContain('granted:');
+  });
+
+  it('pinning the open folder stores a pin and surfaces it in the hub; unpin removes it', async () => {
+    const store = memStore();
+    const source = sourceOf('my-notes', [mdFile('a.md')]);
+    const app = mountAppShell(container, { store, openFolder: openerReturning({ ok: true, source }) });
+    await app.openFolder();
+
+    // Pin the open folder.
+    const pinBtn = container.querySelector<HTMLButtonElement>('.peekover-app__pin[data-pin="folder"]');
+    expect(pinBtn?.textContent).toContain('Pin this folder');
+    pinBtn!.click();
+    await flush();
+
+    expect(store.pins).toHaveLength(1);
+    expect(store.pins[0].kind).toBe('folder');
+    expect(store.pins[0].name).toBe('my-notes');
+    // The pin bar now reflects the pinned state (idempotent — disabled).
+    expect(container.querySelector<HTMLButtonElement>('.peekover-app__pin[data-pin="folder"]')?.disabled).toBe(true);
+    // The hub (shown in the granted view too) surfaces the new pin.
+    expect(container.querySelector('.peekover-recents')?.textContent).toContain('my-notes');
+
+    // Unpin from the hub removes it.
+    container.querySelector<HTMLButtonElement>('.peekover-recents__unpin')!.click();
+    await flush();
+    expect(store.pins).toHaveLength(0);
+  });
+
+  it('selecting a file offers a "Pin <file>" affordance that stores a file pin', async () => {
+    const store = memStore();
+    const source = sourceOf('notes', [mdFile('guide.md', '# Guide')]);
+    const app = mountAppShell(container, { store, openFolder: openerReturning({ ok: true, source }) });
+    await app.openFolder();
+
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+    await flush();
+
+    const filePin = container.querySelector<HTMLButtonElement>('.peekover-app__pin[data-pin="file"]');
+    expect(filePin?.textContent).toContain('Pin guide.md');
+    filePin!.click();
+    await flush();
+
+    expect(store.pins).toHaveLength(1);
+    expect(store.pins[0].kind).toBe('file');
+    expect(store.pins[0].path).toBe('guide.md');
+  });
+
+  it('a reopen that is DENIED degrades to a designed notice (never blank), affordance back', async () => {
+    const store = memStore({
+      folders: [folderRow({ id: 'F1', name: 'notes', handle: {} as FileSystemDirectoryHandle })],
+      recents: [{ id: 'r1', folderId: 'F1', path: 'a.md', name: 'a.md', openedAt: 100 }],
+    });
+    const app = mountAppShell(container, {
+      store,
+      reopenFromHandle: async () => ({ ok: false, reason: 'denied', message: 'Access to this folder wasn’t granted. Click it again to re-allow it.' }),
+    });
+    await app.refresh();
+
+    container.querySelector<HTMLButtonElement>('.peekover-recents__entry')!.click();
+    await flush();
+
+    expect(container.querySelector('.peekover-app__notice')?.textContent).toContain('wasn’t granted');
+    expect(container.querySelector('.peekover-app__cta')).not.toBeNull();
+    expect(container.querySelector('.peekover-app__chip')).toBeNull();
   });
 });

@@ -8,18 +8,22 @@
 // the `folderSource` seam, runs the eager bounded markdown walk, shows a persistent
 // "granted: <folder> — revoke" chip, and presents the folder's files for reading.
 //
-// SCOPE across group 3's tasks:
-//   - 3.2 (this wiring): CTA → plain line → openFolder() → chip + folder body + designed
-//     never-blank states for cancelled / unsupported / error / empty / too-large folders.
-//     The folder body here is a flat file list — a real, functional presentation.
-//   - 3.3 replaces `presentFolderBody` with the pure `tree` + `treeView` (search + keyboard
-//     nav) at the SAME seam, so this file's grant/store/reader wiring is untouched by it.
+// SCOPE across the groups:
+//   - 3.2: CTA → plain line → openFolder() → chip + tree + designed never-blank states.
+//   - 5.1/5.2 (this wiring): the persisted recents/pins REOPEN HUB + per-engine reopen.
+//     On mount the shell loads what `store` persisted (folders/recents/pins) and renders a
+//     recents/pins hub (pure `recents` decides the order — orderRecents/orderPins — the view
+//     never re-derives it). Re-opening a remembered folder is ONE gesture: a Chromium entry's
+//     click carries the `reopenFromHandle` query→request→gate re-grant (spec §5.1); a Firefox
+//     entry that cannot silently rehydrate re-opens the picker ("pick this folder again").
+//     BOTH reopen paths funnel through the SAME `applyOutcome`/`paintGranted` the CTA uses —
+//     the grant/store/reader/tree wiring is reused, never duplicated.
 //
-// The seam stays honest: `selectFile()` (the reader seam group 1 built) is store-free and
-// unchanged, so its jsdom tests keep passing; recents/folder records are written in the
-// grant/select HANDLERS, best-effort (a storage failure never blanks the reader —
-// AGENTS.md #5). `openFolder`/`store` are injectable so the grant flow is jsdom-testable
-// without the native picker (real picker → human gate; real handle path → OPFS browser test).
+// The seam stays honest: `selectFile()` (the reader seam) is store-free; recents/folder
+// records are written in the grant/select HANDLERS, best-effort (a storage failure never
+// blanks the reader — AGENTS.md #5). `openFolder`/`reopenFromHandle`/`store` are injectable so
+// the flow is jsdom-testable without the native picker or a real re-prompt (real picker +
+// disk re-prompt → human gate; real handle path → OPFS browser tests).
 
 import { createReaderPane, type ReaderFile, type ReaderPaneController } from './readerPane';
 import {
@@ -30,6 +34,7 @@ import {
   type OpenFolderOptions,
   type OpenFolderOutcome,
 } from './folderSource';
+import { reopenFromHandle as defaultReopenFromHandle } from './reopen';
 import {
   IDLE_GRANT,
   grant,
@@ -42,29 +47,54 @@ import {
   putFolder as defaultPutFolder,
   deleteFolder as defaultDeleteFolder,
   putRecent as defaultPutRecent,
+  getFolders as defaultGetFolders,
+  getRecents as defaultGetRecents,
+  getPins as defaultGetPins,
+  putPin as defaultPutPin,
+  deleteRecent as defaultDeleteRecent,
+  deletePin as defaultDeletePin,
   type FolderRecord,
   type RecentRecord,
+  type PinRecord,
 } from './store';
+import { addRecent, addPin, orderRecents, orderPins } from './recents';
+import {
+  createRecentsView,
+  type RecentEntryVM,
+  type PinEntryVM,
+  type ReopenKind,
+} from './recentsView';
 import { createTreeView } from './treeView';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
 
-/** The subset of `store` the shell writes to. Injectable so grant-flow jsdom tests need no
- *  real IndexedDB; defaults to the real store (writes are best-effort — see below). */
+/** The subset of `store` the shell uses. The write methods are required (grant flow, group 3);
+ *  the read + pin methods (group 5) are OPTIONAL so a 3-method fake store (existing jsdom /
+ *  browser tests) still mounts — an absent reader just yields an empty hub. Injectable so the
+ *  flow needs no real IndexedDB; defaults to the real store (all writes best-effort). */
 export interface AppStore {
   putFolder(record: FolderRecord): Promise<void>;
   deleteFolder(id: string): Promise<void>;
   putRecent(record: RecentRecord): Promise<void>;
+  getFolders?(): Promise<FolderRecord[]>;
+  getRecents?(): Promise<RecentRecord[]>;
+  getPins?(): Promise<PinRecord[]>;
+  putPin?(record: PinRecord): Promise<void>;
+  deleteRecent?(id: string): Promise<void>;
+  deletePin?(id: string): Promise<void>;
 }
 
-/** Injectable dependencies (defaults are the real picker seam + the real store). */
+/** Injectable dependencies (defaults are the real picker seam, re-grant, and store). */
 export interface AppDeps {
   openFolder?: (opts?: OpenFolderOptions) => Promise<OpenFolderOutcome>;
   /** Turn a folder dropped on the app page into an `OpenFolderOutcome` (Chromium live handle /
    *  Firefox snapshot). Injectable so the drop path is jsdom-testable without a real drop —
    *  defaults to the real `openFolderFromDrop` seam. */
   dropToOutcome?: (dataTransfer: DataTransfer | null) => Promise<OpenFolderOutcome>;
+  /** The one-gesture re-grant of a rehydrated handle (spec §5.1). Injectable so the reopen
+   *  wiring is jsdom-testable without a native re-prompt; defaults to the real `reopenFromHandle`. */
+  reopenFromHandle?: (handle: FileSystemDirectoryHandle, opts?: OpenFolderOptions) => Promise<OpenFolderOutcome>;
   store?: AppStore;
 }
 
@@ -135,6 +165,15 @@ const APP_CSS = /* css */ `
   border:1px solid var(--line); border-radius:999px; padding:.1rem .55rem; cursor:pointer;
 }
 .${SHELL_CLASS}__chip-revoke:hover{background:var(--accent-soft)}
+
+/* Pin bar — "Pin this folder" / "Pin <file>" while a folder is open. */
+.${SHELL_CLASS}__pinbar{display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.7rem}
+.${SHELL_CLASS}__pin{
+  font:inherit; font-size:.78rem; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:999px; padding:.15rem .6rem; cursor:pointer;
+}
+.${SHELL_CLASS}__pin:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__pin:disabled{opacity:.6; cursor:default}
 `;
 
 /** Build the shell style element. */
@@ -168,6 +207,11 @@ export interface AppController {
    * Exposed so the flow is awaitable in tests without simulating a real native picker.
    */
   openFolder(): Promise<void>;
+  /**
+   * Load persisted folders/recents/pins into the reopen hub and repaint it. Called once on
+   * mount; exposed so tests can await the async load deterministically.
+   */
+  refresh(): Promise<void>;
 }
 
 /**
@@ -178,10 +222,17 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const doc = container.ownerDocument;
   const openFolderFn = deps.openFolder ?? defaultOpenFolder;
   const dropToOutcomeFn = deps.dropToOutcome ?? defaultOpenFolderFromDrop;
+  const reopenFromHandleFn = deps.reopenFromHandle ?? defaultReopenFromHandle;
   const store: AppStore = deps.store ?? {
     putFolder: defaultPutFolder,
     deleteFolder: defaultDeleteFolder,
     putRecent: defaultPutRecent,
+    getFolders: defaultGetFolders,
+    getRecents: defaultGetRecents,
+    getPins: defaultGetPins,
+    putPin: defaultPutPin,
+    deleteRecent: defaultDeleteRecent,
+    deletePin: defaultDeletePin,
   };
 
   // --- shell scaffolding ---------------------------------------------------
@@ -245,7 +296,22 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // The remembered folder-record id for the open folder, so revoke can delete it and file
   // selections can link recents to it. Held in memory regardless of store success.
   let activeFolderId: string | null = null;
+  // The open folder's source (for pinning) + the last-selected file (for pinning that file).
+  let activeSource: FolderSource | null = null;
+  let activeFile: MarkdownFile | null = null;
   let busy = false;
+  // The hub slot inside the current view (idle or granted). Kept as a reference so the async
+  // persisted-load updates JUST the hub, never repainting the affordance or touching grant
+  // state — that decoupling is what keeps the mount-time load from racing the grant flow.
+  let hubSlotEl: HTMLElement | null = null;
+
+  // The persisted reopen-hub state, loaded from `store` (best-effort). The view renders THIS;
+  // ordering is the pure `recents` module's job.
+  const persisted: { folders: FolderRecord[]; recents: RecentRecord[]; pins: PinRecord[] } = {
+    folders: [],
+    recents: [],
+    pins: [],
+  };
 
   /** Best-effort store write: storage is a convenience, never a gate on rendering. A
    *  failure (no IndexedDB in a test env, quota, etc.) is swallowed — never a blank page. */
@@ -257,37 +323,186 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     }
   }
 
+  /** Load persisted folders/recents/pins into memory (best-effort). Absent readers (a 3-method
+   *  fake store) yield empty lists — the hub simply renders nothing. */
+  async function loadPersisted(): Promise<void> {
+    try {
+      const [f, r, p] = await Promise.all([
+        store.getFolders?.() ?? Promise.resolve([]),
+        store.getRecents?.() ?? Promise.resolve([]),
+        store.getPins?.() ?? Promise.resolve([]),
+      ]);
+      persisted.folders = f;
+      persisted.recents = r;
+      persisted.pins = p;
+    } catch {
+      /* best-effort: a failed read just leaves the hub empty */
+    }
+  }
+
+  /** Re-render just the reopen hub into its slot in the current view — never repaints the
+   *  affordance and never touches grant state, so it is safe to fire from an async load. */
+  function renderHub(): void {
+    if (!hubSlotEl) return;
+    const hub = buildHub();
+    hubSlotEl.replaceChildren();
+    if (hub) hubSlotEl.append(hub);
+  }
+
+  /** Reload persisted state and refresh the hub (a new recent, a pin add/remove, a revoke). */
+  async function refreshPersisted(): Promise<void> {
+    await loadPersisted();
+    renderHub();
+  }
+
+  // --- reopen-hub (recents/pins) view -------------------------------------
+
+  /** Does the remembered folder for `folderId` still carry a live handle (Chromium)? Decides
+   *  whether an entry rehydrates in one gesture or must re-pick (Firefox / revoked). */
+  function folderReopenKind(folderId: string): ReopenKind {
+    const folder = persisted.folders.find((f) => f.id === folderId);
+    return folder?.handle ? 'rehydrate' : 'repick';
+  }
+
+  /** Build the recents/pins hub element (or null if nothing is stored) from the pure-ordered
+   *  records, wiring each entry to the one-gesture reopen + unpin handlers. */
+  function buildHub(): HTMLElement | null {
+    const recents: RecentEntryVM[] = orderRecents(persisted.recents).map((r) => ({
+      id: r.id,
+      folderId: r.folderId,
+      name: r.name,
+      path: r.path,
+      reopen: folderReopenKind(r.folderId),
+    }));
+    const pins: PinEntryVM[] = orderPins(persisted.pins).map((p) => ({
+      id: p.id,
+      folderId: p.folderId,
+      kind: p.kind,
+      name: p.name,
+      path: p.path,
+      reopen: folderReopenKind(p.folderId),
+    }));
+    return createRecentsView(doc, {
+      recents,
+      pins,
+      onOpenRecent: (e) => void reopenFolder(e.folderId, e.path),
+      onOpenPin: (e) => void reopenFolder(e.folderId, e.kind === 'file' ? e.path : undefined),
+      onUnpin: (e) => void unpin(e.id),
+    }).element;
+  }
+
   // --- reader/select seam (store-free; unchanged from group 1) -------------
   function selectFile(file: ReaderFile | null): Promise<void> {
     return readerPane.select(file);
   }
 
-  /** Select a folder file: render it AND record a recent (best-effort), linked to the
-   *  active folder. Recents are written here, not in the reader seam, so `selectFile`
-   *  stays store-free. */
+  /** Select a folder file: render it AND record a recent (best-effort, dedup/capped via the
+   *  pure `recents` module so the store never accumulates more than the cap), linked to the
+   *  active folder. Also tracks the file so it can be pinned. Recents are written here, not in
+   *  the reader seam, so `selectFile` stays store-free. */
   async function selectFolderFile(file: MarkdownFile): Promise<void> {
+    activeFile = file;
     await selectFile(file);
+    renderPinBar();
     if (activeFolderId) {
       const folderId = activeFolderId;
-      await tryStore(() =>
-        store.putRecent({
+      await tryStore(async () => {
+        const entry: RecentRecord = {
           id: newId(),
           folderId,
           path: file.path,
           name: file.name,
           openedAt: Date.now(),
-        }),
-      );
+        };
+        const existing = (await store.getRecents?.()) ?? [];
+        const next = addRecent(existing, entry);
+        await store.putRecent(entry);
+        // Evict rows the pure cap dropped, so the store stays bounded (trust posture).
+        for (const old of existing) {
+          if (!next.some((n) => n.id === old.id)) await store.deleteRecent?.(old.id);
+        }
+      });
+      await refreshPersisted();
+    }
+  }
+
+  // --- pinning (task 5.2) --------------------------------------------------
+
+  /** Is a pin of `kind` at `path` in the active folder already stored? */
+  function isPinned(kind: 'file' | 'folder', path: string): boolean {
+    if (!activeFolderId) return false;
+    return persisted.pins.some((p) => p.kind === kind && p.folderId === activeFolderId && p.path === path);
+  }
+
+  /** Add a pin (best-effort, idempotent via the pure `recents.addPin`), then refresh the hub. */
+  async function pin(kind: 'file' | 'folder', path: string, name: string): Promise<void> {
+    if (!activeFolderId) return;
+    const folderId = activeFolderId;
+    await tryStore(async () => {
+      const record: PinRecord = { id: newId(), kind, folderId, path, name, pinnedAt: Date.now() };
+      const existing = (await store.getPins?.()) ?? [];
+      const next = addPin(existing, record);
+      // addPin is idempotent — only persist when it actually added a row.
+      if (next.length > existing.length) await store.putPin?.(record);
+    });
+    await refreshPersisted();
+    renderPinBar();
+  }
+
+  /** Remove a pin by id (best-effort), then refresh the hub. */
+  async function unpin(id: string): Promise<void> {
+    await tryStore(() => store.deletePin?.(id) ?? Promise.resolve());
+    await refreshPersisted();
+    renderPinBar();
+  }
+
+  // The pin bar lives in the granted view; kept as a reference so a file selection / pin toggle
+  // can re-render it without rebuilding the whole tree.
+  let pinBarEl: HTMLElement | null = null;
+
+  /** Render the pin bar for the open folder: "Pin this folder" + (when a file is selected)
+   *  "Pin <file>". Already-pinned targets show a disabled "Pinned" state. */
+  function renderPinBar(): void {
+    if (!pinBarEl || !activeSource) return;
+    const source = activeSource;
+    const bar = pinBarEl;
+    bar.replaceChildren();
+
+    const folderPinned = isPinned('folder', '');
+    const folderBtn = doc.createElement('button');
+    folderBtn.type = 'button';
+    folderBtn.className = `${SHELL_CLASS}__pin`;
+    folderBtn.dataset.pin = 'folder';
+    folderBtn.textContent = folderPinned ? 'Folder pinned' : 'Pin this folder';
+    folderBtn.disabled = folderPinned;
+    folderBtn.addEventListener('click', () => void pin('folder', '', source.name));
+    bar.append(folderBtn);
+
+    if (activeFile) {
+      const file = activeFile;
+      const filePinned = isPinned('file', file.path);
+      const fileBtn = doc.createElement('button');
+      fileBtn.type = 'button';
+      fileBtn.className = `${SHELL_CLASS}__pin`;
+      fileBtn.dataset.pin = 'file';
+      fileBtn.textContent = filePinned ? `${file.name} pinned` : `Pin ${file.name}`;
+      fileBtn.disabled = filePinned;
+      fileBtn.addEventListener('click', () => void pin('file', file.path, file.name));
+      bar.append(fileBtn);
     }
   }
 
   // --- folder-pane painters -----------------------------------------------
 
-  /** Paint the idle affordance: the plain-language line + the live CTA, optionally above a
-   *  designed notice (e.g. "No folder was opened." after a cancel). Never blank. */
+  /** Paint the idle affordance: the plain-language line + the live CTA + the reopen hub,
+   *  optionally above a designed notice (e.g. "No folder was opened." after a cancel). Never
+   *  blank. */
   function paintIdle(notice?: { text: string; tone?: 'warn' }): void {
     grantState = IDLE_GRANT;
     activeFolderId = null;
+    activeSource = null;
+    activeFile = null;
+    pinBarEl = null;
 
     const wrap = doc.createElement('div');
     wrap.className = `${SHELL_CLASS}__empty`;
@@ -315,16 +530,25 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     cta.addEventListener('click', () => void runOpenFolder());
 
     wrap.append(msg, line, cta);
+
+    // The reopen hub (recents/pins) — the landing screen IS the one-gesture reopen surface.
+    // It lives in its own slot, filled by renderHub (now, and again when the async load lands).
+    hubSlotEl = doc.createElement('div');
+    hubSlotEl.className = `${SHELL_CLASS}__hub`;
+    wrap.append(hubSlotEl);
+
     foldersContent.replaceChildren(wrap);
+    renderHub();
   }
 
   /**
-   * Present the granted folder: the "granted: <name> — revoke" chip + the searchable,
-   * keyboard-operable file tree (treeView), which itself surfaces the "folder too large"
-   * state and the empty-folder / no-match designed states (never blank).
+   * Present the granted folder: the "granted: <name> — revoke" chip, the pin bar, the
+   * searchable/keyboard-operable file tree (treeView), and the reopen hub. The tree itself
+   * surfaces the "folder too large" / empty-folder / no-match designed states (never blank).
    */
   function paintGranted(source: FolderSource): void {
     grantState = grant(source.name);
+    activeSource = source;
 
     const wrap = doc.createElement('div');
     wrap.className = `${SHELL_CLASS}__folderview`;
@@ -345,6 +569,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       wrap.append(note);
     }
 
+    // Pin bar (rebuilt on file select / pin toggle via renderPinBar).
+    pinBarEl = doc.createElement('div');
+    pinBarEl.className = `${SHELL_CLASS}__pinbar`;
+    wrap.append(pinBarEl);
+
     const treeView = createTreeView(doc, {
       files: source.files,
       truncated: source.truncated,
@@ -352,43 +581,64 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     });
     wrap.append(treeView.element);
 
+    // The reopen hub also shows here so pins/recents stay reachable while a folder is open.
+    hubSlotEl = doc.createElement('div');
+    hubSlotEl.className = `${SHELL_CLASS}__hub`;
+    wrap.append(hubSlotEl);
+
     foldersContent.replaceChildren(wrap);
+    renderHub();
+    renderPinBar();
   }
 
   // --- grant flow ----------------------------------------------------------
 
-  /** Apply a settled open outcome (from the CTA picker OR a drop) to the shell: paint the
-   *  matching designed never-blank state on any non-grant, else remember the folder + present
-   *  it. The ONE place grant success is handled — the drop path reuses it verbatim, never
-   *  duplicating the store/reader/present wiring. */
-  async function applyOutcome(outcome: OpenFolderOutcome): Promise<void> {
+  /** Apply a settled open outcome (from the CTA picker, a drop, OR a reopen) to the shell:
+   *  paint the matching designed never-blank state on any non-grant, else remember the folder +
+   *  present it. Returns the granted `FolderSource` (so a reopen can then select a file), or
+   *  null on a non-grant. The ONE place grant success is handled — the drop and reopen paths
+   *  reuse it verbatim, never duplicating the store/reader/present wiring.
+   *
+   *  `existingFolderId` reuses a remembered folder's record on reopen (updating lastOpenedAt)
+   *  rather than minting a duplicate; the CTA/drop paths omit it and mint a fresh id. */
+  async function applyOutcome(
+    outcome: OpenFolderOutcome,
+    existingFolderId?: string,
+  ): Promise<FolderSource | null> {
     if (!outcome.ok) {
-      // Designed never-blank states for every non-grant outcome. `unsupported` is a
-      // firmer message (this engine can't yet); cancel/error return to the affordance.
+      // Designed never-blank states for every non-grant outcome. `unsupported` is a firmer
+      // message (this engine can't yet); cancel/error/denied return to the affordance + hub.
       if (outcome.reason === 'unsupported') {
         paintIdle({ text: outcome.message, tone: 'warn' });
       } else {
         paintIdle({ text: outcome.message });
       }
-      return;
+      return null;
     }
 
     const source = outcome.source;
-    activeFolderId = newId();
+    activeFolderId = existingFolderId ?? newId();
     const folderId = activeFolderId;
-    // Remember the folder (Chromium: with its handle; a capability ref, never contents).
+    activeFile = null;
+    // Remember the folder (Chromium: with its handle; a capability ref, never contents). On a
+    // reopen we reuse the existing id so the folders store keeps ONE row per remembered folder.
+    const existing = existingFolderId
+      ? persisted.folders.find((f) => f.id === existingFolderId)
+      : undefined;
     await tryStore(() =>
       store.putFolder({
         id: folderId,
         name: source.name,
         handle: source.persistable ? source.handle : undefined,
-        addedAt: Date.now(),
+        addedAt: existing?.addedAt ?? Date.now(),
         lastOpenedAt: Date.now(),
       }),
     );
     // Fresh folder → reader back to the no-selection designed state until a file is picked.
     await selectFile(null);
     paintGranted(source);
+    await refreshPersisted();
+    return source;
   }
 
   async function runOpenFolder(): Promise<void> {
@@ -415,6 +665,37 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     }
   }
 
+  /**
+   * Reopen a remembered folder as ONE gesture (spec §5.1/§5.2). Chromium (the folder row still
+   * carries a live handle): the click's gesture drives `reopenFromHandle` (query→request→gate
+   * re-grant) → the SAME `applyOutcome`/`paintGranted` path. Firefox / revoked (no handle): a
+   * silent rehydrate is impossible, so this re-opens the picker ("pick this folder again") —
+   * still one gesture, honest. On success, optionally select `selectPath` (a recent/pinned
+   * FILE reopens straight to that file). Every failure is a designed never-blank state.
+   */
+  async function reopenFolder(folderId: string, selectPath?: string): Promise<void> {
+    if (busy) return;
+    busy = true;
+    try {
+      const folder = persisted.folders.find((f) => f.id === folderId);
+      let source: FolderSource | null;
+      if (folder?.handle) {
+        // Chromium: one-gesture re-grant of the rehydrated handle, reusing the folder row.
+        source = await applyOutcome(await reopenFromHandleFn(folder.handle), folderId);
+      } else {
+        // Firefox / revoked: no live handle → re-pick via the picker (one gesture). A fresh
+        // record is minted since the picked handle (if any) is new.
+        source = await applyOutcome(await openFolderFn());
+      }
+      if (source && selectPath) {
+        const file = source.files.find((f) => f.path === selectPath);
+        if (file) await selectFolderFile(file);
+      }
+    } finally {
+      busy = false;
+    }
+  }
+
   /** Revoke: drop the in-memory handle + delete the stored folder record, then return to
    *  the idle affordance and clear the reader. Real, not cosmetic (spec 002 §3.2). */
   async function revokeAccess(): Promise<void> {
@@ -422,13 +703,17 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (folderId) await tryStore(() => store.deleteFolder(folderId));
     await selectFile(null);
     paintIdle();
+    await refreshPersisted();
   }
 
-  // Initial paint: the idle affordance (plain line + live CTA) — never a blank page.
+  // Initial paint: the idle affordance (plain line + live CTA) — never a blank page. The
+  // reopen hub fills in once the async load resolves (refresh repaints idle when still idle).
   paintIdle();
+  void refreshPersisted();
 
   return {
     selectFile,
     openFolder: runOpenFolder,
+    refresh: refreshPersisted,
   };
 }

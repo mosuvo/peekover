@@ -11,9 +11,13 @@ import {
   addPin,
   removePin,
   reorderPin,
+  orderRecents,
+  orderPins,
   DEFAULT_RECENTS_CAP,
   type RecentLike,
   type PinLike,
+  type TimedRecent,
+  type TimedPin,
 } from './recents';
 
 function recent(id: string, folderId: string, path: string): RecentLike {
@@ -136,5 +140,60 @@ describe('reorderPin', () => {
     const snapshot = input.map((p) => p.id);
     reorderPin(input, '1', 2);
     expect(input.map((p) => p.id)).toEqual(snapshot);
+  });
+});
+
+// --- DISPLAY ordering (task 5.2): the view renders THIS, unordered getAll in --------------
+
+function timedRecent(id: string, path: string, openedAt: number, folderId = 'F'): TimedRecent {
+  return { id, folderId, path, openedAt };
+}
+function timedPin(id: string, path: string, pinnedAt: number, kind: 'file' | 'folder' = 'file', folderId = 'F'): TimedPin {
+  return { id, kind, folderId, path, pinnedAt };
+}
+
+describe('orderRecents — dedup + most-recent-first + cap over an UNORDERED list', () => {
+  it('sorts most-recent-first regardless of input order (getAll is key-ordered, not time-ordered)', () => {
+    const list = [timedRecent('1', 'a.md', 100), timedRecent('2', 'b.md', 300), timedRecent('3', 'c.md', 200)];
+    expect(orderRecents(list).map((r) => r.id)).toEqual(['2', '3', '1']);
+  });
+
+  it('dedups by (folderId, path) keeping the freshest openedAt', () => {
+    const list = [timedRecent('old', 'a.md', 100), timedRecent('new', 'a.md', 500), timedRecent('b', 'b.md', 200)];
+    const out = orderRecents(list);
+    expect(out.map((r) => r.id)).toEqual(['new', 'b']);
+    expect(out.filter((r) => r.path === 'a.md')).toHaveLength(1);
+  });
+
+  it('caps the list length (default DEFAULT_RECENTS_CAP), keeping the newest', () => {
+    const list = Array.from({ length: DEFAULT_RECENTS_CAP + 6 }, (_, i) => timedRecent(`${i}`, `f${i}.md`, i));
+    const out = orderRecents(list);
+    expect(out).toHaveLength(DEFAULT_RECENTS_CAP);
+    expect(out[0].id).toBe(`${DEFAULT_RECENTS_CAP + 5}`); // newest first
+  });
+
+  it('does not mutate the input (pure)', () => {
+    const input = [timedRecent('1', 'a.md', 100)];
+    const snap = [...input];
+    orderRecents(input);
+    expect(input).toEqual(snap);
+  });
+});
+
+describe('orderPins — dedup + stable oldest-first over an UNORDERED list', () => {
+  it('orders oldest-pinned first regardless of input order', () => {
+    const list = [timedPin('2', 'b', 300, 'folder'), timedPin('1', 'a', 100, 'folder'), timedPin('3', 'c', 200, 'folder')];
+    expect(orderPins(list).map((p) => p.id)).toEqual(['1', '3', '2']);
+  });
+
+  it('dedups by pin identity keeping the earliest pinnedAt (pinning is idempotent)', () => {
+    const list = [timedPin('late', 'a', 500, 'file'), timedPin('first', 'a', 100, 'file')];
+    const out = orderPins(list);
+    expect(out.map((p) => p.id)).toEqual(['first']);
+  });
+
+  it('keeps a file pin and a folder pin at the same path distinct', () => {
+    const list = [timedPin('f', 'docs', 100, 'file'), timedPin('d', 'docs', 200, 'folder')];
+    expect(orderPins(list)).toHaveLength(2);
   });
 });
