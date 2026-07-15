@@ -1,22 +1,28 @@
-// appShell — the M2 active-surface app page skeleton (DOM-UI only).
+// appShell — the M2 active-surface app page shell (DOM-UI + selection wiring).
 //
 // Spec 002 introduces Peekover's SECOND surface: an extension-owned app page
 // (chrome-extension://…/app.html) opened deliberately from the toolbar action. This
-// module renders that page's shell — a header, a folder pane, and a reader pane —
-// with an inert empty state. It is the application shell every future active
-// capability (folder mode, editor, watch/diff) will mount into.
+// module renders that page's shell — a header, a folder pane, and a reader pane — and
+// wires a selected file into the reader. It is the application shell every future
+// active capability (folder mode, editor, watch/diff) will mount into.
 //
-// SCOPE (task 1.1): this stands the surface up and nothing more. There is NO folder
-// logic, NO IndexedDB, NO reader integration, NO tree here — the "Open a folder"
-// affordance is INERT this task; wiring it is task 3. Kept pure DOM-UI per the
-// approved module list (plan.md §Files/modules): appShell never imports src/render/*
-// or any store, so it stays unit-testable in jsdom and can't drift into a god-module.
+// SCOPE (task 1.2): the shell layout + the selection→reader seam. There is still NO
+// folder logic, NO IndexedDB, and NO tree here — the "Open a folder" affordance stays
+// INERT this task (folder mode is group 3). What 1.2 adds over 1.1 is the reader pane:
+// a selected file's text renders through the UNCHANGED M1 `mount()` pipeline, and every
+// non-render outcome (no selection, empty file, unreadable file) degrades to a designed
+// never-blank state (AGENTS.md #5). The rendering itself lives in readerPane.ts (the
+// DOM/engine glue); appShell composes the panes and exposes `selectFile()` as the seam
+// group 3 hands real `MarkdownFile`s to. appShell still imports no store and no parser —
+// only the reader pane (which reuses `mount()`), so it stays unit-testable in jsdom.
 //
 // Styling is design-token-only (values copied verbatim from design/tokens.css, as
 // src/theme/readerCss.ts does). No new fonts or assets: the app chrome uses the
-// system font stack (the bundled Literata is the reader's, added when the reader
-// pane is wired). Themes follow the OS via prefers-color-scheme — the app page owns
-// its whole document, so there is no host to isolate from and no shadow root.
+// system font stack (the bundled Literata is the reader's, inside mount()'s shadow
+// root). Themes follow the OS via prefers-color-scheme — the app page owns its whole
+// document, so there is no host to isolate from and no shadow root at the shell level.
+
+import { createReaderPane, type ReaderFile, type ReaderPaneController } from './readerPane';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
@@ -76,16 +82,27 @@ function buildStyle(doc: Document): HTMLStyleElement {
   return style;
 }
 
+/** The seam appShell exposes to its caller (main.ts today, group 3's tree later). */
+export interface AppController {
+  /**
+   * Select a file to render in the reader pane, or `null` to clear it back to the
+   * no-selection state. Delegates to the reader pane, which reads the file and renders
+   * it through the unchanged `mount()` pipeline (or a designed never-blank state).
+   * Resolves once the pane has settled; never rejects.
+   */
+  selectFile(file: ReaderFile | null): Promise<void>;
+}
+
 /**
- * Render the app-page shell into `container`. Idempotent: a second call replaces the
- * previous shell rather than appending a duplicate. Builds:
+ * Render the app-page shell into `container` and return its controller. Idempotent: a
+ * second call replaces the previous shell rather than appending a duplicate. Builds:
  *   - a header (brand + zero-network tagline),
  *   - a folder pane carrying the INERT "Open a folder to begin" empty state,
- *   - a reader pane placeholder.
- * No behavior is wired this task — the CTA is a plain, disabled-in-spirit affordance
- * (task 3 gives it the at-use grant flow).
+ *   - a reader pane (readerPane.ts) showing the designed no-selection state initially.
+ * The folder CTA stays inert this task (group 3 gives it the at-use grant flow); the
+ * only wired behavior is `selectFile()` → the reader pane, the seam group 3 drives.
  */
-export function mountAppShell(container: HTMLElement): void {
+export function mountAppShell(container: HTMLElement): AppController {
   const doc = container.ownerDocument;
 
   const shell = doc.createElement('div');
@@ -127,16 +144,16 @@ export function mountAppShell(container: HTMLElement): void {
   empty.append(emptyMsg, cta, hint);
   folders.append(empty);
 
-  const reader = doc.createElement('main');
-  reader.className = `${SHELL_CLASS}__reader`;
-  reader.setAttribute('role', 'main');
-  const readerPlaceholder = doc.createElement('p');
-  readerPlaceholder.className = `${SHELL_CLASS}__hint`;
-  readerPlaceholder.textContent = 'Select a file to read it here.';
-  reader.append(readerPlaceholder);
+  // The reader pane owns its own <main> element, designed states, and the mount host.
+  // appShell just slots it into the body and drives it via selectFile().
+  const readerPane: ReaderPaneController = createReaderPane(doc);
 
-  body.append(folders, reader);
+  body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, body);
 
   container.replaceChildren(shell);
+
+  return {
+    selectFile: (file) => readerPane.select(file),
+  };
 }
