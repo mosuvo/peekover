@@ -18,7 +18,7 @@
 // exercised in the real-engine browser project, never jsdom (storage persistence is a
 // jsdom-blind property — retro standing rule).
 
-import { openDb, get, getAll, put, del, type IdbSchema } from './idbCore';
+import { openDb, get, getAll, put, del, clear, type IdbSchema } from './idbCore';
 
 /** Database identity — a single versioned schema (plan.md §IndexedDB). */
 export const DB_NAME = 'peekover';
@@ -132,4 +132,101 @@ export async function getPins(): Promise<PinRecord[]> {
 }
 export async function deletePin(id: string): Promise<void> {
   return del(await db(), STORES.pins, id);
+}
+
+// --- trust controls (task 2.2) -----------------------------------------------
+//
+// Storage ships WITH the way to see and erase it — the first thing that stores anything
+// arrives alongside `wipeAll()` and `describeStored()` (spec §6.17 / trust story). Not
+// deferred: the transparency + erase path is part of THIS group, not a later nicety.
+
+/**
+ * Erase everything Peekover has stored: clear all three stores. This drops remembered
+ * folders (and their persisted handles), the recents list, and all pins — the "wipe all
+ * data" control. Each `clear()` resolves on its transaction commit (idbCore), so once
+ * this resolves the stores are durably empty and a subsequent read sees zero records.
+ * Cleared sequentially so a failure surfaces deterministically rather than racing.
+ */
+export async function wipeAll(): Promise<void> {
+  const conn = await db();
+  await clear(conn, STORES.folders);
+  await clear(conn, STORES.recents);
+  await clear(conn, STORES.pins);
+}
+
+/** One remembered folder as the transparency view sees it — the live handle object is
+ *  NOT surfaced (we disclose THAT one exists via `persisted`, never the object itself),
+ *  and file CONTENTS are never stored at all, so there is nothing hidden to leak. */
+export interface StoredFolderInfo {
+  id: string;
+  name: string;
+  /** True iff a live directory handle is stored (Chromium remembered); false = metadata-only. */
+  persisted: boolean;
+  addedAt: number;
+  lastOpenedAt: number;
+}
+
+/**
+ * The complete, plain-language picture of what Peekover has stored — the "what's stored"
+ * view's read path. Surfaces EVERY record in all three stores (no hidden state), plus a
+ * `total` and human-readable `lines`. Folder handles are reported only as `persisted`
+ * (their presence, not the object); file contents are never stored, so this is the whole
+ * truth of on-device state.
+ */
+export interface StoredSummary {
+  folders: StoredFolderInfo[];
+  recents: RecentRecord[];
+  pins: PinRecord[];
+  total: number;
+  /** Plain-language, trust-facing description — one line per non-empty record class. */
+  lines: string[];
+}
+
+/** Pluralize a count for the plain-language lines ("1 folder" / "3 folders"). */
+function plural(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+/**
+ * Read all three stores and produce the transparency summary. Reads are independent, so
+ * they run concurrently. Nothing here writes or hides state — it is a faithful mirror of
+ * what `wipeAll()` would erase.
+ */
+export async function describeStored(): Promise<StoredSummary> {
+  const conn = await db();
+  const [folderRows, recents, pins] = await Promise.all([
+    getAll<FolderRecord>(conn, STORES.folders),
+    getAll<RecentRecord>(conn, STORES.recents),
+    getAll<PinRecord>(conn, STORES.pins),
+  ]);
+
+  const folders: StoredFolderInfo[] = folderRows.map((f) => ({
+    id: f.id,
+    name: f.name,
+    persisted: f.handle !== undefined,
+    addedAt: f.addedAt,
+    lastOpenedAt: f.lastOpenedAt,
+  }));
+
+  const total = folders.length + recents.length + pins.length;
+
+  const lines: string[] = [];
+  if (folders.length) {
+    const remembered = folders.filter((f) => f.persisted).length;
+    const detail = remembered
+      ? ` (${plural(remembered, 'with folder access remembered for one-click reopen')})`
+      : '';
+    lines.push(`${plural(folders.length, 'remembered folder')}${detail} — names only, never file contents.`);
+  }
+  if (recents.length) {
+    lines.push(`${plural(recents.length, 'recently opened file')} — path + name, so the list can reopen them.`);
+  }
+  if (pins.length) {
+    lines.push(`${plural(pins.length, 'pinned item')} — path + name for quick access.`);
+  }
+  if (total === 0) {
+    lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
+  }
+
+  return { folders, recents, pins, total, lines };
 }
