@@ -24,6 +24,29 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-15 — **Task 6.2: folder-tree perf MEASURED (no threshold asserted — retro rule).**
+  `scripts/perf-folder-tree.ts` (`pnpm perf:folder [--scale N]`) times the REAL production
+  folder-mode hot path — the bounded markdown walk (`walkMarkdown`) + pure tree build
+  (`buildTree`) + name filter (`filterTree`) — over a **realistic nested repo** (deep docs/
+  guides tree + a mostly-non-markdown src/ tree + node_modules/.git skip-dirs), not a flat list.
+  Machine: i7-13700, Windows, tsx/node; 7 iterations, cold run discarded, median of warm 6.
+  - **scale 1 (mid-size project — 786 md files, 482 dirs, depth 10; 1773 total files, node_modules
+    markdown correctly excluded):** walk **median 2.18 ms** (1.87–2.69), build **median 4.53 ms**
+    (3.85–5.79), filter **median 0.12 ms**. truncated=false.
+  - **scale 3 (monorepo — 304,122 markdown files EXIST everywhere; walk stops at the 5000-file
+    cap, truncated=true, 2063 dirs):** walk **median ~8.5 ms**, build **median ~30 ms**, filter
+    ~0.5 ms. The hard cap holds and stays fast even against a pathological tree.
+  - **Finding:** the pure walk+build+filter — the "open my project" cost BEFORE any DOM — is
+    CHEAP (~7 ms typical, ~40 ms at the hard cap). As the plan flagged, the suspect for the
+    **carried-M1 chunked/virtualized-render lever** is `treeView` laying out one DOM node per
+    file+dir (~1268 nodes at scale 1, ~7000 at the cap), NOT the pure build — compare M1's
+    real-browser evidence (~750 ms to lay out ~1400 reader nodes). **NOT measured here** (Task-0
+    automatability limit, no stub-as-proof): the real-browser treeView render/layout to first
+    interactive tree + the disk reopen round-trip — the production app page has no
+    headless-drivable folder-open seam (native picker). Those are confirmed qualitatively at the
+    human gate (6.3); the chunked-render decision is **deferred to a real-browser render
+    measurement** (a separate seam from the eager walk), now informed by the measured cheap half.
+    **No acceptance threshold asserted** (M1 retro: no un-measured gate).
 - 2026-07-15 — **Group-4 follow-up: wired the drag-and-drop folder target.** Investigation found
   the app page had NO drop wiring — `folderSourceFromDataTransfer`/`webkitGetAsEntry` existed and
   was unit-tested but unreachable from any UI path, so a dropped folder fell through to the

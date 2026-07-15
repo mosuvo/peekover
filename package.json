@@ -13,6 +13,7 @@
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
     "perf": "tsx scripts/perf-first-paint.ts",
+    "perf:folder": "tsx scripts/perf-folder-tree.ts",
     "lint": "eslint . && tsc --noEmit",
     "postinstall": "wxt prepare"
   },
