@@ -16,6 +16,13 @@ export default defineConfig({
     // Permissions stay empty until a feature needs one; each addition must be
     // justified in docs/trust/PERMISSIONS.md in the same PR (AGENTS.md #4).
     permissions: [],
+    // Toolbar action (spec 002 / task 1.1). NO `default_popup`: a click fires
+    // `action.onClicked` in the background, which opens the bundled app page in a
+    // full tab (entrypoints/background.ts). `action` is a manifest KEY, not a
+    // permission — the built manifest keeps `permissions: []` on both engines,
+    // CI-pinned by tests/manifest.test.ts. The full-tab page (not a popup) is where
+    // showDirectoryPicker/requestPermission actually work (spec §3, Task-0-verified).
+    action: { default_title: 'Open Peekover' },
     // Firefox-only keys. Gated on `browser` so they never appear in the Chrome
     // MV3 manifest (Chrome would warn "Unrecognized manifest key"). AGENTS.md #4.
     ...(browser === 'firefox'
