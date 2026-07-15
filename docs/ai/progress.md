@@ -3,27 +3,17 @@
 *Updated: 2026-07-15.*
 
 ## Now (start here)
-**M2 CODE-COMPLETE (spec 002 — active-source foundation), all automated acceptance green.** All six
-groups landed: app-page shell + M1-pipeline reader integration · raw-IndexedDB store + trust controls
-· Chromium folder open + bounded walk + tree/search + at-use grant/revoke chip · Firefox read-only
-snapshot fallback + honesty note · recents/pins + handle persistence + one-gesture reopen · and the
-group-6 close (PERMISSIONS.md capability ledger · folder-tree perf measured · visible what's-stored +
-wipe-all controls). Closing sanity pass: **lint clean · 318 unit · 136 in-browser green · `pnpm zip`
-314.49 kB (Chrome) / 314.55 kB (Firefox) < 2 MB.** `permissions:[]` survived (CI-pinned, both
-engines); the M1 content script is byte-identical (270,879 B) — folder mode is a new *caller* of the
-unchanged `mount()`, `src/render/*` untouched all milestone.
+**M2 FULLY CLOSED (spec 002 — active-source foundation): code-complete AND human-gated.** All six
+groups landed and all automated acceptance is green (**lint · 318 unit · 136 in-browser · `pnpm zip`
+314.49 kB Chrome / 314.55 kB Firefox < 2 MB**); `permissions:[]` survived (CI-pinned, both engines);
+the M1 content script stayed byte-identical (270,879 B) — folder mode is a new *caller* of the
+unchanged `mount()`, `src/render/*` untouched all milestone. **The named human milestone-close gate
+(task 6.3) PASSED on 2026-07-15, both engines** — the one spec-002 acceptance an agent cannot
+self-certify (see Done). Nothing on 002 is outstanding.
 
-**THE ONE OUTSTANDING ITEM → the named human milestone-close gate (task 6.3).** This is the single
-spec-002 acceptance item an agent cannot self-certify: a human, Chrome + Firefox, current build,
-Network tab open, walks the full flow — open app page → open folder (picker + drag) / Firefox snapshot
-→ browse tree → search → open files → pin → reload → reopen via re-prompt → open the "Stored data"
-panel → wipe-all — confirming **zero unexpected network, no console errors, every degraded/empty state
-renders**, and (Task-0 split) the **disk `prompt`-after-reload re-prompt** ground truth that OPFS
-cannot show. See the checklist in "Blockers" below. Until that passes, 002 is code-complete, not
-human-closed.
-
-**Active spec after the gate:** `specs/003-*` (TOC / navigation — product spec §11 build-order item 3).
-Start a fresh session per WORKFLOW.md 5.3 (spec → plan → tasks gears) once the 6.3 gate is confirmed.
+**Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3), Gear 3.**
+This session drafts **spec.md only** (the WHAT — gate 1); plan.md and tasks.md follow in later sessions,
+each after human approval (WORKFLOW.md 5.3). No implementation code until tasks are approved.
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
@@ -32,6 +22,19 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-15 — **Task 6.3: human milestone-close gate PASSED, both engines — M2 FULLY CLOSED.** A human
+  walked the full spec-002 checklist in **Chrome + Firefox on the current build, Network tab open**:
+  toolbar action opens the app page (no console errors) · Chromium folder open (picker **and** drag)
+  renders a tree contained in the folder pane and **drag-drop opens rather than navigating** · Firefox
+  pick/drop renders the read-only snapshot + honest platform-limitation note · browse tree · search
+  narrows by name · open files (unchanged reader) · pin · **reload → recents/pins persist → one-gesture
+  reopen → exactly one disk re-prompt after reload → folder re-renders** · the **"Stored data"** panel
+  shows remembered folders (name-only)/recents/pins + "contents never stored", and **wipe-all** clears
+  hub + panel to "Nothing stored". Confirmed: **zero unexpected network throughout, no console errors,
+  every degraded/empty state renders.** This is the single spec-002 acceptance an agent cannot
+  self-certify — now met. It caught 3 real M2 defects the green stack missed across the milestone
+  (containment · drag-navigation · storage-UI gap), so it stays load-bearing (retro 2026-07-15).
+  **M2 (spec 002) is fully closed (code + human gate); next → spec 003 (TOC / navigation).**
 - 2026-07-15 — **Task 6.2: folder-tree perf MEASURED (no threshold asserted — retro rule).**
   `scripts/perf-folder-tree.ts` (`pnpm perf:folder [--scale N]`) times the REAL production
   folder-mode hot path — the bounded markdown walk (`walkMarkdown`) + pure tree build
@@ -216,10 +219,9 @@ foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
     the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
-Immediate — **the named human milestone-close gate (task 6.3)** on the current build (checklist in
-Blockers). Once the human confirms it, M2 is fully closed → **M3 kickoff (spec 003): TOC / navigation**
-(product spec §11 build-order item 3). In a FRESH session per WORKFLOW.md 5.3: draft spec → plan →
-tasks (Gear 3), human approves each gate before code.
+Immediate — **M3 kickoff (spec 003): TOC / navigation** (product spec §11 build-order item 3), now that
+the 6.3 gate has passed and M2 is fully closed. Gear 3 in FRESH sessions per WORKFLOW.md 5.3: **draft
+spec.md (this session, gate 1) → plan.md → tasks.md**, human approves each gate before any code.
 
 Carried to M3 (measurement-driven / unrelated levers, do NOT guess):
 - **Chunked/virtualized *tree* render** — the large-folder lever. 6.2 measured the pure walk+build as
@@ -233,22 +235,7 @@ Roadmap: 003 TOC/navigation · 004 themes+settings · 005 watch mode + diff (the
 full order in docs/product/spec.md §Phase-1.
 
 ## Blockers / open questions
-- **OPEN — the named human milestone-close gate (task 6.3), the one spec-002 acceptance an agent
-  cannot self-certify.** Human checklist, Chrome + Firefox, current build, **Network tab open**:
-  1. Toolbar action opens the app page (full tab); no console errors.
-  2. **Chromium:** "Open a folder" → plain-language line → OS picker → tree renders, contained in the
-     folder pane (not full-page); **drag a folder** onto the page opens it in Peekover (does NOT
-     navigate to the folder).
-  3. **Firefox:** pick/drop a folder → read-only snapshot renders + the honest platform-limitation note.
-  4. Browse the tree · **search** narrows by name · open files (render via the unchanged reader) ·
-     **pin** a file/folder.
-  5. **Reload** the page → recents/pins persist → **reopen** a remembered folder is ONE gesture →
-     the browser shows **exactly one** re-prompt (the disk `prompt`-after-reload ground truth OPFS
-     can't show — Task-0 split) → folder re-renders.
-  6. Open the **"Stored data"** panel → it shows the remembered folders (as remembered/name-only),
-     recents, pins, and the "contents never stored" line → **wipe-all** (inline confirm) clears the
-     hub + panel to "Nothing stored".
-  7. **Zero unexpected network throughout** (Resource Timing / Network tab empty of http(s));
-     `permissions: []`; every degraded/empty state renders (cancel, empty folder, too-large, unreadable).
-  This gate caught 3 real M2 defects the green stack missed (containment · drag-navigation · the
-  storage-UI gap) — it is load-bearing, not ceremony (retro 2026-07-15).
+- **None open on M2.** The named human milestone-close gate (task 6.3) **PASSED 2026-07-15, both
+  engines** — see Done. M2 (spec 002) is fully closed.
+- Spec 003 (TOC / navigation) opens with its own open questions; those live in
+  `specs/003-toc-navigation/spec.md` (§Open questions), not here, until plan time.
