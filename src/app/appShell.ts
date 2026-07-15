@@ -36,6 +36,7 @@ import {
   GRANT_PROMPT_LINE,
   type GrantState,
 } from './capability';
+import { READ_ONLY_SNAPSHOT_NOTE } from './firefoxFolderSource';
 import {
   putFolder as defaultPutFolder,
   deleteFolder as defaultDeleteFolder,
@@ -301,6 +302,19 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
     const chip = buildGrantChip(doc, grantState, () => void revokeAccess());
     if (chip) wrap.append(chip);
+
+    // The read-only-snapshot honesty note, driven by the SEAM's `persistable` bit — never by
+    // sniffing the engine (plan.md §seam). Chromium sources are `persistable` and show
+    // nothing here; a Firefox (or picker-disabled) snapshot is `persistable:false` and gets
+    // the plain "point-in-time, re-pick to reopen — a Firefox platform limitation" note.
+    if (!source.persistable) {
+      const note = doc.createElement('p');
+      note.className = `${SHELL_CLASS}__notice`;
+      note.setAttribute('data-state', 'read-only-snapshot');
+      note.setAttribute('data-tone', 'warn');
+      note.textContent = READ_ONLY_SNAPSHOT_NOTE;
+      wrap.append(note);
+    }
 
     const treeView = createTreeView(doc, {
       files: source.files,

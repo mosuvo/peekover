@@ -244,16 +244,53 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     expect(container.querySelector('.peekover-app__chip')).toBeNull();
   });
 
-  it('an UNSUPPORTED engine (real openFolder in jsdom — no picker) shows an honest state', async () => {
-    // No injected opener → the real openFolder runs; jsdom has no showDirectoryPicker, so
-    // it returns { unsupported } — proving the real feature-detect branch, never a blank.
-    const app = mountAppShell(container, { store: fakeStore() });
+  // Task 4.1: a read-only SNAPSHOT source (Firefox / picker-disabled) carries its honesty as
+  // DATA (`persistable:false`), and the shell renders the platform-limitation note off that
+  // bit — never by sniffing the engine. (The real feature-detect ROUTING is unit-tested in
+  // folderSource.test.ts; the real read path in firefoxFallback.browser.test.ts.)
+  it('a read-only SNAPSHOT source (persistable:false) shows the honest Firefox note + stores NO handle', async () => {
+    const store = fakeStore();
+    const source = sourceOf('snap', [mdFile('a.md')], { persistable: false, handle: undefined });
+    const app = mountAppShell(container, { openFolder: openerReturning({ ok: true, source }), store });
+
+    await app.openFolder();
+
+    const note = container.querySelector('[data-state="read-only-snapshot"]');
+    expect(note).not.toBeNull();
+    expect(note!.textContent).toMatch(/read-only|snapshot|Firefox platform limitation/i);
+    // The chip + tree still render (a folder IS open, just not persistable).
+    expect(container.querySelector('.peekover-app__chip')).not.toBeNull();
+    expect(container.querySelector('[role="treeitem"][data-kind="file"]')).not.toBeNull();
+    // Snapshot → the stored folder row carries NO handle (metadata-only).
+    expect(store.folders).toHaveLength(1);
+    expect(store.folders[0].handle).toBeUndefined();
+  });
+
+  it('a persistable (Chromium) source shows NO read-only note', async () => {
+    const store = fakeStore();
+    const source = sourceOf('live', [mdFile('a.md')]); // persistable:true by default
+    const app = mountAppShell(container, { openFolder: openerReturning({ ok: true, source }), store });
+
+    await app.openFolder();
+
+    expect(container.querySelector('[data-state="read-only-snapshot"]')).toBeNull();
+  });
+
+  it('an injected UNSUPPORTED outcome still degrades to an honest state (defensive, never blank)', async () => {
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({
+        ok: false,
+        reason: 'unsupported',
+        message: 'This browser cannot open a live folder.',
+      }),
+      store: fakeStore(),
+    });
 
     await app.openFolder();
 
     const notice = container.querySelector('.peekover-app__notice');
     expect(notice).not.toBeNull();
-    expect(notice!.textContent).toMatch(/cannot open a live folder|Firefox/i);
+    expect(notice!.textContent).toContain('cannot open a live folder');
     expect(container.querySelector('.peekover-app__cta')).not.toBeNull();
   });
 

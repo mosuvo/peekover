@@ -17,6 +17,7 @@
 
 import type { WalkLimits, CancelToken } from './walkPolicy';
 import { folderSourceFromHandle, pickDirectory } from './chromiumFolderSource';
+import { folderSourceFromFileList, pickDirectoryFiles } from './firefoxFolderSource';
 
 /**
  * One markdown file inside an opened folder — the shared unit the tree and reader consume.
@@ -92,14 +93,25 @@ function isAbort(err: unknown): boolean {
  */
 export async function openFolder(opts: OpenFolderOptions = {}): Promise<OpenFolderOutcome> {
   if (!isDirectoryPickerSupported()) {
-    // Group 4 replaces this branch with the Firefox `<input webkitdirectory>` fallback +
-    // its honest read-only-snapshot note. Until then, an honest designed state, not a hang.
-    return {
-      ok: false,
-      reason: 'unsupported',
-      message:
-        'This browser cannot open a live folder yet. A read-only folder snapshot for Firefox arrives next.',
-    };
+    // Firefox (or any picker-disabled engine): no live handle exists, so read a READ-ONLY,
+    // point-in-time SNAPSHOT via `<input webkitdirectory>`. The resulting `FolderSource` is
+    // `persistable:false` with no handle — the honesty is data at the seam, and appShell
+    // renders the platform-limitation note off that bit. A dismissed chooser resolves to
+    // `null` → the same designed `cancelled` state the Chromium path uses (never a hang).
+    try {
+      const files = await pickDirectoryFiles();
+      if (!files) {
+        return { ok: false, reason: 'cancelled', message: 'No folder was opened.' };
+      }
+      const source = await folderSourceFromFileList(files, opts);
+      return { ok: true, source };
+    } catch {
+      return {
+        ok: false,
+        reason: 'error',
+        message: 'Could not open that folder. Please try again.',
+      };
+    }
   }
   try {
     const handle = await pickDirectory();
