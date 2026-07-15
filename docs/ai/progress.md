@@ -24,6 +24,26 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-15 — **Group-4 follow-up: wired the drag-and-drop folder target.** Investigation found
+  the app page had NO drop wiring — `folderSourceFromDataTransfer`/`webkitGetAsEntry` existed and
+  was unit-tested but unreachable from any UI path, so a dropped folder fell through to the
+  browser's default navigate-to-folder action (the Firefox manual-gate screenshot). Fix: a drop
+  target on the shell root (`dragenter`/`dragover`/`drop` all `preventDefault` — dragover so a drop
+  fires, drop FIRST so the browser doesn't navigate). New seam `openFolderFromDrop` branches per
+  capability: Chromium (`getAsFileSystemHandle` + picker supported) → LIVE handle (`persistable`,
+  NOT downgraded to snapshot); Firefox → read-only Entries snapshot. Injected `dropToOutcome` dep;
+  drop funnels through the SAME `applyOutcome` as the CTA (chip/tree/snapshot-note/never-blank —
+  no duplication). Synchronous-extraction invariant preserved + commented (items only live during
+  the drop event). Tests: +9 unit (routing in `folderSource.test.ts`, DOM wiring in
+  `appShell.test.ts`), +5 real-engine (`tests/browser/folderDrop.browser.test.ts`, ×2 engines).
+  **RED→GREEN (real Chromium + Firefox):** with the drop listeners disabled, the two wiring tests
+  (dragover/drop `defaultPrevented`; full read→render) FAILED `expected false to be true` on BOTH
+  engines (4 failed / 6 passed — the direct `openFolderFromDrop` routing tests still passed); with
+  the listeners restored, 10/10 passed. NOTE: a synthetic `dispatchEvent` never triggers a real
+  browser's default navigation in ANY engine, so "the browser really did not navigate" stays a
+  human-gate item (manual note); the real engine proves the handler owns the real DragEvent + the
+  real Entries/File.text()/mount path. Render path byte-identical (content script 270,879 B),
+  `permissions:[]` pin green, lint + 285 unit + 122 browser green.
 - 2026-07-14 — **M1 CLOSED (spec 001 — core render pipeline).** Extension skeleton + reader
   pipeline (detect → hide-raw → mount → parse → markdown-it/GFM → DOMPurify → shadow-DOM themed
   reading → Raw toggle → block-remote-media → never-blank fallback) shipping on Chrome + Firefox,

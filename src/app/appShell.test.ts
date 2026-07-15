@@ -315,3 +315,99 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     expect(container.querySelector('.peekover-app__reader [data-state="no-selection"]')).not.toBeNull();
   });
 });
+
+// --- group-4 follow-up: the drag-and-drop folder target (DOM-shape, injected drop seam) ----
+//
+// A folder dropped on the app page must open IN Peekover, not fall through to the browser's
+// default navigate-to-folder action (the Firefox manual-gate bug). That needs preventDefault on
+// BOTH dragover (so a `drop` fires at all) and drop (so the browser does not navigate). Here we
+// prove the DOM wiring in jsdom: the handlers claim the events (defaultPrevented), the injected
+// drop seam is invoked, and a success funnels through the EXACT same grant branch as the CTA
+// (chip + tree). jsdom cannot prove a real browser's navigation was suppressed — a synthetic
+// event never triggers a default action in ANY engine — so that property is asserted on real
+// DragEvents in folderDrop.browser.test.ts and confirmed live at the human gate.
+
+describe('appShell (group-4 drag-and-drop folder target)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  function shellOf(): HTMLElement {
+    return container.querySelector<HTMLElement>('.peekover-app')!;
+  }
+
+  it('dragover is preventDefault\'d — REQUIRED, or no drop event ever fires', () => {
+    mountAppShell(container, {
+      dropToOutcome: async () => ({ ok: true, source: sourceOf('x', []) }),
+      store: fakeStore(),
+    });
+
+    const dragover = new Event('dragover', { bubbles: true, cancelable: true });
+    shellOf().dispatchEvent(dragover);
+
+    expect(dragover.defaultPrevented).toBe(true);
+  });
+
+  it('a folder DROP is claimed (defaultPrevented), routed through the injected seam, and funnels to the chip + tree', async () => {
+    const store = fakeStore();
+    const source = sourceOf('dropped-notes', [mdFile('a.md'), mdFile('docs/b.md')]);
+    let calls = 0;
+    const app = mountAppShell(container, {
+      dropToOutcome: async () => {
+        calls += 1;
+        return { ok: true, source };
+      },
+      store,
+    });
+    void app;
+
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+    shellOf().dispatchEvent(drop);
+    await flush();
+
+    // The handler CLAIMED the event — the browser will not navigate to the dropped folder.
+    expect(drop.defaultPrevented).toBe(true);
+    // …the injected drop seam ran once…
+    expect(calls).toBe(1);
+    // …and success went through the SAME grant branch: chip + searchable tree + remembered.
+    const chip = container.querySelector('.peekover-app__chip');
+    expect(chip?.textContent).toContain('granted:');
+    expect(chip?.textContent).toContain('dropped-notes');
+    const files = container.querySelectorAll('[role="treeitem"][data-kind="file"]');
+    expect([...files].map((f) => f.textContent).sort()).toEqual(['a.md', 'b.md']);
+    expect(store.folders.map((f) => f.name)).toEqual(['dropped-notes']);
+  });
+
+  it('an EMPTY / invalid drop still claims the event and shows a designed notice (never blank)', async () => {
+    mountAppShell(container, {
+      dropToOutcome: async () => ({ ok: false, reason: 'cancelled', message: 'Drop a folder to open it.' }),
+      store: fakeStore(),
+    });
+
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+    shellOf().dispatchEvent(drop);
+    await flush();
+
+    expect(drop.defaultPrevented).toBe(true);
+    expect(container.querySelector('.peekover-app__notice')?.textContent).toContain('Drop a folder');
+    // The affordance is back — not a dead end.
+    expect(container.querySelector('.peekover-app__cta')).not.toBeNull();
+    expect(container.querySelector('.peekover-app__chip')).toBeNull();
+  });
+
+  it('a dropped SNAPSHOT source (Firefox, persistable:false) shows the read-only note via the same branch', async () => {
+    const store = fakeStore();
+    const source = sourceOf('snap-drop', [mdFile('a.md')], { persistable: false, handle: undefined });
+    mountAppShell(container, { dropToOutcome: async () => ({ ok: true, source }), store });
+
+    shellOf().dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+    await flush();
+
+    expect(container.querySelector('[data-state="read-only-snapshot"]')).not.toBeNull();
+    expect(store.folders[0].handle).toBeUndefined();
+  });
+});

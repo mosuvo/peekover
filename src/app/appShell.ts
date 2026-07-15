@@ -24,6 +24,7 @@
 import { createReaderPane, type ReaderFile, type ReaderPaneController } from './readerPane';
 import {
   openFolder as defaultOpenFolder,
+  openFolderFromDrop as defaultOpenFolderFromDrop,
   type FolderSource,
   type MarkdownFile,
   type OpenFolderOptions,
@@ -60,6 +61,10 @@ export interface AppStore {
 /** Injectable dependencies (defaults are the real picker seam + the real store). */
 export interface AppDeps {
   openFolder?: (opts?: OpenFolderOptions) => Promise<OpenFolderOutcome>;
+  /** Turn a folder dropped on the app page into an `OpenFolderOutcome` (Chromium live handle /
+   *  Firefox snapshot). Injectable so the drop path is jsdom-testable without a real drop —
+   *  defaults to the real `openFolderFromDrop` seam. */
+  dropToOutcome?: (dataTransfer: DataTransfer | null) => Promise<OpenFolderOutcome>;
   store?: AppStore;
 }
 
@@ -172,6 +177,7 @@ export interface AppController {
 export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppController {
   const doc = container.ownerDocument;
   const openFolderFn = deps.openFolder ?? defaultOpenFolder;
+  const dropToOutcomeFn = deps.dropToOutcome ?? defaultOpenFolderFromDrop;
   const store: AppStore = deps.store ?? {
     putFolder: defaultPutFolder,
     deleteFolder: defaultDeleteFolder,
@@ -210,6 +216,29 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, body);
   container.replaceChildren(shell);
+
+  // --- drag-and-drop folder target (Chromium live handle / Firefox snapshot) ----------
+  //
+  // A folder dropped onto the app page must open IN Peekover, not trigger the browser's default
+  // "navigate to the dropped folder" action (which showed Firefox's file:// directory index at
+  // the manual gate — the drop was never claimed by the page). Claiming the drop needs BOTH:
+  //   • dragover.preventDefault() — REQUIRED for any `drop` to fire at all; also the hook for the
+  //     copy cursor. Without it the browser refuses the drop and keeps its default.
+  //   • drop.preventDefault() FIRST — this is what stops the navigation. It must run before any
+  //     async work, so it is the first statement in the handler.
+  // The DataTransfer is captured synchronously and handed to `runDrop`; its items are only valid
+  // during this dispatch, so nothing engine-bound may be read after an await (see runDrop).
+  shell.addEventListener('dragenter', (e) => {
+    e.preventDefault(); // establish the shell as a drop zone
+  });
+  shell.addEventListener('dragover', (e) => {
+    e.preventDefault(); // REQUIRED — without this no `drop` event fires
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+  shell.addEventListener('drop', (e) => {
+    e.preventDefault(); // FIRST — stop the browser navigating to the dropped folder
+    void runDrop(e.dataTransfer);
+  });
 
   // --- grant state + the active folder ------------------------------------
   let grantState: GrantState = IDLE_GRANT;
@@ -328,38 +357,59 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   // --- grant flow ----------------------------------------------------------
 
+  /** Apply a settled open outcome (from the CTA picker OR a drop) to the shell: paint the
+   *  matching designed never-blank state on any non-grant, else remember the folder + present
+   *  it. The ONE place grant success is handled — the drop path reuses it verbatim, never
+   *  duplicating the store/reader/present wiring. */
+  async function applyOutcome(outcome: OpenFolderOutcome): Promise<void> {
+    if (!outcome.ok) {
+      // Designed never-blank states for every non-grant outcome. `unsupported` is a
+      // firmer message (this engine can't yet); cancel/error return to the affordance.
+      if (outcome.reason === 'unsupported') {
+        paintIdle({ text: outcome.message, tone: 'warn' });
+      } else {
+        paintIdle({ text: outcome.message });
+      }
+      return;
+    }
+
+    const source = outcome.source;
+    activeFolderId = newId();
+    const folderId = activeFolderId;
+    // Remember the folder (Chromium: with its handle; a capability ref, never contents).
+    await tryStore(() =>
+      store.putFolder({
+        id: folderId,
+        name: source.name,
+        handle: source.persistable ? source.handle : undefined,
+        addedAt: Date.now(),
+        lastOpenedAt: Date.now(),
+      }),
+    );
+    // Fresh folder → reader back to the no-selection designed state until a file is picked.
+    await selectFile(null);
+    paintGranted(source);
+  }
+
   async function runOpenFolder(): Promise<void> {
     if (busy) return;
     busy = true;
     try {
-      const outcome = await openFolderFn();
-      if (!outcome.ok) {
-        // Designed never-blank states for every non-grant outcome. `unsupported` is a
-        // firmer message (this engine can't yet); cancel/error return to the affordance.
-        if (outcome.reason === 'unsupported') {
-          paintIdle({ text: outcome.message, tone: 'warn' });
-        } else {
-          paintIdle({ text: outcome.message });
-        }
-        return;
-      }
+      await applyOutcome(await openFolderFn());
+    } finally {
+      busy = false;
+    }
+  }
 
-      const source = outcome.source;
-      activeFolderId = newId();
-      const folderId = activeFolderId;
-      // Remember the folder (Chromium: with its handle; a capability ref, never contents).
-      await tryStore(() =>
-        store.putFolder({
-          id: folderId,
-          name: source.name,
-          handle: source.persistable ? source.handle : undefined,
-          addedAt: Date.now(),
-          lastOpenedAt: Date.now(),
-        }),
-      );
-      // Fresh folder → reader back to the no-selection designed state until a file is picked.
-      await selectFile(null);
-      paintGranted(source);
+  /** Handle a folder dropped on the app page. `dataTransfer` MUST be captured synchronously in
+   *  the drop handler (its items are only live during the event); the routing pulls everything
+   *  engine-bound from it before its first await (see `openFolderFromDrop`). Funnels through the
+   *  SAME `applyOutcome` as the CTA, so chip/tree/snapshot-note/never-blank states come free. */
+  async function runDrop(dataTransfer: DataTransfer | null): Promise<void> {
+    if (busy) return;
+    busy = true;
+    try {
+      await applyOutcome(await dropToOutcomeFn(dataTransfer));
     } finally {
       busy = false;
     }

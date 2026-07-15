@@ -17,7 +17,11 @@
 
 import type { WalkLimits, CancelToken } from './walkPolicy';
 import { folderSourceFromHandle, pickDirectory } from './chromiumFolderSource';
-import { folderSourceFromFileList, pickDirectoryFiles } from './firefoxFolderSource';
+import {
+  folderSourceFromFileList,
+  folderSourceFromDataTransfer,
+  pickDirectoryFiles,
+} from './firefoxFolderSource';
 
 /**
  * One markdown file inside an opened folder — the shared unit the tree and reader consume.
@@ -121,6 +125,91 @@ export async function openFolder(opts: OpenFolderOptions = {}): Promise<OpenFold
     if (isAbort(err)) {
       return { ok: false, reason: 'cancelled', message: 'No folder was opened.' };
     }
+    return {
+      ok: false,
+      reason: 'error',
+      message: 'Could not open that folder. Please try again.',
+    };
+  }
+}
+
+/** The non-standard drop-item method Chromium exposes: a dragged file/folder item yields a
+ *  live `FileSystemHandle` (the same capability the picker grants). Not in the DOM lib types. */
+interface DataTransferItemWithHandle extends DataTransferItem {
+  getAsFileSystemHandle?(): Promise<FileSystemHandle | null>;
+}
+
+/**
+ * The DROP counterpart of `openFolder`: turn a folder dropped onto the app page into the SAME
+ * designed `OpenFolderOutcome`, so the drop path funnels through the exact grant branch the CTA
+ * uses (chip, tree, persistable/snapshot note, every never-blank state) with no duplicated logic.
+ *
+ * A drop BYPASSES `openFolder`'s feature-detect, so it branches here itself — and it must NOT
+ * downgrade a Chromium user: where the dropped item exposes `getAsFileSystemHandle()` (Chromium
+ * with the directory picker), we take the LIVE handle path (`persistable:true`, reopenable),
+ * exactly as if they'd used the picker; only where no live handle exists (Firefox) do we read the
+ * read-only Entries-API snapshot (`persistable:false`). Every non-folder / empty / error drop is a
+ * designed `{ ok:false }`, never a throw — the caller renders a never-blank state (AGENTS.md #5).
+ *
+ * SYNCHRONOUS-EXTRACTION INVARIANT: a `DataTransferItemList` and the per-item `webkitGetAsEntry()`
+ * / `getAsFileSystemHandle()` accessors are only valid DURING the drop event's synchronous
+ * dispatch — read after any `await` they yield nothing. So everything engine-bound is pulled from
+ * the items BEFORE the first `await`: the item array is snapshotted up front; on the Chromium
+ * branch `getAsFileSystemHandle()` is CALLED synchronously (its promises are awaited afterwards);
+ * on the Firefox branch `folderSourceFromDataTransfer` calls `webkitGetAsEntry()` synchronously in
+ * its own leading (pre-await) loop. Do not move item access below an `await` — it will silently
+ * break in real engines while jsdom (which keeps the items alive) stays green.
+ */
+export async function openFolderFromDrop(
+  dataTransfer: DataTransfer | null,
+  opts: OpenFolderOptions = {},
+): Promise<OpenFolderOutcome> {
+  // Snapshot the items NOW (before any await) — see the synchronous-extraction invariant above.
+  const items: DataTransferItem[] = dataTransfer ? Array.from(dataTransfer.items) : [];
+  const fileItems = items.filter((it) => it.kind === 'file');
+
+  // Chromium prefers the LIVE handle so a dragged folder is not downgraded to the snapshot.
+  const handleItems = fileItems.filter(
+    (it): it is DataTransferItemWithHandle =>
+      typeof (it as DataTransferItemWithHandle).getAsFileSystemHandle === 'function',
+  );
+  if (isDirectoryPickerSupported() && handleItems.length > 0) {
+    // Call getAsFileSystemHandle() synchronously for every item (the CALL must happen during the
+    // event); collect the promises here and await them below.
+    const handlePromises = handleItems.map((it) => it.getAsFileSystemHandle!());
+    try {
+      const handles = await Promise.all(handlePromises);
+      const dir = handles.find(
+        (h): h is FileSystemDirectoryHandle => h != null && h.kind === 'directory',
+      );
+      if (!dir) {
+        return { ok: false, reason: 'cancelled', message: 'Drop a folder to open it.' };
+      }
+      const source = await folderSourceFromHandle(dir, opts);
+      return { ok: true, source };
+    } catch {
+      return {
+        ok: false,
+        reason: 'error',
+        message: 'Could not open that folder. Please try again.',
+      };
+    }
+  }
+
+  // Firefox (or any engine without live drop handles): read the point-in-time Entries-API
+  // snapshot. `folderSourceFromDataTransfer` calls webkitGetAsEntry() synchronously up front
+  // (its entries[] is built before its first await), so passing the pre-filtered items straight
+  // in keeps the drop-event invariant — the call below runs with no `await` before it.
+  const entryItems = fileItems.filter(
+    (it) => typeof (it as { webkitGetAsEntry?: unknown }).webkitGetAsEntry === 'function',
+  );
+  if (entryItems.length === 0) {
+    return { ok: false, reason: 'cancelled', message: 'Drop a folder to open it.' };
+  }
+  try {
+    const source = await folderSourceFromDataTransfer(entryItems, opts);
+    return { ok: true, source };
+  } catch {
     return {
       ok: false,
       reason: 'error',

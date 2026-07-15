@@ -32,9 +32,15 @@ vi.mock('./firefoxFolderSource', () => ({
     truncated: false,
     persistable: false,
   })),
+  folderSourceFromDataTransfer: vi.fn(async () => ({
+    name: 'firefox-drop',
+    files: [],
+    truncated: false,
+    persistable: false,
+  })),
 }));
 
-import { openFolder, isDirectoryPickerSupported } from './folderSource';
+import { openFolder, openFolderFromDrop, isDirectoryPickerSupported } from './folderSource';
 import * as chromium from './chromiumFolderSource';
 import * as firefox from './firefoxFolderSource';
 
@@ -103,5 +109,88 @@ describe('openFolder — feature-detect routes to the right engine impl', () => 
     if (!outcome.ok) expect(outcome.reason).toBe('cancelled');
     // A cancelled pick never reaches the file-list read.
     expect(firefox.folderSourceFromFileList).not.toHaveBeenCalled();
+  });
+});
+
+// --- openFolderFromDrop — the DROP counterpart routes the SAME two ways -----------------
+//
+// A drop bypasses openFolder's feature-detect, so it branches itself. The capability-downgrade
+// guard is the point: a Chromium drop (item exposes getAsFileSystemHandle) must take the LIVE
+// handle path (persistable), NOT the read-only snapshot — dragging a folder must not silently
+// give a Chromium user less than the picker would. The real read paths are engine-tested; here
+// we prove the ROUTING with synthetic DataTransfer items.
+
+/** A synthetic DataTransfer whose `.items` is a plain array (Array.from reads it array-like).
+ *  Items are loosely typed — each test supplies only the accessors the routing reads. */
+function dropWith(items: Array<Record<string, unknown>>): DataTransfer {
+  return { items } as unknown as DataTransfer;
+}
+
+describe('openFolderFromDrop — a dropped folder routes to the right engine impl', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setPickerSupported(false);
+  });
+
+  it('Chromium (item exposes getAsFileSystemHandle) → LIVE handle path, persistable (NOT downgraded)', async () => {
+    setPickerSupported(true);
+    const dirHandle = { kind: 'directory', name: 'dropped' };
+    const item = { kind: 'file', getAsFileSystemHandle: async () => dirHandle };
+
+    const outcome = await openFolderFromDrop(dropWith([item]));
+
+    // The live handle path was taken (NOT the snapshot) — a Chromium drop is not downgraded.
+    expect(chromium.folderSourceFromHandle).toHaveBeenCalledTimes(1);
+    expect(chromium.folderSourceFromHandle).toHaveBeenCalledWith(dirHandle, {});
+    expect(firefox.folderSourceFromDataTransfer).not.toHaveBeenCalled();
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) expect(outcome.source.persistable).toBe(true);
+  });
+
+  it('Firefox (no handle; item exposes webkitGetAsEntry) → read-only Entries snapshot, NOT persistable', async () => {
+    setPickerSupported(false);
+    const item = { kind: 'file', webkitGetAsEntry: () => ({ isDirectory: true }) };
+
+    const outcome = await openFolderFromDrop(dropWith([item]));
+
+    expect(firefox.folderSourceFromDataTransfer).toHaveBeenCalledTimes(1);
+    expect(chromium.folderSourceFromHandle).not.toHaveBeenCalled();
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      expect(outcome.source.persistable).toBe(false);
+      expect(outcome.source.handle).toBeUndefined();
+    }
+  });
+
+  it('a Chromium item with NO directory handle (files-only / empty drop) → designed cancelled, never blank', async () => {
+    setPickerSupported(true);
+    // getAsFileSystemHandle resolves to a FILE handle (a dropped file, not a folder).
+    const item = { kind: 'file', getAsFileSystemHandle: async () => ({ kind: 'file', name: 'x.md' }) };
+
+    const outcome = await openFolderFromDrop(dropWith([item]));
+
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.reason).toBe('cancelled');
+    expect(chromium.folderSourceFromHandle).not.toHaveBeenCalled();
+  });
+
+  it('an empty drop (no items, or a null dataTransfer) → designed cancelled, never a throw', async () => {
+    setPickerSupported(false);
+    expect((await openFolderFromDrop(dropWith([]))).ok).toBe(false);
+    const nullOutcome = await openFolderFromDrop(null);
+    expect(nullOutcome.ok).toBe(false);
+    if (!nullOutcome.ok) expect(nullOutcome.reason).toBe('cancelled');
+    expect(firefox.folderSourceFromDataTransfer).not.toHaveBeenCalled();
+  });
+
+  it('the Chromium handle read throwing → designed error, never blank', async () => {
+    setPickerSupported(true);
+    vi.mocked(chromium.folderSourceFromHandle).mockRejectedValueOnce(new Error('io'));
+    const item = { kind: 'file', getAsFileSystemHandle: async () => ({ kind: 'directory', name: 'd' }) };
+
+    const outcome = await openFolderFromDrop(dropWith([item]));
+
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.reason).toBe('error');
   });
 });
