@@ -1,31 +1,65 @@
-// appShell — the M2 active-surface app page shell (DOM-UI + selection wiring).
+// appShell — the M2 active-surface app page shell (DOM-UI + grant/selection wiring).
 //
 // Spec 002 introduces Peekover's SECOND surface: an extension-owned app page
 // (chrome-extension://…/app.html) opened deliberately from the toolbar action. This
-// module renders that page's shell — a header, a folder pane, and a reader pane — and
-// wires a selected file into the reader. It is the application shell every future
-// active capability (folder mode, editor, watch/diff) will mount into.
+// module renders that page's shell — a header, a folder pane, and a reader pane — and, as
+// of group 3, drives the AT-USE FOLDER GRANT FLOW: the "Open a folder" CTA (inert through
+// groups 1–2) is now LIVE. Clicking it, after a plain-language line, opens the picker via
+// the `folderSource` seam, runs the eager bounded markdown walk, shows a persistent
+// "granted: <folder> — revoke" chip, and presents the folder's files for reading.
 //
-// SCOPE (task 1.2): the shell layout + the selection→reader seam. There is still NO
-// folder logic, NO IndexedDB, and NO tree here — the "Open a folder" affordance stays
-// INERT this task (folder mode is group 3). What 1.2 adds over 1.1 is the reader pane:
-// a selected file's text renders through the UNCHANGED M1 `mount()` pipeline, and every
-// non-render outcome (no selection, empty file, unreadable file) degrades to a designed
-// never-blank state (AGENTS.md #5). The rendering itself lives in readerPane.ts (the
-// DOM/engine glue); appShell composes the panes and exposes `selectFile()` as the seam
-// group 3 hands real `MarkdownFile`s to. appShell still imports no store and no parser —
-// only the reader pane (which reuses `mount()`), so it stays unit-testable in jsdom.
+// SCOPE across group 3's tasks:
+//   - 3.2 (this wiring): CTA → plain line → openFolder() → chip + folder body + designed
+//     never-blank states for cancelled / unsupported / error / empty / too-large folders.
+//     The folder body here is a flat file list — a real, functional presentation.
+//   - 3.3 replaces `presentFolderBody` with the pure `tree` + `treeView` (search + keyboard
+//     nav) at the SAME seam, so this file's grant/store/reader wiring is untouched by it.
 //
-// Styling is design-token-only (values copied verbatim from design/tokens.css, as
-// src/theme/readerCss.ts does). No new fonts or assets: the app chrome uses the
-// system font stack (the bundled Literata is the reader's, inside mount()'s shadow
-// root). Themes follow the OS via prefers-color-scheme — the app page owns its whole
-// document, so there is no host to isolate from and no shadow root at the shell level.
+// The seam stays honest: `selectFile()` (the reader seam group 1 built) is store-free and
+// unchanged, so its jsdom tests keep passing; recents/folder records are written in the
+// grant/select HANDLERS, best-effort (a storage failure never blanks the reader —
+// AGENTS.md #5). `openFolder`/`store` are injectable so the grant flow is jsdom-testable
+// without the native picker (real picker → human gate; real handle path → OPFS browser test).
 
 import { createReaderPane, type ReaderFile, type ReaderPaneController } from './readerPane';
+import {
+  openFolder as defaultOpenFolder,
+  type FolderSource,
+  type MarkdownFile,
+  type OpenFolderOptions,
+  type OpenFolderOutcome,
+} from './folderSource';
+import {
+  IDLE_GRANT,
+  grant,
+  buildGrantChip,
+  GRANT_PROMPT_LINE,
+  type GrantState,
+} from './capability';
+import {
+  putFolder as defaultPutFolder,
+  deleteFolder as defaultDeleteFolder,
+  putRecent as defaultPutRecent,
+  type FolderRecord,
+  type RecentRecord,
+} from './store';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
+
+/** The subset of `store` the shell writes to. Injectable so grant-flow jsdom tests need no
+ *  real IndexedDB; defaults to the real store (writes are best-effort — see below). */
+export interface AppStore {
+  putFolder(record: FolderRecord): Promise<void>;
+  deleteFolder(id: string): Promise<void>;
+  putRecent(record: RecentRecord): Promise<void>;
+}
+
+/** Injectable dependencies (defaults are the real picker seam + the real store). */
+export interface AppDeps {
+  openFolder?: (opts?: OpenFolderOptions) => Promise<OpenFolderOutcome>;
+  store?: AppStore;
+}
 
 /** The shell stylesheet: design tokens (light + dark) + minimal layout. */
 const APP_CSS = /* css */ `
@@ -63,8 +97,8 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; padding:1.5rem}
 
 .${SHELL_CLASS}__empty{
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:.5rem; height:100%; text-align:center; color:var(--muted);
+  display:flex; flex-direction:column; align-items:flex-start;
+  gap:.55rem; text-align:left; color:var(--muted);
 }
 .${SHELL_CLASS}__cta{
   font:inherit; color:var(--ink); background:var(--paper);
@@ -72,7 +106,38 @@ const APP_CSS = /* css */ `
   padding:.55rem 1rem; cursor:pointer;
 }
 .${SHELL_CLASS}__cta:hover{background:var(--accent-soft)}
-.${SHELL_CLASS}__hint{color:var(--faint); font-size:.8rem}
+.${SHELL_CLASS}__cta:disabled{opacity:.6; cursor:default}
+.${SHELL_CLASS}__line{color:var(--muted); font-size:.82rem; max-width:34ch}
+.${SHELL_CLASS}__notice{
+  color:var(--muted); font-size:.82rem; border-left:3px solid var(--line);
+  padding:.35rem .6rem; background:var(--paper); border-radius:6px; max-width:34ch;
+}
+.${SHELL_CLASS}__notice[data-tone="warn"]{border-left-color:var(--accent)}
+
+/* Grant chip — "granted: <name> — revoke" (capability.ts). */
+.${SHELL_CLASS}__chip{
+  display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+  padding:.35rem .5rem .35rem .6rem; margin-bottom:.7rem;
+  border:1px solid var(--line); border-radius:999px; background:var(--paper);
+  font-size:.82rem; color:var(--muted);
+}
+.${SHELL_CLASS}__chip-prefix{color:var(--faint)}
+.${SHELL_CLASS}__chip-name{color:var(--ink); font-weight:600; word-break:break-word}
+.${SHELL_CLASS}__chip-revoke{
+  font:inherit; font-size:.78rem; color:var(--ink); background:transparent;
+  border:1px solid var(--line); border-radius:999px; padding:.1rem .55rem; cursor:pointer;
+}
+.${SHELL_CLASS}__chip-revoke:hover{background:var(--accent-soft)}
+
+/* Folder body — flat file list (3.2; replaced by treeView in 3.3). */
+.${SHELL_CLASS}__files{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px}
+.${SHELL_CLASS}__file{
+  font:inherit; text-align:left; width:100%; color:var(--ink); background:transparent;
+  border:0; border-radius:6px; padding:.3rem .5rem; cursor:pointer;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.${SHELL_CLASS}__file:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__folder-empty{color:var(--muted); font-size:.85rem}
 `;
 
 /** Build the shell style element. */
@@ -82,33 +147,49 @@ function buildStyle(doc: Document): HTMLStyleElement {
   return style;
 }
 
-/** The seam appShell exposes to its caller (main.ts today, group 3's tree later). */
+/** A best-effort id: `crypto.randomUUID()` where available, else a local unique fallback. */
+let idCounter = 0;
+function newId(): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  idCounter += 1;
+  return `f-${Date.now()}-${idCounter}`;
+}
+
+/** The seam appShell exposes to its caller (main.ts + the grant-flow tests). */
 export interface AppController {
   /**
-   * Select a file to render in the reader pane, or `null` to clear it back to the
-   * no-selection state. Delegates to the reader pane, which reads the file and renders
-   * it through the unchanged `mount()` pipeline (or a designed never-blank state).
-   * Resolves once the pane has settled; never rejects.
+   * Select a file to render in the reader pane, or `null` to clear it. Store-free: it only
+   * drives the reader (recents are recorded by the folder file-select handler). Resolves
+   * once the pane has settled; never rejects.
    */
   selectFile(file: ReaderFile | null): Promise<void>;
+  /**
+   * Run the folder grant flow (what the "Open a folder" CTA triggers): open the picker via
+   * the seam, and on success show the chip + present the folder; on any non-grant outcome
+   * paint the matching designed never-blank state. Resolves once settled; never rejects.
+   * Exposed so the flow is awaitable in tests without simulating a real native picker.
+   */
+  openFolder(): Promise<void>;
 }
 
 /**
  * Render the app-page shell into `container` and return its controller. Idempotent: a
- * second call replaces the previous shell rather than appending a duplicate. Builds:
- *   - a header (brand + zero-network tagline),
- *   - a folder pane carrying the INERT "Open a folder to begin" empty state,
- *   - a reader pane (readerPane.ts) showing the designed no-selection state initially.
- * The folder CTA stays inert this task (group 3 gives it the at-use grant flow); the
- * only wired behavior is `selectFile()` → the reader pane, the seam group 3 drives.
+ * second call replaces the previous shell rather than appending a duplicate.
  */
-export function mountAppShell(container: HTMLElement): AppController {
+export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppController {
   const doc = container.ownerDocument;
+  const openFolderFn = deps.openFolder ?? defaultOpenFolder;
+  const store: AppStore = deps.store ?? {
+    putFolder: defaultPutFolder,
+    deleteFolder: defaultDeleteFolder,
+    putRecent: defaultPutRecent,
+  };
 
+  // --- shell scaffolding ---------------------------------------------------
   const shell = doc.createElement('div');
   shell.className = SHELL_CLASS;
 
-  // Header ------------------------------------------------------------------
   const header = doc.createElement('header');
   header.className = `${SHELL_CLASS}__header`;
   header.setAttribute('role', 'banner');
@@ -120,7 +201,6 @@ export function mountAppShell(container: HTMLElement): AppController {
   tag.textContent = 'Zero network by default';
   header.append(brand, tag);
 
-  // Body: folder pane + reader pane ----------------------------------------
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
 
@@ -128,32 +208,200 @@ export function mountAppShell(container: HTMLElement): AppController {
   folders.className = `${SHELL_CLASS}__folders`;
   folders.setAttribute('aria-label', 'Folders');
 
-  const empty = doc.createElement('div');
-  empty.className = `${SHELL_CLASS}__empty`;
-  const emptyMsg = doc.createElement('p');
-  emptyMsg.textContent = 'Open a folder to begin';
-  const cta = doc.createElement('button');
-  cta.type = 'button';
-  cta.className = `${SHELL_CLASS}__cta`;
-  cta.textContent = 'Open a folder';
-  // Inert this task — the at-use grant flow is wired in task 3.
-  cta.setAttribute('data-peekover-inert', 'true');
-  const hint = doc.createElement('p');
-  hint.className = `${SHELL_CLASS}__hint`;
-  hint.textContent = 'Folder mode arrives next — this surface is the foundation.';
-  empty.append(emptyMsg, cta, hint);
-  folders.append(empty);
+  // The repainted region of the folder pane (idle affordance ⇄ granted folder view).
+  const foldersContent = doc.createElement('div');
+  foldersContent.className = `${SHELL_CLASS}__folders-content`;
+  folders.append(foldersContent);
 
-  // The reader pane owns its own <main> element, designed states, and the mount host.
-  // appShell just slots it into the body and drives it via selectFile().
   const readerPane: ReaderPaneController = createReaderPane(doc);
 
   body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, body);
-
   container.replaceChildren(shell);
 
+  // --- grant state + the active folder ------------------------------------
+  let grantState: GrantState = IDLE_GRANT;
+  // The remembered folder-record id for the open folder, so revoke can delete it and file
+  // selections can link recents to it. Held in memory regardless of store success.
+  let activeFolderId: string | null = null;
+  let busy = false;
+
+  /** Best-effort store write: storage is a convenience, never a gate on rendering. A
+   *  failure (no IndexedDB in a test env, quota, etc.) is swallowed — never a blank page. */
+  async function tryStore(op: () => Promise<void>): Promise<void> {
+    try {
+      await op();
+    } catch {
+      /* best-effort: never let a storage failure break the reader (AGENTS.md #5) */
+    }
+  }
+
+  // --- reader/select seam (store-free; unchanged from group 1) -------------
+  function selectFile(file: ReaderFile | null): Promise<void> {
+    return readerPane.select(file);
+  }
+
+  /** Select a folder file: render it AND record a recent (best-effort), linked to the
+   *  active folder. Recents are written here, not in the reader seam, so `selectFile`
+   *  stays store-free. */
+  async function selectFolderFile(file: MarkdownFile): Promise<void> {
+    await selectFile(file);
+    if (activeFolderId) {
+      const folderId = activeFolderId;
+      await tryStore(() =>
+        store.putRecent({
+          id: newId(),
+          folderId,
+          path: file.path,
+          name: file.name,
+          openedAt: Date.now(),
+        }),
+      );
+    }
+  }
+
+  // --- folder-pane painters -----------------------------------------------
+
+  /** Paint the idle affordance: the plain-language line + the live CTA, optionally above a
+   *  designed notice (e.g. "No folder was opened." after a cancel). Never blank. */
+  function paintIdle(notice?: { text: string; tone?: 'warn' }): void {
+    grantState = IDLE_GRANT;
+    activeFolderId = null;
+
+    const wrap = doc.createElement('div');
+    wrap.className = `${SHELL_CLASS}__empty`;
+
+    if (notice) {
+      const n = doc.createElement('p');
+      n.className = `${SHELL_CLASS}__notice`;
+      if (notice.tone) n.setAttribute('data-tone', notice.tone);
+      n.textContent = notice.text;
+      wrap.append(n);
+    }
+
+    const msg = doc.createElement('p');
+    msg.textContent = 'Open a folder to begin';
+
+    // The plain-language line shown BEFORE the picker — the trust moment (capability.ts).
+    const line = doc.createElement('p');
+    line.className = `${SHELL_CLASS}__line`;
+    line.textContent = GRANT_PROMPT_LINE;
+
+    const cta = doc.createElement('button');
+    cta.type = 'button';
+    cta.className = `${SHELL_CLASS}__cta`;
+    cta.textContent = 'Open a folder';
+    cta.addEventListener('click', () => void runOpenFolder());
+
+    wrap.append(msg, line, cta);
+    foldersContent.replaceChildren(wrap);
+  }
+
+  /** Present the granted folder: chip + optional too-large notice + the folder body. */
+  function paintGranted(source: FolderSource): void {
+    grantState = grant(source.name);
+
+    const wrap = doc.createElement('div');
+    wrap.className = `${SHELL_CLASS}__folderview`;
+
+    const chip = buildGrantChip(doc, grantState, () => void revokeAccess());
+    if (chip) wrap.append(chip);
+
+    if (source.truncated) {
+      const notice = doc.createElement('p');
+      notice.className = `${SHELL_CLASS}__notice`;
+      notice.setAttribute('data-tone', 'warn');
+      notice.setAttribute('data-state', 'too-large');
+      notice.textContent = `This folder is very large — showing the first ${source.files.length} markdown files. Open a more specific folder to see everything.`;
+      wrap.append(notice);
+    }
+
+    wrap.append(presentFolderBody(source));
+    foldersContent.replaceChildren(wrap);
+  }
+
+  /**
+   * Build the folder's file presentation. 3.2: a flat, real, clickable file list (or a
+   * designed empty state for a folder with no markdown). 3.3 swaps this ONE function for
+   * the pure-tree-backed `treeView` (search + keyboard nav) at the same seam.
+   */
+  function presentFolderBody(source: FolderSource): HTMLElement {
+    if (source.files.length === 0) {
+      const empty = doc.createElement('p');
+      empty.className = `${SHELL_CLASS}__folder-empty`;
+      empty.setAttribute('data-state', 'empty-folder');
+      empty.textContent = 'No markdown files in this folder.';
+      return empty;
+    }
+    const list = doc.createElement('ul');
+    list.className = `${SHELL_CLASS}__files`;
+    for (const file of source.files) {
+      const li = doc.createElement('li');
+      const btn = doc.createElement('button');
+      btn.type = 'button';
+      btn.className = `${SHELL_CLASS}__file`;
+      btn.textContent = file.path;
+      btn.title = file.path;
+      btn.addEventListener('click', () => void selectFolderFile(file));
+      li.append(btn);
+      list.append(li);
+    }
+    return list;
+  }
+
+  // --- grant flow ----------------------------------------------------------
+
+  async function runOpenFolder(): Promise<void> {
+    if (busy) return;
+    busy = true;
+    try {
+      const outcome = await openFolderFn();
+      if (!outcome.ok) {
+        // Designed never-blank states for every non-grant outcome. `unsupported` is a
+        // firmer message (this engine can't yet); cancel/error return to the affordance.
+        if (outcome.reason === 'unsupported') {
+          paintIdle({ text: outcome.message, tone: 'warn' });
+        } else {
+          paintIdle({ text: outcome.message });
+        }
+        return;
+      }
+
+      const source = outcome.source;
+      activeFolderId = newId();
+      const folderId = activeFolderId;
+      // Remember the folder (Chromium: with its handle; a capability ref, never contents).
+      await tryStore(() =>
+        store.putFolder({
+          id: folderId,
+          name: source.name,
+          handle: source.persistable ? source.handle : undefined,
+          addedAt: Date.now(),
+          lastOpenedAt: Date.now(),
+        }),
+      );
+      // Fresh folder → reader back to the no-selection designed state until a file is picked.
+      await selectFile(null);
+      paintGranted(source);
+    } finally {
+      busy = false;
+    }
+  }
+
+  /** Revoke: drop the in-memory handle + delete the stored folder record, then return to
+   *  the idle affordance and clear the reader. Real, not cosmetic (spec 002 §3.2). */
+  async function revokeAccess(): Promise<void> {
+    const folderId = activeFolderId;
+    if (folderId) await tryStore(() => store.deleteFolder(folderId));
+    await selectFile(null);
+    paintIdle();
+  }
+
+  // Initial paint: the idle affordance (plain line + live CTA) — never a blank page.
+  paintIdle();
+
   return {
-    selectFile: (file) => readerPane.select(file),
+    selectFile,
+    openFolder: runOpenFolder,
   };
 }
