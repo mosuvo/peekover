@@ -1,6 +1,48 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-15 · M2 CLOSE (spec 002 — active-source foundation): the trust model was
+  COMPLETED, not compromised.** M2 gave Peekover its second surface — a dedicated app page
+  that reads a chosen folder of markdown from disk — and did it **without spending a single
+  manifest permission**. The settled architecture, recorded so 003 builds on it, not around it:
+  - **`permissions: []` survived M2 (the headline).** Folder access is reached entirely through
+    **user-gesture web APIs** (File System Access `showDirectoryPicker` on Chromium; `<input
+    webkitdirectory>` + drag `webkitGetAsEntry` on Firefox/picker-disabled). These add no
+    manifest permission and no install-time warning — so consent lives in the **at-use, visible,
+    revocable, re-prompted** flow, not an install dialog. The only manifest add is the toolbar
+    `action` key (no popup → background `action.onClicked` → `tabs.create` of the extension's own
+    `app.html`), which needs no `tabs`/WAR. CI-pinned by `tests/manifest.test.ts` (both engines).
+  - **Second surface = a dedicated full-tab extension page** (not a popup, not a new-tab
+    override). Task-0-verified: `showDirectoryPicker()`/`requestPermission()` work on a full-tab
+    `chrome-extension://` page but the SW can't run them and the popup `AbortError`s. The M1
+    render pipeline is reused **unchanged as a library** (`mount(text, host)`); the app page is a
+    new caller, `src/render/*` untouched all milestone.
+  - **The `FolderSource → MarkdownFile[]` seam** is the one engine boundary: everything above it
+    (pure `tree`/`filterTree`, `treeView`, `readerPane`, recents/pins, storage panel) is
+    engine-agnostic, and Firefox's read-only-snapshot limits ride as **capability meta**
+    (`persistable:false`), never an engine sniff downstream. Designing the seam up front paid off:
+    the group-4 drag-and-drop drop-in and the group-5 reopen wiring both funnelled through the
+    SAME `applyOutcome`/`paintGranted` with zero duplication.
+  - **Storage = a raw-IndexedDB local wrapper (`idbCore`), no `idb` dependency** — three stores
+    (`folders`/`recents`/`pins`), the handle persisted as a **structured-cloneable capability ref,
+    never file contents**. It shipped WITH its trust controls (`describeStored`/`wipeAll`), and
+    group 6 gave those a **visible surface** (the "Stored data" panel + inline-confirm wipe) — the
+    gap the group-5 manual gate surfaced. `getAll` is key-order (unordered); display order is the
+    pure `recents` module's job.
+  - **Eager, bounded, interruptible walk** (`walkPolicy`): markdown-filter + skip-list
+    (node_modules/dotdirs) + hard file/depth cap + cancel token. Eager because name-search needs
+    the full set; the cap is what makes a pathological tree surface "folder too large" instead of
+    hanging (perf-measured: the cap holds at 5000 files against a 304k-file tree, ~40 ms).
+  - **The test-honesty split (decision 4, held verbatim):** the automated real-engine test proves
+    our **query→request→gate mechanism** via an OPFS/controllable-permission handle; the disk
+    `prompt`-after-reload / `NotAllowedError` re-prompt ground truth is **NOT automatable** (OPFS
+    always reports `granted`) and is confirmed at the **human gate + platform docs**. No stub
+    masqueraded as platform proof — the same discipline gated the 6.2 perf harness (render/layout
+    + disk reopen deferred to real-browser/human, not faked in jsdom/node).
+  Revisit-when: 003+ adds a capability that needs a real manifest permission (re-open the ledger,
+  AGENTS.md #4); the chunked/virtualized-render lever lands (decided from a real-browser tree
+  render measurement, the deferred half of 6.2); or multi-folder *project* semantics arrive.
+
 - **2026-07-14 · CORRECTION OF RECORD: "a detached node doesn't fetch" was FALSE in
   Blink AND Gecko; the remote-resource commit shipped a real pre-opt-in fetch leak.** The
   mechanics entry below claimed `mount()` was safe because it built the reader root

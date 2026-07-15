@@ -1,4 +1,51 @@
 # Retro log — Peekover
+- **2026-07-15 · M2 close (spec 002 — active-source foundation).** Peekover's second surface: a
+  dedicated app page that reads a chosen folder of markdown, `permissions: []` intact, both engines.
+  Six groups (shell · store · Chromium open · Firefox fallback · recents/pins+persist · doc/perf/
+  close). All automated acceptance green: lint · 318 unit · 136 in-browser · zip 314 kB both engines.
+  - **(1) Where the agent needed correction — the manual gate caught THREE real defects again, all
+    invisible to a green automated stack.** A repeat of M1's central lesson, now with three data
+    points instead of two:
+    - *Containment* — folder files rendered full-page instead of inside the reader pane (fixed
+      cdbeb06). DOM-shape tests passed; the layout wrongness only shows to a human eye.
+    - *Drag-navigation* — a dropped folder fell through to the browser's default navigate-to-folder
+      (the Firefox manual-gate screenshot); the drop path existed and was unit-tested but was
+      **unreachable from any UI** — no wiring. A synthetic `dispatchEvent` never triggers a real
+      browser's default action in ANY engine, so jsdom structurally cannot see "the browser
+      navigated."
+    - *Storage-UI gap* — `describeStored`/`wipeAll` existed and were real-engine-tested since group
+      2, but had **no visible surface**; the app stored folders/recents/pins with no way for a user
+      to see or clear them (closed by task 6.0 this group). "Function exists + tested" read as
+      "feature shipped" — it wasn't, until it was wired to a control a human can find.
+    → **General lesson, sharpened:** green tests certify the code paths they exercise, not that the
+    capability is REACHABLE, VISIBLE, or LAID OUT right. All three defects were "wiring/visibility"
+    gaps between tested units — exactly the seam jsdom + unit tests don't cover. → **Action:** the
+    named human Chrome+Firefox gate stays load-bearing and non-removable (it has now caught 5/5 of
+    the milestone-shipping defects across M1+M2); and a unit test that proves a function works is not
+    evidence the function is wired to a user-reachable, visible control — that link is a manual-gate
+    or real-engine-wiring check, by default.
+  - **(2) What WORKED and should be kept — two process wins earned their cost.**
+    - *Seam-design-up-front paid off.* The `FolderSource → MarkdownFile[]` seam + the
+      `applyOutcome`/`paintGranted` funnel were designed at plan time (group 1–3); the group-4
+      drag-and-drop target and the group-5 reopen wiring both **dropped in through the same funnel
+      with zero duplication** — chip/tree/snapshot-note/never-blank came free. Designing the
+      convergence boundary before the branches existed is why later engines/paths were additive, not
+      surgical. → keep: name the one seam, force every branch through it.
+    - *Genuine-reload / real-engine test discipline held.* Persistence, wipe, handle structured-clone,
+      and bytes-on-wire ran against the engine's OWN IndexedDB/OPFS (never jsdom, never
+      `fake-indexeddb`), red-first and non-vacuous (the wipe test fails vs a no-op; the network guard
+      fails if a real request fires). And the **test-honesty split was held verbatim**: the OPFS
+      handle proves our query→request→gate *mechanism*, while the disk `prompt`-after-reload ground
+      truth is explicitly deferred to the human gate — no stub was allowed to masquerade as platform
+      proof. The same discipline shaped 6.2: the perf harness measures the pure walk+build (real
+      code) and honestly defers the real-browser render/layout number rather than faking it in jsdom.
+  - **(3) Ceremony that was waste — none.** The plan-gate seam decision, the red-first real-engine
+    proofs, and the manual gate each caught or prevented real issues; the retro rule "no un-measured
+    threshold" kept 6.2 honest (measured cheap half, deferred the render lever). All worth their cost.
+  - **Metrics:** manual-gate defects this milestone = 3 (containment · drag-navigation · storage-UI
+    gap), all invisible to green tests · first-try automated-pass = yes per group, but the manual gate
+    remained necessary at the seams · sessions = several (M2, one per group-ish). Outstanding: the
+    named human milestone-close gate (6.3) — the one acceptance item an agent cannot self-certify.
 - **2026-07-14 · M1 close — security + perf groups (spec 001 CLOSED).** The reader core is done
   end-to-end and the milestone is closed with all 7 acceptance criteria verified green. This retro
   covers the stretch after the shell group: remote-resource policy, the golden/perf groups, and the
