@@ -3,7 +3,7 @@
 *Gear 3 (spec+plan+tasks). Owner: mosuvo. Status: DRAFT — awaiting human approval (spec gate only; no
 plan/tasks yet).*
 *Research base: live-docs + competitor re-check 2026-07-15 (MDN, WICG/webcomponents, w3c/IntersectionObserver,
-github-slugger, markdown-it-anchor, simov/markdown-viewer). Citations in §12.*
+github-slugger, markdown-it-anchor, simov/markdown-viewer). Citations in §9.*
 
 ## Goal
 Give Peekover's **reader** an auto-generated **table of contents**: a sidebar built from the document's
@@ -18,6 +18,20 @@ quiet, collapsible, and never blocks reading.
 Nothing else. This is *reading navigation within one document.* It deliberately does **not** build
 cross-file search, heading permalinks/deep-links, or a mini-map — those are named, deferred, adjacent
 build-order items (§Out of scope). It adds **no manifest permission** and makes **no network request**.
+
+---
+
+## User stories
+
+- **As a developer reading a README / docs on a `file://` path or a raw-git URL** (the content-script
+  reader surface), **I want** an auto-generated table of contents in the reader **so that** I can grasp a
+  long document's structure at a glance and jump straight to the section I need without hand-scrolling the
+  whole file. *(This persona — reading on `file://` and raw-git — is the reason **both** reader surfaces
+  are in scope; §Surface scope.)*
+- **As a reader of a long, many-heading document**, **I want** the TOC to highlight the section I'm
+  currently reading (scroll-spy), let me collapse deep levels, resize the sidebar, and toggle it from the
+  keyboard, **so that** I keep my place and navigate quickly while the TOC stays quiet and the document
+  remains the hero.
 
 ---
 
@@ -37,7 +51,7 @@ Two facts fall out of this, and they shape the whole spec:
 
 1. **The scroll container is the shadow host in *both* surfaces — never the browser viewport.** So
    scroll-spy must be rooted on that host's scroll box, not on the viewport, on both surfaces.
-2. **The headings live *inside* the shadow root.** Per research (§12), **browsers do not follow URL
+2. **The headings live *inside* the shadow root.** Per research (§9), **browsers do not follow URL
    fragments (`#hash`) into a shadow tree, and `:target` does not cross the shadow boundary** — this is
    an unresolved Web Components gap in current Chromium **and** Firefox, with no native fix in sight.
    **Consequence:** Peekover must do its own scroll-to-heading. Fortunately it already can: the reader
@@ -85,8 +99,11 @@ surfaces unless a criterion names one.)*
   `mount()` path.
 - **Click-to-navigate** — clicking a TOC entry scrolls the reader's scroll container (the shadow host)
   to that heading via a **direct element reference** (`scrollIntoView`), **not** a URL hash (research
-  §12: fragments don't enter shadow trees). Scroll is **smooth**, and **`auto` under
+  §9: fragments don't enter shadow trees). Scroll is **smooth**, and **`auto` under
   `prefers-reduced-motion: reduce`**.
+- **URL untouched** — TOC navigation scrolls **by element reference only** and shall **not modify the page
+  URL or push a history entry** (no `#hash`, no `pushState`/`replaceState`). URL-hash / text-fragment
+  deep-linking to a heading is the deferred permalink feature (§Out of scope), **not** part of 003.
 - **Scroll-spy** — as the reader scrolls, the TOC highlights the entry for the section currently in
   view, using an **`IntersectionObserver` rooted on the shadow-host scroll container** (works for both
   surfaces because the container is the host in both; targets are the headings in the same shadow tree).
@@ -109,7 +126,7 @@ surfaces unless a criterion names one.)*
 ## Out of scope (resist — named as *deferred to later specs*, not designed here)
 - **URL-hash / text-fragment deep links to headings; heading permalinks ("copy link to this heading")**
   (product spec §F5 ⭐ "Heading permalinks + deep links"). **Deferred** — a later build-order phase. This
-  is *why* the shadow-DOM fragment gap (§12) does not block 003: 003 navigates by element reference, not
+  is *why* the shadow-DOM fragment gap (§9) does not block 003: 003 navigates by element reference, not
   by hash. When permalinks land, they will need heading **ids/slugs** in the sanitized DOM — which is a
   **security-reviewed change** (re-allowing `id`, a DOM-clobbering surface deliberately dropped from the
   sanitize allow-list in M1 — decisions.md 2026-07-14). 003 does **not** open that door: it needs no
@@ -143,12 +160,19 @@ Not a design, but the constraints any 003 design must meet, so the plan is bound
   per-surface duplication — the same "one seam, every branch funnels through it" win M2 recorded.
 - **Navigation is by element reference, never by URL hash.** The reader already holds the heading nodes;
   a TOC entry maps to its heading element and scrolls the host container to it. This sidesteps the
-  shadow-DOM fragment gap (§12) entirely and needs **no heading `id`** — so the sanitize allow-list is
+  shadow-DOM fragment gap (§9) entirely and needs **no heading `id`** — so the sanitize allow-list is
   **unchanged** (the M1 DOM-clobbering closure on `id` stays shut).
 - **Scroll-spy roots on the shadow host.** `IntersectionObserver({ root: <shadow host scroll box> })`
   with heading targets in the same shadow tree. The container is the host on both surfaces, so **one
   code path** serves full-page and contained. `rootMargin` accounts for any top chrome so the "current"
   section is the one actually being read (tuned against a real doc, not guessed).
+- **The TOC is consistent with the sanitized, rendered DOM.** Whichever heading-model source the plan
+  chooses — post-processing the rendered shadow DOM for heading refs (the recommended direction, §8) or
+  deriving from the parse token stream — the TOC **must** agree with the **sanitized, rendered** output:
+  **every TOC entry resolves to a real heading node present in the document, and no entry exists for a
+  heading absent from the rendered DOM** (e.g. one sanitize removed). The design must satisfy this
+  invariant; a token-stream source in particular must be reconciled against post-sanitize output so it
+  cannot list a heading the reader never painted.
 - **Labels are built via `textContent`, never `innerHTML`.** A TOC entry's text is derived from its
   heading's text content only — no HTML string from heading markup is ever assigned to the DOM (AGENTS.md
   #3). No new unsanitized path is introduced.
@@ -175,7 +199,7 @@ manifest surface:
 ## 5. Non-functional requirements
 - **Zero network by default (AGENTS.md #1)** — building, rendering, toggling, resizing, and scroll-spying
   the TOC issue **no network request**. This rides on the existing folder-mode / reader zero-network
-  guards and is asserted at the request level in a real engine (§9). `permissions: []` preserved (above).
+  guards and is asserted at the request level in a real engine (§6 acceptance). `permissions: []` preserved (above).
 - **Never a blank page / never-blank chrome (AGENTS.md #5)** — every heading shape in §In-scope (none,
   one, empty/image/emoji-only, duplicate, non-monotonic nesting, pathologically many, extremely long
   heading text) resolves to a correct or gracefully-degraded TOC and a fully-rendered document — never a
@@ -185,9 +209,9 @@ manifest surface:
   string reaches the DOM; the sanitize profile and allow-list are unchanged (no `id` re-added).
 - **Accessibility (spec §F12, §7)** — keyboard toggle + full keyboard navigation of the TOC tree;
   screen-reader landmarks/roles; visible focus (reuses the reader's `:focus-visible` ring); **smooth
-  scroll gated on `prefers-reduced-motion`** (research §12) — `reduce` → instant scroll, honoring the
-  reader's existing reduced-motion block. Designed states, not "functional now, pretty later" (§7).
-- **The document stays the hero (§7)** — the TOC is low-contrast, collapsible, and quiet; it must not
+  scroll gated on `prefers-reduced-motion`** (research §9) — `reduce` → instant scroll, honoring the
+  reader's existing reduced-motion block. Designed states, not "functional now, pretty later" (product spec §7).
+- **The document stays the hero (product spec §7)** — the TOC is low-contrast, collapsible, and quiet; it must not
   dominate the reading column or add reading-mode noise.
 - **Performance — TO BE MEASURED (no un-measured thresholds; M1 retro standing rule).** 003 asserts **no**
   perf/scale number up front. The quantities that need bars — **TOC build+render time** as a function of
@@ -258,13 +282,23 @@ concrete test files; jsdom-blind items live in `tests/browser/` per the standing
       generated manifest, both builds (`tests/manifest.test.ts` stays green).
 - [ ] The **content-script byte size and `pnpm zip` size are re-measured and recorded** after the reader
       gains the TOC; both stay under budget (≤5 MB packed / <2 MB zip). All **M1 golden + regression
-      suites stay green**; any golden re-baseline is solely the reviewed TOC diff, nothing else.
+      suites stay green**; any golden re-baseline is solely the reviewed TOC diff, nothing else. This
+      byte-size record is a size check only — it is **not** a first-paint proxy; the M1 first-paint gate is
+      **separately re-run** (see Performance).
 
 **Performance:**
 - [ ] TOC build/render time (vs heading count) and scroll-spy overhead on a large many-heading document
       are **measured and recorded** (protocol like M1's perf scripts); a gate is set **from** the
       measurement. The chunked/virtualized reader-render and TOC-tree-render levers are decided from a
       **real-browser measurement**, not asserted. **[to be measured — no threshold asserted here]**
+- [ ] **First-paint gate RE-RUN (a byte check is not a proxy).** Because the TOC adds work to the shared
+      `mount()` path, the **M1 two-part first-paint gate** — as re-scoped in **decisions.md 2026-07-14**:
+      **(a) a ≤50 KB nav→paint in <150 ms (measured)** and **(b) a 1 MB doc with no raw-flash on both
+      engines + the reader painted in <1.7 s** — is **re-run after the reader gains the TOC** and confirmed
+      **still passing**, or honestly re-measured and re-scoped per the no-un-measured-threshold rule (bound
+      taken from the 2026-07-14 rescope, not re-guessed). The re-measured content-script + `pnpm zip`
+      **byte** sizes (Trust block) are a size check and **do not** substitute for this first-paint **time**
+      re-run.
 
 **Milestone-close human gate (named, required — not removable by adding jsdom tests):**
 - [ ] Human manual pass, **Chrome + Firefox, current build, Network tab open**, on **both** surfaces
