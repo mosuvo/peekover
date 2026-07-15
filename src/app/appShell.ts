@@ -53,9 +53,12 @@ import {
   putPin as defaultPutPin,
   deleteRecent as defaultDeleteRecent,
   deletePin as defaultDeletePin,
+  describeStored as defaultDescribeStored,
+  wipeAll as defaultWipeAll,
   type FolderRecord,
   type RecentRecord,
   type PinRecord,
+  type StoredSummary,
 } from './store';
 import { addRecent, addPin, orderRecents, orderPins } from './recents';
 import {
@@ -65,6 +68,7 @@ import {
   type ReopenKind,
 } from './recentsView';
 import { createTreeView } from './treeView';
+import { createStorageView } from './storageControls';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
@@ -83,6 +87,12 @@ export interface AppStore {
   putPin?(record: PinRecord): Promise<void>;
   deleteRecent?(id: string): Promise<void>;
   deletePin?(id: string): Promise<void>;
+  /** The transparency read (group 2) surfaced by the "what's stored" panel (task 6.0). Optional
+   *  so a minimal fake store still mounts — an absent reader just yields the empty summary. */
+  describeStored?(): Promise<StoredSummary>;
+  /** Erase everything (group 2) behind the "wipe all data" control (task 6.0). Optional for the
+   *  same reason; absent → the wipe is a no-op the best-effort wrapper swallows. */
+  wipeAll?(): Promise<void>;
 }
 
 /** Injectable dependencies (defaults are the real picker seam, re-grant, and store). */
@@ -125,6 +135,13 @@ const APP_CSS = /* css */ `
 }
 .${SHELL_CLASS}__brand{font-weight:650; letter-spacing:-.01em}
 .${SHELL_CLASS}__tag{color:var(--muted); font-size:.8rem}
+.${SHELL_CLASS}__storage-toggle{
+  margin-left:auto; font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
+}
+.${SHELL_CLASS}__storage-toggle:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__storage-toggle[aria-expanded="true"]{background:var(--accent-soft)}
+.${SHELL_CLASS}__storage-slot{flex:0 0 auto; overflow:auto; max-height:45%}
 
 .${SHELL_CLASS}__body{flex:1 1 auto; display:flex; min-height:0}
 .${SHELL_CLASS}__folders{
@@ -233,6 +250,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     putPin: defaultPutPin,
     deleteRecent: defaultDeleteRecent,
     deletePin: defaultDeletePin,
+    describeStored: defaultDescribeStored,
+    wipeAll: defaultWipeAll,
   };
 
   // --- shell scaffolding ---------------------------------------------------
@@ -248,7 +267,22 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const tag = doc.createElement('span');
   tag.className = `${SHELL_CLASS}__tag`;
   tag.textContent = 'Zero network by default';
-  header.append(brand, tag);
+
+  // The always-visible "what's stored" affordance (task 6.0). It lives in the header so the
+  // transparency + erase controls are discoverable BEFORE any folder is opened — storage
+  // ships visible, not buried behind a folder view (spec §6.17 / the trust story).
+  const storageToggle = doc.createElement('button');
+  storageToggle.type = 'button';
+  storageToggle.className = `${SHELL_CLASS}__storage-toggle`;
+  storageToggle.textContent = 'Stored data';
+  storageToggle.setAttribute('aria-expanded', 'false');
+  storageToggle.addEventListener('click', () => void toggleStorage());
+  header.append(brand, tag, storageToggle);
+
+  // The storage panel's slot — spans below the header, above the body. Empty (and out of the
+  // layout) until the toggle opens it; filled with the createStorageView panel on demand.
+  const storagePanel = doc.createElement('div');
+  storagePanel.className = `${SHELL_CLASS}__storage-slot`;
 
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
@@ -265,7 +299,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const readerPane: ReaderPaneController = createReaderPane(doc);
 
   body.append(folders, readerPane.element);
-  shell.append(buildStyle(doc), header, body);
+  shell.append(buildStyle(doc), header, storagePanel, body);
   container.replaceChildren(shell);
 
   // --- drag-and-drop folder target (Chromium live handle / Firefox snapshot) ----------
@@ -353,6 +387,62 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   async function refreshPersisted(): Promise<void> {
     await loadPersisted();
     renderHub();
+  }
+
+  // --- "what's stored" transparency panel + "wipe all data" (task 6.0) -----------------
+  //
+  // The storage controls describeStored()/wipeAll() have existed (tested, group 2) with no
+  // visible surface — this wires them in. The panel toggles from the header; opening it loads
+  // the summary, wiping it clears the store then refreshes BOTH the hub and the panel so the
+  // emptied state is immediately visible. All reads/writes are best-effort — a storage failure
+  // never blanks the page (AGENTS.md #5).
+
+  let storageOpen = false;
+
+  /** The designed empty summary, used when no `describeStored` reader is injected (a minimal
+   *  fake store) or a read fails — matches store.describeStored()'s own "Nothing stored" line. */
+  const EMPTY_SUMMARY: StoredSummary = {
+    folders: [],
+    recents: [],
+    pins: [],
+    total: 0,
+    lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
+  };
+
+  /** Read the transparency summary (best-effort); a failed/absent read yields the honest
+   *  empty state, never a blank panel. */
+  async function readSummary(): Promise<StoredSummary> {
+    try {
+      return (await store.describeStored?.()) ?? EMPTY_SUMMARY;
+    } catch {
+      return EMPTY_SUMMARY;
+    }
+  }
+
+  /** Render the storage panel from a freshly-read summary (best-effort). */
+  async function renderStorage(): Promise<void> {
+    const summary = await readSummary();
+    const view = createStorageView(doc, {
+      summary,
+      onWipe: () => void wipeAllData(),
+      onClose: () => void toggleStorage(),
+    });
+    storagePanel.replaceChildren(view.element);
+  }
+
+  /** Show/hide the storage panel; loads a fresh summary each time it opens. */
+  async function toggleStorage(): Promise<void> {
+    storageOpen = !storageOpen;
+    storageToggle.setAttribute('aria-expanded', String(storageOpen));
+    if (storageOpen) await renderStorage();
+    else storagePanel.replaceChildren();
+  }
+
+  /** Erase everything, then refresh the hub AND the open panel so the cleared state shows. */
+  async function wipeAllData(): Promise<void> {
+    await tryStore(() => store.wipeAll?.() ?? Promise.resolve());
+    await refreshPersisted(); // the reopen hub empties
+    if (storageOpen) await renderStorage(); // the panel repaints to "Nothing stored"
   }
 
   // --- reopen-hub (recents/pins) view -------------------------------------

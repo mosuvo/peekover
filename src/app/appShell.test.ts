@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mountAppShell, type AppStore } from './appShell';
 import type { ReaderFile } from './readerPane';
 import type { FolderSource, MarkdownFile, OpenFolderOutcome } from './folderSource';
-import type { FolderRecord, RecentRecord, PinRecord } from './store';
+import type { FolderRecord, RecentRecord, PinRecord, StoredSummary } from './store';
 
 // Task 1.1: the app-page surface EXISTS and renders its skeleton + affordance.
 // Task 1.2: the shell wires selection → the reader pane (unchanged M1 mount()).
@@ -622,5 +622,195 @@ describe('appShell (task 5.2 recents/pins reopen hub)', () => {
     expect(container.querySelector('.peekover-app__notice')?.textContent).toContain('wasn’t granted');
     expect(container.querySelector('.peekover-app__cta')).not.toBeNull();
     expect(container.querySelector('.peekover-app__chip')).toBeNull();
+  });
+});
+
+// --- task 6.0: the "what's stored" transparency panel + "wipe all data" control (DOM-shape) ---
+//
+// The group-5 manual gate confirmed a real gap: describeStored()/wipeAll() existed and were
+// real-engine-tested (wipe.browser.test.ts, group 2) but had NO visible surface — the app page
+// stored folders/recents/pins with no user-visible way to SEE or CLEAR them. This wires the
+// transparency + erase controls in (spec §6.17 / the trust story). The REAL erase is already
+// real-engine-proven in group 2's wipe.browser.test.ts; this is the UI over it, so jsdom
+// DOM-shape coverage is right — we do NOT duplicate the browser wipe proof here. The controls
+// go through the SAME injectable store seam (describeStored/wipeAll added to AppStore as
+// optional), so the flow needs no real IndexedDB.
+
+/** Build a StoredSummary from raw records the way store.describeStored() does — so an injected
+ *  store can report the honest picture (folders as persisted-boolean, recents, pins, lines). */
+function summarize(
+  folders: FolderRecord[],
+  recents: RecentRecord[],
+  pins: PinRecord[],
+): StoredSummary {
+  const folderInfos = folders.map((f) => ({
+    id: f.id,
+    name: f.name,
+    persisted: f.handle !== undefined,
+    addedAt: f.addedAt,
+    lastOpenedAt: f.lastOpenedAt,
+  }));
+  const total = folderInfos.length + recents.length + pins.length;
+  const lines: string[] = [];
+  if (folderInfos.length) lines.push(`${folderInfos.length} remembered folder — names only, never file contents.`);
+  if (recents.length) lines.push(`${recents.length} recently opened file — path + name, so the list can reopen them.`);
+  if (pins.length) lines.push(`${pins.length} pinned item — path + name for quick access.`);
+  if (total === 0) lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
+  return { folders: folderInfos, recents, pins, total, lines };
+}
+
+describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
+  let container: HTMLElement;
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  function openPanel(): void {
+    container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
+  }
+
+  it('the "Stored data" control is discoverable in the header before any folder is opened', () => {
+    mountAppShell(container, { store: memStore() });
+    const toggle = container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle');
+    expect(toggle).not.toBeNull();
+    expect(toggle!.textContent).toContain('Stored data');
+    // No folder open, no panel yet — but the affordance is present.
+    expect(container.querySelector('.peekover-storage')).toBeNull();
+  });
+
+  it('opening the panel renders the injected summary: folders as persisted-boolean, recents, pins, lines', async () => {
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async (): Promise<StoredSummary> => ({
+        folders: [
+          { id: 'F1', name: 'live-notes', persisted: true, addedAt: 1, lastOpenedAt: 1 },
+          { id: 'F2', name: 'snap-notes', persisted: false, addedAt: 1, lastOpenedAt: 1 },
+        ],
+        recents: [{ id: 'r1', folderId: 'F1', path: 'docs/a.md', name: 'a.md', openedAt: 2 }],
+        pins: [{ id: 'p1', kind: 'folder', folderId: 'F1', path: '', name: 'live-notes', pinnedAt: 3 }],
+        total: 4,
+        lines: ['1 remembered folder — names only, never file contents.'],
+      }),
+    };
+    mountAppShell(container, { store });
+
+    openPanel();
+    await flush();
+
+    const panel = container.querySelector('.peekover-storage');
+    expect(panel).not.toBeNull();
+    // Folders appear by NAME with a persisted/name-only tag — never the handle object itself.
+    expect(panel!.textContent).toContain('live-notes');
+    expect(panel!.textContent).toContain('folder access remembered'); // persisted:true tag
+    expect(panel!.textContent).toContain('snap-notes');
+    expect(panel!.textContent).toContain('name only'); // persisted:false tag
+    // Recents + pins are surfaced.
+    expect(panel!.textContent).toContain('a.md');
+    // The plain-language line + the standing contents-never-stored promise are both shown.
+    expect(panel!.textContent).toContain('never file contents');
+    expect(panel!.querySelector('[data-note="contents-never-stored"]')?.textContent).toMatch(
+      /never stores the contents/i,
+    );
+    expect(panel!.getAttribute('data-state')).toBe('has-data');
+  });
+
+  it('an EMPTY store shows the designed "Nothing stored" state (never blank) and disables wipe', async () => {
+    mountAppShell(container, { store: memStore() }); // no describeStored → empty-summary fallback
+
+    openPanel();
+    await flush();
+
+    const panel = container.querySelector('.peekover-storage');
+    expect(panel).not.toBeNull();
+    expect(panel!.getAttribute('data-state')).toBe('nothing-stored');
+    expect(panel!.textContent).toContain('Nothing stored');
+    // Nothing to erase → the wipe start button is present but disabled.
+    const start = panel!.querySelector<HTMLButtonElement>('[data-wipe="start"]');
+    expect(start).not.toBeNull();
+    expect(start!.disabled).toBe(true);
+    // The contents-never-stored promise is shown even when empty.
+    expect(panel!.querySelector('[data-note="contents-never-stored"]')).not.toBeNull();
+  });
+
+  it('wipe takes an inline confirm (not a browser confirm), then wipeAll() clears the panel + hub', async () => {
+    let wipeCalls = 0;
+    const folders = [folderRow({ id: 'F1', name: 'notes', handle: {} as FileSystemDirectoryHandle })];
+    const recents = [{ id: 'r1', folderId: 'F1', path: 'a.md', name: 'a.md', openedAt: 100 }];
+    const pins: PinRecord[] = [];
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      getFolders: async () => [...folders],
+      getRecents: async () => [...recents],
+      getPins: async () => [...pins],
+      describeStored: async () => summarize(folders, recents, pins),
+      wipeAll: async () => {
+        wipeCalls += 1;
+        folders.length = 0;
+        recents.length = 0;
+        pins.length = 0;
+      },
+    };
+    const app = mountAppShell(container, { store });
+    await app.refresh();
+
+    // The hub shows the seeded recent up-front.
+    expect(container.querySelector('.peekover-recents')?.textContent).toContain('a.md');
+
+    openPanel();
+    await flush();
+
+    // First click on "Wipe all data" only ARMS the inline confirm — it does NOT wipe.
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-wipe="start"]')!.click();
+    expect(wipeCalls).toBe(0);
+    const confirm = panel().querySelector<HTMLButtonElement>('[data-wipe="confirm"]');
+    expect(confirm).not.toBeNull();
+    expect(panel().querySelector('[data-wipe="cancel"]')).not.toBeNull();
+
+    // Confirm → wipeAll() runs, and the panel + hub refresh to the emptied state.
+    confirm!.click();
+    await flush();
+
+    expect(wipeCalls).toBe(1);
+    // Panel repainted to "Nothing stored".
+    expect(container.querySelector('.peekover-storage')?.getAttribute('data-state')).toBe('nothing-stored');
+    expect(container.querySelector('.peekover-storage')?.textContent).toContain('Nothing stored');
+    // The reopen hub cleared too (no more recents/pins to surface).
+    expect(container.querySelector('.peekover-recents')).toBeNull();
+  });
+
+  it('cancelling the inline confirm leaves the data intact (no wipeAll call)', async () => {
+    let wipeCalls = 0;
+    const folders = [folderRow({ id: 'F1', name: 'notes', handle: {} as FileSystemDirectoryHandle })];
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      getFolders: async () => [...folders],
+      getRecents: async () => [],
+      getPins: async () => [],
+      describeStored: async () => summarize(folders, [], []),
+      wipeAll: async () => void (wipeCalls += 1),
+    };
+    mountAppShell(container, { store });
+
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-wipe="start"]')!.click();
+    panel().querySelector<HTMLButtonElement>('[data-wipe="cancel"]')!.click();
+
+    expect(wipeCalls).toBe(0);
+    // Back to the un-armed control; data still described.
+    expect(panel().querySelector('[data-wipe="start"]')).not.toBeNull();
+    expect(panel().querySelector('[data-wipe="confirm"]')).toBeNull();
+    expect(panel().textContent).toContain('notes');
   });
 });
