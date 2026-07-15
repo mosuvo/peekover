@@ -57,10 +57,14 @@ export interface FolderSource {
   handle?: FileSystemDirectoryHandle;
 }
 
-/** A designed, never-blank outcome of an open attempt. */
+/** A designed, never-blank outcome of an open attempt.
+ *  `denied` is the re-grant case (spec §5.1): a rehydrated handle whose re-ask was declined —
+ *  distinct from `cancelled` (no picker opened) so the app page can frame it as "re-allow",
+ *  never a dead end. It routes through the SAME designed-notice path as the other non-grant
+ *  reasons (appShell.applyOutcome), so no new UI branch is needed. */
 export type OpenFolderOutcome =
   | { ok: true; source: FolderSource }
-  | { ok: false; reason: 'cancelled' | 'unsupported' | 'error'; message: string };
+  | { ok: false; reason: 'cancelled' | 'unsupported' | 'error' | 'denied'; message: string };
 
 /** Options threaded down to the bounded walk (limits + a cancel token). */
 export interface OpenFolderOptions {
