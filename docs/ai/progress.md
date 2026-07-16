@@ -11,9 +11,11 @@ unchanged `mount()`, `src/render/*` untouched all milestone. **The named human m
 (task 6.3) PASSED on 2026-07-15, both engines** — the one spec-002 acceptance an agent cannot
 self-certify (see Done). Nothing on 002 is outstanding.
 
-**Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3), Gear 3.**
-This session drafts **spec.md only** (the WHAT — gate 1); plan.md and tasks.md follow in later sessions,
-each after human approval (WORKFLOW.md 5.3). No implementation code until tasks are approved.
+**Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3) — IMPLEMENTATION underway.**
+spec.md + plan.md + tasks.md all approved (Gear 3 gates 1–3). **Task 1.1 DONE:** `src/render/tocModel.ts` — pure
+`buildTocModel(root): TocEntry[]` (h1–h6 refs in doc order, nearest-shallower-ancestor nesting, no synthetic nodes,
+designed fallback labels, verbatim duplicates) + 9 jsdom unit tests green, lint clean. **Next → task 2.1** (`tocView`
+rail chrome). Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
