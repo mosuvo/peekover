@@ -17,6 +17,10 @@
   `readerCss.ts` touched **additively**; `sanitize.ts` / `parse.ts` / manifest / PERMISSIONS.md **untouched**.
 - **The pre-existing "`\` is inert on the app page" gap is OUT of 003 scope** (§6-#1) but gets a **durable
   one-line record in `docs/ai/decisions.md`** at the close task (6.1) — not only in plan.md.
+- **Progress.md Now-pointer advances at EACH task/group boundary during implementation** (M1 retro rule,
+  retro.md 2026-07-14: the pointer once lagged four tasks — it is the one line the next session trusts, so
+  it MUST be moved per task/group, not batched to the end). 6.1 is the FINAL reconciliation (pointer →
+  "003 complete / next milestone" + decisions.md entries), **not** the pointer's first move.
 
 ---
 
@@ -41,7 +45,11 @@
 
 - [ ] **2.1 `tocView.ts` rail build + `tocView.test.ts` (shape).** `buildTocView(host, model, {contained})`
       → a right-side `<nav aria-label="Table of contents">` wrapping a nested `<ol>`; each entry is a
-      `<button>` that will scroll to `entry.headingRef` (wired in 3.1); a level with children carries a
+      `<button>` that will scroll to `entry.headingRef` (wired in 3.1) — the button **carries that exact
+      `headingRef` node** (via closure/`WeakMap` set HERE in 2.1), and 3.1's scroll handler acts on **that
+      same carried ref**, so the jsdom identity test below guards the real-engine scroll target itself, not
+      an independently re-derived node (M1/M2 retro: a green test must exercise the real mechanism, not one
+      beside it); a level with children carries a
       disclosure `<button aria-expanded>`; collapse hides/shows that subtree. **Threshold omit:** returns
       `null` at <2 headings (0 and 1 → no rail). Labels set via **`textContent` only** (never innerHTML).
       Initial open/collapsed decided from `:host` scrollport width (open wide / collapsed narrow). Returns
@@ -98,6 +106,10 @@
 
 - [ ] **3.1 Click-to-scroll, BOTH surfaces (real).** Wire entry click/Enter → `entry.headingRef
       .scrollIntoView({block:'start'})` (NO `behavior` arg → CSS `:host{scroll-behavior}` governs; plan §3-#2).
+      The handler MUST scroll to the **exact `headingRef` node the button carries from 2.1** (the closure/
+      `WeakMap` ref set at build time) — not a node re-derived here — so 2.1's jsdom entry→heading-ref
+      identity test genuinely guards this real scroll target (M1/M2 retro: exercise the real mechanism, not an
+      adjacent one).
       Add `scroll-margin-top` if not already in 2.2. Drive both hosts: the `<peekover-root>` full-page host AND
       the `{contained}` app-page host (via `mountAppShell` + an in-memory folder source, as
       `readerPaneContained.browser.test.ts` does).
@@ -188,8 +200,12 @@
 
 ## 6 — Close + named human gate
 
-- [ ] **6.1 Advance memory + record decisions (ONLY at tasks-complete boundary).** progress.md Now-pointer →
-      003 state; append `decisions.md` entries for what 003 settles: the ONE-seam TOC compose, element-ref
+- [ ] **6.1 Final memory reconciliation + record decisions.** **ONLY-at-tasks-complete scope applies to the
+      items in THIS task — the `decisions.md` entries below and the FINAL progress.md Now-pointer
+      reconciliation (pointer → "003 complete / next milestone").** It does NOT govern the pointer's earlier
+      movements: per the standing note above, the Now-pointer has already been advanced at each task/group
+      boundary during implementation (M1 retro rule) — this task is that pointer's last move, not its first.
+      Append `decisions.md` entries for what 003 settles: the ONE-seam TOC compose, element-ref
       navigation (no `id`, sanitize `id`-closure stays shut), host-rooted IO scroll-spy for both surfaces,
       right-rail + ≥2-heading heuristic, backtick toggle + host registry, and the re-measured sizes / perf /
       first-paint-re-run numbers. **Durable one-liner (the plan's task-level note): record the pre-existing
