@@ -17,11 +17,12 @@
 // (3.2); the buttons here support it. Focus reuses the reader's existing `:host
 // :focus-visible` ring — no new focus CSS.
 //
-// SCOPE (tasks 2.1–3.1): this module builds the rail, wires the LOCAL collapse toggle
-// (2.1), the backtick shortcut + host registry (2.3), and — task 3.1 — the entry
-// click/Enter → `scrollIntoView` of the button's carried heading ref. It carries no CSS
-// (2.2, readerCss.ts). It never touches `location`/`history`/`pushState` — entries navigate
-// by scrolling a ref, not by URL (spec In-scope "URL untouched").
+// SCOPE (tasks 2.1–3.4): this module builds the rail, wires the LOCAL collapse toggle
+// (2.1), the backtick shortcut + host registry (2.3), the entry click/Enter →
+// `scrollIntoView` of the button's carried heading ref (3.1), the scroll-spy that marks the
+// section being read (3.2), and the pointer-drag resizer that rewrites the per-view --toc-w
+// (3.4). It carries no CSS (2.2, readerCss.ts). It never touches `location`/`history`/
+// `pushState` — entries navigate by scrolling a ref, not by URL (spec In-scope "URL untouched").
 
 import type { TocEntry } from './tocModel';
 
@@ -222,6 +223,110 @@ function buildOpener(host: HTMLElement): HTMLButtonElement {
   return opener;
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// Task 3.4 — resize drag: a pointer-draggable handle on the rail's inner edge rewrites the
+// per-view --toc-w custom property on the host. Real-engine only for the geometry (jsdom has no
+// pointer coordinates or layout); the handlers below never run in the jsdom shape tests (no
+// pointer events are dispatched there), so building the handle stays jsdom-safe.
+
+/** The rail's default width in px — a verbatim mirror of readerCss.ts's `:host{--toc-w:250px}`.
+ *  Used as the drag's starting width when the computed property can't be read. */
+const DEFAULT_TOC_W = 250;
+
+/** Min/max the drag clamps --toc-w to (px). DESIGN values (spec §3-#6 "the document stays the
+ *  hero"), not measured perf gates: 180 keeps entry labels readable at the narrow end; 480 keeps
+ *  the reading column dominant at the wide end (well under the rail's CSS `max-width:38vw` ceiling
+ *  on a typical viewport). Exported so the real-engine clamp test asserts the EXACT bounds rather
+ *  than magic numbers — dragging past a bound clamps here, never collapses to nothing or eats the
+ *  viewport. */
+export const TOC_MIN_WIDTH = 180;
+export const TOC_MAX_WIDTH = 480;
+
+/** Clamp a candidate rail width to [TOC_MIN_WIDTH, TOC_MAX_WIDTH]. */
+function clampTocWidth(px: number): number {
+  return Math.max(TOC_MIN_WIDTH, Math.min(TOC_MAX_WIDTH, px));
+}
+
+/** The host's current --toc-w in px, resolved from computed style (the `:host` default or a prior
+ *  drag's inline override), falling back to the CSS default if unreadable. */
+function currentTocWidth(host: HTMLElement): number {
+  const read =
+    typeof getComputedStyle === 'function'
+      ? parseFloat(getComputedStyle(host).getPropertyValue('--toc-w'))
+      : Number.NaN;
+  return Number.isFinite(read) ? read : DEFAULT_TOC_W;
+}
+
+/**
+ * The resize handle: a thin grab strip on the rail's INNER (left) edge (styled by
+ * `.peekover-toc__resizer`, added to readerCss.ts in 2.2 — 3.4 wires the drag onto it, adding
+ * no CSS). A pointer drag rewrites `--toc-w` on the host, clamped to [TOC_MIN_WIDTH,
+ * TOC_MAX_WIDTH]. The rail is anchored to the viewport's RIGHT edge, so moving the pointer LEFT
+ * (outward) WIDENS it and RIGHT (inward) NARROWS it: `width = startWidth − (clientX − startX)`.
+ *
+ * PER VIEW ONLY — the width is an inline style on the host, NEVER written to storage/IndexedDB
+ * (persistence is spec 004); no store.ts/idbCore.ts is touched. Pointer events +
+ * setPointerCapture (standard resizer practice) route move/up to the handle even when the
+ * pointer leaves it — but setPointerCapture throws for a pointerId with no active pointer (e.g. a
+ * synthetically dispatched event), so it is guarded; the handler must never throw.
+ *
+ * NO leak on teardown: every listener is on THIS resizer element (never document/window), so a
+ * rebuild — which replaces the whole rail via mount()'s `replaceChildren` — drops the old resizer
+ * and its listeners together for GC (removing a captured element also releases its capture), and a
+ * `!resizer.isConnected` guard bails a drag caught in flight across a rebuild (the same isConnected
+ * liveness discipline the rAF guard, scroll-spy self-heal, and host registry use). Unlike the
+ * scroll-spy — whose observer + scroll listener attach to a PERSISTENT external scroll container
+ * and therefore need `teardownScrollSpy` — the resizer owns only its own ephemeral node, so it
+ * self-cleans and needs no registry seam. No scroll, URL, history, or network: the drag rewrites
+ * ONE CSS custom property and nothing else.
+ */
+function buildResizer(host: HTMLElement): HTMLElement {
+  const resizer = document.createElement('div');
+  resizer.className = 'peekover-toc__resizer';
+  resizer.setAttribute('role', 'separator');
+  resizer.setAttribute('aria-orientation', 'vertical');
+  resizer.setAttribute('aria-label', 'Resize table of contents');
+
+  let dragging = false;
+  let startX = 0;
+  let startWidth = DEFAULT_TOC_W;
+
+  resizer.addEventListener('pointerdown', (e: PointerEvent) => {
+    dragging = true;
+    startX = e.clientX;
+    startWidth = currentTocWidth(host);
+    try {
+      resizer.setPointerCapture(e.pointerId);
+    } catch {
+      /* no active pointer (e.g. a synthetic event) — capture is a nicety, not required */
+    }
+    e.preventDefault(); // suppress text-selection / focus side effects during the drag
+  });
+
+  resizer.addEventListener('pointermove', (e: PointerEvent) => {
+    if (!dragging) return;
+    if (!resizer.isConnected) {
+      dragging = false; // rail rebuilt mid-drag — bail rather than write to a stale node
+      return;
+    }
+    host.style.setProperty('--toc-w', `${clampTocWidth(startWidth - (e.clientX - startX))}px`);
+  });
+
+  const end = (e: PointerEvent): void => {
+    if (!dragging) return;
+    dragging = false;
+    try {
+      resizer.releasePointerCapture(e.pointerId);
+    } catch {
+      /* capture was never established (guarded above) — nothing to release */
+    }
+  };
+  resizer.addEventListener('pointerup', end);
+  resizer.addEventListener('pointercancel', end);
+
+  return resizer;
+}
+
 /**
  * Decide the initial open/collapsed state and reflect it — WITHOUT trusting a pre-layout
  * width read (Defect 2). `buildTocView` runs BEFORE mount()'s `replaceChildren` commits the
@@ -295,9 +400,11 @@ export function buildTocView(
   if (options.contained) nav.dataset.contained = '';
 
   // The always-visible opener heads the rail (survives the collapsed state); the collapsible
-  // list body follows it. `data-toc="collapsed"` hides ONLY the list, never this handle.
+  // list body follows it. `data-toc="collapsed"` hides ONLY the list, never this handle. The
+  // resize handle (3.4) is a position:absolute sibling on the rail's inner edge — DOM order is
+  // immaterial to its placement, so it is appended last.
   const opener = buildOpener(host);
-  nav.append(opener, buildList(model));
+  nav.append(opener, buildList(model), buildResizer(host));
 
   applyInitialTocState(host, opener);
 

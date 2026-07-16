@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-15.*
+*Updated: 2026-07-16.*
 
 ## Now (start here)
 **M2 FULLY CLOSED (spec 002 — active-source foundation): code-complete AND human-gated.** All six
@@ -134,7 +134,38 @@ assertion would be VACUOUS (both modes instant), so it is deliberately NOT in th
 `sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 32 green, lint clean, both builds succeed (content
 script **281.55 kB — byte-identical to 3.2**, confirming no shipped-code change). Only changes: the browser test +
 the `vitest.config.ts` harness command; `src/` (tocView.ts/readerCss.ts/mount.ts/…) untouched.
-**Next → task 3.4** (resize drag). Pointer advances per task (M1 retro rule).
+**Task 3.4 DONE (resize drag, real engine, both engines):** a pointer-draggable resize handle
+(`.peekover-toc__resizer` — 2.2 shipped only its CSS; 3.4 BUILDS the element in `buildTocView` and
+wires the drag, readerCss.ts UNTOUCHED, matching tasks.md 3.4's "resizer rule *if not in 2.2*"
+conditional) rewrites the per-view `--toc-w` custom property on the host. Pointer events
+(pointerdown/move/up/cancel) + `setPointerCapture` (guarded — it throws for a synthetic pointerId,
+so wrapped in try/catch; never lets the handler throw); the rail is anchored to the viewport RIGHT
+edge and the handle sits on its INNER (left) edge, so drag LEFT/outward WIDENS, RIGHT/inward
+NARROWS (`width = startWidth − (clientX − startX)`). CLAMPED to `[TOC_MIN_WIDTH=180,
+TOC_MAX_WIDTH=480]` px — DESIGN values (spec §3-#6 "document stays the hero"), exported so the test
+asserts the exact bounds; the rail never collapses to nothing or eats the viewport. PER-VIEW ONLY,
+NOT PERSISTED (spec 004 scope): the width is an inline style on the host; NO store.ts/idbCore.ts/idb
+path touched (asserted on the contained surface with a spy store — resize adds zero store calls).
+NO leak on teardown: ALL listeners live on the resizer element itself (never document/window), so a
+rebuild's `replaceChildren` drops the old resizer + its listeners for GC (removing a captured
+element also releases capture) + a `!resizer.isConnected` guard bails a drag caught mid-rebuild
+(same isConnected discipline as the rAF guard / scroll-spy self-heal / host registry) — unlike the
+scroll-spy, the resizer attaches to no PERSISTENT external node, so it needs no `teardownScrollSpy`
+seam. No scroll/URL/history/network — one CSS var write. `tests/browser/tocScroll.browser.test.ts`
+(+3, ×2 engines = +6): grow/shrink/zero-delta (non-vacuous — an unwired handle leaves every drag at
+the default, so the direction assertions reduce to the zero-delta invariant and fail), clamp at
+BOTH bounds, and per-view/no-storage on the contained surface. **Red-first PROVEN both engines:**
+disabling the drag's `--toc-w` write → grow/contained FAIL `expected 250 to be greater than 250`
+and clamp FAILS `expected 250 to be 480` (the property never moved) while the zero-delta invariant
+still passes. `pnpm test:browser` **158 green** both engines (152 → +6), `pnpm test` **350 green**
+(golden diff EMPTY, manifest `permissions:[]` + huge-doc `sha256=8bc5094c…de61bbd` intact),
+`pnpm test tocView tocModel` 32 green (jsdom-safe: the pointer handlers only run on real events,
+never dispatched in the shape tests; `getComputedStyle`/`setPointerCapture` live inside those
+handlers), lint clean, both builds succeed (content script **282.43 kB**, info-only). readerCss.ts/
+mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden/store.ts/idbCore.ts untouched.
+**GROUP 3 IS NOW CODE-COMPLETE** (3.1 click-scroll · 3.2 scroll-spy · 3.3 reduced-motion · 3.4
+resize) → next = the batched group-3 human manual gate, then group 4 (zero-network guard). Pointer
+advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level

@@ -30,6 +30,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 // below types our custom command onto the extensible `BrowserCommands` interface.
 import { commands } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
+import { TOC_MIN_WIDTH, TOC_MAX_WIDTH } from '../../src/render/tocView';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
 
@@ -513,5 +514,137 @@ describe('TOC reduced-motion — real engine (task 3.3)', () => {
   it('full-page host: instant under reduce, smooth without (:host{scroll-behavior} governs)', async () => {
     const { host, buttons } = mountFullPage();
     await assertReducedMotion(host, buttons[REDUCE_TARGET]);
+  });
+});
+
+// ── Task 3.4 — resize drag: a pointer-draggable handle rewrites the per-view --toc-w ──────────
+// The rail's width is the `--toc-w` custom property on the host (readerCss.ts default 250px). A
+// pointer drag on `.peekover-toc__resizer` (the handle 3.4 builds + wires) rewrites it, clamped
+// to [TOC_MIN_WIDTH, TOC_MAX_WIDTH]. jsdom has no pointer geometry and does not resolve the
+// custom property from the shadow stylesheet, so this is a real-engine proof on Chromium AND
+// Firefox (pointer-event + setPointerCapture handling differs across engines — exactly why it is
+// here). The handle sits on the rail's INNER (left) edge and the rail is anchored to the viewport
+// RIGHT edge, so dragging the pointer LEFT (outward) WIDENS the rail and RIGHT (inward) NARROWS it.
+//
+// NON-VACUOUS by construction: a ZERO-delta drag must leave --toc-w unchanged while a real drag
+// must move it — an unwired handle would leave EVERY drag at the default (indistinguishable from
+// the zero-delta case), so the "grew"/"shrank" assertions would fail. That is the red-first proof:
+// with the pointer wiring absent, `--toc-w` never moves and the direction assertions go red (they
+// reduce to the zero-delta invariant). PER VIEW ONLY: the width is an inline style on the host and
+// resizing invokes NO store method (asserted on the contained surface with a spy store).
+
+/** The host's live --toc-w in px (what the drag rewrites; the CSS `:host` default resolves it
+ *  before any drag). Reading THIS property — not a re-derived rendered width — is the exact
+ *  channel tasks.md 3.4's red-first names ("FAILS if the drag does not move --toc-w"). */
+function tocWidthPx(host: HTMLElement): number {
+  return parseFloat(getComputedStyle(host).getPropertyValue('--toc-w'));
+}
+
+/** Dispatch a real PointerEvent at the handle. Events are dispatched directly ON the resizer, so
+ *  the handler runs regardless of whether the browser could route an OS pointer here — the drag
+ *  math (delta + captured start width) is what is under test, not capture routing (a browser
+ *  primitive). `clientY` is fixed; only the horizontal delta matters for a vertical resizer. */
+function firePointer(resizer: Element, type: string, clientX: number): void {
+  resizer.dispatchEvent(
+    new PointerEvent(type, {
+      pointerId: 1,
+      pointerType: 'mouse',
+      clientX,
+      clientY: 300,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
+/** One full press→drag→release gesture from a fixed anchor X by a horizontal delta (negative =
+ *  outward/left = wider; positive = inward/right = narrower). Returns the resulting --toc-w. */
+function dragBy(host: HTMLElement, resizer: Element, anchorX: number, delta: number): number {
+  firePointer(resizer, 'pointerdown', anchorX);
+  firePointer(resizer, 'pointermove', anchorX + delta);
+  firePointer(resizer, 'pointerup', anchorX + delta);
+  return tocWidthPx(host);
+}
+
+const ANCHOR_X = 600; // arbitrary; only the delta from it matters (events fire directly on the handle)
+
+describe('TOC resize drag — real engine (task 3.4)', () => {
+  it('full-page host: drag outward grows, inward shrinks, zero-delta leaves --toc-w unchanged (non-vacuous)', async () => {
+    const { host } = mountFullPage();
+    host.setAttribute('data-toc', 'open'); // open → the rail renders at var(--toc-w)
+    await waitForScrollable(host);
+    const resizer = host.shadowRoot!.querySelector('.peekover-toc__resizer')!;
+
+    const start = tocWidthPx(host);
+    expect(start).toBe(250); // the readerCss.ts :host default, before any drag
+
+    // ZERO-delta: no movement → width unchanged. This is the red-first anchor: if the pointer
+    // wiring were absent, the grow/shrink drags below would ALSO leave the width here, so their
+    // assertions would be indistinguishable from this no-op and fail.
+    expect(dragBy(host, resizer, ANCHOR_X, 0)).toBeCloseTo(start, 0);
+
+    // GROW: drag outward (left, clientX decreases) → wider by |delta|.
+    const grown = dragBy(host, resizer, ANCHOR_X, -60);
+    expect(grown).toBeGreaterThan(start);
+    expect(grown).toBeCloseTo(start + 60, 0);
+
+    // SHRINK: drag inward (right, clientX increases) from the now-grown width → narrower.
+    const shrunk = dragBy(host, resizer, ANCHOR_X, 40);
+    expect(shrunk).toBeLessThan(grown);
+    expect(shrunk).toBeCloseTo(grown - 40, 0);
+  });
+
+  it('full-page host: dragging past a bound clamps at TOC_MIN_WIDTH / TOC_MAX_WIDTH', async () => {
+    const { host } = mountFullPage();
+    host.setAttribute('data-toc', 'open');
+    await waitForScrollable(host);
+    const resizer = host.shadowRoot!.querySelector('.peekover-toc__resizer')!;
+
+    // Far outward (250 + 1000 → clamped): stops AT the max, never wider.
+    expect(dragBy(host, resizer, ANCHOR_X, -1000)).toBe(TOC_MAX_WIDTH);
+    // Far inward from the max (480 − 1000 → clamped): stops AT the min, never narrower.
+    expect(dragBy(host, resizer, ANCHOR_X, 1000)).toBe(TOC_MIN_WIDTH);
+  });
+
+  it('contained pane: resizing writes to NO storage (per view) and the width holds for the view', async () => {
+    // Persistence is spec 004 — resizing must invoke no store method. A spy store records every
+    // call; we snapshot the count AFTER the folder open (which legitimately persists recents), then
+    // assert the resize adds none.
+    const calls: string[] = [];
+    const spyStore: AppStore = {
+      putFolder: async () => {
+        calls.push('putFolder');
+      },
+      deleteFolder: async () => {
+        calls.push('deleteFolder');
+      },
+      putRecent: async () => {
+        calls.push('putRecent');
+      },
+    };
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    containers.push(container);
+    const app = mountAppShell(container, {
+      openFolder: async () => ({ ok: true, source: memorySource('doc.md', buildDoc()) }),
+      store: spyStore,
+    });
+    await app.openFolder();
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+    const host = await waitFor(() =>
+      container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+    );
+    await waitFor(() => host.shadowRoot?.querySelector('.peekover-toc__resizer'));
+    const resizer = host.shadowRoot!.querySelector('.peekover-toc__resizer')!;
+
+    const before = calls.length; // whatever opening the folder persisted — the resize must add 0
+    const grown = dragBy(host, resizer, ANCHOR_X, -50);
+    expect(grown).toBeGreaterThan(250); // the drag really moved --toc-w on the contained host
+    expect(calls.length).toBe(before); // ...and touched no persistence path
+
+    // Holds for the view: the inline override persists (no reset on a later tick).
+    await new Promise<void>((r) => setTimeout(r, 60));
+    expect(tocWidthPx(host)).toBe(grown);
   });
 });
