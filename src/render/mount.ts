@@ -24,7 +24,7 @@ import {
 import { applyMediaPolicy } from './mediaPolicy';
 import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 import { buildTocModel } from './tocModel';
-import { buildTocView } from './tocView';
+import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
@@ -137,6 +137,13 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     registerReaderSource(host, source); // stash source for the lazy Raw view
     setReaderMode(host, 'reading'); // default view = the rendered document
     installToggleShortcut(); // idempotent; only active while our reader is mounted
+    // TOC toggle registry (task 2.3): this host has a rail iff buildTocView returned one.
+    // Register when composed so the backtick shortcut can resolve+toggle it; un-register on
+    // a rail-less re-render (<2 headings) so backtick never toggles a rail-less reader. The
+    // raw-fallback path un-registers too (mountRawFallback). installTocShortcut is idempotent.
+    if (tocRail) registerTocHost(host);
+    else unregisterTocHost(host);
+    installTocShortcut();
     initReaderRuntime(host);
   } catch (err) {
     // AGENTS.md #5: never a blank page. Degrade to the raw source as escaped text,
@@ -165,6 +172,7 @@ function mountRawFallback(
   contained = false,
 ): void {
   host.removeAttribute('data-mode');
+  unregisterTocHost(host); // a failed render replaces the rail with banner+<pre> — no rail now
 
   const banner = document.createElement('div');
   banner.className = 'peekover-alert';

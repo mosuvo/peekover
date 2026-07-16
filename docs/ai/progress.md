@@ -41,8 +41,26 @@ before writing — a stale frame firing after teardown / after a newer rail repl
 data-toc/aria-expanded onto a dead node (the dead-node hazard 2.3's registry prunes, arriving early via the rAF
 closure; the synchronous first decide is intentionally exempt). +1 non-vacuous lifecycle test (proven RED with the
 guard removed: the post-teardown frame flips data-toc `collapsed`→`open`); `pnpm test` 342 green, golden + pins intact,
-lint clean. **Next → task 2.3** (backtick keyboard toggle + host registry + de-register on teardown). Pointer advances
-per task (M1 retro rule).
+lint clean. **Task 2.3 DONE:** the backtick (`` ` ``) keyboard toggle + module-level host registry + de-register on
+teardown (`tocView.ts` registry/shortcut · `mount.ts` register/unregister hooks · `tocView.test.ts` guards). ONE
+document-level keydown listener mirroring `installToggleShortcut` EXACTLY (bare key, no Ctrl/Cmd/Alt, ignored in
+input/textarea/select/contenteditable, `preventDefault` only after deciding to handle, idempotent install) — distinct
+from readerMode's `\`, so the two never collide (each returns early on the other's key). Active-host resolution: a
+`Set<HTMLElement>` mount() fills when a rail is composed (un-fills on a rail-less re-render AND the raw-fallback path);
+the resolver PRUNES any `!host.isConnected` entry first, then returns the registered host containing
+`document.activeElement`, else the last-registered live host — so the "last host" fallback can never resolve to a dead
+node (same isConnected discipline as the rAF guard). Toggle flips the resolved host's `data-toc` via the SAME
+`setTocOpen` writer the opener uses (data-toc + opener aria-expanded in lockstep); no scroll/URL/history/network. +7
+non-vacuous jsdom tests (backtick toggle + aria tracking; Ctrl/Cmd/Alt + editable-field guards; `\`↔backtick
+no-collision both ways; two-host activeElement resolution; DEAD-NODE PRUNE proven RED with the prune removed — resolver
+returns the dead host and writes to it; no-rail pass-through; idempotent-install single-flip). `pnpm test` **349 green**
+(manifest `permissions:[]` + golden + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 31 green,
+golden diff EMPTY, lint clean, both builds succeed (mv3; content script 279.6 kB, info-only). readerMode.ts /
+sanitize.ts / parse.ts / manifest / readerCss.ts / tocModel.ts / golden fixtures untouched; raw-fallback path stays
+TOC-free AND now un-registers. Added a dated `decisions.md` line (Firefox manual-gate loads must come from a FRESH
+`wxt build -b firefox` → `.output/firefox-mv3` — a stale/dev load's `localhost` CSP warning is a procedure error, not a
+code defect; task-2.2 gate lesson). **Next → task 3.1** (group-3 real-engine scroll/scroll-spy/reduced-motion/resize
+cluster). Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level

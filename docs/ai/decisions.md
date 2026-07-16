@@ -1,6 +1,12 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-16 · Firefox manual-gate loads MUST come from a FRESH production build (testing
+  procedure, not a code decision).** `wxt build -b firefox` → load `.output/firefox-mv3/manifest.json`
+  (note: **mv3**, not mv2 — we target MV3 on Firefox). A stale or dev Firefox load shows a `localhost`
+  CSP warning and a dead reader; that is a load/procedure error, not a code defect — rebuild and reload
+  the mv3 output before diagnosing. (Lesson from the task-2.2 human gate.)
+
 - **2026-07-15 · M2 CLOSE (spec 002 — active-source foundation): the trust model was
   COMPLETED, not compromised.** M2 gave Peekover its second surface — a dedicated app page
   that reads a chosen folder of markdown from disk — and did it **without spending a single

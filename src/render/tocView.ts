@@ -261,3 +261,122 @@ export function buildTocView(
 
   return nav;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Task 2.3 — backtick toggle + host registry + de-register on teardown.
+//
+// A SECOND document-level shortcut, mirroring readerMode's installToggleShortcut EXACTLY
+// (bare key, no Ctrl/Cmd/Alt, ignored in editable fields, preventDefault only after we
+// decide to handle, idempotent install). The two never collide because each matches a
+// different bare key — this one `` ` `` (TOC), readerMode's one `\` (Raw/Reading) — so a
+// `\` press returns early here and a `` ` `` press returns early there.
+//
+// The key difference from readerMode is HOST RESOLUTION. readerMode can
+// `document.querySelector('peekover-root')` because its shortcut only matters on the
+// full-page content-script surface; the TOC ships on BOTH surfaces, and on the app page
+// the reader host is a plain contained <div>, not a <peekover-root> (plan §Reality-pushback
+// #1). So the active host is resolved from a module-level registry that mount() maintains,
+// not from a tag query.
+
+/** Hosts that currently have a composed TOC rail. mount() adds a host here when a rail is
+ *  committed and removes it when the rail is gone (a <2-heading re-render, or the raw
+ *  fallback replacing the rail with banner+<pre>). The resolver additionally prunes any
+ *  disconnected host before resolving, so a torn-down reader can NEVER be toggled — the
+ *  same dead-node discipline the rAF liveness guard uses (applyInitialTocState), applied
+ *  to the "last-registered host" fallback. */
+const tocHosts = new Set<HTMLElement>();
+
+/** Register a host as owning a live TOC rail (called by mount() when a rail is composed). */
+export function registerTocHost(host: HTMLElement): void {
+  tocHosts.add(host);
+}
+
+/** Drop a host from the registry (called by mount() when its rail is gone: a rail-less
+ *  re-render or the never-blank raw fallback). Safe to call for an unregistered host. */
+export function unregisterTocHost(host: HTMLElement): void {
+  tocHosts.delete(host);
+}
+
+/**
+ * The active reader host the backtick toggle acts on, or `null` when no live rail exists.
+ * PRUNES first: any registered host no longer in the document is removed, so the "last
+ * host" fallback can never resolve to a dead node (deleting during Set iteration is safe —
+ * removed entries are not revisited). Then: the registered host containing
+ * `document.activeElement` wins (focus inside a shadow root retargets `activeElement` to
+ * its host, so `host === active` catches a focused rail button; `host.contains` catches a
+ * focused light-DOM descendant on the contained surface); otherwise the sole / last-
+ * registered live host (Set preserves insertion order).
+ */
+function resolveActiveTocHost(): HTMLElement | null {
+  for (const host of tocHosts) {
+    if (!host.isConnected) tocHosts.delete(host); // dead-node prune (see comment above)
+  }
+  if (tocHosts.size === 0) return null;
+
+  const active = typeof document !== 'undefined' ? document.activeElement : null;
+  if (active) {
+    for (const host of tocHosts) {
+      if (host === active || host.contains(active)) return host;
+    }
+  }
+
+  let last: HTMLElement | null = null;
+  for (const host of tocHosts) last = host; // insertion order → last-registered live host
+  return last;
+}
+
+/** Flip a resolved host's rail open⇄collapsed through the SAME `setTocOpen` writer the
+ *  opener uses (data-toc + the opener's aria-expanded in lockstep — never duplicated). The
+ *  opener lives in the host's shadow root; if it is somehow absent (a rail-less host that
+ *  slipped the registry), no-op rather than write a half state. */
+function toggleTocHost(host: HTMLElement): void {
+  const opener = host.shadowRoot?.querySelector<HTMLButtonElement>('button.peekover-toc__toggle');
+  if (!opener) return;
+  setTocOpen(host, opener, host.getAttribute('data-toc') !== 'open');
+}
+
+/** The bare key that toggles the rail. A backtick — chosen at the plan gate over `t` to
+ *  avoid colliding with `role=tree` type-ahead in the app-page folder browser, and distinct
+ *  from readerMode's `\` so the two shortcuts never contend (tasks.md plan-gate lock). */
+export const TOC_TOGGLE_KEY = '`';
+
+/** True when focus is in a field we must not hijack keystrokes from. A local mirror of
+ *  readerMode's private helper — 2.3 must not edit readerMode.ts, so the guard is
+ *  replicated verbatim rather than shared. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return el.isContentEditable === true;
+}
+
+let tocShortcutInstalled = false;
+
+/**
+ * Install the single document-level backtick listener, ONCE (the boolean guard makes
+ * repeated calls across re-mounts add no duplicate listener — exactly like
+ * installToggleShortcut). Scoping guarantees, mirrored from readerMode so `` ` `` is never
+ * swallowed on a page without our rail:
+ *   - only the bare TOC_TOGGLE_KEY with no Ctrl/Cmd/Alt is considered;
+ *   - ignored when focus is in input/textarea/select/contenteditable;
+ *   - it does nothing — and does NOT preventDefault — unless the registry resolves a live
+ *     host WITH a rail (resolveActiveTocHost returns non-null); so on any page without our
+ *     rail, and after every rail is torn down, the key passes straight through;
+ *   - preventDefault fires ONLY after we have decided to handle it.
+ * No scroll, no URL/history, no network — a pure attribute flip on the resolved host.
+ */
+export function installTocShortcut(): void {
+  if (tocShortcutInstalled) return;
+  if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+  tocShortcutInstalled = true;
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key !== TOC_TOGGLE_KEY) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isEditableTarget(e.target)) return;
+    const host = resolveActiveTocHost();
+    if (!host) return; // no live rail → pass through, never swallow `
+    e.preventDefault();
+    toggleTocHost(host);
+  });
+}

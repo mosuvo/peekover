@@ -12,9 +12,16 @@
 //   - `location.href` + `history.length` UNCHANGED after activating an entry (structural F2);
 //   - the pure width→initial-state rule is unit-checked with an INJECTED width (jsdom is layout-blind).
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import { buildTocModel, type TocEntry } from './tocModel';
-import { buildTocView, tocHeadingRef, initialTocOpen } from './tocView';
+import {
+  buildTocView,
+  tocHeadingRef,
+  initialTocOpen,
+  installTocShortcut,
+  registerTocHost,
+  unregisterTocHost,
+} from './tocView';
 
 /** A reader-root-shaped container from an HTML string (test scaffolding only). */
 function rootFrom(html: string): HTMLElement {
@@ -280,3 +287,163 @@ function setTocOpen(host: HTMLElement, opener: HTMLButtonElement, open: boolean)
   host.setAttribute('data-toc', open ? 'open' : 'collapsed');
   opener.setAttribute('aria-expanded', String(open));
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Task 2.3 — backtick toggle + host registry + de-register on teardown.
+//
+// jsdom shape/wiring only (no layout/scroll). Each test drives the REAL mechanism: a real
+// host with a real shadow-mounted rail (so the backtick handler resolves it from the
+// registry and flips it through the same setTocOpen writer the opener uses). Every test is
+// non-vacuous — the notes below state what regression each one goes RED on.
+
+describe('backtick TOC toggle + host registry (task 2.3)', () => {
+  const created: HTMLElement[] = [];
+
+  /** A fully mounted reader host: real open shadow root + composed rail, registered. Mirrors
+   *  what mount() does at the seam, so the shortcut resolves it and toggleTocHost finds the
+   *  opener under host.shadowRoot exactly as in production. */
+  function mountedHost(html = '<h1>A</h1><h2>B</h2>'): HTMLElement {
+    const host = document.createElement('peekover-root');
+    document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const rail = buildTocView(host, buildTocModel(rootFrom(html)))!;
+    shadow.appendChild(rail);
+    host.setAttribute('data-toc', 'open'); // pin a known start (jsdom is layout-blind)
+    registerTocHost(host);
+    created.push(host);
+    return host;
+  }
+
+  /** Dispatch a keydown that bubbles to the document-level listener; return the event so the
+   *  caller can inspect defaultPrevented (proves handle vs pass-through). */
+  function pressKey(key: string, init: KeyboardEventInit = {}, target: EventTarget = document): KeyboardEvent {
+    const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(e);
+    return e;
+  }
+
+  beforeAll(() => {
+    installTocShortcut(); // idempotent; installs the single document listener under test
+  });
+
+  afterEach(() => {
+    // The registry is module-level and persists across tests — clean up every host we made
+    // (un-register AND detach) so one test's live hosts can't win another's resolution.
+    for (const host of created) {
+      unregisterTocHost(host);
+      host.remove();
+    }
+    created.length = 0;
+    document.body.querySelectorAll('input,[contenteditable]').forEach((n) => n.remove());
+  });
+
+  it('bare backtick toggles the active host data-toc open⇄collapsed, aria-expanded tracking', () => {
+    const host = mountedHost();
+    const opener = host.shadowRoot!.querySelector<HTMLButtonElement>('button.peekover-toc__toggle')!;
+    expect(host.getAttribute('data-toc')).toBe('open');
+
+    const e1 = pressKey('`');
+    expect(e1.defaultPrevented).toBe(true); // handled → preventDefault fired
+    expect(host.getAttribute('data-toc')).toBe('collapsed');
+    expect(opener.getAttribute('aria-expanded')).toBe('false');
+
+    pressKey('`'); // and back — the same shortcut toggles both directions
+    expect(host.getAttribute('data-toc')).toBe('open');
+    expect(opener.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('is IGNORED under Ctrl/Cmd/Alt and when focus is in input/textarea/select/contenteditable', () => {
+    const host = mountedHost();
+
+    // Modifier combinations pass through untouched (a modified backtick is a browser/OS combo).
+    for (const mod of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      const e = pressKey('`', mod);
+      expect(e.defaultPrevented).toBe(false);
+      expect(host.getAttribute('data-toc')).toBe('open'); // never toggled
+    }
+
+    // Focus in a text field → the keystroke is the user's, not ours. Dispatch ON the field so
+    // e.target is the editable element (bubbles to the document listener).
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    const eInput = pressKey('`', {}, input);
+    expect(eInput.defaultPrevented).toBe(false);
+    expect(host.getAttribute('data-toc')).toBe('open');
+
+    const editable = document.createElement('div');
+    editable.setAttribute('contenteditable', '');
+    // jsdom does not derive isContentEditable from the attribute, so set the property the
+    // guard actually reads (matches how readerMode's mirror guard is exercised).
+    Object.defineProperty(editable, 'isContentEditable', { value: true, configurable: true });
+    document.body.appendChild(editable);
+    const eCe = pressKey('`', {}, editable);
+    expect(eCe.defaultPrevented).toBe(false);
+    expect(host.getAttribute('data-toc')).toBe('open');
+  });
+
+  it('does NOT collide with `\\` — the backtick handler ignores `\\`, and `\\` is left for Raw/Reading', () => {
+    const host = mountedHost();
+    // `\` is readerMode's key. The TOC handler must not fire on it (no toggle, no preventDefault).
+    const e = pressKey('\\');
+    expect(e.defaultPrevented).toBe(false); // TOC handler returned early on the wrong key
+    expect(host.getAttribute('data-toc')).toBe('open'); // TOC untouched by `\`
+
+    // And the converse: a backtick does NOT flip data-mode (readerMode's attribute) — the two
+    // shortcuts key off different bare keys and never contend.
+    host.setAttribute('data-mode', 'reading');
+    pressKey('`');
+    expect(host.getAttribute('data-mode')).toBe('reading'); // backtick did not touch Raw/Reading
+    expect(host.getAttribute('data-toc')).toBe('collapsed'); // it toggled the TOC, as intended
+  });
+
+  it('resolves the active host by document.activeElement when several hosts are registered', () => {
+    const host1 = mountedHost();
+    const host2 = mountedHost();
+
+    // Give each host a focusable light-DOM child; focusing host2's makes it contain activeElement.
+    const btn1 = document.createElement('button');
+    const btn2 = document.createElement('button');
+    host1.appendChild(btn1);
+    host2.appendChild(btn2);
+    btn2.focus();
+    expect(host2.contains(document.activeElement)).toBe(true);
+
+    pressKey('`', {}, btn2);
+    expect(host2.getAttribute('data-toc')).toBe('collapsed'); // the focused host toggled
+    expect(host1.getAttribute('data-toc')).toBe('open'); // the other host untouched
+  });
+
+  it('DEAD-NODE PRUNE: a torn-down host is pruned and never written to (no throw)', () => {
+    // Register a real, rail-bearing host (opener present in its shadow), then remove it from
+    // the DOM. Without the prune, resolveActiveTocHost returns this dead host as the "last"
+    // fallback and toggleTocHost writes data-toc onto it. With the prune, the resolver deletes
+    // it (size → 0), returns null, and the press is a pass-through no-op.
+    const dead = mountedHost();
+    expect(dead.getAttribute('data-toc')).toBe('open');
+    dead.remove();
+    expect(dead.isConnected).toBe(false);
+
+    const e = pressKey('`');
+    expect(() => e).not.toThrow(); // dispatch above did not throw against the dead node
+    expect(e.defaultPrevented).toBe(false); // resolver returned null → pass-through
+    // The dead host's state is UNCHANGED. Remove the `!host.isConnected` prune in
+    // resolveActiveTocHost and this flips to "collapsed" → RED (verified by deleting the prune
+    // loop locally: the fallback returns `dead`, toggleTocHost writes, this assertion fails).
+    expect(dead.getAttribute('data-toc')).toBe('open');
+  });
+
+  it('pressing backtick on a page with NO registered host is a pass-through (no throw, nothing toggled)', () => {
+    // afterEach has cleared the registry; no rail exists on this page.
+    const e = pressKey('`');
+    expect(e.defaultPrevented).toBe(false); // never swallowed on a rail-less page
+  });
+
+  it('repeated installTocShortcut() adds no duplicate listener (one press → one flip)', () => {
+    installTocShortcut();
+    installTocShortcut();
+    installTocShortcut();
+    const host = mountedHost();
+    pressKey('`'); // a duplicate listener would flip twice (net no-op) → RED against 'collapsed'
+    expect(host.getAttribute('data-toc')).toBe('collapsed');
+  });
+});
