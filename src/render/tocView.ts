@@ -207,7 +207,20 @@ function applyInitialTocState(host: HTMLElement, opener: HTMLButtonElement): voi
   };
   decide(); // synchronous: real width if already laid out, else the documented default
   const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
-  if (raf) raf(decide); // post-commit/post-layout correction (no-op in layout-blind jsdom)
+  if (raf) {
+    // Post-commit/post-layout correction (no-op in layout-blind jsdom). LIVENESS GUARD: mount()
+    // is idempotent and re-renders into the same host — and the content-script path can REMOVE
+    // the host on a failed/empty re-render — but nothing cancels this pending frame. A stale
+    // frame that fires after teardown, or after a NEWER rail replaced this one, must not write
+    // data-toc/aria-expanded onto a detached host or an orphaned opener. Bail if the rail is no
+    // longer live (the same dead-node hazard 2.3's host registry prunes, arriving early via this
+    // rAF closure). The synchronous decide() above is intentionally exempt: the host may
+    // legitimately be pre-commit / not-yet-connected there, and it only sets the documented default.
+    raf(() => {
+      if (!host.isConnected || !opener.isConnected) return;
+      decide();
+    });
+  }
 }
 
 /**

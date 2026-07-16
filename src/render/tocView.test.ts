@@ -12,7 +12,7 @@
 //   - `location.href` + `history.length` UNCHANGED after activating an entry (structural F2);
 //   - the pure width→initial-state rule is unit-checked with an INJECTED width (jsdom is layout-blind).
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildTocModel, type TocEntry } from './tocModel';
 import { buildTocView, tocHeadingRef, initialTocOpen } from './tocView';
 
@@ -227,6 +227,48 @@ describe('buildTocView — right-rail chrome (jsdom shape)', () => {
       opener.click(); // open → collapsed (the same control toggles both ways)
       expect(host.getAttribute('data-toc')).toBe('collapsed');
       expect(opener.getAttribute('aria-expanded')).toBe('false');
+    });
+  });
+
+  describe('deferred (rAF) state write: dead-node liveness guard', () => {
+    it('no-ops the post-layout frame if the host was torn down before it fired', () => {
+      // The initial-state fix schedules a width-driven correction on the next frame. mount() is
+      // idempotent and the content-script path can REMOVE the host on a failed/empty re-render;
+      // a stale frame must NOT write onto a detached host (the dead-node hazard 2.3's registry
+      // prunes). jsdom can't see a real teardown-then-frame, so we drive it: capture the frame
+      // instead of running it, stub a REAL width so the deferred decide WOULD write (otherwise
+      // the write is a jsdom no-op and the test is vacuous), tear the host down, then flush.
+      const host = makeHost(); // makeHost appends to document.body → host.isConnected === true
+      const stubWidth = (w: number) => {
+        host.getBoundingClientRect = (() => ({ width: w })) as unknown as typeof host.getBoundingClientRect;
+      };
+
+      let frame: FrameRequestCallback | null = null;
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        frame = cb;
+        return 1;
+      });
+      try {
+        stubWidth(400); // narrow → the SYNC decide pins a definite state
+        const rail = buildTocView(host, buildTocModel(rootFrom('<h1>A</h1><h2>B</h2>')))! as HTMLElement;
+        host.appendChild(rail); // opener now lives under the host, as in the real shadow mount
+        expect(host.getAttribute('data-toc')).toBe('collapsed'); // sync decide @ width 400
+
+        // A later frame at a NOW-WIDE layout would flip it to "open" — but only if it runs.
+        stubWidth(1200);
+        const before = host.getAttribute('data-toc');
+
+        host.remove(); // teardown: the host (and the opener under it) are now detached
+        expect(host.isConnected).toBe(false);
+
+        expect(frame).not.toBeNull(); // a frame really was scheduled
+        expect(() => frame!(0)).not.toThrow(); // no throw against the dead node
+        // Guarded: the deferred decide bailed, so data-toc is unchanged. Remove the
+        // `!host.isConnected || !opener.isConnected` guard and this flips to "open" → RED.
+        expect(host.getAttribute('data-toc')).toBe(before);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
   });
 });

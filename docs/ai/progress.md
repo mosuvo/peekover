@@ -35,8 +35,14 @@ open⇄collapsed with matching `aria-expanded`; and the INITIAL state is fixed �
 guaranteed-0 pre-commit/pre-layout width read (a documented default now, corrected to the real width-driven
 `initialTocOpen` on the next rAF once layout exists; the pure rule itself unchanged). `pnpm test` 341 green (golden +
 `permissions:[]` pins intact), lint clean, both builds succeed (content script 278.69 kB, info-only). Column + raw
-fallback + mount() seam untouched. **Next → task 2.3** (backtick keyboard toggle + host registry + de-register on
-teardown). Pointer advances per task (M1 retro rule).
+fallback + mount() seam untouched. **Hardening #2 (rAF liveness guard, tocView.ts/tocView.test.ts only):** the
+initial-state fix's deferred `requestAnimationFrame(decide)` now BAILS if `!host.isConnected || !opener.isConnected`
+before writing — a stale frame firing after teardown / after a newer rail replaced this one no-ops instead of writing
+data-toc/aria-expanded onto a dead node (the dead-node hazard 2.3's registry prunes, arriving early via the rAF
+closure; the synchronous first decide is intentionally exempt). +1 non-vacuous lifecycle test (proven RED with the
+guard removed: the post-teardown frame flips data-toc `collapsed`→`open`); `pnpm test` 342 green, golden + pins intact,
+lint clean. **Next → task 2.3** (backtick keyboard toggle + host registry + de-register on teardown). Pointer advances
+per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
