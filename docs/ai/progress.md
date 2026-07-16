@@ -20,8 +20,16 @@ contents">` + nested `<ol>` of entry `<button>`s (disclosure `aria-expanded` col
 `null` below 2 total headings; labels via `textContent`; each button carries its exact `entry.headingRef` in a
 module-level `WeakMap` read via `tocHeadingRef` — the single ref 3.1 will scroll to; initial open/collapsed from a
 pure `initialTocOpen(width)` rule reflected as `data-toc` on the host; `contained` threaded as a structural marker,
-CSS deferred to 2.2) + 13 jsdom shape tests green, lint clean. **Next → task 2.2** (compose at the `mount.ts` seam +
-`readerCss.ts` styles + golden/manifest pins). Pointer advances per task (M1 retro rule).
+CSS deferred to 2.2) + 13 jsdom shape tests green, lint clean. **Task 2.2 DONE:** composed the rail through the ONE
+`mount.ts` seam — `buildTocView(host, buildTocModel(root), {contained})` pushed into the SAME `children[]` (before
+`root`, alongside the pills; omitted when it returns `null`), committed by the existing single `replaceChildren`;
+`mountRawFallback`'s second `replaceChildren` left TOC-FREE (banner + raw `<pre>` only — never-blank #5). `readerCss.ts`
+grew (ADDITIVELY, tokens only) the `.peekover-toc` rail/list/twist/active-`aria-current`/resizer rules + `--toc-w`
+per-view width var + `scroll-margin-top` on `h1..h6`; `.peekover-toc` added to `CONTAINED_CSS`'s fixed→absolute list.
+**Golden untouched: `git diff tests/golden/output/` EMPTY, huge-doc `sha256=8bc5094c…e61bbd` unchanged** (rail is a
+sibling; `.peekover-reader` column byte-identical), `manifest` still `permissions:[]` — `pnpm test` 340 green, lint
+clean. **Next → task 2.3** (backtick keyboard toggle + host registry + de-register on teardown). Pointer advances per
+task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level

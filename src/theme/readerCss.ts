@@ -260,6 +260,79 @@ export const READER_CSS = /* css */ `
   background:var(--hl-soft);
   border-left:3px solid var(--warn);border-radius:0 var(--r) var(--r) 0;
 }
+
+/* ============ TOC rail (task 2.2 — right-side "on this page" navigation) ============ */
+/* Quiet right-rail chrome, a SIBLING of the reading column and the pills — never inside
+   .peekover-reader (that column stays byte-identical). Same fixed→absolute containment
+   trick the pills use under {contained} (CONTAINED_CSS below). Width is a per-view custom
+   property --toc-w that the resize drag (3.4) rewrites; open/collapsed keys off data-toc on
+   the host (initialTocOpen sets it in 2.1; the backtick toggle flips it in 2.3). Tokens
+   ONLY — panel/line for the surface, muted/faint/ink for text, hl for the active mark. */
+:host{ --toc-w:250px; }
+
+.peekover-toc{
+  position:fixed;top:0;right:0;z-index:1;
+  box-sizing:border-box;width:var(--toc-w);max-width:38vw;height:100%;
+  overflow:auto;padding:56px 22px 130px;
+  font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted);
+  border-left:1px solid var(--line);
+}
+/* Collapsed (narrow scrollport / toggled off) hides the rail; open shows it. The document
+   is always the hero — a hidden rail leaves the reading column exactly as it was. */
+:host([data-toc="collapsed"]) .peekover-toc{display:none}
+.peekover-toc [hidden]{display:none} /* collapsed subtree (childList.hidden) — explicit in shadow */
+
+.peekover-toc__list{list-style:none;margin:0;padding:0}
+/* Nested levels indent under their parent with a hairline guide (the nesting made visible). */
+.peekover-toc__list .peekover-toc__list{margin-left:11px;padding-left:9px;border-left:1px solid var(--line)}
+.peekover-toc__item{margin:0}
+.peekover-toc__row{display:flex;align-items:flex-start;gap:3px}
+
+/* Disclosure twist: a bare glyph that rotates on expand (transition neutralised under
+   prefers-reduced-motion by the global :host rule). No token color beyond faint/muted. */
+.peekover-toc__twist{
+  flex:none;width:18px;height:24px;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:none;border:none;cursor:pointer;color:var(--faint);
+}
+.peekover-toc__twist:hover{color:var(--muted)}
+.peekover-toc__twist::before{content:"\\25B8";font-size:10px;display:inline-block;transition:transform .15s}
+.peekover-toc__twist[aria-expanded="true"]::before{transform:rotate(90deg)}
+
+/* Entry link: a full-width text button, single-line with ellipsis so long headings never
+   break the rail. Ink-on-hover echoes the reader's interactive language. */
+.peekover-toc__link{
+  flex:1 1 auto;min-width:0;
+  display:block;text-align:left;
+  margin:1px 0;padding:4px 7px;
+  background:none;border:none;border-radius:6px;cursor:pointer;
+  font-family:var(--sans);font-size:13px;line-height:1.4;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  transition:color .15s,background .15s;
+}
+.peekover-toc__link:hover{color:var(--ink);background:var(--panel)}
+/* Active section (scroll-spy sets aria-current="location" + .is-active in 3.2). The one
+   highlighter accent as a left bar — brand "interactive = ink + highlighter". */
+.peekover-toc__link.is-active,
+.peekover-toc__link[aria-current="location"]{
+  color:var(--ink);font-weight:600;
+  box-shadow:inset 2px 0 0 var(--hl);
+}
+
+/* Resize handle (3.4 wires the pointer drag that rewrites --toc-w; the rule ships here so
+   the seam task carries the rail's full chrome). A thin grab strip on the rail's inner edge;
+   contained within the now-positioned .peekover-toc. */
+.peekover-toc__resizer{
+  position:absolute;top:0;left:0;width:6px;height:100%;
+  padding:0;background:none;border:none;cursor:ew-resize;touch-action:none;
+}
+.peekover-toc__resizer:hover{background:var(--line)}
+
+/* scroll-margin-top so a TOC click's scrollIntoView (3.1) lands the heading below the top
+   chrome, not flush against the scrollport edge. Container-relative → engine-correct on both
+   surfaces, no JS pixel math. Additive property only; the column's own rules are unchanged. */
+.peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
+.peekover-reader h4,.peekover-reader h5,.peekover-reader h6{ scroll-margin-top:24px; }
 `;
 
 // ============================================================================
@@ -296,5 +369,6 @@ export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
 .peekover-mode-toggle,
 .peekover-remote-load,
-.peekover-net{ position:absolute; }
+.peekover-net,
+.peekover-toc{ position:absolute; }
 `;

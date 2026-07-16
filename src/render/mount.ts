@@ -23,6 +23,8 @@ import {
 } from './readerMode';
 import { applyMediaPolicy } from './mediaPolicy';
 import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
+import { buildTocModel } from './tocModel';
+import { buildTocView } from './tocView';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
@@ -121,6 +123,15 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }
+    // Table-of-contents rail (task 2.2), composed through THIS one seam so both surfaces
+    // (content-script full-page and app-page {contained}) get it with zero per-surface
+    // branching. buildTocModel reads the h1..h6 now living in `root`; buildTocView returns
+    // the rail Node, or null below the >=2-heading threshold — omitted from `children`
+    // entirely, so a thin doc grows no rail chrome. Placed alongside the pills, BEFORE
+    // `root`, as a sibling of the reading column — never inside it, so `.peekover-reader`
+    // stays byte-identical (golden-friendly). Committed by the SAME replaceChildren below.
+    const tocRail = buildTocView(host, buildTocModel(root), { contained: options.contained });
+    if (tocRail) children.push(tocRail);
     children.push(root);
     shadow.replaceChildren(...children);
     registerReaderSource(host, source); // stash source for the lazy Raw view

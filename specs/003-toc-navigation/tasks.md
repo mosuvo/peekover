@@ -62,7 +62,7 @@
       entry in jsdom (structural F2 — real scroll is R1/3.1).
       [§6 F1 (both-surface shape) · F2 (structural) · F4 · F5]
 
-- [ ] **2.2 Compose at the seam (`mount.ts`) + styles (`readerCss.ts`) + golden/manifest pins.** In
+- [x] **2.2 Compose at the seam (`mount.ts`) + styles (`readerCss.ts`) + golden/manifest pins.** In
       `mount.ts:118–125`, after `root` is built (`root.append(tpl.content)` — headings now live in `root`),
       call `buildTocModel(root)` then push `buildTocView(host, model, {contained})` into the SAME `children[]`
       array (omit when it returns `null`), committed by the existing single `shadow.replaceChildren(...)`.
