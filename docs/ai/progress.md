@@ -14,8 +14,14 @@ self-certify (see Done). Nothing on 002 is outstanding.
 **Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3) — IMPLEMENTATION underway.**
 spec.md + plan.md + tasks.md all approved (Gear 3 gates 1–3). **Task 1.1 DONE:** `src/render/tocModel.ts` — pure
 `buildTocModel(root): TocEntry[]` (h1–h6 refs in doc order, nearest-shallower-ancestor nesting, no synthetic nodes,
-designed fallback labels, verbatim duplicates) + 9 jsdom unit tests green, lint clean. **Next → task 2.1** (`tocView`
-rail chrome). Pointer advances per task (M1 retro rule).
+designed fallback labels, verbatim duplicates) + 9 jsdom unit tests green, lint clean. **Task 2.1 DONE:**
+`src/render/tocView.ts` — `buildTocView(host, model, {contained})` builds the right-side `<nav aria-label="Table of
+contents">` + nested `<ol>` of entry `<button>`s (disclosure `aria-expanded` collapse toggling subtree `hidden`;
+`null` below 2 total headings; labels via `textContent`; each button carries its exact `entry.headingRef` in a
+module-level `WeakMap` read via `tocHeadingRef` — the single ref 3.1 will scroll to; initial open/collapsed from a
+pure `initialTocOpen(width)` rule reflected as `data-toc` on the host; `contained` threaded as a structural marker,
+CSS deferred to 2.2) + 13 jsdom shape tests green, lint clean. **Next → task 2.2** (compose at the `mount.ts` seam +
+`readerCss.ts` styles + golden/manifest pins). Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
