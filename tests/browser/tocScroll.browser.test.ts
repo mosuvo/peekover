@@ -24,9 +24,20 @@
 // can never pass by the harness being blind.
 
 import { describe, it, expect, afterEach } from 'vitest';
+// `commands` is vitest's bridge to the server-side browser commands registered in
+// vitest.config.ts; we use it for `emulateReducedMotion` (Playwright `page.emulateMedia`) —
+// the one cross-engine way to toggle prefers-reduced-motion (task 3.3). The augmentation
+// below types our custom command onto the extensible `BrowserCommands` interface.
+import { commands } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
+
+declare module 'vitest/internal/browser' {
+  interface BrowserCommands {
+    emulateReducedMotion(value: 'reduce' | 'no-preference' | null): Promise<void>;
+  }
+}
 
 // A tall multi-heading document: 8 flat h2 sections, each with enough filler that a section is
 // taller than a viewport, so headings sit at well-separated offsets and a mid-doc section can
@@ -404,5 +415,103 @@ describe('TOC scroll-spy — real engine, both surfaces (task 3.2)', () => {
     expect(await stableActiveIndex(buttons)).toBe(2); // spy moved to section 3, not stuck on 6
     expect(topOffset(headings[2], host)).toBeLessThan(100); // 3.1 really brought it to the top
     expect(activeCount(buttons)).toBe(1);
+  });
+});
+
+// ── Task 3.3 — reduced-motion: instant under prefers-reduced-motion, smooth without ──────────
+// The scroll wiring (3.1) calls `scrollIntoView({block:'start'})` with NO `behavior` arg, so the
+// scroll box's CSS `scroll-behavior` governs: readerCss.ts sets `:host{scroll-behavior:smooth}`
+// and flips it to `auto` under `@media (prefers-reduced-motion:reduce)`. jsdom is blind to both
+// media emulation AND scroll animation, so this can only be proven in a real engine — and it must
+// hold in Chromium AND Firefox (reduced motion is an accessibility obligation, spec §5), so it
+// runs on both. Media is emulated via the `emulateReducedMotion` command (Playwright
+// `page.emulateMedia`; vitest.config.ts) — the harness has no in-page emulateMedia and cdp() is
+// Chromium-only, so the server-side Playwright command is the only cross-engine route.
+//
+// DISTINGUISHING INSTANT FROM SMOOTH (the assertion must be able to FAIL): a smooth scroll
+// animates the target over many frames; an instant scroll lands in one. Right after triggering a
+// TOC-entry scroll we sample scrollTop on each of the next several frames, BEFORE it could have
+// finished animating:
+//   • instant/reduce → already AT the target (within a px) on the first post-trigger frame, and
+//     never observed partway;
+//   • smooth/default → still STRICTLY between start (0) and target on an early frame, reaching the
+//     target only later.
+// The two signatures are mutually exclusive, so asserting both (per mode) is non-vacuous BY
+// CONSTRUCTION: if the engine ignored the media query and behaved identically in both modes, one
+// signature would be absent and the test would go red. Red-first was additionally demonstrated by
+// swapping the emulated media (asserting the reduce signature under default media FAILS) — recorded
+// in progress.md.
+
+/** Resolve on the next animation frame — one tick of a smooth scroll's interpolation. */
+function nextFrame(): Promise<void> {
+  return new Promise<void>((r) => requestAnimationFrame(() => r()));
+}
+
+/** Trigger a scroll from the top and capture its trajectory: `immediate` (scrollTop synchronously
+ *  after the trigger), `early` (scrollTop on each of the next `frames` animation frames), and
+ *  `final` (the settled destination — mode-independent; only the PATH there differs). The reset to
+ *  0 + settle is itself smooth-safe (settle waits out any animated reset). */
+async function scrollTrajectory(
+  scroller: HTMLElement,
+  trigger: () => void,
+  frames = 8,
+): Promise<{ immediate: number; early: number[]; final: number }> {
+  scroller.scrollTop = 0;
+  await settle(scroller);
+  trigger();
+  const immediate = scroller.scrollTop;
+  const early: number[] = [];
+  for (let i = 0; i < frames; i += 1) {
+    await nextFrame();
+    early.push(scroller.scrollTop);
+  }
+  const final = await settle(scroller);
+  return { immediate, early, final };
+}
+
+const LAND_EPS = 4; // px slack for "landed on the target" (fractional device-pixel positions)
+const MOVE_EPS = 4; // px past which the box has demonstrably started moving (not still at 0)
+const REDUCE_TARGET = 5; // Section 6 — a large, deterministic scroll distance so smooth clearly animates
+
+/** Assert the mode-distinguishing trajectory signatures on `scroller` for the entry `button`,
+ *  proving BOTH directions of the media query with mutually-exclusive (hence non-vacuous) checks. */
+async function assertReducedMotion(scroller: HTMLElement, button: HTMLElement): Promise<void> {
+  await waitForScrollable(scroller);
+
+  // Harness sanity: the emulation actually reaches the test iframe (matchMedia flips both ways).
+  // If this control fails, media emulation is not wired to the page and nothing below is trustworthy.
+  await commands.emulateReducedMotion('reduce');
+  expect(matchMedia('(prefers-reduced-motion: reduce)').matches).toBe(true);
+  const reduce = await scrollTrajectory(scroller, () => button.click());
+
+  await commands.emulateReducedMotion('no-preference');
+  expect(matchMedia('(prefers-reduced-motion: reduce)').matches).toBe(false);
+  const smooth = await scrollTrajectory(scroller, () => button.click());
+
+  // Same destination in both modes — the media query changes the PATH, never the target.
+  expect(reduce.final).toBeGreaterThan(400); // it really scrolled a large distance
+  expect(Math.abs(reduce.final - smooth.final)).toBeLessThan(LAND_EPS);
+
+  // REDUCE → instant: at the target within one frame, and NEVER observed partway.
+  expect(reduce.early[0]).toBeGreaterThan(reduce.final - LAND_EPS);
+  expect(reduce.early.every((s) => s >= reduce.final - LAND_EPS)).toBe(true);
+
+  // DEFAULT → smooth: NOT landed on the first frame, and observed STRICTLY mid-flight on some early
+  // frame (0 < s < target). This is exactly what fails if the engine ignored the media query (it
+  // would have gone instant like reduce and never been caught mid-flight).
+  expect(smooth.early[0]).toBeLessThan(smooth.final - LAND_EPS);
+  expect(smooth.early.some((s) => s > MOVE_EPS && s < smooth.final - LAND_EPS)).toBe(true);
+}
+
+describe('TOC reduced-motion — real engine (task 3.3)', () => {
+  afterEach(async () => {
+    // Media emulation is page-scoped and persists across tests in this file; reset so later
+    // specs (and reruns) start from the system default rather than a leaked 'reduce'/'no-preference'.
+    await commands.emulateReducedMotion(null);
+  });
+
+  it('full-page host: instant under reduce, smooth without (:host{scroll-behavior} governs)', async () => {
+    const { host, buttons } = mountFullPage();
+    await assertReducedMotion(host, buttons[REDUCE_TARGET]);
   });
 });

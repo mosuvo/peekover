@@ -107,8 +107,34 @@ mark to entry 1 → section-3 assertion RED ("expected +0 to be 2"), and disabli
 `sha256=8bc5094c…e61bbd` intact), `pnpm test:browser` **150 green** both engines, `pnpm test tocView tocModel` 32 green
 (jsdom-safe: the observer construction is guarded where IntersectionObserver is absent), lint clean, both builds succeed
 (content script 281.55 kB, info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched.
-**Next → task 3.3** (reduced-motion: TOC nav scrolls instantly under `prefers-reduced-motion`, smooth without). Pointer
-advances per task (M1 retro rule).
+**Task 3.3 DONE (TEST-ONLY — no production/`src` code):** reduced-motion proven in a real engine on BOTH Chromium +
+Firefox. 3.1 already routes through `scrollIntoView({block:'start'})` with NO `behavior` arg, so readerCss.ts's
+`:host{scroll-behavior:smooth}` (line 71) + `@media(prefers-reduced-motion:reduce){:host{scroll-behavior:auto}}`
+(76–79, from 2.2) govern — and the test PROVES that existing CSS path already yields instant-under-reduce /
+smooth-without on the full-page `:host` scroll box. **No JS fallback needed** (no engine ignored `:host scroll-behavior`
+on `scrollIntoView`; 2.2's CSS is correct — untouched). New TEST-HARNESS capability (human-authorized, out of 3.3's
+listed Files): a `browser.commands` entry `emulateReducedMotion` → Playwright `page.emulateMedia` in `vitest.config.ts`
+— the ONLY cross-engine way to toggle the media query (vitest's in-page `page` API has no `emulateMedia`; `cdp()` is
+Chromium-only). Test (`tocScroll.browser.test.ts`, +1×2 engines) samples scrollTop per animation frame right after a
+TOC-click: reduce = at target on frame 1 AND never observed mid-flight; default = NOT landed on frame 1 AND observed
+strictly mid-flight (0<s<target) — mutually-exclusive signatures, so vacuity is ruled out by construction; a `matchMedia`
+sanity control confirms the emulation reaches the test iframe. **Red-first PROVEN both engines:** emulating
+`no-preference` where the test expects `reduce` → the reduce-signature assertion FAILS (`expected 0 to be greater than
+~20178`; a smooth scroll is still at 0 on frame 1). **CONTAINED-SURFACE FINDING (carried; out of 3.3 scope):** the
+app-page pane scrolls `.peekover-app__reader` (light-DOM, app-shell CSS `appShell.ts:151` — `overflow:auto`, NO
+`scroll-behavior`), and `scrollIntoView` resolves behavior from that scroll box, NOT the shadow `:host` — so contained
+is INSTANT in BOTH modes (measured immediate===final under reduce AND no-preference, both engines). This is NOT engine
+divergence and NOT a defect in 2.2's `:host` CSS (which correctly governs the full-page surface): the reduced-motion
+a11y obligation (instant under reduce) HOLDS on contained trivially, while the smooth-without nicety is absent on the
+app page. Delivering smooth-on-contained would touch app-shell CSS (`appShell.ts`) or take the JS fallback in the 3.1
+handler — both out of 3.3's readerCss-focused scope and NOT triggered by the prompt's engine-divergence rule; flagged
+for 6.1 / the plan §3-#2 ("CSS governs in both surfaces" — false for contained) revisit. A contained reduced-motion
+assertion would be VACUOUS (both modes instant), so it is deliberately NOT in the committed suite. `pnpm test:browser`
+**152 green** both engines, `pnpm test` **350 green** (golden diff EMPTY, manifest `permissions:[]` + huge-doc
+`sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 32 green, lint clean, both builds succeed (content
+script **281.55 kB — byte-identical to 3.2**, confirming no shipped-code change). Only changes: the browser test +
+the `vitest.config.ts` harness command; `src/` (tocView.ts/readerCss.ts/mount.ts/…) untouched.
+**Next → task 3.4** (resize drag). Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level

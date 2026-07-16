@@ -1,5 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
+import type { BrowserCommand } from 'vitest/node';
+
+// ── Reduced-motion media emulation for the browser project (task 3.3) ──────────
+// Vitest's in-page `page` API exposes viewport/screenshot/locators but NO
+// `emulateMedia`, and `cdp()` is Chromium-only — neither can toggle
+// `prefers-reduced-motion` across BOTH engines. The Playwright provider augments
+// the browser-command context with the real Playwright `page`, so this thin
+// server-side command is the one cross-engine (Chromium AND Firefox) way to
+// emulate the media query. Consumed only by tests/browser/tocScroll.browser.test.ts
+// to prove TOC-nav scrolls instantly under reduce / smooth without; a no-op for
+// every other browser test. `null` resets to the system default.
+const emulateReducedMotion: BrowserCommand<[value: 'reduce' | 'no-preference' | null]> = async (
+  { page },
+  value,
+) => {
+  await page.emulateMedia({ reducedMotion: value });
+};
 
 // Two Vitest projects, run independently:
 //
@@ -37,6 +54,9 @@ export default defineConfig({
             enabled: true,
             headless: true,
             provider: playwright(),
+            // Custom cross-engine commands callable from browser tests via
+            // `commands` from 'vitest/browser' (see emulateReducedMotion above).
+            commands: { emulateReducedMotion },
             instances: [
               { browser: 'chromium' },
               { browser: 'firefox' },
