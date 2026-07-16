@@ -84,8 +84,31 @@ Both engines landed the heading via the CSS-governed `scrollIntoView` — NEITHE
 settle-based measurement is smooth/instant-agnostic; smooth-vs-instant is 3.3's scope). `pnpm test` **350 green** (golden
 diff EMPTY, manifest `permissions:[]` + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test:browser` **144 green**
 both engines, `pnpm test tocView tocModel` 32 green, lint clean, both builds succeed (content script 279.86 kB,
-info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched. **Next → task 3.2**
-(scroll-spy: host-rooted IntersectionObserver → `aria-current="location"` tracking). Pointer advances per task (M1 retro rule).
+info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched. **Task 3.2 DONE:** scroll-spy —
+ONE `IntersectionObserver` per rail marks the section being read with `aria-current="location"` + `.is-active`
+(the 2.2 CSS hooks). Root is resolved PER SURFACE, not assumed `:host` (tasks.md 3.2's "root: host … :host in both"
+predates 3.1's scroll-box discovery; the parenthetical "proven, not assumed" is honored by resolving the real
+container): full-page → `:host` (fixed/inset:0/overflow:auto, always scrolls); contained → the nearest ancestor pane
+that scrolls (`.peekover-app__reader`; `:host`'s own overflow:auto is the full-page rule and is skipped), resolved by
+COMPUTED overflow (layout-timing-robust). rootMargin `0px 0px -70% 0px` (activation line 30% from the scrollport top);
+active section DETERMINED from LIVE `getBoundingClientRect` per recompute (the observer + a rAF-coalesced scroll listener
+are the TRIGGERS) — NOT from `isIntersecting` snapshots, which go stale on a fast scroll that jumps a heading clear
+across the thin band (the first-cut `passed[]` design failed exactly there on both engines; fixed). TRAILING-SHORT-SECTION
+edge handled: at scroll-bottom the final entry is promoted (the observer never fires at the absolute bottom), so the
+highlight can reach the last section. Observer DISCONNECTED on teardown: `teardownScrollSpy(host)` at the top of every
+`buildTocView` supersedes the prior rail's observer + scroll listener + pending frame; the raw-fallback path (which never
+calls buildTocView) self-heals via an isConnected liveness check in recompute — same discipline as the rAF guard + host
+registry; **mount.ts untouched** (tasks.md 3.2 scopes edits to tocView.ts + the browser test). Zero network (the observer
+watches layout). `tests/browser/tocScroll.browser.test.ts` (+3, ×2 engines = +6): observer-sanity/NON-VACUOUS (two
+different offsets → two different actives), track section 3 / top / bottom(=last, trailing edge), exactly-one-active, and
+composes-with-3.1 (click-to-scroll → the mark lands on the clicked section). **Red-first PROVEN both engines:** pinning the
+mark to entry 1 → section-3 assertion RED ("expected +0 to be 2"), and disabling the trailing-edge promotion → bottom RED
+("expected 6 to be 7"). `pnpm test` **350 green** (golden diff EMPTY, manifest `permissions:[]` + huge-doc
+`sha256=8bc5094c…e61bbd` intact), `pnpm test:browser` **150 green** both engines, `pnpm test tocView tocModel` 32 green
+(jsdom-safe: the observer construction is guarded where IntersectionObserver is absent), lint clean, both builds succeed
+(content script 281.55 kB, info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched.
+**Next → task 3.3** (reduced-motion: TOC nav scrolls instantly under `prefers-reduced-motion`, smooth without). Pointer
+advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level

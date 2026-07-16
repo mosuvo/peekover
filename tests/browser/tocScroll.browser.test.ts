@@ -147,7 +147,7 @@ afterEach(() => {
   for (const h of fullPageHosts.splice(0)) h.remove();
 });
 
-function mountFullPage(): {
+function mountFullPage(doc: string = buildDoc()): {
   host: HTMLElement;
   buttons: HTMLElement[];
   headings: Element[];
@@ -155,7 +155,7 @@ function mountFullPage(): {
   const host = document.createElement('peekover-root');
   document.body.appendChild(host);
   fullPageHosts.push(host);
-  mount(buildDoc(), host);
+  mount(doc, host);
   const shadow = host.shadowRoot!;
   const buttons = [...shadow.querySelectorAll<HTMLElement>('button.peekover-toc__link')];
   const headings = [...shadow.querySelectorAll('.peekover-reader h2')];
@@ -194,7 +194,7 @@ afterEach(() => {
   for (const c of containers.splice(0)) c.remove();
 });
 
-async function mountContained(): Promise<{
+async function mountContained(doc: string = buildDoc()): Promise<{
   scroller: HTMLElement;
   buttons: HTMLElement[];
   headings: Element[];
@@ -204,7 +204,7 @@ async function mountContained(): Promise<{
   containers.push(container);
 
   const app = mountAppShell(container, {
-    openFolder: async () => ({ ok: true, source: memorySource('doc.md', buildDoc()) }),
+    openFolder: async () => ({ ok: true, source: memorySource('doc.md', doc) }),
     store: fakeStore(),
   });
   await app.openFolder();
@@ -266,5 +266,143 @@ describe('TOC click-to-scroll — real engine, both surfaces (task 3.1)', () => 
     await settle(host);
     expect(location.href).toBe(hrefBefore);
     expect(history.length).toBe(historyBefore);
+  });
+});
+
+// ── Task 3.2 — scroll-spy: the active entry tracks the section being read ────────────────────
+// One IntersectionObserver rooted on the reader's ACTUAL scroll container (resolved per surface,
+// NOT assumed to be :host — see tocView.ts) marks the current section with aria-current="location"
+// + .is-active. jsdom has neither IntersectionObserver nor layout, so this is a real-engine proof;
+// it runs on Chromium AND Firefox, on BOTH surfaces (the per-surface root correctness is the point).
+
+// A spy doc where every section but the LAST is taller than a viewport (well-separated,
+// reachable-to-top offsets) and the FINAL section is a single short line — so its heading can
+// NEVER reach the activation line at max scroll. That is exactly what forces the trailing-edge
+// promotion: without it the highlight would stall on the second-to-last section.
+const SPY_SECTIONS = 8;
+function buildSpyDoc(): string {
+  const parts: string[] = [];
+  for (let i = 1; i <= SPY_SECTIONS; i += 1) {
+    parts.push(`## Section ${i}`);
+    parts.push(i === SPY_SECTIONS ? 'Short trailing section.' : FILLER);
+  }
+  return parts.join('\n\n');
+}
+
+/** Index of the entry currently marked active (aria-current="location"), or -1 if none. */
+function activeIndex(links: HTMLElement[]): number {
+  return links.findIndex((l) => l.getAttribute('aria-current') === 'location');
+}
+
+/** How many entries are marked active — must be exactly 1 whenever the spy has run. */
+function activeCount(links: HTMLElement[]): number {
+  return links.filter((l) => l.getAttribute('aria-current') === 'location').length;
+}
+
+/** Poll until the active index stops changing (the spy updates over a frame or two after a
+ *  scroll settles) or we time out, then return it. Waiting for STABILITY — not for an expected
+ *  value — keeps the assertion non-vacuous: a wrong-but-stable active index is returned and then
+ *  fails the caller's `expect`, rather than being masked by a poll-until-equal. */
+async function stableActiveIndex(links: HTMLElement[]): Promise<number> {
+  let prev = Number.NaN;
+  let stable = 0;
+  for (let i = 0; i < 160; i += 1) {
+    const cur = activeIndex(links);
+    if (cur === prev) {
+      stable += 1;
+      if (stable >= 3) return cur;
+    } else {
+      stable = 0;
+    }
+    prev = cur;
+    await new Promise<void>((r) => setTimeout(r, 25));
+  }
+  return activeIndex(links);
+}
+
+/** Scroll `scroller` so `heading` sits just below the scrollport top (direct scrollTop write —
+ *  instant, independent of smooth-vs-instant behavior; `settle` handles either). */
+function scrollToHeading(scroller: HTMLElement, heading: Element): void {
+  const delta = heading.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+  scroller.scrollTop = scroller.scrollTop + delta - 4;
+}
+
+/** Shared, surface-agnostic scroll-spy assertions: observer sanity (non-vacuous: two different
+ *  positions → two different actives), tracking at top / mid / bottom, exactly-one-active, and
+ *  the trailing-section edge. One code path; only which element is the scroll box differs. */
+async function assertSpyTracks(
+  scroller: HTMLElement,
+  links: HTMLElement[],
+  headings: Element[],
+): Promise<void> {
+  expect(links.length).toBe(SPY_SECTIONS);
+  expect(headings.length).toBe(SPY_SECTIONS);
+  await waitForScrollable(scroller);
+
+  // Baseline: at the very top, section 1 is the current section.
+  scroller.scrollTop = 0;
+  await settle(scroller);
+  expect(await stableActiveIndex(links)).toBe(0);
+  expect(activeCount(links)).toBe(1);
+
+  // OBSERVER SANITY / NON-VACUOUS: two DIFFERENT scroll positions must yield two DIFFERENT active
+  // entries. A mis-rooted observer (against the viewport, not this box) or a blind one would never
+  // change the active — so a stuck highlight cannot pass here. Section 3:
+  scrollToHeading(scroller, headings[2]);
+  await settle(scroller);
+  const atThree = await stableActiveIndex(links);
+  expect(atThree).toBe(2);
+  expect(activeCount(links)).toBe(1);
+
+  // A different position (Section 6) → a different active entry (the highlight MOVED).
+  scrollToHeading(scroller, headings[5]);
+  await settle(scroller);
+  const atSix = await stableActiveIndex(links);
+  expect(atSix).toBe(5);
+  expect(atSix).not.toBe(atThree);
+  expect(activeCount(links)).toBe(1);
+
+  // The mark follows the scroll both ways — back to the top → section 1 again.
+  scroller.scrollTop = 0;
+  await settle(scroller);
+  expect(await stableActiveIndex(links)).toBe(0);
+
+  // TRAILING-SECTION EDGE: scroll to the very bottom → the LAST entry is active, even though the
+  // short final section's heading never reaches the activation line. Without the trailing-edge
+  // promotion the highlight would stall on section 7 (index 6) — this asserts index 7.
+  scroller.scrollTop = scroller.scrollHeight;
+  await settle(scroller);
+  expect(await stableActiveIndex(links)).toBe(SPY_SECTIONS - 1);
+  expect(activeCount(links)).toBe(1);
+}
+
+describe('TOC scroll-spy — real engine, both surfaces (task 3.2)', () => {
+  it('full-page host: the active entry tracks the section being read (:host is the scroll box)', async () => {
+    const { host, buttons, headings } = mountFullPage(buildSpyDoc());
+    await assertSpyTracks(host, buttons, headings);
+  });
+
+  it('contained pane: the active entry tracks the section being read (.peekover-app__reader is the scroll box)', async () => {
+    const { scroller, buttons, headings } = await mountContained(buildSpyDoc());
+    await assertSpyTracks(scroller, buttons, headings);
+  });
+
+  it('composes with 3.1: after click-to-scroll the active mark lands on the clicked section', async () => {
+    // Click-to-scroll (3.1) and scroll-spy (3.2) compose: clicking an entry scrolls to it, then
+    // the spy updates the active mark to THAT section — not stuck on the previously-read one.
+    const { host, buttons, headings } = mountFullPage(buildSpyDoc());
+    await waitForScrollable(host);
+    host.scrollTop = 0;
+    await settle(host);
+
+    buttons[5].click(); // 3.1 scrolls to section 6
+    await settle(host);
+    expect(await stableActiveIndex(buttons)).toBe(5); // spy caught up to section 6
+
+    buttons[2].click(); // 3.1 scrolls back up to section 3
+    await settle(host);
+    expect(await stableActiveIndex(buttons)).toBe(2); // spy moved to section 3, not stuck on 6
+    expect(topOffset(headings[2], host)).toBeLessThan(100); // 3.1 really brought it to the top
+    expect(activeCount(buttons)).toBe(1);
   });
 });

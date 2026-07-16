@@ -95,6 +95,19 @@ function countHeadings(entries: TocEntry[]): number {
   return n;
 }
 
+/** The heading refs flattened in document (pre-order) order — parent before its children,
+ *  exactly the order buildList emits the `.peekover-toc__link` buttons. So zipping this with
+ *  the nav's links (below, in buildTocView) pairs each entry button with its own heading, one
+ *  per entry, for the scroll-spy (3.2). */
+function flattenHeadings(entries: TocEntry[]): Element[] {
+  const out: Element[] = [];
+  for (const e of entries) {
+    out.push(e.headingRef);
+    out.push(...flattenHeadings(e.children));
+  }
+  return out;
+}
+
 /** Build one nested `<ol>` of entries. Recurses for children so document nesting becomes
  *  list nesting (the a11y nested-list structure). */
 function buildList(entries: TocEntry[]): HTMLOListElement {
@@ -267,6 +280,11 @@ export function buildTocView(
   model: TocEntry[],
   options: TocViewOptions = {},
 ): Node | null {
+  // A fresh render supersedes the previous rail: disconnect any prior scroll-spy for this host
+  // BEFORE we decide rail-or-not, so a rail→no-rail re-render (dropping below 2 headings) also
+  // tears the old observer down. Idempotent; no-op the first time (task 3.2 lifecycle).
+  teardownScrollSpy(host);
+
   if (countHeadings(model) < 2) return null; // threshold omit — no rail below 2 headings
 
   const nav = document.createElement('nav');
@@ -283,7 +301,247 @@ export function buildTocView(
 
   applyInitialTocState(host, opener);
 
+  // Scroll-spy (3.2): pair each heading ref with its entry button and install the observer.
+  // The model pre-order (flattenHeadings) matches the nav's `.peekover-toc__link` DOM order
+  // one-for-one (buildList emits parent-then-children), so index i pairs the same entry.
+  // querySelectorAll on the still-detached nav is fine — mount() commits it next, and the
+  // observer only starts on the following frame (post-commit/post-layout) via installScrollSpy.
+  const links = [...nav.querySelectorAll<HTMLElement>('button.peekover-toc__link')];
+  const headings = flattenHeadings(model);
+  const pairs: SpyPair[] = links.map((link, i) => ({ heading: headings[i], link }));
+  installScrollSpy(host, pairs, options.contained === true);
+
   return nav;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Task 3.2 — scroll-spy: ONE IntersectionObserver per rail, host-rooted on the reader's
+// ACTUAL scroll container, marking the section being read with aria-current="location" +
+// .is-active (the active-mark CSS hooks 2.2 already added). Real-engine only — jsdom has no
+// IntersectionObserver and no layout (guarded below, the same way 3.1 guarded scrollIntoView).
+//
+// ROOT RESOLUTION is load-bearing and differs by surface (3.1's scroll-box fact). On the
+// full-page content-script takeover, :host IS the scroll box (position:fixed; inset:0;
+// overflow:auto — it always scrolls). In the app-page {contained} pane, :host sits in normal
+// flow (CONTAINED_CSS) and grows to its content, so it never scrolls itself; the scrolling
+// element is an ancestor pane (.peekover-app__reader, overflow:auto). A wrong root silently
+// observes against the VIEWPORT and the spy tracks nothing (or everything) — so the container
+// must be RESOLVED, never assumed to be :host. tasks.md 3.2 literally says "root: host … :host
+// in both" — that predates 3.1's discovery; the parenthetical "proven, not assumed" is honored
+// by proving the real container per surface, and the test asserts tracking on BOTH.
+
+/** rootMargin for the spy's IntersectionObserver. Bottom -70% shrinks the observation root to
+ *  its TOP 30%, so the observer fires as a heading crosses that near-top band — the cadence at
+ *  which the current section changes. The active section is DETERMINED from live geometry in
+ *  `recompute` (below), against an activation line at the same 30%-from-top (SPY_ACTIVATION_RATIO
+ *  mirrors this -70%); the observer is the efficient TRIGGER, not the sole arbiter, because
+ *  IntersectionObserver only reports when isIntersecting CHANGES — a fast scroll that jumps a
+ *  heading clear across the thin band (not-intersecting-above → not-intersecting-below) fires no
+ *  callback and would strand a snapshot-based flag. Live geometry is immune to that. */
+const SPY_ROOT_MARGIN = '0px 0px -70% 0px';
+
+/** The activation line as a fraction of the scrollport height from its top. 0.30 corresponds
+ *  EXACTLY to SPY_ROOT_MARGIN's -70% bottom (rootBounds.bottom = boxTop + 0.30·clientHeight), so
+ *  the observer's trigger band and the geometry we measure against share one line. MEASURED on
+ *  the real many-section doc in tocScroll.browser.test.ts: at 30%, scrolling section N's heading
+ *  to the top makes N — and only N — active while N+1 (≥1 viewport below) is not yet, a clean
+ *  single-active handoff at every tested offset on both engines. A line nearer the very top
+ *  delayed activation into the section; 30% tracked the reading position best without ever
+ *  double-marking. */
+const SPY_ACTIVATION_RATIO = 0.3;
+
+/** px slack for "the scroll box is at its bottom" — fractional device-pixel scroll positions
+ *  never land exactly on scrollHeight-clientHeight. Small, so only the true bottom promotes. */
+const SPY_BOTTOM_EPS = 2;
+
+/** True when an element is a vertical scroll container by its COMPUTED overflow. Computed style
+ *  is available synchronously (unlike scrollHeight, which needs layout), so this resolves the
+ *  root correctly on the first post-mount frame. */
+function scrollsVertically(el: Element): boolean {
+  const oy = getComputedStyle(el).overflowY;
+  return oy === 'auto' || oy === 'scroll' || oy === 'overlay';
+}
+
+/**
+ * The reader's real vertical scroll container for `host`, resolved per surface (never blindly
+ * :host). Full-page (`!contained`) → :host itself (the fixed, inset:0 takeover that always
+ * scrolls). Contained → the nearest ANCESTOR pane that scrolls; :host's OWN overflow:auto is the
+ * full-page rule and does not scroll in normal flow, so the host is excluded from the walk and
+ * `.peekover-app__reader` (overflow:auto) is found. Falls back to host if no scrolling ancestor
+ * exists (a degenerate mount) — still a shadow-including ancestor of the headings, so the
+ * observer stays valid rather than throwing.
+ */
+function resolveScrollContainer(host: HTMLElement, contained: boolean): HTMLElement {
+  if (!contained) return host;
+  let el = host.parentElement;
+  while (el) {
+    if (scrollsVertically(el)) return el;
+    el = el.parentElement;
+  }
+  return host;
+}
+
+/** One TOC entry button paired with the exact heading node it tracks (both in document order). */
+interface SpyPair {
+  heading: Element;
+  link: HTMLElement;
+}
+
+/** Per-host scroll-spy teardown. mount() re-renders into the SAME shadow root (idempotent), so a
+ *  fresh rail must disconnect the previous rail's observer or it leaks — the same replaced-rail
+ *  hazard the rAF liveness guard and the host registry already guard against. */
+const spyByHost = new WeakMap<HTMLElement, () => void>();
+
+/** Disconnect any live scroll-spy for `host` (idempotent). Called at the top of buildTocView so a
+ *  new rail supersedes the old; the raw-fallback path never calls buildTocView, so that case is
+ *  covered by the self-heal inside `recompute` (below) rather than a mount.ts hook — tasks.md 3.2
+ *  scopes edits to tocView.ts + the test, not mount.ts. */
+function teardownScrollSpy(host: HTMLElement): void {
+  const t = spyByHost.get(host);
+  if (t) {
+    t();
+    spyByHost.delete(host);
+  }
+}
+
+/**
+ * Install the scroll-spy for one rail; its teardown is registered in `spyByHost`. ONE
+ * IntersectionObserver, rooted on the resolved scroll container, over the heading refs. It flips
+ * aria-current="location" + .is-active onto EXACTLY ONE entry — the section currently being read.
+ *
+ * "Current" = the LAST heading whose top is at or above the activation line (30% from the
+ * scrollport top). Reading that from LIVE getBoundingClientRect on each recompute — rather than a
+ * per-heading "currently intersecting" flag — keeps a section active while the reader is IN it
+ * (including the gaps between headings where none sits inside the thin band) AND is immune to
+ * fast-scroll staleness (see SPY_ROOT_MARGIN). Headings are in document order, so their tops
+ * increase down the page: the scan stops at the first one below the line.
+ *
+ * TRAILING-SECTION EDGE (plan §3-#3): the last section(s) can be too short to ever push their
+ * heading up to the activation line, so "last passed" could never reach the final entry. When the
+ * box is at (or within SPY_BOTTOM_EPS of) its bottom, the final entry is promoted, so the
+ * highlight CAN reach the last section. A rAF-coalesced scroll listener drives this: the observer
+ * does NOT fire at the absolute bottom when no heading crosses the line there, so the bottom is
+ * detected from the scroll position itself.
+ *
+ * LIFECYCLE: `teardown` disconnects the observer, removes the scroll listener, and cancels any
+ * pending frame. It runs when a rebuild supersedes this rail (teardownScrollSpy at the top of
+ * buildTocView) and self-heals when the rail is torn down without a rebuild (the never-blank raw
+ * fallback detaches the old headings → the next recompute sees a disconnected node and tears
+ * itself down — the same isConnected discipline as the rAF guard and the registry). No scroll,
+ * URL, history, or network: the spy only sets/removes an attribute + class, and the observer
+ * issues no request (it watches layout).
+ */
+function installScrollSpy(host: HTMLElement, pairs: SpyPair[], contained: boolean): void {
+  let observer: IntersectionObserver | null = null;
+  let root: HTMLElement | null = null;
+  let onScroll: (() => void) | null = null;
+  let startRaf = 0;
+  let scrollRaf = 0;
+  let disposed = false;
+
+  const cancel = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : null;
+  const schedule = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+
+  const teardown = (): void => {
+    disposed = true;
+    if (cancel) {
+      if (startRaf) cancel(startRaf);
+      if (scrollRaf) cancel(scrollRaf);
+    }
+    startRaf = 0;
+    scrollRaf = 0;
+    if (observer) observer.disconnect();
+    if (root && onScroll) root.removeEventListener('scroll', onScroll);
+    observer = null;
+    root = null;
+    onScroll = null;
+  };
+  spyByHost.set(host, teardown);
+
+  const start = (): void => {
+    if (disposed || !host.isConnected) return;
+    // Guard the observer construction where IntersectionObserver is absent (jsdom), exactly as
+    // 3.1 guards scrollIntoView — so activating the rail in a unit test never throws.
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const box = resolveScrollContainer(host, contained);
+    root = box;
+
+    let activeIdx = -1;
+
+    const setActive = (idx: number): void => {
+      if (idx === activeIdx) return; // no DOM churn when the section hasn't changed
+      activeIdx = idx;
+      pairs.forEach((p, i) => {
+        if (i === idx) {
+          p.link.setAttribute('aria-current', 'location');
+          p.link.classList.add('is-active');
+        } else {
+          p.link.removeAttribute('aria-current');
+          p.link.classList.remove('is-active');
+        }
+      });
+    };
+
+    const recompute = (): void => {
+      if (disposed) return;
+      // Self-heal for the raw-fallback path (which replaces the rail WITHOUT calling
+      // buildTocView, so nothing else supersedes this spy): once the old headings/links are
+      // detached, tear down instead of writing to dead nodes — the isConnected liveness the rAF
+      // guard and the host registry already use.
+      if (!host.isConnected || (pairs.length > 0 && !pairs[0].link.isConnected)) {
+        teardown();
+        return;
+      }
+      // The current section = the LAST heading whose top is at or above the activation line,
+      // read from live geometry. Tops increase in document order, so stop at the first below.
+      const lineY = box.getBoundingClientRect().top + box.clientHeight * SPY_ACTIVATION_RATIO;
+      let idx = 0;
+      for (let i = 0; i < pairs.length; i += 1) {
+        if (pairs[i].heading.getBoundingClientRect().top <= lineY) idx = i;
+        else break;
+      }
+      const atBottom = box.scrollHeight - box.clientHeight - box.scrollTop <= SPY_BOTTOM_EPS;
+      if (atBottom) idx = pairs.length - 1; // trailing-section edge
+      setActive(idx);
+    };
+
+    // ONE IntersectionObserver over the heading refs: it fires when a heading crosses the near-top
+    // band and re-evaluates the current section from live geometry (recompute). It also catches
+    // active-section changes that happen WITHOUT a scroll — a layout shift (late fonts/images
+    // reflowing the column) moves headings under a still scroll position.
+    observer = new IntersectionObserver(() => recompute(), {
+      root: box,
+      rootMargin: SPY_ROOT_MARGIN,
+      threshold: 0,
+    });
+    for (const p of pairs) observer.observe(p.heading);
+
+    // The observer does not fire at the ABSOLUTE bottom when no heading crosses the line there,
+    // so a light rAF-coalesced scroll listener drives the trailing-edge promotion (and keeps the
+    // mark responsive between intersection callbacks). Passive: it never blocks scrolling.
+    onScroll = (): void => {
+      if (scrollRaf) return;
+      if (!schedule) {
+        recompute();
+        return;
+      }
+      scrollRaf = schedule(() => {
+        scrollRaf = 0;
+        recompute();
+      });
+    };
+    box.addEventListener('scroll', onScroll, { passive: true });
+
+    recompute(); // initial mark; observe()'s initial batch then refines `passed` from real layout
+  };
+
+  // Defer to the next frame so mount() has committed the rail and the engine has laid it out —
+  // resolveScrollContainer and the intersection geometry both need the committed, laid-out DOM.
+  if (schedule) startRaf = schedule(() => {
+    startRaf = 0;
+    start();
+  });
 }
 
 // ───────────────────────────────────────────────────────────────────────────
