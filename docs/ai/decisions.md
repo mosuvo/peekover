@@ -1,6 +1,22 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-16 · FINDING (task 3.3): the app-page (contained) reader is reduced-motion-safe by
+  ACCIDENT, not by design — plan §3-#2 is FALSE for the contained surface.** The contained reader
+  scrolls `.peekover-app__reader` — a **light-DOM** element whose CSS lives in the app shell
+  (`appShell.ts`, `overflow:auto`, **no `scroll-behavior`**), NOT the shadow `:host`. `scrollIntoView`
+  reads `scroll-behavior` from that scroll box, so contained is **INSTANT in both modes** (measured,
+  both engines, 3.3). **Why it matters:** plan §3-#2's "CSS `:host{scroll-behavior}` governs on BOTH
+  surfaces" does not hold here — `readerCss.ts`'s `:host` reduced-motion override (the smooth default
+  + `@media(prefers-reduced-motion:reduce)` reset) never reaches that light-DOM box, so the contained
+  surface's reduced-motion safety is **incidental (instant-always)**, not enforced. Latent hazard: if
+  anyone later adds `scroll-behavior:smooth` to `.peekover-app__reader` for parity, it would be smooth
+  in **both** modes and silently violate `prefers-reduced-motion` on the app page, because the override
+  isn't co-located with that box. **Revisit-when:** smooth-scroll parity on the app page is wanted, OR
+  before any app-shell scroll-CSS change — add a reduced-motion-aware `scroll-behavior` to
+  `.peekover-app__reader` (or take the §3-#2 JS `behavior` fallback in the 3.1 handler). Carried to
+  6.1 for the plan §3-#2 revisit.
+
 - **2026-07-16 · Firefox manual-gate loads MUST come from a FRESH production build (testing
   procedure, not a code decision).** `wxt build -b firefox` → load `.output/firefox-mv3/manifest.json`
   (note: **mv3**, not mv2 — we target MV3 on Firefox). A stale or dev Firefox load shows a `localhost`
