@@ -432,6 +432,36 @@ describe('backtick TOC toggle + host registry (task 2.3)', () => {
     expect(dead.getAttribute('data-toc')).toBe('open');
   });
 
+  it('RAIL-LESS SKIP: resolves to the host WITH a rail, not a connected-but-rail-less last-registered host', () => {
+    // Multi-host gap the dead-node prune alone misses: a host can be CONNECTED yet have no rail
+    // (its shadow root holds no toggle button). host A has a real composed rail; host B is
+    // connected + registered LAST but rail-less. Focus is OUTSIDE both, so resolution falls to
+    // the last-registered fallback — where B sits.
+    //   • OLD behavior (prune !isConnected only): the fallback returns B (last live host);
+    //     toggleTocHost finds no opener under B and no-ops → A NEVER toggles → the A-collapsed
+    //     assertion below FAILS (RED). The backtick is dead even though A has a visible rail.
+    //   • NEW behavior (require hasRail): B is skipped, A is the last host WITH a rail, A toggles.
+    const a = mountedHost();
+    const b = document.createElement('peekover-root');
+    document.body.appendChild(b);
+    b.attachShadow({ mode: 'open' }); // shadow root present, but EMPTY — no button.peekover-toc__toggle
+    b.setAttribute('data-toc', 'open');
+    registerTocHost(b); // registered after A → B is the "last-registered" fallback candidate
+    created.push(b);
+
+    // Focus outside both hosts so the activeElement branch does not fire and resolution reaches
+    // the last-registered fallback (the branch the rail-less host would otherwise win).
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    expect(a.contains(document.activeElement)).toBe(false);
+    expect(b.contains(document.activeElement)).toBe(false);
+    expect(a.getAttribute('data-toc')).toBe('open');
+
+    const e = pressKey('`');
+    expect(e.defaultPrevented).toBe(true); // a live rail (A) was resolved → handled
+    expect(a.getAttribute('data-toc')).toBe('collapsed'); // A — the host WITH a rail — toggled
+    expect(b.getAttribute('data-toc')).toBe('open'); // B, rail-less, was skipped, untouched
+  });
+
   it('pressing backtick on a page with NO registered host is a pass-through (no throw, nothing toggled)', () => {
     // afterEach has cleared the registry; no rail exists on this page.
     const e = pressKey('`');

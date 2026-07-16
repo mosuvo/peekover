@@ -49,13 +49,24 @@ from readerMode's `\`, so the two never collide (each returns early on the other
 `Set<HTMLElement>` mount() fills when a rail is composed (un-fills on a rail-less re-render AND the raw-fallback path);
 the resolver PRUNES any `!host.isConnected` entry first, then returns the registered host containing
 `document.activeElement`, else the last-registered live host — so the "last host" fallback can never resolve to a dead
-node (same isConnected discipline as the rAF guard). Toggle flips the resolved host's `data-toc` via the SAME
+node (same isConnected discipline as the rAF guard). **2.3 HARDENING (resolver requires a LIVE rail, not just a live
+host — tocView.ts/tocView.test.ts only):** resolution now also requires the resolved host to CURRENTLY have a rail —
+a `hasRail(host)` = `!!host.shadowRoot?.querySelector('button.peekover-toc__toggle')` (the exact node `toggleTocHost`
+flips), applied to BOTH the activeElement match and the last-registered fallback; if no registered host has a live rail
+the resolver returns `null` (clean pass-through). Closes a multi-host dead-key: a connected-but-rail-less host (its
+shadow re-rendered without a rail) could win the fallback, and `toggleTocHost`'s `if (!opener) return` swallowed the
+press silently even when ANOTHER registered host had a visible rail — so backtick did nothing. That `if (!opener)`
+guard stays as belt-and-suspenders but no longer hides a mis-resolution. +1 non-vacuous multi-host test (host A with a
+rail + host B connected-but-rail-less registered last, focus outside both → backtick toggles A, not a no-op on B);
+proven RED with the rail-less filter removed (fallback returns B, `toggleTocHost` no-ops, A never toggles → assertion
+fails). Toggle flips the resolved host's `data-toc` via the SAME
 `setTocOpen` writer the opener uses (data-toc + opener aria-expanded in lockstep); no scroll/URL/history/network. +7
 non-vacuous jsdom tests (backtick toggle + aria tracking; Ctrl/Cmd/Alt + editable-field guards; `\`↔backtick
 no-collision both ways; two-host activeElement resolution; DEAD-NODE PRUNE proven RED with the prune removed — resolver
-returns the dead host and writes to it; no-rail pass-through; idempotent-install single-flip). `pnpm test` **349 green**
-(manifest `permissions:[]` + golden + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 31 green,
-golden diff EMPTY, lint clean, both builds succeed (mv3; content script 279.6 kB, info-only). readerMode.ts /
+returns the dead host and writes to it; no-rail pass-through; idempotent-install single-flip; RAIL-LESS SKIP multi-host
+resolution). `pnpm test` **350 green** (manifest `permissions:[]` + golden + huge-doc `sha256=8bc5094c…e61bbd` intact),
+`pnpm test tocView tocModel` 32 green, golden diff EMPTY, lint clean, both builds succeed (mv3; content script 279.7 kB,
+info-only). readerMode.ts /
 sanitize.ts / parse.ts / manifest / readerCss.ts / tocModel.ts / golden fixtures untouched; raw-fallback path stays
 TOC-free AND now un-registers. Added a dated `decisions.md` line (Firefox manual-gate loads must come from a FRESH
 `wxt build -b firefox` → `.output/firefox-mv3` — a stale/dev load's `localhost` CSP warning is a procedure error, not a

@@ -297,15 +297,28 @@ export function unregisterTocHost(host: HTMLElement): void {
   tocHosts.delete(host);
 }
 
+/** A registered host currently HAS a rail when its shadow root holds the rail's opener — the
+ *  exact node `toggleTocHost` needs to flip. A host can be connected yet rail-LESS (its shadow
+ *  root was re-rendered without a rail); such a host must NOT win resolution, or the "last host"
+ *  fallback resolves to it and `toggleTocHost` no-ops silently — a dead backtick even when ANOTHER
+ *  registered host has a visible rail the user meant to toggle. Resolution therefore requires a
+ *  LIVE rail, not merely a live host (the same predicate `toggleTocHost` acts through). */
+function hasRail(host: HTMLElement): boolean {
+  return !!host.shadowRoot?.querySelector('button.peekover-toc__toggle');
+}
+
 /**
- * The active reader host the backtick toggle acts on, or `null` when no live rail exists.
- * PRUNES first: any registered host no longer in the document is removed, so the "last
- * host" fallback can never resolve to a dead node (deleting during Set iteration is safe —
- * removed entries are not revisited). Then: the registered host containing
- * `document.activeElement` wins (focus inside a shadow root retargets `activeElement` to
- * its host, so `host === active` catches a focused rail button; `host.contains` catches a
- * focused light-DOM descendant on the contained surface); otherwise the sole / last-
- * registered live host (Set preserves insertion order).
+ * The active reader host the backtick toggle acts on, or `null` when no host has a live rail.
+ * PRUNES first: any registered host no longer in the document is removed, so the "last host"
+ * fallback can never resolve to a dead node (deleting during Set iteration is safe — removed
+ * entries are not revisited). Then, considering only hosts that currently HAVE a rail
+ * (`hasRail` — a connected-but-rail-less host can't be toggled, so it is skipped, never
+ * swallowing the key): the registered host containing `document.activeElement` wins (focus
+ * inside a shadow root retargets `activeElement` to its host, so `host === active` catches a
+ * focused rail button; `host.contains` catches a focused light-DOM descendant on the contained
+ * surface); otherwise the sole / last-registered host WITH a rail (Set preserves insertion
+ * order). If no registered host has a live rail, returns `null` — a clean pass-through, never a
+ * mis-resolution `toggleTocHost` would silently absorb.
  */
 function resolveActiveTocHost(): HTMLElement | null {
   for (const host of tocHosts) {
@@ -316,12 +329,13 @@ function resolveActiveTocHost(): HTMLElement | null {
   const active = typeof document !== 'undefined' ? document.activeElement : null;
   if (active) {
     for (const host of tocHosts) {
+      if (!hasRail(host)) continue; // rail-less host can't be toggled — skip, don't swallow `
       if (host === active || host.contains(active)) return host;
     }
   }
 
   let last: HTMLElement | null = null;
-  for (const host of tocHosts) last = host; // insertion order → last-registered live host
+  for (const host of tocHosts) if (hasRail(host)) last = host; // last-registered host WITH a live rail
   return last;
 }
 
