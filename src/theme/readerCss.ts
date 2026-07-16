@@ -277,9 +277,32 @@ export const READER_CSS = /* css */ `
   font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted);
   border-left:1px solid var(--line);
 }
-/* Collapsed (narrow scrollport / toggled off) hides the rail; open shows it. The document
-   is always the hero — a hidden rail leaves the reading column exactly as it was. */
-:host([data-toc="collapsed"]) .peekover-toc{display:none}
+
+/* Always-present opener/handle heading the rail — the single control that flips data-toc,
+   and the affordance that MUST survive the collapsed state (a hidden whole-rail with no way
+   back was the ship-dark defect). A pill echoing the mode-toggle chrome; the ☰ glyph via an
+   escaped code point (\\2630) so no literal control byte lands in this string. */
+.peekover-toc__toggle{
+  display:inline-flex;align-items:center;gap:7px;margin:0 0 12px;
+  font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:6px 13px;cursor:pointer;
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-toc__toggle:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-toc__toggle::before{content:"\\2630";font-size:13px;line-height:1;color:var(--faint)}
+
+/* Collapsed (narrow scrollport / toggled off) collapses the rail TO ITS HANDLE — the list
+   body is hidden, but the opener stays visible and clickable so the TOC is never unreachable.
+   The nav shrinks to fit the handle and drops the full-height border; its top offset clears
+   the top-right mode pill. The document stays the hero — the reading column is untouched. */
+:host([data-toc="collapsed"]) .peekover-toc{
+  width:auto;height:auto;overflow:visible;
+  padding:52px 16px 16px;border-left:none;
+}
+:host([data-toc="collapsed"]) .peekover-toc__list{display:none}
+:host([data-toc="collapsed"]) .peekover-toc__toggle{margin:0}
 .peekover-toc [hidden]{display:none} /* collapsed subtree (childList.hidden) — explicit in shadow */
 
 .peekover-toc__list{list-style:none;margin:0;padding:0}

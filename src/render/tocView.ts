@@ -57,6 +57,17 @@ export function tocHeadingRef(button: HTMLElement): Element | undefined {
 const WIDE_SCROLLPORT_PX = 720;
 
 /**
+ * The documented default open/collapsed state used ONLY when a real, laid-out width is not
+ * yet available (build runs pre-commit; jsdom has no layout at all — see Defect 2 below). We
+ * default to OPEN, NOT collapsed: the rail is a harmless right-side sibling that never
+ * disturbs the reading column, the common surface (a wide desktop content-script takeover)
+ * wants it open, and the always-reachable opener makes a wrong guess recoverable in one
+ * click. The width-driven decision then overrides this on the next frame once layout exists.
+ * The default is a deliberate choice, never the old "collapsed because the width read as 0".
+ */
+const DEFAULT_TOC_OPEN = true;
+
+/**
  * PURE width→initial-state rule: open when the reader's own scrollport is wide. Exported so
  * it is unit-checkable with an INJECTED width — jsdom has no layout (`getBoundingClientRect`
  * is all-zero), so the real measurement (`readScrollportWidth` below) is jsdom-blind and
@@ -142,18 +153,77 @@ function buildItem(entry: TocEntry): HTMLLIElement {
   return li;
 }
 
+/** Reflect the rail's open/collapsed state as `data-toc` on the host AND keep the opener's
+ *  `aria-expanded` in lockstep — the single writer of both, so the visible chrome, the CSS
+ *  key, and the a11y state can never drift. No scroll, no `location`/`history`. */
+function setTocOpen(host: HTMLElement, opener: HTMLButtonElement, open: boolean): void {
+  host.setAttribute('data-toc', open ? 'open' : 'collapsed');
+  opener.setAttribute('aria-expanded', String(open));
+}
+
+/**
+ * Build the ALWAYS-PRESENT opener/handle that heads the rail. It is the SINGLE control that
+ * flips the host between `data-toc="open"` and `"collapsed"`, and — crucially — it lives
+ * INSIDE `.peekover-toc` but OUTSIDE the collapsible list body, so `data-toc="collapsed"`
+ * hides only the list (2.2 CSS) while this handle stays visible and clickable. That closes
+ * the ship-dark "collapsed rail is unreachable" defect: on a narrow pane the rail starts
+ * collapsed to just this labeled handle, never erased with no way back.
+ *
+ * A plain `<button>` → keyboard-focusable with no tabindex hack; its text ("On this page")
+ * is the accessible name and `aria-expanded` mirrors the open state (standard disclosure).
+ * Click toggles both ways (open⇄collapsed) — no scroll, no URL, no network.
+ */
+function buildOpener(host: HTMLElement): HTMLButtonElement {
+  const opener = document.createElement('button');
+  opener.type = 'button';
+  opener.className = 'peekover-toc__toggle';
+  opener.textContent = 'On this page';
+  opener.setAttribute('aria-expanded', String(DEFAULT_TOC_OPEN));
+  opener.addEventListener('click', () => {
+    setTocOpen(host, opener, host.getAttribute('data-toc') !== 'open');
+  });
+  return opener;
+}
+
+/**
+ * Decide the initial open/collapsed state and reflect it — WITHOUT trusting a pre-layout
+ * width read (Defect 2). `buildTocView` runs BEFORE mount()'s `replaceChildren` commits the
+ * host and before any layout, so `readScrollportWidth(host)` is a guaranteed 0 here (and in
+ * jsdom it is 0 forever) — feeding that to the rule yields a false "collapsed everywhere".
+ *
+ * So: if a real (>0) width already exists (an idempotent re-mount of an already-laid-out
+ * host), use the pure rule now; otherwise set the documented DEFAULT synchronously and defer
+ * the real width-driven decision to the next animation frame, when mount() has committed the
+ * rail and the engine has laid the host out. rAF callbacks run before the next paint, so the
+ * corrected state wins with no visible flash; in jsdom rAF's width is still 0, so the guard
+ * leaves the default in place — stable and testable. The pure `initialTocOpen` rule is
+ * untouched; only WHERE/WHEN it is fed a real width changed.
+ */
+function applyInitialTocState(host: HTMLElement, opener: HTMLButtonElement): void {
+  const decide = () => {
+    const width = readScrollportWidth(host);
+    if (width > 0) setTocOpen(host, opener, initialTocOpen(width));
+    else if (!host.hasAttribute('data-toc')) setTocOpen(host, opener, DEFAULT_TOC_OPEN);
+  };
+  decide(); // synchronous: real width if already laid out, else the documented default
+  const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+  if (raf) raf(decide); // post-commit/post-layout correction (no-op in layout-blind jsdom)
+}
+
 /**
  * Build the TOC rail for a rendered reader, or `null` when it has no navigation value.
  *
  * Returns `null` at <2 headings (0 → no rail, 1 → no rail: a single-entry TOC is the F5/F6
  * graceful degradation, never a broken sidebar). At ≥2 it returns a right-side
- * `<nav aria-label="Table of contents">` wrapping a nested `<ol>` of entry buttons; each
- * button carries its `entry.headingRef` (see `headingByButton`/`tocHeadingRef`).
+ * `<nav aria-label="Table of contents">` headed by an always-present opener (see
+ * `buildOpener`) and wrapping a nested `<ol>` of entry buttons; each button carries its
+ * `entry.headingRef` (see `headingByButton`/`tocHeadingRef`).
  *
- * Side effects on `host` (both need the host, which is why it is a param): the initial
- * open/collapsed state is reflected as `data-toc` on the host — decided from the reader's own
- * `:host` scrollport width via the pure `initialTocOpen` (2.3 flips this attribute; 2.2 keys
- * the rail's visibility off it). No CSS, no scroll, no `location`/`history` mutation.
+ * Side effects on `host` (which is why it is a param): the initial open/collapsed state is
+ * reflected as `data-toc` — from a REAL scrollport width via the pure `initialTocOpen` when
+ * one exists, else a documented default corrected on the next frame (`applyInitialTocState`;
+ * Defect-2 fix). The opener flips that same attribute (2.3's backtick shortcut will flip it
+ * too). No CSS, no scroll, no `location`/`history` mutation.
  */
 export function buildTocView(
   host: HTMLElement,
@@ -169,12 +239,12 @@ export function buildTocView(
   // added there; here `contained` is threaded as a hook only, no styling.
   if (options.contained) nav.dataset.contained = '';
 
-  nav.append(buildList(model));
+  // The always-visible opener heads the rail (survives the collapsed state); the collapsible
+  // list body follows it. `data-toc="collapsed"` hides ONLY the list, never this handle.
+  const opener = buildOpener(host);
+  nav.append(opener, buildList(model));
 
-  // Initial open/collapsed from the reader's own scrollport width (design rule, not a perf
-  // gate). Reflected on the host so 2.2's CSS shows/hides the rail and 2.3's toggle flips it.
-  const open = initialTocOpen(readScrollportWidth(host));
-  host.setAttribute('data-toc', open ? 'open' : 'collapsed');
+  applyInitialTocState(host, opener);
 
   return nav;
 }

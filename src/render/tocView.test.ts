@@ -189,11 +189,52 @@ describe('buildTocView — right-rail chrome (jsdom shape)', () => {
       expect(initialTocOpen(400)).toBe(false);
     });
 
-    it('reflects the (layout-blind → collapsed) initial state as data-toc on the host', () => {
+    it('reflects an initial data-toc that is one of the two valid states (never forced-collapsed by a 0-width read)', () => {
+      // Defect-2 correction: buildTocView runs pre-commit/pre-layout, so a width read here is a
+      // guaranteed 0 — that must NOT hard-force "collapsed" (it did, collapsing the rail
+      // everywhere). The attribute must be PRESENT and one of the two valid values; the real
+      // width-driven decision rides to the next frame / the real-engine gate (rAF is a no-op in
+      // layout-blind jsdom). We assert the invariant, not the old 0-width-means-collapsed bug.
       const host = makeHost();
       buildTocView(host, buildTocModel(rootFrom('<h1>A</h1><h2>B</h2>')));
-      // With no layout the measured width is 0 → collapsed; the attribute is present either way.
+      expect(['open', 'collapsed']).toContain(host.getAttribute('data-toc'));
+    });
+  });
+
+  describe('collapsed-state opener: an always-reachable control that flips data-toc', () => {
+    it('renders a focusable, labeled toggle button whose aria-expanded tracks data-toc, both directions', () => {
+      // Defect-1 correction: "collapsed" must mean collapsed-TO-A-HANDLE, not erased. The rail
+      // carries an always-present opener (jsdom-testable: attribute + DOM only, no layout/scroll)
+      // that survives the collapsed state and flips the host open⇄collapsed on click.
+      const host = makeHost();
+      const rail = buildTocView(host, buildTocModel(rootFrom('<h1>A</h1><h2>B</h2>')))! as HTMLElement;
+
+      const opener = rail.querySelector<HTMLButtonElement>('button.peekover-toc__toggle')!;
+      expect(opener).not.toBeNull();
+      expect(opener.tagName).toBe('BUTTON'); // keyboard-focusable by default, no tabindex hack
+      expect((opener.textContent ?? '').trim().length).toBeGreaterThan(0); // has a visible label
+      expect(opener.hasAttribute('aria-expanded')).toBe(true); // disclosure state exposed to AT
+
+      // Drive both directions from a known start (jsdom is layout-blind, so pin the state first).
+      setTocOpen(host, opener, false);
       expect(host.getAttribute('data-toc')).toBe('collapsed');
+      expect(opener.getAttribute('aria-expanded')).toBe('false');
+
+      opener.click(); // collapsed → open
+      expect(host.getAttribute('data-toc')).toBe('open');
+      expect(opener.getAttribute('aria-expanded')).toBe('true');
+
+      opener.click(); // open → collapsed (the same control toggles both ways)
+      expect(host.getAttribute('data-toc')).toBe('collapsed');
+      expect(opener.getAttribute('aria-expanded')).toBe('false');
     });
   });
 });
+
+/** Set the rail's open/collapsed state the way buildTocView's internal writer does — used
+ *  only to pin a known starting state before exercising the opener (jsdom has no layout, so
+ *  the initial state is the documented default). Mirrors the host+aria pairing exactly. */
+function setTocOpen(host: HTMLElement, opener: HTMLButtonElement, open: boolean): void {
+  host.setAttribute('data-toc', open ? 'open' : 'collapsed');
+  opener.setAttribute('aria-expanded', String(open));
+}

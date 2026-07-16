@@ -27,9 +27,16 @@ CSS deferred to 2.2) + 13 jsdom shape tests green, lint clean. **Task 2.2 DONE:*
 grew (ADDITIVELY, tokens only) the `.peekover-toc` rail/list/twist/active-`aria-current`/resizer rules + `--toc-w`
 per-view width var + `scroll-margin-top` on `h1..h6`; `.peekover-toc` added to `CONTAINED_CSS`'s fixed→absolute list.
 **Golden untouched: `git diff tests/golden/output/` EMPTY, huge-doc `sha256=8bc5094c…e61bbd` unchanged** (rail is a
-sibling; `.peekover-reader` column byte-identical), `manifest` still `permissions:[]` — `pnpm test` 340 green, lint
-clean. **Next → task 2.3** (backtick keyboard toggle + host registry + de-register on teardown). Pointer advances per
-task (M1 retro rule).
+sibling; `.peekover-reader` column byte-identical), `manifest` still `permissions:[]`. **Task 2.2 HARDENING (visibility
+fixes, rail-only — readerCss.ts/tocView.ts/tocView.test.ts):** the rail now has a REACHABLE opener — a labeled,
+focusable `.peekover-toc__toggle` handle that heads the nav, survives the collapsed state (which now hides only the
+list body, not the whole rail — the ship-dark "collapsed = unreachable" defect) and flips the host `data-toc`
+open⇄collapsed with matching `aria-expanded`; and the INITIAL state is fixed — no longer forced-collapsed by the
+guaranteed-0 pre-commit/pre-layout width read (a documented default now, corrected to the real width-driven
+`initialTocOpen` on the next rAF once layout exists; the pure rule itself unchanged). `pnpm test` 341 green (golden +
+`permissions:[]` pins intact), lint clean, both builds succeed (content script 278.69 kB, info-only). Column + raw
+fallback + mount() seam untouched. **Next → task 2.3** (backtick keyboard toggle + host registry + de-register on
+teardown). Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
