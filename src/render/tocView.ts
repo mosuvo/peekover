@@ -17,10 +17,11 @@
 // (3.2); the buttons here support it. Focus reuses the reader's existing `:host
 // :focus-visible` ring — no new focus CSS.
 //
-// SCOPE (task 2.1): this module builds the rail and wires the LOCAL, jsdom-testable
-// collapse toggle. It does NOT scroll (3.1), install the keyboard shortcut / host registry
-// (2.3), or carry any CSS (2.2). It never touches `location`/`history`/`pushState` — buttons
-// carry refs, they do not navigate by URL (spec In-scope "URL untouched").
+// SCOPE (tasks 2.1–3.1): this module builds the rail, wires the LOCAL collapse toggle
+// (2.1), the backtick shortcut + host registry (2.3), and — task 3.1 — the entry
+// click/Enter → `scrollIntoView` of the button's carried heading ref. It carries no CSS
+// (2.2, readerCss.ts). It never touches `location`/`history`/`pushState` — entries navigate
+// by scrolling a ref, not by URL (spec In-scope "URL untouched").
 
 import type { TocEntry } from './tocModel';
 
@@ -146,6 +147,29 @@ function buildItem(entry: TocEntry): HTMLLIElement {
   link.textContent = entry.label;
   // Carry the EXACT model heading node (single source of truth for 3.1's scroll target).
   headingByButton.set(link, entry.headingRef);
+  // Task 3.1 — click/Enter/Space → scroll to that heading. The target is read back through
+  // `tocHeadingRef(link)`, i.e. the SAME WeakMap ref just stored above (and the very node
+  // 2.1's jsdom identity test asserts) — NOT a node re-derived from the DOM here. So there
+  // is one ref, one derivation, and the identity test genuinely guards this scroll target
+  // (M1/M2 retro rule). `scrollIntoView({block:'start'})` is called with NO `behavior` arg,
+  // so the reader's `:host{scroll-behavior}` rule governs — smooth normally, `auto` under
+  // prefers-reduced-motion (readerCss.ts, 2.2) — and the top-chrome offset is the CSS
+  // `scroll-margin-top` on h1..h6, never JS pixel math (plan §3-#2). The heading lives in
+  // the same shadow tree as this button; its nearest scrollable ancestor is the reader's
+  // `:host` (overflow:auto), the scroll box on BOTH surfaces. No `location`/`history`/
+  // `pushState` — this navigates by scrolling a ref, never by URL (spec "URL untouched").
+  // A <button> fires click on Enter and Space for free, so keyboard activation needs no
+  // separate handler.
+  link.addEventListener('click', () => {
+    const target = tocHeadingRef(link);
+    // Guard the call itself, not just the ref: a click handler must never throw (a thrown
+    // listener is swallowed by the engine but noisy, and jsdom — where 2.1's URL-untouched
+    // test activates entries — implements no `scrollIntoView` at all). In every real engine
+    // the method exists, so this only affects layout-blind environments.
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'start' });
+    }
+  });
   row.append(link);
 
   li.append(row);

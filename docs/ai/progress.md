@@ -70,8 +70,22 @@ info-only). readerMode.ts /
 sanitize.ts / parse.ts / manifest / readerCss.ts / tocModel.ts / golden fixtures untouched; raw-fallback path stays
 TOC-free AND now un-registers. Added a dated `decisions.md` line (Firefox manual-gate loads must come from a FRESH
 `wxt build -b firefox` → `.output/firefox-mv3` — a stale/dev load's `localhost` CSP warning is a procedure error, not a
-code defect; task-2.2 gate lesson). **Next → task 3.1** (group-3 real-engine scroll/scroll-spy/reduced-motion/resize
-cluster). Pointer advances per task (M1 retro rule).
+code defect; task-2.2 gate lesson). **Task 3.1 DONE:** click/Enter on a TOC entry scrolls the reader to that entry's
+heading via `entry.headingRef.scrollIntoView({block:'start'})` — NO `behavior` arg, so `:host{scroll-behavior}` (2.2)
+governs and `scroll-margin-top` handles the chrome offset (no JS pixel math); the handler reads the target back through
+`tocHeadingRef(link)` — the SAME WeakMap ref set at build time and guarded by 2.1's identity test, not a re-derived node
+(2.1↔3.1 coupling) — and touches no `location`/`history` (URL-untouched, now a REAL guard). Guarded the call
+(`typeof target.scrollIntoView === 'function'`) so a click handler never throws in layout-blind jsdom. Real-engine test
+`tests/browser/tocScroll.browser.test.ts` (Cr+Fx, +8): observer-sanity control scroll → click-to-scroll on BOTH surfaces
+(full-page `:host` scroll box AND contained `.peekover-app__reader` pane), NON-VACUOUS (two entries → further scroll +
+prior heading pushed above top) + URL-untouched across every entry. **Red-first PROVEN both engines/both surfaces:**
+wiring the handler to the wrong (first) heading left the clicked section ~8082 px below top → `topOffset<100` FAILED.
+Both engines landed the heading via the CSS-governed `scrollIntoView` — NEITHER needed the JS `behavior` fallback (the
+settle-based measurement is smooth/instant-agnostic; smooth-vs-instant is 3.3's scope). `pnpm test` **350 green** (golden
+diff EMPTY, manifest `permissions:[]` + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test:browser` **144 green**
+both engines, `pnpm test tocView tocModel` 32 green, lint clean, both builds succeed (content script 279.86 kB,
+info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched. **Next → task 3.2**
+(scroll-spy: host-rooted IntersectionObserver → `aria-current="location"` tracking). Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
