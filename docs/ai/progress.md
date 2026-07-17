@@ -3,311 +3,49 @@
 *Updated: 2026-07-17.*
 
 ## Now (start here)
-**M2 FULLY CLOSED (spec 002 — active-source foundation): code-complete AND human-gated.** All six
-groups landed and all automated acceptance is green (**lint · 318 unit · 136 in-browser · `pnpm zip`
-314.49 kB Chrome / 314.55 kB Firefox < 2 MB**); `permissions:[]` survived (CI-pinned, both engines);
-the M1 content script stayed byte-identical (270,879 B) — folder mode is a new *caller* of the
-unchanged `mount()`, `src/render/*` untouched all milestone. **The named human milestone-close gate
-(task 6.3) PASSED on 2026-07-15, both engines** — the one spec-002 acceptance an agent cannot
-self-certify (see Done). Nothing on 002 is outstanding.
+**M2 fully closed (spec 002 — active-source foundation): code + the named human gate, both engines**
+(task 6.3 PASSED 2026-07-15 — see Done). Nothing on 002 outstanding.
 
-**Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3) — IMPLEMENTATION underway.**
-spec.md + plan.md + tasks.md all approved (Gear 3 gates 1–3). **Task 1.1 DONE:** `src/render/tocModel.ts` — pure
-`buildTocModel(root): TocEntry[]` (h1–h6 refs in doc order, nearest-shallower-ancestor nesting, no synthetic nodes,
-designed fallback labels, verbatim duplicates) + 9 jsdom unit tests green, lint clean. **Task 2.1 DONE:**
-`src/render/tocView.ts` — `buildTocView(host, model, {contained})` builds the right-side `<nav aria-label="Table of
-contents">` + nested `<ol>` of entry `<button>`s (disclosure `aria-expanded` collapse toggling subtree `hidden`;
-`null` below 2 total headings; labels via `textContent`; each button carries its exact `entry.headingRef` in a
-module-level `WeakMap` read via `tocHeadingRef` — the single ref 3.1 will scroll to; initial open/collapsed from a
-pure `initialTocOpen(width)` rule reflected as `data-toc` on the host; `contained` threaded as a structural marker,
-CSS deferred to 2.2) + 13 jsdom shape tests green, lint clean. **Task 2.2 DONE:** composed the rail through the ONE
-`mount.ts` seam — `buildTocView(host, buildTocModel(root), {contained})` pushed into the SAME `children[]` (before
-`root`, alongside the pills; omitted when it returns `null`), committed by the existing single `replaceChildren`;
-`mountRawFallback`'s second `replaceChildren` left TOC-FREE (banner + raw `<pre>` only — never-blank #5). `readerCss.ts`
-grew (ADDITIVELY, tokens only) the `.peekover-toc` rail/list/twist/active-`aria-current`/resizer rules + `--toc-w`
-per-view width var + `scroll-margin-top` on `h1..h6`; `.peekover-toc` added to `CONTAINED_CSS`'s fixed→absolute list.
-**Golden untouched: `git diff tests/golden/output/` EMPTY, huge-doc `sha256=8bc5094c…e61bbd` unchanged** (rail is a
-sibling; `.peekover-reader` column byte-identical), `manifest` still `permissions:[]`. **Task 2.2 HARDENING (visibility
-fixes, rail-only — readerCss.ts/tocView.ts/tocView.test.ts):** the rail now has a REACHABLE opener — a labeled,
-focusable `.peekover-toc__toggle` handle that heads the nav, survives the collapsed state (which now hides only the
-list body, not the whole rail — the ship-dark "collapsed = unreachable" defect) and flips the host `data-toc`
-open⇄collapsed with matching `aria-expanded`; and the INITIAL state is fixed — no longer forced-collapsed by the
-guaranteed-0 pre-commit/pre-layout width read (a documented default now, corrected to the real width-driven
-`initialTocOpen` on the next rAF once layout exists; the pure rule itself unchanged). `pnpm test` 341 green (golden +
-`permissions:[]` pins intact), lint clean, both builds succeed (content script 278.69 kB, info-only). Column + raw
-fallback + mount() seam untouched. **Hardening #2 (rAF liveness guard, tocView.ts/tocView.test.ts only):** the
-initial-state fix's deferred `requestAnimationFrame(decide)` now BAILS if `!host.isConnected || !opener.isConnected`
-before writing — a stale frame firing after teardown / after a newer rail replaced this one no-ops instead of writing
-data-toc/aria-expanded onto a dead node (the dead-node hazard 2.3's registry prunes, arriving early via the rAF
-closure; the synchronous first decide is intentionally exempt). +1 non-vacuous lifecycle test (proven RED with the
-guard removed: the post-teardown frame flips data-toc `collapsed`→`open`); `pnpm test` 342 green, golden + pins intact,
-lint clean. **Task 2.3 DONE:** the backtick (`` ` ``) keyboard toggle + module-level host registry + de-register on
-teardown (`tocView.ts` registry/shortcut · `mount.ts` register/unregister hooks · `tocView.test.ts` guards). ONE
-document-level keydown listener mirroring `installToggleShortcut` EXACTLY (bare key, no Ctrl/Cmd/Alt, ignored in
-input/textarea/select/contenteditable, `preventDefault` only after deciding to handle, idempotent install) — distinct
-from readerMode's `\`, so the two never collide (each returns early on the other's key). Active-host resolution: a
-`Set<HTMLElement>` mount() fills when a rail is composed (un-fills on a rail-less re-render AND the raw-fallback path);
-the resolver PRUNES any `!host.isConnected` entry first, then returns the registered host containing
-`document.activeElement`, else the last-registered live host — so the "last host" fallback can never resolve to a dead
-node (same isConnected discipline as the rAF guard). **2.3 HARDENING (resolver requires a LIVE rail, not just a live
-host — tocView.ts/tocView.test.ts only):** resolution now also requires the resolved host to CURRENTLY have a rail —
-a `hasRail(host)` = `!!host.shadowRoot?.querySelector('button.peekover-toc__toggle')` (the exact node `toggleTocHost`
-flips), applied to BOTH the activeElement match and the last-registered fallback; if no registered host has a live rail
-the resolver returns `null` (clean pass-through). Closes a multi-host dead-key: a connected-but-rail-less host (its
-shadow re-rendered without a rail) could win the fallback, and `toggleTocHost`'s `if (!opener) return` swallowed the
-press silently even when ANOTHER registered host had a visible rail — so backtick did nothing. That `if (!opener)`
-guard stays as belt-and-suspenders but no longer hides a mis-resolution. +1 non-vacuous multi-host test (host A with a
-rail + host B connected-but-rail-less registered last, focus outside both → backtick toggles A, not a no-op on B);
-proven RED with the rail-less filter removed (fallback returns B, `toggleTocHost` no-ops, A never toggles → assertion
-fails). Toggle flips the resolved host's `data-toc` via the SAME
-`setTocOpen` writer the opener uses (data-toc + opener aria-expanded in lockstep); no scroll/URL/history/network. +7
-non-vacuous jsdom tests (backtick toggle + aria tracking; Ctrl/Cmd/Alt + editable-field guards; `\`↔backtick
-no-collision both ways; two-host activeElement resolution; DEAD-NODE PRUNE proven RED with the prune removed — resolver
-returns the dead host and writes to it; no-rail pass-through; idempotent-install single-flip; RAIL-LESS SKIP multi-host
-resolution). `pnpm test` **350 green** (manifest `permissions:[]` + golden + huge-doc `sha256=8bc5094c…e61bbd` intact),
-`pnpm test tocView tocModel` 32 green, golden diff EMPTY, lint clean, both builds succeed (mv3; content script 279.7 kB,
-info-only). readerMode.ts /
-sanitize.ts / parse.ts / manifest / readerCss.ts / tocModel.ts / golden fixtures untouched; raw-fallback path stays
-TOC-free AND now un-registers. Added a dated `decisions.md` line (Firefox manual-gate loads must come from a FRESH
-`wxt build -b firefox` → `.output/firefox-mv3` — a stale/dev load's `localhost` CSP warning is a procedure error, not a
-code defect; task-2.2 gate lesson). **Task 3.1 DONE:** click/Enter on a TOC entry scrolls the reader to that entry's
-heading via `entry.headingRef.scrollIntoView({block:'start'})` — NO `behavior` arg, so `:host{scroll-behavior}` (2.2)
-governs and `scroll-margin-top` handles the chrome offset (no JS pixel math); the handler reads the target back through
-`tocHeadingRef(link)` — the SAME WeakMap ref set at build time and guarded by 2.1's identity test, not a re-derived node
-(2.1↔3.1 coupling) — and touches no `location`/`history` (URL-untouched, now a REAL guard). Guarded the call
-(`typeof target.scrollIntoView === 'function'`) so a click handler never throws in layout-blind jsdom. Real-engine test
-`tests/browser/tocScroll.browser.test.ts` (Cr+Fx, +8): observer-sanity control scroll → click-to-scroll on BOTH surfaces
-(full-page `:host` scroll box AND contained `.peekover-app__reader` pane), NON-VACUOUS (two entries → further scroll +
-prior heading pushed above top) + URL-untouched across every entry. **Red-first PROVEN both engines/both surfaces:**
-wiring the handler to the wrong (first) heading left the clicked section ~8082 px below top → `topOffset<100` FAILED.
-Both engines landed the heading via the CSS-governed `scrollIntoView` — NEITHER needed the JS `behavior` fallback (the
-settle-based measurement is smooth/instant-agnostic; smooth-vs-instant is 3.3's scope). `pnpm test` **350 green** (golden
-diff EMPTY, manifest `permissions:[]` + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test:browser` **144 green**
-both engines, `pnpm test tocView tocModel` 32 green, lint clean, both builds succeed (content script 279.86 kB,
-info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched. **Task 3.2 DONE:** scroll-spy —
-ONE `IntersectionObserver` per rail marks the section being read with `aria-current="location"` + `.is-active`
-(the 2.2 CSS hooks). Root is resolved PER SURFACE, not assumed `:host` (tasks.md 3.2's "root: host … :host in both"
-predates 3.1's scroll-box discovery; the parenthetical "proven, not assumed" is honored by resolving the real
-container): full-page → `:host` (fixed/inset:0/overflow:auto, always scrolls); contained → the nearest ancestor pane
-that scrolls (`.peekover-app__reader`; `:host`'s own overflow:auto is the full-page rule and is skipped), resolved by
-COMPUTED overflow (layout-timing-robust). rootMargin `0px 0px -70% 0px` (activation line 30% from the scrollport top);
-active section DETERMINED from LIVE `getBoundingClientRect` per recompute (the observer + a rAF-coalesced scroll listener
-are the TRIGGERS) — NOT from `isIntersecting` snapshots, which go stale on a fast scroll that jumps a heading clear
-across the thin band (the first-cut `passed[]` design failed exactly there on both engines; fixed). TRAILING-SHORT-SECTION
-edge handled: at scroll-bottom the final entry is promoted (the observer never fires at the absolute bottom), so the
-highlight can reach the last section. Observer DISCONNECTED on teardown: `teardownScrollSpy(host)` at the top of every
-`buildTocView` supersedes the prior rail's observer + scroll listener + pending frame; the raw-fallback path (which never
-calls buildTocView) self-heals via an isConnected liveness check in recompute — same discipline as the rAF guard + host
-registry; **mount.ts untouched** (tasks.md 3.2 scopes edits to tocView.ts + the browser test). Zero network (the observer
-watches layout). `tests/browser/tocScroll.browser.test.ts` (+3, ×2 engines = +6): observer-sanity/NON-VACUOUS (two
-different offsets → two different actives), track section 3 / top / bottom(=last, trailing edge), exactly-one-active, and
-composes-with-3.1 (click-to-scroll → the mark lands on the clicked section). **Red-first PROVEN both engines:** pinning the
-mark to entry 1 → section-3 assertion RED ("expected +0 to be 2"), and disabling the trailing-edge promotion → bottom RED
-("expected 6 to be 7"). `pnpm test` **350 green** (golden diff EMPTY, manifest `permissions:[]` + huge-doc
-`sha256=8bc5094c…e61bbd` intact), `pnpm test:browser` **150 green** both engines, `pnpm test tocView tocModel` 32 green
-(jsdom-safe: the observer construction is guarded where IntersectionObserver is absent), lint clean, both builds succeed
-(content script 281.55 kB, info-only). readerCss.ts/mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden untouched.
-**Task 3.3 DONE (TEST-ONLY — no production/`src` code):** reduced-motion proven in a real engine on BOTH Chromium +
-Firefox. 3.1 already routes through `scrollIntoView({block:'start'})` with NO `behavior` arg, so readerCss.ts's
-`:host{scroll-behavior:smooth}` (line 71) + `@media(prefers-reduced-motion:reduce){:host{scroll-behavior:auto}}`
-(76–79, from 2.2) govern — and the test PROVES that existing CSS path already yields instant-under-reduce /
-smooth-without on the full-page `:host` scroll box. **No JS fallback needed** (no engine ignored `:host scroll-behavior`
-on `scrollIntoView`; 2.2's CSS is correct — untouched). New TEST-HARNESS capability (human-authorized, out of 3.3's
-listed Files): a `browser.commands` entry `emulateReducedMotion` → Playwright `page.emulateMedia` in `vitest.config.ts`
-— the ONLY cross-engine way to toggle the media query (vitest's in-page `page` API has no `emulateMedia`; `cdp()` is
-Chromium-only). Test (`tocScroll.browser.test.ts`, +1×2 engines) samples scrollTop per animation frame right after a
-TOC-click: reduce = at target on frame 1 AND never observed mid-flight; default = NOT landed on frame 1 AND observed
-strictly mid-flight (0<s<target) — mutually-exclusive signatures, so vacuity is ruled out by construction; a `matchMedia`
-sanity control confirms the emulation reaches the test iframe. **Red-first PROVEN both engines:** emulating
-`no-preference` where the test expects `reduce` → the reduce-signature assertion FAILS (`expected 0 to be greater than
-~20178`; a smooth scroll is still at 0 on frame 1). **CONTAINED-SURFACE FINDING (carried; out of 3.3 scope):** the
-app-page pane scrolls `.peekover-app__reader` (light-DOM, app-shell CSS `appShell.ts:151` — `overflow:auto`, NO
-`scroll-behavior`), and `scrollIntoView` resolves behavior from that scroll box, NOT the shadow `:host` — so contained
-is INSTANT in BOTH modes (measured immediate===final under reduce AND no-preference, both engines). This is NOT engine
-divergence and NOT a defect in 2.2's `:host` CSS (which correctly governs the full-page surface): the reduced-motion
-a11y obligation (instant under reduce) HOLDS on contained trivially, while the smooth-without nicety is absent on the
-app page. Delivering smooth-on-contained would touch app-shell CSS (`appShell.ts`) or take the JS fallback in the 3.1
-handler — both out of 3.3's readerCss-focused scope and NOT triggered by the prompt's engine-divergence rule; flagged
-for 6.1 / the plan §3-#2 ("CSS governs in both surfaces" — false for contained) revisit. A contained reduced-motion
-assertion would be VACUOUS (both modes instant), so it is deliberately NOT in the committed suite. `pnpm test:browser`
-**152 green** both engines, `pnpm test` **350 green** (golden diff EMPTY, manifest `permissions:[]` + huge-doc
-`sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 32 green, lint clean, both builds succeed (content
-script **281.55 kB — byte-identical to 3.2**, confirming no shipped-code change). Only changes: the browser test +
-the `vitest.config.ts` harness command; `src/` (tocView.ts/readerCss.ts/mount.ts/…) untouched.
-**Task 3.4 DONE (resize drag, real engine, both engines):** a pointer-draggable resize handle
-(`.peekover-toc__resizer` — 2.2 shipped only its CSS; 3.4 BUILDS the element in `buildTocView` and
-wires the drag, readerCss.ts UNTOUCHED, matching tasks.md 3.4's "resizer rule *if not in 2.2*"
-conditional) rewrites the per-view `--toc-w` custom property on the host. Pointer events
-(pointerdown/move/up/cancel) + `setPointerCapture` (guarded — it throws for a synthetic pointerId,
-so wrapped in try/catch; never lets the handler throw); the rail is anchored to the viewport RIGHT
-edge and the handle sits on its INNER (left) edge, so drag LEFT/outward WIDENS, RIGHT/inward
-NARROWS (`width = startWidth − (clientX − startX)`). CLAMPED to `[TOC_MIN_WIDTH=180,
-TOC_MAX_WIDTH=480]` px — DESIGN values (spec §3-#6 "document stays the hero"), exported so the test
-asserts the exact bounds; the rail never collapses to nothing or eats the viewport. PER-VIEW ONLY,
-NOT PERSISTED (spec 004 scope): the width is an inline style on the host; NO store.ts/idbCore.ts/idb
-path touched (asserted on the contained surface with a spy store — resize adds zero store calls).
-NO leak on teardown: ALL listeners live on the resizer element itself (never document/window), so a
-rebuild's `replaceChildren` drops the old resizer + its listeners for GC (removing a captured
-element also releases capture) + a `!resizer.isConnected` guard bails a drag caught mid-rebuild
-(same isConnected discipline as the rAF guard / scroll-spy self-heal / host registry) — unlike the
-scroll-spy, the resizer attaches to no PERSISTENT external node, so it needs no `teardownScrollSpy`
-seam. No scroll/URL/history/network — one CSS var write. `tests/browser/tocScroll.browser.test.ts`
-(+3, ×2 engines = +6): grow/shrink/zero-delta (non-vacuous — an unwired handle leaves every drag at
-the default, so the direction assertions reduce to the zero-delta invariant and fail), clamp at
-BOTH bounds, and per-view/no-storage on the contained surface. **Red-first PROVEN both engines:**
-disabling the drag's `--toc-w` write → grow/contained FAIL `expected 250 to be greater than 250`
-and clamp FAILS `expected 250 to be 480` (the property never moved) while the zero-delta invariant
-still passes. `pnpm test:browser` **158 green** both engines (152 → +6), `pnpm test` **350 green**
-(golden diff EMPTY, manifest `permissions:[]` + huge-doc `sha256=8bc5094c…de61bbd` intact),
-`pnpm test tocView tocModel` 32 green (jsdom-safe: the pointer handlers only run on real events,
-never dispatched in the shape tests; `getComputedStyle`/`setPointerCapture` live inside those
-handlers), lint clean, both builds succeed (content script **282.43 kB**, info-only). readerCss.ts/
-mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden/store.ts/idbCore.ts untouched.
-**GROUP 3 IS NOW CODE-COMPLETE** (3.1 click-scroll · 3.2 scroll-spy · 3.3 reduced-motion · 3.4
-resize) → next = the batched group-3 human manual gate, then group 4 (zero-network guard). Pointer
-advances per task (M1 retro rule).
-**GROUP-3 GATE FIX (readerCss.ts only, CSS-string):** the first group-3 human gate found the
-`.peekover-toc` rail was TRANSPARENT (the reading column's text bled THROUGH it) AND the centered
-column reserved no room for the rail, so an opaque rail would then CLIP the column's right edge
-(Firefox full-page confirmed; contained had the same latent defect). Fixed BOTH: (a) the rail now
-has an opaque `background:var(--paper)` so it occludes anything behind it; (b) while OPEN the
-reading column reserves exactly the rail's width — `:host([data-toc="open"]) .peekover-reader{
-width:auto; margin-right:var(--toc-w)}` — so its right edge is pulled clear of the rail and never
-underlaps it. Landed on the COLUMN-side `margin-right` (the prompt's recommended mechanism) after
-a centered two-sided `min(76ch, 100%−2·--toc-w)` variant OVERSHOT the rail on a narrow scrollport:
-the real vitest viewport is **414px** (contained pane just **146px**), where a two-sided
-reservation drives the column to its 64px padding floor and, centered, overshoots the rail — a
-single rail-width reservation instead lets the column take exactly the space left of the rail and
-is correct at every width (the `width:auto` is REQUIRED: a bare margin-right on the base
-`width:100%` column drives margin-left negative and shoves the column off-screen left). Reservation
-scales with `--toc-w` (a 3.4 resize widens it) and is ZERO when collapsed (rule gated on
-`data-toc="open"` → base `margin:0 auto` re-centers beside the handle, no phantom gutter).
-Column-side ⇒ identical on BOTH surfaces (full-page fixed rail + contained absolute rail resolve
-against the same `:host` right edge); CONTAINED_CSS UNTOUCHED. New real-engine test
-(`tocScroll.browser.test.ts`, +2 ×2 engines = +4, now **166** browser green): on BOTH surfaces,
-BOTH engines — the rail computes a NON-transparent `background-color` when open (occlusion), the
-column's `getBoundingClientRect().right ≤ rail.left` while open (no underlap), and collapsing
-RECLAIMS the space (column right edge widens back out — no phantom reservation). Measured
-SYNCHRONOUSLY after each attribute write so the mount's one-shot `initialTocOpen` rAF (which at
-414px would flip full-page to collapsed) can't clobber the forced `data-toc`. **Red-first PROVEN
-both engines/both surfaces:** (a) reservation removed → column right (414 full-page / 390
-contained) OVERLAPS rail left (257 / 325), no-underlap assertion FAILS; (b) `background` removed →
-rail computes `rgba(0, 0, 0, 0)`, occlusion assertion FAILS. `pnpm test` **350 green** (golden diff
-EMPTY — the fix is stylesheet-string CSS, not column HTML; manifest `permissions:[]` + huge-doc
-digest intact), `pnpm test:browser` **162 green** both engines, `pnpm test tocView tocModel` 32
-green, lint clean, both builds succeed (content script **284.74 kB**, info-only; the CSS strings +
-load-bearing comments are the only growth — no shipped JS behavior change). Only file touched:
-`src/theme/readerCss.ts` (READER_CSS) + the browser test. Group 3 code-complete AND gate-fix
-applied → the human RE-RUNS the group-3 gate on this build before push.
-**GROUP 4 DONE (§6 R4 zero-network guard — TEST-ONLY, no production/`src` code).** Every TOC action
-is proven to put ZERO bytes on the wire, both surfaces (full-page content-script host + contained
-app-page pane), both engines (Chromium + Firefox): building the rail, click-to-scroll, scroll-spy,
-collapse twist, opener, the real document-level backtick shortcut, and the resize drag are each
-exercised and asserted network-free after each action AND cumulatively. New file only:
-`tests/browser/tocNetwork.browser.test.ts` — reusing the EXISTING bytes-on-wire mechanism verbatim
-(remoteMedia/folderMode.network): the engine's own Resource Timing buffer
-(`performance.getEntriesByType('resource')`, http(s)-filtered, cleared per measured window), where an
-entry appears ONLY when the engine really put a request on the wire (jsdom is blind to this — the M1
-image leak shipped through a green jsdom stack). Media-free heading+prose doc (no image/code/math/
-mermaid → nothing lazy-loads/fetches), so any http(s) entry in a window is a genuine TOC leak — scoped
-honestly. NON-VACUOUS: a same-origin CONTROL fetch is shown to land in the same buffer through the
-same flush window BEFORE any zero is trusted (observer proven live) and again AFTER (still live); the
-same buffer/filter/`toEqual([])` check backs every zero-assert, so a leak from any action would fail
-identically. **RED-FIRST PROVEN both engines:** a temporary `fetch()` in the opener click handler made
-the `opener-toggle` per-action assert go red (`expected [ …(2) ] to deeply equal []`, showing the
-leaked URL) on Chromium AND Firefox; reverted (production `src/` untouched — `git diff src/` EMPTY).
-As expected, NO production code was needed (the rail is pure DOM/CSS; scroll/observer/pointer work
-issues no request) — AGENTS.md #1 holds and is now testable for the TOC. `pnpm test:browser` **166
-green** both engines (162 → +4), `pnpm test` **350 green** (manifest `permissions:[]` + golden diff
-EMPTY + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 32 green, lint clean,
-both builds succeed (content script **284.74 kB — byte-identical to the group-3 build**, confirming no
-shipped-code change). → next = group 5 (5.1 perf:toc measure · 5.2 first-paint re-run incl. the
-~1400-entry-TOC number · 5.3 byte re-measure). No decisions.md entry — no leak found.
-**TASK 5.1 DONE (§6 P1 — MEASUREMENT, no threshold asserted; M1 retro standing rule).** New harness
-`scripts/perf-toc.ts` (`pnpm perf:toc`) + `scripts/jsdom.d.ts` ambient decl (jsdom ships no types, and
-`@types/jsdom` is not a dep — the unit suite reaches jsdom via vitest's `environment`, never importing
-it; standalone `.d.ts`, same pattern as `markdown-it-task-lists.d.ts`; NO new dependency). Same protocol
-as `perf-first-paint`/`perf-folder-tree` (7 iters/size, cold run discarded, median of warm 6). Machine:
-i7-13700, Windows, tsx/node + jsdom. Measures the REAL production hot path — `buildTocModel(root)` +
-`buildTocView(host, model)` — with the SAME perf-folder-tree honesty split the M2 retro praised: the
-pure/JS-construction half faithfully, the browser's layout/paint DEFERRED to the real engine (not faked
-in jsdom). **(a) BUILD vs heading count** (jsdom real-DOM construction — the "one DOM node per heading"
-suspect, 6.2-analogous to `treeView`):
+**Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3) —
+IMPLEMENTATION COMPLETE, awaiting the 6.2 human gate before M3 close.** spec + plan + tasks approved
+(Gear 3 gates 1–3); groups 1–5 all landed and pushed (HEAD `e0e848e`), every acceptance number measured.
+**M3 is NOT yet closed** — the named Chrome+Firefox milestone-close gate (**6.2**, the one 003 acceptance
+an agent cannot self-certify) is still owed, then **6.3** retro. This line is 6.1's reconcile — the
+pointer's last move before the gate.
 
-  | headings | model build (med) | rail build (med) | total | rail nodes |
-  |---|---|---|---|---|
-  | 50 | 0.41 ms | 2.76 ms | 3.17 ms | 204 |
-  | 100 | 0.45 ms | 4.65 ms | 5.10 ms | 404 |
-  | 250 | 0.66 ms | 8.64 ms | 9.30 ms | 1004 |
-  | 500 | 1.02 ms | 15.19 ms | 16.21 ms | 2004 |
-  | 1000 | 2.70 ms | 28.01 ms | 30.71 ms | 4004 |
-  | **1401** (= `buildHugeDoc`: 1 h1 + 1400 h2) | **3.57 ms** | **41.34 ms** | **44.9 ms** | **5609** |
-  | 2000 | 4.16 ms | 56.46 ms | 60.62 ms | 8004 |
+**What shipped:** an in-reader right-side TOC rail, ONE implementation for both reader surfaces via the
+single `mount()` seam. Pure `buildTocModel(root)` (h1–h6 refs in doc order, nearest-strictly-shallower-
+ancestor nesting — no synthetic nodes, designed fallback labels, verbatim duplicates) + `buildTocView(host,
+model, {contained})` (`nav` landmark + nested `<ol>`, disclosure-`aria-expanded` collapse, `≥2`-heading
+threshold-omit, `textContent`-only labels, each button carrying its exact `entry.headingRef` via a
+module-level `WeakMap`). Click/Enter scrolls by element ref (`scrollIntoView`, NO `behavior` arg → CSS
+governs smooth / reduced-motion); a host-rooted `IntersectionObserver` scroll-spy marks the section in view
+(`aria-current="location"` + `.is-active`, per-surface root resolution); backtick (`` ` ``) toggle via a
+module host registry (distinct from readerMode's `\`, prunes dead nodes, requires a live rail); pointer-drag
+resize of `--toc-w` (per-view, not persisted). `permissions:[]` intact; zero network on every TOC action.
 
-**(b) SCROLL-SPY per-frame JS overhead** (real `installScrollSpy` `recompute()` over 240 scroll frames,
-geometry STUBBED so this isolates OUR O(N) live-geometry scan + single-active churn — NOT the browser's
-real `getBoundingClientRect`/layout cost): **1401 headings → median 4.38 ms/frame** (4.26–4.54);
-**2000 → 7.03 ms/frame** (6.90–7.31). **Honesty split (why (b) is JS-only):** jsdom has no layout and no
-`IntersectionObserver` (the spy guards itself off there), so the spy's DOMINANT real cost — the browser
-forcing layout on each live `getBoundingClientRect` during an active scroll — cannot be measured here
-without a stub masquerading as the real number (M1/M2 retro forbids). That real cost is covered, measured,
-elsewhere: **5.2 first-paint on the SAME ~1400-heading doc** (real headless Chromium; the rail builds +
-lays out + installs its observer there) and **`tocScroll.browser.test.ts` (3.2) proving clean
-single-active tracking on BOTH Chromium + Firefox**. **FINDING (recorded, not asserted):** the rail build
-at the pathological 1401-heading doc is ~45 ms of JS-construction (jsdom, a conservative upper bound —
-real-browser C++ DOM is faster) and scales ~linearly with heading count; the carried chunked/virtualized
-**TOC-tree** lever is therefore NOT forced by this number for typical docs, but the pathological
-one-node-per-heading cost (5609 nodes @1401) is the same suspect as the folder tree — a post-measurement
-call left to 5.2's real-browser first-paint number + the 6.1 close. `pnpm lint` clean; `pnpm perf:toc`
-reproducible. No `src/` touched; golden untouched; `permissions:[]` intact. → next = 5.2 (first-paint
-re-run incl. the ~1400-entry-TOC number) · 5.3 (byte re-measure).
-**TASK 5.2 DONE (§6 P2 — first-paint gate RE-RUN with the TOC present; the load-bearing acceptance
-item, and it HOLDS — no regression).** Re-ran the existing M1 two-part first-paint gate on a FRESH build
-that includes the composed TOC rail (content script 284.74 kB — the group-4 byte-identical build; see
-5.3). Machine i7-13700, Windows, headless Chromium via Playwright; same protocol (7 iters, cold
-discarded, median of warm 6). **The `pnpm perf` harness drives CHROMIUM ONLY** by construction
-(`chromium.launchPersistentContext`); per tasks.md 5.2 the both-engine **no-raw-flash** half of (b) is a
-**manual 6.2 human-gate item**, not this automated TIME measurement — flagged, not conflated.
-- **(a) typical doc (50 KB / 62 sections): nav→paint median 133.5 ms** (min 132.3, max 139.5) **vs
-  <150 ms → PASS.** (Was ~118–122 ms at the 2026-07-14 rescope; +~12 ms is the 63-heading rail build
-  from 5.1 + run variance — still comfortably under the bar. No threshold softened.)
-- **(b) 1 MB doc = `buildHugeDoc` (1 h1 + 1400 h2 = 1401 headings — the pathological ~1400-entry TOC):
-  nav→paint median 1196.3 ms** (min 1178.2, max 1216.0; (b) responseEnd→paint 1194.6 ms) **vs the M1
-  honest <1.7 s bound → PASS.** So **THE ~1400-ENTRY-TOC FIRST-PAINT NUMBER = 1196.3 ms.** This sits
-  squarely inside the recorded historical band (~1187–1341 ms across the 5.2 / document_start / rescope
-  measurements) → **the huge TOC does NOT regress first paint.** The rail is built from already-parsed
-  headings and composed into the SAME single `replaceChildren` as the reading column (mount.ts seam), so
-  its ~45 ms JS-construction (5.1) rides inside the mount path and is lost in the noise of the ~750 ms
-  browser layout of the 1400-section reader DOM that dominates first paint (DCL marks ~467 ms, load
-  ~980–1020 ms — consistent with every prior run). Sanity green every run: h1 ok, 1400 sections rendered,
-  0 console errors. The script's own `vs <150ms → FAIL` line for the 1 MB fixture is the typical-doc gate
-  applied informationally to the large doc (as designed at the 2026-07-14 rescope) — the 1 MB doc is
-  judged against its own <1.7 s bound, which it passes. **BOTH gate parts PASS with the TOC; no
-  src/ change was made to chase a number (measurement only).** → next = 5.3 (byte re-measure).
-**TASK 5.3 DONE (§6 T2 size half — byte re-measure recorded against the spent M2 invariant).** The
-reader gained the TOC, so the M2 content-script byte-identity (270,879 B) is deliberately spent (spec
-§Surface-scope) — re-measured on the FRESH both-engine builds:
-- **Content script: 284,744 B (284.74 kB) — IDENTICAL on Chromium + Firefox.** vs the recorded M2
-  baseline **270,879 B → +13,865 B (+5.12%)**; vs the last reported group-4 number **284,744 B →
-  0 B (byte-identical)** — confirming group 5 added ZERO shipped code (only `scripts/` + docs). The
-  +13,865 B is the **entire spec-003 TOC feature** (`tocModel.ts` + `tocView.ts` + the additive
-  `READER_CSS`/`CONTAINED_CSS` rail strings + the `mount.ts` compose seam) — the measured, reported
-  size change §Surface-scope authorized.
-- **`pnpm zip`: Chrome 323.63 kB, Firefox 323.69 kB — both < 2 MB → PASS** (vs M2 314.49/314.55 kB →
-  +~9.1 kB, the TOC's compressed cost). The AMO `sources.zip` (1.19 MB) is also < 2 MB.
-- **Packed ≤ 5 MB → PASS** (content 284.74 kB ≪ 5 MB).
-- **All M1 golden + regression suites green** — `pnpm test` **350 green** (golden `git diff
-  tests/golden/output/` **EMPTY**, huge-doc `sha256=8bc5094c…bde61bbd` intact, `manifest`
-  `permissions:[]` pinned), `pnpm test:browser` **166 green** both engines, `pnpm lint` clean, both
-  builds succeed, both built manifests declare `permissions:[]` (no `host_permissions`/forbidden keys).
-  **No golden re-baseline was needed (expected — 2.2): the rail is a sibling, the `.peekover-reader`
-  column is byte-identical.**
-**GROUP 5 IS NOW COMPLETE** (5.1 perf:toc measured · 5.2 first-paint re-run PASS both parts, no
-regression · 5.3 bytes re-measured under budget). No `src/` touched anywhere in group 5; no un-measured
-threshold asserted; no acceptance regression found. → next = the **6.x milestone close** (6.1 final memory
-reconciliation + decisions.md entries · 6.2 named human Chrome+Firefox gate · 6.3 retro). decisions.md
-entries are owned by 6.1 (no measurement in group 5 forced a recorded decision — first paint held, bytes
-stayed under budget).
+**Measured (group 5):** content script **284,744 B** (+13,865 B / +5.12% vs the deliberately-spent M2
+270,879 B baseline — the whole TOC feature), byte-identical Chromium/Firefox; `pnpm zip` **323.63 kB Chrome /
+323.69 kB Firefox, both < 2 MB**. First-paint re-run (5.2) **PASSES both parts: (a) ≤50 KB nav→paint
+133.5 ms < 150 ms; (b) 1 MB doc = the ~1400-entry pathological TOC 1196.3 ms < 1.7 s** — no regression.
+`perf:toc` (5.1): rail build ~45 ms @1401 headings (jsdom construction, conservative upper bound), scroll-spy
+~4.4 ms/frame @1401 — recorded, no threshold asserted.
+
+**Suites green:** `pnpm test` **350 unit** · `pnpm test:browser` **166** both engines · golden
+`git diff tests/golden/output/` **EMPTY** · huge-doc `sha256=8bc5094c…e61bbd` intact · manifest
+`permissions:[]` pinned · lint clean.
+
+**Carried gaps (each has a recorded home — see decisions.md):** the **contained-surface reduced-motion gap**
+(plan §3-#2 is FALSE for the app-page `.peekover-app__reader` box — the reduced-motion a11y obligation HOLDS
+trivially, only the smooth-without nicety is absent; decisions.md 2026-07-16); the **`\` (Raw/Reading) inert-on-
+app-page gap** (decisions.md 2026-07-17 — 003's TOC toggle works on both surfaces, `\` deliberately not
+retrofitted onto the registry); the **TOC-tree virtualization lever** (measurement-informed at ~45 ms/1401,
+NOT forced for typical docs; revisit at N-thousand headings — decisions.md 2026-07-17). The **defect-#6
+"visual occlusion is gate-only" class** (the group-3 gate found the rail transparent + the column un-reserved)
+is a retro LESSON left to **6.3**, not a decisions entry.
+
+**Next → 6.2 named human gate (Chrome+Firefox, both surfaces, Network tab), then 6.3 retro → M3 close.**
+Pointer advances per task (M1 retro rule).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
@@ -513,23 +251,31 @@ foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
     the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
-Immediate — **M3 kickoff (spec 003): TOC / navigation** (product spec §11 build-order item 3), now that
-the 6.3 gate has passed and M2 is fully closed. Gear 3 in FRESH sessions per WORKFLOW.md 5.3: **draft
-spec.md (this session, gate 1) → plan.md → tasks.md**, human approves each gate before any code.
+Immediate — **spec 003 (TOC / navigation) implementation is COMPLETE; the 6.x milestone-close is in
+progress.** Next actions, in order: **6.2** — the named human Chrome+Firefox gate on the current build (both
+surfaces, Network tab open), the one 003 acceptance an agent cannot self-certify; then **6.3** — `/retro`.
+**Only after 6.2 passes is M3 closed.** (6.1 — this reconcile — is done: `Now` collapsed, decisions.md
+entries recorded.)
 
-Carried to M3 (measurement-driven / unrelated levers, do NOT guess):
+Carried beyond 003 (measurement-driven / unrelated levers, do NOT guess):
+- **Chunked/virtualized *TOC-tree* render** — the many-heading lever, new from 003's 5.1: ~45 ms rail build
+  @1401 headings (jsdom upper bound), scales ~linearly. **NOT forced for typical docs**; the pathological
+  one-node-per-heading cost is the same suspect as the folder tree. **Revisit at N-thousand headings**
+  (decisions.md 2026-07-17).
 - **Chunked/virtualized *tree* render** — the large-folder lever. 6.2 measured the pure walk+build as
   cheap (~7 ms typical); the suspect is `treeView` laying out one DOM node per file+dir. **Decide from
   a real-browser tree render measurement** (the deferred half of 6.2), not from a guessed bound.
 - **Chunked/virtualized reader render** — the M1-carried large-*doc* first-paint lever (decisions.md
-  2026-07-14). Same class, different surface.
-- Restore GFM table alignment safely (map to class, never inline style) — unrelated to 002.
+  2026-07-14). Same class, different surface; 003's 5.2 confirmed no first-paint regression, so still carried.
+- Restore GFM table alignment safely (map to class, never inline style) — unrelated to 002/003 (spec 003
+  §Out-of-scope leaves it to table work).
 
 Roadmap: 003 TOC/navigation · 004 themes+settings · 005 watch mode + diff (the differentiator) · …
 full order in docs/product/spec.md §Phase-1.
 
 ## Blockers / open questions
-- **None open on M2.** The named human milestone-close gate (task 6.3) **PASSED 2026-07-15, both
-  engines** — see Done. M2 (spec 002) is fully closed.
-- Spec 003 (TOC / navigation) opens with its own open questions; those live in
-  `specs/003-toc-navigation/spec.md` (§Open questions), not here, until plan time.
+- **None on M2.** M2 (spec 002) is fully closed — code + the named 6.3 human gate, both engines (2026-07-15).
+- **003 open item: the 6.2 milestone-close human gate is owed** — Chrome + Firefox, current build, both
+  surfaces, Network tab open (the one 003 acceptance an agent cannot self-certify). Implementation is complete
+  and all automated acceptance is green (350 unit · 166 browser · golden EMPTY · `permissions:[]` pinned · lint
+  clean), so nothing blocks the gate. The spec/plan §Open-questions were all resolved at the plan gate.

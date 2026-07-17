@@ -1,6 +1,61 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-17 · M3 CLOSE (spec 003 — in-reader TOC / navigation): implementation complete, awaiting
+  the 6.2 human gate.** The reader gained an auto-generated table-of-contents rail that serves BOTH reader
+  surfaces (content-script full-page + app-page contained pane) from ONE implementation. Recorded so a later
+  spec builds on it, not around it:
+  - **ONE-seam compose.** `buildTocModel(root)` + `buildTocView(host, model, {contained})` are pushed into
+    the SAME `children[]` array `mount()` commits with its single `shadow.replaceChildren(...)` — the M2
+    "one seam, every branch funnels through it" win reused verbatim, so both surfaces get the TOC with zero
+    per-surface branching. The raw-fallback path stays TOC-free (banner + raw `<pre>` — never-blank #5).
+  - **Navigation is by element REFERENCE, never a URL hash.** Each entry button carries its exact heading
+    node (`entry.headingRef`) in a module-level `WeakMap`; click/Enter calls `scrollIntoView({block:'start'})`
+    on that carried ref (the same node 2.1's identity test guards and 3.1 scrolls — one ref, not two
+    derivations). **No heading `id` is added → the M1 sanitize `id`-closure (DOM-clobbering surface, dropped
+    2026-07-14) stays SHUT**, and the shadow-DOM fragment gap (spec §9) is sidestepped. URL/history untouched.
+  - **Scroll-spy roots on the shadow-host scroll box, resolved PER SURFACE** (not assumed `:host`): full-page
+    → `:host`; contained → the nearest ancestor pane that actually scrolls (`.peekover-app__reader`), resolved
+    by COMPUTED overflow. Active section is read from LIVE `getBoundingClientRect` per recompute (observer +
+    rAF-coalesced scroll listener as triggers), NOT from stale `isIntersecting` snapshots; the trailing-short-
+    section edge is handled by promoting the final entry at scroll-bottom. Observer disconnected on teardown.
+  - **Right-side rail, present at ≥2 headings** (0/1 → omitted — a single-entry TOC has no nav value); initial
+    open/collapsed decided from the reader's own `:host` scrollport width (`initialTocOpen`), reflected as
+    `data-toc` on the host. Right (not left) keeps the app page's left folder-pane and the section-nav rail
+    visually distinct. While open, the reading column reserves exactly the rail's `--toc-w` (opaque
+    `background:var(--paper)` + column `margin-right`) so the rail never overlaps or underlaps the text.
+  - **Keyboard toggle = backtick `` ` ``** (plan-gate override of the plan's `t`), via a module-level host
+    `Set<HTMLElement>` that `mount()` fills/empties; the resolver prunes any `!isConnected` host AND requires
+    a live rail before toggling. Guarded EXACTLY like readerMode's `\` (bare key, no Ctrl/Cmd/Alt, ignored in
+    input/textarea/select/contenteditable) and distinct from it — the two never collide.
+  - **Sizes / perf / first-paint (measured, group 5; the byte-identity M2 invariant is deliberately spent per
+    spec §Surface-scope).** Content script **284,744 B** (+13,865 B / +5.12% vs M2 270,879 B — the whole TOC
+    feature), byte-identical both engines; `pnpm zip` **323.63 kB Chrome / 323.69 kB Firefox, < 2 MB**.
+    First-paint re-run PASSES both parts: **(a) ≤50 KB nav→paint 133.5 ms < 150 ms; (b) 1 MB = the ~1400-entry
+    pathological TOC 1196.3 ms < 1.7 s** — no regression (the rail's ~45 ms JS build rides inside the mount
+    path, lost in the ~750 ms browser layout of the 1400-section reader). `perf:toc`: rail build ~45 ms @1401
+    headings (jsdom upper bound), scroll-spy ~4.4 ms/frame @1401 — **no threshold asserted** (M1 retro rule).
+    **The chunked/virtualized TOC-tree render is a measurement-informed LEVER, not a forced change:** the
+    ~45 ms/1401 build scales ~linearly and is fine for typical docs; the one-node-per-heading cost at
+    pathological counts is the same suspect as the folder tree. **Revisit-when:** a real document reaches
+    N-thousand headings (then virtualize the TOC-tree render); OR heading permalinks / deep-links land (they
+    need heading `id`/slugs → a security-reviewed re-opening of the sanitize `id`-closure, out of 003); OR the
+    frontmatter render-options feature lands (the intended home for a document-declared initial TOC state); OR
+    spec 004 settings persists TOC open-state / width (003 is per-view only). The contained-surface reduced-
+    motion gap is separately recorded (2026-07-16, plan §3-#2 false for the app-page box); the `\`-app-page
+    inert-shortcut gap is recorded immediately below.
+
+- **2026-07-17 · CARRIED HARDENING: the `\` (Raw/Reading) shortcut is inert on the app page — 003 did NOT
+  retrofit it.** `installToggleShortcut()` resolves its target via `document.querySelector('peekover-root')`
+  (`readerMode.ts`), which is the content-script host but returns `null` for the app-page reader host
+  (`<div class="peekover-app__reader__host">`) — so `\` is already inert on the app page (a latent 002 gap,
+  not surfaced by 002's gate). 003's TOC backtick toggle works on BOTH surfaces because `tocView.ts` registers
+  each mounted host in its own registry; 003 deliberately did **not** retrofit `\` onto that registry, because
+  it touches `readerMode` + its tests for no 003 benefit. Recorded here (not only in plan §6-#1 / §9-#4) so the
+  inconsistency (TOC toggle works app-page; `\` still doesn't) is visibly deliberate. **Revisit-when:** a
+  settings/hardening pass, or the next time `readerMode`'s shortcut host-resolution is touched — unify both
+  shortcuts on one host registry.
+
 - **2026-07-16 · FINDING (task 3.3): the app-page (contained) reader is reduced-motion-safe by
   ACCIDENT, not by design — plan §3-#2 is FALSE for the contained surface.** The contained reader
   scrolls `.peekover-app__reader` — a **light-DOM** element whose CSS lives in the app shell
