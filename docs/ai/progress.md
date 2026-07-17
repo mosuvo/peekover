@@ -223,6 +223,44 @@ EMPTY + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel
 both builds succeed (content script **284.74 kB — byte-identical to the group-3 build**, confirming no
 shipped-code change). → next = group 5 (5.1 perf:toc measure · 5.2 first-paint re-run incl. the
 ~1400-entry-TOC number · 5.3 byte re-measure). No decisions.md entry — no leak found.
+**TASK 5.1 DONE (§6 P1 — MEASUREMENT, no threshold asserted; M1 retro standing rule).** New harness
+`scripts/perf-toc.ts` (`pnpm perf:toc`) + `scripts/jsdom.d.ts` ambient decl (jsdom ships no types, and
+`@types/jsdom` is not a dep — the unit suite reaches jsdom via vitest's `environment`, never importing
+it; standalone `.d.ts`, same pattern as `markdown-it-task-lists.d.ts`; NO new dependency). Same protocol
+as `perf-first-paint`/`perf-folder-tree` (7 iters/size, cold run discarded, median of warm 6). Machine:
+i7-13700, Windows, tsx/node + jsdom. Measures the REAL production hot path — `buildTocModel(root)` +
+`buildTocView(host, model)` — with the SAME perf-folder-tree honesty split the M2 retro praised: the
+pure/JS-construction half faithfully, the browser's layout/paint DEFERRED to the real engine (not faked
+in jsdom). **(a) BUILD vs heading count** (jsdom real-DOM construction — the "one DOM node per heading"
+suspect, 6.2-analogous to `treeView`):
+
+  | headings | model build (med) | rail build (med) | total | rail nodes |
+  |---|---|---|---|---|
+  | 50 | 0.41 ms | 2.76 ms | 3.17 ms | 204 |
+  | 100 | 0.45 ms | 4.65 ms | 5.10 ms | 404 |
+  | 250 | 0.66 ms | 8.64 ms | 9.30 ms | 1004 |
+  | 500 | 1.02 ms | 15.19 ms | 16.21 ms | 2004 |
+  | 1000 | 2.70 ms | 28.01 ms | 30.71 ms | 4004 |
+  | **1401** (= `buildHugeDoc`: 1 h1 + 1400 h2) | **3.57 ms** | **41.34 ms** | **44.9 ms** | **5609** |
+  | 2000 | 4.16 ms | 56.46 ms | 60.62 ms | 8004 |
+
+**(b) SCROLL-SPY per-frame JS overhead** (real `installScrollSpy` `recompute()` over 240 scroll frames,
+geometry STUBBED so this isolates OUR O(N) live-geometry scan + single-active churn — NOT the browser's
+real `getBoundingClientRect`/layout cost): **1401 headings → median 4.38 ms/frame** (4.26–4.54);
+**2000 → 7.03 ms/frame** (6.90–7.31). **Honesty split (why (b) is JS-only):** jsdom has no layout and no
+`IntersectionObserver` (the spy guards itself off there), so the spy's DOMINANT real cost — the browser
+forcing layout on each live `getBoundingClientRect` during an active scroll — cannot be measured here
+without a stub masquerading as the real number (M1/M2 retro forbids). That real cost is covered, measured,
+elsewhere: **5.2 first-paint on the SAME ~1400-heading doc** (real headless Chromium; the rail builds +
+lays out + installs its observer there) and **`tocScroll.browser.test.ts` (3.2) proving clean
+single-active tracking on BOTH Chromium + Firefox**. **FINDING (recorded, not asserted):** the rail build
+at the pathological 1401-heading doc is ~45 ms of JS-construction (jsdom, a conservative upper bound —
+real-browser C++ DOM is faster) and scales ~linearly with heading count; the carried chunked/virtualized
+**TOC-tree** lever is therefore NOT forced by this number for typical docs, but the pathological
+one-node-per-heading cost (5609 nodes @1401) is the same suspect as the folder tree — a post-measurement
+call left to 5.2's real-browser first-paint number + the 6.1 close. `pnpm lint` clean; `pnpm perf:toc`
+reproducible. No `src/` touched; golden untouched; `permissions:[]` intact. → next = 5.2 (first-paint
+re-run incl. the ~1400-entry-TOC number) · 5.3 (byte re-measure).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
