@@ -13,9 +13,12 @@ deferred here from 5.2. **Zero unexpected network, no console errors, the docume
 the one 003 acceptance an agent cannot self-certify — now met. It caught **1 real defect** the green stack
 missed (the rail rendered TRANSPARENT + the reading column un-reserved — a NEW **"visual occlusion is
 gate-only"** class; retro 2026-07-17), keeping the gate load-bearing (**6/6** milestone-shipping defects caught
-across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding. **Next → spec 004 plan.md
-(Gear-3 gate 2); the spec is DRAFTED and APPROVED (gate 1 passed 2026-07-17).** Full close details in Done
-(2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
+across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding. **Next → spec 004
+IMPLEMENTATION (group 1 — store foundation), in a fresh session AFTER the tasks.md gate-3 human review. Spec
+APPROVED (gate 1, 2026-07-17); plan APPROVED (Gear-3 gate 2, 2026-07-17); tasks.md DRAFTED (`specs/004-themes-
+settings/`) awaiting gate 3. Sepia DEFERRED (D-1 = A).** No implementation code before tasks approval
+(WORKFLOW.md §5.3). Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in
+decisions.md 2026-07-17.
 
 **M2 (spec 002 — active-source foundation) remains fully closed** (code + the named human gate, both engines;
 task 6.3 PASSED 2026-07-15 — see Done). Nothing on 002 outstanding.
@@ -27,6 +30,15 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-17 — **Spec 004 plan APPROVED (Gear-3 gate 2) + tasks DRAFTED (gate-3 artifact).** `plan.md` landed
+  (the HOW — the `settings` store schema + `DB_VERSION` 1→2, the `SettingsPort` message seam, the theme-runtime
+  + host-registry rewrite with the `isConnected` liveness guard, the MEASURE-then-mitigate flash approach, the
+  test strategy); `tasks.md` drafted — **8 dependency-ordered groups**, each task with its own real-engine /
+  red-first or measured Verify line + the standing golden-EMPTY / `manifest.test.ts`-green pins, awaiting a
+  separate human gate before any implementation code. **D-1 = A: sepia DEFERRED from 004** — `design/tokens.css`
+  defines only 4 of ~15 sepia tokens, so completing the palette is a brand/design decision, not an
+  implementation fill; 004 ships **auto/light/dark** + persistence + TOC carry-over. Spec §3.5/§4/§6 amended
+  (f4e11f5); full detail in decisions.md 2026-07-17 + `specs/004-themes-settings/plan.md` §0 D-1.
 - 2026-07-17 — **Spec 004 (themes + settings) gate-1 approved & landed.** Gear-3 gate 1 passed 2026-07-17;
   `specs/004-themes-settings/spec.md` written (the WHAT — no tech). Next → plan.md (the HOW), Gear-3 gate 2, for
   a separate human gate before any implementation code. Persistence-path direction recorded in decisions.md
@@ -265,9 +277,11 @@ foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 ## Up next
 Immediate — **spec 003 (TOC / navigation) is CLOSED (code + the 6.2 human gate + 6.3 retro, 2026-07-17).**
 Next milestone: **spec 004 (themes + settings)** — the settings surface that persists reading prefs
-(theme/mode, and per §Surface-scope the TOC open-state/width that 003 kept per-view only). **Spec DRAFTED and
-APPROVED (Gear-3 gate 1 passed 2026-07-17 — `specs/004-themes-settings/spec.md`); the next action is plan.md
-(the HOW), Gear-3 gate 2, for a separate human gate before any implementation code.**
+(theme/mode, and per §Surface-scope the TOC open-state/width that 003 kept per-view only). **Spec + plan +
+tasks all landed: spec APPROVED (gate 1, 2026-07-17), plan APPROVED (Gear-3 gate 2, 2026-07-17 —
+`specs/004-themes-settings/plan.md`), tasks.md DRAFTED (the gate-3 artifact) awaiting the human review. The next
+action is IMPLEMENTATION group 1 (store foundation) in a FRESH session AFTER tasks approval — no implementation
+code before then (WORKFLOW.md §5.3). Sepia DEFERRED from 004 (D-1 = A; palette undefined in `design/tokens.css`).**
 
 Carried beyond 003 (measurement-driven / unrelated levers, do NOT guess):
 - **Chunked/virtualized *TOC-tree* render** — the many-heading lever, new from 003's 5.1: ~45 ms rail build
@@ -288,5 +302,6 @@ full order in docs/product/spec.md §Phase-1.
 ## Blockers / open questions
 - **None.** M2 (spec 002) fully closed 2026-07-15; **M3 (spec 003) fully closed 2026-07-17** — code + the named
   6.2 human gate (both engines, both surfaces) + 6.3 retro. Nothing outstanding on either. **Spec 004 is scoped
-  and approved (Gear-3 gate 1, 2026-07-17); open questions for the build are carried as the five risks in
-  `specs/004-themes-settings/spec.md` §7, to be resolved at the plan.md gate.**
+  and approved (gate 1); plan approved (Gear-3 gate 2, 2026-07-17) — the spec §7 risks are resolved in
+  `specs/004-themes-settings/plan.md` §3; tasks.md is DRAFTED and awaiting the gate-3 human review before any
+  implementation code.**
