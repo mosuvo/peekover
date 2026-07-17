@@ -1,4 +1,81 @@
 # Retro log — Peekover
+- **2026-07-17 · M3 close (spec 003 — TOC / navigation).** An in-reader right-side table-of-contents
+  rail serving BOTH reader surfaces from ONE `mount()`-seam compose (see decisions.md 2026-07-17 for the
+  settled architecture — not restated here). Six groups (model · rail+seam · scroll/spy/motion/resize ·
+  zero-network · perf/first-paint/bytes · close). All automated acceptance green at close: lint · 350 unit ·
+  166 in-browser both engines · golden diff EMPTY · `permissions:[]` pinned · zip 323 kB both engines. The
+  6.2 human milestone-close gate PASSED on both engines and both surfaces (incl. the Firefox no-raw-flash
+  1 MB first-paint ground truth deferred here from 5.2). Rich, honest material — the real-engine tests earned
+  their cost this milestone AND a new human-gate-only defect class surfaced.
+  - **(1) THE HEADLINE — a NEW gate-only defect class: visual occlusion / opacity / z-order is invisible to
+    geometry tests (defect #6, running score 6/6 caught at the human gate).** The first group-3 human gate found
+    the `.peekover-toc` rail rendered TRANSPARENT — the reading column's text bled straight through it — and the
+    column reserved no room for the rail, so it also underlapped (an opaque rail would then clip the column's
+    right edge). This passed EVERY automated test, including **158 green real-engine browser tests** in real
+    Chromium + Firefox, because those tests assert **geometry and behavior** — scroll position, active index,
+    rail width, request counts, bounding-rect non-overlap — and a transparent-but-correctly-positioned element
+    scrolls, highlights, resizes, and *measures* perfectly while looking broken. **The crisp lesson:
+    bounding-rect / behavior tests can prove non-overlap and correct position, but they CANNOT see see-through,
+    opacity, or paint z-order — those are human-gate-only properties.** Follow-on: the fix (348eb67) both
+    OCCLUDED (opaque `background:var(--paper)`) and RESERVED (`:host([data-toc="open"]) .peekover-reader
+    {width:auto;margin-right:var(--toc-w)}`), and ADDED a real-engine test that CAN check the part a real engine
+    exposes — rail computes a **non-transparent** background when open, and column `right ≤` rail `left` (no
+    underlap), red-first proven both engines/surfaces. So the class is now *partially* test-covered (computed
+    background-color + edge geometry), but the ROOT lesson stands for the next overlay-chrome feature: **a
+    real-engine test can read computed opacity if you think to assert it, but nothing short of a human eye tells
+    you the chrome LOOKS wrong** — occlusion/opacity/z-order is not something geometry alone surfaces. This is
+    defect #6 of 6 caught at the human gate across M1+M2+M3 (M1: fetch leak, Firefox timing; M2: containment,
+    drag-navigation, storage-UI gap; M3: rail occlusion). The gate is 6/6 load-bearing.
+  - **(2) Where the line fell between "a real-engine test caught it" and "only a human/real-load caught it" —
+    and this milestone the automated real-engine tests were NOT ceremony.** Unlike M1/M2 (where the manual gate
+    caught bugs a green stack missed), the browser suite genuinely caught real bugs MID-implementation, before
+    any gate:
+    - *Scroll-spy staleness (3.2)* — an early `isIntersecting`-snapshot spy left the highlight stale under fast
+      scroll; the real-engine scroll assertion failed until it was re-rooted on LIVE `getBoundingClientRect` per
+      recompute (decisions.md 2026-07-17).
+    - *Dead-node / liveness hazards* — the rAF-coalesced scroll listener, the host `Set` registry, and the
+      rail-less backtick resolution each had a torn-down-host hazard the tests forced out (16821a8, e4d3bc6,
+      997d81e, 361be37).
+    - *Initial-state 0-width collapse (2.2)* — the rail could mount collapsed to zero width with no reachable
+      opener; caught and fixed with a real shape test (16821a8).
+    - *Reduced-motion contained-surface finding (3.3)* — measurement, not reasoning, revealed the app-page box is
+      reduced-motion-safe only by accident (see (4)).
+    But the two things the automated stack still could NOT see were **gate/procedure-only**: the **rail occlusion**
+    (defect #6, above) and the **Firefox no-raw-flash / stale-build scares** — the latter a *procedure* trap
+    (a stale or dev Firefox load shows a dead reader + `localhost` CSP warning that reads as a code defect but
+    isn't; decisions.md 2026-07-16). → **The reusable boundary:** real-engine tests now catch geometry, behavior,
+    engine-timing staleness, and bytes-on-wire; what remains human-only is **how the chrome LOOKS** (opacity,
+    occlusion, "is the document still the hero") and **whether the build under test is the fresh production one**.
+  - **(3) Process wins to CARRY — codify the liveness guard by construction.** The isConnected / liveness
+    discipline recurred **5×** this milestone (rAF scroll callback · host `Set` registry · rail-less backtick
+    resolution · scroll-spy observer teardown · resize pointer listeners) — every deferred / observer / listener
+    on the shared `mount()` path needed the SAME "is the host still connected?" teardown guard, rediscovered
+    per-task. → **Action:** the next feature that adds deferred/observer/listener work to the shared mount path
+    should apply the isConnected-prune-on-teardown guard **by construction**, not rediscover it — treat it as a
+    checklist item of "anything async rooted on a mountable host." The **fresh-production-build-before-a-Firefox-
+    gate** procedure is already durably recorded (decisions.md 2026-07-16) — reference it, don't repeat the scare.
+    And the **per-task pointer-move + per-task commit + fresh-skeptic-review** loop held again with no pointer lag
+    (the M1 defect that started this rule) — keep it.
+  - **(4) A plan-conformance miss found only by measurement — "CSS governs on both surfaces" did not hold.** Plan
+    §3-#2 asserted the `:host{scroll-behavior}` reduced-motion override governs on BOTH surfaces. Measurement (3.3)
+    showed it FALSE for the app page: the contained reader scrolls `.peekover-app__reader`, a **light-DOM** box
+    whose CSS lives in the app shell, which the shadow `:host` override never reaches — so the app page is
+    reduced-motion-safe by *accident* (instant-always), not by enforcement (decisions.md 2026-07-16). → **Lesson:**
+    a "CSS governs" claim about a shadow-host stylesheet does NOT reach light-DOM scroll boxes; such per-surface
+    claims need per-surface **measurement**, not reasoning. (The a11y obligation holds trivially here; the latent
+    hazard — someone later adding `scroll-behavior:smooth` to that light-DOM box — is recorded for the revisit.)
+  - **Ceremony that was waste — none.** The red-first real-engine proofs caught 4+ mid-implementation bugs; the
+    "no un-measured threshold" rule kept 5.1/5.2 honest (measured the ~45 ms/1401 rail build + first-paint
+    re-run, asserted no new threshold); the human gate caught defect #6. All earned their cost.
+  - **The carried TOC-tree render lever is CARRIED, not decided** (5.1 measured ~45 ms/1401-heading build, scales
+    ~linearly, fine for typical docs; the one-node-per-heading cost is the same suspect as the folder tree —
+    revisit at N-thousand headings, decisions.md 2026-07-17). The `\`-app-page inert-shortcut gap is durably
+    recorded (decisions.md 2026-07-17, per 6.1) — TOC backtick works on both surfaces; `\` was deliberately not
+    retrofitted.
+  - **Metrics:** human-gate-caught defects this milestone = **1** (rail occlusion — a NEW class: opacity/z-order
+    invisible to geometry tests), running gate score **6/6** across M1+M2+M3 · first-try verification pass = the
+    automated real-engine stack caught bugs mid-implementation (genuine, not ceremony), but the human gate was
+    still required for the occlusion class it structurally cannot see · sessions = several (M3, ~one per group).
 - **2026-07-15 · M2 close (spec 002 — active-source foundation).** Peekover's second surface: a
   dedicated app page that reads a chosen folder of markdown, `permissions: []` intact, both engines.
   Six groups (shell · store · Chromium open · Firefox fallback · recents/pins+persist · doc/perf/

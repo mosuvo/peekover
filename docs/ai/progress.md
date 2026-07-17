@@ -3,49 +3,22 @@
 *Updated: 2026-07-17.*
 
 ## Now (start here)
-**M2 fully closed (spec 002 — active-source foundation): code + the named human gate, both engines**
-(task 6.3 PASSED 2026-07-15 — see Done). Nothing on 002 outstanding.
+**M3 CLOSED (spec 003 — TOC / navigation): code-complete AND human-gated, both engines, both surfaces.**
+The **6.2 milestone-close human gate PASSED 2026-07-17** on Chrome + Firefox, both surfaces (content-script
+full-page `file://` doc AND the app-page reader pane), Network tab open — TOC appears at ≥2 headings · click
+scrolls to the section · scroll-spy tracks the active entry · collapse/expand · drag-resize · backtick toggle ·
+**smooth** normally and **instant** under OS reduced-motion · a no-heading doc and a pathological-heading doc
+each show a designed state, **never blank** · plus the (b) **no-raw-flash on the 1 MB doc** ground truth
+deferred here from 5.2. **Zero unexpected network, no console errors, the document stays the hero.** This is
+the one 003 acceptance an agent cannot self-certify — now met. It caught **1 real defect** the green stack
+missed (the rail rendered TRANSPARENT + the reading column un-reserved — a NEW **"visual occlusion is
+gate-only"** class; retro 2026-07-17), keeping the gate load-bearing (**6/6** milestone-shipping defects caught
+across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding. **Next → spec 004 (themes +
+settings).** Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md
+2026-07-17.
 
-**Active: `specs/003-toc-navigation/` (TOC / navigation — product spec §11 build-order item 3) —
-IMPLEMENTATION COMPLETE, awaiting the 6.2 human gate before M3 close.** spec + plan + tasks approved
-(Gear 3 gates 1–3); groups 1–5 all landed and pushed (HEAD `e0e848e`), every acceptance number measured.
-**M3 is NOT yet closed** — the named Chrome+Firefox milestone-close gate (**6.2**, the one 003 acceptance
-an agent cannot self-certify) is still owed, then **6.3** retro. This line is 6.1's reconcile — the
-pointer's last move before the gate.
-
-**What shipped:** an in-reader right-side TOC rail, ONE implementation for both reader surfaces via the
-single `mount()` seam. Pure `buildTocModel(root)` (h1–h6 refs in doc order, nearest-strictly-shallower-
-ancestor nesting — no synthetic nodes, designed fallback labels, verbatim duplicates) + `buildTocView(host,
-model, {contained})` (`nav` landmark + nested `<ol>`, disclosure-`aria-expanded` collapse, `≥2`-heading
-threshold-omit, `textContent`-only labels, each button carrying its exact `entry.headingRef` via a
-module-level `WeakMap`). Click/Enter scrolls by element ref (`scrollIntoView`, NO `behavior` arg → CSS
-governs smooth / reduced-motion); a host-rooted `IntersectionObserver` scroll-spy marks the section in view
-(`aria-current="location"` + `.is-active`, per-surface root resolution); backtick (`` ` ``) toggle via a
-module host registry (distinct from readerMode's `\`, prunes dead nodes, requires a live rail); pointer-drag
-resize of `--toc-w` (per-view, not persisted). `permissions:[]` intact; zero network on every TOC action.
-
-**Measured (group 5):** content script **284,744 B** (+13,865 B / +5.12% vs the deliberately-spent M2
-270,879 B baseline — the whole TOC feature), byte-identical Chromium/Firefox; `pnpm zip` **323.63 kB Chrome /
-323.69 kB Firefox, both < 2 MB**. First-paint re-run (5.2) **PASSES both parts: (a) ≤50 KB nav→paint
-133.5 ms < 150 ms; (b) 1 MB doc = the ~1400-entry pathological TOC 1196.3 ms < 1.7 s** — no regression.
-`perf:toc` (5.1): rail build ~45 ms @1401 headings (jsdom construction, conservative upper bound), scroll-spy
-~4.4 ms/frame @1401 — recorded, no threshold asserted.
-
-**Suites green:** `pnpm test` **350 unit** · `pnpm test:browser` **166** both engines · golden
-`git diff tests/golden/output/` **EMPTY** · huge-doc `sha256=8bc5094c…e61bbd` intact · manifest
-`permissions:[]` pinned · lint clean.
-
-**Carried gaps (each has a recorded home — see decisions.md):** the **contained-surface reduced-motion gap**
-(plan §3-#2 is FALSE for the app-page `.peekover-app__reader` box — the reduced-motion a11y obligation HOLDS
-trivially, only the smooth-without nicety is absent; decisions.md 2026-07-16); the **`\` (Raw/Reading) inert-on-
-app-page gap** (decisions.md 2026-07-17 — 003's TOC toggle works on both surfaces, `\` deliberately not
-retrofitted onto the registry); the **TOC-tree virtualization lever** (measurement-informed at ~45 ms/1401,
-NOT forced for typical docs; revisit at N-thousand headings — decisions.md 2026-07-17). The **defect-#6
-"visual occlusion is gate-only" class** (the group-3 gate found the rail transparent + the column un-reserved)
-is a retro LESSON left to **6.3**, not a decisions entry.
-
-**Next → 6.2 named human gate (Chrome+Firefox, both surfaces, Network tab), then 6.3 retro → M3 close.**
-Pointer advances per task (M1 retro rule).
+**M2 (spec 002 — active-source foundation) remains fully closed** (code + the named human gate, both engines;
+task 6.3 PASSED 2026-07-15 — see Done). Nothing on 002 outstanding.
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
@@ -54,6 +27,41 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-17 — **Tasks 6.2 + 6.3: M3 CLOSED (spec 003 — TOC / navigation) — code-complete AND human-gated.**
+  The **6.2 milestone-close human gate PASSED, both engines, both surfaces.** A human walked the full spec-003
+  checklist in **Chrome + Firefox on the current build, Network tab open**, on the content-script full-page
+  `file://` doc AND the app-page reader pane: multi-heading doc → **TOC appears** (≥2 headings) → click an
+  entry **scrolls to the section** → scroll → **active entry tracks** (scroll-spy) → **collapse/expand** →
+  **resize** the sidebar → **backtick toggle** → **smooth** scroll normally, **instant** under an OS
+  reduced-motion setting → a **no-heading** doc and a **pathological-heading** doc each show a designed state,
+  **never blank** → the (b) **no-raw-flash on the 1 MB doc** ground truth from 5.2 confirmed. **Zero unexpected
+  network throughout, no console errors, the document stayed the hero.** The single 003 acceptance an agent
+  cannot self-certify — now met. It caught **1 real defect** the green stack missed: the TOC rail rendered
+  TRANSPARENT (text bled through) and the reading column reserved no room for it (underlap) — a **NEW
+  "visual occlusion is gate-only" defect class** (geometry/behavior tests measure a transparent element
+  perfectly; opacity/z-order is human-eye-only). Fixed pre-close (348eb67: opaque rail + column reservation +
+  a real-engine occlusion test that now covers the part an engine CAN read); the root lesson is captured in the
+  retro (2026-07-17). Running human-gate score: **6/6** milestone-shipping defects caught across M1+M2+M3.
+  **What shipped (one implementation, both surfaces, via the single `mount()` seam):** an in-reader right-side
+  TOC rail. Pure `buildTocModel(root)` (h1–h6 refs in doc order, nearest-strictly-shallower-ancestor nesting —
+  no synthetic nodes, designed fallback labels, verbatim duplicates) + `buildTocView(host, model, {contained})`
+  (`nav` landmark + nested `<ol>`, disclosure-`aria-expanded` collapse, `≥2`-heading threshold-omit,
+  `textContent`-only labels, each button carrying its exact `entry.headingRef` via a module-level `WeakMap`).
+  Click/Enter scrolls by element ref (`scrollIntoView`, no `behavior` arg → CSS governs); a host-rooted
+  scroll-spy (observer + rAF-coalesced scroll, LIVE `getBoundingClientRect`, per-surface root) marks the
+  section in view (`aria-current="location"` + `.is-active`); backtick (`` ` ``) toggle via a module host
+  registry (distinct from readerMode's `\`, prunes dead nodes, requires a live rail); pointer-drag resize of
+  `--toc-w` (per-view). `permissions:[]` intact; zero network on every TOC action. **Measured (group 5):**
+  content script **284,744 B** (+13,865 B / +5.12% vs the deliberately-spent M2 270,879 B baseline),
+  byte-identical Chromium/Firefox; `pnpm zip` **323.63 kB Chrome / 323.69 kB Firefox, both < 2 MB**. First-paint
+  re-run (5.2): **(a) ≤50 KB nav→paint 133.5 ms < 150 ms; (b) 1 MB = the ~1400-entry pathological TOC
+  1196.3 ms < 1.7 s** — no regression. `perf:toc` (5.1): rail build ~45 ms @1401 headings, scroll-spy
+  ~4.4 ms/frame @1401 — recorded, no threshold asserted (M1 retro rule). **Suites at close:** `pnpm test`
+  **350 unit** · `pnpm test:browser` **166** both engines · golden diff **EMPTY** · huge-doc
+  `sha256=8bc5094c…e61bbd` intact · `permissions:[]` pinned · lint clean. Carried gaps each have a recorded
+  home in decisions.md (contained-surface reduced-motion 2026-07-16 · `\`-app-page inert 2026-07-17 · TOC-tree
+  virtualization lever 2026-07-17 — CARRIED, not forced). **M3 (spec 003) is fully closed; next → spec 004
+  (themes + settings).**
 - 2026-07-15 — **Task 6.3: human milestone-close gate PASSED, both engines — M2 FULLY CLOSED.** A human
   walked the full spec-002 checklist in **Chrome + Firefox on the current build, Network tab open**:
   toolbar action opens the app page (no console errors) · Chromium folder open (picker **and** drag)
@@ -251,11 +259,10 @@ foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
     the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
-Immediate — **spec 003 (TOC / navigation) implementation is COMPLETE; the 6.x milestone-close is in
-progress.** Next actions, in order: **6.2** — the named human Chrome+Firefox gate on the current build (both
-surfaces, Network tab open), the one 003 acceptance an agent cannot self-certify; then **6.3** — `/retro`.
-**Only after 6.2 passes is M3 closed.** (6.1 — this reconcile — is done: `Now` collapsed, decisions.md
-entries recorded.)
+Immediate — **spec 003 (TOC / navigation) is CLOSED (code + the 6.2 human gate + 6.3 retro, 2026-07-17).**
+Next milestone: **spec 004 (themes + settings)** — the settings surface that persists reading prefs
+(theme/mode, and per §Surface-scope the TOC open-state/width that 003 kept per-view only). **Not yet started —
+no spec/plan/tasks drafted; that Gear-3 kickoff is the next session's first action, not this one.**
 
 Carried beyond 003 (measurement-driven / unrelated levers, do NOT guess):
 - **Chunked/virtualized *TOC-tree* render** — the many-heading lever, new from 003's 5.1: ~45 ms rail build
@@ -274,8 +281,10 @@ Roadmap: 003 TOC/navigation · 004 themes+settings · 005 watch mode + diff (the
 full order in docs/product/spec.md §Phase-1.
 
 ## Blockers / open questions
-- **None on M2.** M2 (spec 002) is fully closed — code + the named 6.3 human gate, both engines (2026-07-15).
-- **003 open item: the 6.2 milestone-close human gate is owed** — Chrome + Firefox, current build, both
-  surfaces, Network tab open (the one 003 acceptance an agent cannot self-certify). Implementation is complete
-  and all automated acceptance is green (350 unit · 166 browser · golden EMPTY · `permissions:[]` pinned · lint
-  clean), so nothing blocks the gate. The spec/plan §Open-questions were all resolved at the plan gate.
+- **None.** M2 (spec 002) fully closed 2026-07-15; **M3 (spec 003) fully closed 2026-07-17** — code + the named
+  6.2 human gate (both engines, both surfaces) + 6.3 retro. Nothing outstanding on either. Spec 004 has no open
+  questions yet because it has not been scoped — its Gear-3 spec gate is where those get raised.
+- **Doc-hygiene note (not a blocker):** `specs/003-toc-navigation/tasks.md` still shows stale `[ ]` on the
+  completed boxes (1.1–5.3, 6.1, 6.2, 6.3) — only 2.2 is ticked. Task 6.3's file-scope is `docs/ai/retro.md`
+  ONLY, so those ticks were **flagged for a separate hygiene commit** rather than folded into the 6.3 close
+  commit (see the close report). A trivial follow-up.
