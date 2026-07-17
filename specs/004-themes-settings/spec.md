@@ -1,6 +1,6 @@
 # Spec 004 — Themes + Settings
 
-**Status:** approved (Gear-3 gate 1 passed 2026-07-17) — plan.md next
+**Status:** approved (Gear-3 gate 1 passed 2026-07-17); amended 2026-07-17 — sepia deferred (D-1=A, plan.md §0 D-1)
 **Date:** 2026-07-17
 **Milestone:** M4 · builds on 003 (TOC/navigation, CLOSED)
 **Structure:** follows WORKFLOW.md §5.2 (`spec.md` = the WHAT, no tech). Reconcile against `specs/_template-spec.md` if it carries extra sections.
@@ -38,7 +38,7 @@ Settings persist in the existing on-device `peekover` IndexedDB (a new `settings
 
 **3.4 Auto-theme staleness fix ruled IN.** The theme runtime (`reader.ts` `watchColorScheme`) currently re-themes only content-script hosts (`querySelectorAll('peekover-root')`), so an OS light↔dark flip with an app-page document open leaves that reader's theme **stale** — a latent M2 defect this milestone's runtime rewrite fixes by construction (host-registry broadcast, mirroring 003's TOC registry). Shipping the rewrite without fixing it would be knowingly shipping the bug.
 
-**3.5 Sepia activated — with its palette completed.** Sepia becomes user-selectable. Its token block currently overrides only `--paper/--ink/--accent/--accent-soft` (`readerCss.ts`), so chrome (code, tables, rail, pills) would inherit **light** tokens on sepia paper. Completing sepia's token set is **in scope**, and is a *verify-first* task: check `design/tokens.css` (the stated source of truth) for a full sepia palette and copy it; if only the four tokens are defined there, that is a **design decision to escalate**, not a gap to silently fill. Sepia's rendered look (contrast, the on-highlighter literal-hex trap) is a **human-gate item** — occlusion-class, not measurable by geometry.
+**3.5 Sepia deferred — palette undefined in `design/tokens.css`.** The verify-first check fired its escalation: `design/tokens.css` (the stated source of truth) defines only **four** sepia tokens (`--paper/--ink/--accent/--accent-soft`); the remaining ~11 fall through to light, so a sepia reader would paint **light** chrome (code, tables, rail, pills) on sepia paper. Completing the palette is a **brand/design decision, not an implementation fill** (plan.md §0 D-1) — so sepia is **DEFERRED from 004**: this milestone ships auto/light/dark. Sepia returns as its own small task once its palette is designed (one extra `data-theme` value everywhere; the plan is written surface-neutral to it). When it does land, its rendered look (contrast, the on-highlighter literal-hex trap) remains a **human-gate item** — occlusion-class, not measurable by geometry.
 
 ## 4. Acceptance criteria (EARS)
 
@@ -58,8 +58,8 @@ Settings persist in the existing on-device `peekover` IndexedDB (a new `settings
 **TOC carry-over**
 - When the user changes the TOC open-state or width, the system shall persist it so the next reader open applies the remembered state instead of the width-derived default (`initialTocOpen`). *(Scope: a single global remembered state this milestone; per-file memory is out — §6.)*
 
-**Sepia completeness**
-- When Sepia is selected, the system shall render a complete, contrast-checked palette across the reading column **and** its chrome (code, tables, rail, pills) — no light-theme token bleed.
+**Sepia completeness** *(deferred from 004 — see §3.5; not in this milestone's acceptance set)*
+- *When sepia is eventually shipped, it shall render a complete, contrast-checked palette across the reading column **and** its chrome (code, tables, rail, pills) — no light-theme token bleed. Not asserted for 004.*
 
 **Trust surface**
 - When the user opens the "Stored data" panel, the system shall disclose (plain language) that theme/display settings are stored on-device, alongside folders/recents/pins.
@@ -81,6 +81,7 @@ Settings persist in the existing on-device `peekover` IndexedDB (a new `settings
 
 ## 6. Out of scope (explicit)
 
+- **Sepia theme** — deferred from 004 (palette undefined in `design/tokens.css`); returns as its own small task once designed (§3.5, plan.md §0 D-1).
 - **Cross-device sync / `storage.sync`** — deferred as a future deliberate #4 event (§3.1).
 - **Multiple document themes (30+), GitHub-identical named themes** (F7) — later milestone.
 - **Font family / size / line-height / paragraph-spacing / dyslexia-font controls** (F7) — later.
