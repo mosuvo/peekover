@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-16.*
+*Updated: 2026-07-17.*
 
 ## Now (start here)
 **M2 FULLY CLOSED (spec 002 — active-source foundation): code-complete AND human-gated.** All six
@@ -199,6 +199,30 @@ green, lint clean, both builds succeed (content script **284.74 kB**, info-only;
 load-bearing comments are the only growth — no shipped JS behavior change). Only file touched:
 `src/theme/readerCss.ts` (READER_CSS) + the browser test. Group 3 code-complete AND gate-fix
 applied → the human RE-RUNS the group-3 gate on this build before push.
+**GROUP 4 DONE (§6 R4 zero-network guard — TEST-ONLY, no production/`src` code).** Every TOC action
+is proven to put ZERO bytes on the wire, both surfaces (full-page content-script host + contained
+app-page pane), both engines (Chromium + Firefox): building the rail, click-to-scroll, scroll-spy,
+collapse twist, opener, the real document-level backtick shortcut, and the resize drag are each
+exercised and asserted network-free after each action AND cumulatively. New file only:
+`tests/browser/tocNetwork.browser.test.ts` — reusing the EXISTING bytes-on-wire mechanism verbatim
+(remoteMedia/folderMode.network): the engine's own Resource Timing buffer
+(`performance.getEntriesByType('resource')`, http(s)-filtered, cleared per measured window), where an
+entry appears ONLY when the engine really put a request on the wire (jsdom is blind to this — the M1
+image leak shipped through a green jsdom stack). Media-free heading+prose doc (no image/code/math/
+mermaid → nothing lazy-loads/fetches), so any http(s) entry in a window is a genuine TOC leak — scoped
+honestly. NON-VACUOUS: a same-origin CONTROL fetch is shown to land in the same buffer through the
+same flush window BEFORE any zero is trusted (observer proven live) and again AFTER (still live); the
+same buffer/filter/`toEqual([])` check backs every zero-assert, so a leak from any action would fail
+identically. **RED-FIRST PROVEN both engines:** a temporary `fetch()` in the opener click handler made
+the `opener-toggle` per-action assert go red (`expected [ …(2) ] to deeply equal []`, showing the
+leaked URL) on Chromium AND Firefox; reverted (production `src/` untouched — `git diff src/` EMPTY).
+As expected, NO production code was needed (the rail is pure DOM/CSS; scroll/observer/pointer work
+issues no request) — AGENTS.md #1 holds and is now testable for the TOC. `pnpm test:browser` **166
+green** both engines (162 → +4), `pnpm test` **350 green** (manifest `permissions:[]` + golden diff
+EMPTY + huge-doc `sha256=8bc5094c…e61bbd` intact), `pnpm test tocView tocModel` 32 green, lint clean,
+both builds succeed (content script **284.74 kB — byte-identical to the group-3 build**, confirming no
+shipped-code change). → next = group 5 (5.1 perf:toc measure · 5.2 first-paint re-run incl. the
+~1400-entry-TOC number · 5.3 byte re-measure). No decisions.md entry — no leak found.
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
