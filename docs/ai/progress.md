@@ -13,9 +13,9 @@ deferred here from 5.2. **Zero unexpected network, no console errors, the docume
 the one 003 acceptance an agent cannot self-certify — now met. It caught **1 real defect** the green stack
 missed (the rail rendered TRANSPARENT + the reading column un-reserved — a NEW **"visual occlusion is
 gate-only"** class; retro 2026-07-17), keeping the gate load-bearing (**6/6** milestone-shipping defects caught
-across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding. **Next → spec 004 (themes +
-settings).** Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md
-2026-07-17.
+across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding. **Next → spec 004 plan.md
+(Gear-3 gate 2); the spec is DRAFTED and APPROVED (gate 1 passed 2026-07-17).** Full close details in Done
+(2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
 **M2 (spec 002 — active-source foundation) remains fully closed** (code + the named human gate, both engines;
 task 6.3 PASSED 2026-07-15 — see Done). Nothing on 002 outstanding.
@@ -27,6 +27,10 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Done
+- 2026-07-17 — **Spec 004 (themes + settings) gate-1 approved & landed.** Gear-3 gate 1 passed 2026-07-17;
+  `specs/004-themes-settings/spec.md` written (the WHAT — no tech). Next → plan.md (the HOW), Gear-3 gate 2, for
+  a separate human gate before any implementation code. Persistence-path direction recorded in decisions.md
+  2026-07-17 (settings persist WITHOUT a new manifest permission — `permissions:[]` kept; sync deferred).
 - 2026-07-17 — **Tasks 6.2 + 6.3: M3 CLOSED (spec 003 — TOC / navigation) — code-complete AND human-gated.**
   The **6.2 milestone-close human gate PASSED, both engines, both surfaces.** A human walked the full spec-003
   checklist in **Chrome + Firefox on the current build, Network tab open**, on the content-script full-page
@@ -261,8 +265,9 @@ foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 ## Up next
 Immediate — **spec 003 (TOC / navigation) is CLOSED (code + the 6.2 human gate + 6.3 retro, 2026-07-17).**
 Next milestone: **spec 004 (themes + settings)** — the settings surface that persists reading prefs
-(theme/mode, and per §Surface-scope the TOC open-state/width that 003 kept per-view only). **Not yet started —
-no spec/plan/tasks drafted; that Gear-3 kickoff is the next session's first action, not this one.**
+(theme/mode, and per §Surface-scope the TOC open-state/width that 003 kept per-view only). **Spec DRAFTED and
+APPROVED (Gear-3 gate 1 passed 2026-07-17 — `specs/004-themes-settings/spec.md`); the next action is plan.md
+(the HOW), Gear-3 gate 2, for a separate human gate before any implementation code.**
 
 Carried beyond 003 (measurement-driven / unrelated levers, do NOT guess):
 - **Chunked/virtualized *TOC-tree* render** — the many-heading lever, new from 003's 5.1: ~45 ms rail build
@@ -282,9 +287,6 @@ full order in docs/product/spec.md §Phase-1.
 
 ## Blockers / open questions
 - **None.** M2 (spec 002) fully closed 2026-07-15; **M3 (spec 003) fully closed 2026-07-17** — code + the named
-  6.2 human gate (both engines, both surfaces) + 6.3 retro. Nothing outstanding on either. Spec 004 has no open
-  questions yet because it has not been scoped — its Gear-3 spec gate is where those get raised.
-- **Doc-hygiene note (not a blocker):** `specs/003-toc-navigation/tasks.md` still shows stale `[ ]` on the
-  completed boxes (1.1–5.3, 6.1, 6.2, 6.3) — only 2.2 is ticked. Task 6.3's file-scope is `docs/ai/retro.md`
-  ONLY, so those ticks were **flagged for a separate hygiene commit** rather than folded into the 6.3 close
-  commit (see the close report). A trivial follow-up.
+  6.2 human gate (both engines, both surfaces) + 6.3 retro. Nothing outstanding on either. **Spec 004 is scoped
+  and approved (Gear-3 gate 1, 2026-07-17); open questions for the build are carried as the five risks in
+  `specs/004-themes-settings/spec.md` §7, to be resolved at the plan.md gate.**
