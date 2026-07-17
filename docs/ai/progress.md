@@ -166,6 +166,39 @@ mount.ts/sanitize.ts/parse.ts/manifest/tocModel.ts/golden/store.ts/idbCore.ts un
 **GROUP 3 IS NOW CODE-COMPLETE** (3.1 click-scroll · 3.2 scroll-spy · 3.3 reduced-motion · 3.4
 resize) → next = the batched group-3 human manual gate, then group 4 (zero-network guard). Pointer
 advances per task (M1 retro rule).
+**GROUP-3 GATE FIX (readerCss.ts only, CSS-string):** the first group-3 human gate found the
+`.peekover-toc` rail was TRANSPARENT (the reading column's text bled THROUGH it) AND the centered
+column reserved no room for the rail, so an opaque rail would then CLIP the column's right edge
+(Firefox full-page confirmed; contained had the same latent defect). Fixed BOTH: (a) the rail now
+has an opaque `background:var(--paper)` so it occludes anything behind it; (b) while OPEN the
+reading column reserves exactly the rail's width — `:host([data-toc="open"]) .peekover-reader{
+width:auto; margin-right:var(--toc-w)}` — so its right edge is pulled clear of the rail and never
+underlaps it. Landed on the COLUMN-side `margin-right` (the prompt's recommended mechanism) after
+a centered two-sided `min(76ch, 100%−2·--toc-w)` variant OVERSHOT the rail on a narrow scrollport:
+the real vitest viewport is **414px** (contained pane just **146px**), where a two-sided
+reservation drives the column to its 64px padding floor and, centered, overshoots the rail — a
+single rail-width reservation instead lets the column take exactly the space left of the rail and
+is correct at every width (the `width:auto` is REQUIRED: a bare margin-right on the base
+`width:100%` column drives margin-left negative and shoves the column off-screen left). Reservation
+scales with `--toc-w` (a 3.4 resize widens it) and is ZERO when collapsed (rule gated on
+`data-toc="open"` → base `margin:0 auto` re-centers beside the handle, no phantom gutter).
+Column-side ⇒ identical on BOTH surfaces (full-page fixed rail + contained absolute rail resolve
+against the same `:host` right edge); CONTAINED_CSS UNTOUCHED. New real-engine test
+(`tocScroll.browser.test.ts`, +2 ×2 engines = +4, now **166** browser green): on BOTH surfaces,
+BOTH engines — the rail computes a NON-transparent `background-color` when open (occlusion), the
+column's `getBoundingClientRect().right ≤ rail.left` while open (no underlap), and collapsing
+RECLAIMS the space (column right edge widens back out — no phantom reservation). Measured
+SYNCHRONOUSLY after each attribute write so the mount's one-shot `initialTocOpen` rAF (which at
+414px would flip full-page to collapsed) can't clobber the forced `data-toc`. **Red-first PROVEN
+both engines/both surfaces:** (a) reservation removed → column right (414 full-page / 390
+contained) OVERLAPS rail left (257 / 325), no-underlap assertion FAILS; (b) `background` removed →
+rail computes `rgba(0, 0, 0, 0)`, occlusion assertion FAILS. `pnpm test` **350 green** (golden diff
+EMPTY — the fix is stylesheet-string CSS, not column HTML; manifest `permissions:[]` + huge-doc
+digest intact), `pnpm test:browser` **162 green** both engines, `pnpm test tocView tocModel` 32
+green, lint clean, both builds succeed (content script **284.74 kB**, info-only; the CSS strings +
+load-bearing comments are the only growth — no shipped JS behavior change). Only file touched:
+`src/theme/readerCss.ts` (READER_CSS) + the browser test. Group 3 code-complete AND gate-fix
+applied → the human RE-RUNS the group-3 gate on this build before push.
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level

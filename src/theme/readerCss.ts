@@ -274,6 +274,12 @@ export const READER_CSS = /* css */ `
   position:fixed;top:0;right:0;z-index:1;
   box-sizing:border-box;width:var(--toc-w);max-width:38vw;height:100%;
   overflow:auto;padding:56px 22px 130px;
+  /* OPAQUE surface (group-3 gate fix): without a background the rail is see-through and
+     the reading column's text shows THROUGH it. --paper matches the page, so the rail
+     reads as the same quiet paper divided only by its border-left — but it now occludes
+     anything behind it. (The collapsed handle is paper-on-paper = invisible box around the
+     --panel toggle pill, which is the intended look.) */
+  background:var(--paper);
   font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted);
   border-left:1px solid var(--line);
 }
@@ -304,6 +310,29 @@ export const READER_CSS = /* css */ `
 :host([data-toc="collapsed"]) .peekover-toc__list{display:none}
 :host([data-toc="collapsed"]) .peekover-toc__toggle{margin:0}
 .peekover-toc [hidden]{display:none} /* collapsed subtree (childList.hidden) — explicit in shadow */
+
+/* Reserve the rail's width on the COLUMN so the now-opaque rail never CLIPS the reading text
+   (group-3 gate fix, companion to the opaque background above). While OPEN the reading column
+   gives up EXACTLY --toc-w of right margin, so its right edge is pulled clear of the rail's left
+   edge and no column text can sit under the rail to be clipped. margin-left stays auto (from the
+   base margin:0 auto), so the column shifts toward the rail but never under it. Reserving exactly
+   one rail-width — not both sides — is what keeps this correct on a NARROW scrollport (where the
+   column's padding floor plus a two-sided reservation would overshoot the rail); the column simply
+   takes whatever width remains left of the rail. The reservation is --toc-w, so a 3.4 resize
+   widens it too, and it is ZERO when collapsed (this rule is gated on data-toc="open" → the base
+   margin:0 auto re-centers the column beside the handle, no phantom gutter left). Column-side ONLY
+   → identical on both surfaces: the full-page fixed rail and the contained absolute rail both
+   anchor to the same :host right edge the column's margin is measured against. padding-right on
+   :host is deliberately avoided — it fights the fixed rail's right:0 anchor and the scrollbar and
+   breaks the contained case (the investigation's finding). width:auto is REQUIRED here: the base
+   column is width:100%, and a bare margin-right on a 100%-wide box does not shrink it — it drives
+   margin-left negative and shoves the column off-screen left. width:auto lets the column shrink to
+   fill exactly the space LEFT of the rail (still capped at the base max-width:76ch), so on a narrow
+   scrollport it takes what remains and on a wide one it caps at 76ch with the leftover left margin. */
+:host([data-toc="open"]) .peekover-reader{
+  width:auto;
+  margin-right:var(--toc-w);
+}
 
 .peekover-toc__list{list-style:none;margin:0;padding:0}
 /* Nested levels indent under their parent with a hairline guide (the nesting made visible). */

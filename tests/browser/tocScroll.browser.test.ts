@@ -568,6 +568,85 @@ function dragBy(host: HTMLElement, resizer: Element, anchorX: number, delta: num
 
 const ANCHOR_X = 600; // arbitrary; only the delta from it matters (events fire directly on the handle)
 
+// ── Group-3 gate fix — the rail OCCLUDES the column and the column never UNDERLAPS the rail ──
+// The group-3 human gate found the `.peekover-toc` rail was TRANSPARENT (the reading column's
+// text bled through it) AND the centered column reserved no space for the rail, so an opaque
+// rail would then CLIP the column's right edge. This is a VISUAL-OCCLUSION defect the existing
+// geometry tests can't see — it needs a real laid-out engine. This suite asserts BOTH halves of
+// the fix in a way a real engine CAN check, on BOTH surfaces:
+//   (1) the rail computes a non-transparent background-color when open (occlusion), and
+//   (2) the column's right edge is at or left of the rail's left edge while open (no underlap),
+//   (3) collapsing the rail RECLAIMS that space — the column widens back past where the open
+//       rail's left edge was, proving the reservation is gone (no phantom gutter beside the handle).
+//
+// WIDTH-ROBUST / NON-VACUOUS by construction: we can't shrink the fixed full-page `:host`'s
+// viewport from inside the test, so we drive the reservation through the SAME `--toc-w` channel
+// the fix keys off — setting it to ~45% of the scrollport. That makes 2×--toc-w exceed the
+// (100% − 76ch) slack at any realistic width, so the reservation demonstrably BITES (the open
+// column is narrowed well below its natural 76ch) and its right edge is pulled clear of the rail,
+// while collapsing releases it. Red-first was demonstrated by (a) removing the reservation rule →
+// the natural 76ch column overlaps the rail and assertion (2) fails, and (b) removing the rail's
+// `background` → assertion (1) fails; both on Chromium AND Firefox (recorded in progress.md).
+
+/** Assert both halves of the gate fix on one surface's shadow root: the rail is opaque when open,
+ *  the column never underlaps it, and collapsing reclaims the reserved space. `sizeHost` is the
+ *  element whose width is the column's containing block (the scrollport): `:host` on the full-page
+ *  surface, the pane host on the contained surface.
+ *
+ *  Measurement is SYNCHRONOUS after each attribute write: `getBoundingClientRect` forces a layout
+ *  flush, and running no `await` between the write and the read denies the mount's one-shot
+ *  `initialTocOpen` rAF any chance to clobber our forced `data-toc` mid-measure (at this 414px
+ *  viewport that rAF would otherwise flip the full-page host to "collapsed"). */
+function assertOccludesAndReserves(shadow: ShadowRoot, sizeHost: HTMLElement): void {
+  const host = shadow.host as HTMLElement;
+  const rail = shadow.querySelector<HTMLElement>('.peekover-toc')!;
+  const column = shadow.querySelector<HTMLElement>('.peekover-reader')!;
+  expect(rail).toBeTruthy();
+  expect(column).toBeTruthy();
+
+  // Drive --toc-w to a good fraction of THIS scrollport (the vitest viewport is a narrow 414px, and
+  // the contained pane narrower still) via the same property the fix keys off, so the reservation
+  // is a meaningful share of the width and the geometry is unambiguous at whatever width we get.
+  const scrollportWidth = sizeHost.getBoundingClientRect().width;
+  host.setAttribute('data-toc', 'open');
+  host.style.setProperty('--toc-w', `${Math.round(scrollportWidth * 0.45)}px`);
+
+  // (1) OCCLUSION: the rail paints an opaque surface — not see-through — so column text behind it
+  // can never bleed through. A transparent rail computes `rgba(0, 0, 0, 0)` / `transparent`.
+  const bg = getComputedStyle(rail).backgroundColor;
+  expect(bg).not.toBe('transparent');
+  expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+
+  // (2) NO UNDERLAP: the reading column's right edge is at/left of the rail's left edge, so no
+  // column text sits under the (now opaque) rail to be clipped.
+  const railLeftOpen = rail.getBoundingClientRect().left;
+  const colRightOpen = column.getBoundingClientRect().right;
+  expect(colRightOpen).toBeLessThanOrEqual(railLeftOpen + 1);
+
+  // (3) COLLAPSED RECLAIMS: with the rail collapsed to its handle the reservation is gone and the
+  // column widens back OUT past where the open rail's left edge was — no phantom gutter is left
+  // reserved. (Proves the reservation is gated on data-toc="open", not a permanent narrowing.)
+  host.setAttribute('data-toc', 'collapsed');
+  const colRightCollapsed = column.getBoundingClientRect().right;
+  expect(colRightCollapsed).toBeGreaterThan(colRightOpen + 1);
+}
+
+describe('TOC rail occludes + column reserves — real engine, both surfaces (group-3 gate fix)', () => {
+  it('full-page host: rail is opaque and the column never underlaps it (:host is the scrollport)', async () => {
+    const { host } = mountFullPage();
+    await waitForScrollable(host);
+    // On the full-page surface the column's containing block is :host itself (fixed; inset:0).
+    assertOccludesAndReserves(host.shadowRoot!, host);
+  });
+
+  it('contained pane: rail is opaque and the column never underlaps it (pane host is the scrollport)', async () => {
+    const { scroller } = await mountContained();
+    // The contained :host sits in normal flow inside the pane; it is the column's containing block.
+    const host = scroller.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+    assertOccludesAndReserves(host.shadowRoot!, host);
+  });
+});
+
 describe('TOC resize drag — real engine (task 3.4)', () => {
   it('full-page host: drag outward grows, inward shrinks, zero-delta leaves --toc-w unchanged (non-vacuous)', async () => {
     const { host } = mountFullPage();
