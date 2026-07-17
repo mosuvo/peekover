@@ -1,6 +1,15 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-17 · Spec 004 gate-1 direction: settings persist WITHOUT a new manifest permission
+  (`permissions:[]` kept).** Settings live in the existing `peekover` IndexedDB (new `settings` store); the
+  content-script reader reaches it via a message to the extension background (its own origin can't see the
+  extension DB); the app page reaches it directly. **WHY:** preserves the M2 "`permissions:[]` survived" trust
+  headline (spec §6 / PERMISSIONS.md) rather than spending `storage` on a settings feature. **CONSEQUENCE:** no
+  cross-device sync this milestone — the product spec's `storage.sync` path (§9 / §6.17 / F7) is deferred as a
+  later, deliberate #4 event, scoped on its own when sync value justifies the permission. Full detail:
+  `specs/004-themes-settings/spec.md` §3.1. **Revisit-when:** cross-device sync is wanted (then scope the
+  `storage` permission + PERMISSIONS.md + manifest-pin change as a #4 event).
 - **2026-07-17 · M3 CLOSE (spec 003 — in-reader TOC / navigation): implementation complete, awaiting
   the 6.2 human gate.** The reader gained an auto-generated table-of-contents rail that serves BOTH reader
   surfaces (content-script full-page + app-page contained pane) from ONE implementation. Recorded so a later
