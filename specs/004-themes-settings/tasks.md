@@ -129,12 +129,16 @@
 
 ## 4 — Flash: MEASURE, then the minimal mitigation (D-2 decided by the number, not up front)
 
-- [ ] **4.1 Flash harness — MEASUREMENT, no threshold (plan §1.5, §4).** Measure settings-resolved vs
-      first-paint on **≤50 KB and 1 MB** fixtures, **warm + cold** service worker, **both** engines (Firefox
-      event-page timing too). Record numbers honestly in progress.md. **Assert NO threshold** — the numbers
-      decide block-vs-transition; the `load()` timeout value is itself read off this measurement.
-      Files: `scripts/perf-theme-flash.ts` (+ `package.json` `perf:flash` script) — measurement only, no `src/`
-      change to chase a number.
+- [ ] **4.1 Flash harness + minimal measurement wiring — MEASUREMENT, no threshold (plan §1.5, §4).** To have
+      anything to measure, add the MINIMAL document_start wiring the measurement needs: fire `port.load()` at
+      `document_start` and timestamp settings-resolved vs first-paint — measurement-only instrumentation, NOT the
+      reveal-gating decision (that is 4.2). Measure on **≤50 KB and 1 MB** fixtures, **warm + cold** service
+      worker, **both** engines (Firefox event-page timing too). Record numbers honestly in progress.md. **Assert
+      NO threshold** — the numbers decide block-vs-transition; the `load()` timeout value is itself read off this
+      measurement. (Scaffolding for the number, not a src/ change to chase one; 4.2 replaces it with the chosen
+      mitigation.)
+      Files: `scripts/perf-theme-flash.ts` (+ `package.json` `perf:flash`) · `entrypoints/*content*` +
+      `src/render/runReader.ts` (minimal load()+timestamp instrumentation only)
       Verify (**measured**): `pnpm perf:flash` prints resolved-vs-paint medians per fixture × warm/cold × engine,
       recorded in progress.md. No acceptance number asserted (M1 retro standing rule).
 
@@ -144,10 +148,12 @@
       (transition — bounded flash, softened by a `prefers-reduced-motion`-respecting cross-fade, instant under
       reduce). Reuse `runReader`'s existing hide→reveal machine + never-blank safety floor — do not reinvent.
       Files: `src/render/runReader.ts` · `entrypoints/*content*` · `tests/browser/themeFlash.browser.test.ts`
-      Verify (**tests/browser** — Cr+Fx): a reader opened with a persisted **dark** setting presents dark as its
-      **first painted state** (block), OR flips within the measured bound with a reduced-motion-instant cross-
-      fade (transition — whichever 4.1 selected); the never-blank floor still fires on a failed `load()`.
-      Golden EMPTY + manifest green.
+      Verify (**tests/browser** — Cr+Fx, red-first): a reader opened with a persisted **dark** setting presents
+      dark as its **first painted state** (block), OR flips within the measured bound with a reduced-motion-
+      instant cross-fade (transition — whichever 4.1 selected). **Never-blank integration (red-first):** with the
+      settings path made genuinely unreachable (background non-responding / `load()` rejecting), the reader still
+      **mounts themed-Auto** and the safety floor still reveals — proving the async settings read never gates the
+      never-blank guarantee (fails if a hung `load()` can stall the reveal). Golden EMPTY + manifest green.
 
 ## 5 — Settings UI (auto/light/dark only — sepia deferred, D-1=A)
 
@@ -158,9 +164,10 @@
       direct `store` import.
       Files: `src/render/mount.ts` · `src/render/readerPane.ts` · `src/theme/readerCss.ts` (pill rule, tokens
       only) · `tests/browser/themeRuntime.browser.test.ts`
-      Verify (**tests/browser** — Cr+Fx): selecting Dark applies dark + persists (read back next open); the
-      control is a **sibling** of `.peekover-reader`, so `git diff tests/golden/output/` is **EMPTY** (asserted).
-      Manifest green.
+      Verify (**tests/browser** — Cr+Fx, BOTH surfaces): the pill renders and works on the content-script full-
+      page reader AND the app-page `{contained}` pane (the one-mount() seam ships to both — the recurring two-
+      surface gotcha); selecting Dark applies dark + persists (read back next open); the control is a **sibling**
+      of `.peekover-reader`, so `git diff tests/golden/output/` is **EMPTY** (asserted). Manifest green.
 
 - [ ] **5.2 App-page shell header theme control.** A matching auto/light/dark control in the shell header
       (beside the storage-toggle), wired to the `directPort`; writes the concrete `data-theme` on the shell root
@@ -182,18 +189,22 @@
       `null` fields fall back to 003's default. Golden EMPTY + manifest green.
 
 ## 7 — Perf / bytes / pins / docs + close
-
-- [ ] **7.1 Re-measure bytes + first-paint; PERMISSIONS.md + memory; final pins.** Re-measure the content-
-      script byte size vs **284,744 B** (delta stated) and typical-doc (≤50 KB) first-paint vs **<150 ms**;
-      `pnpm zip` **< 2 MB** both engines. Update **PERMISSIONS.md** (SAME session — AGENTS.md #4): the background
-      now holds a **second listener** (settings message handler, was exactly one); document the settings message
-      channel as a **zero-permission capability** (like the folder ledger) — still `permissions: []`. Reconcile
-      memory files + advance the progress Now-pointer to "004 code-complete / human gate next".
-      Files: `docs/trust/PERMISSIONS.md` · `docs/ai/progress.md` · `docs/ai/decisions.md` · memory files
-      (measurement only — no `src/` change to chase a number)
-      Verify (**measured + gate**): `pnpm lint` + `pnpm test` + `pnpm test:browser` green; `pnpm zip` < 2 MB both
+- [ ] **7.1 Re-measure bytes + first-paint; final pins.** Re-measure the content-script byte size vs
+      **284,744 B** (delta stated) and typical-doc (≤50 KB) first-paint vs **<150 ms**; `pnpm zip` **< 2 MB**
+      both engines. (Measurement only — no `src/` change to chase a number.)
+      Files: `docs/ai/progress.md` (record the numbers)
+      Verify (**measured**): `pnpm lint` + `pnpm test` + `pnpm test:browser` green; `pnpm zip` < 2 MB both
       engines; byte + first-paint deltas recorded in progress.md; `git diff tests/golden/output/` **EMPTY** +
-      `manifest.test.ts` green (`permissions: []` re-proven); PERMISSIONS.md reflects the second listener.
+      `manifest.test.ts` green (`permissions: []` re-proven).
+- [ ] **7.2 PERMISSIONS.md (AGENTS.md #4, SAME session) + memory reconcile.** Update PERMISSIONS.md: the
+      background now holds a **second listener** (settings message handler, was exactly one); document the
+      settings message channel as a **zero-permission capability** (like the folder ledger) — still
+      `permissions: []`. Confirm the real path with `git ls-files '*PERMISSIONS.md*'` and edit THAT file (it
+      lives at `docs/trust/PERMISSIONS.md`) — do not create a stray copy. Reconcile memory files + advance the
+      progress Now-pointer to "004 code-complete / human gate next".
+      Files: `docs/trust/PERMISSIONS.md` · `docs/ai/progress.md` · `docs/ai/decisions.md`
+      Verify (**gate**): PERMISSIONS.md reflects the second listener + the zero-permission settings channel;
+      `manifest.test.ts` green (`permissions: []`); the Now-pointer reads "code-complete / human gate next".
 
 ## 8 — Human milestone-close gate (the acceptance an agent CANNOT self-certify)
 
@@ -206,6 +217,7 @@
       **wipe** clears them → back to **Auto**; **zero unexpected network**, no console errors; the **document
       stays the hero**. This class (layout / engine timing / bytes-on-wire / wiring-visibility) is exactly what
       jsdom cannot see — **an agent cannot self-certify it.**
+      Files: — (human gate; no code)
       Verify (**human gate**): a human walks the full checklist, both engines + both surfaces, and records the
       pass in progress.md.
 
