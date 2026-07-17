@@ -261,6 +261,29 @@ one-node-per-heading cost (5609 nodes @1401) is the same suspect as the folder t
 call left to 5.2's real-browser first-paint number + the 6.1 close. `pnpm lint` clean; `pnpm perf:toc`
 reproducible. No `src/` touched; golden untouched; `permissions:[]` intact. → next = 5.2 (first-paint
 re-run incl. the ~1400-entry-TOC number) · 5.3 (byte re-measure).
+**TASK 5.2 DONE (§6 P2 — first-paint gate RE-RUN with the TOC present; the load-bearing acceptance
+item, and it HOLDS — no regression).** Re-ran the existing M1 two-part first-paint gate on a FRESH build
+that includes the composed TOC rail (content script 284.74 kB — the group-4 byte-identical build; see
+5.3). Machine i7-13700, Windows, headless Chromium via Playwright; same protocol (7 iters, cold
+discarded, median of warm 6). **The `pnpm perf` harness drives CHROMIUM ONLY** by construction
+(`chromium.launchPersistentContext`); per tasks.md 5.2 the both-engine **no-raw-flash** half of (b) is a
+**manual 6.2 human-gate item**, not this automated TIME measurement — flagged, not conflated.
+- **(a) typical doc (50 KB / 62 sections): nav→paint median 133.5 ms** (min 132.3, max 139.5) **vs
+  <150 ms → PASS.** (Was ~118–122 ms at the 2026-07-14 rescope; +~12 ms is the 63-heading rail build
+  from 5.1 + run variance — still comfortably under the bar. No threshold softened.)
+- **(b) 1 MB doc = `buildHugeDoc` (1 h1 + 1400 h2 = 1401 headings — the pathological ~1400-entry TOC):
+  nav→paint median 1196.3 ms** (min 1178.2, max 1216.0; (b) responseEnd→paint 1194.6 ms) **vs the M1
+  honest <1.7 s bound → PASS.** So **THE ~1400-ENTRY-TOC FIRST-PAINT NUMBER = 1196.3 ms.** This sits
+  squarely inside the recorded historical band (~1187–1341 ms across the 5.2 / document_start / rescope
+  measurements) → **the huge TOC does NOT regress first paint.** The rail is built from already-parsed
+  headings and composed into the SAME single `replaceChildren` as the reading column (mount.ts seam), so
+  its ~45 ms JS-construction (5.1) rides inside the mount path and is lost in the noise of the ~750 ms
+  browser layout of the 1400-section reader DOM that dominates first paint (DCL marks ~467 ms, load
+  ~980–1020 ms — consistent with every prior run). Sanity green every run: h1 ok, 1400 sections rendered,
+  0 console errors. The script's own `vs <150ms → FAIL` line for the 1 MB fixture is the typical-doc gate
+  applied informationally to the large doc (as designed at the 2026-07-14 rescope) — the 1 MB doc is
+  judged against its own <1.7 s bound, which it passes. **BOTH gate parts PASS with the TOC; no
+  src/ change was made to chase a number (measurement only).** → next = 5.3 (byte re-measure).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
