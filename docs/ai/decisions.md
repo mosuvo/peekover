@@ -1,6 +1,19 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-17 · Spec 004 D-1: sepia DEFERRED from the themes milestone (plan gate 2).** 004 ships
+  **auto/light/dark** + persistence + TOC carry-over; sepia does not activate this milestone. **WHY:**
+  `design/tokens.css` — the stated source of truth — defines only **4 of ~15** sepia tokens
+  (`--paper`/`--ink`/`--accent`/`--accent-soft`); the rest fall through to light, so a sepia reader would paint
+  **light chrome (code/tables/rail/pills) on sepia paper**. Completing the palette is a **brand/design
+  decision, not an implementation fill** — the spec §3.5 verify-first escalation firing exactly as written,
+  surfaced at the plan gate rather than filled silently. The 004 runtime is built **surface-neutral** to sepia
+  (one extra `data-theme` value everywhere), so activation later is additive. **CONSEQUENCE:** spec §3.5
+  rewritten to a deferral, the §4 "sepia completeness" acceptance dropped from 004's set, and a §6
+  out-of-scope line added (f4e11f5). Full detail: `specs/004-themes-settings/plan.md` §0 D-1; spec §3.5
+  (amended). **Revisit-when:** a designed, contrast-checked sepia palette exists in `design/tokens.css` — then
+  activate sepia as its own small task (the completed token block + one `data-theme` option + a human-gate LOOK
+  check for contrast / the on-highlighter literal-hex trap).
 - **2026-07-17 · Spec 004 gate-1 direction: settings persist WITHOUT a new manifest permission
   (`permissions:[]` kept).** Settings live in the existing `peekover` IndexedDB (new `settings` store); the
   content-script reader reaches it via a message to the extension background (its own origin can't see the
