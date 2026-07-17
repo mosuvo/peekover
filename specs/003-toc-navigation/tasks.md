@@ -26,7 +26,7 @@
 
 ## 1 — Pure heading model (crash-free foundation, no DOM/engine)
 
-- [ ] **1.1 `tocModel.ts` (PURE) + `tocModel.test.ts`.** `buildTocModel(root: ParentNode): TocEntry[]` —
+- [x] **1.1 `tocModel.ts` (PURE) + `tocModel.test.ts`.** `buildTocModel(root: ParentNode): TocEntry[]` —
       `root.querySelectorAll('h1,h2,h3,h4,h5,h6')` in document order, hold the element **ref** per entry,
       nest by the **nearest-strictly-shallower-ancestor stack** (plan §3-#9: h1→h3 nests directly under h1,
       **no synthetic h2**; a doc starting at h3 normalizes its baseline to the shallowest level present).
@@ -43,7 +43,7 @@
 
 ## 2 — Rail chrome + compose at the ONE seam + styles + trust pin (jsdom-shaped)
 
-- [ ] **2.1 `tocView.ts` rail build + `tocView.test.ts` (shape).** `buildTocView(host, model, {contained})`
+- [x] **2.1 `tocView.ts` rail build + `tocView.test.ts` (shape).** `buildTocView(host, model, {contained})`
       → a right-side `<nav aria-label="Table of contents">` wrapping a nested `<ol>`; each entry is a
       `<button>` that will scroll to `entry.headingRef` (wired in 3.1) — the button **carries that exact
       `headingRef` node** (via closure/`WeakMap` set HERE in 2.1), and 3.1's scroll handler acts on **that
@@ -83,7 +83,7 @@
       expected to be a **no-op**.)
       [§6 F1 · F5 · F7 (sanitize path unchanged) · T1 · T2 (golden-green half)]
 
-- [ ] **2.3 Keyboard toggle (BACKTICK) + host registry + de-register on teardown.** One document-level
+- [x] **2.3 Keyboard toggle (BACKTICK) + host registry + de-register on teardown.** One document-level
       `keydown` listener (mirroring `installToggleShortcut`) toggles the rail on bare `` ` ``: no Ctrl/Cmd/Alt,
       ignored when focus is in input/textarea/select/contenteditable, `preventDefault` only after deciding to
       handle, and only when a mounted reader **with a TOC rail** exists — so it never collides with `\`
@@ -104,7 +104,7 @@
 
 ## 3 — Scroll · scroll-spy · reduced-motion · resize (real engine; each lands WITH its capability)
 
-- [ ] **3.1 Click-to-scroll, BOTH surfaces (real).** Wire entry click/Enter → `entry.headingRef
+- [x] **3.1 Click-to-scroll, BOTH surfaces (real).** Wire entry click/Enter → `entry.headingRef
       .scrollIntoView({block:'start'})` (NO `behavior` arg → CSS `:host{scroll-behavior}` governs; plan §3-#2).
       The handler MUST scroll to the **exact `headingRef` node the button carries from 2.1** (the closure/
       `WeakMap` ref set at build time) — not a node re-derived here — so 2.1's jsdom entry→heading-ref
@@ -121,7 +121,7 @@
       (`behavior: prefersReducedMotion()?'auto':'smooth'`) — the test picks the path, not a guess (plan §6-#3).
       [§6 R1]
 
-- [ ] **3.2 Scroll-spy tracking (real).** One `IntersectionObserver({root: host, rootMargin:'0px 0px -70% 0px',
+- [x] **3.2 Scroll-spy tracking (real).** One `IntersectionObserver({root: host, rootMargin:'0px 0px -70% 0px',
       threshold:0})` over the heading refs; the intersecting entry gets `aria-current="location"` + `.is-active`.
       Tune `-70%` against a real doc here; handle the trailing-short-section edge (promote the final entry at
       scroll-bottom) so the highlight can reach the last section (plan §3-#3). Root is `host` on **both** surfaces.
@@ -131,7 +131,7 @@
       stays **pinned to entry 1**; asserted on both surfaces (container is `:host` in both — proven, not assumed).
       [§6 R2]
 
-- [ ] **3.3 Reduced-motion (real).** Confirm TOC navigation scrolls **instantly** under
+- [x] **3.3 Reduced-motion (real).** Confirm TOC navigation scrolls **instantly** under
       `prefers-reduced-motion: reduce` and **smooth** without it (via the CSS `:host` reduced-motion block, or
       the §3-#2 JS fallback if 3.1 selected it).
       Files: `src/render/tocView.ts` (only if the fallback path is active) · `tests/browser/tocScroll.browser.test.ts`
@@ -140,7 +140,7 @@
       preference → smooth (multi-frame). Red-first: FAILS if motion is not gated on the media query.
       [§6 R3]
 
-- [ ] **3.4 Resize drag (real).** A pointer-draggable resizer sets `--toc-w` on `:host`, clamped to sensible
+- [x] **3.4 Resize drag (real).** A pointer-draggable resizer sets `--toc-w` on `:host`, clamped to sensible
       min/max; width holds **per view** (not persisted — 003 scope).
       Files: `src/render/tocView.ts` · `src/theme/readerCss.ts` (resizer rule if not in 2.2) ·
       `tests/browser/tocScroll.browser.test.ts`
@@ -151,7 +151,7 @@
 
 ## 4 — Zero-network guard (real; bytes-on-wire discipline)
 
-- [ ] **4.1 `tocNetwork.browser.test.ts` (real).** Extend the `remoteMedia.browser.test.ts` /
+- [x] **4.1 `tocNetwork.browser.test.ts` (real).** Extend the `remoteMedia.browser.test.ts` /
       `folderMode.network.browser.test.ts` Resource-Timing discipline: building + rendering + toggling +
       scroll-spying the TOC issues **zero** network requests.
       Files: `tests/browser/tocNetwork.browser.test.ts`
@@ -162,7 +162,7 @@
 
 ## 5 — Perf measure · first-paint re-run · byte re-measure (measured — no un-measured thresholds)
 
-- [ ] **5.1 `scripts/perf-toc.ts` — MEASUREMENT, not a threshold.** Same protocol as
+- [x] **5.1 `scripts/perf-toc.ts` — MEASUREMENT, not a threshold.** Same protocol as
       `perf-first-paint.ts`/`perf-folder-tree.ts` (7 iters, cold discarded, median of warm 6). Measures
       (a) TOC model-build + rail-render time vs heading count (swept), (b) scroll-spy overhead during active
       scroll on a large many-heading doc. Record numbers honestly in progress.md; **assert NO threshold** — a
@@ -174,7 +174,7 @@
       recorded in progress.md. No acceptance number asserted (M1 retro standing rule).
       [§6 P1]
 
-- [ ] **5.2 First-paint gate RE-RUN (P2) — also the ~1400-entry pathological-TOC first-paint number.** Re-run
+- [x] **5.2 First-paint gate RE-RUN (P2) — also the ~1400-entry pathological-TOC first-paint number.** Re-run
       the existing `pnpm perf` two-part M1 gate (decisions.md 2026-07-14: **(a)** ≤50 KB nav→paint <150 ms;
       **(b)** 1 MB doc — no raw-flash both engines + reader painted <1.7 s) **after** the reader gains the TOC;
       confirm still passing OR honestly re-measure and re-scope (bound taken from the 2026-07-14 rescope, not
@@ -188,7 +188,7 @@
       6.2) + painted <1.7 s or honest re-scope; the ~1400-entry-TOC first-paint number stated explicitly.
       [§6 P2 · P1 (large-doc render lever input)]
 
-- [ ] **5.3 Re-measure content-script + `pnpm zip` byte sizes (T2 size half).** The reader gained the TOC, so
+- [x] **5.3 Re-measure content-script + `pnpm zip` byte sizes (T2 size half).** The reader gained the TOC, so
       the M2 270,879 B content-script invariant is deliberately spent (spec §Surface-scope). Re-measure and
       record the new content-script byte size and both-engine `pnpm zip` sizes; confirm under budget
       (≤5 MB packed / <2 MB zip).
@@ -200,7 +200,7 @@
 
 ## 6 — Close + named human gate
 
-- [ ] **6.1 Final memory reconciliation + record decisions.** **ONLY-at-tasks-complete scope applies to the
+- [x] **6.1 Final memory reconciliation + record decisions.** **ONLY-at-tasks-complete scope applies to the
       items in THIS task — the `decisions.md` entries below and the FINAL progress.md Now-pointer
       reconciliation (pointer → "003 complete / next milestone").** It does NOT govern the pointer's earlier
       movements: per the standing note above, the Now-pointer has already been advanced at each task/group
@@ -216,7 +216,7 @@
       decisions.md contains the `\`-app-page-gap line.
       [§6 T2 (record half)]
 
-- [ ] **6.2 Milestone-close human gate (NAMED, required — not removable by adding jsdom tests).** Chrome +
+- [x] **6.2 Milestone-close human gate (NAMED, required — not removable by adding jsdom tests).** Chrome +
       Firefox, current build, **Network tab open**, on **BOTH** surfaces (a `file://`/raw-git doc via the
       content script AND a file opened in the app-page reader pane): multi-heading doc → **TOC appears** →
       click an entry **scrolls to the section** → scroll and watch the **active entry track** (scroll-spy) →
@@ -231,7 +231,7 @@
       progress.md (the one 003 acceptance an agent cannot self-certify).
       [§6 H1]
 
-- [ ] **6.3 Retro.** Run `/retro`: append an R-entry to `docs/ai/retro.md` (corrections · first-try
+- [x] **6.3 Retro.** Run `/retro`: append an R-entry to `docs/ai/retro.md` (corrections · first-try
       verification pass · sessions). Note whether the chunked/virtualized TOC-tree render lever is now decided
       (from 5.1) or carried; confirm the `\`-app-page gap is durably recorded (6.1).
       Verify: `docs/ai/retro.md` has the 003 entry with the three metrics.
