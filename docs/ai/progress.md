@@ -284,6 +284,30 @@ discarded, median of warm 6). **The `pnpm perf` harness drives CHROMIUM ONLY** b
   applied informationally to the large doc (as designed at the 2026-07-14 rescope) — the 1 MB doc is
   judged against its own <1.7 s bound, which it passes. **BOTH gate parts PASS with the TOC; no
   src/ change was made to chase a number (measurement only).** → next = 5.3 (byte re-measure).
+**TASK 5.3 DONE (§6 T2 size half — byte re-measure recorded against the spent M2 invariant).** The
+reader gained the TOC, so the M2 content-script byte-identity (270,879 B) is deliberately spent (spec
+§Surface-scope) — re-measured on the FRESH both-engine builds:
+- **Content script: 284,744 B (284.74 kB) — IDENTICAL on Chromium + Firefox.** vs the recorded M2
+  baseline **270,879 B → +13,865 B (+5.12%)**; vs the last reported group-4 number **284,744 B →
+  0 B (byte-identical)** — confirming group 5 added ZERO shipped code (only `scripts/` + docs). The
+  +13,865 B is the **entire spec-003 TOC feature** (`tocModel.ts` + `tocView.ts` + the additive
+  `READER_CSS`/`CONTAINED_CSS` rail strings + the `mount.ts` compose seam) — the measured, reported
+  size change §Surface-scope authorized.
+- **`pnpm zip`: Chrome 323.63 kB, Firefox 323.69 kB — both < 2 MB → PASS** (vs M2 314.49/314.55 kB →
+  +~9.1 kB, the TOC's compressed cost). The AMO `sources.zip` (1.19 MB) is also < 2 MB.
+- **Packed ≤ 5 MB → PASS** (content 284.74 kB ≪ 5 MB).
+- **All M1 golden + regression suites green** — `pnpm test` **350 green** (golden `git diff
+  tests/golden/output/` **EMPTY**, huge-doc `sha256=8bc5094c…bde61bbd` intact, `manifest`
+  `permissions:[]` pinned), `pnpm test:browser` **166 green** both engines, `pnpm lint` clean, both
+  builds succeed, both built manifests declare `permissions:[]` (no `host_permissions`/forbidden keys).
+  **No golden re-baseline was needed (expected — 2.2): the rail is a sibling, the `.peekover-reader`
+  column is byte-identical.**
+**GROUP 5 IS NOW COMPLETE** (5.1 perf:toc measured · 5.2 first-paint re-run PASS both parts, no
+regression · 5.3 bytes re-measured under budget). No `src/` touched anywhere in group 5; no un-measured
+threshold asserted; no acceptance regression found. → next = the **6.x milestone close** (6.1 final memory
+reconciliation + decisions.md entries · 6.2 named human Chrome+Firefox gate · 6.3 retro). decisions.md
+entries are owned by 6.1 (no measurement in group 5 forced a recorded decision — first paint held, bytes
+stayed under budget).
 
 **Product progress (rough):** M1 opens build-order phase 1-of-7 (product spec §11) — specifically its
 core-render slice; themes-full, TOC, and onboarding from that same phase are still ahead. Spec-level
