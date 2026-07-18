@@ -13,12 +13,21 @@ deferred here from 5.2. **Zero unexpected network, no console errors, the docume
 the one 003 acceptance an agent cannot self-certify — now met. It caught **1 real defect** the green stack
 missed (the rail rendered TRANSPARENT + the reading column un-reserved — a NEW **"visual occlusion is
 gate-only"** class; retro 2026-07-17), keeping the gate load-bearing (**6/6** milestone-shipping defects caught
-across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding. **Next → spec 004
-IMPLEMENTATION (group 1 — store foundation), in a fresh session AFTER the tasks.md gate-3 human review. Spec
-APPROVED (gate 1, 2026-07-17); plan APPROVED (Gear-3 gate 2, 2026-07-17); tasks.md DRAFTED (`specs/004-themes-
-settings/`) awaiting gate 3. Sepia DEFERRED (D-1 = A).** No implementation code before tasks approval
-(WORKFLOW.md §5.3). Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in
-decisions.md 2026-07-17.
+across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding.
+
+**Spec 004 (themes + settings) IMPLEMENTATION IN PROGRESS — group 1 (store foundation).** Spec/plan/tasks all
+APPROVED (gate 1 + Gear-3 gate 2 + gate-3 tasks, 2026-07-17). Sepia DEFERRED (D-1 = A). Group-1 tracker (advance
+PER TASK — M1 lesson):
+- **1.1 DONE** — `DB_VERSION` 1→2 + additive `settings` store + `getSettings`/`putSettings` in `src/app/store.ts`
+  (note: the store layer lives at `src/app/`, not the `src/store/` the tasks/plan text names — benign doc path
+  drift, flagged). Real-engine proof `tests/browser/settingsStore.browser.test.ts` (Cr+Fx): round-trip+merge, and
+  the v1→v2 additive upgrade PRESERVES folders/recents/pins + adds a working settings store (red-first verified —
+  broke onupgradeneeded to drop+recreate → `expected [] to include 'seed-folder'` on BOTH engines → reverted →
+  green). Golden EMPTY, `manifest.test.ts` green (`permissions: []`).
+- **NEXT → 1.2** — idbCore `db.onversionchange` close-and-drop by construction. Then 1.3 (`wipeAll`/`describeStored`
+  include settings). Do NOT start group 2+. No push — human reviews the group-1 evidence first.
+
+Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
 **M2 (spec 002 — active-source foundation) remains fully closed** (code + the named human gate, both engines;
 task 6.3 PASSED 2026-07-15 — see Done). Nothing on 002 outstanding.

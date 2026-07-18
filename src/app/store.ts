@@ -1,34 +1,36 @@
-// store — Peekover's IndexedDB layer: the CRUD over the three stores 002 introduces,
+// store — Peekover's IndexedDB layer: the CRUD over the stores 002/004 introduce,
 // built on the local `idbCore` raw wrapper (NO `idb` dependency — plan.md §Libraries).
 //
-// Database `peekover` v1, three keyPath('id') object stores (plan.md §IndexedDB):
-//   - folders : remembered folders. On Chromium a row carries the structured-cloneable
-//               FileSystemDirectoryHandle (a capability REF, never file contents); on
-//               Firefox the handle is absent (metadata-only, display).
-//   - recents : bounded "recently opened" list (ordering computed by pure recents.ts).
-//   - pins    : user-pinned files/folders (ordering computed by pure recents.ts).
+// Database `peekover` v2, four keyPath('id') object stores (plan.md §IndexedDB):
+//   - folders  : remembered folders. On Chromium a row carries the structured-cloneable
+//                FileSystemDirectoryHandle (a capability REF, never file contents); on
+//                Firefox the handle is absent (metadata-only, display).
+//   - recents  : bounded "recently opened" list (ordering computed by pure recents.ts).
+//   - pins     : user-pinned files/folders (ordering computed by pure recents.ts).
+//   - settings : one global reader-settings row (theme + TOC carry-over). Added at
+//                DB_VERSION 2 (spec 004). The v1→v2 upgrade is ADDITIVE — idbCore's
+//                onupgradeneeded only creates the missing `settings` store, never drops
+//                or rebuilds folders/recents/pins, so existing 002 rows survive intact.
+//                No record-shape migration (that is idbCore's documented STOP signal).
 //
-// SCOPE SPLIT across group 2's two tasks:
-//   - task 2.1 (this file's first commit): the CRUD + schema + record types.
-//   - task 2.2: `wipeAll()` + `describeStored()` — the trust controls that ship WITH
-//               the first thing that stores anything (spec §6.17 / trust story).
-//
-// Nothing consumes this yet — group 3 wires the folder walk into it. It is pure-ish data
-// layer: no DOM, no UI. Browser-only at runtime (IndexedDB is a browser global); it is
-// exercised in the real-engine browser project, never jsdom (storage persistence is a
-// jsdom-blind property — retro standing rule).
+// Nothing consumes settings yet — group 2 wires the SettingsPort onto get/putSettings. It
+// is pure-ish data layer: no DOM, no UI. Browser-only at runtime (IndexedDB is a browser
+// global); it is exercised in the real-engine browser project, never jsdom (storage
+// persistence + the schema upgrade are jsdom-blind properties — retro standing rule).
 
 import { openDb, get, getAll, put, del, clear, type IdbSchema } from './idbCore';
 
-/** Database identity — a single versioned schema (plan.md §IndexedDB). */
+/** Database identity — a single versioned schema (plan.md §IndexedDB). Bumped 1→2 for
+ *  the additive `settings` store (spec 004). */
 export const DB_NAME = 'peekover';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
-/** The three object-store names, as a const map (no magic strings at call sites). */
+/** The object-store names, as a const map (no magic strings at call sites). */
 export const STORES = {
   folders: 'folders',
   recents: 'recents',
   pins: 'pins',
+  settings: 'settings',
 } as const;
 export type StoreName = (typeof STORES)[keyof typeof STORES];
 
@@ -64,7 +66,33 @@ export interface PinRecord {
   pinnedAt: number;
 }
 
-/** The full v1 schema handed to idbCore.openDb. */
+/**
+ * Reader settings — the persisted reading preferences (spec 004). A single global row
+ * keyed by SETTINGS_ID; there is exactly one. `theme` carries the sepia value in the type
+ * even though sepia is DEFERRED from 004 (D-1 = A) — the runtime is written surface-neutral
+ * to it, so re-activating sepia later is additive and needs no shape change here.
+ * `tocOpen`/`tocWidth` are the 003 per-view TOC state promoted to persistence; `null` means
+ * "not set — fall back to the 003 width-derived default".
+ */
+export interface Settings {
+  theme: 'auto' | 'light' | 'dark' | 'sepia';
+  tocOpen: boolean | null;
+  tocWidth: number | null;
+}
+
+/** The stored settings row: the global Settings plus its fixed keyPath id. */
+export interface SettingsRecord extends Settings {
+  id: string;
+}
+
+/** The one settings row's key — a single global reader-settings row (no per-doc settings). */
+export const SETTINGS_ID = 'reader';
+
+/** The default reading preferences, used before anything is stored and after a wipe: Auto
+ *  theme, TOC state unset (defer to the 003 width-derived behavior). */
+export const DEFAULT_SETTINGS: Settings = { theme: 'auto', tocOpen: null, tocWidth: null };
+
+/** The full v2 schema handed to idbCore.openDb. */
 const SCHEMA: IdbSchema = {
   name: DB_NAME,
   version: DB_VERSION,
@@ -72,6 +100,7 @@ const SCHEMA: IdbSchema = {
     { name: STORES.folders, keyPath: 'id' },
     { name: STORES.recents, keyPath: 'id' },
     { name: STORES.pins, keyPath: 'id' },
+    { name: STORES.settings, keyPath: 'id' },
   ],
 };
 
@@ -132,6 +161,30 @@ export async function getPins(): Promise<PinRecord[]> {
 }
 export async function deletePin(id: string): Promise<void> {
   return del(await db(), STORES.pins, id);
+}
+
+// --- settings (spec 004) -----------------------------------------------------
+//
+// One global reader-settings row. Read returns the stored row (merged over the defaults so
+// a partial legacy row still yields a complete Settings) or the defaults when nothing is
+// stored yet; write merges a patch onto the current row and commits it. Both go through
+// idbCore's write discipline, so putSettings resolves only once the write has durably
+// committed (a subsequent getSettings observes it).
+
+/** The persisted reading preferences, or {@link DEFAULT_SETTINGS} when nothing is stored. */
+export async function getSettings(): Promise<Settings> {
+  const row = await get<SettingsRecord>(await db(), STORES.settings, SETTINGS_ID);
+  if (!row) return { ...DEFAULT_SETTINGS };
+  // Merge over the defaults so any field a future/partial row omits stays well-defined.
+  return { ...DEFAULT_SETTINGS, theme: row.theme, tocOpen: row.tocOpen, tocWidth: row.tocWidth };
+}
+
+/** Merge `patch` onto the current settings and write the single global row. Resolves once
+ *  the write commits, so the next getSettings sees it. */
+export async function putSettings(patch: Partial<Settings>): Promise<void> {
+  const current = await getSettings();
+  const merged: SettingsRecord = { id: SETTINGS_ID, ...current, ...patch };
+  return put(await db(), STORES.settings, merged);
 }
 
 // --- trust controls (task 2.2) -----------------------------------------------

@@ -35,7 +35,7 @@
 
 ## 1 — Store foundation (real-engine: IDB upgrade + versionchange are jsdom-blind)
 
-- [ ] **1.1 `DB_VERSION` 1→2 + additive `settings` store + `getSettings`/`putSettings`.** Bump `DB_VERSION`
+- [x] **1.1 `DB_VERSION` 1→2 + additive `settings` store + `getSettings`/`putSettings`.** Bump `DB_VERSION`
       to 2; add the `settings` store (keyPath `id`) to `SCHEMA`/`STORES` so `openDb`'s existing
       **missing-store-create-only** `onupgradeneeded` creates it additively (no record-shape migration — that
       is idbCore's documented STOP signal). One global row `{ id:'reader', theme, tocOpen, tocWidth }`;
