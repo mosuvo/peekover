@@ -40,7 +40,7 @@
       **missing-store-create-only** `onupgradeneeded` creates it additively (no record-shape migration — that
       is idbCore's documented STOP signal). One global row `{ id:'reader', theme, tocOpen, tocWidth }`;
       `getSettings()` returns the row or the default, `putSettings(patch)` merges + writes.
-      Files: `src/store/store.ts` · `tests/browser/settingsStore.browser.test.ts`
+      Files: `src/app/store.ts` · `tests/browser/settingsStore.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx, red-first): write→read-back round-trips; the 1→2 upgrade **preserves**
       existing folders/recents/pins rows AND the `settings` store now exists. Red-first: a v1 DB opened as v2
       keeps its prior data (fails if the upgrade drops/recreates stores). Golden EMPTY + manifest green.
@@ -49,7 +49,7 @@
       register `db.onversionchange = () => { db.close(); <drop the memo> }` (optionally `onblocked` → close the
       orphaned open). This is the codebase's FIRST `DB_VERSION` bump, so the handler ships WITH it — the
       by-construction liveness guard, same spirit as the tocView `isConnected` prune.
-      Files: `src/store/idbCore.ts` · `tests/browser/idbVersionchange.browser.test.ts`
+      Files: `src/app/idbCore.ts` · `tests/browser/idbVersionchange.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx, **red-first**): hold a v1 connection, open v2 → the v1 connection
       **closes** and the v2 open proceeds. Red-first: **without** the handler the second open **blocks/hangs**
       (assert the difference — the test must fail before the handler exists). Golden EMPTY + manifest green.
@@ -57,7 +57,7 @@
 - [x] **1.3 `wipeAll` + `describeStored` include `settings`.** Extend the store list both walk: `wipeAll()`
       clears `settings` too; `describeStored()` reads it and adds a plain-language line ("theme / display
       settings — stored on-device, no file contents"), joining folders/recents/pins.
-      Files: `src/store/store.ts` · `tests/browser/settingsStore.browser.test.ts` (+ jsdom unit for the
+      Files: `src/app/store.ts` · `tests/browser/settingsStore.browser.test.ts` (+ jsdom unit for the
       `describeStored` string)
       Verify: **jsdom** — `describeStored` emits the settings line; **tests/browser** (Cr+Fx) — after
       `putSettings` then `wipeAll`, `getSettings` returns the **default** (theming falls back to Auto).
@@ -175,6 +175,11 @@
       Files: `src/ui/appShell.ts` · `tests/browser/themeRuntime.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx): header select applies to **both** shell + reader pane (coherent, no
       half-themed screen) and persists across reload. Golden EMPTY + manifest green.
+      *Carried from group-1 review: `StoredSummary.settings` was left OPTIONAL (`settings?:`) so
+      the shell's hardcoded `EMPTY_SUMMARY` literal in `appShell.ts` stayed valid without a
+      cross-group edit. While in appShell here, restore `settings` to REQUIRED in `src/app/store.ts`
+      and add `settings: null` to `EMPTY_SUMMARY` — closing the type-safety debt (`describeStored`
+      always sets the field).*
 
 ## 6 — TOC carry-over (persisted open-state + width; global, per plan §1.7)
 

@@ -44,6 +44,9 @@ PER TASK — M1 lesson):
 - **GROUP 1 COMPLETE (1.1/1.2/1.3), NOT pushed** — awaiting human review of the evidence. Suites at group close:
   `pnpm test` **354 unit** · `pnpm test:browser` **176** both engines · golden diff **EMPTY** · `manifest.test.ts`
   green (`permissions: []`). NEXT after review → group 2 (SettingsPort + messaging seam). Do NOT start it yet.
+  *Two review follow-ups banked in tasks.md: (a) `src/store/`→`src/app/` Files-path correction
+  in the remaining tasks; (b) group-5 to-do to restore `StoredSummary.settings` to required +
+  add `settings: null` to appShell's `EMPTY_SUMMARY`.*
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

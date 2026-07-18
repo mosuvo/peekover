@@ -107,8 +107,8 @@ Full settings panel, fonts, widths, per-origin/doc overrides, export/import = ou
 
 **Touch**
 
-- `src/store/store.ts` — `DB_VERSION` 1→2; add `settings` store to `SCHEMA`/`STORES`; `getSettings`/`putSettings`; `wipeAll` + `describeStored` include settings.
-- `src/store/idbCore.ts` — register `db.onversionchange` (close + let the memo drop) on open success (spec §7-2); optional `onblocked` orphaned-open close.
+- `src/app/store.ts` — `DB_VERSION` 1→2; add `settings` store to `SCHEMA`/`STORES`; `getSettings`/`putSettings`; `wipeAll` + `describeStored` include settings.
+- `src/app/idbCore.ts` — register `db.onversionchange` (close + let the memo drop) on open success (spec §7-2); optional `onblocked` orphaned-open close.
 - `src/theme/reader.ts` — replace `watchColorScheme`'s `querySelectorAll` broadcast with the registry; make `initReaderRuntime` theme from the resolved setting (concrete via `resolveTheme`), register the host; OS-flip re-themes only when setting=auto.
 - `src/theme/readerCss.ts` — (D-1 only) complete sepia tokens if B/C.
 - `src/ui/appShell.ts` — `APP_CSS` cascade restructure (§1.4); register the shell root in the theme registry; add the header theme control; build/hold the `directPort`; thread it into the reader pane + reader.
