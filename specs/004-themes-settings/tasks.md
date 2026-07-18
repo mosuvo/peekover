@@ -45,7 +45,7 @@
       existing folders/recents/pins rows AND the `settings` store now exists. Red-first: a v1 DB opened as v2
       keeps its prior data (fails if the upgrade drops/recreates stores). Golden EMPTY + manifest green.
 
-- [ ] **1.2 idbCore `db.onversionchange` — close-and-drop by construction (spec §7-2).** On `openDb` success
+- [x] **1.2 idbCore `db.onversionchange` — close-and-drop by construction (spec §7-2).** On `openDb` success
       register `db.onversionchange = () => { db.close(); <drop the memo> }` (optionally `onblocked` → close the
       orphaned open). This is the codebase's FIRST `DB_VERSION` bump, so the handler ships WITH it — the
       by-construction liveness guard, same spirit as the tocView `isConnected` prune.

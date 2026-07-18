@@ -24,8 +24,16 @@ PER TASK — M1 lesson):
   the v1→v2 additive upgrade PRESERVES folders/recents/pins + adds a working settings store (red-first verified —
   broke onupgradeneeded to drop+recreate → `expected [] to include 'seed-folder'` on BOTH engines → reverted →
   green). Golden EMPTY, `manifest.test.ts` green (`permissions: []`).
-- **NEXT → 1.2** — idbCore `db.onversionchange` close-and-drop by construction. Then 1.3 (`wipeAll`/`describeStored`
-  include settings). Do NOT start group 2+. No push — human reviews the group-1 evidence first.
+- **1.2 DONE** — idbCore `db.onversionchange` close-and-drop by construction (`src/app/idbCore.ts`). On open
+  success every connection registers `db.onversionchange = () => { db.close(); onVersionChange?.(); }`; the memo-drop
+  lives in `store.ts`'s `db()` (idbCore owns the close, the owner owns its memoization — same seam as
+  `__resetConnectionForTest`, rationale in-code). Real-engine proof `tests/browser/idbVersionchange.browser.test.ts`
+  (Cr+Fx): a held v1 connection steps aside so a competing v2 open PROCEEDS; a NEGATIVE CONTROL raw (non-stepping)
+  v1 BLOCKS the same open (the difference the handler removes). Red-first verified — removed `db.close()` → the
+  positive test threw `IndexedDB open blocked …v2` on BOTH engines → reverted → green. Golden EMPTY, 350 unit +
+  `manifest.test.ts` green.
+- **NEXT → 1.3** — `wipeAll`/`describeStored` include settings. Do NOT start group 2+. No push — human reviews the
+  group-1 evidence first.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

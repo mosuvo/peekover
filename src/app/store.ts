@@ -106,9 +106,21 @@ const SCHEMA: IdbSchema = {
 
 // One memoized connection per page. openDb is idempotent; memoizing avoids reopening on
 // every call and keeps a stable connection for the app page's lifetime.
+//
+// The `onVersionChange` hook is the other half of idbCore's close-and-drop (spec §7-2): when
+// another context (a second surface, a reloaded page) opens a NEWER DB_VERSION, idbCore
+// closes THIS connection, then calls this hook so we forget it — the next db() reopens fresh
+// at the new version instead of holding a closed/stale connection open and blocking the
+// upgrade. This is the same memo the test seam below resets; here it is dropped by construction.
 let dbPromise: Promise<IDBDatabase> | null = null;
 function db(): Promise<IDBDatabase> {
-  if (!dbPromise) dbPromise = openDb(SCHEMA);
+  if (!dbPromise) {
+    dbPromise = openDb(SCHEMA, {
+      onVersionChange: () => {
+        dbPromise = null;
+      },
+    });
+  }
   return dbPromise;
 }
 

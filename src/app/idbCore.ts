@@ -28,12 +28,29 @@ export interface IdbSchema {
   stores: ReadonlyArray<{ name: string; keyPath: string }>;
 }
 
+/** Open-time hooks. `onVersionChange` fires AFTER this connection has closed itself in
+ *  response to another context's upgrade (see openDb) — the owner uses it to drop any
+ *  memoized reference so the next call reopens at the new version. */
+export interface OpenOptions {
+  onVersionChange?: () => void;
+}
+
 /**
  * Open (creating/upgrading if needed) the database described by `schema`. On an upgrade
  * this creates any missing object store with its keyPath; it never drops or rebuilds an
- * existing store (v1 only — a real migration is the complexity STOP signal above).
+ * existing store (a real migration is the complexity STOP signal above).
+ *
+ * VERSIONCHANGE (spec §7-2, by construction): a database can only be upgraded when no
+ * other connection is open at the old version. The FIRST DB_VERSION bump (1→2) makes this
+ * real — a second surface (or a reloaded page) opening v2 while this connection holds v1
+ * would BLOCK forever. So on open we register `db.onversionchange` to CLOSE this connection
+ * the instant another context needs to upgrade, then invoke `onVersionChange` so the owner
+ * forgets the now-closed connection (the next call reopens at the new version). idbCore owns
+ * the close (it created the connection); the owner owns its own memoization — the same seam
+ * store.ts's `__resetConnectionForTest` already uses. Same spirit as tocView's `isConnected`
+ * liveness prune: the guard ships WITH the thing that needs it.
  */
-export function openDb(schema: IdbSchema): Promise<IDBDatabase> {
+export function openDb(schema: IdbSchema, options: OpenOptions = {}): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(schema.name, schema.version);
     req.onupgradeneeded = () => {
@@ -44,10 +61,22 @@ export function openDb(schema: IdbSchema): Promise<IDBDatabase> {
         }
       }
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      db.onversionchange = () => {
+        // Step out of the way of a competing upgrade: close, then let the owner drop its
+        // memo so the very next call reopens fresh at the new version (never a stale, or
+        // blocking, connection).
+        db.close();
+        options.onVersionChange?.();
+      };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
-    // A concurrent open holding an older version blocks the upgrade — surface it rather
-    // than hang forever (never a silent stall; AGENTS.md #5 in spirit).
+    // A concurrent connection that did NOT step aside blocks this open — surface it rather
+    // than hang forever (never a silent stall; AGENTS.md #5 in spirit). With the handler
+    // above registered on every idbCore connection, this is now only reachable against a
+    // connection opened outside idbCore.
     req.onblocked = () => reject(new Error(`IndexedDB open blocked: ${schema.name} v${schema.version}`));
   });
 }
