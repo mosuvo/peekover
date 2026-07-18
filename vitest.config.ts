@@ -18,6 +18,23 @@ const emulateReducedMotion: BrowserCommand<[value: 'reduce' | 'no-preference' | 
   await page.emulateMedia({ reducedMotion: value });
 };
 
+// ── OS color-scheme emulation for the browser project (task 3.2) ──────────────
+// Same seam, same reason: a PAGE cannot fake `prefers-color-scheme` — it is an OS/browser
+// setting, and no in-page API sets it. Driving it needs the browser control protocol, which
+// only the server-side Playwright `page` reaches. This is what makes the spec §3.4 staleness
+// property (an OS flip re-themes an ALREADY-OPEN app-page reader) testable as a REAL OS flip
+// rather than a hand-fired signal at the seam: Playwright's emulation dispatches a genuine
+// `change` on the live `matchMedia` list in BOTH Chromium and Firefox (verified — see
+// themeRuntime.browser.test.ts's harness-sanity test, which fails loudly if an engine ever
+// stops delivering it, so this can never degrade into a silently vacuous suite).
+// `null` resets to the system default.
+const emulateColorScheme: BrowserCommand<[value: 'light' | 'dark' | null]> = async (
+  { page },
+  value,
+) => {
+  await page.emulateMedia({ colorScheme: value });
+};
+
 // Two Vitest projects, run independently:
 //
 //   pnpm test          -> vitest run --project unit     (fast, jsdom/node)
@@ -56,7 +73,7 @@ export default defineConfig({
             provider: playwright(),
             // Custom cross-engine commands callable from browser tests via
             // `commands` from 'vitest/browser' (see emulateReducedMotion above).
-            commands: { emulateReducedMotion },
+            commands: { emulateReducedMotion, emulateColorScheme },
             instances: [
               { browser: 'chromium' },
               { browser: 'firefox' },

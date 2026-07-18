@@ -105,7 +105,7 @@
       remove one from the DOM → it is **pruned** and never re-written (the resolver can't touch a dead node).
       Golden EMPTY + manifest green.
 
-- [ ] **3.2 `reader.ts` rewrite — registry broadcast + auto-only OS re-theme, BOTH surfaces (spec §3.4).**
+- [x] **3.2 `reader.ts` rewrite — registry broadcast + auto-only OS re-theme, BOTH surfaces (spec §3.4).**
       Replace `watchColorScheme`'s `querySelectorAll('peekover-root')` broadcast with the 3.1 registry;
       `initReaderRuntime` themes from the **resolved** setting (concrete via `resolveTheme`) and registers its
       host. The OS-flip listener re-resolves **only when the setting is `auto`** (manual themes ignore the OS).

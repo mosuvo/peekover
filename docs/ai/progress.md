@@ -123,6 +123,42 @@ PER TASK — M1 lesson):
   `manifest.test.ts` green. Doc drift fixed in the same commit: tasks.md 3.3/5.2 + plan.md §2 said
   `src/ui/appShell.ts`; the real file is `src/app/appShell.ts` (same class as the group-1
   `src/store/`→`src/app/` fix — paths only, no checkbox/text change).
+- **3.2 DONE** — `src/theme/reader.ts` rewritten: the OS-flip listener's
+  `querySelectorAll('peekover-root')` broadcast is replaced by the 3.1 registry, and the theme is now
+  the SETTING resolved against the OS (`resolveTheme`) rather than the OS alone. Module-level
+  `currentSetting` (default `auto`) + the single writer `setThemeSetting()`, which re-resolves and
+  broadcasts; the OS listener re-resolves **only under `auto`** (manual pins the theme), reading the
+  setting at EVENT time. **No port/store import** — groups 4/5 call the setter (plan-gate decision).
+  `initReaderRuntime(host)` **call-compatible (signature unchanged)** → `src/render/mount.ts`
+  UNTOUCHED. M1 degradation kept (absent `matchMedia` → no-op, defaults light, never throws).
+  +4 jsdom unit in `reader.test.ts` (375 total).
+  - **OS-SCHEME EMULATION: AVAILABLE.** Added an `emulateColorScheme` browser command to
+    `vitest.config.ts` (Playwright `page.emulateMedia({colorScheme})`) — the exact seam 003 already
+    used for `emulateReducedMotion`. **Verified working in BOTH Chromium and Firefox:** `matches`
+    flips, a real `change` event fires, and CSS media rules re-evaluate. So the §3.4 staleness
+    property is proven against a GENUINE emulated OS flip, not a signal injected at the seam.
+  - Real-engine proof `tests/browser/themeRuntime.browser.test.ts` (Cr+Fx, +6 →198 browser): a
+    harness-sanity test (flip is genuinely observed — the non-vacuous guard), CONTAINED app-page
+    reader re-themes under Auto, full-page reader re-themes (no M1 regression), two hosts from one
+    flip, manual ignores the flip, and auto resumes. **TWO RED-FIRSTS, both engines, both clean:**
+    (a) restoring the M1 `querySelectorAll` broadcast → the two CONTAINED-host tests fail
+    (`expected 'light' to be 'dark'`) — the stale-host bug, isolated; (b) removing the auto-only
+    guard → both manual tests fail (`expected 'dark' to be 'light'`) — the gate proven non-vacuous
+    (it had passed vacuously under red (a), since M1 never reached a `<div>` at all).
+  - **HARNESS QUIRKS DIAGNOSED (not papered over).** Two real flakes were found and root-caused with
+    instrumentation rather than sleeps: (i) `matches` and the `change` event are NOT simultaneous
+    (Chromium dispatches `change` later), and the control listener lives on a DIFFERENT
+    MediaQueryList than the runtime's, whose notification order is unspecified → positive
+    assertions now poll the OBSERVABLE OUTCOME (`waitForTheme`), negative ones wait for proven event
+    delivery; (ii) an MQL created INSIDE a test callback receives only the first subsequent emulated
+    flip then goes silent (module-scope ones keep receiving) → new test-only seam
+    `resetThemeWatchForTest()` re-installs per test (same family as `__resetConnectionForTest`).
+    A GC-of-the-MQL hypothesis was tested and **disproved** (holding a strong reference did not fix
+    it) — recorded so it is not re-guessed. Production installs the listener once, as before.
+  - **WHAT THIS STILL DOES NOT PROVE:** emulated `prefers-color-scheme` is the BROWSER's media
+    state, not a real OS-level theme switch; the OS→browser binding stays an **8.1 human-gate** item.
+  `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **198** both engines; golden diff
+  **EMPTY**; `manifest.test.ts` green (`permissions: []`).
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
