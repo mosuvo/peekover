@@ -135,9 +135,12 @@ function mountFullPageReader(): HTMLElement {
 
 beforeEach(async () => {
   resetThemeHostsForTest();
-  // Re-install the OS listener per test — see resetThemeWatchForTest's note: a MediaQueryList
-  // created inside a test callback goes silent after the first emulated flip, so a listener
-  // installed by an EARLIER test would not see this test's flip. Production installs once.
+  // Re-install the OS listener per test — TEST ISOLATION across the test boundary, not a product
+  // limitation. Measured with this line disabled: a listener installed in an EARLIER test stops
+  // receiving emulated flips in later ones (they fail on their FIRST flip, `expected 'light' to
+  // be 'dark'`). Within a single test that same listener handles repeated flips fine — that is
+  // the production property, asserted by the "ONE listener, MANY flips" test below. Production
+  // installs once and never resets. See resetThemeWatchForTest's note for the disproved causes.
   resetThemeWatchForTest();
   setThemeSetting('auto');
   document.body.replaceChildren();
@@ -199,6 +202,29 @@ describe('theme runtime — OS flip re-themes registered hosts (spec §3.4)', ()
     // asserted; the shell is not yet a registered host here.)
     await waitForTheme(contained, 'dark');
     await waitForTheme(fullPage, 'dark');
+  });
+});
+
+describe('theme runtime — ONE listener, MANY flips (the production lifetime property)', () => {
+  it('re-themes on a SECOND OS flip with the listener installed only once', async () => {
+    // THE PRODUCTION LIFETIME PROPERTY. `watchColorScheme()` guards on `let watching = false`,
+    // so a real page installs its OS listener exactly ONCE and that single listener must handle
+    // EVERY flip for the page's lifetime. Every other test here flips once against a
+    // freshly-installed listener (beforeEach calls `resetThemeWatchForTest()`), which proves only
+    // "a NEW listener handles ONE flip" — strictly weaker. A user who toggles their OS theme
+    // twice would still see the reader update once and then go stale for the rest of the session,
+    // and nothing above would notice.
+    //
+    // So: install ONCE (the beforeEach reset already ran; `initReaderRuntime` below is the only
+    // install), then flip TWICE with NO reset in between, and require BOTH flips to land.
+    const host = mountContainedReader(); // initReaderRuntime -> the one and only install
+    expect(host.getAttribute('data-theme')).toBe('light');
+
+    await flipOsAndAwaitDelivery('dark');
+    await waitForTheme(host, 'dark'); // flip 1 — also proven by the tests above
+
+    await flipOsAndAwaitDelivery('light');
+    await waitForTheme(host, 'light'); // flip 2 — the assertion nothing else covers
   });
 });
 

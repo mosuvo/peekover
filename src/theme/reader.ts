@@ -130,14 +130,21 @@ function watchColorScheme(): void {
  * Test-only: forget that the OS listener was installed, so the next `initReaderRuntime` installs
  * a fresh one.
  *
- * This exists for a HARNESS limitation, not a product one. A page normally installs this
- * listener once and keeps it for its lifetime — which is exactly what production does and what
- * the 8.1 human gate exercises. But the browser suite emulates many OS flips within ONE page
- * (Playwright `page.emulateMedia`), and a MediaQueryList created inside a test callback was
- * measured to receive only the FIRST subsequent change before going silent, while a
- * module-scope one kept receiving them (Chromium; diagnosed with fire-counters — see
- * tests/browser/themeRuntime.browser.test.ts). Re-installing per test sidesteps that quirk so
- * each test observes a live listener. Same family of seam as store.ts's
+ * TEST ISOLATION, not a workaround for a product limitation. The listener installed here handles
+ * REPEATED flips for as long as the page lives — proven on both engines by the "ONE listener,
+ * MANY flips" test in tests/browser/themeRuntime.browser.test.ts, which flips the emulated OS
+ * twice against a single install and requires both to land. (That test is non-vacuous: making the
+ * handler remove itself after one fire turns it red on Chromium AND Firefox.) So production's
+ * once-per-page install is sound and needs no reset.
+ *
+ * What this seam is actually for is the TEST BOUNDARY. Measured with the seam disabled: a
+ * listener installed in one Vitest test stops receiving emulated flips in LATER tests, so those
+ * tests fail on their first flip. The cause is internal to Playwright's `emulateMedia` override
+ * lifecycle across tests and is NOT pinned; two hypotheses were probed and both DISPROVED —
+ * GC of the MediaQueryList (holding a strong reference did not help) and the `emulateMedia(null)`
+ * teardown in `afterEach` (removing it did not help). Nothing production does resembles this: a
+ * real page has one media state that changes, never an override swapped out from under it.
+ * Re-installing per test gives each test a live listener. Same family of seam as store.ts's
  * `__resetConnectionForTest`.
  */
 export function resetThemeWatchForTest(): void {

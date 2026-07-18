@@ -150,11 +150,27 @@ PER TASK — M1 lesson):
     (Chromium dispatches `change` later), and the control listener lives on a DIFFERENT
     MediaQueryList than the runtime's, whose notification order is unspecified → positive
     assertions now poll the OBSERVABLE OUTCOME (`waitForTheme`), negative ones wait for proven event
-    delivery; (ii) an MQL created INSIDE a test callback receives only the first subsequent emulated
-    flip then goes silent (module-scope ones keep receiving) → new test-only seam
-    `resetThemeWatchForTest()` re-installs per test (same family as `__resetConnectionForTest`).
-    A GC-of-the-MQL hypothesis was tested and **disproved** (holding a strong reference did not fix
-    it) — recorded so it is not re-guessed. Production installs the listener once, as before.
+    delivery; (ii) a listener installed in one test stops receiving emulated flips in LATER tests →
+    new test-only seam `resetThemeWatchForTest()` re-installs per test (same family as
+    `__resetConnectionForTest`).
+  - **QUIRK (ii) RE-EXAMINED AND RE-SCOPED (follow-up, 2026-07-18).** The original note read as
+    "an MQL goes silent after its first flip", which would have implied a REAL product defect: since
+    `watchColorScheme()` guards on `let watching = false`, production installs ONE listener per page
+    and a user toggling their OS theme twice would see the reader update once then go stale. That
+    reading is **WRONG**, and the seam is **TEST ISOLATION, not a workaround for a product
+    limitation**. New standing guard `theme runtime — ONE listener, MANY flips` flips the emulated OS
+    **twice within a single test against a single install** (no mid-test reset) and requires BOTH to
+    land: **GREEN on Chromium AND Firefox**. **Non-vacuous** — mutating the handler to remove itself
+    after one fire turns it RED on both engines (`expected 'dark' to be 'light'`, i.e. flip 1 landed
+    and flip 2 did not: exactly the defect signature). So one listener handling every flip for the
+    page's lifetime is now PROVEN, not assumed.
+    The quirk itself is real but **scoped to the TEST BOUNDARY**: measured with the seam disabled,
+    earlier-installed listeners fail LATER tests on their FIRST flip (`expected 'light' to be
+    'dark'`). Its mechanism is internal to Playwright's `emulateMedia` override lifecycle and is
+    **NOT pinned**; two hypotheses probed, **both disproved** — MQL garbage collection (a strong
+    reference did not fix it) and the `emulateMedia(null)` teardown in `afterEach` (removing it did
+    not fix it). Recorded so neither is re-guessed. Nothing production does resembles it: a real page
+    has one media state that changes, never an override swapped out beneath it.
   - **WHAT THIS STILL DOES NOT PROVE:** emulated `prefers-color-scheme` is the BROWSER's media
     state, not a real OS-level theme switch; the OS→browser binding stays an **8.1 human-gate** item.
   `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **198** both engines; golden diff
@@ -183,8 +199,10 @@ PER TASK — M1 lesson):
     app page actually LOOKS right stays **8.1**.
   `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **208** both engines; golden diff
   **EMPTY**; `manifest.test.ts` green (`permissions: []`).
-- **GROUP 3 COMPLETE (3.1/3.2/3.3), NOT pushed** — 3 commits ahead, awaiting human review. Suites at
-  group close: `pnpm test` **375 unit** · `pnpm test:browser` **208** both engines · golden diff
+- **GROUP 3 COMPLETE (3.1/3.2/3.3 + the review follow-up), NOT pushed** — 4 commits ahead, awaiting
+  human review. The 4th is the review follow-up above: the one-listener-many-flips guard (+1 test,
+  comment/doc corrections only — **no `src/` behavior change**, the runtime was already correct).
+  Suites at group close: `pnpm test` **375 unit** · `pnpm test:browser` **210** both engines · golden diff
   **EMPTY** · `manifest.test.ts` green (`permissions: []`). `src/render/` (incl. `mount.ts`),
   `src/settings/`, `entrypoints/`, sanitize/parse and the manifest were **all untouched** — the only
   non-group-3 file is `vitest.config.ts`, which gained the test-only `emulateColorScheme` browser
