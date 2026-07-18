@@ -427,7 +427,8 @@ export const READER_CSS = /* css */ `
 //   1. :host returns to normal flow (position:relative; inset:auto), so it fills its
 //      PANE box instead of pinning to the viewport. Every other :host declaration
 //      (background, colour, overflow, typography) is inherited from READER_CSS.
-//   2. The chrome pills (mode toggle, theme control, remote-load, network, TOC rail) switch position:fixed → position:absolute, so they
+//   2. The chrome pills (mode toggle, theme control, remote-load, network indicator) and the
+//      TOC rail switch position:fixed → position:absolute, so they
 //      anchor to the now-positioned :host — the pane's corners — keeping their
 //      top/right/bottom/left offsets. Switching fixed→absolute (rather than a
 //      transform / contain containing-block trick on :host) deliberately SIDESTEPS the

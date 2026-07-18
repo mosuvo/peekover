@@ -225,12 +225,28 @@
       wide (1400px) viewport; the pill sits bottom-left above the network indicator, the one corner no chrome
       claims at rest. LOOK (contrast, occlusion, whether it reads as Peekover chrome) is **8.1 only**.*
 
-- [ ] **5.2 App-page shell header theme control.** A matching auto/light/dark control in the shell header
+- [x] **5.2 App-page shell header theme control.** A matching auto/light/dark control in the shell header
       (beside the storage-toggle), wired to the `directPort`; writes the concrete `data-theme` on the shell root
       via `applyTheme`.
-      Files: `src/app/appShell.ts` · `tests/browser/themeRuntime.browser.test.ts`
+      Files: `src/app/appShell.ts` · `src/app/store.ts` (the carry-over) · `tests/browser/themeShell.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx): header select applies to **both** shell + reader pane (coherent, no
       half-themed screen) and persists across reload. Golden EMPTY + manifest green.
+      *DONE 2026-07-18 — the SAME `buildThemeControl()` the reader chrome uses, restyled as a header pill
+      beside the storage toggle, so the two surfaces cannot drift in behaviour/labelling/a11y. The app page is
+      extension-origin, so it wires `directPort` (not `messagingPort`): register the save sink + `load()` and
+      apply via `setThemeSetting`. **CARRY-OVER LANDED:** `StoredSummary.settings` is REQUIRED; the tightening
+      caught three literals (`EMPTY_SUMMARY` + two test fixtures), all fixed — exactly the compile-time signal
+      the optional field was suppressing. +9 real-engine tests ×2 (**+18 →272 browser**), unit unchanged at
+      **380**. **TWO red-firsts, clean on Cr+Fx:** drop `registerThemeSaveSink` → the 2 persistence tests fail;
+      drop the mount-time `load()` → the re-mount test fails (`expected 'Theme: Auto' to be 'Theme: Dark'`),
+      which also proves that test is not passing on leftover module state. Coherence asserted on COMPUTED
+      `--paper`/`--ink` (the group-3 precedent), not the attribute. **HONEST LIMIT:** the harness never
+      navigates, so "persists" here is a RE-MOUNT reading the real IndexedDB with the in-memory theme state
+      deliberately reset to `auto` first — NOT a browser reload. The true reload is **8.1**.
+      **UX QUESTION FOR THE HUMAN GATE:** the app page now shows TWO theme controls — this header one AND
+      5.1's in-reader pill, which reaches the contained pane through the one `mount()` seam. tasks.md specifies
+      both, so both ship and they are proven to stay in sync; whether the in-reader pill is REDUNDANT on the
+      app page is a judgement call left to 8.1 rather than taken unilaterally here.*
       *Carried from group-1 review: `StoredSummary.settings` was left OPTIONAL (`settings?:`) so
       the shell's hardcoded `EMPTY_SUMMARY` literal in `appShell.ts` stayed valid without a
       cross-group edit. While in appShell here, restore `settings` to REQUIRED in `src/app/store.ts`

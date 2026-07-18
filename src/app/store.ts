@@ -238,11 +238,14 @@ export interface StoredSummary {
   folders: StoredFolderInfo[];
   recents: RecentRecord[];
   pins: PinRecord[];
-  /** The stored reader settings, or `null` when nothing is stored (the user never
-   *  customized). `describeStored` always sets this; it is OPTIONAL so pre-004 literal
-   *  summaries elsewhere (e.g. the shell's designed EMPTY_SUMMARY) stay valid without an
-   *  edit outside the store layer. Present ⇒ a settings row exists and is counted + described. */
-  settings?: Settings | null;
+  /** The stored reader settings, or `null` when nothing is stored (the user never customized).
+   *  REQUIRED as of task 5.2 (the group-1 carry-over): 1.3 left it optional only to keep the
+   *  shell's designed `EMPTY_SUMMARY` literal valid without a cross-group edit, which was a
+   *  scope-fence concession, not a design choice. `describeStored` has always set it, so the
+   *  type now says what the code already did, and a future summary literal that forgets the
+   *  field fails to compile instead of silently reporting "no settings stored". Non-null ⇒ a
+   *  settings row exists and is counted + described. */
+  settings: Settings | null;
   total: number;
   /** Plain-language, trust-facing description — one line per non-empty record class. */
   lines: string[];

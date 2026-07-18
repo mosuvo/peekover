@@ -60,6 +60,7 @@ import {
   type PinRecord,
   type StoredSummary,
 } from './store';
+import { DEFAULT_SETTINGS, type Settings } from '../settings/settings';
 import { addRecent, addPin, orderRecents, orderPins } from './recents';
 import {
   createRecentsView,
@@ -68,7 +69,10 @@ import {
   type ReopenKind,
 } from './recentsView';
 import { registerThemeHost } from '../theme/themeRegistry';
-import { applyColorScheme } from '../theme/reader';
+import { applyColorScheme, setThemeSetting } from '../theme/reader';
+import { buildThemeControl, registerThemeSaveSink } from '../theme/themeControl';
+import { directPort } from '../settings/settingsPort';
+import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
 import { createTreeView } from './treeView';
 import { createStorageView } from './storageControls';
 
@@ -95,6 +99,11 @@ export interface AppStore {
   /** Erase everything (group 2) behind the "wipe all data" control (task 6.0). Optional for the
    *  same reason; absent → the wipe is a no-op the best-effort wrapper swallows. */
   wipeAll?(): Promise<void>;
+  /** The persisted reader settings (task 5.2). Optional like the other group-5 readers so a
+   *  minimal fake store still mounts — absent → the header control works and applies, it just
+   *  has nothing to load from and nowhere to persist to. */
+  getSettings?(): Promise<Settings>;
+  putSettings?(patch: Partial<Settings>): Promise<void>;
 }
 
 /** Injectable dependencies (defaults are the real picker seam, re-grant, and store). */
@@ -171,8 +180,17 @@ const APP_CSS = /* css */ `
 }
 .${SHELL_CLASS}__brand{font-weight:650; letter-spacing:-.01em}
 .${SHELL_CLASS}__tag{color:var(--muted); font-size:.8rem}
-.${SHELL_CLASS}__storage-toggle{
+/* Theme control (task 5.2) — the same element the reader chrome uses, restyled as a header
+   pill. It carries the margin-left:auto, so IT is the element that pushes the header's right-hand
+   group over; the storage toggle then sits beside it with a plain gap. Tokens only, matching the
+   storage toggle's chrome exactly so the two read as one control group. */
+.${SHELL_CLASS}__theme-toggle{
   margin-left:auto; font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
+}
+.${SHELL_CLASS}__theme-toggle:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__storage-toggle{
+  font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
   border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
 }
 .${SHELL_CLASS}__storage-toggle:hover{background:var(--accent-soft)}
@@ -288,6 +306,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     deletePin: defaultDeletePin,
     describeStored: defaultDescribeStored,
     wipeAll: defaultWipeAll,
+    getSettings: defaultGetSettings,
+    putSettings: defaultPutSettings,
   };
 
   // --- shell scaffolding ---------------------------------------------------
@@ -320,7 +340,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   storageToggle.textContent = 'Stored data';
   storageToggle.setAttribute('aria-expanded', 'false');
   storageToggle.addEventListener('click', () => void toggleStorage());
-  header.append(brand, tag, storageToggle);
+
+  // The theme control (task 5.2) — the SAME builder the reader chrome uses, so the two surfaces
+  // cannot drift in behaviour, labelling or a11y; only the positioning differs, and that is pure
+  // CSS (readerCss.ts styles it fixed inside the shadow root, APP_CSS below styles it as a header
+  // pill). It carries an extra shell class for that styling. Clicking it calls the same
+  // `setThemeSetting` broadcast as everything else, so the shell root and the contained reader
+  // pane re-theme together — no half-themed screen.
+  const themeControl = buildThemeControl();
+  themeControl.classList.add(`${SHELL_CLASS}__theme-toggle`);
+  header.append(brand, tag, themeControl, storageToggle);
 
   // The storage panel's slot — spans below the header, above the body. Empty (and out of the
   // layout) until the toggle opens it; filled with the createStorageView panel on demand.
@@ -448,6 +477,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     folders: [],
     recents: [],
     pins: [],
+    settings: null, // nothing stored — the reader falls back to the Auto default (task 5.2)
     total: 0,
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };
@@ -838,6 +868,24 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     paintIdle();
     await refreshPersisted();
   }
+
+  // --- settings port (task 5.2) -------------------------------------------------------
+  //
+  // The app page is EXTENSION-ORIGIN, so it reads and writes the settings store DIRECTLY —
+  // `directPort`, not the content script's `messagingPort` (there is no background round-trip to
+  // make). Two wirings, mirroring the content entrypoint exactly:
+  //   • register the save sink, so the header control (and the in-reader pill, which is built by
+  //     the same mount() seam on this page) persists a pick through this context's own port;
+  //   • load the persisted setting and apply it via `setThemeSetting`, whose registry broadcast
+  //     themes the shell root AND any open reader pane together.
+  // Both are best-effort: `load()` is bounded and falls back to Auto, `save()` swallows
+  // persistence failures. Nothing here can blank or stall the shell (AGENTS.md #5).
+  const settingsPort = directPort({
+    getSettings: () => store.getSettings?.() ?? Promise.resolve({ ...DEFAULT_SETTINGS }),
+    putSettings: (patch) => store.putSettings?.(patch) ?? Promise.resolve(),
+  });
+  registerThemeSaveSink((patch) => void settingsPort.save(patch));
+  void settingsPort.load().then((resolved) => setThemeSetting(resolved.theme));
 
   // Initial paint: the idle affordance (plain line + live CTA) — never a blank page. The
   // reopen hub fills in once the async load resolves (refresh repaints idle when still idle).

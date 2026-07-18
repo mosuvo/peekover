@@ -656,7 +656,7 @@ function summarize(
   if (recents.length) lines.push(`${recents.length} recently opened file — path + name, so the list can reopen them.`);
   if (pins.length) lines.push(`${pins.length} pinned item — path + name for quick access.`);
   if (total === 0) lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
-  return { folders: folderInfos, recents, pins, total, lines };
+  return { folders: folderInfos, recents, pins, settings: null, total, lines };
 }
 
 describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
@@ -692,6 +692,7 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
         ],
         recents: [{ id: 'r1', folderId: 'F1', path: 'docs/a.md', name: 'a.md', openedAt: 2 }],
         pins: [{ id: 'p1', kind: 'folder', folderId: 'F1', path: '', name: 'live-notes', pinnedAt: 3 }],
+        settings: null,
         total: 4,
         lines: ['1 remembered folder — names only, never file contents.'],
       }),

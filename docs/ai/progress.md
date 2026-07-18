@@ -457,7 +457,52 @@ PER TASK — M1 lesson):
   - `pnpm lint` clean; `pnpm test` **380 unit**; `pnpm test:browser` **254** both engines; golden diff
     **EMPTY**; `manifest.test.ts` green (`permissions: []`).
 
-  **NOW → 5.2 (app-page shell header control + the group-1 `StoredSummary.settings` carry-over).**
+- **5.2 DONE — app-page shell header control + the group-1 carry-over closed.** The header gains the
+  **SAME `buildThemeControl()`** the reader chrome uses, restyled as a header pill beside the storage
+  toggle (it carries the `margin-left:auto`, so it heads the right-hand control group). One builder,
+  two surfaces — behaviour, labelling and a11y cannot drift; only the CSS differs, and the two
+  stylesheets cannot leak into each other (readerCss lives in the shadow root, APP_CSS is
+  `.peekover-app`-scoped).
+  - **The app page wires `directPort`, not `messagingPort`** — it is extension-origin, so it reads
+    and writes the settings store directly with no background round-trip. Two wirings mirroring the
+    content entrypoint: `registerThemeSaveSink(patch => port.save(patch))` and
+    `load().then(r => setThemeSetting(r.theme))`. `AppStore` gained OPTIONAL
+    `getSettings`/`putSettings` (the group-5 reader convention), so a minimal fake store still mounts
+    and the control still applies — it just cannot persist.
+  - **CARRY-OVER LANDED (recorded at the group-1 review).** `StoredSummary.settings` is now REQUIRED.
+    The tightening immediately caught **three** literals — appShell's `EMPTY_SUMMARY` plus two test
+    fixtures in `appShell.test.ts` — each of which had been silently reporting "no settings stored".
+    That is exactly the compile-time signal the optional field was suppressing; all three fixed,
+    `settings: null` added to `EMPTY_SUMMARY`. Full suites re-run green after the type tightened.
+  - **TESTS.** New `tests/browser/themeShell.browser.test.ts` (Cr+Fx, 9 tests → **+18 → 272 browser**;
+    unit unchanged at **380** — 5.2 adds no pure logic, it is wiring, and saying so beats inventing a
+    jsdom test). Present-and-in-the-header · cycles auto/light/dark with **no sepia** · a header pick
+    themes shell AND the contained reader pane coherently on **COMPUTED `--paper`/`--ink`** (the
+    group-3 precedent — an attribute-only assertion would have passed on the pre-3.3 shell) ·
+    dark and light · the header control and the in-reader pill show the SAME selection in both
+    directions · a pick reaches the real IndexedDB · it comes back on RE-MOUNT · empty store falls
+    back to Auto · a store with no settings methods still applies the pick.
+    **TWO RED-FIRSTS, clean on both engines:** dropping `registerThemeSaveSink` fails the 2
+    persistence tests; dropping the mount-time `load()` fails the re-mount test with
+    `expected 'Theme: Auto' to be 'Theme: Dark'`.
+  - **WHAT "PERSISTS" HONESTLY MEANS HERE.** The harness loads no extension and NEVER NAVIGATES, so a
+    re-mount is not a reload: the page, module graph and module-level theme state all survive it. The
+    test therefore resets the runtime to `auto` and drops the memoized DB connection BEFORE
+    re-mounting, so the value read back demonstrably came off disk — and the red-first above confirms
+    it (without the load, the re-mount reads `auto`). The genuine reload is **8.1**.
+  - `pnpm lint` clean; `pnpm test` **380 unit**; `pnpm test:browser` **272** both engines; golden diff
+    **EMPTY**; `manifest.test.ts` green (`permissions: []`).
+  - **FOR THE HUMAN — A UX QUESTION, NOT A DEFECT.** The app page now shows **TWO** theme controls:
+    this header one, and 5.1's in-reader pill, which reaches the contained pane through the one
+    `mount()` seam. tasks.md 5.1+5.2 specify exactly that, so both shipped and they are proven to stay
+    in sync — but whether the in-reader pill is redundant on the app page is a judgement call, left
+    to the gate rather than taken unilaterally.
+
+  **GROUP 5 COMPLETE (5.1/5.2), NOT pushed** — 2 commits ahead, awaiting human review. Suites at group
+  close: `pnpm test` **380 unit** · `pnpm test:browser` **272** both engines · golden diff **EMPTY** ·
+  `manifest.test.ts` green (`permissions: []`). Fence held: `tocView.ts`/`tocModel.ts`, `sanitize.ts`,
+  `parse.ts`, the manifest and `wxt.config` all **untouched**. NEXT after review → group 6 (TOC
+  carry-over). Do NOT start it yet.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
