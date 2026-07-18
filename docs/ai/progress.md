@@ -299,6 +299,16 @@ PER TASK — M1 lesson):
     accepts a visible light→dark flip on every cold start, which is the exact defect 004 exists to fix.
   - `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **210** both engines; golden diff
     **EMPTY**; `manifest.test.ts` green (`permissions: []`).
+- **4.1a DONE (human decision gate) — D-2 SETTLED: BLOCK, with its own short paint-gate deadline,
+  falling through to Auto + an INSTANT re-theme.** Recorded in `docs/ai/decisions.md` 2026-07-18 (the
+  driving numbers are LINKED to the 4.1 table above, not restated). Two deliberate sub-decisions:
+  **(a) no cross-fade** — the late-arrival path swaps instantly, because an instant swap is
+  `prefers-reduced-motion`-safe by construction and adds no code, while a cross-fade is a *visual*
+  property no test we can write certifies (M3 defect #6, "occlusion/appearance is human-gate-only");
+  the plan's "softened by a cross-fade" wording is **superseded**. **(b) block-with-fallthrough
+  SUBSUMES transition** — gate resolves in time → no flash; gate expires → mount Auto and re-theme on
+  arrival, which IS the transition behaviour. There is no separate transition design to build.
+  **NOW → task 4.2** (implement the gate; re-measure post-gating; remove the 4.1 instrumentation).
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

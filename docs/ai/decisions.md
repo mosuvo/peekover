@@ -1,6 +1,42 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-18 · Spec 004 D-2 (decision gate 4.1a): the theme-flash mitigation is BLOCK-UNTIL-READ,
+  with its OWN short paint-gate deadline, falling through to Auto + an INSTANT re-theme.** The
+  content-script reader defers its first mount attempt until the persisted theme is in hand, bounded
+  by a gate deadline of its own; if the gate expires first, the reader mounts themed-Auto and the
+  late-arriving setting re-themes it immediately. **WHY (the numbers, task 4.1 — full table + caveats
+  in `docs/ai/progress.md`, group 4; not restated here):** the background's real cost is **0.4 ms warm
+  / 5.0 ms cold** (the isolation probe, which is the honest measure — the in-page cold `resolved`
+  figures are a main-thread DELIVERY wait, not service-worker cost), `port.load()` fires at
+  `document_start`, and the mount does not commit until **~60 ms**. So in every measured cell the
+  settings are available BEFORE the natural mount, and gating costs **~0 ms in the common case**. The
+  138.9 ms cold `resolved` figure is an artifact of the mount itself blocking delivery — gating
+  *before* the mount is exactly what removes it. **THE TWO DEADLINES ARE DIFFERENT NUMBERS DOING
+  DIFFERENT JOBS and must not be conflated:** the paint gate is **~75 ms from nav start** (paint lands
+  ~72.6 ms after commit; the <150 ms budget therefore allows a commit by ~77 ms; the natural commit is
+  60.4 ms → **~17 ms of slack**), while `LOAD_TIMEOUT_MS` (**1500 ms**) is the dead-background backstop
+  living under runReader's 3 s never-blank floor. They differ **~20×**; inheriting 1500 ms as the paint
+  gate would blow the typical-doc budget by an order of magnitude.
+  **SUB-DECISION (a) — NO CROSS-FADE. The late-arrival path does an INSTANT theme swap.** The plan's
+  "softened by a `prefers-reduced-motion`-respecting cross-fade" wording is **superseded**. An instant
+  swap is trivially reduced-motion-safe and adds no code; a cross-fade is a *visual* property that no
+  test we can write is able to certify — M3 defect #6 established that occlusion/appearance is
+  **human-gate-only** (a fully transparent rail measured perfectly in every geometry test). We do not
+  ship a visual affordance whose only correctness check is a human's eye on a path that, by this
+  decision, should almost never run.
+  **SUB-DECISION (b) — BLOCK-WITH-FALLTHROUGH SUBSUMES "TRANSITION". There is no separate transition
+  design to build.** If the gate resolves in time → no flash. If it expires → mount Auto and re-theme
+  on arrival, which *is* the transition behaviour. The plan's block-vs-transition framing described
+  one mechanism with two arms, not two mechanisms.
+  **CONSEQUENCE:** 4.2 implements one gate in `runReader` + the entrypoint; the instant re-theme needs
+  **no new code** — group 3's `setThemeSetting()` already broadcasts through the theme registry to
+  every registered host. **Revisit-when:** (i) 4.2's post-gating `pnpm perf:flash` re-measure
+  contradicts the inference that gating before the mount makes cold availability ≈26 ms — the ~26 ms
+  figure follows from the isolation probe and was **never measured in the gated configuration**; if the
+  50 KB cells breach <150 ms, fall back to mount-Auto + instant re-theme (i.e. open the gate at 0 ms);
+  or (ii) the first-paint budget itself changes, since the gate's ~17 ms of slack is derived from it.
+
 - **2026-07-17 · Spec 004 D-1: sepia DEFERRED from the themes milestone (plan gate 2).** 004 ships
   **auto/light/dark** + persistence + TOC carry-over; sepia does not activate this milestone. **WHY:**
   `design/tokens.css` — the stated source of truth — defines only **4 of ~15** sepia tokens

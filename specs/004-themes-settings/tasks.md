@@ -146,7 +146,7 @@
       routes to **8.1**. `mount.ts`/`src/theme`/`src/settings`/`src/app` untouched — group 3's registry
       broadcast means group 4 needs no `MountOptions` change.*
 
-- [ ] **4.1a DECISION GATE (human) — D-2: block vs transition.** 4.1's numbers exist; the choice is the
+- [x] **4.1a DECISION GATE (human) — D-2: block vs transition.** 4.1's numbers exist; the choice is the
       human's, not the agent's. Agent RECOMMENDATION on the table: **block, with its own short paint-gate
       deadline (~75 ms) and a fallthrough to auto + transition** — the background costs 0.4 ms warm /
       5.0 ms cold and `load()` fires at document_start while mount commits at ~60 ms, so gating costs ~0 ms
@@ -157,6 +157,13 @@
       they differ ~20× and do different jobs.
       Files: — (human decision; record it in decisions.md)
       Verify (**human gate**): the D-2 choice is recorded before 4.2 writes code.
+      *DONE 2026-07-18 — **D-2 = BLOCK, with its own short paint-gate deadline, falling through to Auto +
+      an INSTANT re-theme.** Two sub-decisions taken deliberately: **no cross-fade** (an instant swap is
+      reduced-motion-safe by construction and adds no code; a cross-fade is a visual property only a human
+      gate can certify — M3 defect #6), and **block-with-fallthrough SUBSUMES transition** (gate resolves →
+      no flash; gate expires → Auto + re-theme on arrival, which IS the transition behaviour), so there is
+      no separate transition design to build. The plan's "softened by a cross-fade" wording is superseded.
+      Recorded in `docs/ai/decisions.md` 2026-07-18 (numbers linked to progress.md group 4, not restated).*
 
 - [ ] **4.2 Implement the CHOSEN reveal-gating in `runReader` (block OR transition).** Fire `port.load()` at
       `document_start` (parallel with `injectHideStyle()`); mount consumes `port.snapshot()`. Per 4.1: either
