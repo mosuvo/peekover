@@ -67,6 +67,8 @@ import {
   type PinEntryVM,
   type ReopenKind,
 } from './recentsView';
+import { registerThemeHost } from '../theme/themeRegistry';
+import { applyColorScheme } from '../theme/reader';
 import { createTreeView } from './treeView';
 import { createStorageView } from './storageControls';
 
@@ -108,11 +110,45 @@ export interface AppDeps {
   store?: AppStore;
 }
 
-/** The shell stylesheet: design tokens (light + dark) + minimal layout. */
-const APP_CSS = /* css */ `
-.${SHELL_CLASS}{
+// The shell's light and dark token sets, each written ONCE and reused by every rule that needs
+// them (base, media default, explicit override). Values are verbatim from design/tokens.css and
+// match `readerCss.ts`'s `:host` blocks token-for-token — that identity is what makes shell and
+// reader compute the SAME --paper/--ink under one theme (the coherence property, asserted in
+// tests/browser/themeRuntime.browser.test.ts). Change one side and you must change both.
+const LIGHT_TOKENS = /* css */ `
   --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
   --line:#E6E6DF; --accent:#16171F; --accent-soft:#ECECE3; --hl-soft:#FFF6BF;
+`;
+const DARK_TOKENS = /* css */ `
+  --paper:#12141C; --panel:#181B26; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
+  --line:#262A38; --accent:#EAEBF3; --accent-soft:#232838; --hl-soft:#3A3413;
+`;
+
+/**
+ * The shell stylesheet: design tokens (light + dark) + minimal layout.
+ *
+ * THEME CASCADE (task 3.3, spec §3.3/§7-3). Three layers, in this order and for these reasons:
+ *
+ *   1. `.peekover-app`                              — light base.
+ *   2. `@media (prefers-color-scheme:dark)`         — the PRE-JS default. The app page is
+ *      themed by CSS alone before any script resolves a setting, so it is never unthemed for
+ *      a frame (and never a white flash on a dark-OS machine).
+ *   3. `.peekover-app[data-theme="light"|"dark"]`   — the explicit override the theme runtime
+ *      writes.
+ *
+ * Layer 3 beats layer 2 by SPECIFICITY, not by source order: an attribute selector on top of
+ * the class is (0,2,0) against the media rule's (0,1,0), and `@media` contributes nothing to
+ * specificity. That is what makes a MANUAL theme win over the OS in BOTH directions —
+ * manual-dark on an OS-light machine and manual-light on an OS-dark one. Before this
+ * restructure the shell was themed by the media query ALONE, so no attribute could override it
+ * and a manual-dark reader sat in an OS-light shell (the §7-3 desync).
+ *
+ * Deliberately NOT added here: `scroll-behavior` on `.peekover-app__reader` (spec §6 — the
+ * reduced-motion trap; scroll behavior stays governed by the reader's own CSS).
+ */
+const APP_CSS = /* css */ `
+.${SHELL_CLASS}{
+  ${LIGHT_TOKENS}
   --r:10px;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   position:fixed; inset:0; display:flex; flex-direction:column;
@@ -121,11 +157,11 @@ const APP_CSS = /* css */ `
   -webkit-text-size-adjust:100%;
 }
 @media (prefers-color-scheme:dark){
-  .${SHELL_CLASS}{
-    --paper:#12141C; --panel:#181B26; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
-    --line:#262A38; --accent:#EAEBF3; --accent-soft:#232838; --hl-soft:#3A3413;
-  }
+  .${SHELL_CLASS}{${DARK_TOKENS}}
 }
+/* Explicit overrides — (0,2,0) beats the media rule's (0,1,0), so manual wins over the OS. */
+.${SHELL_CLASS}[data-theme="light"]{${LIGHT_TOKENS}}
+.${SHELL_CLASS}[data-theme="dark"]{${DARK_TOKENS}}
 .${SHELL_CLASS} *,.${SHELL_CLASS} *::before,.${SHELL_CLASS} *::after{box-sizing:border-box}
 .${SHELL_CLASS} :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 
@@ -257,6 +293,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // --- shell scaffolding ---------------------------------------------------
   const shell = doc.createElement('div');
   shell.className = SHELL_CLASS;
+  // The shell root is a THEMED HOST (task 3.3): registering it puts it in the same set as the
+  // reader hosts, so one applyTheme broadcast writes shell + reader together and the screen can
+  // never end up half-themed. `applyColorScheme` then writes the currently-resolved theme
+  // immediately — the value it writes equals what the pre-JS media rule was already showing, so
+  // this is a no-op visually on first paint and only diverges once a manual setting exists.
+  registerThemeHost(shell);
+  applyColorScheme(shell);
 
   const header = doc.createElement('header');
   header.className = `${SHELL_CLASS}__header`;

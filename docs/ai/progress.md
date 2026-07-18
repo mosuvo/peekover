@@ -159,6 +159,37 @@ PER TASK — M1 lesson):
     state, not a real OS-level theme switch; the OS→browser binding stays an **8.1 human-gate** item.
   `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **198** both engines; golden diff
   **EMPTY**; `manifest.test.ts` green (`permissions: []`).
+- **3.3 DONE** — `src/app/appShell.ts` shell token cascade restructured into three layers:
+  `.peekover-app` light base · `@media (prefers-color-scheme:dark)` = the **PRE-JS default** (the app
+  page is themed by CSS alone, never unthemed for a frame) · `.peekover-app[data-theme="light"|"dark"]`
+  explicit overrides. Layer 3 beats layer 2 by **SPECIFICITY** — attribute-on-class (0,2,0) vs the
+  media rule's (0,1,0), `@media` adding none — so **MANUAL WINS OVER OS in BOTH directions**. The
+  light/dark token sets are extracted to `LIGHT_TOKENS`/`DARK_TOKENS` consts so each value is written
+  ONCE across all three layers (and they match `readerCss.ts` token-for-token — that identity IS the
+  coherence property). The shell root now `registerThemeHost(shell)` + `applyColorScheme(shell)`, so
+  ONE `applyTheme` writes shell + reader together. Per spec §6 **no `scroll-behavior` added** to
+  `.peekover-app__reader` (reduced-motion trap); `readerCss.ts` untouched; **no sepia** (D-1=A).
+  - Real-engine proof appended to `themeRuntime.browser.test.ts` (Cr+Fx, +5 →208 browser), driving the
+    REAL `mountAppShell` → openFolder → select-file path and reading **computed tokens**
+    (`getComputedStyle(...).getPropertyValue('--paper')` — jsdom cannot cascade): shell/reader compute
+    the SAME `--paper`/`--ink` under manual dark AND manual light; manual-dark-on-OS-light and
+    manual-light-on-OS-dark both resolve correctly; and with NO attribute set the media rule still
+    themes a bare shell (pre-JS default intact). **RED-FIRST** — removed the two attribute-override
+    blocks → coherence + both direction tests failed on BOTH engines (`expected '#FBFBF8' to be
+    '#12141C'` and the converse) → restored → 22/22 green.
+  - **LOOK IS HUMAN-GATE-ONLY.** Computed tokens and geometry prove the values agree; they cannot see
+    contrast, opacity, z-order or occlusion. M3's gate caught a fully TRANSPARENT rail that every
+    geometry test measured perfectly (defect #6, "visual occlusion is gate-only"). Whether the themed
+    app page actually LOOKS right stays **8.1**.
+  `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **208** both engines; golden diff
+  **EMPTY**; `manifest.test.ts` green (`permissions: []`).
+- **GROUP 3 COMPLETE (3.1/3.2/3.3), NOT pushed** — 3 commits ahead, awaiting human review. Suites at
+  group close: `pnpm test` **375 unit** · `pnpm test:browser` **208** both engines · golden diff
+  **EMPTY** · `manifest.test.ts` green (`permissions: []`). `src/render/` (incl. `mount.ts`),
+  `src/settings/`, `entrypoints/`, sanitize/parse and the manifest were **all untouched** — the only
+  non-group-3 file is `vitest.config.ts`, which gained the test-only `emulateColorScheme` browser
+  command (the 003 `emulateReducedMotion` precedent). NEXT after review → group 4 (flash MEASUREMENT,
+  then the D-2 mitigation). Do NOT start it yet.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

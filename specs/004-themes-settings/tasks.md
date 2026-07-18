@@ -114,7 +114,7 @@
       **re-themes** it under Auto (fails before the registry swap — the stale-host bug); under a **manual**
       theme the OS flip is ignored. Golden EMPTY + manifest green.
 
-- [ ] **3.3 Shell `APP_CSS` attribute cascade + register the shell root (spec §3.3, §7-3).** Restructure the
+- [x] **3.3 Shell `APP_CSS` attribute cascade + register the shell root (spec §3.3, §7-3).** Restructure the
       shell token cascade: `.peekover-app` = light base; `@media (prefers-color-scheme:dark) .peekover-app` =
       dark (pre-JS default, never an unthemed frame); `.peekover-app[data-theme="light"|"dark"]` = explicit
       overrides (attribute specificity beats the media rule → **manual wins over OS**). Register the shell root

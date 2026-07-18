@@ -27,6 +27,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { commands } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
+import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import type { FolderSource } from '../../src/app/folderSource';
 import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 
@@ -223,5 +225,133 @@ describe('theme runtime — a MANUAL setting ignores the OS (spec §4)', () => {
     setThemeSetting('auto'); // back to Auto — re-resolves immediately against the live OS
 
     expect(host.getAttribute('data-theme')).toBe('dark');
+  });
+});
+
+// ── Task 3.3: the shell attribute cascade + shell/reader coherence ────────────────────────
+//
+// COMPUTED TOKENS are the whole point here and are exactly what jsdom cannot produce: these
+// assertions read `getComputedStyle(...).getPropertyValue('--paper')`, which requires a real
+// cascade. Two distinct properties are proven:
+//
+//   COHERENCE — the shell root and the reader host resolve the SAME --paper/--ink under one
+//   theme. This is the anti-"half-themed screen" property (spec §7-3).
+//
+//   ATTRIBUTE BEATS MEDIA — a manual theme wins over the OS in BOTH directions. Asserted as
+//   two separate cases because a cascade can easily be right in one direction and wrong in the
+//   other (e.g. if the override block were placed before the media rule).
+//
+// WHAT GEOMETRY AND TOKENS CANNOT SEE: whether the result actually LOOKS right — contrast,
+// opacity, z-order, occlusion. M3's human gate caught a fully TRANSPARENT TOC rail that every
+// geometry test measured perfectly (defect #6, the "visual occlusion is gate-only" class). So
+// "the tokens agree" is NOT "the screen looks correct"; the LOOK stays human-gate 8.1.
+
+function fakeStore(): AppStore {
+  return {
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+  };
+}
+
+function memorySource(name: string, text: string): FolderSource {
+  return {
+    name: 'docs',
+    truncated: false,
+    persistable: false,
+    files: [{ path: name, name, read: async () => text }],
+  };
+}
+
+const token = (el: HTMLElement, name: string) =>
+  getComputedStyle(el).getPropertyValue(name).trim().toUpperCase();
+
+/** Mount the real app shell, open a folder, and select the file — yielding the live shell root
+ *  AND the contained reader host that readerPane created inside it. Both are real production
+ *  code paths; nothing about the theming is simulated. */
+async function mountShellWithReader(): Promise<{ shell: HTMLElement; reader: HTMLElement }> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const app = mountAppShell(container, {
+    openFolder: async () => ({ ok: true, source: memorySource('doc.md', DOC) }),
+    store: fakeStore(),
+  });
+  await app.openFolder();
+  container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+
+  const shell = container.querySelector<HTMLElement>('.peekover-app')!;
+  let reader: HTMLElement | null = null;
+  for (let i = 0; i < 100 && !reader; i += 1) {
+    reader = container.querySelector<HTMLElement>('.peekover-app__reader__host');
+    if (!reader) await sleep(20);
+  }
+  if (!reader) throw new Error('contained reader host never appeared');
+  return { shell, reader };
+}
+
+describe('shell cascade — coherence with the reader (spec §7-3)', () => {
+  it('shell root and reader host compute the SAME --paper/--ink under a manual theme', async () => {
+    const { shell, reader } = await mountShellWithReader();
+
+    setThemeSetting('dark');
+
+    // RED BEFORE THE CASCADE RESTRUCTURE: the shell was themed by @media alone, so with the OS
+    // emulated LIGHT it computed light paper while the reader host — already attribute-driven
+    // via readerCss's :host([data-theme]) — computed dark. A half-themed screen.
+    expect(token(shell, '--paper')).toBe(token(reader, '--paper'));
+    expect(token(shell, '--ink')).toBe(token(reader, '--ink'));
+    expect(token(shell, '--paper')).toBe('#12141C');
+    expect(token(shell, '--ink')).toBe('#EAEBF3');
+  });
+
+  it('stays coherent under a manual LIGHT theme too', async () => {
+    const { shell, reader } = await mountShellWithReader();
+
+    setThemeSetting('light');
+
+    expect(token(shell, '--paper')).toBe(token(reader, '--paper'));
+    expect(token(shell, '--ink')).toBe(token(reader, '--ink'));
+    expect(token(shell, '--paper')).toBe('#FBFBF8');
+  });
+});
+
+describe('shell cascade — the attribute beats the media rule, both directions', () => {
+  it('manual DARK wins on an OS-LIGHT machine', async () => {
+    const { shell } = await mountShellWithReader(); // beforeEach emulated the OS to light
+    expect(window.matchMedia(DARK_QUERY).matches).toBe(false);
+
+    setThemeSetting('dark');
+
+    expect(token(shell, '--paper')).toBe('#12141C');
+  });
+
+  it('manual LIGHT wins on an OS-DARK machine', async () => {
+    const { shell } = await mountShellWithReader();
+    await flipOsAndAwaitDelivery('dark'); // OS is genuinely dark now
+    expect(window.matchMedia(DARK_QUERY).matches).toBe(true);
+
+    setThemeSetting('light');
+
+    // The direction a naive cascade gets wrong: the media rule is still matching, and only
+    // the attribute selector's higher specificity keeps light on screen.
+    expect(token(shell, '--paper')).toBe('#FBFBF8');
+    expect(token(shell, '--ink')).toBe('#16171F');
+  });
+
+  it('with NO attribute set, the media rule still themes the shell (pre-JS default intact)', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    // A bare shell element carrying only the class — the state the page is in before the
+    // runtime writes an attribute. It must already be dark on a dark OS: no unthemed frame.
+    const bare = document.createElement('div');
+    bare.className = 'peekover-app';
+    container.appendChild(bare);
+    mountAppShell(container, { store: fakeStore() }); // brings APP_CSS into the document
+    container.appendChild(bare);
+
+    await flipOsAndAwaitDelivery('dark');
+
+    expect(bare.hasAttribute('data-theme')).toBe(false);
+    expect(token(bare, '--paper')).toBe('#12141C');
   });
 });
