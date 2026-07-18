@@ -129,7 +129,7 @@
 
 ## 4 — Flash: MEASURE, then the minimal mitigation (D-2 decided by the number, not up front)
 
-- [ ] **4.1 Flash harness + minimal measurement wiring — MEASUREMENT, no threshold (plan §1.5, §4).** To have
+- [x] **4.1 Flash harness + minimal measurement wiring — MEASUREMENT, no threshold (plan §1.5, §4).** To have
       anything to measure, add the MINIMAL document_start wiring the measurement needs: fire `port.load()` at
       `document_start` and timestamp settings-resolved vs first-paint — measurement-only instrumentation, NOT the
       reveal-gating decision (that is 4.2). Measure on **≤50 KB and 1 MB** fixtures, **warm + cold** service
@@ -141,6 +141,22 @@
       `src/render/runReader.ts` (minimal load()+timestamp instrumentation only)
       Verify (**measured**): `pnpm perf:flash` prints resolved-vs-paint medians per fixture × warm/cold × engine,
       recorded in progress.md. No acceptance number asserted (M1 retro standing rule).
+      *DONE — numbers + full caveats in progress.md (group 4). Chromium only: Playwright's Firefox
+      extension support is CLOSED as out-of-scope (playwright#7297), so the Firefox no-flash property
+      routes to **8.1**. `mount.ts`/`src/theme`/`src/settings`/`src/app` untouched — group 3's registry
+      broadcast means group 4 needs no `MountOptions` change.*
+
+- [ ] **4.1a DECISION GATE (human) — D-2: block vs transition.** 4.1's numbers exist; the choice is the
+      human's, not the agent's. Agent RECOMMENDATION on the table: **block, with its own short paint-gate
+      deadline (~75 ms) and a fallthrough to auto + transition** — the background costs 0.4 ms warm /
+      5.0 ms cold and `load()` fires at document_start while mount commits at ~60 ms, so gating costs ~0 ms
+      measured. **Two things 4.2 must not inherit blindly:** (a) the ~26 ms cold availability behind a gate
+      is an INFERENCE from the isolation probe, not measured in the gated configuration — re-measure and
+      fall back to transition if it does not hold; (b) the **paint-gating deadline (~77 ms from nav start,
+      ~17 ms of slack) is NOT `LOAD_TIMEOUT_MS`** (1500 ms, the never-blank backstop under the 3 s floor) —
+      they differ ~20× and do different jobs.
+      Files: — (human decision; record it in decisions.md)
+      Verify (**human gate**): the D-2 choice is recorded before 4.2 writes code.
 
 - [ ] **4.2 Implement the CHOSEN reveal-gating in `runReader` (block OR transition).** Fire `port.load()` at
       `document_start` (parallel with `injectHideStyle()`); mount consumes `port.snapshot()`. Per 4.1: either

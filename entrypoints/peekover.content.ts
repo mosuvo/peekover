@@ -1,5 +1,5 @@
 import { defineContentScript, browser } from '#imports';
-import { runReader } from '@/src/render/runReader';
+import { markSettingsResolved, runReader } from '@/src/render/runReader';
 import { messagingPort } from '@/src/settings/settingsPort';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
@@ -39,17 +39,22 @@ export default defineContentScript({
   // it, then mount at DOMContentLoaded. runReader owns the never-blank guarantees.
   runAt: 'document_start',
   main() {
-    // Build the content-script settings port and start warming it (spec 004, task 2.3 — WIRING
-    // ONLY). The reader's own origin cannot read the extension DB, so this port reaches settings
-    // by messaging the background (handled in entrypoints/background.ts). `load()` kicks off the
-    // round-trip now, at document_start, so a value is cached by the time the render path needs
-    // it; `load()` is bounded and falls back to Auto, so a dead background can never stall here.
+    // Build the content-script settings port and fire load() at document_start, IN PARALLEL with
+    // runReader's injectHideStyle() (plan §1.5). The reader's own origin cannot read the extension
+    // DB, so this port reaches settings by messaging the background (entrypoints/background.ts).
+    // `load()` is bounded and falls back to Auto, so a dead background can never stall here.
     //
-    // Deliberately NOT threaded into runReader/mount yet: consuming port.snapshot() to theme the
-    // first paint (and the reveal-gating + flash measurement) is tasks 4.1/4.2 — that requires
-    // touching src/render/, a later group's files, so it is left alone here.
+    // TASK 4.1 = MEASUREMENT ONLY. `markSettingsResolved` timestamps the moment the persisted
+    // settings are in hand, so scripts/perf-theme-flash.ts can measure it against the reader's
+    // first paint and answer the D-2 question: does the persisted theme arrive before the paint
+    // (no flash) or after it (a visible flip)? Nothing here CONSUMES the settings yet — the
+    // snapshot is still not threaded into mount, and the reveal is not gated. Applying the
+    // resolved theme and choosing block-vs-transition is task 4.2, decided by these numbers.
+    //
+    // Note `load()` never rejects (settingsPort's withTimeout resolves to the default on timeout
+    // or failure), so there is no rejection path to handle — the mark always lands.
     const settings = messagingPort((message) => browser.runtime.sendMessage(message));
-    void settings.load();
+    void settings.load().then((resolved) => markSettingsResolved(resolved.theme));
 
     runReader();
   },

@@ -203,11 +203,102 @@ PER TASK — M1 lesson):
   human review. The 4th is the review follow-up above: the one-listener-many-flips guard (+1 test,
   comment/doc corrections only — **no `src/` behavior change**, the runtime was already correct).
   Suites at group close: `pnpm test` **375 unit** · `pnpm test:browser` **210** both engines · golden diff
-  **EMPTY** · `manifest.test.ts` green (`permissions: []`). `src/render/` (incl. `mount.ts`),
+  **EMPTY** · `manifest.test.ts` green (`permissions: []`). **NOTE: group 3's four commits were still
+  UNPUSHED as of the 4.1 session** (`git status` read `ahead 4`) — groups 1–2 are pushed, group 3 is not.
+  `src/render/` (incl. `mount.ts`),
   `src/settings/`, `entrypoints/`, sanitize/parse and the manifest were **all untouched** — the only
   non-group-3 file is `vitest.config.ts`, which gained the test-only `emulateColorScheme` browser
   command (the 003 `emulateReducedMotion` precedent). NEXT after review → group 4 (flash MEASUREMENT,
   then the D-2 mitigation). Do NOT start it yet.
+
+**Group 4 (flash: MEASURE → mitigate) IN PROGRESS — advance PER TASK.**
+- **4.1 DONE — flash MEASUREMENT harness + numbers. NO threshold asserted (M1 retro rule).** New
+  `scripts/perf-theme-flash.ts` (`pnpm perf:flash [-- --sw warm|cold|both] [--no-build]`), modelled on
+  `perf-first-paint.ts`. Minimal instrumentation only: the content entrypoint now fires `port.load()` at
+  document_start (parallel with `injectHideStyle()`, plan §1.5) and timestamps the resolve;
+  `runReader.ts` timestamps the mount commit. **`src/render/mount.ts`, `src/theme/`, `src/settings/`,
+  `src/app/` and the manifest were NOT touched** — group 3's `setThemeSetting()` broadcast through the
+  theme registry means a setting applied BEFORE mount themes the first paint and one applied AFTER is
+  fixed by the broadcast, so group 4 needs no `MountOptions` change (verified by reading `reader.ts`,
+  not assumed). Nothing CONSUMES the settings yet; the reveal is not gated. That is 4.2.
+  - **HARNESS SCOPE — CHROMIUM ONLY, and this is now a HARD limit, not a gap to close.** Playwright
+    cannot load an unpacked extension into Firefox: `--load-extension` is a Chromium flag, and the
+    tracking issue (microsoft/playwright#7297) was **CLOSED 2024-12-03 as out-of-scope**, with every
+    later request folded into it. `playwright-core@1.61.1` contains no `installAddon`/
+    `installTemporaryAddon` (grepped). So there is no roadmap item to wait for. The **Firefox no-flash
+    property is routed to the 8.1 human gate**; no Firefox number was faked. (Third-party escapes exist
+    — `playwright-webextext`, Selenium/geckodriver `installAddon`, `web-ext` — none adopted here.)
+  - **"COLD" IS DEFINED AND ASSERTED, not slept for.** The MV3 worker is terminated via CDP
+    `Target.closeTarget` immediately before each cold navigation. **Two mechanisms probed, one works:**
+    `ServiceWorker.stopAllWorkers` was accepted without error but the target SURVIVED; `Target.closeTarget`
+    returns `{success:true}` and the target disappears from a follow-up `Target.getTargets`. **A trap
+    cost a debugging cycle and is recorded so it is not re-hit:** Playwright's `ctx.serviceWorkers()`
+    STILL lists a terminated worker (client-side cache, never pruned), so the first liveness check made
+    every cold run look like a failure — `Target.getTargets` is the browser's own answer and is now the
+    authority. "Cold" therefore means *no running worker process*, not a fresh profile (that would
+    cold-start the browser and disk cache too, conflating three variables). That the worker genuinely
+    respawns is proven, not assumed: each run asserts the reply carried the seeded `dark`.
+  - **The two observable moments:** `resolved` = `port.load()` resolving in the content script;
+    `painted` = 2nd rAF after `<peekover-root>` first has populated open-shadow content — the **same
+    metric and detector as `pnpm perf`**, so it is directly comparable to the 003 baseline. Marks cross
+    the **isolated-world boundary** as `<html>` data-attributes (a content script's `window` is not the
+    page's, so a global is invisible to `page.evaluate`; the DOM is shared). Each mark carries
+    `Date.now()` beside `performance.now()` so the harness **CHECKS** both worlds share a timeOrigin
+    rather than assuming it — measured skew **≤0.9 ms** every run, well inside the 2 ms tolerance.
+  - **NUMBERS** (i7-13700, Windows, headless chromium/Playwright; 7 runs per cell, run 1 discarded,
+    **median of warm 6**, min/max as spread; persisted theme seeded to a NON-default `dark` and asserted
+    to have reached the reader every run — a run resolving to the `auto` default would measure nothing):
+
+    | fixture | SW   | resolved | painted | committed | DELTA (painted−resolved) | theme before paint |
+    |---|---|---|---|---|---|---|
+    | 50 KB | warm | 21.4 ms (20.6–22.5) | 133.0 ms (131.9–144.1) | 60.4 ms | **+111.8 ms** | 6/6 |
+    | 50 KB | cold | 138.9 ms (137.1–142.9) | 139.1 ms (137.3–143.1) | 62.6 ms | **+0.2 ms** | 6/6 |
+    | 1 MB | warm | 22.7 ms (21.3–24.1) | 1162.7 ms (1155.6–1180.7) | 457.9 ms | **+1140.4 ms** | 6/6 |
+    | 1 MB | cold | 962.3 ms (954.4–983.9) | 1159.8 ms (1150.0–1194.6) | 462.3 ms | **+199.5 ms** | 6/6 |
+
+  - **THE COLD FIGURES ARE CONTAMINATED — quantified, not hand-waved.** Cold `resolved` read 138.9 ms on
+    the 50 KB doc but 962.3 ms on the 1 MB doc, for what is the *same* worker wake. A separate isolation
+    probe (extension page, no render work) measures the settings round-trip at **0.4 ms warm (0.4–0.6)
+    and 5.0 ms cold (4.4–7.5)**. So the background is nearly free; the in-page cold numbers are almost
+    entirely a **DELIVERY WAIT** — a content script shares the page main thread, so a reply arriving
+    while the reader is parsing/mounting is not dispatched until that thread yields. `resolved` is
+    therefore honestly "when the reader could ACT on the settings", **not** the service-worker cost.
+  - **The +0.2 ms 50 KB/cold delta is a PHOTO FINISH, not comfort.** It is pinned at +0.1…+0.2 ms across
+    all 6 runs while the absolute values move 6 ms — the signature of both stamps being flushed in the
+    SAME main-thread turn. Their order *within* that turn is not resolvable by this instrumentation and
+    is not guaranteed by anything currently in `src/`. Mechanism: the ~5 ms worker wake pushes the reply
+    just past the moment the main thread saturates with parse+mount, so it then waits ~115 ms for the
+    next yield. **It is a cliff, not a gradient** — which is exactly why 4.2 must not read "6/6 before
+    paint" as "no flash by default".
+  - **INSTRUMENTATION COST ~NIL:** 50 KB warm painted **133.0 ms** vs the recorded 003 baseline
+    **133.5 ms** (budget <150 ms) = **−0.5 ms**, inside run-to-run noise. The measurement did not move
+    the number it measures. Content script 285.96 kB (formal byte re-measure is task 7.1).
+  - **THE TWO DEADLINES — DIFFERENT NUMBERS, DIFFERENT JOBS (the plan conflates these; it must not).**
+    - **NEVER-BLANK ceiling ≈ <3000 ms.** runReader's `SAFETY_UNHIDE_MS = 3000` floor reveals raw text if
+      nothing has mounted; a gate must resolve well inside that or the user sees the raw flash the whole
+      design exists to prevent. `LOAD_TIMEOUT_MS = 1500` (group 2, provisional) sits at 50% of the floor —
+      **safe, and NOT re-tuned by this measurement**, but it is ~200× the measured worst-case round trip
+      (7.5 ms). It is a dead-background backstop, nothing more.
+    - **PAINT-GATING deadline ≈ 77 ms from navigation start (~17 ms of slack).** Derived: paint lands
+      ~72.6 ms after mount commit (60.4 → 133.0 ms, 50 KB warm); the <150 ms budget therefore allows a
+      commit no later than ~77 ms; the natural commit is 60.4 ms, so a gate may delay the mount by at
+      most **~17 ms**. Measured true availability is 21.4 ms warm and ~26 ms cold (21.4 + the 5 ms wake),
+      leaving ~51 ms of headroom.
+    - **These differ by ~20×. 1500 ms must NOT be inherited as the paint gate** — a gate that waits
+      `LOAD_TIMEOUT_MS` would blow the typical-doc budget by an order of magnitude.
+  - **D-2 RECOMMENDATION (for the human to accept or reject — NOT a decision taken): BLOCK, with a short
+    paint-gate deadline of its own (~75 ms), falling through to auto + the transition path.** Rationale:
+    the background's real cost is 0.4 ms warm / 5.0 ms cold, and `load()` is fired at document_start
+    while mount does not commit until ~60 ms — so gating the mount on it costs **~0 ms in every measured
+    cell**, and the 138.9 ms cold `resolved` is an artifact of the mount work itself blocking delivery,
+    which gating *before* the mount removes. **The inference to flag:** that "gating before mount makes
+    cold ≈26 ms" follows from the isolation probe, it was NOT measured in the gated configuration —
+    **4.2 must re-measure post-gating and fall back to transition if it does not hold.** The fallthrough
+    is not optional: the paint budget allows only ~17 ms of stall, so the gate needs its own short
+    deadline and a transition path behind it. A pure transition design is the safe-but-worse option — it
+    accepts a visible light→dark flip on every cold start, which is the exact defect 004 exists to fix.
+  - `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **210** both engines; golden diff
+    **EMPTY**; `manifest.test.ts` green (`permissions: []`).
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
