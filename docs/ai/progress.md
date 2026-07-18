@@ -45,8 +45,18 @@ PER TASK — M1 lesson):
   `pnpm test` **354 unit** · `pnpm test:browser` **176** both engines · golden diff **EMPTY** · `manifest.test.ts`
   green (`permissions: []`). NEXT after review → group 2 (SettingsPort + messaging seam). Do NOT start it yet.
   *Two review follow-ups banked in tasks.md: (a) `src/store/`→`src/app/` Files-path correction
-  in the remaining tasks; (b) group-5 to-do to restore `StoredSummary.settings` to required +
-  add `settings: null` to appShell's `EMPTY_SUMMARY`.*
+  in tasks.md (tasks 1.1–1.3) and plan.md; (b) group-5 to-do to restore `StoredSummary.settings`
+  to required + add `settings: null` to appShell's `EMPTY_SUMMARY`.*
+
+**Group 2 (SettingsPort + messaging seam) IN PROGRESS — advance PER TASK.**
+- **2.1 DONE** — new canonical `src/settings/settings.ts` owns the settings VOCABULARY: `Settings`
+  + `ThemeSetting`/`EffectiveTheme`, `DEFAULT_SETTINGS`, the pure `resolveTheme(setting, osDark)`
+  (auto→OS; manual ignores OS — incl. deferred `sepia`), and the `SettingsPort` interface.
+  Dependency-free (no DOM/engine/store/`#imports`). `src/app/store.ts` now IMPORTS + RE-EXPORTS
+  `Settings`/`DEFAULT_SETTINGS` (keeps only the persistence-shaped `SettingsRecord`/`SETTINGS_ID`),
+  so existing callers importing from the store are unchanged. jsdom-unit proof
+  `src/settings/settings.test.ts` (+4): the full setting×OS matrix + the default shape. `pnpm lint`
+  clean, `pnpm test` **358 unit**; golden diff **EMPTY**, `manifest.test.ts` green (`permissions: []`).
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

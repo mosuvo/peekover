@@ -19,6 +19,16 @@
 // persistence + the schema upgrade are jsdom-blind properties — retro standing rule).
 
 import { openDb, get, getAll, put, del, clear, type IdbSchema } from './idbCore';
+import { DEFAULT_SETTINGS, type Settings } from '../settings/settings';
+
+// The settings VOCABULARY (the `Settings` shape + its default) is owned by the canonical,
+// dependency-free `src/settings/settings.ts` (group 2 consolidation). The store keeps only the
+// PERSISTENCE-shaped concerns below (`SettingsRecord` = the row incl. its keyPath id, and
+// `SETTINGS_ID`). We re-export the canonical pair so existing callers that import `Settings` /
+// `DEFAULT_SETTINGS` from the store keep working unchanged — the store stays the one-stop
+// data-layer surface without redefining the type.
+export { DEFAULT_SETTINGS };
+export type { Settings };
 
 /** Database identity — a single versioned schema (plan.md §IndexedDB). Bumped 1→2 for
  *  the additive `settings` store (spec 004). */
@@ -66,31 +76,15 @@ export interface PinRecord {
   pinnedAt: number;
 }
 
-/**
- * Reader settings — the persisted reading preferences (spec 004). A single global row
- * keyed by SETTINGS_ID; there is exactly one. `theme` carries the sepia value in the type
- * even though sepia is DEFERRED from 004 (D-1 = A) — the runtime is written surface-neutral
- * to it, so re-activating sepia later is additive and needs no shape change here.
- * `tocOpen`/`tocWidth` are the 003 per-view TOC state promoted to persistence; `null` means
- * "not set — fall back to the 003 width-derived default".
- */
-export interface Settings {
-  theme: 'auto' | 'light' | 'dark' | 'sepia';
-  tocOpen: boolean | null;
-  tocWidth: number | null;
-}
-
-/** The stored settings row: the global Settings plus its fixed keyPath id. */
+/** The stored settings row: the global {@link Settings} plus its fixed keyPath id. This is the
+ *  PERSISTENCE shape (owned here); the `Settings` vocabulary + `DEFAULT_SETTINGS` live in the
+ *  canonical `src/settings/settings.ts` (imported + re-exported above). */
 export interface SettingsRecord extends Settings {
   id: string;
 }
 
 /** The one settings row's key — a single global reader-settings row (no per-doc settings). */
 export const SETTINGS_ID = 'reader';
-
-/** The default reading preferences, used before anything is stored and after a wipe: Auto
- *  theme, TOC state unset (defer to the 003 width-derived behavior). */
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', tocOpen: null, tocWidth: null };
 
 /** The full v2 schema handed to idbCore.openDb. */
 const SCHEMA: IdbSchema = {
