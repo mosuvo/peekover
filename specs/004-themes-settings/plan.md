@@ -111,7 +111,7 @@ Full settings panel, fonts, widths, per-origin/doc overrides, export/import = ou
 - `src/app/idbCore.ts` — register `db.onversionchange` (close + let the memo drop) on open success (spec §7-2); optional `onblocked` orphaned-open close.
 - `src/theme/reader.ts` — replace `watchColorScheme`'s `querySelectorAll` broadcast with the registry; make `initReaderRuntime` theme from the resolved setting (concrete via `resolveTheme`), register the host; OS-flip re-themes only when setting=auto.
 - `src/theme/readerCss.ts` — (D-1 only) complete sepia tokens if B/C.
-- `src/ui/appShell.ts` — `APP_CSS` cascade restructure (§1.4); register the shell root in the theme registry; add the header theme control; build/hold the `directPort`; thread it into the reader pane + reader.
+- `src/app/appShell.ts` — `APP_CSS` cascade restructure (§1.4); register the shell root in the theme registry; add the header theme control; build/hold the `directPort`; thread it into the reader pane + reader.
 - `src/render/readerPane.ts` — pass the port/snapshot through to `mount({contained, settings/port})`.
 - `src/render/mount.ts` — `MountOptions` gains the settings snapshot + save-callback (or the port); thread to `initReaderRuntime` (theme) and `buildTocView` (TOC state); add the theme-control sibling.
 - `src/render/runReader.ts` — fire `port.load()` at document_start; thread the snapshot into mount; implement the §4-measured reveal-gating decision.

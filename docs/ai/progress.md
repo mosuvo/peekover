@@ -105,8 +105,24 @@ PER TASK — M1 lesson):
     messagingPort import (formal re-measure is task 7.1).
 - **GROUP 2 COMPLETE (2.1/2.2/2.3), NOT pushed** — 3 commits ahead, awaiting human review. Suites at
   group close: `pnpm test` **367 unit** · `pnpm test:browser` **186** both engines · golden diff
-  **EMPTY** · `manifest.test.ts` green (`permissions: []`). NEXT after review → group 3 (theme
-  runtime + host registry). Do NOT start it yet.
+  **EMPTY** · `manifest.test.ts` green (`permissions: []`). Group 2 reviewed + **PUSHED**.
+
+**Group 3 (theme runtime + host registry) IN PROGRESS — advance PER TASK.**
+- **3.1 DONE** — new `src/theme/themeRegistry.ts`: a module-level `Set<HTMLElement>` of themed hosts +
+  `registerThemeHost`/`unregisterThemeHost` + `applyTheme(effective)` broadcast, with an
+  `isConnected` **PRUNE before every broadcast** (verbatim mirror of tocView's `tocHosts` — the
+  by-construction liveness guard, retro 5×-recurrence rule; deleting during Set iteration is safe).
+  Takes an `EffectiveTheme` (never a setting) — `auto` is resolved by the caller, so nothing
+  downstream knows about the OS. **OWN module, not inside reader.ts** (tasks.md 3.1 names that path;
+  it also lets `appShell.ts` import the registry WITHOUT dragging `READER_CSS` + the font loader
+  into the shell bundle). jsdom-unit proof `src/theme/themeRegistry.test.ts` (+4): broadcast reaches
+  a `peekover-root` AND a plain div (the tag-name query would have missed the shell root — the §3.4
+  bug), register-twice is idempotent, unregister stops writes, and the prune. **RED-FIRST verified** —
+  disabled the prune → the DETACHED node received the next write (`expected 'light' to be 'dark'`)
+  → restored → 4/4 green. `pnpm lint` clean, `pnpm test` **371 unit**; golden diff **EMPTY**,
+  `manifest.test.ts` green. Doc drift fixed in the same commit: tasks.md 3.3/5.2 + plan.md §2 said
+  `src/ui/appShell.ts`; the real file is `src/app/appShell.ts` (same class as the group-1
+  `src/store/`→`src/app/` fix — paths only, no checkbox/text change).
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

@@ -96,7 +96,7 @@
 
 ## 3 — Theme runtime + host registry (paint is jsdom-blind; coherence + staleness proven in the real engine)
 
-- [ ] **3.1 `themeRegistry.ts` — themed-host `Set` + register/unregister/`isConnected` prune + `applyTheme`.**
+- [x] **3.1 `themeRegistry.ts` — themed-host `Set` + register/unregister/`isConnected` prune + `applyTheme`.**
       A module-level `Set<HTMLElement>`; `applyTheme(effective)` writes `data-theme` on **every registered
       host**, pruning any `!host.isConnected` entry first (a verbatim mirror of tocView's `tocHosts` pattern —
       the by-construction liveness guard, retro 5×-recurrence rule). Keep it **one module**.
@@ -121,7 +121,7 @@
       in the theme registry; the runtime writes a concrete `data-theme` on it once settings resolve. **Do NOT**
       add `scroll-behavior` to `.peekover-app__reader` (spec §6 — reduced-motion trap); `readerCss.ts`
       `:host([data-theme])` blocks need no change for light/dark.
-      Files: `src/ui/appShell.ts` · `tests/browser/themeRuntime.browser.test.ts`
+      Files: `src/app/appShell.ts` · `tests/browser/themeRuntime.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx, **red-first**): under a manual theme the shell root and the reader host
       compute the **same** `--paper`/`--ink` (coherence — fails before the cascade restructure); manual-dark-in-
       OS-light and manual-light-in-OS-dark both resolve correctly (attribute beats media). Golden EMPTY +
@@ -172,7 +172,7 @@
 - [ ] **5.2 App-page shell header theme control.** A matching auto/light/dark control in the shell header
       (beside the storage-toggle), wired to the `directPort`; writes the concrete `data-theme` on the shell root
       via `applyTheme`.
-      Files: `src/ui/appShell.ts` · `tests/browser/themeRuntime.browser.test.ts`
+      Files: `src/app/appShell.ts` · `tests/browser/themeRuntime.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx): header select applies to **both** shell + reader pane (coherent, no
       half-themed screen) and persists across reload. Golden EMPTY + manifest green.
       *Carried from group-1 review: `StoredSummary.settings` was left OPTIONAL (`settings?:`) so
