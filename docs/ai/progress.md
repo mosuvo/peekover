@@ -57,6 +57,20 @@ PER TASK — M1 lesson):
   so existing callers importing from the store are unchanged. jsdom-unit proof
   `src/settings/settings.test.ts` (+4): the full setting×OS matrix + the default shape. `pnpm lint`
   clean, `pnpm test` **358 unit**; golden diff **EMPTY**, `manifest.test.ts` green (`permissions: []`).
+- **2.2 DONE** — `src/settings/settingsPort.ts` is the surface-agnostic messaging SEAM: the wire
+  contract (`GET_SETTINGS`/`SET_SETTINGS` named once), both client ports (`directPort(store)` for
+  extension-origin, `messagingPort(send)` for content scripts), AND the background handler builder
+  (`createSettingsListener` / pure `handleSettingsMessage`) — all deps INJECTED, no `#imports`/DOM/
+  store import. Every port: sync cached `snapshot()` (starts at DEFAULT, never throws) · `load()`
+  bounded by `LOAD_TIMEOUT_MS` (**1500 ms** provisional — 4.1 re-tunes from measurement, NOT an
+  asserted threshold; chosen < runReader's 3 s never-blank floor, > a cold MV3 SW spin-up + one IDB
+  read) resolving to DEFAULT on timeout/failure · `save(patch)` updates cache immediately then
+  best-effort persists. jsdom-unit proof `settingsPort.test.ts` (+9) with fake store/messenger:
+  round-trip both ports, snapshot-default-before-load, coerce garbled response, save best-effort.
+  **RED-FIRST verified** — neutered `withTimeout` to `return promise`: the two THROWING tests
+  rejected ("promise rejected … instead of resolving") and the two HANGING tests timed out
+  ("Test timed out in 2500ms") → reverted → 9/9 green. `pnpm lint` clean, `pnpm test` **367 unit**;
+  golden diff **EMPTY**, `manifest.test.ts` green.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
