@@ -79,43 +79,6 @@ export function removeHideStyle(): void {
   document.getElementById(HIDE_STYLE_ID)?.remove();
 }
 
-// --- task 4.1 flash-MEASUREMENT scaffolding (TEMPORARY — 4.2 removes it) ------------
-//
-// These two marks are the only way the flash harness can see the content script's
-// clock. A Chrome content script runs in an ISOLATED WORLD: its `window` is not the
-// page's, so a global set here is invisible to Playwright's page.evaluate(). The DOM
-// IS shared, so the marks travel as data-attributes on <html> and the harness
-// (scripts/perf-theme-flash.ts) reads them from the main world.
-//
-// Each value is `performance.now()|Date.now()|detail`. The Date.now() half exists so
-// the harness can CHECK that the isolated and main worlds share a timeOrigin instead
-// of assuming it — a skew there would silently corrupt every measured delta.
-//
-// Deliberately inert: first-write-wins, no listeners, no timers, no network, and a
-// no-op if <html> is somehow absent. This is measurement scaffolding for task 4.1's
-// number, NOT the reveal-gating decision (that is 4.2, which deletes this block).
-
-/** <html> attribute carrying the moment the settings port's load() resolved. */
-export const SETTINGS_RESOLVED_ATTR = 'data-peekover-settings-resolved';
-/** <html> attribute carrying the moment runReader committed a mounted reader. */
-export const MOUNT_COMMITTED_ATTR = 'data-peekover-mount-committed';
-
-/** Write a first-wins timestamp mark onto <html>. Never throws, never overwrites. */
-function mark(attr: string, detail: string): void {
-  const root = document.documentElement;
-  if (!root || root.hasAttribute(attr)) return;
-  root.setAttribute(attr, `${performance.now()}|${Date.now()}|${detail}`);
-}
-
-/** Called by the content entrypoint when `port.load()` resolves; `theme` is the
- *  resolved SETTING, so the harness can prove the persisted value actually arrived
- *  (a run that resolved to the default `auto` would measure nothing). */
-export function markSettingsResolved(theme: string): void {
-  mark(SETTINGS_RESOLVED_ATTR, theme);
-}
-
-// --- end task 4.1 scaffolding --------------------------------------------------------
-
 /** Injectable seams so the orchestration is unit-testable without a real navigation. */
 export interface RunReaderOptions {
   /** Context gate (defaults to isRenderableContext against location.href). */
@@ -191,7 +154,6 @@ export function runReader(options: RunReaderOptions = {}): void {
       throw err;
     }
     if (didCommit) {
-      mark(MOUNT_COMMITTED_ATTR, 'commit'); // task 4.1 measurement scaffolding (removed in 4.2)
       finish(); // reader is up — hand visibility off to mount/the toggle.
       return;
     }

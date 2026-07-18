@@ -1,6 +1,32 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-18 · Spec 004 D-2 CORRECTION OF RECORD (task 4.2): the paint gate was BUILT, MEASURED and
+  REMOVED. The shipped mitigation is D-2's own fallback — mount Auto + an INSTANT re-theme.** This is
+  the D-2 entry below firing its OWN revisit-when, not a reversal of the human's call. **WHY:** D-2
+  made the block arm conditional on 4.2 re-measuring 4.1's untested inference that gating before the
+  mount would make cold settings availability ≈26 ms. Measured in the gated configuration: **~72 ms**.
+  The isolation probe still reproduces (0.4 ms warm / 5.6 ms cold), so the background is genuinely
+  nearly free — the probe simply **under-predicts the content-script path by ~13×**, because it
+  measures an idle, already-loaded extension page while a content script at `document_start` competes
+  with an active navigation. **Standing correction: never infer in-page availability from that probe
+  again** (recorded in-code at `measureSwWake`). **THE BUDGET DATA (50 KB cell, same build + session):
+  gate 75 ms → cold 172.7 ms; gate 40 ms → cold 172.9 ms; NO gate → cold 137.7–148.2 ms**, against the
+  <150 ms first-paint budget. Halving the deadline moved cold by **0.2 ms**, which is the decisive
+  fact: the ~25–35 ms cost is not the length of the wait but that **deferring the mount at all takes it
+  off the DOMContentLoaded turn it otherwise rides**. So no deadline both gates the warm case
+  (settings land ~21.5 ms, before the ~60 ms natural commit) and stays free on the cold one — and the
+  gate bought nothing measurable, since warm was already flash-free without it. **CONSEQUENCE:** the
+  content entrypoint applies the persisted theme via `setThemeSetting` on `load()` and nothing in the
+  render path awaits it, so never-blank is **structural** on this path rather than a tuned timeout;
+  `runReader.ts` is behaviourally unchanged by 004. Shipped: 50 KB warm 139.5 ms / cold 137.7 ms, both
+  inside budget, **no-flash 24/24** measured directly off production's `data-theme` at the paint rAF.
+  **THE RESIDUAL, STATED PLAINLY:** cold start is a race we win, not one we cannot lose — ungated cold
+  runs land the theme and the paint in the SAME main-thread turn (+0.1 ms deltas), 4.1's "photo finish"
+  cliff. The tradeoff accepted is **a rare cold-start flip** over **a ~25 ms budget breach on every
+  cold typical-doc open**. **Revisit-when:** the human gate (8.1) actually SEES a flip on a cold start,
+  or the first-paint budget gains enough headroom to afford the ~25 ms deferral cost — at which point
+  the gate is recoverable from this session's history, tests included.
 - **2026-07-18 · Spec 004 D-2 (decision gate 4.1a): the theme-flash mitigation is BLOCK-UNTIL-READ,
   with its OWN short paint-gate deadline, falling through to Auto + an INSTANT re-theme.** The
   content-script reader defers its first mount attempt until the persisted theme is in hand, bounded

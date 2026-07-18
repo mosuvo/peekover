@@ -308,7 +308,93 @@ PER TASK — M1 lesson):
   the plan's "softened by a cross-fade" wording is **superseded**. **(b) block-with-fallthrough
   SUBSUMES transition** — gate resolves in time → no flash; gate expires → mount Auto and re-theme on
   arrival, which IS the transition behaviour. There is no separate transition design to build.
-  **NOW → task 4.2** (implement the gate; re-measure post-gating; remove the 4.1 instrumentation).
+- **4.2 DONE — but NOT as D-2 specified: the gate was built, measured, and REMOVED. The shipped
+  mitigation is D-2's own recorded fallback (mount Auto + INSTANT re-theme).** The one src/ change
+  that matters is that the persisted theme now actually REACHES the runtime: the content entrypoint
+  does `settings.load().then(r => setThemeSetting(r.theme))`, whose registry broadcast (group 3)
+  themes the reader. `runReader.ts` ends the task with **no behavioural change at all** — only the
+  4.1 instrumentation deleted.
+  - **THE GATE WAS IMPLEMENTED AND IT FAILED ITS BUDGET.** Built as specified: a `themeReady` seam on
+    `RunReaderOptions`, a `THEME_GATE_MS` deadline of its own (75 ms, derived exactly as 4.1 said),
+    deferral-with-remembered-finality so the settings wait composed with the Gecko source-not-ready
+    retry, and openGate on settle-or-deadline-or-rejection. It was green: 7 jsdom orchestration tests
+    (red-first in two independent mutations) + 4 real-engine never-blank tests on both engines. Then
+    it was measured, and the numbers killed it.
+  - **THE 4.1 INFERENCE DID NOT HOLD — this is the headline.** 4.1 predicted that gating before the
+    mount would make cold settings availability **≈26 ms** (extrapolated from the isolation probe,
+    never measured in the gated configuration — 4.1 flagged it as the thing 4.2 must check). Measured
+    behind the gate: **~72 ms**. The isolation probe still reproduces (**0.4 ms warm / 5.6 ms cold**),
+    so the background really is nearly free; the probe simply **under-predicts the content-script path
+    by ~13×** — it measures an idle, already-loaded extension page, while a content script at
+    `document_start` competes with an active navigation. **Standing correction: do not infer in-page
+    availability from that probe again** (noted in-code at `measureSwWake`).
+  - **MEASURED, THREE CONFIGURATIONS, SAME BUILD AND SESSION (50 KB cell, the one carrying the
+    <150 ms budget; medians of 6 warm runs, run 1 discarded):**
+
+    | config | 50 KB warm painted | 50 KB cold painted | verdict |
+    |---|---|---|---|
+    | gate 75 ms | 129.9 ms | **172.7 ms** | cold BREACHES <150 ms |
+    | gate 40 ms | 134.1 ms | **172.9 ms** | cold BREACHES — *not* the deadline's fault |
+    | **no gate (shipped)** | 135.4 ms | **148.2 ms / 137.7 ms** | inside budget |
+
+    The two gated rows are the decisive pair: **halving the deadline changed cold by 0.2 ms**, so the
+    ~25–35 ms cold cost is not the length of the wait — it is that deferring the mount at all takes it
+    off the DOMContentLoaded turn it otherwise rides. No deadline both gates warm (settings land at
+    ~21.5 ms, before the ~60 ms natural commit) and stays free on cold. And the gate bought nothing
+    measurable: **warm was already no-flash without it**, because the settings beat the mount anyway.
+  - **FINAL SHIPPED NUMBERS (`pnpm perf:flash`, mark-free harness, Chromium):**
+
+    | fixture | SW   | painted | NO FLASH |
+    |---|---|---|---|
+    | 50 KB | warm | 139.5 ms (133.1–145.6) | **6/6** |
+    | 50 KB | cold | 137.7 ms (132.1–148.6) | **6/6** |
+    | 1 MB | warm | 1172.5 ms | **6/6** |
+    | 1 MB | cold | 1366.7 ms | **6/6** |
+
+    **VERDICT: the shipped design holds the <150 ms budget on both 50 KB cells** (139.5 / 137.7 ms),
+    and 1 MB stays under the 003 part-(b) 1.7 s bound. 50 KB warm reads 139.5 ms vs the 003 baseline
+    133.5 ms and 4.1's 133.0 ms — **+6 ms, inside the run-to-run band** (this session's ungated control
+    measured 135.4 ms and the min was 133.1 ms; the machine is noisier today than at 4.1). No
+    regression, but not a clean improvement either — stated as measured.
+  - **THE NO-FLASH MEASUREMENT IS NOW DIRECT, not inferred.** 4.1 could only compare two timestamps;
+    the harness now reads **`data-theme` on `<peekover-root>` inside the same rAF that stamps the
+    paint** — production's own attribute, at the paint moment. **24/24 runs painted the persisted
+    `dark` as the FIRST painted state.** A run where the theme never arrives is an ERROR (vacuous),
+    not a "flash".
+  - **RESIDUAL RISK, STATED PLAINLY (the thing the gate would have removed):** cold start is a race we
+    win, not a race we cannot lose. The ungated cold runs show `resolved` and `painted` landing in the
+    **same main-thread turn** (deltas of +0.1 ms in half the runs — 4.1's "photo finish" cliff, still
+    there). 24/24 is the measurement, not a guarantee, and no engine here can see an actual flash.
+    Whether a human EYE ever catches a flip on a cold start is **8.1**.
+  - **4.1 INSTRUMENTATION GONE, AND `perf:flash` SURVIVED MARK-FREE.** `SETTINGS_RESOLVED_ATTR` /
+    `MOUNT_COMMITTED_ATTR` / `mark()` / `markSettingsResolved` are deleted (grep across `src/`,
+    `entrypoints/`, `tests/`: zero hits) — nothing measurement-only writes to the host page's `<html>`
+    any more. The harness did NOT become one-shot: `data-theme` is set by production code, so it
+    observes the same property better and with no isolated-world boundary (and therefore no
+    cross-world timebase check to maintain). **Byte delta, control-built in the same session:**
+    4.1 build (marks, no wiring) **285,955 B** → 4.2 build (no marks, wired) **285,737 B** =
+    **−218 B**; the removal more than paid for the theme wiring. vs the 003 baseline 284,744 B:
+    **+993 B (+0.35%)** (formal re-measure is task 7.1).
+  - **TESTS — THE HONEST SPLIT.** Real-engine `tests/browser/themeFlash.browser.test.ts` (Cr+Fx, +3
+    →**216 browser**): the late-arriving theme re-themes the ALREADY-MOUNTED reader **synchronously,
+    no re-mount** (the shipped fallback mechanism — **RED-FIRST verified on BOTH engines**: disabling
+    the registry broadcast in `applyTheme` fails exactly this test, `src/theme/` then restored, diff
+    empty); the reader mounts + reveals themed-Auto with the settings never arriving; and the 3 s
+    safety floor still reveals raw when nothing can mount. **Unit count is UNCHANGED at 375** and that
+    is not an oversight: the gate's 7 orchestration tests were deleted with the gate, and what shipped
+    adds no jsdom-testable logic — `runReader` is behaviourally untouched and the entrypoint binds
+    `#imports`. **Test 2 above is a REGRESSION PIN, not a proof:** with no coupling between the render
+    path and the settings promise, there is nothing to mutate to make it fail. Said so in the file
+    rather than dressing a tautology as a red-first.
+  - `pnpm lint` clean; `pnpm test` **375 unit**; `pnpm test:browser` **216** both engines; golden diff
+    **EMPTY**; `manifest.test.ts` green (`permissions: []`). Fence held: `src/render/mount.ts`,
+    `src/theme/`, `src/settings/`, `src/app/`, `entrypoints/background.ts` and the manifest untouched.
+  - **FOR THE HUMAN:** 4.2 ships the arm of D-2 the human did NOT pick first, under the escape clause
+    D-2 itself recorded ("if the re-measure contradicts the inference and the 50 KB cells breach the
+    budget, fall back"). The tradeoff now on the table is a **rare cold-start flip** vs a **~25 ms
+    budget breach on every cold typical-doc open**; the evidence above is what it rests on.
+
+  **NOW → group 5 (settings UI). NOT started.**
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

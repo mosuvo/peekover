@@ -165,7 +165,7 @@
       no separate transition design to build. The plan's "softened by a cross-fade" wording is superseded.
       Recorded in `docs/ai/decisions.md` 2026-07-18 (numbers linked to progress.md group 4, not restated).*
 
-- [ ] **4.2 Implement the CHOSEN reveal-gating in `runReader` (block OR transition).** Fire `port.load()` at
+- [x] **4.2 Implement the CHOSEN reveal-gating in `runReader` (block OR transition).** Fire `port.load()` at
       `document_start` (parallel with `injectHideStyle()`); mount consumes `port.snapshot()`. Per 4.1: either
       **gate the reveal** on `load()` resolving (block — no flash) OR mount with `auto` and re-apply on resolve
       (transition — bounded flash, softened by a `prefers-reduced-motion`-respecting cross-fade, instant under
@@ -177,6 +177,18 @@
       settings path made genuinely unreachable (background non-responding / `load()` rejecting), the reader still
       **mounts themed-Auto** and the safety floor still reveals — proving the async settings read never gates the
       never-blank guarantee (fails if a hung `load()` can stall the reveal). Golden EMPTY + manifest green.
+      *DONE 2026-07-18 — **the gate was BUILT, MEASURED and REMOVED; the shipped mitigation is D-2's own
+      recorded fallback (mount Auto + INSTANT re-theme).** 4.1's "gating makes cold availability ≈26 ms"
+      was re-measured in the gated configuration, as 4.1 required, and did NOT hold: ~72 ms, with the
+      50 KB cold cell painting at **~173 ms against the <150 ms budget — at a 75 ms gate AND a 40 ms gate**
+      (halving the deadline moved it 0.2 ms, so the ~25–35 ms cost is deferring the mount off the DCL turn,
+      not the length of the wait), while the ungated control on the same build measured ~137–148 ms.
+      Shipped numbers: 50 KB **warm 139.5 ms / cold 137.7 ms**, both inside budget, **NO FLASH 24/24**
+      measured DIRECTLY off production's `data-theme` at the paint rAF. 4.1's `<html>` marks are deleted
+      (−218 B, control-built) and `perf:flash` survived **mark-free**. Real-engine proof (Cr+Fx, +3 →216):
+      instant re-theme of an already-mounted reader (**red-first** — disabling the registry broadcast fails
+      it on both engines), never-blank with settings absent, and the 3 s floor. Full evidence + the residual
+      cold-start photo-finish risk in progress.md (group 4).*
 
 ## 5 — Settings UI (auto/light/dark only — sepia deferred, D-1=A)
 

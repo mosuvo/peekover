@@ -1,6 +1,7 @@
 import { defineContentScript, browser } from '#imports';
-import { markSettingsResolved, runReader } from '@/src/render/runReader';
+import { runReader } from '@/src/render/runReader';
 import { messagingPort } from '@/src/settings/settingsPort';
+import { setThemeSetting } from '@/src/theme/reader';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -39,22 +40,39 @@ export default defineContentScript({
   // it, then mount at DOMContentLoaded. runReader owns the never-blank guarantees.
   runAt: 'document_start',
   main() {
+    // THEMING THE FIRST PAINT (task 4.2 — the D-2 mitigation AS MEASURED; see below).
+    //
     // Build the content-script settings port and fire load() at document_start, IN PARALLEL with
     // runReader's injectHideStyle() (plan §1.5). The reader's own origin cannot read the extension
     // DB, so this port reaches settings by messaging the background (entrypoints/background.ts).
-    // `load()` is bounded and falls back to Auto, so a dead background can never stall here.
+    // `load()` is bounded and falls back to Auto, so a dead background can never stall here — and,
+    // given the shape below, could not stall the reader even if it did.
     //
-    // TASK 4.1 = MEASUREMENT ONLY. `markSettingsResolved` timestamps the moment the persisted
-    // settings are in hand, so scripts/perf-theme-flash.ts can measure it against the reader's
-    // first paint and answer the D-2 question: does the persisted theme arrive before the paint
-    // (no flash) or after it (a visible flip)? Nothing here CONSUMES the settings yet — the
-    // snapshot is still not threaded into mount, and the reveal is not gated. Applying the
-    // resolved theme and choosing block-vs-transition is task 4.2, decided by these numbers.
+    // `setThemeSetting` is the ONE line that makes the persisted theme real for the reader: it
+    // updates the theme runtime and BROADCASTS through the theme registry (group 3), re-theming
+    // every registered host. Land before the mount and the persisted theme IS the first painted
+    // state; land after and the already-mounted reader is re-themed INSTANTLY — D-2 sub-decision
+    // (a): an instant swap, never a cross-fade (reduced-motion-safe by construction, and not a
+    // visual property that only a human gate could ever certify).
+    //
+    // WHY THERE IS NO BLOCKING GATE HERE, THOUGH D-2 CHOSE ONE. D-2 (decisions.md 2026-07-18)
+    // selected block-until-read behind a short paint gate, ON THE EXPLICIT CONDITION that 4.2
+    // re-measure it: 4.1's "gating makes cold availability ~26 ms" was an INFERENCE from an
+    // isolation probe, never measured in the gated configuration. 4.2 measured it, and it DID NOT
+    // HOLD (numbers in progress.md, task 4.2). Behind a gate, cold settings availability is ~72 ms,
+    // not ~26 ms, and the 50 KB cold cell painted at ~173 ms against the <150 ms budget — at a
+    // 75 ms gate AND at a 40 ms gate — while the ungated control on the SAME build measured
+    // ~137-148 ms. The gate cost ~25-35 ms on cold start and bought nothing measurable, because
+    // the settings already beat the mount in every warm cell without it. So D-2's own recorded
+    // fallback applies: mount Auto + re-theme instantly. The gate was built, tested, measured and
+    // REMOVED rather than shipped missing its budget.
     //
     // Note `load()` never rejects (settingsPort's withTimeout resolves to the default on timeout
-    // or failure), so there is no rejection path to handle — the mark always lands.
+    // or failure). Nothing in the render path awaits this promise, so even a future change that
+    // COULD reject can neither withhold nor delay the reader (AGENTS.md #5) — never-blank is
+    // structural on this path, not a timeout that has to be tuned correctly.
     const settings = messagingPort((message) => browser.runtime.sendMessage(message));
-    void settings.load().then((resolved) => markSettingsResolved(resolved.theme));
+    void settings.load().then((resolved) => setThemeSetting(resolved.theme));
 
     runReader();
   },

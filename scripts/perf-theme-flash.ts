@@ -1,62 +1,68 @@
-// scripts/perf-theme-flash.ts — spec 004 task 4.1 measurement (NOT wired into CI).
+// scripts/perf-theme-flash.ts — spec 004 theme-flash measurement (NOT wired into CI).
 //
 // THE QUESTION THIS ANSWERS. When a user has persisted a non-default theme (say
 // Dark) and opens a markdown document, the content-script reader must read that
 // setting from the extension's IndexedDB — which it cannot touch directly, so it
 // messages the background (plan §1.2). That read is ASYNC; the first paint is not.
-// So either the setting arrives BEFORE the reader paints (no flash — the persisted
-// theme IS the first painted state), or it arrives after (a light->dark flip the
-// user sees). Which one happens is a MEASUREMENT, not an argument: this harness
-// takes the number, and a human picks the D-2 mitigation from it (block-until-read
-// vs paint-and-transition). See specs/004-themes-settings/plan.md §0 D-2, §1.5.
+// So either the persisted theme is the FIRST PAINTED STATE (no flash), or the
+// reader paints Auto first and flips (a flash the user sees). Which one happens is
+// a MEASUREMENT, not an argument.
+//
+// WHAT CHANGED AT TASK 4.2 (and why this file survived).
+//
+// Task 4.1 answered the question INDIRECTLY, by timestamping two moments — when
+// `port.load()` resolved and when the mount committed — and comparing them. Those
+// timestamps needed custom marks written onto the host page's <html>, which was
+// measurement-only code sitting in the shipped content script on every matched
+// page. 4.2 REMOVED it; no measurement-only code ships.
+//
+// This harness survived the removal because it no longer needs marks. The reader's
+// `data-theme` attribute on <peekover-root> is written by PRODUCTION code (the theme
+// registry), so "which theme was applied at first paint" is DIRECTLY OBSERVABLE from
+// the main world — and it is the better measurement anyway: 4.1 could only prove a
+// timestamp ordering held, while this reads the theme that was actually on the
+// element at the moment the reader first had content. There is no isolated-world
+// boundary to cross and therefore no cross-world timebase to verify.
 //
 // NO THRESHOLD IS ASSERTED HERE. This harness prints numbers; it never passes or
-// fails (M1 retro standing rule — no un-measured gate, and equally no gate bolted
-// onto a measurement task). Unlike scripts/perf-first-paint.ts, which carries the
-// spec-001 <150 ms gate line, there is deliberately no `GATE_MS` in this file.
+// fails on a timing (M1 retro standing rule — no un-measured gate, and equally no
+// gate bolted onto a measurement task). Unlike scripts/perf-first-paint.ts, which
+// carries the spec-001 <150 ms gate line, there is deliberately no `GATE_MS` here.
+// It DOES refuse to report a vacuous run (see runIteration): a run in which the
+// persisted theme never reached the reader at all measures nothing, and is an error
+// rather than a "flash".
 //
 // WHAT IT MEASURES, per (fixture x service-worker state):
-//   resolved  — performance.now() when the content script's port.load() RESOLVED
-//               (i.e. the persisted settings are in hand and themeable).
-//   painted   — performance.now() at the 2nd rAF after <peekover-root> first has
-//               populated open-shadow content. IDENTICAL metric + detector to
-//               perf-first-paint.ts, so `painted` is directly comparable to the
-//               recorded 003 baseline (133.5 ms on the <=50 KB fixture).
-//   committed — performance.now() when runReader committed the mount (the moment a
-//               "block the reveal" design would be gating). Diagnostic.
-//   DELTA     — painted - resolved. THE D-2 NUMBER:
-//                 delta > 0  => settings landed BEFORE paint: no flash, and a block
-//                               would have stalled the paint by ~0 ms (it was free).
-//                 delta < 0  => settings landed AFTER paint: the user sees a flip,
-//                               and a block would have stalled the paint by |delta|.
-//
-// HOW THE TWO TIMESTAMPS MEET (the isolated-world problem, solved not assumed).
-// A Chrome content script runs in an ISOLATED WORLD: its `window` is NOT the page's
-// window, so a global it sets is invisible to page.evaluate(). The DOM, however, IS
-// shared. So the content-script side writes its marks as data-attributes on
-// <html> (src/render/runReader.ts, the 4.1 scaffolding), and the main-world init
-// script reads them. Both worlds are also asked for a Date.now() alongside their
-// performance.now(), so the harness can CHECK that the two worlds share a timeOrigin
-// rather than assuming it — a cross-world timebase skew would silently corrupt every
-// delta. The check is printed per run and asserted (see TIMEBASE_TOLERANCE_MS).
+//   painted      — performance.now() at the 2nd rAF after <peekover-root> first has
+//                  populated open-shadow content. IDENTICAL metric + detector to
+//                  perf-first-paint.ts, so it is directly comparable to the recorded
+//                  003 baseline (133.5 ms on the <=50 KB fixture).
+//   themeAtPaint — the value of <peekover-root data-theme> AT that same moment.
+//                  THE FLASH NUMBER: equal to the seeded theme => that theme was the
+//                  first painted state (no flash). Anything else => the reader
+//                  painted Auto first and the persisted theme arrived later, i.e. a
+//                  visible flip.
+//   themeFinal   — the same attribute after settling. Proves the setting did land
+//                  eventually, which is what separates "flashed" from "never arrived".
 //
 // SERVICE-WORKER STATE (--sw warm|cold|both). The MV3 background is the flash
 // variable: a sleeping worker adds spin-up to the round-trip (plan §4).
 //   warm — the worker is already running (the seeding round-trip woke it, and each
 //          measured run's own message keeps it alive).
 //   cold — the worker is TERMINATED via CDP `Target.closeTarget` immediately before
-//          each navigation, and the harness ASSERTS context.serviceWorkers() is
-//          empty before proceeding. That is what "cold" means here: no running
-//          worker process, so the content script's first message must spin one up.
-//          It is not a fresh-profile cold start (that would also cold-start the
-//          browser and the disk cache, conflating three variables into one number).
+//          each navigation, and the harness ASSERTS the target is gone before
+//          proceeding. That is what "cold" means here: no running worker process, so
+//          the content script's first message must spin one up. It is not a
+//          fresh-profile cold start (that would also cold-start the browser and the
+//          disk cache, conflating three variables into one number).
 //
 // ENGINES: CHROMIUM ONLY, by construction. Playwright can only load an unpacked
 // extension via chromium.launchPersistentContext + --load-extension; it exposes no
 // Firefox add-on installation API (no installTemporaryAddon anywhere in
-// playwright-core 1.61.1). This is the same recorded constraint as perf-first-paint.ts
-// (progress.md, PERF HARNESS SCOPE). The Firefox no-flash property is therefore NOT
-// automatable here and is routed to the 8.1 human gate. No Firefox number is faked.
+// playwright-core 1.61.1), and the tracking issue was CLOSED as out-of-scope
+// (playwright#7297). Same recorded constraint as perf-first-paint.ts. The Firefox
+// no-flash property is therefore NOT automatable here and is routed to the 8.1 human
+// gate. No Firefox number is faked.
 //
 // Runner: `tsx` (package script "perf:flash"), for the same tsc/moduleResolution
 // reason documented at the top of perf-first-paint.ts.
@@ -82,37 +88,26 @@ const ITERATIONS = 7;
 const EXPECTED_H1 = 'Peekover huge-document golden fixture';
 
 /** The persisted, NON-DEFAULT theme seeded before measuring. The whole question is
- *  whether THIS value is in hand before the first paint, so it must not be the
- *  default (`auto`) — a default would be indistinguishable from having read nothing. */
+ *  whether THIS value is the one painted, so it must not be the default (`auto`) —
+ *  a default would be indistinguishable from having read nothing. */
 const SEEDED_THEME = 'dark';
 
-/** Max tolerated |skew| between the isolated world's and the main world's clocks,
- *  derived from (Date.now() - performance.now()) in each. They share a document, so
- *  this should be ~0; anything larger means the deltas below are not comparable. */
-const TIMEBASE_TOLERANCE_MS = 2;
-
-/** How long to wait for the settings-resolved mark to appear after paint. Generously
- *  above settingsPort's LOAD_TIMEOUT_MS (1500), since load() ALWAYS settles by then
- *  (it falls back to the default) — so a timeout here is a wiring bug, not slowness. */
-const MARK_TIMEOUT_MS = 10_000;
+/** How long to wait after paint for the persisted theme to land, before calling a run
+ *  vacuous. Generously above settingsPort's LOAD_TIMEOUT_MS (1500), by which time
+ *  load() has ALWAYS settled (it falls back to the default) — so exceeding this is a
+ *  wiring bug, not slowness. */
+const SETTLE_TIMEOUT_MS = 10_000;
 
 // --- Types -------------------------------------------------------------------
 
-/** A (performance.now(), Date.now()) pair, so timebases can be cross-checked. */
-interface Stamp {
-  now: number;
-  epoch: number;
-  detail: string;
-}
-
 /** What the in-page (MAIN world) instrumentation records. */
 interface Observed {
-  /** Main-world paint stamp — the 2nd rAF after populated shadow content. */
-  painted: Stamp;
-  /** Isolated-world settings-resolved stamp, read back off <html>. */
-  resolved: Stamp | null;
-  /** Isolated-world mount-committed stamp, read back off <html>. */
-  committed: Stamp | null;
+  /** performance.now() at the 2nd rAF after populated shadow content, or null. */
+  painted: number | null;
+  /** <peekover-root data-theme> AT the paint moment. */
+  themeAtPaint: string | null;
+  /** <peekover-root data-theme> read live, now. */
+  themeNow: string | null;
   /** Render-succeeded proof. */
   h1: string | null;
   sections: number;
@@ -120,25 +115,25 @@ interface Observed {
 
 /** One iteration's derived metrics. */
 interface Metrics {
-  resolved: number;
   painted: number;
-  committed: number | null;
-  /** painted - resolved. Positive = settings won the race (no flash). */
-  delta: number;
-  /** The theme the content script actually resolved (must be SEEDED_THEME). */
-  theme: string;
-  /** |isolated-world timeOrigin - main-world timeOrigin|, ms. Expected ~0. */
-  timebaseSkew: number;
+  themeAtPaint: string | null;
+  themeFinal: string | null;
+  /** themeAtPaint === SEEDED_THEME — i.e. the persisted theme was the first painted state. */
+  noFlash: boolean;
 }
 
 type SwMode = 'warm' | 'cold';
 
 // --- In-page instrumentation (MAIN world) ------------------------------------
 // Passed as a STRING for the same reason as perf-first-paint.ts: tsc/eslint do not
-// parse browser globals here. Detector is a byte-for-byte behavioural copy of
-// perf-first-paint.ts's (self-sustaining rAF poll + MutationObserver bonus, double
-// rAF on detection) so `painted` is comparable to the 003 baseline. The only
-// addition is Date.now() alongside performance.now() for the timebase cross-check.
+// parse browser globals here. The paint detector is a byte-for-byte behavioural copy
+// of perf-first-paint.ts's (self-sustaining rAF poll + MutationObserver bonus, double
+// rAF on detection) so `painted` stays comparable to the 003 baseline.
+//
+// The one addition is reading `data-theme` off the host INSIDE the same rAF callback
+// that stamps the time — not afterwards. Reading it later would race the very flip we
+// are trying to detect and would report "no flash" for a reader that had already
+// flipped by the time we looked.
 
 const INIT_SCRIPT = String.raw`
 (() => {
@@ -146,8 +141,9 @@ const INIT_SCRIPT = String.raw`
   var w = window;
   w.__peekoverFlash = null;
   var done = false;
+  function hostEl() { return document.querySelector(HOST); }
   function painted() {
-    var host = document.querySelector(HOST);
+    var host = hostEl();
     if (!host) return false;
     var sr = host.shadowRoot;
     if (!sr) return false;
@@ -159,7 +155,11 @@ const INIT_SCRIPT = String.raw`
     done = true;
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        w.__peekoverFlash = { now: performance.now(), epoch: Date.now(), detail: 'paint' };
+        var host = hostEl();
+        w.__peekoverFlash = {
+          now: performance.now(),
+          theme: host ? host.getAttribute('data-theme') : null
+        };
       });
     });
   }
@@ -172,26 +172,19 @@ const INIT_SCRIPT = String.raw`
 })();
 `;
 
-/**
- * Read the paint stamp + BOTH isolated-world marks (data-attributes on <html>,
- * written by the 4.1 scaffolding in src/render/runReader.ts) + the render-succeeded
- * proof, in one main-world evaluation. Mark format: "now|epoch|detail".
- */
+/** Read the paint stamp + the theme at paint + the LIVE theme + the render-succeeded
+ *  proof, in one main-world evaluation. No custom marks: `data-theme` is written by
+ *  production code, so nothing measurement-only has to exist in src/ for this to work. */
 const READ_SCRIPT = String.raw`
 (() => {
-  function stamp(attr) {
-    var raw = document.documentElement && document.documentElement.getAttribute(attr);
-    if (!raw) return null;
-    var parts = raw.split('|');
-    return { now: parseFloat(parts[0]), epoch: parseFloat(parts[1]), detail: parts[2] || '' };
-  }
   var host = document.querySelector('peekover-root');
   var sr = host && host.shadowRoot;
   var reader = sr && sr.querySelector('.peekover-reader');
+  var f = window.__peekoverFlash;
   return {
-    painted: window.__peekoverFlash,
-    resolved: stamp('data-peekover-settings-resolved'),
-    committed: stamp('data-peekover-mount-committed'),
+    painted: f ? f.now : null,
+    themeAtPaint: f ? f.theme : null,
+    themeNow: host ? host.getAttribute('data-theme') : null,
     h1: reader ? (reader.querySelector('h1') ? reader.querySelector('h1').textContent : null) : null,
     sections: reader ? reader.querySelectorAll('h2').length : 0,
   };
@@ -210,11 +203,6 @@ function fmt(n: number | null): string {
   return n === null ? 'n/a' : `${n.toFixed(1)}ms`;
 }
 
-/** Signed format — the delta's SIGN carries the meaning, so never hide it. */
-function fmtSigned(n: number): string {
-  return `${n >= 0 ? '+' : ''}${n.toFixed(1)}ms`;
-}
-
 function fmtBytes(n: number): string {
   return n < 1_048_576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1_048_576).toFixed(2)} MB`;
 }
@@ -231,10 +219,8 @@ function sectionsForBytes(target: number): number {
 }
 
 /**
- * Build unless --no-build. A measurement harness that silently measures a STALE
- * build is worse than no harness — this instrumentation only exists in src/ as of
- * task 4.1, so a pre-4.1 .output/ would produce a run with no `resolved` mark at
- * all (which is caught below, but slowly and confusingly). Default is to rebuild.
+ * Build unless --no-build. A measurement harness that silently measures a STALE build
+ * is worse than no harness. Default is to rebuild.
  */
 function ensureBuild(rebuild: boolean): void {
   const manifest = path.join(EXT_DIR, 'manifest.json');
@@ -315,12 +301,12 @@ async function liveServiceWorkers(cdp: CDPSession): Promise<{ targetId: string }
  * the worker AFTER it has been terminated — that list is a client-side cache that is
  * not pruned on termination. Polling it (the first version of this function) made every
  * cold run look like a failure. `Target.getTargets` is the browser's own answer, so the
- * check below asks CDP, not Playwright. (ctx is therefore unused here — deliberately.)
+ * check below asks CDP, not Playwright.
  *
  * That the worker then genuinely COLD-STARTS is proven downstream, not assumed: the
- * content script's message must wake it, and runIteration asserts the reply carried the
- * seeded theme. A worker that never respawned would fail that assertion, not quietly
- * produce a fast number.
+ * content script's message must wake it, and runIteration asserts the seeded theme
+ * reached the reader. A worker that never respawned would fail that assertion, not
+ * quietly produce a fast number.
  */
 async function terminateServiceWorker(cdp: CDPSession): Promise<void> {
   for (const t of await liveServiceWorkers(cdp)) {
@@ -335,20 +321,16 @@ async function terminateServiceWorker(cdp: CDPSession): Promise<void> {
 
 /**
  * Measure the settings round-trip IN ISOLATION, on an extension page doing no render
- * work, warm and cold. This exists because the in-page `resolved` number turned out to
- * be CONTAMINATED and the contamination has to be quantified rather than guessed at.
+ * work, warm and cold. This is the BACKGROUND's own cost — transport + worker spin-up +
+ * one IndexedDB read — with no page main thread to contend with.
  *
- * The tell: cold `resolved` measured 135 ms on the 50 KB fixture but 972 ms on the 1 MB
- * one — for what is the same service-worker wake. A content script shares the page's
- * main thread, so `load().then(...)` cannot run while that thread is busy laying out the
- * reader; `resolved` therefore records when the settings became USABLE (the first moment
- * the content script got a turn), not when the background answered. That is the honest
- * quantity for the flash question — you cannot theme before you can run code — but it is
- * NOT the service-worker cost, and reading it as such would badly overstate cold start.
- *
- * This probe removes the render entirely, so what is left is transport + worker spin-up +
- * one IndexedDB read. Together the two numbers separate "how slow is the background" from
- * "how long until the reader can act on it".
+ * KEEP READING BEFORE QUOTING IT (task 4.2 correction of record). 4.1 used this probe to
+ * INFER what settings availability would be inside a content script behind a paint gate,
+ * and predicted ~26 ms cold. 4.2 measured the gated configuration directly and got ~72 ms
+ * — the probe under-predicts the content-script path by ~13x. It measures a page that is
+ * already loaded and idle; a content script at document_start is competing with an active
+ * navigation. So this number bounds how slow the BACKGROUND is, and nothing else. Do not
+ * infer in-page availability from it a second time.
  */
 async function measureSwWake(
   ctx: BrowserContext,
@@ -379,7 +361,8 @@ async function measureSwWake(
   return out;
 }
 
-/** Run one iteration on a fresh page; assert the render + the marks before trusting timings. */
+/** Run one iteration on a fresh page; assert the render + that the theme ARRIVED before
+ *  trusting the result. Whether it arrived before or after the paint is the measurement. */
 async function runIteration(
   ctx: BrowserContext,
   cdp: CDPSession,
@@ -398,15 +381,22 @@ async function runIteration(
   page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
   await page.goto(fileUrl, { waitUntil: 'load' });
-  // Wait for BOTH sides: the main-world paint stamp AND the isolated-world resolved
-  // mark. Either missing means the measurement is incomplete, so we never average
-  // over a run that only half-happened.
-  await page.waitForFunction(
-    `window.__peekoverFlash != null &&
-     document.documentElement.hasAttribute('data-peekover-settings-resolved')`,
-    undefined,
-    { timeout: MARK_TIMEOUT_MS },
-  );
+  await page.waitForFunction('window.__peekoverFlash != null', undefined, { timeout: SETTLE_TIMEOUT_MS });
+
+  // Then wait for the persisted theme to be LIVE on the host. This is deliberately a
+  // separate wait from the paint: the gap between them is exactly the flash window, and
+  // collapsing them into one condition would hide it.
+  let settled = true;
+  try {
+    await page.waitForFunction(
+      `(() => { var h = document.querySelector('peekover-root');
+                return !!h && h.getAttribute('data-theme') === '${SEEDED_THEME}'; })()`,
+      undefined,
+      { timeout: SETTLE_TIMEOUT_MS },
+    );
+  } catch {
+    settled = false;
+  }
 
   const o = (await page.evaluate(READ_SCRIPT)) as Observed;
   await page.close();
@@ -420,32 +410,20 @@ async function runIteration(
   if (consoleErrors.length) {
     throw new Error(`${label}: ${consoleErrors.length} console error(s):\n  ${consoleErrors.join('\n  ')}`);
   }
-  if (!o.resolved) throw new Error(`${label}: no settings-resolved mark (instrumentation missing from the build?)`);
-  if (o.resolved.detail !== SEEDED_THEME) {
+  if (o.painted === null) throw new Error(`${label}: no paint stamp recorded`);
+  if (!settled) {
     throw new Error(
-      `${label}: content script resolved theme "${o.resolved.detail}", want "${SEEDED_THEME}" — ` +
-        `the persisted value did not reach the reader, so this run measures nothing.`,
-    );
-  }
-
-  // Cross-world timebase check: (epoch - now) is each world's timeOrigin. They share
-  // a document, so these must agree; if they do not, `delta` compares two different
-  // clocks and is meaningless.
-  const skew = Math.abs(o.painted.epoch - o.painted.now - (o.resolved.epoch - o.resolved.now));
-  if (skew > TIMEBASE_TOLERANCE_MS) {
-    throw new Error(
-      `${label}: isolated/main world timeOrigin skew ${skew.toFixed(1)}ms > ${TIMEBASE_TOLERANCE_MS}ms — ` +
-        `the two stamps are not on one clock; deltas would be fiction.`,
+      `${label}: the persisted theme "${SEEDED_THEME}" NEVER reached the reader ` +
+        `(data-theme settled at ${JSON.stringify(o.themeNow)}). This is a wiring failure, not a flash — ` +
+        `the run measures nothing, so refusing to report it.`,
     );
   }
 
   return {
-    resolved: o.resolved.now,
-    painted: o.painted.now,
-    committed: o.committed ? o.committed.now : null,
-    delta: o.painted.now - o.resolved.now,
-    theme: o.resolved.detail,
-    timebaseSkew: skew,
+    painted: o.painted,
+    themeAtPaint: o.themeAtPaint,
+    themeFinal: o.themeNow,
+    noFlash: o.themeAtPaint === SEEDED_THEME,
   };
 }
 
@@ -464,17 +442,15 @@ async function runCell(
     out.push(m);
     console.log(
       `[run ${i}]${i === 1 ? ' (discarded)' : '           '} ` +
-        `resolved ${fmt(m.resolved)} | painted ${fmt(m.painted)} | committed ${fmt(m.committed)} | ` +
-        `DELTA painted-resolved ${fmtSigned(m.delta)} ` +
-        `[theme "${m.theme}", skew ${m.timebaseSkew.toFixed(2)}ms]`,
+        `painted ${fmt(m.painted)} | theme AT PAINT "${m.themeAtPaint}" | settled "${m.themeFinal}" | ` +
+        `${m.noFlash ? 'NO FLASH' : 'FLASH (painted Auto first, then flipped)'}`,
     );
   }
   return out.slice(1);
 }
 
-function summarize(name: string, values: number[], signed = false): string {
-  const f = signed ? fmtSigned : (n: number) => fmt(n);
-  return `${name}: median ${f(median(values))}  (min ${f(Math.min(...values))}, max ${f(Math.max(...values))})`;
+function summarize(name: string, values: number[]): string {
+  return `${name}: median ${fmt(median(values))}  (min ${fmt(Math.min(...values))}, max ${fmt(Math.max(...values))})`;
 }
 
 // --- Main --------------------------------------------------------------------
@@ -531,14 +507,14 @@ async function main(): Promise<void> {
     console.log(`[flash] extension id: ${extId}`);
     await seedTheme(ctx, extId);
 
-    // A CDP session needs a page to hang off; this one is only used for the
-    // browser-wide Target domain (getTargets/closeTarget), never navigated.
+    // A CDP session needs a page to hang off; this one is only used for the browser-wide
+    // Target domain (getTargets/closeTarget), never navigated.
     const cdpHost = await ctx.newPage();
     const cdp = await ctx.newCDPSession(cdpHost);
 
-    // Isolate the background cost first, so the in-page numbers below can be read
-    // against it (see measureSwWake's note on why `resolved` alone is not enough).
     console.log('\n--- PROBE: settings round-trip in isolation (extension page, no render work) ---');
+    console.log('  (the BACKGROUND\'s own cost. Do NOT infer in-page availability from it — 4.1 did,');
+    console.log('   predicted ~26 ms cold, and 4.2 measured ~72 ms. See measureSwWake\'s note.)');
     for (const cold of [false, true]) {
       const ms = await measureSwWake(ctx, cdp, extId, cold, ITERATIONS);
       const warmup = ms.slice(1);
@@ -559,46 +535,34 @@ async function main(): Promise<void> {
   }
 
   console.log('\n=== SUMMARY (warm-up run 1 excluded from every cell; n=%d per cell) ===', ITERATIONS - 1);
-  console.log('resolved  = port.load() resolved in the content script (isolated world)');
-  console.log('painted   = 2nd rAF after <peekover-root> has populated shadow content (same metric as `pnpm perf`)');
-  console.log('DELTA     = painted - resolved. POSITIVE => settings were in hand BEFORE the paint (no flash;');
-  console.log('            a block would have stalled the paint by ~0 ms). NEGATIVE => the paint beat the');
-  console.log('            settings by |DELTA| (the user sees a flip; a block would stall the paint that long).');
+  console.log('painted      = 2nd rAF after <peekover-root> has populated shadow content (same metric as `pnpm perf`)');
+  console.log('theme@paint  = <peekover-root data-theme> AT that moment, read by PRODUCTION code, no marks.');
+  console.log(`NO FLASH     = theme@paint was the persisted "${SEEDED_THEME}", i.e. it was the FIRST painted state.`);
 
   for (const r of rows) {
-    const d = r.runs.map((m) => m.delta);
-    const beforePaint = r.runs.filter((m) => m.delta >= 0).length;
+    const clean = r.runs.filter((m) => m.noFlash).length;
     console.log(`\n[${r.fixture} / SW ${r.sw}]`);
-    console.log(`  ${summarize('resolved ', r.runs.map((m) => m.resolved))}`);
-    console.log(`  ${summarize('painted  ', r.runs.map((m) => m.painted))}`);
-    console.log(`  ${summarize('committed', r.runs.map((m) => m.committed ?? NaN))}`);
-    console.log(`  ${summarize('DELTA    ', d, true)}`);
-    console.log(`  resolved BEFORE painted in ${beforePaint}/${r.runs.length} runs ` +
-      `=> persisted theme ${beforePaint === r.runs.length ? 'WAS' : beforePaint === 0 ? 'was NOT' : 'was SOMETIMES'} available for the first paint`);
+    console.log(`  ${summarize('painted', r.runs.map((m) => m.painted))}`);
+    console.log(`  NO FLASH in ${clean}/${r.runs.length} runs ` +
+      `=> the persisted theme ${clean === r.runs.length ? 'WAS' : clean === 0 ? 'was NOT' : 'was SOMETIMES'} the first painted state`);
   }
 
   console.log('\n=== TABLE (medians) ===');
-  console.log('fixture | sw   | resolved | painted  | delta     | theme-before-paint');
+  console.log('fixture | sw   | painted  | no-flash');
   for (const r of rows) {
-    const before = r.runs.filter((m) => m.delta >= 0).length;
+    const clean = r.runs.filter((m) => m.noFlash).length;
     console.log(
       `${r.fixture.padEnd(7)} | ${r.sw.padEnd(4)} | ` +
-        `${fmt(median(r.runs.map((m) => m.resolved))).padStart(8)} | ` +
-        `${fmt(median(r.runs.map((m) => m.painted))).padStart(8)} | ` +
-        `${fmtSigned(median(r.runs.map((m) => m.delta))).padStart(9)} | ${before}/${r.runs.length}`,
+        `${fmt(median(r.runs.map((m) => m.painted))).padStart(8)} | ${clean}/${r.runs.length}`,
     );
   }
-  console.log('\n=== READ THIS BEFORE QUOTING THE COLD NUMBERS ===');
-  console.log('`resolved` is when the content script could ACT on the settings, not when the background');
-  console.log('answered. A content script shares the page main thread, so a reply that arrives while the');
-  console.log('reader is parsing/mounting is not delivered until that thread yields. The isolation probe');
-  console.log('above is the background\'s real cost (sub-ms warm, ~5 ms cold); the cold in-page figures are');
-  console.log('dominated by that delivery wait, which is why 50kb/cold and 1mb/cold differ by ~800 ms for');
-  console.log('the same worker wake. Corollary: the +0.2 ms 50kb/cold delta is a PHOTO FINISH, not comfort —');
-  console.log('both stamps are flushed in the same main-thread turn, and their order within it is not');
-  console.log('something this harness (or anything currently in src/) guarantees.');
-  console.log('\n[flash] NO threshold asserted — these are numbers for the D-2 decision, not a gate.');
+
+  console.log('\n[flash] NO timing threshold asserted — these are numbers, not a gate (M1 retro rule).');
+  console.log('[flash] A run in which the persisted theme NEVER arrived is an ERROR, not a flash: that');
+  console.log('        is a wiring failure and would make every no-flash count vacuous.');
   console.log('[flash] Firefox NOT measured (Playwright cannot load extensions there) -> human gate 8.1.');
+  console.log('[flash] Whether a human EYE sees a flip is also 8.1 — no engine here can see a flash;');
+  console.log('        this measures the attribute present at the paint, which is the best proxy available.');
 }
 
 main().catch((err) => {
