@@ -13,8 +13,12 @@
   again** (recorded in-code at `measureSwWake`). **THE BUDGET DATA (50 KB cell, same build + session):
   gate 75 ms → cold 172.7 ms; gate 40 ms → cold 172.9 ms; NO gate → cold 137.7–148.2 ms**, against the
   <150 ms first-paint budget. Halving the deadline moved cold by **0.2 ms**, which is the decisive
-  fact: the ~25–35 ms cost is not the length of the wait but that **deferring the mount at all takes it
-  off the DOMContentLoaded turn it otherwise rides**. So no deadline both gates the warm case
+  fact: **the ~25–35 ms cost is not the length of the wait.** The most likely MECHANISM is that
+  deferring the mount at all takes it off the DOMContentLoaded turn it otherwise rides — but that was
+  **NOT instrumented; it is a hypothesis, not a measurement**, and only the deadline-insensitivity is
+  measured. (Labelled deliberately: 4.2 exists precisely because 4.1's un-remeasured inference
+  (~26 ms) did not survive contact, so an un-instrumented causal claim in the same record must be
+  marked rather than inherited as fact.) So no deadline both gates the warm case
   (settings land ~21.5 ms, before the ~60 ms natural commit) and stays free on the cold one — and the
   gate bought nothing measurable, since warm was already flash-free without it. **CONSEQUENCE:** the
   content entrypoint applies the persisted theme via `setThemeSetting` on `load()` and nothing in the
@@ -26,7 +30,14 @@
   cliff. The tradeoff accepted is **a rare cold-start flip** over **a ~25 ms budget breach on every
   cold typical-doc open**. **Revisit-when:** the human gate (8.1) actually SEES a flip on a cold start,
   or the first-paint budget gains enough headroom to afford the ~25 ms deferral cost — at which point
-  the gate is recoverable from this session's history, tests included.
+  the gate must be **REBUILT, not restored**. It exists in **NO commit**: the implementation and its
+  7 jsdom orchestration tests were discarded mid-task by a `git checkout src/render/runReader.ts
+  src/render/runReader.test.ts` BEFORE they were ever committed, and its browser tests were
+  overwritten when `themeFlash.browser.test.ts` was rewritten — also never committed. There is
+  nothing to `git revert`. Rebuilding is straightforward because the DESIGN is fully described in
+  this entry: a `themeReady` seam on `RunReaderOptions`; a `THEME_GATE_MS` deadline of its own;
+  deferral with remembered finality, so the settings wait composes with the Gecko
+  source-not-ready retry; and `openGate` on settle-or-deadline-or-rejection.
 - **2026-07-18 · Spec 004 D-2 (decision gate 4.1a): the theme-flash mitigation is BLOCK-UNTIL-READ,
   with its OWN short paint-gate deadline, falling through to Auto + an INSTANT re-theme.** The
   content-script reader defers its first mount attempt until the persisted theme is in hand, bounded

@@ -252,7 +252,15 @@
       production build, **Chrome + Firefox**, **both surfaces** (content-script reader on a raw/`file://` doc AND
       a file in the app-page reader pane), **Network tab open**: pick each theme (Auto/Light/Dark) → **applies
       live**; **reload → persists**; the **no-flip** property (or its accepted 4.1 fallback) on the content-
-      script reader; an **OS flip re-themes only under Auto**; shell + reader **coherent** (no half-themed
+      script reader; **COLD-START FLASH on the content-script surface** — extension freshly loaded / MV3
+      service worker asleep (NOT a warm repeat open), open a `file://` markdown doc with a persisted
+      **non-default** theme, watch the FIRST paint for a light→dark flip; repeat a few times, both engines.
+      *(Why named separately: `perf:flash`'s 24/24 does NOT cover this — `painted` is stamped at the 2nd rAF
+      after `<peekover-root>` first has populated shadow content and `data-theme` is read at that SAME moment,
+      so the harness cannot distinguish "theme applied before first painted content" from "applied within
+      ~2 frames (~32 ms) after" — a window the size of the accepted residual risk. Firefox has no automated
+      coverage at all: Playwright cannot load extensions there.)*
+      an **OS flip re-themes only under Auto**; shell + reader **coherent** (no half-themed
       screen — occlusion eyeball); **TOC open-state/width remembered**; "Stored data" shows **settings** + a
       **wipe** clears them → back to **Auto**; **zero unexpected network**, no console errors; the **document
       stays the hero**. This class (layout / engine timing / bytes-on-wire / wiring-visibility) is exactly what

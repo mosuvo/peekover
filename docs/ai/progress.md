@@ -338,8 +338,12 @@ PER TASK — M1 lesson):
     | **no gate (shipped)** | 135.4 ms | **148.2 ms / 137.7 ms** | inside budget |
 
     The two gated rows are the decisive pair: **halving the deadline changed cold by 0.2 ms**, so the
-    ~25–35 ms cold cost is not the length of the wait — it is that deferring the mount at all takes it
-    off the DOMContentLoaded turn it otherwise rides. No deadline both gates warm (settings land at
+    ~25–35 ms cold cost is **not the length of the wait**. The most likely MECHANISM is that deferring
+    the mount at all takes it off the DOMContentLoaded turn it otherwise rides — but that was **NOT
+    instrumented; it is a hypothesis, not a measurement**. (Marked as such deliberately: 4.2 exists
+    because 4.1's un-remeasured inference (~26 ms) did not survive contact, so an un-instrumented
+    causal claim in this same record gets labelled rather than inherited.) No deadline both gates warm
+    (settings land at
     ~21.5 ms, before the ~60 ms natural commit) and stays free on cold. And the gate bought nothing
     measurable: **warm was already no-flash without it**, because the settings beat the mount anyway.
   - **FINAL SHIPPED NUMBERS (`pnpm perf:flash`, mark-free harness, Chromium):**
