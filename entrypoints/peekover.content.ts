@@ -2,6 +2,7 @@ import { defineContentScript, browser } from '#imports';
 import { runReader } from '@/src/render/runReader';
 import { messagingPort } from '@/src/settings/settingsPort';
 import { setThemeSetting } from '@/src/theme/reader';
+import { registerThemeSaveSink } from '@/src/theme/themeControl';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -73,6 +74,15 @@ export default defineContentScript({
     // structural on this path, not a timeout that has to be tuned correctly.
     const settings = messagingPort((message) => browser.runtime.sendMessage(message));
     void settings.load().then((resolved) => setThemeSetting(resolved.theme));
+
+    // The WRITE direction (task 5.1, decision D-A). The in-reader theme control is built deep
+    // inside mount(), which has no port and is not given one: threading a port through
+    // runReader -> mountReader -> mount for a single callback would reshape four signatures on
+    // two call chains. Instead this context registers its own port's `save` ONCE, exactly as it
+    // registers the theme setting above — the same seam, the same direction of dependency, and
+    // mount() still imports neither a port nor the store. `save` is best-effort by construction
+    // (settingsPort swallows persistence failures), so a dead background cannot break a pick.
+    registerThemeSaveSink((patch) => void settings.save(patch));
 
     runReader();
   },

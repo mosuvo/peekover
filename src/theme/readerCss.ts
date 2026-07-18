@@ -203,6 +203,28 @@ export const READER_CSS = /* css */ `
 }
 .peekover-mode-toggle:hover{color:var(--ink);border-color:var(--faint)}
 
+/* ============ Theme control (task 5.1 — auto/light/dark) ============ */
+/* The same pill chrome as the mode toggle, in the BOTTOM-LEFT, stacked above the network
+   indicator. The corner is chosen by elimination, not taste — every other one is already
+   claimed, and this is the M3 collision defect class:
+     - the whole RIGHT side belongs to the TOC rail (full height, right:0). A top-right pill
+       stacked under the mode toggle looks free at a wide viewport but collides with the rail's
+       handle at a narrow one, where the rail clamps to 38vw and its content shifts left into
+       exactly that band. Measured, not assumed.
+     - TOP-RIGHT is the mode toggle, TOP-LEFT the remote-load opt-in.
+   That leaves the bottom-left, which only the network indicator uses (bottom:16px, and hidden
+   until the user triggers a network action) — so this sits one pill-height above it at 56px and
+   the two never intersect whether or not the indicator is lit. Tokens ONLY. */
+.peekover-theme-toggle{
+  position:fixed;bottom:56px;left:16px;z-index:2;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-theme-toggle:hover{color:var(--ink);border-color:var(--faint)}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline
@@ -405,7 +427,7 @@ export const READER_CSS = /* css */ `
 //   1. :host returns to normal flow (position:relative; inset:auto), so it fills its
 //      PANE box instead of pinning to the viewport. Every other :host declaration
 //      (background, colour, overflow, typography) is inherited from READER_CSS.
-//   2. The three chrome pills switch position:fixed → position:absolute, so they
+//   2. The chrome pills (mode toggle, theme control, remote-load, network, TOC rail) switch position:fixed → position:absolute, so they
 //      anchor to the now-positioned :host — the pane's corners — keeping their
 //      top/right/bottom/left offsets. Switching fixed→absolute (rather than a
 //      transform / contain containing-block trick on :host) deliberately SIDESTEPS the
@@ -420,6 +442,7 @@ export const READER_CSS = /* css */ `
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
 .peekover-mode-toggle,
+.peekover-theme-toggle,
 .peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }

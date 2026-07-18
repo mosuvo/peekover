@@ -398,7 +398,66 @@ PER TASK — M1 lesson):
     budget, fall back"). The tradeoff now on the table is a **rare cold-start flip** vs a **~25 ms
     budget breach on every cold typical-doc open**; the evidence above is what it rests on.
 
-  **NOW → group 5 (settings UI). NOT started.**
+**Group 5 (settings UI — auto/light/dark, sepia deferred) IN PROGRESS — advance PER TASK.**
+- **5.1 DONE — the in-reader theme control, shipped to BOTH surfaces through the one `mount()` seam.**
+  New `src/theme/themeControl.ts`: the pure `nextThemeSetting` cycle (auto→light→dark), the
+  `buildThemeControl()` builder, and the **register-once save seam** `registerThemeSaveSink`.
+  `mount()` pushes the control into `children[]` as a SIBLING of `.peekover-reader`; the content
+  entrypoint registers `messagingPort(...).save`.
+  - **D-A — the port reaches the control by MODULE SEAM, not by threading (a corrected tasks.md
+    line).** tasks.md 5.1 said "threaded through `MountOptions`"; that threading never existed.
+    Group 3 deliberately kept the port in the entrypoint (`reader.ts`'s header says why) and group 4
+    kept it there again. Threading would reshape FOUR signatures across TWO call chains
+    (`runReader`→`mountReader`→`mount`, `mountAppShell`→`createReaderPane`→`mount`) to deliver one
+    callback. The seam mirrors group 3's `setThemeSetting` precedent exactly and keeps the property
+    the wording protected: **`mount()` and the control import neither the port nor `store`** — the
+    context injects its own sink. tasks.md 5.1 corrected in-place (same class as the earlier
+    `src/store/`→`src/app/` path drift).
+  - **D-B — the control asks the RUNTIME for the setting; it cannot read `data-theme`.** That
+    attribute is the EFFECTIVE theme, so `auto` on a light OS is indistinguishable from a manual
+    `light`. Group 3's seam gained the minimum needed (`src/theme/reader.ts`): `currentThemeSetting()`
+    promoted from test-only, plus `onThemeSettingChange()`. `setThemeSetting` now notifies after
+    broadcasting — so ONE subscription keeps every control in sync whether the change came from the
+    async cold-start `load()`, an OS flip, or the other surface's control. Liveness is by
+    construction: a module-level Set of controls pruned by `isConnected` before each sync (the
+    themeRegistry/tocView pattern), so mount()'s per-render rebuild cannot leak a listener.
+  - **CORRECTION OF RECORD — THE GOLDEN PIN CANNOT SEE THIS TASK, AND THAT WAS MEASURED.** The
+    standing "golden diff EMPTY ⇒ the column is untouched" reading is **false for chrome**: with the
+    control deliberately appended INSIDE `.peekover-reader`, `git diff tests/golden/output/` stayed
+    **EMPTY** and `golden.test.ts` still passed **10/10**. `tests/golden/golden.test.ts` snapshots the
+    pure `sanitize(parse(source))` string — a stage upstream of `mount()` that never observes chrome.
+    So the **DOM sibling assertion is the only guard**, not a belt-and-braces duplicate. Noted in
+    mount.ts and in the test so the empty diff is never over-read again.
+  - **PLACEMENT WAS MEASURED, NOT CHOSEN.** The obvious spot — stacked under the mode-toggle at the
+    top-right — **collides with the TOC rail's handle at BOTH viewports** (narrow 414px: control
+    [291,56,398,86] vs handle [280,56,392,102]; wide 1400px: [1277,56,1384,86] vs [1173,56,1292,86]).
+    The rail owns the entire right side; top-right is the mode toggle, top-left the remote-load pill.
+    The control therefore sits **bottom-left, 56px up** — one pill-height above the network indicator,
+    the one corner nothing claims at rest. `CONTAINED_CSS` flips it fixed→absolute with the other
+    pills, so the app-page pane positions it correctly (the recurring two-surface gotcha).
+  - **TESTS — THE HONEST SPLIT.** jsdom unit (+5 →**380**) covers ONLY `nextThemeSetting` + the label
+    map; everything else is DOM/cascade/geometry and is proven in the real engine.
+    `tests/browser/themeControl.browser.test.ts` (Cr+Fx, 19 tests → **+38 → 254 browser**): renders on
+    both surfaces · sibling-of-column on both · a pick applies instantly (attribute AND computed
+    `--paper` `#12141C`) · reaches EVERY registered host · works with no sink registered · the save
+    path is called once per pick with the right patch · re-labels on a late-arriving setting · a
+    second control stays in sync · auto-vs-manual-light is distinguished · button/no-tabindex/
+    accessible-name · geometry vs mode-toggle + TOC handle + TOC list at narrow AND wide on BOTH
+    surfaces · clears the column at wide · clears the network indicator + remote-load pill.
+    **FOUR RED-FIRSTS, all clean on both engines:** append to `root` → 2 sibling tests fail; drop the
+    save call → the save test fails; drop the notification → 3 sync tests fail; move to top-right →
+    4 geometry tests fail on the TOC handle.
+  - **HARNESS LIMIT, STATED:** the browser project loads no unpacked extension, so the control's REAL
+    sink (`messagingPort.save` → background) cannot run. A **fake sink is injected through the
+    production `registerThemeSaveSink` seam** and asserted; that proves the control's half of the
+    contract, NOT that the message reaches the background. End-to-end pick→reload→persists is **8.1**.
+  - **LOOK IS HUMAN-GATE-ONLY (8.1).** Geometry and computed tokens proved a fully TRANSPARENT rail in
+    M3 (defect #6). Whether the pill reads as Peekover chrome, holds contrast in both themes, or
+    occludes something a human minds is not decidable here.
+  - `pnpm lint` clean; `pnpm test` **380 unit**; `pnpm test:browser` **254** both engines; golden diff
+    **EMPTY**; `manifest.test.ts` green (`permissions: []`).
+
+  **NOW → 5.2 (app-page shell header control + the group-1 `StoredSummary.settings` carry-over).**
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

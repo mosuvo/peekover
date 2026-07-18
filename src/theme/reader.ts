@@ -87,11 +87,43 @@ export function currentEffectiveTheme(): EffectiveTheme {
 export function setThemeSetting(setting: ThemeSetting): void {
   currentSetting = setting;
   applyTheme(currentEffectiveTheme());
+  // Notify AFTER the broadcast, so any listener that reads the DOM sees the applied theme.
+  for (const listener of settingListeners) listener(setting);
 }
 
-/** Test-only: read back the current setting without resolving it. */
-export function currentThemeSettingForTest(): ThemeSetting {
+/**
+ * Read back the current theme SETTING without resolving it — what the user picked, not what
+ * paints. Task 5.1 promoted this from test-only to public, and the reason is a real constraint:
+ * a settings CONTROL must display the setting, and `data-theme` on a host cannot tell it apart.
+ * `data-theme` carries the EFFECTIVE theme, so `auto` on a light OS and a manual `light` both
+ * read `light` there — indistinguishable. The control therefore has to ask the runtime.
+ */
+export function currentThemeSetting(): ThemeSetting {
   return currentSetting;
+}
+
+/** Test-only alias kept so `reader.test.ts` reads as it did before 5.1 promoted the getter. */
+export const currentThemeSettingForTest = currentThemeSetting;
+
+/**
+ * Listeners notified whenever the SETTING changes (task 5.1). Not the effective theme: an OS
+ * flip under `auto` changes what paints but NOT what the user picked, so it deliberately does
+ * not notify — a control showing "Auto" stays correct across an OS flip.
+ *
+ * Why this exists: a theme control is built at mount time, but the persisted setting arrives
+ * AFTER that on a cold start (group 4's measured behaviour — the entrypoint's
+ * `load().then(setThemeSetting)`), and on the app page a SECOND control (5.2) can change it.
+ * Both are `setThemeSetting` calls, so one notification point keeps every control in sync with
+ * no per-surface wiring.
+ */
+const settingListeners = new Set<(setting: ThemeSetting) => void>();
+
+/** Subscribe to setting changes. Returns an unsubscribe. Callers that outlive a render must
+ *  prune themselves — see themeControl.ts, which subscribes ONCE and prunes dead controls by
+ *  `isConnected` (the themeRegistry liveness pattern) rather than adding a listener per view. */
+export function onThemeSettingChange(listener: (setting: ThemeSetting) => void): () => void {
+  settingListeners.add(listener);
+  return () => settingListeners.delete(listener);
 }
 
 /**

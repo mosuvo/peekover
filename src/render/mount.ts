@@ -23,6 +23,7 @@ import {
 } from './readerMode';
 import { applyMediaPolicy } from './mediaPolicy';
 import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
+import { buildThemeControl } from '../theme/themeControl';
 import { buildTocModel } from './tocModel';
 import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
 
@@ -120,6 +121,18 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     const children: Node[] = [buildReaderStyle()];
     if (options.contained) children.push(buildContainedStyle());
     children.push(buildModeToggle(host));
+    // Theme control (task 5.1), composed through THIS one seam so both surfaces get it with no
+    // per-surface branching — same discipline as the TOC rail below. It is chrome: pushed as a
+    // SIBLING of the reading column, never inside `root`, so `.peekover-reader` stays
+    // byte-identical. It imports no port and no store — it writes through the theme runtime's
+    // single setter plus a sink the CONTEXT registered (src/theme/themeControl.ts, decision D-A).
+    //
+    // NOTE ON THE GOLDEN PIN: tests/golden/ snapshots the PURE `sanitize(parse(source))` string,
+    // upstream of this function entirely — so it stays empty no matter what chrome is committed
+    // here, INCLUDING chrome wrongly appended into `root`. The golden diff is therefore not the
+    // guard people assume; the DOM sibling relationship is asserted directly in
+    // tests/browser/themeControl.browser.test.ts (verified red by appending to `root`).
+    children.push(buildThemeControl());
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }

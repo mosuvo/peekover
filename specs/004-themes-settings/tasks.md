@@ -192,17 +192,38 @@
 
 ## 5 — Settings UI (auto/light/dark only — sepia deferred, D-1=A)
 
-- [ ] **5.1 Reader theme control — sibling of `.peekover-reader` (golden stays EMPTY).** A minimal control in
+- [x] **5.1 Reader theme control — sibling of `.peekover-reader` (golden stays EMPTY).** A minimal control in
       `mount()`'s `children[]`, committed **outside** the reading column (styled like the mode-toggle /
       remote-load pills, tokens only). Selects/cycles **auto/light/dark**, calls `port.save({theme})`, applies
-      immediately via `applyTheme`. Threaded through `MountOptions` (snapshot + save callback / the port), not a
-      direct `store` import.
-      Files: `src/render/mount.ts` · `src/render/readerPane.ts` · `src/theme/readerCss.ts` (pill rule, tokens
-      only) · `tests/browser/themeRuntime.browser.test.ts`
+      immediately via `applyTheme`. Reaches its port through a **register-once module seam**
+      (`registerThemeSaveSink`, `src/theme/themeControl.ts`), not a direct `store` import.
+      Files: `src/render/mount.ts` · `src/theme/themeControl.ts` · `src/theme/reader.ts` ·
+      `src/theme/readerCss.ts` (pill rule, tokens only) · `entrypoints/peekover.content.ts` ·
+      `tests/browser/themeControl.browser.test.ts`
+      *CORRECTED AT IMPLEMENTATION (decision D-A): this line originally read "Threaded through `MountOptions`
+      (snapshot + save callback / the port)". That threading never existed — group 3 deliberately kept the port
+      in the entrypoint (`reader.ts`'s header states why) and group 4 kept it there again. Threading it would
+      reshape four signatures across two call chains (`runReader`→`mountReader`→`mount`, and
+      `mountAppShell`→`createReaderPane`→`mount`) to deliver one callback. The register-once seam mirrors
+      group 3's precedent exactly and preserves the property the wording was protecting — `mount()` and the
+      control import neither the port nor `store`. Same class of correction as the earlier `src/store/`→
+      `src/app/` path-drift fixes. `src/render/readerPane.ts` is dropped from Files: it is at `src/app/`, and
+      it needed no edit — the control ships to the contained surface through the one `mount()` seam.*
       Verify (**tests/browser** — Cr+Fx, BOTH surfaces): the pill renders and works on the content-script full-
       page reader AND the app-page `{contained}` pane (the one-mount() seam ships to both — the recurring two-
       surface gotcha); selecting Dark applies dark + persists (read back next open); the control is a **sibling**
       of `.peekover-reader`, so `git diff tests/golden/output/` is **EMPTY** (asserted). Manifest green.
+      *DONE 2026-07-18 — 19 real-engine tests ×2 engines (+38 →254 browser), +5 jsdom unit (→380). **FOUR
+      red-firsts, all clean on Cr+Fx:** control appended to `root` → the 2 sibling tests fail; save call removed
+      → the save test fails; the `setThemeSetting` notification removed → the 3 sync tests fail; the pill moved
+      to the top-right → the 4 geometry tests fail on the TOC handle. **CORRECTION OF RECORD — the golden pin
+      cannot see this task.** Measured: with the control appended INSIDE `.peekover-reader`, `git diff
+      tests/golden/output/` is still EMPTY and `golden.test.ts` still passes 10/10, because it snapshots the pure
+      `sanitize(parse(source))` string, a stage upstream of `mount()` that never observes chrome. The DOM sibling
+      assertion is therefore the ONLY guard, not a redundant one. **Placement was measured, not chosen:** the
+      top-right stack under the mode toggle collided with the TOC rail's handle at BOTH a narrow (414px) and a
+      wide (1400px) viewport; the pill sits bottom-left above the network indicator, the one corner no chrome
+      claims at rest. LOOK (contrast, occlusion, whether it reads as Peekover chrome) is **8.1 only**.*
 
 - [ ] **5.2 App-page shell header theme control.** A matching auto/light/dark control in the shell header
       (beside the storage-toggle), wired to the `directPort`; writes the concrete `data-theme` on the shell root
