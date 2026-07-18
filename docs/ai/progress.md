@@ -71,6 +71,42 @@ PER TASK — M1 lesson):
   rejected ("promise rejected … instead of resolving") and the two HANGING tests timed out
   ("Test timed out in 2500ms") → reverted → 9/9 green. `pnpm lint` clean, `pnpm test` **367 unit**;
   golden diff **EMPTY**, `manifest.test.ts` green.
+- **2.3 DONE** — `entrypoints/background.ts` gains the SECOND listener:
+  `browser.runtime.onMessage.addListener(createSettingsListener({ getSettings, putSettings }))`,
+  answering `getSettings`/`setSettings` against store.ts (the background's OWN memoized idbCore
+  connection — first non-page consumer, correct across an update via 1.2's versionchange handler),
+  action listener intact. **Async-response contract:** WXT's `browser` is the NATIVE
+  `chrome.*`/`browser.*` namespace (verified — `@wxt-dev/browser`: `globalThis.browser?.runtime?.id
+  ? browser : chrome`), NOT the webextension-polyfill. Native Chrome IGNORES a Promise returned
+  from an onMessage listener, so the handler uses **`return true` + async `sendResponse`** (the
+  common denominator — Chrome requires it, Firefox honors it); a non-settings message returns
+  `false` (declines, no dangling channel). `entrypoints/peekover.content.ts` builds the
+  `messagingPort(msg => browser.runtime.sendMessage(msg))` and warms it via `void load()` at
+  document_start — **WIRING ONLY**, deliberately NOT threaded into runReader/mount (consuming
+  `snapshot()` for first-paint theming + reveal-gating is 4.1/4.2; that touches `src/render/`, a
+  fenced later group). Real-engine proof `tests/browser/settingsPort.browser.test.ts` (Cr+Fx, +5
+  tests → +10): DIRECT port persists + reads back through the real IndexedDB; MESSAGING port
+  round-trips through the SAME `createSettingsListener` + real store (SET read back by BOTH ports —
+  one DB behind both); zero-network (Resource-Timing) across save+load both ports + wipe,
+  **non-vacuous** (a control fetch registers); RED-FIRST misrouted type → handler declines →
+  DEFAULT (asserted ≠ the saved value). RED also proven at source: breaking `GET_SETTINGS` routing
+  failed all messaging round-trips on BOTH engines ("expected {theme:'auto'…} to deeply equal
+  {theme:'light'…}") → reverted → 10/10 green.
+  - **HARNESS LIMITATION (flagged for human gate 8.1):** the Vitest browser-playwright project
+    loads NO unpacked extension — no background SW, no content-script injection, `browser.runtime`
+    has no receiving end. So the TRUE content→background `runtime.sendMessage` transport is NOT
+    exercised; the loopback proves handler + listener response-contract + both ports + the real
+    engine's IndexedDB compose, but NOT the message bus itself. The end-to-end path (content-script
+    reader → pick theme → reload → persists, Network tab open) is the named 8.1 human-gate item.
+  - **PERMISSIONS.md now STALE** ("background = exactly one listener / no other logic"): the update
+    is task 7.2 (same-session-as-code discipline lands at group close), NOT edited now. Built
+    manifest re-proven `permissions: []` (content→own-background messaging needs no permission).
+    Content-script **285,507 B** vs the 284,744 B baseline = **+763 B (+0.27%)** from the
+    messagingPort import (formal re-measure is task 7.1).
+- **GROUP 2 COMPLETE (2.1/2.2/2.3), NOT pushed** — 3 commits ahead, awaiting human review. Suites at
+  group close: `pnpm test` **367 unit** · `pnpm test:browser` **186** both engines · golden diff
+  **EMPTY** · `manifest.test.ts` green (`permissions: []`). NEXT after review → group 3 (theme
+  runtime + host registry). Do NOT start it yet.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

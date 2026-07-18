@@ -65,14 +65,14 @@
 
 ## 2 — SettingsPort + messaging seam (surface-agnostic boundary; both ports proven in the real engine)
 
-- [ ] **2.1 `settings.ts` — `Settings` type + default + pure `resolveTheme` + `SettingsPort` interface.**
+- [x] **2.1 `settings.ts` — `Settings` type + default + pure `resolveTheme` + `SettingsPort` interface.**
       `resolveTheme(setting, osDark) → effective` ({auto,light,dark}→concrete; auto keys off `osDark`).
       Default `{ theme:'auto', tocOpen:null, tocWidth:null }`. Pure logic, no DOM/engine, no `store` import.
       Files: `src/settings/settings.ts` · `src/settings/settings.test.ts`
       Verify (**jsdom/unit**): `pnpm test settings` green — `resolveTheme` covers setting × OS (auto→light,
       auto→dark, manual ignores OS); the default shape is asserted. Golden EMPTY + manifest green.
 
-- [ ] **2.2 `settingsPort.ts` — `directPort(store)` + `messagingPort()` with cached snapshot + timeout→default.**
+- [x] **2.2 `settingsPort.ts` — `directPort(store)` + `messagingPort()` with cached snapshot + timeout→default.**
       Both expose `snapshot()` (sync cached, never throws) / `load()` (resolve persisted, update cache) /
       `save(patch)` (best-effort, update cache immediately). `directPort` wraps `get/putSettings`;
       `messagingPort` wraps `browser.runtime.sendMessage` (`peekover:getSettings`/`peekover:setSettings`).
@@ -84,7 +84,7 @@
       resolve to the **default within the timeout** (fails if the fallback is missing). Golden EMPTY + manifest
       green.
 
-- [ ] **2.3 Background settings handler (the second listener) + real-engine round-trip BOTH ports + zero-net.**
+- [x] **2.3 Background settings handler (the second listener) + real-engine round-trip BOTH ports + zero-net.**
       `entrypoints/background.ts` gains a `runtime.onMessage` handler answering `getSettings`/`setSettings`
       against `store` (background's own memoized idbCore connection — correct across an update *because of* 1.2).
       Content entrypoint builds the `messagingPort`; app page builds the `directPort`.

@@ -1,5 +1,6 @@
-import { defineContentScript } from '#imports';
+import { defineContentScript, browser } from '#imports';
 import { runReader } from '@/src/render/runReader';
+import { messagingPort } from '@/src/settings/settingsPort';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -38,6 +39,18 @@ export default defineContentScript({
   // it, then mount at DOMContentLoaded. runReader owns the never-blank guarantees.
   runAt: 'document_start',
   main() {
+    // Build the content-script settings port and start warming it (spec 004, task 2.3 — WIRING
+    // ONLY). The reader's own origin cannot read the extension DB, so this port reaches settings
+    // by messaging the background (handled in entrypoints/background.ts). `load()` kicks off the
+    // round-trip now, at document_start, so a value is cached by the time the render path needs
+    // it; `load()` is bounded and falls back to Auto, so a dead background can never stall here.
+    //
+    // Deliberately NOT threaded into runReader/mount yet: consuming port.snapshot() to theme the
+    // first paint (and the reveal-gating + flash measurement) is tasks 4.1/4.2 — that requires
+    // touching src/render/, a later group's files, so it is left alone here.
+    const settings = messagingPort((message) => browser.runtime.sendMessage(message));
+    void settings.load();
+
     runReader();
   },
 });
