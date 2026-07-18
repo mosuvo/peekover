@@ -206,10 +206,11 @@ export async function putSettings(patch: Partial<Settings>): Promise<void> {
 // deferred: the transparency + erase path is part of THIS group, not a later nicety.
 
 /**
- * Erase everything Peekover has stored: clear all three stores. This drops remembered
- * folders (and their persisted handles), the recents list, and all pins — the "wipe all
- * data" control. Each `clear()` resolves on its transaction commit (idbCore), so once
- * this resolves the stores are durably empty and a subsequent read sees zero records.
+ * Erase everything Peekover has stored: clear all four stores. This drops remembered
+ * folders (and their persisted handles), the recents list, all pins, AND the reader
+ * settings — the "wipe all data" control. Each `clear()` resolves on its transaction
+ * commit (idbCore), so once this resolves the stores are durably empty and a subsequent
+ * read sees zero records (getSettings then falls back to the Auto default).
  * Cleared sequentially so a failure surfaces deterministically rather than racing.
  */
 export async function wipeAll(): Promise<void> {
@@ -217,6 +218,7 @@ export async function wipeAll(): Promise<void> {
   await clear(conn, STORES.folders);
   await clear(conn, STORES.recents);
   await clear(conn, STORES.pins);
+  await clear(conn, STORES.settings);
 }
 
 /** One remembered folder as the transparency view sees it — the live handle object is
@@ -242,6 +244,11 @@ export interface StoredSummary {
   folders: StoredFolderInfo[];
   recents: RecentRecord[];
   pins: PinRecord[];
+  /** The stored reader settings, or `null` when nothing is stored (the user never
+   *  customized). `describeStored` always sets this; it is OPTIONAL so pre-004 literal
+   *  summaries elsewhere (e.g. the shell's designed EMPTY_SUMMARY) stay valid without an
+   *  edit outside the store layer. Present ⇒ a settings row exists and is counted + described. */
+  settings?: Settings | null;
   total: number;
   /** Plain-language, trust-facing description — one line per non-empty record class. */
   lines: string[];
@@ -253,28 +260,20 @@ function plural(n: number, one: string, many = `${one}s`): string {
 }
 
 /**
- * Read all three stores and produce the transparency summary. Reads are independent, so
- * they run concurrently. Nothing here writes or hides state — it is a faithful mirror of
- * what `wipeAll()` would erase.
+ * The PURE plain-language description of on-device state — extracted from `describeStored`
+ * so it is unit-testable without an engine (IndexedDB is jsdom-blind). One line per
+ * non-empty record class, in the same order the stores are listed; a single "nothing
+ * stored" line when everything is empty. `total` is passed in (it is the caller's derived
+ * count) so this stays a pure string builder.
  */
-export async function describeStored(): Promise<StoredSummary> {
-  const conn = await db();
-  const [folderRows, recents, pins] = await Promise.all([
-    getAll<FolderRecord>(conn, STORES.folders),
-    getAll<RecentRecord>(conn, STORES.recents),
-    getAll<PinRecord>(conn, STORES.pins),
-  ]);
-
-  const folders: StoredFolderInfo[] = folderRows.map((f) => ({
-    id: f.id,
-    name: f.name,
-    persisted: f.handle !== undefined,
-    addedAt: f.addedAt,
-    lastOpenedAt: f.lastOpenedAt,
-  }));
-
-  const total = folders.length + recents.length + pins.length;
-
+export function buildStoredLines(input: {
+  folders: StoredFolderInfo[];
+  recents: RecentRecord[];
+  pins: PinRecord[];
+  settings: Settings | null;
+  total: number;
+}): string[] {
+  const { folders, recents, pins, settings, total } = input;
   const lines: string[] = [];
   if (folders.length) {
     const remembered = folders.filter((f) => f.persisted).length;
@@ -289,9 +288,47 @@ export async function describeStored(): Promise<StoredSummary> {
   if (pins.length) {
     lines.push(`${plural(pins.length, 'pinned item')} — path + name for quick access.`);
   }
+  if (settings) {
+    lines.push('Theme / display settings — stored on-device, no file contents.');
+  }
   if (total === 0) {
+    // Kept verbatim (folders/recents/pins) to stay identical to the shell's designed
+    // EMPTY_SUMMARY literal — when total is 0 there are no settings either, so the
+    // enumeration is complete in spirit and the two strings never diverge.
     lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
   }
+  return lines;
+}
 
-  return { folders, recents, pins, total, lines };
+/**
+ * Read all four stores and produce the transparency summary. Reads are independent, so
+ * they run concurrently. Nothing here writes or hides state — it is a faithful mirror of
+ * what `wipeAll()` would erase. The settings row is surfaced only when it EXISTS (the user
+ * customized); an unstored default is not a stored record and is not counted.
+ */
+export async function describeStored(): Promise<StoredSummary> {
+  const conn = await db();
+  const [folderRows, recents, pins, settingsRow] = await Promise.all([
+    getAll<FolderRecord>(conn, STORES.folders),
+    getAll<RecentRecord>(conn, STORES.recents),
+    getAll<PinRecord>(conn, STORES.pins),
+    get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID),
+  ]);
+
+  const folders: StoredFolderInfo[] = folderRows.map((f) => ({
+    id: f.id,
+    name: f.name,
+    persisted: f.handle !== undefined,
+    addedAt: f.addedAt,
+    lastOpenedAt: f.lastOpenedAt,
+  }));
+
+  const settings: Settings | null = settingsRow
+    ? { theme: settingsRow.theme, tocOpen: settingsRow.tocOpen, tocWidth: settingsRow.tocWidth }
+    : null;
+
+  const total = folders.length + recents.length + pins.length + (settings ? 1 : 0);
+  const lines = buildStoredLines({ folders, recents, pins, settings, total });
+
+  return { folders, recents, pins, settings, total, lines };
 }

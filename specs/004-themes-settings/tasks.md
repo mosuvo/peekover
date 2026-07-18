@@ -54,7 +54,7 @@
       **closes** and the v2 open proceeds. Red-first: **without** the handler the second open **blocks/hangs**
       (assert the difference — the test must fail before the handler exists). Golden EMPTY + manifest green.
 
-- [ ] **1.3 `wipeAll` + `describeStored` include `settings`.** Extend the store list both walk: `wipeAll()`
+- [x] **1.3 `wipeAll` + `describeStored` include `settings`.** Extend the store list both walk: `wipeAll()`
       clears `settings` too; `describeStored()` reads it and adds a plain-language line ("theme / display
       settings — stored on-device, no file contents"), joining folders/recents/pins.
       Files: `src/store/store.ts` · `tests/browser/settingsStore.browser.test.ts` (+ jsdom unit for the

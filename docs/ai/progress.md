@@ -32,8 +32,18 @@ PER TASK — M1 lesson):
   v1 BLOCKS the same open (the difference the handler removes). Red-first verified — removed `db.close()` → the
   positive test threw `IndexedDB open blocked …v2` on BOTH engines → reverted → green. Golden EMPTY, 350 unit +
   `manifest.test.ts` green.
-- **NEXT → 1.3** — `wipeAll`/`describeStored` include settings. Do NOT start group 2+. No push — human reviews the
-  group-1 evidence first.
+- **1.3 DONE** — `wipeAll` clears `settings`; `describeStored` reads the settings row, adds a plain-language line
+  ("Theme / display settings — stored on-device, no file contents."), and counts it. Extracted the pure
+  `buildStoredLines` helper so the string logic is jsdom-unit-testable (`src/app/store.test.ts`, +4 unit). Real-engine
+  proof in `settingsStore.browser.test.ts` (Cr+Fx): describeStored surfaces the settings line, and after `wipeAll`
+  `getSettings` falls back to the Auto DEFAULT + describeStored reads cleared. Red-first verified — removed the
+  settings `clear` from `wipeAll` → `{theme:'dark'…}` survived vs the Auto default on BOTH engines → reverted →
+  green. **Scope note:** `StoredSummary.settings` made OPTIONAL (not required) so the shell's designed
+  `EMPTY_SUMMARY` literal in `appShell.ts` stays valid WITHOUT a cross-file edit (scope fence held — group 1 touched
+  only `src/app/store.ts` + `src/app/idbCore.ts` + the two new tests + the new unit test).
+- **GROUP 1 COMPLETE (1.1/1.2/1.3), NOT pushed** — awaiting human review of the evidence. Suites at group close:
+  `pnpm test` **354 unit** · `pnpm test:browser` **176** both engines · golden diff **EMPTY** · `manifest.test.ts`
+  green (`permissions: []`). NEXT after review → group 2 (SettingsPort + messaging seam). Do NOT start it yet.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 

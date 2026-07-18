@@ -20,11 +20,14 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import {
+  putFolder,
   getFolders,
   getRecents,
   getPins,
   getSettings,
   putSettings,
+  wipeAll,
+  describeStored,
   __resetConnectionForTest,
   DB_NAME,
   DB_VERSION,
@@ -154,5 +157,40 @@ describe('settings store — additive v1→v2 upgrade (real engine; jsdom-blind)
       expect.arrayContaining(['folders', 'recents', 'pins', 'settings']),
     );
     raw.close();
+  });
+});
+
+// --- task 1.3: wipeAll + describeStored include settings ---------------------------
+//
+// The trust story: the first thing that stores settings ships WITH the way to see and erase
+// them. describeStored surfaces a settings line when a row exists; wipeAll erases it so the
+// theming falls back to the Auto default. Both are jsdom-blind (IndexedDB), so real-engine.
+
+describe('wipeAll + describeStored include settings (real engine)', () => {
+  it('describeStored surfaces the settings line; after wipeAll getSettings falls back to the Auto DEFAULT (red-first vs a settings-skipping wipe)', async () => {
+    // Customize settings + store a folder, so the pre/post states are unambiguous.
+    await putSettings({ theme: 'dark', tocOpen: true, tocWidth: 300 });
+    await putFolder({ id: 'wf', name: 'w', addedAt: 1, lastOpenedAt: 2 });
+
+    const before = await describeStored();
+    expect(before.settings).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 300 });
+    expect(before.total).toBe(2); // 1 folder + the settings row
+    const beforeText = before.lines.join(' ');
+    expect(beforeText).toContain('display settings');
+    expect(beforeText).toContain('no file contents');
+
+    // The wipe-all control erases settings too.
+    await wipeAll();
+
+    // RED-FIRST: with `clear(settings)` removed from wipeAll, the dark row survives → this
+    // toEqual(DEFAULT_SETTINGS) FAILS and `after.settings` stays non-null (verified — recorded
+    // in progress.md). getSettings falling back to the Auto default is the theming safety net.
+    expect(await getSettings()).toEqual(DEFAULT_SETTINGS);
+    const after = await describeStored();
+    expect(after.settings).toBeNull();
+    expect(after.total).toBe(0);
+    const afterText = after.lines.join(' ');
+    expect(afterText).not.toContain('display settings');
+    expect(afterText).toContain('Nothing stored');
   });
 });
