@@ -70,19 +70,40 @@
   - **(5) THE OPEN QUESTION, ANSWERED: the clean gate is MOSTLY THE DISCIPLINE, with the boundary genuinely
     moved in ONE direction — and the "quieter surface" half is weaker than it looks.** progress.md's group-8
     entry deliberately left this open. The evidence:
-    - *What moved into CI, specifically:* M4 built its assertions on **computed style**, not attributes —
+    - *Computed-token coverage is real rigour but NOT a boundary move — correcting this entry's own first
+      draft, by its own test.* M4 built its assertions on **computed style**, not attributes —
       `getComputedStyle(...).getPropertyValue('--paper')` across `themeRuntime` / `themeShell` /
-      `themeControl` / `tocPersist`. That is a real boundary move: **theme incoherence (a half-themed
-      screen, shell and reader disagreeing, manual-vs-OS precedence inverted) is now a CI class**, and 3.3's
-      own note says an attribute-only assertion would have passed on the pre-3.3 shell. Browser tests went
-      **166 → 314** across the milestone; **~20 red-first mutations** were run, all genuinely red on both
-      engines.
+      `themeControl` / `tocPersist` — and 3.3's own note says an attribute-only assertion would have passed
+      on the pre-3.3 shell. That is the right way to test it. But **theme incoherence was never gate-only
+      before 004: it did not EXIST.** With no manual theming there was no shell-vs-reader disagreement and
+      no manual-vs-OS precedence to invert, and nothing stopped M3 from calling `getComputedStyle`.
+      **Covering a NEW class in CI from birth is not a boundary moving** — it is the boundary being drawn in
+      the right place the first time. Claiming otherwise would be finding (3)'s error exactly: citing a
+      guard as evidence for a property whose scope was assumed rather than tested.
+    - ***THE GENUINE CAPABILITY MOVE — `emulateColorScheme` (group 3), which the first draft of this entry
+      missed.*** Before it, "an OS flip re-themes an already-open reader" was verifiable **only by a human
+      flipping the OS setting**: jsdom can stub `matchMedia` but cannot deliver a real `change` event, and a
+      signal injected at our own seam proves our plumbing, not the platform's. Group 3 added a Playwright
+      `page.emulateMedia({colorScheme})` browser command to `vitest.config.ts` and **spiked it FIRST** —
+      confirming `matches` flips, a **real `change` event fires**, and **CSS media rules re-evaluate**, on
+      **both engines** — before relying on it. That converted a gate-only property into a CI-testable one,
+      and the tests it enabled are load-bearing: the auto-only guard and the one-listener-many-flips
+      standing guard are both proven against a genuine emulated OS flip. 003 established the seam with
+      `emulateReducedMotion`; 004 extended it to a second media feature. → **THE ACTIONABLE LEVER: when a
+      property looks gate-only, ask whether a SERVER-SIDE browser command can reach it before accepting it
+      as human-only.** Playwright drives the browser from outside the page, so it can move platform state
+      that no in-page API can fake. That is how the boundary actually moves — not by asserting harder from
+      inside the page. Browser tests went **166 → 314** across the milestone; **~20 red-first mutations**
+      were run, all genuinely red on both engines.
     - *But most red-firsts prove non-vacuity, they do not find bugs* — and the honest list of what CI caught
-      **mid-development** is short and specific: the **5.1 placement collision** (the obvious top-right spot
+      **mid-development** is only TWO items: the **5.1 placement collision** (the obvious top-right spot
       overlaps the TOC handle at BOTH viewports — caught by geometry **before** a placement was committed,
-      not diagnosed after); the **6.1 clamp gap** (a stored 5000 px rail that would have eaten the reading
-      column); the **5.2 type tightening** (three literals silently reporting "no settings stored"); the
-      **3.2 stale-host broadcast**. Would 5.1 have reached the gate in M3? **Probably not** — M3 had
+      not diagnosed after) and the **5.2 type tightening** (three literals silently reporting "no settings
+      stored"). The other two candidates do **not** belong to CI, and the attribution matters (see Metrics):
+      the **6.1 restore clamp** was **specified in the task brief up front** — its red-first proved the
+      implementation, it discovered no gap — and the **3.2 stale-host broadcast** was found by
+      **orchestrator CODE REVIEW before implementation** (it became spec §3.4, "ruled IN"); CI proved that
+      fix, it did not find that bug. Would 5.1 have reached the gate in M3? **Probably not** — M3 had
       bounding-rect tests too, and they measured the transparent rail perfectly. The difference is not that
       geometry got smarter; it is that **M4 ran the geometry check as an input to the design decision rather
       than as a regression guard after one.** That is a discipline change, not a capability change.
@@ -153,11 +174,19 @@
     without changing behaviour.
   - **Metrics:** human-gate-caught defects this milestone = **0** — the first milestone with none; running
     gate score still **6/6** across M1+M2+M3, denominator unmoved · ~**20 red-first mutations**, all red on
-    both engines · browser tests **166 → 314** · defects caught by CI mid-development = 4 (placement
-    collision · restore clamp · type tightening · stale-host broadcast), by measurement = 1 (the paint gate's
-    cold budget breach) · orchestrator factual errors caught by ground-truth re-derivation = **4** (+1 at
-    this session's STEP 0) · one increment permanently destroyed (`git checkout`) · sessions = several
-    (M4, ~one per group).
+    both engines · browser tests **166 → 314** · **defects by WHO CAUGHT THEM: CI = 2** (the 5.1 placement
+    collision · the 5.2 type tightening, which surfaced three literals silently reporting "no settings
+    stored"); **measurement = 1** (the paint gate's cold budget breach); **orchestrator code review = 1**
+    (the 3.2 stale-host broadcast, caught pre-implementation and written into spec §3.4) · orchestrator
+    factual errors caught by ground-truth re-derivation = **4** (+1 at this session's STEP 0) · one
+    increment permanently destroyed (`git checkout`) · sessions = several (M4, ~one per group).
+    - **Why this split is kept honest rather than rounded up (it was inflated to "CI = 4" in this entry's
+      first draft):** the restore clamp was *specified*, not discovered, and the stale-host broadcast was
+      caught by review before a line was written. **An inflated CI-catch count is exactly what a future
+      retro would cite as evidence that CI is catching more than it is** — and would then use to justify
+      thinning the gate or the review step that actually did the catching. Finding (3) of this same entry
+      is about a pin whose scope was assumed rather than tested; a metric whose provenance is assumed
+      rather than traced is the same error wearing a number.
 - **2026-07-19 · PROCESS (spec 004, groups 3–5) — `git checkout <path>` as a red-first revert destroyed
   uncommitted task work THREE times. The revert tool must not be repo-scoped when the file is dirty.**
   The red-first discipline requires mutating `src/` to prove a test fails, then undoing the mutation. Three
