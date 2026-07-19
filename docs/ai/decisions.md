@@ -1,6 +1,64 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-19 · FINDING (spec 005 task-0 probe) · Watch-mode feasibility, MEASURED on both engines and
+  both surfaces.** The probe was throwaway and is deleted; this entry is the only surviving record.
+  - **CHROMIUM 150 — app page.** Feature detect: `showDirectoryPicker` ✓ · `FileSystemObserver` ✓ ·
+    `showOpenFilePicker` ✓ · `FileSystemFileHandle`/`DirectoryHandle` ✓ · `DataTransferItem.webkitGetAsEntry` ✓.
+    **`FileSystemObserver` WORKS.** `observe(fileHandle)` accepted; callbacks fire with `type:"modified"`,
+    `changedHandle {kind:"file", name:"small.md"}`, `relativePathComponents []`, `relativePathMovedFrom null`,
+    `root` = the same file handle. Fired for **both** agent-style appends (`echo >>`) **and** editor saves.
+    **NO atomic-rename problem observed** — no `disappeared`+`appeared` pair, so the predicted worst case did
+    not materialise on this machine. **File-level observation is viable; directory observation was not needed.**
+    Survived **10+ minutes idle** and kept firing — no silent death, no service-worker interference (the probe
+    page is a full tab). **Watch mode here is EVENT-DRIVEN: no polling loop, no interval tuning, no size-aware
+    backoff.**
+  - **LATENCY IS UNMEASURED — do not quote a number.** The one sample recorded (5127 ms) is dominated by
+    HUMAN time: the MARK button was clicked, then the human alt-tabbed and typed the command. A clean run
+    (`mark`, then `sleep 5 && echo >>`) was never performed. Treat observer latency as an open measurement,
+    not as "5 seconds".
+  - **FIREFOX 152 — app page.** Feature detect: `showDirectoryPicker` ✗ · `showOpenFilePicker` ✗ ·
+    `FileSystemObserver` ✗ · `FileSystemFileHandle` ✓ · `FileSystemDirectoryHandle` ✓ · `webkitGetAsEntry` ✓.
+  - **TRAP 1 — the handle types EXIST as constructors but there is NO WAY TO OBTAIN ONE** (no picker). That is
+    the OPFS half of the API without the local-disk half. **Feature-detect on `showDirectoryPicker`, NEVER on
+    the handle constructors** — the obvious detect gives a FALSE POSITIVE on Firefox.
+  - **Firefox PICKER path (`<input webkitdirectory>` → cached `File`): PERMANENTLY STALE.** Polled ~45 ticks
+    across a real on-disk edit; `lastModified` and `size` never moved and `.text()` never returned new content.
+    Not viable.
+  - **Firefox DRAG path (`webkitGetAsEntry` → `FileSystemFileEntry`, `entry.file()` called FRESH each tick):
+    WORKS.** 3 appends → 3 `TEXT CHANGED (FRESH BYTES)` detections, confirmed against `wc -c` (128 → 161 bytes).
+  - **TRAP 2, and the expensive one: on the drag path `size` and `lastModified` are FROZEN AT DROP TIME and
+    never update — only `.text()` reads fresh from disk.** Change detection **MUST compare CONTENT**. The
+    obvious implementation (poll `lastModified`, re-read when it changes) would compile, pass a naive test,
+    and **SILENTLY NEVER FIRE**.
+  - **Firefox polling cost, measured:** small file ~0–1 ms read · 1.12 MiB file **~2–8 ms per tick** (open ≈0 ms
+    because `entry.file()` is cheap; the cost is `.text()`). A 1 s interval is affordable even at 1.12 MiB —
+    but note this reads the **whole file every tick** to detect change.
+  - **BOTH ENGINES — content-script surface (`file://` page).** Measured on **Chromium**, with **"Allow access
+    to file URLs" GRANTED**. The content script **CANNOT re-read its own file**: `fetch` → `TypeError "Failed
+    to fetch"`; XHR → `status 0`. Both plain **and** cache-busted. **The `file://` origin restriction applies to
+    the content script regardless of the file-URLs toggle** — it is not a permissions problem, so do not "fix"
+    it by requesting more permissions. The **BACKGROUND CAN**: `fetch("file:///D:/…")` returned `status=200`
+    with FRESH content (len=161, matching the on-disk byte count at that moment). **XHR is unavailable in the
+    MV3 service worker (`ReferenceError`) — fetch only.**
+  - **UNCONFIRMED on Firefox, and do NOT assume it transfers:** Firefox has no "Allow access to file URLs"
+    toggle and its background may not fetch `file://` at all. If it cannot, **the content-script surface has NO
+    watch path on Firefox.**
+  - **CONSEQUENCE 1 — SPLIT DESIGN, both halves evidenced:** Chromium event-driven (observer); Firefox polled
+    and **DRAG-ONLY**, comparing **content, not metadata**.
+  - **CONSEQUENCE 2 — two surfaces, two routes:** the app page uses handles directly; the content script must
+    **RELAY through the background** (the same pattern 004 established for settings).
+  - **CONSEQUENCE 3 — OPEN QUESTION THE SPEC MUST ANSWER (raised at teardown):** a background
+    `fetch("file://…")` is a **real fetch through the same API the zero-network guards watch** (AGENTS.md #1,
+    and the Resource-Timing assertions in `tests/browser`). Reading a local file is not a network call in
+    spirit, but it **is one mechanically**. Spec 005 needs a deliberate classification — does it light the
+    network indicator, is it excluded from the zero-network assertions, and how do the existing guards
+    distinguish it — **or the first honest guard we write trips on our own watch loop**.
+  - **CONSEQUENCE 4 — Firefox content-script watch: UNKNOWN.** Needs a probe if the spec wants to promise it.
+  **Revisit-when:** Firefox ships `showDirectoryPicker` or `FileSystemObserver` (either would collapse the
+  split); or Chromium's observer changes behaviour on atomic saves (this machine's editor did not trigger the
+  rename path — another might, and the file-level design depends on it not doing so).
+
 - **2026-07-19 · FINDING (promoted at the M4 progress.md archive) · DISPROVED HYPOTHESES AND DEAD ENDS —
   the things we tried that did NOT work. Recorded so no future session re-spends the debugging cycle.**
   These cost real time to establish and none of them is a "decision", which is exactly why they would
