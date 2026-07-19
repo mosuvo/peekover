@@ -3,6 +3,8 @@ import { runReader } from '@/src/render/runReader';
 import { messagingPort } from '@/src/settings/settingsPort';
 import { setThemeSetting } from '@/src/theme/reader';
 import { publishSettings, registerSettingsSink } from '@/src/settings/settingsSeam';
+import { pollingDetector } from '@/src/watch/changeDetector';
+import { WATCH_INTERVAL_MS, registerWatchDetector, relayRead } from '@/src/watch/watchRelay';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -95,6 +97,26 @@ export default defineContentScript({
     // the TOC rail) — the seam was generalized rather than duplicated per feature (decision D-E).
     // Registered under its canonical name; `registerThemeSaveSink` remains a delegate to this.
     registerSettingsSink((patch) => void settings.save(patch));
+
+    // WATCH (task 2.2). Build this surface's detector and register it — and START NOTHING.
+    // Nothing watches by default: switching it on is a user gesture on group 4's control
+    // (spec §4 Trust), and group 4.3 owns the lifecycle. Constructing a stopped detector costs
+    // one object and no timer.
+    //
+    // THE LOOP LIVES HERE, IN THE PAGE — the background is a stateless fetch proxy. That is what
+    // dissolves spec §7-6: there is no long-lived background state an MV3 teardown could lose, and
+    // the watch dies with this tab, which is the correct lifetime.
+    //
+    // `pollingDetector` is the right implementation for this surface on BOTH engines, not a Firefox
+    // fallback: `FileSystemObserver.observe()` takes a `FileSystemHandle` and a content script has
+    // only a URL, with no URL→handle API anywhere (plan §1.1). Chromium's event-driven path is the
+    // APP PAGE's, and only the app page's.
+    registerWatchDetector(
+      pollingDetector(
+        relayRead(location.href, (message) => browser.runtime.sendMessage(message)),
+        WATCH_INTERVAL_MS,
+      ),
+    );
 
     runReader();
   },

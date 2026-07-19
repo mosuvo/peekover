@@ -11,9 +11,31 @@
 **M4 is CLOSED. M5 (spec 005) is IN IMPLEMENTATION: all three Gear-3 artifacts are APPROVED — spec.md
 (gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
 COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare) and
-**1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Next: group 2**
-(relay + the Firefox verification), which begins with 2.1. Nothing is wired into the product yet — group 1
-built two detectors and proved them; the factory that chooses between them is group 4's.**
+**1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Group 2 is
+CODE-COMPLETE: 2.1 DONE** (the `WATCH_READ` contract + `createWatchListener` + URL validation) and
+**2.2 DONE** (the relay wired — background's THIRD listener, content-script `relayRead` → `pollingDetector`,
+zero-network guard). **Next: 2.3 — a HUMAN-RUN check that no harness can do, and it BLOCKS 4.4.**
+The content script now builds a stopped detector at `document_start`; nothing starts it, because
+watching is a user gesture on group 4's control.**
+
+- **2.3 is the immediate next action and it needs a human at a browser.** Two questions, both engines:
+  (a) does a background `fetch("file:///…")` resolve — **Firefox's answer is the unknown**, Chromium's was
+  measured at task 0; and (b) **the spec §7-4 question, MOVED HERE from 2.2** — does that fetch appear in
+  `performance.getEntriesByType('resource')` from the background context? 2.2 could not answer (b): the
+  browser test page runs on an `http://localhost` origin, cannot fetch `file://` at all, and the harness
+  loads no extension. The click-through is in task 2.3; the answer gets its own commit in
+  `decisions.md` and **4.4 must not start until it is recorded.**
+
+- **The `remoteMedia` positive-control flake is FIXED** (it had recurred — 1 failure in 10 captured runs,
+  Firefox). It now AWAITS the Resource-Timing entries to a 5 s budget instead of sampling the buffer at one
+  instant, and returns the buffer so a genuine failure still fails on the caller's own `toContain` with the
+  real diff. **Evidence: 22/22 consecutive runs green, both engines**; a deliberate break (await a URL that
+  is never fetched) goes red on both with the real message. The zero-check is untouched and stays a genuine
+  zero-check — you cannot await something that should never arrive. **The other six guard files do NOT
+  share the risk and were deliberately not touched:** their controls are `await fetch(probe)`, so the test
+  awaits the fetch promise itself, whereas `remoteMedia`'s requests are engine-initiated `<img>` loads the
+  test never awaited. That structural difference is why only that file ever flaked. If one of the six ever
+  does flake, promote the awaited helper to a shared test util rather than patching in place.
 
 - **One question the tasks draft ANSWERED by measurement rather than deferring it** (throwaway probe, run
   and deleted 2026-07-19): **the Chromium `FileSystemObserver` path IS real-engine testable in

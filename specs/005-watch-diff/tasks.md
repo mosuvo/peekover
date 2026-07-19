@@ -101,7 +101,7 @@
 
 ## 2 — Relay + THE FIREFOX VERIFICATION (this group gates group 4's Firefox surface promise)
 
-- [ ] **2.1 `WATCH_READ` contract + `createWatchListener(read)` + URL validation (pure handler).** A second
+- [x] **2.1 `WATCH_READ` contract + `createWatchListener(read)` + URL validation (pure handler).** A second
       message type on the existing channel: `WATCH_READ = 'peekover:watchRead'`, `{ type, url }` →
       `{ ok: true, text } | { ok: false, error }`. `createWatchListener(read)` returns
       `(message, sender, sendResponse) => boolean`, **copying `createSettingsListener`'s shape verbatim**
@@ -121,7 +121,7 @@
       **`false`**, not `true`; a rejecting `read` yields `{ok:false}` rather than a hung channel. Red-first:
       remove the scheme check → the `http:` case reaches `read`. Golden EMPTY + manifest green.
 
-- [ ] **2.2 Wire the relay — background listener + content-script `relayRead`, with the zero-network
+- [x] **2.2 Wire the relay — background listener + content-script `relayRead`, with the zero-network
       guard.** Register `createWatchListener` in `entrypoints/background.ts` **beside** the settings
       listener (the background's second → third listener; both must coexist, which is what 2.1's `false`
       return buys). Content script builds `relayRead(location.href)` and hands it to `pollingDetector` as
@@ -143,6 +143,24 @@
       harness loads no extension, so `runtime.sendMessage` has no receiving end — the handler is proven as
       a pure function through the **production** seam and the round trip is **7.1's named gate item**, not
       a thing this test covers. Golden EMPTY + manifest green.
+      **DONE 2026-07-19 — with TWO CORRECTIONS to this task as written, both applied deliberately:**
+      **(i) §7-4 MOVED TO 2.3.** The harness cannot answer *"does a `file://` fetch appear in the
+      Resource-Timing buffer?"* — the browser test page runs on an `http://localhost` origin and cannot
+      fetch `file://` at all; only the background can, and the harness loads no extension. It is answered
+      at 2.3, where a real background console is already open. **Not attempted here; no non-answer was
+      recorded as an answer.**
+      **(ii) The zero-network test's claim is NARROWER than the line above implies, and the test file
+      says so in its header.** With no extension loaded, `runtime.sendMessage` has no receiving end, so
+      this cannot exercise the real relay. What it DOES prove: the watch loop, driven through the
+      production seam with an injected `read`, issues **zero http(s)** across start → several ticks →
+      stop; and **`relayRead` never falls back to fetching its own URL** — red-first proven by injecting
+      that exact fallback, which fails the `networkedUrls()` assertion (not merely the rejection one) on
+      **both** engines with the leaked URL named. The `/^https?:/i` predicate is reused VERBATIM; the
+      live control fetch uses Task B's awaited mechanism, not a sample.
+      **One thing built slightly ahead of its task, flagged rather than buried:** `registerWatchDetector`
+      / `getWatchDetector` in `watchRelay.ts` is a register-once holder, because 2.2's wiring has to put
+      the built detector somewhere reachable. It is the same D-A shape **4.1** needs — **4.1 should
+      extend or subsume it, not add a second registry beside it.**
 
 - [ ] **2.3 HUMAN CHECK — does a background `fetch("file://…")` work on FIREFOX at all? (spec §7-1).**
       **This is the group's reason for existing and it BLOCKS 4.4.** The task-0 probe measured Chromium's

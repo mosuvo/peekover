@@ -155,6 +155,85 @@ function describeError(cause: unknown): string {
   return 'read failed';
 }
 
+// --- the client half (content script side) ------------------------------------------
+
+/** The transport `relayRead` wraps — `browser.runtime.sendMessage`, injected exactly as
+ *  `settingsPort`'s `SettingsMessenger` is. Resolves with the background's response. */
+export type WatchMessenger = (message: WatchMessage) => Promise<unknown>;
+
+/**
+ * Build the `read` that `pollingDetector` polls: ask the background for `url`'s current text.
+ *
+ * **This function does not, and must never, `fetch` anything itself.** A content script quietly
+ * fetching its own URL as a fallback would be a real defect on two counts — it would put bytes on
+ * the wire from the one context with no network indicator (AGENTS.md #1), and on an `http(s)` raw
+ * view it would silently succeed, so the bug would hide behind a working feature. It is asserted
+ * as a property in `tests/browser/watchNetwork.browser.test.ts`, not merely intended here.
+ *
+ * It REJECTS on refusal, on transport failure, and on a malformed response. That is the right shape
+ * for `pollingDetector`, which swallows a rejected read, leaves its baseline untouched and keeps
+ * polling — a file being rewritten can briefly fail to open, and that is transient by construction.
+ * A read that keeps failing is task 4.3's dead-state policy, at the controller, not here.
+ */
+export function relayRead(url: string, send: WatchMessenger): () => Promise<string> {
+  return async () => {
+    const response = await send({ type: WATCH_READ, url });
+    if (!response || typeof response !== 'object') {
+      // No receiving end, or a background that answered with nothing — the same shape the settings
+      // port coerces past. Here it must REJECT: resolving with '' would look like an emptied file
+      // and re-render the reader blank (AGENTS.md #5).
+      throw new Error('watch relay: no response from the background');
+    }
+    const result = response as WatchReadResponse;
+    if (!result.ok) throw new Error(result.error || 'read failed');
+    if (typeof result.text !== 'string') throw new Error('watch relay: malformed response');
+    return result.text;
+  };
+}
+
+/**
+ * How often the content-script watch re-reads its file.
+ *
+ * PROVISIONAL, and deliberately NOT an asserted acceptance threshold (standing M1 "no un-measured
+ * threshold" rule) — the same posture as `settingsPort`'s `LOAD_TIMEOUT_MS`. Note this is the POLL
+ * interval, not the debounce window: group 5 measures and chooses the latter, and nothing here
+ * pre-empts it.
+ *
+ * Chosen bound + rationale: comfortably faster than a human notices a stale document, while the
+ * cost it commits to is a whole-file re-read per tick — measured at ~0–1 ms small / ~2–8 ms at
+ * 1.12 MiB (decisions.md 2026-07-19). At one second that is well under 1% of a frame budget even on
+ * the large end.
+ */
+export const WATCH_INTERVAL_MS = 1000;
+
+// --- the content script's detector holder -------------------------------------------
+//
+// SCOPE NOTE, stated rather than buried: this is a register-once holder, the same D-A shape
+// task 4.1 will need for its control (which is rebuilt every mount, while the controller is not).
+// It exists here because 2.2's wiring has to put the built detector SOMEWHERE, and a value the
+// content script builds and no one can reach is not wiring. **Task 4.1 should extend or subsume
+// this, not invent a second registry beside it.** Nothing starts the detector: watching requires a
+// user gesture on 4.1's control (spec §4 Trust), and 4.3 owns the lifecycle.
+
+/** The seam a detector satisfies — structurally identical to `changeDetector.ts`'s `ChangeDetector`,
+ *  restated here so this module keeps its zero-import posture. */
+interface StartStop {
+  start(cb: (text: string) => void): void;
+  stop(): void;
+}
+
+let contentWatchDetector: StartStop | null = null;
+
+/** Called once by the content script at `document_start` with the detector it built. */
+export function registerWatchDetector(detector: StartStop): void {
+  contentWatchDetector = detector;
+}
+
+/** The registered detector, or `null` if this context never built one. Group 4's control reads it. */
+export function getWatchDetector(): StartStop | null {
+  return contentWatchDetector;
+}
+
 /** A response callback (`sendResponse`), typed without pulling a `#imports` dependency in. */
 type SendResponse = (response?: unknown) => void;
 
