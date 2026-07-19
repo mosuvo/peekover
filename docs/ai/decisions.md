@@ -1,6 +1,32 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-19 · Spec 004 (groups 5–6) · STORED settings and APPLIED theme live in TWO modules, on
+  purpose. `src/settings/settingsSeam.ts` owns the stored side; `src/theme/reader.ts` keeps the applied
+  side. They are deliberately NOT unified.** The split: the seam exports `currentSettings()` /
+  `onSettingsChange()` / `saveSettings()` / `registerSettingsSink()` / `publishSettings()` — the
+  persistence vocabulary, the last-written `Settings` value. `reader.ts` keeps `currentThemeSetting()` /
+  `onThemeSettingChange()` — the theme runtime's **applied** state, what is actually painting right now.
+  **WHY NOT ONE MODULE (the whole point):** those two answers legitimately DIVERGE. Under `theme: 'auto'`
+  an OS light/dark flip changes what paints while the stored setting is never touched — the user chose
+  "auto" and still has "auto". Collapsing the two would force one value to answer both questions and
+  destroy exactly the distinction D-2 was written to preserve; a consumer asking "what is on screen"
+  would get "what is in the database" and be wrong every time the OS moves.
+  **WHY A SEAM EXISTS AT ALL:** the settings port is never threaded into the render path. Doing so would
+  have meant four-to-five signature changes across two call chains (both entrypoints → shell/mount →
+  render → tocView) to deliver one value to a leaf, on a path where the content-script surface renders
+  once per navigation. A module-level seam that the entrypoints register into, and leaves subscribe to,
+  keeps the render functions' signatures unchanged and the side effects in the entrypoints where
+  AGENTS.md puts them.
+  **WHY IT DID NOT CHURN GROUP 5:** the generalization was a PURE MOVE. `themeControl.ts` still exports
+  `registerThemeSaveSink` / `resetThemeSaveSinkForTest` as **delegates** to the seam, so every group-5
+  call site and test file stayed byte-unchanged and both theme browser suites stayed green untouched.
+  The delegates are kept deliberately, not left behind as debris.
+  **REVISIT WHEN:** a second setting develops its own applied-vs-stored divergence (a TOC width the
+  layout overrides, say). Then the pattern is a general `applied` layer beside the seam — NOT merging
+  the two into one value. Merge only if `auto` ever stops existing, which spec 004 §4 makes unlikely.
+  Full narrative: progress.md group-5 and group-6 (6.1 D-E) entries — not restated here.
+
 - **2026-07-18 · Spec 004 D-2 CORRECTION OF RECORD (task 4.2): the paint gate was BUILT, MEASURED and
   REMOVED. The shipped mitigation is D-2's own fallback — mount Auto + an INSTANT re-theme.** This is
   the D-2 entry below firing its OWN revisit-when, not a reversal of the human's call. **WHY:** D-2

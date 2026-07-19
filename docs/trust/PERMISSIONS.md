@@ -28,20 +28,33 @@ permissions" (true); the real consent is the OS picker the user clicks, the "gra
 they can see, and the re-prompt on every reopen. This section documents that flow honestly, per
 capability, so "no permissions" is never mistaken for "no capability."
 
-## The ledger — every M2 capability
+## The ledger — every M2 capability, plus M4's settings channel
+
+*(M4 / spec 004 adds one entry, the last row: the settings message channel. Like folder read, it is a
+real capability that costs **no manifest permission** — so it belongs here rather than nowhere.)*
 
 | Capability | Trigger (never silent) | What it can touch | Storage (on-device only) | How the user sees & revokes it |
 |---|---|---|---|---|
 | **Folder read — picker (Chromium)** | User clicks **"Open a folder"** on the app page (after a plain-language line) → the OS folder picker; one gesture. | Only the **one chosen folder**, **read-only** (`mode: 'read'`), this session. A **bounded, markdown-only** walk (skips `node_modules`/dotdirs, caps file count + depth), so it never trawls the whole disk. | The `FileSystemDirectoryHandle` — a **capability reference, not file contents** — persisted in IndexedDB (`folders` store) so the folder can be reopened in one gesture. | The persistent **"granted: `folder` — revoke"** chip (revoke drops the handle **and** its IndexedDB row); the **"Wipe all data"** control; and access is lost on tab close / reload until re-granted (see re-prompt below). |
 | **Folder read — drag (Chromium)** | User **drags a folder onto the app page** and drops it; one gesture. Chromium resolves a **live** handle (`getAsFileSystemHandle`). | Same as picker: the one dropped folder, read-only, bounded markdown walk. | Same as picker — the live handle, a capability ref, never contents. | Same as picker (chip · wipe · lost on close). |
 | **Folder read — Firefox read-only snapshot** | User **picks** (`<input webkitdirectory>`) or **drops** a folder; one gesture. Firefox exposes **no persistable handle**. | A **point-in-time, read-only snapshot** of the chosen folder's markdown files. No live handle, **no persistence, no silent reopen** — a Firefox platform limitation, surfaced honestly in the UI. | **Names/metadata only** — the `folders` row carries **no handle**; recents/pins store path + name for display. Never file contents. | **"Wipe all data"** (there is no persisted access to revoke — each open re-picks). |
-| **IndexedDB persistence (handles · recents · pins)** | A consequence of opening a folder, opening a file, or pinning — **never a network call, never file contents.** | The on-device **`peekover`** IndexedDB (three stores: `folders`, `recents`, `pins`). Nothing else. | Chromium: the folder handle (capability ref). Both engines: recents (`folderId` + path + name) and pins (kind + path + name). **File contents are never stored.** | The **"Stored data"** panel (`describeStored()`) shows *everything* held — folders as a **persisted-boolean** (the presence of a handle, never the object), recents, pins, in plain language. **"Wipe all data"** (`wipeAll()`) clears all three stores. |
+| **IndexedDB persistence (handles · recents · pins · settings)** | A consequence of opening a folder, opening a file, pinning, or changing a reading preference — **never a network call, never file contents.** | The on-device **`peekover`** IndexedDB (four stores: `folders`, `recents`, `pins`, and — since M4 / spec 004 task 1.1, at `DB_VERSION` 2 — `settings`). Nothing else. | Chromium: the folder handle (capability ref). Both engines: recents (`folderId` + path + name), pins (kind + path + name), and the single settings row (theme choice, TOC open-state + width). **File contents are never stored.** | The **"Stored data"** panel (`describeStored()`) shows *everything* held — folders as a **persisted-boolean** (the presence of a handle, never the object), recents, pins, and a plain-language **"Theme / display settings — stored on-device, no file contents."** line whenever a settings row exists. **"Wipe all data"** (`wipeAll()`) clears all four stores, settings included. |
 | **Re-prompt on reopen** | User **clicks a remembered recent/pinned folder**; one gesture. | Re-grants **read** access to that **previously-chosen** folder via `handle.requestPermission({ mode: 'read' })`. Touches nothing new. | No new storage — reuses the remembered handle row. | Decline the browser's re-prompt (a pre-grant read rejects `NotAllowedError`, surfaced as a re-ask affordance, never a dead end); or revoke / wipe as above. Re-ask-on-use is the **default** — access is never assumed silently. |
+| **Settings message channel (M4 / spec 004)** | The content-script reader messaging **Peekover's own background** — `peekover:getSettings` on reader start, `peekover:setSettings` when the user changes a reading preference (theme, TOC open-state, TOC width). Never on a timer, never for anything else. | **Only the single on-device settings row** — theme choice, TOC open-state, TOC width. It cannot read or write folders, recents, pins, file contents, or page content, and it **never touches the network**. The background answers exactly these two messages and holds no other logic. | The `settings` store in the same on-device **`peekover`** IndexedDB (row above). Nothing leaves the device. | The **"Stored data"** panel lists the settings row in plain language; **"Wipe all data"** erases it with everything else. The effect is also directly visible — it *is* the theme and TOC state the user chose. |
 
 **Read this ledger as the truth of what folder mode can do:** it can read the markdown in folders the
 user explicitly hands it, on device, and remember a *handle* (Chromium) so reopening is one click. It
 cannot read outside a chosen folder, cannot write, cannot reach the network, and stores no file
 contents anywhere.
+
+**And the same honesty about the settings channel.** A content script messaging its **own** extension's
+background requires **no manifest permission at all** — no `storage`, no `tabs`, nothing; it is
+same-extension IPC, which is why adding it left `permissions: []` intact (re-proven every run by
+`tests/manifest.test.ts` on **both** built manifests). But "needs no permission" is not "worth hiding":
+it is a new path between two Peekover contexts, so it is disclosed above with the same three questions
+the folder rows answer — what triggers it, what it can touch, and how the user sees and erases it. The
+short version: it carries reading preferences to and from one on-device row, it is **never** a network
+call, it **never** sees file or page contents, and "Wipe all data" clears it.
 
 ## `content_scripts.matches`
 
@@ -94,8 +107,15 @@ no persistent background page. Each build ships a background context only so MV3
 background entry, and the shape differs by engine: Chrome uses a service worker
 (`background.service_worker` = `background.js`); Firefox uses a non-persistent MV3 **event page**
 (`background.scripts` = `["background.js"]`). WXT emits the correct shape per engine (decisions.md,
-2026-07-14). As of M2 (task 1.1) the background script registers exactly one listener —
-`action.onClicked` → open the app page — and makes no network calls; it holds no other logic.
+2026-07-14). As of M4 (spec 004, task 2.3) the background script registers **two** listeners and
+makes no network calls; it holds no other logic:
+
+1. `action.onClicked` → open the app page (M2 / task 1.1), as described above; and
+2. `runtime.onMessage` → the **settings message handler** (`peekover:getSettings` /
+   `peekover:setSettings`), answered against the background's own IndexedDB connection. The
+   content-script reader runs on the *page's* origin and therefore cannot see the extension's
+   IndexedDB, so it reaches its own stored settings by messaging this context. See the settings-channel
+   row in the ledger above — it adds **no** manifest permission.
 
 ### Firefox data collection declaration
 The Firefox build declares `browser_specific_settings.gecko.data_collection_permissions`

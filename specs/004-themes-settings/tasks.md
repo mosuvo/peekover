@@ -283,7 +283,7 @@
       Verify (**measured**): `pnpm lint` + `pnpm test` + `pnpm test:browser` green; `pnpm zip` < 2 MB both
       engines; byte + first-paint deltas recorded in progress.md; `git diff tests/golden/output/` **EMPTY** +
       `manifest.test.ts` green (`permissions: []` re-proven).
-- [ ] **7.2 PERMISSIONS.md (AGENTS.md #4, SAME session) + memory reconcile.** Update PERMISSIONS.md: the
+- [x] **7.2 PERMISSIONS.md (AGENTS.md #4, SAME session) + memory reconcile.** Update PERMISSIONS.md: the
       background now holds a **second listener** (settings message handler, was exactly one); document the
       settings message channel as a **zero-permission capability** (like the folder ledger) — still
       `permissions: []`. Confirm the real path with `git ls-files '*PERMISSIONS.md*'` and edit THAT file (it
