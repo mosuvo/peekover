@@ -276,7 +276,7 @@
       `null` fields fall back to 003's default. Golden EMPTY + manifest green.
 
 ## 7 — Perf / bytes / pins / docs + close
-- [ ] **7.1 Re-measure bytes + first-paint; final pins.** Re-measure the content-script byte size vs
+- [x] **7.1 Re-measure bytes + first-paint; final pins.** Re-measure the content-script byte size vs
       **284,744 B** (delta stated) and typical-doc (≤50 KB) first-paint vs **<150 ms**; `pnpm zip` **< 2 MB**
       both engines. (Measurement only — no `src/` change to chase a number.)
       Files: `docs/ai/progress.md` (record the numbers)

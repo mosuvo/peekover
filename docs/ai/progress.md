@@ -613,6 +613,63 @@ PER TASK — M1 lesson):
     **EMPTY**; `tests/manifest.test.ts` green **8/8** (`permissions: []`). Fence held: `sanitize.ts`,
     `parse.ts`, `readerMode.ts`, the manifest and `wxt.config` all **untouched**.
 
+- **7.1 DONE — re-measured at milestone close. Every gate PASSES; nothing in `src/` was touched to make
+  a number.** Measurement only, per the task fence.
+  - **Content-script bytes: 288,654 B** (`.output/chrome-mv3/content-scripts/peekover.js`, fresh
+    `pnpm build`). vs the **003 baseline 284,744 B → +3,910 B (+1.37%)**. vs the **task-4.2 reading
+    285,737 B → +2,917 B**, which is the honest attribution: 4.2 was measured BEFORE group 5
+    (themeControl + readerCss rules + entrypoint sink) and group 6 (settingsSeam + tocView carry-over),
+    so essentially all of the growth since is those two groups. **Per spec §5 this delta is STATED, NOT
+    GATED — there is no byte threshold and none was invented.**
+  - **First paint (a) typical doc ≤50 KB — the SPEC-001 GATE, PASSES.** Fixture 50.4 KB / 62 sections,
+    7 iterations (run 1 cold, discarded). Harness verdict verbatim:
+    `gate [50.4 KB, typical-doc gate]: (a) median 137.7ms vs <150ms -> PASS`
+    median **137.7 ms** · min 132.6 · max 146.0. vs baseline **133.5 ms → +4.2 ms**.
+    - **CALLED AS NOISE, NOT REGRESSION — with the spread behind the call.** Two things say so.
+      (1) The **floor did not move**: our min **132.6 ms** is BELOW the 4.2-session recorded min
+      (133.1 ms). A real added cost raises the floor; noise only raises the middle.
+      (2) A **second independent 7-iteration pass** read median **140.3 ms** (min 136.1, max 150.9) —
+      also `-> PASS`. The run-to-run median spread (137.7 vs 140.3 = **2.6 ms**) is the same magnitude
+      as the 4.2 ms delta being attributed to 004, so the delta is not separable from machine noise.
+      Same conclusion the 4.2 session reached about this machine.
+    - **HEADROOM IS THIN AND WORTH SAYING:** the second pass had a single warm iteration at **150.9 ms**,
+      over the 150 ms bar. The gate is on the MEDIAN and both medians pass, but the typical-doc budget
+      now sits ~7–12 ms from its ceiling on this hardware. Not a breach; a thing the next perf-touching
+      session should know before it spends the margin.
+  - **First paint (b) 1 MB / ~1400-entry TOC — informational, PASSES its own bound.** Default fixture
+    1.12 MB / 1400 sections, 7 iterations. median **1248.6 ms** · min 1198.5 · max 1273.1. vs baseline
+    **1196.3 ms → +52.3 ms**; budget **<1.7 s → PASS** with ~450 ms headroom. Same noise reading as (a)
+    (the ±37 ms within-run spread swallows most of the delta). **The harness prints
+    `gate [1.12 MB, large-doc (informational vs typical-doc gate)]: (a) median 1248.6ms vs <150ms -> FAIL`
+    — that FAIL is the harness comparing the 1 MB fixture against the TYPICAL-doc bar and self-labelling
+    the comparison informational. It is the known, recorded ~8x-over reading (decisions.md 2026-07-14),
+    NOT a 004 breach.** Recorded verbatim so a future session does not read it as a regression.
+  - **SCOPE CAVEAT, RESTATED (do not read this as both engines).** `scripts/perf-first-paint.ts` drives
+    **CHROMIUM ONLY by construction** — `chromium.launchPersistentContext` with
+    `--load-extension`; Playwright cannot load an extension in Firefox at all. **The Firefox
+    first-paint half is UNMEASURED and is human-gate 8.1.** Every first-paint number above is Chromium.
+  - **`pnpm zip` — the one real bound, PASSES both engines with vast headroom.** Chrome
+    **327.61 kB**, Firefox **327.66 kB**, both **< 2 MB**. vs the 003 close (323.63 / 323.69 kB) →
+    **+3.98 kB / +3.97 kB**, tracking the content-script growth. (The Firefox run also emits
+    `peekover-0.0.0-sources.zip` at 1.6 MB — that is the AMO source bundle, not the shipped extension;
+    noted so it is not mistaken for the artifact under the 2 MB bound.)
+  - **The standing pins, all green.** `git diff tests/golden/output/` **EMPTY** (and `git status
+    --porcelain` on it empty). `tests/manifest.test.ts` **8/8 green and byte-UNCHANGED** — last touched
+    by 3b6c575 back in M2 task 1.1, so `permissions: []` on both built manifests is re-proven by the
+    same unmodified test. `pnpm lint` clean (eslint + `tsc --noEmit`). `pnpm test` **384/384, 34 files**.
+    `pnpm test:browser` **314/314, 38 files**, both engines.
+  - **ONE FLAKE, RECORDED HONESTLY RATHER THAN RE-RUN AWAY.** The FIRST `pnpm test:browser` run failed
+    1/314: `remoteMedia.browser.test.ts` on **Firefox** — *"DOES fire the requests after opt-in"*,
+    `expected [] to include 'http://localhost:63315/…'`. Established as a flake, not a 004 regression:
+    it passed in isolation on both engines (4/4) and the FULL suite then went 38/38 · 314/314 on re-run,
+    and 004 touches nothing in `mediaPolicy.ts`. **The important part: the flaky half is the POSITIVE
+    CONTROL (the opt-in fetch DOES appear), not the zero-leak assertion — the non-negotiable was never
+    the thing that wobbled.** Most likely the opt-in request had not landed in the Resource Timing
+    buffer inside the assertion window on a loaded machine. **But note the shape:** a control that
+    intermittently reads empty is exactly the failure mode that would make the zero-count VACUOUS if it
+    ever flaked in the other direction and nobody looked. Watch item — if it recurs, the fix is to await
+    the request rather than sample for it. Not fixed here (7.1 is measurement-only; no `src/`, no tests).
+
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
 **M2 (spec 002 — active-source foundation) remains fully closed** (code + the named human gate, both engines;
