@@ -98,7 +98,8 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 - When the user opens "Stored data", the system shall disclose that document **snapshots (file contents)** are stored on-device, distinctly from settings/folders/recents/pins. _(deferred to 006 — see §3.1)_
 - When the user wipes all data, the system shall erase all snapshots. _(deferred to 006 — see §3.1)_
 - The system shall make **no network request** while watching, and shall keep the built manifest at `permissions: []` on both engines.
-- The system shall not begin watching, or store any snapshot, without the user choosing to.
+- The system shall not begin watching without the user choosing to.
+- The system shall not store any snapshot without the user choosing to. _(deferred to 006 — see §3.1)_
 
 **Degradation**
 
@@ -143,4 +144,4 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 
 ---
 
-_Gate: on approval of this spec, plan.md (the HOW) is drafted next — the detection architecture per engine, the relay seam, the snapshot schema and bounds, the diff approach, the re-render/place-keeping mechanism, and the test strategy — for a separate human gate before any implementation code (WORKFLOW.md §5.3)._
+_Gate status: this spec is APPROVED (gate 1) and `plan.md` — the HOW — is APPROVED (gate 2). **`tasks.md`, the ORDER, is the next artifact and the next gate (gate 3)**: seven groups per `plan.md` §6, each task dependency-ordered and carrying its own verification line. Implementation code begins only after tasks.md is approved (WORKFLOW.md §5.3). Read `plan.md` §3 for the resolutions of the §7 risks above — do not re-derive them from this list._

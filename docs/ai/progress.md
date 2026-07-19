@@ -8,8 +8,21 @@
 
 ## Now (start here)
 
-**M4 is CLOSED. M5 (spec 005) stands at Gear-3 gate 2 PASSED — spec.md approved AND plan.md approved. The
-next action is tasks.md — gate 3 — in a FRESH session. NOT implementation code (WORKFLOW.md §5.3).**
+**M4 is CLOSED. M5 (spec 005): all three Gear-3 artifacts now exist — spec.md APPROVED (gate 1), plan.md
+APPROVED (gate 2), and `specs/005-watch-diff/tasks.md` is DRAFTED and AWAITING GATE 3. The next action is
+the HUMAN REVIEW of tasks.md. It is a draft, NOT a go-signal — no implementation code until it is approved
+(WORKFLOW.md §5.3).**
+
+- **One question the tasks draft ANSWERED by measurement rather than deferring it** (throwaway probe, run
+  and deleted 2026-07-19): **the Chromium `FileSystemObserver` path IS real-engine testable in
+  `tests/browser`, via OPFS.** `navigator.storage.getDirectory()` yields a real `FileSystemDirectoryHandle`
+  with **no user gesture** and no loaded extension, and on **HeadlessChrome/149** `observe()` on an
+  OPFS file handle is accepted and a write fires a genuine `["modified"]` record. **Firefox 151 has no
+  `FileSystemObserver` at all** (OPFS itself works), so that suite feature-gates off on Firefox — honest,
+  not a hole, since Firefox never takes the observer path in production either. **Residual limit, stated in
+  task 1.2:** OPFS is not local disk, so this proves the *wiring* and the dead-record branches, not that
+  Chromium's observer fires for a local-disk file rewritten by an external agent (task-0 established that;
+  the human gate re-walks it).
 
 - **M1 (001), M2 (002), M3 (003), M4 (004) are all fully closed** — code-complete, human-gated, retro'd.
   **Nothing on any of them is outstanding**, and no work of any kind on 001–004 remains to be started.
@@ -162,9 +175,13 @@ there without either lying or duplicating.*
 
 ## Up next
 
-**Immediate: spec 005 — tasks.md (Gear-3 gate 3), in a fresh session.** spec.md and plan.md are both
-approved (see Now); tasks.md is the ORDER — **seven groups per `plan.md` §6**, red-first, each with its
-pins. It is the last gate before implementation code. Nothing else is queued ahead of it.
+**Immediate: the HUMAN REVIEW of `specs/005-watch-diff/tasks.md` — Gear-3 gate 3.** The draft exists:
+**seven groups per `plan.md` §6**, 20 tasks, red-first, each carrying its own Files + Verify line with the
+golden/manifest pins and the two-surface `describe.each` rule baked in. **It is the last gate before
+implementation code**, and nothing else is queued ahead of it. Two items inside it are themselves human
+work and are budgeted up front rather than discovered late: **2.3** (does a background `fetch("file://…")`
+work on Firefox at all — it needs a loaded extension, so no harness can answer it, and it **blocks 4.4**)
+and **5.2** (the debounce window, chosen from 5.1's numbers, deliberately split from the measuring task).
 
 **After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
 inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
