@@ -20,9 +20,21 @@ HUMAN-GATED. The 8.1 milestone-close gate PASSED 2026-07-19, both engines (Chrom
 surfaces, fresh production builds, Network tab open — with NO DEFECTS FOUND.** Groups 1–8 are all DONE.
 **Nothing about 004 is outstanding**; no 004 work of any kind remains to be started.
 
-- **The next action is the M4 RETRO** (`/retro`, appended to `docs/ai/retro.md`), then the progress.md
-  condense/archive task. Full gate detail — what was walked, in risk order — is in the **group-8 entry**
-  below.
+- **The M4 RETRO IS DONE** (task **8.2**, 2026-07-19 — `docs/ai/retro.md`, newest entry). **The next action
+  is the progress.md CONDENSE/ARCHIVE task.** Full gate detail — what was walked, in risk order — is in the
+  **group-8 entry** below.
+  - The retro **ANSWERS the clean-gate question** that the group-8 entry below deliberately leaves open:
+    **discipline-dominant, with the boundary moved for COHERENCE (computed-token assertions moved
+    theme-incoherence into CI) but NOT for appearance** — contrast/legibility/occlusion are exactly as
+    gate-only as in M3. **The gate stays load-bearing**; do not read the clean run as evidence otherwise.
+    It also names a new defect class (**the vacuous persistence test**) and records the ORCHESTRATOR's four
+    factual errors, each caught by re-deriving from git rather than trusting the prompt.
+- **FOR THE CONDENSE/ARCHIVE TASK — a known contradiction in THIS file, flagged so it cannot be lost (do
+  NOT fix piecemeal now; the condense task restructures these sections anyway):** every group heading below
+  still reads *"Spec 004 … IMPLEMENTATION IN PROGRESS — group N"*, which flatly contradicts the **M4 CLOSED**
+  statement a few lines above. Those headers were advanced per-task during implementation and never
+  retitled at close. The condense pass must retitle them (or fold them into Done) so a future session
+  cannot read the file as "004 still in progress".
 - **The three items 6.1/7.1 deferred INTO 8.1 are DISCHARGED**, not open: Firefox first paint, the
   end-to-end TOC carry-over through the real messaging→background→IndexedDB path, and the narrow-viewport
   theme-pill occlusion eyeball. All walked, all passed.

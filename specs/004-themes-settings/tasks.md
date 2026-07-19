@@ -335,6 +335,25 @@
       `messagingPort → background → IndexedDB` path, and the narrow-viewport theme-pill occlusion eyeball.
       Full walk-through in `docs/ai/progress.md` (group-8 entry).
 
+- [x] **8.2 Retro (M4 close).** Run `/retro`: append an entry to `docs/ai/retro.md` — lessons that change
+      future behaviour, not a chronicle (progress.md already narrates 004 exhaustively). Link decisions.md
+      rather than restating settled architecture; reference the mid-milestone `git checkout` PROCESS entry
+      rather than duplicating it. **Must answer the question group 8 deliberately left open:** M4 is the
+      first milestone whose gate found nothing — discipline, or a quieter surface? — and state what the
+      answer implies for whether the gate stays load-bearing.
+      Files: `docs/ai/retro.md` (+ the progress.md Now-pointer reconcile)
+      Verify: `docs/ai/retro.md` has the 004 entry with the three metrics and an evidenced answer to the
+      clean-gate question.
+      **DONE 2026-07-19.** Banked. Named a new defect class (**the vacuous persistence test** — a test that
+      hardcodes what the fallback would have decided is vacuous whenever the two agree; the `remoteMedia`
+      positive-control flake is its second instance from the other direction). Answer to the clean-gate
+      question: **discipline-dominant, with the boundary moved for COHERENCE (computed-token assertions) but
+      NOT for appearance** — contrast/legibility/occlusion remain exactly as gate-only as they were in M3.
+      The gate **stays load-bearing**: Firefox first paint and a genuine reload through the real transport
+      have zero automated coverage and no roadmap to any, and *"found nothing"* is indistinguishable from
+      *"was not needed"* inside a single milestone. Also recorded the **orchestrator's** four factual errors,
+      each caught by re-deriving from git rather than trusting the prompt.
+
 ---
 
 ## Deferred / Out of 004 (traceability)
