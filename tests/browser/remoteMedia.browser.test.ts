@@ -50,6 +50,47 @@ function fetchedUrls(token: string): string[] {
     .filter((name) => name.includes(`/__peekover_probe__/${token}/`));
 }
 
+/**
+ * THE POSITIVE CONTROL'S WAIT — await the entries, never sample for them.
+ *
+ * Why this exists (progress.md watch item; retro 2026-07-19, finding 1): `fetchedUrls()` reads the
+ * Resource-Timing buffer at ONE INSTANT, and `flush()` is a fixed ~180 ms window. An entry is added
+ * to that buffer asynchronously AFTER the response completes, so on a loaded machine the window can
+ * expire before the engine records a request it genuinely made. Measured: 1 failure in 10 captured
+ * full runs, Firefox only — *"expected [ Array(1) ] to include '…/__peekover_probe__/…'"*.
+ *
+ * That half is the POSITIVE CONTROL: the instrument proving the zero-leak assertion next door is
+ * non-vacuous. A control that reads empty when the request DID fire can read empty when it did NOT,
+ * and the assertion it guards is AGENTS.md #1. So the fix is not a longer fixed sleep — it is to
+ * WAIT FOR THE EVENT: poll the buffer until every expected URL is present, or a stated budget
+ * expires.
+ *
+ * MECHANISM — polling this buffer, not a `PerformanceObserver`. Both are event-driven enough to fix
+ * the flake; polling wins on two counts specific to this suite. (1) The wait and the assertion read
+ * the SAME source of truth — an observer maintains a second, parallel record, so a discrepancy
+ * between them would be a new failure mode in the very instrument being hardened. (2) `beforeEach`
+ * calls `performance.clearResourceTimings()`, whose interaction with an observer's `buffered: true`
+ * replay is engine-specific; the buffer read has no such coupling.
+ *
+ * It returns the buffer rather than throwing on timeout, so a genuine failure still fails on the
+ * CALLER's own `toContain` with the real diff of what was and was not fetched — a timeout error
+ * here would hide exactly the information the control exists to report.
+ *
+ * This CANNOT be used for the zero-check: you cannot await something that should never arrive.
+ * That assertion stays `flush()`-then-assert-empty, which is sound in the other direction (if no
+ * request fired, no wait length changes the answer).
+ */
+const CONTROL_BUDGET_MS = 5000;
+async function awaitFetchedUrls(token: string, expected: string[]): Promise<string[]> {
+  const deadline = performance.now() + CONTROL_BUDGET_MS;
+  let seen = fetchedUrls(token);
+  while (!expected.every((u) => seen.includes(u)) && performance.now() < deadline) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    seen = fetchedUrls(token);
+  }
+  return seen;
+}
+
 // A macrotask + rAF + settle: long enough that a fetch fired at innerHTML/insertion
 // time has reached the Resource Timing buffer (the same-origin 404 resolves fast).
 // If a request fired, it is recorded within this window; if none did, the buffer
@@ -107,11 +148,12 @@ describe('remote media — real-engine no-leak (bytes on the wire)', () => {
     const shadow = host.shadowRoot!;
     const loadBar = shadow.querySelector<HTMLButtonElement>('.peekover-remote-load')!;
     loadBar.click();
-    await flush();
+    await flush(); // settle the DOM commit — the tree assertions below are unchanged by this fix
 
-    // The three real <img>s were inserted and the engine fetched all three URLs —
-    // opt-in genuinely reaches the network (the other half of "correct").
-    const fetched = fetchedUrls(token);
+    // AWAIT the three requests rather than sampling for them (see awaitFetchedUrls). This is the
+    // positive control: it must be able to fail for the RIGHT reason (nothing fetched) and never
+    // for a timing one (fetched, recorded a beat late).
+    const fetched = await awaitFetchedUrls(token, urls);
     for (const u of urls) expect(fetched).toContain(u);
 
     const imgs = [...shadow.querySelectorAll('img')].map((i) => i.getAttribute('src'));
