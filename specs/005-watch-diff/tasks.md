@@ -1,7 +1,9 @@
 # Tasks 005 — Watch mode — check off, add discovered tasks BELOW the line they came from
 *Gear 3 tasks stage — **DRAFT, awaiting the human gate-3 review; NOT a go-signal.** No implementation*
 *code until this is approved (WORKFLOW.md §5.3). Approved upstream: `spec.md` (b12c310 · amended d115b6e,*
-*5943e0e) + `plan.md` (d115b6e). CC commit per task; human reviews + pushes. Each capability task carries*
+*5943e0e) + `plan.md` (d115b6e — ONE commit that landed the plan AND those spec amendments, not two*
+*artifacts sharing a hash by coincidence). CC commit per task; human reviews + pushes. Each capability*
+*task carries*
 *its OWN real-engine test (`tests/browser/*`, BOTH Chromium + Firefox, **red-first + non-vacuous**), not a*
 *trailing "add tests" task. Layout, rAF, computed style, pointer geometry, bytes-on-wire and cross-context*
 *messaging are jsdom-**BLIND**: they are proven in the real engine, never in jsdom.*
@@ -217,6 +219,13 @@
       because `readerPane`'s routine re-mount depends on it (fails if `:151` is made conditional on the
       wrong thing, or removed outright). Theme survives both paths. **Restore the deliberate break from a
       `cp` copy, never `git checkout src/render/mount.ts`.** Golden EMPTY + manifest green.
+      **FALLBACK, sanctioned in advance — do not improvise one.** If `preserveReading` cannot preserve
+      Raw/Reading mode without breaking `readerPane`'s reset (direction (b)), **ship ANCHOR-ONLY
+      continuity**: scroll place is preserved, mode is not, `mount.ts:151` is left untouched, and mode
+      preservation becomes a **spec amendment** (§4's re-render criterion narrows) recorded in
+      `decisions.md` with the evidence for why. **This is the 4.2 pattern from M4** — build it, measure it,
+      remove it if it fails its bar — and removing it is a SUCCESS, not waste. **Restore from the `cp` copy,
+      never `git checkout src/render/mount.ts`.**
 
 - [ ] **3.4 Confirm the TOC re-decide interaction — VERIFY, do not assume (plan §1.3, §4-5).**
       `applyInitialTocState` re-derives `data-toc` from the laid-out width on **every** mount
@@ -299,7 +308,11 @@
       covers the content-script surface on Firefox** and the spec narrows with it.
       Files: `src/watch/watchControl.ts` · `src/theme/readerCss.ts` · `entrypoints/peekover.content.ts` ·
       `tests/browser/watchLifecycle.browser.test.ts`
-      Verify (**tests/browser** — Cr+Fx): on the picker-opened (non-drag) Firefox path the control presents
+      Verify (**tests/browser** — Cr+Fx): **PRECONDITION — do NOT start 4.4 until 2.3's answer is RECORDED
+      in `docs/ai/decisions.md`.** If it is not there, STOP and report rather than assuming either outcome.
+      The answer determines whether this task covers the Firefox app-page surface only, or the
+      content-script surface too.
+      Then: on the picker-opened (non-drag) Firefox path the control presents
       the **explanation** state rather than a silently inert button; Chromium is unaffected (assert the
       normal control still renders — a degraded state that leaks into the working engine is the failure mode
       here). Whether the explanation is **discoverable and reads as honest rather than broken** is
@@ -362,9 +375,11 @@
 
 - [ ] **6.2 Docs + memory reconcile — and NO PERMISSIONS.md trust-claim change, stated so it does not read
       as an oversight.** PERMISSIONS.md **does** get the §3.6 disclosure — that watching **reads the user's
-      own chosen local file from disk and makes NO network request** — and the background's **new listener**
-      (it gained a settings listener in 004; this adds the watch relay), if and only if 2.2 landed the
-      relay. **What it does NOT get, deliberately: the "file contents are never stored" claim stays exactly
+      own chosen local file from disk and makes NO network request**. The relay lands in 2.2 regardless, so
+      PERMISSIONS.md discloses the background's **third listener** (it gained the settings listener in 004;
+      this adds the watch relay) — **what 2.3's answer varies is whether the Firefox content-script surface
+      is CLAIMED**, which is 4.4's and the spec's business, not this file's.
+      **What it does NOT get, deliberately: the "file contents are never stored" claim stays exactly
       as it is, because it is TRUE for all of 005** (D-1 — 005 stores nothing). **A future reader should not
       think this was forgotten:** that correction belongs to **006**, in the same PR as the first code that
       stores a snapshot. **`permissions: []` is unchanged; if any watch capability ever needs a manifest
