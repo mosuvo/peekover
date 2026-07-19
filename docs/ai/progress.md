@@ -745,6 +745,44 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 005 watch+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly this is early
 foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
 
+## Baselines / pins
+*Current measured truth, as of the M4 close (7.1, 2026-07-19). This section is MUTABLE — each milestone's
+close task overwrites the numbers and moves the previous ones into the "vs" column. It lives here, not in
+decisions.md, because decisions.md is dated append-only and a current-numbers table cannot be corrected
+there without either lying or duplicating.*
+
+| pin | at M4 close | previous (003) | bound | verdict |
+|---|---|---|---|---|
+| First paint, typical doc (50.4 KB) | **137.7 ms** | 133.5 ms | <150 ms **GATE** | PASS |
+| First paint, 1 MB / ~1400-entry TOC | **1248.6 ms** | 1196.3 ms | <1.7 s (informational) | PASS |
+| Content script (`.output/chrome-mv3/`) | **288,654 B** | 284,744 B | none — **stated, not gated** | — |
+| `pnpm zip` Chrome / Firefox | **327.61 / 327.66 kB** | 323.63 / 323.69 kB | <2 MB | PASS |
+| Suites | 384 unit · 314 browser (both engines) | 350 · 166 | — | green |
+
+- **HEADROOM IS THIN — the number to know before spending margin.** The typical-doc budget now sits
+  **~7–12 ms from its ceiling** on this hardware (i7-13700, Windows, headless Chromium). A second
+  independent 7-iteration pass read median 140.3 ms with a single warm iteration at **150.9 ms**, over the
+  bar. Both medians PASS and the gate is on the median — but the next perf-touching session should know
+  this before it assumes room.
+- **The +4.2 ms since 003 is NOISE, not regression, and the spread is why:** the **floor did not move**
+  (min 132.6 ms, *below* the 4.2-session min of 133.1 ms — real added cost raises the floor, noise raises
+  only the middle), and the run-to-run median spread (2.6 ms) is the same magnitude as the delta.
+- **Every first-paint number here is CHROMIUM.** `perf-first-paint.ts` cannot drive Firefox
+  (decisions.md 2026-07-19, harness ledger). Firefox first paint is evidenced only by the human gate.
+- **The 1 MB harness line prints `-> FAIL`** because it compares the 1 MB fixture against the *typical-doc*
+  bar and self-labels the comparison informational. That is the known ~8× reading (decisions.md
+  2026-07-14), **not** a breach. Do not read it as a regression.
+- **Standing pins, all green at close:** `git diff tests/golden/output/` **EMPTY** · `tests/manifest.test.ts`
+  **8/8 and byte-unchanged** since M2 (so `permissions: []` is re-proven by an unmodified test) · huge-doc
+  `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean.
+- **Measurement protocol (unchanged since M1 — keep it, so numbers stay comparable):** 7 iterations, run 1
+  discarded as cold, **median of the warm 6**, min/max as spread. **No threshold is ever asserted from a
+  measurement task** (standing M1 retro rule).
+- **A pin certifies exactly the stage it observes.** "Golden diff EMPTY ⇒ the reading column is untouched"
+  is **FALSE** — that suite snapshots `sanitize(parse(source))`, upstream of `mount()`, and stayed empty
+  through the 5.1 chrome addition. Before citing a pin as evidence, break the property and check it goes
+  red (retro 2026-07-19, finding 3).
+
 ## Done
 - 2026-07-17 — **Spec 004 plan APPROVED (Gear-3 gate 2) + tasks DRAFTED (gate-3 artifact).** `plan.md` landed
   (the HOW — the `settings` store schema + `DB_VERSION` 1→2, the `SettingsPort` message seam, the theme-runtime

@@ -1,6 +1,100 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-19 · FINDING (promoted at the M4 progress.md archive) · DISPROVED HYPOTHESES AND DEAD ENDS —
+  the things we tried that did NOT work. Recorded so no future session re-spends the debugging cycle.**
+  These cost real time to establish and none of them is a "decision", which is exactly why they would
+  otherwise have been archived with the milestone narrative that produced them.
+  - **`ServiceWorker.stopAllWorkers` (CDP) does NOT terminate an extension's MV3 service worker.** It is
+    accepted without error and the target SURVIVES. **`Target.closeTarget` DOES** — it returns
+    `{success:true}` and the target disappears. This is how `scripts/perf-theme-flash.ts` defines a "cold"
+    run (task 4.1). "Cold" therefore means *no running worker process*, deliberately NOT a fresh profile —
+    a fresh profile would cold-start the browser and its disk cache too, conflating three variables.
+  - **Playwright's `ctx.serviceWorkers()` STILL LISTS A TERMINATED WORKER.** It is a client-side cache that
+    is never pruned, so a liveness check written against it reports every successful termination as a
+    failure — it cost a full debugging cycle at 4.1. **`Target.getTargets` is the browser's own answer and
+    is the authority.** Do not re-check worker liveness through the Playwright object.
+  - **The silent-MediaQueryList quirk is NOT garbage collection, and NOT the `emulateMedia(null)` afterEach
+    teardown.** Symptom (task 3.2): a listener installed in one browser test stops receiving emulated OS
+    flips in LATER tests. **Both hypotheses were probed and BOTH are disproved** — holding a strong
+    reference to the MQL did not fix it, and removing the `emulateMedia(null)` teardown did not fix it.
+    The mechanism is internal to Playwright's `emulateMedia` override lifecycle and remains **UNPINNED**.
+    **It is scoped to the TEST BOUNDARY and is not a product defect:** the standing guard *"theme runtime —
+    ONE listener, MANY flips"* flips the emulated OS twice against a single install inside one test and is
+    green on both engines (and goes red if the handler removes itself after one fire), so one listener
+    serving the page's whole lifetime is proven. `resetThemeWatchForTest()` exists for **test isolation**,
+    not as a workaround for a runtime limitation. Nothing production does resembles the quirk: a real page
+    has one media state that changes, never an override swapped out beneath it.
+  - *(Already recorded elsewhere, listed here only so the category is complete: **"a detached node doesn't
+    fetch" is FALSE** in Blink and Gecko — 2026-07-14 below; **the settings isolation probe under-predicts
+    the content-script path ~13×** — 2026-07-18 below.)*
+  **Revisit-when:** the MQL quirk is worth re-probing only if it starts affecting a test that cannot be
+  isolated with `resetThemeWatchForTest()`; the two CDP facts revisit if Playwright/CDP changes under us
+  (a `pnpm perf:flash` cold run reporting no worker to kill is the signal).
+
+- **2026-07-19 · FINDING (promoted at the M4 progress.md archive) · WHAT THE TEST + MEASUREMENT HARNESSES
+  CAN AND CANNOT DO. Standing capability ledger — check it before planning coverage for a property.**
+  - **The vitest `browser` project loads NO unpacked extension.** There is no background service worker, no
+    content-script injection, and `browser.runtime` has no receiving end. Consequence, stated once for all
+    of `tests/browser/`: the **real content→background `runtime.sendMessage` transport has never been
+    exercised by any test**, on any milestone. Suites prove both halves independently by injecting a fake
+    through the **production seam** (`registerSettingsSink` / `publishSettings`), which proves our half of
+    the contract and nothing about the bus. It also never navigates, so a "re-mount" is not a reload.
+  - **`scripts/perf-first-paint.ts` and `scripts/perf-theme-flash.ts` are CHROMIUM-ONLY BY CONSTRUCTION.**
+    They use `chromium.launchPersistentContext` + `--load-extension`, a Chromium flag. Playwright cannot
+    load an extension into Firefox: **microsoft/playwright#7297 is CLOSED as out-of-scope (2024-12-03)**,
+    with later requests folded into it, and `playwright-core@1.61.1` contains no `installAddon` /
+    `installTemporaryAddon` (grepped). **This is a HARD limit with no roadmap item to wait for — not a
+    pending upstream fix.** Every first-paint and flash number in this repo is Chromium. **Firefox first
+    paint has no automated coverage at all** and is evidenced solely by the milestone-close human gate.
+    (Unadopted third-party escapes exist: `playwright-webextext`, Selenium/geckodriver `installAddon`,
+    `web-ext`.)
+  - **THE LEVER THAT MOVES THE GATE-ONLY BOUNDARY: server-side Playwright browser commands.** `vitest.config.ts`
+    exposes `emulateReducedMotion` (added 003) and `emulateColorScheme` (added 004, `page.emulateMedia`).
+    Both are **verified on Chromium AND Firefox**: `matches` flips, a **real `change` event** fires, and CSS
+    media rules re-evaluate. Playwright drives the browser from outside the page, so it can move platform
+    state no in-page API can fake. **When a property looks human-gate-only, ask whether a server-side
+    command can reach it before accepting it as human-only** (retro 2026-07-19, finding 5).
+  - **What stays gate-only regardless:** how the chrome LOOKS — contrast, legibility, opacity, occlusion,
+    z-order, "is the document still the hero". Geometry and computed tokens measured a fully TRANSPARENT
+    rail perfectly (M3 defect #6). Computed style is the strongest thing an engine can assert; it is not
+    an eye.
+  - **jsdom cannot see:** bytes on wire (loads no subresources), cascade/computed custom properties, rAF +
+    layout ordering, pointer geometry. Zero-network and remote-media guards live in the browser project by
+    standing rule (2026-07-14).
+  **Revisit-when:** playwright#7297 is reopened or a maintained Firefox-extension driver is adopted (that
+  would retire the Firefox-first-paint gate item); or the browser project gains a real extension load, which
+  would let the message bus be tested and retire the largest named human-gate item.
+
+- **2026-07-19 · PROCEDURE (promoted at the M4 progress.md archive) · THE MILESTONE-CLOSE HUMAN GATE:
+  BUILD AND LOAD, BOTH ENGINES. Every milestone ends with this; it should never be re-derived.**
+  Generalizes and supersedes-by-extension the Firefox-only note of 2026-07-16 (which stands, unedited).
+  - **Build FRESH PRODUCTION output for each engine — never gate a dev build.**
+    `pnpm build` → `.output/chrome-mv3/` · `pnpm exec wxt build -b firefox` → `.output/firefox-mv3/`
+    (**mv3**, not mv2 — we target MV3 on Firefox). `pnpm zip` produces the store packages; the Firefox run
+    also emits `peekover-<v>-sources.zip` (the AMO source bundle, ~1.6 MB) — that is **not** the shipped
+    artifact and must not be measured against the 2 MB bound.
+  - **Chrome:** `chrome://extensions` → Developer mode → **Load unpacked** → `.output/chrome-mv3/`. Then
+    open the extension's details and enable **"Allow access to file URLs"** — without it the content script
+    never injects on `file://` pages and the reader appears simply not to work (see
+    `docs/trust/PERMISSIONS.md`).
+  - **Firefox:** `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** →
+    `.output/firefox-mv3/manifest.json`. **Temporary add-ons do not survive a browser restart** — reload
+    after every rebuild and after every restart.
+  - **THE PROCEDURE TRAP, RESTATED BECAUSE IT READS EXACTLY LIKE A CODE DEFECT:** a **stale or dev** load
+    shows a `localhost` CSP warning in the console and a **dead reader**. That is a load/procedure error.
+    **Rebuild and reload the production output before diagnosing anything.** (Cost a scare at the 003 gate;
+    2026-07-16.)
+  - **Gate conditions, every time:** both engines · **both surfaces** (content-script full-page `file://`
+    doc AND the app-page reader pane) · **Network tab open throughout** · console watched. Walk the spec's
+    checklist **in risk order**, hardest-to-automate first. Standing acceptance regardless of milestone:
+    **zero unexpected network · no console errors · every degraded/empty state renders (never blank) · the
+    document stays the hero.**
+  **Revisit-when:** a store/browser changes how unpacked or temporary extensions load, or the browser
+  project gains a real extension load (which would move items OFF this checklist — but per retro
+  2026-07-19 finding 5, only when something else can *observe* the property, never because the gate has
+  been quiet).
+
 - **2026-07-19 · Spec 004 (groups 5–6) · STORED settings and APPLIED theme live in TWO modules, on
   purpose. `src/settings/settingsSeam.ts` owns the stored side; `src/theme/reader.ts` keeps the applied
   side. They are deliberately NOT unified.** The split: the seam exports `currentSettings()` /
