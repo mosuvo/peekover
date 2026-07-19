@@ -95,8 +95,8 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 
 **Trust**
 
-- When the user opens "Stored data", the system shall disclose that document **snapshots (file contents)** are stored on-device, distinctly from settings/folders/recents/pins.
-- When the user wipes all data, the system shall erase all snapshots.
+- When the user opens "Stored data", the system shall disclose that document **snapshots (file contents)** are stored on-device, distinctly from settings/folders/recents/pins. _(deferred to 006 — see §3.1)_
+- When the user wipes all data, the system shall erase all snapshots. _(deferred to 006 — see §3.1)_
 - The system shall make **no network request** while watching, and shall keep the built manifest at `permissions: []` on both engines.
 - The system shall not begin watching, or store any snapshot, without the user choosing to.
 
@@ -114,7 +114,7 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 - **Manifest pin:** `permissions: []` re-proven on both built manifests. **Re-confirm, do not assume** — the background reading `file://` is a new capability shape; if it ever needs a permission, that is an AGENTS.md #4 event.
 - **Golden pin:** `tests/golden/output/` shall stay **EMPTY** — watch/diff/snapshot touch chrome, storage and re-render orchestration, never the pre-mount `sanitize(parse(source))` string. **But per the 5.1 correction of record, an empty golden diff proves nothing about chrome** — structural assertions are required where placement matters.
 - **Bytes:** content-script size delta measured vs the M4 baseline **288,654 B**, delta stated; `pnpm zip` **< 2 MB** both engines.
-- **Storage:** snapshots must be bounded (§3.4) and must not degrade read/write for the existing stores.
+- **Storage:** snapshots must be bounded (§3.4) and must not degrade read/write for the existing stores. _(deferred to 006 — see §3.1)_
 - **a11y:** the update signal and any follow-scroll respect `prefers-reduced-motion`; watch state is exposed to assistive technology and never colour-only.
 - **Sanitization (AGENTS.md #3):** re-rendered content goes through the unchanged parse → sanitize path. **A file being rewritten by an agent is untrusted input on every update, not just the first.**
 
@@ -136,7 +136,7 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 2. **Observer latency is UNMEASURED** (decisions.md 2026-07-19). The design assumes event-driven detection is effectively immediate; that is untested. Measure it cleanly before writing any responsiveness threshold.
 3. **Re-render cost under rapid updates is unknown.** A 1 MB document currently takes ~1.25 s to render; an agent producing several updates per second could make the reader unusable. **This is the "measure, then decide" class 004's D-2 established** — no mitigation is pre-committed here, and the plan must not inherit one.
 4. **Does a `file://` fetch appear in the Resource-Timing buffer?** §3.6-A's guards depend on the answer. If it does appear, the existing zero-network assertions need explicit http(s) scoping **and** a non-vacuity check that still holds afterwards.
-5. **Snapshot bound defaults are unevidenced.** Count/age/bytes are required (§3.4); the actual numbers are guesses until real documents and real agent-write patterns are observed. Propose defaults with reasoning — tuneable, not gated.
+5. **Snapshot bound defaults are unevidenced.** _(deferred to 006 — see §3.1)_ Count/age/bytes are required (§3.4); the actual numbers are guesses until real documents and real agent-write patterns are observed. Propose defaults with reasoning — tuneable, not gated.
 6. **Watch lifetime vs. surface lifetime.** An MV3 service worker is torn down when idle; an app-page tab or content-script page lives as long as the tab. **Where the watch loop lives determines whether it survives.** The probe ran in a long-lived tab, which masked this entirely. Decide deliberately.
 7. **Atomic-save fragility (Chromium).** The probe saw `modified` records for both agent appends and editor saves **on one machine with one editor** — no `disappeared`+`appeared` rename pair. Another editor or agent may write atomically, which on Windows can invalidate the observed file handle. Decide whether file-level observation suffices or the design must observe the directory.
 8. **Firefox drag-only discoverability.** If watch requires a drag-opened folder on Firefox, a user who used the file input gets no watch and may not know why. §4's degradation criterion needs a real designed state, not a disabled control.
