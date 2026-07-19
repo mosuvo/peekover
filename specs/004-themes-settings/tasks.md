@@ -295,7 +295,7 @@
 
 ## 8 — Human milestone-close gate (the acceptance an agent CANNOT self-certify)
 
-- [ ] **8.1 Milestone-close human gate (NAMED, required — not removable by adding jsdom tests).** Fresh
+- [x] **8.1 Milestone-close human gate (NAMED, required — not removable by adding jsdom tests).** Fresh
       production build, **Chrome + Firefox**, **both surfaces** (content-script reader on a raw/`file://` doc AND
       a file in the app-page reader pane), **Network tab open**: pick each theme (Auto/Light/Dark) → **applies
       live**; **reload → persists**; the **no-flip** property (or its accepted 4.1 fallback) on the content-
@@ -329,6 +329,11 @@
       `messagingPort → background → IndexedDB` save path and a genuine reopen are unproven (a fake sink is
       injected through the production seam instead). Do this on BOTH surfaces and check the remembered state
       is GLOBAL (set it on one surface, see it on the other).*
+      **DONE 2026-07-19 — PASSED. Both engines (Chrome + Firefox), both surfaces, fresh production builds,
+      Network tab open. NO DEFECTS FOUND.** The three items deferred into 8.1 by groups 6–7 are
+      **DISCHARGED**: Firefox first paint, the end-to-end TOC carry-over through the real
+      `messagingPort → background → IndexedDB` path, and the narrow-viewport theme-pill occlusion eyeball.
+      Full walk-through in `docs/ai/progress.md` (group-8 entry).
 
 ---
 

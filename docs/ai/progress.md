@@ -15,27 +15,24 @@ missed (the rail rendered TRANSPARENT + the reading column un-reserved — a NEW
 gate-only"** class; retro 2026-07-17), keeping the gate load-bearing (**6/6** milestone-shipping defects caught
 across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding.
 
-**NOW: spec 004 (themes + settings) is CODE-COMPLETE. The next action is the 8.1 MILESTONE-CLOSE HUMAN
-GATE — the one acceptance an agent cannot self-certify.** Groups 1–7 are all DONE: 1–6 pushed; **7.1
-(re-measure) and 7.2 (PERMISSIONS.md + memory reconcile) committed, NOT pushed.** No implementation work
-remains and none should be started — **group 8 is the gate, not code.**
+**NOW: M4 CLOSED as far as an agent can take it — spec 004 (themes + settings) is CODE-COMPLETE AND
+HUMAN-GATED. The 8.1 milestone-close gate PASSED 2026-07-19, both engines (Chrome + Firefox), both
+surfaces, fresh production builds, Network tab open — with NO DEFECTS FOUND.** Groups 1–8 are all DONE.
+**Nothing about 004 is outstanding**; no 004 work of any kind remains to be started.
 
-- **What 8.1 must catch (read the task in `specs/004-themes-settings/tasks.md` before running it):** fresh
-  production build, **Chrome + Firefox**, **both surfaces**, Network tab open — theme applies live,
-  persists across reload, the no-flip property, and specifically the **COLD-START FLASH** on the
-  content-script surface (extension freshly loaded / SW asleep, a persisted NON-default theme). That last
-  one is named separately because `perf:flash`'s 24/24 provably cannot see it.
-- **The three items 7.1/6.1 explicitly deferred INTO 8.1, so they are not lost:** (1) the **Firefox
-  first-paint** half — `perf-first-paint.ts` is Chromium-only by construction, so Firefox first paint has
-  **no automated coverage at all**; (2) the **end-to-end collapse→drag→reload** TOC carry-over through the
-  real `messagingPort` → background → IndexedDB path (the browser project loads no unpacked extension);
-  (3) the **theme-pill occlusion eyeball** at a narrow viewport — the M3 defect-#6 "visual occlusion is
-  gate-only" class.
+- **The next action is the M4 RETRO** (`/retro`, appended to `docs/ai/retro.md`), then the progress.md
+  condense/archive task. Full gate detail — what was walked, in risk order — is in the **group-8 entry**
+  below.
+- **The three items 6.1/7.1 deferred INTO 8.1 are DISCHARGED**, not open: Firefox first paint, the
+  end-to-end TOC carry-over through the real messaging→background→IndexedDB path, and the narrow-viewport
+  theme-pill occlusion eyeball. All walked, all passed.
+- **The gate statistic, precisely:** **6/6** = six milestone-shipping defects, all caught by this gate,
+  across **M1+M2+M3**. **M4 adds zero defects and zero misses**, so it still reads 6/6 — and **M4 is the
+  first milestone whose gate found nothing.** Whether that is the discipline working or luck is a **retro
+  question**, deliberately left unanswered here.
 - Group-6 detail below; the four 6.1 design decisions (D-E generalized seam · D-F rAF stomp · D-G
   restore-never-saves · D-H save-on-drag-end) are recorded there. The 7.1 numbers are in the group-7 entry.
   The stored-vs-applied split from groups 5–6 is now in **decisions.md 2026-07-19**.
-- **The M4 retro is NOT yet written — deliberately.** It is banked AFTER 8.1, because what the gate
-  catches is its most valuable content (**6/6** milestone-shipping defects caught to date).
 
 **Spec 004 (themes + settings) IMPLEMENTATION IN PROGRESS — group 1 (store foundation).** Spec/plan/tasks all
 APPROVED (gate 1 + Gear-3 gate 2 + gate-3 tasks, 2026-07-17). Sepia DEFERRED (D-1 = A). Group-1 tracker (advance
@@ -687,6 +684,44 @@ PER TASK — M1 lesson):
     ever flaked in the other direction and nobody looked. Watch item — if it recurs, the fix is to await
     the request rather than sample for it. Not fixed here (7.1 is measurement-only; no `src/`, no tests).
 
+**Group 8 (the human milestone-close gate — the acceptance an agent CANNOT self-certify).**
+- **8.1 PASSED — 2026-07-19, both engines (Chrome + Firefox), both surfaces, NO DEFECTS FOUND.** A human
+  walked the full 8.1 checklist on **fresh production builds**, with the **Network tab open throughout**, on
+  the content-script reader over a `file://` doc **and** a file in the app-page reader pane.
+  - **Walked in the gate's risk order:**
+    1. **Cold-start theme flash on the content-script surface** — extension freshly loaded / MV3 worker
+       asleep, a persisted NON-default theme, watching the FIRST paint, repeated on both engines. This is
+       the item `perf:flash`'s 24/24 provably **cannot** see: it stamps `data-theme` two frames after first
+       painted content, exactly the window the accepted 4.2 residual risk lives in. **No flip seen.**
+    2. **Firefox first paint** — which has **NO automated coverage at all** (`perf-first-paint.ts` and
+       `perf-theme-flash.ts` are Chromium-only by construction; Playwright cannot load an extension into
+       Firefox — microsoft/playwright#7297, closed out-of-scope). This gate is the ONLY evidence Firefox
+       first paint has ever had. **Clean.**
+    3. **Shell/reader coherence + the theme-pill occlusion eyeball at ~414 px** — no half-themed screen, and
+       the text under the fixed pill stays legible (the M3 defect-#6 "visual occlusion is gate-only" class).
+    4. **TOC carry-over end-to-end** — collapse the rail, drag a width, **RELOAD**, both come back, and the
+       remembered state is GLOBAL across the two surfaces. This exercises the real
+       `messagingPort → background → IndexedDB` path, which **no test has ever run** (the browser project
+       loads no unpacked extension; every suite injects a fake sink through the production seam).
+    5. **Theme cycle + persistence + the no-flip property** — Auto/Light/Dark apply live, survive a real
+       reload, and an OS flip re-themes **only under Auto**.
+    6. **The trust surface** — "Stored data" shows the settings row; **wipe** clears it and the reader falls
+       back to **Auto**.
+    7. **Zero unexpected network throughout; clean console; the document stayed the hero.**
+  - **THE GATE STATISTIC, STATED PRECISELY SO IT IS NOT MISREAD.** The running **6/6** figure means **SIX
+    milestone-shipping defects, ALL of them caught by this gate**, across **M1 + M2 + M3**. **M4 contributes
+    ZERO defects and ZERO misses**, so the ratio still reads **6/6** — the denominator did not move because
+    nothing shipped past the gate to move it. **M4 is therefore the FIRST milestone whose gate found
+    nothing.** *That is a question FOR THE RETRO, deliberately NOT answered here: did the red-first /
+    mutation-proof discipline this milestone genuinely catch these classes earlier, or was M4 a quieter
+    surface and this one lucky? The retro decides. Do not read a clean gate as evidence the gate has stopped
+    being load-bearing.*
+  - **THE THREE ITEMS DEFERRED INTO 8.1 BY GROUPS 6–7 ARE NOW DISCHARGED** — a future session should not
+    treat any of them as open: (1) **Firefox first paint** (7.1's Chromium-only scope caveat); (2) the
+    **end-to-end TOC carry-over** through the real messaging→background→IndexedDB path (6.1's harness
+    limit); (3) the **narrow-viewport theme-pill occlusion eyeball** (6.1's carried 5.1 question). All three
+    were walked and all three passed.
+
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
 **M2 (spec 002 — active-source foundation) remains fully closed** (code + the named human gate, both engines;
@@ -944,12 +979,16 @@ foundation, ~first of ~12+ spec-milestones. Don't over-read the fraction.
     the whole 1400-section DOM synchronously) — explicitly out of scope for this group.
 
 ## Up next
-Immediate — **spec 004 (themes + settings) is CODE-COMPLETE (groups 1–7). The next action is the 8.1
-milestone-close HUMAN GATE, then the M4 retro (in that order — the retro is written after the gate so it
-can record what the gate caught).** No 004 implementation work remains; do not start group 8 as code, it
-IS the gate. The gate script, the three deferred-into-8.1 items, and the 7.1 measurements are in "Now"
-and the group-7 entry above. Sepia stays DEFERRED from 004 (D-1 = A; palette undefined in
-`design/tokens.css`) — it is a candidate for a later themes pass, not an 8.1 item.
+Immediate — **spec 004 (themes + settings) is CODE-COMPLETE AND HUMAN-GATED (groups 1–8; 8.1 PASSED
+2026-07-19). Nothing about 004 is outstanding.** The next action is the **M4 RETRO**, then the progress.md
+condense/archive task.
+
+- **NOTE — there is no numbered retro task for M4.** `specs/004-themes-settings/tasks.md` ends at 8.1;
+  M3 had a **6.3** for exactly this. So the M4 retro is a **close follow-on rather than a numbered task**.
+  **Flagging, not doing:** should an **8.2 (M4 retro)** be added to tasks.md for symmetry with M3's 6.3?
+  Left to the human — deliberately NOT added unilaterally.
+- Sepia stays DEFERRED from 004 (D-1 = A; palette undefined in `design/tokens.css`) — a candidate for a
+  later themes pass.
 
 **Spec 003 (TOC / navigation) remains CLOSED** (code + the 6.2 human gate + 6.3 retro, 2026-07-17).
 
@@ -982,15 +1021,34 @@ Roadmap: 003 TOC/navigation · 004 themes+settings · 005 watch mode + diff (the
 full order in docs/product/spec.md §Phase-1.
 
 ## Blockers / open questions
-- **No blockers. One thing WAITING ON A HUMAN, which is not the same as blocked.** M2 (spec 002) fully
-  closed 2026-07-15; **M3 (spec 003) fully closed 2026-07-17** — code + the named 6.2 human gate + 6.3
-  retro. Nothing outstanding on either.
-- **Spec 004 is CODE-COMPLETE and awaiting the 8.1 milestone-close human gate** (both engines, both
-  surfaces). Every automated pin is green at close — see the group-7 entry for the numbers. Nothing an
-  agent can do advances 004 past this point; the gate is the next action, the M4 retro follows it.
-- **Open, and honestly unmeasured until 8.1:** Firefox first paint (the harness is Chromium-only), the
-  real end-to-end settings round-trip through the background, and the cold-start theme flash. These are
-  gaps in AUTOMATED coverage that 8.1 is designed to cover — not known defects.
+- **No blockers, and nothing waiting on a human.** M2 (spec 002) fully closed 2026-07-15; **M3 (spec 003)
+  fully closed 2026-07-17**; **spec 004 code-complete AND human-gated 2026-07-19** (8.1 PASSED, both
+  engines, both surfaces, no defects). Nothing outstanding on any of them. The M4 retro is the next
+  action, not a blocker.
+- **The three formerly-open "unmeasured until 8.1" gaps are CLOSED by the gate:** Firefox first paint, the
+  real end-to-end settings/TOC round-trip through the background, and the cold-start theme flash. They were
+  gaps in AUTOMATED coverage, never known defects; the gate walked all three and found nothing. They remain
+  gaps in *automated* coverage — a future change touching those paths still has no test that can see them.
+- **OPEN QUESTION (an M2 finding, NOT an 004 defect — recorded here only so it is not lost).**
+  **Dropping a single `.md` file onto the app page does nothing; only folders work.** Found by the human
+  during the 8.1 session. **This is NOT an 004 issue** — 004 touched no folder/drop code — and it did **not**
+  affect the gate result. It is **spec-002 / M2 territory**.
+  **UNVERIFIED — do not assume either way.** The evidence points at folder-only **BY DESIGN**:
+  `docs/trust/PERMISSIONS.md`'s ledger describes only folder drop/pick in all three of its rows; M2 is the
+  "active-source foundation", where the FOLDER is the source; and the architecture is folder-shaped
+  throughout (`FolderSource → MarkdownFile[]`, `folderId`-keyed recents/pins, remembered directory handles —
+  a lone file has no `folderId` and no handle worth persisting). **But that is inference from surrounding
+  artifacts, not verification.**
+  **Two checks would settle it:** (1) does `docs/product/spec.md` state "open a single file from the app
+  page" as a feature at all? If the product answer is "single files open via `file://` through the content
+  script; the app page is the FOLDER surface", then folder-only is coherent by design. (2) does the drop
+  handler bail **SILENTLY**? `getAsFileSystemHandle()` returns handles for files *and* directories, so the
+  code very likely checks `kind === 'directory'` — the real question is whether the user gets **any**
+  feedback.
+  **Worth flagging regardless of the answer:** a reasonable gesture producing total silence is its own small
+  **never-blank (#5)** gap. Even if single-file open is correctly out of scope, a line like *"Drop a folder —
+  single files open directly from your file manager"* would close it cheaply.
+  *Recorded only — not investigated, not fixed in this task.*
 - **Watch item (not a blocker):** `remoteMedia.browser.test.ts` flaked once on Firefox during 7.1 — the
   POSITIVE control ("does fire after opt-in"), not the zero-leak assertion; green in isolation and on
   full re-run. If it recurs, await the request rather than sampling for it. Detail in the group-7 entry.
