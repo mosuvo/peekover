@@ -1,6 +1,7 @@
 # Spec 005 — Watch mode + diff
 
-**Status:** approved (Gear-3 gate 1 passed 2026-07-19) — plan.md next
+**Status:** approved (Gear-3 gate 1 passed 2026-07-19); plan approved (gate 2 passed 2026-07-19) — tasks.md next
+**Scope:** **005 delivers watch mode only.** Snapshots + diff are split out to **006** (`plan.md` §0 D-1). This spec remains the WHAT for the whole feature area.
 **Date:** 2026-07-19
 **Milestone:** M5 · builds on 004 (themes + settings, CLOSED)
 **Structure:** follows WORKFLOW.md §5.2 (`spec.md` = the WHAT, no tech). Reconcile against `specs/_template-spec.md` if it carries extra sections.
@@ -30,21 +31,21 @@ This milestone makes the reader **follow a file as it is written**, and makes **
 ## 3. Key scope decisions (decided at this gate — redline as needed)
 
 **3.1 Milestone scope — three of F6's six items.** IN: **auto-reload on change**, **watch mode** (the reading experience while it updates), and **diff against an earlier snapshot**. OUT, each with a recorded home (§6): compare-any-two-files, agent-file awareness/badges, session-transcript rendering, and the post-v1 MCP bridge. This is still the headline differentiator; it is also already a larger surface than 004.
-_(If the plan gate judges it too large, the natural split is watch — §4 change detection / re-render / watch UX — as 005, and snapshots+diff as 006. Flagged, not pre-decided.)_
+_(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships auto-reload + watch** (§4 change detection / re-render / watch UX); **diff-vs-snapshot moves to 006**, which gets its own Gear-3 cycle drawing on §3.3/§3.4 and the criteria marked deferred below. This spec remains the WHAT for the whole feature area. **Consequence: nothing in 005 stores file contents, so PERMISSIONS.md's "file contents are never stored" claim stays TRUE for all of 005** — §3.3's correction lands in 006, in the same PR as the code that forces it.)_
 
 **3.2 The engine split is REAL, MEASURED, and stated honestly rather than papered over.** The probe settled this; the spec promises what each engine can actually do:
 
-- **Chromium:** change detection is **event-driven** (`FileSystemObserver`). No polling loop.
+- **Chromium:** the split is **per-surface as well as per-engine**. On the **app page**, change detection is **event-driven** (`FileSystemObserver`) — no polling loop. On the **content script** it is **polled via the background relay**: `FileSystemObserver.observe()` takes a `FileSystemHandle`, the content script has only a URL, and there is **no URL→handle API**. (Full reasoning and the 2×2: `plan.md` §1.1.)
 - **Firefox:** no observer, no directory picker. Detection is **polled**, and works **only via the drag route** — a folder opened with the file input yields permanently stale reads. Detection must compare **content**, because `size`/`lastModified` are frozen at drop time (the trap that would otherwise compile, pass a naive test, and silently never fire).
 - **Consequence, stated in-product:** on Firefox, watch is available for **drag-opened** folders and unavailable otherwise, with a designed explanation — not a dead toggle. Same honesty posture M2 took for Firefox's read-only folder snapshot.
 
-**3.3 Snapshots store FILE CONTENTS — and that changes a published trust claim.** Diffing against an earlier version requires keeping earlier versions. `docs/trust/PERMISSIONS.md` currently states **"File contents are never stored"** in three places; that becomes **false** the moment this ships.
+**3.3 Snapshots store FILE CONTENTS — and that changes a published trust claim.** _(deferred to 006 — see §3.1)_ Diffing against an earlier version requires keeping earlier versions. `docs/trust/PERMISSIONS.md` currently states **"File contents are never stored"** in three places; that becomes **false** the moment this ships.
 
 - **Decision: store the contents, and say so plainly.** No content-hash-only workaround that would yield change detection but not diff. This product's character is disclosure, not minimisation-by-trick.
 - **Not literally an AGENTS.md #4 permission event** (no manifest change), **but treated with the same weight**: PERMISSIONS.md is corrected **in the same PR** as the first code that stores a snapshot; the "Stored data" panel discloses snapshots; "Wipe all data" erases them.
 - The claims that must remain true: **nothing leaves the device**, and everything stored is **visible and erasable**.
 
-**3.4 Snapshot storage is BOUNDED on three axes, with user-visible controls.** Snapshots are the first unbounded-growth feature in the product. Caps by **count**, **age**, and **total bytes** — whichever binds first — with the limits visible and adjustable and current usage shown. Eviction is oldest-first, and the user can see what is retained rather than discovering loss by surprise.
+**3.4 Snapshot storage is BOUNDED on three axes, with user-visible controls.** _(deferred to 006 — see §3.1)_ Snapshots are the first unbounded-growth feature in the product. Caps by **count**, **age**, and **total bytes** — whichever binds first — with the limits visible and adjustable and current usage shown. Eviction is oldest-first, and the user can see what is retained rather than discovering loss by surprise.
 
 **3.5 Both reader surfaces, by two different routes.** Watch ships to the app-page reader **and** the content-script `file://` reader — the two-surface symmetry every milestone since M1 has held.
 
@@ -63,14 +64,14 @@ _(If the plan gate judges it too large, the natural split is watch — §4 chang
 **Change detection**
 
 - When a watched file changes on disk, the system shall detect the change without user action.
-- While watching on Chromium, the system shall detect changes **without polling**.
+- While watching on Chromium **on the app page**, the system shall detect changes **without polling**. (The content-script surface polls on both engines — §3.2.)
 - While watching on Firefox, the system shall detect changes by comparing **content**, not file metadata.
 - If a watched file becomes unreadable (deleted, moved, permission revoked), then the system shall surface a designed state and stop watching — never fail silently, never retry forever.
 
 **Re-render**
 
 - When a watched file changes, the system shall re-render the document and **preserve the reader's place** in the content they were reading.
-- While a document re-renders from a change, the system shall preserve the user's **theme, TOC open-state/width, and Raw/Reading mode** — 003's and 004's persisted state must not reset on every agent keystroke.
+- While a document re-renders from a change, the system shall preserve the user's **theme, TOC open-state/width, and Raw/Reading mode** — this state must not reset on every agent keystroke. **Verified against the code: only theme survives a re-mount today.** TOC survives only via 004's persistence round-trip and is re-decided every mount; **Raw/Reading mode is actively RESET by an existing unconditional line in `mount()`**. Preserving it is therefore **new work inside a function four milestones have treated as read-only library** — not merely a matter of not breaking what already works (`plan.md` §1.3).
 - If a re-render fails, then the system shall keep the last good render, surface the failure, and never blank the page (AGENTS.md #5).
 
 **Watch UX**
@@ -81,7 +82,7 @@ _(If the plan gate judges it too large, the natural split is watch — §4 chang
 - While watch is active and the reader has scrolled **away** from the bottom, when the document updates, the system shall **not** move them — following is opt-in-by-position, never a hijack.
 - While `prefers-reduced-motion` is set, any update signal or follow-scroll shall be **instant**.
 
-**Snapshots & diff**
+**Snapshots & diff** _(deferred to 006 — see §3.1)_
 
 - When a watched document changes, the system shall be able to retain the previous version as a snapshot.
 - When the user asks what changed, the system shall show the difference between the current document and a chosen earlier snapshot.

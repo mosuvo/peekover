@@ -8,32 +8,52 @@
 
 ## Now (start here)
 
-**M4 is CLOSED. M5 (spec 005, watch mode + diff) is STARTED and stands at Gear-3 gate 1 PASSED. The next
-action is plan.md — gate 2 — in a FRESH session. NOT implementation code (WORKFLOW.md §5.3).**
+**M4 is CLOSED. M5 (spec 005) stands at Gear-3 gate 2 PASSED — spec.md approved AND plan.md approved. The
+next action is tasks.md — gate 3 — in a FRESH session. NOT implementation code (WORKFLOW.md §5.3).**
 
 - **M1 (001), M2 (002), M3 (003), M4 (004) are all fully closed** — code-complete, human-gated, retro'd.
   **Nothing on any of them is outstanding**, and no work of any kind on 001–004 remains to be started.
-- **M5 — spec 005, watch mode + diff** (the Phase-1 differentiator; roadmap in `docs/product/spec.md`
+- **M5 — spec 005, watch mode** (the Phase-1 differentiator; roadmap in `docs/product/spec.md`
   §Phase-1). Done so far: the **task-0 feasibility probe** was built, run on both engines and both
-  surfaces, and **torn down** (findings in `decisions.md` 2026-07-19, spec-005 task-0 probe); and
-  **`specs/005-watch-diff/spec.md` is APPROVED at Gear-3 gate 1** (2026-07-19).
-- **The remaining gate order, and no other:** **plan.md (the HOW) → human gate 2 → tasks.md → human
-  gate 3 → only then implementation code.** Do not write implementation code before tasks are approved.
+  surfaces, and **torn down** (findings in `decisions.md` 2026-07-19, spec-005 task-0 probe);
+  **`specs/005-watch-diff/spec.md` is APPROVED at gate 1**; and **`specs/005-watch-diff/plan.md` is
+  APPROVED at gate 2** (both 2026-07-19).
+- **THE MILESTONE WAS SPLIT AT THE PLAN GATE — inherit this, it changes what 005 is.**
+  **005 = watch mode**, seven task groups (detection core · relay + Firefox verification · re-render
+  continuity · watch UX · measure→tune · perf/pins/docs · human gate). **006 = snapshots + diff**, which
+  gets its **own Gear-3 cycle** (spec-level WHAT already exists in 005's §3.3/§3.4 and its criteria
+  marked *deferred to 006*). Two consequences worth knowing before planning anything: **005 adds NO
+  dependency** (`dependencies` stays at three) and **005 stores NO file contents** — so
+  PERMISSIONS.md's "file contents are never stored" claim **stays TRUE for all of 005**, and its
+  correction lands in 006 alongside the code that forces it.
+- **The remaining gate order, and no other:** **tasks.md (the ORDER) → human gate 3 → only then
+  implementation code.** Do not write implementation code before tasks are approved.
+- **Three decisions were SETTLED at the plan gate (`plan.md` §0) — inherit them, do not re-litigate:**
+  - **D-1 · SPLIT taken** — 005 ships watch (7 groups, 004's proven size); snapshots + diff become 006.
+  - **D-2 · the `diff` dependency is APPROVED but DEFERRED to 006** — it would be the first
+    `dependencies` addition since M1, so it is a governed act, and it is not this milestone's.
+  - **D-3 · scroll continuity is ANCHOR-based, not `scrollTop`-based** — restoring pixels is right only
+    when content is *appended*, and an agent rewriting a file inserts *above* the reading position
+    constantly. Heading-anchor restore, `scrollTop` fallback; whether it *feels* right is human-gate-only.
 - **Four scope decisions are SETTLED at gate 1 — inherit them, do not re-litigate:**
   1. **Scope is three of F6's six items** — auto-reload on change, watch mode, and diff vs. an earlier
      snapshot. The other three plus the MCP bridge are out, each with a recorded home (spec §6).
+     **Since D-1, the first two are 005 and the third is 006** — the feature area is unchanged, the
+     milestone boundary moved.
   2. **The engine split is MEASURED, not assumed:** Chromium detects **event-driven**
      (`FileSystemObserver`, no polling); Firefox detects by **polling** and **only via the drag route**,
      comparing **content** — `size`/`lastModified` are frozen at drop time.
   3. **Snapshots store FILE CONTENTS.** So `docs/trust/PERMISSIONS.md`'s "File contents are never
      stored" claim (three places) becomes false and **must be corrected in the same PR as the first code
      that stores a snapshot** — same weight as an AGENTS.md #4 event, though no manifest change.
+     **That PR is now in 006, not 005** (D-1). Do not correct the claim early: in 005 it is still true.
   4. **§3.6 — a local-file read is NOT a network call (option A).** Watching does not light the network
      indicator; the zero-network guards stay **http(s)-scoped**. **Verify, do not assume** — spec §7-4.
-- **The plan must resolve the eight open risks in `specs/005-watch-diff/spec.md` §7** (Firefox
-  content-script watch unverified · observer latency unmeasured · re-render cost under rapid updates ·
-  the Resource-Timing question · snapshot bound defaults · watch lifetime vs. surface lifetime ·
-  atomic-save fragility · Firefox drag-only discoverability). They are stated there; not restated here.
+- **The spec's eight §7 risks are RESOLVED to concrete positions in `plan.md` §3** — read that, not the
+  spec's list. **The seven risks the plan still CARRIES into implementation are `plan.md` §4**; they are
+  stated there and deliberately not restated here. The two worth knowing before opening any file: the
+  plan **crosses the `mount()` boundary** four milestones have treated as read-only library, and the
+  **relay is untestable end-to-end** in `tests/browser`, so its round trip is a budgeted human-gate item.
 - **Before the first task of any group, re-read the standing rules that keep costing time when skipped:**
   `docs/ai/decisions.md` (the harness ledger, the dead ends, the gate procedure — all three promoted
   2026-07-19) and `docs/ai/retro.md` (newest entry first).
@@ -99,7 +119,7 @@ about the BUILD, not about the GATE* (retro 2026-07-19).
 
 **Product progress (rough):** M1 opened build-order phase 1-of-7 (product spec §11). Spec-level
 milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TOC · 004 themes+settings ·
-005 watch+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly this is early
+005 watch · 006 snapshots+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly this is early
 foundation, ~fourth of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Baselines / pins
@@ -142,10 +162,13 @@ there without either lying or duplicating.*
 
 ## Up next
 
-**Immediate: spec 005 — plan.md (Gear-3 gate 2), in a fresh session.** The kickoff has happened and
-spec.md is approved (see Now); the plan is the HOW — detection architecture per engine, the relay seam,
-the snapshot schema and bounds, the diff approach, the re-render/place-keeping mechanism, and the test
-strategy — resolving the eight §7 risks. Nothing else is queued ahead of it.
+**Immediate: spec 005 — tasks.md (Gear-3 gate 3), in a fresh session.** spec.md and plan.md are both
+approved (see Now); tasks.md is the ORDER — **seven groups per `plan.md` §6**, red-first, each with its
+pins. It is the last gate before implementation code. Nothing else is queued ahead of it.
+
+**After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
+inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
+(the two-store IndexedDB split that dodges `idbCore`'s STOP signal), §1.8 (diff) and §3-5.
 
 **Carried items — banked deliberately, each with a recorded home. Do NOT guess at any of them; every one
 is either measurement-driven or explicitly deferred.**
@@ -178,8 +201,8 @@ is either measurement-driven or explicitly deferred.**
 - **Restore GFM table alignment safely** (map to a class, never an inline style) — carried from M1;
   spec 003 §Out-of-scope leaves it to table work.
 
-**Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode + diff** (the
-differentiator) · … full order in `docs/product/spec.md` §Phase-1.
+**Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode** (the differentiator) ·
+**006 snapshots + diff** · … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
 
