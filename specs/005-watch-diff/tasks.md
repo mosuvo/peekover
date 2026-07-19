@@ -48,7 +48,7 @@
 
 ## 1 — Detection core (one seam, two implementations; the platform difference lives in the factory)
 
-- [ ] **1.1 `ChangeDetector` seam + `pollingDetector` (pure, injected `read`) — compares CONTENT, never
+- [x] **1.1 `ChangeDetector` seam + `pollingDetector` (pure, injected `read`) — compares CONTENT, never
       metadata.** `interface ChangeDetector { start(cb: OnText): void; stop(): void }` with
       `OnText = (text: string) => void`. `pollingDetector(read, intervalMs)` calls the injected
       `read: () => Promise<string>` on an interval and fires `cb` **only when the text differs from the

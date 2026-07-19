@@ -8,10 +8,11 @@
 
 ## Now (start here)
 
-**M4 is CLOSED. M5 (spec 005): all three Gear-3 artifacts now exist — spec.md APPROVED (gate 1), plan.md
-APPROVED (gate 2), and `specs/005-watch-diff/tasks.md` is DRAFTED and AWAITING GATE 3. The next action is
-the HUMAN REVIEW of tasks.md. It is a draft, NOT a go-signal — no implementation code until it is approved
-(WORKFLOW.md §5.3).**
+**M4 is CLOSED. M5 (spec 005) is IN IMPLEMENTATION: all three Gear-3 artifacts are APPROVED — spec.md
+(gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Now: group 1 (detection core).
+**1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare). **Next: 1.2**
+(`observerDetector` + dead-observation handling, real-engine via OPFS). Nothing is wired into the product
+yet — group 1 builds two detectors and proves them; the factory that chooses one is group 4's.**
 
 - **One question the tasks draft ANSWERED by measurement rather than deferring it** (throwaway probe, run
   and deleted 2026-07-19): **the Chromium `FileSystemObserver` path IS real-engine testable in
