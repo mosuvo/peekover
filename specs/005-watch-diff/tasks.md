@@ -67,7 +67,7 @@
       compares a metadata-ish stand-in instead of the text fails the identical-content and changed-content
       pair. Golden EMPTY + manifest green.
 
-- [ ] **1.2 `observerDetector` (Chromium app page) + dead-observation handling — REAL-ENGINE, via OPFS.**
+- [x] **1.2 `observerDetector` (Chromium app page) + dead-observation handling — REAL-ENGINE, via OPFS.**
       `observerDetector(fileHandle)` wraps `FileSystemObserver`: on a `modified` record, `getFile().text()`
       → `cb`. **Dead-observation handling is part of THIS task, not a follow-up:** a record of type
       `errored` or `disappeared` means **the observation is DEAD** — re-observe, or fall back to polling,

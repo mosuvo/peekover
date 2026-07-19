@@ -9,10 +9,11 @@
 ## Now (start here)
 
 **M4 is CLOSED. M5 (spec 005) is IN IMPLEMENTATION: all three Gear-3 artifacts are APPROVED — spec.md
-(gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Now: group 1 (detection core).
-**1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare). **Next: 1.2**
-(`observerDetector` + dead-observation handling, real-engine via OPFS). Nothing is wired into the product
-yet — group 1 builds two detectors and proves them; the factory that chooses one is group 4's.**
+(gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
+COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare) and
+**1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Next: group 2**
+(relay + the Firefox verification), which begins with 2.1. Nothing is wired into the product yet — group 1
+built two detectors and proved them; the factory that chooses between them is group 4's.**
 
 - **One question the tasks draft ANSWERED by measurement rather than deferring it** (throwaway probe, run
   and deleted 2026-07-19): **the Chromium `FileSystemObserver` path IS real-engine testable in
@@ -40,8 +41,11 @@ yet — group 1 builds two detectors and proves them; the factory that chooses o
   dependency** (`dependencies` stays at three) and **005 stores NO file contents** — so
   PERMISSIONS.md's "file contents are never stored" claim **stays TRUE for all of 005**, and its
   correction lands in 006 alongside the code that forces it.
-- **The remaining gate order, and no other:** **tasks.md (the ORDER) → human gate 3 → only then
-  implementation code.** Do not write implementation code before tasks are approved.
+- **All three Gear-3 gates are PASSED** (spec → plan → tasks). Implementation is under way, task by task,
+  each with its own commit, its own red-first evidence and its own pointer move. **The gates that remain
+  are the ones budgeted INSIDE tasks.md and they are human work:** **2.3** (does a background
+  `fetch("file://…")` work on Firefox at all — no harness can answer it, and it **blocks 4.4**), **5.2**
+  (the debounce window, chosen from 5.1's numbers) and **7.1** (the milestone-close gate).
 - **Three decisions were SETTLED at the plan gate (`plan.md` §0) — inherit them, do not re-litigate:**
   - **D-1 · SPLIT taken** — 005 ships watch (7 groups, 004's proven size); snapshots + diff become 006.
   - **D-2 · the `diff` dependency is APPROVED but DEFERRED to 006** — it would be the first
@@ -257,3 +261,15 @@ is either measurement-driven or explicitly deferred.**
   flaked the other way, the non-negotiable zero-network count would have been certified by an empty
   buffer. **If it recurs, the fix is to AWAIT the request, not sample for it.** (retro 2026-07-19,
   finding 1.)
+  - **IT HAS RECURRED — measured at 005 task 1.2, 2026-07-19, and it is the SAME half on the SAME engine.**
+    **1 failure in 10 consecutive full `pnpm test:browser` runs** (Firefox; Chromium never failed):
+    `AssertionError: expected [ Array(1) ] to include 'http://localhost:PORT/__peekover_pro…'` at
+    `remoteMedia.browser.test.ts:115` — the opt-in positive control, the half asserting the request IS on
+    the wire. Nothing in 005 touches `mediaPolicy.ts` or that suite, and group 1 wires nothing into the
+    render path, so this is the pre-existing flake reproducing, **not** a regression. **The prescribed fix
+    is now DUE and is no longer hypothetical:** `fetchedUrls(token)` SAMPLES the Resource-Timing buffer at
+    one instant; it must AWAIT the request instead (poll to a deadline, as `waitFor` does elsewhere).
+    Left unfixed here deliberately — it is outside group 1's file fence — and flagged for scheduling as its
+    own task. **Why it outranks a normal flake: this is the instrument that proves the non-negotiable
+    zero-network assertion is non-vacuous.** A sampling control that can read empty when the request DID
+    fire can also read empty when it did NOT.
