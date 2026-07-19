@@ -1,6 +1,44 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-19 · FINDING (spec 005 task 2.3, HUMAN-RUN with a loaded extension) · Can a background
+  `fetch("file://…")` read a local file, and does that read enter the Resource-Timing buffer? MEASURED on
+  both engines.** This closes spec §7-1 and §7-4, the two questions no automated harness could answer (the
+  browser test page runs on an `http://localhost` origin and the harness loads no extension).
+  - **Q1 — does a background `fetch("file:///…")` resolve with the file's bytes?**
+    - **CHROMIUM (background service worker, "Allow access to file URLs" ON):** `{ status: 200, bytes: 845 }`
+      — **resolves, fresh bytes.** Confirms and re-measures the task-0 result.
+    - **FIREFOX 152 (background page, `moz-extension://…/_generated_background_page.html`): THREW.**
+      Console, verbatim:
+      `Security Error: Content at moz-extension://<id>/_generated_background_page.html may not load or link to file:///D:/Dev/peekover/README.md.`
+      then `TypeError | NetworkError when attempting to fetch resource.`
+      **This is Gecko's URI security policy, not a missing toggle or manifest key** — a `moz-extension:`
+      document may not load `file:`. **No permission fixes it**; Firefox has no "Allow access to file URLs"
+      equivalent to grant. Do not "fix" this by requesting permissions or editing the manifest.
+  - **Q2 — does the read appear in `performance.getEntriesByType('resource')` from the background context?**
+    **`[]` on BOTH engines.** Chromium's successful `file://` read leaves no Resource-Timing entry; Firefox's
+    refused one leaves none either.
+  - **CONSEQUENCE 1 — FIREFOX WATCH IS APP-PAGE-ONLY.** The content-script surface **cannot** watch on
+    Firefox: the content script cannot re-read its own file (task-0: `fetch` → `TypeError`, XHR → `status 0`,
+    **even with file-URL access**) **AND** the background cannot read `file://` either. **Both halves of the
+    only available route are closed** — there is no third path. **Chromium is unaffected**: its background
+    reads `file://` fine, so its content-script relay stands as designed. Spec §3.5 narrowed in the same
+    commit as this entry (C12); 4.4 ships the designed explanation for this surface too, not a dead control.
+  - **CONSEQUENCE 2 — SPEC §7-4 ANSWERED, BOTH ENGINES: a `file://` read never enters the Resource-Timing
+    buffer.** So the existing `/^https?:/i` zero-network guards are **CORRECT, not merely conveniently
+    scoped** — there is nothing for them to filter out. **§3.6-A's premise now holds on the measurement, not
+    just on the prose.** State the flip side plainly rather than letting a later reader over-read the result:
+    the guards can prove watch put **nothing on the wire**, and can **never prove the local read happened**.
+    A watch loop that silently stopped reading would pass every zero-network assertion we have.
+  - **CONSEQUENCE 3 — one dead branch removed** (`entrypoints/background.ts`, same commit). The read fn
+    carried `if (!response.ok && response.status !== 0)` with a comment claiming a `file://` fetch reports
+    `status: 0` on a **successful** read in some engines. **That was an unverified assumption and this
+    measurement falsifies it:** Chromium returns **200**; Firefox never resolves at all, so the branch cannot
+    run there either. The escape hatch was dead code justified by a false comment. Simplified to a plain
+    `!response.ok`.
+  **Revisit-when:** Firefox changes its extension-page URI security policy, or ships a file-access grant
+  (either would reopen the content-script surface on Firefox and un-narrow §3.5).
+
 - **2026-07-19 · FINDING (spec 005 task-0 probe) · Watch-mode feasibility, MEASURED on both engines and
   both surfaces.** The probe was throwaway and is deleted; this entry is the only surviving record.
   - **CHROMIUM 150 — app page.** Feature detect: `showDirectoryPicker` ✓ · `FileSystemObserver` ✓ ·

@@ -44,9 +44,13 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener(
     createWatchListener(async (url) => {
       const response = await fetch(url);
-      // A `file://` fetch reports `status: 0` on a successful read in some engines, so `ok` alone
-      // is not a usable signal here — a missing file rejects or yields an empty body instead.
-      if (!response.ok && response.status !== 0) {
+      // MEASURED at task 2.3 (decisions.md 2026-07-19), replacing an earlier guess that a `file://`
+      // read reports `status: 0`: **Chromium returns a plain 200** with fresh bytes, so `ok` is the
+      // whole signal. **On Firefox this code never runs** — a `moz-extension:` document may not load
+      // `file:` at all (Gecko URI security policy), so the fetch above rejects and watch is
+      // app-page-only there (spec §3.5). Do not re-add a `status === 0` escape hatch for an engine
+      // that never reaches this line.
+      if (!response.ok) {
         throw new Error(`cannot read file (status ${response.status})`);
       }
       return response.text();

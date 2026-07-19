@@ -12,19 +12,28 @@
 (gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
 COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare) and
 **1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Group 2 is
-CODE-COMPLETE: 2.1 DONE** (the `WATCH_READ` contract + `createWatchListener` + URL validation) and
-**2.2 DONE** (the relay wired — background's THIRD listener, content-script `relayRead` → `pollingDetector`,
-zero-network guard). **Next: 2.3 — a HUMAN-RUN check that no harness can do, and it BLOCKS 4.4.**
-The content script now builds a stopped detector at `document_start`; nothing starts it, because
-watching is a user gesture on group 4's control.**
+COMPLETE: 2.1 DONE** (the `WATCH_READ` contract + `createWatchListener` + URL validation), **2.2 DONE**
+(the relay wired — background's THIRD listener, content-script `relayRead` → `pollingDetector`,
+zero-network guard) and **2.3 DONE** (the human-run both-engines check; answers recorded, spec narrowed).
+**Next: GROUP 3 — re-render continuity, THE RISKIEST GROUP** — it is where `mount()` stops being the
+read-only library four milestones have treated it as. The content script builds a stopped detector at
+`document_start`; nothing starts it, because watching is a user gesture on group 4's control.**
 
-- **2.3 is the immediate next action and it needs a human at a browser.** Two questions, both engines:
-  (a) does a background `fetch("file:///…")` resolve — **Firefox's answer is the unknown**, Chromium's was
-  measured at task 0; and (b) **the spec §7-4 question, MOVED HERE from 2.2** — does that fetch appear in
-  `performance.getEntriesByType('resource')` from the background context? 2.2 could not answer (b): the
-  browser test page runs on an `http://localhost` origin, cannot fetch `file://` at all, and the harness
-  loads no extension. The click-through is in task 2.3; the answer gets its own commit in
-  `decisions.md` and **4.4 must not start until it is recorded.**
+- **INHERIT THIS BEFORE PLANNING GROUP 4 — FIREFOX WATCH IS APP-PAGE-ONLY, measured at 2.3**
+  (decisions.md 2026-07-19). A background `fetch("file:///…")` on **Firefox 152 THROWS**: a
+  `moz-extension:` document *"may not load or link to `file:`"* — **Gecko's URI security policy, not a
+  missing toggle**, and **no permission grants it**. Combined with task-0's finding that the content script
+  cannot re-read its own file either, **both halves of the content-script route are closed on Firefox.**
+  **Chromium is unaffected** (status 200, fresh bytes) and keeps its two-surface promise. Spec §3.5 was
+  narrowed in the same commit (C12); §7-1 and §7-4 are marked RESOLVED; §4 Degradation now covers this
+  surface. **Consequence for group 4: 4.4's precondition is SATISFIED and it took the negative branch — it
+  ships the designed explanation for the Firefox content-script surface too**, not only the non-drag app
+  page, and **not a dead control**.
+- **§7-4 is also answered, and it validates the guards rather than changing them:** a `file://` read
+  produces **`[]`** in `performance.getEntriesByType('resource')` on **both** engines. The existing
+  `/^https?:/i` zero-network scoping is **correct, not merely convenient** — nothing to filter out.
+  **Stated plainly so it is not over-read:** those guards prove watch put nothing on the wire and can
+  **never** prove the local read happened. Detection tests own that, not the guards.
 
 - **The `remoteMedia` positive-control flake is FIXED** (it had recurred — 1 failure in 10 captured runs,
   Firefox). It now AWAITS the Resource-Timing entries to a 5 s budget instead of sampling the buffer at one

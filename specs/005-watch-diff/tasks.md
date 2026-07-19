@@ -162,7 +162,7 @@
       the built detector somewhere reachable. It is the same D-A shape **4.1** needs — **4.1 should
       extend or subsume it, not add a second registry beside it.**
 
-- [ ] **2.3 HUMAN CHECK — does a background `fetch("file://…")` work on FIREFOX at all? (spec §7-1).**
+- [x] **2.3 HUMAN CHECK — does a background `fetch("file://…")` work on FIREFOX at all? (spec §7-1).**
       **This is the group's reason for existing and it BLOCKS 4.4.** The task-0 probe measured Chromium's
       background `file://` fetch working (status 200, fresh bytes) and **never tested Firefox's**. Firefox
       has no "Allow access to file URLs" toggle and its background may not fetch `file://` at all. It needs
@@ -181,6 +181,28 @@
       `docs/ai/decisions.md` (record the answer) · `docs/ai/progress.md`
       Verify (**human gate**): the answer is recorded with its error text before 4.4 promises any Firefox
       surface. No code lands on the strength of an assumption here.
+      **DONE 2026-07-19 — RUN BY THE HUMAN ON BOTH ENGINES. Both questions answered; full record in
+      `docs/ai/decisions.md` (newest entry).**
+      **(a) Background `fetch("file:///…")`:** Chromium → `{status: 200, bytes: 845}`, resolves with fresh
+      bytes. **Firefox 152 → THREW**, verbatim: `Security Error: Content at
+      moz-extension://<id>/_generated_background_page.html may not load or link to file:///…`, then
+      `TypeError | NetworkError when attempting to fetch resource.` **This is Gecko's URI security policy,
+      not a missing toggle or manifest key** — no permission grants it.
+      **(b) §7-4, the question moved here from 2.2:** `performance.getEntriesByType('resource')` → **`[]` on
+      BOTH engines.** A `file://` read never enters the Resource-Timing buffer, so the existing
+      `/^https?:/i` guards are **correct, not merely conveniently scoped** — nothing to filter out, no
+      re-scoping needed. Flip side recorded plainly: the guards prove watch put nothing on the wire and can
+      **never** prove the local read happened.
+      **CONSEQUENCE — FIREFOX WATCH IS APP-PAGE-ONLY**, taken as the second outcome this task anticipated.
+      Both halves of the content-script route are closed (content script cannot re-read its own file per
+      task-0; background cannot read `file://` per this check). **Spec narrowed in THIS commit (C12,
+      spec-anchored): §3.5 amended, §7-1 and §7-4 marked RESOLVED (kept, not deleted), §4 Degradation
+      extended to cover the Firefox content-script surface.** Chromium's two-surface promise is untouched.
+      **Also removed: one dead branch in `entrypoints/background.ts`** — the `status !== 0` escape hatch and
+      its now-falsified comment (Chromium returns 200; Firefox never reaches the line). Behaviour-preserving
+      on the only engine that runs it; `pnpm test` + `pnpm test:browser` green.
+      **4.4's PRECONDITION IS NOW SATISFIED** — its answer is recorded in `decisions.md`, and it is the
+      negative outcome, so **4.4 covers the content-script surface on Firefox too**, not just the app page.
 
 ## 3 — Re-render continuity — THE RISKIEST GROUP (this is where `mount()` stops being read-only library)
 
