@@ -255,12 +255,22 @@
 
 ## 6 — TOC carry-over (persisted open-state + width; global, per plan §1.7)
 
-- [ ] **6.1 Apply persisted `tocOpen`/`tocWidth` on build; persist on toggle/resize.** Thread the port into
-      `buildTocView` (via `mount()`): on build, if `snapshot().tocOpen`/`tocWidth` are non-null apply them
-      instead of the 003 width-derived `initialTocOpen`; else keep 003's behavior. `setTocOpen` (backtick +
-      opener) calls `save({tocOpen})`; the resize drag `end` calls `save({tocWidth})` — via an **injected
-      callback**, not a direct `store` import (tocView stays surface-agnostic).
-      Files: `src/render/tocView.ts` · `src/render/mount.ts` · `tests/browser/tocPersist.browser.test.ts`
+- [x] **6.1 Apply persisted `tocOpen`/`tocWidth` on build; persist on toggle/resize.** The rail reaches the
+      settings through the **module seam** `src/settings/settingsSeam.ts` (`currentSettings` /
+      `onSettingsChange` / `saveSettings`), NOT a port threaded through `mount()` — the same correction 5.1
+      made for the theme control (D-A), for the same reason: that threading does not exist and would reshape
+      four signatures across two call chains for one callback. Decision **D-E = (b)**: the group-5 theme-only
+      save sink was GENERALIZED into that seam rather than duplicated, so one `registerSettingsSink` per
+      context now serves both consumers; `registerThemeSaveSink` remains as a delegate so no group-5 call
+      site or test changed. On build, if `currentSettings().tocOpen`/`tocWidth` are non-null they are applied
+      instead of the 003 width-derived `initialTocOpen` (**and the width-derived rAF is not scheduled at all**
+      — decision D-F, the stomp); else 003's behavior is untouched. `tocWidth` is **clamped** on restore.
+      The opener AND the backtick persist `{tocOpen}` via `setTocOpenByUser`; the resize drag's `end` persists
+      `{tocWidth}` ONCE per gesture (D-H). The restore path is deliberately SILENT (D-G) — `setTocOpen` stays
+      save-free so restoring a stored value cannot re-save it.
+      Files: `src/render/tocView.ts` · `src/settings/settingsSeam.ts` · `src/theme/themeControl.ts` ·
+      `entrypoints/peekover.content.ts` · `src/app/appShell.ts` · `src/render/tocView.test.ts` ·
+      `tests/browser/tocPersist.browser.test.ts`
       Verify (**tests/browser** — Cr+Fx, red-first): toggle the rail closed + drag a width → **reopen** applies
       the remembered open-state + width (fails if the snapshot isn't consulted / the callback doesn't save);
       `null` fields fall back to 003's default. Golden EMPTY + manifest green.
@@ -305,6 +315,20 @@
       Files: — (human gate; no code)
       Verify (**human gate**): a human walks the full checklist, both engines + both surfaces, and records the
       pass in progress.md.
+      *Added at 6.1 — **eyeball the theme pill's clearance over TEXT at a NARROW viewport** (~414px wide).
+      MEASURED at 6.1 (Chromium + Firefox, 414×896): the reading column spans the FULL width
+      `[0,0,414,5957]` while the pill is fixed at `[16,810,123,840]` — so it DOES sit over body text, by
+      design. That is the established Peekover pattern, not a defect: the mode toggle `[341,16,398,46]`, the
+      remote-load pill and the network indicator are the same family of fixed corner chrome and overlay the
+      column identically at this viewport (asserted in `tocPersist.browser.test.ts`, so a future change that
+      broke the pattern goes red). NOTHING WAS RESTYLED. What a test cannot decide is whether the text UNDER
+      the pill stays legible — contrast/occlusion is the M3 defect-#6 class, human-eye-only. Check it at a
+      narrow window on both engines.*
+      *Added at 6.1 — **TOC carry-over end-to-end**: collapse the rail, drag a width, RELOAD, confirm both
+      come back. The browser harness loads no extension, so the real
+      `messagingPort → background → IndexedDB` save path and a genuine reopen are unproven (a fake sink is
+      injected through the production seam instead). Do this on BOTH surfaces and check the remembered state
+      is GLOBAL (set it on one surface, see it on the other).*
 
 ---
 

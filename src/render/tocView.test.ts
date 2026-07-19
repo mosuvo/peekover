@@ -21,6 +21,9 @@ import {
   installTocShortcut,
   registerTocHost,
   unregisterTocHost,
+  clampTocWidth,
+  TOC_MIN_WIDTH,
+  TOC_MAX_WIDTH,
 } from './tocView';
 
 /** A reader-root-shaped container from an HTML string (test scaffolding only). */
@@ -475,5 +478,42 @@ describe('backtick TOC toggle + host registry (task 2.3)', () => {
     const host = mountedHost();
     pressKey('`'); // a duplicate listener would flip twice (net no-op) → RED against 'collapsed'
     expect(host.getAttribute('data-toc')).toBe('collapsed');
+  });
+});
+
+// ── Task 6.1 — the clamp-on-restore rule (the ONE genuinely pure bit of TOC persistence) ─────
+//
+// Everything else 6.1 adds is DOM/rAF/layout/pointer-drag and therefore jsdom-blind — it is
+// proven in tests/browser/tocPersist.browser.test.ts on both engines. This rule is not: it is a
+// total function of one number, and it is the guard that keeps a corrupt or foreign stored width
+// from breaking the layout, so it is asserted directly here rather than only through a rail.
+describe('clampTocWidth — restoring a stored rail width (task 6.1)', () => {
+  it('passes an in-range stored width through unchanged', () => {
+    expect(clampTocWidth(250)).toBe(250);
+    expect(clampTocWidth(TOC_MIN_WIDTH)).toBe(TOC_MIN_WIDTH);
+    expect(clampTocWidth(TOC_MAX_WIDTH)).toBe(TOC_MAX_WIDTH);
+  });
+
+  it('clamps a stored width BELOW the minimum up to the minimum', () => {
+    // A corrupt row, or a build whose TOC_MIN_WIDTH was lower. Restoring 12px raw would render a
+    // rail too narrow to read or grab; it must land on the bound, never collapse to nothing.
+    expect(clampTocWidth(12)).toBe(TOC_MIN_WIDTH);
+    expect(clampTocWidth(0)).toBe(TOC_MIN_WIDTH);
+    expect(clampTocWidth(-9999)).toBe(TOC_MIN_WIDTH);
+  });
+
+  it('clamps a stored width ABOVE the maximum down to the maximum', () => {
+    // The direction that matters most for "the document stays the hero": an oversized stored
+    // width must not be allowed to eat the reading column, since the column reserves --toc-w.
+    expect(clampTocWidth(10_000)).toBe(TOC_MAX_WIDTH);
+    expect(clampTocWidth(TOC_MAX_WIDTH + 1)).toBe(TOC_MAX_WIDTH);
+  });
+
+  it('is idempotent — clamping an already-clamped value changes nothing', () => {
+    // The property the drag-end save relies on: it clamps a value the pointer moves already
+    // clamped, so re-clamping must be free rather than drifting the stored width.
+    for (const raw of [-50, 0, 180, 300, 480, 4000]) {
+      expect(clampTocWidth(clampTocWidth(raw))).toBe(clampTocWidth(raw));
+    }
   });
 });

@@ -70,8 +70,9 @@ import {
 } from './recentsView';
 import { registerThemeHost } from '../theme/themeRegistry';
 import { applyColorScheme, setThemeSetting } from '../theme/reader';
-import { buildThemeControl, registerThemeSaveSink } from '../theme/themeControl';
+import { buildThemeControl } from '../theme/themeControl';
 import { directPort } from '../settings/settingsPort';
+import { publishSettings, registerSettingsSink } from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
 import { createTreeView } from './treeView';
 import { createStorageView } from './storageControls';
@@ -884,8 +885,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     getSettings: () => store.getSettings?.() ?? Promise.resolve({ ...DEFAULT_SETTINGS }),
     putSettings: (patch) => store.putSettings?.(patch) ?? Promise.resolve(),
   });
-  registerThemeSaveSink((patch) => void settingsPort.save(patch));
-  void settingsPort.load().then((resolved) => setThemeSetting(resolved.theme));
+  // Task 6.1: ONE sink registration now serves every settings consumer on this page — the header
+  // control, the in-reader pill, AND the reader pane's TOC rail (decision D-E generalized the
+  // group-5 theme-only seam rather than adding a second one beside it). `publishSettings` caches
+  // + notifies, which is what carries the remembered TOC open-state/width to a pane mounted
+  // before this load resolved.
+  registerSettingsSink((patch) => void settingsPort.save(patch));
+  void settingsPort.load().then((resolved) => {
+    setThemeSetting(resolved.theme);
+    publishSettings(resolved);
+  });
 
   // Initial paint: the idle affordance (plain line + live CTA) — never a blank page. The
   // reopen hub fills in once the async load resolves (refresh repaints idle when still idle).

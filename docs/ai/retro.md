@@ -1,4 +1,27 @@
 # Retro log — Peekover
+- **2026-07-19 · PROCESS (spec 004, groups 3–5) — `git checkout <path>` as a red-first revert destroyed
+  uncommitted task work THREE times. The revert tool must not be repo-scoped when the file is dirty.**
+  The red-first discipline requires mutating `src/` to prove a test fails, then undoing the mutation. Three
+  times across groups 3–5 the undo was `git checkout <path>` — which restores the file to HEAD, i.e. it
+  reverts the mutation **and** every uncommitted line of the task itself, because both live in the same file:
+  - *Group 3:* `git checkout src/theme/reader.ts` wiped the `setThemeSetting` rewrite. Caught, redone.
+  - *Group 4:* `git checkout src/render/runReader.ts src/render/runReader.test.ts` **permanently destroyed**
+    the paint gate and its 7 jsdom orchestration tests. Nothing recovered them — which is why decisions.md
+    records the gate as "rebuild, not restore".
+  - *Group 5:* `git checkout src/render/mount.ts` dropped the mount edits again. Caught, redone.
+  **The lesson: while uncommitted task work lives in a file, NEVER revert a red-first mutation with
+  `git checkout <path>`. Use a file-level backup (`cp` the file aside, mutate, restore from the copy) or a
+  targeted edit that undoes exactly the mutated lines.** The distinguishing property is that `git checkout`'s
+  restore point is HEAD, while the wanted restore point is *the working tree one mutation ago* — those differ
+  by exactly the task's own work.
+  - **This is INCONSISTENCY, not ignorance, and that is the sharper finding.** The safe pattern was used
+    correctly in the SAME sessions — group 5 backed up `src/theme/themeControl.ts` to `/tmp/` before mutating
+    it and restored from there. So the knowledge was present and the wrong tool was still reached for under
+    the momentum of "just undo it". A rule that is known but not reliably applied needs a mechanical trigger,
+    not more understanding: **before any red-first mutation, `cp` the target aside first — make the backup the
+    first step of the mutation, not a thing remembered at revert time.**
+  - Cost: one destroyed increment (group 4's gate + 7 tests, rebuilt from scratch), two near-misses. Groups
+    6–8 all still have red-first mutations ahead; this is followed from task 6.1 onward.
 - **2026-07-17 · M3 close (spec 003 — TOC / navigation).** An in-reader right-side table-of-contents
   rail serving BOTH reader surfaces from ONE `mount()`-seam compose (see decisions.md 2026-07-17 for the
   settled architecture — not restated here). Six groups (model · rail+seam · scroll/spy/motion/resize ·

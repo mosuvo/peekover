@@ -25,6 +25,7 @@
 // `pushState` — entries navigate by scrolling a ref, not by URL (spec In-scope "URL untouched").
 
 import type { TocEntry } from './tocModel';
+import { currentSettings, onSettingsChange, saveSettings } from '../settings/settingsSeam';
 
 /** Options threaded from mount(). `contained` = the app-page reader pane (vs the full-page
  *  content-script takeover). In 2.1 this is STRUCTURAL only — reflected as a marker on the
@@ -193,10 +194,37 @@ function buildItem(entry: TocEntry): HTMLLIElement {
 
 /** Reflect the rail's open/collapsed state as `data-toc` on the host AND keep the opener's
  *  `aria-expanded` in lockstep — the single writer of both, so the visible chrome, the CSS
- *  key, and the a11y state can never drift. No scroll, no `location`/`history`. */
+ *  key, and the a11y state can never drift. No scroll, no `location`/`history`.
+ *
+ *  DELIBERATELY DOES NOT PERSIST (task 6.1, decision D-G). This one writer serves THREE callers:
+ *  the opener, the backtick shortcut, and — new in 6.1 — the restore path that applies a stored
+ *  value. Saving here would make restoring a stored value immediately re-save it: a pointless
+ *  write, and a live echo/race against a `load()` still in flight. "The user changed it" and "we
+ *  restored what was already stored" are therefore SEPARATE call paths (`setTocOpenByUser`
+ *  below), not one path with a suppression flag. */
 function setTocOpen(host: HTMLElement, opener: HTMLButtonElement, open: boolean): void {
   host.setAttribute('data-toc', open ? 'open' : 'collapsed');
   opener.setAttribute('aria-expanded', String(open));
+}
+
+/** The USER-INITIATED half of the open/collapsed change (task 6.1): apply it through the single
+ *  writer above, then persist it. Both user entry points call this — the opener click and the
+ *  backtick shortcut — so the two cannot drift in what they remember. The restore path calls
+ *  `setTocOpen` directly and stays silent (decision D-G).
+ *
+ *  Persistence is best-effort and never gates the visible flip: `saveSettings` is a no-op with no
+ *  sink registered, and the port swallows storage failures. */
+function setTocOpenByUser(host: HTMLElement, opener: HTMLButtonElement, open: boolean): void {
+  setTocOpen(host, opener, open);
+  saveSettings({ tocOpen: open });
+}
+
+/** A host's live rail opener — the exact node `setTocOpen` keeps in lockstep with `data-toc`.
+ *  `null` when the host currently has no rail (a <2-heading re-render, or the never-blank raw
+ *  fallback). One accessor so the backtick resolver and 6.1's late restore agree on what "has a
+ *  rail" means. */
+function tocOpenerFor(host: HTMLElement): HTMLButtonElement | null {
+  return host.shadowRoot?.querySelector<HTMLButtonElement>('button.peekover-toc__toggle') ?? null;
 }
 
 /**
@@ -218,7 +246,7 @@ function buildOpener(host: HTMLElement): HTMLButtonElement {
   opener.textContent = 'On this page';
   opener.setAttribute('aria-expanded', String(DEFAULT_TOC_OPEN));
   opener.addEventListener('click', () => {
-    setTocOpen(host, opener, host.getAttribute('data-toc') !== 'open');
+    setTocOpenByUser(host, opener, host.getAttribute('data-toc') !== 'open');
   });
   return opener;
 }
@@ -242,8 +270,19 @@ const DEFAULT_TOC_W = 250;
 export const TOC_MIN_WIDTH = 180;
 export const TOC_MAX_WIDTH = 480;
 
-/** Clamp a candidate rail width to [TOC_MIN_WIDTH, TOC_MAX_WIDTH]. */
-function clampTocWidth(px: number): number {
+/**
+ * Clamp a candidate rail width to [TOC_MIN_WIDTH, TOC_MAX_WIDTH].
+ *
+ * Used by BOTH the live drag and 6.1's restore-from-persistence path, and exported for the latter:
+ * a stored width is untrusted input in a way a live drag is not. The drag can only produce values
+ * this same function already bounded, but a stored row can hold anything — a corrupted value, a
+ * hand-edited DB, or a width written by a FUTURE build whose TOC_MIN/MAX differ from this build's.
+ * Clamping on the way IN means such a value narrows the rail to a sane edge instead of collapsing
+ * the reading column or eating the viewport. Pure and total (a non-finite input yields
+ * TOC_MIN_WIDTH via Math.min/Math.max's NaN propagation being caught by the caller's guard), so it
+ * is the one piece of 6.1 that is genuinely jsdom-unit-testable.
+ */
+export function clampTocWidth(px: number): number {
   return Math.max(TOC_MIN_WIDTH, Math.min(TOC_MAX_WIDTH, px));
 }
 
@@ -320,11 +359,88 @@ function buildResizer(host: HTMLElement): HTMLElement {
     } catch {
       /* capture was never established (guarded above) — nothing to release */
     }
+    // PERSIST ON DRAG END ONLY (task 6.1, decision D-H). `pointermove` above rewrites --toc-w on
+    // every pointer sample — dozens to hundreds per drag — so saving there would fire that many
+    // writes through the port and, on the content-script surface, that many runtime messages to
+    // the background, for one user gesture with one meaningful outcome. The `if (!dragging)` guard
+    // above also makes this fire exactly ONCE per drag: pointerup and pointercancel share this
+    // handler, and the second of them (or a stray one with no drag in progress) returns early.
+    // The value read back is the committed one the moves already clamped; clamped again so a
+    // host whose --toc-w came from somewhere other than this drag cannot store an out-of-range
+    // width. Best-effort, and it never gates the visible size.
+    saveSettings({ tocWidth: clampTocWidth(currentTocWidth(host)) });
   };
   resizer.addEventListener('pointerup', end);
   resizer.addEventListener('pointercancel', end);
 
   return resizer;
+}
+
+/**
+ * Apply a persisted rail width (task 6.1), or do nothing when there is none. `null` means "never
+ * set" and MUST leave the CSS default (`:host{--toc-w:250px}`) in place — writing an inline
+ * property for an unset value would pin the rail against any future default change.
+ *
+ * CLAMPED on the way in (see `clampTocWidth`): a stored value outside this build's bounds is
+ * brought to the nearest edge, never applied raw. A non-finite stored value (a corrupted row) is
+ * rejected outright rather than clamped, because `clampTocWidth(NaN)` is NaN — which would write
+ * the literal string "NaNpx" and silently kill the whole custom property.
+ */
+function applyStoredTocWidth(host: HTMLElement, stored: number | null): void {
+  if (stored === null || !Number.isFinite(stored)) return;
+  host.style.setProperty('--toc-w', `${clampTocWidth(stored)}px`);
+}
+
+// ── TASK 6.1 — LATE ARRIVAL ────────────────────────────────────────────────────────────────
+//
+// On a cold start the settings land AFTER the mount commits (group 4's MEASURED behaviour, not a
+// guess: `resolved` at ~21 ms warm but the rail is built inside a mount that commits at ~60 ms,
+// and on cold starts the reply waits for a main-thread yield). So the rail is normally built
+// against `DEFAULT_SETTINGS` — both TOC fields `null` — and the persisted state arrives one turn
+// later.
+//
+// IT IS APPLIED WHEN IT ARRIVES, not deferred to the next render, for the same reason the theme
+// is: deferring means the remembered state does not appear on the open the user is looking at,
+// only on the NEXT one. For the theme that would be a visible flash; for the TOC it would be
+// worse — the content-script surface renders a document ONCE per navigation, so "the next render"
+// may never come, and a user who collapsed the rail would find it open on every single open
+// forever. That is indistinguishable from the feature not working.
+//
+// The re-open direction is the visible cost and it is accepted deliberately: a rail built open by
+// the width default, whose stored state is `collapsed`, will collapse a frame or two after paint.
+// That is the same instant-correction trade D-2 settled for the theme (an instant swap, no
+// cross-fade), it moves chrome rather than the reading column's text, and the alternative —
+// gating the mount on the settings — is exactly what task 4.2 measured, failed against the
+// <150 ms budget, and removed. Whether the correction is perceptible is an 8.1 eyeball item.
+//
+// LIVENESS is the same `isConnected` discipline the rAF guard, the scroll-spy self-heal and the
+// host registry already use, reached through the SAME registry: `tocHosts` prunes dead hosts, and
+// `tocOpenerFor` returns null for a connected-but-rail-less host, so a restore can never write to
+// a detached node or a reader whose rail was replaced by the never-blank raw fallback.
+//
+// ONE module-level subscription, never one per rail — mount() rebuilds its chrome on every render
+// (replaceChildren drops the old rail), so a per-rail subscription would leak one listener per
+// re-render. The verbatim themeControl/themeRegistry pattern.
+
+let settingsSubscribed = false;
+
+/** Subscribe ONCE to published settings, so a cold-start `load()` reaches rails already built. */
+function ensureSettingsSubscribed(): void {
+  if (settingsSubscribed) return;
+  settingsSubscribed = true;
+  onSettingsChange((settings) => {
+    for (const host of tocHosts) {
+      if (!host.isConnected) {
+        tocHosts.delete(host); // dead-node prune (deleting during Set iteration is safe)
+        continue;
+      }
+      const opener = tocOpenerFor(host);
+      if (!opener) continue; // connected but rail-less — nothing to restore onto
+      // Restore path: silent, so applying what is already stored cannot echo back as a save (D-G).
+      if (settings.tocOpen !== null) setTocOpen(host, opener, settings.tocOpen);
+      applyStoredTocWidth(host, settings.tocWidth);
+    }
+  });
 }
 
 /**
@@ -342,7 +458,43 @@ function buildResizer(host: HTMLElement): HTMLElement {
  * untouched; only WHERE/WHEN it is fed a real width changed.
  */
 function applyInitialTocState(host: HTMLElement, opener: HTMLButtonElement): void {
+  // ── TASK 6.1 / DECISION D-F: A PERSISTED OPEN-STATE WINS OUTRIGHT, AND THE rAF IS NOT
+  //    SCHEDULED AT ALL. ────────────────────────────────────────────────────────────────────
+  //
+  // This is the trap in 6.1 and it is silent. Applying a stored `tocOpen` here and then letting
+  // the code below run would be a passing test and a broken product: `decide()` is re-run one
+  // frame later against the real laid-out width and calls `setTocOpen(..., initialTocOpen(width))`,
+  // which OVERWRITES the restored value with the width-derived default. A test asserting
+  // `data-toc` immediately after build would never see it — the stomp lands a frame later. So the
+  // real-engine tests assert AFTER two frames, and the rAF is not scheduled on this path at all
+  // rather than merely being made to agree: nothing pending means nothing to race.
+  //
+  // WHY PERSISTED WINS rather than the two composing: the width rule is a GUESS made in the
+  // absence of knowledge ("we have never been told, so infer from the viewport"), while a stored
+  // value is the user's actual last choice. Spec §4 makes that choice a SINGLE GLOBAL preference,
+  // so re-deriving it per viewport is precisely what "remembered" must not mean — a user who
+  // collapsed the rail on a wide screen must find it collapsed, not re-opened by the width rule.
+  // The opener is always present and one click away, so the remembered state is never a trap.
+  const stored = currentSettings();
+  if (stored.tocOpen !== null) {
+    setTocOpen(host, opener, stored.tocOpen); // restore path — silent, never re-saves (D-G)
+    applyStoredTocWidth(host, stored.tocWidth);
+    return;
+  }
+  // No stored open-state → 003's behaviour EXACTLY as it was, untouched. This is the regression
+  // guard: on a cold start `currentSettings()` is DEFAULT_SETTINGS (both fields null) until the
+  // entrypoint's `load()` publishes, so this is also the normal first-render path, with the real
+  // value arriving through `onSettingsChange` below.
+  applyStoredTocWidth(host, stored.tocWidth); // width is independent of open-state; restore it either way
   const decide = () => {
+    // The OTHER half of D-F's stomp guard, for the narrow race the early return above cannot
+    // cover: this rail was built with nothing stored (so the rAF below WAS scheduled), and the
+    // settings then published in the window before that frame ran. The late-arrival subscriber
+    // has already restored the real state onto this rail — so re-deriving from width here would
+    // stomp it, one frame after it was correctly applied. Re-read the seam at DECISION time (not
+    // at build time) and stand down if a stored value now exists. Cheap, synchronous, and it makes
+    // the width rule strictly "the default when nothing is remembered", at every point it runs.
+    if (currentSettings().tocOpen !== null) return;
     const width = readScrollportWidth(host);
     if (width > 0) setTocOpen(host, opener, initialTocOpen(width));
     else if (!host.hasAttribute('data-toc')) setTocOpen(host, opener, DEFAULT_TOC_OPEN);
@@ -406,6 +558,9 @@ export function buildTocView(
   const opener = buildOpener(host);
   nav.append(opener, buildList(model), buildResizer(host));
 
+  // Task 6.1: subscribe ONCE (module-level) so a cold-start `load()` publishing after this mount
+  // still reaches this rail — the normal path, not an edge case (see the LATE ARRIVAL note).
+  ensureSettingsSubscribed();
   applyInitialTocState(host, opener);
 
   // Scroll-spy (3.2): pair each heading ref with its entry button and install the observer.
@@ -693,7 +848,7 @@ export function unregisterTocHost(host: HTMLElement): void {
  *  registered host has a visible rail the user meant to toggle. Resolution therefore requires a
  *  LIVE rail, not merely a live host (the same predicate `toggleTocHost` acts through). */
 function hasRail(host: HTMLElement): boolean {
-  return !!host.shadowRoot?.querySelector('button.peekover-toc__toggle');
+  return tocOpenerFor(host) !== null;
 }
 
 /**
@@ -733,9 +888,12 @@ function resolveActiveTocHost(): HTMLElement | null {
  *  opener lives in the host's shadow root; if it is somehow absent (a rail-less host that
  *  slipped the registry), no-op rather than write a half state. */
 function toggleTocHost(host: HTMLElement): void {
-  const opener = host.shadowRoot?.querySelector<HTMLButtonElement>('button.peekover-toc__toggle');
+  const opener = tocOpenerFor(host);
   if (!opener) return;
-  setTocOpen(host, opener, host.getAttribute('data-toc') !== 'open');
+  // The backtick is a USER change, exactly like clicking the opener, so it persists through the
+  // same `setTocOpenByUser` path (task 6.1). If it used the bare writer, the rail would remember
+  // clicks but silently forget keyboard toggles.
+  setTocOpenByUser(host, opener, host.getAttribute('data-toc') !== 'open');
 }
 
 /** The bare key that toggles the rail. A backtick — chosen at the plan gate over `t` to

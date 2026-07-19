@@ -44,7 +44,12 @@
 // control), so a per-control listener would leak one subscription per re-render; this cannot.
 
 import { setThemeSetting, currentThemeSetting, onThemeSettingChange } from './reader';
-import type { Settings, ThemeSetting } from '../settings/settings';
+import {
+  registerSettingsSink,
+  resetSettingsSeamForTest,
+  saveSettings,
+} from '../settings/settingsSeam';
+import type { ThemeSetting } from '../settings/settings';
 
 /**
  * The settings the control offers, in cycle order. auto/light/dark ONLY — sepia is DEFERRED
@@ -76,28 +81,32 @@ export function nextThemeSetting(current: ThemeSetting): ThemeSetting {
   return THEME_CYCLE[(index + 1) % THEME_CYCLE.length];
 }
 
-// --- the save seam (D-A) -----------------------------------------------------------
+// --- the save seam (D-A, generalized in task 6.1 by D-E) ---------------------------
+//
+// The seam group 5 built here is now `src/settings/settingsSeam.ts`, because group 6 needed the
+// identical mechanism for the TOC and this one was already `Partial<Settings>`-shaped — only its
+// NAME was theme-specific (decision D-E = (b); the full argument is in that module's header).
+//
+// This is a PURE MOVE: the two exports below keep their names and behaviour and simply delegate,
+// so every group-5 call site and test is untouched by the generalization. `SaveSettings` is
+// re-exported from its new home for the same reason.
 
-/** What the control needs from a SettingsPort: persist a patch. Deliberately narrower than the
- *  port itself, so a context hands over one function and this module never sees the store. */
-export type SaveSettings = (patch: Partial<Settings>) => void;
-
-let saveSink: SaveSettings | null = null;
+export type { SaveSettings } from '../settings/settingsSeam';
 
 /**
  * Register the context's persistence sink — called ONCE per context by whoever owns the port:
  * the content script with `messagingPort(...).save`, the app page with `directPort(store).save`.
  * Last registration wins (a context has exactly one settings port). Registering is optional: an
  * unregistered context still applies theme picks, it just does not persist them.
+ *
+ * Retained under its group-5 name; `registerSettingsSink` is the canonical one now, and the same
+ * registration serves every settings consumer (theme control, TOC rail) rather than one per
+ * feature.
  */
-export function registerThemeSaveSink(save: SaveSettings): void {
-  saveSink = save;
-}
+export const registerThemeSaveSink = registerSettingsSink;
 
 /** Test-only: forget the registered sink so suites do not leak one into another. */
-export function resetThemeSaveSinkForTest(): void {
-  saveSink = null;
-}
+export const resetThemeSaveSinkForTest = resetSettingsSeamForTest;
 
 // --- the control -------------------------------------------------------------------
 
@@ -170,7 +179,7 @@ export function buildThemeControl(): HTMLButtonElement {
   control.addEventListener('click', () => {
     const next = nextThemeSetting(currentThemeSetting());
     setThemeSetting(next); // applies + broadcasts + notifies (which re-labels this control)
-    saveSink?.({ theme: next }); // best-effort; never gates the visible change
+    saveSettings({ theme: next }); // best-effort; never gates the visible change
   });
   controls.add(control);
   ensureSubscribed();

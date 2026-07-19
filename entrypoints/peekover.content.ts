@@ -2,7 +2,7 @@ import { defineContentScript, browser } from '#imports';
 import { runReader } from '@/src/render/runReader';
 import { messagingPort } from '@/src/settings/settingsPort';
 import { setThemeSetting } from '@/src/theme/reader';
-import { registerThemeSaveSink } from '@/src/theme/themeControl';
+import { publishSettings, registerSettingsSink } from '@/src/settings/settingsSeam';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -73,7 +73,16 @@ export default defineContentScript({
     // COULD reject can neither withhold nor delay the reader (AGENTS.md #5) — never-blank is
     // structural on this path, not a timeout that has to be tuned correctly.
     const settings = messagingPort((message) => browser.runtime.sendMessage(message));
-    void settings.load().then((resolved) => setThemeSetting(resolved.theme));
+    void settings.load().then((resolved) => {
+      setThemeSetting(resolved.theme);
+      // Task 6.1: hand the SAME resolved value to the settings seam, which caches it for any
+      // consumer built later and notifies the ones already built. That is what carries the
+      // persisted TOC open-state/width to a rail this load() lost the race to — the normal cold-
+      // start ordering (group 4's measurement), not an edge case. Theme keeps its own line above
+      // because the theme runtime applies + broadcasts, which is a rendering act, not a cache
+      // update (see settingsSeam.ts on why the two halves stay separate).
+      publishSettings(resolved);
+    });
 
     // The WRITE direction (task 5.1, decision D-A). The in-reader theme control is built deep
     // inside mount(), which has no port and is not given one: threading a port through
@@ -82,7 +91,10 @@ export default defineContentScript({
     // registers the theme setting above — the same seam, the same direction of dependency, and
     // mount() still imports neither a port nor the store. `save` is best-effort by construction
     // (settingsPort swallows persistence failures), so a dead background cannot break a pick.
-    registerThemeSaveSink((patch) => void settings.save(patch));
+    // ONE registration now serves EVERY settings consumer (the theme control and, from task 6.1,
+    // the TOC rail) — the seam was generalized rather than duplicated per feature (decision D-E).
+    // Registered under its canonical name; `registerThemeSaveSink` remains a delegate to this.
+    registerSettingsSink((patch) => void settings.save(patch));
 
     runReader();
   },

@@ -15,6 +15,11 @@ missed (the rail rendered TRANSPARENT + the reading column un-reserved — a NEW
 gate-only"** class; retro 2026-07-17), keeping the gate load-bearing (**6/6** milestone-shipping defects caught
 across M1+M2+M3). Retro captured (docs/ai/retro.md). Nothing on 003 outstanding.
 
+**NOW: spec 004 (themes + settings) — groups 1–5 DONE AND PUSHED; group 6 (TOC carry-over) task 6.1 DONE,
+committed, NOT pushed.** Next → group 7 (perf/bytes/pins/docs + close). Group-6 detail below; the four 6.1
+design decisions (D-E generalized seam · D-F rAF stomp · D-G restore-never-saves · D-H save-on-drag-end)
+are recorded there.
+
 **Spec 004 (themes + settings) IMPLEMENTATION IN PROGRESS — group 1 (store foundation).** Spec/plan/tasks all
 APPROVED (gate 1 + Gear-3 gate 2 + gate-3 tasks, 2026-07-17). Sepia DEFERRED (D-1 = A). Group-1 tracker (advance
 PER TASK — M1 lesson):
@@ -501,8 +506,112 @@ PER TASK — M1 lesson):
   **GROUP 5 COMPLETE (5.1/5.2), NOT pushed** — 2 commits ahead, awaiting human review. Suites at group
   close: `pnpm test` **380 unit** · `pnpm test:browser` **272** both engines · golden diff **EMPTY** ·
   `manifest.test.ts` green (`permissions: []`). Fence held: `tocView.ts`/`tocModel.ts`, `sanitize.ts`,
-  `parse.ts`, the manifest and `wxt.config` all **untouched**. NEXT after review → group 6 (TOC
-  carry-over). Do NOT start it yet.
+  `parse.ts`, the manifest and `wxt.config` all **untouched**. **Group 5 reviewed + PUSHED.**
+  NEXT → group 6 (TOC carry-over), below.
+
+**Group 6 (TOC carry-over) IN PROGRESS — advance PER TASK.**
+- **6.1 DONE — the 003 rail's open-state and width are now a remembered global preference.** Applied on
+  build, restored on late arrival, persisted on change; 003's behaviour is bit-for-bit unchanged when
+  nothing is stored.
+  - **D-E = (b) — the group-5 save seam was GENERALIZED, not duplicated.** New
+    `src/settings/settingsSeam.ts` owns `currentSettings()` / `onSettingsChange()` / `saveSettings()` /
+    `registerSettingsSink()`. Justified from the code, not by taste: the group-5 sink's type was ALREADY
+    `(patch: Partial<Settings>) => void` — nothing about it was theme-specific, it was only NAMED for its
+    first consumer; a second seam would have had both entrypoints register the SAME `port.save` twice into
+    two module globals; and the TOC additionally needs a READ half, which is literally a `Settings` value
+    and belongs with the settings vocabulary rather than bolted onto a theme module. **PURE MOVE, as
+    required:** `themeControl.ts` still exports `registerThemeSaveSink` / `resetThemeSaveSinkForTest` as
+    delegates, so **every group-5 test file is byte-unchanged** and the two theme browser suites
+    (`themeControl` 19 + `themeShell` 9) stayed green untouched. Entrypoints/appShell moved to the
+    canonical `registerSettingsSink` + gained `publishSettings(resolved)` beside their existing
+    `setThemeSetting(resolved.theme)`.
+    - **WHAT WAS DELIBERATELY *NOT* UNIFIED, and why:** the theme's READ half stays in `reader.ts`
+      (`currentThemeSetting` / `onThemeSettingChange`). Those report the theme runtime's **APPLIED** state,
+      not the persistence cache, and the two legitimately diverge — an OS flip under `auto` changes what
+      paints while the stored setting is untouched. Collapsing them would destroy exactly the distinction
+      decision D-B was written to preserve. So: the seam owns STORED settings; reader.ts owns APPLIED theme.
+  - **D-F — THE rAF STOMP, AND THE VACUOUS TEST IT NEARLY SHIPPED (the headline of this task).**
+    `applyInitialTocState` schedules an rAF that re-runs the width rule post-layout and calls `setTocOpen`,
+    so a restored value applied at build is **overwritten one frame later**. Handling: **a persisted
+    `tocOpen` wins outright AND the rAF is not scheduled at all** (nothing pending ⇒ nothing to race), plus
+    a second guard inside `decide()` that re-reads the seam at DECISION time and stands down if a stored
+    value has appeared since — closing the narrow window where a rail built with nothing stored has the
+    settings publish before its already-scheduled frame runs. Rationale: the width rule is a GUESS made in
+    the absence of knowledge; spec §4 makes the stored value a single GLOBAL preference, so re-deriving it
+    per viewport is precisely what "remembered" must not mean.
+    - **THE NEAR-MISS, RECORDED BECAUSE IT IS THE REUSABLE LESSON.** The first version of the D-F test
+      assumed the harness viewport was WIDE and asserted that a stored `tocOpen:false` survived. **The
+      harness viewport is 414×896 — NARROW** — so the width rule already decides `collapsed`, meaning the
+      stomp would have written *the same value the test asserted*: it would have passed with the entire D-F
+      handling deleted. The harness surfaced this only incidentally (a different hardcoded `'open'`
+      expectation failed). Fix: the suite now MEASURES the width-derived default by mounting a probe with
+      nothing stored and reading production's own answer, then seeds the **opposite** — adversarial by
+      construction on any viewport, plus an explicit `not.toBe(widthDefault)` assertion. **The general
+      lesson: a persistence test that hardcodes what the fallback would have decided is vacuous whenever
+      the two agree, and nothing about the green run says so.**
+  - **D-G — restoring must not write back.** `setTocOpen` remains the single, SAVE-FREE writer of
+    `data-toc`/`aria-expanded`, now serving three callers (opener, backtick, restore). Persistence lives in
+    a separate `setTocOpenByUser` wrapper that both USER paths call. At the seam the same split is
+    structural: `publishSettings` (store → us) notifies, `saveSettings` (us → store) does NOT — so a
+    consumer that saves on change and restores on notification cannot loop its own write back one turn
+    later, or race a `load()` still in flight. Asserted: after a restore, and after a LATE restore, the
+    captured-patch array is `[]`.
+  - **D-H — CONFIRMED, the drag persists on `end` only.** `pointermove` rewrites `--toc-w` per pointer
+    sample and saves nothing; the shared `pointerup`/`pointercancel` handler saves once, and its existing
+    `if (!dragging) return` guard makes that exactly once per gesture (a stray or duplicate release stores
+    nothing). The stored width is clamped again on the way out.
+  - **LATE ARRIVAL — APPLIED, NOT DEFERRED, and this is the PRIMARY path.** On a cold start the settings
+    land after the mount commits (group 4's measurement), so the rail is normally built against
+    `DEFAULT_SETTINGS` (both fields `null` → 003's behaviour) and corrected when `publishSettings` fires.
+    Deferring to "the next render" was rejected because the content-script surface renders once per
+    navigation — the next render may never come, so a collapsed rail would reopen on every single open
+    forever, indistinguishable from the feature not working. Cost accepted deliberately: a visible
+    correction a frame or two after paint, the same instant-swap trade D-2 settled for the theme, moving
+    chrome rather than the column's text — and gating the mount is exactly what 4.2 measured, failed
+    against the <150 ms budget, and removed. ONE module-level subscription (never per rail — mount()
+    rebuilds chrome every render), reaching hosts through the existing `tocHosts` registry with the same
+    `isConnected` prune + rail-less skip the backtick resolver uses.
+  - **CLAMP ON RESTORE.** A stored width is untrusted in a way a live drag is not (corrupt row, hand-edited
+    DB, or a future build with different bounds), so `clampTocWidth` is applied on the way IN; a non-finite
+    stored value is rejected outright rather than clamped, because `clampTocWidth(NaN)` is NaN and would
+    write the literal `"NaNpx"`, silently killing the whole custom property.
+  - **TESTS — THE HONEST SPLIT.** jsdom unit **+4 → 384**: ONLY `clampTocWidth` (in/below/above range +
+    idempotence). That is genuinely all the pure logic 6.1 adds — everything else is rAF, layout, computed
+    custom properties and pointer geometry, all jsdom-blind; said so rather than inventing a unit test.
+    New `tests/browser/tocPersist.browser.test.ts` (Cr+Fx, 21 tests → **+42 → 314 browser**), every
+    open-state assertion made **after 3 frames** so it outlives the stomp, and the whole persistence block
+    run on **BOTH surfaces** via `describe.each` (the recurring two-surface gotcha, closed structurally).
+    **FIVE RED-FIRSTS, all genuinely red on BOTH engines, all reverted from a `cp` backup:**
+    (1) D-F handling removed → the opposing-`tocOpen` test fails `expected 'collapsed' to be 'open'` and
+    its mirror, 12 failures; (2) clamp dropped from restore → `expected 5000 to be 480` (a rail that would
+    have eaten the reading column); (3) `saveSettings` dropped from the user path → both opener and
+    backtick tests fail `expected [] to deeply equal [{tocOpen:false}]`; (4) the save moved into
+    `pointermove` → `expected [ {tocWidth:251}, …(39) ] to deeply equal []` — 40 writes for one gesture,
+    the exact D-H defect; (5) the late-arrival subscription removed → the cold-start test fails on both
+    surfaces.
+  - **A REAL INTERACTION THE CONTAINED SURFACE FORCED OUT (not scaffolding).** `mountAppShell` runs its own
+    production wiring — it registers ITS port's sink (last registration wins, by design) and publishes
+    whatever its store returns. On the app page the shell genuinely owns the port and the rail is a second
+    consumer of the same seam, so the test re-registers after the shell's turn and gives the fake store a
+    `getSettings` that answers with the seeded value. Worth knowing: **on the app page the shell's `load()`
+    is authoritative and will overwrite anything published before it.**
+  - **HARNESS LIMIT, STATED:** the browser project loads no unpacked extension, so the REAL save path
+    (`messagingPort` → background → IndexedDB) cannot run. The fake sink is injected through the
+    PRODUCTION `registerSettingsSink` seam and the persisted value fed in through the PRODUCTION
+    `publishSettings` — the exact two functions the entrypoints call. That proves tocView's half of the
+    contract; it does NOT prove the message reaches the background or that a real reopen remembers.
+    End-to-end collapse→drag→**reload** is now an explicit **8.1** item.
+  - **THE 5.1 CARRIED QUESTION — ANSWERED BY MEASUREMENT: (a), the established pattern. Nothing
+    restyled.** At **414×896** the reading column spans the FULL width `[0,0,414,5957]` while the theme pill
+    is fixed at `[16,810,123,840]` — so it **does** sit over body text at a narrow viewport. That is not an
+    unintended overlap: the mode toggle `[341,16,398,46]`, the remote-load pill and the network indicator
+    are the same family of fixed corner chrome and overlay the column identically at this viewport. The
+    relationship is now asserted, so a future change that breaks the pattern goes red. What no test can
+    decide — whether the text UNDER the pill stays legible — is the M3 defect-#6 occlusion class and is
+    added as an **8.1** eyeball item.
+  - `pnpm lint` clean; `pnpm test` **384 unit**; `pnpm test:browser` **314** both engines; golden diff
+    **EMPTY**; `tests/manifest.test.ts` green **8/8** (`permissions: []`). Fence held: `sanitize.ts`,
+    `parse.ts`, `readerMode.ts`, the manifest and `wxt.config` all **untouched**.
 
 Full close details in Done (2026-07-17); the settled TOC architecture + sizes/perf in decisions.md 2026-07-17.
 
