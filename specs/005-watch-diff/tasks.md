@@ -1,9 +1,9 @@
 # Tasks 005 — Watch mode — check off, add discovered tasks BELOW the line they came from
-*Gear 3 tasks stage — **DRAFT, awaiting the human gate-3 review; NOT a go-signal.** No implementation*
-*code until this is approved (WORKFLOW.md §5.3). Approved upstream: `spec.md` (b12c310 · amended d115b6e,*
-*5943e0e) + `plan.md` (d115b6e — ONE commit that landed the plan AND those spec amendments, not two*
-*artifacts sharing a hash by coincidence). CC commit per task; human reviews + pushes. Each capability*
-*task carries*
+*Gear 3 tasks stage — **APPROVED (Gear-3 gate 3 passed 2026-07-19); implementation IN PROGRESS.** This*
+*file is the live go-signal (WORKFLOW.md §5.3): work the unticked boxes in order. Approved upstream:*
+*`spec.md` (b12c310 · amended d115b6e, 5943e0e) + `plan.md` (d115b6e — ONE commit that landed the plan*
+*AND those spec amendments, not two artifacts sharing a hash by coincidence). CC commit per task; human*
+*reviews + pushes. Each capability*
 *its OWN real-engine test (`tests/browser/*`, BOTH Chromium + Firefox, **red-first + non-vacuous**), not a*
 *trailing "add tests" task. Layout, rAF, computed style, pointer geometry, bytes-on-wire and cross-context*
 *messaging are jsdom-**BLIND**: they are proven in the real engine, never in jsdom.*
