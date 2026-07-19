@@ -49,4 +49,4 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 
 - Start every session: read `docs/ai/progress.md`, then the active spec in `specs/`.
 - Plans before code for anything non-trivial (C13). Update memory files before ending (C14 budget).
-- Current milestone: `specs/001-core-rendering/`.
+- Current milestone: `specs/005-watch-diff/`.

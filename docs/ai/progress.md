@@ -8,16 +8,32 @@
 
 ## Now (start here)
 
-**M4 is CLOSED. Nothing is in progress. The next action is a spec-005 kickoff in a FRESH session.**
+**M4 is CLOSED. M5 (spec 005, watch mode + diff) is STARTED and stands at Gear-3 gate 1 PASSED. The next
+action is plan.md — gate 2 — in a FRESH session. NOT implementation code (WORKFLOW.md §5.3).**
 
 - **M1 (001), M2 (002), M3 (003), M4 (004) are all fully closed** — code-complete, human-gated, retro'd.
   **Nothing on any of them is outstanding**, and no work of any kind on 001–004 remains to be started.
-- **NEXT MILESTONE: M5 — spec 005, watch mode + diff** (the Phase-1 differentiator; roadmap in
-  `docs/product/spec.md` §Phase-1). **NOT STARTED.** No spec folder, no plan, no tasks.
-- **Its first action is a Gear-3 kickoff, in a FRESH session** (WORKFLOW.md §5.3), in this order and no
-  other: **spec.md (the WHAT, no tech) → human gate 1 → plan.md (the HOW) → human gate 2 → tasks.md →
-  human gate 3 → only then implementation code.** Do not write implementation code before tasks are
-  approved.
+- **M5 — spec 005, watch mode + diff** (the Phase-1 differentiator; roadmap in `docs/product/spec.md`
+  §Phase-1). Done so far: the **task-0 feasibility probe** was built, run on both engines and both
+  surfaces, and **torn down** (findings in `decisions.md` 2026-07-19, spec-005 task-0 probe); and
+  **`specs/005-watch-diff/spec.md` is APPROVED at Gear-3 gate 1** (2026-07-19).
+- **The remaining gate order, and no other:** **plan.md (the HOW) → human gate 2 → tasks.md → human
+  gate 3 → only then implementation code.** Do not write implementation code before tasks are approved.
+- **Four scope decisions are SETTLED at gate 1 — inherit them, do not re-litigate:**
+  1. **Scope is three of F6's six items** — auto-reload on change, watch mode, and diff vs. an earlier
+     snapshot. The other three plus the MCP bridge are out, each with a recorded home (spec §6).
+  2. **The engine split is MEASURED, not assumed:** Chromium detects **event-driven**
+     (`FileSystemObserver`, no polling); Firefox detects by **polling** and **only via the drag route**,
+     comparing **content** — `size`/`lastModified` are frozen at drop time.
+  3. **Snapshots store FILE CONTENTS.** So `docs/trust/PERMISSIONS.md`'s "File contents are never
+     stored" claim (three places) becomes false and **must be corrected in the same PR as the first code
+     that stores a snapshot** — same weight as an AGENTS.md #4 event, though no manifest change.
+  4. **§3.6 — a local-file read is NOT a network call (option A).** Watching does not light the network
+     indicator; the zero-network guards stay **http(s)-scoped**. **Verify, do not assume** — spec §7-4.
+- **The plan must resolve the eight open risks in `specs/005-watch-diff/spec.md` §7** (Firefox
+  content-script watch unverified · observer latency unmeasured · re-render cost under rapid updates ·
+  the Resource-Timing question · snapshot bound defaults · watch lifetime vs. surface lifetime ·
+  atomic-save fragility · Firefox drag-only discoverability). They are stated there; not restated here.
 - **Before the first task of any group, re-read the standing rules that keep costing time when skipped:**
   `docs/ai/decisions.md` (the harness ledger, the dead ends, the gate procedure — all three promoted
   2026-07-19) and `docs/ai/retro.md` (newest entry first).
@@ -126,8 +142,10 @@ there without either lying or duplicating.*
 
 ## Up next
 
-**Immediate: spec 005 — watch mode + diff.** Gear-3 kickoff in a fresh session (see Now). Nothing else is
-queued ahead of it.
+**Immediate: spec 005 — plan.md (Gear-3 gate 2), in a fresh session.** The kickoff has happened and
+spec.md is approved (see Now); the plan is the HOW — detection architecture per engine, the relay seam,
+the snapshot schema and bounds, the diff approach, the re-render/place-keeping mechanism, and the test
+strategy — resolving the eight §7 risks. Nothing else is queued ahead of it.
 
 **Carried items — banked deliberately, each with a recorded home. Do NOT guess at any of them; every one
 is either measurement-driven or explicitly deferred.**
