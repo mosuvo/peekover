@@ -233,7 +233,7 @@
       only modified file). 44/44 browser files · 335 passed / 5 skipped, both engines; 410 unit; lint clean;
       golden diff EMPTY; manifest green unmodified.
 
-- [ ] **3.2 `readingAnchor` — capture + restore (D-3).** Capture: resolve the scroll box (3.1), find the
+- [x] **3.2 `readingAnchor` — capture + restore (D-3).** Capture: resolve the scroll box (3.1), find the
       **last heading whose top is at or above the scroll position**, record `{ text, index, delta }` where
       `delta` is the pixel gap from that heading's top to the scroll position. Restore: match by **heading
       text** first (stable across re-parses of a mostly-unchanged doc), by **index** if the text is gone,
@@ -250,6 +250,27 @@
       would land somewhere **different** in that same fixture, so the test proves the anchor is doing work
       rather than agreeing with the fallback (the vacuous-persistence-test rule, retro finding 1). Golden
       EMPTY + manifest green.
+      **DONE 2026-07-20.** `src/render/readingAnchor.ts` — `{text,index,delta,scrollTop}`, captured off the
+      live pre-change DOM, restored text → index → `scrollTop`. The selection and match ladder are PURE
+      (`selectAnchorIndex` / `matchAnchorIndex`, numbers + strings, never a node), so jsdom tests it
+      honestly (12 unit cases) and the real engine proves only what jsdom is blind to. `buildTocModel` is
+      reused, not re-derived.
+      **Red-first:** replacing the restore body with the naive `scroller.scrollTop = anchor.scrollTop`
+      failed on **both engines AND both surfaces** — the target heading landed **3239.9 px** (full-page,
+      Chromium) / **11592.8 px** (contained) from where the reader left it, against a `< 8` bar.
+      **The non-vacuity control** measures the naive restore's landing point IN THE SAME FIXTURE and
+      asserts the anchor landed >100 px away from it, so the test cannot pass by the anchor merely agreeing
+      with the fallback.
+      **A REAL HARNESS DEFECT WAS FOUND AND FIXED HERE, and it is worth inheriting:** the usual
+      `waitForScrollable` (wait for overflow) returns while the reader is STILL RESTYLING. Measured on the
+      full-page surface: `scrollHeight` **81798 px at first overflow → 26069 px once settled**, a 3× reflow.
+      A heading offset read in that window is stale by tens of thousands of pixels and the following
+      `scrollTop` write CLAMPS to the new maximum — which silently parked the test at the document bottom
+      and made the capture pick the LAST heading, deterministically, on both engines. **This suite waits for
+      `scrollHeight` to STOP CHANGING, not merely to overflow.** Any future geometry suite in this milestone
+      should do the same; overflow is not the precondition, stability is.
+      44/44 browser files · 343 passed / 5 skipped both engines; 422 unit; lint clean; golden EMPTY;
+      manifest green unmodified.
 
 - [ ] **3.3 `MountOptions.preserveReading` + the `mount.ts:151` change — BOTH DIRECTIONS red-first.**
       Add `preserveReading?: boolean` to `MountOptions` (which today has exactly one field, `contained?`,

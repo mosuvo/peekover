@@ -17,11 +17,24 @@ COMPLETE: 2.1 DONE** (the `WATCH_READ` contract + `createWatchListener` + URL va
 zero-network guard) and **2.3 DONE** (the human-run both-engines check; answers recorded, spec narrowed).
 **GROUP 3 — re-render continuity, THE RISKIEST GROUP — is IN PROGRESS: 3.1 DONE**
 (`resolveScrollContainer` extracted to `src/render/scrollContainer.ts` as a pure move; `tocScroll`
-green unchanged). **Next: 3.2** (`readingAnchor` capture + restore). Group 3 is where `mount()` stops
+green unchanged) and **3.2 DONE** (`readingAnchor` — capture + the text → index → `scrollTop`
+restore ladder, D-3). **Next: 3.3** — `MountOptions.preserveReading` and the `mount.ts:151` change,
+the task where `mount()` stops being read-only library, red-first in BOTH directions. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
 
+- **INHERIT THIS BEFORE WRITING ANY GEOMETRY TEST — "the box overflows" is NOT the precondition;
+  "the box has STOPPED REFLOWING" is** (measured at 3.2, 2026-07-20, both engines). The long-standing
+  `waitForScrollable` helper returns as soon as `scrollHeight > clientHeight`, which is true while the
+  reader is still restyling: on the full-page surface `scrollHeight` read **81798 px at first overflow
+  and 26069 px once settled — a 3× reflow.** Any heading offset measured in that window is stale by
+  tens of thousands of pixels, and the `scrollTop` write that follows **CLAMPS to the new maximum**,
+  silently parking the test at the document bottom. It is not a flake — it made 3.2's anchor capture
+  pick the LAST heading deterministically, on Chromium and Firefox. `watchAnchor.browser.test.ts` polls
+  `scrollHeight` for stability instead; copy that, not the older helper. **Note the failure SHAPE: a
+  clamped scroll produces a plausible wrong answer, never an error** — the same silent-wrong-answer
+  class as 003's mis-resolved scroll root.
 - **INHERIT THIS BEFORE PLANNING GROUP 4 — FIREFOX WATCH IS APP-PAGE-ONLY, measured at 2.3**
   (decisions.md 2026-07-19). A background `fetch("file:///…")` on **Firefox 152 THROWS**: a
   `moz-extension:` document *"may not load or link to `file:`"* — **Gecko's URI security policy, not a
