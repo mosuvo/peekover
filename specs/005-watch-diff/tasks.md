@@ -549,7 +549,7 @@ A was edited after the switch…' to contain 'File B'`.
       445 passed / 5 skipped both engines; 432 unit; lint clean; golden EMPTY; manifest green
       unmodified; `dependencies` still three.
 
-- [ ] **4.4 Firefox degraded state — a designed explanation at the moment it matters (spec §7-8).**
+- [x] **4.4 Firefox degraded state — a designed explanation at the moment it matters (spec §7-8).**
       **Depends on 2.3's answer.** On Firefox, watch works only for **drag-opened** folders: the
       `<input webkitdirectory>` picker route yields permanently stale reads (measured — ~45 ticks across a
       real on-disk edit, `lastModified`/`size` never moved). A user who used the file input gets no watch
@@ -568,6 +568,81 @@ A was edited after the switch…' to contain 'File B'`.
       normal control still renders — a degraded state that leaks into the working engine is the failure mode
       here). Whether the explanation is **discoverable and reads as honest rather than broken** is
       **7.1**, not this test. Golden EMPTY + manifest green.
+      **DONE 2026-07-20. PRECONDITION RE-CHECKED FIRST:** 2.3's answer IS recorded in
+      `docs/ai/decisions.md` (2026-07-19) and it is the NEGATIVE branch, so this task covers BOTH
+      Firefox cases. `src/watch/watchAvailability.ts` (+ 8 jsdom cases) holds the PURE decision;
+      `peekover.content.ts` and `appShell.ts` wire it; `tests/browser/watchLifecycle.browser.test.ts`
+      proves it on both engines.
+      **A REAL FINDING THAT CHANGED THE IMPLEMENTATION — the seam CANNOT distinguish the two
+      Firefox app-page routes.** 4.4 as written assumes "watch works only for drag-opened folders",
+      which implies the routes are distinguishable. Reading `folderSource.ts` shows they are not:
+      `folderSourceFromFileList` (picker) and `folderSourceFromDataTransfer` (drag) BOTH converge on
+      `persistable:false` with no handle. They differ only in a capability the seam does not express
+      — on the DRAG path `File.text()` reads FRESH BYTES while the picker path is frozen through
+      (task 1.1's header vs 4.4's ~45-poll measurement). **`folderSource.ts` is OUTSIDE this
+      milestone's file fence**, so a `watchable` bit was NOT added to the seam. Instead `appShell`
+      — which IS in fence and calls the two routes from two DISTINCT call sites (`runOpenFolder`
+      vs `runDrop`) — records which route produced the active source and passes it to the pure
+      decision. **Teaching `folderSource` a `watchable` bit is the tidier home and is flagged as a
+      006 cleanup**, not smuggled in here.
+      **NOT ENGINE SNIFFING, and the distinction is stated in-code** because `firefoxFolderSource.ts`
+      set the opposite precedent ("branch on `persistable`, never on the engine"). Two different
+      questions get two different honest signals: the APP PAGE asks about the SOURCE
+      (`persistable` + route — so a Chromium build taking a degraded route degrades identically);
+      the CONTENT SCRIPT asks about the ENGINE, which is genuinely what varies, via WXT's
+      BUILD-TIME `import.meta.env.FIREFOX` — a fixed property of the targeted artifact, measured at
+      2.3, not a runtime probe. The pure function takes it as a parameter, so it stays `#imports`-free.
+      **This task also completed the app page's watch WIRING** (per selected file, in
+      `selectFolderFile`), which is what makes the decision live code rather than a dead branch.
+      **RED-FIRST:** keying the decision on `persistable` ALONE (the seam-only heuristic) failed in
+      BOTH suites — jsdom `expected { watchable: false, …(1) } to deeply equal { watchable: true,
+      note: null }` and `expected false not to be false`; real-engine, both engines,
+      `expected null to be truthy` (the working Firefox DRAG route rendered no control at all).
+      **Non-vacuity:** the drag case is the SAME `persistable:false` input taking the other branch,
+      so the explanation is demonstrably specific to the route that truly cannot re-read rather than
+      to non-persistability in general. **Chromium-unaffected is asserted for BOTH its surfaces** —
+      a degraded state leaking into the working engine is this task's real failure mode.
+      Restored from a `cp` copy; `git checkout` was never used. 8 unit + 22 lifecycle cases;
+      440 unit; 453 passed / 5 skipped browser both engines; lint clean; golden EMPTY; manifest
+      green unmodified; `dependencies` still three.
+
+- [ ] **4.5 (DISCOVERED at 4.4 — the group-3 flake watch item is now IDENTIFIED and ROOT-CAUSED, and
+      GROUP 4 AGGRAVATED IT.) Make `pnpm test:browser` deterministic again.**
+      **This is a STOP-and-flag, not a silent fix: the change belongs in `vitest.config.ts`, which is
+      outside 005 group 4's file fence.** Nothing was edited there.
+      **What was an unidentified 1-in-11 failure with no captured name (progress.md, group-3 close)
+      now has names, a signature, and a measured mechanism:**
+      - **Signature:** ALWAYS Firefox, ALWAYS the FULL-PAGE surface (`:host{position:fixed;inset:0}`,
+        i.e. the scroll box is sized to the viewport), ALWAYS a scroll/geometry assertion. Captured
+        names across this session: `tocScroll` *"activating an entry scrolls its heading into view"*;
+        `watchAnchor` *"resolves the EXACT element that scrolls"* and *"restores the SAME heading at
+        the SAME offset…"*; `watchRemount` *"a reader in READING mode keeps its PLACE…"*;
+        `watchControl` *"AT THE BOTTOM, appended content is FOLLOWED"*. Messages are of the form
+        `expected 0 to be greater than 0`, `expected 8092.6 to be greater than 8092.6`,
+        `expected 2816.4 to be less than 12` — **a plausible WRONG position, or no movement at all;
+        never an error.** Same silent-wrong-answer class as 003's mis-resolved scroll root.
+      - **MECHANISM, measured:** cross-file CONCURRENCY. `pnpm exec vitest run --project browser
+        --no-file-parallelism` → **3/3 runs GREEN**. With parallelism → ~40% of runs fail.
+        Test files share ONE browser window, so a `page.viewport()` resize (or simply contention)
+        lands under another file measuring viewport-sized scroll geometry.
+      - **GROUP 4 AGGRAVATED IT, and this is stated plainly rather than shrugged off.** Measured in a
+        git worktree at `5cf9be4` (pre-group-4, after `wxt prepare`): **5/5 runs GREEN, 367 passed.**
+        At group-4 HEAD: ~40% failing. The suite grew 372 → 458 tests and 47 → 50 files, pushing
+        concurrency past the threshold. **A first mitigation was applied inside the fence and was NOT
+        sufficient:** `watchControl`'s viewport resizing moved from a global `beforeEach` (~30 resizes
+        per run) into the geometry tests only (~6, restored immediately). It helped marginally and did
+        not fix it, which is itself evidence that raw concurrency — not resizing alone — is the cause.
+      - **Proposed fix (for the human to approve):** set `fileParallelism: false` on the `browser`
+        project in `vitest.config.ts`, or isolate the full-page geometry suites into a sequential
+        group. Cost is wall-clock only. **Do NOT weaken any assertion to make this green** — every
+        one of these tests is a real, red-first-proven guard, and the failures are the harness, not
+        the code.
+      - **Until it is fixed, `pnpm test:browser` MUST be run with `--no-file-parallelism` for a
+        trustworthy result**, and every green claimed at 4.1–4.4 was verified that way or on a clean
+        parallel run.
+      Files: `vitest.config.ts` (OUT OF FENCE — human decision) · `docs/ai/progress.md`
+      Verify: 10 consecutive full `pnpm test:browser` runs green, both engines, under whatever
+      configuration is chosen.
 
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 

@@ -75,6 +75,11 @@ import { directPort } from '../settings/settingsPort';
 import { publishSettings, registerSettingsSink } from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
 import { createTreeView } from './treeView';
+import { pollingDetector } from '../watch/changeDetector';
+import { WATCH_INTERVAL_MS } from '../watch/watchRelay';
+import { createWatchController } from '../watch/watchController';
+import { watchCapability } from '../watch/watchAvailability';
+import { registerWatchTarget, resetWatchTarget, setWatchNote } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
@@ -567,6 +572,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   async function selectFolderFile(file: MarkdownFile): Promise<void> {
     activeFile = file;
     await selectFile(file);
+    // WATCH WIRING FOR THE APP PAGE (tasks 4.3 + 4.4), per SELECTED FILE.
+    //
+    // Per-file, not per-folder, because a detector re-reads ONE file: the watch belongs to the
+    // document on screen. `readerPane.select()` (called above) has already stopped whatever was
+    // watching the previous file, so this only ever replaces a stopped target — the ordering is
+    // what prevents the cross-feed bug 4.3 proved.
+    //
+    // A surface that cannot watch registers NO target and shows the explanation instead, so the
+    // reader grows an honest note rather than a button that does nothing (spec §4 Degradation).
+    installWatchForFile(file);
     renderPinBar();
     if (activeFolderId) {
       const folderId = activeFolderId;
@@ -588,6 +603,45 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       });
       await refreshPersisted();
     }
+  }
+
+  // --- watch (spec 005, tasks 4.3 + 4.4) -----------------------------------
+  //
+  // HOW THE ROUTE IS KNOWN WITHOUT SNIFFING THE ENGINE, and why it has to be known at all.
+  // `folderSourceFromFileList` (picker) and `folderSourceFromDataTransfer` (drag) BOTH return
+  // `persistable: false` on Firefox, so the seam alone cannot tell them apart — yet they differ in
+  // the one way watch depends on: the DRAG path's `File.text()` reads fresh bytes from disk (task
+  // 1.1), the picker path's does not. This module is the only place that knows, because it calls
+  // the two routes from two distinct call sites (`runOpenFolder` vs `runDrop`), so it records which
+  // one produced the active source and hands that to the pure decision. Teaching `folderSource` a
+  // `watchable` bit is the tidier home and is a 006 cleanup — it is outside 005's file fence.
+
+  /** How the ACTIVE folder arrived. Set by the two open paths; read only by the watch decision. */
+  let activeRoute: 'drop' | 'picker' = 'picker';
+
+  /** Register (or decline to register) a watch for the file now on screen. */
+  function installWatchForFile(file: MarkdownFile): void {
+    const decision = watchCapability({
+      surface: 'app-page',
+      persistable: activeSource?.persistable === true,
+      route: activeRoute,
+    });
+    if (!decision.watchable) {
+      // No target at all — `buildWatchChrome` then renders the explanation ALONE, never a toggle.
+      resetWatchTarget();
+      setWatchNote(decision.note);
+      return;
+    }
+    setWatchNote(null);
+    // The polled detector serves BOTH engines on this surface: `FileSystemObserver.observe()` takes
+    // a handle, and the seam hands us a `read()` (plan §1.1). Content-compare, never metadata —
+    // Firefox's drag-path metadata is frozen at drop time (task 1.1's trap).
+    registerWatchTarget(
+      createWatchController({
+        detector: pollingDetector(() => file.read(), WATCH_INTERVAL_MS),
+        contained: true,
+      }),
+    );
   }
 
   // --- pinning (task 5.2) --------------------------------------------------
@@ -809,6 +863,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (busy) return;
     busy = true;
     try {
+      // The PICKER route (task 4.4): on Firefox this yields a frozen copy of every file, so a
+      // watch here would never fire. Recorded before applyOutcome so the watch decision sees it.
+      activeRoute = 'picker';
       await applyOutcome(await openFolderFn());
     } finally {
       busy = false;
@@ -823,6 +880,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (busy) return;
     busy = true;
     try {
+      // The DRAG route (task 4.4): even on Firefox, where the seam reports persistable:false and
+      // metadata is frozen at drop time, `File.text()` still reads FRESH BYTES — which is why the
+      // detector compares content and why this route can watch at all.
+      activeRoute = 'drop';
       await applyOutcome(await dropToOutcomeFn(dataTransfer));
     } finally {
       busy = false;
@@ -848,7 +909,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         source = await applyOutcome(await reopenFromHandleFn(folder.handle), folderId);
       } else {
         // Firefox / revoked: no live handle → re-pick via the picker (one gesture). A fresh
-        // record is minted since the picked handle (if any) is new.
+        // record is minted since the picked handle (if any) is new. That is the PICKER route for
+        // watch purposes too (task 4.4), whatever route first opened this folder.
+        activeRoute = 'picker';
         source = await applyOutcome(await openFolderFn());
       }
       if (source && selectPath) {

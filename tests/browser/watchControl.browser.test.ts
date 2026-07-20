@@ -173,7 +173,6 @@ beforeEach(async () => {
   setThemeSetting('auto');
   document.body.replaceChildren();
   await commands.emulateReducedMotion(null);
-  await page.viewport(NARROW.width, NARROW.height);
 });
 
 afterEach(async () => {
@@ -183,7 +182,6 @@ afterEach(async () => {
   resetThemeControlsForTest();
   document.body.replaceChildren();
   await commands.emulateReducedMotion(null);
-  await page.viewport(NARROW.width, NARROW.height);
 });
 
 // ── Rendering, the sibling pin, and toggling ────────────────────────────────────────────────
@@ -428,6 +426,17 @@ function assertNoChromeCollision(host: HTMLElement, label: string): void {
 describe.each(SURFACES)(
   'watch control — geometry on the $name surface (the M3 defect class)',
   (surface) => {
+    // VIEWPORT RESIZING IS SCOPED TO THE TESTS THAT NEED IT, and that is a deliberate harness
+    // decision rather than tidiness. `page.viewport()` resizes the SHARED browser window, and
+    // vitest runs test FILES concurrently — so a resize here lands under any other file measuring
+    // geometry at that moment. The full-page surface is `:host{position:fixed;inset:0}`, i.e. sized
+    // to the viewport, so a mid-measurement resize makes its scroll box briefly unscrollable. An
+    // earlier draft resized in the GLOBAL beforeEach (~30 resizes per run); it is now ~6, confined
+    // to the geometry tests, and restored immediately after. See progress.md's flake watch item.
+    afterEach(async () => {
+      await page.viewport(NARROW.width, NARROW.height);
+    });
+
     it.each([
       ['narrow', NARROW],
       ['wide', WIDE],

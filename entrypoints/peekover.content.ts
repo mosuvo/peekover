@@ -5,6 +5,8 @@ import { setThemeSetting } from '@/src/theme/reader';
 import { publishSettings, registerSettingsSink } from '@/src/settings/settingsSeam';
 import { pollingDetector } from '@/src/watch/changeDetector';
 import { WATCH_INTERVAL_MS, registerWatchDetector, relayRead } from '@/src/watch/watchRelay';
+import { watchCapability } from '@/src/watch/watchAvailability';
+import { setWatchNote } from '@/src/watch/watchRegistry';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -111,12 +113,34 @@ export default defineContentScript({
     // fallback: `FileSystemObserver.observe()` takes a `FileSystemHandle` and a content script has
     // only a URL, with no URL→handle API anywhere (plan §1.1). Chromium's event-driven path is the
     // APP PAGE's, and only the app page's.
-    registerWatchDetector(
-      pollingDetector(
-        relayRead(location.href, (message) => browser.runtime.sendMessage(message)),
-        WATCH_INTERVAL_MS,
-      ),
-    );
+    // WATCH AVAILABILITY ON THIS SURFACE (task 4.4) — decided BEFORE anything is registered.
+    //
+    // 2.3 measured the answer and it was NEGATIVE for Firefox: a `moz-extension:` background
+    // "may not load or link to file:" — Gecko's URI security policy, which no permission grants —
+    // and task-0 established the content script cannot re-read its own file either. Both halves of
+    // the route are closed, so on Firefox this surface ships a designed EXPLANATION and registers
+    // no detector at all. Never a dead toggle (spec §4 Degradation).
+    //
+    // `import.meta.env.FIREFOX` is a BUILD-TIME constant, not a runtime engine sniff, and the
+    // distinction matters because `firefoxFolderSource.ts` set the opposite precedent for the app
+    // page ("branch on `persistable`, never on the engine"). That rule is about a capability which
+    // varies per SOURCE and must be carried as data at the seam. This one varies per BUILD: it is a
+    // fixed property of the engine the artifact targets, unchangeable at runtime and already
+    // measured. The decision itself is a pure function so it stays testable (watchAvailability.ts).
+    const watch = watchCapability({
+      surface: 'content-script',
+      backgroundCanReadFileUrls: !import.meta.env.FIREFOX,
+    });
+    if (watch.watchable) {
+      registerWatchDetector(
+        pollingDetector(
+          relayRead(location.href, (message) => browser.runtime.sendMessage(message)),
+          WATCH_INTERVAL_MS,
+        ),
+      );
+    } else {
+      setWatchNote(watch.note);
+    }
 
     runReader();
   },

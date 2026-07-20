@@ -161,3 +161,18 @@ export function resetWatchRegistryForTest(): void {
 export function stopWatch(): void {
   target?.stop();
 }
+
+/**
+ * Drop the registered target entirely — this surface can no longer watch (task 4.4).
+ *
+ * Distinct from {@link stopWatch}, and the difference is what the user sees: `stopWatch` leaves the
+ * toggle in place because watching is still POSSIBLE and simply is not running; this removes it,
+ * so `buildWatchChrome` renders the explanation ALONE. The app page calls it when a selected file
+ * came from a route that cannot re-read (Firefox's picker), where offering a toggle would be a
+ * promise the surface cannot keep.
+ */
+export function resetWatchTarget(): void {
+  target?.stop();
+  target = null;
+  notifyWatchChanged();
+}

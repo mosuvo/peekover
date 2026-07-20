@@ -33,8 +33,14 @@ import { createWatchController, DEAD_AFTER_FAILURES } from '../../src/watch/watc
 import {
   registerWatchTarget,
   resetWatchRegistryForTest,
+  setWatchNote,
   watchNote,
 } from '../../src/watch/watchRegistry';
+import {
+  watchCapability,
+  FIREFOX_CONTENT_SCRIPT_NOTE,
+  FIREFOX_PICKER_NOTE,
+} from '../../src/watch/watchAvailability';
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
@@ -259,6 +265,95 @@ describe('watch lifecycle — a dead read surfaces a designed state (task 4.3)',
     // current state — the exact honesty failure this whole task is about, inverted.
     expect(noteIn(host)!.hidden).toBe(true);
     expect(host.getAttribute('data-watch')).toBe('active');
+  });
+});
+
+// ════ TASK 4.4 — the Firefox degraded state, on BOTH closed routes ═════════════════════════
+//
+// PRECONDITION SATISFIED: 2.3's answer is recorded in docs/ai/decisions.md (2026-07-19) and it
+// took the NEGATIVE branch — Firefox 152's background THREW on `fetch("file:///…")` with a Gecko
+// URI security error that no permission grants. So this covers BOTH Firefox cases, not one:
+// (a) the app page opened via the FILE INPUT, and (b) the content-script `file://` reader.
+//
+// WHAT THESE TESTS PROVE, AND WHAT THEY CANNOT. They prove the reader presents the EXPLANATION
+// state rather than a silently inert button, and — the failure mode that actually matters here —
+// that the degraded state does NOT leak into the working engine. They do NOT prove the copy reads
+// as honest rather than broken; that is human-gate 7.1 and is deliberately not attempted.
+//
+// The DECISION is driven through the production `watchCapability` seam rather than by faking an
+// engine, so these run identically on Chromium and Firefox: what is being exercised is the code
+// path each engine's build takes, which is exactly what a per-engine constant makes testable.
+
+describe('watch degraded state — the Firefox routes (task 4.4)', () => {
+  /** Put the reader in the state a given surface's decision produces, then mount. */
+  function mountUnder(decision: { watchable: boolean; note: string | null }): HTMLElement {
+    if (decision.watchable) {
+      registerWatchTarget(createWatchController({ detector: handDriven().detector }));
+    }
+    setWatchNote(decision.note);
+    const host = document.createElement('peekover-root');
+    document.body.appendChild(host);
+    mount(DOC_A, host);
+    return host;
+  }
+
+  it('(b) the Firefox content-script reader EXPLAINS, and offers no toggle at all', () => {
+    const host = mountUnder(
+      watchCapability({ surface: 'content-script', backgroundCanReadFileUrls: false }),
+    );
+
+    // NOT a disabled control and NOT a dead toggle — there is no button to mislead anyone.
+    expect(controlIn(host)).toBeNull();
+    const note = noteIn(host)!;
+    expect(note).toBeTruthy();
+    expect(note.hidden).toBe(false);
+    expect(note.getAttribute('role')).toBe('status');
+    expect(note.textContent).toBe(FIREFOX_CONTENT_SCRIPT_NOTE);
+    // AGENTS.md #5: the document renders normally. A degraded watch degrades WATCH, nothing else.
+    expect(columnText(host)).toContain('The first document');
+  });
+
+  it('(a) the Firefox file-input app page EXPLAINS, and offers no toggle at all', () => {
+    const host = mountUnder(
+      watchCapability({ surface: 'app-page', persistable: false, route: 'picker' }),
+    );
+
+    expect(controlIn(host)).toBeNull();
+    expect(noteIn(host)!.textContent).toBe(FIREFOX_PICKER_NOTE);
+    expect(columnText(host)).toContain('The first document');
+  });
+
+  it('the DRAGGED Firefox folder is NOT degraded — it watches, with no note', () => {
+    // The non-vacuity of the two tests above: if everything non-persistable were degraded, they
+    // would pass while proving only that the note mechanism works. This is the same
+    // `persistable:false` input taking the OTHER branch, so the explanation is demonstrably
+    // specific to the route that genuinely cannot re-read.
+    const host = mountUnder(
+      watchCapability({ surface: 'app-page', persistable: false, route: 'drop' }),
+    );
+
+    expect(controlIn(host)).toBeTruthy();
+    expect(noteIn(host)!.hidden).toBe(true);
+  });
+
+  it('CHROMIUM IS UNAFFECTED — the normal control still renders on both surfaces', () => {
+    // THE FAILURE MODE THIS TASK IS MOST AT RISK OF: a degraded state leaking into the working
+    // engine. Asserted for both of Chromium's surfaces.
+    const contentScript = mountUnder(
+      watchCapability({ surface: 'content-script', backgroundCanReadFileUrls: true }),
+    );
+    expect(controlIn(contentScript)).toBeTruthy();
+    expect(controlIn(contentScript)!.getAttribute('aria-pressed')).toBe('false');
+    expect(noteIn(contentScript)!.hidden).toBe(true);
+
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+
+    const appPage = mountUnder(
+      watchCapability({ surface: 'app-page', persistable: true, route: 'picker' }),
+    );
+    expect(controlIn(appPage)).toBeTruthy();
+    expect(noteIn(appPage)!.hidden).toBe(true);
   });
 });
 

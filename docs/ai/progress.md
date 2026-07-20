@@ -35,15 +35,38 @@ scrolled away, and reinstating the mockup's behaviour yanks the reader **~25,500
 document on both engines. **The update signal flashes the CONTROL, not the document** — 005 cannot
 know which element changed without 006's diff, and a whole-column wash on every keystroke would be
 the most intrusive option available. **The toast is SKIPPED and noted for 006** (no toast primitive
-exists; the pill flash carries the same information). **Next: 4.3** (lifecycle — a gesture starts it,
-switching documents stops it, a dead read surfaces a designed state). 4.4's
-precondition is already satisfied and took the negative branch (see the Firefox note below). Group 3 is where `mount()` stops
+exists; the pill flash carries the same information). **4.3 DONE** (lifecycle — a gesture starts it, switching documents stops it, a dead read surfaces a
+designed state) and **4.4 DONE** (the Firefox degraded state, on BOTH closed routes). **GROUP 4 IS
+COMPLETE. Next: GROUP 5 — measure then tune** (5.1 measures observer latency + re-render cost; 5.2 is
+a HUMAN decision gate for the debounce window; nothing in group 4 pre-empted it). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
 
-- **WATCH ITEM (group 3 close, 2026-07-20): ONE UNIDENTIFIED FULL-SUITE FAILURE, 1 in 11 runs, NAME NOT
-  CAPTURED.** During 3.3's verification a `pnpm test:browser` run reported `1 failed | 366 passed` and the
+- **THE FLAKE IS IDENTIFIED, ROOT-CAUSED, AND GROUP 4 MADE IT WORSE — read this before trusting a
+  `pnpm test:browser` result (2026-07-20, task 4.4).** What was an unidentified 1-in-11 failure with no
+  captured name is now understood. **Signature:** ALWAYS Firefox, ALWAYS the FULL-PAGE surface
+  (`:host{position:fixed;inset:0}` — the scroll box is sized to the viewport), ALWAYS a scroll/geometry
+  assertion, and ALWAYS a *plausible wrong position or no movement*, never an error
+  (`expected 0 to be greater than 0`, `expected 8092.6 to be greater than 8092.6`,
+  `expected 2816.4 to be less than 12`). Names captured: `tocScroll` "activating an entry scrolls its
+  heading into view"; `watchAnchor` "resolves the EXACT element that scrolls" and "restores the SAME
+  heading at the SAME offset"; `watchRemount` "keeps its PLACE when content is inserted ABOVE";
+  `watchControl` "AT THE BOTTOM, appended content is FOLLOWED".
+  **MECHANISM (measured): cross-file CONCURRENCY.** `--no-file-parallelism` → **3/3 green**; with
+  parallelism → **~40% of runs fail**. Files share ONE browser window, so a viewport resize or plain
+  contention lands under another file measuring viewport-sized scroll geometry.
+  **GROUP 4 AGGRAVATED IT — stated plainly.** A git worktree at `5cf9be4` (pre-group-4, `wxt prepare`
+  run) measured **5/5 green, 367 passed**; at group-4 HEAD ~40% fail. The suite grew 372 → 458 tests
+  and 47 → 50 files. A partial mitigation inside the file fence (moving `watchControl`'s viewport
+  resizing out of a global `beforeEach`, ~30 → ~6 resizes) helped only marginally — which is itself
+  evidence that concurrency, not resizing alone, is the cause.
+  **The fix is OUT OF group 4's file fence and is flagged as discovered task 4.5, not applied:** set
+  `fileParallelism: false` on the browser project in `vitest.config.ts`, or isolate the full-page
+  geometry suites. **Do NOT weaken any of those assertions** — each is a real, red-first-proven guard
+  and the failure is the harness, not the code. **Until it is fixed, run `pnpm test:browser
+  --no-file-parallelism` for a trustworthy result.**
+- **SUPERSEDED — the original form of the watch item, kept for provenance:** During 3.3's verification a `pnpm test:browser` run reported `1 failed | 366 passed` and the
   failing test's NAME was not captured before the next run. **10 consecutive full runs since were green**
   (367 passed / 5 skipped, both engines), as were targeted re-runs of every group-3 suite. **Recorded as an
   open unknown rather than dismissed**, because this milestone's standing lesson is that the SHAPE of a
