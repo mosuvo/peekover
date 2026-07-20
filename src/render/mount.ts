@@ -24,6 +24,7 @@ import {
 import { applyMediaPolicy } from './mediaPolicy';
 import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 import { buildThemeControl } from '../theme/themeControl';
+import { buildWatchControl } from '../watch/watchControl';
 import { buildTocModel } from './tocModel';
 import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
 import { resolveScrollContainer } from './scrollContainer';
@@ -164,6 +165,20 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // guard people assume; the DOM sibling relationship is asserted directly in
     // tests/browser/themeControl.browser.test.ts (verified red by appending to `root`).
     children.push(buildThemeControl());
+    // Watch control (spec 005 task 4.1), composed through THIS one seam for the same reason the
+    // theme control and the TOC rail are — both surfaces get it with no per-surface branching. A
+    // SIBLING of the reading column, never inside `root`, so `.peekover-reader` stays
+    // byte-identical (and, per the note above, the golden pin cannot see the difference — the DOM
+    // sibling assertion in tests/browser/watchControl.browser.test.ts is the only guard).
+    //
+    // It returns NULL in a context that registered no watch target, and that null is deliberate:
+    // a surface that cannot watch grows no chrome at all rather than a button that looks live and
+    // does nothing (task 4.4 replaces the null with a designed explanation where a user would
+    // otherwise wonder why). The control itself holds no controller reference — it reaches
+    // start/stop through the module-level registry, because `replaceChildren` destroys it on every
+    // render, INCLUDING the renders a running watch causes. See src/watch/watchRegistry.ts.
+    const watchControl = buildWatchControl(host);
+    if (watchControl) children.push(watchControl);
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }

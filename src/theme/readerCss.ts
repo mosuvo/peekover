@@ -225,6 +225,64 @@ export const READER_CSS = /* css */ `
 }
 .peekover-theme-toggle:hover{color:var(--ink);border-color:var(--faint)}
 
+/* ============ Watch control (spec 005 task 4.1 — "watching") ============ */
+/* THE MOCKUP'S BADGE, TRANSLATED INTO THIS READER'S CHROME FAMILY — not its toolbar.
+   design/mockup.html puts a .watch button with a .dot span inside
+   in a fixed 52px top bar beside a brand, a breadcrumb, an AI button and a segmented mode
+   control. None of that exists here and this task does not build it (see watchControl.ts's
+   header). What IS carried across: the pill shape, the --ok "live and healthy" semantic, the
+   pulsing dot, the --ok-soft hover, and the word "watching".
+
+   PLACEMENT, BY ELIMINATION AND BY MEASUREMENT (004's 5.1 method; rects in watchControl.ts):
+   top-right is the mode toggle and the row beneath it is the TOC handle; top-left is the
+   remote-load opt-in and exists only sometimes; bottom-right sits inside the TOC rail box AND
+   its live entry list at a narrow viewport. The bottom-left column is the one that clears
+   everything, so this is its THIRD tenant: network indicator (16) -> theme pill (56) -> watch
+   (96). Asserted at a narrow and a wide viewport on both surfaces.
+
+   TWO TOKENS THE MOCKUP USES AND THIS FILE ALREADY DEFINES: --ok and --ok-soft, in BOTH themes
+   (see the token blocks at the top — copied verbatim from design/tokens.css). No token had to be
+   added; substituting --accent here would have silently thrown away the "this is live" meaning.
+
+   ONE MOCKUP DECLARATION DELIBERATELY DROPPED: its border is
+   1px solid color-mix(in srgb, var(--ok) 35%, transparent). color-mix() appears NOWHERE in
+   Peekover's shipped CSS, and introducing a new CSS feature for one border is not worth it — the
+   pill family's own var(--line) border is used instead. Nothing is lost: the --ok semantic is
+   carried by the TEXT and the DOT, which are also the two carriers a colour-blind user reads via
+   the label change rather than the hue (a11y — state is never colour-only). */
+.peekover-watch{
+  position:fixed;bottom:96px;left:16px;z-index:2;
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-watch:hover{color:var(--ink);border-color:var(--faint)}
+/* ACTIVE: the mockup's green. Driven off the HOST attribute, so it survives replaceChildren —
+   which matters precisely because watching is what causes the re-render. */
+:host([data-watch="active"]) .peekover-watch{color:var(--ok)}
+:host([data-watch="active"]) .peekover-watch:hover{color:var(--ok);background:var(--ok-soft)}
+
+.peekover-watch__dot{
+  flex:none;width:7px;height:7px;border-radius:50%;
+  background:var(--faint);
+}
+/* The pulse — an expanding ring that then vanishes, the mockup's @keyframes pulse with the
+   color-mix ring replaced by the --ok-soft token. INFINITE, and therefore the strongest possible
+   case for prefers-reduced-motion: the global :host * animation-duration:.001ms!important rule
+   near the top of this sheet neutralises it under reduce, which the browser suite asserts
+   NON-VACUOUSLY (it measures the un-reduced 2s path in the same run). */
+:host([data-watch="active"]) .peekover-watch__dot{
+  background:var(--ok);
+  animation:peekover-watch-pulse 2s infinite;
+}
+@keyframes peekover-watch-pulse{
+  0%,100%{box-shadow:0 0 0 0 var(--ok-soft)}
+  55%{box-shadow:0 0 0 6px transparent}
+}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline
@@ -444,6 +502,7 @@ export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
 .peekover-mode-toggle,
 .peekover-theme-toggle,
+.peekover-watch,
 .peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }

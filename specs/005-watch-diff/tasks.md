@@ -363,7 +363,7 @@
 
 ## 4 — Watch UX (the control is rebuilt every mount; the controller is not — that gap is a seam, not a closure)
 
-- [ ] **4.1 The watch control + its registry seam + `data-watch` on the host.** A control in `mount()`'s
+- [x] **4.1 The watch control + its registry seam + `data-watch` on the host.** A control in `mount()`'s
       `children[]`, committed as a **sibling of `.peekover-reader`** — never inside the reading column —
       styled from **design tokens only** (never hardcoded colors; the mode toggle / theme pill / remote-load
       pill are the established family). Active state lives on the **host** as `data-watch="active"`, so CSS
@@ -383,6 +383,56 @@
       survives a re-mount; the control still works **after** a re-render (the closure-death case — red-first:
       swap the registry for a captured reference → this fails). a11y: watch state is exposed to AT and is
       **never colour-only**. Golden EMPTY + manifest green.
+      **DONE 2026-07-20.** `src/watch/watchRegistry.ts` (the ONE holder) + `src/watch/watchControl.ts`
+      (the pill) + the `.peekover-watch` rule in `readerCss.ts`; `mount.ts` pushes it into
+      `children[]` as a sibling of `.peekover-reader`.
+      **THE REGISTRY SUBSUMED 2.2's HOLDER RATHER THAN DUPLICATING IT, using the codebase's own
+      precedent:** when 004's group 6 needed the theme-only save seam for the TOC too, it
+      generalized into `settingsSeam.ts` and left `registerThemeSaveSink` a one-line DELEGATE (D-E).
+      Same move — the single holder now lives in `watchRegistry.ts` and holds a `WatchTarget`
+      (`start(host)`/`stop()`/`isWatching()`), while `watchRelay`'s `registerWatchDetector` /
+      `getWatchDetector` keep their names, signatures and call sites (`peekover.content.ts`
+      **untouched**) and adapt the bare `ChangeDetector` into that shape. ONE piece of module state,
+      two names.
+      **PLACEMENT — BOTTOM-LEFT, `bottom:96px`, third in the stack (net 16 → theme 56 → watch 96),
+      chosen BY MEASUREMENT with a throwaway probe (built, run on both engines, deleted).** The
+      rects that ruled the others out, full-page @414×896, TOC open: **top-right** = mode toggle
+      `[341,16,398,46]`, and the row beneath it lands at y 56–86 **inside the TOC handle
+      `[280,56,392,102]`** — 004's measured collision, reproduced; **top-left** = the remote-load
+      pill, which exists only on documents with blocked media; **bottom-right** = inside the TOC
+      rail box `[257,0,414,896]` **and its live entry list, which runs to y=988**, past the viewport
+      bottom. Bottom-left was the only corner clearing everything.
+      **`--ok` / `--ok-soft` ALREADY EXISTED** in `readerCss.ts`, in BOTH themes, copied verbatim
+      from `design/tokens.css` — this was NOT a repeat of 004's D-1 sepia trap, and no token was
+      added. **One mockup declaration deliberately dropped:** its
+      `color-mix(in srgb, var(--ok) 35%, transparent)` border — `color-mix()` appears NOWHERE in
+      shipped CSS (grepped), so the pill family's own `var(--line)` border is used rather than
+      introducing a CSS feature for one border. The `--ok` semantic is carried by the text and dot.
+      **RED-FIRST — AND THE FIRST BREAK WAS INSUFFICIENT, which is the finding worth carrying.**
+      Swapping the click-time `getWatchTarget()` for a build-time captured reference left the suite
+      **fully GREEN (46/46)**: across a plain re-render the registry holds the SAME OBJECT, so the
+      capture still finds it. The "still works after a re-render" test could never have gone red.
+      What actually dies is a capture taken before the slot's OCCUPANT changes — which production
+      does constantly (4.2 replaces this task's adapter in the same slot; 4.3 re-registers on a
+      document switch; the app page registers only once a file is open). A test for THAT was added
+      and the same break then failed **4× — both engines, both surfaces**:
+      `AssertionError: expected [] to deeply equal [ Array(1) ]` (the click reached the dead target).
+      **Second red-first — the sibling pin, and it re-proves the 5.1 correction of record:**
+      committing the control into `root` instead of `children` left `git diff tests/golden/output/`
+      **EMPTY and golden.test.ts GREEN 10/10**, while the DOM assertion failed on both engines with
+      `expected <div class="peekover-reader">…(5)</div> to be ShadowRoot{}`. The DOM assertion is
+      the sole guard, exactly as the standing note says.
+      **Reduced motion, non-vacuous in ONE run:** the infinite pulse computes
+      `animation-name: peekover-watch-pulse`, `duration 2s`, `iteration-count infinite` under
+      `no-preference`, and `< 0.01s` under `reduce` — so the reduce assertion cannot be satisfied by
+      a dot that never animated.
+      **A11y — never colour-only:** three independent carriers (visible text "Watching"/"Watch this
+      file", native `aria-pressed`, and an `aria-label` naming state + action); the dot is
+      `aria-hidden`. **A context with no registered target grows NO control at all** — never a dead
+      button (the shape 4.4 builds its explanation on).
+      Restored from `cp` copies throughout; `git checkout` was never used. 48/48 browser files ·
+      417 passed / 5 skipped both engines; 422 unit; lint clean; golden EMPTY; manifest green
+      unmodified; `dependencies` still three.
 
 - [ ] **4.2 `watchController` — start/stop, the update signal, follow-at-bottom-only.** Owns the
       detector→re-render loop: on new text, re-mount with `{ preserveReading: true }` (3.3) and fire a

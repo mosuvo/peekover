@@ -206,32 +206,78 @@ export function relayRead(url: string, send: WatchMessenger): () => Promise<stri
  */
 export const WATCH_INTERVAL_MS = 1000;
 
-// --- the content script's detector holder -------------------------------------------
+// --- the content script's detector holder — NOW A DELEGATE (task 4.1) ---------------
 //
-// SCOPE NOTE, stated rather than buried: this is a register-once holder, the same D-A shape
-// task 4.1 will need for its control (which is rebuilt every mount, while the controller is not).
-// It exists here because 2.2's wiring has to put the built detector SOMEWHERE, and a value the
-// content script builds and no one can reach is not wiring. **Task 4.1 should extend or subsume
-// this, not invent a second registry beside it.** Nothing starts the detector: watching requires a
-// user gesture on 4.1's control (spec §4 Trust), and 4.3 owns the lifecycle.
+// 2.2 built this holder here because its wiring had to put the constructed detector SOMEWHERE
+// reachable, and it flagged that **4.1 should extend or subsume it, not invent a second registry
+// beside it**. 4.1 has done exactly that, using the precedent already in the codebase: when 004's
+// group 6 needed the theme-only save seam for the TOC as well, it generalized the mechanism into
+// `settingsSeam.ts` and left `registerThemeSaveSink` as a one-line DELEGATE (decision D-E).
+//
+// So the single holder now lives in `watchRegistry.ts` and holds a `WatchTarget` — the wider shape
+// the rebuilt-every-mount control needs (`start(host)`, `stop()`, `isWatching()`). These two
+// functions keep their NAMES, their SIGNATURES and their CALL SITES —
+// `entrypoints/peekover.content.ts` is untouched — and simply adapt the bare `ChangeDetector` they
+// are handed into that shape. There is exactly ONE piece of module state for the context's watch,
+// reachable under two names, which is precisely the property a second registry would have broken:
+// the entrypoint that registers and the control that starts would have been talking about
+// different objects.
+//
+// The adapter's `start(host)` IGNORES the host and delivers no re-render, because at 4.1 there is
+// no controller yet — a detector is all this context has built. Task 4.2 registers the real
+// controller into the SAME slot (last registration wins), at which point this adapter is simply
+// replaced rather than competed with.
+//
+// Nothing starts the detector here: watching requires a user gesture on 4.1's control (spec §4
+// Trust), and 4.3 owns the lifecycle.
+
+import { registerWatchTarget, getWatchTarget, notifyWatchChanged } from './watchRegistry';
 
 /** The seam a detector satisfies — structurally identical to `changeDetector.ts`'s `ChangeDetector`,
- *  restated here so this module keeps its zero-import posture. */
+ *  restated here so this module keeps its zero-import posture toward the engine. */
 interface StartStop {
   start(cb: (text: string) => void): void;
   stop(): void;
 }
 
+/** The detector behind the registered target, so `getWatchDetector` can still answer with the
+ *  DETECTOR (its 2.2 contract) while the registry holds the wider target. */
 let contentWatchDetector: StartStop | null = null;
 
-/** Called once by the content script at `document_start` with the detector it built. */
+/** Called once by the content script at `document_start` with the detector it built. Registers a
+ *  minimal detector-backed target into the ONE registry (see this section's header). */
 export function registerWatchDetector(detector: StartStop): void {
   contentWatchDetector = detector;
+  let running = false;
+  registerWatchTarget({
+    start() {
+      if (running) return;
+      running = true;
+      // No re-render wiring at 4.1 — a detector on its own has nowhere to render TO. 4.2's
+      // controller replaces this target and supplies exactly that.
+      detector.start(() => {});
+      notifyWatchChanged();
+    },
+    stop() {
+      if (!running) return;
+      running = false;
+      detector.stop();
+      notifyWatchChanged();
+    },
+    isWatching: () => running,
+  });
 }
 
-/** The registered detector, or `null` if this context never built one. Group 4's control reads it. */
+/** The registered detector, or `null` if this context never built one. Retained under its 2.2 name
+ *  and contract; the registry is the single source of truth for whether one is REGISTERED. */
 export function getWatchDetector(): StartStop | null {
-  return contentWatchDetector;
+  return getWatchTarget() ? contentWatchDetector : null;
+}
+
+/** Test-only companion to `resetWatchRegistryForTest`, so a suite clearing the registry also
+ *  clears the detector this module remembers alongside it. */
+export function resetWatchDetectorForTest(): void {
+  contentWatchDetector = null;
 }
 
 /** A response callback (`sendResponse`), typed without pulling a `#imports` dependency in. */

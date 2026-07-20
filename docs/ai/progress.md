@@ -23,8 +23,14 @@ restore ladder, D-3) and **3.3 DONE — SHIPPED AS SPECIFIED, the sanctioned fal
 `setReaderMode(host, carried?.mode ?? 'reading')`). **`mount()` is no longer read-only library** — the
 boundary four milestones respected has been crossed, deliberately and with both directions proven red
 first. **3.4 DONE — the TOC re-decide interaction is VERIFIED COVERED** (by two independent guards, not
-one). **GROUP 3 IS COMPLETE. Next: GROUP 4 — watch UX**, whose 4.4 precondition is already satisfied and
-took the negative branch (see the Firefox note below). Group 3 is where `mount()` stops
+one). **GROUP 3 IS COMPLETE. GROUP 4 — watch UX — IS IN PROGRESS: 4.1 DONE** (the watch pill, its
+register-once registry seam, and `data-watch` on the host). The pill sits **bottom-left at 96px**,
+third in the stack above the theme pill, chosen by a measured probe rather than taste — top-right
+collides with the TOC handle, bottom-right sits inside the rail's live entry list. **The registry
+SUBSUMED 2.2's holder** (`watchRelay`'s `registerWatchDetector`/`getWatchDetector` are now delegates
+into `src/watch/watchRegistry.ts`, the D-E delegate precedent), so there is ONE piece of watch state,
+not two. **Next: 4.2** (the controller — start/stop, update signal, follow-at-bottom-only). 4.4's
+precondition is already satisfied and took the negative branch (see the Firefox note below). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
