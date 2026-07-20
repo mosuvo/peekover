@@ -22,11 +22,23 @@ restore ladder, D-3) and **3.3 DONE — SHIPPED AS SPECIFIED, the sanctioned fal
 (`MountOptions.preserveReading`, additive and defaulted-off; `mount.ts:151` now
 `setReaderMode(host, carried?.mode ?? 'reading')`). **`mount()` is no longer read-only library** — the
 boundary four milestones respected has been crossed, deliberately and with both directions proven red
-first. **Next: 3.4** — verify the TOC re-decide interaction. Group 3 is where `mount()` stops
+first. **3.4 DONE — the TOC re-decide interaction is VERIFIED COVERED** (by two independent guards, not
+one). **GROUP 3 IS COMPLETE. Next: GROUP 4 — watch UX**, whose 4.4 precondition is already satisfied and
+took the negative branch (see the Firefox note below). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
 
+- **WATCH ITEM (group 3 close, 2026-07-20): ONE UNIDENTIFIED FULL-SUITE FAILURE, 1 in 11 runs, NAME NOT
+  CAPTURED.** During 3.3's verification a `pnpm test:browser` run reported `1 failed | 366 passed` and the
+  failing test's NAME was not captured before the next run. **10 consecutive full runs since were green**
+  (367 passed / 5 skipped, both engines), as were targeted re-runs of every group-3 suite. **Recorded as an
+  open unknown rather than dismissed**, because this milestone's standing lesson is that the SHAPE of a
+  flake matters more than its rate: the `remoteMedia` positive control flaked at a similar rate for two
+  milestones before anyone established it was the instrument proving a non-vacuous zero-network assertion.
+  **Do NOT assume it was benign, and do not assume it was in a group-3 file** — it is unidentified. If a
+  full-suite failure recurs, CAPTURE THE TEST NAME FIRST (`| grep -E "^ FAIL"`) before re-running; a
+  re-run that goes green destroys the only evidence.
 - **INHERIT THIS BEFORE WRITING ANY GEOMETRY TEST — "the box overflows" is NOT the precondition;
   "the box has STOPPED REFLOWING" is** (measured at 3.2, 2026-07-20, both engines). The long-standing
   `waitForScrollable` helper returns as soon as `scrollHeight > clientHeight`, which is true while the

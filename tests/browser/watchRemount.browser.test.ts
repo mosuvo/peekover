@@ -1,5 +1,4 @@
-// Re-render continuity through the mount() seam — REAL-ENGINE (spec 005 task 3.3; 3.4 extends
-// this file).
+// Re-render continuity through the mount() seam — REAL-ENGINE (spec 005 tasks 3.3 + 3.4).
 //
 // ── WHY THIS SUITE IS SHAPED AROUND *TWO* RED-FIRST DIRECTIONS ─────────────────────────────
 //
@@ -34,10 +33,11 @@ import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
 import {
   currentSettings,
+  publishSettings,
   registerSettingsSink,
   resetSettingsSeamForTest,
 } from '../../src/settings/settingsSeam';
-import { type Settings } from '../../src/settings/settings';
+import { DEFAULT_SETTINGS, type Settings } from '../../src/settings/settings';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────────────────────
 
@@ -82,6 +82,10 @@ beforeEach(() => {
 afterEach(() => {
   resetSettingsSeamForTest();
 });
+
+function seedStored(patch: Partial<Settings>): void {
+  publishSettings({ ...DEFAULT_SETTINGS, ...patch });
+}
 
 async function waitFor<T>(fn: () => T | null | undefined, tries = 150): Promise<T> {
   for (let i = 0; i < tries; i += 1) {
@@ -129,6 +133,15 @@ async function settle(scroller: HTMLElement): Promise<number> {
   return scroller.scrollTop;
 }
 
+/** Wait n animation frames, then a macrotask — long enough for `applyInitialTocState`'s
+ *  width-derived rAF correction to have landed (or to have stood down). */
+async function afterFrames(n = 3): Promise<void> {
+  for (let i = 0; i < n; i += 1) {
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  }
+  await new Promise<void>((r) => setTimeout(r, 0));
+}
+
 /** Vertical offset of an element's top relative to the scroll box's top — "where on screen". */
 function topOffset(el: Element, scroller: HTMLElement): number {
   return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
@@ -143,6 +156,18 @@ function headingByText(host: HTMLElement, text: string): Element {
 
 function modeOf(host: HTMLElement): string | null {
   return host.getAttribute('data-mode');
+}
+
+function tocState(host: HTMLElement): string | null {
+  return host.getAttribute('data-toc');
+}
+
+function tocWidthPx(host: HTMLElement): number {
+  return parseFloat(getComputedStyle(host).getPropertyValue('--toc-w'));
+}
+
+function openerOf(host: HTMLElement): HTMLButtonElement {
+  return host.shadowRoot!.querySelector<HTMLButtonElement>('button.peekover-toc__toggle')!;
 }
 
 function modeToggleOf(host: HTMLElement): HTMLButtonElement {
@@ -375,6 +400,90 @@ describe.each(SURFACES)(
       files[1].click();
       await waitFor(() => (modeOf(host) === 'reading' ? true : null));
       expect(modeOf(host)).toBe('reading');
+    });
+  },
+);
+
+// ── Task 3.4 — the TOC re-decide interaction, VERIFIED rather than assumed ──────────────────
+//
+// `applyInitialTocState` re-derives `data-toc` from the laid-out width on EVERY mount
+// (tocView.ts) and could therefore re-open a rail the user just collapsed — on every agent
+// keystroke. 004's persistence is BELIEVED to cover this (`setTocOpenByUser` persists on click;
+// `saveSettings` updates the snapshot immediately), and believed-covered is not tested.
+//
+// NON-VACUITY — this is EXACTLY the shape that produced 6.1's vacuous test, so the control is
+// built the same way 004 rebuilt it: first mount a probe with NOTHING stored and read
+// production's OWN width-derived answer at this harness viewport, then drive the rail to the
+// OPPOSITE of that and assert `not.toBe(thatFallback)`. Seeding what the fallback would have
+// chosen anyway passes while proving nothing — the harness viewport is narrow, so a test that
+// assumed "wide, therefore open" would assert the same value the stomp would have written.
+
+/** What production's width-derived rule decides on THIS surface at THIS viewport, measured by
+ *  mounting a probe with nothing stored — never predicted from a hardcoded expectation. */
+async function widthDerivedDefault(
+  mountSurface: (doc?: string) => Promise<Surface>,
+): Promise<boolean> {
+  const probe = await mountSurface();
+  await afterFrames();
+  const open = tocState(probe.host) === 'open';
+  probe.host.remove();
+  resetSettingsSeamForTest();
+  registerSettingsSink((patch) => saved.push(patch));
+  saved.length = 0;
+  return open;
+}
+
+describe.each(SURFACES)(
+  'TOC re-decide across a preserveReading re-mount — $name surface (task 3.4)',
+  ({ mount: mountSurface }) => {
+    it('a rail the user COLLAPSED stays collapsed across the re-mount, and the stored width survives', async () => {
+      const widthDefault = await widthDerivedDefault(mountSurface);
+
+      const s = await mountSurface();
+      await afterFrames();
+
+      // Drive the rail to the OPPOSITE of what the width rule would choose, through the REAL
+      // user path (the opener click is what `setTocOpenByUser` persists from). If the width rule
+      // already says "collapsed" at this viewport, the adversarial state is "open" — the test
+      // follows the measurement rather than assuming a direction.
+      const target = !widthDefault;
+      if ((tocState(s.host) === 'open') !== target) openerOf(s.host).click();
+      expect(tocState(s.host)).toBe(target ? 'open' : 'collapsed');
+      expect(saved).toContainEqual({ tocOpen: target }); // the click really persisted
+
+      // A width the user chose, stored the same way a drag would leave it.
+      seedStored({ tocOpen: target, tocWidth: 320 });
+      await afterFrames();
+      expect(tocWidthPx(s.host)).toBe(320);
+
+      // The agent edits the file — a watch re-render, the thing that happens on every keystroke.
+      s.remount(buildEditedDoc(), true);
+      await afterFrames(); // ...and past the frame applyInitialTocState's rAF would land on
+
+      // STILL the user's choice, not the width rule's.
+      expect(tocState(s.host)).toBe(target ? 'open' : 'collapsed');
+      // THE NON-VACUITY ASSERTION: demonstrably NOT what the width rule would have re-decided.
+      expect(tocState(s.host)).not.toBe(widthDefault ? 'open' : 'collapsed');
+      // The a11y state moved in lockstep — no half state left behind by the re-mount.
+      expect(openerOf(s.host).getAttribute('aria-expanded')).toBe(String(target));
+      // And the stored width survived the rebuild of the rail.
+      expect(tocWidthPx(s.host)).toBe(320);
+    });
+
+    it('the re-mount itself PERSISTS NOTHING — a re-render is not a user gesture (D-G)', async () => {
+      // The other half of the property, and the one a "still collapsed" assertion alone would
+      // miss: if the re-mount wrote back the state it just restored, an agent typing would issue
+      // a settings save per keystroke (and, on the content-script surface, a runtime message per
+      // keystroke) for a choice the user never made.
+      seedStored({ tocOpen: true, tocWidth: 300 });
+      const s = await mountSurface();
+      await afterFrames();
+      saved.length = 0;
+
+      s.remount(buildEditedDoc(), true);
+      await afterFrames();
+
+      expect(saved).toEqual([]);
     });
   },
 );

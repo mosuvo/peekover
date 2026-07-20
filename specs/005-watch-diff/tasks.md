@@ -324,7 +324,7 @@
       46/46 browser files · 367 passed / 5 skipped both engines; 422 unit; lint clean; golden EMPTY;
       manifest green unmodified; `dependencies` still three.
 
-- [ ] **3.4 Confirm the TOC re-decide interaction — VERIFY, do not assume (plan §1.3, §4-5).**
+- [x] **3.4 Confirm the TOC re-decide interaction — VERIFY, do not assume (plan §1.3, §4-5).**
       `applyInitialTocState` re-derives `data-toc` from the laid-out width on **every** mount
       (`tocView.ts:498-500`) and could re-open a rail the user just collapsed, on every agent keystroke.
       The recon **believes** 004's persistence already covers this (`setTocOpenByUser` persists on click and
@@ -336,6 +336,30 @@
       read production's own width-derived answer at the harness viewport, then seed the **OPPOSITE** and
       assert `not.toBe(thatFallback)`. If the property turns out NOT to be covered, that is a real finding →
       a task added **below this line**, not a silent fix. Golden EMPTY + manifest green.
+      **DONE 2026-07-20 — VERIFIED COVERED. No task is added below this line, and the reason is evidenced,
+      not assumed.** The recon's belief was right, and it is covered **more robustly than the recon knew:
+      by TWO INDEPENDENT GUARDS, either of which alone is sufficient.** That was discovered BY the red-first
+      pass rather than by reading the code — the first deliberate break (disabling
+      `applyInitialTocState`'s stored-value early return) left the suite **fully GREEN**, because
+      `decide()` carries its own stand-down (`if (currentSettings().tocOpen !== null) return;`, 004's D-F
+      guard for the late-publish race) and independently refused to re-derive. Only removing **both** guards
+      turned it red: `expected 'collapsed' to be 'open'` on **both engines and both surfaces** — the width
+      rule re-opening the rail the user had just collapsed, which is precisely the per-keystroke bug this
+      task existed to rule out.
+      **The insufficient first break is the finding worth carrying:** a single-break red-first would have
+      "passed" while proving only that one of two guards existed. Checking that the break actually went red
+      — and investigating when it did not — is what surfaced the real structure.
+      **Non-vacuity:** a probe mounts with NOTHING stored and reads production's own width-derived answer at
+      this harness viewport (it is **open** here, the opposite of 6.1's narrow-viewport reading — which is
+      exactly why it is measured per run and never hardcoded), then the rail is driven to the OPPOSITE
+      through the real opener click and asserted `not.toBe` that fallback.
+      **A second property is asserted that a "still collapsed" test alone would miss:** the re-mount
+      **PERSISTS NOTHING** (`saved` is `[]`). A re-render is not a user gesture — without that, an agent
+      typing would issue one settings save, and on the content-script surface one runtime message, **per
+      keystroke** for a choice the user never made (D-G).
+      Stored width (320 px) survives the rail rebuild. 46/46 browser files · 367 passed / 5 skipped both
+      engines; 422 unit; lint clean; golden EMPTY; `manifest.test.ts` 8/8 and byte-unmodified since M2;
+      `dependencies` still three.
 
 ## 4 — Watch UX (the control is rebuilt every mount; the controller is not — that gap is a seam, not a closure)
 
