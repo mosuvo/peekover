@@ -1,0 +1,380 @@
+// Re-render continuity through the mount() seam — REAL-ENGINE (spec 005 task 3.3; 3.4 extends
+// this file).
+//
+// ── WHY THIS SUITE IS SHAPED AROUND *TWO* RED-FIRST DIRECTIONS ─────────────────────────────
+//
+// 3.3 is the task where `mount()` stops being the read-only library four milestones have treated
+// it as (`readerPane.ts:16`). `MountOptions.preserveReading` is additive and DEFAULTED-OFF, and
+// the claim "every existing caller is unaffected" is one to PROVE, not assert. So this file
+// asserts the flag in BOTH directions and treats them as equally load-bearing:
+//
+//   (a) WITH the flag  — a reader left in Raw, scrolled mid-document, re-mounts still in Raw at
+//       the same place. This fails before the change (mode resets to reading, scroll goes to 0).
+//   (b) WITHOUT the flag — the existing UNCONDITIONAL `setReaderMode(host, 'reading')` still
+//       fires. This is not a formality: `readerPane.select()` DEPENDS on it. Switching from a
+//       file you were reading in Raw to a different file must land in Reading, on the new
+//       document. An implementation that preserved unconditionally — or made the reset
+//       conditional on the wrong thing — passes (a) and breaks the app page silently, which is
+//       precisely the failure mode a single-direction test would ship.
+//
+// Both directions were demonstrated RED against deliberate breaks before this file went green;
+// the messages are recorded in specs/005-watch-diff/tasks.md.
+//
+// ── HARNESS NOTE, INHERITED FROM 3.2 AND LOAD-BEARING HERE TOO ─────────────────────────────
+//
+// "The box overflows" is NOT a safe precondition for a geometry assertion; "the box has stopped
+// reflowing" is. Measured at 3.2: `scrollHeight` read 81798 px at first overflow and 26069 px
+// once the reader had finished restyling. A scroll write in that window CLAMPS to the new
+// maximum and silently parks the test at the document bottom. `waitForStable` below polls for a
+// settled content height, not merely a scrollable one.
+
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { mount } from '../../src/render/mount';
+import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import type { FolderSource } from '../../src/app/folderSource';
+import {
+  currentSettings,
+  registerSettingsSink,
+  resetSettingsSeamForTest,
+} from '../../src/settings/settingsSeam';
+import { type Settings } from '../../src/settings/settings';
+
+// ── Fixtures ────────────────────────────────────────────────────────────────────────────────
+
+const FILLER = Array.from(
+  { length: 24 },
+  (_, i) =>
+    `Paragraph ${i + 1}: lorem ipsum dolor sit amet, consectetur adipiscing elit, ` +
+    `sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.`,
+).join('\n\n');
+
+const SECTIONS = 8;
+
+function buildDoc(): string {
+  const parts: string[] = [];
+  for (let i = 1; i <= SECTIONS; i += 1) parts.push(`## Section ${i}`, FILLER);
+  return parts.join('\n\n');
+}
+
+/** The agent's edit: one more section appended. Same headings, same order — so the anchor has a
+ *  text match and the assertions are about continuity, not about the matching ladder (3.2 owns
+ *  that). */
+function buildEditedDoc(): string {
+  return [buildDoc(), '## Section 9', FILLER].join('\n\n');
+}
+
+/** The agent's other edit, and the one that matters: a section INSERTED ABOVE everything, so
+ *  every existing heading moves DOWN. Holding `scrollTop` steady is the wrong answer here — see
+ *  the note on the Reading-mode test. */
+function buildDocWithInsertionAbove(): string {
+  return ['## Inserted Section', FILLER, buildDoc()].join('\n\n');
+}
+
+/** Patches captured at the PRODUCTION settings sink — what would have gone to the port. */
+let saved: Partial<Settings>[] = [];
+
+beforeEach(() => {
+  resetSettingsSeamForTest();
+  saved = [];
+  registerSettingsSink((patch) => saved.push(patch));
+});
+
+afterEach(() => {
+  resetSettingsSeamForTest();
+});
+
+async function waitFor<T>(fn: () => T | null | undefined, tries = 150): Promise<T> {
+  for (let i = 0; i < tries; i += 1) {
+    const v = fn();
+    if (v) return v;
+    await new Promise<void>((r) => setTimeout(r, 20));
+  }
+  throw new Error('waitFor timed out');
+}
+
+/** Wait until the scroll box overflows AND its content height has STOPPED CHANGING (see the
+ *  harness note in the file header — overflow alone returns mid-restyle). */
+async function waitForStable(scroller: HTMLElement): Promise<void> {
+  let prev = Number.NaN;
+  let stable = 0;
+  for (let i = 0; i < 200; i += 1) {
+    const h = scroller.scrollHeight;
+    if (h > scroller.clientHeight + 4 && h === prev) {
+      stable += 1;
+      if (stable >= 3) return;
+    } else {
+      stable = 0;
+    }
+    prev = h;
+    await new Promise<void>((r) => setTimeout(r, 20));
+  }
+  throw new Error('scroll box never settled (content did not overflow, or kept reflowing)');
+}
+
+/** Poll `scrollTop` until it stops changing (the full-page :host scrolls smoothly). */
+async function settle(scroller: HTMLElement): Promise<number> {
+  let prev = Number.NaN;
+  let stable = 0;
+  for (let i = 0; i < 150; i += 1) {
+    const cur = scroller.scrollTop;
+    if (cur === prev) {
+      stable += 1;
+      if (stable >= 3) return cur;
+    } else {
+      stable = 0;
+    }
+    prev = cur;
+    await new Promise<void>((r) => setTimeout(r, 20));
+  }
+  return scroller.scrollTop;
+}
+
+/** Vertical offset of an element's top relative to the scroll box's top — "where on screen". */
+function topOffset(el: Element, scroller: HTMLElement): number {
+  return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+}
+
+/** Find a heading by its exact text in the live reader. */
+function headingByText(host: HTMLElement, text: string): Element {
+  return [...host.shadowRoot!.querySelectorAll('.peekover-reader h2')].find(
+    (h) => (h.textContent ?? '').trim() === text,
+  )!;
+}
+
+function modeOf(host: HTMLElement): string | null {
+  return host.getAttribute('data-mode');
+}
+
+function modeToggleOf(host: HTMLElement): HTMLButtonElement {
+  return host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-mode-toggle')!;
+}
+
+// ── The two surfaces, one parameterised suite ───────────────────────────────────────────────
+
+interface Surface {
+  host: HTMLElement;
+  scroller: HTMLElement;
+  /** Re-render into the same host — the exact seam watch mode drives. */
+  remount(text: string, preserveReading?: boolean): void;
+}
+
+const fullPageHosts: HTMLElement[] = [];
+afterEach(() => {
+  for (const h of fullPageHosts.splice(0)) h.remove();
+});
+
+function mountFullPage(doc: string = buildDoc()): Surface {
+  const host = document.createElement('peekover-root');
+  document.body.appendChild(host);
+  fullPageHosts.push(host);
+  mount(doc, host);
+  return {
+    host,
+    scroller: host,
+    remount: (text, preserveReading) => mount(text, host, { preserveReading }),
+  };
+}
+
+function fakeStore(): AppStore {
+  return {
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+    // Stands in for the app page's real IndexedDB settings row: answers with whatever this test
+    // seeded, so the shell's own `load().then(publishSettings)` re-publishes rather than wipes.
+    getSettings: async () => currentSettings(),
+    putSettings: async () => undefined,
+  };
+}
+
+function memorySource(name: string, text: string): FolderSource {
+  return {
+    name: 'docs',
+    truncated: false,
+    persistable: false,
+    files: [{ path: name, name, read: async () => text }],
+  };
+}
+
+const containers: HTMLElement[] = [];
+afterEach(() => {
+  for (const c of containers.splice(0)) c.remove();
+});
+
+async function mountContained(doc: string = buildDoc()): Promise<Surface> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  containers.push(container);
+
+  const app = mountAppShell(container, {
+    openFolder: async () => ({ ok: true, source: memorySource('doc.md', doc) }),
+    store: fakeStore(),
+  });
+  // mountAppShell runs its own production wiring and its sink registration REPLACES the test
+  // sink (last registration wins, by design), so re-register after the shell has had its turn.
+  registerSettingsSink((patch) => saved.push(patch));
+  await app.openFolder();
+  container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+
+  const host = await waitFor(() =>
+    container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+  );
+  await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader h2'));
+  const pane = container.querySelector<HTMLElement>('.peekover-app__reader')!;
+  return {
+    host,
+    scroller: pane,
+    remount: (text, preserveReading) => mount(text, host, { contained: true, preserveReading }),
+  };
+}
+
+const SURFACES: { name: string; mount: (doc?: string) => Promise<Surface> }[] = [
+  { name: 'full-page', mount: async (doc) => mountFullPage(doc) },
+  { name: 'contained', mount: (doc) => mountContained(doc) },
+];
+
+// ── Task 3.3 — direction (a): WITH the flag, mode and place survive ─────────────────────────
+
+describe.each(SURFACES)(
+  'preserveReading — $name surface (task 3.3, direction (a): WITH the flag)',
+  ({ mount: mountSurface }) => {
+    it('a reader left in RAW, scrolled mid-document, re-mounts still in Raw at the same place', async () => {
+      const s = await mountSurface();
+      await waitForStable(s.scroller);
+
+      // Leave the reader in Raw, through the real control the user would click.
+      modeToggleOf(s.host).click();
+      expect(modeOf(s.host)).toBe('raw');
+      await waitForStable(s.scroller);
+
+      // ...and scrolled mid-document, genuinely away from the top.
+      s.scroller.scrollTop = Math.round((s.scroller.scrollHeight - s.scroller.clientHeight) / 2);
+      const readingAt = await settle(s.scroller);
+      expect(readingAt).toBeGreaterThan(200);
+
+      // The agent edits the file underneath the reader.
+      s.remount(buildEditedDoc(), true);
+      await waitForStable(s.scroller);
+      const after = await settle(s.scroller);
+
+      // MODE survives — the reader is not yanked back to Reading mid-edit.
+      expect(modeOf(s.host)).toBe('raw');
+      // PLACE survives. In Raw there are no visible headings to anchor to, so this is the
+      // anchor's own scrollTop rung — asserted against the measured position, and the `> 200`
+      // above is what makes "still there" distinguishable from "reset to 0".
+      expect(Math.abs(after - readingAt)).toBeLessThan(40);
+      // THEME survives the path (it rides on the host, not on the replaced children).
+      expect(s.host.getAttribute('data-theme')).toBeTruthy();
+    });
+
+    it('a reader in READING mode keeps its PLACE when content is inserted ABOVE it', async () => {
+      // THE FIXTURE HERE IS INSERTED-ABOVE, NOT APPENDED, AND THAT IS THE WHOLE POINT.
+      // An earlier draft of this test appended a section and asserted `scrollTop` was unchanged
+      // — and it PASSED against a mount() with no continuity code at all. The engine simply does
+      // not reset `scrollTop` when `replaceChildren` leaves the box still tall enough, so the
+      // assertion was satisfied by the browser rather than by anything this milestone built.
+      // That is the vacuous-persistence-test class (retro 2026-07-19, finding 1) caught in the
+      // act, by running the red-first pass and noticing the test did NOT go red.
+      //
+      // Insertion above is the case nothing else can fake: every heading MOVES, so holding
+      // `scrollTop` steady is now the WRONG answer, and only an anchor restore lands the reader
+      // back on the words they were reading.
+      const s = await mountSurface();
+      await waitForStable(s.scroller);
+      expect(modeOf(s.host)).toBe('reading');
+
+      const target = 'Section 5';
+      const before = headingByText(s.host, target);
+      s.scroller.scrollTop =
+        s.scroller.scrollTop + topOffset(before, s.scroller) + 40;
+      const readingAt = await settle(s.scroller);
+      const offsetBefore = topOffset(before, s.scroller);
+      expect(readingAt).toBeGreaterThan(200);
+
+      s.remount(buildDocWithInsertionAbove(), true);
+      await waitForStable(s.scroller);
+      await settle(s.scroller);
+
+      expect(modeOf(s.host)).toBe('reading');
+      // The SAME heading is back at the SAME offset — the reader's place, not their pixels.
+      const offsetAfter = topOffset(headingByText(s.host, target), s.scroller);
+      expect(Math.abs(offsetAfter - offsetBefore)).toBeLessThan(12);
+      // NON-VACUOUS: the scroll position itself demonstrably MOVED to achieve that, so a mount()
+      // that merely let the engine hold `scrollTop` steady cannot satisfy this.
+      expect(Math.abs(s.scroller.scrollTop - readingAt)).toBeGreaterThan(100);
+      expect(s.host.getAttribute('data-theme')).toBeTruthy();
+    });
+  },
+);
+
+// ── Task 3.3 — direction (b): WITHOUT the flag, the unconditional reset STILL fires ─────────
+
+describe.each(SURFACES)(
+  'preserveReading — $name surface (task 3.3, direction (b): WITHOUT the flag)',
+  ({ mount: mountSurface }) => {
+    it('the existing UNCONDITIONAL reset to Reading still happens — readerPane depends on it', async () => {
+      const s = await mountSurface();
+      await waitForStable(s.scroller);
+
+      modeToggleOf(s.host).click();
+      expect(modeOf(s.host)).toBe('raw'); // the precondition is real, not assumed
+      await waitForStable(s.scroller);
+      s.scroller.scrollTop = Math.round((s.scroller.scrollHeight - s.scroller.clientHeight) / 2);
+      expect(await settle(s.scroller)).toBeGreaterThan(200);
+
+      // A routine re-mount with NO options — exactly what `readerPane.select()` issues.
+      s.remount(buildEditedDoc());
+      await waitForStable(s.scroller);
+
+      // THE ASSERTION THAT PROTECTS THE APP PAGE: a new document lands in Reading, whatever the
+      // previous one was left in. An implementation that preserved unconditionally fails here.
+      expect(modeOf(s.host)).toBe('reading');
+      expect(s.host.getAttribute('data-theme')).toBeTruthy();
+    });
+
+    it('readerPane.select() itself lands a NEW file in Reading after the old one was left in Raw', async () => {
+      // The bug direction (b) exists to prevent, exercised through the REAL app-page controller
+      // rather than a hand-rolled mount() call — readerPane is read-only in this task, so this is
+      // an observation of production, not a modification of it.
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      containers.push(container);
+
+      const source: FolderSource = {
+        name: 'docs',
+        truncated: false,
+        persistable: false,
+        files: [
+          { path: 'a.md', name: 'a.md', read: async () => buildDoc() },
+          { path: 'b.md', name: 'b.md', read: async () => buildEditedDoc() },
+        ],
+      };
+      const app = mountAppShell(container, {
+        openFolder: async () => ({ ok: true, source }),
+        store: fakeStore(),
+      });
+      registerSettingsSink((patch) => saved.push(patch));
+      await app.openFolder();
+
+      const files = [
+        ...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+      ];
+      expect(files.length).toBe(2);
+
+      files[0].click();
+      const host = await waitFor(() =>
+        container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+      );
+      await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader h2'));
+
+      // Leave file A in Raw.
+      modeToggleOf(host).click();
+      expect(modeOf(host)).toBe('raw');
+
+      // Select file B — a DIFFERENT document. It must render in Reading.
+      files[1].click();
+      await waitFor(() => (modeOf(host) === 'reading' ? true : null));
+      expect(modeOf(host)).toBe('reading');
+    });
+  },
+);

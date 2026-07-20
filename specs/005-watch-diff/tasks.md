@@ -272,7 +272,7 @@
       44/44 browser files · 343 passed / 5 skipped both engines; 422 unit; lint clean; golden EMPTY;
       manifest green unmodified.
 
-- [ ] **3.3 `MountOptions.preserveReading` + the `mount.ts:151` change — BOTH DIRECTIONS red-first.**
+- [x] **3.3 `MountOptions.preserveReading` + the `mount.ts:151` change — BOTH DIRECTIONS red-first.**
       Add `preserveReading?: boolean` to `MountOptions` (which today has exactly one field, `contained?`,
       and — unlike 004's port — **is already threaded through every caller**, so adding a field is not the
       mistake 004 made). When set, `mount()`: **before** `replaceChildren` captures the reading anchor
@@ -297,6 +297,32 @@
       `decisions.md` with the evidence for why. **This is the 4.2 pattern from M4** — build it, measure it,
       remove it if it fails its bar — and removing it is a SUCCESS, not waste. **Restore from the `cp` copy,
       never `git checkout src/render/mount.ts`.**
+      **DONE 2026-07-20 — SHIPPED AS SPECIFIED. The fallback was NOT needed and was NOT taken:** direction
+      (b) is satisfiable alongside (a), because the flag is read at exactly one place (whether to CAPTURE at
+      all) and every existing caller omits it, reaching `replaceChildren` with nothing read and nothing
+      changed. `mount()` gained `preserveReading?: boolean`, a `captureReading` before the commit and a
+      `restoreReading` after it; `:151` became `setReaderMode(host, carried?.mode ?? 'reading')`.
+      **RED-FIRST, BOTH DIRECTIONS, both engines, both surfaces:**
+      **(a)** against the PRISTINE pre-3.3 `mount.ts`: **8 failures** — `expected 'reading' to be 'raw'`
+      (mode reset) and `expected 3239.89 to be less than 12` / `expected 11592.78 to be less than 12` (the
+      reader's place lost).
+      **(b)** making the capture unconditional (ignoring the flag — "conditional on the wrong thing"):
+      **8 failures** — `expected 'raw' to be 'reading'`, INCLUDING the test that drives the real
+      `readerPane.select()` across two files, which times out waiting for Reading. **That is the app-page
+      bug default-off prevents, observed rather than argued.** `readerPane.ts` was NOT modified.
+      **RAW-MODE SUBTLETY handled explicitly:** in Raw the reading column is `display:none`, so heading
+      rects are all-zero and an anchor restore would resolve to ~0 — a jump to the top. Restore hands
+      `restoreReadingAnchor` an EMPTY model in that case, taking its own `scrollTop` rung.
+      **A VACUOUS TEST WAS CAUGHT BY THE RED-FIRST PASS ITSELF and is worth inheriting.** The first draft of
+      the Reading-mode test APPENDED a section and asserted `scrollTop` was unchanged — and it PASSED
+      against a `mount()` with no continuity code at all, because the engine does not reset `scrollTop` when
+      `replaceChildren` leaves the box tall enough. The assertion was being satisfied by the browser, not by
+      anything this milestone built. It only surfaced because the red run was checked for the RIGHT NUMBER
+      of failures rather than merely for "it went red". Rewritten to INSERTED-ABOVE, where holding
+      `scrollTop` steady is the wrong answer; it now fails red as it should.
+      Restored from `cp` copies throughout; `git checkout` was never used on `mount.ts`.
+      46/46 browser files · 367 passed / 5 skipped both engines; 422 unit; lint clean; golden EMPTY;
+      manifest green unmodified; `dependencies` still three.
 
 - [ ] **3.4 Confirm the TOC re-decide interaction — VERIFY, do not assume (plan §1.3, §4-5).**
       `applyInitialTocState` re-derives `data-toc` from the laid-out width on **every** mount

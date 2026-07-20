@@ -18,8 +18,11 @@ zero-network guard) and **2.3 DONE** (the human-run both-engines check; answers 
 **GROUP 3 — re-render continuity, THE RISKIEST GROUP — is IN PROGRESS: 3.1 DONE**
 (`resolveScrollContainer` extracted to `src/render/scrollContainer.ts` as a pure move; `tocScroll`
 green unchanged) and **3.2 DONE** (`readingAnchor` — capture + the text → index → `scrollTop`
-restore ladder, D-3). **Next: 3.3** — `MountOptions.preserveReading` and the `mount.ts:151` change,
-the task where `mount()` stops being read-only library, red-first in BOTH directions. Group 3 is where `mount()` stops
+restore ladder, D-3) and **3.3 DONE — SHIPPED AS SPECIFIED, the sanctioned fallback was NOT needed**
+(`MountOptions.preserveReading`, additive and defaulted-off; `mount.ts:151` now
+`setReaderMode(host, carried?.mode ?? 'reading')`). **`mount()` is no longer read-only library** — the
+boundary four milestones respected has been crossed, deliberately and with both directions proven red
+first. **Next: 3.4** — verify the TOC re-decide interaction. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**

@@ -26,6 +26,9 @@ import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildTocModel } from './tocModel';
 import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
+import { resolveScrollContainer } from './scrollContainer';
+import { captureReadingAnchor, restoreReadingAnchor, type ReadingAnchor } from './readingAnchor';
+import type { ReaderMode } from './readerMode';
 
 /** Open so tests / a11y tooling can inspect (matches the hello-shell precedent). */
 const SHADOW_MODE = 'open' as const;
@@ -40,6 +43,34 @@ export interface MountOptions {
    * painting over it (see CONTAINED_CSS in theme/readerCss.ts).
    */
   contained?: boolean;
+  /**
+   * Keep the reader WHERE AND HOW IT WAS across this re-render (spec 005 task 3.3).
+   *
+   * OFF by default, and that default is load-bearing rather than merely conservative. `mount()`
+   * has been read-only library for four milestones (`readerPane.ts:16`), and its unconditional
+   * `setReaderMode(host, 'reading')` below is DEPENDED ON by `readerPane.select()`: switching
+   * from a file you were reading in Raw to a different file must land in Reading, on the new
+   * document. So the reset is not incidental — preserving unconditionally would be a real bug on
+   * the app page, which is why BOTH directions of this flag are red-first proven in
+   * `tests/browser/watchRemount.browser.test.ts`, not just the new one.
+   *
+   * When set, mount() captures the reading anchor (3.2) and the live `data-mode` BEFORE
+   * `replaceChildren`, then after the commit restores that mode INSTEAD of forcing 'reading',
+   * and restores the anchor. Watch mode is the only caller that sets it: an agent rewriting a
+   * file underneath you must not yank you to the top of the document, or out of Raw, on every
+   * keystroke.
+   */
+  preserveReading?: boolean;
+}
+
+/** What a `preserveReading` mount carries across its own `replaceChildren`. */
+interface CarriedReading {
+  /** The scroll box the anchor was captured from — resolved once, reused for the restore. */
+  scroller: HTMLElement;
+  /** The live view mode at capture time, or null if the host carried none. */
+  mode: ReaderMode | null;
+  /** The captured place, or null when there was no previous render to capture from. */
+  anchor: ReadingAnchor | null;
 }
 
 /** A <style> carrying the contained-mode override, injected AFTER the base reader
@@ -146,9 +177,18 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     const tocRail = buildTocView(host, buildTocModel(root), { contained: options.contained });
     if (tocRail) children.push(tocRail);
     children.push(root);
+
+    // CONTINUITY CAPTURE (task 3.3), taken from the LIVE pre-commit DOM — the last moment the
+    // previous render still exists. Only when the caller opted in; every existing caller omits
+    // the flag and reaches `replaceChildren` with nothing read and nothing changed.
+    const carried = options.preserveReading ? captureReading(shadow, host, options) : null;
+
     shadow.replaceChildren(...children);
     registerReaderSource(host, source); // stash source for the lazy Raw view
-    setReaderMode(host, 'reading'); // default view = the rendered document
+    // Default view = the rendered document. UNCONDITIONAL unless the caller asked to preserve:
+    // `readerPane.select()` depends on this reset to land a newly-selected file in Reading even
+    // when the previous file was left in Raw (see MountOptions.preserveReading).
+    setReaderMode(host, carried?.mode ?? 'reading');
     installToggleShortcut(); // idempotent; only active while our reader is mounted
     // TOC toggle registry (task 2.3): this host has a rail iff buildTocView returned one.
     // Register when composed so the backtick shortcut can resolve+toggle it; un-register on
@@ -158,12 +198,52 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     else unregisterTocHost(host);
     installTocShortcut();
     initReaderRuntime(host);
+    // CONTINUITY RESTORE (task 3.3), last — after the commit, the mode and the rail are all in
+    // place, so the geometry the anchor measures against is the one the reader will actually see.
+    if (carried) restoreReading(root, carried);
   } catch (err) {
     // AGENTS.md #5: never a blank page. Degrade to the raw source as escaped text,
     // with a quiet user-facing banner (task 4.2). Dev-only signal kept alongside it.
     console.warn('[peekover] render failed; showing raw source', err);
     mountRawFallback(source, shadow, host, options.contained);
   }
+}
+
+/**
+ * Read the reader's current place and view mode off the live pre-commit DOM (task 3.3).
+ *
+ * Returns a carrier even when there is no previous render (`anchor: null`, `mode: null`) — a
+ * first mount with the flag set is not an error, it simply has nothing to preserve, and the
+ * restore below degrades to doing nothing rather than to a jump.
+ */
+function captureReading(
+  shadow: ShadowRoot,
+  host: HTMLElement,
+  options: MountOptions,
+): CarriedReading {
+  const scroller = resolveScrollContainer(host, options.contained === true);
+  const prevRoot = shadow.querySelector('.peekover-reader');
+  return {
+    scroller,
+    mode: (host.getAttribute('data-mode') as ReaderMode | null) ?? null,
+    anchor: prevRoot ? captureReadingAnchor(scroller, buildTocModel(prevRoot)) : null,
+  };
+}
+
+/**
+ * Put the reader back where it was, after the commit (task 3.3).
+ *
+ * THE RAW-MODE SUBTLETY, stated because the code below looks like a needless branch: in Raw mode
+ * the rendered reading column is `display:none`, so every heading's rect is all-zero and an
+ * anchor restore computed against them would resolve to ~0 — a jump to the top, which is exactly
+ * the failure this feature exists to prevent. Handing `restoreReadingAnchor` an EMPTY model makes
+ * it take its own `scrollTop` rung, which is the honest answer for a view that has no headings on
+ * screen to anchor to.
+ */
+function restoreReading(root: HTMLElement, carried: CarriedReading): void {
+  const { scroller, mode, anchor } = carried;
+  if (!anchor) return;
+  restoreReadingAnchor(scroller, mode === 'raw' ? [] : buildTocModel(root), anchor);
 }
 
 /**
