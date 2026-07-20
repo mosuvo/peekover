@@ -15,9 +15,12 @@ COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementati
 COMPLETE: 2.1 DONE** (the `WATCH_READ` contract + `createWatchListener` + URL validation), **2.2 DONE**
 (the relay wired — background's THIRD listener, content-script `relayRead` → `pollingDetector`,
 zero-network guard) and **2.3 DONE** (the human-run both-engines check; answers recorded, spec narrowed).
-**Next: GROUP 3 — re-render continuity, THE RISKIEST GROUP** — it is where `mount()` stops being the
-read-only library four milestones have treated it as. The content script builds a stopped detector at
-`document_start`; nothing starts it, because watching is a user gesture on group 4's control.**
+**GROUP 3 — re-render continuity, THE RISKIEST GROUP — is IN PROGRESS: 3.1 DONE**
+(`resolveScrollContainer` extracted to `src/render/scrollContainer.ts` as a pure move; `tocScroll`
+green unchanged). **Next: 3.2** (`readingAnchor` capture + restore). Group 3 is where `mount()` stops
+being the read-only library four milestones have treated it as. The content script builds a stopped
+detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
+control.**
 
 - **INHERIT THIS BEFORE PLANNING GROUP 4 — FIREFOX WATCH IS APP-PAGE-ONLY, measured at 2.3**
   (decisions.md 2026-07-19). A background `fetch("file:///…")` on **Firefox 152 THROWS**: a

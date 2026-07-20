@@ -206,7 +206,7 @@
 
 ## 3 — Re-render continuity — THE RISKIEST GROUP (this is where `mount()` stops being read-only library)
 
-- [ ] **3.1 Extract `resolveScrollContainer` to a shared module; `tocView` imports it.** It is currently
+- [x] **3.1 Extract `resolveScrollContainer` to a shared module; `tocView` imports it.** It is currently
       **private** at `src/render/tocView.ts:636` and watch is its second consumer. The container genuinely
       differs per surface — `:host` full-page, `.peekover-app__reader` when contained, and the contained
       one is an ancestor **outside the shadow root**. 003 recorded the trap in-code (`tocView.ts:580-593`):
@@ -222,6 +222,16 @@
       resolved element identity, not merely that something scrollable came back); the **existing** TOC
       scroll-spy suite (`tocScroll.browser.test.ts`) stays green **unchanged**, which is the real proof the
       move was pure. Golden EMPTY + manifest green.
+      **DONE 2026-07-20 — pure move, no behaviour change.** `scrollsVertically` + `resolveScrollContainer`
+      now live in `src/render/scrollContainer.ts` with the 003 trap comment carried across; `tocView.ts`
+      imports the resolver and its old in-file trap block points at the new home. **Red-first:** replacing
+      the body with `return host` (the exact 003 trap — assume `:host`) failed **4 tests across both
+      engines** — this suite's contained-surface identity assertion (`expect(resolved).toBe(...)` received
+      the host, expected `<main class="peekover-app__reader">`) **and** `tocScroll`'s contained scroll-spy,
+      which is the purity proof firing from the other direction. Restored from a `cp` copy, never
+      `git checkout`. **`tocScroll.browser.test.ts` passed UNCHANGED** (git status shows `tocView.ts` as the
+      only modified file). 44/44 browser files · 335 passed / 5 skipped, both engines; 410 unit; lint clean;
+      golden diff EMPTY; manifest green unmodified.
 
 - [ ] **3.2 `readingAnchor` — capture + restore (D-3).** Capture: resolve the scroll box (3.1), find the
       **last heading whose top is at or above the scroll position**, record `{ text, index, delta }` where

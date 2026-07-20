@@ -26,6 +26,7 @@
 
 import type { TocEntry } from './tocModel';
 import { currentSettings, onSettingsChange, saveSettings } from '../settings/settingsSeam';
+import { resolveScrollContainer } from './scrollContainer';
 
 /** Options threaded from mount(). `contained` = the app-page reader pane (vs the full-page
  *  content-script takeover). In 2.1 this is STRUCTURAL only — reflected as a marker on the
@@ -616,32 +617,11 @@ const SPY_ACTIVATION_RATIO = 0.3;
  *  never land exactly on scrollHeight-clientHeight. Small, so only the true bottom promotes. */
 const SPY_BOTTOM_EPS = 2;
 
-/** True when an element is a vertical scroll container by its COMPUTED overflow. Computed style
- *  is available synchronously (unlike scrollHeight, which needs layout), so this resolves the
- *  root correctly on the first post-mount frame. */
-function scrollsVertically(el: Element): boolean {
-  const oy = getComputedStyle(el).overflowY;
-  return oy === 'auto' || oy === 'scroll' || oy === 'overlay';
-}
-
-/**
- * The reader's real vertical scroll container for `host`, resolved per surface (never blindly
- * :host). Full-page (`!contained`) → :host itself (the fixed, inset:0 takeover that always
- * scrolls). Contained → the nearest ANCESTOR pane that scrolls; :host's OWN overflow:auto is the
- * full-page rule and does not scroll in normal flow, so the host is excluded from the walk and
- * `.peekover-app__reader` (overflow:auto) is found. Falls back to host if no scrolling ancestor
- * exists (a degenerate mount) — still a shadow-including ancestor of the headings, so the
- * observer stays valid rather than throwing.
- */
-function resolveScrollContainer(host: HTMLElement, contained: boolean): HTMLElement {
-  if (!contained) return host;
-  let el = host.parentElement;
-  while (el) {
-    if (scrollsVertically(el)) return el;
-    el = el.parentElement;
-  }
-  return host;
-}
+// `scrollsVertically` + `resolveScrollContainer` MOVED to src/render/scrollContainer.ts at
+// spec 005 task 3.1 — watch mode's reading-anchor is their second consumer, and the trap
+// documented above (a wrong root silently observes the viewport and tracks nothing) is now
+// recorded once, beside the code, instead of being re-derived per consumer. Imported at the
+// top of this file; behaviour is unchanged by the move.
 
 /** One TOC entry button paired with the exact heading node it tracks (both in document order). */
 interface SpyPair {
