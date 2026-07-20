@@ -283,6 +283,19 @@ export const READER_CSS = /* css */ `
   55%{box-shadow:0 0 0 6px transparent}
 }
 
+/* THE UPDATE SIGNAL (task 4.2) — the mockup's .flash keyframe and its 1.6s duration, applied to
+   the CONTROL rather than to the changed element. 005 re-renders the whole document and cannot
+   know WHICH element changed without a diff, and the diff is 006; flashing the whole reading
+   column instead would wash the entire document on every agent keystroke, which is the opposite
+   of brief and non-intrusive. Flashing the chrome that already means "this file is live" says
+   exactly what 005 knows and nothing it does not. Full argument: watchController.ts, DECISION 2.
+   Neutralised under reduce by the same global animation-duration rule as the pulse. */
+.peekover-watch.is-updated{animation:peekover-watch-flash 1.6s ease}
+@keyframes peekover-watch-flash{
+  0%{background:var(--hl-soft)}
+  100%{background:var(--panel)}
+}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline

@@ -29,7 +29,14 @@ third in the stack above the theme pill, chosen by a measured probe rather than 
 collides with the TOC handle, bottom-right sits inside the rail's live entry list. **The registry
 SUBSUMED 2.2's holder** (`watchRelay`'s `registerWatchDetector`/`getWatchDetector` are now delegates
 into `src/watch/watchRegistry.ts`, the D-E delegate precedent), so there is ONE piece of watch state,
-not two. **Next: 4.2** (the controller — start/stop, update signal, follow-at-bottom-only). 4.4's
+not two. **4.2 DONE** (the controller — start/stop, the update signal, follow-at-bottom-only). **The spec
+beat the mockup on follow**: the mockup scrolls unconditionally, spec §4 forbids moving a reader who
+scrolled away, and reinstating the mockup's behaviour yanks the reader **~25,500 px** down the
+document on both engines. **The update signal flashes the CONTROL, not the document** — 005 cannot
+know which element changed without 006's diff, and a whole-column wash on every keystroke would be
+the most intrusive option available. **The toast is SKIPPED and noted for 006** (no toast primitive
+exists; the pill flash carries the same information). **Next: 4.3** (lifecycle — a gesture starts it,
+switching documents stops it, a dead read surfaces a designed state). 4.4's
 precondition is already satisfied and took the negative branch (see the Firefox note below). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's

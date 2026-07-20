@@ -169,6 +169,32 @@ export function buildWatchControl(host: HTMLElement): HTMLButtonElement | null {
   return control;
 }
 
+/** The class carrying the update flash (task 4.2). Applied to the CONTROL, never to the document
+ *  — see `watchController.ts`'s "DECISION 2" for why the mockup's per-element flash is 006's. */
+export const WATCH_FLASH_CLASS = 'is-updated';
+
+/**
+ * Fire the brief update signal on `host`'s watch control (task 4.2).
+ *
+ * Called by the controller AFTER the re-render, which is the only order that works: `mount()`'s
+ * `replaceChildren` has just destroyed the control that existed a moment ago, so this necessarily
+ * looks the CURRENT one up rather than holding a reference — the same lifetime property the
+ * registry exists for, one layer down.
+ *
+ * Because the element is freshly built, adding the class is enough to play the animation from the
+ * start; there is no previous animation state to reset and no reflow-forcing dance needed. The
+ * class is left in place: the next update replaces the element entirely, and a control that is
+ * never updated again simply keeps a finished (visually inert) animation.
+ *
+ * Reduced motion needs no branch — the reader's global
+ * `:host *{animation-duration:.001ms!important}` rule under `@media (prefers-reduced-motion:reduce)`
+ * neutralises this exactly as it neutralises the pulsing dot.
+ */
+export function signalWatchUpdate(host: HTMLElement): void {
+  host.shadowRoot?.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`)
+    ?.classList.add(WATCH_FLASH_CLASS);
+}
+
 /** Test-only: empty the live-control set so suites do not leak controls into one another. */
 export function resetWatchControlsForTest(): void {
   controls.clear();

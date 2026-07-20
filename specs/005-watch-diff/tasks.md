@@ -434,7 +434,7 @@
       417 passed / 5 skipped both engines; 422 unit; lint clean; golden EMPTY; manifest green
       unmodified; `dependencies` still three.
 
-- [ ] **4.2 `watchController` — start/stop, the update signal, follow-at-bottom-only.** Owns the
+- [x] **4.2 `watchController` — start/stop, the update signal, follow-at-bottom-only.** Owns the
       detector→re-render loop: on new text, re-mount with `{ preserveReading: true }` (3.3) and fire a
       **brief, non-intrusive** update signal. **Follow is opt-in-by-position:** at the bottom → follow the
       new content; scrolled **away** → **never move them**. Under `prefers-reduced-motion` any signal or
@@ -450,6 +450,50 @@
       `emulateReducedMotion('reduce')` the follow and the signal are **instant** (no animation frames of
       transition), and **non-vacuously** — assert the un-reduced path differs, or the test proves nothing.
       Golden EMPTY + manifest green.
+      **DONE 2026-07-20.** `src/watch/watchController.ts` + `.test.ts` (10 jsdom cases) +
+      `tests/browser/watchControl.browser.test.ts`. Registered as a `WatchTarget` into 4.1's
+      registry, so it REPLACES that task's thin detector-backed adapter in the same slot.
+      **M3 — THE SPEC SHIPPED, NOT THE MOCKUP, AND THE DIVERGENCE IS RECORDED IN-CODE** (a
+      `Do not "fix" this to match the mockup` note heads `watchController.ts`). The mockup's
+      unconditional `scrollIntoView({block:'center'})` is NOT shipped; follow is opt-in-by-position
+      per spec §4. **Red-first:** reinstating the mockup's behaviour failed **4× — both engines,
+      both surfaces** — `AssertionError: expected 25546 to be less than 40` (Chromium full-page),
+      `25636` (Chromium contained), `25554.7` (Firefox). The reader was yanked **~25,500 px** down
+      the document, which is the hijack §4 forbids, measured. Note the AT-THE-BOTTOM test stayed
+      GREEN under that break — which is exactly why the PAIR is the test and neither half alone is.
+      **THE UPDATE SIGNAL — DECIDED AND JUSTIFIED: it flashes the CONTROL, not the document.**
+      005 re-renders the whole document and cannot know WHICH element changed without a diff, and
+      the diff is 006 (D-1). Three candidates were weighed in-code: (a) the changed element — needs
+      006's diff, and building a diff to obtain a flash inverts the milestone split; (b) the reading
+      column / reader root — a full-width background wash across the entire document on **every
+      agent keystroke**, the most intrusive option on the list and a breach of "the document stays
+      the hero"; (c) the watch pill itself — the chrome whose meaning already IS "this file is
+      live". **(c) ships**, reusing the mockup's own `flash` keyframe and its 1.6 s duration. It
+      claims only what 005 knows (the file changed), not what it does not (where), and 006's
+      per-element flash becomes an ADDITION rather than a rewrite.
+      **THE TOAST IS SKIPPED — noted here for 006, not forgotten.** The reader has no toast
+      primitive; adding one means a new corner, a new stacking context, a new dismissal contract and
+      a new set of geometry assertions against the five pieces of chrome already in the corners. The
+      pill flash carries the same information at a fraction of the surface area. 006 has more to SAY
+      ("3 lines added") and can build the primitive then.
+      **Reduced motion, non-vacuous in one run:** the flash computes `1.6s` under `no-preference`
+      and `< 0.01s` under `reduce`; the follow needs no branch in the controller because
+      `readerCss.ts` already flips `:host{scroll-behavior}` smooth→auto — asserted as computed
+      `'smooth'` vs `'auto'` AND as the follow having LANDED on the first frames under reduce.
+      `matchMedia` is checked both ways first, so the suite cannot pass by the emulation being
+      unwired.
+      **TWO HARNESS DEFECTS FOUND AND FIXED HERE, both worth inheriting.** (i) The contained
+      surface was mounting a BARE div, so `resolveScrollContainer` took its documented
+      degenerate-mount fallback to the host — which in normal flow grows to its content and **never
+      scrolls**, making every follow assertion measure an immovable box. Production always has
+      `<main class="peekover-app__reader">` (overflow:auto) around the host; the harness now does
+      too. **Task 3.1's trap is real in the harness, not only in production.** (ii) The reading
+      column was captured BEFORE the update and asserted on after — but `mount()` had replaced it,
+      and `getComputedStyle` on a detached node returns `''`, not `'none'`, so the assertion would
+      have passed for the wrong reason. Re-queried after the commit.
+      Restored from a `cp` copy; `git checkout` was never used. 48/48 browser files · 431 passed /
+      5 skipped both engines; 432 unit; lint clean; golden EMPTY; manifest green unmodified;
+      `dependencies` still three.
 
 - [ ] **4.3 Lifecycle — a gesture starts it, switching documents STOPS it, a dead read surfaces a designed
       state (plan §1.10).** Nothing watches by default; starting is a **user gesture** on the control (spec

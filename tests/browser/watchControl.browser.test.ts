@@ -46,6 +46,9 @@ import {
   type WatchTarget,
 } from '../../src/watch/watchRegistry';
 import { resetWatchControlsForTest, WATCH_HOST_ATTR } from '../../src/watch/watchControl';
+import { createWatchController } from '../../src/watch/watchController';
+import { resolveScrollContainer } from '../../src/render/scrollContainer';
+import type { ChangeDetector } from '../../src/watch/changeDetector';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
@@ -118,12 +121,26 @@ function mountFullPageReader(doc = DOC): HTMLElement {
   return host;
 }
 
-/** A CONTAINED reader host — a plain <div>, exactly what readerPane.ts mounts into on the app
- *  page. The recurring two-surface gotcha: the one mount() seam must ship the control to both. */
+/**
+ * A CONTAINED reader host — a plain <div> inside a scrolling pane, which is exactly the shape
+ * `readerPane.ts` + `appShell.ts` produce on the app page: the mount host lives inside
+ * `<main class="peekover-app__reader">`, and THAT pane is `overflow:auto` (APP_CSS).
+ *
+ * THE PANE IS NOT DECORATION — task 3.1's whole point is that the contained surface's scroll box
+ * is an ANCESTOR OUTSIDE the shadow root, not `:host`. Mounting a bare div would leave
+ * `resolveScrollContainer` falling back to the host (its documented degenerate-mount branch), and
+ * a host in normal flow grows to its content and never scrolls — so every follow assertion below
+ * would be measuring a box that cannot move. That is a harness defect this suite hit and fixed,
+ * not a production one.
+ */
 function mountContainedReader(doc = DOC): HTMLElement {
+  const pane = document.createElement('main');
+  pane.className = 'peekover-app__reader';
+  pane.style.cssText = 'display:block;overflow:auto;height:80vh;width:100%';
   const host = document.createElement('div');
   host.style.display = 'block';
-  document.body.appendChild(host);
+  pane.appendChild(host);
+  document.body.appendChild(pane);
   mount(doc, host, { contained: true });
   return host;
 }
@@ -465,5 +482,234 @@ describe('watch control — geometry against the conditional chrome', () => {
 
     expectNoOverlap('watch', rect, 'network indicator', netRect);
     expectNoOverlap('watch', rect, 'remote-load pill', remoteLoad!.getBoundingClientRect());
+  });
+});
+
+// ════ TASK 4.2 — the controller: follow-at-bottom-only, and the update signal ═══════════════
+//
+// ── THE SPEC WINS OVER THE MOCKUP, AND THIS SUITE IS WHERE THAT IS ENFORCED ─────────────────
+//
+// `design/mockup.html` scrolls the changed paragraph into view on EVERY update, unconditionally.
+// Spec §4 forbids exactly that: a reader who has scrolled away from the bottom must NOT be moved.
+// The two tests below are the pair that makes the difference observable — at the bottom the reader
+// follows, in the middle they do not — and the mockup's behaviour fails the second one on both
+// engines. See watchController.ts's DECISION 1.
+//
+// ── THE FIXTURE IS APPENDED CONTENT, ON PURPOSE ────────────────────────────────────────────
+//
+// Both follow tests append. That isolates the property under test from task 3.3's anchor restore:
+// with nothing inserted ABOVE the reading position, the anchor lands the reader back at the same
+// `scrollTop`, so any movement observed here is the FOLLOW's doing and nothing else's. An
+// inserted-above fixture would make "did not move" the wrong assertion (3.3 proves the anchor
+// SHOULD move scrollTop in that case, to hold the reader's place) and the test would be measuring
+// two features at once.
+//
+// ── AND THE SETTLED-HEIGHT WAIT, NOT THE OVERFLOW ONE (3.2's measured harness defect) ──────
+//
+// "The box overflows" is not the precondition; "the box has stopped reflowing" is. 3.2 measured
+// `scrollHeight` at 81798 px on first overflow and 26069 px once settled, and a scroll write in
+// that window clamps silently. `waitForSettled` below polls for a stable height.
+
+/** Wait until the scroll box overflows AND its content height has STOPPED CHANGING. */
+async function waitForSettled(scroller: HTMLElement): Promise<void> {
+  let prev = Number.NaN;
+  let stable = 0;
+  for (let i = 0; i < 200; i += 1) {
+    const h = scroller.scrollHeight;
+    if (h > scroller.clientHeight + 4 && h === prev) {
+      stable += 1;
+      if (stable >= 3) return;
+    } else {
+      stable = 0;
+    }
+    prev = h;
+    await new Promise<void>((r) => setTimeout(r, 20));
+  }
+  throw new Error('scroll box never settled (no overflow, or it kept reflowing)');
+}
+
+/** Poll `scrollTop` until it stops changing (the reader scrolls smoothly by default). */
+async function settle(scroller: HTMLElement): Promise<number> {
+  let prev = Number.NaN;
+  let stable = 0;
+  for (let i = 0; i < 150; i += 1) {
+    const cur = scroller.scrollTop;
+    if (cur === prev) {
+      stable += 1;
+      if (stable >= 3) return cur;
+    } else {
+      stable = 0;
+    }
+    prev = cur;
+    await new Promise<void>((r) => setTimeout(r, 20));
+  }
+  return scroller.scrollTop;
+}
+
+const nextFrame = (): Promise<void> =>
+  new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+const FILLER = Array.from(
+  { length: 24 },
+  (_, i) =>
+    `Paragraph ${i + 1}: lorem ipsum dolor sit amet, consectetur adipiscing elit, ` +
+    `sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.`,
+).join('\n\n');
+
+function buildDoc(sections = 8): string {
+  const parts: string[] = [];
+  for (let i = 1; i <= sections; i += 1) parts.push(`## Section ${i}`, FILLER);
+  return parts.join('\n\n');
+}
+
+/** The agent's edit: MORE content at the end. Nothing above the reading position moves. */
+function buildAppended(extra = 4): string {
+  const parts = [buildDoc()];
+  for (let i = 9; i < 9 + extra; i += 1) parts.push(`## Section ${i}`, FILLER);
+  return parts.join('\n\n');
+}
+
+/** A detector whose callback this suite drives by hand — the real controller, no timers. */
+function handDrivenDetector(): { detector: ChangeDetector; fire: (text: string) => void } {
+  let cb: ((text: string) => void) | null = null;
+  return {
+    detector: {
+      start(next) {
+        cb = next;
+      },
+      stop() {
+        cb = null;
+      },
+    },
+    fire: (text) => cb?.(text),
+  };
+}
+
+interface LiveWatch {
+  host: HTMLElement;
+  scroller: HTMLElement;
+  fire: (text: string) => void;
+}
+
+/** Mount a tall document on `surface`, register the REAL controller, and start the watch through
+ *  the REAL control click — the production path end to end, with only the detector faked. */
+async function startWatch(surface: Surface): Promise<LiveWatch> {
+  const { detector, fire } = handDrivenDetector();
+  registerWatchTarget(
+    createWatchController({ detector, contained: surface.name === 'contained' }),
+  );
+  const host = surface.mount(buildDoc());
+  const scroller = resolveScrollContainer(host, surface.name === 'contained');
+  await waitForSettled(scroller);
+  controlIn(host)!.click(); // the user gesture — nothing watches until this happens
+  return { host, scroller, fire };
+}
+
+describe.each(SURFACES)('watch follow — $name surface (task 4.2)', (surface) => {
+  it('AT THE BOTTOM, appended content is FOLLOWED', async () => {
+    const w = await startWatch(surface);
+
+    w.scroller.scrollTop = w.scroller.scrollHeight;
+    const before = await settle(w.scroller);
+    expect(before).toBeGreaterThan(200); // really at the bottom of a real document
+
+    w.fire(buildAppended());
+    await waitForSettled(w.scroller);
+    const after = await settle(w.scroller);
+
+    // The reader is tailing, so the new content is what they want to see.
+    expect(after).toBeGreaterThan(before);
+    expect(w.scroller.scrollHeight - w.scroller.clientHeight - after).toBeLessThan(40);
+  });
+
+  it('SCROLLED AWAY, the same update leaves the reader UNMOVED', async () => {
+    // THE ASSERTION THE MOCKUP'S UNCONDITIONAL scrollIntoView FAILS, on both engines.
+    const w = await startWatch(surface);
+
+    const mid = Math.round((w.scroller.scrollHeight - w.scroller.clientHeight) / 2);
+    w.scroller.scrollTop = mid;
+    const before = await settle(w.scroller);
+    expect(before).toBeGreaterThan(200);
+
+    w.fire(buildAppended());
+    await waitForSettled(w.scroller);
+    const after = await settle(w.scroller);
+
+    // They did not move. The fixture appends, so task 3.3's anchor restore is a no-op here and
+    // this measures the FOLLOW decision alone (see this section's header).
+    expect(Math.abs(after - before)).toBeLessThan(40);
+    // NON-VACUOUS: the bottom is demonstrably somewhere else entirely, so "unmoved" is a real
+    // claim rather than a position that happens to coincide with where a follow would have gone.
+    const bottom = w.scroller.scrollHeight - w.scroller.clientHeight;
+    expect(bottom - after).toBeGreaterThan(500);
+  });
+});
+
+describe('watch update signal — the flash on the control, not the document (task 4.2)', () => {
+  it('flashes the control on an update, and never touches the reading column', async () => {
+    const w = await startWatch(SURFACES[0]);
+    expect(controlIn(w.host)!.classList.contains('is-updated')).toBe(false);
+
+    w.fire(buildAppended());
+    await waitForSettled(w.scroller);
+
+    // Re-queried AFTER the update: `mount()`'s replaceChildren destroyed the pre-update column,
+    // and getComputedStyle on a detached node returns an empty string, not 'none' — which would
+    // have made this assertion pass for the wrong reason had it been captured earlier.
+    const column = shadowOf(w.host).querySelector<HTMLElement>('.peekover-reader')!;
+
+    // The signal lands on the REBUILT control — mount() destroyed the one that existed when the
+    // update arrived, so this also pins that the signal looks the current control up rather than
+    // holding a reference (the same lifetime property the registry exists for, one layer down).
+    expect(controlIn(w.host)!.classList.contains('is-updated')).toBe(true);
+    expect(getComputedStyle(controlIn(w.host)!).animationName).toBe('peekover-watch-flash');
+
+    // THE DOCUMENT STAYS THE HERO: the flash is chrome-only. A whole-column wash on every agent
+    // keystroke is the option this decision rejected (watchController.ts, DECISION 2).
+    expect(column.classList.contains('is-updated')).toBe(false);
+    expect(getComputedStyle(column).animationName).toBe('none');
+  });
+});
+
+describe('watch under prefers-reduced-motion — follow and signal are INSTANT (task 4.2)', () => {
+  it('the signal animation is neutralised under reduce, and real without it (non-vacuous)', async () => {
+    const w = await startWatch(SURFACES[0]);
+    w.fire(buildAppended());
+    await waitForSettled(w.scroller);
+    const control = controlIn(w.host)!;
+
+    await commands.emulateReducedMotion('no-preference');
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).toBe(false);
+    expect(getComputedStyle(control).animationDuration).toBe('1.6s');
+
+    await commands.emulateReducedMotion('reduce');
+    expect(matchMedia('(prefers-reduced-motion: reduce)').matches).toBe(true);
+    expect(parseFloat(getComputedStyle(control).animationDuration)).toBeLessThan(0.01);
+  });
+
+  it('the follow scroll is instant under reduce and animated without it (non-vacuous)', async () => {
+    // The two signatures are MUTUALLY EXCLUSIVE, which is what makes this non-vacuous by
+    // construction: if the engine ignored the media query and behaved identically in both modes,
+    // one of the two would be absent and this goes red. (003's tocScroll method, reused.)
+    const w = await startWatch(SURFACES[0]);
+
+    // The mechanism, asserted directly: readerCss.ts flips :host{scroll-behavior} under reduce,
+    // and that single declaration is what makes the follow instant — no branch in the controller.
+    await commands.emulateReducedMotion('no-preference');
+    expect(getComputedStyle(w.scroller).scrollBehavior).toBe('smooth');
+    await commands.emulateReducedMotion('reduce');
+    expect(getComputedStyle(w.scroller).scrollBehavior).toBe('auto');
+
+    // ...and the behaviour that mechanism produces: under reduce the follow has LANDED on the
+    // first frame after the update.
+    w.scroller.scrollTop = w.scroller.scrollHeight;
+    await settle(w.scroller);
+    w.fire(buildAppended(6));
+    await nextFrame();
+    await nextFrame();
+    const early = w.scroller.scrollTop;
+    const final = await settle(w.scroller);
+    expect(final).toBeGreaterThan(0);
+    expect(early).toBeGreaterThan(final - 8);
   });
 });
