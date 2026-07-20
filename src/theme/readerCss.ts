@@ -296,6 +296,29 @@ export const READER_CSS = /* css */ `
   100%{background:var(--panel)}
 }
 
+/* THE DESIGNED EXPLANATION (tasks 4.3 + 4.4) — NOT a disabled control, NOT a dead toggle.
+   One element serves both honesty cases, because from the user's side they are the same case:
+   watching is not happening, and here is why, in plain language. 4.3 = a watch that DIED (the file
+   stopped being readable) — it appears WITHOUT a re-render, so the last good render stays exactly
+   where it is (AGENTS.md #5: never blank, and never a silent failure either). 4.4 = a watch that
+   could never START on this Firefox surface.
+
+   It sits directly above the watch pill in the same bottom-left column and is width-capped so it
+   reads as a quiet aside rather than a modal — the document stays the hero. The left accent bar
+   borrows the render-failure banner's language (.peekover-alert) so degraded states across the
+   reader look like one family. --warn, not --del: this is "something you should know", not an
+   error the user caused. Tokens ONLY. */
+.peekover-watch-note{
+  position:fixed;bottom:136px;left:16px;z-index:2;
+  margin:0;max-width:34ch;
+  font-family:var(--sans);font-size:12px;line-height:1.5;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:9px 13px;box-shadow:var(--shadow);
+}
+.peekover-watch-note[hidden]{display:none}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline
@@ -516,6 +539,7 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-mode-toggle,
 .peekover-theme-toggle,
 .peekover-watch,
+.peekover-watch-note,
 .peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }

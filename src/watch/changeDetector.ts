@@ -30,13 +30,31 @@
 export type OnText = (text: string) => void;
 
 /**
+ * What a detector reports when a READ FAILS (spec 005 task 4.3).
+ *
+ * REPORTING IS THE DETECTOR'S JOB; DECIDING IS NOT. This module's header states the boundary and
+ * it is kept: a failed read is transient by construction here (a file being rewritten can briefly
+ * fail to open), so the loop swallows it, leaves the baseline untouched and keeps polling. What it
+ * does NOT do is decide that a watch is dead — "a read that keeps failing stops the watch and
+ * surfaces a designed state" is a UI policy, and it lives at the controller, where the UI is.
+ *
+ * So this callback carries no verdict, only the fact. The controller counts CONSECUTIVE failures
+ * against its own threshold; a single blip never reaches the user.
+ */
+export type OnReadError = (cause: unknown) => void;
+
+/**
  * The detection seam. Two implementations satisfy it — this module's {@link pollingDetector}
  * and the Chromium app page's `observerDetector` (task 1.2) — and no consumer above the factory
  * can tell which one it holds.
  */
 export interface ChangeDetector {
-  /** Begin detecting. Calling `start` on an already-started detector is a no-op. */
-  start(cb: OnText): void;
+  /** Begin detecting. Calling `start` on an already-started detector is a no-op.
+   *
+   *  `onError` is OPTIONAL and additive (task 4.3): a detector reports failed reads through it so
+   *  the controller can apply its dead-read policy, and every existing caller that omits it gets
+   *  byte-identical behaviour — the read failure is still swallowed and the loop still continues. */
+  start(cb: OnText, onError?: OnReadError): void;
   /** Stop detecting. Idempotent, and safe to call from within `cb`. */
   stop(): void;
 }
@@ -72,6 +90,7 @@ export function pollingDetector(read: () => Promise<string>, intervalMs: number)
   let timer: ReturnType<typeof setTimeout> | null = null;
   let running = false;
   let callback: OnText | null = null;
+  let errback: OnReadError | null = null;
   /** The last text seen. `null` = nothing seen yet, i.e. the next read is the baseline. */
   let lastText: string | null = null;
 
@@ -97,9 +116,12 @@ export function pollingDetector(read: () => Promise<string>, intervalMs: number)
     timer = null;
     if (!running) return;
     read()
-      .then(deliver, () => {
+      .then(deliver, (cause: unknown) => {
         // A failed read is transient here; the baseline is left untouched so the NEXT
-        // successful read is compared against the last good text, not against a gap.
+        // successful read is compared against the last good text, not against a gap. It is
+        // REPORTED (task 4.3) but not acted on — the dead-read policy is the controller's, and
+        // a detector that stopped itself on one blip would kill a watch mid-file-rewrite.
+        if (running) errback?.(cause);
       })
       .catch(() => {
         // A THROWING callback must not kill the loop, and must never surface as an unhandled
@@ -109,15 +131,17 @@ export function pollingDetector(read: () => Promise<string>, intervalMs: number)
   };
 
   return {
-    start(cb) {
+    start(cb, onError) {
       if (running) return;
       running = true;
       callback = cb;
+      errback = onError ?? null;
       schedule();
     },
     stop() {
       running = false;
       callback = null;
+      errback = null;
       if (timer !== null) {
         clearTimeout(timer);
         timer = null;

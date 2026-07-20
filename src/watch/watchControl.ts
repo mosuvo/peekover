@@ -39,6 +39,7 @@ import {
   isWatching,
   onWatchChanged,
   watchAvailable,
+  watchNote,
 } from './watchRegistry';
 
 /** CSS class the reader stylesheet styles (`readerCss.ts`). */
@@ -106,6 +107,7 @@ function syncControls(): void {
   pruneControls();
   const watching = isWatching();
   for (const control of controls) labelControl(control, watching);
+  syncNotes();
 }
 
 let subscribed = false;
@@ -195,7 +197,81 @@ export function signalWatchUpdate(host: HTMLElement): void {
     ?.classList.add(WATCH_FLASH_CLASS);
 }
 
-/** Test-only: empty the live-control set so suites do not leak controls into one another. */
+// --- the designed explanation (tasks 4.3 + 4.4) --------------------------------------
+
+/** CSS class for the plain-language explanation shown when watching died or cannot start. */
+export const WATCH_NOTE_CLASS = 'peekover-watch-note';
+
+/** Live note elements, kept in sync by the same single subscription as the controls. */
+const notes = new Set<HTMLElement>();
+
+/** Write the current explanation into one note element, hiding it entirely when there is none. */
+function labelNote(el: HTMLElement): void {
+  const text = watchNote();
+  el.textContent = text ?? '';
+  // `hidden` rather than a class, so the element is out of the a11y tree too — an empty
+  // `role="status"` region that is merely transparent still gets announced by some AT.
+  el.hidden = text === null;
+}
+
+/** Drop note elements a re-render dropped, then re-write the survivors. */
+function syncNotes(): void {
+  for (const el of notes) {
+    if (!el.isConnected) notes.delete(el);
+  }
+  for (const el of notes) labelNote(el);
+}
+
+/**
+ * Build the explanation element (tasks 4.3 + 4.4).
+ *
+ * `role="status"` — polite, not an assertive alert. A watch that stopped is worth telling the user
+ * about, but it is not an emergency and must not interrupt what a screen-reader user is reading.
+ * It is a live region, so the 4.3 case (the note arriving with NO re-render, while the last good
+ * render stays on screen) is announced when it appears rather than only on next focus.
+ */
+export function buildWatchNote(): HTMLElement {
+  const el = document.createElement('p');
+  el.className = WATCH_NOTE_CLASS;
+  el.setAttribute('role', 'status');
+  notes.add(el);
+  ensureSubscribed();
+  labelNote(el);
+  return el;
+}
+
+/**
+ * The watch chrome for `host`: the toggle, the explanation, both, or NOTHING.
+ *
+ * `mount()` calls this once and spreads the result into its `children[]`, so every piece is a
+ * SIBLING of `.peekover-reader` and the reading column stays byte-identical. The four states are
+ * the honest ones:
+ *   • can watch, nothing to explain      → the toggle alone.
+ *   • can watch, but something to say    → the toggle AND the note (4.3: a watch that just died on
+ *     this file — the toggle stays, because retrying is the user's to choose).
+ *   • cannot watch, with a reason        → the note alone (4.4: Firefox). Never a dead button.
+ *   • cannot watch, nothing to explain   → nothing at all (a focused test, a reader with no file
+ *     behind it). Absent beats inert.
+ */
+export function buildWatchChrome(host: HTMLElement): Node[] {
+  const chrome: Node[] = [];
+  const control = buildWatchControl(host);
+  if (control) chrome.push(control);
+  if (control || watchNote() !== null) chrome.push(buildWatchNote());
+  return chrome;
+}
+
+/**
+ * Test-only: empty the live-control and note sets so suites do not leak into one another.
+ *
+ * `subscribed` MUST be reset alongside them, and the reason is a bug this very reset caused once:
+ * `resetWatchRegistryForTest()` clears the registry's listener SET, but this module's once-guard
+ * lives here. Clearing one without the other leaves `subscribed === true` with no listener
+ * actually registered — so every control built after the first reset silently never syncs, and a
+ * note that should have appeared stays hidden. Reset them together, always.
+ */
 export function resetWatchControlsForTest(): void {
   controls.clear();
+  notes.clear();
+  subscribed = false;
 }

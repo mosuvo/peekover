@@ -17,6 +17,7 @@
 // pane is a new caller, exactly like the content script is.
 
 import { mount } from '../render/mount';
+import { stopWatch } from '../watch/watchRegistry';
 
 /**
  * The minimal file seam the reader pane consumes. Deliberately structural and tiny:
@@ -185,6 +186,23 @@ export function createReaderPane(doc: Document): ReaderPaneController {
   paint({ kind: 'no-selection' });
 
   async function select(file: ReaderFile | null): Promise<void> {
+    // STOP ANY RUNNING WATCH BEFORE SWITCHING DOCUMENTS (spec 005 task 4.3).
+    //
+    // THIS PREVENTS A REAL BUG, NOT AN EDGE CASE. This pane re-mounts ONE shared host for every
+    // file (see `paint`), and the watch controller holds that same host. A watch left running over
+    // file A would keep re-rendering A's freshly-read text into the host that is now showing B —
+    // so the reader would silently display file A's content under file B's name, with no error and
+    // no clue anything was wrong. That is the silent-wrong-answer failure class this milestone has
+    // already met twice (003's mis-resolved scroll root, 3.2's clamped scroll).
+    //
+    // It is stopped FIRST, before the async read below, so there is no window in which the old
+    // watch can fire against a pane that is mid-switch. Closing the tab ends a watch by
+    // construction (spec §1.2); switching documents does not, so it is explicit here.
+    //
+    // `stopWatch()` is a no-op in a context with no registered watch (every existing caller, and
+    // the content script, which never switches documents), so this is additive for them.
+    stopWatch();
+
     if (!file) {
       paint(classifyReaderOutcome(null, { ok: true, text: '' }));
       return;

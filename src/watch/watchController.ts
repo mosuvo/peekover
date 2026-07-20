@@ -60,8 +60,21 @@
 import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
 import type { ChangeDetector } from './changeDetector';
-import { notifyWatchChanged, type WatchTarget } from './watchRegistry';
+import { notifyWatchChanged, setWatchNote, type WatchTarget } from './watchRegistry';
 import { signalWatchUpdate } from './watchControl';
+
+/**
+ * How many CONSECUTIVE failed reads mean the watch is dead rather than merely interrupted.
+ *
+ * PROVISIONAL, and deliberately not an asserted acceptance threshold (the standing rule). The
+ * shape of the number matters more than its value: it must be >1, because a file being rewritten
+ * can briefly fail to open and a watch that died on the first blip would be useless against
+ * exactly the agent-writes-continuously workload this feature exists for; and it must be small,
+ * because spec §4 forbids retrying forever. Three ticks is a few seconds at the current poll
+ * interval — long enough to ride out a rewrite, short enough that a deleted file is reported while
+ * the user still remembers deleting it.
+ */
+export const DEAD_AFTER_FAILURES = 3;
 
 /**
  * How close to the bottom still counts as being AT the bottom.
@@ -118,10 +131,40 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
   const { detector, contained = false, render = mount, signal = signalWatchUpdate } = options;
   let host: HTMLElement | null = null;
   let running = false;
+  let consecutiveFailures = 0;
+
+  /** Stop without going through the WatchTarget surface, so the dead-read path and an explicit
+   *  user stop share one teardown and cannot drift apart. */
+  function stopSelf(): void {
+    if (!running) return;
+    running = false;
+    host = null;
+    consecutiveFailures = 0;
+    detector.stop();
+    notifyWatchChanged();
+  }
+
+  function onReadError(): void {
+    if (!running) return;
+    consecutiveFailures += 1;
+    if (consecutiveFailures < DEAD_AFTER_FAILURES) return;
+    // THE DEAD-READ POLICY (task 4.3), and every clause of it is deliberate:
+    //   • it STOPS rather than retrying forever — a watch that cannot read is burning a timer for
+    //     nothing, and spec §4 forbids failing silently just as it forbids retrying blindly;
+    //   • it explains, in plain language, WITHOUT a re-render — so the last good render stays
+    //     exactly where it is. Never a blank page (AGENTS.md #5), and never a mystery either;
+    //   • the toggle STAYS, because retrying is the user's call to make, not ours.
+    stopSelf();
+    setWatchNote(
+      'Stopped watching — this file could not be read. It may have been moved, renamed, or ' +
+        'deleted. The last version that was read is still shown above.',
+    );
+  }
 
   function onText(text: string): void {
     const target = host;
     if (!running || !target) return;
+    consecutiveFailures = 0; // a good read clears the streak; only CONSECUTIVE failures count
 
     // CAPTURED BEFORE THE RE-RENDER, and it has to be: after `replaceChildren` the box's geometry
     // is the NEW document's, so "were they at the bottom" is a question only the old layout can
@@ -148,16 +191,14 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
       if (running) return;
       running = true;
       host = next;
-      detector.start(onText);
+      consecutiveFailures = 0;
+      // Starting clears any previous explanation: the user has just asked to watch THIS file, and
+      // a stale "stopped watching" note from the last one would be a lie about the current state.
+      setWatchNote(null);
+      detector.start(onText, onReadError);
       notifyWatchChanged();
     },
-    stop() {
-      if (!running) return;
-      running = false;
-      host = null;
-      detector.stop();
-      notifyWatchChanged();
-    },
+    stop: stopSelf,
     isWatching: () => running,
   };
 }

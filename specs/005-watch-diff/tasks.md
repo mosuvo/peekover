@@ -495,7 +495,7 @@
       5 skipped both engines; 432 unit; lint clean; golden EMPTY; manifest green unmodified;
       `dependencies` still three.
 
-- [ ] **4.3 Lifecycle — a gesture starts it, switching documents STOPS it, a dead read surfaces a designed
+- [x] **4.3 Lifecycle — a gesture starts it, switching documents STOPS it, a dead read surfaces a designed
       state (plan §1.10).** Nothing watches by default; starting is a **user gesture** on the control (spec
       §4 Trust — and note that criterion is now its own bullet, split from the snapshot half at gate 3).
       **Switching documents stops the previous watch — this is a REAL BUG the design prevents, not an edge
@@ -512,6 +512,42 @@
       watch and renders the designed state, **with the last good render still on screen** (never blank);
       nothing watches until the control is clicked (assert no detector starts on plain mount). Golden EMPTY
       + manifest green.
+      **DONE 2026-07-20.** `tests/browser/watchLifecycle.browser.test.ts` (14 cases, both engines);
+      `readerPane.select()` now calls `stopWatch()` FIRST, before its async read, so there is no
+      window in which the old watch can fire against a pane mid-switch.
+      **THE CROSS-FEED BUG WAS OBSERVED, NOT ARGUED.** Red-first, removing that one call: 4 failures
+      on both engines. The MECHANISM assertion fires first (`expected +0 to be 1` — no stop), so the
+      CONSEQUENCE was isolated in a second pass by temporarily dropping the mechanism assertions
+      with the break still in — and it fails on its own:
+      `AssertionError: expected 'File A
+A was edited after the switch…' to contain 'File B'`.
+      That is the reader **displaying file A's freshly-read text while the user has file B open**,
+      with no error and no clue — the silent-wrong-answer class, caught in the act.
+      **THE DEAD-READ PATH needed an error channel group 1 did not have, and it was added along
+      group 1's OWN stated boundary rather than across it.** `changeDetector.ts` said in its header
+      that it "deliberately owns no dead-read POLICY". So `ChangeDetector.start` gained an OPTIONAL
+      second arg `onError` — the detector REPORTS a failed read (still swallowing it, still polling,
+      byte-identical for every caller that omits the arg) and the CONTROLLER counts. The policy is
+      `DEAD_AFTER_FAILURES = 3` **consecutive** failures: >1 because a file mid-rewrite can briefly
+      fail to open and dying on the first blip would be useless against the very workload watch
+      exists for; small because §4 forbids retrying forever. A good read clears the streak, and that
+      is asserted (2N-2 non-consecutive failures do NOT kill a working watch).
+      **The designed state is ONE channel serving 4.3 and 4.4**, because from the user's side they
+      are the same case: `.peekover-watch-note`, a `role="status"` polite live region driven by
+      `setWatchNote()`. It appears **with NO re-render**, which is precisely what keeps the last
+      good render on screen — asserted directly (`columnText` still contains the previous document).
+      The toggle STAYS on the dead-read path, because retrying is the user's call; a restart clears
+      the stale note, because a "stopped watching" message over a running watch is the same honesty
+      failure inverted.
+      **A TEST-ISOLATION BUG IN MY OWN RESET HELPERS, found by this suite and worth inheriting:**
+      `resetWatchRegistryForTest()` clears the registry's listener SET, but the once-guard
+      (`subscribed`) lives in `watchControl.ts`. Clearing one without the other leaves
+      `subscribed === true` with NO listener registered, so every control built after the first
+      reset silently never syncs — the note that should have appeared stayed hidden, on both
+      engines. The two are now reset together, with the reason recorded on the function.
+      Restored from `cp` copies; `git checkout` was never used. 14/14 lifecycle; 50 browser files ·
+      445 passed / 5 skipped both engines; 432 unit; lint clean; golden EMPTY; manifest green
+      unmodified; `dependencies` still three.
 
 - [ ] **4.4 Firefox degraded state — a designed explanation at the moment it matters (spec §7-8).**
       **Depends on 2.3's answer.** On Firefox, watch works only for **drag-opened** folders: the

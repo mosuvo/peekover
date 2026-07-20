@@ -24,7 +24,7 @@ import {
 import { applyMediaPolicy } from './mediaPolicy';
 import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 import { buildThemeControl } from '../theme/themeControl';
-import { buildWatchControl } from '../watch/watchControl';
+import { buildWatchChrome } from '../watch/watchControl';
 import { buildTocModel } from './tocModel';
 import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
 import { resolveScrollContainer } from './scrollContainer';
@@ -171,14 +171,14 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // byte-identical (and, per the note above, the golden pin cannot see the difference — the DOM
     // sibling assertion in tests/browser/watchControl.browser.test.ts is the only guard).
     //
-    // It returns NULL in a context that registered no watch target, and that null is deliberate:
-    // a surface that cannot watch grows no chrome at all rather than a button that looks live and
-    // does nothing (task 4.4 replaces the null with a designed explanation where a user would
-    // otherwise wonder why). The control itself holds no controller reference — it reaches
+    // It returns an EMPTY array in a context that registered no watch target and has nothing to
+    // explain, and that emptiness is deliberate: a surface that cannot watch grows no chrome at
+    // all rather than a button that looks live and does nothing. Where a user WOULD wonder why
+    // watching is missing (tasks 4.3 and 4.4), it returns a designed explanation instead — never a
+    // disabled control. The control itself holds no controller reference — it reaches
     // start/stop through the module-level registry, because `replaceChildren` destroys it on every
     // render, INCLUDING the renders a running watch causes. See src/watch/watchRegistry.ts.
-    const watchControl = buildWatchControl(host);
-    if (watchControl) children.push(watchControl);
+    children.push(...buildWatchChrome(host));
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }

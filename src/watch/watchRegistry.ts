@@ -97,6 +97,38 @@ export function isWatching(): boolean {
   return target?.isWatching() ?? false;
 }
 
+// --- the designed explanation (tasks 4.3 + 4.4) --------------------------------------
+//
+// One channel serves both honesty cases, because they are the same case from the user's side —
+// "watching is not happening, and here is why in plain language":
+//   • 4.3, a watch that DIED: the file stopped being readable (moved, renamed, deleted, permission
+//     revoked, or task 1.2's dead observation). The watch stops; the last good render stays on
+//     screen (AGENTS.md #5 — never blank, and never a silent failure either).
+//   • 4.4, a watch that could never START on this surface: Firefox's file-input app-page route and
+//     its content-script `file://` reader (decisions.md 2026-07-19).
+//
+// It is deliberately NOT a disabled control and NOT a dead toggle (spec §4 Degradation): a user who
+// is told nothing assumes a bug, and a user given a greyed-out button assumes they did something
+// wrong. They are told what happened and why.
+
+/** The plain-language explanation currently in force, or null when watching is simply normal. */
+let note: string | null = null;
+
+/**
+ * Set (or clear, with null) the designed explanation. Notifies immediately, so the note appears
+ * WITHOUT a re-render — which is the load-bearing part on 4.3's path: the whole point is that the
+ * last good render stays exactly where it is while the explanation arrives beside it.
+ */
+export function setWatchNote(next: string | null): void {
+  note = next;
+  notifyWatchChanged();
+}
+
+/** The current explanation, or null. */
+export function watchNote(): string | null {
+  return note;
+}
+
 /** Subscribe to watch-state changes. Called ONCE by `watchControl.ts` (see `listeners`). */
 export function onWatchChanged(listener: () => void): void {
   listeners.add(listener);
@@ -113,5 +145,19 @@ export function notifyWatchChanged(): void {
  *  another (the `resetThemeControlsForTest` / `resetSettingsSeamForTest` precedent). */
 export function resetWatchRegistryForTest(): void {
   target = null;
+  note = null;
   listeners.clear();
+}
+
+/**
+ * Stop whatever watch is running in this context, if any (task 4.3).
+ *
+ * THE APP PAGE CALLS THIS ON EVERY DOCUMENT SWITCH, and it prevents a real bug rather than an edge
+ * case: `readerPane.select()` re-mounts the SHARED host with a different file, so a watch left
+ * running would keep feeding the OLD file's content into the NEW document's reader — the reader
+ * would silently show file A's text under file B's name. Closing the tab ends a watch by
+ * construction (§1.2); switching documents does not, so it is done explicitly here.
+ */
+export function stopWatch(): void {
+  target?.stop();
 }
