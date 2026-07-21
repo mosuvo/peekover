@@ -1,6 +1,72 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · HARNESS LEDGER ADDENDUM (spec 005 tasks 3.2, 5.1, and the `remoteMedia` fix; promoted out
+  of progress.md at the M5 archive pass) · THREE WAYS AN INSTRUMENT LIED THIS MILESTONE — each silently,
+  each producing a plausible wrong answer rather than an error.** These are **authoring rules for the next
+  test or harness**, not a record of three incidents; the incidents are in the archive. They share one
+  shape and it is this milestone's recurring failure class: **the instrument was wrong while the product
+  was right, and nothing went red to say so.**
+  - **(1) "THE BOX OVERFLOWS" IS NOT THE PRECONDITION FOR A GEOMETRY TEST — "THE BOX HAS STOPPED
+    REFLOWING" IS** (measured at 3.2, both engines). The long-standing `waitForScrollable` helper returns
+    as soon as `scrollHeight > clientHeight`, which is true **while the reader is still restyling**: on the
+    full-page surface `scrollHeight` read **81 798 px at first overflow and 26 069 px once settled — a 3×
+    reflow.** A heading offset measured in that window is stale by tens of thousands of pixels, and the
+    `scrollTop` write that follows **CLAMPS to the new maximum**, silently parking the test at the document
+    bottom. **It is not a flake** — it made 3.2's anchor capture pick the LAST heading *deterministically*,
+    on Chromium and Firefox. → **Poll `scrollHeight` for STABILITY, not for overflow.**
+    `tests/browser/watchAnchor.browser.test.ts` does; copy that, not the older helper.
+  - **(2) AN A/B PERF CONTROL MUST BE LIKE-FOR-LIKE IN THE DIMENSION YOU WILL QUOTE** (5.1's control was
+    **vacuous twice** before it measured anything, and both failures were silent). *(i)* The first draft
+    applied the same-size change to control and measured path, so both documents had **identical geometry**
+    and the anchor had nothing to correct — **0 px drift on every cell**, a control that could never have
+    gone positive. **Fix: render an identical byte/paragraph/heading count and merely MOVE the block**
+    (below for the control, above for the measured path), so render cost stays comparable while the
+    geometry genuinely shifts. *(ii)* Drift read at the 2nd rAF reported **2738 px contained but 2 px
+    full-page** — because `:host` is `scroll-behavior:smooth` and the write was **still animating**, while
+    the contained pane (`auto`) had already landed. **A plausible wrong answer on exactly one surface.**
+    → **Read geometry after a SETTLE, never on the timing frame** — and note the trap is *per-surface*, so
+    a control that looks sound on one surface can be silently vacuous on the other.
+  - **(3) A POSITIVE CONTROL THAT *SAMPLES* CAN READ EMPTY WHEN THE EVENT DID HAPPEN — AWAIT IT.** The
+    prescription retro 2026-07-19 (finding 1) carried as a watch item **has now been executed**, and this
+    records that it is DONE so nobody re-opens it: `remoteMedia.browser.test.ts`'s opt-in control now
+    **AWAITS** the Resource-Timing entries to a 5 s budget instead of sampling the buffer at one instant,
+    and returns the buffer so a genuine failure still fails on the caller's own `toContain` with a real
+    diff. **Evidence: 22/22 consecutive runs green, both engines**; a deliberate break (await a URL that is
+    never fetched) goes red on both. **The zero-check is untouched and stays a genuine zero-check** — you
+    cannot await something that should never arrive. → **The structural reason only that file ever flaked,
+    which is the transferable part: the other six zero-network guards' controls are `await fetch(probe)`,
+    so the test awaits the fetch promise ITSELF, whereas `remoteMedia`'s requests are engine-initiated
+    `<img>` loads the test never awaited.** If one of the six ever does flake, **promote the awaited helper
+    to a shared test util** rather than patching in place.
+  **Revisit-when:** a shared browser-test helper module is created (plan §4-7 already names the duplicated
+  `flush()`/`afterFrames()`/`waitFor()` as load-bearing) — these three belong in it, and (1) should
+  *replace* `waitForScrollable` at that point rather than sit beside it.
+
+- **2026-07-21 · DECISION (spec 005 task 4.5; the root cause and the measurements live in
+  `vitest.config.ts`'s own comment at the point of use — this entry exists so the DECISION is findable
+  from the memory files, and deliberately does not duplicate it) · THE BROWSER PROJECT RUNS SERIAL
+  (`fileParallelism: false`), GLOBALLY, NOT FIREFOX-ONLY.** In-browser test files share ONE browser window
+  per engine and its **viewport is a window-global property**, so one file's `page.viewport()` resize lands
+  under another file's scroll-geometry measurement — **a plausible wrong position, never an error**, at
+  ~40% of runs.
+  - **Why global rather than the narrower per-instance option, from the numbers:** global serial **62 s**,
+    Firefox-instance-only serial **57 s**, parallel **26 s but ~40% flaky**. Vitest genuinely accepts
+    per-instance `fileParallelism` (`BrowserInstanceOption`), so the narrow option was real, not
+    hypothetical — it was **rejected because ~5 s does not buy an asymmetric, harder-to-explain config**
+    ("why is only Firefox serial?") while the whole suite runs in under a minute. The +36 s is **dev/CI
+    wall-clock only; `pnpm test:browser` time is not a shipped metric.**
+  - **NO assertion was weakened, and that is the load-bearing half.** Every one of those geometry checks is
+    a red-first-proven guard. **The harness-vs-product argument was ARGUED, not asserted:**
+    `--no-file-parallelism` fixes it **while the same test still resizes the same viewport**, so the only
+    variable that flips pass→fail is cross-file concurrency. *(Generalised in retro.md 2026-07-21,
+    finding 3 — "it's the harness" needs an isolating variable, because it is otherwise the most convenient
+    explanation available for a real defect.)*
+  **Revisit-when:** the browser suite's serial runtime reaches **minutes rather than seconds** — then the
+  per-instance option (or isolating just the full-page geometry suites) earns its complexity, and the
+  numbers to beat are recorded above. **Do not revisit by re-enabling parallelism and re-running until it
+  passes**; the failure is ~40%, so a green run proves nothing.
+
 - **2026-07-21 · PRODUCT DECISION, TAKEN BY THE HUMAN AT THE 005 7.1 GATE · THE WATCH PILL IS NOT
   DISCOVERABLE, AND IT SHIPS AS-IS — because the fix is ONBOARDING, and inventing chrome at a gate is how
   you get unwalked UI.** Asked whether they would have found the watch control unaided, the human said
