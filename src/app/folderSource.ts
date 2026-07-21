@@ -35,6 +35,26 @@ export interface MarkdownFile {
   name: string;
   /** Read the file's raw markdown text. May reject (permission/IO) — the reader handles it. */
   read(): Promise<string>;
+  /**
+   * OPTIONAL — the live handle for THIS FILE, present only where the engine genuinely granted
+   * one (spec 005 task 4.7). It is a CAPABILITY ref, never file contents, and it is not stored.
+   *
+   * WHY IT IS ON THE SEAM AT ALL, given M2 deliberately abstracted handles away. The
+   * abstraction is right and is why Firefox works at all — but it also meant the app page could
+   * only ever offer `read()`, and `FileSystemObserver.observe()` takes a `FileSystemHandle`. So
+   * the Chromium app page polled, and spec §4's *"detect changes without polling"* was false in
+   * shipped code. This field is the narrowest thing that makes it true: one optional capability
+   * ref, set by the one adapter that has it.
+   *
+   * IT IS NOT A SECOND `persistable`, and it must never be read as one. `persistable` still
+   * answers "can this FOLDER be reopened without re-picking"; this answers "does this FILE
+   * expose a handle a watcher could observe". Consumers branch on the CAPABILITY they need —
+   * `handle != null` — never on the engine (`firefoxFolderSource.ts`'s standing rule). Firefox's
+   * routes leave it absent because they have no `FileSystemHandle` to give: its picker yields
+   * `File`s and its drag route yields `FileSystemFileEntry`, the old Entries API. They fall
+   * through to polling by absence, not by an engine check, and their modules needed no change.
+   */
+  handle?: FileSystemFileHandle;
 }
 
 /**

@@ -764,6 +764,99 @@ A was edited after the switch…' to contain 'File B'`.
       `manifest.test.ts` green unmodified. `pnpm test` **445** (was 440); `pnpm test:browser` **457 passed /
       5 skipped** both engines (was 453), suite still 50 files, serial per 4.5.
 
+- [ ] **4.7 (DISCOVERED while preparing 5.2. `observerDetector` was BUILT, TESTED, MEASURED — and WIRED
+      INTO NOTHING, so a spec §4 acceptance criterion was FALSE in shipped code.)
+      Wire `observerDetector` on the Chromium app page.** Filed under group 4 because it is
+      `installWatchForFile` wiring; the provenance is 5.2's preparation.
+      **THE FINDING.** `grep -rn "observerDetector" src/ entrypoints/` returned its own definition and one
+      comment — nothing imported it. Every shipped watch path polled at `WATCH_INTERVAL_MS = 1000`: the app
+      page via `pollingDetector(() => file.read(), …)`, the content script via `pollingDetector(relayRead(…))`.
+      So spec §4's *"While watching on Chromium on the app page, the system shall detect changes **without
+      polling**"* was **false**, and §3.2 / plan §1.1's 2×2 rested on it. **The cause was architectural, not
+      careless:** `FileSystemObserver.observe()` needs a `FileSystemHandle`, and M2 deliberately abstracted
+      handles away behind `MarkdownFile.read()` — an abstraction that is *correct* and is why Firefox works
+      at all. Group 1 built the observer against handles; group 4 found none at the seam and used polling.
+      **Nothing failed:** 1.2's suite drove the module directly, 4.3/4.4's suites drove hand-written
+      detectors, and the polled path worked — it was simply the wrong mechanism. **`appShell.test.ts` has no
+      watch coverage at all, and every watch suite registers its own target before mounting**, so nothing in
+      the repo could see it. **The decision was to WIRE IT, not to amend the spec:** polling at 1 Hz is cheap
+      (0.6–2.4 ms/tick, 5.1), so this is not performance — event-driven-on-Chromium is the design, it is
+      written into the acceptance criteria, and 7.1 would otherwise have failed on it.
+      **WHERE THE HANDLE COMES FROM — the walk ALREADY HELD ONE and threw the reference away.**
+      `chromiumFolderSource.fileNodeFromHandle(handle)` built `read: async () => (await handle.getFile()).text()`
+      — closing over a real `FileSystemFileHandle` and keeping no reference to it. So the fix is *stop
+      discarding it*, not *go and get one*: `WalkFileNode.handle` → `FoundFile.handle` → `MarkdownFile.handle`,
+      all OPTIONAL and PASS-THROUGH. **Five lines of code across three files** (plus the comments explaining
+      why). `walkPolicy` never reads it and no policy decision depends on it — it names a lib.dom type in a
+      type position only, stays referentially transparent, and its 270-line suite passes UNCHANGED.
+      A WeakMap keyed on the `read` closure was rejected as the alternative that touches no shared file: it
+      would break SILENTLY the first time anyone wrapped `read`, degrading to polling with nothing going red
+      — which is the exact failure mode this task exists to remove.
+      **THE BRANCH IS A CAPABILITY CHECK AND CANNOT BE READ AS AN ENGINE SNIFF.** New module
+      `src/watch/detectorForFile.ts`, the factory `changeDetector.ts`'s own header always described and that
+      did not exist: `file.handle && ctor → observerDetector`, else `pollingDetector` (byte-identical to
+      before). It contains no `import.meta.env`, no UA string, no engine name. **Firefox reaches the fallback
+      BY ABSENCE** — its picker yields `File`s and its drag route yields `FileSystemFileEntry` (the OLD
+      Entries API, not a `FileSystemHandle`) — **so no Firefox source module was touched**, which is the
+      claim, not an aspiration. A picker-disabled Chromium (Brave/flag-gated) degrades identically.
+      **Handle-but-no-observer ALSO falls back**, up front, so no doomed `observe()` and no spurious degraded
+      report. **The content script still polls and that is correct** (URL only, no URL→handle API) — 4.7
+      makes the 2×2 REAL, it does not collapse it.
+      **VERIFIED BY THE MECHANISM, NOT BY INSPECTING WHICH FUNCTION WAS CONSTRUCTED.** The instrument is the
+      seam's own `read()` counter: only `pollingDetector` can call it, so **detection happens AND `read` was
+      called ZERO further times across a full poll interval ⇒ there is no polling loop** — spec §4's sentence
+      transcribed. Its non-vacuity control is the SAME file with the handle withheld, where the count grows.
+      Plus sub-interval latency (`< WATCH_INTERVAL_MS`; **not a budget — the bound IS the poll interval, and
+      a polled detector cannot beat its own interval**; 5.1 measured ~18.7 ms @ 50 KB, ~50× margin).
+      **RED-FIRST, run twice.** Removing the handle branch (i.e. the pre-4.7 state) fails **exactly 7
+      Chromium tests** — the two factory no-polling tests, all three appShell tests, and all three ladder
+      tests — while the polled tests, the handle-but-no-observer test, the harness gate and **all of Firefox
+      stay green**. Restored from a `cp` copy; `git checkout <path>` was never used.
+      **1.2's DEAD-OBSERVATION LADDER IS NOW ON A REAL PATH, and is asserted THROUGH IT.** `errored` over a
+      live file → re-observes and keeps rendering (and recovers onto EVENTS, not into a poll loop: the read
+      count is unchanged). **Spec §7-7's atomic-save fragility — ASSERTED, NOT ASSUMED:** an `errored` record
+      whose re-observe then REFUSES (the write-temp-then-rename shape that invalidates a handle) **degrades to
+      polling and keeps watching** — a later write still reaches the real reader, with `observed === 1` proving
+      no second observation was ever established. `disappeared` over a genuinely removed file → the controller
+      stops, the pill flips off, and the user is told **in the polled path's exact words** (`DEAD_READ_NOTE`,
+      extracted from `watchController.onReadError` so one event has one string), with the last good render
+      still on screen (#5). Those two tests wrap the REAL `FileSystemObserver` in the global slot production
+      reads — **only the record is fabricated, because only the record is unreachable** (1.2's precedent, one
+      level up). `preserveReading` still applies on the observer path (Raw survives an observer-driven update,
+      and the raw view carries the new text) — the controller cannot tell which detector it holds.
+      **── SECOND DEFECT, FOUND BY THIS TASK'S OWN VERIFICATION AND FIXED HERE ──────────────────────**
+      **The watch pill did not exist on the FIRST file opened in a session, on BOTH engines.**
+      `selectFolderFile` called `installWatchForFile` AFTER `await selectFile(file)` — but `select()` mounts,
+      and `buildWatchControl` decides at mount time (`watchAvailable()` false ⇒ it returns null and no pill is
+      committed); the registry's later `notifyWatchChanged` only re-labels controls that already exist, it
+      cannot conjure one. So watch was invisible until a *second* file was selected, at which point the
+      previous file's target happened to be in the slot at mount time. The first red run surfaced it as six
+      `openAndWatch` timeouts — it is **not** caused by 4.7, and it is the same class as 4.7 itself: wiring
+      that never reaches the user, with no test able to see it. **Fixed by stopping explicitly and installing
+      BEFORE the select** (`stopWatch(); installWatchForFile(file); await selectFile(file);`) — which keeps
+      4.3's cross-feed property (the previous watch is stopped before its target is replaced) while adding the
+      missing half. `readerPane.select()`'s own `stopWatch()` still runs, idempotent, on a target that is not
+      running. Pinned by its own both-engines regression test.
+      Files: `src/watch/detectorForFile.ts` (NEW) · `src/watch/watchController.ts` (`DEAD_READ_NOTE`
+      extracted) · `src/app/appShell.ts` · `src/app/chromiumFolderSource.ts` · `src/app/folderSource.ts` ·
+      `src/app/walkPolicy.ts` · `tests/browser/watchObserverWiring.browser.test.ts` (NEW).
+      **`src/app/firefoxFolderSource.ts` UNCHANGED** — the fence held and it is the purity proof, the way
+      `tocScroll` was for 3.1. **D-1 no storage · D-2 no dependency** (still three); `permissions: []`
+      untouched; golden diff **EMPTY**; `manifest.test.ts` green and **byte-unmodified**. `pnpm lint` clean;
+      `pnpm test` **445** (unchanged — every M2 folder/walk/tree suite green UNMODIFIED); `pnpm test:browser`
+      **473 passed / 15 skipped** both engines (was 457/5), **52 file-instances** (was 50 — exactly one new
+      file × two engines), serial per 4.5.
+      **WHAT IS PROVEN vs WHAT REMAINS 7.1's:** OPFS gives real handles and a real `FileSystemObserver` in
+      the harness, so the **WIRING** is proven — a `MarkdownFile` carrying a handle reaches `observerDetector`
+      through the real `installWatchForFile`, no polling loop is created, the ladder runs, `preserveReading`
+      survives. **OPFS IS NOT LOCAL DISK.** This does **NOT** prove a disk-backed observer fires for an
+      agent's rewrite of a real file — the harness loads no extension and has no picker, so a local-disk
+      handle cannot be obtained here at all. That was established by the task-0 probe on real disk
+      (decisions.md 2026-07-19) and is re-walked at **7.1, alongside 5.1a**.
+      **One environment note:** the recorded `EACCES ::1:63315` Windows reserved-port collision recurred
+      (decisions.md 2026-07-21); the documented **local-only** `browser.api.port` override was used for every
+      run above and **stripped before the commit**.
+
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 
 - [x] **5.1 MEASURE observer latency + re-render cost — NO THRESHOLD ASSERTED.** Two numbers this milestone

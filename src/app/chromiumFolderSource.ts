@@ -40,12 +40,25 @@ export function pickDirectory(win: Window = window): Promise<FileSystemDirectory
   return (win as unknown as DirectoryPickerWindow).showDirectoryPicker({ mode: 'read' });
 }
 
-/** Adapt a file handle into a pure `WalkFileNode` — its reader is `getFile().text()`. */
+/**
+ * Adapt a file handle into a pure `WalkFileNode` — its reader is `getFile().text()`.
+ *
+ * IT ALSO CARRIES THE HANDLE ITSELF (spec 005 task 4.7). Until then this function closed over
+ * the handle for `read` and dropped the reference, so nothing downstream could ever observe the
+ * file: `FileSystemObserver.observe()` takes a `FileSystemHandle`, the seam offered only a
+ * `read()`, and the app page therefore polled — which made spec §4's *"while watching on
+ * Chromium on the app page, detect changes WITHOUT POLLING"* false in shipped code while
+ * `observerDetector` sat built, tested and wired into nothing.
+ *
+ * Nothing about `read` changes: it stays the reader every consumer already uses, and the handle
+ * is additive, so a consumer that does not know about it behaves exactly as before.
+ */
 function fileNodeFromHandle(handle: FileSystemFileHandle): WalkFileNode {
   return {
     kind: 'file',
     name: handle.name,
     read: async () => (await handle.getFile()).text(),
+    handle,
   };
 }
 
@@ -94,6 +107,9 @@ export async function folderSourceFromHandle(
     path: f.path,
     name: f.name,
     read: f.read,
+    // The per-FILE handle (task 4.7) — distinct from the DIRECTORY handle below, which is the
+    // persistence/reopen capability. This one is what the app page's watch observes.
+    handle: f.handle,
   }));
   return {
     name: handle.name,

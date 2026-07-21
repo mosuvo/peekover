@@ -87,6 +87,19 @@ export const DEAD_AFTER_FAILURES = 3;
 export const AT_BOTTOM_SLACK_PX = 24;
 
 /**
+ * The plain-language explanation for a watch that DIED because the file stopped being readable.
+ *
+ * Extracted from `onReadError` below and exported at task 4.7 for ONE reason: the observer path
+ * reaches the same user-facing state by a different mechanism. `onReadError` counts consecutive
+ * failed POLLS; `observerDetector`'s dead-observation ladder reports `onDead` when a dead record
+ * turns out to sit over a file that can no longer be opened. Same fact, same thing to say — so
+ * there is one string, not two that could drift into saying different things about one event.
+ */
+export const DEAD_READ_NOTE =
+  'Stopped watching — this file could not be read. It may have been moved, renamed, or ' +
+  'deleted. The last version that was read is still shown above.';
+
+/**
  * PURE: is a scroll box at (or within slack of) its bottom?
  *
  * The one piece of real logic in this module, so it is unit-tested in jsdom while everything that
@@ -155,10 +168,7 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     //     exactly where it is. Never a blank page (AGENTS.md #5), and never a mystery either;
     //   • the toggle STAYS, because retrying is the user's call to make, not ours.
     stopSelf();
-    setWatchNote(
-      'Stopped watching — this file could not be read. It may have been moved, renamed, or ' +
-        'deleted. The last version that was read is still shown above.',
-    );
+    setWatchNote(DEAD_READ_NOTE);
   }
 
   function onText(text: string): void {

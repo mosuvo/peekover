@@ -49,7 +49,21 @@ puts watch out of scope. `watchCapability` now gates the content-script decision
 `isWatchableFileUrl(location.href)` (the relay's own predicate, passed as a boolean to keep the pure
 decision engine-free); a remote page gets a plain SCOPE note and **no detector at all**. `file://`
 behaviour is byte-identical (Chromium control kept, Firefox note unchanged); the three notes are red-first
-proven non-interchangeable (`decisions.md` 2026-07-21). **GROUP 5 IS IN PROGRESS: 5.1 DONE — both numbers are
+proven non-interchangeable (`decisions.md` 2026-07-21). **4.7 DONE — `observerDetector` was BUILT, TESTED,
+MEASURED and WIRED INTO NOTHING, so spec §4's *"on Chromium, on the app page, detect changes WITHOUT
+POLLING"* was FALSE in shipped code; it is now TRUE.** Discovered while preparing 5.2. The cause was
+architectural rather than careless — `observe()` needs a `FileSystemHandle`, M2's seam hands out `read()` —
+and the fix is that the Chromium walk **already held a handle and discarded the reference**: it is now
+carried, optional and pass-through, `WalkFileNode → FoundFile → MarkdownFile`, and the new
+`src/watch/detectorForFile.ts` branches on the **CAPABILITY** (`handle && observer`), never the engine, so
+**Firefox reaches the polled fallback by ABSENCE and not one Firefox module changed**. The content script
+still polls, correctly (URL only, no URL→handle API) — the 2×2 is made real, not collapsed. Verified by the
+MECHANISM: the seam's `read()` count stays flat across a full poll interval while changes still arrive, with
+the handle-withheld same-file case as its non-vacuity control; 1.2's dead-observation ladder and spec §7-7's
+atomic-save fallback are now asserted **through the real wiring**. **A SECOND DEFECT was found by that
+verification and fixed with it: the watch pill did not exist on the FIRST file opened in a session** (the
+target was registered after the mount that decides whether to build a control) — invisible on both engines
+until a second file was selected. **GROUP 5 IS IN PROGRESS: 5.1 DONE — both numbers are
 MEASURED** (`scripts/perf-watch.ts`, `pnpm perf:watch`, not in CI; numbers in the § Baselines / pins block
 below). **NO threshold asserted and NO debounce window chosen — 5.2 is untouched and is the human's.**
 **NEXT: 5.2 — the HUMAN decision gate for the debounce window.** One discovered task was added below 5.1:

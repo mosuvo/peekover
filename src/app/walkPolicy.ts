@@ -37,6 +37,25 @@ export interface WalkFileNode {
   kind: 'file';
   name: string;
   read(): Promise<string>;
+  /**
+   * OPTIONAL, PASS-THROUGH ONLY: the live file handle behind this node, where the engine
+   * adapter genuinely has one (Chromium's handle walk). The walk NEVER reads it, never
+   * requires it, and no policy decision here depends on it — it is carried to `FoundFile`
+   * and no further, exactly as `read` is (spec 005 task 4.7).
+   *
+   * It exists because the Chromium adapter already HELD a `FileSystemFileHandle` and threw
+   * the reference away after closing over it in `read` — which silently forced the app page
+   * onto the polled detector and made spec §4's *"detect changes without polling"* criterion
+   * false in shipped code. Firefox's two adapters have no handle to set (its picker yields
+   * `File`s, its drag route yields `FileSystemFileEntry` — the old Entries API, NOT a
+   * `FileSystemHandle`), so they simply leave it absent and the consumer's capability branch
+   * falls through to polling on its own. That is the point of it being optional.
+   *
+   * This is DATA, not policy, so it does not breach the pure/engine split above: it names a
+   * lib.dom type in a type position only, the walk stays referentially transparent, and every
+   * walk test still runs against an in-memory tree with no engine.
+   */
+  handle?: FileSystemFileHandle;
 }
 
 /** A directory node. `children()` enumerates its entries lazily (async — a real handle
@@ -57,6 +76,9 @@ export interface FoundFile {
   name: string;
   /** Read the file's raw markdown text (the node's own reader, unchanged). */
   read(): Promise<string>;
+  /** The node's own handle, carried through unchanged where the adapter had one. Absent on
+   *  every handle-free route. See {@link WalkFileNode.handle}. */
+  handle?: FileSystemFileHandle;
 }
 
 /** The outcome of a bounded walk. `truncated`/`cancelled` are the never-hang signals. */
@@ -221,7 +243,12 @@ export async function walkMarkdown(
       } else {
         // (a) markdown filter — non-markdown files are skipped early and never collected.
         if (!isMarkdownFile(node.name)) continue;
-        files.push({ path: `${prefix}${node.name}`, name: node.name, read: node.read });
+        files.push({
+          path: `${prefix}${node.name}`,
+          name: node.name,
+          read: node.read,
+          handle: node.handle,
+        });
       }
     }
   }

@@ -75,11 +75,16 @@ import { directPort } from '../settings/settingsPort';
 import { publishSettings, registerSettingsSink } from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
 import { createTreeView } from './treeView';
-import { pollingDetector } from '../watch/changeDetector';
-import { WATCH_INTERVAL_MS } from '../watch/watchRelay';
-import { createWatchController } from '../watch/watchController';
+import { detectorForFile } from '../watch/detectorForFile';
+import { createWatchController, DEAD_READ_NOTE } from '../watch/watchController';
 import { watchCapability } from '../watch/watchAvailability';
-import { registerWatchTarget, resetWatchTarget, setWatchNote } from '../watch/watchRegistry';
+import {
+  registerWatchTarget,
+  resetWatchTarget,
+  setWatchNote,
+  stopWatch,
+  type WatchTarget,
+} from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
@@ -571,17 +576,38 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    *  the reader seam, so `selectFile` stays store-free. */
   async function selectFolderFile(file: MarkdownFile): Promise<void> {
     activeFile = file;
-    await selectFile(file);
     // WATCH WIRING FOR THE APP PAGE (tasks 4.3 + 4.4), per SELECTED FILE.
     //
     // Per-file, not per-folder, because a detector re-reads ONE file: the watch belongs to the
-    // document on screen. `readerPane.select()` (called above) has already stopped whatever was
-    // watching the previous file, so this only ever replaces a stopped target — the ordering is
-    // what prevents the cross-feed bug 4.3 proved.
+    // document on screen.
     //
     // A surface that cannot watch registers NO target and shows the explanation instead, so the
     // reader grows an honest note rather than a button that does nothing (spec §4 Degradation).
+    //
+    // ── THE ORDER IS LOAD-BEARING IN *BOTH* DIRECTIONS, and it used to be wrong in one ────────
+    //
+    // (1) The previous file's watch must be STOPPED before this file's target replaces it in the
+    //     registry, or the old detector keeps feeding file A's text into the shared host that is
+    //     now showing file B — the cross-feed bug 4.3 proved. `readerPane.select()` does that
+    //     stop itself, which is why this used to sit *after* the select.
+    //
+    // (2) But the target must be REGISTERED BEFORE THE MOUNT, and that half was missing.
+    //     `buildWatchControl` decides at mount time — `watchAvailable()` false means it returns
+    //     null and mount() commits NO pill — and the registry's later `notifyWatchChanged` only
+    //     re-labels controls that already exist; it cannot conjure one. So registering after
+    //     `select()` (which mounts) meant **the first file opened in a session showed no watch
+    //     control at all**, on both engines: it only appeared from the second file onwards,
+    //     because by then the previous file's target was still in the slot at mount time.
+    //     FOUND BY 4.7's verification, which is the first test ever to drive this function
+    //     (`appShell.test.ts` has no watch coverage, and every watch suite registers its own
+    //     target before mounting — so nothing could see it).
+    //
+    // Both are satisfied by stopping EXPLICITLY here and then installing before the select. The
+    // `stopWatch()` inside `readerPane.select()` still runs, on a target that is not running —
+    // it is idempotent, so it is a no-op rather than a second policy.
+    stopWatch();
     installWatchForFile(file);
+    await selectFile(file);
     renderPinBar();
     if (activeFolderId) {
       const folderId = activeFolderId;
@@ -633,15 +659,35 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       return;
     }
     setWatchNote(null);
-    // The polled detector serves BOTH engines on this surface: `FileSystemObserver.observe()` takes
-    // a handle, and the seam hands us a `read()` (plan §1.1). Content-compare, never metadata —
-    // Firefox's drag-path metadata is frozen at drop time (task 1.1's trap).
-    registerWatchTarget(
-      createWatchController({
-        detector: pollingDetector(() => file.read(), WATCH_INTERVAL_MS),
-        contained: true,
-      }),
-    );
+    // WHICH detector is `detectorForFile`'s decision, not this module's, and it is made on the
+    // CAPABILITY the selected file carries — a live `handle` plus an engine observer gets the
+    // event-driven `observerDetector`; everything else gets the polled one, unchanged (task 4.7).
+    // Groups 1–4 shipped polling on BOTH engines here because the seam offered only `read()`;
+    // `MarkdownFile.handle` now exists on the routes that genuinely have one, which is what makes
+    // spec §4's "on Chromium, on the app page, detect changes WITHOUT POLLING" true in shipped
+    // code rather than only in a module nothing imported.
+    //
+    // The controller is deliberately built AFTER the detector and reached through a mutable ref:
+    // 1.2's ladder reports a dead observation through `onDead`, and the controller is what must
+    // then stop and explain. Without this, an observation that died over an unreadable file would
+    // leave the pill reading "Watching" over a watch that had ended — the exact silent-stop the
+    // ladder exists to prevent, reintroduced one level up.
+    let controller: WatchTarget | null = null;
+    const detector = detectorForFile(file, {
+      onDead: () => {
+        controller?.stop();
+        // The SAME copy the polled path's dead-read policy shows (4.3) — one string for one
+        // user-facing event, reached by two mechanisms. Set AFTER the stop, which does not
+        // clear notes; `start()` clears it if the user chooses to try again.
+        setWatchNote(DEAD_READ_NOTE);
+      },
+      // `onFallback` is deliberately NOT surfaced. A degraded observation is still WATCHING —
+      // it polls instead of listening — so there is nothing the user must be told and nothing
+      // they could do. Inventing copy for it would be new UI at a wiring task, un-walked at the
+      // 7.1 gate. Silence here is honest; silence on `onDead` would not be.
+    });
+    controller = createWatchController({ detector, contained: true });
+    registerWatchTarget(controller);
   }
 
   // --- pinning (task 5.2) --------------------------------------------------
