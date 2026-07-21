@@ -960,7 +960,7 @@ A was edited after the switch…' to contain 'File B'`.
       wall-clock from write to the reader updating, at both fixture sizes. **Record it even if it matches
       the OPFS number** — a confirmed inference is evidence; an unrecorded one stays a guess.
 
-- [ ] **5.2 DECISION GATE (human) — the debounce window, chosen FROM the numbers.** 5.1's measurements
+- [x] **5.2 DECISION GATE (human) — the debounce window, chosen FROM the numbers.** 5.1's measurements
       exist; the choice is the human's. **This is 004's D-2 shape exactly, and its lesson is why the two
       tasks are separate: 4.1's inference did not survive contact with 4.2's measurement**, and the only
       reason a budget-breaching gate never shipped is that the measuring task was forbidden from choosing.
@@ -968,6 +968,26 @@ A was edited after the switch…' to contain 'File B'`.
       Files: — (human decision; record it in `docs/ai/decisions.md`)
       Verify (**human gate**): the debounce window (and whether coalescing is trailing-only) is **recorded
       before 5.3 writes code**.
+      **DONE 2026-07-21 — DECIDED BY THE HUMAN, RECORDED IN `docs/ai/decisions.md` (newest entry) IN THIS
+      COMMIT, BEFORE 5.3 WRITES A LINE.** No code lands here; that ordering IS this task's verify criterion.
+      **THE DECISION: a COST-PROPORTIONAL COOLDOWN, not a fixed millisecond window.** After each render,
+      refuse the next until roughly as long as that render TOOK has elapsed **since it FINISHED**
+      (multiplier **1.0**). Changes arriving during the cooldown are **COALESCED, NOT QUEUED** — at most
+      ONE pending render, **newest text wins** (a viewer, not a log). The **first** render after a watch
+      starts has no prior cost and renders **immediately**.
+      **From 5.1's numbers:** 50 KB → ~50 ms cooldown, far under the 1 s poll interval and **effectively
+      invisible at realistic sizes**; 1 MB → ~800 ms, leaving the main thread roughly **half free instead
+      of not at all**. **4.7 is what made this a live problem:** the observer fires within ~19 ms and
+      `mount()` is synchronous, so callbacks **QUEUE** — ten changes during an 800 ms render is ~8 s of
+      blocking, a burst that was unreachable while every path polled at 1 Hz.
+      **Rejected, recorded so they are not re-litigated:** a fixed window <1000 ms is a **no-op on every
+      polled path**; a pure trailing debounce **STARVES** against a continuously-writing agent (it waits
+      for quiet that never comes); **ship nothing** was defensible until 4.7 made bursts reachable.
+      **Uncertainty recorded rather than hidden:** 1 MB is not established as a realistic watched-file
+      size (5–50 KB is typical), so this may never bind — it ships because it **self-calibrates** and the
+      cost of being wrong is ~50 ms nobody perceives. **Revisit at 7.1** (laggy at normal sizes → loosen
+      or remove) or if **5.1a**'s disk latency dwarfs the OPFS inference (that changes the headroom, not
+      the shape).
 
 - [ ] **5.3 Implement the CHOSEN coalescing.** Per 5.2: trailing debounce of the decided N ms, **at most one
       pending render**, intermediate texts **dropped — the newest wins** (this is a viewer, not a log).

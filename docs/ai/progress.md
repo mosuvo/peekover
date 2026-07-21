@@ -66,7 +66,13 @@ target was registered after the mount that decides whether to build a control) �
 until a second file was selected. **GROUP 5 IS IN PROGRESS: 5.1 DONE — both numbers are
 MEASURED** (`scripts/perf-watch.ts`, `pnpm perf:watch`, not in CI; numbers in the § Baselines / pins block
 below). **NO threshold asserted and NO debounce window chosen — 5.2 is untouched and is the human's.**
-**NEXT: 5.2 — the HUMAN decision gate for the debounce window.** One discovered task was added below 5.1:
+**5.2 DONE 2026-07-21 — THE HUMAN DECIDED: a COST-PROPORTIONAL COOLDOWN, not a fixed window.** After each
+render, refuse the next until roughly as long as that render TOOK has elapsed **since it FINISHED**
+(multiplier 1.0); changes inside the cooldown are **COALESCED, not queued** — one pending render, **newest
+text wins**; the FIRST render after a start is immediate. ~50 ms at 50 KB (invisible), ~800 ms at 1 MB
+(the main thread roughly half free instead of not at all). **Recorded in `docs/ai/decisions.md` BEFORE 5.3
+wrote a line**, per 004's D-2 pattern. **NEXT: 5.3 — implement it in `watchController.ts`.** One discovered
+task was added below 5.1:
 **5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
 **non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
@@ -391,12 +397,14 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 
 ## Up next
 
-**Immediate: task 5.2 — the HUMAN DECISION GATE for the debounce window** (`specs/005-watch-diff/tasks.md`).
-**5.1's numbers exist** (§ Baselines / pins → *Watch-mode numbers*) and the measuring task was forbidden
-from choosing, exactly as 004's D-2 split intends. The agent brings a recommendation with its reasoning and
-its uncertainty; **the choice, and whether coalescing is trailing-only, is the human's and is recorded in
-`decisions.md` BEFORE 5.3 writes code.** Gate 3 passed 2026-07-19; groups 1–4 are complete.
-*(Then: 5.3 implement · group 6 perf/bytes/pins/docs · 7.1 the human milestone-close gate.)*
+**Immediate: task 5.3 — implement the CHOSEN coalescing** (`specs/005-watch-diff/tasks.md`).
+**5.2 is DECIDED and RECORDED** (`decisions.md`, newest entry, landed before any 5.3 code — 004's D-2
+ordering): a **cost-proportional cooldown** (multiplier 1.0, measured from render END), **coalescing not
+queueing**, one pending render, **newest text wins**, first render immediate. 5.3 is **controller-only** —
+`mount()`, the detectors and `WATCH_INTERVAL_MS` are not touched — and its distinguishing test is the one
+that proves the cooldown **SCALES WITH COST**, since a fixed window would pass everything else.
+Gate 3 passed 2026-07-19; groups 1–4 are complete.
+*(Then: group 6 perf/bytes/pins/docs · 7.1 the human milestone-close gate.)*
 
 **After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
 inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7

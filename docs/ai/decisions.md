@@ -1,6 +1,46 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · HUMAN DECISION GATE (spec 005 task 5.2) · THE WATCH DEBOUNCE IS A COST-PROPORTIONAL
+  COOLDOWN, NOT A FIXED MILLISECOND WINDOW.** Recorded BEFORE 5.3 writes a line — that ordering is 5.2's
+  own verify criterion and it is 004's D-2 pattern, the split that stopped a budget-breaching gate from
+  shipping when 4.1's inference did not survive 4.2's measurement.
+  - **THE MECHANISM.** After each render, refuse the next until roughly as long as that render TOOK has
+    elapsed **since it FINISHED** (multiplier **1.0** — the reader gets as much idle as it just spent
+    rendering; any other multiplier would be an unmeasured threshold). Changes arriving inside the
+    cooldown are **COALESCED, NOT QUEUED**: at most ONE pending render, and **the newest text wins**.
+    This is a viewer, not a log — nobody needs to see the intermediate states of a file being written.
+    The **first** render after a watch starts has no prior cost, so it renders **immediately**: be
+    responsive by default, throttle only on evidence.
+  - **WHY, FROM 5.1's MEASURED NUMBERS** (progress.md § Baselines / pins → *Watch-mode numbers*):
+    - **50 KB renders in ~35 ms synchronous / ~50 ms to the 2nd rAF ⇒ a ~50 ms cooldown**, far below the
+      1 s poll interval. **Effectively invisible at realistic sizes** — at the sizes agents actually
+      write, this mechanism does nothing at all, which is the point.
+    - **1 MB blocks ~717 ms synchronous / ~806 ms to the 2nd rAF ⇒ a ~800 ms cooldown**, so under a
+      continuous rewrite the main thread is roughly **half free instead of not at all**.
+  - **WHY IT BECAME A LIVE PROBLEM AT 4.7, having not been one before.** The observer now fires within
+    **~19 ms** of a write on Chromium's app page (5.1(a)), and `mount()` is **synchronous** — callbacks
+    cannot interleave, they **QUEUE**. Ten changes arriving during an 800 ms render is ~8 s of solid
+    blocking. Before 4.7 every shipped path polled at 1 Hz and a burst was **unreachable**; wiring the
+    observer is what made it reachable.
+  - **ALTERNATIVES REJECTED — recorded so they are not re-litigated:**
+    - **A fixed window below 1000 ms is a NO-OP on every polled path.** Renders there are already capped
+      at one per second, so it would coalesce nothing and add lag. A fixed window ABOVE 1000 ms would
+      throttle the polled paths for no measured reason.
+    - **A pure trailing debounce STARVES.** It waits for N ms of *quiet*; an agent writing continuously
+      never provides quiet, so the reader would stop updating **entirely** — failing at the exact
+      workload watch exists for.
+    - **Ship nothing** was defensible while the observer was unwired, and was the standing
+      recommendation until the 4.7 grep. 4.7 made bursts reachable, so it no longer is.
+  - **THE UNCERTAINTY, RECORDED RATHER THAN HIDDEN:** it is **not established that 1 MB is a realistic
+    watched-file size.** Agent-written specs and CLAUDE.md files are typically 5–50 KB, where this
+    mechanism never binds. It ships anyway because it **self-calibrates**: if large files never occur,
+    the cooldown never fires, and the cost of being wrong is ~50 ms of lag nobody perceives.
+  **Revisit-when:** 7.1 reports the reader feels laggy at NORMAL sizes (loosen the multiplier, or remove
+  the mechanism); or **5.1a**'s local-disk observer latency turns out far larger than the OPFS inference
+  — which would change the **headroom**, not the shape (a later-noticed change has more idle before it,
+  not less).
+
 - **2026-07-21 · HARNESS LEDGER ADDENDUM (spec 005 task 5.1) · THREE limits found while building
   `scripts/perf-watch.ts`. Two are new; the third is the one that decides what the observer number means.**
   - **`page.evaluate(functionString, arg)` SILENTLY RETURNS `undefined`.** Playwright evaluates a STRING as
