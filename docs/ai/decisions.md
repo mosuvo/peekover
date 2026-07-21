@@ -1,6 +1,66 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · PRODUCT DECISION, TAKEN BY THE HUMAN AT THE 005 7.1 GATE · THE WATCH PILL IS NOT
+  DISCOVERABLE, AND IT SHIPS AS-IS — because the fix is ONBOARDING, and inventing chrome at a gate is how
+  you get unwalked UI.** Asked whether they would have found the watch control unaided, the human said
+  **no**. It sits bottom-left, **third in a stack** (network → theme → watch), unlabelled until looked at.
+  This is the gate's only finding and it is **recorded as a carried item, not filed as a defect.**
+  - **THE PLACEMENT IS NOT THE PROBLEM, AND THAT IS ESTABLISHED BY MEASUREMENT RATHER THAN DEFENCE.**
+    4.1 chose bottom-left with a throwaway probe on both engines: **top-right** is the mode toggle, and the
+    row beneath it lands **inside the TOC handle**; **bottom-right** is inside the TOC rail's box *and its
+    live entry list, which runs past the viewport bottom*; **top-left** is the remote-load pill's corner.
+    Bottom-left was **the only corner clearing everything**. There is no better rect to move it to.
+  - **"IN A CORNER THE USER CAN SEE" AND "DISCOVERABLE" ARE DIFFERENT PROPERTIES.** The probe answered
+    occlusion and collision — the M3 defect-#6 class — and answered them correctly. It could not answer
+    *"would someone know this feature exists?"*, and nobody claimed it did. **A measured placement is not
+    a discoverability argument**, and conflating the two would have let a correct measurement certify a
+    property it never observed. That is the same shape as the golden-pin correction of record (5.1) and the
+    vacuous-control class (retro 2026-07-19, finding 1): **a pin certifies exactly the stage it observes.**
+  - **WHY SHIP RATHER THAN FIX IT NOW.** Discoverability is an **onboarding** problem (product spec **F11**),
+    and **005 has no onboarding surface** — no first-run state, no hint primitive, no coach-mark. Every
+    available fix means **inventing new chrome at the gate**: a new corner, a new dismissal contract, a new
+    stacking context, and a new set of geometry assertions against the five pieces of chrome already in the
+    corners — **the same reasoning that made 4.2 skip the toast**, for the same reason. And chrome invented
+    at a gate is chrome nobody walks: the gate is the last scheduled human pass, so anything added after the
+    walk ships unwalked. **The honest move is to name the gap and carry it**, not to close it with UI that
+    would itself be unverified.
+  - **WHAT IS NOT CLAIMED.** This is not a finding that the pill is *wrong*, and not evidence that watch is
+    unusable — a user told the feature exists finds and operates it fine (the rest of §10 passed). It is a
+    finding that **the product does not TEACH the feature**, which is a different and later problem.
+  **Revisit-when:** an onboarding surface lands (spec F11) — that is the natural home and the pill should be
+  on its list; **or** a first-run hint becomes cheap on an existing surface, in which case it is a small,
+  walkable addition rather than a new subsystem. **Do NOT revisit by moving the pill** — 4.1's rects are the
+  answer to that question and they have not changed.
+
+- **2026-07-21 · MEASUREMENT (spec 005 task 5.1a, taken at the 7.1 human gate) · THE OPFS OBSERVER-LATENCY
+  INFERENCE IS CONFIRMED ON LOCAL DISK — and this entry exists because "it matched" is the outcome nobody
+  writes down.** With a production build loaded and a real picker-opened folder rewritten from outside the
+  browser: **a small file updates INSTANTLY; the 1 MB file updates in A FEW MILLISECONDS.** 5.1's harness
+  numbers (**18.7 ms @ 50 KB · 109.5 ms @ 1 MB**, measured on OPFS) **did not under-predict local disk.**
+  - **IT CLOSES A NAMED INFERENCE, WHICH IS THE WHOLE POINT.** 5.1 measured on **OPFS** — the only handle
+    obtainable without a user gesture, since `showDirectoryPicker` opens a native dialog Playwright cannot
+    drive (recorded M2 limit) — and **refused to quote it as a disk number**, giving it a named home
+    (5.1a) instead of a footnote. **A confirmed inference is evidence; an unrecorded one stays a guess**,
+    and the gap between those two is invisible unless someone goes and looks.
+  - **IT IS THE COUNTER-EXAMPLE TO RETRO FINDING 2, and that is why it is worth an entry.** That finding's
+    precedent — 004's isolated probe under-predicting the real path by **~13×** — is precisely why OPFS was
+    distrusted here. **This time the isolated probe held.** The precedent is not overturned by one
+    counter-example; it becomes **a rule with a known exception**, which is more useful than either alone.
+    The distinguishing feature worth carrying: 004's probe under-predicted because it omitted work the real
+    path did, whereas OPFS's suspected error was in the opposite direction (no filesystem watcher, no atomic
+    rename, no OS notification queue — all reasons disk could have been **slower**, and it was not).
+  - **THE LIMIT OF THE CONFIRMATION, STATED SO IT IS NOT OVER-READ: the gate instrument is COARSER than the
+    harness instrument.** A human watching a reader update cannot resolve 18.7 ms from 109.5 ms and did not
+    try. What is confirmed is the **magnitude class** — sub-perceptual at both sizes, no OS-level penalty
+    large enough to see. **It does not produce rival disk figures and the table keeps its OPFS provenance.**
+  - **CONSEQUENCE, RECORDED BECAUSE 5.2 NAMED IT AS A TRIGGER:** disk latency does **not** dwarf the OPFS
+    inference, so the cost-proportional cooldown's headroom is unchanged and **no 5.2 revisit is owed on
+    that ground**. (The other 5.2 trigger — "laggy at normal sizes" — also did not fire: §6 of the gate.)
+  **Revisit-when:** a real observer-latency *number* on disk is ever needed (this gives a class, not a
+  figure), or a harness appears that can drive a local-disk handle — per the harness ledger there is still
+  no roadmap to one.
+
 - **2026-07-21 · STANDING RULE + FINDING (spec 005 task 4.8, found by a HUMAN at the 7.1 gate) · LOGIC
   DOES NOT LIVE IN A WXT ENTRYPOINT, BECAUSE NO TEST CAN LOAD ONE — and the third instance of one defect
   class in this milestone is what established it.** Watch on the content-script `file://` surface detected

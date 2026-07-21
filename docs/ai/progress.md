@@ -8,27 +8,26 @@
 
 ## Now (start here)
 
-> ### 7.1 HAS BEGUN AND IT IMMEDIATELY EARNED ITS KEEP. RESUME THE GATE.
-> **The first pass of 7.1 found a shipped defect no test could reach: watch on the content-script
-> `file://` surface detected every change and rendered NONE of them** (the registered target's
-> `start()` called `detector.start(() => {})`). Filed and fixed as **discovered task 4.8** — see
-> `tasks.md`. **Groups 1–6 are DONE** (including discovered tasks 4.5, 4.6, 4.7, 4.8) and **no code task
-> remains**, but "code-complete" is now a claim that has already been falsified once by a human walking
-> the product, so treat the remaining gate items as load-bearing rather than ceremonial.
-> **RESUME 7.1 FROM THE TOP** — the fix changes what the watch item on the `file://` surface is testing
-> (it should now update, and a deleted file should now explain), and the gate's earlier passes were run
-> against the broken build. Its procedure is in `tasks.md` and the **seven items it must carry** are
-> listed under *Up next* below. **What 4.8 hands the gate:** a `file://` watch that is expected to
-> re-render for real. **The `"Unsafe attempt to load URL file:///…"` console line is CLOSED and is NOT
-> ours** — it appears with the extension disabled, and the fixture contains no images at all, so 4.8's
-> "render-time media" conclusion is falsified; it is Chrome's own behaviour on `file://` documents
-> (`decisions.md`, 2026-07-21). **7.2 (the M5 retro) is banked AFTER the gate**, deliberately: what the
-> gate catches is its most valuable content, and it has now caught something — twice, counting the
-> falsified conclusion above. **Do not write the retro first.**
-> The one thing to know before walking it: **the automated stack has never once exercised the real
-> content→background relay**, on this or any milestone — which is precisely the gap 4.8 fell through.
+> ### 005'S GATE IS PASSED. THE CODE WORK IS CLOSED. THE NEXT ACTION IS 7.2 — THE M5 RETRO.
+> **7.1 PASSED 2026-07-21** — a human walked the full gate on **both engines and both surfaces**, with
+> fresh **production** builds, Network tab open and the console watched. Groups 1–6 are DONE (including
+> discovered tasks 4.5, 4.6, 4.7, 4.8), **5.1a is TICKED**, and **no code task remains on 005**.
+> **The gate found ONE thing, and it is a product judgement rather than a defect: the watch pill is not
+> discoverable.** Shipped as-is by human decision, recorded as a **carried item** below — the placement
+> is measured-correct (4.1) and the real problem is onboarding, which 005 has no surface for.
+> **It also earned its keep before that, and that is the milestone's headline:** the FIRST pass found a
+> shipped defect no test could reach — watch on the content-script `file://` surface detected every
+> change and rendered NONE — fixed as **discovered task 4.8**, then re-walked and confirmed working.
+> **Found in the first five minutes, on the first item checked, on the surface the automated stack
+> provably cannot reach.** The gate score is now **7/7**.
+> **NEXT: 7.2, the M5 retro** (`docs/ai/retro.md`, via `/retro`) — banked deliberately AFTER the gate,
+> because what the gate catches is its most valuable content, and it caught two things: 4.8, and the
+> falsified `"Unsafe attempt to load URL file:///…"` conclusion (that line is **Chrome's own behaviour on
+> `file://` documents, not ours** — it appears with the extension disabled and the fixture contains no
+> images at all; `decisions.md` 2026-07-21). The questions 7.2 owes answers to are in `tasks.md` §7.2.
 
-**M4 is CLOSED. M5 (spec 005) is CODE-COMPLETE: all three Gear-3 artifacts are APPROVED — spec.md
+**M4 is CLOSED. M5 (spec 005) has PASSED ITS HUMAN GATE and its code work is closed: all three Gear-3
+artifacts are APPROVED — spec.md
 (gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
 COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare) and
 **1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Group 2 is
@@ -150,6 +149,23 @@ added below 5.1:
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
+**7.1 PASSED 2026-07-21 — BOTH ENGINES, BOTH SURFACES, FRESH PRODUCTION BUILDS, NETWORK TAB OPEN. ONE
+FINDING, and it is a product judgement rather than a defect (the pill's discoverability — see the carried
+items).** The relay round trip, **the single largest gap in the milestone**, now works on the `file://`
+surface and was re-walked after 4.8's fix. The anchor (D-3) passed all three cases: **inserted-above**
+lands on the same sentence; a **wholesale heading rewrite** (`sed -i 's/^## Section/## Chapter/'`) lands
+in the same place via **the index fallback — the ladder's second rung, exercised on real disk for the
+first time**; and that same command is an **atomic save**, which **the watch survived** — answering spec
+§7-7's fragility concern on real disk rather than on OPFS. **Raw mode holds**, so 3.3's deliberate
+`scrollTop`-only asymmetry is now eyeballed rather than assumed. **5.1a is TICKED — the OPFS inference is
+CONFIRMED** (see § Baselines). The 5.3 cooldown passed a 20-append burst on the 1 MB file (**no freeze,
+landed on `burst 20` — newest wins**) with its limit stated: the burst finished in under a second, so it
+proved coalescing, not sustained pressure. **Firefox app-page watch works including 1 MB with no hitch —
+the ONLY performance evidence Firefox's watch will ever have**, since both perf harnesses are
+Chromium-only by construction. **The "Allow access to file URLs" OFF check confirms 4.6's reasoning by
+observation:** the content script does not inject at all — no control, no note, no misdirection. Zero
+network while watching; no console errors; a file deleted mid-watch **explains and keeps the last good
+render**. **5.1a and all seven carried items are DISCHARGED.**
 
 - **THE 5.1 NUMBERS, AND THE ONE THAT INVERTS THE OBVIOUS READING (2026-07-21).** Full table in
   § Baselines / pins. The headline for whoever walks into 5.2: **`preserveReading` roughly DOUBLES the
@@ -160,10 +176,12 @@ control.**
   cost would have been the wrong conclusion from a correct measurement, which is why the like-for-like
   to-2nd-rAF control exists.
 - **THE 5127 ms IS RETIRED.** It was human reaction time (decisions.md said so at the time). Clean
-  programmatic observer latency: **18.7 ms @ 50 KB · 109.5 ms @ 1 MB** — **on OPFS, which is an INFERENCE
-  about local disk, not a measurement of it.** No local-disk handle is obtainable without a native dialog
-  Playwright cannot drive, so none was faked. **Retro finding 2 is the precedent** (004's isolated probe
-  under-predicted the real path ~13×). Named home: **discovered task 5.1a**, at the 7.1 gate.
+  programmatic observer latency: **18.7 ms @ 50 KB · 109.5 ms @ 1 MB** — measured **on OPFS**, because no
+  local-disk handle is obtainable without a native dialog Playwright cannot drive, so none was faked.
+  **THE INFERENCE IS NOW CONFIRMED (task 5.1a, at the 7.1 gate): on local disk a small file updates
+  instantly and 1 MB in a few milliseconds — the OPFS probe did NOT under-predict**, making this the
+  counter-example to retro finding 2's ~13× precedent rather than another instance of it. Full detail and
+  the stated limit of the confirmation are in § Baselines.
 - **INHERIT THIS BEFORE WRITING ANY A/B PERF CONTROL — 5.1's control was VACUOUS TWICE before it measured
   anything, and both failures were silent.** (i) The first draft applied the same-size change to both the
   control and the measured mount, so the two documents had IDENTICAL geometry and the anchor had nothing to
@@ -369,10 +387,15 @@ Firefox mount-timing regression. → narrative:
 [archive § task log](progress-archive.md#task--session-log--newest-first--m1--m3-close--the-004-planning-gates)
 · decisions: `decisions.md` 2026-07-14 · lessons: `retro.md` 2026-07-14.
 
-**The human-gate score: 6/6** — six milestone-shipping defects, **all** caught by the milestone-close
-gate, across M1+M2+M3. **M4 contributed zero defects and zero misses**, so the ratio is unmoved; the
-denominator did not grow because nothing shipped past the gate to move it. *A clean gate is evidence
-about the BUILD, not about the GATE* (retro 2026-07-19).
+**The human-gate score: 7/7** (was 6/6 across M1+M2+M3, with M4 contributing zero defects and zero
+misses). **Seven milestone-shipping defects, ALL SEVEN caught by the milestone-close gate, NONE escaping
+it.** **M5 contributes the seventh: task 4.8** — watch on the content-script `file://` surface detected
+every change and rendered none of them. **The sharpest fact about it: it was found in the FIRST FIVE
+MINUTES, on the FIRST item checked, on the surface the automated stack provably cannot reach** (no test on
+any milestone has ever exercised the real content→background transport). Read the ratio precisely: it says
+every known shipping defect was caught **here**, not that the gate catches everything — the denominator
+only counts what someone eventually found. *A clean gate is evidence about the BUILD, not about the GATE*
+(retro 2026-07-19); M5 is the inverse case, and it is evidence about the GATE.
 
 **Product progress (rough):** M1 opened build-order phase 1-of-7 (product spec §11). Spec-level
 milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TOC · 004 themes+settings ·
@@ -469,8 +492,9 @@ window is chosen here — that is 5.2's, and it is the human's.*
   the second pass's own intra-run spread is **min 100.5 – max 132.7 ms**, a 32 ms band that *contains* 5.1's
   109.5. A 7-sample median over a 32 ms band is not stable to 20 ms. **50 KB latency is stable across all
   three passes — 18.7 / 19.3 / 18.3 ms** (spread 17.8–19.1), which is the control that makes the 1 MB
-  band read as fixture-size variance rather than instrument drift. **Still OPFS, still an inference about
-  local disk (5.1a).**
+  band read as fixture-size variance rather than instrument drift. **Still OPFS-measured — but no longer
+  an unconfirmed inference: 5.1a walked local disk at the 7.1 gate and the magnitude class held** (small
+  file instant, 1 MB a few milliseconds; see the observer-latency bullets below).
 
 **(b) RE-RENDER COST — production's own `mount(text, host, {preserveReading:true})`, real headless Chromium,
 on the REAL content-script `<peekover-root>` and on the app page's `.peekover-app__reader` pane shape.**
@@ -502,12 +526,24 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 | write (createWritable…close) | 2.2 ms | 4.2 ms |
 | per-tick read (`getFile().text()`) | 0.6 ms | 2.4 ms |
 
-- **THIS IS AN INFERENCE ABOUT LOCAL DISK, NOT A MEASUREMENT OF IT — do not quote it as one.** Measured on
-  **OPFS**, the only handle obtainable without a user gesture; `showDirectoryPicker` opens a native dialog
-  Playwright cannot drive (recorded M2 limit), so no local-disk number exists and **none was faked**. OPFS
-  has no filesystem watcher, no atomic rename, no OS notification queue. **Retro finding 2 is the
-  precedent** — 004's isolated probe under-predicted the real path by ~13×. Named home for the real number:
-  **discovered task 5.1a**, at the 7.1 human gate; explicitly non-blocking for 5.2/5.3.
+- **★ THE INFERENCE IS CONFIRMED — MEASURED ON LOCAL DISK AT THE 7.1 GATE, 2026-07-21 (task 5.1a).** With
+  a production build loaded and a real picker-opened folder rewritten from outside the browser: **a small
+  file updates INSTANTLY; the 1 MB file updates in A FEW MILLISECONDS.** The OPFS numbers **did NOT
+  under-predict local disk** — the disk path is at least as fast, so no OS-notification-queue or
+  atomic-rename penalty shows up, and **5.2's named revisit trigger ("if 5.1a's disk latency dwarfs the
+  OPFS inference") did NOT fire.**
+- **THE PROVENANCE OF THE TABLE ABOVE IS UNCHANGED AND STILL OPFS — the confirmation does not overwrite
+  it.** 18.7 / 109.5 ms were measured on **OPFS**, the only handle obtainable without a user gesture
+  (`showDirectoryPicker` opens a native dialog Playwright cannot drive — recorded M2 limit), and no
+  local-disk number was faked then or invented now. **The gate instrument is COARSER than the harness
+  instrument:** a human watching a reader update cannot resolve 18.7 ms from 109.5 ms and did not try.
+  What 5.1a confirms is the **magnitude class** — sub-perceptual at both sizes — not a rival figure.
+- **WHY A CONFIRMATION WAS WORTH A TASK, stated because "it matched" is the outcome nobody writes down:
+  this is the COUNTER-EXAMPLE to retro finding 2.** That finding's precedent — 004's isolated probe
+  under-predicting the real path by **~13×** — is the entire reason 5.1 refused to quote OPFS as a disk
+  number. **Here the isolated probe held.** A confirmed inference is evidence; an unrecorded one stays a
+  guess. The precedent is not overturned by one counter-example — it is now a rule with a known exception,
+  which is more useful than either alone.
 - **The task-0 probe's 5127 ms is RETIRED** — it was human reaction time (click MARK, alt-tab, type), as
   decisions.md said at the time. It must not be quoted as a latency.
 - **CHROMIUM ONLY, twice over:** Playwright cannot load an extension into Firefox, and `FileSystemObserver`
@@ -524,60 +560,20 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 
 ## Up next
 
-**Immediate: 7.1 — the milestone-close HUMAN GATE. It is the only thing standing between 005 and closed,
-and no amount of further testing can substitute for it.** Groups 1–6 are complete; the full procedure
-(fresh **production** builds per engine — never a dev build — both surfaces, Network tab open, console
-watched) is in `specs/005-watch-diff/tasks.md` §7.1 and `decisions.md` 2026-07-19 (PROCEDURE).
+**Immediate: 7.2 — the M5 retro, and it is the ONLY thing left on 005.** `docs/ai/retro.md`, via
+`/retro`. The questions the milestone owes answers to are listed in `tasks.md` §7.2; the sharpest is
+whether crossing the `mount()` boundary cost what §4-1 feared. **It is written now BECAUSE the gate is
+done** — what the gate catches is its most valuable content, and this gate caught two things (4.8, and
+the falsified console-line conclusion). The third question §7.2 asks now has an answer to work from: the
+gate score moved to **7/7**, and M5 is the first milestone whose defect was in a transport no harness can
+reach.
 
-**WHAT 7.1 MUST CARRY. Several tasks deferred items into it; this is the consolidated list, recorded here
-so none is lost between sessions.** The first two are the ones that cannot be recovered later.
-
-1. **THE RELAY ROUND TRIP, end-to-end — the single largest gap in the whole milestone.** `tests/browser`
-   loads no extension, so `runtime.sendMessage` has **no receiving end**, and the real content→background
-   transport has **never been exercised by any test, on any milestone**. The handler is proven as a pure
-   function through the production seam; the *transport* is proven by nothing. Watch a `file://` doc
-   through the content script on Chromium and confirm it actually updates.
-2. **5.1a — observer latency ON LOCAL DISK** (the discovered task below 5.1). 5.1's **18.7 ms @ 50 KB /
-   109.5 ms @ 1 MB** are **OPFS**, an *inference* about disk, not a measurement of it — no local-disk
-   handle is obtainable without a native dialog Playwright cannot drive. **Retro finding 2 is the
-   precedent** (004's isolated probe under-predicted the real path ~13×). With a production build and a
-   picker-opened folder, have an agent (or `echo >>` in a loop) rewrite a watched file and record
-   write→update at both sizes. **Record it even if it matches** — a confirmed inference is evidence; an
-   unrecorded one stays a guess.
-3. **Does the anchor FEEL like your place when an agent REWRITES HEADINGS, not just appends?** (D-3.) The
-   geometry tests prove the scroll landed at *a* correct position; whether it is *the reader's* place is
-   the M3 defect-#6 class and is **eye-only**. **Include the Raw-mode asymmetry flagged at 3.3:** in Raw
-   the reading column is `display:none`, so heading rects are all zero and restore deliberately falls to
-   its **`scrollTop` rung** — Raw gets pixel continuity, Reading gets anchor continuity. That is a
-   reasoned choice, not a bug, but **nobody has ever looked at whether it feels right.**
-4. **Firefox first paint.** `perf-first-paint.ts` is **Chromium-only by construction** (Playwright cannot
-   load an extension into Firefox), so Firefox first paint has **no automated coverage on any milestone**
-   and is evidenced only here — exactly as at M4's gate.
-5. **Firefox's watch RE-RENDER COST — UNMEASURED, same root cause.** Firefox's app-page watch
-   (drag-opened folders) **is a shipped surface**, but every number in the watch table is Chromium.
-   Whether a re-render is acceptable there is currently unknown, not merely unrecorded.
-6. **The degraded-state COPY, on all three surfaces — does it read as honest, or as broken?** Both
-   Firefox routes (the picker-opened app page and the `file://` content script, both closed by 2.3's
-   negative answer) **and** the remote `http(s)` raw surface (4.6's rescope). The tests prove the right
-   *string* renders on the right *branch*; they cannot judge whether a user reads it as an explanation
-   or as a failure. **The three notes are deliberately different in kind** — a platform limit with a
-   "do X instead" route, vs. a scope statement naming no fault — and that distinction is the thing to
-   check.
-7. **The un-automatable Chrome check from 4.6, five seconds:** with **"Allow access to file URLs" OFF**,
-   confirm the content script does **not** inject on a `file://` page at all — no control, no note, no
-   misdirection. 4.6's conclusion that the hardcoded `backgroundCanReadFileUrls: true` is correct rests
-   on this, and it was reasoned from Chrome's docs rather than observed.
-
-**Plus the standing gate items, regardless of milestone:** cold start (freshly loaded extension / MV3
-worker asleep, not a warm repeat open) · **zero unexpected network** with the Network tab open across
-start/tick/stop on both engines · is the update signal **noticeable but not annoying** over several
-minutes of a real agent writing · no console errors · every degraded/empty state renders (**never
-blank**) · the document stays the hero.
-
-**Then 7.2 — the M5 retro, banked AFTER the gate and not before.** `docs/ai/retro.md`, via `/retro`. The
-questions the milestone owes answers to are listed in `tasks.md` §7.2; the sharpest is whether crossing
-the `mount()` boundary cost what §4-1 feared. **Do not pre-write it** — what the gate catches is its most
-valuable content.
+**7.1 IS DONE AND ALL SEVEN CARRIED ITEMS ARE DISCHARGED** (the consolidated list that used to live here
+— relay round trip · 5.1a · the anchor's *feel* under heading rewrites incl. 3.3's Raw asymmetry ·
+Firefox first paint · Firefox's re-render cost · the degraded-state copy on all three surfaces · 4.6's
+five-second toggle-off check). **Every one was walked; the results are in `tasks.md` §7.1**, and the two
+that produced durable numbers or decisions are also in § Baselines (5.1a) and the carried items (the
+pill's discoverability). **Nothing deferred into the gate is outstanding.**
 
 **After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
 inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
@@ -586,6 +582,23 @@ inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006
 **Carried items — banked deliberately, each with a recorded home. Do NOT guess at any of them; every one
 is either measurement-driven or explicitly deferred.**
 
+- **★ THE WATCH PILL IS NOT DISCOVERABLE — the 7.1 gate's ONE finding, SHIPPED AS-IS by human decision,
+  carried rather than filed as a defect.** Asked whether they would have found it unaided, the human said
+  **no**: bottom-left, third in a stack (network → theme → watch), unlabelled until looked at.
+  **The placement is correct AND measured, which is why this is not a placement bug** — 4.1's throwaway
+  probe ruled out top-right (collides with the TOC handle) and bottom-right (inside the TOC rail's live
+  entry list) with real rects, and bottom-left was the only corner clearing everything. **"Right corner"
+  and "discoverable" are different properties**, and the geometry offers nowhere better.
+  **WHY IT SHIPS: discoverability is an ONBOARDING problem** (product spec F11), and **005 has no
+  onboarding surface to hang a hint on**. Inventing chrome at a gate is how you get unwalked UI — the one
+  thing this project's whole gate discipline exists to prevent. **REVISIT WHEN:** onboarding lands, or a
+  first-run hint becomes cheap on an existing surface. Recorded in `decisions.md` (2026-07-21) with its
+  reasoning; kept here so it survives into the next milestone instead of living only in a gate note.
+- **A POLISH CANDIDATE, NOT A DEFECT — the anchor's visible correction (seen at 7.1).** When content is
+  inserted above the reading position, the view **visibly moves up and then returns**: the browser holds
+  `scrollTop` through `replaceChildren`, then the anchor corrects it. That is 5.1's measured **~2738 px**
+  correction made visible — **correct behaviour with a slightly visible mechanism.** Any fix belongs with
+  006's diff work (which knows *what* changed and could avoid the full replace), not with a scroll hack.
 - **Comment-only nit, to ride along with the NEXT `src/render/tocView.ts` touch.** `clampTocWidth`'s doc
   comment claims a non-finite input yields `TOC_MIN_WIDTH` "via Math.min/Math.max's NaN propagation being
   caught by the caller's guard". **The comment is wrong twice; the CODE is right.**
@@ -623,12 +636,11 @@ is either measurement-driven or explicitly deferred.**
 
 ## Blockers / open questions
 
-- **ONE THING IS WAITING ON A HUMAN, and it is the only thing: 7.1, the 005 milestone-close gate.**
-  005 is **code-complete** — groups 1–6 done, no code task remaining, nothing in flight, no agent work
-  available on this milestone. It is **not a blocker in the "something is broken" sense**; it is the
-  budgeted acceptance that an agent cannot self-certify, and the full carry list is under *Up next*.
-  **Nothing else on 005 is outstanding.** M1–M4 remain fully closed (code + named human gate + retro),
-  with nothing outstanding on any of them.
+- **NOTHING IS BLOCKED AND NOTHING IS WAITING ON A HUMAN.** 7.1 — the acceptance an agent cannot
+  self-certify — **PASSED 2026-07-21** on both engines and both surfaces, and its one finding was a
+  product judgement the human decided in the room (ship the pill as-is; carried). 005's code work is
+  closed; **only 7.2, the retro, remains**, and that is agent work. M1–M4 remain fully closed (code +
+  named human gate + retro), with nothing outstanding on any of them.
 - **The gaps that 8.1 closed are closed as *findings*, but remain gaps in AUTOMATED coverage** — Firefox
   first paint, the real end-to-end settings/TOC round-trip through the background, and the cold-start theme
   flash. They were never known defects; the gate walked all three and found nothing. **But a future change
