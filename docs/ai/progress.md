@@ -8,10 +8,11 @@
 
 ## Now (start here)
 
-> ### 005'S GATE IS PASSED. THE CODE WORK IS CLOSED. THE NEXT ACTION IS 7.2 — THE M5 RETRO.
+> ### M5 (spec 005 — watch mode) IS CLOSED: CODE + GATE + RETRO. NOTHING ON 005 REMAINS.
 > **7.1 PASSED 2026-07-21** — a human walked the full gate on **both engines and both surfaces**, with
-> fresh **production** builds, Network tab open and the console watched. Groups 1–6 are DONE (including
-> discovered tasks 4.5, 4.6, 4.7, 4.8), **5.1a is TICKED**, and **no code task remains on 005**.
+> fresh **production** builds, Network tab open and the console watched. **7.2 (the M5 retro) is BANKED**
+> in `docs/ai/retro.md`, newest-first. Every task in `specs/005-watch-diff/tasks.md` is ticked, including
+> the five discovered ones (4.5, 4.6, 4.7, 4.8, 5.1a).
 > **The gate found ONE thing, and it is a product judgement rather than a defect: the watch pill is not
 > discoverable.** Shipped as-is by human decision, recorded as a **carried item** below — the placement
 > is measured-correct (4.1) and the real problem is onboarding, which 005 has no surface for.
@@ -19,12 +20,20 @@
 > shipped defect no test could reach — watch on the content-script `file://` surface detected every
 > change and rendered NONE — fixed as **discovered task 4.8**, then re-walked and confirmed working.
 > **Found in the first five minutes, on the first item checked, on the surface the automated stack
-> provably cannot reach.** The gate score is now **7/7**.
-> **NEXT: 7.2, the M5 retro** (`docs/ai/retro.md`, via `/retro`) — banked deliberately AFTER the gate,
-> because what the gate catches is its most valuable content, and it caught two things: 4.8, and the
-> falsified `"Unsafe attempt to load URL file:///…"` conclusion (that line is **Chrome's own behaviour on
-> `file://` documents, not ours** — it appears with the extension disabled and the fixture contains no
-> images at all; `decisions.md` 2026-07-21). The questions 7.2 owes answers to are in `tasks.md` §7.2.
+> provably cannot reach.** The gate score is now **7/7** — the denominator moved for the first time since
+> M3, and it confirms M4's reasoning **by instance**: the item M4 kept because nothing else could observe
+> it is the item that caught the defect.
+> **NEXT — TWO STEPS, IN ORDER, NEITHER OF THEM 005 WORK:**
+> **(1) THE progress.md CONDENSE / ARCHIVE PASS.** This file is the working set and it has grown into a
+> milestone narrative again — 005's task-by-task prose belongs in `progress-archive.md` behind a close
+> summary, the way M1–M4's does. Do this BEFORE 006 starts, so 006's first session reads a working set
+> rather than a history.
+> **(2) 006 — snapshots + diff — starts a fresh Gear-3 cycle at SPEC level, in a FRESH SESSION** (C14:
+> implementation and planning contexts do not share a window). Its inputs already exist — see *Up next*.
+> **The M5 retro's nine findings are the standing input to 006's planning**, and three bear on it
+> directly: the **wired-to-nothing** class and its call-site pin (006 adds more registration seams), the
+> **`mount()` boundary** answer (006 touches `mount()` again for diff), and **red-first is a COUNT and a
+> REASON, not a colour** (twice this milestone a break that stayed green revealed a second guard).
 
 **M4 is CLOSED. M5 (spec 005) has PASSED ITS HUMAN GATE and its code work is closed: all three Gear-3
 artifacts are APPROVED — spec.md
@@ -560,13 +569,22 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 
 ## Up next
 
-**Immediate: 7.2 — the M5 retro, and it is the ONLY thing left on 005.** `docs/ai/retro.md`, via
-`/retro`. The questions the milestone owes answers to are listed in `tasks.md` §7.2; the sharpest is
-whether crossing the `mount()` boundary cost what §4-1 feared. **It is written now BECAUSE the gate is
-done** — what the gate catches is its most valuable content, and this gate caught two things (4.8, and
-the falsified console-line conclusion). The third question §7.2 asks now has an answer to work from: the
-gate score moved to **7/7**, and M5 is the first milestone whose defect was in a transport no harness can
-reach.
+**Immediate: the progress.md CONDENSE / ARCHIVE pass — 005 is closed and nothing on it is outstanding.**
+Move 005's task-by-task narrative into `progress-archive.md` behind an M5 close summary (M1–M4 set the
+format), leaving this file the working set it is meant to be. **Then 006's Gear-3 kickoff, in a fresh
+session** (C14).
+
+**7.2 IS DONE — the M5 retro is banked** (`docs/ai/retro.md`, newest-first): **nine findings, one
+candidate cut on purpose**, and all three of `tasks.md` §7.2's questions answered from evidence.
+**The headline is a NEW named defect class — BUILT, TESTED, AND WIRED TO NOTHING**, which hit **three
+times** in 005 (4.7's unimported `observerDetector` · the pill absent on the first file opened · 4.8's
+empty render callback) with **one cause: every watch test registers its own target before mounting, so no
+test ever asked which target PRODUCTION registers.** Its rule and the WXT-entrypoint standing rule
+(`#imports` means no Vitest project can load an entrypoint — logic there is untestable by construction)
+are the parts 006 must carry. The other findings worth knowing before planning: **red-first is a COUNT and
+a REASON, not a colour**; **"it's the harness" must be argued from an isolating variable, never asserted**;
+**layout MOVED, not ADDED** (the like-for-like control that stopped 5.2 deciding from a wrong premise);
+and **M4 retro finding 2 now has a known exception** (5.1a — the OPFS probe held).
 
 **7.1 IS DONE AND ALL SEVEN CARRIED ITEMS ARE DISCHARGED** (the consolidated list that used to live here
 — relay round trip · 5.1a · the anchor's *feel* under heading rewrites incl. 3.3's Raw asymmetry ·
@@ -638,9 +656,10 @@ is either measurement-driven or explicitly deferred.**
 
 - **NOTHING IS BLOCKED AND NOTHING IS WAITING ON A HUMAN.** 7.1 — the acceptance an agent cannot
   self-certify — **PASSED 2026-07-21** on both engines and both surfaces, and its one finding was a
-  product judgement the human decided in the room (ship the pill as-is; carried). 005's code work is
-  closed; **only 7.2, the retro, remains**, and that is agent work. M1–M4 remain fully closed (code +
-  named human gate + retro), with nothing outstanding on any of them.
+  product judgement the human decided in the room (ship the pill as-is; carried). **7.2 (the retro) is
+  banked, so M5 is fully closed — code + named human gate + retro — exactly as M1–M4 are. Nothing is
+  outstanding on ANY milestone**, and the next actions (the archive pass, then 006's spec gate) are new
+  work rather than remainder.
 - **The gaps that 8.1 closed are closed as *findings*, but remain gaps in AUTOMATED coverage** — Firefox
   first paint, the real end-to-end settings/TOC round-trip through the background, and the cold-start theme
   flash. They were never known defects; the gate walked all three and found nothing. **But a future change

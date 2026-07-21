@@ -1484,7 +1484,7 @@ A was edited after the switch…' to contain 'File B'`.
       **7.2 (the retro) is NOT written here and `docs/ai/retro.md` is untouched by this commit** — that is
       the next task, deliberately after the gate.
 
-- [ ] **7.2 Retro (M5 close).** Run `/retro`: append an entry to `docs/ai/retro.md` — lessons that change
+- [x] **7.2 Retro (M5 close).** Run `/retro`: append an entry to `docs/ai/retro.md` — lessons that change
       future behaviour, not a chronicle. Link decisions.md rather than restating settled architecture.
       **Questions this milestone owes an answer to:** did crossing the `mount()` boundary cost what §4-1
       feared, or less? Did the anchor survive the gate — and if it did not, is the failure in the *mechanism*
@@ -1494,6 +1494,47 @@ A was edited after the switch…' to contain 'File B'`.
       Files: `docs/ai/retro.md` (+ the progress.md Now-pointer reconcile)
       Verify: `docs/ai/retro.md` has the 005 entry with its metrics and an evidenced answer to the
       `mount()`-boundary question.
+      **DONE 2026-07-21 — the M5 entry is banked newest-first in `docs/ai/retro.md`. NINE findings, and one
+      candidate was CUT ON PURPOSE** (the D-1 milestone split — right, but no future session behaves
+      differently for reading it; its one plannable fact survives as a metric). **All three questions are
+      answered from evidence:**
+      **(1) THE `mount()` BOUNDARY COST LESS THAN §4-1 FEARED, and what made it cheap is repeatable rather
+      than lucky** — the change is ADDITIVE, DEFAULTED-OFF and **read at exactly one place**, and the
+      fallback was sanctioned in advance. **It would NOT have been cheap without the both-directions
+      red-first:** direction (b) failed **8×**, including the test that drives the real `readerPane.select()`
+      across two files. → the transferable lever is that the cost of crossing a long-respected boundary is
+      set by those structural properties plus a red-first on the OLD behaviour, **not by how long the
+      boundary has stood**.
+      **(2) THE ANCHOR SURVIVED ALL THREE GATE CASES**, and the second half is answered too: had it failed,
+      the failure would have been in the **JUDGEMENT, not the mechanism**, and the tests would have stayed
+      green through it — they pin *a* correct position against a numeric bar with a non-vacuity control,
+      but *"the reader's place"* is defined by a human's expectation, so a test can only pin a **proxy**.
+      → **A property whose definition references a human's expectation cannot be delegated to a test at
+      all — name the proxy, gate the property, AT PLAN TIME**, which is exactly what D-3 did. §10's
+      discoverability finding is the same shape from the other side.
+      **(3) M5 MOVED THE DENOMINATOR — 6/6 → 7/7, the first move since M3** — and it **confirms M4's
+      reasoning by instance rather than by argument**: the gate item M4 kept precisely because nothing else
+      could observe it (the real content→background transport) is the item that caught 4.8. Read honestly,
+      7/7 says every *known* shipping defect was caught here — an upper bound on the escape rate, not proof
+      the gate catches everything. **M5 added no browser capability**, only a new CLASS of assertion (4.8's
+      call-site pin + source-text pins on an unloadable entrypoint), and **neither reaches the transport**.
+      **METRICS, with the attribution kept honest the way M4's own correction was:** gate-caught defects
+      = **1**; **CI mid-development = 1** (asterisked — found by NEW coverage driving the production path,
+      not by the existing 48-file suite); **agent code review = 2** (4.7, 4.6); **measurement = 1 prevented
+      wrong decision**; **harness/instrument defects counted SEPARATELY = 6**; ~**21** recorded red-first
+      mutations, **5** insufficient on the first attempt, **2** of those revealing a second independent
+      guard; unit **384 → 456**, browser **314 → 499/15 skipped**. **Discovered work was 5 of 25 tasks
+      (+25% over a 20-task plan) — NOT the ~35% this task was briefed with — but group 4 alone DOUBLED
+      (4 → 8), and every discovered task was rework on work believed done, not new scope.**
+      **THREE FACTUAL CLAIMS IN THE BRIEF DID NOT SURVIVE CHECKING** and are corrected in the entry rather
+      than repeated: *"clean, up to date with origin"* (`git status`: **ahead by 2**), *"the here-string
+      lesson is already banked in M4's retro"* (**it is nowhere** — grepped across `retro.md`,
+      `decisions.md`, `WORKFLOW.md`, `AGENTS.md`), and the ~35% figure. Each cost one command; M4's
+      finding (7) is thereby validated on a third kind of claim — **a prompt's claims about the RECORD
+      ITSELF**.
+      Docs-only: `docs/ai/retro.md` · this tick · `docs/ai/progress.md` (Now-pointer). No `src/`,
+      `entrypoints/`, `scripts/`, manifest or config change; `permissions: []` untouched; **D-1 no storage ·
+      D-2 still three dependencies**. **005 IS CLOSED — code, gate and retro.**
 
 ---
 

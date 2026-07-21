@@ -1,4 +1,227 @@
 # Retro log — Peekover
+- **2026-07-21 · M5 close (spec 005 — watch mode).** Watch a chosen local markdown file and re-render it in
+  place while an agent rewrites it, on both engines and both surfaces, with **`permissions: []` still
+  intact**, **no new dependency** (still three) and **no file contents stored** — D-1/D-2 held to the last
+  commit. Seven groups plus **five discovered tasks** (4.5, 4.6, 4.7, 4.8, 5.1a). At close: lint ·
+  **456 unit** · **499 in-browser passed / 15 skipped**, 54 file-instances, both engines · golden diff EMPTY ·
+  `manifest.test.ts` 8/8 and **byte-unmodified since M2** · zip 335.89 / 335.95 kB · first paint **138.6 ms**
+  against the **<150 ms** budget. The 7.1 milestone-close gate **PASSED and found ONE shipping defect** —
+  the first gate since M1 to find one, found **in the first five minutes, on the first item checked**. The
+  settled architecture (the register-once registry, the entrypoint rule, the cooldown's mechanism, the OPFS
+  confirmation) is in decisions.md 2026-07-19/20/21 — **linked, not restated**.
+  - **(1) THE HEADLINE — a NEW named defect class: BUILT, TESTED, AND WIRED TO NOTHING. It hit THREE TIMES
+    in one milestone, and all three have ONE cause.** `observerDetector` was built, real-engine tested via
+    OPFS, perf-measured — and **imported by nothing**, so spec §4's *"detect changes without polling"* was
+    **FALSE in shipped code** (4.7). The watch pill **did not exist on the first file opened in a session**,
+    on both engines, because the target was registered after the mount that decides whether to build a
+    control (4.7's own verification). And the content script's registered `WatchTarget` called
+    `detector.start(() => {})` — **an empty callback**: watch detected every change and rendered **none**
+    (4.8, found by a human at the gate; the relay underneath it was measured working — 200, 28 623 bytes,
+    88 background reads in ~90 s, **zero re-renders**). → **The one cause, and it is why every suite stayed
+    green: every watch test calls `registerWatchTarget(createWatchController({…}))` ITSELF before mounting.**
+    That is a good way to test the controller, the pill and the registry, and it is exactly why all of them
+    passed — **no test ever asked which target *production* registers.** → **The rule, mechanical enough to
+    apply without thinking: for any capability reached through a registration seam, at least one test must
+    drive the PRODUCTION ENTRY PATH rather than construct its own preconditions.** 4.8 shipped the
+    generalisable form and it is the new *kind* of assertion in this repo — a **call-site pin**: *every
+    production `registerWatchTarget(...)` call site builds its target with `createWatchController`*, verified
+    RED against the pre-4.8 tree, naming the offending file. It asserts a property of the wiring, not of a
+    unit, which is the only altitude at which this class is visible. → **And record the aggravating factor as
+    a standing rule, because it is structural, not a habit: a WXT entrypoint imports the virtual `#imports`
+    module, so NEITHER Vitest project can load one at all.** Logic living in an entrypoint is **untestable by
+    construction** and verified by code review and nothing else — so **an entrypoint wires; it does not decide
+    or construct** (decisions.md 2026-07-21; the fix was a relocation into `src/watch/contentWatch.ts`,
+    leaving three genuinely engine-bound values behind). **It was written down twice and acted on zero times:**
+    4.1's note said the adapter delivers no re-render and 4.2 would replace it — **4.2 replaced it in
+    `appShell.ts` only** — and 4.6 later restated the same mechanism verbatim as evidence for a *different*
+    argument. **A correct observation filed under the wrong conclusion is not caught by re-reading the notes.**
+  - **(2) RED-FIRST IS NOT "DID IT GO RED" — IT IS "DID THE RIGHT THINGS GO RED, IN THE RIGHT NUMBER." Five
+    instances this milestone, and TWICE the check revealed structure nobody knew existed.** This is a
+    distinct rule from M4's finding (1): that one is about the TEST's instrument being live; this is about
+    the MUTATION isolating the property. The evidence: **3.3** — a first-draft test appended a section and
+    asserted `scrollTop` was unchanged, and **passed against a `mount()` with no continuity code at all**,
+    because the engine does not reset `scrollTop` when `replaceChildren` leaves the box tall enough (the
+    *engine* was satisfying the assertion; rewritten to INSERTED-ABOVE, where holding steady is the wrong
+    answer). **3.4** — disabling `applyInitialTocState`'s stored-value early return left the suite **fully
+    green**, and investigating why found `decide()` carrying its **own independent stand-down**: two guards,
+    either sufficient. **4.1** — swapping the click-time registry lookup for a captured reference stayed
+    green, because across a plain re-render the registry holds the **same object**; what actually dies is a
+    capture taken before the slot's *occupant* changes, so a test for **that** was added and the same break
+    then failed 4×. **5.3** — removing `stop()`'s cancel left the switch test green because **`start()`
+    cancels too**; breaking both exposed `"A: pending -> HOST B"`, 4.3's cross-feed bug one level up. And
+    **5.1**'s A/B control was **vacuous twice** before it measured anything. → **The rule: check the failure
+    COUNT and the failure REASON, and treat a break that stays green as a finding rather than a relief.**
+    Twice here it meant *two independent guards*, which is knowledge you cannot get by reading the code —
+    both times the second guard was in a different file, added for a different reason, by a different task.
+    → **Corollary for anyone tidying: a guard that looks redundant may be the one the suite is actually
+    resting on. Removing "the duplicate" goes red NOWHERE** (decisions.md 2026-07-21 records this for the
+    cooldown's two cancels specifically).
+  - **(3) "IT'S THE HARNESS" IS THE MOST DANGEROUS SENTENCE AVAILABLE — this milestone said it THREE TIMES
+    and was right three times, and the reason it was right is the reusable part.** **3.2**: the standing
+    `waitForScrollable` returns while the reader is still restyling — `scrollHeight` **81 798 px at first
+    overflow → 26 069 px settled**, so a heading offset read there is stale by tens of thousands of pixels
+    and the following `scrollTop` write **CLAMPS**, parking the test at the document bottom *deterministically
+    on both engines*. **4.5**: cross-file viewport concurrency, ~40% flaky. **5.3**: a macrotask-spaced burst
+    measures the harness's scheduler, not the coalescer. → **What makes it a diagnosis rather than an excuse
+    is that each was argued from a variable that isolates the harness, not asserted.** 4.5 is the model:
+    `--no-file-parallelism` fixes it **while the same test still resizes the same viewport**, so the only
+    variable that flips pass→fail is cross-file concurrency. That mattered because the failure shape here is
+    this milestone's recurring one — **a plausible WRONG position, never an error** (`expected 8092.6 to be
+    greater than 8092.6`) — which is indistinguishable from a real defect until you isolate it. → **And in
+    all three, NO assertion was weakened and the fix was measured, not taken on convenience:** 4.5 compared
+    global serial **62 s** against a Firefox-only serial **57 s** and rejected the 5 s saving as not worth an
+    asymmetric config. **Test-runtime is not a shipped metric; a weakened geometry assertion is a permanent
+    hole.** (Two further instrument defects at 4.2 and one at 4.3 were fixed the same way.)
+  - **(4) A MECHANISM THAT *CAN* PRODUCE A SYMPTOM IS NOT EVIDENCE THAT IT *DID* — an agent's diagnosis was
+    falsified by a human with a grep and a toggle.** The `"Unsafe attempt to load URL file:///…"` console
+    line was investigated thoroughly, correctly scoped, and **correctly flagged-not-fixed** — and the
+    conclusion (render-time media in the document resolving to the page's own URL) was **wrong**. Two
+    measurements at the gate killed it: `grep -n '!\[' small.md` → **nothing** (the fixture is headings and
+    lorem ipsum from an `awk` one-liner and contains no images at all, so the explanation required media the
+    document does not have), and **the line appears with the extension disabled**. It is Chrome's own
+    behaviour on `file://` documents. → **The rule: when you identify a mechanism, CHECK THE SPECIFIC CASE
+    CONTAINS THE MECHANISM'S PRECONDITIONS before concluding.** Two minutes of measurement beat an hour of
+    correct reasoning, and the reasoning really was correct — every supporting fact in that investigation
+    survives (the product makes exactly one `fetch`, remote URLs are neutralised inside an inert `<template>`
+    before commit). Only the conclusion was unearned. **This is the same shape as (2) at the level of prose
+    rather than tests:** a proof that a thing *could* be true, mistaken for a proof that it *is*.
+  - **(5) MEASURE-THEN-DECIDE HELD AGAIN — and the LIKE-FOR-LIKE control is the only reason 5.2 did not
+    decide from a wrong premise.** 004's D-2 split applied a second time: 5.1 measured and was **forbidden
+    from choosing**, 5.2 (human) chose, 5.3 implemented — with the decision recorded in decisions.md before
+    5.3 wrote a line. **The finding it bought inverts the obvious reading:** `preserveReading` roughly
+    **DOUBLES the synchronous block** (16.8→34.9 ms at 50 KB; 360→717 ms at 1 MB) but adds **≈0 ms to the
+    whole unresponsive window** (start → 2nd rAF), because `restoreReadingAnchor`'s `getBoundingClientRect`
+    forces layout that a plain mount pays one frame later regardless. **Layout MOVED, not ADDED** — measured
+    twice (5.1, re-run at 6.1 with opposite signs on the two surfaces, i.e. noise around zero). Quoting
+    *"preserve − plain"* as the anchor's cost — the obvious reading, and the one a single-row table invites —
+    would have concluded the anchor should be optimised or dropped, and 5.2 would have chosen a mechanism to
+    fix a cost that does not exist. → **The rule: an A/B control must be like-for-like in the DIMENSION YOU
+    WILL QUOTE, or it measures displacement and reports it as cost.** Getting there took two corrections
+    (the first draft gave both mounts identical geometry, so the anchor had nothing to correct — **0 px
+    drift on every cell**; and drift read on the timing frame reported **2738 px contained but 2 px
+    full-page**, because `:host` is `scroll-behavior:smooth` and was still animating). **Read geometry after
+    a settle, never on the timing frame.**
+  - **(6) M4's FINDING 2 NOW HAS A KNOWN EXCEPTION, and recording it was worth a task precisely because the
+    answer was "it matched."** That finding — 004's isolated probe under-predicting the real path **~13×** —
+    is the entire reason 5.1 refused to quote its OPFS observer latency as a disk number and gave the gap a
+    named home (5.1a) instead of a footnote. **At the gate the isolated probe HELD:** on local disk a small
+    file updates instantly and 1 MB in a few milliseconds; OPFS did not under-predict. → **The asymmetry is
+    the durable part** (decisions.md 2026-07-21): 004's probe erred by **omitting work the real path did**,
+    whereas OPFS's suspected error ran the other way — no filesystem watcher, no atomic rename, no OS
+    notification queue were all reasons disk could have been **slower**. **A rule with a known exception is
+    more useful than either alone**, and *"it matched"* is the outcome nobody writes down, so an unconfirmed
+    inference silently stays a guess forever. The confirmation's own limit is stated where it lives: the gate
+    instrument is coarser than the harness instrument, so it confirms a **magnitude class**, not a rival
+    figure — the table keeps its OPFS provenance.
+  - **(7) THE `mount()` BOUNDARY — §4-1's FEAR WAS DISPROPORTIONATE, AND WHAT MADE IT CHEAP IS REPEATABLE
+    RATHER THAN LUCKY.** *(tasks.md §7.2, question 1.)* Four milestones treated `mount()` as read-only
+    library; plan §4-1 named editing it as the riskiest thing in 005. **The bill: the sanctioned
+    anchor-only fallback was NOT needed, direction (b) was satisfiable alongside (a), `readerPane.ts` was
+    never modified, and no existing caller changed behaviour.** → **Three structural properties did that
+    work, and they generalise to the next shared-trunk change (006 will touch `mount()` again for diff):**
+    **(i) the change was ADDITIVE and DEFAULTED-OFF** — `preserveReading?: boolean` on a `MountOptions` that
+    was **already threaded through every caller**, so adding a field was not 004's port mistake; **(ii) the
+    flag is read at EXACTLY ONE PLACE** (whether to capture at all), so every existing caller reaches
+    `replaceChildren` with nothing read and nothing changed — a one-site read is what makes "unchanged" a
+    small claim instead of a survey; **(iii) the fallback was sanctioned IN ADVANCE**, so the risk had a
+    landing site and nobody had to improvise one under pressure (the 4.2 pattern from M4 — build it, measure
+    it, remove it if it fails its bar). → **Would it have been cheap without the both-directions red-first?
+    No — and that is the answer, not a hedge.** Direction (b) failed **8×** when the capture was made
+    unconditional, *including the test that drives the real `readerPane.select()` across two files, which
+    times out waiting for Reading*. **That is the app-page bug default-off prevents, observed rather than
+    argued.** Without it, "existing callers are unchanged" would have been a claim resting on the same
+    reasoning that produced it. → **The transferable lever: the cost of crossing a long-respected boundary
+    is set by whether the change is additive, defaulted-off and read at one site — and by whether the OLD
+    behaviour is red-first proven — not by how long the boundary has stood.** Four milestones of deference
+    turned out to be a fact about nobody having needed it, not a measure of the risk.
+  - **(8) THE GATE: M4's OPEN QUESTION ANSWERED FROM THE INVERSE DIRECTION — 6/6 → 7/7 — AND THE PROPERTY
+    THAT CANNOT BE DELEGATED TO A TEST AT ALL.** *(tasks.md §7.2, questions 2 and 3.)*
+    - **Question 3 — did M5 move the denominator? Yes, and the *reasoning* M4 gave for keeping the gate is
+      now confirmed by an instance rather than only argued.** M4 concluded *"a clean gate is evidence about
+      the BUILD, not about the GATE"* and *"retire a gate item only when something else can OBSERVE the
+      property."* **The item M4 kept on exactly that ground — the real content→background transport, which no
+      test on any milestone has ever exercised — is the item that caught 4.8**, in the first five minutes, on
+      the first item checked. → **But read the ratio precisely, because the honest reading is narrower than
+      the number:** 7/7 says every **known** shipping defect was caught here; the denominator only counts
+      defects someone eventually found, so it is an upper bound on the escape rate and says nothing about
+      what shipped unnoticed. **A dirty gate is strong evidence that nothing else could reach the path, and
+      weak evidence about how much the gate catches.**
+    - **Did the boundary move this milestone? Marginally, and NOT in the direction M4's did.** M4's
+      `emulateColorScheme` was a genuine capability move (a browser command reaching platform state no in-page
+      API can fake). M5 added no browser capability — it added a new **class of assertion**: the 4.8 call-site
+      pin (a property of production *wiring*) and source-text pins on a file no test can load. Both are real
+      and both are cheap, and **neither can reach the transport**. The gate item is untouched, and per the
+      harness ledger there is still **no roadmap** to a harness that loads an extension and runs a content
+      script.
+    - **Question 2 — the anchor survived all three gate cases** (inserted-above lands on the same sentence;
+      a wholesale heading rewrite lands via **the index fallback, the ladder's second rung, exercised on real
+      disk for the first time**; that same `sed -i` is an **atomic save** and the watch survived it, answering
+      spec §7-7 on disk rather than on OPFS). **The second half is still worth answering: had it failed, the
+      failure would have been in the JUDGEMENT, not the mechanism** — and the tests would have stayed green
+      through it. They pin *a* correct position against a numeric bar (`< 8 px`, `< 12 px`) with a non-vacuity
+      control proving the naive `scrollTop` restore lands **3239.9 px / 11 592.8 px** away. **"The reader's
+      place" is not a geometric property**; it is defined by a human's expectation of where they were, so a
+      test can only ever pin a **proxy** for it. → **The generalisable line: a property whose definition
+      references a human's expectation cannot be delegated to a test at all — name the proxy, gate the
+      property, and do it AT PLAN TIME.** 005 did exactly that (D-3 declared the *feel* human-gate-only
+      before a line was written), which is why the gate had a checklist item rather than a surprise. **The
+      gate's own §10 finding is the same shape from the other side:** the pill's placement was *measured*
+      correct (4.1's rects) and is still **not discoverable** — a measured placement is not a
+      discoverability argument, and conflating them would have let a correct measurement certify a property
+      it never observed (decisions.md 2026-07-21; carried, not filed as a defect).
+  - **(9) A KNOWN-BUT-UNAPPLIED RULE NEEDS A MECHANICAL DEFAULT, NOT MORE AWARENESS — the SECOND instance of
+    that shape in two milestones.** M4 banked it for `git checkout` (*"INCONSISTENCY, not ignorance"* — the
+    safe pattern was used correctly in the same sessions), and the mechanical fix — **`cp` the file aside as
+    the FIRST step of the mutation** — then held for **every** red-first in 005; the DONE notes say so per
+    task and no work was lost. **The recurrence is in the shell:** a PowerShell here-string used in Git Bash
+    produced a malformed commit subject repeatedly this milestone (reported by the human as ~five times),
+    caught and amended every time — `git log` shows every subject well-formed, so the *catching* worked and
+    only the *avoiding* did not. → **The mechanical default: pass commit messages with `-F` (a file or a
+    heredoc), never an inline here-string.** *(Checked before writing this: the lesson was **NOT** already
+    banked — `retro.md`, `decisions.md`, `WORKFLOW.md` and `AGENTS.md` contain no mention of it. This is the
+    first time it is written down, which is itself the explanation for five recurrences.)* Same family, also
+    reported this milestone: **a recursive delete followed a junction into `node_modules`** (4.4) — that is
+    M4's `git checkout` incident's class exactly, **a destructive command traversing into state you did not
+    mean to touch** — so the general form of both is *bound the blast radius before you run it, don't rely on
+    remembering the exception at the moment you're moving fastest.*
+  - **Deliberately CUT from this entry — the milestone split (D-1).** It was right, but no future session
+    behaves differently for reading that: 005 alone produced five discovered tasks and a gate defect, and
+    006 additionally carries snapshot storage, `DB_VERSION` 2→3, the first dependency since M1 and a
+    PERMISSIONS.md trust-claim correction — the split is self-evidently the smaller of the two. **The one
+    fact worth keeping is a metric, not a finding, and it corrects the number this retro was briefed with:**
+    discovered work was **5 of 25 tasks (+25% over a 20-task plan), not ~35%** — but **group 4 alone
+    DOUBLED, 4 planned → 8** — and **every discovered task was rework on work already believed done**
+    (two "wired to nothing" defects, one harness fix, one falsified premise), **not new scope**. That is the
+    plannable shape: budget the discovery margin where the *wiring* is, not evenly.
+  - **Metrics:** human-gate-caught defects this milestone = **1** (4.8 — the content-script relay rendering
+    nothing); running gate score **6/6 → 7/7**, **the denominator moved for the first time since M3** · the
+    gate also **falsified one agent diagnosis** (the console line) and **confirmed one deferred measurement**
+    (5.1a) · **~21 red-first mutations recorded in the task DONE notes**, of which **5 failed to isolate the
+    property on the first attempt** (3.3's appended-block draft · 3.4's single guard · 4.1's captured
+    reference · 5.3's `stop()`-only break · 5.1's control, vacuous twice) and **2 of those revealed a second
+    independent guard** · unit **384 → 456**; browser **314 → 499 passed / 15 skipped** across 54
+    file-instances · **defects by WHO CAUGHT THEM** — **human gate = 1**; **CI mid-development = 1** (the
+    pill absent on the first file opened, six `openAndWatch` timeouts); **agent code review = 2** (4.7's
+    `grep -rn "observerDetector"` finding a spec §4 criterion FALSE in shipped code, before any test existed
+    that could; 4.6's Chrome file-URLs premise falsified against the docs **before a line was written**);
+    **measurement = 1 prevented wrong decision, not a defect** (5.1's like-for-like control) · **harness /
+    instrument defects, counted SEPARATELY = 6** (3.2 · 4.2 ×2 · 4.3 · 4.5 · 5.3 — **none of them a product
+    defect**, which is exactly why they are not in the column above) · orchestrator factual errors caught by ground-truth re-derivation = **3 verified at
+    this session's STEP 0 alone**, plus others reported in-milestone that no artifact records · sessions =
+    several (M5, ~one per task).
+    - **Why the CI column is ONE and not four, keeping M4's correction discipline:** 4.7 and 4.6 were caught
+      by **an agent reading and grepping**, not by a suite — 4.7's whole finding is that *nothing in the repo
+      could see it* — and 5.1's inversion was **measurement**. Counting those as CI catches would produce
+      exactly the number a future retro would cite to justify thinning the review and gate steps that
+      actually did the catching. **And the one genuine CI catch needs its own asterisk:** it was found by
+      **new coverage written to drive the production path**, not by the existing 48-file suite, which had
+      been green over that defect for the whole of group 4. **That distinction IS finding (1).**
+    - **Three factual claims in this retro's own brief did not survive checking, and are corrected above
+      rather than repeated:** *"tree is clean, up to date with origin"* (`git status`: **ahead by 2**);
+      *"the here-string lesson is already banked in M4's retro"* (grep: **it is nowhere**); *"discovered
+      tasks were ~35% of the milestone's task count"* (**20%; group 4 doubled**). Each cost one command.
+      **The rule from M4's finding (7) — a prompt's factual claims about repository state are UNVERIFIED
+      INPUT — is now validated on a third kind of claim: a prompt's claims about the RECORD ITSELF.**
 - **2026-07-19 · M4 close (spec 004 — themes + settings).** Auto/light/dark, persisted in the existing
   IndexedDB with **`permissions: []` still intact**, applied coherently across shell + both reader surfaces,
   plus the 003 TOC rail's open-state and width carried over as a global preference (sepia deferred, D-1).
