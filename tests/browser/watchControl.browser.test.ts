@@ -578,6 +578,16 @@ function buildAppended(extra = 4): string {
   return parts.join('\n\n');
 }
 
+/** Poll a predicate until it holds, or fail with a named reason. Used instead of a fixed sleep so
+ *  nothing here depends on a latency number (the spec's NFR is responsiveness, not a threshold). */
+async function waitFor(what: string, predicate: () => boolean, tries = 300): Promise<void> {
+  for (let i = 0; i < tries; i += 1) {
+    if (predicate()) return;
+    await new Promise<void>((r) => setTimeout(r, 20));
+  }
+  throw new Error(`timed out waiting for: ${what}`);
+}
+
 /** A detector whose callback this suite drives by hand — the real controller, no timers. */
 function handDrivenDetector(): { detector: ChangeDetector; fire: (text: string) => void } {
   let cb: ((text: string) => void) | null = null;
@@ -720,5 +730,153 @@ describe('watch under prefers-reduced-motion — follow and signal are INSTANT (
     const final = await settle(w.scroller);
     expect(final).toBeGreaterThan(0);
     expect(early).toBeGreaterThan(final - 8);
+  });
+});
+
+// ════ TASK 5.3 — THE COST-PROPORTIONAL COOLDOWN, IN A REAL ENGINE ═══════════════════════════
+//
+// ── WHAT THIS SUITE CLAIMS, AND WHAT IT DELIBERATELY DOES NOT ───────────────────────────────
+//
+// The spec's NFR is RESPONSIVENESS, not a latency number, so **no threshold is asserted here** —
+// that is the standing M1 rule and 5.1's own protocol. What is asserted is the mechanism that
+// responsiveness rests on, measured against REAL render costs on REAL engines:
+//
+//   • a stream of N changes produces FEWER than N renders — the main thread is not committed to
+//     one full synchronous `mount()` per change, which is the pile-up 5.2 decided against
+//     (`mount()` is synchronous, so callbacks QUEUE rather than interleave);
+//   • the reader LANDS ON THE NEWEST text, not on an intermediate state and not short of the end
+//     — coalescing must drop the middle without dropping the tail;
+//   • the reader is still OPERABLE afterwards — the control toggles, the watch really stops.
+//
+// Whether it FEELS responsive to a human watching an agent write for several minutes is **7.1**,
+// eye-only, and no test in this repo can stand in for it.
+//
+// The jsdom suite (`src/watch/watchController.test.ts`) owns the exact arithmetic — that the
+// cooldown SCALES with the render cost rather than being a fixed window — because that needs a
+// controlled clock and a controlled render cost. Here the costs are whatever the engine really
+// charges, which is the half jsdom cannot supply.
+//
+// ── A FLAKE THAT WAS FIXED AT ITS CAUSE, NOT ASSERTED AROUND (worth inheriting) ─────────────
+//
+// The first draft spaced the stream with `await setTimeout(0)` between changes, meaning to imitate
+// an agent writing. It failed 1 run in 3 (`12 renders for 12 changes — nothing coalesced`), and
+// the reason is instructive: a macrotask yield in a busy engine is not ~1 ms, it can exceed a
+// render's cost — and when the gap between changes exceeds the cooldown, NOTHING SHOULD coalesce.
+// The test was measuring the harness's scheduler latency, not the coalescer. **The product was
+// right and the instrument was wrong**, the same shape as 4.5's viewport flake.
+//
+// The burst below is therefore a tight loop of microtasks, which is not a simplification but a
+// more faithful model of the thing under test: `mount()` is SYNCHRONOUS, so changes arriving while
+// it runs cannot interleave — they queue and then drain BACK-TO-BACK. That drain is exactly what
+// this loop delivers. The spaced-out case is still covered, at the end of the same test, by the
+// only assertion it can support without a threshold: a later change still lands.
+
+/** One version of a streamed document, uniquely identifiable in the rendered DOM. */
+const streamDoc = (i: number): string => `${buildDoc(12)}\n\n## Stream marker ${i}\n\n${FILLER}`;
+
+interface CountedWatch extends LiveWatch {
+  renders: () => number;
+  column: () => HTMLElement;
+}
+
+/** Like `startWatch`, but wrapping the REAL `mount` so renders can be counted. The render seam is
+ *  the injection point 4.2 already established; production's mount is what actually runs, so the
+ *  costs the cooldown reacts to are the engine's real ones. */
+async function startCountedWatch(surface: Surface): Promise<CountedWatch> {
+  const { detector, fire } = handDrivenDetector();
+  const counters = { renders: 0 };
+  registerWatchTarget(
+    createWatchController({
+      detector,
+      contained: surface.name === 'contained',
+      render: (text, host, options) => {
+        counters.renders += 1;
+        mount(text, host, options);
+      },
+    }),
+  );
+  const host = surface.mount(buildDoc());
+  const scroller = resolveScrollContainer(host, surface.name === 'contained');
+  await waitForSettled(scroller);
+  controlIn(host)!.click();
+  return {
+    host,
+    scroller,
+    fire,
+    renders: () => counters.renders,
+    column: () => shadowOf(host).querySelector<HTMLElement>('.peekover-reader')!,
+  };
+}
+
+describe.each(SURFACES)('watch under a rapid update stream — $name surface (task 5.3)', (surface) => {
+  const CHANGES = 12;
+
+  it('COALESCES the stream, lands on the NEWEST text, and stays operable', async () => {
+    const w = await startCountedWatch(surface);
+    // Starting a watch renders nothing by itself — the baseline the count below is read against.
+    expect(w.renders()).toBe(0);
+
+    // THE DRAIN: changes that arrived while a synchronous `mount()` was running cannot interleave,
+    // so they run back-to-back the moment it returns. See this section's header on why this is the
+    // faithful model and a spaced-out loop was the flake.
+    for (let i = 1; i <= CHANGES; i += 1) {
+      w.fire(streamDoc(i));
+      await Promise.resolve();
+    }
+
+    // No starvation: the LAST change is not dropped, whatever happened to the ones before it.
+    await waitFor(`the reader to show stream marker ${CHANGES}`, () =>
+      w.column().textContent!.includes(`Stream marker ${CHANGES}`),
+    );
+
+    const renders = w.renders();
+    // NON-VACUOUS FROM BOTH SIDES: renders really happened (the reader is not frozen), and there
+    // were fewer of them than there were changes (the main thread was not handed one full
+    // synchronous mount per change).
+    expect(renders, 'the reader rendered nothing at all').toBeGreaterThanOrEqual(2);
+    expect(renders, `${renders} renders for ${CHANGES} changes — nothing coalesced`).toBeLessThan(
+      CHANGES,
+    );
+
+    // The reader shows the NEWEST document, not an intermediate one left behind by the burst.
+    const text = w.column().textContent!;
+    expect(text).toContain(`Stream marker ${CHANGES}`);
+    expect(text).not.toContain(`Stream marker ${CHANGES - 1}`);
+
+    // THE STREAM IS NOT WEDGED: a change arriving later, well after the burst, still lands. This
+    // is the spaced-out case, asserted the only way it can be without a threshold — eventually,
+    // not within N ms. It is what rules out a coalescer that quietly stops updating.
+    w.fire(streamDoc(99));
+    await waitFor('the reader to show a change arriving after the burst', () =>
+      w.column().textContent!.includes('Stream marker 99'),
+    );
+
+    // ...and it is still a live control, not a reader wedged behind a queue of pending work.
+    const control = controlIn(w.host)!;
+    expect(control.getAttribute('aria-pressed')).toBe('true');
+    control.click();
+    expect(control.getAttribute('aria-pressed')).toBe('false');
+    expect(w.host.hasAttribute(WATCH_HOST_ATTR)).toBe(false);
+  });
+
+  it('STOPPING mid-stream renders nothing further — no pending render outlives the watch', async () => {
+    // The same property the jsdom suite asserts against a controlled clock, re-proven where the
+    // cooldown is whatever this engine really charges for a mount: a stop during the cooldown must
+    // CANCEL the pending render, not merely be overtaken by it.
+    const w = await startCountedWatch(surface);
+
+    w.fire(streamDoc(1)); // renders immediately, and starts a cooldown
+    for (let i = 2; i <= 5; i += 1) w.fire(streamDoc(i)); // ...these coalesce into one pending
+    controlIn(w.host)!.click(); // STOP, with that render still pending
+
+    const rendersAtStop = w.renders();
+    await new Promise<void>((r) => setTimeout(r, 400));
+
+    expect(w.renders(), 'a stopped watch rendered again').toBe(rendersAtStop);
+    // The reader keeps the last thing it actually rendered — never blanked, never advanced.
+    expect(
+      w.column().textContent,
+      'the reader advanced past the last render the watch was allowed',
+    ).toContain('Stream marker 1');
   });
 });

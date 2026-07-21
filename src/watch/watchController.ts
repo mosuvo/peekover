@@ -5,10 +5,11 @@
 // without losing the reader's mode or their place (`preserveReading`, task 3.3), fire a brief
 // update signal, and follow the new content ONLY if the reader was already at the bottom.
 //
-// Debounce is deliberately NOT here. It is group 5's, chosen FROM measurement (5.1 measures, 5.2
-// decides, 5.3 implements) — the split exists because 004's 4.1 inference did not survive contact
-// with 4.2's measurement, and the only reason a budget-breaching gate never shipped is that the
-// measuring task was forbidden from choosing.
+// Debounce was deliberately NOT here at 4.2. It is group 5's, chosen FROM measurement (5.1
+// measures, 5.2 decides, 5.3 implements) — the split exists because 004's 4.1 inference did not
+// survive contact with 4.2's measurement, and the only reason a budget-breaching gate never
+// shipped is that the measuring task was forbidden from choosing. It has now been decided and it
+// lives below, as DECISION 3.
 //
 // ══ DECISION 1 — FOLLOW IS OPT-IN-BY-POSITION. THE SPEC WINS OVER THE MOCKUP. ═════════════════
 //
@@ -48,6 +49,47 @@
 // (c) ships. It is honest about what 005 knows (the file changed) rather than implying knowledge
 // it does not have (where it changed), and it costs nothing to replace: when 006 lands the diff,
 // the per-element flash becomes an ADDITION to this, not a rewrite of it.
+//
+// ══ DECISION 3 — THE COOLDOWN IS COST-PROPORTIONAL, NOT A FIXED WINDOW (tasks 5.2 + 5.3) ══════
+//
+// Decided by the human at 5.2 from 5.1's measurements, recorded in decisions.md (2026-07-21)
+// BEFORE this code was written. The rule, in one sentence:
+//
+//     After a render finishes, refuse the next one until roughly as long as that render TOOK has
+//     elapsed — and coalesce whatever arrives in between into ONE pending render carrying the
+//     NEWEST text.
+//
+// WHY PROPORTIONAL RATHER THAN A NUMBER. 5.1 measured the render at both ends of the plausible
+// range: 50 KB blocks ~35 ms synchronously (~50 ms to the 2nd rAF), 1 MB blocks ~717 ms (~806 ms).
+// A window chosen for one of those is wrong for the other by a factor of ~16. Proportional means
+// the reader gets as much idle as it just spent rendering, whatever the document turned out to be:
+// ~50 ms at 50 KB — far below the 1 s poll interval, so it is invisible on every realistic file —
+// and ~800 ms at 1 MB, where it is the difference between the main thread being roughly half free
+// and not free at all.
+//
+// WHY THIS BECAME NECESSARY AT 4.7 AND NOT BEFORE. `mount()` is SYNCHRONOUS, so detector callbacks
+// cannot interleave — they QUEUE. Until 4.7 every shipped path polled at 1 Hz, and a 1 Hz source
+// cannot produce a burst; 4.7 wired `observerDetector`, which 5.1 measured firing within ~19 ms of
+// a write. Ten changes arriving during an 800 ms render is ~8 s of solid blocking with no way to
+// scroll, cancel or even repaint. That is the failure this exists to prevent.
+//
+// THE THREE CLAUSES, EACH LOAD-BEARING:
+//   • FROM THE END, NOT THE START. Measuring the cooldown from when the render STARTED would leave
+//     no gap at all — the render itself would consume the whole window and the next one could
+//     begin the instant it returned.
+//   • MULTIPLIER 1.0. The reader gets as much idle as it spent rendering. Any other multiplier
+//     would be a threshold nobody measured (the standing rule), and this one explains itself.
+//   • COALESCE, DO NOT QUEUE. At most ONE pending render, and the NEWEST text replaces whatever
+//     was pending. **This is a viewer, not a log** — nobody needs the intermediate states of a
+//     file being written, and a queue would guarantee the pile-up the cooldown exists to stop.
+//
+// AND THE FIRST RENDER AFTER A START IS IMMEDIATE. There is no prior cost to be proportional to,
+// so there is nothing to justify making the user wait: be responsive by default, throttle only on
+// evidence. `start()` resets the cooldown for the same reason.
+//
+// The update signal therefore fires once per RENDER, not once per CHANGE. That is correct rather
+// than a compromise: the signal means "the view you are looking at just updated", and a coalesced
+// burst produces exactly one visible update. One flash per flash.
 //
 // **THE TOAST IS DEFERRED TO 006, DELIBERATELY.** The mockup's bottom-centre
 // "◈ File changed on disk — rendered live" toast is optional for 005 (tasks.md 4.2) and is not
@@ -100,6 +142,17 @@ export const DEAD_READ_NOTE =
   'deleted. The last version that was read is still shown above.';
 
 /**
+ * How much idle the reader gets per unit of render cost (task 5.2's decision).
+ *
+ * 1.0 — the cooldown equals the last render's measured cost, so the reader gets as much idle as it
+ * just spent rendering. **NOT a tuned constant and deliberately not one:** every other value would
+ * be a threshold no measurement supports, whereas this one states its own reasoning. If 7.1 finds
+ * the reader laggy at normal sizes, the honest move is to loosen or remove the mechanism (recorded
+ * revisit-when), not to hunt for a number.
+ */
+export const COOLDOWN_MULTIPLIER = 1;
+
+/**
  * PURE: is a scroll box at (or within slack of) its bottom?
  *
  * The one piece of real logic in this module, so it is unit-tested in jsdom while everything that
@@ -132,6 +185,14 @@ export interface WatchControllerOptions {
   render?: RenderFn;
   /** Injected for the unit test; defaults to the real control flash. */
   signal?: (host: HTMLElement) => void;
+  /**
+   * The clock the cooldown is measured on. Injected for exactly the same reason `render` and
+   * `signal` are (the settingsPort / changeDetector precedent): a test needs to control how long a
+   * render *costs* in order to prove the cooldown is proportional to it, and a real render in jsdom
+   * costs nothing measurable. Production passes `performance.now`, which is the right instrument —
+   * `mount()` is synchronous, so a reading either side of it IS the block, exactly.
+   */
+  now?: () => number;
 }
 
 /**
@@ -141,10 +202,42 @@ export interface WatchControllerOptions {
  * rather than capture a reference.
  */
 export function createWatchController(options: WatchControllerOptions): WatchTarget {
-  const { detector, contained = false, render = mount, signal = signalWatchUpdate } = options;
+  const {
+    detector,
+    contained = false,
+    render = mount,
+    signal = signalWatchUpdate,
+    now = () => performance.now(),
+  } = options;
   let host: HTMLElement | null = null;
   let running = false;
   let consecutiveFailures = 0;
+
+  // ── The cost-proportional cooldown's entire state (DECISION 3) ────────────────────────────
+  /** The earliest time the next render may START. 0 = no cooldown, render immediately. */
+  let readyAt = 0;
+  /** The one pending text, or null. There is never a second: the newest REPLACES this. */
+  let pendingText: string | null = null;
+  /** The timer that will flush {@link pendingText}. Cancelled by every teardown path. */
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Drop the pending render, timer and all.
+   *
+   * BOTH HALVES MATTER, and the second one is a bug this milestone has already met one level down.
+   * Clearing `pendingText` alone would leave a live timer that fires into a *restarted* watch —
+   * and a document switch is precisely `stop()` then `start()` with a DIFFERENT host
+   * (`readerPane.select()` / `appShell.selectFolderFile`). That timer would put **file A's text
+   * into file B's reader**: the cross-feed bug 4.3 proved and fixed at the detector level,
+   * reappearing at the controller level. Cancel the timer, not just the intent.
+   */
+  function cancelPending(): void {
+    if (pendingTimer !== null) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+    pendingText = null;
+  }
 
   /** Stop without going through the WatchTarget surface, so the dead-read path and an explicit
    *  user stop share one teardown and cannot drift apart. */
@@ -153,6 +246,8 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     running = false;
     host = null;
     consecutiveFailures = 0;
+    cancelPending();
+    readyAt = 0;
     detector.stop();
     notifyWatchChanged();
   }
@@ -171,10 +266,16 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     setWatchNote(DEAD_READ_NOTE);
   }
 
-  function onText(text: string): void {
-    const target = host;
-    if (!running || !target) return;
-    consecutiveFailures = 0; // a good read clears the streak; only CONSECUTIVE failures count
+  /**
+   * Re-render NOW, and set the cooldown from what that render actually cost.
+   *
+   * The whole synchronous block is timed, not just `render()`: reading the scroll geometry forces
+   * layout and the signal touches the DOM, and it is the block as a whole — start to return — that
+   * the main thread cannot do anything else during. `followToBottom`'s rAF corrections are
+   * deliberately OUTSIDE it: they run on later frames and are not part of the block.
+   */
+  function renderNow(text: string, target: HTMLElement): void {
+    const started = now();
 
     // CAPTURED BEFORE THE RE-RENDER, and it has to be: after `replaceChildren` the box's geometry
     // is the NEW document's, so "were they at the bottom" is a question only the old layout can
@@ -191,9 +292,53 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     // unconditional reset that `readerPane.select()` depends on.
     render(text, target, { contained, preserveReading: true });
 
-    // The signal fires on EVERY update; the follow only when they were tailing.
+    // The signal fires on EVERY RENDER — once per visible update, so a coalesced burst flashes
+    // once (DECISION 3). The follow fires only when they were tailing (DECISION 1).
     signal(target);
+
+    // FROM THE END, NOT THE START. See DECISION 3: measuring from the start would leave no gap.
+    readyAt = now();
+    readyAt += (readyAt - started) * COOLDOWN_MULTIPLIER;
+
     if (wasAtBottom) followToBottom(scroller);
+  }
+
+  /** The cooldown expired (or the timer fired early): render whatever is pending, if anything. */
+  function flushPending(): void {
+    pendingTimer = null;
+    const target = host;
+    if (!running || !target || pendingText === null) return;
+    // A timer may fire fractionally early (clamping, a coarse clock, a busy main thread). Then the
+    // cooldown has NOT actually elapsed, so re-arm for the remainder rather than rendering early —
+    // the cooldown is defined by the clock, not by whenever the timer happened to run.
+    const remaining = readyAt - now();
+    if (remaining > 0) {
+      pendingTimer = setTimeout(flushPending, remaining);
+      return;
+    }
+    const text = pendingText;
+    pendingText = null;
+    renderNow(text, target);
+  }
+
+  function onText(text: string): void {
+    const target = host;
+    if (!running || !target) return;
+    consecutiveFailures = 0; // a good read clears the streak; only CONSECUTIVE failures count
+
+    const wait = readyAt - now();
+    if (wait <= 0 && pendingTimer === null) {
+      renderNow(text, target);
+      return;
+    }
+
+    // COALESCE, DO NOT QUEUE (DECISION 3). One slot, and the newest text takes it — the older
+    // pending text is DROPPED, unrendered, because nobody wants to watch a file's intermediate
+    // states scroll past. The existing timer is left alone: it is already aimed at `readyAt`, and
+    // re-arming it on every change would be a trailing debounce, which STARVES against an agent
+    // that never stops writing (5.2's recorded rejection).
+    pendingText = text;
+    if (pendingTimer === null) pendingTimer = setTimeout(flushPending, wait);
   }
 
   return {
@@ -202,6 +347,12 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
       running = true;
       host = next;
       consecutiveFailures = 0;
+      // THE FIRST RENDER OF A WATCH IS IMMEDIATE: there is no prior cost to be proportional to, so
+      // there is nothing to make the user wait for. This also clears any cooldown left over from a
+      // watch on a DIFFERENT document — the previous file's render cost says nothing about this
+      // one, and `cancelPending` guarantees no timer from it survives either.
+      readyAt = 0;
+      cancelPending();
       // Starting clears any previous explanation: the user has just asked to watch THIS file, and
       // a stale "stopped watching" note from the last one would be a lie about the current state.
       setWatchNote(null);

@@ -989,7 +989,7 @@ A was edited after the switch…' to contain 'File B'`.
       or remove) or if **5.1a**'s disk latency dwarfs the OPFS inference (that changes the headroom, not
       the shape).
 
-- [ ] **5.3 Implement the CHOSEN coalescing.** Per 5.2: trailing debounce of the decided N ms, **at most one
+- [x] **5.3 Implement the CHOSEN coalescing.** Per 5.2: trailing debounce of the decided N ms, **at most one
       pending render**, intermediate texts **dropped — the newest wins** (this is a viewer, not a log).
       Lives **outside** `mount()`, which cannot be interrupted. **Re-measure in the shipped configuration**
       if 5.1 flagged any number as an inference.
@@ -1000,6 +1000,78 @@ A was edited after the switch…' to contain 'File B'`.
       a coalescer that keeps the *first* text passes a count-only test); a quiet gap produces a render per
       change. (**tests/browser** — Cr+Fx): the reader **stays responsive** under a rapid update stream (the
       spec's actual NFR — responsiveness, not a latency number). Golden EMPTY + manifest green.
+      **DONE 2026-07-21 — CONTROLLER-ONLY, exactly as 5.2 decided. `mount()`, the detectors and
+      `WATCH_INTERVAL_MS` were NOT touched** (`git status` shows three files: `watchController.ts`,
+      its unit test, and `watchControl.browser.test.ts`).
+      **THE MECHANISM.** `renderNow()` times the whole synchronous block (`performance.now()` either side —
+      `mount()` is synchronous, so a reading either side IS the block) and sets `readyAt = end + cost × 1.0`.
+      `onText` renders immediately when the cooldown has elapsed, otherwise **coalesces**: one `pendingText`
+      slot the newest change overwrites, one `setTimeout` aimed at `readyAt`. **The timer is deliberately NOT
+      re-armed per change** — re-arming is a trailing debounce, which STARVES against an agent that never
+      stops writing (5.2's recorded rejection). `flushPending` re-checks the clock and re-arms for the
+      remainder if it fired early, so the cooldown is defined by the clock rather than by whenever the timer
+      happened to run. The clock is an INJECTED `now` (the seam `render`/`signal` already established),
+      because the distinguishing property is proportionality to a render cost and a jsdom render costs
+      nothing measurable.
+      **★ THE COST-SCALING TEST IS THE ONE THAT PROVES WHAT SHIPPED**, and it was verified against the exact
+      impostor: a **FIXED 250 ms** cooldown fails it with `expected 250 to be less than 30`, while a 10 ms
+      render waits 10 ms and a 400 ms render waits 400 ms (40× the cost, 40× the wait). That mutation also
+      reddened two others — the quiet-gap test (`expected ['a','b'] to deeply equal ['a','b','c']`, a 200 ms
+      gap swallowed by the fixed window) and 4.2's signal test — so "fixed" is observably wrong in three
+      places, but **only the scaling test is red for the RIGHT reason.**
+      **RED-FIRST, FOUR MUTATIONS, each restored from a `cp` copy (`git checkout` was never used):**
+      **(A) the PRE-5.3 controller (no coalescing):** 5 unit failures —
+      `nothing may render during the cooldown: expected [...] to have a length of 1 but got 11` — and
+      **8 browser failures, both engines × both surfaces**, `12 renders for 12 changes — nothing coalesced`.
+      **(B) a fixed 250 ms window:** as above.
+      **(C) a coalescer that keeps the FIRST text** (`if (pendingText === null) pendingText = text`): **the
+      COUNT assertion PASSED and the CONTENT assertion failed** — `expected 'v1' to be 'v10'`. That is the
+      count-only-test trap this task's verify line names, demonstrated rather than assumed.
+      **(D) `stop()` stops cancelling the pending render:** the stop test goes red (`expected 1 to be +0` —
+      a live timer outliving the watch), **but the SWITCH test stayed GREEN.** **The insufficient first
+      break again** (3.4, 4.1 — the third time this milestone): `start()` cancels too, so **two independent
+      guards** cover the switch and either alone suffices. Only breaking BOTH turned it red, and the
+      consequence was then isolated in a second pass by dropping the count assertion with the break still
+      in: `+ "A: pending -> HOST B"` — **file A's text rendered into file B's host**, 4.3's cross-feed bug
+      reappearing one level up, caught in the act rather than argued.
+      **THE FOUR REQUIRED PROPERTIES:** (1) `stop()` cancels the pending render — asserted as
+      `vi.getTimerCount()` going to 0, i.e. the timer is **CANCELLED, not merely guarded at fire time**, and
+      the difference is exactly what (D) shows; (2) a document switch discards it — **asserted directly**
+      (stop → start(hostB) → no render, and no render ever carrying `hostB`), never inferred from (1);
+      (3) the update **signal fires per RENDER, not per change**, so a coalesced burst is ONE flash — stated
+      in-code and pinned by its own test; (4) **the polled paths are untouched** — at 1 Hz a ~50 ms cooldown
+      never binds, and every polled suite (`changeDetector`, `watchRelay`, `watchLifecycle`,
+      `watchObserverWiring`, `watchNetwork`) is green **byte-unmodified**.
+      **ONE 4.2 TEST GAINED A FROZEN CLOCK (`now: () => 0`), stated rather than buried:** *"fires the update
+      signal on every update"* fires twice back-to-back with a zero-cost render, where "the cooldown is zero"
+      is true on the wall clock only as a **race** between the render body and the gap between two calls.
+      Freezing makes the intended condition exact. Its assertions are unchanged.
+      **A FLAKE IN MY OWN NEW BROWSER TEST WAS FOUND AND FIXED AT ITS CAUSE (1 failure in 3 full runs), and
+      it is worth inheriting.** The first draft spaced the stream with `await setTimeout(0)`; a macrotask
+      yield in a busy engine can exceed a render's cost, and when the gap exceeds the cooldown **nothing
+      should coalesce** — so the test was measuring the harness's scheduler latency, not the coalescer
+      (`12 renders for 12 changes`). **The product was right and the instrument was wrong**, 4.5's shape
+      exactly. The burst is now a tight microtask loop, which is the FAITHFUL model rather than a
+      simplification: `mount()` is synchronous, so changes arriving during it cannot interleave — they queue
+      and drain back-to-back. The spaced case is still covered by the only assertion it can carry without a
+      threshold (a later change still lands). **No assertion was weakened.** Verified by repetition:
+      **4/4 single-file runs and 3/3 full `pnpm test:browser` runs green**, both engines.
+      **NO THRESHOLD IS ASSERTED IN THE REAL ENGINE** (the spec's NFR is responsiveness): what is asserted is
+      fewer renders than changes (non-vacuous from both sides — ≥2 renders AND <12), the reader landing on
+      the **NEWEST** text, a post-burst change still landing, and the control still toggling. Whether it
+      **feels** responsive over minutes of a real agent writing is **7.1**.
+      **NO RE-MEASUREMENT WAS OWED:** 5.1's inference flag is on the OBSERVER LATENCY (5.1a, at 7.1), not on
+      the re-render cost this decision is computed from — and the cooldown does not use a stored number at
+      all; it measures the shipped path **every render, in the shipped configuration**, which is what makes
+      it self-calibrating.
+      **D-1 no storage · D-2 no dependency** (still three); `permissions: []` untouched; golden diff
+      **EMPTY**; `manifest.test.ts` green and **byte-unmodified since M2**. `pnpm lint` clean; `pnpm test`
+      **452** (was 445, +7); `pnpm test:browser` **481 passed / 15 skipped** (was 473/15, +8 = 4 × two
+      engines), **52 file-instances unchanged**, serial per 4.5.
+      **One environment note:** the recorded `EACCES ::1:63315` Windows reserved-port collision recurred
+      (decisions.md 2026-07-21; `netsh` confirms 63230–63329 reserved on this machine). The documented
+      **local-only** `browser.api.port` override was used for every browser run above and **stripped before
+      the commit** — `vitest.config.ts` is unmodified.
 
 ## 6 — Perf / bytes / pins / docs
 

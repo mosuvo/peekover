@@ -71,8 +71,17 @@ render, refuse the next until roughly as long as that render TOOK has elapsed **
 (multiplier 1.0); changes inside the cooldown are **COALESCED, not queued** — one pending render, **newest
 text wins**; the FIRST render after a start is immediate. ~50 ms at 50 KB (invisible), ~800 ms at 1 MB
 (the main thread roughly half free instead of not at all). **Recorded in `docs/ai/decisions.md` BEFORE 5.3
-wrote a line**, per 004's D-2 pattern. **NEXT: 5.3 — implement it in `watchController.ts`.** One discovered
-task was added below 5.1:
+wrote a line**, per 004's D-2 pattern. **5.3 DONE 2026-07-21 — SHIPPED, CONTROLLER-ONLY** (`mount()`, the
+detectors and `WATCH_INTERVAL_MS` untouched). `renderNow()` times the synchronous block and sets
+`readyAt = end + cost`; `onText` coalesces into ONE pending slot the newest change overwrites, on a timer
+aimed at `readyAt` that is deliberately **not re-armed per change** (re-arming is a trailing debounce, which
+starves). **The cost-scaling test is the one that proves what shipped** — a fixed 250 ms impostor fails it
+`expected 250 to be less than 30`. **The switch-discards property has TWO independent guards** (stop AND
+start both cancel), found the same way 3.4 and 4.1 found theirs: the single break stayed green, and only
+breaking both exposed `"A: pending -> HOST B"` — 4.3's cross-feed bug one level up. **A flake in the new
+browser test was fixed at its cause, not asserted around** (a macrotask-spaced stream measures the
+harness's scheduler latency, not the coalescer — 4.5's shape); 3/3 full browser runs green after.
+**NEXT: group 6 — perf/bytes/pins/docs.** One discovered task was added below 5.1:
 **5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
 **non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
@@ -397,14 +406,13 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 
 ## Up next
 
-**Immediate: task 5.3 — implement the CHOSEN coalescing** (`specs/005-watch-diff/tasks.md`).
-**5.2 is DECIDED and RECORDED** (`decisions.md`, newest entry, landed before any 5.3 code — 004's D-2
-ordering): a **cost-proportional cooldown** (multiplier 1.0, measured from render END), **coalescing not
-queueing**, one pending render, **newest text wins**, first render immediate. 5.3 is **controller-only** —
-`mount()`, the detectors and `WATCH_INTERVAL_MS` are not touched — and its distinguishing test is the one
-that proves the cooldown **SCALES WITH COST**, since a fixed window would pass everything else.
-Gate 3 passed 2026-07-19; groups 1–4 are complete.
-*(Then: group 6 perf/bytes/pins/docs · 7.1 the human milestone-close gate.)*
+**Immediate: group 6 — 6.1 re-measure bytes + first paint, then 6.2 docs/memory reconcile**
+(`specs/005-watch-diff/tasks.md`). **Group 5 is CLOSED except 5.1a**, which is deliberately folded into the
+7.1 human gate and is non-blocking: 5.1 measured, **5.2 decided** (a cost-proportional cooldown, recorded
+before any code — 004's D-2 ordering), **5.3 shipped it controller-only**. Know before starting 6.1: the
+first-paint margin is **~7–12 ms** against the <150 ms budget and watch has been adding chrome to that path
+all milestone. Gate 3 passed 2026-07-19; groups 1–4 are complete.
+*(Then: 7.1 the human milestone-close gate — which also carries 5.1a and the relay round trip.)*
 
 **After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
 inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
