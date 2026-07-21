@@ -764,7 +764,7 @@ A was edited after the switch…' to contain 'File B'`.
       `manifest.test.ts` green unmodified. `pnpm test` **445** (was 440); `pnpm test:browser` **457 passed /
       5 skipped** both engines (was 453), suite still 50 files, serial per 4.5.
 
-- [ ] **4.7 (DISCOVERED while preparing 5.2. `observerDetector` was BUILT, TESTED, MEASURED — and WIRED
+- [x] **4.7 (DISCOVERED while preparing 5.2. `observerDetector` was BUILT, TESTED, MEASURED — and WIRED
       INTO NOTHING, so a spec §4 acceptance criterion was FALSE in shipped code.)
       Wire `observerDetector` on the Chromium app page.** Filed under group 4 because it is
       `installWatchForFile` wiring; the provenance is 5.2's preparation.
