@@ -5,363 +5,205 @@
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
 > step-by-step evidence behind a closed milestone, follow the link from its close summary below.
+> **Order is deliberate: what to do (Now · Up next · Blockers) comes before what to know (Closed
+> milestones · Baselines).**
 
 ## Now (start here)
 
-> ### M5 (spec 005 — watch mode) IS CLOSED: CODE + GATE + RETRO. NOTHING ON 005 REMAINS.
-> **7.1 PASSED 2026-07-21** — a human walked the full gate on **both engines and both surfaces**, with
-> fresh **production** builds, Network tab open and the console watched. **7.2 (the M5 retro) is BANKED**
-> in `docs/ai/retro.md`, newest-first. Every task in `specs/005-watch-diff/tasks.md` is ticked, including
-> the five discovered ones (4.5, 4.6, 4.7, 4.8, 5.1a).
-> **The gate found ONE thing, and it is a product judgement rather than a defect: the watch pill is not
-> discoverable.** Shipped as-is by human decision, recorded as a **carried item** below — the placement
-> is measured-correct (4.1) and the real problem is onboarding, which 005 has no surface for.
-> **It also earned its keep before that, and that is the milestone's headline:** the FIRST pass found a
-> shipped defect no test could reach — watch on the content-script `file://` surface detected every
-> change and rendered NONE — fixed as **discovered task 4.8**, then re-walked and confirmed working.
-> **Found in the first five minutes, on the first item checked, on the surface the automated stack
-> provably cannot reach.** The gate score is now **7/7** — the denominator moved for the first time since
-> M3, and it confirms M4's reasoning **by instance**: the item M4 kept because nothing else could observe
-> it is the item that caught the defect.
-> **NEXT — TWO STEPS, IN ORDER, NEITHER OF THEM 005 WORK:**
-> **(1) THE progress.md CONDENSE / ARCHIVE PASS.** This file is the working set and it has grown into a
-> milestone narrative again — 005's task-by-task prose belongs in `progress-archive.md` behind a close
-> summary, the way M1–M4's does. Do this BEFORE 006 starts, so 006's first session reads a working set
-> rather than a history.
-> **(2) 006 — snapshots + diff — starts a fresh Gear-3 cycle at SPEC level, in a FRESH SESSION** (C14:
-> implementation and planning contexts do not share a window). Its inputs already exist — see *Up next*.
-> **The M5 retro's nine findings are the standing input to 006's planning**, and three bear on it
-> directly: the **wired-to-nothing** class and its call-site pin (006 adds more registration seams), the
-> **`mount()` boundary** answer (006 touches `mount()` again for diff), and **red-first is a COUNT and a
-> REASON, not a colour** (twice this milestone a break that stayed green revealed a second guard).
+> ### M5 (spec 005 — watch mode) IS CLOSED: CODE + HUMAN GATE + RETRO. M6 (spec 006) IS NOT STARTED.
+> **Nothing is in progress and nothing is blocked.** Every task in `specs/005-watch-diff/tasks.md` is
+> ticked, including the five discovered ones (4.5, 4.6, 4.7, 4.8, 5.1a); the durable facts are promoted
+> into `decisions.md` / `retro.md`; the narrative is archived. **M1–M5 are all fully closed** —
+> code-complete, human-gated, retro'd — with no work of any kind outstanding on any of them.
+>
+> **THE NEXT ACTION IS 006's GEAR-3 KICKOFF, AT SPEC LEVEL, IN A FRESH SESSION.** Not code. The order is
+> **spec → gate 1 → plan → gate 2 → tasks → gate 3 → only then implementation** (WORKFLOW.md §5.3); the
+> human approves each artifact before the next is generated. **Start it in a clean context** (C14) holding
+> only the memory files and 006's inputs — which are listed under *Up next* so the kickoff session does
+> not have to reconstruct them.
+>
+> *`AGENTS.md`'s `Current milestone:` line still points at `specs/005-watch-diff/`. That is deliberate —
+> it moves to 006 at the kickoff, when the 006 spec folder actually exists.*
 
-**M4 is CLOSED. M5 (spec 005) has PASSED ITS HUMAN GATE and its code work is closed: all three Gear-3
-artifacts are APPROVED — spec.md
-(gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
-COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare) and
-**1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Group 2 is
-COMPLETE: 2.1 DONE** (the `WATCH_READ` contract + `createWatchListener` + URL validation), **2.2 DONE**
-(the relay wired — background's THIRD listener, content-script `relayRead` → `pollingDetector`,
-zero-network guard) and **2.3 DONE** (the human-run both-engines check; answers recorded, spec narrowed).
-**GROUP 3 — re-render continuity, THE RISKIEST GROUP — is IN PROGRESS: 3.1 DONE**
-(`resolveScrollContainer` extracted to `src/render/scrollContainer.ts` as a pure move; `tocScroll`
-green unchanged) and **3.2 DONE** (`readingAnchor` — capture + the text → index → `scrollTop`
-restore ladder, D-3) and **3.3 DONE — SHIPPED AS SPECIFIED, the sanctioned fallback was NOT needed**
-(`MountOptions.preserveReading`, additive and defaulted-off; `mount.ts:151` now
-`setReaderMode(host, carried?.mode ?? 'reading')`). **`mount()` is no longer read-only library** — the
-boundary four milestones respected has been crossed, deliberately and with both directions proven red
-first. **3.4 DONE — the TOC re-decide interaction is VERIFIED COVERED** (by two independent guards, not
-one). **GROUP 3 IS COMPLETE. GROUP 4 — watch UX — IS IN PROGRESS: 4.1 DONE** (the watch pill, its
-register-once registry seam, and `data-watch` on the host). The pill sits **bottom-left at 96px**,
-third in the stack above the theme pill, chosen by a measured probe rather than taste — top-right
-collides with the TOC handle, bottom-right sits inside the rail's live entry list. **The registry
-SUBSUMED 2.2's holder** (`watchRelay`'s `registerWatchDetector`/`getWatchDetector` became delegates
-into `src/watch/watchRegistry.ts`, the D-E delegate precedent), so there is ONE piece of watch state,
-not two. **Those two delegates were DELETED at 4.8** — the adapter they wrapped is the defect below. **4.2 DONE** (the controller — start/stop, the update signal, follow-at-bottom-only). **The spec
-beat the mockup on follow**: the mockup scrolls unconditionally, spec §4 forbids moving a reader who
-scrolled away, and reinstating the mockup's behaviour yanks the reader **~25,500 px** down the
-document on both engines. **The update signal flashes the CONTROL, not the document** — 005 cannot
-know which element changed without 006's diff, and a whole-column wash on every keystroke would be
-the most intrusive option available. **The toast is SKIPPED and noted for 006** (no toast primitive
-exists; the pill flash carries the same information). **4.3 DONE** (lifecycle — a gesture starts it, switching documents stops it, a dead read surfaces a
-designed state) and **4.4 DONE** (the Firefox degraded state, on BOTH closed routes). **GROUP 4 IS
-COMPLETE.** Two discovered tasks then closed: **4.5 DONE** — the browser-suite flake is fixed
-(`fileParallelism: false`, measured over global-vs-narrower serial, 12/12 green; see the flake bullet
-below), and **4.6 INVESTIGATED then RESCOPED + SHIPPED**: the original premise is FALSIFIED (Chrome's single "Allow
-access to file URLs" toggle gates BOTH content-script injection on `file://` AND the background read, so a
-running content script always has access — `isAllowedFileSchemeAccess` was NOT wired, an unreachable
-branch), and the reachable analogue it surfaced is the **real defect and now ships**: the content script
-offered a live-looking watch control on the REMOTE `http(s)` raw surfaces (raw.githubusercontent / gist /
-gitlab-raw / bitbucket-raw), where the relay refuses every read — a dead control on a surface where spec §6
-puts watch out of scope. `watchCapability` now gates the content-script decision on
-`isWatchableFileUrl(location.href)` (the relay's own predicate, passed as a boolean to keep the pure
-decision engine-free); a remote page gets a plain SCOPE note and **no detector at all**. `file://`
-behaviour is byte-identical (Chromium control kept, Firefox note unchanged); the three notes are red-first
-proven non-interchangeable (`decisions.md` 2026-07-21). **4.7 DONE — `observerDetector` was BUILT, TESTED,
-MEASURED and WIRED INTO NOTHING, so spec §4's *"on Chromium, on the app page, detect changes WITHOUT
-POLLING"* was FALSE in shipped code; it is now TRUE.** Discovered while preparing 5.2. The cause was
-architectural rather than careless — `observe()` needs a `FileSystemHandle`, M2's seam hands out `read()` —
-and the fix is that the Chromium walk **already held a handle and discarded the reference**: it is now
-carried, optional and pass-through, `WalkFileNode → FoundFile → MarkdownFile`, and the new
-`src/watch/detectorForFile.ts` branches on the **CAPABILITY** (`handle && observer`), never the engine, so
-**Firefox reaches the polled fallback by ABSENCE and not one Firefox module changed**. The content script
-still polls, correctly (URL only, no URL→handle API) — the 2×2 is made real, not collapsed. Verified by the
-MECHANISM: the seam's `read()` count stays flat across a full poll interval while changes still arrive, with
-the handle-withheld same-file case as its non-vacuity control; 1.2's dead-observation ladder and spec §7-7's
-atomic-save fallback are now asserted **through the real wiring**. **A SECOND DEFECT was found by that
-verification and fixed with it: the watch pill did not exist on the FIRST file opened in a session** (the
-target was registered after the mount that decides whether to build a control) — invisible on both engines
-until a second file was selected. **GROUP 5 IS IN PROGRESS: 5.1 DONE — both numbers are
-MEASURED** (`scripts/perf-watch.ts`, `pnpm perf:watch`, not in CI; numbers in the § Baselines / pins block
-below). **NO threshold asserted and NO debounce window chosen — 5.2 is untouched and is the human's.**
-**5.2 DONE 2026-07-21 — THE HUMAN DECIDED: a COST-PROPORTIONAL COOLDOWN, not a fixed window.** After each
-render, refuse the next until roughly as long as that render TOOK has elapsed **since it FINISHED**
-(multiplier 1.0); changes inside the cooldown are **COALESCED, not queued** — one pending render, **newest
-text wins**; the FIRST render after a start is immediate. ~50 ms at 50 KB (invisible), ~800 ms at 1 MB
-(the main thread roughly half free instead of not at all). **Recorded in `docs/ai/decisions.md` BEFORE 5.3
-wrote a line**, per 004's D-2 pattern. **5.3 DONE 2026-07-21 — SHIPPED, CONTROLLER-ONLY** (`mount()`, the
-detectors and `WATCH_INTERVAL_MS` untouched). `renderNow()` times the synchronous block and sets
-`readyAt = end + cost`; `onText` coalesces into ONE pending slot the newest change overwrites, on a timer
-aimed at `readyAt` that is deliberately **not re-armed per change** (re-arming is a trailing debounce, which
-starves). **The cost-scaling test is the one that proves what shipped** — a fixed 250 ms impostor fails it
-`expected 250 to be less than 30`. **The switch-discards property has TWO independent guards** (stop AND
-start both cancel), found the same way 3.4 and 4.1 found theirs: the single break stayed green, and only
-breaking both exposed `"A: pending -> HOST B"` — 4.3's cross-feed bug one level up. **A flake in the new
-browser test was fixed at its cause, not asserted around** (a macrotask-spaced stream measures the
-harness's scheduler latency, not the coalescer — 4.5's shape); 3/3 full browser runs green after.
-**GROUP 6 IS IN PROGRESS: 6.1 DONE 2026-07-21 — RE-MEASURED AT THE MILESTONE CLOSE, AND THE FIRST-PAINT
-GATE HELD.** The milestone's standing perf risk (watch adding chrome to a path with ~7–12 ms of margin)
-**did not materialise**: two independent 7-iteration passes read **138.6 ms** and **135.8 ms** against the
-**<150 ms** budget, with **no warm iteration over the bar** — where the M4 close's own second pass had one
-at 150.9 ms. **Called NOISE on the floor, per the M4 precedent:** the floor across both passes is
-**132.0 ms**, at/below M4's recorded min of 132.6 ms, and real added cost raises the floor. Bytes grew and
-are **STATED, not gated** (spec §5): content script **+10,757 B**, app chunk **+12,809 B**, background
-**+878 B** (the third listener). **The app-chunk baseline did not exist and was measured rather than
-guessed** — a throwaway worktree build of `70bb8ef` that reproduced the recorded content-script baseline
-**to the byte**. `pnpm zip` **335.89 / 335.95 kB**, far under 2 MB. `perf:watch` re-run twice and did
-**not** move — and the reason is recorded: that harness does not drive `watchController`, so it cannot see
-5.3's cooldown at all. Full numbers + deltas in § Baselines / pins. **6.2 DONE 2026-07-21 —
-`docs/trust/PERMISSIONS.md` now discloses the background's THIRD listener and carries a watch-relay row
-in the capability ledger**, in the ledger's own honest framing: **no new manifest permission** (a content
-script messaging its own background needs none; `permissions: []` re-proven on both built manifests by an
-**unmodified** `manifest.test.ts`), but a real capability worth disclosing — what it can touch (**only**
-`file://` markdown URLs matching the content script's own `matches`, refused **before** any read by
-`isWatchableFileUrl`), when it fires (only while the user has switched watch on), and that it is
-user-visible and stoppable in one click. **§3.6-A is now stated explicitly AND as MEASURED rather than
-asserted:** a `file://` read leaves the Resource-Timing buffer **empty on both engines** (task 2.3), so
-the http(s)-scoped zero-network guards are **correct, not conveniently scoped**. **The claim *"File
-contents are never stored"* was left EXACTLY as it is — that is DELIBERATE, not an oversight:** it is
-**true for all of 005** (D-1 — nothing here persists file contents; `DB_VERSION` is untouched at 2), and
-its correction belongs to **006**, in the same PR as the first code that stores a snapshot. Correcting
-it now would make the document wrong in the other direction. **GROUP 6 IS COMPLETE.**
-**4.8 DONE 2026-07-21 — FOUND BY A HUMAN AT THE 7.1 GATE, with 005 believed code-complete and pushed:
-watch on the content-script `file://` surface detected changes and rendered NOTHING.** The registered
-target was 4.1's placeholder, whose `start(host)` ignored the host and called `detector.start(() => {})`
-— an EMPTY callback. 4.1 wrote that it would be replaced at 4.2; **4.2 replaced it in `appShell.ts`
-only**, and 4.6 later restated the same mechanism as evidence for a different argument without anyone
-connecting it to *"so watch does nothing there"*. The human measured the relay working perfectly around
-it: **200, 28623 bytes, 88 background fetches in ~90 s, zero re-renders. THIS IS THE THIRD INSTANCE OF
-ONE CLASS IN 005** (`observerDetector` wired to nothing, the pill missing on the first file, this) and
-they share one cause: **every watch test registers its own target before mounting**, so nothing ever
-asked which target *production* registers — and `peekover.content.ts` cannot be loaded by any test at
-all, because a WXT entrypoint imports the virtual `#imports` module. **So the fix is a RELOCATION:**
-`src/watch/contentWatch.ts` (`installContentWatch`) now owns the whole decision-and-construction, the
-entrypoint keeps only `location.href` / `browser.runtime.sendMessage` / `!import.meta.env.FIREFOX`, and
-a real `createWatchController` goes into the slot — which also wires `onError`, so a file deleted while
-watched here **stops and explains** instead of failing silently forever. The placeholder was **deleted**,
-not kept as a delegate: dead code that looks live is what caused this. **The pin that generalises it**
-(`contentWatch.test.ts`, verified red against the pre-4.8 tree): *every production
-`registerWatchTarget(...)` call site builds its target with `createWatchController`.* One discovered task was
-added below 5.1:
-**5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
-**non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
-being the read-only library four milestones have treated it as. The content script builds a stopped
-detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
-control.**
-**7.1 PASSED 2026-07-21 — BOTH ENGINES, BOTH SURFACES, FRESH PRODUCTION BUILDS, NETWORK TAB OPEN. ONE
-FINDING, and it is a product judgement rather than a defect (the pill's discoverability — see the carried
-items).** The relay round trip, **the single largest gap in the milestone**, now works on the `file://`
-surface and was re-walked after 4.8's fix. The anchor (D-3) passed all three cases: **inserted-above**
-lands on the same sentence; a **wholesale heading rewrite** (`sed -i 's/^## Section/## Chapter/'`) lands
-in the same place via **the index fallback — the ladder's second rung, exercised on real disk for the
-first time**; and that same command is an **atomic save**, which **the watch survived** — answering spec
-§7-7's fragility concern on real disk rather than on OPFS. **Raw mode holds**, so 3.3's deliberate
-`scrollTop`-only asymmetry is now eyeballed rather than assumed. **5.1a is TICKED — the OPFS inference is
-CONFIRMED** (see § Baselines). The 5.3 cooldown passed a 20-append burst on the 1 MB file (**no freeze,
-landed on `burst 20` — newest wins**) with its limit stated: the burst finished in under a second, so it
-proved coalescing, not sustained pressure. **Firefox app-page watch works including 1 MB with no hitch —
-the ONLY performance evidence Firefox's watch will ever have**, since both perf harnesses are
-Chromium-only by construction. **The "Allow access to file URLs" OFF check confirms 4.6's reasoning by
-observation:** the content script does not inject at all — no control, no note, no misdirection. Zero
-network while watching; no console errors; a file deleted mid-watch **explains and keeps the last good
-render**. **5.1a and all seven carried items are DISCHARGED.**
+## Up next
 
-- **THE 5.1 NUMBERS, AND THE ONE THAT INVERTS THE OBVIOUS READING (2026-07-21).** Full table in
-  § Baselines / pins. The headline for whoever walks into 5.2: **`preserveReading` roughly DOUBLES the
-  synchronous block (16.8→34.9 ms at 50 KB; 360→717 ms at 1 MB) but adds ≈0 ms to the whole unresponsive
-  window (start → 2nd rAF).** The anchor's `getBoundingClientRect` FORCES layout inside `mount()` that a
-  plain mount pays one frame later anyway — so that delta is layout **MOVED, not ADDED**, and on this
-  evidence **the anchor is not the lever; the render itself is.** Quoting "preserve − plain" as the anchor's
-  cost would have been the wrong conclusion from a correct measurement, which is why the like-for-like
-  to-2nd-rAF control exists.
-- **THE 5127 ms IS RETIRED.** It was human reaction time (decisions.md said so at the time). Clean
-  programmatic observer latency: **18.7 ms @ 50 KB · 109.5 ms @ 1 MB** — measured **on OPFS**, because no
-  local-disk handle is obtainable without a native dialog Playwright cannot drive, so none was faked.
-  **THE INFERENCE IS NOW CONFIRMED (task 5.1a, at the 7.1 gate): on local disk a small file updates
-  instantly and 1 MB in a few milliseconds — the OPFS probe did NOT under-predict**, making this the
-  counter-example to retro finding 2's ~13× precedent rather than another instance of it. Full detail and
-  the stated limit of the confirmation are in § Baselines.
-- **INHERIT THIS BEFORE WRITING ANY A/B PERF CONTROL — 5.1's control was VACUOUS TWICE before it measured
-  anything, and both failures were silent.** (i) The first draft applied the same-size change to both the
-  control and the measured mount, so the two documents had IDENTICAL geometry and the anchor had nothing to
-  correct: **0 px drift on every cell**, a control that could never have gone positive (the same shape 3.3's
-  red-first pass caught). Fix: both mounts render an identical byte/paragraph/heading count with the block
-  merely **MOVED** — below for the control, above for the measured path. (ii) Drift read at the 2nd rAF
-  reported **2738 px contained but 2 px full-page**, because `:host` is `scroll-behavior:smooth` and the
-  write was still animating while the contained pane (`auto`) had landed. **A plausible wrong answer on
-  exactly one surface, never an error** — this milestone's recurring failure class. Read geometry after a
-  SETTLE, never on the timing frame.
+### 006 — snapshots + diff · its inputs, listed once
 
-- **THE FLAKE IS FIXED (task 4.5, 2026-07-21): `fileParallelism: false` on the `browser` project, and
-  `pnpm test:browser` is deterministic again — 12/12 consecutive green, both engines.** The choice was
-  measured, not guessed: global serial **62s** vs a narrower Firefox-instance-only serial **57s** (Vitest
-  honours per-instance `fileParallelism`) — the ~5s saving did not justify the asymmetric config while the
-  whole suite runs under a minute; parallel was 26s but ~40% flaky. NO assertion was weakened. The +36s is
-  dev/CI wall-clock only (test runtime is not a shipped metric). **One env caveat:** Vitest's default
-  browser API port (63315) can collide with a Windows reserved range (`EACCES`) — the fix is a local-only
-  `browser.api.port` override, deliberately NOT committed (orthogonal to parallelism). Root-cause record
-  retained below for provenance.
-- **[SUPERSEDED by 4.5 above — kept for the root-cause trail] THE FLAKE IS IDENTIFIED, ROOT-CAUSED, AND
-  GROUP 4 MADE IT WORSE (2026-07-20, task 4.4).** What was an unidentified 1-in-11 failure with no
-  captured name is now understood. **Signature:** ALWAYS Firefox, ALWAYS the FULL-PAGE surface
-  (`:host{position:fixed;inset:0}` — the scroll box is sized to the viewport), ALWAYS a scroll/geometry
-  assertion, and ALWAYS a *plausible wrong position or no movement*, never an error
-  (`expected 0 to be greater than 0`, `expected 8092.6 to be greater than 8092.6`,
-  `expected 2816.4 to be less than 12`). Names captured: `tocScroll` "activating an entry scrolls its
-  heading into view"; `watchAnchor` "resolves the EXACT element that scrolls" and "restores the SAME
-  heading at the SAME offset"; `watchRemount` "keeps its PLACE when content is inserted ABOVE";
-  `watchControl` "AT THE BOTTOM, appended content is FOLLOWED".
-  **MECHANISM (measured): cross-file CONCURRENCY.** `--no-file-parallelism` → **3/3 green**; with
-  parallelism → **~40% of runs fail**. Files share ONE browser window, so a viewport resize or plain
-  contention lands under another file measuring viewport-sized scroll geometry.
-  **GROUP 4 AGGRAVATED IT — stated plainly.** A git worktree at `5cf9be4` (pre-group-4, `wxt prepare`
-  run) measured **5/5 green, 367 passed**; at group-4 HEAD ~40% fail. The suite grew 372 → 458 tests
-  and 47 → 50 files. A partial mitigation inside the file fence (moving `watchControl`'s viewport
-  resizing out of a global `beforeEach`, ~30 → ~6 resizes) helped only marginally — which is itself
-  evidence that concurrency, not resizing alone, is the cause.
-  **The fix is OUT OF group 4's file fence and is flagged as discovered task 4.5, not applied:** set
-  `fileParallelism: false` on the browser project in `vitest.config.ts`, or isolate the full-page
-  geometry suites. **Do NOT weaken any of those assertions** — each is a real, red-first-proven guard
-  and the failure is the harness, not the code. **Until it is fixed, run `pnpm test:browser
-  --no-file-parallelism` for a trustworthy result.**
-- **SUPERSEDED — the original form of the watch item, kept for provenance:** During 3.3's verification a `pnpm test:browser` run reported `1 failed | 366 passed` and the
-  failing test's NAME was not captured before the next run. **10 consecutive full runs since were green**
-  (367 passed / 5 skipped, both engines), as were targeted re-runs of every group-3 suite. **Recorded as an
-  open unknown rather than dismissed**, because this milestone's standing lesson is that the SHAPE of a
-  flake matters more than its rate: the `remoteMedia` positive control flaked at a similar rate for two
-  milestones before anyone established it was the instrument proving a non-vacuous zero-network assertion.
-  **Do NOT assume it was benign, and do not assume it was in a group-3 file** — it is unidentified. If a
-  full-suite failure recurs, CAPTURE THE TEST NAME FIRST (`| grep -E "^ FAIL"`) before re-running; a
-  re-run that goes green destroys the only evidence.
-- **INHERIT THIS BEFORE WRITING ANY GEOMETRY TEST — "the box overflows" is NOT the precondition;
-  "the box has STOPPED REFLOWING" is** (measured at 3.2, 2026-07-20, both engines). The long-standing
-  `waitForScrollable` helper returns as soon as `scrollHeight > clientHeight`, which is true while the
-  reader is still restyling: on the full-page surface `scrollHeight` read **81798 px at first overflow
-  and 26069 px once settled — a 3× reflow.** Any heading offset measured in that window is stale by
-  tens of thousands of pixels, and the `scrollTop` write that follows **CLAMPS to the new maximum**,
-  silently parking the test at the document bottom. It is not a flake — it made 3.2's anchor capture
-  pick the LAST heading deterministically, on Chromium and Firefox. `watchAnchor.browser.test.ts` polls
-  `scrollHeight` for stability instead; copy that, not the older helper. **Note the failure SHAPE: a
-  clamped scroll produces a plausible wrong answer, never an error** — the same silent-wrong-answer
-  class as 003's mis-resolved scroll root.
-- **INHERIT THIS BEFORE PLANNING GROUP 4 — FIREFOX WATCH IS APP-PAGE-ONLY, measured at 2.3**
-  (decisions.md 2026-07-19). A background `fetch("file:///…")` on **Firefox 152 THROWS**: a
-  `moz-extension:` document *"may not load or link to `file:`"* — **Gecko's URI security policy, not a
-  missing toggle**, and **no permission grants it**. Combined with task-0's finding that the content script
-  cannot re-read its own file either, **both halves of the content-script route are closed on Firefox.**
-  **Chromium is unaffected** (status 200, fresh bytes) and keeps its two-surface promise. Spec §3.5 was
-  narrowed in the same commit (C12); §7-1 and §7-4 are marked RESOLVED; §4 Degradation now covers this
-  surface. **Consequence for group 4: 4.4's precondition is SATISFIED and it took the negative branch — it
-  ships the designed explanation for the Firefox content-script surface too**, not only the non-drag app
-  page, and **not a dead control**.
-- **§7-4 is also answered, and it validates the guards rather than changing them:** a `file://` read
-  produces **`[]`** in `performance.getEntriesByType('resource')` on **both** engines. The existing
-  `/^https?:/i` zero-network scoping is **correct, not merely convenient** — nothing to filter out.
-  **Stated plainly so it is not over-read:** those guards prove watch put nothing on the wire and can
-  **never** prove the local read happened. Detection tests own that, not the guards.
+**What it is:** the second half of the watch feature area. 005 shipped watch; **006 stores snapshots and
+diffs against them.** It gets its **own full Gear-3 cycle** — the split (D-1) was taken at 005's plan gate
+precisely so this would be planned rather than inherited.
 
-- **The `remoteMedia` positive-control flake is FIXED** (it had recurred — 1 failure in 10 captured runs,
-  Firefox). It now AWAITS the Resource-Timing entries to a 5 s budget instead of sampling the buffer at one
-  instant, and returns the buffer so a genuine failure still fails on the caller's own `toContain` with the
-  real diff. **Evidence: 22/22 consecutive runs green, both engines**; a deliberate break (await a URL that
-  is never fetched) goes red on both with the real message. The zero-check is untouched and stays a genuine
-  zero-check — you cannot await something that should never arrive. **The other six guard files do NOT
-  share the risk and were deliberately not touched:** their controls are `await fetch(probe)`, so the test
-  awaits the fetch promise itself, whereas `remoteMedia`'s requests are engine-initiated `<img>` loads the
-  test never awaited. That structural difference is why only that file ever flaked. If one of the six ever
-  does flake, promote the awaited helper to a shared test util rather than patching in place.
-
-- **One question the tasks draft ANSWERED by measurement rather than deferring it** (throwaway probe, run
-  and deleted 2026-07-19): **the Chromium `FileSystemObserver` path IS real-engine testable in
-  `tests/browser`, via OPFS.** `navigator.storage.getDirectory()` yields a real `FileSystemDirectoryHandle`
-  with **no user gesture** and no loaded extension, and on **HeadlessChrome/149** `observe()` on an
-  OPFS file handle is accepted and a write fires a genuine `["modified"]` record. **Firefox 151 has no
-  `FileSystemObserver` at all** (OPFS itself works), so that suite feature-gates off on Firefox — honest,
-  not a hole, since Firefox never takes the observer path in production either. **Residual limit, stated in
-  task 1.2:** OPFS is not local disk, so this proves the *wiring* and the dead-record branches, not that
-  Chromium's observer fires for a local-disk file rewritten by an external agent (task-0 established that;
-  the human gate re-walks it).
-
-- **M1 (001), M2 (002), M3 (003), M4 (004) are all fully closed** — code-complete, human-gated, retro'd.
-  **Nothing on any of them is outstanding**, and no work of any kind on 001–004 remains to be started.
-- **M5 — spec 005, watch mode** (the Phase-1 differentiator; roadmap in `docs/product/spec.md`
-  §Phase-1). Done so far: the **task-0 feasibility probe** was built, run on both engines and both
-  surfaces, and **torn down** (findings in `decisions.md` 2026-07-19, spec-005 task-0 probe);
-  **`specs/005-watch-diff/spec.md` is APPROVED at gate 1**; and **`specs/005-watch-diff/plan.md` is
-  APPROVED at gate 2** (both 2026-07-19).
-- **THE MILESTONE WAS SPLIT AT THE PLAN GATE — inherit this, it changes what 005 is.**
-  **005 = watch mode**, seven task groups (detection core · relay + Firefox verification · re-render
-  continuity · watch UX · measure→tune · perf/pins/docs · human gate). **006 = snapshots + diff**, which
-  gets its **own Gear-3 cycle** (spec-level WHAT already exists in 005's §3.3/§3.4 and its criteria
-  marked *deferred to 006*). Two consequences worth knowing before planning anything: **005 adds NO
-  dependency** (`dependencies` stays at three) and **005 stores NO file contents** — so
-  PERMISSIONS.md's "file contents are never stored" claim **stays TRUE for all of 005**, and its
-  correction lands in 006 alongside the code that forces it.
-- **All three Gear-3 gates are PASSED** (spec → plan → tasks). Implementation is under way, task by task,
-  each with its own commit, its own red-first evidence and its own pointer move. **The gates that remain
-  are the ones budgeted INSIDE tasks.md and they are human work:** **2.3** (does a background
-  `fetch("file://…")` work on Firefox at all — no harness can answer it, and it **blocks 4.4**), **5.2**
-  (the debounce window, chosen from 5.1's numbers) and **7.1** (the milestone-close gate).
-- **Three decisions were SETTLED at the plan gate (`plan.md` §0) — inherit them, do not re-litigate:**
-  - **D-1 · SPLIT taken** — 005 ships watch (7 groups, 004's proven size); snapshots + diff become 006.
-  - **D-2 · the `diff` dependency is APPROVED but DEFERRED to 006** — it would be the first
-    `dependencies` addition since M1, so it is a governed act, and it is not this milestone's.
-  - **D-3 · scroll continuity is ANCHOR-based, not `scrollTop`-based** — restoring pixels is right only
-    when content is *appended*, and an agent rewriting a file inserts *above* the reading position
-    constantly. Heading-anchor restore, `scrollTop` fallback; whether it *feels* right is human-gate-only.
-- **Four scope decisions are SETTLED at gate 1 — inherit them, do not re-litigate:**
-  1. **Scope is three of F6's six items** — auto-reload on change, watch mode, and diff vs. an earlier
-     snapshot. The other three plus the MCP bridge are out, each with a recorded home (spec §6).
-     **Since D-1, the first two are 005 and the third is 006** — the feature area is unchanged, the
-     milestone boundary moved.
-  2. **The engine split is MEASURED, not assumed:** Chromium detects **event-driven**
-     (`FileSystemObserver`, no polling); Firefox detects by **polling** and **only via the drag route**,
-     comparing **content** — `size`/`lastModified` are frozen at drop time.
-  3. **Snapshots store FILE CONTENTS.** So `docs/trust/PERMISSIONS.md`'s "File contents are never
-     stored" claim (three places) becomes false and **must be corrected in the same PR as the first code
-     that stores a snapshot** — same weight as an AGENTS.md #4 event, though no manifest change.
-     **That PR is now in 006, not 005** (D-1). Do not correct the claim early: in 005 it is still true.
-  4. **§3.6 — a local-file read is NOT a network call (option A).** Watching does not light the network
-     indicator; the zero-network guards stay **http(s)-scoped**. **Verify, do not assume** — spec §7-4.
-- **The spec's eight §7 risks are RESOLVED to concrete positions in `plan.md` §3** — read that, not the
-  spec's list. **The seven risks the plan still CARRIES into implementation are `plan.md` §4**; they are
-  stated there and deliberately not restated here. The two worth knowing before opening any file: the
-  plan **crosses the `mount()` boundary** four milestones have treated as read-only library, and the
-  **relay is untestable end-to-end** in `tests/browser`, so its round trip is a budgeted human-gate item.
+- **Spec-level WHAT already exists:** `specs/005-watch-diff/spec.md` **§3.3 / §3.4** (snapshots store file
+  contents; storage bounds) and every §4 acceptance criterion marked *deferred to 006*. They were marked,
+  not deleted — they are good criteria that land later.
+- **Plan-level starting points, written for 006 and standing:** `specs/005-watch-diff/plan.md` **§1.7**
+  (the two-store IndexedDB split that dodges `idbCore`'s STOP signal), **§1.8** (the line-diff engine and
+  the diff view — diff output goes through the existing sanitize path like any other rendered content),
+  and **§3-5** (snapshot bound defaults are proposed with reasoning, **tuneable, not gated**).
+- **`DB_VERSION` 2 → 3.** 005 deliberately did not touch it (D-1). The `idbVersionchange` suite is exactly
+  the guard for an additive upgrade preserving existing rows.
+- **★ THE `diff` DEPENDENCY — APPROVED at the 005 plan gate (D-2) but DEFERRED to here. It is the FIRST
+  `dependencies` addition since M1**, so adding it is a governed act, not a convenience. 005 shipped with
+  three and every task re-proved it.
+- **★ THE PERMISSIONS.md TRUST-CLAIM CORRECTION, which is an AGENTS.md #4-weight event even though no
+  manifest permission changes.** *"File contents are never stored"* appears in **three places** in
+  `docs/trust/PERMISSIONS.md` and becomes **FALSE** the moment the first snapshot is stored. **It is
+  corrected in the SAME PR as that code.** It was left alone through all of 005 deliberately — in 005 the
+  claim is TRUE, and correcting it early would have made the document wrong in the other direction.
+- **`permissions: []` is expected to survive this milestone too.** `tests/manifest.test.ts` has been
+  byte-unmodified since M2 (`3b6c575`); if any 006 capability seems to need a manifest permission, that is
+  a **STOP-and-flag**, not a task.
+- **The M5 retro findings that bear on 006 directly** (`retro.md` 2026-07-21 — read it, do not rely on
+  this summary):
+  - **The *built-tested-and-wired-to-nothing* class and its call-site pin.** It hit **three times** in 005
+    because every watch test registered its own target before mounting, so no test ever asked which target
+    *production* registers. **006 adds more registration seams** (snapshot store, diff view) — at least one
+    test per seam must drive the **production entry path**.
+  - **The `mount()` boundary answer. 006 touches `mount()` again** for the diff view. 005 crossed it more
+    cheaply than plan §4-1 feared, and the reasons are structural and reusable: **additive, defaulted-off,
+    read at exactly one site, with the OLD behaviour red-first proven.**
+  - **Red-first is a COUNT and a REASON, not a colour.** Twice in 005 a break that stayed green revealed a
+    **second independent guard** nobody knew about.
+  - **An entrypoint wires; it does not decide or construct** — a WXT entrypoint imports `#imports`, so no
+    Vitest project can load one. Logic there is untestable by construction.
 - **Before the first task of any group, re-read the standing rules that keep costing time when skipped:**
-  `docs/ai/decisions.md` (the harness ledger, the dead ends, the gate procedure — all three promoted
-  2026-07-19) and `docs/ai/retro.md` (newest entry first).
+  `docs/ai/decisions.md` (the harness ledger, the dead ends, the both-engines gate procedure) and
+  `docs/ai/retro.md` (newest entry first).
+
+### Carried items
+*Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
+measurement-driven or explicitly deferred.*
+
+- **★ THE WATCH PILL IS NOT DISCOVERABLE — the 7.1 gate's ONE finding, SHIPPED AS-IS by human decision,
+  carried rather than filed as a defect.** Asked whether they would have found it unaided, the human said
+  **no**: bottom-left, third in a stack (network → theme → watch), unlabelled until looked at.
+  **The placement is correct AND measured, which is why this is not a placement bug** — 4.1's throwaway
+  probe ruled out top-right (collides with the TOC handle) and bottom-right (inside the TOC rail's live
+  entry list) with real rects, and bottom-left was the only corner clearing everything. **"Right corner"
+  and "discoverable" are different properties**, and the geometry offers nowhere better.
+  **WHY IT SHIPS: discoverability is an ONBOARDING problem** (product spec F11), and **005 has no
+  onboarding surface to hang a hint on**. Inventing chrome at a gate is how you get unwalked UI — the one
+  thing this project's whole gate discipline exists to prevent. **REVISIT WHEN:** onboarding lands, or a
+  first-run hint becomes cheap on an existing surface. Recorded in `decisions.md` (2026-07-21) with its
+  reasoning; kept here so it survives into the next milestone instead of living only in a gate note.
+- **A POLISH CANDIDATE, NOT A DEFECT — the anchor's visible correction (seen at 7.1).** When content is
+  inserted above the reading position, the view **visibly moves up and then returns**: the browser holds
+  `scrollTop` through `replaceChildren`, then the anchor corrects it. That is 5.1's measured **~2738 px**
+  correction made visible — **correct behaviour with a slightly visible mechanism.** Any fix belongs with
+  006's diff work (which knows *what* changed and could avoid the full replace), not with a scroll hack.
+- **Comment-only nit, to ride along with the NEXT `src/render/tocView.ts` touch.** `clampTocWidth`'s doc
+  comment claims a non-finite input yields `TOC_MIN_WIDTH` via NaN being "caught by the caller's guard".
+  **Wrong twice; the CODE is right.** `Math.max(180, Math.min(480, NaN))` is **`NaN`** (it propagates, it
+  is not clamped), and the caller does not "catch" it — `applyStoredTocWidth` guards with
+  `Number.isFinite` and **returns early**, so `clampTocWidth` never sees a non-finite value. That guard is
+  load-bearing: without it the restore path writes literal `"NaNpx"` and silently kills `--toc-w`.
+  **Fix the comment only** — the function is *partial* on non-finite input, guarded by the caller.
+- **Sepia stays DEFERRED** (D-1 = A; `design/tokens.css` defines only 4 of ~15 sepia tokens, so completing
+  the palette is a brand/design decision, not an implementation fill). A candidate for a later themes pass.
+- **Unify the two keyboard shortcuts on ONE host registry.** 003 left `` ` `` (TOC toggle) on a host
+  registry while readerMode's `\` still resolves differently and is inert on the app page. The
+  inconsistency is deliberate and recorded (decisions.md 2026-07-17) — **revisit at a settings/hardening
+  pass, or the next time `readerMode`'s shortcut host-resolution is touched.**
+- **Chunked/virtualized *TOC-tree* render** — the many-heading lever (003 §5.1: ~45 ms rail build @1401
+  headings, scales ~linearly). **NOT forced for typical docs**; revisit at N-thousand headings
+  (decisions.md 2026-07-17).
+- **Chunked/virtualized *folder-tree* render** — the large-folder lever. 6.2 measured the pure
+  walk+build+filter as **cheap** (~7 ms typical, ~40 ms at the 5000-file cap); the suspect is `treeView`
+  laying out one DOM node per file+dir. **Decide from a real-browser tree-render measurement** (the
+  deferred half of 6.2), not from a guessed bound.
+- **Chunked/virtualized *reader* render** — the M1-carried large-*doc* first-paint lever (decisions.md
+  2026-07-14). Same class, different surface; 003's 5.2 and 004's 7.1 both confirmed no first-paint
+  regression, so it stays carried rather than forced. **005's 5.1 gives it a second, sharper motivation:
+  a 1 MB WATCH re-render blocks the main thread for ~717 ms and cannot be interrupted (`mount()` has no
+  scheduling and no abort), and unlike a first paint it happens repeatedly while the user is reading.**
+  Still not forced — 5.2/5.3's coalescing is the cheaper lever first — but this is now the strongest
+  evidence for it.
+- **Restore GFM table alignment safely** (map to a class, never an inline style) — carried from M1;
+  spec 003 §Out-of-scope leaves it to table work.
+- **A shared browser-test helper module.** `flush()` / `afterFrames()` / `waitFor()` are duplicated
+  verbatim across 6+ files (plan §4-7 named it; 005 added more). When it lands, the three instrument rules
+  in `decisions.md` 2026-07-21 belong in it — and the stability-polling wait should **replace**
+  `waitForScrollable`, not sit beside it.
+
+**Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
+**006 snapshots + diff ← NEXT** · … full order in `docs/product/spec.md` §Phase-1.
+
+## Blockers / open questions
+
+- **NOTHING IS BLOCKED AND NOTHING IS WAITING ON A HUMAN.** M5's three human gates (2.3, 5.2, 7.1) all
+  ran and are recorded. The next human gate is **006's spec gate 1**, which is the start of the next
+  milestone rather than a remainder of this one.
+- **GAPS IN AUTOMATED COVERAGE — closed as *findings*, still open as *coverage*. Plan for these; do not
+  assume CI will catch a regression in them.** Per the harness ledger (decisions.md 2026-07-19 + the
+  2026-07-21 addenda) there is **no roadmap to any of them**:
+  - **The real content→background transport.** No test on any milestone has ever exercised it — the
+    harness loads no extension, so `runtime.sendMessage` has no receiving end. **This is where M5's one
+    shipping defect lived (4.8).** 4.8 added the closest reachable substitutes (a call-site pin and
+    source-text pins on the entrypoint); **neither reaches the transport.**
+  - **Firefox first paint and Firefox's watch re-render cost.** Playwright cannot load an extension into
+    Firefox (upstream, closed out-of-scope), so both perf harnesses are Chromium-only by construction.
+    Firefox's evidence is the human gate and nothing else.
+  - **Local-disk `FileSystemObserver` latency.** No automated route to a local-disk handle exists; every
+    harness number is an OPFS inference (confirmed once, at 5.1a — see § Baselines).
+  - **From M4 and still true:** the end-to-end settings/TOC round-trip through the background, and the
+    cold-start theme flash.
+- **OPEN QUESTION (an M2 finding, NOT an 004 defect — recorded so it is not lost). Dropping a single `.md`
+  file onto the app page does nothing; only folders work.** Found by the human during the 8.1 session. 004
+  touched no folder/drop code and this did not affect the gate result; it is **spec-002 / M2 territory**.
+  **UNVERIFIED — do not assume either way.** The evidence points at folder-only **BY DESIGN** (the
+  PERMISSIONS.md ledger describes only folder drop/pick; the architecture is folder-shaped throughout —
+  `FolderSource → MarkdownFile[]`, `folderId`-keyed recents/pins, remembered directory handles, and a lone
+  file has none of those) — **but that is inference from surrounding artifacts, not verification.**
+  **Two checks would settle it:** (1) does `docs/product/spec.md` name "open a single file from the app
+  page" as a feature at all? (2) does the drop handler bail **SILENTLY**? `getAsFileSystemHandle()`
+  returns handles for files *and* directories, so it very likely checks `kind === 'directory'` — the real
+  question is whether the user gets **any** feedback. **Worth flagging regardless of the answer:** a
+  reasonable gesture producing total silence is its own small **never-blank (#5)** gap, and a line like
+  *"Drop a folder — single files open directly from your file manager"* would close it cheaply.
+  *Recorded only — not investigated, not fixed.*
+- **RESOLVED, noted once so it is not re-opened: the `remoteMedia` positive-control flake is FIXED.** It
+  now awaits the Resource-Timing entries instead of sampling for them (22/22 consecutive runs green, both
+  engines; deliberate break goes red). Retro 2026-07-19's watch item is **discharged**; the rule and the
+  structural reason only that file was ever at risk are in `decisions.md` 2026-07-21.
 
 ## Closed milestones
 
-**M4 · spec 004 — themes + settings · CLOSED 2026-07-19.** Auto/light/dark with sepia deferred (D-1),
-persisted in the existing IndexedDB with **`permissions: []` still intact** — no manifest permission was
-spent — applied coherently across the app shell and **both** reader surfaces through one theme-host
-registry, plus the 003 TOC rail's open-state and width carried over as a single global preference. Eight
-groups: store foundation · `SettingsPort` + messaging seam · theme runtime + host registry · flash
-MEASURE-then-mitigate · settings UI on both surfaces · TOC carry-over · re-measure + trust docs · the
-human gate. The headline engineering result is a **negative** one, and it is the milestone's best work:
-group 4 built the paint gate D-2 specified, measured it, found it breached the <150 ms budget on **every
-cold typical-doc open** by a cost that was **insensitive to the deadline** (75 ms → 172.7 ms; 40 ms →
-172.9 ms), and **deleted it** — shipping D-2's own recorded fallback (mount Auto + an instant re-theme).
-The **8.1 milestone-close human gate PASSED**, both engines, both surfaces, fresh production builds,
-Network tab open, **with no defects found** — the first milestone whose gate found nothing, which the
-retro answers rather than celebrates (verdict: **discipline-dominant**; the boundary moved for
-*coherence* via computed-token assertions and `emulateColorScheme`, **not** for *appearance* — contrast,
-legibility and occlusion are exactly as gate-only as in M3, so **the gate stays load-bearing**). The gate
-also discharged the three items groups 6–7 deferred into it (Firefox first paint · end-to-end TOC
-carry-over through the real messaging→background→IndexedDB path · the narrow-viewport theme-pill
-occlusion eyeball) — none of them is open. → narrative:
+**M5 · spec 005 — watch mode · CLOSED 2026-07-21.** The Phase-1 differentiator: **watch a chosen local
+markdown file and re-render it in place while an agent rewrites it**, both engines, both surfaces, with
+**`permissions: []` intact**, **no new dependency** (still three) and **no file contents stored** — so
+PERMISSIONS.md's *"file contents are never stored"* claim stayed TRUE throughout. Seven groups **plus five
+discovered tasks**. **SPLIT AT THE PLAN GATE (D-1): 005 = watch; 006 = snapshots + diff.** Detection is a
+measured **2×2, not a per-engine split**: Chromium's app page is event-driven (`FileSystemObserver` over a
+real handle), everything else polls and compares **content**, because on Firefox's drag path
+`size`/`lastModified` are frozen at drop time. **Firefox watch is app-page-only** — a background
+`fetch("file://…")` throws under Gecko's URI security policy and no permission grants it. Continuity is
+**anchor-based, not `scrollTop`-based** (D-3), which is why **`mount()` stopped being the read-only
+library four milestones had treated it as** — additive, defaulted-off, both directions red-first proven.
+**★ THE FACT TO CARRY: the 7.1 gate caught a shipping defect (4.8) in the first five minutes, on the
+first item checked, on the surface the automated stack provably cannot reach** — watch on the
+content-script `file://` surface detected every change and rendered **none** of them. **The score moved to
+7/7**, its first move since M3, confirming M4's keep-the-gate reasoning **by instance**: the item M4 kept
+*because nothing else could observe it* is the item that caught the defect. The gate's other output was a
+**product judgement, not a defect** — the pill is not discoverable, shipped as-is and carried.
+→ narrative:
+[archive § M5](progress-archive.md#m5--spec-005--watch-mode--closed-2026-07-21) · decisions:
+`decisions.md` 2026-07-19 (Firefox `file://` · the harness ledger) and 2026-07-21 (the cooldown; the
+WXT-entrypoint rule; the 5.1a confirmation; the pill; the instrument rules; `fileParallelism`) · lessons:
+`retro.md` 2026-07-21 (the **built-tested-and-wired-to-nothing** defect class; red-first is a count and a
+reason; "it's the harness" needs an isolating variable; layout MOVED not ADDED; the `mount()`-boundary
+answer).
+
+**M4 · spec 004 — themes + settings · CLOSED 2026-07-19.** Auto/light/dark (sepia deferred, D-1),
+persisted in the existing IndexedDB with **`permissions: []` still intact**, applied coherently across the
+app shell and **both** reader surfaces through one theme-host registry, plus the 003 TOC rail's state
+carried over as a global preference. Eight groups. **The headline result is a NEGATIVE one and it is the
+milestone's best work:** group 4 built the paint gate D-2 specified, measured it, found it breached the
+<150 ms budget on **every cold typical-doc open** by a cost **insensitive to the deadline** (75 ms →
+172.7 ms; 40 ms → 172.9 ms), and **deleted it** — shipping D-2's own recorded fallback. The 8.1 gate
+PASSED **with no defects found** — the first milestone whose gate found nothing, which the retro answers
+rather than celebrates (verdict: **discipline-dominant**; the boundary moved for *coherence*, not for
+*appearance*, so **the gate stays load-bearing**). It also discharged the three items groups 6–7 deferred
+into it. → narrative:
 [archive § M4](progress-archive.md#m4--spec-004--themes--settings--closed-2026-07-19) · decisions:
 `decisions.md` 2026-07-18 (D-2 + its correction of record) and 2026-07-19 (stored-vs-applied split; the
 three promoted entries) · lessons: `retro.md` 2026-07-19 (the **vacuous persistence test** defect class;
@@ -408,8 +250,8 @@ only counts what someone eventually found. *A clean gate is evidence about the B
 
 **Product progress (rough):** M1 opened build-order phase 1-of-7 (product spec §11). Spec-level
 milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TOC · 004 themes+settings ·
-005 watch · 006 snapshots+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly this is early
-foundation, ~fourth of ~12+ spec-milestones. Don't over-read the fraction.
+005 watch · 006 snapshots+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly
+this is early foundation, **~fifth of ~12+ spec-milestones**. Don't over-read the fraction.
 
 ## Baselines / pins
 *Current measured truth, as of the M5 close (task 6.1, 2026-07-21). This section is MUTABLE — each
@@ -427,35 +269,17 @@ corrected there without either lying or duplicating.*
 | `pnpm zip` Chrome / Firefox | **335.89 / 335.95 kB** | 327.61 / 327.66 kB (**+8.28 / +8.29 kB**) | <2 MB | PASS |
 | Suites | 456 unit · 499 passed / 15 skipped browser, 54 file-instances (both engines) | 384 · 314 | — | green |
 
-- **THE FIRST-PAINT GATE HELD, and the margin did NOT shrink — this was the milestone's real perf risk and
-  it did not materialise.** Watch added chrome to that path all milestone (4.1's pill, 4.3/4.4's note
-  element, 4.7's wiring), and the entry warning was ~7–12 ms of headroom. **Two independent 7-iteration
-  passes:** median **138.6 ms** (min 136.4, max 144.5) and median **135.8 ms** (min 132.0, max 137.6). The
-  second pass reads **BELOW the M4 baseline**. **No warm iteration exceeded the bar in either pass** — max
-  144.5 ms, against the M4 close's own second pass which had one warm iteration at **150.9 ms**.
-- **VERDICT: NOISE, not regression — and the FLOOR is why, applying the M4 precedent rather than
-  re-deriving it.** Real added cost raises the floor; noise moves only the middle. The floor across both
-  passes is **132.0 ms**, at/below M4's recorded min of **132.6 ms**. The cross-pass median spread
-  (**2.8 ms**) is the same magnitude as the +0.9 ms pass-1 delta and larger than it. **A +10.8 KB content
-  script did not cost measurable first paint** — the bytes are parsed once at `document_start` while the
-  gate's cost is dominated by parse+sanitize+layout of the document itself.
-- **HEADROOM IS STILL THIN and the next perf-touching session should still assume none.** The budget sits
+- **THE FIRST-PAINT GATE HELD ACROSS TWO INDEPENDENT 7-ITERATION PASSES, with no warm iteration over the
+  bar in either** (max 144.5 ms) — where the M4 close's own second pass had one at **150.9 ms**. Called
+  **NOISE, not regression, on the FLOOR**: the floor across both passes is **132.0 ms**, at/below M4's
+  recorded min of 132.6 ms. *(Full pass-by-pass evidence: archive § M5, and `tasks.md` 6.1.)*
+- **HEADROOM IS STILL THIN and the next perf-touching session should assume none.** The budget sits
   **~11–14 ms from its ceiling** on this hardware (i7-13700, Windows, headless Chromium). That is not
   better than M4's ~7–12 ms by any real amount; it is the same reading with a different noise draw.
-- **The 1 MB number IMPROVED by 64.8 ms and that is not claimed as an optimisation** — 005 did nothing to
-  the first-paint path that would explain it, so it is read as the same run-to-run variation the typical-doc
-  spread shows, drawn favourably. **A milestone that adds bytes does not get to book an unexplained speedup.**
-- **THE BYTE DELTAS ARE STATED, NOT GATED** (spec §5 — no threshold was invented). +10,757 B on the content
-  script and +12,809 B on the app chunk buy: the watch control + its registry, the `role="status"` note
-  element, the change detectors, the controller with 5.3's cooldown, `detectorForFile`, `watchAvailability`
-  and the relay client. The background's +878 B is the third listener (the watch relay) and nothing else.
-- **THE APP-CHUNK BASELINE DID NOT EXIST AND WAS MEASURED, NOT ESTIMATED.** No prior milestone recorded the
-  app-page chunk, so "+12,809 B" would have been unsupportable. It was obtained by rebuilding the M4-close
-  commit (`70bb8ef`, 004 task 7.1) in a throwaway `git worktree` and reading the artifact. **The method
-  validates itself:** that build reproduced the recorded content-script baseline **exactly — 288,654 B, to
-  the byte** — so the app-chunk number comes off the same trusted build. The worktree was removed. *(This is
-  where 4.7's `observerDetector`, `detectorForFile` and `watchController` first reach a shipped path, so the
-  app chunk is the one that should have grown most, and it did.)*
+- **The M4 app-chunk baseline DID NOT EXIST and was MEASURED, not estimated** — a throwaway `git worktree`
+  build of `70bb8ef` (M4 close). **The method validates itself:** that build reproduced the recorded
+  content-script baseline **exactly, 288,654 B to the byte**, so the "vs M4" column for the app chunk comes
+  off a build proven to be the one the recorded numbers came from.
 - **Every first-paint number here is CHROMIUM.** `perf-first-paint.ts` cannot drive Firefox
   (decisions.md 2026-07-19, harness ledger). Firefox first paint is evidenced only by the human gate.
 - **The 1 MB harness line prints `-> FAIL`** because it compares the 1 MB fixture against the *typical-doc*
@@ -467,43 +291,29 @@ corrected there without either lying or duplicating.*
   **EMPTY** · `tests/manifest.test.ts` **8/8 and byte-unmodified since M2** — last touched at `3b6c575`
   (M2 / the app-page commit), so `permissions: []` is re-proven by a test no watch task could have bent ·
   huge-doc `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean · `pnpm test` **456** ·
-  `pnpm test:browser` **499 passed / 15 skipped, 54 file-instances, both engines** (task 4.8: +4 unit
-  pins, +9 browser tests × two engines, +1 new browser file × two engines).
+  `pnpm test:browser` **499 passed / 15 skipped, 54 file-instances, both engines** (task 4.8 contributed
+  +4 unit pins, +9 browser tests × two engines, +1 new browser file × two engines).
 - **`pnpm zip` produces a THIRD artifact that is NOT the bound, stated so it is not misread:** the Firefox
   run also emits `peekover-0.0.0-sources.zip` (**3.39 MB**) — the source archive AMO requires for review,
   not a shipped package. The <2 MB bound is on the extension zips (335.89 / 335.95 kB).
 - **One environment note, unchanged and still local-only:** `pnpm test:browser` hit the recorded
   `EACCES ::1:63315` Windows reserved-port collision (decisions.md 2026-07-21). The documented
   **local-only** `browser.api.port` override was applied for the run and **stripped before commit** —
-  `vitest.config.ts` is unmodified.
+  `vitest.config.ts` is unmodified apart from 4.5's `fileParallelism: false`.
 - **Measurement protocol (unchanged since M1 — keep it, so numbers stay comparable):** 7 iterations, run 1
   discarded as cold, **median of the warm 6**, min/max as spread. **No threshold is ever asserted from a
-  measurement task** (standing M1 retro rule).
+  measurement task** (standing M1 retro rule). **Signal-vs-noise is decided on the FLOOR, not the middle**
+  — real added cost raises the floor; noise moves only the middle (the M4 precedent, applied again at 6.1).
+- **A pin certifies exactly the stage it observes.** "Golden diff EMPTY ⇒ the reading column is untouched"
+  is **FALSE** — that suite snapshots `sanitize(parse(source))`, upstream of `mount()`, and stayed empty
+  through the 5.1 chrome addition. Before citing a pin as evidence, break the property and check it goes
+  red (retro 2026-07-19, finding 3).
 
 ### Watch-mode numbers (spec 005 task 5.1, measured 2026-07-21 — `pnpm perf:watch`)
-*Same machine and protocol as the table above. **NOT a gate**: no threshold is asserted and no debounce
-window is chosen here — that is 5.2's, and it is the human's.*
-
-- **RE-RUN AT 6.1 (twice), AFTER 5.3's COOLDOWN SHIPPED — THE NUMBERS DID NOT MOVE, and the reason matters
-  more than the numbers.** `perf-watch.ts` **does not drive `watchController` at all** — it calls `mount()`
-  and `observerDetector` directly (`watchController` appears in that file only inside a comment). **So this
-  harness cannot see 5.3's cooldown, and a moved number here would have needed a different explanation than
-  "the cooldown".** Two re-run passes against 5.1's table: shipped-sync 50 KB full-page **32.8 / 33.7** (5.1:
-  34.9), 1 MB full-page **702.1 / 695.8** (5.1: 717.3), 1 MB contained **681.3 / 684.6** (5.1: 713.9);
-  parse+sanitize **11.7 / 12.4** (5.1: 12.5). Every cell is at or slightly below 5.1's, with no systematic
-  direction — **re-measurement noise on an unchanged code path**, which is exactly what it should be.
-  **The `preserveReading` finding REPRODUCED**, which is the part worth re-confirming: continuity still
-  roughly doubles the synchronous block while the whole start→2nd-rAF window moves **+24.1 ms full-page and
-  −24.8 ms contained** — opposite signs, i.e. noise around zero. **Layout MOVED, not ADDED, twice measured.**
-  Non-vacuity held per cell (2738 px vs 0 px).
-- **The ONE cell that looked like it moved, and the spread that settles it: 1 MB observer latency.** 5.1 read
-  **109.5 ms**; the 6.1 passes read **130.4** and **126.4 ms**, which invites a "+19%" story. It is **noise**:
-  the second pass's own intra-run spread is **min 100.5 – max 132.7 ms**, a 32 ms band that *contains* 5.1's
-  109.5. A 7-sample median over a 32 ms band is not stable to 20 ms. **50 KB latency is stable across all
-  three passes — 18.7 / 19.3 / 18.3 ms** (spread 17.8–19.1), which is the control that makes the 1 MB
-  band read as fixture-size variance rather than instrument drift. **Still OPFS-measured — but no longer
-  an unconfirmed inference: 5.1a walked local disk at the 7.1 gate and the magnitude class held** (small
-  file instant, 1 MB a few milliseconds; see the observer-latency bullets below).
+*Same machine and protocol as the table above. **NOT a gate**: no threshold is asserted. Re-run twice at
+6.1 and the numbers did not move — **`perf-watch.ts` calls `mount()` and `observerDetector` directly and
+never drives `watchController`, so it is structurally blind to 5.3's cooldown.** A moved number here would
+have needed a different explanation than "the cooldown".*
 
 **(b) RE-RENDER COST — production's own `mount(text, host, {preserveReading:true})`, real headless Chromium,
 on the REAL content-script `<peekover-root>` and on the app page's `.peekover-app__reader` pane shape.**
@@ -520,12 +330,14 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
   block but adds **≈0 ms at 50 KB** and **nothing distinguishable from noise at 1 MB** (+9.9 full-page,
   −39.1 contained, against a plain-path spread of 793–908) to the **whole** unresponsive window.
   `restoreReadingAnchor` reads `getBoundingClientRect` after the commit and forces layout the plain path
-  pays a frame later regardless. **Layout MOVED, not ADDED.**
+  pays a frame later regardless. **Layout MOVED, not ADDED** — reproduced on the 6.1 re-runs, with the two
+  surfaces moving in **opposite** directions (+24.1 / −24.8 ms), i.e. noise around zero.
 - **Non-vacuity, proven per cell:** with the changed block INSERTED ABOVE, the shipped path moved the scroll
   box **2738 px** to hold the reader's place while the plain control moved it **0 px** — on both surfaces.
-- **The contained surface is the one the decision governs:** `watchController` (the only caller that ever
-  sets `preserveReading`) is wired ONLY by `appShell.ts`. The content script registers 4.1's thin detector
-  adapter and never re-renders (decisions.md 2026-07-21, 4.6 finding (2)).
+- **BOTH SURFACES NOW RE-RENDER, and this corrects what this section said before task 4.8.** The table's
+  contained column governs the app page (`appShell.ts`), but the content script is **no longer** the
+  never-re-rendering surface the pre-4.8 note described — it registers a real `createWatchController` too.
+  Its cost is the full-page column.
 
 **(a) OBSERVER LATENCY — programmatic write → `observerDetector` callback, no human in the loop.**
 
@@ -538,23 +350,19 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 - **★ THE INFERENCE IS CONFIRMED — MEASURED ON LOCAL DISK AT THE 7.1 GATE, 2026-07-21 (task 5.1a).** With
   a production build loaded and a real picker-opened folder rewritten from outside the browser: **a small
   file updates INSTANTLY; the 1 MB file updates in A FEW MILLISECONDS.** The OPFS numbers **did NOT
-  under-predict local disk** — the disk path is at least as fast, so no OS-notification-queue or
-  atomic-rename penalty shows up, and **5.2's named revisit trigger ("if 5.1a's disk latency dwarfs the
-  OPFS inference") did NOT fire.**
-- **THE PROVENANCE OF THE TABLE ABOVE IS UNCHANGED AND STILL OPFS — the confirmation does not overwrite
-  it.** 18.7 / 109.5 ms were measured on **OPFS**, the only handle obtainable without a user gesture
-  (`showDirectoryPicker` opens a native dialog Playwright cannot drive — recorded M2 limit), and no
-  local-disk number was faked then or invented now. **The gate instrument is COARSER than the harness
-  instrument:** a human watching a reader update cannot resolve 18.7 ms from 109.5 ms and did not try.
-  What 5.1a confirms is the **magnitude class** — sub-perceptual at both sizes — not a rival figure.
-- **WHY A CONFIRMATION WAS WORTH A TASK, stated because "it matched" is the outcome nobody writes down:
-  this is the COUNTER-EXAMPLE to retro finding 2.** That finding's precedent — 004's isolated probe
-  under-predicting the real path by **~13×** — is the entire reason 5.1 refused to quote OPFS as a disk
-  number. **Here the isolated probe held.** A confirmed inference is evidence; an unrecorded one stays a
-  guess. The precedent is not overturned by one counter-example — it is now a rule with a known exception,
-  which is more useful than either alone.
-- **The task-0 probe's 5127 ms is RETIRED** — it was human reaction time (click MARK, alt-tab, type), as
-  decisions.md said at the time. It must not be quoted as a latency.
+  under-predict local disk**, so 5.2's named revisit trigger did not fire.
+- **THE TABLE'S PROVENANCE IS STILL OPFS and the confirmation does not overwrite it.** 18.7 / 109.5 ms
+  were measured on **OPFS**, the only handle obtainable without a user gesture (`showDirectoryPicker`
+  opens a native dialog Playwright cannot drive — recorded M2 limit); no local-disk number was faked then
+  or invented now. **The gate instrument is COARSER than the harness instrument** — a human cannot resolve
+  18.7 from 109.5 ms and did not try — so 5.1a confirms a **magnitude class**, not a rival figure. *(Why
+  the confirmation was worth a task, and why it is the counter-example to retro finding 2: `decisions.md`
+  2026-07-21.)*
+- **The task-0 probe's 5127 ms is RETIRED** — it was human reaction time. Never quote it as a latency.
+- **The 1 MB latency cell looks unstable and is not:** 5.1 read 109.5 ms, the 6.1 passes 130.4 / 126.4 ms,
+  but the second pass's own spread is **100.5–132.7 ms**, a band *containing* 109.5. **50 KB is stable
+  across all three passes (18.7 / 19.3 / 18.3)** — the control that makes the 1 MB band read as
+  fixture-size variance rather than instrument drift.
 - **CHROMIUM ONLY, twice over:** Playwright cannot load an extension into Firefox, and `FileSystemObserver`
   does not exist on Firefox (measured, task 1.2). Firefox's app-page watch (drag-opened folders) IS a
   shipped surface, so **its re-render cost is UNMEASURED** and evidenced only at 7.1.
@@ -562,144 +370,3 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
   bundles the same SOURCE with esbuild (via `tsx`'s own dependency — no devDependency added) and evaluates
   it in the page. Production source, not the production build artifact; and the bundle's own registry holds
   no watch target, so the measured mount omits the watch pill. No measurement-only code ships.
-- **A pin certifies exactly the stage it observes.** "Golden diff EMPTY ⇒ the reading column is untouched"
-  is **FALSE** — that suite snapshots `sanitize(parse(source))`, upstream of `mount()`, and stayed empty
-  through the 5.1 chrome addition. Before citing a pin as evidence, break the property and check it goes
-  red (retro 2026-07-19, finding 3).
-
-## Up next
-
-**Immediate: the progress.md CONDENSE / ARCHIVE pass — 005 is closed and nothing on it is outstanding.**
-Move 005's task-by-task narrative into `progress-archive.md` behind an M5 close summary (M1–M4 set the
-format), leaving this file the working set it is meant to be. **Then 006's Gear-3 kickoff, in a fresh
-session** (C14).
-
-**7.2 IS DONE — the M5 retro is banked** (`docs/ai/retro.md`, newest-first): **nine findings, one
-candidate cut on purpose**, and all three of `tasks.md` §7.2's questions answered from evidence.
-**The headline is a NEW named defect class — BUILT, TESTED, AND WIRED TO NOTHING**, which hit **three
-times** in 005 (4.7's unimported `observerDetector` · the pill absent on the first file opened · 4.8's
-empty render callback) with **one cause: every watch test registers its own target before mounting, so no
-test ever asked which target PRODUCTION registers.** Its rule and the WXT-entrypoint standing rule
-(`#imports` means no Vitest project can load an entrypoint — logic there is untestable by construction)
-are the parts 006 must carry. The other findings worth knowing before planning: **red-first is a COUNT and
-a REASON, not a colour**; **"it's the harness" must be argued from an isolating variable, never asserted**;
-**layout MOVED, not ADDED** (the like-for-like control that stopped 5.2 deciding from a wrong premise);
-and **M4 retro finding 2 now has a known exception** (5.1a — the OPFS probe held).
-
-**7.1 IS DONE AND ALL SEVEN CARRIED ITEMS ARE DISCHARGED** (the consolidated list that used to live here
-— relay round trip · 5.1a · the anchor's *feel* under heading rewrites incl. 3.3's Raw asymmetry ·
-Firefox first paint · Firefox's re-render cost · the degraded-state copy on all three surfaces · 4.6's
-five-second toggle-off check). **Every one was walked; the results are in `tasks.md` §7.1**, and the two
-that produced durable numbers or decisions are also in § Baselines (5.1a) and the carried items (the
-pill's discoverability). **Nothing deferred into the gate is outstanding.**
-
-**After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
-inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
-(the two-store IndexedDB split that dodges `idbCore`'s STOP signal), §1.8 (diff) and §3-5.
-
-**Carried items — banked deliberately, each with a recorded home. Do NOT guess at any of them; every one
-is either measurement-driven or explicitly deferred.**
-
-- **★ THE WATCH PILL IS NOT DISCOVERABLE — the 7.1 gate's ONE finding, SHIPPED AS-IS by human decision,
-  carried rather than filed as a defect.** Asked whether they would have found it unaided, the human said
-  **no**: bottom-left, third in a stack (network → theme → watch), unlabelled until looked at.
-  **The placement is correct AND measured, which is why this is not a placement bug** — 4.1's throwaway
-  probe ruled out top-right (collides with the TOC handle) and bottom-right (inside the TOC rail's live
-  entry list) with real rects, and bottom-left was the only corner clearing everything. **"Right corner"
-  and "discoverable" are different properties**, and the geometry offers nowhere better.
-  **WHY IT SHIPS: discoverability is an ONBOARDING problem** (product spec F11), and **005 has no
-  onboarding surface to hang a hint on**. Inventing chrome at a gate is how you get unwalked UI — the one
-  thing this project's whole gate discipline exists to prevent. **REVISIT WHEN:** onboarding lands, or a
-  first-run hint becomes cheap on an existing surface. Recorded in `decisions.md` (2026-07-21) with its
-  reasoning; kept here so it survives into the next milestone instead of living only in a gate note.
-- **A POLISH CANDIDATE, NOT A DEFECT — the anchor's visible correction (seen at 7.1).** When content is
-  inserted above the reading position, the view **visibly moves up and then returns**: the browser holds
-  `scrollTop` through `replaceChildren`, then the anchor corrects it. That is 5.1's measured **~2738 px**
-  correction made visible — **correct behaviour with a slightly visible mechanism.** Any fix belongs with
-  006's diff work (which knows *what* changed and could avoid the full replace), not with a scroll hack.
-- **Comment-only nit, to ride along with the NEXT `src/render/tocView.ts` touch.** `clampTocWidth`'s doc
-  comment claims a non-finite input yields `TOC_MIN_WIDTH` "via Math.min/Math.max's NaN propagation being
-  caught by the caller's guard". **The comment is wrong twice; the CODE is right.**
-  `Math.max(180, Math.min(480, NaN))` is **`NaN`** — NaN propagates through both, it is not clamped by
-  them — and the caller does not "catch" it: `applyStoredTocWidth` guards with `Number.isFinite` and
-  **returns early**, so `clampTocWidth` is never called with a non-finite value at all. The guard is
-  correct and load-bearing (without it the restore path writes the literal `"NaNpx"` and silently kills
-  the `--toc-w` custom property). **Only the doc comment needs fixing** — describe the function as
-  *partial* on non-finite input, guarded by the caller. No behaviour change, no test change.
-- **Sepia stays DEFERRED** (D-1 = A; `design/tokens.css` defines only 4 of ~15 sepia tokens, so completing
-  the palette is a brand/design decision, not an implementation fill). A candidate for a later themes pass.
-- **Unify the two keyboard shortcuts on ONE host registry.** 003 left `` ` `` (TOC toggle) on a host
-  registry while readerMode's `\` still resolves differently and is inert on the app page. The
-  inconsistency is deliberate and recorded (decisions.md 2026-07-17) — **revisit at a settings/hardening
-  pass, or the next time `readerMode`'s shortcut host-resolution is touched.**
-- **Chunked/virtualized *TOC-tree* render** — the many-heading lever (003 §5.1: ~45 ms rail build @1401
-  headings, scales ~linearly). **NOT forced for typical docs**; revisit at N-thousand headings
-  (decisions.md 2026-07-17).
-- **Chunked/virtualized *folder-tree* render** — the large-folder lever. 6.2 measured the pure
-  walk+build+filter as **cheap** (~7 ms typical, ~40 ms at the 5000-file cap); the suspect is `treeView`
-  laying out one DOM node per file+dir. **Decide from a real-browser tree-render measurement** (the
-  deferred half of 6.2), not from a guessed bound.
-- **Chunked/virtualized *reader* render** — the M1-carried large-*doc* first-paint lever (decisions.md
-  2026-07-14). Same class, different surface; 003's 5.2 and 004's 7.1 both confirmed no first-paint
-  regression, so it stays carried rather than forced. **005's 5.1 gives it a second, sharper motivation:
-  a 1 MB WATCH re-render blocks the main thread for ~717 ms and cannot be interrupted (`mount()` has no
-  scheduling and no abort), and unlike a first paint it happens repeatedly while the user is reading.**
-  Still not forced — 5.2/5.3's coalescing is the cheaper lever first — but this is now the strongest
-  evidence for it.
-- **Restore GFM table alignment safely** (map to a class, never an inline style) — carried from M1;
-  spec 003 §Out-of-scope leaves it to table work.
-
-**Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode** (the differentiator) ·
-**006 snapshots + diff** · … full order in `docs/product/spec.md` §Phase-1.
-
-## Blockers / open questions
-
-- **NOTHING IS BLOCKED AND NOTHING IS WAITING ON A HUMAN.** 7.1 — the acceptance an agent cannot
-  self-certify — **PASSED 2026-07-21** on both engines and both surfaces, and its one finding was a
-  product judgement the human decided in the room (ship the pill as-is; carried). **7.2 (the retro) is
-  banked, so M5 is fully closed — code + named human gate + retro — exactly as M1–M4 are. Nothing is
-  outstanding on ANY milestone**, and the next actions (the archive pass, then 006's spec gate) are new
-  work rather than remainder.
-- **The gaps that 8.1 closed are closed as *findings*, but remain gaps in AUTOMATED coverage** — Firefox
-  first paint, the real end-to-end settings/TOC round-trip through the background, and the cold-start theme
-  flash. They were never known defects; the gate walked all three and found nothing. **But a future change
-  touching those paths still has no test that can see it** — and per the harness ledger (decisions.md
-  2026-07-19) there is **no roadmap to any**. Plan coverage accordingly; do not assume CI will catch a
-  regression there.
-- **OPEN QUESTION (an M2 finding, NOT an 004 defect — recorded so it is not lost). Dropping a single `.md`
-  file onto the app page does nothing; only folders work.** Found by the human during the 8.1 session. 004
-  touched no folder/drop code and this did not affect the gate result; it is **spec-002 / M2 territory**.
-  **UNVERIFIED — do not assume either way.** The evidence points at folder-only **BY DESIGN**:
-  `docs/trust/PERMISSIONS.md`'s ledger describes only folder drop/pick in all three of its rows; M2 is the
-  "active-source foundation", where the FOLDER is the source; and the architecture is folder-shaped
-  throughout (`FolderSource → MarkdownFile[]`, `folderId`-keyed recents/pins, remembered directory handles
-  — a lone file has no `folderId` and no handle worth persisting). **But that is inference from surrounding
-  artifacts, not verification.** **Two checks would settle it:** (1) does `docs/product/spec.md` state
-  "open a single file from the app page" as a feature at all? If the product answer is "single files open
-  via `file://` through the content script; the app page is the FOLDER surface", then folder-only is
-  coherent by design. (2) does the drop handler bail **SILENTLY**? `getAsFileSystemHandle()` returns
-  handles for files *and* directories, so the code very likely checks `kind === 'directory'` — the real
-  question is whether the user gets **any** feedback. **Worth flagging regardless of the answer:** a
-  reasonable gesture producing total silence is its own small **never-blank (#5)** gap. Even if
-  single-file open is correctly out of scope, a line like *"Drop a folder — single files open directly
-  from your file manager"* would close it cheaply. *Recorded only — not investigated, not fixed.*
-- **Watch item (not a blocker): the `remoteMedia.browser.test.ts` positive control flaked once on Firefox**
-  during 7.1 — *"DOES fire the requests after opt-in"* read `[]`. Green in isolation (4/4, both engines)
-  and on full re-run (38/38 · 314/314), and 004 touches nothing in `mediaPolicy.ts`, so: a flake, not a
-  regression. **The reason it is watched rather than shrugged off is the SHAPE:** the flaky half is the
-  **positive control**, the thing whose job is to prove the zero-leak assertion is non-vacuous — had it
-  flaked the other way, the non-negotiable zero-network count would have been certified by an empty
-  buffer. **If it recurs, the fix is to AWAIT the request, not sample for it.** (retro 2026-07-19,
-  finding 1.)
-  - **IT HAS RECURRED — measured at 005 task 1.2, 2026-07-19, and it is the SAME half on the SAME engine.**
-    **1 failure in 10 consecutive full `pnpm test:browser` runs** (Firefox; Chromium never failed):
-    `AssertionError: expected [ Array(1) ] to include 'http://localhost:PORT/__peekover_pro…'` at
-    `remoteMedia.browser.test.ts:115` — the opt-in positive control, the half asserting the request IS on
-    the wire. Nothing in 005 touches `mediaPolicy.ts` or that suite, and group 1 wires nothing into the
-    render path, so this is the pre-existing flake reproducing, **not** a regression. **The prescribed fix
-    is now DUE and is no longer hypothetical:** `fetchedUrls(token)` SAMPLES the Resource-Timing buffer at
-    one instant; it must AWAIT the request instead (poll to a deadline, as `waitFor` does elsewhere).
-    Left unfixed here deliberately — it is outside group 1's file fence — and flagged for scheduling as its
-    own task. **Why it outranks a normal flake: this is the instrument that proves the non-negotiable
-    zero-network assertion is non-vacuous.** A sampling control that can read empty when the request DID
-    fire can also read empty when it did NOT.
