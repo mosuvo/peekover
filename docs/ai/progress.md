@@ -81,7 +81,19 @@ start both cancel), found the same way 3.4 and 4.1 found theirs: the single brea
 breaking both exposed `"A: pending -> HOST B"` — 4.3's cross-feed bug one level up. **A flake in the new
 browser test was fixed at its cause, not asserted around** (a macrotask-spaced stream measures the
 harness's scheduler latency, not the coalescer — 4.5's shape); 3/3 full browser runs green after.
-**NEXT: group 6 — perf/bytes/pins/docs.** One discovered task was added below 5.1:
+**GROUP 6 IS IN PROGRESS: 6.1 DONE 2026-07-21 — RE-MEASURED AT THE MILESTONE CLOSE, AND THE FIRST-PAINT
+GATE HELD.** The milestone's standing perf risk (watch adding chrome to a path with ~7–12 ms of margin)
+**did not materialise**: two independent 7-iteration passes read **138.6 ms** and **135.8 ms** against the
+**<150 ms** budget, with **no warm iteration over the bar** — where the M4 close's own second pass had one
+at 150.9 ms. **Called NOISE on the floor, per the M4 precedent:** the floor across both passes is
+**132.0 ms**, at/below M4's recorded min of 132.6 ms, and real added cost raises the floor. Bytes grew and
+are **STATED, not gated** (spec §5): content script **+10,757 B**, app chunk **+12,809 B**, background
+**+878 B** (the third listener). **The app-chunk baseline did not exist and was measured rather than
+guessed** — a throwaway worktree build of `70bb8ef` that reproduced the recorded content-script baseline
+**to the byte**. `pnpm zip` **335.89 / 335.95 kB**, far under 2 MB. `perf:watch` re-run twice and did
+**not** move — and the reason is recorded: that harness does not drive `watchController`, so it cannot see
+5.3's cooldown at all. Full numbers + deltas in § Baselines / pins. **NEXT: 6.2 — docs + memory
+reconcile.** One discovered task was added below 5.1:
 **5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
 **non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
@@ -317,35 +329,69 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 foundation, ~fourth of ~12+ spec-milestones. Don't over-read the fraction.
 
 ## Baselines / pins
-*Current measured truth, as of the M4 close (7.1, 2026-07-19). This section is MUTABLE — each milestone's
-close task overwrites the numbers and moves the previous ones into the "vs" column. It lives here, not in
-decisions.md, because decisions.md is dated append-only and a current-numbers table cannot be corrected
-there without either lying or duplicating.*
+*Current measured truth, as of the M5 close (task 6.1, 2026-07-21). This section is MUTABLE — each
+milestone's close task overwrites the numbers and moves the previous ones into the "vs" column. It lives
+here, not in decisions.md, because decisions.md is dated append-only and a current-numbers table cannot be
+corrected there without either lying or duplicating.*
 
-| pin | at M4 close | previous (003) | bound | verdict |
+| pin | at M5 close (005) | vs M4 close | bound | verdict |
 |---|---|---|---|---|
-| First paint, typical doc (50.4 KB) | **137.7 ms** | 133.5 ms | <150 ms **GATE** | PASS |
-| First paint, 1 MB / ~1400-entry TOC | **1248.6 ms** | 1196.3 ms | <1.7 s (informational) | PASS |
-| Content script (`.output/chrome-mv3/`) | **288,654 B** | 284,744 B | none — **stated, not gated** | — |
-| `pnpm zip` Chrome / Firefox | **327.61 / 327.66 kB** | 323.63 / 323.69 kB | <2 MB | PASS |
-| Suites | 384 unit · 314 browser (both engines) | 350 · 166 | — | green |
+| First paint, typical doc (50.4 KB) | **138.6 ms** (2nd pass **135.8 ms**) | 137.7 ms | <150 ms **GATE** | **PASS** |
+| First paint, 1 MB / ~1400-entry TOC | **1183.8 ms** | 1248.6 ms (**−64.8 ms**) | <1.7 s (informational) | PASS |
+| Content script (`.output/chrome-mv3/`) | **299,411 B** | 288,654 B (**+10,757 B, +3.73%**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-*.js`) | **332,895 B** | 320,086 B (**+12,809 B, +4.00%**) | none — **stated, not gated** | — |
+| Background (`background.js`) | **3,315 B** | 2,437 B (**+878 B, +36.0%**) | none — **stated, not gated** | — |
+| `pnpm zip` Chrome / Firefox | **335.89 / 335.95 kB** | 327.61 / 327.66 kB (**+8.28 / +8.29 kB**) | <2 MB | PASS |
+| Suites | 452 unit · 481 passed / 15 skipped browser, 52 file-instances (both engines) | 384 · 314 | — | green |
 
-- **HEADROOM IS THIN — the number to know before spending margin.** The typical-doc budget now sits
-  **~7–12 ms from its ceiling** on this hardware (i7-13700, Windows, headless Chromium). A second
-  independent 7-iteration pass read median 140.3 ms with a single warm iteration at **150.9 ms**, over the
-  bar. Both medians PASS and the gate is on the median — but the next perf-touching session should know
-  this before it assumes room.
-- **The +4.2 ms since 003 is NOISE, not regression, and the spread is why:** the **floor did not move**
-  (min 132.6 ms, *below* the 4.2-session min of 133.1 ms — real added cost raises the floor, noise raises
-  only the middle), and the run-to-run median spread (2.6 ms) is the same magnitude as the delta.
+- **THE FIRST-PAINT GATE HELD, and the margin did NOT shrink — this was the milestone's real perf risk and
+  it did not materialise.** Watch added chrome to that path all milestone (4.1's pill, 4.3/4.4's note
+  element, 4.7's wiring), and the entry warning was ~7–12 ms of headroom. **Two independent 7-iteration
+  passes:** median **138.6 ms** (min 136.4, max 144.5) and median **135.8 ms** (min 132.0, max 137.6). The
+  second pass reads **BELOW the M4 baseline**. **No warm iteration exceeded the bar in either pass** — max
+  144.5 ms, against the M4 close's own second pass which had one warm iteration at **150.9 ms**.
+- **VERDICT: NOISE, not regression — and the FLOOR is why, applying the M4 precedent rather than
+  re-deriving it.** Real added cost raises the floor; noise moves only the middle. The floor across both
+  passes is **132.0 ms**, at/below M4's recorded min of **132.6 ms**. The cross-pass median spread
+  (**2.8 ms**) is the same magnitude as the +0.9 ms pass-1 delta and larger than it. **A +10.8 KB content
+  script did not cost measurable first paint** — the bytes are parsed once at `document_start` while the
+  gate's cost is dominated by parse+sanitize+layout of the document itself.
+- **HEADROOM IS STILL THIN and the next perf-touching session should still assume none.** The budget sits
+  **~11–14 ms from its ceiling** on this hardware (i7-13700, Windows, headless Chromium). That is not
+  better than M4's ~7–12 ms by any real amount; it is the same reading with a different noise draw.
+- **The 1 MB number IMPROVED by 64.8 ms and that is not claimed as an optimisation** — 005 did nothing to
+  the first-paint path that would explain it, so it is read as the same run-to-run variation the typical-doc
+  spread shows, drawn favourably. **A milestone that adds bytes does not get to book an unexplained speedup.**
+- **THE BYTE DELTAS ARE STATED, NOT GATED** (spec §5 — no threshold was invented). +10,757 B on the content
+  script and +12,809 B on the app chunk buy: the watch control + its registry, the `role="status"` note
+  element, the change detectors, the controller with 5.3's cooldown, `detectorForFile`, `watchAvailability`
+  and the relay client. The background's +878 B is the third listener (the watch relay) and nothing else.
+- **THE APP-CHUNK BASELINE DID NOT EXIST AND WAS MEASURED, NOT ESTIMATED.** No prior milestone recorded the
+  app-page chunk, so "+12,809 B" would have been unsupportable. It was obtained by rebuilding the M4-close
+  commit (`70bb8ef`, 004 task 7.1) in a throwaway `git worktree` and reading the artifact. **The method
+  validates itself:** that build reproduced the recorded content-script baseline **exactly — 288,654 B, to
+  the byte** — so the app-chunk number comes off the same trusted build. The worktree was removed. *(This is
+  where 4.7's `observerDetector`, `detectorForFile` and `watchController` first reach a shipped path, so the
+  app chunk is the one that should have grown most, and it did.)*
 - **Every first-paint number here is CHROMIUM.** `perf-first-paint.ts` cannot drive Firefox
   (decisions.md 2026-07-19, harness ledger). Firefox first paint is evidenced only by the human gate.
 - **The 1 MB harness line prints `-> FAIL`** because it compares the 1 MB fixture against the *typical-doc*
   bar and self-labels the comparison informational. That is the known ~8× reading (decisions.md
-  2026-07-14), **not** a breach. Do not read it as a regression.
-- **Standing pins, all green at close:** `git diff tests/golden/output/` **EMPTY** · `tests/manifest.test.ts`
-  **8/8 and byte-unchanged** since M2 (so `permissions: []` is re-proven by an unmodified test) · huge-doc
-  `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean.
+  2026-07-14), **not** a breach. Do not read it as a regression. **Re-confirmed verbatim at 6.1:**
+  `gate [1.12 MB, large-doc (informational vs typical-doc gate)]: (a) median 1183.8ms vs <150ms -> FAIL`.
+  The verdict against the number's OWN bound (<1.7 s) is **PASS**.
+- **Standing pins, all green at the M5 close (task 6.1, 2026-07-21):** `git diff tests/golden/output/`
+  **EMPTY** · `tests/manifest.test.ts` **8/8 and byte-unmodified since M2** — last touched at `3b6c575`
+  (M2 / the app-page commit), so `permissions: []` is re-proven by a test no watch task could have bent ·
+  huge-doc `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean · `pnpm test` **452** ·
+  `pnpm test:browser` **481 passed / 15 skipped, 52 file-instances, both engines**.
+- **`pnpm zip` produces a THIRD artifact that is NOT the bound, stated so it is not misread:** the Firefox
+  run also emits `peekover-0.0.0-sources.zip` (**3.39 MB**) — the source archive AMO requires for review,
+  not a shipped package. The <2 MB bound is on the extension zips (335.89 / 335.95 kB).
+- **One environment note, unchanged and still local-only:** `pnpm test:browser` hit the recorded
+  `EACCES ::1:63315` Windows reserved-port collision (decisions.md 2026-07-21). The documented
+  **local-only** `browser.api.port` override was applied for the run and **stripped before commit** —
+  `vitest.config.ts` is unmodified.
 - **Measurement protocol (unchanged since M1 — keep it, so numbers stay comparable):** 7 iterations, run 1
   discarded as cold, **median of the warm 6**, min/max as spread. **No threshold is ever asserted from a
   measurement task** (standing M1 retro rule).
@@ -353,6 +399,26 @@ there without either lying or duplicating.*
 ### Watch-mode numbers (spec 005 task 5.1, measured 2026-07-21 — `pnpm perf:watch`)
 *Same machine and protocol as the table above. **NOT a gate**: no threshold is asserted and no debounce
 window is chosen here — that is 5.2's, and it is the human's.*
+
+- **RE-RUN AT 6.1 (twice), AFTER 5.3's COOLDOWN SHIPPED — THE NUMBERS DID NOT MOVE, and the reason matters
+  more than the numbers.** `perf-watch.ts` **does not drive `watchController` at all** — it calls `mount()`
+  and `observerDetector` directly (`watchController` appears in that file only inside a comment). **So this
+  harness cannot see 5.3's cooldown, and a moved number here would have needed a different explanation than
+  "the cooldown".** Two re-run passes against 5.1's table: shipped-sync 50 KB full-page **32.8 / 33.7** (5.1:
+  34.9), 1 MB full-page **702.1 / 695.8** (5.1: 717.3), 1 MB contained **681.3 / 684.6** (5.1: 713.9);
+  parse+sanitize **11.7 / 12.4** (5.1: 12.5). Every cell is at or slightly below 5.1's, with no systematic
+  direction — **re-measurement noise on an unchanged code path**, which is exactly what it should be.
+  **The `preserveReading` finding REPRODUCED**, which is the part worth re-confirming: continuity still
+  roughly doubles the synchronous block while the whole start→2nd-rAF window moves **+24.1 ms full-page and
+  −24.8 ms contained** — opposite signs, i.e. noise around zero. **Layout MOVED, not ADDED, twice measured.**
+  Non-vacuity held per cell (2738 px vs 0 px).
+- **The ONE cell that looked like it moved, and the spread that settles it: 1 MB observer latency.** 5.1 read
+  **109.5 ms**; the 6.1 passes read **130.4** and **126.4 ms**, which invites a "+19%" story. It is **noise**:
+  the second pass's own intra-run spread is **min 100.5 – max 132.7 ms**, a 32 ms band that *contains* 5.1's
+  109.5. A 7-sample median over a 32 ms band is not stable to 20 ms. **50 KB latency is stable across all
+  three passes — 18.7 / 19.3 / 18.3 ms** (spread 17.8–19.1), which is the control that makes the 1 MB
+  band read as fixture-size variance rather than instrument drift. **Still OPFS, still an inference about
+  local disk (5.1a).**
 
 **(b) RE-RENDER COST — production's own `mount(text, host, {preserveReading:true})`, real headless Chromium,
 on the REAL content-script `<peekover-root>` and on the app page's `.peekover-app__reader` pane shape.**
