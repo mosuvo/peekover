@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-19.*
+*Updated: 2026-07-21.*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -37,14 +37,26 @@ know which element changed without 006's diff, and a whole-column wash on every 
 the most intrusive option available. **The toast is SKIPPED and noted for 006** (no toast primitive
 exists; the pill flash carries the same information). **4.3 DONE** (lifecycle — a gesture starts it, switching documents stops it, a dead read surfaces a
 designed state) and **4.4 DONE** (the Firefox degraded state, on BOTH closed routes). **GROUP 4 IS
-COMPLETE. Next: GROUP 5 — measure then tune** (5.1 measures observer latency + re-render cost; 5.2 is
+COMPLETE.** Discovered task **4.5 DONE** — the browser-suite flake is fixed (`fileParallelism: false`,
+chosen over a narrower Firefox-only serial by measurement, 12/12 consecutive green; see the flake bullet
+below). **4.6 (the Chrome file-URLs "wrong explanation" concern) is next.** **Next: GROUP 5 — measure then
+tune** (5.1 measures observer latency + re-render cost; 5.2 is
 a HUMAN decision gate for the debounce window; nothing in group 4 pre-empted it). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
 
-- **THE FLAKE IS IDENTIFIED, ROOT-CAUSED, AND GROUP 4 MADE IT WORSE — read this before trusting a
-  `pnpm test:browser` result (2026-07-20, task 4.4).** What was an unidentified 1-in-11 failure with no
+- **THE FLAKE IS FIXED (task 4.5, 2026-07-21): `fileParallelism: false` on the `browser` project, and
+  `pnpm test:browser` is deterministic again — 12/12 consecutive green, both engines.** The choice was
+  measured, not guessed: global serial **62s** vs a narrower Firefox-instance-only serial **57s** (Vitest
+  honours per-instance `fileParallelism`) — the ~5s saving did not justify the asymmetric config while the
+  whole suite runs under a minute; parallel was 26s but ~40% flaky. NO assertion was weakened. The +36s is
+  dev/CI wall-clock only (test runtime is not a shipped metric). **One env caveat:** Vitest's default
+  browser API port (63315) can collide with a Windows reserved range (`EACCES`) — the fix is a local-only
+  `browser.api.port` override, deliberately NOT committed (orthogonal to parallelism). Root-cause record
+  retained below for provenance.
+- **[SUPERSEDED by 4.5 above — kept for the root-cause trail] THE FLAKE IS IDENTIFIED, ROOT-CAUSED, AND
+  GROUP 4 MADE IT WORSE (2026-07-20, task 4.4).** What was an unidentified 1-in-11 failure with no
   captured name is now understood. **Signature:** ALWAYS Firefox, ALWAYS the FULL-PAGE surface
   (`:host{position:fixed;inset:0}` — the scroll box is sized to the viewport), ALWAYS a scroll/geometry
   assertion, and ALWAYS a *plausible wrong position or no movement*, never an error

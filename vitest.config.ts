@@ -67,6 +67,27 @@ export default defineConfig({
         test: {
           name: 'browser',
           include: ['tests/browser/**/*.test.ts'],
+          // ── Run the browser files SERIALLY (task 4.5) ──────────────────────────────
+          // Root-caused at spec-005 group 4 (docs/ai/progress.md, tasks.md 4.5): the
+          // in-browser files share ONE browser window per engine, and its VIEWPORT is a
+          // window-global property. When two files run concurrently, one file's
+          // `page.viewport()` resize (its full-page `:host{position:fixed;inset:0}` scroll
+          // box) lands under another file's scroll-geometry measurement — producing a
+          // PLAUSIBLE WRONG POSITION (`expected 0 to be greater than 0`), never an error.
+          // Signature: ALWAYS Firefox, ALWAYS the full-page surface, ALWAYS a geometry
+          // assertion — the same silent-wrong-answer class as 003's mis-resolved scroll root.
+          //
+          // This is a HARNESS isolation defect, not a product one, and the proof is that
+          // `--no-file-parallelism` fixes it WHILE THE SAME TEST STILL RESIZES THE SAME
+          // VIEWPORT: the variable that flips pass→fail is cross-file concurrency, not the
+          // resize. Measured: parallel ~40% of runs fail (~26s); serial 0 failures across
+          // repeated runs (~62s). A narrower per-instance serialization (Firefox only)
+          // was measured too and saved ~5s (~57s) for an asymmetric, harder-to-justify
+          // config — not worth it while the whole suite runs in under a minute. The +36s
+          // is dev/CI wall-clock only; `pnpm test:browser` time is not a shipped metric.
+          // NO assertion was weakened — every one of these geometry checks is a real,
+          // red-first-proven guard, and the failure is the instrument, not the code.
+          fileParallelism: false,
           browser: {
             enabled: true,
             headless: true,

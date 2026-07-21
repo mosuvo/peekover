@@ -606,7 +606,7 @@ A was edited after the switch…' to contain 'File B'`.
       440 unit; 453 passed / 5 skipped browser both engines; lint clean; golden EMPTY; manifest
       green unmodified; `dependencies` still three.
 
-- [ ] **4.5 (DISCOVERED at 4.4 — the group-3 flake watch item is now IDENTIFIED and ROOT-CAUSED, and
+- [x] **4.5 (DISCOVERED at 4.4 — the group-3 flake watch item is now IDENTIFIED and ROOT-CAUSED, and
       GROUP 4 AGGRAVATED IT.) Make `pnpm test:browser` deterministic again.**
       **This is a STOP-and-flag, not a silent fix: the change belongs in `vitest.config.ts`, which is
       outside 005 group 4's file fence.** Nothing was edited there.
@@ -643,6 +643,40 @@ A was edited after the switch…' to contain 'File B'`.
       Files: `vitest.config.ts` (OUT OF FENCE — human decision) · `docs/ai/progress.md`
       Verify: 10 consecutive full `pnpm test:browser` runs green, both engines, under whatever
       configuration is chosen.
+      **DONE 2026-07-21 — `fileParallelism: false` on the `browser` project, chosen FROM measurement, not
+      taste.**
+      **The harness-vs-product argument, stated and confirmed rather than assumed:** the failure shape is
+      this milestone's silent-wrong-answer class (a plausible wrong scroll position, never an error), so
+      "it's the harness" had to be argued. It holds: `--no-file-parallelism` fixes it **while the same
+      test still resizes the same viewport** — the only variable that flips pass→fail is cross-file
+      concurrency, not the resize. The mechanism is that the in-browser files share ONE window per engine
+      and its VIEWPORT is a window-global property, so one file's `page.viewport()` resize lands under
+      another file's geometry measurement. Reproduced this session, exact signature: `|firefox|
+      tocScroll.browser.test.ts > full-page host: activating an entry scrolls its heading into view` →
+      `AssertionError: expected 0 to be greater than 0`.
+      **TWO options measured (medians of 3 full runs each, this machine, headless):**
+      - **(a) Global serial** (`fileParallelism: false`, chosen): **62s**, and the flake is gone.
+      - **(b) Narrower — Firefox INSTANCE serial only** (`{ browser:'firefox', fileParallelism:false }`,
+        Chromium left parallel): **57s**, also green. Vitest accepts per-instance `fileParallelism`
+        (`BrowserInstanceOption`), so this was a real option, not a hypothetical.
+      - Parallel baseline for scale: **26s**, but **1 of 3 runs failed** (the flake, reproduced).
+      **The choice, justified from the numbers:** the narrower option saves only **~5s** (57 vs 62) for an
+      **asymmetric, harder-to-explain config** ("why is only Firefox serial?"), because the Firefox
+      geometry files ARE the long pole — serializing them is most of the cost either way, and the two
+      instances barely overlap. Under the task's own rule (serial in seconds → take it; minutes → earn the
+      complexity), the whole suite runs in **under a minute**, so global serial's simplicity wins. The
+      +36s over parallel is **dev/CI wall-clock only — `pnpm test:browser` time is not a shipped metric**,
+      and group 6 re-measures PRODUCT perf (bytes/first-paint via the `perf-*` scripts), not test runtime.
+      **VERIFIED BY REPETITION: 12 / 12 consecutive full `pnpm test:browser` runs GREEN** (453 passed / 5
+      skipped, both engines) on the chosen config. **NO assertion was weakened** — every geometry check is
+      the same red-first-proven guard; only the config changed. Golden diff EMPTY; `manifest.test.ts`
+      green (in the 440-unit run, byte-unmodified); lint clean; `dependencies` still three.
+      **One environment note, kept out of the committed config:** Vitest's default browser API port
+      (63315) fell inside a Windows reserved range on this machine (`EACCES`), so the measurement runs used
+      a temporary `browser.api.port` override. It is orthogonal to parallelism (it only picks which port
+      the server binds) and was **removed before commit** — the committed diff is the comment +
+      `fileParallelism: false` and nothing else. A future run on a machine with the same reservation may
+      need the same local-only override.
 
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 
