@@ -49,11 +49,39 @@ puts watch out of scope. `watchCapability` now gates the content-script decision
 `isWatchableFileUrl(location.href)` (the relay's own predicate, passed as a boolean to keep the pure
 decision engine-free); a remote page gets a plain SCOPE note and **no detector at all**. `file://`
 behaviour is byte-identical (Chromium control kept, Firefox note unchanged); the three notes are red-first
-proven non-interchangeable (`decisions.md` 2026-07-21). **Next: GROUP 5 — measure then tune** (5.1 measures observer latency + re-render cost; 5.2 is
-a HUMAN decision gate for the debounce window; nothing in group 4 pre-empted it). Group 3 is where `mount()` stops
+proven non-interchangeable (`decisions.md` 2026-07-21). **GROUP 5 IS IN PROGRESS: 5.1 DONE — both numbers are
+MEASURED** (`scripts/perf-watch.ts`, `pnpm perf:watch`, not in CI; numbers in the § Baselines / pins block
+below). **NO threshold asserted and NO debounce window chosen — 5.2 is untouched and is the human's.**
+**NEXT: 5.2 — the HUMAN decision gate for the debounce window.** One discovered task was added below 5.1:
+**5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
+**non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's
 control.**
+
+- **THE 5.1 NUMBERS, AND THE ONE THAT INVERTS THE OBVIOUS READING (2026-07-21).** Full table in
+  § Baselines / pins. The headline for whoever walks into 5.2: **`preserveReading` roughly DOUBLES the
+  synchronous block (16.8→34.9 ms at 50 KB; 360→717 ms at 1 MB) but adds ≈0 ms to the whole unresponsive
+  window (start → 2nd rAF).** The anchor's `getBoundingClientRect` FORCES layout inside `mount()` that a
+  plain mount pays one frame later anyway — so that delta is layout **MOVED, not ADDED**, and on this
+  evidence **the anchor is not the lever; the render itself is.** Quoting "preserve − plain" as the anchor's
+  cost would have been the wrong conclusion from a correct measurement, which is why the like-for-like
+  to-2nd-rAF control exists.
+- **THE 5127 ms IS RETIRED.** It was human reaction time (decisions.md said so at the time). Clean
+  programmatic observer latency: **18.7 ms @ 50 KB · 109.5 ms @ 1 MB** — **on OPFS, which is an INFERENCE
+  about local disk, not a measurement of it.** No local-disk handle is obtainable without a native dialog
+  Playwright cannot drive, so none was faked. **Retro finding 2 is the precedent** (004's isolated probe
+  under-predicted the real path ~13×). Named home: **discovered task 5.1a**, at the 7.1 gate.
+- **INHERIT THIS BEFORE WRITING ANY A/B PERF CONTROL — 5.1's control was VACUOUS TWICE before it measured
+  anything, and both failures were silent.** (i) The first draft applied the same-size change to both the
+  control and the measured mount, so the two documents had IDENTICAL geometry and the anchor had nothing to
+  correct: **0 px drift on every cell**, a control that could never have gone positive (the same shape 3.3's
+  red-first pass caught). Fix: both mounts render an identical byte/paragraph/heading count with the block
+  merely **MOVED** — below for the control, above for the measured path. (ii) Drift read at the 2nd rAF
+  reported **2738 px contained but 2 px full-page**, because `:host` is `scroll-behavior:smooth` and the
+  write was still animating while the contained pane (`auto`) had landed. **A plausible wrong answer on
+  exactly one surface, never an error** — this milestone's recurring failure class. Read geometry after a
+  SETTLE, never on the timing frame.
 
 - **THE FLAKE IS FIXED (task 4.5, 2026-07-21): `fileParallelism: false` on the `browser` project, and
   `pnpm test:browser` is deterministic again — 12/12 consecutive green, both engines.** The choice was
@@ -292,6 +320,56 @@ there without either lying or duplicating.*
 - **Measurement protocol (unchanged since M1 — keep it, so numbers stay comparable):** 7 iterations, run 1
   discarded as cold, **median of the warm 6**, min/max as spread. **No threshold is ever asserted from a
   measurement task** (standing M1 retro rule).
+
+### Watch-mode numbers (spec 005 task 5.1, measured 2026-07-21 — `pnpm perf:watch`)
+*Same machine and protocol as the table above. **NOT a gate**: no threshold is asserted and no debounce
+window is chosen here — that is 5.2's, and it is the human's.*
+
+**(b) RE-RENDER COST — production's own `mount(text, host, {preserveReading:true})`, real headless Chromium,
+on the REAL content-script `<peekover-root>` and on the app page's `.peekover-app__reader` pane shape.**
+
+| ms (median of warm 6) | 50 KB full-page | 50 KB contained | 1 MB full-page | 1 MB contained |
+|---|---|---|---|---|
+| **shipped mount, SYNCHRONOUS** | **34.9** | **35.7** | **717.3** | **713.9** |
+| shipped, start → 2nd rAF | 49.8 | 49.7 | 811.5 | 806.3 |
+| plain mount, synchronous (control) | 16.8 | 17.0 | 359.9 | 379.3 |
+| plain, start → 2nd rAF (control) | 49.9 | 49.8 | 801.6 | 845.4 |
+| parse+sanitize only | 12.5 | 12.7 | 266.8 | 261.6 |
+
+- **READ THE TWO ROWS TOGETHER OR YOU WILL DRAW THE WRONG CONCLUSION.** Continuity doubles the SYNCHRONOUS
+  block but adds **≈0 ms at 50 KB** and **nothing distinguishable from noise at 1 MB** (+9.9 full-page,
+  −39.1 contained, against a plain-path spread of 793–908) to the **whole** unresponsive window.
+  `restoreReadingAnchor` reads `getBoundingClientRect` after the commit and forces layout the plain path
+  pays a frame later regardless. **Layout MOVED, not ADDED.**
+- **Non-vacuity, proven per cell:** with the changed block INSERTED ABOVE, the shipped path moved the scroll
+  box **2738 px** to hold the reader's place while the plain control moved it **0 px** — on both surfaces.
+- **The contained surface is the one the decision governs:** `watchController` (the only caller that ever
+  sets `preserveReading`) is wired ONLY by `appShell.ts`. The content script registers 4.1's thin detector
+  adapter and never re-renders (decisions.md 2026-07-21, 4.6 finding (2)).
+
+**(a) OBSERVER LATENCY — programmatic write → `observerDetector` callback, no human in the loop.**
+
+| | 50 KB | 1 MB |
+|---|---|---|
+| **close() → detector cb** | **18.7 ms** | **109.5 ms** |
+| write (createWritable…close) | 2.2 ms | 4.2 ms |
+| per-tick read (`getFile().text()`) | 0.6 ms | 2.4 ms |
+
+- **THIS IS AN INFERENCE ABOUT LOCAL DISK, NOT A MEASUREMENT OF IT — do not quote it as one.** Measured on
+  **OPFS**, the only handle obtainable without a user gesture; `showDirectoryPicker` opens a native dialog
+  Playwright cannot drive (recorded M2 limit), so no local-disk number exists and **none was faked**. OPFS
+  has no filesystem watcher, no atomic rename, no OS notification queue. **Retro finding 2 is the
+  precedent** — 004's isolated probe under-predicted the real path by ~13×. Named home for the real number:
+  **discovered task 5.1a**, at the 7.1 human gate; explicitly non-blocking for 5.2/5.3.
+- **The task-0 probe's 5127 ms is RETIRED** — it was human reaction time (click MARK, alt-tab, type), as
+  decisions.md said at the time. It must not be quoted as a latency.
+- **CHROMIUM ONLY, twice over:** Playwright cannot load an extension into Firefox, and `FileSystemObserver`
+  does not exist on Firefox (measured, task 1.2). Firefox's app-page watch (drag-opened folders) IS a
+  shipped surface, so **its re-render cost is UNMEASURED** and evidenced only at 7.1.
+- **Fidelity residual, stated:** the content script's isolated world exports nothing, so `perf-watch.ts`
+  bundles the same SOURCE with esbuild (via `tsx`'s own dependency — no devDependency added) and evaluates
+  it in the page. Production source, not the production build artifact; and the bundle's own registry holds
+  no watch target, so the measured mount omits the watch pill. No measurement-only code ships.
 - **A pin certifies exactly the stage it observes.** "Golden diff EMPTY ⇒ the reading column is untouched"
   is **FALSE** — that suite snapshots `sanitize(parse(source))`, upstream of `mount()`, and stayed empty
   through the 5.1 chrome addition. Before citing a pin as evidence, break the property and check it goes
@@ -299,13 +377,12 @@ there without either lying or duplicating.*
 
 ## Up next
 
-**Immediate: the HUMAN REVIEW of `specs/005-watch-diff/tasks.md` — Gear-3 gate 3.** The draft exists:
-**seven groups per `plan.md` §6**, 20 tasks, red-first, each carrying its own Files + Verify line with the
-golden/manifest pins and the two-surface `describe.each` rule baked in. **It is the last gate before
-implementation code**, and nothing else is queued ahead of it. Two items inside it are themselves human
-work and are budgeted up front rather than discovered late: **2.3** (does a background `fetch("file://…")`
-work on Firefox at all — it needs a loaded extension, so no harness can answer it, and it **blocks 4.4**)
-and **5.2** (the debounce window, chosen from 5.1's numbers, deliberately split from the measuring task).
+**Immediate: task 5.2 — the HUMAN DECISION GATE for the debounce window** (`specs/005-watch-diff/tasks.md`).
+**5.1's numbers exist** (§ Baselines / pins → *Watch-mode numbers*) and the measuring task was forbidden
+from choosing, exactly as 004's D-2 split intends. The agent brings a recommendation with its reasoning and
+its uncertainty; **the choice, and whether coalescing is trailing-only, is the human's and is recorded in
+`decisions.md` BEFORE 5.3 writes code.** Gate 3 passed 2026-07-19; groups 1–4 are complete.
+*(Then: 5.3 implement · group 6 perf/bytes/pins/docs · 7.1 the human milestone-close gate.)*
 
 **After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
 inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
@@ -338,7 +415,11 @@ is either measurement-driven or explicitly deferred.**
   deferred half of 6.2), not from a guessed bound.
 - **Chunked/virtualized *reader* render** — the M1-carried large-*doc* first-paint lever (decisions.md
   2026-07-14). Same class, different surface; 003's 5.2 and 004's 7.1 both confirmed no first-paint
-  regression, so it stays carried rather than forced.
+  regression, so it stays carried rather than forced. **005's 5.1 gives it a second, sharper motivation:
+  a 1 MB WATCH re-render blocks the main thread for ~717 ms and cannot be interrupted (`mount()` has no
+  scheduling and no abort), and unlike a first paint it happens repeatedly while the user is reading.**
+  Still not forced — 5.2/5.3's coalescing is the cheaper lever first — but this is now the strongest
+  evidence for it.
 - **Restore GFM table alignment safely** (map to a class, never an inline style) — carried from M1;
   spec 003 §Out-of-scope leaves it to table work.
 

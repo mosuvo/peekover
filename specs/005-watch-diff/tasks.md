@@ -766,7 +766,7 @@ A was edited after the switch…' to contain 'File B'`.
 
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 
-- [ ] **5.1 MEASURE observer latency + re-render cost — NO THRESHOLD ASSERTED.** Two numbers this milestone
+- [x] **5.1 MEASURE observer latency + re-render cost — NO THRESHOLD ASSERTED.** Two numbers this milestone
       has been carrying as unknowns since the probe:
       **(a) Observer latency** — mark → **PROGRAMMATIC** write → callback, **with no human in the loop**.
       The probe's single 5127 ms sample was **human reaction time** (click MARK, alt-tab, type a command)
@@ -783,6 +783,89 @@ A was edited after the switch…' to contain 'File B'`.
       (standing M1 retro rule). **If a number is taken in one configuration and the decision will run in
       another, it is an INFERENCE — say so in the record and name the re-measure as 5.3's job** (retro
       2026-07-19, finding 2: the 004 settings probe under-predicted the real path ~13×).
+      **DONE 2026-07-21 — `scripts/perf-watch.ts` + `perf:watch`, NOT in CI. Protocol unchanged: 7
+      iterations, run 1 discarded, median of the warm 6, min/max as spread. NO threshold asserted and NO
+      debounce window chosen — 5.2 is untouched, and this entry carries no recommended number.**
+      **(a) OBSERVER LATENCY — median 18.7 ms @ 50 KB · 109.5 ms @ 1 MB** (write cost 2.2 / 4.2 ms stated
+      separately; per-tick `getFile().text()` read 0.6 / 2.4 ms). Programmatic write, no human in the loop,
+      through production's own `observerDetector` (not a bare `FileSystemObserver`) — so the span is the one
+      watch actually waits on: close → `getFile().text()` → content-compare → `cb`. **The probe's 5127 ms is
+      now retired as what it always was: human reaction time.**
+      **IT IS AN INFERENCE ABOUT LOCAL DISK, NOT A MEASUREMENT OF IT, and this is the task's own warning
+      honoured rather than a hedge.** It is measured on **OPFS**, the only handle obtainable without a
+      gesture — `showDirectoryPicker` opens a native dialog Playwright cannot drive (recorded M2 limit), so
+      **no local-disk number exists and none was faked**. OPFS is browser-managed storage: no filesystem
+      watcher, no atomic rename, no OS notification queue. **This is retro finding 2's exact shape** (004's
+      isolated probe under-predicted the real path ~13×), which is why the gap gets a named home rather than
+      a footnote → **discovered task 5.1a**, below.
+      **(b) RE-RENDER COST — the shipped `mount(text, host, {preserveReading:true})`, real headless
+      Chromium, on the REAL production `<peekover-root>` after a real `file://` navigation, and on the app
+      page's `<main class="peekover-app__reader">` pane shape. Both surfaces, because the decision governs
+      the CONTAINED one** (`watchController` is wired only by `appShell.ts`; the content script registers
+      4.1's thin adapter and never re-renders — decisions.md 2026-07-21, 4.6 finding (2)).
+      | | 50 KB full-page | 50 KB contained | 1 MB full-page | 1 MB contained |
+      |---|---|---|---|---|
+      | **shipped mount, SYNCHRONOUS** | **34.9 ms** | **35.7 ms** | **717.3 ms** | **713.9 ms** |
+      | shipped, start → 2nd rAF | 49.8 ms | 49.7 ms | 811.5 ms | 806.3 ms |
+      | plain mount, synchronous | 16.8 ms | 17.0 ms | 359.9 ms | 379.3 ms |
+      | plain, start → 2nd rAF | 49.9 ms | 49.8 ms | 801.6 ms | 845.4 ms |
+      | parse+sanitize only | 12.5 ms | 12.7 ms | 266.8 ms | 261.6 ms |
+      **THE BREAKDOWN WAS TAKEN, AND IT ANSWERS 5.2's REAL QUESTION — "is the anchor the lever, or is
+      debounce?" — WITH A RESULT THAT INVERTS THE OBVIOUS READING.** `preserveReading` roughly DOUBLES the
+      synchronous block (16.8→34.9 ms; 360→717 ms), because `restoreReadingAnchor` reads
+      `getBoundingClientRect` after the commit and so FORCES layout inside `mount()`. But measured
+      like-for-like — **start → 2nd rAF, the whole span in which the page cannot respond** — it adds
+      **≈0 ms at 50 KB and nothing distinguishable from noise at 1 MB** (+9.9 ms full-page, −39.1 ms
+      contained, against a plain-path spread of 793–908 ms). **A plain mount pays that same layout one frame
+      later.** So the synchronous-time delta is layout **MOVED, not ADDED**, and on this evidence **the
+      anchor is not the lever.** Stated as a measurement, not a recommendation.
+      **THE CONTROL IS NON-VACUOUS, and it took two corrections to become so — both worth inheriting.**
+      (i) The first draft **appended** the changed block for both mounts and read **0 px drift on every
+      cell**: two documents with identical geometry give the anchor nothing to correct, so the control could
+      never have gone positive — the same shape 3.3's red-first pass caught. Both mounts now render an
+      IDENTICAL byte/paragraph/heading count with the block merely **MOVED** (below for plain, above for
+      preserve), so render costs stay comparable while the geometry genuinely shifts. (ii) Drift read at the
+      2nd rAF reported **2738 px contained but 2 px full-page** — because `:host` is
+      `scroll-behavior:smooth` and the anchor's write was still animating, while the contained pane is
+      `auto` and had already landed. **A plausible wrong answer on exactly one surface, never an error.**
+      Drift is now read after a settle: **preserve 2738 px vs plain 0 px on BOTH surfaces.**
+      **HOW IT REACHES `mount()`, stated because it is the one fidelity compromise:** the content script's
+      isolated world exports nothing, so the harness bundles the SAME SOURCE with esbuild (reached through
+      `tsx`'s own dependency — **no devDependency added; `dependencies` still three**) and evaluates it in
+      the page. Residuals named in the script header and its output: production SOURCE not the production
+      BUILD ARTIFACT, and the bundle's own registry holds no watch target so the measured mount omits the
+      watch pill. **A test-only export in shipped code was NOT the alternative taken** — no measurement-only
+      code ships (established when 4.2 removed 4.1's marks).
+      **CHROMIUM ONLY, twice over:** Playwright cannot load an extension into Firefox (harness ledger), and
+      `FileSystemObserver` does not exist on Firefox at all (measured at 1.2). Firefox's app-page watch IS a
+      shipped surface, so its re-render cost is **UNMEASURED and named as such**, evidenced only at 7.1.
+      `pnpm lint` clean; `pnpm test` **445**; `pnpm test:browser` **457 passed / 5 skipped**, 50 files, both
+      engines; `git diff tests/golden/output/` **EMPTY**; `manifest.test.ts` green and **byte-unmodified**;
+      no `src/` change, no dependency, no storage (D-1, D-2 intact).
+      **One environment note:** `pnpm test:browser` hit the recorded `EACCES ::1:63315` Windows
+      reserved-port collision (decisions.md 2026-07-21); the documented **local-only** `browser.api.port`
+      override was used and **stripped before commit** — `vitest.config.ts` is unmodified.
+
+- [ ] **5.1a (DISCOVERED at 5.1 — the number 5.1 could not take, given a named home rather than a footnote.)
+      MEASURE OBSERVER LATENCY ON LOCAL DISK, at the 7.1 human gate. NON-BLOCKING: 5.2 and 5.3 proceed
+      without it.**
+      **Why it is not automatable, established not assumed:** `FileSystemObserver.observe()` needs a
+      `FileSystemHandle`; the only handle obtainable without a user gesture is **OPFS**, and the local-disk
+      route (`showDirectoryPicker`) opens a native dialog Playwright cannot drive (recorded M2 limit). 5.1
+      measured OPFS and **said so in the script output, in progress.md and in its own record** rather than
+      quoting it as a disk number.
+      **Why it still matters:** OPFS has no filesystem watcher, no atomic rename, no OS notification queue.
+      **Retro finding 2 is the precedent** — 004's isolated probe under-predicted the real path by ~13×, so
+      "the same order of magnitude" is a hypothesis here, not a fact.
+      **Why it does NOT block 5.2:** the debounce window is chosen from **(b) re-render cost**, which IS
+      measured on the shipped path. Observer latency sets how soon a change is *noticed*, not how long the
+      render *blocks* — and if it turns out to be large, that ADDS to the coalescing window's headroom
+      rather than eating it. If the human wants it before deciding, it is a 5-minute check, not a task.
+      Files: `docs/ai/progress.md` (record the number) · `docs/ai/decisions.md` (if it changes the picture)
+      Verify (**human gate, folded into 7.1**): with a production build loaded and a real folder opened
+      through the picker, have an agent (or `echo >>` in a loop) rewrite a watched file and record the
+      wall-clock from write to the reader updating, at both fixture sizes. **Record it even if it matches
+      the OPFS number** — a confirmed inference is evidence; an unrecorded one stays a guess.
 
 - [ ] **5.2 DECISION GATE (human) — the debounce window, chosen FROM the numbers.** 5.1's measurements
       exist; the choice is the human's. **This is 004's D-2 shape exactly, and its lesson is why the two

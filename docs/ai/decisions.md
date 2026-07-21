@@ -1,6 +1,39 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · HARNESS LEDGER ADDENDUM (spec 005 task 5.1) · THREE limits found while building
+  `scripts/perf-watch.ts`. Two are new; the third is the one that decides what the observer number means.**
+  - **`page.evaluate(functionString, arg)` SILENTLY RETURNS `undefined`.** Playwright evaluates a STRING as
+    an expression, so `(async (a) => {…})` yields a function object, the arg is never applied, and the
+    result serializes to `undefined` — **no throw, no warning.** This is the harness equivalent of this
+    milestone's recurring failure class: a plausible wrong answer, never an error. It cost one full
+    measurement run before the `undefined` was traced. **The fix, and the rule for any future harness in
+    this repo: pass parameters by INLINING them into the evaluated source** (`JSON.stringify` them into a
+    template), never through Playwright's `arg` when the code is a string. `perf-theme-flash.ts` and
+    `perf-first-paint.ts` never hit this because every one of their snippets is an immediately-INVOKED
+    expression taking no argument.
+  - **The extension origin's CSP blocks `page.addScriptTag`, but `page.evaluate` goes through CDP and is
+    NOT subject to it.** So injecting a measurement bundle into a `chrome-extension://` page (needed here:
+    OPFS requires a secure, non-opaque origin, which a `file://` page is not) must go through `evaluate`.
+  - **THERE IS NO AUTOMATED ROUTE TO A LOCAL-DISK `FileSystemHandle`, and this bounds what any harness can
+    ever say about observer latency.** `FileSystemObserver.observe()` needs a handle; the only handle
+    obtainable without a user gesture is **OPFS** (`navigator.storage.getDirectory()` — task 1.2 measured it
+    fires real `["modified"]` records in Chromium). `showDirectoryPicker` needs a gesture AND opens a native
+    dialog Playwright cannot drive (recorded M2 limit). **Consequence: every automated observer-latency
+    number this project can produce is an INFERENCE about local disk** — OPFS has no filesystem watcher, no
+    atomic rename, no OS notification queue. 5.1 measured it (18.7 ms @ 50 KB, 109.5 ms @ 1 MB) and labelled
+    it as an inference in the script output, in progress.md and in its own task record. **Retro finding 2 is
+    the standing precedent for why that labelling is not pedantry:** 004's isolated probe under-predicted
+    the real path by ~13×. The real number is a human-gate item (tasks.md 5.1a → 7.1).
+  - **Also recorded so it is not re-derived: `mount()` is not reachable from the main world** (the content
+    script's isolated world exports nothing), so a real-engine measurement of it must bundle the source and
+    inject it. `perf-watch.ts` does that with esbuild reached through `tsx`'s own dependency — **no
+    devDependency was added, and `dependencies` stays at three.** The alternative — a test-only export in
+    shipped code — is forbidden: no measurement-only code ships (established when 004's task 4.2 removed
+    4.1's marks).
+  **Revisit-when:** Playwright grows a way to drive the file picker or install an extension into Firefox
+  (either would collapse a recorded gap); or Firefox ships `FileSystemObserver`.
+
 - **2026-07-21 · HARNESS LEDGER ADDENDUM (extends the 2026-07-19 "WHAT THE TEST + MEASUREMENT HARNESSES
   CAN AND CANNOT DO" entry) · Vitest's browser API port is HARDCODED and can collide with a Windows
   reserved range — `pnpm test:browser` then runs ZERO tests with an `EACCES`, not a test failure.**

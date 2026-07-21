@@ -16,6 +16,7 @@
     "perf:folder": "tsx scripts/perf-folder-tree.ts",
     "perf:toc": "tsx scripts/perf-toc.ts",
     "perf:flash": "tsx scripts/perf-theme-flash.ts",
+    "perf:watch": "tsx scripts/perf-watch.ts",
     "lint": "eslint . && tsc --noEmit",
     "postinstall": "wxt prepare"
   },
