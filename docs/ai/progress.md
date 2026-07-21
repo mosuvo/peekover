@@ -37,10 +37,14 @@ know which element changed without 006's diff, and a whole-column wash on every 
 the most intrusive option available. **The toast is SKIPPED and noted for 006** (no toast primitive
 exists; the pill flash carries the same information). **4.3 DONE** (lifecycle — a gesture starts it, switching documents stops it, a dead read surfaces a
 designed state) and **4.4 DONE** (the Firefox degraded state, on BOTH closed routes). **GROUP 4 IS
-COMPLETE.** Discovered task **4.5 DONE** — the browser-suite flake is fixed (`fileParallelism: false`,
-chosen over a narrower Firefox-only serial by measurement, 12/12 consecutive green; see the flake bullet
-below). **4.6 (the Chrome file-URLs "wrong explanation" concern) is next.** **Next: GROUP 5 — measure then
-tune** (5.1 measures observer latency + re-render cost; 5.2 is
+COMPLETE.** Two discovered tasks then closed: **4.5 DONE** — the browser-suite flake is fixed
+(`fileParallelism: false`, measured over global-vs-narrower serial, 12/12 green; see the flake bullet
+below), and **4.6 INVESTIGATED — its premise is FALSIFIED, no code shipped**: Chrome's single "Allow
+access to file URLs" toggle gates BOTH content-script injection on `file://` AND the background read, so a
+running content script always has access — the misleading dead-read scenario is unreachable and
+`isAllowedFileSchemeAccess` was NOT wired (an unreachable branch). The reachable analogue (a watch control
+on REMOTE raw surfaces) is flagged for a human scoping decision, not implemented (`decisions.md`
+2026-07-21). **Next: GROUP 5 — measure then tune** (5.1 measures observer latency + re-render cost; 5.2 is
 a HUMAN decision gate for the debounce window; nothing in group 4 pre-empted it). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's

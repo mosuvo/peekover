@@ -1,6 +1,45 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · FINDING (spec 005 task 4.6, INVESTIGATED — premise FALSIFIED, no code shipped) · The
+  Chrome content-script "Allow access to file URLs" concern is UNREACHABLE, so `isAllowedFileSchemeAccess`
+  was NOT wired.** 4.6 assumed a fresh-install Chromium user (file access OFF by default) would get a
+  running content-script watch whose background reads fail → 3 failures → 4.3's dead-read note ("moved,
+  renamed, or deleted"), a misdirection. **Two independent facts falsify the premise:**
+  - **(1) One toggle gates BOTH injection and the read.** Chrome exposes exactly ONE per-extension "Allow
+    access to file URLs" setting (verified: `chrome.extension.isAllowedFileSchemeAccess()` docs — "the
+    user-controlled per-extension 'Allow access to File URLs' setting"; return type `Promise<boolean>`,
+    Chrome 99+ MV3, present in WXT's `browser.extension` namespace). That same toggle gates whether a
+    `file:///*.md` **content script is injected at all** (match-patterns docs: `file:///` "requires the
+    user to manually grant access") AND the **background's `file://` read** (this repo's own 2.3 record got
+    `status 200` only because the 7.1 procedure enables it). There is no separate toggle. **Therefore a
+    content script that is *running* on a `file://` page necessarily has access granted → the background
+    read works.** On a fresh install (toggle OFF) the content script is never injected, so it shows no
+    control and no note — the misdirection cannot occur. `isAllowedFileSchemeAccess()` would return `true`
+    on every file:// surface where the script runs, making a file-access-denied note an UNREACHABLE branch
+    (this codebase forbids unreachable branches — `watchAvailability.ts`: "Every branch is reachable").
+    **So the current hardcoded `backgroundCanReadFileUrls: !import.meta.env.FIREFOX` is CORRECT for the
+    file:// content-script surface.**
+  - **(2) The content script has no dead-read policy anyway.** It wires the thin 4.1
+    `registerWatchDetector` adapter (`start(){ detector.start(()=>{}) }` — no re-render callback, no
+    `onError`), NOT `createWatchController` (which owns `DEAD_AFTER_FAILURES`). `createWatchController` is
+    used ONLY by `appShell.ts` (the app page). So 4.6's "3 failures → dead-read note fires on the content
+    script" cannot happen — that note is app-page-only.
+  - **THE REACHABLE ANALOGUE, proposed for the human, NOT implemented:** the content script offers a watch
+    control on the REMOTE `http(s)` raw surfaces too (raw.githubusercontent / gist / gitlab-raw /
+    bitbucket-raw), where `isWatchableFileUrl` refuses every relay read (non-`file://`) and watching remote
+    is explicitly out of 005's scope. Today, given (2), clicking it silently does nothing. The clean,
+    SYNCHRONOUS fix (no async query, no mount-ordering problem) is to gate the content-script watch on
+    `isWatchableFileUrl(location.href)`, so remote surfaces get an explanation (or no control) instead of a
+    control that cannot work — the same honesty posture 4.4 took for Firefox. Left for a human scoping
+    decision; it changes 4.6's copy and verify criteria, so it is not smuggled in.
+  - **Verified how far it could be:** the API's existence + contract (docs + WXT types) and the single-
+    toggle behaviour (docs + repo 2.3/7.1) are conclusive. The one step needing a loaded extension —
+    observing that the content script does NOT inject with the toggle off — is a 5-second 7.1 check, not a
+    guess this milestone should build on.
+  **Revisit-when:** Chrome ever decouples file-URL content-script injection from file-URL read access
+  (would make `isAllowedFileSchemeAccess` load-bearing here), or the human scopes remote-surface watch.
+
 - **2026-07-19 · FINDING (spec 005 task 2.3, HUMAN-RUN with a loaded extension) · Can a background
   `fetch("file://…")` read a local file, and does that read enter the Resource-Timing buffer? MEASURED on
   both engines.** This closes spec §7-1 and §7-4, the two questions no automated harness could answer (the

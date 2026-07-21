@@ -678,6 +678,46 @@ A was edited after the switch…' to contain 'File B'`.
       `fileParallelism: false` and nothing else. A future run on a machine with the same reservation may
       need the same local-only override.
 
+- [x] **4.6 (DISCOVERED at 4.5 — the Chrome file-URLs "wrong explanation" concern is INVESTIGATED, and its
+      PREMISE is FALSIFIED. No code shipped; a human decision is proposed below, not smuggled in.)**
+      **What 4.6 assumed:** the Chromium build hard-codes `backgroundCanReadFileUrls: !import.meta.env.FIREFOX`
+      (= `true`), but Chromium's background can only read `file://` when the user enabled "Allow access to
+      file URLs" (OFF by default). A fresh-install user would then get: reads fail → 3 failures → 4.3's
+      dead-read note ("moved, renamed, or deleted"), which misdirects.
+      **Why the premise does not hold — TWO independent reasons, verified before building on the API
+      (the milestone has been burned by assumed API behaviour twice: 4.1's 26ms, 2.3's Firefox `file://`):**
+      - **(1) ONE toggle gates BOTH content-script injection AND the background read.** Chrome exposes a
+        single per-extension "Allow access to file URLs" setting — verified: `isAllowedFileSchemeAccess()`
+        exists (`Promise<boolean>`, Chrome 99+ MV3, in WXT's `browser.extension`), documented as "the
+        user-controlled per-extension 'Allow access to File URLs' setting". That same toggle gates whether a
+        `file:///*.md` content script is **injected at all** (Chrome match-patterns docs: `file:///`
+        "requires the user to manually grant access") **and** the background's `file://` read (this repo's
+        2.3 record got `200` only because 7.1 enables it). So a content script **running** on a `file://`
+        page necessarily has access → the background read works. On a fresh install (toggle off) the script
+        is never injected — no control, no note, no misdirection. Detecting via `isAllowedFileSchemeAccess()`
+        would return `true` on every running file:// surface, making a file-access-denied note an
+        **unreachable branch** — which `watchAvailability.ts` explicitly forbids ("Every branch is
+        reachable"). **The current hardcoded `true` is CORRECT for the file:// content-script surface.**
+      - **(2) The content script has no dead-read policy anyway.** It wires the thin 4.1
+        `registerWatchDetector` adapter (`start(){ detector.start(()=>{}) }` — no re-render, no `onError`),
+        NOT `createWatchController` (which owns `DEAD_AFTER_FAILURES`); the controller is used ONLY by
+        `appShell.ts`. So 4.6's "3 failures → dead-read note" cannot fire on the content script — that note
+        is app-page-only.
+      **THE REACHABLE ANALOGUE — proposed for a human decision, NOT implemented (it changes 4.6's copy and
+      verify criteria):** the content script also offers a watch control on the REMOTE `http(s)` raw
+      surfaces (raw.githubusercontent / gist / gitlab-raw / bitbucket-raw), where the relay refuses every
+      non-`file://` read and watching remote is explicitly out of 005's scope. The clean, **synchronous**
+      fix (no async round-trip, no mount-ordering problem) is to gate the content-script watch on
+      `isWatchableFileUrl(location.href)`, so a remote surface shows an explanation (or no control) rather
+      than one that cannot work — the same honesty posture 4.4 took for Firefox. **STOP-and-flag per the
+      task's own instruction ("say so and propose the alternative rather than shipping a guess").**
+      **The one un-automatable confirmation** — that the content script does NOT inject with the toggle off
+      — is a 5-second 7.1 check, not a guess to build on. Full record: `docs/ai/decisions.md` 2026-07-21.
+      Files (INVESTIGATED, none modified): `entrypoints/peekover.content.ts` · `src/watch/watchAvailability.ts`
+      · `src/watch/watchRelay.ts` · `entrypoints/background.ts`. `permissions: []` untouched — and note
+      explicitly: file-URL access is a Chrome UI toggle, **not** a manifest permission, so nothing here was
+      ever an AGENTS.md #4 event.
+
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 
 - [ ] **5.1 MEASURE observer latency + re-render cost — NO THRESHOLD ASSERTED.** Two numbers this milestone
