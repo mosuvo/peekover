@@ -8,14 +8,25 @@
 
 ## Now (start here)
 
-> ### 005 IS CODE-COMPLETE. THE NEXT ACTION IS 7.1, THE HUMAN MILESTONE-CLOSE GATE.
-> **Groups 1–6 are DONE** (including discovered tasks 4.5, 4.6, 4.7). **No code task remains.** Nothing
-> is blocked and nothing is in flight. **7.1 is human work an agent cannot self-certify** — its
-> procedure is in `tasks.md` and the **seven items it must carry** are listed under *Up next* below,
-> several of them deferred there by earlier tasks. **7.2 (the M5 retro) is banked AFTER the gate**,
-> deliberately: what the gate catches is its most valuable content. **Do not write the retro first.**
+> ### 7.1 HAS BEGUN AND IT IMMEDIATELY EARNED ITS KEEP. RESUME THE GATE.
+> **The first pass of 7.1 found a shipped defect no test could reach: watch on the content-script
+> `file://` surface detected every change and rendered NONE of them** (the registered target's
+> `start()` called `detector.start(() => {})`). Filed and fixed as **discovered task 4.8** — see
+> `tasks.md`. **Groups 1–6 are DONE** (including discovered tasks 4.5, 4.6, 4.7, 4.8) and **no code task
+> remains**, but "code-complete" is now a claim that has already been falsified once by a human walking
+> the product, so treat the remaining gate items as load-bearing rather than ceremonial.
+> **RESUME 7.1 FROM THE TOP** — the fix changes what the watch item on the `file://` surface is testing
+> (it should now update, and a deleted file should now explain), and the gate's earlier passes were run
+> against the broken build. Its procedure is in `tasks.md` and the **seven items it must carry** are
+> listed under *Up next* below. **What 4.8 hands the gate:** a `file://` watch that is expected to
+> re-render for real. **The `"Unsafe attempt to load URL file:///…"` console line is CLOSED and is NOT
+> ours** — it appears with the extension disabled, and the fixture contains no images at all, so 4.8's
+> "render-time media" conclusion is falsified; it is Chrome's own behaviour on `file://` documents
+> (`decisions.md`, 2026-07-21). **7.2 (the M5 retro) is banked AFTER the gate**, deliberately: what the
+> gate catches is its most valuable content, and it has now caught something — twice, counting the
+> falsified conclusion above. **Do not write the retro first.**
 > The one thing to know before walking it: **the automated stack has never once exercised the real
-> content→background relay**, on this or any milestone.
+> content→background relay**, on this or any milestone — which is precisely the gap 4.8 fell through.
 
 **M4 is CLOSED. M5 (spec 005) is CODE-COMPLETE: all three Gear-3 artifacts are APPROVED — spec.md
 (gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
@@ -36,9 +47,9 @@ one). **GROUP 3 IS COMPLETE. GROUP 4 — watch UX — IS IN PROGRESS: 4.1 DONE**
 register-once registry seam, and `data-watch` on the host). The pill sits **bottom-left at 96px**,
 third in the stack above the theme pill, chosen by a measured probe rather than taste — top-right
 collides with the TOC handle, bottom-right sits inside the rail's live entry list. **The registry
-SUBSUMED 2.2's holder** (`watchRelay`'s `registerWatchDetector`/`getWatchDetector` are now delegates
+SUBSUMED 2.2's holder** (`watchRelay`'s `registerWatchDetector`/`getWatchDetector` became delegates
 into `src/watch/watchRegistry.ts`, the D-E delegate precedent), so there is ONE piece of watch state,
-not two. **4.2 DONE** (the controller — start/stop, the update signal, follow-at-bottom-only). **The spec
+not two. **Those two delegates were DELETED at 4.8** — the adapter they wrapped is the defect below. **4.2 DONE** (the controller — start/stop, the update signal, follow-at-bottom-only). **The spec
 beat the mockup on follow**: the mockup scrolls unconditionally, spec §4 forbids moving a reader who
 scrolled away, and reinstating the mockup's behaviour yanks the reader **~25,500 px** down the
 document on both engines. **The update signal flashes the CONTROL, not the document** — 005 cannot
@@ -114,8 +125,25 @@ the http(s)-scoped zero-network guards are **correct, not conveniently scoped**.
 contents are never stored"* was left EXACTLY as it is — that is DELIBERATE, not an oversight:** it is
 **true for all of 005** (D-1 — nothing here persists file contents; `DB_VERSION` is untouched at 2), and
 its correction belongs to **006**, in the same PR as the first code that stores a snapshot. Correcting
-it now would make the document wrong in the other direction. **GROUP 6 IS COMPLETE; 005 IS
-CODE-COMPLETE. NEXT: 7.1, the human gate** (then 7.2, the retro, after it). One discovered task was
+it now would make the document wrong in the other direction. **GROUP 6 IS COMPLETE.**
+**4.8 DONE 2026-07-21 — FOUND BY A HUMAN AT THE 7.1 GATE, with 005 believed code-complete and pushed:
+watch on the content-script `file://` surface detected changes and rendered NOTHING.** The registered
+target was 4.1's placeholder, whose `start(host)` ignored the host and called `detector.start(() => {})`
+— an EMPTY callback. 4.1 wrote that it would be replaced at 4.2; **4.2 replaced it in `appShell.ts`
+only**, and 4.6 later restated the same mechanism as evidence for a different argument without anyone
+connecting it to *"so watch does nothing there"*. The human measured the relay working perfectly around
+it: **200, 28623 bytes, 88 background fetches in ~90 s, zero re-renders. THIS IS THE THIRD INSTANCE OF
+ONE CLASS IN 005** (`observerDetector` wired to nothing, the pill missing on the first file, this) and
+they share one cause: **every watch test registers its own target before mounting**, so nothing ever
+asked which target *production* registers — and `peekover.content.ts` cannot be loaded by any test at
+all, because a WXT entrypoint imports the virtual `#imports` module. **So the fix is a RELOCATION:**
+`src/watch/contentWatch.ts` (`installContentWatch`) now owns the whole decision-and-construction, the
+entrypoint keeps only `location.href` / `browser.runtime.sendMessage` / `!import.meta.env.FIREFOX`, and
+a real `createWatchController` goes into the slot — which also wires `onError`, so a file deleted while
+watched here **stops and explains** instead of failing silently forever. The placeholder was **deleted**,
+not kept as a delegate: dead code that looks live is what caused this. **The pin that generalises it**
+(`contentWatch.test.ts`, verified red against the pre-4.8 tree): *every production
+`registerWatchTarget(...)` call site builds its target with `createWatchController`.* One discovered task was
 added below 5.1:
 **5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
 **non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
@@ -365,7 +393,7 @@ corrected there without either lying or duplicating.*
 | App-page chunk (`chunks/app-*.js`) | **332,895 B** | 320,086 B (**+12,809 B, +4.00%**) | none — **stated, not gated** | — |
 | Background (`background.js`) | **3,315 B** | 2,437 B (**+878 B, +36.0%**) | none — **stated, not gated** | — |
 | `pnpm zip` Chrome / Firefox | **335.89 / 335.95 kB** | 327.61 / 327.66 kB (**+8.28 / +8.29 kB**) | <2 MB | PASS |
-| Suites | 452 unit · 481 passed / 15 skipped browser, 52 file-instances (both engines) | 384 · 314 | — | green |
+| Suites | 456 unit · 499 passed / 15 skipped browser, 54 file-instances (both engines) | 384 · 314 | — | green |
 
 - **THE FIRST-PAINT GATE HELD, and the margin did NOT shrink — this was the milestone's real perf risk and
   it did not materialise.** Watch added chrome to that path all milestone (4.1's pill, 4.3/4.4's note
@@ -406,8 +434,9 @@ corrected there without either lying or duplicating.*
 - **Standing pins, all green at the M5 close (task 6.1, 2026-07-21):** `git diff tests/golden/output/`
   **EMPTY** · `tests/manifest.test.ts` **8/8 and byte-unmodified since M2** — last touched at `3b6c575`
   (M2 / the app-page commit), so `permissions: []` is re-proven by a test no watch task could have bent ·
-  huge-doc `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean · `pnpm test` **452** ·
-  `pnpm test:browser` **481 passed / 15 skipped, 52 file-instances, both engines**.
+  huge-doc `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean · `pnpm test` **456** ·
+  `pnpm test:browser` **499 passed / 15 skipped, 54 file-instances, both engines** (task 4.8: +4 unit
+  pins, +9 browser tests × two engines, +1 new browser file × two engines).
 - **`pnpm zip` produces a THIRD artifact that is NOT the bound, stated so it is not misread:** the Firefox
   run also emits `peekover-0.0.0-sources.zip` (**3.39 MB**) — the source archive AMO requires for review,
   not a shipped package. The <2 MB bound is on the extension zips (335.89 / 335.95 kB).

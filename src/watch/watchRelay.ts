@@ -206,79 +206,32 @@ export function relayRead(url: string, send: WatchMessenger): () => Promise<stri
  */
 export const WATCH_INTERVAL_MS = 1000;
 
-// --- the content script's detector holder — NOW A DELEGATE (task 4.1) ---------------
+// --- the content script's detector holder — DELETED AT TASK 4.8 ----------------------
 //
-// 2.2 built this holder here because its wiring had to put the constructed detector SOMEWHERE
-// reachable, and it flagged that **4.1 should extend or subsume it, not invent a second registry
-// beside it**. 4.1 has done exactly that, using the precedent already in the codebase: when 004's
-// group 6 needed the theme-only save seam for the TOC as well, it generalized the mechanism into
-// `settingsSeam.ts` and left `registerThemeSaveSink` as a one-line DELEGATE (decision D-E).
+// 2.2 built a register-once holder HERE (`registerWatchDetector` / `getWatchDetector`) because its
+// wiring had to put the constructed detector somewhere reachable, and flagged that 4.1 should
+// subsume it rather than build a second registry beside it. 4.1 did: the single holder moved to
+// `watchRegistry.ts` and these two became DELEGATES that adapted a bare `ChangeDetector` into a
+// `WatchTarget` — a target whose `start(host)` IGNORED the host and called `detector.start(() => {})`.
+// An EMPTY callback, deliberately, because at 4.1 there was no controller to render with; 4.1's
+// note said 4.2 would replace it in the same slot.
 //
-// So the single holder now lives in `watchRegistry.ts` and holds a `WatchTarget` — the wider shape
-// the rebuilt-every-mount control needs (`start(host)`, `stop()`, `isWatching()`). These two
-// functions keep their NAMES, their SIGNATURES and their CALL SITES —
-// `entrypoints/peekover.content.ts` is untouched — and simply adapt the bare `ChangeDetector` they
-// are handed into that shape. There is exactly ONE piece of module state for the context's watch,
-// reachable under two names, which is precisely the property a second registry would have broken:
-// the entrypoint that registers and the control that starts would have been talking about
-// different objects.
+// **4.2 replaced it on the app page only, and this adapter stayed live on the content script for
+// the rest of the milestone — so watching a `file://` document detected every change and rendered
+// none of them.** A human found it at the 7.1 gate (task 4.8).
 //
-// The adapter's `start(host)` IGNORES the host and delivers no re-render, because at 4.1 there is
-// no controller yet — a detector is all this context has built. Task 4.2 registers the real
-// controller into the SAME slot (last registration wins), at which point this adapter is simply
-// replaced rather than competed with.
+// It is DELETED rather than kept as a delegate, and the deletion is the point rather than a
+// tidy-up. `registerWatchDetector` had exactly one caller (the entrypoint, now calling
+// `contentWatch.installContentWatch`); `getWatchDetector` and `resetWatchDetectorForTest` had
+// NONE, anywhere, including tests. A "thin delegate" left behind would be a function that reads
+// like it registers a working watch and structurally cannot: a bare `ChangeDetector` has nowhere
+// to render TO, which is the whole defect. **Dead code that looks live is what caused this**, so
+// leaving a smaller version of it loaded for the next surface that needs a watch would be
+// repeating the mistake at a discount. The real wiring now lives in ONE place with a test that
+// drives it (`src/watch/contentWatch.ts`).
 //
-// Nothing starts the detector here: watching requires a user gesture on 4.1's control (spec §4
-// Trust), and 4.3 owns the lifecycle.
-
-import { registerWatchTarget, getWatchTarget, notifyWatchChanged } from './watchRegistry';
-
-/** The seam a detector satisfies — structurally identical to `changeDetector.ts`'s `ChangeDetector`,
- *  restated here so this module keeps its zero-import posture toward the engine. */
-interface StartStop {
-  start(cb: (text: string) => void): void;
-  stop(): void;
-}
-
-/** The detector behind the registered target, so `getWatchDetector` can still answer with the
- *  DETECTOR (its 2.2 contract) while the registry holds the wider target. */
-let contentWatchDetector: StartStop | null = null;
-
-/** Called once by the content script at `document_start` with the detector it built. Registers a
- *  minimal detector-backed target into the ONE registry (see this section's header). */
-export function registerWatchDetector(detector: StartStop): void {
-  contentWatchDetector = detector;
-  let running = false;
-  registerWatchTarget({
-    start() {
-      if (running) return;
-      running = true;
-      // No re-render wiring at 4.1 — a detector on its own has nowhere to render TO. 4.2's
-      // controller replaces this target and supplies exactly that.
-      detector.start(() => {});
-      notifyWatchChanged();
-    },
-    stop() {
-      if (!running) return;
-      running = false;
-      detector.stop();
-      notifyWatchChanged();
-    },
-    isWatching: () => running,
-  });
-}
-
-/** The registered detector, or `null` if this context never built one. Retained under its 2.2 name
- *  and contract; the registry is the single source of truth for whether one is REGISTERED. */
-export function getWatchDetector(): StartStop | null {
-  return getWatchTarget() ? contentWatchDetector : null;
-}
-
-/** Test-only companion to `resetWatchRegistryForTest`, so a suite clearing the registry also
- *  clears the detector this module remembers alongside it. */
-export function resetWatchDetectorForTest(): void {
-  contentWatchDetector = null;
-}
+// Deleting it also restores this module to what its header claims: the wire contract and nothing
+// else — no `watchRegistry` import, no module state, no DOM, no engine.
 
 /** A response callback (`sendResponse`), typed without pulling a `#imports` dependency in. */
 type SendResponse = (response?: unknown) => void;

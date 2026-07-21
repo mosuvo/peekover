@@ -27,13 +27,25 @@
 // DELEGATE (`themeControl.ts`, decision D-E). Same move here:
 //
 //   • the single holder lives HERE, and holds a WatchTarget (the richer shape the control needs);
-//   • `watchRelay.registerWatchDetector` / `getWatchDetector` keep their names, their signatures
-//     and their call sites (`entrypoints/peekover.content.ts` is unchanged), and now delegate into
-//     this module, adapting the bare `ChangeDetector` they receive into a WatchTarget.
+//   • `watchRelay.registerWatchDetector` / `getWatchDetector` initially kept their names and
+//     signatures and delegated into this module, adapting the bare `ChangeDetector` they received
+//     into a WatchTarget.
 //
-// So there is exactly ONE piece of module state for the context's watch, reachable under two
-// names, and the entrypoint that registers a detector and the control that starts it are talking
-// about the same object — which is the property a second registry would have quietly broken.
+// ── THOSE DELEGATES WERE DELETED AT 4.8. THIS IS NOW THE ONLY WAY IN. ────────────────────────
+//
+// The adapter WAS the defect 7.1 found: a bare `ChangeDetector` has nowhere to render TO, so the
+// WatchTarget it synthesized called `detector.start(() => {})` — the content-script `file://`
+// surface detected every change and rendered none of them, and passed no `onError`, so a deleted
+// file failed silently and forever. `registerWatchDetector`, `getWatchDetector` and
+// `resetWatchDetectorForTest` are GONE (the first had one caller, now `installContentWatch`; the
+// other two had no callers anywhere, including tests). D-E's delegate precedent did not apply —
+// no remaining call sites, no compat obligation, and the thing being delegated cannot be built
+// correctly at all. `src/watch/contentWatch.test.ts` pins the replacement rule: every production
+// `registerWatchTarget(...)` call site builds its target with `createWatchController`.
+//
+// So there is exactly ONE piece of module state for the context's watch, under ONE name, and the
+// entrypoint that registers a target and the control that starts it are talking about the same
+// object — which is the property a second registry would have quietly broken.
 
 /**
  * What the control drives. Deliberately WIDER than `ChangeDetector`'s `start`/`stop`:
@@ -44,8 +56,9 @@
  *  - `isWatching` exists because the control is rebuilt mid-watch and must render the CURRENT
  *    state rather than assume "off" (the re-render case again).
  *
- * 4.1 registers a thin detector-backed target through `watchRelay`'s delegate; 4.2 registers the
- * full controller into the same slot. Nothing above this seam can tell which one it holds.
+ * Every production registration builds this with `createWatchController` (pinned by
+ * `contentWatch.test.ts` since 4.8). Nothing above this seam can tell which controller it holds —
+ * the app page and the content script register into the same slot, last one wins.
  */
 export interface WatchTarget {
   /** Begin watching, rendering updates into `host`. A no-op if already watching. */

@@ -3,15 +3,7 @@ import { runReader } from '@/src/render/runReader';
 import { messagingPort } from '@/src/settings/settingsPort';
 import { setThemeSetting } from '@/src/theme/reader';
 import { publishSettings, registerSettingsSink } from '@/src/settings/settingsSeam';
-import { pollingDetector } from '@/src/watch/changeDetector';
-import {
-  WATCH_INTERVAL_MS,
-  registerWatchDetector,
-  relayRead,
-  isWatchableFileUrl,
-} from '@/src/watch/watchRelay';
-import { watchCapability } from '@/src/watch/watchAvailability';
-import { setWatchNote } from '@/src/watch/watchRegistry';
+import { installContentWatch } from '@/src/watch/contentWatch';
 
 // Peekover content script. The manifest `matches` below are a COARSE, host-level
 // gate (they decide where the browser injects at all); `isRenderableContext` is
@@ -105,55 +97,37 @@ export default defineContentScript({
     // Registered under its canonical name; `registerThemeSaveSink` remains a delegate to this.
     registerSettingsSink((patch) => void settings.save(patch));
 
-    // WATCH (task 2.2). Build this surface's detector and register it — and START NOTHING.
-    // Nothing watches by default: switching it on is a user gesture on group 4's control
-    // (spec §4 Trust), and group 4.3 owns the lifecycle. Constructing a stopped detector costs
-    // one object and no timer.
+    // WATCH (tasks 2.2 + 4.4, REWIRED at 4.8). Decide whether this surface can watch, and where it
+    // can, register the REAL controller — and START NOTHING. Watching is a user gesture on group
+    // 4's pill (spec §4 Trust); 4.3 owns the lifecycle.
     //
     // THE LOOP LIVES HERE, IN THE PAGE — the background is a stateless fetch proxy. That is what
     // dissolves spec §7-6: there is no long-lived background state an MV3 teardown could lose, and
     // the watch dies with this tab, which is the correct lifetime.
     //
-    // `pollingDetector` is the right implementation for this surface on BOTH engines, not a Firefox
-    // fallback: `FileSystemObserver.observe()` takes a `FileSystemHandle` and a content script has
-    // only a URL, with no URL→handle API anywhere (plan §1.1). Chromium's event-driven path is the
-    // APP PAGE's, and only the app page's.
-    // WATCH AVAILABILITY ON THIS SURFACE (task 4.4) — decided BEFORE anything is registered.
-    //
-    // 2.3 measured the answer and it was NEGATIVE for Firefox: a `moz-extension:` background
-    // "may not load or link to file:" — Gecko's URI security policy, which no permission grants —
-    // and task-0 established the content script cannot re-read its own file either. Both halves of
-    // the route are closed, so on Firefox this surface ships a designed EXPLANATION and registers
-    // no detector at all. Never a dead toggle (spec §4 Degradation).
+    // EVERY DECISION AND EVERY CONSTRUCTION MOVED INTO `installContentWatch` AT 4.8, and the three
+    // arguments below are the entire remainder — the values that are genuinely WXT/engine-bound and
+    // could not live anywhere else. That is not tidying. This wiring shipped BROKEN for the whole
+    // milestone (it registered a target whose `start()` re-rendered nothing, so watch detected
+    // changes here and displayed none), and **no test could load this file to see it**: a WXT
+    // entrypoint imports the virtual `#imports` module, which no unit or browser test can resolve.
+    // Logic that lives here is untestable by construction, so it does not live here any more.
+    // `src/watch/contentWatch.ts` carries the full reasoning and is proven in
+    // `tests/browser/watchContentWiring.browser.test.ts` — the same move `runReader()` made for
+    // the render path, for the same reason.
     //
     // `import.meta.env.FIREFOX` is a BUILD-TIME constant, not a runtime engine sniff, and the
     // distinction matters because `firefoxFolderSource.ts` set the opposite precedent for the app
     // page ("branch on `persistable`, never on the engine"). That rule is about a capability which
     // varies per SOURCE and must be carried as data at the seam. This one varies per BUILD: it is a
     // fixed property of the engine the artifact targets, unchangeable at runtime and already
-    // measured. The decision itself is a pure function so it stays testable (watchAvailability.ts).
-    const watch = watchCapability({
-      surface: 'content-script',
+    // measured (2.3). Passed as a plain boolean, so the decision itself stays engine-free and
+    // unit-testable with plain values (watchAvailability.ts).
+    installContentWatch({
+      url: location.href,
+      send: (message) => browser.runtime.sendMessage(message),
       backgroundCanReadFileUrls: !import.meta.env.FIREFOX,
-      // The OTHER half of this content script's `matches` is remote raw hosts (raw.githubusercontent,
-      // gist, gitlab-raw, bitbucket-raw), where watching is out of scope (spec §6, task 4.6-rescope).
-      // Gate on the RELAY's own predicate — the authority on what the background will read — so a remote
-      // page gets the scope note and registers NO detector (no toggle, no per-second refused message),
-      // rather than a live-looking control the relay refuses every tick. Passed as a plain boolean (not
-      // by importing the predicate into the pure decision) so `watchCapability` stays engine/DOM-free and
-      // unit-testable with plain values, exactly as `backgroundCanReadFileUrls` is.
-      documentIsWatchableFile: isWatchableFileUrl(location.href),
     });
-    if (watch.watchable) {
-      registerWatchDetector(
-        pollingDetector(
-          relayRead(location.href, (message) => browser.runtime.sendMessage(message)),
-          WATCH_INTERVAL_MS,
-        ),
-      );
-    } else {
-      setWatchNote(watch.note);
-    }
 
     runReader();
   },

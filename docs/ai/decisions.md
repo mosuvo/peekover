@@ -1,6 +1,96 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · STANDING RULE + FINDING (spec 005 task 4.8, found by a HUMAN at the 7.1 gate) · LOGIC
+  DOES NOT LIVE IN A WXT ENTRYPOINT, BECAUSE NO TEST CAN LOAD ONE — and the third instance of one defect
+  class in this milestone is what established it.** Watch on the content-script `file://` surface detected
+  every change and rendered NONE of them: the registered `WatchTarget` was 4.1's placeholder, whose
+  `start(host)` ignored the host and called **`detector.start(() => {})`**. Measured with the extension
+  loaded: background `fetch("file:///…/small.md")` → **200, 28623 bytes**; a patched `self.fetch` logged
+  **88 calls over ~90 s** during a live watch; **zero re-renders**. The same file through the app page
+  updated correctly — same detector, same `mount()`, same cooldown, different registered target.
+  - **IT WAS RECORDED TWICE AND ACTED ON ZERO TIMES.** 4.1's note said the adapter delivers no re-render
+    and that 4.2 would replace it in the same slot; **4.2 replaced it in `appShell.ts` only**. The
+    2026-07-21 4.6 entry below then restates the mechanism verbatim — *"the content script uses the thin
+    `registerWatchDetector` adapter (no re-render callback, no `onError`)"* — as evidence for a DIFFERENT
+    argument (why a file-access note was unreachable), and neither the agent nor the reviewer connected it
+    to *"so watch does nothing there."* **A correct observation filed under the wrong conclusion is not
+    caught by re-reading the notes; it is caught by a test or by a human using the product.**
+  - **THE CLASS: `observerDetector` wired to nothing (4.7), the pill absent on the first file opened
+    (4.7), and this (4.8) — three in one milestone, one cause.** Every watch test calls
+    `registerWatchTarget(createWatchController({…}))` **itself** before mounting. That is a good way to
+    test the controller, the pill and the registry, and it is exactly why all of them passed: **no test
+    ever asks which target PRODUCTION registers.** `peekover.content.ts` is the worst case of it — a WXT
+    entrypoint imports the virtual `#imports` module, so **neither Vitest project can load that file at
+    all**. Anything decided there is verified by code review and nothing else.
+  - **THE RULE, going forward: an entrypoint wires; it does not decide or construct.** Everything the
+    content script decided moved into `src/watch/contentWatch.ts` (`installContentWatch`), leaving three
+    values that are genuinely WXT/engine-bound — `location.href`, `browser.runtime.sendMessage`,
+    `!import.meta.env.FIREFOX`. `runReader.ts` set this precedent for the render path and `detectorForFile.ts`
+    for 4.7; 4.8 makes it the standing rule rather than a per-task instinct. **Not in `watchRelay.ts`,**
+    which the BACKGROUND imports: a real controller pulls `watchController → mount →` the render pipeline
+    into the service-worker graph and into a node-environment unit test.
+  - **THE PLACEHOLDER WAS DELETED, NOT KEPT AS A DELEGATE — and 4.1's own D-E precedent does not apply.**
+    `registerWatchDetector` had one caller (now gone); `getWatchDetector` and `resetWatchDetectorForTest`
+    had **none anywhere**, including tests. D-E keeps a name as a delegate when the name still has call
+    sites and a compat obligation. This one had neither, and the thing it would delegate cannot be built
+    correctly at all — a bare `ChangeDetector` has nowhere to render TO, which IS the defect. **Dead code
+    that looks live is what caused this**, so a smaller copy of it left loaded for the next surface is the
+    same mistake at a discount.
+  - **THE PIN THAT GENERALISES IT** (`src/watch/contentWatch.test.ts`, verified RED against the pre-4.8
+    tree, naming `src/watch/watchRelay.ts`): **every production `registerWatchTarget(...)` call site must
+    build its target with `createWatchController`** — the only thing in the codebase that holds a host,
+    calls `mount` and wires `onError`, i.e. the only target any suite has proven can render. Plus three
+    source-text pins on the entrypoint, using the `WATCHABLE_EXTENSIONS` precedent (reading it as TEXT is
+    the only access a test has to a WXT entrypoint).
+  - **A SECOND USER-FACING FIX CAME FREE:** the placeholder passed no `onError`, and `DEAD_AFTER_FAILURES`
+    is controller-owned — so a file deleted while watched on this surface failed **silently and forever**,
+    pill still reading "Watching". It now stops and explains, asserted rather than assumed.
+  **Revisit-when:** a `WatchTarget` is ever legitimately hand-built (then the class pin is the thing to
+  argue with, on purpose), or a harness appears that can load an extension and run a content script —
+  which is the only thing that would have caught this automatically, and per the harness ledger there is
+  still no roadmap to one.
+
+- **2026-07-21 · CLOSED — AND THE FIRST CONCLUSION WAS WRONG, FALSIFIED BY THE HUMAN AT THE GATE (spec 005
+  task 4.8) · The `"Unsafe attempt to load URL file:///…/small.md from frame with URL
+  file:///…/small.md"` console line is CHROME'S OWN BEHAVIOUR ON `file://` DOCUMENTS. It is NOT Peekover —
+  not watch, not the relay, not the render path, not `applyMediaPolicy`.** Seen by the human at 7.1 while a
+  watch was running, alongside 88 demonstrably successful background reads. 4.8's investigation concluded it
+  was render-time media in the document; **two measurements at the gate killed that**, and this entry
+  records the settled answer, not the first one.
+  - **MEASUREMENT 1 — THE LINE APPEARS WITH THE EXTENSION DISABLED**, on that same document. None of our
+    code is running, so nothing of ours can be emitting it or causing it to be emitted. That alone settles
+    it: this is the engine's behaviour on a `file://` document, independent of Peekover.
+  - **MEASUREMENT 2 — THE FIXTURE CONTAINS NO IMAGES AT ALL.** `grep -n '!\[' small.md` → **nothing**.
+    `small.md` is `## Section N` headings and lorem ipsum prose, generated by an `awk` one-liner. The
+    media explanation required media the document does not contain.
+  - **WHAT THE FIRST INVESTIGATION GOT RIGHT — kept, but as supporting detail, not as the finding.** The
+    product makes **exactly one `fetch` anywhere**, `entrypoints/background.ts:46` (grep over every loader
+    in `src/` and `entrypoints/`). Nothing in the page frame loads any URL: `isRenderableContext` is a pure
+    string predicate and `relayRead` is `sendMessage` only, asserted as a property in
+    `watchNetwork.browser.test.ts`. **No zero-network implication either way:** everything resolving to
+    `http(s)` is replaced by an inert placeholder inside the `<template>` *before* commit, and 2.3 measured
+    that a `file:` read never enters Resource Timing at all. All of that remains true — it just was not the
+    answer to this question.
+  - **WHAT IT GOT WRONG, AND THE FAILURE MODE WORTH REMEMBERING.** A throwaway probe showed that
+    `![alt]()` renders `<img src="">`, resolves to the document's own URL, and **can** produce exactly this
+    error shape. That was then treated as evidence that it **did**. It does not follow. The investigation
+    was thorough, correctly scoped, and correctly flagged-not-fixed — and still landed wrong, because
+    **it never checked whether the document contained what its own explanation required.** The human closed
+    it in two minutes with a grep and an extension toggle.
+  - **SEPARATELY — AND NOT CONNECTED TO THIS ERROR — AN UNVERIFIED QUESTION FLAGGED FOR 006.** *Does Chrome
+    refuse `file:`→`file:` subresources without `--allow-file-access-from-files`, so that **local images in
+    a `file://` markdown document never display**?* This was originally inferred from the media chain above
+    and inherits none of its credibility now that the chain is falsified; the error line has nothing to do
+    with media. **It is a real question and worth asking anyway** — it would be a product gap rather than
+    console noise, and it is invisible to every existing test (they run on `http://localhost`, where the
+    same references are correctly blocked as remote instead). **It is UNVERIFIED, and nothing here has
+    tested it.** What would actually answer it: a `file://` markdown document containing a genuine local
+    `![](./some.png)`, opened with the extension on, checking whether the image paints. `small.md` had no
+    images, which is precisely why the original reasoning could not have been checked against it.
+  **Revisit-when:** the error line itself is settled — do not reopen it. The 006 question above is open and
+  needs the one measurement named there before anyone treats it as a finding.
+
 - **2026-07-21 · IMPLEMENTATION SHAPE (spec 005 task 5.3) · HOW THE COST-PROPORTIONAL COOLDOWN IS BUILT —
   three structural properties a reasonable future edit would break silently.** The *decision* and its
   rationale are the 5.2 entry immediately below; this entry does not restate them. It records only what

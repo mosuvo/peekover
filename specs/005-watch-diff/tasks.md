@@ -857,6 +857,130 @@ A was edited after the switch…' to contain 'File B'`.
       (decisions.md 2026-07-21); the documented **local-only** `browser.api.port` override was used for every
       run above and **stripped before the commit**.
 
+- [x] **4.8 (DISCOVERED BY A HUMAN AT THE 7.1 GATE, with the milestone believed code-complete and groups
+      1–6 pushed. THE THIRD INSTANCE OF ONE CLASS IN 005.)
+      Give the content script a REAL controller — watch on the `file://` surface detected changes and
+      rendered NOTHING.** Filed under group 4 because it is entrypoint watch wiring; the provenance is 7.1.
+      **THE DEFECT.** `registerWatchDetector` (`watchRelay.ts`) built a `WatchTarget` whose `start(host)`
+      ignored the host and called **`detector.start(() => {})` — an EMPTY callback**. The content script
+      registered that target and never anything else. **Measured by the human in the service-worker console
+      with the extension loaded:** a background `fetch("file:///…/small.md")` returned **200, 28623 bytes**,
+      and a patched `self.fetch` logged **88 calls over ~90 s** while a watch ran — *the whole relay worked*
+      — and the reader never updated once. The same file watched through the **app page** updated correctly:
+      same detector, same `mount()`, same cooldown, different `WatchTarget`.
+      **IT WAS WRITTEN DOWN TWICE AND READ BY NOBODY.** 4.1's own note: *"The adapter's `start(host)`
+      IGNORES the host and delivers no re-render… Task 4.2 registers the real controller into the SAME slot,
+      at which point this adapter is simply replaced."* **4.2 replaced it in `appShell.ts` only.** 4.6 then
+      restated the mechanism verbatim — *"the content script uses the thin `registerWatchDetector` adapter
+      (no re-render callback, no `onError`)"* — as evidence for a DIFFERENT argument (why the Chrome
+      file-access note was unreachable), and neither the agent nor the reviewer connected it to *"so watch
+      does nothing there"*. A correct observation, filed under the wrong conclusion.
+      **THE CLASS, AND IT IS THE PART WORTH KEEPING.** `observerDetector` wired to nothing (4.7), the pill
+      absent on the first file opened (4.7), and this. All three: **built, tested, and connected to nothing
+      the user reaches**; all three invisible to a green suite for ONE reason — **every watch test calls
+      `registerWatchTarget(createWatchController({…}))` itself before mounting**, so no test ever asked which
+      target *production* registers. `peekover.content.ts` makes it worse than the app page's case: a WXT
+      entrypoint imports the virtual `#imports` module, so **no test in either project can load that file at
+      all**. Logic living there is untestable by construction.
+      **THE FIX IS THEREFORE A RELOCATION, NOT A ONE-LINE SWAP.** New module `src/watch/contentWatch.ts`
+      (`installContentWatch`) takes everything the entrypoint decided and built — the `watchCapability` call,
+      `isWatchableFileUrl`, `relayRead`, `pollingDetector`, and now the **real `createWatchController`
+      (`contained: false`)** — and the entrypoint keeps only the three values that are genuinely WXT/engine-
+      bound: `location.href`, `browser.runtime.sendMessage`, `!import.meta.env.FIREFOX`. Same move
+      `runReader.ts` made for the render path and `detectorForFile.ts` made at 4.7. **Not in `watchRelay.ts`:**
+      `entrypoints/background.ts` imports that module, and a real controller drags `watchController → mount →`
+      the whole render pipeline into the SERVICE WORKER's graph and into a node-environment unit test.
+      **SEQUENCING — INVESTIGATED, NOT ASSUMED. The controller never needed the host.** The concern was that
+      the content script builds at `document_start` while the host does not exist until `runReader()` mounts.
+      It is a non-problem by design: `WatchTarget.start(host)` takes the host as an **argument**, and the host
+      it gets is the one the **pill** was built for (`watchControl.ts` passes its own host at click time,
+      looking the target up in the registry rather than capturing it — 4.1's whole point). So the controller
+      is constructed host-free, exactly as `appShell.installWatchForFile` constructs it before `selectFile()`
+      mounts. Registering EARLY is not merely safe, it is **required**: `buildWatchControl` decides at MOUNT
+      time whether a pill exists at all, so a target registered after the first mount would reproduce 4.7's
+      second defect on this surface. The call therefore stays exactly where the entrypoint always made it.
+      **`onError` IS NOW WIRED, AND IT IS A SECOND USER-FACING FIX.** The placeholder called
+      `detector.start(cb)` with ONE argument; `DEAD_AFTER_FAILURES` and the dead-read policy are
+      controller-owned. So a file deleted while watched on this surface failed **silently and forever** — no
+      note, no stop, a pill still reading "Watching". Asserted now, not assumed.
+      **THE PLACEHOLDER IS DELETED, NOT KEPT AS A DELEGATE.** `registerWatchDetector` had exactly one caller
+      (the entrypoint); `getWatchDetector` and `resetWatchDetectorForTest` had **NONE** anywhere, including
+      tests (grepped). A thin delegate left behind would be a function that reads like it registers a working
+      watch and structurally cannot — a bare `ChangeDetector` has nowhere to render TO, which *is* the
+      defect. **Dead code that looks live is what caused this**, so leaving a smaller copy loaded for the next
+      surface would be repeating the mistake at a discount. 4.1's D-E "keep the name as a delegate" precedent
+      applied when the name still had a call site and a compat obligation; it has neither. Deleting it also
+      returns `watchRelay.ts` to what its header claims — the wire contract, no `watchRegistry` import, no
+      module state, no DOM.
+      **RED-FIRST, AND THE RED RAN AGAINST THE SHIPPED CODE.** Step 1 was a pure extraction that still
+      delegated to `registerWatchDetector`, so the red run exercised the placeholder verbatim rather than a
+      re-typed imitation: **12 failed / 6 passed (both engines)** — the four re-render tests and the two
+      dead-read tests failed on every wait, while the "registers nothing" and app-page tests passed, which is
+      exactly the shape of a target that starts, polls, reads, compares and renders nowhere. Green after the
+      swap: **18/18**, and 6× faster (6.3 s vs 40 s of timeouts). Files `cp`'d aside first;
+      `git checkout <path>` was never used.
+      **WHAT THE TEST PROVES, AND — PLAINLY — WHAT REMAINS 7.1's.**
+      `tests/browser/watchContentWiring.browser.test.ts` (Cr+Fx) drives the production registration function
+      with the three engine-bound values injected: the real capability decision, the real `relayRead` over the
+      real `WATCH_READ` wire shape, the real `pollingDetector`, the real controller, the real registry, the
+      real pill, the real `mount()`. It asserts the gate's own hand-made assertion — **a detector callback
+      carrying new text RE-RENDERS the content-script host** — plus: the loop survives its own first success
+      (the clicked pill is destroyed by the render it caused and the new one reads `aria-pressed="true"`);
+      `preserveReading` holds here too (Raw survives, carrying the new text); the SHIPPED
+      `WATCH_INTERVAL_MS` default is on the path (one test takes no injected interval); a dead read reaches
+      `DEAD_READ_NOTE` with the last good render still on screen and the toggle still offered; a SINGLE
+      failure does **not** kill the watch (the non-vacuity control); and the two un-watchable surfaces
+      (Firefox, remote raw) register nothing and issue **zero** relay traffic.
+      **THE HARNESS LOADS NO EXTENSION, SO IT CANNOT RUN A CONTENT SCRIPT** — no `file://` document, no
+      `browser.runtime`. The residual is exactly three lines of `peekover.content.ts` plus the browser's own
+      injection. Two of the three are pinned as SOURCE TEXT (below), because reading a WXT entrypoint as text
+      is the only access any test has. **The genuine end-to-end — extension loaded, real `file://` document,
+      real agent rewriting it — is 7.1's, and is where this was found.**
+      **THE ASSERTION THAT WOULD HAVE CAUGHT THE CLASS** (`src/watch/contentWatch.test.ts`, unit): *every
+      production `registerWatchTarget(...)` call site builds its target with `createWatchController`* — the
+      only thing in the codebase that holds a host, calls `mount` and wires `onError`, i.e. the only target
+      any suite has proven can render. **Verified RED against the pre-4.8 tree**, naming
+      `[ 'src/watch/watchRelay.ts' ]`, alongside the three entrypoint pins (it calls `installContentWatch`,
+      it passes exactly the three engine-bound values, it no longer names the placeholder). Non-vacuity is
+      asserted too (zero call sites found ⇒ fail). If a future target is legitimately hand-built, this test
+      is the thing that has to be argued with on purpose.
+      **THE APP PAGE IS BYTE-IDENTICAL** — `src/app/` untouched (`git diff --stat`: two files, both fenced),
+      and `watchObserverWiring` / `watchLifecycle` / `watchRemount` / `watchAnchor` / `watchControl` all green
+      **UNMODIFIED**. One in-file statement of it as well: a later app-page registration still replaces the
+      content one in the shared slot, and the pill then drives the new target.
+      Files: `src/watch/contentWatch.ts` (NEW) · `src/watch/contentWatch.test.ts` (NEW) ·
+      `tests/browser/watchContentWiring.browser.test.ts` (NEW) · `entrypoints/peekover.content.ts` ·
+      `src/watch/watchRelay.ts` (placeholder deleted).
+      **D-1 no storage · D-2 no dependency** (still three); `permissions: []` untouched; `manifest.test.ts`
+      green and **byte-unmodified**; golden diff **EMPTY**. `pnpm lint` clean; `pnpm test` **456** (was 452,
+      +4 = the pins); `pnpm test:browser` **499 passed / 15 skipped** both engines (was 481/15, +18 = 9 × two
+      engines), **54 file-instances** (was 52 — exactly one new file × two engines), serial per 4.5.
+      **ALSO INVESTIGATED — AND THE INVESTIGATION REACHED THE WRONG CONCLUSION; CORRECTED HERE.** The gate's
+      `"Unsafe attempt to load URL file:///…/small.md from frame with URL file:///…/small.md"` console line
+      was reported as render-time media in the document (`![alt]()` → `<img src="">` resolving to the page's
+      own URL). **The human falsified that at the gate with two measurements:** (1) `grep -n '!\[' small.md`
+      → **NOTHING** — the fixture is `## Section N` headings and lorem ipsum from an `awk` one-liner and has
+      no images at all, so the explanation required media the document does not contain; (2) **the line
+      appears with the EXTENSION DISABLED** on that same document. **It is therefore Chrome's own behaviour
+      on `file://` documents — not Peekover, not watch, not the relay, not the render path, not
+      `applyMediaPolicy`.** Settled; see `decisions.md` (2026-07-21).
+      What the investigation got right and keeps, as supporting detail rather than as the finding: the
+      product makes exactly ONE `fetch` anywhere (`entrypoints/background.ts:46`), nothing in the page frame
+      loads any URL, everything resolving to `http(s)` is replaced by an inert placeholder inside the
+      `<template>` *before* commit, and 2.3 measured that `file:` reads never enter Resource Timing.
+      **THE PROCESS FACT, RECORDED PLAINLY FOR 7.2:** this investigation was thorough, correctly scoped, and
+      correctly flagged-not-fixed rather than reached for — **and it still landed wrong, because it never
+      checked whether the fixture contained what its explanation required.** A mechanism that *can* produce
+      an observed symptom is not evidence that it *did*. The human closed it in two minutes with a grep and
+      a toggle.
+      **THE 006 FLAG SURVIVES BUT IS SEVERED FROM THIS ERROR AND DEMOTED TO AN UNVERIFIED QUESTION:** does
+      Chrome refuse `file:`→`file:` subresources without `--allow-file-access-from-files`, so that local
+      images in a `file://` markdown document never display? Worth asking — it would be a product gap
+      invisible to every existing test (they run on `http://localhost`, where the same references are
+      correctly blocked as remote) — but **nothing here has tested it**, and it is unrelated to the console
+      line. Answering it needs a `file://` document with a genuine local `![](./some.png)`, which `small.md`
+      did not have.
+
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 
 - [x] **5.1 MEASURE observer latency + re-render cost — NO THRESHOLD ASSERTED.** Two numbers this milestone
