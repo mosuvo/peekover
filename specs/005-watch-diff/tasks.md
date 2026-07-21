@@ -1154,7 +1154,7 @@ A was edited after the switch…' to contain 'File B'`.
       documented **local-only** `browser.api.port` override was applied for the browser run and **stripped
       before commit** — `vitest.config.ts` is unmodified (`git status` clean).
 
-- [ ] **6.2 Docs + memory reconcile — and NO PERMISSIONS.md trust-claim change, stated so it does not read
+- [x] **6.2 Docs + memory reconcile — and NO PERMISSIONS.md trust-claim change, stated so it does not read
       as an oversight.** PERMISSIONS.md **does** get the §3.6 disclosure — that watching **reads the user's
       own chosen local file from disk and makes NO network request**. The relay lands in 2.2 regardless, so
       PERMISSIONS.md discloses the background's **third listener** (it gained the settings listener in 004;
@@ -1170,6 +1170,88 @@ A was edited after the switch…' to contain 'File B'`.
       Verify (**gate**): PERMISSIONS.md reflects the local-file read and the listener count, and **still
       states "file contents are never stored"**; `manifest.test.ts` green; the Now-pointer reads
       "005 code-complete / human gate next".
+      **DONE 2026-07-21. Path CONFIRMED from ground truth, not memory:** `git ls-files '*PERMISSIONS.md*'`
+      → **`docs/trust/PERMISSIONS.md`**, one file, edited in place; no stray copy was created.
+      **EVERY CLAIM WAS CHECKED AGAINST THE CODE BEFORE IT WAS WRITTEN, not against this tasks file:**
+      - **THE LISTENER COUNT WAS WRONG AND IS NOW RIGHT.** `entrypoints/background.ts` registers
+        **THREE** — `action.onClicked` (M2), the settings handler (004 task 2.3), the watch relay (005
+        task 2.2). The file was corrected to "two" at 004's 7.2 and said **two**; it now says **three**
+        and describes what the third does, including that the background holds **no watch state at all**
+        (the loop lives in the page, so the watch dies with its tab and there is nothing to lose when the
+        MV3 worker is evicted). The coexistence contract (each listener returns `false` for what is not
+        its own) is stated too, since that is what lets three listeners share one channel.
+      - **`isWatchableFileUrl` READ, not assumed** (`src/watch/watchRelay.ts:100`): `protocol === 'file:'`
+        plus `pathname` ending in one of the nine `WATCHABLE_EXTENSIONS`, matched on `pathname` (not
+        `href`, so a query string cannot smuggle a fake extension) and left percent-encoded (so `%2Emd`
+        does not satisfy `.md`). Validation runs **before** `read` is ever called — the ledger says
+        "refused unread" because that is what the code does, not because it sounds better.
+      - **`permissions: []` VERIFIED ON THE BUILT ARTIFACTS**, both engines, by reading
+        `.output/{chrome-mv3,firefox-mv3}/manifest.json` directly — not merely by trusting the test. The
+        test is green and **byte-unmodified since M2** (`3b6c575`), which is the stronger claim.
+      - **THE CONTENT SCRIPT'S OWN GATE VERIFIED** (`entrypoints/peekover.content.ts:135-151`): the
+        detector is registered **only** inside the `watch.watchable` branch, with
+        `documentIsWatchableFile: isWatchableFileUrl(location.href)` — so the shipped path can only ever
+        hand the relay a `file://` markdown URL, and the background re-validates independently anyway.
+      - **D-1 VERIFIED BY GREP, not by assertion:** no storage API is reached from `src/watch/` at all
+        (every `persistable` hit is the folder-source capability flag — a boolean about whether a
+        *handle* can be persisted — never file contents), and `DB_VERSION` is **unchanged at 2**.
+      **THE WATCH RELAY IS NOW IN THE CAPABILITY LEDGER**, in the ledger's own framing: **no new manifest
+      permission** (content→own-background messaging needs none), but a real capability, so it answers
+      the same three questions the folder rows do — what triggers it (**a click, on a file already open**;
+      nothing watches by default), what it can touch (**only that one `file://` markdown document**;
+      `http(s)`/`data:`/`blob:`/`chrome-extension:` all refused unread), what it stores (**nothing** — the
+      bytes are rendered and dropped), and how the user sees and stops it (the control is in the reader,
+      states its state in words as well as colour, stops in one click, and ends by itself on a document
+      switch or tab close).
+      **§3.6-A IS STATED EXPLICITLY AND AS MEASURED RATHER THAN ASSERTED** — the distinction that makes
+      it worth writing. Reading a watched local file **is not a network call**, lights no indicator, and
+      the zero-network guards stay `http(s)`-scoped; **task 2.3 measured a `file://` read leaving
+      `performance.getEntriesByType('resource')` EMPTY on BOTH engines**, so those guards are **correct,
+      not conveniently scoped** — there is nothing for them to filter out. Recorded in both directions so
+      it is not over-read: they prove watch put nothing on the wire and can **never** prove the local read
+      happened. A watch bullet was added to *Zero-network evidence* alongside the reader and folder-mode
+      ones, including the `watchNetwork` property that the reader never falls back to fetching its own URL.
+      **ONE MORE VERIFIED FACT ADDED, from 4.6's investigation:** the same single Chrome "Allow access to
+      file URLs" toggle gates **both** content-script injection on `file://` **and** the background's
+      read — so the relay is reachable exactly when the reader is running and grants no access the user
+      has not already granted. It is a browser UI setting, **not** a manifest permission.
+      **THE CLAIM THAT MUST NOT CHANGE DID NOT CHANGE — and this was DELIBERATE, not overlooked.**
+      *"File contents are never stored"* is **untouched** and remains **TRUE for all of 005**: nothing in
+      this milestone persists file contents (D-1; snapshots are 006's, and the correction lands in the
+      same PR as the first code that stores one). **Correcting it early would make the document wrong in
+      the other direction.** It is now stated affirmatively in the watch prose too, so a future reader
+      sees it was re-confirmed rather than skipped.
+      **Voice and structure preserved** — no section was reordered or restructured; two rows/paragraphs
+      were added where the M4 settings channel set the precedent, and one wrong number was corrected.
+      **decisions.md — ONE new newest-first entry, and the judgement behind it is recorded rather than
+      assumed.** 5.2's decision **is** already there and was **linked, not restated**. What was NOT
+      recorded anywhere durable is how 5.3's mechanism is *built*, so the entry covers only the three
+      structural properties whose failure modes are **silent**: (i) the timer is deliberately **not
+      re-armed** per change — re-arming is the obvious "fix" that turns it into the trailing debounce
+      5.2 rejected for starving; (ii) the **injected `now`** is what makes proportionality testable at
+      all, so dropping it for `performance.now()` would leave the cost-scaling test green while it stopped
+      proving what shipped; (iii) the switch-discards property has **two independent guards** (`stop()`
+      and `start()` both cancel), so removing either as redundant goes red **nowhere**. Each is a thing a
+      reasonable future edit would do and nothing would catch. tasks.md is a per-milestone artifact;
+      decisions.md is what the next session actually reads first, which is why it belongs there too.
+      **progress.md reconciled, and Now / Up next / Blockers are now mutually consistent** (the M1 lesson
+      — Now is the one line the next session trusts, and it had grown into a paragraph). Now opens with a
+      blockquote stating **005 IS CODE-COMPLETE, next action 7.1**; *Up next* replaces "group 6" with the
+      **consolidated seven-item 7.1 carry list** so nothing deferred into the gate is lost between
+      sessions — the **relay round trip** (never exercised by any test on any milestone), **5.1a**
+      (local-disk observer latency), **the anchor's feel when headings are REWRITTEN** (with 3.3's
+      Raw-mode `scrollTop`-only asymmetry folded in explicitly), **Firefox first paint**, **Firefox's
+      re-render cost** (unmeasured — Playwright cannot load an extension there, and it IS a shipped
+      surface), **the degraded-state copy on all three surfaces** (both Firefox routes + the remote
+      surface), and **4.6's five-second toggle-off check** — plus the standing gate items. *Blockers* no
+      longer claims "nothing waiting on a human": 7.1 is, and it says so while making clear it is the
+      budgeted acceptance rather than something broken.
+      **THE M5 RETRO WAS NOT WRITTEN. That is 7.2, after the gate** — `docs/ai/retro.md` is untouched.
+      Verify criteria met: PERMISSIONS.md reflects the local-file read and the listener count and **still
+      states "file contents are never stored"**; `manifest.test.ts` **8/8 green, byte-unmodified**; the
+      Now-pointer reads **005 code-complete / 7.1 human gate next**. Docs-only — `src/`, `entrypoints/`,
+      `scripts/`, the manifest and every config file are untouched; `permissions: []` unchanged; golden
+      diff **EMPTY**; **D-1 no storage · D-2 still three dependencies**.
 
 ## 7 — Human milestone-close gate (the acceptance an agent CANNOT self-certify — budgeted HERE, up front)
 

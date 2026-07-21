@@ -28,10 +28,11 @@ permissions" (true); the real consent is the OS picker the user clicks, the "gra
 they can see, and the re-prompt on every reopen. This section documents that flow honestly, per
 capability, so "no permissions" is never mistaken for "no capability."
 
-## The ledger — every M2 capability, plus M4's settings channel
+## The ledger — every M2 capability, plus M4's settings channel and M5's watch relay
 
-*(M4 / spec 004 adds one entry, the last row: the settings message channel. Like folder read, it is a
-real capability that costs **no manifest permission** — so it belongs here rather than nowhere.)*
+*(M4 / spec 004 added the settings message channel; M5 / spec 005 adds the watch relay — the last two
+rows. Like folder read, each is a real capability that costs **no manifest permission** — so they
+belong here rather than nowhere.)*
 
 | Capability | Trigger (never silent) | What it can touch | Storage (on-device only) | How the user sees & revokes it |
 |---|---|---|---|---|
@@ -41,6 +42,7 @@ real capability that costs **no manifest permission** — so it belongs here rat
 | **IndexedDB persistence (handles · recents · pins · settings)** | A consequence of opening a folder, opening a file, pinning, or changing a reading preference — **never a network call, never file contents.** | The on-device **`peekover`** IndexedDB (four stores: `folders`, `recents`, `pins`, and — since M4 / spec 004 task 1.1, at `DB_VERSION` 2 — `settings`). Nothing else. | Chromium: the folder handle (capability ref). Both engines: recents (`folderId` + path + name), pins (kind + path + name), and the single settings row (theme choice, TOC open-state + width). **File contents are never stored.** | The **"Stored data"** panel (`describeStored()`) shows *everything* held — folders as a **persisted-boolean** (the presence of a handle, never the object), recents, pins, and a plain-language **"Theme / display settings — stored on-device, no file contents."** line whenever a settings row exists. **"Wipe all data"** (`wipeAll()`) clears all four stores, settings included. |
 | **Re-prompt on reopen** | User **clicks a remembered recent/pinned folder**; one gesture. | Re-grants **read** access to that **previously-chosen** folder via `handle.requestPermission({ mode: 'read' })`. Touches nothing new. | No new storage — reuses the remembered handle row. | Decline the browser's re-prompt (a pre-grant read rejects `NotAllowedError`, surfaced as a re-ask affordance, never a dead end); or revoke / wipe as above. Re-ask-on-use is the **default** — access is never assumed silently. |
 | **Settings message channel (M4 / spec 004)** | The content-script reader messaging **Peekover's own background** — `peekover:getSettings` on reader start, `peekover:setSettings` when the user changes a reading preference (theme, TOC open-state, TOC width). Never on a timer, never for anything else. | **Only the single on-device settings row** — theme choice, TOC open-state, TOC width. It cannot read or write folders, recents, pins, file contents, or page content, and it **never touches the network**. The background answers exactly these two messages and holds no other logic. | The `settings` store in the same on-device **`peekover`** IndexedDB (row above). Nothing leaves the device. | The **"Stored data"** panel lists the settings row in plain language; **"Wipe all data"** erases it with everything else. The effect is also directly visible — it *is* the theme and TOC state the user chose. |
+| **Watch relay — re-reading a watched local file (M5 / spec 005)** | The user switches **watch on** for the document they already have open, with a click on the in-reader watch control. **Nothing watches by default**, nothing starts on a timer, and no document is watched until that gesture. While watching, the reader asks the background (`peekover:watchRead`) for the file's current bytes about once a second; it stops on a second click, when the user switches documents, and when the tab closes. | **Only the one `file://` markdown document the user already opened** — the URL must be a `file://` URL whose extension is one of the same nine in the content script's own `matches`, checked by `isWatchableFileUrl` **before** any read happens (`src/watch/watchRelay.ts`). Every other URL is refused unread: `http(s)` (which would make this a network proxy), `data:`, `blob:`, and `chrome-extension:`/`moz-extension:` (which would expose the extension's own packaged files). It reads **only**; it cannot write, cannot reach outside that one file, and **never touches the network**. | **Nothing.** The bytes are re-rendered and dropped. **No file contents are stored** — 005 keeps no snapshot, no history, no cache, and adds no IndexedDB store (`DB_VERSION` is unchanged at 2). | The watch control itself: it is **visible in the reader**, states whether it is on in words as well as colour, and **turns it off with one click**. Watching also ends by itself when the user opens another document or closes the tab. Where watching cannot work — Firefox, or a document loaded over the network — the control **explains why in plain language instead of pretending**. |
 
 **Read this ledger as the truth of what folder mode can do:** it can read the markdown in folders the
 user explicitly hands it, on device, and remember a *handle* (Chromium) so reopening is one click. It
@@ -55,6 +57,31 @@ it is a new path between two Peekover contexts, so it is disclosed above with th
 the folder rows answer — what triggers it, what it can touch, and how the user sees and erases it. The
 short version: it carries reading preferences to and from one on-device row, it is **never** a network
 call, it **never** sees file or page contents, and "Wipe all data" clears it.
+
+**And the same honesty about the watch relay — including the part that costs us nothing to admit.**
+Like the settings channel, a content script messaging its **own** background needs **no manifest
+permission**, and `permissions: []` is re-proven every run by `tests/manifest.test.ts` on **both**
+built manifests. But "needs no permission" is again not "worth hiding": watching adds a path that
+**re-reads a file from disk on a timer**, which is a bigger claim than carrying a theme preference,
+so it gets the same three answers. What triggers it: **a click, on a file the user already has
+open** — never a default, never a timer that starts on its own. What it can touch: **only that one
+`file://` markdown document**, enforced by a check that runs before any read and refuses every other
+scheme and extension outright. How the user sees and stops it: the control is **in the reader**, says
+in words whether it is on, and stops with one click — and watching ends on its own when they open
+another document or close the tab.
+
+**Reading a watched local file is NOT a network call** (spec §3.6-A). It does not light the network
+indicator, and Peekover's zero-network guards remain scoped to `http(s)` — which is **correct, not
+merely convenient**, and that distinction is **measured rather than asserted**: at spec 005 task 2.3
+a `file://` read was found to leave `performance.getEntriesByType('resource')` **empty (`[]`) on both
+engines**. There is nothing for an http(s)-scoped guard to filter out because a local file read never
+enters that buffer at all. Stated plainly in both directions, so the evidence is not over-read: those
+guards prove watch puts **nothing on the wire**, and they can **never** prove the local read happened
+— that is what the detection tests are for.
+
+**Watching stores nothing, and the claim above stands unchanged.** *"File contents are never
+stored"* is still **true**: watch re-renders the fresh bytes and drops them. It adds no store, no
+cache, no history, and does not touch `DB_VERSION`.
 
 ## `content_scripts.matches`
 
@@ -107,15 +134,30 @@ no persistent background page. Each build ships a background context only so MV3
 background entry, and the shape differs by engine: Chrome uses a service worker
 (`background.service_worker` = `background.js`); Firefox uses a non-persistent MV3 **event page**
 (`background.scripts` = `["background.js"]`). WXT emits the correct shape per engine (decisions.md,
-2026-07-14). As of M4 (spec 004, task 2.3) the background script registers **two** listeners and
+2026-07-14). As of M5 (spec 005, task 2.2) the background script registers **three** listeners and
 makes no network calls; it holds no other logic:
 
-1. `action.onClicked` → open the app page (M2 / task 1.1), as described above; and
+1. `action.onClicked` → open the app page (M2 / task 1.1), as described above;
 2. `runtime.onMessage` → the **settings message handler** (`peekover:getSettings` /
    `peekover:setSettings`), answered against the background's own IndexedDB connection. The
    content-script reader runs on the *page's* origin and therefore cannot see the extension's
    IndexedDB, so it reaches its own stored settings by messaging this context. See the settings-channel
-   row in the ledger above — it adds **no** manifest permission.
+   row in the ledger above — it adds **no** manifest permission; and
+3. `runtime.onMessage` → the **watch relay** (`peekover:watchRead`, added M5 / spec 005 task 2.2).
+   A content script runs in the *page's* origin and cannot reliably re-read its own `file://`
+   document; this context can. So while the user is watching a local markdown file, the reader asks
+   this listener for that file's current bytes and gets one response. **The background holds no watch
+   state at all** — no timer, no registry, nothing: the polling loop lives in the page, so the watch
+   dies with the tab that owns it and there is nothing to lose when the MV3 worker is evicted. The
+   listener **refuses anything that is not a `file://` URL ending in one of the markdown extensions
+   in the content script's own `matches`** (`isWatchableFileUrl`, `src/watch/watchRelay.ts`), and it
+   refuses **before** reading, so a refused URL is never read at all. That validation — not this
+   paragraph — is what stops the relay becoming a general file-read oracle for a compromised page
+   context. See the watch-relay row in the ledger above; like the settings channel it adds **no**
+   manifest permission.
+
+Both message listeners see every message and each returns `false` for anything that is not its own,
+so they coexist without either hijacking the other's response channel.
 
 ### Firefox data collection declaration
 The Firefox build declares `browser_specific_settings.gecko.data_collection_permissions`
@@ -135,13 +177,17 @@ in the browser's extension settings — a binary, user-controlled toggle. Peekov
 requests no additional permission for this; it only declares the `file:///*.<ext>`
 match patterns above, which take effect once the user grants that access. (This governs the
 *content script* on `file://` pages; the app page's folder read is the separate user-gesture
-capability documented in the ledger above, and does not use this toggle.)
+capability documented in the ledger above, and does not use this toggle.) **That same single
+toggle also gates the background's `file://` read**, so the watch relay is reachable exactly when
+the content script is running and never otherwise — it grants the relay no access the user has not
+already granted the reader. It is a browser UI setting, **not** a manifest permission, so nothing
+here changes `permissions: []`.
 
 ## Zero-network evidence
 
 `permissions: []` means the manifest requests no network capability — no `host_permissions`,
 `webRequest`, or any fetch-granting permission. That is the manifest promise; the proof that Peekover
-honors it is **behavioral**, on two surfaces:
+honors it is **behavioral**, on three surfaces:
 
 - **The reader** blocks remote resources by default: `src/render/mediaPolicy.ts` neutralizes remote
   media before it can load, and `tests/browser/remoteMedia.browser.test.ts` asserts at the request
@@ -155,5 +201,14 @@ honors it is **behavioral**, on two surfaces:
   fire **zero** http(s) requests — and, non-vacuously, that a control same-origin fetch *does* appear
   in the same buffer, so the zero-count is a real observation, not a broken observer.
 
-So the manifest requests no network capability, and both the reader and folder mode are **tested to
-make none**.
+- **Watch mode** issues **no network request** to start watching, to re-read a watched file, or to
+  re-render it. `tests/browser/watchNetwork.browser.test.ts` asserts on the Resource Timing buffer —
+  real Chromium and Firefox — that a full watch start → several ticks → stop produces **zero** http(s)
+  entries, and, non-vacuously, that a live control fetch **does** register in the same test. It also
+  pins the property that matters most on a raw `http(s)` page: the reader **never falls back to
+  fetching its own URL** to re-read itself, which would put bytes on the wire from the one context
+  with no network indicator. Watching is out of scope on network-loaded documents entirely, and the
+  reader says so rather than offering a control that cannot work.
+
+So the manifest requests no network capability, and the reader, folder mode and watch mode are all
+**tested to make none**.

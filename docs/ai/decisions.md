@@ -1,6 +1,44 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · IMPLEMENTATION SHAPE (spec 005 task 5.3) · HOW THE COST-PROPORTIONAL COOLDOWN IS BUILT —
+  three structural properties a reasonable future edit would break silently.** The *decision* and its
+  rationale are the 5.2 entry immediately below; this entry does not restate them. It records only what
+  the shipped mechanism's correctness rests on, because none of it is self-evident from reading
+  `watchController.ts` and each failure mode is quiet rather than loud.
+  - **THE TIMER IS DELIBERATELY NOT RE-ARMED PER CHANGE, and re-arming it is the obvious "fix" that
+    reintroduces the failure 5.2 rejected.** `onText` sets one `setTimeout` aimed at `readyAt` and leaves
+    it alone; later changes inside the cooldown only overwrite the single `pendingText` slot. **Pushing
+    the deadline out on every change IS a trailing debounce**, which **starves** against an agent that
+    never stops writing — the reader would simply stop updating. The code looks like a debounce and must
+    not be completed into one. `flushPending` re-checks the clock and re-arms only for the *remainder* if
+    it fired early, so **the cooldown is defined by the clock, not by whenever the timer happened to
+    run** — which is also what makes an early-firing timer harmless rather than a lost cooldown.
+  - **THE `now` CLOCK IS INJECTED BECAUSE THE DISTINGUISHING PROPERTY IS OTHERWISE UNTESTABLE.** What
+    separates this from any fixed window is *proportionality to a render's measured cost*, and a jsdom
+    render costs nothing measurable — on the real wall clock a fixed-250 ms impostor and the shipped
+    mechanism are indistinguishable at small sizes. With an injected `now` the property is exact: a 10 ms
+    render waits 10 ms, a 400 ms render waits 400 ms, and the impostor fails with `expected 250 to be
+    less than 30`. **If a future refactor drops the injected clock for `performance.now()`, the
+    cost-scaling test stops proving what shipped** even while staying green.
+  - **THE "A DOCUMENT SWITCH DISCARDS THE PENDING RENDER" PROPERTY HAS TWO INDEPENDENT GUARDS — `stop()`
+    cancels AND `start()` cancels — so breaking either one alone leaves the whole suite GREEN.** It is
+    asserted directly (stop → `start(hostB)` → no render, and no render ever carrying `hostB`), never
+    inferred from the stop test, precisely because the stop test cannot see a half-broken state.
+    Breaking both exposes what is actually at stake: `"A: pending -> HOST B"` — **file A's text rendered
+    into file B's host**, 4.3's cross-feed bug one level up. **A future edit that removes one guard as
+    redundant removes a layer with nothing going red.**
+  - **The update signal fires per RENDER, not per change** — so a coalesced burst is ONE flash, not
+    twelve. That follows from where the call sits (inside `renderNow`), and moving it to `onText` would
+    restore per-keystroke flashing while every coalescing test stayed green.
+  - **The polled paths are untouched by construction:** at 1 Hz a ~50 ms cooldown never binds, and
+    `mount()`, the detectors and `WATCH_INTERVAL_MS` were not modified. The mechanism is controller-only.
+  **Revisit-when:** 5.2's revisit conditions (7.1 reports lag at normal sizes; 5.1a's disk latency dwarfs
+  the OPFS inference) — the *shape* above is what any such change has to preserve, and the multiplier is
+  the knob, not the structure. Also revisit if a second caller ever sets `preserveReading`: the cooldown
+  currently assumes one controller owning one host at a time, which is what makes a single pending slot
+  sufficient.
+
 - **2026-07-21 · HUMAN DECISION GATE (spec 005 task 5.2) · THE WATCH DEBOUNCE IS A COST-PROPORTIONAL
   COOLDOWN, NOT A FIXED MILLISECOND WINDOW.** Recorded BEFORE 5.3 writes a line — that ordering is 5.2's
   own verify criterion and it is 004's D-2 pattern, the split that stopped a budget-breaching gate from

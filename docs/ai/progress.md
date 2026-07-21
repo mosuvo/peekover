@@ -8,7 +8,16 @@
 
 ## Now (start here)
 
-**M4 is CLOSED. M5 (spec 005) is IN IMPLEMENTATION: all three Gear-3 artifacts are APPROVED — spec.md
+> ### 005 IS CODE-COMPLETE. THE NEXT ACTION IS 7.1, THE HUMAN MILESTONE-CLOSE GATE.
+> **Groups 1–6 are DONE** (including discovered tasks 4.5, 4.6, 4.7). **No code task remains.** Nothing
+> is blocked and nothing is in flight. **7.1 is human work an agent cannot self-certify** — its
+> procedure is in `tasks.md` and the **seven items it must carry** are listed under *Up next* below,
+> several of them deferred there by earlier tasks. **7.2 (the M5 retro) is banked AFTER the gate**,
+> deliberately: what the gate catches is its most valuable content. **Do not write the retro first.**
+> The one thing to know before walking it: **the automated stack has never once exercised the real
+> content→background relay**, on this or any milestone.
+
+**M4 is CLOSED. M5 (spec 005) is CODE-COMPLETE: all three Gear-3 artifacts are APPROVED — spec.md
 (gate 1), plan.md (gate 2), `specs/005-watch-diff/tasks.md` (gate 3). Group 1 (detection core) is
 COMPLETE: **1.1 DONE** (`pollingDetector` — the seam + the polled implementation, content-compare) and
 **1.2 DONE** (`observerDetector` + the dead-observation ladder, real-engine via OPFS). **Group 2 is
@@ -92,8 +101,22 @@ are **STATED, not gated** (spec §5): content script **+10,757 B**, app chunk **
 guessed** — a throwaway worktree build of `70bb8ef` that reproduced the recorded content-script baseline
 **to the byte**. `pnpm zip` **335.89 / 335.95 kB**, far under 2 MB. `perf:watch` re-run twice and did
 **not** move — and the reason is recorded: that harness does not drive `watchController`, so it cannot see
-5.3's cooldown at all. Full numbers + deltas in § Baselines / pins. **NEXT: 6.2 — docs + memory
-reconcile.** One discovered task was added below 5.1:
+5.3's cooldown at all. Full numbers + deltas in § Baselines / pins. **6.2 DONE 2026-07-21 —
+`docs/trust/PERMISSIONS.md` now discloses the background's THIRD listener and carries a watch-relay row
+in the capability ledger**, in the ledger's own honest framing: **no new manifest permission** (a content
+script messaging its own background needs none; `permissions: []` re-proven on both built manifests by an
+**unmodified** `manifest.test.ts`), but a real capability worth disclosing — what it can touch (**only**
+`file://` markdown URLs matching the content script's own `matches`, refused **before** any read by
+`isWatchableFileUrl`), when it fires (only while the user has switched watch on), and that it is
+user-visible and stoppable in one click. **§3.6-A is now stated explicitly AND as MEASURED rather than
+asserted:** a `file://` read leaves the Resource-Timing buffer **empty on both engines** (task 2.3), so
+the http(s)-scoped zero-network guards are **correct, not conveniently scoped**. **The claim *"File
+contents are never stored"* was left EXACTLY as it is — that is DELIBERATE, not an oversight:** it is
+**true for all of 005** (D-1 — nothing here persists file contents; `DB_VERSION` is untouched at 2), and
+its correction belongs to **006**, in the same PR as the first code that stores a snapshot. Correcting
+it now would make the document wrong in the other direction. **GROUP 6 IS COMPLETE; 005 IS
+CODE-COMPLETE. NEXT: 7.1, the human gate** (then 7.2, the retro, after it). One discovered task was
+added below 5.1:
 **5.1a**, the local-disk observer latency the harness provably cannot take, folded into 7.1 and explicitly
 **non-blocking** for 5.2/5.3. Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
@@ -472,13 +495,60 @@ on the REAL content-script `<peekover-root>` and on the app page's `.peekover-ap
 
 ## Up next
 
-**Immediate: group 6 — 6.1 re-measure bytes + first paint, then 6.2 docs/memory reconcile**
-(`specs/005-watch-diff/tasks.md`). **Group 5 is CLOSED except 5.1a**, which is deliberately folded into the
-7.1 human gate and is non-blocking: 5.1 measured, **5.2 decided** (a cost-proportional cooldown, recorded
-before any code — 004's D-2 ordering), **5.3 shipped it controller-only**. Know before starting 6.1: the
-first-paint margin is **~7–12 ms** against the <150 ms budget and watch has been adding chrome to that path
-all milestone. Gate 3 passed 2026-07-19; groups 1–4 are complete.
-*(Then: 7.1 the human milestone-close gate — which also carries 5.1a and the relay round trip.)*
+**Immediate: 7.1 — the milestone-close HUMAN GATE. It is the only thing standing between 005 and closed,
+and no amount of further testing can substitute for it.** Groups 1–6 are complete; the full procedure
+(fresh **production** builds per engine — never a dev build — both surfaces, Network tab open, console
+watched) is in `specs/005-watch-diff/tasks.md` §7.1 and `decisions.md` 2026-07-19 (PROCEDURE).
+
+**WHAT 7.1 MUST CARRY. Several tasks deferred items into it; this is the consolidated list, recorded here
+so none is lost between sessions.** The first two are the ones that cannot be recovered later.
+
+1. **THE RELAY ROUND TRIP, end-to-end — the single largest gap in the whole milestone.** `tests/browser`
+   loads no extension, so `runtime.sendMessage` has **no receiving end**, and the real content→background
+   transport has **never been exercised by any test, on any milestone**. The handler is proven as a pure
+   function through the production seam; the *transport* is proven by nothing. Watch a `file://` doc
+   through the content script on Chromium and confirm it actually updates.
+2. **5.1a — observer latency ON LOCAL DISK** (the discovered task below 5.1). 5.1's **18.7 ms @ 50 KB /
+   109.5 ms @ 1 MB** are **OPFS**, an *inference* about disk, not a measurement of it — no local-disk
+   handle is obtainable without a native dialog Playwright cannot drive. **Retro finding 2 is the
+   precedent** (004's isolated probe under-predicted the real path ~13×). With a production build and a
+   picker-opened folder, have an agent (or `echo >>` in a loop) rewrite a watched file and record
+   write→update at both sizes. **Record it even if it matches** — a confirmed inference is evidence; an
+   unrecorded one stays a guess.
+3. **Does the anchor FEEL like your place when an agent REWRITES HEADINGS, not just appends?** (D-3.) The
+   geometry tests prove the scroll landed at *a* correct position; whether it is *the reader's* place is
+   the M3 defect-#6 class and is **eye-only**. **Include the Raw-mode asymmetry flagged at 3.3:** in Raw
+   the reading column is `display:none`, so heading rects are all zero and restore deliberately falls to
+   its **`scrollTop` rung** — Raw gets pixel continuity, Reading gets anchor continuity. That is a
+   reasoned choice, not a bug, but **nobody has ever looked at whether it feels right.**
+4. **Firefox first paint.** `perf-first-paint.ts` is **Chromium-only by construction** (Playwright cannot
+   load an extension into Firefox), so Firefox first paint has **no automated coverage on any milestone**
+   and is evidenced only here — exactly as at M4's gate.
+5. **Firefox's watch RE-RENDER COST — UNMEASURED, same root cause.** Firefox's app-page watch
+   (drag-opened folders) **is a shipped surface**, but every number in the watch table is Chromium.
+   Whether a re-render is acceptable there is currently unknown, not merely unrecorded.
+6. **The degraded-state COPY, on all three surfaces — does it read as honest, or as broken?** Both
+   Firefox routes (the picker-opened app page and the `file://` content script, both closed by 2.3's
+   negative answer) **and** the remote `http(s)` raw surface (4.6's rescope). The tests prove the right
+   *string* renders on the right *branch*; they cannot judge whether a user reads it as an explanation
+   or as a failure. **The three notes are deliberately different in kind** — a platform limit with a
+   "do X instead" route, vs. a scope statement naming no fault — and that distinction is the thing to
+   check.
+7. **The un-automatable Chrome check from 4.6, five seconds:** with **"Allow access to file URLs" OFF**,
+   confirm the content script does **not** inject on a `file://` page at all — no control, no note, no
+   misdirection. 4.6's conclusion that the hardcoded `backgroundCanReadFileUrls: true` is correct rests
+   on this, and it was reasoned from Chrome's docs rather than observed.
+
+**Plus the standing gate items, regardless of milestone:** cold start (freshly loaded extension / MV3
+worker asleep, not a warm repeat open) · **zero unexpected network** with the Network tab open across
+start/tick/stop on both engines · is the update signal **noticeable but not annoying** over several
+minutes of a real agent writing · no console errors · every degraded/empty state renders (**never
+blank**) · the document stays the hero.
+
+**Then 7.2 — the M5 retro, banked AFTER the gate and not before.** `docs/ai/retro.md`, via `/retro`. The
+questions the milestone owes answers to are listed in `tasks.md` §7.2; the sharpest is whether crossing
+the `mount()` boundary cost what §4-1 feared. **Do not pre-write it** — what the gate catches is its most
+valuable content.
 
 **After 005 closes: spec 006 — snapshots + diff**, starting a fresh Gear-3 cycle at spec level. Its
 inputs already exist: 005's §3.3/§3.4 and the criteria marked *deferred to 006*, plus `plan.md` §1.7
@@ -524,8 +594,12 @@ is either measurement-driven or explicitly deferred.**
 
 ## Blockers / open questions
 
-- **No blockers, and nothing waiting on a human.** M1–M4 are all fully closed (code + the named human gate
-  + retro). Nothing outstanding on any of them.
+- **ONE THING IS WAITING ON A HUMAN, and it is the only thing: 7.1, the 005 milestone-close gate.**
+  005 is **code-complete** — groups 1–6 done, no code task remaining, nothing in flight, no agent work
+  available on this milestone. It is **not a blocker in the "something is broken" sense**; it is the
+  budgeted acceptance that an agent cannot self-certify, and the full carry list is under *Up next*.
+  **Nothing else on 005 is outstanding.** M1–M4 remain fully closed (code + named human gate + retro),
+  with nothing outstanding on any of them.
 - **The gaps that 8.1 closed are closed as *findings*, but remain gaps in AUTOMATED coverage** — Firefox
   first paint, the real end-to-end settings/TOC round-trip through the background, and the cold-start theme
   flash. They were never known defects; the gate walked all three and found nothing. **But a future change
