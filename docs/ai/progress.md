@@ -39,12 +39,17 @@ exists; the pill flash carries the same information). **4.3 DONE** (lifecycle �
 designed state) and **4.4 DONE** (the Firefox degraded state, on BOTH closed routes). **GROUP 4 IS
 COMPLETE.** Two discovered tasks then closed: **4.5 DONE** — the browser-suite flake is fixed
 (`fileParallelism: false`, measured over global-vs-narrower serial, 12/12 green; see the flake bullet
-below), and **4.6 INVESTIGATED — its premise is FALSIFIED, no code shipped**: Chrome's single "Allow
+below), and **4.6 INVESTIGATED then RESCOPED + SHIPPED**: the original premise is FALSIFIED (Chrome's single "Allow
 access to file URLs" toggle gates BOTH content-script injection on `file://` AND the background read, so a
-running content script always has access — the misleading dead-read scenario is unreachable and
-`isAllowedFileSchemeAccess` was NOT wired (an unreachable branch). The reachable analogue (a watch control
-on REMOTE raw surfaces) is flagged for a human scoping decision, not implemented (`decisions.md`
-2026-07-21). **Next: GROUP 5 — measure then tune** (5.1 measures observer latency + re-render cost; 5.2 is
+running content script always has access — `isAllowedFileSchemeAccess` was NOT wired, an unreachable
+branch), and the reachable analogue it surfaced is the **real defect and now ships**: the content script
+offered a live-looking watch control on the REMOTE `http(s)` raw surfaces (raw.githubusercontent / gist /
+gitlab-raw / bitbucket-raw), where the relay refuses every read — a dead control on a surface where spec §6
+puts watch out of scope. `watchCapability` now gates the content-script decision on
+`isWatchableFileUrl(location.href)` (the relay's own predicate, passed as a boolean to keep the pure
+decision engine-free); a remote page gets a plain SCOPE note and **no detector at all**. `file://`
+behaviour is byte-identical (Chromium control kept, Firefox note unchanged); the three notes are red-first
+proven non-interchangeable (`decisions.md` 2026-07-21). **Next: GROUP 5 — measure then tune** (5.1 measures observer latency + re-render cost; 5.2 is
 a HUMAN decision gate for the debounce window; nothing in group 4 pre-empted it). Group 3 is where `mount()` stops
 being the read-only library four milestones have treated it as. The content script builds a stopped
 detector at `document_start`; nothing starts it, because watching is a user gesture on group 4's

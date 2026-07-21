@@ -4,7 +4,12 @@ import { messagingPort } from '@/src/settings/settingsPort';
 import { setThemeSetting } from '@/src/theme/reader';
 import { publishSettings, registerSettingsSink } from '@/src/settings/settingsSeam';
 import { pollingDetector } from '@/src/watch/changeDetector';
-import { WATCH_INTERVAL_MS, registerWatchDetector, relayRead } from '@/src/watch/watchRelay';
+import {
+  WATCH_INTERVAL_MS,
+  registerWatchDetector,
+  relayRead,
+  isWatchableFileUrl,
+} from '@/src/watch/watchRelay';
 import { watchCapability } from '@/src/watch/watchAvailability';
 import { setWatchNote } from '@/src/watch/watchRegistry';
 
@@ -130,6 +135,14 @@ export default defineContentScript({
     const watch = watchCapability({
       surface: 'content-script',
       backgroundCanReadFileUrls: !import.meta.env.FIREFOX,
+      // The OTHER half of this content script's `matches` is remote raw hosts (raw.githubusercontent,
+      // gist, gitlab-raw, bitbucket-raw), where watching is out of scope (spec §6, task 4.6-rescope).
+      // Gate on the RELAY's own predicate — the authority on what the background will read — so a remote
+      // page gets the scope note and registers NO detector (no toggle, no per-second refused message),
+      // rather than a live-looking control the relay refuses every tick. Passed as a plain boolean (not
+      // by importing the predicate into the pure decision) so `watchCapability` stays engine/DOM-free and
+      // unit-testable with plain values, exactly as `backgroundCanReadFileUrls` is.
+      documentIsWatchableFile: isWatchableFileUrl(location.href),
     });
     if (watch.watchable) {
       registerWatchDetector(

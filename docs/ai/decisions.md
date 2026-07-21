@@ -1,6 +1,30 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-21 · HARNESS LEDGER ADDENDUM (extends the 2026-07-19 "WHAT THE TEST + MEASUREMENT HARNESSES
+  CAN AND CANNOT DO" entry) · Vitest's browser API port is HARDCODED and can collide with a Windows
+  reserved range — `pnpm test:browser` then runs ZERO tests with an `EACCES`, not a test failure.**
+  Measured at 4.5 on this machine (i7-13700, Windows 11).
+  - **Symptom:** `pnpm test:browser` exits with `Error: listen EACCES: permission denied ::1:63315`,
+    `Test Files no tests`, `Duration ~45ms`. It reads like the harness is broken; it is not — the browser
+    provider cannot bind its server port.
+  - **Cause:** Vitest's `defaultBrowserPort = 63315` (`vitest/dist/chunks/constants.*.js`), and on this
+    machine `netsh interface ipv4 show excludedportrange protocol=tcp` lists **63230–63329** as a
+    Windows/Hyper-V/WinNAT dynamic reservation — 63315 falls inside it, so `listen` gets `EACCES`. These
+    reservations are assigned at boot and vary between machines and reboots, which is why 4.1–4.4 never hit
+    it and this session did.
+  - **The CLI flag does NOT fix it:** `--browser.api.port=51234` was ignored — the run still tried 63315.
+    The working override is `browser.api.port` set in `vitest.config.ts` (the browser project's `browser`
+    block).
+  - **The override is LOCAL-ONLY and deliberately NOT committed** — it is orthogonal to anything the
+    project tests (it only chooses which port the server binds), and hardcoding a port would be worse for
+    everyone whose reserved range differs. All of 4.5's measurement + 12/12 verification and 4.6's browser
+    runs used a temporary `api: { port: 51234 }` that was stripped before each commit.
+  **Revisit-when:** Vitest makes the default port configurable via CLI/env, or moves off a
+  commonly-reserved port. Until then: a future session seeing `EACCES` on `::1:63315` with zero tests run
+  should add `browser.api.port` locally (a free port outside `netsh ... show excludedportrange`) and NOT
+  commit it.
+
 - **2026-07-21 · FINDING (spec 005 task 4.6, INVESTIGATED — premise FALSIFIED, no code shipped) · The
   Chrome content-script "Allow access to file URLs" concern is UNREACHABLE, so `isAllowedFileSchemeAccess`
   was NOT wired.** 4.6 assumed a fresh-install Chromium user (file access OFF by default) would get a

@@ -678,8 +678,9 @@ A was edited after the switch…' to contain 'File B'`.
       `fileParallelism: false` and nothing else. A future run on a machine with the same reservation may
       need the same local-only override.
 
-- [x] **4.6 (DISCOVERED at 4.5 — the Chrome file-URLs "wrong explanation" concern is INVESTIGATED, and its
-      PREMISE is FALSIFIED. No code shipped; a human decision is proposed below, not smuggled in.)**
+- [x] **4.6 (DISCOVERED at 4.5, then RESCOPED. The original Chrome file-URLs premise is FALSIFIED — that
+      record is kept in full below, unchanged. The reachable analogue it surfaced was ACCEPTED by the human
+      and SHIPPED 2026-07-21 — see the RESCOPE note at the end of this entry.)**
       **What 4.6 assumed:** the Chromium build hard-codes `backgroundCanReadFileUrls: !import.meta.env.FIREFOX`
       (= `true`), but Chromium's background can only read `file://` when the user enabled "Allow access to
       file URLs" (OFF by default). A fresh-install user would then get: reads fail → 3 failures → 4.3's
@@ -717,6 +718,51 @@ A was edited after the switch…' to contain 'File B'`.
       · `src/watch/watchRelay.ts` · `entrypoints/background.ts`. `permissions: []` untouched — and note
       explicitly: file-URL access is a Chrome UI toggle, **not** a manifest permission, so nothing here was
       ever an AGENTS.md #4 event.
+      **── RESCOPE — SHIPPED 2026-07-21. The human accepted the reachable analogue; it is the real defect,
+      and it is now gated. Same class 4.6 was reaching for, different location: not "Chromium without file
+      access" but "a content script on a REMOTE page."**
+      **The defect, confirmed:** the content script's `matches` include `raw.githubusercontent.com`,
+      `gist.githubusercontent.com`, `gitlab.com/*/-/raw/*`, `bitbucket.org/*/raw/*`. On those pages the old
+      `watchCapability({surface:'content-script', …})` returned **watchable** — it never asked what the URL
+      was — so `buildWatchChrome` rendered a **live-looking control**. Clicking it sends an `https://` URL to
+      the relay, 2.1's `isWatchableFileUrl` correctly refuses it, and `pollingDetector` swallows the
+      rejection and keeps polling: **one refused message per second for the life of the tab, nothing rendered,
+      nothing explained** — the dead control spec §4 forbids, on a surface where spec §6 says watch is out of
+      scope ("http(s) documents are not watched").
+      **The gate (pure, SYNCHRONOUS — none of the original 4.6's async/mount-ordering cost):**
+      `watchCapability`'s content-script branch now takes `documentIsWatchableFile`, and returns the
+      **unavailable** state (note, no toggle) when it is false. The content script computes it with the
+      relay's OWN predicate — `isWatchableFileUrl(location.href)` from `watchRelay.ts` — so there is **one
+      authority** and nothing to drift. It is **passed as a boolean**, not imported into the pure decision:
+      that keeps `watchAvailability` engine/DOM-free and unit-testable with plain values, exactly as
+      `backgroundCanReadFileUrls` and the app-page `persistable`/`route` are. Ordering of the branch is
+      REMOTE-first (engine-independent — a remote page is remote on both builds), then the file:// access
+      check.
+      **The note is a SCOPE STATEMENT, not an error** (`REMOTE_DOCUMENT_NOTE`): *"Peekover watches local
+      files for changes. This document is loaded over the network, so there is no file on disk to follow —
+      you are seeing it as it loaded."* It names no fault and no fix, because there is neither — deliberately
+      unlike 4.4's Firefox notes (a platform limit *with* a "do X instead" route) and 4.3's dead-read note (a
+      failure the file suffered).
+      **The three notes are NOT interchangeable — RED-FIRST proven.** Swapping `REMOTE_DOCUMENT_NOTE` ↔
+      `FIREFOX_CONTENT_SCRIPT_NOTE` in the decision failed **3 unit cases** (`watchAvailability.test.ts`: the
+      Firefox-local case, the remote case, and "remoteness dominates") **and 6 browser cases** (the (b)
+      Firefox, (c) remote, and render-level discrimination tests × both engines) —
+      `expected 'Peekover watches local files…' to be 'Watching isn't available…'` and its mirror. Restored
+      from a `cp` copy; `git checkout` was never used. The unit properties test also pins REMOTE ≠ the
+      dead-read note (it must not match `/could not|error|failed/`) and REMOTE ≠ the Firefox notes (no
+      `/Firefox|isn't available|instead/`).
+      **`file://` behaviour is BYTE-IDENTICAL, asserted:** Chromium's file:// content script keeps its
+      control (the CHROMIUM-UNAFFECTED test, `documentIsWatchableFile:true`), and Firefox's file:// keeps its
+      existing note unchanged. **And on a remote page NO detector is registered** — the browser test asserts
+      `watchAvailable()` is `false` there, mirroring production, which registers a detector ONLY in the
+      `watch.watchable` branch. So no detector, no polling loop, no per-second refused message. (Second
+      finding checked and NEGATIVE: no detector is left registered on remote.)
+      Files (RESCOPE, modified): `src/watch/watchAvailability.ts` (+ `watchAvailability.test.ts`) ·
+      `entrypoints/peekover.content.ts` · `tests/browser/watchLifecycle.browser.test.ts`. **`watchRelay.ts`
+      UNCHANGED** — its `isWatchableFileUrl` was already exported and is reused as-is (the authority).
+      `permissions: []` untouched; **D-1 no storage · D-2 no dependency** (still three); golden diff EMPTY;
+      `manifest.test.ts` green unmodified. `pnpm test` **445** (was 440); `pnpm test:browser` **457 passed /
+      5 skipped** both engines (was 453), suite still 50 files, serial per 4.5.
 
 ## 5 — MEASURE → tune (the measuring task is separate from the deciding one, on purpose)
 

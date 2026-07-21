@@ -52,9 +52,15 @@
 //
 // Spec §4 Degradation, and the same honesty posture M2 took for Firefox's read-only folder
 // snapshot (`READ_ONLY_SNAPSHOT_NOTE`). A user told nothing assumes a bug; a user given a greyed-out
-// button assumes they did something wrong. Both notes below therefore say WHAT is not happening,
-// WHY, and — this is the part that makes them worth shipping — WHAT TO DO INSTEAD, because in both
-// cases there genuinely is a working route the user can take.
+// button assumes they did something wrong. The two Firefox notes below therefore say WHAT is not
+// happening, WHY, and — the part that makes them worth shipping — WHAT TO DO INSTEAD, because in
+// both those cases there genuinely is a working route the user can take.
+//
+// The THIRD note (task 4.6-rescope) is a different shape ON PURPOSE: the REMOTE `http(s)` raw
+// surface is not a limitation to work around but a SCOPE boundary (spec §6 — remote watching is out
+// of scope). Its note names no fault and no fix, because there is neither; it just states that watch
+// follows local files. The three notes are deliberately non-interchangeable, and that is red-first
+// proven — swapping any pair fails, the same discrimination check that caught 4.4's engine leak.
 //
 // Whether the copy READS as honest rather than broken is human-gate 7.1, not a test.
 
@@ -64,6 +70,13 @@ export type WatchSurface =
       surface: 'content-script';
       /** Can THIS BUILD's background read `file://` URLs? Chromium yes; Firefox no (2.3). */
       backgroundCanReadFileUrls: boolean;
+      /** Is the CURRENT DOCUMENT a local `file://` markdown URL the relay will actually read —
+       *  i.e. does `location.href` satisfy `watchRelay`'s `isWatchableFileUrl`? The content script's
+       *  `matches` ALSO cover remote raw hosts (raw.githubusercontent, gist, gitlab-raw,
+       *  bitbucket-raw); on those this is `false`, and watching is out of scope (spec §6, task
+       *  4.6-rescope) — not a live control the relay would refuse every tick. The caller computes it
+       *  with the relay's OWN predicate, so there is one authority and nothing to drift. */
+      documentIsWatchableFile: boolean;
     }
   | {
       surface: 'app-page';
@@ -93,6 +106,22 @@ export const FIREFOX_PICKER_NOTE =
   'Drag the folder onto this page instead and watching will work.';
 
 /**
+ * (c) A REMOTE `http(s)` raw document — raw.githubusercontent / gist / gitlab-raw / bitbucket-raw,
+ * the other half of the content script's `matches`.
+ *
+ * This is a SCOPE STATEMENT, not an error and not a platform limit. Watching remote URLs is
+ * deliberately out of scope (spec §6 — "http(s) documents are not watched; that would be real
+ * network polling and a different trust conversation"). So, unlike the Firefox notes above (a
+ * platform limit that names a working alternative) and unlike 4.3's dead-read note (a failure the
+ * file suffered), this names NEITHER a fault the user made NOR a fix they could apply: there simply
+ * is no local file behind a network document to follow. Saying that plainly is why it must not be
+ * interchangeable with the other two — swapping any pair should read as wrong.
+ */
+export const REMOTE_DOCUMENT_NOTE =
+  'Peekover watches local files for changes. This document is loaded over the network, so there is ' +
+  'no file on disk to follow — you are seeing it as it loaded.';
+
+/**
  * PURE: can this surface watch, and if not, what should the user be told?
  *
  * Every branch is reachable and each has a test. The DEFAULT is watchable — a surface that can
@@ -100,8 +129,17 @@ export const FIREFOX_PICKER_NOTE =
  */
 export function watchCapability(input: WatchSurface): WatchDecision {
   if (input.surface === 'content-script') {
-    // Chromium: the background reads the file and relays it (task 2.2). Firefox: Gecko refuses,
-    // and no permission changes that — so the honest answer is an explanation, not a toggle.
+    // REMOTE first, and engine-independent: the content script also runs on the raw http(s) hosts
+    // (raw.githubusercontent / gist / gitlab-raw / bitbucket-raw), where `location.href` is not a
+    // `file://` URL the relay will read. Watching remote URLs is OUT OF SCOPE (spec §6). Offering a
+    // control there would be a DEAD TOGGLE — the relay refuses every read (2.1's `isWatchableFileUrl`
+    // accepts only `file://`), so `pollingDetector` would swallow one rejection per tick forever and
+    // nothing would render (spec §4 Degradation). The honest answer is the scope note, not a toggle.
+    if (!input.documentIsWatchableFile) {
+      return { watchable: false, note: REMOTE_DOCUMENT_NOTE };
+    }
+    // A local file. Chromium: the background reads it and relays it (task 2.2). Firefox: Gecko
+    // refuses and no permission changes that — so the honest answer is an explanation, not a toggle.
     return input.backgroundCanReadFileUrls
       ? { watchable: true, note: null }
       : { watchable: false, note: FIREFOX_CONTENT_SCRIPT_NOTE };

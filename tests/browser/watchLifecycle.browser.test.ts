@@ -35,11 +35,13 @@ import {
   resetWatchRegistryForTest,
   setWatchNote,
   watchNote,
+  watchAvailable,
 } from '../../src/watch/watchRegistry';
 import {
   watchCapability,
   FIREFOX_CONTENT_SCRIPT_NOTE,
   FIREFOX_PICKER_NOTE,
+  REMOTE_DOCUMENT_NOTE,
 } from '../../src/watch/watchAvailability';
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
@@ -299,7 +301,11 @@ describe('watch degraded state — the Firefox routes (task 4.4)', () => {
 
   it('(b) the Firefox content-script reader EXPLAINS, and offers no toggle at all', () => {
     const host = mountUnder(
-      watchCapability({ surface: 'content-script', backgroundCanReadFileUrls: false }),
+      watchCapability({
+        surface: 'content-script',
+        backgroundCanReadFileUrls: false,
+        documentIsWatchableFile: true,
+      }),
     );
 
     // NOT a disabled control and NOT a dead toggle — there is no button to mislead anyone.
@@ -336,11 +342,67 @@ describe('watch degraded state — the Firefox routes (task 4.4)', () => {
     expect(noteIn(host)!.hidden).toBe(true);
   });
 
+  it('(c) a REMOTE http(s) raw document EXPLAINS with the scope note — no toggle, NO detector', () => {
+    // The other half of the content script's `matches` — raw.githubusercontent / gist / gitlab-raw /
+    // bitbucket-raw. Watching remote is out of scope (spec §6), so the reader shows the scope note,
+    // NOT a live-looking control the relay refuses every tick (the dead-toggle §4 forbids).
+    const decision = watchCapability({
+      surface: 'content-script',
+      backgroundCanReadFileUrls: true,
+      documentIsWatchableFile: false,
+    });
+    const host = mountUnder(decision);
+
+    // No toggle — and, because the decision is not watchable, `mountUnder` registered NO target, EXACTLY
+    // as production's peekover.content.ts registers a detector ONLY in the `watch.watchable` branch. So a
+    // remote page runs no detector, no polling loop, and issues no per-second refused relay message.
+    expect(controlIn(host)).toBeNull();
+    expect(watchAvailable()).toBe(false);
+    const note = noteIn(host)!;
+    expect(note.hidden).toBe(false);
+    expect(note.getAttribute('role')).toBe('status');
+    expect(note.textContent).toBe(REMOTE_DOCUMENT_NOTE);
+    // AGENTS.md #5: the document itself renders normally — only WATCH degrades, nothing else.
+    expect(columnText(host)).toContain('The first document');
+  });
+
+  it('the remote scope note and the Firefox limit note are NOT interchangeable (render level)', () => {
+    // Each surface renders its OWN note. Swapping the two in the decision (the red-first mutation)
+    // makes exactly this assertion — and the two surface-specific tests above — fail.
+    const remote = noteIn(
+      mountUnder(
+        watchCapability({
+          surface: 'content-script',
+          backgroundCanReadFileUrls: true,
+          documentIsWatchableFile: false,
+        }),
+      ),
+    )!.textContent;
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    const firefoxLocal = noteIn(
+      mountUnder(
+        watchCapability({
+          surface: 'content-script',
+          backgroundCanReadFileUrls: false,
+          documentIsWatchableFile: true,
+        }),
+      ),
+    )!.textContent;
+    expect(remote).toBe(REMOTE_DOCUMENT_NOTE);
+    expect(firefoxLocal).toBe(FIREFOX_CONTENT_SCRIPT_NOTE);
+    expect(remote).not.toBe(firefoxLocal);
+  });
+
   it('CHROMIUM IS UNAFFECTED — the normal control still renders on both surfaces', () => {
     // THE FAILURE MODE THIS TASK IS MOST AT RISK OF: a degraded state leaking into the working
     // engine. Asserted for both of Chromium's surfaces.
     const contentScript = mountUnder(
-      watchCapability({ surface: 'content-script', backgroundCanReadFileUrls: true }),
+      watchCapability({
+        surface: 'content-script',
+        backgroundCanReadFileUrls: true,
+        documentIsWatchableFile: true,
+      }),
     );
     expect(controlIn(contentScript)).toBeTruthy();
     expect(controlIn(contentScript)!.getAttribute('aria-pressed')).toBe('false');
