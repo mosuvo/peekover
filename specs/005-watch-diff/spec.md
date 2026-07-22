@@ -45,7 +45,7 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 - **Not literally an AGENTS.md #4 permission event** (no manifest change), **but treated with the same weight**: PERMISSIONS.md is corrected **in the same PR** as the first code that stores a snapshot; the "Stored data" panel discloses snapshots; "Wipe all data" erases them.
 - The claims that must remain true: **nothing leaves the device**, and everything stored is **visible and erasable**.
 
-**3.4 Snapshot storage is BOUNDED on three axes, with user-visible controls.** _(deferred to 006 — see §3.1)_ Snapshots are the first unbounded-growth feature in the product. Caps by **count**, **age**, and **total bytes** — whichever binds first — with the limits visible and adjustable and current usage shown. Eviction is oldest-first, and the user can see what is retained rather than discovering loss by surprise.
+**3.4 Snapshot storage is BOUNDED on three axes, with user-visible controls.** _(deferred to 006 — see §3.1)_ Snapshots are the first unbounded-growth feature in the product. Caps by **count**, **age**, and **total bytes** — whichever binds first — with the limits visible ~~and adjustable~~ and current usage shown. Eviction is oldest-first, and the user can see what is retained rather than discovering loss by surprise. **AMENDED BY 006 §3.4 — THE *ADJUSTABLE* HALF ONLY.** Bounds are disclosed defaults, not user settings: §7-5 concedes the numbers are guesses until real agent-write patterns are observed, and both it and plan §1.7 specify defaults *"tuneable, not gated"* — meaning **we** may change them without a gate, not that the user tunes them. Exposing them as a control would harden guessed numbers into an interface. **Visible limits, visible usage and visible eviction all survive** as criteria in 006 §4. Kept, not deleted, so it is not re-opened from scratch.
 
 **3.5 Both reader surfaces, by two different routes.** Watch ships to the app-page reader **and** the content-script `file://` reader — the two-surface symmetry every milestone since M1 has held.
 
@@ -88,7 +88,7 @@ _(**The split was TAKEN at the plan gate** — `plan.md` §0 D-1. **005 ships au
 - When a watched document changes, the system shall be able to retain the previous version as a snapshot.
 - When the user asks what changed, the system shall show the difference between the current document and a chosen earlier snapshot.
 - When snapshots exceed any configured bound (count, age, or bytes), the system shall evict oldest-first, and the user shall be able to see that this happened.
-- The system shall let the user see how much snapshot storage is in use and adjust the limits.
+- The system shall let the user see how much snapshot storage is in use ~~and adjust the limits~~. **AMENDED BY 006 §4 (Retention & bounds): the USAGE half stands, the ADJUSTMENT half is superseded** — bounds are disclosed defaults, not user settings (006 §3.4). Kept, not deleted, so it is not re-opened from scratch.
 
 **Surfaces**
 

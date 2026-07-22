@@ -10,32 +10,34 @@
 
 ## Now (start here)
 
-> ### M5 (spec 005 — watch mode) IS CLOSED: CODE + HUMAN GATE + RETRO. M6 (spec 006) IS NOT STARTED.
-> **Nothing is in progress and nothing is blocked.** Every task in `specs/005-watch-diff/tasks.md` is
-> ticked, including the five discovered ones (4.5, 4.6, 4.7, 4.8, 5.1a); the durable facts are promoted
-> into `decisions.md` / `retro.md`; the narrative is archived. **M1–M5 are all fully closed** —
-> code-complete, human-gated, retro'd — with no work of any kind outstanding on any of them.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN AT GATE 1 PASSED: the spec is APPROVED and LANDED.
+> **Nothing is in progress and nothing is blocked.** `specs/006-snapshots-diff/spec.md` is the approved
+> WHAT for snapshots + diff-against-history. It also **amends 005 §3.4 and one §4 criterion**, struck
+> through and annotated in place rather than rewritten (C12). **M1–M5 remain fully closed.**
 >
-> **THE NEXT ACTION IS 006's GEAR-3 KICKOFF, AT SPEC LEVEL, IN A FRESH SESSION.** Not code. The order is
-> **spec → gate 1 → plan → gate 2 → tasks → gate 3 → only then implementation** (WORKFLOW.md §5.3); the
-> human approves each artifact before the next is generated. **Start it in a clean context** (C14) holding
-> only the memory files and 006's inputs — which are listed under *Up next* so the kickoff session does
-> not have to reconstruct them.
+> **THE NEXT ACTION IS 006's `plan.md` — GATE 2, IN A FRESH SESSION** (C14). Not code, and not `tasks.md`.
+> The order is **spec → gate 1 ✅ → plan → gate 2 → tasks → gate 3 → only then implementation**
+> (WORKFLOW.md §5.3); the human approves each artifact before the next is generated.
 >
-> *`AGENTS.md`'s `Current milestone:` line still points at `specs/005-watch-diff/`. That is deliberate —
-> it moves to 006 at the kickoff, when the 006 spec folder actually exists.*
+> **`plan.md`'s job is spec 006 §7 — fifteen open risks, resolved against the ACTUAL CODE**, not against
+> the spec. Every `file:line` and every number inherited from a 005 artifact must be **re-derived**; plan
+> 005 §1.7's own references have already drifted.
+>
+> **No implementation, no storage schema and no `diff` dependency until `tasks.md` is approved.**
 
 ## Up next
 
-### 006 — snapshots + diff · its inputs, listed once
+### 006 — snapshots + diff · next artifact is `plan.md` (gate 2)
 
 **What it is:** the second half of the watch feature area. 005 shipped watch; **006 stores snapshots and
 diffs against them.** It gets its **own full Gear-3 cycle** — the split (D-1) was taken at 005's plan gate
 precisely so this would be planned rather than inherited.
 
-- **Spec-level WHAT already exists:** `specs/005-watch-diff/spec.md` **§3.3 / §3.4** (snapshots store file
-  contents; storage bounds) and every §4 acceptance criterion marked *deferred to 006*. They were marked,
-  not deleted — they are good criteria that land later.
+- **★ THE WHAT IS SETTLED — `specs/006-snapshots-diff/spec.md`, approved at gate 1 (2026-07-22). Read it
+  first.** It supersedes the spec-level material previously pointed at here: 005's **§3.3 / §3.4** and its
+  §4 criteria marked *deferred to 006* carried forward into it, and 005 §3.4 plus one §4 criterion are now
+  **struck through and annotated** where 006 amends them (retention limits are disclosed defaults, not
+  user-adjustable).
 - **Plan-level starting points, written for 006 and standing:** `specs/005-watch-diff/plan.md` **§1.7**
   (the two-store IndexedDB split that dodges `idbCore`'s STOP signal), **§1.8** (the line-diff engine and
   the diff view — diff output goes through the existing sanitize path like any other rendered content),

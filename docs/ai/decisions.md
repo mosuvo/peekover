@@ -1,6 +1,23 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-22 · RECORD BACKFILL · SPEC 005's THREE PLAN-GATE DECISIONS WERE NEVER LOGGED HERE.** D-1 (the
+  005/006 split), D-2 (the `diff` dependency approved, and deferred to 006) and D-3 (anchor-based scroll
+  continuity) were taken and human-approved at the 005 plan gate on **2026-07-19**, but recorded **only** in
+  `specs/005-watch-diff/plan.md` §0. **Full text of all three lives there and is deliberately not restated
+  here (C5)** — this entry records *that* they exist and *where*, not what they say.
+  - **Why this is being fixed now, rather than left as a closed milestone's untidiness:** 004's D-1 and D-2
+    both have entries in this log, and 004's D-1 links out to its plan for the detail — **the log carries
+    the entry, the plan carries the detail** was already the pattern, and 005 did not follow it. **006 acts
+    on D-2 directly** (it adds the dependency), and WORKFLOW §8.2 states that *"dependency changes always
+    require explicit human approval"*. A session reading this log for standing rules would not have found
+    that approval at the moment it needed it — which is the one moment it matters.
+  - **Dated today rather than 2026-07-19** so that append-only and newest-first date order both stay intact.
+    The decisions themselves are not re-opened by this entry; only their findability changes.
+  **Revisit-when:** a second milestone's plan-gate decisions go unlogged. At that point the gap is in the
+  **workflow, not the milestone** — fix WORKFLOW §5.3 so the plan gate emits its own log entry, rather than
+  backfilling a third time.
+
 - **2026-07-21 · HARNESS LEDGER ADDENDUM (spec 005 tasks 3.2, 5.1, and the `remoteMedia` fix; promoted out
   of progress.md at the M5 archive pass) · THREE WAYS AN INSTRUMENT LIED THIS MILESTONE — each silently,
   each producing a plausible wrong answer rather than an error.** These are **authoring rules for the next

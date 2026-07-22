@@ -213,19 +213,23 @@ Log a decision when: choosing between libraries/approaches, changing architectur
 
 ```markdown
 # Progress
-**Updated:** YYYY-MM-DD  ·  **Current focus:** <one line>
+**Updated:** YYYY-MM-DD
 
-## Now (in progress)
-- <task> — <state, blockers>
-## Next (ordered)
+## Now (start here)
+- <task> — <state, blockers>. If nothing is in progress, say so and name the next action.
+## Up next
 1. …
-## Done (recent, newest first — prune monthly to a Changelog section)
-- YYYY-MM-DD: …
-## Known issues / tech debt
+## Blockers / open questions
 - …
-## Session notes for next time
-- <the thing you'd tell a new engineer taking over tomorrow>
+## Closed milestones
+- YYYY-MM-DD: <milestone> — one-line close summary, linking the narrative in `progress-archive.md`
+## Baselines / pins
+- <the current numbers: perf gates, bundle sizes, version pins>
 ```
+**Section order is load-bearing:** *what to do* (Now · Up next · Blockers) comes before *what to know* (Closed milestones · Baselines). Keep it when editing.
+**When the file gets long,** promote durable facts into `decisions.md`/`retro.md` and move closed-milestone narrative into `progress-archive.md`. That archive pass is what the older "prune monthly to a Changelog section" instruction became — same idea, real mechanism.
+**`Baselines / pins` is the home for mutable current numbers** — an append-only `decisions.md` structurally cannot hold them.
+**There is deliberately no "session notes" section:** it was absorbed by `Now (start here)`, which every session reads first. Don't restore it as missing.
 
 ---
 
