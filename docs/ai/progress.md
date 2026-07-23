@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-21.*
+*Updated: 2026-07-23.*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,24 +10,22 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN AT GATE 1 PASSED: the spec is APPROVED and LANDED.
-> **Nothing is in progress and nothing is blocked.** `specs/006-snapshots-diff/spec.md` is the approved
-> WHAT for snapshots + diff-against-history. It also **amends 005 §3.4 and one §4 criterion**, struck
-> through and annotated in place rather than rewritten (C12). **M1–M5 remain fully closed.**
+> ### M6 (spec 006 — snapshots + diff) IS OPEN AT GATE 2 PASSED: the plan is APPROVED and LANDED.
+> **Nothing is in progress and nothing is blocked.** `specs/006-snapshots-diff/plan.md` (revision 2) is the
+> approved HOW — it resolves spec 006 §7's fifteen risks against the actual code. **§0 holds sixteen settled
+> decisions (D-1…D-16)**, each also logged in `decisions.md` (C5); **§0.1 holds two open questions the human
+> still owes answers on** (the "changed again" diff line; snapshot life vs. recents eviction). The landing
+> commit also **amends spec 006 §3.3 and §7-10** in place (C12). **M1–M5 remain fully closed.**
 >
-> **THE NEXT ACTION IS 006's `plan.md` — GATE 2, IN A FRESH SESSION** (C14). Not code, and not `tasks.md`.
-> The order is **spec → gate 1 ✅ → plan → gate 2 → tasks → gate 3 → only then implementation**
-> (WORKFLOW.md §5.3); the human approves each artifact before the next is generated.
->
-> **`plan.md`'s job is spec 006 §7 — fifteen open risks, resolved against the ACTUAL CODE**, not against
-> the spec. Every `file:line` and every number inherited from a 005 artifact must be **re-derived**; plan
-> 005 §1.7's own references have already drifted.
+> **THE NEXT ACTION IS 006's `tasks.md` — GATE 3, IN A FRESH SESSION** (C14). Not code. The order is
+> **spec → gate 1 ✅ → plan → gate 2 ✅ → tasks → gate 3 → only then implementation** (WORKFLOW.md §5.3);
+> the human approves each artifact before the next is generated.
 >
 > **No implementation, no storage schema and no `diff` dependency until `tasks.md` is approved.**
 
 ## Up next
 
-### 006 — snapshots + diff · next artifact is `plan.md` (gate 2)
+### 006 — snapshots + diff · next artifact is `tasks.md` (gate 3)
 
 **What it is:** the second half of the watch feature area. 005 shipped watch; **006 stores snapshots and
 diffs against them.** It gets its **own full Gear-3 cycle** — the split (D-1) was taken at 005's plan gate
@@ -38,6 +36,10 @@ precisely so this would be planned rather than inherited.
   §4 criteria marked *deferred to 006* carried forward into it, and 005 §3.4 plus one §4 criterion are now
   **struck through and annotated** where 006 amends them (retention limits are disclosed defaults, not
   user-adjustable).
+- **★ THE HOW IS SETTLED — `specs/006-snapshots-diff/plan.md` (revision 2), approved at gate 2
+  (2026-07-23).** §0 holds sixteen decisions D-1…D-16 (also in `decisions.md`, C5); §0.1 holds two open
+  questions the human still owes. **`tasks.md` (gate 3) is the next artifact, in a fresh session** — the
+  guidance below still applies to it.
 - **Plan-level starting points, written for 006 and standing:** `specs/005-watch-diff/plan.md` **§1.7**
   (the two-store IndexedDB split that dodges `idbCore`'s STOP signal), **§1.8** (the line-diff engine and
   the diff view — diff output goes through the existing sanitize path like any other rendered content),

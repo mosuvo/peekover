@@ -1,6 +1,36 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-23 · SPEC 006 PLAN-GATE DECISIONS (gate 2) · D-1…D-16 RECORDED HERE; DETAIL AND REJECTED
+  ALTERNATIVES LIVE IN `specs/006-snapshots-diff/plan.md` §0 (C5).** Sixteen decisions were taken and
+  human-approved at 006's plan gate (2026-07-23). Per C5 the log carries the entry and the plan carries the
+  detail — the sub-items below are each decision's own title **verbatim** (grep them), each pointing at its
+  §0 block for the reasoning and the rejected paths. **Logged AT the gate this time, not backfilled** — the
+  fix the 2026-07-22 entry's revisit-when asked for, applied on the first occasion after it.
+  - **006 D-1 — the outgoing snapshot source is read from the reader-source WeakMap, not retained a second time.** → plan §0 D-1.
+  - **006 D-2 — seam pins match the registration expression, not the file; one helper, two registries.** → plan §0 D-2.
+  - **006 D-3 — capture disclosure is an additive channel, not a seventh writer of the single note slot.** → plan §0 D-3.
+  - **006 D-4 — snapshot metadata is split from snapshot content to stay inside idbCore.** → plan §0 D-4.
+  - **006 D-5 — CRLF is normalised for comparison and diffing; 005's content-compare detection is left exactly as shipped.** → plan §0 D-5.
+  - **006 D-6 — the anchor's visible correction stays carried; diff does not become a re-render optimisation here.** → plan §0 D-6.
+  - **006 D-7 — the diff view is keyboard-reachable without a third global bare key.** → plan §0 D-7.
+  - **006 D-8 — snapshot bound defaults are proposed, measured, and chosen at a separate human gate.** → plan §0 D-8.
+  - **006 D-9 — on-device snapshot storage is not data collection; `data_collection_permissions: {required:['none']}` stands.** → plan §0 D-9.
+  - **006 D-10 — revoke erases the revoked folder's snapshots; contents outlive access to nothing.** → plan §0 D-10.
+  - **006 D-11 — a displayed diff defers the re-render; the deferred render captures normally, so no state is lost.** → plan §0 D-11.
+  - **006 D-12 — the capture flag is a second settings row, so the content script never fetches a setting it cannot act on.** → plan §0 D-12.
+  - **006 D-13 — one global erase-snapshots control; per-document erase is deferred, not rejected.** → plan §0 D-13.
+  - **006 D-14 — a surface that registered no diff target grows no diff chrome at all.** → plan §0 D-14.
+  - **006 D-15 — entering a diff is an attribute flip, not a re-render; mount() stays read-only library.** → plan §0 D-15.
+  - **006 D-16 — snapshot count is bounded per document, bytes and age across the store.** → plan §0 D-16.
+  **Why grouped, not sixteen top-level entries:** C16 — sixteen entries each repeating "why: see plan §0 /
+  revisit: see plan §0" would out-cost the work and bury the log, and the 2026-07-22 backfill entry set the
+  precedent of one grouped entry per plan gate. Findability is preserved because each sub-item carries the
+  decision's exact title, so a grep for `D-14` or "no diff target" still lands on the right line.
+  **Revisit-when:** any D-*n*'s premise changes against the code (each §0 block states its own revisit
+  trigger); or `tasks.md`/implementation contradicts a decision — at which point it is re-opened at its §0
+  home, not silently diverged from.
+
 - **2026-07-22 · RECORD BACKFILL · SPEC 005's THREE PLAN-GATE DECISIONS WERE NEVER LOGGED HERE.** D-1 (the
   005/006 split), D-2 (the `diff` dependency approved, and deferred to 006) and D-3 (anchor-based scroll
   continuity) were taken and human-approved at the 005 plan gate on **2026-07-19**, but recorded **only** in
