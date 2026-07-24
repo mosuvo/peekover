@@ -8,6 +8,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildStoredLines,
+  SCHEMA,
+  STORES,
+  DB_VERSION,
   DEFAULT_SETTINGS,
   type StoredFolderInfo,
   type RecentRecord,
@@ -43,6 +46,31 @@ function lines(over: {
   const total = folders.length + recents.length + pins.length + (settings ? 1 : 0);
   return buildStoredLines({ folders, recents, pins, settings, total });
 }
+
+// Task 1.1 — the SCHEMA shape at the bumped DB_VERSION. Pure constant assertions (no engine):
+// the real v2→v3 upgrade preserving existing rows is proven in the browser project
+// (idbVersionchange.browser.test.ts), which reads this same exported SCHEMA.
+describe('SCHEMA — DB_VERSION 3, two new snapshot stores (task 1.1)', () => {
+  it('declares version 3, matching DB_VERSION', () => {
+    expect(SCHEMA.version).toBe(3);
+    expect(SCHEMA.version).toBe(DB_VERSION);
+  });
+
+  it('adds `snapshotMeta` (keyPath docId) and `snapshots` (keyPath id)', () => {
+    expect(SCHEMA.stores).toEqual(
+      expect.arrayContaining([
+        { name: 'snapshotMeta', keyPath: 'docId' },
+        { name: 'snapshots', keyPath: 'id' },
+      ]),
+    );
+  });
+
+  it('still carries the four pre-existing stores (additive — nothing dropped or renamed)', () => {
+    expect(SCHEMA.stores.map((s) => s.name)).toEqual(
+      expect.arrayContaining([STORES.folders, STORES.recents, STORES.pins, STORES.settings]),
+    );
+  });
+});
 
 describe('buildStoredLines — settings line (task 1.3)', () => {
   it('emits the settings line when a settings row exists', () => {

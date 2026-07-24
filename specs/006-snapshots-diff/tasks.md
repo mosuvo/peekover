@@ -86,7 +86,7 @@ go to the gate) and the milestone-close gate (9.1).
 *contents. 1.1–1.3 store nothing and precede it; 1.4 is the irreducible storing commit; 1.5–1.6 are additive*
 *controls.*
 
-- [ ] **1.1 Schema — `DB_VERSION` 2 → 3, two stores, and the versionchange-preserves-rows gap (§3-4).**
+- [x] **1.1 Schema — `DB_VERSION` 2 → 3, two stores, and the versionchange-preserves-rows gap (§3-4).**
       Add `snapshotMeta` (keyPath `docId`, `{docId, entries:[{id, ts, bytes}]}`) and `snapshots` (keyPath `id`,
       `{id, text}`) to `STORES`/`SCHEMA`, bump `DB_VERSION` to 3. Additive-by-name, no migration code
       (`idbCore.ts:56-63`); `onversionchange` close-and-drop already covers the bump. **This task STORES

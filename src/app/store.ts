@@ -1,7 +1,7 @@
 // store — Peekover's IndexedDB layer: the CRUD over the stores 002/004 introduce,
 // built on the local `idbCore` raw wrapper (NO `idb` dependency — plan.md §Libraries).
 //
-// Database `peekover` v2, four keyPath('id') object stores (plan.md §IndexedDB):
+// Database `peekover` v3, six object stores (plan.md §IndexedDB · 006 §1.2):
 //   - folders  : remembered folders. On Chromium a row carries the structured-cloneable
 //                FileSystemDirectoryHandle (a capability REF, never file contents); on
 //                Firefox the handle is absent (metadata-only, display).
@@ -12,6 +12,16 @@
 //                onupgradeneeded only creates the missing `settings` store, never drops
 //                or rebuilds folders/recents/pins, so existing 002 rows survive intact.
 //                No record-shape migration (that is idbCore's documented STOP signal).
+//   - snapshotMeta : per-document snapshot index (spec 006 task 1.1), keyPath `docId`,
+//                `{docId, entries:[{id, ts, bytes}]}` — the small bounded rows listing,
+//                eviction and byte-accounting read (D-4: never the snapshot text).
+//   - snapshots : snapshot bodies (spec 006 task 1.1), keyPath `id`, `{id, text}` — fetched
+//                only when a diff renders, never materialised by describeStored (D-4).
+//                Both are added EMPTY at DB_VERSION 3: the schema exists but nothing writes to
+//                them yet (capture wiring is task 1.4), so "file contents are never stored"
+//                stays true through this commit. The v2→v3 upgrade is additive-by-name like
+//                v1→v2 (idbCore only creates the missing stores), so existing
+//                folders/recents/pins/settings rows survive intact.
 //
 // Nothing consumes settings yet — group 2 wires the SettingsPort onto get/putSettings. It
 // is pure-ish data layer: no DOM, no UI. Browser-only at runtime (IndexedDB is a browser
@@ -31,9 +41,10 @@ export { DEFAULT_SETTINGS };
 export type { Settings };
 
 /** Database identity — a single versioned schema (plan.md §IndexedDB). Bumped 1→2 for
- *  the additive `settings` store (spec 004). */
+ *  the additive `settings` store (spec 004), 2→3 for the additive `snapshotMeta` +
+ *  `snapshots` stores (spec 006 task 1.1), which land EMPTY. */
 export const DB_NAME = 'peekover';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 /** The object-store names, as a const map (no magic strings at call sites). */
 export const STORES = {
@@ -41,6 +52,9 @@ export const STORES = {
   recents: 'recents',
   pins: 'pins',
   settings: 'settings',
+  // spec 006 task 1.1 — added EMPTY at DB_VERSION 3; nothing writes to them until task 1.4.
+  snapshotMeta: 'snapshotMeta',
+  snapshots: 'snapshots',
 } as const;
 export type StoreName = (typeof STORES)[keyof typeof STORES];
 
@@ -86,8 +100,9 @@ export interface SettingsRecord extends Settings {
 /** The one settings row's key — a single global reader-settings row (no per-doc settings). */
 export const SETTINGS_ID = 'reader';
 
-/** The full v2 schema handed to idbCore.openDb. */
-const SCHEMA: IdbSchema = {
+/** The full v3 schema handed to idbCore.openDb. Exported so store.test.ts can assert its
+ *  shape at the current version; no production code reads it (openDb below is the sole use). */
+export const SCHEMA: IdbSchema = {
   name: DB_NAME,
   version: DB_VERSION,
   stores: [
@@ -95,6 +110,9 @@ const SCHEMA: IdbSchema = {
     { name: STORES.recents, keyPath: 'id' },
     { name: STORES.pins, keyPath: 'id' },
     { name: STORES.settings, keyPath: 'id' },
+    // spec 006 task 1.1 — added EMPTY; snapshotMeta is keyed per document, snapshots per id.
+    { name: STORES.snapshotMeta, keyPath: 'docId' },
+    { name: STORES.snapshots, keyPath: 'id' },
   ],
 };
 

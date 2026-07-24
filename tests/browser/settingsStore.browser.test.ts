@@ -1,7 +1,8 @@
 // Task 1.1 (+ 1.3 below) — the REAL-ENGINE settings-store proof, both Chromium + Firefox.
 // [spec 004 §3 persistence] · plan.md §Store foundation.
 //
-// The IndexedDB SCHEMA UPGRADE (v1→v2) and storage round-trip are JSDOM-BLIND: jsdom has no
+// The IndexedDB SCHEMA UPGRADE (v1 → the store's current version) and storage round-trip are
+// JSDOM-BLIND: jsdom has no
 // IndexedDB at all, and even where a fake exists it does not exercise the engine's real
 // open/upgrade/commit path (the retro standing rule — storage + upgrade proven in a real
 // engine, never jsdom). So these run against each engine's OWN IndexedDB.
@@ -10,13 +11,15 @@
 //   1. ROUND-TRIP + MERGE. putSettings writes; getSettings reads back; a patch merges onto
 //      the current row rather than replacing it. State-tolerant (asserts only the fields it
 //      writes), so a leftover row can never mask a bug.
-//   2. ADDITIVE v1→v2 UPGRADE. A hand-built v1 DB (the pre-004 folders/recents/pins schema)
-//      seeded with one row per store, then opened at v2 through the REAL store layer,
+//   2. ADDITIVE UPGRADE. A hand-built v1 DB (the pre-004 folders/recents/pins schema)
+//      seeded with one row per store, then opened at the store's current version through the
+//      REAL store layer,
 //      PRESERVES every seeded row AND gains a working `settings` store. RED-FIRST: if the
 //      upgrade dropped/recreated the stores the seeded rows would vanish and the preservation
 //      asserts FAIL (verified red by patching onupgradeneeded to delete+recreate — recorded
 //      in progress.md). NON-VACUOUS: the seeded rows are genuinely read back through the
-//      store, and the on-disk schema (version 2 + the four store names) is asserted directly.
+//      store, and the on-disk schema (the store's declared version + the four pre-existing store
+//      names) is asserted directly.
 
 import { describe, it, expect, afterEach } from 'vitest';
 import {
@@ -35,10 +38,10 @@ import {
 } from '../../src/app/store';
 
 // The upgrade test seeds via RAW IndexedDB: it must build the *v1* schema by hand, which the
-// store layer (now v2) can no longer open.
+// store layer (now at a newer DB_VERSION) can no longer open.
 
 /** Delete the whole peekover DB and RESOLVE ONLY once it is truly gone (onsuccess). We never
- *  resolve on `blocked`: seedV1 then opens at v1, which a surviving v2 DB would reject with a
+ *  resolve on `blocked`: seedV1 then opens at v1, which a surviving higher-version DB would reject with a
  *  VersionError — so a premature resolve would corrupt the test. The memoized connection is
  *  closed + given a tick first, so `blocked` (if it fires at all) clears and success follows. */
 function deleteDatabase(name: string): Promise<void> {
@@ -59,7 +62,7 @@ async function resetAndSettle(): Promise<void> {
 
 /** Build the pre-004 v1 schema by hand (folders/recents/pins, NO settings) and seed one row
  *  in each store — the exact on-disk shape a 002 user has before upgrading. Closes when done
- *  so the store's subsequent v2 open is not blocked by this v1 connection. */
+ *  so the store's subsequent open (at its current version) is not blocked by this v1 connection. */
 async function seedV1(): Promise<void> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
@@ -87,8 +90,8 @@ async function seedV1(): Promise<void> {
 
 // Every test leaves a clean slate (DB deleted) so leftover rows never escape this file — a
 // settings row is invisible to the pre-1.3 describeStored, but wipe.browser.test.ts must not
-// inherit one. Deleting the whole DB is the strongest reset and re-creates fresh at v2 on the
-// next store open.
+// inherit one. Deleting the whole DB is the strongest reset and re-creates fresh at the store's
+// current version on the next store open.
 afterEach(async () => {
   await resetAndSettle();
   await deleteDatabase(DB_NAME);
@@ -115,15 +118,15 @@ describe('settings round-trip + merge (real engine)', () => {
   });
 });
 
-describe('settings store — additive v1→v2 upgrade (real engine; jsdom-blind)', () => {
-  it('the 1→2 upgrade PRESERVES folders/recents/pins AND adds a working settings store (red-first vs a drop/recreate)', async () => {
-    // Start strictly below v2: remove any existing peekover DB, then hand-build v1 and seed it.
+describe('settings store — additive upgrade (real engine; jsdom-blind)', () => {
+  it('an additive upgrade PRESERVES folders/recents/pins AND adds a working settings store (red-first vs a drop/recreate)', async () => {
+    // Start strictly below the store's version: remove any existing peekover DB, then hand-build v1 and seed it.
     await resetAndSettle();
     await deleteDatabase(DB_NAME);
     await seedV1();
 
-    // Open at v2 through the REAL store layer (DB_VERSION === 2). idbCore's additive
-    // onupgradeneeded creates only the missing `settings` store and leaves the three seeded
+    // Open through the REAL store layer (at its declared DB_VERSION). idbCore's additive
+    // onupgradeneeded creates the stores the current schema adds and leaves the three seeded
     // stores — and their rows — intact.
     await resetAndSettle();
 
@@ -144,7 +147,8 @@ describe('settings store — additive v1→v2 upgrade (real engine; jsdom-blind)
     await putSettings({ theme: 'dark', tocOpen: true, tocWidth: 321 });
     expect(await getSettings()).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 321 });
 
-    // Assert the on-disk schema directly: version 2, all four stores present.
+    // Assert the on-disk schema directly: the store's declared version, all four pre-existing
+    // stores present.
     await resetAndSettle();
     const raw = await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(DB_NAME); // no version → read the current schema as-is
@@ -152,7 +156,6 @@ describe('settings store — additive v1→v2 upgrade (real engine; jsdom-blind)
       req.onerror = () => reject(req.error);
     });
     expect(raw.version).toBe(DB_VERSION);
-    expect(raw.version).toBe(2);
     expect(Array.from(raw.objectStoreNames)).toEqual(
       expect.arrayContaining(['folders', 'recents', 'pins', 'settings']),
     );

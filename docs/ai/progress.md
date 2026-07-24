@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-23.*
+*Updated: 2026-07-24.*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,21 +10,26 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN AT GATE 3 PASSED: `tasks.md` is APPROVED and LANDED — implementation may begin.
-> **Nothing is in progress and nothing is blocked.** All three Gear-3 artifacts are approved and on disk:
-> `spec.md` (gate 1), `plan.md` revision 2 (gate 2), `tasks.md` (gate 3) — order **spec ✅ → plan ✅ →
-> tasks ✅ → implementation** (WORKFLOW.md §5.3). §0.1's two open questions are now **settled and logged**
-> (`decisions.md` 2026-07-23, gate 3): the D-11 "changed again" line ships; a document's snapshots survive
-> its recents row being evicted. **M1–M5 remain fully closed.**
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **task 1.1 landed; next action is 1.2.**
+> **Nothing is in progress and nothing is blocked. Task 1.1 has landed** (this commit): `DB_VERSION` 2 → 3
+> with two new stores — `snapshotMeta` (keyPath `docId`) and `snapshots` (keyPath `id`) — added
+> **additive-by-name and EMPTY**, plus a new `idbVersionchange.browser.test.ts` case proving
+> folders/recents/pins/settings rows survive the v2→v3 bump (red-first vs a schema that drops `folders`).
+> **This task STORED NOTHING** — the stores are empty, so `PERMISSIONS.md`'s "file contents are never
+> stored" claim is still TRUE; the trust correction binds to 1.4 (the first storing commit), not here. A
+> redundant hardcoded `raw.version` version-2 assertion in `settingsStore.browser.test.ts` was made
+> version-agnostic in the same commit (the value the bump made stale, fixed by the change that forced it).
+> All three Gear-3 artifacts remain on disk; **M1–M5 remain fully closed.**
 >
-> **THE NEXT ACTION IS TASK 1.1, IN A FRESH SESSION** (C14) — the schema + capture group. **Group 1 is
-> deliberately end-to-end: 1.4 is an irreducible storing commit** — the trust correction binds to the first
-> code that stores a snapshot, and splitting it ships either storage-wired-to-nothing or a false published
-> claim. **The Now-pointer advances PER TASK from here** (the M1 rule — it once lagged four tasks and the
-> next session acted on stale state).
+> **THE NEXT ACTION IS TASK 1.2** — `snapshots.ts`: the pure byte-accounting + eviction algorithm (bounds
+> per D-16, deletion META-FIRST per §1.2), split from the IDB calls and wired to nothing yet (1.4 is its
+> production caller). **Group 1 is deliberately end-to-end: 1.4 is the irreducible storing commit** where
+> the trust correction and every trust surface land together — splitting it ships either
+> storage-wired-to-nothing or a false published claim. **The Now-pointer advances PER TASK from here** (the
+> M1 rule — it once lagged four tasks and the next session acted on stale state).
 >
-> **The `diff` dependency is still task 5.1 and `permissions: []` still stands.** No code, schema or
-> dependency has landed yet.
+> **The `diff` dependency is still task 5.1 and `permissions: []` still stands.** Schema landed at 1.1;
+> no snapshot has been stored and no dependency has been added yet.
 
 ## Up next
 
