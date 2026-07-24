@@ -10,22 +10,25 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN AT GATE 2 PASSED: the plan is APPROVED and LANDED.
-> **Nothing is in progress and nothing is blocked.** `specs/006-snapshots-diff/plan.md` (revision 2) is the
-> approved HOW — it resolves spec 006 §7's fifteen risks against the actual code. **§0 holds sixteen settled
-> decisions (D-1…D-16)**, each also logged in `decisions.md` (C5); **§0.1 holds two open questions the human
-> still owes answers on** (the "changed again" diff line; snapshot life vs. recents eviction). The landing
-> commit also **amends spec 006 §3.3 and §7-10** in place (C12). **M1–M5 remain fully closed.**
+> ### M6 (spec 006 — snapshots + diff) IS OPEN AT GATE 3 PASSED: `tasks.md` is APPROVED and LANDED — implementation may begin.
+> **Nothing is in progress and nothing is blocked.** All three Gear-3 artifacts are approved and on disk:
+> `spec.md` (gate 1), `plan.md` revision 2 (gate 2), `tasks.md` (gate 3) — order **spec ✅ → plan ✅ →
+> tasks ✅ → implementation** (WORKFLOW.md §5.3). §0.1's two open questions are now **settled and logged**
+> (`decisions.md` 2026-07-23, gate 3): the D-11 "changed again" line ships; a document's snapshots survive
+> its recents row being evicted. **M1–M5 remain fully closed.**
 >
-> **THE NEXT ACTION IS 006's `tasks.md` — GATE 3, IN A FRESH SESSION** (C14). Not code. The order is
-> **spec → gate 1 ✅ → plan → gate 2 ✅ → tasks → gate 3 → only then implementation** (WORKFLOW.md §5.3);
-> the human approves each artifact before the next is generated.
+> **THE NEXT ACTION IS TASK 1.1, IN A FRESH SESSION** (C14) — the schema + capture group. **Group 1 is
+> deliberately end-to-end: 1.4 is an irreducible storing commit** — the trust correction binds to the first
+> code that stores a snapshot, and splitting it ships either storage-wired-to-nothing or a false published
+> claim. **The Now-pointer advances PER TASK from here** (the M1 rule — it once lagged four tasks and the
+> next session acted on stale state).
 >
-> **No implementation, no storage schema and no `diff` dependency until `tasks.md` is approved.**
+> **The `diff` dependency is still task 5.1 and `permissions: []` still stands.** No code, schema or
+> dependency has landed yet.
 
 ## Up next
 
-### 006 — snapshots + diff · next artifact is `tasks.md` (gate 3)
+### 006 — snapshots + diff · `tasks.md` is the OPERATIVE artifact; the plan is the HOW, the spec the WHY
 
 **What it is:** the second half of the watch feature area. 005 shipped watch; **006 stores snapshots and
 diffs against them.** It gets its **own full Gear-3 cycle** — the split (D-1) was taken at 005's plan gate
@@ -37,9 +40,10 @@ precisely so this would be planned rather than inherited.
   **struck through and annotated** where 006 amends them (retention limits are disclosed defaults, not
   user-adjustable).
 - **★ THE HOW IS SETTLED — `specs/006-snapshots-diff/plan.md` (revision 2), approved at gate 2
-  (2026-07-23).** §0 holds sixteen decisions D-1…D-16 (also in `decisions.md`, C5); §0.1 holds two open
-  questions the human still owes. **`tasks.md` (gate 3) is the next artifact, in a fresh session** — the
-  guidance below still applies to it.
+  (2026-07-23).** §0 holds sixteen decisions D-1…D-16 (also in `decisions.md`, C5); §0.1's two open
+  questions are now settled and logged (gate 3, `decisions.md` 2026-07-23). **`tasks.md` (gate 3) is the
+  OPERATIVE artifact now — work its boxes in order; the plan is the HOW and the spec the WHY.** The guidance
+  below still applies.
 - **Plan-level starting points, written for 006 and standing:** `specs/005-watch-diff/plan.md` **§1.7**
   (the two-store IndexedDB split that dodges `idbCore`'s STOP signal), **§1.8** (the line-diff engine and
   the diff view — diff output goes through the existing sanitize path like any other rendered content),

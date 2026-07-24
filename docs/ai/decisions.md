@@ -1,6 +1,26 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-23 · SPEC 006 GATE-3 PRODUCT DECISIONS (gate 3) · the TWO open questions plan §0.1 left to the
+  human are now settled — logged BEFORE the code that implements them** (the 004 D-2 pattern; 005's
+  plan-gate decisions had to be backfilled a day late — `decisions.md` 2026-07-22 — and this is the first
+  occasion since to not repeat that). Both are already encoded in `specs/006-snapshots-diff/tasks.md`'s
+  header block (the "Two gate-3 product decisions" bullet) and gate the tasks that carry them; detail lives
+  there and in plan §0.1 (C5), not restated at length here.
+  - **The D-11 "this document changed again since you opened this diff" line SHIPS.** D-11 already requires
+    deferring the re-render while a diff is displayed; the line itself is product copy the spec does not
+    require. **Why:** a document that changed with no indication is the same dishonesty one layer over.
+    **How it is held to account:** its legibility (useful vs noise) is a task 9.1 human-gate item — a "reads
+    as noise" verdict is a finding, not a silent removal. → tasks.md 6.3; plan §0.1-1, §0 D-11.
+  - **A document's snapshots SURVIVE its recents row being auto-evicted** (`appShell.ts:622-628` caps recents
+    by count). **Why:** the storage panel discloses the bytes either way, and tying stored contents to a cap
+    the user never sees would delete history by surprise. **Consequence, stated so it is not discovered
+    later:** a document can hold snapshots with no visible recents entry pointing at it until the file is
+    reopened. → tasks.md group 1 header + §9; plan §0.1-2.
+  **Revisit-when:** 9.1 returns a "nagging / noise / surprise" verdict on either (recorded as a task below
+  9.1, not silently reversed); or §3.7's per-document snapshot picker lands, giving the orphaned-snapshots
+  case a visible home.
+
 - **2026-07-23 · SPEC 006 PLAN-GATE DECISIONS (gate 2) · D-1…D-16 RECORDED HERE; DETAIL AND REJECTED
   ALTERNATIVES LIVE IN `specs/006-snapshots-diff/plan.md` §0 (C5).** Sixteen decisions were taken and
   human-approved at 006's plan gate (2026-07-23). Per C5 the log carries the entry and the plan carries the
@@ -24,8 +44,10 @@
   - **006 D-15 — entering a diff is an attribute flip, not a re-render; mount() stays read-only library.** → plan §0 D-15.
   - **006 D-16 — snapshot count is bounded per document, bytes and age across the store.** → plan §0 D-16.
   **Why grouped, not sixteen top-level entries:** C16 — sixteen entries each repeating "why: see plan §0 /
-  revisit: see plan §0" would out-cost the work and bury the log, and the 2026-07-22 backfill entry set the
-  precedent of one grouped entry per plan gate. Findability is preserved because each sub-item carries the
+  revisit: see plan §0" would out-cost the work and bury the log. 004 set the OPPOSITE precedent — it gave its two plan-gate
+  decisions (D-1, D-2) their own top-level entries, each linking to its plan; grouping is right HERE not
+  because this is a plan gate but because at sixteen C16 inverts the answer it gave at two. Findability is
+  preserved because each sub-item carries the
   decision's exact title, so a grep for `D-14` or "no diff target" still lands on the right line.
   **Revisit-when:** any D-*n*'s premise changes against the code (each §0 block states its own revisit
   trigger); or `tasks.md`/implementation contradicts a decision — at which point it is re-opened at its §0
