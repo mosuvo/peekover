@@ -63,7 +63,7 @@
 - **Two gate-3 product decisions, settled by the human, carried here:** the D-11 *"this document changed again"*
   line **SHIPS** (its legibility is a group-9 human-gate item); a document's snapshots **SURVIVE** its recents
   row being auto-evicted (§9 — history stays, disclosed by bytes in the panel; no task, recorded in
-  `decisions.md` with the gate-3 landing commit alongside plan §10's precedent correction).
+  `decisions.md` with the gate-3 landing commit alongside the gate-2 entry's grouping-precedent correction in the same file).
 
 **Human-run items budgeted UP FRONT (plan §5; enumerated again at 9.1, not discovered late):** whether the
 persistent capture disclosure reads as honesty or nagging (load-bearing for D-12) · whether D-11's "changed

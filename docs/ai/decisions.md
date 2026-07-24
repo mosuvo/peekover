@@ -44,9 +44,10 @@
   - **006 D-15 — entering a diff is an attribute flip, not a re-render; mount() stays read-only library.** → plan §0 D-15.
   - **006 D-16 — snapshot count is bounded per document, bytes and age across the store.** → plan §0 D-16.
   **Why grouped, not sixteen top-level entries:** C16 — sixteen entries each repeating "why: see plan §0 /
-  revisit: see plan §0" would out-cost the work and bury the log. 004 set the OPPOSITE precedent — it gave its two plan-gate
-  decisions (D-1, D-2) their own top-level entries, each linking to its plan; grouping is right HERE not
-  because this is a plan gate but because at sixteen C16 inverts the answer it gave at two. Findability is
+  revisit: see plan §0" would out-cost the work and bury the log. 004 set the OPPOSITE precedent — its plan-gate D-1 and its
+  decision-gate D-2 each got their own top-level entry, linking out to the plan for detail. Grouping is
+  right HERE not because this is a plan gate, but because at sixteen decisions C16 inverts the answer it
+  gave at two. Findability is
   preserved because each sub-item carries the
   decision's exact title, so a grep for `D-14` or "no diff target" still lands on the right line.
   **Revisit-when:** any D-*n*'s premise changes against the code (each §0 block states its own revisit
