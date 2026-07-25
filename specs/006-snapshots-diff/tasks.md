@@ -266,7 +266,7 @@ go to the gate) and the milestone-close gate (9.1).
 *commit may leave any acceptance criterion unmet) would mean no milestone could ever have more than one*
 *commit. No release happens between tasks either — 9.1 precedes any publish — so user exposure is zero.*
 
-- [ ] **3.1 D-3 — a SEPARATE disclosure channel, rendered alongside the note, PERSISTENT, correctly gated.**
+- [x] **3.1 D-3 — a SEPARATE disclosure channel, rendered alongside the note, PERSISTENT, correctly gated.**
       The single watch-note slot is the wrong home: its semantic is the opposite of a disclosure
       (*"watching is not happening, and here is why"*), and `start()` clears it (`watchController.ts:358`) at
       exactly the moment §3.6 needs the disclosure. So: a separate slot in `watchRegistry.ts` and a separate

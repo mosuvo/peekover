@@ -319,6 +319,25 @@ export const READER_CSS = /* css */ `
 }
 .peekover-watch-note[hidden]{display:none}
 
+/* The persistent capture disclosure (task 3.1, D-3) — a SEPARATE channel from the watch note,
+   sitting one 40px step above it in the same bottom-left column (net 16 · theme 56 · watch pill 96
+   · watch note 136 · disclosure 176). It BORROWS the note's quiet-aside shape — same width cap,
+   typography, panel fill, fixed/absolute split — because both are the reader's calm asides. What
+   differs is the accent, and that difference is the semantic: the note is a WARNING (--warn amber,
+   "something you should know"); this is INFORMATIONAL (--accent, the brand ink), a standing
+   statement that capture is on and on-device. Ink, not amber, so it reads as disclosure rather than
+   alarm. Tokens ONLY. */
+.peekover-watch-disclosure{
+  position:fixed;bottom:176px;left:16px;z-index:2;
+  margin:0;max-width:34ch;
+  font-family:var(--sans);font-size:12px;line-height:1.5;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:9px 13px;box-shadow:var(--shadow);
+}
+.peekover-watch-disclosure[hidden]{display:none}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline
@@ -540,6 +559,7 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-theme-toggle,
 .peekover-watch,
 .peekover-watch-note,
+.peekover-watch-disclosure,
 .peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }

@@ -10,35 +10,33 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed (the diff registry SEAM); next action is 3.1.**
-> **Nothing is in progress and nothing is blocked. Task 2.1 — the diff registry seam — has landed** (this commit).
-> A new `src/render/diffRegistry.ts` is a SIBLING of `watchRegistry.ts`: a module-level register-once holder
-> (`registerDiffContext` / `getDiffContext` / `isDiffContextRegistered` / `resetDiffRegistryForTest`), zero external
-> deps beyond a TYPE-only `SnapshotMetaEntry` import, safe to import from BOTH surfaces (no engine, no view, not the
-> `diff` package). It holds a `DiffContext` — the DATA a diff needs: `docId` + `getCurrentSource()` (a closure over
-> 1.3's `readerSourceFor` reaching the reader pane's live host) + `fetchMeta()`/`fetchText()` (closures over 1.4's
-> `getSnapshotMeta`/`getSnapshotText`, filtered to the `docId`). `appShell.installWatchForFile` registers it
-> ALONGSIDE `registerWatchTarget`, under the SAME `docId != null` guard as 1.4's capture gate (app-page only, §3.2);
-> `contentWatch.ts` is UNTOUCHED and imports no diffRegistry symbol, so the registry is **empty on the content
-> script and non-empty on the app page after a file open** — exactly the surface signal D-3 (3.1) and D-14 (6.2)
-> read. The production-path test drives the REAL gesture chain (mountAppShell → open folder → click file) and
-> `installContentWatch`, NEVER a hand-built `registerDiffContext` (the M5 seam rule); red-first added a
-> `registerDiffContext(...)` to `installContentWatch` — the content-script assertion reddened on both engines while
-> the app-page assertion stayed green (the isolating asymmetry), then restored byte-identical. **`permissions: []`
-> still stands. `DB_VERSION` is 3 (from 1.1). The `diff` dependency is still task 5.1.** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed (the persistent capture disclosure); next action is 4.1.**
+> **Nothing is in progress and nothing is blocked. Task 3.1 — D-3, the persistent capture disclosure — has landed** (this commit).
+> A SEPARATE disclosure channel in `watchControl.ts`, rendered by `buildWatchChrome` ALONGSIDE the watch note (not
+> instead of it): `buildDisclosure()` + a `disclosures` set + `syncDisclosure()`, mirroring `buildWatchNote`'s
+> structure. Its copy is STATIC ("Snapshots of this file are stored on this device only, never uploaded. Manage them
+> in the Stored data panel — turn off capture, or erase all snapshots.") and its visibility is GATE-DRIVEN — it is a
+> state-GATE READER, never a slot writer, so `watchRegistry.ts` is byte-untouched (no seventh note-slot writer). The
+> gate is `shouldShowDisclosure() = watchAvailable() && isDiffContextRegistered()` — **both halves, no third gate**
+> (not `contained`, not the capture on/off flag). Visibility flips reactively on `onWatchChanged` (the same single
+> subscription the controls and notes ride), so it is PERSISTENT, not one-shot — D-12's wipe-reset safety rests on
+> exactly this (a wiped user re-watching sees it again, as a new user would). CSS: `.peekover-watch-disclosure` at
+> `bottom:176px`, one 40px step above the note, `border-left:3px solid var(--accent)` (INFORMATIONAL ink, vs the
+> note's `--warn` amber alarm); listed in `CONTAINED_CSS` alongside the note for app-page positioning. The
+> production-path browser test drives the REAL gesture chain (mountAppShell → open folder → click file) and
+> `installContentWatch`, NEVER a hand-built `buildDisclosure` (the M5 seam rule); red-first dropped the registry half
+> of the gate (`watchAvailable()` alone — the exact D-14 trap) and ONLY the Chromium content-script `file://` test
+> reddened on both engines while the app-page and Firefox/remote assertions stayed green (the isolating asymmetry),
+> then restored byte-identical. **`permissions: []` still stands. `DB_VERSION` is 3 (from 1.1). The `diff` dependency
+> is still task 5.1.** M1–M5 remain fully closed.
 >
-> **★ D-3 cross-reference (task 3.1):** the wipe-reset's SAFETY depends on 3.1's PERSISTENT capture disclosure
-> re-appearing on the next watch (a wiped user re-watching sees it as a new user would). A comment at
-> `getCaptureEnabled`'s jsdoc names that dependency, so a future one-shot disclosure at 3.1 voids D-12 loudly, not
-> silently. D-3 ships at 3.1 (next); until then the reset is safe because capture defaults on and the panel
-> discloses the bytes.
->
-> **THE NEXT ACTION IS TASK 3.1 — D-3, the persistent capture disclosure channel.** A SEPARATE disclosure channel,
-> rendered ALONGSIDE the existing watch note, PERSISTENT (not one-shot), correctly gated: **suppressed when
-> `!watchAvailable()` OR the diff registry is empty** — and the second half of that gate is exactly what 2.1 just
-> made possible (`isDiffContextRegistered()` is now the honest "nothing here was ever captured to diff" signal on
-> the content-script `file://` surface, which can watch but must not capture). Do NOT gate on `watchAvailable()`
-> alone (that ships the disclosure to a surface that can watch but never captures) and NOT on `contained`. **The
+> **THE NEXT ACTION IS TASK 4.1 — D-2, the SHARED seam-pin helper.** Extract a shared, CALL-SITE-scoped seam-pin
+> helper that generalises M5's file-scoped `watchRegistry` call-site pin to cover BOTH `watchRegistry` (its
+> `createWatchController` registration) AND `diffRegistry` (its `registerDiffContext` registration) — both
+> registrations now live in `appShell.installWatchForFile`, which is precisely where a file-scoped matcher is weakest
+> (a `createWatchController(` anywhere in that file satisfies the watch pin regardless of which line the target came
+> from; plan §0 D-2). The second registry now EXISTS (2.1) and its disclosure consumer ships (3.1), so the helper's
+> shape can be generalised without a hole. Re-express the watch pin through it; cover both registries. **The
 > Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next

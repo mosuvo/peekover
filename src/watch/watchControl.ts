@@ -41,6 +41,7 @@ import {
   watchAvailable,
   watchNote,
 } from './watchRegistry';
+import { isDiffContextRegistered } from '../render/diffRegistry';
 
 /** CSS class the reader stylesheet styles (`readerCss.ts`). */
 export const WATCH_CONTROL_CLASS = 'peekover-watch';
@@ -108,6 +109,7 @@ function syncControls(): void {
   const watching = isWatching();
   for (const control of controls) labelControl(control, watching);
   syncNotes();
+  syncDisclosure();
 }
 
 let subscribed = false;
@@ -240,6 +242,92 @@ export function buildWatchNote(): HTMLElement {
   return el;
 }
 
+// --- the persistent capture disclosure (task 3.1, D-3) -------------------------------
+//
+// A SEPARATE channel from the watch note above — D-3's whole point (an ADDITIVE channel, not a
+// seventh writer of the single note slot). The note's semantic is the OPPOSITE of a disclosure:
+// "watching is not happening, and here is why". This says watching IS available here and something
+// additional is now true — snapshots of this document are being kept, on-device. It NEVER writes
+// the registry's note slot and the note never writes it; the two are independent surfaces that may
+// coexist (arbitration in `buildWatchChrome`: note first and closer to the control, disclosure
+// after it).
+//
+// PERSISTENT, not one-shot: the copy is STATIC and the visibility is GATE-DRIVEN — present for as
+// long as the surface can watch AND has a diff context registered, re-evaluated reactively every
+// time `onWatchChanged` fires (the same single subscription the controls and notes ride). D-12's
+// wipe-reset safety rests on this exactly: a user who wipes then re-watches must see this disclosure
+// again, as a new user would (1.5's jsdoc at `getCaptureEnabled` names the dependency). A one-shot
+// or dismissible disclosure would silently void D-12. So this is a state-GATE READER, never a
+// state-slot writer.
+
+/** CSS class the reader stylesheet styles (`readerCss.ts`). */
+export const WATCH_DISCLOSURE_CLASS = 'peekover-watch-disclosure';
+
+/** The static disclosure copy (task 3.1 · §3.6). Every clause is checked against a truth condition:
+ *  on THIS DEVICE ONLY, NEVER uploaded, and WHERE the user manages it — the "Stored data" panel's
+ *  capture off-switch (1.5) and "Erase snapshots" control (1.6). It deliberately does NOT describe
+ *  the diff view (6.1, unshipped), any future feature, or per-document erase (deferred, §6): a
+ *  standing statement of what capture IS doing, phrased so it reads as disclosure, not as chrome. */
+const DISCLOSURE_TEXT =
+  'Snapshots of this file are stored on this device only, never uploaded. Manage them in the ' +
+  'Stored data panel — turn off capture, or erase all snapshots.';
+
+/** Live disclosure elements, kept in sync by the same single subscription as the controls. */
+const disclosures = new Set<HTMLElement>();
+
+/**
+ * The disclosure's suppression gate — the ONLY thing that decides its visibility.
+ *
+ * BOTH halves matter, and each ALONE is wrong on one surface:
+ *   • `watchAvailable()` alone STILL shows it on the Chromium content-script `file://` reader,
+ *     which CAN watch but MUST NOT capture (1.4 gates capture off there with `docId: null`, and
+ *     that surface registers no diff context) — the exact D-14 trap, verified red-first not assumed.
+ *   • `isDiffContextRegistered()` alone STILL shows it on the Firefox picker / remote surfaces,
+ *     where the registry is trivially empty because nothing runs there. A harmless false negative —
+ *     but the composed gate is the honest one: disclose capture only where the surface BOTH can
+ *     watch AND has a registered context to disclose.
+ * There is deliberately NO third gate: not `contained` (a layout flag, not a capture signal), and
+ * not the capture on/off flag — the disclosure describes the CAPABILITY and the current
+ * registration, which stay true whether the toggle is on or off.
+ */
+function shouldShowDisclosure(): boolean {
+  return watchAvailable() && isDiffContextRegistered();
+}
+
+/** Reflect the current gate onto one disclosure element. `hidden` (not a class) so a suppressed
+ *  disclosure is out of the a11y tree too — a merely-transparent `role="status"` region still gets
+ *  announced by some AT. */
+function labelDisclosure(el: HTMLElement): void {
+  el.hidden = !shouldShowDisclosure();
+}
+
+/** Drop disclosure elements a re-render dropped, then re-apply the gate to the survivors — the
+ *  `syncNotes` liveness pattern, verbatim. */
+function syncDisclosure(): void {
+  for (const el of disclosures) {
+    if (!el.isConnected) disclosures.delete(el);
+  }
+  for (const el of disclosures) labelDisclosure(el);
+}
+
+/**
+ * Build the persistent capture disclosure (task 3.1).
+ *
+ * `role="status"` — polite and informational, a standing statement about what capture is doing,
+ * never an alert. The content is STATIC; only its `hidden` state moves, gate-driven and reactive
+ * through the same `onWatchChanged` subscription as the controls and notes.
+ */
+export function buildDisclosure(): HTMLElement {
+  const el = document.createElement('p');
+  el.className = WATCH_DISCLOSURE_CLASS;
+  el.setAttribute('role', 'status');
+  el.textContent = DISCLOSURE_TEXT;
+  disclosures.add(el);
+  ensureSubscribed();
+  labelDisclosure(el);
+  return el;
+}
+
 /**
  * The watch chrome for `host`: the toggle, the explanation, both, or NOTHING.
  *
@@ -252,12 +340,19 @@ export function buildWatchNote(): HTMLElement {
  *   • cannot watch, with a reason        → the note alone (4.4: Firefox). Never a dead button.
  *   • cannot watch, nothing to explain   → nothing at all (a focused test, a reader with no file
  *     behind it). Absent beats inert.
+ *
+ * The capture disclosure (D-3, task 3.1) is appended on top of that, INDEPENDENTLY: it renders
+ * whenever `shouldShowDisclosure()` holds, alongside whatever the note/control produced. Order is
+ * the D-3 arbitration rule — control first (closest to the bottom), note above it, disclosure above
+ * the note — so a warning always reads closer to the control it is about than the informational
+ * disclosure does.
  */
 export function buildWatchChrome(host: HTMLElement): Node[] {
   const chrome: Node[] = [];
   const control = buildWatchControl(host);
   if (control) chrome.push(control);
   if (control || watchNote() !== null) chrome.push(buildWatchNote());
+  if (shouldShowDisclosure()) chrome.push(buildDisclosure());
   return chrome;
 }
 
@@ -273,5 +368,6 @@ export function buildWatchChrome(host: HTMLElement): Node[] {
 export function resetWatchControlsForTest(): void {
   controls.clear();
   notes.clear();
+  disclosures.clear();
   subscribed = false;
 }
