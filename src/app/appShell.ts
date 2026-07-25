@@ -63,7 +63,13 @@ import {
 } from './store';
 import { DEFAULT_SETTINGS, type Settings } from '../settings/settings';
 import { addRecent, addPin, orderRecents, orderPins, SEP } from './recents';
-import { deleteSnapshotsForFolder as defaultDeleteSnapshotsForFolder } from './snapshots';
+import {
+  deleteSnapshotsForFolder as defaultDeleteSnapshotsForFolder,
+  getSnapshotMeta,
+  getSnapshotText,
+} from './snapshots';
+import { readerSourceFor } from '../render/readerMode';
+import { registerDiffContext } from '../render/diffRegistry';
 import {
   createRecentsView,
   type RecentEntryVM,
@@ -742,6 +748,38 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const docId = activeFolderId != null ? activeFolderId + SEP + file.path : null;
     controller = createWatchController({ detector, contained: true, docId });
     registerWatchTarget(controller);
+
+    // THE DIFF CONTEXT (task 2.1) — registered ALONGSIDE the watch target and under the SAME
+    // `docId != null` guard as 1.4's capture gate, so the identical architectural rule holds: this
+    // is the APP PAGE ONLY (§3.2). The content script never routes through here, and if a future
+    // refactor accidentally did, the null guard preserves the registry-empty invariant its surface
+    // depends on (D-3 suppression at 3.1, D-14 chrome gate at 6.2 both read `isDiffContextRegistered`).
+    //
+    // The context is DATA, not liveness: `getCurrentSource` reads the reader pane's live host from
+    // the reader-source WeakMap (1.3) — queried from the pane rather than held, because the pane owns
+    // and re-attaches that host (readerPane.ts); a detached host during a designed state yields
+    // `undefined`, which is the honest "nothing on screen to diff" answer. `fetchMeta`/`fetchText`
+    // close over 1.4's meta/text reads, filtered to this `docId`. No engine, no view, no `diff`.
+    // Last-write-wins (no explicit unregister): a stale context is harmless — `fetchMeta` over a
+    // stale `docId` returns [] — exactly as `registerWatchTarget`'s next-mount-overwrites.
+    if (docId != null) {
+      const diffDocId = docId;
+      registerDiffContext({
+        docId: diffDocId,
+        getCurrentSource: () => {
+          // The app page's live reader host — the element `mount()` renders into and keys the
+          // reader-source WeakMap on (class from readerPane.ts, the same selector its own
+          // real-engine test uses). Null during a designed state → undefined source.
+          const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+          return host ? readerSourceFor(host) : undefined;
+        },
+        fetchMeta: async () => {
+          const all = await getSnapshotMeta();
+          return all.find((m) => m.docId === diffDocId)?.entries ?? [];
+        },
+        fetchText: (id) => getSnapshotText(id),
+      });
+    }
   }
 
   // --- pinning (task 5.2) --------------------------------------------------

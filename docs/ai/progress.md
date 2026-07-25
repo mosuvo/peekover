@@ -10,42 +10,36 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (tasks 1.1–1.6 landed); next action is 2.1.**
-> **Nothing is in progress and nothing is blocked. Task 1.6 — D-13, one GLOBAL "erase snapshots" control — has
-> landed** (this commit), closing group 1. A `wipeAll`-sibling `eraseSnapshots()` in `store.ts` clears ONLY the two
-> snapshot stores (`snapshotMeta` FIRST, then `snapshots` — §1.2's safe ordering), leaving folders/recents/pins/
-> settings AND the capture-flag row (D-12) intact — erasing snapshots is not erasing settings. Six pieces:
-> (1) `eraseSnapshots()`, jsdoc'd with the "only two stores" invariant + META-FIRST ordering + the what-survives
-> honesty; (2) `AppStore.eraseSnapshots?` + an `eraseSnapshotsData` handler mirroring `wipeAllData` (best-effort,
-> capture-flag live cache NOT cleared — the row survives, so the in-memory flag must too); (3) a sibling
-> `[data-erase-snapshots]` inline-confirm control in the storage panel, placed ABOVE wipe (less destructive first),
-> disabled when `snapshots.count === 0`, confirm copy naming what erases AND what survives — `onEraseSnapshots?`
-> made OPTIONAL to keep the pre-existing `captureToggle.browser.test.ts` StorageViewOptions literal compiling
-> (a type-level consumer, not a panel-assertion tripwire); (4) jsdom tests (idle-disabled / idle-enabled / arm /
-> confirm-refreshes / cancel / copy); (5) a real-engine test driving the erase through the production UI CLICK
-> (M5 seam rule), non-vacuous (describeStored shows a "watched document" snapshot line before the erase) and
-> red-first (mutating `eraseSnapshots` to also `clear(folders)` reddened the folders survival assertion on both
-> engines, restored byte-identical); (6) `PERMISSIONS.md`'s stale future-erase forward-reference corrected — the
-> control ships now, and the deferred item is per-document ERASE (§6), not a per-document capture off-switch (the
-> off-switch is GLOBAL, shipped at 1.5). **`permissions: []` still stands. `DB_VERSION` is 3 (from 1.1). The
-> `diff` dependency is still task 5.1.** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed (the diff registry SEAM); next action is 3.1.**
+> **Nothing is in progress and nothing is blocked. Task 2.1 — the diff registry seam — has landed** (this commit).
+> A new `src/render/diffRegistry.ts` is a SIBLING of `watchRegistry.ts`: a module-level register-once holder
+> (`registerDiffContext` / `getDiffContext` / `isDiffContextRegistered` / `resetDiffRegistryForTest`), zero external
+> deps beyond a TYPE-only `SnapshotMetaEntry` import, safe to import from BOTH surfaces (no engine, no view, not the
+> `diff` package). It holds a `DiffContext` — the DATA a diff needs: `docId` + `getCurrentSource()` (a closure over
+> 1.3's `readerSourceFor` reaching the reader pane's live host) + `fetchMeta()`/`fetchText()` (closures over 1.4's
+> `getSnapshotMeta`/`getSnapshotText`, filtered to the `docId`). `appShell.installWatchForFile` registers it
+> ALONGSIDE `registerWatchTarget`, under the SAME `docId != null` guard as 1.4's capture gate (app-page only, §3.2);
+> `contentWatch.ts` is UNTOUCHED and imports no diffRegistry symbol, so the registry is **empty on the content
+> script and non-empty on the app page after a file open** — exactly the surface signal D-3 (3.1) and D-14 (6.2)
+> read. The production-path test drives the REAL gesture chain (mountAppShell → open folder → click file) and
+> `installContentWatch`, NEVER a hand-built `registerDiffContext` (the M5 seam rule); red-first added a
+> `registerDiffContext(...)` to `installContentWatch` — the content-script assertion reddened on both engines while
+> the app-page assertion stayed green (the isolating asymmetry), then restored byte-identical. **`permissions: []`
+> still stands. `DB_VERSION` is 3 (from 1.1). The `diff` dependency is still task 5.1.** M1–M5 remain fully closed.
 >
 > **★ D-3 cross-reference (task 3.1):** the wipe-reset's SAFETY depends on 3.1's PERSISTENT capture disclosure
 > re-appearing on the next watch (a wiped user re-watching sees it as a new user would). A comment at
 > `getCaptureEnabled`'s jsdoc names that dependency, so a future one-shot disclosure at 3.1 voids D-12 loudly, not
-> silently. D-3 ships at 3.1 (later); until then the reset is safe because capture defaults on and the panel
+> silently. D-3 ships at 3.1 (next); until then the reset is safe because capture defaults on and the panel
 > discloses the bytes.
 >
-> **THE NEXT ACTION IS TASK 2.1 — the diff registry SEAM.** A new `src/render/diffRegistry.ts` register-once
-> HOLDER (the `watchRegistry.ts` precedent — control rebuilt every mount, target held module-level, no closure
-> reference). `appShell.installWatchForFile` registers a diff CONTEXT for the host — `docId` + the current-source
-> getter + a snapshot fetch, the DATA a diff needs, NOT the engine and NOT the view (both are later groups). The
-> content-script graph registers nothing, so the registry is EMPTY on the content script and NON-EMPTY on the app
-> page — exactly the surface signal D-3's disclosure suppression (group 3) and D-14's chrome gate (group 6) both
-> READ. It is a SEAM, so the test must drive the PRODUCTION registration (`installWatchForFile`), not a hand-built
-> one; red-first: ungating the registration guard makes the content-script-empty assertion fail. D-2's shared
-> seam-pin helper generalises this + the watch registry at 4.1. **The Now-pointer advances PER TASK** (the M1 rule
-> — it once lagged four tasks and the next session acted on stale state).
+> **THE NEXT ACTION IS TASK 3.1 — D-3, the persistent capture disclosure channel.** A SEPARATE disclosure channel,
+> rendered ALONGSIDE the existing watch note, PERSISTENT (not one-shot), correctly gated: **suppressed when
+> `!watchAvailable()` OR the diff registry is empty** — and the second half of that gate is exactly what 2.1 just
+> made possible (`isDiffContextRegistered()` is now the honest "nothing here was ever captured to diff" signal on
+> the content-script `file://` surface, which can watch but must not capture). Do NOT gate on `watchAvailable()`
+> alone (that ships the disclosure to a surface that can watch but never captures) and NOT on `contained`. **The
+> Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next
 

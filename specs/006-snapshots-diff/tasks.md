@@ -242,7 +242,7 @@ go to the gate) and the milestone-close gate (9.1).
 *into 1.4 — see the gate-3 note. Recommendation: keep the registry as its own seam, exactly the object the plan*
 *specifies as the gate.*
 
-- [ ] **2.1 `diffRegistry.ts` — the register-once holder + app-page registration; the content graph registers
+- [x] **2.1 `diffRegistry.ts` — the register-once holder + app-page registration; the content graph registers
       nothing.** A module-level register-once holder (the `watchRegistry.ts:4-16` precedent — the control is
       rebuilt every mount, the target is not; hold no reference in a closure). `appShell.installWatchForFile`
       registers a **diff context** for the host (`docId` + the current-source getter + a snapshot fetch — the DATA
