@@ -1,0 +1,10 @@
+// ★ THE LOAD-BEARING FIXTURE — one correct-traced call AND one hand-built-traced call in the SAME
+// file. Both are clause-2 candidates; only `good` traces to the factory. The file contains
+// `createWatchController(` (from `good`), so the OLD file-scoped matcher passed it green. The new
+// call-site-scoped helper reddens on the `bad` call site — the exact D-2 revision-1 appShell weakness.
+let good;
+good = createWatchController({ detector, contained: true, docId: null });
+registerWatchTarget(good);
+
+const bad = { start: () => {}, stop: () => {} };
+registerWatchTarget(bad);

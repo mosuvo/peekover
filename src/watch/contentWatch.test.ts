@@ -24,48 +24,31 @@
 // one the suite has proven can render.* Only `createWatchController` produces such a target — it is
 // the sole thing in the codebase that holds a host, calls `mount`, and wires `onError`. So the pin
 // is: every production `registerWatchTarget(...)` call site builds its target with
-// `createWatchController`. Run against the pre-4.8 tree it goes RED on `watchRelay.ts`, which
+// `createWatchController`. Run against the pre-4.8 tree it went RED on `watchRelay.ts`, which
 // registered a hand-built target whose `start(host)` ignored the host (verified, not assumed —
 // see the task record).
+//
+// As of D-2 (task 4.1) this pin no longer scans for the factory name file-wide — it delegates to the
+// shared CALL-SITE-SCOPED helper `assertRegistrationsUseFactory` (tests/util/seamPin.ts), which
+// inspects each call's actual argument. That closes the hole a file-scoped matcher leaves once two
+// registrations sit in one file (appShell.installWatchForFile, after 2.1): a file holding one correct
+// and one hand-built registration used to pass green. The helper's clause 2 also understands
+// appShell's DELIBERATE mutable-ref shape (`controller` assigned from `createWatchController` a line
+// above the register), so the legitimate variable form passes without inlining. The diff registry's
+// twin pin, built on the same helper, lives beside its own registry in src/render/diffRegistry.test.ts.
 //
 // **If a future target is legitimately hand-built** (a stub surface, a second controller shape),
 // this test is the place that has to be argued with, deliberately, rather than a silent green.
 
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertRegistrationsUseFactory } from '../../tests/util/seamPin';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 
 const ENTRYPOINT = join(ROOT, 'entrypoints', 'peekover.content.ts');
-
-/** Every production `.ts` under `dir` — tests excluded, because a test registering its own target
- *  is exactly the legitimate thing this pin must not flag. */
-function productionSources(dir: string): string[] {
-  const out: string[] = [];
-  for (const name of readdirSync(dir)) {
-    const path = join(dir, name);
-    if (statSync(path).isDirectory()) {
-      if (name === 'node_modules') continue;
-      out.push(...productionSources(path));
-      continue;
-    }
-    if (!name.endsWith('.ts') || name.endsWith('.test.ts')) continue;
-    out.push(path);
-  }
-  return out;
-}
-
-/** Lines that CALL `registerWatchTarget`, with the declaration and every comment filtered out. */
-function registrationLines(source: string): string[] {
-  return source.split('\n').filter((line) => {
-    const trimmed = line.trim();
-    if (!trimmed.includes('registerWatchTarget(')) return false;
-    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return false;
-    return !trimmed.includes('export function registerWatchTarget');
-  });
-}
 
 describe('the content script wires watch through the function this suite can test', () => {
   it('calls installContentWatch, and imports it from src/watch/contentWatch', () => {
@@ -98,30 +81,17 @@ describe('the content script wires watch through the function this suite can tes
   });
 });
 
-describe('THE CLASS PIN — every production watch target is one that can render', () => {
-  it('builds every registered WatchTarget with createWatchController', () => {
-    const files = [
-      ...productionSources(join(ROOT, 'src')),
-      ...productionSources(join(ROOT, 'entrypoints')),
-    ];
-
-    const registrars = files
-      .map((path) => ({ path, source: readFileSync(path, 'utf8') }))
-      .filter(({ source }) => registrationLines(source).length > 0);
-
-    // Non-vacuity: if this ever drops to zero the pin has stopped watching anything, which would
-    // be the same silent-green failure it exists to prevent.
-    expect(registrars.length, 'no registerWatchTarget call sites found — did the seam move?')
-      .toBeGreaterThan(0);
-
-    const handBuilt = registrars
-      .filter(({ source }) => !source.includes('createWatchController('))
-      .map(({ path }) => path.slice(ROOT.length).replace(/\\/g, '/'));
-
-    expect(
-      handBuilt,
-      'these register a WatchTarget that no suite has proven can re-render — the 005 defect class ' +
-        '(4.7 twice, 4.8 once). Use createWatchController, or argue with this test on purpose.',
-    ).toEqual([]);
+describe('THE CLASS PIN — every production watch target is one that can render (D-2)', () => {
+  it('every production registerWatchTarget call site builds its target with createWatchController', () => {
+    assertRegistrationsUseFactory({
+      roots: ['src', 'entrypoints'],
+      registerName: 'registerWatchTarget',
+      factoryName: 'createWatchController',
+      // The two production call sites: appShell.installWatchForFile (clause 2 — the mutable-ref
+      // `controller`) and contentWatch.installContentWatch (clause 1 — inline). No un-loadable
+      // entrypoint registers a watch target — the content-script's registration lives in the
+      // loadable src/ file contentWatch.ts — so there is no entrypoint source-text pin to add.
+      minCallSites: 2,
+    });
   });
 });

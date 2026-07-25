@@ -1,0 +1,4 @@
+// A bare identifier whose same-file assignment is a hand-built object, not the factory — the hole a
+// file-scoped matcher (and option C) would leave open. Clause 2 traces it and FAILS.
+const handBuilt = { start: () => {}, stop: () => {} };
+registerWatchTarget(handBuilt);

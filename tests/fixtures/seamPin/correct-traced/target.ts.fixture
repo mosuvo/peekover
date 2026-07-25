@@ -1,0 +1,5 @@
+// Clause 2 — a bare identifier assigned from the factory earlier in the SAME file (the appShell
+// mutable-ref shape: declared, assigned on a later line, then registered). PASS.
+let controller;
+controller = createWatchController({ detector, contained: true, docId: null });
+registerWatchTarget(controller);

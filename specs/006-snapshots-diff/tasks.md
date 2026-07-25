@@ -290,7 +290,7 @@ go to the gate) and the milestone-close gate (9.1).
 
 ## 4 — D-2's shared seam-pin helper (before the pin is copied with its hole)
 
-- [ ] **4.1 D-2 — extract a shared, CALL-SITE-scoped seam-pin helper; re-express the watch pin; cover both
+- [x] **4.1 D-2 — extract a shared, CALL-SITE-scoped seam-pin helper; re-express the watch pin; cover both
       registries.** The existing pin (`contentWatch.test.ts:101-127`) is **file-scoped**: `:117-119` asks whether
       the file contains `createWatchController(` anywhere, not whether the registration uses it — a file with one
       correct and one hand-built registration passes green, and `appShell.ts` (which will hold BOTH registries'

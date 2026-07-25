@@ -1,0 +1,2 @@
+// Clause 1 — the argument is an inline factory call. PASS.
+registerWatchTarget(createWatchController({ detector, contained: true, docId: null }));

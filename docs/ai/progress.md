@@ -10,34 +10,32 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed (the persistent capture disclosure); next action is 4.1.**
-> **Nothing is in progress and nothing is blocked. Task 3.1 — D-3, the persistent capture disclosure — has landed** (this commit).
-> A SEPARATE disclosure channel in `watchControl.ts`, rendered by `buildWatchChrome` ALONGSIDE the watch note (not
-> instead of it): `buildDisclosure()` + a `disclosures` set + `syncDisclosure()`, mirroring `buildWatchNote`'s
-> structure. Its copy is STATIC ("Snapshots of this file are stored on this device only, never uploaded. Manage them
-> in the Stored data panel — turn off capture, or erase all snapshots.") and its visibility is GATE-DRIVEN — it is a
-> state-GATE READER, never a slot writer, so `watchRegistry.ts` is byte-untouched (no seventh note-slot writer). The
-> gate is `shouldShowDisclosure() = watchAvailable() && isDiffContextRegistered()` — **both halves, no third gate**
-> (not `contained`, not the capture on/off flag). Visibility flips reactively on `onWatchChanged` (the same single
-> subscription the controls and notes ride), so it is PERSISTENT, not one-shot — D-12's wipe-reset safety rests on
-> exactly this (a wiped user re-watching sees it again, as a new user would). CSS: `.peekover-watch-disclosure` at
-> `bottom:176px`, one 40px step above the note, `border-left:3px solid var(--accent)` (INFORMATIONAL ink, vs the
-> note's `--warn` amber alarm); listed in `CONTAINED_CSS` alongside the note for app-page positioning. The
-> production-path browser test drives the REAL gesture chain (mountAppShell → open folder → click file) and
-> `installContentWatch`, NEVER a hand-built `buildDisclosure` (the M5 seam rule); red-first dropped the registry half
-> of the gate (`watchAvailable()` alone — the exact D-14 trap) and ONLY the Chromium content-script `file://` test
-> reddened on both engines while the app-page and Firefox/remote assertions stayed green (the isolating asymmetry),
-> then restored byte-identical. **`permissions: []` still stands. `DB_VERSION` is 3 (from 1.1). The `diff` dependency
-> is still task 5.1.** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed (the shared seam-pin helper) — GROUP 4 CLOSED; next action is 5.1.**
+> **Nothing is in progress and nothing is blocked. Task 4.1 — D-2, the SHARED, CALL-SITE-scoped seam-pin helper — has landed** (this commit).
+> `tests/util/seamPin.ts` extracts M5's file-scoped watch pin into `assertRegistrationsUseFactory`, a SOURCE-TEXT (no
+> AST — the `#imports` rule stands) helper that inspects each `registerX(...)` call's ACTUAL argument via a
+> comment/string-aware parenthesis-balancing scanner. Two clauses: (1) an inline `factoryName(` argument; (2) a bare
+> identifier traced to a same-file `<ident> = factoryName(` assignment. **Clause 2 is what the first STOP-and-flag
+> forced out**: `appShell` registers `registerWatchTarget(controller)` where `controller` is the DELIBERATE mutable-ref
+> assigned a line above (its `onDead` closure needs the ref) — a bare variable, not an inline factory call, which is
+> exactly why M5's pin was file-scoped. A strict "argument starts with `createWatchController(`" would have RED-ded the
+> production tree; the human chose OPTION A (extend the algorithm with the trace) over option C (diff-registry pin
+> only). `createDiffContext` (an identity-map factory) was added to `diffRegistry.ts` so
+> `registerDiffContext(createDiffContext({...}))` mirrors `registerWatchTarget(createWatchController(...))`;
+> `appShell.installWatchForFile` wraps its 2.1 object literal in it (behavior-neutral, three-line diff). The watch pin
+> (`contentWatch.test.ts`) and a NEW diff pin (`diffRegistry.test.ts`, beside its own registry) both run through the
+> helper. Red-first was FIXTURE-based (method b): a `mixed` fixture (`tests/fixtures/seamPin/`, `.ts.fixture` so
+> tsc/eslint skip it) holds one correct-traced and one hand-built-traced registration in one file — the exact case the
+> OLD file-scoped matcher passed green — and reddens on the hand-built call site with its line named and the correct
+> trace shown resolved. **`permissions: []` still stands; `DiffContext` interface byte-identical; `contentWatch.ts`
+> byte-identical; `DB_VERSION` is 3. The `diff` dependency is still task 5.1.** M1–M5 remain fully closed.
 >
-> **THE NEXT ACTION IS TASK 4.1 — D-2, the SHARED seam-pin helper.** Extract a shared, CALL-SITE-scoped seam-pin
-> helper that generalises M5's file-scoped `watchRegistry` call-site pin to cover BOTH `watchRegistry` (its
-> `createWatchController` registration) AND `diffRegistry` (its `registerDiffContext` registration) — both
-> registrations now live in `appShell.installWatchForFile`, which is precisely where a file-scoped matcher is weakest
-> (a `createWatchController(` anywhere in that file satisfies the watch pin regardless of which line the target came
-> from; plan §0 D-2). The second registry now EXISTS (2.1) and its disclosure consumer ships (3.1), so the helper's
-> shape can be generalised without a hole. Re-express the watch pin through it; cover both registries. **The
-> Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
+> **THE NEXT ACTION IS TASK 5.1 — `diffEngine.ts`, the diff engine and the FIRST dependency added since M1 (`diff`).**
+> Group 5 is where the import-graph fence begins: `diffEngine.ts` must be imported ONLY by diff-view consumers,
+> provably NOT reachable from `mount.ts` or the content script's import graph. The 4.1 helper's source-text method
+> generalises to that import guard, but it is 5.1's job. Adding the `diff` package is a DEPENDENCY-APPROVAL gate — do
+> NOT tick 5.x without walking it. **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and
+> the next session acted on stale state).
 
 ## Up next
 

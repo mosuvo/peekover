@@ -11,6 +11,7 @@ import {
   resetDiffRegistryForTest,
   type DiffContext,
 } from './diffRegistry';
+import { assertRegistrationsUseFactory } from '../../tests/util/seamPin';
 
 /** A minimal context — the holder never calls its closures, so plain stubs suffice here. */
 function ctx(docId: string): DiffContext {
@@ -54,5 +55,26 @@ describe('diffRegistry — the register-once holder (task 2.1)', () => {
     resetDiffRegistryForTest();
     expect(isDiffContextRegistered()).toBe(false);
     expect(getDiffContext()).toBeNull();
+  });
+});
+
+// THE SEAM PIN — the diff registry's twin of the M5 watch pin, built on the SAME shared helper
+// (D-2, task 4.1). It lives here, beside the registry it guards, rather than in contentWatch.test.ts:
+// each registry's call-site pin sits next to that registry. The M5 seam rule is load-bearing here
+// (diffRegistry.ts header): the only production path that registers a diff context is
+// appShell.installWatchForFile, and after 2.1 that registration sits in the SAME file block as the
+// watch registration — exactly the side-by-side shape a file-scoped matcher is weakest against.
+describe('THE SEAM PIN — every production diff context is built by its factory (D-2)', () => {
+  it('every production registerDiffContext call site builds its context with createDiffContext', () => {
+    assertRegistrationsUseFactory({
+      roots: ['src', 'entrypoints'],
+      registerName: 'registerDiffContext',
+      factoryName: 'createDiffContext',
+      // One production call site: appShell.installWatchForFile (clause 1 — inline
+      // createDiffContext({...}) after the 4.1 wrap). The content-script graph imports no symbol
+      // from diffRegistry and registers none (2.1's proven architectural fact), so there is no
+      // second site and no un-loadable entrypoint pin.
+      minCallSites: 1,
+    });
   });
 });

@@ -64,6 +64,25 @@ export interface DiffContext {
   fetchText(snapshotId: string): Promise<string | undefined>;
 }
 
+/**
+ * Build a {@link DiffContext} from its parts — the identity-map factory D-2 (task 4.1) adds so
+ * that `registerDiffContext(createDiffContext(...))` has the SAME `registerX(createY(...))` shape
+ * as `registerWatchTarget(createWatchController(...))`. It exists for the SEAM PIN, not for
+ * behaviour: the shared call-site-scoped helper (tests/util/seamPin.ts) can then enforce, uniformly
+ * across BOTH registries, that every production registration's argument is built by its factory —
+ * the check a file-scoped matcher cannot make once two registrations sit side by side in one file
+ * (appShell.installWatchForFile, after 2.1). Trivial today (it returns its config unchanged); the
+ * value is that it establishes the seam a second registry consumer must pass through.
+ */
+export function createDiffContext(config: {
+  docId: string;
+  getCurrentSource(): string | undefined;
+  fetchMeta(): Promise<SnapshotMetaEntry[]>;
+  fetchText(snapshotId: string): Promise<string | undefined>;
+}): DiffContext {
+  return config;
+}
+
 /** The context's diff context, or null in a context that registered none (the content script, a
  *  focused test, an app-page surface that cannot watch). A null context is not an error — see
  *  {@link isDiffContextRegistered}. */

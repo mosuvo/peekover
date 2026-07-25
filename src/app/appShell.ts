@@ -69,7 +69,7 @@ import {
   getSnapshotText,
 } from './snapshots';
 import { readerSourceFor } from '../render/readerMode';
-import { registerDiffContext } from '../render/diffRegistry';
+import { registerDiffContext, createDiffContext } from '../render/diffRegistry';
 import {
   createRecentsView,
   type RecentEntryVM,
@@ -764,7 +764,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // stale `docId` returns [] — exactly as `registerWatchTarget`'s next-mount-overwrites.
     if (docId != null) {
       const diffDocId = docId;
-      registerDiffContext({
+      registerDiffContext(createDiffContext({
         docId: diffDocId,
         getCurrentSource: () => {
           // The app page's live reader host — the element `mount()` renders into and keys the
@@ -778,7 +778,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
           return all.find((m) => m.docId === diffDocId)?.entries ?? [];
         },
         fetchText: (id) => getSnapshotText(id),
-      });
+      }));
     }
   }
 

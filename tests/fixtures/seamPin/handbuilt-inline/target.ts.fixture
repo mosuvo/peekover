@@ -1,0 +1,2 @@
+// The argument is an inline object literal — no factory call at all. FAIL (neither clause).
+registerWatchTarget({ start: () => {}, stop: () => {} });
