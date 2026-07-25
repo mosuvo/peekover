@@ -10,32 +10,35 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed (the shared seam-pin helper) — GROUP 4 CLOSED; next action is 5.1.**
-> **Nothing is in progress and nothing is blocked. Task 4.1 — D-2, the SHARED, CALL-SITE-scoped seam-pin helper — has landed** (this commit).
-> `tests/util/seamPin.ts` extracts M5's file-scoped watch pin into `assertRegistrationsUseFactory`, a SOURCE-TEXT (no
-> AST — the `#imports` rule stands) helper that inspects each `registerX(...)` call's ACTUAL argument via a
-> comment/string-aware parenthesis-balancing scanner. Two clauses: (1) an inline `factoryName(` argument; (2) a bare
-> identifier traced to a same-file `<ident> = factoryName(` assignment. **Clause 2 is what the first STOP-and-flag
-> forced out**: `appShell` registers `registerWatchTarget(controller)` where `controller` is the DELIBERATE mutable-ref
-> assigned a line above (its `onDead` closure needs the ref) — a bare variable, not an inline factory call, which is
-> exactly why M5's pin was file-scoped. A strict "argument starts with `createWatchController(`" would have RED-ded the
-> production tree; the human chose OPTION A (extend the algorithm with the trace) over option C (diff-registry pin
-> only). `createDiffContext` (an identity-map factory) was added to `diffRegistry.ts` so
-> `registerDiffContext(createDiffContext({...}))` mirrors `registerWatchTarget(createWatchController(...))`;
-> `appShell.installWatchForFile` wraps its 2.1 object literal in it (behavior-neutral, three-line diff). The watch pin
-> (`contentWatch.test.ts`) and a NEW diff pin (`diffRegistry.test.ts`, beside its own registry) both run through the
-> helper. Red-first was FIXTURE-based (method b): a `mixed` fixture (`tests/fixtures/seamPin/`, `.ts.fixture` so
-> tsc/eslint skip it) holds one correct-traced and one hand-built-traced registration in one file — the exact case the
-> OLD file-scoped matcher passed green — and reddens on the hand-built call site with its line named and the correct
-> trace shown resolved. **`permissions: []` still stands; `DiffContext` interface byte-identical; `contentWatch.ts`
-> byte-identical; `DB_VERSION` is 3. The `diff` dependency is still task 5.1.** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed (the engine + the `diff` dependency + the two-layer import fence) — GROUP 5 CLOSED; next action is 6.1.**
+> **Nothing is in progress and nothing is blocked. Task 5.1 — `diffEngine.ts`, the pure line-diff engine, and the FIRST dependency added since M1 (`diff@^9.0.0`) — has landed** (this commit).
+> `src/render/diffEngine.ts` imports `diffLines` from `diff` (narrow named import for tree-shaking) and REUSES
+> `normalise` from `snapshots.ts` (D-5, never re-declared), mapping the library's change objects 1:1 into a stable,
+> Peekover-owned `DiffHunk[]` (`kind` + newline-stripped `lines`) that insulates callers from `diff`'s version churn.
+> Pure and total: no DOM, no IDB, always returns. `computeDiff` normalises both sides before `diffLines` sees them, so
+> a bare CRLF→LF rewrite reports NO change (identical inputs → one `unchanged` hunk; two empty inputs → `[]`).
+> **The `diff` dependency-approval gate was walked** (BSD-3-Clause, zero runtime deps, bundled types so no `@types/diff`,
+> `pnpm ls diff --depth 0` confirms zero transitive additions); `dependencies` is now exactly four with `diff` first
+> alphabetically. **The two-layer import fence holds** (plan §1.4): (1) a SOURCE-TEXT allowlist pin
+> (`diffEngine.test.ts`) — the `diff` package is imported by exactly `{diffEngine.ts}` and no production module imports
+> the engine yet; red-first via a `mount.ts` mutation adding `from 'diff'` reddens with the offending file:line named,
+> restored byte-identical; (2) a VERIFY-ONLY bundle-grep + byte-delta check — content-script bundles are byte-IDENTICAL
+> to the pre-`diff` baseline on BOTH engines (305744 B each, Δ0), zero `diff`-package strings present. **The engine is
+> DELIBERATELY wired to nothing at 5.1** (D-15 — "entering a diff is an attribute flip, not a re-render; mount() stays
+> read-only library"): its first consumer is 6.1's `diffView.ts`, so the app-page chunk did NOT grow yet either (Δ0) —
+> the `diff` bytes land in the app-page graph only when the view imports the engine at 6.1. **`permissions: []` still
+> stands; `mount.ts`, `watchController.ts`, `watchControl.ts`, `diffRegistry.ts`, `contentWatch.ts`, `appShell.ts` all
+> byte-identical (D-15's architectural basis); `Settings`/`getSettings`/`putSettings` byte-identical; `DB_VERSION` is 3.**
+> M1–M5 remain fully closed.
 >
-> **THE NEXT ACTION IS TASK 5.1 — `diffEngine.ts`, the diff engine and the FIRST dependency added since M1 (`diff`).**
-> Group 5 is where the import-graph fence begins: `diffEngine.ts` must be imported ONLY by diff-view consumers,
-> provably NOT reachable from `mount.ts` or the content script's import graph. The 4.1 helper's source-text method
-> generalises to that import guard, but it is 5.1's job. Adding the `diff` package is a DEPENDENCY-APPROVAL gate — do
-> NOT tick 5.x without walking it. **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and
-> the next session acted on stale state).
+> **THE NEXT ACTION IS TASK 6.1 — `diffView.ts`, the diff VIEW: hunks → sanitized markup, the lazily-built `data-diff`
+> sibling flip on the host (D-15), build/enter/exit, and the fallback named in plan §1.5.** 6.1 is the engine's FIRST
+> consumer — `diffView.ts` imports `diffEngine.ts`, so the fence pin's `ALLOWED_ENGINE_IMPORTERS` allowlist gains
+> `src/render/diffView.ts` in that commit (the one-line test change that documents the architecture change), and the
+> app-page chunk grows by `diffLines`'s tree-shaken cost then (re-measured officially at 8.1). Both diff sides go
+> through the unchanged `parse → sanitize` path (untrusted on both sides, §3.8); `mount()` clears `data-diff` on both
+> commit paths so a diff never crosses a document switch. **The Now-pointer advances PER TASK** (the M1 rule — it once
+> lagged four tasks and the next session acted on stale state).
 
 ## Up next
 

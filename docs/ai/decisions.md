@@ -1,6 +1,20 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-25 · `diff` DEPENDENCY PINNED AT `^9.0.0` (task 5.1) · the first dependency added since M1, and
+  the concrete resolution of D-2's approval** (the `diff` package was approved and deferred to 006 at 005's
+  plan gate). Package `diff` (kpdecker/jsdiff): BSD-3-Clause, ZERO runtime deps (`pnpm ls diff --depth 0`
+  confirms no transitive additions), bundled types (so NO `@types/diff` — carrying it would double the types
+  surface), no install scripts, canonical maintainer, 131M+ weekly downloads, tree-shakeable ESM. Pinned
+  `^9.0.0`; resolved 9.0.0. Only `diffLines` is used (narrow named import), against `normalise`-d text (D-5).
+  **Why `^` and this range:** matches the file's existing three deps' pattern; the API was re-verified against
+  `diff@9`'s bundled `.d.ts` before pinning (AGENTS.md — training knowledge of the API is stale). **Why this
+  is safe to add now:** the import fence (plan §1.4) keeps the package's bytes off the content-script graph —
+  proven at 5.1 by a byte-identical content-script bundle on both engines and zero `diff`-strings in it.
+  **Revisit-when:** `diff` ships a major with a breaking `diffLines` signature (re-verify against its docs
+  before bumping); or the bundle-fence re-measurement at 8.1 shows `diff` bytes reaching the content script
+  (a STOP-and-flag — the fence broke).
+
 - **2026-07-23 · SPEC 006 GATE-3 PRODUCT DECISIONS (gate 3) · the TWO open questions plan §0.1 left to the
   human are now settled — logged BEFORE the code that implements them** (the 004 D-2 pattern; 005's
   plan-gate decisions had to be backfilled a day late — `decisions.md` 2026-07-22 — and this is the first

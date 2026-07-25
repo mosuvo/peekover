@@ -307,7 +307,7 @@ go to the gate) and the milestone-close gate (9.1).
 
 ## 5 — The diff engine (the only module that imports `diff`)
 
-- [ ] **5.1 `diffEngine.ts` — `normalise` + `diff`'s line API → hunks (pure, no DOM). Add the dependency.**
+- [x] **5.1 `diffEngine.ts` — `normalise` + `diff`'s line API → hunks (pure, no DOM). Add the dependency.**
       The library returns hunks; the markup is ours (6.1). Line granularity is applied to **source** and displayed
       against blocks (§3.8) — no sub-line spans (deferred with a home). Add `diff` to `package.json` (three →
       four), the first dependency since M1 — a governed act, approved at 005's plan gate (D-2); **verify the
