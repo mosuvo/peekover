@@ -196,7 +196,7 @@ go to the gate) and the milestone-close gate (9.1).
       live control `fetch` shown in the same test. **★ Confirm both NUL checks read zero.** Golden EMPTY ·
       manifest green + byte-unchanged.
 
-- [ ] **1.5 D-12 — the capture off-switch is its OWN settings ROW, not a field on the shared `Settings` record.**
+- [x] **1.5 D-12 — the capture off-switch is its OWN settings ROW, not a field on the shared `Settings` record.**
       A field on `Settings` would be fetched by the content script on every reader start and acted on by nothing;
       worse, `getSettings()` hand-enumerates its fields (`store.ts:185`), so a new `Settings` field would persist
       then **silently vanish on read** — no type error, no test failure (§4-1, the trap D-12 routes around). The

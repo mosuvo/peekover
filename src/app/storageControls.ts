@@ -39,6 +39,13 @@ export const STORAGE_DISCLOSURE_NOTE =
 export interface StorageViewOptions {
   /** The plain-language picture from `store.describeStored()`. */
   summary: StoredSummary;
+  /** The current snapshot-capture flag (D-12, task 1.5) — the caller passes `getCaptureFlag()`
+   *  (the live cache) at render time, so the checkbox reflects the flag the watch loop honours. */
+  captureEnabled: boolean;
+  /** Toggle snapshot capture on/off (D-12, task 1.5). Called with the NEW value on change; the
+   *  caller both persists it (`store.setCaptureEnabled`) AND updates the live cache
+   *  (`setCaptureFlag`) so the next watched render honours it immediately. */
+  onToggleCapture(enabled: boolean): void;
   /** Erase everything — invoked ONLY after the inline confirm (never on the first click). */
   onWipe(): void;
   /** Dismiss the panel. */
@@ -82,6 +89,10 @@ const SC_CSS = /* css */ `
   color:var(--muted,#5D6070); font-size:.8rem; border-left:3px solid var(--line,#E6E6DF);
   padding:.4rem .6rem; background:var(--paper,#FBFBF8); border-radius:6px; max-width:52ch;
 }
+.${SC_CLASS}__capture{display:flex; flex-direction:column; gap:.3rem; min-width:0}
+.${SC_CLASS}__capture-row{display:flex; align-items:baseline; gap:.5rem; cursor:pointer; font-size:.85rem; color:var(--ink,#16171F)}
+.${SC_CLASS}__capture-row input{flex:0 0 auto; margin:0; cursor:pointer}
+.${SC_CLASS}__capture-note{color:var(--muted,#5D6070); font-size:.8rem; margin:0; max-width:52ch}
 .${SC_CLASS}__wipe{display:flex; align-items:center; gap:.5rem; flex-wrap:wrap}
 .${SC_CLASS}__wipe-prompt{color:var(--muted,#5D6070); font-size:.82rem}
 .${SC_CLASS}__btn{
@@ -136,7 +147,7 @@ function buildRow(doc: Document, name: string, tag?: string): HTMLElement {
  * `onWipe`. Everything is one surface — no modal, no browser confirm().
  */
 export function createStorageView(doc: Document, opts: StorageViewOptions): StorageViewController {
-  const { summary, onWipe, onClose } = opts;
+  const { summary, captureEnabled, onToggleCapture, onWipe, onClose } = opts;
 
   const element = doc.createElement('div');
   element.className = SC_CLASS;
@@ -192,6 +203,31 @@ export function createStorageView(doc: Document, opts: StorageViewOptions): Stor
   never.textContent = STORAGE_DISCLOSURE_NOTE;
   element.append(never);
 
+  // The snapshot-capture off-switch (D-12, task 1.5). A checkbox reflecting the current flag; its
+  // change persists the new value and updates the live cache the watch loop reads at render time,
+  // so the next watched render honours it. Never blank (AGENTS.md #5): the label states plainly what
+  // capture does — bounded past text states of watched documents, on this device only, never uploaded.
+  const capture = doc.createElement('section');
+  capture.className = `${SC_CLASS}__capture`;
+  capture.setAttribute('aria-label', 'Snapshot capture');
+  const captureLabel = doc.createElement('label');
+  captureLabel.className = `${SC_CLASS}__capture-row`;
+  const captureBox = doc.createElement('input');
+  captureBox.type = 'checkbox';
+  captureBox.checked = captureEnabled;
+  captureBox.dataset.captureToggle = '';
+  captureBox.addEventListener('change', () => onToggleCapture(captureBox.checked));
+  const captureText = doc.createElement('span');
+  captureText.textContent = 'Keep version snapshots of documents you watch';
+  captureLabel.append(captureBox, captureText);
+  const captureNote = doc.createElement('p');
+  captureNote.className = `${SC_CLASS}__capture-note`;
+  captureNote.textContent =
+    'Keeps a bounded number of past text states of the documents you watch, on this device only and ' +
+    'never uploaded, so you can compare versions. Turn this off to stop keeping new snapshots.';
+  capture.append(captureLabel, captureNote);
+  element.append(capture);
+
   // The wipe control — inline confirm, one surface. Rebuilt in place between idle/confirming.
   const wipe = doc.createElement('div');
   wipe.className = `${SC_CLASS}__wipe`;
@@ -212,7 +248,10 @@ export function createStorageView(doc: Document, opts: StorageViewOptions): Stor
     }
     const prompt = doc.createElement('span');
     prompt.className = `${SC_CLASS}__wipe-prompt`;
-    prompt.textContent = 'Confirm wipe? This erases every remembered folder, recent, and pin.';
+    prompt.textContent =
+      'Confirm wipe? This erases everything on this device — remembered folders, recents, pins, ' +
+      'reader settings, and every saved document snapshot — and resets snapshot capture to its ' +
+      'default (on).';
     const confirm = doc.createElement('button');
     confirm.type = 'button';
     confirm.className = `${SC_CLASS}__btn`;

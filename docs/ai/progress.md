@@ -10,33 +10,41 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.4 landed; next action is 1.5.**
-> **Nothing is in progress and nothing is blocked. Task 1.4 — ★ THE STORING COMMIT — has landed** (this commit):
-> the first code that stores a snapshot, with the WHOLE trust correction in ONE commit (§3.3's same-commit rule).
-> Seven pieces: (1) capture wiring in `watchController.renderNow`, AFTER `readyAt` and OUTSIDE the timed block,
-> `void storeSnapshot(docId, outgoing)` fire-and-forget — `captureEnabled` is a defaulted-ON **const** here
-> (1.5 makes it a settings-row read); (2) D-5 `normalise` (LF) both sides of the equal-check, `changeDetector.ts`
-> byte-unchanged; (3) `SEP` exported from `recents.ts` with the two-subsystem coupling comment, `docId =
-> folderId + SEP + path` built at the app-page install site, `docId: null` on the content script (the
-> app-page-only guard, §3.2); (4) D-10 `deleteSnapshotsForFolder` on the `folderId + SEP` boundary, called from
-> `revokeAccess` before the folder-row delete; (5) the trust correction reaching CODE — `PERMISSIONS.md` claim
-> sentence + derived facts + a new snapshot-capture ledger row, `storageControls`'s note rewritten, `store.ts`'s
-> record-class comments re-scoped; (6) `StoredSummary` gains a required `snapshots` field, `describeStored` reads
-> `snapshotMeta` only, `buildStoredLines` gains a line; (7) `wipeAll` clears the two snapshot stores (META first).
-> The correction ordering was procedurally enforced: product code + `PERMISSIONS.md` + type-forced updates landed
-> first, then the RED transition was observed VERBATIM on THREE genuine product-driven assertion classes
-> (`wipe.browser.test.ts` folders line, `appShell.test.ts` disclosure note, `store.test.ts`/`settingsStore.browser`
-> settings line), and only THEN were the assertions flipped. Red-first proven for the two absence/boundary claims
-> (content-script no-capture; the `folderId + SEP` delimiter). **The `diff` dependency is still task 5.1 and
-> `permissions: []` still stands. `DB_VERSION` is 3 (from 1.1).** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.5 landed; next action is 1.6.**
+> **Nothing is in progress and nothing is blocked. Task 1.5 — D-12, the capture off-switch as its OWN settings
+> ROW — has landed** (this commit): the flag is a SECOND row in the settings store (`CAPTURE_SETTINGS_ID='capture'`,
+> its own `CaptureRecord` type — never unioned with `SettingsRecord`), read by key via `getCaptureEnabled` /
+> `setCaptureEnabled`, routing AROUND `getSettings()`'s hand-enumerate trap (plan §4-1) — which stays LIVE for
+> whoever adds the next `Settings` field. Eight pieces: (1) the second row + reader/writer, read-with-default
+> (TRUE) as the reset mechanism, jsdoc'd as D-12's route-around and cross-referencing D-3 (3.1); (2)
+> `getSettings`/`putSettings` bodies BYTE-UNTOUCHED (373 B / 245 B) and the `Settings` type byte-identical
+> (912 B) — the shape invariant `Object.keys(getSettings())==['theme','tocOpen','tocWidth']` was RED-FIRST proven
+> in the real engine (getSettings is jsdom-blind, so the invariant lives in `settingsStore.browser.test.ts`, not
+> `store.test.ts`) under a shared-record mutation (Object.keys gained a fourth field), then restored
+> byte-identical; (3) `describeStored` reads BOTH settings rows, `StoredSummary` gains a required
+> `captureFlag: boolean | null` (compile-forced `EMPTY_SUMMARY` + two test fixtures, same class as 1.4's
+> `snapshots`), `buildStoredLines` gains a line; (4) `wipeAll` UNCHANGED — the reset is automatic via
+> read-with-default (non-vacuously tested); (5) `captureEnabled` const → `getCaptureFlag()` read at RENDER TIME
+> via a new pure `src/app/captureFlag.ts` cache (appShell loads on mount + writes on toggle; content-script
+> behaviour unchanged, `docId: null` still gates); (6) a real storage-panel toggle wired through appShell,
+> browser-proven to stop capture on the next render (non-vacuous, driven through the production checkbox); (7)
+> wipe-confirmation copy names the six-store erase AND the snapshot-capture reset to default; (8) `PERMISSIONS.md`'s
+> stale "off-switchable per document" corrected to the global storage-panel off-switch. **The `diff` dependency is
+> still task 5.1 and `permissions: []` still stands. `DB_VERSION` is 3 (from 1.1).** M1–M5 remain fully closed.
 >
-> **THE NEXT ACTION IS TASK 1.5 — D-12, the capture off-switch as its OWN settings ROW** (not a field on the
-> shared `Settings` record — `getSettings()` hand-enumerates its fields at `store.ts`, so a new field would
-> persist then silently vanish on read; §4-1 is the trap D-12 routes around, deliberately left live). The flag
-> is a second row in the settings store, read by key, so `getSettings()` stays untouched; `describeStored()` must
-> read both rows; `wipeAll()` resets the flag to its default (on). `captureEnabled` in `watchController.ts`
-> becomes that settings-row read (it is a defaulted-ON const at 1.4). **The Now-pointer advances PER TASK** (the
-> M1 rule — it once lagged four tasks and the next session acted on stale state).
+> **★ D-3 cross-reference (task 3.1):** the wipe-reset's SAFETY depends on 3.1's PERSISTENT capture disclosure
+> re-appearing on the next watch (a wiped user re-watching sees it as a new user would). A comment at
+> `getCaptureEnabled`'s jsdoc names that dependency, so a future one-shot disclosure at 3.1 voids D-12 loudly, not
+> silently. D-3 ships at 3.1 (later); until then the reset is safe because capture defaults on and the panel
+> discloses the bytes.
+>
+> **THE NEXT ACTION IS TASK 1.6 — D-13, one GLOBAL "erase snapshots" control** — a `wipeAll`-sibling in `store.ts`
+> that clears ONLY the two snapshot stores (`snapshotMeta` + `snapshots`), leaving folders/recents/pins/settings
+> AND the capture flag intact (erasing snapshots is not erasing settings). Per-document erase stays deferred
+> with a home (§6, D-13). Red-first + non-vacuous: a control that also clears a non-snapshot store reddens that
+> store's survival assertion; assert a snapshot existed before the erase so an empty tail is not an empty
+> instrument. **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session
+> acted on stale state).
 
 ## Up next
 

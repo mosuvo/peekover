@@ -698,6 +698,7 @@ function summarize(
     pins,
     settings: null,
     snapshots: { count: 0, docs: 0, bytes: 0 },
+    captureFlag: null,
     total,
     lines,
   };
@@ -738,6 +739,7 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
         pins: [{ id: 'p1', kind: 'folder', folderId: 'F1', path: '', name: 'live-notes', pinnedAt: 3 }],
         settings: null,
         snapshots: { count: 0, docs: 0, bytes: 0 },
+        captureFlag: null,
         total: 4,
         lines: ['1 remembered folder — names only.'],
       }),
@@ -832,6 +834,31 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
     expect(container.querySelector('.peekover-storage')?.textContent).toContain('Nothing stored');
     // The reopen hub cleared too (no more recents/pins to surface).
     expect(container.querySelector('.peekover-recents')).toBeNull();
+  });
+
+  it('the wipe confirmation copy names the six-store erase AND the snapshot-capture reset (task 1.5, Piece 7)', async () => {
+    // A store with SOMETHING to erase, so the wipe-start button is enabled (it disables at total 0).
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => summarize([folderRow({ id: 'F1', name: 'notes' })], [], []),
+      wipeAll: async () => undefined,
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    // Arm the inline confirm (the confirmation copy only shows in the confirming state).
+    panel().querySelector<HTMLButtonElement>('[data-wipe="start"]')!.click();
+    const prompt = panel().querySelector('.peekover-storage__wipe-prompt');
+    expect(prompt).not.toBeNull();
+    // (a) it names the snapshot-capture reset, and (b) the reset-to-default fact — the two things
+    // Piece 7 requires stated plainly (the six-store erase is the "everything" clause beside them).
+    expect(prompt!.textContent).toMatch(/snapshot capture/i);
+    expect(prompt!.textContent).toMatch(/default/i);
+    expect(prompt!.textContent).toMatch(/snapshot/i);
   });
 
   it('cancelling the inline confirm leaves the data intact (no wipeAll call)', async () => {

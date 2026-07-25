@@ -221,6 +221,64 @@ export async function putSettings(patch: Partial<Settings>): Promise<void> {
   return put(await db(), STORES.settings, merged);
 }
 
+// --- snapshot-capture flag (D-12, task 1.5) ----------------------------------
+//
+// The capture off-switch is its OWN ROW in the settings store, NOT a field on the shared
+// `Settings` record — plan §0 D-12. Two reasons, both load-bearing:
+//   1. A `Settings` field would be fetched by the content script on every reader start and acted
+//      on by nothing (it captures on no surface, §3.2).
+//   2. `getSettings()` above HAND-ENUMERATES its fields (`theme`/`tocOpen`/`tocWidth`) — plan §4-1's
+//      trap: a new `Settings` field would persist through `putSettings` then SILENTLY VANISH on
+//      read, with no type error and no test failure. D-12 routes AROUND that trap rather than
+//      fixing it; the trap stays live for whoever adds the next `Settings` field.
+// So the flag is a SECOND row in the same store, keyed `CAPTURE_SETTINGS_ID`, with its OWN record
+// type (`CaptureRecord`) — never unioned with `SettingsRecord`. `getSettings()`/`putSettings()`
+// read/write only the `SETTINGS_ID='reader'` row, so they are untouched by this addition; these two
+// read/write only the `'capture'` row, by key. Two independent record types keyed 'reader' and
+// 'capture' coexist in the one `keyPath:'id'` store without either seeing the other.
+
+/** The capture-flag row: its keyPath id plus the flag. A DIFFERENT record type from
+ *  {@link SettingsRecord} on purpose (D-12) — the two rows share the store, not a shape. */
+interface CaptureRecord {
+  id: string;
+  enabled: boolean;
+}
+
+/** The capture-flag row's key — the second row in the settings store, distinct from
+ *  {@link SETTINGS_ID}. Read by key so `getSettings()`'s hand-enumeration never sees it. */
+export const CAPTURE_SETTINGS_ID = 'capture';
+
+/**
+ * Whether snapshot capture is enabled (D-12, task 1.5). Reads the `'capture'` row by key.
+ *
+ * ★ Returns TRUE (the default) when NO row exists — and read-with-default IS the reset mechanism:
+ * `wipeAll()` clears the settings store (both rows), so after a wipe the row is gone and this reads
+ * the default (on) again, with no code in `wipeAll` (Piece 4). This ROUTES AROUND `getSettings()`'s
+ * hand-enumerate trap (plan §4-1): it reads its own key, never a `Settings` field, so the trap that
+ * would swallow a new `Settings` field cannot touch this flag — and the trap stays deliberately live.
+ *
+ * ★ D-3 CROSS-REFERENCE (task 3.1, plan §0 D-12/D-3): the wipe-reset's SAFETY depends on D-3's
+ * persistent capture disclosure re-appearing on the next watch — a user who wipes then re-watches
+ * must see the disclosure again, exactly as a new user would. D-3 ships at task 3.1 (later than this
+ * task). This is a COMMENT, not a code coupling: if a future change to 3.1 makes that disclosure
+ * one-shot, D-12's wipe-reset is void (pinned in D-3) — so this note names the dependency so the
+ * breakage is loud, not silent.
+ */
+export async function getCaptureEnabled(): Promise<boolean> {
+  const row = await get<CaptureRecord>(await db(), STORES.settings, CAPTURE_SETTINGS_ID);
+  return row ? row.enabled : true;
+}
+
+/**
+ * Persist the snapshot-capture flag (D-12, task 1.5) — writes the `'capture'` row. Resolves once the
+ * write commits. ROUTES AROUND `getSettings()`'s trap (plan §4-1): it writes its own key by its own
+ * record type, so `Settings`/`getSettings`/`putSettings` are wholly untouched (D-12's whole point).
+ */
+export async function setCaptureEnabled(enabled: boolean): Promise<void> {
+  const row: CaptureRecord = { id: CAPTURE_SETTINGS_ID, enabled };
+  return put(await db(), STORES.settings, row);
+}
+
 // --- trust controls (task 2.2) -----------------------------------------------
 //
 // Storage ships WITH the way to see and erase it — the first thing that stores anything
@@ -286,6 +344,15 @@ export interface StoredSummary {
    *  — and snapshots are the first stored thing that IS file contents, so a hidden zero here is the
    *  exact trust-surface failure `PERMISSIONS.md` exists to deny. `count === 0` ⇒ no snapshot line. */
   snapshots: { count: number; docs: number; bytes: number };
+  /** The stored snapshot-capture preference (D-12, task 1.5), or `null` when NO `'capture'` row
+   *  exists (the user never toggled — capture is at its default of on, and nothing is stored). A
+   *  row exists only when the user changed the flag, so `boolean` here ⇒ a real stored record the
+   *  panel must disclose (`total` counts it, a line describes it). REQUIRED for the same compile-time
+   *  forcing reason `settings`/`snapshots` are: a summary literal that forgets it fails to compile
+   *  rather than silently hiding a stored preference — the exact "no hidden state" posture
+   *  `describeStored`/`PERMISSIONS.md` exist to hold (store.ts's precedent, and D-12 reads BOTH
+   *  settings rows or the panel hides a record). `null` ⇒ no capture line. */
+  captureFlag: boolean | null;
   total: number;
   /** Plain-language, trust-facing description — one line per non-empty record class. */
   lines: string[];
@@ -318,9 +385,10 @@ export function buildStoredLines(input: {
   pins: PinRecord[];
   settings: Settings | null;
   snapshots: { count: number; docs: number; bytes: number };
+  captureFlag: boolean | null;
   total: number;
 }): string[] {
-  const { folders, recents, pins, settings, snapshots, total } = input;
+  const { folders, recents, pins, settings, snapshots, captureFlag, total } = input;
   const lines: string[] = [];
   if (folders.length) {
     const remembered = folders.filter((f) => f.persisted).length;
@@ -352,6 +420,16 @@ export function buildStoredLines(input: {
         `${humanBytes(snapshots.bytes)} of document text kept on this device only, never uploaded.`,
     );
   }
+  if (captureFlag !== null) {
+    // A `'capture'` row exists only when the user toggled the flag from its default (D-12), so it
+    // is a real stored preference the "no hidden state" panel discloses. The value is stated plainly
+    // so the trust surface never implies capture is on when the user turned it off (or vice versa).
+    lines.push(
+      captureFlag
+        ? 'Snapshot capture is turned on — a stored preference on this device.'
+        : 'Snapshot capture is turned off — a stored preference; no new snapshots are being kept.',
+    );
+  }
   if (total === 0) {
     // Kept verbatim (folders/recents/pins) to stay identical to the shell's designed
     // EMPTY_SUMMARY literal — when total is 0 there are no settings either, so the
@@ -372,11 +450,16 @@ export async function describeStored(): Promise<StoredSummary> {
   // Snapshot accounting reads `snapshotMeta` ONLY — never a content row (D-4's whole point): count,
   // document count and total bytes all live on the small bounded meta rows, so the panel never
   // materialises a single snapshot's text to report how much is stored.
-  const [folderRows, recents, pins, settingsRow, snapshotMetaRows] = await Promise.all([
+  // D-12 (task 1.5): the panel reads BOTH settings rows or it hides a stored record. The reader
+  // (SETTINGS_ID) and the capture flag (CAPTURE_SETTINGS_ID) are two independent rows in the one
+  // settings store, read by their distinct keys — so `getSettings()`'s hand-enumeration (§4-1) is
+  // never involved and the capture row can never leak into the reader-settings surface, or back.
+  const [folderRows, recents, pins, settingsRow, captureRow, snapshotMetaRows] = await Promise.all([
     getAll<FolderRecord>(conn, STORES.folders),
     getAll<RecentRecord>(conn, STORES.recents),
     getAll<PinRecord>(conn, STORES.pins),
     get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID),
+    get<CaptureRecord>(conn, STORES.settings, CAPTURE_SETTINGS_ID),
     getAll<{ docId: string; entries: { id: string; ts: number; bytes: number }[] }>(
       conn,
       STORES.snapshotMeta,
@@ -395,6 +478,10 @@ export async function describeStored(): Promise<StoredSummary> {
     ? { theme: settingsRow.theme, tocOpen: settingsRow.tocOpen, tocWidth: settingsRow.tocWidth }
     : null;
 
+  // `null` when no `'capture'` row exists (default on, nothing stored); the flag's value otherwise
+  // (a stored preference the user set) — disclosed in `total` + a line, never hidden (D-12).
+  const captureFlag: boolean | null = captureRow ? captureRow.enabled : null;
+
   const withEntries = snapshotMetaRows.filter((m) => m.entries.length > 0);
   const snapshots = {
     count: withEntries.reduce((n, m) => n + m.entries.length, 0),
@@ -403,8 +490,21 @@ export async function describeStored(): Promise<StoredSummary> {
   };
 
   const total =
-    folders.length + recents.length + pins.length + (settings ? 1 : 0) + snapshots.count;
-  const lines = buildStoredLines({ folders, recents, pins, settings, snapshots, total });
+    folders.length +
+    recents.length +
+    pins.length +
+    (settings ? 1 : 0) +
+    snapshots.count +
+    (captureFlag !== null ? 1 : 0);
+  const lines = buildStoredLines({
+    folders,
+    recents,
+    pins,
+    settings,
+    snapshots,
+    captureFlag,
+    total,
+  });
 
-  return { folders, recents, pins, settings, snapshots, total, lines };
+  return { folders, recents, pins, settings, snapshots, captureFlag, total, lines };
 }

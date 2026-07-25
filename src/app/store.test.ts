@@ -41,15 +41,22 @@ function lines(over: {
   pins?: PinRecord[];
   settings?: Settings | null;
   snapshots?: { count: number; docs: number; bytes: number };
+  captureFlag?: boolean | null;
 }): string[] {
   const folders = over.folders ?? [];
   const recents = over.recents ?? [];
   const pins = over.pins ?? [];
   const settings = over.settings ?? null;
   const snapshots = over.snapshots ?? { count: 0, docs: 0, bytes: 0 };
+  const captureFlag = over.captureFlag ?? null;
   const total =
-    folders.length + recents.length + pins.length + (settings ? 1 : 0) + snapshots.count;
-  return buildStoredLines({ folders, recents, pins, settings, snapshots, total });
+    folders.length +
+    recents.length +
+    pins.length +
+    (settings ? 1 : 0) +
+    snapshots.count +
+    (captureFlag !== null ? 1 : 0);
+  return buildStoredLines({ folders, recents, pins, settings, snapshots, captureFlag, total });
 }
 
 // Task 1.1 — the SCHEMA shape at the bumped DB_VERSION. Pure constant assertions (no engine):
@@ -151,5 +158,41 @@ describe('buildStoredLines — snapshot line (task 1.4)', () => {
     expect(out).toHaveLength(5);
     expect(out[3]).toMatch(SETTINGS_LINE);
     expect(out[4]).toMatch(/2 snapshots of 1 watched document/);
+  });
+});
+
+describe('buildStoredLines — snapshot-capture preference line (D-12, task 1.5)', () => {
+  it('emits NO capture line when the flag is null (no `capture` row — default on, nothing stored)', () => {
+    const out = lines({ captureFlag: null }).join(' ');
+    expect(out).not.toMatch(/capture/i);
+    // With only the (absent) capture row, the store is empty → the "nothing stored" line stands.
+    expect(out).toMatch(NOTHING);
+  });
+
+  it('emits an OFF capture line when the flag is stored false (a real stored preference)', () => {
+    const out = lines({ captureFlag: false }).join(' ');
+    expect(out).toMatch(/snapshot capture is turned off/i);
+    // A stored preference IS a record → not "nothing stored".
+    expect(out).not.toMatch(NOTHING);
+  });
+
+  it('emits an ON capture line when the flag is stored true (toggled back on — still a stored row)', () => {
+    const out = lines({ captureFlag: true }).join(' ');
+    expect(out).toMatch(/snapshot capture is turned on/i);
+    expect(out).not.toMatch(NOTHING);
+  });
+
+  it('places the capture line LAST, after folders/recents/pins/settings/snapshots', () => {
+    const out = lines({
+      folders: [folder({ persisted: true })],
+      recents: [recent()],
+      pins: [pin()],
+      settings: DEFAULT_SETTINGS,
+      snapshots: { count: 2, docs: 1, bytes: 4096 },
+      captureFlag: false,
+    });
+    expect(out).toHaveLength(6);
+    expect(out[4]).toMatch(/2 snapshots of 1 watched document/);
+    expect(out[5]).toMatch(/snapshot capture is turned off/i);
   });
 });

@@ -75,6 +75,11 @@ import { buildThemeControl } from '../theme/themeControl';
 import { directPort } from '../settings/settingsPort';
 import { publishSettings, registerSettingsSink } from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
+import {
+  getCaptureEnabled as defaultGetCaptureEnabled,
+  setCaptureEnabled as defaultSetCaptureEnabled,
+} from './store';
+import { getCaptureFlag, setCaptureFlag } from './captureFlag';
 import { createTreeView } from './treeView';
 import { detectorForFile } from '../watch/detectorForFile';
 import { createWatchController, DEAD_READ_NOTE } from '../watch/watchController';
@@ -120,6 +125,11 @@ export interface AppStore {
    *  has nothing to load from and nowhere to persist to. */
   getSettings?(): Promise<Settings>;
   putSettings?(patch: Partial<Settings>): Promise<void>;
+  /** The snapshot-capture flag (D-12, task 1.5) — its OWN settings row, read/written by key.
+   *  Optional like the other group-5/1.4 readers so a minimal fake store still mounts: absent →
+   *  the shell keeps the default (on) and the toggle is a best-effort no-op on persistence. */
+  getCaptureEnabled?(): Promise<boolean>;
+  setCaptureEnabled?(enabled: boolean): Promise<void>;
 }
 
 /** Injectable dependencies (defaults are the real picker seam, re-grant, and store). */
@@ -325,6 +335,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     deleteSnapshotsForFolder: defaultDeleteSnapshotsForFolder,
     getSettings: defaultGetSettings,
     putSettings: defaultPutSettings,
+    getCaptureEnabled: defaultGetCaptureEnabled,
+    setCaptureEnabled: defaultSetCaptureEnabled,
   };
 
   // --- shell scaffolding ---------------------------------------------------
@@ -496,6 +508,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     pins: [],
     settings: null, // nothing stored — the reader falls back to the Auto default (task 5.2)
     snapshots: { count: 0, docs: 0, bytes: 0 }, // no snapshots → no snapshot line (task 1.4)
+    captureFlag: null, // no 'capture' row → default (on), nothing stored → no capture line (task 1.5)
     total: 0,
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };
@@ -515,6 +528,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const summary = await readSummary();
     const view = createStorageView(doc, {
       summary,
+      // The checkbox reflects the LIVE cache the watch loop reads (D-12, task 1.5) — read here at
+      // render time, so reopening the panel shows the current flag.
+      captureEnabled: getCaptureFlag(),
+      // Toggling updates the live cache SYNCHRONOUSLY (so the next watched render honours it) and
+      // persists the new value best-effort. No panel re-render: the checkbox already holds its own
+      // visual state, and re-rendering would drop the inline wipe-confirm mid-flow.
+      onToggleCapture: (enabled) => {
+        setCaptureFlag(enabled);
+        void tryStore(() => store.setCaptureEnabled?.(enabled) ?? Promise.resolve());
+      },
       onWipe: () => void wipeAllData(),
       onClose: () => void toggleStorage(),
     });
@@ -1023,6 +1046,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     setThemeSetting(resolved.theme);
     publishSettings(resolved);
   });
+
+  // D-12 (task 1.5): load the persisted snapshot-capture flag into the live cache the watch
+  // controller reads at render time. Best-effort — an absent reader or a failed read leaves the
+  // default (on), the safe value: a controller that renders before this resolves captures rather
+  // than silently dropping snapshots. The store's read-with-default is the wipe-reset mechanism, so
+  // after a wipe this reloads the default automatically (Piece 4).
+  void Promise.resolve(store.getCaptureEnabled?.()).then(
+    (enabled) => setCaptureFlag(enabled ?? true),
+    () => setCaptureFlag(true),
+  );
 
   // Initial paint: the idle affordance (plain line + live CTA) — never a blank page. The
   // reopen hub fills in once the async load resolves (refresh repaints idle when still idle).

@@ -103,20 +103,10 @@ import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
 import { readerSourceFor } from '../render/readerMode';
 import { normalise, storeSnapshot } from '../app/snapshots';
+import { getCaptureFlag } from '../app/captureFlag';
 import type { ChangeDetector } from './changeDetector';
 import { notifyWatchChanged, setWatchNote, type WatchTarget } from './watchRegistry';
 import { signalWatchUpdate } from './watchControl';
-
-/**
- * Whether the re-render loop captures a snapshot of the OUTGOING document before replacing it.
- *
- * ★ A defaulted-ON CONSTANT at task 1.4, stated so it is not improvised: it becomes the D-12
- * settings-row read at task 1.5, and the symbol has no other source until then. Capture is ALSO
- * gated per-render on `docId != null` (below) — the app-page-only guard §3.2 — so this constant
- * cannot by itself put capture on the content-script surface; it only decides whether the app page
- * captures at all.
- */
-const captureEnabled = true;
 
 /**
  * How many CONSECUTIVE failed reads mean the watch is dead rather than merely interrupted.
@@ -335,8 +325,15 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     // state (§4: a failed snapshot completes the re-render normally). `docId != null` is the
     // app-page-only guard (§3.2); the D-5 normalise equality means a pure CRLF↔LF change stores
     // nothing (`changeDetector.ts` is untouched — the cost lands here, at capture).
+    //
+    // `getCaptureFlag()` is the D-12 off-switch (task 1.5), read HERE at RENDER TIME (not at
+    // controller construction) so toggling capture off in the storage panel stops capture on the
+    // NEXT render. It is the synchronous mirror of the persisted `'capture'` settings row (a
+    // module-level cache in `captureFlag.ts`, loaded + written by `appShell`); replacing the
+    // former defaulted-ON const with this read is the whole of Piece 5. On the content-script
+    // surface `docId` is null, so capture is off there regardless of the flag (§3.2 unchanged).
     if (
-      captureEnabled &&
+      getCaptureFlag() &&
       docId != null &&
       outgoing != null &&
       normalise(outgoing) !== normalise(text)

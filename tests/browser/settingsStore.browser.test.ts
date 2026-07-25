@@ -29,6 +29,8 @@ import {
   getPins,
   getSettings,
   putSettings,
+  getCaptureEnabled,
+  setCaptureEnabled,
   wipeAll,
   describeStored,
   __resetConnectionForTest,
@@ -197,5 +199,76 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
     const afterText = after.lines.join(' ');
     expect(afterText).not.toContain('display settings');
     expect(afterText).toContain('Nothing stored');
+  });
+});
+
+// --- task 1.5 (D-12): the capture off-switch is its OWN settings ROW ---------------
+//
+// The flag is a SECOND row in the settings store, keyed 'capture', with its own record type — so
+// `getSettings()`'s hand-enumeration (plan §4-1's trap) never sees it and stays byte-untouched. All
+// of this is jsdom-blind (IndexedDB + the real read/write path), so it is proven here, non-vacuously.
+
+describe('capture flag — its own settings row, getSettings untouched (D-12, task 1.5, real engine)', () => {
+  it('defaults ON with no row; round-trips false/true; and getSettings stays exactly {theme,tocOpen,tocWidth}', async () => {
+    // Piece 1 DEFAULT — a fresh store has no 'capture' row, so read-with-default returns on.
+    expect(await getCaptureEnabled()).toBe(true);
+
+    // ★ Piece 2 SHAPE INVARIANT — with NO reader row, getSettings returns exactly the three fields.
+    expect(Object.keys(await getSettings()).sort()).toEqual(['theme', 'tocOpen', 'tocWidth']);
+
+    // Piece 1 ROUND-TRIP — write the capture row false; it reads back false, a second row in the
+    // SAME store as the reader settings.
+    await setCaptureEnabled(false);
+    expect(await getCaptureEnabled()).toBe(false);
+
+    // ★ Piece 2 (the load-bearing half): a stored 'capture' row does NOT bleed into getSettings —
+    // its shape is still exactly the three fields, whether or not a 'reader' row also exists. A
+    // shared-record implementation (a field on Settings) would redden this.
+    expect(Object.keys(await getSettings()).sort()).toEqual(['theme', 'tocOpen', 'tocWidth']);
+    await putSettings({ theme: 'dark' }); // now BOTH rows exist in the settings store…
+    expect(Object.keys(await getSettings()).sort()).toEqual(['theme', 'tocOpen', 'tocWidth']);
+    expect(await getSettings()).toMatchObject({ theme: 'dark' }); // reader row unaffected by capture
+    expect(await getCaptureEnabled()).toBe(false); // capture row unaffected by the reader write
+
+    // Round-trip back to on — the row persists true (a toggled-back-on state is still a stored row).
+    await setCaptureEnabled(true);
+    expect(await getCaptureEnabled()).toBe(true);
+  });
+
+  it('describeStored reads BOTH settings rows: a stored capture flag is counted and disclosed (Piece 3)', async () => {
+    // No capture row yet → captureFlag is null, no capture line, not counted.
+    const fresh = await describeStored();
+    expect(fresh.captureFlag).toBeNull();
+    expect(fresh.lines.join(' ')).not.toMatch(/snapshot capture is turned/i);
+
+    // Toggle capture off → a 'capture' row exists → the panel discloses it (no hidden state).
+    await setCaptureEnabled(false);
+    const after = await describeStored();
+    expect(after.captureFlag).toBe(false);
+    expect(after.total).toBe(1); // the capture row is the only stored record, and it IS counted
+    expect(after.lines.join(' ')).toMatch(/snapshot capture is turned off/i);
+
+    // A reader row alongside it → BOTH rows counted (the two-row read is genuine, not either/or).
+    await putSettings({ theme: 'dark' });
+    const both = await describeStored();
+    expect(both.captureFlag).toBe(false);
+    expect(both.settings).toEqual({ theme: 'dark', tocOpen: null, tocWidth: null });
+    expect(both.total).toBe(2); // reader row + capture row
+  });
+
+  it('wipeAll resets the flag to its default (on) automatically — read-with-default, no wipeAll change (Piece 4)', async () => {
+    // Seed the flag off — and prove it (non-vacuous: the reset below is a real transition, not a
+    // store that was on all along).
+    await setCaptureEnabled(false);
+    expect(await getCaptureEnabled()).toBe(false);
+
+    await wipeAll();
+
+    // The 'capture' row was cleared with the rest of the settings store, so read-with-default now
+    // returns the default (on). wipeAll gained NO capture-specific code — the reset is automatic.
+    expect(await getCaptureEnabled()).toBe(true);
+    const after = await describeStored();
+    expect(after.captureFlag).toBeNull(); // no row after wipe
+    expect(after.total).toBe(0);
   });
 });
