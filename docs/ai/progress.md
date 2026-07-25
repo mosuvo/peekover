@@ -10,27 +10,25 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.5 landed; next action is 1.6.**
-> **Nothing is in progress and nothing is blocked. Task 1.5 — D-12, the capture off-switch as its OWN settings
-> ROW — has landed** (this commit): the flag is a SECOND row in the settings store (`CAPTURE_SETTINGS_ID='capture'`,
-> its own `CaptureRecord` type — never unioned with `SettingsRecord`), read by key via `getCaptureEnabled` /
-> `setCaptureEnabled`, routing AROUND `getSettings()`'s hand-enumerate trap (plan §4-1) — which stays LIVE for
-> whoever adds the next `Settings` field. Eight pieces: (1) the second row + reader/writer, read-with-default
-> (TRUE) as the reset mechanism, jsdoc'd as D-12's route-around and cross-referencing D-3 (3.1); (2)
-> `getSettings`/`putSettings` bodies BYTE-UNTOUCHED (373 B / 245 B) and the `Settings` type byte-identical
-> (912 B) — the shape invariant `Object.keys(getSettings())==['theme','tocOpen','tocWidth']` was RED-FIRST proven
-> in the real engine (getSettings is jsdom-blind, so the invariant lives in `settingsStore.browser.test.ts`, not
-> `store.test.ts`) under a shared-record mutation (Object.keys gained a fourth field), then restored
-> byte-identical; (3) `describeStored` reads BOTH settings rows, `StoredSummary` gains a required
-> `captureFlag: boolean | null` (compile-forced `EMPTY_SUMMARY` + two test fixtures, same class as 1.4's
-> `snapshots`), `buildStoredLines` gains a line; (4) `wipeAll` UNCHANGED — the reset is automatic via
-> read-with-default (non-vacuously tested); (5) `captureEnabled` const → `getCaptureFlag()` read at RENDER TIME
-> via a new pure `src/app/captureFlag.ts` cache (appShell loads on mount + writes on toggle; content-script
-> behaviour unchanged, `docId: null` still gates); (6) a real storage-panel toggle wired through appShell,
-> browser-proven to stop capture on the next render (non-vacuous, driven through the production checkbox); (7)
-> wipe-confirmation copy names the six-store erase AND the snapshot-capture reset to default; (8) `PERMISSIONS.md`'s
-> stale "off-switchable per document" corrected to the global storage-panel off-switch. **The `diff` dependency is
-> still task 5.1 and `permissions: []` still stands. `DB_VERSION` is 3 (from 1.1).** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (tasks 1.1–1.6 landed); next action is 2.1.**
+> **Nothing is in progress and nothing is blocked. Task 1.6 — D-13, one GLOBAL "erase snapshots" control — has
+> landed** (this commit), closing group 1. A `wipeAll`-sibling `eraseSnapshots()` in `store.ts` clears ONLY the two
+> snapshot stores (`snapshotMeta` FIRST, then `snapshots` — §1.2's safe ordering), leaving folders/recents/pins/
+> settings AND the capture-flag row (D-12) intact — erasing snapshots is not erasing settings. Six pieces:
+> (1) `eraseSnapshots()`, jsdoc'd with the "only two stores" invariant + META-FIRST ordering + the what-survives
+> honesty; (2) `AppStore.eraseSnapshots?` + an `eraseSnapshotsData` handler mirroring `wipeAllData` (best-effort,
+> capture-flag live cache NOT cleared — the row survives, so the in-memory flag must too); (3) a sibling
+> `[data-erase-snapshots]` inline-confirm control in the storage panel, placed ABOVE wipe (less destructive first),
+> disabled when `snapshots.count === 0`, confirm copy naming what erases AND what survives — `onEraseSnapshots?`
+> made OPTIONAL to keep the pre-existing `captureToggle.browser.test.ts` StorageViewOptions literal compiling
+> (a type-level consumer, not a panel-assertion tripwire); (4) jsdom tests (idle-disabled / idle-enabled / arm /
+> confirm-refreshes / cancel / copy); (5) a real-engine test driving the erase through the production UI CLICK
+> (M5 seam rule), non-vacuous (describeStored shows a "watched document" snapshot line before the erase) and
+> red-first (mutating `eraseSnapshots` to also `clear(folders)` reddened the folders survival assertion on both
+> engines, restored byte-identical); (6) `PERMISSIONS.md`'s stale future-erase forward-reference corrected — the
+> control ships now, and the deferred item is per-document ERASE (§6), not a per-document capture off-switch (the
+> off-switch is GLOBAL, shipped at 1.5). **`permissions: []` still stands. `DB_VERSION` is 3 (from 1.1). The
+> `diff` dependency is still task 5.1.** M1–M5 remain fully closed.
 >
 > **★ D-3 cross-reference (task 3.1):** the wipe-reset's SAFETY depends on 3.1's PERSISTENT capture disclosure
 > re-appearing on the next watch (a wiped user re-watching sees it as a new user would). A comment at
@@ -38,13 +36,16 @@
 > silently. D-3 ships at 3.1 (later); until then the reset is safe because capture defaults on and the panel
 > discloses the bytes.
 >
-> **THE NEXT ACTION IS TASK 1.6 — D-13, one GLOBAL "erase snapshots" control** — a `wipeAll`-sibling in `store.ts`
-> that clears ONLY the two snapshot stores (`snapshotMeta` + `snapshots`), leaving folders/recents/pins/settings
-> AND the capture flag intact (erasing snapshots is not erasing settings). Per-document erase stays deferred
-> with a home (§6, D-13). Red-first + non-vacuous: a control that also clears a non-snapshot store reddens that
-> store's survival assertion; assert a snapshot existed before the erase so an empty tail is not an empty
-> instrument. **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session
-> acted on stale state).
+> **THE NEXT ACTION IS TASK 2.1 — the diff registry SEAM.** A new `src/render/diffRegistry.ts` register-once
+> HOLDER (the `watchRegistry.ts` precedent — control rebuilt every mount, target held module-level, no closure
+> reference). `appShell.installWatchForFile` registers a diff CONTEXT for the host — `docId` + the current-source
+> getter + a snapshot fetch, the DATA a diff needs, NOT the engine and NOT the view (both are later groups). The
+> content-script graph registers nothing, so the registry is EMPTY on the content script and NON-EMPTY on the app
+> page — exactly the surface signal D-3's disclosure suppression (group 3) and D-14's chrome gate (group 6) both
+> READ. It is a SEAM, so the test must drive the PRODUCTION registration (`installWatchForFile`), not a hand-built
+> one; red-first: ungating the registration guard makes the content-script-empty assertion fail. D-2's shared
+> seam-pin helper generalises this + the watch registry at 4.1. **The Now-pointer advances PER TASK** (the M1 rule
+> — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next
 

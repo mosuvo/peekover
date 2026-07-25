@@ -48,6 +48,12 @@ export interface StorageViewOptions {
   onToggleCapture(enabled: boolean): void;
   /** Erase everything — invoked ONLY after the inline confirm (never on the first click). */
   onWipe(): void;
+  /** Erase ONLY the saved document snapshots (D-13, task 1.6) — invoked ONLY after the control's own
+   *  inline confirm. The panel does not know when the async erase resolves; the caller (appShell)
+   *  manages the refresh, exactly as it does for `onWipe`. Optional so a minimal consumer that only
+   *  exercises another part of the panel (e.g. the capture-toggle probe) need not supply it — the
+   *  erase control still renders, its confirm is a no-op when absent (appShell always provides it). */
+  onEraseSnapshots?(): void;
   /** Dismiss the panel. */
   onClose(): void;
 }
@@ -93,6 +99,8 @@ const SC_CSS = /* css */ `
 .${SC_CLASS}__capture-row{display:flex; align-items:baseline; gap:.5rem; cursor:pointer; font-size:.85rem; color:var(--ink,#16171F)}
 .${SC_CLASS}__capture-row input{flex:0 0 auto; margin:0; cursor:pointer}
 .${SC_CLASS}__capture-note{color:var(--muted,#5D6070); font-size:.8rem; margin:0; max-width:52ch}
+.${SC_CLASS}__erase{display:flex; align-items:center; gap:.5rem; flex-wrap:wrap}
+.${SC_CLASS}__erase-prompt{color:var(--muted,#5D6070); font-size:.82rem; max-width:52ch}
 .${SC_CLASS}__wipe{display:flex; align-items:center; gap:.5rem; flex-wrap:wrap}
 .${SC_CLASS}__wipe-prompt{color:var(--muted,#5D6070); font-size:.82rem}
 .${SC_CLASS}__btn{
@@ -100,7 +108,9 @@ const SC_CSS = /* css */ `
   border:1px solid var(--line,#E6E6DF); border-radius:999px; padding:.2rem .7rem; cursor:pointer;
 }
 .${SC_CLASS}__btn:hover{background:var(--accent-soft,#ECECE3)}
-.${SC_CLASS}__btn[data-wipe="confirm"]{border-color:var(--accent,#16171F); font-weight:600}
+.${SC_CLASS}__btn:disabled{opacity:.5; cursor:default}
+.${SC_CLASS}__btn[data-wipe="confirm"],
+.${SC_CLASS}__btn[data-erase-snapshots="confirm"]{border-color:var(--accent,#16171F); font-weight:600}
 `;
 
 function buildStyle(doc: Document): HTMLStyleElement {
@@ -147,7 +157,7 @@ function buildRow(doc: Document, name: string, tag?: string): HTMLElement {
  * `onWipe`. Everything is one surface — no modal, no browser confirm().
  */
 export function createStorageView(doc: Document, opts: StorageViewOptions): StorageViewController {
-  const { summary, captureEnabled, onToggleCapture, onWipe, onClose } = opts;
+  const { summary, captureEnabled, onToggleCapture, onWipe, onEraseSnapshots, onClose } = opts;
 
   const element = doc.createElement('div');
   element.className = SC_CLASS;
@@ -227,6 +237,52 @@ export function createStorageView(doc: Document, opts: StorageViewOptions): Stor
     'never uploaded, so you can compare versions. Turn this off to stop keeping new snapshots.';
   capture.append(captureLabel, captureNote);
   element.append(capture);
+
+  // The erase-snapshots control (D-13, task 1.6) — placed ABOVE the wipe control deliberately: it is
+  // the less destructive of the two (it erases only saved document snapshots, keeping everything
+  // else), so the narrower action comes before the nuclear "wipe all". Same inline-confirm shape as
+  // wipe — one surface, no browser confirm(). Rebuilt in place between idle/confirming. Disabled when
+  // there is nothing to erase (no snapshots stored), mirroring wipe's disabled-at-total-0 state.
+  const erase = doc.createElement('div');
+  erase.className = `${SC_CLASS}__erase`;
+  element.append(erase);
+
+  function renderErase(confirming: boolean): void {
+    erase.replaceChildren();
+    if (!confirming) {
+      const start = doc.createElement('button');
+      start.type = 'button';
+      start.className = `${SC_CLASS}__btn`;
+      start.dataset.eraseSnapshots = 'start';
+      start.textContent = 'Erase snapshots';
+      start.disabled = summary.snapshots.count === 0; // nothing stored → nothing to erase
+      start.addEventListener('click', () => renderErase(true));
+      erase.append(start);
+      return;
+    }
+    const prompt = doc.createElement('span');
+    prompt.className = `${SC_CLASS}__erase-prompt`;
+    // Names (a) what erases — all saved document snapshots — and (b) what SURVIVES: folders, recents,
+    // pins, reader settings, and the snapshot-capture preference. Erasing snapshots is not erasing
+    // settings (D-13), and the confirm surface says so plainly so the user is not misled.
+    prompt.textContent =
+      'Erase snapshots? This deletes all saved document snapshots from this device. Your remembered ' +
+      'folders, recents, pins, reader settings, and snapshot-capture preference are kept.';
+    const confirm = doc.createElement('button');
+    confirm.type = 'button';
+    confirm.className = `${SC_CLASS}__btn`;
+    confirm.dataset.eraseSnapshots = 'confirm';
+    confirm.textContent = 'Yes, erase snapshots';
+    confirm.addEventListener('click', () => onEraseSnapshots?.());
+    const cancel = doc.createElement('button');
+    cancel.type = 'button';
+    cancel.className = `${SC_CLASS}__btn`;
+    cancel.dataset.eraseSnapshots = 'cancel';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => renderErase(false));
+    erase.append(prompt, confirm, cancel);
+  }
+  renderErase(false);
 
   // The wipe control — inline confirm, one surface. Rebuilt in place between idle/confirming.
   const wipe = doc.createElement('div');

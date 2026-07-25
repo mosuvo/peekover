@@ -305,6 +305,35 @@ export async function wipeAll(): Promise<void> {
   await clear(conn, STORES.snapshots);
 }
 
+/**
+ * Erase ONLY the two snapshot stores — the "erase snapshots" control (D-13, task 1.6). A sibling
+ * of {@link wipeAll}, but narrow by design: it clears `snapshotMeta` + `snapshots` and NOTHING else.
+ *
+ * ★ INVARIANT (D-13): clears ONLY the two snapshot stores. What SURVIVES, untouched: remembered
+ * folders, recents, pins, the reader settings row (`SETTINGS_ID`), AND the snapshot-capture flag row
+ * (`CAPTURE_SETTINGS_ID`, D-12 / task 1.5). Erasing snapshots is not erasing settings — both settings
+ * rows survive, so a user who erases their saved document text keeps their theme AND their capture
+ * preference exactly as they were. That is the honest disclosure the trust story requires (§3.4).
+ *
+ * Contrast with {@link wipeAll}, which also drops folders/recents/pins/settings and thereby RESETS
+ * the capture flag to its default (on) by clearing its row. This does neither.
+ *
+ * Cleared sequentially and META FIRST (§1.2, the same safe ordering {@link storeSnapshot} and
+ * {@link wipeAll} use): a crash between the two clears leaves a dangling meta entry (benign — the
+ * byte-accounting reads meta, and the missing-content path self-reclaims lazily per §1.2), never an
+ * orphaned content row (invisible bytes the accounting can't see). Each `clear()` resolves on its
+ * transaction commit, so once this resolves both stores are durably empty.
+ *
+ * Per-document erase is DEFERRED with a home (D-13; spec §6) — the moment §3.7's picker shows a
+ * per-document list it becomes a reasonable expectation, but it is out of scope here (scope, not
+ * principle). This global control is the whole of what 1.6 ships.
+ */
+export async function eraseSnapshots(): Promise<void> {
+  const conn = await db();
+  await clear(conn, STORES.snapshotMeta);
+  await clear(conn, STORES.snapshots);
+}
+
 /** One remembered folder as the transparency view sees it — the live handle object is
  *  NOT surfaced (we disclose THAT one exists via `persisted`, never the object itself).
  *  A folder record carries no file contents; watched-document snapshots (the one stored

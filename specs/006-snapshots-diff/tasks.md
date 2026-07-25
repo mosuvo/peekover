@@ -219,7 +219,7 @@ go to the gate) and the milestone-close gate (9.1).
       test**); `wipeAll` resets the flag to on and the confirmation copy names snapshot capture. Golden EMPTY ·
       manifest green.
 
-- [ ] **1.6 D-13 — one GLOBAL "erase snapshots" control (per-document erase is deferred with a home).**
+- [x] **1.6 D-13 — one GLOBAL "erase snapshots" control (per-document erase is deferred with a home).**
       §3.4 commits to the global control; it is a sibling of `wipeAll` that clears **only** the two snapshot
       stores, leaving folders/recents/pins/settings **and the capture flag** intact (erasing snapshots is not
       erasing settings). Per-document erase is a reasonable expectation the moment §3.7's picker shows a

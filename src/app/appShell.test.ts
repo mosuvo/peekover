@@ -890,3 +890,176 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
     expect(panel().textContent).toContain('notes');
   });
 });
+
+// --- task 1.6 (D-13): the global "erase snapshots" control (DOM-shape) ---------------------------
+//
+// A sibling of the wipe control that clears ONLY the snapshot stores. The REAL erase is
+// real-engine-proven through the production UI click in tests/browser/eraseSnapshots.browser.test.ts
+// (the M5 seam rule); this is the jsdom DOM-shape coverage of the control itself — idle/disabled,
+// arm, confirm, cancel, and the confirm copy naming what erases AND what survives. It goes through
+// the SAME injectable store seam (eraseSnapshots added to AppStore as optional), so no real IDB.
+
+/** A StoredSummary carrying `snapshotCount` snapshots (and nothing else stored), enough to drive
+ *  the erase control's enabled/disabled state and the panel's snapshot line. */
+function snapSummary(snapshotCount: number): StoredSummary {
+  const snapshots = snapshotCount > 0
+    ? { count: snapshotCount, docs: 1, bytes: snapshotCount * 100 }
+    : { count: 0, docs: 0, bytes: 0 };
+  const total = snapshots.count;
+  const lines: string[] = [];
+  if (snapshots.count > 0) {
+    lines.push(`${snapshots.count} snapshot of 1 watched document — kept on this device only, never uploaded.`);
+  } else {
+    lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
+  }
+  return { folders: [], recents: [], pins: [], settings: null, snapshots, captureFlag: null, total, lines };
+}
+
+describe('appShell (task 1.6 — the "erase snapshots" control)', () => {
+  let container: HTMLElement;
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  function openPanel(): void {
+    container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
+  }
+
+  it('the erase-snapshots start button is DISABLED when no snapshots are stored (count 0)', async () => {
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => snapSummary(0),
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const start = container.querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]');
+    expect(start).not.toBeNull();
+    expect(start!.disabled).toBe(true);
+  });
+
+  it('the erase-snapshots start button is ENABLED when snapshots exist (count > 0)', async () => {
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => snapSummary(3),
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const start = container.querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]');
+    expect(start).not.toBeNull();
+    expect(start!.disabled).toBe(false);
+  });
+
+  it('the first click only ARMS the inline confirm — it does NOT erase', async () => {
+    let eraseCalls = 0;
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => snapSummary(2),
+      eraseSnapshots: async () => void (eraseCalls += 1),
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]')!.click();
+
+    // Confirm + cancel appear; the erase handler has NOT run yet.
+    expect(panel().querySelector('[data-erase-snapshots="confirm"]')).not.toBeNull();
+    expect(panel().querySelector('[data-erase-snapshots="cancel"]')).not.toBeNull();
+    expect(eraseCalls).toBe(0);
+  });
+
+  it('confirm → eraseSnapshots() runs and the panel refreshes to the emptied snapshot state', async () => {
+    let eraseCalls = 0;
+    let snapshotCount = 2;
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => snapSummary(snapshotCount),
+      eraseSnapshots: async () => {
+        eraseCalls += 1;
+        snapshotCount = 0; // the erase clears the snapshot stores
+      },
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    // Pre-erase the snapshot line is present (non-vacuity for the DOM refresh assertion below).
+    expect(panel().textContent).toContain('snapshot');
+    expect(panel().getAttribute('data-state')).toBe('has-data');
+
+    panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]')!.click();
+    panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="confirm"]')!.click();
+    await flush();
+
+    expect(eraseCalls).toBe(1);
+    // The panel repainted from a fresh summary — the snapshot line is gone, the control disabled.
+    expect(panel().getAttribute('data-state')).toBe('nothing-stored');
+    expect(panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]')!.disabled).toBe(true);
+  });
+
+  it('cancelling the inline confirm returns to idle and does NOT erase', async () => {
+    let eraseCalls = 0;
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => snapSummary(2),
+      eraseSnapshots: async () => void (eraseCalls += 1),
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]')!.click();
+    panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="cancel"]')!.click();
+
+    expect(eraseCalls).toBe(0);
+    // Back to the un-armed control; confirm gone.
+    expect(panel().querySelector('[data-erase-snapshots="start"]')).not.toBeNull();
+    expect(panel().querySelector('[data-erase-snapshots="confirm"]')).toBeNull();
+  });
+
+  it('the confirm copy names what ERASES (saved document snapshots) AND what SURVIVES', async () => {
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      describeStored: async () => snapSummary(2),
+      eraseSnapshots: async () => undefined,
+    };
+    mountAppShell(container, { store });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]')!.click();
+    const prompt = panel().querySelector('.peekover-storage__erase-prompt');
+    expect(prompt).not.toBeNull();
+    // (a) what erases: saved document snapshots.
+    expect(prompt!.textContent).toMatch(/snapshot/i);
+    // (b) what survives: folders/recents/pins/reader settings/snapshot-capture preference.
+    expect(prompt!.textContent).toMatch(/folders/i);
+    expect(prompt!.textContent).toMatch(/recents/i);
+    expect(prompt!.textContent).toMatch(/pins/i);
+    expect(prompt!.textContent).toMatch(/settings/i);
+    expect(prompt!.textContent).toMatch(/capture/i);
+    expect(prompt!.textContent).toMatch(/kept/i);
+  });
+});

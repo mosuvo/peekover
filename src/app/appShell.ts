@@ -55,6 +55,7 @@ import {
   deletePin as defaultDeletePin,
   describeStored as defaultDescribeStored,
   wipeAll as defaultWipeAll,
+  eraseSnapshots as defaultEraseSnapshots,
   type FolderRecord,
   type RecentRecord,
   type PinRecord,
@@ -116,6 +117,10 @@ export interface AppStore {
   /** Erase everything (group 2) behind the "wipe all data" control (task 6.0). Optional for the
    *  same reason; absent → the wipe is a no-op the best-effort wrapper swallows. */
   wipeAll?(): Promise<void>;
+  /** Erase ONLY the two snapshot stores behind the "erase snapshots" control (D-13, task 1.6) —
+   *  leaves folders/recents/pins/settings AND the capture flag row intact (erasing snapshots is not
+   *  erasing settings). Optional like the others; absent → a best-effort no-op the wrapper swallows. */
+  eraseSnapshots?(): Promise<void>;
   /** Erase a revoked folder's snapshots (D-10, task 1.4) — every snapshot whose `docId` is inside
    *  `folderId + SEP`. Optional like the other readers; absent → the best-effort wrapper swallows,
    *  so a minimal fake store still revokes (it just has no snapshots to erase). */
@@ -332,6 +337,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     deletePin: defaultDeletePin,
     describeStored: defaultDescribeStored,
     wipeAll: defaultWipeAll,
+    eraseSnapshots: defaultEraseSnapshots,
     deleteSnapshotsForFolder: defaultDeleteSnapshotsForFolder,
     getSettings: defaultGetSettings,
     putSettings: defaultPutSettings,
@@ -539,6 +545,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         void tryStore(() => store.setCaptureEnabled?.(enabled) ?? Promise.resolve());
       },
       onWipe: () => void wipeAllData(),
+      onEraseSnapshots: () => void eraseSnapshotsData(),
       onClose: () => void toggleStorage(),
     });
     storagePanel.replaceChildren(view.element);
@@ -557,6 +564,17 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     await tryStore(() => store.wipeAll?.() ?? Promise.resolve());
     await refreshPersisted(); // the reopen hub empties
     if (storageOpen) await renderStorage(); // the panel repaints to "Nothing stored"
+  }
+
+  /** Erase ONLY the snapshot stores (D-13, task 1.6), then repaint the open panel so the emptied
+   *  snapshot line disappears. The reopen hub is NOT touched — snapshots never fed it (folders/
+   *  recents/pins survive the erase), so `refreshPersisted()` would be a no-op. The capture-flag
+   *  live cache (`setCaptureFlag`) is deliberately NOT cleared: erasing snapshots is not erasing
+   *  settings, and the flag row survives, so the in-memory flag must survive with it. Best-effort
+   *  (AGENTS.md #5) — a storage failure never blanks the panel. */
+  async function eraseSnapshotsData(): Promise<void> {
+    await tryStore(() => store.eraseSnapshots?.() ?? Promise.resolve());
+    if (storageOpen) await renderStorage(); // the snapshot line clears; every other line stands
   }
 
   // --- reopen-hub (recents/pins) view -------------------------------------
