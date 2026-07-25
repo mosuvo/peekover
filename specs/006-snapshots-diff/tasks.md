@@ -323,7 +323,7 @@ go to the gate) and the milestone-close gate (9.1).
 
 ## 6 — The diff view, affordance, import fence, and D-11 deferral
 
-- [ ] **6.1 `diffView.ts` — hunks → sanitized markup; the `data-diff` sibling flip; exit; the fallback.**
+- [x] **6.1 `diffView.ts` — hunks → sanitized markup; the `data-diff` sibling flip; exit; the fallback.**
       Mechanism per D-15: a lazily-built **sibling** view behind `data-diff="active"` on the **host** (mirroring
       `WATCH_HOST_ATTR` — host attributes survive `replaceChildren`, children do not); `:host([data-diff="active"])
       .peekover-reader{display:none}` in `readerCss.ts`. **NOT a `MountOptions` field** — that would re-parse,

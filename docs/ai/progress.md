@@ -10,35 +10,45 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed (the engine + the `diff` dependency + the two-layer import fence) — GROUP 5 CLOSED; next action is 6.1.**
-> **Nothing is in progress and nothing is blocked. Task 5.1 — `diffEngine.ts`, the pure line-diff engine, and the FIRST dependency added since M1 (`diff@^9.0.0`) — has landed** (this commit).
-> `src/render/diffEngine.ts` imports `diffLines` from `diff` (narrow named import for tree-shaking) and REUSES
-> `normalise` from `snapshots.ts` (D-5, never re-declared), mapping the library's change objects 1:1 into a stable,
-> Peekover-owned `DiffHunk[]` (`kind` + newline-stripped `lines`) that insulates callers from `diff`'s version churn.
-> Pure and total: no DOM, no IDB, always returns. `computeDiff` normalises both sides before `diffLines` sees them, so
-> a bare CRLF→LF rewrite reports NO change (identical inputs → one `unchanged` hunk; two empty inputs → `[]`).
-> **The `diff` dependency-approval gate was walked** (BSD-3-Clause, zero runtime deps, bundled types so no `@types/diff`,
-> `pnpm ls diff --depth 0` confirms zero transitive additions); `dependencies` is now exactly four with `diff` first
-> alphabetically. **The two-layer import fence holds** (plan §1.4): (1) a SOURCE-TEXT allowlist pin
-> (`diffEngine.test.ts`) — the `diff` package is imported by exactly `{diffEngine.ts}` and no production module imports
-> the engine yet; red-first via a `mount.ts` mutation adding `from 'diff'` reddens with the offending file:line named,
-> restored byte-identical; (2) a VERIFY-ONLY bundle-grep + byte-delta check — content-script bundles are byte-IDENTICAL
-> to the pre-`diff` baseline on BOTH engines (305744 B each, Δ0), zero `diff`-package strings present. **The engine is
-> DELIBERATELY wired to nothing at 5.1** (D-15 — "entering a diff is an attribute flip, not a re-render; mount() stays
-> read-only library"): its first consumer is 6.1's `diffView.ts`, so the app-page chunk did NOT grow yet either (Δ0) —
-> the `diff` bytes land in the app-page graph only when the view imports the engine at 6.1. **`permissions: []` still
-> stands; `mount.ts`, `watchController.ts`, `watchControl.ts`, `diffRegistry.ts`, `contentWatch.ts`, `appShell.ts` all
-> byte-identical (D-15's architectural basis); `Settings`/`getSettings`/`putSettings` byte-identical; `DB_VERSION` is 3.**
-> M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed — GROUP 5 CLOSED; group 6 task 6.1 landed (the diff VIEW); next action is 6.2.**
+> **Nothing is in progress and nothing is blocked. Task 6.1 — `src/render/diffView.ts`, the diff VIEW — has landed** (this commit).
+> `enterDiff(host, hunks)` / `exitDiff(host)`: a lazily-built sanitized `.peekover-diff` sibling behind `data-diff="active"`
+> on the HOST (D-15 — mirroring `WATCH_HOST_ATTR`; host attributes survive `replaceChildren`), which CSS uses to hide
+> `.peekover-reader` (`:host([data-diff="active"]) .peekover-reader{display:none}`, readerCss.ts). The reading column's DOM
+> is NEVER touched — entering a diff is an attribute flip, not a re-render; `mount()` stays read-only library. **Both sides
+> (added, removed AND unchanged) go through the unchanged `parse → sanitize` path PLUS mount's inert-`<template>` +
+> `applyMediaPolicy` neutralisation** (§3.8, AGENTS.md #3 + #1 — a remote `<img>` in a diff cannot fetch); a script in
+> either side is scrubbed (red-first proven: bypassing sanitize reddens 4 = 2 surfaces × 2 engines). **Reading place is
+> preserved across the hidden-column rung** (`mount.ts:251-257`): the anchor is captured BEFORE `data-diff` (column visible,
+> real rects) and restored AFTER clearing it, via the existing `readingAnchor` pair, stored in a host-keyed WeakMap. **The
+> fallback (§1.5) is real:** a parse/sanitize failure returns `{ok:false, reason}`, never sets `data-diff`, inserts nothing —
+> the document stays on screen (never blank).
+> **★ THE ENGINE STAYED WIRED TO NOTHING AT 6.1 — this corrects the 5.1 note's expectation.** The 5.1 pointer predicted
+> "6.1 is the engine's first consumer; `diffView.ts` imports `diffEngine.ts`; the allowlist gains it." It does **not**:
+> plan §1.4 makes the view engine-BLIND ("takes hunks as data; imports no engine"). Concretely, `diffView.ts` imports
+> **neither** `diff` **nor** `diffEngine` — not even a type import, because the 5.1 fence is a SOURCE-TEXT scanner and its
+> regex matches `import type … from './diffEngine'` too (a type-only import is erased from the BUNDLE, not from the SOURCE
+> the fence reads). So the hunk type is a LOCAL STRUCTURAL MIRROR; the browser test (fence-exempt) imports the real
+> `DiffHunk` and passes it in, so `tsc --noEmit` guards the mirror against drift. **`ALLOWED_ENGINE_IMPORTERS` stays `[]`;
+> `diffEngine.test.ts` is byte-identical.** The engine's first PRODUCTION consumer is 6.2's `appShell` (via the DiffContext
+> closure), so the `diff` bytes still have NOT entered any bundle at 6.1.
+> **BYTES (re-baselined, not a fence break):** content-script grew 305744 → **307892 B on both engines (+2148)** — proven
+> `diff`-free: grep finds NO `diffLines`/`computeDiff`/`enterDiff` in the content-script bundle; the import fence pin is
+> green. The delta is legitimate CSS (Piece 4's `.peekover-diff` block in READER_CSS) + `mount.ts`'s two `data-diff` clears
+> (Piece 5) — both in the content-script graph. **Byte-identity was never achievable at 6.1: `mount.ts` alone → 305806 B.**
+> The app-page chunk grew by the SAME +2148 (shared readerCss+mount), NOT `diffLines` (the engine is still unimported).
+> Officially re-measured at 8.1. **`permissions: []` still stands; `diffEngine.ts`, `watchController.ts`, `watchControl.ts`,
+> `diffRegistry.ts`, `contentWatch.ts`, `appShell.ts`, `readerMode.ts`, `readingAnchor.ts`, `parse.ts`, `sanitize.ts` all
+> byte-identical; `mount.ts` gains exactly two lines, zero import changes; `Settings`/`getSettings`/`putSettings`
+> byte-identical; `DB_VERSION` is 3.** M1–M5 remain fully closed.
 >
-> **THE NEXT ACTION IS TASK 6.1 — `diffView.ts`, the diff VIEW: hunks → sanitized markup, the lazily-built `data-diff`
-> sibling flip on the host (D-15), build/enter/exit, and the fallback named in plan §1.5.** 6.1 is the engine's FIRST
-> consumer — `diffView.ts` imports `diffEngine.ts`, so the fence pin's `ALLOWED_ENGINE_IMPORTERS` allowlist gains
-> `src/render/diffView.ts` in that commit (the one-line test change that documents the architecture change), and the
-> app-page chunk grows by `diffLines`'s tree-shaken cost then (re-measured officially at 8.1). Both diff sides go
-> through the unchanged `parse → sanitize` path (untrusted on both sides, §3.8); `mount()` clears `data-diff` on both
-> commit paths so a diff never crosses a document switch. **The Now-pointer advances PER TASK** (the M1 rule — it once
-> lagged four tasks and the next session acted on stale state).
+> **THE NEXT ACTION IS TASK 6.2 — `src/render/diffChrome.ts`, the diff AFFORDANCE:** the only diff module `mount.ts`
+> imports; reads the diff registry (2.1); D-14's chrome gate on registry emptiness (the same signal 3.1's disclosure uses);
+> on click it fetches the snapshot, computes the diff via a DiffContext-provided closure (which `appShell` provisions by
+> importing `diffEngine` — **that is where the engine finally enters production**, and the fence pin's
+> `ALLOWED_ENGINE_IMPORTERS` gains `src/app/appShell.ts` there), and calls `enterDiff`. The affordance is `[]` — with no
+> note branch — when the registry is empty, so the content-script surface grows neither affordance nor explanation (§3.2).
+> **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next
 

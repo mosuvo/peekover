@@ -190,6 +190,37 @@ export const READER_CSS = /* css */ `
 :host([data-mode="reading"]) .peekover-raw{display:none}
 :host([data-mode="raw"]) .peekover-reader{display:none}
 
+/* ============ Diff view (task 6.1, D-15) ============ */
+/* Entering a diff is an ATTRIBUTE FLIP, not a re-render: data-diff="active" on the HOST — mirroring
+   data-watch/data-mode — hides the reading column while a lazily-built sibling .peekover-diff
+   (diffView.ts) takes its place. The host attribute survives replaceChildren (like data-watch); the
+   .peekover-reader DOM is never touched, so exit is just clearing the attribute + restoring the
+   reading anchor. SEPARATE from data-mode on purpose (readerMode.ts guards its Raw shortcut on
+   data-mode; a third data-mode value would change that shipped semantic). */
+:host([data-diff="active"]) .peekover-reader{display:none}
+
+/* The diff occupies the reading column's space — same centered measure and padding as
+   .peekover-reader, so a diff reads at the width the document did. */
+.peekover-diff{
+  max-width:76ch;margin:0 auto;padding:56px 32px 130px;width:100%;
+  font-family:var(--serif);color:var(--ink);
+}
+.peekover-diff > :first-child{margin-top:0}
+/* Each hunk is one block carrying its change KIND. Colour is NEVER the only signal (§5 a11y):
+   removed also carries line-through, and added/removed use distinct fills as well as hue.
+   Matches design/mockup.html:210-211 (.diff .add / .del). */
+.peekover-diff .diff-added{background:var(--ok-soft);color:var(--ok);border-radius:6px;padding:2px 8px;margin:2px 0}
+.peekover-diff .diff-removed{
+  /* ★ --del DOUBLE-MEANING (design judgement gated at 9.1, plan §1.7): --del is ALSO the lit
+     network indicator's "one warm accent" (see .peekover-net__dot below). Using it for diff-removed
+     is its SECOND meaning. 6.1 uses --del to match the mockup; a dedicated token is 9.1's call, not
+     6.1's — do NOT silently substitute a nearby token. line-through is the non-colour a11y signal. */
+  background:var(--del-soft);color:var(--del);text-decoration:line-through;
+  border-radius:6px;padding:2px 8px;margin:2px 0;
+}
+/* Unchanged recedes so added/removed stand out. */
+.peekover-diff .diff-unchanged{color:var(--muted);padding:2px 8px;margin:2px 0}
+
 /* One minimal pill, fixed in an unobtrusive corner. Styled from tokens (panel/ink/
    line) — NOT the mockup's full toolbar. Stays put while the column scrolls; its
    transition is neutralised under prefers-reduced-motion by the global rule above. */

@@ -204,6 +204,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // `readerPane.select()` depends on this reset to land a newly-selected file in Reading even
     // when the previous file was left in Raw (see MountOptions.preserveReading).
     setReaderMode(host, carried?.mode ?? 'reading');
+    host.removeAttribute('data-diff'); // D-15: a diff (diffView.ts) never crosses a document switch
     installToggleShortcut(); // idempotent; only active while our reader is mounted
     // TOC toggle registry (task 2.3): this host has a rail iff buildTocView returned one.
     // Register when composed so the backtick shortcut can resolve+toggle it; un-register on
@@ -280,6 +281,7 @@ function mountRawFallback(
   contained = false,
 ): void {
   host.removeAttribute('data-mode');
+  host.removeAttribute('data-diff'); // D-15: clear any open diff on the fallback path too
   unregisterTocHost(host); // a failed render replaces the rail with banner+<pre> — no rail now
 
   const banner = document.createElement('div');
