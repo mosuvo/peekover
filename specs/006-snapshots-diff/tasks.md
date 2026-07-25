@@ -101,7 +101,7 @@ go to the gate) and the milestone-close gate (9.1).
       or renames an existing store makes the row-survival assertion fail — prove it goes red before the correct
       additive schema makes it green. Golden EMPTY · manifest green + byte-unchanged.
 
-- [ ] **1.2 `snapshots.ts` — byte accounting + the eviction algorithm (pure), split from the IDB calls.**
+- [x] **1.2 `snapshots.ts` — byte accounting + the eviction algorithm (pure), split from the IDB calls.**
       The bounds/eviction maths is pure arithmetic over `snapshotMeta.entries` so it is jsdom-testable; the IDB
       read/write is a thin separate layer. **Bytes:** `new TextEncoder().encode(text).length` (synchronous,
       exact), written into `entries[].bytes` at capture so eviction never reads content. **Algorithm, as ONE

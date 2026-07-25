@@ -10,23 +10,28 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **task 1.1 landed; next action is 1.2.**
-> **Nothing is in progress and nothing is blocked. Task 1.1 has landed** (this commit): `DB_VERSION` 2 → 3
-> with two new stores — `snapshotMeta` (keyPath `docId`) and `snapshots` (keyPath `id`) — added
-> **additive-by-name and EMPTY**, plus a new `idbVersionchange.browser.test.ts` case proving
-> folders/recents/pins/settings rows survive the v2→v3 bump (red-first vs a schema that drops `folders`).
-> **This task STORED NOTHING** — the stores are empty, so `PERMISSIONS.md`'s "file contents are never
-> stored" claim is still TRUE; the trust correction binds to 1.4 (the first storing commit), not here. A
-> redundant hardcoded `raw.version` version-2 assertion in `settingsStore.browser.test.ts` was made
-> version-agnostic in the same commit (the value the bump made stale, fixed by the change that forced it).
-> All three Gear-3 artifacts remain on disk; **M1–M5 remain fully closed.**
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.2 landed; next action is 1.3.**
+> **Nothing is in progress and nothing is blocked. Task 1.2 has landed** (this commit): `src/app/snapshots.ts`
+> — the PURE byte-accounting (`bytesOf`, TextEncoder-exact) + eviction-PLANNING algorithm (`planSnapshotWrite`
+> returns a `WritePlan`; single-oversized short-circuits with NO eviction; multi-bound convergence leaves all
+> three bounds holding simultaneously; D-16 axes — count per-document, bytes + age global). **Wired to NOTHING
+> yet** — 1.4 is its production caller and drives it through the store layer (D-4 split). Deletion ORDERING
+> (meta-first, then content — §1.2) is an IDB-layer concern deferred to 1.4; 1.2 computes WHAT to evict, not
+> how to delete. **D-8 bounds land as PROPOSED tuneable constants with reasoning at each export site** — this
+> task is forbidden from choosing values (7.1 measures, 7.2 picks, 7.3 swaps); every test uses small explicit
+> fixture bounds so 7.3's number-swap stays green. Red-first proven against a wrong-axis (count-as-global)
+> implementation: the two-doc E1 discriminator reddens exactly, single-doc cases stay green.
+> **This task STORES NOTHING** — no IDB, no DOM, no browser projection; the trust correction still binds to
+> 1.4 (the first storing commit). All three Gear-3 artifacts remain on disk; **M1–M5 remain fully closed.**
 >
-> **THE NEXT ACTION IS TASK 1.2** — `snapshots.ts`: the pure byte-accounting + eviction algorithm (bounds
-> per D-16, deletion META-FIRST per §1.2), split from the IDB calls and wired to nothing yet (1.4 is its
-> production caller). **Group 1 is deliberately end-to-end: 1.4 is the irreducible storing commit** where
-> the trust correction and every trust surface land together — splitting it ships either
-> storage-wired-to-nothing or a false published claim. **The Now-pointer advances PER TASK from here** (the
-> M1 rule — it once lagged four tasks and the next session acted on stale state).
+> **THE NEXT ACTION IS TASK 1.3** — D-1: export the reader-source getter from `readerMode.ts` (beside the
+> setter) so 1.4's capture path READS the source `mount()` already stashed rather than retaining a second
+> copy, and make `mountRawFallback` register too so the WeakMap always holds what is on screen. **Red-first
+> BOTH directions** (its sole reader today is the Raw view — pin the OLD Raw behaviour first). **Group 1 is
+> deliberately end-to-end: 1.4 is the irreducible storing commit** where the trust correction and every trust
+> surface land together — splitting it ships either storage-wired-to-nothing or a false published claim. **The
+> Now-pointer advances PER TASK from here** (the M1 rule — it once lagged four tasks and the next session acted
+> on stale state).
 >
 > **The `diff` dependency is still task 5.1 and `permissions: []` still stands.** Schema landed at 1.1;
 > no snapshot has been stored and no dependency has been added yet.
