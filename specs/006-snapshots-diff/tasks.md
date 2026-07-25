@@ -125,7 +125,7 @@ go to the gate) and the milestone-close gate (9.1).
       evicts on the wrong axis fails the two-doc cases specifically, not the single-doc ones. Golden EMPTY ·
       manifest green.
 
-- [ ] **1.3 D-1 — export the reader-source getter; `mountRawFallback` registers too. Red-first BOTH directions.**
+- [x] **1.3 D-1 — export the reader-source getter; `mountRawFallback` registers too. Red-first BOTH directions.**
       Export a getter from `readerMode.ts` beside the existing setter (`:39-41`) so the capture path (1.4) READS
       the source `mount()` already stashed (`mount.ts:202` → `readerMode.ts:35`) rather than retaining a second
       copy. **The stale-after-failed-render fix, made total not special-cased:** `mountRawFallback`

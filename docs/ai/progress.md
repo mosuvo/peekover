@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-24.*
+*Updated: 2026-07-25.*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,26 +10,28 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.2 landed; next action is 1.3.**
-> **Nothing is in progress and nothing is blocked. Task 1.2 has landed** (this commit): `src/app/snapshots.ts`
-> — the PURE byte-accounting (`bytesOf`, TextEncoder-exact) + eviction-PLANNING algorithm (`planSnapshotWrite`
-> returns a `WritePlan`; single-oversized short-circuits with NO eviction; multi-bound convergence leaves all
-> three bounds holding simultaneously; D-16 axes — count per-document, bytes + age global). **Wired to NOTHING
-> yet** — 1.4 is its production caller and drives it through the store layer (D-4 split). Deletion ORDERING
-> (meta-first, then content — §1.2) is an IDB-layer concern deferred to 1.4; 1.2 computes WHAT to evict, not
-> how to delete. **D-8 bounds land as PROPOSED tuneable constants with reasoning at each export site** — this
-> task is forbidden from choosing values (7.1 measures, 7.2 picks, 7.3 swaps); every test uses small explicit
-> fixture bounds so 7.3's number-swap stays green. Red-first proven against a wrong-axis (count-as-global)
-> implementation: the two-doc E1 discriminator reddens exactly, single-doc cases stay green.
-> **This task STORES NOTHING** — no IDB, no DOM, no browser projection; the trust correction still binds to
-> 1.4 (the first storing commit). All three Gear-3 artifacts remain on disk; **M1–M5 remain fully closed.**
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.3 landed; next action is 1.4.**
+> **Nothing is in progress and nothing is blocked. Task 1.3 has landed** (this commit): `readerSourceFor`, a
+> getter exported from `readerMode.ts` beside the existing `registerReaderSource` setter — a READ from the
+> WeakMap `mount()` already stashes to, so 1.4's capture path reads the source rather than retaining a second
+> copy (plan §0 D-1: no second retention, no lifetime extension). **Wired to NOTHING yet** — 1.4's capture path
+> at `watchController.renderNow` is its production caller. `mountRawFallback` (`mount.ts:293`) now registers too,
+> so the WeakMap invariant is TOTAL — *"holds what is currently on screen,"* no exception: the fallback already
+> set `pre.textContent = source`, so the registered value genuinely is what is displayed. `readerMode.ts`'s
+> header comment was refreshed accordingly (it had described the "successful render path only" behaviour this
+> task changes). **This task STORES NOTHING** — it changes what a getter returns and what the fallback path
+> stashes, not what IDB holds. Red-first BOTH directions, each with its own procedure: (a) the fallback-fix
+> proven red on every parameterised instance before the register landed; (b) the success-path Raw view proven
+> unaltered, non-vacuous under a temporary deletion of the success-path register (`mount.ts:202`) — direction
+> (b) reds, direction (a) stays green, asymmetry named. All three Gear-3 artifacts remain on disk; **M1–M5
+> remain fully closed.**
 >
-> **THE NEXT ACTION IS TASK 1.3** — D-1: export the reader-source getter from `readerMode.ts` (beside the
-> setter) so 1.4's capture path READS the source `mount()` already stashed rather than retaining a second
-> copy, and make `mountRawFallback` register too so the WeakMap always holds what is on screen. **Red-first
-> BOTH directions** (its sole reader today is the Raw view — pin the OLD Raw behaviour first). **Group 1 is
-> deliberately end-to-end: 1.4 is the irreducible storing commit** where the trust correction and every trust
-> surface land together — splitting it ships either storage-wired-to-nothing or a false published claim. **The
+> **THE NEXT ACTION IS TASK 1.4 — ★ THE STORING COMMIT.** The first code that stores a snapshot, and by HARD
+> constraint it does not split: capture wiring (`watchController.renderNow`, reading through `readerSourceFor`
+> the value `mount()` stashed) lands in the SAME commit as the WHOLE trust correction — `PERMISSIONS.md`'s claim
+> sentence and every trust surface that must now account for stored state. Splitting it ships either
+> storage-wired-to-nothing (the M5 defect class) or a false published claim. **Group 1 is deliberately
+> end-to-end**; 1.4 is where D-4's store layer, 1.2's eviction planner, and the trust correction all meet. **The
 > Now-pointer advances PER TASK from here** (the M1 rule — it once lagged four tasks and the next session acted
 > on stale state).
 >

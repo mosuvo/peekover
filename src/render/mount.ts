@@ -290,6 +290,7 @@ function mountRawFallback(
   const pre = document.createElement('pre');
   pre.className = 'peekover-raw';
   pre.textContent = source;
+  registerReaderSource(host, source); // WeakMap now holds what is on screen here too (task 1.3)
 
   // Theme the fallback too (paper/ink, mono) so a failed render still reads as
   // Peekover rather than a bare white page. buildReaderStyle can't throw here. The

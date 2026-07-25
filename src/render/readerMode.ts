@@ -34,10 +34,19 @@ export type ReaderMode = 'reading' | 'raw';
  */
 const sources = new WeakMap<HTMLElement, string>();
 
-/** Remember a host's raw source for a later lazy Raw view. Called by mount() on the
- *  successful render path (the failure path builds its raw <pre> eagerly itself). */
+/** Remember a host's raw source for a later lazy Raw view. Called by mount() on BOTH
+ *  the successful render path and the fallback path — the WeakMap holds what is
+ *  currently on screen, with no exception. */
 export function registerReaderSource(host: HTMLElement, source: string): void {
   sources.set(host, source);
+}
+
+/** Read a host's registered raw source, or `undefined` when it was never registered.
+ *  The counterpart to registerReaderSource — set it there, get it here. Returns the
+ *  bare Map result (no empty-string fallback) so a caller can tell "never registered"
+ *  apart from a genuinely empty document. */
+export function readerSourceFor(host: HTMLElement): string | undefined {
+  return sources.get(host);
 }
 
 /** Reflect the current mode onto the toggle button's label + aria-label. In reading
