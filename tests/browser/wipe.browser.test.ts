@@ -113,10 +113,13 @@ describe('trust controls — real-engine wipe + describe + zero-network', () => 
     // Every stored record is surfaced — no hidden state.
     expect(summary.folders.map((f) => f.name)).toContain('my-notes');
     expect(summary.recents.map((r) => r.path)).toContain('x/y.md');
-    // Plain-language lines describe what's stored, and disclose we never keep file contents.
+    // Plain-language lines describe what's stored: folders/recents are names + paths only. The
+    // blanket "never file contents" was dropped at 006 task 1.4 — watched-document snapshots ARE
+    // stored contents, disclosed by their own line when any exist (none are seeded here, so the
+    // folder line's re-scoped "names only" is what stands in).
     const text = summary.lines.join(' ');
     expect(text).toContain('remembered folder');
-    expect(text).toContain('never file contents');
+    expect(text).toContain('names only');
     expect(text).toContain('recently opened file');
   });
 

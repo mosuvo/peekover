@@ -1,14 +1,27 @@
-// snapshots — PURE byte accounting + snapshot-eviction PLANNING. No DOM, no IndexedDB, no I/O.
+// snapshots — snapshot byte accounting + eviction PLANNING (pure) PLUS the thin IDB layer
+// that applies a plan (task 1.4). The pure core has no DOM, no IndexedDB, no I/O; the IDB
+// layer below (`storeSnapshot`, `deleteSnapshotsForFolder`, the read helpers) is browser-only
+// at runtime and shares store.ts's single memoized connection.
 //
 // This is the separable seam plan §1.2 / D-4 calls out: the bounds/eviction maths is pure
-// arithmetic over `snapshotMeta.entries`, so it is jsdom-testable in isolation; the IDB
-// read/write is a thin, separate layer (task 1.4 is the production caller and drives this
-// through the store). Same pure/DOM/engine split `recents.ts` uses for the recents caps.
+// arithmetic over `snapshotMeta.entries`, so it is jsdom-testable in isolation (`bytesOf`,
+// `planSnapshotWrite`); the IDB read/write is the thin, separate layer 1.4 adds here and is
+// proven in the real-engine browser project (storage is jsdom-blind). Same pure/DOM/engine
+// split `recents.ts` uses for the recents caps.
 //
-// This module is wired to NOTHING yet. `planSnapshotWrite` computes WHAT to evict; it does
-// not apply anything, and it does not decide deletion ORDERING (META FIRST, then content —
-// plan §1.2, load-bearing) — that is an IDB-layer concern deferred to 1.4. This module never
-// touches IndexedDB, never generates ids, and mutates none of its inputs.
+// `planSnapshotWrite` computes WHAT to evict; it applies nothing and generates no ids. The IDB
+// layer is where deletion ORDERING lands (META FIRST, then content — plan §1.2, load-bearing):
+// the incoming snapshot's meta entry is written BEFORE its content row, so a crash between the
+// two IDB transactions (idbCore writes one store per transaction — §4-5, not atomic) leaves a
+// meta entry pointing at missing content — §4's already-required "comparison unavailable" state,
+// self-reclaiming lazily — rather than an orphaned content row the byte-accounting can never see.
+
+// The IDB layer (below) reuses store.ts's single memoized connection + idbCore's raw ops; `SEP`
+// is imported from recents.ts, never re-declared (§4-9 coupling). The pure core above uses none
+// of these — it stays jsdom-testable in isolation.
+import { get, getAll, put, del } from './idbCore';
+import { connection, STORES } from './store';
+import { SEP } from './recents';
 
 /**
  * One snapshot's metadata row inside a document's `snapshotMeta` record. Declared HERE (not
@@ -211,4 +224,117 @@ export function planSnapshotWrite(
     .map((p) => p.id);
 
   return { store: true, evictIds };
+}
+
+// ── The IDB layer (task 1.4) ────────────────────────────────────────────────────────────────
+//
+// Browser-only at runtime. It reuses store.ts's single memoized connection (never opens a
+// second one, which would fight idbCore's versionchange close-and-drop) and idbCore's raw
+// get/getAll/put/delete (imported at the top). `SEP` comes from recents.ts (§4-9 coupling).
+
+/** One stored snapshot body: the `snapshots` store row (D-4 — split from `snapshotMeta`). */
+export type SnapshotRow = { id: string; text: string };
+
+/**
+ * LF normalisation for the capture/diff boundary (D-5). Pure and total: `\r\n` → `\n`, nothing
+ * else touched. The ENTIRE D-5 half at capture — `changeDetector.ts` is deliberately NOT changed
+ * (plan §3-6): storing no snapshot when the outgoing and incoming texts are equal after this is
+ * what keeps a CRLF→LF rewrite from producing an all-changed comparison, without altering 005's
+ * shipped exact-string re-render detection. 5.1's `diffEngine` reuses this exported function.
+ */
+export function normalise(text: string): string {
+  return text.replace(/\r\n/g, '\n');
+}
+
+/** An opaque, collision-resistant snapshot id (the `snapshots`/`snapshotMeta.entries` key). The
+ *  pure planner treats it as opaque — id generation is the IDB layer's job, never the planner's. */
+let snapCounter = 0;
+function newSnapshotId(): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  snapCounter += 1;
+  return `s-${Date.now()}-${snapCounter}`;
+}
+
+/**
+ * Read every `snapshotMeta` record (small bounded rows — `idbCore.getAll` is safe, idbCore.ts:116).
+ * Never reads a content row: listing, eviction and byte-accounting live on meta alone (D-4).
+ */
+export async function getSnapshotMeta(): Promise<SnapshotMeta[]> {
+  return getAll<SnapshotMeta>(await connection(), STORES.snapshotMeta);
+}
+
+/** Fetch one snapshot's text by id, or `undefined` when the content row is missing (the lazy
+ *  self-reclaim window — §1.2). Reads a single content row, on demand only (never in bulk). */
+export async function getSnapshotText(id: string): Promise<string | undefined> {
+  const row = await get<SnapshotRow>(await connection(), STORES.snapshots, id);
+  return row?.text;
+}
+
+/**
+ * Capture one snapshot of `text` for `docId`, applying the pure eviction plan META FIRST.
+ *
+ * Reads all `snapshotMeta`, plans the write against `DEFAULT_BOUNDS`, and:
+ *  - `store: false` (single-oversized short-circuit) → does nothing: no eviction, no write (§4).
+ *  - `store: true` → writes the incoming META entry (+ removes evicted entries from their meta
+ *    records) BEFORE the incoming content row, then deletes the evicted content rows last. That
+ *    ordering keeps every crash window failing toward a dangling meta entry (safe, self-reclaiming)
+ *    rather than an orphaned content row (invisible bytes the accounting under-reports) — §1.2.
+ *
+ * Fire-and-forget at the call site (task 1.4's `void storeSnapshot(...)`): a rejection completes
+ * the re-render normally rather than surfacing (§4). Callers pass the ALREADY-outgoing source.
+ */
+export async function storeSnapshot(docId: string, text: string): Promise<void> {
+  const conn = await connection();
+  const allMeta = await getAll<SnapshotMeta>(conn, STORES.snapshotMeta);
+  const incomingId = newSnapshotId();
+  const incomingBytes = bytesOf(text);
+  const now = Date.now();
+
+  const plan = planSnapshotWrite(allMeta, docId, incomingId, incomingBytes, now, DEFAULT_BOUNDS);
+  if (!plan.store) return; // single-oversized: no eviction, no write.
+
+  const evicted = new Set(plan.evictIds);
+
+  // Project the post-plan meta state: drop evicted entries everywhere, append the incoming to its
+  // doc. Only records that actually change are written (idbCore is one transaction per put/del).
+  const byDoc = new Map<string, SnapshotMeta>();
+  for (const m of allMeta) {
+    byDoc.set(m.docId, { docId: m.docId, entries: m.entries.filter((e) => !evicted.has(e.id)) });
+  }
+  const incomingRec = byDoc.get(docId) ?? { docId, entries: [] };
+  incomingRec.entries = [...incomingRec.entries, { id: incomingId, ts: now, bytes: incomingBytes }];
+  byDoc.set(docId, incomingRec);
+
+  const changed = (m: SnapshotMeta): boolean =>
+    m.docId === docId || allMeta.some((o) => o.docId === m.docId && o.entries.length !== m.entries.length);
+
+  // META FIRST — the incoming meta entry lands before its content row.
+  for (const rec of byDoc.values()) {
+    if (!changed(rec)) continue;
+    if (rec.entries.length === 0) await del(conn, STORES.snapshotMeta, rec.docId);
+    else await put(conn, STORES.snapshotMeta, rec);
+  }
+  // Incoming content row (after its meta entry).
+  await put<SnapshotRow>(conn, STORES.snapshots, { id: incomingId, text });
+  // Evicted content rows last — their meta entries are already gone.
+  for (const id of plan.evictIds) await del(conn, STORES.snapshots, id);
+}
+
+/**
+ * D-10 revoke-erase: delete every snapshot whose `docId` is inside `folderId`.
+ *
+ * ★ The boundary is `folderId + SEP`, NOT a bare `folderId.startsWith`. The fallback id form
+ * (`f-100-1`) can be a string prefix of another (`f-100-10`), so a bare-prefix scan over-deletes
+ * on an erase path where over-deletion is silent and unrecoverable. `SEP` cannot appear inside a
+ * `folderId` (crypto.randomUUID is hex+hyphens; the fallback is digits+hyphens), so `folderId + SEP`
+ * is an exact boundary. Meta rows first, then content rows (safe crash direction, §1.2).
+ */
+export async function deleteSnapshotsForFolder(folderId: string): Promise<void> {
+  const conn = await connection();
+  const allMeta = await getAll<SnapshotMeta>(conn, STORES.snapshotMeta);
+  const prefix = folderId + SEP;
+  const targets = allMeta.filter((m) => m.docId.startsWith(prefix));
+  for (const m of targets) await del(conn, STORES.snapshotMeta, m.docId);
+  for (const m of targets) for (const e of m.entries) await del(conn, STORES.snapshots, e.id);
 }

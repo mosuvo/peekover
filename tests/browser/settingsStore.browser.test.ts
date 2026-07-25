@@ -180,7 +180,9 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
     expect(before.total).toBe(2); // 1 folder + the settings row
     const beforeText = before.lines.join(' ');
     expect(beforeText).toContain('display settings');
-    expect(beforeText).toContain('no file contents');
+    // 006 task 1.4 re-scoped the settings line: the "no file contents" fragment (part of the
+    // now-false store-wide claim) was dropped; it still discloses the on-device home.
+    expect(beforeText).toContain('stored on-device');
 
     // The wipe-all control erases settings too.
     await wipeAll();

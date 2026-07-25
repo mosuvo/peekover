@@ -377,7 +377,7 @@ describe('4.8 — the app page keeps the registry semantics it already had', () 
       },
       stop() {},
     };
-    registerWatchTarget(createWatchController({ detector: appDetector, contained: true }));
+    registerWatchTarget(createWatchController({ detector: appDetector, contained: true, docId: null }));
 
     const host = mountAfterInstall();
     pillIn(host)!.click();

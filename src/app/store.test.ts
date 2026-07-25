@@ -30,7 +30,9 @@ const recent = (): RecentRecord => ({ id: 'r1', folderId: 'f1', path: 'a.md', na
 const pin = (): PinRecord => ({ id: 'p1', kind: 'file', folderId: 'f1', path: 'a.md', name: 'a.md', pinnedAt: 4 });
 
 const SETTINGS_LINE = /display settings/i;
-const NO_FILE_CONTENTS = /no file contents/i;
+// 006 task 1.4 re-scoped the settings line: the "no file contents" fragment (part of the now-false
+// store-wide claim) was dropped; it still discloses the on-device home.
+const ON_DEVICE = /stored on-device/i;
 const NOTHING = /Nothing stored/i;
 
 function lines(over: {
@@ -38,13 +40,16 @@ function lines(over: {
   recents?: RecentRecord[];
   pins?: PinRecord[];
   settings?: Settings | null;
+  snapshots?: { count: number; docs: number; bytes: number };
 }): string[] {
   const folders = over.folders ?? [];
   const recents = over.recents ?? [];
   const pins = over.pins ?? [];
   const settings = over.settings ?? null;
-  const total = folders.length + recents.length + pins.length + (settings ? 1 : 0);
-  return buildStoredLines({ folders, recents, pins, settings, total });
+  const snapshots = over.snapshots ?? { count: 0, docs: 0, bytes: 0 };
+  const total =
+    folders.length + recents.length + pins.length + (settings ? 1 : 0) + snapshots.count;
+  return buildStoredLines({ folders, recents, pins, settings, snapshots, total });
 }
 
 // Task 1.1 — the SCHEMA shape at the bumped DB_VERSION. Pure constant assertions (no engine):
@@ -77,7 +82,7 @@ describe('buildStoredLines — settings line (task 1.3)', () => {
     const out = lines({ settings: { ...DEFAULT_SETTINGS, theme: 'dark' } });
     const text = out.join(' ');
     expect(text).toMatch(SETTINGS_LINE);
-    expect(text).toMatch(NO_FILE_CONTENTS); // the same on-device / no-contents disclosure
+    expect(text).toMatch(ON_DEVICE); // still discloses the on-device home (006 task 1.4 re-scope)
     // A stored settings row is a real record, so it is NOT "nothing stored".
     expect(text).not.toMatch(NOTHING);
   });
@@ -107,5 +112,44 @@ describe('buildStoredLines — settings line (task 1.3)', () => {
     expect(out[1]).toMatch(/recently opened file/);
     expect(out[2]).toMatch(/pinned item/);
     expect(out[3]).toMatch(SETTINGS_LINE);
+  });
+});
+
+describe('buildStoredLines — snapshot line (task 1.4)', () => {
+  it('emits a snapshot line naming count, document count, and total bytes when snapshots exist', () => {
+    const out = lines({ snapshots: { count: 3, docs: 2, bytes: 2048 } }).join(' ');
+    // Honest disclosure of the first stored thing that IS file contents: how many states, across
+    // how many documents, how many bytes — kept on-device only, never uploaded.
+    expect(out).toMatch(/3 snapshots/);
+    expect(out).toMatch(/2 watched documents/);
+    expect(out).toMatch(/2\.0 KB/); // humanBytes(2048)
+    expect(out).toMatch(/on this device only, never uploaded/i);
+    // With snapshots stored, it is NOT "nothing stored".
+    expect(out).not.toMatch(NOTHING);
+  });
+
+  it('singularizes one snapshot of one document, and renders sub-KiB bytes plainly', () => {
+    const out = lines({ snapshots: { count: 1, docs: 1, bytes: 512 } }).join(' ');
+    expect(out).toMatch(/1 snapshot of 1 watched document/);
+    expect(out).toMatch(/512 B/); // humanBytes under 1 KiB
+  });
+
+  it('emits NO snapshot line when the count is zero (the empty case is the "nothing stored" line)', () => {
+    const out = lines({ snapshots: { count: 0, docs: 0, bytes: 0 } }).join(' ');
+    expect(out).not.toMatch(/snapshot/i);
+    expect(out).toMatch(NOTHING);
+  });
+
+  it('places the snapshot line AFTER folders/recents/pins/settings (store-list order)', () => {
+    const out = lines({
+      folders: [folder({ persisted: true })],
+      recents: [recent()],
+      pins: [pin()],
+      settings: DEFAULT_SETTINGS,
+      snapshots: { count: 2, docs: 1, bytes: 4096 },
+    });
+    expect(out).toHaveLength(5);
+    expect(out[3]).toMatch(SETTINGS_LINE);
+    expect(out[4]).toMatch(/2 snapshots of 1 watched document/);
   });
 });

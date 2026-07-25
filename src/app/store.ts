@@ -137,6 +137,16 @@ function db(): Promise<IDBDatabase> {
 }
 
 /**
+ * The shared memoized connection, for sibling data-layer modules that must write to the SAME
+ * connection rather than opening a second one (which would fight idbCore's versionchange
+ * close-and-drop). `snapshots.ts`'s IDB layer (006 task 1.4) is the one caller — the pure/IDB
+ * split keeps its byte-accounting jsdom-testable while its writes ride this one connection.
+ */
+export function connection(): Promise<IDBDatabase> {
+  return db();
+}
+
+/**
  * TEST SEAM: drop the memoized connection (and optionally close it) so a fresh open
  * happens next call. Not used in production paths — real-engine tests use it to isolate
  * one test's connection from another's on the shared page. Never touches stored data.
@@ -218,12 +228,14 @@ export async function putSettings(patch: Partial<Settings>): Promise<void> {
 // deferred: the transparency + erase path is part of THIS group, not a later nicety.
 
 /**
- * Erase everything Peekover has stored: clear all four stores. This drops remembered
- * folders (and their persisted handles), the recents list, all pins, AND the reader
- * settings — the "wipe all data" control. Each `clear()` resolves on its transaction
- * commit (idbCore), so once this resolves the stores are durably empty and a subsequent
- * read sees zero records (getSettings then falls back to the Auto default).
- * Cleared sequentially so a failure surfaces deterministically rather than racing.
+ * Erase everything Peekover has stored: clear all SIX stores. This drops remembered folders
+ * (and their persisted handles), the recents list, all pins, the reader settings, AND — since
+ * 006 task 1.4 — the two snapshot stores (the past text states of watched documents) — the
+ * "wipe all data" control. Each `clear()` resolves on its transaction commit (idbCore), so once
+ * this resolves the stores are durably empty and a subsequent read sees zero records (getSettings
+ * then falls back to the Auto default). Cleared sequentially so a failure surfaces deterministically
+ * rather than racing. Snapshot stores are cleared META FIRST (§1.2), the same safe ordering the
+ * capture path uses — a dangling meta entry is the benign failure, an orphaned content row is not.
  */
 export async function wipeAll(): Promise<void> {
   const conn = await db();
@@ -231,11 +243,14 @@ export async function wipeAll(): Promise<void> {
   await clear(conn, STORES.recents);
   await clear(conn, STORES.pins);
   await clear(conn, STORES.settings);
+  await clear(conn, STORES.snapshotMeta);
+  await clear(conn, STORES.snapshots);
 }
 
 /** One remembered folder as the transparency view sees it — the live handle object is
- *  NOT surfaced (we disclose THAT one exists via `persisted`, never the object itself),
- *  and file CONTENTS are never stored at all, so there is nothing hidden to leak. */
+ *  NOT surfaced (we disclose THAT one exists via `persisted`, never the object itself).
+ *  A folder record carries no file contents; watched-document snapshots (the one stored
+ *  thing that IS contents) are a separate store, disclosed via `StoredSummary.snapshots`. */
 export interface StoredFolderInfo {
   id: string;
   name: string;
@@ -247,10 +262,10 @@ export interface StoredFolderInfo {
 
 /**
  * The complete, plain-language picture of what Peekover has stored — the "what's stored"
- * view's read path. Surfaces EVERY record in all three stores (no hidden state), plus a
- * `total` and human-readable `lines`. Folder handles are reported only as `persisted`
- * (their presence, not the object); file contents are never stored, so this is the whole
- * truth of on-device state.
+ * view's read path. Surfaces EVERY record in every store (no hidden state), plus a `total`
+ * and human-readable `lines`. Folder handles are reported only as `persisted` (their presence,
+ * not the object); watched-document snapshots ARE file contents and are disclosed in full via
+ * `snapshots` (count + document count + bytes), so this remains the whole truth of on-device state.
  */
 export interface StoredSummary {
   folders: StoredFolderInfo[];
@@ -264,6 +279,13 @@ export interface StoredSummary {
    *  field fails to compile instead of silently reporting "no settings stored". Non-null ⇒ a
    *  settings row exists and is counted + described. */
   settings: Settings | null;
+  /** On-device snapshot state (006 task 1.4): how many past text states are stored, across how
+   *  many watched documents, and their total encoded bytes — read from `snapshotMeta` ALONE (D-4),
+   *  never from content. REQUIRED for the same compile-time forcing reason `settings` is: a summary
+   *  literal that forgets it fails to compile rather than silently reporting "no snapshots stored"
+   *  — and snapshots are the first stored thing that IS file contents, so a hidden zero here is the
+   *  exact trust-surface failure `PERMISSIONS.md` exists to deny. `count === 0` ⇒ no snapshot line. */
+  snapshots: { count: number; docs: number; bytes: number };
   total: number;
   /** Plain-language, trust-facing description — one line per non-empty record class. */
   lines: string[];
@@ -272,6 +294,15 @@ export interface StoredSummary {
 /** Pluralize a count for the plain-language lines ("1 folder" / "3 folders"). */
 function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
+}
+
+/** A human-readable byte size for the snapshot line (deterministic, so the line is unit-testable):
+ *  bytes under 1 KiB, else KB / MB to one decimal. The snapshot store is the first on-device state
+ *  whose SIZE the trust panel must disclose, so the figure is surfaced, not hidden. */
+function humanBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /**
@@ -286,16 +317,21 @@ export function buildStoredLines(input: {
   recents: RecentRecord[];
   pins: PinRecord[];
   settings: Settings | null;
+  snapshots: { count: number; docs: number; bytes: number };
   total: number;
 }): string[] {
-  const { folders, recents, pins, settings, total } = input;
+  const { folders, recents, pins, settings, snapshots, total } = input;
   const lines: string[] = [];
   if (folders.length) {
     const remembered = folders.filter((f) => f.persisted).length;
     const detail = remembered
       ? ` (${plural(remembered, 'with folder access remembered for one-click reopen')})`
       : '';
-    lines.push(`${plural(folders.length, 'remembered folder')}${detail} — names only, never file contents.`);
+    // Re-scoped at 006 task 1.4: the blanket "never file contents" is no longer true of the store
+    // as a WHOLE (snapshots ARE contents), so it is dropped here and the line speaks only for its
+    // own record class — a remembered folder is still names + (Chromium) a capability handle, never
+    // the folder's files. The snapshot line below carries the honest disclosure of stored contents.
+    lines.push(`${plural(folders.length, 'remembered folder')}${detail} — names only.`);
   }
   if (recents.length) {
     lines.push(`${plural(recents.length, 'recently opened file')} — path + name, so the list can reopen them.`);
@@ -304,7 +340,17 @@ export function buildStoredLines(input: {
     lines.push(`${plural(pins.length, 'pinned item')} — path + name for quick access.`);
   }
   if (settings) {
-    lines.push('Theme / display settings — stored on-device, no file contents.');
+    // Re-scoped likewise: settings are on-device (true) — the "no file contents" fragment was part
+    // of the now-false store-wide claim, so it is dropped and the line speaks only for settings.
+    lines.push('Theme / display settings — stored on-device.');
+  }
+  if (snapshots.count > 0) {
+    // The honest disclosure of the first stored thing that IS file contents: a bounded number of
+    // past text states of watched documents, kept on THIS device only and never uploaded.
+    lines.push(
+      `${plural(snapshots.count, 'snapshot')} of ${plural(snapshots.docs, 'watched document')} — ` +
+        `${humanBytes(snapshots.bytes)} of document text kept on this device only, never uploaded.`,
+    );
   }
   if (total === 0) {
     // Kept verbatim (folders/recents/pins) to stay identical to the shell's designed
@@ -323,11 +369,18 @@ export function buildStoredLines(input: {
  */
 export async function describeStored(): Promise<StoredSummary> {
   const conn = await db();
-  const [folderRows, recents, pins, settingsRow] = await Promise.all([
+  // Snapshot accounting reads `snapshotMeta` ONLY — never a content row (D-4's whole point): count,
+  // document count and total bytes all live on the small bounded meta rows, so the panel never
+  // materialises a single snapshot's text to report how much is stored.
+  const [folderRows, recents, pins, settingsRow, snapshotMetaRows] = await Promise.all([
     getAll<FolderRecord>(conn, STORES.folders),
     getAll<RecentRecord>(conn, STORES.recents),
     getAll<PinRecord>(conn, STORES.pins),
     get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID),
+    getAll<{ docId: string; entries: { id: string; ts: number; bytes: number }[] }>(
+      conn,
+      STORES.snapshotMeta,
+    ),
   ]);
 
   const folders: StoredFolderInfo[] = folderRows.map((f) => ({
@@ -342,8 +395,16 @@ export async function describeStored(): Promise<StoredSummary> {
     ? { theme: settingsRow.theme, tocOpen: settingsRow.tocOpen, tocWidth: settingsRow.tocWidth }
     : null;
 
-  const total = folders.length + recents.length + pins.length + (settings ? 1 : 0);
-  const lines = buildStoredLines({ folders, recents, pins, settings, total });
+  const withEntries = snapshotMetaRows.filter((m) => m.entries.length > 0);
+  const snapshots = {
+    count: withEntries.reduce((n, m) => n + m.entries.length, 0),
+    docs: withEntries.length,
+    bytes: withEntries.reduce((n, m) => n + m.entries.reduce((b, e) => b + e.bytes, 0), 0),
+  };
 
-  return { folders, recents, pins, settings, total, lines };
+  const total =
+    folders.length + recents.length + pins.length + (settings ? 1 : 0) + snapshots.count;
+  const lines = buildStoredLines({ folders, recents, pins, settings, snapshots, total });
+
+  return { folders, recents, pins, settings, snapshots, total, lines };
 }

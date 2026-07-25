@@ -61,7 +61,8 @@ import {
   type StoredSummary,
 } from './store';
 import { DEFAULT_SETTINGS, type Settings } from '../settings/settings';
-import { addRecent, addPin, orderRecents, orderPins } from './recents';
+import { addRecent, addPin, orderRecents, orderPins, SEP } from './recents';
+import { deleteSnapshotsForFolder as defaultDeleteSnapshotsForFolder } from './snapshots';
 import {
   createRecentsView,
   type RecentEntryVM,
@@ -110,6 +111,10 @@ export interface AppStore {
   /** Erase everything (group 2) behind the "wipe all data" control (task 6.0). Optional for the
    *  same reason; absent → the wipe is a no-op the best-effort wrapper swallows. */
   wipeAll?(): Promise<void>;
+  /** Erase a revoked folder's snapshots (D-10, task 1.4) — every snapshot whose `docId` is inside
+   *  `folderId + SEP`. Optional like the other readers; absent → the best-effort wrapper swallows,
+   *  so a minimal fake store still revokes (it just has no snapshots to erase). */
+  deleteSnapshotsForFolder?(folderId: string): Promise<void>;
   /** The persisted reader settings (task 5.2). Optional like the other group-5 readers so a
    *  minimal fake store still mounts — absent → the header control works and applies, it just
    *  has nothing to load from and nowhere to persist to. */
@@ -317,6 +322,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     deletePin: defaultDeletePin,
     describeStored: defaultDescribeStored,
     wipeAll: defaultWipeAll,
+    deleteSnapshotsForFolder: defaultDeleteSnapshotsForFolder,
     getSettings: defaultGetSettings,
     putSettings: defaultPutSettings,
   };
@@ -489,6 +495,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     recents: [],
     pins: [],
     settings: null, // nothing stored — the reader falls back to the Auto default (task 5.2)
+    snapshots: { count: 0, docs: 0, bytes: 0 }, // no snapshots → no snapshot line (task 1.4)
     total: 0,
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };
@@ -686,7 +693,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       // they could do. Inventing copy for it would be new UI at a wiring task, un-walked at the
       // 7.1 gate. Silence here is honest; silence on `onDead` would not be.
     });
-    controller = createWatchController({ detector, contained: true });
+    // The snapshot document identity (§1.1) — `folderId + SEP + path`, built at the install site
+    // and passed into the controller, which captures the OUTGOING source on each re-render (task
+    // 1.4). `activeFolderId` is set for every app-page file open; the explicit null keeps capture
+    // off if it somehow is not (no captured "unknown"). `SEP` is recents' documented separator,
+    // reused so `deleteSnapshotsForFolder`'s `folderId + SEP` revoke scan (D-10) stays exact.
+    const docId = activeFolderId != null ? activeFolderId + SEP + file.path : null;
+    controller = createWatchController({ detector, contained: true, docId });
     registerWatchTarget(controller);
   }
 
@@ -973,7 +986,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    *  the idle affordance and clear the reader. Real, not cosmetic (spec 002 §3.2). */
   async function revokeAccess(): Promise<void> {
     const folderId = activeFolderId;
-    if (folderId) await tryStore(() => store.deleteFolder(folderId));
+    if (folderId) {
+      // D-10: revoke ERASES the folder's snapshots — contents must not outlive access to their
+      // folder (§3.3). This lands BEFORE the folders-row delete so a partial failure leaves the
+      // handle removable on retry; both are best-effort (a store failure never blanks the page).
+      await tryStore(() => store.deleteSnapshotsForFolder?.(folderId) ?? Promise.resolve());
+      await tryStore(() => store.deleteFolder(folderId));
+    }
     await selectFile(null);
     paintIdle();
     await refreshPersisted();

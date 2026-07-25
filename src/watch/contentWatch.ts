@@ -116,5 +116,7 @@ export function installContentWatch(options: ContentWatchOptions): void {
   // The controller also owns `DEAD_AFTER_FAILURES` and passes its own `onError` into the detector,
   // which is what gives this surface a dead-read state at all — the placeholder passed none, so a
   // file deleted while watched here failed silently and forever.
-  registerWatchTarget(createWatchController({ detector, contained: false }));
+  // `docId: null` — the content script has no `folderId`, so it constructs no snapshot identity and
+  // captures nothing (§3.2). This null is the enforcement that keeps capture off this surface.
+  registerWatchTarget(createWatchController({ detector, contained: false, docId: null }));
 }

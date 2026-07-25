@@ -74,7 +74,7 @@ describe('watchController — the re-render contract (task 4.2)', () => {
     const render = vi.fn<(t: string, h: HTMLElement, o: MountOptions) => void>();
     const host = document.createElement('div');
 
-    const controller = createWatchController({ detector, render, signal: () => {} });
+    const controller = createWatchController({ detector, docId: null, render, signal: () => {} });
     controller.start(host);
     fire('# new text');
 
@@ -91,7 +91,7 @@ describe('watchController — the re-render contract (task 4.2)', () => {
     const { detector, fire } = fakeDetector();
     const render = vi.fn<(t: string, h: HTMLElement, o: MountOptions) => void>();
 
-    createWatchController({ detector, contained: true, render, signal: () => {} }).start(
+    createWatchController({ detector, docId: null, contained: true, render, signal: () => {} }).start(
       document.createElement('div'),
     );
     fire('# x');
@@ -112,7 +112,7 @@ describe('watchController — the re-render contract (task 4.2)', () => {
     // clock "zero" is a race between the render body and the gap between two `fire` calls. Freezing
     // it makes the intended condition (no cooldown) exact instead of probable. The cooldown's own
     // behaviour is proven below, on a clock whose every millisecond is deliberate.
-    createWatchController({ detector, render: () => {}, signal, now: () => 0 }).start(host);
+    createWatchController({ detector, docId: null, render: () => {}, signal, now: () => 0 }).start(host);
     fire('a');
     fire('b');
 
@@ -125,6 +125,7 @@ describe('watchController — the re-render contract (task 4.2)', () => {
     const fake = fakeDetector();
     const controller = createWatchController({
       detector: fake.detector,
+      docId: null,
       render: () => {},
       signal: () => {},
     });
@@ -144,7 +145,7 @@ describe('watchController — the re-render contract (task 4.2)', () => {
     resetWatchRegistryForTest();
     const { detector, fire } = fakeDetector();
     const render = vi.fn();
-    const controller = createWatchController({ detector, render, signal: () => {} });
+    const controller = createWatchController({ detector, docId: null, render, signal: () => {} });
 
     controller.start(document.createElement('div'));
     controller.stop();
@@ -157,7 +158,7 @@ describe('watchController — the re-render contract (task 4.2)', () => {
     resetWatchRegistryForTest();
     const { detector, fire } = fakeDetector();
     const render = vi.fn();
-    const controller = createWatchController({ detector, render, signal: () => {} });
+    const controller = createWatchController({ detector, docId: null, render, signal: () => {} });
     const host = document.createElement('div');
 
     controller.start(host);
@@ -244,6 +245,7 @@ function rig(costMs: number): CooldownRig {
   const counters = { signals: 0 };
   const controller = createWatchController({
     detector: fake.detector,
+    docId: null,
     render: (text, host) => {
       renders.push({ text, host, at: clock.now() });
       clock.burn(costMs); // THE RENDER'S COST — the quantity the cooldown is proportional to

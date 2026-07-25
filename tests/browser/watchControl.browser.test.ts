@@ -615,7 +615,7 @@ interface LiveWatch {
 async function startWatch(surface: Surface): Promise<LiveWatch> {
   const { detector, fire } = handDrivenDetector();
   registerWatchTarget(
-    createWatchController({ detector, contained: surface.name === 'contained' }),
+    createWatchController({ detector, contained: surface.name === 'contained', docId: null }),
   );
   const host = surface.mount(buildDoc());
   const scroller = resolveScrollContainer(host, surface.name === 'contained');
@@ -789,6 +789,7 @@ async function startCountedWatch(surface: Surface): Promise<CountedWatch> {
     createWatchController({
       detector,
       contained: surface.name === 'contained',
+      docId: null,
       render: (text, host, options) => {
         counters.renders += 1;
         mount(text, host, options);

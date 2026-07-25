@@ -138,7 +138,7 @@ afterEach(() => {
 describe('watch lifecycle — switching documents stops the previous watch (task 4.3)', () => {
   it("stops A's detector on select(B), and A's later change does NOT re-render B", async () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector, contained: true }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, contained: true, docId: null }));
 
     // The REAL app-page reader pane, in a scrolling wrapper exactly as appShell provides.
     const pane = createReaderPane(document);
@@ -174,7 +174,7 @@ describe('watch lifecycle — switching documents stops the previous watch (task
 
   it('the switch also clears the watching state from the host and the control', async () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector, contained: true }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, contained: true, docId: null }));
 
     const pane = createReaderPane(document);
     pane.element.style.cssText = 'display:block;overflow:auto;height:80vh;width:100%';
@@ -200,7 +200,7 @@ describe('watch lifecycle — switching documents stops the previous watch (task
 describe('watch lifecycle — a dead read surfaces a designed state (task 4.3)', () => {
   it('stops the watch and explains, WITH the last good render still on screen', () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, docId: null }));
 
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);
@@ -234,7 +234,7 @@ describe('watch lifecycle — a dead read surfaces a designed state (task 4.3)',
 
   it('a good read clears the failure streak — only CONSECUTIVE failures are fatal', () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, docId: null }));
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);
     mount(DOC_A, host);
@@ -252,7 +252,7 @@ describe('watch lifecycle — a dead read surfaces a designed state (task 4.3)',
 
   it('restarting the watch clears a stale explanation', () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, docId: null }));
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);
     mount(DOC_A, host);
@@ -290,7 +290,7 @@ describe('watch degraded state — the Firefox routes (task 4.4)', () => {
   /** Put the reader in the state a given surface's decision produces, then mount. */
   function mountUnder(decision: { watchable: boolean; note: string | null }): HTMLElement {
     if (decision.watchable) {
-      registerWatchTarget(createWatchController({ detector: handDriven().detector }));
+      registerWatchTarget(createWatchController({ detector: handDriven().detector, docId: null }));
     }
     setWatchNote(decision.note);
     const host = document.createElement('peekover-root');
@@ -424,7 +424,7 @@ describe('watch degraded state — the Firefox routes (task 4.4)', () => {
 describe('watch lifecycle — watching is a user gesture (task 4.3)', () => {
   it('a plain mount starts NO detector', () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, docId: null }));
 
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);
@@ -439,7 +439,7 @@ describe('watch lifecycle — watching is a user gesture (task 4.3)', () => {
 
   it('re-rendering a reader repeatedly still starts nothing', () => {
     const fake = handDriven();
-    registerWatchTarget(createWatchController({ detector: fake.detector }));
+    registerWatchTarget(createWatchController({ detector: fake.detector, docId: null }));
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);
 

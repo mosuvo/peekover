@@ -10,33 +10,33 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.3 landed; next action is 1.4.**
-> **Nothing is in progress and nothing is blocked. Task 1.3 has landed** (this commit): `readerSourceFor`, a
-> getter exported from `readerMode.ts` beside the existing `registerReaderSource` setter — a READ from the
-> WeakMap `mount()` already stashes to, so 1.4's capture path reads the source rather than retaining a second
-> copy (plan §0 D-1: no second retention, no lifetime extension). **Wired to NOTHING yet** — 1.4's capture path
-> at `watchController.renderNow` is its production caller. `mountRawFallback` (`mount.ts:293`) now registers too,
-> so the WeakMap invariant is TOTAL — *"holds what is currently on screen,"* no exception: the fallback already
-> set `pre.textContent = source`, so the registered value genuinely is what is displayed. `readerMode.ts`'s
-> header comment was refreshed accordingly (it had described the "successful render path only" behaviour this
-> task changes). **This task STORES NOTHING** — it changes what a getter returns and what the fallback path
-> stashes, not what IDB holds. Red-first BOTH directions, each with its own procedure: (a) the fallback-fix
-> proven red on every parameterised instance before the register landed; (b) the success-path Raw view proven
-> unaltered, non-vacuous under a temporary deletion of the success-path register (`mount.ts:202`) — direction
-> (b) reds, direction (a) stays green, asymmetry named. All three Gear-3 artifacts remain on disk; **M1–M5
-> remain fully closed.**
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **tasks 1.1–1.4 landed; next action is 1.5.**
+> **Nothing is in progress and nothing is blocked. Task 1.4 — ★ THE STORING COMMIT — has landed** (this commit):
+> the first code that stores a snapshot, with the WHOLE trust correction in ONE commit (§3.3's same-commit rule).
+> Seven pieces: (1) capture wiring in `watchController.renderNow`, AFTER `readyAt` and OUTSIDE the timed block,
+> `void storeSnapshot(docId, outgoing)` fire-and-forget — `captureEnabled` is a defaulted-ON **const** here
+> (1.5 makes it a settings-row read); (2) D-5 `normalise` (LF) both sides of the equal-check, `changeDetector.ts`
+> byte-unchanged; (3) `SEP` exported from `recents.ts` with the two-subsystem coupling comment, `docId =
+> folderId + SEP + path` built at the app-page install site, `docId: null` on the content script (the
+> app-page-only guard, §3.2); (4) D-10 `deleteSnapshotsForFolder` on the `folderId + SEP` boundary, called from
+> `revokeAccess` before the folder-row delete; (5) the trust correction reaching CODE — `PERMISSIONS.md` claim
+> sentence + derived facts + a new snapshot-capture ledger row, `storageControls`'s note rewritten, `store.ts`'s
+> record-class comments re-scoped; (6) `StoredSummary` gains a required `snapshots` field, `describeStored` reads
+> `snapshotMeta` only, `buildStoredLines` gains a line; (7) `wipeAll` clears the two snapshot stores (META first).
+> The correction ordering was procedurally enforced: product code + `PERMISSIONS.md` + type-forced updates landed
+> first, then the RED transition was observed VERBATIM on THREE genuine product-driven assertion classes
+> (`wipe.browser.test.ts` folders line, `appShell.test.ts` disclosure note, `store.test.ts`/`settingsStore.browser`
+> settings line), and only THEN were the assertions flipped. Red-first proven for the two absence/boundary claims
+> (content-script no-capture; the `folderId + SEP` delimiter). **The `diff` dependency is still task 5.1 and
+> `permissions: []` still stands. `DB_VERSION` is 3 (from 1.1).** M1–M5 remain fully closed.
 >
-> **THE NEXT ACTION IS TASK 1.4 — ★ THE STORING COMMIT.** The first code that stores a snapshot, and by HARD
-> constraint it does not split: capture wiring (`watchController.renderNow`, reading through `readerSourceFor`
-> the value `mount()` stashed) lands in the SAME commit as the WHOLE trust correction — `PERMISSIONS.md`'s claim
-> sentence and every trust surface that must now account for stored state. Splitting it ships either
-> storage-wired-to-nothing (the M5 defect class) or a false published claim. **Group 1 is deliberately
-> end-to-end**; 1.4 is where D-4's store layer, 1.2's eviction planner, and the trust correction all meet. **The
-> Now-pointer advances PER TASK from here** (the M1 rule — it once lagged four tasks and the next session acted
-> on stale state).
->
-> **The `diff` dependency is still task 5.1 and `permissions: []` still stands.** Schema landed at 1.1;
-> no snapshot has been stored and no dependency has been added yet.
+> **THE NEXT ACTION IS TASK 1.5 — D-12, the capture off-switch as its OWN settings ROW** (not a field on the
+> shared `Settings` record — `getSettings()` hand-enumerates its fields at `store.ts`, so a new field would
+> persist then silently vanish on read; §4-1 is the trap D-12 routes around, deliberately left live). The flag
+> is a second row in the settings store, read by key, so `getSettings()` stays untouched; `describeStored()` must
+> read both rows; `wipeAll()` resets the flag to its default (on). `captureEnabled` in `watchController.ts`
+> becomes that settings-row read (it is a defaulted-ON const at 1.4). **The Now-pointer advances PER TASK** (the
+> M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next
 

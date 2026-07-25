@@ -144,7 +144,7 @@ go to the gate) and the milestone-close gate (9.1).
       failed render behaves **identically before and after** the change — pin the OLD behaviour red-first, so the
       direction-(b) change is proven not to silently alter shipped Raw semantics. Golden EMPTY · manifest green.
 
-- [ ] **1.4 ★ THE STORING COMMIT — capture wiring + the WHOLE trust correction, one commit (HARD constraint).**
+- [x] **1.4 ★ THE STORING COMMIT — capture wiring + the WHOLE trust correction, one commit (HARD constraint).**
       This is the first code that stores a snapshot, so §7-10 binds the trust correction into the SAME commit and
       the same-commit rule binds every trust surface that must now account for the state. It is large by design
       and **does not split** — splitting ships either storage-wired-to-nothing (the M5 defect class) or a false

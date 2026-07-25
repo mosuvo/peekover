@@ -101,9 +101,22 @@
 
 import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
+import { readerSourceFor } from '../render/readerMode';
+import { normalise, storeSnapshot } from '../app/snapshots';
 import type { ChangeDetector } from './changeDetector';
 import { notifyWatchChanged, setWatchNote, type WatchTarget } from './watchRegistry';
 import { signalWatchUpdate } from './watchControl';
+
+/**
+ * Whether the re-render loop captures a snapshot of the OUTGOING document before replacing it.
+ *
+ * ★ A defaulted-ON CONSTANT at task 1.4, stated so it is not improvised: it becomes the D-12
+ * settings-row read at task 1.5, and the symbol has no other source until then. Capture is ALSO
+ * gated per-render on `docId != null` (below) — the app-page-only guard §3.2 — so this constant
+ * cannot by itself put capture on the content-script surface; it only decides whether the app page
+ * captures at all.
+ */
+const captureEnabled = true;
 
 /**
  * How many CONSECUTIVE failed reads mean the watch is dead rather than merely interrupted.
@@ -178,6 +191,14 @@ export type RenderFn = (text: string, host: HTMLElement, options: MountOptions) 
 export interface WatchControllerOptions {
   /** The detector this controller drives (task 1.1's polled one, or 1.2's observer). */
   detector: ChangeDetector;
+  /**
+   * The snapshot document identity `folderId + SEP + path`, or `null` for a surface that captures
+   * nothing (task 1.4). REQUIRED-not-optional deliberately: the null case is EXPLICIT, so no call
+   * site can omit it and silently default to a captured "unknown". The app page passes a constructed
+   * id (`appShell.installWatchForFile`); the content script passes `null` (`contentWatch.ts`) — and
+   * that `docId != null` guard, not a second check, is what keeps capture app-page-only (§3.2).
+   */
+  docId: string | null;
   /** Whether the reader is the app page's contained pane — threaded to `mount` AND to the scroll
    *  container resolver, which genuinely differs per surface (task 3.1's extracted trap guard). */
   contained?: boolean;
@@ -204,6 +225,7 @@ export interface WatchControllerOptions {
 export function createWatchController(options: WatchControllerOptions): WatchTarget {
   const {
     detector,
+    docId,
     contained = false,
     render = mount,
     signal = signalWatchUpdate,
@@ -277,6 +299,12 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
   function renderNow(text: string, target: HTMLElement): void {
     const started = now();
 
+    // THE OUTGOING SOURCE, read BEFORE render() overwrites the reader-source WeakMap with `text`
+    // (D-1 — a READ; the value already exists, mount() stashed it on the last render). This is a
+    // WeakMap.get, negligible against the render it precedes; the actual capture WRITE is issued
+    // below, after `readyAt`, so it never inflates the cost-proportional cooldown.
+    const outgoing = readerSourceFor(target);
+
     // CAPTURED BEFORE THE RE-RENDER, and it has to be: after `replaceChildren` the box's geometry
     // is the NEW document's, so "were they at the bottom" is a question only the old layout can
     // answer. This is the whole of decision 1 — one boolean, read at the one moment it is true.
@@ -301,6 +329,20 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     readyAt += (readyAt - started) * COOLDOWN_MULTIPLIER;
 
     if (wasAtBottom) followToBottom(scroller);
+
+    // CAPTURE (task 1.4, §1.1) — OUTSIDE the timed block above and fire-and-forget. An awaited write
+    // would inflate `readyAt` and the cooldown with it; a rejection is swallowed to the designed
+    // state (§4: a failed snapshot completes the re-render normally). `docId != null` is the
+    // app-page-only guard (§3.2); the D-5 normalise equality means a pure CRLF↔LF change stores
+    // nothing (`changeDetector.ts` is untouched — the cost lands here, at capture).
+    if (
+      captureEnabled &&
+      docId != null &&
+      outgoing != null &&
+      normalise(outgoing) !== normalise(text)
+    ) {
+      void storeSnapshot(docId, outgoing);
+    }
   }
 
   /** The cooldown expired (or the timer fired early): render whatever is pending, if anything. */

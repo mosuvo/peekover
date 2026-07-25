@@ -113,16 +113,29 @@ function fakeStore(): AppStore & {
   folders: FolderRecord[];
   recents: RecentRecord[];
   deleted: string[];
+  snapDeleted: string[];
+  callLog: string[];
 } {
   const folders: FolderRecord[] = [];
   const recents: RecentRecord[] = [];
   const deleted: string[] = [];
+  const snapDeleted: string[] = []; // folderIds passed to deleteSnapshotsForFolder (D-10, task 1.4)
+  const callLog: string[] = []; // ordering witness: 'snap:<id>' / 'folder:<id>'
   return {
     folders,
     recents,
     deleted,
+    snapDeleted,
+    callLog,
     putFolder: async (r) => void folders.push(r),
-    deleteFolder: async (id) => void deleted.push(id),
+    deleteFolder: async (id) => {
+      callLog.push(`folder:${id}`);
+      deleted.push(id);
+    },
+    deleteSnapshotsForFolder: async (id) => {
+      callLog.push(`snap:${id}`);
+      snapDeleted.push(id);
+    },
     putRecent: async (r) => void recents.push(r),
   };
 }
@@ -313,6 +326,29 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     expect(container.querySelector('.peekover-app__cta')).not.toBeNull();
     expect(store.deleted).toEqual([store.folders[0].id]);
     expect(container.querySelector('.peekover-app__reader [data-state="no-selection"]')).not.toBeNull();
+  });
+
+  // D-10 / task 1.4 — the PRODUCTION revoke path erases the folder's snapshots, and does so BEFORE
+  // deleting the folder row (so a partial failure leaves the handle removable on retry). This drives
+  // the real `revokeAccess` closure through the chip click (the M5 seam rule: a test per seam drives
+  // the production entry path); the delimiter-boundary correctness itself is the real-engine
+  // snapshotRevoke.browser.test.ts's job.
+  it('REVOKE erases the folder’s snapshots through the production path, before the folder row', async () => {
+    const store = fakeStore();
+    const source = sourceOf('notes', [mdFile('a.md')]);
+    const app = mountAppShell(container, { openFolder: openerReturning({ ok: true, source }), store });
+    await app.openFolder();
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+    await flush();
+
+    const folderId = store.folders[0].id;
+    container.querySelector<HTMLButtonElement>('.peekover-app__chip-revoke')!.click();
+    await flush();
+
+    // The revoked folder's snapshots were erased, keyed by its folderId...
+    expect(store.snapDeleted).toEqual([folderId]);
+    // ...and BEFORE the folder row was dropped (ordering is load-bearing, not incidental).
+    expect(store.callLog).toEqual([`snap:${folderId}`, `folder:${folderId}`]);
   });
 });
 
@@ -652,11 +688,19 @@ function summarize(
   }));
   const total = folderInfos.length + recents.length + pins.length;
   const lines: string[] = [];
-  if (folderInfos.length) lines.push(`${folderInfos.length} remembered folder — names only, never file contents.`);
+  if (folderInfos.length) lines.push(`${folderInfos.length} remembered folder — names only.`);
   if (recents.length) lines.push(`${recents.length} recently opened file — path + name, so the list can reopen them.`);
   if (pins.length) lines.push(`${pins.length} pinned item — path + name for quick access.`);
   if (total === 0) lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
-  return { folders: folderInfos, recents, pins, settings: null, total, lines };
+  return {
+    folders: folderInfos,
+    recents,
+    pins,
+    settings: null,
+    snapshots: { count: 0, docs: 0, bytes: 0 },
+    total,
+    lines,
+  };
 }
 
 describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
@@ -693,8 +737,9 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
         recents: [{ id: 'r1', folderId: 'F1', path: 'docs/a.md', name: 'a.md', openedAt: 2 }],
         pins: [{ id: 'p1', kind: 'folder', folderId: 'F1', path: '', name: 'live-notes', pinnedAt: 3 }],
         settings: null,
+        snapshots: { count: 0, docs: 0, bytes: 0 },
         total: 4,
-        lines: ['1 remembered folder — names only, never file contents.'],
+        lines: ['1 remembered folder — names only.'],
       }),
     };
     mountAppShell(container, { store });
@@ -711,10 +756,13 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
     expect(panel!.textContent).toContain('name only'); // persisted:false tag
     // Recents + pins are surfaced.
     expect(panel!.textContent).toContain('a.md');
-    // The plain-language line + the standing contents-never-stored promise are both shown.
-    expect(panel!.textContent).toContain('never file contents');
+    // The re-scoped plain-language folder line + the standing storage disclosure are both shown.
+    // (006 task 1.4: the folder line is "names only" and the disclosure names what IS stored —
+    // on-device snapshots that are never uploaded. The DOM hook stays `contents-never-stored`, a
+    // stable selector, not a claim; only the text-match updates.)
+    expect(panel!.textContent).toContain('names only');
     expect(panel!.querySelector('[data-note="contents-never-stored"]')?.textContent).toMatch(
-      /never stores the contents/i,
+      /never uploaded/i,
     );
     expect(panel!.getAttribute('data-state')).toBe('has-data');
   });

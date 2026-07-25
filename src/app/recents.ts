@@ -40,7 +40,16 @@ export const DEFAULT_RECENTS_CAP = 20;
 // is the six-character escape sequence (backslash-u-0-0-0-0) used as literal text, NOT
 // an embedded NUL control byte — literal control bytes flag the file "Binary" and break
 // edits (AGENTS.md style rule).
-const SEP = '\\u0000';
+//
+// ★ LOAD-BEARING ACROSS TWO SUBSYSTEMS as of 006 task 1.4 (§4-9). It is EXPORTED now because
+// the snapshot layer builds its document identity as `folderId + SEP + path` too — the SAME
+// separator, reused rather than re-declared. That couples recents' composite identity to
+// snapshot identity: change this value and every stored snapshot's `docId` stops matching, so
+// `snapshots.storeSnapshot`/`deleteSnapshotsForFolder` (and D-10's `folderId + SEP` revoke
+// scan) silently miss the folder they must erase — nothing throws, it just stops matching.
+// The recents rationale above (six-char value-as-words, collision-free) is unchanged and now
+// protects both callers; do not rewrite it.
+export const SEP = '\\u0000';
 
 /** Identity of a recent entry: same folder + same path === the same document. */
 function recentKey(r: RecentLike): string {

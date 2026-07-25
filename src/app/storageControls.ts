@@ -9,8 +9,9 @@
 // The honesty posture made concrete:
 //   • Remembered folders are shown ONLY as `persisted: boolean` — the presence of a stored
 //     directory handle, NEVER the handle object itself (store.describeStored guarantees this).
-//   • It states PLAINLY that file contents are never stored — a standing line, present even
-//     when the store is empty, so the promise is visible unconditionally.
+//   • It carries the standing storage disclosure — present even when the store is empty — stating
+//     plainly what IS stored (on-device watched-document snapshots) and what is names-only
+//     (folders/recents/pins), so the honest picture is visible unconditionally (006 task 1.4).
 //   • Never blank: an empty store shows the designed "Nothing stored" state describeStored()
 //     already returns (its `lines`), not a blank box.
 //   • Wipe is destructive, so it takes a lightweight INLINE confirm ("Confirm wipe?") — one
@@ -22,9 +23,18 @@
 
 import type { StoredSummary } from './store';
 
-/** The standing promise, shown unconditionally (empty store included). */
-export const CONTENTS_NEVER_STORED_NOTE =
-  'Peekover never stores the contents of your files — only names and paths, so this list can reopen them. Everything here lives on this device only.';
+/**
+ * The standing storage disclosure, shown unconditionally (empty store included). Rewritten at 006
+ * task 1.4: Peekover now stores watched-document SNAPSHOTS (file contents), so the old "never stores
+ * the contents" promise would be false. This states the new truth honestly — bounded on-device text
+ * states that never leave the device — while keeping the names-only posture for folders/recents/pins.
+ * How MANY bytes are held is the panel's live snapshot line (`describeStored`), not this static note.
+ * (The DOM hook stays `data-note="contents-never-stored"` — a stable selector, not a claim.)
+ */
+export const STORAGE_DISCLOSURE_NOTE =
+  'Peekover keeps a bounded number of past text states (snapshots) of documents you watch, so you ' +
+  'can compare versions — stored on this device only and never uploaded. Folders, recents, and pins ' +
+  'remain names and paths only. Everything Peekover stores lives on this device.';
 
 export interface StorageViewOptions {
   /** The plain-language picture from `store.describeStored()`. */
@@ -179,7 +189,7 @@ export function createStorageView(doc: Document, opts: StorageViewOptions): Stor
   const never = doc.createElement('p');
   never.className = `${SC_CLASS}__never`;
   never.dataset.note = 'contents-never-stored';
-  never.textContent = CONTENTS_NEVER_STORED_NOTE;
+  never.textContent = STORAGE_DISCLOSURE_NOTE;
   element.append(never);
 
   // The wipe control — inline confirm, one surface. Rebuilt in place between idle/confirming.
