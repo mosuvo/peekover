@@ -466,13 +466,17 @@ go to the gate) and the milestone-close gate (9.1).
       both engines. **NO `src/`, test or spec file touched.** Golden EMPTY · `permissions: []` · unit **549** ·
       browser **605/15/74** · `Settings`/`getSettings`/`putSettings` byte-identical (fourteen tasks).
 
-- [ ] **7.2 DECISION GATE (human) — the bound NUMBERS, chosen from 7.1 (D-8; D-16's axis is already decided).**
+- [x] **7.2 DECISION GATE (human) — the bound NUMBERS, chosen from 7.1 (D-8; D-16's axis is already decided).**
       The human picks the count / age / byte bound values from 7.1's measurements. **The axis is NOT reopened**
       (D-16: count per-document, bytes and age global — settled). Recorded in `docs/ai/decisions.md` before the
       code that sets them.
       Files: `docs/ai/decisions.md`
       Verify (**human gate**): the chosen numbers are recorded with the measurement that justifies them, before
       7.3. No code lands on an assumed number.
+      **LANDED.** Values chosen (see `decisions.md` 2026-07-26): `SNAPSHOT_COUNT_PER_DOC = 15`,
+      `SNAPSHOT_TOTAL_BYTES = 20971520` (20 MiB), `SNAPSHOT_MAX_AGE_MS = 2592000000` (30 days). No code at 7.2;
+      7.3 sets the constants and re-runs the accumulation cell of `perf:snapshot-capture` to confirm the new
+      bounds bind (or don't) as expected.
 
 - [ ] **7.3 Implement the CHOSEN bounds.** Set 1.2's proposed constants to 7.2's chosen values (a no-op edit if
       they matched; recorded either way). If the chosen numbers change eviction behaviour, the 1.2 unit cases move

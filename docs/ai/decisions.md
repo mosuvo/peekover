@@ -1,6 +1,41 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-26 · D-8 SNAPSHOT RETENTION BOUND VALUES CHOSEN (task 7.2 human decision gate).** Per plan §0 D-8
+  and §1.2, the axes are settled (D-16, 2026-07-23) — count per-document, bytes global, age global — and this
+  entry logs the VALUES chosen for `snapshots.ts:61/77/93` before 7.3 sets the constants. Chosen from 7.1's
+  measurements (`progress.md` M6-post-7.1 Now section) by human decision, not inference. Values, and the
+  reasoning:
+  - `SNAPSHOT_COUNT_PER_DOC` = **15**. Enough undo-depth for realistic "revise a document over an afternoon"
+    sessions without accumulating stale early history — an agent editing every couple of minutes for an hour
+    hits 15 and starts evicting the earliest. 15 is moderate history depth chosen deliberately over both
+    deeper (20+, keeps stale early state) and shallower (10, tight for active sessions). The picker (6.2)
+    scrolls internally at this depth and that is by design, not a cost — `readerCss.ts:401` caps it at
+    `min(46vh,320px)` with `overflow:auto`, and its own comment records the intent: *"scrolling internally so
+    a full retention window stays one calm list."*
+  - `SNAPSHOT_TOTAL_BYTES` = **20971520** B (**20 MiB**). Five MiB was the plan's defensive proposal
+    ("invisible on any disk") but bit at 4 snapshots for 1 MB documents in 7.1's accumulation — thin for the
+    case where deep history is MOST valuable (large documents evolve more meaningfully than small ones). At
+    20 MiB: ~17 snapshots fit for 1 MB docs (above the count bound at 15, so count binds first as designed);
+    ~420 for 50 KB docs; still 0.02% of a 100 GB drive, still under any user's "notice this" threshold. Bytes
+    is the safety cap for pathological "many large docs" cases, not the everyday constraint — count is what
+    binds normal usage.
+  - `SNAPSHOT_MAX_AGE_MS` = **2592000000** ms (**30 days**). The plan's proposal, kept deliberately after
+    weighing 7 and 90 as alternatives. Framing: age is a SAFETY VALVE, not an active constraint on working
+    memory. Count and bytes bound active usage; age exists to clean up abandoned documents, because at 20 MiB
+    bytes rarely bind in typical use and age becomes the effective garbage collector for the "watched briefly
+    then forgot" case. 30 days covers common project cadences (weekly / biweekly / monthly reviews) while
+    cleaning abandoned experiments within a month. 7 days would change what snapshots ARE (making them
+    "recent working state" not "history of this document"). 90 days would leave stale state occupying the
+    pool for a full quarter after abandonment. **Semantic note recorded for future sessions:** age is measured
+    from snapshot timestamp, not from last access — an actively-worked document loses 30-day-old snapshots
+    even if opened yesterday. Acceptable because by then newer, more relevant snapshots exist; flagged as a
+    semantic worth revisiting if the "last access" model becomes the design need.
+  **Revisit-when:** the user-visible storage number reaches a level users comment on (bytes); users report
+  losing history they wanted at 15 or 30 days (count or age); an eviction bound never binds in practice over a
+  full milestone's use (any axis is chosen wrong); or 8.1's re-measurement shows the accumulation shape 7.1
+  measured has shifted materially.
+
 - **2026-07-25 · `diff` DEPENDENCY PINNED AT `^9.0.0` (task 5.1) · the first dependency added since M1, and
   the concrete resolution of D-2's approval** (the `diff` package was approved and deferred to 006 at 005's
   plan gate). Package `diff` (kpdecker/jsdiff): BSD-3-Clause, ZERO runtime deps (`pnpm ls diff --depth 0`

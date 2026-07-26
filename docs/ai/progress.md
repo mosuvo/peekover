@@ -10,8 +10,34 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **groups 1–6 CLOSED; group 7 task 7.1 landed; next action is 7.2 — A HUMAN DECISION GATE.**
-> **Nothing is in progress and nothing is blocked. Task 7.1 — MEASURE capture cost + diff render/memory — has landed** (this
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **groups 1–6 CLOSED; group 7 is 7.1 + 7.2 done, 7.3 next.**
+> **Nothing is in progress and nothing is blocked. Task 7.2 — D-8's HUMAN DECISION GATE — has landed** (this commit).
+> It is the gate where **the human chose the three snapshot retention bound VALUES** from 7.1's measurements, and it is a
+> DOCS-ONLY task by design: **no code landed.** `src/app/snapshots.ts` is byte-identical; 7.3 sets the constants. The
+> decision is recorded in `docs/ai/decisions.md` (2026-07-26 entry, appended at the top) **before** the code that carries
+> it — the same order the `diff@^9.0.0` approval used at 5.1. **The AXES were never reopened** (D-16, 2026-07-23: count
+> per-document, bytes and age global); 7.2 decided only the numbers.
+>
+> **THE CHOSEN VALUES — for `snapshots.ts:61/77/93`:**
+> - **`SNAPSHOT_COUNT_PER_DOC` = 15** (was the proposed 20)
+> - **`SNAPSHOT_TOTAL_BYTES` = 20971520 B — 20 MiB** (was the proposed 5 MiB)
+> - **`SNAPSHOT_MAX_AGE_MS` = 2592000000 ms — 30 days** (the proposed value, kept deliberately)
+>
+> **THE MENTAL MODEL THE THREE BOUNDS ENCODE — recorded because it is what makes them readable later, and because
+> a future session tuning one of them in isolation would otherwise be tuning it against the wrong purpose:**
+> **count binds active usage** (moderate per-document history depth — what a user actually reasons about when they think
+> "the last N states of this document"); **bytes is the SAFETY CAP**, not the everyday constraint (20 MiB exists for the
+> pathological "many large documents" case; at 20 MiB a 1 MB document fits ~17 snapshots, which is *above* the count bound,
+> so count binds first as designed — that reordering relative to 7.1's observed 4-deep-at-5-MiB behaviour is the point of
+> the change); **age is the SAFETY VALVE for abandonment** (it exists to reclaim documents watched briefly and forgotten,
+> not to constrain working memory). The full reasoning, the alternatives weighed, and the revisit-when triggers are in
+> `decisions.md`, not restated here (C5). One semantic is logged there and worth knowing before touching eviction: **age
+> is measured from snapshot timestamp, not from last access** — an actively-worked document still loses its 30-day-old
+> snapshots.
+>
+> <details><summary>Task 7.1 — MEASURE capture cost + diff render/memory (landed previously; the input to 7.2)</summary>
+>
+> **Task 7.1 — MEASURE capture cost + diff render/memory — landed** (a previous
 > commit). It is the MEASURING task, and it **chose nothing**: no bound, no threshold, no recommendation. Two new harnesses
 > (`scripts/perf-snapshot-capture.ts`, `scripts/perf-diff.ts`), two new `perf:*` script entries, numbers below. **No `src/`
 > file, no test file and no spec file was touched.** The only gates asserted are the two SHIPPED M1 ones (<150 ms typical
@@ -147,24 +173,23 @@
 > `DB_VERSION` is 3.** Unit 519 → **540**; browser 577/15/70 → **601/15/72**. M1–M5 remain fully closed.
 > </details>
 > </details>
+> </details>
 >
-> **THE NEXT ACTION IS TASK 7.2 — A HUMAN DECISION GATE. AN AGENT CANNOT DO IT.** 7.2 is where **the human picks D-8's
-> bound VALUES** — `SNAPSHOT_COUNT_PER_DOC`, `SNAPSHOT_TOTAL_BYTES`, `SNAPSHOT_MAX_AGE_MS` (`snapshots.ts:61/77/93`,
-> currently the PROPOSED 20 / 5 MiB / 30 days, explicitly not chosen). **The AXES are not reopened** — D-16 settled them
-> (count per-document, bytes and age global) and 7.2 decides only the numbers. The choice is recorded in
-> `docs/ai/decisions.md` **before** 7.3 sets the constants; no code lands on an assumed number.
-> **7.1 deliberately offers no recommendation, and the next session must not read one into its numbers.** Do not treat
-> "eviction bound at 4 snapshots at 1 MB" as an argument for any particular byte bound — it is an observation about what
-> the proposed default does, which is the input to the decision, not the decision. A bound inferred from a measurement
-> is exactly the 004 4.1 failure this three-task split exists to prevent, and a soft "seems about right" is the same
-> failure arriving a beat later.
-> **What 7.2 has to work with** (all above, all Chromium): per-snapshot bytes ≈ the document's own size (50.4 KB / 1.12 MB);
-> 13 snapshots from 12 edits at 50 KB with the count cap never reached; 4 snapshots retained at 1 MB with the byte bound
-> binding from the 4th edit on; the synchronous capture guard at 5.0 µs / 47.5 µs; the awaited write at 0.6 ms / 10.8 ms;
-> and the diff at 1 MB entering in 1157.4 ms with a 442.5 ms first interactive frame.
+> **THE NEXT ACTION IS TASK 7.3 — IMPLEMENT THE CHOSEN BOUNDS.** Set the three constants at `snapshots.ts:61/77/93` to
+> 7.2's values (`15` / `20 * 1024 * 1024` / `30 * 24 * 60 * 60 * 1000` — the age constant is unchanged from the proposal,
+> and is recorded as unchanged rather than skipped). **The eviction ALGORITHM does not move — only the constants**; if the
+> new numbers change eviction behaviour, 1.2's unit cases move with them (`src/app/snapshots.test.ts`). Then **re-run the
+> accumulation cell of `perf:snapshot-capture`** (`pnpm perf:snapshot-capture -- --no-build`) to confirm the new bounds
+> bind — or don't — as expected: the 1 MB case should now grow past 7.1's 4 and be held by the COUNT bound at 15 rather
+> than the byte bound, and the 50 KB case should be unaffected (its 13-from-12-edits run never reached either cap). **A
+> result that contradicts that expectation is a finding to report, not a number to quietly accept** — it would mean the
+> byte arithmetic is not what 7.2 reasoned against. **ONE small commit; no other code change.**
+> **Nothing in `decisions.md` is reopened at 7.3.** 7.2 chose; 7.3 implements. If 7.3's re-measurement genuinely
+> invalidates a value, that is a new decision entry and a return to the human — not an edit to the 2026-07-26 entry
+> (the log is append-only).
 > **Re-run either harness any time:** `pnpm perf:snapshot-capture -- --no-build`, `pnpm perf:diff -- --no-build`. Neither
 > emits an exit-code gate — they are informational by design (only `perf-first-paint.ts` owns a hard gate, because
-> <150 ms is a shipped M1 acceptance gate).
+> <150 ms is a shipped M1 acceptance gate). **7.1's measurements below stand until 8.1's official re-measurement.**
 > **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next
