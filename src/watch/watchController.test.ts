@@ -19,10 +19,16 @@ import {
   isAtBottom,
   AT_BOTTOM_SLACK_PX,
   COOLDOWN_MULTIPLIER,
+  CHANGED_AGAIN_NOTE,
+  DIFF_DISPLAYED_ATTR,
 } from './watchController';
 import type { ChangeDetector, OnText } from './changeDetector';
 import type { MountOptions } from '../render/mount';
-import { resetWatchRegistryForTest } from './watchRegistry';
+import { resetWatchRegistryForTest, watchNote } from './watchRegistry';
+// TEST FILES ARE EXEMPT FROM THE 5.1 IMPORT FENCE (diffEngine.test.ts's allowlist walks PRODUCTION
+// `.ts` only). That exemption is what makes the drift check below possible at all: production
+// `watchController.ts` may not import the view, so the test imports BOTH sides and compares them.
+import { DIFF_HOST_ATTR, DIFF_ACTIVE } from '../render/diffView';
 
 /** A detector whose callback this test drives by hand — the seam, with no timers involved. */
 function fakeDetector(): { detector: ChangeDetector; fire: (text: string) => void; stops: number } {
@@ -413,5 +419,261 @@ describe('watchController — the cost-proportional cooldown (task 5.3)', () => 
     r.fire('B: first');
     expect(r.renders).toHaveLength(2);
     expect(r.renders[1]).toMatchObject({ text: 'B: first', host: hostB });
+  });
+});
+
+// ════ TASK 6.3 — D-11: A DISPLAYED DIFF DEFERS THE RE-RENDER (DECISION 4) ═════════════════════
+//
+// The rule under test: while D-15's `data-diff` attribute is on the host, `onText` coalesces and
+// renders NOTHING; when the attribute goes away, the withheld text renders and the reader is told
+// the document moved while they were comparing.
+//
+// ── WHAT IS PROVEN HERE AND WHAT IS NOT ──────────────────────────────────────────────────────
+//
+// The DEFERRAL is state-machine logic over one attribute, which jsdom models exactly (it has a real
+// MutationObserver). What jsdom cannot see is whether the diff was ever actually on screen, whether
+// the reading column stayed hidden while it was, and whether the real affordance's exit gesture
+// reaches the attribute at all — those are the real-engine half, in
+// tests/browser/watchDiffDefer.browser.test.ts, on Chromium AND Firefox.
+//
+// ── WHY THE ATTRIBUTE IS SET BY HAND HERE ────────────────────────────────────────────────────
+//
+// Calling `enterDiff` would import `diffView` into this suite's graph for no gain: the controller's
+// contract is with the ATTRIBUTE, not with the view, and setting it directly is the honest way to
+// test a contract stated in exactly those terms. The risk that buys — that the two sides drift on
+// how the attribute is SPELLED — is what the drift check at the bottom of this block is for.
+
+/** Yield long enough for jsdom to deliver a MutationObserver batch. Microtasks, not timers, so it
+ *  is safe under `vi.useFakeTimers()` — the callback is queued on the microtask checkpoint. */
+async function observerTick(): Promise<void> {
+  for (let i = 0; i < 4; i += 1) await Promise.resolve();
+}
+
+/** Open a diff on this host, the way `diffView.enterDiff` does — the attribute, and nothing else. */
+function enterDiffOn(host: HTMLElement): void {
+  host.setAttribute(DIFF_DISPLAYED_ATTR, DIFF_ACTIVE);
+}
+/** Close it, the way `diffView.exitDiff` and `mount()`'s D-15 clears both do. */
+function exitDiffOn(host: HTMLElement): void {
+  host.removeAttribute(DIFF_DISPLAYED_ATTR);
+}
+
+describe('watchController — D-11: a displayed diff defers the re-render (task 6.3)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('DEFERS while the diff is displayed: no render, and no timer armed either', async () => {
+    const r = rig(40);
+    r.controller.start(r.host);
+    r.fire('v0'); // the immediate first render, BEFORE the diff — the baseline the reader is on
+    expect(r.renders).toHaveLength(1);
+
+    enterDiffOn(r.host);
+    r.clock.advance(5000); // well past any cooldown from the render above
+    r.fire('v1 — arrives while the comparison is open');
+    await observerTick();
+
+    // NOT RENDERED — the comparison the user opened is still what is on screen.
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    // AND NO TIMER. This is the half a naive "skip this one render" would fail: an armed timer
+    // would fire mid-diff and replace the comparison a second later, which is the same defect
+    // with a delay on it. There is no time at which the deferred text becomes renderable — only
+    // a gesture — so there is nothing for a timer to be aimed at.
+    expect(vi.getTimerCount(), 'no timer may be armed by a deferred change').toBe(0);
+    // ...and no signal either: nothing visibly updated, so nothing may flash.
+    expect(r.signals).toBe(1);
+  });
+
+  it('FLUSHES ON EXIT: removing the attribute renders the withheld text', async () => {
+    const r = rig(40);
+    r.controller.start(r.host);
+    r.fire('v0');
+    enterDiffOn(r.host);
+    r.clock.advance(5000);
+    r.fire('v1');
+    await observerTick();
+    expect(r.renders).toHaveLength(1); // still withheld
+
+    exitDiffOn(r.host);
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(r.renders[1].host).toBe(r.host);
+  });
+
+  it('SAYS SO: the exit flush sets the "changed again" note (the gate-3 line)', async () => {
+    const r = rig(40);
+    r.controller.start(r.host);
+    expect(watchNote()).toBeNull(); // `start()` cleared it — the note below is this event's
+    r.fire('v0');
+    enterDiffOn(r.host);
+    r.clock.advance(5000);
+    r.fire('v1');
+    await observerTick();
+    expect(watchNote(), 'the line must not appear while the diff is still up').toBeNull();
+
+    exitDiffOn(r.host);
+    await observerTick();
+
+    expect(watchNote()).toBe(CHANGED_AGAIN_NOTE);
+    // Never blank (AGENTS.md #5): whatever 9.1 decides about the wording, it resolves to a
+    // non-empty sentence rather than an empty note element.
+    expect(CHANGED_AGAIN_NOTE.length).toBeGreaterThan(0);
+  });
+
+  it('NO CHANGE, NO LINE: exiting a diff nothing arrived during says nothing at all', async () => {
+    // ★ THE ONE THAT PROVES THE FLAG IS DOING WORK. Without `pendingSetByDefer`, every diff exit
+    // would announce a change — a sentence about an event that did not happen, which is the same
+    // dishonesty this decision exists to remove, pointed the other way.
+    const r = rig(40);
+    r.controller.start(r.host);
+    r.fire('v0');
+
+    enterDiffOn(r.host);
+    r.clock.advance(5000);
+    exitDiffOn(r.host); // ...and nothing arrived in between
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']); // no re-render
+    expect(watchNote()).toBeNull(); // and no line
+  });
+
+  it('COALESCES during the diff: three changes become ONE render of the NEWEST text', async () => {
+    // The coalescer's own rule (DECISION 3) is unchanged by the deferral — one slot, newest wins.
+    // The count AND the content, for the same reason 5.3 asserted both: keeping the FIRST text
+    // would pass a count-only test and would be the wrong answer.
+    const r = rig(40);
+    r.controller.start(r.host);
+    r.fire('v0');
+    enterDiffOn(r.host);
+    r.clock.advance(5000);
+
+    r.fire('v1');
+    r.fire('v2');
+    r.fire('v3');
+    await observerTick();
+    expect(r.renders).toHaveLength(1);
+
+    exitDiffOn(r.host);
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v3']); // ONE render, and it is the newest
+    expect(r.signals).toBe(2); // one flash per visible update, still
+  });
+
+  it('A DOCUMENT SWITCH DURING A DIFF DISCARDS the deferred text — A never lands in B', async () => {
+    // 4.3's cross-feed bug, one more level up. `readerPane.select()` / `appShell.selectFolderFile`
+    // are stop-then-start with a DIFFERENT host, and a deferred text surviving that would put file
+    // A's content into file B's reader the moment A's stale attribute happened to clear.
+    const r = rig(40);
+    const hostB = midDocumentHost();
+
+    r.controller.start(r.host); // watching file A
+    r.fire('A: rendered');
+    enterDiffOn(r.host);
+    r.clock.advance(5000);
+    r.fire('A: deferred'); // withheld behind A's diff when the user switches away
+
+    r.controller.stop(); // ...what the switch does first
+    r.controller.start(hostB); // ...and then B mounts
+    exitDiffOn(r.host); // A's attribute clears afterwards (mount()'s D-15 clear, or a late gesture)
+    await observerTick();
+    r.clock.advance(5000);
+
+    expect(r.renders).toHaveLength(1); // A's deferred text never rendered anywhere
+    expect(r.renders.some((x) => x.host === hostB)).toBe(false);
+    expect(watchNote()).toBeNull(); // and B is told nothing about A's change
+
+    // ...and B is not left in a deferred state either: its first change renders immediately.
+    r.fire('B: first');
+    expect(r.renders).toHaveLength(2);
+    expect(r.renders[1]).toMatchObject({ text: 'B: first', host: hostB });
+  });
+
+  it('A TIMER ARMED BEFORE THE DIFF OPENED does not fire underneath it — it converts', async () => {
+    // THE PATH THAT DOES NOT GO THROUGH `onText`. A cooldown timer armed moments before the user
+    // opened the comparison is still in flight when they do; letting it fire would replace the
+    // comparison a beat later, which is the deferral defeated by timing rather than by logic.
+    const r = rig(400); // an expensive render, so the cooldown is long enough to open a diff inside
+    r.controller.start(r.host);
+    r.fire('v0'); // renders, and arms a 400 ms cooldown
+    r.fire('v1'); // inside it -> pending, timer armed
+    expect(vi.getTimerCount(), 'the cooldown timer really is armed').toBe(1);
+
+    enterDiffOn(r.host); // the user opens a comparison with that timer still in flight
+    r.clock.advance(2000); // the timer fires in here
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']); // it did NOT render under the diff
+    expect(vi.getTimerCount(), 'and it did not re-arm itself either').toBe(0);
+
+    exitDiffOn(r.host);
+    await observerTick();
+
+    // The text was not lost — it converted to a deferred one and flushes, line and all.
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(watchNote()).toBe(CHANGED_AGAIN_NOTE);
+  });
+
+  it('THE CONTENT-SCRIPT SHAPE (docId null) is ONE code path, inert because nothing sets the flag', async () => {
+    // D-14 keeps the diff feature off that surface entirely, so `data-diff` is never set there and
+    // the deferral never fires — an ARCHITECTURAL fact about which graph registers a diff context
+    // (proven as one in diffChrome.browser.test.ts), not a runtime branch in this module.
+    //
+    // What is proven HERE is the other half of that claim: the controller does not BRANCH on the
+    // surface. A `docId: null` controller runs the identical code — it installs the same observer
+    // and honours the same condition — so the content script's behaviour is 5.3's unchanged
+    // because the attribute is absent, and for no other reason.
+    resetWatchRegistryForTest();
+    const fake = fakeDetector();
+    const clock = fakeClock();
+    const renders: string[] = [];
+    const controller = createWatchController({
+      detector: fake.detector,
+      docId: null, // ← exactly what contentWatch.ts passes
+      render: (text) => renders.push(text),
+      signal: () => {},
+      now: clock.now,
+    });
+    const host = midDocumentHost();
+    controller.start(host);
+
+    // Absent the attribute, the coalescer is 5.3's, untouched: the first change renders at once.
+    fake.fire('v0');
+    expect(renders).toEqual(['v0']);
+    expect(watchNote()).toBeNull();
+
+    // NON-VACUOUS — the observer and the condition really ARE installed on this shape. Set the
+    // attribute by hand (which no content-script code path ever does) and the same defer/flush
+    // runs. If this controller had been built without them, this half would render immediately
+    // and the note would never appear.
+    enterDiffOn(host);
+    clock.advance(5000);
+    fake.fire('v1');
+    await observerTick();
+    expect(renders).toEqual(['v0']); // deferred
+    exitDiffOn(host);
+    await observerTick();
+    expect(renders).toEqual(['v0', 'v1']); // flushed
+    expect(watchNote()).toBe(CHANGED_AGAIN_NOTE);
+  });
+
+  it('DRIFT CHECK: the hard-coded attribute equals diffView\'s exported DIFF_HOST_ATTR', () => {
+    // ★ THE PRICE OF NOT IMPORTING. The 5.1 fence (Clause C) forbids production
+    // `watchController.ts` from importing `./diffView`, so the attribute name is a literal on this
+    // side and an export on that one. Two spellings of one name can drift, and the failure mode if
+    // they did is SILENT: the deferral would simply stop firing, a diff would be replaced under
+    // the reader, and every test that sets the attribute by hand would still pass. This assertion
+    // is what turns that into a red build. Test files are fence-exempt, which is what lets one
+    // file import both sides.
+    expect(DIFF_DISPLAYED_ATTR).toBe(DIFF_HOST_ATTR);
+    // The VALUE too, not just the attribute name: `enterDiff` writes `DIFF_ACTIVE` into it, and
+    // the controller's `hasAttribute` check is value-agnostic on purpose (any diff is a diff) —
+    // so this pins that the view still writes a non-empty value rather than a bare attribute
+    // some future presence check might read differently.
+    expect(DIFF_ACTIVE.length).toBeGreaterThan(0);
   });
 });

@@ -10,8 +10,49 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed — GROUP 5 CLOSED; group 6 tasks 6.1 + 6.2 landed; next action is 6.3, which CLOSES group 6.**
-> **Nothing is in progress and nothing is blocked. Task 6.2 — `src/render/diffChrome.ts`, the diff AFFORDANCE — has landed** (this commit).
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed — GROUP 5 CLOSED; group 6 tasks 6.1 + 6.2 + 6.3 landed — GROUP 6 CLOSED; next action is 7.1.**
+> **Nothing is in progress and nothing is blocked. Task 6.3 — D-11, the diff-defer and the "changed again" line — has landed** (this commit), and it CLOSES group 6. The diff feature is now end-to-end.
+>
+> **THE WATCH LOOP NOW KNOWS A DIFF IS ON SCREEN, AND REFUSES TO RENDER UNDER IT.** `onText` gains one condition —
+> the host carries D-15's `data-diff`, so the text takes the coalescer's single pending slot and **no timer is
+> armed**. On exit the withheld text renders and the reader is told the document moved: **"This document changed
+> again while the comparison was open — the newer version is shown above."** Both halves are the decision; the plan
+> says so in as many words (*"a document that changed with no indication is the same dishonesty one layer over"*),
+> and the line is gate-3-approved copy (decisions.md 2026-07-23) whose legibility is still a **9.1 human-gate item**.
+> **THREE DIVERGENCES FROM THE 6.2 POINTER'S SKETCH, each argued in tasks.md 6.3 and none silent:**
+> **(a) THE LINE IS A WATCH NOTE, ON EXIT — not a sentence inside the diff view.** The sketch's placement needs
+> `diffView.ts`, which 6.1 sealed and this task's own fences require byte-identical; and a line rendered *inside* the
+> comparison would be telling the reader about a document they cannot see yet. `setWatchNote` already carries exactly
+> this semantic (4.3's dead read, 4.4's unavailable surface), renders WITHOUT a re-render, and needed no new chrome —
+> **D-3's toast rejection stands.** Order is load-bearing: render first, line second, because the line points at the
+> document ("shown above").
+> **(b) EXIT IS A `MutationObserver` ON `data-diff`, not a call into `flushPending`.** There is more than one way out
+> of a diff — the 6.2 pill, `mount.ts`'s two D-15 clears, whatever a later task adds — and an explicit signal threaded
+> through each of them would strand the deferred text on the one that got missed. The observer holds no policy: it
+> reads the attribute and flushes. **`watchController.ts` imports none of `./diffView`, `./diffEngine`, `diff`** —
+> the attribute IS the seam (5.1 fence Clause C), so the name is a literal here and an export there, and a **drift
+> check** unit-asserts the two still agree. That check is the whole price of not importing, and it is paid in a test
+> file, which the fence exempts.
+> **(c) A HOLE THE SKETCH MISSED, FOUND AND CLOSED — `flushPending` needed the guard too.** A cooldown timer armed
+> moments *before* the diff opened is still in flight when it does, and it never passes through `onText`; it would
+> have replaced the comparison a beat later. It now CONVERTS to a deferred text instead of rendering. Unit-cased.
+> **RED-FIRST, BOTH HALVES, BOTH ENGINES (the plan demanded a different case each).** Deleting `onText`'s condition
+> reds *"the diff was torn down: expected null to be 'active'"* — the re-render replaced the comparison and `mount`'s
+> D-15 clear took the attribute with it (2 browser + 6 unit cases). Neutering the exit flush reds *"the withheld
+> change never reached the reader"*, and with that assertion lifted, *"the deferred render did not capture the state
+> that was on screen"*. The capture half is non-vacuous: the exit render stored the state the reader LEFT (V2),
+> leaving 2 snapshots where the seeded 1 stood — §3.5's per-render invariant intact, nothing lost.
+> **BYTES:** content-script 314688 → **315143 B both engines (+455)**; app chunk 359969 → **360422 B (+453)** — an
+> observer install/teardown, one condition in each of two functions, one string constant. Content-script grep for
+> `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|structuredPatch`: **0**. The 5.1
+> fence pin is **15/15 green with allowlists UNCHANGED** — 6.3 added a consumer of the diff feature that imports
+> nothing from it.
+> **`permissions: []` stands. `diffEngine.ts`, `diffView.ts`, `diffRegistry.ts`, `diffChrome.ts`, `mount.ts`,
+> `appShell.ts`, `watchControl.ts`, `watchRegistry.ts`, `contentWatch.ts`, `diffEngine.test.ts` ALL BYTE-IDENTICAL**
+> — the whole task landed inside `watchController.ts`. `Settings`/`getSettings`/`putSettings` byte-identical (thirteen
+> tasks now). Unit 540 → **549**; browser 601/15/72 → **605/15/74**. Golden EMPTY. M1–M5 remain fully closed.
+>
+> <details><summary>Task 6.2 — the diff AFFORDANCE (landed previously)</summary>
 > `buildDiffChrome(host)` returns the affordance where a diff context is registered and **`[]` — with NO note branch — where
 > none is** (D-14). `mount.ts` gains one import and one `children.push(...)` beside `buildWatchChrome`. The click flow:
 > `fetchMeta` → an inline `role="listbox"` picker → `fetchText` + `getCurrentSource` → the diff → `data-diff="active"`.
@@ -52,13 +93,19 @@
 > them); `watchController.ts`, `watchControl.ts`, `watchAvailability.ts` byte-identical; `mount.ts` gains exactly two code
 > lines; `appShell.ts` gains two imports and two object fields; `Settings`/`getSettings`/`putSettings` byte-identical;
 > `DB_VERSION` is 3.** Unit 519 → **540**; browser 577/15/70 → **601/15/72**. M1–M5 remain fully closed.
+> </details>
 >
-> **THE NEXT ACTION IS TASK 6.3 — D-11, and it CLOSES group 6:** defer the re-render while a diff is displayed. In
-> `watchController.onText` (`:324-342`, the coalescer): `if (diffDisplayed(target)) { pendingText = text; return }` — the
-> document changed *while you were reading a diff of it*, so the re-render **waits for exit** rather than yanking the diff
-> out from under the reader. **No timer is armed** (plan §1.6, D-11); the deferred text is applied on exit, and the "changed
-> again" line tells the user why what they are looking at is no longer current. The diff view is now genuinely enterable
-> through the affordance, which is what makes this case reachable at all.
+> **THE NEXT ACTION IS TASK 7.1 — MEASURE, and it opens group 7.** Group 7 is the measure → decide → implement split
+> the standing M1 rule requires, and **7.1 is the measuring task, which is FORBIDDEN from choosing anything**: it
+> measures capture cost against the recorded 50 KB ≈ 34.9/35.7 ms and 1 MB ≈ 717.3/713.9 ms synchronous re-render
+> baselines (with a like-for-like control — 005 showed continuity *moved* layout rather than adding it, and only the
+> control made that visible), measures the diff render's memory and usability at **1 MB** (§1.6's real ceiling now
+> that capture adds no copy), and records the real snapshot sizes and counts the eviction bounds will act on.
+> Protocol unchanged: 7 iterations, discard run 1, median of the warm 6, min/max spread; **every first-paint number
+> is Chromium** (Playwright cannot load an extension into Firefox). Those numbers feed **7.2, the human decision
+> gate** that picks D-8's bound values — *a bound chosen at 7.1 is a STOP-and-flag*, because that is precisely the
+> failure 004's 4.1 inference produced and 005's 5.1/5.2 split was built to prevent. Red-first does not apply to
+> 7.1: it asserts no behaviour, and saying so plainly beats manufacturing one.
 > **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next

@@ -371,7 +371,7 @@ go to the gate) and the milestone-close gate (9.1).
       with a throwaway rect probe (deleted), not chosen. Golden EMPTY · manifest green · **import fence** (static:
       `diffChrome.ts` imports no engine; `mount.ts`'s graph excludes `diff`/`diffEngine`/`diffView`).
 
-- [ ] **6.3 D-11 — defer the re-render while a diff is displayed; the "changed again" line; capture on exit.**
+- [x] **6.3 D-11 — defer the re-render while a diff is displayed; the "changed again" line; capture on exit.**
       In `watchController.onText` (`:324-342`): `if (diffDisplayed(target)) { pendingText = text; return }` —
       `diffDisplayed` reads the host's `data-diff` (6.1). No timer armed; `cancelPending()` (`:234-240`) already
       drops it on teardown, so a document switch during a displayed diff loses the pending text exactly as a
@@ -387,6 +387,48 @@ go to the gate) and the milestone-close gate (9.1).
       `diffDisplayed` guard reddens the "diff not replaced" half; removing the exit flush reddens the "captured on
       exit" half — a different case each. Non-vacuous: prove a change with **no** diff displayed captures normally
       (the guard is not swallowing everything). Golden EMPTY · manifest green.
+      **LANDED — GROUP 6 CLOSED. Three divergences from the sketch above, each argued, none silent:**
+      **(a) THE LINE GOES THROUGH THE NOTE CHANNEL, NOT INSIDE THE DIFF VIEW, AND IT LANDS ON EXIT.** The sketch put
+      it *"inside the diff view"* — which is unreachable without editing `diffView.ts`, sealed at 6.1 and required
+      byte-identical by this task's own fences, and which would also make the line a sentence the reader sees while
+      still looking at the comparison it is about. `setWatchNote` already means exactly *"something you should know
+      about the watch you asked for"*, it is the channel 4.3's dead-read and 4.4's unavailable-surface explanations
+      both use, and it renders WITHOUT a re-render. Shipped copy: **"This document changed again while the comparison
+      was open — the newer version is shown above."** — gate-3's approved sentence, re-tensed for the exit moment and
+      given `DEAD_READ_NOTE`'s own "shown above" pointer. Still a 9.1 legibility item. **Not a toast** — D-3's
+      rejection stands, and no new chrome was built.
+      **(b) EXIT IS DETECTED BY A `MutationObserver` ON `data-diff`, NOT BY CALLING `flushPending`.** There is more
+      than one way out of a diff (the 6.2 pill, `mount.ts`'s two D-15 clears, anything a later task adds); an explicit
+      signal would have to be threaded through each, and the one that got missed would strand the deferred text
+      forever. The observer is installed in `start()`, disconnected in `stop()`, holds no policy, and reads the D-15
+      attribute — the seam, so **`watchController.ts` imports neither `./diffView` nor `./diffEngine` nor `diff`**
+      (5.1 fence Clause C). The attribute name is the exported literal `DIFF_DISPLAYED_ATTR`; a **drift check**
+      unit-asserts it still equals `diffView`'s `DIFF_HOST_ATTR`, because two spellings of one name can drift and the
+      failure mode if they did is silent. The exit flush calls `renderNow` directly rather than `flushPending`: the
+      cooldown exists to break up bursts, and this is one render released by a gesture after a window in which the
+      loop rendered nothing.
+      **(c) A HOLE THE SKETCH DID NOT COVER, FOUND AND CLOSED: `flushPending` NEEDED THE GUARD TOO.** A cooldown timer
+      armed moments *before* the diff opened is still in flight when it does, and it does not go through `onText` —
+      so `onText`'s condition alone would have let it fire and replace the comparison a beat later. `flushPending`
+      now CONVERTS such a pending text to a deferred one (the timer is already cleared; the text keeps the single
+      slot) rather than rendering it. Unit-cased.
+      **Results:** unit 540 → **549** (+9: defer · flush-on-exit · the line · no-line-without-defer · coalesce-during ·
+      document-switch-drops · pre-armed-timer-converts · content-script-shape-is-one-code-path · drift check);
+      browser 601/15/72 → **605/15/74** (+2 cases × 2 engines, `tests/browser/watchDiffDefer.browser.test.ts`,
+      app page only — D-14 leaves the content script no diff to defer against, already proven in
+      `diffChrome.browser.test.ts`). **Red-first, both halves, both engines:** deleting `onText`'s condition reds
+      *"the diff was torn down: expected null to be 'active'"* (the re-render replaced the comparison, and `mount`'s
+      D-15 clear took `data-diff` with it) — 2 browser + 6 unit cases; neutering the exit flush reds *"the withheld
+      change never reached the reader"* and, with that assertion lifted, *"the deferred render did not capture the
+      state that was on screen"* — the plan's two halves, separately observed. Non-vacuous capture: the exit render
+      stored the state the reader LEFT (V2), leaving 2 snapshots where the seeded 1 stood.
+      **Bytes:** content-script 314688 → **315143 B both engines (+455)**; app chunk 359969 → **360422 B (+453)** —
+      the observer install/teardown, one condition in each of two functions, and one string. Content-script grep for
+      `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|structuredPatch`: **0**. 5.1's
+      fence pin **15/15 green, allowlists unchanged**. `diffEngine.ts`, `diffView.ts`, `diffRegistry.ts`,
+      `diffChrome.ts`, `mount.ts`, `appShell.ts`, `watchControl.ts`, `watchRegistry.ts`, `contentWatch.ts`,
+      `diffEngine.test.ts` **ALL byte-identical**. Golden EMPTY · `permissions: []` · `Settings`/`getSettings`/
+      `putSettings` byte-identical.
 
 ## 7 — Measure → decide bounds → implement (the measuring task cannot choose)
 

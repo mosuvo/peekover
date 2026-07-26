@@ -98,6 +98,41 @@
 // against the five pieces of chrome already in the corners. The pill flash carries the same
 // information at a fraction of the surface area. If 006 wants the toast (it has more to SAY —
 // "3 lines added"), it builds the primitive then.
+//
+// ══ DECISION 4 — A DISPLAYED DIFF DEFERS THE RE-RENDER, AND SAYS SO ON EXIT (006 D-11) ════════
+//
+// 006 gives the reader a second thing to look at in the same host: an inline diff against a saved
+// snapshot (`diffView.ts`, task 6.1; the affordance that opens it is 6.2). While that is on screen,
+// re-rendering the reading column underneath it would replace a comparison the user deliberately
+// opened, with no indication that anything happened. So:
+//
+//     WHILE A DIFF IS DISPLAYED, `onText` COALESCES BUT NEVER RENDERS. On exit the deferred text
+//     renders — and the reader is TOLD that the document moved while they were comparing.
+//
+// Both halves are load-bearing, and the second is a product decision (gate 3, decisions.md
+// 2026-07-23): deferring silently and then swapping silently is the same dishonesty two layers
+// down. The line's legibility — useful or noise — is a task 9.1 human-gate item, not something
+// this module can self-certify.
+//
+// HOW IT KNOWS, AND WHY THAT IS AN ATTRIBUTE READ RATHER THAN AN IMPORT. D-15 makes `data-diff` on
+// the host the single source of truth for "a diff is displayed": `diffView.ts` sets it, the reader
+// CSS hides the reading column off it, `mount.ts` clears it on a document switch. This module READS
+// that attribute and imports nothing — the 5.1 two-layer import fence (Clause C, expanded at 6.2)
+// forbids `watchController.ts` from importing `./diffView`, because this module is in the
+// CONTENT-SCRIPT bundle's graph and the view drags the `diff` package behind it. So the attribute
+// name is a hard-coded literal here, and a unit test asserts it still equals the view's exported
+// `DIFF_HOST_ATTR` — a rename reddens loudly instead of silently disabling the deferral.
+//
+// WHY A MutationObserver AND NOT AN EXIT CALLBACK. There is more than one way out of a diff — the
+// affordance's exit gesture (6.2), `mount()`'s clear-on-document-switch (D-15, two sites), and
+// whatever a later task adds. An explicit signal would have to be threaded through every one of
+// them, and the one that got missed would strand the deferred text forever. Watching the attribute
+// covers them all uniformly, and holds no policy of its own: it reads D-15's flag and flushes.
+//
+// AND THE CONTENT SCRIPT IS UNCHANGED BY CONSTRUCTION. D-14 keeps the whole diff feature off that
+// surface (no affordance, no view, no registry), so `data-diff` is never set there, the deferral
+// never fires, and the coalescer behaves exactly as 5.3 shipped. That is an architectural fact
+// about which graph reaches the registry, not a runtime check — and it is proven as one.
 
 import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
@@ -154,6 +189,44 @@ export const DEAD_READ_NOTE =
  * revisit-when), not to hunt for a number.
  */
 export const COOLDOWN_MULTIPLIER = 1;
+
+/**
+ * D-15's "a diff is displayed" flag, as a LITERAL — deliberately not an import (DECISION 4).
+ *
+ * `diffView.ts` exports this exact name as `DIFF_HOST_ATTR`, and that is the module that sets and
+ * clears it. Importing it from here would put `diffView` — and behind it the `diff` package — into
+ * the content-script bundle's import graph, which the 5.1 fence (Clause C) exists to forbid. Two
+ * readers of one attribute cannot drift in MEANING (plan §0 D-15 argues exactly this); what they
+ * CAN do is drift in SPELLING, so `watchController.test.ts` asserts this literal still equals the
+ * view's export. That check is the whole price of not importing, and it is paid in a test file,
+ * which the fence exempts.
+ */
+export const DIFF_DISPLAYED_ATTR = 'data-diff';
+
+/**
+ * The D-11 "changed again" line — the gate-3 product decision, in the copy that shipped.
+ *
+ * ★ COPY, NOT LOGIC. Its legibility (does this read as useful, or as noise?) is a task 9.1
+ * human-gate item; an agent cannot self-certify it, and a "reads as noise" verdict there is a
+ * finding to record, not a licence to delete the line quietly.
+ *
+ * WHAT IT IS ALLOWED TO SAY, and each clause is a constraint the draft is held to:
+ *   • it names WHAT happened (the document changed) and WHEN (while the comparison was open) —
+ *     nothing else. It does NOT say what changed, how many lines, or which version this is: the
+ *     6.2 affordance is a diff-target picker, not a version browser (§3.7 divergence 2), and
+ *     copy that implied otherwise would promise a feature that does not exist;
+ *   • it says where the newer document IS, in the same register `DEAD_READ_NOTE` already uses
+ *     ("...is still shown above") — because this line arrives at the moment the reader's view
+ *     changes under them, and pointing at the result is the honest half of admitting it;
+ *   • it offers no restore, undo or revert verb. Nothing here can put the old text back.
+ *
+ * WHY IT GOES THROUGH THE NOTE CHANNEL. `setWatchNote` already means precisely "something you
+ * should know about the watch you asked for", it renders beside the reader WITHOUT a re-render,
+ * and it is the channel 4.3's dead-read explanation and 4.4's unavailable-surface explanation both
+ * use. A second channel for a third sentence of the same kind would be new chrome nobody walked.
+ */
+export const CHANGED_AGAIN_NOTE =
+  'This document changed again while the comparison was open — the newer version is shown above.';
 
 /**
  * PURE: is a scroll box at (or within slack of) its bottom?
@@ -233,6 +306,63 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
   /** The timer that will flush {@link pendingText}. Cancelled by every teardown path. */
   let pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // ── D-11's entire additional state (DECISION 4) ────────────────────────────────────────────
+  /**
+   * Is {@link pendingText} waiting on a DIFF EXIT rather than on the cooldown?
+   *
+   * The distinction is what keeps the "changed again" line honest. A cooldown-pending render is
+   * about to happen anyway and the reader will simply see it; a DEFERRED one is text the reader
+   * has been kept from on purpose, and telling them about it is the whole of the gate-3 decision.
+   * Without this flag, exiting a diff during which nothing arrived would still fire the line —
+   * a sentence about an event that did not occur.
+   */
+  let pendingSetByDefer = false;
+  /** Watches the host's `data-diff` so every exit path flushes. Null while not watching. */
+  let diffObserver: MutationObserver | null = null;
+
+  /** Is a diff on screen in this host right now? D-15's attribute, read directly (DECISION 4). */
+  function diffDisplayed(target: HTMLElement): boolean {
+    return target.hasAttribute(DIFF_DISPLAYED_ATTR);
+  }
+
+  /**
+   * Install the exit watcher on the host this watch is rendering into.
+   *
+   * Cheap and unconditional — every surface gets one, including the content script where
+   * `data-diff` is never set and the callback therefore never runs (D-14). That is deliberate:
+   * ONE code path, and the surface difference stays an architectural fact about which graph
+   * registers a diff context rather than a runtime branch this module has to keep true.
+   */
+  function installDiffObserver(target: HTMLElement): void {
+    diffObserver?.disconnect();
+    diffObserver = new MutationObserver(() => {
+      if (!diffDisplayed(target)) onDiffExited();
+    });
+    diffObserver.observe(target, { attributes: true, attributeFilter: [DIFF_DISPLAYED_ATTR] });
+  }
+
+  /**
+   * The diff came off the screen: render what was withheld, and say that it was withheld.
+   *
+   * ORDER MATTERS — the render first, the line second. The line points at the document ("shown
+   * above"), so it must not arrive before the document it describes.
+   *
+   * The cooldown is deliberately NOT re-checked here. It exists to stop a BURST of renders piling
+   * onto the main thread; this is a single render released by a user gesture, after a window in
+   * which the loop rendered nothing at all — there is no pile-up to prevent, and making the reader
+   * wait after they closed the comparison would look like a hang. `renderNow` sets `readyAt` from
+   * this render's own cost on the way out, so the next change is throttled normally.
+   */
+  function onDiffExited(): void {
+    const target = host;
+    if (!running || !target || !pendingSetByDefer || pendingText === null) return;
+    const text = pendingText;
+    pendingText = null;
+    pendingSetByDefer = false;
+    renderNow(text, target);
+    setWatchNote(CHANGED_AGAIN_NOTE);
+  }
+
   /**
    * Drop the pending render, timer and all.
    *
@@ -249,6 +379,10 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
       pendingTimer = null;
     }
     pendingText = null;
+    // D-11: a DEFERRED pending text is dropped by exactly the same teardown, for exactly the same
+    // reason — and the flag has to go with it, or a later diff exit on the NEW document would
+    // fire the "changed again" line about a change that happened in the OLD one.
+    pendingSetByDefer = false;
   }
 
   /** Stop without going through the WatchTarget surface, so the dead-read path and an explicit
@@ -259,6 +393,10 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     host = null;
     consecutiveFailures = 0;
     cancelPending();
+    // D-11: the exit watcher belongs to the host this watch was rendering into, so it goes when
+    // the watch does. A surviving observer would call `onDiffExited` for a host nobody is watching.
+    diffObserver?.disconnect();
+    diffObserver = null;
     readyAt = 0;
     detector.stop();
     notifyWatchChanged();
@@ -347,6 +485,16 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     pendingTimer = null;
     const target = host;
     if (!running || !target || pendingText === null) return;
+    // D-11 (DECISION 4), AND IT IS NOT COVERED BY `onText`'s CONDITION. A cooldown timer armed
+    // moments BEFORE the diff opened is still in flight when it does, and letting it fire would
+    // replace the comparison underneath the reader — the precise thing the deferral exists to
+    // prevent, arriving by the one path that does not go through `onText`. So the pending text
+    // CONVERTS: the timer is already cleared above, the text stays in the single slot, and it is
+    // re-labelled as deferred so the exit flushes it and accounts for it.
+    if (diffDisplayed(target)) {
+      pendingSetByDefer = true;
+      return;
+    }
     // A timer may fire fractionally early (clamping, a coarse clock, a busy main thread). Then the
     // cooldown has NOT actually elapsed, so re-arm for the remainder rather than rendering early —
     // the cooldown is defined by the clock, not by whenever the timer happened to run.
@@ -364,6 +512,20 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     const target = host;
     if (!running || !target) return;
     consecutiveFailures = 0; // a good read clears the streak; only CONSECUTIVE failures count
+
+    // D-11 (DECISION 4) — THE WHOLE OF THE DEFERRAL, and it is one condition. A diff is on screen,
+    // so nothing renders: no render, no timer, no signal. The text takes the coalescer's single
+    // pending slot (newest wins, exactly as during a cooldown) and `onDiffExited` releases it when
+    // D-15's attribute goes away. No timer is armed on purpose — there is no time at which this
+    // becomes renderable, only a gesture, so a timer would be a promise about a clock that has
+    // nothing to do with it. `cancelPending` drops both the text and the defer flag on every
+    // teardown, so a document switch during a displayed diff loses this text exactly as it loses
+    // a cooldown-pending one — 4.3's cross-feed bug does not reappear one level up.
+    if (diffDisplayed(target)) {
+      pendingText = text;
+      pendingSetByDefer = true;
+      return;
+    }
 
     const wait = readyAt - now();
     if (wait <= 0 && pendingTimer === null) {
@@ -386,6 +548,8 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
       running = true;
       host = next;
       consecutiveFailures = 0;
+      // D-11: the exit watcher is installed with the host, before anything can be deferred into it.
+      installDiffObserver(next);
       // THE FIRST RENDER OF A WATCH IS IMMEDIATE: there is no prior cost to be proportional to, so
       // there is nothing to make the user wait for. This also clears any cooldown left over from a
       // watch on a DIFFERENT document — the previous file's render cost says nothing about this
