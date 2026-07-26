@@ -102,6 +102,8 @@ function dummyContext(docId: string): DiffContext {
     getCurrentSource: () => undefined,
     fetchMeta: async () => [],
     fetchText: async () => undefined,
+    showDiff: () => ({ ok: true }),
+    hideDiff: () => undefined,
   };
 }
 

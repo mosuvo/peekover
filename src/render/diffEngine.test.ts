@@ -108,7 +108,19 @@ describe('computeDiff', () => {
 const ROOT = process.cwd(); // vitest runs from the project root (D:\Dev\peekover)
 
 const ALLOWED_DIFF_IMPORTERS = ['src/render/diffEngine.ts'];
-const ALLOWED_ENGINE_IMPORTERS: string[] = []; // 6.1 adds 'src/render/diffView.ts'
+// 6.2: `appShell.installWatchForFile` provisions the engine's `computeDiff` onto the DiffContext —
+// the ONE production engine-importer, in the app-page graph only. (The 5.1 comment here predicted
+// 6.1's `diffView.ts`; 6.1 recorded why that did not happen — the view is engine-BLIND.)
+const ALLOWED_ENGINE_IMPORTERS = ['src/app/appShell.ts'];
+// 6.2 adds CLAUSE C, and it is not decoration. Plan §1.4 fences the VIEW too — "`diffView.ts` …
+// Imported by `appShell.ts`, never by `mount.ts` — `mount.ts` importing it would drag the view into
+// the content-script graph and put the hole back in the fence it is the point of §1.4 to close" —
+// and tasks.md 6.2's Verify says so in as many words: "`mount.ts`'s graph excludes
+// `diff`/`diffEngine`/`diffView`". Clauses A and B alone would let 6.2 satisfy the letter of the
+// fence (no engine import in `diffChrome.ts`) while breaking it in fact, by having the affordance —
+// which `mount.ts` DOES import — import the view. That is exactly why the affordance reaches BOTH
+// through `showDiff`/`hideDiff` closures the app page provisions (diffRegistry.ts's header).
+const ALLOWED_VIEW_IMPORTERS = ['src/app/appShell.ts'];
 
 /** 1-based line of `index` in `source`. */
 function lineOf(source: string, index: number): number {
@@ -171,11 +183,21 @@ function importSpecifiers(src: string): { spec: string; line: number }[] {
   return out;
 }
 
-/** True if `spec` (a relative or `@/`-aliased path) resolves to `src/render/diffEngine.ts`. */
-function importsEngine(spec: string): boolean {
+/** True if `spec` (a relative or `@/`-aliased path) resolves to the module named `module`. */
+function importsLocalModule(spec: string, module: string): boolean {
   if (!spec.startsWith('.') && !spec.startsWith('@/')) return false;
   const base = spec.replace(/\.[jt]s$/, '').split('/').pop();
-  return base === 'diffEngine';
+  return base === module;
+}
+
+/** True if `spec` (a relative or `@/`-aliased path) resolves to `src/render/diffEngine.ts`. */
+function importsEngine(spec: string): boolean {
+  return importsLocalModule(spec, 'diffEngine');
+}
+
+/** True if `spec` resolves to `src/render/diffView.ts` (Clause C — the view is fenced too). */
+function importsView(spec: string): boolean {
+  return importsLocalModule(spec, 'diffView');
 }
 
 /** True if `spec` pulls the `diff` package (bare `diff`, or a `diff/...` subpath). */
@@ -204,11 +226,13 @@ describe('import fence: `diff` reaches only the engine (plan §1.4, D-15)', () =
   interface Imp { rel: string; line: number; spec: string }
   const diffPackage: Imp[] = [];
   const engine: Imp[] = [];
+  const view: Imp[] = [];
   for (const file of files) {
     const rel = file.slice(ROOT.length).replace(/\\/g, '/').replace(/^\//, '');
     for (const { spec, line } of importSpecifiers(readFileSync(file, 'utf8'))) {
       if (importsDiffPackage(spec)) diffPackage.push({ rel, line, spec });
       if (importsEngine(spec)) engine.push({ rel, line, spec });
+      if (importsView(spec)) view.push({ rel, line, spec });
     }
   }
 
@@ -236,16 +260,69 @@ describe('import fence: `diff` reaches only the engine (plan §1.4, D-15)', () =
     ).toEqual([]);
   });
 
-  it('no production module imports the engine yet — it is wired to nothing until 6.1 (D-15)', () => {
+  it('the engine is imported by exactly appShell.ts — its ONE production consumer (6.2, D-15)', () => {
     // Clause B. mount.ts (and everything the content script reaches) must not import the engine.
     const violations = engine
       .filter((i) => !ALLOWED_ENGINE_IMPORTERS.includes(i.rel))
       .map((i) => `${i.rel}:${i.line} — import '${i.spec}'`);
     expect(
       violations,
-      `diffEngine has no production consumer until 6.1's diffView.ts (D-15 — entering a diff is an ` +
-        `attribute flip; mount() never reaches the engine). When 6.1 lands, add its module to ` +
-        `ALLOWED_ENGINE_IMPORTERS. Offending import(s):`,
+      `the engine's only production consumer is [${ALLOWED_ENGINE_IMPORTERS.join(', ')}], which ` +
+        `provisions computeDiff onto the DiffContext (task 6.2). D-15 — entering a diff is an ` +
+        `attribute flip; mount() never reaches the engine. Offending import(s):`,
     ).toEqual([]);
+  });
+
+  it('the engine allowlist is NOT a rubber stamp — appShell really imports it, at exactly one line', () => {
+    // NON-VACUITY for Clause B's allowlist entry. An allowlist naming a file that does not import
+    // the engine would pass forever while the architecture said something else — and this is the
+    // clause that flipped at 6.2 ([] → ['src/app/appShell.ts']), so the entry has to be earned.
+    const fromAppShell = engine.filter((i) => i.rel === 'src/app/appShell.ts');
+    expect(
+      fromAppShell.map((i) => `${i.rel}:${i.line}`),
+      `ALLOWED_ENGINE_IMPORTERS names src/app/appShell.ts, so it must ACTUALLY import the engine — ` +
+        `on exactly ONE line (the provisioning site in installWatchForFile). Found:`,
+    ).toHaveLength(1);
+  });
+
+  it('the VIEW is imported by exactly appShell.ts — never by mount.ts (Clause C, plan §1.4)', () => {
+    // Clause C (6.2). The view is fenced for the same reason the engine is: `mount.ts` importing it
+    // "would drag the view into the content-script graph and put the hole back in the fence"
+    // (plan §1.4). The affordance mount.ts DOES import (`diffChrome.ts`) reaches the view only
+    // through the DiffContext's provisioned `showDiff`/`hideDiff`.
+    const violations = view
+      .filter((i) => !ALLOWED_VIEW_IMPORTERS.includes(i.rel))
+      .map((i) => `${i.rel}:${i.line} — import '${i.spec}'`);
+    expect(
+      violations,
+      `diffView.ts may be imported ONLY by [${ALLOWED_VIEW_IMPORTERS.join(', ')}] (plan §1.4). In ` +
+        `particular src/render/diffChrome.ts must NOT — mount.ts imports it, so that edge would ` +
+        `put the view (and the hole) back in the content-script graph. Offending import(s):`,
+    ).toEqual([]);
+
+    // Non-vacuity, same argument as the engine's: the allowed importer must really import it.
+    expect(
+      view.filter((i) => i.rel === 'src/app/appShell.ts').map((i) => `${i.rel}:${i.line}`),
+      `ALLOWED_VIEW_IMPORTERS names src/app/appShell.ts, so it must ACTUALLY import the view.`,
+    ).toHaveLength(1);
+  });
+
+  it('the affordance mount.ts imports is clean: diffChrome.ts imports no engine, view, or `diff`', () => {
+    // The fence stated from the OTHER end — as a property of the one file that bridges the two
+    // graphs. Stated separately from the allowlists because this is the edge a future change is
+    // most likely to add by reflex ("just import enterDiff"), and this failure names the reason.
+    const offenders = [...diffPackage, ...engine, ...view]
+      .filter((i) => i.rel === 'src/render/diffChrome.ts')
+      .map((i) => `${i.rel}:${i.line} — import '${i.spec}'`);
+    expect(
+      offenders,
+      `diffChrome.ts is THE ONLY diff module mount.ts imports (plan §1.4), so it must import ` +
+        `neither the \`diff\` package, nor diffEngine.ts, nor diffView.ts. It reaches all three ` +
+        `through the DiffContext's provisioned showDiff/hideDiff closures. Offending import(s):`,
+    ).toEqual([]);
+    // Non-vacuous: the file must exist and be in the walked set, or this passes trivially.
+    expect(
+      files.map((f) => f.slice(ROOT.length).replace(/\\/g, '/').replace(/^\//, '')),
+    ).toContain('src/render/diffChrome.ts');
   });
 });

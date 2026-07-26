@@ -25,6 +25,7 @@ import { applyMediaPolicy } from './mediaPolicy';
 import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildWatchChrome } from '../watch/watchControl';
+import { buildDiffChrome } from './diffChrome';
 import { buildTocModel } from './tocModel';
 import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
 import { resolveScrollContainer } from './scrollContainer';
@@ -179,6 +180,14 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // start/stop through the module-level registry, because `replaceChildren` destroys it on every
     // render, INCLUDING the renders a running watch causes. See src/watch/watchRegistry.ts.
     children.push(...buildWatchChrome(host));
+    // Diff affordance (spec 006 task 6.2), composed through THIS same seam — and it is the ONLY
+    // diff module this file imports (plan §1.4's import fence: `diffChrome.ts` reaches the engine
+    // and the view through closures the app page provisions on the diff registry, so neither
+    // `diff` nor `diffEngine` nor `diffView` enters the content-script graph through here).
+    // Returns `[]` — with NO explanatory note — on a surface that registered no diff context
+    // (D-14, §3.2: the user never saw a history feature there, so there is nothing to be told they
+    // are missing). Siblings of the reading column, like every other piece of chrome above.
+    children.push(...buildDiffChrome(host));
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }

@@ -36,8 +36,38 @@
 // import from BOTH surfaces. The import-fence that keeps the actual `diff` dependency off the
 // content-script graph is 5.1's job; 2.1 only sets the empty registry the affordance side of that
 // fence reads.
+//
+// ── 6.2: THE CONTEXT ALSO CARRIES THE *CAPABILITY*, AS PROVISIONED CLOSURES ────────────────────
+//
+// This is still DATA ONLY, and that is precisely why the capability arrives this way. Plan §1.4
+// fences THREE modules off the content-script graph — `diff` (the package), `diffEngine.ts` (its
+// only importer) AND `diffView.ts` ("Imported by `appShell.ts`, never by `mount.ts` — `mount.ts`
+// importing it would drag the view into the content-script graph and put the hole back in the
+// fence it is the point of §1.4 to close"). The affordance (`diffChrome.ts`) IS imported by
+// `mount.ts`, so it can import none of the three. It therefore reaches all of them through
+// {@link DiffContext.showDiff} / {@link DiffContext.hideDiff} — closures the APP PAGE provisions at
+// `appShell.installWatchForFile`, in a graph `mount.ts` never reaches.
+//
+// The closures are deliberately COARSE ("show a diff of these two texts on this host"), not a
+// `computeDiff` + `enterDiff` pair. A finer seam would have to carry the hunk shape across the
+// fence, which means re-declaring `DiffHunk` here for no benefit — the affordance does nothing
+// with hunks but hand them straight on. One capability in, one result out; the hunks never cross.
+//
+// {@link DiffOutcome} mirrors `diffView.ts`'s `DiffEnterResult` STRUCTURALLY rather than importing
+// it, for the reason 6.1's header already records: the import fence is a SOURCE-TEXT scanner, so
+// even a zero-runtime `import type … from './diffView'` would read as an importer of the view. The
+// provisioning site in `appShell.ts` assigns the real `enterDiff` to this field, so `tsc --noEmit`
+// catches any drift between the two declarations — the same drift guard 6.1's mirror relies on.
 
 import type { SnapshotMetaEntry } from '../app/snapshots';
+
+/**
+ * The result of asking for a diff — a STRUCTURAL MIRROR of `DiffEnterResult` in `./diffView` (see
+ * the header for why it is mirrored rather than imported). On failure `reason` is human-readable,
+ * for the affordance to surface beside the untouched document (the fallback, plan §1.5): the
+ * document stays on screen, `data-diff` is never set, never blank (AGENTS.md #5).
+ */
+export type DiffOutcome = { ok: true } | { ok: false; reason: string };
 
 /**
  * The DATA a diff needs about the document on screen — never any UI, never an engine. Assembled by
@@ -62,6 +92,14 @@ export interface DiffContext {
    *  self-reclaim window — the diff view's "comparison unavailable" state). A closure over
    *  `getSnapshotText` (1.4). */
   fetchText(snapshotId: string): Promise<string | undefined>;
+  /** Diff `before` against `after` and show it on `host` — the whole capability behind ONE closure
+   *  (task 6.2). Provisioned by `appShell`, the only module that imports the engine AND the view;
+   *  the affordance calls it without importing either (plan §1.4's fence — see the header). Returns
+   *  `{ok:false, reason}` for the fallback path, having changed nothing on screen. */
+  showDiff(host: HTMLElement, before: string, after: string): DiffOutcome;
+  /** Leave the diff view on `host` and restore the reading place. A no-op when no diff is shown.
+   *  Provisioned alongside {@link showDiff}, over the same fence, for the same reason. */
+  hideDiff(host: HTMLElement): void;
 }
 
 /**
@@ -79,6 +117,8 @@ export function createDiffContext(config: {
   getCurrentSource(): string | undefined;
   fetchMeta(): Promise<SnapshotMetaEntry[]>;
   fetchText(snapshotId: string): Promise<string | undefined>;
+  showDiff(host: HTMLElement, before: string, after: string): DiffOutcome;
+  hideDiff(host: HTMLElement): void;
 }): DiffContext {
   return config;
 }

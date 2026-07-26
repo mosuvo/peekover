@@ -70,6 +70,15 @@ import {
 } from './snapshots';
 import { readerSourceFor } from '../render/readerMode';
 import { registerDiffContext, createDiffContext } from '../render/diffRegistry';
+// ★ THE IMPORT FENCE'S ONE GATED DOOR, OPENED HERE AND NOWHERE ELSE (plan §1.4, task 6.2).
+// This module is the APP-PAGE graph — `mount.ts` never reaches it — so it is the one production
+// file permitted to import the engine (and, with it, the `diff` package) and the view. Both are
+// provisioned onto the DiffContext below as closures, which is how the affordance (`diffChrome.ts`,
+// which `mount.ts` DOES import) reaches them without importing them. `diffEngine.test.ts`'s
+// allowlists pin exactly this: `ALLOWED_ENGINE_IMPORTERS` and `ALLOWED_VIEW_IMPORTERS` are both
+// `['src/app/appShell.ts']`. Adding either import to any other production file breaks the fence.
+import { computeDiff } from '../render/diffEngine';
+import { enterDiff, exitDiff } from '../render/diffView';
 import {
   createRecentsView,
   type RecentEntryVM,
@@ -759,9 +768,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // the reader-source WeakMap (1.3) — queried from the pane rather than held, because the pane owns
     // and re-attaches that host (readerPane.ts); a detached host during a designed state yields
     // `undefined`, which is the honest "nothing on screen to diff" answer. `fetchMeta`/`fetchText`
-    // close over 1.4's meta/text reads, filtered to this `docId`. No engine, no view, no `diff`.
+    // close over 1.4's meta/text reads, filtered to this `docId`.
     // Last-write-wins (no explicit unregister): a stale context is harmless — `fetchMeta` over a
     // stale `docId` returns [] — exactly as `registerWatchTarget`'s next-mount-overwrites.
+    //
+    // ★ 6.2 AMENDS 2.1's "no engine, no view, no `diff`": the context now also carries the
+    // CAPABILITY, as `showDiff`/`hideDiff` closures. That is what makes THIS file the engine's and
+    // the view's first — and only — production importer. The affordance is in `mount.ts`'s graph
+    // and so may import neither; it calls these closures instead, and the `diff` bytes stay on the
+    // app-page side of the fence (plan §1.4). The closures are created HERE, so nothing on a
+    // content-script path can reach them even by accident: that surface registers no context at all.
     if (docId != null) {
       const diffDocId = docId;
       registerDiffContext(createDiffContext({
@@ -778,6 +794,12 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
           return all.find((m) => m.docId === diffDocId)?.entries ?? [];
         },
         fetchText: (id) => getSnapshotText(id),
+        // Engine → view, in one step, on the app-page side of the fence. `computeDiff` is pure and
+        // total (D-5 LF-normalises both sides); `enterDiff` owns the sanitize discipline, the
+        // hidden-column rung and the `{ok:false, reason}` fallback — so this closure adds no
+        // policy, it only joins the two the affordance is not allowed to import.
+        showDiff: (host, before, after) => enterDiff(host, computeDiff(before, after)),
+        hideDiff: (host) => exitDiff(host),
       }));
     }
   }

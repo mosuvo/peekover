@@ -352,7 +352,7 @@ go to the gate) and the milestone-close gate (9.1).
       not survive). Golden EMPTY · manifest green · **import fence** (`diffView.ts` imported by `appShell.ts`, not
       `mount.ts`).
 
-- [ ] **6.2 `diffChrome.ts` — the affordance + the D-14 registry gate; `mount.ts` pushes it; the fence holds.**
+- [x] **6.2 `diffChrome.ts` — the affordance + the D-14 registry gate; `mount.ts` pushes it; the fence holds.**
       `buildDiffChrome(host)` returns the affordance when the diff registry (2.1) is non-empty and **`[]` — with NO
       note branch — when it is empty**, so the content-script surface grows neither affordance nor explanation
       (§3.2, verbatim: *"there is nothing to be told they are missing. Do not add one."* — the absence of a note

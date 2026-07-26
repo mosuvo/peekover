@@ -10,44 +10,55 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed — GROUP 5 CLOSED; group 6 task 6.1 landed (the diff VIEW); next action is 6.2.**
-> **Nothing is in progress and nothing is blocked. Task 6.1 — `src/render/diffView.ts`, the diff VIEW — has landed** (this commit).
-> `enterDiff(host, hunks)` / `exitDiff(host)`: a lazily-built sanitized `.peekover-diff` sibling behind `data-diff="active"`
-> on the HOST (D-15 — mirroring `WATCH_HOST_ATTR`; host attributes survive `replaceChildren`), which CSS uses to hide
-> `.peekover-reader` (`:host([data-diff="active"]) .peekover-reader{display:none}`, readerCss.ts). The reading column's DOM
-> is NEVER touched — entering a diff is an attribute flip, not a re-render; `mount()` stays read-only library. **Both sides
-> (added, removed AND unchanged) go through the unchanged `parse → sanitize` path PLUS mount's inert-`<template>` +
-> `applyMediaPolicy` neutralisation** (§3.8, AGENTS.md #3 + #1 — a remote `<img>` in a diff cannot fetch); a script in
-> either side is scrubbed (red-first proven: bypassing sanitize reddens 4 = 2 surfaces × 2 engines). **Reading place is
-> preserved across the hidden-column rung** (`mount.ts:251-257`): the anchor is captured BEFORE `data-diff` (column visible,
-> real rects) and restored AFTER clearing it, via the existing `readingAnchor` pair, stored in a host-keyed WeakMap. **The
-> fallback (§1.5) is real:** a parse/sanitize failure returns `{ok:false, reason}`, never sets `data-diff`, inserts nothing —
-> the document stays on screen (never blank).
-> **★ THE ENGINE STAYED WIRED TO NOTHING AT 6.1 — this corrects the 5.1 note's expectation.** The 5.1 pointer predicted
-> "6.1 is the engine's first consumer; `diffView.ts` imports `diffEngine.ts`; the allowlist gains it." It does **not**:
-> plan §1.4 makes the view engine-BLIND ("takes hunks as data; imports no engine"). Concretely, `diffView.ts` imports
-> **neither** `diff` **nor** `diffEngine` — not even a type import, because the 5.1 fence is a SOURCE-TEXT scanner and its
-> regex matches `import type … from './diffEngine'` too (a type-only import is erased from the BUNDLE, not from the SOURCE
-> the fence reads). So the hunk type is a LOCAL STRUCTURAL MIRROR; the browser test (fence-exempt) imports the real
-> `DiffHunk` and passes it in, so `tsc --noEmit` guards the mirror against drift. **`ALLOWED_ENGINE_IMPORTERS` stays `[]`;
-> `diffEngine.test.ts` is byte-identical.** The engine's first PRODUCTION consumer is 6.2's `appShell` (via the DiffContext
-> closure), so the `diff` bytes still have NOT entered any bundle at 6.1.
-> **BYTES (re-baselined, not a fence break):** content-script grew 305744 → **307892 B on both engines (+2148)** — proven
-> `diff`-free: grep finds NO `diffLines`/`computeDiff`/`enterDiff` in the content-script bundle; the import fence pin is
-> green. The delta is legitimate CSS (Piece 4's `.peekover-diff` block in READER_CSS) + `mount.ts`'s two `data-diff` clears
-> (Piece 5) — both in the content-script graph. **Byte-identity was never achievable at 6.1: `mount.ts` alone → 305806 B.**
-> The app-page chunk grew by the SAME +2148 (shared readerCss+mount), NOT `diffLines` (the engine is still unimported).
-> Officially re-measured at 8.1. **`permissions: []` still stands; `diffEngine.ts`, `watchController.ts`, `watchControl.ts`,
-> `diffRegistry.ts`, `contentWatch.ts`, `appShell.ts`, `readerMode.ts`, `readingAnchor.ts`, `parse.ts`, `sanitize.ts` all
-> byte-identical; `mount.ts` gains exactly two lines, zero import changes; `Settings`/`getSettings`/`putSettings`
-> byte-identical; `DB_VERSION` is 3.** M1–M5 remain fully closed.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed — GROUP 5 CLOSED; group 6 tasks 6.1 + 6.2 landed; next action is 6.3, which CLOSES group 6.**
+> **Nothing is in progress and nothing is blocked. Task 6.2 — `src/render/diffChrome.ts`, the diff AFFORDANCE — has landed** (this commit).
+> `buildDiffChrome(host)` returns the affordance where a diff context is registered and **`[]` — with NO note branch — where
+> none is** (D-14). `mount.ts` gains one import and one `children.push(...)` beside `buildWatchChrome`. The click flow:
+> `fetchMeta` → an inline `role="listbox"` picker → `fetchText` + `getCurrentSource` → the diff → `data-diff="active"`.
+> Exit is the SAME pill (its label and aria-label move with the state, so the change is never colour-only).
+> **★ THE ENGINE ENTERED PRODUCTION — and the fence forced a DIFFERENT provisioning path than the 6.1 pointer predicted.**
+> The 6.1 note said the affordance would "call `enterDiff`", i.e. import the VIEW directly. It does **not**, and it must not:
+> plan §1.4 fences **three** modules off the content-script graph — `diff`, `diffEngine.ts` **and `diffView.ts`** ("Imported by
+> `appShell.ts`, never by `mount.ts` — `mount.ts` importing it would drag the view into the content-script graph and put the
+> hole back in the fence"), and tasks.md 6.2's Verify says it outright: *"`mount.ts`'s graph excludes `diff`/`diffEngine`/
+> `diffView`"*. Since `mount.ts` imports the affordance, the affordance may import **none** of the three. So the DiffContext
+> gained **two coarse closures** — `showDiff(host, before, after)` / `hideDiff(host)` — that `appShell.installWatchForFile`
+> provisions; `appShell` is the one production file importing **both** `computeDiff` and `enterDiff`/`exitDiff`. The closures
+> are coarse on purpose: a `computeDiff` + `enterDiff` pair would have to carry `DiffHunk` across the fence for no benefit,
+> since the affordance only hands hunks straight on. **The hunks never cross.** `DiffOutcome` is a local structural mirror of
+> `DiffEnterResult` for the reason 6.1 recorded (the fence is a source-text scanner, so even `import type` reads as an import).
+> **FENCE PIN: `ALLOWED_ENGINE_IMPORTERS` `[]` → `['src/app/appShell.ts']`, and a NEW `ALLOWED_VIEW_IMPORTERS` clause C +
+> a "diffChrome.ts imports none of the three" clause + two non-vacuity checks (12 → 15 checks).** Clause C is load-bearing,
+> not decoration: red-first proven — adding `import { enterDiff } from './diffView'` to `diffChrome.ts` reddens exactly 2,
+> and under the pre-6.2 pin that violation would have passed silently.
+> **PLACEMENT — top-left, `top:56px;left:16px` (picker at `:94`), measured on the CONTAINED pane.** A first probe measured the
+> FULL-PAGE reader (what every other pill in readerCss.ts was measured against), "cleared" top-left, and was **wrong**: D-14
+> ships this chrome to the **app page only**, and under CONTAINED_CSS the pills are `position:absolute` inside a
+> `:host{position:relative}` box that is the whole DOCUMENT's height. Re-measured there (rail forced open — its width rule
+> stomps an early `data-toc` a frame later; 8- and 30-heading docs; both engines): bottom-left `:216`/`:256` land inside the
+> 3.1 capture disclosure **and no step fixes it** (its height is text-wrap dependent — 110px at 1280, 182px at 414); top-right
+> `:56` hits the TOC handle; top-left `:16` is the remote-load slot; bottom-right sits on the opaque rail and its picker
+> expands into the aside stack. Probe **deleted** (the 4.1 rule). Geometry asserted at WIDE, deliberately **not** at 414×896,
+> where the app pane leaves the host 146px — narrower than one pill — and the existing stack **already self-overlaps**
+> (a pre-existing 3.1-era condition, recorded rather than papered over).
+> **BYTES:** content-script 307892 → **314688 B both engines (+6796)**; app chunk 343632 → **359969 B (+16337)**.
+> **Fence proven by controlled experiment, not just grep:** rebuilding with `appShell`'s engine+view imports removed drops the
+> app chunk to 350470 B (**−9499** = the engine + view + `diff`'s tree-shaken `diffLines`) and leaves the content-script bundle
+> **byte-identical at 314688**. Positive discrimination too: diffView's literals (`no reader shadow root to show a diff in`)
+> appear in the app chunk (1) and **not** in the content script (0). The shared +6796 is `diffChrome`'s code plus the CSS —
+> and note **readerCss.ts comments ship verbatim** (they sit inside a template literal), which cost ~8 KB in a first draft
+> until the placement rationale was moved into `diffChrome.ts` where the minifier strips it. Officially re-measured at 8.1.
+> **`permissions: []` still stands; `diffEngine.ts` and `diffView.ts` BYTE-IDENTICAL (5.1 and 6.1 sealed — 6.2 only USES
+> them); `watchController.ts`, `watchControl.ts`, `watchAvailability.ts` byte-identical; `mount.ts` gains exactly two code
+> lines; `appShell.ts` gains two imports and two object fields; `Settings`/`getSettings`/`putSettings` byte-identical;
+> `DB_VERSION` is 3.** Unit 519 → **540**; browser 577/15/70 → **601/15/72**. M1–M5 remain fully closed.
 >
-> **THE NEXT ACTION IS TASK 6.2 — `src/render/diffChrome.ts`, the diff AFFORDANCE:** the only diff module `mount.ts`
-> imports; reads the diff registry (2.1); D-14's chrome gate on registry emptiness (the same signal 3.1's disclosure uses);
-> on click it fetches the snapshot, computes the diff via a DiffContext-provided closure (which `appShell` provisions by
-> importing `diffEngine` — **that is where the engine finally enters production**, and the fence pin's
-> `ALLOWED_ENGINE_IMPORTERS` gains `src/app/appShell.ts` there), and calls `enterDiff`. The affordance is `[]` — with no
-> note branch — when the registry is empty, so the content-script surface grows neither affordance nor explanation (§3.2).
+> **THE NEXT ACTION IS TASK 6.3 — D-11, and it CLOSES group 6:** defer the re-render while a diff is displayed. In
+> `watchController.onText` (`:324-342`, the coalescer): `if (diffDisplayed(target)) { pendingText = text; return }` — the
+> document changed *while you were reading a diff of it*, so the re-render **waits for exit** rather than yanking the diff
+> out from under the reader. **No timer is armed** (plan §1.6, D-11); the deferred text is applied on exit, and the "changed
+> again" line tells the user why what they are looking at is no longer current. The diff view is now genuinely enterable
+> through the affordance, which is what makes this case reachable at all.
 > **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next

@@ -49,6 +49,8 @@ function stubContext(): DiffContext {
     getCurrentSource: () => undefined,
     fetchMeta: async () => [],
     fetchText: async () => undefined,
+    showDiff: () => ({ ok: true }),
+    hideDiff: () => undefined,
   };
 }
 

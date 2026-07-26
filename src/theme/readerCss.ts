@@ -369,6 +369,72 @@ export const READER_CSS = /* css */ `
 }
 .peekover-watch-disclosure[hidden]{display:none}
 
+/* ============ Diff affordance + snapshot picker (task 6.2, D-14) ============ */
+/* Top-left below the remote-load slot, MEASURED not chosen (the 4.1 rule) — on the CONTAINED pane,
+   because D-14 ships this chrome to the app page only. The candidate-by-candidate rects that ruled
+   out the bottom-left stack, both top-right slots and bottom-right live in diffChrome.ts's header
+   (a .ts comment, so it does not ship; THESE css comments are inside a template literal and DO).
+   Geometry is asserted at the wide viewport in tests/browser/diffChrome.browser.test.ts. */
+.peekover-diff-affordance{
+  position:fixed;top:56px;left:16px;z-index:2;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:7px 15px;cursor:pointer;
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-diff-affordance:hover{color:var(--ink);border-color:var(--faint)}
+/* While a diff is on screen the pill's gesture is EXIT, and it says so — the label and aria-label
+   both change (diffChrome.ts), so the state is never carried by colour alone (§5). --accent is the
+   brand ink: this is an active, actionable mode, not a warning. Deliberately NOT --ok (that is
+   watch's "live and healthy" semantic) and NOT --del (already double-booked between the network
+   indicator and diff-removed — see .peekover-diff .diff-removed above). */
+.peekover-diff-affordance[data-diff-open="true"]{color:var(--accent);border-color:var(--accent)}
+
+/* The snapshot picker — a listbox anchored under the pill, NEVER a dialog: no backdrop, no dim, no
+   focus trap, no centering (mockup divergence 1 — the mockup's modal vs spec §3.7's inline; the
+   verbatim record is at diffChrome.ts's rendering site, per plan §1.7). Sized to the measured slot
+   and scrolling internally so a full retention window stays one calm list. Tokens ONLY. */
+.peekover-diff-picker{
+  position:fixed;top:94px;left:16px;z-index:2;
+  box-sizing:border-box;width:240px;max-width:calc(100vw - 32px);
+  max-height:min(46vh,320px);overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:5px;
+}
+.peekover-diff-picker[hidden]{display:none}
+/* One row = one comparison target. A <button>, so Enter/Space and the tab order come for free. */
+.peekover-diff-picker__item{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  width:100%;box-sizing:border-box;text-align:left;
+  font-family:var(--sans);font-size:12px;line-height:1.5;
+  color:var(--muted);background:none;border:0;border-radius:calc(var(--r) - 3px);
+  padding:7px 9px;cursor:pointer;
+  transition:color .15s,background .15s;
+}
+.peekover-diff-picker__item:hover{color:var(--ink);background:var(--paper)}
+.peekover-diff-picker__when{font-weight:600}
+.peekover-diff-picker__size{color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* The fallback / empty-state line (plan §1.5, §7-8) — shown BESIDE the untouched reader when a
+   comparison cannot be made: the document stays exactly on screen, data-diff is never set, never
+   blank (AGENTS.md #5). It occupies the picker's slot, which is safe because the two are mutually
+   exclusive by construction in diffChrome.ts (every path closes one before showing the other).
+   It BORROWS .peekover-watch-note's shape and its --warn accent, and that is the semantic, not
+   laziness: "comparison unavailable" and "no snapshots yet" are the same class of thing the watch
+   note carries — something you should know, not an error you caused. --accent is reserved for the
+   informational capture disclosure (3.1), which this is not. Tokens ONLY. */
+.peekover-diff-status{
+  position:fixed;top:94px;left:16px;z-index:2;
+  margin:0;max-width:34ch;
+  font-family:var(--sans);font-size:12px;line-height:1.5;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:0 var(--r) var(--r) 0;
+  padding:9px 13px;box-shadow:var(--shadow);
+}
+.peekover-diff-status[hidden]{display:none}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline
@@ -591,6 +657,9 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-watch,
 .peekover-watch-note,
 .peekover-watch-disclosure,
+.peekover-diff-affordance,
+.peekover-diff-picker,
+.peekover-diff-status,
 .peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }
