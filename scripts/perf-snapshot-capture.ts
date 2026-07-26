@@ -20,6 +20,13 @@
 // and 005's 5.1/5.2 split exists because of it. A soft "seems about right" here is the same failure
 // as a hard constant, arriving a beat later. 7.2 is the human gate; 7.3 implements what it decides.
 //
+// ★ WHERE THAT STANDS NOW (updated at 8.1). 7.2's gate has RUN and 7.3 has landed what it chose, so
+// everything above is the origin story rather than the current state. The bounds are fixed values —
+// SNAPSHOT_COUNT_PER_DOC 15, SNAPSHOT_TOTAL_BYTES 20 MiB, SNAPSHOT_MAX_AGE_MS 30 days
+// (`src/app/snapshots.ts`; decisions.md 2026-07-26) — and this harness's job has changed from
+// FEEDING that choice to VERIFYING behaviour against it at milestone close. It still chooses
+// nothing and still gates nothing; the closing block at the bottom of this file says so in full.
+//
 // ════ THE DELTA IS THE NUMBER. NEITHER ABSOLUTE VALUE IS. ═══════════════════════════════════════
 //
 // The number that answers "does capture materially extend the unresponsive window?" is the DELTA
@@ -623,14 +630,40 @@ function measureAccumulationScript(edits: number): string {
     // mount() re-stashes the displayed source on every render, so a render happened if and only if
     // the source now registered for this host is the text just emitted. Counting emissions instead
     // would report the sequence length back to itself and hide every coalesced edit.
-    if (P.readerSourceFor(host) === text) renders += 1;
+    //
+    // ★ THE DISCRIMINATOR IS POLLED, NOT SAMPLED ONCE (the 7.3 finding, fixed at 8.1). Sampling
+    // immediately after __pwSettle UNDERCOUNTS at 1 MB: the run printed "9 of 12 edits rendered"
+    // while the IDB-backed count incremented on all 12 (2->13 off a 1-snapshot seed), and a
+    // coalesced edit captures nothing, so 13 was only reachable if all 12 rendered. The one-shot
+    // sample fired before a ~717 ms 1 MB render had re-stashed its source, and the 1600 ms cooldown
+    // sleep below then let the render land in time for __pwCount() to see it — two numbers off the
+    // same run contradicting each other. Why 7.1 could not have caught it: the then-proposed 5 MiB
+    // byte bound clamped the 1 MB count at 4, so the count could not falsify 'renders' until 7.3
+    // lifted the ceiling.
+    //
+    // 2000 ms (40 x 50 ms) is the bound, and it is measured rather than guessed: a 1 MB re-render
+    // is ~717 ms of sync work (7.1/7.3 baselines) and this harness's own within-arm spread at 1 MB
+    // is ~200 ms, so the worst plausible render lands well inside 1 s and the bound is over 2x it.
+    // 50 ms is fine enough that the loop exits within one tick of the render landing, and at 50 KB
+    // (~34 ms renders, already settled) the first check hits and the poll costs nothing at all.
+    // The poll sits BEFORE the cooldown sleep, so it can only LENGTHEN the gap to the next edit —
+    // it can never induce the extra coalescing it exists to measure. It does inflate 'elapsed',
+    // which is reported as sequence wall-clock and is not a cost figure.
+    // A timeout with no hit is now a REAL coalesce, not a sampling artifact.
+    let rendered = false;
+    for (let poll = 0; poll < 40; poll += 1) {
+      if (P.readerSourceFor(host) === text) { rendered = true; break; }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    if (rendered) renders += 1;
     // Wait out the cost-proportional cooldown so the NEXT edit is a render rather than a coalesce.
     // Generous and measured against the render just performed, not a magic constant: the cooldown
     // equals the last render's cost (COOLDOWN_MULTIPLIER = 1), so twice that always clears it.
     await new Promise((r) => setTimeout(r, 1600));
     // The store's size AFTER this edit. Recorded per edit rather than only at the end, because the
     // end state alone cannot distinguish "few edits captured" from "many captured, most evicted" —
-    // and at 1 MB the PROPOSED (not chosen) DEFAULT_BOUNDS make that difference the whole story.
+    // and at 1 MB the CHOSEN DEFAULT_BOUNDS (7.2, decisions.md 2026-07-26) make that difference the
+    // whole story.
     counts.push(await globalThis.__pwCount());
   }
   // Let the last fire-and-forget write land.
@@ -921,8 +954,9 @@ async function main(): Promise<void> {
     if (r.count < peak || r.counts.some((c, i) => i > 0 && c <= r.counts[i - 1])) {
       console.log(
         `  OBSERVED: the count stopped rising (peak ${peak}, final ${r.count}) while renders continued — ` +
-          `eviction bound under the PROPOSED DEFAULT_BOUNDS. Which bound bit, and whether these are the ` +
-          `right numbers, is 7.2's decision; this line records only that eviction occurred in this run.`,
+          `eviction under the CHOSEN DEFAULT_BOUNDS (15 / 20 MiB / 30 days; 7.2, decisions.md ` +
+          `2026-07-26). This line records only that eviction occurred in this run; which bound bit is ` +
+          `read off the count sequence and the sizes above, and no bound is re-litigated here.`,
       );
     }
   }
@@ -987,9 +1021,27 @@ document is supplied to the production controller directly rather than read off 
 is outside every number here. The module graph is bundled from SOURCE by esbuild rather than taken
 from the shipped WXT artifact.
 
-NO THRESHOLD IS ASSERTED. NO BOUND IS CHOSEN OR RECOMMENDED — not count-per-document, not
-bytes-global, not age-global. 7.2 is the human decision gate for all three (D-8); D-16 already fixed
-the AXES, so only the numbers go to that gate. This script emits no exit-code gate on anything.`);
+NO THRESHOLD IS ASSERTED, AND THIS SCRIPT EMITS NO EXIT-CODE GATE ON ANYTHING. Everything here is
+informational; the only hard perf gate in the repo is perf-first-paint.ts's <150 ms typical first
+paint, a shipped M1 acceptance gate. Nothing measured in this file is one.
+
+THE BOUNDS ARE CHOSEN, AND THIS HARNESS NOW VERIFIES AGAINST THEM RATHER THAN FEEDING THE CHOICE.
+These numbers were the raw material 7.2 used at D-8's human decision gate; that gate has since run
+(decisions.md, 2026-07-26) and 7.3 implemented what it chose, so the three bounds now standing in
+src/app/snapshots.ts are FIXED VALUES, not proposals:
+
+    SNAPSHOT_COUNT_PER_DOC = 15   ·   SNAPSHOT_TOTAL_BYTES = 20 MiB   ·   SNAPSHOT_MAX_AGE_MS = 30 days
+
+The harness's role has changed accordingly. It is milestone-close verification infrastructure: re-run
+it to check that observed eviction behaviour still matches those chosen bounds — the count sequence
+and the individual sizes are what show which bound bites, and when. It still chooses nothing. A run
+whose numbers argue for different bounds is a finding to take to a NEW human decision gate, exactly
+as 7.2 was; it is never grounds for this script, or the session running it, to move a value.
+
+STILL NOT MEASURED HERE, and 7.3 named it explicitly: whether the count bound actually STOPS growth
+at 15. That needs more than 14 rendered edits and EDIT_SEQUENCE is 12, so the "~17 snapshots of 1 MB
+fit in 20 MiB, therefore count binds first" arithmetic in decisions.md remains REASONING, not an
+observation of this harness.`);
 }
 
 main().catch((err) => {

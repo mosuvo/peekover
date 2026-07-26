@@ -528,7 +528,7 @@ go to the gate) and the milestone-close gate (9.1).
 
 ## 8 — Perf / bytes / pins / docs
 
-- [ ] **8.1 Re-measure bytes + first paint; the import fence by measured bytes; final pins.**
+- [x] **8.1 Re-measure bytes + first paint; the import fence by measured bytes; final pins.**
       Content-script size vs **299,411 B** — **`diff` must NOT appear in this number** (the fence, measured, not
       only static); app-page chunk vs **332,895 B** — `diff` is **expected here**, a stated-not-gated line item.
       First paint vs **138.6 ms** — **CONTENT SCRIPT only**; 006 is app-page-only, so `diff` never enters the gated
@@ -539,6 +539,23 @@ go to the gate) and the milestone-close gate (9.1).
       Verify: deltas stated with baseline; **content-script bytes show no `diff`** (the fence's byte cross-check —
       a regression here is STOP and flag); zip under bound both engines. No threshold newly asserted on the app
       page. Golden EMPTY · manifest green.
+      **DONE.** Pins re-measured on the M6-close tree: content script **315,144 B** (+15,733 vs M5) · app chunk
+      **360,423 B** (+27,528) · background **3,435 B** · zip **349,165 / 349,223 B** (both < 2 MB) · unit **549**,
+      browser **605/15/74**, `pnpm lint` **EXIT=0** · Golden **EMPTY** · `permissions: []` both engines.
+      **First paint required a QUIESCED machine and both readings are recorded:** a first attempt measured
+      **154.0 / 157.6 ms — BREACHING the gate** and correctly stopped; after a recorded quiesce (49 browser
+      processes closed, 78 s settle, CPU 5.6%) three bounded passes read **137.9 / 140.2 / 137.7 ms — PASS**,
+      floor **133.0 ms** (M5's floor, so 7.1's +6.9 ms was machine state), 1 MB reference **1185.2 ms**.
+      **The standing warning is now ZERO headroom on a working-day machine — the gate sits at the noise floor**,
+      and whether a machine-state-dependent gate should be re-phrased is a 9.1 human call, untouched here.
+      **THE FENCE'S BYTE CROSS-CHECK WAS RE-ESTABLISHED, NOT INHERITED:** 7.1's grep is **RETRACTED as vacuous**
+      (identifiers, minified bundle — the app-chunk negative control also returns 0, so it never discriminated;
+      layer 1's source-text allowlist in `diffEngine.test.ts` had been carrying the fence alone). Replaced by a
+      **controlled ablation**: with the engine+view removed from `appShell.ts`, the content script is
+      **BYTE-IDENTICAL (0 B, md5)** on both engines and the app chunk drops **−9,481 B** — the diff feature's
+      measured app-page cost, and proof its contribution to the gated path is nil. Round-trip restored and all
+      six artifacts rebuilt md5-identical. **No threshold newly asserted on the app page** (still zero automated
+      coverage, §4-3); the large-doc false `FAIL` is **NOT fixed** (§4-8), unchanged by this task.
 
 - [ ] **8.2 Docs + memory reconcile.** `progress.md`: Now-pointer to the milestone-close gate, Baselines/pins
       updated, 006 moved toward Closed on completion. `decisions.md`: revisit-when dates current (D-1…D-16 already

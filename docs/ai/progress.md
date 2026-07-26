@@ -501,24 +501,147 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 this is early foundation, **~fifth of ~12+ spec-milestones**. Don't over-read the fraction.
 
 ## Baselines / pins
-*Current measured truth, as of the M5 close (task 6.1, 2026-07-21). This section is MUTABLE — each
+*Current measured truth, as of the M6 close (task 8.1, 2026-07-26). This section is MUTABLE — each
 milestone's close task overwrites the numbers and moves the previous ones into the "vs" column. It lives
 here, not in decisions.md, because decisions.md is dated append-only and a current-numbers table cannot be
 corrected there without either lying or duplicating.*
 
-| pin | at M5 close (005) | vs M4 close | bound | verdict |
+| pin | at M6 close (006) | vs M5 close | bound | verdict |
 |---|---|---|---|---|
-| First paint, typical doc (50.4 KB) | **138.6 ms** (2nd pass **135.8 ms**) | 137.7 ms | <150 ms **GATE** | **PASS** |
-| First paint, 1 MB / ~1400-entry TOC | **1183.8 ms** | 1248.6 ms (**−64.8 ms**) | <1.7 s (informational) | PASS |
-| Content script (`.output/chrome-mv3/`) | **299,411 B** | 288,654 B (**+10,757 B, +3.73%**) | none — **stated, not gated** | — |
-| App-page chunk (`chunks/app-*.js`) | **332,895 B** | 320,086 B (**+12,809 B, +4.00%**) | none — **stated, not gated** | — |
-| Background (`background.js`) | **3,315 B** | 2,437 B (**+878 B, +36.0%**) | none — **stated, not gated** | — |
-| `pnpm zip` Chrome / Firefox | **335.89 / 335.95 kB** | 327.61 / 327.66 kB (**+8.28 / +8.29 kB**) | <2 MB | PASS |
-| Suites | 456 unit · 499 passed / 15 skipped browser, 54 file-instances (both engines) | 384 · 314 | — | green |
+| First paint, typical doc (50.4 KB) | **137.9 ms** (passes 2/3 **140.2 / 137.7 ms**) | 138.6 ms (**−0.7 ms**) | <150 ms **GATE** | **PASS** |
+| First paint, 1 MB / ~1400-entry TOC | **1185.2 ms** | 1183.8 ms (**+1.4 ms**) | <1.7 s (informational) | PASS |
+| Content script (`content-scripts/peekover.js`) | **315,144 B** both engines | 299,411 B (**+15,733 B, +5.25%**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-Bn1Oo_pw.js`) | **360,423 B** both engines | 332,895 B (**+27,528 B, +8.27%**) | none — **stated, not gated** | — |
+| Background (`background.js`) | **3,435 B** both engines | 3,315 B (**+120 B, +3.62%**) | none — **stated, not gated** | — |
+| `pnpm zip` Chrome / Firefox | **349,165 / 349,223 B** (349.17 / 349.22 kB) | 335.89 / 335.95 kB (**+13.28 / +13.27 kB**) | <2 MB | **PASS** |
+| Suites | 549 unit (46 files) · 605 passed / 15 skipped browser, 74 file-instances (both engines) | 456 · 499/15/54 | — | green |
 
-**M6-post-7.1 (2026-07-26) — measured fresh at task 7.1, on the 006 tree at `a873b8d` + 7.1.** M6 is still OPEN, so this
-is a progress reading, not a close; the M5-close row above stays the pinned baseline until group 8 re-measures
-officially. Format is `M6-post-7.1 vs M5-close ; delta`.
+**★ THE FIRST-PAINT GATE WAS DECIDED ON A QUIESCED MACHINE, AFTER IT FAILED ON A WORKING-DAY ONE. Both
+readings are recorded here; neither is cherry-picked.** The first 8.1 attempt measured medians **154.0 /
+157.6 ms — BREACHING the <150 ms gate** — and correctly stopped rather than re-rolling. Attribution pointed at
+machine state, not code: the build was byte-identical to the one that measured 144.3/145.1 ms at 7.1 (the
+single-byte `SNAPSHOT_TOTAL_BYTES` minification delta is not on the render path), and the 1 MB fixture moved
+**proportionally** (+10.7% vs 7.1) — a code regression on the render path would not scale both fixtures alike.
+The machine was then quiesced under a recorded protocol (**Brave 28 → 0 and Chrome 21 → 0 processes closed
+gracefully; 78 s settle; CPU mean 5.6% across 5 samples; memory 32.2% → 21% used**) and the harness re-run
+**three times in immediate succession, a bounded protocol fixed in advance — not "until it passes"**:
+
+| pass (50.4 KB) | median | min | max | verdict |
+|---|---|---|---|---|
+| 1 | **137.9 ms** | 135.9 | 166.6 | **PASS** |
+| 2 | **140.2 ms** | 133.0 | 143.1 | **PASS** |
+| 3 | **137.7 ms** | 134.8 | 147.2 | **PASS** |
+| 1 MB reference | **1185.2 ms** | 1163.2 | 1226.8 | PASS vs its own <1.7 s bound |
+
+**The 1 MB reference is the discriminator and it confirmed the hypothesis:** 1185.2 ms against 7.1's 1270.4 ms
+and the failed attempt's 1406.6 ms — the machine really did quiet down, so the 50 KB improvement is not a
+lucky draw on one fixture. **Floor across all three passes: 133.0 ms** — against M6-post-7.1's 138.9 ms
+(**−5.9 ms**) and M5-close's 132.0 ms (**+1.0 ms**). On the standing protocol that signal-vs-noise is decided
+on the floor, **the floor is back at M5's, so 7.1's +6.9 ms floor movement was machine state, not 006's code.**
+- **★ THE WARNING IS NOW STRONGER THAN "NO HEADROOM": ASSUME ZERO HEADROOM ON A WORKING-DAY MACHINE — the
+  gate sits AT the machine-state noise floor.** A green result here required closing 49 browser processes.
+  The same tree measured **157.6 ms** with a normal desktop running. Any future session that touches the
+  render path must quiesce before believing a number, and must treat a passing median on a busy machine as
+  luck rather than evidence. **This is a standing risk, not a solved problem** — it is the human's call at
+  9.1 whether a gate that depends on machine state should be re-phrased (spread-aware) or re-sited; the M1
+  gate was set when the codebase was ~30% of its current byte weight, and 8.1 does not touch it.
+- **The measured build IS the committed tree, proven not assumed:** a fresh `wxt build` after the passes
+  reproduced all three artifacts **md5-identical** to the ones the passes ran against.
+
+**★★ THE IMPORT FENCE, PROVEN BY CONTROLLED ABLATION — AND 7.1's GREP RETRACTED AS VACUOUS.**
+
+**The finding first, because it invalidates a reading this file has carried since 5.1.** Every recorded
+"content-script grep for `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|
+structuredPatch` = **0**, both engines" was **proving nothing**. Those are all *identifiers*, and the
+production bundle is minified — they are renamed to one- and two-letter locals, so the pattern cannot match
+diff code **anywhere**. The proof is the negative control that 5.1–7.1 never ran: grep the **app-page chunk**,
+which indisputably *does* contain the engine and the view, and it also returns **0**. A test that returns the
+same answer whether or not the thing is present has **zero discriminating power**. **The fence was never
+actually verified by bytes; it was carried, unnoticed, entirely by layer 1 — the source-text allowlist in
+`diffEngine.test.ts` (Clauses A/B/C), which is green and which is the real architectural proof.** Do not
+propagate the old grep. *(Retro item — named in the 8.1 commit body.)*
+
+**Replacement heuristic for future measure-tasks, controls stated so they can be re-checked.** Use literals
+that survive minification, and always run the negative control:
+
+| marker set | app chunk (CONTROL — must be >0) | content script (FENCE — must be 0) |
+|---|---|---|
+| `diff` pkg option props — `newlineIsToken\|stripTrailingCr\|ignoreWhitespace\|oneChangePerToken\|maxEditLength` | **12** ✓ fires | **0** ✓ |
+| `diffView` strings — `diff could not be rendered\|no reader shadow root to show a diff in` | **2** ✓ fires | **0** ✓ |
+
+Identical on **both engines**. **This is a heuristic, not a proof** — it depends on the minifier preserving
+those particular literals, and a bundler upgrade could silently blunt it exactly as it blunted 7.1's. **The
+source-text allowlist test remains the architectural proof; the grep is a cross-check, and it is only worth
+anything while its control fires.** Note also that `peekover-diff*` class names DO appear in the content
+script (**36 hits**) and this is **correct, not a breach**: `mount.ts` imports `diffChrome.ts` by design, and
+that module is engine-blind (it reaches the engine only through the `showDiff`/`hideDiff` closures the app
+page provisions). A fence grep must target the **engine and the view**, never the string "diff".
+
+**THE CONTROLLED ABLATION (the 6.2 precedent, run at milestone close — the only fence check that cannot be
+fooled by minification).** `src/app/appShell.ts` copied aside, its two gated imports commented out and
+`showDiff`/`hideDiff` stubbed to no-ops, both engines rebuilt:
+
+| artifact | shipped | diff ablated | delta |
+|---|---|---|---|
+| Content script (chrome) | 315,144 B `md5 0ffdb45b…` | 315,144 B `md5 0ffdb45b…` | **0 B — BYTE-IDENTICAL** |
+| Content script (firefox) | 315,144 B `md5 73da1158…` | 315,144 B `md5 73da1158…` | **0 B — BYTE-IDENTICAL** |
+| App-page chunk (both) | 360,423 B | 350,942 B | **−9,481 B (−2.63%)** |
+
+**Read it precisely: removing the entire diff engine and view changes the content script by ZERO BYTES, to the
+md5, on both engines — so the diff feature's contribution to the GATED path is not "small", it is nil.** The
+ablation is **non-vacuous**: both marker sets drop to 0 in the app chunk when ablated, so the mutation really
+did remove what it claimed to. **9,481 B is therefore the measured app-page byte cost of the diff feature** —
+a stated-not-gated line item, and the honest answer to "what did 006's engine cost in bytes."
+**Round-trip verified:** restored from the pristine copy (`md5 78edfe9e…` matches, `git diff` empty), both
+engines rebuilt, and **all six artifacts returned md5-identical to pre-mutation** — including the app chunk's
+content hash `app-Bn1Oo_pw.js`. `pnpm lint` green after restore.
+
+**★ Neither this nor 7.1's growth attribution licenses "006 is free on the content script."** The
+content-script `+15,733 B` vs M5 is **real** and is 006's shared chrome/CSS (the affordance, the picker, the
+watch/diff UI surface `mount.ts` legitimately pulls in) — the ablation isolates the *engine*, not all of 006.
+
+**★ THE TWO 006 HARNESSES RE-RUN AGAINST THE M6-CLOSE TREE (post-7.3 constants), `--no-build`.** This is the
+milestone-close verification the harnesses were converted into at 7.3 — they choose nothing.
+
+**`perf:snapshot-capture` — 7.3's CHOSEN bounds behave as reasoned.** Accumulation over 12 sequential edits,
+through the production controller: **50 KB → 13 snapshots, 659.5 KB** (`2,3,…,13`); **1 MB → 13 snapshots,
+14.57 MB** (`2,3,…,13`). **Neither bound bites** — 13 < 15 and 14.57 MB < 20 MiB — reproducing 7.3's
+re-measurement **exactly**, and 7.1's plateau-at-4 stays gone (it was the *proposed* 5 MiB bound). **STILL NOT
+OBSERVED, and still out of reach of this harness: whether the count actually stops growth at 15** —
+`EDIT_SEQUENCE` is 12, so decisions.md's "~17 snapshots of 1 MB fit in 20 MiB" remains **reasoning, not
+measurement**. Capture cost is unchanged in magnitude and **still unresolvable** at both sizes (the harness
+says so itself): 50 KB sync delta **+1.7 ms** against an 8.7 ms within-arm spread; 1 MB **+49.8 ms** against a
+425.9 ms spread — and across the two passes run this session the 1 MB delta moved 23.8 → 49.8 ms, which is the
+point. Isolated D-5 guard **0.0 µs / 47.5 µs**; awaited write **0.6 ms / 7.1 ms**; mean snapshot 50.7 KB /
+1.12 MB. **No threshold asserted.**
+- **★ PIECE 1's DISCRIMINATOR FIX IS CONFIRMED BY MEASUREMENT, and it settles 7.3's open contradiction.** The
+  harness now reports **`12 of 12 edits rendered` at BOTH fixtures**, against 7.1/7.3's `9 of 12`. 7.3 had
+  already argued the two numbers could not both be true (a coalesced edit captures nothing, so 13 snapshots
+  off a 1-snapshot seed requires all 12 to have rendered) and blamed the sampled `renders` probe. **Polling it
+  instead of sampling once makes the count and the render tally agree.** So **7.1's "the coalescer dropped 2–3
+  edits at 1 MB" is formally RETRACTED — it was a harness artefact, not behaviour.** `scripts/` was fenced at
+  7.3, which is why the fix landed here.
+
+**`perf:diff` — no movement against 7.1.** (a) engine **587.5 ms** (7.1: 585.0) · (b) parse+sanitize **441.5 ms**
+(433.6) · (c) DOM **137.8 ms** *derived* (122.0) · (d) **TOTAL enter 1202.2 ms** (1157.4) · first scroll frame
+**388.3 ms**, settling to ~55 ms by frame 4. Fixture determinism holds to the hunk: **5882 hunks
+(1961+/1961−/1960=) → 5882 blocks on all 7 runs**, both sessions. Memory stays **DIRECTIONAL ONLY** and the
+caveats are load-bearing — median +35.44 MB on enter with a per-run range of **−9.52 to +76.44 MB**, i.e. GC
+timing dominates; the net before→after-exit median is −67.9 KB across a ±42 MB range, which is **not** evidence
+of a clean teardown. **No threshold asserted; `perf:diff` emits no gate.**
+
+**⚠ TOOLING TRAP, recorded so the next session does not lose time to it: `pnpm zip -- -b firefox` SILENTLY
+BUILDS CHROME.** There is no `zip:firefox` script; pnpm forwards the bare `--` as a literal argument and wxt's
+CLI ignores what follows, so the command exits 0 having rebuilt and rezipped **chrome-mv3** — a green run that
+produced the wrong artifact. **The correct invocation is `pnpm exec wxt zip -b firefox`** (likewise
+`pnpm exec wxt build -b firefox`). The `pnpm perf -- --size 50kb` form is unaffected — `tsx` ignores the bare
+`--`, which is why the perf harnesses never exposed this.
+
+**M6-post-7.1 (2026-07-26) — SUPERSEDED by the M6-close table above (task 8.1 re-measured officially).**
+Kept for the audit trail, not as current truth. Two of its readings are **corrected** there and the
+corrections are the point: its first-paint numbers (144.3 / 145.1 ms, floor 138.9 ms) carried **machine-state
+noise it could not see**, and its import-fence grep had **no discriminating power** (see the retraction above).
+Measured on the 006 tree at `a873b8d` + 7.1. Format is `M6-post-7.1 vs M5-close ; delta`.
 
 | pin | M6-post-7.1 | vs M5 close | bound | verdict |
 |---|---|---|---|---|
@@ -537,12 +660,20 @@ officially. Format is `M6-post-7.1 vs M5-close ; delta`.
   Recorded as a fact, **not** interpreted here: 7.1 asserts the gate result and nothing beyond it. **The next
   perf-touching session should assume NO headroom.** (006 is app-page-only, so the diff feature never enters this
   gated content-script path — the growth above is 006's shared chrome/CSS, officially attributed at 8.1.)
+  **★ 8.1 CORRECTION:** the +6.9 ms floor movement was **machine state, not code** — on a quiesced machine the
+  floor returned to **133.0 ms**, M5's. The standing warning is now stronger, not weaker: **assume ZERO headroom
+  on a working-day machine.** And "the diff feature never enters the gated path" is now **proven by ablation**
+  (0 B, md5-identical) rather than argued from the module graph.
 - **The 1 MB line still prints `-> FAIL`** for the known reason (it compares the 1 MB fixture against the
   *typical-doc* bar and self-labels the comparison informational — decisions.md 2026-07-14). Against its OWN
   <1.7 s bound the verdict is **PASS**. Not a breach, not a regression.
-- **THE IMPORT FENCE HOLDS BY MEASURED BYTES, BOTH ENGINES:** content-script grep for
+- ~~**THE IMPORT FENCE HOLDS BY MEASURED BYTES, BOTH ENGINES:** content-script grep for
   `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|structuredPatch` = **0** in
-  `.output/chrome-mv3/` AND `.output/firefox-mv3/`. `permissions: []` on both built manifests.
+  `.output/chrome-mv3/` AND `.output/firefox-mv3/`.~~ **★ RETRACTED AT 8.1 — THIS GREP PROVED NOTHING.** Those
+  are identifiers, and the bundle is minified; the app chunk, which *does* contain the engine, greps **0** too.
+  The claim was true but unsupported by this evidence. **The fence does hold** — re-established at 8.1 by
+  controlled ablation (**0 B, md5-identical content script**) and by markers with a firing control. See the
+  M6-close section above. `permissions: []` on both built manifests **stands** (independently checked at 8.1).
 - **`pnpm zip` still emits the third, non-bound artifact:** the Firefox run also writes
   `peekover-0.0.0-sources.zip` (**3.93 MB**, was 3.39 MB) — the source archive AMO requires for review, not a
   shipped package. The <2 MB bound is on the extension zips (349.17 / 349.23 kB).
