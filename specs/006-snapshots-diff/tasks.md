@@ -557,13 +557,32 @@ go to the gate) and the milestone-close gate (9.1).
       six artifacts rebuilt md5-identical. **No threshold newly asserted on the app page** (still zero automated
       coverage, §4-3); the large-doc false `FAIL` is **NOT fixed** (§4-8), unchanged by this task.
 
-- [ ] **8.2 Docs + memory reconcile.** `progress.md`: Now-pointer to the milestone-close gate, Baselines/pins
+- [x] **8.2 Docs + memory reconcile.** `progress.md`: Now-pointer to the milestone-close gate, Baselines/pins
       updated, 006 moved toward Closed on completion. `decisions.md`: revisit-when dates current (D-1…D-16 already
       logged at gate 2; the two gate-3 decisions land with the tasks.md commit). `PERMISSIONS.md` already corrected
       at 1.4 — confirm no stale claim survived. Retro is 9.2, not here.
       Files: `docs/ai/progress.md` · `docs/ai/decisions.md`
       Verify: `pnpm test` + `pnpm test:browser` + `pnpm lint` green; the memory files read true against the shipped
       code. Golden EMPTY · manifest green.
+      **DONE.** A **coherence pass, not new writing** — the retro (9.2) writes M6's findings. **`decisions.md` and
+      `PERMISSIONS.md` were READ and left UNTOUCHED**, which is the result, not an omission: every `decisions.md`
+      entry still holds against 8.1 (D-8's values behave as reasoned; `diff@^9.0.0`'s *"revisit-when 8.1 shows `diff`
+      bytes reaching the content script"* fired and came back clean at **0 B, md5-identical**; gate-3's two product
+      decisions and D-1…D-16 stand, with 8.1's ablation reinforcing **D-14** empirically). **No entry appended on
+      purpose:** 8.1's two retractions are measurement findings, not decisions — they live in `progress.md` and belong
+      in `retro.md` at 9.2. `PERMISSIONS.md` is coherent with 1.4's correction (the blanket *"file contents are never
+      stored"* survives only inside the paragraph retiring it) and **006 crossed no permission boundary** — the diff
+      adds no store, no channel, no network; `permissions: []` stands.
+      **`progress.md`: FOUR stale pointers found and fixed, the first one substantive — 8.1 landed without advancing
+      the Now-pointer**, leaving the section reading *"group 8 is next (8.1)"* with a next-action block describing work
+      already done, in violation of the M1 per-task rule printed at the bottom of that same section. Also: Blockers
+      still named *"006's spec gate 1"* as the next human gate (four gates stale); the roadmap still pointed at 006 as
+      **← NEXT**; the header date read 2026-07-25. **Now-pointer advanced to 9.1** with its scope named (Firefox
+      everything — 100% human-gate coverage — · zero-network with the Network tab open · capture-disclosure legibility
+      (D-12) · D-11's "changed again" line (gate-3's named condition) · diff discoverability · inline diff at 1 MB ·
+      the 15-row picker · `--del`'s second meaning · app-page responsiveness §4-3 · 8.1's noise-floor gate question);
+      8.1 and 7.3 folded. **Baselines UNTOUCHED** (8.1 owns it). **No `src/`, test, `scripts/` or spec file besides
+      this one changed** — `pnpm lint` **EXIT=0**, unit **549** unchanged, `git diff tests/golden/output/` **EMPTY**.
 
 ## 9 — Human milestone-close gate + retro (the acceptance an agent CANNOT self-certify — budgeted HERE)
 
