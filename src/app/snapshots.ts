@@ -45,57 +45,70 @@ export type SnapshotMeta = { docId: string; entries: SnapshotMetaEntry[] };
 export type SnapshotBounds = { countPerDoc: number; totalBytes: number; maxAgeMs: number };
 
 /**
- * PROPOSED default — NOT chosen (D-8): task 7.2 picks the real number from 7.1's measurements,
- * and 1.2 is explicitly forbidden from choosing it. Per-document cap (D-16 axis: count is
- * per-document — decided, do not reopen).
+ * CHOSEN default (D-8 — task 7.2's human gate, `decisions.md` 2026-07-26). Per-document cap
+ * (D-16 axis: count is per-document — decided, do not reopen). 1.2 proposed 20 and was forbidden
+ * from choosing; the human chose 15 from 7.1's measurements.
  *
  * Tradeoff it balances: session-scale history vs picker legibility. Too low and a normal
  * editing session loses states the user might diff against; too high and §3.7's diff-target
- * picker becomes an unreadable wall of near-identical entries. 20 mirrors the house recents cap
- * (`recents.ts` `DEFAULT_RECENTS_CAP`) as a familiar "short, honest list" scale.
+ * picker becomes an unreadable wall of near-identical entries. 15 is moderate history depth,
+ * chosen over both deeper (20+, which keeps stale early state) and shallower (10, tight for an
+ * active session). The picker scrolls internally at this depth BY DESIGN, not as a cost —
+ * `readerCss.ts:401` caps it at `min(46vh,320px)` with `overflow:auto`.
  *
- * The 7.1 signal that would move it: the recorded count of distinct render-states per watched
- * session. If typical sessions produce far more — or far fewer — meaningfully-different states
- * than ~20, 7.2 moves this to match the measurement.
+ * ★ THIS IS THE BOUND THAT BINDS NORMAL USAGE — bytes is the safety cap, age the abandonment
+ * valve. Tuning any one of the three in isolation against the wrong purpose is the mistake
+ * `decisions.md`'s mental-model note exists to prevent; its revisit-when lives there, not here.
  */
-export const SNAPSHOT_COUNT_PER_DOC = 20;
+export const SNAPSHOT_COUNT_PER_DOC = 15;
 
 /**
- * PROPOSED default — NOT chosen (D-8): 7.2 picks from 7.1's data; 1.2 may not choose it. Global
- * cap across all documents (D-16 axis: bytes are global — decided).
+ * CHOSEN default (D-8 — task 7.2's human gate, `decisions.md` 2026-07-26). Global cap across all
+ * documents (D-16 axis: bytes are global — decided). 1.2 proposed 5 MiB; the human chose 20 MiB.
  *
  * Tradeoff it balances: on-disk footprint vs meaningful history. Peekover is reader-first and
  * zero-network; snapshot storage must stay a modest on-device cost, but too small a ceiling
- * evicts real history the moment a second large document is watched. §1.6 treats 1 MB as the
- * per-document diff-render ceiling, so 5 MiB holds roughly a handful of large documents' worth
- * of history before the global byte sweep bites.
+ * evicts real history the moment a second large document is watched.
  *
- * The 7.1 signal that would move it: the recorded real snapshot sizes/counts the eviction acts
- * on. If real captured documents run much larger or much smaller than the 50 KB / 1 MB render
- * baselines, 7.2 moves this.
+ * ★ WHY IT MOVED, and it is the one number 7.1's measurement actually redirected: 5 MiB was the
+ * plan's defensive proposal ("invisible on any disk"), and 7.1 measured it BINDING AT 4 SNAPSHOTS
+ * for a 1 MB document — the thinnest history exactly where deep history is most valuable, since
+ * large documents evolve more meaningfully than small ones. At 20 MiB a 1 MB document fits ~17
+ * snapshots, which is ABOVE `SNAPSHOT_COUNT_PER_DOC`, so count binds first as designed; ~420 fit
+ * at 50 KB. Still 0.02% of a 100 GB drive.
+ *
+ * ★ This bound is the SAFETY CAP for the pathological "many large documents" case, NOT the
+ * everyday constraint — count is what bounds normal usage.
  */
-export const SNAPSHOT_TOTAL_BYTES = 5 * 1024 * 1024;
+export const SNAPSHOT_TOTAL_BYTES = 20 * 1024 * 1024;
 
 /**
- * PROPOSED default — NOT chosen (D-8): 7.2 picks from 7.1's data; 1.2 may not choose it. Global
- * cap across all documents (D-16 axis: age is global — decided).
+ * CHOSEN default (D-8 — task 7.2's human gate, `decisions.md` 2026-07-26). Global cap across all
+ * documents (D-16 axis: age is global — decided).
  *
- * Tradeoff it balances: forget-horizon vs continuity. A short horizon keeps storage fresh and
- * keeps "history" honestly recent, but drops continuity for a document the user returns to after
- * a break; a long horizon preserves continuity at the cost of holding stale states. 30 days keeps
- * "the last month of this document" without retaining indefinitely.
+ * ★ THE VALUE DID NOT MOVE, AND THAT IS ITSELF THE DECISION: 1.2 proposed 30 days and 7.2 kept it
+ * DELIBERATELY, after weighing 7 and 90 as alternatives. Reviewed and chosen, not skipped.
  *
- * The 7.1 signal that would move it: the record of how quickly the count/byte caps bind in
- * practice. If they bind first (history saturates within a session), age rarely triggers and can
- * be generous; if watched sessions are sparse and far apart, age becomes the effective bound and
- * 7.2 tightens or loosens it accordingly.
+ * Tradeoff it balances: forget-horizon vs continuity. 7 days would change what a snapshot IS —
+ * "recent working state" rather than "the history of this document". 90 would leave stale state
+ * occupying the pool for a full quarter after abandonment. 30 days covers common project cadences
+ * (weekly / biweekly / monthly review) while cleaning abandoned experiments within a month.
+ *
+ * ★ AGE IS THE SAFETY VALVE FOR ABANDONMENT, not a constraint on working memory — count and bytes
+ * bound active usage. At 20 MiB bytes rarely bind in typical use, which makes age the effective
+ * garbage collector for the "watched briefly, then forgot" document.
+ *
+ * ★ One semantic, logged in `decisions.md` and worth knowing BEFORE touching eviction: age is
+ * measured from a snapshot's TIMESTAMP, not from last access — an actively-worked document still
+ * loses its 30-day-old snapshots. Accepted because newer, more relevant snapshots exist by then.
  */
 export const SNAPSHOT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * The proposed defaults assembled into one bounds record. 1.4 passes THIS to `planSnapshotWrite`
- * in production; unit tests pass small explicit bounds instead, so 7.3's number-swap leaves them
- * green. Still PROPOSED end-to-end — 7.2 chooses the numbers, 7.3 swaps the constants above.
+ * The CHOSEN defaults assembled into one bounds record. 1.4 passes THIS to `planSnapshotWrite`
+ * in production; unit tests pass small explicit bounds instead, which is why 7.3's number-swap
+ * left every one of them green. The three constants are referenced BY NAME, so a chosen value
+ * propagates to every consumer through a single edit — no call site carries a literal.
  */
 export const DEFAULT_BOUNDS: SnapshotBounds = {
   countPerDoc: SNAPSHOT_COUNT_PER_DOC,

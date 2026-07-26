@@ -478,12 +478,53 @@ go to the gate) and the milestone-close gate (9.1).
       7.3 sets the constants and re-runs the accumulation cell of `perf:snapshot-capture` to confirm the new
       bounds bind (or don't) as expected.
 
-- [ ] **7.3 Implement the CHOSEN bounds.** Set 1.2's proposed constants to 7.2's chosen values (a no-op edit if
+- [x] **7.3 Implement the CHOSEN bounds.** Set 1.2's proposed constants to 7.2's chosen values (a no-op edit if
       they matched; recorded either way). If the chosen numbers change eviction behaviour, the 1.2 unit cases move
       with them.
       Files: `src/app/snapshots.ts` · `src/app/snapshots.test.ts`
       Verify: (**unit**) the eviction cases pass against the chosen numbers; the algorithm is unchanged (only
       constants moved). Golden EMPTY · manifest green.
+      **LANDED. GROUP 7 CLOSES.** `SNAPSHOT_COUNT_PER_DOC` **20 → 15**; `SNAPSHOT_TOTAL_BYTES` **5 MiB → 20 MiB**;
+      `SNAPSHOT_MAX_AGE_MS` **UNCHANGED at 30 days** — 7.2 weighed 7 and 90 and kept 30, so it is a value REVIEWED
+      AND CHOSEN, not skipped (**"recorded either way"**, this task's own body). **THE ALGORITHM DID NOT MOVE:** one
+      diff hunk, confined to the constants block, whose only two non-comment lines are the two values —
+      `planSnapshotWrite`, `bytesOf`, `DEFAULT_BOUNDS`'s body and the entire IDB layer byte-identical. Consumers pick
+      the numbers up through `DEFAULT_BOUNDS`, which names all three constants, so choosing a value is a one-line
+      edit. The four jsdoc blocks reading **"PROPOSED — NOT chosen (D-8)"** now record them as CHOSEN (7.2,
+      `decisions.md` 2026-07-26) with the reasoning attached — a "proposed" comment on a chosen value is a lie about
+      the decision state, and the next session would read it as still open.
+      **`snapshots.test.ts` NEEDED NO CHANGE — 1.2's design paying off:** every eviction case passes its own small
+      explicit bounds (`{ countPerDoc: 2, totalBytes: 100, … }`) and the one `DEFAULT_BOUNDS` case asserts shape +
+      positivity only. **No test ever pinned a proposed number** (1.2's rule G), so no literal needed updating.
+      **★ RE-MEASUREMENT CONFIRMED THE PREDICTION, WHICH WAS STATED BEFORE THE HARNESS RAN** (a number read first and
+      rationalised after is not a verification). Accumulation cell, 12 edits through the production controller:
+      **50 KB `2,3,4,…,13` → 13 snapshots, 659.5 KB — identical to 7.1 to the byte** (never reached a cap under the
+      old numbers either); **1 MB `2,3,…,13` → 13 snapshots, 14.57 MB — 7.1's PLATEAU AT 4 IS GONE.** That plateau was
+      the proposed 5 MiB bound biting at the fourth 1.12 MB snapshot; 14.57 MB < 20 MiB and 13 < 15, so **neither
+      bound bites — the designed reordering** (bytes stepped back to a safety cap, count became what would bind
+      first). **NOT OBSERVED and out of scope: whether count stops growth at 15** — needs >14 rendered edits,
+      `EDIT_SEQUENCE` is 12, harness unmodified; the ~17-snapshot arithmetic in `decisions.md` is reasoning, not
+      measurement. **No stale-build trap** (checked, not assumed): `--no-build` reuses `.output/`, but the harness
+      re-bundles `snapshots.ts` + `watchController.ts` from SOURCE via esbuild (`perf-snapshot-capture.ts:275-282`),
+      so the measured path carried the new constants.
+      **★ A FINDING THE RELAXED BOUND EXPOSED — 7.1's "the coalescer dropped 2–3 edits at 1 MB" IS NOT SUPPORTED.**
+      The run printed `edits rendered: 9 of 12` while the count incremented on **all 12** edits (2→13 off a 1-snapshot
+      seed). A coalesced edit captures nothing, so 13 is reachable only if all 12 rendered — the two numbers
+      contradict each other and IndexedDB backs the count. The `renders` discriminator samples
+      `readerSourceFor(host) === text` before a 1 MB render re-stashes its source. **7.1 could not have caught it:**
+      the 5 MiB bound clamped the count at 4, making `renders` unfalsifiable until the ceiling lifted. `scripts/` is
+      fenced here, so the harness was NOT touched — **8.1 owns the fix or the caveat.**
+      Other cells same magnitude (constants touch eviction only, never capture cost): guard 5.0 → **0.0 µs** (both at
+      or under the 5 µs granularity floor) / 47.5 → **45.0 µs**; awaited write 0.6 → **0.6 ms** / 10.8 → **7.5 ms**;
+      mean snapshot 50.7 KB / **1.12 MB**. **The OFF-vs-ON delta is still unresolvable and still flips sign** (−0.4 /
+      −5.4 ms sync) — 7.1's headline finding reproduces. **NO threshold asserted.**
+      **Pins:** unit **549** unchanged · browser **605/15/74** unchanged · `pnpm lint` **EXIT=0** · Golden **EMPTY** ·
+      `permissions: []` stands · `tests/manifest.test.ts` **2975 B**, byte-unmodified since M2 ·
+      `Settings`/`getSettings`/`putSettings` byte-identical (**sixteen tasks now**) · `store.ts`, `idbCore.ts`,
+      `settings.ts`, `vitest.config.ts`, `wxt.config.ts`, `package.json`, `pnpm-lock.yaml`, `PERMISSIONS.md`, both
+      harnesses and **every sealed 006 file** (`diffEngine`, `diffView`, `diffRegistry`, `diffChrome`, `mount`,
+      `appShell`, `watchController`, `watchControl`, `watchRegistry`, `diffEngine.test`) **BYTE-IDENTICAL** —
+      `snapshots.ts` is the only file in `src/` that changed. NUL count 0.
 
 ## 8 — Perf / bytes / pins / docs
 

@@ -10,8 +10,73 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **groups 1–6 CLOSED; group 7 is 7.1 + 7.2 done, 7.3 next.**
-> **Nothing is in progress and nothing is blocked. Task 7.2 — D-8's HUMAN DECISION GATE — has landed** (this commit).
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **groups 1–7 CLOSED; group 8 is next (8.1).**
+> **Nothing is in progress and nothing is blocked. Task 7.3 — IMPLEMENT THE CHOSEN BOUNDS — has landed, and GROUP 7 CLOSES**
+> (this commit). **Two constants moved, one was reviewed and deliberately left alone**, in `src/app/snapshots.ts` and nowhere
+> else. **The eviction ALGORITHM did not move** — `planSnapshotWrite`, `bytesOf`, `DEFAULT_BOUNDS`'s body and the whole IDB
+> layer are byte-identical; the single diff hunk is confined to the constants block, and its only two non-comment lines are
+> the two values. Every consumer picks the new numbers up through `DEFAULT_BOUNDS`, which references all three BY NAME, so
+> choosing a value stayed a one-line edit:
+> - **`SNAPSHOT_COUNT_PER_DOC` 20 → 15**
+> - **`SNAPSHOT_TOTAL_BYTES` 5 MiB → 20 MiB** (`20 * 1024 * 1024`)
+> - **`SNAPSHOT_MAX_AGE_MS` UNCHANGED at 30 days** — 7.2 weighed 7 and 90 and kept 30, so this is a value REVIEWED AND
+>   CHOSEN, not a value skipped. Recorded either way, per tasks.md 7.3's own body.
+>
+> **The four jsdoc blocks that called these values "PROPOSED — NOT chosen (D-8)" now record them as CHOSEN** (7.2,
+> `decisions.md` 2026-07-26), each carrying the reasoning that picked it and the mental model it belongs to. That edit is
+> not cosmetic: a "proposed" comment sitting on a chosen value is a lie about the decision state, and the next session
+> would have read it as an open question.
+>
+> **★ THE RE-MEASUREMENT CONFIRMED THE PREDICTION, WHICH WAS STATED BEFORE THE HARNESS RAN** (retro discipline — a number
+> read first and rationalised after is not a verification). `pnpm perf:snapshot-capture -- --no-build`, accumulation cell,
+> 12 sequential edits through the production controller:
+> - **50 KB: `2,3,4,…,13` → 13 snapshots, 659.5 KB.** IDENTICAL to 7.1, to the byte. Neither bound bites (13 < 15;
+>   659.5 KB ≪ 20 MiB) — this fixture never reached a cap under the old numbers either, so unchanged is the correct result.
+> - **1 MB: `2,3,4,5,6,7,8,9,10,11,12,13` → 13 snapshots, 14.57 MB.** **7.1's plateau at 4 IS GONE.** That plateau was the
+>   proposed 5 MiB byte bound biting at the fourth 1.12 MB snapshot, and it is now silent: 13 × 1.12 MB = 14.57 MB sits
+>   under 20 MiB, and 13 sits under the count bound of 15. **This is the designed reordering** — bytes stepped back, count
+>   became the bound that would bind first.
+> - **NOT OBSERVED, and out of 7.3's scope: whether count actually stops growth at 15.** That needs >14 rendered edits;
+>   `EDIT_SEQUENCE` is 12 and the harness was not modified. The arithmetic is stated in `decisions.md` (~17 snapshots of
+>   1 MB fit in 20 MiB, above 15, so count binds first) — **stated, not measured.** 8.1 does not close this either.
+>
+> **★ A FINDING THE RELAXED BOUND EXPOSED — 7.1's "the coalescer dropped 2–3 edits at 1 MB" IS NOT SUPPORTED, and the
+> `renders` discriminator UNDERCOUNTS at 1 MB.** This run printed `edits rendered: 9 of 12` while the per-edit count
+> incremented on **every one of the 12 edits** (2→13, twelve increments off a 1-snapshot seed). A coalesced edit captures
+> nothing, so 13 snapshots is only reachable if all 12 edits rendered and captured — the count and the `renders` number
+> contradict each other, and the count is the one backed by IndexedDB. The discriminator
+> (`P.readerSourceFor(host) === text`, checked right after `__pwSettle`) evidently samples before a 1 MB render has
+> re-stashed its source, and the 1600 ms cooldown sleep then lets the render land before `__pwCount()` reads it.
+> **Why 7.1 could not have caught this:** the byte bound clamped the 1 MB count at 4, so the count could not be used to
+> falsify `renders` — the undercount was unfalsifiable at 5 MiB and became visible the moment the ceiling lifted.
+> **Consequence for the record:** the 7.1 note below reading *"only 9–10 of 12 edits rendered, and a render that never
+> happens captures nothing — measured via the reader-source WeakMap, not assumed"* is left as written (it is what 7.1
+> observed) but **must not be carried forward as a coalescer fact.** `scripts/` is fenced at 7.3 and the harness was NOT
+> touched; **8.1 owns the fix or the caveat**, and its accumulation numbers should not quote `renders` at 1 MB until then.
+>
+> **Spot-check, other cells vs 7.1 — same magnitude throughout, as expected (the constants touch eviction only, never
+> capture cost):** guard/check 5.0 → **0.0 µs** at 50 KB (both at or under `performance.now()`'s 5 µs granularity floor —
+> 7.1 already reported its own figure as an upper bound, so this is the same non-number) and 47.5 → **45.0 µs** at 1 MB;
+> awaited `storeSnapshot` 0.6 → **0.6 ms** / 10.8 → **7.5 ms**; mean snapshot 50.4 KB → **50.7 KB** / **1.12 MB**
+> unchanged; sync medians 33.5–33.8 ms at 50 KB and 715.8–721.2 ms at 1 MB. **The OFF-vs-ON delta remains unresolvable and
+> still flips sign** (−0.4 / −5.4 ms sync, −0.0 / −32.0 ms →2ndRAF) — 7.1's headline finding reproduces, and no delta here
+> may be quoted as a cost in either direction.
+>
+> **No stale-build trap, checked rather than assumed:** `--no-build` reuses `.output/chrome-mv3`, but the harness bundles
+> `src/app/snapshots.ts` and `src/watch/watchController.ts` **fresh from source via esbuild at run time**
+> (`scripts/perf-snapshot-capture.ts:275-282`) and drives `P.createWatchController`, so the measured
+> `renderNow → storeSnapshot → DEFAULT_BOUNDS` path carried the NEW constants. The shipped build supplies only the
+> extension shell. Had that not been true, the 1 MB case would have re-printed the plateau at 4 and looked like a
+> contradiction.
+>
+> **`src/app/snapshots.test.ts` NEEDED NO CHANGE, and that is 1.2's design paying off:** every eviction case passes its own
+> small explicit bounds (`{ countPerDoc: 2, totalBytes: 100, … }`), and the one `DEFAULT_BOUNDS` test asserts SHAPE and
+> positivity only — no test ever pinned a proposed number as an expected value (1.2's rule G). Unit **549**, unchanged, no
+> test file touched anywhere in the repo.
+>
+> <details><summary>Task 7.2 — D-8's HUMAN DECISION GATE, the bound VALUES (landed previously; the input to 7.3)</summary>
+>
+> **Task 7.2 — D-8's HUMAN DECISION GATE — landed** (a previous commit).
 > It is the gate where **the human chose the three snapshot retention bound VALUES** from 7.1's measurements, and it is a
 > DOCS-ONLY task by design: **no code landed.** `src/app/snapshots.ts` is byte-identical; 7.3 sets the constants. The
 > decision is recorded in `docs/ai/decisions.md` (2026-07-26 entry, appended at the top) **before** the code that carries
@@ -174,19 +239,27 @@
 > </details>
 > </details>
 > </details>
+> </details>
 >
-> **THE NEXT ACTION IS TASK 7.3 — IMPLEMENT THE CHOSEN BOUNDS.** Set the three constants at `snapshots.ts:61/77/93` to
-> 7.2's values (`15` / `20 * 1024 * 1024` / `30 * 24 * 60 * 60 * 1000` — the age constant is unchanged from the proposal,
-> and is recorded as unchanged rather than skipped). **The eviction ALGORITHM does not move — only the constants**; if the
-> new numbers change eviction behaviour, 1.2's unit cases move with them (`src/app/snapshots.test.ts`). Then **re-run the
-> accumulation cell of `perf:snapshot-capture`** (`pnpm perf:snapshot-capture -- --no-build`) to confirm the new bounds
-> bind — or don't — as expected: the 1 MB case should now grow past 7.1's 4 and be held by the COUNT bound at 15 rather
-> than the byte bound, and the 50 KB case should be unaffected (its 13-from-12-edits run never reached either cap). **A
-> result that contradicts that expectation is a finding to report, not a number to quietly accept** — it would mean the
-> byte arithmetic is not what 7.2 reasoned against. **ONE small commit; no other code change.**
-> **Nothing in `decisions.md` is reopened at 7.3.** 7.2 chose; 7.3 implements. If 7.3's re-measurement genuinely
-> invalidates a value, that is a new decision entry and a return to the human — not an edit to the 2026-07-26 entry
-> (the log is append-only).
+> **THE NEXT ACTION IS TASK 8.1 — MEASUREMENT CLOSE (the official re-measurement, group 8 opens).** Re-measure bytes and
+> first paint against the recorded baselines: content-script vs **299,411 B** — and **`diff` must NOT appear in that
+> number**, which is the import fence proven BY MEASURED BYTES rather than by static grep alone (a regression there is
+> STOP-and-flag); app-page chunk vs **332,895 B**, where `diff` IS expected — a stated, not gated, line item. First paint
+> vs **138.6 ms**, **CONTENT SCRIPT ONLY** — 006 is app-page-only, so `diff` never enters the gated path, and **app-page
+> first paint has ZERO automated coverage** (§4-3): state that as the weaker claim it is, never as "within budget."
+> `pnpm zip` vs 335.89 / 335.95 kB (< 2 MB, both engines). The carried `perf-first-paint.ts` false `FAIL` on the large-doc
+> fixture is **NOT fixed in 006** (§4-8). Run the controlled-ablation fence check once, at this milestone close, and record
+> M6-close baselines alongside M5-close's.
+> **★ TWO ITEMS 7.3 HANDED FORWARD TO 8.1, both above in full:** (1) the **`renders` undercount at 1 MB** in
+> `perf-snapshot-capture.ts`'s accumulation cell — 8.1 owns the fix or an explicit caveat, and until then no accumulation
+> report should quote `renders` at 1 MB; (2) that same harness's trailing prose still reads **"NO BOUND IS CHOSEN OR
+> RECOMMENDED — 7.2 is the human decision gate"**, which was true when written and is now stale (7.2 chose, 7.3
+> implemented). `scripts/` was fenced at 7.3, so neither was touched. **Whether count binds at 15 is still unmeasured** —
+> it needs >14 rendered edits and `EDIT_SEQUENCE` is 12; 8.1 does not close it either, and the ~17-snapshot arithmetic in
+> `decisions.md` remains reasoning, not measurement.
+> **Nothing in `decisions.md` was reopened at 7.3, and nothing needs reopening now.** 7.2 chose; 7.3 implemented the
+> choice and the re-measurement CONFIRMED it. Any future correction is a NEW append-only entry and a return to the human —
+> never an edit to the 2026-07-26 entry.
 > **Re-run either harness any time:** `pnpm perf:snapshot-capture -- --no-build`, `pnpm perf:diff -- --no-build`. Neither
 > emits an exit-code gate — they are informational by design (only `perf-first-paint.ts` owns a hard gate, because
 > <150 ms is a shipped M1 acceptance gate). **7.1's measurements below stand until 8.1's official re-measurement.**
