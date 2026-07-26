@@ -17,6 +17,8 @@
     "perf:toc": "tsx scripts/perf-toc.ts",
     "perf:flash": "tsx scripts/perf-theme-flash.ts",
     "perf:watch": "tsx scripts/perf-watch.ts",
+    "perf:snapshot-capture": "tsx scripts/perf-snapshot-capture.ts",
+    "perf:diff": "tsx scripts/perf-diff.ts",
     "lint": "eslint . && tsc --noEmit",
     "postinstall": "wxt prepare"
   },

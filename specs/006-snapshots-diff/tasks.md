@@ -432,7 +432,7 @@ go to the gate) and the milestone-close gate (9.1).
 
 ## 7 — Measure → decide bounds → implement (the measuring task cannot choose)
 
-- [ ] **7.1 MEASURE capture cost + diff memory — NO THRESHOLD ASSERTED (D-8, standing M1 rule).**
+- [x] **7.1 MEASURE capture cost + diff memory — NO THRESHOLD ASSERTED (D-8, standing M1 rule).**
       Measure, with a **like-for-like control** (005 showed continuity *moved* layout rather than adding it, and
       only the control made that visible): capture cost against the 50 KB ≈ 34.9/35.7 ms and 1 MB ≈ 717.3/713.9 ms
       synchronous re-render baselines (`progress.md`); the diff render's memory/usability at **1 MB** (§1.6 — the
@@ -444,6 +444,27 @@ go to the gate) and the milestone-close gate (9.1).
       Verify: numbers recorded with baseline + delta + spread; **no threshold asserted, no bound chosen** (a chosen
       bound here = STOP and flag). This is a measurement task; red-first does not apply (asserts no behaviour) —
       stated plainly, not manufactured.
+      **LANDED.** Two harnesses: `scripts/perf-snapshot-capture.ts` (like-for-like control, capture OFF vs ON) and
+      `scripts/perf-diff.ts` (1 MB diff through the REAL 6.2 gesture path). Two `perf:*` entries. **NOTHING CHOSEN,
+      NOTHING RECOMMENDED** — neither script emits an exit-code gate; only the two shipped M1 gates are asserted.
+      **★ THE CONTROL'S RESULT IS THAT THE IN-SITU DELTA IS UNRESOLVABLE, and it was proven so rather than assumed:
+      two independent 6-run passes at 1 MB gave deltas of OPPOSITE SIGN** (−1.7/−62.7 ms, then +23.8/+20.3, final
+      −3.4/−15.5) because one 1 MB re-render varies 40–90 ms run-to-run. So a cell was added that measures the whole
+      synchronous capture guard where it IS resolvable: **5.0 µs at 50 KB (at `performance.now()`'s 5 µs granularity
+      floor — an upper bound), 47.5 µs at 1 MB.** Reported as a FLOOR on added work, never a prediction (retro
+      finding 2). **Non-vacuity held every run: ON stored 2 snapshots/iteration, OFF stored 0.**
+      Awaited `storeSnapshot` (off the sync path by construction): **0.6 ms / 10.8 ms**. Snapshot bytes = document
+      bytes: **50.4 KB / 1.12 MB**. **Accumulation over 12 edits: 50 KB grew `2,3,…,13`; 1 MB grew `2,3,4` then
+      STOPPED at 4** — the proposed 5 MiB global byte bound binding. Recorded as an observation; **whether that is
+      the right number is 7.2's**. Diff at 1 MB (5882 hunks, 5.0% of lines, identical all 7 runs): engine
+      **585.0 ms** · pipeline **433.6 ms** · DOM **122.0 ms (DERIVED)** · **TOTAL enter 1157.4 ms** · first scroll
+      frame **442.5 ms** then 71.7/56.4/59.9/54.6. Memory directional only (V8 heap, no DOM nodes, GC-dependent):
+      +35.95 MB median on enter, spread +8.92/+77.11.
+      **Gates:** first paint **144.3 / 145.1 ms** over two passes (<150 ms **PASS**; floor 138.9 ms vs M5's 132.0 —
+      **+6.9 ms on the floor**, stated not interpreted); `pnpm zip` **349.17 / 349.23 kB** (<2 MB **PASS**).
+      Content-script **315,143 B**, app chunk **360,422 B**, background **3,435 B**, both engines; fence grep **0**
+      both engines. **NO `src/`, test or spec file touched.** Golden EMPTY · `permissions: []` · unit **549** ·
+      browser **605/15/74** · `Settings`/`getSettings`/`putSettings` byte-identical (fourteen tasks).
 
 - [ ] **7.2 DECISION GATE (human) — the bound NUMBERS, chosen from 7.1 (D-8; D-16's axis is already decided).**
       The human picks the count / age / byte bound values from 7.1's measurements. **The axis is NOT reopened**

@@ -10,8 +10,60 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **group 1 CLOSED (1.1–1.6); group 2 task 2.1 landed; group 3 task 3.1 landed; group 4 task 4.1 landed — GROUP 4 CLOSED; group 5 task 5.1 landed — GROUP 5 CLOSED; group 6 tasks 6.1 + 6.2 + 6.3 landed — GROUP 6 CLOSED; next action is 7.1.**
-> **Nothing is in progress and nothing is blocked. Task 6.3 — D-11, the diff-defer and the "changed again" line — has landed** (this commit), and it CLOSES group 6. The diff feature is now end-to-end.
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION UNDERWAY: **groups 1–6 CLOSED; group 7 task 7.1 landed; next action is 7.2 — A HUMAN DECISION GATE.**
+> **Nothing is in progress and nothing is blocked. Task 7.1 — MEASURE capture cost + diff render/memory — has landed** (this
+> commit). It is the MEASURING task, and it **chose nothing**: no bound, no threshold, no recommendation. Two new harnesses
+> (`scripts/perf-snapshot-capture.ts`, `scripts/perf-diff.ts`), two new `perf:*` script entries, numbers below. **No `src/`
+> file, no test file and no spec file was touched.** The only gates asserted are the two SHIPPED M1 ones (<150 ms typical
+> first paint, <2 MB packaged) — both PASS.
+>
+> **★ THE HEADLINE IS A MEASUREMENT-RESOLUTION FINDING, NOT A COST.** The like-for-like control (capture OFF vs ON, same
+> document, same host, same iteration, differing only in D-12's capture flag) shows the in-situ delta is **BELOW THE NOISE
+> FLOOR AT BOTH SIZES** — and that was established, not assumed: **two independent 6-run passes at 1 MB produced deltas of
+> OPPOSITE SIGN** (pass 1 −1.7 ms sync / −62.7 ms →2ndRAF; pass 2 +23.8 / +20.3; final pass −3.4 / −15.5). A single 1 MB
+> re-render varies 40–90 ms run-to-run, which swamps anything capture adds. **No delta from this cell may be quoted as "the
+> capture cost", in either direction.** So the harness gained a cell that measures the component where it IS resolvable: the
+> whole synchronous capture guard (`getCaptureFlag()` + two whole-document `normalise()` + compare —
+> `watchController.ts:472-480` verbatim) costs **5.0 µs at 50 KB and 47.5 µs at 1 MB**. That is ~4 orders of magnitude below
+> the re-render it sits inside, which is *why* the in-situ delta cannot resolve. The 50 KB figure sits at
+> `performance.now()`'s own 5 µs granularity floor, so it is an **upper bound**, not a reading. Per retro finding 2 (004's
+> isolated probe under-predicted the real path ~13×) the isolated number is reported as a **FLOOR on added work, never as a
+> prediction** — both numbers stand, neither replaces the other.
+> **The non-vacuity control held on every run:** capture ON stored 2 snapshots per iteration (12 over 6 runs, both sizes);
+> capture OFF stored **0**. A cell that failed either check threw rather than reporting.
+>
+> **CAPTURE'S OTHER TWO COSTS, measured and kept separate from the delta on purpose.** `renderNow` fires
+> `void storeSnapshot(...)`, so the IDB write is **off the synchronous path by construction**: awaited directly it is
+> **0.6 ms at 50 KB, 10.8 ms at 1 MB**. And a snapshot weighs what the document weighs — capture stores the source, not a
+> diff: **50.4 KB and 1.12 MB** respectively.
+>
+> **★ EVICTION IS ALREADY BINDING AT 1 MB UNDER THE PROPOSED DEFAULTS — recorded as an observation, NOT as a reason to
+> change them.** Driving 12 sequential edits through the production controller: at 50 KB the store grew monotonically
+> `2,3,4,…,13` (13 snapshots, 659.5 KB, count cap 20 never reached). At 1 MB it grew `2,3,4` and then **stopped at 4 for the
+> remaining 9 edits** (4.48 MB) — four 1.12 MB snapshots is 4.48 MB against the proposed 5 MiB global byte bound, so the
+> fifth evicts the first. **Whether 4-deep history at 1 MB is the right product answer is exactly 7.2's decision**, and 7.1
+> states the observation without a view on it. (The 1 MB run also shows the coalescer working as designed: only 9–10 of 12
+> edits rendered, and a render that never happens captures nothing — measured via the reader-source WeakMap, not assumed.)
+>
+> **THE DIFF AT 1 MB — §1.6's named ceiling, measured through the REAL 6.2 gesture path** (click the real pill → real picker
+> over real `snapshotMeta` → click a real item → `fetchText` out of real IndexedDB → `showDiff`; nothing hand-called, the M5
+> "wired to nothing" rule applied to a harness). Fixture: every 20th line rewritten — **1961 of 39202 lines (5.0%)**,
+> deterministic, producing an identical **5882 hunks (1961 added / 1961 removed / 1960 unchanged) → 5882 blocks on all 7
+> runs**. **(a) computeDiff 585.0 ms** (576.2/592.6) · **(b) parse+sanitize over all hunks 433.6 ms** (418.7/515.6) ·
+> **(c) DOM construction 122.0 ms — DERIVED** (`enterDiff` with precomputed hunks, 559.7 ms, minus (b); reported as derived
+> because 7.1 may not add a mark inside `enterDiff`) · **(d) TOTAL enter, the user-visible number, 1157.4 ms**
+> (1129.6/1230.9). (a)+(b)+(c) deliberately do **not** reconcile to (d): (d) also carries two IDB round-trips, event
+> dispatch and the browser's own layout of the appended subtree, and that gap is left visible.
+> **(e) INTERACTIVE FRAMES — the first scroll after entering a diff costs 442.5 ms** (359.2/528.7), then settles to
+> **71.7 / 56.4 / 59.9 / 54.6 ms**. The first frame is where the browser pays deferred layout for the 5882-block subtree.
+> Stated, not gated — no threshold exists for it and 7.1 invents none.
+> **MEMORY is DIRECTIONAL ONLY** and the caveats are load-bearing: Chromium-only `performance.memory`, **V8 heap only — DOM
+> nodes are NOT counted**, GC-timing dependent, and taken with a non-default `--enable-precise-memory-info` flag. Heap at
+> rest **14.42 MB**; before→after enter **+35.95 MB median but +8.92/+77.11 MB across runs**; net before→after exit
+> **−861.1 KB median (−27.75/+29.17 MB)**. The spread is printed beside every median precisely because a single confident
+> median here would be a fiction. A small heap delta is **not** evidence the diff is cheap in memory.
+>
+> <details><summary>Task 6.3 — D-11, the diff-defer + the "changed again" line (landed previously; CLOSED group 6)</summary>
 >
 > **THE WATCH LOOP NOW KNOWS A DIFF IS ON SCREEN, AND REFUSES TO RENDER UNDER IT.** `onText` gains one condition —
 > the host carries D-15's `data-diff`, so the text takes the coalescer's single pending slot and **no timer is
@@ -94,18 +146,25 @@
 > lines; `appShell.ts` gains two imports and two object fields; `Settings`/`getSettings`/`putSettings` byte-identical;
 > `DB_VERSION` is 3.** Unit 519 → **540**; browser 577/15/70 → **601/15/72**. M1–M5 remain fully closed.
 > </details>
+> </details>
 >
-> **THE NEXT ACTION IS TASK 7.1 — MEASURE, and it opens group 7.** Group 7 is the measure → decide → implement split
-> the standing M1 rule requires, and **7.1 is the measuring task, which is FORBIDDEN from choosing anything**: it
-> measures capture cost against the recorded 50 KB ≈ 34.9/35.7 ms and 1 MB ≈ 717.3/713.9 ms synchronous re-render
-> baselines (with a like-for-like control — 005 showed continuity *moved* layout rather than adding it, and only the
-> control made that visible), measures the diff render's memory and usability at **1 MB** (§1.6's real ceiling now
-> that capture adds no copy), and records the real snapshot sizes and counts the eviction bounds will act on.
-> Protocol unchanged: 7 iterations, discard run 1, median of the warm 6, min/max spread; **every first-paint number
-> is Chromium** (Playwright cannot load an extension into Firefox). Those numbers feed **7.2, the human decision
-> gate** that picks D-8's bound values — *a bound chosen at 7.1 is a STOP-and-flag*, because that is precisely the
-> failure 004's 4.1 inference produced and 005's 5.1/5.2 split was built to prevent. Red-first does not apply to
-> 7.1: it asserts no behaviour, and saying so plainly beats manufacturing one.
+> **THE NEXT ACTION IS TASK 7.2 — A HUMAN DECISION GATE. AN AGENT CANNOT DO IT.** 7.2 is where **the human picks D-8's
+> bound VALUES** — `SNAPSHOT_COUNT_PER_DOC`, `SNAPSHOT_TOTAL_BYTES`, `SNAPSHOT_MAX_AGE_MS` (`snapshots.ts:61/77/93`,
+> currently the PROPOSED 20 / 5 MiB / 30 days, explicitly not chosen). **The AXES are not reopened** — D-16 settled them
+> (count per-document, bytes and age global) and 7.2 decides only the numbers. The choice is recorded in
+> `docs/ai/decisions.md` **before** 7.3 sets the constants; no code lands on an assumed number.
+> **7.1 deliberately offers no recommendation, and the next session must not read one into its numbers.** Do not treat
+> "eviction bound at 4 snapshots at 1 MB" as an argument for any particular byte bound — it is an observation about what
+> the proposed default does, which is the input to the decision, not the decision. A bound inferred from a measurement
+> is exactly the 004 4.1 failure this three-task split exists to prevent, and a soft "seems about right" is the same
+> failure arriving a beat later.
+> **What 7.2 has to work with** (all above, all Chromium): per-snapshot bytes ≈ the document's own size (50.4 KB / 1.12 MB);
+> 13 snapshots from 12 edits at 50 KB with the count cap never reached; 4 snapshots retained at 1 MB with the byte bound
+> binding from the 4th edit on; the synchronous capture guard at 5.0 µs / 47.5 µs; the awaited write at 0.6 ms / 10.8 ms;
+> and the diff at 1 MB entering in 1157.4 ms with a 442.5 ms first interactive frame.
+> **Re-run either harness any time:** `pnpm perf:snapshot-capture -- --no-build`, `pnpm perf:diff -- --no-build`. Neither
+> emits an exit-code gate — they are informational by design (only `perf-first-paint.ts` owns a hard gate, because
+> <150 ms is a shipped M1 acceptance gate).
 > **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state).
 
 ## Up next
@@ -358,6 +417,49 @@ corrected there without either lying or duplicating.*
 | Background (`background.js`) | **3,315 B** | 2,437 B (**+878 B, +36.0%**) | none — **stated, not gated** | — |
 | `pnpm zip` Chrome / Firefox | **335.89 / 335.95 kB** | 327.61 / 327.66 kB (**+8.28 / +8.29 kB**) | <2 MB | PASS |
 | Suites | 456 unit · 499 passed / 15 skipped browser, 54 file-instances (both engines) | 384 · 314 | — | green |
+
+**M6-post-7.1 (2026-07-26) — measured fresh at task 7.1, on the 006 tree at `a873b8d` + 7.1.** M6 is still OPEN, so this
+is a progress reading, not a close; the M5-close row above stays the pinned baseline until group 8 re-measures
+officially. Format is `M6-post-7.1 vs M5-close ; delta`.
+
+| pin | M6-post-7.1 | vs M5 close | bound | verdict |
+|---|---|---|---|---|
+| First paint, typical doc (50.4 KB) | **144.3 ms** (2nd pass **145.1 ms**) | 138.6 ms (**+5.7 ms**) | <150 ms **GATE** | **PASS** |
+| First paint, 1 MB | **1270.4 ms** | 1183.8 ms (**+86.6 ms**) | <1.7 s (informational) | PASS |
+| Content script (`.output/*/content-scripts/peekover.js`) | **315,143 B** both engines | 299,411 B (**+15,732 B, +5.25%**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-cheLPYz6.js`) | **360,422 B** both engines | 332,895 B (**+27,527 B, +8.27%**) | none — **stated, not gated** | — |
+| Background (`background.js`) | **3,435 B** both engines | 3,315 B (**+120 B, +3.62%**) | none — **stated, not gated** | — |
+| `pnpm zip` Chrome / Firefox | **349.17 / 349.23 kB** | 335.89 / 335.95 kB (**+13.28 / +13.28 kB**) | <2 MB | **PASS** |
+| Suites | 549 unit · 605 passed / 15 skipped browser, 74 file-instances (both engines) | 456 · 499/15/54 | — | green |
+
+- **THE <150 ms GATE HELD ACROSS TWO INDEPENDENT 7-ITERATION PASSES** — medians 144.3 / 145.1 ms, no warm iteration
+  over the bar in either (maxima 149.2 / 150.0 ms; the 150.0 is a max, not the gated median). **HEADROOM IS NOW
+  ~5 ms AND THE FLOOR MOVED:** floor across both passes is **138.9 ms**, against M5's recorded floor of 132.0 ms —
+  **+6.9 ms on the FLOOR**, and the standing protocol says signal-vs-noise is decided on the floor, not the middle.
+  Recorded as a fact, **not** interpreted here: 7.1 asserts the gate result and nothing beyond it. **The next
+  perf-touching session should assume NO headroom.** (006 is app-page-only, so the diff feature never enters this
+  gated content-script path — the growth above is 006's shared chrome/CSS, officially attributed at 8.1.)
+- **The 1 MB line still prints `-> FAIL`** for the known reason (it compares the 1 MB fixture against the
+  *typical-doc* bar and self-labels the comparison informational — decisions.md 2026-07-14). Against its OWN
+  <1.7 s bound the verdict is **PASS**. Not a breach, not a regression.
+- **THE IMPORT FENCE HOLDS BY MEASURED BYTES, BOTH ENGINES:** content-script grep for
+  `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|structuredPatch` = **0** in
+  `.output/chrome-mv3/` AND `.output/firefox-mv3/`. `permissions: []` on both built manifests.
+- **`pnpm zip` still emits the third, non-bound artifact:** the Firefox run also writes
+  `peekover-0.0.0-sources.zip` (**3.93 MB**, was 3.39 MB) — the source archive AMO requires for review, not a
+  shipped package. The <2 MB bound is on the extension zips (349.17 / 349.23 kB).
+- **No port override was needed this session.** `pnpm test:browser` ran clean on the default port; the recorded
+  `EACCES ::1:63315` collision (decisions.md 2026-07-21) did not reproduce, and `vitest.config.ts` is
+  **byte-unmodified**. Both new perf harnesses host nothing (they drive `file://` and `chrome-extension://`), so
+  the collision cannot arise there by construction.
+- **`perf:toc` re-run (jsdom, informational, no gate):** rail build 3.796 ms at 1401 headings / 5.740 ms at 2000;
+  scroll-spy recompute 4.394 ms and 7.094 ms per frame. Run because 006 adds chrome to the same `mount()`
+  composition path and `diffChrome`'s placement was measured against the TOC handle. `perf:folder` and
+  `perf:flash` were **not** run — no 006 code reaches the folder-tree or theme-flash paths, and saying which
+  harnesses were skipped and why beats an unexplained gap.
+- **7.1's own new measurements** (capture cost, the isolated D-5 guard, snapshot sizes/accumulation, the diff at
+  1 MB, memory) are in the **Now** section above, with their caveats attached. They are **inputs to 7.2's human
+  decision**, and **no bound is chosen or recommended anywhere in them**.
 
 - **THE FIRST-PAINT GATE HELD ACROSS TWO INDEPENDENT 7-ITERATION PASSES, with no warm iteration over the
   bar in either** (max 144.5 ms) — where the M4 close's own second pass had one at **150.9 ms**. Called
