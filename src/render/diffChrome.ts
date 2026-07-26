@@ -80,6 +80,53 @@
 // (watch note [260,20451,390,20543] vs capture disclosure [260,20321,390,20503]) before this task
 // adds anything. That is a pre-existing 3.1-era condition of the contained pane; it is recorded
 // rather than papered over with an offset tuned to today's copy, and it is not 6.2's to fix.
+//
+// ── ★ SUPERSEDED BY RECOVERY B1 (the M6 9.1 gate's finding 2) — top:56 → top:12 ────────────────
+//
+// EVERYTHING ABOVE STANDS AS THE CANDIDATE RECORD; the surviving offset does not. The 6.2
+// measurement swept the six sibling CHROMES and the rail and cleared them all — but it never
+// measured the READING COLUMN, and that is where top:56 collided. `.peekover-reader` carries
+// `padding:56px 32px 130px`, so the h1's top edge is at exactly 56 too: the pill's top edge and the
+// heading's were flush, and they overlapped horizontally on every app-page width where the column's
+// left margin fell under ~114px (≲1440 CSS-px). The clearance loop in
+// diffChrome.browser.test.ts cited watchControl.browser.test.ts by name, borrowed its scoping
+// decision, and dropped its reading-column assertion — so the sweep was green and wrong.
+//
+// THE FIX IS VERTICAL, AND THAT CHOICE IS LOAD-BEARING. The same recovery pass fixed finding A (the
+// column was flung right against the rail because the data-toc="open" override left margin-left
+// auto; readerCss.ts's B1 .ts block has that argument). Finding A's fix MOVES the column's left
+// margin — it grows with viewport width — so any horizontal fix for finding 2 would have been tuned
+// against geometry that was about to change underneath it, and would simply have relocated the
+// collision to wider viewports. The reading column's top 56px of padding, by contrast, is empty at
+// EVERY width, forever. A 32px pill at top:12 sits wholly inside it and clears the h1 by 12px
+// independently of how wide the viewport is or where the column's margin lands.
+//
+//   CONTAINED_CSS ONLY — the pill exists on the app page alone (D-14), so no full-page rule moves.
+//   .peekover-diff-affordance  top:56 → top:12   pill host-rect [16,12,101,44]  ("Compare",  85px)
+//                                                             [16,12,152,44]  ("Close…", 136px)
+//   .peekover-diff-picker      top:94 → top:50   picker [16,50,256,94] — the SAME 6px gap under the
+//   .peekover-diff-status      top:94 → top:50   pill that the 6.2 pair had (88→94).
+//
+// ── THE REMOTE-LOAD LANE: the conditional-clearance objection, finally answered ────────────────
+//
+// Moving the pill up puts it in the band the remote-load opt-in owns (top:16; left:16) — the
+// objection recorded four paragraphs above as "applying unchanged". It cannot stay recorded now, and
+// two ~30px pills cannot stack inside a 56px band, so the band is split into LANES instead:
+// the diff pill keeps left:16, and CONTAINED_CSS displaces `.peekover-remote-load` to left:176.
+//
+// ★ THE DIFF PILL TAKES THE LEFT LANE, AND THE DIRECTION IS THE WHOLE POINT — it is the one whose
+// width is DETERMINISTIC. Its label is one of exactly two module constants (LABEL_COMPARE 85px,
+// LABEL_EXIT 136px, both measured on both engines), so an offset set off the wider one — 152 + a
+// 24px gap = 176 — is a derived number, not a tuned one. remote-load's copy is
+// `${n} remote image(s) blocked · Load`: its width moves with the blocked COUNT and its plural, so
+// placing the diff pill to the RIGHT of it would have meant guessing past content-dependent text —
+// exactly the magic-number trap the bottom-left elimination above rejects at :55-60, where 3.1's
+// disclosure height varies with text wrap. The variable-width element goes on the right, where its
+// variability extends into open space instead of into someone else's offset.
+//
+// Both lanes asserted at 1280 AND 1400 on both engines, in BOTH pill label states, on a document
+// with genuinely blocked media (diffChrome.browser.test.ts). The 414 case is still not asserted, for
+// the pre-existing reason recorded above — nothing about B1 changes it.
 
 import { getDiffContext, isDiffContextRegistered } from './diffRegistry';
 

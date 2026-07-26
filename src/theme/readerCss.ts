@@ -79,8 +79,10 @@ export const READER_CSS = /* css */ `
 }
 
 /* ============ Reading column ============ */
+/* Measure: ONE value, referenced twice (max-width + the data-toc margin). Why px not ch: B1 block. */
+:host{ --reader-measure:748px; }
 .peekover-reader{
-  max-width:76ch;
+  max-width:var(--reader-measure);
   margin:0 auto;
   padding:56px 32px 130px;
   width:100%;
@@ -546,9 +548,10 @@ export const READER_CSS = /* css */ `
 /* Reserve the rail's width on the COLUMN so the now-opaque rail never CLIPS the reading text
    (group-3 gate fix, companion to the opaque background above). While OPEN the reading column
    gives up EXACTLY --toc-w of right margin, so its right edge is pulled clear of the rail's left
-   edge and no column text can sit under the rail to be clipped. margin-left stays auto (from the
-   base margin:0 auto), so the column shifts toward the rail but never under it. Reserving exactly
-   one rail-width — not both sides — is what keeps this correct on a NARROW scrollport (where the
+   edge and no column text can sit under the rail to be clipped. margin-left is COMPUTED, not auto:
+   half the surplus after column+rail, floored at 0 — wide centres the column beside the rail, narrow
+   keeps the left-align. Argument: the B1 .ts block below. Reserving exactly one rail-width — not both
+   sides — is what keeps this correct on a NARROW scrollport (where the
    column's padding floor plus a two-sided reservation would overshoot the rail); the column simply
    takes whatever width remains left of the rail. The reservation is --toc-w, so a 3.4 resize
    widens it too, and it is ZERO when collapsed (this rule is gated on data-toc="open" → the base
@@ -559,11 +562,12 @@ export const READER_CSS = /* css */ `
    breaks the contained case (the investigation's finding). width:auto is REQUIRED here: the base
    column is width:100%, and a bare margin-right on a 100%-wide box does not shrink it — it drives
    margin-left negative and shoves the column off-screen left. width:auto lets the column shrink to
-   fill exactly the space LEFT of the rail (still capped at the base max-width:76ch), so on a narrow
-   scrollport it takes what remains and on a wide one it caps at 76ch with the leftover left margin. */
+   fill exactly the space LEFT of the rail (still capped at the base max-width), so on a narrow
+   scrollport it takes what remains and on a wide one it caps at the measure. */
 :host([data-toc="open"]) .peekover-reader{
   width:auto;
   margin-right:var(--toc-w);
+  margin-left:max(0px,calc((100% - var(--reader-measure) - var(--toc-w)) / 2));
 }
 
 .peekover-toc__list{list-style:none;margin:0;padding:0}
@@ -620,6 +624,92 @@ export const READER_CSS = /* css */ `
 `;
 
 // ============================================================================
+// THE data-toc="open" COLUMN MARGIN — recovery B1, the M6 9.1 gate's finding A.
+// ============================================================================
+// This block is a `.ts` comment ON PURPOSE. The rule it explains lives inside READER_CSS's template
+// literal, and comments in THERE ship verbatim in every bundle (diffChrome.ts:41-44 records the
+// first 6.2 draft paying ~8 KB of shipped prose for exactly that mistake). The rule itself carries a
+// four-line summary; the argument, and the alternatives that were rejected, are here.
+//
+// ── THE DEFECT ────────────────────────────────────────────────────────────────────────────────
+//
+// `margin-left` used to stay `auto`, inherited from the base `.peekover-reader{margin:0 auto}`. That
+// reads as "still centred", and it is not. `max-width:76ch` + `width:auto` + one auto margin is the
+// CSS 2.1 §10.3.3/§10.4 trap: the auto width resolves first, the max-width clamp then makes `width`
+// NON-auto, the algorithm re-runs, and the single remaining auto margin absorbs the ENTIRE surplus.
+// The column is flung RIGHT, flush against the rail, with the whole gutter dumped on the left —
+// measured at ~590px of dead left gutter on the app pane at 1920 CSS-px and ~880px on the full-page
+// content-script reader. Shipped since M3 on both surfaces; invisible to every existing test because
+// they assert CLEARANCE (does the column avoid the rail — it does) and never CENTRING.
+//
+// ── THE REJECTED ALTERNATIVE, WHICH STILL BINDS ───────────────────────────────────────────────
+//
+// The obvious fix is symmetric `margin-left:var(--toc-w)`. It was rejected on MEASURED
+// narrow-scrollport grounds, and that rejection is not stale — it is the same constraint the
+// one-sided reservation above exists to satisfy. At widths where the rail is open into an already
+// squeezed pane, a full rail-width taken off BOTH sides drives the column under its usable measure
+// (the contained pane at 414 leaves the reader host 146px — narrower than one pill; see
+// diffChrome.ts's NOT-ASSERTED note). A fix that is correct at 1920 and unusable at 414 is not a fix.
+//
+// ── THE RESOLUTION: HALF THE SURPLUS, FLOORED AT ZERO ─────────────────────────────────────────
+//
+//   margin-left: max(0px, calc((100% - var(--reader-measure) - var(--toc-w)) / 2))
+//
+// `100%` is the containing block's width, so the calc is "what is left over once the column has its
+// full measure AND the rail has its reservation" — the surplus — halved. Two regimes, and they
+// are the two the constraints demand:
+//
+//   WIDE (surplus > 0): margin-left = surplus/2. The used width clamps to the measure, which over-constrains
+//     the box, so §10.3.3 drops `margin-right` and the right gap becomes --toc-w + surplus/2 — i.e.
+//     the column sits exactly CENTRED in the space left of the rail, and clears the rail by MORE than
+//     the reservation, never less. Centring is a property of the formula here, not a tuned constant.
+//   NARROW (surplus <= 0): the floor clamps margin-left to 0px, width resolves to
+//     (100% - --toc-w) with no max-width clamp, margin-right is honoured exactly, and the behaviour
+//     is BYTE-FOR-BYTE the pre-B1 left-aligned one the narrow-viewport rejection asked for.
+//
+// ── THE --reader-measure COUPLING (why px, not ch) ────────────────────────────────────────────
+//
+// 748px IS Literata's 76ch at this sheet's 17px, measured in a real browser under Playwright on both
+// engines. It is a px constant in a variable rather than the `ch` unit written twice, and that is a
+// MEASURED decision, not a style preference:
+//
+//   `ch` INSIDE A MARGIN CALC COSTS ~28ms OF FIRST PAINT. The same 76ch in `max-width` is cheap —
+//   resolved once and cached — but in a margin computation it pulls font metrics into layout, and
+//   layout for the reading column is the first-paint critical path. Measured on the 50 KB typical
+//   doc, medians, interleaved against a HEAD control to rule out machine state (A-B-A: the ch form
+//   read ~180ms in BOTH the early and the late slot, so the cost tracks the code, not the machine):
+//     HEAD (no margin-left at all)      ~160ms
+//     margin-left with 76ch             ~182ms   ← the gate breaker
+//     margin-left ablated, rest of B1   ~155ms   ← isolates the declaration
+//     margin-left with the px measure   ~151ms   ← what ships
+//   The <150ms gate's quiesced headroom is ~5ms, so the ch form was not affordable.
+//
+// THE COUPLING IS STRUCTURAL, NOT DOCUMENTARY. `max-width` and this margin MUST refer to the same
+// measure or the centring is silently wrong, and a comment asking a future session to remember that
+// is exactly the class of guard that fails. So there is ONE variable, referenced twice, and a
+// browser test asserts at runtime that `getComputedStyle(reader).maxWidth` equals the resolved
+// `--reader-measure` (diffChrome.browser.test.ts). Change the reader's measure and the variable is
+// the ONE site to edit; drift the two apart and the test reds mechanically.
+//
+// FALLBACK-FONT WINDOW, carried as an honesty note rather than a defect: before Literata loads, the
+// fallback's own `ch` may differ, so during that window a true `76ch` column and this px measure
+// would disagree slightly. The MAX-WIDTH governs the column's actual width and both forms now use
+// the same value, so the column is never mis-sized — only the centring could be off by a few px for
+// ~50-100ms. First eye-fixation lands well after font load, so it is invisible in practice; it is
+// recorded because "invisible in practice" is a judgement someone may want to revisit.
+//
+// NO DISCRETE THRESHOLD, and that is why it respects the rejection rather than trading against it:
+// the regimes meet continuously at surplus = 0, the width at which the column is exactly the measure with
+// the rail reserved. margin-left is 0 on one side of that width and grows from 0 on the other, so
+// there is no jump to place, no breakpoint to keep in sync with --toc-w, and a 3.4 resize drag moves
+// the crossover automatically because --toc-w is IN the expression.
+//
+// WHY `/ 2` RATHER THAN THE min(--toc-w, ...) FORM: capping the left margin at one rail-width leaves
+// the column left-of-centre the moment the surplus exceeds 2 * --toc-w — at 2560 it would sit 760px
+// off centre, which is the same defect class in a smaller size. Halving the surplus has no such
+// ceiling and needs no constant beyond the measure the base rule already declares.
+//
+// ============================================================================
 // CONTAINED variant — opt-in via mount(source, host, { contained: true }).
 // ============================================================================
 // READER_CSS above styles the shadow root as a FULL-PAGE takeover: :host is
@@ -663,4 +753,9 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }
+/* B1 finding 2 — pill into the column's empty top band; remote-load beside it. Why: diffChrome.ts */
+.peekover-diff-affordance{ top:12px; }
+.peekover-diff-picker,
+.peekover-diff-status{ top:50px; }
+.peekover-remote-load{ left:176px; }
 `;

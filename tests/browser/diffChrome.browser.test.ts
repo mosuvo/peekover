@@ -76,6 +76,14 @@ import { WATCH_READ, type WatchMessage } from '../../src/watch/watchRelay';
 
 const NARROW = { width: 414, height: 896 }; // the harness default, restored after each test
 const WIDE = { width: 1400, height: 900 }; // watchControl.browser.test.ts's own WIDE
+// Recovery B1: the geometry cases run at BOTH of these. 1400 alone sat on the clean side of the
+// finding-2 collision (the reading column's left margin was wide enough there to hide it); 1280 is
+// the width at which the app pane's column goes flush-left, which is where the pill's old
+// top:56 landed on the h1. A single wide width let that class of defect ship.
+const GEOMETRY_WIDTHS = [
+  ['1280', { width: 1280, height: 900 }],
+  ['1400', WIDE],
+] as const;
 
 const FILLER = Array.from(
   { length: 10 },
@@ -339,8 +347,8 @@ describe('the affordance is a SIBLING of the reading column, never inside it', (
 // This mirrors watchControl.browser.test.ts's own scoped-to-WIDE column check and 004's 5.1
 // precedent ("clears the reading column at a WIDE viewport, where a gutter exists").
 describe('placement clears the existing chrome (measured, not chosen)', () => {
-  it('clears the aside stack, the mode toggle and the TOC rail at 1400x900', async () => {
-    await page.viewport(WIDE.width, WIDE.height);
+  it.each(GEOMETRY_WIDTHS)('clears the aside stack, the mode toggle and the TOC rail at %s', async (_w, size) => {
+    await page.viewport(size.width, size.height);
     const host = await mountAppPage();
     await seedSnapshot();
 
@@ -403,6 +411,127 @@ describe('placement clears the existing chrome (measured, not chosen)', () => {
       if (other.width === 0 || other.height === 0) continue;
       expectNoOverlap('diff picker', rect, name, other);
     }
+  });
+
+  // ── THE ASSERTION 6.2 DROPPED IN TRANSCRIPTION (recovery B1, finding 2) ─────────────────────
+  // The loop above checks six sibling chromes and the rail. It did NOT check the READING COLUMN,
+  // and that omission IS finding 2: the pill shipped at top:56px and the column's padding-top is
+  // also 56px, so the pill's top edge was flush with the h1's — overlapping at every app-page width
+  // where the column's left margin fell under ~114px. watchControl.browser.test.ts:453-466 and
+  // themeControl.browser.test.ts:349 both DO check reader clearance; this file's header cites
+  // watchControl by name but borrowed only its SCOPING decision (assert at a wide viewport) and left
+  // the assertion itself behind. One line lost in transcription, one defect shipped.
+  //
+  // ★ WHY THE TARGET IS THE h1 AND NOT `.peekover-reader`'s OWN RECT. The fix puts the pill INSIDE
+  // the column's box deliberately — the top 56px of `padding:56px 32px 130px` is empty at every
+  // width, forever, and a 32px pill fits wholly within it. A whole-box assertion is therefore
+  // unsatisfiable BY CONSTRUCTION: it would forbid the fix rather than guard it. What must never be
+  // overlapped is the column's rendered CONTENT, and the h1 is both the topmost content box and the
+  // tightest case.
+  it.each(GEOMETRY_WIDTHS)("clears the reading column's first content box at %s", async (_w, size) => {
+    await page.viewport(size.width, size.height);
+    const host = await mountAppPage();
+    await seedSnapshot();
+    await flush();
+    host.setAttribute('data-toc', 'open');
+
+    const h1 = readerIn(host).querySelector<HTMLElement>('h1')!;
+    expect(h1).not.toBeNull();
+    const h1Rect = h1.getBoundingClientRect();
+    // Non-vacuous: a zero-rect or display:none h1 would clear everything trivially.
+    expect(h1Rect.width).toBeGreaterThan(0);
+    expect(h1Rect.height).toBeGreaterThan(0);
+
+    const compare = pillIn(host)!.getBoundingClientRect();
+    expect(compare.height).toBeGreaterThan(0);
+    expectNoOverlap('diff affordance (Compare)', compare, 'reader h1', h1Rect);
+
+    // ...and in the EXIT state, where the label is at its widest. The column is display:none'd while
+    // a diff is up, so this reuses the rect captured above — the invariant being asserted is "the
+    // pill the user clicks to come BACK does not sit on the document it restores".
+    pillIn(host)!.click();
+    await waitFor(() => pickerIn(host)!.hidden === false);
+    pickerIn(host)!.querySelector<HTMLButtonElement>('[role="option"]')!.click();
+    await waitFor(() => host.getAttribute('data-diff') === 'active');
+    expect(pillIn(host)!.textContent).toBe('Close comparison'); // the wide label really is up
+    expectNoOverlap(
+      'diff affordance (exit)',
+      pillIn(host)!.getBoundingClientRect(),
+      'reader h1',
+      h1Rect,
+    );
+  });
+
+  // ── THE --reader-measure COUPLING, ASSERTED RATHER THAN DOCUMENTED ──────────────────────────
+  // The reading column's measure is referenced TWICE — `.peekover-reader{max-width}` and the
+  // data-toc="open" margin-left that centres it — and the two MUST resolve to the same length or the
+  // centring is silently wrong at every wide viewport. readerCss.ts holds one `--reader-measure`
+  // variable so they cannot drift by construction; this is the runtime proof that they haven't. It
+  // is a px constant rather than `76ch` for a measured reason (the `ch` unit inside a margin calc
+  // cost ~28ms of first paint by pulling font metrics into layout — readerCss.ts's B1 .ts block has
+  // the numbers), which is exactly the kind of trade a later session might undo without knowing why.
+  // If someone edits max-width to a different measure and leaves the variable behind, this reds.
+  it.each(GEOMETRY_WIDTHS)('--reader-measure is the SAME length max-width resolves to at %s', async (_w, size) => {
+    await page.viewport(size.width, size.height);
+    const host = await mountAppPage();
+    await flush();
+    const reader = readerIn(host);
+    const computedMaxWidth = getComputedStyle(reader).maxWidth;
+    const computedMeasure = getComputedStyle(host).getPropertyValue('--reader-measure').trim();
+
+    // Non-vacuous: two empty strings, or a pair of `none`s, would match trivially.
+    expect(computedMeasure).toMatch(/^\d+(\.\d+)?px$/);
+    expect(computedMaxWidth).toMatch(/^\d+(\.\d+)?px$/);
+    expect(computedMaxWidth).toBe(computedMeasure);
+  });
+
+  // ── THE CONDITIONAL-CLEARANCE OBJECTION, NOW ANSWERED RATHER THAN RECORDED ──────────────────
+  // diffChrome.ts:64-66 recorded top-left-at-16 as "taken on exactly the documents that have blocked
+  // media" — watchControl.ts:22-23's objection — and left it standing, which was fine while 6.2's
+  // pill sat BELOW that slot at top:56. Finding 2's fix moves the pill INTO the band remote-load
+  // occupies, so the objection stops being a note and becomes a thing that must be answered: the two
+  // get distinct LANES (pill at left:16, opt-in displaced to left:176 in CONTAINED_CSS). This is the
+  // assertion that the lanes hold.
+  it.each(GEOMETRY_WIDTHS)('clears the remote-load opt-in that shares the top band at %s', async (_w, size) => {
+    await page.viewport(size.width, size.height);
+    const host = await mountAppPage(`${docV2()}\n\n![blocked](https://example.invalid/x.png)\n`);
+    await seedSnapshot();
+    await flush();
+    host.setAttribute('data-toc', 'open');
+
+    const remote = shadowOf(host).querySelector<HTMLElement>('.peekover-remote-load');
+    // Non-vacuous: the fixture's image really was blocked, so the opt-in really is on screen. Without
+    // this the whole case passes by the element being absent.
+    expect(remote, 'remote-load opt-in absent — the blocked-media fixture stopped working').not.toBeNull();
+    const remoteRect = remote!.getBoundingClientRect();
+    expect(remoteRect.width).toBeGreaterThan(0);
+    expect(remoteRect.height).toBeGreaterThan(0);
+
+    expectNoOverlap(
+      'diff affordance (Compare)',
+      pillIn(host)!.getBoundingClientRect(),
+      'remote-load',
+      remoteRect,
+    );
+
+    // The picker drops out of the pill's lane and must clear the opt-in too.
+    pillIn(host)!.click();
+    await waitFor(() => pickerIn(host)!.hidden === false);
+    expectNoOverlap('diff picker', pickerIn(host)!.getBoundingClientRect(), 'remote-load', remoteRect);
+
+    // ★ THE WIDE LABEL IS THE REAL CASE: "Close comparison" measures 136px against "Compare"'s 85px,
+    // so it is the only state that can reach across into the opt-in's lane. The 176px offset is set
+    // off the WIDER of the two, which is what makes it deterministic — both labels are fixed
+    // constants in diffChrome.ts, unlike remote-load's own count-dependent copy.
+    pickerIn(host)!.querySelector<HTMLButtonElement>('[role="option"]')!.click();
+    await waitFor(() => host.getAttribute('data-diff') === 'active');
+    expect(pillIn(host)!.textContent).toBe('Close comparison');
+    expectNoOverlap(
+      'diff affordance (exit)',
+      pillIn(host)!.getBoundingClientRect(),
+      'remote-load',
+      remoteRect,
+    );
   });
 });
 
