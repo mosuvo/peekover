@@ -575,7 +575,7 @@ corrected there without either lying or duplicating.*
 
 | pin | at M6 close (006) | vs M5 close | bound | verdict |
 |---|---|---|---|---|
-| First paint, typical doc (50.4 KB) | **137.9 ms** (passes 2/3 **140.2 / 137.7 ms**) | 138.6 ms (**−0.7 ms**) | <150 ms **GATE** | **PASS** |
+| First paint, typical doc (50.4 KB) | **137.9 ms** (passes 2/3 **140.2 / 137.7 ms**) | 138.6 ms (**−0.7 ms**) | ~~<150 ms **GATE**~~ → **<165 ms GATE** (re-baselined at 9.1 — see below) | **PASS** |
 | First paint, 1 MB / ~1400-entry TOC | **1185.2 ms** | 1183.8 ms (**+1.4 ms**) | <1.7 s (informational) | PASS |
 | Content script (`content-scripts/peekover.js`) | **315,144 B** both engines | 299,411 B (**+15,733 B, +5.25%**) | none — **stated, not gated** | — |
 | App-page chunk (`chunks/app-Bn1Oo_pw.js`) | **360,423 B** both engines | 332,895 B (**+27,528 B, +8.27%**) | none — **stated, not gated** | — |
@@ -612,6 +612,20 @@ on the floor, **the floor is back at M5's, so 7.1's +6.9 ms floor movement was m
   luck rather than evidence. **This is a standing risk, not a solved problem** — it is the human's call at
   9.1 whether a gate that depends on machine state should be re-phrased (spread-aware) or re-sited; the M1
   gate was set when the codebase was ~30% of its current byte weight, and 8.1 does not touch it.
+- **★ 9.1 RESOLUTION — THE GATE WAS RE-BASELINED TO <165 ms (recovery B2, 2026-07-26).** The human call
+  8.1 deferred above is now made: option B, **re-site the bar**, not re-phrase it. **NO MEASUREMENT ON
+  THIS PAGE CHANGED** — 137.9 / 140.2 / 137.7 ms and the 133.0 ms floor are what they were; only the
+  threshold they are judged against moved, and the struck-through **<150 ms** stays in the table beside
+  it so the M1 bar is not quietly erased. The reasoning, in one line: a gate that needs 49 browser
+  processes closed to go green is measuring the machine, not the code — the working-day readings
+  (**154.0 / 157.6 ms** at 8.1's stopped attempt, **~145–150 ms** at B1 v2 even after a quiesce) breach a
+  bar the quiesced ones clear, and the codebase has grown ~40% since M1 set it. **165 ms restores the
+  gate's actual job** — any regression that pushes typical past it is real signal — while leaving ~15 ms
+  of honest headroom. `GATE_MS` in `scripts/perf-first-paint.ts` is the single site; full rationale and
+  the revisit triggers are in decisions.md 2026-07-26. **This is the FIRST re-baseline of the M1 gate**,
+  and the standing "assume zero headroom" warning above is NOT repealed by it — it is deferred: M7
+  kickoff is where optimization work gets considered (006's +15.7 KB content-script growth is
+  legitimate but, per the human note at 9.1, not sacred).
 - **The measured build IS the committed tree, proven not assumed:** a fresh `wxt build` after the passes
   reproduced all three artifacts **md5-identical** to the ones the passes ran against.
 

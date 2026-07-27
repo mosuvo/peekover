@@ -55,11 +55,20 @@ const ITERATIONS = 7;
 
 /**
  * The typical-document acceptance gate from specs/001-core-rendering/spec.md:
- * nav->paint median < 150 ms. This is the bar the rescoped gate holds for docs
+ * nav->paint median < 165 ms. This is the bar the rescoped gate holds for docs
  * up to ~50 KB; the 1 MB fixture is measured against its own honest bound (the
- * number lands ~8x over 150 ms — see progress.md / decisions.md 2026-07-14).
+ * number lands ~8x over M1's original 150 ms bar — see progress.md / decisions.md
+ * 2026-07-14).
+ *
+ * RE-BASELINED at M6 close from M1's original 150 ms (9.1 human decision, option B —
+ * see decisions.md 2026-07-26). The 150 ms bar breached on working-day machines by
+ * ~5-8 ms while passing on quiesced ones: the codebase grew ~40% since M1 and the
+ * gate had drifted down to the machine-state noise floor, so it was measuring the
+ * machine, not the code. 165 ms keeps the gate a real codebase-discipline signal
+ * (any regression past it is genuine) while leaving ~15 ms of honest headroom. This
+ * is the FIRST re-baseline of the M1 gate; the revisit triggers are in decisions.md.
  */
-const GATE_MS = 150;
+const GATE_MS = 165;
 
 /** First heading buildHugeDoc() emits — the render-succeeded sanity marker. */
 const EXPECTED_H1 = 'Peekover huge-document golden fixture';
@@ -365,7 +374,7 @@ async function main(): Promise<void> {
 
   const gateVal = median(aVals);
   const pass = gateVal < GATE_MS;
-  // The rescoped gate (spec 001) holds the <150 ms bar for TYPICAL docs (<=50 KB);
+  // The rescoped gate (spec 001) holds the <165 ms bar for TYPICAL docs (<=50 KB);
   // the 1 MB fixture is judged against its own honest measured bound, not this line.
   // Tolerance band (64 KB) so a ~50 KB target that generates a hair over 51200 B
   // still reads as the typical-doc tier it represents.

@@ -200,11 +200,35 @@ const DARK_TOKENS = /* css */ `
  *
  * Deliberately NOT added here: `scroll-behavior` on `.peekover-app__reader` (spec §6 — the
  * reduced-motion trap; scroll behavior stays governed by the reader's own CSS).
+ *
+ * THE STORAGE PANEL IS AN OVERLAY, NOT A BAND (M6 9.1 gate finding, recovery Session A defect 1).
+ * `__storage-slot` used to be a shell child at `flex:0 0 auto; max-height:45%` — a full-width
+ * band between header and body. Opening it pushed the folder navigator DOWN and shrank the
+ * reader: two vertically-stacked left columns and a large empty region for as long as the panel
+ * was open. That is the wrong shape for a transparency surface reached from a top-right header
+ * button, which should drop down NEXT to its button and leave the page under it exactly where it
+ * was. The slot now lives INSIDE the header and is absolutely positioned against it. Anchoring to
+ * the header (rather than to `.peekover-app`, which is `position:fixed` and would also serve as a
+ * containing block) means `top:100%` IS the header's bottom edge — no header-height constant to
+ * keep in sync — and `right:1rem` matches the header's own horizontal padding, so the panel's
+ * right edge lines up with the toggle that opened it. The `max-height` calc is a SAFETY bound,
+ * not an alignment one: if the header ever grows the panel just gets shorter, nothing misaligns.
+ * The `:not(:empty)` guard scopes the whole rule to the OPEN state — `toggleStorage` closes by
+ * emptying the slot, and an empty absolute box would otherwise paint a stray bordered sliver
+ * under the header. `z-index` clears the reader chrome's pills (`z-index:2` in `readerCss.ts`),
+ * which share this stacking context through an unpositioned pane host. Pinned by
+ * tests/browser/storagePanelOverlay.browser.test.ts.
+ *
+ * ★ RATIONALE LIVES HERE, NOT IN THE CSS BELOW, AND THAT IS LOAD-BEARING: everything inside the
+ * template literal is STRING CONTENT the minifier cannot strip, so a comment written in there
+ * ships to every user's browser. Writing this block as CSS cost **+1.5 KB on the app-page chunk**
+ * before it was moved up here. Long-form reasoning goes in this doc comment; the CSS keeps only
+ * short pointers.
  */
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
   ${LIGHT_TOKENS}
-  --r:10px;
+  --r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   position:fixed; inset:0; display:flex; flex-direction:column;
   background:var(--paper); color:var(--ink);
@@ -223,6 +247,7 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS}__header{
   flex:0 0 auto; display:flex; align-items:center; gap:.6rem;
   padding:.7rem 1rem; border-bottom:1px solid var(--line); background:var(--panel);
+  position:relative; /* containing block for __storage-slot's overlay — see APP_CSS doc comment */
 }
 .${SHELL_CLASS}__brand{font-weight:650; letter-spacing:-.01em}
 .${SHELL_CLASS}__tag{color:var(--muted); font-size:.8rem}
@@ -241,7 +266,14 @@ const APP_CSS = /* css */ `
 }
 .${SHELL_CLASS}__storage-toggle:hover{background:var(--accent-soft)}
 .${SHELL_CLASS}__storage-toggle[aria-expanded="true"]{background:var(--accent-soft)}
-.${SHELL_CLASS}__storage-slot{flex:0 0 auto; overflow:auto; max-height:45%}
+/* "Stored data" panel: overlay dropped from the header, not a band in flow — see doc comment. */
+.${SHELL_CLASS}__storage-slot:not(:empty){
+  position:absolute; top:100%; right:1rem; z-index:5;
+  width:min(560px,calc(100vw - 2rem));
+  max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
+  background:var(--paper); border:1px solid var(--line);
+  border-radius:var(--r); box-shadow:var(--shadow);
+}
 
 .${SHELL_CLASS}__body{flex:1 1 auto; display:flex; min-height:0}
 .${SHELL_CLASS}__folders{
@@ -399,12 +431,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // pane re-theme together — no half-themed screen.
   const themeControl = buildThemeControl();
   themeControl.classList.add(`${SHELL_CLASS}__theme-toggle`);
-  header.append(brand, tag, themeControl, storageToggle);
 
-  // The storage panel's slot — spans below the header, above the body. Empty (and out of the
-  // layout) until the toggle opens it; filled with the createStorageView panel on demand.
+  // The storage panel's slot — an overlay that DROPS FROM the header, anchored under the
+  // toggle that opens it. It lives INSIDE the header (not as a shell child beside it) purely
+  // so `top:100%` in APP_CSS resolves against the header box; that is what keeps the panel
+  // tied to its button without tracking a header-height constant. Empty until the toggle
+  // opens it — and empty means out of the layout AND unstyled (`:not(:empty)`), so the
+  // folder navigator and reader never move when it opens (M6 9.1 gate finding).
   const storagePanel = doc.createElement('div');
   storagePanel.className = `${SHELL_CLASS}__storage-slot`;
+  header.append(brand, tag, themeControl, storageToggle, storagePanel);
 
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
@@ -421,7 +457,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const readerPane: ReaderPaneController = createReaderPane(doc);
 
   body.append(folders, readerPane.element);
-  shell.append(buildStyle(doc), header, storagePanel, body);
+  shell.append(buildStyle(doc), header, body);
   container.replaceChildren(shell);
 
   // --- drag-and-drop folder target (Chromium live handle / Firefox snapshot) ----------

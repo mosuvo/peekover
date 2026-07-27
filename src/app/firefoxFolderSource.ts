@@ -35,13 +35,17 @@ import {
  * The honest note appShell renders whenever a `FolderSource` is `persistable:false`. Framed
  * as a Firefox PLATFORM limitation, not a Peekover choice (mirroring M1's `file://` honesty
  * and the write-fallback framing): a read-only, point-in-time snapshot with no live handle,
- * no persistence, and no reopen-without-re-pick. Exported so the browser test asserts the
- * exact copy the shell shows.
+ * no persistence, and no reopen-without-re-pick. The closing sentence naming watch mode and
+ * snapshot capture is an M6 9.1 gate finding: both are unavailable on this path for exactly
+ * the same missing-live-handle reason, but the note stopped at persistence/write-back, so a
+ * user who went looking for the watch pill found nothing and no stated reason why. Exported
+ * so the browser test asserts the exact copy the shell shows.
  */
 export const READ_ONLY_SNAPSHOT_NOTE =
   'This is a read-only, point-in-time snapshot of the folder. Firefox cannot grant a live ' +
   'folder handle, so there is no persistence and no write-back — reopening this folder means ' +
-  'picking it again. That is a Firefox platform limitation, not a Peekover choice.';
+  'picking it again. That is a Firefox platform limitation, not a Peekover choice. Watch mode ' +
+  'and snapshot capture are also unavailable here for the same reason.';
 
 // --- (A) the `<input webkitdirectory>` FileList adapter --------------------------
 //

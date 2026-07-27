@@ -1,6 +1,19 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-26 · First-paint gate re-baselined to <165 ms typical (M6 9.1 human decision).** The M1 gate at
+  <150 ms breached on working-day machines by ~5-8 ms while passing on quiesced machines — the codebase grew
+  ~40% since M1 and the gate now sits at the machine-state noise floor. Re-baselining to 165 ms preserves the
+  gate as codebase discipline (any future regression that pushes typical past 165 ms is a real signal) while
+  making the promise honest about the range users actually experience. This is the FIRST re-baseline of the
+  M1 gate. **Why:** shipping M6 with a gate that requires quiescing 49 browser processes to pass means the
+  gate is measuring machine state, not code — and future sessions would either game the quiesce protocol or
+  silently re-baseline again. 165 ms leaves ~15 ms real headroom for future growth before the next
+  re-baseline is due. **Revisit-when:** (a) M7 kickoff considers optimization work (per human note at 9.1 —
+  006's +15.7 KB content-script growth is legitimate but not sacred), (b) working-day median exceeds 165 ms
+  on the reference hardware, or (c) a future milestone adds enough bytes that the gate's discipline signal
+  degrades further.
+
 - **2026-07-26 · D-8 SNAPSHOT RETENTION BOUND VALUES CHOSEN (task 7.2 human decision gate).** Per plan §0 D-8
   and §1.2, the axes are settled (D-16, 2026-07-23) — count per-document, bytes global, age global — and this
   entry logs the VALUES chosen for `snapshots.ts:61/77/93` before 7.3 sets the constants. Chosen from 7.1's
