@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-07-26.*
+*Updated: 2026-07-27.*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,18 +10,46 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION IS COMPLETE: **groups 1–8 CLOSED; 9.1 CLOSED (walk record in `tasks.md`); only 9.2 (the retro) remains.**
-> **Nothing is in progress and nothing is blocked. Task 9.1 — THE MILESTONE-CLOSE HUMAN GATE — has been walked and PASSED**
-> (2026-07-26, Chrome + Firefox, both surfaces, Network tab open). **The full record is the landing block under `tasks.md` 9.1
-> and is deliberately not restated here.** The headline: **the running gate score is now 8/8** (it was 7/7 across M1–M5). The
-> walk caught **three real layout defects the automated stack could not see** — the storage panel opening into the layout, the
-> Compare pill colliding with the reading column's `h1`, and the reader right-aligning against the TOC rail on wide viewports.
-> All three are **fixed before close**, at **`e231941`** (reader centring + pill placement) and **`8255380`** (storage panel
-> overlay + the Firefox app-page disclosure gap the walk also found). **The first-paint gate was re-baselined `<150` → `<165` ms
-> working-day** at `8255380` — the human call 8.1 deferred here; see § Baselines below and `decisions.md` 2026-07-26.
+> ### M6 (spec 006 — snapshots + diff) IS **CLOSED** — code, human gate and retro all landed. **All nine groups, all twenty tasks, 9.1 PASSED and 9.2 BANKED.**
+> **Nothing is in progress and nothing is blocked.** Task **9.2 — the M6 retro — is written** (`retro.md`, 2026-07-27, newest-first:
+> nine findings, three candidates cut with the reason stated, and metrics). Task 9.1 — THE MILESTONE-CLOSE HUMAN GATE — was walked
+> and PASSED 2026-07-26 (Chrome + Firefox, both surfaces, Network tab open); **the full record is the landing block under
+> `tasks.md` 9.1 and is deliberately not restated here.** The walk caught **three real layout defects the automated stack could
+> not see** — the storage panel opening into the layout, the Compare pill colliding with the reading column's `h1`, and the reader
+> right-aligning against the TOC rail on wide viewports — **all fixed before close**, at **`e231941`** (reader centring + pill
+> placement) and **`8255380`** (storage panel overlay + the Firefox app-page disclosure gap the walk also found).
+> **The first-paint gate was re-baselined `<150` → `<165` ms working-day** at `8255380` — the human call 8.1 deferred; see
+> § Baselines below and `decisions.md` 2026-07-26.
 > **Two items ship carried, not fixed**, each with revisit triggers in `decisions.md` (2026-07-26): the **first-time-user edit
 > expectation** (Editor Mode is spec §F8) and the **15-row snapshot picker, UNMEASURED** — the walk reached 3–7 snapshots and
 > says so rather than inferring the count bound from a shallower depth.
+>
+> **★ TWO CORRECTIONS THE RETRO MAKES TO THIS MILESTONE'S OWN RECORD — read them before quoting either number anywhere.**
+> **The running gate score is 10/10, NOT the 8/8 recorded at 9.1.** The score counts DEFECTS (M1:2 + M2:3 + M3:1 + M4:0 + M5:1 =
+> 7/7); 9.1's block says *"M6 contributes THREE"* and then writes 8/8 — **7 + 3 = 10**. And **"none escaping" is FALSE for the
+> first time**: finding A shipped since M3 and was missed at M3's, M4's and M5's close gates, so nine of ten defects were caught
+> at their own gate and **one escaped three**. The mechanical cause is nameable — **no gate record on any milestone states the
+> walk's VIEWPORT**, only its engines and surfaces. Full argument: `retro.md` 2026-07-27, finding 2.
+>
+> **★ THE NEXT ACTION IS THE progress.md CONDENSE / ARCHIVE PASS, IN A FRESH SESSION** (the convention M4's archive pass set).
+> **It has a worklist, and it is not cosmetic — three of these four items are stale FACTS, not pointers:**
+> 1. **§ Baselines is STALE BY THE TWO RECOVERY COMMITS.** 8.1 measured the M6-close pins; **B1 v2 and B2 then shipped production
+>    code and neither re-ran them.** Per the recovery commits' own byte accounting: content script **315,144 recorded vs 315,671
+>    actual** (+527), app chunk **360,423 vs 361,500** (+1,077), suites **605/15/74 vs 629/15/76**. The table's header dates itself
+>    *"(task 8.1)"* while calling itself *"current measured truth"*. **Re-measure — do not hand-edit the numbers in from commit
+>    bodies**, which is accounting, not measurement.
+> 2. **§ Closed milestones still reads "The human-gate score: 7/7"** and has **no M6 entry**. Both fixed in the same pass, with
+>    the score written as **10/10** and the escape qualification stated (see the corrections above).
+> 3. **§ Up next still holds the pre-milestone 006 block** ("THE WHAT IS SETTLED… work its boxes in order") — 006 is closed and
+>    that block is now history; it belongs in the archive, replaced by M7's entry when M7 is planned.
+> 4. **Fold the Now section's task narratives into the archive** and leave this section pointing at M7.
+> **Then M7's kickoff, in its own fresh session** — and per `retro.md` 2026-07-27 finding 8, **M7 owes a floor-delta statement
+> before any further first-paint re-baseline discussion**, plus the optimisation question `decisions.md` 2026-07-26 routed to it.
+>
+> *(Why these are listed rather than fixed at 9.2: 9.2's scope was the retro plus this pointer and the roadmap tick. **Retro
+> finding 3 is exactly this defect class** — "the close-measurement task is not the last commit, but every artifact is written as
+> if it were" — so naming the work is the discipline the finding asks for, and quietly patching a measurement table would have
+> been the opposite of it.)*
 >
 > <details><summary>Task 8.2 — DOCS + MEMORY RECONCILE (landed previously; CLOSED group 8)</summary>
 >
@@ -309,26 +337,20 @@
 > </details>
 > </details>
 >
-> **THE NEXT ACTION IS TASK 9.2 — THE RETRO — AND IT CLOSES THE MILESTONE. WRITE IT IN A FRESH SESSION**, per the convention
-> M4's archive pass established: the retro is written *after* milestone close, by a session that is **not** the one that just
-> closed it. **9.1 is done and this is not that task.** 9.2 is where M6's substantial writing lives — the gate walk and the
-> Now section above are the record, not the lessons.
-> **What 9.2 owes an answer to:** M6's findings; **both retractions** from 8.1 (the vacuous import-fence grep; the coalescer
-> undercount); and the discipline items surfaced across the milestone and its recovery — **`ch` in a margin calc cost ~28 ms
-> of first paint** where the same unit in `max-width` is free; **CSS comments inside a template literal SHIP** (the minifier
-> cannot reach string content — +1,873 B before the prose moved into the `.ts` doc comment); **A-B-A ordering against a
-> same-session control** before attributing a perf delta to code rather than machine state; **non-vacuity verification** of
-> every new test and every grep (prove the control fires, or ablate and diff the bytes); **coupling guards scoped to the
-> coupling** rather than to the file; **test-per-file audited against its siblings** (B1's finding 2 — the clearance loop
-> checked six chromes and the rail but not the reading column, which is why the sweep was green and wrong); and roughly a
-> dozen smaller items tracked through the milestone. **9.2 also moves 006 into § Closed milestones and re-points the roadmap**
-> — the § Up next 006 block below still reads as pre-milestone guidance and is 9.2's to replace.
-> **Still unmeasured, carried into 9.2 as reasoning rather than fact:** whether the count bound actually stops growth at 15
-> (it needs >14 rendered edits; `EDIT_SEQUENCE` is 12), so `decisions.md`'s "~17 snapshots of 1 MB fit in 20 MiB" stays
+> **TASK 9.2 — THE RETRO — IS DONE, AND IT CLOSED THE MILESTONE.** Written in a fresh session per the convention M4's archive
+> pass established (the retro is written *after* close, by a session that is **not** the one that closed it). **Everything it
+> was owed, it answered** — both 8.1 retractions, the `ch`-in-a-margin cost, the template-literal comment leak, A-B-A ordering,
+> non-vacuity of every test and every grep, the sibling-checklist audit — plus three items the brief did not anticipate: the
+> gate-score arithmetic, the broken "none escaping" invariant, and the stale pin table. **Read `retro.md` 2026-07-27; it is not
+> summarised here.** Three candidate findings were **cut with the reason stated**, one of them the coupling-guard item.
+> **Still unmeasured, carried past the milestone as reasoning rather than fact:** whether the count bound actually stops growth
+> at 15 (it needs >14 rendered edits; `EDIT_SEQUENCE` is 12), so `decisions.md`'s "~17 snapshots of 1 MB fit in 20 MiB" stays
 > arithmetic. **Re-run either harness any time:** `pnpm perf:snapshot-capture -- --no-build`, `pnpm perf:diff -- --no-build`
 > — neither emits an exit-code gate, by design.
 > **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state;
-> **8.1 lagged it by one and 8.2 caught it — see the gap noted in the 8.2 fold above**).
+> **8.1 lagged it by one and 8.2 caught it**; **9.1's own closing commit shipped three inverted pointers and session C caught
+> them**; and **9.2 found § Baselines stale by two commits** — the rule now has four recorded failures and one mechanical
+> remedy, `retro.md` 2026-07-27 finding 3: **a pointer walk as a discrete step in every gate-closing task**).
 
 ## Up next
 
@@ -438,8 +460,8 @@ measurement-driven or explicitly deferred.*
   `waitForScrollable`, not sit beside it.
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
-**006 snapshots + diff ← OPEN, implementation complete, human gate 9.1 PASSED 8/8; only the retro (9.2) remains** · … full order in
-`docs/product/spec.md` §Phase-1.
+**006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; running gate score **10/10**, corrected
+from the 8/8 recorded at 9.1) · … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
 

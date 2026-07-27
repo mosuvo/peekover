@@ -677,7 +677,29 @@ go to the gate) and the milestone-close gate (9.1).
       **9.2 (the retro) is NOT written here and `docs/ai/retro.md` is untouched by this commit** — that is the
       next task, deliberately in a fresh session after the gate.
 
-- [ ] **9.2 Retro (M6 close).** Run `/retro`: append to `docs/ai/retro.md` — the lessons that change how the next
+- [x] **9.2 Retro (M6 close).** Run `/retro`: append to `docs/ai/retro.md` — the lessons that change how the next
       milestone runs, newest first, and what the gate caught (its most valuable content).
       Files: `docs/ai/retro.md` · `docs/ai/progress.md`
       Verify: the entry is banked; `progress.md` shows 006 closed and points at what is next.
+      **DONE. 006 CLOSES.** M6's entry prepended to `retro.md` (newest-first): **nine findings**, three candidates
+      **cut with the reason stated** (M5's precedent), and metrics. Docs only — no `src/`, test, `scripts/` or spec
+      file touched; `decisions.md` deliberately **untouched** (a retro banks lessons; decisions are 8.2's finding and
+      stand as written).
+      **★ TWO CORRECTIONS OF RECORD THE RETRO MAKES, both against artifacts this milestone produced.**
+      **(1) The running gate score is 10/10, not the 8/8 recorded above in 9.1.** The score has always counted
+      DEFECTS (M1:2 + M2:3 + M3:1 + M4:0 + M5:1 = 7/7, per progress.md § Closed milestones); 9.1's own block says
+      *"M6 contributes THREE"* and then writes 8/8. **7 + 3 = 10.** 9.1's landing block above is left as written —
+      it is the walk's record — and the correction lives in `retro.md` (the M4 precedent: metric corrections go in
+      the retro, not by rewriting a landed note). **(2) "None escaping" is FALSE for the first time:** finding A
+      shipped since M3 and was missed at M3's, M4's and M5's close gates, so nine of ten defects were caught at
+      their own gate and **one escaped three**. Its mechanical cause is nameable — **no gate record on any
+      milestone states the walk's VIEWPORT**, only its engines and surfaces.
+      **★ CARRIED INTO THE NEXT PASS, NOT FIXED HERE (scope: Now-pointer + roadmap only).** progress.md
+      § Baselines is **stale by the two recovery commits** — 8.1 measured the pins, then B1 v2 and B2 shipped
+      production code and neither re-ran them: content script 315,144 recorded vs **315,671** actual, app chunk
+      360,423 vs **361,500**, suites 605/15/74 vs **629/15/76**. § Closed milestones still reads *"7/7"* and has no
+      M6 entry; § Up next still holds the pre-milestone 006 block. All four are named in the Now-pointer as the
+      condense/archive pass's worklist. **Retro finding 3 is exactly this class**, which is why it is recorded
+      rather than quietly patched.
+      Pins (unchanged — this task ships no code): unit **549** · browser **629/15/76** · `permissions: []` ·
+      `tests/manifest.test.ts` **2975 B**, byte-unmodified since M2 · Golden EMPTY.

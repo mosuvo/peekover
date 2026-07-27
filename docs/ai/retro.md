@@ -1,4 +1,258 @@
 # Retro log — Peekover
+- **2026-07-27 · M6 close (spec 006 — snapshots + diff).** Snapshot capture on the app page, bounded
+  retention (count 15 / 20 MiB / 30 days, D-8), a global erase control, a **persistent** capture disclosure,
+  and an inline line-diff against any stored snapshot — with **`permissions: []` still intact**, the
+  **FIRST `dependencies` addition since M1** (`diff@^9.0.0`), and PERMISSIONS.md's *"file contents are never
+  stored"* claim corrected **in the same commit as the first stored byte** (1.4). Nine groups, **twenty
+  planned tasks, ZERO discovered tasks** — against M5's five. At close: lint EXIT=0 · **549 unit** (46 files)
+  · **629 in-browser passed / 15 skipped**, 76 file-instances, both engines · golden diff EMPTY ·
+  `manifest.test.ts` 8/8 and **2975 B, byte-unmodified since M2** · first paint **137.9 ms** against a bar
+  that **moved this milestone** (see finding 8). The 9.1 gate **PASSED and found THREE layout defects plus a
+  disclosure gap**, all fixed before close across **four unplanned recovery sessions** (A, B1, B1 v2, B2, and
+  a pointer-fix session C). The settled architecture (D-1…D-16, the gate-3 product calls, the bound values,
+  the re-baseline) is in decisions.md 2026-07-22/23/25/26 — **linked, not restated**; the measurement
+  evidence is progress.md § Baselines and the tasks.md landing notes. **Two claims this milestone formally
+  RETRACTED, which is the entry's headline and is not a failure to apologise for — it is the only milestone
+  so far that audited its own prior evidence hard enough to find it hollow.**
+  - **(1) THE HEADLINE — TWO FORMAL RETRACTIONS AT 8.1, AND BOTH RETRACTED CLAIMS WERE *UNFALSIFIABLE UNDER
+    THE CONDITIONS THEY WERE MEASURED IN*. That is one defect class, not two incidents, and it is a NEW
+    metric column: M4 had zero retractions, M5 had zero, M6 has two.** **(a) The import fence was never
+    verified by bytes.** Every progress.md entry since 5.1 cited *"content-script grep for
+    `diffLines|jsdiff|computeDiff|enterDiff|…` = **0**, both engines"* as fence-by-measurement. Those are
+    **identifiers**, the bundle is **minified**, and the proof is the negative control 5.1–7.1 never ran:
+    grep the **app-page chunk**, which indisputably *does* contain the engine, and it **also returns 0**.
+    **A test that returns the same answer whether or not the thing is present has zero discriminating
+    power** — the fence was carried the whole time, unnoticed, by layer 1 alone (the source-text allowlist in
+    `diffEngine.test.ts`). **(b) The coalescer never dropped anything.** 7.1's *"9 of 12 edits rendered at
+    1 MB"* came from a `renders` probe **sampled once**, right after `__pwSettle`, before a 1 MB render
+    re-stashes its source. It could not be falsified at 7.1 either, because the proposed 5 MiB byte bound
+    clamped the snapshot count at 4 — **the discriminator had no room to disagree with itself.** 7.3 lifted
+    the ceiling to 20 MiB, the count then said 13 while `renders` said 9, and 8.1 polled instead of sampling:
+    **12 of 12 at both fixtures.** → **THE RULE, mechanical enough to apply without thinking: every empirical
+    claim needs a POSITIVE CONTROL THAT FIRES UNDER THE SAME CONDITIONS THE NEGATIVE CLAIM DISCLAIMS.** Grep
+    for a marker you *know* exists in the artifact you claim doesn't have them; if the control also reads 0,
+    your grep detects nothing (8.1 banked the replacement heuristic **with its controls in the table**, and
+    labelled it a heuristic, not a proof). Ablate the imported code and diff the bytes; **byte-identical means
+    it was never there** (−9,481 B in the app chunk, **0 B, md5-identical** in the content script — the fence
+    is not "small", it is nil). And a discriminator that can legitimately read empty must **await**, not
+    sample. → **The third instrument in the same family, and the one that caught real waste: DECOMPOSE AN
+    UNEXPLAINED BYTE DELTA AGAINST ITS SUB-BLOCK SIZES AND ACCOUNT EVERY BYTE.** B1 v2 did it and matched to
+    the byte (READER_CSS +289 + CONTAINED_CSS +238 = 527); B2 did it and found **~1.5 KB of the +1,873 B was
+    CSS-comment prose** (finding 9). A delta you accept without decomposing is where waste hides. →
+    **This is M4's finding (3) — "a pin certifies exactly the stage it observes" — from the other side.**
+    That rule is about a guard's SCOPE; this one is about a guard's SENSITIVITY. A pin can be perfectly
+    scoped and still be blind, and green tells you neither.
+  - **(2) THE RUNNING GATE SCORE IS **10/10**, NOT THE 8/8 RECORDED AT 9.1 — AND "NONE ESCAPING" IS FALSE
+    FOR THE FIRST TIME IN THE PROJECT'S HISTORY. Correct both, because the second one matters and the
+    number is how it gets found.** The arithmetic first: the score has always counted **defects**, not
+    milestones — M1:2 + M2:3 + M3:1 + M4:0 + M5:1 = **7/7** (progress.md § Closed milestones states each).
+    M6's own landing block says *"M6 contributes THREE defects"* and then writes **8/8**, which contradicts
+    its own sentence. **7 + 3 = 10.** (On the stricter denominator that also counts the Firefox app-page
+    disclosure gap the walk closed, it is 11/11; prior milestones did not count copy gaps, so **10/10** is
+    the like-for-like figure. Stating the denominator's definition is the point.) → **Now the part the
+    arithmetic was hiding. "Finding A" — the reader right-aligned against the TOC rail on wide viewports —
+    ships on BOTH surfaces and, per the walk's own attribution, has done SINCE M3.** It was present and
+    missed at **M3's, M4's and M5's close gates**. So the invariant this project has cited for five
+    milestones — *"every shipping defect caught by the gate of the milestone that shipped it, none
+    escaping"* — **is broken.** Nine of ten were caught at their own gate; **one escaped three.** →
+    **And M4's clean gate now has a known miss, which is the honest correction to make here rather than
+    leave for someone to notice later:** M4's retro concluded its zero-defect gate was *discipline-dominant*
+    and that reasoning still stands **for what M4 built** — but the gate was not, in fact, clean about the
+    shipped product. **A clean gate is evidence about the BUILD, not about the GATE** (M4's own words) —
+    M6 supplies the instance where that caveat cashes out. → **WHY it escaped is mechanical and fixable, and
+    it is the actionable half: the gate has an UNRECORDED ENVIRONMENT VARIABLE — the walker's viewport.**
+    Playwright's default viewport never reproduced it, and **no gate record on any milestone states what
+    window size the walk used.** Engine and surface are recorded every time; the dimension that actually
+    decides whether a layout defect is visible is not. → **THE RULE: a gate walk records its viewport(s) the
+    way it records its engines, and a milestone that ships positioned chrome walks at least one WIDE
+    viewport deliberately.** Three gates' worth of coverage was silently conditioned on the monitor someone
+    happened to be sitting at.
+  - **(3) THE CLOSE-MEASUREMENT TASK IS NOT THE LAST COMMIT OF THE MILESTONE, BUT EVERY ARTIFACT IS WRITTEN
+    AS IF IT WERE — and the § Baselines pin table is stale RIGHT NOW, at the moment this entry is written.**
+    8.1 measured the M6-close pins; B1 v2 and B2 then shipped **production code** after it and **neither
+    re-ran them**. Verified against the recovery commits' own byte accounting: content script **315,144 B
+    recorded vs 315,671 B actual** (+527, B1 v2), app chunk **360,423 vs 361,500** (+1,077), suites
+    **605/15/74 recorded vs 629/15/76 actual** (+24 cases, +2 file-instances). The table's own header says
+    *"Current measured truth"* and then dates itself *"(task 8.1)"* — **the parenthetical is the tell, and
+    nobody read it as a warning.** B1 v2 touched **no doc at all** (three files, all `src/` and `tests/`);
+    B2 touched progress.md only for the gate strike-through. → **This is the same defect as the three
+    POINTER INVERSIONS the milestone already logged, and they are one finding, not four:** 8.1 landed
+    without advancing the Now-pointer, leaving a next-action block instructing a session to redo a landed
+    task — **with the M1 "advances PER TASK" rule printed at the bottom of that same section** (caught at
+    8.2); 9.1's *closing* commit still carried Blockers saying *"006 IS NOW WAITING ON A HUMAN — next human
+    gate is 9.1"* and a roadmap saying *"at its close gate"*, both false **on the commit that closed it**
+    (caught by session C); and 8.2's own folded prose said *"(this commit)"*, which session C had to rewrite
+    to *"(a previous commit, 5ea9723)"*. **A fourth, still live and left for the archive pass: § Closed
+    milestones still reads "The human-gate score: 7/7."** → **A fifth, of a different kind, and worth its
+    own sentence because it is what a future planner will read: the tasks.md box list says 20/20 with ZERO
+    discovered tasks, and four recovery sessions are invisible in it.** 9.1's own Verify says a bad verdict
+    becomes *"a task added below this line, not a silent fix"* — the fixes were anything but silent (the
+    commit bodies are more thorough than most task notes), but no box was added, so **anyone estimating
+    "how much rework does a close gate cause" reads zero from the boxes.** → **THE RULE, and it is a
+    checklist item rather than a habit: any commit that lands after the measure-close task RE-RUNS THE PINS
+    OR STATES THAT IT DID NOT, and every gate-closing task ends with a POINTER WALK as a discrete step —
+    grep the fixed phrase list (`is next`, `at the gate`, `waiting on`, `this commit`, `← NEXT`, the running
+    score) before committing.** Prose that states current pending state is **false by construction** the
+    next time anything ships; the only defence is a mechanical sweep, because the person who just did the
+    work is the person least able to see it.
+  - **(4) THE TEST-PER-FILE AUDIT MUST WALK THE SIBLING SUITE'S FULL CHECKLIST — THE SINGLE MOST VALUABLE
+    MECHANICAL ITEM M6 PRODUCED, because it is the specific practice that would have prevented the pill
+    collision outright.** `diffChrome.browser.test.ts`'s clearance loop checked **six sibling chromes and
+    the rail** — and not the reading column. Both `watchControl.browser.test.ts:453-466` and
+    `themeControl.browser.test.ts:349` **do** check reader clearance, and `diffChrome.browser.test.ts:339-340`
+    **cites watchControl by name** — it borrowed the *scoping decision* (assert at WIDE) and dropped the
+    *assertion*. **One assertion lost in transcription, from a file that names its source.** Every test
+    passed; the property that should have been tested was absent. **This is CI-invisible by construction:
+    nothing goes red, because the missing test IS the defect.** → **The storage panel is the same finding's
+    other half, and they belong together because the remedy is one thing:** it had **no positioning
+    coverage at all** — not a dropped assertion, no sibling to drop it from, no baseline. B2's
+    `storagePanelOverlay.browser.test.ts` is now the pin. **"The assertion was dropped in transcription" and
+    "there was no sibling to transcribe from" are the two ways the same audit fails**, and the second is the
+    more dangerous because there is nothing to notice missing. → **THE RULE: before writing coverage for a
+    new piece of chrome, ENUMERATE the property set from every existing sibling suite and record each item
+    as present / absent / explicitly out-of-scope. If no sibling suite exists, THAT IS THE SIGNAL** — a
+    visible feature with no positioning baseline is the storage panel again. progress.md already carries
+    *"a shared browser-test helper module"* for `flush()`/`afterFrames()`/`waitFor()`; **the geometry
+    checklist belongs in it, and this milestone is the argument for building it.**
+  - **(5) REVERT-AND-FAIL IS THE THIRD RUNG OF THE RED-FIRST LADDER, AND IT IS STRICTLY STRONGER THAN THE
+    SECOND FOR REGRESSION TESTS SPECIFICALLY.** The ladder now reads: **M4's finding (1)** — did the
+    instrument go red *at all* (non-vacuity); **M5's finding (2)** — did the RIGHT things go red, in the
+    RIGHT NUMBER, for the RIGHT REASON; **M6** — does the failure carry **the defect's own signature, in the
+    defect's own units.** B2 verified `storagePanelOverlay.browser.test.ts` by reverting `appShell.ts` to
+    the unfixed HEAD and re-running: not *"six tests failed"* but **6 of 10 cases failing on named rects —
+    reader top 73 → 476 px, reader height 823 → 420 px, the navigator displaced, `position` computing
+    `static`** — which is the defect's description read back out of the assertions. → **Why it is stronger
+    and not merely a companion:** red-first proves a test *can* fail; signature-matching proves it fails
+    **on the thing the fix restored**, which is the only property a regression test exists to hold. A
+    regression test that reds for some other reason is a tautology with a green tick on it. → **The cost is
+    one `git stash`-shaped move and it is already the house pattern** (M4's mechanical default — `cp` the
+    file aside FIRST — held for every M6 red-first; every one of the ~18 mutations in the commit bodies
+    records *"restored byte-identical"*).
+  - **(6) THE `ch` UNIT IN A CSS *MARGIN CALC* COSTS ~28 MS OF FIRST PAINT; THE SAME `76ch` IN `max-width`
+    IS FREE. Same value, same file, different property, ~20% of the entire paint budget.** `max-width`
+    resolves once and caches; a margin computation pulls **font metrics into layout**, which sits on the
+    first-paint critical path. B1 v1 was geometrically correct and cost the gate its whole headroom
+    (~5 ms quiesced); B1 v2 resolves the measure **once** into `--reader-measure:748px` and references it
+    twice. → **THE RULE, and it is durable well past this instance: for any value that could live in either
+    a CACHED property (`max-width`, `min-width`) or a LAYOUT-BLOCKING one (`margin`, `padding`, `transform`),
+    measure BOTH placements — the expression is identical and the runtime cost is not.** → **The variable
+    was not a tidy-up.** `max-width:748px` and `margin-left:calc(… − 748px − …)` must resolve to the same
+    length or the centring is silently wrong at every wide viewport, so one variable feeds both and a
+    browser test asserts at runtime that `getComputedStyle(reader).maxWidth` equals the resolved value —
+    **it reds mechanically, no vigilance required.** *(And the restraint was right: the same `76ch` in
+    `.peekover-raw` / `.peekover-diff` / `.peekover-alert` was deliberately LEFT ALONE — those have no
+    coupling to preserve, and folding them into a serif-derived px constant would have silently changed
+    their widths. A structural guard preserves a property that must hold; it is not a refactor of "this
+    number appears twice.")*
+  - **(7) PERF UNDER NOISE NEEDS TWO THINGS, AND M6 IS WHERE BOTH EARNED THEIR KEEP: A-B-A AGAINST A
+    SAME-SESSION CONTROL, AND FLOOR-REPORTED-BESIDE-MEDIAN.** **(a) A-B-A.** Re-running a perf harness on
+    the same build re-measures **the same machine**, so ordering effects — warm-up, other processes settling
+    — get attributed to code. Interleave: measure A (HEAD) → B (change) → A again. **A agrees with A ⇒ the
+    machine is stable and B−A is code. A disagrees with A ⇒ nothing measured here means anything.** At
+    B1 v1 the `ch` form read **~180 ms in BOTH the early and the late slot** while HEAD read ~160 ms in the
+    same slot — so the cost tracked the code, not the clock — and ablating the single declaration recovered
+    it. **That protocol is the only reason "the `ch` costs 28 ms" was believable rather than dismissible as
+    noise**, which on a machine this variable is otherwise the default fate of any 28 ms claim. → **This is
+    M4's finding (2) — inference does not survive contact with the configuration it describes — applied to
+    MEASUREMENT rather than to prediction.** **(b) Floor beside median.** Noise raises the median; real cost
+    raises the **floor**. 8.1's first attempt read 154/157 ms medians with the floor still at ~145 → machine.
+    B1 v1's floor jumped to 155 from HEAD's 133 → code. → **THE RULE: report median AND floor on every
+    first-paint measurement. The gate asserts the median; the FLOOR is what tells you whether the gate is
+    sitting at the noise floor** — and, per finding 8, whether a proposed re-baseline is honest.
+  - **(8) THE FIRST RE-BASELINE OF THE M1 GATE (<150 → <165 ms) IS DISCIPLINE-PRESERVING — BUT THE
+    RATIONALE IT WAS RECORDED WITH NAMES THE WRONG CAUSE, AND THAT IS THE PART THAT WILL DO DAMAGE AT M7.**
+    The decision itself is sound and was taken correctly: 8.1 measured, **refused to move the bar**, and
+    routed it to the human at 9.1 (the standing measure-then-decide split, D-2's shape from 004); both the
+    breaching **154.0 / 157.6 ms** working-day readings and the passing quiesced ones are recorded side by
+    side; **no measurement changed, only the threshold**; and the struck-through `<150 ms` stays visible in
+    the table so the M1 bar is not quietly erased. A gate that needs **49 browser processes closed** to go
+    green is measuring the machine. → **But decisions.md 2026-07-26 gives the cause as *"the codebase grew
+    ~40% since M1"*, and the measurements say otherwise.** M6's first paint at close is **137.9 ms against
+    M5's 138.6 — it got FASTER** — and the floor is **133.0 vs M5's 132.0**, i.e. flat. **006's bytes did not
+    move this gate.** What moved was the honesty of the measurement environment: the bar was set on a quiet
+    machine and had *always* been breaching on a working-day one; nobody had measured it there. → **Why the
+    distinction is not pedantic: "we grew, so we re-baseline" is a rationale that licenses every future
+    re-baseline, and it is exactly the sentence M7 will read.** → **THE RULE, and it is the inflection point
+    M7 kickoff needs: a re-baseline is legitimate when the FLOOR IS FLAT and the median breaches — that is
+    environment. It is DRIFT when the FLOOR HAS MOVED UP — that is code, and the answer is optimisation
+    work, not a bigger number.** M6's floor moved +1.0 ms, so M6's re-baseline was environment.
+    **Any future re-baseline proposal must state the floor delta against the previous milestone before the
+    threshold is discussed** — that single number separates the two cases, and without it the two are
+    indistinguishable in prose.
+  - **(9) A RULE THAT HAS BEEN PAID FOR ONCE RECURS ANYWAY — AND M6 RAN THE CONTROLLED COMPARISON THAT SAYS
+    WHY, BECAUSE IT ALSO CONTAINS A RULE THAT HELD.** **The recurrence:** B2's first draft wrote its
+    rationale as **CSS comments inside the `APP_CSS` template literal** — string content the minifier cannot
+    reach — shipping **+1,873 B**, of which ~1.5 KB was prose. Moving it into the TypeScript doc comment
+    above the block cut it to **+550 B with no loss of explanation**. **This rule was already discovered and
+    paid for at 6.2, in this same milestone**, where readerCss.ts's placement rationale cost ~8 KB in a
+    first draft and the fix was the identical relocation. **Same milestone. Same repository. Days apart.** →
+    **The control: a rule that did NOT recur.** decisions.md 2026-07-22 recorded that 005's plan-gate
+    decisions were **never logged**, and attached a revisit-when. The very next gate — 006's, one day later
+    — logged **at** the gate, and the entry says so in as many words: *"the fix the 2026-07-22 entry's
+    revisit-when asked for, applied on the first occasion after it."* → **THE DIFFERENCE IS NOT DILIGENCE,
+    IT IS WHERE THE RULE LIVES.** The decisions rule was written in the **indexed, append-only file every
+    session reads, with a trigger attached**. The template-literal rule was written in a **code comment in
+    one file** — findable only by someone already editing that file, which is precisely not the person about
+    to make the mistake somewhere else. → **THE RULE: a lesson learned in one file must be banked where its
+    CLASS is searchable, not where its instance happened.** And for this one specifically, the honest answer
+    to "should it be mechanical?" is **yes and it is cheap**: a build-time assertion on the shipped byte
+    delta per CSS block, or an ESLint rule forbidding `/* */` inside the known CSS template literals, would
+    end the class. **Until then it will recur a third time** — the two instances are two tasks apart in one
+    milestone, which is the strongest possible evidence that awareness is not the mechanism.
+  - **Deliberately CUT from this entry — three candidates, each for a stated reason.** **(i) "Coupling
+    guards are scoped to the coupling, not the file"** — real, correct, and it changes nobody's behaviour:
+    the restraint it describes (declining to fold three uncoupled `76ch` values into the new variable) is
+    already the default a careful reader applies, and the one durable half of it is the runtime coupling
+    assertion, kept inside finding 6. **(ii) "Prompt premises about machine and repo state are stale by
+    construction"** — M5 already banked *"a prompt's factual claims about repository state are UNVERIFIED
+    INPUT"* and validated it on a second kind of claim. M6 supplies a third kind (**machine** state: a
+    recovery prompt said *"close Brave completely — all four processes"* against an actual **28 Brave + 21
+    Chrome**) and that is a genuinely different failure mode — the category was right and the number was
+    unknowable at write-time — but it is **one sentence, not a finding**, so it lives in the metrics below.
+    **(iii) The two-pass recon disagreement at gate 2** (`specs/recon-006-gate2.md`, deliberately outside
+    the repo): pass 1 said the outgoing content *"is not held anywhere"*, pass 2 found it one layer down in
+    `mount()`'s WeakMap, and the recon's own diagnosis — *"a correctly-answered question can still be the
+    wrong question"* — is sharp. **Cut because the artifact already states it at the top of itself**, it is
+    read by exactly the sessions that need it, and D-1 shipped on pass 2's finding without incident.
+  - **Metrics.** Human-gate-caught defects this milestone = **3** (storage panel opening into the layout ·
+    the Compare pill colliding with the reading column's `h1` · finding A, the reader right-aligned against
+    the TOC rail), **plus one disclosure gap** (Firefox app-page watch silently absent) — all four fixed
+    before close · **running gate score 7/7 → 10/10, CORRECTED from the 8/8 recorded at 9.1** (finding 2),
+    and **the "none escaping" invariant is BROKEN for the first time**: finding A escaped **three** prior
+    close gates · **formal retractions = 2** (the fence grep; the coalescer undercount) — **a NEW metric
+    column; M4 had zero, M5 had zero** · **~18 red-first mutations** recorded across the milestone's commit
+    bodies (1.1–6.3), **every one naming its isolating asymmetry and restored byte-identical**, and **no
+    record in M6 shows a mutation that failed to isolate on the first attempt** — M5 had 5 of ~21; stated as
+    what the record shows, not as proof none occurred · the recovery sessions added **two non-vacuity proofs
+    of a different kind** (B2's revert-and-fail, 6 of 10 cases on named rects; B1 v2's runtime coupling
+    guard, plus the whole geometry set re-run at **1280 as well as 1400**, since 1400 alone sat on the clean
+    side of the pill defect) · unit **456 → 549** (+93); browser **499 → 629 passed / 15 skipped** (+130)
+    across **54 → 76 file-instances**, both counts spanning **two engine projects** (Chromium + Firefox), so
+    the case totals are per-engine-pair, not per-assertion · zero discovered tasks in-plan (M5: five) against
+    **four unplanned recovery sessions after the gate** — the rework moved from the plan to the close.
+    - **Defects by WHO CAUGHT THEM, keeping M4's and M5's correction discipline — and the CI column is
+      ZERO.** **Human gate = 3 defects + 1 disclosure gap.** **Measurement = 2 RETRACTIONS, not defects**
+      (7.3's relaxed bound exposing the `renders` contradiction; 8.1's negative control on the fence grep) —
+      these corrected the *record*, not the product, and counting them as defect catches would inflate the
+      column that did the least work. **Agent code review / design reading = 2** (6.3's `flushPending` hole,
+      a cooldown timer armed just before a diff opens and never passing through `onText`, found by reasoning
+      about exit paths before a test existed; 4.1's file-scoped seam matcher, which passes green on a file
+      holding one correct and one hand-built registration). **CI mid-development = 0.** No commit body or
+      landing note in M6 records the existing suite catching a product defect during development.
+      **That number is honest and it is the expected one:** M4's retro already said most red-firsts prove
+      non-vacuity rather than find bugs, and M6's coverage additions were written *after* their features,
+      to pin them. **The column to watch is not CI's zero — it is that all three product defects were
+      LAYOUT, and finding 4 names why the suite could not have seen two of them.**
+    - **Orchestrator factual errors caught by ground-truth re-derivation = 3 verified** (M4:4, M5:5), plus
+      one reported in-milestone that no artifact records. **Two of the three are in THIS session's own
+      brief:** the byte anchors `373/245/912/2975` — only **2975** resolves (`tests/manifest.test.ts`,
+      byte-unmodified since M2), and the other three match no artifact named anywhere in M6's record; and
+      *"earlier groups' counts are in tasks.md"* — **tasks 1.1 through 6.2 have NO landing notes in
+      tasks.md at all** (landing blocks begin at 6.3), so the milestone's red-first evidence lives in commit
+      bodies and the progress.md folds, and this entry's ~18 was counted from `git log`, not from tasks.md.
+      The third is the machine-state one described in cut (ii) above. **What did NOT need correcting is
+      worth recording too, since M5's equivalent claim was false:** this brief said HEAD `a6c7716`, clean,
+      up to date with origin — **and it was, exactly.**
 - **2026-07-21 · M5 close (spec 005 — watch mode).** Watch a chosen local markdown file and re-render it in
   place while an agent rewrites it, on both engines and both surfaces, with **`permissions: []` still
   intact**, **no new dependency** (still three) and **no file contents stored** — D-1/D-2 held to the last
