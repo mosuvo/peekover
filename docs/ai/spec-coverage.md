@@ -1,0 +1,446 @@
+# Spec coverage audit — post-M6, pre-M7
+
+*Audited 2026-07-27 · HEAD `d7f424c` ("Add 006 gate"; the M6 retro is its parent, `664952f`).*
+*Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
+*Method: source code is the answer, the spec is only the question. No spec item is credited
+because a plan, a task list or a pipeline comment anticipates it.*
+
+---
+
+## Summary
+
+**Phase 1 (§5 F1–F12) is ~17% shipped by weighted feature count** — 34.0 credit points across
+197 enumerated items. Including §6 and §7 the whole-spec figure is **~23%** (51.5 / 226). But the
+number that describes the *product* rather than the *backlog* is the persona one: **~56% of
+persona #1's killer features are shipped** (10 of 18 sub-items across folder browser, watch mode,
+diff view, Mermaid, tables). Six milestones of work have landed almost entirely inside one
+persona's column — the AI-tool developer can open a folder, watch an agent rewrite a file, and
+diff the result against a snapshot, all offline. What they cannot do is see a Mermaid diagram,
+which is the single largest hole in that column and the one item in it that needs a dependency
+Peekover has never installed. Every other persona in §3 is under 15% served: the Developer
+persona is missing code highlighting entirely (F3 is 0%), the Technical writer has no editor and
+no export (F8 4.8%, F9 0%), and the Student has no math (F2 2.8%).
+
+**Weighting method.** Each spec bullet is decomposed into its sub-items and each sub-item counted
+once, unweighted (a bullet listing seven extended-syntax features counts seven). Credit is
+`SHIPPED = 1.0`, `PARTIAL = 0.5`, `NOT = 0`, `UNCLEAR = 0`. Ambiguity resolves toward NOT — this
+document is an input to M7 scoping, and an inflated ✓ costs more than a conservative ✗.
+
+**Status legend.** `✓ SHIPPED` — implementation exists and is either test-covered or demonstrably
+reachable from a production entrypoint. `~ PARTIAL` — exists but incomplete, untested, or reaches
+only some of the stated surfaces. `✗ NOT` — no implementation (absence evidenced by missing
+dependency, zero grep hits, or no entrypoint import). `? UNCLEAR` — evidence ambiguous; listed at
+the bottom with the question a human walk would settle.
+
+| Section | Items | ✓ | ~ | ✗ | ? | Credit | Coverage |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| F1 Rendering engine | 24 | 6 | 3 | 15 | 0 | 7.5 | **31%** |
+| F2 Math & diagrams | 18 | 0 | 1 | 17 | 0 | 0.5 | **3%** |
+| F3 Code blocks | 9 | 0 | 0 | 9 | 0 | 0.0 | **0%** |
+| F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
+| F5 Navigation & reading UX | 39 | 11 | 1 | 27 | 0 | 11.5 | **29%** |
+| F6 Live updating & AI-workflow | 13 | 6 | 0 | 7 | 0 | 6.0 | **46%** |
+| F7 Theming & appearance | 17 | 1 | 0 | 16 | 0 | 1.0 | **6%** |
+| F8 Editor mode | 21 | 0 | 2 | 19 | 0 | 1.0 | **5%** |
+| F9 Export & publishing | 13 | 0 | 0 | 13 | 0 | 0.0 | **0%** |
+| F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
+| F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
+| F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
+| **§5 total** | **197** | **28** | **12** | **157** | **0** | **34.0** | **17%** |
+| §6 Security & privacy | 17 | 6 | 7 | 4 | 0 | 9.5 | **56%** |
+| §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
+| **Whole spec** | **226** | **40** | **23** | **163** | **0** | **51.5** | **23%** |
+
+The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
+sections in the document, and they are the two that no competitor can copy in an afternoon.
+
+---
+
+## F1. Rendering Engine
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Full CommonMark | ✅ | ✓ | `src/render/parse.ts:42`; `tests/golden/` (9 fixtures) | markdown-it default preset. |
+| GFM tables | ✅ | ✓ | `src/render/parse.ts:40`; `src/render/sanitize.ts:35-36`; `tests/golden/fixtures/gfm-torture.md` | Table tags allow-listed; GFM alignment still dropped (emitted as inline `style`, stripped — `sanitize.ts:52-59`). |
+| Task lists / checkboxes | ✅ | ✓ | `src/render/parse.ts:47`; `sanitize.ts:33` | Rendered **disabled** by design; interactivity is an F5 item, still ✗. |
+| Strikethrough | ✅ | ✓ | `parse.ts:40`; `sanitize.ts:28` | Both `<s>` and `<del>` allow-listed. |
+| Autolinks | ✅ | ✓ | `parse.ts:26,40` | `linkify: true` plus core angle-bracket autolinks. |
+| Extended: footnotes | ✅ | ✗ | No `markdown-it-footnote` in `package.json`; 0 grep hits in `src/` | — |
+| Extended: abbreviations | ✅ | ✗ | No `markdown-it-abbr`; 0 hits | — |
+| Extended: super/subscript | ✅ | ~ | `sanitize.ts:28` allows `sup`/`sub` | Tags survive from *inline HTML* only; no `markdown-it-sup`/`-sub` plugin, so `^x^`/`~x~` syntax does nothing. |
+| Extended: definition lists | ✅ | ✗ | No `markdown-it-deflist`; `dl`/`dt`/`dd` absent from `ALLOWED_TAGS` (`sanitize.ts:22-37`) | Double absence — plugin and allow-list. |
+| Extended: emoji shortnames | ✅ | ✗ | No `markdown-it-emoji`; 0 hits | — |
+| Extended: highlight/insert marks | ✅ | ✗ | `mark`/`ins` absent from `ALLOWED_TAGS` | — |
+| Extended: comments/annotations | ✅ | ✗ | 0 hits | — |
+| GitHub alerts (`> [!NOTE]`) | ✅ | ✗ | No alerts plugin; 0 hits in `parse.ts` | Renders as a plain blockquote today. |
+| YAML frontmatter → metadata card | ✅ | ✗ | No `markdown-it-front-matter`; 0 `frontmatter` hits in `src/` | Frontmatter currently renders as body text. |
+| Frontmatter-driven render options | ⭐ | ✗ | Depends on the item above | — |
+| MDX-aware rendering (no execution) | ✅ | ~ | `.mdx` in `src/detect/isRenderableContext.ts:23` and `entrypoints/peekover.content.ts:26` | The file *opens*; JSX blocks fall through `html:true` → DOMPurify strips unknown tags. Non-execution holds; "aware" does not. |
+| Inline HTML — always sanitized | ✅ | ✓ | `sanitize.ts:107-145`; `tests/browser/sanitize.browser.test.ts`; `tests/golden/fixtures/malicious.md` | Allow-list + `data:` hook (`sanitize.ts:131-135`). AGENTS.md #3's core. |
+| Smart typography, toggleable | ✅ | ✗ | `parse.ts:27` — `typographer: false`, no toggle | — |
+| One parser with exposed option toggles | ✅ | ~ | `parse.ts:23-42` — one `MarkdownIt` instance | One engine ✓; options are module-private constants, exposed to nothing. |
+| Content-Type detection | ✅ | ✗ | `isRenderableContext.ts:67-99` matches on URL/extension only; no header read anywhere | — |
+| Configurable URL path-matching per origin | ✅ | ✗ | Host set is hard-coded (`isRenderableContext.ts:37-52`) and mirrored in the manifest (`peekover.content.ts:23-40`); no settings key (`settings.ts:30-39`) | — |
+| Character-encoding override per origin | ✅ | ✗ | 0 hits for encoding/charset in `src/` | — |
+| Wiki-links `[[…]]` resolve in folder | ⭐ | ✗ | 0 hits; the only `[[` in `src/` is a test spread | — |
+| Backlinks panel | ⭐ | ✗ | 0 hits | — |
+
+## F2. Math & Diagrams
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| KaTeX (default) | ✅ | ✗ | No `katex` dependency; 0 grep hits in `src/`, `entrypoints/` | — |
+| MathJax fallback toggle | ✅ | ✗ | No dependency; 0 hits | — |
+| Inline `$…$` | ✅ | ✗ | No math plugin in `parse.ts` | — |
+| Block `$$…$$` | ✅ | ✗ | As above | — |
+| Code-fence math | ✅ | ✗ | As above | — |
+| Right-click → copy as LaTeX | ⭐ | ✗ | No context-menu code anywhere; `permissions: []` (`wxt.config.ts:18`) excludes `contextMenus` | Would be a manifest-permission event (AGENTS.md #4). |
+| Right-click → copy as MathML | ⭐ | ✗ | As above | — |
+| Mermaid rendering (8 diagram kinds) | ✅ | ✗ | No `mermaid` dependency; 0 hits | **The largest single hole in persona #1's column.** |
+| Mermaid theme auto-sync with light/dark | ✅ | ✗ | Depends on the above | The theme *registry* that would drive it exists (`src/theme/themeRegistry.ts:42-67`). |
+| Additional engines (Graphviz/Vega/PlantUML) | ✅ | ✗ | No dependencies; 0 hits | Spec marks these post-v1 stretch. |
+| Diagram → PNG/SVG copy & download | ✅ | ✗ | Depends on Mermaid | — |
+| Smart diagram cache (hash-keyed) | ✅ | ✗ | 0 hits | — |
+| User-visible cache controls (cap, clear) | ✅ | ✗ | `src/app/storageControls.ts:159` has wipe/erase controls but nothing diagram-shaped | The *shape* of this UI exists and is reusable. |
+| Standalone diagram-file rendering | ✅ | ✗ | `MARKDOWN_EXTENSIONS` (`isRenderableContext.ts:20-31`) lists no `.mermaid`/`.dot` | — |
+| No artificial file-size limit | ✅ | ~ | `src/render/mount.ts:112` renders whatever it is given; `tests/golden/hugeDoc.ts`, `src/render/pipeline.perf.test.ts` | No size cap exists ✓. Note `walkPolicy.ts:114` caps the *folder walk*, not documents. |
+| Progressive loading (text first, diagrams after) | ✅ | ✗ | `mount.ts` is a single synchronous `replaceChildren` commit | Explicitly deferred at M1 (`mount.ts` C12 scope note). |
+| Diagram zoom/pan lightbox | ✅ | ✗ | 0 `lightbox` hits | — |
+| Auto dark-mode: diagrams re-themed | ⭐ | ✗ | Depends on Mermaid | — |
+| Auto dark-mode: images dimmed/inverted | ⭐ | ✗ | `src/render/mediaPolicy.ts` classifies and blocks remote media; it does not adapt appearance | Different mechanism, same file — a natural M7 host. |
+
+*(18 items — the "additional engines" row covers one item; the KaTeX/MathJax and inline/block/fence
+rows are counted separately as listed.)*
+
+## F3. Code Blocks
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Syntax highlighting, 190+ languages (Shiki) | ✅ | ✗ | No `shiki` dependency; the only `shiki` string in `src/` is a comment in `parse.test.ts` | Fences render as plain `<pre><code class="language-…">`. |
+| ≥14 code themes, independent of doc theme | ✅ | ✗ | Depends on the above; `settings.ts:18` knows only `light\|dark\|sepia` | — |
+| One-click copy button | ✅ | ✗ | 0 copy-button hits in `readerCss.ts`/`mount.ts` | — |
+| Line numbers (toggle) | ✅ | ✗ | 0 hits | — |
+| Line highlighting | ✅ | ✗ | 0 hits | — |
+| Word wrap toggle | ✅ | ✗ | 0 hits | — |
+| Language auto-detection for unlabeled fences | ✅ | ✗ | 0 hits; no local model bundled | — |
+| Collapsible long code blocks with preview | ⭐ | ✗ | 0 hits | — |
+| Per-block "open raw" view | ⭐ | ✗ | `src/render/readerMode.ts:80-96` toggles the *whole document*, not a block | Document-level raw view ships; per-block does not. |
+
+**F3 is the only section at a flat 0%** — and it is the Developer persona's headline row in §3.
+
+## F4. File Sources & Handling
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Local `file://` rendering | ✅ | ✓ | `entrypoints/peekover.content.ts:25-33` (9 patterns); `src/detect/isRenderableContext.ts:67`; `src/detect/isRenderableContext.test.ts` | Needs the user's "Allow access to file URLs" toggle — which F11's detector, still ✗, was meant to explain. |
+| Remote `http(s)://` markdown URLs | ✅ | ~ | `peekover.content.ts:35-39`; `isRenderableContext.ts:37-52` | Only four allow-listed raw hosts. An arbitrary `https://…/README.md` renders nothing. |
+| Granular per-origin permissions (allowlist, wildcards) | ✅ | ✗ | `wxt.config.ts:18` — `permissions: []`; matches are static manifest literals; no origin UI in `src/app/` | Deliberate posture, but the spec item is a *user-configurable* allowlist. |
+| GitHub/GitLab/Bitbucket raw rendering | ✅ | ✓ | `isRenderableContext.ts:37-52` (exact hosts + path-scoped `/-/raw/`, `/raw/`); verified against live URL shapes 2026-07-14 | — |
+| "Open on GitHub" links | ✅ | ✗ | 0 hits | — |
+| Drag-and-drop a file onto any tab → render | ✅ | ~ | `src/app/folderSource.ts:187-243`; `src/app/appShell.ts:474-484,1071-1087`; `tests/browser/folderDrop.browser.test.ts` | **Folders only, app page only.** A dropped single file hits `folderSource.ts:200-206` and returns "Drop a folder to open it." See uncertain-items §1. |
+| Paste-and-render scratchpad | ✅ | ✗ | 0 `paste` hits in `src/`, `entrypoints/` | No popup surface exists (`wxt.config.ts:25` — action with no `default_popup`). |
+| Render selected text on any page (context menu) | ✅ | ✗ | 0 hits; no `contextMenus` permission | — |
+| "Local-only mode" master switch | ✅ | ✗ | 0 `local-only`/`localOnly` hits; `settings.ts:30-39` has three keys (`theme`, `tocOpen`, `tocWidth`) | — |
+| Web page → Markdown clipper | ⭐ | ✗ | No `turndown`/`readability` dependency (the one `readability` hit is prose in `observerDetector.ts`) | — |
+| Copy for AI | ⭐ | ✗ | 0 hits | Cheap to build on the existing raw-source registry (`readerMode.ts:40-48`) — a plausible M7 quick win. |
+
+## F5. Navigation & Reading UX
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Auto-generated TOC sidebar | ✅ | ✓ | `src/render/tocModel.ts:65`; `src/render/tocView.ts:536`; wired at `src/render/mount.ts:29-30` | Both surfaces. |
+| Scroll-spy | ✅ | ✓ | `tocView.ts`; `tests/browser/tocScroll.browser.test.ts` (both surfaces) | — |
+| Smooth scroll | ✅ | ✓ | `tocView.ts:170-171` — `scrollIntoView` with no `behavior`, governed by `:host{scroll-behavior}` | `auto` under reduced-motion, by construction. |
+| Collapsible levels | ✅ | ✗ | `tocView.ts` collapses the **rail as a whole** (`initialTocOpen:80`, `TOC_TOGGLE_KEY:882`); the nested `<ol>` has no per-branch collapse | Nested levels *render*; they do not collapse individually. |
+| Resizable | ✅ | ✓ | `tocView.ts:271-286` (`TOC_MIN_WIDTH` 180 / `TOC_MAX_WIDTH` 480, `clampTocWidth`); `tests/browser/tocPersist.browser.test.ts` | Drag persists on end only. |
+| Keyboard toggle | ✅ | ✓ | `tocView.ts:882,910` — backtick + `installTocShortcut` | — |
+| Folder browser: open a folder (FS Access) | ✅ | ✓ | `src/app/folderSource.ts:101,122`; `src/app/chromiumFolderSource.ts`; `src/app/firefoxFolderSource.ts`; `tests/browser/folderGrant.browser.test.ts` | Both engines, two routes (picker + drop). |
+| Folder browser: tree view | ✅ | ✓ | `src/app/tree.ts:57`; `src/app/treeView.ts`; `src/app/tree.test.ts` | Keyboard-operable (roving tabindex). |
+| Folder browser: name search & filter | ✅ | ✓ | `src/app/tree.ts:93` (`filterTree`); `treeView.ts:75-79,205` | Live re-filter; designed no-match state. |
+| Project mode: relative links resolve/navigate | ⭐ | ✗ | 0 hits; `sanitize.ts` keeps relative `href`s but nothing intercepts a click | The *sanitizer* preserves relative URLs (`sanitize.ts:74-77`) — half the substrate is there. |
+| Breadcrumbs | ⭐ | ✗ | 0 hits | — |
+| Back/forward history | ⭐ | ✗ | 0 hits | — |
+| Cross-file full-text search | ⭐ | ✗ | No `minisearch` dependency; 0 hits | — |
+| In-document search with heading context | ⭐ | ✗ | 0 hits | `tocModel.ts:65` already computes heading structure — the context half exists. |
+| Broken-link checker | ⭐ | ✗ | 0 hits | — |
+| Recent documents | ✅ | ✓ | `src/app/recents.ts:70-81,141`; `src/app/recentsView.ts:165`; `recents.test.ts` | Cap 20 (`recents.ts:36`). |
+| Pinned files/folders | ✅ | ✓ | `recents.ts:91-107,156`; `recentsView.ts` | Add/remove/reorder. |
+| Scroll-position memory per file | ✅ | ✗ | `src/render/readingAnchor.ts` restores position across a **watch re-mount**, not across sessions; `reopen.ts` restores the *file*, not the offset | Mechanism adjacent, feature absent. |
+| Reading progress bar | ✅ | ✗ | 0 hits in `readerCss.ts`/`mount.ts` | — |
+| Word count | ✅ | ✗ | 0 hits | — |
+| Reading time | ✅ | ✗ | 0 hits | — |
+| External-link preview cards (opt-in) | ✅ | ✗ | 0 hits | Would be the first non-media network path. |
+| Image lightbox | ✅ | ✗ | 0 hits | Images render inline (`readerCss.ts:112`). |
+| Page zoom 50–400% | ✅ | ✗ | 0 hits | — |
+| 3 content widths (narrow/normal/full) | ✅ | ✗ | `readerCss.ts:82-85` — one `--reader-measure`, no width control | — |
+| Heading permalinks | ⭐ | ✗ | `sanitize.ts:52-56` explicitly **disallows `id`** in M1; no anchor generator | Re-allowing `id` is a sanitizer change, i.e. a §6-weight edit. |
+| Deep links / text-fragment highlighting | ⭐ | ✗ | 0 hits | — |
+| Footnote & wiki-link hover preview cards | ⭐ | ✗ | Depends on F1 footnotes/wiki-links (both ✗) | — |
+| Interactive task checkboxes (write-back) | ⭐ | ✗ | `parse.ts:44-47` — checkboxes deliberately rendered **disabled**; no write path | An explicit M1 decision, not an oversight. |
+| Table tools: click-to-sort | ⭐ | ✗ | 0 hits | — |
+| Table tools: quick filter | ⭐ | ✗ | 0 hits | — |
+| Table tools: copy as CSV/JSON/Markdown | ⭐ | ✗ | 0 `csv` hits in `src/` | — |
+| Presentation mode | ✅ | ✗ | 0 `presentation`/`slide` hits | — |
+| Presentation export as standalone HTML | ⭐ | ✗ | 0 hits | — |
+| Read-aloud (TTS, Web Speech API) | ⭐ | ✗ | 0 `speechSynthesis` hits | Zero-cost and zero-network by construction — a cheap ⭐ for M7. |
+| Raw ↔ rendered toggle (shortcut) | ✅ | ✓ | `src/render/readerMode.ts:26,80-96,129`; `tests/browser/readerSource.browser.test.ts` | `\` toggles; both surfaces. |
+| Print-optimized mode | ✅ | ✗ | **0 `@media print` rules** in `src/theme/readerCss.ts` (761 lines) | Blocks F9's PDF export, which is spec'd as a print-pipeline. |
+| Focus/reading mode (typographic column) | ⭐ | ~ | `readerCss.ts:82-85,207`; `src/theme/fonts.ts:39-53` (bundled Literata) | The typographic column ships as the **default**; there is no focus-mode toggle that hides chrome. |
+| Document mini-map | ⭐ | ✗ | 0 hits | — |
+
+## F6. Live Updating & AI-Workflow Mode ⭐
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Auto-reload on file change | ✅ | ✓ | `src/watch/changeDetector.ts:89`; `src/watch/watchController.ts`; `src/watch/detectorForFile.ts`; `tests/browser/watchObserverWiring.browser.test.ts` | 2×2 detection: Chromium app page uses `FileSystemObserver`, everything else polls on content. |
+| Configurable interval | ✅ | ✗ | `WATCH_INTERVAL_MS` is a constant (`contentWatch.ts:92`); `intervalMs` is injected **only for tests** (`contentWatch.ts:75-77`); no settings key | — |
+| Watch mode: follow a file as an agent writes | ⭐ | ✓ | `src/watch/contentWatch.ts:92-112`; `src/app/appShell.ts:100-102`; `entrypoints/peekover.content.ts:126-130`; `tests/browser/watchContentWiring.browser.test.ts` | **Firefox content-script is degraded by platform** (`watchAvailability.ts:97-120`) and explains itself; app page watches on both engines. |
+| Auto-scroll to newest content | ⭐ | ✓ | `watchController.ts`; `tests/browser/watchControl.browser.test.ts` ("AT THE BOTTOM appended content is FOLLOWED" / "SCROLLED AWAY leaves the reader UNMOVED") | Anchor-based, not `scrollTop`-based (D-3). |
+| Subtle "updated" pulse | ⭐ | ✓ | `src/watch/watchControl.ts:194`; `tests/browser/watchControl.browser.test.ts` (flash on the control, never the document) | Neutralised under reduced-motion. |
+| Snapshot history (IndexedDB) | ⭐ | ✓ | `src/app/snapshots.ts:63-113,300,346`; `src/app/idbCore.ts` (DB v3); `tests/browser/snapshotCapture.browser.test.ts`, `idbVersionchange.browser.test.ts` | Bounds: 15/doc, 20 MB, 30 days. Capture is a user-toggleable flag (`captureFlag.ts`). |
+| Diff view — inline | ⭐ | ✓ | `src/render/diffEngine.ts:75`; `src/render/diffView.ts:137`; `src/render/diffChrome.ts:170`; `tests/browser/diffView.browser.test.ts` | **App page only** — `diffRegistry.ts` is registered by `appShell.installWatchForFile` and by nothing on the content-script graph (pinned by `diffRegistry.browser.test.ts`). |
+| Diff view — side-by-side | ⭐ | ✗ | `diffView.ts:67-137` emits one sanitized block per hunk kind; no two-column mode | — |
+| Compare any two files in the folder | ⭐ | ✗ | `diffChrome.ts:242` `compareWith(id)` takes a **snapshot id**; the picker lists snapshots only (`diffChrome.ts:270-281`) | Current-vs-snapshot only. The engine (`computeDiff`) is file-agnostic — this is a UI gap, not an engine gap. |
+| Agent-file awareness: badge | ⭐ | ✗ | 0 `CLAUDE.md`/`.cursorrules` hits in `src/` (the `AGENTS.md` hits are doc-comment citations, not filename matching) | — |
+| Agent-file awareness: tuned render defaults | ⭐ | ✗ | As above | — |
+| Session-transcript rendering (chat bubbles) | ⭐ | ✗ | 0 hits | — |
+| Local MCP bridge | ⭐ | ✗ | 0 hits | Spec marks this post-v1 exploration. |
+
+## F7. Theming & Appearance
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Light / dark / auto (system) | ✅ | ✓ | `src/settings/settings.ts:18-22,50`; `src/theme/reader.ts:87,134`; `src/theme/themeRegistry.ts:42-67`; `tests/browser/themeRuntime.browser.test.ts` | OS flips re-theme every registered host; manual beats media rule both directions. |
+| GitHub-identical light & dark themes | ✅ | ✗ | Three themes exist (`settings.ts:18` — `light\|dark\|sepia`); no GitHub palette | — |
+| ≥30 built-in document themes | ✅ | ✗ | Three (`settings.ts:18`) | 10% of the stated parity bar. |
+| Themes contrast-checked | ✅ | ✗ | No contrast tooling, fixture, or test in the repo | The tokens were designed with contrast in mind (`readerCss.ts:24`) but nothing verifies it. |
+| Custom CSS — global | ✅ | ✗ | 0 hits; no settings key | — |
+| Custom CSS — per-origin | ✅ | ✗ | 0 hits | — |
+| Custom CSS — per-document | ✅ | ✗ | 0 hits | — |
+| 9+ font choices | ✅ | ✗ | `src/theme/fonts.ts:39-53` — **one** family (Literata), four faces | — |
+| Custom font stack | ✅ | ✗ | 0 hits | — |
+| Font size control | ✅ | ✗ | 0 hits | — |
+| Line height control | ✅ | ✗ | 0 hits | — |
+| Paragraph spacing control | ✅ | ✗ | 0 hits | — |
+| Dyslexia-friendly font option | ✅ | ✗ | 0 hits | — |
+| Per-file theme override | ✅ | ✗ | 0 hits | — |
+| Per-folder theme override | ✅ | ✗ | 0 hits | — |
+| Settings export/import (JSON) | ✅ | ✗ | `src/app/storageControls.ts:159` exposes describe/wipe/erase, not export/import | — |
+| `storage.sync` across devices | ✅ | ✗ | Settings live in **IndexedDB** (`src/app/store.ts`, `settings/settingsPort.ts`); 0 `storage.sync` hits | Also makes §6-17's own wording inaccurate — see §6 below. |
+
+## F8. Editor Mode
+
+**No `codemirror` dependency and zero grep hits anywhere in `src/` or `entrypoints/`.** Every row
+below is ✗ unless noted.
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Read ↔ Edit toggle | ✅ | ✗ | No editor; `readerMode.ts:28` knows only `reading\|raw` | The M6 gate recorded a first-time user expecting to edit — carried, `decisions.md` 2026-07-26. |
+| Split pane with scroll sync | ✅ | ✗ | — | — |
+| Visual table editor | ✅ | ✗ | — | — |
+| CSV paste/import → markdown table | ✅ | ✗ | 0 `csv` hits | — |
+| Formatting toolbar | ✅ | ✗ | — | — |
+| Full keyboard shortcuts | ✅ | ✗ | Two shortcuts exist repo-wide (`\`, `` ` ``) | — |
+| Smart lists / continuation | ✅ | ✗ | — | — |
+| Find & replace with regex | ✅ | ✗ | — | — |
+| Markdown linting | ✅ | ✗ | No `markdownlint` dependency | — |
+| Auto-format | ✅ | ✗ | — | — |
+| Text transforms | ✅ | ✗ | — | — |
+| Image paste → Base64 / save alongside | ✅ | ✗ | 0 `paste` hits | — |
+| Snippets | ✅ | ✗ | — | — |
+| Emoji picker | ✅ | ✗ | — | — |
+| Import `.html → md` | ✅ | ✗ | No Turndown | — |
+| Import `.ipynb → md` | ✅ | ✗ | — | — |
+| Import plain text | ✅ | ✗ | — | — |
+| Local drafts with autosave | ✅ | ✗ | No draft store; `idbCore.ts` stores folders/recents/pins/settings/snapshots | — |
+| Version snapshots (IndexedDB) | ✅ | ~ | `src/app/snapshots.ts:300,346`; `tests/browser/snapshotCapture.browser.test.ts` | Snapshots ship — but keyed to **watched documents**, not editor drafts. |
+| Restore or diff any snapshot | ✅ | ~ | Diff: `src/render/diffChrome.ts:242`. Restore: no code path | Half the item ships; restore does not exist. |
+| Document metrics panel | ✅ | ✗ | 0 hits | — |
+
+## F9. Export & Publishing
+
+**Section is flat 0%.** No `docx`, `jszip` dependency; no print CSS; no publish path.
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| HTML export (standalone, CSS inlined, images Base64) | ✅ | ✗ | 0 hits | Fonts are already Base64 data-URIs (`fonts.ts:32`) — one input ready. |
+| DOCX export | ✅ | ✗ | No `docx` dependency | — |
+| PDF export (print pipeline) | ✅ | ✗ | **No `@media print` rules exist** (`readerCss.ts`) | Blocked on F5's print mode. |
+| Copy as rich text | ✅ | ✗ | 0 hits | — |
+| Copy as HTML | ✅ | ✗ | 0 hits | — |
+| Copy as plain text | ✅ | ✗ | 0 hits | Raw source *is* held (`readerMode.ts:40-48`); nothing copies it. |
+| Publish → GitHub Gist | ✅ | ✗ | 0 hits; no token storage | Would be the first deliberate outbound network path. |
+| Publish → GitHub repo | ✅ | ✗ | 0 hits | — |
+| Publish → Medium | ✅ | ✗ | 0 hits | — |
+| Publish → Dev.to | ✅ | ✗ | 0 hits | — |
+| ZIP export | ✅ | ✗ | No `jszip` dependency | — |
+| Export shortcut (Ctrl/Cmd+S) | ✅ | ✗ | 0 hits | — |
+| Progress indicator for heavy documents | ✅ | ✗ | 0 hits | — |
+
+## F10. AI Features
+
+**No AI layer of any kind exists.** No provider SDK, no key storage, no on-device API
+feature-detection, no WebCrypto usage (0 `webcrypto` hits).
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| On-device AI (Chrome built-in task APIs) | — | ✗ | 0 hits for Summarizer/Translator/Proofreader/Writer | — |
+| BYOK (key stored locally, WebCrypto-encrypted) | — | ✗ | 0 `webcrypto` hits; no key store in `idbCore.ts` | — |
+| Summarize document / section | ⭐ | ✗ | 0 hits | — |
+| Explain selection | ⭐ | ✗ | 0 hits | — |
+| Chat with the document | ⭐ | ✗ | 0 hits | — |
+| Rewrite with inline diff preview (accept/reject) | ⭐ | ✗ | 0 hits | The diff engine (`diffEngine.ts:75`) would serve this directly. |
+| Translate document/selection | ⭐ | ✗ | 0 hits | — |
+| Generate: outline | ⭐ | ✗ | 0 hits | — |
+| Generate: table from description | ⭐ | ✗ | 0 hits | — |
+| Generate: Mermaid from description | ⭐ | ✗ | Doubly blocked (no AI, no Mermaid) | — |
+| Generate: alt-text for images | ⭐ | ✗ | 0 hits | — |
+| Proofread (on-device Proofreader API) | ⭐ | ✗ | 0 hits | — |
+| AI-assisted web-clip | ⭐ | ✗ | 0 hits | — |
+| Guardrail: one-time opt-in explainer | — | ✗ | 0 hits | — |
+| Guardrail: per-action network indicator | — | ~ | `src/render/remoteMediaUi.ts:21-34,60`; `tests/browser/remoteMedia.browser.test.ts` | **The indicator mechanism ships** and is bytes-on-wire proven — for remote media. Reusable verbatim for AI calls. |
+| Guardrail: no implicit AI call | — | ✗ | Vacuously true (no AI) | Not credited — nothing enforces it. |
+
+## F11. Setup, Onboarding & Help
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| Auto-opening interactive setup guide on install | ✅ | ✗ | No `runtime.onInstalled` listener in `entrypoints/background.ts:35-58` (three listeners: action, settings, watch relay) | — |
+| Detects "Allow access to file URLs" grant | ✅ | ✗ | 0 hits; `isAllowedFileSchemeAccess` never called | **The category's #1 friction, and the spec's own best-in-class claim.** See uncertain-items §2. |
+| Deep-links to the exact toggle | ✅ | ✗ | As above | — |
+| Zero-config: remote `.md` works before any permission | ✅ | ✓ | `wxt.config.ts:18` (`permissions: []`, CI-pinned by `tests/manifest.test.ts`); `peekover.content.ts:35-39` | Structurally true — the four raw hosts render with no grant at all. |
+| Demo document showcasing every feature | ✅ | ✗ | `tests/fixtures/hello.md` and `tests/golden/fixtures/*` are test inputs, not a demo doc; no bundled `.md` asset | Spec calls this the visual QA page **and** the marketing screenshot (§7 process req 3). |
+| Command palette (Ctrl/Cmd+K) | ✅ | ✗ | 0 hits | §7-5 names it "the spine" of the keyboard story. |
+| Full keyboard shortcut map (customizable) | ✅ | ✗ | Two hardcoded shortcuts (`readerMode.ts:26`, `tocView.ts:882`); no map, no customization | — |
+| Cheat-sheet overlay (`?`) | ✅ | ✗ | 0 hits | — |
+| Extension-conflict detection | ✅ | ✗ | 0 hits | — |
+
+## F12. Internationalization & Accessibility
+
+| Item | ✅/⭐ | Status | Evidence | Notes |
+| --- | :---: | :---: | --- | --- |
+| UI localization (EN+ZH+JA+ES+DE+FR+PT+KO) | ✅ | ✗ | No `_locales/`, no `i18n` hits; every string is an inline English literal (e.g. `capability.ts:36`, `recentsView.ts:96`, `watchAvailability.ts:97-120`, `storageControls.ts:34`) | Strings are scattered across ~15 modules — extraction is real M7 work, not a wrapper. |
+| Community translations via repo | ✅ | ✗ | Depends on the above | — |
+| RTL document support | ✅ | ✗ | 0 `dir=`/`rtl` hits in `readerCss.ts` or `mount.ts` | — |
+| WCAG: full keyboard operability | ⭐ | ~ | `treeView.ts` (roving tabindex, arrow/Enter/Space), `tocView.ts` (ARIA-APG pattern), `readerMode.ts:129`, `themeControl.ts` | Every shipped control is keyboard-operable; no audit, no automated a11y assertion, and no palette (F11) as the promised spine. |
+| WCAG: screen-reader landmarks | ⭐ | ~ | `nav` landmark (`tocView.ts:14`); `aria-label` across 19 modules; `role="status"` (`remoteMediaUi.ts:31`) | Landmarks used consistently; never audited end-to-end. |
+| WCAG: contrast-checked themes | ⭐ | ✗ | No contrast tooling or fixture in the repo | — |
+| WCAG: reduced-motion support | ⭐ | ✓ | `src/theme/readerCss.ts:76` (global `@media (prefers-reduced-motion:reduce)` with `animation-duration:.001ms!important`), honoured by design in `tocView.ts:172`, `readingAnchor.ts:134`, `watchControl.ts:194`, `watchController.ts:586` | Motion is neutralised by **one global rule** rather than per-feature opt-in — the strongest a11y property shipped. |
+
+---
+
+## §6. Security & Privacy Specification
+
+| # | Item | Status | Evidence | Notes |
+| ---: | --- | :---: | --- | --- |
+| 1 | No server | ✓ | No backend anywhere in the repo; `package.json` has no server dependency; `docs/ai/architecture.md` | Structural, not a claim. |
+| 2 | Zero network by default + visible network indicator on every outbound call | ✓ | `src/render/mediaPolicy.ts:59,138` (remote media neutralised pre-DOM); `src/render/remoteMediaUi.ts:21-34`; bytes-on-wire tests: `tests/browser/remoteMedia.browser.test.ts`, `watchNetwork.browser.test.ts`, `tocNetwork.browser.test.ts`, `folderMode.network.browser.test.ts` | Four independent real-engine network guards. The strongest-evidenced item in the spec. |
+| 3 | No telemetry/analytics/error beacons; local "copy debug report" button | ~ | No telemetry ✓ (proven by the four network suites above). **No debug-report button** — 0 hits | The negative claim holds; the positive affordance does not exist. |
+| 4 | No remote code; dynamic imports banned, **verified in CI** | ~ | MV3 on both engines (`wxt.config.ts:11`); fonts inlined as data-URIs (`fonts.ts:32`); no CDN reference | **`.github/workflows/ci.yml` has no such check** — lint/test/browser-test/build only. The spec says "verified in CI"; nothing verifies it. |
+| 5 | MV3, service-worker based, no persistent background page | ✓ | `wxt.config.ts:11` (MV3 forced on Firefox too, not just Chrome); `entrypoints/background.ts:35-58` holds **no state** — three listeners, no timer, no registry | The watch loop lives in the page precisely so an MV3 eviction loses nothing. |
+| 6 | Minimal permissions; per-origin host access requested at moment of use; `PERMISSIONS.md` | ~ | `wxt.config.ts:18` — `permissions: []`, **byte-pinned by `tests/manifest.test.ts` (2975 B, unmodified since M2)**; `docs/trust/PERMISSIONS.md` exists | Permission surface is smaller than the spec asks for ✓. But host access is **static manifest `matches`**, not optional and not requested at use — the "per-origin, at moment of use" half is unbuilt. |
+| 7 | Permission-diff policy (never silently add; changelog + in-product notice) | ~ | AGENTS.md #4 + the manifest byte-pin enforce the *process*; every milestone re-proved `permissions: []` | **No `CHANGELOG.md` in the repo and no in-product notice mechanism.** The discipline is real; the two user-facing artifacts are not. |
+| 8 | Sanitization: DOMPurify strict allowlist, SVG sanitized, strict CSP, sandboxed embeds, block remote images | ~ | Allow-list `sanitize.ts:22-65`; `data:` hook `:131-135`; SVG/iframe/object **excluded entirely** from `ALLOWED_TAGS`; remote-image blocking `mediaPolicy.ts:138` with opt-in bar `remoteMediaUi.ts:60`; `tests/browser/sanitize.browser.test.ts` | Four of five sub-claims hold, some by denial rather than sanitization (stronger). **No `content_security_policy` key is declared** in `wxt.config.ts` — the property rides on MV3's platform default rather than an explicit, auditable line. |
+| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **4 runtime dependencies** — genuinely minimal | **No audit step, no OSV scan, no `.github/dependabot.yml`** (`.github/` contains only `workflows/`), **no SBOM**. Four of five sub-claims unbuilt. |
+| 10 | Reproducible builds; release hashes; signed tags; attestations | ✗ | No release workflow; `ci.yml` runs on `pull_request` only; no attestation config | No release has happened yet, but nothing is in place for one. |
+| 11 | Publisher account security (passkeys/2FA + recovery plan) | ✗ | No such document in `docs/trust/` (contains `PERMISSIONS.md`, `SECURITY.md` only) | Named by the spec as where extension hijacks usually start. |
+| 12 | Open source (MIT/Apache-2.0), full source incl. build scripts | ✓ | `LICENSE` (MIT, 2026 Mo Suvo); `wxt.config.ts`, `scripts/`, `.github/workflows/` all tracked | — |
+| 13 | Threat model document published in the repo | ✗ | Zero occurrences of "threat model" outside `spec.md` itself | — |
+| 14 | `SECURITY.md` — disclosure channel, response-time commitment, hall of fame | ✓ | `docs/trust/SECURITY.md` — `hello@peekover.dev`, 48 h ack target, hall-of-fame section | All three sub-clauses present. |
+| 15 | Community audit invitation + third-party scanner reports | ✗ | 0 hits in `README.md`, `site/index.html`, `docs/trust/` | Launch-time item. |
+| 16 | Ownership pledge in README **and** site | ✓ | `README.md:9` ("never sold — an ownership change voids the listing"); `site/index.html` carries the same pledge language | Both surfaces. |
+| 17 | Data locality: settings in `storage.sync`, drafts/snapshots in IndexedDB, AI keys WebCrypto, one-click wipe-all | ~ | Snapshots in IndexedDB ✓ (`snapshots.ts:300`, DB v3); wipe-all ✓ (`storageControls.ts:159`, `tests/browser/wipe.browser.test.ts`, `eraseSnapshots.browser.test.ts`) | **Settings are in IndexedDB, not `storage.sync`** (`store.ts`, `settingsPort.ts`) — the spec sentence is factually wrong about the shipped product. No drafts, no AI keys. |
+
+**§6 is the healthiest section in the spec at 56%** — and its gaps cluster hard in *release
+engineering* (items 9–11, 13, 15), not in *architecture*. Everything that removes a class of risk
+is built; almost everything that publishes proof of it is not.
+
+## §7. UI/UX Specification
+
+| # | Item | Status | Evidence | Notes |
+| ---: | --- | :---: | --- | --- |
+| 1 | Real visual identity, typography-first, not a template | ✓ | `design/tokens.css`, `design/brand.html`; bundled Literata (`src/theme/fonts.ts:39-53`, four faces, data-URI); `src/theme/readerCss.ts` (761 lines, tokens only) | Paper/ink/one-highlighter; no framework CSS anywhere. |
+| 2 | Document is the hero; chrome quiet, collapsible, auto-hiding on scroll | ~ | Chrome is a **sibling** of the reading column by construction, pinned per-surface (`tests/browser/themeControl.browser.test.ts`, `watchControl.browser.test.ts`, `diffChrome.browser.test.ts`); TOC collapsible (`tocView.ts:80`) | Quiet ✓ and collapsible ✓; **no auto-hide on scroll**. |
+| 3 | Motion with meaning, 150–250 ms, `prefers-reduced-motion` respected | ✓ | `readerCss.ts` — every transition is `.15s` (lines 118, 235, 257, 293, 386, 415, 464, 531, 587, 599); global reduced-motion override at `:76` | In band, consistently, and neutralised globally. |
+| 4 | Instant feel: first paint of real content < 150 ms | ~ | Perf harness `scripts/perf-first-paint.ts`; gate **re-baselined `<150` → `<165` ms** at `8255380` (`decisions.md` 2026-07-26) | The mechanism and the measurement discipline ship; **the spec's stated number is not currently met** and the working-day floor question is routed to M7. |
+| 5 | Keyboard-first, command palette as the spine | ✗ | No palette; two shortcuts repo-wide | The "spine" is missing; individual controls are keyboard-operable (see F12). |
+| 6 | Dark mode as a first-class art piece (tuned syntax palettes, re-themed diagrams, adapted images) | ~ | Dark is a designed token set, not an inversion (`readerCss.ts`, `themeRegistry.ts:42-67`); `tests/browser/themeRuntime.browser.test.ts` proves OS-flip re-theming | The theme itself ✓; **all three named sub-surfaces (syntax, diagrams, images) depend on F2/F3, which are 0–3%.** |
+| 7 | Empty states and errors are designed moments | ✓ | Never-blank fallback with banner (`src/render/mount.fallback.test.ts`, `runReader.fallback.test.ts`); designed idle/denied/unsupported states (`appShell.ts:1018-1032`, `capability.ts:36-49`); empty recents (`recentsView.ts:165`); designed watch-degraded explanations (`watchAvailability.ts:97-120`) | The most consistently applied principle in the codebase. |
+| 8 | Details users feel: scrollbars, selection color, focus rings, favicon per state, texture, typeset print | ~ | `::selection` (`readerCss.ts:75`), `:focus-visible` ring (`:74`), icon assets (`assets/icons`, `design/icons.html`) | **No custom scrollbars, no per-state favicon, and no print CSS at all.** Three of six sub-details absent. |
+| 9 | Design tokens defined before build | ✓ | `design/tokens.css` predates the render pipeline; `readerCss.ts` references tokens exclusively, never literals (AGENTS.md style rule) | — |
+| 10 | Every feature ships with its designed state, not "functional now, pretty later" | ✓ | Six milestone-close human gates, all recorded; M6's caught three layout defects fixed **before** close (`e231941`, `8255380`) | Process evidence rather than file evidence, and it is the right evidence for this item. |
+| 11 | The demo document doubles as the visual QA page | ✗ | No demo document exists (see F11) | Visual QA currently runs on test fixtures and 80+ Playwright screenshots instead. |
+| 12 | Website and extension share the same design language | ✓ | `site/index.html` (52 KB) uses the same custom properties as the extension — `--ink` ×28, `--paper` ×16, `--accent` ×8 — and references Literata | Same token vocabulary, not merely a similar look. |
+
+---
+
+## Dependencies audit
+
+`package.json` declares **4 runtime dependencies**. §10 of the spec names **14 stack layers**, of
+which 10 require a runtime library that is not installed. A missing dependency is load-bearing
+absence evidence: the feature cannot be shipped and no amount of pipeline design substitutes.
+
+| §10 layer | Declared choice | Installed? | Gap |
+| --- | --- | :---: | --- |
+| Extension framework | WXT + TypeScript | ✓ dev (`wxt ^0.20.27`) | — |
+| UI (reader view) | None — vanilla TS + CSS vars | ✓ by construction | Zero UI framework in the tree, as specified. |
+| Markdown | markdown-it **+ plugin ecosystem** (footnote, deflist, abbr, emoji, anchor, front-matter, alerts) | ~ `markdown-it ^14.3.0`, `markdown-it-task-lists ^2.1.1` | **1 of 8 plugins installed.** Directly explains F1's 15 ✗ rows. |
+| Sanitization | DOMPurify | ✓ `dompurify ^3.4.12` | — |
+| Highlighting | Shiki (lazy) | ✗ | **F3 = 0%.** |
+| Math | KaTeX (+ MathJax lazy chunk) | ✗ | **F2 math rows all ✗.** |
+| Diagrams | Mermaid; viz.js later | ✗ | **The persona-#1 killer-feature gap.** |
+| Editor | CodeMirror 6 | ✗ | **F8 = 5%.** |
+| Diff | `diff` + custom renderer | ✓ `diff ^9.0.0` | Added at M6 — the first `dependencies` addition since M1, taken as a governed act. |
+| Search | MiniSearch | ✗ | Blocks F5 cross-file search. |
+| Clipper/import | Readability + Turndown | ✗ | Blocks F4 clipper and F8 html→md import. |
+| Export | docx, JSZip, print pipeline | ✗ | **F9 = 0%.** Print pipeline needs no dependency at all — just `@media print` rules that do not exist. |
+| Tests | Vitest + Playwright | ✓ dev (`vitest 4.1.10`, `playwright ^1.61.1`) | 38 browser suites, 9 golden fixtures. |
+
+**Read this way: 4 of the 14 layers are provisioned.** The un-provisioned ten map almost exactly
+onto the ten spec sections scoring under 30%. Peekover's coverage is not limited by architecture —
+it is limited by which libraries have been let in, which has been deliberate.
+
+## Cross-milestone touch map
+
+| Milestone | Spec sections its work landed in |
+| --- | --- |
+| **M1** · `001-core-rendering` | **F1** (CommonMark, GFM tables, task lists, strikethrough, autolinks, inline-HTML sanitization, one-parser rule) · **F4** (`file://` + raw-host rendering) · **F5** (raw↔rendered toggle) · **§6** (2, 4, 5, 8 — the sanitizer, MV3, zero-network) · **§7** (1, 3, 7, 9 — identity, motion, never-blank, tokens) |
+| **M2** · `002-active-source-foundation` | **F4** (folder drag-and-drop) · **F5** (folder browser, tree view, name search/filter, recents, pins) · **§6** (6 — `permissions: []` byte-pinned; 17 — data locality + wipe-all) · **§7** (7 — designed grant/denied/empty states) |
+| **M3** · `003-toc-navigation` | **F5** (TOC sidebar, scroll-spy, smooth scroll, resizable, keyboard toggle) · **F12** (screen-reader landmarks, keyboard operability) · **§7** (2, 8) |
+| **M4** · `004-themes-settings` | **F7** (light/dark/auto — the section's only ✓) · **F5** (TOC state persistence) · **§6** (17 — settings storage) · **§7** (4 — first-paint measurement discipline) |
+| **M5** · `005-watch-diff` | **F6** (auto-reload, watch mode, follow-newest, update pulse) · **§6** (2 — the watch-relay network guard; 6 — `permissions: []` survived a whole capability) |
+| **M6** · `006-snapshots-diff` | **F6** (snapshot history, diff view) · **F8** (version snapshots, partial) · **§6** (17 — snapshot storage, disclosure, erase; the PERMISSIONS.md trust-claim correction) · **§7** (7, 8 — storage-panel and Compare-pill design defects caught at the gate) |
+
+**F2, F3, F9, F10, F11 have never been touched by any milestone.** F7 was touched once and moved
+6%. Four of the twelve functional sections are untouched ground for M7.
+
+## What's genuinely uncertain and needs an eye-check
+
+No item was scored `? UNCLEAR` — every row resolved on file evidence. Four items resolved on
+evidence but carry a question a human walk would answer better than a grep:
+
+1. **The single-file-drop open question (`progress.md` §Blockers, lines 490–503) is now half
+   answered, and the answer changes it.** Check (1): **yes — `docs/product/spec.md` F4 names
+   "Drag-and-drop a file onto any tab → render" explicitly.** So folder-only is a *gap*, not a
+   design boundary, and the "folder-only by design" inference in that bullet is wrong at the spec
+   level. Check (2): the handler does **not** bail silently — `folderSource.ts:200-206` returns
+   `{ ok: false, reason: 'cancelled', message: 'Drop a folder to open it.' }`, which
+   `appShell.ts:1022-1029` paints via `paintIdle`. **The eye-check question:** the human observed
+   "does nothing". If the message *is* painted, the report was a visibility problem
+   (`paintIdle` may replace an already-granted view rather than notifying beside it). Drop a
+   single `.md` on the app page with a folder already open and watch what the shell does.
+2. **Does the `file://` permission story actually work for a first-time user?** F11's detector and
+   deep-link are ✗, and F4's `file://` rendering is ✓ — meaning the feature works only for a user
+   who already found Chrome's "Allow access to file URLs" toggle unaided. Every automated test
+   runs past this. **The question:** install the unpacked build in a clean profile, open a local
+   `.md`, and record what a user with no prior knowledge sees. This is the category's #1 friction
+   and the spec's own best-in-class claim.
+3. **Whether the three shipped themes actually meet contrast targets.** §7-1 and F12 both assert
+   contrast-checked themes; the tokens were designed for it (`readerCss.ts:24`) but nothing in the
+   repo measures it. **The question:** run the three themes through a contrast checker at body,
+   muted, and faint token levels — cheap, and it converts two ✗ rows to ✓.
+4. **Whether the diff view being app-page-only is a decision or a gap.** `diffRegistry.ts`
+   registers on the app page and provably nowhere else, and that absence is *designed* (D-14) and
+   *tested* (`diffRegistry.browser.test.ts`). The spec's F6 diff bullet names no surface.
+   **The question for M7 scoping:** does an AI-tool developer reading `CLAUDE.md` at a `file://`
+   URL — the persona's most common path — expect Compare there? If yes, this ✓ is really a ~.

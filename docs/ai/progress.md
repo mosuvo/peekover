@@ -465,6 +465,7 @@ from the 8/8 recorded at 9.1) · … full order in `docs/product/spec.md` §Phas
 
 ## Blockers / open questions
 
+- **Spec coverage audit** landed at [`spec-coverage.md`](spec-coverage.md) (post-M6, pre-M7, HEAD `d7f424c`). **~17% of Phase 1's F1–F12 is shipped** by weighted item count (§6 56%, §7 67%, whole spec ~23%); **persona-#1 killer-feature coverage is ~56%**. Only 4 of §10's 14 stack layers are provisioned, and **F2/F3/F9/F10/F11 have never been touched by any milestone**. Read before scoping M7. *(It also half-answers the single-file-drop question below — see the audit's uncertain-items §1.)*
 - **NOTHING IS BLOCKED, AND 006 IS NO LONGER WAITING ON A HUMAN — task 9.1, the milestone-close gate, was
   WALKED AND PASSED 2026-07-26** (see § Now; the full record is the landing block under `tasks.md` 9.1).
   **There is no human gate outstanding for 006**; what remains is 9.2, the retro, which is agent work.
