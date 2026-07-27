@@ -11,3 +11,7 @@ node_modules
 # Vitest browser-mode failure artifacts (screenshots on failing tests)
 .vitest-attachments
 **/__screenshots__/
+
+# SBOM — transient by design. `pnpm run sbom` writes it here for a local look; the
+# published artifact is generated fresh in CI (.github/workflows/supply-chain.yml).
+sbom.cdx.json

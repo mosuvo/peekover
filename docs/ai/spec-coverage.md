@@ -1,6 +1,10 @@
 # Spec coverage audit — post-M6, pre-M7
 
 *Audited 2026-07-27 · HEAD `d7f424c` ("Add 006 gate"; the M6 retro is its parent, `664952f`).*
+***Re-audited 2026-07-27 · HEAD `d470ab2`** ("ci(security): close the §6-4 / §6-9 release-engineering
+gap"). **Targeted re-verification of §6-4 and §6-9 ONLY** — those two items scored PARTIAL for one shared
+reason ("ci.yml has no such check"), and `d470ab2` landed the CI that reason named. No other item was
+re-verified: nothing between `d7f424c` and `d470ab2` touched `src/`, and the answer only changed for §6.*
 *Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
 *Method: source code is the answer, the spec is only the question. No spec item is credited
 because a plan, a task list or a pipeline comment anticipates it.*
@@ -10,7 +14,9 @@ because a plan, a task list or a pipeline comment anticipates it.*
 ## Summary
 
 **Phase 1 (§5 F1–F12) is ~17% shipped by weighted feature count** — 34.0 credit points across
-197 enumerated items. Including §6 and §7 the whole-spec figure is **~23%** (51.5 / 226). But the
+197 enumerated items. Including §6 and §7 the whole-spec figure is **~23%** (52.0 / 226, up from 51.5
+at the `d7f424c` audit — the `d470ab2` re-audit moved §6-4 PARTIAL → SHIPPED and §6 from 56% to 59%;
+**§5 and the persona figure are untouched**, because no §6 item is a persona-#1 feature). But the
 number that describes the *product* rather than the *backlog* is the persona one: **~56% of
 persona #1's killer features are shipped** (10 of 18 sub-items across folder browser, watch mode,
 diff view, Mermaid, tables). Six milestones of work have landed almost entirely inside one
@@ -47,9 +53,9 @@ the bottom with the question a human walk would settle.
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
 | **§5 total** | **197** | **28** | **12** | **157** | **0** | **34.0** | **17%** |
-| §6 Security & privacy | 17 | 6 | 7 | 4 | 0 | 9.5 | **56%** |
+| §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **226** | **40** | **23** | **163** | **0** | **51.5** | **23%** |
+| **Whole spec** | **226** | **41** | **22** | **163** | **0** | **52.0** | **23%** |
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -336,12 +342,12 @@ feature-detection, no WebCrypto usage (0 `webcrypto` hits).
 | 1 | No server | ✓ | No backend anywhere in the repo; `package.json` has no server dependency; `docs/ai/architecture.md` | Structural, not a claim. |
 | 2 | Zero network by default + visible network indicator on every outbound call | ✓ | `src/render/mediaPolicy.ts:59,138` (remote media neutralised pre-DOM); `src/render/remoteMediaUi.ts:21-34`; bytes-on-wire tests: `tests/browser/remoteMedia.browser.test.ts`, `watchNetwork.browser.test.ts`, `tocNetwork.browser.test.ts`, `folderMode.network.browser.test.ts` | Four independent real-engine network guards. The strongest-evidenced item in the spec. |
 | 3 | No telemetry/analytics/error beacons; local "copy debug report" button | ~ | No telemetry ✓ (proven by the four network suites above). **No debug-report button** — 0 hits | The negative claim holds; the positive affordance does not exist. |
-| 4 | No remote code; dynamic imports banned, **verified in CI** | ~ | MV3 on both engines (`wxt.config.ts:11`); fonts inlined as data-URIs (`fonts.ts:32`); no CDN reference | **`.github/workflows/ci.yml` has no such check** — lint/test/browser-test/build only. The spec says "verified in CI"; nothing verifies it. |
+| 4 | No remote code; dynamic imports banned, **verified in CI** | ✓ | MV3 on both engines (`wxt.config.ts:11`); fonts inlined as data-URIs (`fonts.ts:32`); no CDN reference; **`scripts/check-dynamic-imports.ts` + `.github/workflows/supply-chain.yml`** (`remote-code` job, on PR + push-to-main + weekly cron + dispatch) | **Re-audited at `d470ab2`; was PARTIAL for "ci.yml has no such check", which is now false.** Verified locally at HEAD: the self-test exits 0 with **15/15 (7 firing + 8 silent)** and the real scan exits 0 over **54 shipped files** across `src`, `entrypoints`. The self-test is the load-bearing half — zero dynamic imports exist today, so the real scan passes trivially and would pass identically if the scanner broke (retro 2026-07-27 finding 1(a)'s class); CI runs it **first**. Scope of the ban is specifier-staticness, not `import()` — `decisions.md` 2026-07-27 (b). |
 | 5 | MV3, service-worker based, no persistent background page | ✓ | `wxt.config.ts:11` (MV3 forced on Firefox too, not just Chrome); `entrypoints/background.ts:35-58` holds **no state** — three listeners, no timer, no registry | The watch loop lives in the page precisely so an MV3 eviction loses nothing. |
 | 6 | Minimal permissions; per-origin host access requested at moment of use; `PERMISSIONS.md` | ~ | `wxt.config.ts:18` — `permissions: []`, **byte-pinned by `tests/manifest.test.ts` (2975 B, unmodified since M2)**; `docs/trust/PERMISSIONS.md` exists | Permission surface is smaller than the spec asks for ✓. But host access is **static manifest `matches`**, not optional and not requested at use — the "per-origin, at moment of use" half is unbuilt. |
 | 7 | Permission-diff policy (never silently add; changelog + in-product notice) | ~ | AGENTS.md #4 + the manifest byte-pin enforce the *process*; every milestone re-proved `permissions: []` | **No `CHANGELOG.md` in the repo and no in-product notice mechanism.** The discipline is real; the two user-facing artifacts are not. |
 | 8 | Sanitization: DOMPurify strict allowlist, SVG sanitized, strict CSP, sandboxed embeds, block remote images | ~ | Allow-list `sanitize.ts:22-65`; `data:` hook `:131-135`; SVG/iframe/object **excluded entirely** from `ALLOWED_TAGS`; remote-image blocking `mediaPolicy.ts:138` with opt-in bar `remoteMediaUi.ts:60`; `tests/browser/sanitize.browser.test.ts` | Four of five sub-claims hold, some by denial rather than sanitization (stronger). **No `content_security_policy` key is declared** in `wxt.config.ts` — the property rides on MV3's platform default rather than an explicit, auditable line. |
-| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **4 runtime dependencies** — genuinely minimal | **No audit step, no OSV scan, no `.github/dependabot.yml`** (`.github/` contains only `workflows/`), **no SBOM**. Four of five sub-claims unbuilt. |
+| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **4 runtime dependencies** — genuinely minimal; `.github/workflows/supply-chain.yml` (`audit`, `osv`, `sbom` jobs); `.github/dependabot.yml`; `scripts/generate-sbom.ts` | **Re-audited at `d470ab2` — a STRONG partial now, not the weak one above: 4 of 5 sub-clauses SHIPPED.** Locked/minimal ✓ · `pnpm audit --prod --audit-level low` **blocking** ✓ (full tree advisory by a recorded call, `decisions.md` 2026-07-27 (a)) · OSV ✓ by CI wiring (`google/osv-scanner-action@v2.2.4` + SARIF upload; not locally verifiable — it runs on GitHub, and workflow wiring is "demonstrably wired into a production entrypoint" under this document's own legend) · no install scripts ✓ (**0 `requiresBuild: true` in `pnpm-lock.yaml`**; the only `postinstall` is Peekover's own `wxt prepare`) · **SBOM published per release ✗ — the item still fails, and the reason changed.** See the §6-9 note below. |
 | 10 | Reproducible builds; release hashes; signed tags; attestations | ✗ | No release workflow; `ci.yml` runs on `pull_request` only; no attestation config | No release has happened yet, but nothing is in place for one. |
 | 11 | Publisher account security (passkeys/2FA + recovery plan) | ✗ | No such document in `docs/trust/` (contains `PERMISSIONS.md`, `SECURITY.md` only) | Named by the spec as where extension hijacks usually start. |
 | 12 | Open source (MIT/Apache-2.0), full source incl. build scripts | ✓ | `LICENSE` (MIT, 2026 Mo Suvo); `wxt.config.ts`, `scripts/`, `.github/workflows/` all tracked | — |
@@ -351,9 +357,24 @@ feature-detection, no WebCrypto usage (0 `webcrypto` hits).
 | 16 | Ownership pledge in README **and** site | ✓ | `README.md:9` ("never sold — an ownership change voids the listing"); `site/index.html` carries the same pledge language | Both surfaces. |
 | 17 | Data locality: settings in `storage.sync`, drafts/snapshots in IndexedDB, AI keys WebCrypto, one-click wipe-all | ~ | Snapshots in IndexedDB ✓ (`snapshots.ts:300`, DB v3); wipe-all ✓ (`storageControls.ts:159`, `tests/browser/wipe.browser.test.ts`, `eraseSnapshots.browser.test.ts`) | **Settings are in IndexedDB, not `storage.sync`** (`store.ts`, `settingsPort.ts`) — the spec sentence is factually wrong about the shipped product. No drafts, no AI keys. |
 
-**§6 is the healthiest section in the spec at 56%** — and its gaps cluster hard in *release
-engineering* (items 9–11, 13, 15), not in *architecture*. Everything that removes a class of risk
-is built; almost everything that publishes proof of it is not.
+**§6 is the healthiest section in the spec at 59%** (was 56% before the `d470ab2` re-audit) — and its
+gaps still cluster in *release engineering* (items 9–11, 13, 15), not in *architecture*. Everything that
+removes a class of risk is built; **most** of what publishes proof of it now is too. The residue is the
+part that needs a release to exist: items 10, 11, 13 and 15 are untouched, and §6-9's last sub-clause is
+the same shape.
+
+**★ THE §6-9 SBOM SUB-CLAUSE — WHY IT STAYS ✗, AND A DISCREPANCY THIS RE-AUDIT FOUND.** "Published per
+release" has never fired, and cannot yet: **`git tag -l` is empty — no tag has ever been cut in this
+repo.** That alone is the §6-10 pattern (mechanism plausible, never verified) and would hold the
+sub-clause at ✗ on its own. But the mechanism is also **not reachable from a tag push as written**:
+`supply-chain.yml`'s `on.push` is filtered to `branches: [main]` with **no `tags:` key**, so pushing
+`v0.1.0` triggers no run at all, and the `sbom` job's `if: startsWith(github.ref, 'refs/tags/')`
+release-attach step can only be reached by a manual `workflow_dispatch` against a tag ref.
+`decisions.md` 2026-07-27 states the step *"is written and will fire on the first tag"* — **the first
+half is true, the second is not supported by the trigger block.** Recorded here rather than fixed: the
+archive pass that found it is docs-only by scope fence, and `.github/` is outside it. **The fix is one
+line** (`tags: ['v*']` under `on.push`) and belongs with whoever cuts the first release, alongside
+§6-10's hashes and attestations.
 
 ## §7. UI/UX Specification
 
@@ -400,6 +421,16 @@ absence evidence: the feature cannot be shipped and no amount of pipeline design
 onto the ten spec sections scoring under 30%. Peekover's coverage is not limited by architecture —
 it is limited by which libraries have been let in, which has been deliberate.
 
+**Re-audit note (`d470ab2`): the dependency SET is unchanged — still 4 runtime, still 11 dev — but it is
+now GOVERNED, which the first audit could not say.** `.github/dependabot.yml` raises grouped weekly PRs
+for minor+patch on both ecosystems and **ignores majors deliberately**, because a major on any of the four
+runtime deps is the same weight of decision as an addition (dompurify 3→4 is AGENTS.md #3 territory;
+markdown-it majors re-bake every golden file). `pnpm audit --prod` is a blocking CI gate and the tree is
+clean at 0; the 7 advisories in the full tree are all transitive devDependencies of `wxt`/`eslint`/
+`@vitest/browser-playwright` and are reported, not suppressed. **No new dependency was taken to do any of
+this** — the SBOM generator is hand-rolled precisely because installing `@cyclonedx/cyclonedx-npm` to
+satisfy a *minimal-dependencies* claim would be self-defeating (`decisions.md` 2026-07-27 (d)).
+
 ## Cross-milestone touch map
 
 | Milestone | Spec sections its work landed in |
@@ -410,6 +441,7 @@ it is limited by which libraries have been let in, which has been deliberate.
 | **M4** · `004-themes-settings` | **F7** (light/dark/auto — the section's only ✓) · **F5** (TOC state persistence) · **§6** (17 — settings storage) · **§7** (4 — first-paint measurement discipline) |
 | **M5** · `005-watch-diff` | **F6** (auto-reload, watch mode, follow-newest, update pulse) · **§6** (2 — the watch-relay network guard; 6 — `permissions: []` survived a whole capability) |
 | **M6** · `006-snapshots-diff` | **F6** (snapshot history, diff view) · **F8** (version snapshots, partial) · **§6** (17 — snapshot storage, disclosure, erase; the PERMISSIONS.md trust-claim correction) · **§7** (7, 8 — storage-panel and Compare-pill design defects caught at the gate) |
+| **§6 side-quest** · `d470ab2` (post-M6, not a milestone) | **§6** (4 — the dynamic-import scanner + its self-test, wired in CI: PARTIAL → SHIPPED · 9 — `pnpm audit`, OSV+SARIF, Dependabot, SBOM generator: 4 of 5 sub-clauses now shipped) · **§6-17** (the `storage.sync` → IndexedDB correction of record, tailed into §9 and F7 at the archive pass). **The first entry in this table that shipped no `src/` code** — it is release engineering, and it exists because this audit named the gap. |
 
 **F2, F3, F9, F10, F11 have never been touched by any milestone.** F7 was touched once and moved
 6%. Four of the twelve functional sections are untouched ground for M7.

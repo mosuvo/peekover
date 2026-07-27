@@ -10,399 +10,63 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS **CLOSED** — code, human gate and retro all landed. **All nine groups, all twenty tasks, 9.1 PASSED and 9.2 BANKED.**
-> **Nothing is in progress and nothing is blocked.** Task **9.2 — the M6 retro — is written** (`retro.md`, 2026-07-27, newest-first:
-> nine findings, three candidates cut with the reason stated, and metrics). Task 9.1 — THE MILESTONE-CLOSE HUMAN GATE — was walked
-> and PASSED 2026-07-26 (Chrome + Firefox, both surfaces, Network tab open); **the full record is the landing block under
-> `tasks.md` 9.1 and is deliberately not restated here.** The walk caught **three real layout defects the automated stack could
-> not see** — the storage panel opening into the layout, the Compare pill colliding with the reading column's `h1`, and the reader
-> right-aligning against the TOC rail on wide viewports — **all fixed before close**, at **`e231941`** (reader centring + pill
-> placement) and **`8255380`** (storage panel overlay + the Firefox app-page disclosure gap the walk also found).
-> **The first-paint gate was re-baselined `<150` → `<165` ms working-day** at `8255380` — the human call 8.1 deferred; see
-> § Baselines below and `decisions.md` 2026-07-26.
-> **Two items ship carried, not fixed**, each with revisit triggers in `decisions.md` (2026-07-26): the **first-time-user edit
-> expectation** (Editor Mode is spec §F8) and the **15-row snapshot picker, UNMEASURED** — the walk reached 3–7 snapshots and
-> says so rather than inferring the count bound from a shallower depth.
->
-> **★ TWO CORRECTIONS THE RETRO MAKES TO THIS MILESTONE'S OWN RECORD — read them before quoting either number anywhere.**
-> **The running gate score is 10/10, NOT the 8/8 recorded at 9.1.** The score counts DEFECTS (M1:2 + M2:3 + M3:1 + M4:0 + M5:1 =
-> 7/7); 9.1's block says *"M6 contributes THREE"* and then writes 8/8 — **7 + 3 = 10**. And **"none escaping" is FALSE for the
-> first time**: finding A shipped since M3 and was missed at M3's, M4's and M5's close gates, so nine of ten defects were caught
-> at their own gate and **one escaped three**. The mechanical cause is nameable — **no gate record on any milestone states the
-> walk's VIEWPORT**, only its engines and surfaces. Full argument: `retro.md` 2026-07-27, finding 2.
->
-> **★ THE NEXT ACTION IS THE progress.md CONDENSE / ARCHIVE PASS, IN A FRESH SESSION** (the convention M4's archive pass set).
-> **It has a worklist, and it is not cosmetic — three of these four items are stale FACTS, not pointers:**
-> 1. **§ Baselines is STALE BY THE TWO RECOVERY COMMITS.** 8.1 measured the M6-close pins; **B1 v2 and B2 then shipped production
->    code and neither re-ran them.** Per the recovery commits' own byte accounting: content script **315,144 recorded vs 315,671
->    actual** (+527), app chunk **360,423 vs 361,500** (+1,077), suites **605/15/74 vs 629/15/76**. The table's header dates itself
->    *"(task 8.1)"* while calling itself *"current measured truth"*. **Re-measure — do not hand-edit the numbers in from commit
->    bodies**, which is accounting, not measurement.
-> 2. **§ Closed milestones still reads "The human-gate score: 7/7"** and has **no M6 entry**. Both fixed in the same pass, with
->    the score written as **10/10** and the escape qualification stated (see the corrections above).
-> 3. **§ Up next still holds the pre-milestone 006 block** ("THE WHAT IS SETTLED… work its boxes in order") — 006 is closed and
->    that block is now history; it belongs in the archive, replaced by M7's entry when M7 is planned.
-> 4. **Fold the Now section's task narratives into the archive** and leave this section pointing at M7.
-> **Then M7's kickoff, in its own fresh session** — and per `retro.md` 2026-07-27 finding 8, **M7 owes a floor-delta statement
-> before any further first-paint re-baseline discussion**, plus the optimisation question `decisions.md` 2026-07-26 routed to it.
->
-> *(Why these are listed rather than fixed at 9.2: 9.2's scope was the retro plus this pointer and the roadmap tick. **Retro
-> finding 3 is exactly this defect class** — "the close-measurement task is not the last commit, but every artifact is written as
-> if it were" — so naming the work is the discipline the finding asks for, and quietly patching a measurement table would have
-> been the opposite of it.)*
->
-> <details><summary>Task 8.2 — DOCS + MEMORY RECONCILE (landed previously; CLOSED group 8)</summary>
->
-> **Task 8.2 — DOCS + MEMORY RECONCILE — has landed, and GROUP 8 CLOSES**
-> (a previous commit, `5ea9723`). It is a **COHERENCE PASS, not new writing**: the retro (9.2) is where M6's findings, the two retractions and
-> the discipline lessons get written. 8.2 read the memory files against the shipped tree with a critical eye and reports:
-> - **`decisions.md` — EVERY ENTRY STILL HOLDS. Nothing edited, nothing appended.** Checked newest-to-oldest against what 8.1
->   measured. D-8's bound values behave as reasoned (7.3's re-run reproduced exactly at 8.1: 13 snapshots at both fixtures,
->   neither bound biting) and its revisit-when triggers all still stand unfired. The `diff@^9.0.0` entry's *"revisit-when …
->   the bundle-fence re-measurement at 8.1 shows `diff` bytes reaching the content script"* **fired and came back clean** —
->   0 B, md5-identical, by ablation. Gate-3's two product decisions stand (D-11's line shipped at 6.3 and its legibility is a
->   9.1 item by design; snapshot survival is architectural). D-1…D-16 stand — 8.1's ablation *reinforces* D-14 empirically,
->   and D-1's WeakMap read is production-verified. **No new entry was added on purpose:** 8.1's two retractions are
->   measurement findings, not decisions — they live below in § Baselines and belong in `retro.md` at 9.2. Putting them in
->   `decisions.md` would blur what that file is for.
-> - **`PERMISSIONS.md` — COHERENT AND UNTOUCHED.** 1.4's trust correction is intact: the blanket *"file contents are never
->   stored"* survives in exactly one place, inside the paragraph that explicitly retires it, and the snapshot-capture row
->   states what IS stored. **006 crossed no permission boundary** — snapshot storage, the capture disclosure, global erase
->   and the diff are all already-disclosed or capability-free (the diff adds no store, no channel and no network; it reads
->   what the snapshot row already discloses), and `permissions: []` is the shipped manifest reality on both engines,
->   independently re-checked at 8.1.
-> - **`progress.md` — four stale pointers found and fixed**, listed next.
->
-> **★ THE ONE REAL GAP, NAMED RATHER THAN QUIETLY PATCHED: 8.1 LANDED WITHOUT ADVANCING THE NOW-POINTER.** 8.1 wrote its
-> whole record into **Baselines** — which is right, and it is excellent — but left this section reading *"groups 1–7 CLOSED;
-> group 8 is next (8.1)"* with a next-action block describing 8.1 as still to be done. **This file's own M1 rule sits at the
-> bottom of this very section** (*"the Now-pointer advances PER TASK — it once lagged four tasks and the next session acted
-> on stale state"*), so the rule was broken by the task that most needed it. A fresh session reading top-to-bottom would have
-> re-run a measurement task that had already landed. **The other three:** the Blockers section still named *"006's spec gate 1"*
-> as the next human gate (four gates ago — 9.1 is next); the roadmap line still pointed at 006 as **← NEXT** while 006 is a
-> commit away from closing; and the header date read 2026-07-25. All four are pointer corrections — **no measurement, no
-> finding and no decision was reworded, and § Baselines was not touched at all.**
-> </details>
->
-> <details><summary>Task 8.1 — MEASUREMENT CLOSE (landed previously; ITS FULL RECORD IS THE BASELINES SECTION BELOW, deliberately not duplicated here)</summary>
->
-> **Task 8.1 — the official milestone-close re-measurement — landed** (a previous commit, `ba91c6e`). **Its evidence lives in
-> § Baselines / pins, which 8.2 does not touch**; this fold exists so the Now section's task chain is unbroken, not to restate
-> numbers a second time where they could drift apart. The headlines, each with its full treatment in § Baselines below:
-> - **The M6-close pin table** replaced M6-post-7.1's, which is kept below it as a superseded audit trail with its two
->   corrections attached.
-> - **The first-paint gate is GREEN but only on a quiesced machine**, and both readings are recorded — a first attempt read
->   **154.0 / 157.6 ms, BREACHING the gate**, and stopped instead of re-rolling. **The standing warning is now ZERO headroom
->   on a working-day machine.** Whether a machine-state-dependent gate should be re-phrased is a **9.1 human call**.
-> - **7.1's import-fence grep is RETRACTED as vacuous** (identifiers, minified bundle; the app-chunk negative control greps 0
->   too) and the fence is **re-established by controlled ablation** — content script **0 B, md5-identical**, app chunk
->   **−9,481 B**. The struck-through original and its replacement sit together in § Baselines.
-> - **7.1's "the coalescer dropped 2–3 edits at 1 MB" is RETRACTED** — a sampled probe, not behaviour; polling it reports
->   12 of 12 at both fixtures. This is the same instrument class `decisions.md` 2026-07-21 finding (3) already named.
-> - **Both items 7.3 handed forward are DISCHARGED**: the `renders` undercount is fixed in the harness, and its stale
->   *"NO BOUND IS CHOSEN OR RECOMMENDED — 7.2 is the human decision gate"* trailing prose now records that the gate has run.
-> - **A tooling trap is recorded: `pnpm zip -- -b firefox` SILENTLY BUILDS CHROME.** Use `pnpm exec wxt zip -b firefox`.
-> </details>
->
-> <details><summary>Task 7.3 — IMPLEMENT the chosen bounds (landed previously; CLOSED group 7)</summary>
->
-> **Task 7.3 — IMPLEMENT THE CHOSEN BOUNDS — landed** (a previous commit), and **GROUP 7 CLOSED** with it.
-> **Two constants moved, one was reviewed and deliberately left alone**, in `src/app/snapshots.ts` and nowhere
-> else. **The eviction ALGORITHM did not move** — `planSnapshotWrite`, `bytesOf`, `DEFAULT_BOUNDS`'s body and the whole IDB
-> layer are byte-identical; the single diff hunk is confined to the constants block, and its only two non-comment lines are
-> the two values. Every consumer picks the new numbers up through `DEFAULT_BOUNDS`, which references all three BY NAME, so
-> choosing a value stayed a one-line edit:
-> - **`SNAPSHOT_COUNT_PER_DOC` 20 → 15**
-> - **`SNAPSHOT_TOTAL_BYTES` 5 MiB → 20 MiB** (`20 * 1024 * 1024`)
-> - **`SNAPSHOT_MAX_AGE_MS` UNCHANGED at 30 days** — 7.2 weighed 7 and 90 and kept 30, so this is a value REVIEWED AND
->   CHOSEN, not a value skipped. Recorded either way, per tasks.md 7.3's own body.
->
-> **The four jsdoc blocks that called these values "PROPOSED — NOT chosen (D-8)" now record them as CHOSEN** (7.2,
-> `decisions.md` 2026-07-26), each carrying the reasoning that picked it and the mental model it belongs to. That edit is
-> not cosmetic: a "proposed" comment sitting on a chosen value is a lie about the decision state, and the next session
-> would have read it as an open question.
->
-> **★ THE RE-MEASUREMENT CONFIRMED THE PREDICTION, WHICH WAS STATED BEFORE THE HARNESS RAN** (retro discipline — a number
-> read first and rationalised after is not a verification). `pnpm perf:snapshot-capture -- --no-build`, accumulation cell,
-> 12 sequential edits through the production controller:
-> - **50 KB: `2,3,4,…,13` → 13 snapshots, 659.5 KB.** IDENTICAL to 7.1, to the byte. Neither bound bites (13 < 15;
->   659.5 KB ≪ 20 MiB) — this fixture never reached a cap under the old numbers either, so unchanged is the correct result.
-> - **1 MB: `2,3,4,5,6,7,8,9,10,11,12,13` → 13 snapshots, 14.57 MB.** **7.1's plateau at 4 IS GONE.** That plateau was the
->   proposed 5 MiB byte bound biting at the fourth 1.12 MB snapshot, and it is now silent: 13 × 1.12 MB = 14.57 MB sits
->   under 20 MiB, and 13 sits under the count bound of 15. **This is the designed reordering** — bytes stepped back, count
->   became the bound that would bind first.
-> - **NOT OBSERVED, and out of 7.3's scope: whether count actually stops growth at 15.** That needs >14 rendered edits;
->   `EDIT_SEQUENCE` is 12 and the harness was not modified. The arithmetic is stated in `decisions.md` (~17 snapshots of
->   1 MB fit in 20 MiB, above 15, so count binds first) — **stated, not measured.** 8.1 does not close this either.
->
-> **★ A FINDING THE RELAXED BOUND EXPOSED — 7.1's "the coalescer dropped 2–3 edits at 1 MB" IS NOT SUPPORTED, and the
-> `renders` discriminator UNDERCOUNTS at 1 MB.** This run printed `edits rendered: 9 of 12` while the per-edit count
-> incremented on **every one of the 12 edits** (2→13, twelve increments off a 1-snapshot seed). A coalesced edit captures
-> nothing, so 13 snapshots is only reachable if all 12 edits rendered and captured — the count and the `renders` number
-> contradict each other, and the count is the one backed by IndexedDB. The discriminator
-> (`P.readerSourceFor(host) === text`, checked right after `__pwSettle`) evidently samples before a 1 MB render has
-> re-stashed its source, and the 1600 ms cooldown sleep then lets the render land before `__pwCount()` reads it.
-> **Why 7.1 could not have caught this:** the byte bound clamped the 1 MB count at 4, so the count could not be used to
-> falsify `renders` — the undercount was unfalsifiable at 5 MiB and became visible the moment the ceiling lifted.
-> **Consequence for the record:** the 7.1 note below reading *"only 9–10 of 12 edits rendered, and a render that never
-> happens captures nothing — measured via the reader-source WeakMap, not assumed"* is left as written (it is what 7.1
-> observed) but **must not be carried forward as a coalescer fact.** `scripts/` is fenced at 7.3 and the harness was NOT
-> touched; **8.1 owns the fix or the caveat**, and its accumulation numbers should not quote `renders` at 1 MB until then.
->
-> **Spot-check, other cells vs 7.1 — same magnitude throughout, as expected (the constants touch eviction only, never
-> capture cost):** guard/check 5.0 → **0.0 µs** at 50 KB (both at or under `performance.now()`'s 5 µs granularity floor —
-> 7.1 already reported its own figure as an upper bound, so this is the same non-number) and 47.5 → **45.0 µs** at 1 MB;
-> awaited `storeSnapshot` 0.6 → **0.6 ms** / 10.8 → **7.5 ms**; mean snapshot 50.4 KB → **50.7 KB** / **1.12 MB**
-> unchanged; sync medians 33.5–33.8 ms at 50 KB and 715.8–721.2 ms at 1 MB. **The OFF-vs-ON delta remains unresolvable and
-> still flips sign** (−0.4 / −5.4 ms sync, −0.0 / −32.0 ms →2ndRAF) — 7.1's headline finding reproduces, and no delta here
-> may be quoted as a cost in either direction.
->
-> **No stale-build trap, checked rather than assumed:** `--no-build` reuses `.output/chrome-mv3`, but the harness bundles
-> `src/app/snapshots.ts` and `src/watch/watchController.ts` **fresh from source via esbuild at run time**
-> (`scripts/perf-snapshot-capture.ts:275-282`) and drives `P.createWatchController`, so the measured
-> `renderNow → storeSnapshot → DEFAULT_BOUNDS` path carried the NEW constants. The shipped build supplies only the
-> extension shell. Had that not been true, the 1 MB case would have re-printed the plateau at 4 and looked like a
-> contradiction.
->
-> **`src/app/snapshots.test.ts` NEEDED NO CHANGE, and that is 1.2's design paying off:** every eviction case passes its own
-> small explicit bounds (`{ countPerDoc: 2, totalBytes: 100, … }`), and the one `DEFAULT_BOUNDS` test asserts SHAPE and
-> positivity only — no test ever pinned a proposed number as an expected value (1.2's rule G). Unit **549**, unchanged, no
-> test file touched anywhere in the repo.
->
-> <details><summary>Task 7.2 — D-8's HUMAN DECISION GATE, the bound VALUES (landed previously; the input to 7.3)</summary>
->
-> **Task 7.2 — D-8's HUMAN DECISION GATE — landed** (a previous commit).
-> It is the gate where **the human chose the three snapshot retention bound VALUES** from 7.1's measurements, and it is a
-> DOCS-ONLY task by design: **no code landed.** `src/app/snapshots.ts` is byte-identical; 7.3 sets the constants. The
-> decision is recorded in `docs/ai/decisions.md` (2026-07-26 entry, appended at the top) **before** the code that carries
-> it — the same order the `diff@^9.0.0` approval used at 5.1. **The AXES were never reopened** (D-16, 2026-07-23: count
-> per-document, bytes and age global); 7.2 decided only the numbers.
->
-> **THE CHOSEN VALUES — for `snapshots.ts:61/77/93`:**
-> - **`SNAPSHOT_COUNT_PER_DOC` = 15** (was the proposed 20)
-> - **`SNAPSHOT_TOTAL_BYTES` = 20971520 B — 20 MiB** (was the proposed 5 MiB)
-> - **`SNAPSHOT_MAX_AGE_MS` = 2592000000 ms — 30 days** (the proposed value, kept deliberately)
->
-> **THE MENTAL MODEL THE THREE BOUNDS ENCODE — recorded because it is what makes them readable later, and because
-> a future session tuning one of them in isolation would otherwise be tuning it against the wrong purpose:**
-> **count binds active usage** (moderate per-document history depth — what a user actually reasons about when they think
-> "the last N states of this document"); **bytes is the SAFETY CAP**, not the everyday constraint (20 MiB exists for the
-> pathological "many large documents" case; at 20 MiB a 1 MB document fits ~17 snapshots, which is *above* the count bound,
-> so count binds first as designed — that reordering relative to 7.1's observed 4-deep-at-5-MiB behaviour is the point of
-> the change); **age is the SAFETY VALVE for abandonment** (it exists to reclaim documents watched briefly and forgotten,
-> not to constrain working memory). The full reasoning, the alternatives weighed, and the revisit-when triggers are in
-> `decisions.md`, not restated here (C5). One semantic is logged there and worth knowing before touching eviction: **age
-> is measured from snapshot timestamp, not from last access** — an actively-worked document still loses its 30-day-old
-> snapshots.
->
-> <details><summary>Task 7.1 — MEASURE capture cost + diff render/memory (landed previously; the input to 7.2)</summary>
->
-> **Task 7.1 — MEASURE capture cost + diff render/memory — landed** (a previous
-> commit). It is the MEASURING task, and it **chose nothing**: no bound, no threshold, no recommendation. Two new harnesses
-> (`scripts/perf-snapshot-capture.ts`, `scripts/perf-diff.ts`), two new `perf:*` script entries, numbers below. **No `src/`
-> file, no test file and no spec file was touched.** The only gates asserted are the two SHIPPED M1 ones (<150 ms typical
-> first paint, <2 MB packaged) — both PASS.
->
-> **★ THE HEADLINE IS A MEASUREMENT-RESOLUTION FINDING, NOT A COST.** The like-for-like control (capture OFF vs ON, same
-> document, same host, same iteration, differing only in D-12's capture flag) shows the in-situ delta is **BELOW THE NOISE
-> FLOOR AT BOTH SIZES** — and that was established, not assumed: **two independent 6-run passes at 1 MB produced deltas of
-> OPPOSITE SIGN** (pass 1 −1.7 ms sync / −62.7 ms →2ndRAF; pass 2 +23.8 / +20.3; final pass −3.4 / −15.5). A single 1 MB
-> re-render varies 40–90 ms run-to-run, which swamps anything capture adds. **No delta from this cell may be quoted as "the
-> capture cost", in either direction.** So the harness gained a cell that measures the component where it IS resolvable: the
-> whole synchronous capture guard (`getCaptureFlag()` + two whole-document `normalise()` + compare —
-> `watchController.ts:472-480` verbatim) costs **5.0 µs at 50 KB and 47.5 µs at 1 MB**. That is ~4 orders of magnitude below
-> the re-render it sits inside, which is *why* the in-situ delta cannot resolve. The 50 KB figure sits at
-> `performance.now()`'s own 5 µs granularity floor, so it is an **upper bound**, not a reading. Per retro finding 2 (004's
-> isolated probe under-predicted the real path ~13×) the isolated number is reported as a **FLOOR on added work, never as a
-> prediction** — both numbers stand, neither replaces the other.
-> **The non-vacuity control held on every run:** capture ON stored 2 snapshots per iteration (12 over 6 runs, both sizes);
-> capture OFF stored **0**. A cell that failed either check threw rather than reporting.
->
-> **CAPTURE'S OTHER TWO COSTS, measured and kept separate from the delta on purpose.** `renderNow` fires
-> `void storeSnapshot(...)`, so the IDB write is **off the synchronous path by construction**: awaited directly it is
-> **0.6 ms at 50 KB, 10.8 ms at 1 MB**. And a snapshot weighs what the document weighs — capture stores the source, not a
-> diff: **50.4 KB and 1.12 MB** respectively.
->
-> **★ EVICTION IS ALREADY BINDING AT 1 MB UNDER THE PROPOSED DEFAULTS — recorded as an observation, NOT as a reason to
-> change them.** Driving 12 sequential edits through the production controller: at 50 KB the store grew monotonically
-> `2,3,4,…,13` (13 snapshots, 659.5 KB, count cap 20 never reached). At 1 MB it grew `2,3,4` and then **stopped at 4 for the
-> remaining 9 edits** (4.48 MB) — four 1.12 MB snapshots is 4.48 MB against the proposed 5 MiB global byte bound, so the
-> fifth evicts the first. **Whether 4-deep history at 1 MB is the right product answer is exactly 7.2's decision**, and 7.1
-> states the observation without a view on it. (The 1 MB run also shows the coalescer working as designed: only 9–10 of 12
-> edits rendered, and a render that never happens captures nothing — measured via the reader-source WeakMap, not assumed.)
->
-> **THE DIFF AT 1 MB — §1.6's named ceiling, measured through the REAL 6.2 gesture path** (click the real pill → real picker
-> over real `snapshotMeta` → click a real item → `fetchText` out of real IndexedDB → `showDiff`; nothing hand-called, the M5
-> "wired to nothing" rule applied to a harness). Fixture: every 20th line rewritten — **1961 of 39202 lines (5.0%)**,
-> deterministic, producing an identical **5882 hunks (1961 added / 1961 removed / 1960 unchanged) → 5882 blocks on all 7
-> runs**. **(a) computeDiff 585.0 ms** (576.2/592.6) · **(b) parse+sanitize over all hunks 433.6 ms** (418.7/515.6) ·
-> **(c) DOM construction 122.0 ms — DERIVED** (`enterDiff` with precomputed hunks, 559.7 ms, minus (b); reported as derived
-> because 7.1 may not add a mark inside `enterDiff`) · **(d) TOTAL enter, the user-visible number, 1157.4 ms**
-> (1129.6/1230.9). (a)+(b)+(c) deliberately do **not** reconcile to (d): (d) also carries two IDB round-trips, event
-> dispatch and the browser's own layout of the appended subtree, and that gap is left visible.
-> **(e) INTERACTIVE FRAMES — the first scroll after entering a diff costs 442.5 ms** (359.2/528.7), then settles to
-> **71.7 / 56.4 / 59.9 / 54.6 ms**. The first frame is where the browser pays deferred layout for the 5882-block subtree.
-> Stated, not gated — no threshold exists for it and 7.1 invents none.
-> **MEMORY is DIRECTIONAL ONLY** and the caveats are load-bearing: Chromium-only `performance.memory`, **V8 heap only — DOM
-> nodes are NOT counted**, GC-timing dependent, and taken with a non-default `--enable-precise-memory-info` flag. Heap at
-> rest **14.42 MB**; before→after enter **+35.95 MB median but +8.92/+77.11 MB across runs**; net before→after exit
-> **−861.1 KB median (−27.75/+29.17 MB)**. The spread is printed beside every median precisely because a single confident
-> median here would be a fiction. A small heap delta is **not** evidence the diff is cheap in memory.
->
-> <details><summary>Task 6.3 — D-11, the diff-defer + the "changed again" line (landed previously; CLOSED group 6)</summary>
->
-> **THE WATCH LOOP NOW KNOWS A DIFF IS ON SCREEN, AND REFUSES TO RENDER UNDER IT.** `onText` gains one condition —
-> the host carries D-15's `data-diff`, so the text takes the coalescer's single pending slot and **no timer is
-> armed**. On exit the withheld text renders and the reader is told the document moved: **"This document changed
-> again while the comparison was open — the newer version is shown above."** Both halves are the decision; the plan
-> says so in as many words (*"a document that changed with no indication is the same dishonesty one layer over"*),
-> and the line is gate-3-approved copy (decisions.md 2026-07-23) whose legibility is still a **9.1 human-gate item**.
-> **THREE DIVERGENCES FROM THE 6.2 POINTER'S SKETCH, each argued in tasks.md 6.3 and none silent:**
-> **(a) THE LINE IS A WATCH NOTE, ON EXIT — not a sentence inside the diff view.** The sketch's placement needs
-> `diffView.ts`, which 6.1 sealed and this task's own fences require byte-identical; and a line rendered *inside* the
-> comparison would be telling the reader about a document they cannot see yet. `setWatchNote` already carries exactly
-> this semantic (4.3's dead read, 4.4's unavailable surface), renders WITHOUT a re-render, and needed no new chrome —
-> **D-3's toast rejection stands.** Order is load-bearing: render first, line second, because the line points at the
-> document ("shown above").
-> **(b) EXIT IS A `MutationObserver` ON `data-diff`, not a call into `flushPending`.** There is more than one way out
-> of a diff — the 6.2 pill, `mount.ts`'s two D-15 clears, whatever a later task adds — and an explicit signal threaded
-> through each of them would strand the deferred text on the one that got missed. The observer holds no policy: it
-> reads the attribute and flushes. **`watchController.ts` imports none of `./diffView`, `./diffEngine`, `diff`** —
-> the attribute IS the seam (5.1 fence Clause C), so the name is a literal here and an export there, and a **drift
-> check** unit-asserts the two still agree. That check is the whole price of not importing, and it is paid in a test
-> file, which the fence exempts.
-> **(c) A HOLE THE SKETCH MISSED, FOUND AND CLOSED — `flushPending` needed the guard too.** A cooldown timer armed
-> moments *before* the diff opened is still in flight when it does, and it never passes through `onText`; it would
-> have replaced the comparison a beat later. It now CONVERTS to a deferred text instead of rendering. Unit-cased.
-> **RED-FIRST, BOTH HALVES, BOTH ENGINES (the plan demanded a different case each).** Deleting `onText`'s condition
-> reds *"the diff was torn down: expected null to be 'active'"* — the re-render replaced the comparison and `mount`'s
-> D-15 clear took the attribute with it (2 browser + 6 unit cases). Neutering the exit flush reds *"the withheld
-> change never reached the reader"*, and with that assertion lifted, *"the deferred render did not capture the state
-> that was on screen"*. The capture half is non-vacuous: the exit render stored the state the reader LEFT (V2),
-> leaving 2 snapshots where the seeded 1 stood — §3.5's per-render invariant intact, nothing lost.
-> **BYTES:** content-script 314688 → **315143 B both engines (+455)**; app chunk 359969 → **360422 B (+453)** — an
-> observer install/teardown, one condition in each of two functions, one string constant. Content-script grep for
-> `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|structuredPatch`: **0**. The 5.1
-> fence pin is **15/15 green with allowlists UNCHANGED** — 6.3 added a consumer of the diff feature that imports
-> nothing from it.
-> **`permissions: []` stands. `diffEngine.ts`, `diffView.ts`, `diffRegistry.ts`, `diffChrome.ts`, `mount.ts`,
-> `appShell.ts`, `watchControl.ts`, `watchRegistry.ts`, `contentWatch.ts`, `diffEngine.test.ts` ALL BYTE-IDENTICAL**
-> — the whole task landed inside `watchController.ts`. `Settings`/`getSettings`/`putSettings` byte-identical (thirteen
-> tasks now). Unit 540 → **549**; browser 601/15/72 → **605/15/74**. Golden EMPTY. M1–M5 remain fully closed.
->
-> <details><summary>Task 6.2 — the diff AFFORDANCE (landed previously)</summary>
-> `buildDiffChrome(host)` returns the affordance where a diff context is registered and **`[]` — with NO note branch — where
-> none is** (D-14). `mount.ts` gains one import and one `children.push(...)` beside `buildWatchChrome`. The click flow:
-> `fetchMeta` → an inline `role="listbox"` picker → `fetchText` + `getCurrentSource` → the diff → `data-diff="active"`.
-> Exit is the SAME pill (its label and aria-label move with the state, so the change is never colour-only).
-> **★ THE ENGINE ENTERED PRODUCTION — and the fence forced a DIFFERENT provisioning path than the 6.1 pointer predicted.**
-> The 6.1 note said the affordance would "call `enterDiff`", i.e. import the VIEW directly. It does **not**, and it must not:
-> plan §1.4 fences **three** modules off the content-script graph — `diff`, `diffEngine.ts` **and `diffView.ts`** ("Imported by
-> `appShell.ts`, never by `mount.ts` — `mount.ts` importing it would drag the view into the content-script graph and put the
-> hole back in the fence"), and tasks.md 6.2's Verify says it outright: *"`mount.ts`'s graph excludes `diff`/`diffEngine`/
-> `diffView`"*. Since `mount.ts` imports the affordance, the affordance may import **none** of the three. So the DiffContext
-> gained **two coarse closures** — `showDiff(host, before, after)` / `hideDiff(host)` — that `appShell.installWatchForFile`
-> provisions; `appShell` is the one production file importing **both** `computeDiff` and `enterDiff`/`exitDiff`. The closures
-> are coarse on purpose: a `computeDiff` + `enterDiff` pair would have to carry `DiffHunk` across the fence for no benefit,
-> since the affordance only hands hunks straight on. **The hunks never cross.** `DiffOutcome` is a local structural mirror of
-> `DiffEnterResult` for the reason 6.1 recorded (the fence is a source-text scanner, so even `import type` reads as an import).
-> **FENCE PIN: `ALLOWED_ENGINE_IMPORTERS` `[]` → `['src/app/appShell.ts']`, and a NEW `ALLOWED_VIEW_IMPORTERS` clause C +
-> a "diffChrome.ts imports none of the three" clause + two non-vacuity checks (12 → 15 checks).** Clause C is load-bearing,
-> not decoration: red-first proven — adding `import { enterDiff } from './diffView'` to `diffChrome.ts` reddens exactly 2,
-> and under the pre-6.2 pin that violation would have passed silently.
-> **PLACEMENT — top-left, `top:56px;left:16px` (picker at `:94`), measured on the CONTAINED pane.** A first probe measured the
-> FULL-PAGE reader (what every other pill in readerCss.ts was measured against), "cleared" top-left, and was **wrong**: D-14
-> ships this chrome to the **app page only**, and under CONTAINED_CSS the pills are `position:absolute` inside a
-> `:host{position:relative}` box that is the whole DOCUMENT's height. Re-measured there (rail forced open — its width rule
-> stomps an early `data-toc` a frame later; 8- and 30-heading docs; both engines): bottom-left `:216`/`:256` land inside the
-> 3.1 capture disclosure **and no step fixes it** (its height is text-wrap dependent — 110px at 1280, 182px at 414); top-right
-> `:56` hits the TOC handle; top-left `:16` is the remote-load slot; bottom-right sits on the opaque rail and its picker
-> expands into the aside stack. Probe **deleted** (the 4.1 rule). Geometry asserted at WIDE, deliberately **not** at 414×896,
-> where the app pane leaves the host 146px — narrower than one pill — and the existing stack **already self-overlaps**
-> (a pre-existing 3.1-era condition, recorded rather than papered over).
-> **BYTES:** content-script 307892 → **314688 B both engines (+6796)**; app chunk 343632 → **359969 B (+16337)**.
-> **Fence proven by controlled experiment, not just grep:** rebuilding with `appShell`'s engine+view imports removed drops the
-> app chunk to 350470 B (**−9499** = the engine + view + `diff`'s tree-shaken `diffLines`) and leaves the content-script bundle
-> **byte-identical at 314688**. Positive discrimination too: diffView's literals (`no reader shadow root to show a diff in`)
-> appear in the app chunk (1) and **not** in the content script (0). The shared +6796 is `diffChrome`'s code plus the CSS —
-> and note **readerCss.ts comments ship verbatim** (they sit inside a template literal), which cost ~8 KB in a first draft
-> until the placement rationale was moved into `diffChrome.ts` where the minifier strips it. Officially re-measured at 8.1.
-> **`permissions: []` still stands; `diffEngine.ts` and `diffView.ts` BYTE-IDENTICAL (5.1 and 6.1 sealed — 6.2 only USES
-> them); `watchController.ts`, `watchControl.ts`, `watchAvailability.ts` byte-identical; `mount.ts` gains exactly two code
-> lines; `appShell.ts` gains two imports and two object fields; `Settings`/`getSettings`/`putSettings` byte-identical;
-> `DB_VERSION` is 3.** Unit 519 → **540**; browser 577/15/70 → **601/15/72**. M1–M5 remain fully closed.
-> </details>
-> </details>
-> </details>
-> </details>
-> </details>
->
-> **TASK 9.2 — THE RETRO — IS DONE, AND IT CLOSED THE MILESTONE.** Written in a fresh session per the convention M4's archive
-> pass established (the retro is written *after* close, by a session that is **not** the one that closed it). **Everything it
-> was owed, it answered** — both 8.1 retractions, the `ch`-in-a-margin cost, the template-literal comment leak, A-B-A ordering,
-> non-vacuity of every test and every grep, the sibling-checklist audit — plus three items the brief did not anticipate: the
-> gate-score arithmetic, the broken "none escaping" invariant, and the stale pin table. **Read `retro.md` 2026-07-27; it is not
-> summarised here.** Three candidate findings were **cut with the reason stated**, one of them the coupling-guard item.
-> **Still unmeasured, carried past the milestone as reasoning rather than fact:** whether the count bound actually stops growth
-> at 15 (it needs >14 rendered edits; `EDIT_SEQUENCE` is 12), so `decisions.md`'s "~17 snapshots of 1 MB fit in 20 MiB" stays
-> arithmetic. **Re-run either harness any time:** `pnpm perf:snapshot-capture -- --no-build`, `pnpm perf:diff -- --no-build`
-> — neither emits an exit-code gate, by design.
-> **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state;
-> **8.1 lagged it by one and 8.2 caught it**; **9.1's own closing commit shipped three inverted pointers and session C caught
-> them**; and **9.2 found § Baselines stale by two commits** — the rule now has four recorded failures and one mechanical
-> remedy, `retro.md` 2026-07-27 finding 3: **a pointer walk as a discrete step in every gate-closing task**).
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. Nothing is in progress and nothing is blocked.
+The next action is M7's Gear-3 spec kickoff, in a fresh session.**
+
+M6 shipped snapshot capture on the app page, bounded retention (count 15 / 20 MiB / 30 days), a global
+erase control, a persistent capture disclosure and an inline line-diff against any stored snapshot —
+with **`permissions: []` intact** and the first `dependencies` addition since M1 (`diff@^9.0.0`). The
+9.1 human gate PASSED and found three layout defects plus a disclosure gap, all fixed before close.
+**The close record, the group summaries, the five recovery sessions, the two formal retractions and the
+frozen M6-close pins are in [`progress-archive.md` § M6](progress-archive.md#m6--spec-006--snapshots--diff--closed-2026-07-27);
+task-by-task detail is `specs/006-snapshots-diff/tasks.md`. Neither is restated here.**
+
+**Two M6 facts that outlive the milestone — do not re-derive them from its narrative:**
+- **The running human-gate score is 10/10**, corrected from the 8/8 written at 9.1 (the score counts
+  DEFECTS: 7 before M6, M6 contributes 3). See § Closed milestones.
+- **"None escaping" is FALSE for the first time.** Finding A shipped since M3 and was missed at three
+  close gates, so nine of ten defects were caught at their own gate and **one escaped three**. The
+  mechanical cause is that **no gate record on any milestone states the walk's VIEWPORT** — a gate
+  walk now records its viewport the way it records its engines (`retro.md` 2026-07-27, finding 2).
+
+**M7's direction is NAMED below and deliberately NOT SCOPED here** — scoping is `spec.md`'s job, in the
+fresh session. See § Up next, which also carries a flag about an unbanked decision.
+
+**The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session
+acted on stale state). The rule has four recorded failures and one mechanical remedy: **a pointer walk
+as a discrete step in every gate-closing task** (`retro.md` 2026-07-27, finding 3) — grep `is next`,
+`at the gate`, `waiting on`, `this commit`, `← NEXT` and the running score before committing. **This
+archive pass ran that walk on itself.**
+
 
 ## Up next
 
-### 006 — snapshots + diff · `tasks.md` is the OPERATIVE artifact; the plan is the HOW, the spec the WHY
+### M7 (spec 007) — persona #1 completion · NOT STARTED, no artifact exists yet
 
-**What it is:** the second half of the watch feature area. 005 shipped watch; **006 stores snapshots and
-diffs against them.** It gets its **own full Gear-3 cycle** — the split (D-1) was taken at 005's plan gate
-precisely so this would be planned rather than inherited.
+**Direction agreed pre-kickoff; scope is NOT settled, and is not settled here.** The candidate content
+is **Mermaid + a diagram cache**, plus persona-#1 quality-of-life (compare-any-two-files, agent-file
+awareness, table tools). The argument: six milestones have landed almost entirely inside persona #1's
+column, [`spec-coverage.md`](spec-coverage.md) puts that column at **~56%**, and the largest remaining
+hole in it is the one item that needs a dependency Peekover has never installed.
 
-- **★ THE WHAT IS SETTLED — `specs/006-snapshots-diff/spec.md`, approved at gate 1 (2026-07-22). Read it
-  first.** It supersedes the spec-level material previously pointed at here: 005's **§3.3 / §3.4** and its
-  §4 criteria marked *deferred to 006* carried forward into it, and 005 §3.4 plus one §4 criterion are now
-  **struck through and annotated** where 006 amends them (retention limits are disclosed defaults, not
-  user-adjustable).
-- **★ THE HOW IS SETTLED — `specs/006-snapshots-diff/plan.md` (revision 2), approved at gate 2
-  (2026-07-23).** §0 holds sixteen decisions D-1…D-16 (also in `decisions.md`, C5); §0.1's two open
-  questions are now settled and logged (gate 3, `decisions.md` 2026-07-23). **`tasks.md` (gate 3) is the
-  OPERATIVE artifact now — work its boxes in order; the plan is the HOW and the spec the WHY.** The guidance
-  below still applies.
-- **Plan-level starting points, written for 006 and standing:** `specs/005-watch-diff/plan.md` **§1.7**
-  (the two-store IndexedDB split that dodges `idbCore`'s STOP signal), **§1.8** (the line-diff engine and
-  the diff view — diff output goes through the existing sanitize path like any other rendered content),
-  and **§3-5** (snapshot bound defaults are proposed with reasoning, **tuneable, not gated**).
-- **`DB_VERSION` 2 → 3.** 005 deliberately did not touch it (D-1). The `idbVersionchange` suite is exactly
-  the guard for an additive upgrade preserving existing rows.
-- **★ THE `diff` DEPENDENCY — APPROVED at the 005 plan gate (D-2) but DEFERRED to here. It is the FIRST
-  `dependencies` addition since M1**, so adding it is a governed act, not a convenience. 005 shipped with
-  three and every task re-proved it.
-- **★ THE PERMISSIONS.md TRUST-CLAIM CORRECTION, which is an AGENTS.md #4-weight event even though no
-  manifest permission changes.** *"File contents are never stored"* appears in **three places** in
-  `docs/trust/PERMISSIONS.md` and becomes **FALSE** the moment the first snapshot is stored. **It is
-  corrected in the SAME PR as that code.** It was left alone through all of 005 deliberately — in 005 the
-  claim is TRUE, and correcting it early would have made the document wrong in the other direction.
-- **`permissions: []` is expected to survive this milestone too.** `tests/manifest.test.ts` has been
-  byte-unmodified since M2 (`3b6c575`); if any 006 capability seems to need a manifest permission, that is
-  a **STOP-and-flag**, not a task.
-- **The M5 retro findings that bear on 006 directly** (`retro.md` 2026-07-21 — read it, do not rely on
-  this summary):
-  - **The *built-tested-and-wired-to-nothing* class and its call-site pin.** It hit **three times** in 005
-    because every watch test registered its own target before mounting, so no test ever asked which target
-    *production* registers. **006 adds more registration seams** (snapshot store, diff view) — at least one
-    test per seam must drive the **production entry path**.
-  - **The `mount()` boundary answer. 006 touches `mount()` again** for the diff view. 005 crossed it more
-    cheaply than plan §4-1 feared, and the reasons are structural and reusable: **additive, defaulted-off,
-    read at exactly one site, with the OLD behaviour red-first proven.**
-  - **Red-first is a COUNT and a REASON, not a colour.** Twice in 005 a break that stayed green revealed a
-    **second independent guard** nobody knew about.
-  - **An entrypoint wires; it does not decide or construct** — a WXT entrypoint imports `#imports`, so no
-    Vitest project can load one. Logic there is untestable by construction.
-- **Before the first task of any group, re-read the standing rules that keep costing time when skipped:**
-  `docs/ai/decisions.md` (the harness ledger, the dead ends, the both-engines gate procedure) and
-  `docs/ai/retro.md` (newest entry first).
+**A fresh Gear-3 cycle starts with `specs/007-*/spec.md` drafted in a fresh session** — spec → gate 1
+→ plan → gate 2 → tasks → gate 3 → code. Nothing below the spec exists yet.
+
+- **★ FLAG RAISED BY THE ARCHIVE PASS, LEFT FOR THE HUMAN: the persona-#1 completion decision is NOT
+  BANKED IN `decisions.md`.** It was agreed in conversation; grepping that file for it returns only
+  incidental M7 mentions (the dynamic-import rule's *"the moment M7 adds highlighting"*, and two
+  revisit-when triggers routed to M7 kickoff) — **no entry records the argument or its scope
+  constraints.** The archive pass deliberately did **not** write one: banking a product decision is
+  not an archive pass's job, and inventing the rationale would be worse than the gap. **Bank it before
+  the M7 spec kickoff**, so gate 1 has an authority to point at.
+- **M7 owes a FLOOR-DELTA STATEMENT before any further first-paint re-baseline discussion**
+  (`retro.md` 2026-07-27, finding 8), plus the optimisation question `decisions.md` 2026-07-26 routed
+  to it — 006's +15.7 KB content-script growth is legitimate but, per the human note at 9.1, not
+  sacred.
+- **Before the first task of any group, re-read the standing rules that keep costing time when
+  skipped:** `docs/ai/decisions.md` (the harness ledger, the dead ends, the both-engines gate
+  procedure) and `docs/ai/retro.md` (newest entry first).
+
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
@@ -461,19 +125,33 @@ measurement-driven or explicitly deferred.*
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; running gate score **10/10**, corrected
-from the 8/8 recorded at 9.1) · … full order in `docs/product/spec.md` §Phase-1.
+from the 8/8 recorded at 9.1) · **007 persona-#1 completion — NOT STARTED, no artifact drafted** ·
+… full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
 
-- **Spec coverage audit** landed at [`spec-coverage.md`](spec-coverage.md) (post-M6, pre-M7, HEAD `d7f424c`). **~17% of Phase 1's F1–F12 is shipped** by weighted item count (§6 56%, §7 67%, whole spec ~23%); **persona-#1 killer-feature coverage is ~56%**. Only 4 of §10's 14 stack layers are provisioned, and **F2/F3/F9/F10/F11 have never been touched by any milestone**. Read before scoping M7. *(It also half-answers the single-file-drop question below — see the audit's uncertain-items §1.)*
-- **NOTHING IS BLOCKED, AND 006 IS NO LONGER WAITING ON A HUMAN — task 9.1, the milestone-close gate, was
-  WALKED AND PASSED 2026-07-26** (see § Now; the full record is the landing block under `tasks.md` 9.1).
-  **There is no human gate outstanding for 006**; what remains is 9.2, the retro, which is agent work.
-  Every 006 gate has now run and is recorded: spec gate 1 (2026-07-22), plan gate 2 + gate-3 product
-  decisions (2026-07-23), D-8's bound-value decision gate at 7.2 (2026-07-26) and the milestone-close gate
-  9.1 (2026-07-26) — alongside M5's three (2.3, 5.2, 7.1). *(Corrected at 8.2, which found this bullet still
-  naming "006's spec gate 1" as next four gates after it ran; corrected again at 9.1, which found it naming
-  9.1 as pending on the very commit that closed 9.1.)*
+- **NOTHING IS BLOCKED AND NO GATE IS OUTSTANDING.** M6 is closed; every 006 gate ran and is recorded —
+  spec gate 1 (2026-07-22), plan gate 2 + the gate-3 product decisions (2026-07-23), D-8's bound-value
+  gate at 7.2 (2026-07-26) and the milestone-close gate 9.1 (2026-07-26), alongside M5's three (2.3, 5.2,
+  7.1). **M7's spec gate 1 will be the next human gate, and it does not exist yet** — no artifact has
+  been drafted. *(This bullet has been corrected three times for pointer inversion — at 8.2, at 9.1, and
+  again at this archive pass. It is the single most inversion-prone line in the file: it states pending
+  human state, which is false by construction the next time anything ships.)*
+- **Spec coverage audit** at [`spec-coverage.md`](spec-coverage.md) — **re-audited 2026-07-27 at HEAD
+  `d470ab2`** (targeted: §6-4 and §6-9 only, after the §6 side-quest landed the CI those items named).
+  **~17% of Phase 1's F1–F12 is shipped** by weighted item count (**§6 59%** — up from 56% — §7 67%,
+  whole spec ~23%); **persona-#1 killer-feature coverage is ~56%** and is unchanged by the re-audit.
+  Only 4 of §10's 14 stack layers are provisioned, and **F2/F3/F9/F10/F11 have never been touched by any
+  milestone**. **Read before scoping M7.** *(It also half-answers the single-file-drop question below —
+  see the audit's uncertain-items §1.)*
+- **★ ONE GAP THE RE-AUDIT FOUND AND DID NOT FIX, because `.github/` is outside an archive pass's scope
+  fence: the SBOM's release-attach step cannot fire on a tag push.** `supply-chain.yml`'s `on.push` is
+  filtered to `branches: [main]` with **no `tags:` key**, so pushing `v0.1.0` triggers no run, and the
+  `sbom` job's `if: startsWith(github.ref, 'refs/tags/')` step is reachable only by a manual
+  `workflow_dispatch` against a tag ref. `decisions.md` 2026-07-27 says the step *"will fire on the first
+  tag"* — **not supported by the trigger block as written.** The fix is one line (`tags: ['v*']`) and
+  belongs with whoever cuts the first release, alongside §6-10's hashes and attestations. No tag has ever
+  been cut (`git tag -l` is empty), so nothing is broken today.
 - **GAPS IN AUTOMATED COVERAGE — closed as *findings*, still open as *coverage*. Plan for these; do not
   assume CI will catch a regression in them.** Per the harness ledger (decisions.md 2026-07-19 + the
   2026-07-21 addenda) there is **no roadmap to any of them**:
@@ -485,7 +163,7 @@ from the 8/8 recorded at 9.1) · … full order in `docs/product/spec.md` §Phas
     Firefox (upstream, closed out-of-scope), so both perf harnesses are Chromium-only by construction.
     Firefox's evidence is the human gate and nothing else.
   - **Local-disk `FileSystemObserver` latency.** No automated route to a local-disk handle exists; every
-    harness number is an OPFS inference (confirmed once, at 5.1a — see § Baselines).
+    harness number is an OPFS inference (confirmed once, at 5.1a — see § Watch-mode numbers).
   - **From M4 and still true:** the end-to-end settings/TOC round-trip through the background, and the
     cold-start theme flash.
 - **OPEN QUESTION (an M2 finding, NOT an 004 defect — recorded so it is not lost). Dropping a single `.md`
@@ -509,6 +187,28 @@ from the 8/8 recorded at 9.1) · … full order in `docs/product/spec.md` §Phas
 
 ## Closed milestones
 
+**M6 · spec 006 — snapshots + diff · CLOSED 2026-07-27.** Snapshot capture on the app page, bounded
+retention (**count 15 / 20 MiB / 30 days**, D-8), a global erase control, a **persistent** capture
+disclosure, and an inline line-diff against any stored snapshot — with **`permissions: []` still
+intact**, the **FIRST `dependencies` addition since M1** (`diff@^9.0.0`, a governed act), `DB_VERSION`
+2 → 3, and PERMISSIONS.md's *"file contents are never stored"* claim corrected **in the same commit as
+the first stored byte** (1.4). Nine groups, **twenty planned tasks, ZERO discovered tasks** — but
+**five unplanned recovery sessions the box list cannot see**, which is its own finding. The 9.1 gate
+**PASSED and caught THREE layout defects plus a disclosure gap**, all fixed before close (`e231941`,
+`8255380`); the first-paint gate was **re-baselined `<150` → `<165` ms** at the human's call.
+**★ THE MILESTONE ALSO AUDITED ITS OWN PRIOR EVIDENCE HARD ENOUGH TO FIND IT HOLLOW — two formal
+RETRACTIONS, a metric class M4 and M5 both scored zero on:** the import-fence grep proved nothing
+(identifiers, minified bundle — the app chunk greps 0 too), and the coalescer never dropped anything
+(a probe sampled once, unfalsifiable while the proposed byte bound clamped the count). Both retracted
+claims were **unfalsifiable under the conditions they were measured in** — one defect class, not two.
+→ narrative:
+[archive § M6](progress-archive.md#m6--spec-006--snapshots--diff--closed-2026-07-27) · tasks:
+`specs/006-snapshots-diff/tasks.md` · decisions: `decisions.md` 2026-07-22/23/26 (D-1…D-16, the bound
+values, the gate re-baseline) and 2026-07-27 (the §6 side-quest + the §6-17 correction) · lessons:
+`retro.md` 2026-07-27 (the two retractions as one class; **every empirical claim needs a positive
+control that fires**; the gate-score arithmetic; the broken "none escaping" invariant; the pointer-walk
+rule; the sibling-checklist audit).
+
 **M5 · spec 005 — watch mode · CLOSED 2026-07-21.** The Phase-1 differentiator: **watch a chosen local
 markdown file and re-render it in place while an agent rewrites it**, both engines, both surfaces, with
 **`permissions: []` intact**, **no new dependency** (still three) and **no file contents stored** — so
@@ -523,7 +223,8 @@ library four milestones had treated it as** — additive, defaulted-off, both di
 **★ THE FACT TO CARRY: the 7.1 gate caught a shipping defect (4.8) in the first five minutes, on the
 first item checked, on the surface the automated stack provably cannot reach** — watch on the
 content-script `file://` surface detected every change and rendered **none** of them. **The score moved to
-7/7**, its first move since M3, confirming M4's keep-the-gate reasoning **by instance**: the item M4 kept
+7/7** *(the running total AT M5's CLOSE; it is **10/10** now — see the score paragraph below)*, its first
+move since M3, confirming M4's keep-the-gate reasoning **by instance**: the item M4 kept
 *because nothing else could observe it* is the item that caught the defect. The gate's other output was a
 **product judgement, not a defect** — the pill is not discoverable, shipped as-is and carried.
 → narrative:
@@ -579,264 +280,176 @@ Firefox mount-timing regression. → narrative:
 [archive § task log](progress-archive.md#task--session-log--newest-first--m1--m3-close--the-004-planning-gates)
 · decisions: `decisions.md` 2026-07-14 · lessons: `retro.md` 2026-07-14.
 
-**The human-gate score: 7/7** (was 6/6 across M1+M2+M3, with M4 contributing zero defects and zero
-misses). **Seven milestone-shipping defects, ALL SEVEN caught by the milestone-close gate, NONE escaping
-it.** **M5 contributes the seventh: task 4.8** — watch on the content-script `file://` surface detected
-every change and rendered none of them. **The sharpest fact about it: it was found in the FIRST FIVE
-MINUTES, on the FIRST item checked, on the surface the automated stack provably cannot reach** (no test on
-any milestone has ever exercised the real content→background transport). Read the ratio precisely: it says
-every known shipping defect was caught **here**, not that the gate catches everything — the denominator
-only counts what someone eventually found. *A clean gate is evidence about the BUILD, not about the GATE*
-(retro 2026-07-19); M5 is the inverse case, and it is evidence about the GATE.
+**The human-gate score: 10/10** — M1:2 + M2:3 + M3:1 + M4:0 + M5:1 + **M6:3**. The score counts
+**DEFECTS, not milestones**, which is what 9.1's own "8/8" got wrong: its landing block says *"M6
+contributes THREE"* and then writes 8/8, contradicting itself. **7 + 3 = 10.** (On the stricter
+denominator that also counts the Firefox app-page disclosure gap the 9.1 walk closed it is 11/11; prior
+milestones did not count copy gaps, so 10/10 is the like-for-like figure — **stating the denominator's
+definition is the point**.)
+
+**★ BUT "NONE ESCAPING" IS NO LONGER TRUE, AND THE QUALIFICATION MATTERS MORE THAN THE NUMBER.** For
+five milestones this section read *"all N caught by the milestone-close gate, NONE escaping it."*
+**M6's finding A — the reader right-aligning against the TOC rail on wide viewports — ships on BOTH
+surfaces and has done SINCE M3**, present and missed at **M3's, M4's and M5's close gates**. So: **nine
+of ten were caught at their own gate; one escaped three.** M4's clean gate therefore has a known miss —
+its retro's *discipline-dominant* verdict still stands **for what M4 built**, but the gate was not clean
+about the shipped product. *A clean gate is evidence about the BUILD, not about the GATE* was M4's own
+caveat (retro 2026-07-19); **M6 is where it cashed out.** The mechanical cause is fixable and named:
+**no gate record on any milestone states the walk's VIEWPORT** — engine and surface are recorded every
+time, the dimension that decides whether a layout defect is visible is not. **Standing rule: a gate walk
+records its viewport(s) the way it records its engines, and a milestone shipping positioned chrome walks
+at least one WIDE viewport deliberately** (`retro.md` 2026-07-27, finding 2).
+
+**Read the ratio precisely either way:** it says every *known* shipping defect was caught at some gate,
+not that the gate catches everything — the denominator only counts what someone eventually found.
+**M5 remains the sharpest instance FOR the gate:** task 4.8 was found in the **first five minutes, on
+the first item checked, on the surface the automated stack provably cannot reach** (no test on any
+milestone has ever exercised the real content→background transport).
 
 **Product progress (rough):** M1 opened build-order phase 1-of-7 (product spec §11). Spec-level
 milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TOC · 004 themes+settings ·
 005 watch · 006 snapshots+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly
-this is early foundation, **~fifth of ~12+ spec-milestones**. Don't over-read the fraction.
+this is early foundation, **~sixth of ~12+ spec-milestones**. Don't over-read the fraction.
+**The sharper number is now measured rather than guessed:** [`spec-coverage.md`](spec-coverage.md) puts
+the whole spec at **~23%** and persona #1 at **~56%**. Prefer it to this paragraph when scoping.
 
 ## Baselines / pins
-*Current measured truth, as of the M6 close (task 8.1, 2026-07-26). This section is MUTABLE — each
-milestone's close task overwrites the numbers and moves the previous ones into the "vs" column. It lives
-here, not in decisions.md, because decisions.md is dated append-only and a current-numbers table cannot be
-corrected there without either lying or duplicating.*
+*Current measured truth, **re-measured 2026-07-27 at HEAD `d470ab2`** by the post-M6 archive pass. This
+section is MUTABLE — each milestone's close task overwrites the numbers and moves the previous ones into
+the "vs" column. It lives here, not in decisions.md, because decisions.md is dated append-only and a
+current-numbers table cannot be corrected there without either lying or duplicating.*
+*Per-milestone historical pins, and the whole M6-close § Baselines verbatim, are in
+[`progress-archive.md` § M6](progress-archive.md#m6--spec-006--snapshots--diff--closed-2026-07-27).*
 
-| pin | at M6 close (006) | vs M5 close | bound | verdict |
-|---|---|---|---|---|
-| First paint, typical doc (50.4 KB) | **137.9 ms** (passes 2/3 **140.2 / 137.7 ms**) | 138.6 ms (**−0.7 ms**) | ~~<150 ms **GATE**~~ → **<165 ms GATE** (re-baselined at 9.1 — see below) | **PASS** |
-| First paint, 1 MB / ~1400-entry TOC | **1185.2 ms** | 1183.8 ms (**+1.4 ms**) | <1.7 s (informational) | PASS |
-| Content script (`content-scripts/peekover.js`) | **315,144 B** both engines | 299,411 B (**+15,733 B, +5.25%**) | none — **stated, not gated** | — |
-| App-page chunk (`chunks/app-Bn1Oo_pw.js`) | **360,423 B** both engines | 332,895 B (**+27,528 B, +8.27%**) | none — **stated, not gated** | — |
-| Background (`background.js`) | **3,435 B** both engines | 3,315 B (**+120 B, +3.62%**) | none — **stated, not gated** | — |
-| `pnpm zip` Chrome / Firefox | **349,165 / 349,223 B** (349.17 / 349.22 kB) | 335.89 / 335.95 kB (**+13.28 / +13.27 kB**) | <2 MB | **PASS** |
-| Suites | 549 unit (46 files) · 605 passed / 15 skipped browser, 74 file-instances (both engines) | 456 · 499/15/54 | — | green |
+**★ WHY THIS TABLE WAS RE-MEASURED RATHER THAN CARRIED FORWARD.** The previous table was written at task
+8.1 and **B1 v2 and B2 then shipped production code without re-running it** — it was stale by two
+commits while calling itself *"current measured truth"* (`retro.md` 2026-07-27, finding 3). **Every
+number below is a harness run in this session, not a figure lifted from a commit body.**
 
-**★ THE FIRST-PAINT GATE WAS DECIDED ON A QUIESCED MACHINE, AFTER IT FAILED ON A WORKING-DAY ONE. Both
-readings are recorded here; neither is cherry-picked.** The first 8.1 attempt measured medians **154.0 /
-157.6 ms — BREACHING the <150 ms gate** — and correctly stopped rather than re-rolling. Attribution pointed at
-machine state, not code: the build was byte-identical to the one that measured 144.3/145.1 ms at 7.1 (the
-single-byte `SNAPSHOT_TOTAL_BYTES` minification delta is not on the render path), and the 1 MB fixture moved
-**proportionally** (+10.7% vs 7.1) — a code regression on the render path would not scale both fixtures alike.
-The machine was then quiesced under a recorded protocol (**Brave 28 → 0 and Chrome 21 → 0 processes closed
-gracefully; 78 s settle; CPU mean 5.6% across 5 samples; memory 32.2% → 21% used**) and the harness re-run
-**three times in immediate succession, a bounded protocol fixed in advance — not "until it passes"**:
+| pin | now (2026-07-27, `d470ab2`) | vs 8.1's record | vs M5 close | bound | verdict |
+|---|---|---|---|---|---|
+| First paint, typical doc (50.4 KB) | **133.7 ms** (pass 2: **138.3 ms**) | 137.9 ms (**−4.2 ms**) | 138.6 ms (−4.9 ms) | **<165 ms GATE** | **PASS** |
+| First paint, 1 MB / ~1400-entry TOC | **1188.5 ms** | 1185.2 ms (+3.3 ms) | 1183.8 ms (+4.7 ms) | <1.7 s (informational) | PASS |
+| Content script (`content-scripts/peekover.js`) | **315,671 B** both engines | 315,144 B (**+527**) | 299,411 B (**+16,260, +5.43%**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-CEHD9mSZ.js`) | **361,500 B** both engines | 360,423 B (**+1,077**) | 332,895 B (**+28,605, +8.59%**) | none — **stated, not gated** | — |
+| Background (`background.js`) | **3,435 B** both engines | 3,435 B (—) | 3,315 B (+120, +3.62%) | none — **stated, not gated** | — |
+| `pnpm zip` Chrome / Firefox | **349,744 / 349,803 B** | 349,165 / 349,223 (+579 / +580) | 335.89 / 335.95 kB | <2 MB | **PASS** |
+| Suites | **549 unit** (46 files) · **629 passed / 15 skipped** browser, **76 file-instances**, both engines | 605 / 15 / 74 (**+24 cases, +2 files**) | 456 · 499/15/54 | — | green |
 
-| pass (50.4 KB) | median | min | max | verdict |
-|---|---|---|---|---|
-| 1 | **137.9 ms** | 135.9 | 166.6 | **PASS** |
-| 2 | **140.2 ms** | 133.0 | 143.1 | **PASS** |
-| 3 | **137.7 ms** | 134.8 | 147.2 | **PASS** |
-| 1 MB reference | **1185.2 ms** | 1163.2 | 1226.8 | PASS vs its own <1.7 s bound |
+**★ READ THE "vs 8.1" COLUMN CORRECTLY: NONE OF IT IS NEW GROWTH.** The +527 / +1,077 / +579 / +580 /
++24-cases deltas are **B1 v2's and B2's**, shipped during the 9.1 recovery and never pinned. This pass
+closes that gap; it did not cause it. **Nothing has touched the build since M6 closed** — verified, not
+assumed: `git diff a6c7716..d470ab2` over `src/`, `entrypoints/`, `wxt.config.ts`, `package.json` and
+`pnpm-lock.yaml` is **empty**, and the §6 side-quest's only code is two standalone `scripts/` tools that
+are not in the build graph. **So these bytes are simultaneously the current pins and the true M6-close
+pins**, which is why the archive's frozen M6 table carries the same values.
 
-**The 1 MB reference is the discriminator and it confirmed the hypothesis:** 1185.2 ms against 7.1's 1270.4 ms
-and the failed attempt's 1406.6 ms — the machine really did quiet down, so the 50 KB improvement is not a
-lucky draw on one fixture. **Floor across all three passes: 133.0 ms** — against M6-post-7.1's 138.9 ms
-(**−5.9 ms**) and M5-close's 132.0 ms (**+1.0 ms**). On the standing protocol that signal-vs-noise is decided
-on the floor, **the floor is back at M5's, so 7.1's +6.9 ms floor movement was machine state, not 006's code.**
-- **★ THE WARNING IS NOW STRONGER THAN "NO HEADROOM": ASSUME ZERO HEADROOM ON A WORKING-DAY MACHINE — the
-  gate sits AT the machine-state noise floor.** A green result here required closing 49 browser processes.
-  The same tree measured **157.6 ms** with a normal desktop running. Any future session that touches the
-  render path must quiesce before believing a number, and must treat a passing median on a busy machine as
-  luck rather than evidence. **This is a standing risk, not a solved problem** — it is the human's call at
-  9.1 whether a gate that depends on machine state should be re-phrased (spread-aware) or re-sited; the M1
-  gate was set when the codebase was ~30% of its current byte weight, and 8.1 does not touch it.
-- **★ 9.1 RESOLUTION — THE GATE WAS RE-BASELINED TO <165 ms (recovery B2, 2026-07-26).** The human call
-  8.1 deferred above is now made: option B, **re-site the bar**, not re-phrase it. **NO MEASUREMENT ON
-  THIS PAGE CHANGED** — 137.9 / 140.2 / 137.7 ms and the 133.0 ms floor are what they were; only the
-  threshold they are judged against moved, and the struck-through **<150 ms** stays in the table beside
-  it so the M1 bar is not quietly erased. The reasoning, in one line: a gate that needs 49 browser
-  processes closed to go green is measuring the machine, not the code — the working-day readings
-  (**154.0 / 157.6 ms** at 8.1's stopped attempt, **~145–150 ms** at B1 v2 even after a quiesce) breach a
-  bar the quiesced ones clear, and the codebase has grown ~40% since M1 set it. **165 ms restores the
-  gate's actual job** — any regression that pushes typical past it is real signal — while leaving ~15 ms
-  of honest headroom. `GATE_MS` in `scripts/perf-first-paint.ts` is the single site; full rationale and
-  the revisit triggers are in decisions.md 2026-07-26. **This is the FIRST re-baseline of the M1 gate**,
-  and the standing "assume zero headroom" warning above is NOT repealed by it — it is deferred: M7
-  kickoff is where optimization work gets considered (006's +15.7 KB content-script growth is
-  legitimate but, per the human note at 9.1, not sacred).
-- **The measured build IS the committed tree, proven not assumed:** a fresh `wxt build` after the passes
-  reproduced all three artifacts **md5-identical** to the ones the passes ran against.
+- **THE FIRST-PAINT GATE PASSES ON BOTH PASSES, AND THE FLOOR IS THE HEADLINE.** Pass 1 median
+  **133.7 ms** (min 132.4, max 146.5); pass 2 median **138.3 ms** (min 132.1, max 182.2). **Floor across
+  both passes: 132.1 ms** — against 8.1's quiesced floor of 133.0 ms (−0.9 ms) and M5-close's 132.0 ms
+  (+0.1 ms). On the standing protocol that signal-vs-noise is decided on the FLOOR, **the floor is
+  exactly where M5 left it: no regression, and none of 006's +16 KB reaches this path.**
+- **ONE WARM ITERATION IN PASS 2 READ 182.2 ms, OVER THE GATE. Recorded, not hidden.** The gated number
+  is the median and both medians pass with ~27 ms of headroom; that single max is the same working-day
+  machine-state noise 8.1 documented at length (its own passes carried a 166.6 ms max). **The standing
+  warning is NOT repealed:** a passing median on a busy machine is luck, not evidence, and any session
+  touching the render path should quiesce before believing a number.
+- **THE 1 MB FIXTURE IS THE DISCRIMINATOR AND IT CONFIRMS THE MACHINE WAS COMPARABLE.** 1188.5 ms against
+  8.1's quiesced 1185.2 ms (+0.3%) — this session's machine is in the same state 8.1's re-runs were
+  measured in, which is what licenses comparing the 50 KB numbers against 8.1's at all. The harness line
+  still prints `-> FAIL` because it compares the 1 MB fixture against the *typical-doc* bar and
+  self-labels the comparison informational (decisions.md 2026-07-14). Against its OWN <1.7 s bound: PASS.
+- **Standing pins, all green this session:** `git diff tests/golden/output/` **EMPTY** ·
+  `tests/manifest.test.ts` **2975 B, byte-unmodified since M2** (`3b6c575`), `permissions: []` on both
+  built manifests · `pnpm lint` EXIT=0 · `vitest.config.ts` and `wxt.config.ts` unmodified.
+- **`pnpm zip` emits a THIRD artifact that is NOT the bound:** the Firefox run also writes
+  `peekover-0.0.0-sources.zip` (**4.29 MB**, was 3.93 MB at 8.1 — the §6 side-quest's two scripts and the
+  `.github/` additions ride in the source archive). It is the archive AMO requires for review, not a
+  shipped package. The <2 MB bound is on the extension zips.
 
-**★★ THE IMPORT FENCE, PROVEN BY CONTROLLED ABLATION — AND 7.1's GREP RETRACTED AS VACUOUS.**
+**★ THE IMPORT FENCE — THE GREP IS RETRACTED; THE FENCE HOLDS BY ABLATION.** Do not propagate the old
+check. Every recorded *"content-script grep for `diffLines|jsdiff|computeDiff|enterDiff|…` = 0"* proved
+**nothing**: those are identifiers, the bundle is minified, and the negative control nobody ran until 8.1
+— grep the app-page chunk, which indisputably *does* contain the engine — **also returns 0**. The fence
+was carried the whole time by the source-text allowlist in `diffEngine.test.ts`, which remains **the
+architectural proof**. It was re-established at 8.1 by **controlled ablation**: removing the engine and
+view left the content script **byte-identical (0 B, md5-identical, both engines)** and dropped the app
+chunk **−9,481 B** — the diff feature's contribution to the gated path is not "small", it is **nil**.
+Full ablation tables: archive § M6.
 
-**The finding first, because it invalidates a reading this file has carried since 5.1.** Every recorded
-"content-script grep for `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|
-structuredPatch` = **0**, both engines" was **proving nothing**. Those are all *identifiers*, and the
-production bundle is minified — they are renamed to one- and two-letter locals, so the pattern cannot match
-diff code **anywhere**. The proof is the negative control that 5.1–7.1 never ran: grep the **app-page chunk**,
-which indisputably *does* contain the engine and the view, and it also returns **0**. A test that returns the
-same answer whether or not the thing is present has **zero discriminating power**. **The fence was never
-actually verified by bytes; it was carried, unnoticed, entirely by layer 1 — the source-text allowlist in
-`diffEngine.test.ts` (Clauses A/B/C), which is green and which is the real architectural proof.** Do not
-propagate the old grep. *(Retro item — named in the 8.1 commit body.)*
-
-**Replacement heuristic for future measure-tasks, controls stated so they can be re-checked.** Use literals
-that survive minification, and always run the negative control:
+**Replacement heuristic for future measure-tasks — use literals that survive minification, and ALWAYS run
+the negative control.** Re-verified this session against the current build:
 
 | marker set | app chunk (CONTROL — must be >0) | content script (FENCE — must be 0) |
 |---|---|---|
 | `diff` pkg option props — `newlineIsToken\|stripTrailingCr\|ignoreWhitespace\|oneChangePerToken\|maxEditLength` | **12** ✓ fires | **0** ✓ |
 | `diffView` strings — `diff could not be rendered\|no reader shadow root to show a diff in` | **2** ✓ fires | **0** ✓ |
 
-Identical on **both engines**. **This is a heuristic, not a proof** — it depends on the minifier preserving
-those particular literals, and a bundler upgrade could silently blunt it exactly as it blunted 7.1's. **The
-source-text allowlist test remains the architectural proof; the grep is a cross-check, and it is only worth
-anything while its control fires.** Note also that `peekover-diff*` class names DO appear in the content
-script (**36 hits**) and this is **correct, not a breach**: `mount.ts` imports `diffChrome.ts` by design, and
-that module is engine-blind (it reaches the engine only through the `showDiff`/`hideDiff` closures the app
-page provisions). A fence grep must target the **engine and the view**, never the string "diff".
+Identical on **both engines**. **This is a heuristic, not a proof** — it depends on the minifier
+preserving those literals, and a bundler upgrade could silently blunt it exactly as it blunted the old
+one. **It is worth something only while its control fires; check that first, every time.** Note that
+`peekover-diff` class names DO appear in the content script — **30 hits** for that literal, on both
+engines — and this is **correct, not a breach**: `mount.ts` imports `diffChrome.ts` by design, and that
+module reaches the engine only through
+the `showDiff`/`hideDiff` closures the app page provisions. A fence grep must target the **engine and the
+view**, never the string "diff". *(8.1 recorded **36** here under an unstated pattern; this pass measured
+**30** for the literal `peekover-diff`. The gap is not reconciled — it is either the recovery commits'
+CSS changes or a different pattern, and **the number is decoration either way**: it is the two marker
+rows above, with their firing control, that carry the fence's evidence. Stated rather than silently
+overwritten.)*
 
-**THE CONTROLLED ABLATION (the 6.2 precedent, run at milestone close — the only fence check that cannot be
-fooled by minification).** `src/app/appShell.ts` copied aside, its two gated imports commented out and
-`showDiff`/`hideDiff` stubbed to no-ops, both engines rebuilt:
+**★ THE TWO 006 HARNESSES, RE-RUN THIS SESSION (`--no-build`). Neither emits an exit-code gate, by
+design — they choose nothing.**
 
-| artifact | shipped | diff ablated | delta |
-|---|---|---|---|
-| Content script (chrome) | 315,144 B `md5 0ffdb45b…` | 315,144 B `md5 0ffdb45b…` | **0 B — BYTE-IDENTICAL** |
-| Content script (firefox) | 315,144 B `md5 73da1158…` | 315,144 B `md5 73da1158…` | **0 B — BYTE-IDENTICAL** |
-| App-page chunk (both) | 360,423 B | 350,942 B | **−9,481 B (−2.63%)** |
+**`perf:snapshot-capture` — 7.3's chosen bounds still behave as reasoned.** Accumulation over 12
+sequential edits through the production controller: **50 KB → 13 snapshots, 659.5 KB** (`2,3,…,13`;
+mean 50.7 KB); **1 MB → 13 snapshots, 14.57 MB** (`2,3,…,13`; every snapshot 1.12 MB). **Neither bound
+bites** — 13 < 15 and 14.57 MB < 20 MiB — reproducing 8.1 and 7.3 exactly. **`12 of 12 edits rendered`
+at BOTH fixtures**, holding 8.1's discriminator fix (the retracted `9 of 12` was a sampled probe).
+**Capture cost remains UNRESOLVABLE at both sizes and the harness says so itself:** 50 KB sync delta
+**+7.5 ms** against a 24.4 ms within-arm spread; 1 MB **−5.3 ms** against a 199.3 ms spread — **the sign
+flips between fixtures, which is the point. No delta here may be quoted as "the capture cost" in either
+direction.** Isolated D-5 guard **2.5 µs / 55.0 µs** (a FLOOR on added work, measured hot — retro
+finding 2's ~13× warning stands); awaited `storeSnapshot` **0.7 ms / 7.5 ms**, off the synchronous path
+by construction. Non-vacuity held every run: ON captured 2 per run, OFF captured 0.
+**STILL NOT OBSERVED and still out of this harness's reach: whether the count bound actually STOPS
+growth at 15** — `EDIT_SEQUENCE` is 12, so decisions.md's *"~17 snapshots of 1 MB fit in 20 MiB"* remains
+**reasoning, not measurement**.
 
-**Read it precisely: removing the entire diff engine and view changes the content script by ZERO BYTES, to the
-md5, on both engines — so the diff feature's contribution to the GATED path is not "small", it is nil.** The
-ablation is **non-vacuous**: both marker sets drop to 0 in the app chunk when ablated, so the mutation really
-did remove what it claimed to. **9,481 B is therefore the measured app-page byte cost of the diff feature** —
-a stated-not-gated line item, and the honest answer to "what did 006's engine cost in bytes."
-**Round-trip verified:** restored from the pristine copy (`md5 78edfe9e…` matches, `git diff` empty), both
-engines rebuilt, and **all six artifacts returned md5-identical to pre-mutation** — including the app chunk's
-content hash `app-Bn1Oo_pw.js`. `pnpm lint` green after restore.
-
-**★ Neither this nor 7.1's growth attribution licenses "006 is free on the content script."** The
-content-script `+15,733 B` vs M5 is **real** and is 006's shared chrome/CSS (the affordance, the picker, the
-watch/diff UI surface `mount.ts` legitimately pulls in) — the ablation isolates the *engine*, not all of 006.
-
-**★ THE TWO 006 HARNESSES RE-RUN AGAINST THE M6-CLOSE TREE (post-7.3 constants), `--no-build`.** This is the
-milestone-close verification the harnesses were converted into at 7.3 — they choose nothing.
-
-**`perf:snapshot-capture` — 7.3's CHOSEN bounds behave as reasoned.** Accumulation over 12 sequential edits,
-through the production controller: **50 KB → 13 snapshots, 659.5 KB** (`2,3,…,13`); **1 MB → 13 snapshots,
-14.57 MB** (`2,3,…,13`). **Neither bound bites** — 13 < 15 and 14.57 MB < 20 MiB — reproducing 7.3's
-re-measurement **exactly**, and 7.1's plateau-at-4 stays gone (it was the *proposed* 5 MiB bound). **STILL NOT
-OBSERVED, and still out of reach of this harness: whether the count actually stops growth at 15** —
-`EDIT_SEQUENCE` is 12, so decisions.md's "~17 snapshots of 1 MB fit in 20 MiB" remains **reasoning, not
-measurement**. Capture cost is unchanged in magnitude and **still unresolvable** at both sizes (the harness
-says so itself): 50 KB sync delta **+1.7 ms** against an 8.7 ms within-arm spread; 1 MB **+49.8 ms** against a
-425.9 ms spread — and across the two passes run this session the 1 MB delta moved 23.8 → 49.8 ms, which is the
-point. Isolated D-5 guard **0.0 µs / 47.5 µs**; awaited write **0.6 ms / 7.1 ms**; mean snapshot 50.7 KB /
-1.12 MB. **No threshold asserted.**
-- **★ PIECE 1's DISCRIMINATOR FIX IS CONFIRMED BY MEASUREMENT, and it settles 7.3's open contradiction.** The
-  harness now reports **`12 of 12 edits rendered` at BOTH fixtures**, against 7.1/7.3's `9 of 12`. 7.3 had
-  already argued the two numbers could not both be true (a coalesced edit captures nothing, so 13 snapshots
-  off a 1-snapshot seed requires all 12 to have rendered) and blamed the sampled `renders` probe. **Polling it
-  instead of sampling once makes the count and the render tally agree.** So **7.1's "the coalescer dropped 2–3
-  edits at 1 MB" is formally RETRACTED — it was a harness artefact, not behaviour.** `scripts/` was fenced at
-  7.3, which is why the fix landed here.
-
-**`perf:diff` — no movement against 7.1.** (a) engine **587.5 ms** (7.1: 585.0) · (b) parse+sanitize **441.5 ms**
-(433.6) · (c) DOM **137.8 ms** *derived* (122.0) · (d) **TOTAL enter 1202.2 ms** (1157.4) · first scroll frame
-**388.3 ms**, settling to ~55 ms by frame 4. Fixture determinism holds to the hunk: **5882 hunks
-(1961+/1961−/1960=) → 5882 blocks on all 7 runs**, both sessions. Memory stays **DIRECTIONAL ONLY** and the
-caveats are load-bearing — median +35.44 MB on enter with a per-run range of **−9.52 to +76.44 MB**, i.e. GC
-timing dominates; the net before→after-exit median is −67.9 KB across a ±42 MB range, which is **not** evidence
-of a clean teardown. **No threshold asserted; `perf:diff` emits no gate.**
+**`perf:diff` — no movement against 8.1.** (a) engine **635.2 ms** (8.1: 587.5) · (b) parse+sanitize
+**444.9 ms** (441.5) · (c) DOM **138.1 ms** *derived* (137.8) · (d) **TOTAL enter 1224.8 ms** (1202.2) ·
+first scroll frame **388.5 ms**, settling to 73.6 / 54.3 / 59.2 / 52.9 ms. Fixture determinism holds to
+the hunk across a third session: **5882 hunks (1961+ / 1961− / 1960=) → 5882 blocks on all 7 runs.**
+(a)+(b)+(c) deliberately do **not** reconcile to (d) — (d) also carries two IDB round-trips, event
+dispatch and the browser's own layout of the appended subtree, and that gap is left visible. **Memory
+stays DIRECTIONAL ONLY** and the caveats are load-bearing (Chromium-only `performance.memory`, **V8 heap
+only — DOM nodes are NOT counted**, GC-timing dependent, non-default flag): heap at rest **15.50 MB**;
+before→after enter median **+22.68 MB across a −16.40 to +37.18 MB range**; net before→after-exit median
+**+7.05 MB across a −41.46 to +37.57 MB range**. **The spread is printed beside every median precisely
+because a single confident median here would be a fiction, and the net is NOT evidence of a clean
+teardown.**
 
 **⚠ TOOLING TRAP, recorded so the next session does not lose time to it: `pnpm zip -- -b firefox` SILENTLY
-BUILDS CHROME.** There is no `zip:firefox` script; pnpm forwards the bare `--` as a literal argument and wxt's
-CLI ignores what follows, so the command exits 0 having rebuilt and rezipped **chrome-mv3** — a green run that
-produced the wrong artifact. **The correct invocation is `pnpm exec wxt zip -b firefox`** (likewise
-`pnpm exec wxt build -b firefox`). The `pnpm perf -- --size 50kb` form is unaffected — `tsx` ignores the bare
-`--`, which is why the perf harnesses never exposed this.
+BUILDS CHROME.** There is no `zip:firefox` script; pnpm forwards the bare `--` as a literal argument and
+wxt's CLI ignores what follows, so the command exits 0 having rebuilt and rezipped **chrome-mv3** — a
+green run that produced the wrong artifact. **The correct invocation is `pnpm exec wxt zip -b firefox`**
+(likewise `pnpm exec wxt build -b firefox`). The `pnpm perf -- --size 50kb` form is unaffected — `tsx`
+ignores the bare `--`, which is why the perf harnesses never exposed this.
 
-**M6-post-7.1 (2026-07-26) — SUPERSEDED by the M6-close table above (task 8.1 re-measured officially).**
-Kept for the audit trail, not as current truth. Two of its readings are **corrected** there and the
-corrections are the point: its first-paint numbers (144.3 / 145.1 ms, floor 138.9 ms) carried **machine-state
-noise it could not see**, and its import-fence grep had **no discriminating power** (see the retraction above).
-Measured on the 006 tree at `a873b8d` + 7.1. Format is `M6-post-7.1 vs M5-close ; delta`.
-
-| pin | M6-post-7.1 | vs M5 close | bound | verdict |
-|---|---|---|---|---|
-| First paint, typical doc (50.4 KB) | **144.3 ms** (2nd pass **145.1 ms**) | 138.6 ms (**+5.7 ms**) | <150 ms **GATE** | **PASS** |
-| First paint, 1 MB | **1270.4 ms** | 1183.8 ms (**+86.6 ms**) | <1.7 s (informational) | PASS |
-| Content script (`.output/*/content-scripts/peekover.js`) | **315,143 B** both engines | 299,411 B (**+15,732 B, +5.25%**) | none — **stated, not gated** | — |
-| App-page chunk (`chunks/app-cheLPYz6.js`) | **360,422 B** both engines | 332,895 B (**+27,527 B, +8.27%**) | none — **stated, not gated** | — |
-| Background (`background.js`) | **3,435 B** both engines | 3,315 B (**+120 B, +3.62%**) | none — **stated, not gated** | — |
-| `pnpm zip` Chrome / Firefox | **349.17 / 349.23 kB** | 335.89 / 335.95 kB (**+13.28 / +13.28 kB**) | <2 MB | **PASS** |
-| Suites | 549 unit · 605 passed / 15 skipped browser, 74 file-instances (both engines) | 456 · 499/15/54 | — | green |
-
-- **THE <150 ms GATE HELD ACROSS TWO INDEPENDENT 7-ITERATION PASSES** — medians 144.3 / 145.1 ms, no warm iteration
-  over the bar in either (maxima 149.2 / 150.0 ms; the 150.0 is a max, not the gated median). **HEADROOM IS NOW
-  ~5 ms AND THE FLOOR MOVED:** floor across both passes is **138.9 ms**, against M5's recorded floor of 132.0 ms —
-  **+6.9 ms on the FLOOR**, and the standing protocol says signal-vs-noise is decided on the floor, not the middle.
-  Recorded as a fact, **not** interpreted here: 7.1 asserts the gate result and nothing beyond it. **The next
-  perf-touching session should assume NO headroom.** (006 is app-page-only, so the diff feature never enters this
-  gated content-script path — the growth above is 006's shared chrome/CSS, officially attributed at 8.1.)
-  **★ 8.1 CORRECTION:** the +6.9 ms floor movement was **machine state, not code** — on a quiesced machine the
-  floor returned to **133.0 ms**, M5's. The standing warning is now stronger, not weaker: **assume ZERO headroom
-  on a working-day machine.** And "the diff feature never enters the gated path" is now **proven by ablation**
-  (0 B, md5-identical) rather than argued from the module graph.
-- **The 1 MB line still prints `-> FAIL`** for the known reason (it compares the 1 MB fixture against the
-  *typical-doc* bar and self-labels the comparison informational — decisions.md 2026-07-14). Against its OWN
-  <1.7 s bound the verdict is **PASS**. Not a breach, not a regression.
-- ~~**THE IMPORT FENCE HOLDS BY MEASURED BYTES, BOTH ENGINES:** content-script grep for
-  `diffLines|jsdiff|computeDiff|enterDiff|exitDiff|renderHunk|diffWords|diffChars|structuredPatch` = **0** in
-  `.output/chrome-mv3/` AND `.output/firefox-mv3/`.~~ **★ RETRACTED AT 8.1 — THIS GREP PROVED NOTHING.** Those
-  are identifiers, and the bundle is minified; the app chunk, which *does* contain the engine, greps **0** too.
-  The claim was true but unsupported by this evidence. **The fence does hold** — re-established at 8.1 by
-  controlled ablation (**0 B, md5-identical content script**) and by markers with a firing control. See the
-  M6-close section above. `permissions: []` on both built manifests **stands** (independently checked at 8.1).
-- **`pnpm zip` still emits the third, non-bound artifact:** the Firefox run also writes
-  `peekover-0.0.0-sources.zip` (**3.93 MB**, was 3.39 MB) — the source archive AMO requires for review, not a
-  shipped package. The <2 MB bound is on the extension zips (349.17 / 349.23 kB).
-- **No port override was needed this session.** `pnpm test:browser` ran clean on the default port; the recorded
-  `EACCES ::1:63315` collision (decisions.md 2026-07-21) did not reproduce, and `vitest.config.ts` is
-  **byte-unmodified**. Both new perf harnesses host nothing (they drive `file://` and `chrome-extension://`), so
-  the collision cannot arise there by construction.
-- **`perf:toc` re-run (jsdom, informational, no gate):** rail build 3.796 ms at 1401 headings / 5.740 ms at 2000;
-  scroll-spy recompute 4.394 ms and 7.094 ms per frame. Run because 006 adds chrome to the same `mount()`
-  composition path and `diffChrome`'s placement was measured against the TOC handle. `perf:folder` and
-  `perf:flash` were **not** run — no 006 code reaches the folder-tree or theme-flash paths, and saying which
-  harnesses were skipped and why beats an unexplained gap.
-- **7.1's own new measurements** (capture cost, the isolated D-5 guard, snapshot sizes/accumulation, the diff at
-  1 MB, memory) are in the **Now** section above, with their caveats attached. They are **inputs to 7.2's human
-  decision**, and **no bound is chosen or recommended anywhere in them**.
-
-- **THE FIRST-PAINT GATE HELD ACROSS TWO INDEPENDENT 7-ITERATION PASSES, with no warm iteration over the
-  bar in either** (max 144.5 ms) — where the M4 close's own second pass had one at **150.9 ms**. Called
-  **NOISE, not regression, on the FLOOR**: the floor across both passes is **132.0 ms**, at/below M4's
-  recorded min of 132.6 ms. *(Full pass-by-pass evidence: archive § M5, and `tasks.md` 6.1.)*
-- **HEADROOM IS STILL THIN and the next perf-touching session should assume none.** The budget sits
-  **~11–14 ms from its ceiling** on this hardware (i7-13700, Windows, headless Chromium). That is not
-  better than M4's ~7–12 ms by any real amount; it is the same reading with a different noise draw.
-- **The M4 app-chunk baseline DID NOT EXIST and was MEASURED, not estimated** — a throwaway `git worktree`
-  build of `70bb8ef` (M4 close). **The method validates itself:** that build reproduced the recorded
-  content-script baseline **exactly, 288,654 B to the byte**, so the "vs M4" column for the app chunk comes
-  off a build proven to be the one the recorded numbers came from.
+- **Measurement protocol (unchanged since M1 — keep it, so numbers stay comparable):** 7 iterations, run
+  1 discarded as cold, **median of the warm 6**, min/max as spread. **No threshold is ever asserted from
+  a measurement task** (standing M1 retro rule). **Signal-vs-noise is decided on the FLOOR, not the
+  middle** — real added cost raises the floor; noise moves only the middle.
 - **Every first-paint number here is CHROMIUM.** `perf-first-paint.ts` cannot drive Firefox
   (decisions.md 2026-07-19, harness ledger). Firefox first paint is evidenced only by the human gate.
-- **The 1 MB harness line prints `-> FAIL`** because it compares the 1 MB fixture against the *typical-doc*
-  bar and self-labels the comparison informational. That is the known ~8× reading (decisions.md
-  2026-07-14), **not** a breach. Do not read it as a regression. **Re-confirmed verbatim at 6.1:**
-  `gate [1.12 MB, large-doc (informational vs typical-doc gate)]: (a) median 1183.8ms vs <150ms -> FAIL`.
-  The verdict against the number's OWN bound (<1.7 s) is **PASS**.
-- **Standing pins, all green at the M5 close (task 6.1, 2026-07-21):** `git diff tests/golden/output/`
-  **EMPTY** · `tests/manifest.test.ts` **8/8 and byte-unmodified since M2** — last touched at `3b6c575`
-  (M2 / the app-page commit), so `permissions: []` is re-proven by a test no watch task could have bent ·
-  huge-doc `sha256=8bc5094c…e61bbd` intact · `pnpm lint` clean · `pnpm test` **456** ·
-  `pnpm test:browser` **499 passed / 15 skipped, 54 file-instances, both engines** (task 4.8 contributed
-  +4 unit pins, +9 browser tests × two engines, +1 new browser file × two engines).
-- **`pnpm zip` produces a THIRD artifact that is NOT the bound, stated so it is not misread:** the Firefox
-  run also emits `peekover-0.0.0-sources.zip` (**3.39 MB**) — the source archive AMO requires for review,
-  not a shipped package. The <2 MB bound is on the extension zips (335.89 / 335.95 kB).
-- **One environment note, unchanged and still local-only:** `pnpm test:browser` hit the recorded
-  `EACCES ::1:63315` Windows reserved-port collision (decisions.md 2026-07-21). The documented
-  **local-only** `browser.api.port` override was applied for the run and **stripped before commit** —
-  `vitest.config.ts` is unmodified apart from 4.5's `fileParallelism: false`.
-- **Measurement protocol (unchanged since M1 — keep it, so numbers stay comparable):** 7 iterations, run 1
-  discarded as cold, **median of the warm 6**, min/max as spread. **No threshold is ever asserted from a
-  measurement task** (standing M1 retro rule). **Signal-vs-noise is decided on the FLOOR, not the middle**
-  — real added cost raises the floor; noise moves only the middle (the M4 precedent, applied again at 6.1).
-- **A pin certifies exactly the stage it observes.** "Golden diff EMPTY ⇒ the reading column is untouched"
-  is **FALSE** — that suite snapshots `sanitize(parse(source))`, upstream of `mount()`, and stayed empty
-  through the 5.1 chrome addition. Before citing a pin as evidence, break the property and check it goes
-  red (retro 2026-07-19, finding 3).
+- **A pin certifies exactly the stage it observes.** "Golden diff EMPTY ⇒ the reading column is
+  untouched" is **FALSE** — that suite snapshots `sanitize(parse(source))`, upstream of `mount()`, and
+  stayed empty through the 5.1 chrome addition. Before citing a pin as evidence, break the property and
+  check it goes red (retro 2026-07-19, finding 3).
+- **And a pin can be perfectly scoped and still be BLIND.** That is the other half, and it is M6's
+  (retro 2026-07-27, finding 1): **every empirical claim needs a positive control that fires under the
+  same conditions the negative claim disclaims.** Green tells you neither.
+
 
 ### Watch-mode numbers (spec 005 task 5.1, measured 2026-07-21 — `pnpm perf:watch`)
 *Same machine and protocol as the table above. **NOT a gate**: no threshold is asserted. Re-run twice at

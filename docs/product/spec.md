@@ -160,7 +160,7 @@ Legend: ✅ = exists in at least one competitor (superset requirement) · ⭐ = 
 - ✅ Custom CSS: global, per-origin, per-document
 - ✅ 9+ font choices + custom font stack, size, line height, paragraph spacing; dyslexia-friendly font option
 - ✅ Per-file/per-folder theme overrides
-- ✅ Settings export/import (JSON) + browser `storage.sync` across devices (free, no backend)
+- ✅ Settings export/import (JSON); across-device sync **deferred** — the `storage` permission is unspent, so moving settings between devices means exporting the JSON and importing it on the other machine *(Corrected 2026-07-27: this bullet read "+ browser `storage.sync` across devices (free, no backend)", which was never what shipped; see §6-17 and `docs/ai/decisions.md` 2026-07-17.)*
 
 ### F8. Editor Mode (reader-first, editor one keystroke away)
 
@@ -288,13 +288,15 @@ Kept deliberately short — each one exists because a competitor visibly fails a
 | Code hosting, issues, CI               | GitHub + GitHub Actions (free for public repos)           | $0                                         |
 | Website + docs + blog                  | **GitHub Pages** (static, HTTPS, custom domain supported) | $0                                         |
 | Extension hosting/updates              | Chrome Web Store / Edge Add-ons / Firefox AMO             | $5 one-time (Chrome); Edge & Firefox free  |
-| Settings sync                          | Browser `storage.sync`                                    | $0                                         |
+| Settings storage                       | Extension IndexedDB (local)                               | $0                                         |
 | Drafts/versions                        | IndexedDB (local)                                         | $0                                         |
 | AI                                     | On-device Chrome AI + BYOK direct calls                   | $0 to us                                   |
 | Diagram/math/export rendering          | All client-side (WASM/JS)                                 | $0                                         |
 | Publishing (Gist/GitHub/Medium/Dev.to) | User's own tokens, direct API calls                       | $0                                         |
 | Demo video                             | YouTube                                                   | $0                                         |
 | Custom domain (optional)               | e.g. a `.dev` domain                                      | ~$10–15/yr (optional; `*.github.io` works) |
+
+*(Corrected 2026-07-27: the settings row read "Settings sync | Browser `storage.sync`" — settings have lived in the extension's local IndexedDB since spec 004 and cross-device sync stays deferred, so the mechanism is corrected while this row's $0 argument is untouched; see §6-17 and `docs/ai/decisions.md` 2026-07-17.)*
 
 **Architecture rule that guarantees $0:** there is no server. Nothing to scale, secure, or pay for — and it doubles as the privacy story (Section 6, item 1).
 
