@@ -1,6 +1,74 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-27 · M7 GATE 2 — plan 007 (Mermaid + diagram cache) APPROVED, four settled answers to plan
+  §8's routed questions.** Plan 007 (`specs/007-mermaid-diagrams/plan.md`, drafted at `c44406a`) resolved
+  the spec's ten §7 risks against actual code and settled sixteen D-values, with four questions routed to
+  gate 2 in its §8: revoke-exemption copy (D-5), version-bump disposition, `architecture.md` correction
+  placement, and the spec §7-9 routing inconsistency. All four are settled here. The plan file's status
+  line stays "draft — awaiting gate 2" matching gate-1's precedent (spec 007's status line still reads
+  "draft" post-`e09520f`); gate-2 approval lives in this commit and the plan's citations in tasks.md
+  derive from this entry. Four sub-decisions:
+  - **(a) The D-5 revoke-exemption copy — settled.** The mechanism was decided at plan D-5 (content-hash
+    key carries no folder identity; exemption paid for by disclosure and by an alternative one-click
+    gesture). The wording is:
+    - **`docs/trust/PERMISSIONS.md` ledger row** (the file's five-column header order at
+      `PERMISSIONS.md:37`, following the snapshot row's precedent at `:46`):
+      **Capability:** "Diagram cache (M7 / spec 007)".
+      **Trigger (never silent):** "User opens a document containing Mermaid diagrams on the app page →
+      the reader renders each diagram once, then reuses the stored SVG until the diagram source,
+      effective theme or Mermaid engine version changes."
+      **What it can touch:** "Bounded on count, total bytes and age, whichever binds first, evicting
+      oldest-first on `lastUsed`."
+      **Storage (on-device only):** "Cached SVGs stored in the extension's own IndexedDB (`peekover`,
+      DB version 4), keyed by hash of the diagram source."
+      **How the user sees & revokes it:** '**A content-hash key carries no folder identity, so revoking
+      a folder does not clear cached diagrams that folder's documents may reference — the same Mermaid
+      source in two folders is one cached rendering.** Erased by "Clear diagram cache" in the Stored
+      data panel, or by "Wipe all data".'
+    - **Stored-data panel line** (matching the snapshot pair's shape at `storageControls.ts:241-280`):
+      `Diagrams cached: N rendered (~size) — Clear diagram cache`
+      Added as one line beneath the panel's existing snapshot disclosure.
+    Both surfaces land in the SAME commit as the first code that caches an SVG (plan D-14, group 4,
+    §3.9's "never a follow-up" rule).
+  - **(b) `mermaid` version bump: LET EVICTION reclaim stranded rows. No purge-on-upgrade.** Plan D-3
+    makes rows with old `engineVersion` unreachable via lookup; plan §4-7 flags they occupy bytes until
+    age or byte eviction reclaims them. Reasoning at plan §4-7 (Dependabot bumps are rare on a mature
+    library; age eviction covers the reclaim window; purge is a write on what should be a read path; the
+    stored-data panel line disclosed in sub-decision (a) is the user's one-click reclamation gesture; the
+    downgrade case makes any purge-on-mismatch counterproductive). No copy addition needed for the
+    version-bump case; sub-decision (a)'s general disclosure covers it. **Revisit-when:** measurement at
+    gate 3 shows stranded-row accumulation crosses a bound value's threshold at typical reading-session
+    scale.
+  - **(c) `docs/ai/architecture.md` correction lands in group 9 (retro/close), NOT in group 3 or 4.**
+    Plan §0.2-3 documented the drift: `architecture.md` self-labels as *"pre-code; describes intended M1
+    shape"* and its pipeline line names an `enhance` stage between sanitize and mount that does not exist
+    (`mount()` commits in one synchronous `replaceChildren` at `mount.ts:210`). Correcting it in group 3
+    (enhancer scaffolding) or group 4 (cache) would scope-creep those groups; correcting it in group 9
+    matches the M6 archive-pass discipline of "measure-then-correct the memory files as facts land." The
+    correction should note: **"007 group 3 landed the actual post-mount enhancement pattern; the
+    architecture.md 'enhance stage' description was pre-code and never matched code shape."** Same commit
+    as the retro entry or one adjacent commit, per the drafting session's judgment. **Revisit-when:** any
+    future milestone touches the render pipeline in a way that produces new architecture drift; the
+    correction discipline stands.
+  - **(d) Spec §7-9 routing to gate 2: RE-ROUTED to gate 3 with a named fallback.** Plan §1.3 identified
+    the timing inconsistency: spec §7-9 says the theme-flip cost at 50 diagrams, if bad, *"is a finding
+    for gate 2"* — but the measurement cannot exist until group 5's code does, which is well past gate 2.
+    Holding gate 2 open for a spike would mean either (i) writing group 5's code before gate 2 approves
+    the plan (breaks the Gear-3 cycle) or (ii) writing a throwaway spike that measures nothing the actual
+    code produces. The rational shape is: measurement happens in group 5; result is either acceptable (no
+    action, moves to §7 measurement output) or unacceptable (triggers gate-3 revisit-when with the plan's
+    named fallback of progressive visible-first re-render per plan §1.3). This preserves the spec's
+    intent (a bad flip-cost finding is a real product problem) while fixing the timing inconsistency.
+    **Revisit-when:** if group 5's measurement lands unacceptably, plan §1.3's fallback is queued as
+    gate-3 material; if acceptable, no action beyond §7's standard measurement output.
+  **What this entry does NOT reopen.** Sixteen D-values in plan 007 are settled and cited as-is by
+  tasks.md. The gate-1 dispositions (§3.4 OUT, §3.2 no content-script note, §3.2 app-page-only IS
+  persona-#1 completion) are preserved by silence per the plan's own precedent. No spec §3.x decision is
+  re-argued. **Revisit-when (whole entry):** M7a lands and the M6 retro's gate-record-viewport rule is
+  applied at the milestone-close gate; if any of the four sub-decisions above surfaces a gap at gate-3 or
+  the close walk, the revisit-whens above fire.
+
 - **2026-07-27 · M7 DIRECTION — persona #1 (AI-tool developer) completion via M7a: Mermaid + diagram
   cache; the persona-#1 QoL items deferred to M8.** The spec-coverage audit (`docs/ai/spec-coverage.md`
   2026-07-27) put persona #1's killer features at **~56% (10/18)** and every other persona under 15%; the
