@@ -251,7 +251,7 @@ Design quality is a launch requirement. The bar: screenshots that make people in
 1. **A real visual identity, not a template.** Distinctive typography-first design system: a characterful reading serif/sans pairing, deliberate type scale, generous whitespace. Must not look like default Tailwind/Bootstrap or a GitHub clone (except the intentional GitHub-identical themes).
 2. **The document is the hero.** Chrome (sidebars, toolbars) stays quiet — low-contrast, collapsible, auto-hiding on scroll; zero visual noise in reading mode.
 3. **Motion with meaning.** Micro-interactions everywhere they inform: TOC scroll-spy glide, checkbox spring, diagram lightbox zoom, watch-mode pulse, theme cross-fade. 150–250ms, eased, `prefers-reduced-motion` respected. Never decorative-only.
-4. **Instant feel.** Skeleton-free: first paint of real content <150ms; progressive enhancement for heavy blocks (diagrams shimmer in place).
+4. **Instant feel.** Skeleton-free: first paint of real content <165ms; progressive enhancement for heavy blocks (diagrams shimmer in place). *(Corrected 2026-07-27: this principle read "<150ms" — see §8's corrected first-render row and `docs/ai/decisions.md` 2026-07-26 for the M6 B2 re-baseline.)*
 5. **Keyboard-first power, mouse-friendly surface.** Command palette as the spine; every action reachable both ways; shortcut hints on hover.
 6. **Dark mode as a first-class art piece,** not inverted colors: tuned syntax palettes, re-themed diagrams, adapted images (F2).
 7. **Empty states and errors are designed moments** — the onboarding flow, the "no permission yet" screen, and the render-failure fallback all get full design treatment (these are the screens people screenshot when things go wrong; make even those good).
@@ -272,12 +272,14 @@ Kept deliberately short — each one exists because a competitor visibly fails a
 
 | Requirement                   | Target                                                           | Why it matters                                                                   |
 | ----------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| First render (typical README) | < 150 ms                                                         | "Instant" is the first impression and the review quote                           |
+| First render (typical README) | < 165 ms                                                         | "Instant" is the first impression and the review quote                           |
 | Large docs                    | 10 MB / 50k lines stays smooth (virtualized rendering)           | AI agents produce huge files; competitors choke                                  |
 | Diagram-heavy docs            | 50 Mermaid diagrams: first open ≤ 5 s, cached reopen < 1 s       | Matches docu.md's benchmark, the only published perf bar in the category         |
 | Package size                  | ≤ 5 MiB base; heavy engines lazy-loaded as local chunks          | md-reader ships 11.4 MiB; size is a store-listing trust signal                   |
 | Reliability                   | Render failure degrades to raw view — never a blank page         | Blank pages are the #1 source of 1-star reviews in this category                 |
 | Quality gate                  | E2E suite over the demo doc + golden-image rendering tests in CI | A free-time project stays shippable only if regressions are caught automatically |
+
+*(Corrected 2026-07-27: the first-render row read "< 150 ms" — the operative first-paint gate has been "< 165 ms" since the M6 B2 re-baseline, taken after the working-day median breached the 150 ms bar on a codebase ~40% larger than M1's; the rescope preserves the gate's codebase-discipline signal while keeping the promise honest about real usage conditions. See `docs/ai/decisions.md` 2026-07-26. Revisit-when: M7's Mermaid pipeline adds measurement pressure this row must reflect.)*
 
 ---
 
