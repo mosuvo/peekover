@@ -10,7 +10,7 @@
 
 ## Now (start here)
 
-**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7's Gear-3 cycle is at GATE 2: `specs/007-mermaid-diagrams/spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), and `specs/007-mermaid-diagrams/plan.md` is now DRAFTED and AWAITING GATE 2 — the human reviews the plan against the spec, then approves for `tasks.md` or returns it with revisions. It settles D-1…D-16, discharges the §7-8 sibling-checklist audit, and routes four questions to the gate (plan §8). No code and no tasks exist.**
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7's Gear-3 cycle is at GATE 3: `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` is now DRAFTED and AWAITING GATE 3 — 28 tasks across the plan's nine groups, with per-task Files/Verify lines. The human reviews the tasks against the plan, then approves for implementation (beginning at task 1.1 in a fresh session) or returns them with revisions. No code exists.**
 
 M6 shipped snapshot capture on the app page, bounded retention (count 15 / 20 MiB / 30 days), a global
 erase control, a persistent capture disclosure and an inline line-diff against any stored snapshot —
