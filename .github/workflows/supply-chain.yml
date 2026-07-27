@@ -1,0 +1,165 @@
+# Supply-chain & remote-code checks — the CI half of spec §6-4 and §6-9.
+#
+# The spec-coverage audit (docs/ai/spec-coverage.md) scored both items PARTIAL for the same
+# reason: each names CI as its evidence, and ci.yml ran lint/test/browser-test/build only.
+# This workflow is that missing evidence. It is SEPARATE from ci.yml on purpose — a supply
+# chain rots without anyone touching the code, so these checks must also run on a schedule,
+# and ci.yml is a per-change gate.
+#
+# ── THE BLOCKING / ADVISORY SPLIT, WHICH IS A DELIBERATE CALL ─────────────────────────────
+#
+# `pnpm audit` over the WHOLE tree currently reports 7 advisories (1 critical, 5 high) — and
+# every one of them is a transitive DEVdependency of wxt, eslint or @vitest/browser-playwright
+# (shell-quote, tmp, adm-zip, brace-expansion, uuid, esbuild). None is in the signed package;
+# no user ever executes them. The production tree is clean at 0.
+#
+# So: `--prod` BLOCKS, the full tree REPORTS. Wiring the full tree as a blocking gate would
+# make CI red from its first run for CVEs we cannot fix (they are upstream of wxt) — and a red
+# CI that everyone learns to ignore is worse than no CI. The dev advisories are still printed
+# on every run and in the job summary, so they are visible rather than suppressed, and
+# Dependabot raises PRs as upstream fixes land.
+#
+# Revisit-when: a dev advisory becomes reachable at BUILD time in a way that could affect the
+# artifact (a compromised bundler, not a compromised test runner), or wxt ships the fixes and
+# the full tree can be promoted to blocking. Recorded in docs/ai/decisions.md.
+
+name: Supply chain
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, Mondays 06:00 UTC — a new CVE lands without any commit of ours.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remote-code:
+    name: No remote code (§6-4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # RUNS FIRST, AND IS NOT OPTIONAL. There are currently zero dynamic imports in the
+      # shipped graph, so the repository scan below passes trivially — which makes it
+      # indistinguishable from a scanner that has silently stopped working. The self-test
+      # drives the same scanSource() over fixtures that MUST trip it and fixtures that MUST
+      # NOT, so a broken scanner fails here instead of passing silently there.
+      - name: Scanner self-test (firing control)
+        run: pnpm exec tsx scripts/check-dynamic-imports.ts --self-test
+
+      - name: Scan shipped graph for remote code
+        run: pnpm exec tsx scripts/check-dynamic-imports.ts
+
+  audit:
+    name: Dependency audit (§6-9)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # BLOCKING: the runtime tree is what ships to users.
+      - name: Audit production dependencies (blocking)
+        run: pnpm audit --prod --audit-level low
+
+      # ADVISORY: build tooling. Reported, never fails the build — see the header.
+      - name: Audit full tree (advisory — dev tooling, not shipped)
+        if: always()
+        run: |
+          echo '### Dev-tooling advisories (not in the signed package)' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          pnpm audit --audit-level moderate 2>&1 | tee -a "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  osv:
+    name: OSV scanner (§6-9)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # OSV reads pnpm-lock.yaml directly (no install needed) and covers the whole tree,
+      # including advisories that predate or postdate the npm registry's own feed. Results go
+      # to the Security tab as SARIF; the step does not fail the build for the same
+      # dev-vs-prod reason documented in the header — `pnpm audit --prod` is the blocking gate.
+      - name: Run OSV scanner
+        uses: google/osv-scanner-action/osv-scanner-action@v2.2.4
+        continue-on-error: true
+        with:
+          scan-args: |-
+            --lockfile=./pnpm-lock.yaml
+            --format=sarif
+            --output=osv-results.sarif
+
+      - name: Upload OSV results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: osv-results.sarif
+          category: osv-scanner
+
+  sbom:
+    name: SBOM (§6-9)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # SOURCE_DATE_EPOCH pinned to the commit date so the SBOM is byte-reproducible from the
+      # tag alone — anyone can re-derive the published artifact and compare (§6-10).
+      - name: Generate SBOM
+        run: |
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" pnpm exec tsx scripts/generate-sbom.ts
+          echo '### SBOM' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          head -c 2000 sbom.cdx.json >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          if-no-files-found: error
+
+      # "SBOM published per release" (§6-9): on a tag, the SBOM rides with the release
+      # artifacts rather than living only in a CI run that expires.
+      - name: Attach SBOM to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom.cdx.json

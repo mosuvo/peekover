@@ -1,6 +1,60 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-27 · §6 RELEASE-ENGINEERING GAP CLOSED IN CI, and §6-17's `storage.sync` claim CORRECTED to
+  match what has shipped since 004.** The spec-coverage audit (`docs/ai/spec-coverage.md`) scored §6-4 and
+  §6-9 PARTIAL for one shared reason: **both name CI as their evidence and `ci.yml` ran lint/test/browser-test/
+  build only** — the "verified in CI" and "npm audit + OSV + Dependabot + SBOM" clauses were claims with
+  nothing behind them. Added, in a new `.github/workflows/supply-chain.yml` (separate from `ci.yml` because a
+  supply chain rots with no commit of ours — it runs on PR, on push to main, AND weekly):
+  `scripts/check-dynamic-imports.ts`, `pnpm audit`, the OSV scanner with SARIF upload,
+  `scripts/generate-sbom.ts`, and `.github/dependabot.yml`. **Four sub-decisions, each a real call rather
+  than a default:**
+  - **(a) The audit gate is `--prod` BLOCKING, full-tree ADVISORY.** Measured, not assumed: the whole tree
+    reports **7 advisories (1 critical, 5 high)** and **every one is a transitive devDependency of `wxt`,
+    `eslint` or `@vitest/browser-playwright`** (shell-quote ×2, tmp, adm-zip, brace-expansion, uuid,
+    esbuild); the production tree is **clean at 0**. Blocking on the dev half would make CI red from its
+    first run for CVEs that are upstream of `wxt` and unfixable here — and a red CI everyone learns to
+    ignore is worse than none. The dev advisories are printed to the job summary on every run, not
+    suppressed. **Revisit-when:** a dev advisory becomes reachable at BUILD time in a way that could affect
+    the artifact (a compromised bundler, not a compromised test runner), or `wxt` ships the fixes and the
+    full tree can be promoted to blocking.
+  - **(b) The dynamic-import ban is a SPECIFIER-STATICNESS rule, not a ban on `import()`.** §6-4 bans
+    dynamic imports "of anything **not in the signed package**" — and §10 *requires* lazy dynamic imports
+    for Shiki, KaTeX/MathJax and Mermaid ("loads as a local async chunk"). A rule banning every `import()`
+    would have to be suspended the moment M7 adds highlighting, and **a rule that gets suspended is not a
+    rule**. So: a static string-literal specifier is ALLOWED (the bundler resolves it into the package at
+    build time); a computed specifier or a URL specifier is BANNED. `eval`/`new Function` are deliberately
+    NOT checked — MV3's CSP blocks both and no build of ours can re-enable them, so a grep would be theatre.
+    **Revisit-when:** a `content_security_policy` key appears in `wxt.config.ts` (then add them).
+  - **(c) The scanner ships with a SELF-TEST that CI runs FIRST, and it is not optional.** There are
+    currently **zero** dynamic imports in `src/`/`entrypoints/`, so the repository scan passes trivially —
+    **indistinguishable from a scanner that has silently stopped working**. This is retro finding 1(a)'s
+    class exactly (the import-fence grep that returned 0 whether or not the code was present), so the
+    firing control is built in: 7 fixtures that MUST trip it, 8 that MUST NOT, driven through the same
+    `scanSource()` the real scan uses. **It earned itself immediately** — the first run FAILED on the
+    template-interpolation case, a real false-negative where the masker recorded a `${…}` hole as string
+    rather than code. A scanner without it would have shipped with that hole and reported success.
+  - **(d) The SBOM generator is hand-rolled — no `@cyclonedx/cyclonedx-npm`.** Adding a dependency to
+    satisfy a *minimal-dependencies* claim is close to self-defeating, and everything needed is already in
+    `pnpm list --prod`, `pnpm licenses list --prod` and `pnpm-lock.yaml`'s integrity hashes. Output is
+    CycloneDX 1.6, **production-runtime-only** (devDeps are not in the signed package; including them would
+    bury 11 real components under ~700), and **byte-deterministic** — serial number derived from a digest of
+    the component list rather than a random UUID, timestamp honouring `SOURCE_DATE_EPOCH` — so a release
+    SBOM can be re-derived and compared, which is §6-10's reproducibility property applied to itself.
+    **Revisit-when:** the format outgrows this (VEX documents, full provenance attestations).
+  **THE SPEC CORRECTION (§6-17).** The audit found the item asserting *"settings in `storage.sync`
+  (browser-encrypted)"* — **false since 004 and never true**. Authorised by an existing record, not invented
+  here: `decisions.md` 2026-07-17 (004 gate-1) chose the local `peekover` IndexedDB to preserve
+  `permissions: []`, and **names §6.17 itself** as carrying the deferral. §6-17 now states what ships and
+  points at that entry rather than restating it (retro finding 3's pointer discipline). **Revisit-when:**
+  cross-device sync is wanted — then `storage` + PERMISSIONS.md + the manifest pin move together as a #4
+  event, and §6-17/§9/F7 are corrected back in the same PR.
+  **NOT DONE, deliberately, and named so it is not mistaken for done:** §6-10 (reproducible builds, release
+  hashes, signed tags, attestations), §6-11 (publisher account security), §6-13 (threat model) and §6-15
+  (community audit) remain ✗ — they need a release process that does not exist yet. The SBOM's
+  release-attach step is written and will fire on the first tag, but **has never run**.
+
 - **2026-07-26 · First-time-user edit expectation carried as Editor Mode input (M6 9.1 gate observation).**
   During the 9.1 walk a first-time user reasonably expected to be able to EDIT the markdown file inside the
   Peekover reader. This is not in M6 scope — Editor Mode is spec §F8, a named future milestone — but the

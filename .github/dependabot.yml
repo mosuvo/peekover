@@ -1,0 +1,62 @@
+# Dependabot — spec §6-9 ("Locked, minimal dependencies; … Dependabot; SBOM published per
+# release"). The spec-coverage audit found this file absent: .github/ held only workflows/.
+#
+# ── WHY MINOR+PATCH AUTO-PR AND MAJORS IGNORED ───────────────────────────────────────────
+#
+# Peekover has FOUR runtime dependencies and every addition is a governed act (the `diff`
+# package needed a plan gate). A major-version bump on any of them is the same weight of
+# decision as an addition — dompurify 3→4 could change the sanitizer's defaults, which is
+# AGENTS.md #3 territory, and markdown-it majors move parser output, which re-bakes every
+# golden file in tests/golden/output/. Neither should arrive as an auto-PR that a green CI
+# invites someone to merge. So majors are ignored here and handled deliberately; minors and
+# patches (where the security fixes live) are raised automatically.
+#
+# Grouping keeps the PR count survivable for a solo project: one PR per ecosystem per week
+# rather than one per package. The runtime and dev groups stay SEPARATE because they carry
+# different risk — a runtime bump ships to users and re-runs the golden/browser suites for
+# real; a dev bump touches only the build.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
+      include: scope
+    groups:
+      # The four libraries that reach a user's browser. Kept in their own PR so the golden
+      # and browser suites are read carefully rather than skimmed alongside tooling churn.
+      runtime:
+        dependency-type: production
+        update-types: [minor, patch]
+      # Build/test tooling. Not in the signed package (see the SBOM's production-only scope).
+      tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Majors are a deliberate, planned act — never an auto-PR. See the header.
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
+
+  # The workflows themselves are supply chain too: a compromised or abandoned action runs with
+  # repository credentials. Pinned actions still need updating; Dependabot does it here.
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: 'chore(ci)'
+    groups:
+      actions:
+        update-types: [minor, patch]
