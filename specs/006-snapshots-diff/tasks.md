@@ -586,7 +586,7 @@ go to the gate) and the milestone-close gate (9.1).
 
 ## 9 — Human milestone-close gate + retro (the acceptance an agent CANNOT self-certify — budgeted HERE)
 
-- [ ] **9.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** The 7/7 gate.
+- [x] **9.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** The 7/7 gate.
       Walk, on **real Chromium and real Firefox with an extension loaded** (no harness reaches these): whether the
       **persistent capture disclosure** reads as honesty or nagging (load-bearing for D-12 — the wipe-reset's
       safety rests on it re-appearing, not surviving as hidden state); whether **D-11's "changed again" line**
@@ -596,6 +596,86 @@ go to the gate) and the milestone-close gate (9.1).
       unexpected network with the Network tab open** across capture, eviction and diff.
       Verify (**human gate**): each item is walked and its verdict recorded. A "reads as broken/nagging/illegible"
       verdict is a real finding → a task added below this line, not a silent fix.
+      **PASSED 2026-07-26 — walked by a human on Chrome + Firefox, content-script AND app-page surfaces, both
+      engines where the surface exists, Network tab open with Preserve Log on, console watched. EIGHT items
+      walked. THREE layout defects found, ALL FIXED BEFORE CLOSE (recovery commits `e231941` and `8255380`),
+      plus one disclosure gap closed. TWO items carried with `decisions.md` entries. 006's CODE WORK IS CLOSED.**
+      **§1 — FIREFOX EVERYTHING + THE CHROME 006 LOOP: PASS, with two findings.** Firefox is **100% human-gate
+      coverage** for 006 — Playwright cannot load an extension into Firefox (upstream, closed out-of-scope,
+      `decisions.md` 2026-07-19) — so this walk is the *only* evidence that engine will ever have, not a
+      formality. **Firefox content-script watch: PASS with its limitation DISCLOSED honestly** (M5's `file://`
+      notice reads clearly). **Firefox app-page watch was SILENTLY ABSENT — finding, fixed at `8255380`:** no
+      watch pill appeared and the user had to reason from *"read-only + no persistence"* to *"therefore watch
+      is impossible"*. One sentence appended to `READ_ONLY_SNAPSHOT_NOTE` now names watch and capture
+      explicitly as sharing the same Firefox platform limitation. **Chrome watch on BOTH surfaces: PASS.**
+      **Snapshot capture end-to-end: PASS** — 3 snapshots captured via real external edits, picker opened with
+      its items, inline diff rendered, the exit gesture returned cleanly to the reader.
+      **§1a — THE THREE DEFECTS THIS ITEM SURFACED, each fixed before close.**
+      - **The storage panel opened INTO the layout** — a full-width flex band between header and body that
+        pushed the folder navigator DOWNWARD and shrank the reader, so a control reached from a *top-right
+        header button* produced two stacked left columns and a large empty region. **FIXED at `8255380`:**
+        the panel is now an absolute overlay anchored to `top:100%` of the header and drops down beside the
+        button that opened it. Regression test added (`tests/browser/storagePanelOverlay.browser.test.ts`),
+        **non-vacuity proven** against the unfixed shell (6 of 10 cases fail there).
+      - **The Compare pill collided with the reading column's `h1`** — the pill's `top:56px` matched the
+        column's `padding-top:56px` exactly, so the two top edges were flush. **FIXED at `e231941`:** the pill
+        moves to `top:12px` in `CONTAINED_CSS`, into the column's top 56px band, which is empty at every width.
+        Fixed **vertically on purpose** — the reader's left margin was about to move under the next fix, so a
+        horizontal tune would have been calibrated against geometry changing beneath it. Remote-load displaced
+        to the `left:176` lane, answering the objection `diffChrome.ts` had recorded and left standing.
+      - **The reader was right-aligned against the TOC rail on wide viewports — "finding A", and it was NOT in
+        this gate's premise.** Discovered during diagnostic work off the walk. It ships on **BOTH** surfaces
+        and has done **since M3 — three milestones' vintage, silently under every prior gate.** Root cause:
+        `margin:0 auto` plus the `data-toc="open"` override leaves a single `auto` margin, which absorbs the
+        entire surplus once the `max-width` clamp makes width non-auto (CSS 2.1 §10.3.3). **FIXED at `e231941`**
+        via a `--reader-measure` variable feeding an adaptive `margin-left`, floored at zero so narrow
+        behaviour is preserved byte-for-byte. Verified centred at 1920 and 2560 (centre 651 vs 651, 971 vs 971).
+      **§2 — ZERO UNEXPECTED NETWORK ACROSS THE WHOLE 006 SURFACE, BOTH ENGINES: PASS.** Capture, snapshot,
+      storage panel, diff and erase walked on Chrome and Firefox with the Network tab open and Preserve Log
+      enabled. **Zero external requests observed.** `permissions: []` on both manifests (independently
+      re-verified at 8.1 and again at B2). The trust claim is **measured here, not asserted**.
+      **§3 — D-11's "CHANGED AGAIN" LINE: PASS — it reads as useful and honest, not naggy.** The line fires
+      when the file changes while a comparison is open. Gate-3 approved this copy (`decisions.md` 2026-07-23)
+      **on the explicit condition that 9.1 judge its legibility**; that condition is now **discharged**, and
+      the approved copy is the copy that ships.
+      **§4 — INLINE DIFF AT REAL SCALE (1 MB): PASS.** Usable at **5882 hunks**. The first-frame lag (~1.2 s)
+      is noticeable but acceptable for the size; sustained scroll is smooth at ~55 ms/frame. 7.1/8.1's timings
+      are corroborated by eye — and **timing was never the question here; legibility was.**
+      **§5 — THE SNAPSHOT PICKER AT THE COUNT BOUND (15 ROWS): UNMEASURED, CARRIED — not a pass.** The walk
+      exercised the picker at **3–7 snapshots**, which passed cleanly; 15+ would have needed 16 external edits
+      with coalescer cooldown gaps that this walk did not seed. Recorded honestly as unmeasured rather than
+      inferred from the smaller depth. Carried with its revisit triggers in `decisions.md` (2026-07-26).
+      **§6 — `--del`'s SECOND SEMANTIC (the spec §3.4 amendment): PASS, ship as-is.** The two uses
+      (diff-removed strikethrough, network-status indicator) are spatially separated enough that no user would
+      read one as the other. A minor design-hygiene case, judged and closed rather than left open.
+      **§7 — APP-PAGE RESPONSIVENESS AFTER 006 (§4-3, which has ZERO automated coverage — nothing else would
+      notice): PASS.** First open cold-starts snappy; file-select, watch toggle and storage-panel open/close
+      are all responsive. **006's +27.5 KB app-page chunk growth is not perceptible.**
+      **§8 — THE FIRST-PAINT GATE RE-BASELINE (the human call 8.1 deliberately deferred here): OPTION B —
+      RE-BASELINED `<150 ms` → `<165 ms` working-day max.** The M1 gate breached on working-day machines by
+      ~5–8 ms while passing on quiesced ones; the codebase has grown ~40% since M1 set it, and the gate had
+      drifted to the **machine-state noise floor** — a green run required closing 49 browser processes.
+      165 ms keeps the gate a real discipline signal (any regression past it is code, not machine) while
+      making the promise honest about the conditions users actually have. **This is the FIRST re-baseline of
+      the M1 gate.** Landed at `8255380`: `scripts/perf-first-paint.ts` `GATE_MS`, the `decisions.md` entry
+      (2026-07-26) with its revisit-when, and the strike-through + correction in progress.md § Baselines.
+      Two-pass verification against the new bar: **137.5 / 134.1 ms PASS.**
+      **§9 — THE TWO CARRIED ITEMS (shipped as-is, recorded so they survive the milestone; both in
+      `decisions.md` 2026-07-26, each with revisit triggers).**
+      - **A first-time user expected to EDIT the `.md` file inside the reader.** Editor Mode is spec **§F8**,
+        a named future milestone, so this is out of M6 scope — but the *framing* 9.1 surfaced (the reader
+        surface is where editing feels natural, not a mode toggle) is §F8 design input worth carrying.
+        Matches M5's watch-pill-discoverability precedent: ship, record, revisit when the surface lands.
+      - **The 15-row picker, per §5 above.** Theoretically sound (`readerCss.ts:401`'s
+        `max-height:min(46vh,320px)`, an assumption CC named with numbers at D-8), **behaviourally unverified.**
+      **★ THE RUNNING GATE SCORE IS NOW 8/8.** It was **7/7 across M1–M5**. **M6 contributes THREE defects
+      found and fixed** — and the sharp fact is *why* the automated stack missed all three: Playwright's
+      default viewport never reproduced the wide-viewport layout, and the storage panel's positioning had **no
+      regression test at all**. One of the three (finding A) **had been shipping since M3 and passed under
+      three prior gates** — it took a human at a wide monitor. Eight milestone-shipping defects, all eight
+      caught here, none escaping. The gate keeps catching the class of thing only a human walk finds.
+      **9.2 (the retro) is NOT written here and `docs/ai/retro.md` is untouched by this commit** — that is the
+      next task, deliberately in a fresh session after the gate.
 
 - [ ] **9.2 Retro (M6 close).** Run `/retro`: append to `docs/ai/retro.md` — the lessons that change how the next
       milestone runs, newest first, and what the gate caught (its most valuable content).

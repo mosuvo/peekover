@@ -10,9 +10,23 @@
 
 ## Now (start here)
 
-> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION IS COMPLETE: **groups 1–8 CLOSED; only group 9 (the human gate + retro) remains.**
-> **Nothing is in progress and nothing is blocked. Task 8.2 — DOCS + MEMORY RECONCILE — has landed, and GROUP 8 CLOSES**
-> (this commit). It is a **COHERENCE PASS, not new writing**: the retro (9.2) is where M6's findings, the two retractions and
+> ### M6 (spec 006 — snapshots + diff) IS OPEN — IMPLEMENTATION IS COMPLETE: **groups 1–8 CLOSED; 9.1 CLOSED (walk record in `tasks.md`); only 9.2 (the retro) remains.**
+> **Nothing is in progress and nothing is blocked. Task 9.1 — THE MILESTONE-CLOSE HUMAN GATE — has been walked and PASSED**
+> (2026-07-26, Chrome + Firefox, both surfaces, Network tab open). **The full record is the landing block under `tasks.md` 9.1
+> and is deliberately not restated here.** The headline: **the running gate score is now 8/8** (it was 7/7 across M1–M5). The
+> walk caught **three real layout defects the automated stack could not see** — the storage panel opening into the layout, the
+> Compare pill colliding with the reading column's `h1`, and the reader right-aligning against the TOC rail on wide viewports.
+> All three are **fixed before close**, at **`e231941`** (reader centring + pill placement) and **`8255380`** (storage panel
+> overlay + the Firefox app-page disclosure gap the walk also found). **The first-paint gate was re-baselined `<150` → `<165` ms
+> working-day** at `8255380` — the human call 8.1 deferred here; see § Baselines below and `decisions.md` 2026-07-26.
+> **Two items ship carried, not fixed**, each with revisit triggers in `decisions.md` (2026-07-26): the **first-time-user edit
+> expectation** (Editor Mode is spec §F8) and the **15-row snapshot picker, UNMEASURED** — the walk reached 3–7 snapshots and
+> says so rather than inferring the count bound from a shallower depth.
+>
+> <details><summary>Task 8.2 — DOCS + MEMORY RECONCILE (landed previously; CLOSED group 8)</summary>
+>
+> **Task 8.2 — DOCS + MEMORY RECONCILE — has landed, and GROUP 8 CLOSES**
+> (a previous commit, `5ea9723`). It is a **COHERENCE PASS, not new writing**: the retro (9.2) is where M6's findings, the two retractions and
 > the discipline lessons get written. 8.2 read the memory files against the shipped tree with a critical eye and reports:
 > - **`decisions.md` — EVERY ENTRY STILL HOLDS. Nothing edited, nothing appended.** Checked newest-to-oldest against what 8.1
 >   measured. D-8's bound values behave as reasoned (7.3's re-run reproduced exactly at 8.1: 13 snapshots at both fixtures,
@@ -40,6 +54,7 @@
 > as the next human gate (four gates ago — 9.1 is next); the roadmap line still pointed at 006 as **← NEXT** while 006 is a
 > commit away from closing; and the header date read 2026-07-25. All four are pointer corrections — **no measurement, no
 > finding and no decision was reworded, and § Baselines was not touched at all.**
+> </details>
 >
 > <details><summary>Task 8.1 — MEASUREMENT CLOSE (landed previously; ITS FULL RECORD IS THE BASELINES SECTION BELOW, deliberately not duplicated here)</summary>
 >
@@ -294,40 +309,26 @@
 > </details>
 > </details>
 >
-> **THE NEXT ACTION IS TASK 9.1 — THE MILESTONE-CLOSE HUMAN GATE. AN AGENT CANNOT SELF-CERTIFY IT, and adding more tests
-> does not remove it** (`decisions.md` 2026-07-19, the standing gate procedure — build FRESH production output per engine,
-> load unpacked/temporary, **both surfaces**, **Network tab open throughout**, console watched, walked in risk order).
-> **The code is done; what is left is the acceptance nothing automated can reach.** The score to defend is **7/7**.
-> **What 9.1 must walk, hardest-to-automate first (tasks.md 9.1 is the operative list; this is its shape):**
-> - **Firefox EVERYTHING — both surfaces, both engines.** Playwright **cannot** load an extension into Firefox (upstream,
->   closed out-of-scope — `decisions.md` 2026-07-19), so **Firefox is 100% human-gate coverage** for all of 006. This is the
->   single largest uncovered area, not a formality.
-> - **ZERO UNEXPECTED NETWORK with the Network tab open**, across capture, eviction *and* diff — the whole 006 surface.
-> - **The persistent capture disclosure (§3.1) — honesty or nagging?** Load-bearing for **D-12**: the wipe-reset's safety
->   rests on the disclosure *re-appearing*, not on surviving as hidden state.
-> - **D-11's "changed again" line — useful or noise?** Gate-3 approved this copy (`decisions.md` 2026-07-23) **on the
->   explicit condition that 9.1 judges its legibility**; 6.3 landed it naming 9.1 as its judge. A *"reads as noise"* verdict
->   is a **finding → a task below 9.1**, never a silent removal.
-> - **The diff affordance's discoverability** (6.2's pill + picker). Note the precedent: M5's gate returned *"I would not
->   have found the watch pill unaided"* and it **shipped as-is, carried** — a discoverability verdict is a real answer.
-> - **Inline diff legibility at real document sizes.** 7.1/8.1 measured **1157.4 → 1202.2 ms** to enter at 1 MB with a
->   **388–442 ms first scroll frame** — but **timing is not usability**, and only the gate can say whether 5882 blocks read.
-> - **The snapshot picker at the count bound — 15 rows.** It scrolls internally by design (`readerCss.ts:401`,
->   `min(46vh,320px)`); whether that reads as "one calm list" at full depth is an eye question.
-> - **`--del`'s SECOND MEANING** — diff-removed vs the lit network indicator (a spec §3.4 amendment is noted).
-> - **App-page responsiveness after 006 (§4-3)** — it has **ZERO automated coverage**; nothing else will notice.
-> - **Carried in from 8.1, a gate question rather than a defect:** the <150 ms first-paint gate now sits **at the
->   machine-state noise floor** (a green run required closing 49 browser processes). Whether it should be re-phrased
->   spread-aware or re-sited is a **human call at 9.1**; 8.1 deliberately did not touch the M1 gate.
-> **THEN 9.2 — THE RETRO — CLOSES THE MILESTONE**, and that is where M6's substantial writing lives: the findings, **both
-> retractions** (the vacuous fence grep; the coalescer undercount), and the discipline lessons. 8.2 deliberately wrote none
-> of it. 9.2 also moves 006 into § Closed milestones and re-points the roadmap.
-> **Still unmeasured, carried into 9.x as reasoning rather than fact:** whether the count bound actually stops growth at 15
+> **THE NEXT ACTION IS TASK 9.2 — THE RETRO — AND IT CLOSES THE MILESTONE. WRITE IT IN A FRESH SESSION**, per the convention
+> M4's archive pass established: the retro is written *after* milestone close, by a session that is **not** the one that just
+> closed it. **9.1 is done and this is not that task.** 9.2 is where M6's substantial writing lives — the gate walk and the
+> Now section above are the record, not the lessons.
+> **What 9.2 owes an answer to:** M6's findings; **both retractions** from 8.1 (the vacuous import-fence grep; the coalescer
+> undercount); and the discipline items surfaced across the milestone and its recovery — **`ch` in a margin calc cost ~28 ms
+> of first paint** where the same unit in `max-width` is free; **CSS comments inside a template literal SHIP** (the minifier
+> cannot reach string content — +1,873 B before the prose moved into the `.ts` doc comment); **A-B-A ordering against a
+> same-session control** before attributing a perf delta to code rather than machine state; **non-vacuity verification** of
+> every new test and every grep (prove the control fires, or ablate and diff the bytes); **coupling guards scoped to the
+> coupling** rather than to the file; **test-per-file audited against its siblings** (B1's finding 2 — the clearance loop
+> checked six chromes and the rail but not the reading column, which is why the sweep was green and wrong); and roughly a
+> dozen smaller items tracked through the milestone. **9.2 also moves 006 into § Closed milestones and re-points the roadmap**
+> — the § Up next 006 block below still reads as pre-milestone guidance and is 9.2's to replace.
+> **Still unmeasured, carried into 9.2 as reasoning rather than fact:** whether the count bound actually stops growth at 15
 > (it needs >14 rendered edits; `EDIT_SEQUENCE` is 12), so `decisions.md`'s "~17 snapshots of 1 MB fit in 20 MiB" stays
 > arithmetic. **Re-run either harness any time:** `pnpm perf:snapshot-capture -- --no-build`, `pnpm perf:diff -- --no-build`
 > — neither emits an exit-code gate, by design.
 > **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session acted on stale state;
-> **8.1 lagged it by one and 8.2 caught it — see the gap noted at the top of this section**).
+> **8.1 lagged it by one and 8.2 caught it — see the gap noted in the 8.2 fold above**).
 
 ## Up next
 
@@ -437,16 +438,19 @@ measurement-driven or explicitly deferred.*
   `waitForScrollable`, not sit beside it.
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
-**006 snapshots + diff ← OPEN, implementation complete, at its close gate (9.1)** · … full order in
+**006 snapshots + diff ← OPEN, implementation complete, human gate 9.1 PASSED 8/8; only the retro (9.2) remains** · … full order in
 `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
 
-- **NOTHING IS BLOCKED — but 006 IS NOW WAITING ON A HUMAN.** The next human gate is **006's task 9.1, the
-  milestone-close gate** (see § Now). Everything before it has run and is recorded: M5's three gates
-  (2.3, 5.2, 7.1), and 006's spec gate 1 (2026-07-22), plan gate 2 + gate-3 product decisions (2026-07-23)
-  and D-8's bound-value decision gate at 7.2 (2026-07-26). *(Corrected at 8.2: this bullet still named
-  "006's spec gate 1" as next, four gates after it ran.)*
+- **NOTHING IS BLOCKED, AND 006 IS NO LONGER WAITING ON A HUMAN — task 9.1, the milestone-close gate, was
+  WALKED AND PASSED 2026-07-26** (see § Now; the full record is the landing block under `tasks.md` 9.1).
+  **There is no human gate outstanding for 006**; what remains is 9.2, the retro, which is agent work.
+  Every 006 gate has now run and is recorded: spec gate 1 (2026-07-22), plan gate 2 + gate-3 product
+  decisions (2026-07-23), D-8's bound-value decision gate at 7.2 (2026-07-26) and the milestone-close gate
+  9.1 (2026-07-26) — alongside M5's three (2.3, 5.2, 7.1). *(Corrected at 8.2, which found this bullet still
+  naming "006's spec gate 1" as next four gates after it ran; corrected again at 9.1, which found it naming
+  9.1 as pending on the very commit that closed 9.1.)*
 - **GAPS IN AUTOMATED COVERAGE — closed as *findings*, still open as *coverage*. Plan for these; do not
   assume CI will catch a regression in them.** Per the harness ledger (decisions.md 2026-07-19 + the
   2026-07-21 addenda) there is **no roadmap to any of them**:

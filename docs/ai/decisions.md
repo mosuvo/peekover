@@ -1,6 +1,31 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-26 · First-time-user edit expectation carried as Editor Mode input (M6 9.1 gate observation).**
+  During the 9.1 walk a first-time user reasonably expected to be able to EDIT the markdown file inside the
+  Peekover reader. This is not in M6 scope — Editor Mode is spec §F8, a named future milestone — but the
+  observation is worth carrying rather than losing to a gate note. **Why record it:** the same expectation
+  almost certainly recurs for every first-time user until Editor Mode lands, and §F8's design work will
+  benefit from the specific framing 9.1 surfaced (the reader surface is where editing feels natural, not a
+  mode toggle or a separate app). This matches M5's watch-pill-discoverability precedent (`decisions.md`
+  2026-07-21) — ship-as-is, record, revisit when the surface lands. **Revisit-when:** §F8 (Editor Mode)
+  enters spec drafting for its own milestone, OR a first-run onboarding surface lands that could hang an
+  expectation-setting hint on the reader.
+
+- **2026-07-26 · Snapshot picker legibility at count-bound (15 rows) UNMEASURED at 9.1, carried.** The 9.1
+  walk exercised the picker at 3-7 snapshots which passed cleanly (screenshots in the walk record). 15+
+  snapshots would have required 16 external edits with coalescer cooldown gaps between them, which the walk
+  did not seed. The picker's internal scrolling is designed against `readerCss.ts:401`'s
+  `max-height:min(46vh,320px)`, and CC's arithmetic during D-8 selection said it scrolls cleanly at 15 rows
+  — but the behavioural verification is UNMEASURED. **Why ship-as-is:** the layout is theoretically sound (a
+  design assumption CC named with numbers, not a guess), 006's watch-then-many-edits workflow means a user
+  naturally accumulates snapshots over time (the case will surface itself in real use), and holding M6 for a
+  16-edit seed script that only exercises this one scroll case is disproportionate to the risk.
+  **Revisit-when:** (a) a real user or Session's Playwright fixture accumulates 15+ snapshots on a single
+  document and picker behaviour is directly observable, OR (b) a small seed-snapshots CLI helper is added to
+  `scripts/` that could exercise the count-bound case reproducibly (worth ~15 min of M7 scaffolding), OR (c)
+  a defect report from the field names picker legibility at count-bound as an issue.
+
 - **2026-07-26 · First-paint gate re-baselined to <165 ms typical (M6 9.1 human decision).** The M1 gate at
   <150 ms breached on working-day machines by ~5-8 ms while passing on quiesced machines — the codebase grew
   ~40% since M1 and the gate now sits at the machine-state noise floor. Re-baselining to 165 ms preserves the
