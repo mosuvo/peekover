@@ -10,8 +10,7 @@
 
 ## Now (start here)
 
-**M6 (spec 006 — snapshots + diff) closed 2026-07-27. Nothing is in progress and nothing is blocked.
-The next action is M7's Gear-3 spec kickoff, in a fresh session.**
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7's Gear-3 cycle has STARTED: `specs/007-mermaid-diagrams/spec.md` is DRAFTED and AWAITING GATE 1 (the human reviews it against `decisions.md` 2026-07-27's M7 direction, then approves for `plan.md` or returns it with revisions). No code, no plan, no tasks exist.**
 
 M6 shipped snapshot capture on the app page, bounded retention (count 15 / 20 MiB / 30 days), a global
 erase control, a persistent capture disclosure and an inline line-diff against any stored snapshot —
