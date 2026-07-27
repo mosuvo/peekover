@@ -2,7 +2,7 @@
 
 _Updated: 2026-07-11 (pre-code; describes intended M1 shape — update as reality diverges)_
 
-## Extension layout (WXT/MV3)
+## Extension layouts (WXT/MV3)
 
 - `entrypoints/content.ts` — detects raw markdown contexts (file://, text/markdown, raw URLs),
   mounts the reader UI in an isolated container (shadow DOM) over the page.
