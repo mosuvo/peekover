@@ -1,6 +1,40 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-27 · M7 DIRECTION — persona #1 (AI-tool developer) completion via M7a: Mermaid + diagram
+  cache; the persona-#1 QoL items deferred to M8.** The spec-coverage audit (`docs/ai/spec-coverage.md`
+  2026-07-27) put persona #1's killer features at **~56% (10/18)** and every other persona under 15%; the
+  single largest hole in persona #1 is **F2 (Math & Diagrams) at 0%** — no `mermaid` dependency has ever
+  been installed, and AI agents materially produce Mermaid diagrams in the specs/plans this product
+  renders. So the gap is not "polish for existing users" but **a hole in this product's specific value** —
+  not rendering the diagrams the agents write is exactly the wrong shape of gap for the "watch your AI
+  produce specs" story. **M7a SCOPE:** `mermaid` runtime dependency (a governed act, AGENTS.md #3,
+  matching M6's `diff` addition), lazy-loaded per §10's rule, wired into the existing enhance step;
+  **plus** F2's hash-keyed diagram cache (size cap, one-click clear, docu.md parity) — **BOTH from the
+  start, not sequentially**, because §8's diagram-heavy target (50 diagrams: first open ≤5s, **cached
+  reopen <1s**) implicitly requires the cache and shipping Mermaid without it breaches the target on
+  measurement. **DEFERRED TO M8** with revisit-whens: compare-any-two-files (F6), agent-file awareness
+  (F6 — `CLAUDE.md`/`AGENTS.md`/`.cursorrules` recognition + tuned defaults), table tools in reading view
+  (F5 — sort/filter/copy-as-CSV). **Why the deferral is deliberate, not scope-timidity:** four features in
+  one milestone is the M1 skeleton-shape not the M5/M6 focused-theme shape, and M6's retro finding 4
+  (sibling-checklist audit) is easier to apply cleanly to one coherent surface than to four; Mermaid+cache
+  is one coherent theme with one acceptance criterion (the §8 target), and the deferred items are
+  persona-#1 polish rather than core-workflow gaps. **Why persona #2 (Developer, ~5%) is NOT M7's
+  direction despite higher marginal work-per-percentage-point (Shiki + remote URLs would move persona #2
+  from ~5% to ~30-40%):** persona #2's needs are competitor-parity catch-up; persona #1's Mermaid gap is
+  *this product's specific value story failing*, and a bootstrapping product wins by making its own users'
+  primary workflow whole before chasing a wider audience. Persona #2 unlock is queued for M8 or M9
+  depending on M7's outcome. **Why Editor Mode (§F8, walk-finding at M6 9.1) is not M7's direction despite
+  the strongest single first-user expectation:** Editor Mode is a full milestone of CodeMirror 6 + F8's
+  ~21 sub-items; even at M8 it is unlikely to fit alongside anything else. Named as the
+  next-large-milestone candidate after persona #1 completion, not deferred by comparison to M7a.
+  **REVISIT-WHEN:** (a) M7a lands and M8 planning weighs persona-#1 QoL vs persona-#2 unlock vs Editor
+  Mode against updated audit numbers; or (b) Mermaid's byte cost (~400 KB gzipped, likely ~doubles the
+  current ~349 KB zip) breaches §8's ≤5 MiB package budget when measured, at which point the lazy-load
+  boundary or a subset-build strategy becomes gate-3 material; or (c) first-paint regression on the reader
+  path from the Mermaid pipeline shows up in the gated typical fixture, at which point §10's lazy-load
+  rule needs a stricter definition than "loads as a local async chunk."
+
 - **2026-07-27 · §6 RELEASE-ENGINEERING GAP CLOSED IN CI, and §6-17's `storage.sync` claim CORRECTED to
   match what has shipped since 004.** The spec-coverage audit (`docs/ai/spec-coverage.md`) scored §6-4 and
   §6-9 PARTIAL for one shared reason: **both name CI as their evidence and `ci.yml` ran lint/test/browser-test/
