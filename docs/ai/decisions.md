@@ -1,6 +1,40 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-28 · M7 D-3 / D-13 AMENDMENT — `engineVersion` is sourced from the resolved
+  `mermaid/package.json`, because mermaid 11.16.0 exposes no runtime version. Two sealed D-values narrowed
+  in MECHANISM, not intent.** Plan 007's D-3 specifies the cache key's third component as *"read from the
+  engine's own exported version at runtime, never a hardcoded constant"*, and the plan's render pseudocode
+  composes the key with `... + SEP + engine.version`. **That mechanism does not exist:** verified against the
+  installed package, mermaid 11.16.0's dist entry exports only `{ mermaid_default as default }`, whose members
+  carry no `version`; the number appears only build-inlined inside the renderer and in a lazy `infoDiagram`
+  plugin chunk's un-re-exported `getVersion()`. There is no `engine.version` to read. **The resolution:**
+  `engineVersion` is sourced from the resolved `mermaid/package.json` `version` field — a static-literal
+  subpath import inside `diagramEngine.ts`, inlined by the bundler at build time from the *resolved* package
+  (confirmed to build under WXT/Vite and to yield `11.16.0`). **This is not the "hardcoded constant" D-3
+  forbids:** no human writes the number, and it re-derives from the resolved dependency on every build, so a
+  Dependabot bump that moves the resolved version moves the key. D-3's stated reason for putting the version
+  in the key at all — *"a constant goes stale silently on the Dependabot bump"* (§3.6) — is honoured; only the
+  literal "read the engine's exported version at runtime" mechanism, which mermaid does not provide, is
+  replaced. The entry is honest that this is a build-time inline, not a runtime property read, because no
+  runtime read exists. **Amendment to D-13** (*"`mermaid` is imported by EXACTLY ONE module ... via the
+  literal `import('mermaid')`"*): the single-**engine**-importer fence stands unchanged — mermaid the engine
+  is still imported in exactly one place, `diagramEngine.ts`, and the version read pulls no engine code and no
+  lazy engine chunk. D-13 is extended to permit, in that same module and nowhere else, **one additional
+  static-literal specifier — `mermaid/package.json` — for version metadata only.** Being a static string
+  literal, the dynamic-import scanner permits it on the same specifier-staticness rule that permits
+  `import('mermaid')` (decisions.md 2026-07-27 §6 side-quest (b)); task 1.2 verifies the scanner stays green
+  on both. **Preserves gate-2 sub-decision (b)** (2026-07-27, M7 GATE 2): letting eviction reclaim stranded
+  rows on a version bump depends on the key changing on that bump, which the resolved-package read delivers
+  exactly. **Cited by:** task 1.2 (the version accessor reads this source) and task 4.1 (the key composition
+  reads `engineVersion` from here, not the non-existent `engine.version`). **What this does NOT change:** no
+  other D-value, no gate-1/gate-2 disposition, no spec §3.x decision; `plan.md` stays sealed and untouched —
+  this bank is the amendment of record, per the gate-3-banking and §1.1-dompurify-correction precedent.
+  **Revisit-when:** a future mermaid major exposes a genuine runtime version export (the subpath read can then
+  be simplified toward D-3's original mechanism and D-13's second-specifier extension retired); or a future
+  build toolchain stops resolving the `mermaid/package.json` subpath import (the resolved version then moves
+  to a build-time `define`, which touches D-16's `wxt.config.ts` seal instead and is re-banked).
+
 - **2026-07-28 · M7 GATE 3 — tasks 007 (Mermaid + diagram cache, M7a) APPROVED; implementation has begun at
   task 1.1.** `specs/007-mermaid-diagrams/tasks.md`, drafted at `bfa131e` (28 tasks across the plan's nine
   groups, each with its own Verify contract and — bar 9.1's human close-gate walk, which names no files — its
