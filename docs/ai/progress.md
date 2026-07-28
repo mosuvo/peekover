@@ -10,11 +10,11 @@
 
 ## Now (start here)
 
-**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3 (banked in `decisions.md`'s M7 GATE 3 entry — **this commit**; the tasks file's "DRAFT awaiting gate 3" status line stays, by the gate-1/gate-2 precedent). TASK 1.1 IS DONE (`2159e5c`): `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 (`diagramEngine.ts` — the one importer, the literal specifier, the feature-detect gate) IS NEXT. `mermaid` is imported by nothing at 1.1 by design; 1.2 writes the sole importer and 1.3 is the ablation that proves the lazy chunk.**
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3 (banked in `decisions.md`'s M7 GATE 3 entry — `66634fa`; the tasks file's "DRAFT awaiting gate 3" status line stays, by the gate-1/gate-2 precedent). TASK 1.1 IS DONE (`2159e5c`): `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 IS DONE (this commit): `src/render/diagramEngine.ts` — the ONE module naming `import('mermaid')` (a static string literal the scanner permits), the feature-detect that keeps a fence-free document from ever evaluating it, D-6 step 3's configuration, and `engineVersion()` sourced from a STATIC `mermaid/package.json` import per the D-3/D-13 amendment (`bddd5af`) — mermaid exposes no runtime version. Imported by NOTHING, so both bundles are md5-identical to 1.1's. TASK 1.3 (THE ABLATION — the scratch `appShell.ts` reference, four outputs, every byte accounted) IS NEXT, and 1.2 hands it two named items: the static `mermaid/package.json` import inlines the WHOLE package.json, not a tree-shaken `version` — a named byte in 1.3's sub-block accounting; and the build-output proof that the static form emits NO bare specifier and NO orphan chunk is 1.3's, because at 1.2 the module is reachable from nothing and there is no emitted output to inspect.**
 
 **★ BOTH FLAGS RAISED BY TASK 1.1 ARE NOW CLOSED — gate 3's approval banked (below), the SBOM defect
-this commit. Neither ever blocked 1.2.**
-- **CLOSED — Gate 3's approval IS NOW BANKED**, in `decisions.md` (the M7 GATE 3 entry, **this commit**).
+fixed at `1a202fd`. Neither ever blocked 1.2.**
+- **CLOSED — Gate 3's approval IS NOW BANKED**, in `decisions.md` (the M7 GATE 3 entry, `66634fa`).
   M6 used a different shape: it landed `0e24f15 docs(tasks): M6 gate 3 — tasks 006 (snapshots + diff)
   approved and landed` **before** its task 1.1 (`a72f27f`), tasks and approval together. M7's tasks had
   already landed separately at `bfa131e` as an explicit draft, so only the written approval was
@@ -24,7 +24,7 @@ this commit. Neither ever blocked 1.2.**
   post-`e09520f`; plan 007 still reads "draft — awaiting gate 2" post-`cab93c7`). **The decisions entry is
   the approval of record — do not "fix" the status line.**
 - **CLOSED — `scripts/generate-sbom.ts` UNDER-REPORTED the production tree** (a latent defect that
-  mermaid's depth was the first tree to expose), fixed this commit: 90 → 120 components, dedup decoupled
+  mermaid's depth was the first tree to expose), fixed at `1a202fd`: 90 → 120 components, dedup decoupled
   from descent. See § Blockers for the root cause and the proof.
 
 M6 shipped snapshot capture on the app page, bounded retention (count 15 / 20 MiB / 30 days), a global
@@ -141,7 +141,7 @@ from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPL
 ## Blockers / open questions
 
 - **NOTHING IS BLOCKED. M7's three Gear-3 gates have all run AND ARE ALL BANKED IN WRITING** (gate 1
-  `e09520f`, gate 2 `cab93c7`, gate 3 in `decisions.md`'s M7 GATE 3 entry — banked this commit, closing
+  `e09520f`, gate 2 `cab93c7`, gate 3 in `decisions.md`'s M7 GATE 3 entry — banked at `66634fa`, closing
   the flag task 1.1 raised; `tasks.md`'s "DRAFT awaiting gate 3" status line stays by precedent). **The next
   human gate is 8.4**, the cache bound-values / typical-case-target decision gate, and it is a long way
   out — groups 1–7 land first. M6's gates are all closed and recorded (spec gate 1 2026-07-22, plan
@@ -152,7 +152,7 @@ from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPL
   the next time anything ships.)*
 - **RESOLVED, noted once so it is not re-opened: `scripts/generate-sbom.ts` no longer under-reports the
   production tree.** Found by 007 task 1.1 (which correctly did not take it — the file is outside 1.1's
-  commit fence), fixed **this commit** as its own act. **Root cause: `collect()` conflated DEDUP with
+  commit fence), fixed at **`1a202fd`** as its own act. **Root cause: `collect()` conflated DEDUP with
   DESCENT** — one `if (!acc.has(id))` gate both created the component and recursed, so a package was
   walked only on FIRST SIGHT, and `pnpm list --json` emits a repeated package **shallow** at its first
   occurrence in traversal order and **full** at exactly one later one. First sight is therefore precisely
