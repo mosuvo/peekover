@@ -81,9 +81,13 @@ decision gate:** 8.4, the bound values and the typical-case target.
       is recorded, not acted on: `katex` arrives transitively and **math stays on §6's IS-NOT list**.
       Files: `package.json` · `pnpm-lock.yaml`
       Verify: `dependencies` is **exactly five** (asserted, not eyeballed); licence + install-script result per
-      component; `pnpm audit --prod --audit-level low` **EXIT=0** pasted; **`pnpm list --prod dompurify`
-      resolves to exactly ONE version** — control: the same query over the full tree, which is expected to show
-      the dev copies, so a one-line answer is not mistaken for a broken query; SBOM component count + licence
+      component; `pnpm audit --prod --audit-level low` **EXIT=0** pasted; **`pnpm why --prod dompurify`
+      resolves to exactly ONE version across the production tree** — the transitive-aware form, because D-1's
+      dedupe gate concerns a *transitive* second copy that a depth-0 `pnpm list --prod dompurify` cannot
+      surface (that form is insufficient and is not used); firing control (finding 1): the same `pnpm why`
+      shape against a package known to carry TWO versions (e.g. `esbuild` in the full tree) must show both,
+      proving the query can distinguish — so a one-version dompurify result is a genuine
+      singular, not a blind query; SBOM component count + licence
       roll-up recorded. `pnpm lint` EXIT=0 · unit **549** unchanged · Golden EMPTY · manifest green **2975 B** ·
       `permissions: []` both engines · `wxt.config.ts` byte-identical (D-16). [§3.12; plan §4-2/3/4]
 
