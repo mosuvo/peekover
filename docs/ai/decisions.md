@@ -1,6 +1,31 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-28 · M7 GATE 3 — tasks 007 (Mermaid + diagram cache, M7a) APPROVED; implementation has begun at
+  task 1.1.** `specs/007-mermaid-diagrams/tasks.md`, drafted at `bfa131e` (28 tasks across the plan's nine
+  groups, each with its own Verify contract and — bar 9.1's human close-gate walk, which names no files — its
+  own Files line), was reviewed against plan 007 and approved to begin implementation. **The tasks.md status
+  line stays "DRAFT awaiting gate 3" and THIS entry is the approval of record** — matching the in-milestone
+  precedent that gate approvals live in the bank, not the artifact's status line (spec 007 still reads "draft"
+  post-gate-1 `e09520f`; plan 007 still reads "draft — awaiting gate 2" post-gate-2 `cab93c7`, approval banked
+  in that commit). **Why a decisions.md entry and not M6's shape** (`0e24f15 docs(tasks): M6 gate 3 — tasks 006
+  (snapshots + diff) approved and landed`, which landed tasks and approval in one commit before M6's task 1.1):
+  M7's tasks already landed separately at `bfa131e` as an explicit draft, so "approved and landed" cannot be
+  replicated — the tasks were in the tree and only the written approval was outstanding. Task 1.1 (`mermaid`
+  added, `2159e5c`) proceeded on the in-session approval; this entry closes the written gap so a future
+  context-loss session verifies gate 3 against the repo, not a chat. **What this approves:** the tasks as
+  drafted, with plan's sixteen D-values and the four gate-2 sub-decisions cited-not-re-argued, spec §6's IS-NOT
+  fence intact, and the gate-1 dispositions (§3.4 OUT · §3.2 no content-script note · §3.2 app-page-only IS
+  persona-#1 completion) preserved by silence — the "Locked by the gates" contract in tasks.md's own preamble.
+  **What this does NOT reopen:** no D-value, no sub-decision, no spec §3.x decision; a task that re-argues any
+  is a scope-reopen. **One correction is outstanding from 1.1's review, tracked separately and NOT applied
+  here:** tasks.md §1.1's `pnpm list --prod dompurify` dedupe control is a depth-0 query that cannot surface a
+  transitive duplicate (1.1 discharged the gate with `pnpm why --prod dompurify` plus a positive probe on
+  esbuild instead); the §1.1 Verify line is to be corrected before a later task re-cites the depth-0 form, as
+  its own act. **Revisit-when:** implementation surfaces another task whose contract cannot be executed as
+  written (banked at the point of discovery, not propagated forward); or the §7-9 flip-cost finding routed here
+  per gate-2 (d) reaches its gate-3 disposition at 5.2 / 8.4.
+
 - **2026-07-27 · M7 GATE 2 — plan 007 (Mermaid + diagram cache) APPROVED, four settled answers to plan
   §8's routed questions.** Plan 007 (`specs/007-mermaid-diagrams/plan.md`, drafted at `c44406a`) resolved
   the spec's ten §7 risks against actual code and settled sixteen D-values, with four questions routed to

@@ -10,15 +10,18 @@
 
 ## Now (start here)
 
-**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3. TASK 1.1 IS DONE — this commit: `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 (`diagramEngine.ts` — the one importer, the literal specifier, the feature-detect gate) IS NEXT. `mermaid` is imported by nothing at 1.1 by design; 1.2 writes the sole importer and 1.3 is the ablation that proves the lazy chunk.**
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3 (banked in `decisions.md`'s M7 GATE 3 entry — **this commit**; the tasks file's "DRAFT awaiting gate 3" status line stays, by the gate-1/gate-2 precedent). TASK 1.1 IS DONE (`2159e5c`): `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 (`diagramEngine.ts` — the one importer, the literal specifier, the feature-detect gate) IS NEXT. `mermaid` is imported by nothing at 1.1 by design; 1.2 writes the sole importer and 1.3 is the ablation that proves the lazy chunk.**
 
-**★ TWO FLAGS RAISED BY TASK 1.1, LEFT FOR THE HUMAN — neither blocks 1.2.**
-- **Gate 3's approval is NOT BANKED in the repo the way M6 banked its own.** M6 landed
-  `0e24f15 docs(tasks): M6 gate 3 — tasks 006 approved and landed` **before** its task 1.1
-  (`a72f27f`); M7 has no equivalent commit and no `decisions.md` entry, and
-  `specs/007-mermaid-diagrams/tasks.md` still self-labels *"DRAFT awaiting gate 3"* at its header and
-  footer. The approval was given in session and 1.1 proceeded on it; **the written record is missing**,
-  and `tasks.md` is outside 1.1's commit fence so this task did not write it.
+**★ ONE FLAG RAISED BY TASK 1.1 REMAINS OPEN; the other is CLOSED as of this commit. Neither blocks 1.2.**
+- **CLOSED — Gate 3's approval IS NOW BANKED**, in `decisions.md` (the M7 GATE 3 entry, **this commit**).
+  M6 used a different shape: it landed `0e24f15 docs(tasks): M6 gate 3 — tasks 006 (snapshots + diff)
+  approved and landed` **before** its task 1.1 (`a72f27f`), tasks and approval together. M7's tasks had
+  already landed separately at `bfa131e` as an explicit draft, so only the written approval was
+  outstanding and the bank entry is it. **`specs/007-mermaid-diagrams/tasks.md` still self-labels
+  *"DRAFT awaiting gate 3"* at its header and footer, and that is CORRECT, not stale** — the gate-1/gate-2
+  precedent puts approval in `decisions.md`, not the artifact's status line (spec 007 still reads "draft"
+  post-`e09520f`; plan 007 still reads "draft — awaiting gate 2" post-`cab93c7`). **The decisions entry is
+  the approval of record — do not "fix" the status line.**
 - **`scripts/generate-sbom.ts` UNDER-REPORTS the production tree — a latent defect that mermaid's depth
   is the first tree to expose.** See § Blockers.
 
@@ -135,8 +138,9 @@ from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPL
 
 ## Blockers / open questions
 
-- **NOTHING IS BLOCKED. M7's three Gear-3 gates have all run** (gate 1 `e09520f`, gate 2 `cab93c7`,
-  gate 3 in session — see § Now's flag that gate 3's approval is not banked in writing). **The next
+- **NOTHING IS BLOCKED. M7's three Gear-3 gates have all run AND ARE ALL BANKED IN WRITING** (gate 1
+  `e09520f`, gate 2 `cab93c7`, gate 3 in `decisions.md`'s M7 GATE 3 entry — banked this commit, closing
+  the flag task 1.1 raised; `tasks.md`'s "DRAFT awaiting gate 3" status line stays by precedent). **The next
   human gate is 8.4**, the cache bound-values / typical-case-target decision gate, and it is a long way
   out — groups 1–7 land first. M6's gates are all closed and recorded (spec gate 1 2026-07-22, plan
   gate 2 + gate-3 product decisions 2026-07-23, D-8's bound-value gate at 7.2 2026-07-26, close gate 9.1
