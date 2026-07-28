@@ -10,7 +10,17 @@
 
 ## Now (start here)
 
-**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7's Gear-3 cycle is at GATE 3: `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` is now DRAFTED and AWAITING GATE 3 — 28 tasks across the plan's nine groups, with per-task Files/Verify lines. The human reviews the tasks against the plan, then approves for implementation (beginning at task 1.1 in a fresh session) or returns them with revisions. No code exists.**
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3. TASK 1.1 IS DONE — this commit: `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 (`diagramEngine.ts` — the one importer, the literal specifier, the feature-detect gate) IS NEXT. `mermaid` is imported by nothing at 1.1 by design; 1.2 writes the sole importer and 1.3 is the ablation that proves the lazy chunk.**
+
+**★ TWO FLAGS RAISED BY TASK 1.1, LEFT FOR THE HUMAN — neither blocks 1.2.**
+- **Gate 3's approval is NOT BANKED in the repo the way M6 banked its own.** M6 landed
+  `0e24f15 docs(tasks): M6 gate 3 — tasks 006 approved and landed` **before** its task 1.1
+  (`a72f27f`); M7 has no equivalent commit and no `decisions.md` entry, and
+  `specs/007-mermaid-diagrams/tasks.md` still self-labels *"DRAFT awaiting gate 3"* at its header and
+  footer. The approval was given in session and 1.1 proceeded on it; **the written record is missing**,
+  and `tasks.md` is outside 1.1's commit fence so this task did not write it.
+- **`scripts/generate-sbom.ts` UNDER-REPORTS the production tree — a latent defect that mermaid's depth
+  is the first tree to expose.** See § Blockers.
 
 M6 shipped snapshot capture on the app page, bounded retention (count 15 / 20 MiB / 30 days), a global
 erase control, a persistent capture disclosure and an inline line-diff against any stored snapshot —
@@ -40,24 +50,20 @@ archive pass ran that walk on itself.**
 
 ## Up next
 
-### M7 (spec 007) — persona #1 completion · NOT STARTED, no artifact exists yet
+### M7 (spec 007) — persona #1 completion via M7a (Mermaid + diagram cache) · IN IMPLEMENTATION, group 1
 
-**Direction agreed pre-kickoff; scope is NOT settled, and is not settled here.** The candidate content
-is **Mermaid + a diagram cache**, plus persona-#1 quality-of-life (compare-any-two-files, agent-file
-awareness, table tools). The argument: six milestones have landed almost entirely inside persona #1's
-column, [`spec-coverage.md`](spec-coverage.md) puts that column at **~56%**, and the largest remaining
-hole in it is the one item that needs a dependency Peekover has never installed.
+**Scope is SETTLED and all three gates are behind it** (see § Now). M7a is **Mermaid + a diagram
+cache**; the rest of persona-#1 quality-of-life (compare-any-two-files, agent-file awareness, table
+tools) is on spec §6's IS-NOT fence and is **not** in this milestone. The argument that selected it:
+six milestones landed almost entirely inside persona #1's column,
+[`spec-coverage.md`](spec-coverage.md) puts that column at **~56%**, and the largest remaining hole in
+it is the one item that needs a dependency Peekover has never installed.
 
-**A fresh Gear-3 cycle starts with `specs/007-*/spec.md` drafted in a fresh session** — spec → gate 1
-→ plan → gate 2 → tasks → gate 3 → code. Nothing below the spec exists yet.
+**Implementation runs task-by-task from `specs/007-mermaid-diagrams/tasks.md`, one commit per task,
+this pointer advancing in that same commit.** Next: **1.2**.
 
-- **★ FLAG RAISED BY THE ARCHIVE PASS, LEFT FOR THE HUMAN: the persona-#1 completion decision is NOT
-  BANKED IN `decisions.md`.** It was agreed in conversation; grepping that file for it returns only
-  incidental M7 mentions (the dynamic-import rule's *"the moment M7 adds highlighting"*, and two
-  revisit-when triggers routed to M7 kickoff) — **no entry records the argument or its scope
-  constraints.** The archive pass deliberately did **not** write one: banking a product decision is
-  not an archive pass's job, and inventing the rationale would be worse than the gap. **Bank it before
-  the M7 spec kickoff**, so gate 1 has an authority to point at.
+- **DISCHARGED, recorded so it is not re-raised: the persona-#1 completion decision IS NOW BANKED** in
+  `decisions.md` (`87cd026`, the M7 DIRECTION entry). The archive pass's flag is closed.
 - **M7 owes a FLOOR-DELTA STATEMENT before any further first-paint re-baseline discussion**
   (`retro.md` 2026-07-27, finding 8), plus the optimisation question `decisions.md` 2026-07-26 routed
   to it — 006's +15.7 KB content-script growth is legitimate but, per the human note at 9.1, not
@@ -124,18 +130,32 @@ measurement-driven or explicitly deferred.*
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; running gate score **10/10**, corrected
-from the 8/8 recorded at 9.1) · **007 persona-#1 completion — NOT STARTED, no artifact drafted** ·
+from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPLEMENTATION, group 1** ·
 … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
 
-- **NOTHING IS BLOCKED AND NO GATE IS OUTSTANDING.** M6 is closed; every 006 gate ran and is recorded —
-  spec gate 1 (2026-07-22), plan gate 2 + the gate-3 product decisions (2026-07-23), D-8's bound-value
-  gate at 7.2 (2026-07-26) and the milestone-close gate 9.1 (2026-07-26), alongside M5's three (2.3, 5.2,
-  7.1). **M7's spec gate 1 will be the next human gate, and it does not exist yet** — no artifact has
-  been drafted. *(This bullet has been corrected three times for pointer inversion — at 8.2, at 9.1, and
-  again at this archive pass. It is the single most inversion-prone line in the file: it states pending
-  human state, which is false by construction the next time anything ships.)*
+- **NOTHING IS BLOCKED. M7's three Gear-3 gates have all run** (gate 1 `e09520f`, gate 2 `cab93c7`,
+  gate 3 in session — see § Now's flag that gate 3's approval is not banked in writing). **The next
+  human gate is 8.4**, the cache bound-values / typical-case-target decision gate, and it is a long way
+  out — groups 1–7 land first. M6's gates are all closed and recorded (spec gate 1 2026-07-22, plan
+  gate 2 + gate-3 product decisions 2026-07-23, D-8's bound-value gate at 7.2 2026-07-26, close gate 9.1
+  2026-07-26), alongside M5's three (2.3, 5.2, 7.1). *(This bullet has been corrected four times for
+  pointer inversion — at 8.2, at 9.1, at the archive pass, and again at 007 task 1.1. It is the single
+  most inversion-prone line in the file: it states pending human state, which is false by construction
+  the next time anything ships.)*
+- **★ FOUND BY 007 TASK 1.1, NOT FIXED (the file is outside 1.1's commit fence): `scripts/generate-sbom.ts`
+  SILENTLY DROPS 25 OF THE 113 PRODUCTION PACKAGES.** `collect()` (`:107-123`) memoises on
+  `name@version` and recurses **only on first sight** — but `pnpm list --json` emits a repeated package
+  **shallow** at its first occurrence in traversal order and **full** at a later one. Verified, not
+  inferred: `d3@7.9.0` appears first under `mermaid>dagre-d3-es` with **no `dependencies` key**, then
+  under `mermaid` with **30 of them**; the memo hit means the second node is never walked and d3's whole
+  leaf set vanishes. Same shape drops `d3-dsv`'s children (`rw`, `iconv-lite`, `safer-buffer`). Result:
+  the SBOM reports **90 components against a real prod tree of 120 `name@version` / 113 distinct names.**
+  **This is a pre-existing latent defect, not a mermaid regression** — the 4-dependency tree had no
+  diamond deep enough to trigger it, so it has never fired before. It makes the §6-9 "SBOM published per
+  release" claim materially incomplete. **Fix is one line (recurse unconditionally, memoise only the
+  component record); it needs its own task, and 1.1 deliberately did not take it.**
 - **Spec coverage audit** at [`spec-coverage.md`](spec-coverage.md) — **re-audited 2026-07-27 at HEAD
   `d470ab2`** (targeted: §6-4 and §6-9 only, after the §6 side-quest landed the CI those items named).
   **~17% of Phase 1's F1–F12 is shipped** by weighted item count (**§6 59%** — up from 56% — §7 67%,
