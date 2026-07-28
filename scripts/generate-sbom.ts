@@ -37,18 +37,19 @@
 import { execFileSync } from 'node:child_process';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const OUT_PATH = process.argv[2] ?? 'sbom.cdx.json';
 
 /** Shape of the `pnpm list --json` node we consume (only the fields we use). */
-interface PnpmNode {
+export interface PnpmNode {
   from?: string;
   version?: string;
   resolved?: string;
   dependencies?: Record<string, PnpmNode>;
 }
 
-interface Component {
+export interface Component {
   name: string;
   version: string;
   license?: string;
@@ -103,11 +104,50 @@ function readIntegrity(lockPath: string): Map<string, string> {
   return out;
 }
 
-/** Flatten pnpm's nested tree into one component per `name@version`, recording edges. */
-function collect(
+/**
+ * Flatten pnpm's nested tree into one component per `name@version`, recording edges.
+ *
+ * ── WHY DEDUP AND DESCENT ARE TWO SETS, NOT ONE ───────────────────────────────────────────
+ *
+ * This walk used to do both jobs with one gate: `if (!acc.has(id))` created the component AND
+ * recursed, so a package was walked only on FIRST SIGHT. That is wrong, because `pnpm list
+ * --json` does not emit a repeated package identically at every position. It emits the package
+ * SHALLOW (no `dependencies` key at all) at its first occurrence in traversal order and FULL at
+ * exactly one later occurrence. First sight is therefore precisely the occurrence that carries
+ * NO children, so the memo hit at the full occurrence skipped the whole subtree.
+ *
+ * Measured on this repo's tree at the time of the fix: `d3@7.9.0` appears first under
+ * `dagre-d3-es@7.0.14` with 0 children, then under `mermaid@11.16.0` with 30; `d3-dsv@3.0.1`
+ * appears first under `d3-fetch@3.0.1` with 0 children, then under `d3@7.9.0` with 3
+ * (`commander`, `iconv-lite`, `rw` — and `safer-buffer` one level below `iconv-lite`). The
+ * generator reported 90 components against a real production tree of 120 `name@version` / 113
+ * distinct names — 30 dropped, silently.
+ *
+ * This is a LATENT defect, not a mermaid regression: the pre-M7 four-dependency tree had no
+ * diamond deep enough to produce a shallow-first/full-later pair, so it never fired.
+ *
+ * The fix separates the two concerns the old gate conflated:
+ *   • DEDUP  — `acc` keyed by `name@version`, so each component is emitted exactly once.
+ *   • DESCENT — `expanded`, so we walk into any node that actually CARRIES children, whether or
+ *     not we have already emitted that component from an earlier shallow sighting.
+ *
+ * TERMINATION. Two independent reasons, both verified against real `pnpm list` output rather
+ * than assumed. (1) The input is a `JSON.parse` result — a finite tree with no shared or
+ * circular references — so an ungated walk already halts; on this tree it visits 177 node
+ * occurrences. (2) `expanded` admits each id at most once, bounding the recursion at one
+ * expansion per distinct package regardless of tree shape. The `.length > 0` test matters:
+ * marking an id expanded on a childless sighting would reintroduce the very bug being fixed.
+ * Checked on the real tree: no package is ever emitted with children more than once, and no
+ * node carries a present-but-empty `dependencies` object.
+ *
+ * Exported for `tests/sbomWalk.test.ts`, which drives THIS function rather than a copy — a
+ * regression test against a re-implementation proves nothing (decisions.md §6 side-quest (c)).
+ */
+export function collect(
   nodes: Record<string, PnpmNode> | undefined,
   acc: Map<string, Component>,
   parent: Component | null,
+  expanded: Set<string> = new Set(),
 ): void {
   for (const [name, node] of Object.entries(nodes ?? {})) {
     if (!node.version) continue;
@@ -116,7 +156,10 @@ function collect(
     if (!component) {
       component = { name, version: node.version, resolved: node.resolved, deps: new Set() };
       acc.set(id, component);
-      collect(node.dependencies, acc, component);
+    }
+    if (Object.keys(node.dependencies ?? {}).length > 0 && !expanded.has(id)) {
+      expanded.add(id);
+      collect(node.dependencies, acc, component, expanded);
     }
     parent?.deps.add(id);
   }
@@ -137,7 +180,10 @@ function main(): void {
   const components = new Map<string, Component>();
   const rootEdges = new Set<string>();
   const rootStub: Component = { name: pkg.name, version: pkg.version, deps: rootEdges };
-  for (const importer of listed) collect(importer.dependencies, components, rootStub);
+  // One `expanded` set across every importer: the component map is shared already, so sharing
+  // the descent ledger too just avoids re-walking a package two importers both depend on.
+  const expanded = new Set<string>();
+  for (const importer of listed) collect(importer.dependencies, components, rootStub, expanded);
 
   // 2. Licenses, keyed by name@version.
   const licenseGroups = JSON.parse(pnpm(['licenses', 'list', '--prod', '--json'])) as Record<
@@ -254,4 +300,10 @@ function main(): void {
   if (unhashed.length) console.log(`   ⚠️  no integrity hash: ${unhashed.join(', ')}`);
 }
 
-main();
+// Run only when invoked as a script (`pnpm sbom`, or CI's `pnpm exec tsx scripts/generate-sbom.ts`).
+// `tests/sbomWalk.test.ts` imports `collect` from this module, and an import must not shell out to
+// pnpm or write an SBOM. Compared as file URLs so Windows path separators normalise; verified under
+// BOTH entry paths — `pnpm sbom` still emits, and the test import does not.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

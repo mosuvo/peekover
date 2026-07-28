@@ -12,7 +12,8 @@
 
 **M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3 (banked in `decisions.md`'s M7 GATE 3 entry — **this commit**; the tasks file's "DRAFT awaiting gate 3" status line stays, by the gate-1/gate-2 precedent). TASK 1.1 IS DONE (`2159e5c`): `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 (`diagramEngine.ts` — the one importer, the literal specifier, the feature-detect gate) IS NEXT. `mermaid` is imported by nothing at 1.1 by design; 1.2 writes the sole importer and 1.3 is the ablation that proves the lazy chunk.**
 
-**★ ONE FLAG RAISED BY TASK 1.1 REMAINS OPEN; the other is CLOSED as of this commit. Neither blocks 1.2.**
+**★ BOTH FLAGS RAISED BY TASK 1.1 ARE NOW CLOSED — gate 3's approval banked (below), the SBOM defect
+this commit. Neither ever blocked 1.2.**
 - **CLOSED — Gate 3's approval IS NOW BANKED**, in `decisions.md` (the M7 GATE 3 entry, **this commit**).
   M6 used a different shape: it landed `0e24f15 docs(tasks): M6 gate 3 — tasks 006 (snapshots + diff)
   approved and landed` **before** its task 1.1 (`a72f27f`), tasks and approval together. M7's tasks had
@@ -22,8 +23,9 @@
   precedent puts approval in `decisions.md`, not the artifact's status line (spec 007 still reads "draft"
   post-`e09520f`; plan 007 still reads "draft — awaiting gate 2" post-`cab93c7`). **The decisions entry is
   the approval of record — do not "fix" the status line.**
-- **`scripts/generate-sbom.ts` UNDER-REPORTS the production tree — a latent defect that mermaid's depth
-  is the first tree to expose.** See § Blockers.
+- **CLOSED — `scripts/generate-sbom.ts` UNDER-REPORTED the production tree** (a latent defect that
+  mermaid's depth was the first tree to expose), fixed this commit: 90 → 120 components, dedup decoupled
+  from descent. See § Blockers for the root cause and the proof.
 
 M6 shipped snapshot capture on the app page, bounded retention (count 15 / 20 MiB / 30 days), a global
 erase control, a persistent capture disclosure and an inline line-diff against any stored snapshot —
@@ -41,8 +43,8 @@ task-by-task detail is `specs/006-snapshots-diff/tasks.md`. Neither is restated 
   mechanical cause is that **no gate record on any milestone states the walk's VIEWPORT** — a gate
   walk now records its viewport the way it records its engines (`retro.md` 2026-07-27, finding 2).
 
-**M7's direction is NAMED below and deliberately NOT SCOPED here** — scoping is `spec.md`'s job, in the
-fresh session. See § Up next, which also carries a flag about an unbanked decision.
+**M7's direction and scope are SETTLED and live in § Up next** — the direction decision was banked at
+`87cd026` and all three Gear-3 gates are behind it. No flag is outstanding there.
 
 **The Now-pointer advances PER TASK** (the M1 rule — it once lagged four tasks and the next session
 acted on stale state). The rule has four recorded failures and one mechanical remedy: **a pointer walk
@@ -148,18 +150,24 @@ from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPL
   pointer inversion — at 8.2, at 9.1, at the archive pass, and again at 007 task 1.1. It is the single
   most inversion-prone line in the file: it states pending human state, which is false by construction
   the next time anything ships.)*
-- **★ FOUND BY 007 TASK 1.1, NOT FIXED (the file is outside 1.1's commit fence): `scripts/generate-sbom.ts`
-  SILENTLY DROPS 25 OF THE 113 PRODUCTION PACKAGES.** `collect()` (`:107-123`) memoises on
-  `name@version` and recurses **only on first sight** — but `pnpm list --json` emits a repeated package
-  **shallow** at its first occurrence in traversal order and **full** at a later one. Verified, not
-  inferred: `d3@7.9.0` appears first under `mermaid>dagre-d3-es` with **no `dependencies` key**, then
-  under `mermaid` with **30 of them**; the memo hit means the second node is never walked and d3's whole
-  leaf set vanishes. Same shape drops `d3-dsv`'s children (`rw`, `iconv-lite`, `safer-buffer`). Result:
-  the SBOM reports **90 components against a real prod tree of 120 `name@version` / 113 distinct names.**
-  **This is a pre-existing latent defect, not a mermaid regression** — the 4-dependency tree had no
-  diamond deep enough to trigger it, so it has never fired before. It makes the §6-9 "SBOM published per
-  release" claim materially incomplete. **Fix is one line (recurse unconditionally, memoise only the
-  component record); it needs its own task, and 1.1 deliberately did not take it.**
+- **RESOLVED, noted once so it is not re-opened: `scripts/generate-sbom.ts` no longer under-reports the
+  production tree.** Found by 007 task 1.1 (which correctly did not take it — the file is outside 1.1's
+  commit fence), fixed **this commit** as its own act. **Root cause: `collect()` conflated DEDUP with
+  DESCENT** — one `if (!acc.has(id))` gate both created the component and recursed, so a package was
+  walked only on FIRST SIGHT, and `pnpm list --json` emits a repeated package **shallow** at its first
+  occurrence in traversal order and **full** at exactly one later one. First sight is therefore precisely
+  the childless occurrence. **Fix: the two concerns are now separate sets** — `acc` dedups, a new
+  `expanded` set gates descent, so any node that actually carries children is walked. **Counts: 90 → 120
+  `name@version` (113 distinct names); 30 recovered**, all of `d3@7.9.0`'s subtree plus `d3-dsv`'s
+  children. **Proof, and it is graded against something other than itself:** a red-first unit test
+  (`tests/sbomWalk.test.ts`, synthetic shallow-first/full-later fixture, revert-and-fail reproduced, with
+  a firing control asserting the OLD walk drops exactly the shallow-first payload and keeps the
+  full-first one), plus set-equality — not just count-equality — between the fixed generator and an
+  **independent** `pnpm licenses list --prod --json` enumeration (a different pnpm subcommand that never
+  reads the nested tree). **It was a pre-existing latent defect, not a mermaid regression:** the
+  4-dependency tree had no diamond deep enough to produce a shallow-first pair, so it had never fired.
+  CycloneDX version, output format and byte-determinism are unchanged (two runs byte-identical); the
+  serial number moved because it digests the component list, which is the point.
 - **Spec coverage audit** at [`spec-coverage.md`](spec-coverage.md) — **re-audited 2026-07-27 at HEAD
   `d470ab2`** (targeted: §6-4 and §6-9 only, after the §6 side-quest landed the CI those items named).
   **~17% of Phase 1's F1–F12 is shipped** by weighted item count (**§6 59%** — up from 56% — §7 67%,
