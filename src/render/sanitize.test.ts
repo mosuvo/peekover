@@ -28,6 +28,7 @@ import {
   SVG_REFERENCE_ATTR,
   SVG_URI_SAFE_ATTR,
   SANITIZE_SVG_CONFIG,
+  cleanSvgCss,
 } from './sanitize';
 import { parse } from './parse';
 import { MALICIOUS_CASES } from '../../tests/fixtures/malicious-html';
@@ -234,6 +235,16 @@ function survivingStyleText(out: string): string[] {
     .map((el) => `<style>${el.textContent ?? ''}</style>`);
 }
 
+/**
+ * Any surviving `<style>` whose CSS names a resource off this document. The attribute
+ * sweep above cannot reach this: under option B the element survives and its references
+ * live in TEXT. Deliberately broader than `url(`, so a spelling this suite never thought
+ * of (a bare-string `@import`, an `image-set()` string) still trips it.
+ */
+function survivingRemoteCss(out: string): string[] {
+  return survivingStyleText(out).filter((css) => /(?:https?:|\/\/[a-z0-9]|data:)/i.test(css));
+}
+
 describe('sanitizeSvg — the SVG profile (D-1)', () => {
   describe('the allow-list is the reviewed data (guards against silent drift)', () => {
     it('exposes the exact SVG_ALLOWED_TAGS set', () => {
@@ -243,13 +254,20 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
         'text', 'tspan',
         'marker', 'linearGradient', 'stop',
         'title', 'desc',
+        'style',
       ]);
     });
 
     it('denies the dangerous elements BY ABSENCE, not by a FORBID list', () => {
       // The mechanism is the point: there is no FORBID list to read, so the only
       // way these can come back is by being ADDED here, in a reviewed diff.
-      for (const denied of ['foreignObject', 'style', 'script', 'a', 'image', 'switch', 'filter']) {
+      //
+      // `style` is NO LONGER in this list: option B (decisions.md `0de27f3`) admits it,
+      // because 100% of a flowchart's paint is CSS and denying it renders black
+      // silhouettes. It is the ONE element not governed by absence alone — `cleanSvgCss`
+      // is the procedural filter that pays for it, and the `@import` case below is where
+      // that filter is asserted rather than the allow-list.
+      for (const denied of ['foreignObject', 'script', 'a', 'image', 'switch', 'filter']) {
         expect([...SVG_ALLOWED_TAGS], `${denied} must stay denied by absence`)
           .not.toContain(denied);
       }
@@ -347,14 +365,24 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
       expect(survivingAttrValues(out, (v) => v.includes('evil.example'))).toEqual([]);
     });
 
-    it('drops @import in <style> — the element goes, so the rule goes with it', () => {
+    it('drops @import in <style> — the ELEMENT now stays, so the RULE must go', () => {
+      // RE-AIMED for option B (decisions.md `0de27f3`). This case used to pass for a
+      // reason that no longer holds — the element was denied, so the rule went with it,
+      // and the assertion never exercised any CSS handling at all. Now the element
+      // SURVIVES and `cleanSvgCss` is the only thing standing between the artifact and
+      // that `@import`, which is what makes this a real assertion rather than a
+      // restatement of the allow-list.
       const out = sanitizeSvg(
         '<svg xmlns="http://www.w3.org/2000/svg"><style>' +
           '@import url("http://evil.example/x.css"); .n { fill: red }' +
           '</style><g class="n"><rect width="10" height="10" /></g></svg>',
       );
-      expect(survivingStyleText(out)).toEqual([]);
+      expect(survivingStyleText(out), 'the <style> element did not survive — option B is not in effect')
+        .not.toEqual([]);
       expect(out).not.toContain('@import');
+      expect(out).not.toContain('evil.example');
+      // …and the rest of the stylesheet is still there: the rule went, not the sheet.
+      expect(survivingStyleText(out)[0]).toContain('.n { fill: red }');
     });
 
     it('drops on* event handlers', () => {
@@ -404,12 +432,22 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
         '<svg xmlns="http://www.w3.org/2000/svg"><rect fill="url(http://evil.example/f#g)" /></svg>',
       ];
       for (const svg of corpus) {
-        expect(survivingRemoteRefs(sanitizeSvg(svg)), svg).toEqual([]);
+        const out = sanitizeSvg(svg);
+        expect(survivingRemoteRefs(out), svg).toEqual([]);
+        // ★ The `@import` row (index 3) is why this second sweep exists. Under option B
+        // the `<style>` element SURVIVES, and its CSS is TEXT, not an attribute — so
+        // `survivingRemoteRefs` cannot see it, and that row would pass this sweep while
+        // the artifact carried a live `@import`. A sweep that structurally cannot fail on
+        // one of its own rows is worse than no row at all.
+        expect(survivingRemoteCss(out), svg).toEqual([]);
       }
-      // The control: the predicate FIRES on the same markup unsanitized, so an
+      // The controls: BOTH predicates FIRE on the same markup unsanitized, so an
       // empty sweep is a result and not a broken predicate (retro finding 1).
       expect(survivingRemoteRefs(corpus[1])).toEqual([
         '<use href="http://evil.example/b#x">',
+      ]);
+      expect(survivingRemoteCss(corpus[3])).toEqual([
+        '<style>@import url("http://evil.example/d");</style>',
       ]);
     });
   });
@@ -584,6 +622,152 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
       // widening cannot land without a reviewer meeting this sentence.
       expect([...SVG_ALLOWED_TAGS]).not.toContain('image');
       expect(survivingElements(sanitizeSvg(DATA_PAYLOAD), 'image')).toEqual([]);
+    });
+  });
+
+  // ── THE CSS PASS, AT THE STRING LEVEL (option B, decisions.md `0de27f3`) ──
+  //
+  // ★ WHAT THIS SUITE CAN AND CANNOT PROVE. It asserts the SHAPE of `cleanSvgCss`'s
+  // output: which spellings are stripped and which survive. It does NOT prove the
+  // artifact is inert, because jsdom loads no subresources (decisions.md 2026-07-14) —
+  // "no request" and "no engine that could make one" read identically here. THE FETCH
+  // PROOF IS `tests/browser/diagramStyleCss.browser.test.ts`, which adopts the sanitized
+  // artifact into a LIVE Chromium and Firefox document and watches the wire. That file is
+  // authoritative; this one is the fast mirror that fails first on a spelling regression.
+  describe('cleanSvgCss — the CSS pass (string-level; the fetch proof is the browser suite)', () => {
+    const KEEP = '.k{fill:url(#gradA)}\n@keyframes dash{to{stroke-dashoffset:0}}';
+
+    /** Every external spelling the reproduction found, plus the two lanes beyond it. */
+    const EXTERNAL = [
+      ['plain', 'url(http://evil.example/a.png)'],
+      // ★ The lane that decides the mechanism: `\72` is an escaped `r`, so this IS a url
+      // token to a CSS parser and is NOT one to `/url\(/`. A pass that only greps reds here.
+      ['CSS escape', String.raw`u\72 l(http://evil.example/b.png)`],
+      ['CSS escape, no space', String.raw`\75rl(http://evil.example/b2.png)`],
+      ['case', 'URL(http://evil.example/c.png)'],
+      ['interior whitespace', 'url(  http://evil.example/d.png  )'],
+      ['double quoting', 'url("http://evil.example/e.png")'],
+      ['single quoting', "url('http://evil.example/f.png')"],
+      ['protocol-relative', 'url(//evil.example/g.png)'],
+      ['data:', 'url(data:image/gif;base64,R0lGOD)'],
+      ['relative path', 'url(./h.png)'],
+      ['bare-string image-set', 'image-set("http://evil.example/i.png" 1x)'],
+      ['url-wrapping image-set', 'image-set(url(http://evil.example/j.png) 1x)'],
+    ] as const;
+
+    it.each(EXTERNAL)('strips an external reference — %s', (_label, payload) => {
+      const out = cleanSvgCss(`.a{background-image:${payload}}\n${KEEP}`);
+      expect(out, `the payload survived: ${out}`).not.toMatch(/evil\.example|data:|\.\/h\.png/);
+      // …and the live control in the SAME stylesheet, so a clean result is not an
+      // over-strip. This is the jsdom mirror of the browser suite's per-lane control.
+      expect(out, 'internal url(#gradA) went too — over-strip').toContain('url(#gradA)');
+      expect(out, '@keyframes went too — animated edges die with it').toContain('@keyframes dash');
+    });
+
+    it('strips every at-rule EXCEPT @keyframes, prelude and block together', () => {
+      const out = cleanSvgCss(
+        '@import url(http://evil.example/x.css);\n' +
+          '@import "http://evil.example/bare.css";\n' +
+          '@font-face{font-family:e;src:url(http://evil.example/f.woff)}\n' +
+          '@media screen{.m{background:url(http://evil.example/m.png)}}\n' +
+          '@supports (display:grid){.s{background:url(http://evil.example/s.png)}}\n' +
+          KEEP,
+      );
+      expect(out).not.toContain('@import');
+      expect(out).not.toContain('@font-face');
+      expect(out).not.toContain('@media');
+      expect(out).not.toContain('@supports');
+      expect(out, `an at-rule leaked its payload: ${out}`).not.toContain('evil.example');
+      expect(out, '@keyframes is the allow-list of exactly one — mermaid emits it').toContain(
+        '@keyframes dash',
+      );
+    });
+
+    it('descends INTO @keyframes — an external url() there is still an external url()', () => {
+      const out = cleanSvgCss('@keyframes k{from{background-image:url(http://evil.example/k.png)}}');
+      expect(out).not.toContain('evil.example');
+      expect(out, 'the whole @keyframes went — the pass does not descend, it deletes').toContain(
+        '@keyframes k',
+      );
+    });
+
+    it('PRESERVES internal url(#…) in every form, and is the IDENTITY on a clean sheet', () => {
+      const clean =
+        '.a{fill:url(#gradA)}\n.b{fill:url("#gradA")}\n.c{fill:url(\'#gradA\')}\n' +
+        '.d{fill:url(  #gradA  )}\n.e{clip-path:url(#clipA)}\n' +
+        '@keyframes edge-animation-frame{to{stroke-dashoffset:0}}';
+      // Byte-identical, not merely equivalent: a clean engine stylesheet must not be
+      // rewritten at all, or the cached artifact's bytes drift on every pass.
+      expect(cleanSvgCss(clean)).toBe(clean);
+    });
+
+    it('an escaped `#` still reads as the fragment it is', () => {
+      // `\23` IS a `#`, so this really is an internal reference and stripping it would be
+      // the over-strip direction of the same escape lane.
+      expect(cleanSvgCss(String.raw`.a{fill:url(\23 gradA)}`)).toBe(
+        String.raw`.a{fill:url(\23 gradA)}`,
+      );
+    });
+
+    it('an escaped structural char cannot FABRICATE a token', () => {
+      // `url\28 #x)` is the IDENT `url(`, not a function — no fetch, nothing to strip. A
+      // decoder that turned `\28` into a real `(` would see a url token that CSS does not.
+      const ident = String.raw`.a{font-family:url\28 x}`;
+      expect(cleanSvgCss(ident)).toBe(ident);
+      // …and the converse: `\40 import` is an ident, not an at-rule, so it stays put.
+      const notAtRule = String.raw`.a{font-family:\40 import}`;
+      expect(cleanSvgCss(notAtRule)).toBe(notAtRule);
+    });
+
+    it('a comment cannot hide a payload, and comment-joined tokens strip TOO (over-strip)', () => {
+      // Removing comments in the scan view makes the pass STRICTER than CSS, and the
+      // direction is the point. `ur/**/l(` is TWO idents to a real parser and so fetches
+      // nothing — the pass cuts it anyway, because comment removal can only ever join
+      // text into MORE apparent tokens, never fewer. Erring toward a cut is the safe
+      // direction, and no engine output puts a comment mid-token.
+      expect(cleanSvgCss('.a{background:ur/**/l(http://evil.example/x)}')).not.toContain(
+        'evil.example',
+      );
+      // A comment carrying a brace must not desynchronise the scan.
+      const out = cleanSvgCss('/* } */@import url(http://evil.example/y.css);\n' + KEEP);
+      expect(out).not.toContain('evil.example');
+      expect(out).toContain('url(#gradA)');
+      // A comment that merely MENTIONS a payload is inert and is left in place.
+      const commented = '/* url(http://evil.example/q) */\n' + KEEP;
+      expect(cleanSvgCss(commented)).toBe(commented);
+    });
+
+    it('a `}` or `url(` inside a STRING is inert, and is left alone', () => {
+      const inert = '.a{content:"} url(http://evil.example/z)"}\n' + KEEP;
+      expect(cleanSvgCss(inert)).toBe(inert);
+    });
+
+    it('the output is a FIXPOINT — re-running the pass changes nothing', () => {
+      for (const [, payload] of EXTERNAL) {
+        const once = cleanSvgCss(`.a{background-image:${payload}}\n${KEEP}`);
+        expect(cleanSvgCss(once), `not a fixpoint for ${payload}`).toBe(once);
+      }
+    });
+
+    it('fails CLOSED: a cut that could break out of <style> drops the sheet whole', () => {
+      // The source text cannot contain a real `</style>` — the parser would have ended the
+      // element — so this can only fire on text the pass itself produced by joining across
+      // a cut. An HTML-namespaced `<style>` serializes its children RAW, which is what
+      // would make such a join an injection rather than a cosmetic defect.
+      expect(cleanSvgCss('</styleurl(http://evil.example/x)>')).toBe('');
+    });
+
+    it('the DOCUMENT profile is untouched by all of this', () => {
+      // The pass is registered around the sanitizeSvg call and removed again, so it can
+      // never observe a document-profile node. `<style>` is still denied there outright.
+      expect(sanitize('<style>@import url("http://evil.example/x.css");</style><p>hi</p>')).toBe(
+        '<p>hi</p>',
+      );
+      // …and it stays denied after an SVG call, which is where a leaked hook would show.
+      sanitizeSvg('<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:red}</style></svg>');
+      expect(sanitize('<style>@import url("http://evil.example/x.css");</style><p>hi</p>')).toBe(
+        '<p>hi</p>',
+      );
     });
   });
 
