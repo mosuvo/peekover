@@ -135,7 +135,10 @@ decision gate:** 8.4, the bound values and the typical-case target.
       New exported `SVG_ALLOWED_TAGS` / `SVG_ALLOWED_ATTR` / `SANITIZE_SVG_CONFIG` + `sanitizeSvg(svg)`,
       honouring `sanitize.ts:5-10`'s stated discipline. **`ALLOWED_TAGS` (`:22-37`), `ALLOWED_ATTR` (`:61-65`)
       and `SANITIZE_CONFIG` (`:107-117`) stay BYTE-UNTOUCHED** — markdown source still cannot produce an
-      `<svg>`. `ALLOWED_URI_REGEXP` is `/^#/`, **stricter** than the document profile's `:85-86`;
+      `<svg>`. `ALLOWED_URI_REGEXP` is fragments-and-inert-values only — a scheme-free regexp confined by
+      `ADD_URI_SAFE_ATTR` to the reference attributes, see `decisions.md` *"M7 D-1 / §2.1 AMENDMENT"*; `/^#/`
+      alone is unimplementable against DOMPurify's global attribute gating — still **stricter** than the
+      document profile's `:85-86`;
       `foreignObject` is denied **by absence**, not a FORBID list (`:8-10`); `ALLOW_ARIA_ATTR: true` is the one
       deliberate divergence from `:113` and is stated in the doc comment beside it.
       Files: `src/render/sanitize.ts` · `src/render/sanitize.test.ts`

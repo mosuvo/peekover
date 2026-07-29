@@ -1,6 +1,48 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-28 · M7 D-1 / §2.1 AMENDMENT — the SVG profile's `ALLOWED_URI_REGEXP` is NOT `/^#/`, because
+  DOMPurify applies that regexp to every non-URI-safe attribute, which `/^#/` would strip the whole diagram
+  through. Sealed intent preserved; the mechanism corrected.** Plan D-1 and tasks §2.1 specify the SVG
+  profile's `ALLOWED_URI_REGEXP` as literally `/^#/` (fragments-only references). **That value is not
+  implementable:** verified against dompurify 3.4.12 (source + probe, this session), DOMPurify does **not**
+  apply `ALLOWED_URI_REGEXP` to URI attributes only — it tests it against the value of every attribute NOT in
+  its `URI_SAFE_ATTRIBUTES` set. So `/^#/` deletes `viewBox`, `d`, `transform`, coordinates, `fill="none"`,
+  `stroke`, and every `url(#…)` paint/marker/clip reference — arrowheads, gradients and clip paths die with
+  it; only `#hex` values survive, by accident of starting with `#`. **The correction — design C — preserves
+  §2.1's TWO stated security properties exactly** (references are same-document only; no external, `data:` or
+  `javascript:` value survives), and changes only the mechanism so the regexp also admits the non-reference
+  values a paint attribute legitimately carries:
+  - `SVG_ALLOWED_URI_REGEXP` = `/^(?:#[^\s()]*|url\(#[^\s()]*\)|(?:rgb|rgba|hsl|hsla)\([\d\s,.%/+-]+\)|[a-zA-Z-]+)$/i`
+    — four alternatives, NONE able to express a scheme or path (`url(` must be followed by `#`; the colour
+    alternative admits only digits/separators; the bare keyword alternative admits no `:`).
+  - `ADD_URI_SAFE_ATTR`, set to the complement of `SVG_REFERENCE_ATTR` = `['href', 'xlink:href', 'fill',
+    'stroke', 'clip-path', 'marker-start', 'marker-mid', 'marker-end']`, confines the regexp to the attributes
+    that can carry a reference (`href`, `xlink:href`, `fill`, `stroke`, `clip-path`, `marker-start/mid/end`)
+    instead of letting it delete every coordinate. This is a THIRD config key the document profile does not
+    set — not a widening, but the confinement that makes the strict regexp usable.
+  **What this does NOT change:** D-1's core (a second NAMED sanitizer, not a configurable one; the document
+  profile byte-untouched; the allow-list as DATA with no FORBID list; `foreignObject`/`style` denied by
+  absence; the inherited global hook not re-registered) all stand. No other D-value, no gate-1/gate-2/gate-3
+  disposition, no spec §3.x decision. `plan.md` D-1 and `tasks.md` §2.1 have their `/^#/` clause edited to
+  point at this design; this bank is the amendment of record, per the gate-3-banking / §1.1 / §1.2 / bddd5af
+  precedent. **Cited by:** task 2.1 (the profile it builds) and task 2.2 (the real-engine sanitize proof).
+  **TWO DOWNSTREAM FINDINGS banked here so they are not lost:**
+  - **`<style>`/`@import` is a group-3 conjunction (FLAG #3's shape, confirmed real).** 2.1 denies `<style>`
+    by absence (clean; `@import` dies with the element). But mermaid inserts its generated theme as a
+    `<style>` first-child of the SVG (`createUserStyles` → `svg.insertBefore`) and DOMPurify 3.4.12 has no CSS
+    parser, so IF group 3 must allow `<style>` to render themed diagrams, `@import url("http://…")` survives
+    verbatim — machinery beyond D-1's allow-list. **Revisit-when:** group 3 decides themed-diagram rendering —
+    strip `<style>` and lose engine theming, or add CSS sanitization (a D-1/D-6 addendum, its own decision).
+  - **The SVG profile's `data:` denial does NOT depend on the inherited hook.** A fresh DOMPurify with no hook
+    strips `data:` on `xlink:href` via the URI regexp alone (verified). So task 2.2's planned discriminator
+    (remove the hook → the `data:` xlink case reds) will NOT red. **Revisit-when:** 2.2 is drafted — it needs a
+    discriminator the hook catches that the allow-list does not, or the real-engine proof is reframed around
+    what the hook uniquely contributes.
+  **Revisit-when (whole entry):** a future DOMPurify changes how `ALLOWED_URI_REGEXP` interacts with
+  `URI_SAFE_ATTRIBUTES` (the mechanism this correction depends on); then design C's regexp/`ADD_URI_SAFE_ATTR`
+  split is re-verified.
+
 - **2026-07-28 · M7 D-3 / D-13 AMENDMENT — `engineVersion` is sourced from the resolved
   `mermaid/package.json`, because mermaid 11.16.0 exposes no runtime version. Two sealed D-values narrowed
   in MECHANISM, not intent.** Plan 007's D-3 specifies the cache key's third component as *"read from the
