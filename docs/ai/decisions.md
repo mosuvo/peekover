@@ -1,6 +1,65 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-28 · M7 D-6 ADDENDUM — D-6's config HARDENS mermaid's `secure` list, closing a live pre-sanitize
+  CSS-injection/fetch route the plan's residual-hole control does not name.** At `securityLevel: 'strict'` with
+  D-6's config, an untrusted markdown author can inject arbitrary CSS into mermaid's generated `<style>` via a
+  `%%{init:{"themeCSS":…}}%%` directive; verified live this session (real mermaid 11.16.0, real headless
+  Chromium, D-6's config verbatim, every "remote" URL pointed at the probe's OWN loopback server), the injected
+  `url(…)` **FETCHES during the render** — inside D-6's measurement window, BEFORE `sanitizeSvg` runs — so
+  denying `<style>` (2.1) does NOT close it, and `securityLevel: 'strict'` alone does not either (`'loose'`
+  behaves identically, same 10 requests). Of 13 URL-bearing payload rules, **11 survived into the generated
+  `<style>` and 10 reached the wire**: `-webkit-mask-image`, `background-image`, `border-image-source`,
+  `content`, `list-style-image`, `shape-outside`, `cursor`, and the `fill`/`filter`/`clip-path` external
+  references. **`@import` is NOT the live route** — it is dropped by `createUserStyles`' constructed-stylesheet
+  parse (`replaceSync` ignores `@import`) and `@font-face` by `compileCSS`'s at-rule allow-list; **ordinary
+  properties are the route**, which matters because §3.10's stated `<style>` control names `@import`. The
+  instrument is proven live by a benign `%%{init:{"theme":"dark"}}%%` control taking visible effect in the same
+  run (`.node rect` fill `#ECECFF` → `#1f2020`). The render is the only window: the probe never inserts the
+  returned string, and the container is removed in its own `finally`, so an observed request can only have been
+  issued while the measurement container was live. This is plan §7-3/§3.5's named residual hole firing from a
+  route the plan scoped to a remote IMAGE reference, not a directive.
+  **The mitigation, measured:** mermaid's `secure` config list (default `['secure','securityLevel',
+  'startOnLoad','maxTextSize','suppressErrorRendering','maxEdges']`, `mermaid/dist/chunks/mermaid.core/
+  chunk-WYO6CB5R.mjs:4441-4448`) is the set of keys `config.sanitize()` deletes from every `%%{init}%%`
+  directive before it merges (`:4890-4913`); `themeCSS` is NOT in it. D-6's config adds
+  `'themeCSS','fontFamily','altFontFamily','themeVariables'` to `secure`, after which the same payload produces
+  NO evil CSS and NO fetch; a benign `theme` directive is still honoured; a directive attempting to re-widen
+  `secure` (`%%{init:{"secure":[],"themeCSS":…}}%%`) fails, because `sanitize()` iterates
+  `['secure', ...siteConfig.secure ?? []]` — **the list guards itself**; and a `themeCSS` WE set through
+  `initialize()` still applies, so the hardening blocks the DIRECTIVE route, not the feature. **Ablated:**
+  passing mermaid's own default `secure` list explicitly still fetches all 10 — **the four ADDED keys are what
+  closes it**, not the act of passing an array to `initialize()`.
+  **Two measured facts beyond the recon, banked so the implementation does not narrow to `themeCSS` alone:**
+  (a) **`fontFamily` is an INDEPENDENTLY PROVEN route, not defense-in-depth** —
+  `%%{init:{"fontFamily":"serif; background-image: url(…)"}}%%` fetches, because it is interpolated into a
+  `:root{--mermaid-font-family: …}` rule and mermaid's `sanitizeCss` only checks brace balance; `altFontFamily`
+  is the same interpolation. (A brace-escaping `fontFamily` payload IS caught by `sanitizeCss` — the balanced
+  one is not.) (b) **`themeVariables` is defense-in-depth only:** its values are already pattern-guarded to
+  `/^[\d "#%(),.;A-Za-z]+$/`, which admits no `:` and no `/`, so a scheme URL is blanked before it renders
+  (measured — the render throws `Unsupported color format: ""`). **Its one measured COST:** an author-supplied
+  `%%{init:{"theme":"base","themeVariables":{"primaryColor":"#ff0000"}}}%%` stops taking effect (fill
+  `#ff0000` → `#fff4dd`). **Accepted deliberately, not overlooked** — neither spec nor plan promises
+  `%%{init}%%` directives at all (zero occurrences of "directive" or "themeVariables" in either), D-6 sets no
+  `themeVariables`, and §3.7/D-7 make the effective theme OURS to choose rather than the markdown author's.
+  **What this does NOT change:** D-6's `securityLevel: 'strict'` / `htmlLabels: false` / `startOnLoad: false`
+  all stand — this ADDS the `secure` hardening. No other D-value, no gate-1/gate-2/gate-3 disposition, no spec
+  §3.x. It is an instance of §3.10's FIRST bullet (*"the engine is configured so it cannot emit remote
+  references"*), which is why it is a config decision and not a sanitizer one. **This entry is the decision; the
+  config change to `src/render/diagramEngine.ts` (`DiagramEngineConfig` + `DIAGRAM_ENGINE_CONFIG`) lands as its
+  own implementation commit citing this entry — NOT here**; that file is byte-untouched by this bank.
+  `plan.md`'s D-6 residual-hole clause is edited minimally to record that this route is closed by the `secure`
+  hardening; the remaining §7-3 control (remote image references, §3.5 row 22) stays exactly as written, and
+  **group 3's real-engine zero-network guard still owes the measurement** — a config that closes one route is
+  not a proof that the window is clean, which is the whole point of D-6's "not by construction". **Cited by:**
+  the D-6 hardening implementation task (a group-3 / D-6 task); and the `<style>` decision left open as
+  ff8f323's first downstream finding — this hardening makes the generated `<style>`'s content provably
+  ENGINE-AUTHORED, a precondition for any option that ADOPTS that CSS rather than stripping it.
+  **Revisit-when:** a future mermaid changes the `secure` mechanism (e.g. `sanitize()` stops iterating
+  `['secure', ...siteConfig.secure]`, or directives stop flowing through it), or adds new directive-reachable
+  config that can carry a URL or raw CSS; then the hardened set is re-derived against the new version with the
+  same loopback-fetch probe and a firing control.
+
 - **2026-07-28 · M7 §2.2 AMENDMENT — the inherited hook is PROVABLY redundant for `sanitizeSvg`, so 2.2
   proves defense-in-depth + a widening guard, not hook-protection. Discharges ff8f323's second downstream
   finding.** Tasks §2.2 specifies proving the global `uponSanitizeAttribute` hook protects the SVG profile —
