@@ -1,6 +1,86 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-28 · M7 D-1/D-6 ADDENDUM — the SVG profile ADMITS `<style>` (option B), with a CSS-sanitization
+  pass guaranteeing the adopted artifact carries no external reference. Discharges ff8f323's first downstream
+  finding.** 2.1 denied `<style>` by absence; the group-3 investigation proved that STRIPS legibility
+  (flowchart/state/gantt render as black silhouettes — 100% of their paint is CSS) AND makes §4's theme-sync
+  unobservable (light-vs-dark byte-identical), §3.6's theme cache-key inert, §3.7's re-render pointless.
+  Option B admits `<style>` for FIDELITY and preserves §3.6/§3.7/§4/D-7 unchanged (the theme rides in the
+  `<style>`, so a flip re-renders and the cache key is meaningful — B needs NO §3.x amendment, unlike A).
+  **The security cost, scoped by REPRODUCTION (this session — real dompurify 3.4.12, `style` appended to a
+  SCRATCH copy of `SANITIZE_SVG_CONFIG`; `sanitize.ts` byte-untouched):** DOMPurify has no CSS parser, so with
+  `<style>` admitted the ENTIRE stylesheet survives VERBATIM — **21/21** `url()`-bearing declarations passed
+  through, both `@import` forms (`@import url(…)` and the bare-string `@import "…"`), `@font-face`'s `src`,
+  and `url()` nested inside `@media`/`@supports`. The unmodified profile is the control that fires: it drops
+  the element AND its text entirely (`<style>` present: false, `@import` present: false).
+  **The CSS pass must STRIP: any `url(` token whose target is not a `#`-fragment, WHEREVER it appears — the
+  coverage is TOKEN-scoped, not property-scoped, and that is the reproduction's main correction to the
+  recon's prose.** The enumerated property set is the evidence that a property list is the WRONG shape,
+  because the set is open-ended: `background-image`, `background`, `border-image-source`, `border-image`,
+  `list-style-image`, `content`, `cursor`, `shape-outside`, `-webkit-mask-image`, `mask-image`, `mask`,
+  `mask-border-source`, `fill`, `stroke`, `filter`, `clip-path`, `marker-end` (with its `marker-start` /
+  `marker-mid` siblings), `offset-path`, and `src` inside `@font-face` — **19 property spellings tested, all
+  19 passed verbatim** — plus the `url()`-WRAPPING functional forms `image-set(url(…))` and
+  `cross-fade(url(…))`. A pass that allow-lists properties is one CSS release behind by construction.
+  **Four obfuscation lanes also survived and are therefore in scope:** the CSS escape `u\72 l(` — **which a
+  naive `/url\(/` regex MISSES, the single most load-bearing detail here** — case (`URL(`), interior
+  whitespace (`url(  …  )`), and quoting (`url("…")` / `url('…')`); `url(data:…)` and the protocol-relative
+  `url(//host/…)` likewise survive and are likewise external. Plus `@import`, both forms.
+  **It must PRESERVE:** internal `url(#fragment)` references, unquoted and quoted with either quote character
+  (mirroring `SVG_ALLOWED_URI_REGEXP`'s `#`-only principle — all four internal forms survived the probe
+  intact, as did the `fill="url(#gradA)"` attribute the profile already gates); **and `@keyframes`, which
+  GATE B settles empirically: mermaid DOES emit them.** A real render (mermaid 11.16.0, real headless
+  Chromium, D-6's config verbatim, loopback-served, 6 diagram types) finds `@keyframes edge-animation-frame`
+  and `@keyframes dash` in EVERY type's `<style>`, unconditionally — they sit in `getStyles`' own template
+  (`chunk-WYO6CB5R.mjs:5271`), and `compileCSS`'s at-rule allow-list (`mermaid.core.mjs:1146-1184`) retains
+  `KEYFRAMES` with the comment *"needed for Mermaid's animation feature"* while turning every other at-rule
+  into a COMMENT. **So "strip all at-rules" is UNSAFE** — it would silently kill the animated-edge feature.
+  The same render supplies the safe simplification: `@keyframes` is the ONLY at-rule the engine emits, so the
+  at-rule policy is an allow-list of exactly one.
+  **Framing, stated so the implementation is not mis-scoped:** post-`3d7c8ed` the directive-injection route is
+  CLOSED and the `<style>` content is ENGINE-AUTHORED — the same render measured **zero `url()` in the emitted
+  CSS and zero non-`#` `url()` anywhere in the SVG, across all 6 types** — so this CSS pass is
+  DEFENSE-IN-DEPTH on the adopted/cached artifact: it guarantees a cached diagram cannot fetch on re-adopt
+  even if a future engine version emits a `url()`. It is NOT the primary injection defense (D-6's `secure`
+  hardening is). **`@import` is NOT the live route** — mermaid drops it twice over (`createUserStyles`'
+  constructed-stylesheet `replaceSync` parse ignores it, `mermaid.core.mjs:1136-1140`; and `compileCSS`
+  comments out any at-rule outside its allow-list) — external `url()` in ordinary properties is; the pass
+  covers `@import` as defense-in-depth, but a pass scoped to `@import` alone would be VACUOUS.
+  **Sealed footprint:** `SVG_ALLOWED_TAGS` gains `style` (reversing 2.1's denial for that element only);
+  `SANITIZE_SVG_CONFIG` gains the CSS pass (a hook or pre/post step — the first procedural filter beside the
+  allow-list, which spec §3.5/§3.10 anticipated by naming `@import` in embedded `<style>` as a thing to
+  STRIP). It does NOT touch the §2.2 no-hook guard — **`style` ∉ DOMPurify's `DATA_URI_TAGS`
+  (`{audio,video,img,source,image,track}`, `purify.es.mjs:678`), confirmed this session** — so the guard's
+  teeth (which bite only on a `DATA_URI_TAGS` member) are unaffected and the hook stays a proven no-op here;
+  nor the DOCUMENT profile (SVG-profile-only); nor the content-script fence (the CSS pass must tree-shake off
+  the content script with the rest of `sanitizeSvg`, on the `/*#__PURE__*/` pattern — the implementation
+  verifies by md5-identical content-script bytes).
+  **Mechanism (implementation's call, constraint recorded):** a new CSS-parser dependency is a supply-chain
+  event (1.1's pattern), and **the lean is that NONE IS NEEDED** — two in-repo mechanisms cover the surface.
+  (a) A narrow default-deny scan — reject every `url(` token whose target is not `#…`, and every at-rule that
+  is not `@keyframes` — reviewable as data on this file's own pattern, PROVIDED it decodes CSS escapes and
+  normalizes case/whitespace/quoting FIRST, since the `u\72 l(` lane is exactly what a naive regex fails.
+  (b) The PLATFORM's own CSS parser (`CSSStyleSheet` + `replaceSync` + a rule walk), which normalizes all
+  four obfuscation lanes for free and is what mermaid itself uses — at the cost of being browser-only
+  (`createCssStyles` branches on `typeof replaceSync === 'function'`; jsdom has none), so its proof must be
+  real-engine. (a) is the smaller review surface; (b) is the smaller correctness risk. Either beats a
+  dependency.
+  **Implementation MUST:** admit `<style>`; add the CSS pass with a red-first proving external
+  `url()`/`@import` are stripped and `@keyframes` / internal `url(#…)` preserved, real-engine (the fetch is
+  browser-only — jsdom loads no subresources); update 2.1's exact-set (`sanitize.test.ts:239`) and
+  denied-by-absence (`:249`, whose loop names `style`) tests, and RE-AIM `:350` (*"drops `@import` in
+  `<style>` — the element goes, so the rule goes with it"*) at the new mechanism, since the element now STAYS
+  and the rule must go — which is also what turns the `:397` corpus's `@import` row from a vacuous pass into
+  a real one; hold the content-script fence; the byte-untouched DOCUMENT-profile pin (`:601-666`) stays green.
+  **Cited by:** the B implementation task; group 3's enhancer (which adopts the `<style>`-bearing SVG).
+  **Discharges:** ff8f323's first downstream finding. **Revisit-when:** a future mermaid emits CSS constructs
+  beyond `url()`/`@import`/`@keyframes` that can fetch or script — a new at-rule is the live possibility,
+  since `compileCSS`'s allow-list ALREADY admits `@media`/`@supports`/`@layer`/`@scope`/`@container`/
+  `@starting-style` for user CSS and only the engine's current templates keep them out of the output — or
+  DOMPurify gains a CSS parser that changes what survives; then the pass's coverage is re-derived against the
+  new version with the same loopback-fetch probe.
+
 - **2026-07-28 · M7 D-6 ADDENDUM — D-6's config HARDENS mermaid's `secure` list, closing a live pre-sanitize
   CSS-injection/fetch route the plan's residual-hole control does not name.** At `securityLevel: 'strict'` with
   D-6's config, an untrusted markdown author can inject arbitrary CSS into mermaid's generated `<style>` via a
