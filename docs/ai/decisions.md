@@ -1,6 +1,46 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-28 · M7 §2.2 AMENDMENT — the inherited hook is PROVABLY redundant for `sanitizeSvg`, so 2.2
+  proves defense-in-depth + a widening guard, not hook-protection. Discharges ff8f323's second downstream
+  finding.** Tasks §2.2 specifies proving the global `uponSanitizeAttribute` hook protects the SVG profile —
+  "a `data:` on `xlink:href` does not survive `sanitizeSvg`; remove the hook → the assertion reds." **That is
+  unsatisfiable, and provably so:** verified against dompurify 3.4.12 source (this session), the hook's only
+  effect is `keepAttr=false` for `{href, src, xlink:href}` with a `data:`-resolving value, and for that to be
+  OBSERVABLE `_isValidAttribute` must otherwise accept the attribute — all five acceptance branches are closed
+  under `SANITIZE_SVG_CONFIG`: `URI_SAFE_ATTRIBUTES` excludes the ref attrs (they're gated) and `src` isn't
+  allow-listed; `IS_ALLOWED_URI` is anchored/scheme-free and tested against the `ATTR_WHITESPACE`-stripped
+  value (a superset of `isDataUri`'s strip, closing the obfuscation lane); `DATA_URI_TAGS`
+  (`{audio,video,img,source,image,track}`) has empty intersection with `SVG_ALLOWED_TAGS` and non-allow-listed
+  elements are removed before attributes are checked; `ALLOW_UNKNOWN_PROTOCOLS` is false. A sweep of every
+  allow-listed tag × ref attr × `data:`/`javascript:`/obfuscation payload, plus a real-engine
+  mXSS/integration-point corpus, produced **zero hook-vs-no-hook diffs in Chromium, Firefox and jsdom
+  (686/686/726 cases)** — with a firing control (the DOCUMENT profile's `<img src="data:">` DOES diverge,
+  proving the instrument live). The hook remains fully load-bearing for `sanitize()`; it is redundant for
+  `sanitizeSvg` ONLY because 2.1's allow-list already denies the tags that make it necessary. **The reframe:**
+  §2.2 proves (a) the hook is registered on the shared singleton `sanitizeSvg` calls (inherited by
+  construction, real-engine both engines) AND (c) the SVG profile's `data:` denial is allow-list-driven and
+  hook-INDEPENDENT — pinned by a test asserting a NO-HOOK DOMPurify instance is also clean on the profile,
+  which **reds the moment `SVG_ALLOWED_TAGS` is widened to include a `DATA_URI_TAGS` member** (verified this
+  session: with `image` allow-listed, the no-hook instance leaks `data:` while the hooked one strips it — the
+  guard has teeth). This is a STRONGER, TRUE security statement than §2.2's original: it pins both the
+  property (the profile is safe) and the exact boundary change that would make the hook necessary again.
+  **Option (b)** (an observer-hook that proves *a* hook fires, not *the* hook) is rejected — a red-first on the
+  framework's hook mechanism, not on our security posture. **What this does NOT change:** D-1's core (a second
+  named sanitizer; document profile byte-untouched; allow-list as data; denial by absence; the hook
+  inherited-not-re-registered) all stand — the hook IS inherited; what's corrected is the CLAIM that its
+  inheritance is what protects the SVG profile. No other D-value, no gate disposition, no spec §3.x.
+  `plan.md` D-1's hook bullet and `tasks.md` §2.2 are edited minimally to point here; this bank is the
+  amendment of record. **Cited by:** task 2.2. **Discharges:** ff8f323's second downstream finding (2.2's
+  discriminator). **Noted for the M7 retro (a pattern, not a complaint):** this is the THIRD group-2 sealed
+  decision whose library-behaviour assumption did not survive contact with the real library —
+  `engineVersion`'s non-existent runtime export (bddd5af), `/^#/`'s global attribute gating (ff8f323), and now
+  the hook's redundancy under the allow-list. All three were caught by a gate before code shipped; the
+  signature is spec written against a mental model of DOMPurify/mermaid rather than the libraries themselves.
+  **Revisit-when:** `SVG_ALLOWED_TAGS` is ever widened to a `DATA_URI_TAGS` member (the (c) guard reds, and the
+  hook becomes load-bearing — re-verify it fires); or a future DOMPurify changes `_isValidAttribute`'s branch
+  structure (the 5-branch closure is re-confirmed).
+
 - **2026-07-28 · M7 D-1 / §2.1 AMENDMENT — the SVG profile's `ALLOWED_URI_REGEXP` is NOT `/^#/`, because
   DOMPurify applies that regexp to every non-URI-safe attribute, which `/^#/` would strip the whole diagram
   through. Sealed intent preserved; the mechanism corrected.** Plan D-1 and tasks §2.1 specify the SVG

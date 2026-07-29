@@ -152,15 +152,22 @@ decision gate:** 8.4, the bound values and the typical-case target.
 
 - [ ] **2.2 The INHERITED global hook — asserted, not assumed (real-engine, Cr+Fx).** `sanitize.ts:131-135`
       registers `uponSanitizeAttribute` on the **shared DOMPurify singleton**, so it fires for `sanitizeSvg`
-      too, and `URL_ATTRS` (`:89`) already carries `xlink:href`. **That is inherited global-singleton
-      behaviour — exactly what a future `removeHook` breaks silently in a file nobody thought they were
-      touching** — so it is pinned by test, in both engines, against the real DOMPurify build.
+      too, and `URL_ATTRS` (`:89`) already carries `xlink:href`. **That inheritance is BY CONSTRUCTION and is
+      pinned by test, in both engines, against the real DOMPurify build — but it is NOT what protects this
+      profile, and this task's proof is AMENDED** (`decisions.md` *"M7 §2.2 AMENDMENT — the inherited hook is
+      PROVABLY redundant for `sanitizeSvg`"*): all five `_isValidAttribute` acceptance branches are closed
+      under `SANITIZE_SVG_CONFIG`, so the hook is a proven no-op here and removing it reds nothing. The
+      `data:` denial is ALLOW-LIST-driven; the hook is defense-in-depth, and the guard is the widening boundary.
       Files: `tests/browser/diagramSanitize.browser.test.ts` · `src/render/sanitize.test.ts` (unit mirror)
-      Verify: (**tests/browser** — Cr+Fx) a `data:` URI on `xlink:href` does **not** survive `sanitizeSvg`;
-      **revert-and-fail: remove the hook registration and the assertion reds naming the surviving `data:`
-      value**, not "expected true". Non-vacuous control in the same test: a `#fragment` on the same attribute
-      **does** survive, so the assertion is not passing because everything was stripped. Plan §4-3's second
-      half: the hook fires through `sanitizeSvg` **regardless of how `dompurify` resolved** at 1.1. `cp
+      Verify: (**tests/browser** — Cr+Fx) a `data:` URI on `xlink:href` does **not** survive `sanitizeSvg`,
+      **and a fresh NO-HOOK DOMPurify instance is also clean on the profile** — hook-independence is the
+      property, so "remove the hook → it reds" is NOT the discriminator and must not be used as one.
+      **Revert-and-fail: add the single `DATA_URI_TAGS` member `image` to `SVG_ALLOWED_TAGS` and the no-hook
+      assertion reds naming the surviving `data:` value**, not "expected true" — verified live at the
+      amendment (hooked strips, no-hook leaks). Non-vacuous control in the same test: a `#fragment` on the same
+      attribute **does** survive, so the assertion is not passing because everything was stripped. Plan §4-3's
+      second half: the hook is registered on the singleton `sanitizeSvg` calls **regardless of how `dompurify`
+      resolved** at 1.1. `cp
       sanitize.ts` aside; restored byte-identical. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-1; §3.10; plan §4-3]
 
