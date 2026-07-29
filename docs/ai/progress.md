@@ -10,7 +10,7 @@
 
 ## Now (start here)
 
-**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3 (banked in `decisions.md`'s M7 GATE 3 entry — `66634fa`; the tasks file's "DRAFT awaiting gate 3" status line stays, by the gate-1/gate-2 precedent). TASK 1.1 IS DONE (`2159e5c`): `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 IS DONE (this commit): `src/render/diagramEngine.ts` — the ONE module naming `import('mermaid')` (a static string literal the scanner permits), the feature-detect that keeps a fence-free document from ever evaluating it, D-6 step 3's configuration, and `engineVersion()` sourced from a STATIC `mermaid/package.json` import per the D-3/D-13 amendment (`bddd5af`) — mermaid exposes no runtime version. Imported by NOTHING, so both bundles are md5-identical to 1.1's. TASK 1.3 (THE ABLATION — the scratch `appShell.ts` reference, four outputs, every byte accounted) IS NEXT, and 1.2 hands it two named items: the static `mermaid/package.json` import inlines the WHOLE package.json, not a tree-shaken `version` — a named byte in 1.3's sub-block accounting; and the build-output proof that the static form emits NO bare specifier and NO orphan chunk is 1.3's, because at 1.2 the module is reachable from nothing and there is no emitted output to inspect.**
+**M6 (spec 006 — snapshots + diff) closed 2026-07-27. M7 is IN IMPLEMENTATION: all three Gear-3 gates are behind it — `spec.md` PASSED gate 1 (`e09520f`, three revisions, §3.4/§9-2/§9-3 dispositions recorded there), `plan.md` PASSED gate 2 (`c44406a`, approved at `cab93c7` with four sub-decisions — the D-5 ledger copy, version-bump-uses-eviction, the `architecture.md` correction routed to group 9, and the §7-9 flip-cost re-routed to gate 3), and `specs/007-mermaid-diagrams/tasks.md` (28 tasks, nine groups) PASSED gate 3 (banked in `decisions.md`'s M7 GATE 3 entry — `66634fa`; the tasks file's "DRAFT awaiting gate 3" status line stays, by the gate-1/gate-2 precedent). TASK 1.1 IS DONE (`2159e5c`): `mermaid@11.16.0` added as the FIFTH production dependency, with its four supply-chain gates discharged. TASK 1.2 IS DONE (`1391118`): `src/render/diagramEngine.ts` — the ONE module naming `import('mermaid')` (a static string literal the scanner permits), the feature-detect that keeps a fence-free document from ever evaluating it, D-6 step 3's configuration, and `engineVersion()` sourced from a STATIC `mermaid/package.json` import per the D-3/D-13 amendment (`bddd5af`) — mermaid exposes no runtime version. Imported by NOTHING, so both bundles are md5-identical to 1.1's. TASK 1.3 IS DONE (this commit) — THE ABLATION, and GROUP 1 IS COMPLETE. The content-script bundle is md5-IDENTICAL both engines with `diagramEngine` made reachable by a scratch `appShell.ts` reference — mermaid never enters the gated path — and that null counts for something only because the negative control FIRED in the same run: the app page gained +3,349,685 B. mermaid emits as a SEPARATE LAZY ASYNC CHUNK (`chunks/mermaid.core-D7K4dyvy.js`, 34,946 B) behind a real `import()`, never statically inlined; the app chunk itself moved only +2,379 B (dynamic-import glue 1,971 · `diagramEngine`'s own code 375 · scratch artifact 29 · statement realign 4), decomposed to the byte with no unnamed residual. Both of 1.2's handoff items are discharged: the static `mermaid/package.json` import does inline the WHOLE package.json — 3,847 B, isolated by a second ablation — and the emitted output carries NO bare specifier and NO orphan chunk. These figures are ABLATION / SCRATCH-WIRED and are NOT the production figure (8.1 owns that): `appShell.ts` is restored md5-identical, `diagramEngine` is again imported by nothing, and the committed baselines are UNCHANGED. Full note in § Baselines. TASK 2.1 (`sanitizeSvg()` — the second exported profile, hostile corpus red-first) IS NEXT, opening group 2.**
 
 **★ BOTH FLAGS RAISED BY TASK 1.1 ARE NOW CLOSED — gate 3's approval banked (below), the SBOM defect
 fixed at `1a202fd`. Neither ever blocked 1.2.**
@@ -55,7 +55,7 @@ archive pass ran that walk on itself.**
 
 ## Up next
 
-### M7 (spec 007) — persona #1 completion via M7a (Mermaid + diagram cache) · IN IMPLEMENTATION, group 1
+### M7 (spec 007) — persona #1 completion via M7a (Mermaid + diagram cache) · IN IMPLEMENTATION, group 2
 
 **Scope is SETTLED and all three gates are behind it** (see § Now). M7a is **Mermaid + a diagram
 cache**; the rest of persona-#1 quality-of-life (compare-any-two-files, agent-file awareness, table
@@ -65,7 +65,7 @@ six milestones landed almost entirely inside persona #1's column,
 it is the one item that needs a dependency Peekover has never installed.
 
 **Implementation runs task-by-task from `specs/007-mermaid-diagrams/tasks.md`, one commit per task,
-this pointer advancing in that same commit.** Next: **1.2**.
+this pointer advancing in that same commit.** Next: **2.1** — group 1 (1.1 · 1.2 · 1.3) is complete.
 
 - **DISCHARGED, recorded so it is not re-raised: the persona-#1 completion decision IS NOW BANKED** in
   `decisions.md` (`87cd026`, the M7 DIRECTION entry). The archive pass's flag is closed.
@@ -135,7 +135,7 @@ measurement-driven or explicitly deferred.*
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; running gate score **10/10**, corrected
-from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPLEMENTATION, group 1** ·
+from the 8/8 recorded at 9.1) · **007 Mermaid + diagram cache (M7a) — IN IMPLEMENTATION, group 2** ·
 … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
@@ -428,6 +428,53 @@ view**, never the string "diff". *(8.1 recorded **36** here under an unstated pa
 CSS changes or a different pattern, and **the number is decoration either way**: it is the two marker
 rows above, with their firing control, that carry the fence's evidence. Stated rather than silently
 overwritten.)*
+
+**★ 007 TASK 1.3 — THE LAZY-CHUNK ABLATION (plan §7-1 RESOLVED). ABLATION / SCRATCH-WIRED FIGURES —
+NOT THE PRODUCTION FIGURE, WHICH 8.1 OWNS. THE TABLE ABOVE IS UNCHANGED BY THIS NOTE**, and that is a
+measured fact rather than an intention: `diagramEngine.ts` is imported by nothing at HEAD, the scratch
+`appShell.ts` reference existed only inside the measurement, and the restored file is md5-identical
+(`b99512d3b9079b492910b553c21b4c34`) with the rebuild landing back on 315,671 B / 361,500 B
+(`app-CEHD9mSZ.js`) on both engines. Chunking had never been exercised in this repo — zero dynamic
+imports in `src/` before 1.2 — so it was measured before anything was allowed to depend on it.
+
+- **(a) THE FENCE HOLDS, AND THE CONTROL FIRED IN THE SAME RUN.** With `diagramEngine` reachable from
+  the app-page graph, `content-scripts/peekover.js` is **byte-identical: 315,671 B, md5 unchanged on
+  both engines** (Chrome `c8251651d0ae3b348053a54c6ba2e4a4`, Firefox `b597b1b472ebb983f40b6d8ee11fd83c`)
+  — *byte-identical means it was never there.* **That null is only worth something because the negative
+  control moved in the same comparison: the app page gained +3,349,685 B** (5 emitted files → 104). A
+  measurement reading 0 on both sides discriminates nothing — this is retraction A's disposition, and
+  the fence is now carried by bytes rather than by a grep.
+- **(b) EVERY BYTE OF THE APP-PAGE DELTA ASSIGNED.** +3,349,685 B total = **engine 3,347,306 B** (99
+  lazy chunks: 591,209 B fetched with the core via the 20-entry `__vite__mapDeps`, 2,756,097 B in 79
+  further-deferred per-diagram-type chunks) **+ app-chunk 2,379 B**. The app chunk decomposes exactly:
+  **glue 1,971 B** (`__vitePreload` helper 1,192 · `__vite__mapDeps` table 741 · helper re-export 38) ·
+  **`diagramEngine`'s own emitted code 375 B** · **scratch artifact 29 B** (`globalThis.__ablation_1_3=`,
+  not production) · **residual 4 B, NAMED: a `var ` statement-boundary realign** (plus 22 single-char
+  identifier renames, net 0). **CSS = 0 B** — no `.css` file is emitted at all; mermaid carries its
+  styles as JS strings inside the lazy chunks, already counted in the engine block.
+- **(c) A SEPARATE LAZY ASYNC CHUNK, NAMED AND REACHABLE — §10's guarantee holds.**
+  `chunks/mermaid.core-D7K4dyvy.js` (**34,946 B**), reached by a real call site the bundler rewrote from
+  the bare specifier: `()=>kd(()=>import("./mermaid.core-D7K4dyvy.js"),__vite__mapDeps([0…19]))`. **Not
+  statically inlined** — the app chunk moved 2,379 B while the engine payload sits in 99 separate files,
+  and mermaid's own `11.16.0` appears in `mermaid.core-*`, never in the app chunk. No bare specifier and
+  no orphan chunk survive into the output, closing 1.2's second handoff item.
+- **★ (b)'s NAMED LINE-ITEM — THE `mermaid/package.json` INLINE COSTS 3,847 B, AND IT IS MATERIAL.**
+  1.2 handed this forward and it is now measured, isolated by a second ablation (retaining
+  `engineVersion` as well moves the app chunk 363,879 → 367,788 B, +3,909 B = **package.json literal
+  3,847** · `engineVersion()` accessor 32 · scratch artifact #2 30 · hash churn 0). The bundler inlines
+  the WHOLE object — `description`, the `exports` map, `devDependencies`, `scripts` — to carry a
+  seven-character version string, ~1.06% of the app chunk's own 361,500 B baseline and larger than the
+  entire rest of the app-chunk delta combined. **NOT narrowed here: 1.3 measures, it does not decide.**
+  A Vite `define` reading only `version` is the obvious narrowing and is a D-13/D-16 disposition for a
+  later task, recorded so it is not lost.
+- **(d) SCANNER GREEN WITH ITS SELF-TEST FIRING.** `check-dynamic-imports.ts` **EXIT=0** over 55 shipped
+  files, and `--self-test` **EXIT=0** with **7 firing + 8 silent** cases — including the MUST_NOT_FIRE
+  fixture *"bare-specifier lazy chunk"* that is exactly the shape 1.2 shipped. Scanner and
+  `supply-chain.yml` byte-identical; no threshold asserted anywhere in this task.
+- **STALENESS FOUND, ROUTED TO 9.3 RATHER THAN FIXED HERE (baseline reconciliation is 9.3's task):** the
+  table above reads **549 unit (46 files)**; the suite is now **563 passed (48 files)** — `+14` cases from
+  `diagramEngine.test.ts` (`1391118`) and `tests/sbomWalk.test.ts` (`1a202fd`). Every BYTE pin in the
+  table re-measured true this session; only the suite row has drifted.
 
 **★ THE TWO 006 HARNESSES, RE-RUN THIS SESSION (`--no-build`). Neither emits an exit-code gate, by
 design — they choose nothing.**
