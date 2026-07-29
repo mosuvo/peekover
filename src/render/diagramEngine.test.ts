@@ -112,7 +112,12 @@ describe('D-6 step 3 — the configuration the engine is initialized with', () =
     expect(config.htmlLabels).toBe(false);
     expect(config.startOnLoad).toBe(false);
     // And nothing else: an added key is a configuration decision that must be made deliberately.
-    expect(Object.keys(config).sort()).toEqual(['htmlLabels', 'securityLevel', 'startOnLoad']);
+    expect(Object.keys(config).sort()).toEqual([
+      'htmlLabels',
+      'secure',
+      'securityLevel',
+      'startOnLoad',
+    ]);
   });
 
   it('registers no icon packs, calls no bindFunctions, and renders nothing (D-6 steps 3 & 5)', async () => {
@@ -126,11 +131,63 @@ describe('D-6 step 3 — the configuration the engine is initialized with', () =
 
   it('exports the configuration frozen, so a caller cannot mutate the guarantees', () => {
     expect(Object.isFrozen(DIAGRAM_ENGINE_CONFIG)).toBe(true);
+    // The ARRAY is frozen too, not just the object holding it: `Object.freeze` is shallow, so
+    // without this a caller could `secure.length = 0` and silently un-harden the engine.
+    expect(Object.isFrozen(DIAGRAM_ENGINE_CONFIG.secure)).toBe(true);
     expect(DIAGRAM_ENGINE_CONFIG).toEqual({
       securityLevel: 'strict',
       htmlLabels: false,
       startOnLoad: false,
+      secure: [
+        'secure',
+        'securityLevel',
+        'startOnLoad',
+        'maxTextSize',
+        'suppressErrorRendering',
+        'maxEdges',
+        'themeCSS',
+        'fontFamily',
+        'altFontFamily',
+        'themeVariables',
+      ],
     });
+  });
+});
+
+describe('the hardened `secure` list (D-6 addendum — decisions.md 16c7790)', () => {
+  // ★ SCOPE OF THIS BLOCK, STATED HONESTLY. These are CONFIG-SHAPE assertions. They cannot
+  // prove the security property, because the property is BYTES ON THE WIRE fired by the real
+  // engine during render(), and jsdom loads no subresources (decisions.md 2026-07-14) — a
+  // "no fetch" here would be true of any config, including an empty one. THE FETCH PROOF IS
+  // `tests/browser/diagramSecure.browser.test.ts`, which reds against the un-hardened config
+  // over BOTH live routes in real Chromium and Firefox. What these add is a cheap, fast tripwire
+  // on the SET, so dropping a key reds in the everyday suite instead of only in the browser one.
+
+  it('re-states mermaid’s own six defaults — `secure` REPLACES the default, it does not extend it', () => {
+    // The subtle failure this guards: mermaid seeds `siteConfig` from `defaultConfig` and then
+    // assigns ours over it, so omitting a default member here would un-secure that key —
+    // `securityLevel` most of all, which a directive could then flip to 'loose'.
+    for (const key of [
+      'secure',
+      'securityLevel',
+      'startOnLoad',
+      'maxTextSize',
+      'suppressErrorRendering',
+      'maxEdges',
+    ]) {
+      expect(DIAGRAM_ENGINE_CONFIG.secure, `mermaid default "${key}" was dropped`).toContain(key);
+    }
+  });
+
+  it('adds the four CSS-bearing keys the directive-injection route travels through', () => {
+    // Named one at a time so a red says WHICH route re-opened. `themeCSS` and `fontFamily` are
+    // independently PROVEN live (the browser test asserts each separately); `altFontFamily` is
+    // the same interpolation as `fontFamily`; `themeVariables` is defense-in-depth.
+    for (const key of ['themeCSS', 'fontFamily', 'altFontFamily', 'themeVariables']) {
+      expect(DIAGRAM_ENGINE_CONFIG.secure, `"${key}" is not secured — its route is open`).toContain(
+        key,
+      );
+    }
   });
 });
 

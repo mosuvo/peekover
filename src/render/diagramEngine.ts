@@ -79,6 +79,16 @@ export interface DiagramEngineConfig {
   readonly securityLevel: 'strict';
   readonly htmlLabels: false;
   readonly startOnLoad: false;
+  /**
+   * Typed as a MUTABLE `string[]` on purpose. Mermaid's own `MermaidConfig.secure` is
+   * `string[]`, and TypeScript will not assign a `readonly string[]` to it — so declaring the
+   * honest-looking `readonly string[]` here makes `DiagramEngineConfig` un-assignable to
+   * `MermaidConfig`, and the real mermaid module stops satisfying {@link DiagramEngineModule}.
+   * That would trade a real structural guarantee (the interface is a subset the engine
+   * satisfies) for a cosmetic one. The array is frozen at RUNTIME instead — asserted in the
+   * unit mirror — so the guarantee is kept where it actually bites.
+   */
+  readonly secure: string[];
 }
 
 /** What `mermaid.render()` resolves to. Declared for group 3; this module never calls `render`. */
@@ -106,11 +116,57 @@ export interface DiagramEngineModule {
 /** A function that produces the engine module. The default one is the only `import('mermaid')`. */
 export type EngineLoader = () => Promise<DiagramEngineModule>;
 
-/** D-6 step 3, frozen so a caller cannot mutate the configuration the guarantees rest on. */
+/**
+ * D-6 step 3, frozen so a caller cannot mutate the configuration the guarantees rest on.
+ *
+ * ── `secure`: THE HARDENED LIST (decisions.md 2026-07-28, commit `16c7790`) ──────────────────
+ *
+ * `secure` names the config keys `config.sanitize()` DELETES from every `%%{init}%%` directive
+ * before merging it. Mermaid's own default list is the first six entries below; the last four
+ * are ours, and they close a LIVE pre-sanitize fetch route. Without them an untrusted markdown
+ * author can inject arbitrary CSS into the engine's GENERATED `<style>`, and the engine fetches
+ * the resulting `url(…)` DURING `render()` — inside D-6's measurement window, BEFORE
+ * `sanitizeSvg` ever sees the string. Denying `<style>` downstream is therefore too late, and
+ * `securityLevel: 'strict'` does not close it either ('loose' behaves identically). Proven
+ * red-first over both live routes in `tests/browser/diagramSecure.browser.test.ts`:
+ *
+ *   `themeCSS`      — arbitrary CSS, verbatim. The live route is ORDINARY url()-bearing
+ *                     properties (`background-image` et al), NOT `@import`, which mermaid's
+ *                     constructed-stylesheet parse drops on its own.
+ *   `fontFamily`    — interpolated into `:root{--mermaid-font-family: …}`; mermaid's
+ *                     `sanitizeCss` only checks BRACE BALANCE, so a balanced payload passes.
+ *   `altFontFamily` — the same interpolation, same guard, same hole.
+ *   `themeVariables`— defense-in-depth: values are already pattern-guarded to a set admitting
+ *                     no `:` and no `/`. Included anyway, at ONE ACCEPTED COST — an author's
+ *                     `%%{init}%%` themeVariables stop applying. Deliberate: neither spec nor
+ *                     plan promises author directives, and §3.7/D-7 make the effective theme
+ *                     OURS to choose rather than the markdown author's.
+ *
+ * The list guards ITSELF: `sanitize()` iterates `['secure', ...siteConfig.secure]`, so a
+ * `%%{init:{"secure":[]}}%%` cannot re-widen it. This constrains only DIRECTIVE-supplied keys —
+ * a `themeCSS` we set here ourselves still applies, so this closes the route, not the feature.
+ */
 export const DIAGRAM_ENGINE_CONFIG: DiagramEngineConfig = Object.freeze({
   securityLevel: 'strict',
   htmlLabels: false,
   startOnLoad: false,
+  // `as string[]` below concedes the TYPE to mermaid's mutable signature, never the guarantee:
+  // the array is genuinely frozen (see {@link DiagramEngineConfig.secure}).
+  secure: Object.freeze([
+    // mermaid's own defaults — re-stated because `secure` REPLACES the default rather than
+    // extending it, so dropping one here would silently un-secure `securityLevel` itself.
+    'secure',
+    'securityLevel',
+    'startOnLoad',
+    'maxTextSize',
+    'suppressErrorRendering',
+    'maxEdges',
+    // ── ours: the CSS-bearing keys, per the header above ──
+    'themeCSS',
+    'fontFamily',
+    'altFontFamily',
+    'themeVariables',
+  ]) as string[],
 });
 
 /**
