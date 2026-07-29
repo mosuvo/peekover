@@ -98,7 +98,9 @@ import {
 import { getCaptureFlag, setCaptureFlag } from './captureFlag';
 import { createTreeView } from './treeView';
 import { detectorForFile } from '../watch/detectorForFile';
-import { createWatchController, DEAD_READ_NOTE } from '../watch/watchController';
+import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/watchController';
+import { mount } from '../render/mount';
+import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { watchCapability } from '../watch/watchAvailability';
 import {
   registerWatchTarget,
@@ -111,6 +113,26 @@ import { createStorageView } from './storageControls';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
+
+/**
+ * D-12's SECOND call site — the app page's watch re-render.
+ *
+ * `watchController` re-renders through an injected `render`, defaulting to bare `mount`. Until now
+ * every caller took that default; the app page overrides it so a watched document that changes on
+ * disk comes back ENHANCED. It has to be here rather than inside `mount()`: §3.3 forbids the branch
+ * and `replaceChildren` destroys the rendered diagrams on every re-mount, so re-enhancement is not
+ * an optimisation but the only thing that keeps a watched diagram on screen.
+ *
+ * `contentWatch.ts` passes no `render` and is not touched — that omission is the §3.2 fence, and it
+ * is what keeps the enhancer (and the engine behind it) off the content-script graph entirely.
+ *
+ * Identical body to `readerPane`'s site by construction: one shared `enhanceDiagrams`, called after
+ * a committed mount, never two divergent copies.
+ */
+const renderWithDiagrams: RenderFn = (text, target, options) => {
+  mount(text, target, options);
+  enhanceDiagrams(target);
+};
 
 /** The subset of `store` the shell uses. The write methods are required (grant flow, group 3);
  *  the read + pin methods (group 5) are OPTIONAL so a 3-method fake store (existing jsdom /
@@ -791,7 +813,12 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // off if it somehow is not (no captured "unknown"). `SEP` is recents' documented separator,
     // reused so `deleteSnapshotsForFolder`'s `folderId + SEP` revoke scan (D-10) stays exact.
     const docId = activeFolderId != null ? activeFolderId + SEP + file.path : null;
-    controller = createWatchController({ detector, contained: true, docId });
+    controller = createWatchController({
+      detector,
+      contained: true,
+      docId,
+      render: renderWithDiagrams,
+    });
     registerWatchTarget(controller);
 
     // THE DIFF CONTEXT (task 2.1) — registered ALONGSIDE the watch target and under the SAME

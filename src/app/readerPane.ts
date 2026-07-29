@@ -17,6 +17,7 @@
 // pane is a new caller, exactly like the content script is.
 
 import { mount } from '../render/mount';
+import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { stopWatch } from '../watch/watchRegistry';
 
 /**
@@ -177,6 +178,11 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // document), which would otherwise paint over the shell here. See CONTAINED_CSS.
       content.replaceChildren(host);
       mount(outcome.text, host, { contained: true });
+      // D-12's first call site: enhancement runs AFTER the mount has committed and is not a
+      // branch inside it (`mount()` stays read-only library, 006 D-15). Synchronous and
+      // pre-paint — it leaves D-15's degraded state behind, so a fence whose diagram never
+      // arrives is already showing its source rather than transitioning into showing it.
+      enhanceDiagrams(host);
       return;
     }
     content.replaceChildren(buildState(doc, outcome));

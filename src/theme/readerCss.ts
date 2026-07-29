@@ -621,6 +621,14 @@ export const READER_CSS = /* css */ `
    surfaces, no JS pixel math. Additive property only; the column's own rules are unchanged. */
 .peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
 .peekover-reader h4,.peekover-reader h5,.peekover-reader h6{ scroll-margin-top:24px; }
+
+/* Diagrams (007 D-15) — rationale: diagramView.ts */
+.peekover-reader .peekover-diagram{
+  margin:28px 0;padding:0;overflow-x:auto;text-align:center;
+  color:var(--ink);
+}
+.peekover-reader .peekover-diagram svg{max-width:100%;height:auto}
+.peekover-reader pre[data-diagram="rendered"]{display:none}
 `;
 
 // ============================================================================
