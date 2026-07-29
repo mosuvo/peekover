@@ -97,12 +97,16 @@ decision gate:** 8.4, the bound values and the typical-case target.
       the rule permits it, not because the rule is avoided**; **007 is the first code to exercise that rule.**
       Behind §4's feature-detect: no `language-mermaid` fence ⇒ the import is **never evaluated**. D-6 step 3's
       configuration lives here (`securityLevel: 'strict'` — not `'sandbox'` · `htmlLabels: false` · no icon
-      packs). The engine's **own exported version** is read at runtime for D-3's key, **never a hardcoded
-      constant**. Imported by nothing yet.
+      packs). D-3's `engineVersion` is sourced from a **static `mermaid/package.json` import** per the
+      amendment (`decisions.md` bddd5af) — mermaid 11.16.0 exposes **no runtime version export**; the value is
+      inlined by the bundler from the resolved package, **not a hardcoded constant** (it re-derives on every
+      build, so a Dependabot bump moves the key). Imported by nothing yet.
       Files: `src/render/diagramEngine.ts` · `src/render/diagramEngine.test.ts`
       Verify: (**unit**) the feature-detect returns false on a fence-free document and the loader is **not
       invoked** — assert the injected loader's **call count**, since an un-called spy and a missing spy look
-      identical; the version accessor reads the engine's export. `scripts/check-dynamic-imports.ts` **EXIT=0**
+      identical; the version accessor returns the resolved `mermaid/package.json` version (amendment bddd5af),
+      asserted against an independent read of that file — proving it matches the resolved package, not that it
+      changes on a bump (structural, per the amendment). `scripts/check-dynamic-imports.ts` **EXIT=0**
       AND `--self-test` **still fires** — control: a deliberately-computed specifier in a scratch fixture
       (outside `src/`, deleted in the same task) must go **RED**. Golden EMPTY · manifest green **2975 B** ·
       `permissions: []` · scanner + workflow byte-identical. [D-13; §5 dynamic-import; plan §3-1(d)]
