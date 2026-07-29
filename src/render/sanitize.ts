@@ -143,3 +143,242 @@ DOMPurify.addHook('uponSanitizeAttribute', (_node, data) => {
 export function sanitize(html: string): string {
   return DOMPurify.sanitize(html, SANITIZE_CONFIG) as string;
 }
+
+// ── THE SVG PROFILE (007 D-1) ────────────────────────────────────────────────
+//
+// A SECOND NAMED sanitizer, not a parameter to `sanitize()`. A parameter is a value a
+// call site can get wrong, and the failure mode is silent widening on the untrusted-
+// source path; two differently-named functions cannot be confused by a typo. The
+// document profile above keeps exactly one call shape and its three consts are
+// BYTE-UNTOUCHED — markdown source still cannot produce an `<svg>`, because `svg` is
+// not in ALLOWED_TAGS and this profile is never reachable from the parse stage.
+//
+// Same construction as above, for the same reason: the allow-list is DATA, and every
+// tag/attribute NOT listed is dropped. There is still no FORBID list. `foreignObject`,
+// `<style>`, `<a>`, `<switch>`, `<filter>` and the `style`/`on*`/`target` attributes
+// are all denied the same way everything else is — by ABSENCE.
+//
+// The input is our OWN bundled engine's output (D-6), not untrusted source. That does
+// not earn it a looser profile: it earns it a TIGHTER one, because a generated artifact
+// has a knowable shape. Hence `SVG_ALLOWED_URI_REGEXP` below, which can express no
+// scheme at all and is strictly narrower than the document profile's
+// `ALLOWED_URI_REGEXP` (`:85-86`).
+//
+// NOT `USE_PROFILES: {svg:true}` (D-1, rejected): that is permission-by-category, and
+// the category it admits includes `foreignObject`'s neighbours. It is also unreviewable
+// as data, which is the one thing this file exists to make possible.
+
+/**
+ * The only element tags a rendered diagram may contain. Grounded in what the engine
+ * actually emits (a survey of `mermaid@11.16.0`'s dist), not in what SVG permits.
+ *
+ * Denied BY ABSENCE, each for a stated reason — this is the list to read, not a
+ * FORBID list to maintain:
+ *  - `foreignObject` — re-admits arbitrary HTML into a subtree the document profile
+ *    never inspected (spec §3.5). `diagramEngine.ts` sets `htmlLabels: false`, which
+ *    is what makes this denial cheap rather than lossy.
+ *  - `style` — DOMPurify has no CSS parser, so an `@import` inside a `<style>` it was
+ *    told to keep survives VERBATIM (verified against dompurify 3.4.12, not assumed).
+ *    Dropping the element drops the rule with it, which keeps the `@import` denial
+ *    inside the allow-list instead of needing a CSS hook beside it.
+ *  - `a` — §3.11 declines diagram interactivity; `bindFunctions` is never called.
+ *  - `image` — no producer: `registerIconPacks` is never called from this tree
+ *    (`diagramEngine.ts:34-36`), so the engine emits no raster. Same reasoning that
+ *    dropped `align` from the document profile: an entry with no producer is dead
+ *    weight, and dead weight in an allow-list is surface. Revisit only with icon packs.
+ *  - `switch`, `filter` and the `fe*` primitives — `switch` exists to select a
+ *    `foreignObject` fallback we do not have; filters are decoration we do not need.
+ */
+export const SVG_ALLOWED_TAGS = [
+  // root & grouping
+  'svg', 'g', 'defs', 'symbol', 'use', 'clipPath',
+  // shapes
+  'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
+  // text
+  'text', 'tspan',
+  // arrowheads & gradients
+  'marker', 'linearGradient', 'stop',
+  // accessible name & description (§5 — every diagram carries an accessible name)
+  'title', 'desc',
+] as const;
+
+/**
+ * The only attributes allowed on any element of a rendered diagram. Geometry, paint,
+ * text metrics and the SVG fragment machinery — nothing that can reach the network or
+ * the script engine.
+ *
+ * `id` IS allowed here, unlike the document profile. SVG's internal references are the
+ * reason and the whole reason: `marker-end="url(#arrowhead)"` and `xlink:href="#gradient"`
+ * are how an arrowhead and a gradient attach, and {@link SVG_ALLOWED_URI_REGEXP} below
+ * permits no other kind of reference — a fragments-only URL policy with no ids is a
+ * policy that permits nothing at all. The
+ * document profile's `id` denial (decisions.md 2026-07-14) is about ATTACKER-authored
+ * ids arriving from untrusted markdown; these are authored by our own engine, and no
+ * markdown source can reach this profile.
+ *
+ * Denied by absence, each load-bearing:
+ *  - `style` — inline CSS is a network vector DOMPurify does not inspect
+ *    (`style="fill:url(http://…)"`), for the same reason the `<style>` element is out.
+ *    The engine emits it heavily; see the note above SVG_ALLOWED_TAGS.
+ *  - `on*` — event handlers. The engine emits `onclick` on click-bound nodes; it is
+ *    dropped here rather than trusted not to appear.
+ *  - `target`, `data-*` — the first is link machinery for links we do not keep, the
+ *    second is the engine's own bookkeeping (`data-id`, `data-et`, `data-look`), inert
+ *    but unused. `ALLOW_DATA_ATTR: false` below states the second one twice on purpose.
+ *
+ * COMPLETENESS is group 3's to verify, not this task's: an attribute missing from this
+ * list is a rendering-fidelity bug found against real engine output, and it can never
+ * be a security hole — the direction of the failure is what makes that safe.
+ */
+export const SVG_ALLOWED_ATTR = [
+  // identity & hooks (see the `id` note above)
+  'id', 'class', 'title',
+  // geometry
+  'x', 'y', 'dx', 'dy', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r',
+  'x1', 'y1', 'x2', 'y2', 'd', 'points', 'transform', 'transform-origin',
+  // viewport
+  'viewBox', 'preserveAspectRatio', 'overflow', 'xmlns', 'xmlns:xlink',
+  // paint
+  'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
+  'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'visibility',
+  // text
+  'font-family', 'font-size', 'font-style', 'font-weight',
+  'text-anchor', 'dominant-baseline', 'alignment-baseline',
+  // arrowheads & gradients
+  'marker-start', 'marker-mid', 'marker-end',
+  'markerWidth', 'markerHeight', 'markerUnits', 'refX', 'refY', 'orient',
+  'gradientUnits', 'offset', 'stop-color', 'stop-opacity',
+  // clipping
+  'clip-path', 'clip-rule',
+  // internal fragment references ONLY — see SVG_ALLOWED_URI_REGEXP
+  'href', 'xlink:href',
+  // accessibility (`aria-*` arrives via ALLOW_ARIA_ATTR, not by name)
+  'role',
+] as const;
+
+/**
+ * The attributes of {@link SVG_ALLOWED_ATTR} that can carry a REFERENCE, and are
+ * therefore the ones {@link SVG_ALLOWED_URI_REGEXP} gates. Everything else in the
+ * allow-list is geometry, a metric or a keyword — values that cannot name a resource
+ * at all — and is declared URI-safe below.
+ *
+ * ★ THIS SPLIT IS FORCED BY DOMPURIFY'S ACTUAL BEHAVIOUR, not a preference.
+ * `ALLOWED_URI_REGEXP` is NOT applied to URI attributes only: DOMPurify tests it
+ * against the value of EVERY attribute that is not in its `URI_SAFE_ATTRIBUTES` set
+ * (`alt`, `class`, `for`, `id`, `label`, `name`, `pattern`, `placeholder`, `role`,
+ * `summary`, `title`, `value`, `style`, `xmlns`). So a fragments-only regexp applied
+ * globally deletes `viewBox="0 0 100 50"`, `d="M0,0 L8,3"`, `transform="translate(4,4)"`,
+ * `refX="8"`, `font-size="10"` and every other coordinate in the diagram — verified
+ * against dompurify 3.4.12, not reasoned about. `ADD_URI_SAFE_ATTR` is what confines the
+ * regexp to the attributes it was written for.
+ */
+export const SVG_REFERENCE_ATTR = [
+  'href', 'xlink:href',
+  'fill', 'stroke',
+  'clip-path', 'marker-start', 'marker-mid', 'marker-end',
+] as const;
+
+/**
+ * The complement: allow-listed attributes whose values are inert by construction.
+ * DERIVED rather than written out, so the two lists cannot drift apart — an attribute
+ * added to SVG_ALLOWED_ATTR is gated unless it is named a reference attribute above.
+ */
+export const SVG_URI_SAFE_ATTR: readonly string[] = /*#__PURE__*/ SVG_ALLOWED_ATTR.filter(
+  (attr) => !(SVG_REFERENCE_ATTR as readonly string[]).includes(attr),
+);
+
+/**
+ * What a reference attribute may contain. SAME-DOCUMENT REFERENCES AND COLOURS, and
+ * nothing else — no scheme is expressible by any alternative below, so there is no
+ * `https?`, no `mailto`, no relative path, no `data:` and no `javascript:` to reason
+ * about. This is what neutralizes an external `<use href>`, an external or `data:`
+ * `xlink:href`, a `javascript:` href, AND an external `fill`/`marker-end`/`clip-path`
+ * paint reference: the attribute is dropped and the element survives inert.
+ *
+ * Four alternatives, each with a producer in real engine output:
+ *   - `#[^\s()]*`                    `xlink:href="#dot"`, `fill="#16171F"`
+ *   - `url\(#[^\s()]*\)`             `marker-end="url(#arrowhead)"`, `fill="url(#fade)"`
+ *   - `rgb|rgba|hsl|hsla(…)`         a computed theme colour; digits and separators only
+ *   - `[a-zA-Z-]+`                   a bare keyword — `none`, `currentColor`, `auto`
+ *
+ * NONE of them can express a fetchable URL: the first two are anchored to `#`, the third
+ * admits only digits and separators, and the fourth admits no `:` so it can carry no
+ * scheme. `url(http://…)` fails because `url(` must be followed by `#`.
+ *
+ * ★ THIS IS §2.1 AS AMENDED — design C, per decisions.md *"M7 D-1 / §2.1 AMENDMENT"*
+ * (`ff8f323`). §2.1 originally specified this value as literally `/^#/`, which is not
+ * implementable: applied globally (see {@link SVG_REFERENCE_ATTR}) it strips
+ * `fill="none"`, `stroke="none"` and every `url(#…)` reference in the diagram —
+ * arrowheads, gradients and clip paths all die with it. The two SECURITY properties
+ * §2.1 asks for (fragments-only references; no external, `data:` or `javascript:` value
+ * survives) are preserved here exactly; only the mechanism changed, so that the
+ * expression also admits the non-reference values a paint attribute legitimately
+ * carries.
+ */
+export const SVG_ALLOWED_URI_REGEXP =
+  /^(?:#[^\s()]*|url\(#[^\s()]*\)|(?:rgb|rgba|hsl|hsla)\([\d\s,.%/+-]+\)|[a-zA-Z-]+)$/i;
+
+/**
+ * The SVG profile's DOMPurify configuration. Read side by side with SANITIZE_CONFIG
+ * (`:107-117`) — every value matches it except the two named here.
+ *
+ * DIVERGENCE 1 — `ALLOW_ARIA_ATTR: true`, against the document profile's `false`
+ * (`:113`). This is deliberate and is the only config flag that differs. Spec §5
+ * requires every diagram to carry an accessible name, and the engine emits
+ * `aria-labelledby` / `aria-describedby` / `aria-roledescription` pointing at the
+ * `<title>` and `<desc>` allowed above. A diagram with no accessible name is an a11y
+ * regression, and `aria-*` carries no script and no URL — the document profile's
+ * `false` is a minimal-surface default for output that emits none, not a security
+ * boundary. Un-diverging this would silently strip the accessible name.
+ *
+ * DIVERGENCE 2 — `ALLOWED_URI_REGEXP` is {@link SVG_ALLOWED_URI_REGEXP}, which is
+ * STRICTER than the document profile's, not looser: it admits no scheme at all. Its own
+ * doc comment records why §2.1's original literal `/^#/` was amended to it (`ff8f323`).
+ *
+ * DIVERGENCE 3 — `ADD_URI_SAFE_ATTR`, which the document profile does not set. It is not
+ * a widening: it is what confines DIVERGENCE 2's regexp to the attributes that can carry
+ * a reference, instead of letting it delete every coordinate in the diagram. See
+ * {@link SVG_REFERENCE_ATTR} for the mechanism DOMPurify actually implements.
+ *
+ * The `uponSanitizeAttribute` hook above is INHERITED, not re-registered: it is on the
+ * shared DOMPurify singleton, so it fires for this profile's calls too, and `URL_ATTRS`
+ * (`:89`) already carries `xlink:href`. A second registration would run the same check
+ * twice and would be a second thing to keep in sync. That the inherited hook fires
+ * through `sanitizeSvg` is asserted against the real engine, not assumed (task 2.2) —
+ * it is exactly the property a future `removeHook` breaks silently.
+ *
+ * ★ `/*#__PURE__*\/ …slice()` AND NOT `[...spread]`, AND THAT IS LOAD-BEARING — it is
+ * what keeps this profile OFF the content script. `sanitize.ts` is on the content-script
+ * graph for the DOCUMENT profile, and the SVG profile is imported by nothing, so it must
+ * tree-shake to zero bytes there. An array SPREAD is an iteration-protocol call the
+ * bundler cannot prove pure, so it retains this initializer — and with it every string
+ * in all three arrays. MEASURED, not reasoned about: with spreads the content script is
+ * 316,567 B; with pure-annotated `slice()` it is 315,671 B, byte-identical to the build
+ * before this profile existed. The same annotation on {@link SVG_URI_SAFE_ATTR}'s
+ * `filter` carries 696 B of that. Do NOT "simplify" either back to a spread.
+ */
+export const SANITIZE_SVG_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
+  ALLOWED_TAGS: /*#__PURE__*/ SVG_ALLOWED_TAGS.slice(),
+  ALLOWED_ATTR: /*#__PURE__*/ SVG_ALLOWED_ATTR.slice(),
+  ALLOWED_URI_REGEXP: SVG_ALLOWED_URI_REGEXP,
+  ADD_URI_SAFE_ATTR: /*#__PURE__*/ SVG_URI_SAFE_ATTR.slice(), // DIVERGENCE 3 — see above
+  ALLOW_UNKNOWN_PROTOCOLS: false, // keep unknown schemes disallowed
+  ALLOW_DATA_ATTR: false, // no data-* attributes (the engine's own bookkeeping)
+  ALLOW_ARIA_ATTR: true, // DIVERGENCE 1 — see above
+  SAFE_FOR_XML: true, // DOMPurify default; kept explicit for review
+  RETURN_DOM: false, // return an SVG string
+  RETURN_DOM_FRAGMENT: false,
+};
+
+/**
+ * Sanitize a rendered diagram's SVG into markup that is safe to insert into the DOM.
+ *
+ * Separate from {@link sanitize} on purpose (D-1): this profile permits `<svg>` and the
+ * document profile must never learn to. Callers hold one or the other, never a flag.
+ *
+ * @param svg SVG markup produced by the bundled diagram engine.
+ * @returns Sanitized SVG string containing only allow-listed tags/attributes.
+ */
+export function sanitizeSvg(svg: string): string {
+  return DOMPurify.sanitize(svg, SANITIZE_SVG_CONFIG) as string;
+}
