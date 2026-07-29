@@ -343,9 +343,17 @@ export const SVG_ALLOWED_URI_REGEXP =
  * The `uponSanitizeAttribute` hook above is INHERITED, not re-registered: it is on the
  * shared DOMPurify singleton, so it fires for this profile's calls too, and `URL_ATTRS`
  * (`:89`) already carries `xlink:href`. A second registration would run the same check
- * twice and would be a second thing to keep in sync. That the inherited hook fires
- * through `sanitizeSvg` is asserted against the real engine, not assumed (task 2.2) —
- * it is exactly the property a future `removeHook` breaks silently.
+ * twice and would be a second thing to keep in sync. That inheritance is BY CONSTRUCTION,
+ * pinned against the real engine rather than assumed (task 2.2) — but it is NOT what
+ * protects this profile, and reading it that way is the error the §2.2 AMENDMENT
+ * (decisions.md `b19c068`) corrects. The hook is a PROVEN NO-OP here: for it to have any
+ * observable effect DOMPurify must otherwise ACCEPT the attribute, and all five
+ * `_isValidAttribute` acceptance branches are closed under this config — so a future
+ * `removeHook` reds NOTHING on this profile. The `data:` denial is ALLOW-LIST-DRIVEN and
+ * hook-INDEPENDENT (a fresh no-hook instance is equally clean, asserted in both engines).
+ * What would make the hook load-bearing again is WIDENING SVG_ALLOWED_TAGS to a
+ * `DATA_URI_TAGS` member (`image` and its neighbours) — which is exactly the boundary
+ * task 2.2's no-hook guard reds on, and the revisit-when `b19c068` records.
  *
  * ★ `/*#__PURE__*\/ …slice()` AND NOT `[...spread]`, AND THAT IS LOAD-BEARING — it is
  * what keeps this profile OFF the content script. `sanitize.ts` is on the content-script

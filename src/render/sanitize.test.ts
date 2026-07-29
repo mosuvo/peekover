@@ -15,6 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
+import DOMPurify from 'dompurify';
 import {
   sanitize,
   ALLOWED_TAGS,
@@ -497,6 +498,92 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
     it('the document profile is not widened by the SVG profile existing', () => {
       expect([...ALLOWED_TAGS]).not.toContain('svg');
       expect([...ALLOWED_ATTR]).not.toContain('xlink:href');
+    });
+  });
+
+  // ── THE data: DENIAL IS ALLOW-LIST-DRIVEN — jsdom mirror of task 2.2 ────────
+  //
+  // ★ THIS IS THE MIRROR, NOT THE PROOF. The authoritative version of everything
+  // below is `tests/browser/diagramSanitize.browser.test.ts`, which runs against REAL
+  // Chromium and Firefox parsing. jsdom's HTML parser diverges from both on exactly
+  // the class of case a sanitizer profile is judged by — mXSS through SVG/MathML
+  // foreign content, `<template>`/`<noscript>` reparsing — so a payload proven inert
+  // here is NOT proven inert in a browser (decisions.md 2026-07-14, restated in this
+  // file's header). These cases live here anyway because the everyday `pnpm test`
+  // suite is what a future widening runs first, and reding early is worth a mirror.
+  //
+  // ★ AND THE FINDING, so it is not re-derived: there is NO "remove the hook → the
+  // data: case reds" discriminator for this profile. `sanitize.ts:131-135`'s global
+  // hook is a PROVEN NO-OP under `SANITIZE_SVG_CONFIG` — all five of DOMPurify's
+  // `_isValidAttribute` acceptance branches are closed, so it can never be the thing
+  // that strips (decisions.md `b19c068`, the §2.2 AMENDMENT). The denial is the
+  // ALLOW-LIST's, and the guard for it is the widening boundary below.
+  describe('the data: denial is allow-list-driven, not hook-driven (§2.2 mirror)', () => {
+    const DATA_PAYLOAD =
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+      '<defs><symbol id="dot"><circle cx="3" cy="3" r="3" /></symbol></defs>' +
+      '<use xlink:href="data:text/html,x" x="10" y="10" />' +
+      '<use xlink:href="#dot" x="20" y="20" />' +
+      '<image href="data:text/html,y" width="1" height="1" />' +
+      '</svg>';
+
+    /** Surviving attribute values that resolve to `data:`, described (finding 5). */
+    function survivingDataUris(out: string): string[] {
+      return survivingAttrValues(
+        out,
+        // eslint-disable-next-line no-control-regex
+        (v) => v.replace(/[\u0000-\u0020]+/g, '').slice(0, 5).toLowerCase() === 'data:',
+      );
+    }
+
+    it('the sweep FIRES on the raw payload (two data: URIs), so an empty result is a result', () => {
+      expect(survivingDataUris(DATA_PAYLOAD)).toEqual([
+        '<use xlink:href="data:text/html,x">',
+        '<image href="data:text/html,y">',
+      ]);
+    });
+
+    it('no data: URI survives sanitizeSvg', () => {
+      expect(survivingDataUris(sanitizeSvg(DATA_PAYLOAD))).toEqual([]);
+    });
+
+    it('a fresh NO-HOOK DOMPurify instance is equally clean on the profile', () => {
+      // A second instance from the same factory, with its own empty hooks map — so the
+      // only thing acting on the payload is `SANITIZE_SVG_CONFIG` itself.
+      const noHook = DOMPurify(window);
+      expect(noHook, 'the "fresh" instance IS the singleton — this proves nothing')
+        .not.toBe(DOMPurify);
+      // `removeHook` with no function pops and returns the last hook; `undefined` is the
+      // proof the stack was empty. Only the fresh instance is touched.
+      expect(noHook.removeHook('uponSanitizeAttribute')).toBeUndefined();
+
+      const out = noHook.sanitize(DATA_PAYLOAD, SANITIZE_SVG_CONFIG) as string;
+      expect(
+        survivingDataUris(out),
+        'a data: URI survived WITHOUT the hook — the allow-list is not the denial',
+      ).toEqual([]);
+    });
+
+    it('the #fragment on the same attribute SURVIVES — the sweep is not passing on an empty tree', () => {
+      const out = sanitizeSvg(DATA_PAYLOAD);
+      expect(
+        survivingAttrValues(out, (v) => v === '#dot'),
+        'the internal #dot reference was stripped too — the clean data: sweep is vacuous',
+      ).not.toEqual([]);
+      const noHook = DOMPurify(window);
+      expect(
+        survivingAttrValues(noHook.sanitize(DATA_PAYLOAD, SANITIZE_SVG_CONFIG) as string,
+          (v) => v === '#dot'),
+      ).not.toEqual([]);
+    });
+
+    it('`image` — the widening that would make the hook load-bearing — is denied by absence', () => {
+      // The boundary the browser suite's revert-and-fail crosses: `image` is a member of
+      // DOMPurify's own DATA_URI_TAGS, so allow-listing it re-opens the `data:` bypass the
+      // hook exists to close, and the no-hook assertion above reds. Pinned here so the
+      // widening cannot land without a reviewer meeting this sentence.
+      expect([...SVG_ALLOWED_TAGS]).not.toContain('image');
+      expect(survivingElements(sanitizeSvg(DATA_PAYLOAD), 'image')).toEqual([]);
     });
   });
 
