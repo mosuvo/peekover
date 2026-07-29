@@ -1,40 +1,56 @@
 // @vitest-environment jsdom
 //
-// The synchronous prologue (007 task 3.1) — D-15's structure, built over the REAL mount() output
-// so the fence seam is exercised rather than hand-mocked. No engine is involved: 3.1 is scaffolding
-// and the render path is 3.2's, so what is under test here is the shape a document is left in when
-// nothing further ever happens to it. That state is not a placeholder for a test — it IS the
-// shipped degraded state (§3.8, §4, AGENTS.md #5), which is why it gets asserted directly.
+// The synchronous prologue (007 task 3.1) and the state machine around the async body (3.2), built
+// over the REAL mount() output so the fence seam is exercised rather than hand-mocked.
 //
-// The jsdom limit is respected: every assertion here is DOM SHAPE. Whether the CSS rule actually
-// hides the source <pre>, and whether the figure lands inside the reading column's box, are
-// computed-style and layout questions jsdom cannot answer — they live in
+// The 3.1 blocks involve no engine at all: what is under test there is the shape a document is left
+// in when nothing further ever happens to it. That state is not a placeholder for a test — it IS
+// the shipped degraded state (§3.8, §4, AGENTS.md #5), which is why it gets asserted directly. The
+// 3.2 blocks inject a FAKE engine, for the reason `diagramEngine.ts` made the loader injectable:
+// jsdom cannot lay out an SVG, so a real mermaid here would prove nothing about a renderer that
+// measures glyphs, while the D-15 state machine around it is exactly what a fake can drive.
+//
+// The jsdom limit is respected throughout: every assertion here is DOM SHAPE. Whether the CSS rule
+// actually hides the source <pre>, whether the figure lands inside the reading column's box, and
+// everything that depends on real engine OUTPUT (the adopted `<style>`, `foreignObject`, the
+// container's lifetime under a real render) are questions jsdom cannot answer — they live in
 // tests/browser/diagramRender.browser.test.ts on both engines.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount } from './mount';
 import {
   DIAGRAM_FENCE_SELECTOR,
+  DIAGRAM_MEASURE_CLASS,
   diagramFencesIn,
   diagramSourceOf,
   enhanceDiagrams,
 } from './diagramEnhancer';
 import { DIAGRAM_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR } from './diagramEngine';
 import {
+  DIAGRAM_ERROR_CLASS,
   DIAGRAM_FIGURE_CLASS,
   DIAGRAM_STATE_ATTR,
   insertDiagramPlaceholder,
   markDiagramFailed,
   markDiagramRendered,
 } from './diagramView';
+import type { DiagramEngine, DiagramEngineModule } from './diagramEngine';
 
 const HOST_TAG = 'peekover-root';
 const FIGURE_SELECTOR = `figure.${DIAGRAM_FIGURE_CLASS}`;
+
+/** Hosts are removed between tests: the async body reaches into `document.body` for its measuring
+ *  container (D-6 step 1), so a stale host from a previous test is a stale document to query. */
+const mounted: HTMLElement[] = [];
+afterEach(() => {
+  for (const host of mounted.splice(0)) host.remove();
+});
 
 /** A real mounted reader: parse -> sanitize -> shadow DOM, exactly as the app page commits it. */
 function mountedHost(markdown: string): { host: HTMLElement; shadow: ShadowRoot } {
   const host = document.createElement(HOST_TAG);
   document.body.appendChild(host);
+  mounted.push(host);
   mount(markdown, host, { contained: true });
   const shadow = host.shadowRoot;
   if (!shadow) throw new Error('mount() produced no shadow root');
@@ -66,11 +82,13 @@ describe('the fence predicate', () => {
     expect(shadow.querySelectorAll('code.language-js')).toHaveLength(1);
   });
 
-  it('pins the selector against diagramEngine.ts, which it deliberately does not import', () => {
-    // The enhancer declares its own copy so the app-page graph never reaches diagramEngine (and
-    // therefore never materialises mermaid's chunk) at 3.1 — see the module header. This test
-    // imports both, which costs no bundle bytes, so the two cannot drift apart in silence.
+  it('takes its selector FROM diagramEngine — 3.1s duplicate copy is gone', () => {
+    // At 3.1 these were two declarations pinned equal, because importing diagramEngine was what
+    // would have put mermaid's chunk on the app-page graph before there was a task to account for
+    // its bytes. 3.2 imports the engine for real, so the enhancer re-exports the constant instead
+    // of restating it and the drift this pin guarded against is now unrepresentable.
     expect(DIAGRAM_FENCE_SELECTOR).toBe(ENGINE_FENCE_SELECTOR);
+    expect(DIAGRAM_FENCE_SELECTOR).toBe('pre > code.language-mermaid');
   });
 });
 
@@ -224,13 +242,33 @@ describe("D-15's states", () => {
     const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
     if (!pre || !figure) throw new Error('expected the enhanced pair');
 
-    markDiagramFailed(pre, figure);
+    markDiagramFailed(pre, figure, 'the test said so');
 
     expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(0);
     expect(pre.isConnected).toBe(true);
     expect(pre.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
     // `failed` is not `rendered`, which is the only value the stylesheet hides.
     expect(pre.getAttribute(DIAGRAM_STATE_ATTR)).not.toBe('rendered');
+
+    // §4's inline marker: it took the figure's slot and it NAMES the failure.
+    const marker = pre.nextElementSibling;
+    expect(marker?.className).toBe(DIAGRAM_ERROR_CLASS);
+    expect(marker?.textContent).toContain('the test said so');
+  });
+
+  it('a second failure replaces the marker rather than stacking a second one', () => {
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    enhanceDiagrams(host);
+
+    const pre = shadow.querySelector('pre');
+    const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
+    if (!pre || !figure) throw new Error('expected the enhanced pair');
+
+    markDiagramFailed(pre, figure, 'first reason');
+    markDiagramFailed(pre, figure, 'second reason');
+
+    expect(shadow.querySelectorAll(`.${DIAGRAM_ERROR_CLASS}`)).toHaveLength(1);
+    expect(pre.nextElementSibling?.textContent).toContain('second reason');
   });
 
   it('the never-rendered document degrades by construction, not by a catch block', () => {
@@ -256,5 +294,224 @@ describe("D-15's states", () => {
     const figure = insertDiagramPlaceholder(pre);
     expect(pre.nextElementSibling).toBe(figure);
     expect(figure.nextElementSibling?.tagName).toBe('P');
+  });
+});
+
+// ── The async body (007 task 3.2), driven with an INJECTED engine ────────────────────────────
+//
+// SCOPE, STATED. The engine here is a fake: jsdom cannot lay out an SVG, and importing real
+// mermaid into it would prove nothing about a renderer that measures glyphs. What these DO reach —
+// and reach cheaply, on every `pnpm test` — is the STATE MACHINE around the engine: which of D-15's
+// states each of §3.8's three failures lands in, whether one fence's failure reaches another, and
+// that the sanitize step is the REAL `sanitizeSvg` rather than a pass-through. The end-to-end
+// proof over the real engine (adoption, the container's lifetime, `bindFunctions`, the inert
+// `<style>`) is `tests/browser/diagramRender.browser.test.ts`, on both engines.
+
+/** Let the enhancer's async body run to completion — it is deliberately not awaitable. */
+async function settle(): Promise<void> {
+  for (let i = 0; i < 20; i += 1) await new Promise<void>((r) => setTimeout(r, 0));
+}
+
+/** An engine module whose `render` returns whatever `svgFor` says, per call. */
+function fakeEngine(svgFor: (definition: string) => string): {
+  module: DiagramEngineModule;
+  render: ReturnType<typeof vi.fn>;
+  bindFunctions: ReturnType<typeof vi.fn>;
+} {
+  const bindFunctions = vi.fn();
+  const render = vi.fn(async (_id: string, definition: string) => ({
+    svg: svgFor(definition),
+    bindFunctions,
+  }));
+  const engine: DiagramEngine = { initialize: vi.fn(), render } as unknown as DiagramEngine;
+  return { module: { default: engine } as DiagramEngineModule, render, bindFunctions };
+}
+
+const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><g/></svg>';
+
+describe('the async body — the happy path', () => {
+  it('adopts the sanitized SVG into the figure and flips both halves to rendered', async () => {
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const { module, render, bindFunctions } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const pre = shadow.querySelector('pre');
+    const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
+    expect(pre?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(figure?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(figure?.querySelector('svg')).not.toBeNull();
+
+    // The engine got the fence's TEXT, byte for byte — not markup, not a re-serialization.
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][1]).toBe('graph TD; A-->B;\n');
+
+    // D-6 step 5: never called. The control that it COULD have been is below.
+    expect(bindFunctions).toHaveBeenCalledTimes(0);
+
+    // Source retained, per D-15 — the marker exists nowhere on a success.
+    expect(pre?.isConnected).toBe(true);
+    expect(diagramSourceOf(pre!)).toBe('graph TD; A-->B;\n');
+    expect(shadow.querySelectorAll(`.${DIAGRAM_ERROR_CLASS}`)).toHaveLength(0);
+  });
+
+  it('CONTROL: the bindFunctions spy records when something DOES call it', async () => {
+    // Without this, "0 calls" is equally consistent with a spy that was never wired up.
+    const { module, bindFunctions } = fakeEngine(() => SVG);
+    const result = await module.default.render('id', 'graph TD; A-->B;');
+    result.bindFunctions?.(document.createElement('div'));
+    expect(bindFunctions).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the engine unloaded on a fence-free document (§4s feature detect)', async () => {
+    const { host } = mountedHost('# Doc\n\n' + fence('js', 'const a = 1;'));
+    const loader = vi.fn(async () => fakeEngine(() => SVG).module);
+
+    enhanceDiagrams(host, { loader });
+    await settle();
+
+    expect(loader).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe('§3.8s three failures all land on the visible source fence', () => {
+  const FAILING_DOC = fence('mermaid', 'bad one') + '\n' + fence('mermaid', 'good one');
+
+  /** Every failure assertion needs this: the SAME harness hides the source when it succeeds. */
+  async function successControl(): Promise<{ pre: HTMLElement; shadow: ShadowRoot }> {
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    enhanceDiagrams(host, { loader: async () => fakeEngine(() => SVG).module });
+    await settle();
+    const pre = shadow.querySelector('pre');
+    if (!pre) throw new Error('expected the retained fence');
+    expect(pre.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    return { pre, shadow };
+  }
+
+  it('CONTROL: the success path really does reach `rendered` in this harness', async () => {
+    const { shadow } = await successControl();
+    expect(shadow.querySelectorAll(`.${DIAGRAM_ERROR_CLASS}`)).toHaveLength(0);
+  });
+
+  it('engine load: every fence stays visible, each with a marker naming the load failure', async () => {
+    // The code path is 3.2's; the full proof — no stranded placeholder, page interactive — is 6.1's.
+    const { host, shadow } = mountedHost(FAILING_DOC);
+    enhanceDiagrams(host, { loader: async () => { throw new Error('chunk unavailable'); } });
+    await settle();
+
+    const pres = [...shadow.querySelectorAll('pre[data-diagram]')];
+    expect(pres).toHaveLength(2);
+    for (const pre of pres) expect(pre.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(0); // nothing stranded
+    const markers = [...shadow.querySelectorAll(`.${DIAGRAM_ERROR_CLASS}`)];
+    expect(markers).toHaveLength(2);
+    expect(markers[0].textContent).toContain('engine could not be loaded');
+  });
+
+  it('parse/render: the bad fence degrades and the OTHER one renders normally (§4)', async () => {
+    const { host, shadow } = mountedHost(FAILING_DOC);
+    const module = fakeEngine((definition) => {
+      if (definition.includes('bad')) throw new Error('Parse error');
+      return SVG;
+    }).module;
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const [bad, good] = [...shadow.querySelectorAll('pre[data-diagram]')];
+    expect(bad.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    expect(bad.nextElementSibling?.textContent).toContain('could not be drawn');
+    // THE ISOLATION CLAIM: one fence's failure did not reach the next one.
+    expect(good.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(1);
+    expect(shadow.querySelector(FIGURE_SELECTOR)?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('sanitize rejection: the LATEST-moment failure, after the engine already succeeded', async () => {
+    // `<foreignObject>` alone — nothing the SVG profile admits, so the artifact sanitizes to
+    // nothing with no <svg> root. The engine "succeeded"; the artifact did not survive.
+    const { host, shadow } = mountedHost(FAILING_DOC);
+    const module = fakeEngine((definition) =>
+      definition.includes('bad') ? '<foreignObject><p>not an svg</p></foreignObject>' : SVG,
+    ).module;
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const [bad, good] = [...shadow.querySelectorAll('pre[data-diagram]')];
+    expect(bad.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    expect(bad.nextElementSibling?.textContent).toContain('rejected by the sanitizer');
+    expect(good.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+
+    // NEVER AN EMPTY BOX: the rejection removed the placeholder rather than committing nothing
+    // into it, and the source is still there to read.
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(1);
+    expect(bad.textContent).toContain('bad one');
+  });
+
+  it('the sanitize step is the REAL profile, not a pass-through', async () => {
+    // If `sanitizeSvg` were bypassed this <script> would be adopted. It is the same assertion the
+    // browser suite makes on true engine output; here it pins that the call is wired at all.
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const module = fakeEngine(
+      () => '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><g/></svg>',
+    ).module;
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    expect(shadow.querySelector('pre')?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(shadow.querySelector(FIGURE_SELECTOR)?.querySelector('svg')).not.toBeNull();
+    expect(shadow.querySelector('script')).toBeNull();
+  });
+});
+
+describe('idempotency over an already-rendered host', () => {
+  it('a second enhance neither re-renders nor double-adopts', async () => {
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const { module, render } = fakeEngine(() => SVG);
+    const loader = async (): Promise<DiagramEngineModule> => module;
+
+    enhanceDiagrams(host, { loader });
+    await settle();
+    enhanceDiagrams(host, { loader });
+    await settle();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(1);
+    expect(shadow.querySelectorAll(`${FIGURE_SELECTOR} svg`)).toHaveLength(1);
+  });
+});
+
+describe('the measuring container (D-6 step 1)', () => {
+  it('is gone from the document afterwards — and existed while the engine was rendering', async () => {
+    const { host } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    let containerAtRenderTime: Element | null = null;
+    const module = fakeEngine(() => SVG).module;
+    const inner = module.default.render.bind(module.default);
+    module.default.render = async (id, definition, container) => {
+      // Observed DURING the call: an empty tail is not an empty instrument.
+      containerAtRenderTime = document.querySelector(`.${DIAGRAM_MEASURE_CLASS}`);
+      expect(container).toBe(containerAtRenderTime);
+      return inner(id, definition, container);
+    };
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    expect(containerAtRenderTime).not.toBeNull();
+    expect(containerAtRenderTime!.isConnected).toBe(false);
+    expect(document.querySelector(`.${DIAGRAM_MEASURE_CLASS}`)).toBeNull();
+  });
+
+  it('is removed even when the render throws', async () => {
+    const { host } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const module = fakeEngine(() => { throw new Error('boom'); }).module;
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    expect(document.querySelector(`.${DIAGRAM_MEASURE_CLASS}`)).toBeNull();
   });
 });

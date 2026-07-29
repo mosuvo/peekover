@@ -101,7 +101,7 @@ describe('loadDiagramEngine — the feature-detect gate (D-13, §4)', () => {
 });
 
 describe('D-6 step 3 — the configuration the engine is initialized with', () => {
-  it('initializes ONCE with securityLevel strict, htmlLabels false, startOnLoad false', async () => {
+  it('initializes ONCE with securityLevel strict, htmlLabels false, startOnLoad + error graphic off', async () => {
     const { module, engine } = fakeEngineModule();
     await loadDiagramEngine(rootWithFence(), async () => module);
 
@@ -111,12 +111,16 @@ describe('D-6 step 3 — the configuration the engine is initialized with', () =
     expect(config.securityLevel).toBe('strict'); // NOT 'sandbox' — that creates a live iframe
     expect(config.htmlLabels).toBe(false);
     expect(config.startOnLoad).toBe(false);
+    // §3.8: mermaid's own error graphic is suppressed, so a parse failure rejects instead of
+    // drawing an apology (task 3.2 — the first code that calls render()).
+    expect(config.suppressErrorRendering).toBe(true);
     // And nothing else: an added key is a configuration decision that must be made deliberately.
     expect(Object.keys(config).sort()).toEqual([
       'htmlLabels',
       'secure',
       'securityLevel',
       'startOnLoad',
+      'suppressErrorRendering',
     ]);
   });
 
@@ -138,6 +142,7 @@ describe('D-6 step 3 — the configuration the engine is initialized with', () =
       securityLevel: 'strict',
       htmlLabels: false,
       startOnLoad: false,
+      suppressErrorRendering: true,
       secure: [
         'secure',
         'securityLevel',

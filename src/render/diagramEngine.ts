@@ -36,7 +36,16 @@
 // packs" is enforced: by absence. `bindFunctions` is likewise never called (D-6 step 5); it attaches
 // click handlers to a live SVG, which is the interactivity §3.11 declines.
 //
-// `startOnLoad: false` is the fourth value, and it is a guard rather than a preference: the engine's
+// `suppressErrorRendering: true` is §3.8 stated as configuration (added by task 3.2, the first code
+// to call `render`). Without it, a fence that fails to PARSE does not simply reject: mermaid draws
+// its own error graphic — the "Syntax error in text" bomb — into the container and only then throws
+// (`mermaid.core.mjs:1289,1308`). Our container is ours and goes in a `finally`, so that graphic
+// could never be adopted; suppressing it at the source is nonetheless the honest expression of
+// "showing the user their source is more useful than showing them a rendered apology" (spec §3.8),
+// and it keeps the engine from laying out a diagram we have already decided to discard. The key is
+// in the `secure` list below, so a `%%{init}%%` directive cannot turn the graphic back on.
+//
+// `startOnLoad: false` is the fifth value, and it is a guard rather than a preference: the engine's
 // module body registers a `load` listener that calls `mermaid.run()` over the LIVE document when
 // `startOnLoad` is true (its default), which would let the engine walk a page we never asked it to
 // touch. We drive every render explicitly through our own container (D-6 step 1), so the auto-run
@@ -79,6 +88,7 @@ export interface DiagramEngineConfig {
   readonly securityLevel: 'strict';
   readonly htmlLabels: false;
   readonly startOnLoad: false;
+  readonly suppressErrorRendering: true;
   /**
    * Typed as a MUTABLE `string[]` on purpose. Mermaid's own `MermaidConfig.secure` is
    * `string[]`, and TypeScript will not assign a `readonly string[]` to it — so declaring the
@@ -150,6 +160,7 @@ export const DIAGRAM_ENGINE_CONFIG: DiagramEngineConfig = Object.freeze({
   securityLevel: 'strict',
   htmlLabels: false,
   startOnLoad: false,
+  suppressErrorRendering: true,
   // `as string[]` below concedes the TYPE to mermaid's mutable signature, never the guarantee:
   // the array is genuinely frozen (see {@link DiagramEngineConfig.secure}).
   secure: Object.freeze([

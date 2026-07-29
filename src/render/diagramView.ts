@@ -32,6 +32,9 @@ export const DIAGRAM_STATE_ATTR = 'data-diagram';
 /** Class on the sibling <figure>. The `readerCss.ts` rules and the group 7 controls key off it. */
 export const DIAGRAM_FIGURE_CLASS = 'peekover-diagram';
 
+/** Class on §3.8's inline marker. Group 7.1 owns its a11y treatment (§3.5 rows 15, 20). */
+export const DIAGRAM_ERROR_CLASS = 'peekover-diagram-error';
+
 /**
  * The three states a fence can be in.
  *
@@ -90,14 +93,29 @@ export function markDiagramRendered(pre: Element, figure: HTMLElement, content: 
 }
 
 /**
- * The degraded state: drop the placeholder and leave the source fence visible.
+ * The degraded state: drop the placeholder, name the failure, leave the source fence visible.
  *
  * The empty <figure> is REMOVED rather than left in place — it never received content, and an empty
  * bordered box below a code fence reads as a broken image rather than as "this stayed source". The
- * <pre> is marked `failed` rather than reverted to `pending` so 3.2's inline marker (§3.8) has an
- * anchor, and so a re-enhancement pass can tell "not tried yet" from "tried and did not work".
+ * marker takes its place in the flow, so the slot the diagram would have occupied says why it did
+ * not. The <pre> is marked `failed` rather than reverted to `pending` so a re-enhancement pass can
+ * tell "not tried yet" from "tried and did not work".
+ *
+ * `reason` is REQUIRED, not optional: §4 asks for "an inline marker naming the failure", and an
+ * optional parameter is how the three §3.8 paths would drift into one indistinguishable message.
+ * It is written with `textContent` — this module still has no innerHTML assignment (see the header)
+ * and the copy is ours, but the rule is the construction, not the provenance of one string.
  */
-export function markDiagramFailed(pre: Element, figure: HTMLElement): void {
+export function markDiagramFailed(pre: Element, figure: HTMLElement, reason: string): void {
   figure.remove();
   pre.setAttribute(DIAGRAM_STATE_ATTR, 'failed');
+
+  // Idempotent: a second failure on the same fence replaces its marker rather than stacking one.
+  const existing = pre.nextElementSibling;
+  if (existing?.classList.contains(DIAGRAM_ERROR_CLASS)) existing.remove();
+
+  const marker = pre.ownerDocument.createElement('p');
+  marker.className = DIAGRAM_ERROR_CLASS;
+  marker.textContent = `Diagram not shown — ${reason}.`;
+  pre.after(marker);
 }
