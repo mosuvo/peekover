@@ -42,6 +42,7 @@ function lines(over: {
   settings?: Settings | null;
   snapshots?: { count: number; docs: number; bytes: number };
   captureFlag?: boolean | null;
+  diagrams?: { count: number; bytes: number };
 }): string[] {
   const folders = over.folders ?? [];
   const recents = over.recents ?? [];
@@ -49,14 +50,16 @@ function lines(over: {
   const settings = over.settings ?? null;
   const snapshots = over.snapshots ?? { count: 0, docs: 0, bytes: 0 };
   const captureFlag = over.captureFlag ?? null;
+  const diagrams = over.diagrams ?? { count: 0, bytes: 0 };
   const total =
     folders.length +
     recents.length +
     pins.length +
     (settings ? 1 : 0) +
     snapshots.count +
-    (captureFlag !== null ? 1 : 0);
-  return buildStoredLines({ folders, recents, pins, settings, snapshots, captureFlag, total });
+    (captureFlag !== null ? 1 : 0) +
+    diagrams.count;
+  return buildStoredLines({ folders, recents, pins, settings, snapshots, captureFlag, diagrams, total });
 }
 
 // Task 1.1 — the SCHEMA shape at the bumped DB_VERSION. Pure constant assertions (no engine):
@@ -223,7 +226,7 @@ describe('buildStoredLines — snapshot-capture preference line (D-12, task 1.5)
     expect(out).not.toMatch(NOTHING);
   });
 
-  it('places the capture line LAST, after folders/recents/pins/settings/snapshots', () => {
+  it('places the capture line after folders/recents/pins/settings/snapshots', () => {
     const out = lines({
       folders: [folder({ persisted: true })],
       recents: [recent()],
@@ -235,5 +238,61 @@ describe('buildStoredLines — snapshot-capture preference line (D-12, task 1.5)
     expect(out).toHaveLength(6);
     expect(out[4]).toMatch(/2 snapshots of 1 watched document/);
     expect(out[5]).toMatch(/snapshot capture is turned off/i);
+  });
+});
+
+// ── The diagram-cache line (D-2, D-5, D-14; task 4.3) ─────────────────────────────────────────
+//
+// ★ THE WORDING IS NOT AUTHORED HERE OR IN `store.ts`. Gate-2 sub-decision (a), banked at
+// `cab93c7`, settled it: `Diagrams cached: N rendered (~size) — Clear diagram cache`. These cases
+// assert the SHAPE and the `humanBytes` reuse; the character-for-character equality against
+// decisions.md is proven separately (the verbatim diff recorded in progress.md), because a regex
+// here would happily pass on a re-authored line that merely reads similar.
+describe('buildStoredLines — diagram-cache line (D-14, task 4.3)', () => {
+  it('emits the banked line, rendering the count and the size THROUGH humanBytes', () => {
+    const out = lines({ diagrams: { count: 3, bytes: 2048 } }).join(' ');
+    // The whole disclosure half of the banked line, exactly as it renders at these values.
+    expect(out).toContain('Diagrams cached: 3 rendered (~2.0 KB)');
+    // 2.0 KB is humanBytes(2048) — the SAME formatter the snapshot line uses, which is the point:
+    // the panel speaks one size figure, not two that could drift apart (tasks.md 4.3).
+    expect(out).toMatch(/2\.0 KB/);
+    // A cache with rows in it IS stored state → not "nothing stored".
+    expect(out).not.toMatch(NOTHING);
+  });
+
+  it('renders sub-KiB and MB sizes through the same formatter (no second size vocabulary)', () => {
+    expect(lines({ diagrams: { count: 1, bytes: 512 } }).join(' ')).toContain(
+      'Diagrams cached: 1 rendered (~512 B)',
+    );
+    expect(lines({ diagrams: { count: 40, bytes: 3 * 1024 * 1024 } }).join(' ')).toContain(
+      'Diagrams cached: 40 rendered (~3.0 MB)',
+    );
+  });
+
+  it('does NOT pluralize "rendered" at a count of one — the banked wording has no plural form', () => {
+    // `plural()` is deliberately not applied here: the settled string is "N rendered", and 1 is
+    // an N like any other. Reaching for `plural` would be re-authoring by helper.
+    expect(lines({ diagrams: { count: 1, bytes: 100 } }).join(' ')).toContain('1 rendered');
+  });
+
+  it('emits NO diagram line when the cache is empty (the empty case is the "nothing stored" line)', () => {
+    const out = lines({ diagrams: { count: 0, bytes: 0 } }).join(' ');
+    expect(out).not.toMatch(/diagram/i);
+    expect(out).toMatch(NOTHING);
+  });
+
+  it('places the diagram line LAST — one line beneath the snapshot disclosure (cab93c7 (a))', () => {
+    const out = lines({
+      folders: [folder({ persisted: true })],
+      recents: [recent()],
+      pins: [pin()],
+      settings: DEFAULT_SETTINGS,
+      snapshots: { count: 2, docs: 1, bytes: 4096 },
+      captureFlag: false,
+      diagrams: { count: 5, bytes: 10240 },
+    });
+    expect(out).toHaveLength(7);
+    expect(out[4]).toMatch(/2 snapshots of 1 watched document/); // the snapshot disclosure
+    expect(out[6]).toContain('Diagrams cached: 5 rendered (~10.0 KB)'); // beneath it
   });
 });

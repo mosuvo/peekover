@@ -66,6 +66,7 @@ import {
   markDiagramRendered,
 } from '../../src/render/diagramView';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import { clearDiagramCache } from '../../src/app/store';
 import type { FolderSource } from '../../src/app/folderSource';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
 import { resetWatchRegistryForTest, stopWatch } from '../../src/watch/watchRegistry';
@@ -83,7 +84,25 @@ const DOC =
   'Paragraph after the diagram, likewise real text in the reading column.\n';
 
 const cleanup: HTMLElement[] = [];
+
+// ★ START EVERY TEST FROM AN EMPTY DIAGRAM CACHE (007 task 4.3).
+//
+// Before 4.3 the enhancer rendered every fence it was given, so tests in this file could share a
+// fence text freely. Now a render is CACHED, and the cache outlives a test: the second test to
+// enhance `GOOD_FENCE` gets a hit, the injected engine is never invoked, and every instrument
+// hanging off `instrumented()` reads empty. That is the cache working exactly as designed — and
+// it silently guts two assertions here that are ABOUT the engine having run (D-6's measuring
+// container, and the sanitize-rejection path's "the engine SUCCEEDED" precondition), because a
+// hit and a broken harness produce the same empty array.
+//
+// So the isolation is explicit rather than incidental. This is test hygiene, not a production
+// concern: a real reader WANTS the second sight of a diagram to come from the cache.
+beforeEach(async () => {
+  await clearDiagramCache();
+});
+
 afterEach(async () => {
+  await clearDiagramCache();
   for (const el of cleanup.splice(0)) el.remove();
   // DRAIN. The 3.1 blocks mount real documents through the production pane, which now really does
   // load the engine, so a render can still be in flight when a test ends. Its measuring container

@@ -81,6 +81,7 @@ function emptySummary(): StoredSummary {
     settings: null,
     snapshots: { count: 0, docs: 0, bytes: 0 },
     captureFlag: null,
+    diagrams: { count: 0, bytes: 0 },
     total: 0,
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };

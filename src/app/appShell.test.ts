@@ -699,6 +699,7 @@ function summarize(
     settings: null,
     snapshots: { count: 0, docs: 0, bytes: 0 },
     captureFlag: null,
+    diagrams: { count: 0, bytes: 0 },
     total,
     lines,
   };
@@ -740,6 +741,7 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
         settings: null,
         snapshots: { count: 0, docs: 0, bytes: 0 },
         captureFlag: null,
+        diagrams: { count: 0, bytes: 0 },
         total: 4,
         lines: ['1 remembered folder — names only.'],
       }),
@@ -912,7 +914,7 @@ function snapSummary(snapshotCount: number): StoredSummary {
   } else {
     lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
   }
-  return { folders: [], recents: [], pins: [], settings: null, snapshots, captureFlag: null, total, lines };
+  return { folders: [], recents: [], pins: [], settings: null, snapshots, captureFlag: null, diagrams: { count: 0, bytes: 0 }, total, lines };
 }
 
 describe('appShell (task 1.6 — the "erase snapshots" control)', () => {
@@ -1061,5 +1063,169 @@ describe('appShell (task 1.6 — the "erase snapshots" control)', () => {
     expect(prompt!.textContent).toMatch(/settings/i);
     expect(prompt!.textContent).toMatch(/capture/i);
     expect(prompt!.textContent).toMatch(/kept/i);
+  });
+});
+
+// --- task 4.3 (D-5): the "Clear diagram cache" control (DOM-shape) --------------------------------
+//
+// The panel's THIRD erase control, and the one gate-2 sub-decision (a) specified as matching the
+// snapshot pair's shape. The real clear is real-engine-proven in tests/browser/wipe.browser.test.ts
+// (every survivor asserted by name); this is the jsdom DOM-shape coverage of the control — the
+// disabled-at-zero state, arm, confirm, cancel — through the SAME injectable store seam, no real IDB.
+//
+// ★ The button's LABEL is asserted verbatim, not by regex. It is the second half of the banked panel
+// line `Diagrams cached: N rendered (~size) — Clear diagram cache` (cab93c7 (a)); a re-worded button
+// would still match /clear/i, which is exactly the drift a verbatim decision exists to prevent.
+
+/** A StoredSummary carrying `n` cached diagrams and nothing else — enough to drive the control's
+ *  enabled/disabled state and the panel's diagram line. */
+function diagramSummary(n: number): StoredSummary {
+  const diagrams = n > 0 ? { count: n, bytes: n * 1024 } : { count: 0, bytes: 0 };
+  const lines = diagrams.count > 0
+    ? [`Diagrams cached: ${diagrams.count} rendered (~${(diagrams.bytes / 1024).toFixed(1)} KB)`]
+    : ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'];
+  return {
+    folders: [],
+    recents: [],
+    pins: [],
+    settings: null,
+    snapshots: { count: 0, docs: 0, bytes: 0 },
+    captureFlag: null,
+    diagrams,
+    total: diagrams.count,
+    lines,
+  };
+}
+
+describe('appShell (task 4.3 — the "Clear diagram cache" control)', () => {
+  let container: HTMLElement;
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  function openPanel(): void {
+    container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
+  }
+
+  const baseStore = (over: Partial<AppStore>): AppStore => ({
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+    ...over,
+  });
+
+  it('renders the button under cab93c7 (a)\'s exact label, and the panel\'s diagram line beside it', async () => {
+    mountAppShell(container, { store: baseStore({ describeStored: async () => diagramSummary(3) }) });
+    openPanel();
+    await flush();
+
+    const start = container.querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]');
+    expect(start).not.toBeNull();
+    // VERBATIM — the control half of the banked line, character-for-character.
+    expect(start!.textContent).toBe('Clear diagram cache');
+    // ...and the disclosure half is in the panel, one line, as `buildStoredLines` produced it.
+    expect(container.querySelector('.peekover-storage')!.textContent).toContain(
+      'Diagrams cached: 3 rendered (~3.0 KB)',
+    );
+  });
+
+  it('the start button is DISABLED when nothing is cached, and ENABLED when something is', async () => {
+    mountAppShell(container, { store: baseStore({ describeStored: async () => diagramSummary(0) }) });
+    openPanel();
+    await flush();
+    expect(container.querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.disabled).toBe(true);
+
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    mountAppShell(container, { store: baseStore({ describeStored: async () => diagramSummary(2) }) });
+    openPanel();
+    await flush();
+    expect(container.querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.disabled).toBe(false);
+  });
+
+  it('arms an inline confirm — the FIRST click never clears (no browser confirm(), one surface)', async () => {
+    let calls = 0;
+    mountAppShell(container, {
+      store: baseStore({
+        describeStored: async () => diagramSummary(2),
+        clearDiagramCache: async () => void (calls += 1),
+      }),
+    });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.click();
+
+    expect(calls, 'arming is not clearing — the first click must only reveal the confirm').toBe(0);
+    expect(panel().querySelector('[data-clear-diagrams="confirm"]')).not.toBeNull();
+    expect(panel().querySelector('[data-clear-diagrams="cancel"]')).not.toBeNull();
+  });
+
+  it('confirm → clearDiagramCache() runs and the panel refreshes to the emptied state', async () => {
+    let calls = 0;
+    let cached = 4;
+    mountAppShell(container, {
+      store: baseStore({
+        describeStored: async () => diagramSummary(cached),
+        clearDiagramCache: async () => {
+          calls += 1;
+          cached = 0;
+        },
+      }),
+    });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.click();
+    panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="confirm"]')!.click();
+    await flush();
+
+    expect(calls).toBe(1);
+    // The panel repainted from a fresh read: the diagram line is gone and the control is disabled.
+    expect(panel().textContent).not.toContain('Diagrams cached');
+    expect(panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.disabled).toBe(true);
+  });
+
+  it('cancel disarms without clearing', async () => {
+    let calls = 0;
+    mountAppShell(container, {
+      store: baseStore({
+        describeStored: async () => diagramSummary(2),
+        clearDiagramCache: async () => void (calls += 1),
+      }),
+    });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.click();
+    panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="cancel"]')!.click();
+
+    expect(calls).toBe(0);
+    expect(panel().querySelector('[data-clear-diagrams="start"]')).not.toBeNull();
+    expect(panel().querySelector('[data-clear-diagrams="confirm"]')).toBeNull();
+  });
+
+  it('the confirm copy names what clears AND that nothing is permanently lost', async () => {
+    mountAppShell(container, {
+      store: baseStore({
+        describeStored: async () => diagramSummary(2),
+        clearDiagramCache: async () => undefined,
+      }),
+    });
+    openPanel();
+    await flush();
+
+    const panel = () => container.querySelector('.peekover-storage')!;
+    panel().querySelector<HTMLButtonElement>('[data-clear-diagrams="start"]')!.click();
+    const prompt = panel().querySelector('.peekover-storage__erase-prompt');
+    expect(prompt!.textContent).toMatch(/diagram/i);
+    // The honest part: a cleared cache costs nothing but a re-render (D-4's regenerable store).
+    expect(prompt!.textContent).toMatch(/drawn again/i);
   });
 });

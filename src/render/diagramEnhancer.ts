@@ -94,10 +94,13 @@
 
 import {
   DIAGRAM_FENCE_SELECTOR,
+  engineVersion,
   loadDiagramEngine,
   type DiagramEngine,
   type EngineLoader,
 } from './diagramEngine';
+import { diagramCacheKey, readDiagram, storeDiagram } from '../app/diagramCache';
+import { currentEffectiveTheme } from '../theme/reader';
 import { sanitizeSvg } from './sanitize';
 import {
   DIAGRAM_STATE_ATTR,
@@ -294,27 +297,83 @@ async function renderDiagrams(
         continue;
       }
 
-      renderSeq += 1;
-      const id = `peekover-diagram-${renderSeq}`;
-
-      // Step one: the engine. Its failure is §3.8's second, and it is caught per fence so the
-      // fences after it still draw.
-      let drawn: string;
+      // Step one: THE CACHE (D-3, D-4, task 4.3). The key is content-addressed over the three
+      // things that change what this diagram LOOKS like — the source, the effective theme, and the
+      // engine version — so a hit is only ever the same picture (`diagramCache.ts`'s D-3 note).
+      //
+      // The theme read is `currentEffectiveTheme()`, never the `ThemeSetting`: `'auto'` renders as
+      // two different pictures, and keying on it would serve a dark render into a light reader.
+      //
+      // A hit skips `engine.render` entirely — that IS the cache, and it is what makes §3.3's
+      // *every re-render re-enhances* affordable rather than merely correct (4.4 measures it under
+      // watch). The cached string then rejoins the SAME sanitize-and-adopt path a fresh render
+      // takes: nothing that came out of storage is trusted more than what came out of the engine.
+      let key: string | null = null;
+      let cached: string | undefined;
       try {
-        drawn = (await engine.render(id, source, container)).svg;
+        key = await diagramCacheKey(source, currentEffectiveTheme(), engineVersion());
+        cached = await readDiagram(key);
       } catch {
-        markDiagramFailed(pair.pre, pair.figure, RENDER_FAILED);
-        continue;
+        key = null; // hashing unavailable → no cache this pass; the render below is unaffected.
       }
 
-      // Step two: sanitize and adopt. Its failure is §3.8's third, and it lands AFTER the engine
-      // has already succeeded — the latest-moment case D-15 is shaped for.
+      let drawn: string;
+      if (cached === undefined) {
+        renderSeq += 1;
+        const id = `peekover-diagram-${renderSeq}`;
+
+        // Step two: the engine — reached only on a MISS. Its failure is §3.8's second, and it is
+        // caught per fence so the fences after it still draw.
+        try {
+          drawn = (await engine.render(id, source, container)).svg;
+        } catch {
+          markDiagramFailed(pair.pre, pair.figure, RENDER_FAILED);
+          continue;
+        }
+      } else {
+        drawn = cached;
+      }
+
+      // Step three: sanitize and adopt — on the engine's string OR the cached one, indistinguishably.
+      // Its failure is §3.8's third, and it lands AFTER the engine has already succeeded (or after a
+      // hit) — the latest-moment case D-15 is shaped for.
       try {
         const content = adoptSanitizedSvg(doc, sanitizeSvg(drawn));
         if (!content) {
           markDiagramFailed(pair.pre, pair.figure, SANITIZE_REJECTED);
           continue;
         }
+
+        // ── ★ THE WRITE: AFTER SANITIZE SURVIVED, BEFORE THE FENCE LEAVES `pending` ────────────
+        //
+        // Three constraints, and this one position satisfies all three.
+        //
+        //   1. STORE THE ENGINE'S STRING, NOT THE SANITIZED ONE. `drawn` is what `sanitizeSvg` was
+        //      handed, so every cache HIT re-runs the CURRENT profile over it (the sanitize step
+        //      above does not care where its string came from). Storing the post-sanitize artifact
+        //      would freeze one profile version into storage: tighten `sanitize.ts` tomorrow and
+        //      the new rule would apply to fresh renders and silently NOT to cached ones.
+        //
+        //   2. DO NOT STORE AN ARTIFACT THE SANITIZER JUST REJECTED. Writing before the sanitize
+        //      check POISONS the cache — the rejected string is stored, and every later sight of
+        //      that diagram is served it again and re-rejected, without the engine ever getting
+        //      another attempt. §3.8's failure would stop being transient and become permanent,
+        //      cached, and invisible. (Caught by `diagramRender.browser.test.ts`'s sanitize-
+        //      rejection case, whose success control re-renders the same fence and demands
+        //      `rendered`: it read `failed` against a write placed before this check.)
+        //
+        //   3. BEFORE `markDiagramRendered`, which is what clears the `pending` state. That makes
+        //      "the document has settled" mean "and its diagrams are cached" — one observable
+        //      instead of two, and no window in which a re-render races an in-flight write.
+        //
+        // The cost lands only on the MISS path, which has just paid for a full engine render; a
+        // HIT writes nothing here (`readDiagram` already touched `lastUsed`), so the fast path the
+        // cache exists to create never waits on storage at all.
+        //
+        // `storeDiagram` swallows its own failures (§4) — a diagram that could not be cached simply
+        // re-renders next time, which is a cost, not an error the user has an action for.
+        if (cached === undefined && key !== null) await storeDiagram(key, drawn);
+
         markDiagramRendered(pair.pre, pair.figure, content);
       } catch {
         markDiagramFailed(pair.pre, pair.figure, SANITIZE_REJECTED);

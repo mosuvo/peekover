@@ -1,13 +1,22 @@
-// diagramCache — the PURE layer of the diagram cache: D-3's KEY derivation and D-4's eviction
-// PLANNING. Task 4.1, and it is WIRED TO NOTHING: no IndexedDB, no schema, no enhancer. Nothing
-// in `src/` imports this module yet, which is the task's own fence — both bundles stay
-// byte-identical because a module no graph reaches is tree-shaken out. 4.2 adds the two stores;
-// 4.3 is the irreducible commit that wires the cache to the enhancer and corrects every trust
-// surface in the same breath (D-14). THIS FILE STORES NOTHING.
+// diagramCache — the diagram cache: D-3's KEY derivation and D-4's eviction PLANNING (task 4.1's
+// PURE layer, below), plus the IndexedDB read/write layer that task 4.3 wires beneath the enhancer
+// (the second half of this file). 4.1 stored nothing and was reached by nothing; 4.2 added the two
+// stores; 4.3 is the irreducible commit that connects them and corrects every trust surface in the
+// same breath (D-14).
 //
 // The pure/IDB split is `snapshots.ts`'s (plan §1.2): the key maths and the bounds maths are
 // arithmetic and hashing over metadata, so they are testable in isolation in the fast unit
-// project; the IDB read/write is a separate, later layer.
+// project; the IDB read/write is a separate layer, exercised on real engines only.
+//
+// ── ★ THE SEAM: THIS MODULE IS APP-PAGE-ONLY, AND THE EDGE RUNS ONE WAY ───────────────────────
+//
+// This module imports `store.ts`. `store.ts` must NEVER import this module. That asymmetry is
+// load-bearing rather than stylistic: the content script reaches `store.ts` (via `snapshots.ts` →
+// `storeSnapshot`), so an edge in the other direction would put the whole cache — and, through the
+// enhancer that calls it, a path toward the engine — onto the content-script graph. §3.2 keeps the
+// enhancer app-page-only, so the ONLY importer of this module is `diagramEnhancer.ts`, which the
+// content-script entry cannot reach. `diagramImportFence.test.ts` walks both graphs and is the
+// structural gate on exactly this; the byte fence cannot see a type-only or tree-shaken edge.
 //
 // ── WHY THIS IS A SIBLING OF `planSnapshotWrite`, NOT A GENERALISATION (D-4) ──────────────────
 //
@@ -27,6 +36,8 @@
 // (it is the same TextEncoder-exact byte length, and the trust panel surfaces one figure, not
 // two); `SEP` IS imported from `recents.ts`. Neither is re-implemented here.
 
+import { get, put, del, getAll } from './idbCore';
+import { connection, STORES } from './store';
 import { SEP } from './recents';
 import { bytesOf } from './snapshots';
 import type { EffectiveTheme } from '../settings/settings';
@@ -281,4 +292,104 @@ export function planDiagramWrite(
     .map((p) => p.key);
 
   return { store: true, evictKeys };
+}
+
+// ── THE IDB LAYER (task 4.3) ──────────────────────────────────────────────────────────────────
+//
+// Everything above is pure and sealed (4.1). Everything below reads and writes the two stores 4.2
+// added, on the ONE memoized connection `store.ts` owns (`connection()`) — never a second `openDb`,
+// which would fight idbCore's versionchange close-and-drop. This is `snapshots.ts`'s IDB half in
+// the same shape, for the same reasons.
+//
+// ── ★ META IS AUTHORITATIVE, AND THE ORDERING IS META FIRST, THEN CONTENT ─────────────────────
+//
+// The `diagramMeta` row DEFINES membership: {@link readDiagram} misses unless the meta row exists,
+// and {@link describeStored} counts and sizes from meta alone (D-2). Both halves of a cache entry
+// are written and deleted as two SINGLE-STORE transactions, in that order, because `idbCore.ts`
+// is one transaction per store (`:97-109`) and a multi-store transaction helper is its documented
+// STOP signal (`:5-9`). It is therefore NOT atomic, and the ordering is chosen so the crash window
+// fails in the recoverable direction:
+//
+//   • WRITE (meta, then content). A crash between leaves a meta row pointing at MISSING CONTENT.
+//     That is a MISS — the diagram is simply re-rendered, and the re-render overwrites both rows by
+//     keyPath, so the state SELF-RECLAIMS. Bytes are briefly OVER-reported by the panel, never
+//     under: the trust surface errs toward admitting more storage than is really held.
+//   • EVICT (meta, then content). A crash between leaves a content row no meta row names. It is
+//     unreachable (meta is authoritative), so it serves nothing and is re-written in place the next
+//     time that exact key is rendered.
+//
+// The direction the ordering EXISTS to forbid is content-first-on-write: content stored under a key
+// no meta row accounts for is bytes the panel cannot see, and an under-reporting trust panel is the
+// one failure `PERMISSIONS.md` exists to deny.
+//
+// ── EVERY ENTRY POINT DEGRADES QUIETLY ────────────────────────────────────────────────────────
+//
+// §4: a cache that cannot read or write must let diagrams "render normally without caching" and
+// "shall not present the failure as a blocking error". So every function below swallows its own
+// storage errors — a read failure is a miss, a write failure is a diagram that re-renders next
+// time. Neither is a user-facing message, because neither is something the user has an action for.
+
+/** One row of the `diagrams` content store (4.2's shape). The SVG string, and nothing else. */
+type DiagramRow = { key: string; svg: string };
+
+/**
+ * The cached SVG for `key`, or `undefined` on a miss. A HIT touches `lastUsed` (D-4: the cache's
+ * only time axis is recency of USE, so reading is what keeps an entry alive).
+ *
+ * Meta is read FIRST and is authoritative — a content row whose meta row is gone (the eviction
+ * crash window above) is deliberately NOT served, so the store the panel describes and the store
+ * the reader reads are the same store.
+ *
+ * The `lastUsed` touch is awaited rather than fired-and-forgotten: it is one small write on the
+ * meta store, and awaiting it means a subsequent `planDiagramWrite` sweep can never sort against a
+ * stale timestamp it was told had already been updated.
+ */
+export async function readDiagram(key: string): Promise<string | undefined> {
+  try {
+    const conn = await connection();
+    const meta = await get<DiagramMetaRow>(conn, STORES.diagramMeta, key);
+    if (!meta) return undefined; // never cached, or evicted — a miss either way.
+    const row = await get<DiagramRow>(conn, STORES.diagrams, key);
+    if (!row) return undefined; // meta without content: the write crash window. A miss; self-heals.
+    await put<DiagramMetaRow>(conn, STORES.diagramMeta, { ...meta, lastUsed: Date.now() });
+    return row.svg;
+  } catch {
+    return undefined; // storage unavailable → a miss → the caller renders. §4's quiet degradation.
+  }
+}
+
+/**
+ * Store `svg` under `key`, applying D-4's plan.
+ *
+ * Reads all of `diagramMeta` (small, bounded, meta-only — never a content row), plans against
+ * {@link PROPOSED_BOUNDS}, and then:
+ *  - `store: false` (single-oversized short-circuit) → does NOTHING: no eviction, no write, no
+ *    message. That diagram re-renders from the engine every time, quietly, per D-4 and §4.
+ *  - `store: true` → writes the incoming META row, then the incoming CONTENT row, then deletes the
+ *    evicted META rows, then the evicted CONTENT rows — meta before content at every step (see the
+ *    ordering note above).
+ *
+ * ★ THE BOUNDS ARE STILL PROPOSED, NOT CHOSEN (D-8). Passing `PROPOSED_BOUNDS` here is what makes
+ * the cache runnable; it is NOT a decision, and 8.4 remains the gate that picks the numbers.
+ */
+export async function storeDiagram(key: string, svg: string): Promise<void> {
+  try {
+    const conn = await connection();
+    const allMeta = await getAll<DiagramMetaRow>(conn, STORES.diagramMeta);
+    const incomingBytes = bytesOf(svg);
+    const now = Date.now();
+
+    const plan = planDiagramWrite(allMeta, key, incomingBytes, now, PROPOSED_BOUNDS);
+    if (!plan.store) return; // single-oversized: no eviction, no write, no error (§4).
+
+    // META FIRST — the incoming meta row lands before its content row.
+    await put<DiagramMetaRow>(conn, STORES.diagramMeta, { key, bytes: incomingBytes, lastUsed: now });
+    await put<DiagramRow>(conn, STORES.diagrams, { key, svg });
+
+    // Evicted meta rows before evicted content rows, same direction.
+    for (const evicted of plan.evictKeys) await del(conn, STORES.diagramMeta, evicted);
+    for (const evicted of plan.evictKeys) await del(conn, STORES.diagrams, evicted);
+  } catch {
+    // A write that failed is a diagram that re-renders next time. Not a user-facing failure (§4).
+  }
 }

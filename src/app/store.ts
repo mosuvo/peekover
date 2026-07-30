@@ -306,14 +306,15 @@ export async function setCaptureEnabled(enabled: boolean): Promise<void> {
 // deferred: the transparency + erase path is part of THIS group, not a later nicety.
 
 /**
- * Erase everything Peekover has stored: clear all SIX stores. This drops remembered folders
+ * Erase everything Peekover has stored: clear all EIGHT stores. This drops remembered folders
  * (and their persisted handles), the recents list, all pins, the reader settings, AND — since
- * 006 task 1.4 — the two snapshot stores (the past text states of watched documents) — the
- * "wipe all data" control. Each `clear()` resolves on its transaction commit (idbCore), so once
- * this resolves the stores are durably empty and a subsequent read sees zero records (getSettings
- * then falls back to the Auto default). Cleared sequentially so a failure surfaces deterministically
- * rather than racing. Snapshot stores are cleared META FIRST (§1.2), the same safe ordering the
- * capture path uses — a dangling meta entry is the benign failure, an orphaned content row is not.
+ * 006 task 1.4 — the two snapshot stores (the past text states of watched documents), AND — since
+ * 007 task 4.3 — the two diagram-cache stores (rendered SVGs) — the "wipe all data" control. Each
+ * `clear()` resolves on its transaction commit (idbCore), so once this resolves the stores are
+ * durably empty and a subsequent read sees zero records (getSettings then falls back to the Auto
+ * default). Cleared sequentially so a failure surfaces deterministically rather than racing. Both
+ * meta/content pairs are cleared META FIRST (§1.2), the same safe ordering the capture and cache
+ * write paths use — a dangling meta entry is the benign failure, an orphaned content row is not.
  */
 export async function wipeAll(): Promise<void> {
   const conn = await db();
@@ -323,6 +324,8 @@ export async function wipeAll(): Promise<void> {
   await clear(conn, STORES.settings);
   await clear(conn, STORES.snapshotMeta);
   await clear(conn, STORES.snapshots);
+  await clear(conn, STORES.diagramMeta);
+  await clear(conn, STORES.diagrams);
 }
 
 /**
@@ -352,6 +355,32 @@ export async function eraseSnapshots(): Promise<void> {
   const conn = await db();
   await clear(conn, STORES.snapshotMeta);
   await clear(conn, STORES.snapshots);
+}
+
+/**
+ * Erase ONLY the two diagram-cache stores — the "Clear diagram cache" control (D-5, task 4.3). A
+ * sibling of {@link eraseSnapshots} and narrow in exactly the same way: it clears `diagramMeta` +
+ * `diagrams` and NOTHING else.
+ *
+ * ★ INVARIANT (D-5): clears ONLY the two diagram stores. What SURVIVES, untouched: remembered
+ * folders, recents, pins, the reader settings row (`SETTINGS_ID`), the snapshot-capture flag row
+ * (`CAPTURE_SETTINGS_ID`), AND every watched-document snapshot. This is the gesture that pays for
+ * D-5's revoke exemption: a content-hash cache key carries no folder identity, so revoking a folder
+ * cannot clear the diagrams that folder's documents rendered — this control is what the user has
+ * instead, and it must therefore cost them nothing else they stored.
+ *
+ * Cleared sequentially and META FIRST — the same ordering {@link storeDiagram} writes in and
+ * {@link eraseSnapshots} clears in. The cache is REGENERABLE, which makes this the most forgiving
+ * of the three erase controls: anything a crash strands is re-rendered on next sight, never lost.
+ *
+ * Not atomic, and deliberately so (`idbCore.ts:97-109` is one transaction per store): a multi-store
+ * transaction helper would be `idbCore.ts:5-9`'s documented STOP signal, and no correctness claim
+ * here needs one.
+ */
+export async function clearDiagramCache(): Promise<void> {
+  const conn = await db();
+  await clear(conn, STORES.diagramMeta);
+  await clear(conn, STORES.diagrams);
 }
 
 /** One remembered folder as the transparency view sees it — the live handle object is
@@ -402,6 +431,14 @@ export interface StoredSummary {
    *  `describeStored`/`PERMISSIONS.md` exist to hold (store.ts's precedent, and D-12 reads BOTH
    *  settings rows or the panel hides a record). `null` ⇒ no capture line. */
   captureFlag: boolean | null;
+  /** On-device diagram-cache state (007 task 4.3): how many rendered SVGs are cached and their
+   *  total stored bytes — read from `diagramMeta` ALONE (D-2), never from the `diagrams` content
+   *  store, so a trust-panel open never deserialises a single SVG. REQUIRED for the same
+   *  compile-time forcing reason `settings`/`snapshots`/`captureFlag` are: a summary literal that
+   *  forgets it fails to compile rather than silently reporting "no diagrams cached" — and a cache
+   *  the panel cannot see is precisely the hidden state D-14 binds this field to the first cached
+   *  SVG to prevent. `count === 0` ⇒ no diagram line. */
+  diagrams: { count: number; bytes: number };
   total: number;
   /** Plain-language, trust-facing description — one line per non-empty record class. */
   lines: string[];
@@ -435,9 +472,10 @@ export function buildStoredLines(input: {
   settings: Settings | null;
   snapshots: { count: number; docs: number; bytes: number };
   captureFlag: boolean | null;
+  diagrams: { count: number; bytes: number };
   total: number;
 }): string[] {
-  const { folders, recents, pins, settings, snapshots, captureFlag, total } = input;
+  const { folders, recents, pins, settings, snapshots, captureFlag, diagrams, total } = input;
   const lines: string[] = [];
   if (folders.length) {
     const remembered = folders.filter((f) => f.persisted).length;
@@ -479,6 +517,15 @@ export function buildStoredLines(input: {
         : 'Snapshot capture is turned off — a stored preference; no new snapshots are being kept.',
     );
   }
+  if (diagrams.count > 0) {
+    // ★ VERBATIM, NOT AUTHORED HERE (gate-2 sub-decision (a), banked at `cab93c7`; tasks.md 4.3).
+    // The settled wording is `Diagrams cached: N rendered (~size) — Clear diagram cache`, and it
+    // names BOTH halves of the snapshot pair's shape it was written to match
+    // (`storageControls.ts:241-280`): this disclosure line, and the control whose button reads
+    // `Clear diagram cache`. This half renders `N` and `size`; `storageControls.ts` renders the
+    // other. `humanBytes` is REUSED (not a second size formatter) so the panel speaks one figure.
+    lines.push(`Diagrams cached: ${diagrams.count} rendered (~${humanBytes(diagrams.bytes)})`);
+  }
   if (total === 0) {
     // Kept verbatim (folders/recents/pins) to stay identical to the shell's designed
     // EMPTY_SUMMARY literal — when total is 0 there are no settings either, so the
@@ -503,17 +550,28 @@ export async function describeStored(): Promise<StoredSummary> {
   // (SETTINGS_ID) and the capture flag (CAPTURE_SETTINGS_ID) are two independent rows in the one
   // settings store, read by their distinct keys — so `getSettings()`'s hand-enumeration (§4-1) is
   // never involved and the capture row can never leak into the reader-settings surface, or back.
-  const [folderRows, recents, pins, settingsRow, captureRow, snapshotMetaRows] = await Promise.all([
-    getAll<FolderRecord>(conn, STORES.folders),
-    getAll<RecentRecord>(conn, STORES.recents),
-    getAll<PinRecord>(conn, STORES.pins),
-    get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID),
-    get<CaptureRecord>(conn, STORES.settings, CAPTURE_SETTINGS_ID),
-    getAll<{ docId: string; entries: { id: string; ts: number; bytes: number }[] }>(
-      conn,
-      STORES.snapshotMeta,
-    ),
-  ]);
+  // ★ The diagram accounting reads `diagramMeta` ONLY — never the `diagrams` content store. This is
+  // the whole reason D-2 split the cache into two stores: `getAll` documents itself for "small
+  // bounded stores — no cursor needed" (idbCore.ts:116-119) and this function materialises whole
+  // stores, so an inline SVG would make EVERY trust-panel open deserialise EVERY cached diagram.
+  // The meta row carries `bytes`, which is all the panel needs to speak the size honestly.
+  const [folderRows, recents, pins, settingsRow, captureRow, snapshotMetaRows, diagramMetaRows] =
+    await Promise.all([
+      getAll<FolderRecord>(conn, STORES.folders),
+      getAll<RecentRecord>(conn, STORES.recents),
+      getAll<PinRecord>(conn, STORES.pins),
+      get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID),
+      get<CaptureRecord>(conn, STORES.settings, CAPTURE_SETTINGS_ID),
+      getAll<{ docId: string; entries: { id: string; ts: number; bytes: number }[] }>(
+        conn,
+        STORES.snapshotMeta,
+      ),
+      // The row shape is spelled inline rather than imported from `diagramCache.ts`, deliberately:
+      // `store.ts` IS content-script-reachable (via `snapshots.ts`), and importing the cache module
+      // here would drag the cache onto the content-script graph. The seam runs the other way — the
+      // cache imports the store. (Pinned by `diagramImportFence.test.ts`'s reachability walk.)
+      getAll<{ key: string; bytes: number; lastUsed: number }>(conn, STORES.diagramMeta),
+    ]);
 
   const folders: StoredFolderInfo[] = folderRows.map((f) => ({
     id: f.id,
@@ -538,13 +596,19 @@ export async function describeStored(): Promise<StoredSummary> {
     bytes: withEntries.reduce((n, m) => n + m.entries.reduce((b, e) => b + e.bytes, 0), 0),
   };
 
+  const diagrams = {
+    count: diagramMetaRows.length,
+    bytes: diagramMetaRows.reduce((n, r) => n + r.bytes, 0),
+  };
+
   const total =
     folders.length +
     recents.length +
     pins.length +
     (settings ? 1 : 0) +
     snapshots.count +
-    (captureFlag !== null ? 1 : 0);
+    (captureFlag !== null ? 1 : 0) +
+    diagrams.count;
   const lines = buildStoredLines({
     folders,
     recents,
@@ -552,8 +616,9 @@ export async function describeStored(): Promise<StoredSummary> {
     settings,
     snapshots,
     captureFlag,
+    diagrams,
     total,
   });
 
-  return { folders, recents, pins, settings, snapshots, captureFlag, total, lines };
+  return { folders, recents, pins, settings, snapshots, captureFlag, diagrams, total, lines };
 }

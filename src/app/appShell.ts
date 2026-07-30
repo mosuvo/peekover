@@ -56,6 +56,7 @@ import {
   describeStored as defaultDescribeStored,
   wipeAll as defaultWipeAll,
   eraseSnapshots as defaultEraseSnapshots,
+  clearDiagramCache as defaultClearDiagramCache,
   type FolderRecord,
   type RecentRecord,
   type PinRecord,
@@ -158,6 +159,10 @@ export interface AppStore {
    *  leaves folders/recents/pins/settings AND the capture flag row intact (erasing snapshots is not
    *  erasing settings). Optional like the others; absent → a best-effort no-op the wrapper swallows. */
   eraseSnapshots?(): Promise<void>;
+  /** Erase ONLY the two diagram-cache stores behind the "Clear diagram cache" control (D-5, task
+   *  4.3) — leaves folders/recents/pins/settings, the capture flag AND every snapshot intact.
+   *  Optional like the others; absent → a best-effort no-op the wrapper swallows. */
+  clearDiagramCache?(): Promise<void>;
   /** Erase a revoked folder's snapshots (D-10, task 1.4) — every snapshot whose `docId` is inside
    *  `folderId + SEP`. Optional like the other readers; absent → the best-effort wrapper swallows,
    *  so a minimal fake store still revokes (it just has no snapshots to erase). */
@@ -407,6 +412,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     describeStored: defaultDescribeStored,
     wipeAll: defaultWipeAll,
     eraseSnapshots: defaultEraseSnapshots,
+    clearDiagramCache: defaultClearDiagramCache,
     deleteSnapshotsForFolder: defaultDeleteSnapshotsForFolder,
     getSettings: defaultGetSettings,
     putSettings: defaultPutSettings,
@@ -588,6 +594,12 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     settings: null, // nothing stored — the reader falls back to the Auto default (task 5.2)
     snapshots: { count: 0, docs: 0, bytes: 0 }, // no snapshots → no snapshot line (task 1.4)
     captureFlag: null, // no 'capture' row → default (on), nothing stored → no capture line (task 1.5)
+    // ★ ADDED BECAUSE THE COMPILER DEMANDED IT, WHICH IS THE MECHANISM WORKING (task 4.3). Making
+    // `StoredSummary.diagrams` REQUIRED broke the build right here, on this duplicated literal —
+    // the intended outcome, not an obstacle: a trust panel that silently reports "no diagrams
+    // cached" while a cache is filling is exactly the hidden state D-14 exists to forbid, and this
+    // is the compile error that makes forgetting it impossible. Nothing cached → no diagram line.
+    diagrams: { count: 0, bytes: 0 },
     total: 0,
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };
@@ -619,6 +631,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       },
       onWipe: () => void wipeAllData(),
       onEraseSnapshots: () => void eraseSnapshotsData(),
+      onClearDiagramCache: () => void clearDiagramCacheData(),
       onClose: () => void toggleStorage(),
     });
     storagePanel.replaceChildren(view.element);
@@ -648,6 +661,18 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   async function eraseSnapshotsData(): Promise<void> {
     await tryStore(() => store.eraseSnapshots?.() ?? Promise.resolve());
     if (storageOpen) await renderStorage(); // the snapshot line clears; every other line stands
+  }
+
+  /** Clear ONLY the diagram cache (D-5, task 4.3), then repaint the open panel so the emptied
+   *  "Diagrams cached" line disappears. Identical in shape to `eraseSnapshotsData` above, and for
+   *  the same reasons: the reopen hub is NOT refreshed (cached diagrams never fed it), and nothing
+   *  in-memory is reset — clearing the cache is not clearing settings, snapshots, or the capture
+   *  flag. Already-rendered diagrams on screen are left alone: they are painted DOM, not cache
+   *  reads, so clearing costs the user nothing visible until the next render. Best-effort
+   *  (AGENTS.md #5) — a storage failure never blanks the panel. */
+  async function clearDiagramCacheData(): Promise<void> {
+    await tryStore(() => store.clearDiagramCache?.() ?? Promise.resolve());
+    if (storageOpen) await renderStorage(); // the diagram line clears; every other line stands
   }
 
   // --- reopen-hub (recents/pins) view -------------------------------------

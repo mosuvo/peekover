@@ -48,6 +48,12 @@ export interface StorageViewOptions {
   onToggleCapture(enabled: boolean): void;
   /** Erase everything — invoked ONLY after the inline confirm (never on the first click). */
   onWipe(): void;
+  /** Erase ONLY the cached diagram renderings (D-5, task 4.3) — invoked ONLY after the control's own
+   *  inline confirm. This is the one-click gesture that pays for D-5's revoke exemption: a
+   *  content-hash cache key carries no folder identity, so revoking a folder cannot clear cached
+   *  diagrams, and this is what the user has instead. Optional for the same reason as
+   *  `onEraseSnapshots` — a minimal consumer still mounts the panel; appShell always provides it. */
+  onClearDiagramCache?(): void;
   /** Erase ONLY the saved document snapshots (D-13, task 1.6) — invoked ONLY after the control's own
    *  inline confirm. The panel does not know when the async erase resolves; the caller (appShell)
    *  manages the refresh, exactly as it does for `onWipe`. Optional so a minimal consumer that only
@@ -110,7 +116,8 @@ const SC_CSS = /* css */ `
 .${SC_CLASS}__btn:hover{background:var(--accent-soft,#ECECE3)}
 .${SC_CLASS}__btn:disabled{opacity:.5; cursor:default}
 .${SC_CLASS}__btn[data-wipe="confirm"],
-.${SC_CLASS}__btn[data-erase-snapshots="confirm"]{border-color:var(--accent,#16171F); font-weight:600}
+.${SC_CLASS}__btn[data-erase-snapshots="confirm"],
+.${SC_CLASS}__btn[data-clear-diagrams="confirm"]{border-color:var(--accent,#16171F); font-weight:600}
 `;
 
 function buildStyle(doc: Document): HTMLStyleElement {
@@ -157,7 +164,15 @@ function buildRow(doc: Document, name: string, tag?: string): HTMLElement {
  * `onWipe`. Everything is one surface — no modal, no browser confirm().
  */
 export function createStorageView(doc: Document, opts: StorageViewOptions): StorageViewController {
-  const { summary, captureEnabled, onToggleCapture, onWipe, onEraseSnapshots, onClose } = opts;
+  const {
+    summary,
+    captureEnabled,
+    onToggleCapture,
+    onWipe,
+    onEraseSnapshots,
+    onClearDiagramCache,
+    onClose,
+  } = opts;
 
   const element = doc.createElement('div');
   element.className = SC_CLASS;
@@ -237,6 +252,57 @@ export function createStorageView(doc: Document, opts: StorageViewOptions): Stor
     'never uploaded, so you can compare versions. Turn this off to stop keeping new snapshots.';
   capture.append(captureLabel, captureNote);
   element.append(capture);
+
+  // The clear-diagram-cache control (D-5, task 4.3) — the THIRD erase control, built on the erase-
+  // snapshots pair's shape below (inline confirm, one surface, disabled when there is nothing to
+  // clear) because gate-2 sub-decision (a) specified it as matching that pair. It is placed FIRST of
+  // the three by the same least-destructive-first rule that put "Erase snapshots" above "Wipe all
+  // data": cached diagrams are REGENERABLE — clearing them costs the user nothing but a re-render,
+  // which makes this the most forgiving control in the panel and the safest one to reach first.
+  //
+  // ★ Its button label, `Clear diagram cache`, is the second half of the VERBATIM panel line banked
+  // at `cab93c7` (a): `Diagrams cached: N rendered (~size) — Clear diagram cache`. `store.ts`'s
+  // `buildStoredLines` renders the disclosure half; this renders the control half. Neither is
+  // re-authored here.
+  const diagrams = doc.createElement('div');
+  diagrams.className = `${SC_CLASS}__erase`;
+  element.append(diagrams);
+
+  function renderClearDiagrams(confirming: boolean): void {
+    diagrams.replaceChildren();
+    if (!confirming) {
+      const start = doc.createElement('button');
+      start.type = 'button';
+      start.className = `${SC_CLASS}__btn`;
+      start.dataset.clearDiagrams = 'start';
+      start.textContent = 'Clear diagram cache';
+      start.disabled = summary.diagrams.count === 0; // nothing cached → nothing to clear
+      start.addEventListener('click', () => renderClearDiagrams(true));
+      diagrams.append(start);
+      return;
+    }
+    const prompt = doc.createElement('span');
+    prompt.className = `${SC_CLASS}__erase-prompt`;
+    // Names (a) what clears — every cached diagram rendering — and (b) that it costs nothing
+    // permanent, since a cleared diagram is simply drawn again next time the document is opened.
+    prompt.textContent =
+      'Clear diagram cache? This deletes every stored diagram rendering from this device. Nothing ' +
+      'is lost — each diagram is drawn again the next time you open the document that contains it.';
+    const confirm = doc.createElement('button');
+    confirm.type = 'button';
+    confirm.className = `${SC_CLASS}__btn`;
+    confirm.dataset.clearDiagrams = 'confirm';
+    confirm.textContent = 'Yes, clear diagram cache';
+    confirm.addEventListener('click', () => onClearDiagramCache?.());
+    const cancel = doc.createElement('button');
+    cancel.type = 'button';
+    cancel.className = `${SC_CLASS}__btn`;
+    cancel.dataset.clearDiagrams = 'cancel';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', () => renderClearDiagrams(false));
+    diagrams.append(prompt, confirm, cancel);
+  }
+  renderClearDiagrams(false);
 
   // The erase-snapshots control (D-13, task 1.6) — placed ABOVE the wipe control deliberately: it is
   // the less destructive of the two (it erases only saved document snapshots, keeping everything
