@@ -101,8 +101,11 @@ import {
 } from './diagramEngine';
 import { diagramCacheKey, readDiagram, storeDiagram } from '../app/diagramCache';
 import { currentEffectiveTheme } from '../theme/reader';
+import { onEffectiveThemeChange } from '../theme/themeRegistry';
+import type { EffectiveTheme } from '../settings/settings';
 import { sanitizeSvg } from './sanitize';
 import {
+  DIAGRAM_FIGURE_CLASS,
   DIAGRAM_STATE_ATTR,
   insertDiagramPlaceholder,
   markDiagramFailed,
@@ -144,6 +147,25 @@ interface DiagramPair {
  * spelled against a private string is an assertion about nothing.
  */
 export const DIAGRAM_MEASURE_CLASS = 'peekover-diagram-measure';
+
+/**
+ * The effective theme a rendered <figure>'s CONTENT was drawn at (007 D-7, task 5.1). Written
+ * here rather than in `diagramView.ts` because it is a fact about the RENDER, not about D-15's
+ * three states — the view module owns the state machine and has no notion of a theme.
+ *
+ * It earns its place twice over:
+ *
+ *   1. It is what makes the re-theme idempotent. `applyTheme` broadcasts on every theme write,
+ *      including one that re-applies the theme already showing; comparing this attribute is how
+ *      a subscriber tells "the picture is stale" from "the picture is already right" without
+ *      re-rendering the document to find out.
+ *   2. It is the OBSERVABLE the staleness claim is spelled against. `data-theme` on the host says
+ *      what the page is painting; this says what the diagram was drawn for. A test asserting only
+ *      the former cannot see a stale diagram at all — the host re-themes either way. The failure
+ *      of a wrong-channel subscription therefore reads as `expected 'light' to be 'dark'` on this
+ *      attribute, naming the stale rendering, rather than as a bare boolean.
+ */
+export const DIAGRAM_THEME_ATTR = 'data-diagram-theme';
 
 /** §3.8's three failures, in the words the inline marker shows. */
 const ENGINE_LOAD_FAILED = 'the diagram engine could not be loaded';
@@ -261,6 +283,118 @@ function adoptSanitizedSvg(doc: Document, svg: string): DocumentFragment | null 
 }
 
 /**
+ * The outcome of drawing ONE diagram at ONE theme: either adopted content ready to commit, or the
+ * §3.8/§4 reason it did not draw. A returned value rather than a `markDiagramFailed` call inside,
+ * because the two callers degrade DIFFERENTLY — see {@link reThemeHost}, which must not turn a
+ * diagram that is already on screen into a failure marker.
+ */
+type DrawOutcome = { readonly content: DocumentFragment } | { readonly failure: string };
+
+/**
+ * Source guard → cache lookup → engine on a miss → sanitize → adopt → cache write, for one fence
+ * at one effective theme. Extracted at task 5.1 so the first render and the re-theme share ONE
+ * implementation: a second copy is where the cache write's three ordering constraints below would
+ * drift apart, and the re-theme is precisely a second pass through this sequence at a new theme.
+ *
+ * `theme` is a parameter rather than a `currentEffectiveTheme()` read inside, and that is
+ * load-bearing for the re-theme: the listener is handed the theme that was just BROADCAST, and
+ * keying on anything else would let the key disagree with what the hosts now carry.
+ */
+async function drawDiagram(
+  doc: Document,
+  engine: DiagramEngine,
+  container: HTMLElement,
+  source: string,
+  theme: EffectiveTheme,
+): Promise<DrawOutcome> {
+  // Step zero: §4's source guard. The caller read the source once and hands the SAME string on —
+  // a second read is a second thing to keep in agreement. A carrying fence never reaches
+  // `render()`, which is the only moment at which its reference could have gone out; it takes
+  // §3.8's degrade path and the fences around it are untouched (§4's per-fence isolation).
+  if (hasRemoteReference(source)) return { failure: REMOTE_REFERENCE };
+
+  // Step one: THE CACHE (D-3, D-4, task 4.3). The key is content-addressed over the three
+  // things that change what this diagram LOOKS like — the source, the effective theme, and the
+  // engine version — so a hit is only ever the same picture (`diagramCache.ts`'s D-3 note).
+  //
+  // The theme is always an EffectiveTheme, never a `ThemeSetting`: `'auto'` renders as two
+  // different pictures, and keying on it would serve a dark render into a light reader.
+  //
+  // A hit skips `engine.render` entirely — that IS the cache, and it is what makes §3.3's
+  // *every re-render re-enhances* affordable rather than merely correct (4.4 measures it under
+  // watch). The cached string then rejoins the SAME sanitize-and-adopt path a fresh render
+  // takes: nothing that came out of storage is trusted more than what came out of the engine.
+  // It is also what makes the SECOND theme flip free: the rendering this pass stores is the row
+  // the flip back reads (§3.7's two coexisting rows, 4.3's D-3 component-2 case).
+  let key: string | null;
+  let cached: string | undefined;
+  try {
+    key = await diagramCacheKey(source, theme, engineVersion());
+    cached = await readDiagram(key);
+  } catch {
+    key = null; // hashing unavailable → no cache this pass; the render below is unaffected.
+  }
+
+  let drawn: string;
+  if (cached === undefined) {
+    renderSeq += 1;
+    const id = `peekover-diagram-${renderSeq}`;
+
+    // Step two: the engine — reached only on a MISS. Its failure is §3.8's second, and it is
+    // caught per fence so the fences after it still draw.
+    try {
+      drawn = (await engine.render(id, source, container)).svg;
+    } catch {
+      return { failure: RENDER_FAILED };
+    }
+  } else {
+    drawn = cached;
+  }
+
+  // Step three: sanitize and adopt — on the engine's string OR the cached one, indistinguishably.
+  // Its failure is §3.8's third, and it lands AFTER the engine has already succeeded (or after a
+  // hit) — the latest-moment case D-15 is shaped for.
+  try {
+    const content = adoptSanitizedSvg(doc, sanitizeSvg(drawn));
+    if (!content) return { failure: SANITIZE_REJECTED };
+
+    // ── ★ THE WRITE: AFTER SANITIZE SURVIVED, BEFORE THE FENCE LEAVES `pending` ────────────
+    //
+    // Three constraints, and this one position satisfies all three.
+    //
+    //   1. STORE THE ENGINE'S STRING, NOT THE SANITIZED ONE. `drawn` is what `sanitizeSvg` was
+    //      handed, so every cache HIT re-runs the CURRENT profile over it (the sanitize step
+    //      above does not care where its string came from). Storing the post-sanitize artifact
+    //      would freeze one profile version into storage: tighten `sanitize.ts` tomorrow and
+    //      the new rule would apply to fresh renders and silently NOT to cached ones.
+    //
+    //   2. DO NOT STORE AN ARTIFACT THE SANITIZER JUST REJECTED. Writing before the sanitize
+    //      check POISONS the cache — the rejected string is stored, and every later sight of
+    //      that diagram is served it again and re-rejected, without the engine ever getting
+    //      another attempt. §3.8's failure would stop being transient and become permanent,
+    //      cached, and invisible. (Caught by `diagramRender.browser.test.ts`'s sanitize-
+    //      rejection case, whose success control re-renders the same fence and demands
+    //      `rendered`: it read `failed` against a write placed before this check.)
+    //
+    //   3. BEFORE the caller commits, which is what clears the `pending` state. That makes
+    //      "the document has settled" mean "and its diagrams are cached" — one observable
+    //      instead of two, and no window in which a re-render races an in-flight write.
+    //
+    // The cost lands only on the MISS path, which has just paid for a full engine render; a
+    // HIT writes nothing here (`readDiagram` already touched `lastUsed`), so the fast path the
+    // cache exists to create never waits on storage at all.
+    //
+    // `storeDiagram` swallows its own failures (§4) — a diagram that could not be cached simply
+    // re-renders next time, which is a cost, not an error the user has an action for.
+    if (cached === undefined && key !== null) await storeDiagram(key, drawn);
+
+    return { content };
+  } catch {
+    return { failure: SANITIZE_REJECTED };
+  }
+}
+
+/**
  * The async body: load the engine once, then draw each pending fence into its placeholder.
  *
  * SEQUENTIAL, deliberately. The container is shared, and the engine empties it at the top of every
@@ -287,103 +421,206 @@ async function renderDiagrams(
   const container = createMeasureContainer(doc);
   try {
     for (const pair of pairs) {
-      // Step zero: §4's source guard. Read once, scan, and hand the SAME string to the engine —
-      // a second read is a second thing to keep in agreement. A carrying fence never reaches
-      // `render()`, which is the only moment at which its reference could have gone out; it takes
-      // §3.8's degrade path and the fences around it are untouched (§4's per-fence isolation).
-      const source = diagramSourceOf(pair.pre);
-      if (hasRemoteReference(source)) {
-        markDiagramFailed(pair.pre, pair.figure, REMOTE_REFERENCE);
+      // Read the theme PER FENCE, as this loop always has: a flip that lands mid-pass leaves the
+      // fences behind it keyed at the new theme and the ones in front of it stale, and the stale
+      // ones are exactly what the re-theme listener then repairs (it compares each figure's own
+      // recorded theme, not the document's).
+      const theme = currentEffectiveTheme();
+      const outcome = await drawDiagram(doc, engine, container, diagramSourceOf(pair.pre), theme);
+      if ('failure' in outcome) {
+        markDiagramFailed(pair.pre, pair.figure, outcome.failure);
         continue;
       }
-
-      // Step one: THE CACHE (D-3, D-4, task 4.3). The key is content-addressed over the three
-      // things that change what this diagram LOOKS like — the source, the effective theme, and the
-      // engine version — so a hit is only ever the same picture (`diagramCache.ts`'s D-3 note).
-      //
-      // The theme read is `currentEffectiveTheme()`, never the `ThemeSetting`: `'auto'` renders as
-      // two different pictures, and keying on it would serve a dark render into a light reader.
-      //
-      // A hit skips `engine.render` entirely — that IS the cache, and it is what makes §3.3's
-      // *every re-render re-enhances* affordable rather than merely correct (4.4 measures it under
-      // watch). The cached string then rejoins the SAME sanitize-and-adopt path a fresh render
-      // takes: nothing that came out of storage is trusted more than what came out of the engine.
-      let key: string | null = null;
-      let cached: string | undefined;
-      try {
-        key = await diagramCacheKey(source, currentEffectiveTheme(), engineVersion());
-        cached = await readDiagram(key);
-      } catch {
-        key = null; // hashing unavailable → no cache this pass; the render below is unaffected.
-      }
-
-      let drawn: string;
-      if (cached === undefined) {
-        renderSeq += 1;
-        const id = `peekover-diagram-${renderSeq}`;
-
-        // Step two: the engine — reached only on a MISS. Its failure is §3.8's second, and it is
-        // caught per fence so the fences after it still draw.
-        try {
-          drawn = (await engine.render(id, source, container)).svg;
-        } catch {
-          markDiagramFailed(pair.pre, pair.figure, RENDER_FAILED);
-          continue;
-        }
-      } else {
-        drawn = cached;
-      }
-
-      // Step three: sanitize and adopt — on the engine's string OR the cached one, indistinguishably.
-      // Its failure is §3.8's third, and it lands AFTER the engine has already succeeded (or after a
-      // hit) — the latest-moment case D-15 is shaped for.
-      try {
-        const content = adoptSanitizedSvg(doc, sanitizeSvg(drawn));
-        if (!content) {
-          markDiagramFailed(pair.pre, pair.figure, SANITIZE_REJECTED);
-          continue;
-        }
-
-        // ── ★ THE WRITE: AFTER SANITIZE SURVIVED, BEFORE THE FENCE LEAVES `pending` ────────────
-        //
-        // Three constraints, and this one position satisfies all three.
-        //
-        //   1. STORE THE ENGINE'S STRING, NOT THE SANITIZED ONE. `drawn` is what `sanitizeSvg` was
-        //      handed, so every cache HIT re-runs the CURRENT profile over it (the sanitize step
-        //      above does not care where its string came from). Storing the post-sanitize artifact
-        //      would freeze one profile version into storage: tighten `sanitize.ts` tomorrow and
-        //      the new rule would apply to fresh renders and silently NOT to cached ones.
-        //
-        //   2. DO NOT STORE AN ARTIFACT THE SANITIZER JUST REJECTED. Writing before the sanitize
-        //      check POISONS the cache — the rejected string is stored, and every later sight of
-        //      that diagram is served it again and re-rejected, without the engine ever getting
-        //      another attempt. §3.8's failure would stop being transient and become permanent,
-        //      cached, and invisible. (Caught by `diagramRender.browser.test.ts`'s sanitize-
-        //      rejection case, whose success control re-renders the same fence and demands
-        //      `rendered`: it read `failed` against a write placed before this check.)
-        //
-        //   3. BEFORE `markDiagramRendered`, which is what clears the `pending` state. That makes
-        //      "the document has settled" mean "and its diagrams are cached" — one observable
-        //      instead of two, and no window in which a re-render races an in-flight write.
-        //
-        // The cost lands only on the MISS path, which has just paid for a full engine render; a
-        // HIT writes nothing here (`readDiagram` already touched `lastUsed`), so the fast path the
-        // cache exists to create never waits on storage at all.
-        //
-        // `storeDiagram` swallows its own failures (§4) — a diagram that could not be cached simply
-        // re-renders next time, which is a cost, not an error the user has an action for.
-        if (cached === undefined && key !== null) await storeDiagram(key, drawn);
-
-        markDiagramRendered(pair.pre, pair.figure, content);
-      } catch {
-        markDiagramFailed(pair.pre, pair.figure, SANITIZE_REJECTED);
-      }
+      markDiagramRendered(pair.pre, pair.figure, outcome.content);
+      pair.figure.setAttribute(DIAGRAM_THEME_ATTR, theme);
     }
   } finally {
     // OURS to remove, which is the whole reason we passed one (D-6 step 1). Runs even if the loop
     // throws for a reason neither catch above names.
     container.remove();
   }
+}
+
+// ── D-7: THE RE-THEME, AND WHY IT SUBSCRIBES WHERE IT DOES ────────────────────────────────────
+//
+// §4 requires re-theming *"when the EFFECTIVE theme changes"*. `applyTheme` is the one broadcast
+// every effective-theme change goes through — the setting writer (`reader.ts:89`) AND the OS-flip
+// listener (`reader.ts:157`) — so that is where this subscribes (`themeRegistry.ts`'s
+// `onEffectiveThemeChange`). `onThemeSettingChange` is the seam that looks right and is not: by its
+// own doc comment (`reader.ts:108-112`) an OS flip under `auto` *"changes what paints but NOT what
+// the user picked, so it deliberately does not notify"*, and `DEFAULT_SETTINGS.theme` IS `'auto'`.
+// A subscriber there would leave every diagram stale on an OS dark-mode flip in the DEFAULT
+// configuration. `diagramTheme.browser.test.ts` reverts to that channel and requires the flip to go
+// red, so the choice is pinned by the defect it avoids rather than by this comment.
+//
+// THE MECHANISM IS RE-RENDER-AND-SWAP, NOT MUTATE-IN-PLACE. A themed mermaid SVG differs in fills,
+// strokes, marker defs and its generated <style> block; there is no set of attributes to patch that
+// is equivalent to what the engine emits at the other theme. So the fence is re-keyed at the new
+// theme, looked up, rendered on a miss, and the RESULT replaces the figure's children.
+//
+// KEEP-PREVIOUS-VISIBLE IS FREE, AND THAT IS D-15's DOING. Nothing here empties a figure or returns
+// a fence to `pending`: the old rendering stays on screen, untouched, for the whole of the async
+// re-key/look-up/render, and the swap is one synchronous `replaceChildren` with the replacement
+// ALREADY built. There is no instant — not a frame, not a task — in which the figure has no <svg>.
+// A failure at the new theme leaves the OLD rendering standing rather than calling
+// `markDiagramFailed`: the diagram on screen is still a correct picture of the source, merely at
+// the previous theme, and replacing it with an error marker would be a strictly worse outcome than
+// the staleness it reports.
+
+/**
+ * Hosts with at least one rendered diagram, and the loader each was enhanced with.
+ *
+ * A Map rather than a Set because the re-theme has to reach the engine the SAME way the first
+ * render did — a test that injected a loader (the only seam D-13's static import leaves) must not
+ * silently fall back to the production `import('mermaid')` on a flip.
+ */
+const enhancedHosts = new Map<HTMLElement, EngineLoader | undefined>();
+
+/** Subscribed once, lazily, on the first host that actually has diagrams — never at module scope
+ *  (side effects belong to call sites) and never per host (that is the leak the prune prevents). */
+let themeSubscribed = false;
+
+/** Ids re-theme passes, so one can tell whether it is still the pass that owns its host. */
+let themePassSeq = 0;
+
+/**
+ * The pass each host currently has IN FLIGHT, and the theme it is producing. One map answers both
+ * questions the re-theme has to get right when broadcasts arrive faster than renders finish.
+ *
+ * **A duplicate is declined before it starts.** A second broadcast of a theme a host is already
+ * re-rendering to has nothing to add, and starting it would run the engine again for a picture
+ * already on its way. Duplicate broadcasts are ordinary, not pathological: `applyTheme` fires on
+ * every theme write, so a settings load landing on the theme the OS already resolved to, or two
+ * surfaces writing the same theme, both arrive here twice. (The test harness makes it vivid —
+ * `resetThemeWatchForTest` leaves each test's OS listener installed, so by the third test in a
+ * file one flip arrives three times. Without this the flip ran the engine three times per diagram.)
+ *
+ * **A superseded pass does not commit.** Two flips in quick succession would otherwise race: the
+ * first pass's render can land AFTER the second's, and its swap would put the older theme back on
+ * screen permanently — a stale diagram produced by the mechanism that exists to prevent one. A
+ * pass commits only while it is still the one recorded here.
+ *
+ * The two interact, and the ordering matters: only a pass that ACTUALLY STARTS claims the slot, so
+ * a coalesced duplicate cannot supersede the very pass it deferred to. (Counting supersession per
+ * broadcast instead had exactly that bug — every flip cancelled itself and nothing ever re-themed.)
+ */
+const inFlightThemes = new Map<HTMLElement, { theme: EffectiveTheme; pass: number }>();
+
+/** Drop every host no longer in the document — `themeRegistry.ts`'s `pruneThemeHosts` discipline,
+ *  one level up, as its `onEffectiveThemeChange` doc comment requires of a lasting subscriber.
+ *  Deleting during Map iteration is safe. */
+function pruneEnhancedHosts(): void {
+  for (const host of enhancedHosts.keys()) {
+    if (!host.isConnected) {
+      enhancedHosts.delete(host);
+      inFlightThemes.delete(host);
+    }
+  }
+}
+
+/** Re-render every stale diagram in one host at `effective`, and swap each when it is ready. */
+async function reThemeHost(
+  host: HTMLElement,
+  loader: EngineLoader | undefined,
+  effective: EffectiveTheme,
+): Promise<void> {
+  const shadow = host.shadowRoot;
+  if (!shadow) return;
+
+  // Already on its way to this exact theme — see `inFlightThemes`. Checked before the stale scan
+  // because the in-flight pass has not committed yet, so the figures still READ stale.
+  if (inFlightThemes.get(host)?.theme === effective) return;
+
+  // Only figures whose CONTENT is at another theme. This is what makes the listener idempotent:
+  // `applyTheme` also broadcasts when the theme did not actually change (every `setThemeSetting`
+  // call does), and re-rendering a document to discover that would be the cost the cache exists
+  // to avoid, paid on every write.
+  const stale: DiagramPair[] = [];
+  for (const figure of shadow.querySelectorAll<HTMLElement>(
+    `figure.${DIAGRAM_FIGURE_CLASS}[${DIAGRAM_STATE_ATTR}="rendered"]`,
+  )) {
+    if (figure.getAttribute(DIAGRAM_THEME_ATTR) === effective) continue;
+    const pre = figure.previousElementSibling;
+    if (pre instanceof HTMLElement) stale.push({ pre, figure });
+  }
+  if (stale.length === 0) return;
+
+  themePassSeq += 1;
+  const pass = themePassSeq;
+  inFlightThemes.set(host, { theme: effective, pass });
+  try {
+    await drawStaleFigures(host, shadow, loader, stale, effective, pass);
+  } finally {
+    // Ours to clear only if a newer pass has not already claimed the slot.
+    if (inFlightThemes.get(host)?.pass === pass) inFlightThemes.delete(host);
+  }
+}
+
+/** The engine load, the measuring container and the per-figure swap — split out so
+ *  {@link reThemeHost}'s in-flight bookkeeping has one `finally` covering all of it. */
+async function drawStaleFigures(
+  host: HTMLElement,
+  shadow: ShadowRoot,
+  loader: EngineLoader | undefined,
+  stale: readonly DiagramPair[],
+  effective: EffectiveTheme,
+  pass: number,
+): Promise<void> {
+  /** Still the pass that owns this host? A newer flip claiming the slot ends this one. */
+  const current = (): boolean => inFlightThemes.get(host)?.pass === pass;
+
+  let engine: DiagramEngine | null;
+  try {
+    engine = await (loader ? loadDiagramEngine(shadow, loader) : loadDiagramEngine(shadow));
+  } catch {
+    return; // the engine that already drew these is gone; the existing renderings stay on screen.
+  }
+  if (!engine) return;
+
+  const container = createMeasureContainer(host.ownerDocument);
+  try {
+    for (const pair of stale) {
+      if (!current()) return; // a newer flip owns the screen now
+      const outcome = await drawDiagram(
+        host.ownerDocument,
+        engine,
+        container,
+        diagramSourceOf(pair.pre),
+        effective,
+      );
+      // A failure keeps the previous rendering (see the header): still a diagram, merely stale.
+      if ('failure' in outcome) continue;
+      if (!current() || !pair.figure.isConnected) continue;
+
+      // ★ THE SWAP. One synchronous call, with the replacement already built — the figure is
+      // REPLACED, never emptied, so no observer can catch it without an <svg>.
+      markDiagramRendered(pair.pre, pair.figure, outcome.content);
+      pair.figure.setAttribute(DIAGRAM_THEME_ATTR, effective);
+    }
+  } finally {
+    container.remove();
+  }
+}
+
+/** The effective-theme subscriber. Prunes first, then re-themes each live host independently —
+ *  one host's slow engine must not hold another host's diagrams at the old theme. */
+function reThemeAllHosts(effective: EffectiveTheme): void {
+  pruneEnhancedHosts();
+  for (const [host, loader] of enhancedHosts) {
+    void reThemeHost(host, loader, effective);
+  }
+}
+
+/**
+ * Test-only: forget every enhanced host and the subscription itself, so a suite does not leave a
+ * listener re-rendering into a later suite's document. Pairs with
+ * `themeRegistry.resetEffectiveThemeListenersForTest`, which clears the other half.
+ */
+export function resetDiagramThemeForTest(): void {
+  enhancedHosts.clear();
+  inFlightThemes.clear();
+  themeSubscribed = false;
+  themePassSeq = 0;
 }
 
 /**
@@ -416,6 +653,15 @@ export function enhanceDiagrams(host: HTMLElement, options: EnhanceOptions = {})
     pairs.push({ pre, figure: insertDiagramPlaceholder(pre) });
   }
   if (pairs.length === 0) return;
+
+  // D-7: this host now has diagrams, so it follows the effective theme from here on. Both lines
+  // are AFTER the empty-list return by design — a fence-free document subscribes to nothing and
+  // is not retained, which keeps the no-diagram case exactly as cheap as it was.
+  enhancedHosts.set(host, options.loader);
+  if (!themeSubscribed) {
+    themeSubscribed = true;
+    onEffectiveThemeChange(reThemeAllHosts);
+  }
 
   // Everything above is synchronous and already committed; everything below is off this stack.
   void renderDiagrams(host.ownerDocument, shadow, pairs, options.loader);

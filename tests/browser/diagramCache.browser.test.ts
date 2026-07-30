@@ -130,6 +130,19 @@ async function renderPass(markdown: string, loader: EngineLoader, spy: Mock<() =
   return { shadow, invocations: spy.mock.calls.length - before };
 }
 
+/**
+ * Detach every host mounted so far.
+ *
+ * Needed only where a test changes the THEME mid-way. From task 5.1 an open reader FOLLOWS the
+ * effective theme (D-7): a host still connected from an earlier pass legitimately re-renders on
+ * the flip, and that render lands on this file's SHARED spy. Detaching first keeps `renderPass`'s
+ * number meaning what its name says — the invocations of THAT pass — rather than that pass plus
+ * every document still on screen. The re-theme skips them by its own `isConnected` prune.
+ */
+function detachMountedHosts(): void {
+  for (const el of cleanup.splice(0)) el.remove();
+}
+
 /** The one rendered figure in `shadow`, asserted non-empty — a hit that served nothing would
  *  ALSO leave the engine uninvoked, so "on screen" is half of every hit claim here. */
 function assertRenderedFigure(shadow: ShadowRoot): void {
@@ -204,6 +217,9 @@ describe('the diagram cache serves (D-3, D-4, D-14; task 4.3)', () => {
 
     // Same fence text, same engine — only the EFFECTIVE theme differs. A hash-keyed store would
     // hit here, which is exactly the collision D-3's composite key exists to prevent.
+    // (`detachMountedHosts` first — see its note: from 5.1 the pass above is still on screen and
+    // would follow this flip, adding its own render to the count this line reads.)
+    detachMountedHosts();
     setThemeSetting('dark');
     expect(
       (await renderPass(doc(FENCE_A), loader, render)).invocations,
@@ -213,8 +229,10 @@ describe('the diagram cache serves (D-3, D-4, D-14; task 4.3)', () => {
     // §3.7's REQUIREMENT, asserted directly: both renderings are rows, so every subsequent flip in
     // either direction is a hit rather than a re-render.
     expect((await describeStored()).diagrams.count).toBe(2);
+    detachMountedHosts();
     setThemeSetting('light');
     expect((await renderPass(doc(FENCE_A), loader, render)).invocations).toBe(0);
+    detachMountedHosts();
     setThemeSetting('dark');
     expect((await renderPass(doc(FENCE_A), loader, render)).invocations).toBe(0);
   });

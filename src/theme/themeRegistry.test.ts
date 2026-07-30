@@ -7,13 +7,15 @@
 // (the §3.4 fix — no tag-name query), and a host removed from the document is pruned so it is
 // never written again (the by-construction liveness guard).
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   registerThemeHost,
   unregisterThemeHost,
   applyTheme,
+  onEffectiveThemeChange,
   themeHostCountForTest,
   resetThemeHostsForTest,
+  resetEffectiveThemeListenersForTest,
 } from './themeRegistry';
 
 /** A connected themed host. The registry is tag-agnostic on purpose — the real surfaces are a
@@ -27,6 +29,7 @@ function mountHost(tag = 'div'): HTMLElement {
 
 beforeEach(() => {
   resetThemeHostsForTest();
+  resetEffectiveThemeListenersForTest();
   document.body.replaceChildren();
 });
 
@@ -59,6 +62,88 @@ describe('theme registry — broadcast', () => {
     unregisterThemeHost(host);
     applyTheme('light');
     expect(host.getAttribute('data-theme')).toBe('dark'); // frozen at the last broadcast it saw
+  });
+});
+
+// ── 007 D-7, task 5.1: the effective-theme notification ───────────────────────────────────────
+//
+// ★ ADDITIVE, AND THE CONTROL FOR IT IS ABOVE. The four tests that precede this block are
+// UNCHANGED from before the listener existed, and were run green at HEAD (f133913) as the
+// pre-listener control. They are what "additive" means here: they pin `applyTheme`'s whole
+// pre-existing contract — every registered host written, an unregistered host skipped, the
+// prune shrinking the set — and they still pass with a listener installed. This block adds the
+// notification's own properties on top; it does not restate theirs.
+describe('theme registry — the effective-theme notification (007 D-7)', () => {
+  it('notifies every subscriber with the theme that was just applied', () => {
+    const seen: string[] = [];
+    onEffectiveThemeChange((effective) => seen.push(effective));
+
+    applyTheme('dark');
+    applyTheme('sepia');
+
+    // The EFFECTIVE theme, not a setting — the subscriber never has to ask the OS or re-resolve
+    // anything, which is what stops it becoming a second source of truth for what is painting.
+    expect(seen).toEqual(['dark', 'sepia']);
+  });
+
+  it('★ notifies AFTER the attribute writes — a listener reading the DOM sees the NEW theme', () => {
+    const host = mountHost();
+    registerThemeHost(host);
+    applyTheme('light');
+
+    // The ordering is the reason a re-render subscriber can key off what the page now carries.
+    // RED IF THE NOTIFY MOVES ABOVE THE WRITE LOOP: this reads the theme being REPLACED.
+    let observed: string | null = 'never ran';
+    onEffectiveThemeChange(() => {
+      observed = host.getAttribute('data-theme');
+    });
+    applyTheme('dark');
+
+    expect(observed).toBe('dark');
+  });
+
+  it('notifies on a re-broadcast of the SAME theme (the no-op decision is the subscriber\'s)', () => {
+    const listener = vi.fn();
+    onEffectiveThemeChange(listener);
+
+    applyTheme('dark');
+    applyTheme('dark');
+
+    // Only the subscriber knows what its surfaces currently show — a diagram rendered at another
+    // theme is stale even when the broadcast repeats. Suppressing here would hide that from it.
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('unsubscribing stops the notifications', () => {
+    const listener = vi.fn();
+    const off = onEffectiveThemeChange(listener);
+
+    applyTheme('dark');
+    off();
+    applyTheme('light');
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenLastCalledWith('dark');
+  });
+
+  it('★ additive — the host broadcast is unchanged while a subscriber is installed', () => {
+    const reader = mountHost('peekover-root');
+    const doomed = mountHost();
+    registerThemeHost(reader);
+    registerThemeHost(doomed);
+    onEffectiveThemeChange(() => {});
+
+    applyTheme('dark');
+    expect(reader.getAttribute('data-theme')).toBe('dark');
+    expect(doomed.getAttribute('data-theme')).toBe('dark');
+
+    // ...including the prune. The listener sits beside the hosts; it must not have joined the
+    // iteration that removes dead ones.
+    doomed.remove();
+    applyTheme('light');
+    expect(reader.getAttribute('data-theme')).toBe('light');
+    expect(doomed.getAttribute('data-theme')).toBe('dark');
+    expect(themeHostCountForTest()).toBe(1);
   });
 });
 
