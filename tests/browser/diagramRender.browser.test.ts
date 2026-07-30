@@ -49,7 +49,7 @@
 // own file, because it gates the mechanism rather than reporting on it, and it needs the control
 // that fires. The cooldown and the import fence are 3.4's.
 
-import { describe, it, expect, afterEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi, type Mock } from 'vitest';
 import mermaid from 'mermaid';
 import { createReaderPane } from '../../src/app/readerPane';
 import { mount } from '../../src/render/mount';
@@ -65,6 +65,13 @@ import {
   DIAGRAM_STATE_ATTR,
   markDiagramRendered,
 } from '../../src/render/diagramView';
+import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import type { FolderSource } from '../../src/app/folderSource';
+import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { resetWatchRegistryForTest, stopWatch } from '../../src/watch/watchRegistry';
+import { resetWatchControlsForTest } from '../../src/watch/watchControl';
+import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
+import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 
 const FIGURE_SELECTOR = `figure.${DIAGRAM_FIGURE_CLASS}`;
 
@@ -603,4 +610,176 @@ describe('D-12 parity — the RENDER path behaves the same from both call sites'
       expect(figure!.textContent).toContain('Alpha');
     }
   }, 45_000);
+});
+
+// ── 3.4 — A WATCH RE-RENDER RE-ENHANCES, THROUGH THE PRODUCTION INSTALL SITE ─────────────────
+//
+// §3.3 of the plan: `mount()` commits with `replaceChildren`, so every re-render DESTROYS the
+// rendered diagrams along with everything else in the reading column. Re-enhancement is therefore
+// not an optimisation — it is the only thing that keeps a watched diagram on screen. The wiring
+// that does it is `appShell.ts:132`'s `renderWithDiagrams`, handed to `createWatchController` at
+// `appShell.ts:820`, inside `installWatchForFile`.
+//
+// SO THE CONTROLLER IS NOT HAND-BUILT HERE, and that is the whole design of this block. Four
+// sibling watch suites construct `createWatchController({ detector, contained, docId })` directly
+// and drive a fake detector's callback (`watchControl.browser.test.ts:611-623`). Every one of them
+// takes the DEFAULT `render`, which is bare `mount` — so a hand-built controller would re-render
+// without enhancing and pass a test that asserted the opposite of the truth, or fail one that
+// asserted the truth. The only thing that proves the shipped app page re-enhances is the shipped
+// app page: mountAppShell -> open folder -> click the file (which runs `installWatchForFile`) ->
+// click the watch pill -> change the bytes `read()` returns -> wait out a real 1 s poll.
+//
+// THE CONTROL IS `replaceChildren` ITSELF. The pre-change figure's `isConnected` is asserted FALSE
+// after the re-render: the old rendered diagram really was destroyed, so the figure found
+// afterwards is a NEW one that something had to build. Without re-enhancement there would be no
+// figure at that point at all — which is why the identity check, not merely the presence check, is
+// what this block turns on.
+//
+// VERIFIED RED by ablating the one line it exists to prove: deleting `render: renderWithDiagrams`
+// from the `createWatchController` call at `appShell.ts:820` (so the controller falls back to its
+// default bare `mount`) times this test out on BOTH engines — the document re-renders with the new
+// text and grows no figure at all. Restored from a copy; green again on both.
+
+const DIAGRAM_A = '# Watched\n\nBefore.\n\n```mermaid\ngraph TD; A-->B;\n```\n';
+const DIAGRAM_B = '# Watched\n\nAfter the agent edited it.\n\n```mermaid\ngraph LR; X-->Y-->Z;\n```\n';
+
+/** Writes nothing anywhere — the grant flow's IndexedDB traffic is irrelevant to this block. */
+function noopStore(): AppStore {
+  return {
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+  };
+}
+
+/** The file on "disk": mutable bytes, plus a count of how many times they have been read.
+ *
+ *  THE COUNT IS NOT DECORATION — it is what makes this test deterministic rather than racy.
+ *  `pollingDetector` treats its FIRST read after `start()` as the BASELINE and delivers nothing
+ *  (`changeDetector.ts:106-108`): "nothing seen yet, i.e. the next read is the baseline". So bytes
+ *  changed between the pill click and that first poll are never a CHANGE — they are simply what
+ *  the file always said, and the watch correctly stays silent forever. (The first cut of this test
+ *  did exactly that and timed out with 11 polls and no re-render.) The edit therefore waits for
+ *  the baseline read to have LANDED, which the counter is the only honest way to observe. */
+interface DiskFile {
+  text: string;
+  reads: number;
+}
+
+/** A PERSISTABLE in-memory folder whose one file re-reads {@link DiskFile}. `persistable: true` is
+ *  what makes `watchCapability({surface:'app-page'})` return watchable, so `installWatchForFile`
+ *  reaches its `createWatchController` site instead of the "cannot watch" early return. */
+function mutableSource(disk: DiskFile): FolderSource {
+  return {
+    name: 'docs',
+    truncated: false,
+    persistable: true,
+    files: [
+      {
+        path: 'watched.md',
+        name: 'watched.md',
+        read: async () => {
+          disk.reads += 1;
+          return disk.text;
+        },
+      },
+    ],
+  };
+}
+
+async function until<T>(fn: () => T | null | undefined | false, tries = 400): Promise<T> {
+  for (let i = 0; i < tries; i += 1) {
+    const v = fn();
+    if (v) return v as T;
+    await new Promise<void>((r) => setTimeout(r, 25));
+  }
+  throw new Error('until() timed out');
+}
+
+describe('a watch re-render RE-ENHANCES (task 3.4, §3.3) — production path, no hand-built controller', () => {
+  beforeEach(() => {
+    resetDiffRegistryForTest();
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    resetThemeHostsForTest();
+    resetThemeControlsForTest();
+  });
+
+  afterEach(() => {
+    stopWatch(); // a live 1 s poll would otherwise keep reading into the next test's document
+    resetDiffRegistryForTest();
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    resetThemeHostsForTest();
+    resetThemeControlsForTest();
+  });
+
+  it('renders the NEW diagram after the file changes on disk, the old figure having been destroyed', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    cleanup.push(container);
+
+    const disk: DiskFile = { text: DIAGRAM_A, reads: 0 };
+    const app = mountAppShell(container, {
+      openFolder: async () => ({ ok: true, source: mutableSource(disk) }),
+      store: noopStore(),
+    });
+    await app.openFolder();
+
+    // The real gesture. `selectFolderFile`'s synchronous head runs `installWatchForFile`, which is
+    // the ONLY place `render: renderWithDiagrams` is ever provisioned onto a controller.
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+
+    const host = await until(() =>
+      container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+    );
+    const shadow = await until(() => host.shadowRoot);
+
+    // First render, first enhancement — the real engine, through the real pane.
+    const firstFigure = await until(() =>
+      shadow.querySelector<HTMLElement>(`${FIGURE_SELECTOR}[${DIAGRAM_STATE_ATTR}="rendered"]`),
+    );
+    expect(firstFigure.querySelector('svg')).not.toBeNull();
+    expect(shadow.textContent).toContain('Before.');
+
+    // Start watching, through the shipped pill. Nothing polls until this happens.
+    const pill = await until(() => shadow.querySelector<HTMLButtonElement>('.peekover-watch'));
+    const readsBeforeStart = disk.reads;
+    pill.click();
+    expect(pill.getAttribute('aria-pressed')).toBe('true');
+
+    // Wait for the detector's BASELINE read (see DiskFile) — until it has landed, an edit is
+    // indistinguishable from "the file always said that" and no change is ever delivered.
+    await until(() => disk.reads > readsBeforeStart);
+
+    // The agent edits the file. This is now a genuine change against a live baseline, and it
+    // arrives on a real WATCH_INTERVAL_MS poll — no hand-fired callback anywhere in this test.
+    disk.text = DIAGRAM_B;
+
+    // Re-QUERIED on every poll, never captured: `mount()` commits with `replaceChildren`, so the
+    // reading column itself is a new element after the re-render and a held reference would go on
+    // reporting the old document forever.
+    await until(() =>
+      (shadow.querySelector('.peekover-reader')?.textContent ?? '').includes(
+        'After the agent edited it',
+      ),
+    );
+
+    // THE CONTROL: `replaceChildren` destroyed the rendered diagram. The figure asserted below is
+    // therefore a new element, built by a second pass over the new document — not the survivor of
+    // the first. Without re-enhancement this document would have no figure at all.
+    expect(firstFigure.isConnected).toBe(false);
+
+    const reEnhanced = await until(() =>
+      shadow.querySelector<HTMLElement>(`${FIGURE_SELECTOR}[${DIAGRAM_STATE_ATTR}="rendered"]`),
+    );
+    expect(reEnhanced).not.toBe(firstFigure);
+    expect(reEnhanced.querySelector('svg')).not.toBeNull();
+
+    // And it is the NEW diagram, not a re-draw of the old one: three nodes, not two. The source
+    // fence is present-but-hidden beside it, exactly as after a first mount.
+    const pre = shadow.querySelector<HTMLElement>('pre[data-diagram]');
+    expect(pre?.textContent).toContain('graph LR; X-->Y-->Z;');
+    expect(getComputedStyle(pre!).display).toBe('none');
+  });
 });

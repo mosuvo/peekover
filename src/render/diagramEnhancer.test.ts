@@ -16,7 +16,7 @@
 // container's lifetime under a real render) are questions jsdom cannot answer — they live in
 // tests/browser/diagramRender.browser.test.ts on both engines.
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, type Mock } from 'vitest';
 import { mount } from './mount';
 import {
   DIAGRAM_FENCE_SELECTOR,
@@ -26,7 +26,10 @@ import {
   enhanceDiagrams,
   hasRemoteReference,
 } from './diagramEnhancer';
-import { DIAGRAM_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR } from './diagramEngine';
+import {
+  DIAGRAM_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR,
+  loadDiagramEngine,
+} from './diagramEngine';
 import {
   DIAGRAM_ERROR_CLASS,
   DIAGRAM_FIGURE_CLASS,
@@ -677,5 +680,112 @@ describe('the measuring container (D-6 step 1)', () => {
     await settle();
 
     expect(document.querySelector(`.${DIAGRAM_MEASURE_CLASS}`)).toBeNull();
+  });
+});
+
+// ── D-12's COOLDOWN CONSTRAINT (007 task 3.4) ────────────────────────────────────────────────
+//
+// `watchController.renderNow` (`watchController.ts:422`) times its WHOLE synchronous block —
+// "start to return — that the main thread cannot do anything else during" — and sets the next
+// re-render's cooldown from what that block cost:
+//
+//     const started = now(); … render(text, target, …); … readyAt = now();
+//     readyAt += (readyAt - started) * COOLDOWN_MULTIPLIER;
+//
+// On the app page that `render` is `appShell.ts:132`'s `renderWithDiagrams`, which is `mount()`
+// followed by `enhanceDiagrams()`. So every millisecond the enhancer spends before it returns is
+// multiplied into the cooldown of every subsequent update, on every diagram-bearing watched
+// document. The enhancer's contract is therefore not merely "is async somewhere" but "schedules
+// and returns in ~nothing" — a shape the source states (`diagramEnhancer.ts:361`: "Everything
+// above is synchronous and already committed; everything below is off this stack") and which is
+// asserted here.
+//
+// THE MEASUREMENT IS A WITH/WITHOUT PAIR ON ONE CLOCK, and it has to be. "The enhancer returned
+// fast" is unfalsifiable on its own — a fake engine that costs nothing makes it true no matter
+// how the enhancer is written. So the fake engine below BURNS a real, blocking `BURN_MS` of main
+// thread inside `render()`, and the same clock measures that same work driven INLINE. The inline
+// number is the cooldown watchController would have charged; the synchronous number is what it
+// actually charges. If the inline control did not read the burn, the fast reading would mean
+// nothing.
+//
+// MEASURED at 3.4 on this machine, one `BURN_MS = 40` engine, one fence:
+//   inline (the control, work inside the block) …… 40.43 ms  — the control fires; the burn is read
+//   scheduled (the shipped shape) ………………………………………  0.83 ms
+//   the same, in the first test ……………………………………… 0.22 ms
+// So watchController times ~0.2–0.8 ms of enhancer instead of ~40, and `COOLDOWN_MULTIPLIER`
+// scales that difference into every subsequent update of a diagram-bearing watched document.
+describe("D-12's cooldown constraint — the enhancer's cost is OFF watchController's timed block", () => {
+  /** Long enough to dwarf a jsdom prologue by an order of magnitude, short enough to stay cheap. */
+  const BURN_MS = 40;
+
+  /** An engine whose `render` blocks the main thread for `BURN_MS` — a stand-in for the real one,
+   *  whose cost is a genuine layout-and-measure pass (D-6). A `setTimeout` would NOT do: the
+   *  quantity under test is main-thread occupancy, which is what a timed block measures. */
+  function burningEngine(): DiagramEngineModule {
+    const render = vi.fn(async () => {
+      const until = performance.now() + BURN_MS;
+      while (performance.now() < until) {
+        /* block, exactly as a real measure-and-lay-out pass does */
+      }
+      return { svg: SVG, bindFunctions: vi.fn() };
+    });
+    const engine: DiagramEngine = { initialize: vi.fn(), render } as unknown as DiagramEngine;
+    return { default: engine } as DiagramEngineModule;
+  }
+
+  it('returns with the placeholder committed and NOT ONE unit of the engine work done', async () => {
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const module = burningEngine();
+    const render = module.default.render as unknown as Mock;
+
+    const started = performance.now();
+    const returned: unknown = enhanceDiagrams(host, { loader: async () => module });
+    const syncMs = performance.now() - started;
+
+    // AT THE INSTANT OF RETURN — the state watchController's `readyAt = now()` would observe.
+    expect(returned).toBeUndefined(); // nothing to await, so nothing CAN be awaited into the block
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(1); // §4's pre-paint half
+    expect(shadow.querySelector(FIGURE_SELECTOR)?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('pending');
+    expect(render).not.toHaveBeenCalled();
+    // The measuring container is created AFTER the engine await (`diagramEnhancer.ts:283`), so its
+    // absence here is the async body's own boundary, observed rather than assumed.
+    expect(document.querySelector(`.${DIAGRAM_MEASURE_CLASS}`)).toBeNull();
+    expect(syncMs).toBeLessThan(BURN_MS);
+
+    // THE INSTRUMENT IS LIVE: every one of those readings flips once the work actually runs, so
+    // the "not yet" above is a not-yet and not a dead probe.
+    await settle();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(shadow.querySelector(FIGURE_SELECTOR)?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(performance.now() - started).toBeGreaterThanOrEqual(BURN_MS);
+  });
+
+  it('CONTROL — the same engine driven INLINE charges the timed block the full cost', async () => {
+    // WITHOUT the schedule-and-return shape: an enhancer that awaited its own work would leave
+    // `renderNow` holding the stack for the whole render. This is that block, on the same clock
+    // and the same engine — the number watchController would have multiplied into the cooldown.
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const module = burningEngine();
+
+    const inlineStart = performance.now();
+    const engine = await loadDiagramEngine(shadow, async () => module);
+    await engine!.render('inline-control', 'graph TD; A-->B;', host);
+    const inlineMs = performance.now() - inlineStart;
+
+    // The control FIRES: a timer around the work reads the burn. (If this failed, the fast
+    // reading in the test above would be measuring an engine that costs nothing.)
+    expect(inlineMs).toBeGreaterThanOrEqual(BURN_MS);
+
+    // And the shipped shape, measured against it on the same clock in the same test.
+    const shipped = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const scheduledStart = performance.now();
+    enhanceDiagrams(shipped.host, { loader: async () => burningEngine() });
+    const scheduledMs = performance.now() - scheduledStart;
+    await settle();
+
+    expect(scheduledMs).toBeLessThan(inlineMs);
+    // Not merely "less" — the burn is absent from it entirely, which is the claim the cooldown
+    // depends on. An enhancer that awaited even one render would land above BURN_MS here.
+    expect(scheduledMs).toBeLessThan(BURN_MS);
   });
 });
