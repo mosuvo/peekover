@@ -184,10 +184,16 @@ export function sanitize(html: string): string {
  *    never inspected (spec §3.5). `diagramEngine.ts` sets `htmlLabels: false`, which
  *    is what makes this denial cheap rather than lossy.
  *  - `a` — §3.11 declines diagram interactivity; `bindFunctions` is never called.
- *  - `image` — no producer: `registerIconPacks` is never called from this tree
- *    (`diagramEngine.ts:34-36`), so the engine emits no raster. Same reasoning that
- *    dropped `align` from the document profile: an entry with no producer is dead
- *    weight, and dead weight in an allow-list is surface. Revisit only with icon packs.
+ *  - `image` — PRODUCERS EXIST AND ARE REFUSED. An earlier revision of this line read
+ *    "no producer", reasoning from `registerIconPacks` never being called
+ *    (`diagramEngine.ts:34-36`). That reason was wrong; the denial it justified was not.
+ *    Two producers are reachable from the diagram SOURCE (decisions.md 2026-07-30):
+ *    `imageSquare`'s `append("image")` for flowchart `@{ img: … }`, and `drawImage`'s
+ *    `<image xlink:href>` for a sequence actor's `properties.icon`. Denying the element
+ *    here is §4's ARTIFACT half and it holds. It is NOT the whole answer, because both
+ *    producers fetch INSIDE `render()`, before any string reaches this file — §4's WIRE
+ *    half is closed upstream by `diagramEnhancer.ts`'s source pre-scan. Revisit only with
+ *    icon packs, and only together with that pre-scan.
  *  - `switch`, `filter` and the `fe*` primitives — `switch` exists to select a
  *    `foreignObject` fallback we do not have; filters are decoration we do not need.
  */

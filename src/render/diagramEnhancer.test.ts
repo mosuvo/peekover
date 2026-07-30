@@ -24,6 +24,7 @@ import {
   diagramFencesIn,
   diagramSourceOf,
   enhanceDiagrams,
+  hasRemoteReference,
 } from './diagramEnhancer';
 import { DIAGRAM_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR } from './diagramEngine';
 import {
@@ -464,6 +465,169 @@ describe('§3.8s three failures all land on the visible source fence', () => {
     expect(shadow.querySelector('pre')?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
     expect(shadow.querySelector(FIGURE_SELECTOR)?.querySelector('svg')).not.toBeNull();
     expect(shadow.querySelector('script')).toBeNull();
+  });
+});
+
+// ── §4's SOURCE GUARD (decisions.md 2026-07-30) ───────────────────────────────────────────────
+//
+// SCOPE, STATED, because this is the half jsdom CAN answer and it is not the important half. What
+// is reachable here is DOM SHAPE — which state a carrying fence lands in, what its marker says,
+// whether the fence beside it still renders — plus the predicate's boundary, which is a pure
+// function over text and needs no DOM at all. Whether the guard actually keeps bytes off the wire
+// is a request-level question on a real engine, and jsdom loads no subresources at all
+// (`mount.ts:119-129`): it is `tests/browser/diagramSourceGuard.browser.test.ts`, both engines.
+
+describe("§4's source-guard predicate — the boundary between an accepted cost and a bug", () => {
+  /**
+   * DEGRADES. The first two are the routes that actually put bytes on the wire; the rest are the
+   * ACCEPTED COST banked in decisions.md 2026-07-30 — references that do not fetch in this engine
+   * version and degrade anyway, because a predicate that depended on current fetch behaviour would
+   * re-create the version-coupled narrowness the decision exists to remove.
+   */
+  const CARRIES: readonly [string, string][] = [
+    ['flowchart img: (fetches, then throws)', 'flowchart TD\n  A@{ img: "https://h.example/x.png" }'],
+    ['sequence properties.icon (fetches AND renders)',
+      'sequenceDiagram\n  participant A\n  properties A: {"icon": "http://h.example/i.png"}'],
+    ['ACCEPTED COST — click href (reaches the SVG, never loads)',
+      'flowchart TD\n  A --> B\n  click A href "https://h.example/page"'],
+    ['ACCEPTED COST — sequence link (same)',
+      'sequenceDiagram\n  participant A\n  link A: Home @ https://h.example/'],
+    ['ACCEPTED COST — a URL in a node LABEL', 'flowchart TD\n  A["see https://h.example/docs"]'],
+    ['ACCEPTED COST — a URL in a %% comment', 'flowchart TD\n  %% https://h.example/notes\n  A --> B'],
+    ['protocol-relative, quoted', 'flowchart TD\n  A@{ img: "//h.example/x.png" }'],
+    ['protocol-relative, unquoted after a space', 'flowchart TD\n  A@{ img: //h.example/x.png }'],
+    ['scheme with no slashes — the URL parser still resolves it',
+      'flowchart TD\n  A@{ img: "http:h.example/x.png" }'],
+    ['uppercase spelling', 'flowchart TD\n  A@{ img: "HTTPS://H.EXAMPLE/X.PNG" }'],
+    // `scheme://host` degrades whatever the scheme is. Deliberate, and the reason is the line
+    // below it: `img://h.example/x.png` is the UNSPACED spelling of the flowchart image route, and
+    // a predicate that only recognised schemes this engine version happens to fetch would be the
+    // version-coupled narrowness decisions.md 2026-07-30 exists to remove.
+    ['any scheme with an authority', 'flowchart TD\n  A@{ img: "xhttp://h.example/x" }'],
+    ['the unspaced image route', 'flowchart TD\n  A@{ img://h.example/x.png }'],
+  ];
+
+  /**
+   * DOES NOT DEGRADE. Everything here contains an `http` or a `//` SUBSTRING and none of it is a
+   * remote reference. A hit on any of these is a PREDICATE BUG, not §4's stance: the accepted cost
+   * above is a genuine URL that happens not to fetch, which is a different thing from a fence
+   * refused for a slash inside a word. The last four are mermaid's OWN sequence arrows.
+   */
+  const CLEAN: readonly [string, string][] = [
+    ['a word merely containing "http"', 'flowchart TD\n  A[authtoken] --> B[shttpd]'],
+    ['prose using the protocol name', 'flowchart TD\n  A["Use HTTP: the fast one"]'],
+    ['an unknown scheme with NO authority', 'flowchart TD\n  A@{ img: "xhttp:local" }'],
+    ['a double slash inside a word', 'flowchart TD\n  A[TCP//IP] --> B[and//or]'],
+    ['a double slash inside a number', 'flowchart TD\n  A["50//50"]'],
+    ['a relative image path', 'flowchart TD\n  A@{ img: "./local.png" }'],
+    ['a data: URI (C4 $sprite travels this way)', 'flowchart TD\n  A@{ img: "data:image/png;base64,iVBOR" }'],
+    ['sequence arrow --//', 'sequenceDiagram\n  A --// B: hi'],
+    ['sequence arrow //--', 'sequenceDiagram\n  A //-- B: hi'],
+    ['sequence arrow -//', 'sequenceDiagram\n  A -// B: hi'],
+    ['sequence arrow //-', 'sequenceDiagram\n  A //- B: hi'],
+    ['an ordinary diagram', 'graph TD; A-->B;'],
+  ];
+
+  it.each(CARRIES)('carries a remote reference: %s', (_name, source) => {
+    expect(hasRemoteReference(source)).toBe(true);
+  });
+
+  it.each(CLEAN)('does NOT carry one: %s', (_name, source) => {
+    expect(hasRemoteReference(source)).toBe(false);
+  });
+
+  it('has no `g` flag, so it answers the same on a second call', () => {
+    const source = 'flowchart TD\n  A@{ img: "https://h.example/x.png" }';
+    expect(hasRemoteReference(source)).toBe(true);
+    expect(hasRemoteReference(source)).toBe(true);
+  });
+});
+
+describe("§4's source guard degrades a carrying fence and never calls the engine", () => {
+  const CARRYING = 'flowchart TD\n  A@{ img: "https://h.example/x.png" }\n  A --> B';
+
+  it('the carrying fence reaches `failed` with a marker naming THIS cause', async () => {
+    const { host, shadow } = mountedHost(fence('mermaid', CARRYING));
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const pre = shadow.querySelector('pre');
+    expect(pre?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    // The reason names the CAUSE, and is distinguishable from §3.8's three.
+    const marker = shadow.querySelector(`.${DIAGRAM_ERROR_CLASS}`);
+    expect(marker?.textContent).toContain('references a remote resource');
+    expect(marker?.textContent).not.toContain('could not be drawn');
+
+    // The whole point: the engine — the only place the reference could have gone out — never ran.
+    expect(render).toHaveBeenCalledTimes(0);
+
+    // §3.8's shape, reused rather than re-invented: source visible, no stranded empty box.
+    expect(pre?.isConnected).toBe(true);
+    expect(pre?.textContent).toContain('h.example');
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(0);
+  });
+
+  it('CONTROL: the same harness renders a fence WITHOUT one — the guard does not over-degrade', async () => {
+    // Without this, "failed" above is equally consistent with a guard that refuses everything.
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    expect(shadow.querySelector('pre')?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(shadow.querySelectorAll(`.${DIAGRAM_ERROR_CLASS}`)).toHaveLength(0);
+  });
+
+  it('PER-FENCE: the carrying fence degrades, the clean one beside it renders (§4)', async () => {
+    const { host, shadow } = mountedHost(
+      fence('mermaid', CARRYING) + '\n' + fence('mermaid', 'graph TD; A-->B;'),
+    );
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const [carrying, clean] = [...shadow.querySelectorAll('pre[data-diagram]')];
+    expect(carrying.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    expect(clean.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    // The guard is per fence, not document-wide: the engine ran exactly once, for the clean one.
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][1]).toBe('graph TD; A-->B;\n');
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(1);
+  });
+
+  it('the ACCEPTED COST is a decision, not an accident: `click href` degrades too', async () => {
+    // Pinned deliberately (decisions.md 2026-07-30). `click A href` puts the URL in the SVG but an
+    // <a> does not LOAD, and the profile strips `a` anyway — so this fence degrades for a reference
+    // that would never have fetched. §4 forbids diagram content that REFERENCES a remote resource;
+    // the supported path for an external link is a markdown link outside the fence. If this test
+    // ever reads as a regression, the thing to change is the decision, not the predicate.
+    const { host, shadow } = mountedHost(
+      fence('mermaid', 'flowchart TD\n  A --> B\n  click A href "https://h.example/page"'),
+    );
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    expect(shadow.querySelector('pre')?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    expect(render).toHaveBeenCalledTimes(0);
+  });
+
+  it('reads the source ONCE and hands the engine that same string (D-15: read, never rewritten)', async () => {
+    const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    // The scan did not consume, trim or normalise anything on the way past.
+    expect(render.mock.calls[0][1]).toBe('graph TD; A-->B;\n');
+    expect(diagramSourceOf(shadow.querySelector('pre')!)).toBe('graph TD; A-->B;\n');
   });
 });
 
