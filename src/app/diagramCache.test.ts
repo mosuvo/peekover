@@ -268,6 +268,67 @@ describe('planDiagramWrite — the three GLOBAL sweeps (D-4)', () => {
     });
   });
 
+  // ── 4.4 — THE SINGLE-OVERSIZED PATH, SHARPENED ──────────────────────────────────────────────
+  //
+  // The refusal above is asserted against a store that would have been swept. These three close
+  // the cases where "refused whole, evicting nothing" could still be got wrong in a way that
+  // costs the user cached diagrams, and they are the pure-layer half of 4.4's browser claim.
+
+  it('ONE BYTE decides it: the same store, the same everything, refused vs stored', () => {
+    // The pair the bound actually is. 4.1 asserted the inclusive side against an EMPTY store;
+    // this asserts both sides against the SAME populated one, so the only difference between a
+    // plan that stores and a plan that refuses is the single byte.
+    const bounds: DiagramBounds = { count: 10, totalBytes: 1_000, maxAgeMs: 1_000_000_000 };
+    const rows = [row('kept', NOW - 500, 100)];
+
+    // At the bound: stored — and it evicts `kept` on the byte axis, because 1_000 + 100 > 1_000.
+    // That eviction is the point of the comparison: the refusal below does NOT perform it.
+    expect(planDiagramWrite(rows, 'incoming', 1_000, NOW, bounds)).toEqual({
+      store: true,
+      evictKeys: ['kept'],
+    });
+
+    // One byte over: refused, and `kept` survives. An implementation that made room FIRST and
+    // discovered the incoming row still did not fit would evict `kept` here too — a user losing a
+    // cached diagram to a write that was never going to succeed.
+    expect(planDiagramWrite(rows, 'incoming', 1_001, NOW, bounds)).toEqual({
+      store: false,
+      reason: 'oversized',
+    });
+  });
+
+  it('refuses against an EMPTY store too — the refusal is about SIZE, never about headroom', () => {
+    // There is no amount of eviction that makes an oversized SVG fit, so there is no "try to make
+    // room" path to reach. With nothing to evict the two dispositions would otherwise be
+    // indistinguishable, which is exactly why this case is worth stating separately.
+    const bounds: DiagramBounds = { count: 10, totalBytes: 1_000, maxAgeMs: 1_000_000_000 };
+    expect(planDiagramWrite([], 'incoming', 1_001, NOW, bounds)).toEqual({
+      store: false,
+      reason: 'oversized',
+    });
+  });
+
+  it('an oversized write does not even displace the row ALREADY AT ITS OWN KEY', () => {
+    // The sharpest form of "evicts nothing", and the one a replace-then-check implementation gets
+    // wrong. The key is deterministic (D-3), so re-rendering a diagram whose SVG has grown past
+    // the bound — a mermaid bump that emits more markup, say — lands on the key its own smaller,
+    // valid, still-serving row occupies. The short-circuit runs BEFORE the projection, so that
+    // row is not touched: `storeDiagram` returns without writing, and the old entry goes on
+    // serving that diagram. Projecting first and refusing afterwards would have overwritten it.
+    const bounds: DiagramBounds = { count: 10, totalBytes: 1_000, maxAgeMs: 1_000_000_000 };
+    const rows = [row('incoming', NOW - 500, 200), row('other', NOW - 400, 200)];
+    const before = JSON.stringify(rows);
+
+    const plan = planDiagramWrite(rows, 'incoming', 5_000, NOW, bounds);
+
+    expect(plan).toEqual({ store: false, reason: 'oversized' });
+    // Nothing to apply — and specifically no key naming the row it would have replaced.
+    expect(plan).not.toHaveProperty('evictKeys');
+    // The rows the caller read are still the rows in the store, `incoming`'s old entry included.
+    // That is what lets `storeDiagram` simply return, leaving the smaller render still serving.
+    expect(JSON.stringify(rows)).toBe(before);
+  });
+
   it('re-writing an existing key REPLACES its row rather than adding one', () => {
     const bounds: DiagramBounds = { count: 2, totalBytes: 1_000, maxAgeMs: 1_000_000_000 };
     const rows = [row('dup', NOW - 900, 100), row('other', NOW - 500, 100)];
