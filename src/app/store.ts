@@ -1,7 +1,7 @@
 // store — Peekover's IndexedDB layer: the CRUD over the stores 002/004 introduce,
 // built on the local `idbCore` raw wrapper (NO `idb` dependency — plan.md §Libraries).
 //
-// Database `peekover` v3, six object stores (plan.md §IndexedDB · 006 §1.2):
+// Database `peekover` v4, eight object stores (plan.md §IndexedDB · 006 §1.2 · 007 §5):
 //   - folders  : remembered folders. On Chromium a row carries the structured-cloneable
 //                FileSystemDirectoryHandle (a capability REF, never file contents); on
 //                Firefox the handle is absent (metadata-only, display).
@@ -22,6 +22,18 @@
 //                stays true through this commit. The v2→v3 upgrade is additive-by-name like
 //                v1→v2 (idbCore only creates the missing stores), so existing
 //                folders/recents/pins/settings rows survive intact.
+//   - diagramMeta : the rendered-diagram cache index (spec 007 task 4.2), keyPath `key`,
+//                `{key, bytes, lastUsed}` — the small bounded rows eviction and byte
+//                accounting read (D-4's planDiagramWrite), never the SVG.
+//   - diagrams : rendered diagram bodies (spec 007 task 4.2), keyPath `key`, `{key, svg}` —
+//                fetched only on a cache hit for the one diagram being rendered.
+//                TWO stores, not one (D-2): `getAll` is documented for "small bounded stores
+//                — no cursor needed" (idbCore.ts:116-119) and describeStored() materialises
+//                whole stores, so an inline SVG would make every trust-panel open deserialise
+//                every cached diagram. Both are added EMPTY at DB_VERSION 4 — this schema
+//                bump STORES NOTHING (the cache is wired in task 4.3). The v3→v4 upgrade is
+//                additive-by-name like the two before it, so all six existing stores' rows
+//                survive intact (proven on real engines in idbVersionchange.browser.test.ts).
 //
 // Nothing consumes settings yet — group 2 wires the SettingsPort onto get/putSettings. It
 // is pure-ish data layer: no DOM, no UI. Browser-only at runtime (IndexedDB is a browser
@@ -42,9 +54,10 @@ export type { Settings };
 
 /** Database identity — a single versioned schema (plan.md §IndexedDB). Bumped 1→2 for
  *  the additive `settings` store (spec 004), 2→3 for the additive `snapshotMeta` +
- *  `snapshots` stores (spec 006 task 1.1), which land EMPTY. */
+ *  `snapshots` stores (spec 006 task 1.1), and 3→4 for the additive `diagramMeta` +
+ *  `diagrams` stores (spec 007 task 4.2) — each pair lands EMPTY. */
 export const DB_NAME = 'peekover';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 /** The object-store names, as a const map (no magic strings at call sites). */
 export const STORES = {
@@ -55,6 +68,9 @@ export const STORES = {
   // spec 006 task 1.1 — added EMPTY at DB_VERSION 3; nothing writes to them until task 1.4.
   snapshotMeta: 'snapshotMeta',
   snapshots: 'snapshots',
+  // spec 007 task 4.2 — added EMPTY at DB_VERSION 4; nothing writes to them until task 4.3.
+  diagramMeta: 'diagramMeta',
+  diagrams: 'diagrams',
 } as const;
 export type StoreName = (typeof STORES)[keyof typeof STORES];
 
@@ -100,7 +116,7 @@ export interface SettingsRecord extends Settings {
 /** The one settings row's key — a single global reader-settings row (no per-doc settings). */
 export const SETTINGS_ID = 'reader';
 
-/** The full v3 schema handed to idbCore.openDb. Exported so store.test.ts can assert its
+/** The full v4 schema handed to idbCore.openDb. Exported so store.test.ts can assert its
  *  shape at the current version; no production code reads it (openDb below is the sole use). */
 export const SCHEMA: IdbSchema = {
   name: DB_NAME,
@@ -113,6 +129,10 @@ export const SCHEMA: IdbSchema = {
     // spec 006 task 1.1 — added EMPTY; snapshotMeta is keyed per document, snapshots per id.
     { name: STORES.snapshotMeta, keyPath: 'docId' },
     { name: STORES.snapshots, keyPath: 'id' },
+    // spec 007 task 4.2 — added EMPTY; both keyed by D-3's composite key STRING (one keyPath,
+    // no compound key — idbCore.ts:5-9 keeps compound keys and indexes off the table).
+    { name: STORES.diagramMeta, keyPath: 'key' },
+    { name: STORES.diagrams, keyPath: 'key' },
   ],
 };
 

@@ -120,11 +120,15 @@ describe('idbCore db.onversionchange — close-and-drop by construction (real en
 // (folders/recents/pins) plus the SettingsRecord row — none invented here.
 
 const NEW_006_STORES = ['snapshotMeta', 'snapshots'];
+/** The two stores 007 task 4.2 adds at v4 — absent from BOTH the v2 and the v3 seed below. */
+const NEW_007_STORES = ['diagramMeta', 'diagrams'];
 
 /** The pre-006 store list, coupled to the production SCHEMA (so a dropped store drops from the
  *  seed too). keyPath comes straight from SCHEMA — all four pre-existing stores are keyPath 'id'. */
 const preexistingStores = (): ReadonlyArray<{ name: string; keyPath: string }> =>
-  SCHEMA.stores.filter((s) => !NEW_006_STORES.includes(s.name));
+  SCHEMA.stores.filter(
+    (s) => !NEW_006_STORES.includes(s.name) && !NEW_007_STORES.includes(s.name),
+  );
 
 /** One seeded row per pre-existing store — the exact shapes settingsStore.browser seeds. */
 const SEED_ROWS: Record<string, Record<string, unknown>> = {
@@ -134,12 +138,17 @@ const SEED_ROWS: Record<string, Record<string, unknown>> = {
   settings: { id: 'reader', theme: 'dark', tocOpen: true, tocWidth: 300 },
 };
 
-/** Build a v2 DB (raw open at version 2) holding exactly the pre-existing stores, seed the one
- *  row each has a shape for, then close so the subsequent v3 open is not blocked. */
-async function seedPreexistingV2(name: string): Promise<void> {
-  const stores = preexistingStores();
+/** Build an OLD-version DB by raw open (bypassing idbCore, so the upgrade under test is the only
+ *  one idbCore performs) holding exactly `stores`, seed the one row each has a shape for in
+ *  `rows`, then close so the subsequent newer-version open is not blocked. */
+async function seedRawDb(
+  name: string,
+  version: number,
+  stores: ReadonlyArray<{ name: string; keyPath: string }>,
+  SEED_ROWS: Record<string, Record<string, unknown>>,
+): Promise<void> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(name, 2);
+    const req = indexedDB.open(name, version);
     req.onupgradeneeded = () => {
       const d = req.result;
       for (const s of stores) d.createObjectStore(s.name, { keyPath: s.keyPath });
@@ -171,15 +180,26 @@ async function readStore(db: IDBDatabase, store: string): Promise<unknown[] | nu
   }
 }
 
+/** The production SCHEMA as it stood at v3 — store.ts's stores minus the two 007 task 4.2 adds,
+ *  pinned to version 3. Still live-coupled: dropping or renaming a store in store.ts drops it
+ *  here too, so its row-survival case below reds. (Before 4.2 this was `SCHEMA` itself; SCHEMA is
+ *  now v4, and 006's proof is specifically the SINGLE additive v2→v3 step, so it is pinned rather
+ *  than allowed to silently become a v2→v4 jump. The v3→v4 step is the next describe.) */
+const schemaAtV3 = (name: string): IdbSchema => ({
+  name,
+  version: 3,
+  stores: SCHEMA.stores.filter((s) => !NEW_007_STORES.includes(s.name)),
+});
+
 describe('peekover schema v2→v3 additive upgrade preserves existing rows (real engine)', () => {
   const name = nextName();
   let v3!: IDBDatabase;
 
   beforeAll(async () => {
     // Seed a v2-shaped DB, then open it at v3 through idbCore's real additive openDb with the
-    // production SCHEMA (name overridden to this throwaway DB; version + stores are store.ts's).
-    await seedPreexistingV2(name);
-    v3 = await openDb({ ...SCHEMA, name });
+    // production stores (name overridden to this throwaway DB; the store list is store.ts's).
+    await seedRawDb(name, 2, preexistingStores(), SEED_ROWS);
+    v3 = await openDb(schemaAtV3(name));
   });
   afterAll(async () => {
     v3?.close();
@@ -203,5 +223,87 @@ describe('peekover schema v2→v3 additive upgrade preserves existing rows (real
     expect(names).toContain('snapshots');
     expect(await getAll(v3, 'snapshotMeta')).toEqual([]);
     expect(await getAll(v3, 'snapshots')).toEqual([]);
+  });
+});
+
+// --- task 4.2: the REAL peekover schema's v3→v4 additive upgrade preserves existing rows -------
+//
+// 007 task 4.2 bumps DB_VERSION 3→4, adding `diagramMeta` + `diagrams`. A version real user data
+// crosses, so the SAME gap 006 §3-4 names is re-closed for THIS bump, on real engines (jsdom's IDB
+// does not run the upgrade path faithfully, so versionchange is jsdom-blind).
+//
+// The load-bearing claim is NOT "the two new stores appear" — that is trivially true of any
+// additive schema and proves nothing about safety. It is that the SIX EXISTING stores' ROWS SURVIVE
+// the bump. So the discriminator is pointed at the dangerous half: the v3 seed's store list is
+// derived FROM the production SCHEMA (minus the two 4.2 stores), so a SCHEMA that DROPS or RENAMES
+// an existing store drops it from the seed, that store is then absent at v4, readStore returns
+// null, and ONLY that store's ROW-SURVIVAL case reds — naming the lost rows, not "expected true".
+// The new-store-presence case below stays GREEN under that ablation, which is the point.
+//
+// Seed shapes are the real record types, not invented: folders/recents/pins/settings as above,
+// snapshotMeta `{docId, entries:[{id, ts, bytes}]}` (snapshots.ts:33-36) and snapshots `{id, text}`
+// (the SnapshotRow put at snapshots.ts:332).
+
+/** The pre-4.2 store list — the SIX stores that exist at v3 — coupled to the production SCHEMA. */
+const preexistingV3Stores = (): ReadonlyArray<{ name: string; keyPath: string }> =>
+  SCHEMA.stores.filter((s) => !NEW_007_STORES.includes(s.name));
+
+/** One seeded row per store that exists at v3. The four above plus the two 006 stores, whose
+ *  keyPaths differ (`docId` / `id`) — taken from SCHEMA, not restated. */
+const SEED_ROWS_V3: Record<string, Record<string, unknown>> = {
+  ...SEED_ROWS,
+  snapshotMeta: {
+    docId: 'seed-folder/a.md',
+    entries: [{ id: 'seed-snap', ts: 10, bytes: 42 }],
+  },
+  snapshots: { id: 'seed-snap', text: '# seeded snapshot\n' },
+};
+
+describe('peekover schema v3→v4 additive upgrade preserves existing rows (real engine, task 4.2)', () => {
+  const name = nextName();
+  let v4!: IDBDatabase;
+
+  beforeAll(async () => {
+    // Seed a v3-shaped DB with a row in EVERY one of the six existing stores, then open it at v4
+    // through idbCore's real additive openDb with the production SCHEMA (name overridden to this
+    // throwaway DB; version + stores are store.ts's own — this is the shipped bump, not a mock).
+    await seedRawDb(name, 3, preexistingV3Stores(), SEED_ROWS_V3);
+    v4 = await openDb({ ...SCHEMA, name });
+  });
+  afterAll(async () => {
+    v4?.close();
+    await deleteDatabase(name);
+  });
+
+  it('opens at DB_VERSION 4', () => {
+    expect(v4.version).toBe(4);
+    expect(v4.version).toBe(SCHEMA.version);
+  });
+
+  // ★ THE CLAIM: one case per pre-existing store, asserting the seeded row survives the bump
+  // byte-identical. This is the assertion the drop/rename ablation reds (RED-FIRST, recorded in
+  // progress.md) — readStore yields null for the vanished store, so the failure names the store
+  // and the lost row rather than a bare boolean.
+  it.each(Object.entries(SEED_ROWS_V3))(
+    'preserves the seeded %s row byte-identical across the v3→v4 bump',
+    async (store, row) => {
+      expect(await readStore(v4, store)).toEqual([row]);
+    },
+  );
+
+  // Coverage guard: the six cases above are the six stores that exist at v3 — so a store added to
+  // SCHEMA without a seed row cannot slip through the survival sweep unasserted.
+  it('covers every one of the six pre-4.2 stores with a survival case', () => {
+    expect(Object.keys(SEED_ROWS_V3).sort()).toEqual(preexistingV3Stores().map((s) => s.name).sort());
+    expect(preexistingV3Stores()).toHaveLength(6);
+  });
+
+  // The easy half, asserted separately and deliberately NOT the red-first target.
+  it('creates the two 4.2 diagram stores, present and EMPTY (this bump stores nothing)', async () => {
+    const names = Array.from(v4.objectStoreNames);
+    expect(names).toContain('diagramMeta');
+    expect(names).toContain('diagrams');
+    expect(await getAll(v4, 'diagramMeta')).toEqual([]);
+    expect(await getAll(v4, 'diagrams')).toEqual([]);
   });
 });

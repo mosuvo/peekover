@@ -62,12 +62,7 @@ function lines(over: {
 // Task 1.1 — the SCHEMA shape at the bumped DB_VERSION. Pure constant assertions (no engine):
 // the real v2→v3 upgrade preserving existing rows is proven in the browser project
 // (idbVersionchange.browser.test.ts), which reads this same exported SCHEMA.
-describe('SCHEMA — DB_VERSION 3, two new snapshot stores (task 1.1)', () => {
-  it('declares version 3, matching DB_VERSION', () => {
-    expect(SCHEMA.version).toBe(3);
-    expect(SCHEMA.version).toBe(DB_VERSION);
-  });
-
+describe('SCHEMA — two snapshot stores (task 1.1)', () => {
   it('adds `snapshotMeta` (keyPath docId) and `snapshots` (keyPath id)', () => {
     expect(SCHEMA.stores).toEqual(
       expect.arrayContaining([
@@ -81,6 +76,52 @@ describe('SCHEMA — DB_VERSION 3, two new snapshot stores (task 1.1)', () => {
     expect(SCHEMA.stores.map((s) => s.name)).toEqual(
       expect.arrayContaining([STORES.folders, STORES.recents, STORES.pins, STORES.settings]),
     );
+  });
+});
+
+// Task 4.2 — the DB_VERSION 3→4 schema bump: two diagram-cache stores, added EMPTY (this task
+// STORES NOTHING; the cache is wired in 4.3). Constant assertions only — that the SIX existing
+// stores' ROWS survive the bump is the jsdom-blind half, proven on real engines in
+// idbVersionchange.browser.test.ts, which reads this same exported SCHEMA.
+describe('SCHEMA — DB_VERSION 4, two new diagram stores (task 4.2)', () => {
+  it('declares version 4, matching DB_VERSION', () => {
+    expect(SCHEMA.version).toBe(4);
+    expect(SCHEMA.version).toBe(DB_VERSION);
+  });
+
+  // Both keyPath 'key' — D-3's composite key is a single STRING (hash+SEP+theme+SEP+engine),
+  // never a compound key, which idbCore.ts:5-9 puts behind the STOP signal.
+  it('adds `diagramMeta` (keyPath key) and `diagrams` (keyPath key)', () => {
+    expect(SCHEMA.stores).toEqual(
+      expect.arrayContaining([
+        { name: 'diagramMeta', keyPath: 'key' },
+        { name: 'diagrams', keyPath: 'key' },
+      ]),
+    );
+  });
+
+  // D-2: two stores, not one. Meta and body are SEPARATE object stores so describeStored()'s
+  // whole-store getAll over diagramMeta never materialises an SVG.
+  it('keeps meta and body as two separate stores (D-2)', () => {
+    expect(STORES.diagramMeta).not.toBe(STORES.diagrams);
+    const names = SCHEMA.stores.map((s) => s.name);
+    expect(names).toContain(STORES.diagramMeta);
+    expect(names).toContain(STORES.diagrams);
+  });
+
+  // Additive-by-name: the bump adds exactly two names and drops/renames none. Asserted as the
+  // FULL list (not arrayContaining) so a dropped or renamed store reds here too.
+  it('is purely additive — all six pre-4.2 stores still present, eight in total', () => {
+    expect(SCHEMA.stores.map((s) => s.name)).toEqual([
+      STORES.folders,
+      STORES.recents,
+      STORES.pins,
+      STORES.settings,
+      STORES.snapshotMeta,
+      STORES.snapshots,
+      STORES.diagramMeta,
+      STORES.diagrams,
+    ]);
   });
 });
 
