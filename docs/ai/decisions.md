@@ -1,6 +1,74 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-30 · M7 §4 REMOTE-REFERENCE CLOSURE — the enhancer PRE-SCANS the fence source for any remote
+  reference and does not render a fence that carries one. A SPELLING-INDEPENDENT whole-source predicate
+  (option 1), chosen over an enumerated per-keyword fix, because enumeration under-scoped this surface
+  TWICE this milestone. DECIDED; implementation lands as its own commit.**
+  **The defect.** §4 requires that the system *"render no diagram content that references a remote resource,
+  whether the reference originates in the diagram source or in the engine's output"* (`spec.md:197`). Two
+  AUTHOR-REACHABLE routes put `http(s)` on the wire from the diagram SOURCE, during D-6's live measurement
+  window — before `sanitizeSvg` ever runs — and both fire on both engines:
+  (1) flowchart `A@{ img: "URL" }` (four spellings: double-quoted, single-quoted, unquoted, multiline) fetches
+  via `imageSquare` and then THROWS (`decode()` rejects), so the fence degrades — the failure LOOKS like a
+  bad diagram, not a leak. `imageSquare` carries **TWO independent fetch mechanisms** — a bare
+  `new Image()` (`chunk-ZGVPDNZ5.mjs:2500`) AND a live `append("image")` with the URL as `href` (`:2539`) —
+  so even a targeted "remove the `new Image()`" would not have closed this single route.
+  (2) sequenceDiagram `properties A: {"icon": "URL"}` fetches via `drawImage`'s live `<image xlink:href>` and
+  **RENDERS SUCCESSFULLY**, URL and all, into the returned SVG. This is the nastier of the two: a
+  normal-looking diagram paints while the request has already gone out.
+  **Why it was symptomless.** The SVG profile denies `image` by absence, so the ADOPTED ARTIFACT is clean in
+  both cases — the artifact half of §4 held, and held silently. The WIRE half did not. A DOM-shape assertion
+  over the adopted tree reads green here by construction; only a request-level guard on a real engine sees it.
+  **Confirmed CLEAN by grammar or by absence** (recorded so a future reader does not re-hunt them, and so it
+  is clear these are NOT what this closure fixes): `classDef`/`style` with `background-image:url()` (parse
+  error), `icons`/icon shorthand (no packs registered, `diagramEngine.ts:34-36`), `@{ img: }` outside
+  flowchart (parse error), C4 `$sprite` (hardcoded `data:` constant), and `click … href` / sequence `link`
+  (the URL reaches the SVG but an `<a>` does not LOAD, and the profile strips `a` anyway).
+  **Found by 3.3's guard, and that is the point.** The control-fires discipline caught the plan's OWN
+  designated control — the remote-image reference D-6's residual-hole clause said *"stays as written"*
+  (`plan.md:86`, row 22 at `:270`) — as a LIVE DEFECT rather than a passing negative. **Same species as
+  `16c7790`:** the risk class was named correctly and the control was then scoped too narrowly to the one
+  spelling the author had in mind. The recon then found the SURFACE IS LARGER than the instance 3.3 surfaced
+  (two routes, four spellings, three fetch mechanisms) — the second under-scoping of the same class in one
+  milestone, which is the whole reason the closure below is deliberately not a list.
+  **No engine knob closes it, and post-render is too late.** `securityLevel: 'strict'` does NOT stop either
+  route: `img:` and `properties` are diagram SOURCE, not `%%{init}%%` directive keys, so `config.sanitize()`'s
+  `secure` list — which D-6 hardened in `16c7790` — never sees them. Both fetches happen INSIDE `render()`, so
+  any post-render inspection observes an already-issued request. **The only available point is UPSTREAM of the
+  engine:** `diagramEnhancer.ts`, between `diagramSourceOf(pair.pre)` and `engine.render`.
+  **The closure (option 1).** Pre-scan the fence SOURCE for any remote reference — `http(s):` and the
+  protocol-relative `//` — and do not render a fence that carries one: it degrades to its visible source
+  fence per §3.8, the path 3.2 already built. The source is READ, never rewritten, so **D-15's
+  read-only-source invariant holds**. The predicate is over the source TEXT, not over a keyword list, and
+  that is the load-bearing property: **it is surface-complete by construction** — it does not care which
+  keyword or diagram type carries the URL, so a future mermaid shape cannot silently fall out of scope.
+  Option 2 (enumerate `img:` + `properties.icon`) was rejected as the `16c7790` species repeating a third
+  time; option 3 (strip the URL in-source) was rejected because it breaks the read-only-source invariant.
+  **Footprint: the enhancer's source-read only.** It does NOT touch D-6's config, the profile, or the
+  adoption path.
+  **★ ACCEPTED COST, banked deliberately and not incidentally.** Fences carrying a NON-FETCHING remote
+  reference — `click A href "https://…"`, sequence `link` — ALSO degrade under this predicate. This is
+  accepted as **§4-LITERAL alignment**: §4 forbids diagram content that *references* a remote resource in the
+  diagram source, independent of whether that reference happens to fetch in this engine version. Making the
+  predicate depend on current fetch behaviour would re-create exactly the version-coupled narrowness this
+  decision exists to remove. The supported path for an external link is a normal markdown link OUTSIDE the
+  fence, which travels the reader's own governed link path. A future reader who wants clickable diagram links
+  is looking at §3.11 (interactivity, declined) as well as this line, not at this line alone.
+  **Both halves of §4 are now closed:** the ARTIFACT half by the profile's `image` denial, the WIRE half by
+  this pre-scan. **Note for the implementation commit:** `sanitize.ts:187`'s justification for that denial —
+  *"`image` — no producer"* — is now FACTUALLY WRONG; two producers exist (`imageSquare`'s `append("image")`,
+  `drawImage`'s `<image xlink:href>`). The denial is CORRECT and stays; its stated reason must change from
+  "no producer" to "producers exist and are refused". **That correction lands in the implementation commit,
+  not here** — `src/render/*` is byte-untouched by this bank.
+  **Cited by:** the source-guard implementation commit (which cites this entry); 3.3's zero-network guard,
+  whose §4 claim becomes TRUE for adversarial source once the guard lands. **3.3's control succession:** this
+  closure stops CONTROL A (the `img:` remote-image reference) from firing by design, so 3.3's control becomes
+  the sequence `properties.icon` route — the sharper instrument anyway, because it RENDERS rather than throws
+  and therefore proves the wire claim without a degradation confound. **Revisit-when:** a future mermaid adds
+  a URL-bearing shape or a new fetch site — re-run the recon's surface hunt against the new version WITH 3.3's
+  guard in place, since the guard is now the instrument that finds them.
+
 - **2026-07-28 · M7 D-1/D-6 ADDENDUM — the SVG profile ADMITS `<style>` (option B), with a CSS-sanitization
   pass guaranteeing the adopted artifact carries no external reference. Discharges ff8f323's first downstream
   finding.** 2.1 denied `<style>` by absence; the group-3 investigation proved that STRIPS legibility
