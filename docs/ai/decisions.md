@@ -1,6 +1,70 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-07-30 · M7 D-6 WINDOW FINDING — a RELATIVE (same-origin) reference PASSES the §4 source guard, reaches
+  the engine, and FETCHES in D-6's measurement window. In production that resolves to `chrome-extension://<id>/…`,
+  which is PACKAGE-LOCAL and not §4-remote, so the behaviour is ACCEPTED and the guard is deliberately NOT
+  widened. What changes is the CLAIM: the window issues no OFF-ORIGIN request for guard-passing source. DECIDED.**
+  **The finding.** A diagram source carrying a relative reference — `A@{ img: "./x.png" }`, `A@{ img: "/x.png" }`,
+  sequence `properties A: {"icon": "./x.png"}` — makes `hasRemoteReference` return **false** and therefore reaches
+  `engine.render`, which fetches it inside D-6's live measurement window. Reproduced through the PRODUCTION path
+  (`createReaderPane` → `select()` → `mount()` → `enhanceDiagrams` → the real `import('mermaid')`, nothing
+  injected) on **both engines**: all three sources pass the guard AND put the resolved URL on the wire inside the
+  bracketed window. The two `img:` variants then degrade (`decode()` rejects — ROUTE 1's signature), while
+  **`properties.icon` RENDERS SUCCESSFULLY while fetching** — one adopted `<svg>`, state `rendered` — which is
+  `eae7b08`'s ROUTE 2 signature exactly, reached with a URL the guard is not scoped to catch. So the plan's
+  standing claim, *"the window issues no network for guard-passing source"*, is **FALSE as written**.
+  **This is the deliberate COMPLEMENT of `4061398`'s scoping, not a contradiction of it.** That closure scoped the
+  predicate to §4-**REMOTE** references (`\bhttps?:` plus a `//`-at-value-position arm) precisely because §4
+  forbids referencing a *remote resource* (`spec.md:197`). A relative reference is not remote. The guard is
+  **CORRECT and UNCHANGED**; `src/render/*` is byte-untouched by this bank.
+  **★ THE SEVERITY BOUND — A DERIVATION, NOT A MEASUREMENT, and it is recorded as one on purpose.** A relative
+  reference can only reach an ARBITRARY host via `//` or a contiguous `https?:` — and the guard catches **both**.
+  Measured predicate boundary (both engines): TRUE for `//host`, `http://host`, `https://host`, and the
+  tab/CR-obfuscated forms that still carry slashes (`h\tttp://host` — the `//` arm fires); FALSE for the
+  tab/LF-obfuscated forms WITHOUT slashes and for the relative forms. The tab-no-slash case is the interesting
+  one and it was resolved, not assumed: the WHATWG parser strips the tab, leaving `http:host.example/x`, which —
+  matching the base scheme with no authority — resolves as a **same-origin PATH**, observed as
+  `http://<base>/host.example/x` on both engines (`host.example` becomes a path segment, not a host). Same result
+  from `new URL(ref, document.baseURI)` and from a real `img.src` assignment. **So guard-passing ⇒ same-origin.**
+  In PRODUCTION the page origin is `chrome-extension://<id>/app.html`, so a guard-passing reference resolves to
+  `chrome-extension://<id>/…` — package-local, excluded by the `/^https?:/i` wire predicate **by scheme**, exactly
+  as our own lazy module chunk is. **NOTHING LEAVES THE MACHINE.** ★ But the production half of that is
+  **REASONED FROM THE EXTENSION ORIGIN, NOT OBSERVED**: the probe's base is `http://localhost:PORT`, so what the
+  probe actually sees is a `localhost` request. Stated as a derivation so that if the base origin ever changes
+  — packaging, a different host document, an iframed surface — someone re-derives it instead of inheriting a
+  conclusion. **This is NOT an AGENTS.md #1 breach; it is a live finding about the window's true property.**
+  **★ THE ACCEPTED BEHAVIOUR, named as behaviour rather than as an absence.** Relative/same-origin references
+  **DO reach the engine** and **DO cause a PACKAGE-LOCAL request** inside D-6's window. That is accepted. They
+  are not §4-remote, and degrading them would deny a legitimate local-authoring pattern — a relative image in a
+  local markdown file — at **no §4 benefit whatsoever**. The guard is therefore deliberately not widened to
+  relative references. (Contrast the rejected widening to "any URL-ish reference": it would over-degrade a
+  package-local feature AND reintroduce the spelling-completeness problem that scoping to §4-remote is what
+  escaped. The same shape as `4061398`'s own accepted cost — `click … href` degrading without fetching — banked
+  as a cost with a reason, not discovered later as a surprise.)
+  **THE SHARPENED CLAIM 3.3 will ship:** *the window issues NO OFF-ORIGIN request for guard-passing source.*
+  It is provable, it is §4-aligned ("remote" = off-origin here), and it is **STRONGER than the benign-fixture
+  claim** it replaces, because it holds over adversarial source rather than over a hand-picked clean diagram.
+  **★ And the engine-emitted same-origin request IS 3.3's control.** The `properties.icon` relative case
+  (`icon-rel`) is a better positive control than the injected `createElementNS` seam that was to succeed
+  CONTROL A: the **ENGINE** puts it on the wire, inside the window, from AUTHOR SOURCE that no sanitizer has
+  touched — which is D-6's named residual hole *exactly*. The injected seam only ever proved the instrument's
+  floor; this proves the instrument sees the real mechanism. It is also immune to the Firefox inert-parse gotcha
+  by the same construction as CONTROL A (the URL exists only in fence TEXT read via `textContent`).
+  **★ THE PATTERN, banked for the M7 retro — this is the FOURTH time.** The plan's stated control/claim for this
+  one measurement was wrong at every single step: (1) D-6 named the remote-image reference as the control → recon
+  found it a **live defect**; (2) `4061398` named `properties.icon` as 3.3's successor control → the source guard
+  **closed it**; (3) the injected `createElementNS` seam was named the successor → this probe found a **real
+  engine-emitted control** that is strictly better; (4) *"the window is request-free"* → **false**, the true
+  claim is *"no OFF-ORIGIN request"*. Same species each time: **the plan named a property, and BUILDING + RUNNING
+  the measurement revealed the property was scoped wrong.** The control-fires discipline did not merely prevent
+  vacuous green — it **rewrote the claim toward truth four times**. Group 9's retro names this.
+  **Cited by:** 3.3's zero-network guard (ships the sharpened claim and the engine-emitted same-origin control).
+  **Revisit-when:** the extension base origin changes (the severity bound needs re-derivation, and it is a
+  derivation precisely so this trigger is actionable); OR a future mermaid adds a fetch reachable from
+  guard-passing source that resolves OFF-origin — which would make the predicate holed rather than scoped, a
+  different and much worse finding.
+
 - **2026-07-30 · M7 §4 REMOTE-REFERENCE CLOSURE — the enhancer PRE-SCANS the fence source for any remote
   reference and does not render a fence that carries one. A SPELLING-INDEPENDENT whole-source predicate
   (option 1), chosen over an enumerated per-keyword fix, because enumeration under-scoped this surface
