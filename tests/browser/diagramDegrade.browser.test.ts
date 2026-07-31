@@ -1,3 +1,7 @@
+// GROUP 6 — THE TWO SYSTEMIC FAILURES, BOTH IN THIS FILE (§6.2's Files names it alongside §6.1's).
+// The first half below is 6.1, THE ENGINE GONE; the second half, from its own banner, is 6.2, THE
+// STORE GONE. Different layers, different degradations — and the pair is the group.
+//
 // ★ SYSTEMIC FAILURE — THE ENGINE CHUNK NEVER ARRIVES (007 group 6, task 6.1).
 //
 // The failure groups 3–5 cannot reach: not a bad fence, not a rejected artifact, not a cache that
@@ -50,17 +54,38 @@
 //      failure arm reads the placeholder count SYNCHRONOUSLY, before the async body can have run,
 //      and requires N of them — then requires zero after. Resolved, not absent.
 
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi, type Mock } from 'vitest';
+import mermaid from 'mermaid';
 import { createReaderPane } from '../../src/app/readerPane';
 import { mount } from '../../src/render/mount';
-import { DIAGRAM_MEASURE_CLASS, enhanceDiagrams } from '../../src/render/diagramEnhancer';
-import type { EngineLoader } from '../../src/render/diagramEngine';
+import {
+  DIAGRAM_MEASURE_CLASS,
+  diagramSourceOf,
+  enhanceDiagrams,
+} from '../../src/render/diagramEnhancer';
+import { engineVersion } from '../../src/render/diagramEngine';
+import type { DiagramEngine, DiagramEngineModule, EngineLoader } from '../../src/render/diagramEngine';
 import {
   DIAGRAM_ERROR_CLASS,
   DIAGRAM_FIGURE_CLASS,
   DIAGRAM_STATE_ATTR,
 } from '../../src/render/diagramView';
-import { clearDiagramCache } from '../../src/app/store';
+import {
+  clearDiagramCache,
+  describeStored,
+  DB_NAME,
+  STORES,
+  __resetConnectionForTest,
+} from '../../src/app/store';
+import { diagramCacheKey, readDiagram } from '../../src/app/diagramCache';
+import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import type { FolderSource } from '../../src/app/folderSource';
+import { currentEffectiveTheme } from '../../src/theme/reader';
+import { stopWatch, resetWatchRegistryForTest } from '../../src/watch/watchRegistry';
+import { resetWatchControlsForTest } from '../../src/watch/watchControl';
+import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
+import { resetThemeControlsForTest } from '../../src/theme/themeControl';
+import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
 
 const FIGURE_SELECTOR = `figure.${DIAGRAM_FIGURE_CLASS}`;
 const PRE_SELECTOR = `pre[${DIAGRAM_STATE_ATTR}]`;
@@ -366,4 +391,476 @@ describe('6.1 — the engine chunk never arrives: every fence stays a readable c
     );
     expect(shadow.querySelectorAll(`${FIGURE_SELECTOR} svg`)).toHaveLength(DIAGRAMS.length);
   }, 60_000);
+});
+
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// ★ SYSTEMIC FAILURE, THE SECOND ONE — THE STORE IS GONE (007 group 6, task 6.2).
+// ════════════════════════════════════════════════════════════════════════════════════════════
+//
+// 6.1 was the ENGINE gone. This is STORAGE gone, which is a different layer and a different
+// degradation: the engine needs no IndexedDB, so every diagram still DRAWS — it simply never
+// persists, so every render is a cold one and no hit ever lands.
+//
+// ── ★ THIS IS NOT 4.4, AND THE DIFFERENCE IS THE WHOLE POINT ─────────────────────────────────
+//
+// 4.4's quiet path was ONE OVERSIZED ROW refused by `planDiagramWrite` against a perfectly
+// HEALTHY store: the store opened, the transaction would have committed, and the cache made a
+// SIZE decision about a single diagram. Nothing here is about a row's size. There is no oversized
+// fixture in this block and there must not be one — the failures below are the STORE itself:
+// `indexedDB.open` refusing the database, and a `put` rejecting inside an open one. Different
+// layer, different failure, and the diagrams under test are ordinary small flowcharts.
+//
+// ── §4's TWO STORAGE CLAUSES: ONE IS SURFACED, THE OTHER IS SWALLOWED ────────────────────────
+//
+// §6.2 exists because §4 says two different things about storage and the distinction is the task:
+//
+//   • *If the cache cannot be read or written* → render normally without caching, and do not
+//     present it as a blocking error. QUIET. (`arm 3` below.)
+//   • *If the storage schema cannot be opened or upgraded* → keep rendering, and SAY caching is
+//     unavailable rather than failing silently. SURFACED. (`arm 1` and `arm 2`.)
+//
+// So the shape of the proof is a pair that must DISAGREE: same product, same fixture, and the
+// panel says caching is unavailable in one and stays silent in the other. A test that only proved
+// "nothing bad happened" would pass identically on both, and on a harness where storage was never
+// touched at all.
+//
+// ── THE LOAD-BEARING CLAIM: RENDERING SURVIVES STORAGE BEING GONE ────────────────────────────
+//
+// 4.3 wired `readDiagram`/`storeDiagram` INTO the render path, and `storeDiagram`'s call site sits
+// inside the try whose catch returns `SANITIZE_REJECTED` (`diagramEnhancer.ts`). So a storage
+// throw that escapes does not merely lose a cache entry — it reports a diagram that DREW
+// CORRECTLY as a §3.8 failure: the figure is removed, the source fence comes back, and an error
+// marker appears under a diagram that mermaid rendered perfectly. Storage is a nice-to-have;
+// rendering is the product. That is the revert this block reds on.
+//
+// ── NON-VACUITY ──────────────────────────────────────────────────────────────────────────────
+//
+// "Storage failed and nothing bad happened" passes trivially on a harness that never touched
+// storage, so every arm asserts PRESENCE and ABSENCE together — the figure is really on screen
+// AND the engine was really invoked AND the row is really not persisted AND nothing was said —
+// and `arm 4` runs the SAME harness against a WORKING store, where a hit really lands and a row
+// really writes. Without arm 4, every zero below could be a fact about a dead spy.
+
+/** A single ordinary flowchart. Small on purpose: nothing here is about a diagram's SIZE. */
+const STORAGE_FENCE = 'graph TD; S1[Storage one] --> S2[Storage two]';
+const STORAGE_DOC = [
+  '# A document rendered while storage is gone',
+  '',
+  OPENING,
+  '',
+  '```mermaid',
+  STORAGE_FENCE,
+  '```',
+  '',
+  CLOSING,
+  '',
+].join('\n');
+
+/** The words §6.2 requires — asserted as a SUBSTRING of a rendered panel line, so this is a claim
+ *  about text the user can read, not about a class, an attribute or a colour. */
+const CACHING_OFF_WORDS = 'Diagram caching is unavailable';
+
+// ── THE TWO INJECTIONS. BOTH PATCH A BROWSER GLOBAL; NEITHER TOUCHES PRODUCTION ──────────────
+//
+// `diagramCache.ts` reaches storage through `store.ts`'s memoized `connection()` and `idbCore`'s
+// raw IndexedDB calls, and NEITHER may grow a seam for this (`idbCore.ts:5-9` is a standing
+// STOP signal, and a production hook whose only caller is a test is the test dictating the shape
+// of the thing it measures). So the failures are injected where a real browser produces them:
+// at `indexedDB.open`, which is what fails on a corrupt profile, a denied quota or a version the
+// stored database is already past; and at a `put`, which is what fails when a transaction cannot
+// proceed. Both are restored in `afterEach`, and both are scoped so no OTHER database and no
+// OTHER store is affected.
+
+type OpenFn = typeof indexedDB.open;
+let realOpen: OpenFn | null = null;
+
+/** ★ THE SCHEMA CANNOT BE OPENED — §4's second clause, at the only place it can happen. Scoped to
+ *  the `peekover` database by name, so a sibling suite's throwaway DB is untouched. */
+function failDatabaseOpen(): void {
+  if (realOpen) return;
+  const passthrough = indexedDB.open.bind(indexedDB) as OpenFn;
+  realOpen = passthrough;
+  (indexedDB as unknown as { open: OpenFn }).open = ((name: string, version?: number) => {
+    if (name !== DB_NAME) return passthrough(name, version);
+    const req: Record<string, unknown> = {
+      result: undefined,
+      error: new DOMException(`${DB_NAME} could not be opened (test-only)`, 'VersionError'),
+      onsuccess: null,
+      onerror: null,
+      onupgradeneeded: null,
+      onblocked: null,
+    };
+    // `openDb` assigns its handlers synchronously on the returned request, so the rejection is
+    // deferred by a turn — exactly the order a real failing open produces.
+    setTimeout(() => (req.onerror as ((e: Event) => void) | null)?.(new Event('error')), 0);
+    return req as unknown as IDBOpenDBRequest;
+  }) as OpenFn;
+  // Drop the HEALTHY memo, or `connection()` keeps handing back the connection it already has and
+  // the injection reaches nothing at all.
+  __resetConnectionForTest();
+}
+
+function restoreDatabaseOpen(): void {
+  if (!realOpen) return;
+  (indexedDB as unknown as { open: OpenFn }).open = realOpen;
+  realOpen = null;
+  // ...and drop the memoized REJECTION, which `store.ts` never clears on its own.
+  __resetConnectionForTest();
+}
+
+type PutFn = typeof IDBObjectStore.prototype.put;
+let realPut: PutFn | null = null;
+
+/** ★ A WRITE REJECTS INSIDE AN OPEN STORE — §4's first clause. Scoped to the two diagram stores,
+ *  so settings, folders, recents, pins and snapshots still write normally: this is the cache
+ *  failing, not the database. `idbCore.write` issues the put inside its Promise executor, so a
+ *  synchronous throw here is a rejected write, which is what `storeDiagram` has to survive. */
+function failDiagramWrites(): void {
+  if (realPut) return;
+  const passthrough = IDBObjectStore.prototype.put;
+  realPut = passthrough;
+  const diagramStores = new Set<string>([STORES.diagramMeta, STORES.diagrams]);
+  IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args: unknown[]) {
+    if (diagramStores.has(this.name)) {
+      throw new DOMException(`write to ${this.name} rejected (test-only)`, 'InvalidStateError');
+    }
+    return (passthrough as (...a: unknown[]) => IDBRequest<IDBValidKey>).apply(this, args);
+  } as PutFn;
+}
+
+function restoreDiagramWrites(): void {
+  if (!realPut) return;
+  IDBObjectStore.prototype.put = realPut;
+  realPut = null;
+}
+
+/** The real engine, wrapped to COUNT invocations — `diagramCache.browser.test.ts`'s `counting()`.
+ *  Wrapping rather than patching the singleton: sibling suites import the same mermaid instance. */
+function countingLoader(): { loader: EngineLoader; render: Mock<() => void> } {
+  const render: Mock<() => void> = vi.fn();
+  const engine: DiagramEngine = {
+    initialize: (config) => mermaid.initialize(config as never),
+    render: async (id, definition, container) => {
+      render();
+      return await mermaid.render(id, definition, container);
+    },
+  };
+  return { loader: async () => ({ default: engine }) as unknown as DiagramEngineModule, render };
+}
+
+/** A one-file in-memory folder. `persistable: false` on purpose — this block is about storage
+ *  being gone, and a watchable folder would start a real 1 s poll that has nothing to prove here. */
+function docSource(markdown: string): FolderSource {
+  return {
+    name: 'docs',
+    truncated: false,
+    persistable: false,
+    files: [{ path: 'stored.md', name: 'stored.md', read: async () => markdown }],
+  };
+}
+
+/** Writes nothing — used where the arm needs `describeStored` to SUCCEED while the diagram cache's
+ *  own connection is dead, which is the case the availability bit exists for. */
+function healthyFakeStore(): AppStore {
+  return {
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+    describeStored: async () => ({
+      folders: [],
+      recents: [],
+      pins: [],
+      settings: null,
+      snapshots: { count: 0, docs: 0, bytes: 0 },
+      captureFlag: null,
+      diagrams: { count: 0, bytes: 0 },
+      total: 0,
+      lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
+    }),
+  };
+}
+
+async function until<T>(fn: () => T | null | undefined | false, tries = 400): Promise<T> {
+  for (let i = 0; i < tries; i += 1) {
+    const v = fn();
+    if (v) return v as T;
+    await new Promise<void>((r) => setTimeout(r, 25));
+  }
+  throw new Error('until() timed out');
+}
+
+/** Mount the shell, grant the in-memory folder and click the file — the shipped gesture, which is
+ *  the only path that provisions `renderWithDiagrams` onto the pane. Returns the reader's shadow
+ *  root and the container, so the storage panel can be opened on the SAME shell that rendered. */
+async function appShellReading(
+  markdown: string,
+  store?: AppStore,
+): Promise<{ container: HTMLElement; shadow: ShadowRoot }> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  cleanup.push(container);
+
+  const app = mountAppShell(container, {
+    openFolder: async () => ({ ok: true, source: docSource(markdown) }),
+    ...(store ? { store } : {}),
+  });
+  await app.openFolder();
+  (await until(() =>
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+  )).click();
+
+  const host = await until(() =>
+    container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+  );
+  return { container, shadow: await until(() => host.shadowRoot) };
+}
+
+/** Open the "Stored data" panel and return its rendered plain-language lines, as text. §3.9 made
+ *  this panel the diagram cache's disclosure surface, so it is where §4's "say so" is said. */
+async function panelLines(container: HTMLElement): Promise<string[]> {
+  container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
+  const panel = await until(() => container.querySelector<HTMLElement>('.peekover-storage'));
+  const lines = [...panel.querySelectorAll<HTMLElement>('.peekover-storage__line')].map(
+    (li) => li.textContent ?? '',
+  );
+  // NON-VACUITY on the panel itself: an unrendered or empty panel would satisfy every "does not
+  // contain" assertion below for free.
+  expect(lines.length, 'the storage panel rendered no plain-language lines at all').toBeGreaterThan(
+    0,
+  );
+  return lines;
+}
+
+/** The one figure this block's fixture produces, once the pass has settled. */
+function soleFigure(shadow: ShadowRoot): HTMLElement {
+  const figures = [...shadow.querySelectorAll<HTMLElement>(FIGURE_SELECTOR)];
+  expect(figures, 'the fixture has exactly one diagram').toHaveLength(1);
+  return figures[0];
+}
+
+/**
+ * ★ THE RENDER SURVIVED, IN FULL — the conjunction that "no error appeared" alone cannot make.
+ *
+ * A page where enhancement DIED produces no marker either. So this asserts the figure is present
+ * and `rendered`, that a real `<svg>` is inside it, that the source fence went to `rendered` (and
+ * is therefore hidden by the reader stylesheet, which is what success LOOKS like under D-15),
+ * that no §3.8 marker appeared, and that no placeholder was left stranded.
+ */
+function expectDiagramSurvived(shadow: ShadowRoot, label: string): void {
+  const pres = fences(shadow);
+  const markers = [...shadow.querySelectorAll(`.${DIAGRAM_ERROR_CLASS}`)];
+
+  // ★ THIS IS THE REVERT-AND-FAIL MESSAGE, IN THE DEFECT'S OWN UNITS. Take `storeDiagram`'s catch
+  // away and the storage rejection escapes into `drawDiagram`'s sanitize try, so the diagram that
+  // mermaid DREW is reported as a §3.8 failure: the fence goes back to `failed`, the figure is
+  // removed, and a marker blaming the SANITIZER appears under a rendering the sanitizer accepted.
+  // The counts and the marker text below are what say that, rather than "expected 1, got 0".
+  expect(
+    pres.map((p) => p.getAttribute(DIAGRAM_STATE_ATTR)),
+    `${label}: a diagram that RENDERED was lost to a storage failure — ` +
+      `${shadow.querySelectorAll(FIGURE_SELECTOR).length} figure(s) survive of 1, and the ` +
+      `marker(s) under the fence read ${JSON.stringify(markers.map((m) => m.textContent))}. ` +
+      `Storage is a nice-to-have; the render is the product`,
+  ).toEqual(['rendered']);
+  expect(getComputedStyle(pres[0]).display, `${label}: the source fence is hidden`).toBe('none');
+
+  const figure = soleFigure(shadow);
+  expect(figure.getAttribute(DIAGRAM_STATE_ATTR), `${label}: figure state`).toBe('rendered');
+  expect(figure.querySelector('svg'), `${label}: the adopted SVG`).not.toBeNull();
+
+  expect(
+    markers.map((m) => m.textContent),
+    `${label}: a §3.8 failure marker appeared over a diagram that rendered correctly`,
+  ).toEqual([]);
+  expect(placeholders(shadow), `${label}: placeholders left stranded`).toHaveLength(0);
+
+  // Never a blank page (AGENTS.md #5) — the prose at both ends survived the storage failure.
+  expect(shadow.textContent, `${label}: opening prose`).toContain(OPENING);
+  expect(shadow.textContent, `${label}: closing prose`).toContain(CLOSING);
+}
+
+/**
+ * The production cache key for the fence that was actually rendered, at the theme it was rendered
+ * at.
+ *
+ * ★ THE SOURCE IS READ BACK OFF THE DOM, through `diagramSourceOf` — the very function the
+ * enhancer keys on — rather than re-spelled from {@link STORAGE_FENCE}. A hand-written copy is one
+ * trailing newline away from a key that matches nothing, and a key that matches nothing makes
+ * `readDiagram(...)` return `undefined` for the wrong reason, which would turn arm 3's "the row is
+ * not persisted" into a claim about a typo. (It did, until arm 4 refused to find the row it had
+ * just written — which is what the control is for.)
+ */
+async function storageDocKey(shadow: ShadowRoot): Promise<string> {
+  return diagramCacheKey(diagramSourceOf(fences(shadow)[0]), currentEffectiveTheme(), engineVersion());
+}
+
+describe('6.2 — storage is gone: diagrams still render, and the panel says caching is off', () => {
+  let alerted: Mock;
+  let confirmed: Mock;
+
+  beforeEach(() => {
+    resetDiffRegistryForTest();
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    resetThemeHostsForTest();
+    resetThemeControlsForTest();
+    // §6.2: "assert the absence of any modal/alert". These are the only blocking surfaces a page
+    // has, and a spy is the only way to observe one that would have blocked the run if real.
+    alerted = vi.fn();
+    confirmed = vi.fn(() => true);
+    vi.stubGlobal('alert', alerted);
+    vi.stubGlobal('confirm', confirmed);
+  });
+
+  afterEach(async () => {
+    stopWatch();
+    restoreDiagramWrites();
+    restoreDatabaseOpen();
+    vi.unstubAllGlobals();
+    resetDiffRegistryForTest();
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    resetThemeHostsForTest();
+    resetThemeControlsForTest();
+    // Clear the availability bit the way production does — by REACHING STORAGE SUCCESSFULLY. The
+    // bit has no test seam on purpose (`diagramCache.ts`), and this is both the reset and a live
+    // demonstration that it self-clears once the store comes back.
+    await readDiagram('peekover-6.2-availability-selfclear');
+  });
+
+  /** No blocking surface of any kind appeared — §6.2's "no blocking error surfaces", read four
+   *  ways so a modal that is not a native `alert()` cannot slip through. */
+  function expectNothingBlocking(container: HTMLElement, label: string): void {
+    expect(alerted, `${label}: window.alert`).not.toHaveBeenCalled();
+    expect(confirmed, `${label}: window.confirm`).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('dialog[open]'), `${label}: an open <dialog>`).toHaveLength(0);
+    expect(
+      container.querySelectorAll('[role="alertdialog"]'),
+      `${label}: an alertdialog`,
+    ).toHaveLength(0);
+  }
+
+  it('★ arm 1 — the schema will not OPEN: the diagram renders COLD, and the panel SAYS caching is off', async () => {
+    const original = mermaid.render.bind(mermaid);
+    const engineCalls = vi
+      .spyOn(mermaid, 'render')
+      .mockImplementation((id, definition, container) => original(id, definition, container));
+    try {
+      failDatabaseOpen();
+
+      const { container, shadow } = await appShellReading(STORAGE_DOC);
+      await settleDiagrams(shadow);
+
+      // RENDER SURVIVED. The whole reason the revert below is load-bearing: a storage throw that
+      // escapes `storeDiagram` reports this correctly-drawn diagram as a §3.8 failure.
+      expectDiagramSurvived(shadow, 'open-failure');
+      expectNothingBlocking(container, 'open-failure');
+
+      // COLD, AND ONLY COLD. Storage is gone, so there is nothing to hit — the engine drew it.
+      expect(engineCalls.mock.calls.length, 'engine invocations on a dead store').toBe(1);
+
+      // ★ AND IT IS SAID, IN WORDS, ON THE SURFACE §3.9 MADE THE CACHE'S OWN.
+      const lines = await panelLines(container);
+      expect(
+        lines.some((l) => l.includes(CACHING_OFF_WORDS)),
+        `the panel never said caching was unavailable. Its lines were: ${JSON.stringify(lines)}`,
+      ).toBe(true);
+      // ...and it no longer claims a store it could not open is EMPTY. That sentence was a claim
+      // about storage we had just failed to read.
+      expect(lines.some((l) => l.startsWith('Nothing stored'))).toBe(false);
+    } finally {
+      engineCalls.mockRestore();
+    }
+  }, 60_000);
+
+  it('arm 2 — the panel says it even when its OWN read succeeds: the cache reports its dead connection', async () => {
+    // The store port injected here reads fine and returns a perfectly ordinary summary. The only
+    // thing that is broken is the REAL database the diagram cache reaches — so if the line still
+    // appears, it came from `isDiagramCacheUnavailable()` and from nothing else.
+    failDatabaseOpen();
+
+    const { container, shadow } = await appShellReading(STORAGE_DOC, healthyFakeStore());
+    await settleDiagrams(shadow);
+    expectDiagramSurvived(shadow, 'open-failure (injected reader)');
+
+    const lines = await panelLines(container);
+    // The injected reader's own line is still there — the panel was not replaced, only added to.
+    expect(lines.some((l) => l.startsWith('Nothing stored'))).toBe(true);
+    expect(
+      lines.some((l) => l.includes(CACHING_OFF_WORDS)),
+      `the cache's dead connection was never surfaced. Panel lines: ${JSON.stringify(lines)}`,
+    ).toBe(true);
+  }, 60_000);
+
+  it('★ arm 3 — a WRITE rejects in an OPEN store: the diagram renders, the row is not kept, and NOTHING is said', async () => {
+    const { loader, render } = countingLoader();
+    failDiagramWrites();
+
+    const { shadow } = enhancedReader(STORAGE_DOC, loader);
+    expect(placeholders(shadow), 'the synchronous prologue inserted no placeholder').toHaveLength(1);
+    await settleDiagrams(shadow);
+
+    // PRESENCE — the diagram is really on screen, in full. Without this, "no error appeared" is a
+    // fact about a page that never rendered anything (4.4's presence-AND-absence discipline).
+    expectDiagramSurvived(shadow, 'write-failure');
+    // ...and the engine really ran, so this was a genuine cold render rather than a served hit.
+    expect(render.mock.calls.length, 'engine invocations with the write rejecting').toBe(1);
+
+    restoreDiagramWrites();
+
+    // ABSENCE, PART ONE — the row is NOT persisted. The write really did reject; the cache did not
+    // quietly succeed behind our back, which would make every claim above vacuous.
+    expect(
+      await readDiagram(await storageDocKey(shadow)),
+      'the rejected write left a row',
+    ).toBeUndefined();
+    expect((await describeStored()).diagrams.count, 'cached diagram rows').toBe(0);
+
+    // ABSENCE, PART TWO — §4's FIRST clause: this one stays QUIET. Same panel, same product, and
+    // it must NOT say what arm 1 required it to say. This disagreement IS the task: a failed
+    // persist is not something the user has an action for, and only an unopenable schema is.
+    const { container } = await appShellReading('# Just prose\n\nNo diagrams here.\n');
+    expectNothingBlocking(container, 'write-failure');
+    const lines = await panelLines(container);
+    expect(
+      lines.some((l) => l.includes(CACHING_OFF_WORDS)),
+      `a rejected WRITE was surfaced as an unavailable SCHEMA. Panel lines: ${JSON.stringify(lines)}`,
+    ).toBe(false);
+  }, 60_000);
+
+  it('★ arm 4 — NON-VACUOUS CONTROL: the same harness on a WORKING store caches, hits, and says nothing', async () => {
+    await clearDiagramCache();
+    const first = countingLoader();
+
+    // PASS 1 — cold. THE POSITIVE CONTROL for every zero in this block: if this reads 0, the
+    // counter is wired to nothing and "the engine was invoked" means nothing anywhere above.
+    const one = enhancedReader(STORAGE_DOC, first.loader);
+    await settleDiagrams(one.shadow);
+    expectDiagramSurvived(one.shadow, 'working store, pass 1');
+    expect(first.render.mock.calls.length, 'pass 1 engine invocations').toBe(1);
+
+    // THE ROW REALLY WROTE — the write path arm 3 proved broken is proved WORKING here, on the
+    // same harness, so arm 3's `toBeUndefined()` is a fact about the rejection and not about a
+    // cache that never writes at all.
+    const key = await storageDocKey(one.shadow);
+    expect(await readDiagram(key), 'the cached SVG').toBeTruthy();
+    expect((await describeStored()).diagrams.count, 'cached diagram rows').toBe(1);
+
+    // PASS 2 — the HIT. Engine untouched, and the diagram is on screen anyway (a cache that
+    // served nothing would also leave the engine at zero, and would leave an empty box).
+    const second = countingLoader();
+    const two = enhancedReader(STORAGE_DOC, second.loader);
+    await settleDiagrams(two.shadow);
+    expectDiagramSurvived(two.shadow, 'working store, pass 2');
+    expect(second.render.mock.calls.length, 'pass 2 engine invocations — a HIT is zero').toBe(0);
+
+    // ...and a healthy store says nothing about being unavailable, which is what makes arm 1's
+    // sentence a signal rather than the panel's permanent furniture.
+    const { container } = await appShellReading('# Just prose\n\nNo diagrams here.\n');
+    const lines = await panelLines(container);
+    expect(
+      lines.some((l) => l.includes(CACHING_OFF_WORDS)),
+      `a HEALTHY store reported caching unavailable. Panel lines: ${JSON.stringify(lines)}`,
+    ).toBe(false);
+  }, 90_000);
 });

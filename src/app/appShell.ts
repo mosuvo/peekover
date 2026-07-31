@@ -62,6 +62,10 @@ import {
   type PinRecord,
   type StoredSummary,
 } from './store';
+// §4's second storage clause (task 6.2): the cache is the module that discovers an unopenable
+// schema, and this is the surface that says so. App-page-only, like everything it imports —
+// `diagramImportFence.test.ts` is the structural gate on that edge.
+import { isDiagramCacheUnavailable } from './diagramCache';
 import { DEFAULT_SETTINGS, type Settings } from '../settings/settings';
 import { addRecent, addPin, orderRecents, orderPins, SEP } from './recents';
 import {
@@ -604,14 +608,53 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };
 
-  /** Read the transparency summary (best-effort); a failed/absent read yields the honest
-   *  empty state, never a blank panel. */
+  // ── ★ §4's SECOND STORAGE CLAUSE: SAY IT, DO NOT FAIL SILENTLY (task 6.2) ──────────────
+  //
+  // *If the storage schema cannot be opened or upgraded, the system shall continue to render
+  // documents and diagrams, and shall SAY that caching is unavailable rather than failing
+  // silently.* Rendering already survives — the cache swallows its own failures and the enhancer
+  // never depended on it (`diagramCache.ts`'s two-clause note). The half that was missing is the
+  // SAYING, and this is the whole of it.
+  //
+  // ★ THE BUG THIS REPLACES IS A LIE, NOT AN OMISSION. A `describeStored` that THREW used to land
+  // on `EMPTY_SUMMARY`, whose line reads "Nothing stored — Peekover is holding no folders,
+  // recents, or pins on this device." That sentence is a claim about the store, and we just failed
+  // to open the store: we do not know whether it is empty, and if it holds anything we have told
+  // the user it does not. So the throw path keeps the zeroed counts (there is nothing to list)
+  // and REPLACES that line with one that says what actually happened.
+  //
+  // The absent-reader path is deliberately untouched: a minimal fake store with no `describeStored`
+  // is not a failure, and "Nothing stored" is its correct, designed never-blank state.
+  //
+  // Two independent detectors, one sentence, because they see different halves of the same fact:
+  // `describeStored` throwing is the panel's own read failing, and `isDiagramCacheUnavailable()`
+  // is the diagram cache reporting that ITS connection failed — true even where a store port was
+  // injected whose reads happen to succeed. Neither is set by a read/write rejection against a
+  // store that opened; that failure is §4's FIRST clause and stays quiet by design.
+
+  /** §4's second storage clause, in words. Rendered as an ordinary panel line, so it is readable
+   *  text rather than a colour or an icon, and it names the consequence rather than the fault. */
+  const CACHING_UNAVAILABLE_LINE =
+    'Diagram caching is unavailable — storage could not be opened on this device. Diagrams still ' +
+    'render, but none of them is being cached, so each one is drawn fresh every time.';
+
+  /** The same summary with {@link CACHING_UNAVAILABLE_LINE} appended once. */
+  function sayCachingUnavailable(summary: StoredSummary): StoredSummary {
+    if (summary.lines.includes(CACHING_UNAVAILABLE_LINE)) return summary;
+    return { ...summary, lines: [...summary.lines, CACHING_UNAVAILABLE_LINE] };
+  }
+
+  /** Read the transparency summary (best-effort); an absent read yields the honest empty state and
+   *  a FAILED one says so, never a blank panel and never a false "Nothing stored". */
   async function readSummary(): Promise<StoredSummary> {
+    let summary: StoredSummary;
     try {
-      return (await store.describeStored?.()) ?? EMPTY_SUMMARY;
+      summary = (await store.describeStored?.()) ?? EMPTY_SUMMARY;
     } catch {
-      return EMPTY_SUMMARY;
+      // The read itself failed: drop the "Nothing stored" claim we cannot make, keep the panel.
+      return { ...EMPTY_SUMMARY, lines: [CACHING_UNAVAILABLE_LINE] };
     }
+    return isDiagramCacheUnavailable() ? sayCachingUnavailable(summary) : summary;
   }
 
   /** Render the storage panel from a freshly-read summary (best-effort). */

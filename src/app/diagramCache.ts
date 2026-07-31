@@ -328,6 +328,59 @@ export function planDiagramWrite(
 // "shall not present the failure as a blocking error". So every function below swallows its own
 // storage errors — a read failure is a miss, a write failure is a diagram that re-renders next
 // time. Neither is a user-facing message, because neither is something the user has an action for.
+//
+// ── ★ §4 HAS TWO STORAGE CLAUSES, AND THEY ARE DIFFERENT FAILURES (task 6.2) ──────────────────
+//
+// The paragraph above is §4's FIRST clause. The second one is not the same rule stated twice:
+//
+//   • *If the cache cannot be READ OR WRITTEN* → render normally without caching, and do NOT
+//     present it as a blocking error. SWALLOWED. The store opened; one row would not move. The
+//     diagram drew correctly and merely re-renders next time, which is a cost the user has no
+//     action for — telling them about it would be noise.
+//   • *If the storage SCHEMA CANNOT BE OPENED OR UPGRADED* → keep rendering, and SAY that caching
+//     is unavailable rather than failing silently. SURFACED. This one is not a row; it is the
+//     whole store, for the whole session, and it is the kind of thing a user who was told their
+//     renderings are cached on-device deserves to be able to find out is no longer true. §3.9
+//     made the "Stored data" panel that cache's disclosure surface, so that is where it is said.
+//
+// {@link isDiagramCacheUnavailable} is the ONE bit that separates them. It is set only where the
+// CONNECTION fails ({@link cacheConnection}) and by nothing else, so a rejected `put` against a
+// healthy store — 4.4's oversized refusal included — never lights it. `appShell.ts`'s storage
+// panel reads it; nothing else does.
+
+/**
+ * Has opening the database failed since the last time it succeeded? §4's second storage clause,
+ * as one bit, for `appShell.ts`'s "Stored data" panel to state in words.
+ *
+ * ★ It is deliberately NOT reset by a test seam. It SELF-CLEARS on the next connection that
+ * succeeds ({@link cacheConnection}), because the honest reading of "caching is unavailable" is
+ * "the last time we tried to reach the store, we could not" — a stale `true` would go on saying
+ * caching is off after storage came back, which is the same silent-lie failure in the other
+ * direction.
+ */
+let schemaUnavailable = false;
+
+/** @see schemaUnavailable — read by `appShell.ts` to decide whether the panel says caching is off. */
+export function isDiagramCacheUnavailable(): boolean {
+  return schemaUnavailable;
+}
+
+/**
+ * `store.ts`'s shared connection, with §4's second clause recorded on the way past. The try/catch
+ * here is NOT a second swallow — it re-throws — so the callers below degrade exactly as they did
+ * before; the only thing added is that the OPEN failure is now distinguishable from every other
+ * storage failure instead of being flattened into the same silent miss.
+ */
+async function cacheConnection(): Promise<IDBDatabase> {
+  try {
+    const conn = await connection();
+    schemaUnavailable = false;
+    return conn;
+  } catch (err) {
+    schemaUnavailable = true;
+    throw err;
+  }
+}
 
 /** One row of the `diagrams` content store (4.2's shape). The SVG string, and nothing else. */
 type DiagramRow = { key: string; svg: string };
@@ -346,7 +399,7 @@ type DiagramRow = { key: string; svg: string };
  */
 export async function readDiagram(key: string): Promise<string | undefined> {
   try {
-    const conn = await connection();
+    const conn = await cacheConnection();
     const meta = await get<DiagramMetaRow>(conn, STORES.diagramMeta, key);
     if (!meta) return undefined; // never cached, or evicted — a miss either way.
     const row = await get<DiagramRow>(conn, STORES.diagrams, key);
@@ -374,7 +427,7 @@ export async function readDiagram(key: string): Promise<string | undefined> {
  */
 export async function storeDiagram(key: string, svg: string): Promise<void> {
   try {
-    const conn = await connection();
+    const conn = await cacheConnection();
     const allMeta = await getAll<DiagramMetaRow>(conn, STORES.diagramMeta);
     const incomingBytes = bytesOf(svg);
     const now = Date.now();
