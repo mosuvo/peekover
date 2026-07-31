@@ -31,16 +31,17 @@
 // the product is required to carry it: a re-render, a cached raw string or a second copy taken at
 // build time all fail that, because none of them can see a mutation made after adoption.
 //
-// ── THE CLIPBOARD AND THE DOWNLOAD ARE STUBBED HERE, AND UNSTUBBED IN 7.3 ────────────────────
+// ── THE CLIPBOARD AND THE DOWNLOAD ARE STUBBED ABOVE, AND UNSTUBBED IN THE 7.3 SECTION ───────
 //
-// This file captures the products at the browser globals — `navigator.clipboard.write` and the
-// anchor's own click — because what it is testing is WHICH BYTES the control produced. Task 7.3 is
-// the other half and is deliberately not duplicated here: a real click writing a real image to the
-// real clipboard in the loaded build, with both built manifests re-read for `permissions: []`.
+// Everything down to the CSS block captures the products at the browser globals —
+// `navigator.clipboard.write` and the anchor's own click — because what it is testing is WHICH
+// BYTES the control produced. The LAST section of this file is task 7.3, the other half: the
+// recorders come off, the engine's own clipboard receives the write, the anchor's default action
+// is allowed to stand, and both BUILT manifests are re-read from `.output/` for `permissions: []`.
 // Nothing in production grew a seam for either; both are browser globals, stubbed from outside.
 
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent, cdp } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import {
   DIAGRAM_MEASURE_CLASS,
@@ -806,4 +807,327 @@ describe('the shipped diagram CSS block', () => {
     expect(block).toContain(':hover');
     expect(block).toContain('prefers-reduced-motion');
   });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 7.3 — §3-6 RE-PROVEN EMPIRICALLY ON BOTH ENGINES: A DOC READ IS NOT A BUILD
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+//
+// The plan resolved from current official documentation that `clipboardWrite` is NOT required for a
+// click-triggered `navigator.clipboard.write()`, and that `downloads` gates the `chrome.downloads`
+// API only while `<a download>` on a `blob:` URL is plain web platform. THAT IS A DOCUMENTATION
+// FINDING. This section is the build: the two actions are driven through the ENGINE'S OWN
+// clipboard and the anchor's OWN default action, in Chromium and in Firefox, and the manifests
+// the build actually emitted are re-read afterwards and required to still be capability-free.
+//
+// ── ★ WHY THE CONJUNCTION IS THE PROOF, AND EITHER HALF ALONE IS NOT ─────────────────────────
+//
+// `permissions: []` read on its own proves nothing: it has been `[]` since task 1.1 and would be
+// `[]` in a build where copy and download did not exist. What is being asserted is an ABSENCE
+// DESPITE EXERCISE — the copy RAN and resolved, the download RAN and was not cancelled, and the
+// shipped manifests still ask for nothing. Both cases below therefore require the action to reach
+// its `done` state FIRST; an action that silently no-opped would red before any manifest is read.
+//
+// ── ★ WHY `done` IS THE EVIDENCE THAT THE REAL WRITE RESOLVED ────────────────────────────────
+//
+// `runDiagramAction` sets `done` only after `await clipboard.write(...)` returns, and `failed` on
+// any throw — and a refusal throws `NotAllowedError`. So `done` here is a statement about the
+// ENGINE'S clipboard, not about a recorder: the harness-sanity case below asserts
+// `navigator.clipboard` carries no own property and that `write` is `[native code]`, and the
+// refusal case above already proves the SAME attribute reads `failed` when a write is refused.
+// The check is therefore shown capable of failing on exactly the condition the null disclaims.
+//
+// ── ★ THE MEASURED FINDING: THE TWO ENGINES GATE THIS DIFFERENTLY, AND NEITHER GATE IS A KEY ─
+//
+// Firefox writes the PNG on the gesture alone — `clipboard-write` is not even a valid
+// `PermissionName` in Gecko, so there is nothing to ask for. Blink DOES consult the Permissions
+// API, and a Playwright browser context leaves that consent at `prompt`, so the identical click
+// reds with `NotAllowedError: Write permission denied` (measured; the state reads `prompt` in the
+// top frame too, so it is the CONTEXT and not the test iframe). The copy case therefore runs an
+// A-B ablation on Chromium: consent `prompt` -> `failed`, consent `granted` -> `done`, same build,
+// same button, same bytes, NOTHING rebuilt in between. The variable that moves the outcome is a
+// browser consent, not a manifest key — which is precisely §3-6's claim about the write path.
+//
+// ── ★ WHY THE MANIFESTS ARE READ FROM `.output/`, NOT FROM `wxt.config.ts` ───────────────────
+//
+// `tests/manifest.test.ts` guards the SOURCE — deliberately, because CI runs the unit project
+// before any build and never builds Firefox, so a `.output/` read there would be vacuous. That
+// leaves the GENERATED artifact unguarded, which is the whole point of an empirical re-proof: the
+// question is whether the BUILD added a key nobody authored. These read the real emitted JSON.
+//
+// The same asymmetry applies here: `pnpm test:browser` runs BEFORE `pnpm build` in ci.yml, and
+// Firefox is never built there at all, so `.output/` is absent in CI and the built-manifest case
+// SKIPS — visibly, by name, in the reporter's skip count, never silently green. It runs on every
+// machine that has built, which is where the artifact exists to be read. The capability check
+// itself is a pure function, so its non-vacuity is proven unconditionally by the malformed-fixture
+// control, which runs everywhere including CI.
+
+/**
+ * The REAL emitted manifests, read from disk at transform time.
+ *
+ * A Vite glob, not a fixture and not `wxt.config.ts`: these are the bytes `pnpm build` wrote into
+ * `.output/chrome-mv3/` and `.output/firefox-mv3/`. Absent when nothing has been built — the glob
+ * then yields `{}` rather than throwing, which is what lets the case below skip by name.
+ */
+const BUILT_MANIFESTS = import.meta.glob('/.output/*/manifest.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, Record<string, unknown>>;
+
+const BUILT_ENGINES = Object.keys(BUILT_MANIFESTS).sort();
+
+/** Every manifest key that would represent a capability this milestone claims not to need. */
+const CAPABILITY_KEYS = ['host_permissions', 'web_accessible_resources', 'webRequest'] as const;
+
+/**
+ * The ONE check, run against the real artifacts AND against the deliberately malformed fixtures.
+ *
+ * Returns a list rather than asserting, so the same code path can be required to be empty for a
+ * shipped manifest and required to be NON-empty for a control. A checker that only ever runs on
+ * good input is indistinguishable from a checker that returns `[]` unconditionally.
+ */
+/**
+ * The engine's OWN answer about clipboard-write consent — the seam the two engines differ on.
+ *
+ * Gecko rejects the descriptor outright (`clipboard-write` is not a `PermissionName` there), which
+ * is not an error to route around: it IS the finding, and it is what the copy case branches on.
+ * Branching on a capability rather than on `navigator.userAgent` keeps the case honest about WHY
+ * the engines diverge instead of merely noting THAT they do.
+ */
+async function clipboardWriteConsent(): Promise<PermissionState | 'unsupported'> {
+  try {
+    const status = await navigator.permissions.query({
+      name: 'clipboard-write' as PermissionName,
+    });
+    return status.state;
+  } catch {
+    return 'unsupported';
+  }
+}
+
+/**
+ * Grant the BROWSER-CONTEXT clipboard-write consent — Chromium only, over CDP.
+ *
+ * ★ THIS IS A USER CONSENT, NOT A MANIFEST PERMISSION, and the distinction is the whole task.
+ * `Browser.grantPermissions` needs the `browserContextId` because a Playwright page lives in a
+ * non-default context; without it the grant lands elsewhere and the state stays `prompt` (measured).
+ * Nothing is rebuilt, nothing is re-manifested — only the browser's consent moves.
+ */
+let consentGranted = false;
+
+async function grantClipboardWriteConsent(): Promise<void> {
+  consentGranted = true;
+  const info = (await cdp().send('Target.getTargetInfo', {} as never)) as {
+    targetInfo?: { browserContextId?: string };
+  };
+  await cdp().send('Browser.grantPermissions', {
+    origin: location.origin,
+    browserContextId: info?.targetInfo?.browserContextId,
+    permissions: ['clipboardSanitizedWrite'],
+  } as never);
+}
+
+/** Focus (the group is `pointer-events:none` until revealed), REAL-click, wait for the settle. */
+async function realClickSettles(button: HTMLButtonElement): Promise<string> {
+  // The click is Playwright's REAL mouse — a trusted event carrying the user activation both
+  // engines require of an async clipboard write. A dispatched `click()` would not carry it, which
+  // is exactly the difference between this section and the stubbed ones above.
+  button.focus();
+  await userEvent.click(button);
+  return until(() => {
+    const s = button.getAttribute(DIAGRAM_ACTION_STATE_ATTR);
+    return s === 'done' || s === 'failed' ? s : null;
+  });
+}
+
+function capabilityViolations(manifest: Record<string, unknown>): string[] {
+  const found: string[] = [];
+  const perms = manifest.permissions;
+  if (!Array.isArray(perms)) found.push('permissions is missing or not an array');
+  else if (perms.length > 0) found.push(`permissions requests: ${perms.join(', ')}`);
+  for (const key of CAPABILITY_KEYS) {
+    if (manifest[key] !== undefined) found.push(`forbidden key present: ${key}`);
+  }
+  return found;
+}
+
+describe('★ 7.3 — the UNSTUBBED half: the engine’s own clipboard and the anchor’s own click', () => {
+  beforeEach(() => {
+    // The file-wide recorders come OFF. From here down `navigator.clipboard` is the browser's and
+    // the capturing `preventDefault` is gone, so the anchor's default action stands. Both
+    // `restore()`s are idempotent, which is what lets `afterEach` still call them.
+    clipboard.restore();
+    saves.restore();
+  });
+
+  afterEach(async () => {
+    // Undo any consent this section granted, so the browser context leaves these files as it found
+    // them. Guarded by the flag rather than by an engine sniff: `cdp()` is Chromium-only.
+    if (!consentGranted) return;
+    consentGranted = false;
+    await cdp().send('Browser.resetPermissions', {} as never);
+  });
+
+  it('is talking to the browser’s own clipboard — no own property, `write` is [native code]', () => {
+    // HARNESS SANITY. Without this, every assertion below could be passing against the recorder
+    // installed in the file-wide `beforeEach` and the section would prove the opposite of its name.
+    expect(Object.getOwnPropertyDescriptor(navigator, 'clipboard')).toBeUndefined();
+    expect(typeof navigator.clipboard?.write).toBe('function');
+    expect(String(navigator.clipboard.write)).toContain('[native code]');
+
+    // CONTROL: these same checks DO fire on a recorder, so their agreement above is a fact about
+    // this page rather than about assertions that cannot tell the two apart.
+    const recorder = stubClipboard();
+    try {
+      expect(Object.getOwnPropertyDescriptor(navigator, 'clipboard')).toBeDefined();
+      expect(String(navigator.clipboard.write)).not.toContain('[native code]');
+    } finally {
+      recorder.restore();
+    }
+  });
+
+  it('a REAL click writes an image to the REAL clipboard — and what gates it is CONSENT, not the manifest', async () => {
+    const { figure } = await oneFigure();
+    const button = actionIn(figure, DIAGRAM_COPY_ACTION);
+
+    // NOTHING-BEFORE: `data-state` is the idle value until the click causes otherwise.
+    expect(button.getAttribute(DIAGRAM_ACTION_STATE_ATTR)).not.toBe('done');
+
+    const consent = await clipboardWriteConsent();
+
+    if (consent === 'unsupported') {
+      // ── FIREFOX ──────────────────────────────────────────────────────────────────────────────
+      // Gecko has no `clipboard-write` permission to ask for or to grant — the descriptor is not
+      // a valid `PermissionName` there at all. The gesture IS the whole gate, so this is the
+      // §3-6 claim in its strongest form: a real trusted click, a real PNG, the engine's real
+      // clipboard, and nothing granted to anybody.
+      expect(await realClickSettles(button)).toBe('done');
+    } else {
+      // ── CHROMIUM: THE A-B ABLATION ───────────────────────────────────────────────────────────
+      // Blink DOES gate the write on the Permissions-API `clipboard-write` consent, and a
+      // Playwright browser context leaves that at `prompt` (a headless window is never the
+      // OS-focused active tab that real Chrome auto-grants). So the two arms below run THE SAME
+      // BUILD, THE SAME BUTTON and THE SAME BYTES, and move exactly one variable — the browser's
+      // user consent. `failed` before, `done` after.
+      //
+      // ★ THAT IS THE POINT. The variable that flips the outcome is a BROWSER CONSENT, granted
+      // here over CDP at the browser-context level. It is NOT a manifest key: `.output/` is not
+      // rebuilt between the arms, and the built-manifest case below reads `permissions: []` from
+      // the very artifact this session exercised. `clipboardWrite` in a manifest is merely one
+      // route to this same consent for an extension origin — this proves the write path itself
+      // asks the manifest for nothing.
+      //
+      // ★ WHAT THIS DOES NOT PROVE, STATED SO NOBODY READS MORE INTO A GREEN: that a focused,
+      // headful Chrome auto-grants the consent to a gesture-driven write. That is real-Chrome
+      // behaviour a Playwright context cannot exhibit, and it is the one leg of §3-6 that stays
+      // a documentation finding rather than a build.
+      // The OFF arm is PINNED, not conditional: an ablation whose off-arm can quietly not run is
+      // no ablation at all. If Playwright ever starts auto-granting, this reds and says so.
+      expect(
+        consent,
+        'the context no longer starts at `prompt` — the OFF arm of the ablation is void and this ' +
+          'case needs re-deriving, not relaxing',
+      ).toBe('prompt');
+      expect(
+        await realClickSettles(button),
+        'Blink accepted the write with the consent at `prompt` — the OFF arm did not fire',
+      ).toBe('failed');
+
+      await grantClipboardWriteConsent();
+      expect(await clipboardWriteConsent()).toBe('granted');
+
+      // Clear the settled attribute so `until()` cannot return arm one's answer.
+      button.removeAttribute(DIAGRAM_ACTION_STATE_ATTR);
+      expect(
+        await realClickSettles(button),
+        'the real clipboard write did not resolve even with consent granted — if this is a ' +
+          'NotAllowedError then a manifest permission IS required, which is an AGENTS.md #4 ' +
+          'event and a hard stop, not a test to relax',
+      ).toBe('done');
+    }
+
+    expect(button.textContent).toBe('Copied');
+    expect(statusIn(figure).textContent).toContain('copied');
+  });
+
+  it('a REAL click downloads an SVG through plain `<a download>` — nothing cancelled it', async () => {
+    const { figure } = await oneFigure();
+    const button = actionIn(figure, DIAGRAM_DOWNLOAD_ACTION);
+
+    // A PASSIVE observer: it records and returns. No `preventDefault`, so the engine performs the
+    // download for real — the difference from `captureDownloads()` above, which cancels it.
+    const seen: { name: string; href: string; prevented: boolean }[] = [];
+    const onClick = (event: Event): void => {
+      const target = event.target;
+      if (!(target instanceof HTMLAnchorElement) || !target.hasAttribute('download')) return;
+      seen.push({ name: target.download, href: target.href, prevented: event.defaultPrevented });
+    };
+    document.addEventListener('click', onClick, true);
+
+    try {
+      expect(seen).toHaveLength(0);
+
+      // No consent is granted here on EITHER engine — `<a download>` consults no Permissions API
+      // and no manifest key. That it settles `done` untouched is the §3-6 download claim, built.
+      expect(await realClickSettles(button)).toBe('done');
+
+      // The anchor really was clicked, really carried a `blob:` URL minted over bytes already in
+      // this page, and really was left to its default action. No `chrome.downloads` anywhere on
+      // the path — this is the plain web platform, which is the §3-6 claim being re-proven.
+      expect(seen).toHaveLength(1);
+      expect(seen[0].name).toBe('diagram-1.svg');
+      expect(seen[0].href.startsWith('blob:')).toBe(true);
+      expect(
+        seen[0].prevented,
+        'the default action was cancelled — the download did not happen',
+      ).toBe(false);
+      expect(button.textContent).toBe('Downloaded');
+    } finally {
+      document.removeEventListener('click', onClick, true);
+    }
+  });
+});
+
+describe('★ 7.3 — the manifests the build actually emitted', () => {
+  it('the capability check REDS on a malformed manifest — it is capable of failing', () => {
+    // The non-vacuity control §7.3 names, and the reason the skip below is tolerable: this runs
+    // everywhere, including the CI leg where `.output/` does not exist.
+    expect(capabilityViolations({ permissions: [], action: {} })).toEqual([]);
+
+    expect(capabilityViolations({ permissions: ['clipboardWrite'] })).toEqual([
+      'permissions requests: clipboardWrite',
+    ]);
+    expect(capabilityViolations({ permissions: ['downloads', 'tabs'] })).toEqual([
+      'permissions requests: downloads, tabs',
+    ]);
+    expect(
+      capabilityViolations({ permissions: [], web_accessible_resources: ['diagram.svg'] }),
+    ).toEqual(['forbidden key present: web_accessible_resources']);
+    expect(capabilityViolations({ permissions: [], host_permissions: ['<all_urls>'] })).toEqual([
+      'forbidden key present: host_permissions',
+    ]);
+    expect(capabilityViolations({ action: {} })).toEqual(['permissions is missing or not an array']);
+  });
+
+  // SKIPS WITHOUT A BUILD — by name, in the reporter's skip count, never silently green. See the
+  // section header: ci.yml runs this project before `pnpm build` and never builds Firefox.
+  it.skipIf(BUILT_ENGINES.length === 0)(
+    'BOTH built manifests still declare `permissions: []` with no web_accessible_resources',
+    () => {
+      // Both engines, from `.output/`, after the two actions above ran for real in this same
+      // browser session. This is the absence DESPITE exercise.
+      expect(BUILT_ENGINES).toEqual([
+        '/.output/chrome-mv3/manifest.json',
+        '/.output/firefox-mv3/manifest.json',
+      ]);
+
+      for (const [path, manifest] of Object.entries(BUILT_MANIFESTS)) {
+        expect(manifest.permissions, `${path} has no permissions key`).toEqual([]);
+        expect(capabilityViolations(manifest), `${path} asks for a capability`).toEqual([]);
+        // The build emitted a real manifest, not an empty object that would pass by accident.
+        expect(manifest.manifest_version, `${path} is not an MV3 manifest`).toBe(3);
+        expect(manifest.name).toBe('Peekover');
+      }
+    },
+  );
 });
