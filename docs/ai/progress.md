@@ -65,7 +65,11 @@ six milestones landed almost entirely inside persona #1's column,
 it is the one item that needs a dependency Peekover has never installed.
 
 **Implementation runs task-by-task from `specs/007-mermaid-diagrams/tasks.md`, one commit per task,
-this pointer advancing in that same commit.** Next: **6.2** — groups 1 (1.1 · 1.2 · 1.3) and 2 (2.1 ·
+this pointer advancing in that same commit.** Next: **8.3** — *(corrected by 8.2: this line still read
+`Next: 6.2` at `df256d6`, four numbered tasks behind § Now. That is the pointer-lag failure this file
+warns about at § Now, found by 8.2's self-ref sweep rather than by the task that caused it. Groups 6 and
+7 are complete and 8.1 · 8.2 are done; **group 8 remains OPEN with 8.3 · 8.4 · 8.5**.)* Groups 1 (1.1 ·
+1.2 · 1.3) and 2 (2.1 ·
 2.2) are complete, and the two D-1/D-6 ADDENDUM implementations that sit between them and group 3 —
 the `secure` hardening (`3d7c8ed`) and the `<style>` CSS pass (`367d051`) — are both landed. Neither
 is a numbered task, so neither advanced this pointer; `ff8f323`'s `<style>` blocker is CLOSED.
@@ -144,7 +148,24 @@ through the engine's own clipboard and the anchor's own default action, then bot
 re-read from `.output/` (654 B Cr / 770 B Fx, `permissions: []`, no `web_accessible_resources`). The
 finding is that the two engines gate the clipboard differently and **neither gate is a manifest key** —
 Firefox has no such permission at all, Blink wants a browser CONSENT, proven by an A-B ablation with
-nothing rebuilt between the arms. **8.1 IS NOW DONE** (D-10 re-baseline, group 8 open). **NEXT: 8.2** — D-8 + D-9 cache-bound and typical-case measurement.
+nothing rebuilt between the arms. **8.1 IS NOW DONE** (D-10 re-baseline, group 8 open).
+**TASK 8.2 IS NOW DONE — D-8 + D-9 MEASURED, AND NOTHING CHOSEN.** *(GROUP 8 REMAINS OPEN: 8.3, 8.4, 8.5.)*
+What D-8 and D-9 actually bound, resolved from `decisions.md` / plan §0 / spec §8 BEFORE measuring,
+because a measurement aimed at the wrong quantity produces confident useless numbers: **D-8 is the
+three-axis CACHE BOUND** — `count` (rows, placeholder **100**), `totalBytes` (bytes over stored SVG,
+placeholder **8 MiB**), `maxAgeMs` (ms on `lastUsed`, placeholder **30 days**), all global,
+oldest-first, whichever binds first (D-4 settled the axes; the values are open). **D-9 is NOT a cap at
+all** — it is the **typical-case (1–3 diagram) time-to-rendered TARGET**, in milliseconds, that 8.4
+sets from measurement. Both curves are in § Baselines → *THE D-8 / D-9 BOUNDS MEASUREMENT*. Headlines,
+none of which is a recommendation: **the count axis binds in every session shape measured and the byte
+axis never does** (it settles at ~51% of the 8 MiB cap while `count` sits pegged at 100/100); the
+eviction cliff at the placeholder is **TOTAL, not graded** — 50 diagrams × 2 themes = 100 rows is a
+FULL flip-back hit, 51 diagrams = 102 rows is a **full flip-back MISS of all 51**, because each
+re-render's write evicts the next row the same pass is about to need; and D-9's cold cost is
+**~15–17 ms/diagram (Cr) / ~15–22 ms (Fx)**, near-linear, with **time-to-first-diagram flat at
+~14–18 ms regardless of N**. A-B-A resolved (drift +3.0% Cr / −0.6% Fx against 4–6× effects).
+**Scratch harness deleted; both bundles byte-identical; no value chosen, no threshold committed.**
+**NEXT: 8.3** — D-11's placeholder-motion fixtures (and the reduced-motion half that IS a test).
 
 - **DISCHARGED, recorded so it is not re-raised: the persona-#1 completion decision IS NOW BANKED** in
   `decisions.md` (`87cd026`, the M7 DIRECTION entry). The archive pass's flag is closed.
@@ -725,6 +746,205 @@ ignores the bare `--`, which is why the perf harnesses never exposed this.
   (retro 2026-07-27, finding 1): **every empirical claim needs a positive control that fires under the
   same conditions the negative claim disclaims.** Green tells you neither.
 
+
+### THE D-8 / D-9 BOUNDS MEASUREMENT (spec 007 task 8.2, measured 2026-07-31 at HEAD `df256d6`)
+
+*★ **PRODUCES NUMBERS. CHOOSES NOTHING.** Every figure below is input to **8.4**, the human gate that
+picks the values; **8.5** implements them. Nothing here is a recommendation, and where the shape of a
+curve makes one value look obvious that is **still not the answer until 8.4 says so**. No threshold was
+committed — a `bound < N` test would flake AND smuggle in the number 8.4 owns (5.2's rule).*
+*Method: 5.2's, unchanged — a **scratch `tests/browser` file, run once per engine and DELETED**;
+production untouched; both bundles byte-identical at the commit.*
+
+**WHAT D-8 AND D-9 ACTUALLY BOUND** *(resolved from plan §0 D-8/D-9 + spec §8-1/§8-2 BEFORE measuring —
+the premise was checked rather than assumed, and one half of it was wrong)*:
+
+| decision | what it bounds | units | placeholder (`src/app/diagramCache.ts`) |
+|---|---|---|---|
+| **D-8** `count` | global rows in `diagramMeta`; a row is one (diagram × effective theme) | rows | `PROPOSED_DIAGRAM_COUNT` = **100** |
+| **D-8** `totalBytes` | global bytes over stored SVG | bytes | `PROPOSED_DIAGRAM_TOTAL_BYTES` = **8 MiB** (8,388,608) |
+| **D-8** `maxAgeMs` | global age on `lastUsed` — the ABANDONMENT valve, not a capacity bound | ms | `PROPOSED_DIAGRAM_MAX_AGE_MS` = **30 days** (2,592,000,000) |
+| **D-9** | **NOT A CAP.** The typical-case (1–3 diagram) **time-to-rendered TARGET** 8.4 sets | ms | *none — no constant exists yet* |
+
+**★ D-8 is three caps; D-9 is a performance target.** Recorded explicitly because "D-8 and D-9 are the
+two numeric caps" is the natural and WRONG reading, and it aims the measurement at a quantity that does
+not exist.
+
+**CELL 1 — D-8a: rendered-SVG bytes, 7 kinds × 2 sizes, read back through the production key**
+(`diagramCacheKey` → `readDiagram` → `bytesOf`, theme `light`; control: engine invoked exactly 14/14):
+
+| kind | small (Cr) | large (Cr) | small (Fx) | large (Fx) |
+|---|---|---|---|---|
+| flowchart | 14,772 | 109,768 | 15,141 | 112,223 |
+| sequence | 23,782 | 42,178 | 23,790 | 42,182 |
+| class | 18,233 | 75,932 | 18,884 | 80,106 |
+| state | 28,030 | 84,590 | 28,221 | 88,533 |
+| ER | 10,439 | 135,513 | 10,675 | 129,640 |
+| gantt | 11,209 | 24,347 | 11,218 | 24,395 |
+| pie | 4,317 | 9,785 | 4,331 | 9,770 |
+
+All 14, Chromium: **min 4,317 · median 24,064 · max 135,513 · mean 42,350** (Fx: 4,331 / 24,092 /
+129,640 / 42,794). SMALL median **14,772**; LARGE median **75,932**. **A rendered SVG is far larger than
+a "small picture" intuition suggests** — the smallest measured is 4.2 KB and the largest 132 KB, a **31×
+span across kinds**, which is why the byte axis cannot be reasoned about from the count axis.
+
+**CELL 2 — D-8b: the 50-diagram fixture's footprint** (the fixture 5.2 and 8.1 used; controls: 50 engine
+invocations on each theme pass):
+
+| | rows | bytes | mean/row | vs count 100 | vs bytes 8 MiB |
+|---|---|---|---|---|---|
+| one theme (Cr) | 50 | 690,908 | 13,818 | 50% | 8.2% |
+| **two themes (Cr)** | **100** | **1,382,746** | 13,827 | **100%** | **16.5%** |
+| two themes (Fx) | 100 | 1,413,896 | 14,139 | 100% | 16.9% |
+
+**CELL 3 — ★ THE EVICTION CLIFF, MEASURED ACROSS THE PLACEHOLDER, ON THE REAL IDB STORE.** N diagrams
+rendered in `light`, flipped to `dark`, flipped BACK; the cell is the engine invocations on the flip
+back. **Identical on both engines.**
+
+| N (diagrams) | rows wanted (2N) | pass A | pass B | **flip-back re-renders** | rows after B |
+|---|---|---|---|---|---|
+| 25 | 50 | 25 | 25 | **0** — full hit | 50 |
+| 45 | 90 | 45 | 45 | **0** — full hit | 90 |
+| 49 | 98 | 49 | 49 | **0** — full hit | 98 |
+| **50** | **100** | 50 | 50 | **0** — full hit, **by one row** | 100 |
+| **51** | **102** | 51 | 51 | **51 — FULL MISS** | 100 |
+| 55 | 110 | 55 | 55 | **55 — FULL MISS** | 100 |
+| 60 | 120 | 60 | 60 | **60 — FULL MISS** | 100 |
+
+**★ THE CLIFF IS TOTAL, NOT GRADED — and this is the single most decision-relevant number here.** The
+arithmetic prediction was **2** re-renders at N=51 (102 rows − a 100 cap). The measurement is **51**.
+Cause, read off the algorithm: on the flip back the A-theme rows are globally oldest, so the first
+miss's write pushes past the cap and evicts **the next A row the same pass is about to ask for**. Every
+subsequent read misses for the same reason — a **self-defeating cascade**. One row over the bound does
+not cost one re-render; **it costs the entire cache's value for that document.** Stated, not acted on:
+choosing where that discontinuity sits is 8.4's.
+
+**CELL 4 — the bound SWEEP, over the production planner.** `planDiagramWrite` is the shipped eviction
+algorithm, pure and bounds-parameterised, so replaying a session through it at candidate bounds measures
+**the shipped algorithm under other numbers** without touching production. **VALIDATED FIRST** against
+CELL 3's real IDB store — same sequence, production bounds — and it reproduces every point **exactly**
+(0/0/0/0/51/55/60 at N = 25/45/49/50/51/55/60). An unvalidated projection is a model, not a measurement.
+
+*4b — COUNT bound (down) × N diagrams (across); cell = flip-back re-renders, `0` = full hit:*
+
+| count \ N | 1 | 3 | 10 | 25 | 50 | 75 | 100 | 150 | 200 |
+|---|---|---|---|---|---|---|---|---|---|
+| 25 | 0 | 0 | 0 | 25 | 50 | 75 | 100 | 150 | 200 |
+| 50 | 0 | 0 | 0 | 0 | 50 | 75 | 100 | 150 | 200 |
+| 75 | 0 | 0 | 0 | 0 | 50 | 75 | 100 | 150 | 200 |
+| **100** *(placeholder)* | 0 | 0 | 0 | 0 | **0** | 75 | 100 | 150 | 200 |
+| 125 | 0 | 0 | 0 | 0 | 0 | 75 | 100 | 150 | 200 |
+| 150 | 0 | 0 | 0 | 0 | 0 | 0 | 100 | 150 | 200 |
+| 200 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 150 | 200 |
+| 300 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 200 |
+| 400 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+**Every cell is either 0 or N.** The observed rule across the whole grid: **a two-theme flip-back is a
+full hit iff `count ≥ 2N`, and otherwise a full miss** — there is no partial-credit region anywhere in
+the sweep. Note the count bound buys nothing between 100 and 125, or between 150 and 200: **the curve is
+a staircase whose steps are at `2N`, not a smooth trade.**
+
+*4c — BYTES bound (across) × per-row bytes (down), after 50 diagrams × 2 themes; cell = surviving rows /
+which axis bound:*
+
+| bytes/row \ cap | 1 MB | 2 MB | 4 MB | 8 MB *(placeholder)* | 16 MB | 32 MB |
+|---|---|---|---|---|---|---|
+| 4,317 *(pie, small)* | 100 / count | 100 / count | 100 / count | **100 / count** | 100 / count | 100 / count |
+| 13,827 *(the 50-fixture)* | 75 / bytes | 100 / count | 100 / count | **100 / count** | 100 / count | 100 / count |
+| 24,064 *(all-kinds median)* | 43 / bytes | 87 / bytes | 100 / count | **100 / count** | 100 / count | 100 / count |
+| 42,350 *(all-kinds mean)* | 24 / bytes | 49 / bytes | 99 / bytes | **100 / count** | 100 / count | 100 / count |
+| 80,106 *(class large, Fx)* | 13 / bytes | 26 / bytes | 52 / bytes | **100 / count** | 100 / count | 100 / count |
+| 135,513 *(ER large, Cr — the largest measured)* | 7 / bytes | 15 / bytes | 30 / bytes | **61 / bytes** | 100 / count | 100 / count |
+
+*4d — the crossover is exact arithmetic, so it is stated as a formula rather than a table:* **bytes binds
+before count iff mean row bytes > `totalBytes / count`.** At the placeholders that is **83,886 B/row** —
+above every measured *small* diagram (4.3–28.0 KB) and above the all-kinds mean (42.4 KB), but **below
+three of the seven measured LARGE diagrams** (Chromium: ER 135,513 · flowchart 109,768 · state 84,590;
+class 75,932 falls just under, and sequence / gantt / pie are far under). So the byte axis is reachable
+only by a cache filled predominantly with the large end of the distribution.
+
+**CELL 5 — D-8's binding-axis question, over a realistic reading session.** Documents opened in
+sequence, byte sizes drawn from CELL 1's **measured** distribution (all 7 kinds at both sizes, cycled —
+not a single mean, because the byte axis's whole reason for existing is the document carrying a few very
+large diagrams); every third document also re-read in a second theme. Identical on both engines.
+
+| session shape | first eviction | binding axis | steady state |
+|---|---|---|---|
+| typical — 2 diagrams/doc | **document 39** | **COUNT** | rows pegged 100/100; bytes ~4.18–4.45 MB = **~50–53% of the 8 MiB cap** |
+| heavy — 8 diagrams/doc | **document 10** | **COUNT** | rows pegged 100/100; bytes ~4.24–4.42 MB = **~51–53%** |
+
+Single-oversized refusals: **0** in both shapes — no measured diagram approaches the 8 MiB whole-write
+refusal. **PER-AXIS ANSWER, which is what §8.2 asks for** *(the D-8 revisit-when: an axis that never
+binds is chosen wrong)*:
+- **`count` — BINDS, always, in every shape measured.** It is the only axis that ever fires here.
+- **`totalBytes` — NEVER BINDS at the placeholders.** It saturates at ~51% and stops, because `count`
+  caps the row population first. It is reachable only at ~84 KB/row, i.e. a cache filled entirely with
+  the *large* end of the measured distribution. **Whether that makes 8 MiB wrong, or correctly a safety
+  valve that should rarely fire, is 8.4's call — it is not decided here.**
+- **`maxAgeMs` — CANNOT bind inside a session; it is a calendar property.** The axis is shown FIRING and
+  NOT FIRING rather than asserted: a row at `lastUsed = 0` planned against `now = cap+1` evicts
+  `["old"]`; the same row against `now = 1` evicts `[]`.
+
+**CELL 6 — D-9: the typical-case timing curve.** 7 reps, engine pre-warmed (the one-off
+`import('mermaid')` is discarded, or it would land entirely in the N=1 arm). **A-B-A**: a 10-diagram
+cold render interleaved before and after every B block. **Origin is `enhanceDiagrams`** unless the row
+says *document-open*, which starts before `mount`.
+
+*A-vs-A (the machine-state control):* Cr **A-early median 148.8 / A-late 153.2 → drift +3.0%**; Fx
+**164 / 163 → −0.6%**. **The effects below are 4–6×. The bracket holds, so the run is RESOLVED** — not
+8.1's not-resolvable case.
+
+| N | engine | cold: time-to-first | cold: all-resolved (floor / median) | cold: ms/diagram | warm: all-resolved (floor / median) | warm: ms/diagram | **cold/warm** |
+|---|---|---|---|---|---|---|---|
+| 1 | Cr | 14.1 | 14.0 / **14.1** | 14.1 | 2.4 / **3.0** | 3.0 | **4.7×** |
+| 1 | Fx | 16 | 14 / **16** | 16.0 | 3 / **4** | 4.0 | **4.0×** |
+| 3 | Cr | 15.0 | 39.9 / **47.5** | 15.8 | 5.6 / **8.4** | 2.8 | **5.7×** |
+| 3 | Fx | 15 | 40 / **46** | 15.3 | 9 / **10** | 3.3 | **4.6×** |
+| 10 | Cr | 16.0 | 141.1 / **156.8** | 15.7 | 22.6 / **29.5** | 3.0 | **5.3×** |
+| 10 | Fx | 15 | 146 / **171** | 17.1 | 34 / **39** | 3.9 | **4.4×** |
+| 50 | Cr | 16.7 | 824.6 / **839.6** | 16.8 | 122.4 / **130.7** | 2.6 | **6.4×** |
+| 50 | Fx | 18 | 997 / **1098** | 22.0 | 210 / **271** | 5.4 | **4.1×** |
+
+Spreads (min–max), cold all-resolved: Cr 14.0–18.3 / 39.9–51.9 / 141.1–193.0 / 824.6–1067.3; Fx
+14–18 / 40–52 / 146–224 / 997–1221. Markdown mount (text paint) is **0.2–1.4 ms** at every N on both
+engines — the diagram cost is entirely post-paint, as §3.3 requires.
+
+**THE SHAPE BETWEEN THE POINTS, OBSERVED RATHER THAN ASSUMED LINEAR** (plan §7's words):
+- **Cold is near-linear** in N. Amortized cost drifts **14.1 → 15.8 → 15.7 → 16.8 ms/diagram** on
+  Chromium (+19% across a 50× range) and **16 → 15.3 → 17.1 → 22 ms** on Firefox (+38%, all of it in
+  the last leg). **Firefox is ~1.3× Chromium at N=50** — consistent in direction with 5.2's ~1.7× on the
+  flip, smaller in size.
+- **★ Time-to-first-diagram is FLAT — ~14–18 ms cold and ~2.4–7 ms warm, at N=1 and at N=50 alike.**
+  The enhancer is sequential, so the first diagram costs the same whatever follows it. **D-9 has three
+  named axes and they do not move together**: the amortized and all-resolved axes scale with N,
+  time-to-first-diagram does not.
+- **Warm is ~2.6–5.4 ms/diagram**, i.e. the cache is worth **4–6×** on the whole-document axis at every N
+  measured.
+
+**§8's 50-diagram OUTER BOUNDS, verified at that size — stated, not asserted as a test:**
+
+| | Chromium (floor / median / max) | Firefox (floor / median / max) | inherited bound |
+|---|---|---|---|
+| first open, document-open → all 50 resolved | 825.5 / **840.5** / 1068.2 ms | 998 / **1099** / 1223 ms | **≤ 5 s** — met, ~4.5× headroom |
+| cached reopen, same | 123.3 / **131.6** / 229.2 ms | 213 / **273** / 313 ms | **< 1 s** — met, ~3.7× headroom |
+
+**★ INSTRUMENT NON-VACUITY, and the defect it caught.** The instrument must be shown to MOVE with the
+thing it measures, or a flat reading means nothing. Three ways, all shown: (1) CELL 3's flip-back counter
+moves **0 → 51** across the count bound, identically on both engines; (2) CELL 4b's sweep moves the cliff
+**with the bound** (`count ≥ 2N`), so the cliff is a property of the bound and not of the harness;
+(3) CELL 6's cold/warm ratio reads **4.0–6.4×**, in line with 5.2's ~5×.
+**MEASURED HARNESS DEFECT, found by that check and fixed before anything was recorded:** the first
+timing run used the existing 25 ms polling settle, which **floors every arm at ≥25 ms** — the N=1 cold
+arm and the N=1/N=3 warm arms all came back at ~25.5 ms and **the cold/warm ratio at N=1 read 1.0×**,
+which is the poll, not the cache. D-9 is *specifically* the 1–3-diagram case, so the floor sat directly
+on the quantity being measured. Replacing it with a `MutationObserver` on the `pending` attribute moved
+N=1 from 25.5 → **14.1 ms cold / 3.0 ms warm (1.0× → 4.7×)**. **Every D-9 number above is from the
+observer-driven settle.** A polled settle must not be used to time anything at this scale again.
+
+**WHAT 8.2 DID NOT DO:** no bound value chosen, no target chosen, no constant edited, no threshold test
+committed, no production file touched. `PROPOSED_DIAGRAM_COUNT` / `_TOTAL_BYTES` / `_MAX_AGE_MS` remain
+the placeholders 4.1 set. **8.4 reads this alongside 5.2's flip cost and 8.1's package/first-paint
+numbers, and chooses; 8.5 implements.**
 
 ### Watch-mode numbers (spec 005 task 5.1, measured 2026-07-21 — `pnpm perf:watch`)
 *Same machine and protocol as the table above. **NOT a gate**: no threshold is asserted. Re-run twice at
