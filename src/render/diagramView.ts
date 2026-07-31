@@ -35,6 +35,23 @@ export const DIAGRAM_FIGURE_CLASS = 'peekover-diagram';
 /** Class on §3.8's inline marker. Group 7.1 owns its a11y treatment (§3.5 rows 15, 20). */
 export const DIAGRAM_ERROR_CLASS = 'peekover-diagram-error';
 
+/** Class on §3.11's per-diagram control group. Positioned INSIDE the figure (row 11). */
+export const DIAGRAM_ACTIONS_CLASS = 'peekover-diagram-actions';
+
+/** Class on each action button in that group. */
+export const DIAGRAM_ACTION_CLASS = 'peekover-diagram-action';
+
+/** Class on the per-diagram polite live region (row 20) — §4's "a failing action says so". */
+export const DIAGRAM_STATUS_CLASS = 'peekover-diagram-status';
+
+/** `data-action` on the two buttons. Exported so the suite names them once, not twice. */
+export const DIAGRAM_COPY_ACTION = 'copy';
+export const DIAGRAM_DOWNLOAD_ACTION = 'download';
+
+/** `data-state` on a button once its action has resolved — row 15's third carrier, beside the
+ *  visible text and the accessible name. It is the ONLY one of the three a colour keys off. */
+export const DIAGRAM_ACTION_STATE_ATTR = 'data-state';
+
 /**
  * The three states a fence can be in.
  *
@@ -84,9 +101,29 @@ export function insertDiagramPlaceholder(pre: Element): HTMLElement {
  *
  * Order matters on a slow frame: the content is committed BEFORE the source is hidden, so there is
  * no instant in which neither is on screen.
+ *
+ * ── WHY THE CONTROL GROUP IS RE-INSERTED RATHER THAN REBUILT (§3.11, row 14) ───────────────────
+ *
+ * This function is the ONE seam a figure becomes `rendered` through, and it is called TWICE per
+ * figure in the ordinary life of a document: once on the first render, and again on every theme
+ * flip, where `drawStaleFigures` hands it a fresh SVG for the SAME figure element. So the group is
+ * built on the first call and MOVED BACK IN on every later one — the same button objects, with the
+ * same listeners, across a swap that replaces everything they act on.
+ *
+ * That is deliberate, and it is what gives row 14 a defect to have. A handler that captured the
+ * `<svg>` (or its serialization) when the group was built would be holding a node the next theme
+ * flip detaches, and would copy the PREVIOUS theme's picture while the user looks at the current
+ * one. So no handler captures anything: each resolves its figure from the button and its `<svg>`
+ * from the figure, at ACTIVATION time. `diagramActions.browser.test.ts` reverts to a build-time
+ * capture and requires the saved bytes to go red naming the stale node.
+ *
+ * The swap stays ONE synchronous `replaceChildren` — `diagramTheme.browser.test.ts` samples the
+ * figure per frame and requires it never to be seen without an `<svg>` — and the content stays
+ * FIRST, which `diagramEnhancer.test.ts:232` pins.
  */
 export function markDiagramRendered(pre: Element, figure: HTMLElement, content: Node): void {
-  figure.replaceChildren(content);
+  const controls = diagramControlsOf(figure) ?? buildDiagramControls(figure);
+  figure.replaceChildren(content, controls.group, controls.status);
   figure.setAttribute(DIAGRAM_STATE_ATTR, 'rendered');
   figure.removeAttribute('aria-hidden');
   pre.setAttribute(DIAGRAM_STATE_ATTR, 'rendered');
@@ -118,4 +155,304 @@ export function markDiagramFailed(pre: Element, figure: HTMLElement, reason: str
   marker.className = DIAGRAM_ERROR_CLASS;
   marker.textContent = `Diagram not shown — ${reason}.`;
   pre.after(marker);
+}
+
+// ── §3.11: THE PER-DIAGRAM CONTROL GROUP (task 7.1) ───────────────────────────────────────────
+//
+// Copy-as-image and download-as-SVG, revealed on hover AND on keyboard focus. Not a context menu:
+// `contextMenus` is a manifest permission and neither action may need one (§3.11, §7-6).
+//
+// ── THE ARTIFACT BOTH ACTIONS OPERATE ON IS THE ONE ON SCREEN ────────────────────────────────
+//
+// Both read the figure's LIVE `<svg>` — the artifact `diagramEnhancer` sanitized through the §3.5
+// profile and adopted out of an inert `<template>`. Neither re-renders, and neither can reach the
+// engine's raw pre-sanitize string, because this module has no engine and no cache: the only SVG
+// in scope is the one the reader is showing. That is a correctness property (what you copy is what
+// you see) and a security one (a path back to the raw string would re-admit the `<style>` and
+// `<foreignObject>` the profile stripped). It is also why the raster below cannot taint its canvas
+// — the sanitized artifact carries no external reference for the canvas to be tainted by.
+//
+// ── NEITHER ACTION IS A NETWORK CALL (AGENTS.md #1, §3-6) ────────────────────────────────────
+//
+// `URL.createObjectURL` mints a `blob:` URL over bytes already in this page; loading one into an
+// `<img>` and handing another to `<a download>` are same-document reads, not requests. Nothing here
+// is reachable except from a click. Task 7.3 re-proves both empirically, in the loaded build, and
+// re-reads both built manifests for `permissions: []`.
+
+/** The MIME types the two products carry. Named once — the suite asserts against these. */
+const DIAGRAM_PNG_MIME = 'image/png';
+const DIAGRAM_SVG_MIME = 'image/svg+xml';
+const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+
+/** The group and the live region, as {@link markDiagramRendered} moves them across a re-theme. */
+interface DiagramControls {
+  readonly group: HTMLElement;
+  readonly status: HTMLElement;
+}
+
+/** The group and status already on a figure, or `null` on the first render. Read from the DOM
+ *  rather than a map: a WeakMap keyed by figure would be cross-mount state, which §3.3 forbids. */
+function diagramControlsOf(figure: HTMLElement): DiagramControls | null {
+  const group = figure.querySelector<HTMLElement>(`.${DIAGRAM_ACTIONS_CLASS}`);
+  const status = figure.querySelector<HTMLElement>(`.${DIAGRAM_STATUS_CLASS}`);
+  return group && status ? { group, status } : null;
+}
+
+/**
+ * Which diagram this is, counted over the figures in the same tree.
+ *
+ * Row 17's accessible names must carry the SELECTION as well as the action, and on a document with
+ * four diagrams "copy as an image" names no selection at all. The prologue inserts every
+ * placeholder before any render begins (`enhanceDiagrams`), so the count is complete and stable by
+ * the time any figure reaches `rendered`.
+ */
+function diagramOrdinal(figure: HTMLElement): number {
+  const root = figure.getRootNode() as ParentNode;
+  const figures = root.querySelectorAll?.(`figure.${DIAGRAM_FIGURE_CLASS}`);
+  const index = figures ? Array.prototype.indexOf.call(figures, figure) : -1;
+  return index < 0 ? 1 : index + 1;
+}
+
+/** The live `<svg>` of the figure a button belongs to, resolved at ACTIVATION time (row 14). */
+function currentDiagramSvg(figure: HTMLElement): SVGSVGElement {
+  const svg = figure.querySelector('svg');
+  if (!(svg instanceof SVGSVGElement)) throw new Error('this diagram is not on screen');
+  return svg;
+}
+
+/**
+ * The size to export at: what the reader is actually showing.
+ *
+ * `getBoundingClientRect` is the laid-out box, so a diagram the column scaled down exports at the
+ * size it is seen. The `viewBox` fallback covers the one case the rect cannot serve — an engine
+ * with no layout — and a diagram with neither is not exportable, which is a failure the live region
+ * reports rather than a silent 0x0 file.
+ */
+function diagramPixelSize(svg: SVGSVGElement): { width: number; height: number } {
+  const rect = svg.getBoundingClientRect();
+  if (rect.width >= 1 && rect.height >= 1) {
+    return { width: Math.round(rect.width), height: Math.round(rect.height) };
+  }
+  const box = (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number);
+  if (box.length === 4 && box[2] >= 1 && box[3] >= 1) {
+    return { width: Math.round(box[2]), height: Math.round(box[3]) };
+  }
+  throw new Error('this diagram has no measurable size');
+}
+
+/**
+ * The adopted artifact, serialized standalone.
+ *
+ * A CLONE, so nothing here can perturb what the reader is showing. `xmlns` is set because a
+ * serialized fragment out of an HTML document may carry none and a standalone file needs one;
+ * `width`/`height` are set because an `<img>` and a downloaded file both need intrinsic size. Only
+ * the inline `max-width` is dropped — mermaid sets it to keep the diagram inside the column, and it
+ * would otherwise clamp the raster below the size just measured. The rest of the inline style,
+ * including the background colour, is the picture and stays.
+ */
+function diagramSvgText(svg: SVGSVGElement, size: { width: number; height: number }): string {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute('xmlns', SVG_NAMESPACE);
+  clone.setAttribute('width', String(size.width));
+  clone.setAttribute('height', String(size.height));
+  clone.style.removeProperty('max-width');
+  return new XMLSerializer().serializeToString(clone);
+}
+
+/** Rasterize the serialized artifact to PNG through an `<img>` and a canvas. The `blob:` URL is
+ *  revoked in a `finally`, so a decode failure leaks nothing. */
+async function diagramPng(
+  doc: Document,
+  text: string,
+  size: { width: number; height: number },
+): Promise<Blob> {
+  const url = URL.createObjectURL(new Blob([text], { type: DIAGRAM_SVG_MIME }));
+  try {
+    const img = new Image(size.width, size.height);
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('this diagram could not be decoded'));
+      img.src = url;
+    });
+    const canvas = doc.createElement('canvas');
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('this diagram could not be drawn');
+    ctx.drawImage(img, 0, 0, size.width, size.height);
+    const png = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, DIAGRAM_PNG_MIME);
+    });
+    if (!png) throw new Error('this diagram could not be rasterized');
+    return png;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Copy the CURRENT figure's diagram to the clipboard as a PNG. */
+async function copyDiagramAsImage(figure: HTMLElement): Promise<void> {
+  const svg = currentDiagramSvg(figure);
+  const size = diagramPixelSize(svg);
+  const png = await diagramPng(figure.ownerDocument, diagramSvgText(svg, size), size);
+  const clipboard = navigator.clipboard;
+  if (!clipboard?.write) throw new Error('the clipboard is unavailable');
+  await clipboard.write([new ClipboardItem({ [DIAGRAM_PNG_MIME]: png })]);
+}
+
+/**
+ * Download the CURRENT figure's diagram as a standalone `.svg`.
+ *
+ * The anchor is put in the document before it is clicked and removed straight after: a detached
+ * anchor's `download` is honoured inconsistently across engines, and the element is gone again
+ * within the same synchronous block. Revocation is deferred a task so the engine has taken the blob
+ * before the URL dies.
+ */
+function downloadDiagramAsSvg(figure: HTMLElement, ordinal: number): void {
+  const svg = currentDiagramSvg(figure);
+  const size = diagramPixelSize(svg);
+  const text = `<?xml version="1.0" encoding="UTF-8"?>\n${diagramSvgText(svg, size)}`;
+  const doc = figure.ownerDocument;
+  const url = URL.createObjectURL(new Blob([text], { type: DIAGRAM_SVG_MIME }));
+  const anchor = doc.createElement('a');
+  anchor.href = url;
+  anchor.download = `diagram-${ordinal}.svg`;
+  anchor.hidden = true;
+  doc.body.appendChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    doc.defaultView?.setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+}
+
+/** One action's four strings: what the button says and is named, before and after it resolves. */
+interface DiagramActionCopy {
+  readonly action: string;
+  readonly idleText: string;
+  readonly doneText: string;
+  readonly failedText: string;
+  readonly idleName: (n: number) => string;
+  readonly doneName: (n: number) => string;
+  readonly failedName: (n: number) => string;
+  readonly doneStatus: (n: number) => string;
+  readonly failedStatus: (n: number) => string;
+}
+
+/**
+ * Row 17's names carry BOTH the selection and the action, in `themeControl`'s shape
+ * ("Theme: Auto. Activate for Light."). Row 15's state is carried by the visible text AND the
+ * accessible name AND `data-state` — a reader who cannot tell the highlighter from the paper still
+ * reads which of the two actions succeeded, and which diagram it was.
+ */
+const DIAGRAM_ACTION_COPY: readonly DiagramActionCopy[] = [
+  {
+    action: DIAGRAM_COPY_ACTION,
+    idleText: 'Copy image',
+    doneText: 'Copied',
+    failedText: 'Copy failed',
+    idleName: (n) => `Diagram ${n}. Activate to copy it as an image.`,
+    doneName: (n) => `Diagram ${n} copied as an image. Activate to copy it again.`,
+    failedName: (n) => `Diagram ${n} could not be copied as an image. Activate to try again.`,
+    doneStatus: (n) => `Diagram ${n} copied as an image.`,
+    failedStatus: (n) => `Diagram ${n} could not be copied as an image.`,
+  },
+  {
+    action: DIAGRAM_DOWNLOAD_ACTION,
+    idleText: 'Download SVG',
+    doneText: 'Downloaded',
+    failedText: 'Download failed',
+    idleName: (n) => `Diagram ${n}. Activate to download it as SVG.`,
+    doneName: (n) => `Diagram ${n} downloaded as SVG. Activate to download it again.`,
+    failedName: (n) => `Diagram ${n} could not be downloaded as SVG. Activate to try again.`,
+    doneStatus: (n) => `Diagram ${n} downloaded as SVG.`,
+    failedStatus: (n) => `Diagram ${n} could not be downloaded as SVG.`,
+  },
+];
+
+/**
+ * Build the control group and its live region for a figure that has just become `rendered`.
+ *
+ * Real `<button>`s with no `tabindex` of their own (row 16): a button is keyboard-operable and in
+ * the tab order natively, and the CSS reveals the group on `:focus-within` as well as on `:hover`,
+ * so the keyboard path is the same path. Nothing here registers a key handler — §3.11 and §4 both
+ * forbid a new global single-key shortcut, and the way to not have one is to not write one.
+ *
+ * The live region is `role="status"` and `hidden` while empty, `diffChrome.ts:193-199`'s shape: a
+ * polite region that is out of the accessibility tree until it has something to say (row 20).
+ *
+ * It is a `<div>` and NOT a `<p>`, which `diffChrome` can afford to be because it sits outside the
+ * reading column and this does not. A `<p>` here is a paragraph OF THE DOCUMENT as far as every
+ * `.peekover-reader p` rule and selector is concerned — it would inherit the reader's prose
+ * typography, and it broke `diagramRender.browser.test.ts`'s row-5 control, which walks the
+ * column's paragraphs and requires each to have a real box (this one is `hidden`, so it has none).
+ * The status line is chrome that lives inside the column, not text the document contains.
+ */
+function buildDiagramControls(figure: HTMLElement): DiagramControls {
+  const doc = figure.ownerDocument;
+  const ordinal = diagramOrdinal(figure);
+
+  // §5: every rendered diagram carries an accessible name (row 17's other half).
+  figure.setAttribute('aria-label', `Diagram ${ordinal}`);
+
+  const status = doc.createElement('div');
+  status.className = DIAGRAM_STATUS_CLASS;
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+
+  const group = doc.createElement('div');
+  group.className = DIAGRAM_ACTIONS_CLASS;
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', `Diagram ${ordinal} actions`);
+
+  for (const copy of DIAGRAM_ACTION_COPY) {
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.className = DIAGRAM_ACTION_CLASS;
+    button.dataset.action = copy.action;
+    button.textContent = copy.idleText;
+    button.setAttribute('aria-label', copy.idleName(ordinal));
+    button.addEventListener('click', () => {
+      void runDiagramAction(button, copy);
+    });
+    group.appendChild(button);
+  }
+
+  return { group, status };
+}
+
+/**
+ * Run one action and report the outcome in text, in `aria-*` and in the live region.
+ *
+ * ★ EVERYTHING IS RESOLVED FROM THE BUTTON, HERE, NOW. The figure comes from `closest`, the `<svg>`
+ * from the figure and the ordinal from the tree — none of it from the closure that built the
+ * button. That is row 14: the group outlives a theme swap and is rebuilt by the next mount, and in
+ * both cases the thing it must act on is whatever is on screen at the moment of the click.
+ *
+ * A failure leaves the diagram alone (§4): the `<svg>` is never touched on this path, only the
+ * button's own labels and the region below it.
+ */
+async function runDiagramAction(button: HTMLButtonElement, copy: DiagramActionCopy): Promise<void> {
+  const figure = button.closest<HTMLElement>(`figure.${DIAGRAM_FIGURE_CLASS}`);
+  if (!figure) return;
+  const controls = diagramControlsOf(figure);
+  const ordinal = diagramOrdinal(figure);
+
+  const settle = (text: string, name: string, state: string, message: string): void => {
+    button.textContent = text;
+    button.setAttribute('aria-label', name);
+    button.setAttribute(DIAGRAM_ACTION_STATE_ATTR, state);
+    if (!controls) return;
+    controls.status.textContent = message;
+    controls.status.hidden = false;
+  };
+
+  try {
+    if (copy.action === DIAGRAM_COPY_ACTION) await copyDiagramAsImage(figure);
+    else downloadDiagramAsSvg(figure, ordinal);
+    settle(copy.doneText, copy.doneName(ordinal), 'done', copy.doneStatus(ordinal));
+  } catch {
+    settle(copy.failedText, copy.failedName(ordinal), 'failed', copy.failedStatus(ordinal));
+  }
 }

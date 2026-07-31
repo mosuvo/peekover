@@ -629,7 +629,61 @@ export const READER_CSS = /* css */ `
 }
 .peekover-reader .peekover-diagram svg{max-width:100%;height:auto}
 .peekover-reader pre[data-diagram="rendered"]{display:none}
+/* Per-diagram controls (007 §3.11) — rationale: below this literal */
+.peekover-reader .peekover-diagram{position:relative}
+.peekover-reader .peekover-diagram-actions{position:absolute;top:6px;right:6px;z-index:1;display:flex;gap:6px;opacity:0;pointer-events:none;transition:opacity 120ms ease}
+.peekover-reader .peekover-diagram:hover .peekover-diagram-actions,
+.peekover-reader .peekover-diagram:focus-within .peekover-diagram-actions{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){.peekover-reader .peekover-diagram-actions{transition:none}}
+.peekover-reader .peekover-diagram-action{font:600 12px/1 var(--sans);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+.peekover-reader .peekover-diagram-action:hover{background:var(--hl-soft)}
+.peekover-reader .peekover-diagram-action[data-state="done"]{background:var(--hl);color:#26210a;border-color:var(--hl)}
+.peekover-reader .peekover-diagram-action[data-state="failed"]{background:var(--del-soft);color:var(--del);border-color:var(--del)}
+.peekover-reader .peekover-diagram-status{margin:8px 0 0;font:400 13px/1.4 var(--sans);color:var(--muted);text-align:center}
 `;
+
+// ============================================================================
+// THE PER-DIAGRAM CONTROL GROUP — 007 §3.11, task 7.1
+// ============================================================================
+// A `.ts` comment ON PURPOSE: the rules above live inside READER_CSS's template literal, and
+// comments in THERE ship verbatim in every bundle, on BOTH surfaces. `diagramActions.browser.test.ts`
+// pins the shipped block's byte length so this stays true by mechanism rather than by memory.
+//
+// ── WHY opacity AND NOT display/visibility ────────────────────────────────────────────────────
+//
+// §3.11 reveals the group on hover AND on keyboard focus. `display:none` and `visibility:hidden`
+// both take the buttons out of the tab order, which would make the keyboard half unreachable — the
+// exact affordance the spec names first. `opacity:0` leaves two real <button>s focusable and in the
+// accessibility tree, and `:focus-within` on the figure then reveals them, so tabbing into a diagram
+// IS the reveal. `pointer-events:none` while hidden keeps an invisible button from eating a click
+// meant for the diagram under it; focus is unaffected by it.
+//
+// ── WHY THE FIGURE IS THE POSITIONING CONTEXT (row 11) ────────────────────────────────────────
+//
+// `position:relative` on the figure makes the group's `absolute` resolve against ITS OWN diagram,
+// not the viewport and not the reading column. Two consequences the suite asserts: a document with
+// two diagrams gets two groups in two places, and scrolling moves each with its figure. A `fixed`
+// group would satisfy neither, and would look correct in a screenshot of a document that fits.
+//
+// ── WHY IT DOES NOT OCCLUDE THE COLUMN'S TEXT (row 5) ─────────────────────────────────────────
+//
+// The group floats over the DIAGRAM, inset 6px from the figure's own top-right corner. The figure
+// carries `margin:28px 0`, so the group's box starts 6px inside a box that already stands 28px clear
+// of the paragraph above it. Row 5's clearance is therefore a property of the inset being smaller
+// than the margin, not a tuned constant — the suite asserts it at a WIDE viewport, where the gutter
+// exists and the column is at its full measure.
+//
+// ── THE STATUS LINE IS IN FLOW, DELIBERATELY ──────────────────────────────────────────────────
+//
+// The live region sits BELOW the diagram in normal flow rather than floating: it is `hidden` until
+// an action resolves, so it costs no layout on the overwhelmingly common path, and when it does
+// appear it must not cover the picture it is reporting on. An absolutely positioned message would
+// be the one piece of this group that CAN occlude something, for no benefit.
+//
+// ── NO `ch` IN A LAYOUT-BLOCKING PROPERTY (retro finding 6) ───────────────────────────────────
+//
+// Every `margin`, `padding` and `gap` above is px. The measured 28 ms cost of a `ch` in a margin
+// calc is why, and the suite greps the shipped block for it rather than trusting this paragraph.
 
 // ============================================================================
 // THE data-toc="open" COLUMN MARGIN — recovery B1, the M6 9.1 gate's finding A.
