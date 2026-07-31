@@ -48,6 +48,17 @@ export const DIAGRAM_STATUS_CLASS = 'peekover-diagram-status';
 export const DIAGRAM_COPY_ACTION = 'copy';
 export const DIAGRAM_DOWNLOAD_ACTION = 'download';
 
+/** §3.11's lightbox trigger: the transparent `<button>` laid over the diagram itself, so that
+ *  "activating the diagram" (pointer OR keyboard) is activating a real button (row 16). */
+export const DIAGRAM_OPEN_CLASS = 'peekover-diagram-open';
+
+/** The lightbox's own classes. The root is a SIBLING of `.peekover-reader` (row 4's other half),
+ *  so none of these may be namespaced under it — see `readerCss.ts`. */
+export const DIAGRAM_LIGHTBOX_CLASS = 'peekover-diagram-lightbox';
+export const DIAGRAM_LIGHTBOX_PANEL_CLASS = 'peekover-diagram-lightbox__panel';
+export const DIAGRAM_LIGHTBOX_VIEW_CLASS = 'peekover-diagram-lightbox__view';
+export const DIAGRAM_LIGHTBOX_CLOSE_CLASS = 'peekover-diagram-lightbox__close';
+
 /** `data-state` on a button once its action has resolved — row 15's third carrier, beside the
  *  visible text and the accessible name. It is the ONLY one of the three a colour keys off. */
 export const DIAGRAM_ACTION_STATE_ATTR = 'data-state';
@@ -123,7 +134,7 @@ export function insertDiagramPlaceholder(pre: Element): HTMLElement {
  */
 export function markDiagramRendered(pre: Element, figure: HTMLElement, content: Node): void {
   const controls = diagramControlsOf(figure) ?? buildDiagramControls(figure);
-  figure.replaceChildren(content, controls.group, controls.status);
+  figure.replaceChildren(content, controls.open, controls.group, controls.status);
   figure.setAttribute(DIAGRAM_STATE_ATTR, 'rendered');
   figure.removeAttribute('aria-hidden');
   pre.setAttribute(DIAGRAM_STATE_ATTR, 'rendered');
@@ -184,18 +195,21 @@ const DIAGRAM_PNG_MIME = 'image/png';
 const DIAGRAM_SVG_MIME = 'image/svg+xml';
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
-/** The group and the live region, as {@link markDiagramRendered} moves them across a re-theme. */
+/** The trigger, the group and the live region, as {@link markDiagramRendered} moves them across a
+ *  re-theme. All three outlive the `<svg>` they sit beside. */
 interface DiagramControls {
+  readonly open: HTMLElement;
   readonly group: HTMLElement;
   readonly status: HTMLElement;
 }
 
-/** The group and status already on a figure, or `null` on the first render. Read from the DOM
- *  rather than a map: a WeakMap keyed by figure would be cross-mount state, which §3.3 forbids. */
+/** The controls already on a figure, or `null` on the first render. Read from the DOM rather than
+ *  a map: a WeakMap keyed by figure would be cross-mount state, which §3.3 forbids. */
 function diagramControlsOf(figure: HTMLElement): DiagramControls | null {
+  const open = figure.querySelector<HTMLElement>(`.${DIAGRAM_OPEN_CLASS}`);
   const group = figure.querySelector<HTMLElement>(`.${DIAGRAM_ACTIONS_CLASS}`);
   const status = figure.querySelector<HTMLElement>(`.${DIAGRAM_STATUS_CLASS}`);
-  return group && status ? { group, status } : null;
+  return open && group && status ? { open, group, status } : null;
 }
 
 /**
@@ -401,6 +415,19 @@ function buildDiagramControls(figure: HTMLElement): DiagramControls {
   status.setAttribute('role', 'status');
   status.hidden = true;
 
+  // §3.11's lightbox trigger. A real <button> (row 16) laid transparently OVER the picture, so
+  // "the lightbox opens by activating the diagram — pointer or keyboard" is satisfied by one
+  // element: clicking the diagram is clicking it, and tabbing to it is the keyboard half. It is a
+  // sibling of the `<svg>` rather than a wrapper because `diagramEnhancer.test.ts:232` pins the
+  // content as the figure's FIRST element child, and a wrapper would take that place.
+  const open = doc.createElement('button');
+  open.type = 'button';
+  open.className = DIAGRAM_OPEN_CLASS;
+  open.setAttribute('aria-label', `Diagram ${ordinal}. Activate to open it larger.`);
+  open.addEventListener('click', () => {
+    openDiagramLightbox(open);
+  });
+
   const group = doc.createElement('div');
   group.className = DIAGRAM_ACTIONS_CLASS;
   group.setAttribute('role', 'group');
@@ -419,7 +446,158 @@ function buildDiagramControls(figure: HTMLElement): DiagramControls {
     group.appendChild(button);
   }
 
-  return { group, status };
+  return { open, group, status };
+}
+
+// ── §3.11: THE LIGHTBOX (task 7.2) ────────────────────────────────────────────────────────────
+//
+// ── WHY THE TRAP IS HAND-ROLLED AND NOT `<dialog>.showModal()` ────────────────────────────────
+//
+// `showModal()` would hand us the trap, the top layer and Escape for free. It is NOT used, and the
+// reason is that the free version is the wrong shape here:
+//
+//   • The reader lives in a SHADOW ROOT, and the top layer is per-DOCUMENT. A `<dialog>` promoted
+//     out of the shadow tree escapes `READER_CSS`'s scope, so the panel would have to be styled
+//     from a second sheet in the page — the one place this codebase has no stylesheet.
+//   • `::backdrop` and the top layer put the panel over the ENTIRE viewport including the TOC rail
+//     and the chrome pills, which is precisely what rows 8 + 9 forbid.
+//   • Escape on a `<dialog>` is a document-level cancel we cannot scope. §3.11 forbids a new global
+//     bare key; the listener below is on the lightbox ROOT and only ever sees a key because focus
+//     is trapped inside it, so the binding is modal-scoped by construction rather than by promise.
+//
+// The cost of hand-rolling is that trap, restore, Escape and initial focus are all OURS, so each
+// one has a real defect available to it and `diagramLightbox.browser.test.ts` reverts each in turn.
+// Row 21 records that NO existing element in this codebase traps focus — there was nothing to
+// transcribe, and nothing would have been noticed missing. This is that baseline.
+//
+// ── WHAT IT SHOWS IS THE NODE ON SCREEN, CLONED ──────────────────────────────────────────────
+//
+// A clone of the figure's LIVE `<svg>` — the artifact `diagramEnhancer` put through the §3.5
+// profile. Not a re-render and not the engine's raw pre-sanitize string, for the same reason 7.1's
+// two actions are not: a path back to the raw string re-admits the `<style>` and `<foreignObject>`
+// the profile stripped. A clone rather than a move, so closing cannot leave the reader's own figure
+// empty if anything between here and there throws.
+
+/** The lightbox currently open in a given root, or `null`. Read from the DOM, never held in a
+ *  module variable: §3.3 destroys and rebuilds the whole tree and cross-mount state is forbidden. */
+function openLightboxIn(root: ShadowRoot | Document): HTMLElement | null {
+  return root.querySelector<HTMLElement>(`.${DIAGRAM_LIGHTBOX_CLASS}`);
+}
+
+/** The tabbable stops inside the open lightbox, in DOM order. Both are elements this module put
+ *  there, so this is an enumeration of our own panel rather than a general tabbable scanner. */
+function lightboxStops(box: HTMLElement): HTMLElement[] {
+  return [
+    ...box.querySelectorAll<HTMLElement>(
+      `.${DIAGRAM_LIGHTBOX_CLOSE_CLASS}, .${DIAGRAM_LIGHTBOX_VIEW_CLASS}`,
+    ),
+  ];
+}
+
+/**
+ * Close the lightbox and give focus back to the button that opened it.
+ *
+ * ★ THE RESTORE IS THE ANCHOR CLAIM. `trigger` is the exact element activated to open this — not
+ * "a button in the group", not the figure, not the reader. A modal that drops focus on `body`
+ * strands a keyboard user at the top of the document with no way back to where they were, and it
+ * is the one focus property that would still be load-bearing had this been a `<dialog>`: the
+ * platform does not restore focus to the opener for us.
+ *
+ * `isConnected` is checked because §3.3 can re-render the document out from under an open lightbox,
+ * at which point the trigger is a detached node and focusing it would silently move focus to the
+ * body — the very defect this function exists to prevent, arrived at by a different road.
+ */
+function closeDiagramLightbox(box: HTMLElement, trigger: HTMLElement): void {
+  box.remove();
+  if (trigger.isConnected) trigger.focus();
+}
+
+/**
+ * Open the enlarged view of the diagram `trigger` belongs to.
+ *
+ * Everything is resolved from the trigger AT ACTIVATION TIME — the figure by `closest`, the `<svg>`
+ * from the figure, the ordinal from the tree. That is row 14 again: the trigger survives a theme
+ * flip that replaces the `<svg>` under it, and what it must enlarge is whatever is on screen now.
+ *
+ * The root is the figure's own root node, so the lightbox lands as a SIBLING of `.peekover-reader`
+ * (row 4's other half) — chrome beside the reading column, never a node inside the document the
+ * user is reading.
+ */
+function openDiagramLightbox(trigger: HTMLElement): void {
+  const figure = trigger.closest<HTMLElement>(`figure.${DIAGRAM_FIGURE_CLASS}`);
+  if (!figure) return;
+  const root = figure.getRootNode() as ShadowRoot | Document;
+  if (openLightboxIn(root)) return; // already open — activating twice must not stack two modals
+  const svg = currentDiagramSvg(figure);
+  const ordinal = diagramOrdinal(figure);
+  const doc = figure.ownerDocument;
+
+  const box = doc.createElement('div');
+  box.className = DIAGRAM_LIGHTBOX_CLASS;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.setAttribute('aria-label', `Diagram ${ordinal}, enlarged`);
+
+  const panel = doc.createElement('div');
+  panel.className = DIAGRAM_LIGHTBOX_PANEL_CLASS;
+
+  const close = doc.createElement('button');
+  close.type = 'button';
+  close.className = DIAGRAM_LIGHTBOX_CLOSE_CLASS;
+  close.textContent = 'Close';
+  close.setAttribute('aria-label', `Close diagram ${ordinal}.`);
+
+  // The scroll region is `tabindex="0"` ON PURPOSE and it is not row 16's exception: row 16 is
+  // about BUTTONS not inventing their own tab order. A scrollable box that only a mouse can pan is
+  // a WCAG 2.1.1 failure, and this is §3.11's "pan" half — the keyboard reaches it here.
+  const view = doc.createElement('div');
+  view.className = DIAGRAM_LIGHTBOX_VIEW_CLASS;
+  view.tabIndex = 0;
+  view.setAttribute('role', 'img');
+  view.setAttribute('aria-label', `Diagram ${ordinal}, enlarged`);
+
+  const enlarged = svg.cloneNode(true) as SVGSVGElement;
+  enlarged.style.removeProperty('max-width');
+  view.appendChild(enlarged);
+
+  panel.replaceChildren(close, view);
+  box.appendChild(panel);
+
+  // ★ THE TRAP. Tab off either end wraps to the other, and the wrap is an explicit `focus()` after
+  // `preventDefault()` — the engine's own default would carry focus to whatever follows the
+  // lightbox in the shadow tree, which is the document behind it.
+  box.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDiagramLightbox(box, trigger);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const stops = lightboxStops(box);
+    if (stops.length === 0) return;
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    const active = root.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  // Clicking the dim area around the panel closes; clicking the panel does not. The target test
+  // keeps a click that started on the diagram and drifted onto the backdrop from closing it.
+  box.addEventListener('click', (event: MouseEvent) => {
+    if (event.target === box) closeDiagramLightbox(box, trigger);
+  });
+  close.addEventListener('click', () => {
+    closeDiagramLightbox(box, trigger);
+  });
+
+  root.appendChild(box);
+  close.focus(); // initial focus is INSIDE, on the exit — never left on the page behind
 }
 
 /**

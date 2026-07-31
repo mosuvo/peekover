@@ -776,13 +776,19 @@ describe('the shipped diagram CSS block', () => {
   const block = READER_CSS.slice(READER_CSS.indexOf(BLOCK_START));
   const bytes = new TextEncoder().encode(block).length;
 
-  it('is exactly 1,517 B — the pin that keeps prose out of the literal', () => {
+  // Re-pinned by task 7.2: 1,517 -> 2,927 B, the +1,410 B being the lightbox's own rules (trigger
+  // overlay, backdrop, panel, close, scroll view and the zoom keyframes). It carries NO
+  // `prefers-reduced-motion` rule of its own: 7.2 wrote one and deleted it after removing it left
+  // the suite green — the sheet-wide `:host *{animation-duration:.001ms!important}` at the top of
+  // READER_CSS already covers the panel. The rationale lives in the `.ts` comment below the
+  // literal, as this pin requires — a re-pin is what the message below asks for on a rule change.
+  it('is exactly 2,927 B — the pin that keeps prose out of the literal', () => {
     expect(READER_CSS.indexOf(BLOCK_START)).toBeGreaterThan(0);
     expect(
       bytes,
       'the shipped diagram CSS moved. If that is a rule change, re-pin it here and account the ' +
         'content-script delta to the byte; if it is a comment, move it below the literal',
-    ).toBe(1517);
+    ).toBe(2927);
   });
 
   it('uses no `ch` in a layout-blocking property (retro finding 6)', () => {

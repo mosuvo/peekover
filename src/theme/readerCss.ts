@@ -640,6 +640,16 @@ export const READER_CSS = /* css */ `
 .peekover-reader .peekover-diagram-action[data-state="done"]{background:var(--hl);color:#26210a;border-color:var(--hl)}
 .peekover-reader .peekover-diagram-action[data-state="failed"]{background:var(--del-soft);color:var(--del);border-color:var(--del)}
 .peekover-reader .peekover-diagram-status{margin:8px 0 0;font:400 13px/1.4 var(--sans);color:var(--muted);text-align:center}
+/* Lightbox trigger + the modal itself (007 §3.11, task 7.2) — rationale: below this literal */
+.peekover-reader .peekover-diagram-open{position:absolute;inset:0;z-index:0;display:block;width:100%;padding:0;background:none;border:0;border-radius:8px;cursor:zoom-in}
+.peekover-reader .peekover-diagram-open:focus-visible{outline:2px solid var(--hl);outline-offset:2px}
+.peekover-diagram-lightbox{position:fixed;inset:0;z-index:3;display:flex;background:color-mix(in srgb,var(--paper) 76%,transparent)}
+.peekover-diagram-lightbox__panel{position:absolute;top:64px;right:calc(min(var(--toc-w),38vw) + 16px);bottom:96px;left:16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;padding:14px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);animation:peekover-diagram-zoom 180ms ease-out}
+@keyframes peekover-diagram-zoom{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.peekover-diagram-lightbox__close{align-self:flex-end;font:600 12px/1 var(--sans);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
+.peekover-diagram-lightbox__close:hover{background:var(--hl-soft)}
+.peekover-diagram-lightbox__view{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center}
+.peekover-diagram-lightbox__view svg{max-width:none;height:auto}
 `;
 
 // ============================================================================
@@ -684,6 +694,76 @@ export const READER_CSS = /* css */ `
 //
 // Every `margin`, `padding` and `gap` above is px. The measured 28 ms cost of a `ch` in a margin
 // calc is why, and the suite greps the shipped block for it rather than trusting this paragraph.
+
+// ============================================================================
+// THE LIGHTBOX — 007 §3.11, task 7.2
+// ============================================================================
+// Same rule as above: this is a `.ts` comment because comments inside the template literal ship
+// verbatim on both surfaces, and the byte pin in `diagramActions.browser.test.ts` is what enforces
+// it. Behaviour (trap, restore, Escape) lives in `diagramView.ts`; only geometry is here.
+//
+// ── THE TRIGGER IS AN OVERLAY, NOT A WRAPPER ──────────────────────────────────────────────────
+//
+// `.peekover-diagram-open` is `absolute; inset:0` over the figure at `z-index:0`, under the control
+// group's `z-index:1`. That ordering is load-bearing: while the group is revealed it takes its own
+// clicks, and while it is hidden its `pointer-events:none` lets a click through to the trigger
+// beneath — so "click the diagram" and "click Copy image" are never the same gesture. It is a
+// sibling of the `<svg>` rather than its parent because `diagramEnhancer.test.ts:232` pins the
+// content as the figure's first element child.
+//
+// ── THE ROOT IS NOT NAMESPACED UNDER `.peekover-reader`, AND THAT IS THE POINT (row 4b) ───────
+//
+// Every other rule in this block is written `.peekover-reader .peekover-diagram…` because the
+// figure lives INSIDE the reading column. The lightbox is the inversion's other half: it is
+// appended to the shadow root as a SIBLING of the column, so a `.peekover-reader`-prefixed selector
+// would silently never match it. The unprefixed selectors are the mechanism, not an oversight.
+//
+// ── WHY THE PANEL IS INSET RATHER THAN FULL-BLEED (rows 8 + 9) ────────────────────────────────
+//
+// The dim backdrop covers the surface; the PANEL does not. Its insets are derived from the chrome
+// it must clear rather than chosen: `top:64px` clears the top band (`.peekover-mode-toggle` and
+// `.peekover-remote-load` at `top:16px`), `bottom:96px` clears `.peekover-theme-toggle` at
+// `bottom:56px` and the network indicator below it, and `right:calc(min(var(--toc-w),38vw) + 16px)`
+// clears the TOC rail by recomputing the rail's OWN width expression — `width:var(--toc-w)` capped
+// by `max-width:38vw` — so a 3.4 resize drag moves both together, and the clearance cannot drift
+// out of sync with a constant, nor over-inset at a narrow viewport where the cap is what binds.
+//
+// ── ★ THE LIGHTBOX IS THE ONE PIECE OF CONTAINED CHROME THAT STAYS `position:fixed` ──────────
+//
+// `CONTAINED_CSS` switches every other pill and the TOC rail from `fixed` to `absolute` so they
+// anchor to the pane's corners instead of the window's. `.peekover-diagram-lightbox` is
+// deliberately NOT in that list, and its absence is load-bearing rather than an omission.
+//
+// The app page's reader pane is the scroll container (`appShell.ts`: `__reader{overflow:auto}`) and
+// the shadow host inside it grows to the document's full height. So `position:absolute` resolves
+// against a host that may be several thousand pixels tall, which anchors the panel 64px from the
+// top of the DOCUMENT rather than of the viewport: on any document long enough to scroll, the
+// "modal" opens off-screen and taking focus into it yanks the reader back to the top. That is the
+// failure `diagramLightbox.browser.test.ts` caught — the reader's scroll offset moving on open,
+// which is exactly what an out-of-flow overlay must never cause.
+//
+// The reason `CONTAINED_CSS` avoided `fixed` for the pills does not transfer: a pill pinned to the
+// window instead of the pane is misplaced chrome, whereas a MODAL pinned to the window is correct
+// by definition — it is supposed to cover the viewport. The cross-engine caveat recorded there
+// (fixed descendants of a transformed ancestor are contained by it) does not apply, because no
+// ancestor of the shadow host carries a transform, filter or `will-change`.
+//
+// ── THE ZOOM IS AN `animation`, NOT A `transition` (row 19) ───────────────────────────────────
+//
+// A transition needs two frames and a mid-flight sample to observe, which is a timing test. An
+// animation is declarative: `animationName` and `animationDuration` are readable from computed
+// style at any instant, so both halves of row 19 — that it IS animated without the media query and
+// instant under it — are asserted as facts about the cascade rather than races. `watchControl`'s
+// pulsing-dot pair is the shape being reused. `transform:scale()` carries no `ch`.
+//
+// ★ AND THERE IS DELIBERATELY NO `prefers-reduced-motion` RULE FOR THE PANEL. Task 7.2 wrote one,
+// then deleted it: removing it left the suite GREEN, which makes it a dead control rather than a
+// passing one. The reduce half of row 19 is already carried by the sheet-wide rule at the top of
+// this file (`:host *{animation-duration:.001ms!important}`), which this panel is matched by like
+// everything else in the shadow tree. A per-panel override would be bytes that change no
+// observable, and — worse — a second place to have to remember. The suite still ASSERTS both
+// halves, because the behaviour is required whoever provides it; what it does not do is pretend
+// 7.2 is what provides it.
 
 // ============================================================================
 // THE data-toc="open" COLUMN MARGIN — recovery B1, the M6 9.1 gate's finding A.
