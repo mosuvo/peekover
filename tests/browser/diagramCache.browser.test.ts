@@ -58,7 +58,7 @@ import {
   diagramCacheKey,
   readDiagram,
   storeDiagram,
-  PROPOSED_DIAGRAM_TOTAL_BYTES,
+  DIAGRAM_TOTAL_BYTES,
 } from '../../src/app/diagramCache';
 import { clearDiagramCache, describeStored, __resetConnectionForTest } from '../../src/app/store';
 import { setThemeSetting } from '../../src/theme/reader';
@@ -376,10 +376,10 @@ describe('the diagram cache serves (D-3, D-4, D-14; task 4.3)', () => {
 
     // (b) A REAL engine success, padded past the WHOLE byte bound. Not a fabricated string: the
     //     engine really renders, and the padding rides on its artifact.
-    const padding = 'x'.repeat(PROPOSED_DIAGRAM_TOTAL_BYTES + 1024);
+    const padding = 'x'.repeat(DIAGRAM_TOTAL_BYTES + 1024);
     expect(bytesOf(padding), 'the premise of this test is that the SVG exceeds the whole byte ' +
       'bound — if this fails the short-circuit under test is never reached').toBeGreaterThan(
-      PROPOSED_DIAGRAM_TOTAL_BYTES,
+      DIAGRAM_TOTAL_BYTES,
     );
     const oversized: EngineLoader = async () =>
       ({

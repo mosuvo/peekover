@@ -19,10 +19,10 @@ import {
   diagramCacheKey,
   planDiagramWrite,
   bytesOf,
-  PROPOSED_BOUNDS,
-  PROPOSED_DIAGRAM_COUNT,
-  PROPOSED_DIAGRAM_TOTAL_BYTES,
-  PROPOSED_DIAGRAM_MAX_AGE_MS,
+  DIAGRAM_BOUNDS,
+  DIAGRAM_COUNT,
+  DIAGRAM_TOTAL_BYTES,
+  DIAGRAM_MAX_AGE_MS,
   type DiagramMetaRow,
   type DiagramBounds,
 } from './diagramCache';
@@ -423,14 +423,14 @@ describe('module boundaries (4.1 fences)', () => {
     expect(bytesOf('é')).toBe(2);
   });
 
-  it('PROPOSED_BOUNDS is composed of the three named tuneable constants', () => {
+  it('DIAGRAM_BOUNDS is composed of the three named tuneable constants', () => {
     // Structural, deliberately NOT numeric: D-8 forbids this task from treating any bound value
     // as chosen, so no case here may pin one as an expected number. 8.4 chooses; 8.5 sets them;
     // these cases stay green across that swap because they assert wiring, not values.
-    expect(PROPOSED_BOUNDS).toEqual({
-      count: PROPOSED_DIAGRAM_COUNT,
-      totalBytes: PROPOSED_DIAGRAM_TOTAL_BYTES,
-      maxAgeMs: PROPOSED_DIAGRAM_MAX_AGE_MS,
+    expect(DIAGRAM_BOUNDS).toEqual({
+      count: DIAGRAM_COUNT,
+      totalBytes: DIAGRAM_TOTAL_BYTES,
+      maxAgeMs: DIAGRAM_MAX_AGE_MS,
     });
   });
 });

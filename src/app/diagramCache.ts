@@ -67,60 +67,59 @@ export type DiagramMetaRow = { key: string; bytes: number; lastUsed: number };
  */
 export type DiagramBounds = { count: number; totalBytes: number; maxAgeMs: number };
 
-// ── THE BOUND VALUES ARE PROPOSED. THEY ARE NOT CHOSEN. ───────────────────────────────────────
+// ── THE BOUND VALUES ARE CHOSEN. ──────────────────────────────────────────────────────────────
 //
-// D-8: the AXES are settled (D-4 — count, bytes, age, all global, oldest-first on `lastUsed`);
-// the VALUES are not, and this task is FORBIDDEN from choosing them. Tasks 8.1–8.3 MEASURE
-// (rendered-SVG byte sizes across diagram kinds, the 50-diagram footprint, accumulation over a
-// realistic reading session, and — for each axis — whether it actually BINDS in practice, since
-// an axis that never binds is chosen wrong). Task 8.4 is the HUMAN GATE that picks the numbers
-// and records each one with the measurement that justifies it. Task 8.5 sets these constants to
-// those values and removes the PROPOSED framing.
+// D-8: the AXES were settled by D-4 (count, bytes, age, all global, oldest-first on `lastUsed`);
+// the VALUES were chosen at task 8.4's HUMAN GATE from tasks 8.1–8.3's measurements, and task 8.5
+// set them here. Each one is recorded in `docs/ai/decisions.md` (2026-08-01), one entry apiece,
+// each naming the § Baselines measurement that justifies it and its own revisit-when. Those
+// entries are the authority; the notes below say only what a reader of this file needs.
 //
-// So: every number below is a placeholder that makes the module runnable and the unit cases
-// expressible. NONE of them is a decision, and none may be cited as one — not in a doc, not in
-// `PERMISSIONS.md`, not in a review. The reasoning attached to each is the reasoning for the
-// STARTING POINT, i.e. what the measurement should push against, not a justification of the
-// value. If you are reading this comment, the bounds are still open.
+// So: none of these is a placeholder any more, and none should be changed without going back
+// through the same gate — a bound moved here without an entry there is an undocumented decision.
 
 /**
- * PROPOSED — NOT CHOSEN (see the block above; 8.4 is the gate). Global row cap.
+ * CHOSEN (`decisions.md` 2026-08-01). Global row cap.
  *
- * Starting point, and what it should be measured against: rows are per (diagram × effective
- * theme), so §3.7's theme-flip round trip means a single document's diagrams can occupy up to
- * 2× (3× with sepia) their count in rows. 100 is roughly "one long agent-output document's
- * diagrams in every theme it has been read in, plus recent history" — deliberately generous,
- * because if the count axis never binds in 8.2's accumulation cell, that is itself the finding.
+ * Rows are per (diagram × effective theme), so §3.7's theme-flip round trip means a document's
+ * diagrams occupy 2× their count in rows (3× if sepia ever lands — a revisit-when). 8.2's CELL 3
+ * measured the eviction cliff as TOTAL rather than graded: one row over the cap turns a
+ * theme-flip-back from a full HIT into a full MISS of every diagram, so the only real content of
+ * this number is WHERE that cliff sits. At 150 it sits at 75 diagrams — clearing §8's 50-diagram
+ * target case and CELL 5's heavy session shape — while staying below ~200, where CELL 4d's
+ * crossover would move the binding axis onto bytes.
  */
-export const PROPOSED_DIAGRAM_COUNT = 100;
+export const DIAGRAM_COUNT = 150;
 
 /**
- * PROPOSED — NOT CHOSEN (see the block above; 8.4 is the gate). Global byte cap over stored SVG.
+ * CHOSEN (`decisions.md` 2026-08-01). Global byte cap over stored SVG.
  *
- * Starting point, and what it should be measured against: this is the SAFETY cap — the axis that
- * must hold when a document carries a few very large diagrams rather than many small ones. 8 MB
- * is a guess at "generous, still bounded" with NO measurement behind it; 8.1's per-kind SVG
- * sizes are the first real evidence, and the ratio between this and the count cap is what
- * decides which axis binds first.
+ * A SAFETY VALVE, not a capacity limit — {@link DIAGRAM_COUNT} is the capacity limit. 8.2's
+ * CELL 5 measured this axis never binding in either session shape (it saturates at ~51% of the
+ * cap), and that is the design intent, not a defect: the valve exists for the one shape a row
+ * count cannot bound, a cache filled with the large end of CELL 1's 31× size span. Unchanged in
+ * value from the 4.1 placeholder, and recorded anyway.
  */
-export const PROPOSED_DIAGRAM_TOTAL_BYTES = 8 * 1024 * 1024;
+export const DIAGRAM_TOTAL_BYTES = 8 * 1024 * 1024;
 
 /**
- * PROPOSED — NOT CHOSEN (see the block above; 8.4 is the gate). Global age cap on `lastUsed`.
+ * CHOSEN (`decisions.md` 2026-08-01). Global age cap on `lastUsed`.
  *
- * Starting point, and what it should be measured against: this is the ABANDONMENT valve, not a
- * capacity bound — it reclaims rows for documents the user stopped reading, and (per plan §7's
- * open question) it is also what lets a `mermaid` version bump's stranded rows go without a
- * purge-on-upgrade write. 30 days is the conventional starting point; whether it ever binds
- * before the other two is an 8.2 question.
+ * The ABANDONMENT valve, not a capacity bound — it reclaims rows for documents the user stopped
+ * reading, and (per plan §7's open question) it is what lets a `mermaid` version bump's stranded
+ * rows expire without a purge-on-upgrade write. A RETENTION JUDGMENT, recorded as one: the input
+ * that would make it measured is a distribution of real re-read intervals, which is telemetry,
+ * which AGENTS.md forbids outright — so it is permanently a judgment and no later session should
+ * go looking for the number. Because the axis is on `lastUsed`, an actively-read document never
+ * loses its cache. Unchanged in value from the 4.1 placeholder, and recorded anyway.
  */
-export const PROPOSED_DIAGRAM_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+export const DIAGRAM_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** The proposed bounds as one record. PROPOSED, NOT CHOSEN — see the block above. */
-export const PROPOSED_BOUNDS: DiagramBounds = {
-  count: PROPOSED_DIAGRAM_COUNT,
-  totalBytes: PROPOSED_DIAGRAM_TOTAL_BYTES,
-  maxAgeMs: PROPOSED_DIAGRAM_MAX_AGE_MS,
+/** The chosen bounds as one record. */
+export const DIAGRAM_BOUNDS: DiagramBounds = {
+  count: DIAGRAM_COUNT,
+  totalBytes: DIAGRAM_TOTAL_BYTES,
+  maxAgeMs: DIAGRAM_MAX_AGE_MS,
 };
 
 // ── D-3: THE KEY ──────────────────────────────────────────────────────────────────────────────
@@ -415,15 +414,15 @@ export async function readDiagram(key: string): Promise<string | undefined> {
  * Store `svg` under `key`, applying D-4's plan.
  *
  * Reads all of `diagramMeta` (small, bounded, meta-only — never a content row), plans against
- * {@link PROPOSED_BOUNDS}, and then:
+ * {@link DIAGRAM_BOUNDS}, and then:
  *  - `store: false` (single-oversized short-circuit) → does NOTHING: no eviction, no write, no
  *    message. That diagram re-renders from the engine every time, quietly, per D-4 and §4.
  *  - `store: true` → writes the incoming META row, then the incoming CONTENT row, then deletes the
  *    evicted META rows, then the evicted CONTENT rows — meta before content at every step (see the
  *    ordering note above).
  *
- * ★ THE BOUNDS ARE STILL PROPOSED, NOT CHOSEN (D-8). Passing `PROPOSED_BOUNDS` here is what makes
- * the cache runnable; it is NOT a decision, and 8.4 remains the gate that picks the numbers.
+ * ★ THE BOUNDS ARE CHOSEN (D-8, `decisions.md` 2026-08-01). Passing `DIAGRAM_BOUNDS` here is what
+ * puts the gate's numbers into the shipped write path.
  */
 export async function storeDiagram(key: string, svg: string): Promise<void> {
   try {
@@ -432,7 +431,7 @@ export async function storeDiagram(key: string, svg: string): Promise<void> {
     const incomingBytes = bytesOf(svg);
     const now = Date.now();
 
-    const plan = planDiagramWrite(allMeta, key, incomingBytes, now, PROPOSED_BOUNDS);
+    const plan = planDiagramWrite(allMeta, key, incomingBytes, now, DIAGRAM_BOUNDS);
     if (!plan.store) return; // single-oversized: no eviction, no write, no error (§4).
 
     // META FIRST — the incoming meta row lands before its content row.
