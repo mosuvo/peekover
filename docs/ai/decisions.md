@@ -1,6 +1,211 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-01 · M7 D-8 DIAGRAM-CACHE `count` CHOSEN = 150 ROWS (spec 007 task 8.4, the HUMAN decision
+  gate).** Raised from the **100** placeholder 4.1 proposed. Sets `PROPOSED_DIAGRAM_COUNT`
+  (`src/app/diagramCache.ts:95`, and through it `PROPOSED_BOUNDS.count` at `:120`). **8.4 records; 8.5
+  edits the constant. No constant is touched by this entry.**
+  **The measurement that justifies it — `progress.md` § Baselines *THE D-8 / D-9 BOUNDS MEASUREMENT*
+  (task 8.2), CELL 3 and CELL 4b.** CELL 3 measured, on the real IDB store and **identically on both
+  engines**, that the eviction cliff is **TOTAL, not graded**: at N=50 diagrams (100 rows — the cap
+  exactly) a theme flip-back is a **full HIT**; at N=51 (102 rows) it is a **full MISS of all 51**,
+  because on the flip back the A-theme rows are globally oldest, so the first miss's write-back evicts
+  the next row the same pass is about to ask for — a self-defeating cascade. The arithmetic predicted
+  **2** re-renders; the measurement is **51**. One row over the bound therefore does not cost one
+  re-render — **it costs the entire cache's value for that document**, and it costs it on exactly the
+  diagram-heavy document the cache exists for. That discontinuity, not a smooth cost curve, is what this
+  value is choosing the position of.
+  **Why 150, and not another step.** CELL 4b's sweep over the shipped planner gives the rule **full hit
+  iff `count ≥ 2N`, full miss otherwise — every cell in the grid is either 0 or N, with no
+  partial-credit region anywhere**. So the bound's only real content is *where the cliff sits*. At 150
+  the cliff moves to **N = 75**, which clears CELL 5's **heavy** session shape (8 diagrams/document) and
+  §8's own **50-diagram** target case with headroom. It stays **below ~200**, where CELL 4d's crossover
+  would begin moving the binding axis onto bytes: at count 200 the crossover is `8,388,608 / 200` =
+  **41,943 B/row**, which is *below* CELL 1's measured all-kinds mean of **42,350 B**, so a
+  representative cache would start binding on bytes instead. And the curve is a **staircase whose steps
+  are at 2N, not a smooth trade** (CELL 4b's own words), so **125 and 150 buy the same hit coverage over
+  the cases that matter** — every N ≤ 50 is a full hit at both — while **150 clears the 2×50 = 100 cliff
+  decisively**. *(Exact grid reading, recorded so nobody re-derives it wrong: among CELL 4b's sampled N,
+  the count-125 and count-150 rows differ only at **N = 75**, which 150 covers and 125 does not.)*
+  **`count` remains the SOLE BINDING AXIS** — CELL 5's per-axis answer (`count` binds in every session
+  shape measured; `totalBytes` never does; `maxAgeMs` cannot bind inside a session) is unchanged by
+  raising it to 150, and the next two entries depend on that.
+  **Revisit-when:** (a) a **third effective theme** lands (sepia is deferred, `decisions.md`
+  2026-07-17/D-1) — a document would then occupy **3** rows per diagram and the cliff would fall back to
+  **N = 50**, which is the §8 target case itself, so this value must be re-chosen in the same change;
+  (b) real documents routinely exceed **75** diagrams and a flip-back reads as a stall; (c) `count`
+  stops being the binding axis in a re-run of CELL 5 (D-8's standing revisit-when: an axis that never
+  binds is chosen wrong); (d) the eviction algorithm stops being oldest-first-global (D-4), which is
+  what makes the cliff total.
+
+- **2026-08-01 · M7 D-8 DIAGRAM-CACHE `totalBytes` CHOSEN = 8 MiB — UNCHANGED from the placeholder, and
+  recorded anyway (spec 007 task 8.4, the HUMAN decision gate).** Sets
+  `PROPOSED_DIAGRAM_TOTAL_BYTES` (`src/app/diagramCache.ts:106`, `8 * 1024 * 1024` = 8,388,608 B; and
+  `PROPOSED_BOUNDS.totalBytes` at `:120`). A no-op edit for 8.5 — **recorded either way, because a
+  "PROPOSED" comment left on a chosen value is a lie about the decision state** (§8.5's own words).
+  **The measurement that justifies it — 8.2's CELL 4c, CELL 4d and CELL 5.** CELL 5's per-axis answer is
+  that `totalBytes` **NEVER BINDS at the placeholders**: it saturates at **~51% of the cap** (~4.18–4.45
+  MB across both the typical 2-diagram and heavy 8-diagram session shapes) and stops, because `count`
+  caps the row population first. CELL 4d states the crossover as exact arithmetic — **bytes binds before
+  count iff mean row bytes > `totalBytes / count`** — and at the **chosen** count of 150 that threshold
+  is `8,388,608 / 150` = **55,924 B/row**. CELL 1's measured distribution puts that **above the
+  all-kinds mean (42,350 B)** and above every measured *small* diagram (4,317–28,030 B), but **below
+  three of the seven measured LARGE diagrams** (Cr: ER 135,513 · flowchart 109,768 · state 84,590). So
+  after decision 1 the byte axis is reachable **only by a cache filled predominantly with the large end
+  of the distribution** — which is precisely the case it exists for.
+  **★ THE PURPOSE, recorded explicitly because 8.2 left two readings open and this entry picks one.**
+  8.2 asked whether never-binding makes 8 MiB *wrong*, or *correctly a safety valve that should rarely
+  fire*, and refused to decide. **This entry chooses READING B: `totalBytes` is a SAFETY VALVE, not a
+  capacity limit.** `count` is the capacity limit (decision 1). The valve fires only for a cache
+  dominated by large diagrams — the one shape `count` alone cannot bound, because CELL 1 measured a
+  **31× span** in rendered-SVG size across kinds, so the byte cost of 150 rows is not predictable from
+  the row count at all.
+  **★ CAVEAT — "never binds in normal use" is the DESIGN INTENT here, not a defect, and D-8's
+  revisit-when is therefore NOT tripped by it.** D-8 carries the standing rule *an axis that never binds
+  is chosen wrong*; that rule aims at a **capacity** axis, and this axis is deliberately not one. A
+  valve that fires in normal use would be the defect. CELL 5 also measured **0 single-oversized
+  refusals** in both shapes — no measured diagram approaches the 8 MiB whole-write refusal — so the cap
+  is not silently degrading anything today.
+  **Revisit-when:** (a) the valve fires in a **typical** session (it is then a capacity bound in
+  disguise, and both it and `count` need re-choosing together); (b) a single rendered diagram approaches
+  8 MiB, making the whole-write refusal reachable — CELL 1's largest measured is 135,513 B, a ~62×
+  margin; (c) `count` is raised past ~200, where CELL 4d says the axes swap and this stops being a valve
+  by arithmetic rather than by choice; (d) the stored payload stops being sanitized SVG text.
+
+- **2026-08-01 · M7 D-8 DIAGRAM-CACHE `maxAgeMs` CHOSEN = 30 DAYS — a RETENTION JUDGMENT, recorded AS a
+  judgment and NOT as a measured value (spec 007 task 8.4, the HUMAN decision gate).** Unchanged from
+  the placeholder. Sets `PROPOSED_DIAGRAM_MAX_AGE_MS` (`src/app/diagramCache.ts:117`,
+  `30*24*60*60*1000` = 2,592,000,000 ms; and `PROPOSED_BOUNDS.maxAgeMs` at `:120`).
+  **★ WHAT THE MEASUREMENT DOES AND DOES NOT SUPPORT — the honest half of this entry.** 8.2's CELL 5
+  proved the axis **FIRES and DOES NOT FIRE** rather than asserting it: a row at `lastUsed = 0` planned
+  against `now = cap+1` evicts `["old"]`; the same row against `now = 1` evicts `[]`. That is the whole
+  of the evidence. CELL 5 also recorded **why no value can come out of it** — `maxAgeMs` **cannot bind
+  inside a session; it is a calendar property**. So 8.2 measured that the axis works, and measured
+  **nothing whatsoever about what the number should be**. This entry does not pretend otherwise.
+  **★ AND IT WILL NOT BECOME MEASURED LATER.** The missing input is a **distribution of real re-read
+  intervals** — how long a user actually goes between opening the same document. Collecting that means
+  telemetry, which **AGENTS.md non-negotiable #2 forbids outright, forever** ("No telemetry, no
+  analytics, no remote code, ever. Not even error reporting."). So this is not a placeholder awaiting a
+  future measurement; it is a **policy judgment that is permanently a judgment**, and a later session
+  should not go looking for the number.
+  **The judgment.** 30 days reclaims rows for diagrams unviewed for a month. Its two properties are what
+  it was chosen for: an **actively-read document never loses its cache** (the axis is on `lastUsed`, not
+  on write time — note this differs from M6's snapshot `SNAPSHOT_MAX_AGE_MS`, which is measured from the
+  snapshot timestamp, per `decisions.md` 2026-07-26), and an **abandoned document does not accumulate**.
+  30 days covers the common project cadences (weekly / biweekly / monthly) the M6 D-8 entry weighed 7
+  and 90 days against, and this reuses that reasoning rather than re-deriving it. It is also the axis
+  that lets a `mermaid` version bump's stranded rows expire **without a purge-on-upgrade write** (plan
+  §7's open question, and `diagramCache.ts:111-115`'s own note).
+  **Revisit-when:** (a) a user reports losing diagram cache on a document they still consider active
+  (the `lastUsed` semantics are then wrong, not the number); (b) the valve is observed **never**
+  reclaiming anything over a full milestone's real use; (c) a non-telemetry source of re-read cadence
+  becomes available — a user volunteering their own local observation is the only shape AGENTS.md #2
+  permits; (d) `mermaid` version churn makes stranded-row expiry the axis's dominant job, which would
+  make the engine's release cadence the right input instead of the reading cadence.
+
+- **2026-08-01 · M7 D-9 TYPICAL-CASE TARGET CHOSEN = 165 ms MEDIAN, COLD, PER-DIAGRAM-AMORTIZED, with
+  the CHROMIUM FLOOR as the check arm — ASPIRATIONAL, and NOTHING ENFORCES IT (spec 007 task 8.4, the
+  HUMAN decision gate).** **★ MAPS TO NO CONSTANT.** D-9 is **not a cap** — it is the typical-case (1–3
+  diagram) time-to-rendered **target** (8.2's table row for D-9 reads *"none — no constant exists yet"*),
+  and 8.5 creates none: §8.5's Files are `src/app/diagramCache.ts` + `src/app/diagramCache.test.ts` and
+  its body is explicit that **only constants move**. This entry IS the record of the target.
+  **The measurement that justifies it — 8.2's CELL 6 and its 50-diagram outer-bounds table.** The target
+  is set on the axis CELL 6 actually measured: **cold, per-diagram-amortized cost of ~15–17 ms/diagram**
+  (Chromium 14.1 → 15.8 → 15.7 → 16.8 across N = 1/3/10/50; Firefox 16 → 15.3 → 17.1 → 22.0), with the
+  typical case itself at **N=3 cold all-resolved median 47.5 ms (Cr) / 46 ms (Fx)** and N=1 at **14.1 /
+  16 ms**. The 50-diagram case — far outside the typical case — first-opens at **840.5 ms (Cr) / 1099 ms
+  (Fx)** median against §8's inherited **≤ 5 s** bound, ~4.5× headroom. **165 ms therefore carries
+  generous headroom** over everything measured on this axis, which is deliberate: the target is a
+  discipline signal, not a tight fit. The **Chromium floor** is named as the check arm because CELL 6's
+  floors are the least machine-contaminated reading, and 8.2's A-B-A control resolved the run (drift
+  **+3.0% Cr / −0.6% Fx** against 4–6× effects). *(Not to be confused with M6's separate **165 ms
+  first-paint** gate, `decisions.md` 2026-07-26 — same number, different surface and different axis.
+  The coincidence is not a relationship.)*
+  **★ CAVEAT 1 — IT EXCLUDES THE ONE-OFF `import('mermaid')`, so it is NOT user-facing first-open
+  time.** CELL 6 **pre-warmed the engine and discarded that cost on purpose** ("or it would land
+  entirely in the N=1 arm"). What 165 ms bounds is therefore **per-diagram render cost once the engine
+  is loaded**. The number a user actually experiences on a cold first open — engine import *plus*
+  render — is **measured NOWHERE in this milestone**, and this target does not speak to it.
+  **★ CAVEAT 2 — IT IS A COMMITMENT, NOT A GATE. NOTHING ENFORCES IT.** 8.5's Files carry **no timing
+  assertion**, by design: 5.2's rule is that a committed time bound would both flake and smuggle in the
+  threshold 8.4 owns. So no test reds if this target is missed, and no future session should read the
+  number as if one would.
+  **★ CAVEAT 3 — recorded as ASPIRATIONAL, with both of the above explicit** rather than as a
+  satisfied-looking figure. A later reader must be able to see, from this entry alone, that the target
+  is un-enforced and that the user-facing first-open quantity is unmeasured.
+  **Revisit-when:** (a) an instrument exists that can time **document-open → first diagram rendered
+  including the engine import** — the target should then be restated on that axis, because that is the
+  quantity that matters to a user; (b) the target becomes a **gate** (it then needs an enforcement
+  mechanism and a flake analysis, neither of which exists today); (c) CELL 6's amortized cost moves
+  materially on either engine — Firefox's **+38% drift across N**, all of it in the last leg, is the arm
+  to watch; (d) the enhancer stops being sequential, which is what makes time-to-first-diagram flat
+  (~14–18 ms cold at every N) and independent of this target.
+
+- **2026-08-01 · M7 D-10 PACKAGE-SIZE DISPOSITION = (b) NARROW THE `mermaid/package.json` INLINE
+  (~3,818 B recoverable). (c) DEFERRED, (d) WITHDRAWN AS INERT (spec 007 task 8.4, the HUMAN decision
+  gate).** **★ MAPS TO NO CONSTANT, and IS NOT IMPLEMENTED HERE** — see the placement note below.
+  **The measurement that justifies it — `progress.md` § Baselines, task 8.1's re-baseline.** Against the
+  `< 2 MB` store bound the zips are **1,299,871 B (Cr) / 1,299,930 B (Fx) — PASS**, but with **0.70 MB
+  of headroom where M6 had 1.65 MB: 58% of M6's margin consumed by this one milestone**. That is the
+  whole case for acting now rather than at close: the bound is not breached, the *trend* is. 8.1's
+  second ablation gives (b) its number — stubbing the static `import pkg from 'mermaid/package.json'`
+  moves the app chunk **387,837 → 384,019 B, −3,818 B**. **(b) is the cheap, contained win**: a Vite
+  `define` narrowing the inline to the one field `engineVersion()` needs, with no complexity cost and no
+  effect on mermaid's lazy graph.
+  **★ THE CORRECTION THIS ENTRY RECORDS — option (d) IS INERT AGAINST THE BOUND IT WAS PROPOSED FOR.**
+  (d) was "a stricter lazy-load boundary". A stricter boundary reduces bytes **LOADED**, not bytes
+  **SHIPPED**, and the `< 2 MB` bound is on the **packaged zip**. 8.1 already measured the loaded-bytes
+  quantity at **0 on the content script** — byte- and md5-identical on both engines with mermaid ablated
+  away, and 3.4's static import fence green **8/8** confirming `mermaid` / `diagramEngine` /
+  `diagramEnhancer` are on the app-page graph only. There is nothing left for (d) to move. **So (d)
+  collapses into (c)** — the only way to ship fewer bytes is to *package* fewer bytes — and is withdrawn
+  as a distinct option rather than left on the list looking available.
+  **(c) — a mermaid SUBSET BUILD — is DEFERRED, not rejected.** It recovers materially more than (b)
+  (mermaid emits **99 chunks / 3,347,306 B** behind one `import()`), but it costs real complexity and
+  **risks mermaid's lazy chunk graph**, which §3.2's whole content-script fence depends on. Deferred
+  **until headroom forces it**, which is a condition, not a hope — see revisit-when.
+  **★ PLACEMENT — (b) IS A DISPOSITION TAKEN HERE, NOT WORK DONE HERE, AND §8.5 DOES NOT OWN IT.**
+  §8.5's Files are `src/app/diagramCache.ts` · `src/app/diagramCache.test.ts` and its body says **"The
+  ALGORITHM does not move — only constants"**; narrowing the inline touches neither file and is not a
+  constant. So the narrowing is **NEW CARRIED WORK**, banked in `progress.md` § Carried items with this
+  entry as its reasoning. It is deliberately **not** added to `specs/007-mermaid-diagrams/tasks.md`:
+  8.4's Files list is `docs/ai/decisions.md` alone, and §9.1 is this milestone's stated mechanism for
+  adding a task ("a real finding → a task added below this line, not a silent fix").
+  **Revisit-when:** (a) zip headroom falls below ~0.5 MB, or any further dependency lands — **(c) is
+  then forced and (b) is no longer sufficient**; (b) the `< 2 MB` figure changes (it is a store limit, not
+  ours); (c) `engineVersion()` stops sourcing from the static `mermaid/package.json` import (the D-3/D-13
+  amendment, 2026-07-28) — the (b) line item disappears with it; (d) mermaid's own packaging changes
+  shape, which would re-open (c)'s risk assessment from scratch.
+
+- **2026-08-01 · M7 THEME-FLIP COST ACCEPTED — NO PROGRESSIVE RE-RENDER BUILT; plan §1.3 STAYS QUEUED.
+  ★ THE ACCEPTANCE IS CONTINGENT ON `count ≥ 150` (spec 007 task 8.4; this DISCHARGES gate-2 (d)'s
+  routing).** **★ MAPS TO NO CONSTANT** — it is a routing decision about work *not* done.
+  **The measurement that justifies it — task 5.2's flip-cost record (`progress.md` § Up next / § Now)
+  read together with 8.2's CELL 3/4b and decision 1 above.** 5.2 measured, at 50 diagrams, the **worst
+  case** — the first flip to a never-rendered theme, a full miss on every diagram — at **Chromium floor
+  522.3 / median 538.9 ms** and **Firefox floor 900.0 / median 910.0 ms**, A-B-A bracketed against a
+  same-session cold-render control agreeing to −2.4% / −0.4%. The **flip back is a full hit at roughly a
+  fifth of that (~110 ms)**, the cost is **the ENGINE (~77% of the window)** and not the cache
+  write-through (~1.5% / 0.2%), and there is **no flicker at 50**.
+  **Why that is acceptable — and the acceptance is entirely a consequence of decision 1.** At
+  `count = 150`, CELL 4b's `count ≥ 2N` rule makes the flip-back a **full HIT for any document up to 75
+  diagrams**. So in every realistic case the user experiences the **~110 ms hit-flip**, not the ~540 /
+  ~910 ms miss. The miss is a **one-time, per-theme, per-document first flip** — paid once when a
+  document is first read in a theme it has never been read in, and never again while the rows live.
+  Building plan §1.3's **progressive visible-first re-render** to smooth a one-time first flip that is
+  already flicker-free would be new chrome added at a gate, which is the exact shape this project's gate
+  discipline exists to prevent. **§1.3 stays a gate-3 revisit-when — QUEUED, NOT BUILT.**
+  **★ THE CONTINGENCY, named because the acceptance is not free-standing: if `count` is ever lowered
+  below 2×(typical heavy N), THIS ACCEPTANCE IS VOID and plan §1.3 must be revisited in the same
+  change.** Decision 1's own revisit-when (a) is the live instance of this: a third effective theme
+  makes a document occupy 3 rows/diagram and drops the full-hit boundary to N=50 without `count` moving
+  at all. The acceptance is a statement about the **hit boundary**, not about the flip.
+  **Revisit-when:** (a) `count` drops below 2×(typical heavy N) by any route, including a third theme —
+  **void, re-decide**; (b) 9.1's walk reads the first flip as broken at 10 or 50 diagrams (a real
+  finding → a task, not a silent fix); (c) the engine's share of the window (~77%) falls enough that the
+  cache write-through starts to matter, which would change what §1.3 would even be optimising; (d)
+  Firefox's ~1.7× flip factor widens materially.
+
 - **2026-07-30 · M7 D-6 WINDOW FINDING — a RELATIVE (same-origin) reference PASSES the §4 source guard, reaches
   the engine, and FETCHES in D-6's measurement window. In production that resolves to `chrome-extension://<id>/…`,
   which is PACKAGE-LOCAL and not §4-remote, so the behaviour is ACCEPTED and the guard is deliberately NOT
