@@ -37,7 +37,7 @@ task-by-task detail is `specs/006-snapshots-diff/tasks.md`. Neither is restated 
 
 **Two M6 facts that outlive the milestone — do not re-derive them from its narrative:**
 - **The running human-gate score is 10/10 THROUGH M6**, corrected from the 8/8 written at M6's 9.1 (the
-  score counts DEFECTS: 7 before M6, M6 contributes 3). **It now reads 11/11** — M7's 9.1 found
+  score counts DEFECTS: 7 before M6, M6 contributes 3). **It now reads 12/12** — M7's 9.1 found
   **exactly ONE** defect (the dark-mode diagram-text defect). **9.1 is COMPLETE, so the gate itself can
   no longer add to it**; the one way the figure still moves is if the **gantt date-axis overprint** —
   today an open sub-question, deliberately UNCOUNTED — resolves into a confirmed defect when the fix
@@ -213,8 +213,46 @@ builds motion, and the sheet-wide `:host *` rule already owns any suppression.)*
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **✅ FIXED (commit `fix(diagrams): dark-mode diagram text legibility via themed engine config`) —
+  DARK-MODE DIAGRAM TEXT. The item below is kept as written, with the resolution appended, because the
+  DIAGNOSIS IT CARRIED WAS WRONG IN A WAY WORTH KEEPING ON THE RECORD.**
+  **What it said:** *"some of mermaid's own label colours are not driven by the effective theme"*.
+  **What was true:** **NONE of them were.** The effective theme reached `diagramCacheKey` and nothing
+  else — `DIAGRAM_ENGINE_CONFIG` carried no `theme` and no `themeVariables`, and `initialize()` was
+  handed that theme-free constant once per load. Proven, not argued: the adopted `<svg>` was
+  **byte-identical at dark and at light** on both engines once the render id was normalised. Mermaid
+  drew its default LIGHT picture at every theme, and dark mode was that light picture on dark paper —
+  which is exactly why labels on a mermaid FILL stayed readable (the fill came with them) and labels on
+  the CANVAS did not. **D-7's flip machinery was never at fault** and is byte-untouched by the fix.
+  **The fix:** a light/dark/sepia `themeVariables` mapping transcribed from `design/tokens.css` (§3.7's
+  *"the effective theme is OURS"*), applied by a **per-render** `initialize()` immediately before
+  `engine.render` — per render rather than per load because `renderDiagrams` reads the theme PER FENCE,
+  so a load-time theme would draw a mid-pass flip's remaining fences with the OLD paint while stamping
+  them with the NEW `data-diagram-theme`. It sits INSIDE the cache-miss branch: a hit re-configures
+  nothing (asserted).
+  **Measured, both engines, production path:** dark pie title/legend **1.14:1 → 15.1:1**, gantt
+  tick/title **1.45:1 → 15.1:1**, gantt section title **1.32:1 → 15.1:1**; the same five labels on
+  **light stayed clear the whole time** (12–20:1 before, 16.2:1 after) — the light arm is the control
+  that makes the dark arm mean something. **Three labels the walk never named were failing by the same
+  mechanism and are fixed too:** sequence message text (1.45:1), and flowchart + state edge labels
+  (2.30:1 / 3.24:1, from mermaid's TRANSLUCENT default edge-label chip compositing to mid-grey over
+  dark paper). **A whole-fixture contrast sweep** over eight diagram shapes at both themes is what
+  found them, and what proved the mapping does not trade one illegibility for another — an early
+  text-only candidate was measured putting node labels at **1.02:1**, worse than the bug it fixed.
+  **The one sub-4.5 label left is the gantt's task-bar text at 2.95:1 — identical BEFORE and AFTER and
+  at BOTH themes**, so it is mermaid's own default rather than anything this fix touched, and it is not
+  claimed as fixed.
+  **★ FIRST REAL TWO-PICTURE FLIP — FOR 9.2's RETRO.** Every D-7 test was green throughout the period
+  when the two renderings were pixel-identical: *"was it re-rendered"* and *"does it look different"*
+  are different questions, and the suite only ever asked the first. The flip now swaps two genuinely
+  different artifacts, a new test asserts exactly that, and the whole existing D-7 suite stayed green
+  across the change (so none of it was secretly asserting picture-identity). **The lesson to bank: a
+  green re-render suite is not evidence about pixels** — and the new assertion was itself vacuous on
+  its first run (two renderings always differ by their `peekover-diagram-N` id) until an ablation
+  caught it, which is the same lesson one level up.
 - **★ NEW AT 9.1, AND IT IS A TASK, NOT A NOTE — FIX DARK-MODE DIAGRAM TEXT (a D-7 theme-legibility
-  gap). THE MILESTONE-CLOSE GATE'S ONE FINDING.** Filed by §9.1's own mechanism (*"a real finding → a
+  gap). THE MILESTONE-CLOSE GATE'S ONE FINDING. — ✅ RESOLVED, see the entry above.** Filed by §9.1's own
+  mechanism (*"a real finding → a
   task added below this line, not a silent fix"*), placed here rather than in the **gate-sealed**
   `tasks.md` by 8.4's D-10 (b) precedent — **the tension over that placement is recorded in the 9.1 walk
   record and is a 9.3 call, not one taken here.**
@@ -236,7 +274,27 @@ measurement-driven or explicitly deferred.*
   fixture and may pack a compressed time axis into a narrow figure — a *fixture* property, not a product
   one; or (b) a real gantt defect that any document would hit. **It is recorded as a question because the
   walk could not separate them**, and a fix aimed at the wrong one would be a change with no observable.
+  **→ ANSWERED: (b). It is a REAL defect, it is NOT the fixture, and it is now its own item below.**
   **HOME:** its own session and its own commit — the first thing group 9 does after this record.
+
+- **★ THE GANTT DATE AXIS OVERPRINTS — A REAL DEFECT, MECHANISM KNOWN, DELIBERATELY NOT FIXED WITH THE
+  COLOUR BUG.** Promoted from the open sub-question above: the two candidates were separated by
+  measurement, and it is **(b), a product defect** — the SPARSE `diagrams-10` gantt (three days, three
+  tasks) overprints exactly as badly as the dense 50-fence one, at **both** themes, on **both** engines.
+  So it is not a fixture artifact and no dense document is needed to see it. **★ M7's human-gate defect
+  count is therefore TWO, not one (M7:2).**
+  **THE MECHANISM, from mermaid's own source:** `ganttDiagram-NO4QXBWP.mjs:1508` reads
+  `w = elem.parentElement.offsetWidth` — the gantt takes its width from **OUR measuring container**, and
+  `createMeasureContainer` (`diagramEnhancer.ts:260-270`) sets no width by design, so `offsetWidth` is
+  **0** and the axis lays out at a 300-unit fallback. Mermaid never thins ticks, it only scales, so 13
+  date labels needing ≈740px are drawn into 300. **Measured at three container widths:** none → 12 of 12
+  adjacent labels overlap; 700px → 12 of 12; 1200px → **0**.
+  **WHY IT IS NOT IN THE COLOUR COMMIT:** different mechanism (layout, not paint), different region, and
+  it lands on **D-6 step 1's load-bearing prose** — the container is width-less *on purpose*, and the
+  stated reason (`htmlLabels:false` makes every label an SVG `<text>` the engine measures itself, so a
+  parent box would constrain nothing) is **true for flowcharts and false for gantt**, which asks its
+  parent. Reconciling that is a real decision, not a tweak, and bundling it into a colour fix would have
+  hidden it. **HOME:** its own session and its own commit; the D-6-step-1 prose is edited there, not here.
 - **★ NEW AT 8.4 — NARROW THE `mermaid/package.json` INLINE (D-10 disposition (b)), ~3,818 B. THIS IS
   NEW CARRIED WORK, AND ITS PLACEMENT WAS RESOLVED RATHER THAN ASSUMED.** 8.4's human gate **took the
   disposition**; it did not do the work. **§8.5 did NOT own it, and 8.5 HAS NOW LANDED without touching it — this STAYS CARRIED, its trigger
@@ -311,7 +369,7 @@ measurement-driven or explicitly deferred.*
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; gate score **10/10** at that close, corrected
-from the 8/8 recorded at its 9.1 — **now 11/11 after M7's 9.1**) · **007 Mermaid + diagram cache (M7a) — IN IMPLEMENTATION, group 9 · 9.1 COMPLETE (8/8 items walked; last human gate discharged) · 9.2 + 9.3 remain, plus the carried dark-mode fix** ·
+from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mode fix task, which confirmed the gantt overprint as M7's second defect**) · **007 Mermaid + diagram cache (M7a) — IN IMPLEMENTATION, group 9 · 9.1 COMPLETE (8/8 items walked; last human gate discharged) · 9.2 + 9.3 remain, plus the carried dark-mode fix** ·
 … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
@@ -502,15 +560,17 @@ Firefox mount-timing regression. → narrative:
 [archive § task log](progress-archive.md#task--session-log--newest-first--m1--m3-close--the-004-planning-gates)
 · decisions: `decisions.md` 2026-07-14 · lessons: `retro.md` 2026-07-14.
 
-**The human-gate score: 11/11** *(was 10/10 through M6; **9.1 moved it** — see below)* — M1:2 + M2:3 +
-M3:1 + M4:0 + M5:1 + **M6:3** + **M7:1**. **M7's one is 9.1's dark-mode diagram-text defect**, caught at
-its own gate on the surface no test reaches. **The "SO FAR" HEDGE IS RETIRED: 9.1 is COMPLETE** — all
-eight items walked, item 7 (app-page responsiveness) PASSED — **so the gate can contribute nothing
-further, and M7:1 is the gate's final figure.** ★ **One named way it could still move, stated precisely
-instead of hedged:** the gantt date-axis **overprint** is **NOT counted** — it is an open sub-question,
-and the denominator only takes confirmed defects — so **if the dark-mode fix task confirms it as a
-distinct defect, M7 becomes 2 and the score 12/12.** That is a specific pending investigation, not an
-open-ended "can still grow". The score counts
+**The human-gate score: 12/12** *(was 10/10 through M6; **9.1 moved it**, and the dark-mode fix task
+moved it once more — see below)* — M1:2 + M2:3 +
+M3:1 + M4:0 + M5:1 + **M6:3** + **M7:2**. **M7's two are 9.1's dark-mode diagram-text defect** — caught at
+its own gate on the surface no test reaches — **and the gantt date-axis overprint**. **The "SO FAR" HEDGE
+IS RETIRED: 9.1 is COMPLETE** — all eight items walked, item 7 (app-page responsiveness) PASSED — **so the
+gate itself can contribute nothing further.** ★ **The one named way it could still move HAS MOVED, exactly
+as pre-registered:** the overprint was carried as an open sub-question and *"if the dark-mode fix task
+confirms it as a distinct defect, M7 becomes 2 and the score 12/12"*. **It did** — the sparse
+`diagrams-10` gantt overprints as badly as the dense one, at both themes on both engines, from a
+measuring-container width of 0 (§ Carried items has the mechanism). **So M7:2 and 12/12, and this figure
+is now final:** the prediction was resolved by measurement rather than left standing. The score counts
 **DEFECTS, not milestones**, which is what 9.1's own "8/8" got wrong: its landing block says *"M6
 contributes THREE"* and then writes 8/8, contradicting itself. **7 + 3 = 10.** (On the stricter
 denominator that also counts the Firefox app-page disclosure gap the 9.1 walk closed it is 11/11; prior

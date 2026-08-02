@@ -422,3 +422,244 @@ describe('diagrams follow the EFFECTIVE theme (007 D-7; task 5.1)', () => {
     expect(deadFigure.getAttribute(DIAGRAM_THEME_ATTR)).toBe('light');
   });
 });
+
+// ── ★ THE DIAGRAM IS LEGIBLE AT THE THEME IT WAS DRAWN FOR (the 9.1 walk's finding) ───────────
+//
+// Every test ABOVE proves the diagram is RE-RENDERED when the effective theme changes, and every
+// one of them was green while the two renderings were PIXEL-IDENTICAL: until this file's fix, the
+// effective theme reached the cache key and nothing else, so mermaid drew its default LIGHT picture
+// at both themes and the flip swapped a picture for its own twin. `data-diagram-theme` flipped, the
+// <svg> node was replaced, no frame was blank — all true, and none of it about colour.
+//
+// So this block asserts the property those cannot see: that the text mermaid draws ON THE CANVAS is
+// READABLE against the paper it lands on. The 9.1 human gate found it unreadable on dark — the pie's
+// title and legend and the gantt's date axis rendering near-black on near-black paper — and the
+// measurement below is that finding stated as a number.
+//
+// ── WHY CONTRAST, AND WHY NOT "the fill is not #333" ──────────────────────────────────────────
+//
+// A test that pins specific hexes pins the MAPPING, not the PROPERTY: re-tune one token and it goes
+// red without anything having become unreadable. WCAG 2.1 contrast against the actual painted
+// background is the property the walk was judging by eye, and it survives a palette change.
+//
+// ── WHY THE LIGHT ARM IS NOT DECORATION ──────────────────────────────────────────────────────
+//
+// Light was CORRECT before the fix and must stay correct after it — the binding constraint the
+// finding was filed with. Running the SAME assertion on light is what makes the dark arm mean
+// something: pre-fix, light PASSED and dark FAILED, so the assertion discriminates a broken picture
+// from a broken assertion. A check that red on both, or passed on both, would prove neither.
+//
+// ── EACH LABEL IS NAMED SEPARATELY, ON PURPOSE ───────────────────────────────────────────────
+//
+// Five labels, five assertions, because they are FIVE DIFFERENT mermaid colour sources
+// (`pieTitleTextColor`, `pieLegendTextColor`, `textColor`, `titleColor` twice over) — a mapping that
+// catches four and misses one must red on the fifth rather than pass on an average. Two of the five
+// (the gantt's title and its section title) were NOT in the walk's list; the pre-fix survey found
+// them failing by the same mechanism, so they are covered here rather than left to be re-found.
+
+/** WCAG 2.1 AA for normal text. The gantt's task-bar text sits at 2.95:1 at BOTH themes — mermaid's
+ *  own default, identical before and after this fix, and therefore not this block's subject. */
+const MIN_CONTRAST = 4.5;
+
+const PIE_FENCE =
+  '```mermaid\npie title Fence mix, section 7\n  "flowchart" : 30\n  "sequence" : 25\n  "other" : 45\n```\n';
+const GANTT_FENCE =
+  '```mermaid\ngantt\n  title Enhancement pass 6\n  dateFormat YYYY-MM-DD\n  section Fence 6\n' +
+  '  parse     :p6, 2026-08-01, 1d\n  sanitize  :s6, after p6, 1d\n  adopt     :a6, after s6, 1d\n```\n';
+
+/** The five canvas-drawn labels, each with the figure it belongs to and the mermaid colour source
+ *  behind it — named in the failure message so a red says WHICH source is wrong. */
+const CANVAS_LABELS: ReadonlyArray<{
+  readonly label: string;
+  readonly figure: number;
+  readonly selector: string;
+  readonly source: string;
+}> = [
+  { label: 'pie title', figure: 0, selector: '.pieTitleText', source: 'pieTitleTextColor' },
+  { label: 'pie legend', figure: 0, selector: '.legend text', source: 'pieLegendTextColor' },
+  { label: 'gantt date-axis tick', figure: 1, selector: '.grid .tick text', source: 'textColor' },
+  { label: 'gantt title', figure: 1, selector: '.titleText', source: 'titleColor' },
+  { label: 'gantt section title', figure: 1, selector: '.sectionTitle', source: 'titleColor' },
+];
+
+const toLinear = (c: number): number => {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+};
+
+/** WCAG relative luminance. */
+const luminance = ([r, g, b]: readonly [number, number, number]): number =>
+  0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+
+function parseRgb(value: string): [number, number, number] {
+  const m = /(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)/.exec(value);
+  if (!m) throw new Error(`not an rgb colour: ${value}`);
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+/** Strip the per-render `peekover-diagram-N` so two renderings can be compared for their PAINT.
+ *  `renderSeq` increments per render and mermaid stamps the id into the root element and into
+ *  every selector of the stylesheet it generates. */
+const normalizeRenderIds = (svg: string): string => svg.replace(/peekover-diagram-\d+/g, 'ID');
+
+function contrastRatio(a: readonly [number, number, number], b: readonly [number, number, number]): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
+ * The colour actually painted behind `el` — the nearest ancestor with a non-transparent
+ * background, crossing the shadow boundary to the host if it gets that far.
+ *
+ * These five labels are drawn straight onto the canvas: mermaid paints no shape under them, so the
+ * reader's own paper IS their background. Resolving it by walking rather than by naming `--paper`
+ * keeps the test measuring what is on screen instead of what the stylesheet intends.
+ */
+function paintedBackgroundOf(el: Element): [number, number, number] {
+  let node: Element | null = el;
+  while (node) {
+    const bg = getComputedStyle(node).backgroundColor;
+    if (bg && !/rgba\(0,\s*0,\s*0,\s*0\)/.test(bg) && bg !== 'transparent') return parseRgb(bg);
+    const parent: Element | null = node.parentElement;
+    if (parent) {
+      node = parent;
+      continue;
+    }
+    const root = node.getRootNode();
+    node = root instanceof ShadowRoot ? root.host : null;
+  }
+  throw new Error('no painted background found above the label');
+}
+
+/** Assert every canvas label in a settled two-figure document clears {@link MIN_CONTRAST}. */
+function expectCanvasLabelsLegible(shadow: ShadowRoot, theme: string): void {
+  const figures = shadow.querySelectorAll(FIGURE_SELECTOR);
+  expect(figures.length, 'expected the pie and the gantt to have rendered').toBe(2);
+
+  for (const { label, figure, selector, source } of CANVAS_LABELS) {
+    const nodes = figures[figure].querySelectorAll(selector);
+    expect(nodes.length, `no "${label}" node matched ${selector} — the assertion would be vacuous`)
+      .toBeGreaterThan(0);
+
+    const el = nodes[0];
+    const fill = parseRgb(getComputedStyle(el).fill);
+    const behind = paintedBackgroundOf(el);
+    const ratio = contrastRatio(fill, behind);
+
+    expect(
+      Number(ratio.toFixed(2)),
+      `${theme}: the ${label} is drawn rgb(${fill.join(',')}) on rgb(${behind.join(',')}) — ` +
+        `${ratio.toFixed(2)}:1, below WCAG AA ${MIN_CONTRAST}:1. mermaid draws this label on the ` +
+        `CANVAS, so its colour comes from the engine's \`${source}\` theme variable; if the engine ` +
+        `is not configured for the effective theme it falls back to mermaid's light-picture default ` +
+        `and the text lands near-invisible on ${theme} paper (007 §3.7 / D-7, the 9.1 walk finding)`,
+    ).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  }
+}
+
+describe('canvas-drawn diagram text is LEGIBLE at the effective theme (9.1 walk finding)', () => {
+  it('★ DARK: pie title, pie legend, gantt tick, gantt title, gantt section all clear WCAG AA', async () => {
+    await emulateOs('dark');
+    const { shadow } = enhancedHost(doc(PIE_FENCE, GANTT_FENCE), counting().loader);
+    await settleDiagrams(shadow);
+    expectCanvasLabelsLegible(shadow, 'dark');
+  });
+
+  it('the LIGHT control: the SAME five labels, the SAME threshold — light was never broken', async () => {
+    await emulateOs('light');
+    const { shadow } = enhancedHost(doc(PIE_FENCE, GANTT_FENCE), counting().loader);
+    await settleDiagrams(shadow);
+    expectCanvasLabelsLegible(shadow, 'light');
+  });
+
+  /**
+   * ★ THE FLIP NOW SWAPS TWO DIFFERENT PICTURES — the fact every test above was blind to.
+   *
+   * Before the theme reached the engine, `mermaid.render` returned the same bytes at both themes
+   * and the re-theme replaced an <svg> with its own twin. The suite was green throughout, because
+   * "was it re-rendered" and "does it look different" are different questions. This asks the
+   * second one, so a regression that quietly stops the paint from reaching the engine cannot hide
+   * behind a passing flip test again.
+   */
+  it('★ the light and dark renderings of one fence are DIFFERENT artifacts, not twins', async () => {
+    await emulateOs('light');
+    const { shadow } = enhancedHost(doc(PIE_FENCE), counting().loader);
+    await settleDiagrams(shadow);
+    const figure = shadow.querySelector(FIGURE_SELECTOR);
+    if (!figure) throw new Error('expected a rendered figure');
+
+    const lightSvg = normalizeRenderIds(figure.querySelector('svg')?.outerHTML ?? '');
+    await flipOsAndAwaitDelivery('dark');
+    await waitForDiagramTheme(figure, 'dark');
+    const darkSvg = normalizeRenderIds(figure.querySelector('svg')?.outerHTML ?? '');
+
+    expect(lightSvg.length, 'the light rendering must exist to be compared').toBeGreaterThan(0);
+    // The id normalisation above is what makes this assertion mean anything: every render gets a
+    // fresh `peekover-diagram-N`, which mermaid writes into the root id AND into every selector of
+    // its generated <style>, so two renderings ALWAYS differ textually. Without normalising, this
+    // passed against a build with the paint ablated — measured, not assumed.
+    expect(
+      darkSvg,
+      'the dark rendering is identical to the light one once the render id is normalised — the ' +
+        'flip re-rendered and swapped, but the engine drew the same picture twice, which is ' +
+        'exactly the state the 9.1 walk found',
+    ).not.toBe(lightSvg);
+  });
+
+  /**
+   * ★ DECISION 2's OTHER HALF: the per-render configuration rides the RENDER path, never the hit
+   * path. A cache hit serves a stored string and never calls `render`, so it must not pay to
+   * configure an engine it will not invoke — the fast path group 4 exists to create.
+   *
+   * Counted by the THEMED configuration specifically (`themeVariables` present), because
+   * `loadDiagramEngine` also calls `initialize` with the theme-free load-time constant on every
+   * pass including a re-theme's; counting bare calls would conflate the two and prove nothing.
+   */
+  it('★ a cache HIT does not re-configure the engine — themed initialize tracks render exactly', async () => {
+    const themed: unknown[] = [];
+    const render: Mock<() => void> = vi.fn();
+    const engine: DiagramEngine = {
+      initialize: (config) => {
+        if (config.themeVariables !== undefined) themed.push(config.themeVariables);
+        mermaid.initialize(config as never);
+      },
+      render: async (id, definition, container) => {
+        render();
+        return await mermaid.render(id, definition, container);
+      },
+    };
+    const loader: EngineLoader = async () => ({ default: engine }) as unknown as DiagramEngineModule;
+
+    await emulateOs('light');
+    const { shadow } = enhancedHost(doc(FENCE_A), loader);
+    await settleDiagrams(shadow);
+    const figure = shadow.querySelector(FIGURE_SELECTOR);
+    if (!figure) throw new Error('expected a rendered figure');
+    expect(themed).toHaveLength(1);
+    expect(render).toHaveBeenCalledTimes(1);
+
+    // FLIP 1 — a theme never rendered before: a MISS, so one render and one themed configure.
+    await flipOsAndAwaitDelivery('dark');
+    await waitForDiagramTheme(figure, 'dark');
+    expect(render, 'the miss is the control — without it the zero below is not a cache hit')
+      .toHaveBeenCalledTimes(2);
+    expect(themed).toHaveLength(2);
+
+    // FLIP 2 — back to a rendering already stored: a HIT. Neither counter may move.
+    const beforeHit = themed.length;
+    await flipOsAndAwaitDelivery('light');
+    await waitForDiagramTheme(figure, 'light');
+    expect(render, 'the flip back is served from cache').toHaveBeenCalledTimes(2);
+    expect(
+      themed.length - beforeHit,
+      'a cache hit configured the engine anyway — the per-render initialize has drifted off the ' +
+        'render path and onto the hit path, which is the fast path it must never touch',
+    ).toBe(0);
+
+    // The hit really served a diagram — otherwise "no configure" would be the trivial truth of
+    // nothing having happened.
+    expect(figure.querySelectorAll('svg')).toHaveLength(1);
+    expect(figure.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+  });
+});

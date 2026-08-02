@@ -94,6 +94,7 @@
 
 import {
   DIAGRAM_FENCE_SELECTOR,
+  diagramEngineConfigFor,
   engineVersion,
   loadDiagramEngine,
   type DiagramEngine,
@@ -342,7 +343,27 @@ async function drawDiagram(
 
     // Step two: the engine — reached only on a MISS. Its failure is §3.8's second, and it is
     // caught per fence so the fences after it still draw.
+    //
+    // ── ★ THE ENGINE IS CONFIGURED PER RENDER, TO *THIS* FENCE'S THEME (§3.7 / D-7) ────────
+    //
+    // Not once per load, and the difference is a real defect rather than a preference.
+    // `loadDiagramEngine` runs `initialize` ONCE, but `renderDiagrams` reads the effective theme
+    // PER FENCE (see its loop) precisely so a flip landing mid-pass leaves the fences behind it at
+    // the new theme. A theme baked in at load time would draw those remaining fences with the OLD
+    // paint while `markDiagramRendered` stamped them `data-diagram-theme="<new>"` — a stale
+    // picture that D-7 prevents today, reintroduced by the fix meant to make theming work. Here,
+    // the picture and the stamp are read from the same `theme` argument, so they cannot disagree.
+    //
+    // It is CONFIGURATION, not a reload: `initialize()` merges a plain object into mermaid's site
+    // config. The engine stays the one `import('mermaid')` D-13 permits, and the chunk is fetched
+    // once. Renders are already sequential (the shared measuring container — see
+    // `renderDiagrams`), so no other render can be in flight between this call and the one below.
+    //
+    // ★ It sits INSIDE the miss branch on purpose: a cache HIT serves a stored string and never
+    // reaches `engine.render`, so it must not pay for a configuration it will not use. The hit
+    // path is what makes §3.3's *every re-render re-enhances* affordable, and it stays untouched.
     try {
+      engine.initialize(diagramEngineConfigFor(theme));
       drawn = (await engine.render(id, source, container)).svg;
     } catch {
       return { failure: RENDER_FAILED };

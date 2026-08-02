@@ -75,6 +75,7 @@
 // costs the lazy chunk this file's whole design exists to defer.
 
 import pkg from 'mermaid/package.json';
+import type { EffectiveTheme } from '../settings/settings';
 
 /**
  * The fence markdown-it emits for a ```mermaid block, after sanitization. Confirmed empirically, not
@@ -99,7 +100,21 @@ export interface DiagramEngineConfig {
    * unit mirror — so the guarantee is kept where it actually bites.
    */
   readonly secure: string[];
+  /**
+   * The paint (007 §3.7 / D-7, the 9.1 walk finding). OPTIONAL because
+   * {@link DIAGRAM_ENGINE_CONFIG} — the theme-free load-time configuration — deliberately carries
+   * none: the mapping depends on which theme is about to be drawn, which is not known until a
+   * fence is rendered. {@link diagramEngineConfigFor} is the one that sets it.
+   */
+  readonly themeVariables?: DiagramThemeVariables;
 }
+
+/**
+ * A mermaid theme-variable map. `string | boolean` because `darkMode` is a boolean and every other
+ * key is a colour; mermaid types the whole thing `any` (`config.type.d.ts:70`), so nothing stricter
+ * is enforced at the boundary and the honest shape belongs here instead.
+ */
+export type DiagramThemeVariables = Readonly<Record<string, string | boolean>>;
 
 /** What `mermaid.render()` resolves to. Declared for group 3; this module never calls `render`. */
 export interface DiagramRenderResult {
@@ -179,6 +194,169 @@ export const DIAGRAM_ENGINE_CONFIG: DiagramEngineConfig = Object.freeze({
     'themeVariables',
   ]) as string[],
 });
+
+// ── §3.7 / D-7: THE PAINT IS OURS, AND UNTIL NOW WE NEVER CLAIMED IT ──────────────────────────
+//
+// The 9.1 human gate found the pie's title and legend and the gantt's date axis rendering
+// near-black on near-black paper in dark mode. The cause was not a mis-set colour: the effective
+// theme reached the CACHE KEY (`diagramCacheKey`) and nothing else, so the engine below was
+// initialized from a theme-free constant and drew mermaid's default LIGHT picture at every theme.
+// Dark mode was that light picture on dark paper — labels sitting on a mermaid FILL stayed legible
+// (the fill came with them), labels sitting on the CANVAS did not. Measured pre-fix, dark:
+// pie title and legend 1.14:1, gantt tick and title 1.45:1, gantt section title 1.32:1; the same
+// five labels on light, 12–20:1. That asymmetry is the whole defect.
+//
+// It also means D-1/D-6's addendum ("the theme rides in the `<style>`, so a flip re-renders and
+// the cache key is meaningful") described an intention rather than a fact: the two renderings were
+// byte-identical. This is the change that makes it true, and D-7's flip machinery — which was
+// correct all along — finally has two different pictures to swap between.
+//
+// ── WHY OUR TOKENS AND NOT `theme: 'dark'` ───────────────────────────────────────────────────
+//
+// §3.7/D-7 make the effective theme OURS to choose (decisions.md, the D-6 `secure` entry), and a
+// diagram is part of the reading column, not a guest in it. mermaid's own dark theme is a coherent
+// palette — of somebody else's brand. The reader is paper/ink/one-highlighter, so the diagram is
+// painted from the SAME tokens as the prose beside it.
+//
+// ── THE HEX IS TRANSCRIBED, NOT INVENTED ─────────────────────────────────────────────────────
+//
+// `design/tokens.css` is the source of truth and `readerCss.ts:30-52` already copies it verbatim
+// for the same reason this does: these values cross into a context that cannot resolve a CSS
+// custom property. mermaid interpolates them into a stylesheet it GENERATES and runs colour maths
+// (khroma) over some of them, so `var(--ink)` is not a value it can accept. Any token edit must
+// land in all three places; `design/tokens.css` remains the one that decides.
+//
+// ── EVERY KEY BELOW EARNED ITS PLACE BY MEASUREMENT ──────────────────────────────────────────
+//
+// Not a transcription of mermaid's documentation. Each key was added because a real diagram went
+// unreadable without it, and the set was ABLATED afterwards — `nodeBkg`, `arrowheadColor`,
+// `labelBackground` and `stateLabelColor` were all dropped when removing them changed no
+// measurement, and `compositeBackground`/`compositeTitleBackground`/`altBackground` were kept
+// because removing them put a composite state's label at 1.02:1.
+//
+// The keys are LEAF keys, deliberately, and that is a property of mermaid's theme machinery rather
+// than a style choice: `theme-default`'s `calculate()` applies overrides, runs `updateColors()`,
+// then applies the overrides AGAIN (`chunk-WYO6CB5R.mjs:1180-1187`). A leaf key therefore survives;
+// a base key like `primaryColor` is consumed by the derivation and silently overwritten for the
+// keys `theme-default` hardcodes. Setting `primaryTextColor` alone was measured doing nothing to
+// the gantt's axis.
+//
+// ★ THE PAIRING RULE, which is what makes this a legibility fix rather than a colour change: a text
+// colour is only ever moved TOGETHER WITH the fill it sits on. Flipping label ink to near-white
+// without darkening the node behind it was measured at 1.02:1 — a worse defect than the one being
+// fixed, and the reason this map names fills at all.
+
+/** One theme's slice of `design/tokens.css`, in the spellings the diagram paint needs. */
+interface DiagramTokens {
+  readonly paper: string;
+  readonly panel: string;
+  readonly ink: string;
+  readonly line: string;
+  readonly muted: string;
+  /** The highlighter, and the LITERAL dark ink that goes on it. `--hl` is yellow in EVERY theme,
+   *  so text on it must never be `--ink` — `readerCss.ts:124-126`'s trap guard, which mermaid's
+   *  note sticky (`noteBkgColor`) walks straight into. */
+  readonly hl: string;
+  readonly hlInk: string;
+  readonly darkMode: boolean;
+}
+
+/** `design/tokens.css` — verbatim. Sepia takes the light palette except for the two values the
+ *  token file actually overrides (`--paper`, `--ink`), which is exactly what the stylesheet does. */
+const DIAGRAM_TOKENS: Readonly<Record<EffectiveTheme, DiagramTokens>> = Object.freeze({
+  light: {
+    paper: '#FBFBF8', panel: '#F4F4EF', ink: '#16171F', line: '#E6E6DF', muted: '#5D6070',
+    hl: '#FFE94A', hlInk: '#26210a', darkMode: false,
+  },
+  dark: {
+    paper: '#12141C', panel: '#181B26', ink: '#EAEBF3', line: '#262A38', muted: '#A0A4B8',
+    hl: '#FFD84D', hlInk: '#191504', darkMode: true,
+  },
+  sepia: {
+    paper: '#F6EEDF', panel: '#F4F4EF', ink: '#3B2F1E', line: '#E6E6DF', muted: '#5D6070',
+    hl: '#FFE94A', hlInk: '#26210a', darkMode: false,
+  },
+});
+
+/**
+ * One theme's tokens as mermaid theme variables. Grouped by WHAT EACH ONE PAINTS, because the
+ * grouping is the argument: a fill and the ink that lands on it are chosen together (see the
+ * pairing rule above), and a key in the wrong group is a legibility bug waiting to happen.
+ */
+function themeVariablesFrom(t: DiagramTokens): DiagramThemeVariables {
+  return Object.freeze({
+    // mermaid's own light/dark switch — it decides the DIRECTION of every derived value we do not
+    // name here (borders lighten rather than darken, and so on).
+    darkMode: t.darkMode,
+    background: t.paper,
+
+    // ── boxes, and the ink inside them (the pairing rule) ──
+    mainBkg: t.panel,
+    nodeBorder: t.line,
+    nodeTextColor: t.ink,
+    clusterBkg: t.panel,
+    clusterBorder: t.line,
+    actorBkg: t.panel,
+    actorBorder: t.line,
+    actorTextColor: t.ink,
+    classText: t.ink,
+    stateBkg: t.panel,
+    compositeBackground: t.panel,
+    compositeTitleBackground: t.panel,
+    altBackground: t.panel,
+
+    // ── the note sticky: highlighter paper, literal dark ink (readerCss.ts's trap guard) ──
+    noteBkgColor: t.hl,
+    noteBorderColor: t.hl,
+    noteTextColor: t.hlInk,
+
+    // ── text drawn straight onto the canvas: the five labels the 9.1 walk was judging ──
+    textColor: t.ink, // gantt date axis, class title, and the inherited default fill
+    titleColor: t.ink, // gantt title + section titles, flowchart cluster labels
+    signalTextColor: t.ink, // sequence message text — also broken on dark, not in the walk's list
+    pieTitleTextColor: t.ink,
+    pieLegendTextColor: t.ink,
+    transitionLabelColor: t.ink,
+
+    // ── the chip behind an edge label. mermaid's default is TRANSLUCENT
+    // (`rgba(232,232,232,0.8)`), which composites to a mid-grey over dark paper and drags its own
+    // label to 2.30:1. An opaque paper chip is the same shape at both themes. ──
+    edgeLabelBackground: t.paper,
+    labelBackgroundColor: t.paper,
+
+    // ── strokes ──
+    lineColor: t.muted,
+  });
+}
+
+/**
+ * The engine configuration for ONE effective theme: {@link DIAGRAM_ENGINE_CONFIG} plus that
+ * theme's paint. Precomputed and frozen per theme rather than built per call — the render path
+ * asks for one of these immediately before every `render()`, and there are exactly three answers.
+ */
+const DIAGRAM_ENGINE_CONFIGS: Readonly<Record<EffectiveTheme, DiagramEngineConfig>> = Object.freeze({
+  light: Object.freeze({ ...DIAGRAM_ENGINE_CONFIG, themeVariables: themeVariablesFrom(DIAGRAM_TOKENS.light) }),
+  dark: Object.freeze({ ...DIAGRAM_ENGINE_CONFIG, themeVariables: themeVariablesFrom(DIAGRAM_TOKENS.dark) }),
+  sepia: Object.freeze({ ...DIAGRAM_ENGINE_CONFIG, themeVariables: themeVariablesFrom(DIAGRAM_TOKENS.sepia) }),
+});
+
+/**
+ * The configuration to draw ONE fence at ONE effective theme.
+ *
+ * ★ Every theme returns the SAME KEY SET. That is not tidiness: `mermaid.initialize()` MERGES into
+ * its site config rather than replacing it, so a key set at dark and merely absent at light would
+ * survive the flip and paint the light picture with dark values. The themes differ in what the
+ * keys are worth, never in which keys exist.
+ *
+ * `secure` still lists `themeVariables` (see {@link DIAGRAM_ENGINE_CONFIG}) and still must: that
+ * list governs `%%{init}%%` DIRECTIVES, and the values here arrive through `initialize()`, which
+ * the hardening deliberately leaves open ("a `themeCSS` WE set through `initialize()` still
+ * applies, so the hardening blocks the DIRECTIVE route, not the feature" — decisions.md). The
+ * markdown author still cannot repaint a diagram; we can, which is what §3.7 asks for.
+ */
+export function diagramEngineConfigFor(theme: EffectiveTheme): DiagramEngineConfig {
+  return DIAGRAM_ENGINE_CONFIGS[theme];
+}
 
 /**
  * THE single `import('mermaid')` in the repository (D-13). A static string literal, evaluated only
