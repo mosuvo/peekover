@@ -257,6 +257,17 @@ export function diagramSourceOf(pre: Element): string {
  * name-only, and text measurement is the entire reason this element is in the document. No width is
  * set: with `htmlLabels:false` every label is an SVG `<text>` the engine measures and lays out
  * itself, so a parent box would constrain nothing and would only be a magic number.
+ *
+ * ★ THAT REASONING IS TRUE OF EVERY DIAGRAM TYPE BUT ONE, AND THE EXCEPTION IS NOT FIXED HERE.
+ * The gantt does not measure its own extent — it ASKS ITS PARENT, and it is the only thing in all
+ * of mermaid that does (`ganttDiagram-NO4QXBWP.mjs:1508`, `w = elem.parentElement.offsetWidth`).
+ * Against this container it therefore reads the `<svg>`'s intrinsic 300 and draws thirteen date
+ * labels into it — the 9.1 walk's overprint finding. The fix is deliberately NOT a width here: a
+ * width on this element would constrain the one type that asks and be a magic number for the seven
+ * that do not, and it would still not be enough (the reading column's own 684 was measured
+ * overlapping just as badly). It is `gantt.axisFormat` + `gantt.useWidth` in
+ * `diagramEngine.ts`'s configuration, scoped by mermaid's own config namespace to the one type that
+ * needs it — so this container stays width-less, for the reason it always was.
  */
 function createMeasureContainer(doc: Document): HTMLElement {
   const container = doc.createElement('div');

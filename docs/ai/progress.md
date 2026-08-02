@@ -277,8 +277,47 @@ measurement-driven or explicitly deferred.*
   **→ ANSWERED: (b). It is a REAL defect, it is NOT the fixture, and it is now its own item below.**
   **HOME:** its own session and its own commit — the first thing group 9 does after this record.
 
+- **✅ FIXED (commit `fix(diagrams): gantt date-axis legibility via compact format + layout width`) —
+  THE GANTT DATE AXIS OVERPRINT, M7's SECOND human-gate defect. The item below is kept as written,
+  with the resolution appended; its mechanism was RIGHT and its implied fix was WRONG, which is the
+  part worth keeping.**
+  **What it implied:** give the container a real width. **What was true:** *width alone cannot fix
+  this.* Re-measured on the sparse fixture: none → 12 of 12 adjacent labels overlap; 700 → 12 of 12;
+  1200 → 0. **The reading column is 684 and sits INSIDE the overlapping regime**, so the obvious
+  constant is the one that does not work. Nor does any larger one — d3 picks tick COUNT by count and
+  never by pixels, so the width a gantt needs grows with its SPAN, and `useMaxWidth` then scales an
+  over-wide layout back DOWN, shrinking the glyph below its designed 11px. That trades an
+  illegibility defect for an overlap one, so a fixed *display* width is self-defeating.
+  **THE FIX — the lever is the axis FORMAT, and it needs a layout width to work IN.** Both keys, in
+  the **base** `DIAGRAM_ENGINE_CONFIG` (they are LAYOUT, theme-independent, so all three per-theme
+  configs inherit them through the existing spread and the colour fix's per-render `initialize()`
+  carries them unchanged): `gantt.axisFormat: '%b %d'` shortens the label, `gantt.useWidth: 684`
+  lifts the layout off the 300 accident. **Neither works without the other** — at 300 even short
+  labels cram, and at 684 the full date still smears. **The enhancer needed NO code change**: the
+  measuring container stays width-less, because `gantt.*` is scoped by mermaid's own config
+  namespace to the one type that asks its parent. Only its doc-comment was refined.
+  **THE ONE PRODUCT CHANGE, ACCEPTED DELIBERATELY: `%b %d` DROPS THE YEAR.** A gantt in a reading
+  column shows a relative schedule and takes its year from the prose around it, and the multi-year
+  case where every tick truly needs a year is exactly the long-span smear a year would be illegible
+  in anyway. **It is a DEFAULT, not a mandate** — an in-fence `axisFormat %Y-%m-%d` still wins
+  (`ganttDiagram-NO4QXBWP.mjs:1856-1862` reads the parser db BEFORE `conf.axisFormat`), asserted as
+  its own arm. Neither key is in `secure`, deliberately: adding them would break exactly that
+  override, and a date-format string and a layout number are not a security surface.
+  **Measured, production path, BOTH engines** (`tests/browser/diagramGanttAxis.browser.test.ts`, four
+  arms): **12 overlaps → 0**. The pre-fix `viewBox` was `0 0 300 172` with thirteen `2026-08-01`
+  labels; it is now `0 0 684 172` with `Aug 01`. **The scaled-display arm** renders the fixed layout
+  into a 400px host (painted 336–350px, proven actually scaled) and still reports **0** — that is the
+  one property the constant width rests on, asserted rather than argued. **The ablation arm** restates
+  the pre-fix geometry (`useWidth: 300`, `axisFormat: '%Y-%m-%d'`) and must report many overlaps: it
+  is the firing control, without which every `toBe(0)` here could be a broken detector.
+  **NON-GANTT OUTPUT IS BYTE-IDENTICAL** — flowchart/sequence/pie/state normalised SVG hashes match
+  across the change on both engines, so the colour fix's paint is undisturbed; all three per-theme
+  config hashes DID move, which is what proves the key is actually inherited.
+  **Bundle:** content script **byte-identical both engines**; app chunk **+55 B**, decomposed to zero
+  residual (54 B emitted literal + 1 B separating comma) with the string present post-fix and absent
+  at HEAD.
 - **★ THE GANTT DATE AXIS OVERPRINTS — A REAL DEFECT, MECHANISM KNOWN, DELIBERATELY NOT FIXED WITH THE
-  COLOUR BUG.** Promoted from the open sub-question above: the two candidates were separated by
+  COLOUR BUG. — ✅ RESOLVED, see the entry above.** Promoted from the open sub-question above: the two candidates were separated by
   measurement, and it is **(b), a product defect** — the SPARSE `diagrams-10` gantt (three days, three
   tasks) overprints exactly as badly as the dense 50-fence one, at **both** themes, on **both** engines.
   So it is not a fixture artifact and no dense document is needed to see it. **★ M7's human-gate defect
@@ -295,6 +334,19 @@ measurement-driven or explicitly deferred.*
   parent box would constrain nothing) is **true for flowcharts and false for gantt**, which asks its
   parent. Reconciling that is a real decision, not a tweak, and bundling it into a colour fix would have
   hidden it. **HOME:** its own session and its own commit; the D-6-step-1 prose is edited there, not here.
+- **★ NEW AT THE GANTT-AXIS FIX — THE 6-HOUR-TICK REPEATED LABEL. A POLISH ITEM, NOT A DEFECT, AND
+  DELIBERATELY NOT BUNDLED WITH THE OVERPRINT FIX.** On a three-day gantt d3 lands on **6-hour**
+  ticks, so four consecutive ticks format to the same string: the fixed axis reads
+  `Aug 01 | Aug 01 | Aug 01 | Aug 01 | Aug 02 | …`. **Distinguish it from the bug just fixed:** these
+  labels are legible and **do not intersect** — the overprint assertion is genuinely 0. This is
+  redundancy, not illegibility, which is why it is a polish candidate and not a second defect.
+  **WHY NOT FIXED HERE:** it needs a **span-dependent `tickInterval`** (mermaid takes
+  `gantt.tickInterval`, but a single constant is wrong by construction — `1day` is right for a
+  three-day chart and absurd for a three-year one, so this needs a rule computed from the gantt's own
+  span, which the config route cannot express). That is a different and harder mechanism than a format
+  string, and bundling a speculative one into a measured fix would have hidden it — the same reasoning
+  that kept this fix out of the colour commit. **REVISIT WHEN:** a gantt-heavy document makes the
+  repetition worth the machinery, or mermaid grows a span-aware default upstream.
 - **★ NEW AT 8.4 — NARROW THE `mermaid/package.json` INLINE (D-10 disposition (b)), ~3,818 B. THIS IS
   NEW CARRIED WORK, AND ITS PLACEMENT WAS RESOLVED RATHER THAN ASSUMED.** 8.4's human gate **took the
   disposition**; it did not do the work. **§8.5 did NOT own it, and 8.5 HAS NOW LANDED without touching it — this STAYS CARRIED, its trigger

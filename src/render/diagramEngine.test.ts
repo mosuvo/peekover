@@ -115,7 +115,10 @@ describe('D-6 step 3 — the configuration the engine is initialized with', () =
     // drawing an apology (task 3.2 — the first code that calls render()).
     expect(config.suppressErrorRendering).toBe(true);
     // And nothing else: an added key is a configuration decision that must be made deliberately.
+    // `gantt` is the one such decision so far — the 9.1 walk's date-axis overprint finding; it is
+    // LAYOUT (a format and a width), theme-independent, which is why it sits in the base config.
     expect(Object.keys(config).sort()).toEqual([
+      'gantt',
       'htmlLabels',
       'secure',
       'securityLevel',
@@ -138,11 +141,17 @@ describe('D-6 step 3 — the configuration the engine is initialized with', () =
     // The ARRAY is frozen too, not just the object holding it: `Object.freeze` is shallow, so
     // without this a caller could `secure.length = 0` and silently un-harden the engine.
     expect(Object.isFrozen(DIAGRAM_ENGINE_CONFIG.secure)).toBe(true);
+    // Same shallow-freeze reasoning for the nested `gantt` object: without this a caller could
+    // reassign `gantt.useWidth` and put the axis back on the 300-unit geometry the fix removed.
+    expect(Object.isFrozen(DIAGRAM_ENGINE_CONFIG.gantt)).toBe(true);
     expect(DIAGRAM_ENGINE_CONFIG).toEqual({
       securityLevel: 'strict',
       htmlLabels: false,
       startOnLoad: false,
       suppressErrorRendering: true,
+      // The LAYOUT keys. NOT in `secure` below, deliberately — an author's in-fence `axisFormat`
+      // must keep winning, and neither key is a security surface.
+      gantt: { axisFormat: '%b %d', useWidth: 684 },
       secure: [
         'secure',
         'securityLevel',

@@ -100,6 +100,8 @@ export interface DiagramEngineConfig {
    * unit mirror — so the guarantee is kept where it actually bites.
    */
   readonly secure: string[];
+  /** The gantt's layout (the 9.1 walk's SECOND finding). See {@link DiagramGanttConfig}. */
+  readonly gantt: DiagramGanttConfig;
   /**
    * The paint (007 §3.7 / D-7, the 9.1 walk finding). OPTIONAL because
    * {@link DIAGRAM_ENGINE_CONFIG} — the theme-free load-time configuration — deliberately carries
@@ -107,6 +109,15 @@ export interface DiagramEngineConfig {
    * fence is rendered. {@link diagramEngineConfigFor} is the one that sets it.
    */
   readonly themeVariables?: DiagramThemeVariables;
+}
+
+/**
+ * The gantt's LAYOUT — a date format and a width, both theme-independent, which is why they live in
+ * {@link DIAGRAM_ENGINE_CONFIG} rather than beside the paint.
+ */
+export interface DiagramGanttConfig {
+  readonly axisFormat: string;
+  readonly useWidth: number;
 }
 
 /**
@@ -170,6 +181,44 @@ export type EngineLoader = () => Promise<DiagramEngineModule>;
  * The list guards ITSELF: `sanitize()` iterates `['secure', ...siteConfig.secure]`, so a
  * `%%{init:{"secure":[]}}%%` cannot re-widen it. This constrains only DIRECTIVE-supplied keys —
  * a `themeCSS` we set here ourselves still applies, so this closes the route, not the feature.
+ *
+ * ── `gantt`: THE ONE DIAGRAM TYPE THAT ASKS ITS PARENT HOW WIDE TO BE ─────────────────────────
+ *
+ * The 9.1 walk's SECOND finding (M7:2): the gantt's date ticks stack into an unreadable smear, at
+ * both themes and on both engines, on the SPARSE `diagrams-10` gantt — so a product defect, not a
+ * dense-fixture artifact. `ganttDiagram-NO4QXBWP.mjs:1508` reads `w = elem.parentElement.
+ * offsetWidth`, the ONLY parent-width read in all of mermaid. D-6 step 1's measuring container sets
+ * no width (correctly — see `diagramEnhancer.ts`'s note), so it shrink-wraps the `<svg>`'s intrinsic
+ * 300 and the axis lays out there. Mermaid's own `w === undefined -> 1200` fallback never fires: 0
+ * is not undefined, and the value is 300 rather than 0. d3 picks tick COUNT by count, never by
+ * pixels, and mermaid never thins ticks — it only scales. Thirteen `2026-08-01` labels into 300.
+ *
+ * ★ WIDTH ALONE IS NOT THE FIX, WHICH IS WHY BOTH KEYS ARE HERE. Measured on the sparse fixture at
+ * three container widths: none -> 12 of 12 adjacent labels overlap; 700 -> 12 of 12; 1200 -> 0. The
+ * reading column is 684 and sits INSIDE the overlapping regime. Nor does any larger constant fix the
+ * general case — required width grows with the gantt's SPAN, and `useMaxWidth` then scales an
+ * over-wide layout back DOWN, shrinking the glyph below its designed size. That trades an
+ * illegibility defect for an overlap one. So the lever is the FORMAT, and the format needs a layout
+ * width to work in: at 684 units `%b %d` takes the same fixture to 0 overlaps with the glyph size
+ * unchanged, and at 300 even short labels cram. Neither key works without the other.
+ *
+ * `axisFormat` is a DEFAULT, not a mandate: an in-fence `axisFormat` line is read from the parser's
+ * db and consulted BEFORE `conf.axisFormat` (`ganttDiagram-NO4QXBWP.mjs:1856-1862`), so an author
+ * who needs the year writes `axisFormat %Y-%m-%d` and gets it. That is the whole answer to the one
+ * real product change here — `%b %d` DROPS THE YEAR. A gantt in a reading column shows a relative
+ * schedule and takes its year from the prose around it; the multi-year case where every tick truly
+ * needs a year is exactly the long-span smear a year would be illegible in anyway.
+ *
+ * `useWidth` is a DESIGN width to lay out IN, not a measurement: `useMaxWidth` (mermaid's default,
+ * and on for gantt) then scales the result to whatever column it lands in, uniformly through the
+ * viewBox — so labels that clear each other at 684 stay clear when scaled, glyphs shrinking together
+ * with their spacing. A live per-viewport measure would buy nothing for it and would mean plumbing a
+ * width down the per-render path. Asserted, not argued, in `tests/browser/diagramGanttAxis.
+ * browser.test.ts` (its scaled-display arm renders into a 400px host).
+ *
+ * NEITHER KEY IS IN `secure`, deliberately: a date-format string and a layout number are not a
+ * security surface — both are consumed by mermaid's own layout and the result still leaves through
+ * `sanitizeSvg` — and adding them would break the author-override the default depends on.
  */
 export const DIAGRAM_ENGINE_CONFIG: DiagramEngineConfig = Object.freeze({
   securityLevel: 'strict',
@@ -193,6 +242,17 @@ export const DIAGRAM_ENGINE_CONFIG: DiagramEngineConfig = Object.freeze({
     'altFontFamily',
     'themeVariables',
   ]) as string[],
+  gantt: Object.freeze({
+    // Short enough to clear its neighbour at the width below. Drops the year — see the header.
+    axisFormat: '%b %d',
+    // ★ TRANSCRIBED, like the theme hex below it and for the same reason: this crosses into a
+    // context that cannot resolve a CSS custom property (mermaid takes a number, not a `var()`).
+    // SOURCE: `readerCss.ts:83` `--reader-measure:748px` minus `readerCss.ts:87`'s `padding:56px
+    // 32px 130px` on both sides = 748 - 64 = 684, the reading column's CONTENT width. Move the
+    // measure or the padding and this number must move with them; `design/tokens.css` and
+    // `readerCss.ts` remain the ones that decide.
+    useWidth: 684,
+  }),
 });
 
 // ── §3.7 / D-7: THE PAINT IS OURS, AND UNTIL NOW WE NEVER CLAIMED IT ──────────────────────────
