@@ -1,4 +1,271 @@
 # Retro log — Peekover
+- **2026-08-02 · M7 close (spec 007 — Mermaid diagrams + diagram cache, M7a).** Mermaid rendering on the
+  app-page reader behind a lazy chunk the content script never reaches, a **SECOND named sanitizer profile**
+  for SVG, a theme-partitioned diagram cache (`DB_VERSION` 4, two stores), per-diagram copy / download /
+  lightbox, and degradation to readable source on engine-load and storage failure — with **`permissions: []`
+  still intact** and the **SECOND `dependencies` addition since M1** (`mermaid@^11.16.0`, the fifth
+  production dependency, **~3.3 MB of it proven OFF the gated path by ablation**). Nine groups, **twenty-eight
+  planned tasks, ZERO discovered tasks** — and **TWO out-of-plan fix commits AFTER the close gate**, which is
+  where this entry's headline lives. At close, **re-measured this session at `fc3a142`**: lint EXIT=0 ·
+  **728 unit** (51 files) · **927 in-browser passed / 15 skipped**, 100 file-instances, both engines · golden
+  diff EMPTY · the diagram import fence **8/8** · content script **318,747 B** both engines (per-engine md5
+  stable; the engines differ in exactly ONE pre-existing byte) · app chunk **389,143 B**, md5-identical both
+  engines · `permissions: []` on both built manifests · first paint **152.3–163.2 ms** medians, **floor
+  145.3 ms**, against the **<165 ms** bar M6 re-baselined. The 9.1 gate **PASSED all eight items and found
+  TWO shipping defects** (running score **10/10 → 12/12**), both fixed before close, each in its own session
+  and its own commit. The settled architecture (D-1…D-15, the six 8.4 bound decisions, the six in-flight
+  amendments) is in decisions.md 2026-07-27…2026-08-01 — **linked, not restated**; the measurement evidence
+  is progress.md § Baselines and § Carried items. **The headline is that BOTH end-of-milestone fixes had
+  their KICKOFF PREMISE FALSIFIED BY MEASUREMENT before a line was written, and the single most valuable
+  move this milestone made — repeatedly — was red-first-ing the DIAGNOSIS instead of the fix.**
+  - **(1) THE HEADLINE — A KICKOFF PREMISE IS A HYPOTHESIS, AND THE FIRST STEP OF A FIX IS TO MEASURE THE
+    PREMISE, NOT TO EXECUTE IT. Twice in a row, at the end of the milestone, the stated diagnosis was wrong,
+    and one measurement each killed it before a line was written.** **(a) The dark-mode fix.** The kickoff
+    said *"we pass a theme, just not the keys"* — i.e. add the missing colour keys. The truth was that the
+    effective theme reached **`diagramCacheKey` and nothing else**: `DIAGRAM_ENGINE_CONFIG` carried no
+    `theme` and no `themeVariables`, and `initialize()` was handed that theme-free constant once per load.
+    **Mermaid drew its default LIGHT picture at every theme** — proven, not argued: the adopted `<svg>` was
+    **byte-identical at dark and at light** on both engines once the render id was normalised. Executing the
+    premise would have added keys to a config that was never consulted per theme. **(b) The gantt fix.** The
+    kickoff said *"give it a real width"*. The reading column's width is **reachable AND insufficient**:
+    measured on the sparse fixture, no width → **12 of 12** adjacent labels overlap, **700 → 12 of 12**,
+    1200 → 0, and **684 sits inside the overlapping regime**. Nor does any larger constant work — d3 picks
+    tick **count** by count and never by pixels, so the width a gantt needs grows with its SPAN, and
+    `useMaxWidth` then scales an over-wide layout back DOWN, below the designed glyph size. **The lever was
+    the axis FORMAT** (`%b %d`), with a width only as the room it needs to work in. → **What is common to
+    both is the reusable part: the SYMPTOM was reported correctly and the MECHANISM was reported wrongly.**
+    A kickoff written without the artifact executing in front of it can see WHAT is broken and cannot see
+    WHY. → **THE RULE, mechanical enough to apply without thinking: the first commit-shaped move of any fix
+    task is a MEASUREMENT WHOSE ONLY JOB IS TO FALSIFY THE STATED DIAGNOSIS.** Normalise the render id and
+    diff the two artifacts; sweep the container width across the range the premise assumes; *then* build.
+    **It cost one measurement each.** → **This is M5's finding (4) — a mechanism that CAN produce a symptom
+    is not evidence that it DID — at the altitude of a fix kickoff rather than a console line, and it is the
+    third kind of prompt claim this project has had to treat as UNVERIFIED INPUT** (M5 banked repository
+    state, M6 banked machine state; **M7 banks the DIAGNOSIS itself**). → **And state the counter-intuitive
+    half plainly, because it is what makes routing a premise back feel like progress rather than friction:**
+    both fixes are smaller and more correct than the ones their kickoffs described, and in (b) the premise's
+    own fix would have shipped a NEW defect — a shrunken glyph — in place of the old one.
+  - **(2) THE COROLLARY, AND IT HAS THE LONGEST REACH: A GREEN SUITE CAN BE VACUOUS ON THE PROPERTY THAT
+    MATTERS. A TEST PROVES WHAT IT ASSERTS, NOT WHAT IT IS NAMED.** D-7 — *"diagrams follow the effective
+    theme"* — was **green for the whole milestone while the two theme renderings were byte-identical**.
+    Every D-7 test asked *"was it re-rendered?"*; none asked *"does it look different?"*. Those are different
+    assertions, the suite only ever wrote the first, and the NAME promises the second. **The flip machinery
+    was correct and load-bearing throughout and is byte-untouched by the fix** — that is the point: it
+    worked perfectly, flipping between two copies of the same picture. → **The same lesson fired one level
+    up, inside the fix itself, which is what makes it a class rather than an anecdote: the colour fix's OWN
+    new two-picture test was VACUOUS ON ITS FIRST RUN**, because two renderings always differ by their
+    `peekover-diagram-N` id — it would have passed against the unfixed tree. The ablation caught it;
+    normalising the id is what made the assertion mean the thing its name claims. → **THE RULE: for any
+    assertion of the form "X changes when Y changes", NAME THE DIMENSION and normalise away the dimensions
+    that always change — then ABLATE, because only a guard that reds on the real defect tells you which of
+    the two assertions you actually wrote.** → **And the planning-time half, which is where it gets cheap:
+    when a suite is named for a USER-VISIBLE property (theme, legibility, layout), at least one member must
+    assert THAT property — a contrast ratio, an artifact diff, an overlap count — and not only the mechanism
+    believed to produce it.** M7's replacement is exactly that shape: five canvas labels, each asserted
+    separately at WCAG AA against **the background actually painted behind them**, with the LIGHT arm as a
+    control that PASSED unfixed (dark 1.14:1 → 15.1:1; light 12–20:1 → 16.2:1, unregressed) — so the red
+    discriminates a broken picture from a broken assertion. → **This is the FOURTH RUNG of the red-first
+    ladder, and it is about the PREDICATE rather than the instrument.** M4 (1): did the instrument go red at
+    all. M5 (2): did the RIGHT things go red, in the RIGHT number. M6 (5): does the failure carry the
+    defect's own signature. **M7: is the thing being asserted the property a human would NAME?** All three
+    earlier rungs were satisfied by D-7's suite the whole time, and it was still blind.
+  - **(3) THE RED-FIRST WIDENED BY KIND ACROSS THE MILESTONE, AND EVERY NEW KIND NEEDED A NEW ASSERTION
+    SHAPE — "it renders" never once sufficed.** Read in order, M7 is a ladder of property classes.
+    **TRUST** (groups 2–3): a hostile corpus red **9 of 9** under an identity passthrough, each red NAMING
+    the surviving node, and the D-6 `secure` hardening measured **on the wire** with a benign
+    `%%{init:{"theme":"dark"}}%%` control that visibly re-themes in the same run — so *"no fetch"* is a
+    RESULT and not a dead probe. **IDENTITY / CORRECTNESS** (group 4): engine-invocation counts taken through
+    the PRODUCTION watch path, with controls asserted against a **NAMED key and a NAMED surviving row**
+    rather than against a count — the oversized-diagram refusal is decided by **ONE BYTE** at the bound, and
+    *"evicts nothing"* is proven by the pre-existing row still SERVING, not by a row tally. **LEGIBILITY**
+    (the colour fix): contrast ratios against the painted background, both arms. **LAYOUT** (the gantt fix):
+    adjacent-label overlap counts through the real width-less measuring container, with the pre-fix geometry
+    restated explicitly as a firing control — *"without which a broken detector and a fixed axis are
+    indistinguishable."* → **THE RULE: when a milestone enters a NEW property class, budget a NEW ASSERTION
+    SHAPE, not another case in the old one — and find the shape by asking what MEASUREMENT would red on the
+    defect a human just described, in the UNITS the human used.** → **The confirming pattern is uncomfortable
+    and worth stating: the two classes M7 entered LAST (legibility, layout) are exactly the two the gate
+    found defects in, and for the same reason in both — no assertion of that shape existed yet, so there was
+    nothing to be green about.**
+  - **(4) THE HUMAN GATE FOUND BOTH DEFECTS, FOR TWO DIFFERENT REASONS, AND BOTH REASONS GENERALISE — this
+    is the clearest statement of what a milestone-close walk is FOR that this project has produced.**
+    **927 browser cases across two engines were green over both defects.** The dark-mode one was invisible
+    because **the suite's assertion was the wrong one** (finding 2). The gantt one was invisible because
+    **no test asserted layout width at all** — there was no sibling suite to transcribe an assertion from,
+    which is **M6's finding (4), second half, recurring**: the dangerous failure is the one with nothing to
+    notice missing. → **And the gate is the ONLY instrument for two entire properties.** Item 6 (zero
+    unexpected network with the Network tab open, across import → render → cache → re-theme → export) is
+    **the only evidence for the real loaded extension** — 3.4's import fence is a module-graph assertion, not
+    a wire reading — and item 5 (**Firefox everything**) is that engine's only evidence, because Playwright
+    cannot load an extension into Firefox. → **★ THE INVERSE, AND IT IS NEW: SOMETIMES WRITING THE TEST WOULD
+    PRE-EMPT THE GATE, AND THE HONEST OUTPUT IS A RECORD RATHER THAN A COMMIT.** §8.3 was written to assert
+    placeholder motion; 8.3 found that **every writable form of that test DECIDES D-11** — asserting
+    "animates" is impossible against a static placeholder, asserting `animationName === 'none'` pins static
+    as the answer, and building the shimmer to make the first form writable would settle the very question
+    9.1 exists to ask. **8.3 committed NO test and recorded walk material instead**, and 9.1 then decided
+    (D-11 CONFIRMED STATIC, no shimmer built, nothing under `src/` touched to reach the verdict). → **THE
+    RULE: before writing coverage for a property a HUMAN GATE owns, check whether the test would ANSWER the
+    question rather than observe it. If it would, the deliverable is the walk material, not the assertion**
+    — and say so in the record, because a struck Verify clause reads like an omission otherwise. **This is
+    M4's honest-gap → named-gate-item → discharged-at-close loop with the arrow reversed**, and it is the
+    first time this project has declined to write a test on the ground that writing it would be a decision.
+  - **(5) THE WRONG PREMISE MIGRATED INTO THE WRITTEN CONTRACT — SIX GATE-APPROVED CLAUSES WERE AMENDED BY
+    MEASUREMENT DURING IMPLEMENTATION, EVERY ONE CAUGHT BY AN IMPLEMENTER CHECKING THE TEXT AGAINST THE
+    ARTIFACT BEFORE BUILDING TO IT.** In order: **D-1 / §2.1** — the SVG profile's `ALLOWED_URI_REGEXP` was
+    specified as the literal `/^#/`, which is unimplementable against DOMPurify's GLOBAL attribute gating (it
+    would delete every coordinate in every diagram); **D-3 / D-13** — `engineVersion` was specified from the
+    engine's own export, and mermaid **exposes no runtime version**, so it comes from a resolved
+    `mermaid/package.json`; **§2.2** — the task was framed around the inherited sanitize hook being the
+    security discriminator, and the hook is a **proven no-op** for this profile, so the ABSENCE of a
+    "remove the hook → `data:` reds" revert IS the finding; **D-6** — the engine config was believed closed
+    and carried a **LIVE pre-sanitize `themeCSS` / `fontFamily` fetch route**, closed by addendum and proven
+    on the wire in both directions; **§4** — the remote-reference route needed a closure decision the spec
+    had not taken, and the measurement window's claim was **sharpened** to *"no off-origin request"* once
+    relative references were measured as package-local; **§8.3** — a Verify clause premised on a shimmer
+    **never specified into existence**, struck. → **What these six have in common is not sloppiness: every
+    one is an ASSERTION ABOUT SOMEONE ELSE'S CODE** — a library's API surface, a config key's semantics, a
+    sanitizer's gating order — **written by someone who did not have that code executing in front of them.**
+    → **THE RULE: a spec / plan / tasks clause naming a third-party API, config key or artifact shape is a
+    HYPOTHESIS with exactly the standing of a kickoff premise (finding 1), and it is verified in the FIRST
+    TEN MINUTES of the task that implements it — not discovered at the point of failure.** → **And keep the
+    mechanism that made "approved" survivable, deliberately: every amendment was banked as its own DATED
+    decisions.md entry naming the clause it amends, BEFORE the implementing commit** (`ff8f323`, `bddd5af`,
+    `b19c068`, `16c7790`, `4061398`, and 8.3's record). Six corrections to a gate-approved contract did not
+    weaken the gate, because **none of them was silent. A gate that cannot be amended in writing gets amended
+    in code.**
+  - **(6) THE CONTRACT IS THE SECTION BODY. A SUMMARISING PREAMBLE THAT CLAIMS TO ENUMERATE IS THE MORE
+    DANGEROUS FORM, PRECISELY BECAUSE IT INVITES BEING READ AS THE CONTRACT.** `tasks.md`'s front matter
+    budgets the human-run items *"UP FRONT … enumerated in 9.1's Verify, not rediscovered there"* and lists
+    **SIX**; §9.1's BODY lists **EIGHT** — the preamble omits **app-page responsiveness after M7** and **the
+    content-script surface still rendering a mermaid fence as a plain code fence**. The walk was driven from
+    the body and still came in at **seven of eight** for one commit — **and the item that needed the second
+    sitting is one of the two the preamble omits.** → **THE RULE: a gate's item count is read from the
+    SECTION BODY, and the walk record states the count it is walking against before it starts.** A preamble
+    may summarise; the moment it says *"enumerated"* it makes a completeness claim, and a completeness claim
+    inside a summary is the one place nobody checks. *(Whether §9.1's preamble text is edited is a **9.3**
+    reconcile call — the LESSON is banked here, the TEXT is routed.)*
+  - **(7) M6's FINDING (3) IS RIGHT AND ITS TRIGGER IS WRONG — the remedy fires on "a gate-closing task", and
+    M7's staleness landed on commits that were neither gate-closing nor numbered tasks.** Two instances.
+    **(a)** 8.2 advanced § Up next and left § Now reading *"NEXT: 8.2"*; the two sites disagreed until 8.3's
+    sweep caught it. **(b)** the two post-gate FIX commits — out-of-plan by design, not numbered 9.x tasks —
+    updated § Carried items thoroughly and left **§ Now, § Up next and § Blockers all still describing the
+    dark-mode defect as filed-and-unfixed CARRIED work**, and left the score paragraph's pre-registration
+    (*"the one way the figure still moves is if the gantt overprint resolves"*) standing after it had
+    resolved. **§ Baselines went stale by the same mechanism** — its header says *"Current measured truth"*,
+    dates itself to 8.1, and carries an app-chunk row of 387,837 B against **389,143 B** measured at HEAD and
+    a suites row of 911/15/98 against **927/15/100**. → **THE RULE, and it is a one-clause edit to a rule
+    that already exists: the pointer walk is triggered by ANY COMMIT THAT CHANGES STATE A POINTER SITE
+    ASSERTS — not by "a gate-closing task".** **An out-of-plan fix is simultaneously the commit most likely
+    to invalidate a pointer site and the least likely to run the checklist, because it is not on the
+    checklist.** *(9.2 ran the sweep and corrected the pointer sites; § Baselines' numbers are **routed to
+    9.3**, which owns them by name.)*
+  - **(8) THE FLOOR-DELTA RULE GOT ITS FIRST APPLICATION, AND IT NEEDS ONE MORE NUMBER STANDING BESIDE IT OR
+    IT DECIDES NOTHING.** **The statement M7 owes, with the number: M7's first-paint floor is 145.3 ms
+    against M6's 132.1 ms — a floor delta of +13.2 ms — and NO RE-BASELINE IS PROPOSED.** M6's <165 ms bar
+    stands and passed on all four arms (medians 152.3 / 157.6 / 157.9 / 163.2 ms) with **worst-arm headroom
+    1.8 ms**. → **Now the refinement, which is the part that changes a future measurement.** M6's rule reads
+    *"flat floor + breaching median = environment; a floor that has MOVED UP = code"*, and on its face
+    +13.2 ms is a moved floor. **It decides nothing here, because the same session's A-vs-A floor
+    disagreement was 13.4 ms — larger than the delta it is being asked to adjudicate** — and the
+    machine-state discriminator moved with it: the 1 MB fixture read **+9.8%**, and M6's floor scaled by that
+    same 9.8% predicts **~145.1 ms** against **145.3 ms** measured. **The machine accounts for the delta
+    almost exactly, and any residual is smaller than the instrument's own disagreement with itself.** →
+    **THE RULE: state the floor delta, the instrument's own A-vs-A floor disagreement, and the machine-state
+    discriminator IN THE SAME SENTENCE. A floor delta smaller than the instrument's own disagreement is not
+    evidence of drift — it is not evidence of anything.** M6's rule taken alone would license reading this
+    milestone's noise as code growth and spending a session optimising nothing. → **The honest corollary
+    about the bar itself: at 1.8 ms of worst-arm headroom, the next milestone cannot measure first paint on a
+    working machine and believe the answer.** That is not an argument for a bigger number — it is an argument
+    that **M8's first measurement of the render path must be A-B-A on a quiesced machine, budgeted as such**,
+    and that first paint is now this project's least sensitive instrument.
+  - **(9) A BOUND'S COST CURVE IS MEASURED, NOT DERIVED — the eviction cliff is TOTAL rather than graded, and
+    the arithmetic that said otherwise was off by 25×.** 8.2 measured what ONE row over the `count` bound
+    costs. The natural model says a cache one row short loses roughly one row's worth of work; the
+    measurement says **51 re-renders at N=51** where the arithmetic predicted **2**, because a document that
+    exceeds the bound loses the ENTIRE cache's value rather than a proportion of it. That single measurement
+    is what turned 8.4's human question from *"how big should the cache be"* into *"where should the
+    discontinuity SIT"*, and the answer changed with it (`count` 100 → **150**, putting the cliff at N=75).
+    → **THE RULE: before a human is asked to CHOOSE a bound, measure the cost of being ONE UNIT OVER IT. A
+    bound whose cost curve was reasoned about rather than measured hands the human the wrong question** —
+    and a wrong question gets answered confidently. → **The companion, from 8.5, and worth its sentence: a
+    reconstruction is validated against the measurement it claims to reproduce BEFORE it is trusted to
+    predict.** 8.5's accumulation harness reproduced 8.2's CELL 5 **exactly** at the old bounds — `document
+    39` / `document 10`, rows pegged 100/100, COUNT binding, 0 refusals — and only then ran at the chosen
+    ones, with its five predictions stated before it ran. → **And one reading correction that outlives the
+    numbers: D-9 is NOT a cap.** It is the typical-case time-to-rendered *target*; *"D-8 and D-9 are the two
+    numeric caps"* is the natural and wrong reading, and it is banked as a commitment with **nothing
+    enforcing it**, said in as many words.
+  - **Deliberately CUT from this entry — three candidates, each for a stated reason.** **(i) "A revert that
+    reds nothing is a broken control, applied PROSPECTIVELY."** M7 declined to ship two guards on exactly
+    that ground — 7.2's `prefers-reduced-motion` rule for the lightbox panel (deleted as dead bytes, because
+    `readerCss.ts`'s sheet-wide `:host *{animation-duration:.001ms!important}` already owned the
+    suppression) and 8.3's would-be D-11 reduced-motion rule (declined for the same reason). **Real, and its
+    rule is already M6's finding (5);** what is new is only the DIRECTION, and finding (4) carries that half
+    in the form that changes behaviour. **(ii) "Decompose every byte delta to zero residual."** M7 did it on
+    essentially every commit that moved a bundle — including **+55 B on the gantt fix (54 B literal + 1 B
+    separating comma)** and a **0-byte** whole-tree delta at 8.5 resolved to **ONE residual byte** at app-chunk
+    offset 323,975. **That is M6's finding (1) being obeyed, not a new finding** — it belongs in the metrics,
+    and it is there. **(iii) "The scratch harness is deleted, not committed."** 5.2, 8.1 and 8.2 each built,
+    ran and deleted one, and 5.2 explicitly refused to commit a time-bound assertion that would both flake and
+    smuggle in a threshold 8.4 owned. **Correct and already the house pattern**; nobody behaves differently
+    for reading it again.
+  - **ROUTED TO 9.3, NOT RESOLVED HERE** *(they are reconcile items, not lessons — listed so 9.3 inherits a
+    complete set)*: the **"manifest green 2975 B"** mislabel's source text in `tasks.md` §7.1 / §7.2 and every
+    §8.x fence line (the measurement was always right; the NAME was wrong — it is `wc -c tests/manifest.test.ts`,
+    and the built manifests are 654 / 770 B) · `architecture.md`'s **`enhance`-stage** line, which describes a
+    pipeline stage that does not exist (gate-2 (c)) · **§ Baselines' stale app-chunk and suites rows** and its
+    first-paint provenance · the **checkbox convention** — all **28 boxes still `[ ]`** with all 28 tasks
+    landed and **no landing notes in `tasks.md` at all**, so a future planner reads 0/28 from the boxes and the
+    two out-of-plan fixes are invisible in them (**M6's finding (3), fifth sub-point, recurring and worse**) ·
+    **where a gate finding is filed** — §9.1 says *"a task added below this line"* in a gate-sealed file, and
+    both M7 findings landed in § Carried items by 8.4's precedent · §8.3's **struck Verify clause** and whether
+    it earns an in-file note · §9.1's preamble/body item count (finding 6).
+  - **Metrics.** Human-gate-caught defects this milestone = **2** (dark-mode diagram text renders black on the
+    canvas · the gantt date axis overprints into a smear), **both fixed before close, each in its own session
+    and its own commit** · **running gate score 10/10 → 12/12**, and **"caught at its own gate" HOLDS for both**
+    — M7 shipped the surfaces they live on, so neither escaped a prior gate (M6's broken invariant is not
+    extended) · **the gate's viewport was recorded QUALITATIVELY ("WIDE") and the gap was stated rather than
+    dressed up as a number** — M6's finding (2) remedy applied *in kind*; **a later gate records the digits** ·
+    **formal retractions of an empirical claim = 0**, but the nearest equivalent is worth its own line and is
+    finding (2): **D-7 was green-but-vacuous on colour for the entire milestone** · **premise corrections = 9**
+    — 2 fix kickoffs (finding 1), 6 gate-approved contract clauses (finding 5), 1 struck Verify clause · unit
+    **549 → 728** (+179); browser **629/15/76 → 927/15/100** (+298 passed, +24 file-instances), both counts
+    spanning two engine projects · content script **315,671 → 318,747 B** (+3,076, decomposed to a **0 B
+    residual** across five named commits, and **byte- and md5-identical with the engine ablated away** while the
+    negative control fired −3,349,366 B) · app chunk **361,500 → 389,143 B** (+27,643) · **dependencies 4 → 5** ·
+    **zip headroom 1.65 MB → 0.70 MB — 58% of M6's margin consumed in one milestone, the one metric trending
+    badly**, with D-10 (b)'s inline narrowing carried against a ~0.5 MB trigger.
+    - **Defects by WHO CAUGHT THEM, keeping M4's and M5's correction discipline.** **Human gate = 2** (both
+      product defects, both legibility/layout, both on surfaces named in finding 4). **CI mid-development = 1,
+      and it is a genuine one:** 7.1's live region shipped as a `<p>` and was therefore a paragraph OF THE
+      DOCUMENT to every `.peekover-reader p` rule — **caught by a SIBLING suite's own control**
+      (`diagramRender.browser.test.ts`'s row-5 requirement that each column paragraph have a real box), which
+      is M6's finding (4) working in the direction it was written for. **Agent code review / design reading =
+      2** (D-6's LIVE pre-sanitize `themeCSS` fetch route, found by reasoning about the config's routes before
+      any test existed; §4's relative-reference finding, which sharpened the window's claim rather than
+      loosening it). **Measurement = 3 corrections of the RECORD, not defects** (the eviction cliff falsifying
+      the graded-cost model; 8.1's A-B-A returning a NEGATIVE verdict and refusing to claim a diagram
+      first-paint cost in either direction; the 2975 relabel) — counting those as defect catches would inflate
+      the column that did the least product work.
+    - **Red-first: not tallied milestone-wide, and the reason is itself the routed checkbox item.** `tasks.md`
+      carries **no landing notes** for any of the 28 tasks, so the evidence lives in commit bodies and the
+      progress.md folds — same as M6. What the record does state, verifiably: **7.2 records SEVEN reverts each
+      verified to actually red on both engines and restored from a `cp`, plus ONE that stayed green and was
+      therefore deleted as a dead control**; 2.1's hostile corpus is red **9 of 9** with the widening reding
+      **exactly 3**; 2.2's widening reds **exactly 5**; 4.4's cache-bypass reds in the defect's own units
+      (`expected 1 to be +0`); and the gantt fix's four arms include an explicit pre-fix-geometry firing
+      control. **The named flake family (`pipeline.perf`, the 1 MB golden) fired again at 8.5 and was PINNED TO
+      THE MACHINE by an ablated-HEAD tree in the same session** — M6's instrument, reused without incident, and
+      it did not fire at all in this session's clean run (728/728).
+    - **Orchestrator factual errors caught by ground-truth re-derivation = 0 verified** (M4:4, M5:5, M6:3) —
+      **recorded because "it matched" is the outcome nobody writes down.** Every fence figure this session's
+      brief stated was re-derived from HEAD and agreed exactly: content script **318,747 B** both engines with
+      per-engine md5s stable, app chunk **389,143 B** md5-identical both engines, `permissions: []` both, golden
+      **EMPTY**, import fence **8/8**, **28 tasks / 9 groups**, HEAD `fc3a142`, and both walk-surfaced defects
+      fixed. The brief's two summaries of prior findings (#1 the positive control, #5 revert-and-fail) also
+      check out against the register. **The one thing it asked to be re-derived rather than carried — the
+      post-gantt-fix app-chunk size — is the one a stale prompt would most likely have got wrong**, which is
+      the shape of instruction that produced this zero.
 - **2026-07-27 · M6 close (spec 006 — snapshots + diff).** Snapshot capture on the app page, bounded
   retention (count 15 / 20 MiB / 30 days, D-8), a global erase control, a **persistent** capture disclosure,
   and an inline line-diff against any stored snapshot — with **`permissions: []` still intact**, the
