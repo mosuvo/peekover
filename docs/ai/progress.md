@@ -25,6 +25,20 @@ first-paint headroom is OWED, not
 rows "NOT re-run at 9.3" and calls the re-measurement owed), so **`plan.md` re-establishes the headroom on the
 current path FIRST and prices §3.7 against that number**; and the app-chunk baseline the spec cites is
 **389,143 B**, not 387,837 B. Both are applied to the spec.
+★ **THE REDLINE RAN, AND THE MEASUREMENT FALSIFIED ITS PREMISE — PART-DISCHARGED, PREMISE CORRECTED
+(2026-08-03; the wording above is left VERBATIM because it is banked history and it is what produced the
+number). Full record: § Baselines *THE 2026-08-03 FIRST-PAINT RE-MEASUREMENT*.** **(1) THE NUMBER EXISTS
+FOR THE CONTENT SCRIPT: worst-arm headroom 26.9 ms** (median; **29.9 ms** on the floor), arms
+138.1 / 134.3 / 137.0 ms, **A-vs-A 3.8 / 2.5 ms**, quiesced, at HEAD `757f953` — **so §3.7's
+content-script half is UNBLOCKED and priceable, and revisit-when (a) (*"headroom at or below zero"*) did
+NOT fire.** **(2) THE STATED REASON WAS WRONG:** `662b90e` moved **app-chunk bytes only** (content script
+0 B, both md5s unchanged, 007 §3.4's import fence proving the content graph reaches neither diagram
+module), so it never touched the path 8.1 measured — **1.8 ms was MACHINE-STATE on a slower machine, not
+a superseded path**, with byte-identity as the control. **(3) THE OWED NUMBER WAS REALLY TWO:** the path
+`662b90e` DID change — **the app page** — has **never had a first-paint instrument at all**, and building
+one is **ROUTED to a human at the plan gate**, not decided here. **`plan.md` is still the next artifact
+and the next gate**; it prices §3.7's content-script half against 26.9 ms and carries the app-page
+question to its human.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a
@@ -852,8 +866,11 @@ the whole spec at **~23%** and persona #1 at **~56%**. Prefer it to this paragra
 ## Baselines / pins
 *Current measured truth. **The ARTIFACT rows were re-derived 2026-08-02 at HEAD `94f7da5`** by **007 task
 9.3 (the M7 close reconcile)** — built from a clean tree on both engines, `wc -c` + `md5sum` per artifact,
-nothing carried from the brief. **The FIRST-PAINT rows were NOT re-run and still carry 007 task 8.1's
-provenance (2026-07-31, `4c580c4`)** — see the ⚠ provenance note under the table, which states why.*
+nothing carried from the brief. **The TYPICAL-DOC FIRST-PAINT row was RE-MEASURED 2026-08-03 at HEAD
+`757f953`** (the post-gate-1 re-measurement the M8 redline asked for) — see *THE 2026-08-03 FIRST-PAINT
+RE-MEASUREMENT* below, which also records that **the redline's stated premise was falsified by it**.
+**The other two first-paint rows were NOT re-run and still carry 007 task 8.1's provenance (2026-07-31,
+`4c580c4`)** — see the ⚠ provenance note under the table, which states why.*
 *This section is MUTABLE — each milestone's close task overwrites the numbers and moves the previous ones
 into the "vs" column. It lives here, not in decisions.md, because decisions.md is dated append-only and a
 current-numbers table cannot be corrected there without either lying or duplicating.*
@@ -875,9 +892,10 @@ every task recorded as it landed is accounted growth. See *THE M7 BYTE LEDGER*.
 
 | pin | now | vs M6 close (`d470ab2`) | bound | verdict |
 |---|---|---|---|---|
-| First paint, typical doc (50.4 KB) *(8.1, `4c580c4` — **NOT re-run at 9.3**)* | **152.3 / 157.9 / 163.2 ms** medians, **floor 145.3 ms** (3 arms) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | **PASS, all 3 arms** |
-| First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3**)* | **157.6 ms** median, **floor 146.7 ms** | *(new pin)* | **<165 ms GATE** | **PASS — but see the vacuity note** |
-| First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — **NOT re-run at 9.3**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS |
+| First paint, typical doc (50.4 KB) — **CONTENT SCRIPT** *(**RE-MEASURED 2026-08-03**, HEAD `757f953`, quiesced — **the current reading**)* | **138.1 / 134.3 / 137.0 ms** medians, floors **135.1 / 132.6 / 134.7 ms** (3 arms; **A-vs-A 3.8 ms median / 2.5 ms floor**) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | **PASS, all 3 arms — worst-arm headroom 26.9 ms (median) / 29.9 ms (floor)** |
+| ↳ *the DATED PRIOR it supersedes, kept not overwritten* — First paint, typical doc *(8.1, `4c580c4`, 2026-07-31 — **SUPERSEDED 2026-08-03**)* | **152.3 / 157.9 / 163.2 ms** medians, **floor 145.3 ms** (3 arms) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | PASS, all 3 arms — worst-arm headroom **1.8 ms**, now known to have been **MACHINE-STATE, not a superseded path** |
+| First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, and NOT re-run 2026-08-03 either**)* | **157.6 ms** median, **floor 146.7 ms** | *(new pin)* | **<165 ms GATE** | **PASS — but see the vacuity note, and the app-page instrument finding** |
+| First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived**; re-run 2026-08-03 **as the machine-state discriminator only**, where it moved **−5.4%**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS |
 | Content script (`content-scripts/peekover.js`) *(9.3, `94f7da5`)* | **318,747 B** both engines — md5 Cr `c7b33b36b1a727fdacb77eefe64083e1` / Fx `67717921bdf646c7366176392d0c37d7` | 315,671 B (**+3,076, +0.97%**) | none — **stated, not gated** | — |
 | App-page chunk (`chunks/app-jgQlsln1.js`) *(9.3, `94f7da5`)* | **389,143 B** both engines, md5 `65486f78afa2fec0e9d00f7f0e9c0d27` identical on both | 361,500 B (**+27,643, +7.65%**) | none — **stated, not gated** | — |
 | Background (`background.js`) *(9.3, `94f7da5`)* | **3,548 B** both engines, md5 `5f53c0f53c729e0a82fb1a4ce1361e22` | 3,435 B (**+113, +3.29%**) | none — **stated, not gated** | — |
@@ -901,6 +919,71 @@ changed no code** (doc-only), but it cannot claim these three rows still hold �
 honestly. **The re-measurement is OWED, and it is owed to the diagram-bearing row in particular: the next
 session that touches the render path runs 8.1's full protocol on a quiesced machine.** It is not owed to
 9.3, which has no instrument that would make the answer trustworthy.
+
+**★ THE NOTE ABOVE IS KEPT VERBATIM AND ITS INFERENCE IS CORRECTED (2026-08-03).** Its *facts* hold — the
+rows were dated honestly, and `662b90e` really did add a per-render `initialize()`. Its *inference* —
+that this made the three first-paint rows describe a **superseded path** — is **falsified by the
+re-measurement below**. `662b90e` is app-page-only, which **this very section already said** four
+paragraphs down (*"Both post-gate fixes are app-page-only, which is why the content script never
+moved"*), and `perf-first-paint.ts` can drive only the content script. The note was right to refuse to
+print an un-quiesced number and right to call a re-measurement owed; it was wrong about **why**.
+
+**★ THE 2026-08-03 FIRST-PAINT RE-MEASUREMENT — THE CONTENT-SCRIPT HEADROOM IS 26.9 ms, AND IT SUPERSEDES
+1.8 ms AS A *NUMBER*, NOT AS A *PATH*.** Run at HEAD `757f953` on a quiesced machine under 8.1's own
+protocol. Every commit between `94f7da5` and `757f953` is doc-only, so **the built content script is
+byte-identical to 8.1's at `4c580c4`** — 318,747 B, both engines' md5s unchanged (the M7 ledger
+continuation below records this independently). That byte-identity is not a footnote; it is the control
+this whole reading rests on.
+
+- **THE NUMBER.** Three A arms on the 50.4 KB typical doc: **A1 138.1 ms median / 135.1 ms floor · A2
+  134.3 / 132.6 · A3 137.0 / 134.7**. **A-vs-A disagreement is 3.8 ms on the median and 2.5 ms on the
+  floor** — against 8.1's 10.9 / 13.4 ms, which is the difference between an instrument that resolves and
+  one that does not. All three arms PASS. **Worst-arm headroom against the <165 ms gate: 26.9 ms on the
+  median, 29.9 ms on the floor.**
+- **★ SO 1.8 ms WAS MACHINE-STATE, NOT A SUPERSEDED PATH — AND THIS IS A CORRECTION TO THIS FILE'S OWN
+  REASONING, SAID PLAINLY RATHER THAN QUIETLY SWAPPED.** `662b90e` moved **app-chunk bytes ONLY**:
+  content script **0 B**, both engines' md5s unchanged, and 007 §3.4's import fence asserts
+  *structurally* that the content-script graph reaches neither `diagramEngine` nor `diagramEnhancer`. The
+  per-render `initialize()` is real, but it sits on a path `perf-first-paint.ts` has never been able to
+  drive. **So `662b90e` changed a path the 1.8 ms number never described, and the 1.8 ms number described
+  a path `662b90e` never changed.** The instinct to re-measure was right and produced this number; the
+  stated reason for it was wrong. A premise is a hypothesis, and a measurement killed this one.
+- **THE FLOOR MOVED 145.3 → 132.6 ms, AND THE EXCEPTION TO *"A MOVED FLOOR IS CODE"* IS STATED, NOT
+  ASSUMED** (M6 retro finding 8). −12.7 ms, **−8.7%**. The 1 MB machine-state discriminator moved the
+  **same direction, −5.4%**; scaling 145.3 ms by that predicts ~137.5 ms against a measured 132.6 ms.
+  **But the scaling is corroboration, not the control — BYTE-IDENTITY is:** the artifact under both
+  readings is the same bytes with the same md5s, so there is no code delta that *could* have moved this
+  floor. Finding 8's rule is not repealed; it is met by an ablation the calendar performed for us. **The
+  ~4.9 ms residual beyond the machine's −5.4% is NOT resolved here** — it is larger than this session's
+  2.5 ms floor A-vs-A, and it is named as unexplained rather than absorbed into a comfortable story.
+- **THE STANDING *"quiesce before believing anything"* WARNING IS DISCHARGED FOR THIS READING AND STAYS
+  STANDING FOR THE NEXT.** At 26.9 ms the worst-arm margin is no longer luck-shaped. It was thin at 8.1
+  because the machine was slow, not because the code had grown — which is also why M6's 133.7 ms median
+  and this session's 134.3–138.1 ms sit in the same band across a milestone that added 3,076 B.
+
+**★ FINDING — THE APP-PAGE RENDER PATH HAS NO FIRST-PAINT INSTRUMENT AT ALL. THIS IS THE OTHER HALF OF
+THE OWED NUMBER, IT IS THE MILESTONE'S CENTRAL CONSTRAINT, AND IT IS *ROUTED TO A HUMAN*, NOT RESOLVED
+HERE.** The redline asked for one number. There are **two**, and only one was takeable.
+
+- **8.1 already recorded the hole** — *"the claim §8.1 actually wants is testable only on the APP PAGE,
+  which has zero automated first-paint coverage (plan §4-5) — carried unfixed"* (the vacuity bullet
+  below). **This sharpens it:** it is not merely the diagram claim that is uncovered, it is **the app
+  page's first paint outright** — and `662b90e`, the commit the redline's premise rested on, landed
+  exactly **there**. The redline pointed at a real hole; it just named the wrong path as the measured one.
+- **CHECKED AT HEAD, ALL SEVEN `perf-*` HARNESSES, AND NONE OF THEM MEASURES IT.** `perf-first-paint.ts`
+  drives a real `file://` document — the **content script**, the only surface it can drive.
+  `perf-diff.ts`, `perf-snapshot-capture.ts`, `perf-theme-flash.ts` and `perf-watch.ts` DO open
+  `chrome-extension://<id>/app.html`, but each measures its own axis (diff, capture, theme flash, watch
+  re-render), never the app page's first paint. `perf-toc.ts` and `perf-folder-tree.ts` run in
+  **jsdom / node**, which has no layout and no paint at all.
+- **WHY IT IS NOT A SMALL FIX.** Driving the app page's render requires a **user gesture** (the file
+  picker), and the only programmatic seam — `__peekover.selectFile`, `entrypoints/app/main.ts:20` — is
+  guarded by `import.meta.env.DEV` and therefore **stripped from the production build a harness would
+  have to measure**. Measuring DEV bytes would not be measuring the gated artifact.
+- **★ ROUTED, NOT RULED.** Whether M8 builds an app-page first-paint harness, or re-scopes §8-1's claim to
+  what the content script can actually prove, is a **human call at the plan gate** — it trades a
+  milestone's worth of instrument work against a QoL milestone's budget. **This record names the hole and
+  stops.** Nothing here decides it.
 
 **★ THE M7 BYTE LEDGER — EVERY BYTE ASSIGNED, BY BUILDING AT EVERY COMMIT.** Not reasoned from commit
 bodies: a detached worktree at each of the 21 M7 commits, `wxt build` per commit, `wc -c` per artifact.

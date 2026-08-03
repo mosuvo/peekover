@@ -29,7 +29,10 @@
     loads nothing, and because M7's close ruled that surface a **gap**. **BUT it is priced against the
     RE-MEASURED headroom, not the carried one — see the redline below** — with **§8-1 as the escape
     hatch, unchanged: the surface reach gives way before the gate does.** Gate 1 declined the
-    app-page-only alternative rather than letting a measurement decide it silently.
+    app-page-only alternative rather than letting a measurement decide it silently. *(2026-08-03, after
+    the measurement: it ran, and §3.7's surface reach — which is content-script reach — is now priced
+    against **26.9 ms**, not against an owed number. The app-page half of that measurement has no
+    instrument and is routed. See the redline's correction below.)*
   - **§9-5 · Compare is CURRENT-vs-PICKED (§3.2), not any-vs-any.** A diff is entered on the host showing
     a document; a literal any-vs-any is a comparison surface of its own and is not this milestone.
   - **§9-6 · The `docs/product/spec.md` <150 / <165 ms inconsistency was ALREADY CLOSED at `e09520f` —
@@ -57,6 +60,38 @@
     protocol on a quiesced machine, BEFORE §3.7 is priced against it.** Pricing a both-surfaces decision
     against a number the repo has twice marked owed is the failure this redline exists to prevent.
     Applied at spec §3.7, §5, §7-1, §9-4, §9-6.
+  - **★ CORRECTION, 2026-08-03 (same day, AFTER the measurement this redline ordered) — THE REDLINE'S
+    INSTRUCTION WAS RIGHT AND IS NOW HALF-DISCHARGED; ITS *PREMISE* IS FALSIFIED. The clause above is
+    kept VERBATIM and is not struck through** — it is banked history, it was acted on, and it is what
+    produced the number below. A premise that turns out to be a hypothesis a measurement killed belongs
+    in the record, not in a deletion.
+    **What was right — re-measure before pricing.** It ran at HEAD `757f953`, quiesced, under 8.1's own
+    protocol, and returned **worst-arm headroom 26.9 ms on the median (29.9 ms on the floor)**: arms
+    **138.1 / 134.3 / 137.0 ms**, floors 135.1 / 132.6 / 134.7, **A-vs-A 3.8 ms / 2.5 ms** — an
+    instrument that resolves, against 8.1's 10.9 / 13.4 ms which did not. **§3.7's CONTENT-SCRIPT half is
+    unblocked and priceable at 26.9 ms**, and **revisit-when (a) did NOT fire.** Full record:
+    `progress.md` § Baselines, *THE 2026-08-03 FIRST-PAINT RE-MEASUREMENT*.
+    **What was wrong — the REASON.** The clause says 8.1's figure *"describes a path the repo has TWICE
+    marked superseded"* because `662b90e` added a per-render `initialize()`. **`662b90e` moved app-chunk
+    bytes ONLY** — content script **0 B**, both engines' md5s unchanged (`progress.md` § Baselines, the
+    M7 ledger continuation) — and 007 §3.4's import fence asserts *structurally* that the content-script
+    graph reaches neither `diagramEngine` nor `diagramEnhancer`. `perf-first-paint.ts` can drive **only**
+    the content script. **So `662b90e` changed a path the 1.8 ms number never described, and 1.8 ms
+    described a path `662b90e` never changed: 1.8 ms was MACHINE-STATE on a slower machine.** The control
+    is **byte-identity** — same artifact, same md5s, floor 145.3 → 132.6 ms — corroborated by the 1 MB
+    discriminator moving **−5.4%** the same direction. This is M6 retro finding 8's *"a moved floor is
+    code"* met with its exception stated rather than assumed.
+    **And the owed number was TWO, not one — the second is not takeable today.** The path `662b90e` DID
+    change, the **app page**, has **no first-paint instrument in the repo**: all seven `perf-*` harnesses
+    either drive the content script (`perf-first-paint.ts`), measure a different axis on `app.html`
+    (`perf-diff` / `perf-snapshot-capture` / `perf-theme-flash` / `perf-watch`), or run in jsdom with no
+    paint (`perf-toc` / `perf-folder-tree`); and the one programmatic seam — `__peekover.selectFile`,
+    `entrypoints/app/main.ts:20` — is `import.meta.env.DEV`-guarded and **stripped from the production
+    build a harness would have to measure**. **Whether M8 builds that harness or re-scopes §8-1's claim
+    to what the content script can prove is a HUMAN call at the plan gate — ROUTED, not decided here.**
+    **This correction reopens no §3.x decision and changes nothing M8 builds:** it corrects a reason and
+    records a number. Applied at spec §3.7, §5, §7-1, §9-4 and at `progress.md`'s § Now pointer and
+    § Baselines.
   - **387,837 B → 389,143 B (app-page chunk).** 387,837 is 8.1's figure at `4c580c4`; it moved at M7's
     two post-gate fixes (`662b90e` +1,251 B dark-mode diagram theming, `fc3a142` +55 B gantt date-axis),
     and 9.3's clean build at `94f7da5` reads **389,143 B** with the ledger continuation closing to a
