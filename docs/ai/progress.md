@@ -522,6 +522,23 @@ from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mod
   Six of the seven corrections were *"pending X"* → *"pending Y"*, which re-arms the trap; this one is
   *"pending X"* → **NONE**. The next thing that can falsify it is M8 opening a gate, which is a deliberate
   act by whoever opens it, not decay.)*
+- **★ SETTLED 2026-08-03 — PERSONA #1 IS 56%, AND ONE OF THE TWO ROUTED HUMAN DECISIONS ABOVE IS
+  THEREFORE HALF-ANSWERED.** `spec-coverage.md`'s uncertain-items §5 asked whether app-page-only
+  rendering is a scoped boundary or a gap. **A human ran the walk (a `file://` document with a
+  `mermaid` fence, then the same file through the app page) and ruled GAP** — persona #1's core job is
+  done at `file://` URLs and that surface renders no diagrams. The derivation's bracket was
+  **67% (boundary arm) / 56% (gap arm)**; the gap arm is the figure of record. **Recorded in
+  `spec-coverage.md` § Summary**, alongside — not over — the 2026-07-27 dated ~56%, which stays valid
+  as a dated record and is still cited correctly by the bullets above and in § Closed milestones.
+  **The three "56%"s are different numbers and the entry says so.** ★ **WHAT IS STILL OPEN:** the F2
+  **row-level** re-score the ruling implies (42% → roughly 24%, items 4 and 5 moving together) is
+  **CARRIED, not applied** — it is a row-level re-audit, and it merges with the F2 re-audit already
+  routed out of M7 in § Carried items. ★ **AND SEPARATELY: the COST of closing the gap was
+  investigated read-only on 2026-08-03 and lives in that session's report, NOT in a file** — it found
+  the gap is **three mechanisms, not one** (diagrams · diff · snapshot history), each fenced for a
+  **different** reason (007 §3.2 bytes-and-manifest · 006 §1.4 closure provisioning · 006 §3.2 the
+  background's stateless-proxy character), and **no direction was chosen**. M8 scoping is where that
+  choice belongs.
 - **RESOLVED, noted once so it is not re-opened: `scripts/generate-sbom.ts` no longer under-reports the
   production tree.** Found by 007 task 1.1 (which correctly did not take it — the file is outside 1.1's
   commit fence), fixed at **`1a202fd`** as its own act. **Root cause: `collect()` conflated DEDUP with

@@ -48,6 +48,34 @@ missing code highlighting entirely (F3 is 0%), the Technical writer has no edito
 (F8 4.8%, F9 0%), and the Student still has no math — **F2's 42% buys the Student nothing**, since
 all five math items and both formula-copy items remain ✗.
 
+**★ SETTLED 2026-08-03 — PERSONA #1 IS 56%, ON THE GAP LENS. A HUMAN RULING, NOT A RE-DERIVATION.**
+The paragraph above says the ~56% *"needs its own derivation"*. It has since had one, and the
+derivation did **not** return a single number — it returned a **bracket that turned on one question**:
+is the app-page-only surface of diagrams (and diff, and snapshot history) a *scoped boundary*, in
+which case persona #1 scores **67%**, or a *gap*, in which case it scores **56%**? That is
+uncertain-items §5's question, and it is not arithmetic — it is the one a human walk answers. **A
+human ran the walk** — a `file://` markdown document carrying a `mermaid` fence, then the same file
+through the app page — **and ruled GAP**: persona #1's core job (`docs/product/spec.md` §3, *"Read the
+CLAUDE.md/specs/plans their agents generate"*) is done at `file://` URLs, and that is the surface
+where the rendering is absent. **56% is therefore the persona-#1 figure of record from 2026-08-03**,
+on the gap arm of that bracket.
+
+**Three readings of "56%" now exist and they are NOT the same number — do not merge them.**
+(a) The **2026-07-27 ~56%** — a dated record, true on its date, preserved in the paragraph above and
+cited correctly by `progress.md` § Blockers; it is an *undercount* because it scored Mermaid ✗ on
+every surface. (b) The **67%** boundary arm — what persona #1 would score if app-page-only were read
+as scope rather than shortfall; **not chosen**. (c) The **56% gap arm — the figure of record**, which
+coincides with (a) numerically **by arithmetic accident, not by agreement**: (a) is low because
+Mermaid had not shipped at all, (c) is low because Mermaid shipped on one reader surface of two.
+
+**What this ruling does NOT do in this file.** It does not re-score F2's rows. Uncertain-items §5
+already records the consequence its own arithmetic names — items 4 and 5 moving together would drop
+F2 from 42% to roughly 24% (seven ✓ → ~) — and that re-score is **CARRIED, not applied here**: it is
+a row-level re-audit and this entry records a persona figure. **F2's 42% and its seven ✓ marks stand
+in this document until that re-audit runs.** The *cost* of closing the gap — what rendering on the
+content-script surface would take and which decisions it reopens — is a separate M8-scoping input and
+is deliberately **not** asserted here; 007 §3.2 and 006 §3.2 are its primary sources.
+
 **Weighting method.** Each spec bullet is decomposed into its sub-items and each sub-item counted
 once, unweighted (a bullet listing seven extended-syntax features counts seven). Credit is
 `SHIPPED = 1.0`, `PARTIAL = 0.5`, `NOT = 0`, `UNCLEAR = 0`. Ambiguity resolves toward NOT — this
@@ -556,3 +584,10 @@ evidence but carry a question a human walk would answer better than a grep (§5 
    same file through the app page, and judge whether the difference reads as a scoped feature or as a
    missing one. *(Recording the arithmetic, not choosing the answer — the score above stands until a
    human moves it.)*
+   **★ ANSWERED 2026-08-03 — the human ran this walk and ruled GAP, on the surface as a whole
+   (diagrams, and with them diff and snapshot history).** What moved is the **persona figure**:
+   persona #1 is **56%** on the gap lens — see § Summary's settled entry, which also records the 67%
+   boundary arm that was not chosen. What did **NOT** move is this document's row-level scoring:
+   **the F2 42% → ~24% re-score this item's own arithmetic names is CARRIED, not applied**, and item
+   4 (diff view) is carried with it. A row-level re-audit is what discharges them; until it runs,
+   F2's seven ✓ and the F6 rows stand as written.
