@@ -36,9 +36,20 @@ NOT fire.** **(2) THE STATED REASON WAS WRONG:** `662b90e` moved **app-chunk byt
 module), so it never touched the path 8.1 measured — **1.8 ms was MACHINE-STATE on a slower machine, not
 a superseded path**, with byte-identity as the control. **(3) THE OWED NUMBER WAS REALLY TWO:** the path
 `662b90e` DID change — **the app page** — has **never had a first-paint instrument at all**, and building
-one is **ROUTED to a human at the plan gate**, not decided here. **`plan.md` is still the next artifact
-and the next gate**; it prices §3.7's content-script half against 26.9 ms and carries the app-page
-question to its human.
+one is **ROUTED to a human at the plan gate**, not decided here. **That routing was ANSWERED at the plan
+gate: the app-page items ship on a stated per-item cheapness argument with a structural conditionality
+guard, the coverage hole is CARRIED, and M8 does NOT fund an app-page first-paint harness** (human ruling,
+2026-08-03; plan D-11 names the trigger that funds it later).
+★ **`specs/008-persona-1-qol/plan.md` IS NOW DRAFTED AND AWAITING GATE 2** (2026-08-03) — the human reviews
+the plan against the spec, then approves for `tasks.md` or returns it with revisions. It settles **D-1…D-12**,
+resolves all ten §7 risks against the actual code, discharges the §7-7 sibling-checklist audit as a 24-row
+table over two chromes with opposite geometry, and routes four questions to the gate (plan §8). Its two
+architectural calls are **D-1** (document identity arrives through a data-only registry, because a name in
+`MountOptions` would not survive a watch re-render on either surface) and **D-6** (**no** shared post-mount
+enhancement seam — a shared composition point would put `diagramEnhancer` on the content-script graph and
+red the 8/8 import fence, and an enhancer registry would keep the fence green while opening the graph).
+**No code and no tasks exist.** The plan's status line stays "draft" by the M7 precedent — the
+`decisions.md` bank is the approval of record, not the artifact header.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a
