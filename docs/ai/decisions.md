@@ -1,6 +1,107 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-03 · M8 GATE 2 — plan 008 (persona-#1 QoL) APPROVED. Its two architectural calls CONFIRMED,
+  two of plan §8's four questions RULED, and two SCOPE INSTRUCTIONS issued to the tasks stage.
+  `tasks.md` is the next artifact and the next gate.**
+  `specs/008-persona-1-qol/plan.md`, drafted at `fa27333` against a codebase recon at `f46f558`, was
+  reviewed and approved. It settles **D-1…D-12**, resolves the spec's ten §7 risks against the **actual
+  code**, discharges the §7-7 sibling-checklist audit as a 24-row table over two chromes with **opposite
+  geometry**, proposes **no spec amendment** and adds **no dependency**. **The plan file's status line
+  stays "draft (Gear-3 gate 2 — awaiting human approval before `tasks.md`)" and THIS ENTRY IS THE
+  APPROVAL OF RECORD** — the standing precedent (spec 007 still reads "draft" post-gate-1 `e09520f`;
+  plan 007 still reads "draft — awaiting gate 2" post-gate-2 `cab93c7`; M8's spec still reads "draft"
+  post-gate-1 `aaf990e`). A context-loss session verifies M8's gate 2 **here**, not in the artifact
+  header.
+  **THE TWO ARCHITECTURAL CALLS — CONFIRMED, with the reason each was confirmed ON:**
+  - **★ D-1 (the identity seam) — CONFIRMED. `mount()` spends ONE line.** Document identity arrives
+    through the new **data-only** registry `src/render/docIdentity.ts`, read at **build** time, and
+    `mount()` gains exactly `children.push(...buildAgentBadge())` — the **fifth** instance of the pattern
+    `buildThemeControl` / `buildWatchChrome` / `buildDiffChrome` / `buildTocView` already establish.
+    `mount()` stays **read-only library** in the sense 006 D-15 gives that property: it reads a data
+    holder, writes nothing, owns nothing, branches on nothing about the app. **`MountOptions` is rejected
+    on the RE-RENDER property, not on taste** — a name threaded through it would be reconstructed away by
+    `watchController`'s own options object on the app page and **dropped outright** on the content script
+    (`contentWatch.ts:121` passes no `render`), i.e. **the badge would vanish the first time an agent
+    edited the file**, which is 007 D-12's bug class exactly. **The human ACCEPTED spending the one line
+    in `mount.ts` in order to get the badge on BOTH surfaces** — the cost is one checkable line, and the
+    alternative pays module-level state by a longer road on one surface while losing the feature on the
+    other.
+  - **★ D-6 (no shared enhancement seam) — CONFIRMED. Five explicit call sites stay, and the DIFFERENCE
+    between them IS the import fence.** A shared `enhance(host)` composition point called from the
+    content script would put `diagramEnhancer` — and mermaid's dynamic edge behind it — **on the
+    content-script graph**, taking 007's static import fence from **8/8 to red**. **And an enhancer
+    REGISTRY would be worse:** it would keep the fence green by converting a static property the
+    traversal can see into a **runtime registration it cannot** — the fence would pass while the graph
+    was open, which is M6 retro finding 1's zero-discriminating-power shape verbatim. **The human
+    ACCEPTED hardening the duplication into policy: the fence is worth more than the DRY.** The
+    `readerPane.ts:184` *"identical body by construction"* comment becomes **deliberately false across
+    surfaces**, and that asymmetry is §3.2/§3.7's fence expressed in imports. **D-6's site 4
+    (`contentWatch.ts:121`, which must gain a `render` closure) lands with site 3** — a content script
+    that enhances on first mount and not on re-render is a shipped defect, not a partial feature.
+  **THE OTHER D-VALUES — APPROVED AS DRAFTED.** D-2 (pure predicate over the basename, case-sensitive,
+  `buildAgentBadge()` returns `[]` by default, no explanatory note) · D-3 (a second **optional**
+  capability pair on `DiffContext`; the snapshot pair byte-untouched; the discriminant on the picker row)
+  · D-4 (one `role="listbox"`, two `role="group"`s, rendered only when both kinds are non-empty; empty
+  states in the existing status line) · D-5 (a file-vs-file diff names both sides in the existing status
+  line) · D-7 (the table enhancer is TOTAL) · D-8 (scoped to `.peekover-reader`, and the scoping is
+  REQUIRED because `renderHunk` runs the full parser) · D-9 (per-render state; the degradation is
+  structural, `replaceChildren` leaves nothing stale) · D-10 (clipboard needs transient activation, which
+  a click supplies; `permissions: []` holds; the `file://` secure-context residual proven empirically) ·
+  D-11 (per-item mechanical cheapness + the three-arm conditionality guard + the carried app-page hole) ·
+  D-12 (the mockup's table language carried, its interaction model not, the filter with no baseline to
+  transcribe from). None is reopened by this gate and `tasks.md` cites them as-is.
+  **PLAN §8's FOUR GATE-2 QUESTIONS — RULED HERE so `tasks.md` inherits them settled.** *(These are plan
+  §8's questions **Q1–Q4**, which are NOT the spec's `§8-1…§8-4` measure-then-choose items cited
+  elsewhere in this entry — the two numberings collide and are kept apart deliberately.)*
+  - **Q1 · Should a SNAPSHOT diff also name both sides? NO — leave snapshot diffs VERBATIM.** The spec
+    requires the caption for **file-vs-file only** (§4), and that is the floor this milestone builds to.
+    A snapshot's "before" is an earlier version of what is already on screen, so the direction is not in
+    doubt; captioning it is scope the spec did not ask for. D-5 is unchanged: `compareWith` sets the
+    caption on the **file** branch only, and today's snapshot behaviour is preserved byte-for-byte.
+  - **Q2 · Does copy-out need a MENU, or two controls? TWO BUTTONS — minimum chrome, no menu.** CSV and
+    Markdown are offered as two small controls. **This activates NO overlay row:** §3.11 rows 9 (the open
+    overlay clears the chrome) and 21 (focus trap and restore) stay **`—`, not `D`**, and no popup, no
+    focus trap and no §3.11 overlay/focus-trap work enters group 3. The "a table is not a data grid"
+    principle (§6) is what this is decided on.
+  - **Q3 · The badge's LANE (§3.11 row 7): UNCHANGED — produce, do not choose.** The rect
+    is **measured at a task** in group 1 (a real rect probe, never assumed), and the lane is **chosen by
+    the human later**, on the measurement. The measuring task remains **forbidden from choosing a value**
+    (plan §7's standing rule).
+  - **Q4 · The D-11 (iii) carried-hole TRIGGER: UNCHANGED — it stands as the plan names it, and it is a
+    RECORDS act.** The next milestone that puts work on the app-page render path whose cheapness
+    **cannot be argued mechanically** — anything that parses, sanitizes, reads layout or runs an engine
+    there — **funds the first-paint harness before it ships that work.** M8 does not fund it (the
+    2026-08-03 human ruling, already banked); this gate confirms the trigger so a future planner inherits
+    a **condition** rather than a memory.
+  **TWO SCOPE INSTRUCTIONS TO THE TASKS STAGE — banked here because they are the human's calls, not the
+  drafting session's:**
+  1. **The heaviest table-tools task MUST BE SPLIT.** The task that would carry the enhancer **plus**
+     both app-page call sites **plus** §3.11's two **inverted** rows (4 and 5 — the toolbar is asserted
+     INSIDE `.peekover-reader`, and "clearance" inverts to "containment") **plus** D-12's token
+     verification against all three theme blocks **plus** D-12's four divergences is too large to review
+     or to revert as one unit. `tasks.md` splits it. *(In the premature draft on disk this is task 3.2;
+     the instruction attaches to the WORK, not to that number, which `tasks.md` is free to renumber.)*
+  2. **The group-5 GIVE-WAY task MUST BE RE-SCOPED so its rollback path is EXPLICIT.** §8-1's escape
+     hatch is *"the surface reach gives way, not the gate"* — and giving way is a **REMOVAL of the
+     content-script reach followed by a RE-MEASUREMENT**, not an edit to a constant. `tasks.md` states
+     that path in those terms rather than hiding it inside "set the constants", so a session that has to
+     take it knows what it is taking. *(The premature draft's task 5.6.)*
+  **WHAT THIS APPROVAL DOES NOT DO:** it reopens no spec §3.x decision, alters no plan D-value, changes
+  no plan section (the plan is approved as it stands at `fa27333`), chooses **no** §8-1 value, no §8-2
+  filter granularity, no §8-3 threshold and no §8-4 tuning — all four remain measure-then-choose at gate
+  3 — and it **writes no `tasks.md`**. The gate-1 dispositions (§9-1 one milestone · §9-2
+  presentation-only · §9-3 `.cursorrules` OUT · §9-4 both surfaces with §8-1 as the escape hatch · §9-5
+  current-vs-picked · §9-6 discharged) are **preserved by silence**, per the plan's own rule that
+  re-deciding a settled answer is a scope-reopen even when it agrees.
+  **Revisit-when:** (a) `tasks.md` cannot decompose a group without reopening a D-value — that is a
+  gate-2 event and returns here, never a quiet amendment; (b) §8-1's measurement cannot hold the gate and
+  the surface reach gives way — the give-way is a **finding** reported with its number, and instruction 2
+  above is what makes the path takeable; (c) a copy-out affordance later needs a menu after all, which
+  re-activates §3.11 rows 9 and 21 and is a re-ruling of §8-2, not an implementation detail; (d) the
+  D-11 (iii) trigger fires in a later milestone, which funds the app-page first-paint harness before that
+  milestone's work ships.
+
 - **2026-08-03 · M8 GATE 1 — spec 008 (persona-#1 QoL: compare-two-files · agent-file awareness · table
   tools) APPROVED, with ONE REDLINE. `plan.md` is the next artifact and the next gate.**
   `specs/008-persona-1-qol/spec.md`, drafted at `465a58a` against a scope-read of the tree at `81986d8`,

@@ -40,16 +40,23 @@ one is **ROUTED to a human at the plan gate**, not decided here. **That routing 
 gate: the app-page items ship on a stated per-item cheapness argument with a structural conditionality
 guard, the coverage hole is CARRIED, and M8 does NOT fund an app-page first-paint harness** (human ruling,
 2026-08-03; plan D-11 names the trigger that funds it later).
-★ **`specs/008-persona-1-qol/plan.md` IS NOW DRAFTED AND AWAITING GATE 2** (2026-08-03) — the human reviews
-the plan against the spec, then approves for `tasks.md` or returns it with revisions. It settles **D-1…D-12**,
-resolves all ten §7 risks against the actual code, discharges the §7-7 sibling-checklist audit as a 24-row
-table over two chromes with opposite geometry, and routes four questions to the gate (plan §8). Its two
-architectural calls are **D-1** (document identity arrives through a data-only registry, because a name in
-`MountOptions` would not survive a watch re-render on either surface) and **D-6** (**no** shared post-mount
-enhancement seam — a shared composition point would put `diagramEnhancer` on the content-script graph and
-red the 8/8 import fence, and an enhancer registry would keep the fence green while opening the graph).
-**No code and no tasks exist.** The plan's status line stays "draft" by the M7 precedent — the
-`decisions.md` bank is the approval of record, not the artifact header.
+★ **`specs/008-persona-1-qol/plan.md` PASSED GATE 2 — APPROVED (2026-08-03); `tasks.md` IS THE NEXT
+ARTIFACT AND THE NEXT GATE**, generated in a fresh session (C14). It settles **D-1…D-12**, resolves all ten
+§7 risks against the actual code, and discharges the §7-7 sibling-checklist audit as a 24-row table over two
+chromes with opposite geometry. **Both of its architectural calls were CONFIRMED at the gate:** **D-1**
+(document identity arrives through a data-only registry and `mount()` spends **one** line — because a name in
+`MountOptions` would not survive a watch re-render on either surface; the human accepted that one line to get
+the badge on **both** surfaces) and **D-6** (**no** shared post-mount enhancement seam — a shared composition
+point would put `diagramEnhancer` on the content-script graph and red the 8/8 import fence, and an enhancer
+registry would keep the fence green while opening the graph; the human accepted hardening the duplication
+into policy, **the fence being worth more than the DRY**). **Plan §8's four gate-2 questions were ruled:**
+**Q1 snapshot diffs stay uncaptioned** (the spec floor), **Q2 copy-out is TWO BUTTONS, not a menu** (so
+§3.11's overlay/focus-trap rows 9 and 21 stay inactive), **Q3** the badge lane stays produce-not-choose and
+**Q4** the D-11 (iii) trigger stands. **Two scope instructions ride to the tasks stage:** split the heaviest
+table-tools task, and re-scope the group-5 give-way task so its content-script rollback path (**removal +
+re-measurement**, not an edit) is explicit. Full record: `decisions.md` **2026-08-03 · M8 GATE 2**.
+**No code exists and no approved `tasks.md` exists.** The plan's status line stays "draft" by the M7
+precedent — the `decisions.md` bank is the approval of record, not the artifact header.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a
