@@ -539,6 +539,38 @@ from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mod
   **different** reason (007 §3.2 bytes-and-manifest · 006 §1.4 closure provisioning · 006 §3.2 the
   background's stateless-proxy character), and **no direction was chosen**. M8 scoping is where that
   choice belongs.
+- **★ MEASURED 2026-08-03 (ABLATION-AND-REVERT SPIKE) — THE DIAGRAM MECHANISM'S INLINE ROUTE IS
+  INFEASIBLE, AND THE COST INVESTIGATION'S UNMEASURED LOWER BOUND IS NOW A NUMBER.** That investigation
+  bracketed the cost of putting diagrams on the content-script surface at *"[+3.35 MB upper /
+  **unmeasured** lower]"* and inferred *"no plausible reading under 20 ms"* of first-paint headroom.
+  The spike made `enhanceDiagrams` reachable from the content graph by ONE scratch edge in
+  `mountReader.ts` (the mirror of 007 task 1.3's app-page ablation), built, measured, and **reverted to
+  a byte-identical tree**. ★ **THE LOWER BOUND IS NOT LOWER — IT IS HIGHER THAN THE UPPER BRACKET.**
+  The content script goes **318,747 B → 3,705,875 B, a measured +3,387,128 B**, identical on both
+  engines, decomposed to a **0 B residual**: **3,347,306 B** engine graph (the same 99 chunks the app
+  page splits out) · **20,658 B** inline/flatten glue + `diagramEngine.ts` · **19,164 B** enhancer +
+  cache + `sanitizeSvg` + theme wiring. That is **+37,443 B MORE than the app page's own +3,349,685 B**
+  (1.3's figure): flattening the split *loses* what the split buys. ★ **THE IIFE INLINES IT WITHOUT
+  COMPLAINT — the build is NOT the blocker, so the inline and WAR routes do NOT converge on an
+  ESM-conversion cost.** `import(` stays **0** in the output and no chunks directory appears beside the
+  content script; rollup folds the lazy edge flat. ★ **TWO INDEPENDENT BLOCKERS WERE MEASURED, AND THE
+  FIRST IS TOTAL.** (1) **Chrome refuses to load the WHOLE EXTENSION** — not the content script, the
+  extension, background included: *"Could not load file 'content-scripts/peekover.js' for content
+  script. It isn't UTF-8 encoded."* The file **is** strictly valid UTF-8; Chromium's
+  `base::IsStringUTF8()` additionally rejects Unicode **non-characters**, and mermaid's inlined graph
+  carries **exactly one — U+FFFF at offset 542,008, a literal inside a regex character class** (the
+  repo's own AGENTS.md rule about escaping such characters, met from the other side, in a dependency).
+  **Size is NOT the cause and this was proven by control:** a size-matched **inert** 3,705,870 B content
+  script loads and mounts in ~103 ms. (2) With that one character escaped **purely as a measurement
+  instrument** (semantically inert inside the template literal, so the engine really runs), first paint
+  on a **fence-free** 50.4 KB `file://` document goes **146.5 ms → 385.3 ms median** — **+238.8 ms**
+  against **~20 ms of headroom**, **2.3× the <165 ms gate**, floor 360.3 ms, `DOMContentLoaded` +225 ms.
+  **A-B-A, quiesced, swapping ONLY the content-script file so the rest of the tree is held byte-
+  identical: A1 147.7 · B 385.3 · A2 145.3 ms medians — A-vs-A disagreement 2.4 ms, ~1% of the A→B
+  delta**, so 8.1's *"A disagrees with A ⇒ nothing measured"* rule is satisfied and B stands. **§3.2's
+  "diagrams or not" claim is confirmed on the harm's own terms: this document had no `mermaid` fence.**
+  ★ **NO DIRECTION IS CHOSEN HERE.** This prices ONE of the gap's three mechanisms; the surface-milestone
+  vs defer call is M8 scoping's, and it belongs to a human.
 - **RESOLVED, noted once so it is not re-opened: `scripts/generate-sbom.ts` no longer under-reports the
   production tree.** Found by 007 task 1.1 (which correctly did not take it — the file is outside 1.1's
   commit fence), fixed at **`1a202fd`** as its own act. **Root cause: `collect()` conflated DEDUP with
