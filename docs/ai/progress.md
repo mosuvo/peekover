@@ -55,7 +55,12 @@ into policy, **the fence being worth more than the DRY**). **Plan §8's four gat
 **Q4** the D-11 (iii) trigger stands. **Two scope instructions ride to the tasks stage:** split the heaviest
 table-tools task, and re-scope the group-5 give-way task so its content-script rollback path (**removal +
 re-measurement**, not an edit) is explicit. Full record: `decisions.md` **2026-08-03 · M8 GATE 2**.
-**No code exists and no approved `tasks.md` exists.** The plan's status line stays "draft" by the M7
+★ **`specs/008-persona-1-qol/tasks.md` IS NOW DRAFTED AND IS AT GATE 3 — 35 tasks across six groups**, with
+both gate-2 scope instructions applied: the heaviest table-tools task is **split four ways** (3.2 module ·
+3.3 CSS + token verification · 3.4 the two app-page call sites · 3.5 containment) and the give-way is its
+own task (**5.7** — removal of D-6 sites 3–4 plus a re-measurement to a restored 318,747 B, never an edit to
+a constant). Q1 and Q2 are applied as ruled. **No code exists and `tasks.md` is NOT yet approved** — gate 3
+is the human's, and no implementation begins before it. The plan's status line stays "draft" by the M7
 precedent — the `decisions.md` bank is the approval of record, not the artifact header.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
@@ -67,8 +72,9 @@ milestone-sized against `settings.ts`'s single global row and `parse.ts`'s singl
 at spec §3.5. **No dependency, no storage, no manifest event** — so D-10 (b)'s *"any further dependency
 lands"* trigger does not fire and the 0.70 MB zip headroom is undrawn. The **content-script surface milestone
 is deferred with the spike's measurement attached** (`81986d8`, +238.8 ms, 2.3× the gate). **Nothing is in
-implementation; `plan.md` is not written — gate 1 is passed, so writing it is now the sanctioned next act, but
-no implementation code exists before `tasks.md` passes gate 3** (WORKFLOW.md §5.3).
+implementation; all three artifacts now exist — `spec.md` past gate 1, `plan.md` past gate 2, `tasks.md`
+DRAFTED and awaiting gate 3 — and no implementation code exists before `tasks.md` passes it**
+(WORKFLOW.md §5.3).
 
 **★ M7 (spec 007 — Mermaid diagrams + diagram cache, M7a) IS CLOSED — 2026-08-02, at task 9.3.** All **28 tasks** across **nine groups** landed, plus five commits of shipped code outside the box list (three out-of-plan implementations — the two D-1/D-6 addenda and §4's source guard — and the two post-gate fixes); the 9.1 human gate is discharged 8/8 and **no gate remains**. `permissions: []` held on both engines for the whole milestone, the content script grew **+3,076 B** (decomposed to a **0 B** residual) with the ~3.3 MB engine kept off its graph entirely — asserted structurally by 3.4's import fence, not by a byte reading — and `dependencies` went **4 → 5**. **The close summary is in § Closed milestones; the reconcile that sealed it is § Baselines' *THE 9.3 RECONCILE RECORD*. The narrative below is M7's working set and is now HISTORY — it is the next archive pass's material, not a live pointer.** ★ **NOTHING IS IN IMPLEMENTATION. THE NEXT ACT IS M8 SCOPING**, which should start from `spec-coverage.md` — noting that its F2 row is stale by construction until the re-audit 9.3 routed (§ Carried items) has run.
 
