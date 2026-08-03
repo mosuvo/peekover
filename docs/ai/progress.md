@@ -380,8 +380,17 @@ measurement-driven or explicitly deferred.*
   M8's tasks file is drafted**, because whichever answer is chosen has to be written into that file.
   *(Full context: § Baselines, THE 9.3 RECONCILE RECORD.)*
 
-- **★ NEW AT 9.3 — RE-AUDIT `spec-coverage.md`'s F2 BEFORE M8 SCOPING. NOT DONE HERE, AND THE OMISSION IS
-  DELIBERATE.** The file is dated **2026-07-27 at HEAD `d470ab2`** — entirely pre-M7 — and scores **F2
+- **★ NEW AT 9.3 — RE-AUDIT `spec-coverage.md`'s F2 BEFORE M8 SCOPING. ✅ DONE 2026-08-03 at HEAD
+  `59dcb20`** — `spec-coverage.md` carries a third dated audit stamp; **F2 moved 3% → 42%** (19 items:
+  **7 shipped, 2 partial, 10 not** — every diagram row landed, **all seven math/formula rows stayed ✗**),
+  §7-6's *"re-themed diagrams"* sub-surface and the dependency count (**4 → 5**) are updated, and the
+  item count was corrected **18 → 19** as an enumeration slip (the section always listed 19 rows), moving
+  §5 to **21%** and the whole spec to **26%**. **The re-audit is numbers only — it adds no direction
+  recommendation and ranks no M8 candidate**; the weighing remains a separate human step that reads it.
+  *(One question it raises rather than answers: all seven ✓ rows are app-page-only by 007 §3.2, scored ✓
+  on the F6 `Diff view` precedent — see the file's uncertain-items §5, which prices the alternative.)*
+  **Original entry, preserved as the record of why 9.3 left it:** The file is dated **2026-07-27 at HEAD
+  `d470ab2`** — entirely pre-M7 — and scores **F2
   Math & Diagrams at 3% (18 items: 0 shipped, 1 partial)**. **M7 shipped diagrams**, so F2 is stale by
   construction, and so are §6-6's *"re-themed diagrams"* row and the stated dependency count (**4 → 5**).
   **Why 9.3 left it:** §9.3's own Files line makes the coverage file **conditional** (*"F2's score, if the
@@ -538,6 +547,12 @@ from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mod
   Only 4 of §10's 14 stack layers are provisioned, and **F2/F3/F9/F10/F11 have never been touched by any
   milestone**. **Read before scoping M7.** *(It also half-answers the single-file-drop question below —
   see the audit's uncertain-items §1.)*
+  **↳ FORWARD-NOTE 2026-08-03: the figures in this bullet are a DATED RECORD of the `d470ab2` audit and
+  are left standing as such. They are no longer current — `spec-coverage.md` was re-audited 2026-08-03 at
+  HEAD `59dcb20` (F2 only, plus the dependency count): F2 3% → 42%, §5 ~17% → ~21%, whole spec ~23% → ~26%,
+  4 of 14 stack layers → 5, and F2 is no longer on the never-touched list. The persona-#1 ~56% was NOT
+  re-derived and is now an undercount — do not quote it. Read `spec-coverage.md` itself for current
+  numbers; read this bullet for what was true on 2026-07-27.**
 - **★ ONE GAP THE RE-AUDIT FOUND AND DID NOT FIX, because `.github/` is outside an archive pass's scope
   fence: the SBOM's release-attach step cannot fire on a tag push.** `supply-chain.yml`'s `on.push` is
   filtered to `branches: [main]` with **no `tags:` key**, so pushing `v0.1.0` triggers no run, and the

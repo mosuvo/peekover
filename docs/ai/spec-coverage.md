@@ -1,10 +1,19 @@
-# Spec coverage audit — post-M6, pre-M7
+# Spec coverage audit — post-M7, pre-M8
 
 *Audited 2026-07-27 · HEAD `d7f424c` ("Add 006 gate"; the M6 retro is its parent, `664952f`).*
 ***Re-audited 2026-07-27 · HEAD `d470ab2`** ("ci(security): close the §6-4 / §6-9 release-engineering
 gap"). **Targeted re-verification of §6-4 and §6-9 ONLY** — those two items scored PARTIAL for one shared
 reason ("ci.yml has no such check"), and `d470ab2` landed the CI that reason named. No other item was
 re-verified: nothing between `d7f424c` and `d470ab2` touched `src/`, and the answer only changed for §6.*
+
+***★ RE-AUDITED 2026-08-03 · HEAD `59dcb20`** (M7 / spec 007 closed and reconciled). **Targeted
+re-verification of F2 "Math & Diagrams" ONLY**, plus the three figures M7 falsified elsewhere: §7-6's
+"re-themed diagrams" sub-surface, the runtime **dependency count (4 → 5)**, and the §10 layer tally.
+**No other section was re-scored** — §6 and §7's status columns, and F1/F3–F12's rows, are the
+`d470ab2` and `d7f424c` readings unchanged, and any figure derived from them (below) is marked where
+it is now stale. **This is a new dated audit, not a revision of the old one:** the 2026-07-27 numbers
+were true on 2026-07-27, and § Blockers in `progress.md` still cites them correctly as a dated record.*
+
 *Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
 *Method: source code is the answer, the spec is only the question. No spec item is credited
 because a plan, a task list or a pipeline comment anticipates it.*
@@ -13,24 +22,45 @@ because a plan, a task list or a pipeline comment anticipates it.*
 
 ## Summary
 
-**Phase 1 (§5 F1–F12) is ~17% shipped by weighted feature count** — 34.0 credit points across
-197 enumerated items. Including §6 and §7 the whole-spec figure is **~23%** (52.0 / 226, up from 51.5
-at the `d7f424c` audit — the `d470ab2` re-audit moved §6-4 PARTIAL → SHIPPED and §6 from 56% to 59%;
-**§5 and the persona figure are untouched**, because no §6 item is a persona-#1 feature). But the
-number that describes the *product* rather than the *backlog* is the persona one: **~56% of
-persona #1's killer features are shipped** (10 of 18 sub-items across folder browser, watch mode,
-diff view, Mermaid, tables). Six milestones of work have landed almost entirely inside one
-persona's column — the AI-tool developer can open a folder, watch an agent rewrite a file, and
-diff the result against a snapshot, all offline. What they cannot do is see a Mermaid diagram,
-which is the single largest hole in that column and the one item in it that needs a dependency
-Peekover has never installed. Every other persona in §3 is under 15% served: the Developer
-persona is missing code highlighting entirely (F3 is 0%), the Technical writer has no editor and
-no export (F8 4.8%, F9 0%), and the Student has no math (F2 2.8%).
+**Phase 1 (§5 F1–F12) is ~21% shipped by weighted feature count** — 41.5 credit points across
+198 enumerated items. Including §6 and §7 the whole-spec figure is **~26%** (59.5 / 227). The
+2026-08-03 re-audit moved **F2 from 3% to 42%** — M7 shipped Mermaid rendering, the hash-keyed
+cache, theme sync, copy/download, the lightbox and progressive enhancement — and **that single row
+is the whole of the §5 and whole-spec movement**; no other section was re-scored (see the
+enumeration correction below for the +1 item).
+
+**F2 is 42%, not "done".** The row covers two halves and only one shipped: **every diagram item that
+M7 scoped is now ✓ or ~, and every math item is still ✗** — no `katex`, no MathJax, no `$…$`, no
+`$$…$$`, no code-fence math, no copy-as-LaTeX/MathML. Standalone `.mermaid` files, the additional
+engines, and dark-mode image adaptation are also still ✗, each deferred by name in `specs/007-mermaid-diagrams/spec.md` §6. Reading 42% as "diagrams and math are handled" is the
+one misreading this number invites; the honest sentence is **diagrams shipped, math did not.**
+
+**★ The persona-#1 figure is NOT re-derived by this pass and the 2026-07-27 reading of ~56% is now an
+undercount.** That figure counts 10 of 18 sub-items *"across folder browser, watch mode, diff view,
+Mermaid, tables"*, and the Mermaid sub-item(s) it scored ✗ have shipped — but re-deriving it means
+re-enumerating persona #1's sub-items across F1/F5/F6 as well, which is outside this pass's F2 fence
+and would be a whole-file re-audit done from one row's evidence. **Do not quote ~56% as current; it
+needs its own derivation.** The prior audit's accompanying claim — *"what they cannot do is see a
+Mermaid diagram"* — is **false at HEAD** on the app-page reader and remains true only on the
+content-script `file://` / raw-host reader, which spec 007 §3.2 put out of scope by decision (see
+uncertain-items §5). Every other persona in §3 is still under 15% served: the Developer persona is
+missing code highlighting entirely (F3 is 0%), the Technical writer has no editor and no export
+(F8 4.8%, F9 0%), and the Student still has no math — **F2's 42% buys the Student nothing**, since
+all five math items and both formula-copy items remain ✗.
 
 **Weighting method.** Each spec bullet is decomposed into its sub-items and each sub-item counted
 once, unweighted (a bullet listing seven extended-syntax features counts seven). Credit is
 `SHIPPED = 1.0`, `PARTIAL = 0.5`, `NOT = 0`, `UNCLEAR = 0`. Ambiguity resolves toward NOT — this
-document is an input to M7 scoping, and an inflated ✓ costs more than a conservative ✗.
+document is an input to milestone scoping (M7's, and now M8's), and an inflated ✓ costs more than a
+conservative ✗. **The method is unchanged at the 2026-08-03 re-audit; only marks were re-derived.**
+
+**★ AN ENUMERATION CORRECTION, NOT A METHOD CHANGE (2026-08-03).** F2's row declared **18** items and
+its trailing note repeated 18, but the section **has always listed 19 rows** — and 19 is what the
+method above yields when `docs/product/spec.md` §F2's eleven bullets are decomposed (2 + 3 + 2 + 2 + 1
++ 1 + 2 + 1 + 2 + 1 + 2 = 19). The ✗ column carried the slip (17 declared against 18 ✗ rows). The
+count is corrected to **19** here, which moves §5's item total **197 → 198** and the whole spec's
+**226 → 227**. This changes no other section's marks and no rule; it makes F2's denominator larger,
+i.e. its coverage figure *lower*, which is the direction this document's own tie-break prefers.
 
 **Status legend.** `✓ SHIPPED` — implementation exists and is either test-covered or demonstrably
 reachable from a production entrypoint. `~ PARTIAL` — exists but incomplete, untested, or reaches
@@ -41,7 +71,7 @@ the bottom with the question a human walk would settle.
 | Section | Items | ✓ | ~ | ✗ | ? | Credit | Coverage |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | F1 Rendering engine | 24 | 6 | 3 | 15 | 0 | 7.5 | **31%** |
-| F2 Math & diagrams | 18 | 0 | 1 | 17 | 0 | 0.5 | **3%** |
+| F2 Math & diagrams *(re-audited 2026-08-03)* | 19 | 7 | 2 | 10 | 0 | 8.0 | **42%** |
 | F3 Code blocks | 9 | 0 | 0 | 9 | 0 | 0.0 | **0%** |
 | F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
 | F5 Navigation & reading UX | 39 | 11 | 1 | 27 | 0 | 11.5 | **29%** |
@@ -52,10 +82,14 @@ the bottom with the question a human walk would settle.
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **197** | **28** | **12** | **157** | **0** | **34.0** | **17%** |
+| **§5 total** | **198** | **35** | **13** | **150** | **0** | **41.5** | **21%** |
 | §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **226** | **41** | **22** | **163** | **0** | **52.0** | **23%** |
+| **Whole spec** | **227** | **48** | **23** | **156** | **0** | **59.5** | **26%** |
+
+*Every row except F2 is the `d470ab2` / `d7f424c` reading, carried forward unverified at HEAD
+`59dcb20`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
+below) without moving that item off `~`, since two of its three named sub-surfaces are still absent.*
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -93,30 +127,49 @@ sections in the document, and they are the two that no competitor can copy in an
 
 ## F2. Math & Diagrams
 
+***Re-audited 2026-08-03 at HEAD `59dcb20`, against shipped code.** 7 rows moved ✗ → ✓ and one ✗ → ~;
+**ten rows did not move**, and all seven math/formula rows are among them. Every changed mark carries
+a module or test pointer below — a task in `specs/007-mermaid-diagrams/tasks.md` was not accepted as
+evidence that anything shipped. **Surface: all seven ✓ rows are the APP-PAGE reader only** — spec 007
+§3.2 decided the content-script `file://` / raw-host reader renders no diagrams, and that fence is
+asserted structurally by `src/render/diagramImportFence.test.ts`. They are scored ✓ rather than ~ on
+this document's own precedent (F6's `Diff view — inline` and `Watch mode` are ✓ with the same
+app-page-only note); **the surface question itself is raised for a human at uncertain-items §5, not
+priced into the score.***
+
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
-| KaTeX (default) | ✅ | ✗ | No `katex` dependency; 0 grep hits in `src/`, `entrypoints/` | — |
-| MathJax fallback toggle | ✅ | ✗ | No dependency; 0 hits | — |
-| Inline `$…$` | ✅ | ✗ | No math plugin in `parse.ts` | — |
-| Block `$$…$$` | ✅ | ✗ | As above | — |
-| Code-fence math | ✅ | ✗ | As above | — |
-| Right-click → copy as LaTeX | ⭐ | ✗ | No context-menu code anywhere; `permissions: []` (`wxt.config.ts:18`) excludes `contextMenus` | Would be a manifest-permission event (AGENTS.md #4). |
-| Right-click → copy as MathML | ⭐ | ✗ | As above | — |
-| Mermaid rendering (8 diagram kinds) | ✅ | ✗ | No `mermaid` dependency; 0 hits | **The largest single hole in persona #1's column.** |
-| Mermaid theme auto-sync with light/dark | ✅ | ✗ | Depends on the above | The theme *registry* that would drive it exists (`src/theme/themeRegistry.ts:42-67`). |
-| Additional engines (Graphviz/Vega/PlantUML) | ✅ | ✗ | No dependencies; 0 hits | Spec marks these post-v1 stretch. |
-| Diagram → PNG/SVG copy & download | ✅ | ✗ | Depends on Mermaid | — |
-| Smart diagram cache (hash-keyed) | ✅ | ✗ | 0 hits | — |
-| User-visible cache controls (cap, clear) | ✅ | ✗ | `src/app/storageControls.ts:159` has wipe/erase controls but nothing diagram-shaped | The *shape* of this UI exists and is reusable. |
-| Standalone diagram-file rendering | ✅ | ✗ | `MARKDOWN_EXTENSIONS` (`isRenderableContext.ts:20-31`) lists no `.mermaid`/`.dot` | — |
-| No artificial file-size limit | ✅ | ~ | `src/render/mount.ts:112` renders whatever it is given; `tests/golden/hugeDoc.ts`, `src/render/pipeline.perf.test.ts` | No size cap exists ✓. Note `walkPolicy.ts:114` caps the *folder walk*, not documents. |
-| Progressive loading (text first, diagrams after) | ✅ | ✗ | `mount.ts` is a single synchronous `replaceChildren` commit | Explicitly deferred at M1 (`mount.ts` C12 scope note). |
-| Diagram zoom/pan lightbox | ✅ | ✗ | 0 `lightbox` hits | — |
-| Auto dark-mode: diagrams re-themed | ⭐ | ✗ | Depends on Mermaid | — |
-| Auto dark-mode: images dimmed/inverted | ⭐ | ✗ | `src/render/mediaPolicy.ts` classifies and blocks remote media; it does not adapt appearance | Different mechanism, same file — a natural M7 host. |
+| KaTeX (default) | ✅ | ✗ | Still no `katex` dependency (`package.json` — five runtime deps, none math); 0 grep hits in `src/`, `entrypoints/` | **Unmoved.** Explicitly out of 007 (`specs/007-mermaid-diagrams/spec.md` §6, *"KaTeX / MathJax and all math rendering"*). |
+| MathJax fallback toggle | ✅ | ✗ | No dependency; 0 hits | **Unmoved.** As above. |
+| Inline `$…$` | ✅ | ✗ | No math plugin in `parse.ts` | **Unmoved.** |
+| Block `$$…$$` | ✅ | ✗ | As above | **Unmoved.** |
+| Code-fence math | ✅ | ✗ | As above | **Unmoved.** A `mermaid` fence is enhanced; 007 §6 forbids drifting into fence handling generally, and no other fence language is touched. |
+| Right-click → copy as LaTeX | ⭐ | ✗ | No context-menu code anywhere; `permissions: []` (`wxt.config.ts:18`) excludes `contextMenus` | **Unmoved.** M7's own copy/download affordances deliberately avoided a context menu for exactly this reason (007 §3.11) — the permission event was declined, not spent. |
+| Right-click → copy as MathML | ⭐ | ✗ | As above | **Unmoved.** |
+| Mermaid rendering (8 diagram kinds) | ✅ | **✓** | `src/render/diagramEngine.ts:425` (`loadMermaid`, the one `import('mermaid')` in the tree), `:440` `hasDiagramFence`, `:453` `loadDiagramEngine`; `src/render/diagramEnhancer.ts:678` `enhanceDiagrams`; wired at `src/app/appShell.ts:139` and `src/app/readerPane.ts:185`; `tests/browser/diagramRender.browser.test.ts`, `diagramDegrade.browser.test.ts`; fixtures `tests/golden/fixtures/diagrams-10.md`, `diagrams-50.md` | **Was "the largest single hole in persona #1's column"; M7 closed it on the app page.** The path is diagram-kind-agnostic (source text → engine → `sanitize.ts:380` `SANITIZE_SVG_CONFIG` → adopt), so it is not gated on a kind allow-list. Of the spec's eight named kinds, **seven are fixtured** (flowchart, sequence, class, state, ER, gantt, pie); **`gitGraph` appears nowhere in the repo** — rendered by construction, unproven by test. |
+| Mermaid theme auto-sync with light/dark | ✅ | **✓** | `diagramEngine.ts:417` `diagramEngineConfigFor(theme)`; `diagramEnhancer.ts:169` `DIAGRAM_THEME_ATTR`; `tests/browser/diagramTheme.browser.test.ts` | Theme is a component of the cache key (`src/app/diagramCache.ts:171`), so a flip re-renders through the cache rather than retinting the SVG (007 §3.7); the previous rendering stays on screen until its replacement is ready. |
+| Additional engines (Graphviz/Vega/PlantUML) | ✅ | ✗ | No dependencies; 0 hits | **Unmoved.** The spec's own post-v1 stretch clause, restated as out of scope at 007 §6. |
+| Diagram → PNG/SVG copy & download | ✅ | **✓** | `src/render/diagramView.ts:194` (`image/png`), `:298` `canvas.toBlob`, `:314` `ClipboardItem` write, `:325-333` `downloadDiagramAsSvg` with `anchor.download`; `tests/browser/diagramActions.browser.test.ts` | Both halves of the item ship: **copy as PNG**, **download as SVG**, per diagram. Revealed on hover **and** keyboard focus; no manifest permission was needed (007 §3.11's stop-and-flag never fired). |
+| Smart diagram cache (hash-keyed) | ✅ | **✓** | `src/app/diagramCache.ts:171` `diagramCacheKey` (hash of source **+ theme + engine version**), `:399` `readDiagram`, `:427` `storeDiagram`, `:234` `planDiagramWrite`; IndexedDB `peekover` DB v4; `tests/browser/diagramCache.browser.test.ts` | Persistent, not session-memory — which is what makes the spec's *"<1 s reopen"* and *"only re-render changed diagrams"* reachable. A watched document re-mounting serves unchanged diagrams from cache. |
+| User-visible cache controls (cap, clear) | ✅ | **~** | **Clear ✓:** `src/app/storageControls.ts:271-305` — a dedicated `Clear diagram cache` control with its own confirm step, erasing cached diagrams alone; also erased by "Wipe all data". **Disclosure ✓:** `src/app/store.ts:527` — `Diagrams cached: N rendered (~size)`. **Cap ✗ as a user-visible control:** the bounds are module constants (`diagramCache.ts:92` count 150, `:103` 8 MB, `:116` 30 days) | **PARTIAL, scored down deliberately.** The bounds *exist and bind* (oldest-first eviction), and they are disclosed qualitatively in `docs/trust/PERMISSIONS.md:48` — but the panel states neither the values nor a retention line, and 007 §6 defers **user-adjustable cache bounds** by name. The item says *"size cap, one-click clear"*; one of the two is a control the user can see. |
+| Standalone diagram-file rendering | ✅ | ✗ | `MARKDOWN_EXTENSIONS` (`isRenderableContext.ts:20-31`) still lists no `.mermaid`/`.dot` | **Unmoved, and deliberately so:** 007 §3.4 decided it OUT and priced the overturn (a distinct non-markdown code path, a new manifest `matches` pattern, a `PERMISSIONS.md` row); gate 1 upheld it. |
+| No artificial file-size limit | ✅ | ~ | `src/render/mount.ts:112` renders whatever it is given; `tests/golden/hugeDoc.ts`, `src/render/pipeline.perf.test.ts` | **Unmoved at ~.** No document size cap exists ✓; `walkPolicy.ts:114` still caps the *folder walk*, not documents. M7 added no document-level cap — mermaid's own `maxTextSize` is in the frozen `secure` list (`diagramEngine.ts:223`) and bounds a **diagram source**, not a file. |
+| Progressive loading (text first, diagrams after) | ✅ | **✓** | 007 §3.3 makes enhancement **post-mount**: `enhanceDiagrams` is called *after* `mount()` commits, at `appShell.ts:139` and `readerPane.ts:185`, never from inside `mount()`; placeholder at `diagramView.ts:94`; the `<165 ms` first-paint gate is held on diagram-bearing documents (§ Baselines, `progress.md`) | The M1 deferral (*"`mount.ts` is a single synchronous `replaceChildren` commit"*) still describes `mount()` — which is the point. The text paints in one commit and diagrams fill in afterwards, so the heaviest block never gates first paint. |
+| Diagram zoom/pan lightbox | ✅ | **✓** | `diagramView.ts:53-64` (`peekover-diagram-open`, `…-lightbox`, panel/view/close classes), `:631` activation; `tests/browser/diagramLightbox.browser.test.ts` | Opens by pointer **or** keyboard, closes on Escape, traps and restores focus, adds no new global bare key (007 §3.11). **F5's image lightbox is still ✗** — this one was built not to preclude it, but it was not generalised. |
+| Auto dark-mode: diagrams re-themed | ⭐ | **✓** | Same mechanism as the theme-sync row above: `diagramEngineConfigFor` + the theme-keyed cache; `tests/browser/diagramTheme.browser.test.ts` | **The two rows are one mechanism** (the product spec states theme-sync in the Mermaid bullet and again in the dark-mode bullet). Both are credited because the method counts sub-items as enumerated — noted so the double credit is visible rather than silent. |
+| Auto dark-mode: images dimmed/inverted | ⭐ | ✗ | `src/render/mediaPolicy.ts` classifies and blocks remote media; it does not adapt appearance | **Unmoved.** Named out of scope at 007 §6 (*"the other half of the dark-mode row"*), routed to a media/theming pass. |
 
-*(18 items — the "additional engines" row covers one item; the KaTeX/MathJax and inline/block/fence
-rows are counted separately as listed.)*
+*(**19 items** — see the enumeration correction in § Summary; the "additional engines" row covers one
+item, and the KaTeX/MathJax and inline/block/fence rows are counted separately as listed. Credit:
+7 × 1.0 + 2 × 0.5 = **8.0 / 19 = 42%**.)*
+
+**What the 42% is made of, stated so it cannot be rounded up.** M7 shipped **the diagram half**:
+rendering, the hash-keyed persistent cache, theme sync, copy/download, the lightbox, post-mount
+progressive enhancement, the degradation paths, and a second SVG-shaped sanitizer profile
+(`sanitize.ts:200-380`) that leaves the document profile untouched. It shipped **none of the math
+half** and none of F2's three other deferrals. Ten of nineteen rows are still ✗, seven of them math or
+formula rows — so **F2 is now the section where "what's left" is a different feature from "what
+landed"**, which is not true of any other partially-covered section in this document.
 
 ## F3. Code Blocks
 
@@ -347,7 +400,7 @@ feature-detection, no WebCrypto usage (0 `webcrypto` hits).
 | 6 | Minimal permissions; per-origin host access requested at moment of use; `PERMISSIONS.md` | ~ | `wxt.config.ts:18` — `permissions: []`, **byte-pinned by `tests/manifest.test.ts` (2975 B, unmodified since M2)**; `docs/trust/PERMISSIONS.md` exists | Permission surface is smaller than the spec asks for ✓. But host access is **static manifest `matches`**, not optional and not requested at use — the "per-origin, at moment of use" half is unbuilt. |
 | 7 | Permission-diff policy (never silently add; changelog + in-product notice) | ~ | AGENTS.md #4 + the manifest byte-pin enforce the *process*; every milestone re-proved `permissions: []` | **No `CHANGELOG.md` in the repo and no in-product notice mechanism.** The discipline is real; the two user-facing artifacts are not. |
 | 8 | Sanitization: DOMPurify strict allowlist, SVG sanitized, strict CSP, sandboxed embeds, block remote images | ~ | Allow-list `sanitize.ts:22-65`; `data:` hook `:131-135`; SVG/iframe/object **excluded entirely** from `ALLOWED_TAGS`; remote-image blocking `mediaPolicy.ts:138` with opt-in bar `remoteMediaUi.ts:60`; `tests/browser/sanitize.browser.test.ts` | Four of five sub-claims hold, some by denial rather than sanitization (stronger). **No `content_security_policy` key is declared** in `wxt.config.ts` — the property rides on MV3's platform default rather than an explicit, auditable line. |
-| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **4 runtime dependencies** — genuinely minimal; `.github/workflows/supply-chain.yml` (`audit`, `osv`, `sbom` jobs); `.github/dependabot.yml`; `scripts/generate-sbom.ts` | **Re-audited at `d470ab2` — a STRONG partial now, not the weak one above: 4 of 5 sub-clauses SHIPPED.** Locked/minimal ✓ · `pnpm audit --prod --audit-level low` **blocking** ✓ (full tree advisory by a recorded call, `decisions.md` 2026-07-27 (a)) · OSV ✓ by CI wiring (`google/osv-scanner-action@v2.2.4` + SARIF upload; not locally verifiable — it runs on GitHub, and workflow wiring is "demonstrably wired into a production entrypoint" under this document's own legend) · no install scripts ✓ (**0 `requiresBuild: true` in `pnpm-lock.yaml`**; the only `postinstall` is Peekover's own `wxt prepare`) · **SBOM published per release ✗ — the item still fails, and the reason changed.** See the §6-9 note below. |
+| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **5 runtime dependencies** *(4 at the `d470ab2` audit; `mermaid ^11.16.0` added at M7 as the fifth, a governed act — spec 007 §3.12)* — still minimal; `.github/workflows/supply-chain.yml` (`audit`, `osv`, `sbom` jobs); `.github/dependabot.yml`; `scripts/generate-sbom.ts` | **Re-audited at `d470ab2` — a STRONG partial now, not the weak one above: 4 of 5 sub-clauses SHIPPED.** Locked/minimal ✓ · `pnpm audit --prod --audit-level low` **blocking** ✓ (full tree advisory by a recorded call, `decisions.md` 2026-07-27 (a)) · OSV ✓ by CI wiring (`google/osv-scanner-action@v2.2.4` + SARIF upload; not locally verifiable — it runs on GitHub, and workflow wiring is "demonstrably wired into a production entrypoint" under this document's own legend) · no install scripts ✓ (**0 `requiresBuild: true` in `pnpm-lock.yaml`**; the only `postinstall` is Peekover's own `wxt prepare`) · **SBOM published per release ✗ — the item still fails, and the reason changed.** See the §6-9 note below. |
 | 10 | Reproducible builds; release hashes; signed tags; attestations | ✗ | No release workflow; `ci.yml` runs on `pull_request` only; no attestation config | No release has happened yet, but nothing is in place for one. |
 | 11 | Publisher account security (passkeys/2FA + recovery plan) | ✗ | No such document in `docs/trust/` (contains `PERMISSIONS.md`, `SECURITY.md` only) | Named by the spec as where extension hijacks usually start. |
 | 12 | Open source (MIT/Apache-2.0), full source incl. build scripts | ✓ | `LICENSE` (MIT, 2026 Mo Suvo); `wxt.config.ts`, `scripts/`, `.github/workflows/` all tracked | — |
@@ -385,7 +438,7 @@ line** (`tags: ['v*']` under `on.push`) and belongs with whoever cuts the first 
 | 3 | Motion with meaning, 150–250 ms, `prefers-reduced-motion` respected | ✓ | `readerCss.ts` — every transition is `.15s` (lines 118, 235, 257, 293, 386, 415, 464, 531, 587, 599); global reduced-motion override at `:76` | In band, consistently, and neutralised globally. |
 | 4 | Instant feel: first paint of real content < 150 ms | ~ | Perf harness `scripts/perf-first-paint.ts`; gate **re-baselined `<150` → `<165` ms** at `8255380` (`decisions.md` 2026-07-26) | The mechanism and the measurement discipline ship; **the spec's stated number is not currently met** and the working-day floor question is routed to M7. |
 | 5 | Keyboard-first, command palette as the spine | ✗ | No palette; two shortcuts repo-wide | The "spine" is missing; individual controls are keyboard-operable (see F12). |
-| 6 | Dark mode as a first-class art piece (tuned syntax palettes, re-themed diagrams, adapted images) | ~ | Dark is a designed token set, not an inversion (`readerCss.ts`, `themeRegistry.ts:42-67`); `tests/browser/themeRuntime.browser.test.ts` proves OS-flip re-theming | The theme itself ✓; **all three named sub-surfaces (syntax, diagrams, images) depend on F2/F3, which are 0–3%.** |
+| 6 | Dark mode as a first-class art piece (tuned syntax palettes, re-themed diagrams, adapted images) | ~ | Dark is a designed token set, not an inversion (`readerCss.ts`, `themeRegistry.ts:42-67`); `tests/browser/themeRuntime.browser.test.ts` proves OS-flip re-theming. **Re-verified 2026-08-03:** the **diagrams** sub-surface now ships — `diagramEngine.ts:417` `diagramEngineConfigFor(theme)` + the theme-keyed cache, `tests/browser/diagramTheme.browser.test.ts` | The theme itself ✓, and **one of the three named sub-surfaces is now real** (diagrams, app page). **Still `~`:** tuned syntax palettes depend on F3 (0%) and image adaptation on F2's remaining ⭐ row — two of three absent, so the item does not move off PARTIAL. |
 | 7 | Empty states and errors are designed moments | ✓ | Never-blank fallback with banner (`src/render/mount.fallback.test.ts`, `runReader.fallback.test.ts`); designed idle/denied/unsupported states (`appShell.ts:1018-1032`, `capability.ts:36-49`); empty recents (`recentsView.ts:165`); designed watch-degraded explanations (`watchAvailability.ts:97-120`) | The most consistently applied principle in the codebase. |
 | 8 | Details users feel: scrollbars, selection color, focus rings, favicon per state, texture, typeset print | ~ | `::selection` (`readerCss.ts:75`), `:focus-visible` ring (`:74`), icon assets (`assets/icons`, `design/icons.html`) | **No custom scrollbars, no per-state favicon, and no print CSS at all.** Three of six sub-details absent. |
 | 9 | Design tokens defined before build | ✓ | `design/tokens.css` predates the render pipeline; `readerCss.ts` references tokens exclusively, never literals (AGENTS.md style rule) | — |
@@ -397,9 +450,10 @@ line** (`tags: ['v*']` under `on.push`) and belongs with whoever cuts the first 
 
 ## Dependencies audit
 
-`package.json` declares **4 runtime dependencies**. §10 of the spec names **14 stack layers**, of
-which 10 require a runtime library that is not installed. A missing dependency is load-bearing
-absence evidence: the feature cannot be shipped and no amount of pipeline design substitutes.
+`package.json` declares **5 runtime dependencies** *(4 until M7; `mermaid ^11.16.0` is the fifth)*.
+§10 of the spec names **14 stack layers**, of which **9** require a runtime library that is not
+installed. A missing dependency is load-bearing absence evidence: the feature cannot be shipped and
+no amount of pipeline design substitutes.
 
 | §10 layer | Declared choice | Installed? | Gap |
 | --- | --- | :---: | --- |
@@ -408,8 +462,8 @@ absence evidence: the feature cannot be shipped and no amount of pipeline design
 | Markdown | markdown-it **+ plugin ecosystem** (footnote, deflist, abbr, emoji, anchor, front-matter, alerts) | ~ `markdown-it ^14.3.0`, `markdown-it-task-lists ^2.1.1` | **1 of 8 plugins installed.** Directly explains F1's 15 ✗ rows. |
 | Sanitization | DOMPurify | ✓ `dompurify ^3.4.12` | — |
 | Highlighting | Shiki (lazy) | ✗ | **F3 = 0%.** |
-| Math | KaTeX (+ MathJax lazy chunk) | ✗ | **F2 math rows all ✗.** |
-| Diagrams | Mermaid; viz.js later | ✗ | **The persona-#1 killer-feature gap.** |
+| Math | KaTeX (+ MathJax lazy chunk) | ✗ | **F2's seven math/formula rows all ✗** — unchanged by M7. |
+| Diagrams | Mermaid; viz.js later | ✓ `mermaid ^11.16.0` | **Provisioned at M7** — the persona-#1 killer-feature gap, closed on the app-page reader. Emitted as **lazy async chunks behind one `import()`**, never statically inlined, and kept off the content-script graph (`diagramImportFence.test.ts`). viz.js still ✗. |
 | Editor | CodeMirror 6 | ✗ | **F8 = 5%.** |
 | Diff | `diff` + custom renderer | ✓ `diff ^9.0.0` | Added at M6 — the first `dependencies` addition since M1, taken as a governed act. |
 | Search | MiniSearch | ✗ | Blocks F5 cross-file search. |
@@ -417,9 +471,11 @@ absence evidence: the feature cannot be shipped and no amount of pipeline design
 | Export | docx, JSZip, print pipeline | ✗ | **F9 = 0%.** Print pipeline needs no dependency at all — just `@media print` rules that do not exist. |
 | Tests | Vitest + Playwright | ✓ dev (`vitest 4.1.10`, `playwright ^1.61.1`) | 38 browser suites, 9 golden fixtures. |
 
-**Read this way: 4 of the 14 layers are provisioned.** The un-provisioned ten map almost exactly
-onto the ten spec sections scoring under 30%. Peekover's coverage is not limited by architecture —
-it is limited by which libraries have been let in, which has been deliberate.
+**Read this way: 5 of the 14 layers are provisioned** *(4 until M7)*. The un-provisioned nine still
+map closely onto the spec sections scoring lowest. Peekover's coverage is not limited by architecture
+— it is limited by which libraries have been let in, which has been deliberate. **M7 is the first
+milestone to test that sentence in the other direction:** one governed addition moved one section
+from 3% to 42%.
 
 **Re-audit note (`d470ab2`): the dependency SET is unchanged — still 4 runtime, still 11 dev — but it is
 now GOVERNED, which the first audit could not say.** `.github/dependabot.yml` raises grouped weekly PRs
@@ -430,6 +486,11 @@ clean at 0; the 7 advisories in the full tree are all transitive devDependencies
 `@vitest/browser-playwright` and are reported, not suppressed. **No new dependency was taken to do any of
 this** — the SBOM generator is hand-rolled precisely because installing `@cyclonedx/cyclonedx-npm` to
 satisfy a *minimal-dependencies* claim would be self-defeating (`decisions.md` 2026-07-27 (d)).
+
+**Re-audit note (`59dcb20`, 2026-08-03): the SET moved for the first time since M6 — 4 → 5 runtime**,
+`mermaid ^11.16.0`, taken on the M6 process and priced at spec 007 §3.12 (transitive tree enumerated,
+licences permissive, in the SBOM, `pnpm audit --prod` still 0 blocking). The paragraph above remains
+correct as the `d470ab2` reading; the governance it describes is what the fifth addition went through.
 
 ## Cross-milestone touch map
 
@@ -443,13 +504,17 @@ satisfy a *minimal-dependencies* claim would be self-defeating (`decisions.md` 2
 | **M6** · `006-snapshots-diff` | **F6** (snapshot history, diff view) · **F8** (version snapshots, partial) · **§6** (17 — snapshot storage, disclosure, erase; the PERMISSIONS.md trust-claim correction) · **§7** (7, 8 — storage-panel and Compare-pill design defects caught at the gate) |
 | **§6 side-quest** · `d470ab2` (post-M6, not a milestone) | **§6** (4 — the dynamic-import scanner + its self-test, wired in CI: PARTIAL → SHIPPED · 9 — `pnpm audit`, OSV+SARIF, Dependabot, SBOM generator: 4 of 5 sub-clauses now shipped) · **§6-17** (the `storage.sync` → IndexedDB correction of record, tailed into §9 and F7 at the archive pass). **The first entry in this table that shipped no `src/` code** — it is release engineering, and it exists because this audit named the gap. |
 
-**F2, F3, F9, F10, F11 have never been touched by any milestone.** F7 was touched once and moved
-6%. Four of the twelve functional sections are untouched ground for M7.
+| **M7** · `007-mermaid-diagrams` | **F2** (Mermaid rendering, theme sync, hash-keyed cache, cache clear + disclosure, PNG/SVG copy & download, zoom/pan lightbox, progressive post-mount enhancement — 3% → 42%) · **§6** (2 — a fifth network guard, `diagramNetwork.browser.test.ts`; 6 — `permissions: []` survived a fifth dependency and a lazy chunk, with no `web_accessible_resources`; 8 — a second, SVG-shaped sanitizer profile with the document profile untouched; 9 — the first dependency addition since M6, through the governed process; 17 — the diagram cache disclosed, bounded and erasable) · **§7** (6 — the "re-themed diagrams" sub-surface; 3, 7 — placeholder motion and the degrade-to-source-fence states) |
+
+**F3, F9, F10, F11 have never been touched by any milestone.** F7 was touched once and moved 6%.
+**F2 left that list at M7** — it went from never-touched to 42% in one milestone, and it is the only
+section whose remaining ✗ rows (math) are a materially different feature from the ones that landed
+(diagrams). Three of the twelve functional sections plus F11 are untouched ground going into M8.
 
 ## What's genuinely uncertain and needs an eye-check
 
-No item was scored `? UNCLEAR` — every row resolved on file evidence. Four items resolved on
-evidence but carry a question a human walk would answer better than a grep:
+No item was scored `? UNCLEAR` — every row resolved on file evidence. **Five** items resolved on
+evidence but carry a question a human walk would answer better than a grep (§5 added 2026-08-03):
 
 1. **The single-file-drop open question (`progress.md` §Blockers, lines 490–503) is now half
    answered, and the answer changes it.** Check (1): **yes — `docs/product/spec.md` F4 names
@@ -474,5 +539,20 @@ evidence but carry a question a human walk would answer better than a grep:
 4. **Whether the diff view being app-page-only is a decision or a gap.** `diffRegistry.ts`
    registers on the app page and provably nowhere else, and that absence is *designed* (D-14) and
    *tested* (`diffRegistry.browser.test.ts`). The spec's F6 diff bullet names no surface.
-   **The question for M7 scoping:** does an AI-tool developer reading `CLAUDE.md` at a `file://`
+   **The question for scoping:** does an AI-tool developer reading `CLAUDE.md` at a `file://`
    URL — the persona's most common path — expect Compare there? If yes, this ✓ is really a ~.
+5. **★ NEW 2026-08-03 — whether F2's seven ✓ rows should be ~, because diagrams are app-page-only.**
+   `enhanceDiagrams` is reached from `appShell.ts:139` and `readerPane.ts:185` and provably from
+   nowhere on the content-script graph (`diagramImportFence.test.ts`, a source-graph assertion, not a
+   byte reading). That absence is **decided** (007 §3.2: the content script has no storage of its own,
+   and a lazy chunk there would need `web_accessible_resources`, a forbidden manifest key) and **gate 1
+   upheld it**, including the call to ship no explanatory note on that surface. So this is item 4's
+   question one milestone on, and sharper: unlike Compare, **the same document renders differently on
+   the two surfaces** — a `mermaid` fence is a diagram on the app page and a code fence at a `file://`
+   URL. This audit scored ✓ on the F6 precedent (`Diff view — inline` is ✓ with an app-page-only note)
+   so F2 is not held to a stricter rule than F6; **if a human decides app-page-only is a gap rather
+   than a boundary, items 4 and 5 move together and F2 drops from 42% to roughly 24%** (seven ✓ → ~).
+   **The question:** open a `file://` markdown document containing a `mermaid` fence, then open the
+   same file through the app page, and judge whether the difference reads as a scoped feature or as a
+   missing one. *(Recording the arithmetic, not choosing the answer — the score above stands until a
+   human moves it.)*
