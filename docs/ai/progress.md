@@ -16,8 +16,11 @@
 bank is the approval of record, not the artifact header. **What gate 1 settled:** the three items fit ONE
 milestone (§9-1, no split) · §3.5's presentation-only narrowing of "tuned rendering defaults" HOLDS (§9-2) ·
 `.cursorrules` is OUT (§9-3) · §3.7 HOLDS — table tools on BOTH surfaces, with §8-1 as the escape hatch
-(§9-4) · compare is current-vs-picked (§9-5) · the product-spec <150/<165 ms inconsistency stays noted and
-routed onward, not M8's to fix (§9-6). **The one redline: the binding first-paint headroom is OWED, not
+(§9-4) · compare is current-vs-picked (§9-5) · the product-spec <150/<165 ms inconsistency is **DISCHARGED,
+not routed onward** — it was already closed at `e09520f` (2026-07-27, 007's gate-1 commit, both lines now
+`< 165 ms` with dated notes); the spec's premise was stale (§9-6, corrected 2026-08-03 by the second gate-1
+redline — `docs/product/spec.md` is NOT edited, it is already correct). **The one redline: the binding
+first-paint headroom is OWED, not
 1.8 ms** — 8.1's figure describes a render path `662b90e` superseded (this file's own § Baselines marks those
 rows "NOT re-run at 9.3" and calls the re-measurement owed), so **`plan.md` re-establishes the headroom on the
 current path FIRST and prices §3.7 against that number**; and the app-chunk baseline the spec cites is

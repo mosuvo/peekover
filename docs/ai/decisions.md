@@ -32,9 +32,18 @@
     app-page-only alternative rather than letting a measurement decide it silently.
   - **§9-5 · Compare is CURRENT-vs-PICKED (§3.2), not any-vs-any.** A diff is entered on the host showing
     a document; a literal any-vs-any is a comparison surface of its own and is not this milestone.
-  - **§9-6 · The `docs/product/spec.md` <150 / <165 ms inconsistency stays NOTED and is ROUTED ONWARD —
-    not fixed by this gate and not by M8's plan.** Raised twice now; it is a records act with its own
-    home, and folding it into a QoL milestone is how it gets done badly a third time.
+  - **§9-6 · The `docs/product/spec.md` <150 / <165 ms inconsistency was ALREADY CLOSED at `e09520f` —
+    the spec's premise was stale, and the item is DISCHARGED, not routed onward.** *(Corrected
+    2026-08-03, second gate-1 redline. This clause first read: "stays NOTED and is ROUTED ONWARD — not
+    fixed by this gate and not by M8's plan. Raised twice now; it is a records act with its own home,
+    and folding it into a QoL milestone is how it gets done badly a third time." That routing rested on
+    the spec's claim that 007 §9-4's item "was not corrected".)* **It was corrected in that very
+    commit:** `e09520f` (2026-07-27, 007's gate-1 approval) fixed both product-spec lines in the same
+    commit as the approval — §8's first-render row to **`< 165 ms`** with a dated note below the table
+    citing `decisions.md` 2026-07-26 and a revisit-when, and §7 principle 4 to **`<165ms`** with a dated
+    note referencing §8's corrected row. Verified at HEAD: **no first-paint `<150 ms` claim remains** in
+    `docs/product/spec.md`. Nothing is routed onward, and `docs/product/spec.md` is NOT edited by M8 —
+    it is already correct.
   **THE ONE REDLINE — THE BINDING FIRST-PAINT HEADROOM IS *OWED*, NOT 1.8 ms; AND THE APP-CHUNK BASELINE
   IS 389,143 B, NOT 387,837 B.** The draft cited both as operative, binding figures and both are stale:
   - **1.8 ms → OWED, to be re-measured by `plan.md` on the current render path.** 8.1's worst-arm
