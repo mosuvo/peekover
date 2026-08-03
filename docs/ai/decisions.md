@@ -1,6 +1,68 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-03 · M8 GATE 1 — spec 008 (persona-#1 QoL: compare-two-files · agent-file awareness · table
+  tools) APPROVED, with ONE REDLINE. `plan.md` is the next artifact and the next gate.**
+  `specs/008-persona-1-qol/spec.md`, drafted at `465a58a` against a scope-read of the tree at `81986d8`,
+  was reviewed and approved. **The spec's status line stays "draft (Gear-3 gate 1 — awaiting human
+  approval before `plan.md`)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the in-milestone precedent
+  from M7, stated in the 2026-07-28 M7 GATE 3 entry: gate approvals live in the bank, not in the
+  artifact's status line (spec 007 still reads "draft" post-gate-1 `e09520f`; plan 007 still reads
+  "draft — awaiting gate 2" post-gate-2 `cab93c7`). Nothing about this approval is inferable from the
+  spec file alone, and that is by design — a context-loss session verifies M8's gate 1 here.
+  **WHAT GATE 1 SETTLED — the six §9 questions, answered so `plan.md` inherits them closed:**
+  - **§9-1 · The three items fit ONE milestone. NO SPLIT.** The narrower cut the draft offered (items 1
+    and 3 now, item 2 after) is declined. The coherence is the **persona**, not the surface, and the
+    scope-read's case holds: no dependency, no storage, no manifest event, one shared post-mount
+    discipline, and item 2 already cut to size by §3.5.
+  - **§9-2 · The §3.5 narrowing of "tuned rendering defaults" HOLDS — presentation-only.** The draft
+    called this the single most consequential call at the gate; the narrow reading is taken. The literal
+    reading (a per-document-class settings axis, or per-document parser options) stays priced as
+    milestone-sized and deferral-breaking, and stays out. M8 is a QoL milestone, three items.
+  - **§9-3 · `.cursorrules` is OUT.** It is named in the product bullet and is **unreachable behind a
+    shared gate** — the exact shape 007 §3.4 rejected for `.mermaid`, with a manifest change on the
+    `file://` half. It belongs to a milestone that reconsiders the non-markdown reader path, not to this
+    one. §6's overturn price stands as written.
+  - **§9-4 · §3.7 HOLDS — table tools (and the badge where it is free) ship on BOTH reader surfaces**,
+    breaking the four-milestone byte-identical content-script streak deliberately, because the storage
+    reason (006 §3.2) and the engine-byte reason (007 §3.2) do not apply to code that stores nothing and
+    loads nothing, and because M7's close ruled that surface a **gap**. **BUT it is priced against the
+    RE-MEASURED headroom, not the carried one — see the redline below** — with **§8-1 as the escape
+    hatch, unchanged: the surface reach gives way before the gate does.** Gate 1 declined the
+    app-page-only alternative rather than letting a measurement decide it silently.
+  - **§9-5 · Compare is CURRENT-vs-PICKED (§3.2), not any-vs-any.** A diff is entered on the host showing
+    a document; a literal any-vs-any is a comparison surface of its own and is not this milestone.
+  - **§9-6 · The `docs/product/spec.md` <150 / <165 ms inconsistency stays NOTED and is ROUTED ONWARD —
+    not fixed by this gate and not by M8's plan.** Raised twice now; it is a records act with its own
+    home, and folding it into a QoL milestone is how it gets done badly a third time.
+  **THE ONE REDLINE — THE BINDING FIRST-PAINT HEADROOM IS *OWED*, NOT 1.8 ms; AND THE APP-CHUNK BASELINE
+  IS 389,143 B, NOT 387,837 B.** The draft cited both as operative, binding figures and both are stale:
+  - **1.8 ms → OWED, to be re-measured by `plan.md` on the current render path.** 8.1's worst-arm
+    headroom describes a path the repo has TWICE marked superseded: `progress.md` § Baselines marks the
+    three first-paint rows **"NOT re-run at 9.3"** and says why in its own words — **`662b90e` added a
+    per-render `initialize()` inside the cache-miss branch after those numbers were taken**, so *"the
+    re-measurement is OWED"* — and the inline-engine spike (`81986d8`) reads them the same way. The
+    **CONSTRAINT is untouched and is not what the redline moves**: first paint remains M8's binding
+    limit and §3.7's surface reach still gives way before the gate does (§8-1). What moves is the
+    ORDER — **`plan.md` re-establishes the headroom on the current post-`662b90e` path, under 8.1's own
+    protocol on a quiesced machine, BEFORE §3.7 is priced against it.** Pricing a both-surfaces decision
+    against a number the repo has twice marked owed is the failure this redline exists to prevent.
+    Applied at spec §3.7, §5, §7-1, §9-4, §9-6.
+  - **387,837 B → 389,143 B (app-page chunk).** 387,837 is 8.1's figure at `4c580c4`; it moved at M7's
+    two post-gate fixes (`662b90e` +1,251 B dark-mode diagram theming, `fc3a142` +55 B gantt date-axis),
+    and 9.3's clean build at `94f7da5` reads **389,143 B** with the ledger continuation closing to a
+    **0 B residual**. Re-derived from § Baselines at HEAD, not carried. Applied at spec §5.
+  **WHAT THIS APPROVAL DOES NOT DO:** it reopens no §3.x decision, resolves no §7 plan-risk (those are
+  the plan's, against actual code, in a fresh session per C14), routes nothing new to §8's gate-3
+  measure-then-choose list, and writes no `plan.md` or `tasks.md`. §6's IS-NOT fence stands as drafted,
+  including the content-script SURFACE milestone's evidence-backed deferral.
+  **Revisit-when:** (a) the re-measured headroom comes back at or below zero — the gate cannot hold even
+  before M8 spends it, and that is a §8-1 event AND a finding that outranks the milestone; (b) the plan
+  finds an item needs a dependency or a manifest permission (§7-6 / §3.9 stop-and-flag), which would
+  reopen §9-1's one-milestone answer; (c) a later measurement shows §3.5's presentation-only narrowing
+  cannot deliver a tuning anyone notices, which would send §9-2 back to a human rather than let the
+  literal reading arrive by drift.
+
 - **2026-08-01 · M7 D-8 DIAGRAM-CACHE `count` CHOSEN = 150 ROWS (spec 007 task 8.4, the HUMAN decision
   gate).** Raised from the **100** placeholder 4.1 proposed. Sets `PROPOSED_DIAGRAM_COUNT`
   (`src/app/diagramCache.ts:95`, and through it `PROPOSED_BOUNDS.count` at `:120`). **8.4 records; 8.5

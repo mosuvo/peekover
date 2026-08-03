@@ -10,9 +10,20 @@
 
 ## Now (start here)
 
-**★ M8's SPEC IS DRAFTED AND AWAITING GATE 1 — `specs/008-persona-1-qol/spec.md`, 2026-08-03, status DRAFT.**
-This supersedes the *"the next act is M8 scoping"* pointer in the M7-close bullet below: scoping happened, and
-its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
+**★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
+`plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
+`decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the
+bank is the approval of record, not the artifact header. **What gate 1 settled:** the three items fit ONE
+milestone (§9-1, no split) · §3.5's presentation-only narrowing of "tuned rendering defaults" HOLDS (§9-2) ·
+`.cursorrules` is OUT (§9-3) · §3.7 HOLDS — table tools on BOTH surfaces, with §8-1 as the escape hatch
+(§9-4) · compare is current-vs-picked (§9-5) · the product-spec <150/<165 ms inconsistency stays noted and
+routed onward, not M8's to fix (§9-6). **The one redline: the binding first-paint headroom is OWED, not
+1.8 ms** — 8.1's figure describes a render path `662b90e` superseded (this file's own § Baselines marks those
+rows "NOT re-run at 9.3" and calls the re-measurement owed), so **`plan.md` re-establishes the headroom on the
+current path FIRST and prices §3.7 against that number**; and the app-chunk baseline the spec cites is
+**389,143 B**, not 387,837 B. Both are applied to the spec.
+**Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
+scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a
 **scope-read of the tree at `81986d8`**, reported in the spec itself: item 1 is a picker widening over an
 already file-agnostic `computeDiff`; item 3 is a post-mount enhancement with `enhanceDiagrams`' exact
@@ -21,7 +32,8 @@ milestone-sized against `settings.ts`'s single global row and `parse.ts`'s singl
 at spec §3.5. **No dependency, no storage, no manifest event** — so D-10 (b)'s *"any further dependency
 lands"* trigger does not fire and the 0.70 MB zip headroom is undrawn. The **content-script surface milestone
 is deferred with the spike's measurement attached** (`81986d8`, +238.8 ms, 2.3× the gate). **Nothing is in
-implementation; `plan.md` is not written and must not be until a human passes gate 1** (WORKFLOW.md §5.3).
+implementation; `plan.md` is not written — gate 1 is passed, so writing it is now the sanctioned next act, but
+no implementation code exists before `tasks.md` passes gate 3** (WORKFLOW.md §5.3).
 
 **★ M7 (spec 007 — Mermaid diagrams + diagram cache, M7a) IS CLOSED — 2026-08-02, at task 9.3.** All **28 tasks** across **nine groups** landed, plus five commits of shipped code outside the box list (three out-of-plan implementations — the two D-1/D-6 addenda and §4's source guard — and the two post-gate fixes); the 9.1 human gate is discharged 8/8 and **no gate remains**. `permissions: []` held on both engines for the whole milestone, the content script grew **+3,076 B** (decomposed to a **0 B** residual) with the ~3.3 MB engine kept off its graph entirely — asserted structurally by 3.4's import fence, not by a byte reading — and `dependencies` went **4 → 5**. **The close summary is in § Closed milestones; the reconcile that sealed it is § Baselines' *THE 9.3 RECONCILE RECORD*. The narrative below is M7's working set and is now HISTORY — it is the next archive pass's material, not a live pointer.** ★ **NOTHING IS IN IMPLEMENTATION. THE NEXT ACT IS M8 SCOPING**, which should start from `spec-coverage.md` — noting that its F2 row is stale by construction until the re-audit 9.3 routed (§ Carried items) has run.
 
