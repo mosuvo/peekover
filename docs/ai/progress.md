@@ -77,23 +77,38 @@ PRODUCED at 4.3 and 5.1–5.4, **CHOSEN by the human at 5.5**, executed at 5.6/5
 CHECKBOX CONVENTION is SETTLED as a standing invariant: (c) — per-task ticking, each box in its own commit,
 forward from 008; 002 and 007 PREDATE it and are NOT retroactively ticked, their done-ness signal being this
 pointer and § Closed milestones.** See § Carried items (discharged) and the gate-3 entry.
-★ **M8 IS IN IMPLEMENTATION. TASK 1.1 IS DONE — `src/render/docIdentity.ts`, the data-only identity
-registry (D-1), and `docIdentity.test.ts` (8 tests). TASK 1.2 IS NEXT** (`agentFile.ts` — the pure
-predicate, the frozen case-sensitive name set, `decodeURIComponent`'d basename extraction; D-2), in a fresh
-session. 1.1 is the THIRD instance of the register-once pattern after `watchRegistry.ts` and
-`diffRegistry.ts`, and it mirrors the latter's shape with **one deliberate divergence**: it reads
-`string | undefined`, not `T | null`, and carries **no presence predicate** — its one consumer (1.3's
-`buildAgentBadge`) gates on *recognition*, not presence, so absent and unrecognized collapse to the same
-`[]` and there is one empty state rather than two. **Its import list is EMPTY — asserted STRUCTURALLY over
-the source text, not by bytes**, because a type-only edge erases to zero bytes and a byte check is blind to
-it by construction; the clause carries `diffRegistry.ts`'s single type-only edge as a **firing control in
-the same test**. ★ **BOTH bundles are md5-IDENTICAL to `7e9788b`** — 318,747 B content script (Cr
-`c7b33b36…` / Fx `67717921…`) and 389,143 B app chunk (`65486f78…`) — **because the module is imported by
-nothing yet**, and that null counts for something only because the **instrument was proven able to move**:
-one byte added to `readerCss.ts` (on both graphs) drove the content script to 318,748 B with both md5s
-changed and the app chunk to 389,144 B under a **new content-hashed filename**, then reverted to the exact
-baseline. `dependencies` still **5**; `permissions: []` both; golden EMPTY; 007's import fence **8/8** with
-clause B firing.
+★ **M8 IS IN IMPLEMENTATION. TASK 1.2 IS DONE — `src/render/agentFile.ts`, the pure recognition predicate
+(D-2), and `agentFile.test.ts` (34 tests). TASK 1.3 IS NEXT** (`agentBadge.ts` + `mount.ts`'s ONE line +
+the badge's CSS; D-1 · D-2 · D-12 — where content-script bytes move for the first time in five
+milestones), in a fresh session. 1.2 is an **exact, CASE-SENSITIVE** `Set.has` over one frozen set —
+`CLAUDE.md`, `AGENTS.md`, `spec.md`, `plan.md`, `tasks.md`; **`.cursorrules` is NOT in it**, per gate-1
+§9-3, because it is *unreachable* behind `MARKDOWN_EXTENSIONS`, not merely un-badged. Case-sensitivity is
+the whole argument: a `claude.md` badged wrongly is a **false claim on screen**, where a `claude.md` left
+un-badged is just the resting state (`[]`), and those two errors are not equal. Recognition is from the
+**filename only** — the suite runs with **no DOM in scope at all** and asserts that absence directly.
+★ **THE D-2 DECODE-PREMISE FINDING, recorded not resolved (tasks 1.2's Verify asks for exactly this).**
+D-2 justifies `decodeURIComponent` with *"a raw `split('/').pop()` comparison would miss any path
+containing an encoded character"*, worked on `file:///c:/dev/My%20Docs/AGENTS.md`. **That example does not
+demonstrate the failure** — the encoded character is in a **parent** segment, which `.pop()` discards, so
+the undecoded comparison already yields `AGENTS.md`. And **no frozen-set name is reachable only through
+the decode by any path a browser can produce**: all five names are ASCII letters and a dot, so
+`encodeURIComponent(name) === name` for every one of them (asserted). **The decode is kept exactly as
+DECIDED — D-2 is sealed** — and it is CORRECT and harmless; it is *insurance for a future set member with
+a space or a non-ASCII character*, not a live false negative it fixes today. **Two implementation
+properties of the decode are NOT free choices, though, and both are red-first proven:** it **splits before
+it decodes** (decoding first turns `%2F` into a separator, so `weird%2FCLAUDE.md` — one file *not* named
+`CLAUDE.md` — would be badged: a **false positive**), and the decode is **caught** (`decodeURIComponent`
+throws `URIError` on `50%.md`, and `new URL()` does not normalize a lone `%` away; `basenameOf` runs at
+`runReader.ts:118` **before** `mountReader()`, so an uncaught throw there is not a missing badge but **no
+render at all** — the blank page AGENTS.md #5 forbids). ★ **BOTH bundles md5-IDENTICAL to `bd93ffd`** —
+318,747 B content script (Cr `c7b33b36…` / Fx `67717921…`) and 389,143 B app chunk (`65486f78…`) —
+**because the module is imported by nothing yet**; the instrument was re-proven able to move in the same
+session (one CSS byte on both graphs → 318,778 B, all three md5s changed, app chunk under a **new
+content-hashed filename**, then reverted to the exact baseline: A-B-A). `dependencies` still **5**;
+`permissions: []` both; golden EMPTY; 007's import fence **8/8**. **1.1 remains as landed** —
+`docIdentity.ts`, the third register-once instance, `string | undefined` with no presence predicate and an
+**empty import list asserted structurally**; **1.2 does NOT import it**, deliberately: the registry holds
+the name, the predicate judges it, and **they meet at 1.3**.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a

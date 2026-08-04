@@ -167,7 +167,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       null reading that cannot move is not a measurement. `pnpm lint` EXIT=0 · Golden EMPTY · manifest green
       **2975 B** · `permissions: []` both engines. [D-1; §4 agent-file; plan §1.1]
 
-- [ ] **1.2 `agentFile.ts` — the pure predicate, the frozen name set, and basename extraction (D-2).**
+- [x] **1.2 `agentFile.ts` — the pure predicate, the frozen name set, and basename extraction (D-2).**
       **Exact, CASE-SENSITIVE basename match** against one frozen set — `CLAUDE.md`, `AGENTS.md`, and this
       repository's own convention `spec.md` / `plan.md` / `tasks.md`. Case-sensitive **because a `claude.md` is
       not the file the convention names**, and a case-insensitive match would badge it **wrongly** rather than
