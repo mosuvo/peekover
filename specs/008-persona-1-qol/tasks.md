@@ -257,7 +257,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       LANE CHOICE is plan §8 Q3 and is taken by the human at 6.1.** Golden EMPTY · manifest green **2975 B** ·
       `permissions: []`. [D-12; rows 5, 7, 8, 10, 11; findings 2, 7; plan §8 Q3]
 
-- [ ] **1.6 The badge's zero-network guard (§3.11 row 22).** Recognition is a `Set.has` and the badge is a
+- [x] **1.6 The badge's zero-network guard (§3.11 row 22).** Recognition is a `Set.has` and the badge is a
       text node; the claim is that **neither reaches the network**, and the claim is only worth what its
       control is worth.
       Files: `tests/browser/agentBadgeNetwork.browser.test.ts`

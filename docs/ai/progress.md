@@ -91,8 +91,34 @@ way un-badged. Both gates asserted red-first. ★ **TASK 1.5 IS ALSO DONE — TH
 DELIBERATELY NOT CHOSEN: the rect probe ran at BOTH geometry widths on both surfaces and both engines, it
 PRODUCED the lane number, and it left THREE FINDINGS for the human at 6.1** (the 1280 collision recorded
 rather than fixed; the `position:fixed` contained finding; rows 5/8 recorded as measurement). Full record
-below: *THE 1.5 LANE MEASUREMENT*. **GROUP 1 IS NOT DONE — TASK 1.6 IS NEXT** (the zero-network guard),
-and it closes the group.
+below: *THE 1.5 LANE MEASUREMENT*.
+★ **TASK 1.6 IS DONE AND GROUP 1 — THE IDENTITY SEAM — IS COMPLETE. THE BADGE PUTS NOTHING ON THE WIRE,
+AND THAT ZERO IS MEASURED AGAINST AN ARMED PROBE** (`tests/browser/agentBadgeNetwork.browser.test.ts`, 3
+tests per engine, Cr+Fx, both surfaces). The whole lifecycle — REGISTER (the production sites) → RECOGNIZE
+(`isAgentFile`) → RENDER (`mount()` composing the pill) → RE-RENDER (bare `mount()` on the content script,
+a document switch on the app page) — reads **`[]`** on the engine's own Resource Timing buffer through
+`remoteMedia`/`tocNetwork`'s **verbatim `/^https?:/i`** predicate, cumulatively and per step, plus an
+isolated `registerDocIdentity → buildAgentBadge → commit` sweep over all five names of the frozen set.
+★ **TWO CONTROL LANES ARE ARMED IN EACH TEST'S OWN BODY, BEFORE AND AFTER THE MEASUREMENT** — a bare
+`fetch()`, and (row 22's ★) a SUBRESOURCE control on **markup no sanitizer has touched**, since a control
+routed through `DOMPurify.sanitize()` measures the sanitizer's internal `DOMParser` pass and reads NO-FETCH
+while the route is open (decisions.md 2026-07-29). Probe markup is parsed into an inert **`<template>`**,
+never a "detached" div. ★ **AND THE GUARD IS PROVEN RED-FIRST, TWICE.** (i) With an `<img>` appended inside
+`buildAgentBadge` (cp-aside ablation, restored), **all 6 tests went red on the badge-attributable step** in
+both engines — *the badge's "register → recognize → render" step put bytes on the wire: expected [ Array(1) ]
+to deeply equal []*. (ii) With the control's markup left inside the template, the control itself goes red —
+so the arming is load-bearing, not decorative.
+★ **A SUB-FINDING, MEASURED RATHER THAN ASSUMED: THE FETCH FIRES AT `document.importNode`, NOT AT
+`appendChild`.** Ablating only the insertion left the subresource control GREEN in both engines; the
+imported fragment is **detached but `document`-OWNED**, and that is what dispatches. Only removing the
+import as well turns it red. So *"detached"* is not the property that keeps a node quiet — *"no browsing
+context"* is, which is the M1 leak's distinction re-measured on new code and the reason the neutralization
+is a `<template>`. Recorded in the suite's own comment.
+**A TEST FILE SHIPS NOTHING:** all three bundles byte- and md5-IDENTICAL to 1.5's, rebuilt from a cleared
+`.output` — content script **319,709 B** (Cr `a36bd676…` / Fx `fd8407ee…`), app chunk **389,957 B**
+(`72058cff…`). `readerCss.ts` UNCHANGED — **the lane is still un-chosen and 1.5's three findings still
+stand for 6.1**; no 1.1–1.5 module touched; no dependency (5). **GROUP 1 IS COMPLETE — TASK 2.1 IS NEXT**
+(`diffRegistry.ts`'s second, optional capability pair; the picker widens).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
