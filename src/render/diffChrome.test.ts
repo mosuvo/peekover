@@ -16,6 +16,7 @@ import {
   registerDiffContext,
   resetDiffRegistryForTest,
   type DiffContext,
+  type DiffFileEntry,
   type DiffOutcome,
 } from './diffRegistry';
 import type { SnapshotMetaEntry } from '../app/snapshots';
@@ -23,6 +24,13 @@ import type { SnapshotMetaEntry } from '../app/snapshots';
 const ENTRIES: SnapshotMetaEntry[] = [
   { id: 'older', ts: 1_700_000_000_000, bytes: 512 },
   { id: 'newer', ts: 1_700_000_600_000, bytes: 2048 },
+];
+
+/** The D-3 pair's material (task 2.2 provisions it from `activeSource.files`, EXCLUDING the open
+ *  document). Folder order, not alphabetical — the picker keeps whatever order it is handed. */
+const FILES: DiffFileEntry[] = [
+  { path: 'notes/intro.md', name: 'intro.md' },
+  { path: 'notes/appendix.md', name: 'appendix.md' },
 ];
 
 interface Recorder {
@@ -75,6 +83,43 @@ const statusOf = (box: HTMLElement) => box.querySelector<HTMLElement>(`.${DIFF_S
 
 /** Let the click handler's awaited fetchMeta/fetchText microtasks drain. */
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
+
+/**
+ * A STRUCTURAL fingerprint of a subtree: tag + ARIA role + depth, and nothing else — no text, no
+ * data attributes, no classes. Two pickers with the same fingerprint have the same DOM SHAPE.
+ *
+ * It is a printed tree rather than a count because of how it has to FAIL: the D-4 non-regression
+ * below reds when a group node appears in a single-kind picker, and a diff of two indented trees
+ * NAMES `div[role=group]` on the line it appeared. A `querySelectorAll('[role="group"]').length`
+ * check alone would red with `expected 1 to be 0`, which says nothing about where.
+ */
+function shapeOf(el: Element, depth = 0): string {
+  const line = `${'  '.repeat(depth)}${el.tagName.toLowerCase()}[role=${el.getAttribute('role') ?? '-'}]`;
+  return [line, ...[...el.children].map((c) => shapeOf(c, depth + 1))].join('\n');
+}
+
+/** ★ WHAT 006 SHIPS, WRITTEN OUT — the shape the single-kind picker must still have (D-4). Two
+ *  snapshot rows, each a `button role="option"` holding its two unroled spans, sitting DIRECTLY in
+ *  the one listbox. Nothing between the listbox and a row. */
+const SNAPSHOT_ONLY_SHAPE = [
+  'div[role=listbox]',
+  '  button[role=option]',
+  '    span[role=-]',
+  '    span[role=-]',
+  '  button[role=option]',
+  '    span[role=-]',
+  '    span[role=-]',
+].join('\n');
+
+/** Open the picker of a freshly built chrome over `context` and hand back the picker element. */
+async function openedPicker(over: Partial<DiffContext> = {}): Promise<HTMLElement> {
+  resetDiffRegistryForTest();
+  registerDiffContext(recordingContext(over).context);
+  const box = build();
+  pillOf(box).click();
+  await flush();
+  return pickerOf(box);
+}
 
 beforeEach(() => {
   resetDiffRegistryForTest();
@@ -185,6 +230,133 @@ describe('buildDiffChrome — the picker (spec §3.7, mockup divergences 1 and 2
     expect(statusOf(box).textContent).toContain('No snapshots yet');
     // This is NOT the D-14 note branch: the user asked by clicking, so an answer is owed. The
     // gate above still returns [] with nothing at all when no context is registered.
+  });
+});
+
+describe('buildDiffChrome — TWO KINDS: the row discriminant (D-3) and the two groups (D-4)', () => {
+  const bothKinds = { fetchFiles: async () => FILES };
+
+  it('EVERY row carries its OWN kind, on the ROW — snapshots say snapshot, files say file', async () => {
+    // The discriminant is the thing 2.5's single branch reads, so what matters is not that the
+    // attribute EXISTS but that it is on the RIGHT rows. Asserted as the whole (kind, key) list in
+    // document order: a build that labels every row 'snapshot', or that swaps the two, reds naming
+    // the row it mislabelled rather than "expected 4 to be 4".
+    const picker = await openedPicker(bothKinds);
+    const rows = [...picker.querySelectorAll<HTMLElement>('[role="option"]')];
+    expect(rows.map((r) => [r.dataset.targetKind, r.dataset.snapshotId ?? r.dataset.filePath])).toEqual([
+      ['snapshot', 'newer'], // newest first, unchanged
+      ['snapshot', 'older'],
+      ['file', 'notes/intro.md'], // folder order, unchanged
+      ['file', 'notes/appendix.md'],
+    ]);
+    // ...and no row is ambiguous: a snapshot row carries no file path and vice versa.
+    expect(rows.filter((r) => r.dataset.snapshotId != null && r.dataset.filePath != null)).toEqual([]);
+  });
+
+  it('a file row NAMES the file and SAYS IT IS A FILE, in text (never by which group it is in)', async () => {
+    const picker = await openedPicker(bothKinds);
+    const row = picker.querySelector<HTMLElement>('[data-target-kind="file"]')!;
+    expect(row.querySelector('.peekover-diff-picker__name')!.textContent).toBe('intro.md');
+    expect(row.querySelector('.peekover-diff-picker__kind')!.textContent).toBe('File');
+    // The kind is in the row's OWN text, so it survives being read out of context (§5).
+    expect(row.textContent).toContain('File');
+    expect(row.getAttribute('aria-label')).toBe('Compare with the file intro.md');
+    // Still a real button, for :264-283's stated reason — Enter/Space and the tab order for free.
+    expect(row.tagName).toBe('BUTTON');
+    expect((row as HTMLButtonElement).type).toBe('button');
+  });
+
+  it('BOTH kinds → ONE listbox holding TWO labelled groups, snapshots first', async () => {
+    const picker = await openedPicker(bothKinds);
+    const groups = [...picker.querySelectorAll<HTMLElement>('[role="group"]')];
+    expect(groups).toHaveLength(2);
+    expect(groups.map((g) => g.getAttribute('aria-label'))).toEqual([
+      'Snapshots of this document',
+      'Other files in this folder',
+    ]);
+    // Each group is a DIRECT child of the ONE listbox — the ARIA ownership D-4 relies on, asserted
+    // as a parent identity rather than a `contains`.
+    for (const g of groups) expect(g.parentNode).toBe(picker);
+    expect(picker.getAttribute('role')).toBe('listbox');
+    // ...and the rows are in the RIGHT group: a build that fills one group with both kinds reds.
+    expect([...groups[0].children].map((r) => (r as HTMLElement).dataset.targetKind)).toEqual([
+      'snapshot',
+      'snapshot',
+    ]);
+    expect([...groups[1].children].map((r) => (r as HTMLElement).dataset.targetKind)).toEqual([
+      'file',
+      'file',
+    ]);
+    // Still ONE control and still not a dialog: §3.2 rejected a second control, divergence 1 the
+    // modal. Grouping is the ARIA answer to "one list, two kinds" — it adds neither.
+    const box = picker.parentElement!;
+    expect(box.querySelector('[role="dialog"]')).toBeNull();
+    expect(box.querySelector('[role="menu"]')).toBeNull();
+    expect(box.querySelector('[aria-modal]')).toBeNull();
+    expect(box.querySelectorAll(`.${DIFF_AFFORDANCE_CLASS}`)).toHaveLength(1);
+    expect(box.querySelectorAll('[role="listbox"]')).toHaveLength(1);
+  });
+
+  it('★ ONE KIND → NO GROUPS: the snapshot-only picker is STRUCTURALLY what 006 ships', async () => {
+    // THE NON-REGRESSION, and the reason it is a printed shape rather than a count: the existing
+    // browser and unit assertions all drive this path, so if the two-group scaffolding leaked into
+    // it they would keep passing while the DOM every AT user meets had changed underneath them.
+    //
+    // Two arms, because there are two ways to be single-kind and BOTH must land on 006's shape:
+    //   (a) the 006-shaped context itself — no `fetchFiles` member at all (the surface with no
+    //       folder list; the state D-3 made legal by keeping the pair OPTIONAL);
+    //   (b) the 008 context whose folder simply holds no other markdown — `fetchFiles` → [].
+    const sixShape = shapeOf(await openedPicker());
+    const emptyFolderShape = shapeOf(await openedPicker({ fetchFiles: async () => [] }));
+
+    expect(sixShape).toBe(SNAPSHOT_ONLY_SHAPE); // the absolute pin
+    expect(emptyFolderShape).toBe(sixShape); // ...and the two legal provisions agree
+  });
+
+  it('★ ...and the shape probe DISCRIMINATES — the both-kinds picker really is a different tree', async () => {
+    // Without this the assertion above could pass by shapeOf() being blind to grouping.
+    const grouped = shapeOf(await openedPicker(bothKinds));
+    expect(grouped).not.toBe(SNAPSHOT_ONLY_SHAPE);
+    expect(grouped).toContain('div[role=group]');
+    expect(SNAPSHOT_ONLY_SHAPE).not.toContain('group');
+  });
+
+  it('FILES ONLY is single-kind too — flat file rows, no lone group', async () => {
+    const picker = await openedPicker({ fetchMeta: async () => [], fetchFiles: async () => FILES });
+    expect(picker.hidden).toBe(false); // it OPENS: files alone are comparison targets
+    expect(picker.querySelectorAll('[role="group"]')).toHaveLength(0);
+    expect([...picker.children].map((c) => c.getAttribute('role'))).toEqual(['option', 'option']);
+  });
+
+  it('BOTH empty is TODAY’S shipped path, preserved unchanged', async () => {
+    // The surface with no folder list takes this branch on every open, and 2.4 revisits the COPY
+    // for the two half-empty states. What must not move is the behaviour: close, and say so.
+    const picker = await openedPicker({ fetchMeta: async () => [], fetchFiles: async () => [] });
+    expect(picker.hidden).toBe(true);
+    expect(statusOf(picker.parentElement as HTMLElement).textContent).toContain('No snapshots yet');
+  });
+
+  it('the listbox’s own label covers BOTH kinds, not snapshots alone', async () => {
+    const picker = await openedPicker(bothKinds);
+    const label = picker.getAttribute('aria-label')!;
+    expect(label).toMatch(/snapshot/i);
+    expect(label).toMatch(/file/i);
+  });
+
+  it('a file row is NOT wired to the snapshot gesture — the branch is 2.5’s', async () => {
+    // The boundary of this task, pinned so it cannot be crossed by accident: a file row carries its
+    // discriminant and no handler. Routing it through today's snapshot-only compareWith would
+    // answer a file pick with "that snapshot is no longer stored" — this reds if it ever does.
+    resetDiffRegistryForTest();
+    const rec = recordingContext(bothKinds);
+    registerDiffContext(rec.context);
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    pickerOf(box).querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
+    await flush();
+    expect(rec.shown).toEqual([]);
+    expect(statusOf(box).hidden).toBe(true); // and NOTHING was said, wrongly or otherwise
   });
 });
 

@@ -128,7 +128,41 @@
 // with genuinely blocked media (diffChrome.browser.test.ts). The 414 case is still not asserted, for
 // the pre-existing reason recorded above — nothing about B1 changes it.
 
-import { getDiffContext, isDiffContextRegistered } from './diffRegistry';
+// ── 008 D-3 / D-4: TWO KINDS IN ONE LISTBOX, AND WHERE THE DISCRIMINANT LIVES ─────────────────
+//
+// The picker offers two kinds of comparison target: this document's own snapshots, and the OTHER
+// markdown files in the folder (the D-3 optional capability pair, provisioned by the app page —
+// `diffRegistry.ts:62-78`). Two rules, both sealed at gate 2, applied here and not re-argued:
+//
+//   • THE DISCRIMINANT IS ON THE ROW — `dataset.targetKind`, beside today's `dataset.snapshotId`.
+//     That is the only place that needs it: ONE branch reads it. A tagged union in the context
+//     would push a `kind` through two closures to reach that same single branch (D-3).
+//   • THE TWO `role="group"`s APPEAR ONLY WHEN BOTH KINDS HAVE ENTRIES. With one kind the picker is
+//     STRUCTURALLY what 006 shipped — flat `role="option"` rows in the one listbox. That is not
+//     tidiness: it keeps the snapshot-only path — the path every existing assertion in this
+//     module's two suites drives — identical, so those assertions cannot pass by transcription
+//     drift, and it spares AT a single-group nesting that announces a grouping which groups nothing
+//     (D-4).
+//
+// `role="group"` is a legal owned child of `role="listbox"`, and grouping is the standard ARIA
+// answer to "one list, two kinds" — so this stays ONE control: no dialog, no menu, no second pill
+// (§3.2 rejected a second control; divergence 1 below rejected the dialog).
+//
+// ── THE CONTENT-SCRIPT BYTES THIS COSTS, ASSIGNED ─────────────────────────────────────────────
+//
+// `mount.ts:28` imports `buildDiffChrome`, so this module is on BOTH graphs — the picker is
+// app-page-only at RUNTIME (D-14: no context registered there, so it builds nothing), never in the
+// BUNDLE. Plan §4 risk 2 is where that was decided: the content-script bundle stops being
+// byte-identical in M8, and the price of that is that every byte is assigned. Measured for this
+// task, both engines, content script and app chunk moving by the same amount:
+//
+//   +6 B   the `ARIA_PICKER` const and the named `snapshotRows` local
+//   +48 B  the row discriminant and the widened listbox label
+//   +585 B the file row — `buildFileItem`, its two spans, its label
+//   +248 B the grouping — `buildGroup` and the both-non-empty ternary
+//   = 887 B, and stripping all four reproduces HEAD's bundles to the md5 (residual zero).
+
+import { getDiffContext, isDiffContextRegistered, type DiffFileEntry } from './diffRegistry';
 
 /** CSS class the reader stylesheet styles (`readerCss.ts`). The affordance pill itself. */
 export const DIFF_AFFORDANCE_CLASS = 'peekover-diff-affordance';
@@ -141,6 +175,17 @@ export const DIFF_STATUS_CLASS = 'peekover-diff-status';
 const LABEL_COMPARE = 'Compare';
 const ARIA_COMPARE = 'Compare this document with a saved snapshot';
 const LABEL_EXIT = 'Close comparison';
+/** The listbox's own label. It WIDENS with the picker (D-4): the list is no longer snapshots alone,
+ *  and a label that still said so would misname what it contains for exactly the AT users who
+ *  cannot see the two groups' shape. */
+const ARIA_PICKER = 'Snapshots and other files to compare against';
+/** One label per `role="group"` — the group is announced by name, never by its position in the
+ *  listbox (§5: never carried by position or colour alone). */
+const GROUP_SNAPSHOTS = 'Snapshots of this document';
+const GROUP_FILES = 'Other files in this folder';
+/** A file row SAYS it is a file, in text — the row's own kind, visible, not inferred from which
+ *  group it happens to sit in (D-4). */
+const TEXT_FILE_KIND = 'File';
 const TEXT_NO_SNAPSHOTS = 'No snapshots yet — this document has not changed since watching started.';
 const TEXT_UNAVAILABLE = 'Comparison unavailable — that snapshot is no longer stored.';
 const TEXT_NO_SOURCE = 'Comparison unavailable — nothing is on screen to compare against.';
@@ -201,7 +246,7 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
   const picker = document.createElement('div');
   picker.className = DIFF_PICKER_CLASS;
   picker.setAttribute('role', 'listbox');
-  picker.setAttribute('aria-label', 'Snapshots to compare against');
+  picker.setAttribute('aria-label', ARIA_PICKER);
   picker.hidden = true;
 
   const pill = document.createElement('button');
@@ -268,6 +313,10 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     item.setAttribute('role', 'option');
     item.setAttribute('aria-selected', 'false');
     item.dataset.snapshotId = entry.id;
+    // THE DISCRIMINANT (D-3), on the ROW because that is the only place that needs it: one branch
+    // reads it to choose which capability the pick resolves through. Everything else about this row
+    // is UNCHANGED — the absolute stamp and the size included (divergence 2 stands).
+    item.dataset.targetKind = 'snapshot';
     // The item NAMES what it is: a time and a size to compare against (divergence 2). Both are
     // text, so the choice is never carried by colour alone (§5).
     const when = document.createElement('span');
@@ -282,23 +331,87 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     return item;
   }
 
-  /** Open the picker over the current snapshot index, or explain that there is none. */
+  /**
+   * Build one OTHER-FILE row (D-3, D-4) — the same `<button role="option">` as a snapshot row, for
+   * the same stated reason, carrying `targetKind: 'file'` and the `path` its capability takes.
+   *
+   * It NAMES the file and SAYS IT IS A FILE, in text: the kind is readable on the row itself, never
+   * inferred from which group it sits in or from where it falls in the list (§5).
+   *
+   * ★ NO CLICK HANDLER, DELIBERATELY. The gesture is task 2.5's, where `compareWith` branches ONCE
+   * on `dataset.targetKind` — snapshot → `fetchText(id)`, file → `fetchFileText(path)`. Wiring it
+   * here would be that branch written early and in the wrong task; routing a file row through
+   * today's snapshot-only `compareWith` would be worse still, since it would answer a file pick
+   * with "that snapshot is no longer stored".
+   *
+   * The two spans carry classes of their own rather than borrowing `__when` / `__size`: calling a
+   * file's name "when" is a lie a later reader has to unpick. They are untuned today because the
+   * picker's CSS lives in `readerCss.ts`, whose comments and rules ship to BOTH graphs — the row's
+   * own flex rule already lays the pair out, so no rule is added for them.
+   */
+  function buildFileItem(entry: DiffFileEntry): HTMLElement {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'peekover-diff-picker__item';
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', 'false');
+    item.dataset.targetKind = 'file';
+    item.dataset.filePath = entry.path;
+    const name = document.createElement('span');
+    name.className = 'peekover-diff-picker__name';
+    name.textContent = entry.name;
+    const kind = document.createElement('span');
+    kind.className = 'peekover-diff-picker__kind';
+    kind.textContent = TEXT_FILE_KIND;
+    item.append(name, kind);
+    item.setAttribute('aria-label', `Compare with the file ${entry.name}`);
+    return item;
+  }
+
+  /** Wrap `rows` in a labelled `role="group"` — a legal owned child of `role="listbox"` (D-4).
+   *  Called ONLY when both kinds have entries; see the header for why a lone group is never built. */
+  function buildGroup(label: string, rows: HTMLElement[]): HTMLElement {
+    const group = document.createElement('div');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', label);
+    group.append(...rows);
+    return group;
+  }
+
+  /** Open the picker over the current comparison targets, or explain that there are none. */
   async function openPicker(): Promise<void> {
     const context = getDiffContext();
     if (!context) return;
     say(null);
 
     const entries = await context.fetchMeta();
-    if (entries.length === 0) {
+    // OPTIONAL BY DESIGN (D-3): a surface with snapshots but no folder list is a legal, designed
+    // state, and `?? []` is what makes the single-kind path below the one that surface always takes.
+    const files = (await context.fetchFiles?.()) ?? [];
+    if (entries.length === 0 && files.length === 0) {
       // A DESIGNED empty state, not a blank list (AGENTS.md #5). Note this is NOT the D-14 note
       // branch: the user asked for this by clicking, so an answer is owed. D-14 forbids explaining
       // an affordance that was never offered — not answering a gesture that was made.
+      // ★ BOTH-EMPTY IS TODAY'S SHIPPED PATH, PRESERVED: it is the branch the surface with no
+      // folder list takes, and 2.4 revisits the copy for the two half-empty states.
       closePicker();
       return say(TEXT_NO_SNAPSHOTS);
     }
     // Newest first — the most likely comparison target is the least travel away.
     const ordered = [...entries].sort((a, b) => b.ts - a.ts);
-    picker.replaceChildren(...ordered.map(buildItem));
+    const snapshotRows = ordered.map(buildItem);
+    // The FOLDER's own order, unsorted: `fetchFiles` hands over `activeSource.files` filtered, which
+    // is the order of the tree the user just picked this document from. Re-sorting here would make
+    // the picker disagree with the tree beside it.
+    const fileRows = files.map(buildFileItem);
+    // ★ D-4, the whole rule in one expression: two labelled groups when BOTH kinds have entries,
+    // and otherwise the flat listbox 006 ships — no lone group, no empty group, no scaffolding
+    // around a list that has only one kind in it.
+    picker.replaceChildren(
+      ...(snapshotRows.length > 0 && fileRows.length > 0
+        ? [buildGroup(GROUP_SNAPSHOTS, snapshotRows), buildGroup(GROUP_FILES, fileRows)]
+        : [...snapshotRows, ...fileRows]),
+    );
     picker.hidden = false;
     pill.setAttribute('aria-expanded', 'true');
   }

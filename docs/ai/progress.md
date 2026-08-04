@@ -189,8 +189,49 @@ restored); deps **5**; full suite **1814 passed / 15 skipped**. `diffRegistry.ts
 were filled, not changed. ★ **A residual worth recording: `fetchMeta`/`fetchText` cannot be CALLED in
 jsdom** — they close over `./snapshots`, which is real IndexedDB, not the injected `AppStore`; the 2.2
 block asserts their SHAPE only and leaves their behaviour where an engine can run it.
-**TASK 2.3 IS NEXT** (one `role="listbox"`, two `role="group"`s — and `item.dataset.targetKind`, the
-discriminant, on the ROW; the single-kind picker stays structurally what 006 ships).
+★ **TASK 2.3 IS DONE — THE PICKER CARRIES TWO KINDS: `item.dataset.targetKind` ON THE ROW (D-3), AND TWO
+LABELLED `role="group"`s INSIDE THE ONE `role="listbox"` (D-4).** The discriminant sits beside today's
+`dataset.snapshotId` because that is **the only place that needs it** — ONE branch reads it, at 2.5; a
+tagged union in the context would push a `kind` through two closures to reach that same branch. A file row
+is the same `<button role="option">` as a snapshot row (`:264-283`'s reason kept), carries `dataset.filePath`,
+and **names the file and says it is a file, in text** (a `__name` span and a `__kind` span reading *File*),
+so the kind is readable on the row and never inferred from position or colour (§5). The listbox's own
+`aria-label` **widens** to *"Snapshots and other files to compare against"* — a label that still said
+*snapshots* would misname the list for exactly the AT users who cannot see the groups. Snapshot rows are
+**unchanged**, absolute stamp and size included (mockup divergence 2 stands). ★ **The file rows carry NO
+click handler, deliberately** — the gesture is 2.5's single `targetKind` branch, and routing a file pick
+through today's snapshot-only `compareWith` would answer it with *"that snapshot is no longer stored"*.
+Empty-state copy for the two half-empty states is **2.4's**; the both-empty branch is today's shipped
+`closePicker()` + `say(…)`, preserved.
+★ **THE SINGLE-KIND PICKER IS STRUCTURALLY WHAT 006 SHIPS, AND THAT NON-REGRESSION IS PROVEN RED-FIRST.**
+With one kind the groups are **not rendered at all** — flat `role="option"` rows in the one listbox, no lone
+group, no empty group. Asserted as a **DOM-shape equality**: `shapeOf()` prints tag + ARIA role + depth (no
+text, no classes, no data attributes) and the snapshot-only tree is written out literally, so the existing
+browser assertions cannot pass by transcription drift. It is a printed **tree** rather than a count because
+of how it must FAIL — rendering the groups unconditionally reds it **naming `div[role=group]` on the line it
+appeared**, where a `querySelectorAll('[role=group]').length` check would only have said *expected 1 to be 0*.
+★ **THE CONTENT SCRIPT MOVES — +887 B, IDENTICAL ON BOTH ENGINES — AND THAT IS PLAN-SANCTIONED, NOT A
+LEAK.** `mount.ts:28` imports `buildDiffChrome`, so `diffChrome.ts` is on **BOTH** graphs: the picker is
+app-page-only at **RUNTIME** (D-14 — no context is registered on the content script, so it builds nothing),
+**never in the BUNDLE**. Plan **§4 risk 2** is where that was decided: M8 is the milestone in which the
+content-script bundle **stops being byte-identical**, and the price of that decision is that **every byte is
+assigned** — an unaccounted byte is a defect, and an identifier grep over a minified bundle **cannot** be the
+instrument (M6 retro finding 1). Group 2 held a zero through 2.1 and 2.2; **2.3 is where group 2's bytes
+land.** Content script **319,709 → 320,596 B** (Cr `7f2dba47…` / Fx `f777eebc…`), app chunk
+**390,154 → 391,041 B** (`6fc92524…`) — **the same +887 on both artifacts**, both engines rebuilt explicitly
+(`pnpm build` is Chrome-only). **Decomposed by ablation to a ZERO residual:** the `ARIA_PICKER` const and the
+named `snapshotRows` local **+6 B** · the row discriminant and the widened listbox label **+48 B** · the file
+row — `buildFileItem`, its two spans, its label — **+585 B** · the grouping — `buildGroup` and the
+both-non-empty ternary — **+248 B**. **6 + 48 + 585 + 248 = 887, residual ZERO**, and the control FIRES:
+stripping all four reproduces HEAD's bundles **to the md5**. ★ **Record this as the live number: 5.1 measures
+§8-1 headroom against 320,596 B, not against 319,709.**
+`permissions: []` on both built manifests (654 / 770 B) and no permission added — a sibling file is read
+through the File System Access handle the user already granted. `web_accessible_resources` absent; manifest
+test **2975 B**; golden **EMPTY**; **007 import fence 8/8**; `diffRegistry.ts` **UNEDITED** (2.1's
+`DiffFileEntry` was imported, not changed); no 1.1–2.2 module touched; deps **5**; unit **808/808**, browser
+**1023 passed / 15 skipped** (104 files, Cr+Fx).
+**TASK 2.4 IS NEXT** (every empty state lands in the EXISTING `role="status"` line — never a fake or
+disabled option row; the both-empty branch stays today's shipped behaviour, asserted against it).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

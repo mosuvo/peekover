@@ -305,7 +305,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       material the app page already holds. Golden EMPTY · manifest green **2975 B** · `permissions: []` ·
       content-script bytes **unchanged by this task**, stated. [D-3; §4 compare; plan §1.2, §3-3]
 
-- [ ] **2.3 ONE `role="listbox"`, TWO `role="group"`s — and the single-kind picker is what 006 ships (D-4).**
+- [x] **2.3 ONE `role="listbox"`, TWO `role="group"`s — and the single-kind picker is what 006 ships (D-4).**
       Each group carries its own `aria-label` (*snapshots of this document* / *other files in this folder*);
       the picker's own label (`diffChrome.ts:204`, today *"Snapshots to compare against"*) widens to cover
       both. Rows stay `<button role="option">` — `:264-283`'s deliberate choice, kept for its stated reason

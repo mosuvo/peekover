@@ -111,13 +111,21 @@ function fakeStore(): AppStore {
 }
 
 /** A PERSISTABLE in-memory folder source — `persistable:true` is what makes the app-page surface
- *  watchable, so `installWatchForFile` reaches its `registerDiffContext` site (2.1's note). */
-function memorySource(name: string, text: string): FolderSource {
+ *  watchable, so `installWatchForFile` reaches its `registerDiffContext` site (2.1's note).
+ *
+ *  `others` (task 2.3) is the OTHER markdown beside the open document — the material 2.2's
+ *  `fetchFiles` offers, minus the open file itself. It defaults to NONE, which is what keeps every
+ *  case above and below this line on the SNAPSHOT-ONLY path: the single-file folder is 006's picker,
+ *  and the D-4 non-regression is measured against exactly the source those cases drive. */
+function memorySource(name: string, text: string, others: [string, string][] = []): FolderSource {
   return {
     name: 'docs',
     truncated: false,
     persistable: true,
-    files: [{ path: name, name, read: async () => text }],
+    files: [
+      { path: name, name, read: async () => text },
+      ...others.map(([path, body]) => ({ path, name: path, read: async () => body })),
+    ],
   };
 }
 
@@ -161,15 +169,17 @@ function mountContentScript(doc = docV2()): HTMLElement {
 
 /** The app-page surface, driven through the real user gesture chain. NEVER hand-registers a diff
  *  context: the only registration observed is the one `installWatchForFile` performs (M5 seam rule). */
-async function mountAppPage(doc = docV2()): Promise<HTMLElement> {
+async function mountAppPage(doc = docV2(), others: [string, string][] = []): Promise<HTMLElement> {
   const container = document.createElement('div');
   document.body.appendChild(container);
   containers.push(container);
   const app = mountAppShell(container, {
-    openFolder: async () => ({ ok: true, source: memorySource('doc.md', doc) }),
+    openFolder: async () => ({ ok: true, source: memorySource('doc.md', doc, others) }),
     store: fakeStore(),
   });
   await app.openFolder();
+  // `doc.md` is the FIRST file in the source, so this selects the open document whether or not the
+  // folder holds others — the file rows that appear in the picker are then genuinely "another file".
   container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
   const host = await waitFor(() =>
     container.querySelector<HTMLElement>('.peekover-app__reader__host'),
@@ -656,5 +666,133 @@ describe('never blank (AGENTS.md #5) — the fallback states, on the real surfac
     pillIn(host)!.click();
     await waitFor(() => status.hidden === false);
     expect(status.textContent!.length).toBeGreaterThan(0);
+  });
+});
+
+// ── TASK 2.3: TWO KINDS IN ONE LISTBOX (D-3's row discriminant, D-4's groups) ──────────────────
+//
+// WHY HERE AND NOT ONLY IN jsdom. The branching logic is unit-tested next door; what these cases
+// add is the REAL ENGINE and the REAL production path: the file rows come from the closures
+// `appShell.installWatchForFile` actually provisions over a real folder source (2.2), not from a
+// hand-written fake, and the ARIA structure is asserted in the two engines that will compute the
+// accessibility tree from it — `role="group"` owned by `role="listbox"` is a claim about how a real
+// engine reads the markup, and Firefox and Chromium are the two that have to agree.
+
+/** A STRUCTURAL fingerprint — tag + ARIA role + depth, no text, no data attributes. Deliberately a
+ *  printed tree: the non-regression below reds by NAMING the node that appeared (`div[role=group]`)
+ *  rather than by a count that says only that something changed. (The same shape probe exists in the
+ *  unit suite; it is duplicated rather than shared because a five-line test helper is cheaper to
+ *  read twice than to import across the jsdom/browser project boundary.) */
+function shapeOf(el: Element, depth = 0): string {
+  const line = `${'  '.repeat(depth)}${el.tagName.toLowerCase()}[role=${el.getAttribute('role') ?? '-'}]`;
+  return [line, ...[...el.children].map((c) => shapeOf(c, depth + 1))].join('\n');
+}
+
+/** What 006 ships, written out: ONE snapshot row, sitting DIRECTLY in the listbox. (One row, not
+ *  two, because `seedSnapshot()` seeds one — this is the picker the cases above all drive.) */
+const SNAPSHOT_ONLY_SHAPE = [
+  'div[role=listbox]',
+  '  button[role=option]',
+  '    span[role=-]',
+  '    span[role=-]',
+].join('\n');
+
+const SIBLINGS: [string, string][] = [
+  ['sibling-one.md', '# Sibling one\n\nA different file in the same folder.'],
+  ['sibling-two.md', '# Sibling two\n\nAnother one.'],
+];
+
+/** Open the picker and hand it back, once it is really open. */
+async function openPickerIn(host: HTMLElement): Promise<HTMLElement> {
+  pillIn(host)!.click();
+  return waitFor(() => (pickerIn(host)!.hidden ? null : pickerIn(host)));
+}
+
+describe('the picker carries TWO KINDS — one listbox, two groups (D-3, D-4)', () => {
+  it('BOTH kinds → ONE listbox, TWO labelled groups, each row carrying its own kind', async () => {
+    const host = await mountAppPage(docV2(), SIBLINGS);
+    await seedSnapshot();
+    const picker = await openPickerIn(host);
+
+    // ONE listbox. The groups are its DIRECT children — the ARIA ownership D-4 rests on, asserted
+    // as a parent identity in a real engine rather than as a `contains`.
+    expect(shadowOf(host).querySelectorAll('[role="listbox"]')).toHaveLength(1);
+    const groups = [...picker!.querySelectorAll<HTMLElement>('[role="group"]')];
+    expect(groups).toHaveLength(2);
+    for (const g of groups) expect(g.parentNode).toBe(picker);
+    expect(groups.map((g) => g.getAttribute('aria-label'))).toEqual([
+      'Snapshots of this document',
+      'Other files in this folder',
+    ]);
+
+    // THE DISCRIMINANT, on the rows the PRODUCTION closures produced: the snapshot the app page
+    // captured, and the two siblings `fetchFiles` offered (the open `doc.md` excluded by 2.2).
+    const rows = [...picker!.querySelectorAll<HTMLElement>('[role="option"]')];
+    expect(rows.map((r) => r.dataset.targetKind)).toEqual(['snapshot', 'file', 'file']);
+    expect(rows.filter((r) => r.dataset.targetKind === 'file').map((r) => r.dataset.filePath)).toEqual([
+      'sibling-one.md',
+      'sibling-two.md',
+    ]);
+    expect([...groups[0].children].map((r) => (r as HTMLElement).dataset.targetKind)).toEqual(['snapshot']);
+    expect([...groups[1].children].map((r) => (r as HTMLElement).dataset.targetKind)).toEqual(['file', 'file']);
+
+    // A file row NAMES the file and SAYS IT IS A FILE, in text — never inferred from which group it
+    // landed in, and readable with the row alone (§5).
+    const fileRow = rows.find((r) => r.dataset.targetKind === 'file')!;
+    expect(fileRow.textContent).toContain('sibling-one.md');
+    expect(fileRow.textContent).toContain('File');
+    expect(fileRow.getAttribute('aria-label')).toBe('Compare with the file sibling-one.md');
+
+    // Grouping is the ARIA answer to "one list, two kinds", and it adds NO control: §3.2 rejected a
+    // second pill and divergence 1 rejected the modal — both still hold with two kinds in the list.
+    const shadow = shadowOf(host);
+    expect(shadow.querySelector('[role="dialog"]')).toBeNull();
+    expect(shadow.querySelector('[role="menu"]')).toBeNull();
+    expect(shadow.querySelector('[aria-modal]')).toBeNull();
+    expect(shadow.querySelectorAll(`.${DIFF_AFFORDANCE_CLASS}`)).toHaveLength(1);
+
+    // The picker's own label widened with it: a listbox that still said "snapshots" would misname
+    // its contents for exactly the users who cannot see the two groups.
+    const label = picker!.getAttribute('aria-label')!;
+    expect(label).toMatch(/snapshot/i);
+    expect(label).toMatch(/file/i);
+  });
+
+  it('★ ONE KIND → the picker is STRUCTURALLY what 006 ships: no groups at all', async () => {
+    // THE NON-REGRESSION. The single-file folder is the source every case above this line drives,
+    // so if the two-group scaffolding leaked into the snapshot-only path they would all keep
+    // passing while the DOM an AT user meets had changed underneath them. Pinned as a printed
+    // shape: a build that always groups reds here NAMING the `div[role=group]` that appeared.
+    const host = await mountAppPage(); // no siblings → fetchFiles returns []
+    await seedSnapshot();
+    const picker = await openPickerIn(host);
+
+    expect(shapeOf(picker!)).toBe(SNAPSHOT_ONLY_SHAPE);
+    expect(picker!.querySelectorAll('[role="group"]')).toHaveLength(0);
+    // ...and it is really the production path that produced it: the context has the D-3 pair, it
+    // simply has no other file to offer. (Without this the case could pass on a surface where
+    // `fetchFiles` was never provisioned at all — a different single-kind state.)
+    expect(getDiffContext()!.fetchFiles).toBeTypeOf('function');
+    expect(await getDiffContext()!.fetchFiles!()).toEqual([]);
+  });
+
+  it('★ ...and the shape probe DISCRIMINATES — the both-kinds picker is a different tree', async () => {
+    // The control for the case above: without it, `shapeOf` could be blind to grouping and the
+    // non-regression would pass by measuring nothing.
+    const host = await mountAppPage(docV2(), SIBLINGS);
+    await seedSnapshot();
+    const grouped = shapeOf((await openPickerIn(host))!);
+    expect(grouped).not.toBe(SNAPSHOT_ONLY_SHAPE);
+    expect(grouped).toContain('div[role=group]');
+  });
+
+  it('FILES ONLY (no snapshots) is single-kind too — flat file rows, no lone group', async () => {
+    const host = await mountAppPage(docV2(), SIBLINGS); // no seedSnapshot — the store is wiped
+    const picker = await openPickerIn(host);
+    expect(picker!.querySelectorAll('[role="group"]')).toHaveLength(0);
+    expect([...picker!.children].map((c) => c.getAttribute('role'))).toEqual(['option', 'option']);
+    // The document is untouched behind it — this is a picker, not a diff (2.5 wires the gesture).
+    expect(host.hasAttribute('data-diff')).toBe(false);
+    expect(readerIn(host).querySelector('h1')).not.toBeNull();
   });
 });
