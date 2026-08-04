@@ -77,11 +77,19 @@ PRODUCED at 4.3 and 5.1–5.4, **CHOSEN by the human at 5.5**, executed at 5.6/5
 CHECKBOX CONVENTION is SETTLED as a standing invariant: (c) — per-task ticking, each box in its own commit,
 forward from 008; 002 and 007 PREDATE it and are NOT retroactively ticked, their done-ness signal being this
 pointer and § Closed milestones.** See § Carried items (discharged) and the gate-3 entry.
-★ **M8 IS IN IMPLEMENTATION. TASK 1.3 IS DONE — `src/render/agentBadge.ts` (`buildAgentBadge`), `mount.ts`'s
-ONE line, and the badge's CSS (D-1 · D-2 · D-12). THE D-1 SEAM IS BUILT END TO END; GROUP 1 IS NOT DONE —
-TASK 1.4 IS NEXT** (the TWO registration sites at the PRODUCTION path, plus the badge's §3.11 property set
-and the first `tests/browser/agentBadge.browser.test.ts`), in a fresh session. 1.5 (the rect probe, both
-geometry widths) and 1.6 (the zero-network guard) follow it and close the group.
+★ **M8 IS IN IMPLEMENTATION. TASK 1.4 IS DONE — THE TWO REGISTRATION SITES ARE WIRED AND THE BADGE IS
+LIVE: it appears on screen, from a real document's name, on both surfaces (D-1 · D-2, whose `decisions.md`
+entries land with this commit because 1.4 is where they became true in the shipped product).** App page:
+`registerDocIdentity(file.name)` FIRST in `appShell.installWatchForFile` — before the select that mounts, on
+the ordering 005 task 4.7 paid for, so the **first file of a session carries its badge**. Content script:
+`registerDocIdentity(basenameOf(location.href))` in `runReader`, after the renderable gate that already
+parses the URL, before any mount attempt. ★ **Registration is gated on NOTHING** — not on `docId != null`,
+and **not on `installWatchForFile`'s `!decision.watchable` early return either**, which is the *reachable*
+silent drop the plan's site table would have walked into: a Firefox picker-route folder is
+`{watchable:false}`, so a register placed beside `registerDiffContext` leaves every agent file opened that
+way un-badged. Both gates asserted red-first. **GROUP 1 IS NOT DONE — TASK 1.5 IS NEXT** (the rect probe
+over the top band, at BOTH geometry widths, which **produces** the lane measurement and is FORBIDDEN from
+choosing the lane), then 1.6 (the zero-network guard) closes the group.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
@@ -97,10 +105,31 @@ each shed one byte. Any future CSS byte account on this repo is off by one per l
 with `wc -c`. (b) **The `/*#__PURE__*/ new Set([…])` shape behaved in BOTH directions:** dropped while
 unused (1.1/1.2's 0-delta), retained now that `mount()` reaches it, and its cost is **exactly the 54 B of
 member strings** — 40 characters + 10 quotes + 4 commas, to the byte.
-★ **THE BADGE SHIPS BUT DOES NOT YET APPEAR, BY DESIGN — read the absence correctly.** Nothing calls
-`registerDocIdentity` in production until **1.4**, so `getDocIdentity()` is `undefined` at every production
-render on both surfaces and `buildAgentBadge()` returns `[]`. The bytes are in; the pill is not on screen
-until the two registration sites land. **`mount.ts` gained 8 lines, 0 deleted — exactly ONE of them
+★ **1.4's OWN BYTE DELTA, DECOMPOSED TO A ZERO RESIDUAL — and the two edits are each other's firing
+control.** Content script **319,527 → 319,709 B, +182 B, identical size on both engines** (Cr
+`b4107b34…`→`a36bd676…`, Fx `4c7819ba…`→`fd8407ee…`); app chunk **389,926 → 389,957 B, +31 B**
+(`564915e8…`→`72058cff…`). Five arms, each rebuilt for BOTH engines (`wxt build` is Chrome-only — a
+Firefox reading taken without `-b firefox` is a STALE ARTIFACT, which is how this session's first
+measurement briefly reported a +182/+0 engine split that did not exist). **CS +182 = 144 + 38**, sub-ablated:
+**`basenameOf` +144 B** — previously tree-shaken, since `agentBadge` imports only `isAgentFile`, and
+retained the moment `runReader` imports it — plus **`registerDocIdentity`'s retained body and its call
++38 B** (measured by an arm registering `location.href` directly: 319,565). **APP +31 B** is the same
+retained setter and its call, without `basenameOf`, which never joins the app graph. ★ **The controls
+FIRE in both directions:** the runReader-only arm leaves the app chunk **md5-identical** to baseline
+(`564915e8…`), and the appShell-only arm leaves BOTH content scripts **byte- and md5-identical**
+(`b4107b34…` / `4c7819ba…`) — so neither edit leaks onto the other's graph, and the final arm reproduces
+each single-site arm md5-for-md5. **182 = 144+38, 31 = 31 — residual ZERO on both.**
+★ **THE BADGE NOW APPEARS — the 1.3 note that it "ships but does not yet appear" is DISCHARGED, not
+merely stale.** `getDocIdentity()` returns a real name at every production render on both surfaces, and
+`tests/browser/agentBadge.browser.test.ts` (34 assertions, Cr+Fx) proves it end to end. **Its red-first
+evidence is the part worth carrying:** against the registration-unwired build — literally 1.3's state —
+**30 of 34 go red on both engines**, every one on `expected undefined to be '<name>'`, while the **4
+harness-sanity tests stay GREEN**, which is what makes an all-red run evidence rather than a broken
+harness. And against a **capture-once** `buildAgentBadge` (the shape threading the name through
+`MountOptions` amounts to), the document-switch case reads **`expected 'Agent file · CLAUDE.md' not to be
+'Agent file · CLAUDE.md'` on `intro.md` while the registry correctly says `intro.md`** — the previous
+document's badge stranded on the new one, 007 D-12's class, which is the single property D-1's whole
+registry-over-`MountOptions` design exists to buy. **`mount.ts` gained 8 lines, 0 deleted — exactly ONE of them
 executable** (`children.push(...buildAgentBadge())`), the other seven being one mandatory `import` and a
 six-line comment matching the density of the four sibling pushes. **`mount()` stays read-only library**
 (006 D-15): it reads a data holder at build time, writes nothing, owns nothing, branches on nothing.
@@ -110,8 +139,12 @@ inventory recorded in `readerCss.ts`'s `.ts` block: **full page that slot is emp
 affordance` declares the same offset but D-14 never renders it there — a two-rule coincidence held apart by
 a build-time gate, which 1.5 must assert); **on the CONTAINED pane it overlaps the diff picker's and
 status's `top:50` slot**, both `hidden` until opened — **the first thing 1.5 should probe.** Bottom-left is
-already ruled out and not re-derived (`diffChrome.ts:55-60`). The lane is never live-and-unmeasured, because
-the badge cannot appear at all before 1.4.
+already ruled out and not re-derived (`diffChrome.ts:55-60`). ★ **AND THE 1.3 NOTE THAT "the lane is never
+live-and-unmeasured, because the badge cannot appear at all before 1.4" NO LONGER HOLDS — 1.4 is what
+retired it.** The badge is on screen at a lane no rect probe has checked, and that is a KNOWN, BOUNDED
+state, not an oversight: gate-2 Q3 ruled *"produce, do not choose"*, so 1.5 measures it next and 6.1
+chooses. 1.4 deliberately asserts **no geometry whatsoever** — presence, structure and text only — so
+nothing in the shipped suite can quietly ratify a lane the human has not picked.
 ★ **D-12 discipline, per token, run this session:** `--sans` / `--shadow` light-block-only so identical in
 all three; `--muted` #5D6070 / #A0A4B8 / **#5D6070 inherited on sepia**; `--panel` #F4F4EF / #181B26 /
 **#F4F4EF inherited**; `--line` #E6E6DF / #262A38 / **#E6E6DF inherited**. ★ **The sepia reading is stated,

@@ -1,6 +1,83 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-04 · 008 D-1 — the document's name arrives at the render path the way the watch target and
+  the diff context do, because it is the only seam that survives a re-render.** *(Plan 008 §0's
+  pre-written entry text, applied verbatim. IMPLEMENTED AND TRUE IN THE SHIPPED PRODUCT at task 1.4,
+  `docs/ai/progress.md` § Now — which is why the entry lands here rather than at 1.1: the module existed
+  from 1.1 and the badge read it from 1.3, but until the two registration sites were wired
+  `getDocIdentity()` returned `undefined` at every production render and the seam carried nothing.)*
+  Document identity reaches `mount()` through a NEW module-level registry, `src/render/docIdentity.ts` —
+  the THIRD instance of the register-once pattern after `watchRegistry.ts` (005 D-A) and `diffRegistry.ts`
+  (006 §1.4). **NOT `MountOptions`, NOT the post-mount call site**, the three candidate seams §7-2 named
+  and closed. **The decisive argument is the re-render, not the shape.** `MountOptions`' own header calls
+  it *"Optional render modes for a mount"* and both members are booleans about HOW to render, which is a
+  taste argument that decides nothing; what decides it is that **a name threaded through `MountOptions`
+  would not survive a watch re-render on EITHER surface.** The app page re-renders through
+  `renderWithDiagrams`, a module-level `const` with no file in scope, so it would have to close over app
+  state — module-level state by a longer road; the content script's `contentWatch.ts` passes **no
+  `render` at all** and gets bare `mount`, so the name would be **dropped outright** — and dropped the
+  first time an agent edits the file, which is precisely the moment the badge is meant to be on screen.
+  That is 007 D-12's bug class, and avoiding it is the whole of this decision. **The registry is
+  therefore re-read at BUILD time, never captured:** `buildAgentBadge` calls `getDocIdentity()` inside
+  itself, per render, so render N+1 reads what render N+1's registry holds. **WHAT IT COST, stated
+  exactly:** one new module (data only — it holds a string and imports NOTHING, not even a type, so it
+  adds no edge any fence must reason about and is safe on both graphs) and **exactly one line in
+  `mount.ts`** — `children.push(...buildAgentBadge())`, the fifth instance of a pattern
+  `buildThemeControl` / `buildWatchChrome` / `buildDiffChrome` / `buildTocView` already establish; 007
+  touched `mount.ts` at zero sites and 008 touches it at one, which is a checkable property and was
+  checked. **THE TWO REGISTRATION SITES (task 1.4), both re-derived against the tree:** the app page at
+  `appShell.installWatchForFile`, registering `file.name`; the content script in `runReader`, after the
+  renderable gate that already holds and parses `location.href`, registering
+  `basenameOf(location.href)`. ★ **Registration is gated on NOTHING.** Not on `docId != null` — the diff
+  context is, because a snapshot needs a folder identity, whereas a badge needs only a basename, which
+  `MarkdownFile.name` always carries — and **not on `installWatchForFile`'s `!decision.watchable` early
+  return either**, which is the same silent drop one gate earlier and the *reachable* one: a Firefox
+  picker-route folder is `{watchable:false}`, so a registration placed beside `registerDiffContext`
+  would leave every agent file opened that way un-badged, on the surface least able to explain itself.
+  The call is therefore FIRST in that function, and both directions are asserted red-first. **Rejected:**
+  `MountOptions` (on the re-render property above); a fourth mechanism (§7-2 forbids one and nothing
+  needs one); passing the name into `createWatchController`'s config on both surfaces (the `MountOptions`
+  road with two extra config fields and the same module-level endpoint). **Revisit-when:** a fourth
+  consumer needs document identity and wants more than a basename (the holder grows a field and the
+  data-only property is re-argued, not assumed); **or** a surface appears whose re-render does NOT pass
+  through `mount()`, at which point "re-read at build time" stops being sufficient on its own and the
+  registry needs a change notification the way `watchRegistry` has one.
+
+- **2026-08-04 · 008 D-2 — the badge is a name comparison and a text node; absence is the resting state
+  and costs one Set lookup.** *(Plan 008 §0's pre-written entry text, applied verbatim. Implemented at
+  tasks 1.2 (the predicate) and 1.3 (the badge); TRUE IN THE SHIPPED PRODUCT at 1.4, when registration
+  first fed the predicate a real name — before that it judged `undefined` at every production render.)*
+  Recognition is a PURE PREDICATE over the BASENAME in `src/render/agentFile.ts`, and the badge is
+  `buildAgentBadge()` returning `[]` by default. **Exact, case-sensitive match against one frozen set of
+  five** — `CLAUDE.md`, `AGENTS.md`, and this repository's own `spec.md` / `plan.md` / `tasks.md`
+  convention. Case-sensitive **because the convention is the point**: a `claude.md` is not the file the
+  convention names, and a case-insensitive match would badge it wrongly rather than not at all.
+  **Never content sniffing** (spec §3.4, §4) — the name is the whole input. **The content-script basename
+  needs `decodeURIComponent`:** `new URL('file:///c:/dev/My%20Docs/AGENTS.md').pathname` yields a
+  percent-encoded segment, so a raw `split('/').pop()` would silently produce a false negative on any
+  path containing an encoded character; decided here rather than discovered, and asserted against a real
+  `location` at 1.4. **`basenameOf` never throws** — it catches both `new URL` and `decodeURIComponent`
+  and returns `''`, which the predicate simply declines — which is what lets task 1.4 put it on a path
+  that runs before the reader mounts without putting AGENTS.md #5 at risk. **`buildAgentBadge()` returns
+  `[]` when nothing is registered OR the name is unrecognized** — the `buildDiffChrome` shape verbatim
+  (*"THE GATE. Read at BUILD time … it is the only condition"*) — **with NO explanatory note in either
+  case**, for D-14's reason: the user was never offered anything, so there is nothing to be told they are
+  missing. One empty state, not two, because `isAgentFile(undefined)` collapses them by construction.
+  **The badge is a SIBLING of `.peekover-reader`**, pushed into `children[]`, never inside the reading
+  column — so the column stays byte-identical and the golden pin is untouched **by construction**; that
+  also means an EMPTY golden diff is NOT evidence for it, and 1.4 asserts the sibling relationship
+  structurally in a real engine instead. **The copy carries the mockup's `Agent file` and appends the
+  name** (`Agent file · CLAUDE.md`), dropping the mockup's `· tuned rendering on` (that outcome is spec
+  §8-4's, un-chosen until 6.1) and its `◈` glyph plus `var(--ok)` colour (spec §5 requires state in TEXT,
+  §3.11 row 15). **Which presentation defaults a recognized file gets is NOT decided here** — this builds
+  the seam and the badge, it does not pick the tuning; and **the badge's LANE is not chosen here either**
+  (gate-2 Q3: 1.5 produces the rect measurement, the human chooses at 6.1, and the shipped CSS is
+  PROVISIONAL until then). **Revisit-when:** the recognized set needs to grow — that is a SPEC decision,
+  not an implementation one, and `.cursorrules` and every non-markdown agent file are already OUT by
+  gate-1 disposition §9-3 and unreachable through the shared extension gate anyway; **or** §8-4 chooses a
+  presentation set, at which point the badge's copy is re-opened against what was actually chosen.
+
 - **2026-08-03 · M8 GATE 3 — tasks 008 (persona-#1 QoL: compare-two-files · agent-file awareness · table
   tools) APPROVED. Implementation may begin at task 1.1, in a fresh session. AND — carried since 9.3 —
   THE CHECKBOX CONVENTION IS SETTLED, as a STANDING INVARIANT.**

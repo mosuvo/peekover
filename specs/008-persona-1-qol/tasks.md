@@ -207,7 +207,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       set's initializer accounted. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-1, D-2, D-12; §4 agent-file; §5 CSS discipline]
 
-- [ ] **1.4 The TWO registration sites, proven at the PRODUCTION path — and the badge's property set (§3.11
+- [x] **1.4 The TWO registration sites, proven at the PRODUCTION path — and the badge's property set (§3.11
       rows 1, 2, 3, 4, 14, 15, 23).** App page: `registerDocIdentity(file.name)` inside `installWatchForFile`
       (`appShell.ts:838`), beside `registerDiffContext` (`:914`). Content script:
       `registerDocIdentity(basenameOf(location.href))` at `runReader.ts:118-119` — **after the gate, which

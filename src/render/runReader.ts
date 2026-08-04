@@ -34,6 +34,13 @@
 // module is exercised directly by runReader.test.ts.
 import { isRenderableContext } from '../detect/isRenderableContext';
 import { mountReader } from './mountReader';
+// The identity seam (008 task 1.4, D-1/D-2). Both modules import NOTHING and hold no state beyond
+// a string, so neither adds an edge the 007 content-script fence has to reason about — that is the
+// property `docIdentity.ts`'s header argues for itself, and it is why this surface can name its
+// document at all. `agentFile` is already on this graph through `mount -> agentBadge`; this adds an
+// edge to it, not a module.
+import { registerDocIdentity } from './docIdentity';
+import { basenameOf } from './agentFile';
 
 /** id of the injected hide <style>, so we can find and remove exactly it. */
 export const HIDE_STYLE_ID = 'peekover-hide-raw';
@@ -116,6 +123,31 @@ export function runReader(options: RunReaderOptions = {}): void {
 
   // 1. Detect first, hide second — an untouched page on a miss.
   if (!isRenderable(location.href)) return;
+
+  // 1a. NAME THE DOCUMENT (008 task 1.4, D-1) — the content script's half of the identity seam,
+  // and the only place on this surface where a filename exists at all: a content script holds a
+  // `location.href` and never a `MarkdownFile`, so the name has to be parsed out of the URL.
+  //
+  // WHY HERE, precisely:
+  //   • AFTER the gate, which has already decided this is a document we render and has already
+  //     held and parsed `location.href` for its own purposes. Registering before it would name a
+  //     document on a page the reader then leaves completely untouched (the miss contract above).
+  //   • BEFORE any mount attempt. `buildAgentBadge` reads the registry at BUILD time inside
+  //     `mount()` (reached from `mountReader`), so a name registered after the first mount would
+  //     leave that render un-badged — the 005 task 4.7 defect, one chrome over.
+  //   • ONCE per document, not per render, and that is sufficient BY DESIGN: the badge re-reads
+  //     this registry on every render rather than capturing it (D-1), so a watch re-render on this
+  //     surface — `contentWatch.ts`'s controller, which passes no `render` and gets bare `mount` —
+  //     rebuilds the badge from the CURRENT name. A name threaded through `MountOptions` would be
+  //     dropped outright at that exact call, which is the argument that forced this seam.
+  //
+  // THROW-SAFE, which AGENTS.md #5 makes load-bearing rather than tidy: a throw on this line would
+  // land between `isRenderable` and `injectHideStyle`, i.e. before the hide — so it could not blank
+  // the page, but it WOULD abort the mount and leave the raw text unrendered forever. `basenameOf`
+  // never throws (it catches both `new URL` and `decodeURIComponent`, returning `''`, which
+  // `isAgentFile` then simply declines) and `registerDocIdentity` is one assignment.
+  registerDocIdentity(basenameOf(location.href));
+
   injectHideStyle();
 
   // Set once a reader host is committed (or we've given up): stops all backstops and

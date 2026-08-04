@@ -4,6 +4,7 @@ import { mountAppShell, type AppStore } from './appShell';
 import type { ReaderFile } from './readerPane';
 import type { FolderSource, MarkdownFile, OpenFolderOutcome } from './folderSource';
 import type { FolderRecord, RecentRecord, PinRecord, StoredSummary } from './store';
+import { getDocIdentity, resetDocIdentityForTest } from '../render/docIdentity';
 
 // Task 1.1: the app-page surface EXISTS and renders its skeleton + affordance.
 // Task 1.2: the shell wires selection → the reader pane (unchanged M1 mount()).
@@ -1227,5 +1228,127 @@ describe('appShell (task 4.3 — the "Clear diagram cache" control)', () => {
     expect(prompt!.textContent).toMatch(/diagram/i);
     // The honest part: a cleared cache costs nothing but a re-render (D-4's regenerable store).
     expect(prompt!.textContent).toMatch(/drawn again/i);
+  });
+});
+
+// --- 008 task 1.4: the APP-PAGE registration site (D-1) --------------------------
+//
+// What is asserted HERE and what is deliberately NOT. The BADGE — its presence on both surfaces,
+// its absence on an unrecognized name, its survival across a re-render — is
+// `tests/browser/agentBadge.browser.test.ts`'s, in a real engine. What jsdom can see, and what
+// this block is for, is the WIRING: that the production select path registers the name at all,
+// and that the registration inherits NEITHER of the two gates that sit below it in
+// `installWatchForFile`. Those two gates are the whole of D-1's "silent drop" argument, and each
+// is asserted with the branch it guards shown FIRING in the same test — an absence assertion over
+// a branch that never ran would be worth nothing.
+
+describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    resetDocIdentityForTest();
+  });
+
+  /** Open a folder and click its first file — the ONLY route by which a file reaches the reader
+   *  on this surface, and therefore the only honest way to observe the registration. Never calls
+   *  `registerDocIdentity` by hand: a hand-registered fixture would pass against a production path
+   *  wired to nothing, which is the M5 defect this milestone's seam rule exists to prevent. */
+  async function openFirstFile(source: FolderSource): Promise<HTMLElement> {
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({ ok: true, source }),
+      store: fakeStore(),
+    });
+    await app.openFolder();
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+    await flush();
+    return container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+  }
+
+  const badgeIn = (host: HTMLElement) =>
+    host.shadowRoot!.querySelector<HTMLElement>('.peekover-agent-badge');
+
+  it('the FIRST file of a session is named BEFORE it mounts — 4.7’s defect, re-run on new chrome', async () => {
+    // The ordering, and the only assertion that can see it. `installWatchForFile` runs before
+    // `await selectFile(file)`, and `selectFile` is what mounts; `buildAgentBadge` reads the
+    // registry at BUILD time. So if the registration were moved after the select — the shape 005
+    // task 4.7 found and fixed for the watch control — the name would be right and THE FIRST
+    // RENDER WOULD STILL CARRY NO BADGE. Asserting the registry alone would not catch that;
+    // asserting the badge on the first-ever mount of a session does.
+    const host = await openFirstFile(sourceOf('notes', [mdFile('CLAUDE.md', '# Rules')]));
+
+    expect(getDocIdentity()).toBe('CLAUDE.md');
+    expect(badgeIn(host)).not.toBeNull();
+    expect(badgeIn(host)!.textContent).toBe('Agent file · CLAUDE.md');
+  });
+
+  it('an unrecognized name is registered just the same — the registry names, the predicate judges', async () => {
+    // NON-VACUOUS CONTROL for the case above: the same path, one thing different (the name), and
+    // the registration still happens. This is what separates "the badge is gated on the name"
+    // from "the badge is gated on something about this file that also happens to correlate".
+    const host = await openFirstFile(sourceOf('notes', [mdFile('intro.md', '# Intro')]));
+
+    expect(getDocIdentity()).toBe('intro.md');
+    expect(badgeIn(host)).toBeNull();
+    // ...and no explanatory note anywhere in the chrome either (D-14, §3.8: absence is the
+    // resting state). Checked over the shadow root's non-column children, so a note appended
+    // beside the reader could not hide from it.
+    const chromeText = [...host.shadowRoot!.children]
+      .filter((el) => !el.classList.contains('peekover-reader') && el.tagName !== 'STYLE')
+      .map((el) => el.textContent ?? '')
+      .join(' ');
+    expect(chromeText).not.toMatch(/agent file/i);
+  });
+
+  it('★ registration survives the NOT-WATCHABLE early return — the reachable silent drop', async () => {
+    // THE GATE RED-FIRST, in the form that is actually reachable. `installWatchForFile` returns
+    // early when `watchCapability` says the source cannot be watched (`persistable:false` on the
+    // picker route — Firefox's real, everyday case). That early return sits ABOVE the diff
+    // context's `docId != null` guard, so a registration placed beside `registerDiffContext` —
+    // the site plan D-1's table names — would never run here, and EVERY agent file opened through
+    // a Firefox picker would go un-badged. Registering first is what makes this pass; moving the
+    // call below the early return turns it red, with the badge simply absent.
+    const host = await openFirstFile(
+      sourceOf('notes', [mdFile('AGENTS.md', '# Rules')], { persistable: false }),
+    );
+
+    // THE CONTROL THAT FIRES: the early-return branch really was taken. Its designed note is on
+    // screen and no watch toggle exists — so the assertion below is about a registration that
+    // outlived a return, not about a branch the fixture failed to reach.
+    expect(host.shadowRoot!.querySelector('.peekover-watch')).toBeNull();
+    expect(host.shadowRoot!.querySelector('.peekover-watch-note')).not.toBeNull();
+
+    expect(getDocIdentity()).toBe('AGENTS.md');
+    expect(badgeIn(host)!.textContent).toBe('Agent file · AGENTS.md');
+  });
+
+  it('switching documents re-registers — the registry holds the CURRENT name, never the previous', async () => {
+    // Row 14's registry half. The stranding this rules out is proven end to end (a stale badge on
+    // the new document) in the browser suite; what this pins is the input to it — that the seam is
+    // written on EVERY open rather than once per session.
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({
+        ok: true,
+        source: sourceOf('notes', [mdFile('CLAUDE.md', '# Rules'), mdFile('intro.md', '# Intro')]),
+      }),
+      store: fakeStore(),
+    });
+    await app.openFolder();
+    const files = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')];
+    const byName = (n: string) => files.find((f) => f.textContent === n)!;
+
+    byName('CLAUDE.md').click();
+    await flush();
+    expect(getDocIdentity()).toBe('CLAUDE.md');
+
+    byName('intro.md').click();
+    await flush();
+    expect(getDocIdentity()).toBe('intro.md'); // ← not 'CLAUDE.md'
+
+    byName('CLAUDE.md').click();
+    await flush();
+    expect(getDocIdentity()).toBe('CLAUDE.md'); // ...and back, so this is not a one-way latch
   });
 });

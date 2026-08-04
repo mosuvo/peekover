@@ -75,6 +75,9 @@ import {
 } from './snapshots';
 import { readerSourceFor } from '../render/readerMode';
 import { registerDiffContext, createDiffContext } from '../render/diffRegistry';
+// The identity seam (008 task 1.4, D-1). Data only, imports nothing — the app page's half of the
+// same registry the content script writes from `runReader`.
+import { registerDocIdentity } from '../render/docIdentity';
 // ★ THE IMPORT FENCE'S ONE GATED DOOR, OPENED HERE AND NOWHERE ELSE (plan §1.4, task 6.2).
 // This module is the APP-PAGE graph — `mount.ts` never reaches it — so it is the one production
 // file permitted to import the engine (and, with it, the `diff` package) and the view. Both are
@@ -834,8 +837,42 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   /** How the ACTIVE folder arrived. Set by the two open paths; read only by the watch decision. */
   let activeRoute: 'drop' | 'picker' = 'picker';
 
-  /** Register (or decline to register) a watch for the file now on screen. */
+  /**
+   * Register (or decline to register) a watch for the file now on screen — and, since 008 task
+   * 1.4, the document's NAME and the diff context alongside it.
+   *
+   * ★ NAMING DEBT, RECORDED RATHER THAN TIDIED. This function now registers THREE things and its
+   * name describes one. Plan §4-4 says do not refactor it, and the reason is the comment block at
+   * `:783-793`: the ordering this site documents — install BEFORE `selectFile` — is load-bearing,
+   * paid for by the 005 task 4.7 defect, and a rename that moved or re-scoped the call would put
+   * that ordering back in play for a cosmetic gain.
+   */
   function installWatchForFile(file: MarkdownFile): void {
+    // THE DOCUMENT'S NAME (008 task 1.4, D-1) — the app page's half of the identity seam. The
+    // badge reads this registry at BUILD time inside `mount()`, and `selectFile` (`:799`) is what
+    // mounts, so registering here — before the select, on the ordering `:783-793` already
+    // established for the watch target — is what puts the badge on the FIRST file of a session
+    // rather than from the second onwards. That is 4.7's defect re-run against new chrome.
+    //
+    // ★ FIRST IN THIS FUNCTION, AND THAT IS THE WHOLE OF IT — the badge inherits NONE of the two
+    // gates below, because the badge's only condition is the NAME (`agentBadge.ts`: "Not
+    // `contained`, not the surface, not whether a watch is running"):
+    //   • not the `docId != null` guard at the diff context's site, which exists because a
+    //     SNAPSHOT needs a folder identity; a badge needs only a basename, which
+    //     `MarkdownFile.name` (`folderSource.ts`) always carries (plan D-1 says this in terms);
+    //   • and not the `!decision.watchable` EARLY RETURN a few lines below, which is the same
+    //     silent drop one gate earlier and the reachable one: a Firefox picker-route folder is
+    //     `{watchable:false}` (`watchAvailability.ts`), so a registration placed beside
+    //     `registerDiffContext` would never run there and every agent file opened that way would
+    //     go un-badged, on the surface least able to tell you why.
+    // Both directions are asserted red-first — `appShell.test.ts` on the gates, and
+    // `tests/browser/agentBadge.browser.test.ts` end to end.
+    //
+    // Total and throw-free: `file.name` is a required `string` on `MarkdownFile` and
+    // `registerDocIdentity` is one assignment, so nothing here can throw into a mount path
+    // (AGENTS.md #5).
+    registerDocIdentity(file.name);
+
     const decision = watchCapability({
       surface: 'app-page',
       persistable: activeSource?.persistable === true,
