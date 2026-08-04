@@ -117,8 +117,43 @@ is a `<template>`. Recorded in the suite's own comment.
 **A TEST FILE SHIPS NOTHING:** all three bundles byte- and md5-IDENTICAL to 1.5's, rebuilt from a cleared
 `.output` — content script **319,709 B** (Cr `a36bd676…` / Fx `fd8407ee…`), app chunk **389,957 B**
 (`72058cff…`). `readerCss.ts` UNCHANGED — **the lane is still un-chosen and 1.5's three findings still
-stand for 6.1**; no 1.1–1.5 module touched; no dependency (5). **GROUP 1 IS COMPLETE — TASK 2.1 IS NEXT**
-(`diffRegistry.ts`'s second, optional capability pair; the picker widens).
+stand for 6.1**; no 1.1–1.5 module touched; no dependency (5). **GROUP 1 IS COMPLETE.**
+★ **TASK 2.1 IS DONE — GROUP 2 HAS ITS ROOT: `DiffContext` CARRIES A SECOND, OPTIONAL CAPABILITY PAIR
+(`fetchFiles?` / `fetchFileText?`, D-3), AND THE SNAPSHOT PAIR IS BYTE-UNTOUCHED — PROVEN BY DIGEST, NOT BY
+EYE.** The pair is current-vs-picked material only: a list of `{path, name}` (a new registry-local
+`DiffFileEntry`, a structural subset of `MarkdownFile` so a filtered `activeSource.files` is assignable with
+no adapter, and so `read()` stays out of the affordance's reach), plus one text-by-path closure whose
+`undefined` is the SAME designed shape a reclaimed snapshot already uses. **The discriminant is NOT in the
+context** — it lands on the picker row at 2.3, as D-3 ruled; the context carries two independent
+capabilities, never a tagged union. **`computeDiff(before, after)` was not touched and needed no change: it
+diffs two STRINGS, so compare-two-files is a PICKER, not an engine** — the scoping premise HOLDS.
+★ **THE ADDITIVE PROPERTY IS THE CLAIM, AND IT IS MECHANICAL FOUR WAYS:** (i) the four existing capability
+members — declarations AND doc comments — are pinned by **SHA-256 `ab9753bb…` over 1194 UTF-8 bytes**,
+taken from `git show 21526ac:` BEFORE the edit, with a control in the same test proving the digest rejects a
+one-word case change (`meta ONLY` → `meta only` reds it); (ii) `git diff --numstat` reads **49/0 and 160/0 —
+ZERO deletions in either file**; (iii) `diffChrome.test.ts`, `diffChrome.browser.test.ts` and every other
+existing fake are an **EMPTY diff** and pass unedited (**browser 104 files / 1015 passed / 0 failed, Cr+Fx**);
+(iv) making the two members REQUIRED reds `tsc` at **seven existing sites** (`appShell.ts:951`,
+`diffChrome.test.ts:43`, `watchControl.test.ts:47`, `agentBadge.browser.test.ts:870`,
+`diffChrome.browser.test.ts:283`, +2), which is what "optional, not required" has to mean. Two further
+red-first mutations: a factory that DROPS the pair reds the carries-the-pair test; a factory that re-wraps
+`fetchText` when the pair is present reds the identity clause of the additive test.
+★ **ZERO BYTES MOVED — AND THE ZERO IS MEASURED, NOT ASSUMED.** All three artifacts are md5-IDENTICAL to a
+HEAD-source build on **both** engines (content script **319,709 B** Cr `a36bd676…` / Fx `fd8407ee…`; app
+chunk **389,957 B** `72058cff…`), because the whole change is TypeScript type declarations (erased) and doc
+comments (stripped) — residual **ZERO**, nothing left to account for. **The instrument FIRES:** a runtime
+statement injected into `diffRegistry.ts` moves the app chunk **+76 B**, and one placed in a symbol the
+content-script graph actually RETAINS (`isDiffContextRegistered`, reached via `diffChrome`/`watchControl`)
+moves the content script **+88 B on both engines** (Cr `23e8402c…`, Fx `b494ff4c…`) — restored, both return
+byte-for-byte. ★ **A SESSION FINDING WORTH CARRYING: `pnpm build` IS CHROME-ONLY** (`wxt build`); the
+Firefox bundle only rebuilds under `wxt build -b firefox`, so a Firefox md5 read out of a stale `.output`
+proves nothing. Both engines were rebuilt explicitly here, and the ablation showed `registerDiffContext`
+is **tree-shaken out of the content-script bundle** — the first control fired on the app chunk ONLY, which
+is why a second was needed. `permissions: []` on both built manifests (654 / 770 B), `web_accessible_resources`
+absent, manifest test **2975 B**; golden EMPTY; 007 import fence **8/8**; `diffChrome.ts` unedited so it
+gains no import and no fence clause changed; deps **5**. **TASK 2.2 IS NEXT** (`appShell.ts:914` provisions
+the two closures on the app-page side of the fence — `fetchFiles` EXCLUDING the open document, `fetchFileText`
+a FRESH `read()`).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

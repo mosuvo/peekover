@@ -273,7 +273,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
 
 ## 2 — The picker widens (D-3 · D-4 · D-5 — the dependency ROOT for compare-two-files; app-page ONLY per §4, and both fences stay green while it grows)
 
-- [ ] **2.1 `diffRegistry.ts` — a SECOND, OPTIONAL capability pair (D-3).** `fetchFiles?` / `fetchFileText?`
+- [x] **2.1 `diffRegistry.ts` — a SECOND, OPTIONAL capability pair (D-3).** `fetchFiles?` / `fetchFileText?`
       added beside the existing four; **the existing four BYTE-UNTOUCHED**. This is the **same move task 6.2
       already made a first time** — `diffRegistry.ts:40-54` records that amendment and its reasoning, and the
       header is cited in-code as the precedent rather than the argument being re-derived. **Optional, not

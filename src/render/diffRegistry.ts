@@ -58,6 +58,24 @@
 // even a zero-runtime `import type … from './diffView'` would read as an importer of the view. The
 // provisioning site in `appShell.ts` assigns the real `enterDiff` to this field, so `tsc --noEmit`
 // catches any drift between the two declarations — the same drift guard 6.1's mirror relies on.
+//
+// ── 008 D-3: A SECOND, OPTIONAL CAPABILITY PAIR — THE SAME MOVE, A SECOND TIME ─────────────────
+//
+// {@link DiffContext.fetchFiles} / {@link DiffContext.fetchFileText} widen the comparison target
+// from "this document's own history" to "another file in this folder". THE REASONING IS NOT
+// RE-DERIVED: the 6.2 amendment directly above is the precedent, and it already argued why a
+// capability arrives here as PROVISIONED CLOSURES — this module is data only and sits on BOTH
+// graphs, so the side that holds the folder list (the app page) hands the capability across, and
+// the affordance calls it without importing anything the fence keeps out.
+//
+// Both members are OPTIONAL, which is what makes this additive rather than a reshape: every
+// existing `createDiffContext` call site and every existing test fake stays valid untouched, and a
+// context with snapshots but NO folder list is a legal, designed state (the `AppStore`
+// optional-reader discipline, `appShell.ts:150-158`).
+//
+// THE DISCRIMINANT IS NOT HERE. Which kind a chosen row is lives on the ROW (`dataset.targetKind`,
+// D-4) — the only place that needs it. This context carries two INDEPENDENT capabilities, never a
+// tagged union: a union would push a `kind` through both closures to reach one branch.
 
 import type { SnapshotMetaEntry } from '../app/snapshots';
 
@@ -68,6 +86,22 @@ import type { SnapshotMetaEntry } from '../app/snapshots';
  * document stays on screen, `data-diff` is never set, never blank (AGENTS.md #5).
  */
 export type DiffOutcome = { ok: true } | { ok: false; reason: string };
+
+/**
+ * One OTHER file offered as a comparison target (D-3) — the narrowest shape the picker needs: a
+ * `path` to hand back to {@link DiffContext.fetchFileText}, and a `name` to put in the row's text.
+ *
+ * Deliberately NOT `MarkdownFile` (`../app/folderSource`), of which this is a structural subset so
+ * a filtered `activeSource.files` is assignable with no adapter. Declaring the narrow shape here
+ * keeps `read()` out of the affordance's reach — text arrives ONLY through the provisioned
+ * closure — and keeps this module's type-only edge list where it is.
+ */
+export interface DiffFileEntry {
+  /** Slash-separated path from the folder root — the key {@link DiffContext.fetchFileText} takes. */
+  path: string;
+  /** The file's own name, e.g. `intro.md`, for the row's text. */
+  name: string;
+}
 
 /**
  * The DATA a diff needs about the document on screen — never any UI, never an engine. Assembled by
@@ -100,6 +134,17 @@ export interface DiffContext {
   /** Leave the diff view on `host` and restore the reading place. A no-op when no diff is shown.
    *  Provisioned alongside {@link showDiff}, over the same fence, for the same reason. */
   hideDiff(host: HTMLElement): void;
+  /** OPTIONAL (D-3) — the OTHER files in this folder that could be compared against, ABSENT on a
+   *  surface that has no folder list at all. A closure over `activeSource.files` provisioned at the
+   *  same install site, EXCLUDING the open document itself: "another file", never one that would
+   *  offer an always-empty diff against itself. Empty array when the folder holds no other
+   *  markdown — the picker says so rather than listing nothing. */
+  fetchFiles?(): Promise<DiffFileEntry[]>;
+  /** OPTIONAL (D-3) — one other file's text by {@link DiffFileEntry.path}, or `undefined` when it
+   *  cannot be read, which lands in the SAME fallback as a missing snapshot: the document stays on
+   *  screen and the diff is never entered. A FRESH read of that entry, never a stored copy.
+   *  Provisioned alongside {@link fetchFiles} and absent whenever it is. */
+  fetchFileText?(path: string): Promise<string | undefined>;
 }
 
 /**
@@ -119,6 +164,10 @@ export function createDiffContext(config: {
   fetchText(snapshotId: string): Promise<string | undefined>;
   showDiff(host: HTMLElement, before: string, after: string): DiffOutcome;
   hideDiff(host: HTMLElement): void;
+  // OPTIONAL, mirroring {@link DiffContext} — a caller that provisions the D-3 pair passes it
+  // through the same factory, and one that does not is unchanged and still type-checks.
+  fetchFiles?(): Promise<DiffFileEntry[]>;
+  fetchFileText?(path: string): Promise<string | undefined>;
 }): DiffContext {
   return config;
 }
