@@ -1,6 +1,87 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-03 · M8 GATE 3 — tasks 008 (persona-#1 QoL: compare-two-files · agent-file awareness · table
+  tools) APPROVED. Implementation may begin at task 1.1, in a fresh session. AND — carried since 9.3 —
+  THE CHECKBOX CONVENTION IS SETTLED, as a STANDING INVARIANT.**
+  `specs/008-persona-1-qol/tasks.md`, finalized at `87532ad` (**35 tasks across six groups** — 1 (6) ·
+  2 (5) · 3 (11) · 4 (3) · 5 (7) · 6 (3)), was reviewed against plan 008 and approved to begin
+  implementation. **The tasks.md status line stays "DRAFT awaiting gate 3" and THIS ENTRY IS THE
+  APPROVAL OF RECORD** — the standing precedent, now four gates deep (spec 007 still reads "draft"
+  post-gate-1 `e09520f`; plan 007 still reads "draft — awaiting gate 2" post-gate-2 `cab93c7`; tasks 007
+  still reads "DRAFT awaiting gate 3" post-gate-3 `66634fa`; M8's spec and plan likewise, `aaf990e` /
+  `2c29821`). A context-loss session verifies M8's gate 3 **here**, not in the artifact header.
+  **WHAT THIS APPROVES:** the tasks as finalized — the sealed plan ordered into groups, **each task
+  naming the D-values it services** and applying plan §0's already-written `decisions.md` entry text
+  verbatim with the commit that implements it; the **four gate-2 rulings applied, never re-argued**
+  (Q1 snapshot diffs stay verbatim → 2.5 captions file-vs-file only · Q2 two buttons, no menu → 3.8,
+  with §3.11 rows 9 and 21 left `—` and no overlay or focus-trap work in group 3 · Q3 the badge lane is
+  produced at 1.5 and chosen by the human at 6.1 · Q4 the D-11 (iii) trigger stands, confirmed at 6.3);
+  **both gate-2 scope instructions discharged** — the heaviest table-tools task **split four ways**
+  (3.2 module · 3.3 CSS + token verification · 3.4 the two app-page call sites · 3.5 containment) and
+  the give-way **its own task at 5.7**, stated as *removal of D-6 sites 3–4 + a re-measurement to a
+  restored 318,747 B and the two original md5s*, never an edit to a constant. ★ **The milestone's one
+  hard sequencing constraint HOLDS AFTER THE SPLIT, re-checked by number: the §3.11 sibling audit is
+  consumed at 3.1, which precedes every table-tools test task — the first table-tools assertion is at
+  3.2/3.4, and the split's three added tasks all landed BELOW 3.1.** Spec §6's IS-NOT fence is intact
+  and the gate-1 dispositions (§9-1 one milestone · §9-2 presentation-only · §9-3 `.cursorrules` OUT ·
+  §9-4 both surfaces with §8-1 as the escape hatch · §9-5 current-vs-picked · §9-6 discharged) are
+  **preserved by silence**.
+  **TWO CONSEQUENCES WERE FLAGGED AT THE GATE AND BOTH ARE ACCEPTED — banked because they are the
+  human's calls, not the drafting session's:**
+  - **(i) The first NON-ZERO content-script byte delta in five milestones lands at 3.3 — ACCEPTED.**
+    The toolbar's CSS lives in `readerCss.ts`, which is on **BOTH** graphs, so presentation moves
+    content-script bytes **before any call site exists**. That is deliberate, not a slip: with the CSS
+    as the **only contributor in flight**, its **ablation is exact** — remove the block, rebuild, `wc -c`
+    and md5 move by the amount claimed — and the presentation stays revertable without touching the
+    logic. Every delta is still stated with its baseline (**318,747 B**, md5 Cr
+    `c7b33b36b1a727fdacb77eefe64083e1` / Fx `67717921bdf646c7366176392d0c37d7`) and decomposed to a
+    **zero residual**, never proven by an identifier grep. *(The badge's own first delta is 1.3's, on
+    the same terms.)*
+  - **(ii) Task 3.4 stays AS-IS — two app-page call sites plus the toolbar's structural §3.11 rows
+    (1, 2, 3, **4 INVERTS**, 23) — NOT split further. ACCEPTED.** The two sites are
+    **load-bearing-together per D-6**: `readerPane.ts:185` and `appShell.ts`'s renamed
+    `renderWithDiagrams` must land in one unit, because wiring only the first ships a toolbar that
+    **disappears on the app page's own re-render** — 007 D-12's bug class, one surface over, and the
+    same reason 4.1's two content-script sites land together and 5.7 removes them together. Splitting
+    3.4 would buy review granularity by making a defect landable.
+  **★ THE CHECKBOX CONVENTION — the 9.3 carried decision, RULED (c) WITH A PREDECESSOR NOTE, and
+  recorded as a STANDING INVARIANT rather than a milestone note.** 9.3 routed this with three options and
+  no recommendation (`progress.md` § Carried items; full context in § Baselines' *THE 9.3 RECONCILE
+  RECORD*), counted at HEAD: **001 15/15 · 003 15/15 · 004 19/19 · 005 25/25 · 006 20/20 ticked; 002
+  0/15; 007 0/28.** The ruling:
+  - **FORWARD, from 008 onward: PER-TASK TICKING.** Each task's box is ticked **in ITS OWN commit** —
+    the same commit that lands that task's code and advances `progress.md`'s Now-pointer. `tasks.md`
+    ships with **unticked** boxes and they tick as tasks land. This is 006's shipped shape (22 commits
+    touch its `tasks.md`) promoted from habit to invariant, so the divergence cannot recur; it composes
+    with the existing M1 rule that the Now-pointer advances per task in that task's own commit.
+  - **PREDECESSORS ARE NOT RETROACTIVELY TICKED. 002 (0/15) and 007 (0/28) PREDATE this convention.**
+    Their done-ness signal is the **`progress.md` pointer and their § Closed-milestones record**, NOT
+    their boxes. ★ **Recorded explicitly so a future reader does not read "007 is 0/28" as "007 is
+    unstarted": the boxes are a FORWARD convention, not a historical one** — M7 shipped all 28 tasks
+    plus five further code commits, and § Closed milestones is where that is verified. Option (a)
+    (a retroactive 28-box commit) is **declined**: ticking 27 boxes in one close commit is precisely the
+    per-task-in-its-own-commit convention this entry is banking, performed backwards, and `tasks.md` sat
+    outside 9.3's Files list for the reason 8.4's D-10 (b) precedent gives.
+  - **This DISCHARGES the 9.3 § Carried items checkbox decision**, marked discharged there in the same
+    commit as this entry. Nothing was blocked on it; it is settled **before** implementation begins, as
+    9.3 asked.
+  **WHAT THIS APPROVAL DOES NOT DO:** it reopens **no** plan D-value, **no** spec §3.x decision and
+  **no** gate-1 or gate-2 ruling; it edits **no** sealed artifact (spec, plan and tasks are untouched by
+  this commit, and the tasks status line is **not** flipped); it chooses **no** §8-1 ship/no-ship, **no**
+  §8-2 filter granularity, **no** §8-3 threshold and **no** §8-4 presentation set — all four stay
+  measure-then-choose, **PRODUCED** at 4.3 and 5.1–5.4, **CHOSEN by the human at 5.5**, executed at 5.6
+  and 5.7 — and it does **not** pick the badge's lane (1.5 produces, 6.1 chooses). **It writes no
+  implementation code:** task 1.1 begins in a **fresh session** (C14, WORKFLOW.md §5.3).
+  **Revisit-when:** (a) implementation surfaces a task whose Verify contract cannot be executed as
+  written — banked at the point of discovery, as its own act, never propagated forward (the M7 gate-3
+  precedent, whose one outstanding §1.1 correction is the worked example); (b) 5.5 rules §8-1's surface
+  reach OUT, which fires 5.7's give-way — a **finding reported with its number**, not a quiet re-scope;
+  (c) a copy-out affordance later needs a menu, re-activating §3.11 rows 9 and 21 — a re-ruling of
+  gate-2 Q2, not an implementation detail; (d) a future milestone wants a done-ness signal from the
+  boxes of 002 or 007 — the answer is the pointer and § Closed milestones, and changing that is a new
+  human call, not a tidy-up.
+
 - **2026-08-03 · M8 GATE 2 — plan 008 (persona-#1 QoL) APPROVED. Its two architectural calls CONFIRMED,
   two of plan §8's four questions RULED, and two SCOPE INSTRUCTIONS issued to the tasks stage.
   `tasks.md` is the next artifact and the next gate.**

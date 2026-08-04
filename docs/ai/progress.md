@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-02 (spec-007 task 9.3 — the M7 close reconcile).*
+*Updated: 2026-08-03 (M8 gate 3 — tasks 008 approved; the checkbox convention settled).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -59,9 +59,24 @@ re-measurement**, not an edit) is explicit. Full record: `decisions.md` **2026-0
 both gate-2 scope instructions applied: the heaviest table-tools task is **split four ways** (3.2 module ·
 3.3 CSS + token verification · 3.4 the two app-page call sites · 3.5 containment) and the give-way is its
 own task (**5.7** — removal of D-6 sites 3–4 plus a re-measurement to a restored 318,747 B, never an edit to
-a constant). Q1 and Q2 are applied as ruled. **No code exists and `tasks.md` is NOT yet approved** — gate 3
-is the human's, and no implementation begins before it. The plan's status line stays "draft" by the M7
-precedent — the `decisions.md` bank is the approval of record, not the artifact header.
+a constant). Q1 and Q2 are applied as ruled.
+★ **`specs/008-persona-1-qol/tasks.md` HAS PASSED GATE 3 — APPROVED 2026-08-03 at `87532ad`. ALL THREE
+GEAR-3 GATES ARE BEHIND M8, AND THE NEXT ACT IS IMPLEMENTATION AT TASK 1.1, IN A FRESH SESSION** (C14,
+WORKFLOW.md §5.3) — one commit per task, the box ticked and the Now-pointer advanced in that same commit.
+The approval is banked in `decisions.md` (**2026-08-03 · M8 GATE 3**) and **the tasks file's status line
+stays "DRAFT awaiting gate 3"** by the precedent now four gates deep — the bank is the approval of record,
+not the artifact header. **Two consequences were flagged at the gate and BOTH ACCEPTED:** **(i)** the first
+**non-zero content-script byte delta in five milestones** lands at **3.3**, because the toolbar's CSS lives
+in `readerCss.ts` which is on **both** graphs — deliberate, so that with the CSS the only contributor in
+flight its **ablation is exact**, and the presentation stays revertable without touching the logic;
+**(ii)** **3.4 stays as-is** — the two app-page call sites plus the toolbar's structural rows — **not split
+further**, because per **D-6** the two sites are load-bearing *together* and wiring only the first ships a
+toolbar that disappears on the app page's own re-render (007 D-12's bug class). **Nothing is re-opened:** no
+D-value, no spec §3.x decision, no gate-1/gate-2 ruling, and §8-1 … §8-4 stay measure-then-choose —
+PRODUCED at 4.3 and 5.1–5.4, **CHOSEN by the human at 5.5**, executed at 5.6/5.7. ★ **And the carried
+CHECKBOX CONVENTION is SETTLED as a standing invariant: (c) — per-task ticking, each box in its own commit,
+forward from 008; 002 and 007 PREDATE it and are NOT retroactively ticked, their done-ness signal being this
+pointer and § Closed milestones.** See § Carried items (discharged) and the gate-3 entry.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a
@@ -428,8 +443,22 @@ measurement-driven or explicitly deferred.*
   string, and bundling a speculative one into a measured fix would have hidden it — the same reasoning
   that kept this fix out of the colour commit. **REVISIT WHEN:** a gantt-heavy document makes the
   repetition worth the machinery, or mermaid grows a span-aware default upstream.
+- **✅ DISCHARGED 2026-08-03 AT M8's GATE 3 — THE CHECKBOX CONVENTION IS SETTLED: OPTION (c), WITH A
+  PREDECESSOR NOTE. It is now a STANDING INVARIANT, banked in `decisions.md`'s 2026-08-03 M8 GATE 3
+  entry.** The item below is kept as written, because it is the record of what was counted and why the
+  call was routed rather than taken. **The ruling:** **(1) FORWARD, from 008 onward — PER-TASK TICKING.**
+  Each task's box is ticked **in ITS OWN commit**, the same commit that lands that task's code and
+  advances this file's Now-pointer; `tasks.md` ships with unticked boxes and they tick as tasks land.
+  006's shipped shape, promoted from habit to invariant so the divergence cannot recur. **(2)
+  PREDECESSORS ARE NOT RETROACTIVELY TICKED — 002 (0/15) and 007 (0/28) PREDATE the convention.** Their
+  done-ness signal is **this file's pointer and § Closed milestones**, NOT their boxes. ★ **Recorded
+  explicitly so a future reader does not read "007 is 0/28" as "007 is unstarted": the boxes are a
+  FORWARD convention, not a historical one** — M7 shipped all 28 tasks plus five further code commits.
+  Option (a) is **declined**: a retroactive 28-box commit is the per-task-in-its-own-commit convention
+  performed backwards. **Settled BEFORE M8's implementation begins, as the item below asked.**
 - **★ NEW AT 9.3, AND IT IS A HUMAN DECISION RATHER THAN WORK — THE CHECKBOX CONVENTION. 007 CLOSED WITH
-  ALL 28 BOXES UNTICKED, AND 9.3 DELIBERATELY DID NOT TICK THEM.** Counted at HEAD, not recalled:
+  ALL 28 BOXES UNTICKED, AND 9.3 DELIBERATELY DID NOT TICK THEM. — ✅ DISCHARGED, see the entry above.**
+  Counted at HEAD, not recalled:
   **001 15/15 · 003 15/15 · 004 19/19 · 005 25/25 · 006 20/20 ticked; 002 0/15; 007 0/28.** 006's boxes
   moved **per task, in each task's own commit** (22 commits touch its `tasks.md`); 007's `tasks.md` has
   not been touched since before task 1.1, and its own title line says *"check off in order"*. **So a
