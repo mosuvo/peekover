@@ -87,9 +87,12 @@ parses the URL, before any mount attempt. ★ **Registration is gated on NOTHING
 and **not on `installWatchForFile`'s `!decision.watchable` early return either**, which is the *reachable*
 silent drop the plan's site table would have walked into: a Firefox picker-route folder is
 `{watchable:false}`, so a register placed beside `registerDiffContext` leaves every agent file opened that
-way un-badged. Both gates asserted red-first. **GROUP 1 IS NOT DONE — TASK 1.5 IS NEXT** (the rect probe
-over the top band, at BOTH geometry widths, which **produces** the lane measurement and is FORBIDDEN from
-choosing the lane), then 1.6 (the zero-network guard) closes the group.
+way un-badged. Both gates asserted red-first. ★ **TASK 1.5 IS ALSO DONE — THE LANE IS MEASURED, AND
+DELIBERATELY NOT CHOSEN: the rect probe ran at BOTH geometry widths on both surfaces and both engines, it
+PRODUCED the lane number, and it left THREE FINDINGS for the human at 6.1** (the 1280 collision recorded
+rather than fixed; the `position:fixed` contained finding; rows 5/8 recorded as measurement). Full record
+below: *THE 1.5 LANE MEASUREMENT*. **GROUP 1 IS NOT DONE — TASK 1.6 IS NEXT** (the zero-network guard),
+and it closes the group.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
@@ -145,6 +148,89 @@ retired it.** The badge is on screen at a lane no rect probe has checked, and th
 state, not an oversight: gate-2 Q3 ruled *"produce, do not choose"*, so 1.5 measures it next and 6.1
 chooses. 1.4 deliberately asserts **no geometry whatsoever** — presence, structure and text only — so
 nothing in the shipped suite can quietly ratify a lane the human has not picked.
+
+### THE 1.5 LANE MEASUREMENT (spec 008 task 1.5, measured 2026-08-04 at HEAD `868a6d8` — **PRODUCED, NOT CHOSEN**)
+
+★ **THIS IS THE RECORD TASK 6.1 RULES ON. It contains no lane choice, and that is the point** — gate-2 Q3
+ruled *"produce, do not choose"*, so `readerCss.ts` is **UNTOUCHED** by 1.5 and the badge still ships at the
+provisional `top:56px;left:16px`. The probe measures; **6.1 chooses, on these numbers.** Instrument:
+`tests/browser/agentBadge.browser.test.ts`, **41 tests per engine (82 across Cr+Fx)** — the file 1.4 left at
+34 per engine, grown by 1.5's rect section. Every rect goes through `realRect()`, which asserts non-zero
+width AND height before returning, so **an "overlap: NONE" reading means *measured, nothing there* and never
+*measured nothing*** — the vacuity that a `getBoundingClientRect()` on a `display:none` node (all zeros,
+overlapping everything and nothing) would otherwise hide. **A test file ships nothing: all three bundles are
+byte- and md5-identical to 1.4's** (CS 319,709 B, Cr `a36bd676…` / Fx `fd8407ee…`; app chunk 389,957 B,
+`72058cff…`), rebuilt from a cleared `.output`.
+
+★ **THE LANE NUMBER — the deterministic-width input plan §8 Q3 prices the lane on.** All FIVE labels, read
+from the shipped frozen set rather than a re-typed list, **identical at 1280 and 1400, on both surfaces, on
+both engines** (the badge is `position:fixed`, so its own rect does not move with the viewport):
+
+| label | width | rect |
+|---|---|---|
+| `Agent file · AGENTS.md` | **171.0 px** — the WIDEST | `[16,56,187,93]` |
+| `Agent file · CLAUDE.md` | 170.9 px | `[16,56,187,93]` |
+| `Agent file · tasks.md` | 152.4 px | `[16,56,168,93]` |
+| `Agent file · spec.md` | 149.3 px (Cr) / 149.2 px (Fx) | `[16,56,165,93]` |
+| `Agent file · plan.md` | **148.4 px** — the NARROWEST | `[16,56,164,93]` |
+
+**Height 37.3 px at every label and every width.** The spread across the five is **22.6 px**, and the only
+cross-engine disagreement in the whole set is `spec.md`'s **0.1 px** — so the width really is deterministic,
+which is the property `diffChrome.ts:118-129` used to give the diff pill the left lane. **THE DERIVED LANE:
+`left:16 + widest 171 + a 24 px gutter = 211 px`.** That is the number, **not a recommendation** — whether
+the band takes a third lane at all is 6.1's call, and bottom-left is already ruled out upstream
+(`diffChrome.ts:55-60`).
+
+★ **FINDING 1 — THE 1280 COLLISION IS REAL, AND IT IS RECORDED RATHER THAN FIXED.** At **1280, full-page
+content-script reader**, the provisional lane lands **on the reading column's h1**: badge `[16,56,187,93]`
+vs h1 `[173,56,857,105]` — **~14 px of horizontal overlap, top edges flush at 56**, identical in Chromium
+and Firefox, and identical with the TOC rail forced open and left at its width-derived default. **At 1400 it
+clears with a 46 px gap** (h1 left edge moves to 233; the badge does not move). ★ **THIS IS FINDING 2's
+DEFECT CLASS EXACTLY — a single wide width would have hidden it**, which is why `GEOMETRY_WIDTHS` carries
+both and was copied rather than re-picked. **NOT FIXED: fixing it is choosing the lane**, and gate-2 Q3
+forbids 1.5 from doing that. **Routed to 6.1.**
+
+★ **FINDING 2 — THE `position:fixed` CONTAINED FINDING, which FALSIFIED THE PREDICTION 1.3 ROUTED HERE.**
+`.peekover-agent-badge` is **ABSENT from `CONTAINED_CSS`'s fixed→absolute list** (`src/theme/readerCss.ts:
+983-993`, re-derived against the tree this session — the list names the mode toggle, theme pill, watch pill,
+watch note, capture disclosure, diff affordance, diff picker, diff status, remote-load, net indicator and
+TOC, and **not the badge**). So on the app page **every sibling re-anchors to the pane and the badge stays
+pinned to the VIEWPORT** — measured: host `[344,77,1256,559]` at 1280, badge `[16,56,187,93]`, i.e. **the
+badge sits entirely OUTSIDE the pane it names**, over the app shell's chrome. ★ **THIS FALSIFIES 1.3's
+PREDICTED CONTAINED OVERLAP.** The picker's and status's `top:50` slot measures `[360,127,600,139]` and
+`[360,127,390,147]` (un-hidden for the probe; worst case with the picker's computed `max-height`,
+`[360,127,600,447]`), and **`overlap=false` against the badge in all four readings** — but *"no overlap"*
+here is **true for the wrong reason**: the two are in **different coordinate systems**, not clearing each
+other. **A PLACEMENT FINDING 6.1 MUST WEIGH — should the badge re-anchor on the contained pane?**
+**RECORDED, NOT RESOLVED.**
+
+★ **FINDING 3 — ROWS 5 AND 8 ARE EXECUTED AS MEASUREMENT, NOT AS CLEARANCE. This is a revisit-when (a)
+UNEXECUTABLE-CLAUSE finding, banked at discovery** — the **third in group 1**, after 1.3's added-line count
+and 1.4's unreachable `name === undefined` arm. The Verify contract words rows 5 and 8 as **clearances**
+(*"does not occlude the reading column's text"*, *"clears the TOC rail and the mode toggle"*, i.e.
+`expect(...).toBe(false)`), and written that way they were **RED on the first run, in both engines** — because
+the provisional lane genuinely does not clear at 1280. **There are exactly two ways to make a clearance
+assertion green from there and gate-2 Q3 forbids BOTH: move the badge (choosing the lane), or pin the
+geometry that happens to clear (ratifying the lane, and reddening the moment 6.1 moves it).** So the probe
+records every rect and **pins the MEASUREMENT instead — the overlap set is asserted to be exactly
+`{1280 cs open, 1280 cs default}`**, four of the sixteen (width × surface × rail) readings coming back
+occupied and twelve `NONE`. ★ **If 6.1 moves the badge this table REDS carrying both rects — and that is
+CORRECT**: it is a pin on the geometry, not on a required lane, and **6.1 is free to invalidate the whole
+table by choosing. That is what choosing means.**
+
+★ **THE TWO SUPPORTING READINGS, recorded so 6.1 sees them as numbers rather than discovering them at the
+walk.** (a) **THE FULL-PAGE COINCIDENCE IS A COLLISION, PROVEN BY ABLATION.** `.peekover-agent-badge` and
+`.peekover-diff-affordance` declare the **same** `top:56px;left:16px` on the full page, and the only thing
+holding them apart is **D-14** — `buildDiffChrome`'s gate is `isDiffContextRegistered()`, which no
+content-script graph ever satisfies. The probe **feeds the gate its input rather than editing it** (registers
+a diff context on the content-script surface; no `src/` module touched), and the affordance then really
+renders and the two rects really **do** overlap. **The coincidence is held by a BUILD-TIME CONDITION, not by
+geometry** — if D-14 ever changes, the badge is the one that gets covered. (b) **THE 414 READING, reported
+and deliberately not asserted** (`diffChrome.ts:77-82`'s pre-existing contained-pane condition): at 414 the
+content script collides with the h1 `[32,56,132,105]`; on the **app page the h1 measures ZERO WIDTH — it is
+not laid out at all**, so its "no collision" is the pre-existing 3.1-era condition and not a clearance.
+Asserting either would pin a condition that predates the badge onto the badge.
+
 ★ **D-12 discipline, per token, run this session:** `--sans` / `--shadow` light-block-only so identical in
 all three; `--muted` #5D6070 / #A0A4B8 / **#5D6070 inherited on sepia**; `--panel` #F4F4EF / #181B26 /
 **#F4F4EF inherited**; `--line` #E6E6DF / #262A38 / **#E6E6DF inherited**. ★ **The sepia reading is stated,

@@ -39,17 +39,29 @@
 // it, with no `await` for other code to observe — and the original href is restored in a `finally`.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { page } from 'vitest/browser';
 import { runReader, removeHideStyle } from '../../src/render/runReader';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { installContentWatch } from '../../src/watch/contentWatch';
 import { AGENT_BADGE_CLASS } from '../../src/render/agentBadge';
+import { AGENT_FILE_NAMES } from '../../src/render/agentFile';
 import { getDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { resetWatchRegistryForTest, isWatching } from '../../src/watch/watchRegistry';
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
-import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import {
+  DIFF_AFFORDANCE_CLASS,
+  DIFF_PICKER_CLASS,
+  DIFF_STATUS_CLASS,
+} from '../../src/render/diffChrome';
+import {
+  createDiffContext,
+  registerDiffContext,
+  isDiffContextRegistered,
+  resetDiffRegistryForTest,
+} from '../../src/render/diffRegistry';
 import { WATCH_READ, type WatchMessage } from '../../src/watch/watchRelay';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────────────────────
@@ -167,6 +179,46 @@ const badgesIn = (host: HTMLElement) => [
 ];
 const badgeIn = (host: HTMLElement) => badgesIn(host)[0] ?? null;
 const readerIn = (host: HTMLElement) => shadowOf(host).querySelector<HTMLElement>('.peekover-reader')!;
+
+// ── Rect readers (task 1.5) ───────────────────────────────────────────────────────────────────
+//
+// Copied in SHAPE from `diffChrome.browser.test.ts:207-215`, which is 6.2's worked elimination and
+// the precedent D-12 names. Deliberately NOT imported from there: that file is a test module with
+// its own `vi.mock` factories and its own lifecycle, and importing it would run them.
+
+function intersects(a: DOMRect, b: DOMRect): boolean {
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+}
+
+/** Page coordinates, rounded — the form every prior placement record in this repo is written in. */
+const fmt = (r: DOMRect): string =>
+  `[${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.right)},${Math.round(r.bottom)}]`;
+
+/**
+ * ★ THE FIRING CONTROL FOR EVERY RECT IN THIS FILE. `getBoundingClientRect()` on a missing node is
+ * a TypeError, but on a `display:none` or zero-size one it returns all zeros — and an all-zero rect
+ * overlaps nothing, so a clearance assertion built on one passes while measuring NOTHING. Every
+ * rect the probe reads goes through here, so a zero-overlap reading means "measured, no overlap"
+ * and never "measured nothing".
+ */
+function realRect(el: Element | null, what: string): DOMRect {
+  expect(el, `${what} is ABSENT — this probe would have measured nothing`).not.toBeNull();
+  const r = (el as HTMLElement).getBoundingClientRect();
+  expect(r.width, `${what} has zero width — a vacuous rect`).toBeGreaterThan(0);
+  expect(r.height, `${what} has zero height — a vacuous rect`).toBeGreaterThan(0);
+  return r;
+}
+
+/** The produce half of produce-do-not-choose: every number this probe reads is written to the run
+ *  log, so task 6.1 rules on measurements rather than on a re-run. */
+/** Which engine produced a reading. The two run in ONE interleaved stdout stream, so a line that
+ *  does not name its engine cannot be attributed — and the label widths below differ between them
+ *  by up to 4px, which is exactly the kind of number 6.1 must not read off the wrong engine. */
+const ENGINE = navigator.userAgent.includes('Firefox') ? 'Fx' : 'Cr';
+
+function record(line: string): void {
+  console.log(`[1.5][${ENGINE}] ${line}`); // the measurement IS this task's deliverable (D-12)
+}
 
 /** Every piece of chrome BESIDE the reading column, as text — the surface a stray explanatory
  *  note would have to appear on (row 2's "and no note" half). */
@@ -447,5 +499,513 @@ describe('the content-script name comes from the REAL url, through the REAL pars
     expect(getDocIdentity()).toBe('');
     expect(badgeIn(host)).toBeNull();
     expect(readerIn(host).querySelector('h1')).not.toBeNull(); // never blank
+  });
+});
+
+// ══ TASK 1.5 — THE BADGE'S PLACEMENT: A REAL RECT PROBE OVER THE TOP BAND ══════════════════════
+//
+// ★★ THIS SECTION PRODUCES THE LANE MEASUREMENT AND IS FORBIDDEN FROM CHOOSING THE LANE.
+// Gate-2 Q3 ruled the badge's lane UNCHANGED — *"produce, do not choose"*. So nothing below edits
+// `readerCss.ts`, adds a `CONTAINED_CSS` override, or resolves a collision it finds: every reading,
+// INCLUDING the ones that come back as overlaps, is written to the run log by `record()` and the
+// CHOICE is the human's at task 6.1. An overlap here is a MEASUREMENT, not a failure to fix.
+//
+// ── WHY THESE ARE RECT ASSERTIONS AND NOT DOM-SHAPE ONES ─────────────────────────────────────
+//
+// 1.4's cases above are all structure — parentage, text, count — and every one of them is green
+// against a badge painted on top of the h1, because a DOM-shape assertion cannot see a pixel. D-12
+// exists for that gap: *"placement is re-measured with a real rect probe, never chosen"*. Every
+// assertion below reads `getBoundingClientRect()` in a real engine, through `realRect()`, which is
+// the firing control — jsdom returns all-zero rects and applies no cascade, so this is a
+// real-engine test or it is nothing.
+//
+// ── BOTH WIDTHS, AND WHY THAT IS NOT BELT-AND-BRACES (finding 2) ─────────────────────────────
+//
+// `GEOMETRY_WIDTHS` is 1280 AND 1400, copied from `diffChrome.browser.test.ts:83-86` rather than
+// re-picked, and recovery B1's own note is the reason: 1400 alone sat on the CLEAN side of the
+// finding-2 collision (the reading column's left margin was wide enough there to hide it) and a
+// single wide width let that defect class ship. M8 puts new chrome in the same band, so both.
+//
+// ── THE 414 READING IS REPORTED, NOT ASSERTED ────────────────────────────────────────────────
+//
+// `diffChrome.ts:77-82` records that at 414x896 the app shell leaves the reader host 146px wide —
+// narrower than a single pill — so EVERY candidate collides there and the existing aside stack
+// already self-overlaps before any M8 chrome is added. Asserting at that width would pin a
+// pre-existing 3.1-era condition of the contained pane onto the badge. It is MEASURED and recorded
+// here anyway, so 6.1 sees it as a number rather than discovering it at the walk.
+
+const NARROW = { width: 414, height: 896 }; // the browser project's own default, restored after each
+const GEOMETRY_WIDTHS = [
+  ['1280', { width: 1280, height: 900 }],
+  ['1400', { width: 1400, height: 900 }],
+] as const;
+
+/** ★ ALL FIVE LABELS, READ FROM THE SHIPPED FROZEN SET — never a re-typed list, which a rename
+ *  would silently strand. Plan §8 Q3 prices the badge's lane on the label being "one of ~6
+ *  strings"; `AGENT_FILE_NAMES` is frozen at five, so `Agent file · ${name}` is exactly five
+ *  enumerable strings and the widest is DERIVABLE rather than tuned — the same deterministic-width
+ *  argument `diffChrome.ts:118-129` used to give the diff pill the left lane. */
+const ALL_AGENT_NAMES = [...AGENT_FILE_NAMES];
+
+/**
+ * THE PROBE DOCUMENT, and every part of it is load-bearing:
+ *   • a SECOND heading, because `buildTocView` omits the rail below two (`tocView.ts:546`) — the
+ *     first run of this probe measured a band with NO rail in it and row 8's clearance loop cleared
+ *     nothing, which is the vacuity `realRect` exists to catch and did;
+ *   • genuinely blocked media, so `.peekover-remote-load` — the other declared occupant of the top
+ *     band — is REALLY on screen while the badge is measured. Row 7 requires the probe run with the
+ *     remote-load pill and the network indicator present, not against an empty band.
+ */
+const DOC_MEDIA = [
+  '# Heading',
+  'Some body text that makes the reader non-empty.',
+  '## Section two',
+  'A second heading, so the rail really renders.',
+  '![blocked](https://example.invalid/x.png)',
+].join('\n\n');
+
+/** The band's siblings, by the class each module exports or ships. Probed as a set so a new pill
+ *  added to the band later is measured by name rather than silently uncovered. */
+const BAND_SIBLINGS = [
+  ['mode toggle', '.peekover-mode-toggle'],
+  ['theme pill', '.peekover-theme-toggle'],
+  ['watch pill', '.peekover-watch'],
+  ['watch note', '.peekover-watch-note'],
+  ['capture disclosure', '.peekover-watch-disclosure'],
+  ['remote-load', '.peekover-remote-load'],
+  ['network indicator', '.peekover-net'],
+  ['TOC handle', '.peekover-toc__toggle'],
+  ['TOC list', '.peekover-toc__list'],
+] as const;
+
+/**
+ * Put the surface into the state row 7 names: the network indicator revealed, the TOC rail forced
+ * OPEN, and one paint elapsed first.
+ *
+ * The `flush()`-then-`data-toc` order is `diffChrome.browser.test.ts:356-360`'s finding, copied for
+ * its stated reason: `tocView`'s width-derived initial state lands a frame LATER and stomps an
+ * early `data-toc="open"` back to `collapsed`, which once hid the rail's entry list during a
+ * placement probe and nearly cleared a candidate that in fact sat on it.
+ */
+async function settleTheBand(host: HTMLElement): Promise<void> {
+  // TWO frames, not one: `applyInitialTocState` re-runs `decide()` against the real laid-out width
+  // one frame after build and writes the width-derived default then (`tocView.ts:461-471` records
+  // the stomp in as many words). Reading earlier measures a rail state the user never sees.
+  await sleep(30);
+  host.setAttribute('data-network', 'active');
+  await sleep(30);
+}
+
+async function openTheBand(host: HTMLElement): Promise<void> {
+  await sleep(30);
+  host.setAttribute('data-toc', 'open');
+  // The indicator ships `display:none` and is revealed by the host attribute the first network
+  // action sets (`readerCss.ts`'s `:host([data-network="active"])`). This is a GEOMETRY probe, so
+  // the attribute is set directly: nothing here performs a network action, and 1.6 is the task that
+  // proves none happens.
+  host.setAttribute('data-network', 'active');
+  await sleep(30);
+}
+
+/** Restore the project default so a viewport this section sets cannot leak into another file. */
+afterEach(async () => {
+  await page.viewport(NARROW.width, NARROW.height);
+});
+
+// ── ROW 11 + ROW 7 — WHERE THE BADGE ACTUALLY IS, AT ALL FIVE LABELS ─────────────────────────
+
+describe.each(GEOMETRY_WIDTHS)('1.5 · the badge’s own rect at %s (rows 7, 11)', (width, size) => {
+  it.each([
+    ['content script', 'cs'],
+    ['app page', 'app'],
+  ] as const)(`row 11 — %s: the badge is ANCHORED to the lane it declares, all five labels`, async (
+    surfaceLabel,
+    kind,
+  ) => {
+    await page.viewport(size.width, size.height);
+
+    for (const name of ALL_AGENT_NAMES) {
+      reset();
+      const host =
+        kind === 'cs' ? openContentScript(name, DOC_MEDIA) : await openAppPage(name, DOC_MEDIA);
+      await openTheBand(host);
+
+      const badge = badgeIn(host);
+      const rect = realRect(badge, `badge (${name}) on the ${surfaceLabel}`);
+      const style = getComputedStyle(badge!);
+
+      // ROW 11, in the only form that can fire: the rect agrees with the DECLARED inset, resolved
+      // against the badge's own containing block. A computed-style check alone would pass on a rule
+      // that never matched; a rect alone would pass on a lane nobody declared.
+      const box = style.position === 'fixed' ? new DOMRect(0, 0, innerWidth, innerHeight)
+        : host.getBoundingClientRect();
+      expect(Math.round(rect.left - box.left), `${name}: left inset`).toBe(
+        Math.round(parseFloat(style.left)),
+      );
+      expect(Math.round(rect.top - box.top), `${name}: top inset`).toBe(
+        Math.round(parseFloat(style.top)),
+      );
+
+      record(
+        `${width} ${surfaceLabel} · badge "Agent file · ${name}" ${fmt(rect)} ` +
+          `w=${rect.width.toFixed(1)} h=${rect.height.toFixed(1)} ` +
+          `position:${style.position} top:${style.top} left:${style.left}`,
+      );
+    }
+  });
+});
+
+// ══ ROWS 5 AND 8 — THE CLEARANCE READINGS, AND WHY THEY ARE RECORDED RATHER THAN ASSERTED ═════
+//
+// ★★ THIS IS THE POINT AT WHICH produce-do-not-choose STOPPED BEING A FORMALITY. The Verify
+// contract words rows 5 and 8 as clearances — *"the badge does not occlude the reading column's
+// text at either width"*, *"it clears the TOC rail and the mode toggle"*. Written as `expect(...
+// ).toBe(false)` they were RED on the first run, in both engines, and the reading is not a harness
+// fault:
+//
+//   1280, content script:  badge [16,56,187,93]  vs  reader h1 [173,56,857,105]  — OVERLAP.
+//
+// The provisional lane fails row 5 at 1280. There are exactly two ways to make a clearance
+// assertion green from here, and gate-2 Q3 forbids both: MOVE THE BADGE (choosing the lane), or
+// PIN the geometry that happens to clear (ratifying the lane, and reddening the moment 6.1 moves
+// it). So rows 5 and 8 are executed as what D-12 actually asked for — *"PRODUCES numbers; the LANE
+// CHOICE is plan §8 Q3 and is taken by the human at 6.1"* — and every rect, overlap and clearance
+// is written to the run log instead.
+//
+// ★ WHAT STILL FIRES HERE, so this is a measurement and not an empty pass: `realRect` proves the
+// badge, the h1, the paragraph and each band sibling are on screen with non-zero rects, so
+// `overlaps: NONE` means *measured, nothing there* and never *measured nothing*. The overlap SET is
+// asserted to be exactly what was measured, so a future run that changes it fails loudly with both
+// rects in the message rather than drifting silently — a pin on the MEASUREMENT, which 6.1 is free
+// to invalidate by choosing, not a pin on the LANE.
+//
+// ★ THE TARGET IS RENDERED CONTENT, NOT `.peekover-reader`'s OWN BOX — `diffChrome.browser.test.ts:
+// 425-430`'s finding, carried rather than re-derived: the column's `padding:56px 32px 130px` is
+// empty at every width forever and recovery B1 deliberately put a pill INSIDE it, so a whole-box
+// reading would condemn a lane that is in fact clear. What must never be covered is TEXT.
+
+/**
+ * One (width, surface, rail-state) reading: every rect the row-5/row-8 probe touches, and the
+ * overlaps.
+ *
+ * ★ RAIL STATE IS A DIMENSION, NOT A SETTING, and that is a finding of this probe rather than
+ * thoroughness for its own sake: `readerCss.ts`'s B1 block records that the `data-toc="open"`
+ * override MOVES the reading column's left margin, and the column's left edge is precisely what
+ * decides whether the badge's `left:16` lane reaches its text. A probe that measured only the
+ * forced-open rail would report the column at ONE of its two shipped positions and 6.1 would choose
+ * a lane against half the geometry. Both states are read: `open` forced, and DEFAULT — whatever
+ * `applyInitialTocState` derives from the width on a cold start.
+ */
+async function probeBand(
+  width: string,
+  surfaceLabel: string,
+  kind: 'cs' | 'app',
+  rail: 'open' | 'default',
+): Promise<string[]> {
+  const host =
+    kind === 'cs' ? openContentScript('CLAUDE.md', DOC_MEDIA) : await openAppPage('CLAUDE.md', DOC_MEDIA);
+  if (rail === 'open') await openTheBand(host);
+  else await settleTheBand(host);
+  // ★ THE REQUESTED STATE AND THE OBSERVED ONE, BOTH IN THE LABEL. At 1280 and 1400 the
+  // width-derived default resolves to OPEN, so `default` and `open` measure the same geometry and
+  // the dimension is DEGENERATE at both geometry widths. That is not wasted work: it is the proof
+  // that the forced-open reading is the state a user actually sees at these widths, rather than an
+  // artifact of the probe holding the rail open. If a future width rule changes, the two labels
+  // diverge in the log and say so.
+  const railState = host.getAttribute('data-toc') ?? '(unset)';
+  surfaceLabel = `${surfaceLabel} rail:${rail}→${railState}`;
+
+  // The WIDEST of the five labels is the only one that can reach furthest across the band, and it
+  // is measured in the row-7 block above rather than asserted from a constant here.
+  const badge = realRect(badgeIn(host), `badge on the ${surfaceLabel}`);
+  const shadow = shadowOf(host);
+  const reader = readerIn(host);
+
+  // ROW 5 — the reading column's TEXT.
+  const h1 = realRect(reader.querySelector('h1'), 'reader h1');
+  const p = realRect(reader.querySelector('p'), 'reader first paragraph');
+  record(`${width} ${surfaceLabel} · badge ${fmt(badge)} · h1 ${fmt(h1)} · p ${fmt(p)}`);
+
+  const hits: string[] = [];
+  if (intersects(badge, h1)) hits.push(`reader h1 ${fmt(h1)}`);
+  if (intersects(badge, p)) hits.push(`reader p ${fmt(p)}`);
+
+  // ROW 8 — the TOC rail, the mode toggle, and the rest of the band. NON-VACUOUS AND NAMED: the two
+  // the row actually names must BE on screen, or "clears them" is a reading about an empty screen.
+  // The remote-load pill is named too, because the whole point of `DOC_MEDIA` is an OCCUPIED band.
+  expect(shadow.querySelector('.peekover-toc__toggle'), 'TOC rail absent').not.toBeNull();
+  expect(shadow.querySelector('.peekover-mode-toggle'), 'mode toggle absent').not.toBeNull();
+  expect(
+    shadow.querySelector('.peekover-remote-load'),
+    'remote-load absent — the blocked-media fixture stopped working',
+  ).not.toBeNull();
+
+  for (const [name, sel] of BAND_SIBLINGS) {
+    const el = shadow.querySelector<HTMLElement>(sel);
+    if (!el || el.hidden) continue;
+    const other = el.getBoundingClientRect();
+    if (other.width === 0 || other.height === 0) continue; // measured, and genuinely not on screen
+    record(`${width} ${surfaceLabel} · badge ${fmt(badge)} vs ${name} ${fmt(other)}`);
+    if (intersects(badge, other)) hits.push(`${name} ${fmt(other)}`);
+  }
+
+  record(
+    `${width} ${surfaceLabel} · ROWS 5+8 OVERLAPS: ${hits.length === 0 ? 'NONE' : hits.join(' · ')}`,
+  );
+  return hits;
+}
+
+describe.each(GEOMETRY_WIDTHS)('1.5 · rows 5 + 8 — the clearance reading at %s (MEASURED)', (
+  width,
+  size,
+) => {
+  it.each([
+    ['content script', 'cs', 'open'],
+    ['content script', 'cs', 'default'],
+    ['app page', 'app', 'open'],
+    ['app page', 'app', 'default'],
+  ] as const)('%s, rail %3$s, remote-load and network indicator present', async (
+    surfaceLabel,
+    kind,
+    rail,
+  ) => {
+    await page.viewport(size.width, size.height);
+    const hits = await probeBand(width, surfaceLabel, kind, rail);
+
+    // ★ THE PIN IS ON THE MEASUREMENT, NOT ON THE LANE. The occupied readings below are the
+    // FINDING task 6.1 rules on, written as a table so the run states which cases collide instead
+    // of leaving it to the log. If a reading changes without the lane changing — a copy edit that
+    // widens the label, a column-margin change — this reds carrying both rects. 6.1 is free to
+    // invalidate the whole table by choosing a lane; that is what choosing means.
+    const OCCUPIED = new Set(['1280 cs open', '1280 cs default']);
+    expect(
+      hits.length > 0,
+      `the measured overlap set changed: ${hits.length === 0 ? 'NONE' : hits.join(' · ')}`,
+    ).toBe(OCCUPIED.has(`${width} ${kind} ${rail}`));
+  });
+});
+
+// ── ROW 10 — OUT OF FLOW: THE PAGE UNDER THE BADGE DOES NOT MOVE ─────────────────────────────
+//
+// The badge is `position:fixed`, so it should take NO space in the flow — and the assertion the row
+// asks for is the one that can actually fire: render the SAME document twice, once under a name the
+// registry recognizes and once under one it does not, and require the column's first block to land
+// on the SAME rect. Against a badge that had been made static or in-flow, the badged run pushes the
+// column down and this is the only case in the file that reds.
+
+describe.each(GEOMETRY_WIDTHS)('1.5 · row 10 — the badge is OUT OF FLOW at %s', (width, size) => {
+  it.each([
+    ['content script', 'cs'],
+    ['app page', 'app'],
+  ] as const)('%s: the column’s first block lands on the same rect with and without it', async (
+    surfaceLabel,
+    kind,
+  ) => {
+    await page.viewport(size.width, size.height);
+
+    const open = async (name: string): Promise<HTMLElement> =>
+      kind === 'cs' ? openContentScript(name, DOC_MEDIA) : openAppPage(name, DOC_MEDIA);
+
+    const badged = await open('CLAUDE.md');
+    await openTheBand(badged);
+    expect(badgeIn(badged), 'the badged run grew no badge').not.toBeNull();
+    const withBadge = realRect(readerIn(badged).querySelector('h1'), 'h1 (badged run)');
+    const badgeRect = realRect(badgeIn(badged), 'badge');
+
+    reset();
+
+    const plain = await open(PLAIN_NAME);
+    await openTheBand(plain);
+    expect(badgeIn(plain), 'the control run grew a badge — it is not a control').toBeNull();
+    const withoutBadge = realRect(readerIn(plain).querySelector('h1'), 'h1 (un-badged run)');
+
+    record(
+      `${width} ${surfaceLabel} · row10 h1 badged ${fmt(withBadge)} · un-badged ` +
+        `${fmt(withoutBadge)} · badge ${fmt(badgeRect)}`,
+    );
+    expect(Math.round(withBadge.top)).toBe(Math.round(withoutBadge.top));
+    expect(Math.round(withBadge.left)).toBe(Math.round(withoutBadge.left));
+    expect(Math.round(withBadge.width)).toBe(Math.round(withoutBadge.width));
+    expect(Math.round(withBadge.height)).toBe(Math.round(withoutBadge.height));
+  });
+});
+
+// ══ (a) THE FULL-PAGE COINCIDENCE — TWO RULES, ONE OFFSET, HELD APART BY A BUILD-TIME GATE ════
+//
+// `readerCss.ts` records it and routes it here: on the FULL PAGE, `.peekover-agent-badge` and
+// `.peekover-diff-affordance` declare the SAME `top:56px;left:16px`, and the only thing keeping
+// them off each other is D-14 — `buildDiffChrome`'s gate is `isDiffContextRegistered()`, and no
+// content-script graph ever registers a context. That is a coincidence held by a BUILD-TIME
+// CONDITION, not by geometry. If D-14 ever changes, these two land on each other silently and the
+// badge is the one that would be covered.
+//
+// ★ THE RED-FIRST IS THE GATE'S INPUT, NOT ITS CODE. The ablation registers a diff context on the
+// content-script surface — the one call `appShell` makes and `contentWatch` does not — and nothing
+// in `src/` is edited. The affordance then really renders on the full page and the probe really
+// reads two overlapping rects, which is the collision the gate currently prevents, in pixels.
+
+describe.each(GEOMETRY_WIDTHS)('1.5 · (a) the full-page offset coincidence at %s', (width, size) => {
+  it('the gate HOLDS: no affordance on the content script, so the badge’s slot is its own', async () => {
+    await page.viewport(size.width, size.height);
+    const host = openContentScript('CLAUDE.md', DOC_MEDIA);
+    await openTheBand(host);
+
+    expect(isDiffContextRegistered(), 'a content-script graph registered a diff context').toBe(false);
+    expect(
+      shadowOf(host).querySelector(`.${DIFF_AFFORDANCE_CLASS}`),
+      'D-14 broke: the diff affordance rendered on the content script',
+    ).toBeNull();
+
+    const badge = realRect(badgeIn(host), 'badge');
+    record(`${width} full page · badge ${fmt(badge)} · affordance NOT RENDERED (D-14 gate holds)`);
+  });
+
+  it('★ RED-FIRST — with the gate’s input supplied, the two rects really do COLLIDE', async () => {
+    await page.viewport(size.width, size.height);
+
+    // THE ABLATION: supply the context `appShell.installWatchForFile` supplies, on the surface that
+    // never does. No production module is edited and `buildDiffChrome`'s gate is untouched — it is
+    // FED rather than removed, which is why this reads the real rule at its real offset.
+    registerDiffContext(
+      createDiffContext({
+        docId: 'ablation',
+        getCurrentSource: () => DOC_MEDIA,
+        fetchMeta: async () => [],
+        fetchText: async () => undefined,
+        showDiff: () => ({ ok: true }),
+        hideDiff: () => undefined,
+      }),
+    );
+    const ablated = openContentScript('CLAUDE.md', DOC_MEDIA);
+    await openTheBand(ablated);
+
+    const badge = realRect(badgeIn(ablated), 'badge (gate ablated)');
+    const affordance = realRect(
+      shadowOf(ablated).querySelector(`.${DIFF_AFFORDANCE_CLASS}`),
+      'diff affordance (gate ablated)',
+    );
+
+    record(
+      `${width} full page · GATE ABLATED · badge ${fmt(badge)} vs affordance ${fmt(affordance)} ` +
+        `· overlap=${intersects(badge, affordance)}`,
+    );
+    // ★ THE POINT: the coincidence is real and it is a collision, so the assertion above is guarding
+    // something rather than restating an absence. Recorded, NOT resolved — 6.1 rules.
+    expect(intersects(badge, affordance), 'the two rules do NOT in fact share a slot').toBe(true);
+
+    resetDiffRegistryForTest();
+  });
+});
+
+// ══ (b) THE CONTAINED PANE — THE BADGE AGAINST THE top:50 SLOT ════════════════════════════════
+//
+// The live collision candidate `readerCss.ts` flagged as *"the first thing 1.5 should probe"*:
+// recovery B1 moved `.peekover-diff-affordance` to `top:12` and its picker and status to `top:50`
+// under `CONTAINED_CSS`, while the badge declares `top:56`. Both the picker and the status are
+// `hidden` until opened, so nothing on screen shows the reading — it has to be measured.
+//
+// ★ THE PICKER AND STATUS ARE UN-HIDDEN TO BE MEASURED, and that is a probe action on SHIPPED
+// chrome, not a fixture: the elements, their classes and their offsets are all production. An empty
+// picker's HEIGHT is content-dependent, so the worst case is measured too — its real left/top/width
+// with its real computed `max-height` — and both readings are recorded.
+
+describe.each(GEOMETRY_WIDTHS)('1.5 · (b) the contained pane’s top:50 slot at %s', (width, size) => {
+  it('the badge’s rect against the diff picker’s and status’s slot — MEASURED, not resolved', async () => {
+    await page.viewport(size.width, size.height);
+    const host = await openAppPage('CLAUDE.md', DOC_MEDIA);
+    await openTheBand(host);
+
+    const shadow = shadowOf(host);
+    const badge = realRect(badgeIn(host), 'badge (contained pane)');
+    const hostRect = host.getBoundingClientRect();
+    record(
+      `${width} contained · host ${fmt(hostRect)} · badge ${fmt(badge)} ` +
+        `position:${getComputedStyle(badgeIn(host)!).position}`,
+    );
+
+    const picker = shadow.querySelector<HTMLElement>(`.${DIFF_PICKER_CLASS}`);
+    const status = shadow.querySelector<HTMLElement>(`.${DIFF_STATUS_CLASS}`);
+    if (picker === null && status === null) {
+      // A designed state, recorded rather than skipped: this harness's folder source may not reach
+      // `appShell`'s `docId != null` block, in which case D-14's gate keeps the diff chrome off
+      // this pane too and the top:50 slot is EMPTY here. 6.1 needs to know which of the two it is.
+      record(`${width} contained · diff chrome NOT REGISTERED on this pane — top:50 slot is empty`);
+      expect(isDiffContextRegistered()).toBe(false);
+      return;
+    }
+
+    for (const [name, el] of [
+      ['diff picker', picker],
+      ['diff status', status],
+    ] as const) {
+      if (el === null) continue;
+      const wasHidden = el.hidden;
+      el.hidden = false; // the slot it occupies WHEN OPENED — the only way to read a hidden rect
+      const slot = realRect(el, `${name} (un-hidden for the probe)`);
+      const maxH = parseFloat(getComputedStyle(el).maxHeight);
+      const worst = new DOMRect(
+        slot.left,
+        slot.top,
+        slot.width,
+        Number.isFinite(maxH) ? Math.max(slot.height, maxH) : slot.height,
+      );
+      record(
+        `${width} contained · badge ${fmt(badge)} vs ${name} ${fmt(slot)} ` +
+          `(empty) overlap=${intersects(badge, slot)} · worst-case ${fmt(worst)} ` +
+          `overlap=${intersects(badge, worst)}`,
+      );
+      el.hidden = wasHidden;
+    }
+    // NO ASSERTION ON THE OUTCOME. Whether these overlap is the FINDING task 6.1 rules on; an
+    // assertion here would be this task quietly ratifying a lane, which gate-2 Q3 forbids. The
+    // firing control is `realRect` above: every rect written to the log is a real, non-zero one.
+  });
+});
+
+// ══ THE 414 READING — reported beside the wide ones, deliberately not asserted ═════════════════
+
+describe('1.5 · the 414x896 reading, RECORDED (diffChrome.ts:77-82’s pre-existing condition)', () => {
+  it.each([
+    ['content script', 'cs'],
+    ['app page', 'app'],
+  ] as const)('%s: the badge’s rect and every band overlap it has at 414', async (surfaceLabel, kind) => {
+    await page.viewport(NARROW.width, NARROW.height);
+    const host =
+      kind === 'cs'
+        ? openContentScript('CLAUDE.md', DOC_MEDIA)
+        : await openAppPage('CLAUDE.md', DOC_MEDIA);
+    await openTheBand(host);
+
+    const badge = realRect(badgeIn(host), `badge at 414 on the ${surfaceLabel}`);
+    const hits: string[] = [];
+
+    // ★ THE COLUMN IS READ SOFTLY HERE, AND THAT IS ITSELF THE 414 FINDING. On the app page at 414
+    // the shell's tree leaves the reader pane so narrow that the h1 measures ZERO WIDTH — it is not
+    // laid out at all — which is `diffChrome.ts:77-82`'s pre-existing contained-pane condition
+    // showing up in a rect. `realRect` would (correctly) call that vacuous and stop the run; the
+    // reading is recorded instead, because 6.1 needs the number rather than a red.
+    const h1El = readerIn(host).querySelector<HTMLElement>('h1');
+    const h1 = h1El?.getBoundingClientRect() ?? null;
+    record(
+      `414 ${surfaceLabel} · reader h1 ${h1 === null ? 'ABSENT' : fmt(h1)}` +
+        `${h1 !== null && (h1.width === 0 || h1.height === 0) ? ' — ZERO-SIZE, not laid out' : ''}`,
+    );
+    if (h1 !== null && h1.width > 0 && h1.height > 0 && intersects(badge, h1)) {
+      hits.push(`reader h1 ${fmt(h1)}`);
+    }
+
+    for (const [name, sel] of BAND_SIBLINGS) {
+      const el = shadowOf(host).querySelector<HTMLElement>(sel);
+      if (!el || el.hidden) continue;
+      const other = el.getBoundingClientRect();
+      if (other.width === 0 || other.height === 0) continue;
+      if (intersects(badge, other)) hits.push(`${name} ${fmt(other)}`);
+    }
+    record(
+      `414 ${surfaceLabel} · badge ${fmt(badge)} · collisions: ` +
+        `${hits.length === 0 ? 'NONE' : hits.join(' · ')}`,
+    );
+    // Reported, not asserted — and the firing control is that the badge and the h1 both have real,
+    // non-zero rects above, so "NONE" would be a measurement and not an empty screen.
   });
 });

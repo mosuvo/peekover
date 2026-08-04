@@ -236,7 +236,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       **vanishes** — the silent drop D-1 named. Golden EMPTY · manifest green **2975 B** · `permissions: []` ·
       `mount.ts` diff still exactly one line. [D-1, D-2; §4 agent-file; rows 1, 2, 3, 4, 14, 15, 23]
 
-- [ ] **1.5 The badge's PLACEMENT — a real rect probe over the top band (§3.11 rows 5, 7, 8, 10, 11).
+- [x] **1.5 The badge's PLACEMENT — a real rect probe over the top band (§3.11 rows 5, 7, 8, 10, 11).
       PRODUCES the lane measurement; FORBIDDEN FROM CHOOSING THE LANE (plan §8 Q3).** D-12: **placement is
       re-measured with a real rect probe (005's precedent, `diffChrome.ts:38-129`'s worked elimination), never
       chosen.** Row 7's own wording is that **the lane assignment must be re-measured, not assumed**.
@@ -248,7 +248,9 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       a **rect equality on the column's first block with and without the badge**. **Row 11:** anchored to the
       lane it claims. **Row 7 — the measurement:** the top band `diffChrome.ts:110-129` splits into lanes, and
       **that block's own rule gives the left lane to the deterministic-width element**; the badge's width is
-      one of ~6 enumerable strings, so probe **all of them**, at both widths, **with the network indicator and
+      one of **five** enumerable strings (`AGENT_FILE_NAMES` is frozen at five — the "~6" this line carried
+      until 1.5 was an estimate from plan §8 Q3's aside, corrected against the shipped set), so probe **all of
+      them**, at both widths, **with the network indicator and
       the remote-load pill present** (row 7's sibling source: `themeControl:352`, `watchControl:471`). Report
       the **414** reading beside the wide ones, because `diffChrome.ts:77-82` records that at 414 **every**
       candidate already collides — surfaced here rather than discovered at the walk. ★ **PRODUCES numbers; the
