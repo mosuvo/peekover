@@ -20,6 +20,9 @@ import {
   type DiffOutcome,
 } from './diffRegistry';
 import type { SnapshotMetaEntry } from '../app/snapshots';
+// 2.4's lane lives in the CONTAINED sheet, and the assertion that it exists reads the real export
+// rather than a copy of it — a transcribed selector could drift from the shipped one silently.
+import { CONTAINED_CSS, READER_CSS } from '../theme/readerCss';
 
 const ENTRIES: SnapshotMetaEntry[] = [
   { id: 'older', ts: 1_700_000_000_000, bytes: 512 },
@@ -460,21 +463,146 @@ describe('buildDiffChrome — the fallback (plan §1.5, §7-8): explain, never b
     expect(pickerOf(box).hidden).toBe(false);
   });
 
-  it('the picker and the status line are mutually exclusive on every path', async () => {
-    // The CSS parks both in the same measured slot (readerCss.ts), which is only safe because
-    // the code guarantees this. Pinned so a future path cannot quietly overlap them.
-    const rec = recordingContext({ fetchText: async () => undefined });
-    registerDiffContext(rec.context);
-    const box = build();
-    const bothVisible = () => !pickerOf(box).hidden && !statusOf(box).hidden;
+  // ── 2.4: THE INVARIANT ABOVE THIS LINE WAS RE-SCOPED, NOT DELETED ────────────────────────────
+  //
+  // It used to read "mutually exclusive on EVERY path", and the CSS at readerCss.ts:421-428 leaned
+  // on it in as many words. D-4's two HALF-EMPTY states end that: the picker LISTS the kind that
+  // has entries while the status SPEAKS the empty one, both open at once, by design. So the
+  // invariant becomes "mutually exclusive except the half-empty states, which are non-overlapping
+  // by measured lane" — and it is pinned in BOTH halves below.
+  //
+  // ★ WHY THE OLD TEST WOULD HAVE STAYED GREEN THROUGH THE CHANGE, WHICH IS THE WHOLE POINT.
+  // `recordingContext()`'s default has NO `fetchFiles` member at all, so it is the 006-shaped
+  // surface: `files` is always `[]` AND `listsFiles` is false, so no path it can drive ever reaches
+  // a half-empty state. The old assertion would have kept passing over a build that overlapped the
+  // two on every half-empty open — a green that discriminated nothing. Every case below therefore
+  // provisions `fetchFiles` EXPLICITLY, and the first one asserts the state it reached really is
+  // the both-visible one, so it cannot silently degrade back into the vacuous version.
+  //
+  // WHAT IS AND IS NOT PROVABLE HERE. jsdom applies no cascade and returns all-zero rects, so
+  // "non-overlapping" is NOT geometry in this file — it is the browser suite's hit-test at 1280 and
+  // 1400 on both engines. What this file pins is the other half: that the status element really
+  // MATCHES the lane's selector in exactly the states that need it, and really does not in the
+  // states that must keep the original slot. Split that way on purpose — a geometric claim made
+  // where geometry does not exist would be the vacuous green one layer down.
+  const LANE_SELECTOR = '.peekover-diff-picker:not([hidden]) ~ .peekover-diff-status';
 
-    expect(bothVisible()).toBe(false);
+  it('THE LANE EXISTS, and it is the CONTAINED sheet that carries it (D-14: app page only)', () => {
+    expect(CONTAINED_CSS).toContain(LANE_SELECTOR);
+    // Derived from the picker's OWN cap, so it clears at every height the picker can reach —
+    // never a fixed offset tuned against one content length (readerCss.ts's .ts block has the
+    // argument). The cap is the picker's own `max-height` token in READER_CSS.
+    expect(READER_CSS).toContain('max-height:min(46vh,320px)');
+    expect(CONTAINED_CSS).toContain('top:calc(50px + min(46vh,320px) + 6px)');
+    // READER_CSS gains no lane: diffChrome.ts:104's precedent — the chrome is app-page-only, so no
+    // full-page rule moves. A lane there would style chrome D-14 guarantees never renders.
+    expect(READER_CSS).not.toContain(LANE_SELECTOR);
+  });
+
+  it('HALF-EMPTY (snapshots, no other files) — BOTH open, and the status is IN the lane', async () => {
+    // The state 2.4 adds: the snapshots are listed, and the empty half is NAMED IN TEXT beside
+    // them. `fetchFiles` is provisioned and returns [] — the surface HAS a folder list, the folder
+    // simply holds no other markdown. This is the case the old invariant could not reach.
+    registerDiffContext(recordingContext({ fetchFiles: async () => [] }).context);
+    const box = build();
     pillOf(box).click();
     await flush();
-    expect(bothVisible()).toBe(false);
-    pickerOf(box).querySelector<HTMLButtonElement>('[role="option"]')!.click();
+
+    expect(pickerOf(box).hidden).toBe(false); // the list is OFFERED...
+    expect(statusOf(box).hidden).toBe(false); // ...and the empty half is SPOKEN, at the same time
+    expect(statusOf(box).textContent).toContain('No other markdown file in this folder');
+    expect(statusOf(box).matches(LANE_SELECTOR)).toBe(true);
+    // No fake, disabled or placeholder row stood in for the sentence, and no empty group either.
+    expect(pickerOf(box).querySelectorAll('[role="option"]')).toHaveLength(2);
+    expect(pickerOf(box).querySelectorAll('[role="group"]')).toHaveLength(0);
+    expect(pickerOf(box).querySelectorAll('[disabled],[aria-disabled="true"]')).toHaveLength(0);
+  });
+
+  it('HALF-EMPTY (files, no snapshots) — BOTH open, and the status is IN the lane', async () => {
+    registerDiffContext(
+      recordingContext({ fetchMeta: async () => [], fetchFiles: async () => FILES }).context,
+    );
+    const box = build();
+    pillOf(box).click();
     await flush();
+
+    expect(pickerOf(box).hidden).toBe(false);
+    expect(statusOf(box).hidden).toBe(false);
+    expect(statusOf(box).textContent).toContain('No snapshots yet');
+    expect(statusOf(box).matches(LANE_SELECTOR)).toBe(true);
+    expect(pickerOf(box).querySelectorAll('[role="option"]')).toHaveLength(2);
+    expect(pickerOf(box).querySelectorAll('[disabled],[aria-disabled="true"]')).toHaveLength(0);
+  });
+
+  it('BOTH-EMPTY and the non-half-empty paths stay MUTUALLY EXCLUSIVE, in the original slot', async () => {
+    // The other half of the re-scope. The lane is picker-open-only, so every path that closes the
+    // picker before speaking keeps the slot it has always had — asserted as `matches(LANE) === false`
+    // so a lane that leaked onto these paths reds here rather than moving the box in production.
+    const bothEmpty = recordingContext({ fetchMeta: async () => [], fetchFiles: async () => [] });
+    registerDiffContext(bothEmpty.context);
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    expect(pickerOf(box).hidden).toBe(true); // closePicker() first — today's shipped branch
+    expect(statusOf(box).hidden).toBe(false);
+    expect(statusOf(box).matches(LANE_SELECTOR)).toBe(false);
+
+    // ...and the FAILURE paths, which are the other way the status opens: the picker is closed by
+    // `compareWith` before the fallback speaks. Driven with `fetchFiles` present, so this case is
+    // not the 006-shaped fake either.
+    registerDiffContext(
+      recordingContext({ fetchText: async () => undefined, fetchFiles: async () => FILES }).context,
+    );
+    const box2 = build();
+    const bothVisible = () => !pickerOf(box2).hidden && !statusOf(box2).hidden;
     expect(bothVisible()).toBe(false);
+    pillOf(box2).click();
+    await flush();
+    expect(pickerOf(box2).hidden).toBe(false); // both kinds → the picker really did open
+    pickerOf(box2).querySelector<HTMLButtonElement>('[data-target-kind="snapshot"]')!.click();
+    await flush();
+    expect(statusOf(box2).textContent).toContain('Comparison unavailable');
+    expect(bothVisible()).toBe(false);
+    expect(statusOf(box2).matches(LANE_SELECTOR)).toBe(false);
+  });
+
+  it('★ the half-empty SENTENCE does not outlive the list it describes', async () => {
+    // A consequence 2.4 creates and 2.4 therefore closes. "No other markdown file in this folder"
+    // is a statement ABOUT the open picker; picking a row closes the picker, so the sentence has to
+    // go with it — otherwise it sits in the ORIGINAL slot beside a closed list until the awaited
+    // fetch resolves, describing something that is no longer on screen. Unreachable before 2.4 (the
+    // status was always empty while the picker was open), which is why it needs its own pin.
+    const rec = recordingContext({ fetchFiles: async () => [] });
+    registerDiffContext(rec.context);
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    expect(statusOf(box).textContent).toContain('No other markdown file in this folder');
+
+    // SYNCHRONOUSLY after the pick — before `fetchText`'s await resolves. That instant is the whole
+    // point: red-first by dropping `say(null)` from `compareWith`, at which point the stale
+    // sentence is still standing here.
+    pickerOf(box).querySelector<HTMLButtonElement>('[role="option"]')!.click();
+    expect(pickerOf(box).hidden).toBe(true);
+    expect(statusOf(box).hidden).toBe(true);
+    expect(statusOf(box).textContent).toBe('');
+
+    await flush();
+    expect(rec.shown).toHaveLength(1); // ...and the comparison still went through, unchanged
+  });
+
+  it('the 006-SHAPED surface never speaks the file empty state — the gate is the CAPABILITY', async () => {
+    // `listsFiles` reads `typeof context.fetchFiles === 'function'`, not `files.length`. A surface
+    // that was never provisioned to look at a folder is not in the "no other markdown file in this
+    // folder" state, and telling it that it is would name a state the user is not in. RED-FIRST by
+    // gating on `files.length === 0` alone, at which point this reds with the sentence in it.
+    registerDiffContext(recordingContext().context); // no fetchFiles member at all
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    expect(pickerOf(box).hidden).toBe(false);
+    expect(statusOf(box).hidden).toBe(true); // silent, and therefore out of the a11y tree
+    expect(statusOf(box).textContent).toBe('');
   });
 });
 

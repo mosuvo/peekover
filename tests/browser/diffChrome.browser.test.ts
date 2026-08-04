@@ -796,3 +796,160 @@ describe('the picker carries TWO KINDS — one listbox, two groups (D-3, D-4)', 
     expect(readerIn(host).querySelector('h1')).not.toBeNull();
   });
 });
+
+// ── TASK 2.4: THE TWO HALF-EMPTY STATES, AND THE LANE THAT MAKES THEM POSSIBLE ─────────────────
+//
+// WHY THIS IS A GEOMETRY SUITE AND NOT ONLY A COPY ONE. D-4 puts every empty state in the existing
+// `role="status"` line, and for the HALF-empty states that means the picker LISTS one kind while
+// the status SPEAKS the other — both open at once. But `readerCss.ts` parked them in ONE slot, and
+// said so (`:421-428`: "safe because the two are mutually exclusive by construction"). The 2.4
+// probe measured what that costs on the real surface: the status painted OVER the list, and
+// `elementFromPoint` over a row returned `peekover-diff-status`. So the copy is only half the task;
+// the other half is a lane, and a lane is a claim about LAYOUT that only a real engine can settle.
+//
+// ★ HIT-TEST, NOT RECTS. Two boxes can have non-intersecting rects and still deliver a click to the
+// wrong one (transforms, z-index, a scrolled container). The defect this task fixes was found by
+// hit-testing and is closed by hit-testing: for every row the picker offers, the element the engine
+// hands a click at that row's centre must BE that row.
+
+/** What the engine would deliver a click to at `el`'s centre, inside `host`'s shadow tree. */
+function hitTestCentre(host: HTMLElement, el: HTMLElement): Element | null {
+  const r = el.getBoundingClientRect();
+  return shadowOf(host).elementFromPoint(
+    Math.round(r.left + r.width / 2),
+    Math.round(r.top + r.height / 2),
+  );
+}
+
+/** The row a hit landed in — `elementFromPoint` legitimately returns a row's own `<span>`, and a
+ *  span INSIDE the row is a hit ON the row. Anything else (notably the status line) is not. */
+function rowHitAt(host: HTMLElement, row: HTMLElement): Element | null {
+  const hit = hitTestCentre(host, row);
+  return hit && row.contains(hit) ? row : hit;
+}
+
+/**
+ * The whole no-overlap claim, asserted the same way at both widths and in both half-empty states.
+ *
+ * ★ THE CAP IS THE POINT. The second assertion compares the status's top against the picker's
+ * `max-height` — its CAP — not against its CURRENT height. The picker is 44px tall with one row and
+ * up to the token with a full retention window, and CSS cannot read a sibling's rendered height; a
+ * lane that only cleared TODAY's row count would overlap the moment a second snapshot existed. So
+ * what is pinned is that the lane clears the tallest picker the token permits, which is a property
+ * of the derivation rather than of this fixture's content.
+ */
+function expectLaneClears(host: HTMLElement, label: string): void {
+  const picker = pickerIn(host)!;
+  const status = statusIn(host)!;
+  expect(picker.hidden, `${label}: the picker must be OPEN — this is a half-empty state`).toBe(false);
+  expect(status.hidden, `${label}: the status must be SPEAKING the empty half`).toBe(false);
+
+  // ★ THE HIT-TEST IS FIRST, AND THE ORDER IS DELIBERATE. It is the instrument that FOUND the
+  // defect, so it is the one that must be seen to close it: with the lane removed this is what
+  // reds, naming `p.peekover-diff-status` as the element the engine would hand the click to. Put
+  // the cheaper rect check first and it fires instead, and the suite never demonstrates that its
+  // primary instrument still works.
+  const rows = [...picker.querySelectorAll<HTMLElement>('[role="option"]')];
+  expect(rows.length, `${label}: there must be rows to be covered`).toBeGreaterThan(0);
+  for (const row of rows) {
+    const hit = rowHitAt(host, row);
+    expect(
+      hit,
+      `${label}: hit-test at a row's centre returned ` +
+        `${hit ? `${hit.tagName.toLowerCase()}.${hit.className}` : 'null'} — the row must receive its own click`,
+    ).toBe(row);
+  }
+
+  const pickerRect = picker.getBoundingClientRect();
+  const statusRect = status.getBoundingClientRect();
+  expectNoOverlap(`${label} status`, statusRect, 'picker', pickerRect);
+
+  const cap = parseFloat(getComputedStyle(picker).maxHeight);
+  expect(Number.isFinite(cap) && cap > 0, `${label}: the picker's max-height cap must resolve`).toBe(true);
+  expect(
+    statusRect.top >= pickerRect.top + cap,
+    `${label}: status top ${Math.round(statusRect.top)} must clear the picker's CAP ` +
+      `${Math.round(pickerRect.top + cap)} (top ${Math.round(pickerRect.top)} + cap ${Math.round(cap)}), ` +
+      'so the lane holds at every height the picker can reach — not just at this row count',
+  ).toBe(true);
+}
+
+describe('the HALF-EMPTY states: one kind listed, the other SAID — in a measured lane (2.4, D-4)', () => {
+  describe.each(GEOMETRY_WIDTHS)('at %s', (_label, size) => {
+    it('SNAPSHOTS but no other markdown: the list stays clickable under the sentence', async () => {
+      await page.viewport(size.width, size.height);
+      const host = await mountAppPage(); // single-file folder → fetchFiles returns []
+      await seedSnapshot();
+      await openPickerIn(host);
+      await waitFor(() => statusIn(host)!.hidden === false);
+
+      // NAMED IN TEXT (§5) — the state is readable as a sentence, never carried by an absence.
+      expect(statusIn(host)!.textContent).toContain('No other markdown file in this folder');
+      expectLaneClears(host, `no-other-files @${_label}`);
+      // ...and NOT by a fake row: the sentence is the empty state, so the list holds only real
+      // targets and no group wraps a kind that has none.
+      expect(pickerIn(host)!.querySelectorAll('[role="option"]')).toHaveLength(1);
+      expect(pickerIn(host)!.querySelectorAll('[role="group"]')).toHaveLength(0);
+      expect(pickerIn(host)!.querySelectorAll('[disabled],[aria-disabled="true"]')).toHaveLength(0);
+      // The document is untouched behind all of it (§3.8).
+      expect(host.hasAttribute('data-diff')).toBe(false);
+      expect(isHidden(readerIn(host))).toBe(false);
+    });
+
+    it('FILES but no snapshots: the same, with the other kind listed', async () => {
+      await page.viewport(size.width, size.height);
+      const host = await mountAppPage(docV2(), SIBLINGS); // no seedSnapshot — the store is wiped
+      await openPickerIn(host);
+      await waitFor(() => statusIn(host)!.hidden === false);
+
+      expect(statusIn(host)!.textContent).toContain('No snapshots yet');
+      expectLaneClears(host, `no-snapshots @${_label}`);
+      expect(pickerIn(host)!.querySelectorAll('[role="option"]')).toHaveLength(2);
+      expect(pickerIn(host)!.querySelectorAll('[role="group"]')).toHaveLength(0);
+      expect(pickerIn(host)!.querySelectorAll('[disabled],[aria-disabled="true"]')).toHaveLength(0);
+      expect(host.hasAttribute('data-diff')).toBe(false);
+      expect(isHidden(readerIn(host))).toBe(false);
+    });
+
+    it('★ BOTH-EMPTY is UNCHANGED: the picker closes and the status keeps its ORIGINAL slot', async () => {
+      // The lane is `.peekover-diff-picker:not([hidden]) ~ …`, so a closed picker means the rule
+      // does not match and 006's shipped branch is untouched — asserted as the resolved `top`
+      // rather than as an absence, because "the lane did not apply" is exactly what a resolved
+      // 50px says and an absence does not. A lane that leaked onto this path reds HERE.
+      await page.viewport(size.width, size.height);
+      const host = await mountAppPage(); // no snapshots, no siblings
+      pillIn(host)!.click();
+      await waitFor(() => statusIn(host)!.hidden === false);
+
+      expect(pickerIn(host)!.hidden).toBe(true); // closePicker() — today's shipped behaviour
+      expect(statusIn(host)!.textContent).toContain('No snapshots yet');
+      expect(getComputedStyle(statusIn(host)!).top).toBe('50px'); // CONTAINED_CSS's original slot
+      expect(host.hasAttribute('data-diff')).toBe(false);
+      expect(readerIn(host).querySelector('h1')).not.toBeNull();
+    });
+
+    it('the OPEN picker itself is still where 6.2 put it — the lane moved the STATUS only', async () => {
+      // The control for the three above: if the lane had been implemented by moving the PICKER
+      // instead, they would all pass while 6.2's measured placement had silently changed.
+      await page.viewport(size.width, size.height);
+      const host = await mountAppPage(docV2(), SIBLINGS);
+      await seedSnapshot();
+      const picker = await openPickerIn(host);
+      expect(getComputedStyle(picker!).top).toBe('50px');
+    });
+  });
+
+  it('the status line KEEPS its "out of the a11y tree while empty" property (re-asserted, not assumed)', async () => {
+    // The class of assertion M6 lost in transcription, and 2.4 moves this element — so it is
+    // re-proven here rather than inherited from the case above this block.
+    const host = await mountAppPage();
+    await seedSnapshot();
+    const status = statusIn(host)!;
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.hidden).toBe(true);
+    expect(isHidden(status)).toBe(true); // and really unrendered, not merely transparent
+    await openPickerIn(host);
+    await waitFor(() => status.hidden === false);
+    expect(status.textContent!.length).toBeGreaterThan(0);
+  });
+});

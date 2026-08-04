@@ -1,6 +1,42 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-04 · 008 task 2.4 WIDENED (Option 1) — the half-empty empty-states need a measured lane,
+  because the status line and the picker share a slot.** *(A PLAN-LEVEL AMENDMENT to `tasks.md`'s 2.4, and
+  it is recorded here rather than only in the commit so the next reader knows why 2.4 touches FOUR source
+  files instead of two and why a tested invariant changed.)* **D-4 requires the half-empty states to LIST
+  the kind that has entries AND SPEAK the empty state in the status line simultaneously** — that is the
+  whole difference between them and the both-empty branch, which closes the picker. **But
+  `readerCss.ts:429-430` (base) and `:996-997` (`CONTAINED_CSS`) put `.peekover-diff-picker` and
+  `.peekover-diff-status` in ONE slot** (`top:50;left:16;z-index:2`, `absolute` under containment),
+  **safe until now only because `diffChrome.ts` closed one before showing the other** — the invariant
+  pinned at `diffChrome.test.ts:463` and the rationale written into the CSS at `readerCss.ts:421-428`
+  (*"It occupies the picker's slot, which is safe because the two are mutually exclusive by construction
+  in diffChrome.ts"*). **The half-empty states break that mutual exclusion BY DESIGN.** **MEASURED before
+  deciding, on the real surface, both engines, by HIT-TEST rather than by rects** (PROBE-2.4/A+B): the
+  status message does not merely intersect the list, it paints and hit-tests **OVER** it —
+  `elementFromPoint` over the first list row returned `peekover-diff-status`, and 2 of 2 rows were
+  covered. **That is worse than the empty list §4 forbids**: the user is told "no snapshots yet" by a box
+  sitting on top of the files they were offered. **So 2.4's Files list is WIDENED** from
+  `{diffChrome.ts, diffChrome.browser.test.ts}` to also include `{readerCss.ts, diffChrome.test.ts}`:
+  **`readerCss.ts` gets a CSS-only lane for the status WHEN the picker is open**, and **the `:463`
+  invariant is RE-SCOPED, not deleted**, to *"mutually exclusive except the half-empty states, which are
+  non-overlapping by measured lane"*. ★ **The lane is DERIVED, not tuned** — `picker-top +
+  max-height:min(46vh,320px)` (`readerCss.ts:403`, the picker's own token) `+ 6px`, the gap
+  `diffChrome.ts:107` already records between pill and picker. A fixed offset would have been wrong at
+  some height, because the picker's height varies from one 44px row to the token's cap. ★ **The lane
+  lands in `CONTAINED_CSS` ONLY** — `diffChrome.ts:104`'s standing precedent (*"the pill exists on the
+  app page alone (D-14), so no full-page rule moves"*), which recovery B1 already followed; a full-page
+  lane would be a rule for chrome that D-14 guarantees never renders there. **`READER_CSS` is
+  byte-untouched.** ★ **Note against plan §6/gate 3, which named 3.3 as the task where `readerCss.ts`
+  first moves content-script bytes:** this amendment moves that forward to 2.4. The reason 3.3 was chosen
+  — *"with the CSS the only contributor in flight its ablation is exact"* — is honoured here by
+  decomposing 2.4's delta into its `readerCss.ts` and `diffChrome.ts` portions separately, with a firing
+  control. **Revisit-when:** a future picker/status restructure removes the shared slot (the two get
+  independent placements, or the status moves into the picker), **at which point the lane and the
+  re-scoped `:463` invariant are re-derived rather than carried** — the lane exists only because the slot
+  is shared, and it should not outlive that fact.
+
 - **2026-08-04 · 008 D-1 — the document's name arrives at the render path the way the watch target and
   the diff context do, because it is the only seam that survives a re-render.** *(Plan 008 §0's
   pre-written entry text, applied verbatim. IMPLEMENTED AND TRUE IN THE SHIPPED PRODUCT at task 1.4,

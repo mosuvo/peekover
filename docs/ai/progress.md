@@ -230,8 +230,77 @@ through the File System Access handle the user already granted. `web_accessible_
 test **2975 B**; golden **EMPTY**; **007 import fence 8/8**; `diffRegistry.ts` **UNEDITED** (2.1's
 `DiffFileEntry` was imported, not changed); no 1.1–2.2 module touched; deps **5**; unit **808/808**, browser
 **1023 passed / 15 skipped** (104 files, Cr+Fx).
-**TASK 2.4 IS NEXT** (every empty state lands in the EXISTING `role="status"` line — never a fake or
-disabled option row; the both-empty branch stays today's shipped behaviour, asserted against it).
+**TASK 2.4 IS DONE — AND IT WAS WIDENED AT IMPLEMENTATION (Option 1, human ruling 2026-08-04): the empty
+states, in a MEASURED LANE.** The two half-empty states land in the existing `role="status"` line and
+nowhere else — **no fake row, no disabled row, no placeholder, no empty `role="group"`**. Snapshots but no
+folder siblings → the list is offered and the line says *"No other markdown file in this folder to compare
+against."*; files but no snapshots → the list is offered and the line says *"No snapshots yet…"*. ★ **The
+file sentence is gated on the CAPABILITY, not on the result** — `typeof context.fetchFiles === 'function'`,
+because `files.length === 0` cannot tell *"the folder holds no other markdown"* from *"this surface was
+never provisioned to look"*, and only the first is a state the user is in. The 006-shaped surface therefore
+stays **silent** on that half (red-first by gating on `files.length` alone).
+★ **THE AMENDMENT, AND WHY 2.4 TOUCHED FOUR SOURCE FILES INSTEAD OF TWO.** D-4 needs the picker OPEN and the
+status SPEAKING at once — but `readerCss.ts:429-430` (base) / `:996-997` (CONTAINED) park
+`.peekover-diff-picker` and `.peekover-diff-status` in **ONE slot**, and the CSS says so at `:421-428`
+(*"safe because the two are mutually exclusive by construction in diffChrome.ts"*). Measured on the real
+surface before deciding, both engines, **by hit-test rather than by rects**: the status painted **OVER** the
+list — `elementFromPoint` at a row returned `peekover-diff-status`. **Worse than the empty list §4 forbids.**
+So the Files list was widened from `{diffChrome.ts, diffChrome.browser.test.ts}` to add
+`{readerCss.ts, diffChrome.test.ts}`, recorded in `decisions.md` **before** the code as a plan-level
+amendment. ★ **THE LANE IS DERIVED, NOT TUNED:** `.peekover-diff-picker:not([hidden]) ~
+.peekover-diff-status{ top:calc(50px + min(46vh,320px) + 6px) }` — picker top (`:997`) **+ the picker's own
+`max-height` cap** (`:403`) **+ the 6px gap** this chrome already uses under the pill
+(`diffChrome.ts:107`). The cap term is load-bearing: the picker is 44px with one row and up to the token
+with a full window, CSS cannot read a sibling's height, and an offset derived from any particular height
+would overlap at every taller one. **CONTAINED_CSS only** — `diffChrome.ts:104`'s standing precedent
+(*"no full-page rule moves"*); **`READER_CSS` is byte-untouched.** Sibling combinator is legal because
+`diffChrome.ts` pushes `pill, picker, status` in that order.
+★ **PROVEN NO-OVERLAP BY HIT-TEST AT 1280 AND 1400 ON BOTH ENGINES, RED-FIRST AGAINST THE SHARED-SLOT
+DEFECT.** The hit-test runs **first** in the helper on purpose, so it is the instrument seen to fail:
+ablating the lane reds **8 cases** (2 states × 2 widths × 2 engines) with *"hit-test at a row's centre
+returned `p.peekover-diff-status`"*. Three more controls fire: making the lane **unconditional** reds the
+both-empty case (`expected '376px' to be '50px'`); implementing it by moving the **picker** instead reds the
+placement control (`expected '-276px' to be '50px'`); the rect check and a **cap** assertion
+(`status.top >= picker.top + max-height`) back it up, so what is pinned is the derivation, not this
+fixture's row count. **The both-empty branch is UNCHANGED** — `closePicker()` sets `[hidden]`, the rule
+cannot match, and the status resolves to its original **50px**, asserted as the resolved value rather than
+as an absence.
+★ **THE `:463` INVARIANT WAS RE-SCOPED, NOT DELETED — AND THE OLD GREEN WAS VACUOUS.** It read *"mutually
+exclusive on every path"*; it now reads *"…except the half-empty states, which are non-overlapping by
+measured lane"*. **The old test would have stayed green over the overlap**: `recordingContext()`'s default
+has **no `fetchFiles` member at all**, so no path it could drive ever reached a half-empty state. Every
+re-scoped case provisions `fetchFiles` explicitly. jsdom has no cascade and no rects, so the split is
+honest: the unit suite pins that the status **matches the lane's selector** in exactly the states that need
+it and **does not** on the closed paths (plus that the shipped `CONTAINED_CSS` really carries it and
+`READER_CSS` really does not); the **geometry** is the browser suite's hit-test.
+★ **ONE CONSEQUENCE 2.4 CREATED AND CLOSED: the sentence must not outlive the list it describes.** With a
+half-empty picker open, picking a row closed the picker but left *"No other markdown file…"* standing in the
+original slot until the awaited `fetchText` resolved — caught by two existing fallback browser cases going
+red. `compareWith` now calls `say(null)` beside its `closePicker()`. **A no-op on every pre-2.4 path** (the
+status was always empty while the picker was open), so today's behaviour is preserved; pinned by a unit case
+that asserts the state **synchronously** after the pick.
+★ **THE CONTENT SCRIPT MOVES +352 B, AND THE DELTA DECOMPOSES TO A ZERO RESIDUAL.** Content script
+**320,596 → 320,948 B** (Cr `7f2dba47…`→`108951dc…`, Fx `f777eebc…`→`7d9fc306…`), app chunk
+**391,041 → 391,395 B, +354** (`6fc92524…`→`dee77eb5…`). **Not the same +N on both artifacts this time**
+— the copy's portion mangles 2 B wider in the app chunk, the same per-chunk effect 1.4 recorded. **FOUR-ARM
+ablation, both engines rebuilt explicitly** (`pnpm build` is Chrome-only), with the **control FIRING**: the
+strip-both arm reproduces HEAD's bundles **to the md5** (`7f2dba47` / `f777eebc` / `6fc92524`). **CS: the
+CSS lane +205 · the `diffChrome.ts` copy +147 · 205 + 147 = 352, residual ZERO.** **APP: +205 · +149 = 354,
+residual ZERO.** ★ **The +205 is EXACTLY the two lines inside the template literal** (measured: 205 bytes of
+UTF-8), so the **47-line `.ts` rationale block above the export cost 0 B** — finding 9's discipline working,
+and the reason the rationale is not written beside the rule it explains. ★ **Note against plan §6/gate 3,
+which named 3.3 as where `readerCss.ts` first moves content-script bytes: this amendment moves that forward
+to 2.4.** 3.3's stated reason — *"with the CSS the only contributor in flight its ablation is exact"* — is
+honoured by assigning the two contributors separately above. **Record this as the live number: 5.1 measures
+§8-1 headroom against 320,948 B.**
+`permissions: []` on both built manifests (654 / 770 B); `web_accessible_resources` absent; manifest test
+**2975 B** (byte-unmodified); golden **EMPTY**; **007 import fence 8/8**; 007's **28 tasks / nine groups**
+record intact; `diffRegistry.ts` **UNEDITED**; no 1.1–2.3 module touched beyond `diffChrome.ts` and
+`readerCss.ts`; no badge-lane change (6.1's, untouched); deps **5**; unit **813/813**, browser **1041 passed
+/ 15 skipped** (104 files, Cr+Fx).
+**TASK 2.5 IS NEXT** (`compareWith` branches ONCE on `dataset.targetKind`; the caption names both sides on a
+file-vs-file diff — D-5 — with snapshot diffs left VERBATIM per gate-2 ruling Q1). **2.4 stops short of it
+deliberately:** file rows still carry **no click handler**, and no caption is written.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

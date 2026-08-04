@@ -324,18 +324,33 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       assertion reds naming the extra group node.** A file row **names the file and says it is a file, in
       text**. Golden EMPTY · manifest green **2975 B** · `permissions: []`. [D-4; §4 compare; §5 a11y]
 
-- [ ] **2.4 Every empty state lands in the EXISTING status line — never a fake option row (D-4).**
+- [x] **2.4 Every empty state lands in the EXISTING status line — never a fake option row (D-4).**
       `.peekover-diff-status` (`:193-198`) is already a `role="status"` polite region rendered beside the
       untouched reader. **No other markdown file in the folder** → snapshots listed, the status line **says so**
       (§4 requires the system *say so* rather than offer an empty list). **No snapshots** → files listed, status
       says so. **Both empty** → `closePicker()` + `say(…)`, which is **exactly today's shipped behaviour**
       (`:292-298`), **preserved unchanged** for the surface that has no folder list.
-      Files: `src/render/diffChrome.ts` · `tests/browser/diffChrome.browser.test.ts`
+      ★ **WIDENED AT IMPLEMENTATION (Option 1, human ruling 2026-08-04) — full record in `decisions.md`.**
+      The two half-empty states require the picker and the status to be open AT ONCE, but `readerCss.ts`
+      parks them in ONE slot (`:429-430` base, `:996-997` CONTAINED) and says so at `:421-428`. Measured on
+      the real surface, both engines, by hit-test: the status painted **OVER** the list
+      (`elementFromPoint` at a row returned `peekover-diff-status`). So the Files list below is widened to
+      four: `readerCss.ts` gains a **CSS-only lane** for the status **while the picker is open**, derived
+      from the picker's own `max-height` token (`:403`) rather than tuned; and `diffChrome.test.ts:463`'s
+      *"mutually exclusive on every path"* invariant is **RE-SCOPED, not deleted** — its old fake had no
+      `fetchFiles` member, so it could never reach a half-empty path and would have stayed green over the
+      overlap. (Body citation `:651` re-derived to `:661` at HEAD `b0773c9`.)
+      Files: `src/render/diffChrome.ts` · `src/theme/readerCss.ts` · `src/render/diffChrome.test.ts` ·
+      `tests/browser/diffChrome.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) all four states asserted; the both-empty branch's behaviour is
       **unchanged**, asserted against today's shipped path rather than re-implemented. **No state renders a
       disabled or placeholder option row.** The status line keeps `diffChrome.browser.test.ts:651`'s **"out of
       the a11y tree while empty"** property — **re-asserted here, not assumed to survive** (that is the class
-      of assertion M6 lost in transcription). Golden EMPTY · manifest green **2975 B** · `permissions: []`.
+      of assertion M6 lost in transcription). ★ **Added by the amendment:** the lane proven **NO-OVERLAP by
+      HIT-TEST at 1280 AND 1400 on both engines**, **red-first against the shared-slot version** (remove the
+      lane → the hit-test at a row returns `p.peekover-diff-status`); the re-scoped invariant **non-vacuous**
+      — its fake **has** `fetchFiles` and reaches the half-empty branch. Content-script bytes **MOVE** (§4
+      risk 2), decomposed to a **zero residual**. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-4; §4 compare; §3.8 degradation]
 
 - [ ] **2.5 `compareWith` branches ONCE; the caption names both sides (D-5).** `compareWith` (`:242`) branches

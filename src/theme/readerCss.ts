@@ -978,6 +978,50 @@ export const READER_CSS = /* css */ `
 // and therefore the content script's injected stylesheet — is left byte-for-byte
 // unchanged. Its rules come from a later <style> than READER_CSS, so equal-specificity
 // declarations (:host, .peekover-mode-toggle, …) win by source order — no !important.
+//
+// ── 008 TASK 2.4: THE STATUS LINE'S LANE, AND WHY IT IS DERIVED RATHER THAN PICKED ────────────
+//
+// A `.ts` comment ON PURPOSE (finding 9): the rule below lives inside a template literal the
+// minifier cannot enter, and this file is on BOTH graphs, so prose written beside the rule would
+// ship to the content script — the failure diffChrome.ts:40-44 records as having cost ~8 KB once.
+//
+// THE DEFECT IT FIXES, MEASURED BEFORE IT WAS DECIDED. `.peekover-diff-picker` and
+// `.peekover-diff-status` share ONE slot — top:94/left:16 in READER_CSS (:400-401, :429-430),
+// top:50 here (:996-997 before this rule) — and the CSS says so in as many words at :421-428:
+// "safe because the two are mutually exclusive by construction in diffChrome.ts (every path closes
+// one before showing the other)". 008 D-4 ends that. The two HALF-EMPTY states — snapshots but no
+// other markdown, or files but no snapshots — must LIST the kind that has entries AND SPEAK the
+// empty one, at the same time, because a picker that closed itself to say "no snapshots yet" would
+// be hiding the files it was just about to offer. Probed on the real surface at HEAD, both engines,
+// by HIT-TEST rather than by rects: elementFromPoint over the first list row returned
+// `peekover-diff-status`, and every row was covered. The message painted OVER the list.
+//
+// THE LANE IS ARITHMETIC ON THE PICKER'S OWN TOKENS, NOT A NUMBER THAT LOOKED RIGHT:
+//
+//   picker top (50px, :997)  +  picker max-height (min(46vh,320px), :403)  +  6px
+//
+// Each term is already in the file. The 6px is the gap this chrome already uses between the pill
+// and the picker (pill top:12 + its 32px height = 44, picker top:50 — diffChrome.ts:107 calls it
+// "the SAME 6px gap"), so the status sits under the picker exactly as the picker sits under the
+// pill. ★ THE MAX-HEIGHT TERM IS THE LOAD-BEARING ONE. The picker's height is CONTENT-dependent —
+// one 44px row for a single snapshot, up to the token's cap for a full retention window — and CSS
+// cannot read a sibling's rendered height. An offset derived from any PARTICULAR height would clear
+// at that height and overlap at every taller one, which is precisely the magic-number trap
+// diffChrome.ts:55-60 rejects for 3.1's text-wrap-dependent disclosure. Deriving from the CAP
+// clears at EVERY height the picker can reach, by construction rather than by measurement luck —
+// the measurement then CONFIRMS the derivation instead of producing it.
+//
+// SIBLING COMBINATOR, AND IT IS LEGAL HERE: diffChrome.ts pushes `pill, picker, status` in that
+// order, so the status always FOLLOWS the picker among the shadow root's children. `:not([hidden])`
+// reads the same `hidden` property `closePicker()` sets, so the lane applies ONLY while the picker
+// is open — a state change already in the code, not a new class to keep in sync. THE BOTH-EMPTY
+// BRANCH IS THEREFORE UNTOUCHED: it calls `closePicker()` first, so `[hidden]` is set, the rule
+// does not match, and the status keeps its original slot byte-for-byte.
+//
+// CONTAINED_CSS ONLY — diffChrome.ts:104's standing precedent ("the pill exists on the app page
+// alone (D-14), so no full-page rule moves"), which recovery B1 already followed. READER_CSS is
+// byte-untouched: a full-page lane would be a rule for chrome D-14 guarantees never renders there.
+// Specificity (0,3,0) beats the (0,1,0) `top:50px` above it, so source order is not relied on.
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
 .peekover-mode-toggle,
@@ -995,5 +1039,7 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-diff-affordance{ top:12px; }
 .peekover-diff-picker,
 .peekover-diff-status{ top:50px; }
+/* 2.4 — the status takes its own lane WHILE the picker is open. Why + derivation: the .ts above */
+.peekover-diff-picker:not([hidden]) ~ .peekover-diff-status{ top:calc(50px + min(46vh,320px) + 6px); }
 .peekover-remote-load{ left:176px; }
 `;

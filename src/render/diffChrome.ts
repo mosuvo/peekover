@@ -187,6 +187,10 @@ const GROUP_FILES = 'Other files in this folder';
  *  group it happens to sit in (D-4). */
 const TEXT_FILE_KIND = 'File';
 const TEXT_NO_SNAPSHOTS = 'No snapshots yet — this document has not changed since watching started.';
+/** The other half-empty state (2.4): snapshots are listed, the folder offers nothing. §4 requires the
+ *  system to SAY SO rather than offer an empty list, and D-4 puts every empty state in THIS line — so
+ *  there is no fake row, no disabled row, no empty `role="group"` standing in for the sentence. */
+const TEXT_NO_OTHER_FILES = 'No other markdown file in this folder to compare against.';
 const TEXT_UNAVAILABLE = 'Comparison unavailable — that snapshot is no longer stored.';
 const TEXT_NO_SOURCE = 'Comparison unavailable — nothing is on screen to compare against.';
 
@@ -289,6 +293,13 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     const context = getDiffContext();
     if (!context) return;
     closePicker();
+    // ★ 2.4: THE SENTENCE DESCRIBES THE PICKER, SO IT GOES WHEN THE PICKER GOES. Before the
+    // half-empty states existed this was unreachable — the status was ALWAYS empty while the picker
+    // was open, so on every pre-2.4 path this call is a no-op and today's behaviour is byte-for-byte
+    // preserved. It stops being a no-op now: a half-empty open leaves "no other markdown file in
+    // this folder" on screen, and without this the sentence would outlive the list it described,
+    // sitting in the ORIGINAL slot beside a closed picker until the awaited fetch below resolved.
+    say(null);
 
     const before = await context.fetchText(id);
     const after = context.getCurrentSource();
@@ -388,6 +399,12 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     // OPTIONAL BY DESIGN (D-3): a surface with snapshots but no folder list is a legal, designed
     // state, and `?? []` is what makes the single-kind path below the one that surface always takes.
     const files = (await context.fetchFiles?.()) ?? [];
+    // ★ WHETHER THIS SURFACE LISTS FILES AT ALL — read from the CAPABILITY, not from the result.
+    // `files.length === 0` cannot tell "the folder holds no other markdown" from "this surface was
+    // never provisioned to look", and only the FIRST is an empty state worth a sentence. Saying
+    // "no other markdown file in this folder" on a surface that never had a folder list would name
+    // a state the user is not in.
+    const listsFiles = typeof context.fetchFiles === 'function';
     if (entries.length === 0 && files.length === 0) {
       // A DESIGNED empty state, not a blank list (AGENTS.md #5). Note this is NOT the D-14 note
       // branch: the user asked for this by clicking, so an answer is owed. D-14 forbids explaining
@@ -414,6 +431,18 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     );
     picker.hidden = false;
     pill.setAttribute('aria-expanded', 'true');
+    // ★ THE TWO HALF-EMPTY STATES (2.4, D-4). One kind has entries and is LISTED; the other is empty
+    // and is NAMED IN TEXT, in this same `role="status"` line — never a disabled row, never a
+    // placeholder row, never a `role="group"` with nothing in it (§4's "say so", §5's never-by-
+    // position-or-colour). The both-empty branch above is untouched: it closes the picker, because
+    // there is nothing to list beside the sentence.
+    //
+    // THIS IS THE ONE PLACE THE PICKER AND THE STATUS ARE OPEN AT ONCE, and it is why
+    // `readerCss.ts`'s CONTAINED lane exists — the two used to share one slot. The invariant that
+    // used to read "mutually exclusive on every path" is re-scoped, not dropped
+    // (`diffChrome.test.ts`); the lane keeps them non-overlapping by measurement, not by luck.
+    if (entries.length === 0) say(TEXT_NO_SNAPSHOTS);
+    else if (files.length === 0 && listsFiles) say(TEXT_NO_OTHER_FILES);
   }
 
   pill.addEventListener('click', () => {
