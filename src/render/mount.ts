@@ -26,6 +26,7 @@ import { buildNetworkIndicator, buildRemoteLoadBar } from './remoteMediaUi';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildWatchChrome } from '../watch/watchControl';
 import { buildDiffChrome } from './diffChrome';
+import { buildAgentBadge } from './agentBadge';
 import { buildTocModel } from './tocModel';
 import { buildTocView, installTocShortcut, registerTocHost, unregisterTocHost } from './tocView';
 import { resolveScrollContainer } from './scrollContainer';
@@ -188,6 +189,13 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // (D-14, §3.2: the user never saw a history feature there, so there is nothing to be told they
     // are missing). Siblings of the reading column, like every other piece of chrome above.
     children.push(...buildDiffChrome(host));
+    // Agent-file badge (008 task 1.3, D-1/D-2) — the FIFTH instance of the pattern above, and the
+    // whole cost in this file of not threading the document's name through MountOptions. It reads
+    // the module-level identity registry at BUILD time and returns `[]` — with NO note — when the
+    // name is absent or unrecognized, so this line is unconditional and mount() stays read-only
+    // library (006 D-15): it reads a data holder, writes nothing, owns nothing, and branches on
+    // nothing about the app. Why a registry and not MountOptions: src/render/docIdentity.ts.
+    children.push(...buildAgentBadge());
     if (blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }

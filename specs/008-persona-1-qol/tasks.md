@@ -184,7 +184,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       with no source in scope at all. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-2; §4 agent-file; §3.4]
 
-- [ ] **1.3 `agentBadge.ts` + `mount.ts`'s ONE line + the badge's CSS (D-1 · D-2 · D-12).**
+- [x] **1.3 `agentBadge.ts` + `mount.ts`'s ONE line + the badge's CSS (D-1 · D-2 · D-12).**
       `buildAgentBadge()` returns **`[]`** when nothing is registered or the name is not recognized — the
       `buildDiffChrome` shape **verbatim** (`diffChrome.ts:175`'s *"THE GATE. Read at BUILD time … it is the
       only condition"*) — and **with NO explanatory note** (D-14: the user was never offered anything, so there

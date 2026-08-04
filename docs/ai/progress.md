@@ -77,10 +77,71 @@ PRODUCED at 4.3 and 5.1–5.4, **CHOSEN by the human at 5.5**, executed at 5.6/5
 CHECKBOX CONVENTION is SETTLED as a standing invariant: (c) — per-task ticking, each box in its own commit,
 forward from 008; 002 and 007 PREDATE it and are NOT retroactively ticked, their done-ness signal being this
 pointer and § Closed milestones.** See § Carried items (discharged) and the gate-3 entry.
-★ **M8 IS IN IMPLEMENTATION. TASK 1.2 IS DONE — `src/render/agentFile.ts`, the pure recognition predicate
-(D-2), and `agentFile.test.ts` (34 tests). TASK 1.3 IS NEXT** (`agentBadge.ts` + `mount.ts`'s ONE line +
-the badge's CSS; D-1 · D-2 · D-12 — where content-script bytes move for the first time in five
-milestones), in a fresh session. 1.2 is an **exact, CASE-SENSITIVE** `Set.has` over one frozen set —
+★ **M8 IS IN IMPLEMENTATION. TASK 1.3 IS DONE — `src/render/agentBadge.ts` (`buildAgentBadge`), `mount.ts`'s
+ONE line, and the badge's CSS (D-1 · D-2 · D-12). THE D-1 SEAM IS BUILT END TO END; GROUP 1 IS NOT DONE —
+TASK 1.4 IS NEXT** (the TWO registration sites at the PRODUCTION path, plus the badge's §3.11 property set
+and the first `tests/browser/agentBadge.browser.test.ts`), in a fresh session. 1.5 (the rect probe, both
+geometry widths) and 1.6 (the zero-network guard) follow it and close the group.
+★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
+RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
+`c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
+(`65486f78…`→`564915e8…`). Decomposed by **four-arm ablation with a firing control**, never by an
+identifier grep: **CSS block +413 B** (both) · **`mount.ts`'s line + import + module shell +39 B CS / +42 B
+app** · **the three modules' code +274 B** (both) · **the frozen set's five member strings +54 B** (both).
+**780 = 413+39+274+54 and 783 = 413+42+274+54 — residual ZERO on both.** ★ **The control FIRES:** with both
+contributors ablated the build returns to the baseline **byte-for-byte and md5-for-md5** on all three
+artifacts (`c7b33b36…` / `67717921…` / `65486f78…`), so the instrument demonstrably sees the change.
+★ **Two sub-findings worth carrying.** (a) The CSS block is **423 B of source but 413 B shipped** — the
+file is CRLF and the ECMAScript spec normalizes template-literal line terminators to LF, so its 10 newlines
+each shed one byte. Any future CSS byte account on this repo is off by one per line if it reads the source
+with `wc -c`. (b) **The `/*#__PURE__*/ new Set([…])` shape behaved in BOTH directions:** dropped while
+unused (1.1/1.2's 0-delta), retained now that `mount()` reaches it, and its cost is **exactly the 54 B of
+member strings** — 40 characters + 10 quotes + 4 commas, to the byte.
+★ **THE BADGE SHIPS BUT DOES NOT YET APPEAR, BY DESIGN — read the absence correctly.** Nothing calls
+`registerDocIdentity` in production until **1.4**, so `getDocIdentity()` is `undefined` at every production
+render on both surfaces and `buildAgentBadge()` returns `[]`. The bytes are in; the pill is not on screen
+until the two registration sites land. **`mount.ts` gained 8 lines, 0 deleted — exactly ONE of them
+executable** (`children.push(...buildAgentBadge())`), the other seven being one mandatory `import` and a
+six-line comment matching the density of the four sibling pushes. **`mount()` stays read-only library**
+(006 D-15): it reads a data holder at build time, writes nothing, owns nothing, branches on nothing.
+★ **THE BADGE'S LANE IS PROVISIONAL BY INSTRUCTION, not by omission** — gate-2 Q3 ruled *"produce, do not
+choose"*: 1.5 measures, the human chooses at 6.1. It ships at `top:56px;left:16px` with the collision
+inventory recorded in `readerCss.ts`'s `.ts` block: **full page that slot is empty** (`.peekover-diff-
+affordance` declares the same offset but D-14 never renders it there — a two-rule coincidence held apart by
+a build-time gate, which 1.5 must assert); **on the CONTAINED pane it overlaps the diff picker's and
+status's `top:50` slot**, both `hidden` until opened — **the first thing 1.5 should probe.** Bottom-left is
+already ruled out and not re-derived (`diffChrome.ts:55-60`). The lane is never live-and-unmeasured, because
+the badge cannot appear at all before 1.4.
+★ **D-12 discipline, per token, run this session:** `--sans` / `--shadow` light-block-only so identical in
+all three; `--muted` #5D6070 / #A0A4B8 / **#5D6070 inherited on sepia**; `--panel` #F4F4EF / #181B26 /
+**#F4F4EF inherited**; `--line` #E6E6DF / #262A38 / **#E6E6DF inherited**. ★ **The sepia reading is stated,
+not silently substituted:** `--panel` on sepia paper `--paper` #F6EEDF is a 2/2/16 per-channel delta, so the
+pill's surface is near-invisible and `--line` carries its shape — **inherited deliberately**, because all
+five sibling pills ship the same triple and today read the same way; swapping in `--accent-soft` (which
+sepia *does* override) would fix one pill and make it the only chrome that looks different on one theme.
+The whole-band sepia question belongs to a task that takes all six pills at once. **No `ch` in `margin` /
+`padding` / `transform`**; **rationale in the `.ts` comment above the literal**, byte-checked on the shipped
+block (423 B source / 413 B shipped, accounted above).
+★ **THE COPY, and what it declines to claim.** `Agent file · <name>` — the mockup's phrase carried
+(`mockup.html:634`), its `· tuned rendering on` **dropped** because §8-4 has chosen no tuning yet, and its
+`◈` glyph and `var(--ok)` **dropped** because §5 requires text, not colour. **Exactly FIVE enumerable label
+widths** (one per frozen-set member), which is the deterministic-width input plan §8 Q3 prices the lane on.
+★ **A FINDING FROM ABLATION C, recorded because a reader would otherwise assume the toolchain holds it:**
+`buildAgentBadge`'s `name === undefined` arm is **unreachable at runtime** (`isAgentFile(undefined)` is
+already `false`), so **no test can turn it red** — and with the arm removed **neither `tsc --noEmit` nor
+this repo's eslint flags** interpolating a `string | undefined` into the label. It would silently ship
+`Agent file · undefined` the moment 1.2's predicate is widened. The guard is a deliberate belt against an
+**un-caught** failure mode, and it is documented as such rather than asserted by a test that would have to
+fake its own precondition.
+★ **ROUTED TO THE HUMAN — `decisions.md` carries NO 008 D-value entry yet, and 1.3 did not add one.**
+Plan §0 and the tasks header say each D-value's pre-written entry lands *"with the commit that implements
+it"*, but **1.3's Files list does not include `docs/ai/decisions.md`** — and neither did 1.1's or 1.2's, so
+no entry has landed for D-1 or D-2. **The Files list was followed.** The coherent reading is that **D-1 and
+D-2 both complete at 1.4**, where registration makes the seam actually carry a name to screen; landing them
+there keeps one pattern instead of introducing a third. **Flagged for the reviewer to rule on, not decided
+by this session.**
+**Task 1.2 remains as landed** — `src/render/agentFile.ts`, the pure recognition predicate (D-2), and
+`agentFile.test.ts` (34 tests). 1.2 is an **exact, CASE-SENSITIVE** `Set.has` over one frozen set —
 `CLAUDE.md`, `AGENTS.md`, `spec.md`, `plan.md`, `tasks.md`; **`.cursorrules` is NOT in it**, per gate-1
 §9-3, because it is *unreachable* behind `MARKDOWN_EXTENSIONS`, not merely un-badged. Case-sensitivity is
 the whole argument: a `claude.md` badged wrongly is a **false claim on screen**, where a `claude.md` left
@@ -100,9 +161,11 @@ it decodes** (decoding first turns `%2F` into a separator, so `weird%2FCLAUDE.md
 `CLAUDE.md` — would be badged: a **false positive**), and the decode is **caught** (`decodeURIComponent`
 throws `URIError` on `50%.md`, and `new URL()` does not normalize a lone `%` away; `basenameOf` runs at
 `runReader.ts:118` **before** `mountReader()`, so an uncaught throw there is not a missing badge but **no
-render at all** — the blank page AGENTS.md #5 forbids). ★ **BOTH bundles md5-IDENTICAL to `bd93ffd`** —
-318,747 B content script (Cr `c7b33b36…` / Fx `67717921…`) and 389,143 B app chunk (`65486f78…`) —
-**because the module is imported by nothing yet**; the instrument was re-proven able to move in the same
+render at all** — the blank page AGENTS.md #5 forbids). ★ **AS OF `6553790` (1.2) both bundles were
+md5-IDENTICAL to `bd93ffd`** — 318,747 B content script (Cr `c7b33b36…` / Fx `67717921…`) and 389,143 B app
+chunk (`65486f78…`) — **because the module was imported by nothing yet**; *(superseded at 1.3, which wired
+it: see the +780 B / +783 B decomposition above — those are now the BASELINE figures, not the current
+ones)*. The instrument was re-proven able to move in the same
 session (one CSS byte on both graphs → 318,778 B, all three md5s changed, app chunk under a **new
 content-hashed filename**, then reverted to the exact baseline: A-B-A). `dependencies` still **5**;
 `permissions: []` both; golden EMPTY; 007's import fence **8/8**. **1.1 remains as landed** —

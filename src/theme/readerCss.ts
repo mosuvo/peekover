@@ -437,6 +437,16 @@ export const READER_CSS = /* css */ `
 }
 .peekover-diff-status[hidden]{display:none}
 
+/* Agent-file badge (008 task 1.3, D-1/D-2/D-12) — PROVISIONAL LANE, rationale: below this literal */
+.peekover-agent-badge{
+  position:fixed;top:56px;left:16px;z-index:2;
+  margin:0;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:7px 15px;box-shadow:var(--shadow);
+}
+
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
    fetch; the original URL rides on data-peekover-src for one-click restore). Inline
@@ -651,6 +661,92 @@ export const READER_CSS = /* css */ `
 .peekover-diagram-lightbox__view{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center}
 .peekover-diagram-lightbox__view svg{max-width:none;height:auto}
 `;
+
+// ============================================================================
+// THE AGENT-FILE BADGE — 008 §3.11, task 1.3 (D-12)
+// ============================================================================
+// A `.ts` comment ON PURPOSE, and this is the mechanism rather than the reminder: comments inside
+// READER_CSS's template literal cannot be stripped by the minifier and ship verbatim in EVERY
+// bundle, on BOTH surfaces — the failure `diffChrome.ts:40-44` records as having cost ~8 KB once.
+// The rule above therefore carries a one-line pointer and the argument lives down here, where it
+// costs nothing. Task 1.3's byte decomposition measures the shipped block, so this stays true by
+// measurement and not by memory.
+//
+// ── ★ THE LANE IS PROVISIONAL BY INSTRUCTION, NOT BY OMISSION ────────────────────────────────
+//
+// D-12's standing rule is that placement is RE-MEASURED with a real rect probe, never chosen. This
+// task does not run that probe and must not: gate-2 Q3 ruled the badge's lane UNCHANGED —
+// *"produce, do not choose"* — routing the measurement to task 1.5 (both `GEOMETRY_WIDTHS`, 1280
+// AND 1400, all five label widths, with the network indicator and the remote-load pill present)
+// and the CHOICE to the human at 6.1. So `top:56px;left:16px` below is a placeholder that 1.5
+// measures and 6.1 rules on. It is written down here rather than left implicit so nobody reads a
+// shipped offset as a settled one.
+//
+// ★ It ships un-probed at zero user risk THIS commit, and that is why it is acceptable to ship at
+// all: nothing calls `registerDocIdentity` in production until task 1.4, so `buildAgentBadge()`
+// returns `[]` at every production render on both surfaces and this rule matches no element yet.
+// The badge first appears at 1.4; 1.5 probes it; 6.1 rules. The lane is never live and un-measured.
+//
+// ── WHAT 1.5 MUST PROBE — THE CANDIDATES THIS TASK ALREADY KNOWS ABOUT ───────────────────────
+//
+// Read off the shipped rules rather than guessed, so 1.5 starts from an inventory:
+//
+//   FULL PAGE (content script, READER_CSS): `top:56;left:16` is EMPTY. The band's occupants are
+//     `.peekover-remote-load` (`top:16;left:16`, and only on a document with blocked media) and
+//     `.peekover-mode-toggle` (`top:16;right:16`). `.peekover-diff-affordance` also declares
+//     `top:56;left:16`, but D-14 ships diff chrome to the APP PAGE ONLY, so no element ever
+//     matches it here. ★ 1.5 must still assert that, because it is a two-rule coincidence held
+//     apart by a build-time gate, not by geometry — if D-14 ever changes, these two collide
+//     silently and the badge is the one that would be covered.
+//   CONTAINED PANE (app page, CONTAINED_CSS): recovery B1 moved `.peekover-diff-affordance` to
+//     `top:12` and its picker and status to `top:50`, and displaced `.peekover-remote-load` to
+//     `left:176`. So at `top:56;left:16` the badge sits 12px under the diff pill and OVERLAPS the
+//     picker's and status's `top:50` slot — both of which are `hidden` until opened. **That is a
+//     known, live collision candidate the moment 1.4 lands, and it is the first thing 1.5 should
+//     probe.** No CONTAINED override is added here because adding one would be choosing the lane.
+//   BOTTOM-LEFT is already ruled out and is not re-derived: `diffChrome.ts:55-60` measured every
+//     40px step into 3.1's capture disclosure, whose height is TEXT-WRAP dependent (110px at 1280,
+//     182px at 414), so no fixed offset clears it at both widths.
+//
+// ── THE TOKENS, EACH RESOLVED IN ALL THREE THEME BLOCKS BEFORE USE (the standing check) ──────
+//
+// `:host` light `:31-40` · `:host([data-theme="dark"])` `:43-48` · `:host([data-theme="sepia"])`
+// `:51`. Sepia overrides ONLY `--paper`, `--ink`, `--accent`, `--accent-soft`, so everything else
+// resolves to the LIGHT value on sepia paper. Run this session, per token, never assumed:
+//
+//   --sans    light "Bricolage Grotesque",system-ui,sans-serif · dark SAME · sepia SAME (declared
+//             once in the light block; neither override touches it).
+//   --muted   light #5D6070 · dark #A0A4B8 · sepia #5D6070 (inherited light) on paper #F6EEDF.
+//   --panel   light #F4F4EF · dark #181B26 · sepia #F4F4EF (inherited light) on paper #F6EEDF.
+//   --line    light #E6E6DF · dark #262A38 · sepia #E6E6DF (inherited light).
+//   --shadow  light 0 10px 30px rgba(22,23,31,.10) · dark SAME · sepia SAME (light block only).
+//
+// ★ THE SEPIA READING, STATED RATHER THAN SILENTLY SUBSTITUTED. On sepia the fill `--panel`
+// (#F4F4EF) sits on paper `--paper` (#F6EEDF) — a per-channel delta of 2/2/16 — so the pill's
+// SURFACE is very nearly invisible and the `--line` border is what carries its shape. That is the
+// exact condition plan D-12 warned about, and it is INHERITED DELIBERATELY: `.peekover-mode-toggle`,
+// `.peekover-theme-toggle`, `.peekover-watch`, `.peekover-remote-load` and
+// `.peekover-diff-affordance` all ship the same `--panel`/`--line`/`--muted` triple and therefore
+// all read this way on sepia today. Substituting `--accent-soft` (which sepia DOES override, to
+// #E9DCC1) would fix this one pill and make it the only chrome that looks different on one theme —
+// a divergence, not a fix. The whole-band sepia question belongs to whatever task takes all six
+// pills at once; it is recorded here, not solved unilaterally by a badge.
+//
+// ── NO `ch` IN A LAYOUT-BLOCKING PROPERTY (finding 6) ────────────────────────────────────────
+//
+// `margin`, `padding` and `transform` above are px or 0; the rule uses no `ch` at all. The memory
+// of record prices one `ch` in a margin calculation at ~28 ms. (`max-width:34ch` on
+// `.peekover-diff-status` is the free case and is untouched.)
+//
+// ── WHY A PILL AND NOT AN EYEBROW, AND WHY NO TRANSITION ────────────────────────────────────
+//
+// The mockup's precedent (`mockup.html:634`) is an in-column eyebrow; plan D-2 makes the badge a
+// SIBLING of `.peekover-reader`, so it takes the sibling pills' shape instead — same font stack,
+// size, weight, radius and border as `.peekover-diff-affordance`, because it belongs to that band
+// and reading as a stranger in it would be the design defect. It carries NO `cursor`, NO `:hover`
+// and NO `transition`: it is not interactive (§3.11 rows 12, 16), and a hover response on a thing
+// that takes no gesture is a lie about affordance. `margin:0` because it is a `<p>` and the UA
+// default would otherwise offset a `position:fixed` box from its declared inset.
 
 // ============================================================================
 // THE PER-DIAGRAM CONTROL GROUP — 007 §3.11, task 7.1
