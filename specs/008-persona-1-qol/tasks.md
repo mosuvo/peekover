@@ -289,7 +289,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       files.** `diffChrome.ts` gains **no import** and the fence is unchanged. Golden EMPTY · manifest green
       **2975 B** · `permissions: []`. [D-3; §4 compare; plan §1.2]
 
-- [ ] **2.2 `appShell.ts:914` provisions the two closures — on the app-page side of the fence (D-3).**
+- [x] **2.2 `appShell.ts:914` provisions the two closures — on the app-page side of the fence (D-3).**
       `fetchFiles` over `activeSource.files` (`folderSource.ts:70`), **EXCLUDING the current `file.path`** —
       *"another file"*, not *"any file including this one"*, which would offer an **always-empty diff**.
       `fetchFileText(path)` closes over the same list and calls that entry's `read()` (`folderSource.ts:36`) —

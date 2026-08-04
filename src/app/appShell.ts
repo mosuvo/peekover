@@ -968,8 +968,49 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // policy, it only joins the two the affordance is not allowed to import.
         showDiff: (host, before, after) => enterDiff(host, computeDiff(before, after)),
         hideDiff: (host) => exitDiff(host),
+        // THE D-3 PAIR (task 2.2) — "another file in this folder", provisioned HERE for the same
+        // reason `showDiff`/`hideDiff` are: the affordance holds no folder list and may not import
+        // one, so the app page hands the capability across as closures. `mount.ts` never reaches
+        // this graph, which is why the content script — which has a `location.href`, not a folder —
+        // registers no context and so is offered no file comparison at all (§3.2, plan §1.2).
+        //
+        // ONE list expression serves BOTH, so the exclusion cannot drift between them: a path
+        // `fetchFileText` will resolve is exactly a path `fetchFiles` offered. It is read at CALL
+        // time, never captured — `getCurrentSource` above is queried rather than held for the same
+        // reason, and here it is what makes a re-walked folder visible to an already-registered
+        // context instead of stranding it on the list that existed at install.
+        //
+        // EXCLUDING `file.path` IS THE POINT, not a tidy-up: a document diffed against itself is
+        // always empty, so offering it would be a dead option in the picker — "another file", never
+        // "any file including this one". The open document is the one captured here, so the
+        // exclusion follows the selection rather than pinning a name.
+        fetchFiles: async () => otherFilesInFolder(file.path),
+        // A FRESH `read()` of that entry, never a stored copy — §3.2's stated reason for not
+        // reaching through storage. The point of comparing two files is the other file AS IT IS
+        // NOW; a text captured at install would show what it said when this document was opened.
+        // An unreadable file (permission/IO — `MarkdownFile.read` may reject) and an unknown path
+        // both yield `undefined`, which lands in the SAME fallback as a missing snapshot: the
+        // document stays on screen and the diff is never entered (AGENTS.md #5).
+        fetchFileText: async (path) => {
+          const entry = otherFilesInFolder(file.path).find((f) => f.path === path);
+          if (!entry) return undefined;
+          try {
+            return await entry.read();
+          } catch {
+            return undefined;
+          }
+        },
       }));
     }
+  }
+
+  /** The open folder's markdown files EXCEPT `openPath` — the one list both D-3 closures read
+   *  (task 2.2). `MarkdownFile` is a structural superset of `DiffFileEntry`, so the filtered array
+   *  is assignable with no adapter (diffRegistry.ts's stated design). Empty — never null — before a
+   *  folder is open or when it holds no other markdown; the picker says so rather than listing
+   *  nothing (D-4, task 2.4). */
+  function otherFilesInFolder(openPath: string): MarkdownFile[] {
+    return (activeSource?.files ?? []).filter((f) => f.path !== openPath);
   }
 
   // --- pinning (task 5.2) --------------------------------------------------

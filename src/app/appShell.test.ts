@@ -5,6 +5,7 @@ import type { ReaderFile } from './readerPane';
 import type { FolderSource, MarkdownFile, OpenFolderOutcome } from './folderSource';
 import type { FolderRecord, RecentRecord, PinRecord, StoredSummary } from './store';
 import { getDocIdentity, resetDocIdentityForTest } from '../render/docIdentity';
+import { getDiffContext, resetDiffRegistryForTest } from '../render/diffRegistry';
 
 // Task 1.1: the app-page surface EXISTS and renders its skeleton + affordance.
 // Task 1.2: the shell wires selection → the reader pane (unchanged M1 mount()).
@@ -1350,5 +1351,213 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
     byName('CLAUDE.md').click();
     await flush();
     expect(getDocIdentity()).toBe('CLAUDE.md'); // ...and back, so this is not a one-way latch
+  });
+});
+
+// --- 008 task 2.2: the D-3 capability pair, PROVISIONED (app page only) ----------
+//
+// 2.1 declared `fetchFiles?` / `fetchFileText?` as optional members and shipped zero bytes. This
+// block is about the CLOSURES that fill them, and about the two properties that are the whole of
+// their correctness — the ones a plausible-looking provisioning gets wrong:
+//
+//   (1) `fetchFiles` OMITS THE OPEN DOCUMENT. A document diffed against itself is always empty, so
+//       listing it is a dead option. Asserted with the folder holding OTHER files in the same run,
+//       so "the open file is absent" cannot pass because the list is empty for some other reason.
+//   (2) `fetchFileText` READS FRESH. The fixture's text is MUTATED between provisioning and the
+//       call, and the closure must return the NEW text — which a copy stored at install cannot
+//       produce. That mutation IS the control: without it a cached provisioning passes every
+//       assertion here.
+//
+// Everything is observed through `getDiffContext()` after driving the SAME production route the
+// 1.4 block uses (open a folder, click a file). Never by hand-calling `registerDiffContext` — the
+// M5 seam rule: a hand-registered fixture proves nothing about what production registers. The pair
+// reaching the registry THROUGH `createDiffContext` is pinned separately and structurally by
+// `diffRegistry.test.ts`'s `assertRegistrationsUseFactory` over this file's call sites.
+//
+// NOT here, deliberately: the row discriminant (`dataset.targetKind`, 2.3), the picker's two
+// groups (2.3), the empty-state copy (2.4) and the caption (2.5). 2.2 provisions; nothing yet
+// calls these closures in production.
+
+describe('appShell (008 task 2.2 — the D-3 pair provisioned, app page)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    resetDocIdentityForTest();
+    resetDiffRegistryForTest();
+  });
+
+  /** A file whose text is READ FROM A BOX at call time, so a test can change what the file says
+   *  AFTER it has been opened. `mdFile`'s `read` closes over a constant and cannot express the
+   *  freshness control. */
+  function mutableFile(path: string, box: { text: string }): MarkdownFile {
+    return { path, name: path.split('/').pop() ?? path, read: async () => box.text };
+  }
+
+  /** A file whose read REJECTS — the permission/IO case `MarkdownFile.read`'s contract allows. */
+  function unreadableFile(path: string): MarkdownFile {
+    return {
+      path,
+      name: path.split('/').pop() ?? path,
+      read: async () => {
+        throw new Error('EACCES');
+      },
+    };
+  }
+
+  /** Open `source` and click the file named `name` — the production route, and the only honest
+   *  way to reach the provisioning site. Returns the registered context. */
+  async function openAndGetContext(source: FolderSource, name: string) {
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({ ok: true, source }),
+      store: fakeStore(),
+    });
+    await app.openFolder();
+    const items = [
+      ...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+    ];
+    items.find((f) => f.textContent === name)!.click();
+    await flush();
+    const ctx = getDiffContext();
+    expect(ctx, 'production must have registered a diff context for this open').not.toBeNull();
+    return ctx!;
+  }
+
+  it('the pair is PRESENT on a context the app page registered — 2.1 left both absent', async () => {
+    // The registration half, stated before either property: 2.1's optional members are absent by
+    // default and the whole of 2.2 is that this site now fills them. If this reds, every assertion
+    // below would be about a closure that does not exist.
+    const ctx = await openAndGetContext(
+      sourceOf('notes', [mdFile('CLAUDE.md'), mdFile('intro.md')]),
+      'CLAUDE.md',
+    );
+    expect(typeof ctx.fetchFiles).toBe('function');
+    expect(typeof ctx.fetchFileText).toBe('function');
+  });
+
+  it('★ fetchFiles OMITS the open document — "another file", never one that diffs to nothing', async () => {
+    // PROPERTY (1), red-first: drop the `f.path !== openPath` filter and this reds naming
+    // 'CLAUDE.md' in the list — the signature being the open file offered as its own comparison
+    // target, which is exactly the dead option the exclusion exists to prevent.
+    const ctx = await openAndGetContext(
+      sourceOf('notes', [mdFile('CLAUDE.md'), mdFile('intro.md'), mdFile('docs/b.md')]),
+      'CLAUDE.md',
+    );
+
+    const paths = (await ctx.fetchFiles!()).map((f) => f.path);
+    // NON-VACUITY, in the same call: the other two ARE offered, so the absence below is an
+    // exclusion and not an empty list produced by a fixture that never loaded.
+    expect(paths).toEqual(['intro.md', 'docs/b.md']);
+    expect(paths).not.toContain('CLAUDE.md');
+  });
+
+  it('the exclusion FOLLOWS the selection — it is the open document, not a fixed name', async () => {
+    // The control that separates "excludes the open document" from "excludes the first file" or
+    // "excludes a name that happens to be CLAUDE.md". Same folder, a different document open, and
+    // the excluded entry moves with it — which is only true if `file.path` is what is captured.
+    const files = [mdFile('CLAUDE.md'), mdFile('intro.md'), mdFile('docs/b.md')];
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({ ok: true, source: sourceOf('notes', files) }),
+      store: fakeStore(),
+    });
+    await app.openFolder();
+    const items = [
+      ...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+    ];
+    const byName = (n: string) => items.find((f) => f.textContent === n)!;
+
+    byName('CLAUDE.md').click();
+    await flush();
+    expect((await getDiffContext()!.fetchFiles!()).map((f) => f.path)).toEqual([
+      'intro.md',
+      'docs/b.md',
+    ]);
+
+    byName('intro.md').click();
+    await flush();
+    expect((await getDiffContext()!.fetchFiles!()).map((f) => f.path)).toEqual([
+      'CLAUDE.md',
+      'docs/b.md',
+    ]);
+  });
+
+  it('a folder holding ONLY the open document offers an EMPTY list, never null', async () => {
+    // The designed state 2.4 turns into "no other markdown file in this folder" on the status line.
+    // Empty array, not null and not a throw — the picker must be able to say so (AGENTS.md #5).
+    const ctx = await openAndGetContext(sourceOf('notes', [mdFile('solo.md')]), 'solo.md');
+    await expect(ctx.fetchFiles!()).resolves.toEqual([]);
+  });
+
+  it('★ fetchFileText reads FRESH — the file is MUTATED after opening and the NEW text comes back', async () => {
+    // PROPERTY (2), and the control is the mutation itself. `other.md` says "v1" when the folder is
+    // opened and this document is selected; it says "v2" by the time the closure is called. A
+    // provisioning that read the text at install (or memoised the first read) returns "v1" here and
+    // this reds with the STALE text named — the defect being a comparison against what the other
+    // file said when this one was opened, not what it says now.
+    const box = { text: '# v1\n\nfirst' };
+    const ctx = await openAndGetContext(
+      sourceOf('notes', [mdFile('CLAUDE.md'), mutableFile('other.md', box)]),
+      'CLAUDE.md',
+    );
+
+    box.text = '# v2\n\nsecond';
+    await expect(ctx.fetchFileText!('other.md')).resolves.toBe('# v2\n\nsecond');
+
+    // ...and it is not a one-shot: a SECOND call after a SECOND mutation reads fresh again, so this
+    // cannot pass by caching on the first call instead of at install.
+    box.text = '# v3\n\nthird';
+    await expect(ctx.fetchFileText!('other.md')).resolves.toBe('# v3\n\nthird');
+  });
+
+  it('fetchFileText resolves THAT entry — a path selects its own file, never the folder’s first', async () => {
+    // The routing half of the same closure. Freshness alone would be satisfied by a closure that
+    // re-read the WRONG entry every time; this pins that the `path` argument selects.
+    const ctx = await openAndGetContext(
+      sourceOf('notes', [
+        mdFile('CLAUDE.md'),
+        mdFile('intro.md', '# Intro'),
+        mdFile('docs/b.md', '# Bee'),
+      ]),
+      'CLAUDE.md',
+    );
+    await expect(ctx.fetchFileText!('docs/b.md')).resolves.toBe('# Bee');
+    await expect(ctx.fetchFileText!('intro.md')).resolves.toBe('# Intro');
+  });
+
+  it('an UNREADABLE file and an UNKNOWN path both yield undefined — the designed fallback', async () => {
+    // `MarkdownFile.read` may reject (permission/IO), and the open document is not an offered
+    // target. Both land where a missing snapshot lands: `undefined`, so 2.5's caller keeps the
+    // document on screen and never enters the diff. Neither may throw out of the closure.
+    const ctx = await openAndGetContext(
+      sourceOf('notes', [mdFile('CLAUDE.md'), unreadableFile('locked.md'), mdFile('intro.md')]),
+      'CLAUDE.md',
+    );
+    await expect(ctx.fetchFileText!('locked.md')).resolves.toBeUndefined();
+    await expect(ctx.fetchFileText!('nope.md')).resolves.toBeUndefined();
+    // The open document is not resolvable either — the same list serves both closures, so a path
+    // `fetchFiles` never offered is not one `fetchFileText` will read.
+    await expect(ctx.fetchFileText!('CLAUDE.md')).resolves.toBeUndefined();
+    // NON-VACUITY: a readable, offered path in the SAME context really does come back.
+    await expect(ctx.fetchFileText!('intro.md')).resolves.toBe('# intro.md');
+  });
+
+  it('the four EXISTING members are untouched by the provisioning (additive, not a reshape)', async () => {
+    // 2.1's additive property, re-stated where the closures are actually built: adding the pair
+    // must not have disturbed what 6.2 and 1.4 provisioned beside it.
+    const ctx = await openAndGetContext(
+      sourceOf('notes', [mdFile('CLAUDE.md'), mdFile('intro.md')]),
+      'CLAUDE.md',
+    );
+    expect(ctx.docId).toMatch(/CLAUDE\.md$/);
+    expect(typeof ctx.getCurrentSource).toBe('function');
+    expect(typeof ctx.fetchMeta).toBe('function');
+    expect(typeof ctx.fetchText).toBe('function');
+    expect(typeof ctx.showDiff).toBe('function');
+    expect(typeof ctx.hideDiff).toBe('function');
+    // SHAPE only, and deliberately not a call: `fetchMeta`/`fetchText` close over the snapshot
+    // store, which is real IndexedDB (`./snapshots`, not the injected `AppStore`) and does not
+    // exist in jsdom. Their behaviour is 1.4's and 6.2's, asserted where an engine can run them.
   });
 });

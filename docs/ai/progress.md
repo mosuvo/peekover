@@ -151,9 +151,46 @@ proves nothing. Both engines were rebuilt explicitly here, and the ablation show
 is **tree-shaken out of the content-script bundle** — the first control fired on the app chunk ONLY, which
 is why a second was needed. `permissions: []` on both built manifests (654 / 770 B), `web_accessible_resources`
 absent, manifest test **2975 B**; golden EMPTY; 007 import fence **8/8**; `diffChrome.ts` unedited so it
-gains no import and no fence clause changed; deps **5**. **TASK 2.2 IS NEXT** (`appShell.ts:914` provisions
-the two closures on the app-page side of the fence — `fetchFiles` EXCLUDING the open document, `fetchFileText`
-a FRESH `read()`).
+gains no import and no fence clause changed; deps **5**.
+**TASK 2.2 IS DONE — THE TWO CLOSURES ARE PROVISIONED** (`appShell.ts`, inside the `docId != null` block
+beside 6.2's `showDiff`/`hideDiff`). `fetchFiles` and `fetchFileText` both read ONE list expression — a
+private `otherFilesInFolder(openPath)` over `activeSource?.files`, filtered by `f.path !== openPath` — so
+the exclusion cannot drift between them and a path `fetchFileText` will resolve is exactly a path
+`fetchFiles` offered. The list is read at CALL time, never captured. `fetchFileText` calls **that entry's
+`read()`**; an unreadable file (`read` may reject) and an unknown path both yield `undefined`, the same
+fallback a missing snapshot takes. ★ **BOTH PROPERTIES ARE RED-FIRST PROVEN, each by an ablation whose
+signature is the shipped defect.** (a) *Excludes the open document* — dropping the filter reds four tests,
+the naming one showing `+ "CLAUDE.md"` in the offered list (the open file offered as its own comparison
+target) and `fetchFileText('CLAUDE.md')` returning `'# CLAUDE.md'` instead of `undefined`. (b) *Reads
+fresh* — a provisioning that reads every other file ONCE at install and serves the cache reds with the
+STALE text named (`- # v2 / second` expected, `+ # v1 / first` received). ★ **The freshness ablation reds
+ONE test and passes the other six**, which is exactly why the mutate-between-provision-and-call control is
+load-bearing: routing, the empty list and the fallbacks are all satisfied by a cached build.
+★ **THE APP CHUNK MOVED +197 B AND THE ACCOUNT CLOSES TO A ZERO RESIDUAL, TWICE OVER.** App chunk
+**389,957 → 390,154 B** (`72058cff…`→`57e93f45…`). Four arms, each a real rebuild: **S0** neither closure
+nor the helper · **S1** `fetchFiles` + helper · **S2** `fetchFileText` + helper · **S3** shipped.
+S1−S0 = **+90**, S2−S0 = **+166**, S3−S0 = **+197**. Four measurements, three unknowns — over-determined,
+so the zero is a consistency check and not a tautology: **helper 59 + `fetchFiles` 31 + `fetchFileText` 107
+= 197**, residual **ZERO**. The marginals confirm it independently — S3−S2 = **31** and S3−S1 = **107**,
+and 90−31 = 166−107 = **59** by two separate routes. ★ **The instrument FIRES and returns exactly:** S0
+rebuilds to **389,957 B / `72058cff…`**, byte-for-byte AND md5-for-md5 the pre-2.2 baseline.
+★ **THE CONTENT SCRIPT DID NOT MOVE — 319,709 B, md5-IDENTICAL on BOTH engines** (Cr `a36bd676…` / Fx
+`fd8407ee…`), which is the app-page-only property as bytes: the closures live in a graph `mount.ts` never
+reaches. ★ **And that zero is read off a LIVE instrument, per 2.1's tree-shaking finding** — a probe in
+`registerDiffContext` moves nothing there, so the control was placed in a symbol the content-script graph
+RETAINS (`isDiffContextRegistered`, reached via `diffChrome`/`watchControl`): **+85 B on both engines**
+(Cr `8b45c436…`, Fx `20ca5ea2…`), restored byte-for-byte. Both engines rebuilt explicitly throughout —
+`pnpm build` is Chrome-only. **`permissions: []` on both built manifests (654 / 770 B)** and NO permission
+was added: reading a sibling file uses the File System Access handle the user already granted for the open
+folder, so the zero-permission story holds. `web_accessible_resources` absent; manifest test **2975 B**;
+golden EMPTY; **007 import fence 8/8**; `diffEngine.test.ts`'s fence clauses green **with clause B shown
+FIRING** (an engine import added to `diffChrome.ts` reds it naming `src/render/diffChrome.ts:326`, then
+restored); deps **5**; full suite **1814 passed / 15 skipped**. `diffRegistry.ts` UNEDITED — 2.1's types
+were filled, not changed. ★ **A residual worth recording: `fetchMeta`/`fetchText` cannot be CALLED in
+jsdom** — they close over `./snapshots`, which is real IndexedDB, not the injected `AppStore`; the 2.2
+block asserts their SHAPE only and leaves their behaviour where an engine can run it.
+**TASK 2.3 IS NEXT** (one `role="listbox"`, two `role="group"`s — and `item.dataset.targetKind`, the
+discriminant, on the ROW; the single-kind picker stays structurally what 006 ships).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
