@@ -117,14 +117,25 @@ function fakeStore(): AppStore {
  *  `fetchFiles` offers, minus the open file itself. It defaults to NONE, which is what keeps every
  *  case above and below this line on the SNAPSHOT-ONLY path: the single-file folder is 006's picker,
  *  and the D-4 non-regression is measured against exactly the source those cases drive. */
-function memorySource(name: string, text: string, others: [string, string][] = []): FolderSource {
+function memorySource(name: string, text: string, others: [string, string | null][] = []): FolderSource {
   return {
     name: 'docs',
     truncated: false,
     persistable: true,
     files: [
       { path: name, name, read: async () => text },
-      ...others.map(([path, body]) => ({ path, name: path, read: async () => body })),
+      ...others.map(([path, body]) => ({
+        path,
+        name: path,
+        // ★ 2.5, §3.8: a `null` body is a file that CANNOT BE READ, and it fails the way a real one
+        // does — `MarkdownFile.read` REJECTS. That is the shape 2.2's `fetchFileText` turns into
+        // `undefined` in its own catch; stubbing the `undefined` directly would skip the production
+        // code that produces it and prove the fallback over a fixture instead of over the seam.
+        read: async () => {
+          if (body == null) throw new Error('forced read failure (test-only)');
+          return body;
+        },
+      })),
     ],
   };
 }
@@ -169,7 +180,10 @@ function mountContentScript(doc = docV2()): HTMLElement {
 
 /** The app-page surface, driven through the real user gesture chain. NEVER hand-registers a diff
  *  context: the only registration observed is the one `installWatchForFile` performs (M5 seam rule). */
-async function mountAppPage(doc = docV2(), others: [string, string][] = []): Promise<HTMLElement> {
+async function mountAppPage(
+  doc = docV2(),
+  others: [string, string | null][] = [],
+): Promise<HTMLElement> {
   const container = document.createElement('div');
   document.body.appendChild(container);
   containers.push(container);
@@ -951,5 +965,232 @@ describe('the HALF-EMPTY states: one kind listed, the other SAID — in a measur
     await openPickerIn(host);
     await waitFor(() => status.hidden === false);
     expect(status.textContent!.length).toBeGreaterThan(0);
+  });
+});
+
+// ── TASK 2.5: THE PICKER BECOMES A FEATURE — ONE BRANCH, AND A CAPTION ON ONE SIDE OF IT ───────
+//
+// WHY THESE ARE REAL-ENGINE CASES. The branch itself is unit-provable and is proven next door; what
+// only a real engine can settle is everything the branch is FOR:
+//   • the file's text reaches the REAL `computeDiff` and the REAL `enterDiff` through the closures
+//     `appShell.installWatchForFile` actually provisions over a real folder source — so the added
+//     and removed blocks below are the engine's own output, and the caption can be checked AGAINST
+//     them rather than against itself;
+//   • §4's "restores the document and the reading place" is an attribute flip over a column that
+//     was never re-mounted (006 D-15) — node identity through a CSS-driven hide/show, and jsdom
+//     applies no cascade;
+//   • §4's "does not carry a comparison across" a document switch runs through the app page's real
+//     select → render path;
+//   • §4's content-script clause is an ABSENCE, and an absence is only evidence beside a control
+//     that fires — so the app page's file rows are built in the SAME test, from the same run.
+
+/** The other file's own text — deliberately sharing NO line with `docV2()`, so the real engine must
+ *  produce both an added and a removed block, and each block's provenance is unambiguous. */
+const OTHER_FILE_TEXT = '# Sibling one\n\nA line that exists ONLY in the other file.';
+const READABLE_SIBLING: [string, string | null][] = [['sibling-one.md', OTHER_FILE_TEXT]];
+/** The §3.8 fixture: a folder whose other markdown REJECTS on `read()`. */
+const UNREADABLE_SIBLING: [string, string | null][] = [['sibling-one.md', null]];
+
+const fileRowIn = (host: HTMLElement) =>
+  pickerIn(host)!.querySelector<HTMLButtonElement>('[data-target-kind="file"]')!;
+const snapshotRowIn = (host: HTMLElement) =>
+  pickerIn(host)!.querySelector<HTMLButtonElement>('[data-target-kind="snapshot"]')!;
+
+/** Open the picker and pick the other file, settling once the gesture has produced its answer —
+ *  either a diff or a sentence, never a hang. */
+async function compareWithTheFile(host: HTMLElement): Promise<void> {
+  await openPickerIn(host);
+  fileRowIn(host).click();
+  await waitFor(() => host.getAttribute('data-diff') === 'active' || statusIn(host)!.hidden === false);
+}
+
+describe('2.5 — the file row is a GESTURE: one branch, the real engine, both sides named (D-5)', () => {
+  it('★ picks another FILE and enters the diff — the picked file is "before", the document is "after"', async () => {
+    const host = await mountAppPage(docV2(), READABLE_SIBLING); // no snapshot: files-only, flat rows
+    await compareWithTheFile(host);
+
+    // The SAME inline diff a snapshot comparison uses (§4), reached through the SAME closures.
+    expect(host.getAttribute('data-diff')).toBe('active');
+    expect(isHidden(readerIn(host))).toBe(true);
+    const diff = diffIn(host)!;
+    expect(diff).not.toBeNull();
+
+    // ★ THE DIRECTION, MEASURED OFF THE ENGINE'S OWN OUTPUT rather than off the copy. `before` is
+    // the picked file and `after` is what is on screen (§9-5, current-vs-picked), so the REMOVED
+    // block is the other file's and the ADDED block is this document's. Swap the two arguments and
+    // this pair reds naming both blocks — the caption alone could not tell.
+    // (Read over ALL blocks of each kind: the engine emits one hunk per contiguous run, so the
+    // other file's two lines land in two removed blocks, not one.)
+    const textOf = (kind: string) =>
+      [...diff.querySelectorAll(`.diff-${kind}`)].map((b) => b.textContent).join('\n');
+    expect(textOf('removed')).toContain('ONLY in the other file');
+    expect(textOf('removed')).toContain('Sibling one');
+    expect(textOf('added')).toContain('NEW in version two');
+    expect(textOf('added')).not.toContain('ONLY in the other file');
+  });
+
+  it('★ THE CAPTION NAMES BOTH SIDES, in text, and says which side is which (D-5, §4, §5)', async () => {
+    const host = await mountAppPage(docV2(), READABLE_SIBLING);
+    await compareWithTheFile(host);
+
+    const status = statusIn(host)!;
+    expect(status.hidden).toBe(false);
+    const caption = status.textContent!;
+    // BOTH sides, by name. A one-side caption ("Comparing with sibling-one.md") reds on the first
+    // of these; a caption naming only the document reds on the second.
+    expect(caption).toContain('doc.md'); // the document on screen
+    expect(caption).toContain('sibling-one.md'); // the file that was picked
+    // ★ AND THE DIRECTION IS IN THE TEXT — never left to position or colour (§5). The clause is
+    // asserted against the same provenance the engine produced above, so a caption that named both
+    // sides the wrong way round reds here rather than reading plausibly.
+    expect(caption).toContain("removed lines are sibling-one.md's");
+    expect(caption).toContain("added lines are doc.md's");
+    // It is the line that ALREADY EXISTS (D-5), not a new element: one status region, still polite.
+    expect(status.getAttribute('role')).toBe('status');
+    expect(shadowOf(host).querySelectorAll(`.${DIFF_STATUS_CLASS}`)).toHaveLength(1);
+  });
+
+  it('★ A SNAPSHOT diff is UNCHANGED — no caption, an empty status, out of the a11y tree (Q1)', async () => {
+    // GATE-2 RULING Q1, verbatim: "leave snapshot diffs VERBATIM". The caption is ADDITIVE — it
+    // exists on one side of one branch — and this is the assertion that says so on the real
+    // surface. A build that captioned both kinds reds here, naming the sentence it added.
+    const host = await mountAppPage(docV2(), READABLE_SIBLING);
+    await seedSnapshot();
+    await openPickerIn(host);
+    snapshotRowIn(host).click();
+    await waitFor(() => host.getAttribute('data-diff') === 'active');
+
+    expect(diffIn(host)!.textContent).toContain('OLD in version one'); // the diff really ran
+    const status = statusIn(host)!;
+    expect(status.hidden).toBe(true);
+    expect(status.textContent).toBe('');
+    expect(isHidden(status)).toBe(true); // really unrendered, not merely transparent
+  });
+
+  it('★ LEAVING a file-vs-file diff restores the document EXACTLY as leaving a snapshot one does', async () => {
+    // §4's clause, asserted as the property 006 D-15 makes true: an ATTRIBUTE FLIP over an UNTOUCHED
+    // column. Node identity is what distinguishes that from a re-render that happens to look the
+    // same — a build that re-mounted the reader on exit would satisfy every visible assertion and
+    // fail these two, which is why they are here rather than a `querySelector('h1') != null`.
+    const host = await mountAppPage(docV2(), READABLE_SIBLING);
+    await seedSnapshot();
+
+    const column = readerIn(host);
+    const h1 = column.querySelector('h1')!;
+
+    /** Enter through `pick`'s row, leave through the pill, and report what the round trip left. */
+    async function roundTrip(pick: (h: HTMLElement) => HTMLButtonElement): Promise<{
+      sameColumn: boolean;
+      sameH1: boolean;
+      diffAttr: boolean;
+      diffNode: boolean;
+      columnHidden: boolean;
+      statusHidden: boolean;
+      pill: string | null;
+    }> {
+      await openPickerIn(host);
+      pick(host).click();
+      await waitFor(() => host.getAttribute('data-diff') === 'active');
+      pillIn(host)!.click();
+      await waitFor(() => !host.hasAttribute('data-diff'));
+      return {
+        sameColumn: readerIn(host) === column,
+        sameH1: readerIn(host).querySelector('h1') === h1,
+        diffAttr: host.hasAttribute('data-diff'),
+        diffNode: diffIn(host) !== null,
+        columnHidden: isHidden(readerIn(host)),
+        statusHidden: statusIn(host)!.hidden,
+        pill: pillIn(host)!.textContent,
+      };
+    }
+
+    const afterFile = await roundTrip(fileRowIn);
+    const afterSnapshot = await roundTrip(snapshotRowIn);
+
+    // ★ "EXACTLY AS" IS MEASURED, NOT ASSERTED TWICE: the two round trips must leave the SAME
+    // state, and that state must be the restored one. Either half alone would pass over a pair of
+    // exits that agreed on being wrong.
+    expect(afterFile).toEqual(afterSnapshot);
+    expect(afterFile).toEqual({
+      sameColumn: true, // never a re-mount — the same element, unhidden
+      sameH1: true,
+      diffAttr: false,
+      diffNode: false,
+      columnHidden: false,
+      statusHidden: true, // ★ and the CAPTION went with the diff (`showCompare`'s say(null))
+      pill: 'Compare',
+    });
+  });
+
+  it('★ SWITCHING DOCUMENTS does not carry a comparison across (§4)', async () => {
+    // The signature of the defect this guards is a NEW document rendering INSIDE a stale diff: the
+    // column hidden by a `data-diff` nobody cleared, with the previous document's hunks on screen.
+    // So the assertions are about the new document's own render, not merely about the attribute.
+    const host = await mountAppPage(docV2(), READABLE_SIBLING);
+    await compareWithTheFile(host);
+    expect(host.getAttribute('data-diff')).toBe('active'); // non-vacuous: a diff really is open
+
+    const container = containers[containers.length - 1];
+    const rows = [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')];
+    expect(rows).toHaveLength(2);
+    rows[1].click(); // the OTHER file, opened as a document in its own right
+
+    const next = await waitFor(() =>
+      container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+    );
+    await waitFor(
+      () => next.shadowRoot?.querySelector('.peekover-reader h1')?.textContent === 'Sibling one',
+    );
+
+    expect(next.hasAttribute('data-diff')).toBe(false);
+    expect(diffIn(next)).toBeNull();
+    expect(isHidden(readerIn(next))).toBe(false);
+    // ...and the affordance came back offering, not stuck mid-comparison.
+    expect(pillIn(next)!.textContent).toBe('Compare');
+    expect(statusIn(next)!.hidden).toBe(true);
+  });
+
+  it('★ AN UNREADABLE other file SAYS SO beside the untouched document, and never enters (§3.8)', async () => {
+    // REVERT-AND-FAIL, not enter-then-fail. The signature of the wrong shape is a BLANKED COLUMN
+    // behind an error: `data-diff` set, the reader hidden, and a sentence over the top of it. Every
+    // assertion below is chosen to red on that shape rather than only on the message.
+    const host = await mountAppPage(docV2(), UNREADABLE_SIBLING);
+    await compareWithTheFile(host);
+
+    const status = statusIn(host)!;
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toContain('sibling-one.md'); // it names the file it could not read…
+    expect(status.textContent).not.toContain('snapshot'); // …and not a thing the user did not pick
+    // The document is EXACTLY where it was: no attribute, no diff node, nothing hidden.
+    expect(host.hasAttribute('data-diff')).toBe(false);
+    expect(diffIn(host)).toBeNull();
+    expect(isHidden(readerIn(host))).toBe(false);
+    expect(readerIn(host).querySelector('h1')).not.toBeNull();
+    expect(pillIn(host)!.textContent).toBe('Compare'); // still offering, not stuck in exit
+  });
+
+  it('★ NO file comparison on the CONTENT-SCRIPT reader — with the app page as the control that fires', async () => {
+    // §4's last compare clause. An absence nothing could have produced discriminates nothing, so
+    // the control is not a different run or a different fixture: the SAME test, immediately after,
+    // builds file rows on the surface that is supposed to have them.
+    const cs = mountContentScript();
+    await flush();
+    expect(isDiffContextRegistered()).toBe(false); // the architectural fact underneath the absence
+    expect(pillIn(cs)).toBeNull();
+    expect(pickerIn(cs)).toBeNull();
+    expect(shadowOf(cs).querySelector('[data-target-kind]')).toBeNull();
+    expect(shadowOf(cs).querySelector('[data-target-kind="file"]')).toBeNull();
+
+    // ★ THE CONTROL, IN THE SAME RUN: the app page, same document, offers exactly what the content
+    // script does not — and the same selector that read `null` above reads a real row here.
+    const app = await mountAppPage(docV2(), READABLE_SIBLING);
+    await openPickerIn(app);
+    expect(shadowOf(app).querySelector('[data-target-kind="file"]')).not.toBeNull();
+    expect(fileRowIn(app).dataset.filePath).toBe('sibling-one.md');
+    // ...and it really is a gesture there, so what the content script lacks is a working feature.
+    fileRowIn(app).click();
+    await waitFor(() => app.getAttribute('data-diff') === 'active');
+    expect(statusIn(app)!.textContent).toContain('sibling-one.md');
+    expect(cs.hasAttribute('data-diff')).toBe(false); // and none of it reached the other surface
   });
 });

@@ -20,6 +20,10 @@ import {
   type DiffOutcome,
 } from './diffRegistry';
 import type { SnapshotMetaEntry } from '../app/snapshots';
+// 2.5's caption names the document on screen, and this is the module that holds that name (D-1).
+// Registered here rather than transcribed: a caption built from a stale seam would read fine and be
+// wrong, and `resetDocIdentityForTest` keeps one case's name out of the next.
+import { registerDocIdentity, resetDocIdentityForTest } from './docIdentity';
 // 2.4's lane lives in the CONTAINED sheet, and the assertion that it exists reads the real export
 // rather than a copy of it — a transcribed selector could drift from the shipped one silently.
 import { CONTAINED_CSS, READER_CSS } from '../theme/readerCss';
@@ -126,6 +130,7 @@ async function openedPicker(over: Partial<DiffContext> = {}): Promise<HTMLElemen
 
 beforeEach(() => {
   resetDiffRegistryForTest();
+  resetDocIdentityForTest();
 });
 
 describe('buildDiffChrome — the D-14 gate (§3.2)', () => {
@@ -237,7 +242,14 @@ describe('buildDiffChrome — the picker (spec §3.7, mockup divergences 1 and 2
 });
 
 describe('buildDiffChrome — TWO KINDS: the row discriminant (D-3) and the two groups (D-4)', () => {
-  const bothKinds = { fetchFiles: async () => FILES };
+  // ★ 2.5 ADDS `fetchFileText` — the pair is provisioned TOGETHER by `appShell` (`:987`, `:994`)
+  // and `diffRegistry.ts:146` says so ("provisioned alongside `fetchFiles` and absent whenever it
+  // is"), so a fixture that offered file rows no capability to resolve them was a shape production
+  // never produces. The rendering cases below are indifferent to it; the branch case is not.
+  const bothKinds = {
+    fetchFiles: async () => FILES,
+    fetchFileText: async (path: string) => `text of ${path}`,
+  };
 
   it('EVERY row carries its OWN kind, on the ROW — snapshots say snapshot, files say file', async () => {
     // The discriminant is the thing 2.5's single branch reads, so what matters is not that the
@@ -346,20 +358,109 @@ describe('buildDiffChrome — TWO KINDS: the row discriminant (D-3) and the two 
     expect(label).toMatch(/file/i);
   });
 
-  it('a file row is NOT wired to the snapshot gesture — the branch is 2.5’s', async () => {
-    // The boundary of this task, pinned so it cannot be crossed by accident: a file row carries its
-    // discriminant and no handler. Routing it through today's snapshot-only compareWith would
-    // answer a file pick with "that snapshot is no longer stored" — this reds if it ever does.
+  it('★ 2.5 — a file row routes through fetchFileText, NEVER through fetchText (the ONE branch)', async () => {
+    // ★ RE-SCOPED, NOT DELETED (the 2.4 precedent). Until 2.5 this asserted the file row had NO
+    // handler — the boundary of 2.3, pinned so the branch could not be written early. 2.5 IS that
+    // branch, so the pin now asserts the thing it was guarding the shape of: which capability the
+    // discriminant routes a file pick to. The defect it always named is unchanged and still the
+    // signature to look for — a file pick answered with "that snapshot is no longer stored".
     resetDiffRegistryForTest();
-    const rec = recordingContext(bothKinds);
+    const snapshotAsked: string[] = [];
+    const fileAsked: string[] = [];
+    const rec = recordingContext({
+      ...bothKinds,
+      fetchText: async (id) => {
+        snapshotAsked.push(id);
+        return 'snapshot text';
+      },
+      fetchFileText: async (path) => {
+        fileAsked.push(path);
+        return 'other file text';
+      },
+    });
     registerDiffContext(rec.context);
     const box = build();
     pillOf(box).click();
     await flush();
     pickerOf(box).querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
     await flush();
-    expect(rec.shown).toEqual([]);
-    expect(statusOf(box).hidden).toBe(true); // and NOTHING was said, wrongly or otherwise
+
+    // The branch read the ROW's own discriminant and picked the file capability, with the path that
+    // row carries — and the snapshot capability was never asked anything at all.
+    expect(fileAsked).toEqual(['notes/intro.md']);
+    expect(snapshotAsked).toEqual([]);
+    // …and the diff ran over the PICKED FILE's text against what is on screen (§9-5: current-vs-
+    // picked). Asserted as the whole (before, after) pair, so a swap reds naming both sides.
+    expect(rec.shown).toEqual([{ before: 'other file text', after: 'current text' }]);
+    expect(statusOf(box).textContent).not.toContain('snapshot is no longer stored');
+  });
+
+  it('★ 2.5 — a SNAPSHOT row still routes through fetchText, and still says NOTHING (Q1)', async () => {
+    // The other half of the same branch, and the control for the case above: one `if` that always
+    // took the file leg would red here rather than pass quietly. Gate-2 ruling Q1 in one assertion —
+    // a snapshot comparison's presentation is what it was before this task.
+    resetDiffRegistryForTest();
+    const fileAsked: string[] = [];
+    const rec = recordingContext({
+      ...bothKinds,
+      fetchFileText: async (path) => {
+        fileAsked.push(path);
+        return 'other file text';
+      },
+    });
+    registerDiffContext(rec.context);
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    pickerOf(box).querySelector<HTMLButtonElement>('[data-target-kind="snapshot"]')!.click();
+    await flush();
+
+    expect(fileAsked).toEqual([]);
+    expect(rec.shown).toEqual([{ before: 'snapshot text', after: 'current text' }]);
+    // ★ NO CAPTION on a snapshot diff — the status line is still empty and still out of the a11y
+    // tree, which is today's shipped behaviour byte-for-byte (Q1: "leave snapshot diffs verbatim").
+    expect(statusOf(box).hidden).toBe(true);
+    expect(statusOf(box).textContent).toBe('');
+  });
+
+  it('★ 2.5 — the file-vs-file caption NAMES BOTH SIDES, and says which side is which (D-5)', async () => {
+    // §4: "name both sides … in text", §5: never by position or colour. The direction clause is
+    // asserted, not just the two names — a caption listing both names and leaving the reader to
+    // guess which one the red blocks came from is exactly what §3.2's surviving obligation is about.
+    resetDiffRegistryForTest();
+    registerDocIdentity('CLAUDE.md');
+    registerDiffContext(recordingContext(bothKinds).context);
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    pickerOf(box).querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
+    await flush();
+
+    const caption = statusOf(box).textContent!;
+    expect(statusOf(box).hidden).toBe(false);
+    expect(caption).toContain('CLAUDE.md'); // the document on screen — the diff's "after"
+    expect(caption).toContain('intro.md'); // the picked file — the diff's "before"
+    expect(caption).toContain("removed lines are intro.md's");
+    expect(caption).toContain("added lines are CLAUDE.md's");
+  });
+
+  it('★ 2.5 — an UNREADABLE other file says so, names the FILE, and never enters the diff (§3.8)', async () => {
+    // The §3.8 rung, on the file side: `fetchFileText` answers `undefined` for a file it cannot
+    // read (2.2 turns a rejected `read()` into exactly that), and the affordance must not borrow the
+    // SNAPSHOT sentence for it — that would name a thing the user did not pick.
+    resetDiffRegistryForTest();
+    const rec = recordingContext({ ...bothKinds, fetchFileText: async () => undefined });
+    registerDiffContext(rec.context);
+    const box = build();
+    pillOf(box).click();
+    await flush();
+    pickerOf(box).querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
+    await flush();
+
+    expect(rec.shown).toEqual([]); // the diff was never entered
+    expect(statusOf(box).hidden).toBe(false);
+    expect(statusOf(box).textContent).toBe('Comparison unavailable — intro.md could not be read.');
+    expect(statusOf(box).textContent).not.toContain('snapshot');
   });
 });
 

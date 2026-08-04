@@ -353,7 +353,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
       risk 2), decomposed to a **zero residual**. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-4; §4 compare; §3.8 degradation]
 
-- [ ] **2.5 `compareWith` branches ONCE; the caption names both sides (D-5).** `compareWith` (`:242`) branches
+- [x] **2.5 `compareWith` branches ONCE; the caption names both sides (D-5).** `compareWith` (`:242`) branches
       on `target.kind`: snapshot → `fetchText(id)`, file → `fetchFileText(path)`; `after` =
       `getCurrentSource()`; `showDiff(host, before, after)` **over the fence, unchanged**. §4's *"shall name
       both sides … in text"*: on a successful **file-vs-file** diff the status line becomes the **caption**

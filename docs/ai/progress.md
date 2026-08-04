@@ -298,9 +298,64 @@ honoured by assigning the two contributors separately above. **Record this as th
 record intact; `diffRegistry.ts` **UNEDITED**; no 1.1–2.3 module touched beyond `diffChrome.ts` and
 `readerCss.ts`; no badge-lane change (6.1's, untouched); deps **5**; unit **813/813**, browser **1041 passed
 / 15 skipped** (104 files, Cr+Fx).
-**TASK 2.5 IS NEXT** (`compareWith` branches ONCE on `dataset.targetKind`; the caption names both sides on a
-file-vs-file diff — D-5 — with snapshot diffs left VERBATIM per gate-2 ruling Q1). **2.4 stops short of it
-deliberately:** file rows still carry **no click handler**, and no caption is written.
+★ **TASK 2.5 IS DONE — COMPARE-TWO-FILES IS A WORKING FEATURE, AND GROUP 2 IS COMPLETE.** The file row got
+the gesture 2.4 left off (`item.addEventListener('click', () => void compareWith(item))`), and it calls the
+**SAME `compareWith` a snapshot row calls** — which now takes the picked **ROW** and branches **ONCE** on
+`row.dataset.targetKind`: file → `fetchFileText(path)`, snapshot → today's `fetchText(id)`. Everything below
+the branch is shared and unchanged: `after = getCurrentSource()` (**§9-5 current-vs-picked, never
+picked-vs-picked**), `showDiff(host, before, after)` over the plan §1.4 fence, and the same fallback ladder.
+★ **THE DISCRIMINANT IS READ WHERE D-3 PUT IT** — off the row, once, at the gesture; **no tagged union
+entered the context or either closure**, which is what 2.1 kept the pair independent *for*. ★ **The engine is
+UNTOUCHED** (the substrate gift holds): a file-vs-file diff is the same `computeDiff` fed a different
+`before`. **D-5's CAPTION** lands in the status line that already exists — *"Comparing doc.md with
+sibling-one.md — removed lines are sibling-one.md's, added lines are doc.md's."* — naming **both sides AND
+the direction in text**, so neither is inferred from position or colour (§4, §5); the document's own name
+comes from **`getDocIdentity()` (D-1's registry)**, the one seam that already holds it. `showCompare()`'s
+existing `say(null)` clears it on exit — no new element, no new lifecycle. ★ **GATE-2 RULING Q1 HELD
+VERBATIM: a SNAPSHOT diff still says NOTHING on success** — the caption sits on the file side of the one
+branch, and both directions are red-first proven. **§3.8 branches with it:** an unreadable other file gets
+its **own** sentence naming the file (*"Comparison unavailable — sibling-one.md could not be read."*), never
+the snapshot copy that would name a thing the user did not pick.
+**RED-FIRST, SIX ABLATIONS, EVERY ONE FIRING ON BOTH ENGINES** (cp-aside + restore, never `git checkout`;
+the restore verified md5-identical): **(1)** route the file pick through `fetchText` → **the exact defect
+2.3's boundary pin predicted** — *"Comparison unavailable — that snapshot is no longer stored"* (6 browser
+cases + 2 unit); **(2)** a one-side caption → reds naming the dropped side; **(3)** caption BOTH kinds →
+reds the Q1 pin **and** 006's inherited *"success says nothing"* assertion (over-determined); **(4)** ablate
+`mount.ts:224`'s D-15 clear → the new document renders inside a **stale diff**; **(5)** enter-then-fail on an
+unreadable file → `data-diff` set and the **column blanked behind an error**, `showDiff` called with
+`before: ''`; **(6)** drop the exit's `say(null)` → the caption **outlives the diff**, and the two-arm
+equality names the field. ★ **`diffChrome.test.ts:349`'s 2.3-era boundary pin was RE-SCOPED, NOT DELETED**
+(the 2.4 precedent) — it asserted the file row had *no* handler, which is exactly what 2.5 lands, so it now
+asserts the thing it was guarding the shape of: which capability the discriminant routes a file pick to.
+**That widens 2.5's Files list by one file beyond its body** (`src/render/diffChrome.test.ts`); flagged in
+the task report rather than taken silently.
+★ **THE CONTENT SCRIPT MOVES +416 B, DECOMPOSED TO A ZERO RESIDUAL.** Content script **320,948 → 321,364 B**
+(Cr `108951dc…`→`da80bfbc…`, Fx `7d9fc306…`→`b50e4baa…`), app chunk **391,395 → 391,809 B, +414**
+(`dee77eb5…`→`7e635aa2…`). **FIVE arms, both engines rebuilt explicitly** (`pnpm build` is Chrome-only):
+**gesture +68/+68 · branch +115/+113 · caption +140/+138 · SHARED plumbing +93/+95** (the destructured row
+dataset, the `isFile` read, the `HTMLElement` parameter) **= 416 / 414, residual ZERO.** ★ **THE SHARED LINE
+IS WHY THERE IS A FOURTH ARM, and it is this session's carried lesson made concrete:** ablating the branch
+and the caption one at a time leaves the plumbing both read standing in BOTH arms, so the three margins sum
+to **323 of 416** and 93 B land nowhere. The all-three-off arm reproduces HEAD's bundles **to the md5 on both
+engines** (`108951dc` / `7d9fc306` / `dee77eb5`) — **the control FIRES**, and the same arm re-proves
+`diffChrome.ts:43`'s own claim that a `.ts` comment ships nothing: it carries every new comment block and is
+still byte-identical to a HEAD that has none of them.
+`permissions: []` on both built manifests (654 / 770 B); manifest test **2975 B** (byte-unmodified); golden
+**EMPTY**; **007 import fence 8/8**; `diffEngine.test.ts` **15/15** (the `diff`-off-the-content-script
+clauses); 007's **28 tasks / nine groups** record intact; `diffRegistry.ts` **UNEDITED** (2.5 calls the pair,
+it does not change it); `readerCss.ts` **UNTOUCHED** — the caption reuses the status line's existing styling,
+so no CSS was needed; no badge-lane change (6.1's, untouched); NUL **0 in both forms** across all three edited
+files with the control reading nonzero; deps **5**; unit **816/816**, browser **1055 passed / 15 skipped**
+(104 files, Cr+Fx).
+**GROUP 2 IS COMPLETE — and 2.5 performed NO group-close act, because its body scopes none:** the Files list
+is the feature and its tests, and no reconcile, summary or gate is named. ★ **One thing IS outstanding and
+is the human's to route:** the `decisions.md` entries for **D-3, D-4 and D-5** have not landed — 2.1–2.5's
+Files lists none of them include `decisions.md`, though the tasks header (`:55-57`) says each D-value's entry
+lands with the commit that implements it. D-1 and D-2's entries landed at 1.4. **Not taken here** (it is
+outside 2.5's allowed set and would be an invented close); reported instead.
+**TASK 3.1 IS NEXT** — and it is this milestone's **one hard sequencing constraint**: consume §3.11 and
+enumerate the filter's property set (row 24) **before any table-tools test exists**. It writes no `src/` code
+and asserts nothing; both bundles must come back **md5-identical to 2.5's** (`da80bfbc…` / `b50e4baa…`).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

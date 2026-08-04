@@ -148,21 +148,82 @@
 // answer to "one list, two kinds" — so this stays ONE control: no dialog, no menu, no second pill
 // (§3.2 rejected a second control; divergence 1 below rejected the dialog).
 //
+// ── 008 D-5 (task 2.5): ONE BRANCH AT THE GESTURE, AND A CAPTION ON ONE SIDE OF IT ────────────
+//
+// The picker 2.3/2.4 built is now a WORKING feature: a file row has a click handler, and it calls
+// the SAME {@link compareWith} a snapshot row does. Three rules hold it together:
+//
+//   • THE BRANCH IS ONE `if`, AND IT READS THE ROW. `compareWith` takes the picked ROW and reads
+//     `dataset.targetKind` off it — the discriminant D-3 put there precisely so that ONE branch
+//     could read it (see the block above, and `diffRegistry.ts:76-78`). File → `fetchFileText`,
+//     snapshot → today's `fetchText`; everything downstream — `getCurrentSource`, `showDiff` over
+//     the fence, the fallback ladder — is SHARED and unchanged. No `kind` is threaded through the
+//     context or through either closure, which is the whole of what D-3 bought.
+//   • THE ENGINE IS UNTOUCHED. A file-vs-file diff is `showDiff(host, <the other file's text>,
+//     <what is on screen>)` — the same provisioned capability, fed a different `before`. Nothing
+//     here knows how a diff is computed, and 2.5 changed nothing that does.
+//   • CURRENT-VS-PICKED (§9-5). `after` is always `getCurrentSource()`. Two picked files are never
+//     compared against each other; gate 1 ruled that out and no path here can reach it.
+//
+// ── THE CAPTION IS ADDITIVE, AND THAT IS A RULING, NOT A CONVENIENCE (gate-2 Q1) ───────────────
+//
+// §4 requires a file-vs-file diff to NAME BOTH SIDES in text, so its direction is never inferred
+// from position or colour (§5) — unlike a snapshot diff, whose "before" is an earlier version of
+// what is already on screen. D-5 puts that caption in the status line THIS FILE ALREADY HAS: it is
+// already polite, already sits under the pill, already speaks every failure, and already leaves the
+// a11y tree when empty. So a successful FILE comparison replaces today's `say(null)` with the
+// caption, and `showCompare()`'s existing `say(null)` on exit clears it — no new element, no new
+// lifecycle.
+//
+// ★ THE SNAPSHOT BRANCH IS BYTE-FOR-BYTE WHAT IT WAS. Gate-2 ruling Q1 is verbatim "NO — leave
+// snapshot diffs VERBATIM": §4 asks for the naming on file-vs-file ONLY, and captioning a snapshot
+// diff is scope the spec did not ask for. So the caption sits on the FILE side of the one branch,
+// and a snapshot pick still says NOTHING on success — the diff is the answer. Both directions are
+// asserted, red-first.
+//
+// AND THE FAILURE COPY BRANCHES WITH IT. `TEXT_UNAVAILABLE` names a SNAPSHOT ("that snapshot is no
+// longer stored"), which is the wrong sentence for a file that could not be read — it names a thing
+// the user did not pick. §3.8 wants the system to SAY SO beside the untouched document, so the file
+// branch has its own sentence, naming the file. (`diffChrome.test.ts`'s 2.3-era boundary pin caught
+// exactly this mis-routing while the gesture was still absent; 2.5 RE-SCOPES that pin to assert the
+// branch it was guarding the shape of, rather than deleting it.)
+//
 // ── THE CONTENT-SCRIPT BYTES THIS COSTS, ASSIGNED ─────────────────────────────────────────────
 //
 // `mount.ts:28` imports `buildDiffChrome`, so this module is on BOTH graphs — the picker is
 // app-page-only at RUNTIME (D-14: no context registered there, so it builds nothing), never in the
 // BUNDLE. Plan §4 risk 2 is where that was decided: the content-script bundle stops being
-// byte-identical in M8, and the price of that is that every byte is assigned. Measured for this
-// task, both engines, content script and app chunk moving by the same amount:
+// byte-identical in M8, and the price of that is that every byte is assigned. Measured for 2.3,
+// both engines, content script and app chunk moving by the same amount:
 //
 //   +6 B   the `ARIA_PICKER` const and the named `snapshotRows` local
 //   +48 B  the row discriminant and the widened listbox label
 //   +585 B the file row — `buildFileItem`, its two spans, its label
 //   +248 B the grouping — `buildGroup` and the both-non-empty ternary
 //   = 887 B, and stripping all four reproduces HEAD's bundles to the md5 (residual zero).
+//
+// 2.5 moves them again, and its own additions are assigned the same way — measured by ablation
+// against this task's own baseline (CS 320,948 B / Cr 108951dc… / Fx 7d9fc306…; app 391,395 B /
+// dee77eb5…), every arm built on BOTH engines. Content script, then app chunk:
+//
+//   +68 B / +68 B   the GESTURE — the file row's click listener, and the `fileName` it carries so
+//                   the branch's copy can name the file without re-reading the row's spans
+//   +115 B / +113 B the BRANCH — the `fetchFileText` routing and the file's own §3.8 sentence
+//   +140 B / +138 B the CAPTION — `fileCaption`, the `getDocIdentity` edge, and the file-only `say`
+//   +93 B / +95 B   SHARED by the branch and the caption: the destructured row dataset, the
+//                   `isFile` read and the `HTMLElement` parameter that replaced the `id` one
+//   = +416 B / +414 B, and the residual is ZERO.
+//
+// ★ THE SHARED LINE IS NOT A ROUNDING ALLOWANCE — IT IS WHY THERE IS A FOURTH ARM. Ablating the
+// branch and the caption ONE AT A TIME leaves the plumbing both of them read standing in BOTH arms,
+// so its bytes are attributed to neither and the three margins sum to 323 of 416. The fourth arm
+// strips all three TOGETHER and rebuilds HEAD's two bundles to the md5 on both engines — which is
+// what makes the 93 B a measured remainder rather than an unexplained one. The same arm re-proves
+// this file's own claim at :43 that a `.ts` comment ships nothing: it carries every comment block
+// above and is still byte-identical to a HEAD that has none of them.
 
 import { getDiffContext, isDiffContextRegistered, type DiffFileEntry } from './diffRegistry';
+import { getDocIdentity } from './docIdentity';
 
 /** CSS class the reader stylesheet styles (`readerCss.ts`). The affordance pill itself. */
 export const DIFF_AFFORDANCE_CLASS = 'peekover-diff-affordance';
@@ -193,6 +254,34 @@ const TEXT_NO_SNAPSHOTS = 'No snapshots yet — this document has not changed si
 const TEXT_NO_OTHER_FILES = 'No other markdown file in this folder to compare against.';
 const TEXT_UNAVAILABLE = 'Comparison unavailable — that snapshot is no longer stored.';
 const TEXT_NO_SOURCE = 'Comparison unavailable — nothing is on screen to compare against.';
+/** The name the caption uses for the document on screen when nothing registered one. UNREACHABLE on
+ *  the production path — `installWatchForFile` calls `registerDocIdentity(file.name)` BEFORE it
+ *  reaches `registerDiffContext` (`appShell.ts:874`), and a picker only exists where a context is
+ *  registered — so this is the totality AGENTS.md #5 requires, not a state with a design. */
+const TEXT_THIS_DOCUMENT = 'this document';
+
+/** The FILE branch's counterpart to {@link TEXT_UNAVAILABLE} (§3.8). A file that could not be read
+ *  must not be answered with the SNAPSHOT sentence: "that snapshot is no longer stored" names a
+ *  thing the user did not pick, on the one path where they picked something else. */
+function unreadableFile(name: string): string {
+  return `Comparison unavailable — ${name} could not be read.`;
+}
+
+/**
+ * ★ D-5 — THE CAPTION, and it names BOTH sides IN TEXT (§4, §5).
+ *
+ * `before` is the picked file and `after` is the document on screen (§9-5: current-vs-picked), so
+ * every removed line came from the picked file and every added line is the open document's. The
+ * sentence says exactly that: the two names alone would leave the DIRECTION to be inferred from
+ * which colour a block is, which is the inference §5 forbids and §3.2's surviving obligation is
+ * about. The order of the names is not load-bearing — the clause after the dash is.
+ */
+function fileCaption(docName: string, fileName: string): string {
+  return (
+    `Comparing ${docName} with ${fileName} — ` +
+    `removed lines are ${fileName}'s, added lines are ${docName}'s.`
+  );
+}
 
 /** `ts` → a short, absolute, locale-formatted stamp. Absolute rather than relative ("2 min ago")
  *  on purpose: relative stamps are the VERSION-BROWSER register that divergence 2 below rejects. */
@@ -287,8 +376,15 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     delete pill.dataset.diffOpen;
   }
 
-  /** Enter the diff against snapshot `id`. Every failure lands in the fallback (plan §1.5). */
-  async function compareWith(id: string): Promise<void> {
+  /**
+   * Enter the diff against the target `row` names. Every failure lands in the fallback (plan §1.5).
+   *
+   * ★ THE ONE BRANCH (D-5). It takes the picked ROW rather than a `{kind, key}` pair because the
+   * discriminant already lives there and nowhere else (D-3): the branch reads `dataset.targetKind`
+   * at the gesture, once, and the two capabilities on the context stay independent — no `kind`
+   * crosses the fence, and neither closure learns the other exists.
+   */
+  async function compareWith(row: HTMLElement): Promise<void> {
     // THE REGISTRY IS READ HERE, AT GESTURE TIME — never captured when this control was built.
     const context = getDiffContext();
     if (!context) return;
@@ -301,17 +397,35 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     // sitting in the ORIGINAL slot beside a closed picker until the awaited fetch below resolved.
     say(null);
 
-    const before = await context.fetchText(id);
+    const { targetKind, snapshotId, filePath, fileName } = row.dataset;
+    const isFile = targetKind === 'file';
+    // The other file, named for the copy below — its own name, falling back to its path. Both are
+    // set by `buildFileItem`; the `??` chain is what keeps this TOTAL rather than asserted.
+    const other = fileName ?? filePath ?? 'that file';
+    // ★ THE BRANCH. One `if`, over the row's own discriminant, choosing WHICH capability resolves
+    // the pick. `?? ''` for the same totality reason: a row without its key resolves to `undefined`
+    // through the real capability and lands in the fallback below, rather than throwing into the
+    // gesture (AGENTS.md #5). `fetchFileText` is optional-chained because the D-3 pair is optional
+    // on the context — a surface with file rows always has it (2.2 provisions both together), and
+    // one that somehow did not would answer here rather than blow up.
+    const before = isFile
+      ? await context.fetchFileText?.(filePath ?? '')
+      : await context.fetchText(snapshotId ?? '');
     const after = context.getCurrentSource();
     // 1.2's designed self-reclaim window: meta can outlive its content row. That lands HERE, in
-    // the same fallback state as a render failure — the document stays on screen, untouched.
-    if (before == null) return say(TEXT_UNAVAILABLE);
+    // the same fallback state as a render failure — the document stays on screen, untouched. §3.8
+    // routes the FILE case to the same rung with its own sentence: an unreadable other file says so
+    // beside the untouched document and never enters the diff.
+    if (before == null) return say(isFile ? unreadableFile(other) : TEXT_UNAVAILABLE);
     if (after == null) return say(TEXT_NO_SOURCE);
 
-    // The engine and the view, both reached over the fence as one provisioned capability.
+    // The engine and the view, both reached over the fence as one provisioned capability — fed a
+    // different `before` on the file branch, and otherwise the same call it always was.
     const result = context.showDiff(host, before, after);
     if (!result.ok) return say(result.reason);
-    say(null);
+    // ★ D-5, AND THE Q1 RULING IN ONE EXPRESSION. A file-vs-file diff names both sides; a SNAPSHOT
+    // diff still says nothing at all, which is today's behaviour preserved byte-for-byte.
+    say(isFile ? fileCaption(getDocIdentity() ?? TEXT_THIS_DOCUMENT, other) : null);
     showExit();
   }
 
@@ -338,7 +452,7 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     size.textContent = sizeOf(entry.bytes);
     item.append(when, size);
     item.setAttribute('aria-label', `Compare with the snapshot from ${when.textContent} (${size.textContent})`);
-    item.addEventListener('click', () => void compareWith(entry.id));
+    item.addEventListener('click', () => void compareWith(item));
     return item;
   }
 
@@ -349,11 +463,11 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
    * It NAMES the file and SAYS IT IS A FILE, in text: the kind is readable on the row itself, never
    * inferred from which group it sits in or from where it falls in the list (§5).
    *
-   * ★ NO CLICK HANDLER, DELIBERATELY. The gesture is task 2.5's, where `compareWith` branches ONCE
-   * on `dataset.targetKind` — snapshot → `fetchText(id)`, file → `fetchFileText(path)`. Wiring it
-   * here would be that branch written early and in the wrong task; routing a file row through
-   * today's snapshot-only `compareWith` would be worse still, since it would answer a file pick
-   * with "that snapshot is no longer stored".
+   * ★ THE GESTURE, ADDED AT 2.5 — the SAME `compareWith` a snapshot row calls, which branches ONCE
+   * on the `dataset.targetKind` this row carries: file → `fetchFileText(path)`, snapshot →
+   * `fetchText(id)`. It is one handler on both kinds, not two paths that happen to agree, and that
+   * is why the row carries `fileName` as well as `filePath`: the branch's copy — the §3.8 sentence
+   * and D-5's caption — names the file, and the row is where the name already is.
    *
    * The two spans carry classes of their own rather than borrowing `__when` / `__size`: calling a
    * file's name "when" is a lie a later reader has to unpick. They are untuned today because the
@@ -368,6 +482,7 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     item.setAttribute('aria-selected', 'false');
     item.dataset.targetKind = 'file';
     item.dataset.filePath = entry.path;
+    item.dataset.fileName = entry.name;
     const name = document.createElement('span');
     name.className = 'peekover-diff-picker__name';
     name.textContent = entry.name;
@@ -376,6 +491,7 @@ export function buildDiffChrome(host: HTMLElement): Node[] {
     kind.textContent = TEXT_FILE_KIND;
     item.append(name, kind);
     item.setAttribute('aria-label', `Compare with the file ${entry.name}`);
+    item.addEventListener('click', () => void compareWith(item));
     return item;
   }
 
