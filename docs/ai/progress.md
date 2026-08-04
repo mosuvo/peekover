@@ -77,6 +77,23 @@ PRODUCED at 4.3 and 5.1–5.4, **CHOSEN by the human at 5.5**, executed at 5.6/5
 CHECKBOX CONVENTION is SETTLED as a standing invariant: (c) — per-task ticking, each box in its own commit,
 forward from 008; 002 and 007 PREDATE it and are NOT retroactively ticked, their done-ness signal being this
 pointer and § Closed milestones.** See § Carried items (discharged) and the gate-3 entry.
+★ **M8 IS IN IMPLEMENTATION. TASK 1.1 IS DONE — `src/render/docIdentity.ts`, the data-only identity
+registry (D-1), and `docIdentity.test.ts` (8 tests). TASK 1.2 IS NEXT** (`agentFile.ts` — the pure
+predicate, the frozen case-sensitive name set, `decodeURIComponent`'d basename extraction; D-2), in a fresh
+session. 1.1 is the THIRD instance of the register-once pattern after `watchRegistry.ts` and
+`diffRegistry.ts`, and it mirrors the latter's shape with **one deliberate divergence**: it reads
+`string | undefined`, not `T | null`, and carries **no presence predicate** — its one consumer (1.3's
+`buildAgentBadge`) gates on *recognition*, not presence, so absent and unrecognized collapse to the same
+`[]` and there is one empty state rather than two. **Its import list is EMPTY — asserted STRUCTURALLY over
+the source text, not by bytes**, because a type-only edge erases to zero bytes and a byte check is blind to
+it by construction; the clause carries `diffRegistry.ts`'s single type-only edge as a **firing control in
+the same test**. ★ **BOTH bundles are md5-IDENTICAL to `7e9788b`** — 318,747 B content script (Cr
+`c7b33b36…` / Fx `67717921…`) and 389,143 B app chunk (`65486f78…`) — **because the module is imported by
+nothing yet**, and that null counts for something only because the **instrument was proven able to move**:
+one byte added to `readerCss.ts` (on both graphs) drove the content script to 318,748 B with both md5s
+changed and the app chunk to 389,144 B under a **new content-hashed filename**, then reverted to the exact
+baseline. `dependencies` still **5**; `permissions: []` both; golden EMPTY; 007's import fence **8/8** with
+clause B firing.
 **Still true of the draft, and the reason the spec is what it is:** it supersedes the *"the next act is M8
 scoping"* pointer in the M7-close bullet below — scoping happened, and its first artifact exists. **008 = the three persona-#1 items deferred at M7's direction** — compare any two
 files (F6), agent-file awareness (F6), table tools in the reading view (F5). The draft is grounded in a
@@ -86,10 +103,11 @@ precedent; **item 2 is two features in one bullet** — a small badge plus a "tu
 milestone-sized against `settings.ts`'s single global row and `parse.ts`'s single parser instance, cut to size
 at spec §3.5. **No dependency, no storage, no manifest event** — so D-10 (b)'s *"any further dependency
 lands"* trigger does not fire and the 0.70 MB zip headroom is undrawn. The **content-script surface milestone
-is deferred with the spike's measurement attached** (`81986d8`, +238.8 ms, 2.3× the gate). **Nothing is in
-implementation; all three artifacts now exist — `spec.md` past gate 1, `plan.md` past gate 2, `tasks.md`
-DRAFTED and awaiting gate 3 — and no implementation code exists before `tasks.md` passes it**
-(WORKFLOW.md §5.3).
+is deferred with the spike's measurement attached** (`81986d8`, +238.8 ms, 2.3× the gate). **All three
+artifacts exist and all three gates are behind them — `spec.md` past gate 1, `plan.md` past gate 2,
+`tasks.md` past gate 3 — which is what released implementation** (WORKFLOW.md §5.3). *(This paragraph
+described the pre-gate-3 draft; the ★ pointer above supersedes its status clause, which is left corrected
+rather than verbatim because the Now section is the live one.)*
 
 **★ M7 (spec 007 — Mermaid diagrams + diagram cache, M7a) IS CLOSED — 2026-08-02, at task 9.3.** All **28 tasks** across **nine groups** landed, plus five commits of shipped code outside the box list (three out-of-plan implementations — the two D-1/D-6 addenda and §4's source guard — and the two post-gate fixes); the 9.1 human gate is discharged 8/8 and **no gate remains**. `permissions: []` held on both engines for the whole milestone, the content script grew **+3,076 B** (decomposed to a **0 B** residual) with the ~3.3 MB engine kept off its graph entirely — asserted structurally by 3.4's import fence, not by a byte reading — and `dependencies` went **4 → 5**. **The close summary is in § Closed milestones; the reconcile that sealed it is § Baselines' *THE 9.3 RECONCILE RECORD*. The narrative below is M7's working set and is now HISTORY — it is the next archive pass's material, not a live pointer.** ★ **NOTHING IS IN IMPLEMENTATION. THE NEXT ACT IS M8 SCOPING**, which should start from `spec-coverage.md` — noting that its F2 row is stale by construction until the re-audit 9.3 routed (§ Carried items) has run.
 

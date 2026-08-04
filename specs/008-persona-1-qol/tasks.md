@@ -151,7 +151,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
 
 ## 1 — The identity seam (D-1 · D-2 — the dependency ROOT: nothing badges until the name arrives, and the seam choice is the plan's first architectural finding)
 
-- [ ] **1.1 `docIdentity.ts` — the data-only registry, the THIRD instance of the register-once pattern
+- [x] **1.1 `docIdentity.ts` — the data-only registry, the THIRD instance of the register-once pattern
       (D-1).** Holds a string, **imports nothing**. Register / read / reset, **last-write-wins, no
       unregister**: a stale name is overwritten by the next open, and the app page's `select(null)` path never
       mounts at all. Read at **build time, never captured** — the property `diffRegistry.ts:5-10` states for
