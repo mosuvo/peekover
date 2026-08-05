@@ -399,7 +399,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
 its CSS, its call sites and its containment measurement land as four reviewable — and four separately
 revertable — units. **None of them precedes 3.1.***
 
-- [ ] **3.2 `tableEnhancer.ts` — the module ALONE: TOTAL, SCOPED, IDEMPOTENT, HEADER-GATED, and the toolbar
+- [x] **3.2 `tableEnhancer.ts` — the module ALONE: TOTAL, SCOPED, IDEMPOTENT, HEADER-GATED, and the toolbar
       host as a PRECEDING SIBLING. NO CALL SITE LANDS HERE (D-7 · D-8 · D-12).** Query `.peekover-reader` and
       iterate **its** `<table>`s. ★ **The scoping is REQUIRED, not defensive:** `renderHunk`
       (`diffView.ts:119-128`) runs `sanitize(parse(hunk.lines))`, so a spec-v1-vs-spec-v2 comparison — **the

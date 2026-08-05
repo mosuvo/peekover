@@ -408,9 +408,81 @@ residual).** The body's *property* is what was checked and what holds: **3.1 mov
 moves nothing from is HEAD's, which is 2.5's. Same staleness sits in **3.2's** text ("both bundles
 md5-identical to 3.1's (318,747 B CS / 389,143 B app)") — flagged here so 3.2 checks against **321,364 /
 391,809** rather than against a number written before group 2 existed.
-**TASK 3.2 IS NEXT** — `tableEnhancer.ts`, the module ALONE (total, scoped, idempotent, header-gated, the
-toolbar host as a PRECEDING SIBLING), **no call site**, both bundles md5-identical because nothing imports
-it yet, with the firing control that the instrument can see a change.
+★ **TASK 3.2 IS DONE — `src/render/tableEnhancer.ts` EXISTS, AND NOTHING IMPORTS IT.** `enhanceTables(host)`
+queries `.peekover-reader` and puts an EMPTY toolbar host (`div.peekover-table-tools`) in front of every
+enhanceable `<table>`. **The module imports nothing** — it is on both graphs (plan §2), so an import it does
+not need is one the content script pays for. **The four properties are RED-FIRST BY ABLATION, each arm run
+and its signature recorded, never asserted blind** (six arms, `cp`-aside + restore, 19 tests green at HEAD):
+**HEADER-GATED** — drop `if (!hasHeaderRow(table)) continue;` → **4 of 19 red**, the headerless case reading
+*"expected `<div class="peekover-table-tools"></div>` to have a length of +0 but got 1"*, §3.11 row 3's
+ungate arm at unit level; **IDEMPOTENT** — drop the `TABLE_STATE_ATTR` guard → **2 red**, *"expected …(4) to
+have a length of 2 but got 4"*, one toolbar per table per pass; **SCOPED (D-8)** — walk `host.shadowRoot`
+instead of the column → **2 red**, the sibling diff view's real table grows the chrome D-8 exists to stop;
+**TOTAL (D-7), BOTH HALVES SEPARATELY** — drop the outer boundary → **1 red**, *"expected [Function] to not
+throw an error but 'Error: shadowRoot is poisoned' was thrown"*, which on the content script is the throw
+that reaches `mountReader`'s catch and **removes a reader that had already rendered correctly**; drop the
+PER-TABLE try (one outer try only) → **1 red**, *"expected [ true, false, false ] to deeply equal [ true,
+false, true ]"* — **two** tables un-enhanced instead of one, ★ **and the other 18 assertions stay GREEN in
+that arm, which is exactly why both halves are tested rather than one**. The failures are injected as an
+own-property poison on ONE DOM method of ONE node, so the SHIPPED path is exercised and no test-only seam
+was added. ★ **THE PRECEDING-SIBLING PLACEMENT IS ASSERTED ON NODE IDENTITY, NOT SHAPE** (D-12; the mockup's
+`.tablewrap` does not exist in our DOM — markdown-it emits a bare `<table>` and `readerCss.ts:169-179`
+styles the table itself): a sixth arm builds `attachToolbar` as a **wrap-and-restore**, and the
+preceding-sibling test **still PASSES** there while the identity test goes red — *"expected `<div
+class="peekover-table-wrap">…(2)</div>` to be `<div class="peekover-reader">…(4)</div>`"*. The table's
+`parentElement`, `nextElementSibling` and node identity are unchanged and no wrapper exists in the tree.
+**The toolbar is EMPTY** — no `role`, no label, no control (asserted: 0 child nodes, 1 attribute), because
+`role="toolbar"` on an element with no widget describes a group that does not exist; sort/filter/copy fill
+it at 3.6–3.8 and its presentation lands at 3.3.
+★ **THE FIXTURES ARE REAL `mount()` OUTPUT, WHICH IS WHAT MAKES THE GATE A REAL CONDITION:** `parse.ts`'s
+`html: true` plus `sanitize.ts:36`'s `table/thead/tbody/tr/th/td` mean a hand-written headerless `<table>`
+genuinely reaches the reading column from source (plan §0.2) — hand-building the fixture with
+`createElement` would have tested the walk against a DOM no document produces. ★ **AND ONE MEASURED
+FINDING WORTH CARRYING: `:scope > thead > tr > th` RETURNS `null` INSIDE A SHADOW ROOT UNDER JSDOM
+(nwsapi).** The gate is asked through `tHead` / `rows` / `cells` — the table's OWN structure, which nothing
+nested can be reached through and on which both environments agree — rather than through a selector:
+`thead th` is wrong on its face (a table nested in another table's header answers for its parent) and the
+`:scope`-anchored fix for it **reads correct, IS correct in a browser, and closes the gate in the unit
+environment**. Re-measured directly against jsdom at 3.2: the identical selector on identical markup finds
+the `<th>` in a light-DOM `<div>` and **`null`** once the column is in the shadow tree, while the DOM API
+answers `true` in both. **A gate that closes in one environment and opens in the other is worse than
+either.**
+★ **BOTH BUNDLES ARE md5-IDENTICAL TO HEAD'S, AND THE INSTRUMENT WAS PROVEN TO SEE THIS MODULE FIRST.** An
+unimported module is in no graph, so "byte-identical" would otherwise be a tautology rather than a
+measurement. **The firing control:** a TEMPORARY `import { enhanceTables } from './tableEnhancer'` plus a
+call in `mount.ts` (reachable on BOTH graphs) → content script **321,364 → 322,116 B, +752, identical on
+both engines** (Cr `da80bfbc…`→`b3a24128…`, Fx `b50e4baa…`→`b83922f4…`), app chunk **391,809 → 392,587 B,
++778** (`7e635aa2…`→`45669ab7…`, the chunk's content hash changing with it). **Import removed
+(`cp`-aside + restore, never `git checkout`), `.output` deleted, both engines rebuilt from clean: Cr
+`da80bfbc362b47693012ac96a02c2d09` / Fx `b50e4baadf15c8b3e72f837cc61b16d5` at 321,364 B and app
+`7e635aa27091324a0c0e82dd4f759d8d` at 391,809 B — HEAD's numbers, byte for byte and md5 for md5.**
+★ **The baseline is HEAD's, NOT the body's:** 3.2's text pins "md5-identical to 3.1's (318,747 B CS /
+389,143 B app)", which is PRE-GROUP-2 — 2.5 moved both by design. The body's *property* (3.2 moves no byte)
+is what was checked, against **321,364 / 391,809**, exactly as 3.1's finding flagged.
+★ **NO CALL SITE LANDED, BY DESIGN AND BY MEASUREMENT:** `git diff --name-only` is the module, its test,
+this file and `tasks.md` — nothing else. The four sites are D-6's: **1–2 (app page) at 3.4**, **3–4 (content
+script) at 4.1**. ★ **D-7's TEARDOWN signature is NOT claimed here** — a reader torn down on a document that
+had already rendered correctly is reachable only where the call site sits inside `mountReader`'s catch,
+which is the content-script site, and it is **4.1's**. **D-8's real-engine half** (a live diff round trip)
+is **3.9's**; **rows 5, 6** (containment and the resolved `max-width`) are **3.5's**, jsdom being blind to
+both.
+★ **THE `describe.todo` QUESTION IS ANSWERED BY THE FILES LIST: IT IS OUT OF 3.2's SCOPE.** 3.2's Files list
+(`:416`) is `src/render/tableEnhancer.ts` · `src/render/tableEnhancer.test.ts` — `tableFilter.browser.test.ts`
+belongs to **3.1** (which wrote it) and **3.7** (which writes its first assertion). It was **NOT touched**,
+no `describe.todo` was added and none was measured, so **3.1's option (a) stands unchanged: `pnpm
+test:browser` stays red with the same collection error naming exactly one file** (*"No test suite found in
+file …tableFilter.browser.test.ts"*, both engines), and it is read past until 3.7. **Re-measured at 3.2, not
+assumed: 2 failed suites / 104 passed files, tests 1055 passed | 15 skipped — the same pass counts 2.5
+recorded**, so the red is 3.1's collection error and nothing this task did. **3.4, 3.5 and 3.6 run browser
+suites before 3.7 and will meet the same red.**
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; no 1.1–2.5 module
+edited; `pnpm lint` **EXIT=0**; unit **835/835** (816 + this file's 19); NUL **0 in both forms** across both
+new files with **both** controls reading nonzero (the literal-byte reader AND the escape-form matcher — the
+first attempt's escape control read 0 and was re-run from a script file rather than trusted).
+**TASK 3.3 IS NEXT** — the toolbar's CSS in `readerCss.ts`, D-12's token verification against all three
+theme blocks, and the **first table-tools content-script byte statement** (the CSS is on both graphs, so
+that task moves bytes and its ablation is exact — rationale ABOVE the template literal, per finding 9).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
