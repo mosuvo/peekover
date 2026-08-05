@@ -4,8 +4,10 @@
 // host at 3.6-3.8; NOTHING calls this function yet — the four call sites are D-6's and land at
 // 3.4 (app page) and 4.1 (content script).
 //
-// This module imports nothing, and that is a constraint rather than an accident: it is on BOTH
-// graphs (plan §2), so an import it does not need would be an import the content script pays for.
+// It imports ONE module, `tableTools.ts`, and that one is on the same graphs for the same reason
+// and imports nothing itself (plan §2, plan §1.3's split): this file owns the WALK — which tables
+// qualify, the toolbar host, D-7's totality — and `tableTools` owns what a qualifying table then
+// GETS. Anything beyond that pair would be an import the content script pays for.
 //
 // ── D-7 · THE FUNCTION IS TOTAL, AND ON ONE SURFACE THAT IS LOAD-BEARING ──────────────────────
 //
@@ -53,10 +55,13 @@
 //
 // ── WHAT IS DELIBERATELY NOT HERE ─────────────────────────────────────────────────────────────
 //
-// The toolbar is EMPTY. It carries no `role`, no label and no control, because it has nothing to
-// announce yet: `role="toolbar"` on an element with no widget in it describes a group that does
-// not exist. The semantics arrive with the controls at 3.6 (sort), 3.7 (filter) and 3.8 (copy),
-// and its presentation at 3.3 — where the content-script bytes for table tools first move.
+// The toolbar host is STILL EMPTY after 3.6, and that is not an oversight — it is where D-12 put
+// the sort. Divergence 1 places the control INSIDE its own `<th>`, so the sort never enters the
+// strip; the filter (3.7) and the two copy buttons (3.8) are what will fill it. Until one of them
+// lands, the host carries no `role`, no label and no control, because `role="toolbar"` over no
+// widget describes a group that does not exist.
+
+import { installTableSort } from './tableTools';
 
 /**
  * The state attribute the enhanced `<table>` carries. Mirrors `DIAGRAM_STATE_ATTR`
@@ -112,19 +117,27 @@ function buildTableToolbar(doc: Document): HTMLElement {
 }
 
 /**
- * Attach the toolbar to one table. Ordered so that a throw at any step leaves the table exactly as
- * rendered: the host is built detached, inserted, and only then is the table marked enhanced — so
- * a failed insert marks nothing, and the caller's catch unwinds whatever did land.
+ * Attach the tools to one table. Ordered so that a throw at any step leaves the table exactly as
+ * rendered: the host is built detached, inserted, the controls installed, and only THEN is the
+ * table marked enhanced — so a failure at any point marks nothing, and every mutation that did
+ * land is unwound in the reverse order it was made.
+ *
+ * ★ "Exactly as rendered" is asserted on `innerHTML` (`tableEnhancer.test.ts`), which is why the
+ * sort's undo is called here rather than left to a garbage collector: a `<button>` left inside a
+ * `<th>` of a table whose enhancement failed is a visible defect, not an untidiness.
  */
 function attachToolbar(table: HTMLTableElement): void {
   let toolbar: HTMLElement | undefined;
+  let undoSort: (() => void) | undefined;
   try {
     toolbar = buildTableToolbar(table.ownerDocument);
     table.before(toolbar);
+    undoSort = installTableSort(table);
     table.setAttribute(TABLE_STATE_ATTR, 'enhanced');
   } catch (err) {
     // Leave the table exactly as rendered — readable, styled, and indistinguishable from one the
-    // walk never reached. Both cleanups are no-ops in the ordinary case.
+    // walk never reached. All three cleanups are no-ops in the ordinary case.
+    undoSort?.();
     toolbar?.remove();
     table.removeAttribute(TABLE_STATE_ATTR);
     throw err;

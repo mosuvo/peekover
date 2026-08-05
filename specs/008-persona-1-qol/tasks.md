@@ -503,7 +503,7 @@ revertable — units. **None of them precedes 3.1.***
       judge. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-12; §4 table tools; rows 5, 6, 8; finding 2]
 
-- [ ] **3.6 Sort — three-state, stable, numeric-aware, and its state in `aria-sort` PLUS text (§3.6 · D-12).**
+- [x] **3.6 Sort — three-state, stable, numeric-aware, and its state in `aria-sort` PLUS text (§3.6 · D-12).**
       Reorders `<tr>` nodes **in `<tbody>`**; **off restores document order, which is available because the
       rows were MOVED, never rebuilt**.
       Files: `src/render/tableTools.ts` · `src/render/tableTools.test.ts` ·

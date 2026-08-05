@@ -1,6 +1,6 @@
 // tableTools — the REAL-ENGINE proof that the table toolbar is LIVE on the app page (008 task
 // 3.4, D-6 sites 1-2), Chromium AND Firefox, `describe.each` over BOTH app-page call sites
-// (§3.11 row 23).
+// (§3.11 row 23) — and, from task 3.6, that its FIRST control really works there.
 //
 // ══ WHY THIS SUITE EXISTS, AND WHY `tableEnhancer.test.ts` COULD NOT BE IT ════════════════════
 //
@@ -29,9 +29,25 @@
 // probe. Asserting them here at one incidental viewport would ratify a geometry nobody measured —
 // finding 2's defect exactly, which is why 3.5 runs at 1280 AND 1400.
 //
-// ★ AND THE HOST IS STILL EMPTY. There is no sort control, no filter, no copy button and no
-// `role` to assert: the toolbar is a styled strip with nothing in it until 3.6-3.8. Every
-// assertion below is about a container reaching the screen in the right place.
+// ★ AND THE HOST IS STILL EMPTY — AFTER 3.6 TOO, WHICH IS NOT AN OVERSIGHT. D-12 divergence 1
+// puts the sort control inside its own `<th>`, so the sort never enters the strip; the filter
+// (3.7) and the two copy buttons (3.8) are what will fill it. The rows-1-to-23 block below is
+// therefore unchanged by 3.6, and its emptiness assertion still describes the shipped state.
+//
+// ══ WHAT TASK 3.6 ADDED, AND WHY IT IS HERE RATHER THAN IN THE UNIT ═══════════════════════════
+//
+// `src/render/tableTools.test.ts` asserts the sort's ORDERING, its NODE IDENTITY and its ARIA in
+// jsdom, exactly and cheaply. Four things it cannot assert at all live below, and each is the
+// half D-12 diverged from the mockup to get:
+//
+//   • a `<th>` with a click handler is NOT FOCUSABLE and a `<button>` IS — jsdom will focus
+//     anything you ask it to, so the mockup's shape only fails where focus is real;
+//   • ENTER and SPACE activate a native button with no key handling of ours — jsdom has no
+//     default activation behaviour, so the claim is untestable there;
+//   • TAB really lands on the next control, which is what "no `tabindex` of its own" is FOR;
+//   • the direction text is really PAINTED — a non-zero rect. §5's *"not carried by an icon
+//     alone"* is a claim about what a sighted reader can SEE, and a `width:0` span would satisfy
+//     every textContent assertion in the unit suite while showing nothing at all.
 //
 // ══ WHY SITE 2 IS DRIVEN THROUGH A REAL POLL AND NOT THROUGH A HANDED-OVER `render` ═══════════
 //
@@ -43,9 +59,15 @@
 // provisions it (`appShell.ts:939`). That line is what site 2's arm is really testing.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { TABLE_TOOLBAR_CLASS, TABLE_STATE_ATTR } from '../../src/render/tableEnhancer';
+import {
+  SORT_BUTTON_CLASS,
+  SORT_GLYPH_CLASS,
+  SORT_STATE_CLASS,
+} from '../../src/render/tableTools';
 import { resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { resetWatchRegistryForTest, isWatching } from '../../src/watch/watchRegistry';
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
@@ -68,6 +90,41 @@ const HEADLESS_HTML = '<table><tbody><tr><td>a</td><td>1</td></tr></tbody></tabl
 const MIXED_DOC = `${TABLE_DOC}\n${HEADLESS_HTML}\n`;
 
 const NO_TABLE_DOC = '# Report\n\nProse only, and a list:\n\n- one\n- two\n';
+
+/**
+ * ★ TASK 3.6's FIXTURE, AND ITS TWO PROPERTIES ARE BOTH DELIBERATE.
+ *
+ * Column 1 (`dept`) has TWO EQUAL KEYS, adjacent, distinguishable by column 2 in an order no
+ * tie-break would reproduce (`zoe` before `adam`) — §4's stability is unfalsifiable without it.
+ * Column 3 (`n`) is 10 / 9 / 2, whose text order and numeric order share no position, so a
+ * lexicographic comparator cannot pass by luck.
+ */
+const SORT_DOC = [
+  '# Report',
+  '',
+  '| dept | who | n |',
+  '| --- | --- | --- |',
+  '| eng | zoe | 10 |',
+  '| eng | adam | 9 |',
+  '| ops | bo | 2 |',
+  '',
+].join('\n');
+
+/** Two sortable tables in one document — §3.11 row 11's shape, on the live app page. */
+const TWO_TABLE_DOC = [
+  '# Report',
+  '',
+  '| one | n |',
+  '| --- | --- |',
+  '| b | 2 |',
+  '| a | 1 |',
+  '',
+  '| two | n |',
+  '| --- | --- |',
+  '| d | 4 |',
+  '| c | 3 |',
+  '',
+].join('\n');
 
 /** The document site 2's arm starts from. Deliberately table-free and clearly marked: the
  *  assertions run only after the reader is showing the OTHER document, so a test that somehow
@@ -189,6 +246,34 @@ const tablesIn = (host: HTMLElement) => [...columnOf(host).querySelectorAll('tab
 const toolbarsIn = (host: HTMLElement) => [
   ...host.shadowRoot!.querySelectorAll<HTMLElement>(`.${TABLE_TOOLBAR_CLASS}`),
 ];
+
+// ── Task 3.6's readers ────────────────────────────────────────────────────────────────────────
+
+/**
+ * The sort controls, found BY CLASS ALONE and never by `button.${SORT_BUTTON_CLASS}`.
+ *
+ * ★ THE SELECTOR MUST NOT ENCODE THE ANSWER. Row 16's whole claim is that the control IS a real
+ * `<button>` — D-12 divergence 1, against the mockup's `<th onclick>`. A tag-qualified selector
+ * makes that unfalsifiable: a non-button control returns NOTHING, every test below dies on an
+ * undefined dereference, and the focus assertion written to catch exactly this never runs. Found
+ * by class, the ablation's control is located and the keyboard clause is the clause seen to fail.
+ * (3.5 paid for this lesson on its own non-vacuity guard; this is it one suite over.)
+ */
+const sortButtonsIn = (table: HTMLTableElement) => [
+  ...table.querySelectorAll<HTMLButtonElement>(`.${SORT_BUTTON_CLASS}`),
+];
+const headerCellsOf = (table: HTMLTableElement) => [
+  ...table.tHead!.rows[table.tHead!.rows.length - 1].cells,
+];
+const bodyRowsOf = (table: HTMLTableElement) => [...table.tBodies[0].rows];
+const columnText = (table: HTMLTableElement, index: number) =>
+  bodyRowsOf(table).map((row) => (row.cells[index]?.textContent ?? '').trim());
+const ariaSortOf = (table: HTMLTableElement) =>
+  headerCellsOf(table).map((cell) => cell.getAttribute('aria-sort'));
+/** The direction as a sighted reader gets it — the state span, with the aria-hidden glyph left
+ *  out on purpose. That separation IS D-12 divergence 2. */
+const visibleState = (button: HTMLButtonElement) =>
+  (button.querySelector(`.${SORT_STATE_CLASS}`)?.textContent ?? '').trim();
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────────────────────
 
@@ -312,5 +397,252 @@ describe.each(SITES)('the table toolbar is LIVE through the %s (row 23)', (_labe
     // toolbar is empty and the enhancer binds nothing, so "no listener" is true of EVERY document
     // in this build and would discriminate nothing. It becomes a real assertion at 3.6-3.8, where
     // the controls that could bind one first exist.
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 3.6 — THE SORT, IN A REAL ENGINE
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// Everything below runs on call site 1 unless it says otherwise, and the reason is not economy:
+// the sort's ORDERING and its ARIA are already asserted exactly in `src/render/tableTools.test.ts`
+// and re-running them per site would assert the same function twice. What a second site can tell
+// you that the first cannot is whether the handlers reach the CURRENT table after the column has
+// been destroyed and rebuilt — §3.11 row 14's question — and that gets its own arm at the end.
+
+describe('3.6 · the toolbar STRIP is still empty — the sort lives in the <th> (D-12 divergence 1)', () => {
+  it('a sortable table has controls, and NONE of them is in the strip', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+
+    // The firing control: the controls really exist somewhere.
+    expect(sortButtonsIn(table)).toHaveLength(3);
+    // And not one of them is in the toolbar host — which is why 3.5's containment measurement of
+    // an EMPTY strip is still a measurement of the shipped strip after this task.
+    expect(toolbarsIn(host)[0].children).toHaveLength(0);
+    expect(toolbarsIn(host)[0].querySelectorAll(`.${SORT_BUTTON_CLASS}`)).toHaveLength(0);
+    for (const button of sortButtonsIn(table)) {
+      expect(button.parentElement?.tagName).toBe('TH');
+    }
+  });
+});
+
+describe('3.6 · row 16 — a REAL button, keyboard-operable, no tabindex of its own', () => {
+  it('★ the <th> itself is NOT focusable and the button IS — the mockup`s shape, failing live', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const shadow = host.shadowRoot!;
+    const table = tablesIn(host)[0];
+    const th = headerCellsOf(table)[0];
+    const button = sortButtonsIn(table)[0];
+
+    // `design/mockup.html:565-580` hangs the sort on `<th onclick=…>`. A `<th>` takes no focus:
+    // asking for it is a no-op, so a keyboard user can never reach that control. THIS is the
+    // assertion jsdom cannot make — it will focus anything you ask it to.
+    th.focus();
+    expect(shadow.activeElement, 'a <th> must not be focusable — if it is, this test is vacuous')
+      .not.toBe(th);
+
+    button.focus();
+    expect(shadow.activeElement).toBe(button);
+    expect(button.tagName).toBe('BUTTON');
+    expect(button.hasAttribute('tabindex'), 'row 16: no tabindex of its own').toBe(false);
+  });
+
+  it('★ TAB really lands on the next control — which is what "no tabindex" is FOR', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const shadow = host.shadowRoot!;
+    const [first, second] = sortButtonsIn(tablesIn(host)[0]);
+
+    first.focus();
+    await userEvent.tab();
+
+    // A real tab advance through the shadow tree, in the engine's own tab order. An element made
+    // "focusable" with a tabindex hack can satisfy `.focus()` above and still sit outside it.
+    expect(shadow.activeElement, 'tab did not reach the next sort control').toBe(second);
+  });
+
+  it('★ ENTER and SPACE activate it, with no key handling of ours', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const button = sortButtonsIn(table)[0];
+    expect(columnText(table, 0)).toEqual(['eng', 'eng', 'ops']);
+    expect(columnText(table, 1), 'the fixture starts unsorted').toEqual(['zoe', 'adam', 'bo']);
+
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+
+    // A native <button> activates on Enter and on Space by default. The mockup's `<th onclick>`
+    // does neither — it is not even reachable to be pressed — and that is D-12 divergence 1.
+    expect(ariaSortOf(table)[0]).toBe('ascending');
+
+    await userEvent.keyboard(' ');
+    expect(ariaSortOf(table)[0]).toBe('descending');
+    expect(columnText(table, 0)).toEqual(['ops', 'eng', 'eng']);
+
+    await userEvent.keyboard('{Enter}');
+    expect(ariaSortOf(table)[0]).toBe('none');
+    expect(columnText(table, 1), 'the third state is back to the document`s own order').toEqual([
+      'zoe',
+      'adam',
+      'bo',
+    ]);
+  });
+});
+
+describe('3.6 · rows 15, 17, 18 — aria-sort PLUS text (D-12 divergence 2), and the text is PAINTED', () => {
+  it('★ the direction is in aria-sort AND in text a sighted reader can actually SEE', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const button = sortButtonsIn(table)[0];
+    const state = button.querySelector<HTMLElement>(`.${SORT_STATE_CLASS}`)!;
+
+    expect(ariaSortOf(table)).toEqual(['none', 'none', 'none']);
+    expect(visibleState(button)).toBe('');
+
+    button.click();
+
+    expect(ariaSortOf(table)).toEqual(['ascending', 'none', 'none']);
+    expect(visibleState(button)).toBe('ascending');
+    // ★ THE REAL-ENGINE HALF, AND THE ONLY PLACE §5's CLAIM IS ACTUALLY TESTED. "Not carried by
+    // an icon alone" is a claim about what is on the screen: a `width:0` / `visibility:hidden` /
+    // `font-size:0` span passes every textContent assertion in the unit suite and shows nothing.
+    const rect = state.getBoundingClientRect();
+    expect(rect.width, 'the direction text has no width — it is not on screen').toBeGreaterThan(0);
+    expect(rect.height, 'the direction text has no height — it is not on screen').toBeGreaterThan(
+      0,
+    );
+    const style = getComputedStyle(state);
+    expect(style.visibility).toBe('visible');
+    expect(style.display).not.toBe('none');
+  });
+
+  it('row 18 — the glyph is drawn AND hidden from assistive technology', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const button = sortButtonsIn(table)[0];
+    const glyph = button.querySelector<HTMLElement>(`.${SORT_GLYPH_CLASS}`)!;
+
+    expect(glyph.getAttribute('aria-hidden')).toBe('true');
+    button.click();
+    // Non-vacuous: the glyph really is painted, so hiding it from AT is a decision about a real
+    // thing rather than a description of an empty span. It restates what the text already says.
+    expect(glyph.textContent).toBe('\u25B2');
+    expect(glyph.getBoundingClientRect().width).toBeGreaterThan(0);
+  });
+
+  it('row 17 — the accessible name carries selection AND action, and moves with the state', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const button = sortButtonsIn(tablesIn(host)[0])[0];
+
+    expect(button.getAttribute('aria-label')).toBe('Sort by dept, ascending');
+    button.click();
+    expect(button.getAttribute('aria-label')).toBe(
+      'Sorted by dept, ascending. Activate to sort descending.',
+    );
+    button.click();
+    expect(button.getAttribute('aria-label')).toBe(
+      'Sorted by dept, descending. Activate to restore the document order.',
+    );
+  });
+});
+
+describe('3.6 · the mechanism — the <tr> nodes are MOVED, never rebuilt', () => {
+  it('★ the same row NODES survive a three-state cycle, and "off" restores document order', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const documentOrder = bodyRowsOf(table);
+    const documentText = columnText(table, 1);
+    const button = sortButtonsIn(table)[2]; // the numeric column
+
+    button.click();
+    // Numeric-aware in the engine that renders it: 2, 9, 10 and never 10, 2, 9.
+    expect(columnText(table, 2)).toEqual(['2', '9', '10']);
+    // ★ THE ORDER MOVED AND THE NODES DID NOT CHANGE. A rebuild-from-source reads identically on
+    // the line above and holds NO element in common on the line below.
+    expect(new Set(bodyRowsOf(table))).toEqual(new Set(documentOrder));
+
+    button.click();
+    expect(columnText(table, 2)).toEqual(['10', '9', '2']);
+    button.click();
+    expect(bodyRowsOf(table), 'off must restore the nodes IN their document order').toEqual(
+      documentOrder,
+    );
+    expect(columnText(table, 1)).toEqual(documentText);
+  });
+
+  it('★ STABLE on equal keys — the two `eng` rows keep their document order, both directions', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const button = sortButtonsIn(table)[0];
+
+    button.click();
+    expect(columnText(table, 0)).toEqual(['eng', 'eng', 'ops']);
+    // A comparator that tie-broke on a second column reads ['adam','zoe','bo'] here and passes
+    // the key line above — which is why the fixture, not the assertion, is the instrument.
+    expect(columnText(table, 1)).toEqual(['zoe', 'adam', 'bo']);
+
+    button.click();
+    expect(columnText(table, 0)).toEqual(['ops', 'eng', 'eng']);
+    // A descending sort written as "ascending, then reverse" reads ['bo','adam','zoe'] here.
+    expect(columnText(table, 1)).toEqual(['bo', 'zoe', 'adam']);
+  });
+});
+
+describe('3.6 · row 11 — on a two-table document, table 2`s controls act on table 2', () => {
+  it('sorting the second table moves it and leaves the first exactly where it was', async () => {
+    const host = await openViaInitialSelect(TWO_TABLE_DOC);
+    const [first, second] = tablesIn(host);
+    expect(tablesIn(host), 'the fixture must render BOTH tables').toHaveLength(2);
+    expect(columnText(first, 0)).toEqual(['b', 'a']);
+    expect(columnText(second, 0)).toEqual(['d', 'c']);
+
+    sortButtonsIn(second)[0].click();
+
+    // RED-FIRST target: a handler that resolves its table with a document-time `querySelector`
+    // reaches the FIRST table — the `diagramLightbox:354,429` multi-instance defect class, where
+    // 007 found it. Both lines below move in that arm, in opposite directions.
+    expect(columnText(second, 0), 'the clicked table is the one that must sort').toEqual(['c', 'd']);
+    expect(columnText(first, 0), 'the OTHER table must not have moved').toEqual(['b', 'a']);
+    expect(ariaSortOf(second)[0]).toBe('ascending');
+    expect(ariaSortOf(first)[0]).toBe('none');
+  });
+});
+
+describe('3.6 · §4 — no new global single-key shortcut', () => {
+  it('typing at the document sorts nothing — the only way in is the control', async () => {
+    const host = await openViaInitialSelect(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const before = columnText(table, 1);
+
+    // Focus something that is NOT a sort control, then press the keys a shortcut would claim.
+    columnOf(host).querySelector<HTMLElement>('h1')!.click();
+    for (const key of ['s', 'n', 'd', '1', '{ArrowDown}']) {
+      await userEvent.keyboard(key);
+    }
+
+    expect(ariaSortOf(table)).toEqual(['none', 'none', 'none']);
+    expect(columnText(table, 1)).toEqual(before);
+    // The firing control: the control itself DOES work in this same run, so "nothing happened"
+    // is a statement about the keys and not about a table that was never wired.
+    sortButtonsIn(table)[0].click();
+    expect(ariaSortOf(table)[0]).toBe('ascending');
+  });
+});
+
+describe('3.6 · row 14`s question — the handlers reach the CURRENT table after a re-render', () => {
+  it('SITE 2 (watch re-render): the sort works on the document the re-render produced', async () => {
+    const host = await openViaWatchRerender(SORT_DOC);
+    const table = tablesIn(host)[0];
+
+    // This column was built by `renderWithEnhancements` after `replaceChildren` destroyed the
+    // seed render — so a handler that had captured the previous table (or the previous rows)
+    // would be pointing at nodes that are no longer in the tree.
+    expect(columnOf(host).textContent).not.toMatch(/the seed render/);
+    expect(sortButtonsIn(table)).toHaveLength(3);
+
+    sortButtonsIn(table)[2].click();
+
+    expect(columnText(table, 2)).toEqual(['2', '9', '10']);
+    expect(ariaSortOf(table)[2]).toBe('ascending');
   });
 });

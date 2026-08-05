@@ -687,12 +687,121 @@ skipped**, 3.4's **1075** plus this task's **34**, **108 passed suites** against
 **read past until 3.7**. NUL **0 in both forms** in the one added file, with a control reading **non-zero**
 in both. One unit run showed a 2-test `diagramView` flake under concurrent `pnpm lint`; it did not
 reproduce across two clean re-runs.
-**TASK 3.6 IS NEXT** — SORT: three-state (asc → desc → off), **stable on equal keys**, numeric-aware on
-displayed cell text, reordering `<tr>` nodes **in `<tbody>`** so off restores document order because the
-rows were MOVED and never rebuilt. Rows **11, 15, 16, 17, 18, 19**, with **D-12's two divergences** from
-the mockup: a real `<button>` inside the `<th>` (the mockup's `<th onclick=…>` loses keyboard reach) and
-`aria-sort` **PLUS text** (§5 forbids state carried by an icon alone). Its baseline is **321,713 B CS**
-(`c68e437c…` / `e1287b5c…`) and **392,929 B app** (`0c40f5e4…`) — 3.5 moved neither.
+★ **TASK 3.6 IS DONE — THE TOOLBAR'S FIRST CONTROL SHIPS, AND IT LANDED IN THE `<th>` RATHER THAN IN
+THE STRIP.** The sort is `src/render/tableTools.ts` (new; plan §1.3's second table module), wired by one
+call in `tableEnhancer.attachToolbar`. ★ **FINDING 1 APPLIES AND THE TASKS FILE WON: 3.6's Files list is
+`tableTools.ts` · `tableTools.test.ts` · `tableTools.browser.test.ts` — NOT `tableEnhancer.ts`, which the
+session kickoff named, and NOT `readerCss.ts`.** The enhancer was still edited, minimally and by necessity:
+the body's own Verify contract is a REAL-ENGINE contract (*"a real `<button>` inside the `<th>`,
+keyboard-operable"*, row 11's two-table document), and a control that no production path installs cannot
+be asserted in a real engine. The Files list is INCOMPLETE relative to its own Verify contract; the edit is
+an import, a call, a `let` and one line in the existing catch (**+41 B**, measured below). Recorded as a
+finding, not as a quiet re-scope.
+★ **THE MECHANISM — THE ROWS ARE MOVED, NEVER REBUILT, PROVEN ON NODE IDENTITY.** A sort is `appendChild`
+over the EXISTING `<tr>` nodes; `appendChild` on an attached node relocates it. **RED-FIRST (measured,
+ablation A — a `cloneNode(true)` rebuild):** **8 unit red**, the identity clause reading `a rebuilt row
+carries nothing that was hung on the original: expected [ undefined, undefined, undefined ] to deeply equal
+[ 2, 1, +0 ]` — and the ORDER assertion in the same test stayed GREEN, which is the whole point: a rebuild
+reads correct on text and holds no node in common. **Every sort runs from the CAPTURED document order, never
+from the current DOM**, so descending is the reverse of ascending on equal keys rather than a re-sort of a
+sorted list.
+★ **AND THE `<tbody>` IS NOT ONLY ROWS — MEASURED, NOT ASSUMED.** markdown-it separates its `<tr>`s with
+`\n` text nodes, so a first draft that reordered the ROWS alone restored markup that RENDERS identically and
+is not what `mount()` committed. Caught by the undo's `innerHTML` equality. The whole child list is captured
+and *"off"* replays it; while a sort is applied the separators lead.
+★ **D-12's TWO DIVERGENCES, BOTH RED-FIRST AGAINST THE MOCKUP'S OWN SHAPE.**
+**(1) A REAL `<button>` INSIDE THE `<th>`** (`mockup.html:565-580` is `<th onclick=…>`). **RED-FIRST
+(ablation E — the control built as a `<span>` instead):** **1 unit red** (`expected 'SPAN' to be 'BUTTON'`)
+and **6 BROWSER red, 3 per engine, Chromium AND Firefox** — `expected null to be <span>` (it takes no
+focus), *"tab did not reach the next sort control"*, and `expected 'none' to be 'ascending'` (Enter does
+nothing). ★ **38 browser assertions stayed GREEN in that arm** — the mouse-driven sort works perfectly and
+the control is simply unreachable by keyboard, which is the defect's exact signature and the reason §4
+names keyboard reach first.
+★ **THE SELECTOR WAS THE INSTRUMENT AND IT HAD TO BE FIXED FIRST.** Both suites originally found the
+control with `button.peekover-table-sort`. That makes row 16's claim UNFALSIFIABLE: a non-button control
+returns nothing, every test dies on an undefined dereference, and the focus assertion written to catch it
+never runs. Found **by class alone**, the ablation's control is located and the keyboard clause is the
+clause seen to fail — 3.5's masked-instrument lesson, one suite over.
+**(2) `aria-sort` ON THE `<th>` PLUS TEXT** (§5 forbids state carried by an icon alone). **RED-FIRST
+(ablation D — drop the text, keep the `U+25B2` glyph):** **exactly 1 unit red**, `expected '' to be
+'ascending'`, with the `aria-sort` half GREEN — the two halves are asserted separately, so an icon-only
+build fails on the half it breaks. ★ **AND THE BROWSER SUITE ASSERTS THE TEXT IS PAINTED** — a non-zero
+rect plus `visibility`/`display`, because §5's claim is about what is on the SCREEN and a `width:0` span
+satisfies every `textContent` assertion jsdom can make. Row 17: the accessible name carries selection AND
+action (*"Sorted by dept, ascending. Activate to sort descending."*) and moves with the state. Row 18: the
+glyph is `aria-hidden`, and asserted DRAWN so hiding it is a decision about a real thing.
+★ **STABILITY: THE FIXTURE IS THE INSTRUMENT, AND ONE RED DOES NOT COVER BOTH DIRECTIONS.** An unstable
+sort on distinct keys is indistinguishable from a stable one, so the fixtures put TWO rows equal on the
+sorted column, adjacent, in an order no tie-break reproduces (`zoe` before `adam`). **RED-FIRST (ablation
+B — a comparator that tie-breaks on the next column):** **exactly 1 unit red**, `expected [ 'adam', 'zoe',
+'bo' ] to deeply equal [ 'zoe', 'adam', 'bo' ]`. ★ **The DESCENDING stability test stayed GREEN in that
+arm** (negating a tie-break flips it consistently on this fixture) — recorded, because it means the
+ascending clause is the one carrying that red and the descending clause is aimed at a different defect
+(*"sort ascending, then reverse"*). Numeric-awareness uses 10 / 9 / 2, whose text and numeric orders share
+no position; the comparator is code-unit on lower-cased text and **NOT `localeCompare`**, whose ordering
+depends on engine ICU data and would mean different things in the two engines this milestone asserts in.
+★ **ROW 11 — RED-FIRST (ablation C, a document-time `querySelector` for the `<tbody>`):** **exactly 2 unit
+red**, `the clicked table must be the one that sorted: expected [] to deeply equal [ 'c', 'd' ]` and
+`expected [ 'a', 'b', 'c', 'd' ] to deeply equal [ 'a', 'b' ]` — both tables' contents moving in opposite
+directions, the `diagramLightbox:354,429` multi-instance class. Every single-table test stayed green.
+★ **THE SORT IS A NEW FAILURE SOURCE INSIDE D-7's PER-TABLE TRY, AND WRITING THAT TEST FOUND A REAL
+DEFECT.** 3.2's D-7 cases poison `table.before`, which fires BEFORE any control is built, so they are GREEN
+against the bug: with a failure injected at `cell.append(button)`, the header's own nodes had ALREADY been
+moved into a button that never landed and no restore existed for a column not yet pushed — measured as
+`expected '<table>…<th></th>…' to be '<table>…<th>dept</th>…'`, i.e. `tableEnhancer`'s *"left exactly as
+rendered"* broken by the very control this task adds. **FIXED by registering each cell's restore BEFORE
+that cell is touched**; the case is now a permanent test with its measured red quoted at the assertion.
+★ **THE APP CHUNK MOVES +2,229 B AND THE CONTENT SCRIPT DOES NOT MOVE AT ALL.** App **392,929 → 395,158 B**
+(`0c40f5e4…`→`7e89141b…`, identical on both engines); content script **321,713 B BYTE- AND md5-IDENTICAL
+on BOTH engines** (Cr `c68e437c…` / Fx `e1287b5c…`) — `tableTools.ts` is not on the content-script graph
+because its call site is `tableEnhancer`'s and the content-script call sites are **4.1's**. Built from a
+wiped `.output` with `pnpm build` **and** `pnpm exec wxt build -b firefox`, so neither engine's reading is
+a stale artifact. **DECOMPOSED BY ABLATION TO A ZERO RESIDUAL, never by an identifier grep:** **ARM 1** —
+`tableTools.ts` on disk, NOT imported → **392,929 B, md5 `0c40f5e4…`, IDENTICAL to 3.5's**, so an
+unimported module costs **+0** (3.2's precedent, re-measured) · **ARM 2** — the enhancer's wiring plus a
+STUB module → **392,970 B, +41 B**, which is the import, the call, the `let` and the catch line · **SHIPPED
+− ARM 2 = +2,188 B**, the sort module's own logic. **0 + 41 + 2,188 = 2,229. Residual ZERO**, and the
+firing control for the two small readings is the same instrument moving by the full amount in the same
+session.
+★ **3.5's CONTAINMENT SURVIVED THE TASK — AND IT SURVIVED IT FOR A REASON THAT WAS NOT THE PREDICTED ONE.**
+The kickoff expected the strip to gain height and row 8's x-band to carry the load. Measured, **the strip
+is STILL EMPTY**: D-12 divergence 1 puts the control inside its own `<th>`, so the sort never enters the
+toolbar at all — the filter (3.7) and the two copy buttons (3.8) are what will fill it. `tablePlacement`'s
+34 cases are green unchanged, and a new assertion pins the fact directly (a sortable table has three
+controls and **none** of them is in the strip).
+**WHAT 3.6 DOES NOT DO:** no filter (**3.7**), no copy-out (**3.8**), no content-script call site
+(**4.1**), no walk judgement (**6.1**), and ★ **NO STYLING** — `readerCss.ts` is not in 3.6's Files list,
+so the button ships with the engine's own default chrome and **§3.11 row 19 (reduced motion) is INACTIVE**,
+its condition being *"only if a transition ships"* and none does. ★ **STATED AS A FINDING: no task in
+`tasks.md` scopes control styling** — 3.3 styled the container and says so, 5.6 touches `readerCss.ts` only
+for §8-4's presentation block (agent files, unrelated). A native `<button>` in a `<th>` is legible and
+correct but is not the reading language; **6.1's walk is where that judgement belongs**, and it now has a
+real control to judge. ★ **NO THRESHOLD WAS INVENTED** (§8-3 is measured at 5.1-5.4 and CHOSEN at 5.5): the
+one size check — a `<tbody>` with no rows gets no control — is a definition, not a threshold, and is
+labelled as one in the module.
+Golden **EMPTY**; **007 import fence 8/8** (clause B still the firing control); `permissions: []` on both
+built manifests (654 / 770 B); manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**; unit **877/877**, 3.5's **847** plus this task's **30**; browser **1133 passed | 15 skipped**,
+3.5's **1109** plus this task's **24** (12 tests × 2 engines), **108 passed suites**, with the **same 2
+failed suites** — 3.1's collection error naming `tableFilter.browser.test.ts` on both engines, **read past
+until 3.7**. NUL **0 in both forms** (node byte scan and `tr -cd`) in all four edited files, with a control
+file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`; both `src/` files
+restored to their shipped md5s afterwards (`tableEnhancer.ts` `86469afd…`; `tableTools.ts` shipped at
+`27cd78ed…`). ★ **A LOAD FLAKE, RECORDED:** two unit runs taken while the browser suite was finishing
+showed `pipeline.perf` (`expected 116.9 to be less than 100` — an explicitly machine-sensitive budget) and
+`golden`’s 5-6 s byte-stable case failing; **three consecutive clean runs are 877/877** and `golden` passes
+alone in 3.8 s. Machine state, not a regression — the M6 lesson that a red on a busy machine looks like a
+defect.
+**TASK 3.7 IS NEXT** — FILTER: sets `hidden` on non-matching `<tr>`s and **never removes them**, so
+clearing is exact rather than a re-render. ★ **It is where §3.11 row 24 lands — the filter has NO sibling
+suite to transcribe from, so 3.1's enumerated property set is checked off PROPERTY BY PROPERTY in that
+task's report and any property enumerated but not asserted is NAMED, not dropped.** Rows **12, 15, 16, 20,
+24**; row 12's clear is a **rect equality against the pre-filter measurement**; row 20's count is a polite
+live region, OUT of the a11y tree while empty. ★ **3.1's `tableFilter.browser.test.ts` collection error is
+3.7's to clear** — it has been read past since 3.1 and stops being read past there. §8-2's per-table-vs-
+per-document question is **not decided at 3.7**: the filter ships per-table, and the scope question is
+measured at 5.2 and chosen at 5.5. Its baseline is **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and
+**395,158 B app** (`7e89141b…`).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
