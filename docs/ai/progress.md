@@ -922,6 +922,87 @@ manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint` **EXIT=0**. 
 (node byte scan and `tr -cd`) in all six edited files, with a control file reading **2** in both. Ablations
 by cp-aside + restore, never `git checkout`; both `src/` files restored to their shipped md5s afterwards
 (`tableTools.ts` `c2a1be04…`; `tableEnhancer.ts` `3c80f863…`).
+★ **TASK 3.9 IS DONE — D-8's EXCLUSIONS AND D-9's PER-RENDER DEGRADATION ARE ASSERTED, AND THE WHOLE TASK
+COST ZERO PRODUCTION BYTES.** `tests/browser/tableScope.browser.test.ts` (**6 cases × 2 engines = 12**) is
+the entire change: `src/` is **UNTOUCHED**, and both bundles rebuild **byte-for-byte and md5-for-md5
+identical** to 3.8's on both engines — **CS 321,713 B** (`c68e437c…` / `e1287b5c…`), **app 399,646 B**
+(`7275a378…`). This is the **measure-existing** shape the task's Files list called for, not the new-logic
+one: D-8 and D-9 are properties `enhanceTables`'s SHAPE already makes true, and 3.9 is the assertions.
+Unit **944/944** (unchanged — no unit test added); browser **1195 passed | 15 skipped, 114 files, 0 failed**
+(1183 + this task's 12); `pnpm lint` **EXIT=0**.
+★ **D-8 — THE SCOPE *IS* THE EXCLUSION, AND THE DIFF LEG IS THE ONE THAT CARRIES THE RED.** `enhanceTables`
+queries `.peekover-reader` (`tableEnhancer.ts:181`) and walks THAT; the diff view and the raw view are
+SIBLINGS of the column in the same shadow root, so both are excluded **by construction** with no
+entry-condition branch to rot. **The two exclusions are NOT symmetrical and the suite says so rather than
+reporting green twice.** The DIFF contains **REAL `<table>` elements** — `renderHunk` runs the full
+`sanitize(parse(...))` — asserted non-vacuously as *a table with a 3-cell header row*, so neither emptiness
+nor the header gate is doing the excluding. The RAW view contains **none**: `ensureRawView` sets
+`textContent`, so the markdown is TEXT. Its exclusion is **over-determined** (the address AND the absence),
+the widening ablation does **not** red it, and this is stated in the file instead of papered over — what the
+raw leg asserts instead is the pair that makes it mean something: the table's **source** really is on screen
+(`| eng | zoe | 10 |`) and the `<table>` element count is **zero**.
+★ **D-9 — `replaceChildren` LEAVES NO STALE ROW, DRIVEN THROUGH THE PRODUCTION WATCH SEAM.** The re-render
+arrives through the real pill → the real `installWatchForFile` controller → `render: renderWithEnhancements`
+(`appShell.ts:939`, `:153`); nothing is re-implemented. The detector's **first poll is the baseline and
+fires nothing**, so the fixture counts production's own `read()` calls rather than guessing at the 1 s
+interval. **The wait is on the `<h1>`, never the table** — waiting on the table would time out in the
+carried-state arm and the instrument written to catch that defect would never run.
+★ **FOUR ABLATIONS, EACH cp-aside + RESTORE ON `tableEnhancer.ts`, EACH SEEN TO FIRE ON BOTH ENGINES.**
+**A1** the walk widened to the shadow root → *"the diff's 1 real table(s) were enhanced"*, footprint
+`{toolbars:1, sortButtons:3, markedTables:1}` where zero belongs — **that red IS D-8's argument that the
+scoping is required rather than defensive**. **A2** the walk narrowed to a selector matching nothing →
+*"the reading column's own table must be enhanced — the exclusion is not allowed to be broad"*, which is the
+**precision** direction (an exclusion too broad silently drops a feature). **A3** the previous render's rows
+carried across and re-applied → the instrument reds **in the defect's own units**: `bo / adam / zoe` — the
+OLD source's rows in the OLD SORTED order — sitting where `quinn / rae / sol` belongs. **A4** the installers
+handed a CAPTURED `<table>` → `{sortButtons: 0, matrix: <unmoved>}`, row 14's *"a click that mutates
+nothing"*. `tableEnhancer.ts` restored to `63916d73…` after every arm.
+★ **THE MASKED-INSTRUMENT REFLEX PAID AGAIN, AT A4.** A captured reference removes the buttons, so a
+`buttons.length === 3` precondition in front of the matrix check would have swallowed the red and the clause
+written to find the defect would never have been seen to fail. The two were **folded into ONE `expect`** —
+`{sortButtons, matrix}` — which now reds showing **both halves in one diff**. Every property in the file is
+one instrument (a matrix, or an object of counts), never a ladder; the click is guarded so an absent button
+is a **reported result** rather than an undefined dereference that kills the case early. Selectors are **by
+class alone**, never tag-qualified.
+★ **D-8's POSITIVE CONSEQUENCE, ASSERTED AS A POSITIVE.** A diff round trip leaves the column's own table
+still sorted with its filter still applied — and it is **NODE IDENTITY** that separates *"restored"* from
+*"untouched"*: same `<table>` node, same toolbar node, `data-table-tools` still `enhanced`, the field still
+reading `eng`, the same two painted rows. 006 D-15's attribute flip, tested rather than trusted. Also
+asserted: three walks over the same diff leave it excluded (**the exclusion is STABLE across renders**), and
+the second walk over the column neither double-enhances nor un-enhances it (**IDEMPOTENT**).
+★ **ONE MEASUREMENT WORTH CARRYING: `aria-sort` READS THE LITERAL `none`, NOT ABSENT.** The first written
+form of the fresh-table clause expected `null` and reds on both engines — `installTableSort` writes the
+state on **every** header at install, so the attribute is a declared *"sortable, currently unsorted"* rather
+than an omission. Corrected to `none`, which still discriminates: the clicked column would read `ascending`.
+★ **A HONEST LIMIT, STATED SO NOBODY READS MORE INTO THE GREEN.** In production **today** the walk is never
+run while a diff is open — a change arriving during a displayed comparison is DEFERRED to the exit (D-11,
+6.3) and `exitDiff` removes the view before anything re-renders. That is a TIMING accident of one surface at
+one moment, and it is **exactly why D-8 is asserted structurally**: the day a fifth call site or an eager
+re-render changes that timing, the scoping is what still holds. The diff is entered through
+`enterDiff(host, computeDiff(before, after))` — `appShell.ts:983`'s `showDiff` closure verbatim; the
+picker → snapshot → IndexedDB route in front of it is `diffChrome.browser.test.ts`'s subject.
+**WHAT 3.9 DOES NOT DO:** no cost guard (**3.10**), no zero-network proof (**3.11**), no content-script call
+site (**4.1**), no `tableTools` change (**the WALK owns scope — a control-side exclusion would be the design
+smell**), no `src/` edit of any kind, and no new exclusion predicate — D-8 asked for none, and plan D-8 says
+adding one *"would be the thing that could rot."*
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**. NUL **0 in both forms** (node byte scan and `tr -cd`) in the one added file, with a control file
+reading **2** in both. Ablations by cp-aside + restore, never `git checkout`.
+**TASK 3.10 IS NEXT** — **D-11 (ii)'s THREE-ARM conditionality guard on the app page, its ONLY cost
+evidence**, in `tests/browser/tableCost.browser.test.ts`. Three arms in ONE run: (1) `mount()` alone;
+(2) `mount()` + M8's enhancements on a document with **no table and an unrecognized name**; (3) the same on
+a document **with a table, named `CLAUDE.md`**. **(1) == (2)** on shadow-root node count and on
+`addEventListener` calls recorded by instrumenting `EventTarget.prototype.addEventListener`, and
+**(3) > (2)** on both — ★ **the equality is the property, the inequality is the POSITIVE CONTROL THAT
+FIRES**, because a counter that never moves reads equal whether or not the code ran. Plus D-11 (i)'s
+negative half: the enhancer's synchronous prologue calls neither `parse` nor `sanitize` and touches no
+`getBoundingClientRect` / `offsetWidth` / `getComputedStyle` — **spies, each with a control proving the spy
+would have recorded a call**. To be stated as the strictly weaker thing it is: the app page has **no
+first-paint instrument at all** (D-11 (iii)), so this guard **stands in for a number and is never reported
+as "within budget."** Its baseline is 3.9's, unmoved: **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and
+**399,646 B app** (`7275a378…`); 3.10 adds **only a test file**, so both should stay byte-identical, and the
+content script stays byte-identical until **4.1** regardless.
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status
@@ -1087,17 +1168,6 @@ manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint` **EXIT=0**. 
 (node byte scan and `tr -cd`) in all six edited files, with a control file reading **2** in both. Ablations
 by cp-aside + restore, never `git checkout`; both `src/` files restored to their shipped md5s after every
 arm (`tableTools.ts` `c730e043…`; `tableEnhancer.ts` `63916d73…`).
-**TASK 3.9 IS NEXT** — **D-8's exclusions and D-9's per-render degradation**, the two properties
-`replaceChildren` makes true, asserted rather than assumed (rows 13, 14), in
-`tests/browser/tableScope.browser.test.ts`. ★ A diff whose hunks contain a complete markdown table grows
-**NO** sort affordance — **red-first by widening the query to the shadow root**, at which point the diff's
-tables grow controls; the raw view likewise grows none. ★ A diff round trip leaves the column's own table
-STILL SORTED with its filter still applied. ★ **D-9's revert-and-fail** (row 13's inverse — state
-deliberately does NOT survive): sort, drive a watch re-render that CHANGES the source, then assert document
-order AND new-source row text, red against a build that carries the sort state across. **Row 14:** the
-toolbar is rebuilt every mount and its handlers reach the CURRENT table. Its baseline is **321,713 B CS**
-(`c68e437c…` / `e1287b5c…`) and **399,646 B app** (`7275a378…`); 3.9 adds **only a test file**, so both
-should stay byte-identical, and the content script stays byte-identical until **4.1** regardless.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

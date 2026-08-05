@@ -570,7 +570,7 @@ revertable — units. **None of them precedes 3.1.***
       manifest green **2975 B** · `permissions: []` both engines.
       [D-10, §3.6; §4 table tools + Trust; §3.8; row 16; gate-2 ruling Q2]
 
-- [ ] **3.9 D-8's exclusions and D-9's per-render degradation — the two properties `replaceChildren` makes
+- [x] **3.9 D-8's exclusions and D-9's per-render degradation — the two properties `replaceChildren` makes
       true, asserted rather than assumed (rows 13, 14).**
       Files: `tests/browser/tableScope.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) ★ **D-8:** a **diff whose hunks contain a complete markdown table**
