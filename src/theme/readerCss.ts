@@ -176,6 +176,13 @@ export const READER_CSS = /* css */ `
   font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
 }
 .peekover-reader td{padding:11px 16px;border-top:1px solid var(--line);color:var(--ink)}
+/* Table tools toolbar (008 task 3.3, D-12) — the EMPTY host; rationale + tokens: below this literal */
+.peekover-reader .peekover-table-tools{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  margin:22px 0 8px;
+  font-family:var(--sans);font-size:12px;color:var(--muted);
+}
+.peekover-reader .peekover-table-tools + table{margin-top:0}
 
 /* ============ Raw fallback (never a blank page — AGENTS.md #5) ============ */
 .peekover-raw{
@@ -747,6 +754,93 @@ export const READER_CSS = /* css */ `
 // and NO `transition`: it is not interactive (§3.11 rows 12, 16), and a hover response on a thing
 // that takes no gesture is a lie about affordance. `margin:0` because it is a `<p>` and the UA
 // default would otherwise offset a `position:fixed` box from its declared inset.
+
+// ============================================================================
+// THE TABLE-TOOLS TOOLBAR — 008 §3.11, task 3.3 (D-12)
+// ============================================================================
+// A `.ts` comment ON PURPOSE, and 1.3's block above states the mechanism this one inherits: prose
+// written beside the rule, inside READER_CSS's template literal, is prose the minifier cannot enter
+// and it ships verbatim to BOTH surfaces — the failure `diffChrome.ts:40-44` records as having cost
+// ~8 KB once. The rule carries a one-line pointer; the argument lives here, where it costs zero
+// shipped bytes, and 3.3's byte decomposition MEASURES that zero rather than trusting it.
+//
+// ── WHICH SHEET, AND WHY IT IS NOT THE PICKER'S ANSWER ───────────────────────────────────────
+//
+// READER_CSS, not CONTAINED_CSS — the opposite of 2.4's status lane two blocks below, and for a
+// reason that is structural rather than stylistic. Diff chrome is app-page-only by D-14, so a
+// full-page rule for it would style an element that never renders there. The toolbar is not that
+// kind of chrome: it is a sibling of a `<table>` INSIDE `.peekover-reader`, and the reading column
+// is the one thing both surfaces render identically. `enhanceTables` (`tableEnhancer.ts:148`) walks
+// `.peekover-reader` on whichever host it is handed, and D-6 gives it FOUR call sites — 1 and 2 on
+// the app page (3.4), 3 and 4 on the content script (4.1). A CONTAINED-only rule would leave the
+// content-script reader's toolbar unstyled from 4.1 onward: invisible on one surface, and invisible
+// in a way no app-page test could see. So the rule goes where both injected stylesheets carry it,
+// and the content-script bytes move HERE, before any call site exists, deliberately (plan §6): with
+// the CSS the only contributor in flight the ablation is exact, and the presentation stays
+// revertable without touching the logic.
+//
+// ── THE TOKENS, EACH RESOLVED IN ALL THREE THEME BLOCKS BEFORE USE (the standing check) ──────
+//
+// `:host` light `:31-40` · `:host([data-theme="dark"])` `:43-48` · `:host([data-theme="sepia"])`
+// `:51`. Sepia overrides ONLY `--paper`, `--ink`, `--accent`, `--accent-soft`, so every other token
+// resolves to its LIGHT value on sepia paper. Run this session, per token, never assumed:
+//
+//   --sans   light "Bricolage Grotesque",system-ui,sans-serif · dark SAME · sepia SAME (declared
+//            once in the light block; neither override touches it).
+//   --muted  light #5D6070 · dark #A0A4B8 · sepia #5D6070 (inherited light) on paper #F6EEDF.
+//
+// Those two are the whole list, because the rule declares no surface of its own — see below. The
+// toolbar's text therefore reads as the same secondary ink as the `<th>` row it sits above
+// (`:174-177` already uses `--muted` on `--sans`), in all three themes.
+//
+// ★ THE SEPIA READING, STATED RATHER THAN SILENTLY SUBSTITUTED — AND IT IS WHY THERE IS NO FILL.
+// The obvious chrome surface here is the pills' `--panel` + `--line` pair. On sepia `--panel`
+// (#F4F4EF) sits on `--paper` (#F6EEDF) — a per-channel delta of 2/2/16 — so the fill is very
+// nearly invisible and only the border carries the shape; 1.3's block above records the same
+// reading for all six pills and declines to fix it for one of them. This rule does not inherit that
+// problem, because it does not need a surface at all: the toolbar is not a floating pill over the
+// document, it is a strip in the flow of the column, and the paper it sits on is the paper the
+// prose sits on. So it declares NO `background` and NO `border`, in any theme. That is a finding
+// applied, not a token swapped: `--accent-soft` (which sepia DOES override, to #E9DCC1) was NOT
+// substituted, because a toolbar that looked different on one theme from the chrome it belongs to
+// would be a divergence rather than a fix. If the walk at 6.1 rules that the strip needs a surface,
+// the whole-band sepia question is what it inherits, and it is recorded here for that session.
+//
+// ── NO `max-width` OF ITS OWN: IT INHERITS THE MEASURE ───────────────────────────────────────
+//
+// `--reader-measure` is `748px` (`:83`), consumed by `.peekover-reader` at `:85`. The toolbar is a
+// CHILD of the column, so the measure already governs it; declaring one here would be a second site
+// for the same number and the coupling `:925-930` argues for would silently rot. §3.11 row 6 is
+// therefore DECLARED here and ASSERTED at 3.5 as a computed style, in a real engine — a resolved
+// `max-width` is jsdom-blind, so a unit test asserting it would be asserting the string it was
+// handed.
+//
+// ── NO `ch` IN A LAYOUT-BLOCKING PROPERTY (finding 6) ────────────────────────────────────────
+//
+// `margin` and `gap` above are px; the rule uses no `ch` at all, and declares no `padding` and no
+// `transform`. The memory of record prices one `ch` in a margin calculation at ~28 ms of first
+// paint, and this rule is on the content script's critical path from 4.1 onward.
+//
+// ── WHY THE SECOND RULE EXISTS: THE BARE `<table>` HAS NO WRAPPER TO SPACE AGAINST ───────────
+//
+// D-12's structural finding is that `design/mockup.html`'s `.tablewrap` does not exist in our DOM —
+// markdown-it emits a bare `<table>` and `:170-173` puts the border, radius and `overflow:hidden`
+// on the table itself — so the toolbar is a PRECEDING SIBLING (`tableEnhancer.ts:119-132`), not a
+// child of a shared container. Sibling margins collapse: the toolbar's 8px bottom against the
+// table's own 22px top would resolve to 22px, and the 8px would be a number the sheet states and
+// the engine ignores. `.peekover-table-tools + table{margin-top:0}` is what makes the declared
+// spacing true — 22px above the toolbar, 8px between it and the table it belongs to. It is written
+// at specificity (0,2,1) so it beats `.peekover-reader table`'s (0,1,1) BY SPECIFICITY and not by
+// source order, on 2.4's precedent. Nothing about the existing table rule is edited; a table with
+// no toolbar in front of it is matched by neither selector and keeps its 22px byte-for-byte.
+//
+// ── WHAT IS DELIBERATELY NOT HERE ─────────────────────────────────────────────────────────────
+//
+// The host is EMPTY at this task and this rule styles the CONTAINER, not its contents: no sort
+// control (3.6), no filter (3.7), no copy buttons (3.8), no `role`, no label. `display:flex` with a
+// gap is the container's own layout and is the one thing that must exist before there is anything
+// to lay out. ★ And whether the strip READS as part of its table or as clutter above it is a WALK
+// judgement, not a CSS one: it is 6.1's, with 3.5's rect probe as its measurement.
 
 // ============================================================================
 // THE PER-DIAGRAM CONTROL GROUP — 007 §3.11, task 7.1

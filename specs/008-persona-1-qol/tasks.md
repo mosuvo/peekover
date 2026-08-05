@@ -435,7 +435,7 @@ revertable — units. **None of them precedes 3.1.***
       cannot move is not a measurement. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-7, D-8, D-12; §4 table tools; plan §0.2]
 
-- [ ] **3.3 The toolbar's CSS, D-12's token verification against ALL THREE theme blocks, and the FIRST
+- [x] **3.3 The toolbar's CSS, D-12's token verification against ALL THREE theme blocks, and the FIRST
       table-tools content-script byte statement (D-12 · §5).** The styling lands in `readerCss.ts`, which is
       on **BOTH** graphs — **so this task moves content-script bytes before any call site exists**, and that
       separation is the point: the presentation is revertable without touching the logic. Rationale lives in

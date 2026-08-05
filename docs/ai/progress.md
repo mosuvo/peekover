@@ -480,9 +480,95 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 edited; `pnpm lint` **EXIT=0**; unit **835/835** (816 + this file's 19); NUL **0 in both forms** across both
 new files with **both** controls reading nonzero (the literal-byte reader AND the escape-form matcher — the
 first attempt's escape control read 0 and was re-run from a script file rather than trusted).
-**TASK 3.3 IS NEXT** — the toolbar's CSS in `readerCss.ts`, D-12's token verification against all three
-theme blocks, and the **first table-tools content-script byte statement** (the CSS is on both graphs, so
-that task moves bytes and its ablation is exact — rationale ABOVE the template literal, per finding 9).
+★ **TASK 3.3 IS DONE — THE TOOLBAR HOST IS STYLED, IN `READER_CSS` SO BOTH SURFACES CARRY IT, AND THE
+FIRST TABLE-TOOLS CONTENT-SCRIPT BYTES HAVE MOVED.** Two rules beside the table styling they belong to
+(`readerCss.ts:179-185`, rationale `:758-843`): `.peekover-reader .peekover-table-tools` — `display:flex` with `gap:8px`,
+`margin:22px 0 8px`, `--sans`/`12px`/`--muted` — plus `.peekover-reader .peekover-table-tools + table
+{margin-top:0}`. **The host stays EMPTY**: this styles the CONTAINER, not its contents — no control, no
+`role`, no label, no content (sort 3.6, filter 3.7, copy 3.8), and `tableEnhancer.ts` was not touched.
+★ **THE SHEET IS THE LOAD-BEARING CHOICE, AND IT IS THE OPPOSITE OF 2.4's.** `READER_CSS`, not
+`CONTAINED_CSS`: the picker's lane is app-page-only chrome (D-14), but the toolbar is a sibling of a
+`<table>` **inside `.peekover-reader`**, and D-6 gives `enhanceTables` four call sites — 1–2 app page
+(3.4), 3–4 content script (4.1). A CONTAINED-only rule would leave the content-script reader's toolbar
+unstyled from 4.1 on, **invisible on one surface in a way no app-page test could see**. Asserted both
+ways: the selector is in `READER_CSS` and the class appears **nowhere** in `CONTAINED_CSS`.
+★ **D-12's TOKEN CHECK RUN PER TOKEN, AND THE LIST IS SHORT BECAUSE OF WHAT THE SEPIA READING SAID.**
+Only two tokens are used, each named with its resolution in all three blocks (`:host` light `:31-40`,
+dark `:43-48`, sepia `:51`): **`--sans`** light `"Bricolage Grotesque",system-ui,sans-serif` · dark SAME ·
+sepia SAME; **`--muted`** light `#5D6070` · dark `#A0A4B8` · **sepia `#5D6070` (inherited light) on paper
+`#F6EEDF`**. The obvious chrome surface — the pills' `--panel`+`--line` pair — was **NOT taken**: sepia
+overrides only `--paper`/`--ink`/`--accent`/`--accent-soft`, so `--panel` (#F4F4EF) would sit on sepia
+paper (#F6EEDF) at a 2/2/16 per-channel delta, 1.3's recorded reading for all six pills. **The toolbar
+declares NO `background` and NO `border` in any theme** — it is a strip in the flow of the column, not a
+floating pill, so it needs no surface. ★ **A finding APPLIED, not a token swapped:** `--accent-soft`
+(which sepia *does* override) was not substituted, because one piece of chrome that looked different on
+one theme would be a divergence, not a fix. The whole-band sepia question stays where 1.3 left it.
+★ **SIX RED-FIRST ARMS, EACH RUN AND ITS SIGNATURE RECORDED** (`cp`-aside + restore, 17 tests green at
+HEAD): a **hard-coded `#5D6070`** instead of the token → **2 red**, *"expected [ '--sans' ] to deeply
+equal [ '--sans', '--muted' ]"* and the literal-colour matcher firing on the rule; a **token no block
+defines** (`--tool-ink`) → **1 red**, naming it in the used-token list; **the WRONG SHEET** (the rules
+moved to `CONTAINED_CSS`, 2.4's answer) → **4 red**, including *"no such rule in the shipped sheet"* —
+the arm that proves the sheet choice is asserted and not narrated; **rationale written INSIDE the
+literal** → **1 red**, the byte check naming the leaked sentence; **`margin:2ch`** (finding 6) → **2
+red**, *"expected '2ch 0 8px' not to match /\d(?:\.\d+)?ch\b/"*; **the adjacency rule dropped** → **1
+red**. ★ **Two controls fire inside the tests themselves:** the literal-colour matcher and the `ch`
+matcher both **match elsewhere in the same sheet** (the trap-guard hexes; `max-width:34ch`), so each green
+is an absence the instrument could have seen. ★ **And a red-first arm that was WRONG THE FIRST TIME,
+recorded because it nearly passed as evidence:** the rationale-in-the-literal arm at first injected text
+containing **backticks**, which terminate the template literal — the build failed and the suite reported
+582 passed with a transform error rather than a test red. A build error is not a red. Re-run backtick-free,
+it reds the byte check by name.
+★ **THE CONTENT SCRIPT MOVED +349 B ON BOTH ENGINES AND THE ACCOUNT CLOSES TO A ZERO RESIDUAL — the
+first TABLE-TOOLS byte statement, though NOT `readerCss.ts`'s first move this milestone (2.4 moved it
++205 B for the picker's status lane, earlier than plan §6 expected).** Content script **321,364 →
+321,713 B** (Cr `da80bfbc…`→`c68e437c…`, Fx `b50e4baa…`→`e1287b5c…`); app chunk **391,809 → 392,158 B,
++349 B** (`7e635aa2…`→`998ebfd7…`). **Four arms, each a real rebuild of BOTH engines from a cleared
+`.output`** (`pnpm build` is Chrome-only): **S0** HEAD · **S1** the pointer comment alone **321,470
+(+106)** · **S2** the two rules alone **321,607 (+243)** · **S3** shipped **321,713 (+349)**.
+**106 + 243 = 349 — residual ZERO**, and the marginals confirm it by a second route: S3−S1 = **243**,
+S3−S2 = **106**. The numbers are the source text to the byte: the pointer comment is **106 UTF-8 bytes**
+and the two rules **243**. ★ **THE `.ts` RATIONALE COSTS EXACTLY ZERO, MEASURED:** arm **S4** — shipped
+CSS with the whole 86-line rationale block deleted — rebuilds to **321,713 B / `c68e437c…` / `e1287b5c…`
+and app `998ebfd7…`, md5-for-md5 IDENTICAL to S3**. The instrument that read that zero is the same one
+that read S1's +106 and S2's +243 in the same loop, so the null is a measurement. ★ **Never a grep.**
+★ **1.3's CRLF sub-finding held and was needed:** the block is **356 B on disk** (the file is uniformly
+CRLF — 1139 CRLF, 0 bare LF, and the added lines match it) but **349 B shipped**, the seven newlines each
+shedding one byte to the spec's template-literal normalization. A source `wc -c` would have over-stated
+the delta by exactly the line count.
+★ **THE RATIONALE IS OUT OF THE LITERAL, AND THAT IS A BYTE CHECK RATHER THAN A REMINDER** (finding 9).
+The argument lives in a `.ts` comment beside 1.3's badge block, **below `READER_CSS`'s closing backtick**
+— the placement 1.3 established for a `READER_CSS` rule and the same 0-shipped-byte property the body's
+"above the template literal" asks for. The test reads `readerCss.ts` **from disk**, slices the block,
+asserts it is **>1500 B of real prose** (the control — there is something that could have leaked) and
+that **no line of it appears in the exported string**; what ships is **one 104-char pointer**, pinned at
+≤110. `.peekover-reader table` is **unedited** — asserted, and `git diff --numstat` reads **94/0 and
+137/0: ZERO deletions in either file**.
+★ **WHAT 3.3 DECLARES AND DOES NOT ASSERT:** the toolbar carries **no `max-width` of its own** — it is a
+child of the column, so `--reader-measure` (**748px**, `:83`) already governs it. §3.11 **row 6 is
+DECLARED here and ASSERTED at 3.5** as a computed style in a real engine, because a resolved value is
+jsdom-blind; **row 5's containment** is 3.5's rect probe at both geometry widths; and **whether the strip
+reads as part of its table or as clutter above it is 6.1's WALK judgement**, not a CSS one.
+Golden **EMPTY**; **007 import fence 8/8** with clause B firing; `permissions: []` on both built manifests
+(654 / 770 B); `web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**;
+`pnpm lint` **EXIT=0**; unit **842/842** — 3.2's **835** plus this task's **7** new tests in
+`reader.test.ts` (17 in that file now); no 1.1–3.2 module edited, no call site, no
+`tableEnhancer.ts` change; NUL **0 in both forms** in both edited files, with a control file reading **2**.
+★ **THE BROWSER SUITE'S RED SET IS 3.1's, RE-MEASURED — plus one FLAKE, isolated rather than waved past.**
+`pnpm test:browser`: **2 failed suites** are 3.1's collection error naming exactly one file
+(`tableFilter.browser.test.ts`, both engines), read past until 3.7. A **third** appeared on the first run
+— `watchAnchor.browser.test.ts` on **Firefox only**, *"expected 13.949996948242188 to be less than 8"*, a
+scroll-offset tolerance — and it was **isolated rather than waved past**: re-run alone it passes **14/14
+on both engines**, and a **second full-suite run reproduces 3.2's numbers exactly — 2 failed suites / 104
+passed, 1055 passed | 15 skipped**. Structurally it could not have been this task's either: **nothing
+calls `enhanceTables` yet** (the call sites are 3.4 and 4.1), so `.peekover-table-tools` matches **no
+element in any rendered document** and neither rule can move a pixel until 3.4 wires the first site. ★ **A
+CSS task whose rules match nothing today is exactly the shape that can ship a defect invisibly** — which
+is why 3.5's rect probe and 6.1's walk are where its appearance is judged, not here.
+**TASK 3.4 IS NEXT** — app-page call sites 1 AND 2 (`readerPane.ts:185`, `appShell.ts:137-140`'s
+`renderWithDiagrams` and the rename D-6 forces) plus the toolbar's structural rows 1, 2, 3, **4
+(INVERTS)**, 23. **Both sites or neither** (D-6): wiring only the first ships a toolbar that disappears on
+the app page's own re-render. Its baseline is **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and **392,158 B
+app** (`998ebfd7…`) — and **3.4 moves the app chunk only**, the content script staying byte-identical.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
