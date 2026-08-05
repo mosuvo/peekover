@@ -29,10 +29,12 @@
 // probe. Asserting them here at one incidental viewport would ratify a geometry nobody measured —
 // finding 2's defect exactly, which is why 3.5 runs at 1280 AND 1400.
 //
-// ★ AND THE HOST IS STILL EMPTY — AFTER 3.6 TOO, WHICH IS NOT AN OVERSIGHT. D-12 divergence 1
-// puts the sort control inside its own `<th>`, so the sort never enters the strip; the filter
-// (3.7) and the two copy buttons (3.8) are what will fill it. The rows-1-to-23 block below is
-// therefore unchanged by 3.6, and its emptiness assertion still describes the shipped state.
+// ★ THE HOST WAS STILL EMPTY AFTER 3.6, AND THAT WAS NOT AN OVERSIGHT: D-12 divergence 1 puts the
+// sort control inside its own `<th>`, so the sort never enters the strip. ★ 3.7's FILTER IS WHAT
+// FILLS IT — three children, and 3.8's two copy buttons make five. The two emptiness assertions
+// this file carried are updated where they stood, to the specific claim they always meant (no SORT
+// control is in the strip) rather than to a count that would now be false. The filter's own
+// behaviour is `tests/browser/tableFilter.browser.test.ts`'s, where row 24's set is discharged.
 //
 // ══ WHAT TASK 3.6 ADDED, AND WHY IT IS HERE RATHER THAN IN THE UNIT ═══════════════════════════
 //
@@ -339,10 +341,12 @@ describe.each(SITES)('the table toolbar is LIVE through the %s (row 23)', (_labe
 
     expect(toolbarsIn(host)).toHaveLength(1); // one per table, never one per render
     expect(tables[0].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
-    // The host is EMPTY at 3.4 and that is the shipped state, not an oversight: sort (3.6),
-    // filter (3.7) and copy (3.8) are what fill it, and a `role="toolbar"` over no widget would
-    // describe a group that does not exist.
-    expect(toolbarsIn(host)[0].children).toHaveLength(0);
+    // ★ THE HOST WAS EMPTY THROUGH 3.6 AND IS NOT ANY MORE. D-12 divergence 1 kept the sort in its
+    // own `<th>`; 3.7's filter is the first control in the strip (a field, a clear button and the
+    // count), and 3.8's two copy buttons are what will make it five. The host still carries no
+    // `role` — see `tableEnhancer.ts` for why that is now a decision rather than a wait.
+    expect(toolbarsIn(host)[0].children).toHaveLength(3);
+    expect(toolbarsIn(host)[0].hasAttribute('role')).toBe(false);
   });
 
   it('★ row 4 INVERTS — INSIDE `.peekover-reader`, immediately BEFORE its table', async () => {
@@ -410,16 +414,16 @@ describe.each(SITES)('the table toolbar is LIVE through the %s (row 23)', (_labe
 // you that the first cannot is whether the handlers reach the CURRENT table after the column has
 // been destroyed and rebuilt — §3.11 row 14's question — and that gets its own arm at the end.
 
-describe('3.6 · the toolbar STRIP is still empty — the sort lives in the <th> (D-12 divergence 1)', () => {
-  it('a sortable table has controls, and NONE of them is in the strip', async () => {
+describe('3.6 · the SORT lives in the <th>, never in the strip (D-12 divergence 1)', () => {
+  it('every sort control is inside a <th>, and none of them is in the toolbar host', async () => {
     const host = await openViaInitialSelect(SORT_DOC);
     const table = tablesIn(host)[0];
 
     // The firing control: the controls really exist somewhere.
     expect(sortButtonsIn(table)).toHaveLength(3);
-    // And not one of them is in the toolbar host — which is why 3.5's containment measurement of
-    // an EMPTY strip is still a measurement of the shipped strip after this task.
-    expect(toolbarsIn(host)[0].children).toHaveLength(0);
+    // ★ THE STRIP IS NO LONGER EMPTY — 3.7's filter fills it — so the claim this case makes is now
+    // the SPECIFIC one it always meant: whatever is in the strip, no SORT control is. Through 3.6
+    // an emptiness check said this for free; after 3.7 it would have said something false.
     expect(toolbarsIn(host)[0].querySelectorAll(`.${SORT_BUTTON_CLASS}`)).toHaveLength(0);
     for (const button of sortButtonsIn(table)) {
       expect(button.parentElement?.tagName).toBe('TH');

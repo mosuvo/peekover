@@ -222,3 +222,561 @@
 // 3.7 writes the first assertion in this file, and its report checks this set off PROPERTY BY
 // PROPERTY. ★ Any property enumerated here and not asserted there is NAMED, not dropped — an
 // enumeration that quietly loses an entry is finding 4 happening again, one rung further up.
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 3.7 — THE FIRST ASSERTIONS IN THIS FILE
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// The set above was written at 3.1 with nothing below it, and this is the discharge finding 4 asks
+// for. Every case below names the `F<n>` it satisfies; the checklist of which entries land HERE,
+// which land in `src/render/tableTools.test.ts`, and which are NAMED as another task's is in the
+// task report and in `docs/ai/progress.md`.
+//
+// ★ WHAT IS HERE RATHER THAN IN THE UNIT, AND WHY. `tableTools.test.ts` answers DOM shape, node
+// identity, the predicate, the count string and the composition — exactly and cheaply, in jsdom.
+// Five things it cannot answer at all are below, and each is a property whose whole content is
+// that a real engine does something:
+//
+//   • F6's second half — the hidden rows are NOT RENDERED. `hidden` is a UA-stylesheet
+//     `display:none`, and jsdom has no cascade to resolve and no box to measure; a `<tr hidden>`
+//     that some rule un-hid would satisfy every attribute assertion in the unit suite.
+//   • F10 / row 12 — the table's footprint RETURNS TO WHERE IT STARTED, which is a rect equality
+//     against a pre-filter measurement and cannot exist without layout.
+//   • F15 — a real tab stop and a real activation. jsdom focuses anything you ask it to and has
+//     no default `<button>` behaviour, so the claim is untestable there.
+//   • F14 — the count is PAINTED. §5's *"state in text"* is a claim about what a sighted reader
+//     can see, and a `width:0` span passes every `textContent` assertion ever written.
+//   • F11 — the empty state is on the screen, in a table that still draws its header (F12).
+//
+// ★ AND NOTHING BELOW CALLS `enhanceTables`. The filter arrives through the app page's own click
+// chain or it does not arrive — the M5 "built, tested, wired to nothing" defect is why.
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { userEvent } from 'vitest/browser';
+import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
+import { TABLE_TOOLBAR_CLASS } from '../../src/render/tableEnhancer';
+import {
+  FILTER_CLEAR_CLASS,
+  FILTER_COUNT_CLASS,
+  FILTER_EMPTY_CLASS,
+  FILTER_FIELD_CLASS,
+  SORT_BUTTON_CLASS,
+} from '../../src/render/tableTools';
+import { resetDocIdentityForTest } from '../../src/render/docIdentity';
+import { resetWatchRegistryForTest } from '../../src/watch/watchRegistry';
+import { resetWatchControlsForTest } from '../../src/watch/watchControl';
+import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
+import { resetThemeControlsForTest } from '../../src/theme/themeControl';
+import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+
+// ── Fixtures ──────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Three data rows over three columns. `dept` has two `eng` rows so a filter can leave more than
+ * one row standing (a one-row result cannot tell "kept the order" from "kept the row"), and `n` is
+ * 10 / 9 / 2 so the sort has somewhere to move them to — F23 needs both controls to have work.
+ *
+ * The trailing prose is what makes a reflow visible below the table.
+ */
+const FILTER_DOC = [
+  '# Report',
+  '',
+  '| dept | who | n |',
+  '| --- | --- | --- |',
+  '| eng | zoe | 10 |',
+  '| eng | adam | 9 |',
+  '| ops | bo | 2 |',
+  '',
+  'Trailing prose, below the table.',
+  '',
+].join('\n');
+
+/** Two filterable tables in one document — F4's shape, on the live app page. */
+const TWO_TABLE_DOC = [
+  '# Report',
+  '',
+  '| one | n |',
+  '| --- | --- |',
+  '| b | 2 |',
+  '| a | 1 |',
+  '',
+  '| two | n |',
+  '| --- | --- |',
+  '| d | 4 |',
+  '| c | 3 |',
+  '',
+].join('\n');
+
+/** A hand-written HTML table with NO `<thead>` — F2's REAL input, not one invented to be declined:
+ *  `parse.ts` runs `html: true` and `sanitize.ts:36` allows the table elements. */
+const HEADLESS_HTML = '<table><tbody><tr><td>a</td><td>1</td></tr></tbody></table>';
+const MIXED_DOC = `${FILTER_DOC}\n${HEADLESS_HTML}\n`;
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+async function waitFor<T>(fn: () => T | null | undefined | false, tries = 400): Promise<T> {
+  for (let i = 0; i < tries; i += 1) {
+    const v = fn();
+    if (v) return v as T;
+    await sleep(20);
+  }
+  throw new Error('waitFor timed out');
+}
+
+// ── The app-page harness (call site 1 — `readerPane.ts`'s paint) ──────────────────────────────
+
+const containers: HTMLElement[] = [];
+
+function fakeStore(): AppStore {
+  return {
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+  };
+}
+
+function sourceOf(files: MarkdownFile[]): FolderSource {
+  return { name: 'notes', files, truncated: false, persistable: true };
+}
+
+/** Mount the shell and open the file — the real gesture chain, never a direct `selectFile`. */
+async function openDoc(doc: string): Promise<HTMLElement> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  containers.push(container);
+  const app = mountAppShell(container, {
+    openFolder: async () => ({
+      ok: true,
+      source: sourceOf([{ path: 'report.md', name: 'report.md', read: async () => doc }]),
+    }),
+    store: fakeStore(),
+  });
+  await app.openFolder();
+
+  const btn = [
+    ...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+  ].find((b) => b.textContent === 'report.md')!;
+  btn.click();
+  const host = await waitFor(() =>
+    container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+  );
+  await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader h1'));
+  return host;
+}
+
+// ── Readers ───────────────────────────────────────────────────────────────────────────────────
+
+const columnOf = (host: HTMLElement) =>
+  host.shadowRoot!.querySelector<HTMLElement>('.peekover-reader')!;
+const tablesIn = (host: HTMLElement) => [...columnOf(host).querySelectorAll('table')];
+const toolbarOf = (table: HTMLTableElement) => table.previousElementSibling as HTMLElement;
+
+/**
+ * The filter's controls, found BY CLASS ALONE — never `input.${FILTER_FIELD_CLASS}` or
+ * `button.${FILTER_CLEAR_CLASS}`.
+ *
+ * ★ THE SELECTOR MUST NOT ENCODE THE ANSWER. F15's whole claim is that the clear control IS a real
+ * `<button>` and the field a real form control. A tag-qualified selector makes that unfalsifiable:
+ * a non-button control returns NOTHING, every case dies on an undefined dereference, and the focus
+ * assertion written to catch exactly this never runs. (Paid for at 3.5 and again at 3.6.)
+ */
+const fieldOf = (table: HTMLTableElement) =>
+  toolbarOf(table).querySelector<HTMLInputElement>(`.${FILTER_FIELD_CLASS}`)!;
+const clearOf = (table: HTMLTableElement) =>
+  toolbarOf(table).querySelector<HTMLButtonElement>(`.${FILTER_CLEAR_CLASS}`)!;
+const countOf = (table: HTMLTableElement) =>
+  toolbarOf(table).querySelector<HTMLElement>(`.${FILTER_COUNT_CLASS}`)!;
+const emptyStateOf = (table: HTMLTableElement) =>
+  table.querySelector<HTMLElement>(`.${FILTER_EMPTY_CLASS}`)!;
+const sortButtonsIn = (table: HTMLTableElement) => [
+  ...table.querySelectorAll<HTMLButtonElement>(`.${SORT_BUTTON_CLASS}`),
+];
+
+const bodyRowsOf = (table: HTMLTableElement) => [...table.tBodies[0].rows];
+const columnText = (table: HTMLTableElement, index: number) =>
+  bodyRowsOf(table).map((row) => (row.cells[index]?.textContent ?? '').trim());
+
+/** ★ RENDERED, not merely un-`hidden`. This is the reading the whole browser half exists for. */
+const isPainted = (el: HTMLElement): boolean => {
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+};
+const paintedRowsOf = (table: HTMLTableElement) => bodyRowsOf(table).filter(isPainted);
+const paintedText = (table: HTMLTableElement, index: number) =>
+  paintedRowsOf(table).map((row) => (row.cells[index]?.textContent ?? '').trim());
+
+/** Type into the field the way a reader does — a real focus and real key presses. */
+async function typeInto(table: HTMLTableElement, text: string): Promise<void> {
+  fieldOf(table).focus();
+  await userEvent.keyboard(text);
+}
+
+const fmt = (r: DOMRect): string =>
+  `[${r.left.toFixed(1)},${r.top.toFixed(1)},${r.right.toFixed(1)},${r.bottom.toFixed(1)}]`;
+
+// ── Lifecycle ─────────────────────────────────────────────────────────────────────────────────
+
+function reset(): void {
+  resetDocIdentityForTest();
+  resetWatchRegistryForTest();
+  resetWatchControlsForTest();
+  resetThemeHostsForTest();
+  resetThemeControlsForTest();
+  resetDiffRegistryForTest();
+  for (const c of containers.splice(0)) c.remove();
+  document.body.replaceChildren();
+}
+
+beforeEach(reset);
+afterEach(reset);
+
+// ══ F1 / F2 — WHERE THE FILTER IS OFFERED ═════════════════════════════════════════════════════
+
+describe('3.7 · F1 / F2 — a header table offers a filter; a headerless one offers none', () => {
+  it('F1 — the filter is in the toolbar strip, on the table it belongs to, through production', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+
+    // The firing control: the document really rendered a table.
+    expect(tablesIn(host), 'the fixture must actually render a table').toHaveLength(1);
+
+    // ★ THE STRIP HAS ITS FIRST CONTROL. Through 3.6 this host was empty — D-12 divergence 1 puts
+    // the sort inside its own `<th>` — and 3.5 measured the containment of an empty strip. This is
+    // the task where that measurement faces a control with real width.
+    const bar = toolbarOf(table);
+    expect(bar.classList.contains(TABLE_TOOLBAR_CLASS)).toBe(true);
+    expect(bar.contains(fieldOf(table))).toBe(true);
+    expect(bar.contains(clearOf(table))).toBe(true);
+    expect(bar.contains(countOf(table))).toBe(true);
+    expect(isPainted(fieldOf(table)), 'the field is not on screen').toBe(true);
+    expect(isPainted(clearOf(table)), 'the clear control is not on screen').toBe(true);
+  });
+
+  it('F2 — a headerless table in the SAME document is left exactly as rendered', async () => {
+    const host = await openDoc(MIXED_DOC);
+    const tables = tablesIn(host);
+
+    expect(tables, 'the fixture must render BOTH tables').toHaveLength(2);
+    expect(tables[0].tHead, 'fixture: the first table is the header one').not.toBeNull();
+    expect(tables[1].tHead, 'fixture: the second table is the headerless one').toBeNull();
+
+    // Ungated, BOTH tables would carry a field and this reads 2; unwired it reads 0. Only "the
+    // gate is the header row" reads 1 — which makes this a claim about the property.
+    expect(columnOf(host).querySelectorAll(`.${FILTER_FIELD_CLASS}`)).toHaveLength(1);
+    expect(tables[1].querySelectorAll(`.${FILTER_EMPTY_CLASS}`)).toHaveLength(0);
+    expect(tables[1].tBodies).toHaveLength(1);
+  });
+});
+
+// ══ F6 / F7 — HIDDEN, NOT REMOVED, AND GENUINELY NOT RENDERED ═════════════════════════════════
+
+describe('3.7 · ★ F6 / F7 — the rows are hidden and NOT RENDERED, and they never left the table', () => {
+  it('a filtered-out row has no box, keeps its node identity, and is still in the tbody', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+    const before = bodyRowsOf(table);
+    // A handle no rebuild could carry across — a property on the live node itself.
+    before.forEach((row, i) => {
+      (row as HTMLTableRowElement & { __probe?: number }).__probe = i;
+    });
+    expect(before.every(isPainted), 'every row must start painted').toBe(true);
+
+    await typeInto(table, 'eng');
+
+    // F7 — only matching rows are SHOWN, read off the engine's own boxes rather than an attribute.
+    expect(paintedText(table, 1)).toEqual(['zoe', 'adam']);
+
+    // ★ F6 — AND THE ROW IS STILL THERE. A remove-and-restore filter reads identically on the line
+    // above and fails every line below: `bodyRowsOf` would hold one row, the node would be
+    // disconnected, and the restored rows would carry no `__probe`.
+    //
+    // ★ THE IDENTITY CLAUSES COME FIRST, BEFORE ANYTHING READS ROW 2. Written the other way round
+    // — `bodyRowsOf(table)[2]` into a `getComputedStyle` — the ablation dies on an undefined
+    // dereference and the identity claim is never reached. Measured in the unit suite on the first
+    // ablation run; the clause that finds the defect has to be the clause seen to fail.
+    expect(bodyRowsOf(table)).toHaveLength(3);
+    expect(bodyRowsOf(table)).toEqual(before);
+    const gone = bodyRowsOf(table)[2];
+    expect(gone.isConnected).toBe(true);
+    expect(gone.parentElement).toBe(table.tBodies[0]);
+    // ...and it is genuinely NOT RENDERED, which is the half jsdom cannot see at all.
+    expect(isPainted(gone), 'the non-matching row is still being drawn').toBe(false);
+    expect(getComputedStyle(gone).display).toBe('none');
+    expect(gone.offsetParent).toBeNull();
+
+    clearOf(table).click();
+
+    expect(bodyRowsOf(table)).toEqual(before);
+    expect(
+      bodyRowsOf(table).map((row) => (row as HTMLTableRowElement & { __probe?: number }).__probe),
+      'a rebuilt row carries nothing that was hung on the original',
+    ).toEqual([0, 1, 2]);
+    expect(paintedRowsOf(table)).toHaveLength(3);
+  });
+});
+
+// ══ F10 / ROW 12 — THE FOOTPRINT RETURNS TO WHERE IT STARTED ══════════════════════════════════
+
+describe('3.7 · ★ F10 (row 12) — clearing restores every row AND the table`s footprint', () => {
+  it('the table`s rect after a clear equals its rect before the filter, to the pixel', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+    const prose = [...columnOf(host).querySelectorAll('p')].at(-1)!;
+
+    const tableBefore = table.getBoundingClientRect();
+    const proseBefore = prose.getBoundingClientRect();
+    // Non-vacuous: a zero-rect table would compare equal to itself for free.
+    expect(tableBefore.height, 'the table has no height to restore').toBeGreaterThan(0);
+    expect(proseBefore.height, 'nothing below the table to be pushed around').toBeGreaterThan(0);
+
+    await typeInto(table, 'bo');
+
+    // ★ THE FIRING CONTROL, BEFORE THE ASSERTION IT GUARDS. The filter really changed the
+    // geometry — two rows' worth of height left the table and the prose below it came up. Without
+    // this, "the rect came back" is equally true of a filter that never did anything.
+    const tableDuring = table.getBoundingClientRect();
+    expect(
+      tableDuring.height,
+      `the filter did not reflow: table ${fmt(tableBefore)} -> ${fmt(tableDuring)}`,
+    ).toBeLessThan(tableBefore.height);
+    expect(prose.getBoundingClientRect().top).toBeLessThan(proseBefore.top);
+
+    clearOf(table).click();
+
+    // THE ASSERTION. §4's *"restore every row"* has a geometric half, and this is it: a clear that
+    // leaves ONE row hidden restores the right node set and the wrong footprint, and only a rect
+    // equality against the pre-filter measurement can tell the two apart.
+    const tableAfter = table.getBoundingClientRect();
+    const detail = `table ${fmt(tableBefore)} -> ${fmt(tableAfter)}`;
+    expect(tableAfter.top, `top moved: ${detail}`).toBeCloseTo(tableBefore.top, 1);
+    expect(tableAfter.left, `left moved: ${detail}`).toBeCloseTo(tableBefore.left, 1);
+    expect(tableAfter.right, `right moved: ${detail}`).toBeCloseTo(tableBefore.right, 1);
+    expect(tableAfter.bottom, `bottom moved: ${detail}`).toBeCloseTo(tableBefore.bottom, 1);
+    // ...and everything below it is back where it was too.
+    expect(prose.getBoundingClientRect().top).toBeCloseTo(proseBefore.top, 1);
+    expect(paintedRowsOf(table)).toHaveLength(3);
+  });
+});
+
+// ══ F11 / F12 — THE DESIGNED EMPTY STATE, INSIDE A TABLE THAT STILL NAMES ITS COLUMNS ═════════
+
+describe('3.7 · F11 / F12 — no match shows an explanation IN the table, under a live header', () => {
+  it('zero painted data rows, an explanation that is painted, and a header that still is', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+    const empty = emptyStateOf(table);
+    const headerRow = table.tHead!.rows[0];
+
+    expect(isPainted(empty), 'the empty state must start out of sight').toBe(false);
+
+    await typeInto(table, 'nothing matches this');
+
+    expect(paintedRowsOf(table)).toHaveLength(0);
+    // ★ §4: *"never an empty table with no explanation."* The explanation is INSIDE the table and
+    // it is ON THE SCREEN — a `hidden` attribute removed from a span nobody can see would satisfy
+    // every DOM assertion the unit suite makes and show the reader an empty table.
+    expect(table.contains(empty)).toBe(true);
+    expect(isPainted(empty)).toBe(true);
+    expect(empty.textContent).toBe('No rows match this filter.');
+    // F12 — the header is still drawn, so the empty state is read in a table that names its
+    // columns. RED-FIRST target: a filter that hid `thead`'s row along with the body's.
+    expect(isPainted(headerRow)).toBe(true);
+    expect(headerRow.getBoundingClientRect().top).toBeLessThan(empty.getBoundingClientRect().top);
+    // ...and the table is still a table, not a collapsed strip.
+    expect(table.getBoundingClientRect().height).toBeGreaterThan(0);
+
+    clearOf(table).click();
+    expect(isPainted(empty)).toBe(false);
+    expect(paintedRowsOf(table)).toHaveLength(3);
+  });
+});
+
+// ══ F13 / F14 — THE COUNT: POLITE, OUT OF THE TREE WHILE EMPTY, AND PAINTED ═══════════════════
+
+describe('3.7 · F13 / F14 — the count is a polite live region, and its text is really on screen', () => {
+  it('role="status", `hidden` while empty, and a non-zero rect once it speaks', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+    const count = countOf(table);
+
+    // `diffChrome.browser.test.ts:651`'s property, re-asserted for the filter.
+    expect(count.getAttribute('role')).toBe('status');
+    expect(count.hidden, '`hidden`, not merely transparent').toBe(true);
+    expect(isPainted(count)).toBe(false);
+
+    await typeInto(table, 'eng');
+
+    expect(count.hidden).toBe(false);
+    expect(count.textContent).toBe('Showing 2 of 3 rows');
+    // ★ THE ONLY PLACE §5's CLAIM IS ACTUALLY TESTED. *"State in text, never colour alone, never
+    // an icon alone"* is a claim about what a sighted reader can SEE: a `width:0`,
+    // `visibility:hidden` or `font-size:0` region passes every `textContent` assertion in the unit
+    // suite and shows nothing at all.
+    expect(isPainted(count), 'the count has no box — it is not on screen').toBe(true);
+    const style = getComputedStyle(count);
+    expect(style.visibility).toBe('visible');
+    expect(style.display).not.toBe('none');
+
+    clearOf(table).click();
+    expect(count.hidden, 'and it leaves the a11y tree again').toBe(true);
+    expect(count.textContent).toBe('');
+  });
+});
+
+// ══ F15 / F17 — REACHABLE BY KEYBOARD, AND NO SHORTCUT OF ITS OWN ═════════════════════════════
+
+describe('3.7 · F15 / F17 — real controls, a real tab order, and no global single-key shortcut', () => {
+  it('★ the field takes focus and typing into it really filters', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const shadow = host.shadowRoot!;
+    const table = tablesIn(host)[0];
+    const field = fieldOf(table);
+
+    field.focus();
+    expect(shadow.activeElement, 'the field is not focusable').toBe(field);
+    expect(field.tagName).toBe('INPUT');
+    expect(field.hasAttribute('tabindex'), 'no tabindex of its own').toBe(false);
+
+    await userEvent.keyboard('eng');
+
+    expect(field.value).toBe('eng');
+    expect(paintedText(table, 1)).toEqual(['zoe', 'adam']);
+  });
+
+  it('★ TAB reaches the clear control from the field — which is what "no tabindex" is FOR', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const shadow = host.shadowRoot!;
+    const table = tablesIn(host)[0];
+
+    fieldOf(table).focus();
+    await userEvent.tab();
+
+    // A real tab advance through the shadow tree, in the engine's own tab order. RED-FIRST target:
+    // D-12's mockup shape, a handler on a bare element — it takes no tab stop at all, and an
+    // element made focusable with a `tabindex` hack can satisfy `.focus()` and still sit outside
+    // the natural order.
+    expect(shadow.activeElement, 'tab did not reach the clear control').toBe(clearOf(table));
+    expect(clearOf(table).tagName).toBe('BUTTON');
+    expect(clearOf(table).hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('★ ENTER and SPACE activate the clear control, with no key handling of ours', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+
+    await typeInto(table, 'bo');
+    expect(paintedRowsOf(table)).toHaveLength(1);
+
+    clearOf(table).focus();
+    await userEvent.keyboard('{Enter}');
+    expect(paintedRowsOf(table), 'Enter did not clear the filter').toHaveLength(3);
+    expect(fieldOf(table).value).toBe('');
+
+    // And again on Space, from a fresh filtered state — a native <button> answers both by
+    // default, which is the second reason D-12 divergence 1 is the cheaper shape.
+    await typeInto(table, 'bo');
+    expect(paintedRowsOf(table)).toHaveLength(1);
+    clearOf(table).focus();
+    await userEvent.keyboard(' ');
+    expect(paintedRowsOf(table), 'Space did not clear the filter').toHaveLength(3);
+  });
+
+  it('F17 — typing OUTSIDE the field filters nothing: no new global single-key shortcut', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+
+    // Focus something that is NOT the filter, then press the keys a shortcut would claim — and the
+    // letters of a query that WOULD match, because "e", "n", "g" typed at the document is exactly
+    // the collision §4 forbids.
+    columnOf(host).querySelector<HTMLElement>('h1')!.click();
+    for (const key of ['e', 'n', 'g', 'f', '/', '{ArrowDown}']) {
+      await userEvent.keyboard(key);
+    }
+
+    expect(fieldOf(table).value).toBe('');
+    expect(paintedRowsOf(table)).toHaveLength(3);
+    expect(countOf(table).hidden).toBe(true);
+    // The firing control: the filter itself DOES work in this same run, so "nothing happened" is a
+    // statement about the keys and not about a control that was never wired.
+    await typeInto(table, 'eng');
+    expect(paintedRowsOf(table)).toHaveLength(2);
+  });
+});
+
+// ══ F4 — EACH TABLE'S FILTER ACTS ON ITS OWN TABLE ════════════════════════════════════════════
+
+describe('3.7 · F4 — on a two-table document, table 2`s filter acts on table 2', () => {
+  it('filtering the second table leaves the first exactly where it was', async () => {
+    const host = await openDoc(TWO_TABLE_DOC);
+    const [first, second] = tablesIn(host);
+    expect(tablesIn(host), 'the fixture must render BOTH tables').toHaveLength(2);
+    expect(paintedRowsOf(first)).toHaveLength(2);
+    expect(paintedRowsOf(second)).toHaveLength(2);
+
+    await typeInto(second, 'd');
+
+    // RED-FIRST target: a handler that resolves its table with a document-time `querySelector`
+    // reaches the FIRST table — the `diagramLightbox:354,429` multi-instance defect class, where
+    // 007 found it. Both lines below move in that arm, in opposite directions.
+    expect(paintedText(second, 0), 'the filtered table is the one that must change').toEqual(['d']);
+    expect(paintedRowsOf(first), 'the OTHER table must not have been filtered').toHaveLength(2);
+    expect(countOf(first).hidden).toBe(true);
+    expect(countOf(second).hidden).toBe(false);
+  });
+});
+
+// ══ F23 — SORT ∘ FILTER COMPOSE, IN A REAL ENGINE, IN BOTH ORDERS ═════════════════════════════
+//
+// 3.1 enumerated F23 and routed it NOWHERE: it is a property of two controls composing, so it
+// could not exist until both did. 3.6 shipped the sort and 3.7 ships the filter, which makes this
+// the first task where it is a question at all — and it is ASSERTED, in both orders, rather than
+// named. Both directions are here because a build can get one right and the other wrong.
+
+describe('3.7 · ★ F23 — sort and filter compose, both orders, driven live', () => {
+  it('FILTERING A SORTED TABLE keeps the sort`s order among the rows still shown', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+
+    sortButtonsIn(table)[2].click(); // by n, ascending: 2, 9, 10
+    expect(columnText(table, 1)).toEqual(['bo', 'adam', 'zoe']);
+
+    await typeInto(table, 'eng');
+
+    // ★ A filter that rebuilt the body, or re-appended its matches, reads ['zoe','adam'] here.
+    expect(paintedText(table, 1)).toEqual(['adam', 'zoe']);
+    expect(table.tHead!.rows[0].cells[2].getAttribute('aria-sort')).toBe('ascending');
+  });
+
+  it('SORTING A FILTERED TABLE un-hides no hidden row and loses no hidden row', async () => {
+    const host = await openDoc(FILTER_DOC);
+    const table = tablesIn(host)[0];
+    const documentOrder = bodyRowsOf(table);
+
+    await typeInto(table, 'eng');
+    expect(paintedText(table, 1)).toEqual(['zoe', 'adam']);
+    const hiddenBefore = bodyRowsOf(table).filter((row) => !isPainted(row));
+    expect(hiddenBefore, 'the fixture must really have a hidden row to lose').toHaveLength(1);
+
+    sortButtonsIn(table)[2].click(); // sort while the filter is applied
+
+    // ★ NOTHING WAS UN-HIDDEN — the defect F23 names, and the one a sort that rebuilt its rows
+    // would produce: `bo` back on screen in a table the reader had filtered it out of.
+    expect(paintedText(table, 1)).toEqual(['adam', 'zoe']);
+    expect(bodyRowsOf(table).filter((row) => !isPainted(row))).toEqual(hiddenBefore);
+    // ★ AND NOTHING WAS LOST: the hidden row is still there, in the sorted position it would have
+    // taken had it been visible (2 < 9 < 10, so it leads).
+    expect(bodyRowsOf(table)).toHaveLength(3);
+    expect(new Set(bodyRowsOf(table))).toEqual(new Set(documentOrder));
+    expect(columnText(table, 2)).toEqual(['2', '9', '10']);
+    expect(countOf(table).textContent, 'the count did not move either').toBe('Showing 2 of 3 rows');
+
+    // ...and the sort's own third state does not disturb the filter: "off" replays a captured list
+    // of the SAME live nodes, so each row's hidden state rides back with it.
+    const button = sortButtonsIn(table)[2];
+    button.click(); // descending
+    button.click(); // off
+    expect(columnText(table, 1)).toEqual(['zoe', 'adam', 'bo']);
+    expect(paintedText(table, 1)).toEqual(['zoe', 'adam']);
+  });
+});

@@ -1,5 +1,5 @@
-// tableTools — the table toolbar's CONTROLS (008 plan §1.3). This task ships the FIRST of them:
-// the sort (task 3.6). The filter (3.7) and the copy-out (3.8) land beside it in this file.
+// tableTools — the table toolbar's CONTROLS (008 plan §1.3). Two of them ship here: the sort
+// (task 3.6) and the FILTER (task 3.7). The copy-out (3.8) lands beside them in this file.
 //
 // `tableEnhancer.ts` owns the WALK — which tables qualify, the toolbar host, and D-7's totality.
 // This module owns what a qualifying table then GETS. The split is why 3.6 could add a control
@@ -339,5 +339,292 @@ export function installTableSort(table: HTMLTableElement): (() => void) | undefi
     // button and drops the button with them.
     restoreAll();
     reorder(documentChildren);
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE FILTER — task 3.7, §3.11 rows 12, 15, 16, 20, and row 24's enumerated set
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ── THE MECHANISM: THE ROWS ARE HIDDEN, NEVER REMOVED (F6) ────────────────────────────────────
+//
+// Filtering sets `hidden` on the `<tr>`s that do not match. It detaches nothing, so:
+//
+//   • CLEARING IS EXACT RATHER THAN A RE-RENDER (§3.6). Every row is still where it was, with its
+//     own node identity, its own children and whatever a later enhancement hung on it — so "show
+//     everything again" is dropping an attribute, not reconstructing a table from source.
+//   • A REBUILD-AND-RESTORE WOULD PASS A TEXT ASSERTION AND FAIL AN IDENTITY ONE, which is why
+//     `tableTools.test.ts` asserts on the `<tr>` references and on a rect, never on text alone.
+//   • IT COMPOSES WITH THE SORT BY CONSTRUCTION (F23). The sort MOVES row nodes and the filter
+//     sets an attribute ON row nodes: neither operation can undo the other, because they are
+//     writing to different things about the same live elements. Sorting carries each row's
+//     `hidden` along with it; filtering never touches the order. That is a property with no
+//     sibling anywhere in the repo, and it is asserted rather than assumed.
+//
+// ── WHERE THE CONTROL LIVES, AND WHAT THE STRIP GETS ──────────────────────────────────────────
+//
+// D-12 divergence 1 put the sort INSIDE its own `<th>`, so 3.4's toolbar host was still empty
+// after 3.6. This is the control that fills it: a field, a clear button and the count. `readerCss`
+// already lays the strip out (`display:flex`, a gap) and is NOT in this task's file list, so the
+// three ship with the engine's own default chrome — the same statement 3.6 made about its button,
+// and 6.1's walk is where that judgement belongs.
+//
+// ★ THE STRIP DOES NOT ACQUIRE `role="toolbar"` HERE, AND THAT IS A DECISION. An ARIA toolbar is a
+// composite widget: it promises arrow-key navigation between its controls and a single tab stop
+// managed with a roving `tabindex`. Declaring the role without implementing it is worse than not
+// declaring it — a screen-reader user would be told to press arrows that do nothing. Three native
+// controls in document order are each reachable by Tab with no script at all (F15, F17), which is
+// what §4 actually asks for.
+//
+// ── THE EMPTY STATE LIVES IN A SECOND `<tbody>` (F11, F12) ────────────────────────────────────
+//
+// §4 requires a filter matching no row to show a designed empty state WITHIN THE TABLE. It is one
+// `<tr>` in a `<tbody>` of its own, inserted after the data body, and the second body is what
+// keeps it out of everything else's way:
+//
+//   • `table.tBodies[0]` is the data body, so the sort's `documentOrder`, the filter's own row
+//     scan and the count's denominator (F8) never see it — no filter of "which rows are real"
+//     has to exist and be kept correct;
+//   • it is INSIDE the `<table>`, below a `<thead>` that is never hidden, so the empty state is
+//     read in a table that still names its columns (F12).
+//
+// ── WHAT IS DELIBERATELY NOT HERE ─────────────────────────────────────────────────────────────
+//
+// No scope decision. The filter is PER-TABLE because §3.6 decided it; §8-2's per-table-vs-
+// per-document question is MEASURED at 5.2 and CHOSEN at 5.5, and inventing an answer here would
+// be choosing it quietly. No threshold (§8-3, same reason). No global key handling: §4 forbids a
+// new single-key shortcut, and a text field the reader types into is the exact reason why.
+
+/** Class on the filter `<input>`. Selected BY CLASS in the suites, never `input.<class>` — a
+ *  tag-qualified selector would make "it is a real field" unfalsifiable. */
+export const FILTER_FIELD_CLASS = 'peekover-table-filter';
+
+/** Class on the `<label>` that wraps the field and its visible text. */
+export const FILTER_LABEL_CLASS = 'peekover-table-filter__label';
+
+/** Class on the clear control (row 16: a real `<button>`, no `tabindex` of its own). */
+export const FILTER_CLEAR_CLASS = 'peekover-table-filter__clear';
+
+/** Class on the polite live region carrying *"n of m shown"* — and any action failure (row 20). */
+export const FILTER_COUNT_CLASS = 'peekover-table-filter__count';
+
+/** Class on the empty-state `<tr>` (F11). */
+export const FILTER_EMPTY_CLASS = 'peekover-table-filter__empty';
+
+/** The visible label text. A prefix of the field's accessible name, so the two never disagree
+ *  (WCAG 2.5.3's label-in-name, which an `aria-label` that replaced the visible text would break). */
+const FILTER_LABEL_TEXT = 'Filter';
+
+/** F11's designed empty state. A fixed string: the query itself is in the field directly beside
+ *  it, so interpolating it here would restate what the reader can already see. */
+const FILTER_EMPTY_TEXT = 'No rows match this filter.';
+
+/** F26. §4: *"If a table action fails, then the system shall say so and shall leave the table
+ *  readable."* The message says which half happened, because "showing every row" is the recovery
+ *  and a reader who is not told will read the unfiltered table as the filtered one. */
+const FILTER_FAILED_TEXT = 'Filter unavailable. Showing every row.';
+
+/**
+ * The reader's typed text, reduced to what the match is actually over.
+ *
+ * Trimmed, because trailing whitespace from a paste is not something a reader meant to search for,
+ * and lower-cased for the same reason `compareCellText` lower-cases: code-unit comparison after
+ * lowering is deterministic and identical on every engine, where `localeCompare`-style folding is
+ * not. An all-whitespace query normalizes to `''` — i.e. to NO filter — which is what makes F9's
+ * *"the count says nothing"* true of a field the reader has only pressed space in.
+ */
+export function normalizeFilterQuery(text: string): string {
+  return text.trim().toLowerCase();
+}
+
+/**
+ * F5 — the match is over the row's DISPLAYED text.
+ *
+ * `textContent` is what the row shows, and deliberately NOT its markup: a link's `href`, an image's
+ * `src` and an emphasis marker exist in the source and not on the screen, so a row must not match
+ * on them. A substring test is what §3.6 asks for (*"Filter matches displayed row text"*) — no
+ * globbing, no regular expression, nothing a reader would have to know they were writing.
+ *
+ * The empty query matches EVERY row, which is F9 stated as the predicate's own edge.
+ */
+export function rowMatchesFilter(row: HTMLTableRowElement, query: string): boolean {
+  if (query === '') return true;
+  return (row.textContent ?? '').toLowerCase().includes(query);
+}
+
+/**
+ * F8 — *"how many are shown out of how many"*, in text (F14).
+ *
+ * The denominator is the table's DATA rows. The header row is not one of them and is never
+ * counted, which is a checkable consequence of §4's *"rows"* and the reason the count is computed
+ * over `tBodies[0]` rather than over `table.rows`.
+ */
+export function filterCountText(shown: number, total: number): string {
+  return `Showing ${shown} of ${total} ${total === 1 ? 'row' : 'rows'}`;
+}
+
+/**
+ * What the field and the clear control CALL the table they act on (F16 — never position alone).
+ *
+ * The name is the table's own COLUMN HEADERS, because that is the thing that actually
+ * distinguishes one table from another on a multi-table page. Position is the last resort and is
+ * only reached by a header row that names nothing, where there is genuinely nothing else to call
+ * it — and even then it is *"this table"* rather than an index.
+ *
+ * ★ NO `<caption>` BRANCH, AND THAT IS MEASURED RATHER THAN AN OVERSIGHT. A caption would be the
+ * better name where one exists, but `sanitize.ts:36` does not allow the element: markdown-it emits
+ * none, and a hand-written `<caption>` from source is removed before the reading column ever sees
+ * it. A branch no document can reach is a branch no test can honestly cover.
+ *
+ * Read at install time, when the header cells still hold exactly their own text: the sort paints
+ * its state and glyph EMPTY at `none`, so this reading is the same whether the sort was installed
+ * first or not.
+ */
+function tableName(headerRow: HTMLTableRowElement): string {
+  const labels = [...headerRow.cells]
+    .filter((cell) => cell.tagName === 'TH')
+    .map((cell) => (cell.textContent ?? '').trim())
+    .filter((text) => text.length > 0);
+  if (labels.length > 0) return `the ${labels.join(', ')} table`;
+  return 'this table';
+}
+
+/**
+ * The clear control's accessible name — SELECTION (which table), ACTION (clear it) and the STATE,
+ * which MOVES (§3.11 row 17's shape, `themeControl.browser.test.ts:250`).
+ *
+ * The FIELD's name does not move, and that is the same principle rather than an exception: an
+ * `<input>`'s value is exposed to assistive technology as its value, so restating it in the name
+ * would announce the reader's own typing back at them twice.
+ */
+function clearFilterName(name: string, query: string, shown: number, total: number): string {
+  if (query === '') return `Clear the filter on ${name}`;
+  return `Clear the filter on ${name}. ${filterCountText(shown, total)}.`;
+}
+
+/**
+ * Give one table a filter over its rows, with its controls in `toolbar`.
+ *
+ * Returns an UNDO, or `undefined` when there is nothing to filter — no `<thead>`, no `<tbody>`, no
+ * header row, no body rows. Same contract as `installTableSort` and for the same reason:
+ * `tableEnhancer`'s per-table catch (D-7) asserts a failed table is left EXACTLY as rendered.
+ *
+ * Every handler closes over ITS OWN table's `<tbody>` and its own controls (§3.11 row 11, F4).
+ * Nothing here queries the document at input time, which is what makes table 2's filter act on
+ * table 2 — the defect class 007 found at `diagramLightbox:354,429`.
+ */
+export function installTableFilter(
+  table: HTMLTableElement,
+  toolbar: HTMLElement,
+): (() => void) | undefined {
+  const head = table.tHead;
+  const body = table.tBodies[0];
+  if (!head || !body) return undefined;
+
+  const headerRow = head.rows[head.rows.length - 1];
+  if (!headerRow) return undefined;
+  if (body.rows.length === 0) return undefined;
+
+  const doc = table.ownerDocument;
+  const name = tableName(headerRow);
+
+  // ★ EVERYTHING IS BUILT DETACHED, THEN ATTACHED IN TWO CALLS. A throw during construction has
+  // touched no rendered node at all, so there is no half-enhanced table for an undo to miss — the
+  // window 3.6 had to close with per-cell restores does not exist on this control's shape.
+  const label = doc.createElement('label');
+  label.className = FILTER_LABEL_CLASS;
+  const labelText = doc.createElement('span');
+  labelText.textContent = FILTER_LABEL_TEXT;
+  const field = doc.createElement('input');
+  field.type = 'text';
+  field.className = FILTER_FIELD_CLASS;
+  field.setAttribute('aria-label', `${FILTER_LABEL_TEXT} ${name}`);
+  label.append(labelText, field);
+
+  const clear = doc.createElement('button');
+  clear.type = 'button';
+  clear.className = FILTER_CLEAR_CLASS;
+  clear.textContent = 'Clear';
+  clear.setAttribute('aria-label', clearFilterName(name, '', 0, 0));
+
+  // Row 20 / F13: a POLITE live region, and `hidden` — not merely empty — so it is OUT of the
+  // accessibility tree until it has something to say. `diffChrome.ts:336`'s shape exactly.
+  const count = doc.createElement('span');
+  count.className = FILTER_COUNT_CLASS;
+  count.setAttribute('role', 'status');
+  count.hidden = true;
+
+  const emptyBody = doc.createElement('tbody');
+  const emptyRow = doc.createElement('tr');
+  emptyRow.className = FILTER_EMPTY_CLASS;
+  emptyRow.hidden = true;
+  const emptyCell = doc.createElement('td');
+  emptyCell.colSpan = headerRow.cells.length || 1;
+  emptyCell.textContent = FILTER_EMPTY_TEXT;
+  emptyRow.append(emptyCell);
+  emptyBody.append(emptyRow);
+
+  try {
+    toolbar.append(label, clear, count);
+    body.after(emptyBody);
+  } catch (err) {
+    label.remove();
+    clear.remove();
+    count.remove();
+    emptyBody.remove();
+    throw err;
+  }
+
+  /** Show every row again. The recovery path AND the undo path, so "readable" means one thing. */
+  function showEveryRow(): void {
+    for (const row of body.rows) row.hidden = false;
+  }
+
+  /**
+   * The whole filter, expressed as a function of the field's current value.
+   *
+   * ★ THE TABLE IS NEVER LEFT PARTLY FILTERED. `rowMatchesFilter` reads `textContent`, which is a
+   * DOM accessor and can therefore throw; a loop that gave up halfway would leave some rows hidden
+   * with no message and no way back, which is §4's *"leave the table readable"* broken by the
+   * failure path itself. So the catch shows everything and SAYS SO (F26) in the same polite region
+   * the count uses (row 20's second half).
+   */
+  function apply(): void {
+    const query = normalizeFilterQuery(field.value);
+    try {
+      const rows = [...body.rows];
+      let shown = 0;
+      for (const row of rows) {
+        const match = rowMatchesFilter(row, query);
+        row.hidden = !match; // HIDDEN, never removed — the node stays exactly where it is (F6)
+        if (match) shown += 1;
+      }
+      emptyRow.hidden = !(query !== '' && shown === 0);
+      count.textContent = query === '' ? '' : filterCountText(shown, rows.length);
+      count.hidden = query === '';
+      clear.setAttribute('aria-label', clearFilterName(name, query, shown, rows.length));
+    } catch (err) {
+      showEveryRow();
+      emptyRow.hidden = true;
+      count.textContent = FILTER_FAILED_TEXT;
+      count.hidden = false;
+      clear.setAttribute('aria-label', clearFilterName(name, '', 0, 0));
+      // Dev-only signal, like `tableEnhancer.ts:175`. The reader already has the message above.
+      console.warn('[peekover] table filter failed; showing every row', err);
+    }
+  }
+
+  field.addEventListener('input', apply);
+  clear.addEventListener('click', () => {
+    field.value = '';
+    apply();
+  });
+
+  return () => {
+    label.remove();
+    clear.remove();
+    count.remove();
+    emptyBody.remove();
+    showEveryRow();
   };
 }

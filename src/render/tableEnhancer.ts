@@ -55,13 +55,18 @@
 //
 // ── WHAT IS DELIBERATELY NOT HERE ─────────────────────────────────────────────────────────────
 //
-// The toolbar host is STILL EMPTY after 3.6, and that is not an oversight — it is where D-12 put
+// The toolbar host was STILL EMPTY after 3.6, and that was not an oversight — it is where D-12 put
 // the sort. Divergence 1 places the control INSIDE its own `<th>`, so the sort never enters the
-// strip; the filter (3.7) and the two copy buttons (3.8) are what will fill it. Until one of them
-// lands, the host carries no `role`, no label and no control, because `role="toolbar"` over no
-// widget describes a group that does not exist.
+// strip. TASK 3.7's FILTER is the first control that does fill it (a field, a clear button and the
+// count); the two copy buttons are 3.8's.
+//
+// ★ THE HOST STILL CARRIES NO `role`, AND THAT IS NOW A DECISION RATHER THAN A WAIT. `role="toolbar"`
+// is a composite widget: it promises arrow-key navigation and a single roving tab stop. Declaring
+// it without implementing it tells a screen-reader user to press arrows that do nothing, which is
+// worse than three native controls each reachable by Tab — the shape §4 actually asks for. See
+// `tableTools.ts`'s filter section, where the reasoning is recorded beside the control it governs.
 
-import { installTableSort } from './tableTools';
+import { installTableFilter, installTableSort } from './tableTools';
 
 /**
  * The state attribute the enhanced `<table>` carries. Mirrors `DIAGRAM_STATE_ATTR`
@@ -129,14 +134,20 @@ function buildTableToolbar(doc: Document): HTMLElement {
 function attachToolbar(table: HTMLTableElement): void {
   let toolbar: HTMLElement | undefined;
   let undoSort: (() => void) | undefined;
+  let undoFilter: (() => void) | undefined;
   try {
     toolbar = buildTableToolbar(table.ownerDocument);
     table.before(toolbar);
     undoSort = installTableSort(table);
+    // AFTER the sort, so `installTableSort` captures a `<tbody>` the filter has not yet added a
+    // sibling body to, and reads header cells that hold exactly their own text.
+    undoFilter = installTableFilter(table, toolbar);
     table.setAttribute(TABLE_STATE_ATTR, 'enhanced');
   } catch (err) {
     // Leave the table exactly as rendered — readable, styled, and indistinguishable from one the
-    // walk never reached. All three cleanups are no-ops in the ordinary case.
+    // walk never reached. All four cleanups are no-ops in the ordinary case, and they unwind in
+    // the reverse order the mutations landed.
+    undoFilter?.();
     undoSort?.();
     toolbar?.remove();
     table.removeAttribute(TABLE_STATE_ATTR);

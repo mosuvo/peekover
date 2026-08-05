@@ -792,16 +792,143 @@ showed `pipeline.perf` (`expected 116.9 to be less than 100` — an explicitly m
 `golden`’s 5-6 s byte-stable case failing; **three consecutive clean runs are 877/877** and `golden` passes
 alone in 3.8 s. Machine state, not a regression — the M6 lesson that a red on a busy machine looks like a
 defect.
-**TASK 3.7 IS NEXT** — FILTER: sets `hidden` on non-matching `<tr>`s and **never removes them**, so
-clearing is exact rather than a re-render. ★ **It is where §3.11 row 24 lands — the filter has NO sibling
-suite to transcribe from, so 3.1's enumerated property set is checked off PROPERTY BY PROPERTY in that
-task's report and any property enumerated but not asserted is NAMED, not dropped.** Rows **12, 15, 16, 20,
-24**; row 12's clear is a **rect equality against the pre-filter measurement**; row 20's count is a polite
-live region, OUT of the a11y tree while empty. ★ **3.1's `tableFilter.browser.test.ts` collection error is
-3.7's to clear** — it has been read past since 3.1 and stops being read past there. §8-2's per-table-vs-
-per-document question is **not decided at 3.7**: the filter ships per-table, and the scope question is
-measured at 5.2 and chosen at 5.5. Its baseline is **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and
-**395,158 B app** (`7e89141b…`).
+★ **TASK 3.7 IS DONE — THE FILTER SHIPS, THE TOOLBAR STRIP HAS ITS FIRST CONTENT, AND ROW 24's ENUMERATED
+SET IS DISCHARGED PROPERTY BY PROPERTY.** `installTableFilter(table, toolbar)` puts a `<label>`-wrapped
+field, a clear `<button>` and a `role="status"` count into 3.4's host, and a second `<tbody>` carrying the
+empty state into the table. `tableEnhancer.attachToolbar` gains one call, a `let` and one line in its
+catch.
+★ **THE MECHANISM — THE ROWS ARE HIDDEN, NEVER REMOVED, PROVEN ON NODE IDENTITY (F6).** Filtering sets
+`hidden` on the `<tr>`s that do not match and detaches nothing, so clearing is exact rather than a
+re-render. **RED-FIRST (ablation A — a `replaceChildren` rebuild from a captured snapshot):** **6 unit red
+and 6 browser red (3 per engine, Chromium AND Firefox)**, reading `expected [ …(2) ] to have a length of 3
+but got 2` on the identity clause — while the TEXT and COUNT assertions in the very same file stayed
+GREEN (*"only matching rows are shown, and the count says how many of how many"* passes against the
+rebuild). That is F6's own sentence measured: *"a rebuild-and-restore passes a text assertion and fails
+this one."*
+★ **A MASKED INSTRUMENT, CAUGHT IN-SESSION AND FIXED — the fifth of this class.** The first shape of the F6
+case read `bodyRowsOf(table)[2].hidden` as a cheap guard BEFORE the identity clause. Under ablation A the
+suite died on `TypeError: Cannot read properties of undefined (reading 'hidden')` at that guard and said
+**nothing whatever about identity**. Both suites now assert the count and the identity FIRST and read
+`hidden` last; the ablation was re-run and the clause that finds the defect is the clause seen to fail. The
+measured red is quoted at the assertion in both files.
+★ **THE EMPTY STATE IS A SECOND `<tbody>`, AND THAT IS WHAT KEEPS IT OUT OF EVERYTHING ELSE'S WAY (F11,
+F12).** One `<tr>` with a `<td colspan>`, inserted after the data body: `tBodies[0]` — what the count's
+denominator, the sort's captured order and the row scan all read — cannot contain it, so no "which rows are
+real" filter has to exist and be kept correct. **RED-FIRST (ablation I — the empty row never shown):** 1
+unit red and 2 browser red, `expected false to be true` on *"an explanation that is painted"*. The header
+is asserted PAINTED and ABOVE it, so §4's *"never an empty table with no explanation"* is read in a table
+that still names its columns.
+★ **§5's STATE-IN-TEXT IS ASSERTED WHERE IT IS REAL. RED-FIRST (ablation C — `font-size:0` on the count,
+text intact):** the ENTIRE unit suite stayed **60/60 green** and exactly **2 browser tests red, one per
+engine**: `the count has no box — it is not on screen: expected false to be true`. A `textContent`
+assertion cannot see this at all, which is the whole reason the paint clause exists. **RED-FIRST (ablation
+J — a live region that never leaves the a11y tree):** 4 unit + 6 browser red on row 20's property.
+★ **ROW 16 / F15 — RED-FIRST (ablation D — the clear control built as a `<span>`, the mockup's own shape):**
+**1 unit red** (`expected 'SPAN' to be 'BUTTON'`) and **4 browser red across BOTH engines** — *"tab did not
+reach the clear control"* and *"Enter did not clear the filter"*. ★ **22 browser assertions stayed GREEN in
+that arm**: the span still clears on a mouse click, and is simply unreachable by keyboard. The controls are
+found **BY CLASS ALONE**, never `button.peekover-table-filter__clear`, so the ablation's control is LOCATED
+and the keyboard clause is the clause seen to fail (3.5's and 3.6's lesson, carried).
+★ **F16 — RED-FIRST (ablation B — no `aria-label` on the field, a static name on the clear):** exactly **3
+unit red**, `expected null to be 'Filter the dept, who, n table'` and `expected 'Clear' to be 'Clear the
+filter on the dept, who, n table…'`. The field names the TABLE by its column headers; position is reached
+only by a header row that names nothing, and even then it is *"this table"* rather than an index. ★ **NO
+`<caption>` BRANCH, and that is measured rather than an oversight:** `sanitize.ts:36` does not allow the
+element, so a caption from source never reaches the reading column and a branch no document can reach is a
+branch no test can honestly cover.
+★ **F5 — RED-FIRST (ablation G — the predicate over `innerHTML`):** 3 unit red. The fixture is the
+instrument: a row whose only occurrence of `secret` is inside an `href`, asserted to BE in the markup and
+NOT in the displayed text before the predicate is asked. **F26 — RED-FIRST (ablation H — the recovery
+removed):** exactly 1 unit red, the injected `the row text accessor is poisoned` escaping. The shipped path
+shows every row again and says so in the same polite region (*"Filter unavailable. Showing every row."*),
+because a loop that gave up halfway would leave rows hidden with no message and no way back.
+★ **F10 / ROW 12 — THE RECT EQUALITY, WITH ITS FIRING CONTROL FIRST. RED-FIRST (ablation E — a clear that
+leaves ONE row hidden):** **8 browser red across both engines**, the row-12 clause reporting the defect in
+its own units — `bottom moved: table [276.0,302.7,479.8,490.6] -> [276.0,302.7,479.8,443.0]: expected
+442.97 to be close to 490.61` (Chromium) and `493.70 -> 446.05` (Firefox), **47.6 px — exactly one row**.
+The control fires BEFORE the assertion it guards: the filter must be seen to shrink the table and lift the
+prose below it, or *"the rect came back"* is equally true of a filter that never did anything.
+★ ★ **F23 — SORT ∘ FILTER COMPOSE IS ASSERTED, NOT NAMED. 3.1 routed it NOWHERE ("no sibling, no mockup,
+no Verify clause — the one nothing would have noticed missing"), and 3.7 is the first task where BOTH
+controls exist.** Both orders, in the unit AND in both engines: filtering a sorted table leaves the sort's
+order among the rows still shown; sorting a filtered table un-hides no hidden row and loses none, and the
+sort's third state replays a captured list of the SAME live nodes so each row's `hidden` rides back with
+it. **RED-FIRST (ablation F — a `reorder` that clears `hidden`):** 2 unit red and 2 browser red with the
+defect's exact signature — `expected [ 'bo', 'adam', 'zoe' ] to deeply equal [ 'adam', 'zoe' ]`, the
+filtered-out row back on screen. The composition works by construction: the sort MOVES row nodes and the
+filter writes an ATTRIBUTE on row nodes, so neither operation can undo the other.
+★ **ROW 24's SET, CHECKED OFF — 26 ENUMERATED, 26 ACCOUNTED FOR.** **ASSERTED AT 3.7 (19):** F1, F2 (+ unit
+header-gate) · F4 (unit + browser) · F5 · F6 (unit + the not-rendered half in both engines) · F7 · F8 (the
+header is never in the denominator) · F9 · F10 (unit node set + browser rect) · F11 · F12 · F13 · F14 (unit
+text + browser paint) · F15 (unit shape + browser focus/Tab/Enter/Space) · F16 · F17 (no `document`/`window`
+listener, and typing `e`,`n`,`g`,`f`,`/` outside the field filters nothing while the field itself does) ·
+**F23** · F25 (an `Element.prototype.innerHTML` setter spy across build, filter, empty-state, clear and
+undo — **with a control that fires in the same test**) · F26. **CONDITIONAL AND INACTIVE (1):** **F18** —
+its condition is *"only if a transition ships"* and none does; `readerCss.ts` is not in 3.7's file list, so
+the three controls ship with the engine's own default chrome, exactly as 3.6's button does. **NAMED, NOT
+DROPPED — asserted by another task (6):** **F3** → 3.10 / 4.2 (D-11 (ii)'s arm 2) · **F19**, **F20** → 3.9
+(D-9's revert-and-fail and row 14's closure death) · **F21** → 3.2's unit half, already shipped, and 3.9's
+real-engine half · **F22** → 3.8 (copy reads the rows currently shown) · **F24** → 3.11 (request-level
+zero-network across sort → filter → copy). **No entry is unaccounted for.**
+★ **THE test:browser RED CARRIED SINCE 3.1 IS CLEARED.** `pnpm test:browser` was **2 failed | 108 passed
+(110)** at HEAD — 3.1's *"No test suite found in file …tableFilter.browser.test.ts"* on both engines, read
+past for six tasks. It is now **110 passed (110), 0 failed**, **1159 passed | 15 skipped** — 3.6's 1133 plus
+this task's **26** (13 tests × 2 engines). Unit **907/907**, 3.6's 877 plus this task's **30**.
+★ **3.5's CONTAINMENT AND 3.6's SORT BOTH HOLD, AND THE STRIP IS NO LONGER EMPTY.** `tablePlacement`'s 34
+geometry cases are green **unchanged** with a real input, a button and a count in the strip — 3.5 chose the
+x-band assertion precisely because *"disjoint x-bands cannot overlap at ANY height"*, and 3.7 is where that
+choice is tested against a host with content rather than a zero-height one. The sort's own suites are green
+unchanged, and a unit case pins the sort still cycling, still stable, still restoring document order with
+the filter installed beside it. 3.2's properties hold: TOTAL (no body rows / a ragged body / a headerless
+table), IDEMPOTENT (one field, one clear, one count, one empty state after a second pass, `innerHTML`
+byte-identical), SCOPED, HEADER-GATED. ★ **The filter is a NEW failure source inside D-7's per-table try
+and gets its own case** — poisoning `tBodies[0].after` leaves table 1 EXACTLY as rendered (`outerHTML`
+equality against a re-parse of the pre-enhancement markup, the toolbar host gone with it) and table 2
+enhanced normally.
+★ **THE APP CHUNK MOVES +2,179 B AND THE CONTENT SCRIPT DOES NOT MOVE AT ALL.** App **395,158 → 397,337 B**
+(`7e89141b…`→`4ee49a89…`, identical on both engines); content script **321,713 B BYTE- AND md5-IDENTICAL on
+BOTH engines** (Cr `c68e437c…` / Fx `e1287b5c…`) — `tableTools`/`tableEnhancer` are not on the
+content-script graph until **4.1**. Built from a wiped `.output` with `pnpm build` **and** `pnpm exec wxt
+build -b firefox`, so neither engine's reading is a stale artifact. **DECOMPOSED BY ABLATION TO A ZERO
+RESIDUAL, never by an identifier grep:** **ARM 1** — the filter's code on disk, `tableEnhancer` NOT wired →
+**395,158 B, md5 `7e89141b…`, IDENTICAL to 3.6's on both engines**, so an unimported export and every
+helper reachable only through it cost **+0** (rollup drops the lot; 3.2's and 3.6's precedent, re-measured)
+· **ARM 2** — the enhancer's wiring plus a STUB `installTableFilter` that references no filter helper or
+constant → **395,175 B, +17 B**, which is the import, the call, the `let` and the catch line · **SHIPPED −
+ARM 2 = +2,162 B**, the filter's own logic. **0 + 17 + 2,162 = 2,179. Residual ZERO**, and the restored tree
+rebuilds to `4ee49a89…` byte-for-byte and md5-for-md5.
+★ **THE STRIP CARRIES NO `role="toolbar"`, AND AT 3.7 THAT BECOMES A DECISION RATHER THAN A WAIT.** 3.4's
+host declared none because *"`role="toolbar"` over no widget describes a group that does not exist"*; now
+there are widgets and it still declares none. An ARIA toolbar is a COMPOSITE widget — it promises arrow-key
+navigation and a single roving tab stop — and declaring it without implementing it tells a screen-reader
+user to press arrows that do nothing. Three native controls in document order are each reachable by Tab
+with no script at all, which is what §4 asks for. Recorded in `tableTools.ts` beside the control it governs
+and asserted (`toolbar.attributes` is still length 1).
+★ **FINDINGS, STATED NOT QUIETLY RE-SCOPED.** (a) **3.7's Files list omits `src/render/tableEnhancer.ts`** —
+the same omission 3.6 recorded, and the same conclusion: the filter lives in the strip the enhancer builds,
+so its install call has nowhere else to go. (b) **It also omits the two suites that PINNED THE EMPTY
+STRIP** — `src/render/tableEnhancer.test.ts` (`toolbar?.childNodes` of length 0) and
+`tests/browser/tableTools.browser.test.ts` (two `children` length-0 assertions). Both were necessarily
+false after this task and are updated **to the specific claim they always meant** — the host has three
+children and no `role`; no SORT control is in the strip — rather than deleted. (c) **§8-2 is NOT decided
+here:** the filter ships PER-TABLE because §3.6 decided it, and the per-table-vs-per-document question is
+measured at 5.2 and chosen at 5.5. (d) **No threshold was invented** (§8-3 is 5.5's): the one size check —
+a `<tbody>` with no rows gets no filter — is a definition, not a threshold.
+**WHAT 3.7 DOES NOT DO:** no copy-out (**3.8**), no content-script call site (**4.1**), no D-8/D-9
+degradation suite (**3.9**), no cost guard (**3.10**), no zero-network proof (**3.11**), no walk judgement
+(**6.1**), and no styling.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint` **EXIT=0**. NUL **0 in both forms**
+(node byte scan and `tr -cd`) in all six edited files, with a control file reading **2** in both. Ablations
+by cp-aside + restore, never `git checkout`; both `src/` files restored to their shipped md5s afterwards
+(`tableTools.ts` `c2a1be04…`; `tableEnhancer.ts` `3c80f863…`).
+**TASK 3.8 IS NEXT** — COPY-OUT: CSV and Markdown from the rows **currently shown, in the order currently
+shown** (D-10, §3.6), which is **F22**, the half of the filter's contract another task asserts. ★ **Gate-2
+ruling Q2: TWO BUTTONS, no menu** — rows 9 and 21 stay `—`, so no popup, no menu and no focus trap. The
+serializer is a unit including **a cell containing a comma, a quote and a pipe**; **D-10's `permissions: []`
+is re-proven on both built manifests in that task, not inherited**, and its `file://` residual is **4.2's**.
+Its baseline is **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and **397,337 B app** (`4ee49a89…`), and the
+content script stays byte-identical until **4.1**.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

@@ -171,12 +171,20 @@ describe('the toolbar host is a PRECEDING SIBLING — no wrapper, no move', () =
     expect(table.parentElement).toBe(col);
   });
 
-  it('creates the host EMPTY — the controls are 3.6-3.8’s', () => {
+  it('the host carries 3.7’s FILTER and nothing else — and still no attribute but its class', () => {
+    // ★ UPDATED AT 3.7, WHERE THE STRIP STOPPED BEING EMPTY. Through 3.6 this case read
+    // `childNodes` of length 0, because D-12 divergence 1 puts the sort inside its own `<th>` and
+    // nothing entered the strip. The filter is the first control that does: a `<label>` wrapping
+    // the field, the clear `<button>` and the count region — three, and the two copy buttons of
+    // 3.8 are what will make it five.
     const { host, shadow } = mountedHost(`# Doc\n\n${gfmTable('col')}`);
     enhanceTables(host);
 
     const toolbar = column(shadow).querySelector(TOOLBAR_SELECTOR);
-    expect(toolbar?.childNodes).toHaveLength(0);
+    expect(toolbar?.childNodes).toHaveLength(3);
+    // ★ AND THE HOST ITSELF STILL DECLARES NO `role` AND NO LABEL, which is now a DECISION rather
+    // than a wait: `role="toolbar"` promises arrow-key navigation and a roving tab stop, and
+    // declaring it without implementing it is worse than three native controls in document order.
     expect(toolbar?.attributes).toHaveLength(1); // class, and nothing else
   });
 

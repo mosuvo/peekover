@@ -527,7 +527,7 @@ revertable — units. **None of them precedes 3.1.***
       asserted. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§3.6, D-12; §4 table tools; rows 11, 15, 16, 17, 18, 19]
 
-- [ ] **3.7 Filter — `hidden`, never removal; the count announced politely; the clear is exact (row 24's
+- [x] **3.7 Filter — `hidden`, never removal; the count announced politely; the clear is exact (row 24's
       set lands here).** Sets `hidden` on non-matching `<tr>`s and **never removes them**, so clearing is
       **exact rather than a re-render** (§3.6).
       Files: `src/render/tableTools.ts` · `src/render/tableTools.test.ts` ·
