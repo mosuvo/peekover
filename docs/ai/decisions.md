@@ -1,6 +1,166 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-05 · 008 D-3 — the diff context grows additively, the way 6.2 already grew it; the snapshot
+  pair is byte-untouched.** *(Plan 008 §0's pre-written entry text, applied verbatim. IMPLEMENTED across
+  group 2: typed at 2.1 (`53638ff`), provisioned on the app page at 2.2 (`1dde750`), read by the picker at
+  2.3 (`b0773c9`), read by the one branch at 2.5 (`a07f94d`).* ★ **LANDED AT A RECONCILE, ONE COMMIT AFTER
+  GROUP 2 CLOSED — NOT WITH ITS IMPLEMENTING COMMIT, WHICH IS WHAT THE CONVENTION ASKS FOR.** *The tasks
+  header (`specs/008-persona-1-qol/tasks.md:55-57`) requires each D-value's entry to land with the commit
+  that implements it — D-1 and D-2's did, at 1.4 — but **none of 2.1–2.5's Files lists included
+  `docs/ai/decisions.md`**, so the entry could not land inside the fences those tasks set. 2.5 reported the
+  gap rather than inventing a close (`progress.md` § Now: "one thing IS outstanding and is the human's to
+  route"), and this entry is that routing discharged. It describes the decision **AS IT SHIPPED**; the
+  decision itself is sealed at gate 2 and nothing here re-opens it. Recorded plainly so 6.3's audit — which
+  asks that every D-value's entry be present and **names any that did not land with its commit** — reads
+  the fact off the entry rather than having to reconstruct it.)*
+  `DiffContext` grew a **SECOND, OPTIONAL capability pair** — `fetchFiles?(): Promise<DiffFileEntry[]>` and
+  `fetchFileText?(path)` (`diffRegistry.ts:142`, `:147`), mirrored on `createDiffContext`'s config
+  (`:169-170`) — beside the existing four. **The precedent is the file's own header:** task 6.2 added
+  `showDiff`/`hideDiff` to a context that started as `fetchMeta`/`fetchText` alone, and that amendment is
+  cited in-code (`:62`) rather than re-argued. A discriminated target type was **REJECTED and not
+  re-derived** — 007 D-4 already ruled on parameterising shipped, tested code to serve a second caller.
+  **THE SNAPSHOT PAIR IS BYTE-UNTOUCHED, AND 2.1 PROVED IT RATHER THAN ASSERTING IT — four ways:** the four
+  existing declarations and their doc comments pinned by **SHA-256 `ab9753bb…` over 1,194 UTF-8 bytes**
+  taken from `21526ac` before the edit, with a same-test control proving the digest rejects a one-word case
+  change; `git diff --numstat` **49/0 and 160/0 — zero deletions**; an **EMPTY diff** on `diffChrome.test.ts`
+  and `diffChrome.browser.test.ts` with **every existing fake passing unedited** (that IS the additive
+  property); and **making the pair required reds `tsc` at seven existing sites** — which is also what makes
+  *"snapshots but no folder list"* a legal, designed state rather than a hole.
+  ★ **THE DISCRIMINANT IS ON THE ROW, NOT IN THE CONTEXT.** `item.dataset.targetKind`
+  (`diffChrome.ts:483`), beside today's `dataset.snapshotId`. The two capabilities stay **INDEPENDENT** —
+  never a tagged union, which would push a `kind` through both closures to reach one branch — **and that is
+  precisely what let 2.5's `compareWith` branch ONCE, reading the row** (`:387`): the branch reads the
+  discriminant at the gesture, and no `kind` crosses the fence or enters either closure.
+  **`DiffFileEntry` is registry-local and narrow** — `{path, name}` (`:99`), a structural subset of
+  `MarkdownFile` so a filtered `activeSource.files` is assignable with **no adapter**, while `read()` stays
+  out of the affordance's reach: text arrives **only** through the provisioned closure. 2.2 provisions both
+  on the **app-page side of the fence** (`appShell.ts:987`, `:994`) over `activeSource.files`, **excluding
+  the open document** (*"another file"*, never one offering an always-empty diff against itself), and
+  `fetchFileText` is a **FRESH `read()`, never a stored copy** (§3.2's stated reason for not reaching
+  through storage). `diffChrome.ts` gained **no import**, no fence clause changed, and 007's import fence
+  stayed **8/8** through every task in the group.
+  ★ **`computeDiff` WAS NEVER TOUCHED — the substrate gift, and it held.** It diffs two strings, so
+  compare-two-files is a **PICKER, not an engine**: 2.5's file-vs-file diff is the same provisioned
+  capability fed a different `before`. **§9-5 holds by construction** — `after` is always
+  `getCurrentSource()`, so current-vs-picked is not a rule the code obeys, it is the only thing it can
+  express.
+  **BYTES: 2.1 MOVED NOTHING**, and the instrument fired — type declarations erase and doc comments strip,
+  so all three artifacts came back md5-identical, while a runtime statement in `diffRegistry.ts` moved the
+  app chunk **+76 B** and one in a symbol the content-script graph retains moved the content script **+88 B**
+  on both engines, restored byte-for-byte. The picker's own bytes are **2.3's (+887 B) and 2.4's (+352 B)**,
+  assigned in those tasks and in D-4's entry below, never to D-3.
+  **Revisit-when:** (a) a **fourth consumer** needs document comparison and wants more than `{path, name}` —
+  `DiffFileEntry` then grows a field and its narrowness (and the `read()`-stays-out property that rests on
+  it) is **re-argued, not assumed**; (b) **picked-vs-picked is reconsidered**, which is a gate-1 **§9-5**
+  event and not an implementation call — it would take the row-borne discriminant with it, because a second
+  *picked* side has no "current" for `getCurrentSource()` to supply and the one branch stops being
+  sufficient.
+
+- **2026-08-05 · 008 D-4 — the picker carries two kinds as ARIA groups inside the one listbox; a
+  single-kind picker is byte-identical to what 006 shipped.** *(Plan 008 §0's pre-written entry text,
+  applied verbatim. IMPLEMENTED at 2.3 (`b0773c9` — the discriminant and the two groups) and 2.4
+  (`6a6b868` — every empty state, plus the amendment recorded in its own entry below). **Landed at the same
+  reconcile as D-3 above and for the same reason** — see that entry's note; the decision is sealed and
+  nothing here re-opens it.)*
+  **ONE `role="listbox"`, TWO labelled `role="group"`s** — *Snapshots of this document* / *Other files in
+  this folder* (`diffChrome.ts:245-246`), built by `buildGroup` (`:500`), with the picker's own label
+  widened to `ARIA_PICKER` (`:242`, set at `:342`) so it covers both kinds. **No dialog, no menu, no second
+  pill** — §3.2 rejected a second control, and grouping is the standard ARIA answer to *"one list, two
+  kinds"*. Rows stay `<button role="option">` for the keyboard operability that buys for free; **a file row
+  NAMES the file and SAYS it is a file, in text** (`:477`), so the kind is never inferred from which group
+  it sits in or from where it falls in the list (§5); **snapshot rows are unchanged**, absolute stamp and
+  size included (divergence 2 stands).
+  ★ **THE GROUPS RENDER ONLY WHEN BOTH KINDS HAVE ENTRIES** — one ternary in `openPicker` (`:509`) — and
+  otherwise the picker is **structurally what 006 ships**: flat option rows, no lone group, no empty group,
+  no scaffolding around a list with one kind in it. **This is not tidiness:** it keeps the snapshot-only
+  path — the one every existing browser assertion drives — identical, so those assertions cannot pass by
+  transcription drift. **2.3 proved the non-regression red-first as a printed tag+role+depth TREE, not as a
+  count:** rendering the groups unconditionally reds it **naming `div[role=group]` on the line it appeared**,
+  where a count check would only have said *"expected 1 to be 0"*.
+  **EVERY EMPTY STATE LANDS IN THE EXISTING `role="status"` LINE** — never a fake row, never a disabled row,
+  never a placeholder, never a `role="group"` with nothing in it (§4's *say so*, §5's named-in-text).
+  Snapshots but no siblings → the files sentence (`:254`); files but no snapshots → the snapshots sentence;
+  **both empty → `closePicker()` and say it, which is 006's shipped branch preserved unchanged** for the
+  surface that has no folder list. ★ **The file sentence is gated on the CAPABILITY, not on the count** —
+  `typeof context.fetchFiles === 'function'` (`:523`), red-first by gating on `files.length` alone: that
+  test cannot tell *"the folder holds no other markdown"* from *"this surface was never provisioned to
+  look"*, and only the first is a state worth a sentence. Saying it on the other would **name a state the
+  user is not in**.
+  ★ **THE 2.4 AMENDMENT IS NOT REPEATED HERE — IT HAS ITS OWN ENTRY** (2026-08-04, *008 task 2.4 WIDENED*,
+  immediately below), which records in full why the half-empty states needed a **measured CSS lane**
+  (`readerCss.ts:1043`), why that lane is **DERIVED** from the picker's own `max-height` token rather than
+  tuned, why it lands in `CONTAINED_CSS` only, and how `diffChrome.test.ts`'s *"mutually exclusive on every
+  path"* invariant was **RE-SCOPED rather than deleted** (`:569-572`). **D-4 as sealed is unchanged by it:**
+  the amendment widened 2.4's Files list so D-4's half-empty requirement could actually be delivered
+  without the status painting over the list it describes — it did not alter what D-4 decided.
+  **BYTES, assigned:** 2.3 moved the content script **+887 B** (ARIA const + named local 6 · row
+  discriminant + widened label 48 · the file row 585 · the grouping 248, **residual ZERO**); 2.4 moved it
+  **+352 B** and the app chunk **+354 B** (CSS lane 205 · copy 147 / 149, **residual ZERO** — not the same
+  +N on both artifacts, because the copy mangles 2 B wider in the app chunk). Both decomposed by ablation
+  with a control that fires.
+  **Revisit-when:** (a) a **THIRD kind of comparison target** appears — the both-non-empty ternary is a
+  two-kind rule and generalises to N groups only by being rewritten, and the *"one kind is 006's flat
+  picker"* non-regression has to be restated as *"one of three"* before it means anything; (b) the
+  **picker/status shared slot is restructured** (the two get independent placements, or the status moves
+  into the picker), which is the 2.4 amendment's own revisit-when and takes the lane and the re-scoped
+  invariant with it.
+
+- **2026-08-05 · 008 D-5 — a file-vs-file diff says which file is which side, in text, in the line that
+  already exists for saying things.** *(Plan 008 §0's pre-written entry text, applied verbatim. IMPLEMENTED
+  at 2.5 (`a07f94d`), the task that made compare-two-files a working feature. **Landed at the same
+  reconcile as D-3 and D-4 above**, for the reason D-3's note gives; sealed at gate 2 and not re-opened
+  here.)*
+  **`compareWith` BRANCHES ONCE, AT THE GESTURE, OFF THE ROW.** It takes the picked **row**
+  (`diffChrome.ts:387`) rather than a `{kind, key}` pair, because the discriminant already lives there and
+  nowhere else (D-3), and reads `dataset.targetKind` **once**: file → `fetchFileText(path)`, snapshot →
+  today's `fetchText(id)`. **Everything downstream is SHARED and unchanged** — `getCurrentSource()`,
+  `showDiff(host, before, after)` over the plan §1.4 fence, and the same fallback ladder. The row carries
+  `fileName` as well as `filePath` (`:485`) so the branch's copy can name the file without re-reading the
+  row's spans. **One handler on both kinds, not two paths that happen to agree.**
+  **THE CAPTION NAMES BOTH SIDES *AND* THE DIRECTION, IN TEXT** — `fileCaption` (`:279`): *"Comparing
+  doc.md with sibling-one.md — removed lines are sibling-one.md's, added lines are doc.md's."* The two names
+  alone would leave the **direction** to be inferred from which colour a block is, which is exactly the
+  inference §5 forbids and §3.2's surviving obligation is about; **the clause after the dash is the
+  load-bearing half, and the order of the names is not**. The document's own name comes from
+  `getDocIdentity()` — **D-1's registry, the one seam that already holds it** — with `TEXT_THIS_DOCUMENT`
+  (`:261`) as the AGENTS.md #5 totality fallback rather than a designed state: it is **unreachable on the
+  production path**, since `registerDocIdentity` runs before `registerDiffContext` and a picker exists only
+  where a context is registered.
+  **IT LANDS IN THE STATUS LINE THAT ALREADY EXISTS** — already polite, already under the pill, already the
+  surface every diff failure speaks through, and already out of the a11y tree while empty. So a successful
+  file comparison replaces today's `say(null)` (`:428`), and `showCompare()`'s existing `say(null)` clears
+  it on exit: **no new element, no new lifecycle**, one element fewer than a caption of its own.
+  ★ **GATE-2 RULING Q1 HELD VERBATIM — SNAPSHOT DIFFS ARE LEFT AS THEY WERE.** §4 asks for the naming on
+  **file-vs-file only**, and a snapshot's *"before"* is an earlier version of what is already on screen, so
+  the direction is not in doubt. The caption therefore sits on the **file side of the one branch**
+  (`say(isFile ? fileCaption(…) : null)`), and a snapshot pick still **says NOTHING on success** — the diff
+  is the answer. Both directions are red-first proven, **over-determined**: captioning both kinds reds the
+  Q1 pin *and* 006's inherited *"success says nothing"* assertion.
+  **§3.8 BRANCHES WITH IT.** `TEXT_UNAVAILABLE` names a **snapshot** (*"that snapshot is no longer
+  stored"*), which is the wrong sentence for a file that could not be read — it names a thing the user did
+  not pick, on the one path where they picked something else. So the file case gets its own sentence,
+  `unreadableFile(name)` (`:266`, routed at `:419`): *"Comparison unavailable — sibling-one.md could not be
+  read."*, said **beside the untouched document**, never entering the diff.
+  **SIX ABLATIONS, EVERY ONE FIRING ON BOTH ENGINES**, including the one 2.3's boundary pin predicted:
+  routing a file pick through `fetchText` answers it with *"that snapshot is no longer stored"*. That pin
+  (`diffChrome.test.ts`, 2.3-era) was **RE-SCOPED, not deleted** — the 2.4 precedent — from *"the file row
+  has no handler"*, which is exactly what 2.5 lands, to *which capability the discriminant routes a file
+  pick to*.
+  **BYTES: +416 B content script / +414 B app chunk, five arms, residual ZERO** — and ★ **the FOURTH arm
+  exists because the other three cannot see the plumbing they share:** ablating the branch and the caption
+  one at a time leaves the destructured row dataset, the `isFile` read and the `HTMLElement` parameter
+  standing in **both** arms, so the three margins sum to **323 of 416** and 93 B land nowhere. The
+  all-three-off arm reproduces the pre-2.5 bundles to the md5 on both engines, which is what makes the 93 B
+  a measured remainder rather than an unexplained one. `readerCss.ts` was **untouched**: the caption reuses
+  the status line's existing styling.
+  **Revisit-when:** (a) a **snapshot diff is asked to gain a caption** — that is a **re-ruling of gate-2
+  Q1**, not an implementation detail, and it moves the `say` out from under the `isFile` branch, at which
+  point *"a snapshot's direction is not in doubt"* is the claim being overturned and needs to be stated as
+  such; (b) a **third comparison kind** needs its own caption form, which re-opens the one-`if` shape
+  itself — `fileCaption`'s two-name sentence stops being the whole vocabulary, and the row-borne
+  discriminant would be carrying three values into one branch.
+
 - **2026-08-04 · 008 task 2.4 WIDENED (Option 1) — the half-empty empty-states need a measured lane,
   because the status line and the picker share a slot.** *(A PLAN-LEVEL AMENDMENT to `tasks.md`'s 2.4, and
   it is recorded here rather than only in the commit so the next reader knows why 2.4 touches FOUR source

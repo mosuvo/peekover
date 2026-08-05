@@ -348,11 +348,21 @@ so no CSS was needed; no badge-lane change (6.1's, untouched); NUL **0 in both f
 files with the control reading nonzero; deps **5**; unit **816/816**, browser **1055 passed / 15 skipped**
 (104 files, Cr+Fx).
 **GROUP 2 IS COMPLETE — and 2.5 performed NO group-close act, because its body scopes none:** the Files list
-is the feature and its tests, and no reconcile, summary or gate is named. ★ **One thing IS outstanding and
-is the human's to route:** the `decisions.md` entries for **D-3, D-4 and D-5** have not landed — 2.1–2.5's
-Files lists none of them include `decisions.md`, though the tasks header (`:55-57`) says each D-value's entry
-lands with the commit that implements it. D-1 and D-2's entries landed at 1.4. **Not taken here** (it is
-outside 2.5's allowed set and would be an invented close); reported instead.
+is the feature and its tests, and no reconcile, summary or gate is named. ★ **The one thing 2.5 left
+outstanding IS NOW DISCHARGED (2026-08-05, doc-only reconcile):** the `decisions.md` entries for **D-3, D-4
+and D-5** have **LANDED**. None of 2.1–2.5's Files lists included `decisions.md`, though the
+tasks header (`:55-57`) says each D-value's entry lands with the commit that implements it — D-1 and D-2's
+did, at 1.4 — so 2.5 reported the gap rather than inventing a close, and the human routed it here. **Each
+entry describes its decision AS IT SHIPPED**, referencing the implementing commits: **D-3** the second
+optional capability pair with the **discriminant on the ROW** (53638ff · 1dde750 · b0773c9 · a07f94d),
+**D-4** the two ARIA groups, the both-non-empty rule and every empty state in the existing status line
+(b0773c9 · 6a6b868), **D-5** the one branch at the gesture and the both-sides caption with **gate-2 Q1 held
+verbatim** (a07f94d). ★ **D-4's entry REFERENCES the 2026-08-04 *2.4 WIDENED* amendment rather than
+repeating it**, and each entry **records plainly that it landed at a reconcile, not with its commit**, so
+**6.3's audit** (*"any that did not is named"*) reads the fact off the entry. **No decision was re-opened,
+no spec/plan/tasks artifact changed, no box ticked** (no numbered task owns a reconcile), **and both bundles
+came back md5-identical to 2.5's** — `decisions.md` is a `docs/` file, imported by no graph, so it ships
+nothing by construction; the rebuild confirms it rather than assuming it.
 **TASK 3.1 IS NEXT** — and it is this milestone's **one hard sequencing constraint**: consume §3.11 and
 enumerate the filter's property set (row 24) **before any table-tools test exists**. It writes no `src/` code
 and asserts nothing; both bundles must come back **md5-identical to 2.5's** (`da80bfbc…` / `b50e4baa…`).
