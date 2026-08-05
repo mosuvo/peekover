@@ -989,20 +989,81 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
 **EXIT=0**. NUL **0 in both forms** (node byte scan and `tr -cd`) in the one added file, with a control file
 reading **2** in both. Ablations by cp-aside + restore, never `git checkout`.
-**TASK 3.10 IS NEXT** — **D-11 (ii)'s THREE-ARM conditionality guard on the app page, its ONLY cost
-evidence**, in `tests/browser/tableCost.browser.test.ts`. Three arms in ONE run: (1) `mount()` alone;
-(2) `mount()` + M8's enhancements on a document with **no table and an unrecognized name**; (3) the same on
-a document **with a table, named `CLAUDE.md`**. **(1) == (2)** on shadow-root node count and on
-`addEventListener` calls recorded by instrumenting `EventTarget.prototype.addEventListener`, and
-**(3) > (2)** on both — ★ **the equality is the property, the inequality is the POSITIVE CONTROL THAT
-FIRES**, because a counter that never moves reads equal whether or not the code ran. Plus D-11 (i)'s
-negative half: the enhancer's synchronous prologue calls neither `parse` nor `sanitize` and touches no
-`getBoundingClientRect` / `offsetWidth` / `getComputedStyle` — **spies, each with a control proving the spy
-would have recorded a call**. To be stated as the strictly weaker thing it is: the app page has **no
-first-paint instrument at all** (D-11 (iii)), so this guard **stands in for a number and is never reported
-as "within budget."** Its baseline is 3.9's, unmoved: **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and
-**399,646 B app** (`7275a378…`); 3.10 adds **only a test file**, so both should stay byte-identical, and the
-content script stays byte-identical until **4.1** regardless.
+★ **TASK 3.10 IS DONE — THE APP PAGE'S ONLY COST EVIDENCE STANDS, AND IT IS NOT A BUDGET.**
+`tests/browser/tableCost.browser.test.ts` (**5 cases × 2 engines = 10**) is the entire change: `src/` is
+**UNTOUCHED**, and both bundles rebuild **byte-for-byte and md5-for-md5 identical** to 3.9's on both
+engines — **CS 321,713 B** (`c68e437c…` / `e1287b5c…`), **app 399,646 B** (`7275a378…`). Unit **944/944**
+(unchanged — no unit test added); browser **1205 passed | 15 skipped, 116 files, 0 failed** (1195 + this
+task's 10); `pnpm lint` **EXIT=0**.
+★ **THE HONEST FRAMING, FIRST, BECAUSE IT IS THE POINT: THIS STANDS IN FOR A NUMBER AND IS NEVER
+"WITHIN BUDGET."** **No millisecond figure is reported here and none can be** — the app page has **NO
+first-paint instrument at all** (D-11 (iii)), so there is no budget on this surface to be within. What 3.10
+proves is **STRUCTURAL**: the enhancement step is **CONDITIONAL**. It is strictly weaker than a
+measurement, and the test file says so in its own header so that nobody reading the green infers otherwise.
+★ **THE THREE ARMS, IN ONE RUN, THROUGH ONE PARAMETERISED RUNNER.** (1) `mount()` alone on a document with
+**no table and the unrecognized name `notes.md`**; (2) the same document, `mount()` **+ `enhanceDiagrams`
++ `enhanceTables`** (`appShell.ts:153-157`'s body verbatim); (3) `mount()` + the same enhancements on a
+document **with a table, named `CLAUDE.md`**. Arms 1 and 2 differ in **EXACTLY ONE THING** — whether the
+enhancer calls run — because both go through one runner with a flag; any other construction would put the
+harness inside the delta. **COUNTED:** total shadow-root node count (**a `SHOW_ALL` TreeWalker** — text
+nodes too, because the badge's whole cost on a hit is a `<p>` and its text) and **`addEventListener` calls
+on the PROTOTYPE** for the duration of each arm (so a listener bound to `document` or to an uninserted node
+counts). **MEASURED: (1) == (2) = `{nodes: 24, listeners: 2}`.**
+★ **THE EQUALITY IS THE PROPERTY; THE INEQUALITY IS THE POSITIVE CONTROL — AND THE CONTROL AS D-11 WROTE IT
+IS CONFOUNDED ON THE NODE COUNTER. THIS RUN MEASURED THAT, IT DID NOT ARGUE IT.** `(1) == (2)` is vacuous
+alone: a counter that never moves reads equal whether or not the code ran. Arm 3 is what makes the tape
+measure move. **But `(3) > (2)` compares two DIFFERENT DOCUMENTS**, and arm 3's markdown contains a table,
+so its shadow root is larger **before any enhancer runs**. So this file adds a reading D-11 does not name —
+**arm 3's FLOOR** (the same document, mounted **without** enhancement) — and `arm3 − arm3floor` is the
+enhancer's own delta. **Ablation A3 proved the addition load-bearing:** with `enhanceTables` made a
+complete no-op, `movedVsArm2.nodes` **stayed `true`** — D-11's literal control would have read green over a
+dead enhancer — while `movedVsFloor` went `false` on both counters. The listener counter is **not**
+confounded (plain table markup binds nothing) and is asserted both ways.
+★ **D-11 (i)'s NEGATIVE HALF — AND EACH SPY WAS SEEN TO FIRE.** The enhancer calls **neither `parse` nor
+`sanitize` nor `sanitizeSvg`**, and touches **no `getBoundingClientRect` / `getClientRects` /
+`getComputedStyle` / `offsetWidth` / `offsetHeight`** — asserted on **BOTH** documents, not only the bail
+case, because D-11 (i) prices the **table-bearing** render as re-parsing nothing too. The parse/sanitize
+control is free and is the strongest available: **`mount()` reaches `sanitize(parse(source))`
+(`mount.ts:118`) THROUGH THE SAME MOCK**, moments before the measured window, so the spy is seen recording
+`{parse: 1, sanitize: 1}` and then recording nothing. The five layout spies' control is a **probe inside
+the same window** — one direct call each, every one recorded. Each negative clause is paired **in the same
+`expect`** with the enhancement footprint, so a run in which the enhancer did **nothing at all** cannot pass
+as a run in which it did nothing **expensive**.
+★ **SEVEN ABLATIONS, EACH cp-aside + RESTORE, EACH SEEN TO FIRE ON BOTH ENGINES.** **A1** a node appended
+unconditionally in the prologue → `{nodes: 25}` vs 24, **and the M8-class footprint stayed green** — which
+is exactly why the counter is broader than the class list. **A2** a listener bound unconditionally →
+`{listeners: 3}` vs 2, nodes unchanged (the two counters are separately live). **A3** the enhancer made a
+no-op → the confound above, plus the M8 footprint and both anti-vacuity clauses red. **A4** a
+`sanitize(parse(…))` in the prologue → `{parse: 1, sanitize: 1}` where zero belongs, on both documents.
+**A5** a `getBoundingClientRect()` in the prologue → `{getBoundingClientRect: 1}`, both documents. **A6**
+the parse/sanitize mock left **uncounting** → `controlOnMount` reads `{parse: 0, sanitize: 0}` — **the
+spy's control is load-bearing and was seen to fail**. **A7** the five layout patches left unwired →
+`controlOnProbe` reads **all five zeros**. `tableEnhancer.ts` restored to `63916d73…` after every arm.
+★ **ONE MACHINE-STATE RED, RESOLVED BY A-B-A RATHER THAN BY ARGUMENT.** `src/render/pipeline.perf.test.ts`
+(a **pre-existing** 100 ms parse+sanitize budget) red at 103–113 ms under full-suite load. Sequence: red
+**with** the new file → red **without** it (worse, 112.96 ms) → green without it → **green with it,
+944/944**. The variable that flips it is machine load, and by construction the `unit` project **excludes
+`tests/browser/**`**, so this file is never loaded by that run at all.
+**WHAT 3.10 DOES NOT DO:** no zero-network proof (**3.11**), no content-script call site (**4.1**), no
+content-script conditionality arm (**4.2**), no walk judgement (**6.1**), **no `src/` edit of any kind**
+(the enhancer was **already** conditional — 3.10 asserts it, it does not make it so), and **no millisecond
+number and no "within budget" claim** anywhere.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**. NUL **0 in both forms** (node byte scan and `tr -cd`) in all three edited files, with a control
+file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`.
+**TASK 3.11 IS NEXT** — **zero-network across sort → filter → copy** (§3.11 row 22), in
+`tests/browser/tableNetwork.browser.test.ts`. **No request** across the three actions, **at the request
+level**, using the existing **`/^https?:/i` predicate VERBATIM** and `awaitFetchedUrls`'s shape
+(`remoteMedia:83-92`, `:120`, `:140`), **with the control fetch shown LIVE in the SAME test**, under the
+same conditions the negative claim disclaims. ★ **jsdom cannot see bytes on the wire** — a DOM-shape test
+would report NO-FETCH on a wide-open route — so this is a real-engine test on **both** engines or it is
+nothing; ★ **the control adopts markup NO sanitizer has touched** (a control routed through a sanitizer
+reads NO-FETCH while the route is open, and on Firefox an **inert parse consumed an `@import`**), and any
+probe markup is neutralized in an **inert `<template>`**, never a "detached" div. Note the boundary 3.10
+respected: **3.10 is about WORK** (nodes, listeners, no parse/sanitize/layout), **3.11 is about the
+NETWORK**. Baseline unmoved: **321,713 B CS** (`c68e437c…` / `e1287b5c…`), **399,646 B app**
+(`7275a378…`); the content script stays byte-identical until **4.1**.
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status

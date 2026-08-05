@@ -591,7 +591,7 @@ revertable — units. **None of them precedes 3.1.***
       element reference, whose signature is a click that mutates nothing. Golden EMPTY · manifest green
       **2975 B** · `permissions: []`. [D-8, D-9; §7-4, §7-8; rows 13, 14]
 
-- [ ] **3.10 D-11 (ii) — the THREE-ARM conditionality guard, app page. This is the app page's ONLY cost
+- [x] **3.10 D-11 (ii) — the THREE-ARM conditionality guard, app page. This is the app page's ONLY cost
       evidence.** §5's *"a document with no table and no recognized name shall pay nothing measurable"*, in the
       structural form the repo can actually check.
       Files: `tests/browser/tableCost.browser.test.ts`
