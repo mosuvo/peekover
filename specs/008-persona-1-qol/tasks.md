@@ -485,7 +485,7 @@ revertable — units. **None of them precedes 3.1.***
       is stated against **389,143 B**. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-6 sites 1–2, D-8; §4 table tools; rows 1, 2, 3, 4, 23]
 
-- [ ] **3.5 CONTAINMENT — a real rect probe at BOTH geometry widths (rows 5 INVERTS, 6, 8 · D-12).
+- [x] **3.5 CONTAINMENT — a real rect probe at BOTH geometry widths (rows 5 INVERTS, 6, 8 · D-12).
       Row 5 is the second INVERTED row and it is measured, never chosen.**
       Files: `tests/browser/tablePlacement.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx, app page) at **BOTH `GEOMETRY_WIDTHS` — 1280 AND 1400**

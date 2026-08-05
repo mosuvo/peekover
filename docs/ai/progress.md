@@ -619,13 +619,80 @@ suites** against 3.3's 104, with the **same 2 failed suites** — 3.1's collecti
 `tableFilter.browser.test.ts` on both engines, read past until 3.7. The Firefox `watchAnchor` flake 3.3
 isolated did **not** recur. NUL **0 in both forms** in all four edited files, with a scratch control file
 reading **non-zero** in both.
-**TASK 3.5 IS NEXT** — CONTAINMENT: a real rect probe at **BOTH** `GEOMETRY_WIDTHS` (**1280 AND 1400**,
-`diffChrome.ts:83-91`) for rows **5 (INVERTS to containment)**, **6** and **8**. Row 5: the toolbar stays
-**within** the column's box and does **not** push the first content block off-measure — a rect containment
-plus a rect equality on the column's first content block with and without the toolbar, red-first by letting
-it overflow. Row 6: the toolbar's **RESOLVED** `max-width` equals `--reader-measure` (**748px**), a computed
-style and therefore jsdom-blind, which is why 3.3 only declared it. Its baseline is **321,713 B CS**
-(`c68e437c…` / `e1287b5c…`) and **392,929 B app** (`0c40f5e4…`).
+★ **TASK 3.5 IS DONE — THE TOOLBAR'S CONTAINMENT IS MEASURED, AND THE MEASUREMENT CORRECTED THE ROW IT
+WAS SENT TO ASSERT.** `tests/browser/tablePlacement.browser.test.ts` is a new real-engine rect probe (Cr+Fx,
+app page, **17 cases × 2 engines = 34**) for rows **5 (INVERTS)**, **6** and **8**. **MEASURE-ONLY: no
+`src/` file is touched and BOTH bundles are byte- and md5-IDENTICAL to 3.4's** — CS **321,713 B** (Cr
+`c68e437c…` / Fx `e1287b5c…`), app **392,929 B** (`0c40f5e4…`), built from a wiped `.output` with
+`pnpm build` **and** `pnpm exec wxt build -b firefox` so neither engine's reading is a stale artifact.
+★ **ROW 6 IS NOT WHAT tasks.md SAYS IT IS, AND THE ENGINE IS WHAT SAID SO.** The task carries it as *"the
+toolbar's RESOLVED `max-width` equals `--reader-measure` (748px)"*. Measured, **both engines report
+`getComputedStyle(toolbar).maxWidth === 'none'`** — `max-width` **is not a CSS-inherited property** and
+`.peekover-table-tools` declares none, so "inherits the measure" in `readerCss.ts` and plan §3.11 is the
+LOOSE sense (the toolbar takes its bound from the column), not the cascade sense. **The GEOMETRY IS
+CORRECT; the mechanism the shorthand names does not exist**, so this is a wording finding and **not** a
+defect — no fix was needed and none was made (the FLAG-2 route was not taken because nothing is broken).
+★ **AND THE COLUMN IS NOT ALWAYS AT THE MEASURE — the finding that changed the assertion.**
+`:host([data-toc="open"]) .peekover-reader` (`readerCss.ts:584-588`) is `width:auto` + `margin-right:
+var(--toc-w)`, and its own comment says *"on a narrow scrollport it takes what remains"*. Measured, rail
+**OPEN**: **1280 → column 662px, content box 598px, toolbar 598px**; 1400 → 748/684/684. Rail collapsed:
+748/684/684 at both widths. **So `684` is the answer THREE of the four states hand you** — and an
+assertion written as that constant was **verified RED at `1280 · rail open` ONLY** (2 of 34, one case ×
+two engines), green everywhere else. That is **finding 2's defect class one axis over**, which is why the
+**rail state is the probe's SECOND axis** alongside both `GEOMETRY_WIDTHS`. Row 6 therefore ships as the
+RELATION §3.11's own row-6 cell states (*"a toolbar WIDER THAN THE MEASURE breaks the centring"*), in four
+clauses: no `max-width` of its own · the **column's** cap **is** `--reader-measure` · the toolbar's
+resolved width **is** the column's content box · never wider than the measure.
+★ **ROW 5 (INVERTS) HOLDS AT ALL FOUR STATES, BOTH ENGINES.** Containment on every edge, plus a rect
+equality on the column's first content block **with and without** the toolbar — and ★ **the ablation
+carries its own FIRING CONTROL**: the `<table>`'s top edge **must** move (exactly **8px**, the released
+`margin-bottom`) or the test fails, because "the h1 did not move" proves nothing if the removal reflowed
+nothing. ★ **THE TWO ROW-5 HALVES HAVE DIFFERENT SIGNATURES AND ONE RED DOES NOT COVER BOTH.** tasks.md
+compresses them to *"red-first by letting it overflow, whose signature is a first block that has moved"*.
+**Measured, an overflow does NOT move the first block** — a later sibling overflowing its container
+reflows nothing above it, and under the overflow ablation the first-block equality **stayed green** while
+24 other assertions went red. The overflow's signature is the **containment**; a moved first block is a
+DIFFERENT defect and got its own ablation.
+★ **ROW 8 IS INSTRUMENTED AROUND A REAL VACUITY.** The EMPTY host is **zero-height** in both engines
+(width 598/684, **height 0.0**), so a whole-rect overlap check would clear every chrome for free. Row 8
+(*"Y via row 5's containment"*) is asserted on the toolbar's **HORIZONTAL band** — real, and fixed by the
+column rather than the contents, so it is the half that survives 3.6-3.8 filling the host: two disjoint
+x-bands cannot overlap at **any** height. ★ **RECORDED, NOT PAPERED OVER:** with `data-toc="collapsed"`
+the rail stops reserving column width and its handle floats **OVER** the column's top-right (1280:
+`.peekover-toc__toggle` [1120.9,129.2,1240,159.2] vs column [426,77.2,1174,696.2] vs `<h1>`
+[458,133.2,1142,182.5]) — a **pre-existing 2.2-era condition of EVERY block in the column**, not something
+the toolbar introduces and not 3.5's to fix. Row 8 is therefore asserted rail-OPEN, the state
+`diffChrome.browser.test.ts:374-384` forces for the same reason; the **mode toggle clears in BOTH** rail
+states and is asserted in both.
+★ **RED-FIRST, ALL FOUR BY cp-aside + restore (never `git checkout`), both `src/` files restored to their
+committed md5s afterwards** (`readerCss.ts` `173151ca…`, `tableEnhancer.ts` `996ef6bd…`): **(1)**
+`max-width:900px` on the toolbar → **8 red**, `'900px'` where `'none'` is required · **(2)**
+`min-width:calc(100% + 120px)` → 804px against a 748px measure, **24 red** across containment, both width
+clauses and the row-8 x-band · **(3)** `tableEnhancer.ts`'s `table.before(toolbar)` → prepended to the
+column, **8 red** with *"top moved … difference is 30"* · **(4)** the constant-`684` test-side ablation
+above. ★ **ONE INSTRUMENT WAS MASKED AND FIXED.** Ablation 3 first fired on the test's own **non-vacuity
+guard** (*"the first content block has no height"*) because `firstElementChild` had become the prepended
+zero-height strip — the cheap guard swallowed the red the equality clause should have shown. The target is
+now `:scope > *:not(.peekover-table-tools)`, and the clause that finds the defect is the clause seen to
+fail; the reasoning is recorded at the helper.
+**WHAT 3.5 DOES NOT DO:** no control geometry (**3.6-3.8** — the host is empty here), no reads-as-clutter
+walk judgement (**6.1** — this task measures and does not judge), no content-script call site (**4.1**),
+no logic, no host content, **no style-STRING re-assertion** (that is 3.3's; 3.5 asserts the RESOLVED
+value, which is why it is a separate real-engine task).
+Golden **EMPTY**; **007 import fence 8/8** (clause B still the firing control); `permissions: []` on both
+built manifests (654 / 770 B); manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**; unit **847/847** (unchanged — this task adds no unit case); browser **1109 passed | 15
+skipped**, 3.4's **1075** plus this task's **34**, **108 passed suites** against 3.4's 106, with the
+**same 2 failed suites** — 3.1's collection error naming `tableFilter.browser.test.ts` on both engines,
+**read past until 3.7**. NUL **0 in both forms** in the one added file, with a control reading **non-zero**
+in both. One unit run showed a 2-test `diagramView` flake under concurrent `pnpm lint`; it did not
+reproduce across two clean re-runs.
+**TASK 3.6 IS NEXT** — SORT: three-state (asc → desc → off), **stable on equal keys**, numeric-aware on
+displayed cell text, reordering `<tr>` nodes **in `<tbody>`** so off restores document order because the
+rows were MOVED and never rebuilt. Rows **11, 15, 16, 17, 18, 19**, with **D-12's two divergences** from
+the mockup: a real `<button>` inside the `<th>` (the mockup's `<th onclick=…>` loses keyboard reach) and
+`aria-sort` **PLUS text** (§5 forbids state carried by an icon alone). Its baseline is **321,713 B CS**
+(`c68e437c…` / `e1287b5c…`) and **392,929 B app** (`0c40f5e4…`) — 3.5 moved neither.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**
