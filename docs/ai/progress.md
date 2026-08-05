@@ -363,9 +363,54 @@ repeating it**, and each entry **records plainly that it landed at a reconcile, 
 no spec/plan/tasks artifact changed, no box ticked** (no numbered task owns a reconcile), **and both bundles
 came back md5-identical to 2.5's** — `decisions.md` is a `docs/` file, imported by no graph, so it ships
 nothing by construction; the rebuild confirms it rather than assuming it.
-**TASK 3.1 IS NEXT** — and it is this milestone's **one hard sequencing constraint**: consume §3.11 and
-enumerate the filter's property set (row 24) **before any table-tools test exists**. It writes no `src/` code
-and asserts nothing; both bundles must come back **md5-identical to 2.5's** (`da80bfbc…` / `b50e4baa…`).
+★ **TASK 3.1 IS DONE — THE FILTER'S PROPERTY SET IS ENUMERATED, AND IT IS ENUMERATED BEFORE ANY
+TABLE-TOOLS TEST EXISTS (finding 4, the milestone's one hard sequencing constraint).** §3.11's toolbar
+column was read and its routing **confirmed against the tree**: every one of the ten landing tasks exists by
+number below 3.1, and each one's own citation footer carries the rows routed to it (3.4 rows 1,2,3,4,23 ·
+3.5 rows 5,6,8 · 3.6 rows 11,15,16,17,18,19 · 3.7 rows 12,15,16,20,24 · 3.8 row 16 · 3.9 rows 13,14 ·
+3.10/4.2 row 2 · 3.11 row 22 · 4.1/4.2 rows 1,23 on the content script; rows 7,10 OUT; rows 9,21 INACTIVE
+per gate-2 Q2). ★ **Row 24 is the audit's own signal and it holds: the filter's sibling-source column reads
+NONE**, and D-12 found the same hole from the other side — the mockup has a sort affordance, a copy
+affordance and **no filter at all**. **26 properties (F1–F26)** are written into
+`tests/browser/tableFilter.browser.test.ts`'s header block, **each one checkable and each one carrying
+either its sibling source or an explicit "NO BASELINE — enumerated here"** with the requirement it derives
+from: **13 inherit a sibling** (rows 2, 4-INVERTED, 12, 13-INVERSE, 14, 15, 16, 17, 19, 20, 22, read for the
+filter) and **13 are enumerated fresh** off §4's EARS, §3.6, §3.8 and §5 Trust. Each entry also names its landing
+task, so 3.7's report can check the set off property by property. ★ **THE ENUMERATION ALREADY EARNED
+ITSELF, ONCE:** **F23 — sort and filter COMPOSE** (filtering a sorted table keeps the sort's order among the
+rows still shown; sorting a filtered table un-hides nothing) — has **no sibling, no mockup and no Verify
+clause in any task in the file**. It is precisely the property nothing would have noticed missing, and it is
+now on the record with "lands: NOWHERE YET — 3.7 either asserts it or names it as unasserted."
+**NO ASSERTION, NO `src/` CODE, NO TEST WAS WRITTEN** — the file is a comment block and nothing else, which
+is what makes the set a spec the implementation must satisfy rather than a description of an implementation
+that does not exist yet. **Both bundles came back md5-identical to 2.5's** — content script **321,364 B**
+(Cr `da80bfbc…`, Fx `b50e4baa…`), app chunk **391,809 B** (`7e635aa2…`) — and the reasoning is the
+`decisions.md` reconcile's, not an ablation: **a `tests/` file is imported by no graph and ships nothing by
+construction**; the rebuild (both engines explicitly, `pnpm build` being Chrome-only) confirms it rather
+than assuming it. `permissions: []` on both built manifests (654 / 770 B); `web_accessible_resources`
+absent; manifest test **2975 B** (byte-unmodified); golden **EMPTY**; **007 import fence 8/8**; deps **5**;
+`pnpm lint` **EXIT=0**; unit **816/816**.
+★ **ONE FINDING, BANKED AT DISCOVERY RATHER THAN LEFT FOR 3.4 TO TRIP OVER: A HEADER-ONLY FILE UNDER
+`tests/browser/` MAKES `pnpm test:browser` RED.** 3.1's Files list puts the enumeration in
+`tests/browser/tableFilter.browser.test.ts` ("its header block IS the enumerated set"), and the browser
+project's include glob is `tests/browser/**/*.test.ts` — so Vitest collects it and fails it: **`Error: No
+test suite found in file …tableFilter.browser.test.ts`, two failed suites (Chromium AND Firefox), measured,
+not predicted.** `pnpm test` is unaffected (the unit project **excludes** `tests/browser/**`) and `pnpm
+lint` is clean, so **no pin of 3.1's own Verify contract is touched** — but tasks **3.4, 3.5 and 3.6 run
+browser suites before 3.7 writes the first assertion in this file**, and until then a red `pnpm test:browser`
+means one thing that is not a defect. **The options, so the next session does not re-derive them:** (a) let
+it stand and read past it — the red is a collection error naming exactly one file; (b) 3.7 arrives sooner;
+(c) a `describe.todo` placeholder, which collects and asserts nothing — **not taken here, because 3.1's
+body says "before its first assertion exists" and the fence for this task was no test code at all.** ★ **AND
+A SECOND, SMALLER ONE: 3.1's body pins the bundles to "md5-identical to 1.6's" (318,747 B CS / 389,143 B
+app) — those numbers are PRE-GROUP-2 and 2.5 moved both by design (+416 / +414 B, decomposed to a zero
+residual).** The body's *property* is what was checked and what holds: **3.1 moves no byte**; the baseline it
+moves nothing from is HEAD's, which is 2.5's. Same staleness sits in **3.2's** text ("both bundles
+md5-identical to 3.1's (318,747 B CS / 389,143 B app)") — flagged here so 3.2 checks against **321,364 /
+391,809** rather than against a number written before group 2 existed.
+**TASK 3.2 IS NEXT** — `tableEnhancer.ts`, the module ALONE (total, scoped, idempotent, header-gated, the
+toolbar host as a PRECEDING SIBLING), **no call site**, both bundles md5-identical because nothing imports
+it yet, with the firing control that the instrument can see a change.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

@@ -377,7 +377,7 @@ gate:** 5.5 — §8-1's ship/no-ship, §8-2's scope, §8-3's threshold, §8-4's 
 
 ## 3 — Table tools, app page (D-6 sites 1–2 · D-7 · D-8 · D-9 · D-12 — and the audit's consumer: 3.1 precedes every test task here)
 
-- [ ] **3.1 ★ CONSUME §3.11 AND ENUMERATE THE FILTER'S PROPERTY SET (row 24). NO IMPLEMENTATION, NO
+- [x] **3.1 ★ CONSUME §3.11 AND ENUMERATE THE FILTER'S PROPERTY SET (row 24). NO IMPLEMENTATION, NO
       ASSERTION — and NO TABLE-TOOLS TEST EXISTS BEFORE IT.** The audit's toolbar column is read and its
       routing (above) confirmed against the tree. ★ **Row 24 is the reason this is a task and not a note: the
       FILTER has NO sibling suite at all.** No existing control filters anything, so there is **nothing to
