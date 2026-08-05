@@ -564,11 +564,68 @@ calls `enhanceTables` yet** (the call sites are 3.4 and 4.1), so `.peekover-tabl
 element in any rendered document** and neither rule can move a pixel until 3.4 wires the first site. ★ **A
 CSS task whose rules match nothing today is exactly the shape that can ship a defect invisibly** — which
 is why 3.5's rect probe and 6.1's walk are where its appearance is judged, not here.
-**TASK 3.4 IS NEXT** — app-page call sites 1 AND 2 (`readerPane.ts:185`, `appShell.ts:137-140`'s
-`renderWithDiagrams` and the rename D-6 forces) plus the toolbar's structural rows 1, 2, 3, **4
-(INVERTS)**, 23. **Both sites or neither** (D-6): wiring only the first ships a toolbar that disappears on
-the app page's own re-render. Its baseline is **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and **392,158 B
-app** (`998ebfd7…`) — and **3.4 moves the app chunk only**, the content script staying byte-identical.
+★ **TASK 3.4 IS DONE — THE TOOLBAR NOW RENDERS. BOTH APP-PAGE CALL SITES ARE WIRED, TOGETHER (D-6), AND
+3.3's CSS FINALLY MATCHES AN ELEMENT.** Site 1 `readerPane.ts:200` (after the committed `mount`, beside
+`enhanceDiagrams(host)`) and site 2 `appShell.ts:153-157`'s render fn, whose `render:` provisioning at `:939`
+is the one line that puts it on the watch controller. **Sites 3-4 are the content script's and are 4.1's
+— untouched**, and that difference IS the import fence.
+★ **THE D-6 RENAME: `renderWithDiagrams` → `renderWithEnhancements`, and it is PURE.** The name described
+the whole body when the body was one enhancer; it now runs two, so the name was a lie the compiler could
+not catch. `git diff src/app/appShell.ts` is **18/4 across four hunks and nothing else** — the import, the
+doc comment the rename falsified, the const's name, the `enhanceTables(target)` line, the `render:`
+reference. No branch moved, no argument changed. **No code reference to the old name survives** (`tsc`
+is the instrument, not a grep); **seven PROSE mentions remain in five files' comments**
+(`docIdentity.ts:15`, `diagramEnhancer.test.ts:695`, `agentBadge`/`diagramCache`/`diagramDegrade`/
+`diagramRender` browser tests) — documentation debt, **named rather than fixed**, because 3.4's Files list
+does not include those files and the confined-diff clause is what it is.
+★ **BOTH SITES OR NEITHER, PROVED BY ABLATING EACH ONE ALONE** (`cp`-aside + restore). **Site 1 removed:**
+the initial-select arm goes **3 red × 2 engines** (*"expected [] to have a length of 1"*, *"INSIDE the
+column — this row inverts: expected false to be true"*) while the **watch-re-render arm stays fully
+green**. **Site 2 removed:** exactly the mirror — the re-render arm reds, the initial-select arm stays
+green. ★ **That second arm IS the shipped defect D-6 names**: a toolbar on the first render and none after
+an agent rewrites the file, and only the site-2 column can see it. Two more arms: the **header gate
+ungated** → row 3 reds with *"expected [div, div] to have a length of 1 but got 2"* (the ungated
+signature is **2**, the unwired one is **0**, and only "the gate is the header row" reads **1**); the
+**toolbar placed OUTSIDE the column** (row 4 transcribed unexamined) → row 4 reds on both sites and both
+engines **and the golden diff stays EMPTY**, which is exactly why that structural assertion exists.
+★ **THE APP CHUNK MOVES +771 B AND THE CONTENT SCRIPT DOES NOT MOVE AT ALL.** App **392,158 → 392,929 B**
+(`998ebfd7…`→`0c40f5e4…`); content script **321,713 B byte-identical on BOTH engines**, md5-for-md5
+(`c68e437c…` / `e1287b5c…`) — the enhancer entered the **app graph only**; the content-script graph entry
+is 4.1's. **Seven arms, each a real rebuild of BOTH engines from a cleared `.output`.** ★ **The module is a
+SHARED contributor and a naive two-arm account would have double-counted it:** S1 (site 1 alone) **+765**
+and S2 (site 2 alone) **+765** each carry the whole module, and S3 (both) is **+771**, not +1530. So
+**M = S1+S2−S3 = 759 B** (the module entering the graph, once, however many sites call it) · **C1 = S3−S2
+= 6 B** · **C2 = S3−S1 = 6 B**. **759 + 6 + 6 = 771 — residual ZERO.** ★ **Two arms make that account
+non-circular** (the three-unknown solve is exactly determined and is NOT itself evidence): **S5** adds one
+DUPLICATE `enhanceTables(host);` to the shipped build and costs **+6 B**, measuring a bare call statement
+by an independent route and agreeing with C1 and C2 to the byte; and **S4** — shipped code with the rename
+reverted — rebuilds to **392,929 B / `0c40f5e4…`, md5-IDENTICAL to S3**, so ★ **the rename costs exactly
+ZERO, measured** (the minifier mangles a module-level const). ★ **The instrument FIRES:** **S6**, both
+sites removed again, returns to **392,158 B / `998ebfd7…`** byte-for-byte and md5-for-md5. **Never a
+grep.**
+★ **WHAT 3.4 DOES NOT DO.** The host stays **EMPTY** — no control, no `role`, no label, no content (sort
+3.6, filter 3.7, copy 3.8), asserted as `children.length === 0`. **No rect and no computed style is read
+anywhere in this task**: row 6's resolved `max-width` against `--reader-measure` and row 5's containment
+at **both** `GEOMETRY_WIDTHS` are 3.5's probe, and asserting them here at one incidental viewport would
+ratify a geometry nobody measured (finding 2). **Row 2's "and no listener" half is INERT and is NAMED, not
+asserted vacuously** — the enhancer binds nothing in this build, so the property is true of every document
+and discriminates nothing; it becomes real at 3.6-3.8. `tableEnhancer.ts` is **unmodified** (3.2's module
+is done); no 1.1-3.3 module was edited beyond the two render paths.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**; unit **847/847** — 3.3's **842** plus this task's **5** new `appShell.test.ts` cases; browser
+**1075 passed | 15 skipped**, 3.3's **1055** plus this task's **20** (10 × 2 engines), **106 passed
+suites** against 3.3's 104, with the **same 2 failed suites** — 3.1's collection error naming
+`tableFilter.browser.test.ts` on both engines, read past until 3.7. The Firefox `watchAnchor` flake 3.3
+isolated did **not** recur. NUL **0 in both forms** in all four edited files, with a scratch control file
+reading **non-zero** in both.
+**TASK 3.5 IS NEXT** — CONTAINMENT: a real rect probe at **BOTH** `GEOMETRY_WIDTHS` (**1280 AND 1400**,
+`diffChrome.ts:83-91`) for rows **5 (INVERTS to containment)**, **6** and **8**. Row 5: the toolbar stays
+**within** the column's box and does **not** push the first content block off-measure — a rect containment
+plus a rect equality on the column's first content block with and without the toolbar, red-first by letting
+it overflow. Row 6: the toolbar's **RESOLVED** `max-width` equals `--reader-measure` (**748px**), a computed
+style and therefore jsdom-blind, which is why 3.3 only declared it. Its baseline is **321,713 B CS**
+(`c68e437c…` / `e1287b5c…`) and **392,929 B app** (`0c40f5e4…`).
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

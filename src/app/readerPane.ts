@@ -18,6 +18,7 @@
 
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
+import { enhanceTables } from '../render/tableEnhancer';
 import { stopWatch } from '../watch/watchRegistry';
 
 /**
@@ -183,6 +184,20 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // pre-paint — it leaves D-15's degraded state behind, so a fence whose diagram never
       // arrives is already showing its source rather than transitioning into showing it.
       enhanceDiagrams(host);
+      // 008 D-6 SITE 1 — the app page's initial select. The enhancers are LISTED, never composed:
+      // a shared `enhance(host)` seam would be the tidy version and would put `diagramEnhancer`
+      // (and mermaid's dynamic edge behind it) on the content-script graph the moment sites 3-4
+      // called it, taking 007's 8/8 import fence to red. The duplication across the four sites IS
+      // §3.2's fence expressed in imports, and the difference between the app page's two sites and
+      // the content script's two is the thing the fence can see.
+      //
+      // ORDER: diagrams first, then tables (plan §4 risk 5). Neither enhancer knows about the
+      // other and a table cannot occur inside a mermaid fence, so they cannot collide on a node —
+      // but the ordering is an implicit contract and is stated at the site rather than assumed.
+      //
+      // `enhanceTables` is TOTAL (D-7): it cannot throw, so it cannot reach `paint`'s caller and
+      // cannot cost the reader a document that already rendered correctly.
+      enhanceTables(host);
       return;
     }
     content.replaceChildren(buildState(doc, outcome));

@@ -109,6 +109,7 @@ import { detectorForFile } from '../watch/detectorForFile';
 import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/watchController';
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
+import { enhanceTables } from '../render/tableEnhancer';
 import { watchCapability } from '../watch/watchAvailability';
 import {
   registerWatchTarget,
@@ -134,12 +135,25 @@ const SHELL_CLASS = 'peekover-app';
  * `contentWatch.ts` passes no `render` and is not touched — that omission is the §3.2 fence, and it
  * is what keeps the enhancer (and the engine behind it) off the content-script graph entirely.
  *
- * Identical body to `readerPane`'s site by construction: one shared `enhanceDiagrams`, called after
- * a committed mount, never two divergent copies.
+ * Identical body to `readerPane`'s site by construction: the same enhancers in the same order,
+ * called after a committed mount, never two divergent copies.
+ *
+ * ── 008 D-6 SITE 2, AND WHY THE NAME HAD TO GO ────────────────────────────────────────────────
+ *
+ * `renderWithDiagrams` described the whole body when the body was one enhancer. It now runs two,
+ * so the name was a lie the compiler could not catch and the next reader would have believed —
+ * D-6's own argument (the call sites stay explicit, so each one must SAY what it does) applied to
+ * the const rather than to the graph. The rename is exactly that: no branch moved, no argument
+ * changed, and the only behavioural difference is the `enhanceTables` line below.
+ *
+ * Sites 1 and 2 land TOGETHER and that is not tidiness. This surface re-renders through here on
+ * every watch update, so wiring `readerPane`'s site alone would ship a toolbar that vanished the
+ * first time an agent rewrote the file on disk — 007 D-12's bug class, one surface over.
  */
-const renderWithDiagrams: RenderFn = (text, target, options) => {
+const renderWithEnhancements: RenderFn = (text, target, options) => {
   mount(text, target, options);
   enhanceDiagrams(target);
+  enhanceTables(target);
 };
 
 /** The subset of `store` the shell uses. The write methods are required (grant flow, group 3);
@@ -922,7 +936,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       detector,
       contained: true,
       docId,
-      render: renderWithDiagrams,
+      render: renderWithEnhancements,
     });
     registerWatchTarget(controller);
 

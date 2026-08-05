@@ -6,6 +6,7 @@ import type { FolderSource, MarkdownFile, OpenFolderOutcome } from './folderSour
 import type { FolderRecord, RecentRecord, PinRecord, StoredSummary } from './store';
 import { getDocIdentity, resetDocIdentityForTest } from '../render/docIdentity';
 import { getDiffContext, resetDiffRegistryForTest } from '../render/diffRegistry';
+import { TABLE_TOOLBAR_CLASS, TABLE_STATE_ATTR } from '../render/tableEnhancer';
 
 // Task 1.1: the app-page surface EXISTS and renders its skeleton + affordance.
 // Task 1.2: the shell wires selection → the reader pane (unchanged M1 mount()).
@@ -1559,5 +1560,162 @@ describe('appShell (008 task 2.2 — the D-3 pair provisioned, app page)', () =>
     // SHAPE only, and deliberately not a call: `fetchMeta`/`fetchText` close over the snapshot
     // store, which is real IndexedDB (`./snapshots`, not the injected `AppStore`) and does not
     // exist in jsdom. Their behaviour is 1.4's and 6.2's, asserted where an engine can run them.
+  });
+});
+
+// --- 008 task 3.4: the app page's D-6 call sites, structural half -------------------------
+//
+// ══ WHAT THIS BLOCK IS FOR, AND WHAT IT DELIBERATELY CANNOT SEE ═══════════════════════════
+//
+// 3.2 unit-tested `enhanceTables` against a host it built itself. That suite passes, unchanged,
+// against a build in which NOTHING CALLS IT — which is exactly what shipped at 3.2 and 3.3: the
+// class was styled and matched no element in any rendered document. So nothing below calls the
+// enhancer; the toolbar arrives through the shell's own click chain or it does not arrive.
+//
+// This is the STRUCTURE — parentage, sibling order, the gate, the count. Every assertion here is
+// green against a toolbar painted invisibly on top of its table, because jsdom applies no cascade
+// and returns all-zero rects. The RESOLVED geometry (row 6's `max-width` against
+// `--reader-measure`, row 5's containment at both widths) is task 3.5's rect probe, and the
+// real-engine version of these same rows — over BOTH call sites, which jsdom cannot drive because
+// site 2 needs a real poll — is `tests/browser/tableTools.browser.test.ts`.
+
+describe('appShell (008 task 3.4 — the table toolbar reaches the app page, D-6 sites 1-2)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    resetDocIdentityForTest();
+    resetDiffRegistryForTest();
+  });
+
+  /** A GFM table — a real `<thead><tr><th>`, which is what markdown-it's `table` rule emits and
+   *  therefore what the header gate sees on the overwhelming majority of documents. */
+  const TABLE_DOC = ['# Report', '', '| col | n |', '| --- | --- |', '| a | 1 |', ''].join('\n');
+
+  /** A hand-written HTML table with NO `<thead>`. `parse.ts` runs with `html: true` and
+   *  `sanitize.ts:36` allows the table elements, so this really does reach the reading column —
+   *  the gate's non-hypothetical input, not a fixture invented to have something to decline. */
+  const HEADLESS_DOC = [
+    '# Report',
+    '',
+    '<table><tbody><tr><td>a</td><td>1</td></tr></tbody></table>',
+    '',
+  ].join('\n');
+
+  /** Both in ONE document, so the gate's two answers are read off the same render. */
+  const MIXED_DOC = `${TABLE_DOC}\n${HEADLESS_DOC}\n`;
+
+  const NO_TABLE_DOC = '# Report\n\nProse only, and a list:\n\n- one\n- two\n';
+
+  async function openFile(file: MarkdownFile): Promise<HTMLElement> {
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({ ok: true, source: sourceOf('notes', [file]) }),
+      store: fakeStore(),
+    });
+    await app.openFolder();
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+    await flush();
+    return container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+  }
+
+  const columnOf = (host: HTMLElement) =>
+    host.shadowRoot!.querySelector<HTMLElement>('.peekover-reader')!;
+  const toolbarsIn = (host: HTMLElement) => [
+    ...host.shadowRoot!.querySelectorAll<HTMLElement>(`.${TABLE_TOOLBAR_CLASS}`),
+  ];
+
+  it('row 1 — site 1: the app page’s INITIAL select grows the toolbar, through production only', async () => {
+    const host = await openFile(mdFile('report.md', TABLE_DOC));
+
+    // THE CONTROL THAT FIRES FIRST: the document really rendered and really has a table. Without
+    // it, "one toolbar" and "no toolbar" would be indistinguishable from a mount that produced
+    // nothing at all.
+    const tables = columnOf(host).querySelectorAll('table');
+    expect(tables, 'the fixture must actually render a table').toHaveLength(1);
+
+    expect(toolbarsIn(host)).toHaveLength(1); // one per table, not one per render
+    expect(tables[0].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
+  });
+
+  it('★ row 4 INVERTS — the toolbar is INSIDE the column, immediately BEFORE its table', async () => {
+    // Every other piece of chrome in this codebase is asserted OUTSIDE `.peekover-reader`
+    // (`watchControl:205`, `diffChrome:312`, `mount.ts:154-203`) and four sibling suites say so.
+    // Transcribing that row unexamined produces a WRONG test here: the toolbar belongs to a block
+    // in document flow, so it is a child of the column and the table's PRECEDING sibling.
+    const host = await openFile(mdFile('report.md', TABLE_DOC));
+
+    const column = columnOf(host);
+    const table = column.querySelector('table')!;
+    const toolbar = toolbarsIn(host)[0];
+
+    expect(column.contains(toolbar)).toBe(true); // INSIDE — the inversion, stated as such
+    expect(toolbar.parentElement).toBe(table.parentElement); // siblings, no wrapper element
+    expect(table.previousElementSibling).toBe(toolbar); // IMMEDIATELY before
+    // ...and the table was not moved to achieve it: it is still a direct child of the column,
+    // which is what a wrap-and-restore would quietly change while passing the checks above.
+    expect(table.parentElement).toBe(column);
+  });
+
+  it('★ row 3 — the gate is the HEADER: a headerless table in the SAME document gets nothing', async () => {
+    // The gate red-first, with its own firing control in the fixture: if the condition were
+    // ungated, BOTH tables would carry a toolbar and the count below reads 2. If the enhancer
+    // never ran at all, it reads 0. Only "the gate is the header row" reads 1.
+    const host = await openFile(mdFile('report.md', MIXED_DOC));
+
+    const tables = [...columnOf(host).querySelectorAll('table')];
+    expect(tables, 'the fixture must render BOTH tables').toHaveLength(2);
+    expect(tables[0].tHead, 'fixture: the first table is the header one').not.toBeNull();
+    expect(tables[1].tHead, 'fixture: the second table is the headerless one').toBeNull();
+
+    expect(toolbarsIn(host)).toHaveLength(1);
+    expect(tables[0].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
+    expect(tables[1].hasAttribute(TABLE_STATE_ATTR)).toBe(false);
+    expect(tables[1].previousElementSibling?.className).not.toBe(TABLE_TOOLBAR_CLASS);
+  });
+
+  it('row 2 — a table-free document grows NO toolbar and is left exactly as rendered', async () => {
+    const host = await openFile(mdFile('prose.md', NO_TABLE_DOC));
+
+    expect(columnOf(host).querySelector('h1')).not.toBeNull(); // it really rendered
+    expect(toolbarsIn(host)).toHaveLength(0);
+    // Nothing anywhere in the shadow root — not a toolbar beside the column, not a state
+    // attribute on some other element. The absence is total, which is what "no chrome where the
+    // capability is absent" means.
+    expect(host.shadowRoot!.querySelectorAll(`[${TABLE_STATE_ATTR}]`)).toHaveLength(0);
+    // The listener half of row 2 is INERT AT 3.4 and is named rather than asserted vacuously:
+    // the host is empty and the enhancer binds nothing, so "no listener" is true of EVERY
+    // document today and would discriminate nothing. It becomes a real assertion at 3.6-3.8,
+    // where the controls that could bind one first exist.
+  });
+
+  it('switching documents re-derives the toolbar — one per render, never accumulated', async () => {
+    // `readerPane` reuses ONE host for every file (`paint`), so an enhancer that appended without
+    // the column being rebuilt would stack toolbars across selects. The count is the assertion;
+    // node identity is the control that proves a second render actually happened.
+    const app = mountAppShell(container, {
+      openFolder: openerReturning({
+        ok: true,
+        source: sourceOf('notes', [mdFile('a.md', TABLE_DOC), mdFile('b.md', TABLE_DOC)]),
+      }),
+      store: fakeStore(),
+    });
+    await app.openFolder();
+    const items = [
+      ...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+    ];
+    items[0].click();
+    await flush();
+    const host = container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+    const first = toolbarsIn(host)[0];
+    expect(first).toBeDefined();
+
+    items[1].click();
+    await flush();
+
+    expect(first.isConnected).toBe(false); // the re-render really destroyed the previous chrome
+    expect(toolbarsIn(host)).toHaveLength(1);
+    expect(toolbarsIn(host)[0]).not.toBe(first);
   });
 });

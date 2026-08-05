@@ -461,7 +461,7 @@ revertable — units. **None of them precedes 3.1.***
       moves too and is stated against **389,143 B**. Golden EMPTY · manifest green **2975 B** ·
       `permissions: []`. [D-12; §5 CSS discipline; findings 6, 9]
 
-- [ ] **3.4 App-page call sites 1 AND 2, the rename D-6 forces, and the toolbar's STRUCTURAL rows
+- [x] **3.4 App-page call sites 1 AND 2, the rename D-6 forces, and the toolbar's STRUCTURAL rows
       (rows 1, 2, 3, 4 INVERTS, 23 · D-6 sites 1–2 · D-8).** Site 1: `readerPane.ts:185`, after the committed
       `mount`, beside `enhanceDiagrams(host)`. Site 2: `appShell.ts:137-140`'s `renderWithDiagrams` —
       **whose name stops being true and is renamed with it** (D-6). ★ **Sites 3–4 are the CONTENT SCRIPT's
