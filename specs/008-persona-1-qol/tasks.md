@@ -547,7 +547,7 @@ revertable — units. **None of them precedes 3.1.***
       5.2 and chosen at 5.5**. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§3.6; §4 table tools; rows 12, 15, 16, 20, 24]
 
-- [ ] **3.8 Copy-out — CSV and Markdown, from the rows CURRENTLY SHOWN (D-10 · §3.6).** Reads `textContent`
+- [x] **3.8 Copy-out — CSV and Markdown, from the rows CURRENTLY SHOWN (D-10 · §3.6).** Reads `textContent`
       from the rows **currently shown, in the order currently shown** (§4). ★ **Nothing re-enters the
       sanitizer; every new node is built as DOM, never as an HTML string** (§5, AGENTS.md #3). **Two buttons**
       — ★ **gate-2 RULING Q2: TWO BUTTONS, no menu**, which activates **NO** §3.11 overlay row: **rows 9 and

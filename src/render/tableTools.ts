@@ -1,5 +1,5 @@
-// tableTools — the table toolbar's CONTROLS (008 plan §1.3). Two of them ship here: the sort
-// (task 3.6) and the FILTER (task 3.7). The copy-out (3.8) lands beside them in this file.
+// tableTools — the table toolbar's CONTROLS (008 plan §1.3). All three ship here: the sort
+// (task 3.6), the FILTER (task 3.7) and the COPY-OUT (task 3.8).
 //
 // `tableEnhancer.ts` owns the WALK — which tables qualify, the toolbar host, and D-7's totality.
 // This module owns what a qualifying table then GETS. The split is why 3.6 could add a control
@@ -626,5 +626,316 @@ export function installTableFilter(
     count.remove();
     emptyBody.remove();
     showEveryRow();
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE COPY-OUT — task 3.8, F22, D-10, gate-2 ruling Q2
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ── WHAT YOU SEE IS WHAT YOU COPY (F22) ───────────────────────────────────────────────────────
+//
+// §4: *"the system shall copy the rows CURRENTLY SHOWN, IN THE ORDER CURRENTLY SHOWN"*; §3.6:
+// *"a copy that silently disagrees with what is visible is a wrong answer that looks right."*
+//
+// Both halves are read off the LIVE `<tbody>` at click time and neither is tracked separately:
+//
+//   • THE ORDER is `body.rows` order, and the sort MOVES its `<tr>` nodes, so DOM order already
+//     IS the order on screen. Nothing here consults the sort's state, and there is no second copy
+//     of it to disagree with the first.
+//   • THE SET is `body.rows` minus the ones the filter set `hidden` on, and the filter HIDES
+//     rather than removes, so a hidden row is a row still present and skippable rather than a row
+//     that has to be remembered.
+//
+// ★ THE DEFECT THIS SHAPE MAKES UNREACHABLE is a copy that reads the SOURCE markdown, or that
+// re-reads `documentOrder`: either produces every row in document order, ignoring both controls,
+// which is exactly the wrong answer that looks right. `tableTools.test.ts` reds against it with a
+// filtered AND sorted fixture, where document order and screen order share no position.
+//
+// ── THE HEADER'S LABELS ARE CAPTURED AT INSTALL, AND THAT IS LOAD-BEARING ─────────────────────
+//
+// By copy time each `<th>` also contains the sort's state text and its glyph, so a `textContent`
+// read AT CLICK TIME of a sorted table yields `dept ascending` and a `▲` in the header cell of
+// the copied output. The labels are therefore read ONCE, at install, when the header cells hold
+// exactly their own text — `installTableSort` paints `none` as the empty string, so this reading is
+// the same whether the sort was installed first or not. Same timing, same reason, as `tableName`.
+//
+// ── TWO BUTTONS, NO MENU (gate-2 ruling Q2) ───────────────────────────────────────────────────
+//
+// CSV and Markdown are two native `<button>`s in the strip, in document order, each its own tab
+// stop. NO popup, NO menu, NO focus trap — §3.11 rows 9 and 21 stay inactive, which is checkable
+// here rather than merely asserted: nothing below creates an overlay, moves focus or listens for a
+// key. *"A table is not a data grid"* (§6) is what the ruling was taken on.
+//
+// ── THE CLIPBOARD IS ASKED FOR NOTHING (D-10) ─────────────────────────────────────────────────
+//
+// `navigator.clipboard.writeText` needs TRANSIENT ACTIVATION, which a click supplies by
+// construction — every call below is inside a click handler. It needs no manifest permission, and
+// the harder case already ships at `permissions: []` (`diagramView.ts:306-315` writes a
+// `ClipboardItem`). The built manifests are re-read and re-asserted in `tableCopy.browser.test.ts`
+// AFTER a copy has actually run, because `permissions: []` read on its own would be equally true of
+// a build in which the copy did not exist.
+//
+// ── AND IT CAN REFUSE, WHICH IS A STATED FAILURE AND NEVER A THROW (§3.8, D-7) ────────────────
+//
+// The write is ASYNCHRONOUS and rejects with `NotAllowedError` where the engine declines it; the
+// property is missing entirely outside a secure context. Both are handled, both say so in the same
+// polite region the confirmation uses, and the table is untouched either way — §3.8's *"a stated
+// failure beside a still-readable table, never a broken button."* A rejection that escaped would be
+// an unhandled rejection out of a click handler, which is D-7's totality broken on the one path
+// that is not synchronous.
+
+/** Class on BOTH copy buttons — the handle `readerCss.ts` will key off, and the one a suite can
+ *  count to know there are exactly two of them. */
+export const COPY_BUTTON_CLASS = 'peekover-table-copy';
+
+/** Class on the CSV button. */
+export const COPY_CSV_CLASS = 'peekover-table-copy--csv';
+
+/** Class on the Markdown button. */
+export const COPY_MARKDOWN_CLASS = 'peekover-table-copy--markdown';
+
+/**
+ * Class on the copy's OWN polite live region.
+ *
+ * ★ NOT the filter's count region, and that is a decision. Writing *"Copied 2 rows"* into the
+ * region carrying *"Showing 2 of 3 rows"* would destroy an active filter's answer to §4's *"how
+ * many are shown out of how many"* as a side effect of an unrelated action — and the copy has to
+ * work on a table whose filter never installed. Two regions saying two things.
+ */
+export const COPY_STATUS_CLASS = 'peekover-table-copy__status';
+
+/** §3.8 / F26's shape, one control over. It names the recovery — nothing happened to the table —
+ *  because a reader told only *"failed"* does not know whether the table is still the table. */
+const COPY_FAILED_TEXT = 'Copy unavailable. The table is unchanged.';
+
+/**
+ * The DISPLAYED text of a node, with HTML's own whitespace processing applied.
+ *
+ * `textContent` preserves the source's newlines and indentation; the screen does not, because
+ * `white-space: normal` collapses every run to one space. Copying the raw `textContent` would put
+ * line breaks and runs of spaces into cells that show neither — the same *"disagrees with what is
+ * visible"* defect F22 names, one level down. So the collapse is fidelity, not tidying.
+ */
+function displayedText(node: Node): string {
+  return (node.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+/** The column names, read at install (see the note above on why the timing matters). */
+function headerLabels(headerRow: HTMLTableRowElement): string[] {
+  return [...headerRow.cells].map(displayedText);
+}
+
+/**
+ * F22's row set: the rows CURRENTLY SHOWN, in the order CURRENTLY SHOWN.
+ *
+ * Exported because it is the half of F22 a unit can interrogate without a clipboard — and because
+ * "shown" having exactly one definition, shared with the filter's own `hidden`, is what makes the
+ * two controls compose rather than agree by coincidence.
+ */
+export function shownRowsIn(body: HTMLTableSectionElement): HTMLTableRowElement[] {
+  return [...body.rows].filter((row) => !row.hidden);
+}
+
+/**
+ * The grid the serializers take: the header labels, then one array per shown row.
+ *
+ * ★ RECTANGULAR, AT THE WIDEST THING ON SCREEN. A ragged body is reachable (§4 promises the table
+ * is left usable, not that it is well formed), and both formats need a fixed width: a short row
+ * would otherwise emit fewer CSV fields than its header, and a markdown row wider than its
+ * delimiter has its extra cells dropped by every renderer. The width is therefore the MAXIMUM of
+ * the header's and every shown row's — padding short rows with empty cells, and giving an
+ * over-wide row an unnamed column rather than silently not copying a cell the reader can see.
+ */
+export function copyMatrix(
+  labels: readonly string[],
+  rows: readonly HTMLTableRowElement[],
+): string[][] {
+  let width = labels.length;
+  for (const row of rows) width = Math.max(width, row.cells.length);
+
+  const padded = (cells: string[]): string[] => {
+    while (cells.length < width) cells.push('');
+    return cells;
+  };
+
+  const matrix = [padded([...labels])];
+  for (const row of rows) {
+    matrix.push(padded([...row.cells].map(displayedText)));
+  }
+  return matrix;
+}
+
+/**
+ * RFC 4180 — a field is quoted when it contains a quote, the delimiter, or a line break, and an
+ * embedded quote is DOUBLED.
+ *
+ * Three characters, one regular expression rather than three branches: the rule is a single
+ * predicate in the format itself, and splitting it would invite a test per branch instead of a test
+ * per rule. A cell with a comma that was NOT quoted becomes two cells in every spreadsheet that
+ * reads it — silent data corruption, which is why this is a unit and not a glance.
+ */
+export function csvField(text: string): string {
+  if (!/[",\r\n]/.test(text)) return text;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/** The matrix as RFC 4180 CSV. CRLF between records is the RFC's own terminator, and every
+ *  spreadsheet reads it; no trailing terminator, because the RFC makes the final one optional and
+ *  a paste is not a file. */
+export function toCsv(matrix: readonly (readonly string[])[]): string {
+  return matrix.map((row) => row.map(csvField).join(',')).join('\r\n');
+}
+
+/**
+ * A cell as GFM table content.
+ *
+ * ★ THE BACKSLASH IS ESCAPED FIRST, AND THE ORDER IS THE WHOLE CORRECTNESS. A cell reading
+ * `a\|b` escaped for the pipe alone emits `a\\|b`, which markdown reads as an escaped BACKSLASH
+ * followed by a bare pipe — the table breaks on the very character the escape was for. Escaping
+ * backslashes first and pipes second emits `a\\\|b`, which reads back as the cell.
+ *
+ * A newline becomes a space because a GFM table row IS one line: there is no escape that survives
+ * it, and `<br>` would be an HTML string — which this module does not produce (§5, AGENTS.md #3)
+ * and which would arrive as markup in whatever document the reader pastes into.
+ */
+export function markdownField(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/[\r\n]+/g, ' ');
+}
+
+/** The matrix as a GFM table: the header, the delimiter row that makes it a table at all, then the
+ *  shown rows. An empty matrix is the empty string rather than a lone delimiter. */
+export function toMarkdownTable(matrix: readonly (readonly string[])[]): string {
+  if (matrix.length === 0) return '';
+  const line = (cells: readonly string[]): string => `| ${cells.map(markdownField).join(' | ')} |`;
+  const delimiter = `| ${matrix[0].map(() => '---').join(' | ')} |`;
+  return [line(matrix[0]), delimiter, ...matrix.slice(1).map(line)].join('\n');
+}
+
+/** The two formats, and the name each is called by in text. */
+const COPY_FORMATS = [
+  { key: 'csv', label: 'CSV', className: COPY_CSV_CLASS, serialize: toCsv },
+  { key: 'markdown', label: 'Markdown', className: COPY_MARKDOWN_CLASS, serialize: toMarkdownTable },
+] as const;
+
+/** §4: *"shall confirm that it copied."* The COUNT is in it because the copy composes with the
+ *  filter, and *"Copied 2 rows"* on a table showing 2 of 3 is the confirmation actually doing its
+ *  job — a bare *"Copied"* would read identically whether or not the filter was respected. */
+export function copiedText(count: number, format: string): string {
+  return `Copied ${count} ${count === 1 ? 'row' : 'rows'} as ${format}.`;
+}
+
+/**
+ * The write, as a promise that NEVER throws synchronously.
+ *
+ * `navigator.clipboard` is `undefined` outside a secure context, so the property read alone can
+ * produce a `TypeError` one line later; `writeText` may also throw before it returns. Both are
+ * converted to a rejection, so the caller has exactly ONE failure shape to handle and the click
+ * handler has none.
+ */
+function writeToClipboard(doc: Document, text: string): Promise<void> {
+  try {
+    const clipboard = doc.defaultView?.navigator?.clipboard;
+    if (!clipboard || typeof clipboard.writeText !== 'function') {
+      return Promise.reject(new Error('the clipboard is unavailable'));
+    }
+    return Promise.resolve(clipboard.writeText(text));
+  } catch (err) {
+    return Promise.reject(err instanceof Error ? err : new Error(String(err)));
+  }
+}
+
+/**
+ * Give one table its two copy buttons, in `toolbar`.
+ *
+ * Returns an UNDO, or `undefined` when there is nothing to copy — the same four entry conditions
+ * `installTableFilter` has, for `tableEnhancer`'s per-table catch (D-7) and its *"exactly as
+ * rendered"* assertion.
+ *
+ * Every handler closes over ITS OWN table's `<tbody>` and its own labels (§3.11 row 11, F4).
+ * Nothing here queries the document at click time, which is what makes table 2's buttons copy
+ * table 2 — the defect class 007 found at `diagramLightbox:354,429`.
+ */
+export function installTableCopy(
+  table: HTMLTableElement,
+  toolbar: HTMLElement,
+): (() => void) | undefined {
+  const head = table.tHead;
+  const body = table.tBodies[0];
+  if (!head || !body) return undefined;
+
+  const headerRow = head.rows[head.rows.length - 1];
+  if (!headerRow) return undefined;
+  if (body.rows.length === 0) return undefined;
+
+  const doc = table.ownerDocument;
+  const name = tableName(headerRow);
+  const labels = headerLabels(headerRow);
+
+  // Built DETACHED, then attached in ONE call — `installTableFilter`'s shape and its reason: a
+  // throw during construction has touched no rendered node, so there is no half-built strip.
+  const buttons = COPY_FORMATS.map((format) => {
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.className = `${COPY_BUTTON_CLASS} ${format.className}`;
+    // The visible text is a PREFIX of the accessible name (WCAG 2.5.3 label-in-name), and the name
+    // carries the SELECTION as well as the ACTION (§3.11 row 17).
+    button.textContent = `Copy ${format.label}`;
+    button.setAttribute('aria-label', `Copy ${format.label} from ${name}`);
+    return { format, button };
+  });
+
+  // Row 20 / F13's property, re-asserted for this control: POLITE, and `hidden` rather than merely
+  // empty, so it is OUT of the accessibility tree until it has something to say.
+  const status = doc.createElement('span');
+  status.className = COPY_STATUS_CLASS;
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+
+  const nodes = [...buttons.map((entry) => entry.button), status];
+  try {
+    toolbar.append(...nodes);
+  } catch (err) {
+    for (const node of nodes) node.remove();
+    throw err;
+  }
+
+  function announce(text: string): void {
+    status.textContent = text;
+    status.hidden = text === '';
+  }
+
+  function fail(err: unknown): void {
+    announce(COPY_FAILED_TEXT);
+    // Dev-only signal, like `tableEnhancer.ts:186`. The reader already has the message above.
+    console.warn('[peekover] table copy failed; the table is unchanged', err);
+  }
+
+  for (const { format, button } of buttons) {
+    button.addEventListener('click', () => {
+      let text: string;
+      let count: number;
+      try {
+        // ★ READ HERE, FROM THE LIVE `<tbody>` — never from a captured order and never from the
+        // source. This one line is F22.
+        const rows = shownRowsIn(body);
+        count = rows.length;
+        text = format.serialize(copyMatrix(labels, rows));
+      } catch (err) {
+        // Serialization reads `textContent`, which is a DOM accessor and can therefore throw.
+        fail(err);
+        return;
+      }
+      // The rejection is ASYNCHRONOUS, so the catch is on the promise. A `try` around this call
+      // would catch nothing a refused write does.
+      writeToClipboard(doc, text).then(() => announce(copiedText(count, format.label)), fail);
+    });
+  }
+
+  return () => {
+    for (const node of nodes) node.remove();
   };
 }

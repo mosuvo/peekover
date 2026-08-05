@@ -33,6 +33,10 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mount } from './mount';
 import { TABLE_STATE_ATTR, TABLE_TOOLBAR_CLASS, enhanceTables } from './tableEnhancer';
 import {
+  COPY_BUTTON_CLASS,
+  COPY_CSV_CLASS,
+  COPY_MARKDOWN_CLASS,
+  COPY_STATUS_CLASS,
   FILTER_CLEAR_CLASS,
   FILTER_COUNT_CLASS,
   FILTER_EMPTY_CLASS,
@@ -42,13 +46,21 @@ import {
   SORT_GLYPH_CLASS,
   SORT_STATE_CLASS,
   compareCellText,
+  copiedText,
+  copyMatrix,
+  csvField,
   filterCountText,
+  installTableCopy,
   installTableFilter,
   installTableSort,
+  markdownField,
   nextSortDirection,
   normalizeFilterQuery,
   rowMatchesFilter,
+  shownRowsIn,
   sortedRows,
+  toCsv,
+  toMarkdownTable,
 } from './tableTools';
 
 const HOST_TAG = 'peekover-root';
@@ -1272,5 +1284,743 @@ describe('3.7 · the filter`s undo restores the table exactly', () => {
     expect(column.innerHTML).toBe(before);
     expect(table.tBodies).toHaveLength(1);
     expect(bodyRowsOf(table).some((row) => row.hidden)).toBe(false);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 3.8 — THE COPY-OUT (F22 · D-10 · gate-2 ruling Q2)
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ★ THE SERIALIZER IS A UNIT AND NOT A GLANCE, AND THE THREE CHARACTERS ARE WHY. A cell containing
+// a COMMA is two cells in every spreadsheet that reads an unquoted CSV; a cell containing a QUOTE
+// terminates the field early; a cell containing a PIPE ends the row in every markdown renderer.
+// All three are silent — the output is well formed, just not the table. So the escaping is asserted
+// by ROUND-TRIPPING the serialized text back into fields, which is the reading that can actually
+// fail: an assertion on the string alone would be satisfied by whatever the serializer emitted.
+//
+// ★ WHAT IS HERE AND WHAT IS IN `tests/browser/tableCopy.browser.test.ts`. This suite answers the
+// serializer, the row set, the button shape, the failure path and the properties — all of which are
+// DOM shape and pure functions. What it CANNOT answer is whether a REAL engine's clipboard accepts
+// a gesture-driven write at `permissions: []`, which is the whole of D-10 and is asserted there, in
+// Chromium AND Firefox, against the real `navigator.clipboard`.
+
+const COPY_DOC = [
+  '| dept | who | n |',
+  '| --- | --- | --- |',
+  '| eng | zoe | 10 |',
+  '| eng | adam | 9 |',
+  '| ops | bo | 2 |',
+  '',
+].join('\n');
+
+/**
+ * The body's named fixture, as a DOCUMENT rather than a hand-built string: a cell containing a
+ * COMMA, a QUOTE and a PIPE at once. The pipe is written `\|` in the GFM source because that is how
+ * a pipe reaches a cell at all; what the reader SEES — and what must be re-escaped on the way out —
+ * is the bare `|`. `typographer` is off (`parse.ts:26`), so the quotes stay the ASCII ones.
+ */
+const ESCAPE_DOC = ['| what | n |', '| --- | --- |', '| a, "b" \\| c | 1 |', ''].join('\n');
+
+const copyButtonsOf = (table: HTMLTableElement): HTMLButtonElement[] => [
+  ...toolbarOf(table).querySelectorAll<HTMLButtonElement>(`.${COPY_BUTTON_CLASS}`),
+];
+const csvButtonOf = (table: HTMLTableElement): HTMLButtonElement =>
+  toolbarOf(table).querySelector<HTMLButtonElement>(`.${COPY_CSV_CLASS}`)!;
+const markdownButtonOf = (table: HTMLTableElement): HTMLButtonElement =>
+  toolbarOf(table).querySelector<HTMLButtonElement>(`.${COPY_MARKDOWN_CLASS}`)!;
+const statusOf = (table: HTMLTableElement): HTMLElement =>
+  toolbarOf(table).querySelector<HTMLElement>(`.${COPY_STATUS_CLASS}`)!;
+
+/** The task the promise settles in — the write is async even when it cannot happen at all. */
+const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+interface ClipboardStub {
+  readonly written: string[];
+  restore: () => void;
+}
+
+/**
+ * Replace `navigator.clipboard` with a recorder.
+ *
+ * jsdom implements NO clipboard at all, so the property is absent by default — which is why the
+ * unavailable case below needs no stub, and why a case that wants a SUCCESS needs this one. It is
+ * defined on the window's own navigator, which is exactly what `writeToClipboard` reads.
+ */
+function stubClipboard(behaviour: 'resolve' | 'reject' | 'throw' = 'resolve'): ClipboardStub {
+  const written: string[] = [];
+  Object.defineProperty(window.navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText(text: string): Promise<void> {
+        if (behaviour === 'throw') throw new Error('writeText threw synchronously');
+        if (behaviour === 'reject') return Promise.reject(new Error('NotAllowedError'));
+        written.push(text);
+        return Promise.resolve();
+      },
+    },
+  });
+  return {
+    written,
+    restore: () => Reflect.deleteProperty(window.navigator, 'clipboard'),
+  };
+}
+
+/** CSV back into fields — RFC 4180 in reverse, so the escaping is checked by what it DECODES to. */
+function parseCsv(text: string): string[][] {
+  const records: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') {
+        field += '"';
+        i += 1;
+      } else if (ch === '"') quoted = false;
+      else field += ch;
+      continue;
+    }
+    if (ch === '"') quoted = true;
+    else if (ch === ',') {
+      row.push(field);
+      field = '';
+    } else if (ch === '\r' && text[i + 1] === '\n') {
+      row.push(field);
+      records.push(row);
+      row = [];
+      field = '';
+      i += 1;
+    } else field += ch;
+  }
+  row.push(field);
+  records.push(row);
+  return records;
+}
+
+/** A GFM table row back into cells: split on UNESCAPED pipes, then unescape. */
+function parseMarkdownRow(line: string): string[] {
+  const cells: string[] = [];
+  let cell = '';
+  let escaped = false;
+  for (const ch of line.trim().replace(/^\|/, '').replace(/\|$/, '')) {
+    if (escaped) {
+      cell += ch;
+      escaped = false;
+    } else if (ch === '\\') escaped = true;
+    else if (ch === '|') {
+      cells.push(cell);
+      cell = '';
+    } else cell += ch;
+  }
+  cells.push(cell);
+  return cells.map((text) => text.trim());
+}
+
+// ══ THE SERIALIZER — THE PURE HALF ════════════════════════════════════════════════════════════
+
+describe('3.8 · csvField — RFC 4180, the three conditions that need a quote', () => {
+  it('leaves an ordinary field alone', () => {
+    expect(csvField('eng')).toBe('eng');
+    expect(csvField('')).toBe('');
+    expect(csvField('a b')).toBe('a b');
+  });
+
+  it('★ a COMMA quotes the field — the defect is two cells where there was one', () => {
+    expect(csvField('a, b')).toBe('"a, b"');
+  });
+
+  it('★ a QUOTE is DOUBLED, and the field is quoted', () => {
+    expect(csvField('say "hi"')).toBe('"say ""hi"""');
+  });
+
+  it('a NEWLINE quotes the field — the RFC allows the break INSIDE a quoted field', () => {
+    expect(csvField('a\nb')).toBe('"a\nb"');
+    expect(csvField('a\r\nb')).toBe('"a\r\nb"');
+  });
+});
+
+describe('3.8 · markdownField — the pipe, and the backslash that must go first', () => {
+  it('★ a PIPE is escaped — the defect is a row that ends mid-cell', () => {
+    expect(markdownField('a | b')).toBe('a \\| b');
+  });
+
+  it('★ the BACKSLASH is escaped FIRST, so a cell holding one survives its own escape', () => {
+    // A cell whose displayed text is `a\|b`. Escaping the pipe ALONE emits `a\\|b`, which markdown
+    // reads as an escaped BACKSLASH followed by a BARE pipe — the table breaks on exactly the
+    // character the escape was for. The ORDER is the correctness, and this is the fixture that can
+    // tell the two orders apart.
+    expect(markdownField('a\\|b')).toBe('a\\\\\\|b');
+    expect(parseMarkdownRow(`| ${markdownField('a\\|b')} |`)).toEqual(['a\\|b']);
+  });
+
+  it('a newline becomes a space — a GFM table row IS one line', () => {
+    expect(markdownField('a\nb')).toBe('a b');
+    expect(markdownField('a\r\nb')).toBe('a b');
+  });
+});
+
+describe('3.8 · toCsv / toMarkdownTable — the shapes the two formats have', () => {
+  const MATRIX = [
+    ['dept', 'who'],
+    ['eng', 'zoe'],
+  ];
+
+  it('CSV records are separated by CRLF, with no trailing terminator', () => {
+    expect(toCsv(MATRIX)).toBe('dept,who\r\neng,zoe');
+  });
+
+  it('the markdown table carries the DELIMITER row that makes it a table at all', () => {
+    expect(toMarkdownTable(MATRIX)).toBe('| dept | who |\n| --- | --- |\n| eng | zoe |');
+  });
+
+  it('an empty matrix is the empty string, not a lone delimiter', () => {
+    expect(toMarkdownTable([])).toBe('');
+    expect(toCsv([])).toBe('');
+  });
+});
+
+describe('3.8 · ★ the body`s named fixture — a cell with a COMMA, a QUOTE and a PIPE', () => {
+  it('★ the CSV round-trips to the SAME cell, which an un-escaped serializer cannot', () => {
+    const { column } = enhanced(ESCAPE_DOC);
+    const table = tableIn(column);
+    const cell = bodyRowsOf(table)[0].cells[0].textContent ?? '';
+
+    // The FIRING CONTROL: the fixture really does put all three characters on the screen. Without
+    // it, every assertion below is equally true of a cell that never contained them.
+    expect(cell, 'the fixture must show a comma').toContain(',');
+    expect(cell, 'the fixture must show a quote').toContain('"');
+    expect(cell, 'the fixture must show a pipe').toContain('|');
+
+    const matrix = copyMatrix(['what', 'n'], bodyRowsOf(table));
+    expect(matrix[1][0]).toBe('a, "b" | c');
+
+    // RED-FIRST TARGET: a serializer that does not quote the comma emits `a, "b" | c,1`, which
+    // decodes to THREE fields. The round trip is what sees that; a string comparison would only
+    // ever restate whatever was emitted.
+    const decoded = parseCsv(toCsv(matrix));
+    expect(decoded).toHaveLength(2);
+    expect(decoded[1], 'the record must decode back to exactly two fields').toHaveLength(2);
+    expect(decoded[1][0]).toBe('a, "b" | c');
+    expect(decoded[1][1]).toBe('1');
+  });
+
+  it('★ the MARKDOWN round-trips to the SAME cell — the pipe does not end the row', () => {
+    const { column } = enhanced(ESCAPE_DOC);
+    const table = tableIn(column);
+    const matrix = copyMatrix(['what', 'n'], bodyRowsOf(table));
+
+    const lines = toMarkdownTable(matrix).split('\n');
+    expect(lines).toHaveLength(3); // header, delimiter, one row
+
+    // RED-FIRST TARGET: an un-escaped pipe makes this row decode to THREE cells against a
+    // two-column delimiter — a table every renderer draws wrong.
+    const decoded = parseMarkdownRow(lines[2]);
+    expect(decoded, 'the row must decode back to exactly two cells').toHaveLength(2);
+    expect(decoded[0]).toBe('a, "b" | c');
+    expect(decoded[1]).toBe('1');
+  });
+});
+
+// ══ F22 — THE ROWS CURRENTLY SHOWN, IN THE ORDER CURRENTLY SHOWN ══════════════════════════════
+
+describe('3.8 · shownRowsIn — the row set is the filter`s own definition of shown', () => {
+  it('skips the hidden rows and keeps DOM order', () => {
+    const { column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+    const rows = bodyRowsOf(table);
+    rows[1].hidden = true;
+
+    expect(shownRowsIn(table.tBodies[0])).toEqual([rows[0], rows[2]]);
+  });
+});
+
+describe('3.8 · ★ F22 — what you SEE is what you COPY, composed with BOTH controls', () => {
+  it('★ a SORTED and FILTERED table copies the shown rows in the shown order', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+
+      buttonsOf(table)[2].click(); // sort by `n`, ascending: 2, 9, 10
+      typeFilter(table, 'eng'); // hides the `ops` row
+
+      // ★ THE FIXTURE IS THE INSTRUMENT: document order is zoe / adam / bo and screen order is
+      // adam / zoe, so the two share NO position and NO row set. A copy reading `documentOrder`,
+      // or the source, emits three rows in the other order — F22's exact defect, and it cannot
+      // look right here.
+      expect(columnText(table, 1), 'the fixture must really be re-ordered').toEqual([
+        'bo',
+        'adam',
+        'zoe',
+      ]);
+      expect(shownText(table, 1), 'and really be filtered').toEqual(['adam', 'zoe']);
+
+      csvButtonOf(table).click();
+      await settle();
+
+      expect(clipboard.written).toHaveLength(1);
+      expect(clipboard.written[0]).toBe('dept,who,n\r\neng,adam,9\r\neng,zoe,10');
+      expect(statusOf(table).textContent).toBe('Copied 2 rows as CSV.');
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('★ the same table, as MARKDOWN — the same set and the same order', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+
+      buttonsOf(table)[2].click();
+      typeFilter(table, 'eng');
+      markdownButtonOf(table).click();
+      await settle();
+
+      expect(clipboard.written[0]).toBe(
+        [
+          '| dept | who | n |',
+          '| --- | --- | --- |',
+          '| eng | adam | 9 |',
+          '| eng | zoe | 10 |',
+        ].join('\n'),
+      );
+      expect(statusOf(table).textContent).toBe('Copied 2 rows as Markdown.');
+    } finally {
+      clipboard.restore();
+    }
+  });
+});
+
+describe('3.8 · ★ F22, continued — the header, the empty result, the count', () => {
+  it('★ the header carries the COLUMN NAMES, not the sort control`s state and glyph', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+      buttonsOf(table)[0].click(); // sort by `dept`, ascending
+
+      // The FIRING CONTROL: by now the `<th>` really does read more than its own label, so the
+      // assertion below is about WHERE the labels come from and not about a header that never
+      // changed. RED-FIRST TARGET: a `textContent` read at CLICK time copies this string.
+      expect(
+        headerCellsOf(table)[0].textContent,
+        'the sort must have painted its state into the header',
+      ).toContain('ascending');
+
+      csvButtonOf(table).click();
+      await settle();
+
+      expect(clipboard.written[0].split('\r\n')[0]).toBe('dept,who,n');
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('a filter matching NO row copies the header alone, and says zero', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+      typeFilter(table, 'nothing matches');
+      csvButtonOf(table).click();
+      await settle();
+
+      expect(clipboard.written[0]).toBe('dept,who,n');
+      expect(statusOf(table).textContent).toBe('Copied 0 rows as CSV.');
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('copiedText is singular at one row', () => {
+    expect(copiedText(1, 'CSV')).toBe('Copied 1 row as CSV.');
+    expect(copiedText(0, 'Markdown')).toBe('Copied 0 rows as Markdown.');
+  });
+});
+
+describe('3.8 · copyMatrix — rectangular at the widest thing on screen', () => {
+  it('pads a SHORT row and keeps an OVER-WIDE row`s extra cell', () => {
+    const { column } = enhanced(
+      '<table><thead><tr><th>h</th><th>i</th></tr></thead>' +
+        '<tbody><tr><td>a</td></tr><tr><td>b</td><td>2</td><td>x</td></tr></tbody></table>\n',
+    );
+    const table = tableIn(column);
+    const matrix = copyMatrix(['h', 'i'], bodyRowsOf(table));
+
+    expect(matrix).toEqual([
+      ['h', 'i', ''],
+      ['a', '', ''],
+      ['b', '2', 'x'],
+    ]);
+    // Every record has the same field count, which is what both formats require of themselves.
+    expect(new Set(matrix.map((row) => row.length)).size).toBe(1);
+  });
+
+  it('collapses the whitespace the SCREEN collapses', () => {
+    const { column } = enhanced(
+      '<table><thead><tr><th>h</th></tr></thead><tbody><tr><td>a\n   b</td></tr></tbody></table>\n',
+    );
+    const table = tableIn(column);
+    expect(copyMatrix(['h'], bodyRowsOf(table))[1][0]).toBe('a b');
+  });
+});
+
+// ══ GATE-2 RULING Q2 — TWO BUTTONS, NO MENU ═══════════════════════════════════════════════════
+
+describe('3.8 · ★ gate-2 Q2 — TWO real buttons in the strip, and no overlay of any kind', () => {
+  it('exactly two, each a real <button> with no tabindex of its own', () => {
+    const { column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+    const copies = copyButtonsOf(table);
+
+    expect(copies).toHaveLength(2);
+    for (const button of copies) {
+      // Selected BY CLASS above, so a non-button control is FOUND and this is the clause seen to
+      // fail — never a `querySelector` that returns nothing and dies on a dereference instead.
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.type).toBe('button');
+      expect(button.hasAttribute('tabindex')).toBe(false);
+    }
+    expect(copies[0]).toBe(csvButtonOf(table));
+    expect(copies[1]).toBe(markdownButtonOf(table));
+  });
+
+  it('★ NO menu, NO popup, NO focus trap — §3.11 rows 9 and 21 stay inactive', () => {
+    const { column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+
+    // The ruling is CHECKABLE rather than merely recorded: a menu version needs at least one of
+    // these, and none of them exists anywhere in the reading column.
+    expect(column.querySelectorAll('[aria-haspopup]')).toHaveLength(0);
+    expect(
+      column.querySelectorAll('[role="menu"], [role="menuitem"], [role="dialog"]'),
+    ).toHaveLength(0);
+    expect(column.querySelectorAll('dialog')).toHaveLength(0);
+    expect(toolbarOf(table).hasAttribute('role')).toBe(false);
+    for (const button of copyButtonsOf(table)) {
+      expect(button.hasAttribute('aria-expanded')).toBe(false);
+      expect(button.hasAttribute('aria-controls')).toBe(false);
+    }
+  });
+
+  it('the accessible name carries ACTION and SELECTION, and the visible text is inside it', () => {
+    const { column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+
+    expect(csvButtonOf(table).textContent).toBe('Copy CSV');
+    expect(csvButtonOf(table).getAttribute('aria-label')).toBe(
+      'Copy CSV from the dept, who, n table',
+    );
+    expect(markdownButtonOf(table).getAttribute('aria-label')).toBe(
+      'Copy Markdown from the dept, who, n table',
+    );
+    // WCAG 2.5.3 label-in-name: the accessible name CONTAINS the visible text, so a voice-control
+    // reader saying what they can see reaches the control they can see.
+    for (const button of copyButtonsOf(table)) {
+      expect(button.getAttribute('aria-label')).toContain(button.textContent);
+    }
+  });
+});
+
+describe('3.8 · the copy`s own status region (row 20 / F13`s property, one control over)', () => {
+  it('is POLITE and OUT of the a11y tree while silent', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+
+      expect(statusOf(table).getAttribute('role')).toBe('status');
+      expect(statusOf(table).hidden, 'a silent region stays OUT of the tree').toBe(true);
+      expect(statusOf(table).textContent).toBe('');
+
+      csvButtonOf(table).click();
+      await settle();
+      expect(statusOf(table).hidden).toBe(false);
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('★ it is NOT the filter`s count — a copy never erases "n of m shown"', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+      typeFilter(table, 'eng');
+      expect(countOf(table).textContent).toBe('Showing 2 of 3 rows');
+
+      csvButtonOf(table).click();
+      await settle();
+
+      // §4's "how many are shown out of how many" survives an unrelated action.
+      expect(countOf(table).textContent).toBe('Showing 2 of 3 rows');
+      expect(statusOf(table).textContent).toBe('Copied 2 rows as CSV.');
+    } finally {
+      clipboard.restore();
+    }
+  });
+});
+
+// ══ §3.8 / D-7 — THE CLIPBOARD CAN REFUSE, AND THAT IS A STATED FAILURE ═══════════════════════
+
+describe('3.8 · ★ an unavailable clipboard degrades to a STATED failure, never a throw', () => {
+  it('★ NO clipboard at all (jsdom`s own state) — announced, not thrown, table untouched', async () => {
+    const { column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // The FIRING CONTROL for the condition itself: this environment really has no clipboard, so
+    // the failure below is the shipped path and not an injected branch.
+    expect(window.navigator.clipboard, 'jsdom must have no clipboard').toBeUndefined();
+    const before = table.outerHTML;
+
+    expect(() => csvButtonOf(table).click()).not.toThrow();
+    await settle();
+
+    expect(statusOf(table).hidden).toBe(false);
+    expect(statusOf(table).textContent).toBe('Copy unavailable. The table is unchanged.');
+    // §3.8: a stated failure BESIDE A STILL-READABLE TABLE — never a broken button.
+    expect(table.outerHTML).toBe(before);
+    expect(shownRowsOf(table)).toHaveLength(3);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('★ a REJECTED write — the rejection is async, and it is caught ON THE PROMISE', async () => {
+    const clipboard = stubClipboard('reject');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+
+      // RED-FIRST TARGET: a synchronous `try` around the call catches nothing here, so the
+      // rejection escapes as an unhandled promise rejection out of a click handler — D-7's
+      // totality broken on the one path that is not synchronous.
+      expect(() => markdownButtonOf(table).click()).not.toThrow();
+      await settle();
+
+      expect(statusOf(table).textContent).toBe('Copy unavailable. The table is unchanged.');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('a write that throws SYNCHRONOUSLY is the same stated failure', async () => {
+    const clipboard = stubClipboard('throw');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+
+      expect(() => csvButtonOf(table).click()).not.toThrow();
+      await settle();
+
+      expect(statusOf(table).textContent).toBe('Copy unavailable. The table is unchanged.');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      clipboard.restore();
+    }
+  });
+
+  it('a SERIALIZATION failure says the same thing and writes NOTHING', async () => {
+    const clipboard = stubClipboard();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { column } = enhanced(COPY_DOC);
+      const table = tableIn(column);
+
+      // Reading a cell's displayed text is a DOM accessor call and can therefore throw. Injected
+      // where it really happens, not at a seam invented for the test.
+      Object.defineProperty(bodyRowsOf(table)[1].cells[0], 'textContent', {
+        configurable: true,
+        get() {
+          throw new Error('the cell text accessor is poisoned');
+        },
+      });
+
+      expect(() => csvButtonOf(table).click()).not.toThrow();
+      await settle();
+
+      expect(clipboard.written, 'nothing may reach the clipboard').toHaveLength(0);
+      expect(statusOf(table).textContent).toBe('Copy unavailable. The table is unchanged.');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      clipboard.restore();
+    }
+  });
+});
+
+// ══ THE 3.2 / 3.6 / 3.7 PROPERTIES, AND D-7 ═══════════════════════════════════════════════════
+
+describe('3.8 · the copy does not break what 3.2, 3.6 and 3.7 established', () => {
+  it('IDEMPOTENT — enhancing twice leaves TWO copy buttons and ONE status', () => {
+    const { host, column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+    const afterFirst = column.innerHTML;
+
+    enhanceTables(host);
+
+    expect(copyButtonsOf(table)).toHaveLength(2);
+    expect(toolbarOf(table).querySelectorAll(`.${COPY_STATUS_CLASS}`)).toHaveLength(1);
+    expect(column.innerHTML).toBe(afterFirst);
+  });
+
+  it('HEADER-GATED — a headerless table grows no copy button', () => {
+    const { column } = enhanced('<table><tbody><tr><td>a</td></tr></tbody></table>\n');
+    const table = tableIn(column);
+    expect(table.hasAttribute(TABLE_STATE_ATTR)).toBe(false);
+    expect(
+      table.previousElementSibling?.querySelectorAll(`.${COPY_BUTTON_CLASS}`) ?? [],
+    ).toHaveLength(0);
+  });
+
+  it('TOTAL — a header table with no body rows is enhanced and gets NO copy button', () => {
+    const { column } = enhanced('<table><thead><tr><th>h</th></tr></thead></table>\n');
+    const table = tableIn(column);
+    expect(table.getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
+    expect(toolbarOf(table).querySelectorAll(`.${COPY_BUTTON_CLASS}`)).toHaveLength(0);
+  });
+
+  it('the SORT and the FILTER still work, unchanged, with the copy installed beside them', () => {
+    const { column } = enhanced(COPY_DOC);
+    const table = tableIn(column);
+    const documentOrder = bodyRowsOf(table);
+
+    buttonsOf(table)[0].click();
+    expect(columnText(table, 0)).toEqual(['eng', 'eng', 'ops']);
+    expect(columnText(table, 1), '3.6`s stability, still stable').toEqual(['zoe', 'adam', 'bo']);
+    buttonsOf(table)[0].click();
+    buttonsOf(table)[0].click();
+    expect(bodyRowsOf(table)).toEqual(documentOrder);
+
+    typeFilter(table, 'eng');
+    expect(shownText(table, 1)).toEqual(['zoe', 'adam']);
+    expect(countOf(table).textContent).toBe('Showing 2 of 3 rows');
+    clearOf(table).click();
+    expect(shownRowsOf(table)).toHaveLength(3);
+  });
+});
+
+describe('3.8 · ★ SCOPED (row 11 / F4) — table 2`s buttons copy table 2', () => {
+  it('each table`s copy reads its OWN rows, with the other table as the firing control', async () => {
+    const clipboard = stubClipboard();
+    try {
+      const { column } = enhanced(
+        `${gfmTable('one', '| b | 2 |', '| a | 1 |')}\n${gfmTable('two', '| d | 4 |', '| c | 3 |')}`,
+      );
+
+      csvButtonOf(tableIn(column, 1)).click();
+      await settle();
+      expect(clipboard.written[0]).toBe('two,n\r\nd,4\r\nc,3');
+
+      // The FIRING CONTROL for the scope: table 1's own button copies table 1, so "table 2" above
+      // is a statement about which handler ran and not about a document with one table in it.
+      csvButtonOf(tableIn(column, 0)).click();
+      await settle();
+      expect(clipboard.written[1]).toBe('one,n\r\nb,2\r\na,1');
+    } finally {
+      clipboard.restore();
+    }
+  });
+});
+
+describe('3.8 · the copy introduces NO HTML string (§5, AGENTS.md #3)', () => {
+  it('★ nothing the copy builds or does assigns innerHTML — with a control that fires', async () => {
+    const clipboard = stubClipboard();
+    const host = document.createElement(HOST_TAG);
+    document.body.appendChild(host);
+    hosts.push(host);
+    mount(`# Doc\n\n${COPY_DOC}`, host, { contained: true });
+    const column = host.shadowRoot!.querySelector('.peekover-reader')!;
+    const table = tableIn(column);
+    const toolbar = document.createElement('div');
+    table.before(toolbar);
+
+    // The spy goes on AFTER the mount, so what is measured is this module and not the sanitizer.
+    const setHtml = vi.spyOn(Element.prototype, 'innerHTML', 'set');
+    try {
+      const undo = installTableCopy(table, toolbar)!;
+      toolbar.querySelector<HTMLButtonElement>(`.${COPY_CSV_CLASS}`)!.click();
+      await settle();
+      undo();
+
+      expect(setHtml).not.toHaveBeenCalled();
+      // ★ THE FIRING CONTROL — "not called" is equally true of a spy wired to nothing.
+      document.createElement('div').innerHTML = '<b>x</b>';
+      expect(setHtml).toHaveBeenCalledTimes(1);
+    } finally {
+      clipboard.restore();
+    }
+  });
+});
+
+describe('3.8 · D-7 — the copy is a NEW failure source inside the per-table try', () => {
+  it('a throw out of the copy install does not escape, and the table is left as rendered', () => {
+    const host = document.createElement(HOST_TAG);
+    document.body.appendChild(host);
+    hosts.push(host);
+    mount(`# Doc\n\n${COPY_DOC}\n${COPY_DOC}`, host, { contained: true });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const column = host.shadowRoot!.querySelector('.peekover-reader')!;
+    const tables = [...column.querySelectorAll('table')];
+    expect(tables).toHaveLength(2);
+    const htmlBefore = column.innerHTML;
+
+    // The copy is the LAST install, so its throw lands after the sort has moved every header's
+    // nodes into a button AND the filter has inserted its second `<tbody>`. Nothing may survive.
+    // Poisoned on the copy's own attach call — three nodes into the strip — and on the FIRST
+    // table only, so table 2 is the untouched arm.
+    let fired = 0;
+    const realAppend = HTMLElement.prototype.append;
+    vi.spyOn(HTMLElement.prototype, 'append').mockImplementation(function (
+      this: HTMLElement,
+      ...nodes: (Node | string)[]
+    ) {
+      if (this.className === TABLE_TOOLBAR_CLASS && nodes.length === 3 && fired === 0) {
+        fired += 1;
+        throw new Error('the copy install is poisoned');
+      }
+      return realAppend.apply(this, nodes);
+    });
+
+    expect(() => enhanceTables(host)).not.toThrow();
+
+    // The FIRING CONTROL: the injection really did fire, exactly once, on the first table.
+    expect(fired, 'the poison never fired — the case would prove nothing').toBe(1);
+    expect(tables[0].hasAttribute(TABLE_STATE_ATTR)).toBe(false);
+    expect(tables[1].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
+    // ★ EXACTLY as rendered: the sort's buttons, the filter's controls and its second `<tbody>`
+    // are all gone, and so is the toolbar host they were in.
+    expect(tables[0].outerHTML).toBe(
+      new DOMParser().parseFromString(htmlBefore, 'text/html').querySelector('table')!.outerHTML,
+    );
+    expect(tables[0].previousElementSibling?.className).not.toBe(TABLE_TOOLBAR_CLASS);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('3.8 · the copy`s undo restores the strip exactly', () => {
+  it('removes both buttons and the status region, and touches nothing else', () => {
+    const host = document.createElement(HOST_TAG);
+    document.body.appendChild(host);
+    hosts.push(host);
+    mount(`# Doc\n\n${COPY_DOC}`, host, { contained: true });
+    const column = host.shadowRoot!.querySelector('.peekover-reader')!;
+    const table = tableIn(column);
+    const before = column.innerHTML;
+    const toolbar = document.createElement('div');
+    table.before(toolbar);
+
+    const undo = installTableCopy(table, toolbar)!;
+    expect(undo, 'nothing to undo — the fixture did not install').toBeTypeOf('function');
+    expect(toolbar.childNodes).toHaveLength(3);
+
+    undo();
+
+    expect(toolbar.childNodes, 'the undo must empty the strip it filled').toHaveLength(0);
+    toolbar.remove();
+    expect(column.innerHTML).toBe(before);
   });
 });

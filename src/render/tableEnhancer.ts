@@ -58,7 +58,8 @@
 // The toolbar host was STILL EMPTY after 3.6, and that was not an oversight — it is where D-12 put
 // the sort. Divergence 1 places the control INSIDE its own `<th>`, so the sort never enters the
 // strip. TASK 3.7's FILTER is the first control that does fill it (a field, a clear button and the
-// count); the two copy buttons are 3.8's.
+// count); TASK 3.8 adds the two copy buttons and their own status region, for FIVE children — and
+// two buttons rather than a menu is gate-2's ruling Q2, so no popup and no focus trap enter here.
 //
 // ★ THE HOST STILL CARRIES NO `role`, AND THAT IS NOW A DECISION RATHER THAN A WAIT. `role="toolbar"`
 // is a composite widget: it promises arrow-key navigation and a single roving tab stop. Declaring
@@ -66,7 +67,7 @@
 // worse than three native controls each reachable by Tab — the shape §4 actually asks for. See
 // `tableTools.ts`'s filter section, where the reasoning is recorded beside the control it governs.
 
-import { installTableFilter, installTableSort } from './tableTools';
+import { installTableCopy, installTableFilter, installTableSort } from './tableTools';
 
 /**
  * The state attribute the enhanced `<table>` carries. Mirrors `DIAGRAM_STATE_ATTR`
@@ -135,6 +136,7 @@ function attachToolbar(table: HTMLTableElement): void {
   let toolbar: HTMLElement | undefined;
   let undoSort: (() => void) | undefined;
   let undoFilter: (() => void) | undefined;
+  let undoCopy: (() => void) | undefined;
   try {
     toolbar = buildTableToolbar(table.ownerDocument);
     table.before(toolbar);
@@ -142,11 +144,15 @@ function attachToolbar(table: HTMLTableElement): void {
     // AFTER the sort, so `installTableSort` captures a `<tbody>` the filter has not yet added a
     // sibling body to, and reads header cells that hold exactly their own text.
     undoFilter = installTableFilter(table, toolbar);
+    // LAST, so the strip reads filter-then-copy in document order — and so the copy's own label
+    // capture happens while the header still holds exactly its own text, for the sort's reason.
+    undoCopy = installTableCopy(table, toolbar);
     table.setAttribute(TABLE_STATE_ATTR, 'enhanced');
   } catch (err) {
     // Leave the table exactly as rendered — readable, styled, and indistinguishable from one the
-    // walk never reached. All four cleanups are no-ops in the ordinary case, and they unwind in
+    // walk never reached. All five cleanups are no-ops in the ordinary case, and they unwind in
     // the reverse order the mutations landed.
+    undoCopy?.();
     undoFilter?.();
     undoSort?.();
     toolbar?.remove();

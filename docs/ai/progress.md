@@ -922,13 +922,182 @@ manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint` **EXIT=0**. 
 (node byte scan and `tr -cd`) in all six edited files, with a control file reading **2** in both. Ablations
 by cp-aside + restore, never `git checkout`; both `src/` files restored to their shipped md5s afterwards
 (`tableTools.ts` `c2a1be04…`; `tableEnhancer.ts` `3c80f863…`).
-**TASK 3.8 IS NEXT** — COPY-OUT: CSV and Markdown from the rows **currently shown, in the order currently
-shown** (D-10, §3.6), which is **F22**, the half of the filter's contract another task asserts. ★ **Gate-2
-ruling Q2: TWO BUTTONS, no menu** — rows 9 and 21 stay `—`, so no popup, no menu and no focus trap. The
-serializer is a unit including **a cell containing a comma, a quote and a pipe**; **D-10's `permissions: []`
-is re-proven on both built manifests in that task, not inherited**, and its `file://` residual is **4.2's**.
-Its baseline is **321,713 B CS** (`c68e437c…` / `e1287b5c…`) and **397,337 B app** (`4ee49a89…`), and the
-content script stays byte-identical until **4.1**.
+★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
+SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
+`Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status
+region, serializing the rows **CURRENTLY SHOWN, IN THE ORDER CURRENTLY SHOWN** (**F22**, §4) through
+`navigator.clipboard.writeText`. `installTableCopy` is `tableTools.ts`'s third install and `tableEnhancer`
+calls it LAST, after the sort and the filter; the strip now carries **six** children. Unit **944/944** (907
++ this task's **37**); browser **1183 passed | 15 skipped, 112 files, 0 failed** (1159 + this task's **24**,
+12 cases × 2 engines); `pnpm lint` **EXIT=0**.
+★ **F22 IS ONE LINE, AND THAT IS THE DESIGN.** The handler reads `shownRowsIn(body)` — `[...body.rows]`
+minus the ones the filter set `hidden` on — at CLICK time, off the live `<tbody>`. Both halves come for
+free and neither is tracked separately: the SORT **moves** its `<tr>` nodes, so DOM order already IS screen
+order, and the FILTER **hides** rather than removes, so a hidden row is skippable rather than something to
+remember. There is no second copy of either control's state to disagree with the first.
+★ **F22 — RED-FIRST, IN BOTH HALVES SEPARATELY, unit AND real engine.** **ABLATION A1** (`shownRowsIn(body)`
+→ `[...body.rows]`, the filter-blind copy): **3 unit red**, the hidden `ops` row visible in the output
+(`'dept,who,n\r\nops,bo,2\r\neng,adam,9…'`), and **4 browser red across BOTH engines** reading the same
+defect **back out of the real clipboard**. **ABLATION A2** (a `documentOrder` captured at install, filtered
+at click — the right SET, the wrong ORDER): **2 unit red**, `'…eng,zoe,10\r\neng,adam,9'` where
+`'…eng,adam,9\r\neng,zoe,10'` belongs. ★ **The fixture is the instrument:** sorted by `n` ascending and
+filtered to `eng`, document order (zoe / adam / bo) and screen order (adam / zoe) share **no position and
+no row set**, so a source-reading copy cannot look right.
+★ **THE ASSERTION ORDER WAS WRONG ON THE FIRST FIRING, AND THE ABLATION IS WHAT SAID SO.** In A1's first
+browser run the failure was `expected 'Copied 3 rows as CSV.' to be 'Copied 2 rows as CSV.'` — the
+CONFIRMATION's count reds before the clipboard readback runs, so the clause that actually inspects the
+copied bytes never fired. The two clauses were reordered — **bytes first, confirmation second** — and the
+re-run reds on the readback itself, on both engines. The check that finds the defect has to be the one seen
+to fail (the assertion-order lesson, one suite over).
+★ **THE SERIALIZER IS A PURE UNIT, AND THE ESCAPING IS ASSERTED BY ROUND-TRIPPING RATHER THAN BY STRING
+COMPARISON.** `csvField` / `toCsv` (RFC 4180: a field containing a quote, a comma or a line break is
+quoted, and an embedded quote is DOUBLED; records joined with CRLF, no trailing terminator) and
+`markdownField` / `toMarkdownTable` (a pipe escaped `\|`, a newline collapsed to a space because a GFM row
+IS one line). The body's named fixture is a **document**, not a hand-built string: a cell whose displayed
+text is `a, "b" | c` — comma, quote AND pipe at once — with a firing control asserting all three really are
+on the screen before anything is serialized. ★ **RED-FIRST: ABLATION B1** (`csvField` returns its input):
+2 unit red, the round trip decoding to `[ 'a', ' b | c', '1' ]` — *"the record must decode back to exactly
+two fields: … got 3"*. **ABLATION B2** (the pipe escape removed): 1 unit red, `[ 'a, "b"', 'c', '1' ]` —
+three cells against a two-column delimiter. A string comparison would only ever restate whatever the
+serializer emitted; the decode is what can fail.
+★ **THE BACKSLASH IS ESCAPED BEFORE THE PIPE, AND THE ORDER IS THE WHOLE CORRECTNESS — RED-FIRST
+(ABLATION C, the two `.replace`s swapped):** 1 unit red, `expected 'a\\|b' to be 'a\\\|b'`. A cell reading
+`a\|b` escaped for the pipe alone emits `a\\|b`, which markdown reads as an escaped BACKSLASH followed by a
+BARE pipe — the table breaks on exactly the character the escape was for.
+★ **THE HEADER'S LABELS ARE CAPTURED AT INSTALL, AND A MEASUREMENT IS WHY — RED-FIRST (ABLATION D, the
+header read at CLICK time):** 1 unit red, `expected 'dept ascending▲,who,n' to be 'dept,who,n'`. By copy
+time each `<th>` also holds the sort's state text and its `aria-hidden` glyph, so a `textContent` read at
+click time copies **the control** into the header row of the copied table. The labels are therefore read
+ONCE, at install, when the cells hold exactly their own text — `installTableSort` paints `none` as the
+empty string, which is what makes the timing safe, and it is the same timing and the same reason as 3.7's
+`tableName`. The case carries its own firing control: the `<th>` is asserted to really read *"ascending"*
+before the copy is asked.
+★ **D-10 RE-PROVEN, NOT INHERITED — AND `permissions: []` HELD ON BOTH BUILT MANIFESTS (654 / 770 B) AFTER
+A REAL CLIPBOARD WRITE.** The copy is the first feature on this milestone's graphs that touches the
+clipboard, so this is where a `clipboardWrite` permission would have become necessary if the plan's
+documentation finding were wrong. It was not. **The two engines gate the write differently and NEITHER gate
+is a manifest key** — measured here, and identical to what `diagramActions.browser.test.ts:840-849` measured
+for `clipboard.write`: **FIREFOX writes on the gesture alone** (`clipboard-write` is not a `PermissionName`
+in Gecko — there is nothing to ask for or to grant, so a real trusted click, the engine's real clipboard and
+nothing granted to anybody is D-10 in its strongest form), while **CHROMIUM consults the Permissions API**
+and a Playwright browser context leaves that at `prompt`. So the Chromium case is an **A-B ablation whose
+OFF arm is PINNED** (`expect(consent).toBe('prompt')` — an ablation whose off arm can quietly not run is no
+ablation at all): consent `prompt` → the stated failure, `grantClipboardConsent()` over CDP → `Copied 2 rows
+as CSV.`, **same build, same button, same bytes, nothing rebuilt between the arms**. ★ **The conjunction is
+the proof and either half alone is not:** `permissions: []` read on its own has been true since 007 and
+would be true of a build in which the copy did not exist, so the manifest case **exercises the copy FIRST**
+and only then reads `.output/`'s real emitted JSON — an absence DESPITE exercise. Its checker runs against
+a deliberately malformed fixture in the same file, unconditionally, so it is non-vacuous even where
+`.output/` is absent and the artifact case skips by name.
+★ **WHAT D-10 STILL DOES NOT PROVE, STATED SO NOBODY READS MORE INTO A GREEN:** that a focused, headful
+Chrome auto-grants the consent to a gesture-driven write. A Playwright context cannot exhibit that, and it
+stays a documentation finding. **The `file://` residual is 4.2's** — it needs the content-script surface,
+which is not here.
+★ **§3.8's DEGRADATION IS PROVEN AGAINST A REAL `NotAllowedError`, NOT AN INJECTED ONE.** Chromium's OFF
+arm IS the degradation: the rejection is caught, *"Copy unavailable. The table is unchanged."* is announced
+in the copy's own polite region, the rows are still **painted**, the filter's *"Showing 2 of 3 rows"* is
+untouched, and the button is still on screen — §3.8's *"a stated failure beside a still-readable table,
+never a broken button"*, in its own words. Three more failure shapes are covered in the unit: **no
+`navigator.clipboard` at all** (jsdom's own state, asserted as the firing control for the condition), a
+**rejected** write, a write that **throws synchronously**, and a **serialization** failure (a poisoned cell
+`textContent` accessor — the shipped path, not a test-only branch — which announces and writes nothing).
+★ **THE REJECTION IS CAUGHT ON THE PROMISE, AND D-7 IS WHY — RED-FIRST (ABLATION E, the rejection handler
+dropped from `.then`):** 1 unit red **plus a reported Unhandled Rejection**. A synchronous `try` around
+`writeText` catches nothing a refused write does; a rejection escaping a click handler is D-7's totality
+broken on the one path that is not synchronous. `writeToClipboard` also converts an ABSENT `navigator
+.clipboard` and a synchronous throw into rejections, so the caller has exactly one failure shape and the
+handler has none.
+★ **GATE-2 RULING Q2 IS APPLIED AND CHECKABLE, NOT MERELY RECORDED — TWO BUTTONS, NO MENU.** §3.11 rows 9
+and 21 stay `—`: no popup, no menu, no focus trap, no overlay work entered group 3. Asserted as an absence
+of `[aria-haspopup]`, `[role="menu"|"menuitem"|"dialog"]` and `<dialog>` anywhere in the reading column —
+**in a real engine, AFTER a click, which is exactly when a menu would appear** — plus focus still on the
+button the reader clicked (the property row 21 would otherwise be asserting the presence of). ★ **RED-FIRST
+(ABLATION G, `aria-haspopup="menu"` on both buttons):** 1 unit red, `expected …(2) to have a length of +0`.
+★ **ROW 16 / F15's SHAPE — RED-FIRST (ABLATION F, the copy control built as a `<span>`):** 1 unit red,
+`expected 'SPAN' to be 'BUTTON'`. ★ **The controls are found BY CLASS ALONE**, never
+`button.peekover-table-copy--csv`, so the ablated `<span>` is LOCATED and the shape clause is the clause
+seen to fail rather than an undefined dereference (the masked-instrument lesson, now caught six times).
+Real-engine: **TAB walks field → clear → CSV → Markdown** in the engine's own order, and **Enter AND Space**
+both activate — three native controls plus two more in document order, no roving `tabindex`, no
+`role="toolbar"`, no key handling of ours.
+★ **THE COPY'S STATUS IS ITS OWN REGION, AND THAT IS A DECISION.** `role="status"`, `hidden` rather than
+merely empty so it is OUT of the accessibility tree while silent (row 20 / F13's property, re-asserted one
+control over), and **painted** once it speaks (§5's *"state in text"* is a claim about what a sighted reader
+can see, and a `width:0` span passes every `textContent` assertion ever written). It is deliberately NOT the
+filter's count region: writing *"Copied 2 rows"* into the region carrying *"Showing 2 of 3 rows"* would
+destroy §4's *"how many are shown out of how many"* as a side effect of an unrelated action, and the copy
+must work on a table whose filter never installed. Asserted directly — after a copy, the filter's count is
+byte-identical. The confirmation carries the COUNT (*"Copied 2 rows as CSV."*) because a bare *"Copied"*
+would read identically whether or not the filter was respected.
+★ **3.2 / 3.6 / 3.7's PROPERTIES ALL HOLD, AND 3.5's CONTAINMENT DOES TOO.** TOTAL (no body rows → no copy
+control; a ragged body → a RECTANGULAR matrix, padded to the widest thing on screen, so a short row cannot
+emit fewer CSV fields than its header and an over-wide row's extra cell is not silently dropped),
+IDEMPOTENT (two buttons and one status after a second pass, `innerHTML` byte-identical), SCOPED (row 11 /
+F4: table 2's buttons copy table 2, **with table 1's own button as the firing control**), HEADER-GATED. The
+sort still cycles, is still stable and still restores document order; the filter still hides, counts and
+clears; **F23 still holds**. `tablePlacement.browser.test.ts`'s 34 geometry cases are green **unchanged**
+with five controls in the strip, and this task adds its own narrower rect claim — each copy button's box
+inside the strip's box, at the live viewport. ★ **The copy is a NEW failure source inside D-7's per-table
+try and gets its own case:** poisoning the copy's attach leaves table 1 EXACTLY as rendered (`outerHTML`
+equality against a re-parse of the pre-enhancement markup — the sort's buttons, the filter's controls, its
+second `<tbody>` and the toolbar host all gone) while table 2 is enhanced normally, with a counter asserting
+the poison fired exactly once. **F25's shape re-asserted:** an `Element.prototype.innerHTML` setter spy
+across build, copy and undo records nothing, **with a control that fires in the same test**.
+★ **THE APP CHUNK MOVES +2,309 B AND THE CONTENT SCRIPT DOES NOT MOVE AT ALL.** App **397,337 → 399,646 B**
+(`4ee49a89…`→`7275a378…`, identical on both engines); content script **321,713 B BYTE- AND md5-IDENTICAL on
+BOTH engines** (Cr `c68e437c…` / Fx `e1287b5c…`) — `tableTools`/`tableEnhancer` are not on the
+content-script graph until **4.1**. Every arm built from a wiped `.output` with `pnpm build` **and**
+`pnpm exec wxt build -b firefox`, so no engine's reading is a stale artifact. **DECOMPOSED BY ABLATION TO A
+ZERO RESIDUAL, never by an identifier grep:** **ARM 1** — the copy's code on disk, `tableEnhancer` NOT wired
+→ **397,337 B, md5 `4ee49a89…`, IDENTICAL to 3.7's on both engines**, so an unimported export and every
+helper reachable only through it cost **+0** (3.2 / 3.6 / 3.7's precedent, re-measured, and the control that
+proves the instrument sees the change) · **ARM 2** — the enhancer's wiring plus a STUB `installTableCopy`
+that references no copy helper or constant → **397,380 B, +43 B**, the import, the call, the `let`, the
+catch line and the stub's own body · **ARM 3** — everything shipped except the four serializers (both
+formats' `serialize` replaced by `() => ''`) → **399,257 B**, so **ARM 3 − ARM 2 = +1,877 B** is the control
+itself (the two buttons, the status region, the matrix, the labels, `writeToClipboard`, the failure path and
+the strings) and **SHIPPED − ARM 3 = +389 B** is `csvField` / `toCsv` / `markdownField` / `toMarkdownTable`.
+**0 + 43 + 1,877 + 389 = 2,309. Residual ZERO**, and the restored tree rebuilds to `7275a378…`
+byte-for-byte and md5-for-md5 on both engines.
+★ **FINDINGS, STATED NOT QUIETLY RE-SCOPED.** (a) **3.8's Files list omits `src/render/tableEnhancer.ts`** —
+the third time (3.6, 3.7, now); same conclusion, the copy lives in the strip the enhancer builds, so its
+install call has nowhere else to go. (b) **It also omits the two suites that PINNED THE STRIP AT THREE
+CHILDREN** — `src/render/tableEnhancer.test.ts` and `tests/browser/tableTools.browser.test.ts`. Both were
+necessarily false after this task and are updated where they stood. ★ **3.7 FORECAST FIVE AND THE ANSWER IS
+SIX**, because the copy was given a status region of its own rather than made to share the filter's count;
+the forecast is corrected in both comments rather than silently overwritten. (c) ★ **THE WINDOWS CLIPBOARD
+NORMALIZES LINE ENDINGS, AND ONLY BLINK APPLIES IT** — a markdown table written with `\n` reads back from
+`readText()` with `\r\n` in Chromium and unchanged in Gecko (`CF_UNICODETEXT` is CRLF-terminated). That is
+the CLIPBOARD's transformation, not the serializer's, so the markdown readback normalizes before comparing
+and says why; the serializer's exact bytes are pinned in the unit, which is where they belong. (d) ★ **A
+CROSS-FILE CONSENT LEAK, FOUND BY THIS TASK'S OWN PIN AND NOT FIXED HERE.**
+`diagramActions.browser.test.ts` grants the Chromium clipboard consent WITH a `browserContextId` and resets
+it WITHOUT one; `Browser.resetPermissions` with no id clears the DEFAULT context, so that grant outlives its
+file and arrives in the shared window as `granted`. It surfaced as this file's OFF arm reading
+`expected 'granted' to be 'prompt'` — the pin doing exactly its job. That sibling is outside 3.8's fence, so
+`tableCopy.browser.test.ts` **establishes its own floor** (a per-case reset on its own context) and cleans
+up BY ID with an `afterEach` assertion that the consent did not survive. **Carried:** the sibling's cleanup
+is still id-less, and any future file that pins `prompt` after it will meet the same leak.
+**WHAT 3.8 DOES NOT DO:** no content-script call site (**4.1**), no D-8/D-9 degradation suite (**3.9**), no
+cost guard (**3.10**), no zero-network proof (**3.11**), no `file://` clipboard residual (**4.2**), no walk
+judgement (**6.1**), and no styling — the copy ships with the engine's own default chrome, exactly as the
+sort and the filter do.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint` **EXIT=0**. NUL **0 in both forms**
+(node byte scan and `tr -cd`) in all six edited files, with a control file reading **2** in both. Ablations
+by cp-aside + restore, never `git checkout`; both `src/` files restored to their shipped md5s after every
+arm (`tableTools.ts` `c730e043…`; `tableEnhancer.ts` `63916d73…`).
+**TASK 3.9 IS NEXT** — **D-8's exclusions and D-9's per-render degradation**, the two properties
+`replaceChildren` makes true, asserted rather than assumed (rows 13, 14), in
+`tests/browser/tableScope.browser.test.ts`. ★ A diff whose hunks contain a complete markdown table grows
+**NO** sort affordance — **red-first by widening the query to the shadow root**, at which point the diff's
+tables grow controls; the raw view likewise grows none. ★ A diff round trip leaves the column's own table
+STILL SORTED with its filter still applied. ★ **D-9's revert-and-fail** (row 13's inverse — state
+deliberately does NOT survive): sort, drive a watch re-render that CHANGES the source, then assert document
+order AND new-source row text, red against a build that carries the sort state across. **Row 14:** the
+toolbar is rebuilt every mount and its handlers reach the CURRENT table. Its baseline is **321,713 B CS**
+(`c68e437c…` / `e1287b5c…`) and **399,646 B app** (`7275a378…`); 3.9 adds **only a test file**, so both
+should stay byte-identical, and the content script stays byte-identical until **4.1** regardless.
 ★ **CONTENT-SCRIPT BYTES MOVED FOR THE FIRST TIME IN FIVE MILESTONES, AND THE DELTA DECOMPOSES TO A ZERO
 RESIDUAL.** Content script **318,747 → 319,527 B, +780 B, IDENTICAL on both engines** (Cr
 `c7b33b36…`→`b4107b34…`, Fx `67717921…`→`4c7819ba…`); app chunk **389,143 → 389,926 B, +783 B**

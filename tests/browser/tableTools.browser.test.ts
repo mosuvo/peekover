@@ -31,7 +31,8 @@
 //
 // ★ THE HOST WAS STILL EMPTY AFTER 3.6, AND THAT WAS NOT AN OVERSIGHT: D-12 divergence 1 puts the
 // sort control inside its own `<th>`, so the sort never enters the strip. ★ 3.7's FILTER IS WHAT
-// FILLS IT — three children, and 3.8's two copy buttons make five. The two emptiness assertions
+// FILLS IT — three children, and 3.8's two copy buttons plus their status region make six (3.7
+// forecast five, before the copy was given a status region of its own). The two emptiness assertions
 // this file carried are updated where they stood, to the specific claim they always meant (no SORT
 // control is in the strip) rather than to a count that would now be false. The filter's own
 // behaviour is `tests/browser/tableFilter.browser.test.ts`'s, where row 24's set is discharged.
@@ -343,9 +344,9 @@ describe.each(SITES)('the table toolbar is LIVE through the %s (row 23)', (_labe
     expect(tables[0].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
     // ★ THE HOST WAS EMPTY THROUGH 3.6 AND IS NOT ANY MORE. D-12 divergence 1 kept the sort in its
     // own `<th>`; 3.7's filter is the first control in the strip (a field, a clear button and the
-    // count), and 3.8's two copy buttons are what will make it five. The host still carries no
-    // `role` — see `tableEnhancer.ts` for why that is now a decision rather than a wait.
-    expect(toolbarsIn(host)[0].children).toHaveLength(3);
+    // count), and 3.8 adds the two copy buttons and their own status region — SIX. The host still
+    // carries no `role` — see `tableEnhancer.ts` for why that is now a decision rather than a wait.
+    expect(toolbarsIn(host)[0].children).toHaveLength(6);
     expect(toolbarsIn(host)[0].hasAttribute('role')).toBe(false);
   });
 
