@@ -16,6 +16,7 @@
 // original page hidden AND nothing valid shown.
 
 import { mount } from './mount';
+import { enhanceTables } from './tableEnhancer';
 
 /** The custom-element tag whose shadow root hosts the rendered reader. */
 const HOST_TAG = 'peekover-root';
@@ -88,6 +89,25 @@ export function mountReader(): boolean {
   try {
     document.body.appendChild(host);
     mount(source, host);
+    // ── 008 D-6 SITE 3 — the content script's INITIAL mount ─────────────────
+    // The table toolbar does not come through mount()'s one seam the way the
+    // badge and the pills do: D-6 gives it four EXPLICIT call sites, and this
+    // is the third. `enhanceTables` and NOTHING ELSE — no shared enhance(host),
+    // no registry. `readerPane`'s site runs enhanceDiagrams first; this one
+    // must never learn that module exists, because 007's fence IS a static walk
+    // of this graph and a shared seam (or worse, a runtime registration) would
+    // put mermaid's 3.3 MB behind the gated path. The asymmetry between the two
+    // surfaces' call sites is that fence expressed in imports.
+    //
+    // D-7 — and the reason the enhancer is TOTAL rather than this line being
+    // wrapped: we are INSIDE the try below, whose catch removes the host. A
+    // throw out of an enhancement would tear down a reader that had already
+    // rendered the document correctly, which is the one failure this whole
+    // module is ordered to prevent. `enhanceTables` takes that guarantee into
+    // itself (tableEnhancer.ts's outer boundary) so no call site has to.
+    // Site 4 — contentWatch's re-render — lands with this one or the toolbar
+    // vanishes the first time a watching agent rewrites the file.
+    enhanceTables(host);
 
     // mount() degrades to a non-empty raw <pre> even on a failed render, so an
     // empty shadow here means something more fundamental broke. Treat it as a

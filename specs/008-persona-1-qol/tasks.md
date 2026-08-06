@@ -627,7 +627,7 @@ revertable — units. **None of them precedes 3.1.***
 
 ## 4 — The content-script reach, behind its own gate (D-6 sites 3–4 — built so §8-1 can rule on it; the ruling is 5.5's, never a quiet re-scope, and if it rules the reach OUT then **5.7** removes this group's two sites and re-measures to a restored baseline)
 
-- [ ] **4.1 Sites 3 AND 4 land TOGETHER — a surface that enhances on first mount and not on re-render is a
+- [x] **4.1 Sites 3 AND 4 land TOGETHER — a surface that enhances on first mount and not on re-render is a
       SHIPPED DEFECT, not a partial feature (D-6).** Site 3: `mountReader.ts:90` gains `enhanceTables(host)`
       after the committed `mount`. ★ **Site 4 is the one that would be missed:** `contentWatch.ts:121` passes
       **no `render` at all** today — verified at HEAD as

@@ -67,10 +67,19 @@ import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { TABLE_TOOLBAR_CLASS, TABLE_STATE_ATTR } from '../../src/render/tableEnhancer';
 import {
+  FILTER_COUNT_CLASS,
+  FILTER_FIELD_CLASS,
   SORT_BUTTON_CLASS,
   SORT_GLYPH_CLASS,
   SORT_STATE_CLASS,
+  filterCountText,
 } from '../../src/render/tableTools';
+// ★ 4.1's content-script surface (D-6 sites 3-4). `runReader` is the entrypoint orchestration
+// that reaches `mountReader`; `installContentWatch` is the whole watch wiring the entrypoint
+// delegates. Neither `enhanceTables` nor a hand-built `WatchTarget` is imported here on purpose.
+import { runReader } from '../../src/render/runReader';
+import { installContentWatch } from '../../src/watch/contentWatch';
+import { WATCH_READ, type WatchMessage } from '../../src/watch/watchRelay';
 import { resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { resetWatchRegistryForTest, isWatching } from '../../src/watch/watchRegistry';
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
@@ -642,6 +651,303 @@ describe('3.6 · row 14`s question — the handlers reach the CURRENT table afte
     // This column was built by `renderWithEnhancements` after `replaceChildren` destroyed the
     // seed render — so a handler that had captured the previous table (or the previous rows)
     // would be pointing at nodes that are no longer in the tree.
+    expect(columnOf(host).textContent).not.toMatch(/the seed render/);
+    expect(sortButtonsIn(table)).toHaveLength(3);
+
+    sortButtonsIn(table)[2].click();
+
+    expect(columnText(table, 2)).toEqual(['2', '9', '10']);
+    expect(ariaSortOf(table)[2]).toBe('ascending');
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 4.1 — THE CONTENT-SCRIPT CALL SITES, D-6 SITES 3 AND 4
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ── WHY THESE ARMS EXIST, AND WHY THE APP-PAGE ONES ABOVE CANNOT STAND IN ────────────────────
+//
+// Everything above drives `mountAppShell`. That surface reaches `enhanceTables` through
+// `readerPane`'s `paint` (site 1) and `appShell`'s `renderWithEnhancements` (site 2), and it would
+// go on passing, unchanged, against a build in which the CONTENT SCRIPT enhanced nothing at all —
+// which is exactly what shipped from 3.4 through 3.11. §3.11 row 23 asks for both SURFACES, and
+// this is the second one: `runReader` → `mountReader` (site 3) and `installContentWatch`'s
+// controller (site 4). ★ Nothing below calls `enhanceTables`, and nothing below hands a `render`
+// to a controller it built itself — the same discipline the app-page arms hold to, because a
+// suite that provisions the seam it is testing cannot tell a wired seam from an unwired one.
+//
+// ── D-6: BOTH SITES OR NEITHER, AND SITE 4 IS THE ONE THAT WOULD HAVE BEEN MISSED ────────────
+//
+// `contentWatch.ts` passed NO `render` through three milestones, so its controller fell through to
+// `watchController`'s bare `mount` default. Ship site 3 alone and the toolbar appears on the first
+// paint and DISAPPEARS the first time a watching agent rewrites the file on disk — 007 D-12's bug
+// class, one surface over, and worse than shipping nothing, because the reader has already learned
+// the tools are there. The re-render column below is the only arm that can see it, and it is the
+// arm the revert-and-fail was run against.
+//
+// ── D-7'S TEARDOWN IS REACHABLE HERE AND NOWHERE ELSE ────────────────────────────────────────
+//
+// Site 3 sits INSIDE `mountReader`'s try, whose catch REMOVES the host and restores the browser's
+// own raw rendering (`mountReader.ts:106-114`). No app-page site has that shape. So the
+// consequence D-7 was written for — an enhancement failure tearing down a reader that had already
+// rendered the document correctly — is observable only from this surface, and it is asserted in
+// its own units: the host still connected and the raw `<pre>` still hidden.
+
+/** A watchable `file://` document — `isWatchableFileUrl`'s own shape, so `installContentWatch`
+ *  takes its watchable branch through the real capability decision rather than around it. */
+const CS_FILE_URL = 'file:///D:/notes/report.md';
+
+/** The page a browser builds for a raw `.md` resource: the bytes in a single `<pre>`. That is what
+ *  `readPageSource` reads, and seeding it is the only fake in the content-script harness. */
+function seedRawPage(doc: string): void {
+  const pre = document.createElement('pre');
+  pre.textContent = doc;
+  document.body.appendChild(pre);
+}
+
+const rawPre = (): HTMLElement => document.body.querySelector('pre')!;
+const contentHost = (): HTMLElement => document.querySelector<HTMLElement>('peekover-root')!;
+
+/** Did this host COMMIT a render? `mountReader` returns false and REMOVES the host on a failure,
+ *  so a connected host with a non-empty shadow root is the commit, read straight off the DOM. */
+function committedReader(host: HTMLElement): boolean {
+  return host.isConnected && (host.shadowRoot?.childNodes.length ?? 0) > 0;
+}
+
+/**
+ * ★ CALL SITE 3 — `mountReader.ts`, the content script's INITIAL mount, driven through
+ * `runReader`'s real document_start orchestration. `isRenderable` is overridden because the
+ * runner's own page is not a markdown document; that seam exists for exactly this and is the one
+ * the WXT entrypoint fills with `isRenderableContext`. Everything downstream of it — the source
+ * read, the host append, `mount`, the enhancer, the hide of the originals — is production.
+ */
+async function openViaContentMount(doc: string): Promise<HTMLElement> {
+  seedRawPage(doc);
+  runReader({ isRenderable: () => true });
+  const host = contentHost();
+  await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader'));
+  return host;
+}
+
+/**
+ * ★ CALL SITE 4 — `contentWatch.ts`'s controller, the content script's WATCH RE-RENDER.
+ *
+ * The order is production's and it is load-bearing: `installContentWatch` runs at
+ * `document_start`, BEFORE any host exists, and `runReader` mounts afterwards — registering after
+ * the first mount would leave that render with no pill at all (005 4.7's second defect). The
+ * messenger is the only fake and it answers the real `WATCH_READ` wire shape, so `relayRead`,
+ * `pollingDetector` and the real `createWatchController` are all production code under test.
+ *
+ * The destruction witness is the SEED render's `<h1>`, not its toolbar: the seed document is
+ * table-free, so this arm cannot be made to pass or fail by whether site 3 is wired — which is
+ * what D-6's both-or-neither ablation needs, since it varies the two sites independently.
+ */
+async function openViaContentWatchRerender(doc: string): Promise<HTMLElement> {
+  let text = SEED_DOC;
+  let reads = 0;
+  const send = async (message: WatchMessage): Promise<unknown> => {
+    reads += 1;
+    expect(message.type).toBe(WATCH_READ);
+    return { ok: true, text };
+  };
+
+  installContentWatch({ url: CS_FILE_URL, send, backgroundCanReadFileUrls: true, intervalMs: 20 });
+  seedRawPage(SEED_DOC);
+  runReader({ isRenderable: () => true });
+  const host = contentHost();
+  const seedHeading = await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader h1'));
+
+  // `pollingDetector`'s first read is a SILENT baseline (`lastText === null` means "nothing to
+  // compare against"), so a write landing before it is absorbed and nothing ever re-renders. The
+  // write therefore waits on the read COUNT rather than on a sleep.
+  const before = reads;
+  host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-watch')!.click();
+  expect(isWatching(), 'the watch must really be running or nothing re-renders').toBe(true);
+  await waitFor(() => reads > before);
+  text = doc;
+
+  await waitFor(() => !seedHeading.isConnected);
+  // The re-render really happened AND really destroyed the previous column. Without this a
+  // "no toolbar" reading could be a re-render that never occurred rather than one that produced no
+  // chrome — the vacuity that would make the site-4 column worthless.
+  expect(seedHeading.isConnected).toBe(false);
+  await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader h1'));
+  return host;
+}
+
+// ══ HARNESS SANITY — THE CONTROL THAT STAYS GREEN WHEN THE CS CALL SITES ARE UNWIRED ══════════
+//
+// The same control the app-page block has, for the same reason: with both content-script sites
+// removed every other arm below goes red at once, and an all-red run is only evidence if something
+// in the SAME run stays green. This names neither the toolbar nor the enhancer.
+
+describe('4.1 · harness sanity — both content-script call sites really render (non-vacuous)', () => {
+  it('SITE 3 (initial mount): runReader puts the reader up and hides the raw <pre>', async () => {
+    const host = await openViaContentMount(TABLE_DOC);
+    expect(tablesIn(host)).toHaveLength(1);
+    expect(rawPre().style.display, 'the originals are hidden by the committed mount').toBe('none');
+    expect(host.shadowRoot!.querySelector('.peekover-theme-toggle')).not.toBeNull();
+  });
+
+  it('SITE 4 (watch re-render): the poll really replaces the document', async () => {
+    const host = await openViaContentWatchRerender(TABLE_DOC);
+    expect(columnOf(host).textContent).not.toMatch(/the seed render/);
+    expect(tablesIn(host)).toHaveLength(1);
+    expect(host.shadowRoot!.querySelector('.peekover-theme-toggle')).not.toBeNull();
+  });
+});
+
+// ══ ROWS 1 + 23 — THE TOOLBAR, ON BOTH CONTENT-SCRIPT CALL SITES ═══════════════════════════════
+//
+// ★ BOTH SITES OR NEITHER (D-6). Together with the app-page `describe.each` above this completes
+// row 23's "over both surfaces": row 1 says the two-surface case is asserted PER CALL SITE,
+// because the toolbar does not come through the one `mount()` seam the badge and the pills do.
+
+const CONTENT_SITES = [
+  ['initial mount (mountReader.ts, D-6 site 3)', openViaContentMount],
+  ['watch re-render (contentWatch renderWithTables, D-6 site 4)', openViaContentWatchRerender],
+] as const;
+
+describe.each(CONTENT_SITES)(
+  '4.1 · the toolbar is LIVE on the CONTENT SCRIPT through the %s (rows 1, 23)',
+  (_label, open) => {
+    it('row 1 — a header table reaches the content-script reader WITH a toolbar', async () => {
+      const host = await open(TABLE_DOC);
+
+      // The firing control: the document really rendered a table. Without it "one toolbar" and "no
+      // toolbar" are indistinguishable from a mount that produced nothing at all.
+      const tables = tablesIn(host);
+      expect(tables, 'the fixture must actually render a table').toHaveLength(1);
+
+      expect(toolbarsIn(host)).toHaveLength(1); // one per table, never one per render
+      expect(tables[0].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
+      // The same six children the app page gets — the filter's three, the copy's three. The
+      // enhancer is one enhancer; this asserts the CALL SITE reached all of it.
+      expect(toolbarsIn(host)[0].children).toHaveLength(6);
+      expect(toolbarsIn(host)[0].hasAttribute('role')).toBe(false);
+    });
+
+    it('★ row 4 holds here too — INSIDE `.peekover-reader`, immediately BEFORE its table', async () => {
+      const host = await open(TABLE_DOC);
+      const column = columnOf(host);
+      const table = tablesIn(host)[0];
+      const toolbar = toolbarsIn(host)[0];
+
+      expect(column.contains(toolbar), 'INSIDE the column — this row inverts').toBe(true);
+      expect(toolbar.parentElement).toBe(table.parentElement); // siblings; no wrapper element
+      expect(table.previousElementSibling).toBe(toolbar); // IMMEDIATELY before
+      expect(table.parentElement).toBe(column);
+    });
+
+    it('★ row 3 — the gate is still the HEADER ROW on the content script', async () => {
+      const host = await open(MIXED_DOC);
+
+      const tables = tablesIn(host);
+      expect(tables, 'the fixture must render BOTH tables').toHaveLength(2);
+      expect(tables[0].tHead, 'fixture: the first table is the header one').not.toBeNull();
+      expect(tables[1].tHead, 'fixture: the second table is the headerless one').toBeNull();
+
+      expect(toolbarsIn(host)).toHaveLength(1);
+      expect(tables[0].getAttribute(TABLE_STATE_ATTR)).toBe('enhanced');
+      // §4: left EXACTLY as rendered — no toolbar, no state attribute, nothing before it.
+      expect(tables[1].hasAttribute(TABLE_STATE_ATTR)).toBe(false);
+      expect(tables[1].previousElementSibling?.classList.contains(TABLE_TOOLBAR_CLASS)).not.toBe(
+        true,
+      );
+    });
+
+    it('row 2 — a table-free content-script document grows NO toolbar anywhere', async () => {
+      const host = await open(NO_TABLE_DOC);
+
+      expect(columnOf(host).querySelector('h1'), 'it really rendered').not.toBeNull();
+      expect(tablesIn(host)).toHaveLength(0);
+      expect(toolbarsIn(host)).toHaveLength(0);
+      // Total absence over the whole shadow root, not just the column: a toolbar appended beside
+      // the reader would satisfy a column-scoped check and still be chrome grown where the
+      // capability is absent.
+      expect(host.shadowRoot!.querySelectorAll(`[${TABLE_STATE_ATTR}]`)).toHaveLength(0);
+    });
+  },
+);
+
+// ══ D-7 · THE TEARDOWN, REACHABLE AT NO OTHER CALL SITE ═══════════════════════════════════════
+
+describe('4.1 · D-7 — site 3 enhances INSIDE the teardown catch, and the reader survives it', () => {
+  it('the reader is NOT torn down: host connected, originals still hidden, and it had rendered', () => {
+    // ★ THIS ARM DRIVES `runReader` ITSELF RATHER THAN `openViaContentMount`, AND THAT IS THE
+    // WHOLE POINT. The harness resolves the host through a non-null assertion, so under the
+    // revert-and-fail the host is GONE and the harness dies on `null.shadowRoot` — a TypeError
+    // from the fixture, thrown BEFORE any assertion below could run. The check that finds the
+    // defect has to be the check seen to fail, so nothing dereferences the host until after the
+    // teardown has been read off the document.
+    seedRawPage(TABLE_DOC);
+    runReader({ isRenderable: () => true });
+    const host = document.querySelector<HTMLElement>('peekover-root');
+
+    // ★ THE TEARDOWN'S OWN SIGNATURE, IN ITS OWN UNITS, AND ASSERTED FIRST. `mountReader`'s catch
+    // answers a throw by REMOVING the host and leaving the browser's raw rendering exactly as it
+    // was, so a non-total `enhanceTables` shows up HERE — as a reader gone from a document it had
+    // already rendered correctly, with the raw `<pre>` back — and not as a missing toolbar.
+    expect(host, 'the host must still be in the document — D-7').not.toBeNull();
+    expect(rawPre().style.display, 'the originals must still be hidden — D-7').toBe('none');
+    expect(committedReader(host!), 'and it must still hold a committed render — D-7').toBe(true);
+
+    // The reader had something to lose: this document really rendered a table and really got the
+    // toolbar. Without this the assertions above would also pass on a page that never enhanced.
+    expect(tablesIn(host!)).toHaveLength(1);
+    expect(toolbarsIn(host!)).toHaveLength(1);
+  });
+});
+
+// ══ THE CONTROLS THEMSELVES WORK ON THIS SURFACE ══════════════════════════════════════════════
+//
+// The hardening — 3.9's exclusions, 3.10's conditionality, 3.11's zero network — is a property of
+// `enhanceTables`, which is byte-identical here (4.1 imports it; it does not change it), so it is
+// INHERITED rather than re-argued. What is NOT inherited is that the controls actually operate
+// once the enhancer is reached from a different call site, on a surface whose `:host` is the
+// fixed, inset:0 page takeover rather than the app page's contained pane. Sort and filter are
+// asserted here. ★ COPY DELIBERATELY IS NOT: its content-script question is clipboard
+// availability on `file://`, which MDN itself hedges, and that is task 4.2's empirical residual —
+// asserting it here on the runner's `http://` origin would ratify the wrong secure context.
+
+describe('4.1 · the sort and the filter really operate on the content-script surface', () => {
+  it('the sort reorders the content-script table', async () => {
+    const host = await openViaContentMount(SORT_DOC);
+    const table = tablesIn(host)[0];
+    expect(sortButtonsIn(table), 'one real button per column').toHaveLength(3);
+
+    sortButtonsIn(table)[2].click();
+
+    expect(columnText(table, 2)).toEqual(['2', '9', '10']);
+    expect(ariaSortOf(table)[2]).toBe('ascending');
+  });
+
+  it('the filter HIDES rows on the content-script table and says how many are shown', async () => {
+    const host = await openViaContentMount(SORT_DOC);
+    const table = tablesIn(host)[0];
+    const toolbar = toolbarsIn(host)[0];
+    const field = toolbar.querySelector<HTMLInputElement>(`.${FILTER_FIELD_CLASS}`)!;
+    const count = toolbar.querySelector<HTMLElement>(`.${FILTER_COUNT_CLASS}`)!;
+
+    field.focus();
+    await userEvent.keyboard('ops');
+
+    const shown = bodyRowsOf(table).filter((row) => !row.hidden);
+    expect(shown).toHaveLength(1);
+    expect(shown[0].cells[1].textContent).toBe('bo');
+    // HIDE, never remove (F6) — the node count is unchanged on this surface too.
+    expect(bodyRowsOf(table)).toHaveLength(3);
+    expect(count.textContent).toBe(filterCountText(1, 3));
+  });
+});
+
+describe('4.1 · site 4 — the controls reach the CURRENT table after a content-script re-render', () => {
+  it('the sort works on the document `renderWithTables` produced', async () => {
+    const host = await openViaContentWatchRerender(SORT_DOC);
+    const table = tablesIn(host)[0];
+
+    // This column was built by site 4's closure after `replaceChildren` destroyed the seed render,
+    // so a handler that had captured the previous table would be pointing at detached nodes.
     expect(columnOf(host).textContent).not.toMatch(/the seed render/);
     expect(sortButtonsIn(table)).toHaveLength(3);
 

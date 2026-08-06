@@ -1114,18 +1114,97 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
 **EXIT=0**. NUL **0 in both forms** (node byte scan and `tr -cd`) in all three edited files, with a control
 file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`. **GROUP 3 IS COMPLETE.**
-**TASK 4.1 IS NEXT — AND IT IS WHERE THE CONTENT-SCRIPT BYTES FINALLY MOVE.** Sites 3 AND 4 land
-**TOGETHER** (D-6): `mountReader.ts:90` gains `enhanceTables(host)` after the committed `mount`, and
-**`contentWatch.ts:121` — which passes NO `render` at all today — must gain a `render` closure**, or table
-tools vanish the first time a watching agent rewrites the file (007 D-12's bug class). ★ **NO shared
-enhancement seam and NO enhancer registry** — either would put `diagramEnhancer` on the content-script
-graph and take the **8/8 import fence RED** (a registry would be worse: it keeps the fence green by
-converting a static property the traversal can see into a runtime registration it cannot). Verify:
-`describe.each` over **both surfaces**, the toolbar on first mount AND surviving a watch re-render;
-**revert-and-fail** by dropping site 4; and **D-7's TEARDOWN revert-and-fail, reachable at no other call
-site** (site 3 sits inside `mountReader`'s `catch`, which removes the host). Bytes move — state the delta
-with its baseline, decomposed (**4.3** owns the full accounting). Baseline entering 4.1: **321,713 B CS**
-(`c68e437c…` / `e1287b5c…`), **399,646 B app** (`7275a378…`).
+★ **TASK 4.1 IS DONE — THE TABLE TOOLS REACH THE CONTENT SCRIPT. SITES 3 AND 4 LANDED TOGETHER (D-6), AND
+THE CONTENT-SCRIPT BUNDLE MOVED FOR THE FIRST TIME SINCE 3.3.** `mountReader.ts` gains
+`enhanceTables(host)` immediately after the committed `mount` (site 3), and `contentWatch.ts`'s controller
+gains `render: renderWithTables` — a closure that calls `mount` then `enhanceTables` — where it passed **no
+`render` at all** through three milestones (site 4). Browser **+18 cases** (9 × 2 engines) in
+`tests/browser/tableTools.browser.test.ts`; unit **944/944** (unchanged — no unit test added); browser
+**1237 passed | 15 skipped, 118 files, 0 failed** (1219 + this task's 18); `pnpm lint` **EXIT=0**.
+★ **THE BYTES, DECOMPOSED — FOUR REAL REBUILD ARMS OF BOTH ENGINES, AND THE CROSS-CHECK CLOSES.** **CS
+321,713 → 329,233 B, +7,520 B, IDENTICAL on both engines** (Cr `b115c9ae…` / Fx `237831d2…`). The **app
+chunk did NOT move**: 399,646 B, `7275a378…`, the same name and the same md5 — `tableEnhancer` and
+`tableTools` were already in it, and entering a second bundle costs the first one nothing. Arms: **A**
+neither site **321,713** · **B** site 3 only **329,193** · **C** site 4 only **329,227** · **D** both
+**329,233**. So **site 3's glue = D−C = 6 B**, **site 4's glue = D−B = 40 B**, and the **shared enhancer
+payload, counted ONCE = 7,474 B** — the two sites import the same module, which is why four arms were
+needed and not two (the *shared-helper-hides-from-marginal-arms* shape). Cross-check both ways:
+B−A = 7,480 = 7,474 + 6 ✓; C−A = 7,514 = 7,474 + 40 ✓. ★ A **fifth arm** splits the payload: with
+`tableTools`' three installers stubbed the CS reads **324,793**, so the **three controls are ≥ 4,440 B**
+(D−E) and the **enhancer's own orchestration ≤ 3,034 B** — a bracket, not an exact split, because arm E
+still pays for its stubs, and **4.3 owns the decomposition to a zero residual**.
+★ **THE IMPORT FENCE IS STILL 8/8 AND IT STILL MEANS SOMETHING — BOTH HALVES MEASURED.** (i) **The
+traversal now really enters the new modules:** a probe on the fence's own walker reports the content-script
+graph containing `src/render/tableEnhancer.ts` and `src/render/tableTools.ts`, where the same probe at
+`522ae35` returned **`[]`** — so clause A's *"reaches NEITHER `diagramEnhancer` NOR `diagramEngine`"* is
+now an assertion **about them**, not merely near them. (ii) **The fence still fires:** a direct
+`import { enhanceDiagrams } from '../render/diagramEnhancer'` added to `contentWatch.ts` took it to **2 of
+8 red**, both clause-A halves, naming `diagramEngine.ts:425 — import 'mermaid'`. ★ **The trap was avoided
+by construction:** each site names `enhanceTables` in a **direct, static, named import**, so the property
+the fence walks is the property that ships. A shared `enhance(host)` would have gone red; an enhancer
+**registry** would have stayed **green while the graph opened**, because a runtime `register()` is
+invisible to a source traversal. Neither exists. `readerPane.ts:184`'s *"identical body by construction"*
+is now true only **within** the app page, and that asymmetry is the fence written in imports.
+★ **D-7's TEARDOWN FIRED — AND IT IS REACHABLE AT NO OTHER CALL SITE.** Site 3 sits inside `mountReader`'s
+try, whose catch **removes the host**. Revert-and-fail: outer boundary removed from `enhanceTables`, a
+throw inserted inside it → `[peekover] reader mount failed; leaving original page` and the host gone from a
+document that had **already rendered correctly**, on both engines. ★ **THE INSTRUMENT WAS MASKED ONCE, AND
+UNMASKING IT IS THE FINDING.** Routed through the shared harness, the arm died on
+`TypeError: Cannot read properties of null (reading 'shadowRoot')` — the fixture's non-null host assertion,
+thrown **before** the teardown clause could run, so the check that finds the defect was not the check seen
+to fail. The arm now drives `runReader` itself and reads the host with **no dereference**, and reds on its
+own words: *"the host must still be in the document — D-7: expected null not to be null"*, Chromium AND
+Firefox.
+★ **D-6's BOTH-OR-NEITHER, PROVEN IN BOTH DIRECTIONS.** **Site 4 ablated ALONE → 8 red (4 per engine), every
+one of them a site-4 arm**, while site 4's own **harness-sanity control stayed GREEN** (*"the poll really
+replaces the document"*) — so the re-render demonstrably HAPPENED and produced no toolbar, which is the
+vanishes-on-re-render defect in its own units rather than a re-render that never ran. Failure text:
+*"expected [] to have a length of 1"* and *"INSIDE the column — this row inverts: expected false to be
+true"*. **Site 3 ablated alone → 12 red, every one a site-3 arm, and the whole site-4 column stayed
+green** — the two sites are independently observable, which is what the both-or-neither claim needs.
+★ **WHAT THE CONTENT SCRIPT ACTUALLY GETS, THROUGH PRODUCTION ONLY.** Nothing in the suite calls
+`enhanceTables`, and nothing hands a `render` to a controller it built itself: site 3 is driven through
+`runReader` (the entrypoint's own orchestration, `isRenderable` overridden because the runner's page is not
+markdown) and site 4 through `installContentWatch` with only the messenger faked. On both sites, on both
+engines: the toolbar renders with its **six** children and no `role`, **inside** `.peekover-reader` and
+immediately before its `<table>` (row 4's inversion holds on this surface too), the header-row gate still
+declines the headerless table in the same document (row 3), and a table-free document grows **no** chrome
+anywhere in the shadow root (row 2). With the app-page `describe.each` above it, **row 23 is now discharged
+over both surfaces**.
+★ **THE HARDENING IS INHERITED, THE CONTROLS ARE RE-PROVEN.** 3.9's exclusions, 3.10's conditionality and
+3.11's zero network are properties of `enhanceTables`, which **4.1 imports and does not change** (restored
+byte-identical after every ablation), so they are not re-argued. What a new call site can break is whether
+the controls still **work**, and they do: the sort reorders (`['2','9','10']`, `aria-sort=ascending`) and
+the filter hides-not-removes with its count (`Showing 1 of 3 rows`, three `<tr>`s still in the body), on
+first mount and after a watch re-render. ★ **COPY IS DELIBERATELY NOT ASSERTED HERE** — its content-script
+question is clipboard availability on `file://`, which MDN itself hedges, and asserting it on the runner's
+`http://` origin would ratify the wrong secure context. That is **4.2's** empirical residual.
+★ **ONE MACHINE-STATE NOTE, THE SAME ONE 3.11 RECORDED.** Vitest browser mode's default port **63315** is
+still inside a Windows dynamic TCP exclusion range on this machine (`63242-63341`) and `listen EACCES`'d
+before any test ran; the suite was run with the browser API port moved to **5199** and `vitest.config.ts`
+was **restored byte-identical before the commit**. The port is machine state, not a project change.
+**WHAT 4.1 DOES NOT DO:** no `file://` clipboard residual and no content-script conditionality guard
+(**4.2**), no full byte accounting to a zero residual (**4.3** — 4.1 **states** its own delta), no walk
+judgement (**6.1**), **no shared enhancement seam and no enhancer registry** (D-6), **no `tableEnhancer` /
+`tableTools` change** (they were built at 3.2–3.8; 4.1 only imports them), no dependency and no manifest
+permission. ★ **One stale comment is left standing deliberately, because it is outside this task's file
+list:** `runReader.ts:140`'s parenthetical still describes `contentWatch`'s controller as *"passes no
+`render` and gets bare `mount`"*. Its argument (the badge re-reads the registry on every render) is
+unaffected; the parenthetical is not, and it belongs to whichever task next touches that file.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**. NUL **0 in both forms** (raw byte count and decoded-codepoint scan) in all three edited files,
+with a control file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`.
+**TASK 4.2 IS NEXT — THE CONTENT-SCRIPT COST GUARD, AND D-10's `file://` RESIDUAL PROVEN EMPIRICALLY**
+(D-11 (ii) · D-10). The three-arm conditionality guard on the **content script**, same shape as 3.10:
+**(1) == (2)** on node and listener counts, **(3) > (2)** as the control that fires, and no element
+carrying an M8 class anywhere in arm 2's shadow root. ★ **And D-10's one residual, measured rather than
+argued:** the content script runs in the PAGE's context, one of whose two document classes is **`file://`**,
+whose secure-context status **MDN itself hedges** (*"generally true"* is not a contract) — so clipboard
+availability is measured on **both engines** and **both content-script document classes**, `file://` AND an
+allowlisted raw host. Where it is unavailable, §3.8's degradation holds: a stated failure beside a still-
+readable table, never a broken button. **A doc read is not a build.** Baseline entering 4.2: **329,233 B
+CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status
