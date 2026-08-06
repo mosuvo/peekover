@@ -611,7 +611,7 @@ revertable — units. **None of them precedes 3.1.***
       guard **stands in for a number and is never reported as "within budget."** Golden EMPTY · manifest green
       **2975 B** · `permissions: []`. [D-11 (i), (ii); §5 conditional cost; finding 1; row 2]
 
-- [ ] **3.11 Zero-network across sort → filter → copy (§3.11 row 22).**
+- [x] **3.11 Zero-network across sort → filter → copy (§3.11 row 22).**
       Files: `tests/browser/tableNetwork.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) **no request** across **sort → filter → copy**, at the **request
       level**, using the existing **`/^https?:/i` predicate VERBATIM** and `awaitFetchedUrls`'s shape

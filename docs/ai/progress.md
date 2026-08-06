@@ -1052,18 +1052,80 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
 **EXIT=0**. NUL **0 in both forms** (node byte scan and `tr -cd`) in all three edited files, with a control
 file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`.
-**TASK 3.11 IS NEXT** — **zero-network across sort → filter → copy** (§3.11 row 22), in
-`tests/browser/tableNetwork.browser.test.ts`. **No request** across the three actions, **at the request
-level**, using the existing **`/^https?:/i` predicate VERBATIM** and `awaitFetchedUrls`'s shape
-(`remoteMedia:83-92`, `:120`, `:140`), **with the control fetch shown LIVE in the SAME test**, under the
-same conditions the negative claim disclaims. ★ **jsdom cannot see bytes on the wire** — a DOM-shape test
-would report NO-FETCH on a wide-open route — so this is a real-engine test on **both** engines or it is
-nothing; ★ **the control adopts markup NO sanitizer has touched** (a control routed through a sanitizer
-reads NO-FETCH while the route is open, and on Firefox an **inert parse consumed an `@import`**), and any
-probe markup is neutralized in an **inert `<template>`**, never a "detached" div. Note the boundary 3.10
-respected: **3.10 is about WORK** (nodes, listeners, no parse/sanitize/layout), **3.11 is about the
-NETWORK**. Baseline unmoved: **321,713 B CS** (`c68e437c…` / `e1287b5c…`), **399,646 B app**
-(`7275a378…`); the content script stays byte-identical until **4.1**.
+★ **TASK 3.11 IS DONE AND GROUP 3 — THE TABLE TOOLS — IS COMPLETE. SORT, FILTER AND COPY PUT NOTHING ON
+THE WIRE, AND THAT ZERO IS MEASURED AGAINST AN ARMED PROBE** (`tests/browser/tableNetwork.browser.test.ts`,
+2 cases × 2 engines = 4). `src/` is **UNTOUCHED** and both bundles rebuild **byte- and md5-IDENTICAL** to
+3.10's from a cleared `.output` — **CS 321,713 B** (`c68e437c…` / `e1287b5c…`), **app 399,646 B**
+(`7275a378…`). Unit **944/944** (unchanged — no unit test added); browser **1209 passed | 15 skipped, 118
+files, 0 failed** (1205 + this task's 4); `pnpm lint` **EXIT=0**.
+★ **THE ABSENCE IS VACUOUS WITHOUT THE FIRING CONTROL, AND THE FILE SAYS SO IN ITS OWN HEADER.** "No
+request" has two readings — the controls are quiet, or the probe is blind — and only a control that FIRES
+tells them apart (finding 1; 3.10's confounded-control lesson one task earlier). So **both control lanes
+are armed inside each test's own body, and re-armed after the measurement**: a bare `fetch()`, and a
+SUBRESOURCE control on **markup no sanitizer has touched**. The reading is the engine's own Resource
+Timing buffer through `remoteMedia`/`tocNetwork`/1.6's **verbatim `/^https?:/i`** predicate applied to the
+WHOLE buffer (not a token filter), with `awaitProbeUrls` = `awaitFetchedUrls`'s shape (`remoteMedia:120`)
+for the control and `flush()`-then-assert-empty (`:140`) for the zero — **1.6's instrument reused, not
+reinvented.**
+★ **★ THE CONTROL IS VALID, WHICH IS THE HALF 3.10 TAUGHT TO CHECK.** A control routed through
+`sanitize()` measures DOMPurify's internal `DOMParser` pass and **reads NO-FETCH while the route is wide
+open** (in Firefox that parse CONSUMES an eagerly-loaded URL) — a false negative with the same shape as
+3.10's confounded arm 3. So the probe markup is **hand-written, parsed once, adopted once**, touching
+neither `sanitize()` nor `parse()`; it is neutralized in an inert **`<template>`** (never a "detached" div,
+which is `document`-owned and DOES dispatch); and the **parse-time confound is avoided by the element
+choice**, since only `@import` is eager enough for an inert parse to consume — so one URL carries both
+halves and means two different things (template parse fires nothing, adoption of the SAME bytes fires).
+★ **WHAT IS MEASURED, THROUGH PRODUCTION.** The app page's own gesture chain — open folder, click file,
+`renderWithEnhancements` mounts and enhances (the toolbar's nodes are created **inside** the window) —
+then **SORT** (a real click), **FILTER** (a real focus and real key presses) and **COPY** (a real trusted
+click). Nothing calls `enhanceTables` by hand; nothing dispatches a synthetic `click()`. Readings are
+**cumulative by design** — the buffer is never re-cleared between steps, so a late-recorded entry cannot
+be thrown away before the next step reads. Case 2 narrows it further: **six legs, each against a probe
+re-armed immediately before it** — the sort's whole three-state cycle, a matching filter, a filter matching
+NOTHING (the empty-state `<tr>` unhidden into the live table), the clear control, and **both** copy formats.
+★ **THE COPY IS MADE TO SUCCEED, AND THAT IS A MEASUREMENT DECISION.** A refused write is a SHORTER path,
+so a zero over a refusal would be a zero over less than the copy. Firefox writes on the gesture alone;
+Chromium's `clipboardReadWrite` **browser consent** (not a manifest permission — 3.8's D-10 finding) is
+granted over CDP on this file's own context and reset by id in `afterEach`, with the cleanup pinned.
+★ **FIVE ABLATIONS, EACH cp-aside + RESTORE, EACH SEEN TO FIRE.** **A1** an `<img>` appended in the sort's
+`reorder` → *the table's "sort" step put bytes on the wire* (1 entry in the sequence, 3 in the cycle leg),
+both engines. **A2** a `fetch()` in the copy click handler → the **copy** step reds and sort/filter stay
+green — attribution is exact. **A3** an `<img>` appended in the filter's `apply` → the **filter** step
+reds. **A4** the control's `importNode` + append removed (markup left inside the template) → **the
+subresource CONTROL itself reds** — *"adopted markup must fetch — else this probe cannot see a leak"* — so
+the arming is load-bearing, not decorative. **A5** the Chromium consent NOT granted → **Chromium reds on
+the copy's non-vacuity clause** (*"Copy unavailable"* where *"Copied 2 rows as CSV."* belongs) while
+**Firefox stays green**, which is D-10's engine asymmetry re-measured. `tableTools.ts` restored to
+`c730e043…` after every arm.
+★ **ONE MACHINE-STATE RED AND ONE HARNESS NOTE, BOTH RESOLVED WITHOUT AN ARGUMENT.** (i) The unit run
+immediately after the 158 s browser suite red **2 of 944** in `src/render/diagramEnhancer.test.ts`
+(environment 422 s — a loaded machine); re-run **944/944** in 11 s, and that file alone **58/58**. By
+construction the `unit` project **excludes `tests/browser/**`**, so this task's file is never loaded by
+that run. (ii) Vitest browser mode's default port **63315** now falls inside a Windows dynamic TCP
+exclusion range on this machine (`63242-63341`, both stacks) and `listen EACCES`'d before any test ran; the
+suite was run with the browser API port moved to 5199 and **`vitest.config.ts` was restored byte-identical
+(`98d3c37f…`) before the commit** — the port is machine state, not a project change.
+**WHAT 3.11 DOES NOT DO:** no content-script call site (**4.1**), no `file://` clipboard residual
+(**4.2**), no walk judgement (**6.1**), **no `src/` edit of any kind** (the three controls were **already**
+zero-network — they read, reorder, hide and serialize DOM nodes; 3.11 asserts it, it does not make it so),
+and **no divergence from 1.6's instrument**. The §4 Trust clause's other two thirds are elsewhere:
+agent-file recognition is **1.6's**, already banked; file comparison is group **2's** and **6.1's** walk.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
+**EXIT=0**. NUL **0 in both forms** (node byte scan and `tr -cd`) in all three edited files, with a control
+file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`. **GROUP 3 IS COMPLETE.**
+**TASK 4.1 IS NEXT — AND IT IS WHERE THE CONTENT-SCRIPT BYTES FINALLY MOVE.** Sites 3 AND 4 land
+**TOGETHER** (D-6): `mountReader.ts:90` gains `enhanceTables(host)` after the committed `mount`, and
+**`contentWatch.ts:121` — which passes NO `render` at all today — must gain a `render` closure**, or table
+tools vanish the first time a watching agent rewrites the file (007 D-12's bug class). ★ **NO shared
+enhancement seam and NO enhancer registry** — either would put `diagramEnhancer` on the content-script
+graph and take the **8/8 import fence RED** (a registry would be worse: it keeps the fence green by
+converting a static property the traversal can see into a runtime registration it cannot). Verify:
+`describe.each` over **both surfaces**, the toolbar on first mount AND surviving a watch re-render;
+**revert-and-fail** by dropping site 4; and **D-7's TEARDOWN revert-and-fail, reachable at no other call
+site** (site 3 sits inside `mountReader`'s `catch`, which removes the host). Bytes move — state the delta
+with its baseline, decomposed (**4.3** owns the full accounting). Baseline entering 4.1: **321,713 B CS**
+(`c68e437c…` / `e1287b5c…`), **399,646 B app** (`7275a378…`).
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status
