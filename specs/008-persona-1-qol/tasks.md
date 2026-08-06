@@ -715,7 +715,7 @@ revertable — units. **None of them precedes 3.1.***
       cannot hold, the surface REACH gives way, not the gate** — and that ruling is **5.5's**. Golden EMPTY ·
       manifest green **2975 B** · `permissions: []`. [§8-1 (b), (c); §5 first paint; findings 7, 8]
 
-- [ ] **5.2 §8-2 — how documents actually USE tables. PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING VALUES.**
+- [x] **5.2 §8-2 — how documents actually USE tables. PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING VALUES.**
       Outputs: the **distribution of tables per document** across **this repository's own markdown AND the
       golden fixtures** — how many documents have one table, how many several, how many none.
       Files: `docs/ai/progress.md` (numbers only) + the task report

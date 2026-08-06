@@ -1271,6 +1271,97 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B**; deps **5**. NUL **0 in both forms** (raw byte
 count and escape-sequence scan) in all edited files, with a control reading **1**. Ablations by cp-aside +
 restore, never `git checkout`.
+★ **TASK 5.2 IS DONE — §8-2 IS MEASURED. ACROSS THIS REPOSITORY'S 61 TRACKED MARKDOWN DOCUMENTS
+(THE GOLDEN FIXTURES INCLUDED), `45` HAVE NO ENHANCE-ABLE TABLE, `2` HAVE EXACTLY ONE AND `14` HAVE
+SEVERAL — 73.8% / 3.3% / 23.0% AT `n=61` — AND ★ THIS REPOSITORY IS A BIASED SAMPLE FOR A TOOL WHOSE
+USERS ARE AI AGENTS WRITING ARBITRARY MARKDOWN, SO THAT DISTRIBUTION BOUNDS NOTHING ABOUT THE
+POPULATION PEEKOVER ACTUALLY SERVES.** Measurement only: **no `src/` change, no harness committed and
+no dependency** (the body's Files list is `progress.md` + the report), and both bundles are **byte- and
+md5-IDENTICAL to 5.1's** after a from-scratch rebuild of BOTH engines from a wiped `.output` — **CS
+329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`). Unit **944/944**;
+`pnpm lint` **EXIT=0**. ★ **NO VERDICT IS REACHED HERE.** Whether a filter per table *reads as noise*
+at several small tables is 006's **reads-as-noise** shape and is a **WALK (6.1)**; **§3.6's per-table
+decision is not altered by this task**, and the per-table-vs-per-document choice is **5.5's**. This
+task produces the input, nothing more.
+
+★ **THE CORPUS — `n=61`, every tracked `*.md` at HEAD `72a0109`** (`git ls-files '*.md'`), which is
+this repository's own markdown **and** the golden fixtures: the 11 files under
+`tests/golden/fixtures/` are tracked, so they are *inside* that 61 rather than beside it, and both
+halves are broken out below so neither hides in the other.
+
+★ **THE COUNT — ENHANCE-ABLE TABLES, THROUGH THE REAL PIPELINE, NOT A PIPE-CHARACTER GREP.** Each
+document was run through `sanitize(parse(source))` — the shipped `src/render/parse.ts` +
+`src/render/sanitize.ts`, not a re-implementation — into a jsdom `.peekover-reader` column, walked with
+`column.querySelectorAll('table')` exactly as `enhanceTables` walks it, and each table put through
+`hasHeaderRow()` transcribed verbatim from `tableEnhancer.ts` (`table.tHead`, then any `TH` among its
+head rows). **So the unit counted is a table the enhancer would actually grow tools on**, per §3.6's
+gate — which is the only count §8-2's question is about.
+
+★ **THE DISTRIBUTION — the full tail, nothing bucketed away** (documents at each enhance-able-table
+count): **0 → 45 · 1 → 2 · 2 → 5 · 3 → 1 · 4 → 3 · 5 → 3 · 10 → 1 · 17 → 1.** Total enhance-able
+tables in the corpus: **69**. Rolled into the body's three cells: **none 45 (73.8%) · one 2 (3.3%) ·
+several 14 (23.0%)**, `n=61`.
+- **Among the 16 documents that carry any table at all, 14 carry several** — the per-document vector is
+  `1, 1, 2, 2, 2, 2, 2, 3, 4, 4, 4, 5, 5, 5, 10, 17`, **median 3.5, max 17**
+  (`docs/ai/spec-coverage.md`), next `10` (`docs/ai/progress-archive.md`). ★ **Stated because it is the
+  inconvenient half of the same measurement:** the modal document has no table, and the document that
+  has one usually has several.
+- **The golden fixtures alone (`n=11`): none 10 · one 1 (`gfm-torture.md`) · several 0**, one table
+  total. **Everything else tracked (`n=50`): none 35 · one 1 (`tests/fixtures/hello.md`) · several 14**,
+  68 tables. The two halves of the body's corpus phrase do not agree with each other, and averaging them
+  into one cell would have hidden that.
+- ★ **A BY-PRODUCT, RECORDED BECAUSE IT IS A REAL RESULT AND NOT A NULL: the gated count equals the
+  ungated count in all 61 documents.** Every table in this corpus passes §3.6's header gate; there is
+  not one headerless table in it. **So the corpus does not exercise the gate's discrimination at all**,
+  and any confidence in that gate has to come from 3.2's unit cases, not from here.
+
+★ **THE COUNT IS VALIDATED, NOT ASSERTED — three hand-counts and three discrimination checks.**
+- **Hand-count agreement**, on documents small enough to count by eye: `gfm-torture.md` → counter
+  **1**, one pipe block (lines 7–10); `docs/trust/PERMISSIONS.md` → counter **2**, two blocks
+  (38–48, 102–116); `specs/008-persona-1-qol/plan.md` → counter **5**, five blocks (opening at lines
+  31, 88, 136, 184, 285). Three for three.
+- **Discrimination, measured rather than argued:** a pipe table **inside a fence** counts **0**; the
+  same three lines **unfenced** count **1 / gated 1**; a headerless raw-HTML `<table>` counts **1
+  ungated / 0 gated**. ★ **The third check is what makes the `all == gated` by-product above meaningful
+  — the instrument CAN exclude a headerless table, it just never had to here.**
+- **And the fenced-code confound is excluded twice over:** the instrument is markdown-it itself rather
+  than a regex, and separately **no document in the corpus has a pipe-table line inside a fence** (all
+  61 scanned; zero).
+
+★ **THE BIAS, STATED WITH THE NUMBER RATHER THAN UNDER IT (plan §4-7).** *73.8% of THIS REPOSITORY's
+markdown has no table and 23.0% has several, at `n=61`* — **and this repository is a specs-and-docs
+corpus written by and for this project, which is a biased sample for a tool whose users are AI agents
+writing arbitrary markdown.** The tables here are spec-coverage matrices, permission tables and plan
+risk grids; they are not the tables an agent emits into a report on someone else's machine. **The
+distribution above therefore bounds nothing about the population Peekover serves** — it is a convenient
+sample, it is the only sample this milestone funds, and it is reported as such. ★ **And `n=61` is small
+where it matters most: the "several" cell rests on 14 documents and the whole non-zero half on 16.** A
+reader who wants to lean on the several-table shape is leaning on 14 documents from one repository.
+★ **MEASURE-NOT-CHOOSE.** The bucketing is the body's own (none / one / several) and the full tail is
+printed beside it precisely so the rolled-up cells cannot be the only reading; nothing was rounded
+toward a convenient shape, no document was excluded, and the two halves are reported disagreeing.
+**Reproducible without a committed script:** the method above run again over `git ls-files '*.md'`
+returns these numbers, and **this entry deliberately adds no markdown table to `progress.md`**, so
+recording the measurement does not perturb the corpus it measured.
+
+**WHAT 5.2 DOES NOT DO:** **no reads-as-noise verdict — that is 6.1's walk**; **no alteration of §3.6's
+per-table decision**; **no per-table-vs-per-document choice — that is 5.5's**, the human gate, from this
+distribution plus 6.1; no §8-3 threshold (**5.3**) and **no constant set anywhere**; no app-page bytes
+(**5.4**); no `src/` change, no committed harness, no test added, no dependency, no manifest permission.
+Red-first does not apply — 5.2 asserts no behaviour; the rigor is in the count's validation above.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` **absent**; manifest test **2975 B** (byte-unmodified); deps **5**. NUL **0
+in both forms** — raw `0x00` byte and decoded `U+0000` — across all **294 tracked text sources** (298
+tracked, the four `.woff2` fonts binary and excluded by extension), with a control file carrying one
+reading **1 in both forms**.
+**TASK 5.3 IS NEXT — §8-3, THE THRESHOLD BELOW WHICH A TABLE GROWS NO TOOLS** (group 5 continues).
+**PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING VALUES.** *A two-row table with a sort control on every
+column is chrome outweighing content.* **Axes (settled, not reopened): row count · column count ·
+whether any column is numeric**, distributed across **the same corpus with the same bias stated**. ★
+**An always-on answer is LEGITIMATE — it must be CHOSEN, not defaulted into**, and the choosing is
+5.5's: **no threshold is asserted at 5.3 and a constant set there is a STOP-and-flag.** Baseline
+entering 5.3: **329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
+
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
 THAT IS A PRICE, NOT A RULING.** Measurement only: **no `src/` change and no harness committed** (the
@@ -1390,16 +1481,7 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 both forms** — raw `0x00` byte and decoded `U+0000` — across all **285 tracked text sources**, with a
 control file carrying one reading **1 in both forms** (the four `.woff2` fonts are binary and excluded by
 extension, which is why the scan is reported with its scope).
-**TASK 5.2 IS NEXT — §8-2, HOW DOCUMENTS ACTUALLY USE TABLES** (group 5 continues). **PRODUCES NUMBERS;
-FORBIDDEN FROM CHOOSING VALUES.** The **distribution of tables per document** across **this repository's
-own markdown AND the golden fixtures** — how many documents have one table, how many several, how many
-none — stated with its **n**, and ★ **with the corpus's BIAS stated WITH the number** (plan §4-7): this
-repository is a **biased sample** for a tool whose users are **AI agents writing arbitrary markdown**, and
-a number reported without that sentence overstates what it knows. **The judgement half — whether a filter
-per table reads as noise at several small tables — is 006's *reads-as-noise* shape and is a WALK (6.1).**
-★ **No verdict is reached there and §3.6's per-table decision is not altered by it.** Red-first does not
-apply (it asserts no behaviour). Baseline entering 5.2: **329,233 B CS** (`b115c9ae…` / `237831d2…`),
-**399,646 B app** (`7275a378…`).
+**TASK 5.2 WAS NEXT AND IS NOW DONE** — its record is above; the live pointer is 5.3.
 
 ★ **TASK 4.3 IS DONE — THE M8 CONTENT-SCRIPT BYTE DELTA IS DECOMPOSED TO A ZERO RESIDUAL, EVERY BYTE
 NAMED, AND GROUP 4 IS COMPLETE.** Measurement only: **no `src/` change and no test added** (the body's Files
