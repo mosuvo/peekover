@@ -736,7 +736,7 @@ revertable — units. **None of them precedes 3.1.***
       and no constant is set**; a constant set in this task is a STOP-and-flag. Golden EMPTY · manifest green
       **2975 B** · `permissions: []`. [§8-3]
 
-- [ ] **5.4 App-page bytes and the package. PRODUCES NUMBERS.** App chunk vs **389,143 B** (md5
+- [x] **5.4 App-page bytes and the package. PRODUCES NUMBERS.** App chunk vs **389,143 B** (md5
       `65486f78afa2fec0e9d00f7f0e9c0d27`, 9.3 at `94f7da5`), decomposed; `pnpm zip` vs **1,300,383 /
       1,300,442 B**, bound **< 2 MB per engine** (headroom **699,558 B** at the corrected figure); packed
       unzipped vs **4,059,893 / 4,060,009 B** against AGENTS.md's **≤5 MB**; background vs **3,548 B**.

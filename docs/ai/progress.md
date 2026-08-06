@@ -1485,15 +1485,141 @@ on both built manifests (654 / 770 B); `web_accessible_resources` **absent**; ma
 (byte-unmodified); deps **5**. NUL **0 in both forms** — raw `0x00` byte and decoded `U+0000` — in both
 edited files, with a control file carrying one reading **1 in both forms**.
 
-**TASK 5.4 IS NEXT — APP-PAGE BYTES AND THE PACKAGE** (group 5 continues). **PRODUCES NUMBERS.** App
-chunk vs **389,143 B** (md5 `65486f78afa2fec0e9d00f7f0e9c0d27`, 9.3 at `94f7da5`), **decomposed**;
-`pnpm zip` vs **1,300,383 / 1,300,442 B**, bound **< 2 MB per engine**; packed unzipped vs
-**4,059,893 / 4,060,009 B** against AGENTS.md's **≤5 MB**; background vs **3,548 B**. Every delta stated
-**with its baseline**. ★ **`dependencies` is EXACTLY FIVE, asserted not eyeballed** (§3.9, §5: zero
-additions) — **so any delta is our own code** and is decomposed as such; a dependency appearing there is
-a **stop-and-flag**. ★ **Standing note carried so 5.4 does not report a FALSE BREACH: the Firefox
-`-sources.zip` is the AMO review archive, NOT the bound** (007 8.1's finding). Baseline entering 5.4:
-**329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
+★ **TASK 5.4 IS DONE — THE APP-PAGE BYTE DELTA IS DECOMPOSED TO A ZERO RESIDUAL AND THE PACKAGE IS
+MEASURED UNDER BOTH BOUNDS. GROUP 5's INPUT SIDE IS COMPLETE.** Measurement only: **no `src/` change,
+no committed script and no test added** (the body's Files list is `progress.md` + the report), and all
+four artifacts are **byte- and md5-IDENTICAL to 5.3's** after a from-scratch rebuild of BOTH engines —
+**app 399,646 B** (`7275a378…`), **CS 329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **background
+3,548 B** (`5f53c0f5…`, both engines). Unit **944/944**; `pnpm lint` **EXIT=0**. **Nineteen arms**, each
+a real rebuild of BOTH engines from a wiped `.output` (`pnpm build` is Chrome-only; Firefox needs
+`-b firefox`). **The app chunk is byte- AND md5-identical across engines in every arm** — the engine
+split lives in the CS and the manifest, never here.
+★ **THE OBSERVED DELTA, AND THE MASTER CONTROL THAT MAKES IT MEAN SOMETHING.** App chunk **389,143 →
+399,646 B = +10,503 B** (9.3 baseline `65486f78afa2fec0e9d00f7f0e9c0d27` at `94f7da5`). ★ **4.3's
+strongest control re-fires on the app side:** with **all fourteen M8-touched `src/` files put back to
+`94f7da5`** (nine reverted, five removed) the build returns to the 9.3 baseline **byte-for-byte AND
+md5-for-md5 on all four artifacts** — app **389,143** / `65486f78…`, CS **318,747** / `c7b33b36…` /
+`67717921…`, background **3,548**. So nothing outside M8 drifted and the whole +10,503 is M8's own code.
+★ **THE ACCOUNT — EIGHT COMPONENTS, EACH ABLATION-MEASURED IN THIS RUN, SUMMING EXACTLY.**
+
+| # | Component | B | Arm (app chunk with it OFF) |
+|---|---|---|---|
+| 1 | CSS — `readerCss.ts`, all M8 rules | **967** | 391,191 (`62b88b7e…`) |
+| 2 | Badge — `agentBadge` + `agentFile`, incremental | **334** | 390,857 (`0c377697…`) |
+| 3 | Compare/picker — `diffChrome` + D-3 pair, incremental | **1,707** | 389,150 (`be8b5eb5…`) |
+| 4 | Identity seam — `docIdentity` + `appShell`'s register | **7** | 389,143 (`65486f78…`) |
+| 5 | Enhancer's own orchestration | **759** | — (392,929 controls-off, less the glue) |
+| 6 | The three controls | **6,717** | 392,929 (`0c40f5e4…`) |
+| 7 | Glue, site 1 (`appShell`) | **6** | 399,640 (`96385913…`) |
+| 8 | Glue, site 2 (`readerPane`) | **6** | 399,640 (`ee6447b4…`) |
+| | **Σ** | **10,503** | **RESIDUAL ZERO** |
+
+**967 + 334 + 1,707 + 7 + 759 + 6,717 + 6 + 6 = 10,503**, against an observed **10,503**.
+★ **AND THE RESIDUAL IS NOT AN ARITHMETIC CLAIM — IT IS A BUILD STATE.** Rows 1–4 were taken as an
+**incremental chain** from the sites-off arm (**392,158** / `998ebfd7…`), each cut stacked on the last;
+its terminal arm — every component cut **individually** — emits `app-jgQlsln1.js` at **389,143** /
+`65486f78…`, **md5-for-md5 and even chunk-hash-for-chunk-hash identical to the wholesale fourteen-file
+master control**. Two independent routes to the same bytes is a closure no sum can fake. ★ **It also
+settles a question by measurement rather than assumption:** the three content-script files
+(`runReader`, `mountReader`, `contentWatch`) stood **at HEAD** throughout that chain and the app chunk
+still landed on the baseline — so they contribute **0 B** to the app chunk, demonstrated, not argued.
+★ **THE ENHANCER HALF, CROSS-CHECKED.** HEAD − sites-off = **7,488 B** (rows 5–8), and the controls-off
+arm minus the sites-off arm is **771 B** = orchestration **759** + glue **6 + 6**. **The orchestration
+is 759 B against the content script's 760** — the same D-7/D-8 walk, one byte apart across two chunks,
+which is the name-pool grain and not a difference in what shipped.
+★ **THE CONTROLS BLOCK DECOMPOSED FURTHER, AND THE BYTES THAT DO NOT ADD UP ARE NAMED RATHER THAN
+ROUNDED.** Marginal from HEAD: sort **2,231** (397,415) · filter **2,003** (397,643) · copy **2,309**
+(397,337) · filter+copy jointly **4,488** (395,158), so the `tableName` helper **shared by filter and
+copy is 176 B** (4,488 − 2,003 − 2,309). **2,231 + 2,003 + 2,309 + 176 = 6,719 against a measured
+6,717: −2 B**, deterministic, on both engines — the **minifier's name-pool non-linearity**, the M6
+finding-1 caveat at 2-byte scale (4.3 met the same thing at **−1 B** on the CS). **It does not touch the
+zero residual above**, because row 6 enters the account as the single ablation-measured **6,717**, never
+as a sum of sub-marginals.
+★ **THE SHARING IS DIFFERENT ON THIS SURFACE, AND MARGINAL ARMS WERE RUN TO SEE IT.** Rows 2–4 are
+**incremental** figures, so jointly-held bytes fall to whichever component is cut **last**. Measured
+**marginally** from the same enhancer-free arm (391,191): badge alone **334**, compare alone **1,647**
+(389,544 / `34c6307c…`), **both together 2,041** — so **60 B leave only when BOTH go**, invisible to
+either arm on its own. ★ **This is the *shared-helper-hides-from-marginal-arms* shape inverted:** on the
+CS the joint drop was *less* than the marginals summed (a shared helper counted twice); here it is
+**more** (2,041 > 334 + 1,647), because `getDocIdentity` is retained while *either* holder stands. Same
+lesson, opposite sign. ★ **The identity seam says it plainly:** cut alone with badge and compare still
+standing it costs **31 B** (391,160 / `5bee453d…`) — *exactly* 4.3's shared `docIdentity` figure — but
+cut **last**, after both holders are gone, only **7 B** remain. Neither number is wrong and neither
+alone is the whole story; the chain is what sums, the marginal is what finds the sharing.
+★ **FOUR ARMS LANDED ON HISTORICALLY RECORDED md5s — CORROBORATION ACROSS SESSIONS, NOT WITHIN ONE.**
+Beyond the master control's return to 9.3's four artifacts (twice, by two routes): the controls-off arm
+reproduces **392,929** / `0c40f5e4…`, md5-for-md5 **task 3.4's**; copy-off reproduces **3.7's**
+`4ee49a89…` (397,337); filter+copy-off reproduces **3.6's** `7e89141b…` (395,158). **An ablation that
+lands on a build state the repo recorded months of tasks ago is a clean removal, demonstrated rather
+than asserted.**
+★ **NEVER A GREP (M6 finding 1).** No number above came from counting identifiers or source characters.
+Every one is a **drop between two real builds of both engines from a wiped `.output`**, and every arm
+carries a control that fires: the cut is asserted to have matched (a cut that changes nothing exits
+nonzero — one did, mid-run, corrupting a neighbouring declaration; the guard caught it and the arm was
+re-cut line-wise rather than reported), the build **succeeds** (19/19 arms, exit 0 on both engines), and
+the removal reproduces either a recorded md5 or a complementary arm.
+★ **(b) THE ZIP — UNDER THE BOUND ON BOTH ENGINES, AND THE BASELINE WAS RE-MEASURED RATHER THAN
+TRUSTED.** `pnpm zip` / `pnpm zip -b firefox`: **Chrome 1,306,513 B** (baseline **1,300,383**, **+6,130**)
+· **Firefox 1,306,571 B** (baseline **1,300,442**, **+6,129**). Against the **< 2,000,000 B per engine**
+bound: **65.3 % used**, headroom **693,487 / 693,429 B** (down from the recorded 699,558). ★ **The
+baselines are not quoted — they are reproduced:** zipping the **master-control tree** returns
+**1,300,383 / 1,300,442** byte-for-byte, so every delta here is measured from a baseline this run
+rebuilt. And the zip is **deterministic**: two identical HEAD runs returned identical byte counts, so
+the +6,130 is signal and not archive jitter.
+★ **(c) THE UNZIPPED PACKAGE — UNDER `≤5 MB`, AND ITS DELTA RECONCILES TO ZERO.** **Chrome 4,080,882 B**
+(baseline **4,059,893**, **+20,989**) · **Firefox 4,080,998 B** (baseline **4,060,009**, **+20,989**),
+104 files each; the master-control tree reproduces both baselines byte-for-byte. Against AGENTS.md's
+**≤5 MB**: **81.6 % used**, headroom **919,118 / 919,002 B**. ★ **The whole package delta is the two
+chunks and nothing else: 10,503 (app) + 10,486 (CS) = 20,989, exactly** — so no asset, no manifest and
+no chunk outside those two moved a byte.
+★ **(d) THE BACKGROUND SCRIPT — 3,548 B, DELTA `0`** against its **3,548 B** baseline, md5 `5f53c0f5…`,
+identical on both engines. M8 never touched it and the number says so.
+★ **`dependencies` IS EXACTLY FIVE, ASSERTED BY PARSING NOT BY EYE** — `Object.keys(pkg.dependencies)`
+returns `["diff","dompurify","markdown-it","markdown-it-task-lists","mermaid"]`, **length 5** (§3.9, §5:
+zero additions). **So every byte above is our own code**, which is what licenses decomposing the delta
+as Peekover's rather than a library's.
+★ **THE FIREFOX `-sources.zip` IS EXCLUDED FROM THE BOUND, AND THIS IS WHY IT IS NAMED HERE.** The
+Firefox zip run also emits `peekover-0.0.0-sources.zip` at **4,633,623 B** — the **AMO review archive**
+Mozilla's reviewers build from, **not the shippable package** (007 8.1's finding). It is **2.3× the
+2 MB bound** and reporting it against that bound would be a **FALSE BREACH**. The shippable Firefox
+package is the **1,306,571 B** figure above.
+**WHAT 5.4 DOES NOT DO:** ★ **it MEASURES the package against the bounds; it does not RULE.** Both
+bounds hold with 693 KB and 919 KB of headroom — **and "it fits" is a number, not a decision**. Whether
+the content-script reach ships (§8-1), the filter's scope (§8-2), the threshold (§8-3) and the
+presentation set (§8-4) are **5.5's**, taken by a human on 5.1–5.4's numbers and the walk. **No value
+was chosen, nothing rounded toward a bound, no favourable arm preferred** — the four package figures are
+whatever the tree built, and the two that grew are reported with the baseline they grew from. No `src/`
+change, no committed harness, no test added, no dependency, no manifest permission.
+★ **ONE SELF-INFLICTED CAVEAT, MEASURED RATHER THAN LEFT FOR 5.5 TO TRIP OVER.** 5.3 deliberately added
+**no** markdown table to `progress.md` so that recording a measurement would not perturb the corpus it
+measured; **this entry adds one** — the eight-component account above. A before/after count over the
+same **61 tracked `.md` files** confirms the perturbation is exactly that and nothing more: **+1 table**
+on the edited tree. (The absolute count from that check is **95 → 96**, not 5.2's 69, because the check
+is a bare header+delimiter detector without 5.2's fence and header gating — **the delta is the
+load-bearing figure here, not the absolute**.) So **5.2's `n=69` and 5.3's histograms were true at their
+own commits and are now off by this one table**, in the direction of one more medium-sized
+all-prose table. It changes no cut-point 5.5 would read, and it is stated rather than left implicit.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` **absent**; manifest test **2975 B** (byte-unmodified); deps **5**. Ablations
+by **cp-aside + restore, never `git checkout`**, with all fourteen files md5-verified back to HEAD after
+every arm. NUL **0 in both forms** — raw `0x00` byte and decoded `U+0000` — in both edited files, with a
+control file carrying one reading **1 in both forms**.
+
+**TASK 5.5 IS NEXT — ★ THE DECISION GATE, AND IT IS THE HUMAN's** (group 5's choose half; the input side
+is now complete). **Recorded in `docs/ai/decisions.md` BEFORE any code that sets a value.** Four choices,
+each **with the measurement that justifies it**: **§8-1 — does the content-script REACH ship?** on 4.3's
+decomposition (**+10,486 B** CS) and 5.1's floor-beside-median (**+8.9 ms** median / **+11.1 ms** floor
+against the standing **26.9 / 29.9 ms** headroom — 40.8 % at the widest reading), with 5.4's package
+headroom (**693 KB** zip, **919 KB** unzipped) beside them. ★ **The rule is already set and the value is
+not: if the gate cannot hold, the surface REACH gives way, not the gate** (§8-1's escape hatch, gate-1
+§9-4). **§8-2 — per-table or per-document filter**, from 5.2's distribution and **6.1's walk**.
+**§8-3 — the threshold, if any**, from 5.3 — ★ **an always-on answer is LEGITIMATE and must be CHOSEN,
+not defaulted into.** **§8-4 — the presentation set**, a walk judgement. ★ **§8-1's ruling must be
+recorded in the terms 5.7 has to execute** (ship the reach, or remove it and re-measure to a restored
+baseline). **No code lands on an assumed number**, and **a re-scope decided here is a FINDING recorded in
+terms — never a quiet re-scope.** Baseline entering 5.5: **app 399,646 B** (`7275a378…`), **CS
+329,233 B** (`b115c9ae…` / `237831d2…`), **background 3,548 B**, zip **1,306,513 / 1,306,571 B**,
+unzipped **4,080,882 / 4,080,998 B**, deps **5**.
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
