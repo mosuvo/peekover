@@ -115,6 +115,37 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 // spies are wired at all.
 const injected = vi.hoisted(() => ({ parse: 0, sanitize: 0, sanitizeSvg: 0 }));
 
+// ── ★ THE CONTENT SCRIPT'S ENHANCE GATE (task 4.2) ────────────────────────────────────────────
+//
+// The app-page arms above can toggle the enhancement by simply not calling it: 3.10's runner owns
+// the two lines. The CONTENT SCRIPT cannot be driven that way. `enhanceTables` is called from
+// INSIDE production — `mountReader.ts:110` (site 3) and `contentWatch.ts:90` (site 4) — so an arm
+// that "mounts without enhancing" has no seam to pass and reconstructing `mountReader`'s body here
+// would measure the harness rather than the surface.
+//
+// So the ablation is moved one level down, to the module boundary the two sites import across. The
+// wrapper is ALWAYS called and ALWAYS counted; `enabled` decides only whether the REAL body runs.
+// That is what makes the floor arm exact: it is the production path, reaching the production call
+// site, with the enhancer's BODY and nothing else removed.
+//
+// ★ AND `calls` IS THE FLOOR ARM'S OWN FIRING CONTROL, which an enhancement flag alone would not
+// give. A floor that added no node because the site never reached the enhancer is indistinguishable
+// — on the counters — from a floor that reached it and was gated off. The counter tells them apart,
+// and every arm below asserts it.
+const csEnhanceGate = vi.hoisted(() => ({ enabled: true, calls: 0 }));
+
+vi.mock('../../src/render/tableEnhancer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/render/tableEnhancer')>();
+  return {
+    ...actual,
+    enhanceTables: (host: HTMLElement): void => {
+      csEnhanceGate.calls += 1;
+      if (!csEnhanceGate.enabled) return;
+      actual.enhanceTables(host);
+    },
+  };
+});
+
 vi.mock('../../src/render/parse', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/render/parse')>();
   return {
@@ -152,8 +183,17 @@ import {
   SORT_BUTTON_CLASS,
 } from '../../src/render/tableTools';
 import { AGENT_BADGE_CLASS } from '../../src/render/agentBadge';
-import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
+import {
+  getDocIdentity,
+  registerDocIdentity,
+  resetDocIdentityForTest,
+} from '../../src/render/docIdentity';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
+// ★ 4.2's content-script surface. `runReader` is the entrypoint's own document_start
+// orchestration, which reaches `mountReader` (D-6 site 3) and through it the enhancer. Nothing
+// below calls `enhanceTables`, hands a `render` to a controller, or reconstructs `mountReader`'s
+// body — the arms drive the production path and vary the gate above.
+import { runReader, removeHideStyle } from '../../src/render/runReader';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────────────────────
 
@@ -509,6 +549,207 @@ describe('the enhancer re-parses nothing, re-sanitizes nothing and reads no layo
         offsetHeight: 1,
       },
       enhanced: ENHANCED_M8_FOOTPRINT,
+    });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 4.2 — THE SAME GUARD, ON THE CONTENT SCRIPT (D-11 (ii), the second surface)
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ── WHY THE APP-PAGE ARMS ABOVE CANNOT STAND IN FOR THIS ─────────────────────────────────────
+//
+// Everything above composes `mount` + the two enhancer calls the way `appShell` does, and it would
+// go on passing, unchanged, against a build in which the CONTENT SCRIPT enhanced nothing at all —
+// which is exactly what shipped from 3.4 through 3.11 and what 4.1 fixed. §5's *"a document with no
+// table and no recognized name shall pay nothing measurable"* is a claim about BOTH surfaces, and
+// the content script is the one that runs in the page's own context on every allowlisted document
+// the reader ever sees. So the guard is re-established here, through `runReader`.
+//
+// ── THE ARMS, AND THE FLOOR THAT KEEPS THE CONTROL HONEST ────────────────────────────────────
+//
+//   arm 1  runReader, enhancer gated OFF    CS_BARE    — the floor
+//   arm 2  runReader, enhancer gated ON     CS_BARE    — nothing to enhance
+//   arm 3  runReader, enhancer gated ON     CS_TABLE   — something to enhance
+//   arm 3's FLOOR  runReader, gated OFF     CS_TABLE   — the SAME document, unenhanced
+//
+// ★ THE FLOOR IS NOT OPTIONAL, AND 3.10 IS WHY. `(3) > (2)` compares two DIFFERENT DOCUMENTS: arm
+// 3's markdown carries a table, so its shadow root is larger BEFORE any enhancer runs. On the node
+// counter that inequality is CONFOUNDED — a completely dead enhancer would still produce it, and
+// the "control that fires" would be reading the fixture rather than the code. `arm3 − arm3floor`
+// is the enhancer's OWN delta on ONE document, and that is the reading that proves the instrument
+// responds to the enhancer. Both forms are asserted, and the floor-corrected one is what the claim
+// rests on. (The listener counter is not confounded — plain table markup binds nothing — so it is
+// asserted both ways too.)
+//
+// ── ONE DIFFERENCE FROM THE APP-PAGE FOOTPRINT, MEASURED RATHER THAN ASSUMED ─────────────────
+//
+// M8's app-page footprint has two triggers, the table and the recognized NAME. On this surface the
+// name is not the fixture's to choose: `runReader` registers `basenameOf(location.href)` (`:149`),
+// which is the RUNNER's own URL, and no test runner is called `CLAUDE.md`. So no CS arm grows a
+// badge — and the identity is carried INTO the assertion rather than left implicit, so a zero badge
+// count is read beside the name that explains it instead of being mistaken for a badge that failed
+// to render. What that leaves in the CS delta is `enhanceTables` and nothing else, which is exactly
+// what D-6 puts on this surface.
+
+/** NOTHING TO ENHANCE, as the content script receives it: no `<table>`, no fence. */
+const CS_BARE = ['# Report', '', 'Prose only, and nothing any enhancer can reach.', ''].join('\n');
+
+/** SOMETHING TO ENHANCE: a three-column GFM table with a header row, so the gate opens. */
+const CS_TABLE = [
+  '# Report',
+  '',
+  '| dept | who | n |',
+  '| --- | --- | --- |',
+  '| eng | zoe | 10 |',
+  '| ops | bo | 2 |',
+  '',
+].join('\n');
+
+const HOST_TAG = 'peekover-root';
+
+/**
+ * The page a browser builds for a raw `.md` resource: the bytes in a single `<pre>`. That is what
+ * `readPageSource()` reads, and seeding it is the ONLY fake in this harness — measured against the
+ * real thing in `tableCopy.browser.test.ts`'s `file://` probe, which reports the `<pre>` count a
+ * real engine produces for a real `.md` file.
+ */
+function seedRawPage(doc: string): void {
+  const pre = document.createElement('pre');
+  pre.textContent = doc;
+  document.body.appendChild(pre);
+}
+
+/** Leave the document as this file found it: no host, no seeded source, no hide rule. */
+function clearContentPage(): void {
+  document.querySelector(HOST_TAG)?.remove();
+  removeHideStyle();
+  document.body.replaceChildren();
+  resetThemeHostsForTest();
+  resetDocIdentityForTest();
+}
+
+interface ContentArm extends Arm {
+  /** Wrapper invocations during the arm — the floor's proof that the call SITE was reached. */
+  enhancerCalls: number;
+}
+
+/**
+ * ONE runner for every content-script arm. The only difference between an enhanced arm and its
+ * floor is `csEnhanceGate.enabled` — same fixture handling, same `runReader` options, same
+ * instrument installed at the same point, same production path from `runReader` through
+ * `mountReader` to the call site.
+ *
+ * `isRenderable` is overridden because the runner's own page is not a markdown document; that seam
+ * exists for exactly this and is the one the WXT entrypoint fills with `isRenderableContext`.
+ * Everything downstream of it — the source read, the host append, `mount`, the enhancer, the hide
+ * of the originals — is production. `runReader` reaches its mount SYNCHRONOUSLY here (the runner's
+ * `readyState` is `complete`, so `tryMount(true)` runs in the same task), which is what lets the
+ * counters be read the way the app-page arms read theirs.
+ */
+function runContentArm(doc: string, enhance: boolean): ContentArm {
+  clearContentPage();
+  seedRawPage(doc);
+  const callsBefore = csEnhanceGate.calls;
+  csEnhanceGate.enabled = enhance;
+  const listeners = countListeners();
+  try {
+    runReader({ isRenderable: () => true });
+  } finally {
+    listeners.stop();
+    csEnhanceGate.enabled = true;
+  }
+  const host = document.querySelector<HTMLElement>(HOST_TAG)!;
+  return {
+    host,
+    nodes: nodeCount(host.shadowRoot!),
+    listeners: listeners.calls(),
+    enhancerCalls: csEnhanceGate.calls - callsBefore,
+  };
+}
+
+interface ContentMeasured {
+  bareFloor: ContentArm;
+  bareEnhanced: ContentArm;
+  tableFloor: ContentArm;
+  tableEnhanced: ContentArm;
+  /** The name `runReader` derived from the runner's URL — what the badge counts are read against. */
+  identity: string | undefined;
+}
+
+let cs: ContentMeasured;
+
+describe('the CONTENT SCRIPT pays nothing for a document with nothing to enhance (D-11 (ii))', () => {
+  beforeAll(() => {
+    // The same discarded warm-up the app-page arms take, for the same reason: any first-call cost
+    // inside this path would otherwise land in whichever arm ran first.
+    runContentArm(CS_BARE, true);
+
+    cs = {
+      bareFloor: runContentArm(CS_BARE, false),
+      bareEnhanced: runContentArm(CS_BARE, true),
+      tableFloor: runContentArm(CS_TABLE, false),
+      tableEnhanced: runContentArm(CS_TABLE, true),
+      identity: getDocIdentity(),
+    };
+  });
+
+  afterAll(clearContentPage);
+
+  it('arm 1 == arm 2 — runReader alone and runReader + the enhancer produce the SAME shadow root, to the node and to the listener', () => {
+    // THE PROPERTY, and the enhancer-call counts ride in the SAME `expect` because they are what
+    // make it non-vacuous: BOTH arms reached the call site exactly once, and the gated-off one is
+    // therefore a measurement of the enhancer's body rather than of a site that never fired.
+    expect({
+      floor: { ...countsOf(cs.bareFloor), enhancerCalls: cs.bareFloor.enhancerCalls },
+      enhanced: { ...countsOf(cs.bareEnhanced), enhancerCalls: cs.bareEnhanced.enhancerCalls },
+    }).toEqual({
+      floor: { ...countsOf(cs.bareFloor), enhancerCalls: 1 },
+      enhanced: { ...countsOf(cs.bareFloor), enhancerCalls: 1 },
+    });
+  });
+
+  it('★ arm 3 moves the SAME instrument — against arm 2 AND against its own FLOOR (the un-confounded control)', () => {
+    const bare = countsOf(cs.bareEnhanced);
+    const table = countsOf(cs.tableEnhanced);
+    const floor = countsOf(cs.tableFloor);
+    // ★ `movedVsFloor` IS THE CONTROL. `movedVsArm2` is D-11 (ii)'s literal wording and it is
+    // carried, but on the node counter it is confounded by arm 3's larger markup — a dead enhancer
+    // produces it. The floor comparison is the same document with the enhancer's body removed, so
+    // the delta it reports belongs to the enhancer and to nothing else. Raw numbers travel with the
+    // booleans so a failure shows what the counters actually read.
+    expect({
+      arm2: bare,
+      arm3: table,
+      arm3Floor: floor,
+      enhancerCalls: {
+        arm3: cs.tableEnhanced.enhancerCalls,
+        arm3Floor: cs.tableFloor.enhancerCalls,
+      },
+      movedVsArm2: { nodes: table.nodes > bare.nodes, listeners: table.listeners > bare.listeners },
+      movedVsFloor: {
+        nodes: table.nodes > floor.nodes,
+        listeners: table.listeners > floor.listeners,
+      },
+    }).toMatchObject({
+      enhancerCalls: { arm3: 1, arm3Floor: 1 },
+      movedVsArm2: { nodes: true, listeners: true },
+      movedVsFloor: { nodes: true, listeners: true },
+    });
+  });
+
+  it('no element carrying any M8 class exists anywhere in arm 2`s shadow root — and arm 3 carries the toolbar', () => {
+    // The structural half, with its firing control in the same object. `badges: 0` on BOTH arms is
+    // the measured consequence of the identity `runReader` derived from the runner's URL, which is
+    // carried here so the zero is read beside its reason.
+    expect({
+      identityIsAnAgentFile: cs.identity === 'CLAUDE.md' || cs.identity === 'AGENTS.md',
+      arm2: m8Footprint(cs.bareEnhanced.host.shadowRoot!),
+      arm3: m8Footprint(cs.tableEnhanced.host.shadowRoot!),
+    }).toEqual({
+      identityIsAnAgentFile: false,
+      arm2: NO_M8_FOOTPRINT,
+      arm3: { ...ENHANCED_M8_FOOTPRINT, badges: 0 },
     });
   });
 });

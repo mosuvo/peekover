@@ -1195,16 +1195,93 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B** (byte-unmodified); deps **5**; `pnpm lint`
 **EXIT=0**. NUL **0 in both forms** (raw byte count and decoded-codepoint scan) in all three edited files,
 with a control file reading **2** in both. Ablations by cp-aside + restore, never `git checkout`.
-**TASK 4.2 IS NEXT — THE CONTENT-SCRIPT COST GUARD, AND D-10's `file://` RESIDUAL PROVEN EMPIRICALLY**
-(D-11 (ii) · D-10). The three-arm conditionality guard on the **content script**, same shape as 3.10:
-**(1) == (2)** on node and listener counts, **(3) > (2)** as the control that fires, and no element
-carrying an M8 class anywhere in arm 2's shadow root. ★ **And D-10's one residual, measured rather than
-argued:** the content script runs in the PAGE's context, one of whose two document classes is **`file://`**,
-whose secure-context status **MDN itself hedges** (*"generally true"* is not a contract) — so clipboard
-availability is measured on **both engines** and **both content-script document classes**, `file://` AND an
-allowlisted raw host. Where it is unavailable, §3.8's degradation holds: a stated failure beside a still-
-readable table, never a broken button. **A doc read is not a build.** Baseline entering 4.2: **329,233 B
-CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
+★ **TASK 4.2 IS DONE — THE CONTENT-SCRIPT CONDITIONALITY GUARD STANDS, AND D-10's `file://` RESIDUAL IS
+RETIRED BY MEASUREMENT: MDN's HEDGE RESOLVES TO *YES* ON BOTH ENGINES.** Test-only — no `src/` change —
+so **both bundles are byte-identical to 4.1's after a from-scratch rebuild of BOTH engines: CS 329,233 B**
+(Cr `b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`). Unit **944/944**; browser **1251
+passed | 15 skipped, 118 files, 0 failed**; the two touched files re-run with `.output/` present read
+**48/48, zero skips** (so the `permissions: []` re-proof on both built manifests really ran); `pnpm lint`
+**EXIT=0**.
+★ **THE CS GUARD — 3.10's SHAPE, AND 3.10's CONFOUND MEASURED RATHER THAN INHERITED ON TRUST.** Four arms
+through **production only** (`runReader` → `mountReader`, D-6 site 3; nothing calls `enhanceTables` and
+nothing reconstructs `mountReader`'s body): bare-floor, bare-enhanced, table-floor, table-enhanced.
+**(1) == (2)** holds on node AND listener counts, and **the firing control is FLOOR-CORRECTED** —
+`arm3 − arm3floor`, the same document with the enhancer's body removed. ★ **The floor is not ceremony,
+and this run has the number: with the enhancer made completely DEAD, `movedVsArm2.nodes` STILL READ
+`true` on both engines** — arm 3's larger markup produces the naive `(3) > (2)` on its own — **while
+`movedVsFloor.nodes` read `false`.** A nodes-only naive control would have passed over dead code.
+(`movedVsArm2.listeners` went `false`, so the listener counter is un-confounded exactly as 3.10 said;
+both forms are asserted.)
+★ **THE ABLATION SEAM IS THE MODULE BOUNDARY, AND IT CARRIES ITS OWN WIRED-NESS CONTROL.** The CS has no
+`enhance` flag to pass, so `enhanceTables` is module-mocked to a wrapper that is **always called and
+always counted** and whose `enabled` decides only whether the real body runs. `enhancerCalls` rides in the
+SAME `expect` as the equality — and that mattered: **with site 3 unwired, all three CS cases went red and
+`enhancerCalls` dropped 1 → 0**, where the equality ALONE would have stayed **green** (both arms become
+identical). A second masked-instrument catch, banked. Third ablation: an enhancer that grows chrome
+unconditionally → **the equality reds on both engines** while the firing control stays green, which is the
+discriminating structure doing its job.
+★ **D-10's RESIDUAL — MEASURED IN A REAL `file://` DOCUMENT, NOT SIMULATED.** There is **no in-page route**:
+both engines refuse to navigate web content to `file://` (the finding this repo already carried at
+`watchContentWiring.browser.test.ts:24`), and a simulated secure context would prove nothing about the
+surface in question. So `vitest.config.ts` gains **one cross-engine browser command**, `probeFileUrlClipboard`
+— the same server-side Playwright seam `emulateColorScheme` already uses, and the only one that is not
+Chromium-only. It writes a real **raw `.md`** file (the actual CS document class), opens it in a **freshly
+created browser context** (so no consent can leak into this file's own `prompt` pin), and fires a **real
+mouse click** for transient activation. **THE ANSWER, both engines: `isSecureContext: true`,
+`navigator.clipboard.writeText` present and a function** — and the raw `.md` really renders as the single
+`<pre>` `readPageSource()` reads. ★ **The ORIGIN is not the discriminator, the GATE is:** Gecko writes on
+the gesture alone (`clipboard-write` is not a Gecko `PermissionName` — the grant itself reports
+`unsupported`), Blink refuses at consent `prompt` with **`NotAllowedError`** and resolves once the browser
+consent is granted — the *identical* A-B this file already pins at the runner's origin. `file://` introduces
+**no new behaviour and no new failure mode**. ★ *(`location.origin` does differ — `"file://"` in Chromium,
+`"null"` in Firefox — and `isSecureContext` is `true` in both, which is the property that matters.)*
+★ **THE MEASUREMENT'S OWN CONTROLS FIRE.** The harness control (`preCount: 1`, `sourceStart: '# Report'`,
+the URL ending in our file) reds correctly when the probe is pointed at `about:blank` — **and that same
+ablation read `isSecureContext: false`**, which is what proves the `true` on `file://` is a discriminating
+reading rather than a value that is true everywhere.
+★ **THE COPY DEGRADES GRACEFULLY WHATEVER `file://` ANSWERS (§3.8 F26, D-7) — AND 4.1's DEFERRAL IS NOW
+DISCHARGED HONESTLY.** The measurement is what unblocked it: `file://` and the runner's origin are now
+**known** to be the same secure-context class with the same gate and the same `NotAllowedError`, so driving
+the real content-script copy at this origin no longer ratifies the wrong secure context. One case, both
+branches: the click **resolves** (no throw escapes), the status **says** what happened — the confirmation on
+Gecko, §3.8's *"Copy unavailable. The table is unchanged."* on Blink, with the Blink branch **pinned** so a
+silently-succeeding run cannot stop exercising the degradation — the button is still a painted, enabled
+`<button>`, and the table is still readable (`['zoe','adam','bo']` on screen, host connected). Red-first:
+**with F26's `fail` handler removed the case reds on Chromium**. ★ **No `src/` change was needed** —
+`tableTools.ts:834-846` already handles both an absent clipboard and an async rejection.
+★ **ONE MEASURED HARNESS FINDING, RECORDED BECAUSE IT COST A 100-SECOND TIMEOUT.** The probe's first shape
+appended a `<button>` to the `file://` page and clicked it by id; on the browser's **plain-text** `.md`
+document that click never resolved (Firefox, 30 s locator timeout). The engines' text-resource document is
+not an authored one — a listener on `document` plus a real `mouse.click` needs nothing to find first, and
+the constant is inlined rather than passed across the evaluate boundary. Suite time went 101 s → 10.7 s.
+★ **ONE MACHINE-STATE NOTE, THE SAME ONE 3.11 AND 4.1 RECORDED.** Port **63315** is still inside this
+machine's Windows dynamic TCP exclusion range; the suite ran with the browser API port moved to **51999**
+and `vitest.config.ts` was **stripped of it before the commit** (verified by grep in the committed tree).
+Separately, `pipeline.perf.test.ts` read **100.48 ms against a 100 ms budget** on the first full unit run —
+immediately after a full browser suite and two builds. `src/` is byte-identical, so 4.2 cannot have moved
+it; **3/3 green in isolation and 944/944 green on the re-run**. Machine state, per the *perf-deltas-need-an-
+interleaved-control* finding — not a regression, and not silently swallowed either.
+**WHAT 4.2 DOES NOT DO:** **no full byte accounting to a zero residual (4.3)** — 4.2 only re-confirms
+byte-identity; no walk judgement (**6.1**); no `src/` change of any kind; no dependency; no manifest
+permission. ★ **One scope note the human owns and approved in-session:** 4.2's Files list named the two test
+files only, and reaching a real `file://` document required the `vitest.config.ts` seam — routed as a
+decision (spec-005 records that file as *"OUT OF FENCE — human decision"*) and **approved before any code
+landed**, so the commit is four files plus the two records rather than two.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` absent; manifest test **2975 B**; deps **5**. NUL **0 in both forms** (raw byte
+count and escape-sequence scan) in all edited files, with a control reading **1**. Ablations by cp-aside +
+restore, never `git checkout`.
+**TASK 4.3 IS NEXT — THE CONTENT-SCRIPT BYTE DELTA, DECOMPOSED TO A ZERO RESIDUAL** (§5 · §8-1 (a)).
+**PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING VALUES.** The bundle is measured against **318,747 B** (9.3,
+`94f7da5`, md5 Cr `c7b33b36b1a727fdacb77eefe64083e1` / Fx `67717921bdf646c7366176392d0c37d7`) and the delta
+decomposed — table-tools code · badge code · glue · CSS — **summing to the observed delta EXACTLY, with the
+residual NAMED rather than rounded away**, proven **by ablation with a control that FIRES** and **never by
+an identifier grep** (M6 finding 1). 4.1 already banked four rebuild arms (site-3 glue **6 B**, site-4 glue
+**40 B**, shared payload counted once **7,474 B**, both cross-checks closing) and a fifth bracketing arm
+(controls **≥ 4,440 B**, orchestration **≤ 3,034 B**) — 4.3 takes that bracket to an exact split. Check the
+tree-shaking shape while the ablation stands (a spread in an unused export's initializer is retained;
+`/*#__PURE__*/ ARR.slice()` drops). **An unaccounted byte is a DEFECT and a STOP-and-flag.** Baseline
+entering 4.3: **329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status

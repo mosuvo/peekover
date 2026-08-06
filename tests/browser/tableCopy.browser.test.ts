@@ -42,7 +42,11 @@
 // D-10's `file://` residual is 4.2's — it needs the content-script surface, which is not here.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { userEvent, cdp } from 'vitest/browser';
+import { userEvent, cdp, commands } from 'vitest/browser';
+// ★ 4.2's content-script surface: `runReader` is the entrypoint's own document_start
+// orchestration, which reaches `mountReader` and through it D-6 site 3. Nothing below calls
+// `enhanceTables` — on this surface either, for 3.4's reason.
+import { runReader, removeHideStyle } from '../../src/render/runReader';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { TABLE_TOOLBAR_CLASS } from '../../src/render/tableEnhancer';
@@ -281,6 +285,11 @@ async function grantClipboardConsent(): Promise<void> {
 // ── Lifecycle ─────────────────────────────────────────────────────────────────────────────────
 
 function reset(): void {
+  // 4.2's content-script arms leave a `peekover-root` and a hide <style> behind. The host is a
+  // body child and goes with `replaceChildren` below; the <style> lives under `documentElement`
+  // and does not, so it is dropped by name — a surviving `body > :not(peekover-root){display:none}`
+  // would hide the NEXT case's app-page container and read as a paint failure.
+  removeHideStyle();
   resetDocIdentityForTest();
   resetWatchRegistryForTest();
   resetWatchControlsForTest();
@@ -624,6 +633,262 @@ describe('3.8 · ★ D-10 — the clipboard asked the manifest for nothing', () 
       }
     },
   );
+});
+
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// TASK 4.2 — D-10's `file://` RESIDUAL, MEASURED IN A REAL `file://` DOCUMENT
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// ── THE QUESTION, AND WHY IT WAS LEFT OPEN UNTIL NOW ─────────────────────────────────────────
+//
+// Everything above runs on the APP PAGE, at the runner's own `http://localhost` origin. The
+// content script does not: it runs in the PAGE's context, and one of its two document classes is
+// `file://`. `navigator.clipboard` is only available in a SECURE CONTEXT, and MDN's own wording on
+// `file://` is hedged — *"The same is generally true for `file://` URLs"* (Secure Contexts).
+// **"Generally" is not a contract.** So whether the copy works at all on the content script's
+// `file://` class was an EMPIRICAL question, and 4.1 deliberately declined to answer it from this
+// surface: asserting on the runner's `http://` origin would have ratified the WRONG secure context.
+//
+// ── MEASURE, DO NOT CHOOSE ───────────────────────────────────────────────────────────────────
+//
+// Nothing below decides what `file://` ought to do. It reports what a real engine does in a real
+// `file://` document and asserts THAT — the same discipline 3.5 applied to `max-width: none` and
+// 3.9 to `aria-sort: none`. Both answers were acceptable going in: available, or unavailable and
+// degrading to §3.8's stated failure. The measured answer is recorded in the case names.
+//
+// ── HOW A REAL `file://` DOCUMENT IS REACHED, AND WHY A SIMULATION WOULD BE WORTHLESS ────────
+//
+// This test runs IN the page, and BOTH engines refuse to navigate web content to a `file://` URL
+// (this repo already carries the finding: watchContentWiring.browser.test.ts:24). An iframe is
+// blocked identically. So there is no in-page route, and the one thing that must NOT be done is
+// simulate it — stubbing `isSecureContext` or faking the origin would prove exactly nothing about
+// the surface in question, which is the whole reason the residual was named rather than argued.
+//
+// The driver can navigate there, so the measurement is taken through `probeFileUrlClipboard`
+// (`vitest.config.ts`), the same server-side Playwright seam `emulateColorScheme` already uses and
+// the only CROSS-ENGINE one — `cdp()` is Chromium-only and would have to navigate this very page.
+// The command writes a real `.md` file, opens it in a FRESH browser context, and clicks a real
+// button in it. The fixture is a raw `.md` file rather than an `.html` one because that IS the
+// content-script document class.
+//
+// ── THE OTHER DOCUMENT CLASS, AND AN HONEST LIMIT ON IT ──────────────────────────────────────
+//
+// §7 names two: `file://` and the allowlisted raw hosts (`https://raw.githubusercontent.com/*`,
+// `entrypoints/peekover.content.ts:35`). The `https://` class is measured HERE, at the runner's own
+// `http://localhost` origin — and the limit is stated rather than glossed: localhost and `https://`
+// are the same class for the ONE property under test, both being potentially-trustworthy origins
+// by the same spec rule, and this suite will not reach an actual raw host because that would be a
+// network call (AGENTS.md #1). What is measured on that class is its secure-context status and its
+// clipboard, which is what the residual asks about.
+
+interface ClipboardWriteOutcome {
+  outcome: string;
+  errorName: string | null;
+  readBack: string | null;
+}
+
+interface FileUrlClipboardProbe {
+  url: string;
+  origin: string;
+  isSecureContext: boolean;
+  hasClipboard: boolean;
+  writeTextType: string;
+  preCount: number;
+  sourceStart: string;
+  noConsent: ClipboardWriteOutcome;
+  withConsent: ClipboardWriteOutcome & { grant: 'granted' | 'unsupported' };
+}
+
+declare module 'vitest/internal/browser' {
+  interface BrowserCommands {
+    probeFileUrlClipboard(): Promise<FileUrlClipboardProbe>;
+  }
+}
+
+/** The `file://` measurement is one navigation per arm; taken ONCE and read by every case. */
+let fileProbe: FileUrlClipboardProbe;
+
+describe('4.2 · ★ D-10 — the `file://` residual, MEASURED (it IS a secure context, on both engines)', () => {
+  beforeEach(async () => {
+    fileProbe ??= await commands.probeFileUrlClipboard();
+  });
+
+  it('★ the harness really landed on a raw `.md` `file://` document — the content-script document class', async () => {
+    // THE HARNESS CONTROL, and it comes first because every reading below is worthless without it.
+    // A probe that silently landed on an error page, a download shim or `about:blank` would report
+    // a perfectly plausible `isSecureContext` for a document that is not the one under test. The
+    // `<pre>` count and the document's own first bytes are what tie the measurement to OUR file —
+    // and `preCount: 1` is independently the shape `readPageSource()` reads (`mountReader.ts:41`).
+    expect({
+      scheme: fileProbe.url.slice(0, 8),
+      endsWithOurFile: fileProbe.url.endsWith('/report.md'),
+      preCount: fileProbe.preCount,
+      sourceStart: fileProbe.sourceStart,
+    }).toEqual({
+      scheme: 'file:///',
+      endsWithOurFile: true,
+      preCount: 1,
+      sourceStart: '# Report',
+    });
+  });
+
+  it('★ MDN`s hedge resolves to YES: `file://` IS a secure context and DOES carry the clipboard — and so does the raw-host class', async () => {
+    // ★ THE RESIDUAL'S ANSWER, ON BOTH DOCUMENT CLASSES, IN ONE INSTRUMENT. The second half is the
+    // runner's own origin, read in-page — the unambiguous class, carried so the `file://` reading
+    // is a comparison rather than an isolated number.
+    expect({
+      fileUrl: {
+        isSecureContext: fileProbe.isSecureContext,
+        hasClipboard: fileProbe.hasClipboard,
+        writeTextType: fileProbe.writeTextType,
+      },
+      secureHostClass: {
+        isSecureContext: window.isSecureContext,
+        hasClipboard: 'clipboard' in navigator,
+        writeTextType: typeof navigator.clipboard?.writeText,
+      },
+    }).toEqual({
+      fileUrl: { isSecureContext: true, hasClipboard: true, writeTextType: 'function' },
+      secureHostClass: { isSecureContext: true, hasClipboard: true, writeTextType: 'function' },
+    });
+  });
+
+  it('★ the ORIGIN is not the discriminator — `file://` is gated by exactly what the secure host is gated by', async () => {
+    // ★ THE FINDING THIS CASE EXISTS FOR, and it is the one that actually retires the residual.
+    // What differs between the engines is the GATE, not the scheme: Gecko has no `clipboard-write`
+    // PermissionName at all and writes on the gesture alone, while Blink consults the Permissions
+    // API and a Playwright context leaves that at `prompt`. Measured on `file://`, that is the
+    // SAME A-B the section above pins at the runner's origin — so `file://` introduces no new
+    // behaviour and no new failure mode for the copy to have to handle.
+    //
+    // Branching on the CAPABILITY rather than on `navigator.userAgent` keeps the case honest about
+    // WHY the engines diverge instead of merely noting THAT they do (3.8's shape).
+    const consent = await clipboardWriteConsent();
+
+    if (consent === 'unsupported') {
+      // ── FIREFOX: the gesture IS the whole gate, on `file://` exactly as on the secure host ──
+      expect({
+        grantIsOffered: fileProbe.withConsent.grant,
+        noConsent: {
+          outcome: fileProbe.noConsent.outcome,
+          readBack: fileProbe.noConsent.readBack,
+        },
+      }).toEqual({
+        grantIsOffered: 'unsupported',
+        noConsent: { outcome: 'resolved', readBack: 'PEEKOVER-FILE-PROBE' },
+      });
+      return;
+    }
+
+    // ── CHROMIUM: the A-B ablation, on `file://`. Same document, same button, same bytes; the
+    // ONE variable is the browser's user consent — never a manifest key (D-10's whole point).
+    // The OFF arm is PINNED, not conditional: an ablation whose off arm can quietly not run is no
+    // ablation at all.
+    expect(consent, 'the runner context no longer starts at `prompt` — the OFF arm is void').toBe(
+      'prompt',
+    );
+    expect({
+      offArm: {
+        errorName: fileProbe.noConsent.errorName,
+        readBack: fileProbe.noConsent.readBack,
+      },
+      onArm: {
+        grant: fileProbe.withConsent.grant,
+        outcome: fileProbe.withConsent.outcome,
+        readBack: fileProbe.withConsent.readBack,
+      },
+    }).toEqual({
+      // The refusal is a permission decision, NOT an absent clipboard: `NotAllowedError` is what a
+      // gated write throws, and `TypeError` is what an insecure context would have produced one
+      // line earlier. Which one it is decides whether §3.8's degradation is even the right path.
+      offArm: { errorName: 'NotAllowedError', readBack: null },
+      onArm: { grant: 'granted', outcome: 'resolved', readBack: 'PEEKOVER-FILE-PROBE' },
+    });
+  });
+});
+
+// ══ ★ THE COPY ON THE CONTENT-SCRIPT SURFACE — F26's DEGRADATION, WHATEVER THE ANSWER ════════
+//
+// 4.1 routed this here rather than asserting it on its own surface, and the measurement above is
+// what unblocks it: `file://` and the runner's origin are now KNOWN to be the same secure-context
+// class, gated by the same consent, failing with the same `NotAllowedError`. So driving the real
+// content-script copy at this origin is no longer ratifying the wrong secure context — it is
+// exercising the one failure mode `file://` was measured to produce.
+//
+// ★ AND THE CLAIM HOLDS EITHER WAY, WHICH IS WHY IT IS ONE CASE AND NOT TWO. Whatever the engine's
+// consent gives — a confirmation on Gecko, §3.8's stated failure on Blink — the table stays
+// READABLE, the button stays a button, and NOTHING THROWS (D-7). That conjunction is the property;
+// which branch supplies it is the engine's business.
+
+/** The content script's own document, driven through `runReader`'s real orchestration. */
+async function openContentScriptDoc(doc: string): Promise<HTMLElement> {
+  const pre = document.createElement('pre');
+  pre.textContent = doc;
+  document.body.appendChild(pre);
+  runReader({ isRenderable: () => true });
+  const host = document.querySelector<HTMLElement>('peekover-root')!;
+  await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader h1'));
+  return host;
+}
+
+describe('4.2 · ★ the content-script copy degrades gracefully whatever the clipboard answers (§3.8 F26, D-7)', () => {
+  it('★ the click never throws, the status SAYS what happened, and the table is still readable', async () => {
+    const host = await openContentScriptDoc(COPY_DOC);
+    const table = tablesIn(host)[0];
+
+    // The firing control: the content script really rendered a table AND really got the copy
+    // controls. Without it, "the table is still readable" is a claim about a surface that never
+    // enhanced, and the degradation below would be unfalsifiable.
+    expect(tablesIn(host), 'the content script must actually render a table').toHaveLength(1);
+    expect(copyButtonsIn(table), 'and D-6 site 3 must have reached the copy').toHaveLength(2);
+
+    const consent = await clipboardWriteConsent();
+
+    // ★ NO THROW — asserted as a RESOLVED click rather than inferred from a green run. A rejection
+    // escaping the handler surfaces as an unhandled rejection, which does not fail the case that
+    // caused it; the status region acquiring text is the observable that the handler ran to its
+    // own end. `clickAndSettle` times out rather than hanging if it never does.
+    const settled = await clickAndSettle(table, csvButtonOf(table));
+
+    // ★ ONE INSTRUMENT: what the reader was told, AND that the table survived being told it. A
+    // ladder would let the status assertion pass while the table lay in pieces below it.
+    expect({
+      settled,
+      // §3.8's exact words on the failure branch; the confirmation on the success branch. The
+      // engine's consent decides which — measure-not-choose, one case for both.
+      isAStatedOutcome: settled === COPY_FAILED || settled === 'Copied 3 rows as CSV.',
+      // NEVER A BROKEN BUTTON (§3.8): still a button, still painted, still enabled.
+      button: {
+        tag: csvButtonOf(table).tagName,
+        painted: isPainted(csvButtonOf(table)),
+        disabled: csvButtonOf(table).disabled,
+      },
+      // STILL A READABLE TABLE — and READABLE means the cells are on screen with their text, not
+      // merely that three `<tr>`s survive in the DOM. (The filter's count region is empty here
+      // because nothing is filtered; that is measured, not assumed — `filterCountText` only speaks
+      // once a query narrows the set, and asserting a "Showing 3 of 3" that the product never
+      // writes would have been the test inventing a string for itself.)
+      table: {
+        paintedRowText: paintedText(table, 1),
+        countWhileUnfiltered: countOf(table).textContent,
+        hostConnected: host.isConnected,
+      },
+    }).toEqual({
+      settled,
+      isAStatedOutcome: true,
+      button: { tag: 'BUTTON', painted: true, disabled: false },
+      table: {
+        paintedRowText: ['zoe', 'adam', 'bo'],
+        countWhileUnfiltered: '',
+        hostConnected: true,
+      },
+    });
+
+    // ★ AND ON THE ENGINE THAT REFUSES, THE BRANCH IS PINNED rather than left to the disjunction
+    // above — otherwise a Blink run that silently started succeeding would still read green and
+    // §3.8's degradation would never actually be exercised on this surface again.
+    if (consent === 'prompt') expect(settled).toBe(COPY_FAILED);
+  });
 });
 
 // ══ THE COMPOSITION — 3.6 AND 3.7 STILL WORK WITH THE COPY BESIDE THEM ═══════════════════════

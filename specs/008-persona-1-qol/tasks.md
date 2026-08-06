@@ -659,7 +659,7 @@ revertable — units. **None of them precedes 3.1.***
       move: state the delta with its baseline, **decomposed** (4.3 owns the full accounting). Golden EMPTY ·
       manifest green **2975 B** · `permissions: []` both engines. [D-6; §3.7; §4 table tools; rows 1, 23]
 
-- [ ] **4.2 The content-script cost guard, and D-10's `file://` residual proven EMPIRICALLY (D-11 (ii) ·
+- [x] **4.2 The content-script cost guard, and D-10's `file://` residual proven EMPIRICALLY (D-11 (ii) ·
       D-10).**
       Files: `tests/browser/tableCost.browser.test.ts` · `tests/browser/tableCopy.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) **the three-arm conditionality guard on the CONTENT SCRIPT**, same

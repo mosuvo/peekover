@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import type { BrowserCommand } from 'vitest/node';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // ── Reduced-motion media emulation for the browser project (task 3.3) ──────────
 // Vitest's in-page `page` API exposes viewport/screenshot/locators but NO
@@ -33,6 +37,167 @@ const emulateColorScheme: BrowserCommand<[value: 'light' | 'dark' | null]> = asy
   value,
 ) => {
   await page.emulateMedia({ colorScheme: value });
+};
+
+// ── A REAL `file://` DOCUMENT, for D-10's clipboard residual (008 task 4.2) ───
+// The content script runs in the PAGE's context, and one of its two document
+// classes is `file://`, whose secure-context status MDN itself hedges ("the same
+// is GENERALLY true for file:// URLs"). "Generally" is not a contract, so the
+// answer is measured rather than argued — and it can only be measured in a real
+// `file://` document.
+//
+// ★ WHY THIS NEEDS THE SERVER SIDE AT ALL, which is the whole reason the seam
+// exists: a browser test runs IN the page, at the runner's `http://localhost`
+// origin, and BOTH engines refuse to navigate web content to a `file://` URL
+// (this repo already carries the finding — watchContentWiring.browser.test.ts:24,
+// "the harness ... cannot serve a `file://`"). An iframe is blocked the same way.
+// So there is no in-page route to a real `file://` document, and a SIMULATED one
+// — stubbing `isSecureContext`, faking the origin — would prove nothing about the
+// surface actually under question. Only the driver can navigate there, and the
+// Playwright `page` this provider hands the command is the only cross-engine
+// (Chromium AND Firefox) way to reach it. `cdp()` is Chromium-only and would have
+// to navigate the test page itself, destroying the runner.
+//
+// ★ THE FIXTURE IS A RAW `.md` FILE, not an `.html` one, because that IS the
+// content-script document class: the browser renders the bytes into a single
+// `<pre>`, which is exactly what `readPageSource()` reads. `preCount` is returned
+// so the test can assert the harness really landed on that document shape rather
+// than on a download or an error page.
+//
+// ★ IT NEVER TOUCHES THE RUNNER'S OWN PAGE OR CONTEXT. Both arms run in a
+// FRESHLY CREATED browser context, so the consent this grants cannot leak into
+// tableCopy.browser.test.ts's `prompt` pin (a leak of exactly that shape is a
+// finding already carried in that file's own header). The contexts are closed in
+// a `finally`.
+const FILE_URL_DOC = ['# Report', '', '| dept | n |', '| --- | --- |', '| eng | 10 |', ''].join(
+  '\n',
+);
+
+interface ClipboardWriteOutcome {
+  /** 'resolved', or the rejection's own `name: message`. */
+  outcome: string;
+  /** The DOMException name a rejection carried — the failure MODE, comparable across origins. */
+  errorName: string | null;
+  /** What the clipboard held afterwards, when it could be read back at all. */
+  readBack: string | null;
+}
+
+interface FileUrlClipboardProbe {
+  url: string;
+  origin: string;
+  isSecureContext: boolean;
+  hasClipboard: boolean;
+  writeTextType: string;
+  /** The raw-`.md` document really rendered as the browser's single `<pre>`. */
+  preCount: number;
+  /** The first bytes of that `<pre>` — the harness landed on OUR file, not an error page. */
+  sourceStart: string;
+  /** Arm A: a real trusted click, nothing granted to anybody. */
+  noConsent: ClipboardWriteOutcome;
+  /** Arm B: the same click with the BROWSER CONSENT granted (a user consent, never a manifest key). */
+  withConsent: ClipboardWriteOutcome & { grant: 'granted' | 'unsupported' };
+}
+
+/** The text the probe writes, and reads back to prove the write really landed. */
+const PROBE_TEXT = 'PEEKOVER-FILE-PROBE';
+
+/**
+ * Runs INSIDE the `file://` page: arm a `click` listener on the document, then let a REAL mouse
+ * click fire it, so the write carries the transient activation both engines require.
+ *
+ * ★ NO INJECTED ELEMENT AND NO LOCATOR — MEASURED. The first shape of this probe appended a
+ * `<button>` and clicked it by id; on the browser's plain-text `.md` document that click never
+ * resolved and the command timed out. The document the engines build for a raw text resource is
+ * not an authored one, and nothing here needs it to be: a listener on `document` plus a real
+ * `mouse.click` is the same trusted activation with nothing to find first.
+ *
+ * ★ AND NO ARGUMENT IS PASSED ACROSS THE BOUNDARY — the constant is inlined, so this is a plain
+ * expression Playwright evaluates the same way in both engines rather than a stringified function
+ * it has to recognise as callable.
+ */
+const clipboardProbeExpression = (): string => `(() => {
+  window.__peekoverProbeDone = new Promise((resolve) => {
+    document.addEventListener('click', async () => {
+      const r = { outcome: 'resolved', errorName: null, readBack: null };
+      try {
+        await navigator.clipboard.writeText(${JSON.stringify(PROBE_TEXT)});
+      } catch (e) {
+        r.outcome = e.name + ': ' + e.message;
+        r.errorName = e.name;
+      }
+      try { r.readBack = await navigator.clipboard.readText(); } catch { r.readBack = null; }
+      resolve(r);
+    }, { once: true });
+  });
+  return true;
+})()`;
+
+const probeFileUrlClipboard: BrowserCommand<[]> = async ({ page }): Promise<FileUrlClipboardProbe> => {
+  const browser = page.context().browser();
+  if (!browser) throw new Error('no Playwright Browser — the file:// probe cannot isolate a context');
+
+  const dir = mkdtempSync(join(tmpdir(), 'peekover-file-probe-'));
+  const doc = join(dir, 'report.md');
+  writeFileSync(doc, FILE_URL_DOC, 'utf8');
+  const url = pathToFileURL(doc).href;
+
+  /** One arm: a fresh context, a real navigation, a real click. `grant` is attempted only if asked. */
+  const runArm = async (grant: boolean): Promise<ClipboardWriteOutcome & { grant: string }> => {
+    const context = await browser.newContext();
+    let granted: 'granted' | 'unsupported' = 'unsupported';
+    try {
+      if (grant) {
+        try {
+          await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+          granted = 'granted';
+        } catch {
+          // Gecko has no `clipboard-write` PermissionName to grant — that IS the finding,
+          // not an obstacle, and the arm still runs on the gesture alone.
+          granted = 'unsupported';
+        }
+      }
+      const probe = await context.newPage();
+      await probe.goto(url);
+      const armed = await probe.evaluate(clipboardProbeExpression());
+      if (armed !== true) throw new Error('the file:// probe failed to arm its click listener');
+      await probe.mouse.click(40, 40);
+      const result = (await probe.evaluate(
+        'window.__peekoverProbeDone',
+      )) as ClipboardWriteOutcome;
+      return { ...result, grant: granted };
+    } finally {
+      await context.close();
+    }
+  };
+
+  try {
+    const context = await browser.newContext();
+    let shape: Omit<FileUrlClipboardProbe, 'noConsent' | 'withConsent'>;
+    try {
+      const probe = await context.newPage();
+      await probe.goto(url);
+      shape = (await probe.evaluate(`({
+        url: location.href,
+        origin: location.origin,
+        isSecureContext: window.isSecureContext,
+        hasClipboard: 'clipboard' in navigator,
+        writeTextType: typeof navigator.clipboard?.writeText,
+        preCount: document.querySelectorAll('pre').length,
+        sourceStart: (document.body?.textContent ?? '').slice(0, 8),
+      })`)) as Omit<FileUrlClipboardProbe, 'noConsent' | 'withConsent'>;
+    } finally {
+      await context.close();
+    }
+    const noConsent = await runArm(false);
+    const withConsent = await runArm(true);
+    return {
+      ...shape,
+      noConsent,
+      withConsent: withConsent as ClipboardWriteOutcome & { grant: 'granted' | 'unsupported' },
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 };
 
 // Two Vitest projects, run independently:
@@ -94,7 +259,7 @@ export default defineConfig({
             provider: playwright(),
             // Custom cross-engine commands callable from browser tests via
             // `commands` from 'vitest/browser' (see emulateReducedMotion above).
-            commands: { emulateReducedMotion, emulateColorScheme },
+            commands: { emulateReducedMotion, emulateColorScheme, probeFileUrlClipboard },
             instances: [
               { browser: 'chromium' },
               { browser: 'firefox' },
