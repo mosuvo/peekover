@@ -727,7 +727,7 @@ revertable — units. **None of them precedes 3.1.***
       task.** Red-first does not apply (asserts no behaviour). Golden EMPTY · manifest green **2975 B** ·
       `permissions: []`. [§8-2; plan §4-7]
 
-- [ ] **5.3 §8-3 — the threshold below which a table grows no tools. PRODUCES NUMBERS; FORBIDDEN FROM
+- [x] **5.3 §8-3 — the threshold below which a table grows no tools. PRODUCES NUMBERS; FORBIDDEN FROM
       CHOOSING VALUES.** A two-row table with a sort control on every column is **chrome outweighing content**.
       **Axes (settled, not reopened): row count · column count · whether any column is numeric.**
       Files: `docs/ai/progress.md` (numbers only) + the task report

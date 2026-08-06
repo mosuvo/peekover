@@ -1354,13 +1354,146 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 in both forms** — raw `0x00` byte and decoded `U+0000` — across all **294 tracked text sources** (298
 tracked, the four `.woff2` fonts binary and excluded by extension), with a control file carrying one
 reading **1 in both forms**.
-**TASK 5.3 IS NEXT — §8-3, THE THRESHOLD BELOW WHICH A TABLE GROWS NO TOOLS** (group 5 continues).
-**PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING VALUES.** *A two-row table with a sort control on every
-column is chrome outweighing content.* **Axes (settled, not reopened): row count · column count ·
-whether any column is numeric**, distributed across **the same corpus with the same bias stated**. ★
-**An always-on answer is LEGITIMATE — it must be CHOSEN, not defaulted into**, and the choosing is
-5.5's: **no threshold is asserted at 5.3 and a constant set there is a STOP-and-flag.** Baseline
-entering 5.3: **329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
+★ **TASK 5.3 IS DONE — §8-3's SHAPE DISTRIBUTION IS MEASURED. ACROSS THE SAME `n=61` CORPUS'S `69`
+ENHANCE-ABLE TABLES, THE MEDIAN TABLE IS `6` BODY ROWS BY `4` SORT-CONTROLLED COLUMNS; `10` TABLES
+(14.5%) HAVE TWO ROWS OR FEWER, `20` (29.0%) HAVE THREE OR FEWER, AND BETWEEN `11` AND `13` (15.9%–
+18.8%, DEPENDING ON HOW A CELL PREDICATE IS AGGREGATED TO A COLUMN) CARRY ANY NUMERIC COLUMN AT ALL —
+AND ★ THIS REPOSITORY IS A BIASED SAMPLE FOR A TOOL WHOSE USERS ARE AI AGENTS WRITING ARBITRARY
+MARKDOWN, SO THESE SHAPES BOUND NOTHING ABOUT THE POPULATION PEEKOVER ACTUALLY SERVES.** Measurement
+only: **no `src/` change, no harness committed and no dependency** (the body's Files list is
+`progress.md` + the report), and both bundles are **byte- and md5-IDENTICAL to 5.2's** after a
+from-scratch rebuild of BOTH engines from a wiped `.output` — **CS 329,233 B** (Cr `b115c9ae…` / Fx
+`237831d2…`), **app 399,646 B** (`7275a378…`), background **3,548 B**. Unit **944/944**; `pnpm lint`
+**EXIT=0**. ★ ★ **NO THRESHOLD IS ASSERTED HERE AND NO CONSTANT IS SET ANYWHERE.** Whether a table
+below some size grows no tools — **and the always-on answer, which is equally legitimate** — is
+**5.5's** choice, from these numbers; **an always-on outcome must be CHOSEN there, not defaulted into
+by 5.3 measuring and quietly setting nothing.** This task produces the input, nothing more.
+
+★ **THE CORPUS AND THE UNIT ARE 5.2's, UNCHANGED — AND THAT RECONCILIATION IS ITSELF A CHECK.** `n=61`,
+every tracked `*.md` at HEAD `f0bc04e` (`git ls-files '*.md'`, the 11 golden fixtures inside that 61),
+run through the shipped `sanitize(parse(source))` into a jsdom `.peekover-reader` column, walked with
+`column.querySelectorAll('table')` as `enhanceTables` walks it, each table gated by `hasHeaderRow()`
+transcribed verbatim from `tableEnhancer.ts:104`. **That walk found `69` enhance-able tables — the same
+69 5.2 arrived at independently**, so the two measurements agree on their population before either
+reports a shape. **All 69 are also SORTABLE** in the shipped sense (`installTableSort` returns an undo
+for every one: `<thead>`, `<tbody>`, ≥1 body row, ≥1 `<th>` — not one of the 69 is refused).
+
+★ **WHAT "ROW" AND "COLUMN" MEAN HERE — TAKEN FROM THE SHIPPED CODE, NOT INVENTED.** A **row** is a
+`tBodies[0].rows` entry — exactly the `documentOrder` array `installTableSort` reorders
+(`tableTools.ts:220`), so the header row is not counted as data. A **column** is a `<th>` in the LAST
+header row — exactly the cells that get a sort control (`tableTools.ts:238,257`, which skips a `<td>`
+in a head row). **So "column count" is literally the number of sort controls the table would grow**,
+which is the quantity §8-3's motivating sentence is about.
+
+★ **THE ROW DISTRIBUTION — the full tail, nothing bucketed away** (tables at each body-row count):
+**2→10 · 3→10 · 4→8 · 5→5 · 6→2 · 7→5 · 8→3 · 9→4 · 10→1 · 11→2 · 12→1 · 13→5 · 16→4 · 17→3 · 19→1 ·
+21→1 · 23→1 · 24→2 · 39→1.** **Median 6 · min 2 · max 39 · mean 8.52**, `n=69` tables. Cumulative:
+**≤2 rows → 10 (14.5%) · ≤3 → 20 (29.0%) · ≤4 → 28 (40.6%) · ≤5 → 33 (47.8%)**. ★ **No table in the
+corpus has fewer than two body rows** — the degenerate one-row case §8-3 might have worried about does
+not occur here at all, which is a fact about this corpus and not about tables.
+
+★ **THE COLUMN DISTRIBUTION** (sort controls the table would grow): **2→8 · 3→19 · 4→17 · 5→23 · 7→1 ·
+8→1.** **Median 4 · min 2 · max 8 · mean 3.93**, `n=69`. Cumulative: **≤2 → 8 (11.6%) · ≤3 → 27 (39.1%)
+· ≤4 → 44 (63.8%) · ≤5 → 67 (97.1%)**. **The distribution is tight and high**: 97.1% of these tables
+would grow between two and five sort controls, and the two outliers (7 and 8) are the only tables where
+the control count reaches the width of a small spreadsheet.
+
+★ **THE NUMERIC AXIS — AND THE ONE PLACE THE SHIPPED CODE DOES NOT ANSWER THE QUESTION, RECORDED AS A
+FINDING RATHER THAN RESOLVED BY PICKING.** The sort **does** have its own numeric detection —
+`numericValue()` (`tableTools.ts:107`), deliberately strict: an optional sign, digits, one optional
+decimal point, so `1e5`, `0x10`, `Infinity` and an empty cell are all **not** numbers. It was
+transcribed **verbatim** rather than re-implemented. ★ **But it is a per-CELL predicate applied
+per-PAIR**: `compareCellText` (`tableTools.ts:129-136`) compares numerically only when **both** cells of
+a comparison parse, and **there is no per-COLUMN numeric classification anywhere in the shipped code.**
+So §8-3's *"whether any column is numeric"* has **no shipped analogue at column granularity**, and the
+aggregation from cell to column is **undetermined by the code**. ★ **Rather than choose one aggregation
+— which would be choosing a value — all four defensible ones are reported**, over tables carrying at
+least one such column, `n=69`: **every body cell numeric → 11 (15.9%) · every NON-EMPTY body cell
+numeric → 12 (17.4%) · a majority of body cells numeric → 12 (17.4%) · any single body cell numeric →
+13 (18.8%).** ★ **The definition therefore moves the answer by exactly two tables out of 69, and only
+`3` of the 69 tables disagree across the four definitions at all** (`progress-archive.md` twice,
+`progress.md` once) — so the numeric axis is **robust to the aggregation choice at this corpus size**,
+and 5.5 does not have to settle the definition before it can read the number. Numeric-column COUNT per
+table (strictest definition): **0→58 · 1→9 · 2→1 · 6→1** — one table carries six numeric columns, and
+58 of 69 carry none.
+
+★ **THE JOINT SHAPE — because §8-3's sentence is a JOINT claim ("a two-row table with a sort control on
+every column"), and three marginal histograms cannot answer it.** Tables with **≤2 rows AND no
+all-numeric column: 9 of 69 (13.0%)**; with **≤3 rows AND no all-numeric column: 18 of 69 (26.1%)**;
+with **≤2 rows AND ≥4 sort controls: 4 of 69**. Rows-bucket × any-all-numeric-column, `n=69`:
+**≤2 → 9 without / 1 with · 3 → 9 / 1 · 4–5 → 10 / 3 · 6–10 → 14 / 1 · >10 → 16 / 5.** ★ **Stated
+because it is the inconvenient half of the same measurement:** the numeric columns are **not**
+concentrated in the big tables — the smallest bucket has one and the largest has five, and the shape
+§8-3 names as chrome-outweighing-content (small, no numeric column) is a real but **minority** shape in
+this corpus.
+
+★ **THE COUNT IS VALIDATED, NOT ASSERTED — three hand-counts, twelve discrimination arms, and a
+population reconciliation.**
+- **Hand-count agreement on shape** (not merely on table count), three for three:
+  `tests/golden/fixtures/gfm-torture.md` → counter **r=2 c=3, one all-numeric column**; by eye the
+  header is `Left | Center | Right`, the body is two rows, and `Right` holds `1` and `22`.
+  `docs/trust/PERMISSIONS.md` table 1 (lines 38–48) → counter **r=9 c=5**, by eye five header cells and
+  nine body rows. Table 2 (lines 102–116) → counter **r=13 c=3**, by eye three header cells and
+  thirteen body rows.
+- **Discrimination, measured rather than argued — twelve synthetic arms, and the numeric detector is
+  shown firing in BOTH directions on the SAME r/c shape**, which is the control that matters: a 2×3
+  table with a numeric third column reads `numAll=1`; **the identical table with that column's cells
+  replaced by words reads `numAll=0`**. One numeric cell of two → `all=0 maj=0 any=1`; two of three →
+  `all=0 maj=1 any=1` — **so the three aggregations are shown diverging rather than assumed to**. ★
+  **The mirror is the SORT's numeric and not a bare `Number()`:** `1e5`, `0x10` and `Infinity` read
+  `numAll=0`, while `  12  ` reads numeric (it trims) and `-3.5` / `.5` read numeric. An empty cell
+  reads non-numeric. A **ragged short row** contributes `''` and is non-numeric (`cellTextAt`'s own
+  `?? ''`). Column count comes from the **header** and row count from the **tbody** — a 1×4 table reads
+  `r=1 c=4`. And the gate still discriminates: a pipe table **inside a fence** yields **no table**; a
+  headerless raw-HTML `<table>` is **gated out**.
+- **Population reconciliation:** the walk independently returned **69** enhance-able tables, matching
+  5.2's 69 exactly — two separately written harnesses agreeing on the denominator.
+
+★ **THE BIAS, STATED WITH THE NUMBERS RATHER THAN UNDER THEM (plan §4-7).** *THIS REPOSITORY's tables
+are median 6 rows by 4 columns, 14.5% of them two rows or fewer, and 15.9%–18.8% of them carry a numeric
+column, at `n=69` tables from `n=61` documents* — **and this repository is a specs-and-docs corpus
+written by and for this project, which is a biased sample for a tool whose users are AI agents writing
+arbitrary markdown.** These are spec-coverage matrices, permission tables and plan risk grids: **prose
+grids, which is exactly why 58 of 69 carry no numeric column at all** — and an agent emitting a
+benchmark table or a cost breakdown on someone else's machine is writing the *opposite* shape. ★ **The
+numeric axis is the one §8-3 leans on hardest to decide whether a sort is worth its chrome, and it is
+also the axis this corpus is most obviously unrepresentative on.** **The distribution above therefore
+bounds nothing about the population Peekover serves** — it is a convenient sample, it is the only sample
+this milestone funds, and it is reported as such. ★ **And the small cells are very small:** the whole
+numeric half rests on **11–13 tables**, the six-numeric-column outlier is **one table**, and the
+aggregation-sensitivity finding rests on **3**. A reader leaning on the numeric shape is leaning on
+about a dozen tables from one repository.
+★ **MEASURE-NOT-CHOOSE.** The full tails are printed beside every cumulative figure precisely so the
+rolled-up readings cannot be the only ones; **the cumulative cut-points (≤2, ≤3, ≤4, ≤5) are reported
+for every value, not for a preferred one**, and reporting them **is not proposing any of them**.
+Nothing was rounded toward a convenient shape, no table was excluded, the four numeric definitions are
+reported **disagreeing** rather than averaged, and the joint view is printed because the marginals
+alone would have flattered the small-table case. **Reproducible without a committed script:** the
+method above, re-run over `git ls-files '*.md'`, returns these numbers — and **this entry deliberately
+adds no markdown table to `progress.md`**, so recording the measurement does not perturb the corpus it
+measured (**re-run on the edited tree: `61` documents, `69` tables, identical histograms**).
+
+**WHAT 5.3 DOES NOT DO:** ★ **no threshold asserted and NO CONSTANT SET ANYWHERE** — not a `MIN_ROWS`,
+not a `shouldEnhance` predicate, no `src/` change of any kind; **the choice, INCLUDING the legitimate
+always-on choice, is 5.5's** and its implementation is **5.6's**. **No axis reopened** — row count,
+column count and numeric presence are the settled three, and nothing was added to them. No
+reads-as-noise verdict (**6.1's walk**); no alteration of §3.6's per-table decision; no per-table-vs-
+per-document choice (**5.5's**, from 5.2); no app-page bytes (**5.4**); no committed harness, no test
+added, no dependency, no manifest permission. Red-first does not apply — 5.3 asserts no behaviour; the
+rigor is in the count's validation above. Golden **EMPTY**; **007 import fence 8/8**; `permissions: []`
+on both built manifests (654 / 770 B); `web_accessible_resources` **absent**; manifest test **2975 B**
+(byte-unmodified); deps **5**. NUL **0 in both forms** — raw `0x00` byte and decoded `U+0000` — in both
+edited files, with a control file carrying one reading **1 in both forms**.
+
+**TASK 5.4 IS NEXT — APP-PAGE BYTES AND THE PACKAGE** (group 5 continues). **PRODUCES NUMBERS.** App
+chunk vs **389,143 B** (md5 `65486f78afa2fec0e9d00f7f0e9c0d27`, 9.3 at `94f7da5`), **decomposed**;
+`pnpm zip` vs **1,300,383 / 1,300,442 B**, bound **< 2 MB per engine**; packed unzipped vs
+**4,059,893 / 4,060,009 B** against AGENTS.md's **≤5 MB**; background vs **3,548 B**. Every delta stated
+**with its baseline**. ★ **`dependencies` is EXACTLY FIVE, asserted not eyeballed** (§3.9, §5: zero
+additions) — **so any delta is our own code** and is decomposed as such; a dependency appearing there is
+a **stop-and-flag**. ★ **Standing note carried so 5.4 does not report a FALSE BREACH: the Firefox
+`-sources.zip` is the AMO review archive, NOT the bound** (007 8.1's finding). Baseline entering 5.4:
+**329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
