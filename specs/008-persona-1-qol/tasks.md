@@ -675,7 +675,7 @@ revertable — units. **None of them precedes 3.1.***
       here is a measurement, not a citation. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-10, D-11 (ii); §3.8; §4 Trust; row 2]
 
-- [ ] **4.3 THE CONTENT-SCRIPT BYTE DELTA, DECOMPOSED TO A ZERO RESIDUAL (§5 · §8-1 (a)). PRODUCES NUMBERS;
+- [x] **4.3 THE CONTENT-SCRIPT BYTE DELTA, DECOMPOSED TO A ZERO RESIDUAL (§5 · §8-1 (a)). PRODUCES NUMBERS;
       FORBIDDEN FROM CHOOSING VALUES.** ★ **The content-script bundle stops being byte-identical for the first
       time in five milestones, by DECISION (§3.7/§5) — so every byte must be assigned.**
       Files: `docs/ai/progress.md` (numbers only) + the task report

@@ -1271,17 +1271,114 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B**; deps **5**. NUL **0 in both forms** (raw byte
 count and escape-sequence scan) in all edited files, with a control reading **1**. Ablations by cp-aside +
 restore, never `git checkout`.
-**TASK 4.3 IS NEXT — THE CONTENT-SCRIPT BYTE DELTA, DECOMPOSED TO A ZERO RESIDUAL** (§5 · §8-1 (a)).
-**PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING VALUES.** The bundle is measured against **318,747 B** (9.3,
-`94f7da5`, md5 Cr `c7b33b36b1a727fdacb77eefe64083e1` / Fx `67717921bdf646c7366176392d0c37d7`) and the delta
-decomposed — table-tools code · badge code · glue · CSS — **summing to the observed delta EXACTLY, with the
-residual NAMED rather than rounded away**, proven **by ablation with a control that FIRES** and **never by
-an identifier grep** (M6 finding 1). 4.1 already banked four rebuild arms (site-3 glue **6 B**, site-4 glue
-**40 B**, shared payload counted once **7,474 B**, both cross-checks closing) and a fifth bracketing arm
-(controls **≥ 4,440 B**, orchestration **≤ 3,034 B**) — 4.3 takes that bracket to an exact split. Check the
-tree-shaking shape while the ablation stands (a spread in an unused export's initializer is retained;
-`/*#__PURE__*/ ARR.slice()` drops). **An unaccounted byte is a DEFECT and a STOP-and-flag.** Baseline
-entering 4.3: **329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`).
+★ **TASK 4.3 IS DONE — THE M8 CONTENT-SCRIPT BYTE DELTA IS DECOMPOSED TO A ZERO RESIDUAL, EVERY BYTE
+NAMED, AND GROUP 4 IS COMPLETE.** Measurement only: **no `src/` change and no test added** (the body's Files
+list is `progress.md` + the report), and both bundles are **byte- and md5-IDENTICAL to 4.2's** after a
+from-scratch rebuild of BOTH engines — **CS 329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **app 399,646 B**
+(`7275a378…`). Unit **944/944**; `pnpm lint` **EXIT=0**. **Sixteen arms**, each a real rebuild of BOTH
+engines from a wiped `.output` (`pnpm build` is Chrome-only; Firefox needs `-b firefox`). **The CS is
+byte-identical across engines in every arm**, as it has been all milestone.
+★ **THE OBSERVED DELTA, AND THE MASTER CONTROL THAT MAKES IT MEAN SOMETHING.** Content script
+**318,747 → 329,233 B = +10,486 B**; app chunk **389,143 → 399,646 B = +10,503 B**. ★ **The strongest
+control this milestone has run FIRES:** with **all fourteen M8-touched `src/` files put back to `94f7da5`**
+(nine reverted, five removed) the build returns to the 9.3 baseline **byte-for-byte AND md5-for-md5 on all
+four artifacts** — CS **318,747** / `c7b33b36…` / `67717921…`, app **389,143** / `65486f78…`. So the
+toolchain still reproduces the baseline exactly, **nothing outside M8 drifted**, and the whole +10,486 is
+M8's own code rather than a number with an unexamined floor under it.
+★ **THE ACCOUNT — EIGHT COMPONENTS, EACH ABLATION-MEASURED IN THIS RUN, SUMMING EXACTLY.**
+
+| # | Component | B | Ablation (CS bytes with it OFF) |
+|---|---|---|---|
+| 1 | CSS — `readerCss.ts`, all M8 rules | **967** | 328,266 |
+| 2 | Badge code, exclusive | **518** | 328,715 |
+| 3 | Compare/picker code, exclusive | **1,450** | 327,783 |
+| 4 | `docIdentity` — **SHARED** badge ∩ compare | **31** | 327,234 (both off) |
+| 5 | Enhancer's own orchestration | **760** | — (322,519 controls-off, less the glue) |
+| 6 | The three controls | **6,714** | 322,519 |
+| 7 | Glue, site 3 (`mountReader`) | **6** | 329,227 |
+| 8 | Glue, site 4 (`contentWatch`) | **40** | 329,193 |
+| | **Σ** | **10,486** | **RESIDUAL ZERO** |
+
+**967 + 518 + 1,450 + 31 + 760 + 6,714 + 6 + 40 = 10,486**, against an observed **10,486**. The banked
+per-task sub-arms reconcile inside each row: CSS **967 = 413** (1.3's badge block) **+ 205** (2.4's status
+lane) **+ 243** (3.3's two rules) **+ 106** (3.3's pointer comment); compare **1,450 = 887** (2.3) **+ 147**
+(2.4) **+ 416** (2.5); and rows 1–4 sum to **2,966**, which is exactly the pre-4.1 accumulated delta
+(321,713 − 318,747) — the account closes at the milestone's own intermediate waypoint as well as at its end.
+★ **4.1's BRACKET IS RESOLVED TO AN EXACT SPLIT.** The **7,474 B** shared payload is **760 B of enhancer
+orchestration + 6,714 B of controls**. 4.1 could only bracket it (controls **≥ 4,440**, orchestration
+**≤ 3,034**) because its fifth arm **stubbed** the installers and the stubs still shipped; this run removes
+them **cleanly** — the import, the three calls, the three `undo*` declarations and their three unwind calls
+— so `tableTools.ts` leaves the graph and nothing stands in for it. Both bracket bounds hold
+(6,714 ≥ 4,440 ✓, 760 ≤ 3,034 ✓). ★ **The orchestration is 760 B and that is the whole D-7/D-8 walk** — the
+column query, the header gate, the toolbar host, the per-table try and the total outer boundary — **10.2 %**
+of the payload it carries.
+★ **THE CONTROLS BLOCK DECOMPOSED FURTHER, AND THE ONE BYTE THAT DOES NOT ADD UP IS NAMED RATHER THAN
+ROUNDED.** All seven non-empty subsets measured: sort **2,229** · filter **2,001** · copy **2,307** · the
+`tableName` helper **shared by filter + copy, 178 B**. ★ **The two sort-bearing pairs are EXACTLY additive**
+(sort+filter off = **4,230** = 2,229 + 2,001; sort+copy off = **4,536** = 2,229 + 2,307), so the sharing is
+real and localized rather than a smear. But **2,229 + 2,001 + 2,307 + 178 = 6,715 against a measured 6,714**:
+**−1 B**, deterministic, on **both** engines, and appearing **only** in the arm where `tableTools.ts` leaves
+the graph entirely. It is the **minifier's name-pool non-linearity** — one fewer top-level name shifts the
+mangler's allocation — and it is *the* M6-finding-1 caveat (*minification breaks the source-char ↔
+shipped-byte relationship*) showing up at 1-byte scale. **It does not touch the zero residual above**,
+because row 6 enters the account as the single ablation-measured **6,714**, never as a sum of sub-marginals.
+★ **THE 31 B NOBODY HAD MEASURED — `docIdentity` IS JOINTLY HELD, AND A MARGINAL ARM CANNOT SEE IT.** The
+badge-off arm reads **518**, not the **549** banked at 1.3 + 1.4, and the 31 B gap is not an error in either:
+`diffChrome.ts:226` imports `getDocIdentity`, so group 2's compare code — which **did not exist** when 1.3
+and 1.4 measured — now holds `docIdentity` on the graph after the badge lets go. Inclusion–exclusion closes
+it: badge-exclusive **518** + compare-exclusive **1,450** + shared **31** = **1,999**, the measured
+both-off drop, and **518 + 31 = 549** recovers the banked figure to the byte. ★ **This is the
+*shared-helper-hides-from-marginal-arms* shape a third time, and the lesson sharpens: a component's
+INCREMENTAL cost (measured when it landed) and its MARGINAL cost (measured today) differ by exactly what a
+later feature has since come to share.** The incremental chain is the one that sums to the delta; the
+marginal arm is the one that finds the sharing. Both were needed and neither alone would have closed.
+★ **FIVE ARMS LANDED ON HISTORICALLY RECORDED md5s — CORROBORATION NO SUM CAN GIVE.** Beyond the master
+control's return to 9.3's four artifacts: the sites-off arm reproduces **321,713** / `c68e437c…` /
+`e1287b5c…` (3.3–3.11); the clean controls-off arm's **app** chunk is **392,929** / `0c40f5e4…`,
+md5-for-md5 **task 3.4's** (enhancer present, toolbar empty, no controls); filter+copy off reproduces
+**3.6's** app `7e89141b…`; copy off reproduces **3.7's** app `4ee49a89…`; and the two single-site arms
+reproduce **4.1's** arms B (**329,193**) and C (**329,227**) exactly. ★ **An ablation that lands on a
+build state the repo recorded months of tasks ago is a clean removal, demonstrated rather than asserted.**
+★ **THE TREE-SHAKING SHAPE, INSPECTED WHILE THE ABLATION STOOD — AND THERE ARE NO RETAINED-BUT-UNUSED BYTES
+TO NAME.** The known-retaining form (a **spread inside a module-level initializer of an unused export**,
+which cost **+896 B** onto a 0-delta fence once) appears **nowhere** in the five M8 modules: every spread in
+`tableTools.ts` is function-local, `AGENT_FILE_NAMES` uses the known-**dropping**
+`/*#__PURE__*/ new Set([…])`, and the two constant tables (`COPY_FORMATS`, `GLYPH`) are **non-exported and
+internally reached**. `tableTools.ts`'s twenty-odd test-only exports cost nothing extra for the same
+reason — a transitive-reachability walk over the module finds **no declaration reached by no installer**.
+★ **And that is a MEASUREMENT, not an inspection:** the sites-off arm returns the CS to 321,713
+**md5-for-md5**, which it could not do if any part of `tableEnhancer`/`tableTools` were retained while
+unreachable.
+★ **NEVER A GREP (M6 finding 1).** No number above came from counting identifiers or source characters.
+Every one is a **drop between two real builds of both engines from a wiped `.output`**, and every arm
+carries a control that fires: the code is demonstrably gone from the source it was cut from, the build
+**succeeds** (16/16 arms, exit 0 on both engines), and the removal reproduces either a recorded md5 or a
+complementary arm. The one place a source count appears at all is the reconciliation of banked sub-arms,
+and those were themselves ablation-measured at their own tasks.
+**WHAT 4.3 DOES NOT DO:** **no §8-1 headroom-vs-budget ruling — that is 5.1's** (4.3 accounts the M8
+**delta**; 5.1 prices the **total** against the budget, and the ship/no-ship ruling is **5.5's**); no walk
+judgement (**6.1**); **no `src/` change and no pinning test** (the bundle is accounted, not moved); no
+dependency; no manifest permission. ★ **One measurement note carried for whoever next ablates this repo:**
+`tableEnhancer.ts` is **LF** on disk while `readerCss.ts` is **CRLF** — the repo is mixed, and an ablation
+script that assumes either one silently fails to match.
+Golden **EMPTY**; **007 import fence 8/8**; **`diff` off the content-script graph 6/6** — clauses A
+(package), B (engine), C (view) plus their three non-vacuity controls, all green; `permissions: []` on both
+built manifests (654 / 770 B); `web_accessible_resources` **absent**; manifest test **2975 B**
+(byte-unmodified); deps **5**. NUL **0 in both forms** (raw byte count and escape-sequence scan) in both
+edited files, with a control reading nonzero. Ablations by **cp-aside + restore, never `git checkout`**; all
+fourteen `src/` files md5-verified byte-identical after every arm. **GROUP 4 IS COMPLETE.**
+**TASK 5.1 IS NEXT — §8-1 (b) + (c), THE CONTENT-SCRIPT FIRST-PAINT PRICE** (group 5 opens). **PRODUCES
+NUMBERS; FORBIDDEN FROM CHOOSING VALUES.** First paint on the **gated 50.4 KB fixture** and on a document
+with **no table and no recognized name** (the case §5 requires to be free), **A-B-A against a same-session
+HEAD control, FLOOR reported beside MEDIAN** (finding 7), on a **quiesced machine**, priced against the
+**STANDING worst-arm headroom — 26.9 ms median / 29.9 ms floor — which is an INPUT and is NOT re-measured**
+(2026-08-03 at `757f953`; § Baselines). ★ **State the A-vs-A agreement explicitly: A disagreeing with A
+means nothing measured there means anything** — 8.1's own 13.4 ms floor disagreement is the precedent.
+**(c) is reported BESIDE 3.10 / 4.2's structural conditionality result** — two instruments on one claim,
+neither substituting for the other. Carried unfixed and restated so it is not read as a breach:
+`scripts/perf-first-paint.ts` prints a **false `FAIL`** on the 1 MB fixture. Baseline entering 5.1:
+**329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`) — and the byte half of §8-1
+is now **4.3's zero-residual account** above.
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status
