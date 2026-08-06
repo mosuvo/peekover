@@ -697,7 +697,7 @@ revertable — units. **None of them precedes 3.1.***
 
 ## 5 — Measure → decide → implement (the measuring tasks CANNOT choose; the deciding task is a human gate)
 
-- [ ] **5.1 §8-1 (b) + (c) — the content-script first-paint price. PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING
+- [x] **5.1 §8-1 (b) + (c) — the content-script first-paint price. PRODUCES NUMBERS; FORBIDDEN FROM CHOOSING
       VALUES.** First paint on the **gated 50.4 KB fixture**, and **on a document with NO table and NO
       recognized name** — the case §5 requires to be **free**.
       Files: `docs/ai/progress.md` (numbers only) + the task report

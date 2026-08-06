@@ -1271,6 +1271,136 @@ Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built mani
 `web_accessible_resources` absent; manifest test **2975 B**; deps **5**. NUL **0 in both forms** (raw byte
 count and escape-sequence scan) in all edited files, with a control reading **1**. Ablations by cp-aside +
 restore, never `git checkout`.
+★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
+MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
+THAT IS A PRICE, NOT A RULING.** Measurement only: **no `src/` change and no harness committed** (the
+body's Files list is `progress.md` + the report), and both bundles are **byte- and md5-IDENTICAL to
+4.3's** after a from-scratch rebuild of BOTH engines — **CS 329,233 B** (Cr `b115c9ae…` / Fx
+`237831d2…`), **app 399,646 B** (`7275a378…`). Unit **944/944**; `pnpm lint` **EXIT=0**. Quiesced: CPU
+**2%** at the start of the block, no build, no suite and no other heavy process running during any arm —
+**every arm loaded a PRE-BUILT extension directory**, so not one build ran inside the measurement window
+(the flake family here is MACHINE, and a build between arms is the contention that produces it).
+★ **WHETHER THE REACH SHIPS IS 5.5's, AND NOTHING BELOW DECIDES IT.** 5.1 produces numbers. The rule is
+already set and the value is not: *if the gate cannot hold, the surface REACH gives way, not the gate*
+(§8-1's escape hatch, gate-1 §9-4) — and 5.7 executes that only if 5.5 rules it out.
+
+★ **THE INSTRUMENT — A-B-A ON ONE DOCUMENT AT A TIME, WITH THE REACH ABLATED IN THE MIDDLE ARM.** `A` =
+HEAD's build; `B` = the same tree with **D-6's sites 3 and 4 and their two imports removed** (cp-aside +
+restore, never `git checkout`), rebuilt to **321,747 B**; `A` again. Six arms, run back to back in one
+contiguous block, **seven iterations each with run 1 (cold) discarded** — 8.1's own protocol, the same
+in-page double-rAF instrumentation `scripts/perf-first-paint.ts` carries, on the same
+`buildHugeDoc`-derived fixture (the generator file was **md5-copied**, `418aeb77…`, not retyped).
+- ★ **THE RUNTIME FIRING CONTROL — THE TWO ARMS ARE OBSERVABLY DIFFERENT, IN THE PAGE, ON EVERY RUN.**
+  On the gated document every HEAD run reports **62 tables / 62 toolbars** in the shadow root and every
+  ablated run reports **62 tables / 0 toolbars**. A timing delta between two arms nothing could tell
+  apart measures nothing; this one is separated by the very thing being priced, read out of the live DOM
+  rather than inferred from the bundle.
+- ★ **AND THE ABLATION IS CONSERVATIVE, WHICH IS STATED RATHER THAN LEFT TO LOOK EXACT.** 321,747 B sits
+  **34 B ABOVE 4.3's fuller sites-off arm (321,713 B)**: this ablation cuts the two call sites and their
+  imports and **leaves `contentWatch`'s now-vestigial `renderWithTables` wrapper standing**. So arm `B`
+  retains 34 B of glue and, if anything, **under**-states the price. 4.3's account is not reopened —
+  separate marginal ablations are known not to sum to a joint one, and this is that, named.
+
+★ **(b) THE GATED 50.4 KB FIXTURE — `51,564 B`, 62 sections, 62 GFM tables** (`huge.md`, sha256
+`0b4719b7e9361ddb`; identical bytes in all three arms, which is why the arms are comparable at all).
+
+| arm | build | median | floor | max |
+|---|---|---|---|---|
+| **A1** | HEAD (reach IN) | **149.7 ms** | **145.7 ms** | 163.6 |
+| **B** | reach ABLATED | **139.1 ms** | **133.5 ms** | 144.7 |
+| **A2** | HEAD (reach IN) | **146.3 ms** | **143.4 ms** | 156.3 |
+
+- ★ **A AGREES WITH A: `3.4 ms` on the median, `2.3 ms` on the floor** — against 8.1's **13.4 ms** floor
+  disagreement, whose verdict was *negative* precisely because it was larger than any delta it was asked
+  to adjudicate. Here the delta is **2.6× the median disagreement and 4.8× the floor disagreement**, so
+  the machine did not move more than the thing measured and the reading stands.
+- **THE PRICE: `+8.9 ms` median, `+11.1 ms` floor** (A-mean − B). ★ **It survives either A taken alone:**
+  against A2 it is **+7.2 / +9.9 ms**, against A1 **+10.6 / +12.2 ms** — a spread of 3.4 / 2.3 ms that is
+  the disagreement itself, and the **lowest** bound in that range is still above it. The sign and the
+  magnitude do not depend on which control arm is picked.
+- **AGAINST THE BUDGET — the STANDING worst-arm headroom `26.9 ms` median / `29.9 ms` floor, an INPUT,
+  NOT re-measured** (2026-08-03 at `757f953`; § Baselines): the price consumes **33.1% of the median
+  headroom and 37.1% of the floor headroom**; on the worst-arm reading, **39.4% / 40.8%**. **It fits, on
+  every one of the four readings, with the widest consumption 40.8%.**
+- **THE ABSOLUTE NUMBER, for whoever wants it beside the delta:** HEAD's gated first paint is **149.7 /
+  146.3 ms median** and **145.7 / 143.4 ms floor** against the **<165 ms typical-doc gate** — PASS, with
+  **15.3 ms** left on the worst median arm and **19.3 ms** on the worst floor arm.
+
+★ **THE MEDIAN DRIFTED INSIDE THIS SESSION AND THE FLOOR DID NOT — FINDING 7's PREMISE, DEMONSTRATED
+LIVE, AND IT IS REPORTED BECAUSE IT CUTS AGAINST THE COMFORTABLE READING.** A seventh reading was taken
+after the block with the **shipped** harness at HEAD (`pnpm perf -- --size 50kb`, same 50.4 KB / 62
+sections): **median 155.4 ms, floor 145.2 ms** — PASS. Its **floor sits 0.5 ms from A1's 145.7**; its
+**median sits 5.7 ms above the worst interleaved A median**. ★ **Read honestly, that is a warning about
+the median, not a fourth A arm:** it was not interleaved and cannot void the A-B-A, but had it been an A
+arm the median disagreement would have been **9.1 ms — larger than the 8.9 ms median price**, and the
+median half of this measurement would have been void. **The floor half would have survived unchanged
+(0.5 ms).** So the load-bearing statistic here is the **FLOOR**, and the median is reported beside it
+rather than instead of it.
+
+★ **(c) THE FREE CASE — NO TABLE AND NO RECOGNIZED NAME — AND THE HONEST ANSWER IS THAT THIS INSTRUMENT
+CANNOT RESOLVE ITS COST.** Same generator with **every table line removed** and the section count raised
+so the byte length matches: **51,670 B**, 76 sections, **0 tables / 0 toolbars in every run of every
+arm**, written as `plain.md` — **not in `AGENT_FILE_NAMES`** (`CLAUDE.md` · `AGENTS.md` · `spec.md` ·
+`plan.md` · `tasks.md`), so neither the enhancer nor the badge has anything to do.
+
+| arm | build | median | floor |
+|---|---|---|---|
+| **A1** | HEAD (reach IN) | 127.3 ms | 124.3 ms |
+| **B** | reach ABLATED | 125.6 ms | 122.5 ms |
+| **A2** | HEAD (reach IN) | 130.5 ms | 127.2 ms |
+
+- **A-vs-A: `3.2 ms` median, `2.9 ms` floor. The delta: `+3.3 ms` median, `+3.3 ms` floor — `1.0×` and
+  `1.1×` the disagreement.** Against A1 alone the delta is **+1.7 ms**; against A2 alone, **+4.9 ms**.
+- ★ **SO THE STATEMENT IS "NOT MEASURABLE HERE", NOT "ZERO".** The free-case delta is the same size as
+  the instrument's own drift, and which side of the noise it lands on **depends on which control arm you
+  pick** — the disqualifying property. What this arm establishes is a **BOUND: the free case costs at
+  most ~3.3 ms at first paint, and this harness cannot distinguish it from machine state.** It is not
+  rounded to zero to make the sentence tidier. The gated document's delta, measured by the same six-arm
+  block on the same afternoon, resolves at 2.6–4.8× its disagreement; this one does not resolve at all,
+  and the contrast is the evidence that the harness has real resolution and simply ran out of it here.
+- ★ **REPORTED BESIDE 3.10 / 4.2's STRUCTURAL RESULT — TWO INSTRUMENTS ON ONE CLAIM, NEITHER
+  SUBSTITUTING FOR THE OTHER.** `tableCost.browser.test.ts`'s content-script arms prove **arm 1 == arm 2
+  to the NODE and to the LISTENER** on a document with nothing to enhance, with arm 3 moving the same
+  instrument as the positive control. That is a **structural** zero and it is exact. This is a **timed**
+  bound and it is not. A build can add no node and still spend time — a walk that finds nothing still
+  walks — so the structural equality does not imply the timed one, and a ~3.3 ms noise-floor bound does
+  not weaken a node-exact equality. **Together they say: nothing is built, and nothing measurable is
+  spent. Neither says it alone.**
+
+★ **MEASURE-NOT-CHOOSE.** Every number above is what the machine printed. Nothing was re-run to get a
+friendlier arm, nothing rounded toward the budget, no measurement selected over another — the seventh
+reading is reported **precisely because** it is the inconvenient one, and the free case is reported as
+unresolved rather than as the zero the structural guard would have licensed rhetorically.
+★ **CARRIED UNFIXED AND RESTATED SO IT IS NOT READ AS A BREACH:** `scripts/perf-first-paint.ts` prints a
+**false `FAIL`** on the 1 MB fixture. The mechanism, so the next reader can see it is a printing artifact
+rather than a budget failure: `:381` already labels that fixture **`large-doc (informational vs
+typical-doc gate)`**, but `:376`'s `pass = median(aVals) < GATE_MS` is computed **unconditionally**, so
+the verdict line judges the 1 MB doc against the **typical-doc** 165 ms bar it has just said does not
+apply to it. **Not fixed here** — 5.1's Files list is `progress.md`, and a `scripts/` edit is outside it.
+**WHAT 5.1 DOES NOT DO:** **no ship/no-ship ruling on the reach — that is 5.5's**, the human gate;
+**no removal of D-6's sites 3 and 4 — that is 5.7's**, and only if 5.5 rules the reach OUT; no §8-2
+distribution (**5.2**), no §8-3 threshold (**5.3**), no app-page bytes (**5.4**); no walk judgement
+(**6.1**); **no `src/` change, no committed harness, no test added** (the ablation was cp-aside +
+restore, and **the restoration is proven, not assumed**: the tree is clean and the rebuilt bundles return
+to `b115c9ae…` / `237831d2…` / `7275a378…`); no dependency; no manifest permission. ★ **The app-page
+half of §8-1 remains uninstrumented and is NOT silently covered by these numbers** — D-11 (iii)'s carried
+hole and its named trigger stand exactly as they did.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` on both built manifests (654 / 770 B);
+`web_accessible_resources` **absent**; manifest test **2975 B** (byte-unmodified); deps **5**. NUL **0 in
+both forms** — raw `0x00` byte and decoded `U+0000` — across all **285 tracked text sources**, with a
+control file carrying one reading **1 in both forms** (the four `.woff2` fonts are binary and excluded by
+extension, which is why the scan is reported with its scope).
+**TASK 5.2 IS NEXT — §8-2, HOW DOCUMENTS ACTUALLY USE TABLES** (group 5 continues). **PRODUCES NUMBERS;
+FORBIDDEN FROM CHOOSING VALUES.** The **distribution of tables per document** across **this repository's
+own markdown AND the golden fixtures** — how many documents have one table, how many several, how many
+none — stated with its **n**, and ★ **with the corpus's BIAS stated WITH the number** (plan §4-7): this
+repository is a **biased sample** for a tool whose users are **AI agents writing arbitrary markdown**, and
+a number reported without that sentence overstates what it knows. **The judgement half — whether a filter
+per table reads as noise at several small tables — is 006's *reads-as-noise* shape and is a WALK (6.1).**
+★ **No verdict is reached there and §3.6's per-table decision is not altered by it.** Red-first does not
+apply (it asserts no behaviour). Baseline entering 5.2: **329,233 B CS** (`b115c9ae…` / `237831d2…`),
+**399,646 B app** (`7275a378…`).
+
 ★ **TASK 4.3 IS DONE — THE M8 CONTENT-SCRIPT BYTE DELTA IS DECOMPOSED TO A ZERO RESIDUAL, EVERY BYTE
 NAMED, AND GROUP 4 IS COMPLETE.** Measurement only: **no `src/` change and no test added** (the body's Files
 list is `progress.md` + the report), and both bundles are **byte- and md5-IDENTICAL to 4.2's** after a
@@ -1367,18 +1497,6 @@ built manifests (654 / 770 B); `web_accessible_resources` **absent**; manifest t
 (byte-unmodified); deps **5**. NUL **0 in both forms** (raw byte count and escape-sequence scan) in both
 edited files, with a control reading nonzero. Ablations by **cp-aside + restore, never `git checkout`**; all
 fourteen `src/` files md5-verified byte-identical after every arm. **GROUP 4 IS COMPLETE.**
-**TASK 5.1 IS NEXT — §8-1 (b) + (c), THE CONTENT-SCRIPT FIRST-PAINT PRICE** (group 5 opens). **PRODUCES
-NUMBERS; FORBIDDEN FROM CHOOSING VALUES.** First paint on the **gated 50.4 KB fixture** and on a document
-with **no table and no recognized name** (the case §5 requires to be free), **A-B-A against a same-session
-HEAD control, FLOOR reported beside MEDIAN** (finding 7), on a **quiesced machine**, priced against the
-**STANDING worst-arm headroom — 26.9 ms median / 29.9 ms floor — which is an INPUT and is NOT re-measured**
-(2026-08-03 at `757f953`; § Baselines). ★ **State the A-vs-A agreement explicitly: A disagreeing with A
-means nothing measured there means anything** — 8.1's own 13.4 ms floor disagreement is the precedent.
-**(c) is reported BESIDE 3.10 / 4.2's structural conditionality result** — two instruments on one claim,
-neither substituting for the other. Carried unfixed and restated so it is not read as a breach:
-`scripts/perf-first-paint.ts` prints a **false `FAIL`** on the 1 MB fixture. Baseline entering 5.1:
-**329,233 B CS** (`b115c9ae…` / `237831d2…`), **399,646 B app** (`7275a378…`) — and the byte half of §8-1
-is now **4.3's zero-residual account** above.
 ★ **TASK 3.8 IS DONE — THE COPY-OUT SHIPS, GROUP 3's THREE CONTROLS ARE COMPLETE, AND `permissions: []`
 SURVIVED THE FIRST FEATURE THAT TOUCHES THE CLIPBOARD.** Two native `<button>`s in the toolbar strip —
 `Copy CSV` and `Copy Markdown` (`peekover-table-copy--csv` / `--markdown`) — plus their own polite status
