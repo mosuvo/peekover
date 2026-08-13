@@ -1713,7 +1713,87 @@ item requiring a loaded browser extension has no agent substitute. Docs-only: no
 spec file touched. Bundles byte- and md5-IDENTICAL to 6.1's, trivially so — **CS 329,233 B** (Cr
 `b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`), **background 3,548 B**. Golden **EMPTY**;
 **007 import fence 8/8**; `permissions: []` both engines; manifest test **2975 B**; deps **5**.
-★ **TASK 6.3 IS NEXT — THE RECORDS RECONCILE THAT CLOSES M8, INCLUDING D-11 (III)'S TRIGGER (plan §8 Q4).**
+★ **TASK 6.3 IS DONE — THE RECORDS RECONCILE, AND M8 IS CLOSED.** Doc-only: `docs/ai/progress.md` ·
+`docs/ai/spec-coverage.md`; **`docs/ai/decisions.md` is READ AND LEFT UNTOUCHED** — no genuine new
+decision lands here (D-11 (iii)'s trigger is *confirmed*, not decided; it was already decided at gate
+2). `git diff --name-only` for this commit: `docs/ai/progress.md` · `docs/ai/spec-coverage.md` ·
+`specs/008-persona-1-qol/tasks.md` (the checkbox only) — nothing else.
+
+**★ THE D-VALUE AUDIT — EVERY M8 `decisions.md` ENTRY CHECKED AGAINST ITS OWN CONVENTION** (`tasks.md`
+line 55-57: *"landing with the commit that implements it, never after"*, plan §0's own rule, verbatim
+text pre-written per D-value). **D-1, D-2 — COMPLIANT.** Both entries (`decisions.md` 2026-08-04) land
+in `868a6d8` (task 1.4), the same commit that wires the two registration sites — text and code in one
+commit, exactly as the convention asks. **D-3, D-4, D-5 — PRESENT BUT LATE, AND ALREADY SELF-DISCLOSED.**
+Their entries (`decisions.md` 2026-08-05) land in `174dcd6`, one commit **after** group 2 closed — the
+entry's own text says so (*"LANDED AT A RECONCILE... NOT WITH ITS IMPLEMENTING COMMIT"*). Nothing new to
+record; the gap was named where it happened. **D-6 THROUGH D-12 — NO INDIVIDUAL ENTRY EVER LANDED, AND
+THIS IS A REAL GAP, NAMED HERE FOR THE FIRST TIME.** `plan.md` §0 pre-writes verbatim `decisions.md`
+entry text for every one of D-6 through D-12 (each a `` `decisions.md` entry: "008 D-N — ..."` `` line,
+the same shape D-1/D-2/D-3/D-4/D-5 used), meant to land with its implementing commit. **None of the
+seven ever did.** The only place any of them appears in `decisions.md` is the **pre-implementation**
+2026-08-03 M8 GATE 2 entry (`2c29821`) — D-1 and D-6 get individual "CONFIRMED" write-ups there (the two
+architectural calls), D-2/3/4/5/7/8/9/10/11/12 get one shared clause, *"THE OTHER D-VALUES — APPROVED AS
+DRAFTED"* — and that entry **predates every group-3/4/5 implementing commit by weeks**, so it cannot by
+construction be "landing with the commit that implements it." **This audit does NOT backfill the seven
+missing entries** — `decisions.md` is read and left untouched per this task's own Files-list condition
+(*"only if a genuine decision landed"*), and no new decision is landing; gate 2 already decided all
+twelve. Filing the missing text would be closing the gap the way `174dcd6` closed D-3/4/5's, and that
+is a **decision about ledger hygiene**, not a records reconcile — it is named here so whoever next
+touches `decisions.md` can land D-6…D-12's pre-written text with a real commit, the way the convention
+asks.
+
+**★ D-11 (iii)'s TRIGGER — CONFIRMED, NOT REPLACED (plan §8 Q4).** The trigger stands exactly as gate 2
+already ruled it (`decisions.md` 2026-08-03 M8 GATE 2, Q4): *the next milestone that puts work on the
+app-page render path whose cheapness cannot be argued mechanically — anything that parses, sanitizes,
+reads layout, or runs an engine there — funds the app-page first-paint harness before it ships that
+work.* **The carried hole itself is `specs/007-mermaid-diagrams/plan.md` §4-5 (the "nothing else will
+notice" claim), now TWO milestones old (007, 008), and it is recorded as still open.** No code depends
+on it; M8 did not fund it (per-item mechanical cheapness + the three-arm conditionality guard stood in,
+D-11 (i)/(ii)); the next planner who puts non-mechanically-cheap work on the app page inherits a
+CONDITION, not a memory.
+
+**★ `docs/trust/PERMISSIONS.md` WAS NOT EDITED BY M8.** Last touched `a3005db` (2026-07-30, M7 task
+4.3) — no commit since has touched it; no capability row added, nothing new stored, no permission
+spent. Confirmed by `git log --oneline -- docs/trust/PERMISSIONS.md`.
+
+**★ THE PLACEMENT-TENSION — SETTLED, FOLLOWING THE 9.1→9.3 PRECEDENT EXACTLY.** § Carried items named
+the call at 6.1: whether the badge-lane and unstyled-toolbar findings get their own `tasks.md`
+checkbox, or stay carried-items-only. **The call: carried-items-only, no new checkbox.** `tasks.md`
+PASSED gate 3 and is gate-sealed by the same D-10 (b) precedent 9.1's findings were filed under; 9.1's
+own "a task added below this line" wording was never once used by M7 (both its findings landed in §
+Carried items, fixed in their own sessions) — the governing convention, three instances deep now
+(D-10 (b), 9.1's two findings, and this one), is that a gate finding is filed in `progress.md` § Carried
+items. See § Carried items' new discharge entry below.
+
+**★ TWO CARRIED-BUT-NEVER-FILED ITEMS, FOUND BY RE-READING M8's OWN NARRATIVE RATHER THAN TAKEN FROM A
+ROUTED LIST** (the 9.3 method — re-derive rather than only fix what was named). Task 4.1 named a stale
+comment "outside this task's file list... belongs to whichever task next touches that file"
+(`runReader.ts:140`) and task 3.8 named a cross-file consent leak "outside 3.8's fence" — **neither ever
+reached § Carried items.** Both are filed there now, verbatim to what their originating task recorded.
+
+**★ § BASELINES — RE-DERIVED FROM A CLEAN BUILD, BOTH ENGINES, THE 9.3 METHOD.** `.output` cleared,
+rebuilt from scratch, zipped, both suites re-run at HEAD `bdcb2ad`. **Every artifact row matches what
+6.1/6.2 already carried, confirming nothing drifted across two doc-only commits:** content script
+**329,233 B** both engines (md5 Cr `b115c9ae81acf3a834b2834354b4c23a` / Fx
+`237831d2332acc1efb2305a238c4264b`), app chunk **399,646 B** both (md5 `7275a378653d9b5e5021235f045bd902`),
+background **3,548 B** both (md5 `5f53c0f53c729e0a82fb1a4ce1361e22`), built manifests **654 / 770 B**,
+`permissions: []` and no `web_accessible_resources` on both. **New this reconcile:** `pnpm zip` **1,306,513
+/ 1,306,571 B** (Cr/Fx), packed unzipped **4,080,882 / 4,080,998 B**. Unit **944/944** (56 files); browser
+**1,251 passed | 15 skipped, 118 files, 0 failed**. **First-paint rows: NOT re-run at 6.3, stated plainly
+why** — 5.1's quiesced A-B-A protocol already measured the current, byte-identical build within this same
+implementation window (no `src/` commit lands between 5.1 and 6.3), and a second un-quiesced run risks
+printing noise over a number that is already trustworthy; 5.1's reading (149.7/146.3 ms median, 145.7/143.4
+ms floor, worst-arm headroom 26.9/29.9 ms against the standing budget) stands as the current pin. **The
+diagram-bearing (51.7 KB) and 1 MB/TOC rows are STILL not re-run — now three milestones' distance from
+their last measurement (007 8.1, `4c580c4`, 2026-07-31) — named rather than left to imply currency.** Full
+table: § Baselines below.
+
+**★ M8 IS CLOSED.** All 35 tasks across six groups, six D-values' architectural calls confirmed at gate
+2, four §8-N measure-then-choose items resolved (§8-1 shipped, §8-2 per-table affirmed, §8-3 always-on
+chosen, §8-4's set confirmed with two presentation findings carried), zero stop-the-milestone defects at
+the 6.1 gate. **NEXT: nothing within M8 — the next act is the next milestone's scoping**, per the
+roadmap below. Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` both engines; manifest test
+**2975 B**; deps **5**. See § Closed milestones for the close record.
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
@@ -2528,6 +2608,37 @@ builds motion, and the sheet-wide `:host *` rule already owns any suppression.)*
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **✅ SETTLED AT 6.3 (M8's records reconcile) — THE PLACEMENT-TENSION NAMED AT 6.1: CARRIED-ITEMS-ONLY,
+  NO NEW `tasks.md` CHECKBOX.** The item below is kept as written, because it is the record of the
+  tension and why it was routed to 6.3. **The call:** M8's two 6.1 findings (the badge lane, the
+  unstyled toolbar controls) stay exactly where 6.1 filed them — in this section — and get no numbered
+  task-stub in the gate-sealed `tasks.md`. **This follows 007's 9.1→9.3 precedent exactly, not by
+  analogy:** 9.1's dark-mode and gantt-axis findings landed in § Carried items, not as new 007
+  checkboxes, and 9.3 (M7's own reconcile) confirmed that was the right read of 9.1's own "a task added
+  below this line" wording — M7 never once added a task that way. **Three instances deep now** (D-10 (b)
+  new-work-at-a-gate, 9.1's two findings, this one), the convention is written down rather than
+  re-decided each time: a gate finding is filed in `progress.md` § Carried items; the sealed tasks file
+  is never re-opened to hold it. Both findings await the same future styling-pass session named at 6.1.
+- **★ NEW AT 6.3 (M8's records reconcile), FILED RATHER THAN LEFT UNFILED — `runReader.ts:140`'s STALE
+  COMMENT (found at task 4.1, never routed to this section).** The parenthetical still describes
+  `contentWatch`'s controller as *"passes no `render` and gets bare `mount`"* — true of the render call,
+  not of the argument the comment is illustrating (the badge re-reads the registry every render
+  regardless). 4.1 named it *"outside this task's file list... belongs to whichever task next touches
+  that file"* and moved on; no later M8 task touched `runReader.ts` again, so it was never picked up and
+  never reached this section either. **Comment-only; the code is correct.** **HOME:** whichever session
+  next touches `runReader.ts` for any reason.
+- **★ NEW AT 6.3 (M8's records reconcile), FILED RATHER THAN LEFT UNFILED — A CROSS-FILE CLIPBOARD
+  CONSENT LEAK (found at task 3.8, never routed to this section).** `diagramActions.browser.test.ts`
+  grants the Chromium clipboard consent WITH a `browserContextId` and resets it WITHOUT one;
+  `Browser.resetPermissions` with no id clears the DEFAULT context only, so the grant outlives its own
+  file and arrives in the shared window already `granted`. It surfaced once, in `tableCopy.browser.test.ts`'s
+  OFF arm (`expected 'granted' to be 'prompt'`) — the pin doing its job — and 3.8 gave that file its own
+  floor (a per-case reset by id, with an `afterEach` assertion the consent did not survive) rather than
+  fix the sibling, which sits outside 3.8's Files-list fence. **The sibling's cleanup is still id-less**,
+  and any future file that pins `prompt` after `diagramActions.browser.test.ts` runs will meet the same
+  leak. **HOME:** whoever next adds a browser test that asserts a `prompt`/`denied` clipboard state,
+  fixing `diagramActions.browser.test.ts`'s `resetPermissions` call to pass its `browserContextId`.
+
 - **✅ FIXED (commit `fix(diagrams): dark-mode diagram text legibility via themed engine config`) —
   DARK-MODE DIAGRAM TEXT. The item below is kept as written, with the resolution appended, because the
   DIAGNOSIS IT CARRIED WAS WRONG IN A WAY WORTH KEEPING ON THE RECORD.**
@@ -2821,7 +2932,7 @@ measurement-driven or explicitly deferred.*
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; gate score **10/10** at that close, corrected
-from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mode fix task, which confirmed the gantt overprint as M7's second defect**) · **007 Mermaid + diagram cache (M7a) — IN IMPLEMENTATION, group 9 · 9.1 COMPLETE (8/8 items walked; last human gate discharged) · BOTH 9.1 findings FIXED (`662b90e`, `fc3a142`) · 9.2 COMPLETE (retro banked, `retro.md` 2026-08-02) · ONLY 9.3 REMAINS** ·
+from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mode fix task, which confirmed the gantt overprint as M7's second defect**) · **007 Mermaid + diagram cache (M7a) ✓** (closed 2026-08-02 — gate 9.1 PASSED 8/8, both its findings fixed, retro banked; *(this line corrected at M8's 6.3 — it had read "IN IMPLEMENTATION... ONLY 9.3 REMAINS" since before M7's own close, a pointer-walk miss neither 9.1 nor 9.3 caught)*) · **008 Persona-#1 QoL: compare two files + agent-file awareness + table tools ✓** (closed 2026-08-13 — 35/35 tasks, gate score 12/12 unmoved, retro banked) ·
 … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
@@ -2991,6 +3102,50 @@ from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mod
 
 ## Closed milestones
 
+**M8 · spec 008 — Persona-#1 QoL: compare two files · agent-file awareness · table tools · CLOSED
+2026-08-13.** Three features for the AI-agent-file reader: a **file-vs-file diff** (current document vs
+any picked file **or** snapshot, named in the status line — snapshot diffs stay uncaptioned, current-
+vs-picked only, both sealed at gate 1 §9-5), an **agent-file badge** (a name comparison over a frozen
+5-name set — `CLAUDE.md`, `AGENTS.md`, `spec.md`, `plan.md`, `tasks.md` — through a new data-only
+identity registry, `src/render/docIdentity.ts`), and **table tools** (sort, per-table filter, copy as
+CSV/Markdown) on **both** reader surfaces through **five explicit call sites, deliberately not one
+shared seam** (D-6 — a shared `enhance()` would put the table/diagram enhancers on the content-script
+import graph and take 007's 8/8 fence red). **Six groups, 35 planned tasks, ZERO discovered tasks** —
+`specs/008-persona-1-qol/tasks.md` shows exactly 35 commits touching it, a 1:1 correspondence with the
+per-task-ticking convention M8 adopted as this repo's first forward-ticked tasks file. `dependencies`
+stays at **five** — no addition — and `permissions: []` intact throughout, including through the
+milestone's first **deliberately non-zero** content-script byte delta (+10,486 B, decomposed to a
+measured zero residual against five named features).
+**★ THE MILESTONE'S CENTRAL ENGINEERING FACT: the byte ledger reconciled three independent ways.**
+Content script +10,486 B (4.3) and app chunk +10,503 B (5.4), each decomposed to its own zero residual,
+sum to the **package total's** +20,989 B exactly (10,503 + 10,486) — re-confirmed at 6.3's clean rebuild.
+The one honest wrinkle (5.4's −2 B minifier name-pool non-linearity) is named, not smoothed (`retro.md`
+2026-08-13).
+**★ THE OTHER FACT WORTH CARRYING: THE MILESTONE-CLOSE GATE FOUND ZERO DEFECTS, AND THAT IS NOT THE SAME
+CLAIM M4's CLEAN GATE MADE.** The 6.1 human walk (real Chromium, real Firefox, extension loaded, at both
+1280 and 1400 px — the wide-viewport rule M6's escaped defect forced) found **two presentation
+findings, neither stop-the-milestone**: the badge's lane reads better grouped with the other pills than
+alone (plan §8 Q3, produced not chosen — the human's own call), and the toolbar controls ship unstyled
+(the styling debt 3.3 named by its own doc comment). **Both recorded, neither fixed** — filed in §
+Carried items rather than a new `tasks.md` checkbox, following 007's 9.1→9.3 precedent exactly (settled
+at 6.3). §8-2 (per-table filtering) was walked and AFFIRMED, not altered.
+**★ THE RECORDS RECONCILE (6.3) FOUND A REAL GAP AND NAMED IT RATHER THAN HIDING IT: seven of M8's twelve
+D-values (D-6 through D-12) never had their individual, plan-§0-pre-written `decisions.md` entry land
+with an implementing commit** — only the pre-implementation gate-2 summary exists for them. D-1/D-2 are
+compliant; D-3/D-4/D-5 landed late and self-disclosed it already. Not backfilled at 6.3 (no genuine new
+decision landing; `decisions.md` read and left untouched) — named for whoever next has reason to touch
+`decisions.md`. Full record: § Baselines *THE M8 FIRST-PAINT PRICE* and this file's own 6.3 entry above.
+→ narrative: § Now above, **until the next archive pass moves it to
+[`progress-archive.md`](progress-archive.md)** the way M6's and M7's were · tasks:
+`specs/008-persona-1-qol/tasks.md` (**35/35 ticked, per-task, in each task's own commit — the first
+tasks file built under the forward-ticking convention 008 itself banked at gate 3**) · plan D-1…D-12:
+`specs/008-persona-1-qol/plan.md` (sealed at gate 2) · decisions: `decisions.md` **2026-08-03** (GATE 1,
+GATE 2 with D-1/D-6 confirmed and D-2…D-12 approved as drafted, GATE 3), **2026-08-04/05** (D-1…D-5),
+**2026-08-13** (task 5.5's decision gate, task 6.1's milestone-close walk) · lessons: `retro.md`
+2026-08-13 (M8 close — the floor-delta-before-re-baseline discipline applied to M8's own code; the
+byte-ledger's three-way reconciliation; two `AGENTS.md` lines drafted for human review, not committed by
+the retro itself).
+
 **M7 · spec 007 — Mermaid diagrams + diagram cache (M7a) · CLOSED 2026-08-02.** Mermaid fences render as
 real diagrams **on the app page only** (§3.2's gate-1 disposition, walked and confirmed at 9.1: the
 content-script surface still shows a plain code fence, no affordance, no note), behind a **second named
@@ -3124,9 +3279,11 @@ Firefox mount-timing regression. → narrative:
 [archive § task log](progress-archive.md#task--session-log--newest-first--m1--m3-close--the-004-planning-gates)
 · decisions: `decisions.md` 2026-07-14 · lessons: `retro.md` 2026-07-14.
 
-**The human-gate score: 12/12** *(was 10/10 through M6; **9.1 moved it**, and the dark-mode fix task
-moved it once more — see below)* — M1:2 + M2:3 +
-M3:1 + M4:0 + M5:1 + **M6:3** + **M7:2**. **M7's two are 9.1's dark-mode diagram-text defect** — caught at
+**The human-gate score: 12/12, and M8 adds ZERO to the numerator** *(was 10/10 through M6; **9.1 moved
+it**, and the dark-mode fix task moved it once more — see below; M8's 6.1 walk found two presentation
+findings, filed and carried, matching M4's shape — a clean gate about a genuinely clean build, not a
+gate that missed something)* — M1:2 + M2:3 +
+M3:1 + M4:0 + M5:1 + **M6:3** + **M7:2** + **M8:0**. **M7's two are 9.1's dark-mode diagram-text defect** — caught at
 its own gate on the surface no test reaches — **and the gantt date-axis overprint**. **The "SO FAR" HEDGE
 IS RETIRED: 9.1 is COMPLETE** — all eight items walked, item 7 (app-page responsiveness) PASSED — **so the
 gate itself can contribute nothing further.** ★ **The one named way it could still move HAS MOVED, exactly
@@ -3165,16 +3322,24 @@ milestones are finer than the 7 phases (roadmap after 001: 002 sources · 003 TO
 005 watch · 006 snapshots+diff · … ~a dozen to v1.0), so a precise product % is **deferred** — honestly
 this is early foundation, **~sixth of ~12+ spec-milestones**. Don't over-read the fraction.
 **The sharper number is now measured rather than guessed:** [`spec-coverage.md`](spec-coverage.md) puts
-the whole spec at **~23%** and persona #1 at **~56%**. Prefer it to this paragraph when scoping.
+the whole spec at **~28%** (re-derived at M8's 6.3, up from ~26% pre-M8 — F5 and F6 moved, six rows
+total). **Persona #1's ~56% is now STALE INPUT, not a current reading** — M8 shipped three of the
+sub-items its own 18-item enumeration counts (the badge, sort+filter, copy), but 56% is a **human walk's
+answer to a scoping question** (is app-page-only a boundary or a gap?), not row arithmetic, and that walk
+has not re-run against M8's shipped code. Do not quote 56% as current, and do not compute a replacement
+from the row deltas — re-walk it. Prefer `spec-coverage.md` to this paragraph when scoping.
 
 ## Baselines / pins
-*Current measured truth. **The ARTIFACT rows were re-derived 2026-08-02 at HEAD `94f7da5`** by **007 task
-9.3 (the M7 close reconcile)** — built from a clean tree on both engines, `wc -c` + `md5sum` per artifact,
-nothing carried from the brief. **The TYPICAL-DOC FIRST-PAINT row was RE-MEASURED 2026-08-03 at HEAD
-`757f953`** (the post-gate-1 re-measurement the M8 redline asked for) — see *THE 2026-08-03 FIRST-PAINT
-RE-MEASUREMENT* below, which also records that **the redline's stated premise was falsified by it**.
-**The other two first-paint rows were NOT re-run and still carry 007 task 8.1's provenance (2026-07-31,
-`4c580c4`)** — see the ⚠ provenance note under the table, which states why.*
+*Current measured truth. **The ARTIFACT rows and SUITE counts were re-derived 2026-08-13 at HEAD
+`bdcb2ad`** by **008 task 6.3 (the M8 close reconcile)** — `.output` cleared, both engines rebuilt from
+scratch, zipped, both suites re-run, `wc -c` + `md5sum` per artifact, nothing carried from the brief; the
+9.3 method exactly. **The TYPICAL-DOC FIRST-PAINT row is NOT re-run at 6.3, stated plainly why: 008 task
+5.1 already ran 8.1's full quiesced A-B-A protocol on this exact byte-identical build, inside the same
+implementation window (no `src/` commit lands between 5.1 and 6.3)** — see *THE M8 FIRST-PAINT PRICE*
+below, which folds in 6.2's shipped-harness confirmation. **The diagram-bearing and 1 MB/TOC rows were
+NOT re-run at 6.3 either, and are now THREE milestones' distance from their last measurement** (007 task
+8.1, 2026-07-31, `4c580c4`) — carried forward rather than left to imply currency; see the ⚠ provenance
+note under the table.*
 *This section is MUTABLE — each milestone's close task overwrites the numbers and moves the previous ones
 into the "vs" column. It lives here, not in decisions.md, because decisions.md is dated append-only and a
 current-numbers table cannot be corrected there without either lying or duplicating.*
@@ -3194,19 +3359,32 @@ to the gated path*, and that is tested **by ablation**, which passes exactly (be
 five named, previously-recorded content-script features, **decomposed to a residual of 0 B**. Growth that
 every task recorded as it landed is accounted growth. See *THE M7 BYTE LEDGER*.
 
-| pin | now | vs M6 close (`d470ab2`) | bound | verdict |
+| pin | now | vs prior pin *(first-paint rows: M8's own pre-implementation reading, `757f953`, 2026-08-03; artifact/suite rows: M7 close, `94f7da5`)* | bound | verdict |
 |---|---|---|---|---|
-| First paint, typical doc (50.4 KB) — **CONTENT SCRIPT** *(**RE-MEASURED 2026-08-03**, HEAD `757f953`, quiesced — **the current reading**)* | **138.1 / 134.3 / 137.0 ms** medians, floors **135.1 / 132.6 / 134.7 ms** (3 arms; **A-vs-A 3.8 ms median / 2.5 ms floor**) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | **PASS, all 3 arms — worst-arm headroom 26.9 ms (median) / 29.9 ms (floor)** |
-| ↳ *the DATED PRIOR it supersedes, kept not overwritten* — First paint, typical doc *(8.1, `4c580c4`, 2026-07-31 — **SUPERSEDED 2026-08-03**)* | **152.3 / 157.9 / 163.2 ms** medians, **floor 145.3 ms** (3 arms) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | PASS, all 3 arms — worst-arm headroom **1.8 ms**, now known to have been **MACHINE-STATE, not a superseded path** |
-| First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, and NOT re-run 2026-08-03 either**)* | **157.6 ms** median, **floor 146.7 ms** | *(new pin)* | **<165 ms GATE** | **PASS — but see the vacuity note, and the app-page instrument finding** |
-| First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived**; re-run 2026-08-03 **as the machine-state discriminator only**, where it moved **−5.4%**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS |
-| Content script (`content-scripts/peekover.js`) *(9.3, `94f7da5`)* | **318,747 B** both engines — md5 Cr `c7b33b36b1a727fdacb77eefe64083e1` / Fx `67717921bdf646c7366176392d0c37d7` | 315,671 B (**+3,076, +0.97%**) | none — **stated, not gated** | — |
-| App-page chunk (`chunks/app-jgQlsln1.js`) *(9.3, `94f7da5`)* | **389,143 B** both engines, md5 `65486f78afa2fec0e9d00f7f0e9c0d27` identical on both | 361,500 B (**+27,643, +7.65%**) | none — **stated, not gated** | — |
-| Background (`background.js`) *(9.3, `94f7da5`)* | **3,548 B** both engines, md5 `5f53c0f53c729e0a82fb1a4ce1361e22` | 3,435 B (**+113, +3.29%**) | none — **stated, not gated** | — |
-| Built manifests, Chrome / Firefox *(9.3, `94f7da5`)* | **654 / 770 B**, `permissions: []` and no `web_accessible_resources` on both | *(new pin)* | — | — |
-| `pnpm zip` Chrome / Firefox *(9.3, `94f7da5`)* | **1,300,383 / 1,300,442 B** | 349,744 / 349,803 B (**+950,639 each, +272%**) | **<2 MB** | **PASS — headroom 0.70 MB, was 1.65 MB** |
-| Packed unzipped (`.output/<engine>`) *(9.3, `94f7da5`)* | **4,059,893 / 4,060,009 B** | *(new pin)* | **≤5 MB** (AGENTS.md) | **PASS — headroom 0.94 MB** |
-| Suites *(9.3, `94f7da5`)* | **728 unit** (51 files) · **927 passed / 15 skipped** browser, **100 file-instances** | 549 · 629/15/76 (**+179 unit, +298 browser**) | — | green |
+| First paint, typical doc (50.4 KB) — **CONTENT SCRIPT** *(008 task 5.1, quiesced A-B-A, HEAD `bdcb2ad` — bytes unchanged since 5.1 — **the current reading, NOT re-run at 6.3**)* | **149.7 / 146.3 ms** medians (2 reach-IN arms), floors **145.7 / 143.4 ms**; **+ a 3rd, non-interleaved shipped-harness reading (6.2): 155.4 ms median, 145.2 ms floor** | 138.1 / 134.3 / 137.0 ms medians, floors 135.1 / 132.6 / 134.7 ms | **<165 ms GATE** | **PASS, all readings — the M8 table-tools reach costs +8.9 ms median / +11.1 ms floor against a 26.9 / 29.9 ms budget (008 task 5.1); worst-arm headroom now 15.3 ms (median) / 19.3 ms (floor)** |
+| ↳ *the pin this row supersedes, kept not overwritten* — First paint, typical doc *(RE-MEASURED 2026-08-03, HEAD `757f953`, quiesced — M8's pre-implementation reading)* | **138.1 / 134.3 / 137.0 ms** medians, floors **135.1 / 132.6 / 134.7 ms** (3 arms; A-vs-A 3.8 ms median / 2.5 ms floor) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | PASS, all 3 arms — worst-arm headroom 26.9 ms (median) / 29.9 ms (floor), **consumed 33-41% by M8's reach, per 5.1** |
+| First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, not at the 2026-08-03 redline, and NOT re-run at 6.3 — now THREE milestones' distance**)* | **157.6 ms** median, **floor 146.7 ms** | *(unchanged pin)* | **<165 ms GATE** | **PASS as last measured — see the vacuity note; the app-page instrument hole (D-11 (iii)) still means this number is not re-derivable on demand** |
+| First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived at 9.3, at the redline, or at 6.3**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS as last measured |
+| Content script (`content-scripts/peekover.js`) *(6.3, `bdcb2ad`)* | **329,233 B** both engines — md5 Cr `b115c9ae81acf3a834b2834354b4c23a` / Fx `237831d2332acc1efb2305a238c4264b` | 318,747 B (**+10,486, +3.29%**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-CkthuSjX.js`) *(6.3, `bdcb2ad`)* | **399,646 B** both engines, md5 `7275a378653d9b5e5021235f045bd902` identical on both | 389,143 B (**+10,503, +2.70%**) | none — **stated, not gated** | — |
+| Background (`background.js`) *(6.3, `bdcb2ad`)* | **3,548 B** both engines, md5 `5f53c0f53c729e0a82fb1a4ce1361e22` | 3,548 B (**+0, unchanged**) | none — **stated, not gated** | — |
+| Built manifests, Chrome / Firefox *(6.3, `bdcb2ad`)* | **654 / 770 B**, `permissions: []` and no `web_accessible_resources` on both | 654 / 770 B (**unchanged**) | — | — |
+| `pnpm zip` Chrome / Firefox *(6.3, `bdcb2ad`)* | **1,306,513 / 1,306,571 B** | 1,300,383 / 1,300,442 B (**+6,130 / +6,129, +0.47%**) | **<2 MB** | **PASS — headroom 0.69 MB** |
+| Packed unzipped (`.output/<engine>`) *(6.3, `bdcb2ad`)* | **4,080,882 / 4,080,998 B** | 4,059,893 / 4,060,009 B (**+20,989 / +20,989, +0.52% — matches the M8 byte ledger's package total exactly, 10,503 + 10,486**)| **≤5 MB** (AGENTS.md) | **PASS — headroom 0.90 MB** |
+| Suites *(6.3, `bdcb2ad`)* | **944 unit** (56 files) · **1,251 passed / 15 skipped** browser, **118 file-instances** | 728 · 927/15/100 (**+216 unit, +324 browser, +5 unit files, +18 browser file-instances**) | — | green |
+
+**★ THE M8 FIRST-PAINT PRICE, SUMMARIZED HERE SO THIS SECTION STAYS SELF-CONTAINED (full protocol and
+per-arm detail: § Now, task 5.1).** 5.1 ran 8.1's own quiesced A-B-A protocol — `A` = HEAD's build, `B`
+= the same tree with D-6's content-script sites 3/4 and their imports removed — on the gated 50.4 KB
+fixture, and read the reach's cost off the DIFFERENCE, not off a single build's absolute number:
+**+8.9 ms median / +11.1 ms floor**, against the standing **26.9 ms / 29.9 ms** worst-arm headroom the
+2026-08-03 pre-implementation reading set — **33–41% of the budget, on every one of four readings**.
+6.2's retro folded in a third, non-interleaved confirmation with the shipped harness (`pnpm perf --
+size 50kb`): **155.4 ms median / 145.2 ms floor**, whose floor sits 0.5 ms from 5.1's own worst floor
+arm and whose median sits 5.7 ms above it — read as a warning about the median's session-to-session
+noise, not a fourth A arm (it was not interleaved). **The floor is the load-bearing statistic**, and it
+agrees within 0.5 ms across both measurements. Content script byte-identical throughout 5.1→6.2→6.3
+(329,233 B both engines), so all three readings describe the same shipped bytes.
 
 **⚠ PER-ROW PROVENANCE IS NOW EXPLICIT, AND THE SPLIT IS THE POINT (007 task 9.3).** The header used to
 date the WHOLE table to 8.1 / `4c580c4`; after 9.3 that is true of the first-paint rows ONLY. **Why the

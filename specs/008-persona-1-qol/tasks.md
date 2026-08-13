@@ -856,7 +856,7 @@ revertable — units. **None of them precedes 3.1.***
       floor-delta sentence is present and states a NUMBER.** Docs only — no `src/`, test, `scripts/` or spec
       file touched. Golden EMPTY · manifest green **2975 B** · `permissions: []`. [finding 8; WORKFLOW.md §7.5]
 
-- [ ] **6.3 The records reconcile that closes M8 — including D-11 (iii)'s TRIGGER (plan §8 Q4).**
+- [x] **6.3 The records reconcile that closes M8 — including D-11 (iii)'s TRIGGER (plan §8 Q4).**
       Files: `docs/ai/progress.md` · `docs/ai/spec-coverage.md` · `docs/ai/decisions.md` (**only** if a genuine
       decision landed)
       Verify: § Baselines carries **re-run** numbers **or states plainly that it did not re-run them, and why**

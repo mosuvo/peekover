@@ -14,6 +14,15 @@ re-verification of F2 "Math & Diagrams" ONLY**, plus the three figures M7 falsif
 it is now stale. **This is a new dated audit, not a revision of the old one:** the 2026-07-27 numbers
 were true on 2026-07-27, and § Blockers in `progress.md` still cites them correctly as a dated record.*
 
+***★ RE-AUDITED 2026-08-13 · HEAD `bdcb2ad`** (M8 / spec 008 "persona-#1 QoL" closed at task 6.3, the
+records reconcile). **Targeted re-verification of the SIX rows M8's own scope could plausibly move —
+three in F5 (table tools), three in F6 (agent-file awareness, compare) — against shipped code and its
+tests. No other section was re-scored:** F1–F4, F7–F12 and F5/F6's other rows are the `59dcb20` /
+`d470ab2` / `d7f424c` readings, unchanged. **The persona-#1 figure (56%, settled 2026-08-03 as a human
+ruling, not a row-derivation) is NOT re-derived here** — it needs its own walk the way its predecessor
+did, and this pass changes inputs to that walk (three more sub-items shipped) without re-running it. See
+the dated note in § Summary.*
+
 *Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
 *Method: source code is the answer, the spec is only the question. No spec item is credited
 because a plan, a task list or a pipeline comment anticipates it.*
@@ -68,6 +77,16 @@ as scope rather than shortfall; **not chosen**. (c) The **56% gap arm — the fi
 coincides with (a) numerically **by arithmetic accident, not by agreement**: (a) is low because
 Mermaid had not shipped at all, (c) is low because Mermaid shipped on one reader surface of two.
 
+**★ M8 IS STALE INPUT TO (c), NOT A FOURTH READING.** The 56% gap-arm figure counted 10 of 18
+persona-#1 sub-items *"across folder browser, watch mode, diff view, Mermaid, tables"* — and M8 shipped
+three items in that same enumeration: the agent-file badge, and the table-tools pair (sort/filter and
+copy). **Whether that moves 10/18 to 13/18 is not this pass's call** — the 56% figure is a **human
+walk**, not row arithmetic (see the settled entry above), and the walk asked a scoping question (is
+app-page-only a boundary or a gap?) that M8's rows do not touch. **Do not compute "13/18 = 72%" from
+this paragraph** — that number has not been walked and would smuggle a re-derivation into a stale-input
+note. What is safe to say: the persona-#1 figure is **more stale after M8 than before it**, and the next
+session that needs it should re-walk it rather than trust either 56% or an arithmetic guess.
+
 **What this ruling does NOT do in this file.** It does not re-score F2's rows. Uncertain-items §5
 already records the consequence its own arithmetic names — items 4 and 5 moving together would drop
 F2 from 42% to roughly 24% (seven ✓ → ~) — and that re-score is **CARRIED, not applied here**: it is
@@ -102,22 +121,23 @@ the bottom with the question a human walk would settle.
 | F2 Math & diagrams *(re-audited 2026-08-03)* | 19 | 7 | 2 | 10 | 0 | 8.0 | **42%** |
 | F3 Code blocks | 9 | 0 | 0 | 9 | 0 | 0.0 | **0%** |
 | F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
-| F5 Navigation & reading UX | 39 | 11 | 1 | 27 | 0 | 11.5 | **29%** |
-| F6 Live updating & AI-workflow | 13 | 6 | 0 | 7 | 0 | 6.0 | **46%** |
+| F5 Navigation & reading UX *(re-audited 2026-08-13)* | 39 | 13 | 2 | 24 | 0 | 14.0 | **36%** |
+| F6 Live updating & AI-workflow *(re-audited 2026-08-13)* | 13 | 7 | 2 | 4 | 0 | 8.0 | **62%** |
 | F7 Theming & appearance | 17 | 1 | 0 | 16 | 0 | 1.0 | **6%** |
 | F8 Editor mode | 21 | 0 | 2 | 19 | 0 | 1.0 | **5%** |
 | F9 Export & publishing | 13 | 0 | 0 | 13 | 0 | 0.0 | **0%** |
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **35** | **13** | **150** | **0** | **41.5** | **21%** |
+| **§5 total** | **198** | **38** | **16** | **144** | **0** | **46.0** | **23%** |
 | §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **48** | **23** | **156** | **0** | **59.5** | **26%** |
+| **Whole spec** | **227** | **51** | **26** | **150** | **0** | **64.0** | **28%** |
 
-*Every row except F2 is the `d470ab2` / `d7f424c` reading, carried forward unverified at HEAD
-`59dcb20`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
-below) without moving that item off `~`, since two of its three named sub-surfaces are still absent.*
+*Every row except F2, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
+HEAD `bdcb2ad`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
+below) without moving that item off `~`, since two of its three named sub-surfaces are still absent. F5
+and F6 moved at M8 (2026-08-13) — three rows in each, six total, all cited below in their own sections.*
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -264,9 +284,9 @@ landed"**, which is not true of any other partially-covered section in this docu
 | Deep links / text-fragment highlighting | ⭐ | ✗ | 0 hits | — |
 | Footnote & wiki-link hover preview cards | ⭐ | ✗ | Depends on F1 footnotes/wiki-links (both ✗) | — |
 | Interactive task checkboxes (write-back) | ⭐ | ✗ | `parse.ts:44-47` — checkboxes deliberately rendered **disabled**; no write path | An explicit M1 decision, not an oversight. |
-| Table tools: click-to-sort | ⭐ | ✗ | 0 hits | — |
-| Table tools: quick filter | ⭐ | ✗ | 0 hits | — |
-| Table tools: copy as CSV/JSON/Markdown | ⭐ | ✗ | 0 `csv` hits in `src/` | — |
+| Table tools: click-to-sort | ⭐ | **✓** *(2026-08-13)* | `src/render/tableTools.ts:211` `installTableSort`; `aria-sort` + text per D-12 divergence 2; `tests/browser/tableTools.browser.test.ts` | Stable sort, ascending/descending/document-order cycle, always from document order (never re-sorts the already-sorted rows). |
+| Table tools: quick filter | ⭐ | **✓** *(2026-08-13)* | `src/render/tableTools.ts:398-412` (`FILTER_FIELD_CLASS` etc.); per-table, live re-filter, designed empty state (§4); `tests/browser/tableFilter.browser.test.ts` | Per-table scope by D-8/§3.6 decision, not per-document — see §8-2's walk (`progress.md`, M8 task 6.1: per-table AFFIRMED). |
+| Table tools: copy as CSV/JSON/Markdown | ⭐ | **~** *(2026-08-13)* | `src/render/tableTools.ts:693,696,820` — `COPY_CSV_CLASS`, `COPY_MARKDOWN_CLASS`, the format table (`key: 'csv'` + a markdown entry); `tests/browser/tableCopy.browser.test.ts` | **Two of three formats.** CSV and Markdown ship as two native buttons (Q2, gate 2: "two buttons, minimum chrome, no menu"); **no JSON option exists anywhere in `tableTools.ts`.** Copies rows CURRENTLY SHOWN in the order shown (composes with sort and filter by construction). |
 | Presentation mode | ✅ | ✗ | 0 `presentation`/`slide` hits | — |
 | Presentation export as standalone HTML | ⭐ | ✗ | 0 hits | — |
 | Read-aloud (TTS, Web Speech API) | ⭐ | ✗ | 0 `speechSynthesis` hits | Zero-cost and zero-network by construction — a cheap ⭐ for M7. |
@@ -287,9 +307,9 @@ landed"**, which is not true of any other partially-covered section in this docu
 | Snapshot history (IndexedDB) | ⭐ | ✓ | `src/app/snapshots.ts:63-113,300,346`; `src/app/idbCore.ts` (DB v3); `tests/browser/snapshotCapture.browser.test.ts`, `idbVersionchange.browser.test.ts` | Bounds: 15/doc, 20 MB, 30 days. Capture is a user-toggleable flag (`captureFlag.ts`). |
 | Diff view — inline | ⭐ | ✓ | `src/render/diffEngine.ts:75`; `src/render/diffView.ts:137`; `src/render/diffChrome.ts:170`; `tests/browser/diffView.browser.test.ts` | **App page only** — `diffRegistry.ts` is registered by `appShell.installWatchForFile` and by nothing on the content-script graph (pinned by `diffRegistry.browser.test.ts`). |
 | Diff view — side-by-side | ⭐ | ✗ | `diffView.ts:67-137` emits one sanitized block per hunk kind; no two-column mode | — |
-| Compare any two files in the folder | ⭐ | ✗ | `diffChrome.ts:242` `compareWith(id)` takes a **snapshot id**; the picker lists snapshots only (`diffChrome.ts:270-281`) | Current-vs-snapshot only. The engine (`computeDiff`) is file-agnostic — this is a UI gap, not an engine gap. |
-| Agent-file awareness: badge | ⭐ | ✗ | 0 `CLAUDE.md`/`.cursorrules` hits in `src/` (the `AGENTS.md` hits are doc-comment citations, not filename matching) | — |
-| Agent-file awareness: tuned render defaults | ⭐ | ✗ | As above | — |
+| Compare any two files in the folder | ⭐ | **~** *(2026-08-13)* | `src/render/diffChrome.ts:387` `compareWith`; picker at `:308+` lists BOTH snapshots and files as two ARIA groups (D-3/D-4, `role="listbox"` at `:341`); `tests/browser/diffChrome.browser.test.ts` | **Current-vs-picked, not any-two.** `diffChrome.ts:165-166`'s own comment: *"`after` is always `getCurrentSource()`. Two picked files are never compared against each other."* This is a **sealed scope boundary, not an oversight** — spec 008 gate 1 ruled §9-5 "current-vs-picked", and its IS-NOT list names "any-vs-any and cross-folder comparison" explicitly. Up from ✗ (current-vs-**snapshot**-only) because a picked **file** is now a valid `before`, not because "any two" shipped. |
+| Agent-file awareness: badge | ⭐ | **✓** *(2026-08-13)* | `src/render/agentFile.ts:77,95` (`AGENT_FILE_NAMES`, `isAgentFile`); `src/render/agentBadge.ts:111` `buildAgentBadge`; registered at `src/app/appShell.ts:888` and `src/render/runReader.ts:149` (`registerDocIdentity`); `tests/browser/agentBadge.browser.test.ts`, `agentBadgeNetwork.browser.test.ts` (zero bytes on wire, both surfaces) | Basename match against a frozen 5-name set (`CLAUDE.md`, `AGENTS.md`, `spec.md`, `plan.md`, `tasks.md`), case-sensitive, no content sniffing. |
+| Agent-file awareness: tuned render defaults | ⭐ | **~** *(2026-08-13)* | `specs/008-persona-1-qol/spec.md:89` narrows "tuned" to presentation-only, nothing persisted, parser untouched (gate-1 §9-2, upheld); `progress.md` M8 task 6.1: *"§8-4 — the set is right"* (badge + table tools, walked together as the one presentation set a recognized file gets) | **Not a distinct feature — absorbed into the badge + table-tools rows above.** The literal reading (a per-document-class settings axis or parser reconfiguration) is explicitly IS-NOT (`tasks.md`: "parser reconfiguration of any kind"). Scored `~` rather than ✓ because no tuning exists beyond what the other two rows already credit — crediting it ✓ too would double-count the same shipped work a third time. |
 | Session-transcript rendering (chat bubbles) | ⭐ | ✗ | 0 hits | — |
 | Local MCP bridge | ⭐ | ✗ | 0 hits | Spec marks this post-v1 exploration. |
 
@@ -533,6 +553,7 @@ correct as the `d470ab2` reading; the governance it describes is what the fifth 
 | **§6 side-quest** · `d470ab2` (post-M6, not a milestone) | **§6** (4 — the dynamic-import scanner + its self-test, wired in CI: PARTIAL → SHIPPED · 9 — `pnpm audit`, OSV+SARIF, Dependabot, SBOM generator: 4 of 5 sub-clauses now shipped) · **§6-17** (the `storage.sync` → IndexedDB correction of record, tailed into §9 and F7 at the archive pass). **The first entry in this table that shipped no `src/` code** — it is release engineering, and it exists because this audit named the gap. |
 
 | **M7** · `007-mermaid-diagrams` | **F2** (Mermaid rendering, theme sync, hash-keyed cache, cache clear + disclosure, PNG/SVG copy & download, zoom/pan lightbox, progressive post-mount enhancement — 3% → 42%) · **§6** (2 — a fifth network guard, `diagramNetwork.browser.test.ts`; 6 — `permissions: []` survived a fifth dependency and a lazy chunk, with no `web_accessible_resources`; 8 — a second, SVG-shaped sanitizer profile with the document profile untouched; 9 — the first dependency addition since M6, through the governed process; 17 — the diagram cache disclosed, bounded and erasable) · **§7** (6 — the "re-themed diagrams" sub-surface; 3, 7 — placeholder motion and the degrade-to-source-fence states) |
+| **M8** · `008-persona-1-qol` | **F5** (table tools: sort ✗→✓, quick filter ✗→✓, copy CSV/Markdown ✗→~ — no JSON) · **F6** (agent-file badge ✗→✓; tuned render defaults ✗→~, absorbed into the badge/table-tools set, not a distinct feature; compare any two files ✗→~, current-vs-picked, sealed narrower than "any two" by gate-1 §9-5) · **§6** (6, 8 — `permissions: []` and the sanitizer allow-list both survived a +10,486 B content-script / +10,503 B app-page reach, zero dependency added) · **§7** (unmoved — no new theming, motion or token work) |
 
 **F3, F9, F10, F11 have never been touched by any milestone.** F7 was touched once and moved 6%.
 **F2 left that list at M7** — it went from never-touched to 42% in one milestone, and it is the only
