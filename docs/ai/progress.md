@@ -1,6 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-03 (M8 gate 3 — tasks 008 approved; the checkbox convention settled).*
+*Updated: 2026-08-13 (M8 closed at task 6.3 — persona-#1 QoL shipped; between milestones, persona-#2
+next to scope).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -2638,6 +2639,17 @@ measurement-driven or explicitly deferred.*
   and any future file that pins `prompt` after `diagramActions.browser.test.ts` runs will meet the same
   leak. **HOME:** whoever next adds a browser test that asserts a `prompt`/`denied` clipboard state,
   fixing `diagramActions.browser.test.ts`'s `resetPermissions` call to pass its `browserContextId`.
+- **★ FILED AT THE POST-M8 FRESHNESS SWEEP (2026-08-13) — THE D-6…D-12 `decisions.md` LEDGER GAP (found
+  and named at 6.3's own D-VALUE AUDIT, never routed to this section).** `plan.md` §0 pre-writes verbatim
+  `decisions.md` entry text for D-6 through D-12, each meant to land with its implementing commit — **none
+  of the seven ever did.** The only place any of them appears in `decisions.md` is the pre-implementation
+  2026-08-03 M8 GATE 2 entry, which predates every group-3/4/5 implementing commit by weeks and so cannot
+  by construction be "landing with the commit that implements it." 6.3's own D-VALUE AUDIT named this gap
+  in full but — unlike the two items immediately above, found the same session — never promoted it into
+  this section; this entry closes that omission. Filing the missing text is a decision about ledger
+  hygiene, not a records reconcile, so it is **not done here either**. **HOME:** whoever next touches
+  `decisions.md` can land D-6…D-12's pre-written text (`plan.md` §0) with a real commit, the way the
+  convention asks.
 
 - **✅ FIXED (commit `fix(diagrams): dark-mode diagram text legibility via themed engine config`) —
   DARK-MODE DIAGRAM TEXT. The item below is kept as written, with the resolution appended, because the
@@ -2965,7 +2977,9 @@ from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mod
   `tasks.md` is gate-sealed and outside 9.3's Files list; `decisions.md`'s dated `PROPOSED_` line-refs
   **left exactly as written**. **TWO ITEMS ARE ROUTED OUT OF M7 AS OPEN HUMAN DECISIONS and are in
   § Carried items — the checkbox convention (007 closed with 0/28 boxes ticked) and `spec-coverage.md`'s
-  F2 re-audit.** Neither blocks anything today; both should be settled before M8 scoping. M6's gates are all closed and recorded (spec gate 1 2026-07-22, plan
+  F2 re-audit.** Neither blocked anything, and **both were settled**: the checkbox convention was banked
+  at M8 GATE 3 (2026-08-03), and the F2 re-audit ran 2026-08-03 and again at M8's 6.3 (2026-08-13, six
+  rows total across F5/F6 — see `spec-coverage.md`). M6's gates are all closed and recorded (spec gate 1 2026-07-22, plan
   gate 2 + gate-3 product decisions 2026-07-23, D-8's bound-value gate at 7.2 2026-07-26, close gate 9.1
   2026-07-26), alongside M5's three (2.3, 5.2, 7.1). *(This bullet has been corrected SIX times for
   pointer inversion — at 8.2, at 9.1, at the archive pass, at 007 task 1.1, and again at 007 task 8.4,

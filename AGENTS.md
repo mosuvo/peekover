@@ -49,4 +49,5 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 
 - Start every session: read `docs/ai/progress.md`, then the active spec in `specs/`.
 - Plans before code for anything non-trivial (C13). Update memory files before ending (C14 budget).
-- Current milestone: `specs/006-snapshots-diff/`.
+- Current milestone: between milestones — `specs/008-persona-1-qol/` closed 2026-08-13, persona-#2 next
+  to scope.

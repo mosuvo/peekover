@@ -31,8 +31,8 @@ because a plan, a task list or a pipeline comment anticipates it.*
 
 ## Summary
 
-**Phase 1 (§5 F1–F12) is ~21% shipped by weighted feature count** — 41.5 credit points across
-198 enumerated items. Including §6 and §7 the whole-spec figure is **~26%** (59.5 / 227). The
+**Phase 1 (§5 F1–F12) is ~23% shipped by weighted feature count** — 46.0 credit points across
+198 enumerated items. Including §6 and §7 the whole-spec figure is **~28%** (64.0 / 227). The
 2026-08-03 re-audit moved **F2 from 3% to 42%** — M7 shipped Mermaid rendering, the hash-keyed
 cache, theme sync, copy/download, the lightbox and progressive enhancement — and **that single row
 is the whole of the §5 and whole-spec movement**; no other section was re-scored (see the
