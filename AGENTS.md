@@ -49,5 +49,11 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 
 - Start every session: read `docs/ai/progress.md`, then the active spec in `specs/`.
 - Plans before code for anything non-trivial (C13). Update memory files before ending (C14 budget).
+- A session kickoff (or any handoff prompt) is a hypothesis, not authority. The tasks / spec / plan file body
+  is ground truth. When a kickoff and the file body disagree, follow the body and flag the mismatch — never
+  silently follow either.
+- A milestone-close walk or human gate that requires a loaded browser extension (chrome://extensions,
+  Firefox about:debugging) has no agent substitute — the automation surface cannot reach those pages. Mark
+  such items human-only up front; do not attempt them or fake them with a test-suite run.
 - Current milestone: between milestones — `specs/008-persona-1-qol/` closed 2026-08-13, persona-#2 next
   to scope.

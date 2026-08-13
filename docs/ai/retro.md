@@ -28,7 +28,8 @@
     time is exactly what kept 5.7 from ballooning into an unneeded rebuild and kept this retro from being
     written without a human in the room — the pattern recurring three times is evidence the discipline held,
     not evidence it failed. → **ACTION: name the rule once, standing, in `AGENTS.md` — the rule is named
-    above; its `AGENTS.md` wording is reserved to the human, pending adoption.**
+    above; its `AGENTS.md` wording is reserved to the human, adopted 2026-08-13 (AGENTS.md, Workflow
+    section, kickoff-is-a-hypothesis bullet).**
   - **(2) THE MILESTONE-CLOSE WALK HAS NO AGENT SUBSTITUTE, AND THAT WAS DISCOVERED EMPIRICALLY MID-ROUND
     INSTEAD OF STATED UP FRONT — COSTING A REPEAT BEFORE IT PAID OFF EXACTLY AS M7's FINDING 4 PREDICTED.**
     Group 6's three kickoffs arrived in an order that let the agent reach for 6.3 (the reconcile) before 6.1
@@ -43,7 +44,7 @@
     per-table call — five filter boxes on `plan.md`'s five tables read as repetition that "looks good," not
     noise. → **ACTION: state once, standing, that a human-gate item requiring a loaded browser extension has
     no agent substitute — the rule is named above; its `AGENTS.md` wording is reserved to the human,
-    pending adoption.**
+    adopted 2026-08-13 (AGENTS.md, Workflow section, milestone-close-walk bullet).**
   - **(3) THE FLOOR MOVED, AND M8 STATES THE NUMBER BEFORE ANY RE-BASELINE DISCUSSION, PER FINDING 8's OWN
     RULE APPLIED TO THIS MILESTONE'S OWN CODE.** M8's shipped first-paint floor on the standing 50.4 KB
     fixture reads **145.7 / 143.4 / 145.2 ms**, against the standing baseline floors of **135.1 / 132.6 /
