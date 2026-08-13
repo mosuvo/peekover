@@ -1,4 +1,83 @@
 # Retro log — Peekover
+- **2026-08-13 · M8 close (spec 008 — Persona-#1 QoL: compare two files · agent-file awareness · table
+  tools).** A same-basename agent-file badge (D-1/D-2), a compare picker widened to admit any file in the
+  folder beside snapshots (D-3/D-4/D-5), and table tools — sort, filter, copy-out — on both surfaces behind
+  a measured escape hatch (D-6…D-9, D-12) that §8-1 could have pulled if the content-script reach didn't
+  fit. Six groups, **thirty-five planned tasks, ZERO discovered tasks**, closed by the gate-2 split (3.2–3.5,
+  the heaviest table-tools task reviewed as four revertable units) and the measure→choose→implement→execute
+  arc group 5 ran end to end: 5.1–5.4 measured without choosing, 5.5 chose on a human gate with the numbers
+  in hand, 5.6 and 5.7 executed the choice — one of them a recorded no-op, because always-on set no constant
+  and the reach shipping meant nothing to remove. At close: bundles **CS 329,233 B** (Cr `b115c9ae…` / Fx
+  `237831d2…`), **app 399,646 B** (`7275a378…`), **background 3,548 B**, unchanged since 5.4 because no
+  `src/` file moved after it; golden **EMPTY**; **007 import fence 8/8**; `permissions: []` both engines;
+  manifest **2975 B**; deps **exactly 5**. Full suite re-verification is **6.3's**, not re-run here.
+  **The headline is that the discipline this project has been building for eight milestones got tested
+  against its first real edge case each — a non-zero byte delta, a chosen-not-discovered scope, a walk that
+  turned out to be genuinely irreplaceable — and held on all three, with the wrinkles named rather than
+  smoothed.**
+  - **(1) THE KICKOFF-IS-A-HYPOTHESIS RULE FIRED THREE TIMES THIS MILESTONE AND WAS NEVER PROMOTED TO A
+    STANDING RULE — SO THE SAME DISAGREEMENT GOT RE-DERIVED INSTEAD OF CAUGHT ONCE.** 3.9's kickoff
+    hypothesized a new predicate where the task's own body was test-only; 5.7's kickoff demanded a rebuild
+    where the body specified a bare conditional record (5.5 had ruled the reach IN, so 5.7 had nothing to
+    execute); and this entry's own kickoff said "write the retro solo" where 6.2's body said *"Run `/retro`"*
+    — an interview, not a solo write-up. Each time the agent caught the mismatch and followed the tasks-file
+    body, because "a kickoff is a hypothesis, the body is authority" is *true* in this project — but that
+    instruction lived inside each kickoff's own text rather than as a rule the agent could check
+    independently of whichever kickoff it was handed, so the same catch had to be re-derived three times
+    instead of made once. **The honest counterweight: this was not pure waste.** Flagging the mismatch each
+    time is exactly what kept 5.7 from ballooning into an unneeded rebuild and kept this retro from being
+    written without a human in the room — the pattern recurring three times is evidence the discipline held,
+    not evidence it failed. → **ACTION: name the rule once, standing, in `AGENTS.md` — drafted below for
+    review, not committed here.**
+  - **(2) THE MILESTONE-CLOSE WALK HAS NO AGENT SUBSTITUTE, AND THAT WAS DISCOVERED EMPIRICALLY MID-ROUND
+    INSTEAD OF STATED UP FRONT — COSTING A REPEAT BEFORE IT PAID OFF EXACTLY AS M7's FINDING 4 PREDICTED.**
+    Group 6's three kickoffs arrived in an order that let the agent reach for 6.3 (the reconcile) before 6.1
+    (the walk) had run, and separately attempt the walk itself — twice hitting the same wall (`chrome://` is
+    walled off from automation; no tooling exists to load an extension into Firefox) before the actual human
+    walk landed. The agent refused to fake the walk on both attempts, so no task shipped wrong, but the wall
+    was **rediscovered** rather than known. Once the real walk ran, it did exactly what a milestone-close gate
+    is for: it found two things no rect probe or byte count could — the badge reads better grouped with the
+    other pills than alone at its measured lane, and the toolbar's Filter/Clear/Copy controls ship as
+    unstyled default form elements, never integrated with the reader's design language. Both **filed forward,
+    not fixed** (the human ruled record-not-fix), and both **confirmed rather than overturned** §3.6/§8-2's
+    per-table call — five filter boxes on `plan.md`'s five tables read as repetition that "looks good," not
+    noise. → **ACTION: state once, standing, that a human-gate item requiring a loaded browser extension has
+    no agent substitute — drafted below for review, not committed here.**
+  - **(3) THE FLOOR MOVED, AND M8 STATES THE NUMBER BEFORE ANY RE-BASELINE DISCUSSION, PER FINDING 8's OWN
+    RULE APPLIED TO THIS MILESTONE'S OWN CODE.** M8's shipped first-paint floor on the standing 50.4 KB
+    fixture reads **145.7 / 143.4 / 145.2 ms**, against the standing baseline floors of **135.1 / 132.6 /
+    134.7 ms** (2026-08-03, `757f953`) — a floor delta of **roughly +10.5 to +10.8 ms across the three
+    readings**, stated as a number whether or not a re-baseline follows. **None is proposed here.** The delta
+    is not a surprise re-derived at close — it is 5.1's own measured price for the content-script reach
+    (**+8.9 ms median / +11.1 ms floor** against the standing **26.9 / 29.9 ms** headroom, consuming
+    **37.1% / 40.8%** of it at the widest reading), and §8-1 shipped precisely because the moved floor still
+    fits inside that budget — 5.5's ruling is the record of that choice, not this entry's. **A flat floor with
+    a breaching median is environment; a floor that has moved up is code** — M8's is code, named, and it fits.
+  - **(4) THE ZERO-RESIDUAL BYTE DISCIPLINE HELD UNDER M8's FIRST DELIBERATELY NON-ZERO DELTA, DECOMPOSED IN
+    BOTH DIRECTIONS AND RECONCILED A THIRD WAY.** Every milestone through M7 either moved zero content-script
+    bytes or treated a delta as a defect to eliminate; M8 is the first to spend bytes on purpose and account
+    for them anyway. Content script: **318,747 → 329,233 B (+10,486 B)**, decomposed component-by-component
+    at 4.3 to a measured zero residual, confirmed by a master control (all fourteen M8-touched files reverted
+    returns the build to baseline byte-for-byte and md5-for-md5). App chunk: **389,143 → 399,646 B
+    (+10,503 B)**, decomposed the same way at 5.4, confirmed by its own master control. **The two chunk
+    deltas reconcile a third way**: the unzipped package moved by exactly **20,989 B**, and 10,503 + 10,486 =
+    20,989 — nothing outside those two chunks drifted a byte. Never by grep, every time by ablation and md5.
+    **The one honest wrinkle:** 5.4's own component sum landed 2 B off its measured figure (6,719 vs 6,717
+    for the three controls) — named as the minifier's name-pool non-linearity and **quarantined, not smoothed
+    into the residual** (row 6 enters as the single ablation-measured 6,717, never a sum of sub-marginals),
+    matching 4.3's earlier −1 B instance of the same effect on the content script. The discipline survived
+    contact with a real, non-zero, deliberately-spent delta — the first time it has been tested that way.
+  - **(5) A MID-RUN SELF-CATCH, NAMED RATHER THAN SMOOTHED, BECAUSE A CORRECTED SLIP THAT NEVER REACHES THE
+    RECORD IS INVISIBLE UNLESS THE RETRO SAYS SO.** During 5.4's measurement pass, a cut regex corrupted a
+    neighbouring declaration; caught before commit, re-cut, and the shipped artifact and its commit carry no
+    trace of it — which is exactly why it belongs here and nowhere else. No action proposed: this is a process
+    note, not a rule gap, and the same session's −2 B non-linearity (finding 4) is itself evidence the byte
+    accounting was being checked closely enough to catch it.
+  - **Metrics:** corrections = **5** (three kickoff-vs-body flags — 3.9, 5.7, 6.2 itself — one group-6
+    walk-sequencing catch that recurred across two sessions before 6.1 landed, and one self-caught cut-regex
+    slip at 5.4) · first-try verification pass = **NO** — 5 corrections against 35 tasks, the other 30 landed
+    clean · sessions used ≈ **37** (35 task sessions, one per task per the M5/M6/M7 convention, plus 2 extra
+    spent discovering that the milestone-close walk has no agent substitute before 6.1 could run).
 - **2026-08-02 · M7 close (spec 007 — Mermaid diagrams + diagram cache, M7a).** Mermaid rendering on the
   app-page reader behind a lazy chunk the content script never reaches, a **SECOND named sanitizer profile**
   for SVG, a theme-partitioned diagram cache (`DB_VERSION` 4, two stores), per-diagram copy / download /

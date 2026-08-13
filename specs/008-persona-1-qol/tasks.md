@@ -841,7 +841,7 @@ revertable — units. **None of them precedes 3.1.***
       and correct each stale assertion. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§5 human-gate list; §8-2, §8-4; plan §8 Q3; findings 2, 3]
 
-- [ ] **6.2 Retro (M8 close) — in a FRESH SESSION (the M5/M6/M7 precedent).** Run `/retro`: append to
+- [x] **6.2 Retro (M8 close) — in a FRESH SESSION (the M5/M6/M7 precedent).** Run `/retro`: append to
       `docs/ai/retro.md`, newest first — the lessons that change how the next milestone runs, and **what the
       gate caught** (its most valuable content). ★ **M8 owes a FLOOR-DELTA STATEMENT against the standing
       floors — 135.1 / 132.6 / 134.7 ms (2026-08-03, `757f953`) — BEFORE any first-paint re-baseline is even

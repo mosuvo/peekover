@@ -1692,7 +1692,28 @@ Bundles are byte- and md5-IDENTICAL to 5.7's, trivially so since nothing in `src
 329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`), **background 3,548 B**.
 Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` both engines; manifest test **2975 B**;
 deps **5**.
-★ **GROUP 6's HUMAN GATE IS DISCHARGED. TASK 6.2 IS NEXT — THE RETRO, IN A FRESH SESSION.**
+★ **TASK 6.2 IS DONE — THE RETRO, RUN IN A FRESH SESSION VIA `/retro`, INTERVIEWED RATHER THAN WRITTEN
+SOLO.** ★ **THE KICKOFF FOR THIS TASK SAID "SOLO WRITE-UP"; THE BODY SAID "RUN `/retro`" — AN INTERVIEW —
+AND THE BODY WON**, the third time this milestone a kickoff over-specified against the tasks-file body (3.9,
+5.7, now 6.2), each caught and each flagged in the entry itself. Full text: `docs/ai/retro.md` (2026-08-13 ·
+M8 close), five numbered findings plus a Metrics line, appended newest-first, matching M7's form. **THE
+FLOOR-DELTA STATEMENT, REQUIRED BEFORE ANY RE-BASELINE DISCUSSION (finding 8):** M8's shipped first-paint
+floor reads **145.7 / 143.4 / 145.2 ms** against the standing **135.1 / 132.6 / 134.7 ms** (2026-08-03,
+`757f953`) — a delta of **roughly +10.5 to +10.8 ms**, which is 5.1's own measured reach price
+(+8.9 ms median / +11.1 ms floor against the 26.9 / 29.9 ms headroom) landing where it was priced. **No
+re-baseline is proposed** — the moved floor still fits the budget 5.5 shipped against. **THE BYTE-DISCIPLINE
+QUESTION THE BODY ALSO POSED:** decomposition-to-zero-residual held under M8's first deliberately non-zero
+delta — CS +10,486 B (4.3) and app +10,503 B (5.4), each independently decomposed to a measured zero
+residual and reconciling a third way through the package total (20,989 B = 10,503 + 10,486 exactly) — with
+the one honest wrinkle (5.4's −2 B minifier name-pool non-linearity) named, not smoothed. Two concrete
+`AGENTS.md` lines were drafted for human review (not committed by this task, per the retro ritual's own
+rule that the human rewrites and commits language changes themselves): naming "kickoff is a hypothesis, the
+tasks-file body is authority" as a standing rule rather than per-kickoff text, and naming that a human-gate
+item requiring a loaded browser extension has no agent substitute. Docs-only: no `src/`, test, `scripts/` or
+spec file touched. Bundles byte- and md5-IDENTICAL to 6.1's, trivially so — **CS 329,233 B** (Cr
+`b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`), **background 3,548 B**. Golden **EMPTY**;
+**007 import fence 8/8**; `permissions: []` both engines; manifest test **2975 B**; deps **5**.
+★ **TASK 6.3 IS NEXT — THE RECORDS RECONCILE THAT CLOSES M8, INCLUDING D-11 (III)'S TRIGGER (plan §8 Q4).**
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
