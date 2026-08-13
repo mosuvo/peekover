@@ -1,6 +1,38 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-13 · M8 TASK 6.1 — THE MILESTONE-CLOSE WALK: §8-2 RESOLVED (PER-TABLE AFFIRMED), §8-4
+  RESOLVED (THE SET IS RIGHT, TWO PRESENTATION FINDINGS FILED).** The human walked real Chromium AND
+  real Firefox with the extension loaded, per §5's human-gate list and plan §8 Q3 (`progress.md` § Now,
+  TASK 6.1). This closes both deferrals 5.5 recorded below — the walk 5.5 named as the thing that would
+  settle them.
+  - **§8-2 — PER-TABLE STANDS, AFFIRMED, NOT NOISE.** Walked against a five-table document (five filter
+    boxes): the repetition did **not** read as noise, the table "looks good." §3.6's per-table filter
+    decision is therefore CONFIRMED, not altered — the concern the walk surfaced was the controls'
+    STYLING (see §8-4 below), never their per-table SCOPE. 5.2's distribution (none 45 / one 2 /
+    several 14, n=61, a stated-biased sample) is now walk-confirmed rather than merely informing. →
+    `tasks.md` 6.1; spec §8 item 2; plan §7 §8-2.
+  - **§8-4 — THE PRESENTATION SET IS RIGHT; TWO FINDINGS FILED AS FOLLOW-UPS, NOT FIXED HERE.** Sort,
+    filter, copy CSV, copy Markdown — the tool set itself is confirmed correct. Two presentation
+    findings surfaced, both **RECORDED, not fixed** (the human ruled record-not-fix; a `src/` fix at
+    this task would exceed that ruling): **(1) the badge lane (plan §8 Q3)** — the `Agent file` badge
+    WORKS and its position is functional, but reads better GROUPED with the other pills (Watch this
+    file, Theme, the pins) than alone at `top:56px;left:16px`, separated from the bottom-left pill
+    stack (`readerCss.ts:448-449` vs `:259,294,352,371`). **(2) the toolbar controls ship UNSTYLED** —
+    the Filter input, Clear, Copy CSV and Copy Markdown controls render as default browser form
+    elements, never integrated with the reader's design language; this is the styling debt 3.3 carried
+    forward by name (`readerCss.ts:838-843`: *"no sort control (3.6), no filter (3.7), no copy buttons
+    (3.8)"*), and 3.6/3.7/3.8 confirm by omission — none of their Files lists touch `readerCss.ts`. Both
+    findings are filed in `progress.md` § Carried items, traceable to this walk, flagged forward for a
+    future styling pass — not this milestone's `src/`. → `tasks.md` 6.1; spec §8 item 4; plan §7 §8-4;
+    `docs/ai/progress.md` § Carried items.
+  **The mechanical half of the walk** (flow verified on both engines, Firefox parity PASS — the only
+  Firefox evidence this milestone has — zero unexpected network / local-only CONFIRMED, the known
+  Firefox `file://` watch limitation confirmed-known, compare/diff not re-verified this walk) is
+  recorded in full in `progress.md` § Now, TASK 6.1.
+  **Revisit-when:** the styling pass named above lands (badge regrouped, toolbar controls styled) — its
+  own task, its own session, not a silent edit riding another commit.
+
 - **2026-08-13 · M8 TASK 5.5 — THE DECISION GATE: §8-1 SHIP, §8-2 DEFER TO 6.1, §8-3 ALWAYS-ON CHOSEN,
   §8-4 DEFER TO 6.1.** Per spec §8's own framing (*"the axes are settled here, the values are chosen by a
   human at a separate gate, from measurements a measurement task produced and is forbidden from choosing

@@ -1654,11 +1654,45 @@ byte- and md5-IDENTICAL to 5.6's, trivially so since nothing in `src/` was touch
 **EMPTY**; **007 import fence 8/8**; `permissions: []` both engines; manifest test **2975 B**; deps **5**.
 ★ **GROUP 5 (measure → decide → implement → execute) IS COMPLETE.**
 
-**TASK 6.1 IS NEXT — THE MILESTONE-CLOSE HUMAN GATE (the walk).** Real Chromium and real Firefox with an
-extension loaded: the badge's lane (plan §8 Q3, 1.5's measurement in hand), §8-2's per-table-vs-per-document
-walk against 5.2's distribution, §8-4's presentation set, the toolbar reads-as-part-of-its-table-or-clutter
-question, Firefox everything, and zero unexpected network across open → badge → compare → sort → filter →
-copy. Baseline entering 6.1: **CS 329,233 B** / **app 399,646 B**, deps **5**.
+★ **TASK 6.1 IS DONE — THE MILESTONE-CLOSE HUMAN GATE. THE HUMAN WALKED REAL CHROMIUM AND REAL FIREFOX
+WITH THE EXTENSION LOADED, ON `plan.md` (A FIVE-TABLE DOCUMENT), AND THE WALK PASSED CLEAN — TWO
+COSMETIC FINDINGS FLAGGED FORWARD, NOTHING STOP-THE-MILESTONE.** A DOC-ONLY record: no `src/` change
+(the human ruled record-not-fix), no test added. Full text of the two resolved deferrals:
+`decisions.md` (2026-08-13 · M8 TASK 6.1).
+**THE MECHANICAL HALF, VERIFIED:** the flow — badge, table, sort/filter/copy controls — RENDERS on both
+engines, Chromium and Firefox showing the SAME render, side-by-side. **FIREFOX PARITY: PASS** —
+identical to Chromium, and this is the ONLY Firefox evidence this milestone has (no Firefox automation
+exists); the human's eyes are the instrument. **ZERO UNEXPECTED NETWORK / LOCAL-ONLY: CONFIRMED** — the
+app page's "Zero network by default" line holds, and the Stored-data panel shows every on-device item
+(remembered folders, recent files, pins, watch snapshots, diagram cache) staying on-device, never
+uploaded. **A KNOWN FIREFOX LIMITATION, CONFIRMED-KNOWN, NOT A NEW DEFECT:** watching is unavailable for
+files opened from the file manager in Firefox — already-documented behaviour
+(`watchContentWiring.browser.test.ts`'s "cannot serve file://" note); the walk saw it, and it is a
+platform limitation, not a Peekover defect. **COMPARE/DIFF: NOT RE-VERIFIED THIS WALK** — the human
+could not locate the trigger this session and recalls it working in a prior session; recorded HONESTLY
+as a gap, neither "works" nor "broken." (2.x's compare tests plus `diffChrome.browser.test.ts` /
+`diffRegistry.browser.test.ts` stand as its other, standing evidence, supplementing this walk's gap.)
+**THE JUDGEMENT HALF, RESOLVING 5.5's TWO DEFERRALS** (full text: `decisions.md` 2026-08-13 · M8 TASK
+6.1): **§8-2 — PER-TABLE STANDS, AFFIRMED.** Walked at plan.md's five tables (five filter boxes): the
+repetition did not read as noise, the table "looks good" — the walk's concern was the controls'
+STYLING, not their per-table SCOPE. §3.6's decision is CONFIRMED, not altered. **§8-4 — THE SET IS
+RIGHT; TWO PRESENTATION FINDINGS FILED, NOT FIXED** (the human ruled record-not-fix): **(1) the badge
+lane** — works, positioned okay, but reads better GROUPED with the other pills than alone at
+`top:56;left:16`; **(2) the toolbar controls ship UNSTYLED** — Filter, Clear, Copy CSV, Copy Markdown
+render as default browser form elements, never integrated with the reader's design language (the
+styling debt 3.3 carried by name, confirmed by 3.6/3.7/3.8's Files lists never touching
+`readerCss.ts`). Both FILED in § Carried items below, traceable to this walk, flagged forward for a
+future styling pass — no `src/` change here.
+★ **THE POINTER WALK RAN AS ITS OWN STEP, BEFORE THIS COMMIT (finding 3's mechanism):** § Now, § Up next
+and § Blockers greped for `is next`, `at the gate`, `waiting on`, `this commit`, `← NEXT` and the
+running gate score — the only stale assertion found was this section's own "TASK 6.1 IS NEXT" line,
+corrected by this edit; § Up next and § Blockers carry no live M8 pointer (M8's narrative lives entirely
+in § Now).
+Bundles are byte- and md5-IDENTICAL to 5.7's, trivially so since nothing in `src/` was touched — **CS
+329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`), **background 3,548 B**.
+Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` both engines; manifest test **2975 B**;
+deps **5**.
+★ **GROUP 6's HUMAN GATE IS DISCHARGED. TASK 6.2 IS NEXT — THE RETRO, IN A FRESH SESSION.**
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
@@ -2731,6 +2765,38 @@ measurement-driven or explicitly deferred.*
   verbatim across 6+ files (plan §4-7 named it; 005 added more). When it lands, the three instrument rules
   in `decisions.md` 2026-07-21 belong in it — and the stability-polling wait should **replace**
   `waitForScrollable`, not sit beside it.
+- **★ NEW AT 6.1, AND IT IS A PRESENTATION FINDING, NOT A DEFECT — THE AGENT-FILE BADGE'S LANE (plan §8
+  Q3, walked with 1.5's measurement in hand).** The human walked real Chromium and real Firefox with the
+  extension loaded, on `plan.md`: the badge WORKS and its `top:56px;left:16px` position is not broken,
+  but it reads better GROUPED with the other pills (Watch this file, Theme, the pins — stacked
+  bottom-left at `readerCss.ts:259,294,352,371`) than sitting alone, separated from them, in the top
+  band 1.5 measured (`readerCss.ts:448-449`). **RECORDED, not fixed** — the human ruled record-not-fix
+  for 6.1, and `readerCss.ts` is BYTE-UNTOUCHED by this task. This is the design call plan §8 Q3 asked
+  6.1 to make, and the call taken is: **regroup, don't fix here** — 1.5's own three findings (the 1280
+  collision, the `position:fixed` containment, rows 5/8) stay exactly as 1.5 left them; this finding is
+  additive, not a resolution of those three. **HOME:** its own styling-pass task, its own session — see
+  the toolbar-controls finding below, which is the same pass's other half.
+- **★ NEW AT 6.1 — THE TOOLBAR CONTROLS SHIP UNSTYLED (the 3.3-carried debt, confirmed by the walk).**
+  Filter input, Clear, Copy CSV and Copy Markdown render as **default browser form elements** — never
+  integrated with the reader's design language, reading as bolted-on against the polished markdown
+  around them. **Confirmed accurate to the code, not just to the eye:** 3.3's own doc comment names
+  exactly this gap (`readerCss.ts:838-843`, *"no sort control (3.6), no filter (3.7), no copy buttons
+  (3.8)"*), and 3.6/3.7/3.8 confirm it by omission — none of their Files lists touch `readerCss.ts`.
+  **FUNCTION IS NOT THE FINDING**: sort, filter, clear and both copy buttons all work; this is
+  presentation only. **RECORDED, not fixed** — the human ruled record-not-fix for 6.1, no
+  `readerCss.ts` edit rides this commit. **HOME:** the same future styling pass as the badge-lane
+  finding above.
+- **★ A PLACEMENT TENSION, NAMED RATHER THAN SILENTLY RESOLVED — WHERE 6.1's TWO FINDINGS LAND.** 6.1's
+  own Verify text says a clutter/broken/illegible verdict is *"a real finding → a task added below this
+  line, not a silent fix"* — read literally, a new checkbox in `specs/008-persona-1-qol/tasks.md`. But
+  `tasks.md` PASSED GATE 3 (`87532ad`, 2026-08-03) and is gate-sealed by the same **D-10 (b) precedent**
+  named above (*"narrow the mermaid/package.json inline"*) — a Files-list fence holds even for a true
+  addition, and 6.1's own Files list is `decisions.md` / `progress.md` / `tasks.md`-checkbox-only, never
+  a new task body. **9.1 resolved the identical tension the same way** (its dark-mode and gantt-axis
+  findings landed here, in § Carried items, not as new 007 checkboxes) and named the tension for 9.3 to
+  settle, never silently. **This entry does the same, naming it for 6.3:** whether M8's two 6.1 findings
+  get their own numbered task-stub in `tasks.md`, or stay carried-items-only the way 007's did, is
+  **6.3's call, not 6.1's** — 6.1 is doc-only by the human's ruling and adds no checkbox.
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; gate score **10/10** at that close, corrected

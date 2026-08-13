@@ -821,7 +821,7 @@ revertable — units. **None of them precedes 3.1.***
 
 ## 6 — Human milestone-close gate + retro + the records reconcile
 
-- [ ] **6.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** Walk, on
+- [x] **6.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** Walk, on
       **real Chromium and real Firefox with an extension loaded** (no harness reaches these): whether the
       toolbar **reads as part of its table or as clutter above it** (the D-12 question the rect probe cannot
       answer); **the filter at one big table vs several small ones** (§8-2's walk half, against 5.2's
