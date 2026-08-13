@@ -784,7 +784,7 @@ revertable — units. **None of them precedes 3.1.***
       **389,143 B** app), decomposed. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§8-2, §8-3, §8-4]
 
-- [ ] **5.7 ★ THE §8-1 GIVE-WAY — CONDITIONAL, and it is a REMOVAL PLUS A RE-MEASUREMENT, never an edit to a
+- [x] **5.7 ★ THE §8-1 GIVE-WAY — CONDITIONAL, and it is a REMOVAL PLUS A RE-MEASUREMENT, never an edit to a
       constant (gate-2 scope instruction 2).** Executed **only if 5.5 ruled the content-script reach OUT**;
       if 5.5 ruled it **IN**, this task lands **nothing and is RECORDED as a no-op with 5.5's number** — a
       skipped task with a stated reason, never a silently absent one. ★ **§8-1's escape hatch is *"the surface

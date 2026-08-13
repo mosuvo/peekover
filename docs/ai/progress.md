@@ -1642,10 +1642,23 @@ a recorded no-op with 5.5's number. Golden **EMPTY**; **007 import fence 8/8**; 
 engines; manifest test **2975 B**; deps **5**. NUL **0 in both forms** in both edited files (`progress.md`,
 `tasks.md`), with a control file reading **1 in both forms**.
 
-**TASK 5.7 IS NEXT — THE §8-1 GIVE-WAY, CONDITIONAL.** Since 5.5 ruled the content-script reach **IN**,
-5.7 executes nothing on the reach — it lands only a recorded no-op with 5.5's number (D-6's sites 3 and 4
-stay; the bundle stays at **CS 329,233 B** / **app 399,646 B**). Baseline entering 5.7: same as above,
-deps **5**.
+★ **TASK 5.7 IS DONE — THE §8-1 GIVE-WAY, CONDITIONAL, TAKEN AS A RECORDED NO-OP.** 5.5 ruled the
+content-script reach **IN**, so per the task's own conditional (*"if 5.5 ruled it IN, this task lands
+nothing and is RECORDED as a no-op with 5.5's number — a skipped task with a stated reason, never a
+silently absent one"*), 5.7 executes nothing on the reach: **D-6's sites 3 and 4 stay** exactly as 4.1
+built them (`mountReader.ts`'s `enhanceTables(host)`, `contentWatch.ts`'s `render` closure) — no `src/`
+change. The give-way's removal-plus-re-measurement branch (a)–(e) is the branch **NOT taken**, named here
+for completeness: it is what 5.7 would have executed had 5.5 ruled the reach OUT. Bundles are
+byte- and md5-IDENTICAL to 5.6's, trivially so since nothing in `src/` was touched — **CS 329,233 B**
+(Cr `b115c9ae…` / Fx `237831d2…`), **app 399,646 B** (`7275a378…`), **background 3,548 B**. Golden
+**EMPTY**; **007 import fence 8/8**; `permissions: []` both engines; manifest test **2975 B**; deps **5**.
+★ **GROUP 5 (measure → decide → implement → execute) IS COMPLETE.**
+
+**TASK 6.1 IS NEXT — THE MILESTONE-CLOSE HUMAN GATE (the walk).** Real Chromium and real Firefox with an
+extension loaded: the badge's lane (plan §8 Q3, 1.5's measurement in hand), §8-2's per-table-vs-per-document
+walk against 5.2's distribution, §8-4's presentation set, the toolbar reads-as-part-of-its-table-or-clutter
+question, Firefox everything, and zero unexpected network across open → badge → compare → sort → filter →
+copy. Baseline entering 6.1: **CS 329,233 B** / **app 399,646 B**, deps **5**.
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND
