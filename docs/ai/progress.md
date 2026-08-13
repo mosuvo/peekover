@@ -1625,15 +1625,27 @@ because no `src/` file was touched — **CS 329,233 B** (Cr `b115c9ae…` / Fx `
 three edited files (`decisions.md`, `tasks.md`, `progress.md`), with a control file reading **1 in both
 forms**.
 
-**TASK 5.6 IS NEXT — IMPLEMENT THE CHOSEN VALUES: CONSTANTS AND THE PRESENTATION BLOCK ONLY
-(§8-2 · §8-3 · §8-4).** From 5.5: **§8-3 is ALWAYS-ON** — no threshold constant to set, so 5.6's §8-3
-half is a **no-op edit, RECORDED as such** rather than left as a stale "PROPOSED" comment. **§8-2's scope
-and §8-4's set are UNCHOSEN**, deferred to 6.1 — 5.5 recorded that deferral as a finding, so those two
-axes have no value for 5.6 to set until the walk returns one. **The ALGORITHM does not move — only
-constants and the presentation block.** ★ **§8-1's give-way is NOT 5.6's — it is 5.7's**, and since 5.5
-ruled the reach IN, 5.7 lands nothing but a recorded no-op with 5.5's number. Baseline entering 5.6: **app
-399,646 B** (`7275a378…`), **CS 329,233 B** (`b115c9ae…` / `237831d2…`), **background 3,548 B**, deps
-**5**.
+★ **TASK 5.6 IS DONE — THE CHOSEN VALUES ARE A RECORDED NO-OP.** From 5.5: **§8-3 is ALWAYS-ON**, which
+is the CURRENT shipped behaviour — there is no threshold constant to set, so 5.6's §8-3 half lands **no
+`src/` change**, recorded here as a deliberate no-op rather than left silent (the reason: always-on was
+already the shipped code, 5.5 only made it a CHOSEN state rather than an unjustified default). **§8-2 and
+§8-4 are DEFERRED to 6.1** — 5.5 recorded that deferral as a finding, so those two axes have no value for
+5.6 to set until the walk returns one; 5.6 waits rather than inventing one. **The stale-marker grep came
+back clean**: `tableTools.ts:58-61` and `:393-395` already read *"MEASURED at 5.1-5.4 and CHOSEN by a
+human at 5.5"* — true today, not a "PROPOSED" or "TBD" left behind from before the gate — so no comment
+needed converting; `readerCss.ts:1033`'s "NO DISCRETE THRESHOLD" is the TOC-width surplus calc, unrelated
+to §8-3, and was left alone. **The ALGORITHM does not move**: no behaviour change, no `src/` file touched,
+bundles stay byte- and md5-IDENTICAL to 5.5's — **CS 329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **app
+399,646 B** (`7275a378…`), **background 3,548 B**, trivially so since nothing in `src/` was edited.
+★ **§8-1's give-way is NOT 5.6's — it is 5.7's**, and since 5.5 ruled the reach IN, 5.7 lands nothing but
+a recorded no-op with 5.5's number. Golden **EMPTY**; **007 import fence 8/8**; `permissions: []` both
+engines; manifest test **2975 B**; deps **5**. NUL **0 in both forms** in both edited files (`progress.md`,
+`tasks.md`), with a control file reading **1 in both forms**.
+
+**TASK 5.7 IS NEXT — THE §8-1 GIVE-WAY, CONDITIONAL.** Since 5.5 ruled the content-script reach **IN**,
+5.7 executes nothing on the reach — it lands only a recorded no-op with 5.5's number (D-6's sites 3 and 4
+stay; the bundle stays at **CS 329,233 B** / **app 399,646 B**). Baseline entering 5.7: same as above,
+deps **5**.
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND

@@ -766,7 +766,7 @@ revertable — units. **None of them precedes 3.1.***
       never a quiet re-scope.** Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§8-1, §8-2, §8-3, §8-4]
 
-- [ ] **5.6 Implement the CHOSEN values — CONSTANTS AND THE PRESENTATION BLOCK ONLY (§8-2 · §8-3 · §8-4).**
+- [x] **5.6 Implement the CHOSEN values — CONSTANTS AND THE PRESENTATION BLOCK ONLY (§8-2 · §8-3 · §8-4).**
       Set the threshold constants, the filter's scope and the §8-4 presentation block to 5.5's values — ★ **a
       no-op edit if they matched, RECORDED either way**: a *"PROPOSED"* comment left on a chosen value **is a
       lie about the decision state**, and the next session reads it as still open. ★ **The ALGORITHM does not
