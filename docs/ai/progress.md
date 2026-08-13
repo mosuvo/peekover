@@ -1605,21 +1605,35 @@ by **cp-aside + restore, never `git checkout`**, with all fourteen files md5-ver
 every arm. NUL **0 in both forms** — raw `0x00` byte and decoded `U+0000` — in both edited files, with a
 control file carrying one reading **1 in both forms**.
 
-**TASK 5.5 IS NEXT — ★ THE DECISION GATE, AND IT IS THE HUMAN's** (group 5's choose half; the input side
-is now complete). **Recorded in `docs/ai/decisions.md` BEFORE any code that sets a value.** Four choices,
-each **with the measurement that justifies it**: **§8-1 — does the content-script REACH ship?** on 4.3's
-decomposition (**+10,486 B** CS) and 5.1's floor-beside-median (**+8.9 ms** median / **+11.1 ms** floor
-against the standing **26.9 / 29.9 ms** headroom — 40.8 % at the widest reading), with 5.4's package
-headroom (**693 KB** zip, **919 KB** unzipped) beside them. ★ **The rule is already set and the value is
-not: if the gate cannot hold, the surface REACH gives way, not the gate** (§8-1's escape hatch, gate-1
-§9-4). **§8-2 — per-table or per-document filter**, from 5.2's distribution and **6.1's walk**.
-**§8-3 — the threshold, if any**, from 5.3 — ★ **an always-on answer is LEGITIMATE and must be CHOSEN,
-not defaulted into.** **§8-4 — the presentation set**, a walk judgement. ★ **§8-1's ruling must be
-recorded in the terms 5.7 has to execute** (ship the reach, or remove it and re-measure to a restored
-baseline). **No code lands on an assumed number**, and **a re-scope decided here is a FINDING recorded in
-terms — never a quiet re-scope.** Baseline entering 5.5: **app 399,646 B** (`7275a378…`), **CS
-329,233 B** (`b115c9ae…` / `237831d2…`), **background 3,548 B**, zip **1,306,513 / 1,306,571 B**,
-unzipped **4,080,882 / 4,080,998 B**, deps **5**.
+★ **TASK 5.5 IS DONE — THE DECISION GATE. THE FOUR §8 RULINGS ARE RECORDED IN `decisions.md`, EACH WITH
+THE MEASUREMENT THAT JUSTIFIES IT, BEFORE ANY VALUE-SETTING CODE.** A record only: no `src/` change, no
+constant set, no removal executed — full text: `decisions.md` (2026-08-13 · M8 TASK 5.5). **§8-1
+SHIPS** — the gate holds on every measured axis (5.1's **+8.9 / +11.1 ms** inside the **26.9 / 29.9 ms**
+headroom; 4.3's **+10,486 B** zero-residual; 5.4's **693 KB / 919 KB** package headroom; 4.2's `file://`
+copy) — **recorded in 5.7's terms as a RE-CONFIRMATION: the reach stays, nothing removed**; the
+app-page-first-paint-uninstrumented caveat (D-11 (iii)) carried so the ruling does not over-claim.
+**§8-2 DEFERS to 6.1** — 5.2's distribution (none 45 / one 2 / several 14, n=61, a stated-biased sample)
+informs but does not settle the per-table-vs-per-document question; §3.6's per-table decision stands
+provisionally. **§8-3 IS ALWAYS-ON, CHOSEN** — no threshold, no constant, so **5.6 sets nothing** for
+this axis: the chrome-outweighing shape is a **13% minority** (9 of 69, task 5.3), the tooling cost is
+low, and a threshold would rest on the corpus's least-representative axis (11–13 of 69 numeric). **§8-4
+DEFERS to 6.1** — the presentation set is the walk's, no measurement bears on it. **No re-scope**: ship,
+defer, always-on, defer — the reach ships intact. Bundles byte- and md5-IDENTICAL to 5.4's, unchanged
+because no `src/` file was touched — **CS 329,233 B** (Cr `b115c9ae…` / Fx `237831d2…`), **app
+399,646 B** (`7275a378…`), **background 3,548 B**. Golden **EMPTY**; **007 import fence 8/8**;
+`permissions: []` both engines; manifest test **2975 B**; deps **5**. NUL **0 in both forms** in all
+three edited files (`decisions.md`, `tasks.md`, `progress.md`), with a control file reading **1 in both
+forms**.
+
+**TASK 5.6 IS NEXT — IMPLEMENT THE CHOSEN VALUES: CONSTANTS AND THE PRESENTATION BLOCK ONLY
+(§8-2 · §8-3 · §8-4).** From 5.5: **§8-3 is ALWAYS-ON** — no threshold constant to set, so 5.6's §8-3
+half is a **no-op edit, RECORDED as such** rather than left as a stale "PROPOSED" comment. **§8-2's scope
+and §8-4's set are UNCHOSEN**, deferred to 6.1 — 5.5 recorded that deferral as a finding, so those two
+axes have no value for 5.6 to set until the walk returns one. **The ALGORITHM does not move — only
+constants and the presentation block.** ★ **§8-1's give-way is NOT 5.6's — it is 5.7's**, and since 5.5
+ruled the reach IN, 5.7 lands nothing but a recorded no-op with 5.5's number. Baseline entering 5.6: **app
+399,646 B** (`7275a378…`), **CS 329,233 B** (`b115c9ae…` / `237831d2…`), **background 3,548 B**, deps
+**5**.
 
 ★ **TASK 5.1 IS DONE — §8-1 (b) + (c) ARE MEASURED. THE CONTENT-SCRIPT REACH COSTS `+8.9 ms` ON THE
 MEDIAN AND `+11.1 ms` ON THE FLOOR AT FIRST PAINT, AGAINST A `26.9 / 29.9 ms` BUDGET — SO IT FITS, AND

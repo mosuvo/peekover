@@ -1,6 +1,55 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-13 · M8 TASK 5.5 — THE DECISION GATE: §8-1 SHIP, §8-2 DEFER TO 6.1, §8-3 ALWAYS-ON CHOSEN,
+  §8-4 DEFER TO 6.1.** Per spec §8's own framing (*"the axes are settled here, the values are chosen by a
+  human at a separate gate, from measurements a measurement task produced and is forbidden from choosing
+  from"* — the D-8 pattern, spec.md:242), 5.1–5.4 produced the input (`progress.md` § Now, tasks 5.1–5.4)
+  and this is the human reading it and ruling. Recorded here **before any value-setting code** — 5.6
+  implements §8-2/§8-3/§8-4's chosen values, 5.7 executes §8-1's give-way only if it had been ruled OUT.
+  ★ **No re-scope: SHIP, DEFER, ALWAYS-ON, DEFER — the content-script reach ships intact**; neither
+  deferral narrows anything already built, both simply await 6.1's verdict on top of it.
+  - **§8-1 — SHIP the content-script reach.** The gate holds on every measured axis: first-paint price
+    **+8.9 ms median / +11.1 ms floor**, against the standing **26.9 ms median / 29.9 ms floor** worst-arm
+    headroom — **40.8% of the floor headroom at the widest reading** (task 5.1); content-script bytes
+    **+10,486 B**, decomposed to a **zero residual** (task 4.3); package headroom **693 KB** under the
+    2 MB zip bound and **919 KB** under AGENTS.md's 5 MB unzipped bound (task 5.4); the copy control
+    works on `file://` and degrades gracefully whichever way `file://`'s secure-context answer lands
+    (task 4.2). **Recorded in 5.7's terms: this is a RE-CONFIRMATION.** The reach STAYS; the baseline is
+    UNCHANGED (CS **329,233 B** / app **399,646 B**); D-6's sites 3 and 4 are NOT removed; 5.7 lands
+    nothing but this record of a no-op with this number. ★ **Caveat, carried so the ruling does not
+    over-claim: this is a CONTENT-SCRIPT finding only.** The APP-PAGE first paint remains UNINSTRUMENTED
+    (D-11 (iii)'s carried hole, spec §5) — "it fits" is precise for the content script and does not
+    silently cover the app page. → tasks.md 5.7 (no-op, recorded); spec §8 item 1; plan §7 §8-1, §9-4's
+    escape hatch.
+  - **§8-2 — DEFERRED to 6.1's walk.** §3.6's per-table filter decision STANDS provisionally; it is not
+    altered here. 5.2's distribution (n=61 tracked documents: none 45 / one 2 / several 14 —
+    73.8% / 3.3% / 23.0%, task 5.2) INFORMS but does not SETTLE whether a filter per table reads as noise
+    at several small tables — that judgement is 006's *reads-as-noise* shape and belongs to 6.1's walk.
+    5.2 itself names this repository as a biased sample for a tool whose users are AI agents writing
+    arbitrary markdown, which is exactly why the number cannot settle the question alone. **This is a
+    FINDING, not a silent non-decision: per-table stands until 6.1 rules otherwise.** → tasks.md 6.1;
+    spec §8 item 2; plan §7 §8-2.
+  - **§8-3 — ALWAYS-ON, CHOSEN — no threshold, no constant.** A deliberate choice, not a default. The
+    chrome-outweighing shape §8-3 names (a table small enough and with no numeric column to justify a
+    sort on every column) is a **13% minority** in the corpus — **9 of 69** enhance-able tables have
+    ≤2 rows AND no all-numeric column (task 5.3). The tooling cost is LOW and already priced inside the
+    §8-1 envelope above (5.1's +8.9 ms, 4.3's bytes). And a threshold VALUE would have to rest on the
+    corpus's numeric axis, which 5.3 itself names as **the axis this corpus is least representative on**
+    — 11 to 13 of 69 tables carry a numeric column depending on aggregation, a dozen-table foundation for
+    a cut-point. **So 5.6 sets NO constant: always-on is the CURRENT shipped behaviour, and this entry is
+    what makes that a CHOSEN state rather than a silent default it was never justified to be.** →
+    tasks.md 5.6 (no constant); spec §8 item 3; plan §7 §8-3.
+  - **§8-4 — DEFERRED to 6.1's walk.** No measurement from 5.1–5.4 bears on the presentation set — the
+    axes are settled (presentation only, nothing persisted, parser untouched) but the SET itself, carried
+    from §3.3/§3.5/§3.6, is a walk judgement: whether the controls read as clutter is not answerable from
+    a byte count or a timing arm. **This is a FINDING pointing to 6.1, not a verdict reached here.** →
+    tasks.md 6.1; spec §8 item 4; plan §7 §8-4.
+  **Revisit-when:** 6.1's walk returns a reads-as-noise or reads-as-clutter verdict on either deferred
+  axis (§8-2, §8-4) — a task added below 6.1, never a silent fix; or a future milestone's corpus (less
+  biased on the numeric axis 5.3 flags) makes a threshold-worthy case §8-3 has no basis for here; or the
+  app-page first-paint harness named in D-11 (iii)'s trigger lands and narrows §8-1's carried caveat.
+
 - **2026-08-05 · 008 D-3 — the diff context grows additively, the way 6.2 already grew it; the snapshot
   pair is byte-untouched.** *(Plan 008 §0's pre-written entry text, applied verbatim. IMPLEMENTED across
   group 2: typed at 2.1 (`53638ff`), provisioned on the app page at 2.2 (`1dde750`), read by the picker at

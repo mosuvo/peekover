@@ -748,7 +748,7 @@ revertable — units. **None of them precedes 3.1.***
       archive, NOT the bound** (007 8.1's finding). Golden EMPTY · manifest green **2975 B** ·
       `permissions: []` both engines. [§5 bytes; §3.9]
 
-- [ ] **5.5 ★ DECISION GATE (human) — §8-1, §8-2, §8-3 and §8-4, chosen from 5.1–5.4 and the walk. Recorded
+- [x] **5.5 ★ DECISION GATE (human) — §8-1, §8-2, §8-3 and §8-4, chosen from 5.1–5.4 and the walk. Recorded
       in `decisions.md` BEFORE any code that sets a value.**
       **§8-1 — does the content-script REACH ship?** Read 4.3's decomposition and 5.1's floor-beside-median.
       ★ **The rule is already set and the value is not: if the gate cannot hold, the surface REACH gives way,
