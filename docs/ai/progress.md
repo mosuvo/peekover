@@ -11,26 +11,38 @@ next to scope).*
 
 ## Now (start here)
 
-**★ 009's DRAFT SPEC IS CREATED AND AWAITING GATE 1 — `specs/009-code-blocks/spec.md`, 2026-08-14, status
-DRAFT.** This supersedes the *"between milestones, persona-#2 next to scope"* pointer in the M8-close bullet
-below: scoping happened, and its first artifact exists. **009 = F3 (Code Blocks) in full** — Shiki syntax
-highlighting, ≥14 code themes independent of the document theme, the per-block toolbar (copy / line numbers
-/ line highlighting / word wrap), collapsible long blocks with an "open raw" view, all **done-whole,
-unconditional**; language auto-detection for unlabeled fences is scoped **in** but **cost-measured-then-
-ruled** (§8 M-3). `decisions.md` 2026-07-27 (M7 DIRECTION) named persona-#2 unlock as *"queued for M8 or
-M9"*; M8 went to persona-#1 QoL instead, so 009 is that queued unlock — F3 is the only `spec-coverage.md`
-section at a flat **0%**. **The draft did NOT run its own scope-read** (unlike 006/007/008): its substance
-was settled before drafting, in a reviewer-and-human pass, so the spec's job was giving that substance
-008's shape rather than re-deriving it from the tree — flagged as its own seam in the spec's header and §9.
-**The one genuinely open architectural call is D-D (§3.8) — which reader surface(s) get highlighting —
-seeded here as an OPEN question and explicitly left for `plan.md`, a deliberate departure from 007's and
-008's own precedent of deciding their analogous surface question at spec stage** (named at §9-1 for a
-human to confirm or overturn). D-A (Shiki off the content-script static import graph, mirroring 007's
-Mermaid fence exactly) and D-B (progressive first paint, degrade-to-plain-code) are decided; D-C (the byte
-budget) is framed, not valued — §8's M-1 prices it before any headroom is spent. **Doc-only: no `src/`
-change, bundle byte- and md5-IDENTICAL to M8's close (CS 329,233 B / app 399,646 B)**, golden EMPTY, deps
-**still 5** (`shiki` is scoped but not yet installed — that lands with implementation, not the draft).
-**Nothing is in implementation; `plan.md` is not written and must not be until a human passes gate 1**
+**★ 009's SPEC HAS PASSED GATE 1 — `specs/009-code-blocks/spec.md`, approved 2026-08-14 WITH THREE RULINGS.
+`plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
+`decisions.md` (2026-08-14, M9 GATE 1) and **the spec's status line stays "draft" by the M7/M8 precedent** —
+the bank is the approval of record, not the artifact header. **What gate 1 settled:** (1) the surface
+question (§3.8) is DECIDED, not routed to `plan.md` — **app-page-only**, mirroring 007's shipped Mermaid
+decision; the content-script `file://` reader stays plain, unhighlighted code fences. **This puts Shiki —
+an engine — on the app-page render path for the first time since M8 confirmed that path has never had a
+first-paint instrument**, firing D-11 (iii)'s carried trigger (`decisions.md` 2026-08-03 M8 GATE 2, Q4:
+*"the next milestone that puts work on the app-page render path whose cheapness cannot be argued
+mechanically … funds the first-paint harness before it ships that work"*). **009 inherits that obligation**,
+named in the spec (§3.8, §5, §7-1) as an early milestone cost — the harness is funded before or as §8's M-2
+measures first paint under Shiki, not discharged by this doc-only gate. (2) The informal `D-A`…`D-D` labels
+are STRIPPED from the spec — the constraints they named (Shiki off the content-script static import graph,
+progressive first paint, the byte-budget framing, the now-decided app-page-only surface) stay as §3
+decided-call prose, matching 007/008's label-free style; `plan.md` assigns the real D-numbers. (3) Shiki's
+governed-dependency treatment (§3.10, mirroring 007 §3.12) is CONFIRMED IN, unchanged — licence check, SBOM,
+blocking `pnpm audit --prod`, no install scripts. **§9-2 (line-numbers/word-wrap defaults) and §9-4 (the
+`codeTheme` settings-key boundary) are UNCHANGED**, left for `plan.md`/§8 as drafted.
+**Still true of the draft, and the reason the spec is what it is:** this supersedes the *"between milestones,
+persona-#2 next to scope"* pointer in the M8-close bullet below — scoping happened, and its first artifact
+exists. **009 = F3 (Code Blocks) in full** — Shiki syntax highlighting, ≥14 code themes independent of the
+document theme, the per-block toolbar (copy / line numbers / line highlighting / word wrap), collapsible
+long blocks with an "open raw" view, all **done-whole, unconditional**; language auto-detection for
+unlabeled fences is scoped **in** but **cost-measured-then-ruled** (§8 M-3). `decisions.md` 2026-07-27 (M7
+DIRECTION) named persona-#2 unlock as *"queued for M8 or M9"*; M8 went to persona-#1 QoL instead, so 009 is
+that queued unlock — F3 is the only `spec-coverage.md` section at a flat **0%**. **The draft did NOT run its
+own scope-read** (unlike 006/007/008): its substance was settled before drafting, in a reviewer-and-human
+pass, so the spec's job was giving that substance 008's shape rather than re-deriving it from the tree.
+**Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to M8's close (CS 329,233 B / app 399,646 B)**,
+golden EMPTY, deps **still 5** (`shiki` is scoped but not yet installed — that lands with implementation,
+not this gate). **Nothing is in implementation; `plan.md` is not written — gate 1 is passed, so writing it
+is now the sanctioned next act, but no implementation code exists before `tasks.md` passes gate 3**
 (WORKFLOW.md §5.3).
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.

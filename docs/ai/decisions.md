@@ -1,6 +1,68 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-14 · M9 GATE 1 — spec 009 (code blocks: Shiki syntax highlighting, code themes, per-block
+  toolbar) APPROVED, WITH THREE RULINGS. `plan.md` is the next artifact and the next gate.**
+  `specs/009-code-blocks/spec.md`, drafted at `4d640b3` from a reviewer-and-human pass over the kickoff's
+  own substance (**not** a fresh scope-read of the tree, disclosed in the spec's own header), was reviewed
+  and approved. **The spec's status line stays "draft (Gear-3 gate 1 — awaiting human approval before
+  `plan.md`)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the standing precedent from M7/M8: 007 still
+  reads "draft" post-gate-1 (`e09520f`); 008 still reads "draft" post-gate-1 (`aaf990e`, 2026-08-03 M8
+  GATE 1) — gate approvals live in the bank, not in the artifact's status line.
+  **THE THREE RULINGS:**
+  - **RULING 1 · The surface question (draft §3.8) is DECIDED NOW, not routed to `plan.md`:
+    APP-PAGE-ONLY.** The draft seeded this open, explicit that resolving it was `plan.md`'s job (§9-1 as
+    drafted); gate 1 closes it here instead, mirroring 007 §3.2's and 008 §3.3/§3.7's own precedent of
+    deciding the analogous surface question at spec stage — the draft's own seam-1 named leaving it open
+    as 009's real departure from that precedent, and the departure is declined. The content-script
+    `file://` reader shows plain, unhighlighted code fences, exactly as it does today, no affordance, no
+    explanatory note — 007's shipped Mermaid decision, applied to the same surface for the same reason.
+    The app-page reader gets Shiki, themes, the toolbar, and collapsible blocks in full. **Consequence,
+    named so it lands as a decided cost and not a surprise: this puts a heavy Shiki highlight pass on the
+    app-page render path, for the first time since M8 confirmed that path has never had a first-paint
+    instrument** (`decisions.md` 2026-08-03 M8 GATE 2, Q4; `progress.md` D-11 (iii)'s carried hole). D-11
+    (iii)'s trigger — *"the next milestone that puts work on the app-page render path whose cheapness
+    cannot be argued mechanically — anything that parses, sanitizes, reads layout or runs an engine
+    there — funds the first-paint harness before it ships that work"* — reads unambiguously against
+    Shiki: it is an engine, running on the app-page path. **009 INHERITS the obligation.** It is **not
+    discharged by this gate** — no harness is built here, this is a doc-only approval — it is **named in
+    the spec** (§3.8, §5, §7-1, §9-1) as an early milestone cost, funded before or as §8's M-2 measures
+    first paint under Shiki, mirroring how 008 task 5.1 built its own perf harness before measuring.
+    Applied at spec §3.1, §3.2, §3.4, §3.8, §5 (two bullets), §6, §7-1, §9-1.
+  - **RULING 2 · The informal `D-A`…`D-D` labels are STRIPPED from the spec.** The draft's own seam-2
+    flagged that this numbering is `plan.md`'s convention, not spec-stage vocabulary — neither 007's nor
+    008's `spec.md` assigns its own `D-N` numbers. **The architectural constraints the labels named are
+    UNCHANGED** — Shiki off the content-script static import graph, progressive first paint with
+    degrade-to-plain-code, the byte-budget framing, and the now-decided app-page-only surface — restated
+    as §3 decided-call prose, matching 007/008's label-free style. `plan.md` assigns the real `D-1`…`D-N`
+    numbers when its own `decisions.md` entries land with implementing commits, the way 008's D-1/D-2 did
+    at task 1.4. **No dedicated §9 gate question named the labels directly** — the draft's header pointed
+    its own "See §9-1" cross-reference at the surface question rather than a separate item, a mismatch
+    between the kickoff's assumption and the draft's actual body, flagged rather than silently resolved
+    either way (AGENTS.md's standing rule) — so this ruling is recorded here and applied directly at the
+    label sites (spec header "Structure" line, §3.1, §3.2, §3.4, §3.8) rather than resolving a numbered
+    §9 item that does not exist in the draft as written. §9-2 (line-numbers/word-wrap defaults) and §9-4
+    (the `codeTheme` settings-key boundary) are **UNCHANGED**, left as drafted.
+  - **RULING 3 · Shiki gets the governed-dependency treatment, CONFIRMED IN.** §9-3 asked whether §3.10's
+    dependency-governance framing (licence check, SBOM, blocking `pnpm audit --prod`, no install scripts,
+    verified against the package itself) applies in full, unchanged from 007 §3.12's treatment of the
+    fifth dependency. **YES, confirmed, unchanged** — the standing rule (`decisions.md` 2026-07-27 (a))
+    names no milestone-by-milestone opt-out, and product spec §6 item 9 (locked minimal deps, SBOM per
+    release, `pnpm audit`, Dependabot) requires it regardless. The dependency count moves **5 → 6** as a
+    governed event when `shiki` is **installed at implementation**, not at this gate — `shiki` is scoped,
+    not installed, deps stay **5** through this approval.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not build the D-11 (iii) harness (ruling 1's consequence is
+  *named*, not discharged); it does not install `shiki` or move deps off 5; it does not resolve §9-2
+  (line-numbers/word-wrap defaults) or §9-4 (the `codeTheme` boundary question), both left for
+  `plan.md`/§8 as drafted; it reopens no other §3.x decision and routes nothing new to §8's gate-3
+  measure-then-choose list; it writes no `plan.md` or `tasks.md`.
+  **Revisit-when:** (a) `plan.md` finds the app-page first-paint harness cannot be built at the cost this
+  gate assumed — a finding for gate 2, not a quiet re-scope; (b) `plan.md` finds ruling 1's app-page-only
+  choice cannot hold against a requirement this spec didn't anticipate — reopens a decided §3.x call and
+  needs a human, not a plan-stage drift; (c) `shiki`'s licence or transitive tree, verified at
+  implementation against the current package rather than this gate's spot check, turns up something
+  §3.10 didn't anticipate — a `pnpm audit --prod` finding is a blocker, not a threshold to relax.
+
 - **2026-08-13 · M8 TASK 6.1 — THE MILESTONE-CLOSE WALK: §8-2 RESOLVED (PER-TABLE AFFIRMED), §8-4
   RESOLVED (THE SET IS RIGHT, TWO PRESENTATION FINDINGS FILED).** The human walked real Chromium AND
   real Firefox with the extension loaded, per §5's human-gate list and plan §8 Q3 (`progress.md` § Now,
