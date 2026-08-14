@@ -41,9 +41,27 @@ own scope-read** (unlike 006/007/008): its substance was settled before drafting
 pass, so the spec's job was giving that substance 008's shape rather than re-deriving it from the tree.
 **Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to M8's close (CS 329,233 B / app 399,646 B)**,
 golden EMPTY, deps **still 5** (`shiki` is scoped but not yet installed — that lands with implementation,
-not this gate). **Nothing is in implementation; `plan.md` is not written — gate 1 is passed, so writing it
-is now the sanctioned next act, but no implementation code exists before `tasks.md` passes gate 3**
-(WORKFLOW.md §5.3).
+not this gate).
+★ **`specs/009-code-blocks/plan.md` IS NOW DRAFTED AND AWAITING GATE 2** (2026-08-14) — the human reviews
+the plan against the spec, then approves for `tasks.md` or returns it with revisions. It runs the scope-read
+the spec itself did not (§ Evidence base), settles **D-1…D-13**, resolves all nine §7 risks against the
+actual tree, discharges the §7-8 sibling-checklist audit as a 24-row table, and routes four questions to the
+gate (plan §8). **Three of the spec's own supporting citations did NOT hold and are corrected in the plan,
+not silently** (§0.2): the "only one `shiki` string in `src/`" count was two, not one; `design/mockup.html`
+DOES have a code-block section (contra §7-9's claim it did not exist); and §3.6/§7-3's "not a parser change"
+framing for fence-meta reading does not survive contact with markdown-it's actual default fence renderer
+(verified empirically — `{2,4}` never reaches the DOM), resolved with one additive, conditional `parse.ts`
+rule (D-8) that is a no-op against every existing golden fixture. **The WASM/CSP risk (§3.10, §7-2) is
+RESOLVED WITHOUT an AGENTS.md #4 event**: D-3 takes Shiki's `shiki/engine/javascript` regex engine, verified
+against Shiki's current docs to cover every built-in grammar, so the manifest and `permissions: []` stay
+untouched. **The app-page first-paint harness (D-11 (iii)'s obligation) is scoped as the plan's first
+architectural move** — a new, query-gated, capability-free seam in `entrypoints/app/main.ts` plus a
+Playwright driver mirroring `perf-first-paint.ts`, flagged to gate 2 as the plan's most novel call (no
+scoped-but-unbuilt harness design existed to reuse; the blocker is independently corroborated by
+`perf-folder-tree.ts`'s own header). **No code and no tasks exist.** The plan's status line stays "draft" by
+the M7/M8 precedent — the `decisions.md` bank is the approval of record, not the artifact header.
+**Nothing is in implementation; gate 1 is passed and `plan.md` is now written — gate 2 is the sanctioned
+next act, but no implementation code exists before `tasks.md` passes gate 3** (WORKFLOW.md §5.3).
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
