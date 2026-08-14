@@ -11,6 +11,28 @@ next to scope).*
 
 ## Now (start here)
 
+**★ 009's DRAFT SPEC IS CREATED AND AWAITING GATE 1 — `specs/009-code-blocks/spec.md`, 2026-08-14, status
+DRAFT.** This supersedes the *"between milestones, persona-#2 next to scope"* pointer in the M8-close bullet
+below: scoping happened, and its first artifact exists. **009 = F3 (Code Blocks) in full** — Shiki syntax
+highlighting, ≥14 code themes independent of the document theme, the per-block toolbar (copy / line numbers
+/ line highlighting / word wrap), collapsible long blocks with an "open raw" view, all **done-whole,
+unconditional**; language auto-detection for unlabeled fences is scoped **in** but **cost-measured-then-
+ruled** (§8 M-3). `decisions.md` 2026-07-27 (M7 DIRECTION) named persona-#2 unlock as *"queued for M8 or
+M9"*; M8 went to persona-#1 QoL instead, so 009 is that queued unlock — F3 is the only `spec-coverage.md`
+section at a flat **0%**. **The draft did NOT run its own scope-read** (unlike 006/007/008): its substance
+was settled before drafting, in a reviewer-and-human pass, so the spec's job was giving that substance
+008's shape rather than re-deriving it from the tree — flagged as its own seam in the spec's header and §9.
+**The one genuinely open architectural call is D-D (§3.8) — which reader surface(s) get highlighting —
+seeded here as an OPEN question and explicitly left for `plan.md`, a deliberate departure from 007's and
+008's own precedent of deciding their analogous surface question at spec stage** (named at §9-1 for a
+human to confirm or overturn). D-A (Shiki off the content-script static import graph, mirroring 007's
+Mermaid fence exactly) and D-B (progressive first paint, degrade-to-plain-code) are decided; D-C (the byte
+budget) is framed, not valued — §8's M-1 prices it before any headroom is spent. **Doc-only: no `src/`
+change, bundle byte- and md5-IDENTICAL to M8's close (CS 329,233 B / app 399,646 B)**, golden EMPTY, deps
+**still 5** (`shiki` is scoped but not yet installed — that lands with implementation, not the draft).
+**Nothing is in implementation; `plan.md` is not written and must not be until a human passes gate 1**
+(WORKFLOW.md §5.3).
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the
