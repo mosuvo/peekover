@@ -60,12 +60,24 @@ contact with markdown-it's actual default fence renderer (verified empirically �
 DOM), resolved by Ruling 2 above. **The WASM/CSP risk (§3.10, §7-2) stays RESOLVED WITHOUT an AGENTS.md #4
 event**: D-3's `shiki/engine/javascript` regex engine, verified against Shiki's current docs to cover every
 built-in grammar, so the manifest and `permissions: []` stay untouched. Full record: `decisions.md`
-**2026-08-15 · M9 GATE 2**. **No code exists and no approved `tasks.md` exists.** The plan's status line
-stays "draft" by the M7/M8 precedent — the `decisions.md` bank is the approval of record, not the artifact
-header. **Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to gate 1's close (CS 329,233 B / app
-399,646 B), golden EMPTY, deps STILL 5** — `shiki` is scoped, not installed; that lands with implementation.
-**Nothing is in implementation; gate 2 is passed and the plan's architecture is sealed — `tasks.md` is the
-sanctioned next act, but no implementation code exists before `tasks.md` passes gate 3** (WORKFLOW.md §5.3).
+**2026-08-15 · M9 GATE 2**. The plan's status line stays "draft" by the M7/M8 precedent — the `decisions.md`
+bank is the approval of record, not the artifact header.
+★ **`specs/009-code-blocks/tasks.md` IS NOW DRAFTED AND IS AT GATE 3 — 24 tasks across nine groups**,
+following the plan's own §6 group order (Foundation → the harness → fence-meta plumbing → the enhancer →
+themes → collapsible blocks → systemic degradation → measure/decide/implement → the close gate), with the
+plan's four gate-2 rulings applied verbatim. **Two divergences from the draft kickoff's own hypothesis are
+flagged in the file for gate-3 review**: (1) D-2's four-clause import fence is deferred from group 1 to group
+4 (task 4.5) — re-derived against `diagramImportFence.test.ts`'s own precedent (007 task 3.4, not 1.2), clause
+B cannot prove app-page-graph reachability before a real call site exists; group 1 instead builds
+`codeEngine.ts` **unreachable**, mirroring `diagramEngine.ts`'s own 007-task-1.2 shape, byte-ablated via a
+scratch `appShell.ts` reference. (2) D-9's ≥14-option code-theme selector needs a NEW module,
+`codeThemeControl.ts` (task 5.2), not named in plan §2's Create list — `themeControl.ts`'s existing shape is a
+3-way cycle button structurally unable to represent 14+ choices. **`tasks.md` is NOT yet approved** — gate 3
+is the human's, and no implementation begins before it. **Doc-only: no `src/` change, bundle byte- and
+md5-IDENTICAL to gate 2's close (CS 329,233 B / app 399,646 B), golden EMPTY, deps STILL 5** — `shiki` is
+scoped, not installed; that lands with task 1.1. **Nothing is in implementation; all three artifacts now
+exist — `spec.md` past gate 1, `plan.md` past gate 2, `tasks.md` DRAFTED and awaiting gate 3 — and no
+implementation code exists before `tasks.md` passes it** (WORKFLOW.md §5.3).
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
