@@ -85,6 +85,17 @@ PRODUCED at 8.1–8.4, **CHOSEN by the human at 8.5**, executed at 8.6. **Doc-on
 byte- and md5-IDENTICAL to gate 2's close (CS 329,233 B, md5 Cr `b115c9ae81ac…` / Fx `237831d2332a…`; app
 399,646 B), golden EMPTY, deps STILL 5** — `shiki` is scoped, not installed; that lands with task 1.1, the
 FIRST `src/` code of the milestone. **No box is ticked.**
+★ **PREREQUISITE, PRE-1.1: `pnpm audit --prod` was NOT clean at the start of the task-1.1 session — 6
+pre-existing advisories (5 mermaid, 1 dompurify), none caused by any 009 commit, all published to the
+advisory DB after M7/M8's clean audits — a supply-chain drift, not a code regression.** Fixed by bumping
+BOTH within their EXISTING `^` semver ranges (no new dependency, no `package.json` range widened beyond what
+`^` already permitted): `mermaid` 11.16.0 → **11.16.1**, `dompurify` 3.4.12 → **3.4.13**. `pnpm audit --prod`
+now clean, **0 advisories**. Because `dompurify` sits on BOTH graphs, **this moved the milestone's own
+byte baselines BEFORE task 1.1's own firing control runs** — the gate-2/gate-3-close figures above (CS
+329,233 B / app 399,646 B) are now HISTORICAL, superseded by this prerequisite commit's own numbers (see
+§ Baselines). Task 1.1 prices its firing control and its post-install byte-identity check against the NEW
+figures, explicitly stated as a divergence from the kickoff's assumed numbers (standing rule #1) — not
+silently carried forward.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
@@ -3454,13 +3465,13 @@ every task recorded as it landed is accounted growth. See *THE M7 BYTE LEDGER*.
 | ↳ *the pin this row supersedes, kept not overwritten* — First paint, typical doc *(RE-MEASURED 2026-08-03, HEAD `757f953`, quiesced — M8's pre-implementation reading)* | **138.1 / 134.3 / 137.0 ms** medians, floors **135.1 / 132.6 / 134.7 ms** (3 arms; A-vs-A 3.8 ms median / 2.5 ms floor) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | PASS, all 3 arms — worst-arm headroom 26.9 ms (median) / 29.9 ms (floor), **consumed 33-41% by M8's reach, per 5.1** |
 | First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, not at the 2026-08-03 redline, and NOT re-run at 6.3 — now THREE milestones' distance**)* | **157.6 ms** median, **floor 146.7 ms** | *(unchanged pin)* | **<165 ms GATE** | **PASS as last measured — see the vacuity note; the app-page instrument hole (D-11 (iii)) still means this number is not re-derivable on demand** |
 | First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived at 9.3, at the redline, or at 6.3**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS as last measured |
-| Content script (`content-scripts/peekover.js`) *(6.3, `bdcb2ad`)* | **329,233 B** both engines — md5 Cr `b115c9ae81acf3a834b2834354b4c23a` / Fx `237831d2332acc1efb2305a238c4264b` | 318,747 B (**+10,486, +3.29%**) | none — **stated, not gated** | — |
-| App-page chunk (`chunks/app-CkthuSjX.js`) *(6.3, `bdcb2ad`)* | **399,646 B** both engines, md5 `7275a378653d9b5e5021235f045bd902` identical on both | 389,143 B (**+10,503, +2.70%**) | none — **stated, not gated** | — |
-| Background (`background.js`) *(6.3, `bdcb2ad`)* | **3,548 B** both engines, md5 `5f53c0f53c729e0a82fb1a4ce1361e22` | 3,548 B (**+0, unchanged**) | none — **stated, not gated** | — |
-| Built manifests, Chrome / Firefox *(6.3, `bdcb2ad`)* | **654 / 770 B**, `permissions: []` and no `web_accessible_resources` on both | 654 / 770 B (**unchanged**) | — | — |
-| `pnpm zip` Chrome / Firefox *(6.3, `bdcb2ad`)* | **1,306,513 / 1,306,571 B** | 1,300,383 / 1,300,442 B (**+6,130 / +6,129, +0.47%**) | **<2 MB** | **PASS — headroom 0.69 MB** |
-| Packed unzipped (`.output/<engine>`) *(6.3, `bdcb2ad`)* | **4,080,882 / 4,080,998 B** | 4,059,893 / 4,060,009 B (**+20,989 / +20,989, +0.52% — matches the M8 byte ledger's package total exactly, 10,503 + 10,486**)| **≤5 MB** (AGENTS.md) | **PASS — headroom 0.90 MB** |
-| Suites *(6.3, `bdcb2ad`)* | **944 unit** (56 files) · **1,251 passed / 15 skipped** browser, **118 file-instances** | 728 · 927/15/100 (**+216 unit, +324 browser, +5 unit files, +18 browser file-instances**) | — | green |
+| Content script (`content-scripts/peekover.js`) *(009 pre-1.1 prerequisite bump, mermaid/dompurify advisory fix)* | **329,464 B** both engines — md5 Cr `ec91cff6b6698943d699c038ef653b7c` / Fx `e36e768df1bf58c7d0a72f1ba992224f` | 329,233 B (**+231, +0.07% — dompurify 3.4.12→3.4.13, both graphs**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-Wexnkl90.js`) *(009 pre-1.1 prerequisite bump)* | **399,902 B** both engines, md5 `450c0201897b1d68dea09abd22f8b97f` identical on both | 399,646 B (**+256, +0.06%**) | none — **stated, not gated** | — |
+| Background (`background.js`) *(009 pre-1.1 prerequisite bump)* | **3,548 B** both engines, md5 `5f53c0f53c729e0a82fb1a4ce1361e22` | 3,548 B (**+0, unchanged**) | none — **stated, not gated** | — |
+| Built manifests, Chrome / Firefox *(009 pre-1.1 prerequisite bump)* | **654 / 770 B**, `permissions: []` and no `web_accessible_resources` on both | 654 / 770 B (**unchanged**) | — | — |
+| `pnpm zip` Chrome / Firefox *(009 pre-1.1 prerequisite bump)* | **1,306,928 / 1,306,986 B** | 1,306,513 / 1,306,571 B (**+415 / +415**) | **<2 MB** | **PASS — headroom 0.69 MB** |
+| Packed unzipped (`.output/<engine>`) *(009 pre-1.1 prerequisite bump)* | **4,082,294 / 4,082,410 B** | 4,080,882 / 4,080,998 B (**+1,412 / +1,412**)| **≤5 MB** (AGENTS.md) | **PASS — headroom 0.90 MB** |
+| Suites *(009 pre-1.1 prerequisite bump)* | **944 unit** (56 files, incl. 007 `diagramImportFence` 8/8) — browser suite NOT re-run this commit (unit-level fence + golden pin sufficient for a dependency-patch bump; owed before 4.x's browser work if not re-confirmed sooner) | 944 unit / 56 files (**unchanged count**) | — | green |
 
 **★ THE M8 FIRST-PAINT PRICE, SUMMARIZED HERE SO THIS SECTION STAYS SELF-CONTAINED (full protocol and
 per-arm detail: § Now, task 5.1).** 5.1 ran 8.1's own quiesced A-B-A protocol — `A` = HEAD's build, `B`
