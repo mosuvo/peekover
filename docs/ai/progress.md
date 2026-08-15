@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-15 (M9 gate 3 — tasks 009 approved with two rulings; implementation next at task 1.1).*
+*Updated: 2026-08-15 (M9 task 2.2 done — app-page first-paint driver + first-ever baseline, PROVISIONAL; implementation next at task 3.1).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -245,6 +245,64 @@ Standing invariants: `pnpm test` **951/951** (57 files, unchanged); `pnpm lint` 
 (unchanged from 1.2) — no new edge. deps STILL **6**. `git diff --name-only HEAD` at the commit:
 ONLY `entrypoints/app/main.ts` · `tests/browser/appHarnessSeam.browser.test.ts` (new) · this file ·
 `tasks.md`'s 2.1 box flip. `background.ts` and `src/app/chromiumFolderSource.ts` do NOT appear.
+
+★ **TASK 2.2 IS DONE — `scripts/perf-app-first-paint.ts` WRITTEN, AND THE FIRST APP-PAGE FIRST-PAINT
+NUMBER THIS CODEBASE HAS EVER RECORDED IS PRODUCED (D-1, RULING 1, RULING 4). NOW-POINTER ADVANCES TO
+3.1 NEXT.** Mirrors `perf-first-paint.ts`'s shape — same `chromium.launchPersistentContext` +
+`--load-extension` (Chromium only), same `ITERATIONS = 7` (run 1 cold, discarded), same median+floor
+statistics, same `GATE_MS = 165` (printed for reference, not ruled on — see below), same sanity-before-
+timing discipline (h1 + section-count + zero-console-errors, asserted before any timing is trusted).
+Drives `chrome-extension://<id>/app.html?__peekoverHarness=1` through task 2.1's seam
+(`window.__peekoverHarness.openFromHandle(handle)`), the handle a real OPFS
+`FileSystemDirectoryHandle` (`navigator.storage.getDirectory()`, task 2.1's own construction pattern).
+**FIXTURE: the SAME 50.4 KB / 62-section doc the content-script "typical doc" row is built from**
+(`buildHugeDoc(sectionsForBytes(50 * 1024))`, `tests/golden/hugeDoc.ts`) — **not** `perf-first-paint.ts`'s
+default argument-less 1 MB fixture, which that file's own scope logic treats as "large-doc
+(informational)" against a <1.7 s bound rather than `GATE_MS`. tasks.md 2.2 asks for "the same fixture …
+so the two numbers are comparable" and a reading "against `GATE_MS = 165`" — only the 50.4 KB fixture is
+held to that gate, so it is the one reproduced here (`sectionsForBytes` duplicated locally, the same
+pattern `perf-watch.ts`/`perf-snapshot-capture.ts`/`perf-theme-flash.ts` already use independently for
+this exact fixture). **Divergence from the kickoff's paraphrase, named per standing rule #1: not a
+literal default-argument copy of `perf-first-paint.ts`'s fixture call.**
+★ **THE EVENT PAIR — A STRUCTURAL DIFFERENCE FROM THE CONTENT-SCRIPT PAIR, NAMED NOT SMOOTHED OVER.**
+Traced this session, not assumed: `appShell.ts`'s `applyOutcome` explicitly leaves the reader in a
+NO-SELECTION state after a folder opens (`await selectFile(null)`) — opening a folder alone never
+paints anything; a file must additionally be selected, exactly as
+`tests/browser/appHarnessSeam.browser.test.ts`'s own positive-path test already shows (it clicks the
+file entry after `openFromHandle`). So the **primary** pair measured is **t0 (immediately before
+`openFromHandle` is called) → painted** (double-rAF after `.peekover-app__reader__host`'s shadow
+`.peekover-reader` gains content — the same paint definition `perf-first-paint.ts` uses, retargeted from
+`<peekover-root>` to the app page's host class; `readerPane.ts` mounts through the identical shared
+`mount()`), which necessarily brackets a synthetic click on the sole file entry. **Two named biases:**
+(i) this number INCLUDES an in-page click dispatch with no content-script analogue; (ii) this number
+EXCLUDES the app-shell's own page load (timing starts only once the extension UI and the harness seam
+are already ready), unlike the content-script number, which includes the browser's `file://` document
+load. The folder-populate and click-to-paint sub-spans are reported alongside the primary number, never
+blended into it silently.
+★ **THE NUMBER — PRODUCED, PROVISIONAL. Two back-to-back arms, same quiesced conditions, same build:**
+**RUN A: median 89.2 ms, floor 84.8 ms** (warm n=6: 103.7/91.2/90.1/84.9/88.3/84.8, cold run 1 discarded
+346.8 ms). **RUN B: median 89.3 ms, floor 86.8 ms** (warm n=6: 89.7/93.5/92.5/88.4/88.8/86.8, cold run 1
+discarded 138.0 ms). **A-vs-A agreement: 0.1 ms median / 2.0 ms floor** — against `perf-first-paint.ts`'s
+own precedent tolerance of **3.8 ms median / 2.5 ms floor** (the 2026-08-03 content-script
+re-measurement, § Baselines), both deltas comfortably inside it; no near-tolerance-edge behavior, no
+rerun needed, nothing to log as a candidate flake. Sub-spans, both arms: folder-populate (`openFromHandle`
+alone) ~4 ms; click→paint dominates the primary number at ~85 ms of ~89 ms. Printed for reference against
+`GATE_MS = 165` (mirroring `perf-first-paint.ts`'s own console shape): **89.2/89.3 ms medians sit under
+165 ms** — stated as what the script printed, not evaluated here as pass/worrying/fine (this task
+PRODUCES the number; it does not rule on it). **NEXT: sanity-read at 9.1, banked as the standing baseline
+at 9.3 (Ruling 4); consumed by 8.1's M-2 as the pre-Shiki floor for the within-milestone A-B-A against
+post-Shiki app-page first paint in the interim.**
+Standing invariants: `pnpm test` **951/951** (57 files, unchanged); `pnpm lint` EXIT=0; `git diff
+tests/golden/output/` EMPTY; `tests/manifest.test.ts` unmodified **2975 B**; 007
+`diagramImportFence.test.ts` **8/8**, run explicitly. Both bundles **byte- and md5-IDENTICAL** to task
+2.1's close — CS **329,464 B** (Cr `ec91cff6b6…` / Fx `e36e768df1…`), app **400,435 B** (`487b1b7a4b…`
+both engines) — this task's script is not on either build graph. Built manifests **654/770 B**,
+`permissions: []` both, no `web_accessible_resources`. `git grep` for `shiki`/`codeEngine` imports across
+`entrypoints/`+`src/` (excluding `.test.ts`) still returns exactly one file, `src/render/codeEngine.ts` —
+no new edge. deps STILL **6** (the `perf:app` addition is a `scripts` entry, not a `dependencies` one —
+confirmed programmatically). `git diff --name-only HEAD` at the commit: ONLY `scripts/perf-app-first-
+paint.ts` (new) · `package.json` (one `scripts` line) · this file · `tasks.md`'s 2.2 box flip. No `src/`,
+`entrypoints/`, or `tests/` file in the diff.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
@@ -3612,6 +3670,7 @@ every task recorded as it landed is accounted growth. See *THE M7 BYTE LEDGER*.
 |---|---|---|---|---|
 | First paint, typical doc (50.4 KB) — **CONTENT SCRIPT** *(008 task 5.1, quiesced A-B-A, HEAD `bdcb2ad` — bytes unchanged since 5.1 — **the current reading, NOT re-run at 6.3**)* | **149.7 / 146.3 ms** medians (2 reach-IN arms), floors **145.7 / 143.4 ms**; **+ a 3rd, non-interleaved shipped-harness reading (6.2): 155.4 ms median, 145.2 ms floor** | 138.1 / 134.3 / 137.0 ms medians, floors 135.1 / 132.6 / 134.7 ms | **<165 ms GATE** | **PASS, all readings — the M8 table-tools reach costs +8.9 ms median / +11.1 ms floor against a 26.9 / 29.9 ms budget (008 task 5.1); worst-arm headroom now 15.3 ms (median) / 19.3 ms (floor)** |
 | ↳ *the pin this row supersedes, kept not overwritten* — First paint, typical doc *(RE-MEASURED 2026-08-03, HEAD `757f953`, quiesced — M8's pre-implementation reading)* | **138.1 / 134.3 / 137.0 ms** medians, floors **135.1 / 132.6 / 134.7 ms** (3 arms; A-vs-A 3.8 ms median / 2.5 ms floor) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | PASS, all 3 arms — worst-arm headroom 26.9 ms (median) / 29.9 ms (floor), **consumed 33-41% by M8's reach, per 5.1** |
+| First paint, typical doc (50.4 KB) — **APP PAGE, FIRST EVER READING** *(009 task 2.2, HEAD `7c5d05b`, `__peekoverHarness` seam + OPFS handle, quiesced, 2 back-to-back arms)* | **89.2 / 89.3 ms** medians, floors **84.8 / 86.8 ms** (A-vs-A **0.1 ms median / 2.0 ms floor**, inside `perf-first-paint.ts`'s own 3.8 ms/2.5 ms precedent tolerance); sub-spans both arms: folder-populate ~4 ms, click→paint ~85 ms | *(no prior pin — this IS the baseline)* | **<165 ms** (printed for reference, mirroring `perf-first-paint.ts`'s own console shape) | **PRODUCED, PROVISIONAL — no verdict rendered by this task.** Sanity-read owed at 9.1; banked as the standing baseline at 9.3 (Ruling 4); consumed by 8.1's M-2 as the pre-Shiki floor in the interim. Biases named in § Now (task 2.2): includes a synthetic file-select click (no content-script analogue), excludes the app-shell's own page load. |
 | First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, not at the 2026-08-03 redline, and NOT re-run at 6.3 — now THREE milestones' distance**)* | **157.6 ms** median, **floor 146.7 ms** | *(unchanged pin)* | **<165 ms GATE** | **PASS as last measured — see the vacuity note; the app-page instrument hole (D-11 (iii)) still means this number is not re-derivable on demand** |
 | First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived at 9.3, at the redline, or at 6.3**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS as last measured |
 | Content script (`content-scripts/peekover.js`) *(009 pre-1.1 prerequisite bump, mermaid/dompurify advisory fix)* | **329,464 B** both engines — md5 Cr `ec91cff6b6698943d699c038ef653b7c` / Fx `e36e768df1bf58c7d0a72f1ba992224f` | 329,233 B (**+231, +0.07% — dompurify 3.4.12→3.4.13, both graphs**) | none — **stated, not gated** | — |

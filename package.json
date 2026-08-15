@@ -14,6 +14,7 @@
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
     "perf": "tsx scripts/perf-first-paint.ts",
+    "perf:app": "tsx scripts/perf-app-first-paint.ts",
     "perf:folder": "tsx scripts/perf-folder-tree.ts",
     "perf:toc": "tsx scripts/perf-toc.ts",
     "perf:flash": "tsx scripts/perf-theme-flash.ts",

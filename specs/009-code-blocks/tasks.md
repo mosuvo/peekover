@@ -212,7 +212,7 @@ manifest untouched; deps exactly 6. **The four-clause fence is 4.5's, not this g
       milestone; content-script graph **untouched**, 329,233 B, md5-identical). Golden EMPTY · manifest green
       **2975 B** · `permissions: []` both engines. [D-1; Ruling 1; §4 Trust]
 
-- [ ] **2.2 `scripts/perf-app-first-paint.ts` — the driver, mirroring `perf-first-paint.ts`'s shape, producing
+- [x] **2.2 `scripts/perf-app-first-paint.ts` — the driver, mirroring `perf-first-paint.ts`'s shape, producing
       THE FIRST app-page first-paint number this codebase has ever recorded (D-1).** Same
       `chromium.launchPersistentContext` + `--load-extension` pattern, same `ITERATIONS = 7` / median-and-floor
       statistics, same `GATE_MS = 165`. Navigates `app.html?__peekoverHarness=1`, populates an OPFS directory
