@@ -192,7 +192,7 @@ manifest untouched; deps exactly 6. **The four-clause fence is 4.5's, not this g
 
 ## 2 — The harness (D-1 — built and run BEFORE any Shiki code lands, per Ruling 1 and plan §6's hard constraint)
 
-- [ ] **2.1 `entrypoints/app/main.ts`'s query-gated seam — `__peekoverHarness`, inert by default, reusing the
+- [x] **2.1 `entrypoints/app/main.ts`'s query-gated seam — `__peekoverHarness`, inert by default, reusing the
       PRODUCTION `folderSourceFromHandle` (D-1).** `new URL(location.href).searchParams.has('__peekoverHarness')`
       — present **only** on a URL the harness itself constructs; `background.ts`'s `action.onClicked` adds no
       query string on the real launch path, so this branch never runs for a real user. When present, installs

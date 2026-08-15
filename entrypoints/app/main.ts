@@ -1,12 +1,87 @@
-import { mountAppShell } from '@/src/app/appShell';
+import { mountAppShell } from '../../src/app/appShell';
+import { folderSourceFromHandle } from '../../src/app/chromiumFolderSource';
+import type { OpenFolderOutcome } from '../../src/app/folderSource';
 
 // Bootstrap for the bundled app page (spec 002). Side-effects only — the entrypoint
 // binds the DOM to the shell, mirroring how the content entrypoint only calls
 // runReader(). All layout/logic lives in src/app/* so it is unit-testable without a
 // real page (the M1 runReader/mountReader discipline).
+//
+// Imported by RELATIVE path, not the `@/…` alias `wxt prepare` generates: WXT's own
+// bundler resolves either form identically, but `tests/browser/appHarnessSeam.browser
+// .test.ts` (task 2.1) imports this module directly under plain Vitest, which has no
+// `@/…` resolver wired in (`vitest.config.ts` carries none). Relative works in both.
+
 const root = document.getElementById('app');
 if (root) {
-  const app = mountAppShell(root);
+  /**
+   * ★ THE `__peekoverHarness` QUERY-GATED SEAM (task 2.1, D-1). Approved at gate 2 as new
+   * PRODUCTION code for an automation need — `decisions.md`'s **M9 GATE 2** entry
+   * (2026-08-15), Ruling 1 — permitted ONLY because it is capability-free by construction:
+   *   1. no manifest change — no permission, no `web_accessible_resources`;
+   *   2. query-inert on every real visit — `background.ts`'s `action.onClicked` opens
+   *      `/app.html` with no query string, so this branch never runs for a real user;
+   *   3. handle-only surface — `openFromHandle` accepts nothing but a caller-constructed
+   *      `FileSystemDirectoryHandle` and feeds it through the SAME production
+   *      `folderSourceFromHandle` (chromiumFolderSource.ts) that `openFolder()` already
+   *      runs after `showDirectoryPicker()` resolves, so the harness grants no ability
+   *      the caller does not already have.
+   * Ruling 1's own recorded note: this does NOT set a precedent for other automation
+   * seams — each is its own decision (specs/009-code-blocks/tasks.md 2.1).
+   */
+  const isHarness = new URL(location.href).searchParams.has('__peekoverHarness');
+
+  // The handle most recently handed to `openFromHandle` — read only by the injected
+  // `openFolder` override below, which exists only when `isHarness` is true.
+  let harnessHandle: FileSystemDirectoryHandle | null = null;
+
+  /**
+   * Duck-typed, never `instanceof` (the constructor need not exist in every context this
+   * bundle can run in). A real `FileSystemDirectoryHandle` carries all three; a plain
+   * object, a string, or a URL carries none — so the surface REJECTS them rather than
+   * silently minting a capability the caller does not already hold.
+   */
+  function isDirectoryHandle(value: unknown): value is FileSystemDirectoryHandle {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      (value as { kind?: unknown }).kind === 'directory' &&
+      typeof (value as { values?: unknown }).values === 'function' &&
+      typeof (value as { getDirectoryHandle?: unknown }).getDirectoryHandle === 'function'
+    );
+  }
+
+  const app = mountAppShell(
+    root,
+    isHarness
+      ? {
+          openFolder: async (): Promise<OpenFolderOutcome> => {
+            if (!harnessHandle) {
+              return { ok: false, reason: 'error', message: '__peekoverHarness: no handle provided' };
+            }
+            return { ok: true, source: await folderSourceFromHandle(harnessHandle) };
+          },
+        }
+      : {},
+  );
+
+  if (isHarness) {
+    (
+      window as unknown as {
+        __peekoverHarness?: { openFromHandle(handle: FileSystemDirectoryHandle): Promise<void> };
+      }
+    ).__peekoverHarness = {
+      openFromHandle: async (handle: FileSystemDirectoryHandle): Promise<void> => {
+        if (!isDirectoryHandle(handle)) {
+          throw new TypeError(
+            '__peekoverHarness.openFromHandle requires a real FileSystemDirectoryHandle',
+          );
+        }
+        harnessHandle = handle;
+        await app.openFolder();
+      },
+    };
+  }
 
   // DEV-ONLY manual seam (task 1.2). There is no folder source yet (group 3), so in
   // `pnpm dev` the human feeds a file by hand to confirm the reader pane renders it

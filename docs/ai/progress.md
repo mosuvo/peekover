@@ -183,6 +183,69 @@ commit: ONLY `src/render/codeEngine.ts` (new) · `src/render/codeEngine.test.ts`
 `tasks.md`'s 1.2 box flip. `src/app/appShell.ts` does NOT appear — the scratch reference was reverted
 cleanly.
 
+★ **TASK 2.1 IS DONE — THE `__peekoverHarness` QUERY-GATED SEAM IS LIVE IN `entrypoints/app/main.ts`,
+CAPABILITY-FREE BY CONSTRUCTION, PROVEN STRUCTURALLY (D-1, RULING 1). NOW-POINTER ADVANCES TO 2.2
+NEXT.** `new URL(location.href).searchParams.has('__peekoverHarness')` gates installation of
+`window.__peekoverHarness.openFromHandle(handle)`, which validates `handle` by DUCK-TYPE
+(`kind==='directory'` + `values()` + `getDirectoryHandle()`, never `instanceof` — the constructor
+need not exist on every engine) before feeding it through the PRODUCTION `folderSourceFromHandle`
+(`chromiumFolderSource.ts:98`, confirmed unmoved — the kickoff's cited line held) via an injected
+`openFolder` override on `mountAppShell`'s existing `AppDeps` seam, so the harness reaches the SAME
+`applyOutcome` path the CTA/picker already runs, never a duplicate. `background.ts`'s
+`action.onClicked` inspected and confirmed to add no query string
+(`tabs.create({ url: browser.runtime.getURL('/app.html') })`) — the real-user path is structurally
+unaffected, not merely unaffected by claim.
+★ **ONE IN-SCOPE PLUMBING CHANGE, NOTED NOT SILENTLY MADE:** `main.ts`'s own import of `appShell`
+moved from the `@/…` WXT-bundler alias to a relative path — `wxt build` resolves both identically
+(confirmed: manifests and both bundles unaffected by the change of specifier form alone), but
+`tests/browser/appHarnessSeam.browser.test.ts` imports the entrypoint directly under plain Vitest,
+which has no `@/…` resolver (`vitest.config.ts` carries none) — this is the first task to import an
+entrypoint file from a browser test at all.
+★ **THE TEST DRIVES THE REAL ENTRYPOINT — A NEW PATTERN FOR THIS SUITE, FLAGGED NOT SILENTLY
+INVENTED.** `entrypoints/app/main.ts` is side-effect-only top-level code (no exported function), so
+`appHarnessSeam.browser.test.ts` imports it fresh per case via a cache-busted specifier
+(`…/main.ts?peekoverHarnessTest=N`) — deliberately narrower than `vi.resetModules()`: only the
+entrypoint re-evaluates each time; `appShell.ts`'s own module-scoped registries (theme hosts, watch
+targets) stay the SAME singletons every other browser test in this project already shares. The real
+`location.href` is moved with `history.replaceState`, mirroring `agentBadge.browser.test.ts`'s own
+`withDocUrl` (restored in a `finally`/`afterEach`, never left behind — this project's browser test
+files share ONE browser window per engine, `vitest.config.ts`'s own header comment). 11 cases ×
+Cr+Fx = **22 tests, all green**: the negative half (no param → `window.__peekoverHarness`
+undefined, `.peekover-app__cta` still renders — normal init unchanged); the positive half (param
+present → `openFromHandle` is a function, init still completes, additively); the paranoid predicate
+matrix (`?peekoverHarness`, `?__peekoverharness`, `#__peekoverHarness`, `?other=__peekoverHarness`
+— all four still undefined, no false-positive); the handle-only surface (a plain object, a string, a
+`URL` — all three REJECT, never silently succeed); the positive path (a real OPFS
+`FileSystemDirectoryHandle` drives the harness to the SAME granted chip/file-list shape
+`folderGrant.browser.test.ts`'s own directly-injected-`openFolder` control reaches on an equivalent
+folder — the reader-state equivalence tasks.md 2.1 asks for, proven by comparing output, not by
+re-implementing `folderSourceFromHandle`).
+★ **CAPABILITY-FREENESS, PROVEN STRUCTURALLY, NOT ASSERTED.** `chromiumFolderSource.ts` diff is
+EMPTY (`folderSourceFromHandle` imported, never forked). Built manifests **654/770 B**,
+`permissions: []` both, no `web_accessible_resources` — byte-identical to HEAD. Content-script
+bundle **329,464 B, md5-identical both engines** (Cr `ec91cff6b6…` / Fx `e36e768df1…`), untouched —
+this task's only production file is app-page-only. **App-page bundle MOVES for the first time this
+milestone**: **399,902 → 400,435 B (+533 B), md5 `487b1b7a4b…` both engines** — stated as
+DIAGNOSTIC input for group 8's D-11 accounting, not a bound met. `pnpm zip` (post-2.1): Chrome
+**1,307,185 B** / Firefox **1,307,243 B** — not reconciled to a pre-2.1 figure here, that
+reconciliation is 8.1's job.
+★ **A BASELINE-CITATION DIVERGENCE, RESOLVED AGAINST A CLEAN REBUILD, NOT EITHER DOC.** tasks.md
+2.1's own Verify prose (and this file's earlier gate-1 "Now" paragraph, `:85-86`) cite CS
+329,233 B / app 399,646 B — STALE, carried from BEFORE task 1.1 installed `shiki`; this file's own
+task-1.1/1.2 close records (`:102`, `:180`) already correct this to 329,464/399,902, matching the
+kickoff's figures, not tasks.md's. Re-confirmed here directly: this task's changes were stashed, a
+`rm -rf .output` clean rebuild of both engines ran at HEAD `2aace83`, and the measured bytes were
+**CS 329,464 B / app 399,902 B** — exactly task 1.2's own recorded close. Neither stale citation is
+edited here (out of this task's file-touch fence); the divergence is named per standing rule #1, not
+silently followed either way.
+Standing invariants: `pnpm test` **951/951** (57 files, unchanged); `pnpm lint` EXIT=0;
+`git diff tests/golden/output/` EMPTY; `tests/manifest.test.ts` unmodified **2975 B**; 007
+`diagramImportFence.test.ts` **8/8**, run explicitly; `git grep` for `shiki` imports across
+`entrypoints/`+`src/` (excluding `.test.ts`) returns exactly one file, `src/render/codeEngine.ts`
+(unchanged from 1.2) — no new edge. deps STILL **6**. `git diff --name-only HEAD` at the commit:
+ONLY `entrypoints/app/main.ts` · `tests/browser/appHarnessSeam.browser.test.ts` (new) · this file ·
+`tasks.md`'s 2.1 box flip. `background.ts` and `src/app/chromiumFolderSource.ts` do NOT appear.
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the
