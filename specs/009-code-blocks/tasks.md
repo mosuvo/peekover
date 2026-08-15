@@ -234,7 +234,7 @@ exists.*
 
 ## 3 — The fence-meta plumbing (D-8 — standalone and testable before anything highlights)
 
-- [ ] **3.1 `parse.ts` gains ONE additive, conditional custom fence renderer — `data-fence-meta`, a no-op for
+- [x] **3.1 `parse.ts` gains ONE additive, conditional custom fence renderer — `data-fence-meta`, a no-op for
       every existing fence, proven not assumed (D-8, Ruling 2).** `md.renderer.rules.fence` override: calls
       markdown-it's own default fence rendering and, **only when `info.trim().split(/\s+/).length > 1`**,
       appends `data-fence-meta="{2,4}"` (the raw remainder of the info string, HTML-escaped) to the emitted

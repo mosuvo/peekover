@@ -103,6 +103,69 @@ describe('parse — markdown-it GFM stage', () => {
     });
   });
 
+  describe('data-fence-meta override (D-8) — conditional, additive, no-op unless meta present', () => {
+    // The unit-level no-op pin: these are the EXACT literal strings already
+    // committed to tests/golden/output/code.html (code.md's own fences).
+    // D-8's whole approval (Ruling 2) rests on this staying byte-identical —
+    // no new golden fixture for this task (plan §2's Explicitly-NOT-touched
+    // list); this is the pin.
+    it('is byte-identical to the committed golden strings for a language-only fence', () => {
+      const html = parse(
+        '```js\nconst answer = 42;\nfunction render(md) { return sanitize(parse(md)); }\n```',
+      );
+      expect(html).toBe(
+        '<pre><code class="language-js">const answer = 42;\n' +
+          'function render(md) { return sanitize(parse(md)); }\n</code></pre>\n',
+      );
+    });
+
+    it('is byte-identical to the committed golden strings for a fence with no info string', () => {
+      const html = parse(
+        '```\nplain fence with no language info string\nsecond line of the plain fence\n```',
+      );
+      expect(html).toBe(
+        '<pre><code>plain fence with no language info string\n' +
+          'second line of the plain fence\n</code></pre>\n',
+      );
+    });
+
+    it('adds no attribute for a bare fence (no language, no meta)', () => {
+      const html = parse('```\ncode\n```');
+      expect(html).not.toContain('data-fence-meta');
+    });
+
+    it('adds no attribute for a language-only fence', () => {
+      const html = parse('```javascript\ncode\n```');
+      expect(html).not.toContain('data-fence-meta');
+      expect(html).toContain('<pre><code class="language-javascript">');
+    });
+
+    it('adds no attribute when the info string is language-plus-trailing-whitespace only', () => {
+      // Trailing whitespace after the language word is trimmed by markdown-it
+      // itself before this override ever sees `info` — meta is empty.
+      const html = parse('```javascript   \ncode\n```');
+      expect(html).not.toContain('data-fence-meta');
+      expect(html).toContain('<pre><code class="language-javascript">');
+    });
+
+    it('adds data-fence-meta with the raw remainder when meta is present', () => {
+      const html = parse('```javascript {2,4}\ncode\n```');
+      expect(html).toContain('<pre><code data-fence-meta="{2,4}" class="language-javascript">');
+    });
+
+    it('trims only the leading whitespace run before whitespace-heavy meta', () => {
+      const html = parse('```javascript    {2,4}   extra\ncode\n```');
+      // Leading run (language -> meta) stripped; internal spacing preserved raw.
+      expect(html).toContain('data-fence-meta="{2,4}   extra"');
+    });
+
+    it("HTML-escapes <, >, and & in the meta value via markdown-it's own escaper", () => {
+      const html = parse('```javascript {2,4} <tag>&\nc\n```');
+      expect(html).toContain('data-fence-meta="{2,4} &lt;tag&gt;&amp;"');
+      expect(html).not.toContain('<tag>');
+    });
+  });
+
   describe('inline HTML passthrough (html: true)', () => {
     // The parse stage intentionally does NOT sanitize — it lets raw HTML through
     // for the sanitize stage to neutralize. This asserts the passthrough exists.

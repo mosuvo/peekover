@@ -47,6 +47,55 @@ const md = new MarkdownIt(PARSE_OPTIONS).enable([...ENABLED_RULES]);
 md.use(taskLists);
 
 /**
+ * Conditional fence-renderer override (D-8, Ruling 2 — decisions.md M9 GATE 2):
+ * appends `data-fence-meta` to the emitted `<code>` element ONLY when a fence's
+ * info string carries content beyond its language word — e.g.
+ * ```javascript {2,4}``` → `<code class="language-javascript"
+ * data-fence-meta="{2,4}">`. Every fence WITHOUT such content — no language,
+ * language only, or trailing whitespace only — renders through markdown-it's
+ * UNMODIFIED default fence rule, byte-for-byte (pinned in parse.test.ts
+ * against the golden corpus's own committed strings; no new golden fixture
+ * for this — plan §2's Explicitly-NOT-touched list).
+ *
+ * Predicate: the info string (markdown-it's own unescaped, trimmed `info`,
+ * the same value the default rule computes internally) up to its first
+ * whitespace run is the language word; everything after that run is meta.
+ * The attribute is added iff that remainder is non-empty. Predicate table:
+ *   ```javascript              → no meta  → no attribute (falls through)
+ *   ```javascript {2,4}        → meta "{2,4}"
+ *   ```                        → no lang  → no meta → no attribute
+ *   ```javascript   {2,4}      → meta "{2,4}" (only the leading run before
+ *                                  meta is stripped, matching the default
+ *                                  rule's own `langAttrs` computation)
+ *   ```javascript   (trailing ws only) → meta empty after trim → no attribute
+ *
+ * The meta value is pushed RAW (never pre-escaped here) — `Renderer
+ * #renderAttrs` HTML-escapes every attribute value it renders (`& < > "`),
+ * so it comes out escaped exactly like every other attribute in this
+ * pipeline (`class` included).
+ */
+const defaultFenceRule: NonNullable<typeof md.renderer.rules.fence> =
+  md.renderer.rules.fence ??
+  ((tokens, idx, options, _env, slf) => slf.renderToken(tokens, idx, options));
+
+md.renderer.rules.fence = (tokens, idx, options, env, slf) => {
+  const token = tokens[idx];
+  const info = token.info ? md.utils.unescapeAll(token.info).trim() : '';
+  const spaceIdx = info.search(/\s/);
+  const meta = spaceIdx === -1 ? '' : info.slice(spaceIdx).replace(/^\s+/, '');
+
+  if (!meta) {
+    return defaultFenceRule(tokens, idx, options, env, slf);
+  }
+
+  const originalAttrs = token.attrs;
+  token.attrPush(['data-fence-meta', meta]);
+  const html = defaultFenceRule(tokens, idx, options, env, slf);
+  token.attrs = originalAttrs;
+  return html;
+};
+
+/**
  * Parse markdown into an HTML string.
  *
  * The returned HTML is UNSANITIZED. Callers must pass it through the sanitize

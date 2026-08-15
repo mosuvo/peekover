@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-15 (M9 task 2.2 done — app-page first-paint driver + first-ever baseline, PROVISIONAL; implementation next at task 3.1).*
+*Updated: 2026-08-15 (M9 task 3.1 done — parse.ts's conditional data-fence-meta override, D-8; implementation next at task 4.1).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -303,6 +303,78 @@ no new edge. deps STILL **6** (the `perf:app` addition is a `scripts` entry, not
 confirmed programmatically). `git diff --name-only HEAD` at the commit: ONLY `scripts/perf-app-first-
 paint.ts` (new) · `package.json` (one `scripts` line) · this file · `tasks.md`'s 2.2 box flip. No `src/`,
 `entrypoints/`, or `tests/` file in the diff.
+
+★ **TASK 3.1 IS DONE — `parse.ts` GAINS THE CONDITIONAL `data-fence-meta` FENCE-RENDERER OVERRIDE (D-8,
+RULING 2). GROUP 3 IS COMPLETE. NOW-POINTER ADVANCES TO 4.1 NEXT** (group 4's first task — group 3 has
+only 3.1). `md.renderer.rules.fence` is wrapped, not replaced: the ORIGINAL default rule is captured once
+at module load (`md.renderer.rules.fence ?? renderToken` fallback, the standard markdown-it plugin idiom)
+and called for every fence whose info string is empty, language-only, or trailing-whitespace-only after
+the language word — those fences render **byte-identical** to the unmodified pipeline. When the info
+string's first-whitespace-run remainder is non-empty, the override pushes `['data-fence-meta', <raw
+remainder>]` onto a to-be-restored copy of the token's `attrs`, calls the SAME default rule (whose own
+class-injection logic then carries the pushed attribute through), and restores `token.attrs` afterward —
+the original token is never left mutated. The value is pushed **raw, never pre-escaped**: `Renderer
+#renderAttrs` HTML-escapes every attribute value it renders (`& < > "`), so `data-fence-meta` is escaped
+by the exact same code path as `class`, proven with a `<tag>&` fixture in `parse.test.ts`.
+★ **EMPIRICAL PARSER PROBE, CONFIRMED THE PLAN'S PREMISE.** Read `node_modules/.../markdown-it/lib/
+renderer.mjs`'s `default_rules.fence` directly (not assumed from docs): `info.split(/(\s+)/g)` computes
+`langName`/`langAttrs` internally for the `highlight()` callback ONLY — nothing past the language word
+ever reaches a class, an attribute, or the DOM when no `highlight` option is configured (parse.ts's
+`PARSE_OPTIONS` sets none). Verified live: `md.render('\`\`\`javascript {2,4}\n1;\n\`\`\`')` produces
+byte-identical output to `md.render('\`\`\`javascript\n1;\n\`\`\`')` — `{2,4}` is fully discarded pre-
+change, confirming §3.6/§7-3's corrected premise, not assumed from it.
+★ **TWO DIVERGENCES FROM THE KICKOFF, FOLLOWING tasks.md's OWN Files LIST AS GROUND TRUTH (standing
+rule #1 — the file body over the kickoff's paraphrase).** (1) tasks.md 3.1's Files list is explicit: no
+new golden fixture — "relying on the unit-level literal-string pin instead." The kickoff's own draft
+called for a new `tests/golden/fixtures/*.md` + `tests/golden/output/*.html` pair; that was not built.
+Instead, eight new `parse.test.ts` cases pin `parse()`'s raw output directly, including two that assert
+byte-for-byte equality against the EXACT strings already committed to `tests/golden/output/code.html`
+(the no-op proof, at the unit level). (2) the kickoff's assumed "four committed golden fixtures" count was
+wrong — the golden suite (`tests/golden/golden.test.ts`) actually carries **eight** `describe.each`
+fixtures (`broken, code, gfm-torture, headings-inline, inline-html, links, malicious, nesting`) plus
+`images.html` and a huge-doc SHA-256 pin, ten golden cases total; all eight fixture `.md` files were
+read and confirmed meta-free (`code.md`'s two fences are language-only and languageless — no case moves).
+★ **A THIRD FINDING, DISCOVERED DURING THE REVERT-AND-FAIL ABLATION, NOT ANTICIPATED BY EITHER
+tasks.md OR THE KICKOFF: `sanitize.ts`'s `ALLOW_DATA_ATTR: false` (plus an `ALLOWED_ATTR` allowlist that
+does not name `data-fence-meta`) strips this attribute in the REAL pipeline (`sanitize(parse(md))`).**
+Made the golden suite's own `git diff tests/golden/output/`-based revert-and-fail instruction (tasks.md's
+literal text) a **dead instrument**: an ablated build that unconditionally emits `data-fence-meta` (even
+empty) produces **zero** golden-suite diff, because `sanitize()` erases the attribute — present or absent
+— before the snapshot comparison ever sees it. Proved by ablation (guard commented out, `node_modules/
+.vite` cache cleared to rule out a stale-transform false-negative, `golden.test.ts` re-run: 10/10 still
+GREEN, `git diff tests/golden/output/` empty) then RESTORED and re-confirmed green. The WORKING
+revert-and-fail mechanism is the unit-level `parse.test.ts` suite (calls `parse()` directly, no sanitize
+in the path): the same ablation red-flagged 6 tests with the defect's own signature (`expected ... not to
+contain 'data-fence-meta'` / `received '<pre><code data-fence-meta="" class="language-javascript">...'`),
+then went green again on restore. **`sanitize.ts` is untouched by this task** (out of scope — task 3.1's
+Files list names only `parse.ts`/`parse.test.ts`, and D-8's whole plumbing is framed as "standalone and
+testable before anything highlights"), but the allowlist gap is a **carried item**: task 4.3, D-8's own
+named consumer (reads `code.dataset.fenceMeta` for line-highlighting), does not list `sanitize.ts` in its
+Files either — whichever task first needs `data-fence-meta` to survive to the live DOM must add it to
+`ALLOWED_ATTR` there, with its own one-line rationale (matching the file's existing per-attribute comment
+convention), or the attribute stays parse-stage-only and 4.3's toolbar never sees it.
+★ **THE CS-BYTE-IDENTICAL PREDICTION IN tasks.md's OWN VERIFY TEXT DID NOT HOLD, AND IS CORRECTED HERE
+BY MEASUREMENT.** tasks.md 3.1 predicted "a conditional that never fires for today's corpus moves no
+bytes" and the standing invariant (line 56-57) frames content-script bytes as "byte-identical THROUGH
+THIS ENTIRE MILESTONE... never contingent." Both bundles DID move: `parse.ts` sits on **both** graphs
+(confirmed: `git status --short` shows only `parse.ts`/`parse.test.ts` touched, so the whole delta is this
+task's own code, not drift), and any live, always-executing code added to that single shared module
+(D-8's own "one parser, one instance" lock rules out a second, surface-scoped instance) necessarily grows
+both bundles regardless of whether the conditional ever fires at runtime — the "moves no bytes" framing
+described the conditional's RUNTIME behavior, not its STATIC code cost, and those are different
+quantities. **Content script: 329,464 → 329,803 B (+339 B), md5 Cr `ec91cff6b6…`→`9e0b5c5c42…` /
+Fx `e36e768df1…`→`a5d3a65376…`. App-page chunk: 400,435 → 400,774 B (+339 B, the SAME delta — one
+shared module, one added code path), md5 `487b1b7a4b…`→`da584e0e32…` both engines.** Firefox rebuilt
+FRESH via `npx wxt build -b firefox` (not `pnpm build`, which is Chrome-only) to rule out the standing
+stale-Firefox-output pitfall — confirmed live, not carried from a prior session's `.output`.
+Standing invariants: `pnpm test` **959/959** (57 files, +8 — this task's own new cases; prior 951/951 at
+2.2's close) · `pnpm lint` EXIT=0 · `git diff tests/golden/output/` EMPTY (all ten golden cases unchanged)
+· `tests/manifest.test.ts` unmodified **2975 B**, 8/8 · 007 `diagramImportFence.test.ts` **8/8**, run
+explicitly · deps STILL **6** · NUL both-forms check (`tr`/`python3`) clean on `parse.ts` and
+`parse.test.ts`, positive control (a 3-NUL scratch file) read nonzero in both forms · built manifests
+**654/770 B**, `permissions: []` both, no `web_accessible_resources`. `git diff --name-only HEAD` at the
+commit: ONLY `src/render/parse.ts` · `src/render/parse.test.ts` · `specs/009-code-blocks/tasks.md` (3.1's
+box) · this file. No other `src/`, `entrypoints/`, or `tests/` file in the diff.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
