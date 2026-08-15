@@ -1,6 +1,70 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-15 · M9 GATE 3 — tasks 009 (code blocks: Shiki syntax highlighting, code themes, per-block
+  toolbar) APPROVED, WITH TWO RULINGS. Implementation may begin at task 1.1, in a fresh session.**
+  `specs/009-code-blocks/tasks.md`, drafted at `c3582b1` (**24 tasks across nine groups**, following plan
+  §6's group order — 1 Foundation (2) · 2 the harness (2) · 3 fence-meta plumbing (1) · 4 the enhancer (5) ·
+  5 code themes (2) · 6 collapsible blocks (1) · 7 systemic degradation (2) · 8 measure→decide→implement (6)
+  · 9 the close gate (3)), was reviewed against plan 009 and approved to begin implementation. **The
+  tasks.md status line stays "DRAFT awaiting gate 3" and THIS ENTRY IS THE APPROVAL OF RECORD** — the
+  standing precedent (spec 009 still reads "draft" post-gate-1 `1ab8db5`; plan 009 still reads "draft"
+  post-gate-2 `beeb224`; 008's tasks the same, approved post-gate-3 while reading "DRAFT awaiting gate 3"
+  `7e9788b`; 007's tasks likewise, `66634fa`). A context-loss session verifies M9's gate 3 **here**, not in
+  the artifact header.
+  **WHAT THIS APPROVES:** the tasks as drafted — the sealed plan (**D-1…D-13**) ordered into the nine
+  groups, each task naming the D-values it services and applying plan §0's already-written `decisions.md`
+  entry text **verbatim** with the commit that implements it; the **four gate-2 rulings applied, never
+  re-argued** (Ruling 1 the app-page harness (D-1) → group 2 · Ruling 2 the `parse.ts` fence-meta change
+  (D-8) → group 3 · Ruling 3 the D-3 engine revisit-when → carried as a standing condition, re-stated at 9.3
+  · Ruling 4 the harness output as a standing baseline → produced at 2.2, sanity-read at 9.1, banked at
+  9.3). Gate 2 issued **no** scope instruction to the tasks stage (unlike M8's gate 2, which split one task
+  and re-scoped another) — so there is no analogous discharge to record here.
+  **TWO DIVERGENCES WERE FLAGGED AT THE GATE AND BOTH ARE RULED — the tasks stage's own tree-vs-plan
+  decomposition seams, re-derived against the actual tree, FLAGGED rather than silently patched:**
+  - **RULING 1 · THE IMPORT FENCE MOVES FROM GROUP 1 TO TASK 4.5 — APPROVED.** Plan §6 named
+    `codeImportFence.test.ts` in group 1; the draft moves it to task 4.5. **Rationale:** clause B requires
+    the app-page graph to actually REACH the enhancer — an import edge that does not exist until a call
+    site is wired (task 4.1) — verified against 007's own precedent exactly: `diagramEngine.ts` was built
+    unreachable at 007 task 1.2, and `diagramImportFence.test.ts` landed at 007 task 3.4 (commit `522a3fe`),
+    AFTER both call sites existed. 009 follows the same mechanical shape — group 1 builds `codeEngine.ts`
+    unreachable, the fence lands once 4.1 wires a real call site. This ruling also captures the clause-C
+    adjustment plan §0.2 already named (finding (a)): the fence expects **TWO** permitted static specifiers
+    (`shiki/package.json`, `shiki/engine/javascript`), not 007's one — a naive `toHaveLength(1)` copy would
+    fail the fence on CORRECT code. **Noted in the ruling: this does NOT reopen D-2** — the same four-clause
+    fence, the same substance; only WHERE it lands changed, forced by clause B's own logic.
+  - **RULING 2 · A NEW MODULE, `codeThemeControl.ts`, AT TASK 5.2 — APPROVED.** Not named in plan §2's
+    Create list. **Rationale:** `themeControl.ts`'s existing shape is a 3-way cycle button (auto → light →
+    dark), structurally unable to represent ≥14 code-theme choices; the ≥14-option selector needs a
+    listbox-shaped module, mirroring 008's `diffChrome.ts` `role="listbox"` pattern. **Noted in the ruling:
+    this does NOT reopen D-9** — `codeTheme` is still a fourth field on the one global settings row; this is
+    the UI module plan §2's Create list missed, not an architecture change.
+  Both divergences are plan-§6/§2-vs-tree decomposition seams the plan's prose did not foresee, re-derived
+  against the actual tree and 007's own precedent — the tasks stage doing its job, per AGENTS.md's standing
+  rule that a mismatch between a kickoff/plan's assumption and the artifact's actual body is flagged, never
+  silently resolved either way. **Neither reopens a sealed D-value or a spec §3.x call.**
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not write `src/` code; it does not install `shiki` (deps stay
+  **5** — that is task 1.1, at implementation); it reopens **no** plan D-value and **no** spec §3.x decision;
+  it does not resolve **M-1…M-4's VALUES** (those stay §8 measure-then-choose at implementation, PRODUCED at
+  8.1–8.4, CHOSEN by the human at 8.5, EXECUTED at 8.6); it edits **no** sealed artifact — `tasks.md`'s
+  status line is **not** flipped, and **no box is ticked** (per-task ticking is the standing convention
+  since 008's gate-3, `7e9788b`; forward-ticking begins with task 1.1's own commit). It writes no
+  implementation code: task 1.1 begins in a **fresh session** (C14, WORKFLOW.md §5.3) — the FIRST `src/`
+  code of the milestone.
+  **Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to gate 2's close** (CS **329,233 B**, md5 Cr
+  `b115c9ae81acf3a834b2834354b4c23a` / Fx `237831d2332acc1efb2305a238c4264b`; app **399,646 B**), **golden
+  EMPTY** (`git diff tests/golden/output/` empty), **007's import fence 8/8** with clause B firing as the
+  control, manifest `permissions: []` on **both** built manifests (Cr 654 B / Fx 770 B),
+  `web_accessible_resources` absent, **deps STILL 5** (`shiki` scoped, not installed), `pnpm test` 944/944,
+  `pnpm lint` EXIT=0. NUL check on `tasks.md`: 0 by both the `python3` and `tr` forms; a control file with
+  one literal NUL byte reads 1 (python) / strips to 6 of 7 bytes (tr), proving both forms actually fire.
+  **Revisit-when:** (a) implementation surfaces a task whose Verify contract cannot be executed as
+  written — banked at the point of discovery, never propagated forward (the M7/M8 gate-3 precedent); (b)
+  8.5's human decision gate rules an M-1…M-4 value in a way that reopens a task's shape — a finding
+  reported with its number, not a quiet re-scope; (c) a future milestone's tasks stage hits the same
+  plan-§6/§2-vs-tree seam and wants a standing rule instead of a per-milestone ruling — that is a new human
+  call, not inferred from these two.
+
 - **2026-08-15 · M9 GATE 2 — plan 009 (code blocks: Shiki syntax highlighting, code themes, per-block
   toolbar) APPROVED, WITH FOUR RULINGS. `tasks.md` is the next artifact and the next gate.**
   `specs/009-code-blocks/plan.md`, drafted at `40b4ed1` against a codebase recon at `1ab8db5`, was reviewed
