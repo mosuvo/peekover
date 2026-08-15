@@ -96,6 +96,26 @@ byte baselines BEFORE task 1.1's own firing control runs** — the gate-2/gate-3
 § Baselines). Task 1.1 prices its firing control and its post-install byte-identity check against the NEW
 figures, explicitly stated as a divergence from the kickoff's assumed numbers (standing rule #1) — not
 silently carried forward.
+★ **TASK 1.1 DONE — `shiki@4.4.3` INSTALLED, THE GOVERNED 6TH DEPENDENCY (D-13). NOW-POINTER ADVANCES TO
+1.2 NEXT** (007 1.1's own phrasing convention). Firing control fired on `src/render/mount.ts`'s
+`console.warn` diagnostic string (+1 B, both bundles' md5 moved) and restored cleanly to the post-
+prerequisite baseline (CS 329,464 B md5 Cr `ec91cff6b6…` / Fx `e36e768df1…`; app 399,902 B md5
+`450c0201897…`) before the install — the zero delta below is a measurement, not a null reading. `dependencies`
+**5 → 6**, delta asserted programmatically as exactly `+shiki`. `pnpm audit --prod` clean, **0** advisories.
+MIT confirmed on disk (`.license` field AND `LICENSE` file, both). No `preinstall`/`postinstall` on `shiki`
+or any of its eight named direct deps (enumerated via pnpm's `.pnpm` virtual store, all nine confirmed
+empty) — `@shikijs/vscode-textmate` resolved to `10.0.2`, an undeclared ninth transitive
+(`@shikijs/primitive@4.4.3`) also appeared in the store, noted not investigated (not one of the eight named
+deps, no scripts field concern raised). SBOM regenerated, 165 runtime components, `shiki` and BOTH
+`@shikijs/engine-oniguruma` / `@shikijs/engine-javascript` present (D-13's own named-expected shape).
+**Both bundles wc -c- and md5-IDENTICAL to the firing-control-restored baseline, both engines** — CS
+329,464 B, app 399,902 B, unchanged by the install (nothing imports `shiki` yet). Structural absence
+confirmed (`git grep` over `src/`+`entrypoints/` for `shiki`/`codeEngine`/`codeEnhancer`/`codeView` → 0
+hits), never an identifier grep on the minified bundle. Golden EMPTY; manifest **2975 B** unmodified; built
+manifests **654/770 B**, `permissions: []` both, no `web_accessible_resources`; 944/944 unit (56 files,
+incl. 007 `diagramImportFence` 8/8); `pnpm lint` EXIT=0. `git diff --name-only HEAD` at the commit: ONLY
+`package.json` + `pnpm-lock.yaml` + this file + `tasks.md`'s box flip. No `src/` file touched — `codeEngine.ts`
+is task 1.2's, not this one's.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in

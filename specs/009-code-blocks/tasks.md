@@ -143,7 +143,7 @@ unreachable here, exactly as `diagramEngine.ts` was; `codeImportFence.test.ts`'s
 clause B real. This is a plan §6-vs-tree decomposition seam the plan's own prose did not foresee (kickoff FLAG
 category 3) — named here for gate-3 review, not silently patched.
 
-- [ ] **1.1 Install `shiki`, governed exactly as §3.10 specifies (D-13).** `shiki@4.4.3`, MIT, no
+- [x] **1.1 Install `shiki`, governed exactly as §3.10 specifies (D-13).** `shiki@4.4.3`, MIT, no
       `preinstall`/`postinstall` script, eight direct dependencies (`@shikijs/core`, `@shikijs/langs`,
       `@shikijs/themes`, `@shikijs/types`, `@shikijs/vscode-textmate`, `@shikijs/engine-oniguruma`,
       `@shikijs/engine-javascript`, `@types/hast`) — **both regex-engine sub-packages appear in the SBOM
