@@ -160,7 +160,7 @@ category 3) — named here for gate-3 review, not silently patched.
       revert) — a null reading that cannot move is not a measurement. Golden EMPTY · manifest green **2975 B**
       · `permissions: []` both engines. [D-13; §3.10]
 
-- [ ] **1.2 `codeEngine.ts` — the ONE importer, the JS-regex-engine choice locked at import time, the
+- [x] **1.2 `codeEngine.ts` — the ONE importer, the JS-regex-engine choice locked at import time, the
       feature-detect gate, UNREACHABLE from any entrypoint (D-3).** `loadCodeEngine(root)`: `hasCodeFence(root)
       ? … : null` (the `diagramEngine.ts` shape, mirrored) — the dynamic `import('shiki/core')` is the ONE
       edge, evaluated only when a fence exists. `createHighlighterCore({ engine: createJavaScriptRegexEngine(),

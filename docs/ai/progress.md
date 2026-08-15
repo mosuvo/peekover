@@ -116,6 +116,72 @@ manifests **654/770 B**, `permissions: []` both, no `web_accessible_resources`; 
 incl. 007 `diagramImportFence` 8/8); `pnpm lint` EXIT=0. `git diff --name-only HEAD` at the commit: ONLY
 `package.json` + `pnpm-lock.yaml` + this file + `tasks.md`'s box flip. No `src/` file touched — `codeEngine.ts`
 is task 1.2's, not this one's.
+★ **TASK 1.2 DONE — `codeEngine.ts` BUILT, UNREACHABLE, THE JS-REGEX ENGINE LOCKED (D-3). NOW-POINTER
+ADVANCES TO 2.1 NEXT.** Mirrors `diagramEngine.ts`'s shape (fence predicate + null-early-return +
+injectable loader + static `package.json` read) with one deliberate divergence from the kickoff's
+paraphrase, taken from `codeImportFence.test.ts`'s clause C at task 4.5 (already written into tasks.md
+1.2/4.5): `shiki/engine/javascript` is a SECOND static, eager specifier alongside `shiki/package.json` —
+`createJavaScriptRegexEngine` is imported at module top level, not behind the one dynamic
+`import('shiki/core')` edge. `loadCodeEngine(root, loader?)` creates `createHighlighterCore` with an
+EMPTY theme/lang set (`loadLanguage`/`loadTheme` cover per-fence registration in a later task) — narrower
+than `diagramEngine.ts`'s pre-baked config, because D-9's theme set and the language set are not this
+task's decision to make.
+Engine choice, RED-FIRST: `codeEngine.test.ts` mocks `shiki/engine/javascript`'s
+`createJavaScriptRegexEngine` (wrapping the real implementation) and asserts `createHighlighterCore`
+receives the EXACT object that mock returned. Swapping the import for `shiki/engine/oniguruma`'s
+`createOnigurumaEngine` reds the assertion — `AssertionError: expected "vi.fn()" to be called 1 times,
+but got 0 times` — captured, then reverted; `pnpm test` green again after revert.
+Injected-loader spy: fence-free root ⇒ `loader` AND `createHighlighterCore` both 0 calls; the SAME spies
+on a fenced root in the same test show 1 call each (the positive control, retro finding 1).
+`codeToTokens` shape captured against installed 4.4.3 (`github-dark` + `javascript`, fixture
+`console.log('hi')`): `{ tokens: ThemedToken[][], fg, bg, themeName, grammarState }`, each token carrying
+`content`/`offset`/`color`/`fontStyle`; reassembling every line's token contents round-trips the source
+byte-for-byte — the ground truth a later task's DOM adoption is written against.
+`@shikijs/primitive` question resolved: **transitive**, not direct — it is `@shikijs/core`'s own
+dependency (one of the eight tasks.md 1.1 already enumerates), confirmed via
+`node_modules/.pnpm/@shikijs+core@4.4.3/…/package.json`'s `dependencies`; its `scripts` field has only
+`build`/`dev`/`test` (no install-lifecycle hook). Task 1.1's "eight direct dependencies" enumeration is
+NOT off-by-one — no ledger issue.
+★ **THE SCRATCH-REFERENCE ABLATION NEEDED A REPAIR MID-TASK — recorded here as a methodology finding for
+group 8's D-11 accounting to inherit.** A bare `import '../render/codeEngine';` in `appShell.ts` (the
+kickoff's literal phrasing, and tasks.md 1.2's own) measured a **-5 B** delta — FLAG condition 4,
+near-zero/broken. Root cause, confirmed by inspection: `codeEngine.ts` has ZERO top-level side-effecting
+statements (no `Object.freeze(…)` the way `diagramEngine.ts` has), so with nothing imported BY NAME, the
+whole module — including its own static `shiki/engine/javascript` and dynamic `shiki/core` edges — is
+fully tree-shaken out; `diagramEngine.ts`'s own bare-import ablation only ever worked because ITS
+`Object.freeze` calls forced module retention regardless of usage, an accident of shape 009's leaner
+module doesn't share. Repaired by making the scratch reference an actual CALL —
+`import { loadCodeEngine } from '../render/codeEngine'; … void loadCodeEngine(document);` — which cannot
+be eliminated by any tree-shaker without changing program behaviour. Re-measured: app chunk 399,902 →
+457,819 B (**+57,917 B**), plus a NEW lazy chunk `chunks/core-*.js` at **111,981 B** (105 files vs. the
+104-file baseline) — **169,898 B total, DIAGNOSTIC ONLY**, content-script untouched (329,464 B,
+md5-identical, both engines) both DURING and after the ablation. `appShell.ts` restored
+md5-identical (confirmed against the pre-touch snapshot); post-revert rebuild restored both bundles
+byte- and md5-identical to the pre-ablation baseline (CS 329,464 B / app 399,902 B, both engines, 104
+files). **This is 8.1's own input, not a bound met** — 8.1 must re-derive its own scratch reference (or
+a production one, once 4.x wires real call sites) rather than trust this number as final, since the
+exact bytes depend on which exports get pulled in.
+★ **RULE-#1 DIVERGENCE, NAMED NOT SILENTLY FOLLOWED:** the kickoff and tasks.md 1.2 both cite "the 007 1.2
+precedent exactly" for doing this ablation AT task 1.2. Re-derived against the actual 007 history: task
+1.2's own commit (`1391118`) shipped `diagramEngine.ts` **with no ablation at all** — its body says
+plainly "Bundles md5-identical on both engines (module tree-shaken out)" — and the scratch-reference
+ablation was 007's **separate, dedicated task 1.3** (`c7b3004`, "no source commit — measurements into the
+task report"), whose own body is what actually contains the "unreachable... needs a scratch app-page
+reference" sentence 009's tasks.md quotes. 009's tasks.md folds what 007 split across two tasks into one
+— its citation of "the 007 1.2 precedent" is imprecise, though its own task-1.2 Verify contract
+independently and explicitly demands the ablation here, so it was performed as this file's own authority
+requires, not deferred on the strength of the mis-cited precedent alone.
+`diagramEngine.ts:77`'s `mermaid/package.json` read line, cited by tasks.md as ":77" — confirmed UNMOVED
+at line 77, no drift.
+Standing invariants: `pnpm test` **951/951** (57 files — **+7 tests, +1 file** from `codeEngine.test.ts`,
+delta named); `pnpm lint` EXIT=0; `git diff tests/golden/output/` EMPTY; `tests/manifest.test.ts`
+unmodified **2975 B**; built manifests **654/770 B**, `permissions: []` both, no
+`web_accessible_resources`; 007 `diagramImportFence.test.ts` **8/8**, run explicitly. deps STILL **6**.
+Final tree: both bundles byte- and md5-identical to task 1.1's close (CS 329,464 B / app 399,902 B, both
+engines) — `codeEngine.ts` costs zero bundle bytes while unreachable. `git diff --name-only HEAD` at the
+commit: ONLY `src/render/codeEngine.ts` (new) · `src/render/codeEngine.test.ts` (new) · this file ·
+`tasks.md`'s 1.2 box flip. `src/app/appShell.ts` does NOT appear — the scratch reference was reverted
+cleanly.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
