@@ -1,6 +1,100 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-15 · M9 GATE 2 — plan 009 (code blocks: Shiki syntax highlighting, code themes, per-block
+  toolbar) APPROVED, WITH FOUR RULINGS. `tasks.md` is the next artifact and the next gate.**
+  `specs/009-code-blocks/plan.md`, drafted at `40b4ed1` against a codebase recon at `1ab8db5`, was reviewed
+  and approved. It settles **D-1…D-13**, resolves the spec's nine §7 risks against the **actual code**,
+  discharges the §3.11 sibling-checklist audit as a 24-row table, proposes no spec amendment and adds no
+  dependency. **The plan file's status line stays "draft (Gear-3 gate 2 — awaiting human approval before
+  `tasks.md`)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the standing precedent (spec 007 still reads
+  "draft" post-gate-1 `e09520f`; plan 007 still reads "draft — awaiting gate 2" post-gate-2 `cab93c7`; M8's
+  plan still reads "draft" post-gate-2 `2c29821`; 009's own spec still reads "draft" post-gate-1 `1ab8db5`).
+  A context-loss session verifies M9's gate 2 **here**, not in the artifact header. **No plan or spec
+  section is edited by this entry; no D-value moves — D-1 through D-13 are APPROVED AS DRAFTED and
+  `tasks.md` cites them as-is.**
+  **THE FOUR RULINGS — plan §8's Q1–Q4, RULED HERE so `tasks.md` inherits them settled:**
+  - **RULING 1 · Q1, THE HARNESS (D-1) — APPROVED.** The capability-free, query-gated production seam
+    (`entrypoints/app/main.ts`'s `__peekoverHarness` search-param check + `window.__peekoverHarness
+    .openFromHandle` reusing the production `folderSourceFromHandle`) plus the Playwright driver mirroring
+    `perf-first-paint.ts`, EXPLICITLY BLESSED as new production code for an automation need — permitted
+    BECAUSE it is capability-free by construction: it accepts only a `FileSystemDirectoryHandle` the caller
+    already constructed (OPFS, in-origin); it ships no manifest key, no permission, no
+    `web_accessible_resources`; it is query-param-inert on every real user visit (the real launch path never
+    adds the param); and it is reachable only by a script already running in the extension's own origin (a
+    Playwright driver that loaded the extension). **Rationale:** it is the only way to honestly PRICE the
+    sealed app-page-only decision — §8's M-2 is a quantitative <165 ms gate, a human eyeball cannot produce
+    that number, and D-11 (iii)'s carried trigger exists precisely to stop unmeasured app-page engine work
+    from shipping. **Noted in the ruling: permitted as capability-free; this does NOT set a precedent for
+    other automation seams** — each such seam is its own decision, scrutinised the same way.
+  - **RULING 2 · Q2, THE `parse.ts` CHANGE (D-8) — APPROVED.** The additive, conditional fence-renderer
+    override — appends `data-fence-meta` to the emitted `<code>` ONLY when the info string carries meta
+    beyond the language word; byte-identical output for every existing fence; proven a no-op against all
+    four golden fence fixtures; stays one-parser-one-instance; the same category of change GFM tables and
+    task-lists already are in `parse.ts`. **Rationale:** markdown-it's default fence renderer discards
+    everything past the language word (verified empirically against markdown-it 14.3.0) — so the spec's
+    §3.6/§7-3 "not a parser change" premise does NOT hold; this is the MINIMUM VIABLE fix, preserving the
+    spec's INTENT (highlighting behavior stays a post-mount read) while correcting the framing, not the
+    goal. **Noted in the ruling:** it touches `parse.ts` (a file 007/008 left untouched) but honors WHY they
+    did — it is a serialization tweak on an already-parsed token, not a parse-complexity addition; it
+    widens no rule set.
+  - **RULING 3 · Q3, THE D-3 ENGINE REVISIT-WHEN — CONFIRMED.** "Grammar/perf inadequacy discovered at
+    measurement or walk" is the right revisit-condition for the `shiki/engine/javascript` choice — a
+    condition that fires on a real finding (M-1 / M-2 / the walk), not on vague memory. The same
+    condition-not-memory discipline M8's gate 2 confirmed for its own D-11 (iii) trigger. If a grammar
+    isn't covered or perf fails at measurement or walk, THAT is the trigger to reconsider the WASM/Oniguruma
+    path — not before, not never.
+  - **RULING 4 · Q4, THE HARNESS OUTPUT AS A STANDING BASELINE — CONFIRMED YES.** D-1's harness first-paint
+    number becomes a STANDING BASELINE that future app-page work prices against — the way the
+    content-script harness's 26.9/29.9 ms headroom became 008's own input. **Rationale:** naming it
+    explicitly means the next planner who touches the app-page render path inherits a NUMBER, not a
+    rediscovery — the D-11 (iii) lesson applied forward (leave a measurement, not a condition).
+  **THE OTHER D-VALUES — APPROVED AS DRAFTED.** D-2 (the lazy-chunk fence, `codeEngine.ts`/
+  `codeImportFence.test.ts`, mirroring `diagramImportFence.test.ts`'s four clauses, expecting TWO permitted
+  static specifiers not one) · D-4 (Shiki's structured token API, never an HTML string; `sanitize.ts`
+  untouched) · D-5 (the enhancer runs from the same two app-page call sites 007 D-12 established, `mount()`
+  touched at zero sites) · D-6 (the retained `<pre>` is the copy source of truth, zero duplication) · D-7
+  (tokenization and the toolbar are one enhancer, `codeEnhancer.ts`, structurally forced by 009 having no
+  cross-surface asymmetry to protect) · D-9 (`codeTheme` is a fourth field on the one global settings row) ·
+  D-10 (collapsible blocks reuse `readerMode.ts`'s flip-an-attribute pattern) · D-11 (the byte budget
+  decomposes to four ablation-proven components) · D-12 (auto-detection priced on three axes, three
+  mechanisms, forbidden from choosing) · D-13 (the sixth dependency governed exactly as §3.10 specifies).
+  None is reopened by this gate.
+  **THREE SCOPE-READ FINDINGS ACKNOWLEDGED — the spec's own honest "didn't verify" spots, verified by the
+  plan (§0.2):**
+  - **(a) TWO `shiki` strings exist in `src/`, not one.** The spec's §1 claim of exactly one is corrected —
+    `parse.test.ts:91`'s test comment AND `diagramEngine.ts:12`'s own doc comment (quoting
+    `check-dynamic-imports.ts`'s fixture label, *"Shiki pattern"*) both match. Neither is Shiki code, so the
+    spec's underlying F3-at-0% point holds, but the count is corrected — and it is D-11's own live
+    demonstration that a `grep shiki` proves nothing about whether Shiki shipped, not a hypothetical.
+    D-2's fence now expects TWO permitted static specifiers (`shiki/package.json`, `shiki/engine/javascript`),
+    not 007's one, named explicitly so `tasks.md` does not copy `diagramImportFence.test.ts`'s
+    `toHaveLength(1)` shape unadjusted.
+  - **(b) `design/mockup.html` HAS a `.codeblock` section**, contra the spec's §7-9 claim that no mockup
+    exists. Copy button, language label and three token-colour classes carry a real design precedent to
+    honor (`--code-bg`, already a real token); line numbers, word-wrap, line-highlighting and collapse have
+    **no** mockup baseline — the 008 D-12 finding-4 "no sibling suite = the signal" shape, applied to a
+    mockup instead of a test suite, and carried into plan §3.11 row 24.
+  - **(c) The parser-assumption correction** — D-8/Ruling 2 above: §3.6/§7-3's "reading it is not a parser
+    change" claim does not hold empirically; the underlying intent is preserved, the framing is corrected.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not write `tasks.md`; it does not install `shiki` (deps stay
+  **5**); it does not build the harness or any `src/` change; it reopens no sealed §3.x spec call; it does
+  not resolve M-3/M-4's VALUES (those stay §8 measure-then-choose at implementation, produced then chosen
+  by a human, never by the measuring task itself); it changes no plan section — the plan is approved as it
+  stands at `40b4ed1`. The gate-1 dispositions (app-page-only surface, sealed · the `D-A`…`D-D` labels
+  stripped · Shiki's dependency-governance treatment confirmed in) are **preserved by silence**, per the
+  standing rule that re-deciding a settled answer is a scope-reopen even when it agrees.
+  **Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to gate 1's close (CS 329,233 B / app
+  399,646 B), golden EMPTY, deps STILL 5** (`Object.keys(pkg.dependencies).length === 5`, re-confirmed this
+  session) — `shiki` is scoped, not installed; that lands with implementation, not this gate.
+  **Revisit-when:** (a) `tasks.md` cannot decompose D-1's harness or D-8's `parse.ts` change without
+  reopening a D-value — that is a gate-2 event and returns here, never a quiet amendment; (b) implementation
+  measurement (M-1/M-2) or a later walk finds the `shiki/engine/javascript` engine's performance or a
+  specific grammar's fidelity inadequate — ruling 3's trigger firing, routed to a human then, not decided
+  now, and not a reason to pre-emptively default to the heavier Oniguruma/WASM path; (c) a future milestone
+  needs D-1's harness for a different measurement than M-2 and finds its capability-free design too narrow —
+  a re-argument of ruling 1's construction, not an extension assumed here.
+
 - **2026-08-14 · M9 GATE 1 — spec 009 (code blocks: Shiki syntax highlighting, code themes, per-block
   toolbar) APPROVED, WITH THREE RULINGS. `plan.md` is the next artifact and the next gate.**
   `specs/009-code-blocks/spec.md`, drafted at `4d640b3` from a reviewer-and-human pass over the kickoff's

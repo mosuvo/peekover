@@ -42,26 +42,30 @@ pass, so the spec's job was giving that substance 008's shape rather than re-der
 **Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to M8's close (CS 329,233 B / app 399,646 B)**,
 golden EMPTY, deps **still 5** (`shiki` is scoped but not yet installed — that lands with implementation,
 not this gate).
-★ **`specs/009-code-blocks/plan.md` IS NOW DRAFTED AND AWAITING GATE 2** (2026-08-14) — the human reviews
-the plan against the spec, then approves for `tasks.md` or returns it with revisions. It runs the scope-read
-the spec itself did not (§ Evidence base), settles **D-1…D-13**, resolves all nine §7 risks against the
-actual tree, discharges the §7-8 sibling-checklist audit as a 24-row table, and routes four questions to the
-gate (plan §8). **Three of the spec's own supporting citations did NOT hold and are corrected in the plan,
-not silently** (§0.2): the "only one `shiki` string in `src/`" count was two, not one; `design/mockup.html`
-DOES have a code-block section (contra §7-9's claim it did not exist); and §3.6/§7-3's "not a parser change"
-framing for fence-meta reading does not survive contact with markdown-it's actual default fence renderer
-(verified empirically — `{2,4}` never reaches the DOM), resolved with one additive, conditional `parse.ts`
-rule (D-8) that is a no-op against every existing golden fixture. **The WASM/CSP risk (§3.10, §7-2) is
-RESOLVED WITHOUT an AGENTS.md #4 event**: D-3 takes Shiki's `shiki/engine/javascript` regex engine, verified
-against Shiki's current docs to cover every built-in grammar, so the manifest and `permissions: []` stay
-untouched. **The app-page first-paint harness (D-11 (iii)'s obligation) is scoped as the plan's first
-architectural move** — a new, query-gated, capability-free seam in `entrypoints/app/main.ts` plus a
-Playwright driver mirroring `perf-first-paint.ts`, flagged to gate 2 as the plan's most novel call (no
-scoped-but-unbuilt harness design existed to reuse; the blocker is independently corroborated by
-`perf-folder-tree.ts`'s own header). **No code and no tasks exist.** The plan's status line stays "draft" by
-the M7/M8 precedent — the `decisions.md` bank is the approval of record, not the artifact header.
-**Nothing is in implementation; gate 1 is passed and `plan.md` is now written — gate 2 is the sanctioned
-next act, but no implementation code exists before `tasks.md` passes gate 3** (WORKFLOW.md §5.3).
+★ **`specs/009-code-blocks/plan.md` PASSED GATE 2 — APPROVED (2026-08-15); `tasks.md` IS THE NEXT ARTIFACT
+AND THE NEXT GATE**, generated in a fresh session (C14). It settles **D-1…D-13**, resolves all nine §7 risks
+against the actual tree, and discharges the §3.11 sibling-checklist audit as a 24-row table. **All four
+gate-2 questions (plan §8) were RULED, as FOUR RULINGS:** **Ruling 1** the app-page first-paint harness
+(D-1) is APPROVED as new production code, capability-free by construction — the only way to honestly price
+the sealed app-page-only decision. **Ruling 2** the additive, conditional `parse.ts` fence-meta renderer
+(D-8) is APPROVED as the minimum viable fix for the spec's corrected §3.6/§7-3 premise, proven a no-op
+against every existing golden fixture. **Ruling 3** the D-3 engine revisit-when is CONFIRMED — grammar/perf
+inadequacy discovered at measurement or walk, not before, not never. **Ruling 4** D-1's harness output is
+CONFIRMED as a standing baseline future app-page work prices against, the way the content-script harness's
+26.9/29.9 ms headroom became 008's own input. **Three of the spec's own supporting citations did NOT hold
+and are acknowledged as scope-read findings, not silently patched** (§0.2): the "only one `shiki` string in
+`src/`" count was two, not one; `design/mockup.html` DOES have a code-block section (contra §7-9's claim it
+did not exist); and §3.6/§7-3's "not a parser change" framing for fence-meta reading does not survive
+contact with markdown-it's actual default fence renderer (verified empirically — `{2,4}` never reaches the
+DOM), resolved by Ruling 2 above. **The WASM/CSP risk (§3.10, §7-2) stays RESOLVED WITHOUT an AGENTS.md #4
+event**: D-3's `shiki/engine/javascript` regex engine, verified against Shiki's current docs to cover every
+built-in grammar, so the manifest and `permissions: []` stay untouched. Full record: `decisions.md`
+**2026-08-15 · M9 GATE 2**. **No code exists and no approved `tasks.md` exists.** The plan's status line
+stays "draft" by the M7/M8 precedent — the `decisions.md` bank is the approval of record, not the artifact
+header. **Doc-only: no `src/` change, bundle byte- and md5-IDENTICAL to gate 1's close (CS 329,233 B / app
+399,646 B), golden EMPTY, deps STILL 5** — `shiki` is scoped, not installed; that lands with implementation.
+**Nothing is in implementation; gate 2 is passed and the plan's architecture is sealed — `tasks.md` is the
+sanctioned next act, but no implementation code exists before `tasks.md` passes gate 3** (WORKFLOW.md §5.3).
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
