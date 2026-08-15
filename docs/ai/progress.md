@@ -376,6 +376,113 @@ explicitly · deps STILL **6** · NUL both-forms check (`tr`/`python3`) clean on
 commit: ONLY `src/render/parse.ts` · `src/render/parse.test.ts` · `specs/009-code-blocks/tasks.md` (3.1's
 box) · this file. No other `src/`, `entrypoints/`, or `tests/` file in the diff.
 
+★ **TASK 4.1 IS DONE — `codeEnhancer.ts` + `codeView.ts`, D-5's TWO CALL SITES, D-6's RETAINED/WRAPPER
+STRUCTURE. NOW-POINTER ADVANCES TO 4.2 NEXT.** Mirrors `diagramEnhancer.ts`'s 007-task-3.1 shape
+directly (`git show 1e09164`): a synchronous prologue that finds language-classed fences and puts
+structure around each one, then returns — the tokenize/adopt async body (D-4, `codeEngine.ts` wired
+for real) is task 4.2's, exactly as 007 split its own 3.1/3.2.
+★ **THREE DIVERGENCES FROM THE KICKOFF, tasks.md's OWN TEXT FOLLOWED AS GROUND TRUTH (standing rule
+#1).** **(1) SCOPE.** The kickoff's own hypothesis merged 4.1+4.2 — it asked for real `loadCodeEngine`
+tokenization, per-fence try/catch and a two-fence-one-bad-language degradation test inside "4.1."
+tasks.md tags 4.1 with **D-5, D-6 only**; D-4 (`codeToTokens` adoption, per-fence catch) is tagged
+**only on 4.2**, and 4.1's own prose is explicit — "nothing highlighted yet," "the engine is never
+touched." Flagged to the operator before writing code (AskUserQuestion); answer: follow tasks.md
+narrowly. **(2) FILES LIST.** The kickoff omitted `codeView.ts`, `readerCss.ts` and
+`codeEnhancer.test.ts` — all three are in tasks.md 4.1's own Files line and all three were needed:
+`codeView.ts` is where D-6's structure actually lives (mirroring `diagramView.ts`), `readerCss.ts`
+carries the `rendered`-hides-the-retained-pre rule, `codeEnhancer.test.ts` is the jsdom-level
+DOM-shape suite the browser suite's header explicitly says exists "alongside" it. **(3) A STALE NAME
+IN tasks.md ITSELF.** 4.1's text says "`appShell.ts`'s `renderWithDiagrams` closure" — that name no
+longer exists; 008 renamed it to `renderWithEnhancements` (with its own doc comment explaining why:
+"the name was a lie the compiler could not catch"). Wired against the real name, confirmed by reading
+`appShell.ts` directly rather than trusting the stale reference.
+★ **D-6's STRUCTURE IS A WRAP, NOT A SIBLING — A REAL DIFFERENCE FROM 007's `<figure>` PATTERN, NOT A
+COPY-PASTE.** `plan.md`'s D-6 text is explicit the wrapper "wraps BOTH the retained `<pre>` … and the
+newly-built highlighted `<pre>`" — unlike `diagramView.ts`'s figure, which sits as a plain sibling the
+`<pre>` it never contains. So `insertCodeWrapper` does `pre.after(wrapper); wrapper.append(pre)` — the
+wrapper lands at the `<pre>`'s old position, then the `<pre>` moves inside it (re-parenting, not
+mutation: same node, same attributes, same textContent). ★ **A second real difference, easy to miss by
+copying 007 uncritically: the wrapper is NEVER `aria-hidden` while pending.** `diagramView.ts`'s
+placeholder is `aria-hidden` because it starts EMPTY; the code wrapper starts holding the retained
+`<pre>`'s real, already-readable text, so hiding it from assistive technology would hide content that
+was accessible a moment before this task's own code ran. Both differences are stated in
+`codeView.ts`'s own module header, not left implicit.
+★ **A REAL REGRESSION, FOUND BY THE FULL BROWSER SUITE, NOT BY THIS TASK'S OWN NARROW TEST FILES —
+THE STANDING LESSON THAT A NEW SURFACE MUST BE PROVEN AGAINST THE WHOLE TREE, NOT JUST ITSELF.**
+`CODE_FENCE_SELECTOR` (`pre > code[class^="language-"]`, the literal both tasks.md 4.1 and plan.md
+§1.3 give verbatim) matches `language-mermaid` too — it starts with `language-`. `enhanceCode` runs
+AFTER `enhanceDiagrams` at both call sites (D-5's own ordering), so wiring it for real re-parented an
+already-diagram-claimed mermaid `<pre>` into a `.peekover-code` wrapper, breaking
+`pre.nextElementSibling === figure` the instant real call sites existed — `pnpm test:browser` reds
+`diagramRender.browser.test.ts`'s D-12 parity case with exactly that signature (both engines). Neither
+`codeEnhancer.test.ts` nor `codeRender.browser.test.ts` alone would have caught this — both fixture sets
+were written before the collision was known, and 4.1's own Files list does not include any diagram
+test file. **Fixed by excluding `.language-mermaid` inside `codeEnhancer.ts`'s own `codeFencesIn`**
+(a literal class check, not a selector edit — `CODE_FENCE_SELECTOR` itself, and its equality pin
+against `codeEngine.ts`, are UNCHANGED) — `plan.md`'s "no interaction between the two engines is
+scoped" line forbids importing `diagramView.ts` to check the real attribute, so the exclusion is
+self-contained to this module. Two regression tests added (`codeEnhancer.test.ts`): the raw selector
+is proven to match both fences (the control), then `codeFencesIn` is proven to return only the real
+one; a second test hand-builds the exact shape `enhanceDiagrams` leaves behind (a `<figure>` sibling +
+`data-diagram="pending"` on the `<pre>`, built without importing `diagramView.ts`) and proves
+`enhanceCode` moves nothing and marks nothing. Re-ran full `pnpm test:browser` after the fix: 122/122
+files, 1285 passed, 15 skipped, 0 failed (`diagramRender.browser.test.ts` and every other file green).
+★ **CARRIED FINDING FOR 4.2, NAMED NOT FIXED HERE:** `codeEngine.ts` (task 1.2, unchanged this task)
+has the SAME unscoped `CODE_FENCE_SELECTOR`/`hasCodeFence`, so a document with only a mermaid fence
+and no other code would make 4.2's `loadCodeEngine` decide "yes, load Shiki" for nothing to
+highlight. `codeEngine.ts` is not in 4.1's Files list — this is named for 4.2 to resolve, not
+silently patched here.
+★ **A SECOND, INDEPENDENT COLLISION FROM THE SAME CSS ADDITION, CAUGHT BY A DIFFERENT PRE-EXISTING
+CANARY.** `readerCss.ts` is on both graphs; adding CSS to it necessarily moves both bundles (the same
+"static code cost, not runtime behavior" property 3.1 already banked for `parse.ts`). The CSS was
+first appended at the END of `READER_CSS` (after the diagram/lightbox rules) — which broke
+`diagramActions.browser.test.ts`'s **pre-existing** `2,927 B` pin on "the shipped diagram CSS block,"
+because that pin slices `READER_CSS` from D-15's marker to the END of the string and my rules landed
+inside that slice. Its own failure message names the fix: *"if it is a comment, move it below the
+literal"* — except this isn't a comment on the diagram block, it's an unrelated block that needs to
+sit BEFORE the diagram marker instead, restoring the pin's meaning ("diagram CSS only") without
+touching `diagramActions.browser.test.ts` at all (out of 4.1's Files list). Re-pinned by relocation,
+not by editing the assertion. **Retro finding 9's own lesson bites twice in one task, from two
+different pre-existing instruments — both discovered by running the FULL suite, neither would have
+shown up running only this task's own new test files.**
+★ **BYTES, FULLY RECONCILED, ZERO UNACCOUNTED.** Content script: **329,803 → 330,109 B (+306 B)**,
+md5 Cr `9e0b5c5c42…`→`cf8c0312…` / Fx `a5d3a65376…`→`c99305e5…` — the ENTIRE delta is the shared
+`readerCss.ts` CSS block (`git diff` isolated and byte-counted: 306 B exactly, UTF-8, em-dashes
+included per the standing "CSS in template literals ships its comments" lesson). App-page chunk:
+**400,774 → 401,566 B (+792 B)** — 306 B of the SAME shared CSS, plus 486 B of new JS glue
+(`codeEnhancer.ts`, `codeView.ts`, three added lines across the two call sites); both builds (Chrome
+via `pnpm build`, Firefox via `npx wxt build -b firefox`, freshly, `.output` cleared first) agree on
+the 486 B JS-glue figure independently, computed twice across the CSS-relocation fix. **No `shiki`
+chunk in either engine's `.output`** — `git grep` for `shiki` imports still returns ONLY
+`src/render/codeEngine.ts` (unchanged from 1.2); Shiki does not reach the bundle at 4.1, consistent
+with 4.5's own text that bundle bytes move for Shiki's sake for the first time at THAT task, not
+this one. Diagnostic only, per the standing invariant (8.1 owns the full accounting).
+★ **RED-FIRST ABLATIONS, EACH REVERTED AND RE-CONFIRMED CLEAN.** (1) Row 4: `insertCodeWrapper`
+temporarily left the wrapper as a `pre`-sibling instead of wrapping it — reds the containment
+assertion in both `codeEnhancer.test.ts` (jsdom) and `codeRender.browser.test.ts` (Cr+Fx) with the
+defect's own signature (`wrapper.contains(pre)` false). (2) Row 4's INVERT: `enhanceCode` temporarily
+appended the wrapper to the shadow root instead of leaving it at the `<pre>`'s position — reds "puts
+the wrapper INSIDE `.peekover-reader`" on both engines while `git diff tests/golden/output/` stays
+EMPTY, proving the assertion is load-bearing rather than free. (3) Rows 2+3's gate: `mount.ts`
+temporarily called `enhanceCode` directly (mirroring 007's own 3.1 ablation) — reds the
+content-script assertion on both engines with `expected …(1) to have a length of +0 but got 1`, the
+exact accident the gate exists to catch; `mount.ts` restored **md5-identical** (`05436e8e601d…`) to
+its pre-ablation baseline, confirmed by hash and by `git diff --stat` showing no change.
+Standing invariants: `pnpm test` **972/972** (58 files, +13 — `codeEnhancer.test.ts`'s cases,
+including the two mermaid-exclusion regression tests; prior 959/959 at 3.1's close) · `pnpm
+test:browser` **122/122 files green, 1285 passed, 15 skipped, 0 failed** (full suite, both engines,
+re-run after the mermaid fix and the CSS relocation) · `pnpm lint` EXIT=0 · `git diff
+tests/golden/output/` EMPTY · `tests/manifest.test.ts` unmodified **2975 B**, 8/8 · 007
+`diagramImportFence.test.ts` **8/8** · `diagramActions.browser.test.ts`'s shipped-CSS-block pin
+**2,927 B**, restored · deps STILL **6** · built manifests **654/770 B**, `permissions: []` both, no
+`web_accessible_resources` · `pnpm zip` **1,307,773 / 1,307,831 B** both engines, well under the
+**<2 MB** per-engine bound. `git diff --name-only HEAD` at the commit: ONLY `src/render/codeEnhancer.ts`
+(new) · `src/render/codeEnhancer.test.ts` (new) · `src/render/codeView.ts` (new) ·
+`tests/browser/codeRender.browser.test.ts` (new) · `src/app/readerPane.ts` · `src/app/appShell.ts` ·
+`src/theme/readerCss.ts` · `specs/009-code-blocks/tasks.md` (4.1's box) · this file. `codeEngine.ts`,
+`parse.ts`, `sanitize.ts`, `mount.ts`, every `entrypoints/` file and every manifest config file: all
+confirmed byte-identical / untouched. **No other `src/`, `entrypoints/`, or `tests/` file in the diff.**
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the

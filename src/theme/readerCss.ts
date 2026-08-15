@@ -639,6 +639,11 @@ export const READER_CSS = /* css */ `
 .peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
 .peekover-reader h4,.peekover-reader h5,.peekover-reader h6{ scroll-margin-top:24px; }
 
+/* Code blocks (009 D-6) — rationale: codeView.ts. Placed BEFORE the diagram block, not after —
+   diagramActions.browser.test.ts pins that block by slicing to end-of-string. */
+.peekover-reader .peekover-code{position:relative}
+.peekover-reader .peekover-code pre[data-code="rendered"]{display:none}
+
 /* Diagrams (007 D-15) — rationale: diagramView.ts */
 .peekover-reader .peekover-diagram{
   margin:28px 0;padding:0;overflow-x:auto;text-align:center;

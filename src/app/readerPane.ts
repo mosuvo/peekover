@@ -19,6 +19,7 @@
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceTables } from '../render/tableEnhancer';
+import { enhanceCode } from '../render/codeEnhancer';
 import { stopWatch } from '../watch/watchRegistry';
 
 /**
@@ -198,6 +199,10 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // `enhanceTables` is TOTAL (D-7): it cannot throw, so it cannot reach `paint`'s caller and
       // cannot cost the reader a document that already rendered correctly.
       enhanceTables(host);
+      // 009 D-5 SITE 1 — third in the list, after diagrams and tables (D-5's own text: "no ordering
+      // reason beyond newest last"; a markdown-it fence and a GFM table are siblings, and a mermaid
+      // fence does not nest a code block). Synchronous, same D-6 degraded-state property as above.
+      enhanceCode(host);
       return;
     }
     content.replaceChildren(buildState(doc, outcome));

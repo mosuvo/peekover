@@ -270,7 +270,7 @@ group-1 flag)
 ★ **§3.11's audit is consumed here, per its routing table above — no task below is written before it is
 read.**
 
-- [ ] **4.1 The synchronous prologue, D-6's retained/highlighted sibling structure, and the TWO app-page call
+- [x] **4.1 The synchronous prologue, D-6's retained/highlighted sibling structure, and the TWO app-page call
       sites (D-5 · D-6).** `enhanceCode(host)`: `fences = shadow.querySelectorAll('pre > code[class^="language-
       "]')`; if none, return (the engine is never touched — §4). For each fence, build `codeView.ts`'s
       `<div class="peekover-code">` wrapper as a **SIBLING** of the source `<pre>`, retained and visible;
