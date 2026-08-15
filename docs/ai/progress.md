@@ -483,6 +483,95 @@ tests/golden/output/` EMPTY · `tests/manifest.test.ts` unmodified **2975 B**, 8
 `parse.ts`, `sanitize.ts`, `mount.ts`, every `entrypoints/` file and every manifest config file: all
 confirmed byte-identical / untouched. **No other `src/`, `entrypoints/`, or `tests/` file in the diff.**
 
+★ **TASK 4.2 IS DONE — THE ASYNC BODY, D-4'S DIRECT-DOM ADOPTION FROM `codeToTokens`, PER-FENCE
+FAILURE ISOLATION. SHIKI REACHES THE APP-PAGE BUNDLE FOR THE FIRST TIME THIS MILESTONE. NOW-POINTER
+ADVANCES TO 4.3 NEXT.** tasks.md 4.2's own D-value tag line, cited verbatim: *"[D-4, §3.9; §4
+highlighting]"* — D-4 only, not D-5/D-6 (discharged at 4.1) and not D-7 (4.3's toolbar). §3.11's
+routing table (tasks.md's group-4 preamble) assigns **zero rows to 4.2** — every row lands at 4.1,
+4.3, 4.4 or 6.1, or is routed "out" — a real divergence from the session's own kickoff hypothesis,
+confirmed by reading the table directly rather than assumed.
+★ **THE ASYNC BODY MIRRORS `diagramEnhancer.ts`'s task-3.1→3.2 split, one real difference:** Shiki's
+JS-regex engine touches no DOM to tokenize (mermaid's does, hence its shared measuring container),
+so `highlightFences` is a plain sequential loop, no container lifecycle to manage. `enhanceCode`
+now builds `CodePair`s (retained pre + wrapper) synchronously exactly as 4.1 left it, then calls
+`void highlightFences(...)` — never awaited — preserving 4.1's own sync-return test UNCHANGED (it
+still passes, confirmed by re-running the full suite after this task's changes).
+★ **D-4'S STRUCTURAL PROOF: ZERO `.innerHTML =` IN THE HIGHLIGHTING PATH.** `git grep -n innerHTML
+src/render/codeEnhancer.ts src/render/codeView.ts src/render/codeEngine.ts` returns two hits, both
+inside PROSE doc comments ("codeView.ts has no innerHTML at all"), zero actual assignments.
+`adoptHighlighted` walks `codeToTokens`'s `TokensResult` and builds the highlighted `<pre>` with
+`document.createElement` / `element.style.color` / `Text` nodes only — the same `tableTools.ts`
+shape D-4's own `decisions.md` text names. `codeView.ts` gains `markCodeFailed(pre, wrapper)` (the
+pair's third state, reserved at 4.1) — visually identical to `pending`, distinguished only so a
+later pass can tell "never attempted" from "attempted and declined."
+★ **★★ A CATASTROPHIC BUNDLE-BLOAT DEFECT, CAUGHT BY MEASUREMENT BEFORE IT REACHED A COMMIT — SEE
+§ CARRIED ITEMS FOR THE FULL RECORD.** D-4's `codeToTokens` needs a REAL loaded language/theme;
+`createHighlighterCore` (D-3's fine-grained API) ships with neither. The first approach tried —
+importing Shiki's own `shiki/langs`/`shiki/themes` barrel manifests — made Vite discover and chunk
+EVERY one of Shiki's ~700 bundled languages as a build output. Built and measured: packed
+`.output` **13.6 MB** (AGENTS.md's ≤5 MB budget) and Chrome zip **2.99 MB** (this milestone's own
+<2 MB bound) — reverted, never committed. **Fixed** with a small, curated, hand-written loader map
+in `codeEngine.ts` — each language/theme its own literal `import('shiki/langs/<name>.mjs')` /
+`import('shiki/themes/<name>.mjs')` specifier (`codeEngine.test.ts`'s OWN task-1.2 test already used
+this exact per-file shape to capture `codeToTokens`'s return type — now the production pattern
+too), so Vite only chunks what is actually listed. **Explicitly PROVISIONAL, named in
+`codeEngine.ts`'s own header**: six languages (`javascript`, `python`, `json`, `css`, `html`,
+`bash`), one theme (`github-dark`, {@link PROVISIONAL_CODE_THEME} in `codeEnhancer.ts` — task 5.1's
+field, task 8.4's ruling). An unlisted language/theme degrades exactly like any other unresolvable
+one: `loadLanguage`/`loadTheme` no-op on `undefined`, `codeToTokens` then raises `ShikiError`, the
+per-fence `try`/`catch` reads it the same way it reads any other tokenize failure.
+★ **PER-FENCE FAILURE ISOLATION, PROVEN RED-FIRST.** Ablation: temporarily removed the per-fence
+`try`/`catch` inside `highlightFences`'s loop, re-ran the two-fence (bad-language-then-good)
+browser test on both engines. RED, exact defect signature captured: an unhandled `ShikiError:
+Language 'notarealanguage' not found, you may need to load it first` thrown from
+`highlightFences:222` propagates out of the `for` loop entirely — the GOOD fence after the bad one
+in iteration order never gets processed at all (stays `pending` forever), so one bad block took
+down every fence after it (both fences in this 2-fence case, 100% loss) — 4 tests failed across
+both engines (per-fence-isolation ×2, theme-apply-failure ×2, the same defect class). Restored,
+re-ran: 122/122 files green, 1297/1297 passed, 0 failed.
+★ **BYTES, FULLY RECONCILED.** Content script: **330,109 B both engines, md5-IDENTICAL** to 4.1's
+close (Cr `cf8c0312…`, Fx `c99305e5…`) — §3.8 holds, confirmed by a from-scratch `.output` rebuild
+of BOTH engines (`pnpm build` + `npx wxt build -b firefox`), not assumed. App-page chunk
+(`chunks/app-BdGQuvdR.js`): **401,566 → 461,419 B (+59,853 B)**, md5-IDENTICAL across both engines
+(`9edce63b…`) — the eager glue (async body, `adoptHighlighted`, the curated loader map's own
+static code). New LAZY chunks, the actual "Shiki reaches the bundle" event, both engines identical:
+`core-AKC2JaC6.js` **111,981 B** (the `import('shiki/core')` chunk — matches the 1.2 diagnostic
+ablation's own prediction exactly), `javascript-BzbQS41l.js` **174,814 B**, `python-gzcpVVnB.js`
+**69,945 B**, `html-CVO8wu9Q.js` **57,249 B**, `css-LbU1hoFO.js` **49,028 B**,
+`shellscript-CLZ0U2zV.js` **41,472 B**, `github-dark-C-LZuMrd.js` **11,402 B**,
+`json-qhed-kSA.js` **2,817 B** (≈518.8 KB total lazy weight, fetched only when a fence in that
+language/theme is actually encountered). Packed `.output` **4.66 MB** both engines (well under
+AGENTS.md's ≤5 MB, though headroom is now real and measured — see § Carried items). Zip **1.42 MB**
+both engines (under the <2 MB bound). Structural shiki-import check (`git grep -l "from ['"]shiki"
+src/ entrypoints/ | grep -v .test.ts`): still ONLY `src/render/codeEngine.ts` — D-3's "ONE importer"
+invariant holds even with the curated loader map, because every new specifier is a literal in that
+same file.
+★ **§ BASELINES TABLE NOT TOUCHED — FOLLOWING 4.1's OWN PRECEDENT, RE-DERIVED NOT ASSUMED.** Checked
+before writing: 4.1's own byte figures (330,109/401,566 B) do NOT appear anywhere in the § Baselines
+table below either — that table's own header states it is milestone-close-mutable ("each
+milestone's close task overwrites the numbers"), and 3.1/4.1 both recorded their bytes here in
+§ Now only. This task follows the same real convention, not the kickoff's assumption that this
+task's own Files list includes a § Baselines edit.
+Standing invariants: `pnpm test` **980/980** (58 files, +8 — 3 in `codeEngine.test.ts` (mermaid
+exclusion + `languageInputFor`/`themeInputFor`), 5 in `codeEnhancer.test.ts` (real-engine success,
+per-fence isolation, theme-apply failure, whole-engine failure, sync-preserved control); prior
+972/972 at 4.1's close) · `pnpm test:browser` **122/122 files green, 1297 passed, 15 skipped, 0
+failed** (full suite, both engines — +12 over 4.1's 1285, the six new `codeRender.browser.test.ts`
+cases × two engines) · `pnpm lint` EXIT=0 · `git diff tests/golden/output/` EMPTY · `tests/
+manifest.test.ts` unmodified **2975 B**, green · 007 `diagramImportFence.test.ts` green (part of the
+full suite) · `diagramActions.browser.test.ts`'s shipped-CSS-block pin **2,927 B**, held (never
+touched this task — no `readerCss.ts` edit) · deps STILL **6** · built manifests **654/770 B**,
+`permissions: []` both, no `web_accessible_resources` · `perf-first-paint.ts --size 50kb` (the real
+typical-doc acceptance gate; the default 1 MB fixture is explicitly informational, not the gate):
+**149.6 ms median (143.6–158.3 ms range) vs <165 ms — PASS**, confirming the content-script graph is
+undisturbed. `git diff --name-only HEAD` at the commit: ONLY `src/render/codeEnhancer.ts` ·
+`src/render/codeEnhancer.test.ts` · `src/render/codeView.ts` · `src/render/codeEngine.ts` ·
+`src/render/codeEngine.test.ts` · `tests/browser/codeRender.browser.test.ts` ·
+`specs/009-code-blocks/tasks.md` (4.2's box) · this file. `readerCss.ts`, `readerPane.ts`,
+`appShell.ts`, `parse.ts`, `sanitize.ts`, `mount.ts`, every `entrypoints/` file and every manifest
+config file: all confirmed byte-identical / untouched. **No other `src/`, `entrypoints/`, or
+`tests/` file in the diff.**
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the
@@ -3413,6 +3502,41 @@ measurement-driven or explicitly deferred.*
   settle, never silently. **This entry does the same, naming it for 6.3:** whether M8's two 6.1 findings
   get their own numbered task-stub in `tasks.md`, or stay carried-items-only the way 007's did, is
   **6.3's call, not 6.1's** — 6.1 is doc-only by the human's ruling and adds no checkbox.
+- **✅ RESOLVED AT 4.2 (009) — THE `codeEngine.ts` MERMAID/`hasCodeFence` GAP CARRIED FROM 4.1.** 4.1
+  found (and fixed in `codeEnhancer.ts`'s own `codeFencesIn`) that `CODE_FENCE_SELECTOR` matches
+  `language-mermaid` too, and named `codeEngine.ts`'s identically-unscoped `hasCodeFence` as the same
+  gap, carried because 4.2 is the first task to actually call it. **Fixed at 4.2** with the same literal
+  class-check pattern, confined to `codeEngine.ts` (two independent copies of the exclusion, matching
+  `CODE_FENCE_SELECTOR`'s own established duplication — see both modules' headers). Regression-tested at
+  both levels: `codeEnhancer.test.ts` (4.1, pre-existing) and `codeEngine.test.ts` (new at 4.2). **The
+  SPECIFIC instance is closed; the underlying architectural pattern is not** — any `language-*` selector
+  a future D-value's engine adds can collide with an earlier-running engine's claim the same way, an
+  O(N²) coupling that grows with each new engine. **HOME:** M9's own retro (task 9.2), the trigger this
+  finding was already routed to at 4.1.
+- **★ NEW AT 4.2 (009) — SHIKI'S `shiki/langs`/`shiki/themes` BARREL MANIFESTS BLOW THE PACKED-SIZE
+  BUDGET; FIXED, BUT THE REMAINING HEADROOM IS NOW MEASURED AND TIGHT.** D-4's `codeToTokens` needs a
+  REAL loaded language/theme (`createHighlighterCore`'s fine-grained API ships with neither); the
+  obvious route — importing Shiki's own `shiki/langs`/`shiki/themes` manifests and indexing
+  `bundledLanguages`/`bundledThemes` at runtime — makes Vite/Rollup discover and chunk EVERY one of
+  Shiki's ~700 bundled language files as a build output (the manifest's own source is one `import()`
+  per language), regardless of which are ever called. Built and measured before reverting: packed
+  `.output` **13.6 MB** (AGENTS.md's ≤5 MB budget) and the Chrome zip **2.99 MB** (this milestone's own
+  <2 MB bound) — caught by measurement, never committed. **Fixed** with a small, explicit, hand-written
+  loader map in `codeEngine.ts` — each language/theme its own literal `import('shiki/langs/<name>.mjs')`
+  / `import('shiki/themes/<name>.mjs')` specifier (the exact per-file shape `codeEngine.test.ts` already
+  used at task 1.2 to capture `codeToTokens`'s shape, now the production pattern too) — so Vite only
+  chunks what is actually listed. **4.2's own curated set is deliberately minimal and named PROVISIONAL**
+  in `codeEngine.ts`'s own header (six languages: `javascript`/`python`/`json`/`css`/`html`/`bash`; one
+  theme: `github-dark`) — and it ALREADY costs real headroom: packed `.output` **4.66 MB** (both
+  engines), zip **1.42 MB** (both engines) — under budget, but with materially less room than before
+  009 started. **HOME, two follow-ons named rather than silently assumed:** (1) task 5.2 (the
+  ≥14-theme picker) and any future language-catalog growth (M-3 auto-detection, more fence languages)
+  must budget against THESE measured numbers, not assume free headroom — every addition should be
+  priced the way this finding was, not eyeballed. (2) task 4.5's own prospective clause-C text
+  ("exactly one dynamic edge, two static specifiers") no longer holds — `codeEngine.ts` now carries
+  SEVEN dynamic loader edges (six languages + one theme) plus a pre-existing type-only static edge on
+  `shiki/core` 4.5's draft text didn't account for; `codeEngine.ts`'s own module header names this in
+  full for 4.5 to measure and pin for real, not re-derive from scratch.
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; gate score **10/10** at that close, corrected

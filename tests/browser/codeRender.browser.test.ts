@@ -26,11 +26,12 @@
 // the `rendered` state is reached by calling `markCodeRendered` with a stand-in node. What is under
 // test is the STRUCTURE and its CSS contract, not Shiki.
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createReaderPane } from '../../src/app/readerPane';
 import { mount } from '../../src/render/mount';
 import { enhanceCode } from '../../src/render/codeEnhancer';
 import { CODE_STATE_ATTR, CODE_WRAPPER_CLASS, markCodeRendered } from '../../src/render/codeView';
+import type { CodeEngineModule } from '../../src/render/codeEngine';
 
 const WRAPPER_SELECTOR = `div.${CODE_WRAPPER_CLASS}`;
 
@@ -67,6 +68,24 @@ function contentScriptReader(markdown = DOC): ShadowRoot {
   mount(markdown, host);
   if (!host.shadowRoot) throw new Error('mount produced no shadow root');
   return host.shadowRoot;
+}
+
+/** A host enhanced DIRECTLY, bypassing `readerPane.ts`, so a test can inject `EnhanceOptions`
+ *  (a rejecting loader, a theme id no bundled theme resolves) — the same seam `codeEnhancer.ts`'s
+ *  own D-5-parity test below uses to reach the watch-render closure's shape without its wiring. */
+function directHost(markdown: string, options?: Parameters<typeof enhanceCode>[1]): ShadowRoot {
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  cleanup.push(host);
+  mount(markdown, host, { contained: true });
+  enhanceCode(host, options);
+  if (!host.shadowRoot) throw new Error('mount produced no shadow root');
+  return host.shadowRoot;
+}
+
+/** Poll until every predicate holds or the timeout elapses — `vi.waitFor` under a real engine. */
+async function settled(check: () => void): Promise<void> {
+  await vi.waitFor(check, { timeout: 5000, interval: 20 });
 }
 
 describe('the app page grows D-6 structure (row 4 — INVERTED)', () => {
@@ -202,6 +221,126 @@ describe('D-5 parity — both call sites produce the same structure', () => {
       expect(pre!.getAttribute(CODE_STATE_ATTR)).toBe('pending');
       expect(wrapper!.getAttribute(CODE_STATE_ATTR)).toBe('pending');
       expect(shadow.querySelector('.peekover-reader')!.contains(wrapper!)).toBe(true);
+    }
+  });
+});
+
+describe("D-4's async body — real Shiki, real engine, both call sites (task 4.2)", () => {
+  // What jsdom cannot answer and this suite does: whether a token's COLOUR actually computes on a
+  // real engine (an inline `style.color` always "wins" in jsdom regardless of the stylesheet;
+  // here it must win against `readerCss.ts`'s own inherited text colour), whether the retained
+  // pre's `display:none` swap and the highlighted sibling's visibility are real layout facts, and
+  // whether a hostile fixture survives a real browser's DOM round-trip byte-for-byte.
+
+  it("a fence renders to highlighted spans carrying Shiki's own theme-data colours", async () => {
+    const shadow = await appPageReader();
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+
+    const highlighted = wrapper.querySelector<HTMLElement>('pre.shiki');
+    if (!highlighted) throw new Error('expected the highlighted sibling');
+    expect(getComputedStyle(highlighted).display).not.toBe('none');
+
+    const tokenSpans = Array.from(
+      highlighted.querySelectorAll<HTMLElement>('code > span.line > span'),
+    );
+    expect(tokenSpans.length).toBeGreaterThan(0);
+    const colours = new Set(tokenSpans.map((s) => getComputedStyle(s).color));
+    expect(colours.size).toBeGreaterThan(0);
+    for (const c of colours) expect(c).not.toBe('');
+  });
+
+  it('per-fence isolation: an unknown language fails alone, the fence beside it still renders', async () => {
+    const shadow = directHost(
+      '```notarealanguage\nwhatever this is\n```\n\n```javascript\nconst a = 1;\n```\n',
+    );
+    const wrappers = Array.from(shadow.querySelectorAll<HTMLElement>(WRAPPER_SELECTOR));
+    expect(wrappers).toHaveLength(2);
+    const [badWrapper, goodWrapper] = wrappers;
+
+    await settled(() => expect(goodWrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+    expect(badWrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed');
+    expect(badWrapper.querySelector('pre.shiki')).toBeNull();
+
+    // The bad fence's retained pre is still the only visible thing — degradation is the default
+    // state (§3.9), not an error the user is stopped by.
+    const badPre = badWrapper.querySelector<HTMLElement>('pre');
+    if (!badPre) throw new Error('expected the retained pre');
+    expect(getComputedStyle(badPre).display).not.toBe('none');
+  });
+
+  it("the retained pre's textContent is byte-identical to a HOSTILE source (unicode, trailing whitespace, mixed line endings)", async () => {
+    // CommonMark itself normalizes `\r\n`/`\r` to `\n` during preprocessing — upstream of this
+    // task's own code, and true of every fence regardless of highlighting (confirmed empirically
+    // this session: markdown-it's normalization runs before `parse()` returns). What D-6 actually
+    // promises is that NOTHING DOWNSTREAM of that — this task's own tokenize/adopt path included —
+    // touches the fence again, so the expectation is `parse()`'s own normalized text, not the raw
+    // pre-parse literal.
+    const HOSTILE = 'const é = "🎉";   \r\nconsole.log(é);\t\n\n';
+    const NORMALIZED = HOSTILE.replace(/\r\n/g, '\n');
+    const shadow = directHost('```javascript\n' + HOSTILE + '```\n');
+
+    const pre = shadow.querySelector<HTMLElement>('pre[data-code]');
+    if (!pre) throw new Error('expected the retained pre');
+    // Asserted immediately — this property holds whether or not highlighting ever settles, because
+    // D-6 never touches the retained node itself (module header).
+    expect(pre.textContent).toBe(NORMALIZED);
+
+    // CONTROL: this fence really does get attempted (so the identity above isn't free because
+    // nothing ran) — wait for it to settle one way or the other, then re-assert.
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).not.toBe('pending'));
+    expect(pre.textContent).toBe(NORMALIZED);
+  });
+
+  it('engine-load failure: EVERY fence on the page stays plain, the page stays intact', async () => {
+    const loader = vi.fn<() => Promise<CodeEngineModule>>(() => Promise.reject(new Error('boom')));
+    const shadow = directHost('```javascript\nconst a = 1;\n```\n\n```python\na = 1\n```\n', {
+      loader,
+    });
+    const wrappers = Array.from(shadow.querySelectorAll<HTMLElement>(WRAPPER_SELECTOR));
+    expect(wrappers).toHaveLength(2);
+    for (const wrapper of wrappers) {
+      await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+    }
+    expect(shadow.querySelectorAll('pre.shiki')).toHaveLength(0);
+    for (const pre of Array.from(shadow.querySelectorAll<HTMLElement>('pre[data-code]'))) {
+      expect(getComputedStyle(pre).display).not.toBe('none');
+    }
+  });
+
+  it('theme-apply failure: an id no bundled theme resolves falls back to the retained pre, never an unstyled flash', async () => {
+    const shadow = directHost('```javascript\nconst a = 1;\n```\n', {
+      theme: 'not-a-real-theme-id',
+    });
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    const pre = shadow.querySelector<HTMLElement>('pre[data-code]');
+    if (!wrapper || !pre) throw new Error('expected the enhanced pair');
+
+    await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+    expect(wrapper.querySelector('pre.shiki')).toBeNull(); // never an unstyled highlighted sibling
+    expect(getComputedStyle(pre).display).not.toBe('none');
+    expect(pre.textContent).toContain('const a = 1;');
+  });
+
+  it('both call sites reach `rendered` — readerPane AND the watch render closure', async () => {
+    const fromPane = await appPageReader();
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    cleanup.push(host);
+    mount(DOC, host, { contained: true, preserveReading: true });
+    enhanceCode(host);
+    const fromWatch = host.shadowRoot;
+    if (!fromWatch) throw new Error('expected a mounted host');
+
+    for (const shadow of [fromPane, fromWatch]) {
+      const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+      if (!wrapper) throw new Error('expected a wrapper');
+      await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+      expect(wrapper.querySelector('pre.shiki')).not.toBeNull();
     }
   });
 });

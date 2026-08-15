@@ -1,9 +1,10 @@
-// codeView — D-6's retained/highlighted structure and its lifecycle attribute, and nothing else at
-// this task. It builds no markup from the fence's text, imports no engine, and knows nothing about
-// Shiki: it is the shape the enhancer (from task 4.2 on) mutates. The toolbar controls, the collapse
-// structure and the failure marker plan.md §2's Create list also assigns this module land in the
-// later tasks that need them (4.2's `markCodeFailed`, 4.3's toolbar, 6.1's collapse) — task 4.1's own
-// surface is the pending/rendered pair only, mirroring `diagramView.ts`'s task-3.1 scope exactly.
+// codeView — D-6's retained/highlighted/failed structure and its lifecycle attribute. It builds no
+// markup from the fence's text, imports no engine, and knows nothing about Shiki: it is the shape
+// `codeEnhancer.ts` mutates, never the module that decides WHAT to build. The toolbar controls and
+// the collapse structure plan.md §2's Create list also assigns this module land in the later tasks
+// that need them (4.3's toolbar, 6.1's collapse) — task 4.1 built the pending/rendered pair
+// (mirroring `diagramView.ts`'s task-3.1 scope exactly); task 4.2 adds {@link markCodeFailed}, the
+// pair's third state, still no markup and still no engine knowledge.
 //
 // ── D-6: THE RETAINED <pre> IS THE STATE, AND THE WRAPPER OWNS BOTH HALVES ────────────────────
 //
@@ -56,8 +57,9 @@ export const CODE_WRAPPER_CLASS = 'peekover-code';
  *
  * `rendered` — the only state that hides the retained `<pre>`.
  *
- * `failed` — not produced by this task (task 4.2's per-fence catch produces it); reserved here so
- * later tasks share one type rather than each inventing their own string union.
+ * `failed` — produced by {@link markCodeFailed} (task 4.2's per-fence catch): visually identical
+ * to `pending` (the retained `<pre>` is still the only visible thing), distinguished only so a
+ * later pass can tell "never attempted" from "attempted and declined" without re-deriving it.
  */
 export type CodeState = 'pending' | 'rendered' | 'failed';
 
@@ -96,4 +98,17 @@ export function markCodeRendered(pre: HTMLElement, wrapper: HTMLElement, content
   wrapper.append(content);
   wrapper.setAttribute(CODE_STATE_ATTR, 'rendered');
   pre.setAttribute(CODE_STATE_ATTR, 'rendered');
+}
+
+/**
+ * D-4's other outcome (task 4.2): a per-fence failure — engine-load, tokenize, or theme-apply —
+ * that the caller's `try`/`catch` caught. Nothing is appended or removed; the pair is left
+ * exactly where {@link insertCodeWrapper} put it, `pending`'s own visible state (§3.9's
+ * "degradation is the default state" — 007 D-15's same property). Only the state attribute moves,
+ * to `'failed'` rather than back to `'pending'`, so a later pass (the toolbar, the collapse
+ * threshold) can tell "never attempted" from "attempted and declined" without re-deriving it.
+ */
+export function markCodeFailed(pre: HTMLElement, wrapper: HTMLElement): void {
+  wrapper.setAttribute(CODE_STATE_ATTR, 'failed');
+  pre.setAttribute(CODE_STATE_ATTR, 'failed');
 }

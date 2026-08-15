@@ -13,14 +13,53 @@
 // EXPLICITLY instead, so `createJavaScriptRegexEngine()` is passed every time and neither
 // shorthand is ever called from this file.
 //
-// ── ONE DYNAMIC EDGE, TWO STATIC LEAVES (D-2's fence, task 4.5) ───────────────────────────────
+// ── LANGUAGE/THEME REGISTRATION: A CURATED, EXPLICITLY-BOUNDED SET — NOT SHIKI'S FULL CATALOG
+//    (the bundle-bloat finding, task 4.2, measured not assumed) ───────────────────────────────
 //
-// `import('shiki/core')` is the ONE dynamic edge in this module, evaluated only once
-// {@link hasCodeFence} has already seen a fence — the mirror of `diagramEngine.ts`'s
-// `import('mermaid')`. `shiki/package.json` (a version-only JSON leaf) and `shiki/engine/
-// javascript` (the pure-JS engine factory — no WASM, no grammar tables) are read STATIC and
-// EAGER: both are cheap enough that deferring them buys nothing, and `codeImportFence.test.ts`
-// names them as the two permitted static, non-dynamic specifiers alongside the one dynamic edge.
+// `createHighlighterCore` (D-3's fine-grained, WASM-free entry) ships with NO language/theme
+// registry attached — verified this session by calling `loadLanguage('javascript')` with a bare
+// string, which throws. The FIRST fix tried was importing Shiki's own barrel manifests,
+// `shiki/langs` / `shiki/themes` (each a map of every bundled grammar/theme's lazy loader) — and
+// it was a real defect, caught by measurement, not by inspection: `shiki/langs` alone makes
+// Vite/Rollup discover and chunk EVERY one of Shiki's ~700 language files as a build output
+// (because the manifest's own source literally writes one `import()` per language), regardless of
+// which are ever called at runtime. Built and measured: packed `.output` **13.6 MB** (AGENTS.md's
+// budget: ≤5 MB) and the Chrome zip **2.99 MB** (this milestone's own stated bound: <2 MB) — a
+// severe, standing-invariant-breaking regression, reverted before it reached a commit.
+//
+// The fix: {@link LANGUAGE_LOADERS}/{@link THEME_LOADERS} below are a SMALL, EXPLICIT, HAND-
+// WRITTEN map — each entry its own literal `import('shiki/langs/<name>.mjs')` /
+// `import('shiki/themes/<name>.mjs')` specifier (the exact per-file import shape
+// `codeEngine.test.ts` already used at task 1.2 to capture `codeToTokens`'s shape, now the
+// PRODUCTION pattern too), so Vite only ever discovers and chunks the languages/themes actually
+// listed — proportional cost, not the whole catalog. Each loader is handed to `HighlighterCore`'s
+// own `loadLanguage`/`loadTheme` UNRESOLVED (verified this session: both accept the bare lazy
+// function directly, the same shape Shiki's own bundled-key loaders use, so no `.default`
+// unwrapping is needed here). ★ **PROVISIONAL AND EXPLICITLY BOUNDED** — six languages
+// (`javascript`, `python`, `json`, `css`, `html`, `bash`) chosen only to cover this task's own
+// fixtures plus a few very common real-world fence languages; the real catalog breadth (how many
+// languages 009 ships with, whether it grows to Shiki's near-700-language range or stays curated)
+// is a genuine product question this task does NOT decide, left for a later measurement-driven
+// task (mirrors {@link PROVISIONAL_CODE_THEME}'s own framing in `codeEnhancer.ts`). An unlisted
+// language degrades exactly like an unresolvable one always has (module header, below):
+// `loadLanguage` no-ops on `undefined`, `codeToTokens` then raises, the caller's per-fence
+// `try`/`catch` reads it the same way it reads any other tokenize failure — no special case.
+//
+// ── THE DYNAMIC/STATIC EDGE COUNT — TASK 4.5's OWN PROSPECTIVE TEXT DOES NOT YET SURVIVE
+//    CONTACT, NAMED HERE RATHER THAN SILENTLY CARRIED (task 4.2 finding) ──────────────────────
+//
+// tasks.md 4.5 (not yet implemented) predicts, prospectively, exactly ONE dynamic edge
+// (`import('shiki/core')`) plus TWO static leaves (`shiki/package.json`, `shiki/engine/
+// javascript`) across the whole tree. This file now adds SEVEN more dynamic edges (six language
+// loaders, one theme loader), each its own literal specifier, plus a third PRE-EXISTING static
+// leaf 4.5's text did not account for (the type-only `import type { HighlighterCore } from
+// 'shiki/core'` a few lines down, which the same source-scanning fence counts as a static edge
+// distinct from the dynamic `import('shiki/core')` inside {@link loadShikiCore}). Task 4.5's own
+// text already anticipates its clause C needs adjustment ("this task must not copy
+// `diagramImportFence.test.ts`'s `toHaveLength(1)` clause-C shape unadjusted") — this is that
+// adjustment's real shape, left for 4.5 to measure and pin when it is actually written, not
+// asserted here. D-3's own invariant — this file is the ONE module that names a `shiki/…`
+// specifier — still holds: every new edge lands here, not in `codeEnhancer.ts`.
 //
 // ── THE INJECTABLE LOADER (retro finding 1) ───────────────────────────────────────────────────
 //
@@ -29,16 +68,56 @@
 // jsdom. An un-called spy and a missing spy look identical — the fence-free case is proven
 // negative only alongside a fenced-root case that proves the SAME spy fires.
 //
-// ── NO THEMES OR LANGUAGES BAKED IN HERE ──────────────────────────────────────────────────────
+// ── A MERMAID FENCE IS NEVER A CODE-HIGHLIGHTING CANDIDATE (carried from 4.1, resolved here) ──
 //
-// `createHighlighterCore` is created with an empty theme/language set. Shiki's `HighlighterCore`
-// exposes `loadLanguage`/`loadTheme` for on-demand registration; a later task's per-fence
-// language loading and D-9's theme picker call those against the ONE instance this module hands
-// back, rather than this module pre-baking a set it does not yet own the choice of.
+// `CODE_FENCE_SELECTOR` matches `language-mermaid` too (it starts with `language-`), and
+// `codeEnhancer.ts` excludes it in its own `codeFencesIn` (4.1's finding — see that module's
+// header). This file had the SAME unscoped selector in {@link hasCodeFence} and was named there
+// as a carried gap for whichever task first calls it for real: a mermaid-only document would
+// otherwise make {@link loadCodeEngine} decide "yes, load Shiki" for nothing to highlight. Fixed
+// below with the same literal class check, confined to this file (plan §2's "no interaction
+// between the two engines is scoped" line forbids importing `diagramView.ts` to check the real
+// attribute).
 
 import shikiPkg from 'shiki/package.json';
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
-import type { HighlighterCore } from 'shiki/core';
+import type {
+  HighlighterCore,
+  LanguageRegistration,
+  ThemeRegistrationAny,
+  TokensResult,
+} from 'shiki/core';
+
+/** The shape every `shiki/langs/<name>.mjs` leaf's `.default` export actually has (verified
+ *  against the installed 4.4.3's own `.d.mts` files — a single language file may register more
+ *  than one grammar, e.g. embedded sub-languages). */
+type LanguageLoader = () => Promise<{ default: LanguageRegistration | LanguageRegistration[] }>;
+
+/** Same idea for `shiki/themes/<name>.mjs`. */
+type ThemeLoader = () => Promise<{ default: ThemeRegistrationAny }>;
+
+/** See the module header's "LANGUAGE/THEME REGISTRATION" section — PROVISIONAL, explicitly
+ *  bounded. Each value is its own literal `import()` specifier so Vite only chunks THESE
+ *  languages, never Shiki's full ~700-language catalog. */
+const LANGUAGE_LOADERS: Readonly<Record<string, LanguageLoader>> = {
+  javascript: () => import('shiki/langs/javascript.mjs'),
+  python: () => import('shiki/langs/python.mjs'),
+  json: () => import('shiki/langs/json.mjs'),
+  css: () => import('shiki/langs/css.mjs'),
+  html: () => import('shiki/langs/html.mjs'),
+  bash: () => import('shiki/langs/shellscript.mjs'),
+};
+
+/** Same shape as {@link LANGUAGE_LOADERS}, for themes. One entry: {@link PROVISIONAL_CODE_THEME}
+ *  (`codeEnhancer.ts`) is the only theme id this task ever resolves. */
+const THEME_LOADERS: Readonly<Record<string, ThemeLoader>> = {
+  'github-dark': () => import('shiki/themes/github-dark.mjs'),
+};
+
+/** Re-exported so `codeEnhancer.ts` (D-3) never names a `shiki/…` specifier of its own — it gets
+ *  the engine handle's type and `codeToTokens`'s return shape through this module's own exports,
+ *  the same as it already gets {@link loadCodeEngine}'s value. */
+export type { HighlighterCore, TokensResult };
 
 /**
  * The fence markdown-it emits for a fenced code block carrying a language class, after
@@ -47,6 +126,11 @@ import type { HighlighterCore } from 'shiki/core';
  * (D-6's retained-sibling structure needs a direct child to attach beside).
  */
 export const CODE_FENCE_SELECTOR = 'pre > code[class^="language-"]';
+
+/** See the module header's "A MERMAID FENCE IS NEVER A CODE-HIGHLIGHTING CANDIDATE" section.
+ *  Mirrors `codeEnhancer.ts`'s own private copy of the same literal (each module keeps its own,
+ *  per plan §2 — no import between the two engines is scoped). */
+const MERMAID_FENCE_CLASS = 'language-mermaid';
 
 /** The shape of the `shiki/core` module this file needs. Injectable so tests never import the
  *  real module graph into jsdom. */
@@ -73,9 +157,35 @@ export function engineVersion(): string {
 /**
  * §4's feature-detect: does this subtree contain a fenced code block at all? Cheap, DOM only,
  * and the sole thing standing between a fence-free document and the engine's bytes.
+ *
+ * EXCLUDES a mermaid fence (module header) — `enhanceDiagrams` already owns it, and a
+ * mermaid-only document has nothing for this engine to highlight.
  */
 export function hasCodeFence(root: ParentNode): boolean {
-  return root.querySelector(CODE_FENCE_SELECTOR) !== null;
+  for (const code of root.querySelectorAll(CODE_FENCE_SELECTOR)) {
+    if (!code.classList.contains(MERMAID_FENCE_CLASS)) return true;
+  }
+  return false;
+}
+
+/**
+ * Resolve a `language-…` class suffix to this file's curated lazy `LanguageInput` loader, or
+ * `undefined` if the key names no CURATED grammar (module header — this is deliberately NOT
+ * "no bundled grammar"; Shiki ships far more than {@link LANGUAGE_LOADERS} lists). `undefined` is
+ * a normal result, not a bug: the caller skips `engine.loadLanguage` on it, and `codeToTokens` is
+ * what actually raises for an unloaded language — one failure surface, not two.
+ */
+export function languageInputFor(lang: string): LanguageLoader | undefined {
+  return LANGUAGE_LOADERS[lang];
+}
+
+/**
+ * Resolve a code-theme id to this file's curated lazy `ThemeInput` loader, or `undefined` if the
+ * id names no curated theme — same "no separate failure branch" property as
+ * {@link languageInputFor}.
+ */
+export function themeInputFor(theme: string): ThemeLoader | undefined {
+  return THEME_LOADERS[theme];
 }
 
 /**

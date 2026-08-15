@@ -298,7 +298,7 @@ read.**
       checkable property D-5 states for itself. Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-5, D-6; §4 highlighting; rows 2, 3, 4]
 
-- [ ] **4.2 D-4's direct-DOM adoption from `codeToTokens` — no HTML string anywhere in the path — and per-fence
+- [x] **4.2 D-4's direct-DOM adoption from `codeToTokens` — no HTML string anywhere in the path — and per-fence
       / whole-engine degradation (D-4 · §3.9).** `engine = await loadCodeEngine(shadow)`; for each fence,
       `tokens = engine ? await engine.codeToTokens(fence.textContent, { lang, theme }) : null`; `tokens` ?
       `adoptHighlighted(fence, tokens)` (walks the structured line/token data, `document.createTextNode` +

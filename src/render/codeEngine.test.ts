@@ -47,6 +47,8 @@ import {
   engineVersion,
   hasCodeFence,
   loadCodeEngine,
+  languageInputFor,
+  themeInputFor,
   type CodeEngineModule,
 } from './codeEngine';
 
@@ -94,6 +96,24 @@ describe('hasCodeFence / CODE_FENCE_SELECTOR', () => {
 
   it('is the literal selector the predicate uses', () => {
     expect(CODE_FENCE_SELECTOR).toBe('pre > code[class^="language-"]');
+  });
+
+  it('excludes a mermaid-only document — 007 already owns that fence (task 4.2, carried from 4.1)', () => {
+    // The raw selector WOULD match (language-mermaid starts with language-) — the control that
+    // makes the negative below meaningful rather than an artefact of an empty document. Mirrors
+    // `codeEnhancer.test.ts`'s own mermaid-exclusion test shape (4.1).
+    const mermaidOnly = document.createElement('div');
+    mermaidOnly.innerHTML = '<pre><code class="language-mermaid">graph TD; A--&gt;B;</code></pre>';
+    expect(mermaidOnly.querySelectorAll(CODE_FENCE_SELECTOR)).toHaveLength(1);
+    expect(hasCodeFence(mermaidOnly)).toBe(false);
+
+    // CONTROL: a mermaid fence ALONGSIDE a real code fence still detects — the exclusion is
+    // per-fence, not a document-wide "any mermaid present" veto.
+    const mixed = document.createElement('div');
+    mixed.innerHTML =
+      '<pre><code class="language-mermaid">graph TD; A--&gt;B;</code></pre>' +
+      '<pre><code class="language-javascript">const a = 1;</code></pre>';
+    expect(hasCodeFence(mixed)).toBe(true);
   });
 });
 
@@ -147,6 +167,18 @@ describe('D-3 — the configured engine is createJavaScriptRegexEngine, never th
   // oniguruma'`, rerun this file, observe `expect(spy).toHaveBeenCalledTimes(1)` FAIL with
   // "number of calls: 0" (the mocked javascript-module export codeEngine.ts no longer calls),
   // then revert. See the task report for the captured failure output.
+});
+
+describe('languageInputFor / themeInputFor — resolving a bundled key (task 4.2)', () => {
+  it('resolves a known bundled language/theme key to something loadLanguage/loadTheme can use', () => {
+    expect(languageInputFor('javascript')).toBeDefined();
+    expect(themeInputFor('github-dark')).toBeDefined();
+  });
+
+  it('resolves an unknown key to undefined — no throw, the caller decides what that means', () => {
+    expect(languageInputFor('notarealanguage')).toBeUndefined();
+    expect(themeInputFor('notarealtheme')).toBeUndefined();
+  });
 });
 
 describe('engineVersion — the resolved Shiki version', () => {

@@ -11,10 +11,10 @@
 // reading column's box, are computed-style and layout questions jsdom cannot answer — they live in
 // tests/browser/codeRender.browser.test.ts on both engines.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mount } from './mount';
 import { CODE_FENCE_SELECTOR, codeFencesIn, enhanceCode } from './codeEnhancer';
-import { CODE_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR } from './codeEngine';
+import { CODE_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR, type CodeEngineModule } from './codeEngine';
 import { CODE_STATE_ATTR, CODE_WRAPPER_CLASS, markCodeRendered } from './codeView';
 
 const HOST_TAG = 'peekover-root';
@@ -216,6 +216,88 @@ describe('the fence source is read as TEXT, never as markup', () => {
     const tpl = document.createElement('template');
     tpl.innerHTML = PAYLOAD;
     expect(tpl.content.querySelector('img')).not.toBeNull();
+  });
+});
+
+describe("D-4's async body — real engine, real jsdom (task 4.2; Cr+Fx proof lives in tests/browser)", () => {
+  // The JS-regex engine has no DOM/WASM dependency, so — unlike `diagramEnhancer.test.ts`, which
+  // must mock mermaid entirely — this suite runs Shiki FOR REAL under jsdom. What jsdom cannot
+  // answer (computed style hiding the retained pre, real theme-data colours painting) is the
+  // browser suite's job; what is under test here is the STATE MACHINE: which fences end up
+  // `rendered` vs `failed`, and that failure never crosses a fence boundary.
+
+  it('highlights a real fence to `rendered`, with token spans carrying colour, no innerHTML used', async () => {
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host);
+
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+
+    const highlighted = wrapper.querySelector('pre.shiki');
+    if (!highlighted) throw new Error('expected the highlighted sibling');
+    const spans = highlighted.querySelectorAll('code > span.line > span');
+    expect(spans.length).toBeGreaterThan(0);
+    // At least one token carries an inline colour from Shiki's own theme data (D-4).
+    expect(Array.from(spans).some((s) => (s as HTMLElement).style.color !== '')).toBe(true);
+    // The reassembled highlighted text matches the source — no token dropped or duplicated.
+    expect(highlighted.textContent).toBe('const a = 1;\n');
+  });
+
+  it('per-fence isolation: an unknown language fails ALONE, a valid one beside it still renders', async () => {
+    const { host, shadow } = mountedHost(
+      fence('notarealanguage', 'whatever this is') + '\n' + fence('javascript', 'const a = 1;'),
+    );
+    enhanceCode(host);
+
+    const wrappers = shadow.querySelectorAll<HTMLElement>(WRAPPER_SELECTOR);
+    expect(wrappers).toHaveLength(2);
+    const [badWrapper, goodWrapper] = Array.from(wrappers);
+
+    await vi.waitFor(() => expect(goodWrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+    // The bad fence settled to `failed`, never `rendered` — and its retained pre is untouched.
+    expect(badWrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed');
+    expect(badWrapper.querySelector('pre.shiki')).toBeNull();
+    expect(badWrapper.querySelector('pre')?.textContent).toBe('whatever this is\n');
+  });
+
+  it('theme-apply failure: an id no bundled theme resolves falls back to the retained pre, never an unstyled flash', async () => {
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host, { theme: 'not-a-real-theme-id' });
+
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    const pre = shadow.querySelector<HTMLElement>('pre[data-code]');
+    if (!wrapper || !pre) throw new Error('expected the enhanced pair');
+
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+    expect(pre.getAttribute(CODE_STATE_ATTR)).toBe('failed');
+    expect(wrapper.querySelector('pre.shiki')).toBeNull(); // never an unstyled highlighted sibling
+    expect(pre.textContent).toContain('const a = 1;'); // the retained pre is what the user sees
+  });
+
+  it('whole-engine failure: a rejecting loader leaves EVERY fence plain, none reach `rendered`', async () => {
+    const { host, shadow } = mountedHost(
+      fence('javascript', 'const a = 1;') + '\n' + fence('python', 'a = 1'),
+    );
+    const loader = vi.fn<() => Promise<CodeEngineModule>>(() => Promise.reject(new Error('boom')));
+    enhanceCode(host, { loader });
+
+    const wrappers = shadow.querySelectorAll<HTMLElement>(WRAPPER_SELECTOR);
+    expect(wrappers).toHaveLength(2);
+    for (const wrapper of Array.from(wrappers)) {
+      await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+    }
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(shadow.querySelectorAll('pre.shiki')).toHaveLength(0);
+  });
+
+  it('CONTROL: a fenced document with no engine call at all (never awaited) stays `pending` at return', () => {
+    // Re-confirms 4.1's own property survives 4.2's addition: nothing in the highlighted state
+    // exists synchronously, regardless of what the async body will eventually do.
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host);
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    expect(wrapper?.getAttribute(CODE_STATE_ATTR)).toBe('pending');
   });
 });
 
