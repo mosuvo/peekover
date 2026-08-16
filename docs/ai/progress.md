@@ -571,6 +571,141 @@ undisturbed. `git diff --name-only HEAD` at the commit: ONLY `src/render/codeEnh
 `appShell.ts`, `parse.ts`, `sanitize.ts`, `mount.ts`, every `entrypoints/` file and every manifest
 config file: all confirmed byte-identical / untouched. **No other `src/`, `entrypoints/`, or
 `tests/` file in the diff.**
+★ **TASK 4.3 IS DONE — THE TOOLBAR (copy-raw, line-numbers, line-highlighting, word-wrap), `sanitize.ts`
+ALLOWS `data-fence-meta` (RESOLUTION (a) FROM 3.1's REVIEW), D-7's PER-RENDER STATE. NOW-POINTER
+ADVANCES TO 4.4 NEXT.** tasks.md 4.3's own D-value tag line, cited verbatim: *"[D-7, D-8; §4 toolbar;
+rows 5, 8, 11, 14, 15, 16, 17, 18, 19, 20, 24]"*. §3.11's routing table assigns these **11 rows** to
+4.3 — more than any other single task in the milestone, confirmed by reading plan.md §3.11 directly
+rather than assumed from the session's own kickoff.
+★ **RULE-#1 DIVERGENCES FROM THE KICKOFF, BOTH FOLLOWED PER THE TASKS.MD BODY, NOT THE PARAPHRASE:**
+**(1)** the browser test file is `tests/browser/codeToolbar.browser.test.ts`, a NEW file tasks.md 4.3
+names explicitly in its Files list — the kickoff's "extend codeRender.browser.test.ts OR a new file"
+guess resolved to the latter, named. **(2)** tasks.md 4.3's Files list (`codeEnhancer.ts` ·
+`codeView.ts` · `readerCss.ts` · `tests/browser/codeToolbar.browser.test.ts`) omits any unit-test
+file even though its own Verify line requires `parseLineRanges` unit coverage — the same pattern
+4.2's own actual diff already showed (`codeEnhancer.test.ts`/`codeEngine.test.ts` rode along
+unlisted); `parseLineRanges`'s tests land in `codeEnhancer.test.ts` for the same reason.
+★ **RESOLUTION (a) — `sanitize.ts`'s `ALLOWED_ATTR` GAINS `data-fence-meta`, THE ONLY CHANGE TO THAT
+FILE.** One array entry plus a rationale comment matching the file's existing per-attribute-group
+convention (`sanitize.ts:39-60`'s block above the array). `data-fence-meta` is allowed BY EXACT NAME,
+not by `ALLOW_DATA_ATTR` (which stays `false`) — DOMPurify's allow-list check for a named
+`ALLOWED_ATTR` entry is independent of that blanket toggle. Golden EMPTY (confirmed: no existing
+fixture carries fence-meta syntax, so the conditional attribute never fires against the corpus).
+★ **A SECOND, LARGER DIVERGENCE FROM THE KICKOFF'S OWN FENCE LIST, SURFACED DURING WORK AND EXPLICITLY
+RULED BEFORE PROCEEDING (human decision, this session):** the kickoff's "★ STRONGEST FENCE" claimed CS
+bundle byte-identity as a hard stop for this task. Measured: adding ONE entry to `sanitize.ts`'s
+`ALLOWED_ATTR` alone moved the content script **330,109 → 330,127 B (+18 B)**, because `sanitize.ts`'s
+document profile is the ONE profile `mount.ts` uses on BOTH surfaces — there is no per-surface
+variant, so any change to it is structurally unavoidable to move both bundles. Checked against this
+milestone's own history rather than assumed: task 3.4 (parse.ts's D-8 plumbing) already moved CS by
+**+339 B**, and task 4.1 by **+306 B** — CS movement from a shared-graph file is an established,
+already-priced pattern in 009, not a new phenomenon 4.3 introduced. §3.8's actual claim (the
+enhancer/engine stay app-page-only) is untouched — `git diff --name-only HEAD` confirms `parse.ts` and
+`codeEngine.ts` are absent from this diff. The kickoff's blanket CS-byte-identity fence was an
+over-generalization from 4.2's specific circumstance (4.2 touched no shared-graph file); ruled to
+proceed and document rather than treated as a silent violation.
+★ **THE TOOLBAR'S STRUCTURAL MODEL — MIRRORS `tableTools.ts`, NOT `diagramView.ts`.** Two shapes exist
+in this codebase for a per-block control group: `diagramView.ts`'s `position:absolute`, hover/focus-
+revealed corner group, and `tableTools.ts`'s in-flow `table.before(toolbar)` strip. §3.11's routing
+table is explicit that code's toolbar is the second shape — rows 7/9/10 route OUT because *"the
+toolbar is IN-FLOW inside the reading column, not a fixed-position chrome or a modal overlay"*, row 10
+naming the precedent directly: *"same as 008's table toolbar."* So `buildCodeToolbar` (`codeView.ts`)
+returns a `<div class="peekover-code-toolbar">` the prologue `prepend`s as the FIRST child of D-6's
+wrapper — ahead of both `<pre>`s, in normal document flow, pushing them down rather than floating over
+either. NO `position:absolute`/`position:fixed` anywhere in the new CSS; `git grep` over the new
+`readerCss.ts` rules for both returns 0 hits. The pre-existing `.peekover-code{position:relative}`
+rule (4.1) is untouched and unused by this task's CSS.
+★ **PER CONTROL:** copy reads `pre.textContent` — the RETAINED `<pre>` `insertCodeWrapper` passed in,
+captured by the toolbar's build-time closure, never the highlighted sibling (D-6) — proven byte-
+identical against 4.2's own hostile fixture (unicode, trailing whitespace, mixed line endings), both
+before and after highlighting settles. Line-numbers/word-wrap toggle ONE attribute each on the
+wrapper (`data-line-numbers`/`data-wrap`, absent = off); CSS keys off them — line numbers via CSS
+counters on the highlighted sibling's own `.line` spans, word-wrap via `white-space`/`overflow-wrap`
+(NEVER a `ch` unit in a layout-blocking property — retro finding 6; `git grep` over the new CSS for
+`[0-9]ch` in margin/padding/transform returns 0 hits). Line-highlighting: `parseLineRanges(meta)` —
+`{2,4}` → `[2, 4]`, `{1-3,7}` → `[1, 2, 3, 7]`, malformed/absent → `[]`, never throws — reads
+`code.dataset.fenceMeta` (resolution (a)'s own consumer) inside `adoptHighlighted`, applying
+`CODE_LINE_HIGHLIGHT_CLASS` (background) AND an `aria-label` stating *"Highlighted line N: …"* on the
+matching `.line` span (row 15: state in TEXT and `aria-*`, never colour alone).
+★ **A GENUINE INFINITE-LOOP BUG, CAUGHT BY THE ADVERSARIAL UNIT TEST BEFORE IT REACHED A COMMIT.**
+`parseLineRanges`'s first draft bounded only the RANGE SPAN (`end - start`), which a bare huge number
+(`{999999999999999999}`) sails past — `start === end`, span zero — and at that magnitude floating-
+point precision makes `line += 1` a no-op inside the per-line expansion loop, hanging forever (not a
+throw — worse, a 240-second timeout with zero output before the cause was isolated). Fixed with a
+second guard, `MAX_LINE_NUMBER` (1,000,000) independent of span, plus a `{1,7}` digit cap on the token
+regex itself. Both guards are load-bearing and separately tested (`codeEnhancer.test.ts`'s
+"preposterously wide range" and "never throws on adversarial input" cases, the latter including the
+exact `{999999999999999999}` signature).
+★ **D-7'S PER-RENDER STATE: NO MODULE-SCOPE STATE ANYWHERE, PROVEN BY RE-RENDER.** The two toggles read
+and write ONE attribute each on the wrapper `insertCodeWrapper` just built; every `enhanceCode` call
+builds a fresh wrapper (`mount()`'s `replaceChildren`, §3.3), so a re-render starts every toggle at
+its default BY CONSTRUCTION — not a reset this module performs, a state that never had anywhere else
+to live. Proven in `tests/browser/codeToolbar.browser.test.ts`: toggle line-numbers ON, toggle word-
+wrap ON, drive a re-render that changes the source (`mount(...,{preserveReading:true})` +
+`enhanceCode`), assert the FRESH toolbar's two toggles are back to OFF (`aria-pressed="false"`, no
+wrapper attribute) — mirrors 008 D-9's identical structural argument.
+★ **§3.11's 11 ROWS, EACH WITH A REAL-ENGINE ASSERTION, BOTH ENGINES:** row 5 (toolbar rect strictly
+above the visible code rect at both `GEOMETRY_WIDTHS`, 1280/1400) · row 8 (no intersection with
+`.peekover-toc`/`.peekover-mode-toggle`, rail forced open — needed a real `mountAppShell` surface, not
+the lighter `readerPane`, since TOC/mode-toggle chrome is wired only by the full app shell) · row 11
+(two-block document, block 2's copy button copies block 2's text) · row 14 (closure-death: after a
+re-render, the FRESH toolbar's copy button copies the NEW content) · row 15 (line-highlight text/
+`aria-*`, not colour alone — plus the positive proof `code.dataset.fenceMeta === '{2,4}'`) · row 16
+(real `<button type="button">`, no own `tabindex`, real keyboard focus) · row 17 (accessible name
+carries the block's ordinal, moves with state) · row 18 (language label `aria-hidden`) · row 19
+(reduced motion — see below) · row 20 (polite live region, `hidden` while empty, both success and
+failure messages) · row 24 (baseline established: line-numbers actually renders a gutter via a real
+`::before` computed-style check, word-wrap actually wraps a 400-char unbroken line — `scrollWidth` vs
+`clientWidth` before/after, not merely that the attribute flips).
+★ **ROW 19 COULD NOT BE A LIVE DIFFERENTIAL CHECK, AND THAT IS A HARNESS FACT, NOT A SHORTCUT.**
+`readerCss.ts`'s own GLOBAL, unconditional `:host *{transition-duration:.001ms!important}` rule (every
+browser test in this repo already runs under it, for speed) beats the copy button's non-`!important`
+`transition:120ms` in BOTH the reduced and the normal arm — a live `getComputedStyle().transitionDuration`
+read cannot tell them apart in this harness. Measured directly (both arms read ~0.001ms) before
+concluding this, not assumed. `diagramActions.browser.test.ts`'s own row-19 proof for the diagram
+actions hits the identical wall and is ALSO a structural CSS-text check, not a live one — this task's
+own row-19 test mirrors that exact shape (asserts the shipped block carries the transition AND the
+`prefers-reduced-motion` neutraliser, with a non-vacuous control regex).
+★ **RED-FIRST ABLATIONS, BOTH LOCALIZED.** **(i)** Sanitize allowlist: reverted the `ALLOWED_ATTR`
+entry, re-ran row 15's positive case — RED, exact signature (`dataset.fenceMeta === undefined`), on
+BOTH engines; only that one test failed, nothing else in the file — LOCALIZED. Restored, confirmed
+green (both engines, plus `sanitize.test.ts`'s own 90/90). **(ii)** Copy-source: not ablated in-tree
+(would require editing `codeView.ts`'s copy handler to read the highlighted sibling, a source change
+rather than a fixture change) — the byte-identity test's own control is documented in-file instead
+(the highlighted sibling reassembles to the SAME characters, so only exact byte identity — not a
+looser "contains the right text" check — could tell a swapped copy source apart).
+★ **BYTES, FULLY RECONCILED, BOTH TRACKED SEPARATELY (resolution (a) vs the toolbar itself).**
+Content script: **330,109 → 333,161 B both engines (+3,052 B)** — the `sanitize.ts` +18 B plus the new
+toolbar/line-numbers/word-wrap/line-highlight CSS text landing in the SAME shared `READER_CSS` string
+`mount.ts` injects on both surfaces (via `themeRegistry.ts`) — dead, unmatched selectors on the
+content-script surface (which never calls `enhanceCode`), but shipped as bytes regardless, the same
+mechanism 3.4/4.1 already priced. App-page chunk: **461,419 → 467,716 B both engines (+6,297 B)** —
+the CSS delta plus the toolbar's own JS (`buildCodeToolbar`, `parseLineRanges`, the highlight/ordinal
+logic). Both md5-IDENTICAL across engines (length-equal, hash differs between Cr/Fx — the SAME pattern
+every prior 009 byte report shows, not a new divergence). Packed `.output` **4.67 MB both engines**
+(4,672,638 / 4,672,754 B — under AGENTS.md's ≤5 MB, delta from 4.2's 4.66 MB is the CSS/JS above).
+Zip **1.43 MB both engines** (1,425,035 / 1,425,093 B — under the <2 MB bound). Structural shiki-import
+check: still ONLY `src/render/codeEngine.ts` (untouched this task, confirmed by `git diff --name-only`
+absence). `diagramActions.browser.test.ts`'s shipped-CSS-block pin held at **2,927 B**, re-verified —
+the new toolbar CSS lands entirely BEFORE the diagram block's own start marker, so the pinned slice is
+byte-untouched by construction, not by luck.
+Standing invariants: `pnpm test` **986/986** (58 files, +6 — `parseLineRanges`'s four-case/adversarial/
+dedup/inverted-range/brace/hang-guard suite in `codeEnhancer.test.ts`; prior 980/980 at 4.2's close) ·
+`pnpm test:browser` **124/124 files green, 1347 passed, 15 skipped, 0 failed** (full suite, both
+engines, no `-t` — +2 files/+50 passed over 4.2's 122/1297, the new `codeToolbar.browser.test.ts`'s 25
+cases × two engines) · `pnpm lint` EXIT=0 · `git diff tests/golden/output/` EMPTY · `tests/
+manifest.test.ts` unmodified **2975 B**, green · 007 `diagramImportFence.test.ts` green (part of the
+full suite, re-run standalone to confirm) · deps STILL **6** · built manifests **654/770 B**,
+`permissions: []` both, no `web_accessible_resources` · `perf-first-paint.ts --size 50kb`: a first
+reading at 194.4ms (FAIL) was machine-state from a CONCURRENT full browser-suite run in the same
+session (the standing "perf deltas need an interleaved control" lesson) — re-run in isolation:
+**162.0ms median (157.5–170.2ms range) vs <165 ms — PASS**. `git diff --name-only HEAD` at the commit:
+ONLY `src/render/sanitize.ts` · `src/render/sanitize.test.ts` · `src/render/codeEnhancer.ts` ·
+`src/render/codeEnhancer.test.ts` · `src/render/codeView.ts` · `src/theme/readerCss.ts` · `tests/
+browser/codeToolbar.browser.test.ts` (new) · `specs/009-code-blocks/tasks.md` (4.3's box) · this file.
+`parse.ts`, `codeEngine.ts`, `readerPane.ts`, `appShell.ts`, `mount.ts`, every `entrypoints/` file and
+every manifest config file: all confirmed untouched. **No other `src/`, `entrypoints/`, or `tests/`
+file in the diff.**
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
@@ -3537,6 +3672,22 @@ measurement-driven or explicitly deferred.*
   SEVEN dynamic loader edges (six languages + one theme) plus a pre-existing type-only static edge on
   `shiki/core` 4.5's draft text didn't account for; `codeEngine.ts`'s own module header names this in
   full for 4.5 to measure and pin for real, not re-derive from scratch.
+  ★ RESOLUTION LOCKED (post-4.2 review, resolution (c)): the curated language set becomes a component
+  of D-11's decomposition at task 8.1 (ablation-proven byte accounting) and is ruled at task 8.5 (the
+  human decision gate) alongside M-4's default theme. No new task added; 4.3+ ship with the
+  6-language set as-is; 8.1/8.5 own the eventual real ruling.
+- **★ NEW AT 4.3 (009) — BUNDLE-AFFECTING TASKS REQUIRE `pnpm build` + `pnpm zip` + `.output` SIZE
+  MEASUREMENT AS A PRE-COMMIT VERIFY GATE, NOT AN OPTIONAL CHECK.** 4.2's barrel-manifest defect would
+  have shipped had CC trusted *"unit + browser suites pass = ready."* Every subsequent task in this
+  milestone that touches bundle-influencing files (`src/`, `entrypoints/`, imports, `package.json`)
+  includes this as a MANDATORY step in Verify. Re-confirmed at 4.3, which additionally found that a
+  SHARED-GRAPH file (`sanitize.ts`, `readerCss.ts`, `parse.ts`) moves CONTENT-SCRIPT bytes even when
+  the feature it serves is app-page-only — §3.8's own guarantee is about the ENHANCER/ENGINE staying
+  off the content-script graph, not about every file the enhancer's supporting infrastructure touches
+  staying byte-inert there. A kickoff or kickoff-style fence that asserts blanket CS byte-identity for
+  a task touching a shared file should be checked against the milestone's own byte history (3.4: +339
+  B, 4.1: +306 B, 4.3: +18 B from `sanitize.ts` alone) before being treated as a hard stop. **HOME:**
+  M9 retro (task 9.2).
 
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; gate score **10/10** at that close, corrected

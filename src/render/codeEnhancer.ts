@@ -61,7 +61,9 @@ import {
   insertCodeWrapper,
   markCodeRendered,
   markCodeFailed,
+  buildCodeToolbar,
   CODE_STATE_ATTR,
+  CODE_LINE_HIGHLIGHT_CLASS,
 } from './codeView';
 import {
   loadCodeEngine,
@@ -99,10 +101,13 @@ export interface EnhanceOptions {
 }
 
 /** The pair D-6 maintains: the retained source `<pre>` and the wrapper `insertCodeWrapper` built
- *  around it. Mirrors `diagramEnhancer.ts`'s own `DiagramPair`. */
+ *  around it. Mirrors `diagramEnhancer.ts`'s own `DiagramPair`. `lang` is the prologue's own
+ *  `classToLang` read, carried rather than re-derived so the toolbar's label (task 4.3) and the
+ *  highlighter's language choice can never read the fence's class differently. */
 interface CodePair {
   readonly pre: HTMLElement;
   readonly wrapper: HTMLElement;
+  readonly lang: string;
 }
 
 /**
@@ -146,23 +151,79 @@ function classToLang(code: Element | null): string {
   return '';
 }
 
+/** One `{start[-end]}` token, or `{start}` alone. Anything else is malformed and skipped. Each
+ *  digit run is capped at 7 characters — comfortably past {@link MAX_LINE_NUMBER} — so the token
+ *  itself can never carry a number `Number()` would have to represent imprecisely. */
+const LINE_RANGE_TOKEN = /^(\d{1,7})(?:-(\d{1,7}))?$/;
+
+/** No real code block runs anywhere near this many lines — a bare line number past this, OR a
+ *  range wider than this, is treated as malformed (skipped) rather than expanded. Both guards are
+ *  needed: a WIDE range (`{1-99999999999}`) is caught by the span check below, but a single bare
+ *  number past `Number.MAX_SAFE_INTEGER` (`{999999999999999999}`) has a span of ZERO — `start ===
+ *  end` — and would sail past a span-only guard. At that magnitude floating-point precision makes
+ *  `line += 1` a NO-OP, so the per-line loop below would never terminate — a hostile or
+ *  fat-fingered fence meta must degrade to "no lines highlighted", never a hang. */
+const MAX_LINE_NUMBER = 1_000_000;
+const MAX_LINE_RANGE_SPAN = 10_000;
+
+/**
+ * D-8's consumer (task 4.3): `code.dataset.fenceMeta` (now surviving `sanitize.ts`'s allow-list,
+ * resolution (a)) → the 1-based line numbers it names. `{2,4}` → `[2, 4]`; `{1-3,7}` → `[1, 2, 3,
+ * 7]`; anything malformed or absent → `[]`, NEVER a throw — this runs on untrusted-markdown-derived
+ * text on every fence's highlight pass, so a reader's typo in a fence's info string must degrade to
+ * "no lines highlighted", not an unhandled exception that would take the fence down with it.
+ *
+ * Pure and exported so it is unit-testable without an engine — plan §5's own jsdom-unit list names
+ * it explicitly. Deduplicated and sorted, so `{4,2,4}` and `{2-4,3}` both answer `[2, 3, 4]`
+ * regardless of how a reader wrote the overlap.
+ */
+export function parseLineRanges(meta: string | undefined | null): number[] {
+  if (!meta) return [];
+  const wrapped = /^\{(.*)\}$/.exec(meta.trim());
+  if (!wrapped) return [];
+  const lines = new Set<number>();
+  for (const rawToken of wrapped[1].split(',')) {
+    const token = rawToken.trim();
+    if (!token) continue;
+    const parsed = LINE_RANGE_TOKEN.exec(token);
+    if (!parsed) continue; // malformed token — skipped, never thrown over
+    const start = Number(parsed[1]);
+    const end = parsed[2] !== undefined ? Number(parsed[2]) : start;
+    if (start < 1 || end < start) continue;
+    if (end > MAX_LINE_NUMBER || end - start > MAX_LINE_RANGE_SPAN) continue;
+    for (let line = start; line <= end; line += 1) lines.add(line);
+  }
+  return [...lines].sort((a, b) => a - b);
+}
+
 /**
  * D-4: walk `codeToTokens`'s structured 2-D token array and build the highlighted `<pre>` as DOM,
  * directly — `document.createElement`, `element.style.color`, `Text` nodes. NO HTML STRING
  * ANYWHERE, the same shape `tableTools.ts` already uses for its own DOM construction (plan §0's
  * D-4 text, AGENTS.md #3). One `<span class="line">` per source line (so per-line CSS — word-wrap,
- * a future line-highlight background — has something to key off, task 4.3's own need), one
- * `<span>` per token inside it with an inline `color` when Shiki's theme data supplies one, and a
- * literal newline `Text` node between lines so a plain-text copy of this element (never actually
- * taken — D-6 copies the RETAINED `<pre>`, task 4.3) would still read correctly.
+ * the line-highlight background below — has something to key off), one `<span>` per token inside
+ * it with an inline `color` when Shiki's theme data supplies one, and a literal newline `Text` node
+ * between lines so a plain-text copy of this element (never actually taken — D-6 copies the
+ * RETAINED `<pre>`, task 4.3's toolbar) would still read correctly.
+ *
+ * `highlightedLines` is task 4.3's own addition (D-8's consumer): a 1-based line number in the set
+ * gets {@link CODE_LINE_HIGHLIGHT_CLASS} (background only) AND an `aria-label` stating it in text —
+ * row 15's *"state in TEXT and `aria-*`, not colour alone"*. Setting `aria-label` on the line span
+ * is what makes an emphasized line announce as more than its own syntax-highlighted characters; a
+ * background colour alone would carry no signal to a screen reader at all.
  */
-function adoptHighlighted(doc: Document, tokens: TokensResult): HTMLElement {
+function adoptHighlighted(
+  doc: Document,
+  tokens: TokensResult,
+  highlightedLines: readonly number[],
+): HTMLElement {
   const pre = doc.createElement('pre');
   pre.className = 'shiki';
   if (tokens.bg) pre.style.backgroundColor = tokens.bg;
   if (tokens.fg) pre.style.color = tokens.fg;
   const code = doc.createElement('code');
   tokens.tokens.forEach((line, lineIndex) => {
+    const lineNumber = lineIndex + 1;
     const lineEl = doc.createElement('span');
     lineEl.className = 'line';
     for (const token of line) {
@@ -170,6 +231,11 @@ function adoptHighlighted(doc: Document, tokens: TokensResult): HTMLElement {
       if (token.color) span.style.color = token.color;
       span.textContent = token.content;
       lineEl.appendChild(span);
+    }
+    if (highlightedLines.includes(lineNumber)) {
+      lineEl.classList.add(CODE_LINE_HIGHLIGHT_CLASS);
+      const lineText = line.map((token) => token.content).join('');
+      lineEl.setAttribute('aria-label', `Highlighted line ${lineNumber}: ${lineText}`);
     }
     code.appendChild(lineEl);
     if (lineIndex < tokens.tokens.length - 1) code.appendChild(doc.createTextNode('\n'));
@@ -210,8 +276,8 @@ async function highlightFences(
   for (const pair of pairs) {
     try {
       const code = pair.pre.querySelector('code');
-      const lang = classToLang(code);
       const source = code?.textContent ?? '';
+      const lang = pair.lang;
 
       const langInput = languageInputFor(lang);
       if (langInput) await engine.loadLanguage(langInput);
@@ -221,7 +287,11 @@ async function highlightFences(
       // An unresolved language OR theme raises HERE, not above — `codeEngine.ts`'s module header:
       // one failure surface for "unknown key" and "tokenize genuinely failed" alike.
       const tokens = engine.codeToTokens(source, { lang, theme });
-      markCodeRendered(pair.pre, pair.wrapper, adoptHighlighted(doc, tokens));
+      // D-8's consumer: read BEFORE the retained <pre> is hidden — `code.dataset.fenceMeta` stays
+      // on the node either way (D-6 never mutates it), but reading it beside the tokenize call
+      // keeps the two D-8-dependent reads (the language class, the meta attribute) together.
+      const highlightedLines = parseLineRanges(code?.dataset.fenceMeta);
+      markCodeRendered(pair.pre, pair.wrapper, adoptHighlighted(doc, tokens, highlightedLines));
     } catch {
       markCodeFailed(pair.pre, pair.wrapper);
     }
@@ -259,7 +329,14 @@ export function enhanceCode(host: HTMLElement, options: EnhanceOptions = {}): vo
   const pairs: CodePair[] = [];
   for (const pre of codeFencesIn(shadow)) {
     if (pre.hasAttribute(CODE_STATE_ATTR)) continue;
-    pairs.push({ pre, wrapper: insertCodeWrapper(pre) });
+    const wrapper = insertCodeWrapper(pre);
+    const lang = classToLang(pre.querySelector('code'));
+    // Task 4.3's toolbar (D-7): built HERE, in the sync prologue, alongside the wrapper — so
+    // copy-raw is usable from first paint even if highlighting never resolves (§4's "never blank"
+    // property, D-6's own argument one control further). `prepend` puts it ahead of the retained
+    // `<pre>`, the wrapper's first child, in normal flow (module header, `codeView.ts`).
+    wrapper.prepend(buildCodeToolbar(wrapper, pre, lang));
+    pairs.push({ pre, wrapper, lang });
   }
   if (pairs.length === 0) return;
   void highlightFences(

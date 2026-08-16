@@ -320,7 +320,7 @@ read.**
       back to the reader's default presentation, never an unstyled flash. Golden EMPTY · manifest green
       **2975 B** · `permissions: []`. [D-4, §3.9; §4 highlighting]
 
-- [ ] **4.3 The toolbar — copy, line-numbers, line-highlighting (D-8's consumer), word-wrap — wired in the SAME
+- [x] **4.3 The toolbar — copy, line-numbers, line-highlighting (D-8's consumer), word-wrap — wired in the SAME
       per-fence pass, per-render state that does NOT survive a watch re-render (D-7).** `parseLineRanges`
       (`{2,4}` → `[2,4]`; `{1-3,7}` → `[1,2,3,7]`; malformed/absent → empty, safe) reads
       `code.dataset.fenceMeta` (D-8's plumbing). Copy reads the **RETAINED** `<pre>`'s `textContent` — never

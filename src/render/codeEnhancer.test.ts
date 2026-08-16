@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from './mount';
-import { CODE_FENCE_SELECTOR, codeFencesIn, enhanceCode } from './codeEnhancer';
+import { CODE_FENCE_SELECTOR, codeFencesIn, enhanceCode, parseLineRanges } from './codeEnhancer';
 import { CODE_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR, type CodeEngineModule } from './codeEngine';
 import { CODE_STATE_ATTR, CODE_WRAPPER_CLASS, markCodeRendered } from './codeView';
 
@@ -216,6 +216,51 @@ describe('the fence source is read as TEXT, never as markup', () => {
     const tpl = document.createElement('template');
     tpl.innerHTML = PAYLOAD;
     expect(tpl.content.querySelector('img')).not.toBeNull();
+  });
+});
+
+describe("parseLineRanges — D-8's consumer, task 4.3's toolbar (line-highlighting)", () => {
+  // Pure function; the DOM-application half (the highlight class + aria-label on the matching
+  // `.line` span) is D-4's async body, real-engine only — asserted in
+  // tests/browser/codeToolbar.browser.test.ts. What's under test here is the parse itself.
+
+  it('tasks.md 4.3\'s own four cases, verbatim', () => {
+    expect(parseLineRanges('{2,4}')).toEqual([2, 4]);
+    expect(parseLineRanges('{1-3,7}')).toEqual([1, 2, 3, 7]);
+    expect(parseLineRanges('not a range at all')).toEqual([]); // malformed
+    expect(parseLineRanges(undefined)).toEqual([]); // absent
+  });
+
+  it('never throws on adversarial input', () => {
+    const adversarial = [
+      '', '{}', '{,}', '{0}', '{-1}', '{5-2}', '{2,,4}', '{2-}', '{-4}', '{4,4,4}',
+      '{2-4,3}', '  {2,4}  ', '{2, 4}', '{999999999999999999}', '{2-4', '2,4}', null,
+      '{<script>}', '{2}extra', 'javascript', '{NaN}', '{2.5}',
+    ];
+    for (const input of adversarial) {
+      expect(() => parseLineRanges(input)).not.toThrow();
+    }
+  });
+
+  it('deduplicates and sorts regardless of overlap or write order', () => {
+    expect(parseLineRanges('{4,2,4}')).toEqual([2, 4]);
+    expect(parseLineRanges('{2-4,3}')).toEqual([2, 3, 4]);
+  });
+
+  it('rejects an inverted or non-positive range rather than silently producing nothing / negative lines', () => {
+    expect(parseLineRanges('{5-2}')).toEqual([]);
+    expect(parseLineRanges('{0}')).toEqual([]);
+    expect(parseLineRanges('{-1}')).toEqual([]);
+  });
+
+  it('a token missing the surrounding braces is malformed, not a bare range', () => {
+    expect(parseLineRanges('2,4')).toEqual([]);
+  });
+
+  it('a preposterously wide range is rejected rather than expanded (hang guard)', () => {
+    expect(parseLineRanges('{1-99999999999}')).toEqual([]);
+    // A span at the bound still expands normally — the guard rejects only what's wider than it.
+    expect(parseLineRanges('{1-3}')).toEqual([1, 2, 3]);
   });
 });
 

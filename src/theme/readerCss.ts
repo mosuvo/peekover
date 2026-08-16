@@ -644,6 +644,52 @@ export const READER_CSS = /* css */ `
 .peekover-reader .peekover-code{position:relative}
 .peekover-reader .peekover-code pre[data-code="rendered"]{display:none}
 
+/* Per-fence toolbar (009 §3.11, task 4.3) — IN-FLOW, the FIRST child of .peekover-code, pushing
+   both <pre>s down. §3.11's routing table routes rows 7/9/10 OUT for exactly this reason: no
+   position:fixed/absolute here, unlike .peekover-diagram-actions below — mirrors
+   .peekover-table-tools's in-flow shape instead. Rationale: codeView.ts's buildCodeToolbar. */
+.peekover-reader .peekover-code-toolbar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  margin-bottom:8px;
+  font-family:var(--sans);font-size:12px;color:var(--muted);
+}
+.peekover-reader .peekover-code-toolbar__lang{
+  margin-right:auto;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+}
+.peekover-reader .peekover-code-toolbar button{
+  font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;
+}
+.peekover-reader .peekover-code-toolbar button:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-reader .peekover-code-toolbar button[aria-pressed="true"]{
+  color:var(--ink);border-color:var(--faint);background:var(--code-bg);
+}
+.peekover-reader .peekover-code-toolbar__copy{transition:color 120ms ease,border-color 120ms ease}
+.peekover-reader .peekover-code-toolbar__copy[data-state="done"]{color:var(--ok);border-color:var(--ok)}
+.peekover-reader .peekover-code-toolbar__copy[data-state="failed"]{color:var(--del);border-color:var(--del)}
+@media (prefers-reduced-motion:reduce){.peekover-reader .peekover-code-toolbar__copy{transition:none}}
+
+/* Line numbers (task 4.3) — CSS counters on the highlighted sibling's own .line spans, gated on
+   the WRAPPER's data-line-numbers attribute (D-7: absent by default; codeView.ts never mutates
+   the highlighted <pre>'s structure to add this). */
+.peekover-reader .peekover-code[data-line-numbers="on"] pre.shiki code{counter-reset:peekover-code-line}
+.peekover-reader .peekover-code[data-line-numbers="on"] pre.shiki .line{counter-increment:peekover-code-line}
+.peekover-reader .peekover-code[data-line-numbers="on"] pre.shiki .line::before{
+  content:counter(peekover-code-line);display:inline-block;min-width:2em;margin-right:1em;
+  text-align:right;color:var(--faint);user-select:none;
+}
+
+/* Word-wrap (task 4.3) — white-space/overflow-wrap only, gated the same way. NEVER a ch unit in
+   a layout-blocking property here (retro finding 6) — a monospace surface is exactly where that
+   looks tempting. */
+.peekover-reader .peekover-code[data-wrap="on"] pre.shiki{white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Line-highlighting (task 4.3, D-8's consumer) — background ONLY; the text/aria-* half (row 15)
+   is the aria-label codeEnhancer.ts's adoptHighlighted sets on the same span. Content-width, not
+   full-row (PROVISIONAL — the full-bleed treatment is a walk-informed call, M-4's territory, not
+   a decision to make quietly here). */
+.peekover-reader .peekover-code-line--highlighted{background:var(--ok-soft);border-radius:3px}
+
 /* Diagrams (007 D-15) — rationale: diagramView.ts */
 .peekover-reader .peekover-diagram{
   margin:28px 0;padding:0;overflow-x:auto;text-align:center;

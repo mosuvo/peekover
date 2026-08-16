@@ -57,11 +57,21 @@ export const ALLOWED_TAGS = [
  *  - `align` is dead weight: markdown-it emits table alignment as inline `style`
  *    (which we strip), never as an `align` attribute, so allowing it does nothing.
  *    GFM alignment is restored safely in M2 by mapping to a class (see tasks.md).
+ *
+ * `data-fence-meta` (009 task 4.3, resolution (a) from 3.1's review) is a NAMED
+ * exception to `ALLOW_DATA_ATTR: false` below — allowed by exact name, not by the
+ * blanket `data-*` toggle. `parse.ts`'s conditional fence renderer (D-8) is its
+ * only producer, and its value is always the trailing text of a fenced code
+ * block's info string (e.g. `{2,4}`) — never a URL, never script-bearing, and
+ * HTML-escaped by the renderer like every other attribute in this pipeline. The
+ * toolbar's line-highlighting control (task 4.3) reads it back as
+ * `code.dataset.fenceMeta`.
  */
 export const ALLOWED_ATTR = [
   'href', 'src', 'alt', 'title', 'class',
   'type', 'checked', 'disabled',
   'colspan', 'rowspan',
+  'data-fence-meta',
 ] as const;
 
 /**

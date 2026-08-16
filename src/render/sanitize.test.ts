@@ -52,6 +52,7 @@ describe('sanitize — strict DOMPurify profile', () => {
         'href', 'src', 'alt', 'title', 'class',
         'type', 'checked', 'disabled',
         'colspan', 'rowspan',
+        'data-fence-meta',
       ]);
     });
 
@@ -827,6 +828,7 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
   'href', 'src', 'alt', 'title', 'class',
   'type', 'checked', 'disabled',
   'colspan', 'rowspan',
+  'data-fence-meta',
 ] as const;`);
     });
 
