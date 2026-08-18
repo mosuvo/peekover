@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-15 (M9 task 3.1 done — parse.ts's conditional data-fence-meta override, D-8; implementation next at task 4.1).*
+*Updated: 2026-08-18 (M9 task 4.4 done — the code-block pipeline's zero-network guard, §3.11 row 22; implementation next at task 4.5).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -706,6 +706,72 @@ browser/codeToolbar.browser.test.ts` (new) · `specs/009-code-blocks/tasks.md` (
 `parse.ts`, `codeEngine.ts`, `readerPane.ts`, `appShell.ts`, `mount.ts`, every `entrypoints/` file and
 every manifest config file: all confirmed untouched. **No other `src/`, `entrypoints/`, or `tests/`
 file in the diff.**
+★ **TASK 4.4 IS DONE — THE CODE-BLOCK PIPELINE'S ZERO-NETWORK GUARD, `tests/browser/
+codeNetwork.browser.test.ts` (§3.11 row 22), test-only. NOW-POINTER ADVANCES TO 4.5 NEXT.** tasks.md
+4.4's own D-value tag line, cited verbatim: *"[row 22; §4 Trust; §5 zero-network; finding 1]"*.
+★ **RULE-#1 DIVERGENCE FROM THE KICKOFF, FOLLOWED PER THE TASKS.MD BODY:** the kickoff hypothesized a
+STRUCTURAL proof (a unit test inspecting `codeEngine.ts`'s dynamic-import specifiers) as part of this
+task's shape. tasks.md 4.4's actual Files list is ONE file, the browser test alone — the structural
+four-clause import fence (clause C's specifier-count proof) is task **4.5**'s job, not 4.4's; 4.4
+discharges the REQUEST-LEVEL half of §4 Trust only. No production file is touched by this task.
+★ **THE HARNESS-ONLY WARM-UP, NAMED IN THE TEST'S OWN HEADER.** In production, `import('shiki/core')`
+and the curated language/theme chunks resolve to `chrome-extension://`/`moz-extension://` URLs —
+excluded by the `/^https?:/i` predicate's scheme check. In the Vitest dev-server harness the same
+chunks serve over `http://localhost`, which the SAME predicate would catch as a false positive — the
+identical limit `diagramWindow.ts`'s `warmEngine()` already documents for `import('mermaid')`. This
+file's own `warmEngine()` drives one throwaway `enhanceCode` pass (same language, same provisional
+theme) in `beforeAll`, before any probe is armed, so the MEASURED engine-load is a module-cache hit —
+compensating for a harness artifact honestly, not narrowing the claim.
+★ **D-4's OWN FORCE ON THE CONTROL.** `codeToTokens` never produces an HTML string (D-4), so the
+standing "a control routed through `sanitize()` can read NO-FETCH while the route is open" lesson
+applies with full force: the subresource-lane control is hand-written markup, parsed into an inert
+`<template>`, never a "detached" div, touching no sanitizer and no `parse()` — `tableNetwork.browser.
+test.ts`'s row-22 shape, reused verbatim in predicate and in instrument shape (`awaitFetchedUrls`).
+★ **THE FIVE NAMED STAGES COLLAPSE TO THREE MEASURABLE ONES, STATED HONESTLY RATHER THAN FAKED.**
+Production has no separate hook per engine-load/tokenize/theme-select — `codeEnhancer.ts`'s async body
+does all three in one pass — so the test measures that pass as ONE window. Task 6.1 (D-10's collapse
+UI) has not landed, so the collapse stage is exercised by pre-building the decided state directly:
+`codeView.ts`'s own module header names the shape (`data-code-state`, `"collapsed"`/`"expanded"`,
+mirroring `readerMode.ts`'s flip-an-attribute pattern) and this file sets that attribute by hand,
+under the same armed probe — tasks.md 4.4's own text licenses exactly this ("this task's fixture
+pre-builds the collapsed state directly").
+★ **TWO DESCRIBE BLOCKS, MIRRORING `tableNetwork.browser.test.ts`'s OWN SHAPE.** One cumulative
+sequence (ONE arming, buffer never cleared between stages — row 22's claim as written) and one
+per-stage freshly-armed sequence (re-armed immediately before EACH triggering action, including the
+document open itself for the engine-load leg — arming AFTER `openDoc` would arm too late, since
+`enhanceCode`'s async body starts off-stack the instant the fence is committed, D-5).
+★ **RED-FIRST ABLATION, LOCALIZED.** A stray `fetch()` was inserted into `preBuildCollapsedState`
+(test-file-only, never committed) and both describe blocks reded on BOTH engines, exact signature
+(*"the code pipeline's 'collapse' step put bytes on the wire"*), only the collapse-stage assertion
+failing in each test — nothing else in the file. Reverted, confirmed green again both engines. Stray
+`__screenshots__/codeNetwork.browser.test.ts/` artifacts (gitignored) removed.
+Standing invariants: `pnpm test` **986/986** (58 files, unchanged — no unit test added) ·
+`pnpm test:browser` **126/126 files green, 1351 passed, 15 skipped, 0 failed** (full suite, both
+engines, no `-t` — +2 files/+4 passed over 4.3's 124/1347, this file's 2 cases × two engines) ·
+`pnpm lint` EXIT=0 · `git diff tests/golden/output/` EMPTY · `tests/manifest.test.ts` unmodified
+**2975 B**, green · 007 `diagramImportFence.test.ts` **8/8** green · `diagramActions.browser.test.ts`
+CSS pin **2,927 B** held, both engines · deps STILL **6** · built manifests **654/770 B**,
+`permissions: []` both, no `web_accessible_resources` · structural shiki-import: still ONLY
+`src/render/codeEngine.ts` (the two `import('shiki` hits inside `codeEnhancer.ts` are doc-comment
+prose, not code — confirmed by re-reading the matched lines). Bytes BYTE- AND MD5-IDENTICAL to 4.3's
+close, both engines (test-only task, no `src/` change): content script **333,161 B**, app-page chunk
+**467,716 B**, `.output` **4.67 MB** (4,672,638 / 4,672,754 B), zip **1.43 MB** (1,425,035 / 1,425,093
+B). `perf-app-first-paint.ts` (D-1's own app-page instrument, this milestone's governing gate since
+009 is app-page-only): **98.4ms median (92.3–112.2ms range) vs <165ms — PASS**, isolation-run.
+`perf-first-paint.ts --size 50kb` (content-script, unaffected by this task but re-checked as a
+standing invariant): **144.9ms median vs <165ms — PASS**, isolation-run. `git diff --name-only HEAD`
+at the commit: ONLY `tests/browser/codeNetwork.browser.test.ts` (new) · `specs/009-code-blocks/
+tasks.md` (4.4's box) · this file. No `src/`, `entrypoints/`, or any other `tests/` file in the diff.
+★ **THE KICKOFF'S "TWO NEW § CARRIED ITEMS ENTRIES" WERE STALE, AND ARE NOT DUPLICATED HERE.** Both
+pieces of content the kickoff asked this task to bank — the `readerCss.ts` test-speed-rule /
+`prefers-reduced-motion` harness fact, and the kickoff-fence-must-cite-ground-truth lesson from 4.3's
+CS-byte-identity divergence — are **already recorded**, in 4.3's own § Now entry above (this file,
+lines ~660-668 for the harness fact, ~594-606 for the fence lesson), banked by the SAME commit
+(`fa3f182`) this task started from. Re-adding them here would be a duplicate write of already-banked
+fact. This file also has no dedicated **"§ Carried items"** heading — the phrase is a conceptual
+pointer used in prose throughout (e.g. this file's "## Blockers / open questions" section); carried
+findings are recorded inline in whichever "## Now" entry produced them, which is exactly where both
+of these already live.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in

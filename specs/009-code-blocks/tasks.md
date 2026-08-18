@@ -351,7 +351,7 @@ read.**
       stays readable (§3.9). Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-7, D-8; §4 toolbar; rows 5, 8, 11, 14, 15, 16, 17, 18, 19, 20, 24]
 
-- [ ] **4.4 The zero-network guard, across engine-load → tokenize → theme-select → copy → collapse, with the
+- [x] **4.4 The zero-network guard, across engine-load → tokenize → theme-select → copy → collapse, with the
       control fetch shown live in the SAME test (§3.11 row 22).** ★ **D-4 means nothing in this path goes
       through the sanitizer at all** — `codeToTokens` never produces an HTML string, so the standing lesson
       applies with FULL force: the control markup must be adopted from something no sanitizer has touched, not
