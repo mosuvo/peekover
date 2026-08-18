@@ -1111,6 +1111,55 @@ green browser run). `perf-first-paint.ts --size 50kb`, isolation-run (fresh buil
 `src/` or `tests/` file in the diff.
 ★ **NO NEW § CARRIED ITEMS.**
 
+★ **TASK 7.1 IS DONE — TOTAL ENGINE-LOAD FAILURE, PAGE-WIDE (§3.9). NOW-POINTER ADVANCES TO 7.2
+NEXT.** tasks.md 7.1's own tag, cited verbatim: *"[§3.9; §4 highlighting degradation]"* — no D-value
+(7.1 is a systemic-degradation proof, not scoped to a plan D-value). Files list, verbatim:
+`src/render/codeEnhancer.ts` · `tests/browser/codeDegrade.browser.test.ts`.
+★ **THE PRODUCTION DIFF IS EMPTY — `codeEnhancer.ts` ships byte- and md5-identical to HEAD, a
+no-op RECORDED as such, not silently transcribed off the Files list (008's "a PROPOSED comment left
+on a chosen value is a lie about the decision state" discipline, applied here to a whole-file
+no-op).** Investigated first: `highlightFences`'s outer `try { engine = await loadCodeEngine(...) }
+catch { for (const pair of pairs) markCodeFailed(...); return; }` (`codeEnhancer.ts:258-264`)
+**already existed, built at task 4.2** — its own doc comment already states *"Engine-load failure is
+document-wide (§3.9's first failure): no fence got as far as having its own outcome, so every pair
+is marked `failed` together"*, and `codeRender.browser.test.ts`'s own 4.2 test ("engine-load
+failure: EVERY fence on the page stays plain, the page stays intact") already exercises the same
+rejecting-loader behavior. **What 4.2 did NOT prove is that THIS specific guard is load-bearing**:
+4.2's own revert-and-fail removed the PER-FENCE `try`/`catch` inside the loop, which structurally
+cannot touch this path — the loop never starts when the outer `await` rejects. 7.1's job, re-derived
+against the tree rather than assumed from the Files list, was a DEDICATED test file with its OWN
+ablation isolating the outer guard — exactly tasks.md 7.1's Verify line asks for, and exactly why
+`codeEnhancer.ts` is named in the Files list despite shipping no diff.
+★ **PLAN-MODE JUDGMENT: NOT WARRANTED, stated with defense.** No new mechanism — the guard predates
+this task; the work is a browser-test addition following `codeRender.browser.test.ts`'s own
+established shape (`directHost` + injectable rejecting loader + `settled()` polling), with no design
+decision, no threshold, no cross-file wiring. Falls squarely in the framework's "pure extension of
+an existing pattern" bucket.
+★ **RED-FIRST ABLATION, LOCALIZED.** Outer `try`/`catch` temporarily removed (`engine = await
+loadCodeEngine(...)`, unguarded). Result, both engines: the assertion `wrapper.getAttribute
+(CODE_STATE_ATTR)).toBe('failed')` timed out — **`Expected: "failed", Received: "pending"`** — every
+wrapper stuck at its pre-failure state forever, PLUS a genuine unhandled rejection (`Error: boom`)
+surfaced from `highlightFences` — the "propagates" tasks.md 7.1's Verify line names, in its own
+units. **LOCALIZED**: exactly 2 of 132 browser test files failed (the new file × 2 engines); the
+other 130 stayed green in the same run. Reverted; `git diff --stat src/render/codeEnhancer.ts`
+confirmed EMPTY (byte-identical) after revert; the targeted test re-ran GREEN on both engines.
+★ **BUNDLE-VERIFY-GATE, FRESH BUILD BOTH ENGINES — EVERY FIGURE BYTE-IDENTICAL TO 6.1's CLOSE**
+(expected: no production diff). Content script **334,858 B** both engines. App chunk **475,579 B**
+both engines. `.output` **4.87 MB** (Cr `4,866,741 B` / Fx `4,866,857 B`). Zip **1,470,730 /
+1,470,788 B** (Cr/Fx). Built manifests **654 / 770 B**, `permissions: []`, no
+`web_accessible_resources`, both engines. deps STILL **6**.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files — unit count unchanged; 7.1's
+Files list names no unit test file). `pnpm test:browser` **132 files green** (+2 from 130 — one new
+file ×2 engines), **1387 passed, 15 skipped, 0 failed** (+2 from 1385). `pnpm lint` EXIT=0. `git diff
+tests/golden/output/` EMPTY. 009 `codeImportFence.test.ts` **9/9** unchanged (7.1 touches no
+import). 007 `diagramImportFence.test.ts` **8/8**. `diagramActions.browser.test.ts` CSS pin held
+(part of the full green browser run). `perf-first-paint.ts --size 50kb`, isolation-run (fresh
+build): **144.5ms median (140.0–154.3ms range) vs <165ms — PASS**. `git diff --name-only HEAD` at
+the commit: exactly `specs/009-code-blocks/tasks.md` (7.1's box) · `tests/browser/codeDegrade.
+browser.test.ts` (new) · this file. No `src/` file in the diff — `codeEnhancer.ts`'s own diff is the
+empty one recorded above.
+★ **NO NEW § CARRIED ITEMS.**
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the

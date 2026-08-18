@@ -460,7 +460,7 @@ and green.*
 
 ## 7 — Systemic failure and degradation (the failures groups 3–6 could not reach)
 
-- [ ] **7.1 Total engine-load failure — the chunk never resolves at all, page-wide (§3.9).** Distinct from
+- [x] **7.1 Total engine-load failure — the chunk never resolves at all, page-wide (§3.9).** Distinct from
       4.2's per-block-failure proof: here the dynamic `import('shiki/core')` itself is forced to reject before
       ANY fence is processed.
       Files: `src/render/codeEnhancer.ts` · `tests/browser/codeDegrade.browser.test.ts`
