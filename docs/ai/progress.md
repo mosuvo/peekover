@@ -924,6 +924,114 @@ tasks.md` (5.1's box) · this file. No `codeEnhancer.ts`/`codeEngine.ts`/`codeVi
 ★ **NO NEW § CARRIED ITEMS beyond the D-12 trap note above** (which is itself the one finding this task
 surfaced, banked in this same entry).
 
+★ **TASK 5.2 IS DONE — THE CODE THEME PICKER, D-12'S TRAP CLOSED (D-9). NOW-POINTER ADVANCES TO 6.1
+NEXT.** tasks.md 5.2's own D-value tag, cited verbatim: *"[D-9; §4 themes; §4 a11y]"*.
+★ **TWO KICKOFF-VS-GROUND-TRUTH DIVERGENCES CAUGHT BEFORE ANY PRODUCTION CODE, PER AGENTS.MD'S STANDING
+RULE.** (1) TYPE (i), MAJOR: the session's kickoff assumed a hand-curated ~14-theme set added to
+`codeEngine.ts`'s `THEME_LOADERS`, mirroring `LANGUAGE_LOADERS`'s 6-language curated map. tasks.md 5.2's
+own text rules this out explicitly: *"the listbox offers ≥14 entries, drawn from Shiki's own bundled
+theme set (**not hand-curated**)"* — directly contradicting `codeEngine.ts`'s own header, which frames
+`THEME_LOADERS` as deliberately curated specifically to dodge the bundle-bloat regression task 4.2
+measured (13.6 MB `.output` from Shiki's full catalog barrel). Routed to the human via `AskUserQuestion`
+before writing anything, with real numbers: Shiki 4.4.3 bundles 65 themes (`@shikijs/themes`,
+1,465,107 B total measured this session) against a 4.67 MB `.output` baseline and a 5 MB ceiling — all
+65 was measured infeasible, a hand-picked ~14 favorites list was what tasks.md's text rejected. Answer:
+a bounded, MECHANICALLY-selected slice — not a favorites list, not the whole catalog. (2) Resolved from
+ground truth directly, no human input needed: the kickoff's spine also assumed
+`PROVISIONAL_CODE_THEME`'s comment needed force-resolving this task; 5.1's own entry above and
+tasks.md 5.2's text both confirm the *value* stays provisional pending 8.4/8.5's M-4 ruling — 5.2 only
+had to make the *mechanism* real. See PROVISIONAL resolution below.
+★ **DECISION 1 — THE THEME SET, MEASURED.** Rule: **the 20 smallest Shiki-bundled themes by raw `.mjs`
+byte size, ascending**, each candidate's own bg/fg contrast-checked against WCAG AA 4.5:1 (spec §4 a11y:
+*"every code theme meets contrast requirements against its own background"*) and swapped for the
+next-smallest passing theme on a fail. One swap needed: `solarized-light` (7,474 B, measured ratio
+4.13:1) failed AA and was replaced by `vitesse-black` (15,243 B, ratio 14.59:1). Final 20: `min-dark`,
+`red`, `min-light`, `solarized-dark`, `monokai`, `horizon`, `horizon-bright`, `andromeeda`, `dark-plus`,
+`slack-dark`, `plastic`, `slack-ochin`, `light-plus`, `laserwave`, `github-light`, `github-dark`,
+`vesper`, `aurora-x`, `vitesse-light`, `vitesse-black` — 217,343 B total, ~204,598 B of which is new
+(`github-dark` was already shipped at 5.1). Both criteria (byte size, measured contrast) are objective
+and reproducible — a resource constraint and a measured a11y floor — which is what "not hand-curated"
+is read to mean, distinct from `LANGUAGE_LOADERS`'s own editorially-curated six. `codeEngine.ts` gains
+`CODE_THEME_IDS` (exported, `Object.keys(THEME_LOADERS)`) so `codeThemeControl.ts` never duplicates the
+catalog. `codeImportFence.test.ts` clause C's loader-edge count moves 7 → 26 (6 languages + 20 themes);
+its module header gets a dated ADDENDUM rather than an edit to the 4.2-close paragraph, matching the
+D-10(b)/9.3 precedent for not rewriting a snapshot that was correct when written.
+★ **DECISION 2 — `PROVISIONAL_CODE_THEME` REMOVED, NOT RESOLVED-IN-PLACE (008 standing rule).** Once
+`enhanceCode`'s fallback reads `currentSettings().codeTheme` (`settingsSeam.ts`, typed to always return
+a full `Settings`, never `undefined`), the constant became dead weight — a second literal that could
+drift from `DEFAULT_SETTINGS.codeTheme`, which already carries the identical value and the identical
+"provisional pending 8.4/8.5" doc comment (written at 5.1). Deleted; `EnhanceOptions.theme`'s doc
+comment now names `settings.codeTheme` as what it overrides. Single source of truth for the provisional
+default, one place for 8.4/8.5 to eventually change.
+★ **THE D-12 TRAP IS CLOSED.** `store.ts`'s `getSettings()` hand-enumeration extended:
+`codeTheme: row.codeTheme ?? DEFAULT_SETTINGS.codeTheme` — the `??` matters, not a bare override:
+`idbVersionchange.browser.test.ts`'s pre-5.1 legacy row has no `codeTheme` at all, so a bare
+`row.codeTheme` would write `undefined` instead of falling back to the default, same guard
+`settingsPort.ts`'s `coerceSettings`/`store.ts`'s `describeStored()` already use. New roundtrip test in
+`tests/browser/settingsStore.browser.test.ts` (real engine): `putSettings({codeTheme})` →
+`getSettings()` returns it, both engines.
+★ **THE RE-THEME MECHANISM — `codeEnhancer.ts` GAINS A SECOND, INDEPENDENT HOST REGISTRY.** Mirrors
+`themeRegistry.ts`'s `themeHosts`/`pruneThemeHosts`/`isConnected` pattern exactly but is functionally
+SEPARATE from it (§4 forbids a code-theme change from ever touching the document theme or vice versa —
+sharing the registry would conflate the two axes it exists to keep apart). `enhanceCode` registers any
+host with ≥1 code fence; the new exported `reapplyCodeTheme(theme)` prunes dead hosts, re-tokenizes
+every ALREADY-RENDERED block (retained-source `<pre>` still holds the original, untouched by D-6) and
+**replaces** the current `.shiki` sibling via `replaceWith` — never `markCodeRendered`, which APPENDS
+and would duplicate content. Per-fence tokenize/theme-apply failure on reapply leaves that ONE block
+showing its PREVIOUS theme rather than the `failed` state initial render uses (AGENTS.md #5 carried one
+block more granular: a repaint failing on an already-working block must not regress it to no colour).
+★ **`codeThemeControl.ts` — THE NEW MODULE tasks.md 5.2 FLAGGED, NOT SILENTLY INVENTED.** A trigger pill
++ `role="listbox"` popover mirroring `diffChrome.ts`'s own pattern (not `themeControl.ts`'s cycle
+button — structurally can't hold ≥14 choices), each row a native `<button role="option">`
+(`diffChrome.ts`'s own reasoning: keyboard-operable for free, no hand-rolled keydown handling). Selecting
+a row: `saveSettings({codeTheme})` then `reapplyCodeTheme(id)`, in that order, so a repaint failure can
+never leave a pick unsaved. Mounted in `appShell.ts`'s header beside `themeControl`, app-page only —
+§3.8 holds, code highlighting never reaches the content script, and neither does this control.
+★ **A REAL DEFECT FOUND AND FIXED BY THE FULL BROWSER SUITE, NOT BY INSPECTION — EXACTLY THE CLASS OF
+THING THIS GATE EXISTS TO CATCH.** First full `pnpm test:browser` run: 22 failures across 8 files,
+including completely unrelated ones (`tableNetwork.browser.test.ts`'s sort buttons became unclickable —
+*"`<button data-theme-id="dark-plus">…</button> … subtree intercepts pointer events`"*). Root cause:
+APP_CSS's `.peekover-code-theme-picker{display:flex}` rule beats the UA `[hidden]{display:none}`
+default, so `picker.hidden = true` left the popover visually `flex` and covering part of the header on
+every appShell mount, on every subsequent test in the same browser session. `readerCss.ts`'s diffChrome
+picker hit this exact defect first and already carries the fix pattern (`.peekover-diff-picker[hidden]
+{display:none}`) — mirrored here. None of `codeThemeControl.ts`'s own unit/browser tests could have
+caught it: they build the control standalone, with no APP_CSS stylesheet attached at all. Fixed, and a
+new regression suite added (`codeThemeControl.browser.test.ts`, "under the REAL appShell stylesheet")
+that mounts the genuine shell and asserts `getComputedStyle(picker).display === 'none'` while hidden —
+the property the standalone tests structurally cannot see. Re-ran full suite clean after the fix.
+★ **RED-FIRST ABLATIONS, ALL THREE CAPTURED AND REVERTED.** (1) D-12 fix reverted → the new roundtrip
+test reds LOCALIZED, both engines, exact signature (default `'github-dark'` returned instead of the
+written value). (2) Settings wiring reverted (hard-coded `'github-dark'` fallback) → LOCALIZED,
+`codeEnhancer.test.ts`'s new precedence test. (3) Precedence inverted (`currentSettings().codeTheme ??
+options.theme`) → PROPAGATING: 4.2's own pre-existing "theme-apply failure" test reds in BOTH
+`codeEnhancer.test.ts` (jsdom) and `tests/browser/codeRender.browser.test.ts` (both engines), plus the
+new precedence test — three sites, one mechanism, exactly the shape 4.2's own test invariant was meant
+to guard.
+★ **BUNDLE-VERIFY-GATE, FRESH BUILD BOTH ENGINES.** Content script **333,221 B, BYTE-IDENTICAL** to
+5.1's close — themes are app-page-only, §3.8 holds, `codeImportFence.test.ts` clause A re-confirms the
+content-script graph reaches neither `codeEnhancer.ts` nor `codeEngine.ts`. App chunk
+**467,776 → 473,100 B (+5,324 B)** — the new UI module + wiring, not a theme chunk (those are separate
+lazy files). `.output` **4.7 → 4.86 MB** (Cr `4,862,625 B`, Fx `4,862,741 B`, both under 5 MB). Zip
+**1,425,102/1,425,161 → 1,469,717/1,469,776 B** (Cr/Fx, both under 2 MB). Manifests **654/770 B**,
+byte-identical, `permissions: []`, no `web_accessible_resources`, both engines.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files, +32 from 996/996 — 27 new in
+`codeThemeControl.test.ts`, 5 new in `codeEnhancer.test.ts`). `pnpm test:browser` **128 files green,
+1369 passed, 15 skipped, 0 failed** (+2 files/+18 tests from 126/1351 — `codeThemeControl.browser.test.ts`
+new at 8 tests × 2 engines, +1 test × 2 engines in `settingsStore.browser.test.ts`). `pnpm lint` EXIT=0.
+`git diff tests/golden/output/` EMPTY. `tests/manifest.test.ts` green · 009 `codeImportFence.test.ts`
+**9/9** at the new count · 007 `diagramImportFence.test.ts` **8/8** · `diagramActions.browser.test.ts`
+CSS pin held · deps STILL **6**. `perf-first-paint.ts --size 50kb`, isolation-run: **142.6ms median
+(140.2–150.9ms range) vs <165ms — PASS**. `git diff --name-only HEAD` at the commit: exactly
+`specs/009-code-blocks/tasks.md` (5.2's box) · `src/app/appShell.ts` · `src/app/store.ts` ·
+`src/render/codeEngine.ts` · `src/render/codeEnhancer.ts` · `src/render/codeEnhancer.test.ts` ·
+`src/render/codeImportFence.test.ts` · `tests/browser/settingsStore.browser.test.ts` ·
+`src/theme/codeThemeControl.ts` (new) · `src/theme/codeThemeControl.test.ts` (new) · `tests/browser/
+codeThemeControl.browser.test.ts` (new) · this file. No `PERMISSIONS.md`/manifest/other `src/` or
+`tests/` file in the diff — 5.2 added no settings row, no capability, no new disclosure.
+★ **NO NEW § CARRIED ITEMS.** The only thing that could read as one — the `[hidden]`/cascade defect
+class — is fixed in this same commit with its own regression coverage, not filed onward.
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the

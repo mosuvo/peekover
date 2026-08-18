@@ -118,6 +118,20 @@ describe('settings round-trip + merge (real engine)', () => {
     expect(s2.tocOpen).toBe(true);
     expect(s2.tocWidth).toBe(288);
   });
+
+  it('putSettings({codeTheme}) writes, getSettings reads it back — the D-12 hand-enumeration trap task 5.1 filed, closed at task 5.2', async () => {
+    // Red-first (task 5.2): before store.ts's getSettings() extended its hand-enumeration to
+    // include codeTheme, this wrote fine but read back DEFAULT_SETTINGS.codeTheme regardless —
+    // the exact signature this assertion pins.
+    await putSettings({ codeTheme: 'vitesse-black' });
+    expect(await getSettings()).toMatchObject({ codeTheme: 'vitesse-black' });
+
+    // Merges onto the row like every other field — a second patch untouched by codeTheme survives it.
+    await putSettings({ theme: 'dark' });
+    const s = await getSettings();
+    expect(s.codeTheme).toBe('vitesse-black');
+    expect(s.theme).toBe('dark');
+  });
 });
 
 describe('settings store — additive upgrade (real engine; jsdom-blind)', () => {

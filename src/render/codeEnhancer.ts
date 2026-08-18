@@ -63,6 +63,7 @@ import {
   markCodeFailed,
   buildCodeToolbar,
   CODE_STATE_ATTR,
+  CODE_WRAPPER_CLASS,
   CODE_LINE_HIGHLIGHT_CLASS,
 } from './codeView';
 import {
@@ -73,21 +74,10 @@ import {
   type HighlighterCore,
   type TokensResult,
 } from './codeEngine';
+import { currentSettings } from '../settings/settingsSeam';
 
 /** See the module header's "A MERMAID FENCE IS NEVER A CODE-HIGHLIGHTING CANDIDATE" section. */
 const MERMAID_FENCE_CLASS = 'language-mermaid';
-
-/**
- * ★ PROVISIONAL — task 5.1 gives `codeTheme` a real settings field and task 8.4 rules the actual
- * default (plan §8 M-4, measure-then-choose); this task has neither yet, so every fence highlights
- * at ONE fixed, hard-coded bundled theme id until then. Named PROVISIONAL in this comment rather
- * than left to read as a decision — the 008 standing rule ("a PROPOSED comment left on a chosen
- * value is a lie about the decision state") applies to a hard-coded literal exactly as it does to
- * a settings default. `'github-dark'` is chosen only because it is one of Shiki's own bundled
- * theme ids (D-4's "Shiki's own theme-data colours" requirement) and produces visibly distinct
- * token colours for the hostile/plain fixtures this task's tests use — not a design opinion.
- */
-const PROVISIONAL_CODE_THEME = 'github-dark';
 
 /** Options exist for the tests, and for two things: injecting the loader, and forcing a theme id
  *  that will not resolve (the "theme-apply failure" case, tasks.md 4.2's Verify). Production
@@ -95,8 +85,9 @@ const PROVISIONAL_CODE_THEME = 'github-dark';
 export interface EnhanceOptions {
   /** Overrides the `import('shiki/core')` `codeEngine.ts` performs. See {@link EngineLoader}. */
   readonly loader?: EngineLoader;
-  /** Overrides {@link PROVISIONAL_CODE_THEME}. An id `themeInputFor` cannot resolve is how the
-   *  theme-apply-failure path is exercised without D-9's real picker existing yet. */
+  /** Overrides `settings.codeTheme` (task 5.2 — `PROVISIONAL_CODE_THEME` is retired now that the
+   *  fallback reads a real settings field, see the module header). An id `themeInputFor` cannot
+   *  resolve is how the theme-apply-failure path is exercised without a picker click. */
   readonly theme?: string;
 }
 
@@ -275,27 +266,42 @@ async function highlightFences(
 
   for (const pair of pairs) {
     try {
-      const code = pair.pre.querySelector('code');
-      const source = code?.textContent ?? '';
-      const lang = pair.lang;
-
-      const langInput = languageInputFor(lang);
-      if (langInput) await engine.loadLanguage(langInput);
-      const themeInput = themeInputFor(theme);
-      if (themeInput) await engine.loadTheme(themeInput);
-
-      // An unresolved language OR theme raises HERE, not above — `codeEngine.ts`'s module header:
-      // one failure surface for "unknown key" and "tokenize genuinely failed" alike.
-      const tokens = engine.codeToTokens(source, { lang, theme });
-      // D-8's consumer: read BEFORE the retained <pre> is hidden — `code.dataset.fenceMeta` stays
-      // on the node either way (D-6 never mutates it), but reading it beside the tokenize call
-      // keeps the two D-8-dependent reads (the language class, the meta attribute) together.
-      const highlightedLines = parseLineRanges(code?.dataset.fenceMeta);
-      markCodeRendered(pair.pre, pair.wrapper, adoptHighlighted(doc, tokens, highlightedLines));
+      const adopted = await tokenizeAndAdopt(doc, engine, pair.pre, pair.lang, theme);
+      markCodeRendered(pair.pre, pair.wrapper, adopted);
     } catch {
       markCodeFailed(pair.pre, pair.wrapper);
     }
   }
+}
+
+/**
+ * Tokenize one wrapped fence's retained source with `theme` and build the adopted node —
+ * `code.dataset.fenceMeta` is read here, BEFORE the retained `<pre>` is hidden, though D-6 never
+ * mutates it either way (kept beside the tokenize call so the two D-8-dependent reads — the
+ * language class, the meta attribute — stay together). The exact sequence {@link highlightFences}
+ * and task 5.2's {@link reapplyCodeTheme} both need, factored out because it is IDENTICAL between
+ * them; only what happens to the RESULT (commit vs. replace) and what a FAILURE does (mark failed
+ * vs. leave the previous render alone) differs, and both stay at their own call site.
+ *
+ * An unresolved language OR theme raises HERE, inside `codeToTokens` — `codeEngine.ts`'s module
+ * header: one failure surface for "unknown key" and "tokenize genuinely failed" alike.
+ */
+async function tokenizeAndAdopt(
+  doc: Document,
+  engine: HighlighterCore,
+  pre: HTMLElement,
+  lang: string,
+  theme: string,
+): Promise<HTMLElement> {
+  const code = pre.querySelector('code');
+  const source = code?.textContent ?? '';
+  const langInput = languageInputFor(lang);
+  if (langInput) await engine.loadLanguage(langInput);
+  const themeInput = themeInputFor(theme);
+  if (themeInput) await engine.loadTheme(themeInput);
+  const tokens = engine.codeToTokens(source, { lang, theme });
+  const highlightedLines = parseLineRanges(code?.dataset.fenceMeta);
+  return adoptHighlighted(doc, tokens, highlightedLines);
 }
 
 /**
@@ -339,11 +345,115 @@ export function enhanceCode(host: HTMLElement, options: EnhanceOptions = {}): vo
     pairs.push({ pre, wrapper, lang });
   }
   if (pairs.length === 0) return;
+  // Task 5.2: this host has at least one code fence, so it is a candidate for a later re-theme —
+  // register it BEFORE the async body, same as the sync prologue's other side effects.
+  codeHosts.add(host);
   void highlightFences(
     host.ownerDocument,
     shadow,
     pairs,
     options.loader,
-    options.theme ?? PROVISIONAL_CODE_THEME,
+    options.theme ?? currentSettings().codeTheme,
   );
+}
+
+// ── TASK 5.2: THE RE-THEME REGISTRY AND ENTRY POINT ────────────────────────────────────────────
+//
+// Mirrors `themeRegistry.ts`'s `themeHosts`/`pruneThemeHosts`/`isConnected` pattern exactly — a
+// module-level Set, pruned before every use — but this registry is functionally INDEPENDENT of
+// that one: §4 requires a code-theme change to never touch the document theme and vice versa, so
+// sharing `themeRegistry`'s set or broadcast would conflate the two axes it is written to keep
+// apart. `codeThemeControl.ts` never sees this Set directly — it calls {@link reapplyCodeTheme}.
+
+/** Live hosts with at least one code fence, registered by {@link enhanceCode}. */
+const codeHosts = new Set<HTMLElement>();
+
+/** Drop hosts no longer in a document — `themeRegistry.ts`'s `pruneThemeHosts`, verbatim pattern.
+ *  Deleting during Set iteration is safe. */
+function pruneCodeHosts(): void {
+  for (const host of codeHosts) {
+    if (!host.isConnected) codeHosts.delete(host);
+  }
+}
+
+/** One already-rendered fence: its retained source `<pre>` (still holds the original
+ *  `<code class="language-…">` untouched — D-6 never mutates it) and the wrapper around it.
+ *  `lang` is re-derived rather than carried, since a rendered fence has no live {@link CodePair}
+ *  to carry it in by the time a re-theme runs. */
+interface RenderedCodePair {
+  readonly pre: HTMLElement;
+  readonly wrapper: HTMLElement;
+  readonly lang: string;
+}
+
+/** Every already-rendered fence under `root` — {@link codeFencesIn}'s counterpart, keyed off the
+ *  RENDERED state rather than an unwrapped fence, since a re-theme acts on what is already on
+ *  screen. The retained source `<pre>` is the one carrying {@link CODE_STATE_ATTR} — `markCodeRendered`
+ *  sets it there, never on the adopted `.shiki` sibling — so it is found unambiguously. */
+function renderedCodePairsIn(root: ParentNode): RenderedCodePair[] {
+  const pairs: RenderedCodePair[] = [];
+  const wrappers = root.querySelectorAll(`.${CODE_WRAPPER_CLASS}[${CODE_STATE_ATTR}="rendered"]`);
+  for (const wrapper of Array.from(wrappers) as HTMLElement[]) {
+    const pre = wrapper.querySelector(`pre[${CODE_STATE_ATTR}="rendered"]`) as HTMLElement | null;
+    if (!pre) continue; // structural guarantee from markCodeRendered setting both together.
+    pairs.push({ pre, wrapper, lang: classToLang(pre.querySelector('code')) });
+  }
+  return pairs;
+}
+
+/**
+ * Task 5.2's re-theme entry point: repaint every ALREADY-RENDERED fence on every live registered
+ * host with `theme`, in place. `codeThemeControl.ts` is the only caller (persist first via
+ * `saveSettings`, then this, per the module's own header).
+ *
+ * Unlike `enhanceCode`, this is not on `render()`'s timed path (D-5's cooldown constraint) — it
+ * runs from a picker click, never from a mount — so it is a plain, awaitable `async function`
+ * rather than the fire-and-forget `void highlightFences(...)` shape above.
+ *
+ * Per-host engine-load failure, and per-fence tokenize/theme-apply failure, both leave the
+ * affected block(s) showing their PREVIOUS theme rather than flipping to the `failed` state
+ * `highlightFences` uses on first render (AGENTS.md #5's "never blank" carried one block further:
+ * a repaint that fails on an already-working block must not regress it to no colour at all).
+ */
+export async function reapplyCodeTheme(theme: string): Promise<void> {
+  pruneCodeHosts();
+  for (const host of codeHosts) {
+    const shadow = host.shadowRoot;
+    if (!shadow) continue;
+    const pairs = renderedCodePairsIn(shadow);
+    if (pairs.length === 0) continue;
+    let engine: HighlighterCore | null;
+    try {
+      engine = await loadCodeEngine(shadow);
+    } catch {
+      continue; // this host's blocks keep their previous theme — see the doc comment above.
+    }
+    if (!engine) continue;
+    for (const pair of pairs) {
+      try {
+        const adopted = await tokenizeAndAdopt(host.ownerDocument, engine, pair.pre, pair.lang, theme);
+        // Replace the CURRENT adopted `.shiki` sibling — never `markCodeRendered`, which APPENDS
+        // and would duplicate content rather than swap it. The retained source `<pre>` is the one
+        // carrying `CODE_STATE_ATTR`, so the sibling without it is the adopted content.
+        const previous = pair.wrapper.querySelector(`pre:not([${CODE_STATE_ATTR}])`);
+        if (previous) previous.replaceWith(adopted);
+        else pair.wrapper.append(adopted); // structurally shouldn't happen — defensive only.
+      } catch {
+        // Leave this one block exactly as it was — see the doc comment above.
+      }
+    }
+  }
+}
+
+/** Test-only: empty the host registry so suites do not leak hosts into one another — mirrors
+ *  `themeRegistry.ts`'s `resetThemeHostsForTest`. */
+export function resetCodeHostsForTest(): void {
+  codeHosts.clear();
+}
+
+/** Test-only: the number of hosts currently registered (after pruning) — lets a test assert the
+ *  prune actually shrank the set, `themeRegistry.ts`'s `themeHostCountForTest` mirrored. */
+export function codeHostCountForTest(): number {
+  pruneCodeHosts();
+  return codeHosts.size;
 }

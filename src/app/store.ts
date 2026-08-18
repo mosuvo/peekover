@@ -230,7 +230,17 @@ export async function getSettings(): Promise<Settings> {
   const row = await get<SettingsRecord>(await db(), STORES.settings, SETTINGS_ID);
   if (!row) return { ...DEFAULT_SETTINGS };
   // Merge over the defaults so any field a future/partial row omits stays well-defined.
-  return { ...DEFAULT_SETTINGS, theme: row.theme, tocOpen: row.tocOpen, tocWidth: row.tocWidth };
+  return {
+    ...DEFAULT_SETTINGS,
+    theme: row.theme,
+    tocOpen: row.tocOpen,
+    tocWidth: row.tocWidth,
+    // The D-12 hand-enumeration trap (task 5.1's ledger entry): a legacy row predating 5.1 has no
+    // `codeTheme` at all, so a bare `row.codeTheme` would write `undefined` here instead of falling
+    // back to the default — the same `??` guard `settingsPort.ts`'s `coerceSettings` and this
+    // file's own `describeStored()` already use for the same field.
+    codeTheme: row.codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+  };
 }
 
 /** Merge `patch` onto the current settings and write the single global row. Resolves once

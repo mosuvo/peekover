@@ -35,15 +35,35 @@
 // listed — proportional cost, not the whole catalog. Each loader is handed to `HighlighterCore`'s
 // own `loadLanguage`/`loadTheme` UNRESOLVED (verified this session: both accept the bare lazy
 // function directly, the same shape Shiki's own bundled-key loaders use, so no `.default`
-// unwrapping is needed here). ★ **PROVISIONAL AND EXPLICITLY BOUNDED** — six languages
-// (`javascript`, `python`, `json`, `css`, `html`, `bash`) chosen only to cover this task's own
-// fixtures plus a few very common real-world fence languages; the real catalog breadth (how many
-// languages 009 ships with, whether it grows to Shiki's near-700-language range or stays curated)
-// is a genuine product question this task does NOT decide, left for a later measurement-driven
-// task (mirrors {@link PROVISIONAL_CODE_THEME}'s own framing in `codeEnhancer.ts`). An unlisted
-// language degrades exactly like an unresolvable one always has (module header, below):
-// `loadLanguage` no-ops on `undefined`, `codeToTokens` then raises, the caller's per-fence
-// `try`/`catch` reads it the same way it reads any other tokenize failure — no special case.
+// unwrapping is needed here). ★ **LANGUAGE_LOADERS IS PROVISIONAL AND EXPLICITLY BOUNDED** — six
+// languages (`javascript`, `python`, `json`, `css`, `html`, `bash`) chosen only to cover this
+// task's own fixtures plus a few very common real-world fence languages; the real catalog breadth
+// (how many languages 009 ships with, whether it grows to Shiki's near-700-language range or
+// stays curated) is a genuine product question this task does NOT decide, left for a later
+// measurement-driven task. An unlisted language degrades exactly like an unresolvable one always
+// has (module header, below): `loadLanguage` no-ops on `undefined`, `codeToTokens` then raises,
+// the caller's per-fence `try`/`catch` reads it the same way it reads any other tokenize failure —
+// no special case.
+//
+// ★ **THEME_LOADERS IS A DIFFERENT SHAPE — MECHANICALLY SELECTED, NOT EDITORIALLY CURATED (task
+//    5.2, D-9)** — tasks.md 5.2's own text rules out a hand-picked favorites list the way
+// LANGUAGE_LOADERS above is one: *"the listbox offers ≥14 entries, drawn from Shiki's own bundled
+// theme set (not hand-curated)"*. But the SAME bundle-bloat regression this section just described
+// applies to themes too (`@shikijs/themes` 4.4.3 bundles 65 themes, 1,465,107 B total, measured
+// this task) — so "not hand-curated" cannot mean "all of them" against a 5 MB `.output` ceiling
+// with ~330 KB of headroom at this task's start. The rule actually used: **the 20 smallest bundled
+// themes by raw `.mjs` byte size, ascending**, then swap out any candidate that fails a WCAG AA
+// 4.5:1 contrast check (own `editor.background` vs. own `editor.foreground`, Shiki's own
+// `normalizeTheme` fg/bg resolution — spec §4's a11y bullet, "every code theme meets contrast
+// requirements against its own background") for the next-smallest theme that passes. Both criteria
+// are objective and reproducible — a resource constraint and a measured a11y floor, not a taste
+// call — which is what "not hand-curated" is read to mean here. One swap was needed:
+// `solarized-light` (7,474 B, ratio 4.13:1) failed AA and was replaced by `vitesse-black`
+// (15,243 B, ratio 14.59:1), the next-smallest passing candidate. Total: 217,343 B for all 20,
+// ~204,598 B of which is new (`github-dark` was already shipped at 5.1). {@link CODE_THEME_IDS}
+// exports the id list for `codeThemeControl.ts` to build its picker from, so that module never
+// duplicates this one's catalog. Count and set are still open to 8.5's own future ruling, same as
+// LANGUAGE_LOADERS above — this task fixes the SELECTION RULE, not a permanent catalog.
 //
 // ── THE DYNAMIC/STATIC EDGE COUNT — TASK 4.5's OWN PROSPECTIVE TEXT DOES NOT YET SURVIVE
 //    CONTACT, NAMED HERE RATHER THAN SILENTLY CARRIED (task 4.2 finding) ──────────────────────
@@ -108,11 +128,36 @@ const LANGUAGE_LOADERS: Readonly<Record<string, LanguageLoader>> = {
   bash: () => import('shiki/langs/shellscript.mjs'),
 };
 
-/** Same shape as {@link LANGUAGE_LOADERS}, for themes. One entry: {@link PROVISIONAL_CODE_THEME}
- *  (`codeEnhancer.ts`) is the only theme id this task ever resolves. */
+/** Same shape as {@link LANGUAGE_LOADERS}, for themes — see the module header's "THEME_LOADERS IS
+ *  A DIFFERENT SHAPE" section for the selection rule (20 smallest bundled themes by byte size,
+ *  contrast-filtered, not editorially curated). */
 const THEME_LOADERS: Readonly<Record<string, ThemeLoader>> = {
+  'min-dark': () => import('shiki/themes/min-dark.mjs'),
+  red: () => import('shiki/themes/red.mjs'),
+  'min-light': () => import('shiki/themes/min-light.mjs'),
+  'solarized-dark': () => import('shiki/themes/solarized-dark.mjs'),
+  monokai: () => import('shiki/themes/monokai.mjs'),
+  horizon: () => import('shiki/themes/horizon.mjs'),
+  'horizon-bright': () => import('shiki/themes/horizon-bright.mjs'),
+  andromeeda: () => import('shiki/themes/andromeeda.mjs'),
+  'dark-plus': () => import('shiki/themes/dark-plus.mjs'),
+  'slack-dark': () => import('shiki/themes/slack-dark.mjs'),
+  plastic: () => import('shiki/themes/plastic.mjs'),
+  'slack-ochin': () => import('shiki/themes/slack-ochin.mjs'),
+  'light-plus': () => import('shiki/themes/light-plus.mjs'),
+  laserwave: () => import('shiki/themes/laserwave.mjs'),
+  'github-light': () => import('shiki/themes/github-light.mjs'),
   'github-dark': () => import('shiki/themes/github-dark.mjs'),
+  vesper: () => import('shiki/themes/vesper.mjs'),
+  'aurora-x': () => import('shiki/themes/aurora-x.mjs'),
+  'vitesse-light': () => import('shiki/themes/vitesse-light.mjs'),
+  'vitesse-black': () => import('shiki/themes/vitesse-black.mjs'),
 };
+
+/** Every theme id {@link THEME_LOADERS} resolves, in the map's own declared (byte-ascending)
+ *  order — `codeThemeControl.ts`'s listbox source, so the picker's catalog and the engine's
+ *  loader map can never drift apart into two lists naming different themes. */
+export const CODE_THEME_IDS: readonly string[] = Object.freeze(Object.keys(THEME_LOADERS));
 
 /** Re-exported so `codeEnhancer.ts` (D-3) never names a `shiki/…` specifier of its own — it gets
  *  the engine handle's type and `codeToTokens`'s return shape through this module's own exports,

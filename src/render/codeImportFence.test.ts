@@ -58,6 +58,13 @@
 //       counted by distinct specifier text rather than by source line (clause C's third test).
 //   D — TRAVERSAL NON-VACUITY. Both graphs are non-trivial with named landmarks, and every local
 //       specifier resolved — an unresolved edge is a hole the fence cannot see through.
+//
+//   ADDENDUM (task 5.2, D-9): the "six-language/one-theme" count in clause C's own paragraph above
+//   is a DATED snapshot of task 4.2's close, left untouched as evidence rather than edited to lie
+//   about when it held (the D-10(b)/9.3 precedent this milestone already established elsewhere).
+//   `THEME_LOADERS` now carries 20 themes (task 5.2's byte-budget/contrast-filtered selection,
+//   `codeEngine.ts`'s own module header), so the loader-edge count below is 26, not 7 — the number
+//   the "every language/theme loader edge is dynamic" test actually asserts.
 
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
@@ -380,9 +387,11 @@ describe('the code import fence — clause C, the chunk stays LAZY (D-2, D-3)', 
         'grammar/theme into the eager app-page chunk regardless of whether the language is ever used:',
     ).toEqual([]);
 
-    // Six curated languages + one theme = 7 loader edges today (codeEngine.ts's own header:
-    // PROVISIONAL AND EXPLICITLY BOUNDED). This count is the expected mutation point for task 8.5
-    // (M-5, the language-catalog decision) — named here, not enforced as a ceiling beyond "lazy".
+    // Six curated languages + twenty themes = 26 loader edges today (codeEngine.ts's own header:
+    // languages stay PROVISIONAL AND EXPLICITLY BOUNDED, expected to move at task 8.5; the theme
+    // set is task 5.2's byte-budget/contrast-filtered selection — see that module's header for the
+    // full rule). This count is the expected mutation point for whichever task next changes either
+    // catalog — named here, not enforced as a ceiling beyond "lazy".
     expect(loaderEdges.map((p) => p.spec).sort()).toEqual(
       [
         'shiki/langs/css.mjs',
@@ -391,7 +400,26 @@ describe('the code import fence — clause C, the chunk stays LAZY (D-2, D-3)', 
         'shiki/langs/json.mjs',
         'shiki/langs/python.mjs',
         'shiki/langs/shellscript.mjs',
+        'shiki/themes/andromeeda.mjs',
+        'shiki/themes/aurora-x.mjs',
+        'shiki/themes/dark-plus.mjs',
         'shiki/themes/github-dark.mjs',
+        'shiki/themes/github-light.mjs',
+        'shiki/themes/horizon-bright.mjs',
+        'shiki/themes/horizon.mjs',
+        'shiki/themes/laserwave.mjs',
+        'shiki/themes/light-plus.mjs',
+        'shiki/themes/min-dark.mjs',
+        'shiki/themes/min-light.mjs',
+        'shiki/themes/monokai.mjs',
+        'shiki/themes/plastic.mjs',
+        'shiki/themes/red.mjs',
+        'shiki/themes/slack-dark.mjs',
+        'shiki/themes/slack-ochin.mjs',
+        'shiki/themes/solarized-dark.mjs',
+        'shiki/themes/vesper.mjs',
+        'shiki/themes/vitesse-black.mjs',
+        'shiki/themes/vitesse-light.mjs',
       ].sort(),
     );
   });

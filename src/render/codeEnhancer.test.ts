@@ -11,11 +11,19 @@
 // reading column's box, are computed-style and layout questions jsdom cannot answer — they live in
 // tests/browser/codeRender.browser.test.ts on both engines.
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount } from './mount';
-import { CODE_FENCE_SELECTOR, codeFencesIn, enhanceCode, parseLineRanges } from './codeEnhancer';
+import {
+  CODE_FENCE_SELECTOR,
+  codeFencesIn,
+  enhanceCode,
+  parseLineRanges,
+  reapplyCodeTheme,
+  resetCodeHostsForTest,
+} from './codeEnhancer';
 import { CODE_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR, type CodeEngineModule } from './codeEngine';
 import { CODE_STATE_ATTR, CODE_WRAPPER_CLASS, markCodeRendered } from './codeView';
+import { saveSettings, resetSettingsSeamForTest } from '../settings/settingsSeam';
 
 const HOST_TAG = 'peekover-root';
 const WRAPPER_SELECTOR = `div.${CODE_WRAPPER_CLASS}`;
@@ -375,6 +383,83 @@ describe("D-4's async body — real engine, real jsdom (task 4.2; Cr+Fx proof li
     enhanceCode(host);
     const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
     expect(wrapper?.getAttribute(CODE_STATE_ATTR)).toBe('pending');
+  });
+});
+
+describe('task 5.2 — settings wiring + reapplyCodeTheme', () => {
+  afterEach(() => {
+    resetSettingsSeamForTest();
+    resetCodeHostsForTest();
+  });
+
+  it('precedence: options.theme still wins over a VALID settings.codeTheme (4.2\'s own test invariant, unchanged)', async () => {
+    saveSettings({ codeTheme: 'monokai' }); // a valid, resolvable theme
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host, { theme: 'not-a-real-theme-id' }); // the override should still be used
+
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    // If settings.codeTheme won, this would render successfully instead — the failure IS the proof.
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+  });
+
+  it('falls back to settings.codeTheme when no override is passed — a real read, not a hard-coded literal', async () => {
+    saveSettings({ codeTheme: 'not-a-real-theme-id' }); // invalid on purpose
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host); // no options at all — production's own call shape
+
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    // A hard-coded fallback would have rendered fine; only a genuine settings read can fail here.
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+  });
+
+  it('reapplyCodeTheme swaps the highlighted content in place — never a second .shiki sibling', async () => {
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host);
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+
+    await reapplyCodeTheme('monokai');
+
+    expect(wrapper.querySelectorAll('pre.shiki')).toHaveLength(1); // swapped, never appended
+    expect(wrapper.querySelector('pre.shiki')?.textContent).toBe('const a = 1;\n'); // no content lost
+    // The retained source pre is still exactly one, untouched by the swap.
+    expect(wrapper.querySelectorAll(`pre[${CODE_STATE_ATTR}]`)).toHaveLength(1);
+  });
+
+  it('per-pair isolation on reapply: a corrupted fence keeps its PREVIOUS render, a healthy one beside it still updates', async () => {
+    const { host, shadow } = mountedHost(
+      fence('javascript', 'const a = 1;') + '\n' + fence('python', 'a = 1'),
+    );
+    enhanceCode(host);
+    const wrappers = shadow.querySelectorAll<HTMLElement>(WRAPPER_SELECTOR);
+    await vi.waitFor(() => {
+      for (const w of Array.from(wrappers)) expect(w.getAttribute(CODE_STATE_ATTR)).toBe('rendered');
+    });
+    const [badWrapper, goodWrapper] = Array.from(wrappers);
+    const badPreviousHighlighted = badWrapper.querySelector('pre.shiki');
+    const badSourceCode = badWrapper.querySelector(`pre[${CODE_STATE_ATTR}] code`);
+    if (!badSourceCode) throw new Error('expected the retained source code element');
+    // Corrupt ONE fence's language between render and reapply — codeToTokens raises on an unresolved
+    // lang (module header), the same mechanism the initial-render isolation test above exercises.
+    badSourceCode.className = 'language-not-a-real-language';
+
+    await reapplyCodeTheme('monokai');
+
+    // The corrupted pair is untouched: same node, same state — never blanked, never marked failed.
+    expect(badWrapper.querySelector('pre.shiki')).toBe(badPreviousHighlighted);
+    expect(badWrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered');
+    // The healthy pair beside it still updated — isolation, not a whole-batch abort.
+    const goodSpans = goodWrapper.querySelectorAll('pre.shiki code > span.line > span');
+    expect(Array.from(goodSpans).some((s) => (s as HTMLElement).style.color !== '')).toBe(true);
+  });
+
+  it('a host with nothing rendered yet is a no-op — no engine load, nothing to swap', async () => {
+    const { host } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host); // registers the host but nothing is `rendered` yet (still `pending`)
+    await expect(reapplyCodeTheme('monokai')).resolves.toBeUndefined();
   });
 });
 

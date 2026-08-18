@@ -414,7 +414,7 @@ and green.*
       new capability, asserted as a confined diff on that one line. Golden EMPTY · manifest green **2975 B** ·
       `permissions: []`. [D-9; §3.5; §4 themes]
 
-- [ ] **5.2 ★ THE THEME SELECTOR — a NEW module, `codeThemeControl.ts`, not named in plan §2's Create list
+- [x] **5.2 ★ THE THEME SELECTOR — a NEW module, `codeThemeControl.ts`, not named in plan §2's Create list
       (flagged), plus the independence-from-document-theme proof (D-9).** `themeControl.ts`'s existing shape
       is a **3-way CYCLE BUTTON** (`auto → light → dark`) — structurally unable to represent **≥14** discrete
       choices. This task introduces `src/theme/codeThemeControl.ts`, a **listbox-shaped** picker mirroring

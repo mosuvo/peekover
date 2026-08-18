@@ -96,6 +96,7 @@ import {
 import { registerThemeHost } from '../theme/themeRegistry';
 import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
+import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { directPort } from '../settings/settingsPort';
 import { publishSettings, registerSettingsSink } from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
@@ -315,6 +316,35 @@ const APP_CSS = /* css */ `
   border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
 }
 .${SHELL_CLASS}__theme-toggle:hover{background:var(--accent-soft)}
+/* Code-theme control (task 5.2) — the trigger pill matches __theme-toggle's chrome exactly, so
+   the two read as one control group; the popover mirrors __storage-slot's "drop from the header"
+   positioning, anchored to ITS OWN wrapper (position:relative on .peekover-code-theme-control)
+   rather than the header, since it must not shift if other header controls are added later. */
+.${SHELL_CLASS}__code-theme-control{position:relative}
+.peekover-code-theme-toggle{
+  font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
+}
+.peekover-code-theme-toggle:hover{background:var(--accent-soft)}
+.peekover-code-theme-toggle[aria-expanded="true"]{background:var(--accent-soft)}
+.peekover-code-theme-picker{
+  position:absolute; top:100%; left:0; z-index:5; margin-top:.3rem;
+  width:max-content; max-width:min(280px,calc(100vw - 2rem));
+  max-height:min(60vh,calc(100vh - 5rem)); overflow:auto;
+  background:var(--paper); border:1px solid var(--line);
+  border-radius:var(--r); box-shadow:var(--shadow);
+  display:flex; flex-direction:column; padding:.3rem;
+}
+/* An author display rule beats the UA [hidden] default (readerCss.ts's diffChrome picker hit
+   this exact defect first) — without this, picker.hidden = true stays visually flex and keeps
+   intercepting clicks on whatever the page renders underneath it. */
+.peekover-code-theme-picker[hidden]{display:none}
+.peekover-code-theme-picker__item{
+  font:inherit; font-size:.85rem; text-align:left; color:var(--ink); background:transparent;
+  border:none; border-radius:6px; padding:.4rem .6rem; cursor:pointer;
+}
+.peekover-code-theme-picker__item:hover{background:var(--accent-soft)}
+.peekover-code-theme-picker__item[aria-selected="true"]{background:var(--accent-soft); font-weight:600}
 .${SHELL_CLASS}__storage-toggle{
   font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
   border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
@@ -488,6 +518,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const themeControl = buildThemeControl();
   themeControl.classList.add(`${SHELL_CLASS}__theme-toggle`);
 
+  // The code-theme control (task 5.2, D-9) — app-page only, no shadow-root counterpart (§3.8:
+  // code highlighting never reaches the content script, so neither does this). Mounted beside
+  // `themeControl`, never sharing its registry or broadcast — see `codeThemeControl.ts`'s own
+  // header for why the two stay independent.
+  const codeThemeControl = buildCodeThemeControl();
+  codeThemeControl.classList.add(`${SHELL_CLASS}__code-theme-control`);
+
   // The storage panel's slot — an overlay that DROPS FROM the header, anchored under the
   // toggle that opens it. It lives INSIDE the header (not as a shell child beside it) purely
   // so `top:100%` in APP_CSS resolves against the header box; that is what keeps the panel
@@ -496,7 +533,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // folder navigator and reader never move when it opens (M6 9.1 gate finding).
   const storagePanel = doc.createElement('div');
   storagePanel.className = `${SHELL_CLASS}__storage-slot`;
-  header.append(brand, tag, themeControl, storageToggle, storagePanel);
+  header.append(brand, tag, themeControl, codeThemeControl, storageToggle, storagePanel);
 
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
