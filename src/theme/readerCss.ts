@@ -690,6 +690,26 @@ export const READER_CSS = /* css */ `
    a decision to make quietly here). */
 .peekover-reader .peekover-code-line--highlighted{background:var(--ok-soft);border-radius:3px}
 
+/* Collapsible long blocks (009 D-10, task 6.1) — rationale: codeView.ts's §6 section. Two rules
+   only match ONE at a time (data-code-state is a single value), so the collapsed rule's
+   overflow:hidden never needs an expanded-side override — the base '.peekover-reader pre' rule's
+   overflow:auto above governs once the attribute reads "expanded". The max-height is a
+   FIXED length, never JS-measured, so a collapse/expand/collapse cycle always returns to the
+   EXACT same rect (§3.11 row 12) — nothing cached to drift from. The transition mirrors
+   .peekover-code-toolbar__copy's own shape above (its own explicit reduced-motion neutraliser,
+   not the sheet-wide :host * rule alone) rather than the storage panel's dead-control finding
+   further down this file — this control sits in the SAME toolbar family the copy button does. */
+.peekover-reader .peekover-code[data-code-state] pre.shiki{transition:max-height 200ms ease}
+.peekover-reader .peekover-code[data-code-state="collapsed"] pre.shiki{max-height:320px;overflow:hidden}
+.peekover-reader .peekover-code[data-code-state="expanded"] pre.shiki{max-height:none}
+@media (prefers-reduced-motion:reduce){.peekover-reader .peekover-code[data-code-state] pre.shiki{transition:none}}
+.peekover-reader .peekover-code-toolbar__collapse{
+  display:block;width:100%;margin-top:8px;
+  font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;text-align:center;
+}
+.peekover-reader .peekover-code-toolbar__collapse:hover{color:var(--ink);border-color:var(--faint)}
+
 /* Diagrams (007 D-15) — rationale: diagramView.ts */
 .peekover-reader .peekover-diagram{
   margin:28px 0;padding:0;overflow-x:auto;text-align:center;

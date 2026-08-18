@@ -1032,6 +1032,85 @@ codeThemeControl.browser.test.ts` (new) · this file. No `PERMISSIONS.md`/manife
 ★ **NO NEW § CARRIED ITEMS.** The only thing that could read as one — the `[hidden]`/cascade defect
 class — is fixed in this same commit with its own regression coverage, not filed onward.
 
+★ **TASK 6.1 IS DONE — THE COLLAPSE/EXPAND STRUCTURE, `data-code-state` (D-10). NOW-POINTER ADVANCES
+TO 7.1 NEXT.** tasks.md 6.1's own D-value tag, cited verbatim: *"[D-10; §4 collapsible blocks; rows
+12, 15, 19, 24]"*. Files touched: exactly `src/render/codeView.ts` · `src/theme/readerCss.ts` ·
+`tests/browser/codeCollapse.browser.test.ts` (new) — tasks.md 6.1's own list, verbatim, no ride-along.
+★ **TWO KICKOFF-VS-GROUND-TRUTH DIVERGENCES, BOTH CAUGHT BEFORE OR DURING WORK, NEITHER SILENTLY
+FOLLOWED.** **(1) TYPE (i), MAJOR, CAUGHT AT STEP 0 BEFORE ANY PRODUCTION CODE.** This session's
+kickoff's own resolution (a2) asserted "always default expanded — no auto-collapse threshold" as a
+settled fact. tasks.md 6.1's own text and plan.md D-10 both directly contradict it: collapse IS
+threshold-driven — *"each highlighted block over §8's (provisional) threshold gets
+`data-code-state=\"collapsed\"`"* — with the threshold itself a PROVISIONAL placeholder (5.1's own
+discipline) pending group 8's M-4/8.5 human gate. Routed to the human via `AskUserQuestion` before
+writing anything; answer: follow tasks.md as ground truth, supersede the kickoff's resolution.
+Riding on the same wrong hypothesis: the attribute shape (`data-code-state` / `"collapsed"`
+`"expanded"`, not `data-code-collapsed` / `"true"` `"false"`) and the Files list (no `codeEnhancer.ts`
+toolbar wiring — the trigger lives inside `codeView.ts`'s own `markCodeRendered`, the ONLY call site,
+never a second seam). **(2) Resolved from ground truth directly, no human input needed — 4.3's own
+precedent already litigated this exact question.** The kickoff's FORBIDDEN list named CS-byte-
+identity as a hard stop ("collapse is app-page-only... any leak is a §3.8 violation"). Measured: the
+CS bundle moved **333,221 → 334,858 B (+1,637 B)**, both engines, because `readerCss.ts`'s `READER_CSS`
+is the ONE stylesheet string `reader.ts` injects on BOTH surfaces — there is no per-surface CSS
+variant, so any CSS addition is structurally unavoidable on both bundles, the identical shape 4.3's
+own close entry already found and ruled on for `sanitize.ts` (*"the kickoff's blanket CS-byte-identity
+fence was an over-generalization... ruled to proceed and document rather than treated as a silent
+violation"*). §3.8's actual claim — the ENGINE/ENHANCER stay app-page-only — is untouched:
+`codeEnhancer.ts` and `codeEngine.ts` are both absent from this task's diff, and `codeImportFence.
+test.ts` (unchanged, still 9/9) re-confirms the content-script graph reaches neither.
+★ **THE DESIGN.** `codeView.ts`'s `applyCollapseIfNeeded` is called from `markCodeRendered` the
+INSTANT `content` lands in the wrapper — the only call site, so collapse is decided once, off the
+exact node already built, never re-evaluated (a theme repaint replaces the adopted `pre.shiki` and
+never calls `markCodeRendered` again, so D-9's theme/collapse independence holds by construction).
+Line count is read directly off `content`'s own `.line` spans (`codeEnhancer.ts`'s `adoptHighlighted`,
+one per source line) — no second parse, no second highlight pass (tasks.md 6.1's own text, verbatim).
+★ **A GENUINE OFF-BY-ONE, CAUGHT BY THE BOUNDARY TEST BEFORE COMMIT.** markdown-it's fence token
+content always ends in exactly one `\n` (the last content line's own terminator), which Shiki's line
+split turns into one PHANTOM trailing empty `.line` span on EVERY highlighted block, regardless of
+source — verified empirically against the installed engine (`node -e` against `shiki/core` directly:
+40 generated lines + trailing `\n` → 41 `tokens.tokens` entries; without the trailing `\n` → 40).
+Every block since task 4.2 has silently carried this phantom line; 6.1 is the first feature that
+COUNTS `.line` spans, so it is the first place the artifact became behaviourally significant (an
+off-by-one on the collapse threshold). Fixed with `visibleLineCount`: excludes exactly one trailing
+empty `.line` span — a real user-typed trailing blank line still counts, since it becomes the
+SECOND-to-last span once the guaranteed terminator's own artifact is the one excluded.
+`CODE_COLLAPSE_LINE_THRESHOLD = 40`, PROVISIONAL (5.1/`settings.ts`/`watchController.ts`'s own
+discipline, doc-commented as such), pending group 8's M-4. The clamp (`readerCss.ts`, 320px
+max-height + overflow:hidden on `pre.shiki`, keyed off `data-code-state`'s VALUE, never a JS-measured
+height — row 12's rect-equality requirement holds by construction, nothing cached to drift from) and
+the control (`peekover-code-toolbar__collapse`, a real `<button>`, `aria-expanded` + moving text, row
+15) mirror 4.3's toolbar-control shape. Transition mirrors the copy button's own convention (its own
+explicit `prefers-reduced-motion` neutraliser, not the sheet-wide `:host *` rule alone — that family's
+established pattern, not the storage panel's later "dead control" exception, since this control sits
+in the SAME toolbar as the copy button). No `display` rule tied to the native `hidden` attribute is
+added anywhere (the control is never `.hidden`), so the `[hidden]`/cascade defect class from 5.2 does
+not apply here — noted, not silently skipped.
+★ **RED-FIRST ABLATIONS, BOTH LOCALIZED.** **(1) Attribute flip**: the click handler's flip logic was
+temporarily replaced with an unconditional `'collapsed'` — reds row 15's aria-expanded/text test and
+row 12's rect-growth test, LOCALIZED to `codeCollapse.browser.test.ts` alone (the toolbar/theme-picker
+suites stayed green in the same run). **(2) CSS binding**: the collapsed-state selector's attribute
+name was typo'd (`data-code-stat`) — reds the preview-overflow assertion and row 12's rect-growth
+assertion, LOCALIZED the same way. Both reverted before commit.
+★ **BUNDLE-VERIFY-GATE, FRESH BUILD BOTH ENGINES.** Content script **333,221 → 334,858 B (+1,637 B)**,
+byte-identical Cr/Fx (md5s differ per engine, the established pattern). App chunk **473,100 →
+475,579 B (+2,479 B)** — `codeView.ts`'s new JS logic plus its share of the shared CSS string. `.output`
+**4.86 → 4.87 MB** (Cr `4,866,741 B`, Fx `4,866,857 B`, both under 5 MB). Zip **1,469,717/1,469,776 →
+1,470,730/1,470,788 B** (Cr/Fx, both under 2 MB). Manifests **654/770 B**, byte-identical,
+`permissions: []`, no `web_accessible_resources`, both engines. deps STILL **6**.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (unchanged — 6.1's Files list names no
+unit test file; `applyCollapseIfNeeded` is covered only by the real-engine browser suite, per tasks.md
+6.1's own Files list). `pnpm test:browser` **130 files green** (+2 from 128 — one new file ×2 engines),
+**1385 passed, 15 skipped, 0 failed** (+16 from 1369 — `codeCollapse.browser.test.ts`'s 8 tests ×2
+engines). `pnpm lint` EXIT=0. `git diff tests/golden/output/` EMPTY. `tests/manifest.test.ts` green ·
+009 `codeImportFence.test.ts` **9/9** unchanged (6.1 touches no import) · 007
+`diagramImportFence.test.ts` **8/8** · `diagramActions.browser.test.ts` CSS pin held (part of the full
+green browser run). `perf-first-paint.ts --size 50kb`, isolation-run (fresh build): **153.7ms median
+(150.0–162.1ms range) vs <165ms — PASS**. `git diff --name-only HEAD` at the commit: exactly
+`specs/009-code-blocks/tasks.md` (6.1's box) · `src/render/codeView.ts` · `src/theme/readerCss.ts` ·
+`tests/browser/codeCollapse.browser.test.ts` (new) · this file. No `PERMISSIONS.md`/manifest/other
+`src/` or `tests/` file in the diff.
+★ **NO NEW § CARRIED ITEMS.**
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the

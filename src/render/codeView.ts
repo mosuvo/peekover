@@ -98,6 +98,9 @@ export function markCodeRendered(pre: HTMLElement, wrapper: HTMLElement, content
   wrapper.append(content);
   wrapper.setAttribute(CODE_STATE_ATTR, 'rendered');
   pre.setAttribute(CODE_STATE_ATTR, 'rendered');
+  // Task 6.1 (D-10): decided the instant the content lands, off the SAME node — see the §6
+  // section at the end of this file for why this is the only call site.
+  if (content instanceof HTMLElement) applyCollapseIfNeeded(wrapper, content);
 }
 
 /**
@@ -317,4 +320,121 @@ export function buildCodeToolbar(wrapper: HTMLElement, pre: HTMLElement, lang: s
 
   toolbar.append(langLabel, lineNumbersButton, wrapButton, copyButton, status);
   return toolbar;
+}
+
+// ── §6: COLLAPSIBLE LONG BLOCKS (task 6.1, D-10) ──────────────────────────────────────────────
+//
+// `readerMode.ts`'s shape, reused at block scope (this module's header: "THE STATE ATTRIBUTE IS
+// `data-code`, NOT `data-code-state`" — the latter is this axis's name, reserved from the start).
+// A pure attribute flip over content that already exists: unlike `readerMode.ts`'s raw view,
+// there is nothing to build lazily here — {@link markCodeRendered} already committed the full,
+// already-highlighted block before this code ever runs. Collapsing only clamps its PRESENTATION
+// (`readerCss.ts`'s max-height/overflow rule, keyed off {@link CODE_COLLAPSE_ATTR}'s value) and
+// reveals it again on a click — never a re-parse, a re-highlight, or a second copy of the block.
+//
+// Line count is read off the content `markCodeRendered` just appended — one `.line` span per
+// source line (`codeEnhancer.ts`'s `adoptHighlighted`) — so applying the threshold costs one
+// `querySelectorAll` over nodes already in memory, not a re-count of the raw source.
+//
+// UNDER threshold: no attribute is ever set, no control is ever built — "grows no chrome where
+// absent" (§3.11 row 2's shape, applied to this axis), tasks.md 6.1's own Verify line. A short
+// block's wrapper therefore ends up byte-identical to what task 4.2 already produced.
+//
+// A theme repaint (`reapplyCodeTheme`) replaces the adopted `pre.shiki` in place and never calls
+// {@link markCodeRendered} again, so it never re-decides collapse either — D-9's theme/collapse
+// independence holds by construction, not by a guard this code has to remember to keep.
+
+/** How many source lines a highlighted block may carry before it collapses by default.
+ *
+ *  PROVISIONAL, and deliberately NOT an asserted acceptance threshold (the standing "no
+ *  un-measured threshold" rule — mirrors `settings.ts`'s `codeTheme` default and
+ *  `watchController.ts`'s dead-watch-read count, both named PROVISIONAL for the same reason).
+ *  Group 8's M-4 walks this repository's own fenced blocks and the golden fixtures against line
+ *  count, byte size, and whether line-highlighting meta is present (spec §7-3/§8), then RE-TUNES
+ *  or replaces this — this task exists to ship SOME threshold so the collapse mechanism has
+ *  something to fire against at all, not to choose the right one (same discipline as 5.1's
+ *  provisional default theme id). */
+export const CODE_COLLAPSE_LINE_THRESHOLD = 40;
+
+/** The collapse axis attribute, on the WRAPPER — a second, independent axis from {@link
+ *  CODE_STATE_ATTR} (module header). Absent on a block under threshold (no chrome at all); set to
+ *  `'collapsed'` the instant a block over threshold is committed, flipped to `'expanded'` by the
+ *  control's own click handler and back again. `readerCss.ts` keys its max-height/overflow clamp
+ *  off this attribute's VALUE, never off a JS-measured height — row 12 requires a repeat collapse
+ *  to return to EXACTLY the same rect, which a pure CSS rule guarantees by construction and a
+ *  JS-cached height could drift from (a stale measurement, a font not yet loaded, a fractional
+ *  pixel rounding differently the second time). */
+export const CODE_COLLAPSE_ATTR = 'data-code-state';
+
+/** The two values {@link CODE_COLLAPSE_ATTR} takes once a block has collapse chrome at all. */
+export type CodeCollapseState = 'collapsed' | 'expanded';
+
+/** Class on the expand/collapse `<button>` — appended as the wrapper's LAST child, after the
+ *  highlighted `pre.shiki`, below the clamped preview where a reader's eye lands once the content
+ *  cuts off. */
+export const CODE_COLLAPSE_CONTROL_CLASS = 'peekover-code-toolbar__collapse';
+
+/** Row 17's shape again (this module's toolbar section, above): SELECTION + ACTION, moving with
+ *  state, never carried by the button's static visible text alone. */
+const CODE_COLLAPSE_NAME = {
+  collapsed: (n: number) =>
+    `Code block ${n} truncated at ${CODE_COLLAPSE_LINE_THRESHOLD} lines. Activate to show the full block.`,
+  expanded: (n: number) => `Code block ${n} expanded. Activate to collapse it.`,
+};
+
+/** Flip {@link CODE_COLLAPSE_ATTR}, and relabel the control's text and `aria-expanded` (row 15:
+ *  state in TEXT and `aria-*`, never carried by an icon alone) — the one place both the initial
+ *  collapse and every later click funnel through, so the two can never drift apart. */
+function setCollapseState(
+  wrapper: HTMLElement,
+  button: HTMLButtonElement,
+  ordinal: number,
+  state: CodeCollapseState,
+): void {
+  wrapper.setAttribute(CODE_COLLAPSE_ATTR, state);
+  const expanded = state === 'expanded';
+  button.setAttribute('aria-expanded', String(expanded));
+  button.textContent = expanded ? 'Collapse code' : 'Show full code';
+  button.setAttribute('aria-label', CODE_COLLAPSE_NAME[state](ordinal));
+}
+
+/**
+ * markdown-it's fence token content always ends in exactly one `\n` (the last content line's own
+ * terminator — a fence-token-contract property, not this file's choice), which Shiki's line split
+ * turns into one PHANTOM trailing empty `.line` span every highlighted block carries, regardless
+ * of the source (verified empirically against the installed engine, this task). Not a real source
+ * line, so it is excluded here — a real user-typed trailing blank line still counts (it is the
+ * SECOND-to-last span in that case, this being the guaranteed terminator's own artifact instead).
+ */
+function visibleLineCount(content: HTMLElement): number {
+  const lines = content.querySelectorAll('.line');
+  const last = lines.item(lines.length - 1);
+  return last && last.textContent === '' ? lines.length - 1 : lines.length;
+}
+
+/**
+ * Task 6.1's entry point — called by {@link markCodeRendered} right after `content` lands in the
+ * wrapper, the ONLY call site (module header above). `content` is the exact node just appended:
+ * its `.line` spans are counted directly, no second parse, no second highlight pass, no second
+ * copy of the block (tasks.md 6.1's own text, verbatim).
+ *
+ * A real `<button type="button">`, keyboard-reachable for free (no `tabindex` of its own — row 16,
+ * §4's keyboard-reach criterion), built and appended ONLY when the block is over threshold — a
+ * block at or under it gets no attribute and no control at all.
+ */
+function applyCollapseIfNeeded(wrapper: HTMLElement, content: HTMLElement): void {
+  const lineCount = visibleLineCount(content);
+  if (lineCount <= CODE_COLLAPSE_LINE_THRESHOLD) return; // under threshold: no chrome at all.
+
+  const ordinal = codeOrdinal(wrapper);
+  const button = wrapper.ownerDocument.createElement('button');
+  button.type = 'button';
+  button.className = CODE_COLLAPSE_CONTROL_CLASS;
+  button.addEventListener('click', () => {
+    const next: CodeCollapseState =
+      wrapper.getAttribute(CODE_COLLAPSE_ATTR) === 'expanded' ? 'collapsed' : 'expanded';
+    setCollapseState(wrapper, button, ordinal, next);
+  });
+  wrapper.append(button);
+  setCollapseState(wrapper, button, ordinal, 'collapsed');
 }

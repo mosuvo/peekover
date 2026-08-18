@@ -436,7 +436,7 @@ and green.*
 
 ## 6 — Collapsible blocks (D-10)
 
-- [ ] **6.1 The collapse/expand structure — `data-code-state`, reusing `readerMode.ts`'s flip-an-attribute,
+- [x] **6.1 The collapse/expand structure — `data-code-state`, reusing `readerMode.ts`'s flip-an-attribute,
       build-lazily pattern (D-10).** Each highlighted block over §8's (provisional) threshold gets
       `data-code-state="collapsed"` on its `codeView.ts`-built wrapper, a CSS max-height/overflow clamp keyed
       off that attribute, and a control that flips it to `"expanded"`. **No second parse, no second highlight
