@@ -93,6 +93,38 @@ describe('the synchronous prologue', () => {
     expect(returned).not.toBeInstanceOf(Promise);
   });
 
+  it('RE-ASSERTED (4.5): the synchronous return survives a watch-style repeated re-render, not just first paint', () => {
+    // watchController.ts:422 times the WHOLE synchronous render block on EVERY re-render to price
+    // the next cost-proportional cooldown — not only the first paint. `readerPane.ts:205` calls
+    // `enhanceCode` once per file open; `appShell.ts:163`'s watch closure calls it again on every
+    // disk change, through the identical `mount -> enhanceDiagrams -> enhanceTables -> enhanceCode`
+    // shape at both sites. A fixture spanning both call sites therefore has to prove the property
+    // survives a SECOND, watch-triggered call into an already-mounted host — not merely one
+    // isolated call, which is all the assertion above (4.1's own, unchanged) ever exercised, and
+    // which predates 4.2's toolbar build and 4.3/4.4's later additions to what now runs inside this
+    // same synchronous block. A watch that accidentally went async on its second render would
+    // corrupt the cooldown pricing silently; this is the property that would catch it.
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+
+    const firstReturn: unknown = enhanceCode(host);
+    expect(firstReturn).toBeUndefined();
+    expect(firstReturn).not.toBeInstanceOf(Promise);
+    expect(shadow.querySelectorAll(WRAPPER_SELECTOR)).toHaveLength(1);
+
+    // A watch-triggered re-render: the file changed on disk, mount() replaces the shadow tree's
+    // content wholesale (never reusing the first render's committed state), and the real call sites
+    // run their enhancers again over the fresh document.
+    mount(fence('python', 'a = 1'), host, { contained: true });
+    expect(shadow.querySelectorAll(WRAPPER_SELECTOR)).toHaveLength(0); // pre-state, again
+
+    const secondReturn: unknown = enhanceCode(host);
+    expect(secondReturn).toBeUndefined();
+    expect(secondReturn).not.toBeInstanceOf(Promise);
+    // Same synchronous commitment on the SECOND call — the one watchController.ts:422 actually
+    // times for every subsequent re-render, not merely the first.
+    expect(shadow.querySelectorAll(WRAPPER_SELECTOR)).toHaveLength(1);
+  });
+
   it('wraps the retained pre inside the wrapper, at the position the pre used to occupy, both marked pending', () => {
     const { host, shadow } = mountedHost(
       '# Doc\n\nBefore.\n\n' + fence('javascript', 'const a = 1;') + '\nAfter.\n',

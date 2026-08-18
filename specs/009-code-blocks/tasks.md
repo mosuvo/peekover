@@ -366,7 +366,7 @@ read.**
       "detached" div (the standing Firefox `@import` lesson). Golden EMPTY · manifest green **2975 B** ·
       `permissions: []` both engines. [row 22; §4 Trust; §5 zero-network; finding 1]
 
-- [ ] **4.5 ★ THE COOLDOWN CONSTRAINT AND THE FOUR-CLAUSE IMPORT FENCE — deferred from group 1, landing HERE
+- [x] **4.5 ★ THE COOLDOWN CONSTRAINT AND THE FOUR-CLAUSE IMPORT FENCE — deferred from group 1, landing HERE
       because this is the first task where clause B is REAL (D-2).** `watchController.ts:422` times the whole
       synchronous block for the cost-proportional cooldown — `enhanceCode`'s entry point must return
       synchronously in ~nothing (re-asserted here, not merely inherited from 4.1). `codeImportFence.test.ts`,

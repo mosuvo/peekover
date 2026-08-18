@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-18 (M9 task 4.4 done — the code-block pipeline's zero-network guard, §3.11 row 22; implementation next at task 4.5).*
+*Updated: 2026-08-18 (M9 task 4.5 done — the cooldown constraint re-assertion + structural import-fence for shiki, D-2; implementation next at task 5.1).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -772,6 +772,78 @@ fact. This file also has no dedicated **"§ Carried items"** heading — the phr
 pointer used in prose throughout (e.g. this file's "## Blockers / open questions" section); carried
 findings are recorded inline in whichever "## Now" entry produced them, which is exactly where both
 of these already live.
+
+★ **TASK 4.5 IS DONE — THE COOLDOWN CONSTRAINT RE-ASSERTION + STRUCTURAL IMPORT-FENCE FOR SHIKI (D-2).
+NOW-POINTER ADVANCES TO 5.1 NEXT.** tasks.md 4.5's own D-value tag, cited verbatim: *"[D-2; §3.2; plan risk
+5; deferred from group 1 — flagged]"*. Two deliverables per tasks.md 4.5's own text, in ONE task: (1)
+`codeEnhancer.test.ts` re-asserts the synchronous-return property against `enhanceCode`'s CURRENT shape
+(post-4.2/4.3/4.4), not merely inherited unchanged from 4.1; (2) `codeImportFence.test.ts` (new), mirroring
+007's `diagramImportFence.test.ts` four-clause shape (D non-vacuity checked first, then A, B, C).
+★ **THE COOLDOWN-CONSTRAINT RE-ASSERTION'S SHAPE, CHOSEN AND DEFENDED.** tasks.md 4.5's own Verify line asks
+for the synchronous return "re-asserted with a fixture spanning both call sites" — read here as: the SAME
+`mount -> enhanceDiagrams -> enhanceTables -> enhanceCode` order both `readerPane.ts:205` and
+`appShell.ts:163` actually run, exercised as a REPEATED, watch-style re-render into an already-mounted host
+(not merely one isolated call, which is all 4.1's original assertion — left unchanged, immediately above the
+new case — ever exercised). This is the property `watchController.ts:422` actually times on EVERY re-render,
+not only first paint: a `enhanceCode` that went async only on a SECOND call would corrupt the cost-
+proportional cooldown pricing silently, and 4.1's single-call test could never have caught that. No new
+mocking machinery (no spies) — plain re-mount + re-call, named/commented against `watchController.ts:422` by
+line number. `codeEnhancer.ts` (production) is untouched — confirmed by `git diff --name-only HEAD` below.
+★ **CLAUSE C'S SPECIFIER COUNT, RE-DERIVED AGAINST `codeEngine.ts` AT HEAD, NOT TASKS.MD'S ORIGINAL "1
+DYNAMIC / 2 STATIC" PREDICTION.** Grepped fresh this session (not trusted from the kickoff's own restated
+figure, which held): **8 dynamic edges** (`shiki/core` [the engine loader, `:147`] + six language loaders +
+one theme loader) and **3 static specifiers** (`shiki/package.json`, `shiki/engine/javascript`, and the
+type-only `import type {...} from 'shiki/core'` at `:84-89`). tasks.md 4.5's own prose still literally
+predicts "TWO" static leaves; `codeEngine.ts`'s own module header (written at 4.2's close) already names
+this as stale. **Resolution chosen: reading (a)** — tasks.md's "TWO" was itself a prediction (the same way
+007's own `toHaveLength(1)` clause-C shape was explicitly flagged by tasks.md 4.5 as not to be copied
+unadjusted), superseded by measurement, not a design rule forcing the type-only import to be excluded. The
+type-only edge is counted because 007's OWN walker (unchanged, mirrored here) already counts type-only
+imports as edges by deliberate, stated policy ("TYPE-ONLY IMPORTS COUNT AS EDGES, deliberately... still a
+module that 'learns the engine exists'") — written for clause A/B's reachability question but applying
+unchanged to clause C's specifier-count question, since an edge is an edge regardless of which clause counts
+it. Asserted `toHaveLength(3)`, named in the test file's own header comment so a future reader does not
+re-derive the reasoning.
+★ **A SECOND WRINKLE, NOT ANTICIPATED BY THE KICKOFF, FOUND WRITING THE WALKER: `typeof import(...)` TYPE
+QUERIES TEXTUALLY COLLIDE WITH REAL DYNAMIC IMPORTS.** `codeEngine.ts:138` has `(typeof
+import('shiki/core'))['createHighlighterCore']` — TypeScript's import-type-query operator, fully type-erased
+(zero bundle impact, unlike `import type {...} from` it leaves no specifier in the emitted JS at all) — which
+a raw-text walker cannot distinguish from the REAL runtime `import('shiki/core')` at `:147` by shape alone;
+both textually match `import(`. A first draft of the fence found TWO "dynamic" `shiki/core` edges and reded
+against the fence's own "exactly one" claim — which is also `codeEngine.ts`'s own module header's stated
+belief ("THE single `import('shiki/core')` in the repository"), true in TS-semantics terms and false as a
+raw match count. Fixed by explicitly detecting a `typeof\s*$` prefix before a dynamic-import match and
+reclassifying it non-dynamic — `codeImportFence.test.ts`'s `isTypeQueryPosition` helper, documented inline.
+This also meant clause C's "3 static specifiers" count had to be by DISTINCT SPECIFIER TEXT rather than raw
+source occurrence, since `shiki/core` now legitimately appears twice in static/type position (the `import
+type` at `:84` and the `typeof import` at `:138`) — tasks.md 4.5's own prose supports this reading directly
+("the two allowed static, non-dynamic **specifiers**" — a specifier is a string identity, not a line).
+★ **RED-FIRST ABLATION, LOCALIZED.** Added `notareallanguage: () => import('shiki/langs/notarealanguage.mjs')`
+to `codeEngine.ts`'s `LANGUAGE_LOADERS` (never committed). `codeImportFence.test.ts` reded exactly ONE test —
+clause C's loader-specifier-set check — nothing else in the file (D/A/B, and clause C's other two checks,
+stayed green). As an independent, orthogonal confirmation the ablation is a genuine defect (not part of the
+fence's own job), Vite's real transform of `codeEngine.ts` also failed resolving the nonexistent path when
+`codeEnhancer.test.ts`'s real-engine suite (task 4.2) loaded it for real. Reverted; `git diff --stat --
+src/render/codeEngine.ts` confirmed empty; both files green again.
+Standing invariants: `pnpm test` **996/996** (59 files, +10 — 9 clauses in the new `codeImportFence.test.ts`
++ 1 new case in `codeEnhancer.test.ts`; prior 986/986 at 4.4's close) · `pnpm test:browser` **126/126 files
+green, 1351 passed, 15 skipped, 0 failed** (full suite, both engines, no `-t`, unchanged from 4.4's close —
+this task adds no browser test file) · `pnpm lint` EXIT=0 · `git diff tests/golden/output/` EMPTY ·
+`tests/manifest.test.ts` unmodified, green (8/8) · 007 `diagramImportFence.test.ts` **8/8** green, run
+standalone — no shared helper with the new file (the walker code is duplicated, not imported, matching 007's
+own file's standalone-ness) · `diagramActions.browser.test.ts` CSS pin **2,927 B** held · deps STILL **6** ·
+structural shiki-import: still ONLY `src/render/codeEngine.ts` (this task's own clause A/B now assert this
+structurally, not just by grep). Bytes BYTE- AND MD5-IDENTICAL to 4.4's close, both engines (test-only task,
+confirmed BEFORE any test code was written and again after): content script **333,161 B**, `.output` **4.67
+MB** (4,672,638 / 4,672,754 B), zip **1.43 MB** (1,425,035 / 1,425,093 B), manifests **654/770 B**,
+`permissions: []` both, no `web_accessible_resources`. `perf-first-paint.ts --size 50kb`, isolation-run:
+**143.5ms median (140.1–150.5ms range) vs <165ms — PASS**. `git diff --name-only HEAD` at the commit: ONLY
+`src/render/codeImportFence.test.ts` (new) · `src/render/codeEnhancer.test.ts` · `specs/009-code-blocks/
+tasks.md` (4.5's box) · this file. No other `src/`, `entrypoints/`, or `tests/` file in the diff.
+★ **NO NEW § CARRIED ITEMS.** Nothing surfaced this task that isn't already recorded inline above (the
+clause-C resolution and the `typeof import(...)` wrinkle are both this task's own findings, banked in this
+same entry — not a carry-forward from 4.4, which already handed off exactly this task's scope and nothing
+more).
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
