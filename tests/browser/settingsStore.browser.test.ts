@@ -147,7 +147,12 @@ describe('settings store — additive upgrade (real engine; jsdom-blind)', () =>
     expect(await getSettings()).toEqual(DEFAULT_SETTINGS);
     // …and is genuinely writable (round-trips a merged value through the just-created store).
     await putSettings({ theme: 'dark', tocOpen: true, tocWidth: 321 });
-    expect(await getSettings()).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 321 });
+    expect(await getSettings()).toEqual({
+      theme: 'dark',
+      tocOpen: true,
+      tocWidth: 321,
+      codeTheme: 'github-dark',
+    });
 
     // Assert the on-disk schema directly: the store's declared version, all four pre-existing
     // stores present.
@@ -178,7 +183,12 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
     await putFolder({ id: 'wf', name: 'w', addedAt: 1, lastOpenedAt: 2 });
 
     const before = await describeStored();
-    expect(before.settings).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 300 });
+    expect(before.settings).toEqual({
+      theme: 'dark',
+      tocOpen: true,
+      tocWidth: 300,
+      codeTheme: 'github-dark',
+    });
     expect(before.total).toBe(2); // 1 folder + the settings row
     const beforeText = before.lines.join(' ');
     expect(beforeText).toContain('display settings');
@@ -209,12 +219,17 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
 // of this is jsdom-blind (IndexedDB + the real read/write path), so it is proven here, non-vacuously.
 
 describe('capture flag — its own settings row, getSettings untouched (D-12, task 1.5, real engine)', () => {
-  it('defaults ON with no row; round-trips false/true; and getSettings stays exactly {theme,tocOpen,tocWidth}', async () => {
+  it('defaults ON with no row; round-trips false/true; and getSettings stays exactly {theme,tocOpen,tocWidth,codeTheme}', async () => {
     // Piece 1 DEFAULT — a fresh store has no 'capture' row, so read-with-default returns on.
     expect(await getCaptureEnabled()).toBe(true);
 
-    // ★ Piece 2 SHAPE INVARIANT — with NO reader row, getSettings returns exactly the three fields.
-    expect(Object.keys(await getSettings()).sort()).toEqual(['theme', 'tocOpen', 'tocWidth']);
+    // ★ Piece 2 SHAPE INVARIANT — with NO reader row, getSettings returns exactly the four fields.
+    expect(Object.keys(await getSettings()).sort()).toEqual([
+      'codeTheme',
+      'theme',
+      'tocOpen',
+      'tocWidth',
+    ]);
 
     // Piece 1 ROUND-TRIP — write the capture row false; it reads back false, a second row in the
     // SAME store as the reader settings.
@@ -222,11 +237,21 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
     expect(await getCaptureEnabled()).toBe(false);
 
     // ★ Piece 2 (the load-bearing half): a stored 'capture' row does NOT bleed into getSettings —
-    // its shape is still exactly the three fields, whether or not a 'reader' row also exists. A
-    // shared-record implementation (a field on Settings) would redden this.
-    expect(Object.keys(await getSettings()).sort()).toEqual(['theme', 'tocOpen', 'tocWidth']);
+    // its shape is still exactly the four fields, whether or not a 'reader' row also exists. A
+    // second shared-record field bleeding across rows would redden this.
+    expect(Object.keys(await getSettings()).sort()).toEqual([
+      'codeTheme',
+      'theme',
+      'tocOpen',
+      'tocWidth',
+    ]);
     await putSettings({ theme: 'dark' }); // now BOTH rows exist in the settings store…
-    expect(Object.keys(await getSettings()).sort()).toEqual(['theme', 'tocOpen', 'tocWidth']);
+    expect(Object.keys(await getSettings()).sort()).toEqual([
+      'codeTheme',
+      'theme',
+      'tocOpen',
+      'tocWidth',
+    ]);
     expect(await getSettings()).toMatchObject({ theme: 'dark' }); // reader row unaffected by capture
     expect(await getCaptureEnabled()).toBe(false); // capture row unaffected by the reader write
 
@@ -252,7 +277,12 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
     await putSettings({ theme: 'dark' });
     const both = await describeStored();
     expect(both.captureFlag).toBe(false);
-    expect(both.settings).toEqual({ theme: 'dark', tocOpen: null, tocWidth: null });
+    expect(both.settings).toEqual({
+      theme: 'dark',
+      tocOpen: null,
+      tocWidth: null,
+      codeTheme: 'github-dark',
+    });
     expect(both.total).toBe(2); // reader row + capture row
   });
 

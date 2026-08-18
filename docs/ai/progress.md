@@ -845,6 +845,85 @@ clause-C resolution and the `typeof import(...)` wrinkle are both this task's ow
 same entry — not a carry-forward from 4.4, which already handed off exactly this task's scope and nothing
 more).
 
+★ **TASK 5.1 IS DONE — `codeTheme`, A FOURTH FIELD ON THE ONE GLOBAL SETTINGS ROW (D-9). NOW-POINTER
+ADVANCES TO 5.2 NEXT.** tasks.md 5.1's own D-value tag, cited verbatim: *"[D-9; §3.5; §4 themes]"*.
+★ **A KICKOFF SCOPE DIVERGENCE WAS CAUGHT AND ROUTED BACK BEFORE ANY PRODUCTION CODE, PER AGENTS.MD'S
+STANDING RULE.** The session's kickoff prompt assumed 5.1 also wires `codeEnhancer.ts`'s
+`PROVISIONAL_CODE_THEME` to settings and ships a settings UI — neither is in tasks.md 5.1's actual Files
+list (`src/settings/settings.ts` · `src/settings/settings.test.ts` · `docs/trust/PERMISSIONS.md` only).
+Both belong to **5.2** (`codeThemeControl.ts`'s own Verify line: *"persists via `SettingsPort.save`,
+re-applies to every highlighted block on the page"* — the wiring lives there, not here). Flagged to the
+human via `AskUserQuestion` before writing anything; answer: narrow scope, tasks.md's own text. **Resolution
+(a) framing itself (5.1 = field + default only, 5.2 = the picker) HELD** — only the kickoff's WORK section
+had over-reached inside that framing.
+`Settings` (`src/settings/settings.ts`) gains `codeTheme: string`, doc-commented as spec 009 D-9's fourth
+field, independent of `ThemeSetting` (spec 009 §4: "changing one shall never change the other").
+`DEFAULT_SETTINGS.codeTheme` = `'github-dark'` — the SAME value `codeEnhancer.ts`'s (untouched, this task)
+`PROVISIONAL_CODE_THEME` already carries, doc-commented EXPLICITLY PROVISIONAL pending task 8.4/8.5's M-4
+ruling (008 standing rule: a value asserted final without being final is a lie about the decision state).
+`SettingsPort`'s shape is unchanged (`save` already took `Partial<Settings>`). `docs/trust/PERMISSIONS.md`'s
+IndexedDB-persistence row gains exactly the one field name tasks.md 5.1 quotes verbatim — *"theme choice, TOC
+open-state + width, code-theme choice"* — confined to that one line; the separate "Settings message channel"
+row (different phrasing, "TOC open-state, TOC width") is untouched, matching tasks.md's "confined diff on
+that one line" (singular).
+★ **RIPPLE BEYOND TASKS.MD 5.1'S LITERAL FILES LIST — NECESSARY, NOT SCOPE CREEP, EACH ONE MECHANICAL.**
+Widening `Settings` by one required field breaks every existing exact-shape construction/assertion that
+predates it — found by attempting `pnpm lint`/`pnpm test`/`pnpm test:browser` clean, not by inspection alone:
+- `src/settings/settingsPort.ts`'s `coerceSettings` hand-builds a `Settings` object literal — a **compile
+  error** without `codeTheme: v.codeTheme ?? DEFAULT_SETTINGS.codeTheme` (one line added).
+- `src/app/store.ts`'s `describeStored()` hand-builds the trust-panel's `settings: Settings | null` from the
+  raw stored row — a **second, independent compile error**, fixed the same way
+  (`codeTheme: settingsRow.codeTheme ?? DEFAULT_SETTINGS.codeTheme`). This is NOT `getSettings()`'s D-12
+  hand-enumeration trap (below) — it is the trust-panel's own disclosure literal, and it had to compile.
+- Five existing test files asserted the OLD 3-field shape by exact `toEqual`/`Object.keys().sort()` and would
+  have gone RED, not failed to compile: `src/settings/settingsPort.test.ts` (4 sites),
+  `tests/browser/settingsPort.browser.test.ts` (6 sites), `tests/browser/settingsStore.browser.test.ts` (7
+  sites, incl. the capture-flag suite's own **SHAPE INVARIANT** — its comment already named this exact
+  scenario: *"a shared-record implementation (a field on Settings) would redden this"*). All updated to the
+  4-field shape (`codeTheme: 'github-dark'` — the trap-fallback value, see below); comments updated
+  "three fields" → "four fields" where they asserted the count in prose. `settings.test.ts`'s own
+  `DEFAULT_SETTINGS` assertion (tasks.md 5.1's own file) updated the same way.
+- Confirmed NOT needing changes, by inspection: `settingsSeam.ts`, `tocView.ts`, `themeControl.ts`/
+  `reader.ts`, `themeRegistry.ts`, `diagramEnhancer.ts`, `store.test.ts` (spreads `DEFAULT_SETTINGS` or reads
+  a single field, never hand-builds the full shape) — and `idbVersionchange.browser.test.ts`'s v2-shaped
+  legacy seed row (`{id,theme,tocOpen,tocWidth}`, no `codeTheme`), which is CORRECT AS-IS: it represents a
+  real pre-5.1 stored row and its own assertions read the raw row back byte-for-byte, never through
+  `getSettings()`/`DEFAULT_SETTINGS`, so it is untouched by the type change by design, not by oversight.
+★ **`getSettings()`'S D-12 HAND-ENUMERATION TRAP (`store.ts:233`, plan §4-1) IS DELIBERATELY LEFT LIVE FOR
+`codeTheme` — NOT SILENTLY, NAMED HERE.** `getSettings()` spreads `DEFAULT_SETTINGS` first then overrides
+only `theme`/`tocOpen`/`tocWidth` from the row — so a persisted `codeTheme` would compile fine but read back
+as the default regardless of what was stored. Per D-12's own comment (*"the trap stays live for whoever adds
+the next `Settings` field"*), this task is that "whoever," and the choice is stated rather than drifted into:
+tasks.md 5.1's Files list does not include `store.ts`'s persistence functions, its Verify line does not ask
+for a roundtrip test, and nothing in production calls `SettingsPort.save({codeTheme})` yet (5.2 is where a
+real writer first exists). Extending the row-read now would be untestable dead code. **Whoever first calls
+`save({codeTheme: …})` in production — expected to be 5.2 — must extend `getSettings()`'s hand-enumeration or
+the write will silently vanish on the next read**, exactly D-12's documented risk. Filed here so it is not
+rediscovered as a surprise at 5.2.
+Standing invariants: `pnpm test` **996/996** (59 files, unchanged — one existing assertion edited, no new
+`it`, matching tasks.md's "confined diff" framing, not a new-test task) · `pnpm test:browser` **126/126
+files green, 1351 passed, 15 skipped, 0 failed** (full suite, both engines, no `-t`, unchanged from 4.5's
+close — this task adds no browser test file) · `pnpm lint` EXIT=0 · `git diff tests/golden/output/` EMPTY ·
+`tests/manifest.test.ts` **8/8** green · built manifests **654/770 B**, `permissions: []` both, no
+`web_accessible_resources` · 009 `codeImportFence.test.ts` **9/9** · 007 `diagramImportFence.test.ts` **8/8**
+· `diagramActions.browser.test.ts` CSS pin held (54/54 in that file pair) · deps STILL **6** ·
+`perf-first-paint.ts --size 50kb`, isolation-run: **140.9ms median (138.5–157.0ms range) vs <165ms — PASS**.
+Bytes, both engines identical Cr/Fx: content script **333,161 → 333,221 B (+60 B)**, app chunk **467,716 →
+467,776 B (+60 B)**, `.output` **4.7 MB** (well under 5 MB), zip **1,425,102 B (Cr) / 1,425,161 B (Fx)** (well
+under 2 MB each). ★ **The +60 B/engine delta is real, expected, and NOT a §3.2/§3.8 violation**: `settings.ts`
+and `settingsPort.ts` are shared-graph modules the content script's `messagingPort` genuinely imports (the
+M4 settings channel), so a new field + one coercion line is real code on both graphs — the standing
+"content-script bytes byte-identical" invariant is specifically about the CODE-BLOCKS/Shiki surface never
+reaching the content script, which structurally still holds: `codeImportFence.test.ts` clause A (untouched
+this task) re-asserts the content-script graph reaches neither `codeEnhancer.ts` nor `codeEngine.ts` and
+imports no `shiki` specifier, still green. `git diff --name-only HEAD` at the commit: `docs/trust/
+PERMISSIONS.md` · `src/app/store.ts` · `src/settings/settings.ts` · `src/settings/settings.test.ts` ·
+`src/settings/settingsPort.ts` · `src/settings/settingsPort.test.ts` · `tests/browser/
+settingsPort.browser.test.ts` · `tests/browser/settingsStore.browser.test.ts` · `specs/009-code-blocks/
+tasks.md` (5.1's box) · this file. No `codeEnhancer.ts`/`codeEngine.ts`/`codeView.ts`/UI file in the diff.
+★ **NO NEW § CARRIED ITEMS beyond the D-12 trap note above** (which is itself the one finding this task
+surfaced, banked in this same entry).
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the

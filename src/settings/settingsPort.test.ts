@@ -62,8 +62,13 @@ describe('directPort — cached snapshot + round-trip via the injected store', (
     expect(port.snapshot()).toEqual(DEFAULT_SETTINGS);
 
     const loaded = await port.load();
-    expect(loaded).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 288 });
-    expect(port.snapshot()).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 288 });
+    expect(loaded).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 288, codeTheme: 'github-dark' });
+    expect(port.snapshot()).toEqual({
+      theme: 'dark',
+      tocOpen: true,
+      tocWidth: 288,
+      codeTheme: 'github-dark',
+    });
   });
 
   it('save() updates the cache IMMEDIATELY (before persistence resolves) then persists', async () => {
@@ -89,7 +94,12 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
 
     expect(port.snapshot()).toEqual(DEFAULT_SETTINGS); // default before load
 
-    expect(await port.load()).toEqual({ theme: 'dark', tocOpen: null, tocWidth: 320 });
+    expect(await port.load()).toEqual({
+      theme: 'dark',
+      tocOpen: null,
+      tocWidth: 320,
+      codeTheme: 'github-dark',
+    });
 
     await port.save({ tocOpen: true });
     expect(port.snapshot().tocOpen).toBe(true); // cache updated immediately
@@ -97,7 +107,12 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
     expect(m.store.current().tocOpen).toBe(true);
 
     // A fresh load re-reads the persisted, merged value.
-    expect(await messagingPort(m.send).load()).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 320 });
+    expect(await messagingPort(m.send).load()).toEqual({
+      theme: 'dark',
+      tocOpen: true,
+      tocWidth: 320,
+      codeTheme: 'github-dark',
+    });
   });
 
   it('coerces a garbled/absent response into a complete Settings (never a partial shape)', async () => {

@@ -84,6 +84,7 @@ function coerceSettings(value: unknown): Settings {
     theme: v.theme ?? DEFAULT_SETTINGS.theme,
     tocOpen: v.tocOpen === undefined ? DEFAULT_SETTINGS.tocOpen : v.tocOpen,
     tocWidth: v.tocWidth === undefined ? DEFAULT_SETTINGS.tocWidth : v.tocWidth,
+    codeTheme: v.codeTheme ?? DEFAULT_SETTINGS.codeTheme,
   };
 }
 

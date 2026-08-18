@@ -25,18 +25,29 @@ export type ThemeSetting = 'auto' | EffectiveTheme;
  * The persisted reading preferences (spec 004) — a single global row's worth of state, keyed
  * in the store by SETTINGS_ID (persistence concern, kept in `store.ts`). `tocOpen`/`tocWidth`
  * are the 003 per-view TOC state promoted to persistence; `null` means "not set — fall back to
- * the 003 width-derived default" (never confuse `false`/`0` with "unset").
+ * the 003 width-derived default" (never confuse `false`/`0` with "unset"). `codeTheme` is the
+ * 009 D-9 fourth field — a Shiki theme id, independent of {@link ThemeSetting} (spec 009 §4:
+ * "changing one shall never change the other").
  */
 export interface Settings {
   theme: ThemeSetting;
   tocOpen: boolean | null;
   tocWidth: number | null;
+  codeTheme: string;
 }
 
 /** The default reading preferences: Auto theme, TOC state unset (defer to the 003 width-derived
- *  behavior). Used before anything is stored, after a wipe, and as the never-blank fallback when
- *  a settings read fails or times out (spec §4). */
-export const DEFAULT_SETTINGS: Settings = { theme: 'auto', tocOpen: null, tocWidth: null };
+ *  behavior). `codeTheme` is a PROVISIONAL placeholder — `'github-dark'`, one of Shiki's own
+ *  bundled theme ids, chosen only so a highlighted block resolves to something before task
+ *  8.4/8.5 measures and rules the real default (spec 009 M-4); not a design opinion. Used before
+ *  anything is stored, after a wipe, and as the never-blank fallback when a settings read fails
+ *  or times out (spec §4). */
+export const DEFAULT_SETTINGS: Settings = {
+  theme: 'auto',
+  tocOpen: null,
+  tocWidth: null,
+  codeTheme: 'github-dark',
+};
 
 /**
  * Resolve a theme *setting* to the concrete {@link EffectiveTheme} that paints (spec §4). PURE —

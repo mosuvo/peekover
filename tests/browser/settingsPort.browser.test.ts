@@ -110,7 +110,12 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
     // not its own default — this is the extension-origin persistence round-trip.
     const reader = directPort(realStore);
     expect(reader.snapshot()).toEqual(DEFAULT_SETTINGS); // default before load()
-    expect(await reader.load()).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 301 });
+    expect(await reader.load()).toEqual({
+      theme: 'dark',
+      tocOpen: true,
+      tocWidth: 301,
+      codeTheme: 'github-dark',
+    });
   });
 
   it('MESSAGING port: SET through the handler persists to the real store; GET reads it back', async () => {
@@ -124,10 +129,16 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'light',
       tocOpen: null,
       tocWidth: 264,
+      codeTheme: 'github-dark',
     });
     // …AND through the DIRECT port — proving the messaging SET hit the one real database that the
     // direct path reads (both ports, one engine, one DB).
-    expect(await directPort(realStore).load()).toEqual({ theme: 'light', tocOpen: null, tocWidth: 264 });
+    expect(await directPort(realStore).load()).toEqual({
+      theme: 'light',
+      tocOpen: null,
+      tocWidth: 264,
+      codeTheme: 'github-dark',
+    });
   });
 
   it('cross-port: a value SET directly is GET-able over messaging (one real DB behind both)', async () => {
@@ -137,6 +148,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'dark',
       tocOpen: false,
       tocWidth: null,
+      codeTheme: 'github-dark',
     });
   });
 
@@ -148,7 +160,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
 
     // Correct routing reads it back (green control)…
     const correct = await messagingPort(loopbackMessenger(listener)).load();
-    expect(correct).toEqual({ theme: 'dark', tocOpen: null, tocWidth: 288 });
+    expect(correct).toEqual({ theme: 'dark', tocOpen: null, tocWidth: 288, codeTheme: 'github-dark' });
 
     // …but a renamed/misrouted type makes the handler DECLINE, so load() resolves to DEFAULT, NOT
     // the saved value — the message type genuinely carries the round-trip (RED if it didn't).

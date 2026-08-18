@@ -582,7 +582,12 @@ export async function describeStored(): Promise<StoredSummary> {
   }));
 
   const settings: Settings | null = settingsRow
-    ? { theme: settingsRow.theme, tocOpen: settingsRow.tocOpen, tocWidth: settingsRow.tocWidth }
+    ? {
+        theme: settingsRow.theme,
+        tocOpen: settingsRow.tocOpen,
+        tocWidth: settingsRow.tocWidth,
+        codeTheme: settingsRow.codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+      }
     : null;
 
   // `null` when no `'capture'` row exists (default on, nothing stored); the flag's value otherwise

@@ -397,7 +397,7 @@ and green.*
 
 ## 5 — Code themes (D-9)
 
-- [ ] **5.1 `codeTheme` — a fourth field on the ONE global settings row (D-9).** `Settings` (today `{ theme:
+- [x] **5.1 `codeTheme` — a fourth field on the ONE global settings row (D-9).** `Settings` (today `{ theme:
       ThemeSetting; tocOpen: boolean | null; tocWidth: number | null }`) gains `codeTheme: string`. **Same
       shape** `theme`/`tocOpen`/`tocWidth` already are — one more field on one global row, not a new settings
       surface and not the per-document-class axis 008 §3.5 declined (plan §0's own argument, verified against
