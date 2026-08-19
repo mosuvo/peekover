@@ -1160,6 +1160,65 @@ browser.test.ts` (new) · this file. No `src/` file in the diff — `codeEnhance
 empty one recorded above.
 ★ **NO NEW § CARRIED ITEMS.**
 
+★ **TASK 7.2 IS DONE — THEME-APPLY FAILURE AT THE SELECTION LEVEL, PAGE-WIDE (§3.9). NOW-POINTER
+ADVANCES TO 8.1 NEXT.** tasks.md 7.2's own tag, cited verbatim: *"[§3.9; §4 themes degradation]"*.
+Files list, verbatim: `src/render/codeEnhancer.ts` · `tests/browser/codeDegrade.browser.test.ts`.
+★ **THE KICKOFF'S OWN RECOMMENDED RESOLUTION (RETRY WITH `DEFAULT_SETTINGS.codeTheme`) WAS FOUND
+WRONG AT STEP 0 AND ROUTED VIA `AskUserQuestion` BEFORE ANY IMPLEMENTATION — THE USER CONFIRMED THE
+EMPTY-DIFF PATH.** Investigated first: `highlightFences`'s per-fence `try`/`catch` around
+`tokenizeAndAdopt` (task 4.2, `codeEnhancer.ts:267-274`) already catches an unresolvable theme
+exactly like an unresolvable language — `codeEngine.ts`'s own module header states one failure
+surface for "unknown key" and "tokenize genuinely failed" alike — and since `enhanceCode` passes the
+SAME `theme` string (`options.theme ?? currentSettings().codeTheme`) to every pair, a bad PERSISTED
+value already fails every fence identically: page-wide, `markCodeFailed`'s plain retained-`<pre>`
+state. **Task 5.2 already proved this exact scenario at the jsdom level**
+(`codeEnhancer.test.ts:406-415`, "falls back to settings.codeTheme when no override is passed":
+`saveSettings({ codeTheme: 'not-a-real-theme-id' })` → `enhanceCode(host)` with no override → wrapper
+ends `'failed'`) — and that test's own comment is explicit the silent-default-fallback shape was
+deliberately rejected: *"A hard-coded fallback would have rendered fine; only a genuine settings read
+can fail here."* Implementing a retry-to-`DEFAULT_SETTINGS.codeTheme` fallback would have made that
+already-shipped 5.2 test start rendering successfully instead of failing — a regression against an
+established, deliberately-written invariant, in a file (`codeEnhancer.test.ts`) 7.2's own Files list
+does not name. So **`codeEnhancer.ts` ships byte-identical to HEAD, a no-op RECORDED as such**
+(mirrors 7.1's own empty-diff precedent) — 7.2's real job, re-derived against the tree rather than the
+kickoff's argued preference, is the BROWSER-level (Cr+Fx) proof of the SAME degraded state when
+triggered through PERSISTED settings rather than an injected loader/override, exactly what jsdom
+cannot answer (`codeEnhancer.test.ts`'s own header: "what jsdom cannot answer … is the browser
+suite's job").
+★ **PLAN-MODE JUDGMENT: NOT WARRANTED, stated with defense.** No new mechanism — the per-fence guard
+predates this task (4.2); the work is a browser-test addition following `codeDegrade.browser.test.ts`'s
+own 7.1 shape (`directHost` + `settled()` polling), with no design decision, no threshold, no
+cross-file wiring. Pure extension of an existing pattern, same bucket as 7.1.
+★ **RED-FIRST ABLATION, LOCALIZED.** Per-fence `try`/`catch` inside `highlightFences`'s loop
+temporarily removed (`tokenizeAndAdopt` awaited unguarded). Result, both engines: the new 7.2 test's
+assertion `wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed')` timed out — **`Expected: "failed",
+Received: "pending"`** — every wrapper stuck at `pending` forever, PLUS a genuine unhandled
+`ShikiError: Theme 'not-a-real-theme-id' not found` surfaced from `tokenizeAndAdopt`/`highlightFences`
+— the "raw dump or uncaught error" tasks.md 7.2's Verify line names, in its own units. **LOCALIZED**:
+exactly 2 of 132 browser test files failed (the 7.2 test × 2 engines); 7.1's own tests in the SAME
+file stayed green in the same run, proving the ablation touched only the mechanism 7.2 exercises (the
+per-fence catch), never 7.1's outer engine-load catch. Reverted; `git diff --stat
+src/render/codeEnhancer.ts` confirmed EMPTY (byte-identical) after revert; the targeted test re-ran
+GREEN on both engines.
+★ **BUNDLE-VERIFY-GATE, FRESH BUILD BOTH ENGINES — EVERY FIGURE BYTE-IDENTICAL TO 7.1's CLOSE**
+(expected: no production diff). Content script **334,858 B** both engines. App chunk **475,579 B**
+both engines. `.output` **4.87 MB** (Cr `4,866,741 B` / Fx `4,866,857 B`). Zip **1,470,730 /
+1,470,788 B** (Cr/Fx). Built manifests **654 / 770 B**, `permissions: []`, no
+`web_accessible_resources`, both engines. deps STILL **6**.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files — unit count unchanged; 7.2's
+Files list names no unit test file, and no jsdom test file was touched). `pnpm test:browser` **132
+files green** (unchanged file count — 7.2 extends 7.1's existing file rather than adding a new one),
+**1389 passed, 15 skipped, 0 failed** (+2 from 1387 — the new 7.2 `it` ×2 engines). `pnpm lint`
+EXIT=0. `git diff tests/golden/output/` EMPTY. `tests/manifest.test.ts` green. 009
+`codeImportFence.test.ts` **9/9** unchanged (7.2 touches no import). 007 `diagramImportFence.test.ts`
+**8/8**. `diagramActions.browser.test.ts` CSS pin held (part of the full green browser run).
+`perf-first-paint.ts --size 50kb`, isolation-run (fresh build): **146.0ms median (142.1–160.6ms range)
+vs <165ms — PASS**. `git diff --name-only HEAD` at the commit: exactly
+`specs/009-code-blocks/tasks.md` (7.2's box) · `tests/browser/codeDegrade.browser.test.ts` (extended)
+· this file. No `src/` file in the diff — `codeEnhancer.ts`'s own diff is the empty one recorded
+above.
+★ **NO NEW § CARRIED ITEMS.**
+
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
 `decisions.md` (2026-08-03, M8 GATE 1) and **the spec's status line stays "draft" by the M7 precedent** — the

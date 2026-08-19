@@ -471,7 +471,7 @@ and green.*
       D-15's exact class). Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§3.9; §4 highlighting degradation]
 
-- [ ] **7.2 Theme-apply failure at the SELECTION level, not the per-tokenize level (§3.9).** Distinct from
+- [x] **7.2 Theme-apply failure at the SELECTION level, not the per-tokenize level (§3.9).** Distinct from
       4.2's per-fence theme-resolution proof: here the PERSISTED `codeTheme` setting itself names an id Shiki
       cannot resolve (a stale/corrupted value).
       Files: `src/render/codeEnhancer.ts` · `tests/browser/codeDegrade.browser.test.ts`
