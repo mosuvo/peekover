@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-18 (M9 task 4.5 done — the cooldown constraint re-assertion + structural import-fence for shiki, D-2; implementation next at task 5.1).*
+*Updated: 2026-08-19 (M9 task 8.1 done — M-1, the byte budget, D-11's four-component ablation-proven decomposition; group 8 continues at task 8.2).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1217,6 +1217,94 @@ vs <165ms — PASS**. `git diff --name-only HEAD` at the commit: exactly
 `specs/009-code-blocks/tasks.md` (7.2's box) · `tests/browser/codeDegrade.browser.test.ts` (extended)
 · this file. No `src/` file in the diff — `codeEnhancer.ts`'s own diff is the empty one recorded
 above.
+★ **NO NEW § CARRIED ITEMS.**
+
+★ **TASK 8.1 IS DONE — M-1, THE BYTE BUDGET, D-11's FOUR-COMPONENT ABLATION-PROVEN DECOMPOSITION.
+PRODUCED NUMBERS ONLY, CHOSE NOTHING. NOW-POINTER ADVANCES TO 8.2 NEXT.** tasks.md 8.1's own tag,
+cited verbatim: *"[D-11; §5 bytes; finding 1; §7-7]"*. Files list, verbatim: `docs/ai/progress.md`
+(numbers only) + the task report — **no `scripts/` file, no `package.json` alias**. ★ **The
+kickoff's own recommendation (a committed `scripts/byte-budget.ts` + a `package.json` alias) was
+found WRONG at Step 0 and routed via `AskUserQuestion` before any implementation** — ruled out
+because the Files list names only `docs/ai/progress.md`, and a new committed script is neither
+compile- nor Verify-mandatory. The user confirmed: proceed as scoped. Every measurement below is
+ad-hoc ablation (temporarily remove/stub a component, rebuild, measure the delta, restore to
+byte-/hash-identical), mirroring tasks 1.2 and 4.5's own precedent — nothing new lands in `src/` or
+`scripts/`.
+★ **PLAN-MODE JUDGMENT: NOT WARRANTED, stated with defense.** No new mechanism — the ablation
+pattern (remove/rebuild/measure/restore) is already established at 1.2 and 4.5; this task combines
+several such ablations but introduces no new design decision, threshold, or cross-file wiring.
+★ **BASELINES RE-CONFIRMED FRESH, BOTH ENGINES, BEFORE ANY ABLATION (fresh `rm -rf .output` +
+rebuild).** CS **334,858 B** both engines. App chunk **475,579 B** both engines, SAME chunk hash
+`app-BlMcDd3E.js` on both — the control that lazy vendor chunks (language/theme/engine data) are
+engine-independent, so the component ablations below were run on Chrome alone. `.output`
+**4,866,741 B (Cr) / 4,866,857 B (Fx)**. Zip **1,470,730 / 1,470,788 B**. Manifests **654/770 B**,
+`permissions: []`, no `web_accessible_resources`. deps **6**. All match the standing invariant set
+exactly.
+★ **COMPONENT 1 — CONTENT-SCRIPT DELTA: ZERO SHIKI BYTES, PROVEN STRUCTURALLY, CITED NOT
+RE-DERIVED.** CS moved **329,233 → 334,858 B (+5,625 B)** since the pre-1.1 baseline, byte-identical
+Cr/Fx — but the structural fence (`codeImportFence.test.ts` clauses A/B, 9/9 green, task 4.5)
+already proves the content-script graph reaches neither `codeEngine.ts` nor `codeEnhancer.ts` and
+imports no `shiki` specifier. The +5,625 B is entirely `readerCss.ts`'s shared toolbar/collapse CSS
+(landed at 4.3/6.1, on **both** graphs by construction, already ruled non-Shiki at those tasks' own
+close entries) — **not one of D-11's four components**, stated here for completeness and excluded
+from the M-1 accounting, exactly as the Verify line's "0 B" framing means (Shiki-attributable bytes,
+not the total byte count).
+★ **COMPONENT 2 — APP-PAGE DELTA, EACH PIECE INDEPENDENTLY ABLATED WITH A FIRING CONTROL.**
+- **(a) The JS-regex-engine module (D-3) — 169,635 B.** Ablated by stubbing `loadShikiCore` (no
+  `import('shiki/core')`) and removing the static `createJavaScriptRegexEngine`/`shiki/engine/
+  javascript` import + call. The lazy `shiki/core` runtime chunk (111,981 B) vanished entirely from
+  `.output`; the app chunk dropped **475,579 → 417,925 B (−57,654 B)**, the regex engine's own
+  inlined static code. CS unchanged (334,858 B); language/theme chunks confirmed still present,
+  proving the ablation isolated only the engine.
+- **(b) The bundled language-grammar set (6 languages) — 395,967 B.** Ablated by emptying
+  `LANGUAGE_LOADERS`. `.output` total **4,866,741 → 4,470,774 B**. App chunk **475,579 → 475,062 B
+  (−517 B**, the shrunk object literal itself**)**. CS unchanged.
+- **(c) The ≥14-theme data (20 themes shipped) — 197,102 B.** Ablated by emptying `THEME_LOADERS`.
+  `.output` total **4,866,741 → 4,669,639 B**. App chunk **475,579 → 474,363 B (−1,216 B**, the
+  shrunk object literal + `CODE_THEME_IDS`**)**. CS unchanged.
+- **(d) Peekover's own glue code (`codeEngine.ts`/`codeEnhancer.ts`/`codeView.ts`/
+  `codeThemeControl.ts`/the toolbar) — 8,408 B, a RESIDUAL, cross-checked against an independent
+  combined ablation.** (a)+(b)+(c) sum to **762,704 B**. A SEPARATE ablation — disabling BOTH
+  `enhanceCode` call sites (`readerPane.ts`, `appShell.ts`) AND `codeThemeControl`'s mounting in
+  `appShell.ts` (the only OTHER reachability path into `codeEngine.ts`, since `codeThemeControl.ts`
+  imports `CODE_THEME_IDS` independent of whether any fence is ever highlighted) — measured the FULL
+  Shiki-attributable delta directly: `.output` **4,866,741 → 4,095,629 B (−771,112 B)**. **771,112 −
+  762,704 = 8,408 B, exactly** — zero unaccounted byte. All edits reverted (`git checkout --`) after
+  each ablation; the final rebuild confirmed byte- AND chunk-hash-identical to the pre-ablation
+  baseline, both engines (`app-BlMcDd3E.js`, 475,579 B, both).
+★ **TOTAL APP-PAGE SHIKI DELTA: 771,112 B, CROSS-CHECKED TWO INDEPENDENT WAYS — ZERO DISCREPANCY.**
+★ **COMPONENT 3 — `PNPM ZIP` DELTA: MEASURED, AND A GENUINE FINDING, STATED NOT FORCED.** Zip delta
+**164,217 B, IDENTICAL both engines** (Cr 1,306,513→1,470,730; Fx 1,306,571→1,470,788). This does
+**NOT** equal the raw `.output` sum (CS +5,625 + app-page +771,112 = **776,737 B**) — `pnpm zip`
+deflate-compresses, and ~763 KB of the app-page delta is highly repetitive TextMate grammar/theme
+JSON that compresses far harder than the codebase's existing content. Read literally, "reconciled to
+the sum of CS+app exactly" cannot hold ACROSS a compression boundary by construction — the RAW
+`.output` accounting is what reconciles exactly (zero residual, above); the compressed zip figure is
+reported alongside it, not forced to match. Both numbers stand for 8.5.
+★ **COMPONENT 4 — BOUNDS RE-CHECKED, NEITHER BINDS.** `.output` **4,866,741 B (Cr) / 4,866,857 B
+(Fx)**, both under the **5 MiB (5,242,880 B)** package-base bound — headroom **~367 KiB**. Zip
+**1,470,730 / 1,470,788 B**, both under the **2 MB (2,097,152 B)** per-engine bound — headroom
+**~612 KiB**. §7-7's carried subset-build question does **NOT** fire — stated as a measurement, not
+chosen (M-1's own "forbidden from choosing" framing).
+★ **TREE-SHAKING CHECK, WHILE THE ABLATION WAS STANDING (the standing lesson).**
+`CODE_THEME_IDS = Object.freeze(Object.keys(THEME_LOADERS))`, and `LANGUAGE_LOADERS`/
+`THEME_LOADERS` themselves: every export that touches them (`CODE_THEME_IDS`, `languageInputFor`,
+`themeInputFor`) is consumed (`codeThemeControl.ts`/`codeEnhancer.ts`) — no unused export carrying a
+retained initializer, unlike the `ARR.slice()` lesson's pattern. No defect found.
+★ **BUNDLE-VERIFY-GATE — BYTE- AND CHUNK-HASH-IDENTICAL TO 7.2's CLOSE** (expected: 8.1 ships NO
+production diff). CS **334,858 B** both engines. App chunk **475,579 B** both engines
+(`app-BlMcDd3E.js`, same hash). `.output` **4,866,741 / 4,866,857 B**. Zip **1,470,730 /
+1,470,788 B**. Manifests **654/770 B**, `permissions: []`, no `web_accessible_resources`. deps
+STILL **6**.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files, unchanged — 8.1 touches no
+test file). `pnpm test:browser` **132 files green, 1389 passed, 15 skipped, 0 failed** (unchanged).
+`pnpm lint` EXIT=0. `git diff tests/golden/output/` EMPTY. `tests/manifest.test.ts` green. 009
+`codeImportFence.test.ts` **9/9** unchanged. 007 `diagramImportFence.test.ts` **8/8**.
+`diagramActions.browser.test.ts` CSS pin held. `perf-first-paint.ts --size 50kb`, isolation-run:
+**148.1ms median (142.9–163.9ms range) vs <165ms — PASS**. `git diff --name-only HEAD` at the
+commit: exactly `specs/009-code-blocks/tasks.md` (8.1's box) · this file. No `src/`/`scripts/`/
+`tests/` file in the diff — every ablation edit was reverted before commit, `git status` confirmed
+clean before staging.
 ★ **NO NEW § CARRIED ITEMS.**
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.

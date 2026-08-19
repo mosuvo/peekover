@@ -486,7 +486,7 @@ and green.*
 8.5 only in the sense of "does the surface give way," never a value choice. M-3/M-4 are the human-picks-a-value
 items, in 007/008's sense.*
 
-- [ ] **8.1 M-1 — the byte budget, D-11's four-component ablation-proven decomposition. PRODUCES NUMBERS;
+- [x] **8.1 M-1 — the byte budget, D-11's four-component ablation-proven decomposition. PRODUCES NUMBERS;
       FORBIDDEN FROM CHOOSING VALUES.** Against baselines **CS 329,233 B / app 399,646 B / zip 1,306,513 /
       1,306,571 B**, deps exactly **6**.
       Files: `docs/ai/progress.md` (numbers only) + the task report
