@@ -527,7 +527,7 @@ items, in 007/008's sense.*
       — not assumed, not folded in silently. **No verdict reached; §3.7's mechanism is not chosen by this
       task.** Golden EMPTY · manifest green **2975 B** · `permissions: []`. [D-12; §3.7; §8 M-3; plan risk 7]
 
-- [ ] **8.4 M-4 — the default code theme, the collapse threshold, and the line-numbers/word-wrap defaults.
+- [x] **8.4 M-4 — the default code theme, the collapse threshold, and the line-numbers/word-wrap defaults.
       PRODUCES CANDIDATES; FORBIDDEN FROM CHOOSING FINAL VALUES.** Walk-informed against the demo document and
       the golden fixtures (008 §8-4's shape).
       Files: `docs/ai/progress.md` (numbers only) + the task report

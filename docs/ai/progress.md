@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-19 (M9 task 8.3 done — M-3, auto-detection's three mechanisms priced against three axes; group 8 continues at task 8.4).*
+*Updated: 2026-08-19 (M9 task 8.4 done — M-4, theme candidates / collapse-threshold distribution / line-numbers-word-wrap candidates, walk-informed; group 8 continues at task 8.5, the human decision gate).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1489,6 +1489,148 @@ directory outside this repo, never staged, `git status` confirmed clean before s
 n/a / 0ms. Corpus n=23, bias sentence above. **Per D-12/8.5's own framing: if neither paid option fits
 inside 8.1's headroom, defer is the floor** — heuristic's byte cost comfortably fits; local model's byte
 cost does not (~4.8× over). No verdict rendered here.
+★ **NO NEW § CARRIED ITEMS.**
+
+★ **TASK 8.4 IS DONE — M-4, THEME CANDIDATES / COLLAPSE-THRESHOLD DISTRIBUTION / LINE-NUMBERS-WORD-WRAP
+CANDIDATES, WALK-INFORMED. PRODUCED CANDIDATES, CHOSE NOTHING. NOW-POINTER ADVANCES TO 8.5 (HUMAN DECISION
+GATE) NEXT.** tasks.md 8.4's own tag, cited verbatim: *"[D-9, D-10; §8 M-4; §9-2]"*. Files list, verbatim:
+`docs/ai/progress.md` (numbers only) + the task report — no new `src/`/`scripts/`/`tests/` file, mirroring
+8.1-8.3's own precedent.
+★ **PLAN-MODE JUDGMENT: WARRANTED, stated with defense — and used.** Unlike 8.1/8.2 (pure extensions of an
+existing ablation/harness pattern), 8.4 needed a genuinely new methodology (a color-contrast walk across 20
+theme candidates × 3 page-modes) and surfaced two real repo-state ambiguities that had to be resolved before
+any methodology could run. Plan mode entered; plan approved before implementation.
+★ **DIVERGENCE 1 — "THE DEMO DOCUMENT" DOES NOT EXIST IN THIS REPO, RESOLVED DIRECTLY (fact J), RECORDED
+PER STANDING RULE #1.** `docs/ai/spec-coverage.md` item 11: *"No demo document exists (see F11)... Visual QA
+currently runs on test fixtures and 80+ Playwright screenshots instead."* Confirmed independently: a
+repo-wide `find` for any "demo"-named file returns nothing, and neither `plan.md:370` nor `spec.md:220` (both
+of which name "the demo document" as 8.4's input) point at an actual file. Resolved without routing — one
+clearly-supported direction, not a genuine fork: substitute the golden fixtures (already co-named in 8.4's
+own text) plus 8.3's real repo-wide corpus (the established "walk-informed" evidence source this milestone
+already built, same bias sentence) as the best-available stand-in, matching this repo's own documented
+practice for when the aspirational demo document is absent.
+★ **DIVERGENCE 2 — "THE SAME CORPUS 8.3 USES," ROUTED VIA ASKUSERQUESTION (genuine two-way ambiguity).**
+8.3's corpus was deliberately filtered to unlabeled fences only, for auto-detection accuracy — a filter
+criterion orthogonal to collapse behavior, which fires on every code block regardless of language. Reading
+"the SAME corpus" literally (the exact 23-item unlabeled-only set) imports a sampling bias never intended for
+this question; reading it as "the same document set, unfiltered" better matches what collapse actually needs.
+**User chose:** re-scan the same 64 `.md` files 8.3 scanned for **all** fenced blocks, report the literal
+23-item subset as a supplementary cross-check, not primary.
+★ **CORPUS RE-SCAN (n=103 total fences, 64 files) — ZERO DRIFT FROM 8.3's BANKED COUNT.** Same repo-wide
+scan methodology 8.3 used (all `.md` files, excluding `node_modules`/`.git`/`.output`/`.wxt`): **64 files
+scanned, 103 total fenced blocks, 23 unlabeled** — the unlabeled count matches 8.3's banked `n=23` exactly,
+confirming no repo drift between sessions. Scratch script (`corpusScan.mjs`, deleted before commit — 8.2's
+fact F precedent), ported `parseLineRanges`'s exact token grammar (`codeEnhancer.ts:145-188`) and `parse.ts`'s
+exact info-string split (`parse.ts:81-96`, lang/meta divided on the first whitespace run) so "has line-
+highlight meta" matches production semantics precisely, not an approximation.
+★ **SUB-QUESTION 2 — COLLAPSE THRESHOLD DISTRIBUTION, over the 103-fence corpus (bias sentence: this
+repository's own docs, biased toward directory trees, shell/JS snippets, and the house pseudocode convention
+— not representative of an arbitrary agent-authored document a real user would open, per 8.3's own caveat).**
+Line count: **min 1 / median 6 / p75 8 / p90 10 / max 34.** Byte size: **min 69 B / median 156 B / p75 180 B
+/ p90 560 B / max 1,311 B.** Line-highlight meta present: **0 / 103 (0.0%)** — no fence anywhere in this repo
+carries `{...}` meta, an honest limitation stated plainly: this corpus cannot inform whether threshold and
+meta-presence correlate, because meta presence never occurs in it. **Against the current PROVISIONAL
+`CODE_COLLAPSE_LINE_THRESHOLD = 40` (`codeView.ts:357`): 0 / 103 (0.0%) of this corpus's fences exceed it** —
+characterized, not verdicted (fact H): every real fence in this repository sits comfortably under 40 lines,
+so this corpus can confirm 40 does not clip anything IT contains, but says nothing about where the right cut
+line falls for longer real-world code (the same representativeness caveat the bias sentence already carries).
+**Supplementary — the literal 23-item unlabeled-only subset** (per Divergence 2, reported not-primary): line
+count min 2 / median 7 / p75 11 / p90 12 / max 19; byte size min 71 B / median 478 B / p75 768 B / p90 923 B
+/ max 1,311 B; meta 0/23.
+★ **SUB-QUESTION 3 — LINE-NUMBERS / WORD-WRAP DEFAULT CANDIDATES, BOTH STATED LEGITIMATE EITHER WAY (008
+§8-3's principle), NO PICK.** Max single-line length across the 103-fence corpus: **min 25 / median 40 / p75
+83 / p90 102 / max 175 characters** — against the reader's own ~76ch column (`readerCss.ts:13`), roughly the
+top 10% of fences in this corpus carry at least one line wider than the reading column, a factual input for
+the word-wrap candidate, not a verdict on which default is correct. Line-numbers candidate inputs: the
+corpus's own line-count distribution (above) — most fences are short (median 6 lines), so numbering's payoff
+in THIS corpus's typical case is limited, though the bias sentence caveats this against real-world usage;
+existing infra for both booleans is already built and gated behind `data-line-numbers`/`data-wrap`
+(`readerCss.ts:673-685`, `codeView.ts`'s toolbar toggles) — no chrome grows unless a reader opts in, mirroring
+D-10's own "grows no chrome where it costs nothing" framing. Both an ON-by-default (orientation in longer/
+reference blocks; wrap avoids horizontal scroll for the ~10% of over-column lines) and an OFF-by-default
+(visually clean, reader-first per AGENTS.md's brand non-negotiables; consistent with collapse's own
+minimal-chrome-until-needed default) reading are stated as legitimate, per the task's own explicit framing —
+**no constant set, no lean stated.**
+★ **SUB-QUESTION 1 — THEME CANDIDATES, walked against `readerCss.ts`'s three token blocks.** ★ **THE
+SEPIA `--code-bg` FINDING, STATED EXPLICITLY AS A CANDIDATE-SELECTION INPUT (the task's own ★ requirement),
+NOT SILENTLY SUBSTITUTED:** `readerCss.ts`'s sepia block (`:50-52`, `:host([data-theme="sepia"])`) overrides
+only `--paper`/`--ink`/`--accent`/`--accent-soft` — `--code-bg` is NOT redeclared there, so sepia inherits
+`:host`'s LIGHT value, `#F1F1EB`, verbatim. **A second structural fact, traced this session (`codeEnhancer.ts:
+213`, `if (tokens.bg) pre.style.backgroundColor = tokens.bg;`): the highlighted `<pre>`'s own background is
+ENTIRELY theme-owned** — `--code-bg` governs only the inline-`code` span and the per-fence toolbar chrome
+around the block (`readerCss.ts:160,164,191,665`), never the highlighted block itself. So the walk's real
+question is how a candidate theme's own background sits beside `--code-bg`'s toolbar/inline-code chrome, not
+whether the theme "matches the page" directly.
+For all 20 `CODE_THEME_IDS` (`codeEngine.ts:134-155,157-160`): resolved each theme's real background via
+`colors['editor.background']` (the project's own already-installed `shiki@4.4.3`; the raw top-level `bg`
+field is `undefined` on every one of the 20 at this Shiki version — `editor.background` is the value
+`codeToTokens` actually resolves `tokens.bg` from, confirmed by direct import), then computed a WCAG contrast
+ratio against each of the 3 page-mode `--code-bg` values (light `#F1F1EB` / dark `#1C2030` / sepia — the
+same `#F1F1EB` as light, per the finding above). Full 20-row table, no filtering, no pick:
+
+| id | Shiki type | editor.background | vs light `--code-bg` | vs dark `--code-bg` | vs sepia `--code-bg` |
+|---|---|---|---|---|---|
+| min-dark | dark | #1f1f1f | 14.54 | 1.02 | 14.54 |
+| red | dark | #390000 | 15.78 | 1.11 | 15.78 |
+| min-light | light | #ffffff | 1.13 | 16.17 | 1.13 |
+| solarized-dark | dark | #002B36 | 13.24 | 1.08 | 13.24 |
+| monokai | dark | #272822 | 13.11 | 1.09 | 13.11 |
+| horizon | dark | #1C1E26 | 14.66 | 1.03 | 14.66 |
+| horizon-bright | light | #FDF0ED | 1.02 | 14.53 | 1.02 |
+| andromeeda | dark | #23262E | 13.34 | 1.07 | 13.34 |
+| dark-plus | dark | #1E1E1E | 14.70 | 1.03 | 14.70 |
+| slack-dark | dark | #222222 | 14.03 | 1.02 | 14.03 |
+| plastic | dark | #21252B | 13.58 | 1.05 | 13.58 |
+| slack-ochin | light | #FFF | 1.13 | 16.17 | 1.13 |
+| light-plus | light | #FFFFFF | 1.13 | 16.17 | 1.13 |
+| laserwave | dark | #27212e | 13.79 | 1.03 | 13.79 |
+| github-light | light | #fff | 1.13 | 16.17 | 1.13 |
+| github-dark | dark | #24292e | 12.94 | 1.10 | 12.94 |
+| vesper | dark | #101010 | 16.78 | 1.18 | 16.78 |
+| aurora-x | dark | #07090F | 17.56 | 1.23 | 17.56 |
+| vitesse-light | light | #ffffff | 1.13 | 16.17 | 1.13 |
+| vitesse-black | dark | #000 | 18.52 | 1.30 | 18.52 |
+
+**Observed structural pattern, characterized not verdicted (fact H):** every `dark`-typed theme reads as a
+strongly-contrasted "framed box" against the light/sepia page (~13-18.5:1) and nearly blends with the dark
+page's toolbar chrome (~1.0-1.3:1); every `light`-typed theme does the inverse (~1.0-1.1:1 against light/
+sepia, ~14.5-16.2:1 against dark). Since `codeTheme` is ONE global default applying regardless of which page
+mode is active (D-9), no single default theme reads as "blended" in all three page modes simultaneously — a
+factual input for 8.5, not a rule this task invents. **`github-dark`, the current PROVISIONAL
+`DEFAULT_SETTINGS.codeTheme` (`settings.ts:49`), sits mid-table on every axis** (12.94 / 1.10 / 12.94) — cited
+as an existing candidate already in the codebase, not favored. Byte cost is explicitly NOT a candidate-
+selection axis here: all 20 themes already ship in the package regardless of which is default (8.1's
+component (c), 197,102 B, ablated as one block; each `THEME_LOADERS` entry is its own lazy chunk, a
+package-total line item, not a runtime-load cost tied to the default choice).
+★ **SELF-VALIDATION (fact I), both scripts.** Corpus scan: known ground truth from `tests/golden/fixtures/
+code.md` (read directly this session — a 2-line labeled `js` fence at line 8, a 2-line unlabeled fence at
+line 13) reproduced EXACTLY by the script (2 lines / 70 B / no meta; 2 lines / 71 B / no meta) — the
+fence-boundary parser is correct on known input, not merely plausible on unknown input. The unlabeled count
+(23) reproduced exactly against 8.3's independently-banked figure — a same-repo, same-methodology, zero-
+residual cross-check. Theme script: `github-dark`'s resolved `editor.background` (`#24292e`) matches GitHub's
+own well-known legacy dark editor background — a spot-check against an externally-verifiable fact, not an
+internal-only consistency check. `contrastVsLight === contrastVsSepia` held for all 20 rows, exactly as the
+sepia-inheritance finding structurally predicts (not a coincidence needing further investigation, fact K).
+★ **BUNDLE-VERIFY-GATE — BASELINE CONFIRMATION (8.4 is measurement-only, no production diff).** CS
+**334,858 B**, app **475,579 B** (`app-BlMcDd3E.js`), both engines, byte- and chunk-hash-identical to 8.3's
+close. Manifests **654/770 B**, `permissions: []`. deps STILL **6** (both scratch scripts read the project's
+own already-installed `shiki@4.4.3` and Node built-ins only — no `npm install`, no sandbox needed, unlike
+8.3's local-model pricing).
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files, unchanged). `pnpm test:browser`
+**132 files green, 1389 passed, 15 skipped, 0 failed** (unchanged). `pnpm lint` EXIT=0. `git diff
+tests/golden/output/` EMPTY. `tests/manifest.test.ts` green. 007 `diagramImportFence.test.ts` **8/8**. 009
+`codeImportFence.test.ts` **9/9**. `diagramActions.browser.test.ts` CSS pin held. `perf-first-paint.ts
+--size 50kb`, isolation-run (unaffected by this task, re-checked as a standing invariant). `git diff
+--name-only HEAD` at the commit: exactly `specs/009-code-blocks/tasks.md` (8.4's box) · this file. No
+`src/`/`scripts/`/`tests/` file in the diff — both scratch scripts (`corpusScan.mjs`, `themeContrast.mjs`)
+lived entirely under the session scratchpad directory outside this repo, never staged, `git status` confirmed
+clean before staging.
+★ **NUMBERS PRESERVED FOR 8.5 (M-4's theme / threshold / boolean-default decisions):** theme candidates —
+full 20-row contrast table above, `github-dark` (current provisional) at 12.94/1.10/12.94. Collapse
+threshold — 103-fence corpus: line count max 34 (0/103 over the current 40-line threshold), byte size max
+1,311 B, meta 0/103; supplementary 23-item literal subset: line count max 19, byte size max 1,311 B, meta
+0/23. Line-numbers/word-wrap — max-line-length p90 102 chars (vs ~76ch column), line-count median 6.
+No verdict rendered on any of the three sub-questions; no constant set.
 ★ **NO NEW § CARRIED ITEMS.**
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
