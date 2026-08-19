@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-19 (M9 task 8.1 done — M-1, the byte budget, D-11's four-component ablation-proven decomposition; group 8 continues at task 8.2).*
+*Updated: 2026-08-19 (M9 task 8.2 done — M-2, first paint under Shiki, A-B-A against 2.2's pre-Shiki floor; group 8 continues at task 8.3).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1305,6 +1305,94 @@ test file). `pnpm test:browser` **132 files green, 1389 passed, 15 skipped, 0 fa
 commit: exactly `specs/009-code-blocks/tasks.md` (8.1's box) · this file. No `src/`/`scripts/`/
 `tests/` file in the diff — every ablation edit was reverted before commit, `git status` confirmed
 clean before staging.
+★ **NO NEW § CARRIED ITEMS.**
+
+★ **TASK 8.2 IS DONE — M-2, FIRST PAINT UNDER SHIKI, ON GROUP 2's HARNESS, A-B-A WITHIN THIS
+MILESTONE. PRODUCED A NUMBER ONLY, CHOSE NOTHING. NOW-POINTER ADVANCES TO 8.3 NEXT.** tasks.md 8.2's
+own tag, cited verbatim: *"[D-1; §5 first paint; Ruling 4; finding 1, 7, 8]"*. Files list, verbatim:
+`docs/ai/progress.md` (numbers only) + the task report — no new `scripts/`/`tests/` file, mirroring
+8.1's own precedent.
+★ **PLAN-MODE JUDGMENT: NOT WARRANTED, stated with defense.** The primary measurement re-runs
+`scripts/perf-app-first-paint.ts` (built whole at 2.2) unmodified — a pure extension of an already-
+established harness, no new mechanism. The conditionality guard extends 1.2's own already-proven
+spy pattern (`codeEngine.test.ts:121-138`) to a browser-level node-count comparison using the SAME
+injectable-`loader` seam `codeDegrade.browser.test.ts` (task 7.1) already exercises — no new
+infrastructure, no new design decision.
+★ **ASKUSERQUESTION ROUTING: NOT INVOKED, stated with defense.** tasks.md 8.2's text fully
+determines GATE_MS (165, inherited from 2.2), iteration protocol (7 runs, cold discarded, mirrors
+2.2), and the guard's three-arm shape (mount-alone / enhanceCode-no-fence / enhanceCode-code-
+bearing). Two implementation-detail interpretations were needed and are recorded as divergences
+per standing rule #1, not routed to a human: (i) whether the three-arm guard needed a NEW committed
+test file — resolved NO, since the Files list names only `docs/ai/progress.md` and 8.1's own
+precedent already establishes "ad-hoc measurement, no new committed script" for this Files-list
+shape; the guard was written as a scratch file (`tests/browser/_scratch8_2CostGuard.browser.test.ts`),
+run once on both engines, then deleted before commit — never staged. (ii) what "a code-bearing,
+`CLAUDE.md`-named-equivalent-weight document" means for THIS pipeline — 008's own 3.10 borrowed
+"CLAUDE.md" because that milestone's feature (agent-file badge) is filename-triggered; this
+milestone's fence detection is structural (`pre > code[class^="language-"]`, `codeEngine.ts:209`),
+never filename-driven, and this repo's actual `CLAUDE.md` is an 11-byte `@AGENTS.md` import with no
+fence of its own — so a literal same-named fixture would prove nothing. Read instead as "equivalent-
+weight to a real, small, agent-authored document" (this repo's own `AGENTS.md`, 3,777 B, checked
+this session via `wc -c`), the real document CLAUDE.md points to. The constructed arm-3 fixture
+landed at **10,215 B** (repeated-section filler overshot the 3,777 B target — stated honestly, not
+forced to a false "equivalent" claim; the guard's assertions do not depend on the exact byte count,
+only on the loader firing and the node count exceeding arm 2's).
+★ **THE PRIMARY NUMBER — FRESH BUILD, BOTH ENGINES, BEFORE MEASURING (`rm -rf .output` +
+`pnpm build` + `npx wxt build -b firefox`).** CS **334,858 B** both engines. App chunk **475,579 B**
+both engines, same chunk hash `app-BlMcDd3E.js`. Manifests **654/770 B**, `permissions: []`. All
+match the standing invariant set and 8.1's close exactly — confirming "the tree as it now stands"
+(Shiki fully wired) is what group 2's harness ran against.
+★ **`perf-app-first-paint.ts`, THREE BACK-TO-BACK RUNS (A-vs-A, then a third for confidence, all
+isolation-run, same quiesced build):** RUN A **median 96.3ms, floor 87.9ms**. RUN B **median 90.8ms,
+floor 86.2ms**. RUN C **median 95.8ms, floor 88.1ms**. **A-vs-A agreement, stated honestly rather
+than forced: floor spread 1.9ms** (86.2–88.1ms, comfortably inside 2.2's own 2.0ms floor precedent
+and `perf-first-paint.ts`'s 2.5ms floor precedent); **median spread 5.5ms** (90.8–96.3ms) — wider
+than 2.2's own 0.1ms same-session precedent and somewhat wider than `perf-first-paint.ts`'s 3.8ms
+precedent, but the SAME order of magnitude, and Runs A/C (96.3/95.8ms) agree within 0.5ms with Run B
+as the lower outlier; not near-tolerance-edge relative to the ~69–79ms of headroom every arm carries
+against the gate, so no further rerun was taken. All three PASS: `GATE_MS = 165` (printed by the
+script for reference; this task produces the number, it does not rule pass/fail/worrying/fine).
+★ **THE A-B-A COMPARISON, THIS MILESTONE'S OWN — 2.2's PRE-SHIKI FLOOR vs. THIS POST-SHIKI RUN.**
+2.2's pre-Shiki reading (banked at that task's own close): RUN A median 89.2ms/floor 84.8ms, RUN B
+median 89.3ms/floor 86.8ms. This task's post-Shiki reading (above): median 90.8–96.3ms, floor
+86.2–88.1ms. **The delta reads as FLAT, within the same noise band the pre-Shiki A-vs-A itself
+carried** — median moved +1.5 to +7.0ms, floor moved +1.4 to +3.3ms, both well inside the ~2–5.5ms
+same-session noise this task's own three runs already showed. **No verdict rendered — 8.5's job —
+but the number itself does not read as Shiki costing anything distinguishable from measurement
+noise on THIS fixture** (50.4 KB / 62-section typical doc), stated as an observation for 8.5, not a
+ruling.
+★ **THE STRUCTURAL CONDITIONALITY GUARD — THREE ARMS, BOTH ENGINES, AD-HOC (scratch file, deleted
+before commit, per the Files-list divergence above).** The spy-call-count half (fence-free root ⇒
+`loadCodeEngine` never invoked, with the firing control) is **cited, not re-derived** — already
+proven at unit level, `codeEngine.test.ts:121-138` (task 1.2). NEW this task: the shadow-root
+node-count equality against a bare `mount()` arm, and the third code-bearing positive-control arm.
+**Arm 1 (bare `mount()`, no-fence doc):** 23 shadow-root nodes. **Arm 2 (`mount()` +
+`enhanceCode()`, SAME no-fence doc):** 23 nodes — **EQUAL to arm 1** — loader spy **0 calls**, no
+`.peekover-code` wrapper anywhere in the shadow root. **Arm 3 (`mount()` + `enhanceCode()`, the
+code-bearing 10,215 B fixture, real engine via a call-through spy):** 188 nodes — **greater than
+arm 2** — loader spy **1 call** (the positive control that fires), the fence reached the `rendered`
+terminal state. **PASS on both engines, identical readings Chromium and Firefox** (vitest browser
+project, both projects green — Cr and Fx run the same scratch file, same numbers on both).
+★ **BUNDLE-VERIFY-GATE — BASELINE CONFIRMATION (8.2 is measurement-only, no production diff
+expected).** Byte- and chunk-hash-identical to 8.1's close, confirmed above before measuring: CS
+**334,858 B**, app **475,579 B** (`app-BlMcDd3E.js`), both engines. Manifests **654/770 B**,
+`permissions: []`. deps STILL **6**.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files, unchanged — 8.2 touches no
+production or test file). `pnpm test:browser` **132 files green, 1389 passed, 15 skipped, 0 failed**
+(unchanged — run AFTER the scratch guard file was deleted). `pnpm lint` EXIT=0. `git diff
+tests/golden/output/` EMPTY. `tests/manifest.test.ts` green. 007 `diagramImportFence.test.ts`
+**8/8**. 009 `codeImportFence.test.ts` **9/9**. `diagramActions.browser.test.ts` CSS pin held, both
+engines (54/54 passed). `perf-first-paint.ts --size 50kb`, isolation-run (content-script, unaffected
+by this task but re-checked as a standing invariant): **147.2ms median (144.0–151.4ms range) vs
+<165ms — PASS**. `git diff --name-only HEAD` at the commit: exactly `specs/009-code-blocks/tasks.md`
+(8.2's box) · this file. No `src/`/`scripts/`/`tests/` file in the diff — the scratch guard file was
+deleted, never staged, `git status` confirmed clean before staging.
+★ **NUMBERS PRESERVED FOR 8.5 (M-2's pass/fail decision):** post-Shiki app-page first paint,
+50.4 KB typical doc — **median 90.8–96.3ms, floor 86.2–88.1ms, against `GATE_MS = 165`** (headroom
+~69–79ms median, ~77–79ms floor) — **PASS as measured, no verdict rendered here**. Pre-Shiki floor
+this compares against (2.2): median 89.2/89.3ms, floor 84.8/86.8ms. Delta reads as flat, within
+noise. Structural conditionality guard: fence-free costs 0 nodes/0 loader calls vs. a bare mount,
+code-bearing fires and adds nodes, both engines.
 ★ **NO NEW § CARRIED ITEMS.**
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.

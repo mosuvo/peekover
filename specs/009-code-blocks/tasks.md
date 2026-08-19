@@ -503,7 +503,7 @@ items, in 007/008's sense.*
       the ≥14-theme-id list and any frozen name set are inspected for it. Golden EMPTY · manifest green
       **2975 B** · `permissions: []`. [D-11; §5 bytes; finding 1; §7-7]
 
-- [ ] **8.2 M-2 — first paint under Shiki, on group 2's harness, A-B-A within this milestone. PRODUCES A
+- [x] **8.2 M-2 — first paint under Shiki, on group 2's harness, A-B-A within this milestone. PRODUCES A
       NUMBER; FORBIDDEN FROM CHOOSING.** Run the harness (2.2) against the tree as it now stands (Shiki fully
       wired), against `GATE_MS = 165`.
       Files: `docs/ai/progress.md` (numbers only) + the task report
