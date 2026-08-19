@@ -540,7 +540,7 @@ items, in 007/008's sense.*
       into"*). **No constant set in this task.** Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [D-9, D-10; §8 M-4; §9-2]
 
-- [ ] **8.5 ★ DECISION GATE (human) — M-1's bound-met-or-subset-finding, M-2's pass/fail, M-3's mechanism, M-4's
+- [x] **8.5 ★ DECISION GATE (human) — M-1's bound-met-or-subset-finding, M-2's pass/fail, M-3's mechanism, M-4's
       set. Recorded in `decisions.md` BEFORE any code that sets a value.**
       **M-1** — does the full 190+/≥14 set fit, or is a subset build gate-3 material (§7-7)? **M-2** — does
       <165 ms hold under Shiki; if not, what gives way (mirrors 008 §8-1's escape-hatch shape — the engine's

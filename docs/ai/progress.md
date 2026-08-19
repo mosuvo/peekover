@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-19 (M9 task 8.4 done — M-4, theme candidates / collapse-threshold distribution / line-numbers-word-wrap candidates, walk-informed; group 8 continues at task 8.5, the human decision gate).*
+*Updated: 2026-08-19 (M9 task 8.5 done — the human decision gate, all seven M-1…M-4 values ruled and recorded in decisions.md; group 8 continues at task 8.6, implementing the chosen values).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1632,6 +1632,82 @@ threshold — 103-fence corpus: line count max 34 (0/103 over the current 40-lin
 0/23. Line-numbers/word-wrap — max-line-length p90 102 chars (vs ~76ch column), line-count median 6.
 No verdict rendered on any of the three sub-questions; no constant set.
 ★ **NO NEW § CARRIED ITEMS.**
+
+★ **TASK 8.5 IS DONE — THE HUMAN DECISION GATE. ALL SEVEN M-1…M-4 VALUES RULED BY THE HUMAN AND RECORDED
+IN `decisions.md` (2026-08-19 · M9 8.5). NOW-POINTER ADVANCES TO 8.6 NEXT.** tasks.md 8.5's own tag, cited
+verbatim: *"[§8 M-1…M-4]"*. Files list, verbatim: `docs/ai/decisions.md` — documentation-only, no `src/`
+change, unlike 8.6 which lands the constants.
+★ **PLAN-MODE JUDGMENT: NOT WARRANTED, stated with defense.** Files list names only `docs/ai/decisions.md`
+(no production file, so the "Files list names production files" plan-mode trigger does not fire); tasks.md
+8.5's own paragraph directly enumerates all seven decisions and what each one needs (a value or a
+pass/fail). The one real presentation-design question — how to fit a 20-theme candidate choice into
+AskUserQuestion's 2-4-option constraint — was resolved directly per fact J (full 20-row table shown as
+evidence text; the question offered "keep current provisional" vs. "specify a different one," the tool's
+free-text escape hatch covering all 20 ids), not routed as a fork.
+★ **STEP 0.4 — EVIDENCE-STILL-HOLDS SPOT-CHECK.** HEAD `b102f85`, `git status` clean, deps exactly **6**
+(`node -e` count against `package.json`), `settings.ts:49` `codeTheme: 'github-dark'` and `codeView.ts:357`
+`CODE_COLLAPSE_LINE_THRESHOLD = 40` both still match 8.4's banked figures exactly. No drift since 8.4's
+close (only `docs/ai/progress.md` and `specs/009-code-blocks/tasks.md` changed at that commit) — no fact-K
+signal. Full rebuild not run: unnecessary, since 8.5 lands no code and nothing under `src/`/`scripts/`
+changed since 8.4.
+★ **PRESENTATION SEQUENCE (Step 0.6): M-1, M-2 first (structural pass/fail — a "give way"/subset-build
+answer could have changed what M-4's theme/language candidates had available), then M-3 (independent), then
+M-4's four parts in 8.4's own sub-question order** (theme → threshold → line-numbers/word-wrap as a pair,
+per fact L presented as two separate questions since each is independently legitimate either way, even
+though 8.4 measured them together).
+★ **SEVEN DECISIONS, EACH ROUTED VIA `AskUserQuestion` PER FACT M (question / evidence bundle /
+consequences / no CC recommendation), ANSWERED, AND RECORDED PER FACT N — full text in `decisions.md`
+2026-08-19 · M9 8.5, not duplicated here:**
+- **M-1 — full set ships, no subset build.** Evidence: 8.1's `.output`/zip headroom (~367 KiB / ~612 KiB),
+  neither bound binds. **Human: full set.**
+- **M-2 — gate holds, nothing gives way.** Evidence: 8.2's median 90.8-96.3ms/floor 86.2-88.1ms vs.
+  `GATE_MS=165`, pre-Shiki delta flat within noise. **Human: gate holds as measured.**
+- **M-3 — heuristic.** Evidence: 8.3's nine numbers; heuristic (1,856 B/95.7%/3.149µs) fits headroom, local
+  model (1,811,325 B/47.8%/62.09ms+8.65ms) exceeds headroom ~4.8× and would breach the 5 MiB bound outright,
+  defer (0 B/n/a/0ms) not forced since heuristic fits. **Human: heuristic.**
+- **M-4a — `github-dark` (kept).** Evidence: 8.4's 20-row WCAG contrast table, `github-dark` mid-table on
+  every axis (12.94/1.10/12.94), sepia-inheritance and theme-owned-`<pre>`-background findings stated as
+  candidate-selection inputs. **Human: keep github-dark.**
+- **M-4b — `40` (kept).** Evidence: 8.4's 103-fence corpus, line count max 34, 0/103 fences exceed 40.
+  **Human: keep 40.**
+- **M-4c — line-numbers OFF by default (kept).** Evidence: 8.4's corpus line-count median 6, existing
+  per-block opt-in infra unaffected by default. **Human: OFF.**
+- **M-4d — word-wrap OFF by default (kept).** Evidence: 8.4's corpus max-line-length p90 102 chars vs.
+  ~76ch column, existing per-block opt-in infra unaffected by default. **Human: OFF.**
+★ **NO CLARIFYING-QUESTION INTERACTIONS (fact O not exercised) — every answer was a direct selection from
+the presented options, no follow-up numeric/evidence request from the human.**
+★ **ALL SEVEN VALUES MATCH WHAT WAS ALREADY PROVISIONALLY SHIPPED — 8.6 IS A CONFIRM-AND-DE-PROVISIONALIZE
+TASK, NOT A VALUE CHANGE.** `settings.ts:49`'s `codeTheme: 'github-dark'` and `codeView.ts:357`'s
+`CODE_COLLAPSE_LINE_THRESHOLD = 40` already carry the chosen values; the two boolean toolbar defaults
+(`codeView.ts:264,281`, both `aria-pressed="false"`) already match OFF. This is a legitimate outcome, not a
+non-event — 8.6 still has real work: strip the PROVISIONAL doc-comments (008's own rule that a PROPOSED
+comment left on a chosen value is a lie about the decision state) and, if M-3's heuristic mechanism needs
+its own module (`codeDetect.ts`, per tasks.md 8.6's text), build that as its own reviewable unit.
+★ **BUNDLE-VERIFY-GATE — BASELINE CONFIRMATION (8.5 is documentation-only, no production diff).** CS
+**334,858 B**, app **475,579 B** (`app-BlMcDd3E.js`), both engines, byte- and chunk-hash-identical to 8.4's
+close. Manifests **654/770 B**, `permissions: []`. deps STILL **6**.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files, unchanged — 8.5 touches no test
+file). `pnpm test:browser` **132 files green, 1389 passed, 15 skipped, 0 failed** (unchanged). `pnpm lint`
+EXIT=0. `git diff tests/golden/output/` EMPTY. `tests/manifest.test.ts` green. 007
+`diagramImportFence.test.ts` **8/8**. 009 `codeImportFence.test.ts` **9/9**.
+`diagramActions.browser.test.ts` CSS pin held. `perf-first-paint.ts --size 50kb`, isolation-run (unaffected
+by this task, re-checked as a standing invariant). `git diff --name-only HEAD` at the commit: exactly
+`docs/ai/decisions.md` · `specs/009-code-blocks/tasks.md` (8.5's box) · this file. No `src/`/`scripts/`/
+`tests/` file in the diff.
+★ **NO NEW § CARRIED ITEMS. PRESENTATION-DISCIPLINE FACTS L/M/N/O — FIRST APPLICATION, HELD CLEANLY:** fact
+L (separate presentation per decision, no unwarranted batching) kept each M-value's evidence bundle
+distinct even when two AskUserQuestion calls carried multiple questions; fact M (no CC recommendation) held
+without a near-miss — the one place recommendation-pressure existed (M-3's mechanism, where local model was
+factually disqualified by a hard bound) was resolved by stating the disqualification as evidence/consequence,
+not as "CC would pick heuristic"; fact N (verbatim + evidence bundle recorded) is satisfied by `decisions.md`
+2026-08-19 · M9 8.5's full entry; fact O (clarifying-question handling) was not exercised this task — no
+open finding on it either way. **One genuine kickoff underspecification, worth banking:** AskUserQuestion's
+hard 2-4-option-per-question schema constraint is not addressed anywhere in the presentation-discipline
+facts (L/M/N/O assume free framing); a decision with double-digit candidates (M-4a's 20 themes) needs a
+resolvable-directly-per-fact-J narrowing strategy stated up front (full table as evidence text + a
+binary "keep provisional / specify other" question, relying on the tool's own free-text escape hatch for
+the actual value) — worth adding as a permanent methodology fact for the next decision-gate task with a
+large candidate set.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in

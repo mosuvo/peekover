@@ -1,6 +1,74 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-19 · M9 8.5 — DECISION GATE (human): M-1…M-4's values, all seven items ruled, recorded here
+  BEFORE any code lands (8.6).** Each choice below is recorded with the measurement that justifies it, per
+  tasks.md 8.5's own Verify line. No code lands on an assumed number — `settings.ts`/`codeView.ts` stay
+  untouched by this entry; 8.6 executes these values.
+  - **M-1 — full set ships (no subset build).** Evidence (8.1, HEAD `e785fb1`, cross-checked to zero
+    residual): `.output` 4,866,741 B (Cr) / 4,866,857 B (Fx) vs. the 5 MiB (5,242,880 B) bound — headroom
+    ~367 KiB. Zip 1,470,730 / 1,470,788 B vs. the 2 MB (2,097,152 B) bound — headroom ~612 KiB. Neither
+    bound binds. §7-7's carried subset-build question does not fire. Human confirmed: full set (6
+    languages, 20 themes) fits, ship as-is.
+  - **M-2 — the <165ms gate holds under Shiki, nothing gives way.** Evidence (8.2, HEAD `a44e17f`):
+    post-Shiki app-page first paint median 90.8-96.3ms, floor 86.2-88.1ms, against `GATE_MS = 165`
+    (headroom ~69-79ms median, ~77-79ms floor). Pre-Shiki floor (2.2): median 89.2/89.3ms, floor
+    84.8/86.8ms — delta reads flat, within the same 2-5.5ms same-session noise band the pre-Shiki A-vs-A
+    itself carried. Human confirmed: gate holds as measured, nothing gives way.
+  - **M-3 — auto-detection mechanism: HEURISTIC.** Evidence (8.3, HEAD `8b62a2c`, corpus n=23 unlabeled
+    fences, bias sentence: this repo's docs are biased toward directory trees, shell/JS snippets, and a
+    house pseudocode convention, not representative of arbitrary agent-authored markdown): heuristic —
+    1,856 B / 95.7% accuracy (22/23, one honest false positive on `008/plan.md:220`'s placeholder angle
+    brackets) / 3.149µs per fence, fits inside 8.1's headroom. Local model
+    (`@vscode/vscode-languagedetection`) — 1,811,325 B / 47.8% accuracy (11/23, 0/7 language items
+    correctly identified) / 62.09ms load + 8.65ms median warm per-fence, exceeds 8.1's headroom ~4.8× and
+    would breach the 5 MiB package-base bound outright — not shippable regardless of preference, per §8's
+    own rule (*"if none of the paid options fits inside 8.1's headroom, defer is the floor"*) plus the hard
+    bound. Defer — 0 B / n/a / 0ms. Human chose heuristic (the one paid option that fits); defer was not
+    forced since heuristic fits.
+  - **M-4a — default code theme: `github-dark` (kept).** Evidence (8.4, HEAD `b102f85`, full 20-theme WCAG
+    contrast table against `readerCss.ts`'s three `--code-bg` values; sepia inherits light's `#F1F1EB`
+    verbatim, only `--paper`/`--ink`/`--accent`/`--accent-soft` overridden in the sepia block; the
+    highlighted `<pre>`'s own background is entirely theme-owned per `codeEnhancer.ts:213`, `--code-bg`
+    governs only the inline-code span and toolbar chrome): `github-dark` (`#24292e`, dark-typed) — 12.94
+    vs. light `--code-bg`, 1.10 vs. dark, 12.94 vs. sepia — sits mid-table on every axis among the 20
+    candidates. Since `codeTheme` is one global default across all three page modes (D-9), no single theme
+    reads as blended in all three simultaneously; every dark-typed theme reads as a framed box on
+    light/sepia and near-blends on dark, every light-typed theme the inverse. Human confirmed: keep
+    `github-dark` as shipped.
+  - **M-4b — collapse line threshold: `40` (kept).** Evidence (8.4, 103-fence corpus, 64 files, zero drift
+    from 8.3's banked unlabeled count): line count min 1 / median 6 / p75 8 / p90 10 / max 34. Byte size
+    min 69 B / median 156 B / p75 180 B / p90 560 B / max 1,311 B. Line-highlight meta present: 0/103 (this
+    corpus cannot inform threshold-vs-meta correlation — it never occurs in it). Against `40`: 0/103 corpus
+    fences exceed it (max observed 34) — confirms 40 clips nothing in this corpus, says nothing about
+    longer real-world code (bias-sentence caveat). Human confirmed: keep `40`.
+  - **M-4c — line-numbers default: OFF (kept, current toolbar state).** Evidence (8.4, same 103-fence
+    corpus): line-count median 6 — numbering's payoff on a typical block in this corpus is limited (bias
+    caveat applies against real-world usage). Existing infra already built and gated behind
+    `data-line-numbers` (`readerCss.ts:673-685`) — reader opts in per-block via the toolbar regardless of
+    default. Human confirmed: OFF by default.
+  - **M-4d — word-wrap default: OFF (kept, current toolbar state, horizontal scroll).** Evidence (8.4, same
+    corpus): max single-line length min 25 / median 40 / p75 83 / p90 102 / max 175 chars, against the
+    reader's own ~76ch column (`readerCss.ts:13`) — roughly the top 10% of fences carry a line wider than
+    the column. Existing infra already built and gated behind `data-wrap` (`readerCss.ts:673-685`) — reader
+    opts in per-block regardless of default. Human confirmed: OFF by default.
+  **All seven values now settled; none reopens a sealed D-value or spec §3.x decision** — D-9/D-10/D-12's
+  own text named these as measure-then-choose, produced at 8.1-8.4, chosen here. **Doc-only: no `src/`
+  change** — `settings.ts:49`'s `codeTheme: 'github-dark'` and `codeView.ts:357`'s
+  `CODE_COLLAPSE_LINE_THRESHOLD = 40` both already match the chosen values (a no-op edit at 8.6, recorded
+  as chosen not left as a stale "PROVISIONAL" doc-comment lie about decision state per 008's own rule); the
+  two boolean defaults (line-numbers, word-wrap) also already match the CHOSEN values in the current
+  toolbar code (`codeView.ts:264,281`, both `aria-pressed="false"`), pending 8.6's PROVISIONAL-comment
+  cleanup and (if needed) an explicit named default constant.
+  **Revisit-when:** (a) a subset-build pressure re-opens M-1 (a future language/theme addition that pushes
+  `.output` or zip near the bound again — headroom is ~367 KiB / ~612 KiB today, not infinite); (b) a
+  future first-paint regression re-opens M-2 (this milestone's own harness, per Ruling 4, is now the
+  standing baseline future work prices against); (c) accuracy complaints or a smaller/cheaper local-model
+  package re-opens M-3 (heuristic's one honest false positive — HTML-signature confusion on placeholder
+  angle brackets — is a known, accepted limitation, not a bug to chase); (d) the walk at 9.1 (real
+  Chromium/Firefox, both wide viewports) surfaces a "reads as clutter/illegible" verdict on any of the four
+  M-4 values — that is a real finding routed to a new task, not a silent re-open of this entry.
+
 - **2026-08-15 · M9 GATE 3 — tasks 009 (code blocks: Shiki syntax highlighting, code themes, per-block
   toolbar) APPROVED, WITH TWO RULINGS. Implementation may begin at task 1.1, in a fresh session.**
   `specs/009-code-blocks/tasks.md`, drafted at `c3582b1` (**24 tasks across nine groups**, following plan
