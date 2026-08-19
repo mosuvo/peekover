@@ -515,7 +515,7 @@ items, in 007/008's sense.*
       the **positive control that fires** (the 008 3.10 three-arm shape, adapted). Golden EMPTY · manifest
       green **2975 B** · `permissions: []`. [D-1; §5 first paint; Ruling 4; finding 1, 7, 8]
 
-- [ ] **8.3 M-3 — auto-detection's THREE mechanisms priced against THREE axes. PRODUCES NUMBERS; FORBIDDEN FROM
+- [x] **8.3 M-3 — auto-detection's THREE mechanisms priced against THREE axes. PRODUCES NUMBERS; FORBIDDEN FROM
       CHOOSING.** Heuristic / local model / defer, each against byte cost (against 8.1's headroom) / accuracy
       (on this repository's own unlabeled-fence corpus plus the golden fixtures) / latency added before a
       fence resolves.

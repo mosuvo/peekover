@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-19 (M9 task 8.2 done — M-2, first paint under Shiki, A-B-A against 2.2's pre-Shiki floor; group 8 continues at task 8.3).*
+*Updated: 2026-08-19 (M9 task 8.3 done — M-3, auto-detection's three mechanisms priced against three axes; group 8 continues at task 8.4).*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1393,6 +1393,102 @@ deleted, never staged, `git status` confirmed clean before staging.
 this compares against (2.2): median 89.2/89.3ms, floor 84.8/86.8ms. Delta reads as flat, within
 noise. Structural conditionality guard: fence-free costs 0 nodes/0 loader calls vs. a bare mount,
 code-bearing fires and adds nodes, both engines.
+★ **NO NEW § CARRIED ITEMS.**
+
+★ **TASK 8.3 IS DONE — M-3, AUTO-DETECTION'S THREE MECHANISMS PRICED AGAINST THREE AXES. PRODUCED NINE
+NUMBERS, CHOSE NOTHING. NOW-POINTER ADVANCES TO 8.4 NEXT.** tasks.md 8.3's own tag, cited verbatim:
+*"[D-12; §3.7; §8 M-3; plan risk 7]"*. Files list, verbatim: `docs/ai/progress.md` (numbers only) + the
+task report — no new `scripts/`/`tests/` file, mirroring 8.1/8.2's own precedent.
+★ **D-12 AMBIGUITY RESOLVED, RECORDED AS A DIVERGENCE (fact J).** The kickoff flagged D-12 as possibly
+meaning either "the `store.ts:233` `getSettings()` hand-enumeration trap" or "auto-detection pricing."
+`plan.md:164-172` is unambiguous — D-12 is auto-detection pricing, three named mechanisms against three
+named axes; no plan.md text anywhere connects D-12 to a `store.ts` hand-enumeration trap. Resolved
+directly from the text, not routed.
+★ **PLAN-MODE JUDGMENT: WARRANTED, stated with defense — and used.** Unlike 8.1/8.2 (pure extensions of
+an existing ablation/harness pattern), 8.3 required genuinely new measurement infrastructure: a
+hand-written heuristic (no prior implementation to extend), a ground-truthed corpus assembled from
+scratch, and sourcing/pricing a real "genuine local model" package with no existing candidate in the
+codebase. Plan mode entered; plan approved before implementation.
+★ **ASKUSERQUESTION ROUTING: INVOKED, stated with defense.** One genuine design fork surfaced: how
+rigorously to price mechanism (b)'s accuracy/latency axes — actually run a real local-model package in
+an isolated scratch sandbox for directly-measured numbers, vs. cite the package's own published
+documentation. Both are defensible under precedent (8.1/8.2 favor lighter ad-hoc measurement; fact I's
+self-validation bar favors directly-measured evidence) — genuine ambiguity, not an implementation
+detail. Routed via AskUserQuestion. **User chose: actually run it in a scratch sandbox.**
+★ **CORPUS (n=23), BIAS STATED.** Repo-wide scan (64 `.md` files, excluding `node_modules`/`.git`/
+`.output`/`.wxt`) for fenced blocks with no language info string found **23 unlabeled fences** — this
+count already includes `tests/golden/fixtures/code.md:13`'s deliberately-unlabeled prose fence, so D-12's
+"this repo's own unlabeled fences ... plus the golden fixtures" corpus definition is satisfied without
+double-counting. **Bias sentence (per D-12/plan.md:315's own caveat):** this repository's own docs are
+biased toward directory trees, shell/JS snippets, and a house "annotated pseudocode" convention (`#`
+Python-style trailing comments over JS-shaped call sequences, used throughout `specs/*/plan.md`) — not
+representative of arbitrary agent-authored markdown a real user would open; reported with its sample, not
+as a population estimate. Ground truth assigned by inspection: **7 items** are genuine TypeScript
+(`interface`/`type` declarations); **16 items** are non-code (the house pseudocode convention, directory
+trees, a bare file list, and one deliberate prose fixture).
+★ **MECHANISM (a) — HEURISTIC. Byte cost, accuracy, latency, all directly measured.** Scratch file
+(`codeDetectHeuristic.ts`, deleted before commit — 8.2's fact F precedent), token/keyword shape matching
+over the fence's first 10 lines, with explicit structural non-code detectors (directory-tree box-drawing
+chars, arrow/diagram glyphs, bare file lists) checked before language signatures, and a required
+score-margin over the runner-up before claiming a match (a mixed-signal fence must decline, not guess).
+**Byte cost: 1,856 B**, esbuild-bundled + minified standalone (esbuild 0.27.7, already a project devDep).
+**Accuracy: 22/23 = 95.7%** (15/16 non-code items correctly declined, 7/7 language items correctly
+identified — one false positive: `specs/008-persona-1-qol/plan.md:220`'s `<one line>`/`<what is missing>`
+placeholder angle brackets tripped the HTML-tag signature, a genuine, honestly-reported limitation).
+**Latency: 3.149 microseconds/fence** (1000-iteration tight loop over the corpus, synchronous, no chunk
+to load — matches D-12's "expected near-zero" framing, now with a real number).
+★ **MECHANISM (b) — LOCAL MODEL. Real scratch-sandbox measurement, per the user's routing choice.**
+Candidate: **`@vscode/vscode-languagedetection`** — VS Code's actual shipped production local ML model
+for this exact task (guesslang-derived, its own bundled TF.js runtime) — chosen over `linguist-js`
+(statistical/CLI, Node-fs-oriented, not a genuine "model") and `guesslang` itself (unpublished, 404 on the
+npm registry). **No second package needed** — confirmed explicitly per D-12's own requirement: `npm
+install` in an isolated scratch sandbox (own `package.json`, own `node_modules`, never touching
+peekover's `package.json`/`pnpm-lock.yaml` — deps confirmed STILL 6) added exactly 1 package, and the
+installed package's own `package.json` lists zero runtime dependencies. **Byte cost: 1,811,325 B**
+registry/installed unpacked size; the actually-shippable subset (model.json + weights + its two JS
+bundles, excluding README/LICENSE/etc.) is **1,786,746 B** — both stated, honestly reconciled (fact D),
+neither re-bundled through Peekover's own minification pipeline (out of scope for a measurement task).
+Against 8.1's ~367 KiB (~375,808 B) package headroom: **exceeds it by ~4.8×** — a factual comparison, no
+verdict rendered (fact H). **Accuracy: 11/23 = 47.8%** at a 0.5 confidence threshold (the package ships no
+reject class; 0.5 is this measurement's own stated methodology choice, not a vendor default) — **11/16
+non-code items correctly declined** (via low confidence, since the package always returns SOME guess),
+**0/7 language items correctly identified** — the true-positive TypeScript items' own top confidences
+ran 0.08–0.33, well under threshold, an honest finding that this model's calibration (trained on
+full-size real source files) does not transfer cleanly to short, doc-embedded snippets (71–1,306 chars in
+this corpus) — characterized, not verdicted. **Latency: model load 62.09ms** (one-time, corrected after a
+self-validation catch — an initial 0.09ms reading was a measurement artifact: the package's documented
+`minContentSize` floor, default 20 characters, silently returns `[]` below it, and the first diagnostic
+warmup string was 18 characters; every real corpus item is 71+ characters, so the corpus accuracy numbers
+above are unaffected, only the load-time instrument needed correcting) **+ per-fence warm inference:
+median 8.65ms, mean 9.40ms, min 5.62ms, max 22.83ms**.
+★ **MECHANISM (c) — DEFER.** 0 B / not-applicable (no detection attempted) / 0 ms, by construction, per
+`plan.md:171` — stated, not measured.
+★ **SELF-VALIDATION (fact I).** Both mechanisms (a) and (b) scored against the identical 23-item corpus
+and identical ground-truth labels — no corpus drift between rows. The 0.09ms load-time anomaly was
+caught, diagnosed (not accepted at face value), and traced to a real, reportable package behavior
+(the `minContentSize` floor) rather than silently reported as "near-zero local-model load" — the
+diagnostic re-run confirms every actual corpus item clears that floor, so the accuracy/latency numbers
+above stand on verified ground, not an artifact.
+★ **BUNDLE-VERIFY-GATE — BASELINE CONFIRMATION (8.3 is measurement-only, no production diff).** CS
+**334,858 B**, app **475,579 B** (`app-BlMcDd3E.js`), both engines, byte- and chunk-hash-identical to
+8.2's close. Manifests **654/770 B**, `permissions: []`. deps STILL **6** (the scratch sandbox's `npm
+install` never touched peekover's own `package.json`/`pnpm-lock.yaml`, confirmed, then the entire scratch
+sandbox directory was deleted).
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1028/1028** (60 files, unchanged). `pnpm test:browser`
+**132 files green, 1389 passed, 15 skipped, 0 failed** (unchanged). `pnpm lint` EXIT=0. `git diff
+tests/golden/output/` EMPTY. `tests/manifest.test.ts` green. 007 `diagramImportFence.test.ts` **8/8**. 009
+`codeImportFence.test.ts` **9/9**. `diagramActions.browser.test.ts` CSS pin held. `perf-first-paint.ts
+--size 50kb`, isolation-run (unaffected by this task, re-checked as a standing invariant). `git diff
+--name-only HEAD` at the commit: exactly `specs/009-code-blocks/tasks.md` (8.3's box) · this file. No
+`src/`/`scripts/`/`tests/` file in the diff — every scratch artifact (the heuristic file, the corpus/
+ground-truth JSON, the local-model scratch npm sandbox) lived entirely under the session scratchpad
+directory outside this repo, never staged, `git status` confirmed clean before staging.
+★ **NUMBERS PRESERVED FOR 8.5 (M-3's mechanism decision):** heuristic — 1,856 B / 95.7% (22/23) /
+3.149 µs. Local model (`@vscode/vscode-languagedetection`) — 1,811,325 B (1,786,746 B shippable-subset) /
+47.8% (11/23) at a 0.5 confidence threshold / 62.09ms load + 8.65ms median warm per-fence. Defer — 0 B /
+n/a / 0ms. Corpus n=23, bias sentence above. **Per D-12/8.5's own framing: if neither paid option fits
+inside 8.1's headroom, defer is the floor** — heuristic's byte cost comfortably fits; local model's byte
+cost does not (~4.8× over). No verdict rendered here.
 ★ **NO NEW § CARRIED ITEMS.**
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
