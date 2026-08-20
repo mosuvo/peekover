@@ -37,11 +37,10 @@ export interface Settings {
 }
 
 /** The default reading preferences: Auto theme, TOC state unset (defer to the 003 width-derived
- *  behavior). `codeTheme` is a PROVISIONAL placeholder — `'github-dark'`, one of Shiki's own
- *  bundled theme ids, chosen only so a highlighted block resolves to something before task
- *  8.4/8.5 measures and rules the real default (spec 009 M-4); not a design opinion. Used before
- *  anything is stored, after a wipe, and as the never-blank fallback when a settings read fails
- *  or times out (spec §4). */
+ *  behavior). `codeTheme` is `'github-dark'` — M-4a's CHOSEN default (`decisions.md` 2026-08-19 ·
+ *  M9 8.5: sits mid-table on WCAG contrast against all three `readerCss.ts` `--code-bg` values;
+ *  kept as shipped), not a placeholder. Used before anything is stored, after a wipe, and as the
+ *  never-blank fallback when a settings read fails or times out (spec §4). */
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
   tocOpen: null,

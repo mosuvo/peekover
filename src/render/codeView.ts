@@ -178,6 +178,16 @@ export const CODE_COPY_STATE_ATTR = 'data-state';
 export const CODE_LINE_NUMBERS_ATTR = 'data-line-numbers';
 export const CODE_WRAP_ATTR = 'data-wrap';
 
+/** M-4c's CHOSEN default (`decisions.md` 2026-08-19 · M9 8.5): line numbers OFF — this corpus's
+ *  median 6-line block has limited payoff from numbering; a reader opts in per-block regardless
+ *  via the toggle above. */
+export const CODE_LINE_NUMBERS_DEFAULT = false;
+
+/** M-4d's CHOSEN default (`decisions.md` 2026-08-19 · M9 8.5): word-wrap OFF — this corpus's
+ *  longest lines (p90 102 / max 175 chars) exceed the reader's ~76ch column, but a reader opts in
+ *  per-block regardless via the toggle above. */
+export const CODE_WRAP_DEFAULT = false;
+
 /** Class on a highlighted `.line` span (D-8's consumer — `codeEnhancer.ts`'s `adoptHighlighted`
  *  applies it from `parseLineRanges(code.dataset.fenceMeta)`). Background ONLY — row 15's text/
  *  `aria-*` half is the `aria-label` `adoptHighlighted` sets on the same span, not this class. */
@@ -261,7 +271,7 @@ export function buildCodeToolbar(wrapper: HTMLElement, pre: HTMLElement, lang: s
   lineNumbersButton.type = 'button';
   lineNumbersButton.className = CODE_LINE_NUMBERS_CLASS;
   lineNumbersButton.textContent = 'Line numbers';
-  lineNumbersButton.setAttribute('aria-pressed', 'false');
+  lineNumbersButton.setAttribute('aria-pressed', String(CODE_LINE_NUMBERS_DEFAULT));
   lineNumbersButton.setAttribute('aria-label', CODE_LINE_NUMBERS_NAME.off(ordinal));
   lineNumbersButton.addEventListener('click', () => {
     const on = wrapper.getAttribute(CODE_LINE_NUMBERS_ATTR) !== 'on';
@@ -278,7 +288,7 @@ export function buildCodeToolbar(wrapper: HTMLElement, pre: HTMLElement, lang: s
   wrapButton.type = 'button';
   wrapButton.className = CODE_WRAP_CLASS;
   wrapButton.textContent = 'Wrap';
-  wrapButton.setAttribute('aria-pressed', 'false');
+  wrapButton.setAttribute('aria-pressed', String(CODE_WRAP_DEFAULT));
   wrapButton.setAttribute('aria-label', CODE_WRAP_NAME.off(ordinal));
   wrapButton.addEventListener('click', () => {
     const on = wrapper.getAttribute(CODE_WRAP_ATTR) !== 'on';
@@ -346,14 +356,10 @@ export function buildCodeToolbar(wrapper: HTMLElement, pre: HTMLElement, lang: s
 
 /** How many source lines a highlighted block may carry before it collapses by default.
  *
- *  PROVISIONAL, and deliberately NOT an asserted acceptance threshold (the standing "no
- *  un-measured threshold" rule — mirrors `settings.ts`'s `codeTheme` default and
- *  `watchController.ts`'s dead-watch-read count, both named PROVISIONAL for the same reason).
- *  Group 8's M-4 walks this repository's own fenced blocks and the golden fixtures against line
- *  count, byte size, and whether line-highlighting meta is present (spec §7-3/§8), then RE-TUNES
- *  or replaces this — this task exists to ship SOME threshold so the collapse mechanism has
- *  something to fire against at all, not to choose the right one (same discipline as 5.1's
- *  provisional default theme id). */
+ *  `40` — M-4b's CHOSEN value (`decisions.md` 2026-08-19 · M9 8.5: against this repository's own
+ *  103-fence corpus, line count min 1 / median 6 / p75 8 / p90 10 / max 34 — `40` clips nothing
+ *  in this corpus; real-world documents may run longer, per the corpus's own bias caveat), not a
+ *  placeholder. */
 export const CODE_COLLAPSE_LINE_THRESHOLD = 40;
 
 /** The collapse axis attribute, on the WRAPPER — a second, independent axis from {@link

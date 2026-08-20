@@ -554,7 +554,7 @@ items, in 007/008's sense.*
       ★ **No code lands on an assumed number.** Golden EMPTY · manifest green **2975 B** · `permissions: []`.
       [§8 M-1…M-4]
 
-- [ ] **8.6 Implement the CHOSEN values — constants and the presentation block ONLY; M-3's mechanism, IF a paid
+- [x] **8.6 Implement the CHOSEN values — constants and the presentation block ONLY; M-3's mechanism, IF a paid
       one was ruled, lands as its own reviewable unit here.** Sets `DEFAULT_SETTINGS.codeTheme` (5.1's
       placeholder), the collapse threshold (6.1's placeholder), and the line-numbers/word-wrap defaults to
       8.5's values — ★ **a no-op edit if a placeholder already matched, RECORDED either way** (008's "a

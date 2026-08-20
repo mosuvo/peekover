@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-19 (M9 task 8.5 done — the human decision gate, all seven M-1…M-4 values ruled and recorded in decisions.md; group 8 continues at task 8.6, implementing the chosen values).*
+*Updated: 2026-08-20 (M9 task 8.6 done — the four M-4 values de-provisionalized, M-3's heuristic mechanism built as its own standalone, unreachable module (`codeDetect.ts`); group 8 is now complete. Next: 9.1, the milestone-close human gate — no agent substitute, needs a loaded browser extension.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1708,6 +1708,129 @@ resolvable-directly-per-fact-J narrowing strategy stated up front (full table as
 binary "keep provisional / specify other" question, relying on the tool's own free-text escape hatch for
 the actual value) — worth adding as a permanent methodology fact for the next decision-gate task with a
 large candidate set.
+
+★ **TASK 8.6 IS DONE — THE FOUR M-4 VALUES DE-PROVISIONALIZED, M-3's HEURISTIC MECHANISM BUILT AS ITS OWN
+STANDALONE, REVIEWABLE, UNREACHABLE MODULE. NOW-POINTER ADVANCES TO 9.1 (MILESTONE-CLOSE HUMAN GATE)
+NEXT.** tasks.md 8.6's own tag, cited verbatim: *"[§8 M-1…M-4]"*. Files list, verbatim: `src/settings/
+settings.ts` · `src/render/codeView.ts` · (conditionally) `src/render/codeDetect.ts` + tests.
+★ **STEP 0 — "## 8" SECTION UNCHANGED SINCE 8.5's SNAPSHOT**, confirmed by direct re-read. HEAD `94fde3f`,
+`git status` clean, 53 commits ahead of `origin/main`, confirmed. `settings.ts:49` `codeTheme:
+'github-dark'` and `codeView.ts:357` `CODE_COLLAPSE_LINE_THRESHOLD = 40` still match `decisions.md`
+2026-08-19 · M9 8.5 exactly — no drift, no fact-K signal.
+★ **ASKUSERQUESTION ROUTING: INVOKED, per the kickoff's own named example.** tasks.md 8.6's Files list
+names neither `codeEngine.ts` nor `codeEnhancer.ts`, and its Verify line separately requires "the
+enhancer's orchestration, the tokenize call, and the toolbar wiring are byte-identical — the diff confined
+to the constants block" alongside "a real-engine degradation test" for the heuristic — two clauses that
+pull toward different scopes (wire live now, vs. build standalone and defer wiring). The kickoff itself
+names "heuristic wiring is a separate later task" as a worked example of a RESOLUTION-LEVEL divergence
+requiring AskUserQuestion, not silent resolution. Routed with both readings stated, no recommendation.
+**Human chose: standalone, unreachable module** — `codeDetect.ts` built and tested (unit + real-engine)
+but not imported by `codeEngine.ts`/`codeEnhancer.ts`; wiring an unlabeled fence's guess into the live
+highlight path is a future task. §4's auto-detection EARS criteria stay unmet by a live document until
+that task lands — stated explicitly, not silently gapped.
+★ **PLAN-MODE JUDGMENT: NOT WARRANTED, stated with defense.** The de-provisionalize half is a pure
+extension of already-shipped values (no design surface). The build-new-module half, once AskUserQuestion
+settled it to "standalone, unreachable" (mirroring `codeEngine.ts`'s own task-1.2 precedent exactly — same
+byte-cost-via-scratch-reference-ablation shape), is a close port of 8.3's banked methodology (structural
+non-code detectors checked before language signatures, required score-margin) to this codebase's
+conventions — no module-boundary or integration-seam design left open once the routing question above
+resolved it. No plan-mode entered.
+★ **DE-PROVISIONALIZE, FOUR VALUES, CITED TO `decisions.md` 2026-08-19 · M9 8.5:**
+- **M-4a — `settings.ts:45-50`.** `DEFAULT_SETTINGS.codeTheme = 'github-dark'`, value unchanged. Doc
+  comment rewritten: "PROVISIONAL placeholder... not a design opinion" → "M-4a's CHOSEN default
+  (`decisions.md` 2026-08-19 · M9 8.5: sits mid-table on WCAG contrast...), not a placeholder."
+- **M-4b — `codeView.ts:347-357`.** `CODE_COLLAPSE_LINE_THRESHOLD = 40`, value unchanged. Doc comment
+  rewritten: "PROVISIONAL, and deliberately NOT an asserted acceptance threshold..." → "`40` — M-4b's
+  CHOSEN value (`decisions.md` 2026-08-19 · M9 8.5: ...), not a placeholder."
+- **M-4c/M-4d — `codeView.ts`'s toolbar toggles.** Neither boolean default carried an explicit PROVISIONAL
+  comment to strip (8.5's ledger flagged this: "pending 8.6's PROVISIONAL-comment cleanup and (if needed)
+  an explicit named default constant") — the two `aria-pressed="false"` literals were bare, uncited. Added
+  two new named, doc-commented, exported constants (`CODE_LINE_NUMBERS_DEFAULT = false`,
+  `CODE_WRAP_DEFAULT = false`, each citing `decisions.md` 2026-08-19 · M9 8.5) and referenced them at the
+  two call sites (`String(CODE_LINE_NUMBERS_DEFAULT)` / `String(CODE_WRAP_DEFAULT)`, runtime-equivalent to
+  the literal `'false'` they replace). Real code diff, zero functional change — the shipped default stays
+  OFF/OFF, now honestly named rather than a bare literal.
+★ **`codeDetect.ts` BUILT — THE HEURISTIC (D-12/M-3), PORTED FROM 8.3's SCRATCH REFERENCE.** Structural
+non-code detectors (bare file list; directory-tree box-drawing characters; arrow/ellipsis pseudocode
+glyphs; this repo's own "# annotated pseudocode" convention — 2+ `word # comment` trailing annotations)
+checked BEFORE any language signature, each an outright decline. Past that gate, per-language signatures
+(typescript/javascript/python/json/css/html/bash) score over the fence's first 10 lines; the top scorer
+must clear a required margin (2 points) over the runner-up or the fence declines — a mixed-signal fence is
+never guessed. One deliberate exclusion, load-bearing: a generic type parameter (`Promise<Settings>`) is
+excluded from the HTML signature (the `<` sits directly against an identifier, which a real opening tag's
+never does) — without it, `interface`-heavy TypeScript carrying `Promise<X>`/`Partial<X>` return types
+ties against its own HTML miscount and declines incorrectly.
+★ **ACCURACY REPRODUCTION — 8.3's CORPUS RE-SCANNED LIVE (n=23, ZERO DRIFT), GROUND TRUTH INDEPENDENTLY
+RE-ASSIGNED, DIVERGENCE INVESTIGATED (fact K) AND CHARACTERIZED (fact H), NOT FORCED TO MATCH (fact D).**
+8.3's own scratch corpus/ground-truth files were deleted before commit (the standing scratch-file-then-
+delete convention) — only the aggregate 7/16 code/non-code split and ONE named false positive
+(`specs/008-persona-1-qol/plan.md:220`'s placeholder angle brackets tripping the HTML signature) survived
+to the ledger; no per-item labels did. This task's own re-scan (same methodology: all `.md` files,
+excluding `node_modules`/`.git`/`.output`/`.wxt`, fences with an empty info string) reproduces **n=23 with
+zero drift** — matching 8.3 (HEAD `8b62a2c`) and 8.4's own independent re-scan (HEAD `b102f85`) exactly.
+Ground truth was then RE-ASSIGNED independently, by inspection, against 8.3's own stated criteria (genuine
+TypeScript interface/type declarations vs. this repo's pseudocode/tree/list/prose conventions) — the
+re-assignment converged on the SAME 7/16 split 8.3 banked, without consulting any deleted per-item record
+(`codeDetect.test.ts`'s own corpus-accuracy suite pins the resulting table). Measured against this
+re-assignment: **23/23 = 100%** — HIGHER than 8.3's banked 95.7% (22/23). Investigated (fact K): the
+divergence is NOT a methodology regression. The production heuristic's "# annotated pseudocode" structural
+detector (a repeated `word # comment` convention, added during this task's own tuning against the live
+corpus) declines `plan.md:220`'s exact fence BEFORE its HTML signature is ever scored — 8.3's scratch
+reference apparently lacked an equivalent structural check for that specific pseudocode shape, so the
+placeholder-angle-bracket false positive survived their run but does not survive this one. Characterized,
+not verdicted (fact H): this is a genuine improvement on THIS corpus, not proof the heuristic generalizes
+better — the added detector is deliberately aggressive (2+ `#`-annotated lines declines outright), which
+could just as easily suppress a genuinely `#`-commented Python/bash fence this corpus happens not to
+contain (the standing bias-sentence caveat, restated for this specific detector). `decisions.md`'s own
+revisit-when (c) already names the false positive "a known, accepted limitation, not a bug to chase" — its
+disappearance here doesn't reopen M-3, it is simply reported.
+★ **BYTE COST — SCRATCH-REFERENCE ABLATION, TASK 1.2's OWN PRECEDENT EXACTLY (`codeDetect.ts` is
+UNREACHABLE from any entrypoint, same as `codeEngine.ts` was at 1.2).** `cp appShell.ts` aside FIRST; added
+a throwaway `import { detectLanguage as __scratchDetectLanguage } from '../render/codeDetect'` plus one
+call site (`console.log(__scratchDetectLanguage('scratch'))` — codeDetect.ts, unlike codeEngine.ts at 1.2,
+has no top-level side-effecting statement of its own, so a bare unused import would tree-shake to nothing;
+the call site is this task's own adaptation, not a copy of 1.2's exact bare-import shape); built both
+engines; app chunk moved **475,579 B → 477,536 B, delta +1,957 B**, CS **UNCHANGED at 334,858 B** on BOTH
+engines (structural proof `codeDetect.ts` never reaches the content-script graph even when imported from
+an app-page-only call site); removed the scratch reference; rebuilt; `appShell.ts` confirmed **md5-
+identical** to the pre-task copy (`33eeae943d42654cfc8ca8c7611cb916`, both before and after). **Reconciled
+to 8.3's scratch measurement (fact D, not forced to match):** 1,957 B production (via this ablation,
+including the scratch call site's own small overhead) vs. 1,856 B standalone esbuild-bundled-minified
+(8.3) — **+101 B / +5.4%**, well inside a reasonable band for Vite/Rollup's own minifier vs. esbuild
+standalone plus the scratch harness's own call-site bytes; not investigated further (fact D's line — small,
+explicable, cross-pipeline deltas are reported, not chased).
+★ **BUNDLE-VERIFY-GATE — FRESH BUILD, BOTH ENGINES, `codeDetect.ts` GENUINELY UNREACHABLE IN THE FINAL
+TREE (tree-shaken to zero, confirmed by measurement not assumption).** CS **334,858 B**, app **475,579 B**
+(`app-BlMcDd3E.js`), manifests **654/770 B**, `.output` **4,866,741 / 4,866,857 B** — ALL byte- and
+chunk-hash-identical to 8.5's close baseline, both engines. Zip **1,470,730 / 1,470,788 B** (Cr/Fx) —
+byte-identical to 8.1's banked baseline. `permissions: []` both. deps STILL **6**. The de-provisionalize
+edits (two doc-comment rewrites, two new named constants referenced via `String(...)`) cost **zero bytes**
+— the minifier constant-folds them identically to the literals they replace.
+★ **FULL SUITE, BOTH RUNS CLEAN.** `pnpm test` **1042/1042** (61 files — 1028 baseline + 14 new
+`codeDetect.test.ts` tests: 6 structural-detector cases, 3 signature-positive cases, 2 margin-gate cases,
+1 corpus-size pin, 1 corpus-split pin, 1 full corpus-accuracy pin). One `diagramEnhancer.test.ts` timeout
+on first run (the SAME standing flake named at 8.3/8.5's own sessions — unrelated to this task's files,
+confirmed clean on an isolated re-run, 58/58). `pnpm test:browser` **134 files green, 1395 passed, 15
+skipped, 0 failed** (132/1389/15 baseline + 2 files / 6 tests: `codeDetect.browser.test.ts` on Cr+Fx, 3
+tests each — the real-engine degradation proof: an ambiguous fence declines, the corpus's own mixed-signal
+shape declines, an unambiguous fence still gets a real guess as the positive control). `pnpm lint`
+EXIT=0. `git diff tests/golden/output/` EMPTY. `tests/manifest.test.ts` green (8/8). 007
+`diagramImportFence.test.ts` **8/8**. 009 `codeImportFence.test.ts` **9/9** (`codeDetect.ts` imports no
+`shiki` specifier, confirmed structurally — the fence never had reason to move). `diagramActions.browser
+.test.ts` CSS pin held (54/54). `perf-first-paint.ts --size 50kb`, isolation-run: **149.4ms median
+(145.5-154.6ms range) vs <165ms — PASS** (content-script untouched by this task, re-confirmed as a standing
+invariant rather than assumed). `git diff --name-only HEAD` at the commit: exactly `src/render/codeView.ts`
+· `src/settings/settings.ts` · `specs/009-code-blocks/tasks.md` (8.6's box) · this file, plus the three new
+files (`src/render/codeDetect.ts`, `src/render/codeDetect.test.ts`, `tests/browser/codeDetect.browser
+.test.ts`). No scratch artifact in the diff — `appShell.ts`'s scratch edit was reverted and md5-confirmed
+before staging.
+★ **NO NEW § CARRIED ITEMS.** One permanent methodology fact surfaced, worth banking for a future task that
+re-derives a heuristic/corpus from a prior task's deleted scratch reference: **aggregate corpus statistics
+(n, the code/non-code split, one or two NAMED examples) survive to the ledger; per-item ground-truth labels
+do not, unless a future task explicitly banks the full table.** A re-assignment that independently converges
+on the same aggregate split is strong (not certain) evidence of a stable, well-specified corpus — but an
+exact per-item reproduction cannot be verified, and a resulting accuracy delta (here, better) must be
+investigated and characterized, never silently accepted as the new number nor forced to match the old one.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
