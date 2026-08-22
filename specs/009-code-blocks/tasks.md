@@ -660,7 +660,7 @@ items, in 007/008's sense.*
       boundary catches named, not first-try failures) · sessions ≈ **25**. No production diff —
       `docs/ai/retro.md` + `docs/ai/progress.md` + this box, nothing else.
 
-- [ ] **9.3 The records reconcile that closes M9 — including Ruling 3's revisit-when and the NEXT carried
+- [x] **9.3 The records reconcile that closes M9 — including Ruling 3's revisit-when and the NEXT carried
       trigger for D-1's harness.** `spec-coverage.md`'s F3 row moves from **0%** to its landed figure.
       `docs/ai/decisions.md`'s revisit-when (c) — *"a future milestone needs D-1's harness for a different
       measurement than M-2 and finds its capability-free design too narrow"* — is CONFIRMED as the harness's own
@@ -677,6 +677,28 @@ items, in 007/008's sense.*
       **2975 B** · `permissions: []` · deps exactly **6** · all forbidden paths (`sanitize.ts`, `mount.ts`,
       the content-script graph, `diagramEngine.ts`/`diagramEnhancer.ts`/`diagramView.ts`, `store.ts`,
       `wxt.config.ts`) byte-identical or untouched, confirmed. [Ruling 3; D-11 (iii)'s shape, applied forward]
+      **DONE 2026-08-22 — M9 CLOSED.** `spec-coverage.md` F3: **0% → 78%** (six items ✓, two ~ — a
+      6-language curated Shiki catalog not 190+, a collapse/expand control not a per-block raw⇄rendered
+      toggle — one ✗, auto-detection built and tested but deliberately unwired). Ruling 3's revisit-when
+      restated as standing (did not fire this milestone). `decisions.md`'s revisit-when (c) CONFIRMED as
+      D-1 harness's carried trigger; Ruling 4's standing-baseline claim BANKED (2.2 + 8.2's two numeric
+      A-B-A readings, plus 9.1's subjective confirmation — the honest gap named, per 9.2 retro finding 7).
+      **The D-value audit found a real gap, named not hidden: none of D-1…D-13's thirteen individually
+      pre-written `decisions.md` entries ever landed with an implementing commit** — larger than M8's own
+      D-6…D-12 gap; not backfilled (`decisions.md` read and left untouched, no genuine new decision
+      landing). `docs/trust/PERMISSIONS.md` confirmed: 5.1 is the only M9 touch. § Baselines: NOT
+      re-rebuilt (8.6's own fresh figures transcribed, per this task's own Verify-line permission); the
+      post-Shiki app-page first-paint row (8.2) is now the current pin, 2.2's pre-Shiki reading kept as the
+      superseded row. Pointer walk: the Roadmap line was missing 009 as closed — fixed; two "HOME: M9's
+      retro" Blockers items confirmed reached (9.2, `retro.md` 2026-08-22), left as accurate, not rewritten.
+      **No archive pass** — a divergence from the session kickoff's own sketch, named per AGENTS.md's
+      standing rule: `tasks.md` 9.3's own line names no such step, and M7/M8's own § Closed-milestones
+      entries both still read "until the next archive pass," unarchived weeks after their own close — 9.3
+      follows that real, repeated precedent instead. Running human-gate score: **12/12, unmoved** (9.1's
+      one finding is not a defect). Doc-only: `docs/ai/progress.md` · `docs/ai/spec-coverage.md` ·
+      `specs/009-code-blocks/tasks.md` (this box) — `docs/ai/decisions.md` read and left untouched, no
+      genuine new decision landed. Golden EMPTY · manifest green **2975 B** · `permissions: []` · deps **6**
+      · all forbidden paths untouched, confirmed.
 
 ---
 

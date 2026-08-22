@@ -23,6 +23,15 @@ ruling, not a row-derivation) is NOT re-derived here** — it needs its own walk
 did, and this pass changes inputs to that walk (three more sub-items shipped) without re-running it. See
 the dated note in § Summary.*
 
+***★ RE-AUDITED 2026-08-22 · HEAD `174b94a`** (M9 / spec 009 "code blocks" closed at task 9.3, the
+records reconcile, per tasks.md 9.3's own line — *"`spec-coverage.md`'s F3 row moves from 0% to its
+landed figure"*). **Targeted re-verification of F3 (Code Blocks) ONLY**, against shipped code
+(`src/render/codeEngine.ts`, `codeEnhancer.ts`, `codeView.ts`, `codeDetect.ts`, `codeThemeControl.ts`,
+`src/settings/settings.ts`) and its tests. **No other section was re-scored:** F1, F2, F4–F12 and §6/§7
+are the `59dcb20` / `d470ab2` / `d7f424c` / `bdcb2ad` readings, unchanged. **F3 moves 0% → 78%, NOT
+100%** — two of the nine items score PARTIAL and one scores NOT, named in full at F3 below; the method's
+own tie-break (*"ambiguity resolves toward NOT"*) is applied, not an inflated ✓.*
+
 *Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
 *Method: source code is the answer, the spec is only the question. No spec item is credited
 because a plan, a task list or a pipeline comment anticipates it.*
@@ -31,12 +40,18 @@ because a plan, a task list or a pipeline comment anticipates it.*
 
 ## Summary
 
-**Phase 1 (§5 F1–F12) is ~23% shipped by weighted feature count** — 46.0 credit points across
-198 enumerated items. Including §6 and §7 the whole-spec figure is **~28%** (64.0 / 227). The
+**Phase 1 (§5 F1–F12) is ~27% shipped by weighted feature count** — 53.0 credit points across
+198 enumerated items. Including §6 and §7 the whole-spec figure is **~31%** (71.0 / 227). The
 2026-08-03 re-audit moved **F2 from 3% to 42%** — M7 shipped Mermaid rendering, the hash-keyed
-cache, theme sync, copy/download, the lightbox and progressive enhancement — and **that single row
-is the whole of the §5 and whole-spec movement**; no other section was re-scored (see the
-enumeration correction below for the +1 item).
+cache, theme sync, copy/download, the lightbox and progressive enhancement. The 2026-08-22
+re-audit moved **F3 from 0% to 78%** — M9 shipped Shiki highlighting, the code-theme picker
+(20 themes), the per-block toolbar (copy / line numbers / line highlighting / word wrap) and
+collapsible long blocks; two items score PARTIAL (a 6-language curated catalog, not 190+; a
+collapse/expand control rather than a per-block raw⇄rendered toggle) and one scores NOT
+(auto-detection is built and tested but deliberately unwired to any live document, 8.6's own
+AskUserQuestion resolution). **These two rows are the whole of the §5 and whole-spec movement**;
+no other section was re-scored (see the enumeration correction below for the +1 item, which
+predates and is unrelated to F3's move).
 
 **F2 is 42%, not "done".** The row covers two halves and only one shipped: **every diagram item that
 M7 scoped is now ✓ or ~, and every math item is still ✗** — no `katex`, no MathJax, no `$…$`, no
@@ -52,10 +67,13 @@ and would be a whole-file re-audit done from one row's evidence. **Do not quote 
 needs its own derivation.** The prior audit's accompanying claim — *"what they cannot do is see a
 Mermaid diagram"* — is **false at HEAD** on the app-page reader and remains true only on the
 content-script `file://` / raw-host reader, which spec 007 §3.2 put out of scope by decision (see
-uncertain-items §5). Every other persona in §3 is still under 15% served: the Developer persona is
-missing code highlighting entirely (F3 is 0%), the Technical writer has no editor and no export
-(F8 4.8%, F9 0%), and the Student still has no math — **F2's 42% buys the Student nothing**, since
-all five math items and both formula-copy items remain ✗.
+uncertain-items §5). Every other persona in §3 is still under 15% served except the Developer: **F3
+moved 0% → 78% at M9's close (2026-08-22)** — Shiki highlighting, ≥14 (20 shipped) independent code
+themes, copy/line-numbers/line-highlighting/word-wrap and collapsible blocks all ship; what remains is
+a 6-language curated catalog rather than Shiki's 190+, and auto-detection built but not wired to a
+live document (F3 below has the full accounting). The Technical writer still has no editor and no
+export (F8 4.8%, F9 0%), and the Student still has no math — **F2's 42% buys the Student nothing**,
+since all five math items and both formula-copy items remain ✗.
 
 **★ SETTLED 2026-08-03 — PERSONA #1 IS 56%, ON THE GAP LENS. A HUMAN RULING, NOT A RE-DERIVATION.**
 The paragraph above says the ~56% *"needs its own derivation"*. It has since had one, and the
@@ -119,7 +137,7 @@ the bottom with the question a human walk would settle.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | F1 Rendering engine | 24 | 6 | 3 | 15 | 0 | 7.5 | **31%** |
 | F2 Math & diagrams *(re-audited 2026-08-03)* | 19 | 7 | 2 | 10 | 0 | 8.0 | **42%** |
-| F3 Code blocks | 9 | 0 | 0 | 9 | 0 | 0.0 | **0%** |
+| F3 Code blocks *(re-audited 2026-08-22)* | 9 | 6 | 2 | 1 | 0 | 7.0 | **78%** |
 | F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
 | F5 Navigation & reading UX *(re-audited 2026-08-13)* | 39 | 13 | 2 | 24 | 0 | 14.0 | **36%** |
 | F6 Live updating & AI-workflow *(re-audited 2026-08-13)* | 13 | 7 | 2 | 4 | 0 | 8.0 | **62%** |
@@ -129,15 +147,16 @@ the bottom with the question a human walk would settle.
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **38** | **16** | **144** | **0** | **46.0** | **23%** |
+| **§5 total** | **198** | **44** | **18** | **136** | **0** | **53.0** | **27%** |
 | §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **51** | **26** | **150** | **0** | **64.0** | **28%** |
+| **Whole spec** | **227** | **57** | **28** | **142** | **0** | **71.0** | **31%** |
 
-*Every row except F2, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
-HEAD `bdcb2ad`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
+*Every row except F2, F3, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
+HEAD `174b94a`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
 below) without moving that item off `~`, since two of its three named sub-surfaces are still absent. F5
-and F6 moved at M8 (2026-08-13) — three rows in each, six total, all cited below in their own sections.*
+and F6 moved at M8 (2026-08-13) — three rows in each, six total, all cited below in their own sections.
+F3 moved at M9 (2026-08-22) — six rows ✗→✓, two ✗→~, cited in full at F3 below.*
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -221,19 +240,27 @@ landed"**, which is not true of any other partially-covered section in this docu
 
 ## F3. Code Blocks
 
+***Re-audited 2026-08-22 at HEAD `174b94a`, against shipped code (spec 009, M9, closed at task 9.3).**
+Six rows moved ✗ → ✓, two ✗ → ~, one stays ✗ — no row was credited because a plan or task list
+anticipated it; every mark below cites the module, the test, or the absence directly. **This is a new
+dated audit, not a re-litigation of 007/008's own rows.***
+
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
-| Syntax highlighting, 190+ languages (Shiki) | ✅ | ✗ | No `shiki` dependency; the only `shiki` string in `src/` is a comment in `parse.test.ts` | Fences render as plain `<pre><code class="language-…">`. |
-| ≥14 code themes, independent of doc theme | ✅ | ✗ | Depends on the above; `settings.ts:18` knows only `light\|dark\|sepia` | — |
-| One-click copy button | ✅ | ✗ | 0 copy-button hits in `readerCss.ts`/`mount.ts` | — |
-| Line numbers (toggle) | ✅ | ✗ | 0 hits | — |
-| Line highlighting | ✅ | ✗ | 0 hits | — |
-| Word wrap toggle | ✅ | ✗ | 0 hits | — |
-| Language auto-detection for unlabeled fences | ✅ | ✗ | 0 hits; no local model bundled | — |
-| Collapsible long code blocks with preview | ⭐ | ✗ | 0 hits | — |
-| Per-block "open raw" view | ⭐ | ✗ | `src/render/readerMode.ts:80-96` toggles the *whole document*, not a block | Document-level raw view ships; per-block does not. |
+| Syntax highlighting, 190+ languages (Shiki) | ✅ | **~** | `src/render/codeEngine.ts:122-129` `LANGUAGE_LOADERS` — a hand-written, explicitly-`PROVISIONAL` six-language map (`javascript`, `python`, `json`, `css`, `html`, `bash`); the module's own header (`:16-46`) names the ~700-language barrel import as tried and reverted (13.6 MB `.output`, a real regression caught by measurement); `decisions.md` 2026-08-19 · M9 8.5 (M-1): "human confirmed full set (6 languages, 20 themes) fits, ship as-is" | **Shiki itself ships and highlights correctly; the catalog is 6 languages, not 190+.** An unlisted language degrades to plain text via the same per-fence failure path 7.1 tests (§3.9) — no crash, no special case, just no color. Catalog breadth is named a genuine open product question, explicitly deferred past M9. |
+| ≥14 code themes, independent of doc theme | ✅ | **✓** | `src/render/codeEngine.ts:134-160` `THEME_LOADERS`/`CODE_THEME_IDS` (20 themes, mechanically selected — smallest-by-byte-size then WCAG-AA-filtered, not hand-curated, per D-9); `src/theme/codeThemeControl.ts` (`role="listbox"` picker); `tests/browser/codeThemeControl.browser.test.ts` (independence proven **both directions**: flipping `codeTheme` leaves `data-theme` unchanged and vice versa) | 20 ≥ the spec's 14-item floor. Every theme's contrast checked against its OWN background (`codeThemeControl.test.ts`), not the document's. |
+| One-click copy button | ✅ | **✓** | `src/render/codeView.ts` (toolbar copy control, reads the RETAINED `<pre>`'s `textContent`, never the highlighted sibling — D-6); `tests/browser/codeToolbar.browser.test.ts` (copies the exact-as-authored source on a hostile unicode/whitespace fixture, multi-instance row proven — block 2's button copies block 2's text) | — |
+| Line numbers (toggle) | ✅ | **✓** | `src/render/codeView.ts:264` `CODE_LINE_NUMBERS_DEFAULT = false` (D-9); `tests/browser/codeToolbar.browser.test.ts` | Default OFF (`decisions.md` 2026-08-19 · M9 8.5, M-4c) — a real toggle, off by default, not absent. |
+| Line highlighting | ✅ | **✓** | `src/render/parse.ts` (D-8's additive `data-fence-meta` fence-renderer override, byte-identical for every existing fence); `src/render/codeEnhancer.ts` (`parseLineRanges`); `tests/browser/codeToolbar.browser.test.ts`; announced in TEXT for a screen reader, not colour alone (§4 row 15) | — |
+| Word wrap toggle | ✅ | **✓** | `src/render/codeView.ts:281` `CODE_WRAP_DEFAULT = false`; `tests/browser/codeToolbar.browser.test.ts` | Default OFF (`decisions.md` 2026-08-19 · M9 8.5, M-4d) — same shape as line numbers above. |
+| Language auto-detection for unlabeled fences | ✅ | ✗ | `src/render/codeDetect.ts` — built, unit- and real-engine-tested (`codeDetect.test.ts`, `tests/browser/codeDetect.browser.test.ts`, 100% on a 23-fence corpus), but **NOT imported by `codeEngine.ts` or `codeEnhancer.ts`** (confirmed structurally — 009 `codeImportFence.test.ts` 9/9); `progress.md` M9 task 8.6: "wiring an unlabeled fence's guess into the live highlight path is a future task" | **Mechanism built, feature inert — the same "mechanism adjacent, feature absent" shape F5's scroll-position-memory row already uses.** An unlabeled fence in a live document today renders exactly as it did before M9: plain, unhighlighted. `decisions.md`'s M-3 ruling (heuristic mechanism, `codeDetect.ts` IS the chosen mechanism) is not in question — only whether it is reachable, and it is not. |
+| Collapsible long code blocks with preview | ⭐ | **✓** | `src/render/codeView.ts:373-445` (`CODE_COLLAPSE_ATTR`, `applyCollapseIfNeeded`, threshold `CODE_COLLAPSE_LINE_THRESHOLD = 40`, D-9/M-4b ruling); `tests/browser/codeCollapse.browser.test.ts` (expand shows the ALREADY-highlighted content, tokenize call count stays at 1 across a collapse/expand cycle — no re-highlight; collapsed height returns exactly to the preview's) | — |
+| Per-block "open raw" view | ⭐ | **~** | `src/render/codeView.ts:394-403` `setCollapseState` — button text `"Show full code"` / `"Collapse code"`, `aria-expanded` carried | **Ships a per-block expand/collapse of the ALREADY-HIGHLIGHTED content, not a per-block raw⇄rendered toggle mirroring `readerMode.ts`'s document-level Raw view** (which swaps to unrendered markdown SOURCE). The item's "open raw" framing — set against the old row's own note, "document-level raw view ships; per-block does not" — doesn't fully transfer: what shipped answers the *long-block* half of §3.6 (a preview + a way to see the rest) but not a per-block source⇄rendered axis, which still does not exist at any granularity finer than the whole document. |
 
-**F3 is the only section at a flat 0%** — and it is the Developer persona's headline row in §3.
+**F3 moved from a flat 0% to 78% at M9's close (2026-08-22)** — six of nine items ship in full, two are
+partial (a 6-language curated catalog rather than Shiki's 190+; a collapse/expand control rather than a
+per-block raw⇄rendered toggle), one is a real, named gap (auto-detection built and tested but
+deliberately unwired). **F9 (Export & Publishing) is now the only section at a flat 0%.**
 
 ## F4. File Sources & Handling
 

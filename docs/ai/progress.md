@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M9 task 9.2 done — the M9 retro landed in `docs/ai/retro.md`, interview-run via `/retro` per tasks.md 9.2's own line. Next: 9.3, the records reconcile that closes M9.)*
+*Updated: 2026-08-22 (M9 task 9.3 done — the records reconcile: `spec-coverage.md` F3 0%→78%, Ruling 3 and D-1's harness trigger restated as standing, the D-value audit (13/13 individual `decisions.md` entries never landed, named). M9 CLOSED. Next: between milestones — the next milestone's scoping.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1867,6 +1867,107 @@ by this session. Carried item (9.1's toolbar/block spacing) referenced, not touc
 9.2's doc-only synthesis discipline held: `docs/ai/retro.md` + `docs/ai/progress.md`, nothing else. Standing
 invariants unchanged from 9.1's close (HEAD unchanged pre-commit, deps 6, `permissions: []` both, bundle
 bytes byte-identical). NOW-POINTER ADVANCES TO 9.3 (the records reconcile that closes M9) NEXT.
+
+★ **TASK 9.3 IS DONE — THE RECORDS RECONCILE, AND M9 IS CLOSED.** tasks.md 9.3's own line, verbatim:
+*"The records reconcile that closes M9 — including Ruling 3's revisit-when and the NEXT carried trigger
+for D-1's harness. `spec-coverage.md`'s F3 row moves from 0% to its landed figure. `decisions.md`'s
+revisit-when (c) … is CONFIRMED as the harness's own carried trigger … Ruling 3's engine revisit-when …
+is restated as standing, not re-litigated."* No drift from the version banked at 9.2's close. Doc-only:
+`docs/ai/progress.md` · `docs/ai/spec-coverage.md`; **`docs/ai/decisions.md` is READ AND LEFT
+UNTOUCHED** — Ruling 3 and the D-1 harness trigger are both already fully banked (M9 GATE 2, 2026-08-15)
+and this task RESTATES/CONFIRMS them, per the line's own wording, not a genuine new decision.
+★ **SPEC-COVERAGE.MD's F3 ROW — 0% → 78%, RE-DERIVED FROM SHIPPED CODE, NOT ASSERTED FROM THE BOX
+LIST.** Following the document's own convention (F2/F5/F6's targeted re-audits): six of F3's nine items
+✗→✓ (themes, copy, line numbers, line highlighting, word wrap, collapse), two ✗→~ (Shiki ships but the
+language catalog is a hand-curated 6, not 190+ — `codeEngine.ts`'s own `LANGUAGE_LOADERS`, explicitly
+`PROVISIONAL`; the per-block control is an expand/collapse of already-highlighted content, not a
+raw⇄rendered toggle mirroring `readerMode.ts`'s document-level Raw view), one stays ✗ (auto-detection —
+`codeDetect.ts` is built and real-engine-tested but deliberately unwired to any live document, 8.6's own
+AskUserQuestion resolution). Credit 0.0 → 7.0/9. Cascades: §5 total 46.0→53.0/198 (23%→27%), whole spec
+64.0→71.0/227 (28%→31%) — the method's own tie-break (*"ambiguity resolves toward NOT"*) applied, not an
+inflated ✓; full row-by-row evidence in `spec-coverage.md` F3.
+★ **RULING 3's REVISIT-WHEN — RESTATED AS STANDING, PER TASKS.MD 9.3's OWN WORDING ("restated…not
+re-litigated").** `decisions.md` 2026-08-15 · M9 GATE 2: *"grammar/perf inadequacy discovered at
+measurement or walk"* is the trigger to reconsider the `shiki/engine/javascript` choice over
+Oniguruma/WASM — not before, not never. **Did not fire this milestone**: M-1 (8.1) and M-2 (8.2) both
+measured clean against their bounds/gate, and 9.1's walk found no grammar-fidelity or perf complaint on
+any of the 20 real code fences it cycled. Stands unchanged for whichever milestone next touches
+`codeEngine.ts`'s engine choice.
+★ **THE D-1 HARNESS's NEXT CARRIED TRIGGER — `DECISIONS.MD`'S REVISIT-WHEN (c) CONFIRMED, THE D-11
+(iii) SHAPE APPLIED FORWARD: A MEASUREMENT AND A CONDITION, NOT A MEMORY.** **The measurement**: Ruling
+4's standing-baseline claim is BANKED as of this commit — two independent numeric A-B-A readings within
+M9 (2.2 pre-Shiki: 89.2/89.3 ms median, 84.8/86.8 ms floor; 8.2 post-Shiki, HEAD `a44e17f`: 90.8-96.3 ms
+median, 86.2-88.1 ms floor — delta flat, inside the same noise band both readings independently carry)
+plus 9.1's subjective walk-time confirmation (feel matches the banked figure). **The honest gap, named
+not smoothed** (9.2 retro finding 7): the 9.1 confirmation is qualitative, not a third numeric run — the
+claim HOLDS on two numeric readings + one subjective one, not three numeric ones; a future milestone that
+touches this surface anyway should take a third numeric run rather than assume the gap is closed.
+**The condition**: `decisions.md` 2026-08-15 · M9 GATE 2's own revisit-when (c) — *"a future milestone
+needs D-1's harness for a different measurement than M-2 and finds its capability-free design too
+narrow"* — is CONFIRMED as the harness's carried trigger, standing unchanged, not fired this milestone
+(009 needed no measurement beyond M-2).
+★ **THE D-VALUE AUDIT — EVERY M9 `decisions.md` ENTRY CHECKED AGAINST PLAN §0's OWN CONVENTION** (*"every
+decision below gets a `decisions.md` entry, named here, landing with the commit that implements it —
+never after"*, `plan.md` §0, verbatim text pre-written per D-value, D-1 through D-13). **NONE OF THE
+THIRTEEN EVER LANDED AS AN INDIVIDUAL ENTRY — A LARGER GAP THAN M8's OWN D-6…D-12 ONE, NAMED HERE FOR THE
+FIRST TIME.** Searched `decisions.md` for every pre-written entry-text fragment (`"drives the real built
+extension"`, `"lazy-chunk fence for Shiki"`, `"ships two regex engines"`, `"never produces markup to
+sanitize"`, `"two-call-site shape unchanged"`, `"plain fence stays in the tree"`, `"one enhancer because
+they are one feature"`, `"full info string never reaches"`, `"fourth field on the one global"`, `"same
+kind of state readerMode"`, `"measured as four accounted"`, `"mechanism is priced on byte cost"`,
+`"sixth production dependency clears"`) — **zero hits, all thirteen.** The only place any of D-1…D-13
+appears is the pre-implementation **2026-08-15 M9 GATE 2** entry (one shared clause plus Rulings 1-4),
+which predates every implementing commit by weeks and cannot by construction be "landing with the commit
+that implements it." **Not backfilled here** — `decisions.md` is read and left untouched per this task's
+own Files-list condition (only if a genuine decision landed), and no new decision is landing; gate 2
+already decided all thirteen. **One drafting-error side-note, not a records defect**: `plan.md` §0 labels
+BOTH D-6 and D-7's `decisions.md` entry text `"009 D-6"` (`plan.md:91,102`) — a plan-authoring typo, not
+this task's to fix (plan.md is sealed at gate 2, no D-value re-opened); named so whoever eventually lands
+D-7's entry knows to write `"009 D-7"`, not copy the plan's own label literally.
+★ **`docs/trust/PERMISSIONS.md` — CONFIRMED, NOT ASSUMED: task 5.1 IS THE ONLY M9 CHANGE.** `git log
+--oneline -- docs/trust/PERMISSIONS.md`: `4d15306` (5.1, the `codeTheme` field disclosure) is the most
+recent commit touching the file; nothing since. No new row, one field name added to the existing
+settings-row disclosure, exactly as 5.1's own Verify line required.
+★ **§ BASELINES — NOT RE-RUN AT 9.3, STATED PLAINLY WHY (per 9.3's own Verify line).** No fresh
+`.output` rebuild: 8.6 is the last commit touching `src/`, its own bundle-verify-gate already confirmed
+every artifact figure fresh (a clean measurement, not carried), and 9.1/9.2 are both doc-only and
+confirmed byte-identical at each one's own close — a rebuild here would re-measure bytes no commit has
+had the chance to move, exactly the "just to be sure" full-suite re-run this task's own scope declines.
+The already-measured 8.6-close figures are transcribed into the pins table below (not re-derived): CS
+**334,858 B**, app chunk **475,579 B** (`app-BlMcDd3E.js`, both engines same hash), `.output` **4,866,741
+/ 4,866,857 B** (Cr/Fx), zip **1,470,730 / 1,470,788 B**, manifests **654/770 B**, `permissions: []` both,
+`web_accessible_resources` absent, deps **6**. Suites at 8.6 close: unit **1042/1042** (61 files),
+browser **134 files, 1395 passed, 15 skipped, 0 failed**. See § Baselines table below for the row-level
+update, including the post-Shiki app-page first-paint row this task banks per Ruling 4.
+★ **POINTER WALK, DONE AS A DISCRETE STEP, PER 9.1's OWN CONVENTION.** § Now, § Blockers and § Up next
+grepped for `is next`, `at the gate`, `waiting on`, `this commit`, `← NEXT`. **One stale pointer found and
+fixed**: the Roadmap line (§ Up next) still ended at 008, not listing 009/M9 as closed — corrected below.
+**Two Blockers items tagged "HOME: M9's own retro (task 9.2)"** (the `codeEngine.ts`/`hasCodeFence` O(N²)
+coupling pattern; the bundle-affecting-tasks-need-a-build-gate discipline) — both reached their stated
+home: 9.2's retro (`docs/ai/retro.md` 2026-08-22) banked findings 2/3 (a PROVISIONAL-constant rule, a
+bidirectional necessary-ripple rule) and findings 5/6 (the ceremony-waste items, bounded by the
+[hidden]/cascade recurrence proving the full-suite gate load-bearing) — the pointers were accurate (their
+home was reached), so left as historical record, not rewritten; nothing stale about a correct pointer to
+a destination now arrived at.
+★ **NO ARCHIVE PASS — A DIVERGENCE FROM THE KICKOFF'S OWN SKETCH, NAMED PER STANDING RULE #1.** The
+kickoff sketch assumed 9.3 moves M9's § Now content to `progress-archive.md`. **tasks.md 9.3's own line
+names no such step**, and the real precedent contradicts it: **§ Closed milestones' own M7 and M8 entries
+both still read "until the next archive pass moves them to `progress-archive.md`, the way M6's were"** —
+M7 closed 2026-08-02, M8 closed 2026-08-13, and neither has been archived as of this commit. Only M6 (and
+M1-M5) have ever been archived, in a dedicated pass distinct from any milestone's own close task. **9.3
+follows the real, repeated precedent — no content moves to `progress-archive.md`; M9's narrative stays in
+§ Now**, per the file's own note (line 3, § Closed milestones entries below) until a future archive pass
+covers M7/M8/M9 together.
+★ **M9 IS CLOSED.** 24 tasks across nine groups, thirteen D-values (D-1…D-13) settled at gate 2, all
+seven §8 M-1…M-4 measure-then-choose values ruled at 8.5, one milestone-close finding CARRIED (not a
+defect — 9.1's subjective toolbar-spacing preference, `decisions.md` 2026-08-22 · M9 9.1). **Running
+human-gate score: 12/12, UNMOVED** — M9's one 9.1 finding is explicitly not a defect (no correctness or
+a11y regression, no Verify-contract break), the same "zero defects found" class as M8's own clean gate,
+not a thirteenth. `spec-coverage.md` F3: 0% → 78%. Golden **EMPTY**; **007 import fence 8/8**; **009
+import fence 9/9**; `permissions: []` both engines; manifest test **2975 B** (test file, unmoved from
+9.1); deps **6**. See § Closed milestones for the close record. **NEXT: nothing within M9** — the next
+act is the next milestone's scoping, per AGENTS.md's own "between milestones" pointer and the Roadmap
+below.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in
@@ -4853,6 +4954,10 @@ measurement-driven or explicitly deferred.*
 **Roadmap:** 003 TOC/navigation ✓ · 004 themes+settings ✓ · **005 watch mode ✓** (the differentiator) ·
 **006 snapshots + diff ✓** (closed 2026-07-27 — gate 9.1 PASSED, retro banked; gate score **10/10** at that close, corrected
 from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mode fix task, which confirmed the gantt overprint as M7's second defect**) · **007 Mermaid + diagram cache (M7a) ✓** (closed 2026-08-02 — gate 9.1 PASSED 8/8, both its findings fixed, retro banked; *(this line corrected at M8's 6.3 — it had read "IN IMPLEMENTATION... ONLY 9.3 REMAINS" since before M7's own close, a pointer-walk miss neither 9.1 nor 9.3 caught)*) · **008 Persona-#1 QoL: compare two files + agent-file awareness + table tools ✓** (closed 2026-08-13 — 35/35 tasks, gate score 12/12 unmoved, retro banked) ·
+**009 Code blocks: Shiki syntax highlighting + code themes + per-block toolbar + collapsible blocks ✓**
+(closed 2026-08-22 — 24/24 tasks, gate 9.1 PASSED 8 PASS/1 PASS+FINDING (not a defect, ship-as-is
+carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — `spec-coverage.md` F3
+0%→78%) ·
 … full order in `docs/product/spec.md` §Phase-1.
 
 ## Blockers / open questions
@@ -5023,6 +5128,55 @@ from the 8/8 recorded at its 9.1 — **now 12/12 after M7's 9.1 and the dark-mod
   structural reason only that file was ever at risk are in `decisions.md` 2026-07-21.
 
 ## Closed milestones
+
+**M9 · spec 009 — Code blocks: Shiki syntax highlighting · code themes · per-block toolbar ·
+collapsible blocks · CLOSED 2026-08-22.** Shiki fences render as real syntax highlighting **on the
+app page only** (§3.8's gate-1 disposition, mirroring 007's Mermaid decision), behind the pure-JS regex
+engine (`shiki/engine/javascript`, D-3 — no WASM, no CSP/manifest change), never producing an HTML
+string to sanitize (D-4 — `codeToTokens`'s structured token data adopted directly into DOM). Plus a
+≥14-theme picker (20 shipped, independent of document theme in both directions), a per-block toolbar
+(copy / line numbers / line highlighting / word wrap), collapsible long blocks (40-line threshold), and
+degradation paths for total engine-load and theme-apply failure. **Nine groups, 24 planned tasks, ZERO
+discovered tasks.** `dependencies` **5 → 6** (`shiki@4.4.3`, the governed addition, D-13) and
+`permissions: []` intact throughout.
+**★ THE MILESTONE'S CENTRAL ENGINEERING FACT: a real production automation seam was built and used
+honestly.** D-1's `__peekoverHarness` query-gated seam put Shiki — an engine — on the app-page render
+path for the FIRST TIME this codebase has ever instrumented first paint there, discharging D-11 (iii)'s
+carried trigger (two milestones old, 007/008) rather than shipping an engine on that path unmeasured
+again. Pre-Shiki floor (2.2): 89.2/89.3 ms median, 84.8/86.8 ms floor. Post-Shiki (8.2, HEAD `a44e17f`):
+90.8-96.3 ms median, 86.2-88.1 ms floor — flat within noise, against `GATE_MS = 165` (~69-79 ms
+headroom). Ruling 4's standing-baseline claim HOLDS (9.2 retro finding 7), with one honest gap named:
+two numeric readings plus one subjective walk-time confirmation, not three numeric ones.
+**★ THE OTHER FACT WORTH CARRYING: THE BYTE BUDGET RAN TIGHTER THAN THE STANDING MENTAL MODEL FOR MOST
+OF THE MILESTONE.** M-1's four-component ablation (D-11) found `.output` **4,866,741 / 4,866,857 B**
+against the 5 MiB bound (~367 KiB headroom, ~7% free) and zip **1,470,730 / 1,470,788 B** against the
+2 MB bound (~612 KiB headroom) — neither bound bound, but a first-try barrel import of Shiki's full
+~700-language/65-theme catalog blew both (13.6 MB `.output`, 2.99 MB zip), caught by measurement and
+reverted before it reached a commit (4.2). The shipped catalog is a hand-curated **6 languages / 20
+themes**, explicitly `PROVISIONAL` past M9 (`codeEngine.ts`'s own header) — named in `spec-coverage.md`
+F3's own re-audit rather than credited as the spec's full 190+-language promise.
+**★ THE MILESTONE-CLOSE GATE (9.1) FOUND ONE FINDING, NOT A DEFECT — the running human-gate score stays
+12/12, unmoved.** Real Chromium + real Firefox, extension loaded, both `GEOMETRY_WIDTHS` (1280/1400),
+both surfaces, all 20 code themes cycled across all 3 document modes, Network+Console clean throughout:
+8 PASS, 1 PASS+FINDING (the toolbar/code-block vertical spacing reads a bit too generous — a subjective
+preference, no correctness or a11y break, CARRIED not fixed, `decisions.md` 2026-08-22 · M9 9.1).
+**★ THE RECORDS RECONCILE (9.3) FOUND A REAL GAP AND NAMED IT: none of D-1…D-13's thirteen individually
+pre-written `decisions.md` entries ever landed with an implementing commit** — a larger version of M8's
+own D-6…D-12 gap. Not backfilled (no genuine new decision landing; `decisions.md` read and left
+untouched). `spec-coverage.md` F3 moved **0% → 78%** (six items ✓, two ~, one ✗ — auto-detection built
+and tested, `codeDetect.ts`, but deliberately unwired to any live document). Full record: § Baselines
+and this file's own 9.3 entry above.
+→ narrative: § Now above, **until the next archive pass moves it to
+[`progress-archive.md`](progress-archive.md)** the way M6's was (M7's and M8's are still pending the same
+pass — see 9.3's own divergence note above) · tasks: `specs/009-code-blocks/tasks.md` (**24/24 ticked,
+per-task, in each task's own commit**) · plan D-1…D-13: `specs/009-code-blocks/plan.md` (sealed at
+gate 2) · decisions: `decisions.md` **2026-08-14** (GATE 1), **2026-08-15** (GATE 2 with four rulings,
+GATE 3 with two rulings), **2026-08-19** (task 8.5's decision gate, all seven M-1…M-4 values),
+**2026-08-22** (task 9.1's carried spacing finding) · lessons: `retro.md` 2026-08-22 (M9 close — six
+kickoff scope-hypothesis misses including a recurrence of M8's own named failure shape; a missing
+PROVISIONAL-constant-resolution rule; a missing bidirectional necessary-ripple rule; the byte-budget
+headroom running tighter than modeled; two ceremony-waste items bounded by the full-suite gate's own
+load-bearing catch; Ruling 4 HOLDS with one honest gap named).
 
 **M8 · spec 008 — Persona-#1 QoL: compare two files · agent-file awareness · table tools · CLOSED
 2026-08-13.** Three features for the AI-agent-file reader: a **file-vs-file diff** (current document vs
@@ -5252,15 +5406,17 @@ has not re-run against M8's shipped code. Do not quote 56% as current, and do no
 from the row deltas — re-walk it. Prefer `spec-coverage.md` to this paragraph when scoping.
 
 ## Baselines / pins
-*Current measured truth. **The ARTIFACT rows and SUITE counts were re-derived 2026-08-13 at HEAD
-`bdcb2ad`** by **008 task 6.3 (the M8 close reconcile)** — `.output` cleared, both engines rebuilt from
-scratch, zipped, both suites re-run, `wc -c` + `md5sum` per artifact, nothing carried from the brief; the
-9.3 method exactly. **The TYPICAL-DOC FIRST-PAINT row is NOT re-run at 6.3, stated plainly why: 008 task
-5.1 already ran 8.1's full quiesced A-B-A protocol on this exact byte-identical build, inside the same
-implementation window (no `src/` commit lands between 5.1 and 6.3)** — see *THE M8 FIRST-PAINT PRICE*
-below, which folds in 6.2's shipped-harness confirmation. **The diagram-bearing and 1 MB/TOC rows were
-NOT re-run at 6.3 either, and are now THREE milestones' distance from their last measurement** (007 task
-8.1, 2026-07-31, `4c580c4`) — carried forward rather than left to imply currency; see the ⚠ provenance
+*Current measured truth. **The ARTIFACT rows and SUITE counts were transcribed 2026-08-22 at HEAD
+`174b94a` by 009 task 9.3 (the M9 close reconcile) FROM 8.6's own fresh bundle-verify-gate — NOT
+re-rebuilt at 9.3.** 8.6 is the last commit touching `src/`; its own clean rebuild already measured
+these figures, and 9.1/9.2 are both doc-only and confirmed byte-identical at each one's own close — 9.3
+declines the redundant rebuild the way its own Verify line permits ("carries re-run numbers or states
+plainly it did not, and why"). **The APP-PAGE FIRST-PAINT row is BANKED at 9.3 (Ruling 4)**, from 8.2's
+own A-B-A reading against 2.2's pre-Shiki floor — both already-measured, not re-run here. **The
+CONTENT-SCRIPT first-paint, diagram-bearing and 1 MB/TOC rows are UNTOUCHED by M9** (009 never touches
+the content-script render path or the diagram fixtures) and are carried forward exactly as 008 task 6.3
+left them; the diagram-bearing/1 MB rows are now FOUR milestones' distance from their last measurement
+(007 task 8.1, 2026-07-31, `4c580c4`) — named rather than left to imply currency; see the ⚠ provenance
 note under the table.*
 *This section is MUTABLE — each milestone's close task overwrites the numbers and moves the previous ones
 into the "vs" column. It lives here, not in decisions.md, because decisions.md is dated append-only and a
@@ -5285,16 +5441,17 @@ every task recorded as it landed is accounted growth. See *THE M7 BYTE LEDGER*.
 |---|---|---|---|---|
 | First paint, typical doc (50.4 KB) — **CONTENT SCRIPT** *(008 task 5.1, quiesced A-B-A, HEAD `bdcb2ad` — bytes unchanged since 5.1 — **the current reading, NOT re-run at 6.3**)* | **149.7 / 146.3 ms** medians (2 reach-IN arms), floors **145.7 / 143.4 ms**; **+ a 3rd, non-interleaved shipped-harness reading (6.2): 155.4 ms median, 145.2 ms floor** | 138.1 / 134.3 / 137.0 ms medians, floors 135.1 / 132.6 / 134.7 ms | **<165 ms GATE** | **PASS, all readings — the M8 table-tools reach costs +8.9 ms median / +11.1 ms floor against a 26.9 / 29.9 ms budget (008 task 5.1); worst-arm headroom now 15.3 ms (median) / 19.3 ms (floor)** |
 | ↳ *the pin this row supersedes, kept not overwritten* — First paint, typical doc *(RE-MEASURED 2026-08-03, HEAD `757f953`, quiesced — M8's pre-implementation reading)* | **138.1 / 134.3 / 137.0 ms** medians, floors **135.1 / 132.6 / 134.7 ms** (3 arms; A-vs-A 3.8 ms median / 2.5 ms floor) | 133.7 ms / floor 132.1 ms | **<165 ms GATE** | PASS, all 3 arms — worst-arm headroom 26.9 ms (median) / 29.9 ms (floor), **consumed 33-41% by M8's reach, per 5.1** |
-| First paint, typical doc (50.4 KB) — **APP PAGE, FIRST EVER READING** *(009 task 2.2, HEAD `7c5d05b`, `__peekoverHarness` seam + OPFS handle, quiesced, 2 back-to-back arms)* | **89.2 / 89.3 ms** medians, floors **84.8 / 86.8 ms** (A-vs-A **0.1 ms median / 2.0 ms floor**, inside `perf-first-paint.ts`'s own 3.8 ms/2.5 ms precedent tolerance); sub-spans both arms: folder-populate ~4 ms, click→paint ~85 ms | *(no prior pin — this IS the baseline)* | **<165 ms** (printed for reference, mirroring `perf-first-paint.ts`'s own console shape) | **PRODUCED, PROVISIONAL — no verdict rendered by this task.** Sanity-read owed at 9.1; banked as the standing baseline at 9.3 (Ruling 4); consumed by 8.1's M-2 as the pre-Shiki floor in the interim. Biases named in § Now (task 2.2): includes a synthetic file-select click (no content-script analogue), excludes the app-shell's own page load. |
-| First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, not at the 2026-08-03 redline, and NOT re-run at 6.3 — now THREE milestones' distance**)* | **157.6 ms** median, **floor 146.7 ms** | *(unchanged pin)* | **<165 ms GATE** | **PASS as last measured — see the vacuity note; the app-page instrument hole (D-11 (iii)) still means this number is not re-derivable on demand** |
-| First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived at 9.3, at the redline, or at 6.3**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS as last measured |
-| Content script (`content-scripts/peekover.js`) *(009 pre-1.1 prerequisite bump, mermaid/dompurify advisory fix)* | **329,464 B** both engines — md5 Cr `ec91cff6b6698943d699c038ef653b7c` / Fx `e36e768df1bf58c7d0a72f1ba992224f` | 329,233 B (**+231, +0.07% — dompurify 3.4.12→3.4.13, both graphs**) | none — **stated, not gated** | — |
-| App-page chunk (`chunks/app-Wexnkl90.js`) *(009 pre-1.1 prerequisite bump)* | **399,902 B** both engines, md5 `450c0201897b1d68dea09abd22f8b97f` identical on both | 399,646 B (**+256, +0.06%**) | none — **stated, not gated** | — |
-| Background (`background.js`) *(009 pre-1.1 prerequisite bump)* | **3,548 B** both engines, md5 `5f53c0f53c729e0a82fb1a4ce1361e22` | 3,548 B (**+0, unchanged**) | none — **stated, not gated** | — |
-| Built manifests, Chrome / Firefox *(009 pre-1.1 prerequisite bump)* | **654 / 770 B**, `permissions: []` and no `web_accessible_resources` on both | 654 / 770 B (**unchanged**) | — | — |
-| `pnpm zip` Chrome / Firefox *(009 pre-1.1 prerequisite bump)* | **1,306,928 / 1,306,986 B** | 1,306,513 / 1,306,571 B (**+415 / +415**) | **<2 MB** | **PASS — headroom 0.69 MB** |
-| Packed unzipped (`.output/<engine>`) *(009 pre-1.1 prerequisite bump)* | **4,082,294 / 4,082,410 B** | 4,080,882 / 4,080,998 B (**+1,412 / +1,412**)| **≤5 MB** (AGENTS.md) | **PASS — headroom 0.90 MB** |
-| Suites *(009 pre-1.1 prerequisite bump)* | **944 unit** (56 files, incl. 007 `diagramImportFence` 8/8) — browser suite NOT re-run this commit (unit-level fence + golden pin sufficient for a dependency-patch bump; owed before 4.x's browser work if not re-confirmed sooner) | 944 unit / 56 files (**unchanged count**) | — | green |
+| First paint, typical doc (50.4 KB) — **APP PAGE, POST-SHIKI** *(009 task 8.2, HEAD `a44e17f`, A-B-A within M9 against 2.2's pre-Shiki floor, 3 back-to-back runs)* | **90.8–96.3 ms** medians, floors **86.2–88.1 ms** (A-vs-A floor spread **1.9 ms**, median spread **5.5 ms**, same order of magnitude as 2.2's own precedent) | 89.2 / 89.3 ms medians, floors 84.8 / 86.8 ms (2.2, pre-Shiki) — **delta flat, inside the same noise band** | **<165 ms** (~69–79 ms median headroom, ~77–79 ms floor headroom) | **PASS, BANKED AS THE STANDING BASELINE (Ruling 4, confirmed at 9.3).** Two independent numeric A-B-A readings (2.2, 8.2) agree within noise; 9.1's walk-time confirmation is subjective, not a third numeric run — the honest gap 9.2 retro finding 7 names, not smoothed. |
+| ↳ *the pin this row supersedes, kept not overwritten* — First paint, typical doc — **APP PAGE, FIRST EVER READING** *(009 task 2.2, HEAD `7c5d05b`, `__peekoverHarness` seam + OPFS handle, quiesced, pre-Shiki)* | **89.2 / 89.3 ms** medians, floors **84.8 / 86.8 ms** (A-vs-A **0.1 ms median / 2.0 ms floor**) | *(no prior pin — this WAS the baseline)* | **<165 ms** (printed for reference) | Superseded by 8.2's post-Shiki reading above; served as M-2's pre-Shiki floor in the interim, per 8.2's own A-B-A. |
+| First paint, diagram-bearing (51.7 KB, 10 fences) *(8.1, `4c580c4` — **NOT re-run at 9.3, not at 6.3, not at the 2026-08-03 redline — now FOUR milestones' distance; 009 never touches the diagram render path**)* | **157.6 ms** median, **floor 146.7 ms** | *(unchanged pin)* | **<165 ms GATE** | **PASS as last measured — see the vacuity note; the app-page instrument hole (D-11 (iii)) still means this number is not re-derivable on demand** |
+| First paint, 1 MB / ~1400-entry TOC *(8.1, `4c580c4` — value **NOT re-derived at 9.3, at 6.3, or at the redline**)* | **1304.8 ms**, floor 1267.6 ms | 1188.5 ms (**+116.3, +9.8%**) | <1.7 s (informational) | PASS as last measured |
+| Content script (`content-scripts/peekover.js`) *(009 8.6 close, transcribed at 9.3, not re-rebuilt)* | **334,858 B** both engines | 329,464 B (**+5,394 — `readerCss.ts`'s shared toolbar/collapse CSS, non-Shiki-attributable, on both graphs by construction; 009's own D-2 structural fence (`codeImportFence.test.ts` 9/9) proves zero Shiki bytes reach this graph**) | none — **stated, not gated** | — |
+| App-page chunk (`chunks/app-BlMcDd3E.js`) *(009 8.6 close, transcribed at 9.3)* | **475,579 B** both engines, same chunk hash on both | 399,902 B (**+75,677 on this ONE eager chunk — not the full Shiki delta.** Task 8.1's own D-11 decomposition measures the TOTAL `.output` Shiki-attributable delta at **771,112 B** across engine (169,635 B) / languages (395,967 B) / themes (197,102 B) / glue (8,408 B), most of it landing in LAZY chunks this row does not include — see task 8.1 for the full, cross-checked-two-ways reconciliation) | none — **stated, not gated** | — |
+| Background (`background.js`) *(009 8.6 close)* | **3,548 B** both engines | 3,548 B (**+0, unchanged**) | none — **stated, not gated** | — |
+| Built manifests, Chrome / Firefox *(009 8.6 close)* | **654 / 770 B**, `permissions: []` and no `web_accessible_resources` on both | 654 / 770 B (**unchanged**) | — | — |
+| `pnpm zip` Chrome / Firefox *(009 8.1's M-1 measurement, unchanged through 8.6's close)* | **1,470,730 / 1,470,788 B** | 1,306,928 / 1,306,986 B (**+163,802 / +163,802 — Shiki's zip-compressed delta; deflate compresses the repetitive grammar/theme JSON far harder than the raw `.output` sum, per 8.1's own finding**) | **<2 MB** | **PASS — headroom ~612 KiB** |
+| Packed unzipped (`.output/<engine>`) *(009 8.1's M-1 measurement, unchanged through 8.6's close)* | **4,866,741 / 4,866,857 B** | 4,082,294 / 4,082,410 B (**+784,447 / +784,447**) | **≤5 MB** (AGENTS.md) | **PASS — headroom ~367 KiB (~7% free) — the tightest this milestone's own kickoff mental model ran, per 9.2 retro finding 4** |
+| Suites *(009 8.6 close, transcribed at 9.3)* | **1042 unit** (61 files) · **134 browser files, 1395 passed, 15 skipped, 0 failed** | 944 unit / 56 files; browser not tracked at the pre-1.1 reading | — | green |
 
 **★ THE M8 FIRST-PAINT PRICE, SUMMARIZED HERE SO THIS SECTION STAYS SELF-CONTAINED (full protocol and
 per-arm detail: § Now, task 5.1).** 5.1 ran 8.1's own quiesced A-B-A protocol — `A` = HEAD's build, `B`
