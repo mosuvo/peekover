@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M9 task 9.1 done — the milestone-close human gate walked and passed, nine items, eight PASS and one PASS+FINDING carried (toolbar/block vertical spacing, `decisions.md` 2026-08-22 M9 9.1). Next: 9.2, the M9 retro, in a fresh session.)*
+*Updated: 2026-08-22 (M9 task 9.2 done — the M9 retro landed in `docs/ai/retro.md`, interview-run via `/retro` per tasks.md 9.2's own line. Next: 9.3, the records reconcile that closes M9.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1849,6 +1849,24 @@ zip **1,470,730 / 1,470,788 B**, deps **6**, `permissions: []` both) — no re-b
 Standing rule #2 (AGENTS.md) discharged for M9: this walk is the only Firefox evidence M9 will ever have —
 Playwright cannot load an extension into Firefox. **9.2 (the retro) is NOT written here** — deliberately, in
 a fresh session after the gate.
+
+★ **TASK 9.2 IS DONE — THE M9 RETRO LANDED IN `docs/ai/retro.md` (newest-first, 2026-08-22 · M9 close), RUN
+AS THE `/retro` INTERVIEW RITUAL tasks.md 9.2's own line names, NOT a solo synthesis write-up.** A kickoff
+drafted for this session proposed exactly the wrong shape — a fully autonomous milestone-wide synthesis —
+where tasks.md 9.2 says *"Run `/retro`"*; caught at Step 0 per AGENTS.md's kickoff-is-a-hypothesis rule,
+and the mismatch is itself the retro entry's headline finding (finding 1), since M8's own retro (2026-08-13)
+had already named this exact failure shape once. Seven substantive findings banked with provenance: the
+recurring kickoff scope-hypothesis miss and its recursion at 9.2 itself (1), a missing PROVISIONAL-constant
+resolution rule (2), a missing bidirectional necessary-ripple rule (3), the byte-budget headroom running
+tighter than modeled all milestone (4), two ceremony-waste items — pattern-mirroring ablations and
+full-suite Verify on empty-diff tasks (5) — bounded by the [hidden]/cascade recurrence at 5.2 that proves
+the full-suite gate is load-bearing (6), and Ruling 4's standing-baseline claim assessed as HOLDS with one
+honest gap named (two numeric readings, one subjective confirmation, not three numeric ones) (7). Five
+AGENTS.md/WORKFLOW.md lines drafted for the human's own review/edit/commit per constant C2 — none adopted
+by this session. Carried item (9.1's toolbar/block spacing) referenced, not touched. No production diff —
+9.2's doc-only synthesis discipline held: `docs/ai/retro.md` + `docs/ai/progress.md`, nothing else. Standing
+invariants unchanged from 9.1's close (HEAD unchanged pre-commit, deps 6, `permissions: []` both, bundle
+bytes byte-identical). NOW-POINTER ADVANCES TO 9.3 (the records reconcile that closes M9) NEXT.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in

@@ -630,7 +630,7 @@ items, in 007/008's sense.*
       **9.2 (the retro) is NOT written here and `docs/ai/retro.md` is untouched by this commit** — that is the
       next task, deliberately in a fresh session after the gate.
 
-- [ ] **9.2 Retro (M9 close) — in a FRESH SESSION (the M5/M6/M7/M8 precedent).** Run `/retro`: append to
+- [x] **9.2 Retro (M9 close) — in a FRESH SESSION (the M5/M6/M7/M8 precedent).** Run `/retro`: append to
       `docs/ai/retro.md`, newest first — the lessons that change how the next milestone runs, and what the
       gate caught. ★ **State whether Ruling 4's standing-baseline claim holds up** — is the harness's number
       stable enough across the milestone's own runs to actually serve as a floor future work prices against, or
@@ -641,6 +641,24 @@ items, in 007/008's sense.*
       Verify: the entry is banked; `progress.md` shows M9 closed and points at what is next. Docs only — no
       `src/`, test, `scripts/` or spec file touched. Golden EMPTY · manifest green **2975 B** ·
       `permissions: []`. [WORKFLOW.md §7.5]
+      **DONE 2026-08-22 — run as the `/retro` interview ritual, three questions answered one at a time, not a
+      solo synthesis write-up.** A kickoff drafted for this session's start proposed exactly that wrong shape
+      (a fully autonomous milestone-wide synthesis); tasks.md's own line above says "Run `/retro`", caught at
+      Step 0 per AGENTS.md's kickoff-is-a-hypothesis rule — and the mismatch became the retro entry's own
+      headline finding, since M8's retro (2026-08-13) had already named this exact failure shape once and
+      filed an action for it. Seven findings banked in `docs/ai/retro.md` with provenance: the recurring
+      kickoff scope-hypothesis miss and its 9.2 recursion (1); missing PROVISIONAL-constant-resolution and
+      bidirectional necessary-ripple rules (2, 3); byte-budget headroom (~367 KiB / ~612 KiB at 8.5, tighter
+      than the standing mental model all milestone) (4); two ceremony-waste items — pattern-mirroring
+      ablations and full-suite Verify on empty-diff tasks — bounded by the [hidden]/cascade recurrence at 5.2
+      that proves the full-suite gate load-bearing (5, 6); **Ruling 4's standing-baseline claim: HOLDS** —
+      2.2's pre-Shiki and 8.2's post-Shiki readings are two independent numeric A-B-A runs with a flat delta,
+      but 9.1's own confirmation was a subjective "feel" read, not a third numeric one — gap named, not
+      smoothed (7). Content-script floor (26.9/29.9 ms) confirmed unmoved, 009 never touching that surface.
+      Five AGENTS.md/WORKFLOW.md lines drafted for the human's own review/edit/commit per C2 — none adopted
+      this session. Metrics: corrections **6** · first-try verification **mostly yes** (two full-suite/
+      boundary catches named, not first-try failures) · sessions ≈ **25**. No production diff —
+      `docs/ai/retro.md` + `docs/ai/progress.md` + this box, nothing else.
 
 - [ ] **9.3 The records reconcile that closes M9 — including Ruling 3's revisit-when and the NEXT carried
       trigger for D-1's harness.** `spec-coverage.md`'s F3 row moves from **0%** to its landed figure.

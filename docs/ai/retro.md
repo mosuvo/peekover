@@ -1,4 +1,119 @@
 # Retro log — Peekover
+- **2026-08-22 · M9 close (spec 009 — code blocks: Shiki syntax highlighting, per-block toolbar (copy /
+  line-numbers / line-highlighting / word-wrap), code themes, collapsible blocks, systemic degradation
+  paths).** Gate 1 → gate 2 (four rulings) → gate 3 (two rulings) → 24 tasks across nine groups: foundation
+  (Shiki engine, governed import) · the app-page harness (D-1, built before any Shiki code) · fence-meta
+  plumbing (D-8) · the enhancer + toolbar + import fence (group 4's five tasks) · code themes (D-9) · the
+  collapse/expand structure (D-10) · systemic engine/theme-load failure paths · a measure→decide→implement
+  cluster (M-1 byte budget, M-2 first-paint gate, M-3 auto-detection pricing, M-4 theme/threshold/defaults,
+  all seven values human-ruled at 8.5, implemented at 8.6) · the milestone-close walk (9.1, real
+  Chromium+Firefox, 8 PASS/1 PASS+FINDING). At close: `.output` **4,866,741 B (Cr) / 4,866,857 B (Fx)**
+  against the 5 MiB bound (~367 KiB headroom) · zip **1,470,730 / 1,470,788 B** against the 2 MB bound
+  (~612 KiB headroom) · content script **334,858 B** · app chunk **475,579 B** · deps **6** ·
+  `permissions: []` both engines · golden EMPTY. **The headline is that this milestone's own kickoff
+  discipline was the thing under test, not the feature** — five-going-on-six kickoff scope-hypothesis
+  errors in a row drove a mid-milestone methodology shift, and the retro task itself (9.2) fell into the
+  exact failure M8's retro had already named and filed an action for.
+  - **(1) THE KICKOFF-IS-A-HYPOTHESIS RULE CAUGHT SIX SEPARATE MISSES THIS MILESTONE, AND THE SIXTH WAS A
+    RECURRENCE OF A FAILURE M8's OWN RETRO HAD ALREADY DOCUMENTED AND ACTIONED.** 4.1's kickoff merged 4.2's
+    scope into one task; a related task assumed the wrong shiki-import edge count; 4.5 repeated the shape;
+    5.2 proposed a hand-curated 14-theme set where tasks.md explicitly said "not hand-curated"; 6.1's
+    resolution said "always default expanded, no threshold" where tasks.md's own line specified a
+    collapse-past-40-lines rule. Each was caught at Step 0 and routed via AskUserQuestion before code was
+    written — the discipline held every time — but the recurrence rate (five tasks across groups 4-6) was
+    high enough that 7.1 shifted the kickoff-writing methodology itself to scope-minimal and
+    methodology-heavy, which stopped the recurrence but was a lagging fix, not a leading one. **The sixth
+    miss is the more pointed one**: 9.2's own kickoff, drafted this same milestone, proposed a fully
+    autonomous solo-synthesis retro where tasks.md 9.2's own line says *"Run `/retro`"* — an interview
+    ritual, documented in `.claude/commands/retro.md` — and M8's retro (this file, 2026-08-13, finding 1)
+    had already named this EXACT shape of error at 6.2 and filed the standing rule for it. The evidence to
+    catch it was sitting in the same file the retro was about to be written into, and it wasn't checked
+    until Step 0. → **ACTION (drafted, human to place/commit per C2):** a WORKFLOW.md §7.5 line — *"Before
+    drafting a kickoff for a ritual task (retro/gate/walk), read the target log's own history for how prior
+    instances of this ritual ran — it is closer authoritative precedent than tasks.md's one-line pointer."*
+    → **A second, leading-not-lagging action for the recurring scope-hypothesis miss itself:** *"A kickoff's
+    WORK section must be checked against tasks.md's own line-item text before drafting — not after. If a
+    kickoff's scope exceeds, narrows, or substitutes a resolution for what the task's own line already
+    states, that is a drafting-time defect, not just a Step-0 catch."*
+  - **(2) A MISSING RULE FOR HOW PROVISIONAL CONSTANTS RESOLVE, DERIVED IN-SESSION AT 5.2 RATHER THAN
+    STATED ANYWHERE STANDING.** 5.1 shipped `PROVISIONAL_CODE_THEME` with a comment pending 8.4/8.5's
+    ruling; 5.2 correctly removed the constant entirely rather than updating the comment in place, on
+    drift-risk reasoning that was 5.2's own contribution, not a citation to any existing rule. This is
+    adjacent to 008's "a PROPOSED comment left on a chosen value is a lie about the decision state" but adds
+    the constructive half that rule never stated. → **ACTION (drafted, human to place/commit):**
+    *"When the mechanism that made a value PROVISIONAL becomes real, remove the provisional constant rather
+    than updating its comment in place — if a single source of truth already carries the resolved value, a
+    second copy is drift risk, not documentation."*
+  - **(3) "NECESSARY RIPPLE" WAS HANDLED WELL THREE SEPARATE TIMES (5.1, 5.2, 6.1) WITHOUT EVER BEING NAMED
+    AS A RULE — A MISSING RULE, NOT A WRONG ONE.** 5.1 routed an ambiguous ripple file to the human; 5.2
+    used plan-mode with explicit per-file justifications; 6.1 applied 4.3's CS-byte-identity precedent to
+    override an apparent scope boundary. By 7.x the pattern was stable enough to name, and it governs both
+    kickoff-writers and task-executors, which argues for AGENTS.md placement over a workflow-ritual note.
+    → **ACTION (drafted, human to place/commit) — bidirectional, naming both failure modes:**
+    *"Necessary ripple — a file structurally required by the Verify line but absent from the Files list — is
+    not scope creep; it must be enumerated explicitly, in the plan or kickoff, with a per-file justification
+    tied to the specific Verify clause that requires it. Conversely, a file added beyond what the Verify
+    line requires IS scope creep, even if related — route it via AskUserQuestion rather than including it on
+    judgment alone."*
+  - **(4) THE BYTE-BUDGET HEADROOM WAS TIGHTER THAN THE STANDING MENTAL MODEL FOR MOST OF THE MILESTONE,
+    AND NOTHING SURFACED IT UNTIL IT BECAME A LIVE CONSTRAINT AT 5.2.** The actual headroom at 8.5's
+    measurement — ~367 KiB against the 5 MiB `.output` bound, ~612 KiB against the 2 MB zip bound — never
+    bound this milestone, but 5.2's own Decision 1 had to navigate it explicitly (theme-chunk cost against
+    the picker), and that navigation wasn't informed by any kickoff's standing-invariants block stating the
+    snapshot up front. → **ACTION (drafted, human to place/commit):** *"Every task kickoff's
+    standing-invariants block states the current bundle-budget snapshot (bytes used / ceiling / headroom),
+    not only at milestone close — a small tax that surfaces a ceiling-breach before it lands instead of at
+    measurement time."*
+  - **(5) TWO CEREMONIES TAXED THE MILESTONE WITHOUT PROPORTIONATE PAYOFF: PER-EXTENSION RED-FIRST
+    ABLATIONS ON PATTERN-MIRRORING TESTS, AND FULL-SUITE VERIFY ON EMPTY-PRODUCTION-DIFF TASKS.** Ablating a
+    new `describe` block that mirrors an already-established fixture-and-assertion shape re-proves what the
+    pattern's original ablation already proved, at roughly 5 minutes per instance across groups 4-7. Full
+    browser-suite runs on tasks with an empty production diff (7.1's unchanged `codeEnhancer.ts` plus one new
+    browser test file) structurally could not catch anything a targeted run wouldn't — **except that 5.2's
+    own [hidden]/cascade defect is the standing proof that "obviously scoped" is sometimes wrong**, which is
+    why the carve-out below is narrow rather than a blanket relaxation. → **ACTION (drafted, human to
+    place/commit), two lines:** *"Red-first ablations earn their keep on novel assertions. A test extension
+    that mirrors an already-established pattern's shape doesn't need its own per-extension ablation — the
+    pattern's original ablation is standing precedent, cite it instead of re-earning it."* and *"Full-suite
+    Verify is mandatory whenever production code changes. Test-only tasks with an empty production diff may
+    use targeted-suite Verify plus a spot-check that adjacent surfaces weren't inadvertently touched, instead
+    of the full suite."*
+  - **(6) THE [HIDDEN]/CASCADE DEFECT CLASS RECURRED AT 5.2, CAUGHT ONLY BY THE FULL-BROWSER-SUITE GATE,
+    BECAUSE STANDALONE-MODULE TESTS STRUCTURALLY CANNOT SEE CROSS-FILE SELECTOR INTERCEPTION.**
+    `codeThemeControl.ts` shipped past its own unit and browser tests — both built against bare markup with
+    no `APP_CSS` stylesheet attached — and only the mandatory full-suite Verify gate caught the interception
+    across 22 unrelated tests. Fixed with the same pattern `readerCss.ts` already established for
+    `diffChrome`. Not a new defect class (permanent since M-prior), but a fresh instance proving self-scoped
+    tests cannot structurally catch it — the full-suite gate is load-bearing, not redundant, which is the
+    fact that bounds finding (5)'s carve-out to production-diff tasks only.
+  - **(7) RULING 4's STANDING-BASELINE CLAIM: HOLDS, WITH ONE HONEST GAP NAMED RATHER THAN SMOOTHED.** The
+    app-page harness (D-1) produced two independent numeric readings this milestone — 2.2's pre-Shiki
+    89.2/89.3 ms median, 84.8/86.8 ms floor, and 8.2's post-Shiki 90.8-96.3 ms median, 86.2-88.1 ms floor —
+    an A-B-A within the same milestone with a flat delta inside the same-session noise band both readings
+    independently carry. That two-reading comparison is real evidence the number is stable enough to serve
+    as a floor. **The gap:** 9.1's walk-time check against this baseline was a subjective "feel" read
+    against 8.2's banked figure, not a third independent numeric run — so the standing-baseline claim rests
+    on two numeric readings plus one qualitative confirmation, not three numeric ones. Honest status: holds,
+    un-re-opened, but a third numeric confirming run (rather than a subjective one) would strengthen it
+    further if a future milestone's own work touches this surface anyway. **Content-script floor (26.9/29.9
+    ms) confirmed UNMOVED** — 009 never touches that surface, so no floor-delta statement is owed there, but
+    the confirmation is stated, not assumed.
+  - **Carried items (decisions.md references, not fixed here):** 9.1's toolbar/block vertical spacing
+    (`decisions.md` 2026-08-22 · M9 9.1, ship-as-is, revisit when `readerCss.ts`'s `.peekover-code-toolbar`
+    rule is next touched, by M11 close at the latest).
+  - **A note on this entry's own ceremony, named by the person who wrote most of these kickoffs, not by
+    CC:** review write-ups across the milestone ran a fairly constant 800-1500 words regardless of a task's
+    actual novelty — appropriate for 5.2 (large design surface) and 6.1 (a real off-by-one), excessive for
+    low-novelty tasks (7.1's empty diff, 8.6's bundled implementation) whose "lessons to carry" mostly
+    restated that the discipline held. This is the kickoff-writer's own discipline to fix, not a rule for CC
+    to follow, so no AGENTS.md action is filed for it.
+  - **Metrics:** corrections = **6** (five kickoff scope-hypothesis misses across 4.1/4.2, 4.5, 5.2, 6.1,
+    counted as cascading-from-one-event where applicable, plus the 9.2 ritual-precedent miss) · first-try
+    verification pass = **MOSTLY YES** — the exceptions are two full-suite/boundary catches, not first-try
+    implementation failures: 5.2's [hidden]/cascade surfaced only on the full-browser-suite run, and 6.1's
+    phantom `.line` span off-by-one was caught by a boundary test before commit · sessions used ≈ **25**
+    (gate 1, gate 2, gate 3, 1.1-1.2, 2.1-2.2, 3.1, 4.1-4.5, 5.1-5.2, 6.1, 7.1-7.2, 8.1-8.6, 9.1, 9.2 — plus
+    8.5's human-decision-gate session, interactive rather than solo).
 - **2026-08-13 · M8 close (spec 008 — Persona-#1 QoL: compare two files · agent-file awareness · table
   tools).** A same-basename agent-file badge (D-1/D-2), a compare picker widened to admit any file in the
   folder beside snapshots (D-3/D-4/D-5), and table tools — sort, filter, copy-out — on both surfaces behind
