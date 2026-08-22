@@ -264,6 +264,8 @@ Log a decision when: choosing between libraries/approaches, changing architectur
 
 ### 7.5 Retro ritual (per feature — 5 minutes)
 
+Before drafting a kickoff for a ritual task (retro/gate/walk), read the target log's own history for how prior instances of this ritual ran — it is closer authoritative precedent than tasks.md's one-line pointer.
+
 The workflow improves itself only if failures become data. After each Gear 2+ item closes, append to `docs/ai/retro.md`:
 
 ```markdown

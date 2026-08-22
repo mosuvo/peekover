@@ -44,6 +44,15 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - Tests colocated: `foo.ts` + `foo.test.ts`. Pipeline stages get golden-file tests in `tests/golden/`.
 - Before finalizing a dependency, API, or config choice, verify it against current official docs — training knowledge of fast-moving tools (WXT, DOMPurify, browser/store policy) is often stale.
 - Write control/NULL characters as \uXXXX escapes, never literal bytes — especially inside regex character classes.
+- When the mechanism that made a value PROVISIONAL becomes real, remove the provisional constant rather than
+  updating its comment in place — if a single source of truth already carries the resolved value, a second
+  copy is drift risk, not documentation.
+- Red-first ablations earn their keep on novel assertions. A test extension that mirrors an already-established
+  pattern's shape doesn't need its own per-extension ablation — the pattern's original ablation is standing
+  precedent, cite it instead of re-earning it.
+- Full-suite Verify is mandatory whenever production code changes. Test-only tasks with an empty production
+  diff may use targeted-suite Verify plus a spot-check that adjacent surfaces weren't inadvertently touched,
+  instead of the full suite.
 
 ## Workflow (the short version — full: WORKFLOW.md)
 
@@ -52,8 +61,18 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - A session kickoff (or any handoff prompt) is a hypothesis, not authority. The tasks / spec / plan file body
   is ground truth. When a kickoff and the file body disagree, follow the body and flag the mismatch — never
   silently follow either.
+- A kickoff's WORK section must be checked against tasks.md's own line-item text before drafting — not after.
+  If a kickoff's scope exceeds, narrows, or substitutes a resolution for what the task's own line already
+  states, that is a drafting-time defect, not just a Step-0 catch.
+- Necessary ripple — a file structurally required by the Verify line but absent from the Files list — is not
+  scope creep; it must be enumerated explicitly, in the plan or kickoff, with a per-file justification tied to
+  the specific Verify clause that requires it. Conversely, a file added beyond what the Verify line requires IS
+  scope creep, even if related — route it via AskUserQuestion rather than including it on judgment alone.
+- Every task kickoff's standing-invariants block states the current bundle-budget snapshot (bytes used /
+  ceiling / headroom), not only at milestone close — a small tax that surfaces a ceiling-breach before it
+  lands instead of at measurement time.
 - A milestone-close walk or human gate that requires a loaded browser extension (chrome://extensions,
   Firefox about:debugging) has no agent substitute — the automation surface cannot reach those pages. Mark
   such items human-only up front; do not attempt them or fake them with a test-suite run.
-- Current milestone: between milestones — `specs/008-persona-1-qol/` closed 2026-08-13, persona-#2 next
-  to scope.
+- Current milestone: `specs/010-local-exports/` (M10) — 009 (code blocks) closed 2026-08-22; gate 1 drafted,
+  awaiting human approval before `plan.md`.
