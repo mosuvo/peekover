@@ -1,6 +1,71 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-22 · M10 GATE 3 — tasks 010 (local exports: HTML/DOCX/PDF export, copy as rich-text/HTML/plain
+  text, ZIP export, export shortcut, progress indicator, F5 print-optimized mode) APPROVED. Implementation
+  may begin at task 1.1, in a fresh session.**
+  `specs/010-local-exports/tasks.md`, drafted at `a551803` (**22 tasks across 11 groups**, following plan
+  §6's group order — 1 the measurement (1) · 2 the shared serializer (2) · 3 HTML/copy-HTML/copy-plain-text/
+  ZIP (5) · 4 copy-as-rich-text (1) · 5 DOCX export (1) · 6 print mode + `@page` probe (1) · 7 PDF export (1)
+  · 8 shortcut/last-format/progress (3) · 9 systemic failure/degradation (2) · 10 measure (3) · 11
+  human-close/retro/reconcile (3)), was reviewed against plan 010 and approved to begin implementation.
+  **The tasks.md status line stays "DRAFT awaiting gate 3" and THIS ENTRY IS THE APPROVAL OF RECORD** — the
+  standing precedent (spec 010 still reads "draft" post-gate-1 `1921f72`; plan 010 still reads "draft"
+  post-gate-2 `a502ad8`; 009's tasks the same, approved post-gate-3 while reading "DRAFT awaiting gate 3"
+  `c3582b1`; 008's likewise, `87532ad`). A context-loss session verifies M10's gate 3 **here**, not in the
+  artifact header.
+  **WHAT THIS APPROVES:** the tasks as drafted — the sealed plan (**D-1…D-10**) ordered into the 11 groups,
+  each task naming the D-values it services and applying plan §0's already-written `decisions.md` entry text
+  **verbatim** with the commit that implements it; the **four gate-2 rulings applied, never re-argued**
+  (Ruling 1 the ZIP-writer package identity, confirmed as task 1's own call → task 1.1 · Ruling 2 the export
+  panel's `aria-modal="true"` focus trap, `diagramLightbox`'s baseline reused → task 3.2 (panel) and group 8
+  (the shortcut wiring into it) · Ruling 3 the `:host()` selector pre-scoping → task 2.1's first-move
+  verification, ahead of the serializer proper · Ruling 4 the M9 9.1 toolbar-spacing carry non-reopen →
+  task 6.1's explicit, checkable additive-only diff constraint) and the **D-3 interpretation note** (CSS
+  inlined = a bundled stylesheet, not per-node inline styles) applied at task 2.2. Task 1.1 is **D-1's
+  hard-sequenced measurement**, the fork stated as an explicit commit-message-level acceptance criterion per
+  gate-1's provisional-approval condition, exactly as required. **Per-task D-value mapping is present in
+  every task's trailing bracket** — the M9-9.3-named gap (none of M9's own D-1…D-13 pre-written entries ever
+  landed with an implementing commit) is structurally addressed here, closure itself verified at task 11.3.
+  Group 3 (the largest) is **pre-split into 5 tasks** (3.1 HTML file-download · 3.2 the panel · 3.3
+  copy-as-HTML · 3.4 copy-as-plain-text · 3.5 ZIP export) — not drafted as one oversized task awaiting a
+  gate-3 split instruction — justified by D-1's own thin headroom favoring small, revertible units this
+  milestone over any prior one. Task 11.2 explicitly names `/retro`, the interview ritual per WORKFLOW.md
+  §7.5 by command, not by description — the same failure shape M8's and M9's retros both caught once already.
+  Gate 2 issued no scope instruction beyond the four rulings above — no analogous discharge to record here.
+  **NO OPEN QUESTIONS SURFACED FROM REVIEW** — unlike gate 1 (three §9 rulings) and gate 2 (four §8 rulings
+  plus the D-3 interpretation note), gate 3 has no equivalent open-question set: `tasks.md` is the
+  operational layer downstream of spec and plan, where the design surface is already resolved.
+  **TWO TASK-TIME REFINEMENTS WERE NOTED DURING REVIEW — NEITHER IS A `tasks.md` REDLINE; both are recorded
+  here as task-kickoff guidance for the task's own future session, not applied to this file:**
+  - **(i) Task 1.1's Verify could explicitly test for the `web_accessible_resources` hard-stop condition**
+    (plan risk §4-5: either export library's bundler output forcing WAR to lazy-load into the content-script
+    graph). Currently implicit-in-1.1 (the measurement itself would surface the condition). Task 1.1's own
+    kickoff may choose to make this explicit or leave it implicit — a task-time call, not a redline against
+    the drafted Verify contract.
+  - **(ii) Task 3.1's HTML file-download exit correctly names "no sibling suite for a download-triggering
+    control exists in this codebase," but the Verify contract does not specify HOW the download-triggering
+    control itself is tested** — Playwright can drive `<a download>` clicks, but whether that actually saves
+    a file versus triggers a download dialog varies by engine. Task 3.1's own kickoff resolves this at
+    task time.
+  **PRESERVED BY SILENCE:** all of gate 2's **D-1…D-10**, all three of gate-1's §9 rulings, all four of
+  gate-2's §8 rulings, and the D-3 interpretation note are inherited-closed by `tasks.md` and preserved by
+  silence in this entry — none is reopened, none re-argued.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not write `src/` code; it does not install `docx` or the
+  chosen ZIP writer (deps stay **6** — that is task 1.1's own act, at implementation); it reopens **no** plan
+  D-value and **no** spec §3.x decision; it edits **no** sealed artifact — `tasks.md`'s status line is
+  **not** flipped. It writes no implementation code: task 1.1 begins in a **fresh session** (C14,
+  WORKFLOW.md §5.3), the FIRST `src/` code of the milestone.
+  **Doc-only: no `src/` change, no plan.md or spec.md edit** — this entry and `progress.md`'s § Now update
+  are the whole diff. `docx`/the ZIP writer remain **uninstalled**, `dependencies` stays **6**.
+  **Revisit-when:** (a) implementation surfaces a task whose Verify contract cannot be executed as
+  written — banked at the point of discovery, never propagated forward (the M7/M8/M9 gate-3 precedent); (b)
+  task 1.1's own kickoff decides whether to make the WAR hard-stop condition explicit — refinement note (i),
+  a task-time call, not a reopen of this gate; (c) task 3.1's own kickoff resolves the download-triggering-
+  control test mechanism — refinement note (ii), the same; (d) 11.3's D-value audit finds an entry that did
+  NOT land with its own implementing commit — the gap named exactly as M9's own 9.3 named it, not smoothed
+  over.
+
 - **2026-08-22 · M10 GATE 2 — plan 010 (local exports: HTML/DOCX/PDF export, copy as rich-text/HTML/plain
   text, ZIP export, export shortcut, progress indicator, F5 print-optimized mode) APPROVED, WITH FOUR
   RULINGS AND ONE INTERPRETATION NOTE. `tasks.md` is the next artifact and the next gate.**
