@@ -1,8 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M10 gate 1 approved — `specs/010-local-exports/spec.md`, three §9 rulings banked in
-`decisions.md`, one provisional-approval condition set for `plan.md`'s first task. Doc-only; no
-implementation code.)*
+*Updated: 2026-08-22 (M10 gate 2 drafted — `specs/010-local-exports/plan.md`, D-values enumerated,
+measurement-first task ordering, awaiting human approval. Doc-only; no implementation code.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -12,26 +11,34 @@ implementation code.)*
 
 ## Now (start here)
 
-**M10 GATE 1 APPROVED, 2026-08-22 — `specs/010-local-exports/spec.md`, status stays "draft" per M7/M8/M9
-precedent (approval banks in `decisions.md`, not the spec's status line).** Scope: F9 local exports
-(HTML/DOCX/PDF export, copy as rich-text/HTML/plain-text, ZIP export, export shortcut, progress
-indicator — 9 items) + F5 print-optimized mode (1 item, PDF's own named prerequisite per
-`spec-coverage.md`). F9's four publish paths (Gist/GitHub repo/Medium/Dev.to) stay deferred to M11 on the
-routing decision (spec §3.1, §3.2). **The three §9 questions gate 1 was asked to rule are all ruled**
-(`decisions.md` 2026-08-22 M10 GATE 1): DOCX export's math scope — option (a), rendered as plain source
-text, revisit when F2 math ships; the Ctrl/Cmd+S shortcut — app-page only, permanent; ZIP/HTML export's
-remote-image handling — option (a), locally-resolvable images only, revisit at M11 spec-writing time.
-**Gate 1 also carries a provisional-approval condition**, extending §3.4's own measurement discipline:
-approval is provisional on `plan.md`'s first task (the `docx` + zip-writer ablated-cost measurement)
-clearing the current ~367 KiB `.output` headroom against the 5 MiB bound; if either library's ablated cost
-blows the headroom, the spec revisits (subset/lazy-split per §3.10, or scope reduction) before `plan.md`'s
-remaining tasks. **This session was doc-only**: `decisions.md`'s new entry, this file's § Now update. No
-`src/`, test, config, or spec/plan/tasks file touched — spec.md stays byte-identical, still "draft".
-**Next: `plan.md` — gate 2 — in a fresh session**, per M7 precedent, starting with the provisional
-condition's own ablated-cost measurement. M9's narrative (24/24 tasks, gate score 12/12 unmoved,
-`spec-coverage.md` F3 0%→78%) remains in [`progress-archive.md`](progress-archive.md), alongside M8's and
-M7's, from the 2026-08-22 archive pass that preceded this milestone's drafting. See § Closed milestones
-below for each milestone's one-paragraph close summary and links to the archived detail.
+**M10 GATE 2 DRAFTED, 2026-08-22 — `specs/010-local-exports/plan.md`, status "draft" per M7/M8/M9
+precedent, awaiting human approval before `tasks.md`.** Structure follows M9's plan.md format (most recent
+precedent). Ten D-values enumerate the design decisions with pre-written `decisions.md` entry text: D-1 makes
+the `docx` + zip-writer ablated-cost measurement the hard-sequenced first task, per gate 1's provisional
+condition — installation follows measurement, not precedes it, clearing the ~367 KiB `.output` headroom
+against the 5 MiB bound before any other task proceeds. D-2 places export chrome in a new app-page-only
+`exportControls.ts`, following `storageControls.ts`'s precedent, touching `mount.ts` at zero sites. D-3
+resolves §7-1 (HTML export clones the already-sanitized shadow-root DOM, bundles the stylesheet text — no new
+sanitizer profile anticipated). D-4 resolves §7-2 (`ClipboardItem` with `text/html`+`text/plain`, reusing
+007/008's already-verified permission-free clipboard finding). D-5 resolves §7-3's mechanism (the Ctrl+S
+listener lives in `entrypoints/app/main.ts`, not `readerMode.ts`'s app-page-blind pattern). D-6 adds
+`lastExportFormat` as a fifth field on the global `Settings` row. D-7 resolves §7-4's mechanism (print CSS in
+`readerCss.ts`, PDF export riding `window.print()`; the `@page` margin-box fidelity probe is sequenced before
+PDF's own task). D-8 **resolves §7-5 outright** — `mediaPolicy.ts`'s remote-image restore mechanism is real
+and already wired to shipped UI on both surfaces (`remoteMediaUi.ts:77`), and M10 declines to reuse it per
+gate-1's Ruling 3, not because it doesn't exist. D-9 discharges the sibling-checklist audit (§7-6). D-10
+**corrects §7-7's premise** — a mockup for export chrome does exist (`design/mockup.html:861-874`, plus a
+print `@media` block), the same kind of correction 009 made for code blocks. Gate-3 measurement items per
+spec §8 enumerated (default export format, heavy-document threshold, print CSS header/footer content), each
+forbidden from choosing a value. Cross-milestone carries addressed: the M9 9.1 toolbar-spacing revisit trigger
+does not fire from this plan's own print-mode work (reasoned, not asserted); the M9 4.1 fence-selector
+question and the M9 9.2/Ruling-4 first-paint baseline gap are both named for completeness, untouched by M10.
+**This session was doc-only**: one new file (`specs/010-local-exports/plan.md`), this file's § Now update. No
+`src/`, test, config, spec.md, decisions.md, or tasks.md touched. **Next: `tasks.md` — gate 3 — in a fresh
+session**, per M7 precedent, after human approval of this plan. M9's narrative (24/24 tasks, gate score 12/12
+unmoved, `spec-coverage.md` F3 0%→78%) remains in [`progress-archive.md`](progress-archive.md), alongside
+M8's and M7's, from the 2026-08-22 archive pass that preceded this milestone's drafting. See § Closed
+milestones below for each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
