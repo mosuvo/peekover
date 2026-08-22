@@ -1,8 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (archive pass run — the combined M7/M8/M9 pass 9.3 flagged as owed: M7's, M8's and
-M9's § Now / § Up next / § Baselines narratives moved verbatim to `progress-archive.md`, following M6's
-own archive-pass precedent. M9 CLOSED. Next: between milestones — the next milestone's scoping.)*
+*Updated: 2026-08-22 (M10 gate 1 drafted — `specs/010-local-exports/spec.md`, awaiting human approval per
+M6/M7/M8/M9 gate-1 precedent. Doc-only; no implementation code.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -12,12 +11,21 @@ own archive-pass precedent. M9 CLOSED. Next: between milestones — the next mil
 
 ## Now (start here)
 
-**M9 closed 2026-08-22. M10 (or whatever the next milestone is numbered) has not started — nothing is
-in progress.** M9's narrative (24/24 tasks, gate score 12/12 unmoved, `spec-coverage.md` F3 0%→78%) moved
-to [`progress-archive.md`](progress-archive.md) in this same archive pass, alongside M8's and M7's — the
-combined pass 9.3 flagged as owed (M7 closed 2026-08-02, M8 closed 2026-08-13, neither had been archived).
-See § Closed milestones below for each milestone's one-paragraph close summary and links to the archived
-detail. **Next: the next milestone's scoping**, per AGENTS.md's "between milestones" pointer.
+**M10 GATE 1 DRAFTED, 2026-08-22 — `specs/010-local-exports/spec.md`, status "draft", AWAITING HUMAN
+APPROVAL.** Scope: F9 local exports (HTML/DOCX/PDF export, copy as rich-text/HTML/plain-text, ZIP export,
+export shortcut, progress indicator — 9 items) + F5 print-optimized mode (1 item, PDF's own named
+prerequisite per `spec-coverage.md`). F9's four publish paths (Gist/GitHub repo/Medium/Dev.to) are
+deferred to M11 on a routing decision, not re-argued at spec level (spec §3.1, §3.2). **Three open
+questions surfaced for gate-1 human review** (spec §9): DOCX export's math/diagram scope, the Ctrl/Cmd+S
+shortcut's surface scope, and — newly found while drafting — whether ZIP/HTML export's "local copies of
+remote images" wording requires a network fetch that would make M10, not M11, this product's actual first
+deliberate outbound network path. **This session was doc-only**: one new `spec.md`, this file's § Now
+update. No `src/`, test, config, decisions.md, or existing spec/plan/tasks file touched. **Next: the
+human's gate-1 review of `specs/010-local-exports/spec.md`**; on approval, `plan.md` is a fresh session.
+M9's narrative (24/24 tasks, gate score 12/12 unmoved, `spec-coverage.md` F3 0%→78%) remains in
+[`progress-archive.md`](progress-archive.md), alongside M8's and M7's, from the 2026-08-22 archive pass
+that preceded this session. See § Closed milestones below for each milestone's one-paragraph close
+summary and links to the archived detail.
 
 ## Up next
 
