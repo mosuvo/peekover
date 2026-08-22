@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M10 gate 2 approved — four §8 rulings banked in `decisions.md`, one D-3
-interpretation note recorded. Doc-only; no implementation code. Next: `tasks.md`.)*
+*Updated: 2026-08-22 (M10 gate 3 drafted — `specs/010-local-exports/tasks.md`, 22 tasks across 11 groups,
+awaiting human approval. Doc-only; no implementation code. Next: task 1.1, after approval.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,21 +11,23 @@ interpretation note recorded. Doc-only; no implementation code. Next: `tasks.md`
 
 ## Now (start here)
 
-**M10 GATE 2 APPROVED, 2026-08-22 — `specs/010-local-exports/plan.md` (drafted `a502ad8`), status stays
-"draft" per M8/M9 precedent; approval banks in `decisions.md`, not the plan file.** Four §8 questions ruled:
-Q1 (the ZIP-writer package choice) confirmed as task 1's decision, no package name chosen here; Q2 (the
-export panel focus trap, §3.11 row 11) — match the mockup's `aria-modal="true"` contract, reuse
-`diagramLightbox`'s trap/restore baseline; Q3 (`:host()` selector translation for standalone HTML export,
-risk §4-1) — pre-scoped **now** as group 2 work rather than left for group 2 to discover, since
-`readerCss.ts` uses `:host` extensively; Q4 (the M9 9.1 toolbar-spacing carry) — confirmed non-reopen,
-spacing not fixed opportunistically, the carry ships as-is. One interpretation note recorded: D-3's "CSS
-inlined" reading (a bundled `<style>` block, not per-node inline styles) approved as reasoned,
-revisit-when a future export-audit reads it the other way. The gate-1 provisional condition remains in
-force — `tasks.md`'s first task is still the `docx` + zip-writer ablated-cost measurement (D-1),
-installation gated on its result; the ~367 KiB `.output` headroom against the 5 MiB bound is unchanged.
-**This session was doc-only**: `docs/ai/decisions.md` (new M10 GATE 2 entry) + this file's § Now update. No
-plan.md, spec.md, `src/`, test, config, or `tasks.md` touched. **Next: `tasks.md` — gate 3 — in a fresh
-session**, per M7 precedent. M9's narrative (24/24 tasks, gate score 12/12
+**M10 GATE 3 DRAFTED, 2026-08-22 — `specs/010-local-exports/tasks.md`, status "draft" per M7/M8/M9
+precedent, awaiting human approval before implementation.** Structure follows M9's tasks.md format (most
+recent precedent): a per-task D-value mapping stating which `decisions.md` entry text lands with each task's
+own commit — the discipline M9's own 9.3 flagged as a gap at its close (none of D-1…D-13's pre-written
+entries ever landed individually). 22 tasks across 11 groups, matching plan §6's own group order 1:1. **Task
+1.1 is D-1's `docx` + zip-writer ablated-cost measurement, hard-sequenced, with the fork stated explicitly
+as a commit-message-level acceptance criterion**: the delta fits the ~367 KiB `.output` / ~612 KiB `pnpm zip`
+headroom and task 2.1 proceeds, or it does not and every remaining task is suspended pending a spec revisit —
+no silent fall-through either way. Task 2.1 concretizes gate-2's Q3 ruling as a first-move `:host()`-selector
+verification, ahead of the serializer itself. Task 6.1's print-mode work states gate-2's Q4 ruling as an
+explicit, checkable diff constraint — additive-only `@media print`, `.peekover-code-toolbar`'s existing
+spacing rule body byte-unchanged. Group 3 (the largest) is pre-split into five tasks — the panel plus each of
+the four controls it hosts — rather than drafted as one oversized task awaiting a gate-3 split instruction,
+since D-1's own headroom makes small, revertable units more valuable this milestone than any prior one.
+**This session was doc-only**: `specs/010-local-exports/tasks.md` (new) + this file's § Now update. No
+plan.md, spec.md, decisions.md, `src/`, test, or config touched. **Next: task 1.1, in a fresh session, after
+human approval of this file.** M9's narrative (24/24 tasks, gate score 12/12
 unmoved, `spec-coverage.md` F3 0%→78%) remains in [`progress-archive.md`](progress-archive.md), alongside
 M8's and M7's, from the 2026-08-22 archive pass that preceded this milestone's drafting. See § Closed
 milestones below for each milestone's one-paragraph close summary and links to the archived detail.
