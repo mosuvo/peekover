@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-20 (M9 task 8.6 done — the four M-4 values de-provisionalized, M-3's heuristic mechanism built as its own standalone, unreachable module (`codeDetect.ts`); group 8 is now complete. Next: 9.1, the milestone-close human gate — no agent substitute, needs a loaded browser extension.)*
+*Updated: 2026-08-22 (M9 task 9.1 done — the milestone-close human gate walked and passed, nine items, eight PASS and one PASS+FINDING carried (toolbar/block vertical spacing, `decisions.md` 2026-08-22 M9 9.1). Next: 9.2, the M9 retro, in a fresh session.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -1831,6 +1831,24 @@ do not, unless a future task explicitly banks the full table.** A re-assignment 
 on the same aggregate split is strong (not certain) evidence of a stable, well-specified corpus — but an
 exact per-item reproduction cannot be verified, and a resulting accuracy delta (here, better) must be
 investigated and characterized, never silently accepted as the new number nor forced to match the old one.
+★ **TASK 9.1 IS DONE — THE MILESTONE-CLOSE HUMAN GATE, WALKED AND PASSED (ONE CARRIED FINDING). NOW-POINTER
+ADVANCES TO 9.2 (M9 RETRO) NEXT.** Walked on real Chromium AND real Firefox with the extension loaded, both
+engines, app-page AND `file://` content-script surfaces both exercised, both `GEOMETRY_WIDTHS` (1280 AND
+1400) on both engines, all 20 code themes cycled across all 3 document modes (light/dark/sepia). Network and
+Console tabs open throughout, both CLEAN across every item. Nine items walked: **8 PASS, 1 PASS+FINDING.**
+The one finding — Item 1 (toolbar-reads-as-part-of-block-or-clutter, 008's identical question,
+transplanted): walker's verdict, verbatim, *"The toolbar looks good, styled. Only thing is the space between
+the code box and the toolbar is a bit too much."* CARRIED, not fixed — `decisions.md` **2026-08-22 · M9
+9.1**, ship as-is, revisit when `readerCss.ts`'s `.peekover-code-toolbar` rule or the wrapper's
+margin/padding is next touched (by M11 close at the latest). D-1's harness output (the sanity read, Ruling
+4's standing-baseline candidate): subjective feel matches 8.2's banked 90.8–96.3 ms median first-paint
+figure. No production diff — 9.1's own doc-only-by-construction discipline (tasks.md 9.1 names no Files:
+line) held: `decisions.md` + `tasks.md` (box + landing block) + this file, nothing else. Bundle bytes
+byte-identical to 8.6's close (CS **334,858 B**, app **475,579 B**, `.output` **4,866,741 / 4,866,857 B**,
+zip **1,470,730 / 1,470,788 B**, deps **6**, `permissions: []` both) — no re-build needed, nothing changed.
+Standing rule #2 (AGENTS.md) discharged for M9: this walk is the only Firefox evidence M9 will ever have —
+Playwright cannot load an extension into Firefox. **9.2 (the retro) is NOT written here** — deliberately, in
+a fresh session after the gate.
 
 **★ M8's SPEC HAS PASSED GATE 1 — `specs/008-persona-1-qol/spec.md`, approved 2026-08-03 WITH ONE REDLINE.
 `plan.md` IS THE NEXT ARTIFACT AND THE NEXT GATE, in a fresh session (C14).** The approval is banked in

@@ -1,6 +1,26 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-22 · M9 9.1 — Code-block toolbar/block vertical spacing carried, ships as-is (9.1 gate
+  observation).** During the 9.1 walk (HEAD `9386568`, real Chromium + real Firefox, extension loaded),
+  Item 1 (toolbar-reads-as-part-of-block-or-clutter, 008's identical question transplanted) came back
+  PASS+FINDING. Walker's verdict, verbatim: *"The toolbar looks good, styled. Only thing is the space
+  between the code box and the toolbar is a bit too much."* The toolbar chrome itself reads as
+  intentionally integrated with the block — not 008's table-toolbar defect class (ships unstyled, never
+  integrated with the reader's design language) — the finding is narrower: the vertical gap between the
+  toolbar and the code box below it. **Why ship-as-is:** a subjective spacing preference on an
+  otherwise-integrated, shipped feature; it does not block M9 close, affects no Verify contract, and
+  surfaces no correctness or a11y regression. Carried rather than fixed at 9.1 to keep the milestone-close
+  commit doc-only and let a second pass weigh in before a spacing tweak lands — matches M6's watch-pill and
+  15-row-picker precedent (`decisions.md` 2026-07-26): ship, record, revisit when the surface is next
+  touched. The fix, when it comes, is CSS-only — a 4-8px reduction on `.peekover-code-toolbar`'s
+  (`readerCss.ts:651`) `margin-bottom` or the wrapper's `padding-top` — cheap to prototype and A/B against
+  the current spacing. **Revisit-when:** (a) a future milestone next touches `readerCss.ts`'s
+  `.peekover-code-toolbar` rule or the wrapper's margin/padding — the natural moment to eyeball spacing
+  alongside whatever else is landing; (b) if no such milestone lands by M11 close, revisit standalone as a
+  small M11-closeout task. Not a blocker for 9.2 (retro), 9.3 (records reconcile), M9 close, or M10
+  kickoff.
+
 - **2026-08-19 · M9 8.5 — DECISION GATE (human): M-1…M-4's values, all seven items ruled, recorded here
   BEFORE any code lands (8.6).** Each choice below is recorded with the measurement that justifies it, per
   tasks.md 8.5's own Verify line. No code lands on an assumed number — `settings.ts`/`codeView.ts` stay

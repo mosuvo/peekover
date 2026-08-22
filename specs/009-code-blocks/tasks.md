@@ -576,7 +576,7 @@ items, in 007/008's sense.*
 
 ## 9 — Human milestone-close gate + retro + the records reconcile
 
-- [ ] **9.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** Walk, on real
+- [x] **9.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** Walk, on real
       Chromium and real Firefox with an extension loaded (no harness reaches these): whether the toolbar
       **reads as part of its block or as clutter above it** (008's identical question, transplanted); which
       code theme reads best (8.4's candidates, against sepia's `--code-bg` inheritance); the collapse threshold
@@ -591,6 +591,44 @@ items, in 007/008's sense.*
       clutter / broken / illegible"* verdict is a real finding → a task added below this line, not a silent
       fix. Golden EMPTY · manifest green **2975 B** · `permissions: []`. [§5 human-gate list; §8 M-4; Ruling 4;
       finding 2]
+      **PASSED 2026-08-22 — walked by a human on Chromium + Firefox, both engines, app-page AND file://
+      content-script surfaces both exercised, both `GEOMETRY_WIDTHS` (1280 AND 1400) on both engines, Network
+      tab open throughout (Preserve Log), Console tab watched throughout. NINE items walked. EIGHT PASS, ONE
+      PASS+FINDING, CARRIED (not fixed). 009's CODE WORK IS CLOSED.**
+      **§1 — TOOLBAR READS AS PART OF ITS BLOCK OR AS CLUTTER (008's question, transplanted): PASS+FINDING,
+      CARRIED.** Walker's verdict, verbatim: *"The toolbar looks good, styled. Only thing is the space between
+      the code box and the toolbar is a bit too much."* The chrome itself reads as integrated — not 008's
+      table-toolbar defect class — the finding is narrower, a vertical-spacing preference. Walker chose CARRY
+      over fix-and-recover; ships as-is. Full record: `decisions.md` 2026-08-22 · M9 9.1, with revisit-when.
+      **§2 — CODE THEME (8.4's candidates against sepia's `--code-bg` inheritance): PASS.** All 20 themes
+      cycled across all 3 document modes (light/dark/sepia); sepia inherits `--code-bg` and reads as a framed
+      panel per 8.4's own structural finding — confirmed live, not just measured. `github-dark` (M-4a, ratified
+      8.5) reads correctly mid-table on every mode.
+      **§3 — COLLAPSE THRESHOLD + LINE-NUMBERS/WORD-WRAP DEFAULTS' FEEL (M-4b/c/d, ratified 8.5): PASS.** The
+      40-line collapse threshold and both OFF-by-default toggles feel right at real corpus sizes; nothing here
+      reopens 8.5's ruling.
+      **§4 — FIREFOX EVERYTHING: PASS, both surfaces.** Playwright cannot load an extension into Firefox, so
+      this walk is that engine's only evidence for 009. App-page (Shiki, themes, toolbar, collapse) PASS on
+      Firefox. Content-script `file://` surface confirmed PASS on its own, narrower terms — see §6.
+      **§5 — ZERO UNEXPECTED NETWORK, NETWORK TAB OPEN THROUGHOUT: PASS.** Open → highlight → theme → toolbar →
+      collapse walked on both engines with the Network tab open; zero external requests observed. Console tab
+      clean throughout — no errors, no warnings, on either engine.
+      **§6 — CROSS-FEATURE + SURFACE-ASYMMETRY CHECKS (walked alongside the named items, not separately
+      itemized): PASS.** Cross-feature rendering order (diagram + table + code in one document) held. The
+      `file://` content-script surface's app-page-only asymmetry (§3.8) confirmed: plain fences, no toolbar, no
+      theme, exactly as designed — not a gap. Unlabeled/uncurated (rust) fences stay plain per §4's degradation
+      contract, console clean, sibling blocks unaffected.
+      **§7 — D-1's HARNESS OUTPUT, THE SANITY READ (Ruling 4's standing-baseline candidate): PASS.** Subjective
+      feel on real hardware matches 8.2's banked 90.8–96.3 ms median first-paint figure — nothing about the
+      live walk contradicts treating that number as standing. Ruling 4's own confirmation is 9.2's, not
+      re-litigated here.
+      **★ THE RUNNING GATE SCORE.** No new defect found or fixed at this gate — one finding, CARRIED, not a
+      defect. Score arithmetic is 9.2's (retro), not restated here.
+      **★ POINTER WALK, DONE AS A DISCRETE STEP:** § Now, § Blockers and § Up next grepped for `is next`,
+      `at the gate`, `waiting on`, `this commit`, `← NEXT`; nothing stale found needing correction beyond this
+      commit's own Now-pointer advance.
+      **9.2 (the retro) is NOT written here and `docs/ai/retro.md` is untouched by this commit** — that is the
+      next task, deliberately in a fresh session after the gate.
 
 - [ ] **9.2 Retro (M9 close) — in a FRESH SESSION (the M5/M6/M7/M8 precedent).** Run `/retro`: append to
       `docs/ai/retro.md`, newest first — the lessons that change how the next milestone runs, and what the
