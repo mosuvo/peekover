@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M10 gate 2 drafted — `specs/010-local-exports/plan.md`, D-values enumerated,
-measurement-first task ordering, awaiting human approval. Doc-only; no implementation code.)*
+*Updated: 2026-08-22 (M10 gate 2 approved — four §8 rulings banked in `decisions.md`, one D-3
+interpretation note recorded. Doc-only; no implementation code. Next: `tasks.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,31 +11,21 @@ measurement-first task ordering, awaiting human approval. Doc-only; no implement
 
 ## Now (start here)
 
-**M10 GATE 2 DRAFTED, 2026-08-22 — `specs/010-local-exports/plan.md`, status "draft" per M7/M8/M9
-precedent, awaiting human approval before `tasks.md`.** Structure follows M9's plan.md format (most recent
-precedent). Ten D-values enumerate the design decisions with pre-written `decisions.md` entry text: D-1 makes
-the `docx` + zip-writer ablated-cost measurement the hard-sequenced first task, per gate 1's provisional
-condition — installation follows measurement, not precedes it, clearing the ~367 KiB `.output` headroom
-against the 5 MiB bound before any other task proceeds. D-2 places export chrome in a new app-page-only
-`exportControls.ts`, following `storageControls.ts`'s precedent, touching `mount.ts` at zero sites. D-3
-resolves §7-1 (HTML export clones the already-sanitized shadow-root DOM, bundles the stylesheet text — no new
-sanitizer profile anticipated). D-4 resolves §7-2 (`ClipboardItem` with `text/html`+`text/plain`, reusing
-007/008's already-verified permission-free clipboard finding). D-5 resolves §7-3's mechanism (the Ctrl+S
-listener lives in `entrypoints/app/main.ts`, not `readerMode.ts`'s app-page-blind pattern). D-6 adds
-`lastExportFormat` as a fifth field on the global `Settings` row. D-7 resolves §7-4's mechanism (print CSS in
-`readerCss.ts`, PDF export riding `window.print()`; the `@page` margin-box fidelity probe is sequenced before
-PDF's own task). D-8 **resolves §7-5 outright** — `mediaPolicy.ts`'s remote-image restore mechanism is real
-and already wired to shipped UI on both surfaces (`remoteMediaUi.ts:77`), and M10 declines to reuse it per
-gate-1's Ruling 3, not because it doesn't exist. D-9 discharges the sibling-checklist audit (§7-6). D-10
-**corrects §7-7's premise** — a mockup for export chrome does exist (`design/mockup.html:861-874`, plus a
-print `@media` block), the same kind of correction 009 made for code blocks. Gate-3 measurement items per
-spec §8 enumerated (default export format, heavy-document threshold, print CSS header/footer content), each
-forbidden from choosing a value. Cross-milestone carries addressed: the M9 9.1 toolbar-spacing revisit trigger
-does not fire from this plan's own print-mode work (reasoned, not asserted); the M9 4.1 fence-selector
-question and the M9 9.2/Ruling-4 first-paint baseline gap are both named for completeness, untouched by M10.
-**This session was doc-only**: one new file (`specs/010-local-exports/plan.md`), this file's § Now update. No
-`src/`, test, config, spec.md, decisions.md, or tasks.md touched. **Next: `tasks.md` — gate 3 — in a fresh
-session**, per M7 precedent, after human approval of this plan. M9's narrative (24/24 tasks, gate score 12/12
+**M10 GATE 2 APPROVED, 2026-08-22 — `specs/010-local-exports/plan.md` (drafted `a502ad8`), status stays
+"draft" per M8/M9 precedent; approval banks in `decisions.md`, not the plan file.** Four §8 questions ruled:
+Q1 (the ZIP-writer package choice) confirmed as task 1's decision, no package name chosen here; Q2 (the
+export panel focus trap, §3.11 row 11) — match the mockup's `aria-modal="true"` contract, reuse
+`diagramLightbox`'s trap/restore baseline; Q3 (`:host()` selector translation for standalone HTML export,
+risk §4-1) — pre-scoped **now** as group 2 work rather than left for group 2 to discover, since
+`readerCss.ts` uses `:host` extensively; Q4 (the M9 9.1 toolbar-spacing carry) — confirmed non-reopen,
+spacing not fixed opportunistically, the carry ships as-is. One interpretation note recorded: D-3's "CSS
+inlined" reading (a bundled `<style>` block, not per-node inline styles) approved as reasoned,
+revisit-when a future export-audit reads it the other way. The gate-1 provisional condition remains in
+force — `tasks.md`'s first task is still the `docx` + zip-writer ablated-cost measurement (D-1),
+installation gated on its result; the ~367 KiB `.output` headroom against the 5 MiB bound is unchanged.
+**This session was doc-only**: `docs/ai/decisions.md` (new M10 GATE 2 entry) + this file's § Now update. No
+plan.md, spec.md, `src/`, test, config, or `tasks.md` touched. **Next: `tasks.md` — gate 3 — in a fresh
+session**, per M7 precedent. M9's narrative (24/24 tasks, gate score 12/12
 unmoved, `spec-coverage.md` F3 0%→78%) remains in [`progress-archive.md`](progress-archive.md), alongside
 M8's and M7's, from the 2026-08-22 archive pass that preceded this milestone's drafting. See § Closed
 milestones below for each milestone's one-paragraph close summary and links to the archived detail.

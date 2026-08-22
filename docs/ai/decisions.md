@@ -1,6 +1,82 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-22 · M10 GATE 2 — plan 010 (local exports: HTML/DOCX/PDF export, copy as rich-text/HTML/plain
+  text, ZIP export, export shortcut, progress indicator, F5 print-optimized mode) APPROVED, WITH FOUR
+  RULINGS AND ONE INTERPRETATION NOTE. `tasks.md` is the next artifact and the next gate.**
+  `specs/010-local-exports/plan.md`, drafted at `a502ad8` against a codebase recon at `49feea6`, was
+  reviewed and approved. It settles **D-1…D-10**, resolves the spec's seven §7 risks against the **actual
+  code**, discharges the §7-6 sibling-checklist audit (D-9), proposes **no spec amendment** and adds **no
+  dependency**. §7-5 and §7-7 are resolved **outright** rather than carried (D-8, D-10). **The plan file's
+  status line stays "draft (Gear-3 gate 2 — awaiting human approval before `tasks.md`)" and THIS ENTRY IS
+  THE APPROVAL OF RECORD** — the standing precedent (spec 007 still reads "draft" post-gate-1 `e09520f`;
+  plan 008 still reads "draft" post-gate-2 `2c29821`; plan 009 still reads "draft" post-gate-2 `40b4ed1`;
+  010's own spec still reads "draft" post-gate-1 `1921f72`). A context-loss session verifies M10's gate 2
+  **here**, not in the artifact header. **No plan or spec section is edited by this entry; no D-value
+  moves — D-1 through D-10 are APPROVED AS DRAFTED and `tasks.md` cites them as-is.**
+  **THE FOUR RULINGS — plan §8's Q1–Q4, RULED HERE so `tasks.md` inherits them settled:**
+  - **RULING 1 · Q1, THE ZIP-WRITER PACKAGE CHOICE — CONFIRMED.** Task 1 is the right place for the package
+    identity decision, per standard dependency-verification discipline — spec §3.10 explicitly declined to
+    lock it, so no re-litigation at plan level. No package name is chosen here.
+  - **RULING 2 · Q2, THE EXPORT PANEL FOCUS TRAP (§3.11 row 11) — MATCH THE MOCKUP'S `aria-modal="true"`
+    CONTRACT, REUSE `diagramLightbox`'S TRAP/RESTORE BASELINE.** The WCAG 2.1 modal-dialog contract applies,
+    007 already built the reusable baseline exactly for cases like this, and deciding case-by-case which
+    modals get one is where drift starts. The lighter dismiss-on-outside-click contract the plan floated is
+    declined.
+  - **RULING 3 · Q3, THE `:host()` SELECTOR TRANSLATION FOR STANDALONE HTML EXPORT (risk §4-1) —
+    PRE-SCOPE NOW, do not wait for group 2 to discover.** `readerCss.ts` uses `:host` selectors extensively
+    (the reader mounts in a shadow root by design since M1), so §4-1's risk is very likely to materialize.
+    **Instruction to `tasks.md`:** group 2's acceptance criteria must explicitly include the
+    translated-stylesheet derivation, or a first-move task within group 2 must verify `readerCss.ts`'s
+    actual selector shape before the exporter proper is built. This is a **plan-level scope adjustment, not
+    a re-open** — §4-1 already flagged the risk; this ruling elevates it from "carried risk" to "scoped
+    work."
+  - **RULING 4 · Q4, THE M9 9.1 TOOLBAR-SPACING CARRY NON-REOPEN (risk 6, §4) — CONFIRMED, SPACING NOT
+    FIXED OPPORTUNISTICALLY.** The plan's mechanistic reading — a `display:none` under `@media print`
+    touches the toolbar selector's **name**, not its shipped spacing rule **body** — is correct. The
+    carry's revisit-when ("whenever `readerCss.ts`'s `.peekover-code-toolbar` rule is next touched") is
+    best interpreted as "when the rule's body is next edited," not "when any selector referencing the same
+    class is added elsewhere." The opportunistic fix is declined; the carry ships as-is. A future milestone
+    whose scope touches the spacing rule body directly is the natural revisit moment.
+  **ONE INTERPRETATION NOTE — D-3, "CSS INLINED" — APPROVED AS REASONED.** The plan reads spec §1's "CSS
+  inlined" as "the stylesheet is embedded in the export" (a bundled `<style>` block), not "every element
+  carries an inline `style` attribute" (a per-node `getComputedStyle` walk). Per-node inlining is fragile —
+  it misses pseudo-elements and media-query-gated rules — and is real, reviewable work with its own failure
+  modes (007 D-1's SVG `<style>`-cleaning pass is the standing example of how much work that class of
+  problem actually costs). **Recorded here so the interpretation is documented and can be revisited if a
+  future export-audit reads "CSS inlined" the other way.**
+  **THE OTHER D-VALUES — APPROVED AS DRAFTED.** D-1 (the `docx` + zip-writer ablated-cost measurement is
+  the hard-sequenced first task, per gate-1's provisional condition) · D-2 (export chrome lives in a new
+  app-page-only `exportControls.ts`, `storageControls.ts`'s precedent, `mount.ts` touched at zero sites) ·
+  D-4 (§7-2: `ClipboardItem` with `text/html` + `text/plain`, reusing 007/008's already-verified
+  permission-free clipboard finding) · D-5 (§7-3: the Ctrl+S listener lives in `entrypoints/app/main.ts`,
+  app-page-only, not `readerMode.ts`'s app-page-blind pattern) · D-6 (`lastExportFormat` is a fifth field
+  on the one global `Settings` row) · D-7 (§7-4: print CSS lives in `readerCss.ts`, PDF export rides
+  `window.print()`, `@page` margin-box fidelity probed before PDF's own task) · D-8 (§7-5 resolved
+  outright: `mediaPolicy.ts`'s remote-image restore mechanism is real and already wired to shipped UI on
+  both surfaces; M10 declines to reuse it per gate-1 Ruling 3, not because it doesn't exist) · D-9 (§7-6's
+  sibling-checklist audit discharged) · D-10 (§7-7's premise corrected: a mockup for export chrome does
+  exist, `design/mockup.html`, the same class of correction 009 made for code blocks). None is reopened by
+  this gate and `tasks.md` cites them as-is.
+  **WHAT THIS APPROVAL DOES NOT DO:** it reopens no spec §3.x decision, alters no plan D-value, changes no
+  plan section (the plan is approved as it stands at `a502ad8`), chooses **no** ZIP-writer package name and
+  **no** §8 gate-3 measurement value (default export format, heavy-document threshold, print CSS
+  header/footer content all stay measure-then-choose at gate 3) — and it **writes no `tasks.md`**. The
+  gate-1 dispositions (Ruling 1 · §9-1 DOCX math as plain source text · Ruling 2 · §9-2 Ctrl/Cmd+S
+  app-page-only · Ruling 3 · §9-3 ZIP/HTML export embeds only locally-resolvable images · the
+  provisional-approval condition on `.output` headroom) are **preserved by silence**, per the plan's own
+  rule that re-deciding a settled answer is a scope-reopen even when it agrees.
+  **Doc-only: no `src/` change, no plan.md or spec.md edit** — this entry and `progress.md`'s § Now update
+  are the whole diff. `docx`/the ZIP writer remain **uninstalled**, `dependencies` stays **6**.
+  **Revisit-when:** (a) `tasks.md` cannot decompose D-1's measurement task or ruling 3's group-2 scoping
+  without reopening a D-value — that is a gate-2 event and returns here, never a quiet amendment; (b) the
+  ablated-cost measurement (D-1) finds either dependency blows the `.output` headroom — the provisional
+  condition's own named fallback (subset/lazy-split per spec §3.10, or scope reduction) fires, routed to a
+  human, not decided now; (c) a future export-audit reads spec §1's "CSS inlined" as per-node inline styles
+  rather than a bundled stylesheet — the D-3 interpretation note is re-argued, not silently overridden; (d)
+  ruling 3's `:host()` translation is found unnecessary once group 2 verifies `readerCss.ts`'s actual
+  selector shape — the scoped work is then a smaller confirmation task, not a redesign.
+
 - **2026-08-22 · M10 GATE 1 — spec 010 (local exports: HTML/DOCX/PDF export, copy as rich-text/HTML/plain
   text, ZIP export, export shortcut, progress indicator + F5 print-optimized mode) APPROVED, WITH THREE
   RULINGS AND A PROVISIONAL CONDITION. `plan.md` is the next artifact and the next gate.**
