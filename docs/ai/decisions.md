@@ -1,6 +1,54 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-22 · M10 GATE 1 — spec 010 (local exports: HTML/DOCX/PDF export, copy as rich-text/HTML/plain
+  text, ZIP export, export shortcut, progress indicator + F5 print-optimized mode) APPROVED, WITH THREE
+  RULINGS AND A PROVISIONAL CONDITION. `plan.md` is the next artifact and the next gate.**
+  `specs/010-local-exports/spec.md`, drafted at `1921f72`, was reviewed and approved. **The spec's status
+  line stays "draft (Gear-3 gate 1 — awaiting human approval before `plan.md`)" and THIS ENTRY IS THE
+  APPROVAL OF RECORD** — the standing precedent from M7/M8/M9: 007 still reads "draft" post-gate-1
+  (`e09520f`); 008 still reads "draft" post-gate-1 (`aaf990e`, 2026-08-03 M8 GATE 1); 009 still reads
+  "draft" post-gate-1 (2026-08-14 M9 GATE 1) — gate approvals live in the bank, not in the artifact's
+  status line.
+  **THE APPROVAL:** ten items are in scope — nine F9 items (HTML export, DOCX export, PDF export, copy as
+  rich text/HTML/plain text, ZIP export, the export shortcut, a progress indicator for heavy documents) plus
+  F5's print-optimized mode, the one item PDF export's own §3.6 names as its prerequisite. F9's four publish
+  paths (GitHub Gist, GitHub repo, Medium, Dev.to) are **deferred to M11 on the routing decision spec §3.1
+  and §3.2 state** — the product's first deliberate, user-token-bearing outbound network path, per
+  `docs/product/spec.md` §6 principle 2 — inherited from this session's pre-drafting scoping, not
+  re-argued at this gate.
+  **THE THREE RULINGS, spec §9 (verbatim from the human's review):**
+  - **RULING 1 · §9-1, DOCX export's math and diagram scope: OPTION (a), sub-choice "rendered as plain
+    source text."** The current reader does not render math (F2 is ✗), so math displays as raw source;
+    DOCX preserving raw source text is consistent with reader behavior. No special math-handling code in
+    M10. **Revisit-when:** F2 math ships in a future milestone, at which point DOCX math handling becomes a
+    natural extension task in that milestone, not an M10 retrofit.
+  - **RULING 2 · §9-2, the Ctrl/Cmd+S shortcut's scope: APP-PAGE ONLY.** Global binding would suppress the
+    browser's native "Save Page As" dialog on `file://` and raw-host content-script surfaces where Peekover
+    offers no export in its place; app-page-only is consistent with §3.2's own decision to confine exports
+    to that surface. No revisit-when — this is a permanent scope decision.
+  - **RULING 3 · §9-3, ZIP/HTML export's remote-image handling: OPTION (a), locally-resolvable images
+    only.** Preserves the M10/M11 architectural boundary; concentrates security-review weight on M11 where
+    the first deliberate outbound network path belongs; the accepted limitation (a remote image stays a
+    remote reference in ZIP/HTML output rather than a local copy) is a narrower, more honest promise than a
+    half-built fetch. **Revisit-when:** M11 spec-writing time — the F9 product-spec wording ("local copies
+    of remote images") should be revisited then, since it invites this exact confusion again if read later
+    without M10 context.
+  **THE PROVISIONAL-APPROVAL CONDITION:** gate-1 approval is provisional on `plan.md`'s first task — the
+  `docx` + zip-writer ablated-cost measurement, per §3.4 — clearing the current ~367 KiB `.output` headroom
+  against the 5 MiB bound. If either library's ablated cost blows the headroom, the spec revisits (a
+  subset/lazy-split strategy per §3.10, or scope reduction) before `plan.md`'s remaining tasks. This is not
+  a new decision — it extends §3.4's own measurement discipline (`plan.md`'s first measurement, before
+  either dependency is installed for real, 009's own naive-import-then-revert-if-needed precedent) into
+  gate-2 sequencing.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install `docx` or a ZIP writer, or move dependencies off
+  the current 6; it does not resolve §3.6's print-CSS fidelity question (§7-4, routed to `plan.md`); it
+  reopens no other §3.x decision and routes nothing new to §8's gate-3 measure-then-choose list; it writes
+  no `plan.md` or `tasks.md`.
+  **Not a blocker for:** gate 2 (`plan.md`) or any subsequent gate — nothing above is unresolved, each
+  ruling and the provisional condition are stated so `plan.md` inherits them closed (or, for the provisional
+  condition, closed pending its own first task).
+
 - **2026-08-22 · M9 9.1 — Code-block toolbar/block vertical spacing carried, ships as-is (9.1 gate
   observation).** During the 9.1 walk (HEAD `9386568`, real Chromium + real Firefox, extension loaded),
   Item 1 (toolbar-reads-as-part-of-block-or-clutter, 008's identical question transplanted) came back

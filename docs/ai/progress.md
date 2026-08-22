@@ -1,7 +1,8 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M10 gate 1 drafted — `specs/010-local-exports/spec.md`, awaiting human approval per
-M6/M7/M8/M9 gate-1 precedent. Doc-only; no implementation code.)*
+*Updated: 2026-08-22 (M10 gate 1 approved — `specs/010-local-exports/spec.md`, three §9 rulings banked in
+`decisions.md`, one provisional-approval condition set for `plan.md`'s first task. Doc-only; no
+implementation code.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,21 +12,26 @@ M6/M7/M8/M9 gate-1 precedent. Doc-only; no implementation code.)*
 
 ## Now (start here)
 
-**M10 GATE 1 DRAFTED, 2026-08-22 — `specs/010-local-exports/spec.md`, status "draft", AWAITING HUMAN
-APPROVAL.** Scope: F9 local exports (HTML/DOCX/PDF export, copy as rich-text/HTML/plain-text, ZIP export,
-export shortcut, progress indicator — 9 items) + F5 print-optimized mode (1 item, PDF's own named
-prerequisite per `spec-coverage.md`). F9's four publish paths (Gist/GitHub repo/Medium/Dev.to) are
-deferred to M11 on a routing decision, not re-argued at spec level (spec §3.1, §3.2). **Three open
-questions surfaced for gate-1 human review** (spec §9): DOCX export's math/diagram scope, the Ctrl/Cmd+S
-shortcut's surface scope, and — newly found while drafting — whether ZIP/HTML export's "local copies of
-remote images" wording requires a network fetch that would make M10, not M11, this product's actual first
-deliberate outbound network path. **This session was doc-only**: one new `spec.md`, this file's § Now
-update. No `src/`, test, config, decisions.md, or existing spec/plan/tasks file touched. **Next: the
-human's gate-1 review of `specs/010-local-exports/spec.md`**; on approval, `plan.md` is a fresh session.
-M9's narrative (24/24 tasks, gate score 12/12 unmoved, `spec-coverage.md` F3 0%→78%) remains in
-[`progress-archive.md`](progress-archive.md), alongside M8's and M7's, from the 2026-08-22 archive pass
-that preceded this session. See § Closed milestones below for each milestone's one-paragraph close
-summary and links to the archived detail.
+**M10 GATE 1 APPROVED, 2026-08-22 — `specs/010-local-exports/spec.md`, status stays "draft" per M7/M8/M9
+precedent (approval banks in `decisions.md`, not the spec's status line).** Scope: F9 local exports
+(HTML/DOCX/PDF export, copy as rich-text/HTML/plain-text, ZIP export, export shortcut, progress
+indicator — 9 items) + F5 print-optimized mode (1 item, PDF's own named prerequisite per
+`spec-coverage.md`). F9's four publish paths (Gist/GitHub repo/Medium/Dev.to) stay deferred to M11 on the
+routing decision (spec §3.1, §3.2). **The three §9 questions gate 1 was asked to rule are all ruled**
+(`decisions.md` 2026-08-22 M10 GATE 1): DOCX export's math scope — option (a), rendered as plain source
+text, revisit when F2 math ships; the Ctrl/Cmd+S shortcut — app-page only, permanent; ZIP/HTML export's
+remote-image handling — option (a), locally-resolvable images only, revisit at M11 spec-writing time.
+**Gate 1 also carries a provisional-approval condition**, extending §3.4's own measurement discipline:
+approval is provisional on `plan.md`'s first task (the `docx` + zip-writer ablated-cost measurement)
+clearing the current ~367 KiB `.output` headroom against the 5 MiB bound; if either library's ablated cost
+blows the headroom, the spec revisits (subset/lazy-split per §3.10, or scope reduction) before `plan.md`'s
+remaining tasks. **This session was doc-only**: `decisions.md`'s new entry, this file's § Now update. No
+`src/`, test, config, or spec/plan/tasks file touched — spec.md stays byte-identical, still "draft".
+**Next: `plan.md` — gate 2 — in a fresh session**, per M7 precedent, starting with the provisional
+condition's own ablated-cost measurement. M9's narrative (24/24 tasks, gate score 12/12 unmoved,
+`spec-coverage.md` F3 0%→78%) remains in [`progress-archive.md`](progress-archive.md), alongside M8's and
+M7's, from the 2026-08-22 archive pass that preceded this milestone's drafting. See § Closed milestones
+below for each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
