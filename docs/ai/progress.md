@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-24 (M10 §3.10 gate ruled — DOCX export dropped, D-1's BUSTS fork resolved by scope
-reduction, task 5.1 struck, group 2 re-authorized, next task 2.1.)*
+*Updated: 2026-08-24 (M10 task 2.1 landed — Ruling 3's `:host()` prediction CONFIRMED, finding (b),
+translation is new scope for 2.2.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +11,27 @@ reduction, task 5.1 struck, group 2 re-authorized, next task 2.1.)*
 
 ## Now (start here)
 
+**★★★ M10 TASK 2.1 LANDED, 2026-08-24 — RULING 3'S PREDICTION CONFIRMED: FINDING (b), `:host` IS
+LOAD-BEARING, A TRANSLATED COPY IS NEW SCOPE FOR 2.2, NOT A SILENT ADDITION.** `grep -n ":host"
+src/theme/readerCss.ts` returns 43 hits — 26 inside live CSS rules, 17 inside comments/doc-prose (not
+selectors, excluded from the finding). The 26 rule sites fail finding (a)'s test (":host scoping only on
+the outermost rule, plain inner selectors") on two counts: (1) `:host{...}` / `:host([data-theme=...]){...}`
+appears as 8 distinct top-level definition points — design tokens (`--reader-measure`, `--toc-w`), the
+light/dark/sepia theme blocks, box-sizing reset, focus-visible outline, `::selection` color, the
+reduced-motion override, and a print-mode position override (line 1191) — not one outermost wrapper; (2)
+`:host([data-attr=...])` is compounded with descendant selectors throughout the sheet
+(`:host([data-theme="dark"]) .peekover-reader a{...}`, `:host([data-mode="raw"]) .peekover-reader{display:
+none}`, `:host([data-diff="active"]) .peekover-reader{display:none}`, `:host([data-watch="active"])
+.peekover-watch{...}`, `:host([data-network="active"]) .peekover-net{...}`, `:host([data-toc="collapsed"])
+.peekover-toc{...}`) driving dark-mode link/mark color, reading/raw mode toggling, diff-view hiding,
+watch-status color, network-indicator visibility, and TOC collapse layout — all presentation-relevant state,
+not shadow-boundary housekeeping. **Task 2.2 must build a translated copy** (a plain top-level selector set
+targeting whichever element `wrapInStandaloneDocument` uses as the exported wrapper — `:root` or a wrapper
+class), real reviewable new code, flagged back to gate 3 review per Ruling 3's own escalation wording, not
+built silently. Files touched: none in the investigation itself (`tasks.md` 2.1 ticked + this note, doc-only
+per Verify's own commit-message framing). Full grep output and per-rule reasoning in task 2.1's own commit
+message. Next: **2.2**, scoped now to include the translation, not "bundle verbatim."
+*(Prior entry, kept for the record:)*
 **★★ M10 §3.10 GATE RULED, 2026-08-24 — D-1's BUSTS FORK IS RESOLVED BY SCOPE REDUCTION. DOCX export (task
 5.1) is DROPPED FROM M10. Group 2 and every task below it, except struck 5.1, are RE-AUTHORIZED under
 normal per-task byte discipline — no special gate. Next actionable task: 2.1.** Full reasoning and the
@@ -69,11 +90,11 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS and RE-AUTHORIZED (2026-08-24) — the §3.10 gate ruled DOCX export dropped, resolving
-D-1's fork by scope reduction.** Next task: **2.1** (Ruling 3's `:host()`-selector first-move verification)
-in `specs/010-local-exports/tasks.md`, group 2. See § Now for the resolution summary and `decisions.md`'s
-**M10 §3.10** entry for the full reasoning and arithmetic. An immediate follow-up dependency act (removing
-the now-orphaned `docx` package, deps 8→7) is also outstanding and should land before or alongside 2.1.
+**M10 is IN PROGRESS (2026-08-24) — task 2.1 landed, finding (b) confirmed.** Next task: **2.2**
+(`serializeReaderDocument` + `wrapInStandaloneDocument`) in `specs/010-local-exports/tasks.md`, group 2 —
+now scoped to include the `:host`→wrapper-selector translation per 2.1's finding, not a verbatim bundle. See
+§ Now for 2.1's full finding. An immediate follow-up dependency act (removing the now-orphaned `docx`
+package, deps 8→7) is also outstanding and should land before or alongside 2.2.
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
 — the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
 human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec

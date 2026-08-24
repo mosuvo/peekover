@@ -183,7 +183,7 @@ or the fork is taken and stated as a hard stop — either is a valid close, only
 
 ## 2 — The shared serializer (D-3 — and Ruling 3's pre-scoped `:host()` verification)
 
-- [ ] **2.1 ★ FIRST-MOVE VERIFICATION, PER RULING 3 — `readerCss.ts`'s actual selector shape, checked BEFORE
+- [x] **2.1 ★ FIRST-MOVE VERIFICATION, PER RULING 3 — `readerCss.ts`'s actual selector shape, checked BEFORE
       the exporter is built, not discovered by it.** `grep -n ":host" src/theme/readerCss.ts`, enumerated: every
       `:host(...)`-scoped rule is a rule that will NOT resolve inside a standalone exported document (no shadow
       root, no custom element), per plan risk §4-1. Produces one of two findings, stated plainly, neither chosen
