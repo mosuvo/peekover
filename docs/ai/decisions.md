@@ -1,6 +1,78 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-24 · M10 D-1 — the export dependencies are measured before they are trusted, because the current
+  ~367 KiB `.output` headroom is the thinnest this project has carried into any gate-1 close. MEASURED: THE
+  FORK IS TAKEN — BUSTS. Every remaining M10 task past 1.1 is SUSPENDED pending a spec revisit.**
+  `plan.md` §0's own pre-written text, landed verbatim with the implementing commit per the per-task D-value-
+  mapping discipline (closing the M9-9.3-named gap): *"010 D-1 — the export dependencies are measured before
+  they are trusted, because the current ~367 KiB `.output` headroom is the thinnest this project has carried
+  into any gate-1 close."*
+  **ZIP-WRITER CHOICE (Ruling 1 / Q1, discharged here, not on faith):** `client-zip@2.5.0` (MIT, zero
+  dependencies, write-only `downloadZip(files)` API matching task 3.5's exact need — package the raw markdown
+  source plus locally-resolvable images, no streaming-from-network, no read-back). **The naive dedup
+  hypothesis — that `jszip` would cost ≈0 marginal because `docx@9.7.1` already declares `jszip: "^3.10.1"`
+  as its own dependency — was MEASURED AND FALSIFIED, not assumed either way.** Real ablation, both engines:
+  `docx` alone costs **+373,820 B** on the app-page chunk (475,579 → 849,399 B); importing `jszip` ourselves
+  on top costs a further **+96,056 B** (849,399 → 945,455 B) despite pnpm resolving both import sites to the
+  identical on-disk package (confirmed via `pnpm add jszip` reporting `reused`, zero new downloads) — Rollup
+  does not collapse the two call sites to zero marginal cost in practice. `client-zip` on top of `docx` alone
+  costs only **+6,538 B** (849,399 → 855,937 B), because it delegates DEFLATE to the browser's native
+  `CompressionStream` API rather than bundling a codec at all, so there is no second-codec tax the way `jszip`
+  or `fflate` both carry. `client-zip` wins on marginal cost by a wide margin (6,538 B vs 96,056 B), on
+  maintenance (mature, MIT, zero deps, API-adequate), and licence. `fflate` (0.8.3, actively maintained, MIT)
+  was reasoned out of a full build: no dedup benefit over `docx`'s own bundled `jszip`, and a second full
+  deflate codec bundled alongside it — dominated by `client-zip` on standalone size and by nothing on marginal
+  cost, no scenario where it would win. `@zip.js/zip.js` (2.8.57, BSD-3-Clause, very actively maintained) was
+  reasoned out on registry evidence alone: ~7.17 MB unpacked (vs `client-zip`'s ~41.8 KB), and its
+  Web-Worker-based codec path is a `web_accessible_resources` risk this milestone cannot afford to open.
+  **ABLATION, DECOMPOSED (both engines — Chrome/Firefox app-page chunk and `.output` moved identically, same
+  content-hash both engines, consistent with every prior milestone's own pattern):**
+  (a) `docx` alone: **+373,820 B** (the overwhelming majority of the budget — `Document`/`Paragraph`/
+  `TextRun`/`HeadingLevel`/`Table`/`TableRow`/`TableCell`/`ImageRun`, task 5.1's own stated surface, each
+  actually constructed in the harness so tree-shaking could not silently zero the reading).
+  (b) `client-zip` on top: **+6,538 B**.
+  (c) transitive: **0 unexpected** — no new content-script-graph chunk, no `web_accessible_resources` key at
+  any ablation step; `docx`'s own transitives (`jszip`, `hash.js`, `nanoid`, `xml`, `xml-js`, `@types/node`
+  [type-only, zero runtime bytes]) are already fully accounted inside (a); `client-zip` carries zero
+  dependencies of its own.
+  (d) Peekover's own glue: **0**, confirmed structurally — the harness was reverted before commit, and the
+  final rebuild (docx + client-zip installed, unimported) is BYTE-IDENTICAL to the pre-task baseline on every
+  measured figure (`.output` 4,866,741 / 4,866,857 B, app-page chunk 475,579 B, `pnpm zip` 1,470,730 /
+  1,470,788 B, content-script md5 unchanged both engines) — nothing is wired in yet, exactly as task 1.1's own
+  Files list (package.json + pnpm-lock.yaml only) requires.
+  **TOTAL MEASURED DELTA (a+b, both engines identical): +380,358 B.** Against the **~367 KiB (375,808 B)**
+  `.output` headroom: **BUSTS by 4,550 B (~1.2% over)**. Against the **~612 KiB (626,688 B)** `pnpm zip`
+  headroom: the zip-compressed delta is **+105,875 B**, **PASSES with 520,813 B headroom remaining** — `pnpm
+  zip` is not the binding ceiling; `.output` (unpacked) is.
+  **GOVERNANCE, ALL CLEAR:** `pnpm audit --prod` → 0 advisories. Licence: every one of the 22 new
+  production-tree packages (`client-zip`, `docx`, `@types/node`, `hash.js`, `inherits`, `minimalistic-assert`,
+  `jszip`, `lie`, `immediate`, `pako`, `readable-stream`, `core-util-is`, `isarray`, `process-nextick-args`,
+  `safe-buffer`, `string_decoder`, `util-deprecate`, `setimmediate`, `nanoid`, `xml`, `xml-js`, `sax`,
+  `undici-types`) read from its installed `node_modules` `package.json` — MIT/ISC/BSD-class permissive
+  throughout (`jszip` dual MIT-or-GPL, MIT terms taken; `pako` MIT-and-Zlib; `sax` BlueOak-1.0.0, permissive).
+  Zero declare `preinstall`/`install`/`postinstall`. The `esbuild`/`spawn-sync` ignored-build-scripts warning
+  is dev-tree only (confirmed absent from `pnpm list --prod`), matching 007 task 1.1's own precedent exactly.
+  SBOM regenerated locally (`pnpm run sbom`, 188 runtime components) — gitignored/transient by design, not
+  part of this commit's diff, same as 007's own 1.1.
+  **CONTENT-SCRIPT BYTE-IDENTITY (D-2), firing control proven before trusting the zero:** baseline md5
+  `41e7607a...` (Chrome) / `69338e67...` (Firefox); a real, reachable edit to `src/watch/contentWatch.ts`
+  (a side-effecting `globalThis` write — a bare trailing comment was tried first and was silently stripped by
+  the minifier, proving comment-only edits are the WRONG instrument) moved the Chrome md5 to `7a2b5584...`
+  (334,858 → 334,925 B); reverting returned it to the exact baseline. The final post-install, harness-reverted
+  build reconfirms both engines' md5s unchanged from baseline.
+  **WAR (plan risk 5) OBSERVATION:** no `web_accessible_resources` key appeared in either built manifest at
+  any ablation step (both stayed 654 / 770 B, `permissions: []`), and no new chunk landed in the
+  content-script's own import graph — expected, since nothing is wired in at this task. Not a hard-stop.
+  **Consequences:** group 2 is **NOT authorized**. Every task below 1.1 in `specs/010-local-exports/tasks.md`
+  is **SUSPENDED** until a human-reviewed spec revisit — per the provisional condition's own text, a
+  subset/lazy-split strategy (spec §3.10) or a scope reduction — reopens it. The install itself (docx +
+  client-zip in `package.json`/`pnpm-lock.yaml`) stands as committed; nothing imports either library yet, so
+  the shipped extension is byte-identical to pre-task HEAD in every dimension. **Revisit when:** the spec
+  revisit lands and re-authorizes group 2, or scopes the export surface down enough to fit the remaining
+  ~1,988 B `.output` headroom `docx` alone leaves (i.e., `docx`'s own weight is very likely the thing that
+  must shrink or split — task 3.5's zip-writer choice above is not the lever this milestone's headroom needed).
+
 - **2026-08-22 · M10 GATE 3 — tasks 010 (local exports: HTML/DOCX/PDF export, copy as rich-text/HTML/plain
   text, ZIP export, export shortcut, progress indicator, F5 print-optimized mode) APPROVED. Implementation
   may begin at task 1.1, in a fresh session.**

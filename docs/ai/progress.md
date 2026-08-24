@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-22 (M10 gate 3 approved — `specs/010-local-exports/tasks.md` sealed for implementation.
-Doc-only; no implementation code. Next: task 1.1, in a fresh session.)*
+*Updated: 2026-08-24 (M10 task 1.1 landed — `docx` + `client-zip` measured for real, THE FORK IS TAKEN:
+BUSTS. Every remaining M10 task past 1.1 is SUSPENDED pending a human-reviewed spec revisit.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,36 +11,50 @@ Doc-only; no implementation code. Next: task 1.1, in a fresh session.)*
 
 ## Now (start here)
 
-**M10 GATE 3 APPROVED, 2026-08-22 — `specs/010-local-exports/tasks.md` sealed for implementation; the
-tasks.md status line stays "draft" per M7/M8/M9 gate-3 precedent (the approval lives in `decisions.md`'s
-**M10 GATE 3** entry, not the artifact header).** 22 tasks across 11 groups, matching plan §6's own group
-order 1:1, approved as drafted with no open questions surfacing from review. Two task-time refinement notes
-were banked for future kickoffs, neither a redline against the drafted tasks: (i) task 1.1's Verify could
-explicitly test for the `web_accessible_resources` hard-stop condition (currently implicit in the
-measurement); (ii) task 3.1's Verify doesn't specify how the download-triggering control itself is tested
-(Playwright-vs-engine variance) — task-time judgment either way. **Task 1.1 is D-1's `docx` + zip-writer
-ablated-cost measurement, hard-sequenced, with the fork stated explicitly as a commit-message-level
-acceptance criterion**: the delta fits the ~367 KiB `.output` / ~612 KiB `pnpm zip` headroom and task 2.1
-proceeds, or it does not and every remaining task is suspended pending a spec revisit — no silent
-fall-through either way. Task 2.1 concretizes gate-2's Ruling 3 as a first-move `:host()`-selector
-verification, ahead of the serializer itself. Task 6.1's print-mode work states gate-2's Ruling 4 as an
-explicit, checkable diff constraint — additive-only `@media print`, `.peekover-code-toolbar`'s existing
-spacing rule body byte-unchanged. Group 3 (the largest) is pre-split into five tasks — the panel plus each of
-the four controls it hosts — rather than drafted as one oversized task awaiting a gate-3 split instruction,
-since D-1's own headroom makes small, revertable units more valuable this milestone than any prior one.
-**This session was doc-only**: `docs/ai/decisions.md` (new **M10 GATE 3** entry) + this file's § Now update.
-No plan.md, spec.md, `tasks.md`, `src/`, test, or config touched. **Next: task 1.1, in a fresh session** —
-the FIRST `src/` code of the milestone. M9's narrative (24/24 tasks, gate score 12/12
-unmoved, `spec-coverage.md` F3 0%→78%) remains in [`progress-archive.md`](progress-archive.md), alongside
-M8's and M7's, from the 2026-08-22 archive pass that preceded this milestone's drafting. See § Closed
-milestones below for each milestone's one-paragraph close summary and links to the archived detail.
+**★ M10 TASK 1.1 LANDED, 2026-08-24 — THE HARD GATE FIRED: BUSTS. Every remaining M10 task past 1.1 is
+SUSPENDED pending a human-reviewed spec revisit (subset/lazy-split per spec §3.10, or scope reduction).**
+Full evidence in `decisions.md`'s **M10 D-1** entry (2026-08-24) — summarized here for the pointer. `docx` +
+`client-zip` installed for real (`package.json`/`pnpm-lock.yaml` — dependencies **6 → 8**, exactly the two
+names D-1 anticipated), governance clean (`pnpm audit --prod` 0 advisories; all 22 new production-tree
+packages MIT/ISC/BSD-class permissive; zero install scripts; SBOM regenerated, gitignored/transient).
+**The naive "jszip dedupes with docx's own bundled jszip to ≈0" hypothesis was MEASURED AND FALSIFIED**:
+`docx` alone costs **+373,820 B** on the app-page chunk — almost the ENTIRE ~367 KiB headroom by itself,
+before any zip-writer is even added — and importing `jszip` ourselves on top costs a further **+96,056 B**
+despite pnpm resolving both import sites to the identical on-disk package. `client-zip` (delegates DEFLATE to
+the browser's native `CompressionStream`, bundles no codec of its own) costs only **+6,538 B** on top of
+`docx` and was chosen on that measured marginal cost, not `jszip`'s intuition-defying-but-falsified dedup
+promise. **Total measured delta (both engines, both ceilings): `.output` +380,358 B against ~367 KiB
+(375,808 B) headroom — BUSTS BY 4,550 B (~1.2% over); `pnpm zip` +105,875 B against ~612 KiB (626,688 B)
+headroom — PASSES with 520,813 B to spare.** `.output` (unpacked) is the binding ceiling, exactly as D-1's
+own text predicted it would be ("the zip delta is compressed and smaller"). Content-script byte-identical
+both engines (md5 proven to move on a real edit first, then proven to revert — a bare trailing comment was
+tried first and was silently stripped by the minifier, the wrong instrument, corrected before trusting the
+zero). No `web_accessible_resources` key, no new content-script-graph chunk at any ablation step — the plan
+risk 5 hard-stop did not fire. **The ablation harness was fully reverted before commit** — the shipped
+extension at this commit is byte-identical to pre-task HEAD in every measured dimension (nothing imports
+either library yet), so this commit's own build carries zero risk despite the fork outcome.
+**What this means going forward: `docx`'s own weight (not the zip-writer choice) is almost certainly the
+lever that must move** — a subset of its API surface, a lazy-split strategy per spec §3.10, or a scope
+reduction on the DOCX-export feature itself. The zip-writer decision (`client-zip`) is not in question and
+should carry forward into any revisit. **No further M10 task may proceed until that revisit happens and
+re-authorizes group 2** — this is now the single blocking item for the milestone.
+*(Prior entry, kept for the record: M10 GATE 3 approved 2026-08-22 — `specs/010-local-exports/tasks.md`
+sealed for implementation, 22 tasks across 11 groups, no open questions from review, two task-time
+refinements banked (task 1.1's WAR check made explicit — acted on above; task 3.1's download-control test
+surface left to task-time judgment). Doc-only session; see `decisions.md`'s **M10 GATE 3** entry.)*
+M9's narrative (24/24 tasks, gate score 12/12 unmoved, `spec-coverage.md` F3 0%→78%) remains in
+[`progress-archive.md`](progress-archive.md), alongside M8's and M7's. See § Closed milestones below for
+each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**Between milestones.** M9 closed 2026-08-22; M7's and M8's own "Up next"/"Now" narratives moved to
-[`progress-archive.md`](progress-archive.md) in this same archive pass (M6's own precedent). No milestone
-is in progress. The next act is scoping the next milestone (persona-#2 or whatever the human picks next),
-which has not started.
+**M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24) — the next act is the spec revisit
+D-1's provisional condition names**, not scoping a new milestone: a human-reviewed decision on `docx`'s own
+weight (subset the API surface used, a lazy-split strategy per spec §3.10, or a scope reduction on the
+DOCX-export feature), since `docx` alone already consumes nearly the entire ~367 KiB `.output` headroom
+before any zip-writer is added. See § Now for the full ablation evidence and `decisions.md`'s **M10 D-1**
+entry. Once the revisit re-authorizes group 2, task 2.1 (Ruling 3's `:host()`-selector first-move
+verification) is next in `specs/010-local-exports/tasks.md`.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either

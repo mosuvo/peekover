@@ -151,7 +151,7 @@ fidelity go/no-go if group 7's fallback question is live.
 
 ## 1 — The measurement (D-1 — HARD GATE, approval-conditional per gate 1's provisional condition)
 
-- [ ] **1.1 Install `docx` + the chosen ZIP writer FOR REAL, decompose the delta, verify governance for both.
+- [x] **1.1 Install `docx` + the chosen ZIP writer FOR REAL, decompose the delta, verify governance for both.
       THE FORK IS EXPLICIT: this task cannot fail silently into task 2.1 (D-1; Ruling 1).** Resolve the
       ZIP-writer package identity first (Ruling 1: task 1's own decision, current registry landscape — size,
       maintenance, licence — not `spec-coverage.md`'s `jszip` working assumption, taken on faith). Install both
