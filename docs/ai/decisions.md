@@ -1,6 +1,72 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-24 · M10 MEASUREMENT NOTE — pricing §3.10's "subset" option before the human spec revisit rules
+  on it. Not a decision (rules nothing), not a task, not a tasks.md box.** M10 is SUSPENDED at D-1's own fork
+  (BUSTS by 4,550 B `.output`); the provisional condition's fallback names three options — subset `docx`'s API
+  surface, a lazy-split strategy (spec §3.10), or a scope reduction — and this prices the first so the human
+  ruling reads evidence, not a guess. **Does not choose; states what the evidence supports/kills.**
+  **STEP 0 — authority pinned before measuring:**
+  (1) Spec §3.10 itself governs the ZIP-writer choice and dependency-act discipline; it does not define
+  "lazy-split." That phrase is decisions.md/progress.md's own paraphrase of §3.2/§3.8's established
+  content-script-vs-app-page shape (`plan.md`:54, spec §5 NFR:171) — `docx`/the ZIP writer may lazy-load on
+  the **app page** the way `mermaid`/`shiki` already do (dynamic `import()`, no `web_accessible_resources`,
+  since the app page isn't the content-script graph). **CONFIRMED EMPIRICALLY, not just by reading:** both
+  `mermaid.core-*.js` and `mermaid-parser.core-*.js` exist as physical files inside `.output/chrome-mv3/
+  chunks/` today, despite being lazy-loaded via `diagramEngine.ts`'s single `import('mermaid')` — proving a
+  dynamically-split chunk still ships unpacked inside `.output` and is still counted against the ≤5 MiB
+  ceiling. **Lazy-split changes the first-paint budget (§3.4), not the `.output` byte-budget (§5 NFR) — it
+  cannot by itself un-bust D-1's fork.** This removes "lazy-split alone" from the menu the human is choosing
+  between; it is a first-paint mitigation, orthogonal to the ceiling that actually busted.
+  (2) Task 5.1's own stated minimal surface: `Document`+`Packer`+`Paragraph`+`TextRun` (irreducible core) +
+  `HeadingLevel` + list/numbering (`Numbering`/`LevelFormat` — 5.1's Verify line names "ordered/unordered
+  lists" explicitly) + `Table`/`TableRow`/`TableCell` + `ImageRun` (diagram embed, `diagramView.ts:298`). Math
+  ships as plain source text (Ruling 1) — no math API surface at all.
+  (3) What 1.1 actually measured (373,820 B): `Document`/`Paragraph`/`TextRun`/`HeadingLevel`/`Table`/
+  `TableRow`/`TableCell`/`ImageRun`, each actually constructed. **1.1's own ceiling omitted list/numbering** —
+  a real, if small, gap against 5.1's true minimal surface (below).
+  **FLOOR vs CEILING (temporary harness, imported from `entrypoints/app/main.ts`, actually constructed per
+  1.1's own tree-shaking-proof discipline; REVERTED before this note — see below):**
+  - FLOOR (`Document`+`Packer`+`Paragraph`+`TextRun` only): **+351,029 B**, both engines identical delta.
+  - +`HeadingLevel`: **+199 B** (cumulative 351,228).
+  - +list/numbering (`Numbering`/`LevelFormat`): **+195 B** (cumulative 351,423).
+  - +`Table`/`TableRow`/`TableCell`: **+9,093 B** (cumulative 360,516).
+  - +`ImageRun` (CEILING, 5.1's full surface incl. list): **+13,670 B** (cumulative **374,178 B**).
+  - Reconciliation surface matching 1.1's exact named imports (no list/numbering): **373,983 B** — within
+  163 B (0.04%) of 1.1's reported 373,820 B, both engines, consistent direction — confirms 1.1's number as
+  essentially THE minimal-surface price for the table+image surface as named; the residual 163 B is harness
+  literal noise (fake image bytes/strings), not a surface difference. **1.1's ceiling was already close to
+  minimal — this is not a kitchen-sink-vs-minimal spread, and the true 5.1 minimal (incl. list, which its own
+  Verify line requires) is ~358 B higher than 1.1 reported: 374,178 B, not 373,820 B.**
+  **SPREAD = ceiling − floor ≈ 23,149 B.** The floor alone is **93.9% of the full ceiling** — `docx`'s weight
+  is overwhelmingly baked into `Packer`'s zip/xml serialization machinery (jszip/xml/xml-js transitives),
+  not into which node types get imported. This is NOT a flat curve, though: within the 23 KiB spread, two
+  features carry real, unequal weight — `Table` (+9,093 B) and `ImageRun` (+13,670 B) — while `HeadingLevel`
+  and list/numbering are each under 200 B (functionally free).
+  **FLIP THRESHOLD** (docx-subset must be `< 369,601 B` (Cr) / `< 369,485 B` (Fx) to flip to FITS while
+  keeping `client-zip`'s +6,538 B): FLOOR alone fits with ~18.5 KiB to spare; FLOOR+heading+list+Table (drop
+  `ImageRun`/diagram embed) fits at **360,516 B, ~9,085 B (Cr) headroom**; FLOOR+heading+list+`ImageRun` (drop
+  `Table`) fits at **365,093 B, ~4,508 B (Cr) headroom** — tighter, marginal; the full 5.1 surface (374,178 B)
+  BUSTS by **4,577 B (Cr) / 4,693 B (Fx)**, consistent with D-1's own 4,550 B bust. **Dropping either `Table`
+  OR `ImageRun` alone is sufficient to flip; dropping both is not needed.** Every one of these passing numbers
+  carries D-1's own unmeasured-glue caveat (2.2/3.x/5.1 wiring code is not priced here) — a 4.5–9 KiB pass
+  margin is a "flips only if glue is near-zero" result, not a safe clearance.
+  **VERDICT ON SUBSET ONLY (not a ruling on §3.10):** subsetting is a **real, actionable, non-flat lever** —
+  the evidence supports it as viable IF the human is willing to drop table support or diagram-embed from DOCX
+  export (dropping `ImageRun`/diagram-embed is the tighter of the two, ~4.5 KiB margin; dropping `Table` is
+  the safer of the two, ~9 KiB margin), but KILLS "subset without dropping a named 5.1 feature" — the full
+  minimal surface, correctly priced including list support, busts by more than 1.1 reported, not less.
+  Lazy-split (Step 0.1) is evidenced to NOT relieve the `.output` ceiling on its own — it is a first-paint
+  lever, not a byte-budget one, and does not appear on the menu as a standalone fix for this specific bust.
+  **HARNESS REVERTED, byte-identical to the e9120ae baseline, reconfirmed post-revert:** `.output` 4,866,741 B
+  (Cr) / 4,866,857 B (Fx); content-script md5 `41e7607a...` (Cr) / `69338e67...` (Fx) unchanged throughout
+  every ablation step (D-2's firing control cited from 1.1, not re-earned — md5 read at floor, at ceiling, and
+  post-revert, identical every time since the harness only ever touched `entrypoints/app/main.ts`, never the
+  content-script graph). No dependency, manifest, or product/export code change — `package.json`/
+  `pnpm-lock.yaml` untouched by this note (docx + client-zip already stood installed from 1.1).
+  **Revisit when:** the human §3.10 gate rules on subset vs. lazy-split vs. scope reduction — this note is the
+  evidence input to that gate, not a pre-emption of it.
+
 - **2026-08-24 · M10 D-1 — the export dependencies are measured before they are trusted, because the current
   ~367 KiB `.output` headroom is the thinnest this project has carried into any gate-1 close. MEASURED: THE
   FORK IS TAKEN — BUSTS. Every remaining M10 task past 1.1 is SUSPENDED pending a spec revisit.**

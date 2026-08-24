@@ -38,6 +38,11 @@ lever that must move** — a subset of its API surface, a lazy-split strategy pe
 reduction on the DOCX-export feature itself. The zip-writer decision (`client-zip`) is not in question and
 should carry forward into any revisit. **No further M10 task may proceed until that revisit happens and
 re-authorizes group 2** — this is now the single blocking item for the milestone.
+*Pricing note (2026-08-24, off the sealed task list, measure-not-choose): the subset option is priced —
+see `decisions.md`'s **M10 MEASUREMENT NOTE** entry. Dropping `Table` OR `ImageRun` alone (not both) flips
+`docx`'s minimal surface under the `.output` ceiling; lazy-split alone does not (a dynamically-split chunk
+still ships inside `.output`, confirmed against `mermaid`'s own chunks). Evidence only — the §3.10 ruling
+is still the human's.*
 *(Prior entry, kept for the record: M10 GATE 3 approved 2026-08-22 — `specs/010-local-exports/tasks.md`
 sealed for implementation, 22 tasks across 11 groups, no open questions from review, two task-time
 refinements banked (task 1.1's WAR check made explicit — acted on above; task 3.1's download-control test
