@@ -7,7 +7,10 @@
 spec's seven §7 risks against the **actual code**, not against the spec document. No §3.x decision is
 re-opened, and nothing on the §6 IS-NOT list is proposed.
 **Gate-1 dispositions inherited, not re-argued:** **RULING 1 · §9-1** — DOCX math ships as plain source text
-(F2 math is 0%, no renderer exists to produce even the conceded image fallback); revisit-when F2 ships.
+(F2 math is 0%, no renderer exists to produce even the conceded image fallback); revisit-when F2 ships. **★
+DEFERRED-WITH-DOCX, 2026-08-24** — DOCX export itself was struck from M10 at the §3.10 gate (`decisions.md`
+M10 §3.10), resolving D-1's own fork by scope reduction; Ruling 1 has nothing left to apply to until DOCX
+export returns in a future milestone, at which point its own revisit-when (F2 shipping) still governs.
 **RULING 2 · §9-2** — the Ctrl/Cmd+S shortcut is **app-page-only**, permanent, no revisit-when. **RULING 3 ·
 §9-3** — ZIP/HTML export embeds **only locally-resolvable images**; a remote image stays a remote reference,
 unrewritten; revisit-when M11 spec-writing time. **The provisional-approval condition** — gate-1 approval is
@@ -72,6 +75,17 @@ DOCX-heavy group 3 install `docx` alone, pass its own group's budget check, and 
 addition be the one that blows the combined total, discovered two groups later than the provisional condition
 intends. The condition names *both libraries together* as the gate; splitting the measurement would satisfy
 the letter and miss the point.
+
+**★ FORK OUTCOME, 2026-08-24 (post-plan, recorded here so this D-value's own text does not read as an open
+question once the milestone resolved it) — THE ABLATED COST BUSTED.** Task 1.1 measured `docx` alone at
++373,820 B and the combined `docx` + `client-zip` delta at +380,358 B against ~367 KiB `.output` headroom —
+BUSTS by 4,550 B (`decisions.md` M10 D-1). The human resolved the fork by **scope reduction**: DOCX export
+(group 5) is struck from `tasks.md`; group 2 and every task below it are re-authorized (`decisions.md` M10
+§3.10). Neither subset nor lazy-split was adopted — both were priced (the M10 MEASUREMENT NOTE) and named as
+real but thinner-margin alternatives, not chosen. This plan's own two-branch framing above (fits / does not
+fit) is preserved verbatim as the record of what this plan anticipated; the actual resolution is one level
+more specific than either branch stated, which is why it is appended here rather than folded into the branch
+text.
 
 **D-2 · Export chrome lives in a NEW, app-page-only module — `src/app/exportControls.ts` — following
 `storageControls.ts`'s own precedent. `mount()` is touched at ZERO sites. DECIDED.**
@@ -411,8 +425,11 @@ margin-box content is the open probe (§7-4, D-7), sequenced before this task cl
 ## 2. Files to create / touch / NOT touch
 
 **Create** — `src/export/htmlExport.ts` (D-3: `serializeReaderDocument`, `wrapInStandaloneDocument`, the
-Base64-embedding walk) · `src/export/docxExport.ts` (Ruling 1's plain-source-text math handling, diagram
-embed reusing `diagramView.ts`'s existing `canvas.toBlob` capture, `:298`) · `src/export/zipExport.ts` (D-3's
+Base64-embedding walk) · ~~`src/export/docxExport.ts` (Ruling 1's plain-source-text math handling, diagram
+embed reusing `diagramView.ts`'s existing `canvas.toBlob` capture, `:298`)~~ **STRUCK 2026-08-24 — DOCX
+export dropped from M10 by human ruling at the §3.10 gate (`decisions.md` M10 §3.10), resolving D-1's own
+BUSTS fork by scope reduction; kept struck rather than deleted so this Files-to-create list stays legible as
+the record of what gate 2 approved** · `src/export/zipExport.ts` (D-3's
 image-resolution half, reused; no CSS inlining) · `src/app/exportControls.ts` (D-2: the overlay/panel, D-5's
 shortcut wiring entry point, the progress affordance, D-6's settings read/write) · test files per §5.
 
@@ -606,9 +623,12 @@ controls' wiring). *Acceptance:* §4's HTML/copy/ZIP criteria; §3.11 rows 6, 7 
 this task per AGENTS.md's standing rule. *Acceptance:* pastes as formatted content on both engines; the
 `file://`-secure-context residual 008 D-10 named for its own clipboard work re-checked for this payload shape.
 
-**5 · DOCX export.** Ruling 1's plain-source-text math handling; diagram embed reusing `diagramView.ts:298`'s
-existing capture. *Touches:* `docxExport.ts`. *Acceptance:* §4's DOCX criteria; the "never silently drop
-content without indicating it was omitted" clause for math, proven against a math-bearing fixture.
+**5 · DOCX export. ★ STRUCK 2026-08-24 — DOCX export DROPPED FROM M10, human ruling at the §3.10 gate
+(`decisions.md` M10 §3.10), resolving D-1's own BUSTS fork by scope reduction, not subset or lazy-split.
+Ruling 1 (§9-1) is correspondingly DEFERRED-WITH-DOCX, not resolved.** ~~Ruling 1's plain-source-text math
+handling; diagram embed reusing `diagramView.ts:298`'s existing capture. *Touches:* `docxExport.ts`.
+*Acceptance:* §4's DOCX criteria; the "never silently drop content without indicating it was omitted" clause
+for math, proven against a math-bearing fixture.~~
 
 **6 · Print mode + the `@page` fidelity probe.** F5's chrome-hiding rules; the empirical page-number/header/
 footer probe this group's own result feeds into group 7's go/no-go. *Touches:* `readerCss.ts`. *Acceptance:*

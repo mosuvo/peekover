@@ -43,9 +43,16 @@ Not quoted, and explicitly not this milestone's (§3.2, §6): *"Publish with the
 
 **3.1 Milestone scope — the nine local F9 items plus F5's print mode. The four publish items are OUT, on a routing decision inherited from the human, not re-litigated here.**
 
-IN: HTML export, DOCX export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite (`spec-coverage.md`:321,402 — *"Blocks F9's PDF export, which is spec'd as a print-pipeline"*). OUT, each with a home in §6: the four publish paths (§3.2); every other F5/F9 item not named above; every other F-area.
+**★ DOCX EXPORT DROPPED, 2026-08-24 — a HUMAN RULING at the §3.10 gate, recorded in `decisions.md`'s M10
+§3.10 entry, not re-argued here.** Task 1.1's dependency measurement found `docx` alone costs +373,820 B
+against a ~367 KiB `.output` headroom — the combined `docx` + ZIP-writer delta BUSTS the ceiling by 4,550 B.
+The human resolved the fork by SCOPE REDUCTION: DOCX export is deferred out of M10 entirely (revisit-when:
+a future milestone, paired with §9-1's own revisit-when — F2 math shipping first). The line below is kept
+as originally drafted, struck rather than rewritten, so the gate-1-approved scope stays legible as history:
 
-**Ten items, not nine, in the sense that matters for sizing.** The kickoff's own count (9 F9 + 1 F5) is right, but two of the nine are one product-spec bullet each carrying two deliverables (*"Copy as: rich text, HTML, plain text"* is three controls under one bullet; *"Export shortcut… with progress indicator"* is two mechanisms under one bullet). §4 and §8 treat each control separately because each has its own acceptance criteria and, for the copy actions, a different clipboard mechanism (§7-2).
+~~IN: HTML export, DOCX export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite (`spec-coverage.md`:321,402 — *"Blocks F9's PDF export, which is spec'd as a print-pipeline"*).~~ **IN, as revised 2026-08-24: HTML export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite.** OUT, each with a home in §6: the four publish paths (§3.2); DOCX export (§3.10 gate ruling, above); every other F5/F9 item not named above; every other F-area.
+
+~~**Ten items, not nine, in the sense that matters for sizing.** The kickoff's own count (9 F9 + 1 F5) is right, but two of the nine are one product-spec bullet each carrying two deliverables (*"Copy as: rich text, HTML, plain text"* is three controls under one bullet; *"Export shortcut… with progress indicator"* is two mechanisms under one bullet). §4 and §8 treat each control separately because each has its own acceptance criteria and, for the copy actions, a different clipboard mechanism (§7-2).~~ **Nine items, not ten, after the 2026-08-24 revision (8 F9 local items + F5 print mode) — DOCX export's removal drops the prior ten-count by one.** The multi-deliverable-bullet reasoning above is otherwise unchanged: §4 and §8 still treat each surviving control separately.
 
 **3.2 010 SHIPS TO THE APP-PAGE READER ONLY. The content-script `file://` / raw-host reader gets no export affordance — DECIDED, and named so it is not silently reversed.**
 
@@ -120,7 +127,8 @@ AGENTS.md #5, stated per item, the 007/008/009 shape:
 - When the user exports the current document as HTML, the system shall produce a single standalone file with all styling inlined and every locally-resolvable image embedded as Base64.
 - If the document references a remote image, then the system's handling shall follow whatever §9-3 rules — inline it, leave it as a remote reference, or omit it — but shall never silently fail the whole export over one unresolvable image.
 
-**DOCX export**
+**DOCX export — ★ DEFERRED OUT OF M10, 2026-08-24 (`decisions.md` M10 §3.10). Clauses kept unstruck as the
+record of what gate 1 approved; none apply to M10's own acceptance criteria any longer (see §6).**
 
 - When the user exports the current document as DOCX, the system shall produce a file that preserves the document's heading structure, lists, tables, and emphasis.
 - When the document contains a rendered diagram, the system shall embed it as an image in the DOCX output.
@@ -177,6 +185,12 @@ AGENTS.md #5, stated per item, the 007/008/009 shape:
 
 ## 6. Out of scope (explicit)
 
+- **★ DOCX export, in full — added 2026-08-24, a HUMAN RULING at the §3.10 gate (`decisions.md` M10 §3.10),
+  not part of the original gate-1 draft.** `docx`'s own measured weight (+373,820 B) busted the milestone's
+  ~367 KiB `.output` headroom in combination with the ZIP writer; the human resolved the fork by scope
+  reduction rather than subsetting `docx`'s API surface or a lazy-split strategy. Home: a future milestone.
+  **Revisit-when:** paired with §9-1's own revisit-when — F2 math shipping first, since DOCX math handling
+  was gate 1's Ruling 1 and is now deferred alongside the feature it served.
 - **Publish → GitHub Gist, GitHub repo, Medium, Dev.to** (§3.1, §3.2) — the product's first deliberate, credential-bearing outbound network path, `docs/product/spec.md` §6 principle 2's own exception territory. Home: M11, a milestone whose own gate-1 can give the security review this class of feature needs the attention 006/007's storage-disclosure and 009's dependency-governance calls got theirs. **This deferral is a routing decision inherited from the human at this session's scoping, not re-argued at spec level** — but see §9-3, which raises a real question about whether M10 is actually first.
 - **The content-script `file://` / raw-host reader's export reach** (§3.2) — no export affordance, no explanatory note, ships there in M10. Home: a future milestone that reconsiders that surface's capability set, the same shape 007/009 both left for their own app-page-only features.
 - **Any editor-mode export interaction** (F8) — Editor Mode does not exist; exports operate on the reader's current rendered state, never a draft.
@@ -207,7 +221,10 @@ AGENTS.md #5, stated per item, the 007/008/009 shape:
 
 *Things this draft could not settle from the source material, stated as questions rather than smuggled in as defaults.*
 
-1. **DOCX export's math and diagram scope (§3.5).** Diagrams are cheap — the existing copy-as-image mechanism (`diagramView.ts:298`, per this session's kickoff) embeds directly. Math is not shippable at all today: F2 math is 0%, so there is no equation render to embed even as the product spec's own conceded fallback image. **Two live options: (a) DOCX export ships in M10 with math omitted or rendered as plain source text, explicitly labeled as a known gap; or (b) DOCX export's math handling is blocked on F2 shipping first, and M10's DOCX export ships without a "math" acceptance criterion at all (diagrams only).** **No recommendation given** — this is a product-completeness call about whether a visibly-incomplete DOCX export is worse than a diagrams-only one, which this draft has no basis to make alone.
+1. **DOCX export's math and diagram scope (§3.5). ★ DEFERRED-WITH-DOCX, 2026-08-24 — DOCX export itself was
+   dropped from M10 at the §3.10 gate (`decisions.md` M10 §3.10), so this ruling (math ships as plain source
+   text, gate 1's Ruling 1) has nothing left to apply to in this milestone. Kept below, unstruck, as the
+   record of what gate 1 actually ruled — revisit-when: DOCX export returns to a future milestone.** Diagrams are cheap — the existing copy-as-image mechanism (`diagramView.ts:298`, per this session's kickoff) embeds directly. Math is not shippable at all today: F2 math is 0%, so there is no equation render to embed even as the product spec's own conceded fallback image. **Two live options: (a) DOCX export ships in M10 with math omitted or rendered as plain source text, explicitly labeled as a known gap; or (b) DOCX export's math handling is blocked on F2 shipping first, and M10's DOCX export ships without a "math" acceptance criterion at all (diagrams only).** **No recommendation given** — this is a product-completeness call about whether a visibly-incomplete DOCX export is worse than a diagrams-only one, which this draft has no basis to make alone.
 
 2. **The Ctrl/Cmd+S shortcut's scope (§3.7).** Standard browser Ctrl+S triggers "Save Page As"; Peekover's binding needs `preventDefault`. **Does it fire only within the app-page reader surface (§3.2 already confines exports there, so this would be consistent — and it leaves the browser's native save behavior untouched on `file://` and raw-host content-script surfaces, where no export exists to bind it to anyway), or globally, including on surfaces this milestone gives no export affordance to?** **Recommendation: app-page-only**, on the reasoning in parentheses — a global binding would suppress the browser's native save dialog on a surface where Peekover offers nothing in its place, which reads as a regression on that surface rather than a neutral no-op.
 

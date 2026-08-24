@@ -126,7 +126,8 @@ D-2's own shape match — export chrome is an overlay panel, not an inline pill)
 plan §6's own hard sequencing constraint). Routing:
 - rows 3, 4, 5 (overlay mechanics, `storagePanelOverlay`'s own shape, inherited **Y**) → **task 3.2** (the panel
   itself first exists there) · rows 6, 7, 8 (button/name/decorative) → **task 3.2** and re-checked at **4.1**,
-  **5.1**, **8.1** for each control those tasks add to the same panel · row 9 (polite live region) →
+  ~~**5.1**~~ (struck, §3.10 — no DOCX row to re-check), **8.1** for each control those tasks add to the same
+  panel · row 9 (polite live region) →
   **task 8.3** (the progress indicator) and **task 9.1** (completion/failure state for every action) · row 10
   (reduced motion) → **task 8.3** if the progress indicator animates, **task 9.1** for any copy-confirmation
   transition · row 11 (focus trap and restore, Ruling 2) → **task 3.2**, the panel's own open/close · row 12
@@ -254,7 +255,7 @@ standalone-render check passes.*
       re-derived. **Row 6** (every row a real `<button>`, keyboard-operable, no `tabindex` of its own) and
       **row 7** (accessible name carrying selection AND action — *"Export as HTML,"* never a bare icon glyph,
       since the mockup's own icon-glyph rows `:866-870` are a visual reference only) for whatever controls this
-      task's own shell contains (the export ROWS themselves land at 3.1/3.3/4.1/5.1/8.1 — this task tests the
+      task's own shell contains (the export ROWS themselves land at 3.1/3.3/4.1/~~5.1~~(struck, §3.10)/8.1 — this task tests the
       PANEL, re-checked per-row at each of those). Content-script bytes md5-identical (D-2 — the panel is
       app-page DOM outside any shadow root, by construction, `mount.ts` diff **EMPTY**, asserted as a confined
       diff). Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-2; Ruling 2; §4 Trust; rows
@@ -334,9 +335,19 @@ panel that hosts them.*
 *Group-4 acceptance (plan §6): pastes as formatted content on both engines; the `file://` secure-context
 residual re-checked for this specific payload shape.*
 
-## 5 — DOCX export (Ruling 1's plain-source-text math handling)
+## 5 — DOCX export (Ruling 1's plain-source-text math handling) — ★ STRUCK, §3.10 human ruling, 2026-08-24
 
-- [ ] **5.1 `docxExport.ts` — heading/list/table/emphasis mapping, diagram embed via `diagramView.ts:298`'s
+**★ GROUP 5 / TASK 5.1 IS STRUCK — DOCX export is DROPPED FROM M10 by human ruling at the §3.10 gate,
+resolving D-1's BUSTS fork via SCOPE REDUCTION. Full reasoning, arithmetic, and the fork's resolution are
+banked in `decisions.md`'s M10 §3.10 entry (2026-08-24) — cited here, not re-argued. Ruling 1 (§9-1, DOCX
+math as plain source text) is correspondingly DEFERRED-WITH-DOCX, not resolved. Kept struck-in-place, not
+deleted, so the milestone's 22-task / 11-group audit trail stays intact — this is the first post-seal,
+mid-implementation strike this repo has made, and no precedent existed for deleting one.** Active task count
+for M10: **21** (22 − struck 5.1); active group count: **10** (11 − group 5, whose only task was struck).
+Group 2 and every group below it are RE-AUTHORIZED to proceed under normal per-task byte discipline — no
+special gate — per the same §3.10 entry.
+
+- [ ] ~~**5.1 `docxExport.ts` — heading/list/table/emphasis mapping, diagram embed via `diagramView.ts:298`'s
       existing capture, math as plain source text per Ruling 1.** Walks the cloned column (2.2's clone
       mechanism, reused for structure though `docx`'s own document-builder API is the output target, not HTML
       serialization) into the installed `docx` library's node types. Diagrams: reuse `diagramView.ts`'s existing
@@ -354,10 +365,10 @@ residual re-checked for this specific payload shape.*
       math source string is present as text. App-page bytes stated against 4.1's own figure, decomposed —
       `docx`'s own runtime weight was already priced at 1.1; this task's delta is glue only. Content-script
       bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [Ruling 1; D-1;
-      §4 DOCX export]
+      §4 DOCX export]~~ **STRUCK — see the group header above and `decisions.md` M10 §3.10.**
 
-*Group-5 acceptance (plan §6): §4's DOCX criteria; the never-silently-drop-content clause proven against a
-math-bearing fixture.*
+*Group-5 acceptance — N/A, struck. DOCX export's §4 criteria no longer apply to M10; the never-silently-
+drop-content clause struck with it (DOCX was the only control that clause's math-source-text handling served).*
 
 ## 6 — Print mode + the `@page` fidelity probe (D-7)
 
@@ -464,8 +475,9 @@ math-bearing fixture.*
       Distinct from any per-task happy-path proof: here each failure mode is forced directly (a corrupted local
       image reference, a serialization exception, a rejected clipboard write) and the reader's own committed
       DOM must be provably untouched afterward (AGENTS.md #5, never blank).
-      Files: `src/export/htmlExport.ts` · `src/export/docxExport.ts` · `src/export/zipExport.ts` ·
-      `src/app/exportControls.ts` · `tests/browser/exportDegrade.browser.test.ts`
+      Files: `src/export/htmlExport.ts` · ~~`src/export/docxExport.ts`~~ (struck, §3.10 — no DOCX exporter
+      to force-fail) · `src/export/zipExport.ts` · `src/app/exportControls.ts` ·
+      `tests/browser/exportDegrade.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) each forced failure states itself distinctly (spec §4: *"shall indicate
       completion… shall indicate the failure distinctly from success"*, *"shall say so and shall not report
       success for a copy that did not occur"*) and the reader stays exactly as rendered — a reference-identity
@@ -481,7 +493,8 @@ math-bearing fixture.*
       own numbers.
       Files: `tests/browser/exportNetwork.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) **zero requests** across HTML export, Copy-as-HTML, Copy-as-rich-text,
-      Copy-as-plain-text, ZIP export, DOCX export, print/PDF export — using the existing `/^https?:/i` predicate
+      Copy-as-plain-text, ZIP export, print/PDF export (DOCX export struck, §3.10 — no path to test) — using
+      the existing `/^https?:/i` predicate
       **verbatim** and `awaitFetchedUrls`'s shape, **with `remoteMediaUi`'s existing restore-button mechanism
       (`mediaPolicy.ts:166` ← `remoteMediaUi.ts:77`) shown firing LIVE IN THE SAME TEST** as the positive
       control — invoked directly, never through any of 010's own export code (D-8's own text: the control
@@ -594,13 +607,16 @@ ledger reconciled to a named residual.*
       PERMISSIONS.md`'s one-field addition (8.2) is the ONLY change to that file** — confirmed, not assumed.
       11.1's pointer walk repeated as a discrete step on the final commit. `decisions.md` read and left
       untouched unless a genuine decision landed. Golden EMPTY · manifest green **654 / 770 B** ·
-      `permissions: []` · deps exactly **8** · all forbidden paths (`sanitize.ts`, `mount.ts`, the
+      `permissions: []` · deps exactly **7** (assumes the §3.10 docx-removal follow-up act has landed by
+      this task; if not, deps **8** with `docx` installed-but-unused, named as a defect if still true here) ·
+      all forbidden paths (`sanitize.ts`, `mount.ts`, the
       content-script graph, `mediaPolicy.ts`/`remoteMediaUi.ts`, `diagramEngine.ts`/`codeEngine.ts`,
       `wxt.config.ts`) byte-identical or untouched, confirmed. [the D-value audit; M9 9.3's own gap, named]
 
 ---
 
-**§4 EARS coverage — every clause has at least one task.** *HTML export* → 2.2, 3.1 · *DOCX export* → 5.1 ·
+**§4 EARS coverage — every clause has at least one task, DOCX export excepted (struck, §3.10 — its EARS
+clause no longer applies to M10).** *HTML export* → 2.2, 3.1 · ~~*DOCX export* → 5.1~~ (struck) ·
 *PDF export* → 6.1, 7.1 · *Copy actions* → 3.3, 3.4, 4.1, 9.1 · *ZIP export* → 3.5 · *Export shortcut &
 progress* → 8.1–8.3 · *Print mode* → 6.1 · *Trust* → 1.1 (deps/bytes/manifest), 9.2 (network) ·
 *Degradation* → 9.1, 9.2.
@@ -613,15 +629,20 @@ is the largest group (four controls sharing one serializer) and is kept as five 
 008-precedent discipline of splitting a group too large to review or revert as one unit, applied here before
 the fact rather than after a gate-2 split instruction, since D-1's own headroom pressure makes small,
 independently-revertable units more valuable this milestone than any prior one. **4** stands alone because its
-payload shape genuinely differs from 3.3's (D-4's two halves). **5**, **6**, **7**, **8** are each independent
-of the others except 6→7's stated dependency (§3.3). **9** is built behind groups 2–8 so it can reach failure
-modes they could not. **10** measures then decides then implements, never choosing inside a measuring task,
-and folds the byte ledger's final reconciliation into its own decision gate (10.4) rather than a separate task,
-since D-1's headroom makes the ledger and the three product decisions genuinely one gate, not two. **11**
-closes.
+payload shape genuinely differs from 3.3's (D-4's two halves). ~~**5**~~ **is struck in full (§3.10 — DOCX
+export dropped from M10; see the group-5 header above and `decisions.md`'s M10 §3.10 entry).** **6**, **7**,
+**8** are each independent of the others except 6→7's stated dependency (§3.3) — struck 5 was independent of
+both and its removal changes neither. **9** is built behind groups 2–8 (5 struck, its own failure modes moot)
+so it can reach failure modes they could not. **10** measures then decides then implements, never choosing
+inside a measuring task, and folds the byte ledger's final reconciliation into its own decision gate (10.4)
+rather than a separate task, since D-1's headroom makes the ledger and the three product decisions genuinely
+one gate, not two. **11** closes.
 
-**Count: ELEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (5) · 4 (1) · 5 (1) · 6 (1) · 7 (1) · 8 (3) · 9 (2) ·
-10 (5) · 11 (3).
+**Count as sealed at gate 3: ELEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (5) · 4 (1) · 5 (1) · 6 (1) · 7 (1)
+· 8 (3) · 9 (2) · 10 (5) · 11 (3).
+**★ Count ACTIVE after the §3.10 human ruling (2026-08-24, `decisions.md` M10 §3.10) — TEN groups, 21
+tasks** — group 5's sole task (5.1) is struck, DOCX export dropped from M10. 1 (1) · 2 (2) · 3 (5) · 4 (1) ·
+~~5 (1)~~ struck · 6 (1) · 7 (1) · 8 (3) · 9 (2) · 10 (5) · 11 (3) = **21 active + 1 struck = 22 sealed.**
 
 *Gate: this file is a **DRAFT awaiting gate 3**. On approval, implementation may begin at **task 1.1, in a
 fresh session**, per WORKFLOW.md §5.3 — one commit per task, the `progress.md` Now-pointer advancing in that
@@ -629,4 +650,8 @@ same commit. **No plan D-value is re-opened, no spec §3.x decision is re-decide
 proposed here.** ★ **Gate 2 is BANKED and its four rulings and one interpretation note are APPLIED above, not
 held. The only places this file declines to decide are the spec's §8 M-1/M-2/M-3 measure-then-choose items —
 PRODUCED at 10.1–10.3, CHOSEN by the human at 10.4, executed at 10.5 — and task 1.1's own fork, which is a
-gate this file cannot pre-resolve.***
+gate this file cannot pre-resolve.*** ★ **The fork's resolution is now banked: `decisions.md`'s M10 §3.10
+entry (2026-08-24) resolves task 1.1's fork by SCOPE REDUCTION (DOCX export struck, task 5.1) — group 2 and
+every task below it, except struck 5.1, are RE-AUTHORIZED. This is the one place gate 3's own seal has been
+touched post-approval, and it is touched by a human ruling recorded in `decisions.md`, not by this file
+re-deciding anything on its own.***

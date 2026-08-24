@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-24 (M10 task 1.1 landed — `docx` + `client-zip` measured for real, THE FORK IS TAKEN:
-BUSTS. Every remaining M10 task past 1.1 is SUSPENDED pending a human-reviewed spec revisit.)*
+*Updated: 2026-08-24 (M10 §3.10 gate ruled — DOCX export dropped, D-1's BUSTS fork resolved by scope
+reduction, task 5.1 struck, group 2 re-authorized, next task 2.1.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +11,22 @@ BUSTS. Every remaining M10 task past 1.1 is SUSPENDED pending a human-reviewed s
 
 ## Now (start here)
 
+**★★ M10 §3.10 GATE RULED, 2026-08-24 — D-1's BUSTS FORK IS RESOLVED BY SCOPE REDUCTION. DOCX export (task
+5.1) is DROPPED FROM M10. Group 2 and every task below it, except struck 5.1, are RE-AUTHORIZED under
+normal per-task byte discipline — no special gate. Next actionable task: 2.1.** Full reasoning and the
+FITS arithmetic are banked in `decisions.md`'s M10 §3.10 entry — summarized here for the pointer. Dropping
+DOCX frees `docx`'s full measured +373,820 B; the remaining scope's only anticipated dependency cost is
+`client-zip`'s +6,538 B, against ~376,139 B (Cr) / ~376,023 B (Fx) `.output` headroom — **robustly FITS**,
+~369,601 B (Cr) remaining before any task's own glue is priced, not the MEASUREMENT NOTE's own thinner
+4.5–9 KiB subset margin. The human chose the cushion over gambling nine remaining tasks' worth of unpriced
+glue against that thinner margin. Ruling 1 (§9-1, DOCX math as plain text) is now DEFERRED-WITH-DOCX, not
+resolved. `specs/010-local-exports/tasks.md` task 5.1 is struck-in-place (not deleted) with a pointer to the
+decision — the first post-seal, mid-implementation strike this repo has made; active count is now **21
+tasks / 10 groups** (22/11 sealed at gate 3). The orphaned `docx` package (installed at 1.1, imported by
+nothing now that 5.1 is struck) is kept installed this commit — doc-only, no dependency diff — and removed
+in an **immediate follow-up dependency act** (`pnpm remove docx`, deps 8→7); until that lands, dep count
+stays 8 with `docx` installed-but-unused.
+*(Prior entry, kept for the record — the fork's own discovery, now resolved above:)*
 **★ M10 TASK 1.1 LANDED, 2026-08-24 — THE HARD GATE FIRED: BUSTS. Every remaining M10 task past 1.1 is
 SUSPENDED pending a human-reviewed spec revisit (subset/lazy-split per spec §3.10, or scope reduction).**
 Full evidence in `decisions.md`'s **M10 D-1** entry (2026-08-24) — summarized here for the pointer. `docx` +
@@ -41,8 +57,8 @@ re-authorizes group 2** — this is now the single blocking item for the milesto
 *Pricing note (2026-08-24, off the sealed task list, measure-not-choose): the subset option is priced —
 see `decisions.md`'s **M10 MEASUREMENT NOTE** entry. Dropping `Table` OR `ImageRun` alone (not both) flips
 `docx`'s minimal surface under the `.output` ceiling; lazy-split alone does not (a dynamically-split chunk
-still ships inside `.output`, confirmed against `mermaid`'s own chunks). Evidence only — the §3.10 ruling
-is still the human's.*
+still ships inside `.output`, confirmed against `mermaid`'s own chunks). **Was evidence-only when written;
+the §3.10 ruling has since run and chose scope reduction over this priced subset lever — see § Now, above.***
 *(Prior entry, kept for the record: M10 GATE 3 approved 2026-08-22 — `specs/010-local-exports/tasks.md`
 sealed for implementation, 22 tasks across 11 groups, no open questions from review, two task-time
 refinements banked (task 1.1's WAR check made explicit — acted on above; task 3.1's download-control test
@@ -53,13 +69,15 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24) — the next act is the spec revisit
-D-1's provisional condition names**, not scoping a new milestone: a human-reviewed decision on `docx`'s own
-weight (subset the API surface used, a lazy-split strategy per spec §3.10, or a scope reduction on the
-DOCX-export feature), since `docx` alone already consumes nearly the entire ~367 KiB `.output` headroom
-before any zip-writer is added. See § Now for the full ablation evidence and `decisions.md`'s **M10 D-1**
-entry. Once the revisit re-authorizes group 2, task 2.1 (Ruling 3's `:host()`-selector first-move
-verification) is next in `specs/010-local-exports/tasks.md`.
+**M10 is IN PROGRESS and RE-AUTHORIZED (2026-08-24) — the §3.10 gate ruled DOCX export dropped, resolving
+D-1's fork by scope reduction.** Next task: **2.1** (Ruling 3's `:host()`-selector first-move verification)
+in `specs/010-local-exports/tasks.md`, group 2. See § Now for the resolution summary and `decisions.md`'s
+**M10 §3.10** entry for the full reasoning and arithmetic. An immediate follow-up dependency act (removing
+the now-orphaned `docx` package, deps 8→7) is also outstanding and should land before or alongside 2.1.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
+— the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
+human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec
+§3.10, or a scope reduction on the DOCX-export feature)~~ — **the revisit ran and chose scope reduction.**
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either

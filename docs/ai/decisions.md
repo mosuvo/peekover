@@ -1,6 +1,80 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-24 · M10 §3.10 — HUMAN RULING: DOCX EXPORT (scope item 2 / task 5.1) DROPPED FROM M10. D-1's
+  BUSTS FORK IS RESOLVED BY SCOPE REDUCTION — not subset, not lazy-split. Group 2 and every task below it
+  except struck 5.1 are RE-AUTHORIZED to proceed under normal per-task byte discipline; no special gate.**
+  Ruled by the human at the §3.10 gate. The 1.1 report (`e9120ae`) and the MEASUREMENT NOTE (`9788e3a`,
+  immediately below) are **evidence inputs this entry cites, not re-derives** — they did not decide
+  anything; the human did, from what they priced.
+  **Precision on authority, checked before writing this entry:** spec §3.10 itself governs only the
+  `docx`/ZIP-writer *dependency-act* discipline (licence, install-scripts, `pnpm audit --prod`) — it does
+  not itself enumerate fork-resolution options. The subset/lazy-split/scope-reduction three-way menu is
+  task 1.1's own acceptance-fork text (`tasks.md`), mirrored in D-1 below. "Lazy-split" borrows §3.2/§3.8's
+  content-script-vs-app-page shape (hence "per §3.10" in D-1's own phrasing); "scope reduction" is not tied
+  to a specific §3.10 clause — it is the fork's own third branch, a plain product-scope call the human is
+  always free to make. Stated so this entry does not misattribute the option's authority to the spec.
+  **THE FITS ARITHMETIC THAT AUTHORIZES RE-AUTHORIZATION.** Dropping DOCX frees `docx`'s full measured
+  weight, **+373,820 B** (1.1's own ablated figure, `e9120ae`). The remaining scope's only anticipated
+  dependency cost is `client-zip`'s **+6,538 B** (also 1.1's own figure). Against 9.3's own `.output`
+  baseline (**4,866,741 / 4,866,857 B**) under the ≤5 MiB (AGENTS.md) bound, headroom is **376,139 B (Cr) /
+  376,023 B (Fx)**; net of `client-zip` alone that is **369,601 B (Cr) / 369,485 B (Fx) remaining before any
+  task's own glue is priced** — the exact figures the MEASUREMENT NOTE's own FLIP THRESHOLD already computed
+  (there, framed as "how small must a docx-subset be to flip"; here, "how much room is left with no docx at
+  all"). **Robust, not marginal** — this is the full headroom minus one already-measured, low-cost
+  dependency, not the MEASUREMENT NOTE's own 4,508–9,085 B (Cr) subset margin.
+  **WHY SCOPE REDUCTION OVER SUBSET.** The subset lever (drop `Table` OR `ImageRun` from `docx`'s own node
+  surface) is real and viable — the MEASUREMENT NOTE priced it and it flips to FITS. But every one of its
+  passing numbers "carries D-1's own unmeasured-glue caveat…a 4.5–9 KiB pass margin is a 'flips only if glue
+  is near-zero' result, not a safe clearance" (the MEASUREMENT NOTE's own words, unaltered). The human chose
+  the cushion a full scope-drop buys — most of a 367 KiB headroom, against nine remaining tasks' worth of
+  unpriced glue — over gambling the rest of the milestone against a margin that thin. Lazy-split was already
+  killed by the MEASUREMENT NOTE's own Step 0.1 finding (a dynamically-split chunk still ships inside
+  `.output`, proven against `mermaid`'s own chunks) and is not reconsidered here.
+  **RULING 1 (§9-1, DOCX math ships as plain source text) is now DEFERRED-WITH-DOCX, not resolved.** It was
+  a ruling about DOCX export's own math handling; DOCX export no longer ships in M10, so the ruling has
+  nothing left to apply to. **Revisit-when: DOCX export returns to a future milestone — paired with the
+  revisit-when Ruling 1 already carried (F2 math shipping first), one trigger, not two.**
+  **Consequences, landing in this same commit:** `specs/010-local-exports/tasks.md` task 5.1 (the whole of
+  group 5) is struck-in-place with a pointer to this entry — **the first post-seal, mid-implementation
+  strike this repo has made; no precedent exists in `decisions.md` or any prior milestone's `tasks.md`, so
+  the form is set conservatively: struck, never deleted, so the 22→21 / 11→10 audit trail is preserved.**
+  `spec.md` moves DOCX from scope-IN (§3.1) to a named deferral, with §9-1 marked DEFERRED-WITH-DOCX.
+  `plan.md` strikes `docxExport.ts` from its Files-to-create list and annotates group 5 / D-1's fork
+  resolution. `progress.md`'s Now-pointer advances: fork RESOLVED via scope reduction, group 2
+  re-authorized, 5.1 struck, next actionable task 2.1. (`spec-coverage.md` carries **no** existing M10/010
+  reference of any kind — checked by grep, zero hits — so there is no F9-projection text there for this
+  ruling to ripple into; none added.)
+  **The orphaned `docx` dependency.** Dropping the feature orphans the installed `docx` package (6→8 at
+  1.1, imported by nothing once 5.1 is struck). Kept installed in THIS commit — doc-only, no
+  production/dependency diff, so a full-suite Verify is not triggered — removed in an **immediate
+  follow-up dependency act** (`pnpm remove docx`, lock update, `pnpm audit --prod` re-run, deps 8→7, its own
+  full-suite Verify). Until that follow-up lands: dep target is **7**; current state is **8, with `docx`
+  installed-but-unused**. `client-zip` stays — ZIP export (scope item 7) remains in scope.
+  **Revisit-when:** DOCX export returns to a future milestone (Ruling 1's own merged revisit-when, above).
+
+  **ARITHMETIC RECONCILIATION — an APPENDED correction to the 9788e3a MEASUREMENT NOTE below, not an
+  in-place edit.** This file is append-only; the 2026-08-03 correction elsewhere in this file is the
+  precedent this follows — *"the clause above is kept VERBATIM and is not struck through — it is banked
+  history… a correction belongs in the record, not in a deletion."* The MEASUREMENT NOTE's own text and
+  every delta it reports stand unchanged below; these two lines only clarify how to read it.
+  (i) **The 163 B / 358 B seam.** The MEASUREMENT NOTE quotes both figures as gaps "vs 1.1's reported
+  373,820 B" without naming that they measure two different surfaces. Read cleanly: **1.1's exact named
+  surface, re-measured = 373,983 B; delta to 1.1's own report = +163 B, harness-literal noise (fake image
+  bytes/strings), not a surface difference.** **The list-inclusive ceiling (5.1's true minimal surface, per
+  its own Verify line) = 374,178 B — a SEPARATE comparison, not the same gap restated** — its own +358 B
+  over 1.1's report is larger because it additionally includes list/numbering (+195 B) that 1.1's named
+  imports omitted. Do not read 163 B and 358 B as two measurements of one thing; they are one measurement
+  each of two different things, against the same 373,820 B baseline.
+  (ii) **The 8 B cumulative gap.** The MEASUREMENT NOTE's own step figures — 351,029 + 199 + 195 + 9,093 +
+  13,670 — sum to **374,186 B**, 8 B above its own stated ceiling of 374,178 B. Named and quarantined, per
+  the byte-accounting rule (never left silent): **8 B attributed to minifier name-pool jitter across the
+  four successive incremental builds each step required** (FLOOR, +HeadingLevel, +list, +Table, +ImageRun
+  were five separate builds, not one) — not a transcription error in any single line, and too small to move
+  the FLIP THRESHOLD, the subset verdict, or any delta either this entry or the MEASUREMENT NOTE states.
+  Neither (i) nor (ii) changes a conclusion — the subset verdict (viable at a 4.5–9 KiB margin, not chosen)
+  and every delta the MEASUREMENT NOTE reports stand exactly as written below.
+
 - **2026-08-24 · M10 MEASUREMENT NOTE — pricing §3.10's "subset" option before the human spec revisit rules
   on it. Not a decision (rules nothing), not a task, not a tasks.md box.** M10 is SUSPENDED at D-1's own fork
   (BUSTS by 4,550 B `.output`); the provisional condition's fallback names three options — subset `docx`'s API
