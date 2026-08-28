@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-24 (M10 task 2.1 landed — Ruling 3's `:host()` prediction CONFIRMED, finding (b),
-translation is new scope for 2.2.)*
+*Updated: 2026-08-28 (orphaned `docx` dependency removed — §3.10 ruling's deferred follow-up act landed,
+deps 8 → 7.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +11,29 @@ translation is new scope for 2.2.)*
 
 ## Now (start here)
 
+**★★★★ ORPHANED `docx` DEPENDENCY REMOVED, 2026-08-28 — THE §3.10 RULING'S DEFERRED FOLLOW-UP ACT HAS
+LANDED. `dependencies` 8 → 7** (`pnpm remove docx`; 8 packages pruned from the tree, docx + 7 now-unused
+transitives). Not a numbered task — this is the cleanup §3.10 itself named, sitting between 2.1 and 2.2
+without blocking either. Step 0 confirmed the precondition before removing: `docx` was imported by
+NOTHING in `src/`, `entrypoints/`, or `scripts/` (grep clean), and every `docxExport.ts` reference left in
+`specs/010-local-exports/` is already struck-through from the §3.10 commit — no live Files target
+referenced it. `client-zip` and the original 6 dependencies are untouched. `pnpm audit --prod` clean (0
+advisories) on the resulting tree. **`.output` is byte-unchanged on both engines** — 4,866,741 B (Chrome)
+/ 4,866,857 B (Firefox), identical to the pre-removal baseline — because `docx` was never imported and so
+never contributed built bytes; this was the expected result, not a coincidence (a nonzero delta would have
+meant `docx` was reachable after all). Content-script md5 unchanged; manifests 654 / 770 B, `permissions:
+[]`, no `web_accessible_resources` — all unchanged. Full-suite Verify ran per rule 8 (production diff):
+browser suite green (134 files / 1395 passed / 15 skipped / 0 failed, matches baseline exactly), lint exit
+0, golden diff empty, 007/009 fence tests 8/8 + 9/9 intact (17/17). **Unit suite: 1040/1042 passed, 2
+failed in `codeDetect.test.ts`** — the test's repo-wide unlabeled-fence corpus scan drifted (23→26 files,
+code/non-code split 7/16→7/19) from docs added since the corpus counts were last pinned. **Confirmed
+pre-existing and unrelated to this act**: the identical 2 failures reproduce at HEAD (`b2ac25d`) with
+`docx` still installed, verified via stash/pop before this commit. Left unfixed — re-pinning the corpus
+count is outside this act's scope (removing an orphaned dependency), and the user chose to commit with the
+drift documented rather than fold in an unrelated fix. SBOM not regenerated: gitignored/transient per the
+1.1 precedent, not forced into the diff. The "docx installed-but-unused" interim language from the §3.10
+entry below is now superseded — the removal it was waiting for has landed.
+*(Prior entry, kept for the record:)*
 **★★★ M10 TASK 2.1 LANDED, 2026-08-24 — RULING 3'S PREDICTION CONFIRMED: FINDING (b), `:host` IS
 LOAD-BEARING, A TRANSLATED COPY IS NEW SCOPE FOR 2.2, NOT A SILENT ADDITION.** `grep -n ":host"
 src/theme/readerCss.ts` returns 43 hits — 26 inside live CSS rules, 17 inside comments/doc-prose (not
@@ -90,11 +113,11 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-08-24) — task 2.1 landed, finding (b) confirmed.** Next task: **2.2**
-(`serializeReaderDocument` + `wrapInStandaloneDocument`) in `specs/010-local-exports/tasks.md`, group 2 —
-now scoped to include the `:host`→wrapper-selector translation per 2.1's finding, not a verbatim bundle. See
-§ Now for 2.1's full finding. An immediate follow-up dependency act (removing the now-orphaned `docx`
-package, deps 8→7) is also outstanding and should land before or alongside 2.2.
+**M10 is IN PROGRESS (2026-08-28) — task 2.1 landed, finding (b) confirmed; the orphaned `docx` dependency
+removal has also landed (deps 8→7).** Next task: **2.2** (`serializeReaderDocument` +
+`wrapInStandaloneDocument`) in `specs/010-local-exports/tasks.md`, group 2 — now scoped to include the
+`:host`→wrapper-selector translation per 2.1's finding, not a verbatim bundle. See § Now for 2.1's full
+finding and the dependency-removal act's detail.
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
 — the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
 human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec
