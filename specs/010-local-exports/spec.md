@@ -50,9 +50,9 @@ The human resolved the fork by SCOPE REDUCTION: DOCX export is deferred out of M
 a future milestone, paired with §9-1's own revisit-when — F2 math shipping first). The line below is kept
 as originally drafted, struck rather than rewritten, so the gate-1-approved scope stays legible as history:
 
-~~IN: HTML export, DOCX export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite (`spec-coverage.md`:321,402 — *"Blocks F9's PDF export, which is spec'd as a print-pipeline"*).~~ **IN, as revised 2026-08-24: HTML export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite.** OUT, each with a home in §6: the four publish paths (§3.2); DOCX export (§3.10 gate ruling, above); every other F5/F9 item not named above; every other F-area.
+~~IN: HTML export, DOCX export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite (`spec-coverage.md`:321,402 — *"Blocks F9's PDF export, which is spec'd as a print-pipeline"*).~~ ~~**IN, as revised 2026-08-24: HTML export, PDF export, copy as rich text/HTML/plain text, ZIP export, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite.**~~ **IN, as revised 2026-08-29: HTML export, PDF export, copy as rich text/HTML/plain text, the export shortcut with last-used-format memory, a progress indicator for heavy exports, and F5's print-optimized mode as PDF export's named prerequisite.** OUT, each with a home in §6: the four publish paths (§3.2); DOCX export (§3.10 gate ruling, above); ZIP export (§3.1 gate downstream ruling — see §6); every other F5/F9 item not named above; every other F-area.
 
-~~**Ten items, not nine, in the sense that matters for sizing.** The kickoff's own count (9 F9 + 1 F5) is right, but two of the nine are one product-spec bullet each carrying two deliverables (*"Copy as: rich text, HTML, plain text"* is three controls under one bullet; *"Export shortcut… with progress indicator"* is two mechanisms under one bullet). §4 and §8 treat each control separately because each has its own acceptance criteria and, for the copy actions, a different clipboard mechanism (§7-2).~~ **Nine items, not ten, after the 2026-08-24 revision (8 F9 local items + F5 print mode) — DOCX export's removal drops the prior ten-count by one.** The multi-deliverable-bullet reasoning above is otherwise unchanged: §4 and §8 still treat each surviving control separately.
+~~**Ten items, not nine, in the sense that matters for sizing.** The kickoff's own count (9 F9 + 1 F5) is right, but two of the nine are one product-spec bullet each carrying two deliverables (*"Copy as: rich text, HTML, plain text"* is three controls under one bullet; *"Export shortcut… with progress indicator"* is two mechanisms under one bullet). §4 and §8 treat each control separately because each has its own acceptance criteria and, for the copy actions, a different clipboard mechanism (§7-2).~~ ~~**Nine items, not ten, after the 2026-08-24 revision (8 F9 local items + F5 print mode) — DOCX export's removal drops the prior ten-count by one.**~~ **Eight items, not nine, after the 2026-08-29 revision (7 F9 local items + F5 print mode) — ZIP export's removal (§3.1 gate downstream ruling, `decisions.md` M10 §3.1(cont.)) drops the 2026-08-24 nine-count by one.** The multi-deliverable-bullet reasoning above is otherwise unchanged: §4 and §8 still treat each surviving control separately.
 
 **3.2 010 SHIPS TO THE APP-PAGE READER ONLY. The content-script `file://` / raw-host reader gets no export affordance — DECIDED, and named so it is not silently reversed.**
 
@@ -146,7 +146,10 @@ record of what gate 1 approved; none apply to M10's own acceptance criteria any 
 - When the user copies the document as plain text, the system shall copy the raw source text exactly as authored.
 - If any copy action fails, then the system shall say so and shall not report success for a copy that did not occur.
 
-**ZIP export**
+**ZIP export — ★ DROPPED OUT OF M10 IN FULL, 2026-08-29 (`decisions.md` M10 §3.1(cont.), a downstream
+consequence of the §3.1 local-image ruling above). Clauses kept unstruck as the record of what gate 1
+approved (and of the §3.1 gate's own interim reduction); none apply to M10's own acceptance criteria any
+longer (see §6).**
 
 - When the user exports the current document as a ZIP, the system shall include the markdown source ~~and every locally-resolvable referenced image, with paths rewritten to match the archive's layout~~. **★ LOCAL-IMAGE FILE-COPYING DROPPED, 2026-08-29 — same §3.1 gate ruling as HTML export's Base64 clause above (`decisions.md` M10 §3.1). No image is copied into the archive; a local image reference ships unrewritten, exactly as authored. See §6.**
 - The system's handling of remote images in a ZIP export shall follow §9-3's resolution.
@@ -191,13 +194,28 @@ record of what gate 1 approved; none apply to M10's own acceptance criteria any 
   constructs a byte-readable reference to a non-markdown file — no local-image embedding capability exists
   in the code as it landed, and extending the seam to add one is out of this milestone's own gate-2 sealed
   scope. The human resolved the fork by scope reduction, not by extending the seam or by a Chromium-only
-  asymmetry. **What survives:** HTML export (text + translated CSS + rendered diagrams) and ZIP export
-  (markdown source) both still ship; remote images stay unrewritten references (§9-3, unchanged); a local
+  asymmetry. **What survives:** HTML export (text + translated CSS + rendered diagrams) and ~~ZIP export
+  (markdown source) both still ship~~ **ZIP export (markdown source) still shipped, AS OF THIS ENTRY — ZIP
+  export itself was subsequently dropped from M10 in full, 2026-08-29, a downstream consequence of THIS
+  ruling; see the entry immediately below and §4's own ZIP-export clause.**; remote images stay unrewritten
+  references (§9-3, unchanged); a local
   image reference is left broken/unrewritten in the export, the same state the app-page reader itself
   already shows for a relative local image path today (`decisions.md`'s own D1 finding — not a regression
   from current reader behavior). Home: a future milestone, paired with the seam-extension work a real
   local-image capability requires on both engines. **Revisit-when:** local-image embedding returns to a
   future milestone alongside that seam-extension work (one trigger).
+- **★ ZIP export, in full — added 2026-08-29, a HUMAN RULING at the §3.1 gate (`decisions.md` M10
+  §3.1(cont.)), a DOWNSTREAM CONSEQUENCE of the local-image ruling immediately above, not a re-litigation of
+  it.** The local-image drop removed the only thing that made ZIP export more than Copy-as-plain-text (§4,
+  copy actions): shorn of images, ZIP export is "package the byte-identical markdown source into a `.zip`" —
+  the same raw markdown source Copy-as-plain-text already delivers to the clipboard, by a different exit. A
+  source-only ZIP is an elaborate way to produce a file the user already has (copy-paste-save, or the
+  editor/browser's own native save) — not worth its own control. Dropping it orphans `client-zip` (installed
+  as ZIP export's sole consumer); removed in an immediate follow-up dependency act, per `decisions.md`'s own
+  entry. Home: a future milestone, paired with the local-image/seam-extension work above — a ZIP that bundles
+  source *and* assets is the version worth having, and it needs that seam work anyway. **Revisit-when:** ZIP
+  (or any bundle) export returns to a future milestone alongside the local-image/seam-extension revisit-when
+  (one trigger, not two).
 - **★ DOCX export, in full — added 2026-08-24, a HUMAN RULING at the §3.10 gate (`decisions.md` M10 §3.10),
   not part of the original gate-1 draft.** `docx`'s own measured weight (+373,820 B) busted the milestone's
   ~367 KiB `.output` headroom in combination with the ZIP writer; the human resolved the fork by scope

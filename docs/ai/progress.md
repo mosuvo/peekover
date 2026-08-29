@@ -11,6 +11,28 @@ reduced + UNBLOCKED.)*
 
 ## Now (start here)
 
+**★★★★★ M10 §3.1(cont.) GATE RULED, 2026-08-29 — ZIP EXPORT (task 3.5) DROPPED FROM M10 ENTIRELY, DOWNSTREAM
+OF THE §3.1 LOCAL-IMAGE RULING BELOW. Task 3.5 is STRUCK WHOLE (not reduced) — active count 21 → 20, group 3
+now 4 active tasks. `client-zip` is ORPHANED (deps target 6). Next actionable task: still 3.1 (reduced).**
+Immediately after ruling local-image embedding out of M10 (below), the human ruled the downstream
+consequence: shorn of images, ZIP export was near-redundant with Copy-as-plain-text (task 3.4) — both deliver
+the same byte-identical raw markdown source, by a different exit — and not worth its own control. ZIP export
+was `client-zip`'s sole consumer (installed at 1.1, +6,538 B); dropping it orphans the dependency (**grep
+confirmed zero live imports** across `src/`, `entrypoints/`, `scripts/`). **Kept installed this commit**
+(doc-only gate act, no production diff) — **removed in an immediate follow-up dependency act** (`pnpm remove
+client-zip`, deps 7→6, its own full-suite Verify), the same two-commit rhythm the §3.10 ruling → `docx`
+removal used. Full reasoning: `decisions.md`'s 2026-08-29 M10 §3.1(cont.) entry (above the §3.1 RESOLUTION
+entry it follows from). **Ripple landed this same commit:** `specs/010-local-exports/tasks.md` task 3.5
+struck-in-place (mirroring 5.1's own DOCX strike), group-3/EARS/count text restated, and tasks 9.1/9.2 —
+the only other tasks referencing `zipExport.ts`/ZIP export — corrected to stop treating it as a built path;
+`specs/010-local-exports/spec.md`'s §4 ZIP-export clause marked deferred and moved to a new §6 IS-NOT entry,
+§3.1's scope-item count restated (eight items, not nine — seven F9 local items + F5 print mode);
+`specs/010-local-exports/plan.md`'s Files-to-create list strikes `zipExport.ts` (mirroring `docxExport.ts`'s
+own strike) and its zipExport pseudocode/description moves from the prior partial "STRUCK/AMENDED" note to a
+full strike. `spec-coverage.md` carries no M10/010 reference of any kind (grepped, zero hits, same finding
+the §3.10 ruling made) — no ripple there. **Next: 3.1** (reduced) remains the first actionable task, unchanged
+by this ruling — it does not touch `zipExport.ts`.
+*(Prior entry, kept for the record — the ruling this one is downstream of:)*
 **★★★★★ M10 §3.1 GATE RULED, 2026-08-29 — LOCAL-IMAGE EMBEDDING DROPPED FROM M10 BY SCOPE REDUCTION. Tasks
 3.1 and 3.5 are REDUCED (not struck) and UNBLOCKED. Next actionable task: 3.1 (reduced).** The stop-flag
 below (task 3.1's own kickoff finding: no byte-readable local-image reference survives folder-open on either

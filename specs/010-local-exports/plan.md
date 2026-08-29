@@ -405,13 +405,16 @@ copyAsHtml(host):
     })])
 ```
 
-**★ STRUCK/AMENDED, 2026-08-29 (M10 §3.1 gate, `decisions.md`):** ~~`zipExport` reuses `collectLocalImages`'s
-resolution half only (§3.3, spec-decided) — it ships the raw markdown source plus the resolved local image
-files, paths rewritten to the archive's layout, never the rendered/sanitized HTML at all.~~ `zipExport`
-ships the raw markdown source only, byte-identical, never the rendered/sanitized HTML at all — local-image
-file-copying is DROPPED by the same ruling as HTML export's Base64 embedding above; `collectLocalImages`'s
-resolution is not consumed here either. See `decisions.md`'s 2026-08-29 M10 §3.1 entry, including its flag
-that this leaves task 3.5's own remaining scope thin.
+**★ STRUCK IN FULL, 2026-08-29 (M10 §3.1(cont.) gate, `decisions.md`) — supersedes the prior partial
+"STRUCK/AMENDED" note below, kept unstruck as the record of what that interim reduction said.** ~~`zipExport`
+reuses `collectLocalImages`'s resolution half only (§3.3, spec-decided) — it ships the raw markdown source
+plus the resolved local image files, paths rewritten to the archive's layout, never the rendered/sanitized
+HTML at all.~~ ~~`zipExport` ships the raw markdown source only, byte-identical, never the rendered/sanitized
+HTML at all — local-image file-copying is DROPPED by the same ruling as HTML export's Base64 embedding above;
+`collectLocalImages`'s resolution is not consumed here either.~~ **ZIP export is DROPPED FROM M10 IN FULL —
+`zipExport` is not built. See `decisions.md`'s 2026-08-29 M10 §3.1(cont.) entry: shorn of images, ZIP export
+was near-redundant with Copy-as-plain-text's already-shipped raw-source payload, and not worth its own
+control.**
 
 ### 1.2 Where each control lives (D-2)
 
@@ -450,8 +453,11 @@ margin-box content is the open probe (§7-4, D-7), sequenced before this task cl
 embed reusing `diagramView.ts`'s existing `canvas.toBlob` capture, `:298`)~~ **STRUCK 2026-08-24 — DOCX
 export dropped from M10 by human ruling at the §3.10 gate (`decisions.md` M10 §3.10), resolving D-1's own
 BUSTS fork by scope reduction; kept struck rather than deleted so this Files-to-create list stays legible as
-the record of what gate 2 approved** · `src/export/zipExport.ts` (D-3's
-image-resolution half, reused; no CSS inlining) · `src/app/exportControls.ts` (D-2: the overlay/panel, D-5's
+the record of what gate 2 approved** · ~~`src/export/zipExport.ts` (D-3's
+image-resolution half, reused; no CSS inlining)~~ **STRUCK 2026-08-29 — ZIP export dropped from M10 in full
+by human ruling at the §3.1(cont.) gate (`decisions.md` M10 §3.1(cont.)), a downstream consequence of the
+local-image ruling immediately above; kept struck rather than deleted for the same legibility reason** ·
+`src/app/exportControls.ts` (D-2: the overlay/panel, D-5's
 shortcut wiring entry point, the progress affordance, D-6's settings read/write) · test files per §5.
 
 **Touch** — `src/settings/settings.ts` (D-6: `lastExportFormat` field, `DEFAULT_SETTINGS`) ·
@@ -636,9 +642,11 @@ group 2.
 resolution. *Touches:* `htmlExport.ts`. *Must NOT touch:* `mount.ts`, `sanitize.ts`. *Acceptance:* the
 `:host`-selector risk (§4-1) resolved one way or the other, not left open; a standalone-render check passes.
 
-**3 · HTML export, Copy-as-HTML, Copy-as-plain-text, ZIP export.** D-3 (consumed), D-4 (HTML/plain-text
-halves). *Touches:* `htmlExport.ts` (export entry points), `zipExport.ts`, `exportControls.ts` (the three
-controls' wiring). *Acceptance:* §4's HTML/copy/ZIP criteria; §3.11 rows 6, 7 for these three controls.
+**3 · HTML export, Copy-as-HTML, Copy-as-plain-text, ~~ZIP export~~ (struck 2026-08-29, M10 §3.1(cont.) —
+dropped from M10 in full, downstream of the local-image ruling; see `decisions.md`).** D-3 (consumed), D-4
+(HTML/plain-text halves). *Touches:* `htmlExport.ts` (export entry points), ~~`zipExport.ts`~~ (struck),
+`exportControls.ts` (the three controls' wiring). *Acceptance:* §4's HTML/copy criteria; §3.11 rows 6, 7 for
+these three controls.
 
 **4 · Copy-as-rich-text.** D-4's `ClipboardItem` multi-format construction, verified against current docs at
 this task per AGENTS.md's standing rule. *Acceptance:* pastes as formatted content on both engines; the
@@ -670,9 +678,9 @@ own acceptance criteria. *Acceptance:* §4's Degradation clause in full.
 **11 · Human milestone-close gate + retro.** Including the §5 human-gate list, the recorded viewports, and
 the byte-ledger statement this milestone's own thin headroom makes worth stating plainly either way.
 
-**§4 EARS coverage:** HTML export → 2, 3 · DOCX export → 5 · PDF export → 6, 7 · Copy actions → 3, 4 · ZIP
-export → 3 · Export shortcut & progress → 8 · Print mode → 6 · Trust → 1 (bytes/manifest), 9 (network) ·
-Degradation → 9. Every clause has at least one group.
+**§4 EARS coverage:** HTML export → 2, 3 · DOCX export → 5 (struck) · PDF export → 6, 7 · Copy actions → 3, 4
+· ~~ZIP export → 3~~ (struck, M10 §3.1(cont.)) · Export shortcut & progress → 8 · Print mode → 6 · Trust → 1
+(bytes/manifest), 9 (network) · Degradation → 9. Every remaining clause has at least one group.
 
 ## 7. Measurement plan (spec §8 M-1 · M-2 · M-3)
 

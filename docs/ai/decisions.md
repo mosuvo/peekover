@@ -1,6 +1,46 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 §3.1(cont.) — HUMAN RULING: ZIP EXPORT (task 3.5) DROPPED FROM M10 ENTIRELY, A DOWNSTREAM
+  CONSEQUENCE OF THE §3.1 LOCAL-IMAGE RULING (immediately below), NOT A RE-LITIGATION OF IT. Unlike DOCX
+  (§3.10) and local-image embedding (§3.1), this is a WHOLE-TASK STRIKE — task 3.5 has no surviving half worth
+  keeping, the same shape §3.10's DOCX task 5.1 took, not a reduction.**
+  Ruled by the human, immediately after ruling the §3.1 local-image drop. The §3.1 RESOLUTION entry (below)
+  is the **evidence input** this entry cites, not re-derives — its own text already flagged task 3.5's
+  remaining scope as "genuinely thin" and routed the call here; that flag is the reviewer's analysis, not the
+  decider. This entry banks the decision the human made from it.
+  **Rationale.** The §3.1 local-image drop removed the ONLY thing that made ZIP export more than
+  Copy-as-plain-text (task 3.4). Shorn of images, task 3.5 is "package the byte-identical markdown source into
+  a `.zip`" — the SAME raw markdown source task 3.4 already delivers to the clipboard (spec §4: *"the system
+  shall copy the raw source text exactly as authored"*), by a different exit. A source-only ZIP is an
+  elaborate way to produce a file the user already has (copy-paste-save, or the editor/browser's own native
+  save) — not worth its own task.
+  **Dependency consequence.** ZIP export was the SOLE consumer of `client-zip` (installed at task 1.1, measured
+  +6,538 B). Dropping 3.5 ORPHANS `client-zip` — deps target **6** (7 → 6, the pre-1.1 count). **Confirmed,
+  not assumed:** `grep -rn "client-zip|from 'client-zip'|clientZip|downloadZip|makeZip" src/ entrypoints/
+  scripts/` returns **zero hits** — ZIP export was never implemented (3.5 never ran; 2.2's serializer and
+  3.1/3.2 don't zip), so `client-zip` is imported by nothing today. `package.json`'s own `dependencies` block
+  confirms 7 entries with `client-zip` present. **Kept installed THIS commit** — doc-only, no
+  production/dependency diff, so a full-suite Verify is not triggered — **removed in an immediate follow-up
+  dependency act** (`pnpm remove client-zip`, lock update, `pnpm audit --prod` re-run, deps 7→6, its own
+  full-suite Verify), the same two-commit rhythm the §3.10 ruling → `docx` removal used. Until that follow-up
+  lands: dep count is **7**, current state is `client-zip` installed-but-unused.
+  **Consequences, landing in this same commit:** `specs/010-local-exports/tasks.md` task 3.5 is struck-in-place
+  (mirroring DOCX task 5.1's whole-task strike, never deleted) — group 3 is now 4 active tasks (3.1–3.4), not
+  5; active count for M10 moves **21 → 20**; the §4 EARS-coverage line's ZIP-export mapping is struck; task
+  9.1's Files list and task 9.2's Verify text (the only other tasks referencing `zipExport.ts`/ZIP export)
+  are corrected to stop treating it as a built path. `spec.md` moves the ZIP-export §4 clause to §6 IS-NOT
+  (mirroring the DOCX and local-image IS-NOT entries) and restates §3.1's scope-item count (eight items, not
+  nine — seven F9 local items + F5 print mode). `plan.md` strikes `zipExport.ts` from its Files-to-create list
+  (mirroring `docxExport.ts`'s own strike) and strikes the zipExport pseudocode/description whole, rather than
+  the prior partial "STRUCK/AMENDED" annotation. `progress.md`'s Now-pointer advances: ZIP export dropped,
+  3.5 struck, `client-zip` orphaned-pending-removal, active count 21→20, next actionable task still 3.1
+  (reduced). `spec-coverage.md` carries **no** M10/010 reference of any kind (grepped, zero hits, the same
+  finding the §3.10 ruling made) — no ripple there.
+  **Revisit-when:** ZIP export (or any bundle export) returns to a future milestone — paired with the
+  local-image/seam-extension revisit-when immediately below, since a ZIP that bundles source+assets is the
+  version worth having, and it needs that seam work anyway (one trigger, not two).
+
 - **2026-08-29 · M10 §3.1 — HUMAN RULING: LOCAL-IMAGE BASE64/FILE EMBEDDING DROPPED FROM M10 (HTML export §4
   + ZIP export §3.5). THE §3.1 STOP-FLAG (below) IS RESOLVED BY SCOPE REDUCTION — not seam extension
   (option a), not Chromium-only asymmetry (option b). Tasks 3.1 and 3.5 are REDUCED, not struck whole — they

@@ -59,8 +59,8 @@ attributes. → **group 2**, `wrapInStandaloneDocument`'s own construction.
   ★ **SUPERSEDED IN PART, 2026-08-29 (M10 §3.1 gate, `decisions.md`) — Ruling 3's own text above is kept
   verbatim as the sealed gate-1 record, but its "embeds only locally-resolvable images" half no longer
   describes what M10 ships: local-image embedding was ALSO dropped, so M10 now embeds NO images (local or
-  remote) in HTML/ZIP export — only Ruling 3's remote-stays-unrewritten half remains active. See tasks 3.1
-  and 3.5, amended below.**
+  remote) in HTML export — only Ruling 3's remote-stays-unrewritten half remains active, and only for HTML
+  export, since ZIP export itself is struck (M10 §3.1(cont.), below). See task 3.1, amended below.**
 - **plan D-1 … D-10**, sealed at gate 2. **Every task names the D-values it services.** ★ **Each D-value's
   `decisions.md` entry text is ALREADY WRITTEN in `plan.md` §0 and is applied VERBATIM — never re-authored —
   landing with the commit that implements it, never after** (plan §0's own rule). ★ **This is the discipline
@@ -227,7 +227,8 @@ or the fork is taken and stated as a hard stop — either is a valid close, only
 *Group-2 acceptance (plan §6): the `:host`-selector risk resolved one way or the other, not left open; a
 standalone-render check passes.*
 
-## 3 — HTML export, Copy-as-HTML, Copy-as-plain-text, ZIP export (D-3 consumed, D-4's HTML/plain-text halves)
+## 3 — HTML export, Copy-as-HTML, Copy-as-plain-text, ~~ZIP export~~ (D-3 consumed, D-4's HTML/plain-text
+halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see below**
 
 - [ ] **3.1 HTML export — the file-download exit. ★ REDUCED, 2026-08-29 (M10 §3.1 gate, `decisions.md`):
       local-image Base64 embedding is DROPPED from this task, by human ruling via scope reduction — not
@@ -303,7 +304,15 @@ standalone-render check passes.*
       hostile-fixture discipline 009 4.2 used for its own retained-source claim). Golden EMPTY · manifest green
       **654 / 770 B** · `permissions: []`. [D-4; §4 copy actions]
 
-- [ ] **3.5 ZIP export — raw markdown source, NEVER the rendered/sanitized HTML. ★ REDUCED, 2026-08-29 (M10
+**★ TASK 3.5 IS STRUCK, 2026-08-29 (M10 §3.1(cont.) human ruling, `decisions.md`) — ZIP export is DROPPED FROM
+M10 ENTIRELY, downstream of the §3.1 local-image ruling immediately above. Shorn of local images, ZIP export
+was near-redundant with 3.4's Copy-as-plain-text (same raw markdown source, a different exit) and not worth
+its own task. Full reasoning banked in `decisions.md`'s 2026-08-29 M10 §3.1(cont.) entry — cited here, not
+re-argued. Kept struck-in-place, not deleted, mirroring task 5.1's own whole-task strike (§3.10) — the
+milestone's 22-task / 11-group audit trail stays intact.** Group 3 is now **4 active tasks** (3.1–3.4), not
+5; active count for M10 moves **21 → 20** (see the count restated at the group ordering / count block below).
+
+- [ ] ~~**3.5 ZIP export — raw markdown source, NEVER the rendered/sanitized HTML. ★ REDUCED, 2026-08-29 (M10
       §3.1 gate, `decisions.md`): local-image file-copying is DROPPED from this task, by human ruling via
       scope reduction — not built, not deferred-silently. ★ FLAGGED, NOT SILENTLY COLLAPSED: the remaining
       scope is genuinely thin — see `decisions.md`'s 2026-08-29 M10 §3.1 entry's own flag, and confirm at
@@ -325,10 +334,11 @@ standalone-render check passes.*
       the per-task instance). A local-image fixture likewise produces an unrewritten local reference (§3.1's
       own new assertion, mirroring 3.1's). App-page bytes stated against 3.4's own figure, decomposed.
       Content-script bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`.
-      [D-3; §4 ZIP export; Ruling 3; §3.1 gate ruling]
+      [D-3; §4 ZIP export; Ruling 3; §3.1 gate ruling]~~ **STRUCK — see the note above and `decisions.md`
+      M10 §3.1(cont.).**
 
-*Group-3 acceptance (plan §6): §4's HTML/copy/ZIP criteria; §3.11 rows 3–7, 11, 14 for these controls and the
-panel that hosts them.*
+*Group-3 acceptance (plan §6): §4's HTML/copy criteria; §3.11 rows 3–7, 11, 14 for these controls and the
+panel that hosts them. ~~ZIP~~ **struck, M10 §3.1(cont.) — no ZIP-export criteria to accept.**
 
 ## 4 — Copy-as-rich-text (D-4's ClipboardItem construction, confirmed against current docs at task time)
 
@@ -500,8 +510,8 @@ drop-content clause struck with it (DOCX was the only control that clause's math
       image reference, a serialization exception, a rejected clipboard write) and the reader's own committed
       DOM must be provably untouched afterward (AGENTS.md #5, never blank).
       Files: `src/export/htmlExport.ts` · ~~`src/export/docxExport.ts`~~ (struck, §3.10 — no DOCX exporter
-      to force-fail) · `src/export/zipExport.ts` · `src/app/exportControls.ts` ·
-      `tests/browser/exportDegrade.browser.test.ts`
+      to force-fail) · ~~`src/export/zipExport.ts`~~ (struck, §3.1(cont.) — no ZIP exporter to force-fail) ·
+      `src/app/exportControls.ts` · `tests/browser/exportDegrade.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) each forced failure states itself distinctly (spec §4: *"shall indicate
       completion… shall indicate the failure distinctly from success"*, *"shall say so and shall not report
       success for a copy that did not occur"*) and the reader stays exactly as rendered — a reference-identity
@@ -517,16 +527,18 @@ drop-content clause struck with it (DOCX was the only control that clause's math
       own numbers.
       Files: `tests/browser/exportNetwork.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) **zero requests** across HTML export, Copy-as-HTML, Copy-as-rich-text,
-      Copy-as-plain-text, ZIP export, print/PDF export (DOCX export struck, §3.10 — no path to test) — using
-      the existing `/^https?:/i` predicate
+      Copy-as-plain-text, print/PDF export (DOCX export struck, §3.10 — no path to test; ZIP export struck,
+      §3.1(cont.) — no path to test) — using the existing `/^https?:/i` predicate
       **verbatim** and `awaitFetchedUrls`'s shape, **with `remoteMediaUi`'s existing restore-button mechanism
       (`mediaPolicy.ts:166` ← `remoteMediaUi.ts:77`) shown firing LIVE IN THE SAME TEST** as the positive
       control — invoked directly, never through any of 010's own export code (D-8's own text: the control
-      proves the export/copy paths are silent, using a mechanism export never calls). A remote-image fixture
+      proves the export/copy paths are silent, using a mechanism export never calls). ~~A remote-image fixture
       exported to ZIP produces an unrewritten remote reference (Ruling 3, re-checked here at the milestone-wide
-      level, per-task instance already covered at 3.5). ★ **jsdom cannot see bytes on the wire — real-engine or
-      nothing.** Control markup neutralized in an inert `<template>`, never a "detached" div (the standing
-      Firefox `@import` lesson). Golden EMPTY · manifest green **654 / 770 B** · `permissions: []` both engines.
+      level, per-task instance already covered at 3.5).~~ **struck, §3.1(cont.) — no ZIP export exists to
+      produce an unrewritten reference from; Ruling 3's HTML-export half is asserted at 3.1 instead.** ★
+      **jsdom cannot see bytes on the wire — real-engine or nothing.** Control markup neutralized in an inert
+      `<template>`, never a "detached" div (the standing Firefox `@import` lesson). Golden EMPTY · manifest
+      green **654 / 770 B** · `permissions: []` both engines.
       [§3.11 row 12; §5 zero-network; D-8; Ruling 3; M6 finding 1]
 
 *Group-9 acceptance (plan §6): §4's Degradation clause in full.*
@@ -640,19 +652,22 @@ ledger reconciled to a named residual.*
 ---
 
 **§4 EARS coverage — every clause has at least one task, DOCX export excepted (struck, §3.10 — its EARS
-clause no longer applies to M10).** *HTML export* → 2.2, 3.1 · ~~*DOCX export* → 5.1~~ (struck) ·
-*PDF export* → 6.1, 7.1 · *Copy actions* → 3.3, 3.4, 4.1, 9.1 · *ZIP export* → 3.5 · *Export shortcut &
-progress* → 8.1–8.3 · *Print mode* → 6.1 · *Trust* → 1.1 (deps/bytes/manifest), 9.2 (network) ·
+clause no longer applies to M10; ZIP export's clause struck the same way, §3.1(cont.) — moved to spec.md §6).**
+*HTML export* → 2.2, 3.1 · ~~*DOCX export* → 5.1~~ (struck) ·
+*PDF export* → 6.1, 7.1 · *Copy actions* → 3.3, 3.4, 4.1, 9.1 · ~~*ZIP export* → 3.5~~ (struck) · *Export
+shortcut & progress* → 8.1–8.3 · *Print mode* → 6.1 · *Trust* → 1.1 (deps/bytes/manifest), 9.2 (network) ·
 *Degradation* → 9.1, 9.2.
 
 **Group ordering, stated so it can be checked:** **1** is the hard gate the whole milestone's approval is
 conditional on — nothing else may proceed until its fork resolves. **2** is the shared serializer, with Ruling
 3's verification landing as its own first task rather than folded silently into the serializer's build. **3**
-is the largest group (four controls sharing one serializer) and is kept as five tasks — the panel itself
+is the largest group (three controls sharing one serializer, after 3.5's own strike — M10 §3.1(cont.), below)
+and was kept as five tasks — the panel itself
 (3.2) split from each of the three actions it hosts plus HTML export's own file-exit (3.1) — following the
 008-precedent discipline of splitting a group too large to review or revert as one unit, applied here before
 the fact rather than after a gate-2 split instruction, since D-1's own headroom pressure makes small,
-independently-revertable units more valuable this milestone than any prior one. **4** stands alone because its
+independently-revertable units more valuable this milestone than any prior one; it is now **four active tasks**
+(3.5 struck). **4** stands alone because its
 payload shape genuinely differs from 3.3's (D-4's two halves). ~~**5**~~ **is struck in full (§3.10 — DOCX
 export dropped from M10; see the group-5 header above and `decisions.md`'s M10 §3.10 entry).** **6**, **7**,
 **8** are each independent of the others except 6→7's stated dependency (§3.3) — struck 5 was independent of
@@ -667,6 +682,10 @@ one gate, not two. **11** closes.
 **★ Count ACTIVE after the §3.10 human ruling (2026-08-24, `decisions.md` M10 §3.10) — TEN groups, 21
 tasks** — group 5's sole task (5.1) is struck, DOCX export dropped from M10. 1 (1) · 2 (2) · 3 (5) · 4 (1) ·
 ~~5 (1)~~ struck · 6 (1) · 7 (1) · 8 (3) · 9 (2) · 10 (5) · 11 (3) = **21 active + 1 struck = 22 sealed.**
+**★ Count ACTIVE after the M10 §3.1(cont.) human ruling (2026-08-29, `decisions.md`) — TEN groups, 20
+tasks** — task 3.5 (ZIP export) is struck, downstream of the §3.1 local-image ruling; group 3 drops from 5 to
+4 active tasks, no group disappears (group 5 was already struck). 1 (1) · 2 (2) · 3 (4) · 4 (1) · ~~5 (1)~~
+struck · 6 (1) · 7 (1) · 8 (3) · 9 (2) · 10 (5) · 11 (3) = **20 active + 2 struck = 22 sealed.**
 
 *Gate: this file is a **DRAFT awaiting gate 3**. On approval, implementation may begin at **task 1.1, in a
 fresh session**, per WORKFLOW.md §5.3 — one commit per task, the `progress.md` Now-pointer advancing in that
