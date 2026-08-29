@@ -199,7 +199,7 @@ or the fork is taken and stated as a hard stop — either is a valid close, only
       reasoning. If (b), the commit message names the translation as new scope for 2.2, not a silent addition.
       Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [Ruling 3; plan risk §4-1]
 
-- [ ] **2.2 `serializeReaderDocument` + `wrapInStandaloneDocument` — clone, resolve local images, bundle the
+- [x] **2.2 `serializeReaderDocument` + `wrapInStandaloneDocument` — clone, resolve local images, bundle the
       stylesheet (translated per 2.1's finding, or verbatim) (D-3).** `column = host.shadowRoot.querySelector(
       '.peekover-reader')`; `clone = column.cloneNode(true)` — already-sanitized nodes, never re-parsed, never a
       new HTML string until serialized AFTER cloning (AGENTS.md #3 satisfied by construction, no new sanitizer

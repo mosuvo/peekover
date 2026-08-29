@@ -1,7 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-28 (orphaned `docx` dependency removed — §3.10 ruling's deferred follow-up act landed,
-deps 8 → 7.)*
+*Updated: 2026-08-29 (task 2.2 landed — the shared serializer + finding (b)'s :host translation.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +10,72 @@ deps 8 → 7.)*
 
 ## Now (start here)
 
+**★★★★★ M10 TASK 2.2 LANDED, 2026-08-29 — `serializeReaderDocument`/`wrapInStandaloneDocument`, WITH
+FINDING (b)'s :host TRANSLATION BUILT AS A MECHANICAL, LIVE-DERIVED RULE (not a committed second copy).**
+`src/export/htmlExport.ts` (new): `serializeReaderDocument(host, documentPath?)` clones `.peekover-reader`
+out of the shadow root (`cloneNode(true)` over already-sanitized nodes — no re-parse, no new sanitizer
+profile) and resolves local images (`collectLocalImages`, pure path math against `documentPath`, no I/O —
+reading bytes is 3.1's/3.5's job); `wrapInStandaloneDocument(clone, theme)` emits a standalone document
+whose `<style>` carries `translateReaderStylesheet`'s output.
+**THE TRANSLATION — one general rule, not a 26-site table.** `translateReaderStylesheet` parses
+`READER_CSS`'s OWN text LIVE at call time (a small brace-depth-aware CSS splitter: flat rules +
+`@media`/`@keyframes` blocks, one nesting level, matching this file's actual shape) and reclassifies every
+`:host`-scoped rule by ONE rule: bare `:host` (no attribute predicate) → CARRY, translated to `body`
+unconditionally (design tokens, the full-bleed base, box-sizing/focus/selection, reduced-motion — the
+wrapper's own box); `:host([data-theme="…"])` → RESOLVE, kept (predicate stripped) IFF it matches the
+export's OWN theme, baked once at serialization time; every OTHER `:host([data-ATTR="…"])` (mode, diff,
+watch, network, toc) → DROP, unconditionally — none of those live-toggle states, or their subject elements
+(`.peekover-toc`, `.peekover-watch`, `.peekover-net`, `.peekover-diff-affordance`, `.peekover-raw`), ride
+into a clone that is `.peekover-reader` alone. Non-`:host` rules (typography, tables, diagrams, the
+lightbox) ship byte-for-byte unchanged — out of finding (b)'s :host-only scope, same dead-weight treatment
+D-3's original framing already accepted. **25 of 2.1's 26 counted `:host` sites live in `READER_CSS`
+itself** (the only stylesheet this module reads); the 26th (`readerCss.ts:1191`) is `CONTAINED_CSS`'s own
+`:host{ position:relative; inset:auto; }` — the app-page shell-region pane variant, resolved by SCOPE (it
+is never fed into the transform at all), and — corrected against this task's own kickoff, which
+mis-hypothesized it as print-related — has nothing to do with `@media print`, which `readerCss.ts` does not
+carry yet (task 6.1's own greenfield).
+**DERIVED LIVE, NEVER A COMMITTED SECOND COPY** — H2's preferred design, and the code achieves it: there is
+exactly one copy of the stylesheet source in this codebase. `htmlExport.test.ts`'s drift-guard test still
+exists (18 unit tests total) because "derived live" prevents a two-copy desync but not a parser silently
+mis-modeling a shape it was not written for — it pins the LIVE `:host` rule count (25) and proves, by a
+red-first ablation (append one more `:host([data-theme="dark"])` rule to the real `READER_CSS` text), that
+the count and the output both track the edit rather than a hardcoded number.
+**★ THE NECESSARY-RIPPLE FILE 2.2's OWN Files LIST DID NOT NAME.** 2.2's Verify explicitly demands a
+`(tests/browser — Cr+Fx)` real-engine check for D-3's structural claim ("renders visually equivalent…
+real-engine or nothing"), but its Files list named only two unit-test files. Per AGENTS.md's necessary-
+ripple rule, `tests/browser/htmlExport.browser.test.ts` (4 tests) was added, scoped narrowly to what 2.2
+itself can prove — not full visual equivalence (3.1's/11.1's job) but that the TRANSLATED stylesheet
+actually applies when the document is opened bare (`file://`, no extension, fresh isolated browser
+context — the same pattern `vitest.config.ts`'s existing `probeFileUrlClipboard` established, since a
+browser test cannot navigate the runner's own page to `file://`). One new server-side command
+(`renderStandaloneDocument`) was added to `vitest.config.ts` for this. Passed on both Chromium and Firefox:
+`body{position:fixed}` + the correct theme's `--paper` background resolve with zero `:host` literal shipped
+and zero console errors, for both a light and a dark export.
+**Byte discipline.** App-page chunk **475,579 B — UNCHANGED** against 1.1's own post-`docx`-removal figure
+(nothing yet imports the new module; 3.1/3.2 wire it in). Content-script md5 **`41e7607a…` (Cr) /
+`69338e67…` (Fx) — byte-identical**, confirmed by full rebuild of BOTH engines (not a stale directory —
+the standing lesson memory already carries). `.output` **4,866,741 / 4,866,857 B**, `pnpm zip` **1,470,730
+B** — both unchanged. Dependencies **7**, unchanged (no new package). Manifest **654 / 770 B**,
+`permissions: []`, no `web_accessible_resources` — unchanged.
+**Suite.** Full unit suite: **1058/1060 passed**, exactly the 2 known pre-existing `codeDetect.test.ts`
+corpus-drift failures (confirmed same signatures — corpus 26 not 23, split 7/19 not 7/16 — as the
+2026-08-28 baseline; an earlier same-session run additionally showed 3 unrelated timeouts in
+`codeEnhancer.test.ts`/`diagramEnhancer.test.ts` that a clean re-run and an isolated per-file run both
+proved transient/environmental, not caused by this task). Full browser suite: **136 files / 1399 passed /
+15 skipped**, zero failures (134/1395/15 baseline + this task's 2 new files/4 new tests). Lint/typecheck
+clean. Golden diff empty.
+**Scope-shape flag to gate (Ruling 3's own escalation wording, carried from 2.1, now landing):** finding
+(b)'s translated-stylesheet mechanism + its drift guard are the reviewable new scope 2.1 flagged — recorded
+in `decisions.md`'s M10 D-3 (task 2.2) entry, which also documents why D-3's plan-`§0` pre-written text is
+applied only in PART (the clone/no-re-parse/no-sanitizer half verbatim; the "bundles the existing
+stylesheet text" half superseded by the amendment plan §4 risk 1 had already pre-authorized).
+**§2.2-body-vs-kickoff reconcile:** no mismatch — §2.2's own body already read "translated per 2.1's
+finding, or verbatim" and its Verify already conditioned the stylesheet-embedding check on "or its
+translated form, if 2.1 found (b)"; the task's own kickoff hypothesis that this might be stale
+pre-finding-(b) prose did not hold on inspection.
+**Next: 3.1** (HTML export — the file-download exit), the first consumer that actually imports
+`htmlExport.ts` and moves app-page bytes.
+*(Prior entry, kept for the record:)*
 **★★★★ ORPHANED `docx` DEPENDENCY REMOVED, 2026-08-28 — THE §3.10 RULING'S DEFERRED FOLLOW-UP ACT HAS
 LANDED. `dependencies` 8 → 7** (`pnpm remove docx`; 8 packages pruned from the tree, docx + 7 now-unused
 transitives). Not a numbered task — this is the cleanup §3.10 itself named, sitting between 2.1 and 2.2
@@ -113,11 +178,12 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-08-28) — task 2.1 landed, finding (b) confirmed; the orphaned `docx` dependency
-removal has also landed (deps 8→7).** Next task: **2.2** (`serializeReaderDocument` +
-`wrapInStandaloneDocument`) in `specs/010-local-exports/tasks.md`, group 2 — now scoped to include the
-`:host`→wrapper-selector translation per 2.1's finding, not a verbatim bundle. See § Now for 2.1's full
-finding and the dependency-removal act's detail.
+**M10 is IN PROGRESS (2026-08-29) — task 2.2 landed, group 2 CLOSED (its 2-task acceptance: the `:host`
+risk resolved, a standalone-render check passes — both true).** Next task: **3.1** (HTML export — the
+file-download exit) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually IMPORT
+`src/export/htmlExport.ts` and move app-page bytes; also the first Base64-image-embedding consumer of
+2.2's `collectLocalImages` path resolution. See § Now for 2.2's full translation mechanism, drift guard,
+and byte/suite results.
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
 — the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
 human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec

@@ -1,0 +1,352 @@
+// htmlExport — D-3's shared serializer. `serializeReaderDocument` clones the ALREADY-sanitized
+// `.peekover-reader` shadow-root subtree (no re-parse, no new sanitizer surface — AGENTS.md #3
+// is satisfied by construction: cloneNode never touches innerHTML) and resolves the local images
+// inside it; `wrapInStandaloneDocument` bundles that clone with a translated copy of the reader's
+// own stylesheet into a standalone document. Both 3.1 (HTML export) and 3.3 (Copy-as-HTML) consume
+// this pair — SAME artifact, different sink (spec §4: "the SAME standalone HTML").
+//
+// ── WHY THE STYLESHEET NEEDS TRANSLATING AT ALL — FINDING (b), task 2.1 (decisions.md) ─────────
+//
+// `readerCss.ts`'s `READER_CSS` is written for a SHADOW ROOT: its design tokens, base layout and
+// every conditional (theme, mode, diff, watch, network, TOC) are scoped through `:host`, which
+// resolves to nothing outside a shadow tree. A standalone exported document has no shadow root, so
+// bundling `READER_CSS` verbatim would ship rules that never apply — task 2.1 found this and
+// flagged the translation as new, reviewable scope (not a silent addition; see decisions.md's M10
+// task-2.1 entry and progress.md's "finding (b)"). 2.1's own grep counted 26 `:host` rule sites —
+// but that grep ran over the WHOLE `readerCss.ts` FILE, which also exports `CONTAINED_CSS` (see
+// below); 25 of the 26 live in `READER_CSS` itself, the only stylesheet this module ever reads.
+//
+// ── THE TRANSLATION IS DERIVED LIVE, NEVER A COMMITTED SECOND COPY ──────────────────────────────
+//
+// `translateReaderStylesheet` below reads `READER_CSS`'s OWN text at call time and reclassifies
+// each `:host`-scoped rule by ONE mechanical, general rule (no per-site table, no hand-authored
+// exceptions) — see its own doc comment. There is therefore only ONE copy of the stylesheet's
+// source text in this codebase; nothing here can silently desync from a `readerCss.ts` edit the
+// way a committed translated-CSS artifact could. `htmlExport.test.ts`'s drift-guard test still
+// exists, because "derived live" protects against desync but not against the PARSER silently
+// mis-modeling a `readerCss.ts` shape it was not written for — the guard pins the live rule count
+// so an unexpected shape change is caught (see that test for the ablation proof).
+//
+// ── WHAT IS DELIBERATELY NOT FED INTO THE TRANSFORM: `CONTAINED_CSS` ────────────────────────────
+//
+// `readerCss.ts` also exports `CONTAINED_CSS`, a SECOND stylesheet injected only when a caller
+// mounts with `{ contained: true }` (the app page's shell-region reader pane). Its own `:host{
+// position:relative; inset:auto; }` rule (readerCss.ts's own "CONTAINED variant" section) undoes
+// the full-page takeover for THAT context — it has nothing to do with print and nothing to do with
+// a standalone export, which is neither a shadow-root full-page takeover nor an app-page shell
+// pane; it is a THIRD context this module owns. Only `READER_CSS`'s text is ever translated here.
+
+import { READER_CSS } from '../theme/readerCss';
+import type { EffectiveTheme } from '../settings/settings';
+
+/** A local (non-remote, non-inert) `<img>` found in a serialized clone, with the path its bytes
+ *  should be read from — resolved, not read. Reading + embedding is the caller's job (3.1's file
+ *  export, 3.5's ZIP export each read this path through their own available mechanism; this module
+ *  performs no I/O and adds no new file-read capability). */
+export interface LocalImageRef {
+  element: HTMLImageElement;
+  /** Path resolved against `documentPath`'s own directory, POSIX-style, rooted at the open
+   *  folder — the same root `FolderSource.handle`/`MarkdownFile.path` addresses. */
+  resolvedPath: string;
+}
+
+export interface SerializedReaderDocument {
+  /** A DETACHED clone of `.peekover-reader` — the live tree is never mutated (only read). */
+  clone: HTMLElement;
+  images: LocalImageRef[];
+  /** The theme painting on `host` at serialization time — `wrapInStandaloneDocument`'s theme arg. */
+  theme: EffectiveTheme;
+}
+
+const KNOWN_THEMES: readonly EffectiveTheme[] = ['light', 'dark', 'sepia'];
+
+/** The effective theme currently painting on a reader host — `readerCss.ts`'s own token blocks key
+ *  off exactly this attribute (`theme/reader.ts`'s `applyColorScheme`). Absent/unrecognized → the
+ *  base (light) tokens, matching `resolveTheme`'s own default. */
+function currentTheme(host: HTMLElement): EffectiveTheme {
+  const attr = host.getAttribute('data-theme');
+  return (KNOWN_THEMES as readonly string[]).includes(attr ?? '') ? (attr as EffectiveTheme) : 'light';
+}
+
+/**
+ * Clone the sanitized `.peekover-reader` subtree out of `host`'s shadow root and resolve its local
+ * images. No re-parse, no new sanitizer profile — `cloneNode(true)` walks already-sanitized nodes;
+ * the only string built from any of this is `wrapInStandaloneDocument`'s own serialization, taken
+ * AFTER cloning (AGENTS.md #3 satisfied by construction).
+ *
+ * @param host         The shadow-root-owning reader host to serialize.
+ * @param documentPath The currently-open document's own path within its folder (e.g.
+ *   `docs/guide/intro.md`), used only to resolve relative image references — see
+ *   {@link collectLocalImages}. Omitted (`''`) for a document with no folder context; every
+ *   relative image reference then resolves rooted at `''` (itself, unrooted).
+ */
+export function serializeReaderDocument(
+  host: HTMLElement,
+  documentPath = '',
+): SerializedReaderDocument {
+  const column = host.shadowRoot?.querySelector<HTMLElement>('.peekover-reader');
+  if (!column) {
+    throw new Error("serializeReaderDocument: no '.peekover-reader' in this host's shadow root");
+  }
+  const clone = column.cloneNode(true) as HTMLElement;
+  return { clone, images: collectLocalImages(clone, documentPath), theme: currentTheme(host) };
+}
+
+/** True for any URL that carries its own scheme (`http:`, `https:`, `data:`, `blob:`, …) or is
+ *  protocol-relative (`//host/path`) — i.e. anything that is NOT a bare relative/root-relative
+ *  reference into the open folder. */
+function isAbsoluteUrl(src: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('//');
+}
+
+/** POSIX-style path resolution, pure string math — no URL object, no I/O. `base` is the current
+ *  document's own path; `relative` is the `<img src>` exactly as authored. A leading `/` on
+ *  `relative` is read as rooted at the open folder's own root (there is no server to root against). */
+function resolveRelativePath(base: string, relative: string): string {
+  const baseDir = base.includes('/') ? base.slice(0, base.lastIndexOf('/')) : '';
+  const segments = relative.startsWith('/')
+    ? relative.slice(1).split('/')
+    : (baseDir ? baseDir.split('/') : []).concat(relative.split('/'));
+  const resolved: string[] = [];
+  for (const seg of segments) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') resolved.pop();
+    else resolved.push(seg);
+  }
+  return resolved.join('/');
+}
+
+/**
+ * Walk every `<img>` under `clone` and resolve the LOCALLY-resolvable ones to a path rooted at the
+ * open folder. A remote reference (`http:`/`https:`/protocol-relative) or an inert one (`data:`,
+ * `blob:`, empty) is left exactly as sanitize produced it and is NOT collected — per Ruling 3
+ * (spec §9-3, re-checked at 3.5/9.2): a remote image stays a remote reference, unrewritten, never
+ * fetched. This function performs no I/O and mutates nothing on `clone` — it only computes where a
+ * caller's own read mechanism should look; embedding the bytes is 3.1's/3.5's job.
+ */
+export function collectLocalImages(clone: HTMLElement, documentPath = ''): LocalImageRef[] {
+  const refs: LocalImageRef[] = [];
+  for (const img of Array.from(clone.querySelectorAll('img'))) {
+    const src = img.getAttribute('src') ?? '';
+    if (!src || isAbsoluteUrl(src)) continue;
+    refs.push({ element: img, resolvedPath: resolveRelativePath(documentPath, src) });
+  }
+  return refs;
+}
+
+// ============================================================================
+// THE :host TRANSLATION — one mechanical rule, derived live from READER_CSS.
+// ============================================================================
+//
+// Every rule in READER_CSS falls into exactly one of two buckets:
+//
+//   NOT :host-scoped  — the typography/table/code/diagram rules that target the reading column's
+//     OWN classes. These ship byte-for-byte unchanged: D-3's original "bundle the stylesheet"
+//     framing already covers them, and finding (b) is about `:host` specifically, not a general
+//     dead-code pass over chrome the clone never carries (e.g. `.peekover-diagram-lightbox`'s
+//     plain-selector rules ship unchanged too, unconditionally — out of THIS task's scope).
+//
+//   :host-scoped — reclassified by ONE rule, general over every current AND future `:host` site,
+//     not a per-line table:
+//
+//     • NO attribute predicate (`:host`, `:host *`, `:host :focus-visible`, `:host{ --toc-w:… }`,
+//       …) → CARRY. `:host` is replaced with `body`, unconditionally. This is the wrapper's own
+//       box — design tokens, the full-bleed base, the box-sizing/focus/selection reset, the
+//       reduced-motion override. (One token this carries with nothing left to consume it —
+//       `--toc-w`, since the TOC never rides into a standalone export — is accepted as harmless
+//       dead weight rather than special-cased out: a bare `:host` custom-property declaration does
+//       not "match nothing" the way a dead SELECTOR would, and a per-token exception is exactly the
+//       hand-authored carve-out this mechanical rule exists to avoid.)
+//     • `:host([data-theme="…"])` → RESOLVE. Kept — with the predicate stripped — IFF its value
+//       equals the export's OWN theme (baked once, at serialization time; there is no live theme
+//       toggle in a static file). The other two theme blocks are dropped entirely, not shipped
+//       inert: an export carries exactly one theme, forever.
+//     • `:host([data-ATTR="…"])` for any OTHER attribute (`data-mode`, `data-diff`, `data-watch`,
+//       `data-network`, `data-toc`, or any attribute a future readerCss.ts edit adds) → DROP,
+//       unconditionally. None of these states is ever baked onto the export's wrapper — a static
+//       file has no raw/reading toggle, no diff overlay, no watch status, no network indicator, no
+//       collapsible TOC, and (per `serializeReaderDocument`'s own clone target) none of their
+//       SUBJECT elements — `.peekover-toc`, `.peekover-watch`, `.peekover-net`,
+//       `.peekover-diff-affordance`, `.peekover-raw` — ride into the clone at all, since it clones
+//       ONLY `.peekover-reader`, never its shadow-root siblings. A rule gated on one of these
+//       attributes is therefore dropped rather than translated into a selector proven to match
+//       nothing (`:host([data-toc="open"]) .peekover-reader` is the sharpest case: its SUBJECT,
+//       `.peekover-reader`, DOES survive the clone, but the STATE gating it — an open TOC — can
+//       never occur in a file with no TOC to open, so translating it unconditionally would apply a
+//       TOC-reserved margin to a reader that has no TOC, a real rendering defect, not a no-op).
+
+/** One classified `:host` rule (or a pass-through non-`:host` rule) after translation. `null` marks
+ *  a dropped rule — filtered out before the output is assembled. */
+type ClassifiedRule = { selector: string; body: string } | null;
+
+/** Strip `/* … *‍/` comments before parsing rules — the doc-prose in READER_CSS mentions `:host` in
+ *  17 places (task 2.1's own grep) that are not selectors at all; comments also cost export bytes
+ *  for no reason once this text is no longer riding inside the shipped bundle's own minifier-blind
+ *  template literal. */
+function stripCssComments(css: string): string {
+  return css.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+/** Split a flat (non-`@media`-nested) chunk of CSS into `{selector, body}` rules. READER_CSS uses
+ *  no nesting beyond one `@media`/`@keyframes` level (verified by the residual check below), so a
+ *  rule is simply "text up to `{`, then text up to the matching `}`" with no braces inside either
+ *  part. KNOWN LIMIT, stated rather than silently assumed: this is not a general CSS parser — a
+ *  nested `@media` (an `@media` block containing another `@media` block) would NOT reliably throw;
+ *  READER_CSS has never done this and the drift guard's own pinned rule count is the practical
+ *  guard against a shape change this parser was not written for. */
+function parseFlatRules(css: string): { rules: { selector: string; body: string }[]; residual: string } {
+  const rules: { selector: string; body: string }[] = [];
+  const residual = css.replace(/([^{}]+)\{([^{}]*)\}/g, (_m, sel: string, body: string) => {
+    rules.push({ selector: sel.trim(), body });
+    return '';
+  });
+  return { rules, residual };
+}
+
+/** Pull every `@media (...) { … }` block out of `css`, parsing its (flat) interior as rules too.
+ *  Returns the leftover text with every matched block removed, plus each block's condition + rules. */
+function extractMediaBlocks(css: string): {
+  plain: string;
+  media: { condition: string; rules: { selector: string; body: string }[] }[];
+} {
+  const media: { condition: string; rules: { selector: string; body: string }[] }[] = [];
+  const plain = css.replace(
+    /@media([^{]*)\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g,
+    (_m, condition: string, inner: string) => {
+      const { rules, residual } = parseFlatRules(inner);
+      if (residual.trim() !== '') {
+        throw new Error('translateReaderStylesheet: unparsed text inside an @media block');
+      }
+      media.push({ condition: condition.trim(), rules });
+      return '';
+    },
+  );
+  return { plain, media };
+}
+
+/** Pull every `@keyframes name { … }` block out of `css` untouched — animation keyframes never
+ *  carry a `:host` selector (verified: `readerCss.ts`'s three `@keyframes` blocks are pure
+ *  percentage/from/to steps), so they need no classification, only pass-through preservation. Like
+ *  `extractMediaBlocks`, this assumes exactly one level of nesting inside the block. */
+function extractKeyframeBlocks(css: string): { plain: string; keyframes: string[] } {
+  const keyframes: string[] = [];
+  const plain = css.replace(
+    /@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g,
+    (whole: string) => {
+      if (/:host/.test(whole)) {
+        throw new Error('translateReaderStylesheet: unexpected :host inside an @keyframes block');
+      }
+      keyframes.push(whole);
+      return '';
+    },
+  );
+  return { plain, keyframes };
+}
+
+/** Classify + translate one rule against `theme`. `null` selector text on a `:host([data-attr=…])`
+ *  match with a NON-theme attribute (or a non-matching theme value) signals DROP. */
+function classifyRule(
+  rule: { selector: string; body: string },
+  theme: EffectiveTheme,
+): ClassifiedRule {
+  const { selector, body } = rule;
+  if (!selector.includes(':host')) return { selector, body }; // pass through unchanged
+  const attrMatch = selector.match(/:host\(\[data-([a-z-]+)="([^"]+)"\]\)/);
+  if (!attrMatch) {
+    // Bare :host (no attribute predicate) — CARRY, unconditionally.
+    return { selector: selector.split(':host').join('body'), body };
+  }
+  const [full, attr, value] = attrMatch;
+  if (attr !== 'theme' || value !== theme) return null; // DROP
+  const remainder = selector.replace(full, '').trim();
+  return { selector: remainder ? `body ${remainder}` : 'body', body };
+}
+
+/** Render a list of classified rules back to CSS text, dropped ones already filtered out. */
+function renderRules(rules: ClassifiedRule[]): string {
+  return rules
+    .filter((r): r is { selector: string; body: string } => r !== null)
+    .map((r) => `${r.selector}{${r.body}}`)
+    .join('\n');
+}
+
+/** Diagnostics surfaced for the drift-guard test (htmlExport.test.ts) — never consumed in
+ *  production. `hostSiteCount` is the number of `:host`-scoped rules the LIVE READER_CSS text
+ *  actually carried at call time (2.1's own finding pins it at 26); a `readerCss.ts` edit that
+ *  adds, removes, or reshapes a `:host` rule moves this number on the very next call — there is no
+ *  separate copy for it to desync from. */
+export interface TranslationDiagnostics {
+  hostSiteCount: number;
+  carried: number;
+  resolved: number;
+  dropped: number;
+}
+
+/**
+ * Derive, LIVE from `READER_CSS`'s own text, the stylesheet a standalone export should ship — see
+ * the module-level doc comment above for the one mechanical rule this applies. Throws if
+ * `READER_CSS` no longer matches the flat-plus-one-@media-level shape the parser assumes (a
+ * structural change, not a silent mistranslation) — the residual checks below are exact.
+ */
+export function translateReaderStylesheet(
+  theme: EffectiveTheme,
+  source: string = READER_CSS,
+): { css: string; diagnostics: TranslationDiagnostics } {
+  const stripped = stripCssComments(source);
+  const { plain: withoutKeyframes, keyframes } = extractKeyframeBlocks(stripped);
+  const { plain, media } = extractMediaBlocks(withoutKeyframes);
+  const { rules: flatRules, residual } = parseFlatRules(plain);
+  if (residual.trim() !== '') {
+    throw new Error('translateReaderStylesheet: unparsed text at the top level of READER_CSS');
+  }
+
+  let hostSiteCount = 0;
+  let carried = 0;
+  let resolved = 0;
+  let dropped = 0;
+  const tally = (rule: { selector: string; body: string }, out: ClassifiedRule) => {
+    if (!rule.selector.includes(':host')) return;
+    hostSiteCount++;
+    if (out === null) dropped++;
+    else if (/^:host\(\[data-theme=/.test(rule.selector)) resolved++;
+    else carried++;
+  };
+
+  const flatOut = flatRules.map((r) => {
+    const c = classifyRule(r, theme);
+    tally(r, c);
+    return c;
+  });
+
+  const mediaOut = media
+    .map((block) => {
+      const inner = block.rules.map((r) => {
+        const c = classifyRule(r, theme);
+        tally(r, c);
+        return c;
+      });
+      const rendered = renderRules(inner);
+      return rendered ? `@media${block.condition}{${rendered}}` : '';
+    })
+    .filter((s) => s !== '');
+
+  const css = [renderRules(flatOut), ...mediaOut, ...keyframes].filter((s) => s !== '').join('\n');
+  return { css, diagnostics: { hostSiteCount, carried, resolved, dropped } };
+}
+
+/**
+ * Wrap a serialized clone into a standalone HTML document: doctype, a `<style>` carrying the
+ * TRANSLATED stylesheet (per the module-level doc comment), and the clone itself. `:host`
+ * translates to `body` (see `classifyRule`), so the wrapper IS the document's own `<body>` — no
+ * extra wrapper element, matching D-3's interpretation note ("a bundled `<style>` block, never
+ * per-node inline `style` attributes").
+ */
+export function wrapInStandaloneDocument(clone: HTMLElement, theme: EffectiveTheme): string {
+  const { css } = translateReaderStylesheet(theme);
+  return (
+    '<!doctype html>\n' +
+    '<html>\n<head>\n<meta charset="utf-8">\n' +
+    `<style>${css}</style>\n` +
+    `</head>\n<body>\n${clone.outerHTML}\n</body>\n</html>\n`
+  );
+}

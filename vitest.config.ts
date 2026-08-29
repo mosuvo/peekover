@@ -200,6 +200,58 @@ const probeFileUrlClipboard: BrowserCommand<[]> = async ({ page }): Promise<File
   }
 };
 
+// ── A REAL, BARE, STANDALONE HTML DOCUMENT — task 2.2's D-3 structural claim ──
+// "Opened standalone (no extension loaded, a bare `file://` … document)" cannot be simulated
+// in-page for the same reason the clipboard `file://` probe above cannot: a browser test runs
+// INSIDE the vitest browser-mode page, at its own `http://localhost` runner origin, and neither
+// engine will navigate that page to `file://` (the standing finding this file already carries).
+// So this command takes an ALREADY-SERIALIZED standalone document string (built in-page, by the
+// real `serializeReaderDocument`/`wrapInStandaloneDocument`, against a real mounted reader —
+// only the "open it bare" half needs the server side), writes it to a temp `.html` file, and
+// opens it in a FRESH, isolated browser context/page — never the runner's own page or context,
+// the same isolation `probeFileUrlClipboard` uses and for the same reason.
+interface StandaloneRenderProbe {
+  bodyPosition: string;
+  bodyBackgroundColor: string;
+  hostSelectorLiteralPresent: boolean;
+  h1Text: string | null;
+  consoleErrors: string[];
+}
+
+const renderStandaloneDocument: BrowserCommand<[html: string]> = async (
+  { page },
+  html,
+): Promise<StandaloneRenderProbe> => {
+  const browser = page.context().browser();
+  if (!browser) throw new Error('no Playwright Browser — the standalone-document probe cannot isolate a context');
+
+  const dir = mkdtempSync(join(tmpdir(), 'peekover-standalone-export-'));
+  const file = join(dir, 'export.html');
+  writeFileSync(file, html, 'utf8');
+  const url = pathToFileURL(file).href;
+
+  const context = await browser.newContext();
+  try {
+    const probe = await context.newPage();
+    const consoleErrors: string[] = [];
+    probe.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    probe.on('pageerror', (err) => consoleErrors.push(String(err)));
+    await probe.goto(url);
+    const result = (await probe.evaluate(`({
+      bodyPosition: getComputedStyle(document.body).position,
+      bodyBackgroundColor: getComputedStyle(document.body).backgroundColor,
+      hostSelectorLiteralPresent: document.documentElement.outerHTML.includes(':host'),
+      h1Text: document.querySelector('h1')?.textContent ?? null,
+    })`)) as Omit<StandaloneRenderProbe, 'consoleErrors'>;
+    return { ...result, consoleErrors };
+  } finally {
+    await context.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
 // Two Vitest projects, run independently:
 //
 //   pnpm test          -> vitest run --project unit     (fast, jsdom/node)
@@ -259,7 +311,12 @@ export default defineConfig({
             provider: playwright(),
             // Custom cross-engine commands callable from browser tests via
             // `commands` from 'vitest/browser' (see emulateReducedMotion above).
-            commands: { emulateReducedMotion, emulateColorScheme, probeFileUrlClipboard },
+            commands: {
+              emulateReducedMotion,
+              emulateColorScheme,
+              probeFileUrlClipboard,
+              renderStandaloneDocument,
+            },
             instances: [
               { browser: 'chromium' },
               { browser: 'firefox' },

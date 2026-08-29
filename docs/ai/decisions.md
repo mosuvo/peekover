@@ -1,6 +1,48 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 D-3 (task 2.2) — `serializeReaderDocument`/`wrapInStandaloneDocument` land, WITH
+  FINDING (b)'s AMENDMENT APPLIED, NOT PLAN's ORIGINAL VERBATIM TEXT.** `plan.md` §0's pre-written entry
+  for D-3 reads: *"010 D-3 — the export serializer clones trusted nodes and bundles the existing
+  stylesheet text; it never re-enters the parse/sanitize path and never inlines per-node computed
+  styles."* The clone/no-re-parse/no-new-sanitizer half is applied VERBATIM and is exactly what shipped —
+  `serializeReaderDocument` clones `.peekover-reader` with `cloneNode(true)` over already-sanitized nodes,
+  serializes only AFTER cloning, adds no sanitizer profile. **The "bundles the existing stylesheet text"
+  half is NOT applied verbatim, and plan.md §4 risk 1 already pre-authorized exactly this deviation**:
+  *"if the shipped rules are `:host`-scoped, the export needs a translated copy… which changes D-3's
+  'no new anything' framing and must be flagged back rather than built silently."* Task 2.1 (`b2ac25d`)
+  ran that check and found (b): 26 `:host` rule sites, presentation-relevant, not shadow-boundary
+  housekeeping. So 2.2 ships a **mechanically-derived translation** (`translateReaderStylesheet` in
+  `src/export/htmlExport.ts`), not a string reuse: one general rule (no per-site table) — a bare `:host`
+  rule carries onto `body`; a `:host([data-theme="…"])` rule resolves against the export's own theme,
+  baked once; every other `:host([data-ATTR="…"])` rule (mode/diff/watch/network/toc — none of whose
+  subject elements ride into `serializeReaderDocument`'s clone, which is `.peekover-reader` alone) drops.
+  **DERIVED LIVE, not a committed second copy** — the function reads `READER_CSS`'s own text at call
+  time, so there is one copy of the stylesheet's source in this codebase, not two that could desync; the
+  mandatory drift guard (`htmlExport.test.ts`) instead pins the live `:host` rule count and proves, by a
+  red-first ablation, that the count tracks a `readerCss.ts` edit rather than a hardcoded number. `25` of
+  2.1's 26 counted sites live in `READER_CSS`; the 26th (`readerCss.ts:1191`, `CONTAINED_CSS`'s own
+  `:host{ position:relative; inset:auto; }`, the app-page shell-region variant) is out of scope BY
+  CONSTRUCTION — it is never fed into the transform, resolved by scope rather than by classification (and
+  is unrelated to print, despite this task's own kickoff hypothesizing that reading — corrected on
+  inspection: it is `mount({contained:true})`'s pane-vs-full-page variant, `readerCss.ts`'s own "CONTAINED
+  variant" section, nothing to do with `@media print`, which `readerCss.ts` does not carry at all yet —
+  task 6.1's own greenfield).
+  **Consequences, landing in this same commit:** `src/export/htmlExport.ts` +
+  `src/export/htmlExport.test.ts` (18 unit tests, jsdom) + `tests/browser/htmlExport.browser.test.ts` (4
+  tests, real Chromium+Firefox — a necessary-ripple addition beyond 2.2's own Files list, justified by
+  its own Verify clause: *"the exported document, opened standalone… renders visually equivalent to the
+  reader"* is real-engine-or-nothing and 2.2's Files list named no such file). `vitest.config.ts` gains one
+  server-side custom command (`renderStandaloneDocument`), the same "write a temp file, navigate a FRESH
+  isolated context" pattern `probeFileUrlClipboard` already established, for the same reason: a browser
+  test runs at the runner's own `http://localhost` origin and neither engine will navigate that page to
+  `file://`. App-page/content-script bytes byte-identical to 2.1's own baseline (nothing yet imports the
+  new module — 3.1/3.2 wire it in); dependencies unchanged at 7. Golden empty. Full suite green except the
+  2 known pre-existing `codeDetect.test.ts` corpus-drift failures (confirmed same signatures as the
+  2026-08-28 baseline). **Revisit-when:** never, for the clone/sanitizer half (D-3's original claim holds
+  exactly as written); the translation's own "derive live" design means a future `readerCss.ts` edit needs
+  no revisit here at all — the drift guard is the mechanism, not a trigger.
+
 - **2026-08-24 · M10 §3.10 — HUMAN RULING: DOCX EXPORT (scope item 2 / task 5.1) DROPPED FROM M10. D-1's
   BUSTS FORK IS RESOLVED BY SCOPE REDUCTION — not subset, not lazy-split. Group 2 and every task below it
   except struck 5.1 are RE-AUTHORIZED to proceed under normal per-task byte discipline; no special gate.**
