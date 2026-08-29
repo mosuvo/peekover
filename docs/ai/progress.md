@@ -71,10 +71,13 @@ identical**, confirmed by a full rebuild of BOTH engines. `.output` **4,866,741 
 **1,470,730 B**, manifest **654 / 770 B**, `permissions: []`, no `web_accessible_resources` — all
 unchanged. `dependencies` **6**, unchanged (no new package; `downloadAs` uses only `Blob`/`URL`, already
 used elsewhere).
-**Suite.** Full unit suite: **1053/1055 passed**, the SAME 2 known pre-existing `codeDetect.test.ts`
-corpus-drift failures (corpus 26 not 23, split 7/19 not 7/16 — confirmed same signatures). Unit count moved
-**1060 → 1055** (−5), fully accounted for: exactly the 5 `collectLocalImages` tests removed with the code
-they tested, no other test dropped. Full browser suite: **136 files / 1403 passed / 15 skipped**, zero
+**Suite.** Full unit suite: **1055/1055 passed, 0 failed.** (M10 hygiene, 2026-08-29: `codeDetect.test.ts`'s
+2 standing corpus-drift failures re-pinned to the current corpus — 23→26 files, split 7/16→7/19 — after
+confirming the drift is legitimate growth, 3 new non-code fences in `specs/010-local-exports/plan.md`, not a
+detection regression; the "2 known failures" caveat below and at line 116/240/273 is RETIRED, "suite green"
+is now literally true.) Unit count moved **1060 → 1055** (−5), fully accounted for: exactly the 5
+`collectLocalImages` tests removed with the code they tested, no other test dropped. Full browser suite:
+**136 files / 1403 passed / 15 skipped**, zero
 failures (1399 → 1403, +4 — this task's file went from 2 tests to 4, on both engines). Lint/typecheck
 clean. Golden diff empty. Manifest suite 8/8. 007/009 fence tests intact (covered by the full green browser
 run, 0 failures across all 136 files).

@@ -146,11 +146,14 @@ describe('detectLanguage — accuracy against this repository\'s own unlabeled-f
   const corpus: UnlabeledFence[] = [];
   scanUnlabeledFences(ROOT, corpus);
 
-  // 8.3's banked count (HEAD 8b62a2c), reproduced with ZERO drift at 8.4 (HEAD b102f85) and again
-  // here — a change in this number means the corpus itself drifted since 8.5's ruling, which is a
+  // 8.3's banked count (HEAD 8b62a2c) held with ZERO drift through 8.4 (HEAD b102f85). Re-pinned
+  // at M10 hygiene (HEAD 4b16a23, n=23→26) after confirming the drift is legitimate corpus growth —
+  // 3 new unlabeled fences in specs/010-local-exports/plan.md (a file that didn't exist at 8.3/8.4),
+  // each independently confirmed non-code — not a detectLanguage regression: the pre-existing
+  // 23-item subset still splits 7/16 under today's code. A future change in this number is again a
   // FLAG condition for the task that observes it, not a silent re-baseline.
-  it('reproduces 8.3/8.4\'s banked corpus size (n=23), zero drift', () => {
-    expect(corpus.length).toBe(23);
+  it('reproduces the current banked corpus size (n=26), zero drift since the M10 hygiene re-pin', () => {
+    expect(corpus.length).toBe(26);
   });
 
   // Ground truth assigned by inspection (8.3's own methodology) — 7 genuine code items, 16
@@ -169,14 +172,14 @@ describe('detectLanguage — accuracy against this repository\'s own unlabeled-f
     'specs/009-code-blocks/plan.md:118',
   ]);
 
-  it('reproduces the 7/16 code/non-code split this task\'s own re-assignment converged on', () => {
+  it('reproduces the 7/19 code/non-code split this task\'s own re-assignment converged on', () => {
     const key = (f: UnlabeledFence): string => `${f.file}:${f.startLine}`;
     const codeCount = corpus.filter((f) => CODE_ITEMS.has(key(f))).length;
     expect(codeCount).toBe(7);
-    expect(corpus.length - codeCount).toBe(16);
+    expect(corpus.length - codeCount).toBe(19);
   });
 
-  it('scores every corpus item\'s CODE-vs-DECLINE call correctly (23/23 on this task\'s own re-assignment)', () => {
+  it('scores every corpus item\'s CODE-vs-DECLINE call correctly (26/26 on this task\'s own re-assignment)', () => {
     const key = (f: UnlabeledFence): string => `${f.file}:${f.startLine}`;
     const misses: string[] = [];
     for (const fence of corpus) {
