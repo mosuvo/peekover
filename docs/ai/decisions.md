@@ -1,6 +1,75 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 D-2 / D-10 (panel half) / Ruling 2 (task 3.2) — the export panel lands: `exportControls.ts`
+  follows `storageControls.ts`'s own wiring, the mockup's shape (minus the 4 struck/out-of-scope rows) is
+  carried for the 5 surviving rows, and Ruling 2's focus trap is discharged.** Three gate-2 approvals get
+  their first implementing commit here — none had landed one before this task, since no earlier M10 task
+  touched `exportControls.ts` or built any trap.
+  **D-2, applied VERBATIM** (`plan.md` §0's own text): *"010 D-2 — export controls are app-page chrome, not
+  reader chrome, so they follow storageControls.ts's wiring rather than mount()'s children[] pattern."*
+  `createExportView(doc, opts) -> {element}` mirrors `createStorageView`'s stateless-builder-plus-slot shape
+  exactly; `appShell.ts` owns open/close state and inserts via `exportPanel.replaceChildren(...)`, the same
+  pattern as `storagePanel`. `mount.ts` is touched at zero sites — confirmed by diff, not assumed.
+  **D-10, panel half only, applied VERBATIM** (`plan.md` §0's own text, which covers BOTH halves of D-10):
+  *"010 D-10 — the export panel and the print @media block both predate this spec in the mockup, which
+  corrects §7-7's own 'no mockup known to exist' framing the same way 009 corrected an identical claim about
+  code blocks."* Only the PANEL half is real as of this commit — the mockup's `#exportsOverlay`
+  (`design/mockup.html:861-874`) supplied the icon-glyph-plus-subtext visual language for the panel's 5
+  surviving rows (HTML/PDF/rich-text carried from the mockup's own 3 matching rows; Copy-as-HTML and
+  Copy-as-plain-text designed in the same language, since D-10's own plan-time finding already noted the
+  mockup draws no row for either). The print-`@media`-block half of this same D-value remains pending task
+  6.1, which is where its own implementing entry lands.
+  **Ruling 2 (gate 2, plan §8 Q2) — MATCH THE MOCKUP'S `aria-modal="true"` CONTRACT, REUSE
+  `diagramLightbox`'S TRAP/RESTORE BASELINE — discharged, not re-argued.** `exportControls.ts` copies
+  `diagramView.ts`'s `openDiagramLightbox` shape inline (its own keydown closure: Tab wrap computed from a
+  live tab-stop scan over enabled buttons, Escape asks the caller to close) — no shared trap helper exists
+  anywhere in this codebase (rule-of-three: `diagramLightbox` plus this panel is two call sites, not three,
+  so extracting one is a future call, not this task's). The RESTORE half (focus back to `exportToggle`,
+  guarded by `isConnected`) is `appShell.ts`'s own job, mirroring the open/close split
+  `toggleStorage`/`renderStorage` already use. `tests/browser/exportPanel.browser.test.ts`'s row-11 suite
+  proves the trap real-engine (Tab/Shift-Tab wrap, Escape closes + restores, AND the negative — a control
+  behind the panel is unreachable by Tab while it is open, red-first-ablated to confirm the assertion can
+  fail: breaking the wrap sends focus to real controls behind the panel, `peekover-app__chip-revoke` /
+  `peekover-app__export-toggle`, on both engines).
+  **Q1 (this task's own central unknown, not a plan D-value) — RESOLVED (a): 3.2 wires HTML export's row
+  live.** tasks.md's §3.2 body lists 5 surviving rows and says each row's own task (3.1, 3.3, 3.4, 4.1,
+  6.1/7.1) is where its wiring "lands" — but 3.1 (HTML export's function) already landed with no panel to
+  wire it into, and no later task's Files list revisits `exportControls.ts` for HTML specifically (3.3/3.4/
+  4.1/7.1 each touch it once, for their OWN row). So 3.2 is the only place HTML's row can go live, and it
+  does: `exportControls.ts`'s `html` row calls `opts.onExportHtml`, which `appShell.ts` wires to the real
+  `exportHtml(host, basenameForExport())` — `htmlExport.ts`'s FIRST import into the app graph. The other 4
+  rows render as real, accessibly-named `<button>`s that are simply `disabled` — present so the panel reads
+  as the whole feature on day one, inert until their own task supplies a handler.
+  **Byte discipline — the delta, MEASURED, not the confirmation 3.1 gave.** App-page chunk moves off
+  475,579 B for the first time in M10: **483,331 B (+7,752 B), both engines identical.** Confirmed by string
+  search in the built chunk (`peekover-export`, `Export as HTML`, `translateReaderStylesheet` all present) —
+  the delta is real wiring, not dead code the bundler happened to retain. The delta is small because
+  `READER_CSS`'s own text — the bulk of what `translateReaderStylesheet` reads — was ALREADY in the app-page
+  chunk via `readerPane.ts`'s own pre-existing `mount()` import; only `htmlExport.ts`'s own new logic
+  (`translateReaderStylesheet`'s parser, `wrapInStandaloneDocument`, `downloadAs`, `exportHtml`) plus
+  `exportControls.ts`'s own DOM-building code are genuinely new bytes. `.output` **4,874,493 B (Cr) /
+  4,874,609 B (Fx)** — same +7,752 B delta both engines, ~368,387 B (Cr) headroom remaining, robustly under
+  the 5 MiB ceiling. `pnpm zip` **1,472,891 B (+2,161 B)**, ~610 KiB headroom remaining. Content-script
+  md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-identical to baseline**, confirmed by a full rebuild of
+  both engines (not a stale directory). Manifests **654 / 770 B**, `permissions: []`, no
+  `web_accessible_resources` — unchanged. `dependencies` unchanged at 6.
+  **Q2 (this task's own scope, not a plan D-value) — RESOLVED: DISABLED, not hidden.** `exportToggle` is a
+  document-scoped affordance (every row targets the CURRENTLY OPEN document); unlike `storageToggle`
+  (global), it renders `disabled` whenever `activeFile == null` and enables the instant a file is selected
+  — matching the disabled-not-hidden visual language `__cta`/`__pin` already establish elsewhere in this
+  shell (present so the control is discoverable before any document is open, inert until it has something
+  to act on). `setActiveFile` (new, `appShell.ts`) is the one place `activeFile` is now assigned, so the
+  toggle's disabled state can never drift from the value it gates on.
+  **Suite.** Full unit suite unaffected by this task (no file it touches has a test file of its own beyond
+  the new browser suite — `appShell.test.ts`'s existing 62 tests all still pass unmodified). Full browser
+  suite: **138 files / 1433 passed / 15 skipped, 0 failed** (136/1403/15 baseline + this task's one new
+  file, 15 tests × 2 engines = +30). Lint/typecheck clean. Golden diff empty (a panel is chrome, not
+  content — no parse/sanitize/render path touched).
+  **Revisit-when:** D-10's print-`@media`-block half — task 6.1's own implementing entry. Ruling 2's
+  rule-of-three non-extraction — if a third focus trap appears anywhere in this codebase, that is the
+  trigger to extract a shared helper, not before.
+
 - **2026-08-29 · M10 §3.1(cont.) — HUMAN RULING: ZIP EXPORT (task 3.5) DROPPED FROM M10 ENTIRELY, A DOWNSTREAM
   CONSEQUENCE OF THE §3.1 LOCAL-IMAGE RULING (immediately below), NOT A RE-LITIGATION OF IT. Unlike DOCX
   (§3.10) and local-image embedding (§3.1), this is a WHOLE-TASK STRIKE — task 3.5 has no surviving half worth

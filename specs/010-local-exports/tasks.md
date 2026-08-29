@@ -272,8 +272,15 @@ halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see belo
       Content-script bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`.
       [D-3; §4 HTML export; row 14; §3.1 gate ruling]
 
-- [ ] **3.2 The export panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring shape, Ruling 2's
-      focus trap (D-2, Ruling 2).** `createExportView(...)`, wired in `appShell.ts` beside the existing
+- [x] **3.2 The export panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring shape, Ruling 2's
+      focus trap (D-2, Ruling 2). ★ LANDED, 2026-08-29 — Q1 RESOLVED (a): this task wires HTML export's row
+      live (3.1's `exportHtml`, the first `htmlExport.ts` import into the app graph, app-page chunk
+      475,579 -> 483,331 B, +7,752 B both engines); the other 4 rows render as real, accessibly-named
+      `<button>`s that are `disabled`, pending 3.3/3.4/4.1/6.1-7.1's own wiring. Q2 RESOLVED: `exportToggle`
+      is DISABLED (not hidden) while `activeFile == null`, mirroring `__cta`/`__pin`'s own disabled-not-
+      hidden language. Full reasoning, the byte decomposition, and D-2/D-10(panel half)/Ruling 2's own
+      implementing entries are in `decisions.md`'s 2026-08-29 M10 D-2/D-10/Ruling-2 (task 3.2) entry.**
+      `createExportView(...)`, wired in `appShell.ts` beside the existing
       `createStorageView(...)` call, the same builder shape reused verbatim: a pure `(doc, opts) → {element}`
       function rebuilt on every open, mounted through `appShell.ts`'s existing slot pattern
       (`storagePanel.replaceChildren(view.element)` to open, `storagePanel.replaceChildren()` to close) —

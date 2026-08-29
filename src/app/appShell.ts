@@ -121,6 +121,8 @@ import {
   type WatchTarget,
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
+import { createExportView } from './exportControls';
+import { exportHtml } from '../export/htmlExport';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
@@ -275,6 +277,15 @@ const DARK_TOKENS = /* css */ `
  * which share this stacking context through an unpositioned pane host. Pinned by
  * tests/browser/storagePanelOverlay.browser.test.ts.
  *
+ * THE EXPORT PANEL IS ANCHORED AT ITS OWN TRIGGER, NOT THE HEADER'S RIGHT EDGE (task 3.2, D-2,
+ * §3.11 rows 3-5). `__storage-slot`'s `right:1rem` anchor works only because the storage toggle
+ * happens to be the header's rightmost control; the export toggle sits to ITS right, so reusing
+ * that same header-relative anchor for `__export-slot` would overlap the two panels at the exact
+ * same rect whenever both existed. `__export-control` instead carries `position:relative` (the
+ * `__code-theme-control` wrapper's own shape) and `__export-slot` is positioned against THAT
+ * wrapper (`right:0`, not a header-relative constant) — genuinely anchored at its own trigger,
+ * which also makes it independent of whatever else joins the header's right-hand group later.
+ *
  * ★ RATIONALE LIVES HERE, NOT IN THE CSS BELOW, AND THAT IS LOAD-BEARING: everything inside the
  * template literal is STRING CONTENT the minifier cannot strip, so a comment written in there
  * ships to every user's browser. Writing this block as CSS cost **+1.5 KB on the app-page chunk**
@@ -355,6 +366,22 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS}__storage-slot:not(:empty){
   position:absolute; top:100%; right:1rem; z-index:5;
   width:min(560px,calc(100vw - 2rem));
+  max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
+  background:var(--paper); border:1px solid var(--line);
+  border-radius:var(--r); box-shadow:var(--shadow);
+}
+/* "Export" toggle + panel (task 3.2) — anchoring rationale is in the doc comment above APP_CSS. */
+.${SHELL_CLASS}__export-toggle{
+  font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
+  border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
+}
+.${SHELL_CLASS}__export-toggle:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__export-toggle[aria-expanded="true"]{background:var(--accent-soft)}
+.${SHELL_CLASS}__export-toggle:disabled{opacity:.6; cursor:default}
+.${SHELL_CLASS}__export-control{position:relative}
+.${SHELL_CLASS}__export-slot:not(:empty){
+  position:absolute; top:100%; right:0; z-index:5;
+  width:min(420px,calc(100vw - 2rem));
   max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
   background:var(--paper); border:1px solid var(--line);
   border-radius:var(--r); box-shadow:var(--shadow);
@@ -533,7 +560,27 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // folder navigator and reader never move when it opens (M6 9.1 gate finding).
   const storagePanel = doc.createElement('div');
   storagePanel.className = `${SHELL_CLASS}__storage-slot`;
-  header.append(brand, tag, themeControl, codeThemeControl, storageToggle, storagePanel);
+
+  // The export panel's own trigger + slot (task 3.2, D-2). Q2 (tasks.md's own document-scoped
+  // question): every export/copy action targets the CURRENTLY OPEN document, so — unlike
+  // `storageToggle`, which is global — this toggle is DISABLED (not hidden) until `activeFile` is
+  // set, matching the disabled-not-hidden visual language `__cta`/`__pin` already establish
+  // elsewhere in this shell: present so it is discoverable before any document is open, inert
+  // until it has something to act on. `setActiveFile` (below) keeps this in sync.
+  const exportControl = doc.createElement('div');
+  exportControl.className = `${SHELL_CLASS}__export-control`;
+  const exportToggle = doc.createElement('button');
+  exportToggle.type = 'button';
+  exportToggle.className = `${SHELL_CLASS}__export-toggle`;
+  exportToggle.textContent = 'Export';
+  exportToggle.setAttribute('aria-expanded', 'false');
+  exportToggle.disabled = true; // no document open yet
+  exportToggle.addEventListener('click', () => toggleExport());
+  const exportPanel = doc.createElement('div');
+  exportPanel.className = `${SHELL_CLASS}__export-slot`;
+  exportControl.append(exportToggle, exportPanel);
+
+  header.append(brand, tag, themeControl, codeThemeControl, storageToggle, storagePanel, exportControl);
 
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
@@ -779,6 +826,66 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (storageOpen) await renderStorage(); // the diagram line clears; every other line stands
   }
 
+  // --- the export panel (task 3.2, D-2, Ruling 2) -------------------------------------
+  //
+  // `createExportView` mirrors `createStorageView`'s own stateless-builder-plus-slot shape
+  // exactly, with one addition: Ruling 2's focus trap. The trap's KEYDOWN HALF (Tab wrap, Escape)
+  // is built inside `createExportView` itself (copied inline from `openDiagramLightbox`'s shape —
+  // see `exportControls.ts`'s own doc comment for why no shared helper exists). What appShell owns
+  // here is the OPEN/CLOSE STATE and the RESTORE half — insert-and-focus on open, empty-and-
+  // restore on close — the exact split `toggleStorage`/`renderStorage` already use for the
+  // storage panel, plus the one thing that panel never needed: a focus target to restore to.
+
+  let exportOpen = false;
+
+  /** The exported file's basename (task 3.1's own parameter) — the open document's own name,
+   *  minus its extension. `exportToggle` is disabled whenever `activeFile` is null, so the
+   *  fallback below is defensive only (never reachable through the shipped UI). */
+  function basenameForExport(): string {
+    const name = activeFile?.name ?? 'export';
+    return name.replace(/\.[^./\\]+$/, '') || 'export';
+  }
+
+  /** Render the export panel into its slot and move initial focus inside it — never left on the
+   *  page behind, the same choice `openDiagramLightbox` makes for its own trap's entry point. */
+  function renderExport(): void {
+    const view = createExportView(doc, {
+      onExportHtml: () => {
+        // The app page's live reader host (readerPane.ts's own class, the same selector the diff
+        // context above already uses) — absent during a designed non-render state (e.g. an
+        // unreadable file), in which case there is nothing to export and this is a silent no-op
+        // (AGENTS.md #5: no export UI is reachable without `activeFile`, but the read itself can
+        // still fail after selection).
+        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+        if (host) exportHtml(host, basenameForExport());
+      },
+      onClose: () => toggleExport(),
+    });
+    exportPanel.replaceChildren(view.element);
+    view.element.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
+  }
+
+  /** Show/hide the export panel. Closing restores focus to `exportToggle`, guarded by
+   *  `isConnected` exactly as `closeDiagramLightbox` guards its own restore (a detached trigger
+   *  must not throw). */
+  function toggleExport(): void {
+    exportOpen = !exportOpen;
+    exportToggle.setAttribute('aria-expanded', String(exportOpen));
+    if (exportOpen) {
+      renderExport();
+    } else {
+      exportPanel.replaceChildren();
+      if (exportToggle.isConnected) exportToggle.focus();
+    }
+  }
+
+  /** Track `activeFile` AND keep `exportToggle`'s document-scoped disabled state (Q2) in sync —
+   *  every assignment site below goes through this instead of setting `activeFile` bare. */
+  function setActiveFile(file: MarkdownFile | null): void {
+    activeFile = file;
+    exportToggle.disabled = activeFile == null;
+  }
+
   // --- reopen-hub (recents/pins) view -------------------------------------
 
   /** Does the remembered folder for `folderId` still carry a live handle (Chromium)? Decides
@@ -825,7 +932,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    *  active folder. Also tracks the file so it can be pinned. Recents are written here, not in
    *  the reader seam, so `selectFile` stays store-free. */
   async function selectFolderFile(file: MarkdownFile): Promise<void> {
-    activeFile = file;
+    setActiveFile(file);
     // WATCH WIRING FOR THE APP PAGE (tasks 4.3 + 4.4), per SELECTED FILE.
     //
     // Per-file, not per-folder, because a detector re-reads ONE file: the watch belongs to the
@@ -1146,7 +1253,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     grantState = IDLE_GRANT;
     activeFolderId = null;
     activeSource = null;
-    activeFile = null;
+    setActiveFile(null);
     pinBarEl = null;
 
     const wrap = doc.createElement('div');
@@ -1264,7 +1371,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const source = outcome.source;
     activeFolderId = existingFolderId ?? newId();
     const folderId = activeFolderId;
-    activeFile = null;
+    setActiveFile(null);
     // Remember the folder (Chromium: with its handle; a capability ref, never contents). On a
     // reopen we reuse the existing id so the folders store keeps ONE row per remembered folder.
     const existing = existingFolderId

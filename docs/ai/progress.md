@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (task 3.1 landed — HTML export's file-download exit, REDUCED per the §3.1 gate ruling;
-the `collectLocalImages` orphan removed in the same commit.)*
+*Updated: 2026-08-29 (task 3.2 landed — the export panel, HTML export's row wired live, the app page's
+FIRST `htmlExport.ts` import.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +11,53 @@ the `collectLocalImages` orphan removed in the same commit.)*
 
 ## Now (start here)
 
+**★★★★★ M10 TASK 3.2 LANDED, 2026-08-29 — THE EXPORT PANEL. Q1 RESOLVED (a): THIS TASK WIRES HTML EXPORT'S
+ROW LIVE — THE APP PAGE'S FIRST `htmlExport.ts` IMPORT, APP-PAGE BYTES MOVE FOR THE FIRST TIME IN M10. Next
+actionable task: 3.3 (Copy-as-HTML).**
+**Q1 — the wiring model, resolved empirically, not just by reading.** §3.2's own body says the export ROWS
+land at "3.1, 3.3, 3.4, 4.1, 6.1/7.1" and that this task "tests the PANEL" — read at face value that could
+mean every row ships inert here. It doesn't: 3.1 already built `exportHtml` with nothing to call it, and no
+later task's Files list ever revisits `exportControls.ts` for the HTML row specifically (3.3/3.4/4.1/7.1
+each touch it once, for their OWN row) — so HTML's row has no other place to go live, and this task is where
+it does. `src/app/exportControls.ts` (new) builds all 5 surviving rows as real `<button>`s; the HTML row's
+`onClick` is wired through `appShell.ts` to the real `exportHtml(host, basenameForExport())` — confirmed not
+just designed: the built app-page chunk was grepped for `peekover-export`, `Export as HTML`, and
+`translateReaderStylesheet`, all present. The other 4 rows (Copy-as-HTML, Copy-as-plain-text,
+Copy-as-rich-text, PDF) render `disabled`, pending their own tasks.
+**Q2 — the document-scoped trigger, resolved DISABLED (not hidden).** `exportToggle` is a NEW header
+button beside `storageToggle`, but unlike it (global), every export/copy action targets the CURRENTLY OPEN
+document — so the toggle renders `disabled` while `activeFile == null` and enables the instant a file is
+selected, matching the disabled-not-hidden visual language `__cta`/`__pin` already use elsewhere in this
+shell. `appShell.ts` gained one new setter, `setActiveFile`, so `activeFile`'s three assignment sites
+(select a file, clear on idle, clear on a new folder grant) can never drift from the toggle's disabled state.
+**Ruling 2's focus trap** is copied inline from `diagramView.ts`'s `openDiagramLightbox` shape (its own
+keydown closure: Tab wrap over a live tab-stop scan of enabled buttons, Escape asks the caller to close) —
+no shared trap helper exists in this codebase, and extracting one stays out of scope (rule-of-three:
+`diagramLightbox` plus this panel is two call sites). `appShell.ts` owns the open/close state and the
+RESTORE half (focus back to `exportToggle`, guarded by `isConnected`), mirroring `toggleStorage`/
+`renderStorage`'s own split. `tests/browser/exportPanel.browser.test.ts` (new, 15 tests × 2 engines) proves
+it real-engine: Tab/Shift-Tab wrap, Escape closes + restores, and **the negative** — a control behind the
+panel cannot receive Tab focus while it is open — **red-first ablated**: breaking the wrap sent focus to
+real controls behind the panel (`peekover-app__chip-revoke`, `peekover-app__export-toggle`) on both engines,
+proving the assertion can actually fail before trusting it green.
+**Byte discipline — the delta, measured.** App-page chunk moves off 475,579 B for the first time in M10:
+**483,331 B (+7,752 B), identical on both engines** — small because `READER_CSS`'s own text (the bulk of
+what `translateReaderStylesheet` reads) was ALREADY in the app-page chunk via `readerPane.ts`'s existing
+`mount()` import; only `htmlExport.ts`'s own new logic plus `exportControls.ts`'s own DOM code are genuinely
+new bytes. `.output` **4,874,493 B (Cr) / 4,874,609 B (Fx)**, ~368 KiB (Cr) headroom remaining, robustly
+under the 5 MiB ceiling. `pnpm zip` **1,472,891 B (+2,161 B)**. Content-script md5 **`41e7607a…` (Cr) /
+`69338e67…` (Fx) — byte-identical**, confirmed by a full rebuild of BOTH engines. Manifests **654 / 770 B**,
+`permissions: []`, no `web_accessible_resources`; `dependencies` unchanged at 6.
+**Suite.** Full browser suite: **138 files / 1433 passed / 15 skipped, 0 failed** (136/1403/15 baseline +
+this task's one new file, +30 tests). Unit suite: 1053/1055 passed — the 2 failures are the standing
+`diagramEnhancer.test.ts` timing-flakiness carried item (below), confirmed pre-existing by an isolated
+re-run (58/58 green alone), not caused by this task (which touches neither file). Lint/typecheck clean.
+Golden diff empty (a panel is chrome, not content).
+**Full reasoning, the byte decomposition, and D-2/D-10(panel half)/Ruling 2's own implementing entries**:
+`decisions.md`'s 2026-08-29 M10 D-2/D-10/Ruling-2 (task 3.2) entry. D-10's print-`@media`-block half remains
+pending task 6.1.
+
+*(Prior entry, kept for the record:)*
 **Doc-only, 2026-08-29 — `tasks.md` §3.2's draft body reconciled to reality ahead of building it (no code,
 no box ticked, 3.2 stays active).** Recon found the body self-contradicting (its "drop the 2 publish rows"
 instruction against its own "rows land at…" enumeration) and pointing at the wrong stylesheet, neither a new
@@ -376,12 +423,15 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-08-29) — task 3.1 landed** (HTML export's file-download exit, REDUCED per the
-§3.1 ruling; the `collectLocalImages` orphan removed in the same commit). Next task: **3.2** (the export
-panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring shape, Ruling 2's focus trap) in
-`specs/010-local-exports/tasks.md`, group 3 — the first task to actually wire export chrome into the app
-page and move app-page bytes (3.1 itself left them unchanged; nothing yet imports `src/export/htmlExport.ts`
-from `src/app`/`entrypoints`). See § Now for 3.1's full landing detail.
+**M10 is IN PROGRESS (2026-08-29) — task 3.2 landed** (the export panel; Q1 resolved (a), HTML export's row
+wired live; app-page bytes moved for the first time in M10, 475,579 → 483,331 B). Next task: **3.3**
+(Copy-as-HTML — the clipboard exit, same artifact as 3.1, different sink) in
+`specs/010-local-exports/tasks.md`, group 3. See § Now for 3.2's full landing detail.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-08-29) — task 3.1 landed (HTML export's
+file-download exit, REDUCED per the §3.1 ruling; the `collectLocalImages` orphan removed in the same
+commit). Next task: 3.2 (the export panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring
+shape, Ruling 2's focus trap) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually
+wire export chrome into the app page and move app-page bytes~~ — **3.2 has since landed, see above.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-08-29) — the §3.1 gate ruled (local-image
 embedding dropped, scope reduction), tasks 3.1/3.5 reduced + UNBLOCKED; the orphaned `client-zip` dependency
 removal has also landed (deps 7→6, M10 net-dependency change now ZERO). Next task: 3.1 (HTML export — the
