@@ -1,6 +1,74 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 MEASUREMENT NOTE — pricing §3.1's scope-reduction option (c) before the human
+  §3.1 gate rules on it. Not a decision (rules nothing), not a task, not a tasks.md box.** §3.1 is
+  STOP-AND-FLAGGED at the entry directly below (the folder-source seam has no byte-readable local-image
+  reference on either engine); the human's three options are (a) extend the seam, (b) Chromium-only +
+  Firefox asymmetry, (c) scope-reduce local-image embedding out of M10. This diagnostic prices whether
+  (c) is a real regression from the reader's OWN behavior or close to free — read-only, chooses nothing.
+  **STEP 0 — authority pinned:**
+  (1) Spec §4: *"every locally-resolvable image embedded as Base64"* (line 127); §9-3 (spec.md:231)
+  already ruled the sibling *remote*-image question — HTML/ZIP export embeds only already-locally-
+  resolvable images and leaves remote references unrewritten (no new fetch). §3.1's gap is about the
+  *local* half of that same promise: whether a local image is even reachable to Base64-embed at all.
+  (2) `docs/ai/decisions.md` 2026-08-29 M10 §3.1 (below): confirms the three options and that this
+  blocks 3.1/3.5 only, not the whole milestone.
+  (3) The reader's own image-resolution path, traced code-first: `mount.ts:131` sets
+  `baseUrl = host.ownerDocument?.baseURI`; `mediaPolicy.ts:59` (`classifyMediaUrl`) resolves a raw
+  `<img src>` against that `baseUrl` and classifies `http:/https:` → remote (blocked), `file:` → local
+  (allowed), anything else → inert (left untouched, native browser resolution). For the **app-page**
+  reader — the only surface task 3.1/export touches (§3.2 confines exports there; content-script
+  `file://` is out of scope per spec §6) — `host` comes from `createReaderPane(doc)` (`appShell.ts:550`),
+  `doc` being the app page's own document. Its `baseURI` is the extension's app-page URL
+  (`chrome-extension://…`/`moz-extension://…`), never rewritten to the opened folder's path — no `<base>`
+  tag manipulation exists anywhere in `src/` (grepped). `readerPane.ts:238` confirms what actually feeds
+  `mount()`: `file.read()` — the markdown TEXT only, via the same `MarkdownFile` the walk constructs — no
+  image src rewriting, no blob-URL substitution, anywhere in that path.
+  **D1 — THE PIVOTAL FINDING: local images do NOT resolve in the app-page reader today.** A relative
+  `![](./img.png)` in a folder-opened document resolves against the app-page's own `chrome-extension:`/
+  `moz-extension:` base URL — a scheme `classifyMediaUrl` buckets as `inert` (neither `http(s):` nor
+  `file:`), so `mediaPolicy` leaves the `<img>` untouched and the browser attempts to load
+  `chrome-extension://<id>/img.png` against the extension's own origin, which does not serve arbitrary
+  user-folder paths — a 404/broken-image icon in ordinary use. This is the SAME practical outcome as
+  case (ii) named in the kickoff (broken image), reached via the `inert`-bucket code path rather than the
+  `remote`-block path. **Confidence: high, code-derived** (baseURI wiring + classification logic + the
+  read path are all directly read, not inferred) but **not proven at the byte level** — a real-engine
+  check (open a folder containing a genuine relative-path image, look at the rendered `<img src>` and
+  Network/Elements panel) would convert this from "high-confidence code trace" to "measured," the same
+  gap `docs/ai/decisions.md`'s own 2026-08-2x entry left open for the *unrelated* `file://` content-script
+  surface (line ~2573 below — that question is about a different surface, still genuinely unverified, and
+  this note does not close it). **Net: export's inability to embed a local image is NOT a regression from
+  the app-page reader's own current behavior — the reader already shows it broken.** Option (c) costs
+  little on this axis specifically.
+  **D2 — diagram export is independent of the seam, CONFIRMED.** `diagramView.ts:232`
+  (`figure.querySelector('svg')`) pulls the mermaid-rendered SVG straight out of the live DOM;
+  `diagramSvgText`/`diagramPng` (lines 267-304) clone/serialize/rasterize it via a `blob:` URL → `Image`
+  → `canvas.toBlob`, entirely in-memory, no `folderSource.read()`, no file handle, anywhere in the path.
+  Under option (c), diagram embedding in HTML/ZIP export is untouched — (c) is "drop local **raster**
+  image embedding only," not "drop all images."
+  **D3 — corpus commonality, judgement input, grepped not measured.** `grep -rEo '!\[[^]]*\]\([^)]+\)'`
+  over every `*.md` in the repo (control-fired: pattern matched fixture data before trusting the zero)
+  found 5 image references total: 3 are `tests/golden/fixtures/images.md` (a synthetic fixture built
+  specifically to exercise image handling — 1 local, 2 remote), and 2 are literal-text examples inside
+  `docs/ai/decisions.md`/`specs/005-watch-diff/tasks.md` prose (`` ![](./some.png) ``, quoted as a
+  discussion example, not an authored image). **Zero organic local relative-path raster images exist
+  anywhere in this repo's own specs/docs/design corpus.** Consistent with F5 persona-1 (agent-authored
+  markdown: CLAUDE.md, specs, plans, AGENTS.md — text, code, mermaid) — local raster images read as
+  long-tail for this milestone's actual documents, not core or common. Not authoritative (one repo, not
+  the universe of user documents) but a real data point, not an impression.
+  **VERDICT INPUT (not a ruling):** D1 collapses the decision meaningfully toward (c) being cheap — the
+  reader shows local images broken today regardless of what export does, so (c)'s "drop local raster
+  image embedding" concedes a capability the reader doesn't currently have either, not a working feature
+  users would notice regress. D2 confirms (c) is narrowly scoped (diagrams keep working). D3 suggests the
+  concrete cost, even if (c) is chosen, is low-frequency against this milestone's actual target documents.
+  None of this rules out (a) or (b) — extending the seam has value independent of M10 (recents/pins/watch/
+  tree already depend on it, and a future milestone may want local-image byte access for other reasons) —
+  but the human should weigh D1 specifically: is closing a gap the reader itself doesn't yet close worth
+  reopening the sealed seam boundary now, versus deferring it. **Revisit-when:** the human rules at the
+  §3.1 gate; if a real-engine check of D1 is wanted before ruling, that is a small, cheap follow-up this
+  note recommends but does not perform (stays inside "read-only, no code" scope).
+
 - **2026-08-29 · M10 §3.1 — STOP-AND-FLAG, NO CODE WRITTEN. The local-image-byte-read capability
   plan.md's D-3 rationale and pseudocode assume ("reads already-resolved local file bytes through
   the same folder-source read path `folderSourceFromHandle`/`FolderSource.read()` already uses…
