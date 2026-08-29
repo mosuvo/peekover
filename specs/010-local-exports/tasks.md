@@ -230,17 +230,35 @@ standalone-render check passes.*
 ## 3 — HTML export, Copy-as-HTML, Copy-as-plain-text, ~~ZIP export~~ (D-3 consumed, D-4's HTML/plain-text
 halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see below**
 
-- [ ] **3.1 HTML export — the file-download exit. ★ REDUCED, 2026-08-29 (M10 §3.1 gate, `decisions.md`):
+- [x] **3.1 HTML export — the file-download exit. ★ REDUCED, 2026-08-29 (M10 §3.1 gate, `decisions.md`):
       local-image Base64 embedding is DROPPED from this task, by human ruling via scope reduction — not
-      built, not deferred-silently.** `exportHtml(host)`: 2.2's `{clone}` (the `images` field 2.2 still
-      computes is no longer consumed here — see the `collectLocalImages` orphan note in `decisions.md`'s
-      2026-08-29 M10 §3.1 entry), `downloadAs(doc.outerHTML, '${basename}.html')`. Every `<img>` — local or
-      remote — ships in the export exactly as `serializeReaderDocument`'s clone carried it: untouched, no
-      rewrite, no embed. A local `![](./x.png)` is broken in the export the SAME way it is already broken in
-      the app-page reader today (the ruling's own D1 finding) — not a new regression. Rendered DIAGRAMS are
-      unaffected (D2): they are live `<svg>` in the cloned DOM already, never an `<img>` needing embedding.
+      built, not deferred-silently.** `exportHtml(host, basename)`: 2.2's `{clone, theme}` — the `images`
+      field / `collectLocalImages` the pseudocode above still named is not merely unconsumed here, it is
+      REMOVED at this task's own implementation, per `decisions.md`'s own orphan-removal recommendation (see
+      LANDED note below); `downloadAs(wrapInStandaloneDocument(clone, theme), '${basename}.html')`. Every
+      `<img>` — local or remote — ships in the export exactly as `serializeReaderDocument`'s clone carried
+      it: untouched, no rewrite, no embed. A local `![](./x.png)` is broken in the export the SAME way it is
+      already broken in the app-page reader today (the ruling's own D1 finding) — not a new regression.
+      Rendered DIAGRAMS are unaffected (D2): they are live `<svg>` in the cloned DOM already, never an
+      `<img>` needing embedding.
       **No sibling suite for a download-triggering control exists in this codebase** (plan §3.11 row 14) —
       established here.
+      **★ LANDED, 2026-08-29.** `basename` is a plain string parameter (the caller's job to supply — the
+      currently-open document's own name; 3.2's own wiring, not yet built) rather than derived from a
+      `documentPath`, since image-path resolution (the only reason `serializeReaderDocument` took a path
+      before) is gone. `downloadAs` did not exist; built following `diagramView.ts`'s `downloadDiagramAsSvg`
+      shape verbatim (`Blob` + `URL.createObjectURL` + a synthetic, document-appended `<a download>` click +
+      deferred `revokeObjectURL`) — the same real-engine-tested pattern, cited as standing precedent rather
+      than re-earning its own jsdom ablation. The `collectLocalImages` removal cascade (FOLD, per the
+      ruling's own recommendation) landed in this same commit: `LocalImageRef`, `collectLocalImages`,
+      `resolveRelativePath`, `isAbsoluteUrl`, the `images` field, and `serializeReaderDocument`'s
+      `documentPath` parameter are all gone; `htmlExport.test.ts`'s 5 `collectLocalImages` tests were
+      dropped (unit count 1060→1055, both known `codeDetect` corpus-drift failures unchanged); task 3.3's
+      stale `{clone, images}` reference and `plan.md:172-174`'s stale "remains as shipped" claim were
+      corrected as necessary ripple. App-page chunk **475,579 B — confirmed UNCHANGED** (byte-identical
+      build output, same chunk hash) — nothing in `src/app`/`entrypoints` imports `htmlExport.ts` yet (3.2
+      is the first consumer); content-script md5 byte-identical both engines; `.output` **4,866,741 /
+      4,866,857 B**, `pnpm zip` **1,470,730 B** — all unchanged; `dependencies` still **6**.
       Files: `src/export/htmlExport.ts` · `tests/browser/htmlExport.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) the downloaded file, opened standalone, renders visually equivalent
       to the reader for its TEXT/CSS/diagram content (2.2's own claim, re-proven at the file-download exit
@@ -278,8 +296,9 @@ halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see belo
       3, 4, 5, 11]
 
 - [ ] **3.3 Copy-as-HTML — the clipboard exit, SAME artifact as 3.1, different sink (D-3, D-4's HTML half).**
-      `copyAsHtml(host)`: 2.2's `{clone, images}` (SAME call, same image resolution as 3.1 — no second
-      serialization path); `doc = wrapInStandaloneDocument(...)` (SAME bundled stylesheet as the file export —
+      `copyAsHtml(host)`: 2.2's `{clone}` (SAME call as 3.1 — no second serialization path; the `images`
+      field named here previously was removed at task 3.1, §3.1 gate ruling — no image resolution left to
+      share); `doc = wrapInStandaloneDocument(...)` (SAME bundled stylesheet as the file export —
       spec §4's own line: *"the system shall write the SAME standalone HTML §4's HTML-export criteria
       describe, to the clipboard rather than to a file"*); `await navigator.clipboard.write([new ClipboardItem({
       'text/html': ..., 'text/plain': plainTextOf(clone) })])` (D-4).

@@ -1,9 +1,22 @@
 // htmlExport — D-3's shared serializer. `serializeReaderDocument` clones the ALREADY-sanitized
 // `.peekover-reader` shadow-root subtree (no re-parse, no new sanitizer surface — AGENTS.md #3
-// is satisfied by construction: cloneNode never touches innerHTML) and resolves the local images
-// inside it; `wrapInStandaloneDocument` bundles that clone with a translated copy of the reader's
-// own stylesheet into a standalone document. Both 3.1 (HTML export) and 3.3 (Copy-as-HTML) consume
-// this pair — SAME artifact, different sink (spec §4: "the SAME standalone HTML").
+// is satisfied by construction: cloneNode never touches innerHTML); `wrapInStandaloneDocument`
+// bundles that clone with a translated copy of the reader's own stylesheet into a standalone
+// document. Both 3.1 (HTML export) and 3.3 (Copy-as-HTML) consume this pair — SAME artifact,
+// different sink (spec §4: "the SAME standalone HTML").
+//
+// ── NO IMAGE RESOLUTION HERE — DROPPED BY THE §3.1 GATE RULING (decisions.md, 2026-08-29) ───────
+//
+// This module used to also compute `collectLocalImages`/`LocalImageRef`, a pure path-math walk
+// resolving local `<img>` references against the open document's path, feeding a Base64-embed
+// step neither this task nor any other in M10 still performs. The human ruling that dropped
+// local-image embedding from M10 (local raster images ship exactly as `.peekover-reader`'s clone
+// already carries them — broken/unrewritten, the SAME state the app-page reader itself already
+// shows today, not a new regression) named that resolution machinery orphaned and recommended its
+// removal land with task 3.1's own implementation, since 3.1 already touches this file. Removed
+// here: `collectLocalImages`, `LocalImageRef`, `resolveRelativePath`, `isAbsoluteUrl`, and the
+// `documentPath` parameter that existed only to feed that resolution. `serializeReaderDocument`
+// now takes only `host` and returns only `{ clone, theme }`.
 //
 // ── WHY THE STYLESHEET NEEDS TRANSLATING AT ALL — FINDING (b), task 2.1 (decisions.md) ─────────
 //
@@ -39,21 +52,9 @@
 import { READER_CSS } from '../theme/readerCss';
 import type { EffectiveTheme } from '../settings/settings';
 
-/** A local (non-remote, non-inert) `<img>` found in a serialized clone, with the path its bytes
- *  should be read from — resolved, not read. Reading + embedding is the caller's job (3.1's file
- *  export, 3.5's ZIP export each read this path through their own available mechanism; this module
- *  performs no I/O and adds no new file-read capability). */
-export interface LocalImageRef {
-  element: HTMLImageElement;
-  /** Path resolved against `documentPath`'s own directory, POSIX-style, rooted at the open
-   *  folder — the same root `FolderSource.handle`/`MarkdownFile.path` addresses. */
-  resolvedPath: string;
-}
-
 export interface SerializedReaderDocument {
   /** A DETACHED clone of `.peekover-reader` — the live tree is never mutated (only read). */
   clone: HTMLElement;
-  images: LocalImageRef[];
   /** The theme painting on `host` at serialization time — `wrapInStandaloneDocument`'s theme arg. */
   theme: EffectiveTheme;
 }
@@ -69,69 +70,21 @@ function currentTheme(host: HTMLElement): EffectiveTheme {
 }
 
 /**
- * Clone the sanitized `.peekover-reader` subtree out of `host`'s shadow root and resolve its local
- * images. No re-parse, no new sanitizer profile — `cloneNode(true)` walks already-sanitized nodes;
- * the only string built from any of this is `wrapInStandaloneDocument`'s own serialization, taken
- * AFTER cloning (AGENTS.md #3 satisfied by construction).
+ * Clone the sanitized `.peekover-reader` subtree out of `host`'s shadow root. No re-parse, no new
+ * sanitizer profile — `cloneNode(true)` walks already-sanitized nodes; the only string built from
+ * any of this is `wrapInStandaloneDocument`'s own serialization, taken AFTER cloning (AGENTS.md #3
+ * satisfied by construction). Every `<img>` — local or remote — ships in the clone exactly as
+ * sanitize/`mediaPolicy` produced it; no image resolution happens here (see the module doc comment).
  *
- * @param host         The shadow-root-owning reader host to serialize.
- * @param documentPath The currently-open document's own path within its folder (e.g.
- *   `docs/guide/intro.md`), used only to resolve relative image references — see
- *   {@link collectLocalImages}. Omitted (`''`) for a document with no folder context; every
- *   relative image reference then resolves rooted at `''` (itself, unrooted).
+ * @param host The shadow-root-owning reader host to serialize.
  */
-export function serializeReaderDocument(
-  host: HTMLElement,
-  documentPath = '',
-): SerializedReaderDocument {
+export function serializeReaderDocument(host: HTMLElement): SerializedReaderDocument {
   const column = host.shadowRoot?.querySelector<HTMLElement>('.peekover-reader');
   if (!column) {
     throw new Error("serializeReaderDocument: no '.peekover-reader' in this host's shadow root");
   }
   const clone = column.cloneNode(true) as HTMLElement;
-  return { clone, images: collectLocalImages(clone, documentPath), theme: currentTheme(host) };
-}
-
-/** True for any URL that carries its own scheme (`http:`, `https:`, `data:`, `blob:`, …) or is
- *  protocol-relative (`//host/path`) — i.e. anything that is NOT a bare relative/root-relative
- *  reference into the open folder. */
-function isAbsoluteUrl(src: string): boolean {
-  return /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('//');
-}
-
-/** POSIX-style path resolution, pure string math — no URL object, no I/O. `base` is the current
- *  document's own path; `relative` is the `<img src>` exactly as authored. A leading `/` on
- *  `relative` is read as rooted at the open folder's own root (there is no server to root against). */
-function resolveRelativePath(base: string, relative: string): string {
-  const baseDir = base.includes('/') ? base.slice(0, base.lastIndexOf('/')) : '';
-  const segments = relative.startsWith('/')
-    ? relative.slice(1).split('/')
-    : (baseDir ? baseDir.split('/') : []).concat(relative.split('/'));
-  const resolved: string[] = [];
-  for (const seg of segments) {
-    if (seg === '' || seg === '.') continue;
-    if (seg === '..') resolved.pop();
-    else resolved.push(seg);
-  }
-  return resolved.join('/');
-}
-
-/**
- * Walk every `<img>` under `clone` and resolve the LOCALLY-resolvable ones to a path rooted at the
- * open folder. A remote reference (`http:`/`https:`/protocol-relative) or an inert one (`data:`,
- * `blob:`, empty) is left exactly as sanitize produced it and is NOT collected — per Ruling 3
- * (spec §9-3, re-checked at 3.5/9.2): a remote image stays a remote reference, unrewritten, never
- * fetched. This function performs no I/O and mutates nothing on `clone` — it only computes where a
- * caller's own read mechanism should look; embedding the bytes is 3.1's/3.5's job.
- */
-export function collectLocalImages(clone: HTMLElement, documentPath = ''): LocalImageRef[] {
-  const refs: LocalImageRef[] = [];
-  for (const img of Array.from(clone.querySelectorAll('img'))) {
-    const src = img.getAttribute('src') ?? '';
-    if (!src || isAbsoluteUrl(src)) continue;
-    refs.push({ element: img, resolvedPath: resolveRelativePath(documentPath, src) });
-  }
-  return refs;
+  return { clone, theme: currentTheme(host) };
 }
 
 // ============================================================================
@@ -349,4 +302,46 @@ export function wrapInStandaloneDocument(clone: HTMLElement, theme: EffectiveThe
     `<style>${css}</style>\n` +
     `</head>\n<body>\n${clone.outerHTML}\n</body>\n</html>\n`
   );
+}
+
+/**
+ * Download `text` as a file named `filename`, via a `blob:` URL and a synthetic anchor click — no
+ * `downloads` permission needed (the click itself carries transient activation; MDN's own
+ * `<a download>` contract). `diagramView.ts`'s `downloadDiagramAsSvg` established this exact shape
+ * for 007's diagram-download control, reused verbatim here rather than re-derived: the anchor is
+ * inserted before it is clicked and removed straight after (a detached anchor's `download` fires
+ * inconsistently across engines), and revocation is deferred a task so the engine has taken the
+ * blob before the URL dies.
+ */
+export function downloadAs(text: string, filename: string, mimeType = 'text/html'): void {
+  const url = URL.createObjectURL(new Blob([text], { type: mimeType }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.hidden = true;
+  document.body.appendChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+}
+
+/**
+ * HTML export — the file-download exit (task 3.1). Reuses 2.2's serializer/wrapper unchanged: no
+ * re-parse, no second serialization path, no image walk. Every `<img>` — local or remote — ships
+ * exactly as `serializeReaderDocument`'s clone carried it, per the §3.1 gate ruling (see the module
+ * doc comment): a local relative reference is broken/unrewritten, the SAME state the app-page
+ * reader itself already shows today for that reference, not a new regression.
+ *
+ * @param host     The shadow-root-owning reader host to export.
+ * @param basename The exported file's name, without extension (e.g. `intro` for `intro.md`) — the
+ *   caller's job to supply (the currently-open document's own name), since this module has no
+ *   document-identity concept of its own now that image-path resolution is gone.
+ */
+export function exportHtml(host: HTMLElement, basename: string): void {
+  const { clone, theme } = serializeReaderDocument(host);
+  const doc = wrapInStandaloneDocument(clone, theme);
+  downloadAs(doc, `${basename}.html`);
 }

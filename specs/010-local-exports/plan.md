@@ -170,8 +170,10 @@ M10 (HTML export and ZIP export both), not built via seam extension. D-3's "no n
 already flagged as at-risk by plan risk §4-1 for the `:host` question — turns out to be wrong on THIS axis
 for a different reason: not "new reviewable code," but "no code, because the capability itself doesn't
 exist and extending it is out of scope." Group 2's own local-image resolution (`collectLocalImages`,
-task 2.2, pure path math, no I/O) remains as shipped, but its output is no longer consumed by task 3.1/3.5
-per the ruling above — see `decisions.md`'s own `collectLocalImages` orphan note.
+task 2.2, pure path math, no I/O) was kept installed at the gate-ruling commit per `decisions.md`'s own
+orphan note, then REMOVED at task 3.1's own implementation (the recommended removal, now landed):
+`collectLocalImages`, `LocalImageRef`, `resolveRelativePath`, `isAbsoluteUrl`, and the `documentPath`
+parameter are gone; `serializeReaderDocument(host)` now returns `{ clone, theme }` only.
 
 *Rejected:* re-parsing the raw markdown source through a second, export-specific pipeline (violates "one
 parser, one instance," AGENTS.md's standing rule, restated at every milestone since 006 for exactly this

@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import type { BrowserCommand } from 'vitest/node';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import type { Page, Download } from 'playwright';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -252,6 +253,77 @@ const renderStandaloneDocument: BrowserCommand<[html: string]> = async (
   }
 };
 
+// ── THE REAL FILE-DOWNLOAD CODEPATH — task 3.1's own Verify demand ────────────
+// D-3's "renders visually equivalent" was already proven above at the SERIALIZATION exit
+// (`renderStandaloneDocument`, task 2.2). Task 3.1's own Verify calls that "re-proven at the
+// file-download exit specifically, since a clipboard write and a file write are different browser
+// codepaths" — so this drives `exportHtml`'s REAL `downloadAs` (a synthetic `<a download>` click
+// over a `blob:` URL, `htmlExport.ts`'s own doc comment), captures the resulting Playwright
+// `Download` on the SAME page the click fires on, and opens the SAVED FILE bare in a fresh
+// isolated context — same isolation as `renderStandaloneDocument`, for the same reason (a browser
+// test cannot navigate the runner's own page to `file://`/a downloaded path).
+//
+// Two commands, not one, because arming a `page.waitForEvent('download')` listener and the
+// synchronous in-page click that satisfies it are necessarily different steps: the browser test
+// (running IN-PAGE, so it can call the real `exportHtml` import directly — the actual codepath,
+// not a re-implementation here) arms the listener first, then calls `exportHtml()` in-page, then
+// collects the result. `pendingDownloads` is keyed by the Playwright `Page` object itself (stable
+// across both command calls within one test), not a module-level singleton, so two engine
+// instances (Chromium + Firefox) running this same file never share state.
+const pendingDownloads = new WeakMap<Page, Promise<Download>>();
+
+const armExportDownload: BrowserCommand<[]> = async ({ page }) => {
+  pendingDownloads.set(page, page.waitForEvent('download'));
+  return true;
+};
+
+interface ExportDownloadProbe extends StandaloneRenderProbe {
+  suggestedFilename: string;
+  /** The downloaded file's own raw HTML text — for structural assertions (e.g. the local-`<img>`
+   *  passthrough) the computed-style probe above can't express. */
+  html: string;
+}
+
+const collectExportDownload: BrowserCommand<[]> = async ({ page }): Promise<ExportDownloadProbe> => {
+  const pending = pendingDownloads.get(page);
+  if (!pending) {
+    throw new Error('collectExportDownload: no download was armed — call armExportDownload() first');
+  }
+  pendingDownloads.delete(page);
+  const download = await pending;
+
+  const browser = page.context().browser();
+  if (!browser) throw new Error('no Playwright Browser — the export-download probe cannot isolate a context');
+
+  const suggestedFilename = download.suggestedFilename();
+  const dir = mkdtempSync(join(tmpdir(), 'peekover-html-export-'));
+  const savePath = join(dir, suggestedFilename);
+  await download.saveAs(savePath);
+  const html = readFileSync(savePath, 'utf8');
+  const url = pathToFileURL(savePath).href;
+
+  const context = await browser.newContext();
+  try {
+    const probe = await context.newPage();
+    const consoleErrors: string[] = [];
+    probe.on('console', (msg) => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    probe.on('pageerror', (err) => consoleErrors.push(String(err)));
+    await probe.goto(url);
+    const result = (await probe.evaluate(`({
+      bodyPosition: getComputedStyle(document.body).position,
+      bodyBackgroundColor: getComputedStyle(document.body).backgroundColor,
+      hostSelectorLiteralPresent: document.documentElement.outerHTML.includes(':host'),
+      h1Text: document.querySelector('h1')?.textContent ?? null,
+    })`)) as Omit<StandaloneRenderProbe, 'consoleErrors'>;
+    return { ...result, consoleErrors, suggestedFilename, html };
+  } finally {
+    await context.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
 // Two Vitest projects, run independently:
 //
 //   pnpm test          -> vitest run --project unit     (fast, jsdom/node)
@@ -316,6 +388,8 @@ export default defineConfig({
               emulateColorScheme,
               probeFileUrlClipboard,
               renderStandaloneDocument,
+              armExportDownload,
+              collectExportDownload,
             },
             instances: [
               { browser: 'chromium' },

@@ -1,23 +1,36 @@
 // @vitest-environment jsdom
 //
-// htmlExport — serializeReaderDocument/collectLocalImages/translateReaderStylesheet/
-// wrapInStandaloneDocument (task 2.2, D-3 + finding (b)'s :host translation).
+// htmlExport — serializeReaderDocument/translateReaderStylesheet/wrapInStandaloneDocument/
+// downloadAs/exportHtml (tasks 2.2 + 3.1, D-3 + finding (b)'s :host translation).
 //
 // jsdom-safe vs real-engine, stated per AGENTS.md's own standing rule: everything asserted here is
 // DOM SHAPE, string content, or a reference-identity check — never layout, computed style, or
 // "does this render correctly outside a shadow root." D-3's "renders visually equivalent"
-// standalone claim is real-engine-or-nothing (tests/browser, not written by this task — 2.2's own
-// Verify routes it there) and is NOT re-asserted here.
+// standalone claim, and the real file-download codepath, are real-engine-or-nothing
+// (tests/browser/htmlExport.browser.test.ts) and are NOT re-asserted here.
+//
+// No `collectLocalImages`/`LocalImageRef` tests here — that resolution machinery was removed at
+// task 3.1 (§3.1 gate ruling, decisions.md 2026-08-29): `serializeReaderDocument` no longer
+// computes an image partition, so there is nothing left of that shape to test.
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount } from '../render/mount';
 import { READER_CSS } from '../theme/readerCss';
 import {
   serializeReaderDocument,
-  collectLocalImages,
   translateReaderStylesheet,
   wrapInStandaloneDocument,
 } from './htmlExport';
+
+// `downloadAs`/`exportHtml` (task 3.1) are NOT unit-tested here: their mechanics (Blob,
+// `URL.createObjectURL`, a synthetic anchor click) are the exact shape `diagramView.ts`'s
+// `downloadDiagramAsSvg` already established for 007's diagram-download control, real-engine-
+// tested only (`tests/browser/diagramActions.browser.test.ts`) — jsdom implements neither
+// `URL.createObjectURL` nor real anchor-download semantics, and AGENTS.md's own standing rule
+// is that a pattern mirroring already-established precedent doesn't earn its own per-extension
+// ablation. `exportHtml`'s own composition (serialize → wrap) is already covered by
+// `serializeReaderDocument`/`wrapInStandaloneDocument`'s tests above; the file-download exit
+// itself is proven in `tests/browser/htmlExport.browser.test.ts`.
 
 const HOST_TAG = 'peekover-root';
 
@@ -67,55 +80,6 @@ describe('serializeReaderDocument', () => {
     hosts.push(host);
     host.attachShadow({ mode: 'open' });
     expect(() => serializeReaderDocument(host)).toThrow(/peekover-reader/);
-  });
-});
-
-describe('collectLocalImages', () => {
-  function withImages(...srcs: string[]): HTMLElement {
-    const div = document.createElement('div');
-    div.innerHTML = srcs.map((s) => `<img src="${s}" alt="">`).join('');
-    return div;
-  }
-
-  it('resolves nested/relative local paths against the document path', () => {
-    const clone = withImages('./a.png', '../assets/b.png', 'c.png', 'sub/d.png');
-    const refs = collectLocalImages(clone, 'docs/guide/intro.md');
-    expect(refs.map((r) => r.resolvedPath)).toEqual([
-      'docs/guide/a.png',
-      'docs/assets/b.png',
-      'docs/guide/c.png',
-      'docs/guide/sub/d.png',
-    ]);
-  });
-
-  it('resolves a root-relative path at the open folder\'s own root', () => {
-    const clone = withImages('/top.png');
-    const refs = collectLocalImages(clone, 'docs/guide/intro.md');
-    expect(refs.map((r) => r.resolvedPath)).toEqual(['top.png']);
-  });
-
-  it('resolves against "" (unrooted) when no document path is given', () => {
-    const clone = withImages('pic.png');
-    const refs = collectLocalImages(clone);
-    expect(refs.map((r) => r.resolvedPath)).toEqual(['pic.png']);
-  });
-
-  it('never collects remote or inert references (Ruling 3 — left unrewritten, never fetched)', () => {
-    const clone = withImages(
-      'https://example.com/x.png',
-      'http://example.com/y.png',
-      '//example.com/z.png',
-      'data:image/png;base64,AAAA',
-      'blob:https://example.com/uuid',
-    );
-    expect(collectLocalImages(clone, 'docs/intro.md')).toEqual([]);
-  });
-
-  it('does not mutate the <img> elements it collects', () => {
-    const clone = withImages('a.png');
-    const before = clone.querySelector('img')!.outerHTML;
-    collectLocalImages(clone, 'docs/intro.md');
-    expect(clone.querySelector('img')!.outerHTML).toBe(before);
   });
 });
 

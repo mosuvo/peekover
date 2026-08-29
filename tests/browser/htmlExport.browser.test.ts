@@ -1,24 +1,29 @@
-// htmlExport — D-3's structural claim, real-engine or nothing (task 2.2).
+// htmlExport — the file-download exit (task 3.1). ★ REDUCED per the §3.1 gate ruling
+// (decisions.md, 2026-08-29): no local-image Base64 embedding to prove — every <img> ships in the
+// downloaded file exactly as the clone carried it. This file drives the REAL download codepath,
+// not just the serialized string: task 2.2's `htmlExport.browser.test.ts` already proved the
+// TRANSLATED stylesheet applies once a standalone document is opened bare (D-3's structural
+// claim); this task's own Verify calls for that "re-proven at the file-download exit specifically,
+// since a clipboard write and a file write are different browser codepaths" — so here the SAME
+// render-equivalence checks run against a file that actually came out of `exportHtml`'s
+// `downloadAs` (a synthetic `<a download>` click over a `blob:` URL), captured as a real
+// Playwright `Download`, saved, and opened in a fresh isolated context. See vitest.config.ts's
+// `armExportDownload`/`collectExportDownload` for the capture mechanism and why it needs two
+// commands instead of one.
 //
-// jsdom cannot open a downloaded file (tasks.md's own §010-class rule), so the ONE thing
-// htmlExport.test.ts (unit/jsdom) cannot prove — that the TRANSLATED stylesheet actually applies
-// once the document is opened bare, no shadow root, no extension, outside the runner's own origin
-// — is proven here, on real Chromium AND Firefox (vitest.config.ts's `browser` project instances).
-//
-// SCOPE, stated because it is easy to overreach: this is 2.1's finding (b) handled correctly, not
-// a full visual-equivalence audit of the whole exported document (that is 3.1's file-download exit
-// and 11.1's milestone-close walk, per tasks.md's own group boundaries). What is asserted: the
-// wrapper (`body`) actually receives the full-bleed base + the CHOSEN theme's tokens with no
-// `:host` literal shipped, and the content the shadow root rendered is legible plain HTML outside
-// any shadow tree — the qualitative proof that the translation, not just its unit-level string
-// shape, holds up in a real engine.
+// §3.11 rows 3-5 (out-of-flow, the trigger itself, zero residual footprint) are NOT asserted here:
+// task 3.1 has no export-panel trigger of its own (that is task 3.2) — `exportHtml` is driven
+// directly, exactly as 2.2 drove `serializeReaderDocument` directly. Row 14 (no sibling suite for
+// a download-triggering control) is established by this file being the first of its kind.
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { commands } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
-import { serializeReaderDocument, wrapInStandaloneDocument } from '../../src/export/htmlExport';
+import { exportHtml } from '../../src/export/htmlExport';
 
-interface StandaloneRenderProbe {
+interface ExportDownloadProbe {
+  suggestedFilename: string;
+  html: string;
   bodyPosition: string;
   bodyBackgroundColor: string;
   hostSelectorLiteralPresent: boolean;
@@ -28,7 +33,8 @@ interface StandaloneRenderProbe {
 
 declare module 'vitest/internal/browser' {
   interface BrowserCommands {
-    renderStandaloneDocument(html: string): Promise<StandaloneRenderProbe>;
+    armExportDownload(): Promise<true>;
+    collectExportDownload(): Promise<ExportDownloadProbe>;
   }
 }
 
@@ -47,28 +53,79 @@ function mountedHost(markdown: string, theme: 'light' | 'dark' | 'sepia'): HTMLE
   return host;
 }
 
-describe('the standalone export, opened bare (no extension, no shadow root)', () => {
-  it('applies the full-bleed base + the LIGHT theme, with no :host literal shipped', async () => {
-    const host = mountedHost('# Exported Title\n\nHello *world*.\n', 'light');
-    const { clone, theme } = serializeReaderDocument(host);
-    const doc = wrapInStandaloneDocument(clone, theme);
+/** Arm the download capture, trigger the REAL `exportHtml` codepath in-page, collect the result. */
+async function driveExportHtml(host: HTMLElement, basename: string) {
+  await commands.armExportDownload();
+  exportHtml(host, basename);
+  return commands.collectExportDownload();
+}
 
-    const probe = await commands.renderStandaloneDocument(doc);
+describe('exportHtml — the real download codepath, opened bare', () => {
+  it('downloads a standalone file that renders visually equivalent to the reader (light)', async () => {
+    const host = mountedHost('# Exported Title\n\nHello *world*.\n', 'light');
+    const probe = await driveExportHtml(host, 'exported-title');
+
+    expect(probe.suggestedFilename).toBe('exported-title.html');
     expect(probe.consoleErrors).toEqual([]);
-    expect(probe.bodyPosition).toBe('fixed'); // readerCss.ts:58's base, carried onto body
+    expect(probe.bodyPosition).toBe('fixed'); // readerCss.ts's base, carried onto body
     expect(probe.bodyBackgroundColor).toBe('rgb(251, 251, 248)'); // light --paper #FBFBF8
     expect(probe.hostSelectorLiteralPresent).toBe(false); // no dead :host text shipped
     expect(probe.h1Text).toBe('Exported Title');
   });
 
-  it('bakes the DARK theme instead when that is what was painting at export time', async () => {
+  it('downloads the DARK theme instead when that is what was painting at export time', async () => {
     const host = mountedHost('# Dark Export\n', 'dark');
-    const { clone, theme } = serializeReaderDocument(host);
-    const doc = wrapInStandaloneDocument(clone, theme);
+    const probe = await driveExportHtml(host, 'dark-export');
 
-    const probe = await commands.renderStandaloneDocument(doc);
     expect(probe.consoleErrors).toEqual([]);
     expect(probe.bodyBackgroundColor).toBe('rgb(18, 20, 28)'); // dark --paper #12141C
     expect(probe.h1Text).toBe('Dark Export');
+  });
+
+  it('★ POSITIVE PASSTHROUGH: a local <img src> ships UNCHANGED — broken-reference passthrough, not embedded', async () => {
+    // §3.1 gate ruling: local-image Base64 embedding is dropped from M10. The downloaded file's
+    // <img> must carry the EXACT authored relative path — never a data: URI, never rewritten —
+    // the same broken/unrewritten state the app-page reader itself already shows today for a
+    // local relative-path image on the REAL app page (decisions.md's own D1 finding: a relative
+    // reference resolves against the app page's chrome-extension:/moz-extension: baseURI, which
+    // mediaPolicy classifies `inert` and leaves untouched).
+    //
+    // This test harness cannot reproduce that origin-dependent classification faithfully: it runs
+    // the mounted document at the runner's own http://localhost origin, where a relative path
+    // resolves to an http: URL and mediaPolicy would classify it `remote` (blocked into a
+    // placeholder) instead of `inert` — a harness artifact, not the real app-page behavior. So the
+    // fixture <img> is inserted directly into the already-mounted `.peekover-reader` subtree,
+    // simulating exactly the DOM shape mediaPolicy leaves an inert/local reference in — and this
+    // test's actual subject, `exportHtml`'s own passthrough (never rewriting whatever `<img>` the
+    // committed reader DOM already carries), is proven regardless of how that DOM got there.
+    // mediaPolicy's OWN classification is that module's own suite's job, not re-proven here.
+    const host = mountedHost('# Doc\n', 'light');
+    const column = host.shadowRoot!.querySelector('.peekover-reader')!;
+    const img = host.ownerDocument.createElement('img');
+    img.src = './images/pic.png';
+    img.alt = 'a local pic';
+    column.appendChild(img);
+
+    const probe = await driveExportHtml(host, 'local-image-doc');
+
+    expect(probe.html).toContain('src="./images/pic.png"');
+    expect(probe.html).not.toMatch(/src="data:/);
+  });
+
+  it('a remote image (already blocked to a placeholder upstream, at mount time) ships unrewritten (Ruling 3)', async () => {
+    // Unlike the local case, https: is remote regardless of the page's own origin, so the REAL
+    // production pipeline (mount -> mediaPolicy) reliably reproduces this one: by the time
+    // exportHtml runs, the reader's committed DOM already carries mediaPolicy's inert placeholder
+    // (`<span class="peekover-remote" data-peekover-src="...">`), never a fetch-capable <img> — the
+    // remote URL rides along on the placeholder's own data-* attribute, unrewritten, never fetched.
+    // §9.2's own text routes Ruling 3's HTML-export half here rather than re-checking it a third time.
+    const host = mountedHost('# Doc\n\n![remote](https://example.com/pic.png)\n', 'light');
+    const column = host.shadowRoot!.querySelector('.peekover-reader')!;
+    expect(column.querySelector('img')).toBeNull(); // blocked upstream — no <img> survives to export
+
+    const probe = await driveExportHtml(host, 'remote-image-doc');
+
+    expect(probe.html).toContain('data-peekover-src="https://example.com/pic.png"');
+    expect(probe.html).not.toContain('<img');
   });
 });

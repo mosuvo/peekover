@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (orphaned `client-zip` dependency removed — §3.1(cont.) ruling's deferred follow-up
-act landed, deps 7 → 6.)*
+*Updated: 2026-08-29 (task 3.1 landed — HTML export's file-download exit, REDUCED per the §3.1 gate ruling;
+the `collectLocalImages` orphan removed in the same commit.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +11,81 @@ act landed, deps 7 → 6.)*
 
 ## Now (start here)
 
+**★★★★★ M10 TASK 3.1 LANDED, 2026-08-29 — HTML EXPORT'S FILE-DOWNLOAD EXIT, REDUCED PER THE §3.1 GATE
+RULING. THE `collectLocalImages` ORPHAN IS REMOVED (FOLD). Next actionable task: 3.2 (the export panel).**
+`src/export/htmlExport.ts` gains `downloadAs(text, filename, mimeType?)` (a `Blob` + `URL.createObjectURL`
++ a synthetic, document-appended `<a download>` click + deferred `revokeObjectURL` — the exact shape
+`diagramView.ts`'s `downloadDiagramAsSvg` already established for 007's diagram-download control, reused
+verbatim rather than re-derived, cited as standing precedent per AGENTS.md's own rule rather than earning
+its own jsdom ablation) and `exportHtml(host, basename)` (calls 2.2's `serializeReaderDocument` +
+`wrapInStandaloneDocument` unchanged, then `downloadAs`s the result — no re-parse, no second serialization
+path, no image walk). `basename` is a plain string the caller supplies (3.2's own future wiring; this task's
+own test supplies it directly) — not derived from a document path, since path-based image resolution is
+gone (below).
+**THE `collectLocalImages` REMOVAL (FOLD, per the §3.1 gate ruling's own recommendation) — landed in this
+same commit, verified green before `exportHtml` was written on top.** `collectLocalImages`, `LocalImageRef`,
+`resolveRelativePath`, `isAbsoluteUrl`, the `images` field, and `serializeReaderDocument`'s `documentPath`
+parameter are all gone — nothing else in the codebase consumed them (confirmed by grep before removing, not
+assumed). `serializeReaderDocument(host)` now returns `{ clone, theme }` only. `htmlExport.test.ts`'s 5
+`collectLocalImages`-specific tests were dropped with the code they tested (unit count moves legitimately,
+below); every other unit test in that file (the clone/theme/error-path tests, the full `:host`-translation
+suite) is untouched. **Necessary ripple corrected, not left stale:** task 3.3's own body ("2.2's `{clone,
+images}`") and `plan.md:172-174`'s "remains as shipped" claim about `collectLocalImages` both described a
+shape this commit deletes — both corrected in this same commit, cited to the lines they touch.
+**THE REAL FILE-DOWNLOAD CODEPATH, PROVEN — task 3.1's own Verify demand, not just the serialized string.**
+`tests/browser/htmlExport.browser.test.ts` (rewritten; superseded 2.2's own file of the same name, which
+tested `serializeReaderDocument`/`wrapInStandaloneDocument` directly at the serialization exit only) now
+drives the REAL `exportHtml` and captures a REAL Playwright `Download`. Two new server-side commands in
+`vitest.config.ts`, `armExportDownload`/`collectExportDownload` (keyed by the Playwright `Page` object
+itself via a `WeakMap`, so Chromium and Firefox instances never share state): the browser test arms the
+download listener, calls the real in-page `exportHtml` import (the actual codepath, not a re-implementation
+in the command), then collects the saved file and opens it bare in a fresh isolated context — the same
+isolation `renderStandaloneDocument` (task 2.2) already established, for the same reason (no in-page route
+to `file://`/a downloaded path in either engine). 4 tests, both engines: light/dark render-equivalence
+(re-proving 2.2's own claim at THIS exit), and the **★ positive passthrough assertion** the §3.1 ruling's
+reduced Verify calls for — a local `<img src="./images/pic.png">` ships in the downloaded file UNCHANGED,
+never a `data:` URI; a remote image (blocked upstream to a `data-peekover-src` placeholder by `mediaPolicy`
+at mount time, per Ruling 3) ships with that reference unrewritten too, closing 9.2's own delegation
+("Ruling 3's HTML-export half is asserted at 3.1 instead"). **Local-image fixture note:** built by
+appending the `<img>` directly to the already-mounted `.peekover-reader` subtree rather than through a real
+`mount()` call, because this harness's own origin (`http://localhost`) makes a relative path resolve
+`remote` (blocked into a placeholder) where the real app page's `chrome-extension:`/`moz-extension:` origin
+resolves it `inert` (left untouched, decisions.md's own D1 finding) — a harness artifact, not a product one;
+`exportHtml`'s own passthrough behavior (untouched by either path) is what this test proves, not
+`mediaPolicy`'s classification, which is that module's own suite's job.
+**Byte discipline — all confirmations, not deltas, per H1's own hypothesis (nothing yet imports
+`htmlExport.ts` into the app graph; 3.2 is the first consumer).** App-page chunk **475,579 B — CONFIRMED
+UNCHANGED**, same built chunk hash as the pre-task figure (grep-confirmed first: nothing in `src/app`/
+`entrypoints` references `htmlExport`). Content-script md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-
+identical**, confirmed by a full rebuild of BOTH engines. `.output` **4,866,741 / 4,866,857 B**, `pnpm zip`
+**1,470,730 B**, manifest **654 / 770 B**, `permissions: []`, no `web_accessible_resources` — all
+unchanged. `dependencies` **6**, unchanged (no new package; `downloadAs` uses only `Blob`/`URL`, already
+used elsewhere).
+**Suite.** Full unit suite: **1053/1055 passed**, the SAME 2 known pre-existing `codeDetect.test.ts`
+corpus-drift failures (corpus 26 not 23, split 7/19 not 7/16 — confirmed same signatures). Unit count moved
+**1060 → 1055** (−5), fully accounted for: exactly the 5 `collectLocalImages` tests removed with the code
+they tested, no other test dropped. Full browser suite: **136 files / 1403 passed / 15 skipped**, zero
+failures (1399 → 1403, +4 — this task's file went from 2 tests to 4, on both engines). Lint/typecheck
+clean. Golden diff empty. Manifest suite 8/8. 007/009 fence tests intact (covered by the full green browser
+run, 0 failures across all 136 files).
+**§3.1-body-vs-kickoff reconcile.** (H1) confirmed as hypothesized: nothing imports `htmlExport.ts` into
+the app graph yet, app-page bytes unchanged, the "3.1 moves bytes" framing was wrong — bytes first move at
+3.2. (H2) `downloadAs` did not exist, built per `diagramView.ts`'s own precedent; `basename` is a plain
+parameter, not derived from any document-path/`activeFile` global (no such wiring exists at 3.1's own
+scope — `appShell.ts`'s `activeFile: MarkdownFile | null` is app-page state 3.1's Files list does not
+touch; 3.2's own wiring supplies it for real). (H3) FOLD, exactly as the §3.1 gate ruling's own text
+already recommended ("recommended for removal at task 3.1's own implementation, since 3.1's Files list
+already touches `htmlExport.ts`") — not a fresh judgment call, the ruling had already made it; this task's
+own Step 0 just confirmed the cascade was clean (grep-verified nothing else consumed the removed symbols)
+and executed it. **No new `decisions.md` entry landed with this commit** — D-3's own implementing entry
+already landed at task 2.2's commit (2.2 built the serializer; 3.1 only consumes it), and the §3.1 gate
+ruling's entry already landed at the gate-ruling's own commit; this task's bracket names both, neither
+needed a new entry, stated explicitly rather than silently omitted. §3.11 rows 3–5 (download-trigger
+behavior) deferred to 3.2's own panel test, per §3.1's own conditional (the trigger is the export panel,
+not yet built) — stated, not silently skipped.
+**Next: 3.2** (the export panel — `exportControls.ts`'s overlay, Ruling 2's focus trap), the first task to
+actually wire `exportHtml` (and 3.3/3.4's siblings) into the app page and move app-page bytes.
+*(Prior entry, kept for the record:)*
 **★★★★ ORPHANED `client-zip` DEPENDENCY REMOVED, 2026-08-29 — THE §3.1(cont.) RULING'S DEFERRED FOLLOW-UP
 ACT HAS LANDED. `dependencies` 7 → 6** (`pnpm remove client-zip`; 1 package pruned — client-zip carried
 zero transitives, delegating DEFLATE to the browser's `CompressionStream`). Not a numbered task — this is
@@ -273,14 +348,16 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-08-29) — the §3.1 gate ruled (local-image embedding dropped, scope reduction),
-tasks 3.1/3.5 reduced + UNBLOCKED; the orphaned `client-zip` dependency removal has also landed (deps
-7→6, M10 net-dependency change now ZERO).** Next task: **3.1** (HTML export — the file-download exit,
-REDUCED per the §3.1 ruling) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually
-IMPORT `src/export/htmlExport.ts` and move app-page bytes. ~~also the first Base64-image-embedding consumer
-of 2.2's `collectLocalImages` path resolution~~ **struck — that consumption was dropped by the §3.1 ruling;
-2.2's `collectLocalImages` output is not consumed by 3.1's reduced scope (see § Now).** See § Now for the
-§3.1 ruling's full ripple, and for the dependency-removal act's detail.
+**M10 is IN PROGRESS (2026-08-29) — task 3.1 landed** (HTML export's file-download exit, REDUCED per the
+§3.1 ruling; the `collectLocalImages` orphan removed in the same commit). Next task: **3.2** (the export
+panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring shape, Ruling 2's focus trap) in
+`specs/010-local-exports/tasks.md`, group 3 — the first task to actually wire export chrome into the app
+page and move app-page bytes (3.1 itself left them unchanged; nothing yet imports `src/export/htmlExport.ts`
+from `src/app`/`entrypoints`). See § Now for 3.1's full landing detail.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-08-29) — the §3.1 gate ruled (local-image
+embedding dropped, scope reduction), tasks 3.1/3.5 reduced + UNBLOCKED; the orphaned `client-zip` dependency
+removal has also landed (deps 7→6, M10 net-dependency change now ZERO). Next task: 3.1 (HTML export — the
+file-download exit, REDUCED per the §3.1 ruling)~~ — **3.1 has since landed, see above.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
 — the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
 human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec
