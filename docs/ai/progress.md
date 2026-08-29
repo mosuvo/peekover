@@ -11,6 +11,21 @@ the `collectLocalImages` orphan removed in the same commit.)*
 
 ## Now (start here)
 
+**Doc-only, 2026-08-29 — `tasks.md` §3.2's draft body reconciled to reality ahead of building it (no code,
+no box ticked, 3.2 stays active).** Recon found the body self-contradicting (its "drop the 2 publish rows"
+instruction against its own "rows land at…" enumeration) and pointing at the wrong stylesheet, neither a new
+decision — both trace to already-banked rulings and already-true code facts. **Row set**: of the mockup's 7
+rows, 4 drop — Word/DOCX (struck task 5.1, §3.10) and ZIP (struck task 3.5, §3.1(cont.)), joining the 2
+publish rows D-10 already named — leaving 5 surviving actions (HTML file 3.1 · Copy-as-HTML 3.3 ·
+Copy-as-plain-text 3.4 · Copy-as-rich-text 4.1 · PDF 6.1/7.1); the mockup itself has no row for 3.3/3.4
+(D-10's own plan-time finding), so those 2 are net-new in the mockup's visual language, not transcribed.
+**Tokens re-routed**: panel chrome now points at `appShell.ts`'s `LIGHT_TOKENS`/`DARK_TOKENS` (2 blocks, no
+sepia, app-page DOM), not `readerCss.ts`'s `:host`-scoped blocks, which never reach app-page DOM by their own
+header comment — `readerCss.ts` dropped from 3.2's Files list. **Recorded**: Ruling 2's trap is COPIED inline
+from `diagramView.ts`'s `openDiagramLightbox` shape (no shared helper exists; extracting one is out of 3.2's
+scope), and `createExportView` mirrors `createStorageView`'s stateless-builder-plus-slot shape. Active/sealed
+count untouched (still 20 active / 22 sealed) — no task struck, no decision made.
+
 **Hygiene, 2026-08-29 — `renderStandaloneDocument` (task 2.2's serialization-exit browser command)
 removed from `vitest.config.ts`, orphaned by 3.1's `htmlExport.browser.test.ts` rewrite which switched to
 driving the real download via `armExportDownload`/`collectExportDownload`.** Confirmed zero call sites and

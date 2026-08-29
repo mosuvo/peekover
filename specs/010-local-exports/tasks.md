@@ -274,12 +274,39 @@ halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see belo
 
 - [ ] **3.2 The export panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring shape, Ruling 2's
       focus trap (D-2, Ruling 2).** `createExportView(...)`, wired in `appShell.ts` beside the existing
-      `createStorageView(...)` call, the same shape reused verbatim. The mockup's `#exportsOverlay`
-      (`design/mockup.html:861-874`) is the design language to carry — **drop its two out-of-scope publish rows
-      (Gist, Medium/Dev.to) at this task**, per D-10's own instruction; do not transcribe the list.
-      `role="dialog" aria-modal="true"`, `diagramLightbox`'s trap/restore baseline reused per Ruling 2.
-      Files: `src/app/exportControls.ts` · `src/app/appShell.ts` · `src/theme/readerCss.ts` (panel chrome
-      tokens, verified against all three theme blocks before use — the standing discipline) ·
+      `createStorageView(...)` call, the same builder shape reused verbatim: a pure `(doc, opts) → {element}`
+      function rebuilt on every open, mounted through `appShell.ts`'s existing slot pattern
+      (`storagePanel.replaceChildren(view.element)` to open, `storagePanel.replaceChildren()` to close) —
+      `appShell.ts` owns the open/close state and the trap lifecycle, `createExportView` itself is stateless,
+      exactly mirroring `createStorageView`'s own shape.
+      The mockup's `#exportsOverlay` (`design/mockup.html:861-874`) is the design language to carry, corrected
+      for what M10 actually ships. Of its **7 rows, 4 are dropped**: Word/DOCX (struck in full at task 5.1,
+      §3.10 gate ruling, 2026-08-24) and ZIP bundle (struck in full at task 3.5, §3.1(cont.) gate ruling,
+      2026-08-29), plus the two out-of-scope publish rows (Gist, Medium/Dev.to). D-10 itself only instructs
+      dropping the 2 publish rows — DOCX and ZIP were still in scope when D-10 sealed at gate 2 (2026-08-22);
+      their strikes landed later, so this task drops 4 rows total, not 2, joining the 2 publish rows already
+      named. The **5 surviving actions** the panel actually offers: HTML file (task 3.1), Copy-as-HTML (task
+      3.3), Copy-as-plain-text (task 3.4), Copy-as-rich-text (task 4.1), PDF (tasks 6.1/7.1).
+      **The mockup is also incomplete against that surviving set** — D-10's own plan-time finding (`plan.md`
+      §0/D-10) already notes it draws no row for Copy-as-HTML or Copy-as-plain-text, only Copy-as-rich-text.
+      Those 2 rows are NET-NEW at this task, designed in the mockup's visual language (icon glyph + subtext)
+      rather than transcribed from it, alongside the 3 rows (HTML, PDF, rich-text) the mockup does draw.
+      "Carry the mockup" means carry its visual language for the 5 surviving actions, not transcribe its list.
+      `role="dialog" aria-modal="true"`. Ruling 2's focus trap is discharged by COPYING the inline shape
+      `diagramView.ts`'s `openDiagramLightbox` already uses (its own `keydown` closure, its own
+      `lightboxStops()` tab-stop scan, restore via `trigger.focus()` guarded by `trigger.isConnected`) — no
+      shared trap helper exists anywhere in the tree, and extracting one is OUT OF SCOPE here (rule-of-three:
+      `diagramLightbox` plus this panel is two call sites, not three; flag a future extract only if a third
+      trap appears).
+      Files: `src/app/exportControls.ts` · `src/app/appShell.ts` (panel-chrome tokens land in `appShell.ts`'s
+      own `LIGHT_TOKENS`/`DARK_TOKENS` blocks — **2 blocks, no sepia arm** — applied to `.${SHELL_CLASS}` in
+      app-page DOM. NOT `readerCss.ts`: every one of its tokens is `:host`-scoped inside the reader's shadow
+      root and, by its own header comment, never reaches the host page. The export panel is app-page DOM
+      outside any shadow root (D-2), same as `storageControls.ts`'s existing panel, which already falls back
+      through this exact app-page cascade — `var(--panel,#F4F4EF)` — the precedent this panel's chrome CSS
+      matches. `readerCss.ts` is dropped from this task's Files list; it was listed only
+      for panel tokens, and touching it would ship chrome tokens nothing in app-page DOM can read — silent
+      fallback to CSS literals, sepia untheming, both invisible short of a real-engine check.) ·
       `tests/browser/exportPanel.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) ★ **§3.11 rows 3, 4, 5** (`storagePanelOverlay`'s own shape, inherited
       **Y**): out of flow, the page under it does not move; anchored at its own trigger; closing returns the
@@ -289,11 +316,12 @@ halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see belo
       re-derived. **Row 6** (every row a real `<button>`, keyboard-operable, no `tabindex` of its own) and
       **row 7** (accessible name carrying selection AND action — *"Export as HTML,"* never a bare icon glyph,
       since the mockup's own icon-glyph rows `:866-870` are a visual reference only) for whatever controls this
-      task's own shell contains (the export ROWS themselves land at 3.1/3.3/4.1/~~5.1~~(struck, §3.10)/8.1 — this task tests the
+      task's own shell contains (the export ROWS themselves land at **3.1, 3.3, 3.4, 4.1, 6.1/7.1** — the 5
+      surviving actions above; DOCX/ZIP have no row left to re-check, both struck in full — this task tests the
       PANEL, re-checked per-row at each of those). Content-script bytes md5-identical (D-2 — the panel is
       app-page DOM outside any shadow root, by construction, `mount.ts` diff **EMPTY**, asserted as a confined
-      diff). Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-2; Ruling 2; §4 Trust; rows
-      3, 4, 5, 11]
+      diff). Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-2, D-10; Ruling 2; §3.10;
+      §3.1(cont.); §4 Trust; rows 3, 4, 5, 11]
 
 - [ ] **3.3 Copy-as-HTML — the clipboard exit, SAME artifact as 3.1, different sink (D-3, D-4's HTML half).**
       `copyAsHtml(host)`: 2.2's `{clone}` (SAME call as 3.1 — no second serialization path; the `images`
