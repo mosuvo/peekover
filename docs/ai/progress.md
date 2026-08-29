@@ -11,6 +11,16 @@ the `collectLocalImages` orphan removed in the same commit.)*
 
 ## Now (start here)
 
+**Hygiene, 2026-08-29 — `renderStandaloneDocument` (task 2.2's serialization-exit browser command)
+removed from `vitest.config.ts`, orphaned by 3.1's `htmlExport.browser.test.ts` rewrite which switched to
+driving the real download via `armExportDownload`/`collectExportDownload`.** Confirmed zero call sites and
+no `BrowserCommands` declaration for it anywhere under `tests/` before removing; its `StandaloneRenderProbe`
+interface is kept (`ExportDownloadProbe` still extends it). Considered whether 3.3 (Copy-as-HTML) might
+revive it to open the clipboard payload bare — ruled out: 3.3's own Verify text (tasks.md) is a byte-
+identical string comparison against 3.1's exported file, not a render-open. Test-infra-only, no `src/`
+change, no shipped-byte change. Full browser suite green: 136 files / 1403 passed / 15 skipped / 0 failed
+(unchanged from baseline). Lint/typecheck clean.
+
 **★★★★★ M10 TASK 3.1 LANDED, 2026-08-29 — HTML EXPORT'S FILE-DOWNLOAD EXIT, REDUCED PER THE §3.1 GATE
 RULING. THE `collectLocalImages` ORPHAN IS REMOVED (FOLD). Next actionable task: 3.2 (the export panel).**
 `src/export/htmlExport.ts` gains `downloadAs(text, filename, mimeType?)` (a `Blob` + `URL.createObjectURL`

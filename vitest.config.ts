@@ -201,16 +201,11 @@ const probeFileUrlClipboard: BrowserCommand<[]> = async ({ page }): Promise<File
   }
 };
 
-// ── A REAL, BARE, STANDALONE HTML DOCUMENT — task 2.2's D-3 structural claim ──
-// "Opened standalone (no extension loaded, a bare `file://` … document)" cannot be simulated
-// in-page for the same reason the clipboard `file://` probe above cannot: a browser test runs
-// INSIDE the vitest browser-mode page, at its own `http://localhost` runner origin, and neither
-// engine will navigate that page to `file://` (the standing finding this file already carries).
-// So this command takes an ALREADY-SERIALIZED standalone document string (built in-page, by the
-// real `serializeReaderDocument`/`wrapInStandaloneDocument`, against a real mounted reader —
-// only the "open it bare" half needs the server side), writes it to a temp `.html` file, and
-// opens it in a FRESH, isolated browser context/page — never the runner's own page or context,
-// the same isolation `probeFileUrlClipboard` uses and for the same reason.
+// ── Shared probe shape for a bare, standalone HTML document — task 2.2's D-3 structural claim ──
+// (bodyPosition/bodyBackgroundColor/hostSelectorLiteralPresent/h1Text/consoleErrors, computed
+// against a fresh, isolated browser context/page opened on the document, never the runner's own
+// page or context — the same isolation `probeFileUrlClipboard` uses and for the same reason).
+// `ExportDownloadProbe` below extends this for the real file-download exit.
 interface StandaloneRenderProbe {
   bodyPosition: string;
   bodyBackgroundColor: string;
@@ -219,49 +214,15 @@ interface StandaloneRenderProbe {
   consoleErrors: string[];
 }
 
-const renderStandaloneDocument: BrowserCommand<[html: string]> = async (
-  { page },
-  html,
-): Promise<StandaloneRenderProbe> => {
-  const browser = page.context().browser();
-  if (!browser) throw new Error('no Playwright Browser — the standalone-document probe cannot isolate a context');
-
-  const dir = mkdtempSync(join(tmpdir(), 'peekover-standalone-export-'));
-  const file = join(dir, 'export.html');
-  writeFileSync(file, html, 'utf8');
-  const url = pathToFileURL(file).href;
-
-  const context = await browser.newContext();
-  try {
-    const probe = await context.newPage();
-    const consoleErrors: string[] = [];
-    probe.on('console', (msg) => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
-    probe.on('pageerror', (err) => consoleErrors.push(String(err)));
-    await probe.goto(url);
-    const result = (await probe.evaluate(`({
-      bodyPosition: getComputedStyle(document.body).position,
-      bodyBackgroundColor: getComputedStyle(document.body).backgroundColor,
-      hostSelectorLiteralPresent: document.documentElement.outerHTML.includes(':host'),
-      h1Text: document.querySelector('h1')?.textContent ?? null,
-    })`)) as Omit<StandaloneRenderProbe, 'consoleErrors'>;
-    return { ...result, consoleErrors };
-  } finally {
-    await context.close();
-    rmSync(dir, { recursive: true, force: true });
-  }
-};
-
 // ── THE REAL FILE-DOWNLOAD CODEPATH — task 3.1's own Verify demand ────────────
-// D-3's "renders visually equivalent" was already proven above at the SERIALIZATION exit
-// (`renderStandaloneDocument`, task 2.2). Task 3.1's own Verify calls that "re-proven at the
-// file-download exit specifically, since a clipboard write and a file write are different browser
-// codepaths" — so this drives `exportHtml`'s REAL `downloadAs` (a synthetic `<a download>` click
-// over a `blob:` URL, `htmlExport.ts`'s own doc comment), captures the resulting Playwright
-// `Download` on the SAME page the click fires on, and opens the SAVED FILE bare in a fresh
-// isolated context — same isolation as `renderStandaloneDocument`, for the same reason (a browser
-// test cannot navigate the runner's own page to `file://`/a downloaded path).
+// D-3's "renders visually equivalent" was already proven at the SERIALIZATION exit by task 2.2's
+// own browser test (since superseded by task 3.1's rewrite — see `docs/ai/decisions.md`). Task
+// 3.1's own Verify calls that "re-proven at the file-download exit specifically, since a clipboard
+// write and a file write are different browser codepaths" — so this drives `exportHtml`'s REAL
+// `downloadAs` (a synthetic `<a download>` click over a `blob:` URL, `htmlExport.ts`'s own doc
+// comment), captures the resulting Playwright `Download` on the SAME page the click fires on, and
+// opens the SAVED FILE bare in a fresh isolated context (a browser test cannot navigate the
+// runner's own page to `file://`/a downloaded path).
 //
 // Two commands, not one, because arming a `page.waitForEvent('download')` listener and the
 // synchronous in-page click that satisfies it are necessarily different steps: the browser test
@@ -387,7 +348,6 @@ export default defineConfig({
               emulateReducedMotion,
               emulateColorScheme,
               probeFileUrlClipboard,
-              renderStandaloneDocument,
               armExportDownload,
               collectExportDownload,
             },
