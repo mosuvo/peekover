@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (task 2.2 landed — the shared serializer + finding (b)'s :host translation.)*
+*Updated: 2026-08-29 (task 3.1 STOPPED-AND-FLAGGED before any code — local-image-byte-read gap.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,29 @@
 
 ## Now (start here)
 
+**★★★★★ M10 TASK 3.1 — STOPPED AND FLAGGED BEFORE ANY CODE, 2026-08-29. Blocker: no local-image-
+byte-read capability exists in the landed folder-source seam.** 3.1's kickoff's Step 0 re-read
+plan.md's D-3 rationale/pseudocode against the ACTUAL code (not the plan's assumption) and found
+plan.md:156-159/374's claim — that local-image embedding "reads already-resolved local file bytes
+through the same folder-source read path… no new file-read capability" — does not hold.
+`walkPolicy.ts`'s `isMarkdownFile` gate filters the walk to markdown files only; no
+`MarkdownFile`/`FoundFile`/`.read()` is ever built for an image, on either engine. Chromium is
+theoretically recoverable (new path-segment-walk glue off `FolderSource.handle`, no new
+permission, but new mechanism + an expanded `exportHtml` signature). **Firefox has NO recovery
+path at all** — `firefoxFolderSource.ts`'s `snapshotSource` discards every non-markdown
+`File`/entry synchronously during the same walk that builds `FolderSource`; nothing survives to
+read afterward. Closing that gap means extending `folderSource.ts` +both engine adapters — the
+shared seam every other feature depends on, absent from plan.md §2's Create/Touch lists and never
+anticipated at gate 2. That is a plan-level scope question, not task-level necessary ripple (the
+same shape as task 2.1's finding (b), much larger blast radius), so **per user decision this
+session it is flagged back, not built silently or absorbed.** Full reasoning + three options for
+the human to rule on: `decisions.md`'s 2026-08-29 M10 §3.1 entry. **State: zero files touched, no
+byte movement, 3.1's task box NOT ticked.** This also blocks 3.5 (ZIP export needs the same local-
+image-byte capability); 3.2 (the panel), 3.3/3.4/4.1 (copy actions using the CSS/text halves, not
+image bytes) are not blocked by this specific gap. **Next: human rules on the seam-extension
+question (decisions.md's three options); until then no further group-3 task proceeds on the
+image-embedding half.**
+*(Prior entry, kept for the record:)*
 **★★★★★ M10 TASK 2.2 LANDED, 2026-08-29 — `serializeReaderDocument`/`wrapInStandaloneDocument`, WITH
 FINDING (b)'s :host TRANSLATION BUILT AS A MECHANICAL, LIVE-DERIVED RULE (not a committed second copy).**
 `src/export/htmlExport.ts` (new): `serializeReaderDocument(host, documentPath?)` clones `.peekover-reader`

@@ -1,6 +1,49 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 §3.1 — STOP-AND-FLAG, NO CODE WRITTEN. The local-image-byte-read capability
+  plan.md's D-3 rationale and pseudocode assume ("reads already-resolved local file bytes through
+  the same folder-source read path `folderSourceFromHandle`/`FolderSource.read()` already uses…
+  no new file-read capability," plan.md:156-159, restated in the `exportHtml(host)` pseudocode at
+  plan.md:374) DOES NOT EXIST in the code as it actually landed.** Read `walkPolicy.ts`,
+  `chromiumFolderSource.ts`, `firefoxFolderSource.ts` directly (task 3.1 kickoff's Step 0
+  reconciliation, before any implementation): `walkMarkdown` (`walkPolicy.ts:245`,
+  `isMarkdownFile` gate) filters the walk to markdown files only — a `MarkdownFile`/`FoundFile`
+  entry, and therefore any `.read()` capability, is never constructed for a non-markdown file. No
+  image byte, `File` reference, or handle survives folder-open on either engine.
+  **Chromium** is theoretically recoverable: `FolderSource.handle` (`FileSystemDirectoryHandle`)
+  survives, so NEW glue (not an existing path — nothing in this codebase does this today) could
+  walk path segments via `getDirectoryHandle`/`getFileHandle` to reach an image's bytes. No new
+  permission grant, but genuinely new mechanism, and `exportHtml(host)`'s literal single-argument
+  signature can't reach it — the directory handle has to be plumbed in somehow, an expansion
+  task 2.2 already set precedent for (`serializeReaderDocument(host, documentPath?)` exceeded the
+  plan's own bare `serializeReaderDocument(host)` pseudocode without objection).
+  **Firefox has no recovery path at all.** `firefoxFolderSource.ts`'s `snapshotSource` converts
+  the walk's markdown-only `FoundFile[]` into `MarkdownFile[]`; the original `FileList`/
+  `DataTransferItem` entries for every non-markdown file (images included) are discarded
+  synchronously inside the same walk, on both the `<input webkitdirectory>` route and the drop
+  route. There is no byte-readable reference to a local image left anywhere once folder-open
+  completes — not a coding-effort gap, a structural one.
+  **Why this blocks 3.1 (and 3.5, which needs the same capability for ZIP export's image
+  files) rather than being absorbed as necessary ripple:** closing the Firefox gap requires
+  extending `folderSource.ts`/`chromiumFolderSource.ts`/`firefoxFolderSource.ts` — the shared
+  folder-source seam every other feature (recents, pins, watch, tree view) depends on, guarded by
+  its own "the seam stays honest," engine-agnostic-above-the-seam invariants. None of those three
+  files appear in plan.md §2's Create or Touch lists; gate 2 never anticipated this seam moving
+  for M10 at all. That is a plan-level scope question (the same shape as task 2.1's finding (b),
+  but with blast radius across the whole app rather than confined to `htmlExport.ts`), so it is
+  flagged back rather than built silently or absorbed as task-level ripple — consistent with
+  AGENTS.md's kickoff-reconciliation discipline and with how finding (b) was routed.
+  **State:** no file touched, no task box ticked, no byte movement. 3.1 is NOT suspended for the
+  whole milestone the way D-1's fork would have been — this is narrower, scoped to local-image
+  embedding specifically. Options put to the human (not decided here): (a) extend the seam as an
+  explicit, enumerated scope addition to M10 (real multi-file change, sealed-gate-2 boundary
+  reopened); (b) ship Chromium-only image embedding for 3.1/3.5 with the Firefox asymmetry stated
+  honestly against Verify rather than silently degraded; (c) a spec-level scope reduction
+  (mirroring §3.10's DOCX resolution) if local-image embedding turns out not worth the seam
+  change. **Revisit-when:** the human rules on one of the above; until then 3.1/3.5 do not
+  proceed.
+
 - **2026-08-29 · M10 D-3 (task 2.2) — `serializeReaderDocument`/`wrapInStandaloneDocument` land, WITH
   FINDING (b)'s AMENDMENT APPLIED, NOT PLAN's ORIGINAL VERBATIM TEXT.** `plan.md` §0's pre-written entry
   for D-3 reads: *"010 D-3 — the export serializer clones trusted nodes and bundles the existing
