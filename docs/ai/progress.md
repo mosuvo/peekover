@@ -939,6 +939,16 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   now awaits the Resource-Timing entries instead of sampling for them (22/22 consecutive runs green, both
   engines; deliberate break goes red). Retro 2026-07-19's watch item is **discharged**; the rule and the
   structural reason only that file was ever at risk are in `decisions.md` 2026-07-21.
+- **CARRIED — `codeEnhancer.test.ts` / `diagramEnhancer.test.ts` have ~3 timing-sensitive unit tests that
+  can fail on a cold or machine-loaded first run and pass on rerun.** Observed 2026-08-29 at the codeDetect
+  corpus re-pin (`57d18b8`). **The determination that these are flaky-not-real rests on the CAUSAL
+  argument — a codeDetect fixture re-pin cannot affect enhancer timing — not merely on "reran clean and it
+  passed."** A single clean rerun alone does not distinguish flaky from intermittently-real; the causal
+  argument is what actually rules out the latter here. **Guidance for a future session:** a red confined to
+  exactly these two files that clears on rerun matches this known pattern and does not need re-deriving. A
+  red that PERSISTS across reruns, or that appears in any OTHER file, does NOT match this pattern and must
+  be treated as real and investigated. Flag for the 11.2 retro alongside the codeDetect corpus-scan-
+  brittleness note already logged there.
 
 ## Closed milestones
 
