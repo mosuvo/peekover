@@ -1,6 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (task 3.1 STOPPED-AND-FLAGGED before any code — local-image-byte-read gap.)*
+*Updated: 2026-08-29 (M10 §3.1 gate RULED — local-image embedding dropped by scope reduction; 3.1/3.5
+reduced + UNBLOCKED.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +11,29 @@
 
 ## Now (start here)
 
+**★★★★★ M10 §3.1 GATE RULED, 2026-08-29 — LOCAL-IMAGE EMBEDDING DROPPED FROM M10 BY SCOPE REDUCTION. Tasks
+3.1 and 3.5 are REDUCED (not struck) and UNBLOCKED. Next actionable task: 3.1 (reduced).** The stop-flag
+below (task 3.1's own kickoff finding: no byte-readable local-image reference survives folder-open on either
+engine) is RESOLVED — not by extending the folder-source seam (option a), not by a Chromium-only asymmetry
+(option b), but by scope reduction (option c): local-image Base64 embedding (HTML export) and local-image
+file-copying (ZIP export) are both dropped from M10. **What survives:** HTML export (text + translated CSS +
+rendered diagrams, D2's own finding that diagram capture is seam-independent) and ZIP export (markdown
+source) both still ship; remote images stay unrewritten references (Ruling 3, unchanged); a local image
+reference ships broken/unrewritten, the SAME state the app-page reader itself already shows today for a
+relative local-image path (the measurement note's own D1 finding — not a new regression). **Full reasoning,
+evidence inputs, and the ruling's own text:** `decisions.md`'s 2026-08-29 M10 §3.1 RESOLUTION entry (above
+the STOP-FLAG and MEASUREMENT NOTE entries it cites). **Ripple landed this same commit:**
+`specs/010-local-exports/tasks.md` tasks 3.1 and 3.5 amended (image-embedding clauses struck, both tasks
+restated shorn); `specs/010-local-exports/spec.md` §4's HTML/ZIP clauses amended, §6 gains a new IS-NOT
+entry; `specs/010-local-exports/plan.md`'s false seam-read claim (D-3, `:156-159`/`:374`) struck as
+banked-but-false, its pseudocode and zipExport description annotated. **The `collectLocalImages` orphan**
+(shipped at 2.2, pure path math, still called but its output now consumed by nothing): kept installed this
+commit (doc-only gate act, no production diff), recommended for removal at task 3.1's own implementation,
+which already touches `htmlExport.ts` — see the decisions.md entry's own orphan note. **★ Task 3.5's
+remaining scope (a bare markdown-source ZIP, no images) is flagged as genuinely thin** — not resolved here,
+routed to whoever picks up 3.5's own implementation. **Next: 3.1** (reduced), the first task to actually
+import `htmlExport.ts` for a file-download exit and move app-page bytes — no longer blocked.
+*(Prior entry, kept for the record — the stop-flag this ruling resolves:)*
 **★★★★★ M10 TASK 3.1 — STOPPED AND FLAGGED BEFORE ANY CODE, 2026-08-29. Blocker: no local-image-
 byte-read capability exists in the landed folder-source seam.** 3.1's kickoff's Step 0 re-read
 plan.md's D-3 rationale/pseudocode against the ACTUAL code (not the plan's assumption) and found
@@ -201,12 +225,13 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-08-29) — task 2.2 landed, group 2 CLOSED (its 2-task acceptance: the `:host`
-risk resolved, a standalone-render check passes — both true).** Next task: **3.1** (HTML export — the
-file-download exit) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually IMPORT
-`src/export/htmlExport.ts` and move app-page bytes; also the first Base64-image-embedding consumer of
-2.2's `collectLocalImages` path resolution. See § Now for 2.2's full translation mechanism, drift guard,
-and byte/suite results.
+**M10 is IN PROGRESS (2026-08-29) — the §3.1 gate ruled (local-image embedding dropped, scope reduction),
+tasks 3.1/3.5 reduced + UNBLOCKED.** Next task: **3.1** (HTML export — the file-download exit, REDUCED per
+the §3.1 ruling) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually IMPORT
+`src/export/htmlExport.ts` and move app-page bytes. ~~also the first Base64-image-embedding consumer of
+2.2's `collectLocalImages` path resolution~~ **struck — that consumption was dropped by the §3.1 ruling;
+2.2's `collectLocalImages` output is not consumed by 3.1's reduced scope (see § Now).** See § Now for the
+§3.1 ruling's full ripple, and for 2.2's own translation mechanism, drift guard, and byte/suite results.
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
 — the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
 human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec

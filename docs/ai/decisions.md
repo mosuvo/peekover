@@ -1,6 +1,86 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 §3.1 — HUMAN RULING: LOCAL-IMAGE BASE64/FILE EMBEDDING DROPPED FROM M10 (HTML export §4
+  + ZIP export §3.5). THE §3.1 STOP-FLAG (below) IS RESOLVED BY SCOPE REDUCTION — not seam extension
+  (option a), not Chromium-only asymmetry (option b). Tasks 3.1 and 3.5 are REDUCED, not struck whole — they
+  survive shorn of their image half, unlike §3.10's DOCX task 5.1, struck in full.**
+  Ruled by the human at the §3.1 gate. The §3.1 STOP-FLAG entry (below) and the MEASUREMENT NOTE
+  (immediately below that, `472f7e0`) are **evidence inputs this entry cites, not re-derives** — they did
+  not decide anything; the human did, from what the note priced.
+  **What survives, narrowly (D2's own finding).** HTML export still ships: the clone, the translated
+  `:host`→`body` stylesheet (D-3, task 2.2, unaffected), and every rendered DIAGRAM — `diagramView.ts:232`
+  pulls Mermaid's rendered `<svg>` straight out of the live DOM and rasterizes it in-memory
+  (`diagramSvgText`/`diagramPng`, `:267-304`), never touching `folderSource.read()` — so diagram embedding is
+  untouched by this ruling. ZIP export still ships the markdown source, byte-identical, with path rewriting
+  for whatever remains shippable. Remote images stay unrewritten references, exactly as Ruling 3 (§9-3,
+  unchanged) already stated. **Only local RASTER image embedding — the Base64 walk in HTML export, the
+  local-file-copy half of ZIP export — is dropped.** A local `![](./x.png)` becomes a broken/omitted
+  reference in the export, the SAME state D1 (below) found the reader itself already shows today — not a
+  regression from current behavior.
+  **What's deferred.** Seam extension (option a) — walking `FolderSource.handle`'s directory handle
+  (Chromium) or restoring the discarded `File`/`DataTransferItem` entries (Firefox, structurally absent
+  today) to reach image bytes — has value independent of M10 (recents/pins/watch/tree already depend on the
+  seam) but belongs in a future milestone with its OWN gate, not smuggled into M10 as ripple on a boundary
+  gate 2 never anticipated moving. **Revisit-when:** local-image embedding returns to a future milestone,
+  paired with the seam-extension work a real local-image capability requires on BOTH engines (one trigger,
+  not two).
+  **What's rejected.** Chromium-only image embedding with a stated Firefox asymmetry (option b) — breaks the
+  Cr+Fx-parity discipline held since M1; not adopted.
+  **Evidence inputs, cited not re-derived:**
+  - **§3.1 STOP-FLAG** (below) — the folder-source seam retains no byte-readable local-image reference on
+    either engine; `walkPolicy.ts`'s `isMarkdownFile` gate filters the walk to markdown files only, so no
+    `MarkdownFile`/`FoundFile`/`.read()` is ever constructed for an image. Firefox has no recovery path at
+    all (`firefoxFolderSource.ts`'s `snapshotSource` discards every non-markdown entry synchronously during
+    the same walk); Chromium is theoretically recoverable but only via new, unshipped glue.
+  - **MEASUREMENT NOTE D1** (below) — **the pivotal finding.** Local relative-path images do NOT resolve in
+    the app-page reader TODAY: a relative `![](./img.png)` resolves against the app page's own
+    `chrome-extension:`/`moz-extension:` `baseURI`, which `mediaPolicy.ts`'s `classifyMediaUrl` buckets as
+    `inert` (neither `http(s):` nor `file:`) and leaves untouched — a 404/broken-image icon in ordinary use.
+    So option (c)'s cost on this axis specifically is low: dropping local-image embedding concedes no
+    capability the reader currently delivers. **Confidence: high, code-derived, not byte-measured** — the
+    human ruled on the code trace (baseURI wiring + classification logic + the read path, three
+    corroborating lines) and judged a real-engine confirmation of D1 optional before ruling, the note's own
+    honest caveat.
+  - **MEASUREMENT NOTE D2** — diagram export is independent of the seam, confirmed: the SVG capture path
+    never calls `folderSource.read()`. This is what makes option (c) narrow — "drop local raster image
+    embedding only," not "drop all images."
+  - **MEASUREMENT NOTE D3** — zero organic local relative-path raster images exist anywhere in this repo's
+    own specs/docs/design corpus (grepped, control-fired); local raster images read as long-tail for this
+    milestone's actual documents (F5 persona-1: agent-authored markdown), not core or common. One repo, not
+    the universe of user documents — a real data point, not authoritative.
+  **Consequences, landing in this same commit:** `specs/010-local-exports/tasks.md` tasks 3.1 and 3.5 are
+  AMENDED — the local-image-embedding clause dropped from each; both survive as reduced tasks (3.1: HTML
+  export ships text + translated CSS + diagram images; 3.5: ZIP export ships the markdown source, remote
+  references unrewritten, local raster embedding no longer any part of its scope) — flagged, not silently
+  collapsed, since 3.5's remaining scope is now thin (see below). `spec.md` §4's HTML-export clause loses its
+  "every locally-resolvable image embedded as Base64" promise, moved to a new §6 IS-NOT entry (mirroring
+  §3.10's DOCX move); §4's ZIP-export clause loses its "every locally-resolvable referenced image" inclusion
+  the same way. `plan.md` strikes the FALSE seam-read claim at plan.md:156-159/374 (D-3's own text, which
+  assumed `folderSourceFromHandle`/`FolderSource.read()` reaches image bytes — the claim the §3.1 STOP-FLAG
+  falsified) and annotates D-3's image-embedding half as dropped-per-this-ruling. `progress.md`'s Now-pointer
+  advances: §3.1 gate RULED, local-image embedding dropped by scope reduction, 3.1/3.5 reduced + UNBLOCKED,
+  next actionable task 3.1 (reduced).
+  **The `collectLocalImages` orphan.** `collectLocalImages` (shipped at task 2.2, `htmlExport.ts` — pure path
+  math, no I/O) is still CALLED by `serializeReaderDocument` (2.2's own code invokes it unconditionally to
+  build its return value) but its output — the local/remote image partition — is now consumed by NOTHING:
+  3.1's reduced HTML export no longer needs to distinguish a local `<img>` from a remote one (both are left
+  exactly as sanitize/`mediaPolicy` produced them, identical passthrough), and 3.5's reduced ZIP export no
+  longer copies image files at all. Not unreachable, but its result is now dead weight. **Kept installed
+  this commit** — removing it is a production-code act (full-suite Verify), not a doc-only gate commit — and
+  is recommended for removal **at task 3.1's own implementation**, since 3.1's Files list already touches
+  `htmlExport.ts` and is the natural place to also simplify `serializeReaderDocument`'s return shape
+  (dropping `images`/`LocalImageRef`). Named so the omission reads as deliberate, not missed — the same
+  interim language §3.10's own orphaned-`docx` entry used.
+  **★ Task 3.5's remaining scope is genuinely thin, flagged rather than silently accepted.** Shorn of local
+  image copying, ZIP export becomes "package the already-byte-identical markdown source into a `.zip`
+  archive, remote image references left exactly as authored." Whether that is still worth its own task (vs.
+  folding into 3.1/3.4's existing file/clipboard exits, or revisiting §3.1's scope further) is **not decided
+  here** — this entry states the concern per the gate-act kickoff's own instruction to flag rather than
+  collapse, and routes the call to whoever next picks up task 3.5's own implementation.
+  **Revisit-when:** local-image embedding returns to a future milestone (merged with the seam-extension
+  revisit-when above — one trigger, not two).
+
 - **2026-08-29 · M10 MEASUREMENT NOTE — pricing §3.1's scope-reduction option (c) before the human
   §3.1 gate rules on it. Not a decision (rules nothing), not a task, not a tasks.md box.** §3.1 is
   STOP-AND-FLAGGED at the entry directly below (the folder-source seam has no byte-readable local-image

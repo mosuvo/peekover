@@ -153,10 +153,25 @@ custom-element shadow-root context they ship in today (`:host(...)` selectors do
 root, and if the shipped stylesheet uses them, the export path needs a **translated** copy, not a direct
 string reuse — flagged in §4 as a real risk, not silently assumed away).
 
-Local image embedding (Base64) walks the cloned tree's `<img>` elements and reads already-resolved local file
+~~Local image embedding (Base64) walks the cloned tree's `<img>` elements and reads already-resolved local file
 bytes through the same folder-source read path `folderSourceFromHandle`/`FolderSource.read()` already uses
 (the 009 D-1 harness's own citation of this mechanism) — no new file-read capability, reusing what `openFolder`
-already grants for the currently-open folder.
+already grants for the currently-open folder.~~
+
+**★ STRUCK, 2026-08-29 (M10 §3.1 gate, `decisions.md`) — THIS CLAIM DOES NOT HOLD AND MUST NOT SURVIVE AS
+BANKED-BUT-FALSE.** Task 3.1's own kickoff Step 0 re-read this paragraph against the actual tree
+(`walkPolicy.ts`, `chromiumFolderSource.ts`, `firefoxFolderSource.ts`) and found no `folderSourceFromHandle`/
+`FolderSource.read()` capability reaches image bytes on either engine — the walk is filtered to markdown
+files only, so no `MarkdownFile`/`FoundFile`/`.read()` is ever constructed for a non-markdown file. Firefox
+has no recovery path at all; Chromium is theoretically recoverable only via new, unshipped glue. Full
+reasoning: `decisions.md`'s 2026-08-29 M10 §3.1 STOP-FLAG entry. **The human resolved the resulting fork by
+scope reduction** (`decisions.md`'s 2026-08-29 M10 §3.1 RULING entry): local-image embedding is DROPPED from
+M10 (HTML export and ZIP export both), not built via seam extension. D-3's "no new anything" framing —
+already flagged as at-risk by plan risk §4-1 for the `:host` question — turns out to be wrong on THIS axis
+for a different reason: not "new reviewable code," but "no code, because the capability itself doesn't
+exist and extending it is out of scope." Group 2's own local-image resolution (`collectLocalImages`,
+task 2.2, pure path math, no I/O) remains as shipped, but its output is no longer consumed by task 3.1/3.5
+per the ruling above — see `decisions.md`'s own `collectLocalImages` orphan note.
 
 *Rejected:* re-parsing the raw markdown source through a second, export-specific pipeline (violates "one
 parser, one instance," AGENTS.md's standing rule, restated at every milestone since 006 for exactly this
@@ -375,13 +390,14 @@ serializeReaderDocument(host):                     # pure-ish: reads the shadow 
     return { clone, images }                         # HTML export / Copy-as-HTML both consume this
 
 exportHtml(host):
-    { clone, images } = serializeReaderDocument(host)
-    for img in images: inline as Base64 (data: URI), rewrite src
+    { clone } = serializeReaderDocument(host)   # ★ the `images` field is still computed by 2.2's own code
+                                                 #   but is NOT consumed here — see below
+    # for img in images: inline as Base64 (data: URI), rewrite src   ★ STRUCK, §3.1 gate — DROPPED, not built
     doc = wrapInStandaloneDocument(clone, READER_STYLESHEET_TEXT)   # D-3's bundled <style>, not inline styles
     downloadAs(doc.outerHTML, `${basename}.html`)
 
 copyAsHtml(host):
-    { clone, images } = serializeReaderDocument(host)   # same call, same images resolution
+    { clone } = serializeReaderDocument(host)   # same call
     doc = wrapInStandaloneDocument(clone, READER_STYLESHEET_TEXT)
     await navigator.clipboard.write([new ClipboardItem({
       'text/html': new Blob([doc.outerHTML], {type:'text/html'}),
@@ -389,9 +405,13 @@ copyAsHtml(host):
     })])
 ```
 
-`zipExport` reuses `collectLocalImages`'s resolution half only (§3.3, spec-decided) — it ships the raw
-markdown source plus the resolved local image files, paths rewritten to the archive's layout, never the
-rendered/sanitized HTML at all.
+**★ STRUCK/AMENDED, 2026-08-29 (M10 §3.1 gate, `decisions.md`):** ~~`zipExport` reuses `collectLocalImages`'s
+resolution half only (§3.3, spec-decided) — it ships the raw markdown source plus the resolved local image
+files, paths rewritten to the archive's layout, never the rendered/sanitized HTML at all.~~ `zipExport`
+ships the raw markdown source only, byte-identical, never the rendered/sanitized HTML at all — local-image
+file-copying is DROPPED by the same ruling as HTML export's Base64 embedding above; `collectLocalImages`'s
+resolution is not consumed here either. See `decisions.md`'s 2026-08-29 M10 §3.1 entry, including its flag
+that this leaves task 3.5's own remaining scope thin.
 
 ### 1.2 Where each control lives (D-2)
 
@@ -424,8 +444,9 @@ margin-box content is the open probe (§7-4, D-7), sequenced before this task cl
 
 ## 2. Files to create / touch / NOT touch
 
-**Create** — `src/export/htmlExport.ts` (D-3: `serializeReaderDocument`, `wrapInStandaloneDocument`, the
-Base64-embedding walk) · ~~`src/export/docxExport.ts` (Ruling 1's plain-source-text math handling, diagram
+**Create** — `src/export/htmlExport.ts` (D-3: `serializeReaderDocument`, `wrapInStandaloneDocument` ·
+~~the Base64-embedding walk~~ **STRUCK 2026-08-29 — local-image embedding dropped, M10 §3.1 gate,
+`decisions.md`, mirroring the DOCX strike immediately below**) · ~~`src/export/docxExport.ts` (Ruling 1's plain-source-text math handling, diagram
 embed reusing `diagramView.ts`'s existing `canvas.toBlob` capture, `:298`)~~ **STRUCK 2026-08-24 — DOCX
 export dropped from M10 by human ruling at the §3.10 gate (`decisions.md` M10 §3.10), resolving D-1's own
 BUSTS fork by scope reduction; kept struck rather than deleted so this Files-to-create list stays legible as

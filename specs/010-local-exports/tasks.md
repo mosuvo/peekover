@@ -56,6 +56,11 @@ attributes. → **group 2**, `wrapInStandaloneDocument`'s own construction.
   export embeds only locally-resolvable images; a remote image stays a remote reference, unrewritten. **The
   gate-1 provisional condition** — approval is conditional on task 1.1 clearing headroom before any dependency
   is treated as usable — is a **hard sequencing constraint**, restated at task 1.1 and nowhere re-argued.
+  ★ **SUPERSEDED IN PART, 2026-08-29 (M10 §3.1 gate, `decisions.md`) — Ruling 3's own text above is kept
+  verbatim as the sealed gate-1 record, but its "embeds only locally-resolvable images" half no longer
+  describes what M10 ships: local-image embedding was ALSO dropped, so M10 now embeds NO images (local or
+  remote) in HTML/ZIP export — only Ruling 3's remote-stays-unrewritten half remains active. See tasks 3.1
+  and 3.5, amended below.**
 - **plan D-1 … D-10**, sealed at gate 2. **Every task names the D-values it services.** ★ **Each D-value's
   `decisions.md` entry text is ALREADY WRITTEN in `plan.md` §0 and is applied VERBATIM — never re-authored —
   landing with the commit that implements it, never after** (plan §0's own rule). ★ **This is the discipline
@@ -224,19 +229,29 @@ standalone-render check passes.*
 
 ## 3 — HTML export, Copy-as-HTML, Copy-as-plain-text, ZIP export (D-3 consumed, D-4's HTML/plain-text halves)
 
-- [ ] **3.1 HTML export — the file-download exit.** `exportHtml(host)`: 2.2's `{clone, images}`, inline every
-      local image as Base64 (`data:` URI, rewriting `src`), `downloadAs(doc.outerHTML, '${basename}.html')`.
+- [ ] **3.1 HTML export — the file-download exit. ★ REDUCED, 2026-08-29 (M10 §3.1 gate, `decisions.md`):
+      local-image Base64 embedding is DROPPED from this task, by human ruling via scope reduction — not
+      built, not deferred-silently.** `exportHtml(host)`: 2.2's `{clone}` (the `images` field 2.2 still
+      computes is no longer consumed here — see the `collectLocalImages` orphan note in `decisions.md`'s
+      2026-08-29 M10 §3.1 entry), `downloadAs(doc.outerHTML, '${basename}.html')`. Every `<img>` — local or
+      remote — ships in the export exactly as `serializeReaderDocument`'s clone carried it: untouched, no
+      rewrite, no embed. A local `![](./x.png)` is broken in the export the SAME way it is already broken in
+      the app-page reader today (the ruling's own D1 finding) — not a new regression. Rendered DIAGRAMS are
+      unaffected (D2): they are live `<svg>` in the cloned DOM already, never an `<img>` needing embedding.
       **No sibling suite for a download-triggering control exists in this codebase** (plan §3.11 row 14) —
       established here.
       Files: `src/export/htmlExport.ts` · `tests/browser/htmlExport.browser.test.ts`
-      Verify: (**tests/browser** — Cr+Fx) every local `<img>` becomes a `data:` URI, byte-verified against the
-      source file's own bytes (no lossy re-encode); the downloaded file, opened standalone, renders visually
-      equivalent to the reader (2.2's own claim, re-proven at the file-download exit specifically, since a
-      clipboard write and a file write are different browser codepaths). ★ **§3.11 rows 3–5** (out-of-flow, the
-      trigger itself, zero residual footprint after the action completes) asserted against whatever control
-      triggers the download — if that control is the export panel, deferred to 3.2's own panel test rather than
-      duplicated; if not, asserted here. Content-script bytes md5-identical. Golden EMPTY · manifest green
-      **654 / 770 B** · `permissions: []`. [D-3; §4 HTML export; row 14]
+      Verify: (**tests/browser** — Cr+Fx) the downloaded file, opened standalone, renders visually equivalent
+      to the reader for its TEXT/CSS/diagram content (2.2's own claim, re-proven at the file-download exit
+      specifically, since a clipboard write and a file write are different browser codepaths) — ~~every local
+      `<img>` becomes a `data:` URI, byte-verified against the source file's own bytes (no lossy re-encode)~~
+      **struck, §3.1 gate: no Base64 embedding to verify.** A local-image fixture's `<img src>` is asserted
+      UNCHANGED (broken-reference passthrough), not embedded — the reduced scope's own positive assertion,
+      not merely an absence. ★ **§3.11 rows 3–5** (out-of-flow, the trigger itself, zero residual footprint
+      after the action completes) asserted against whatever control triggers the download — if that control
+      is the export panel, deferred to 3.2's own panel test rather than duplicated; if not, asserted here.
+      Content-script bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`.
+      [D-3; §4 HTML export; row 14; §3.1 gate ruling]
 
 - [ ] **3.2 The export panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring shape, Ruling 2's
       focus trap (D-2, Ruling 2).** `createExportView(...)`, wired in `appShell.ts` beside the existing
@@ -288,20 +303,29 @@ standalone-render check passes.*
       hostile-fixture discipline 009 4.2 used for its own retained-source claim). Golden EMPTY · manifest green
       **654 / 770 B** · `permissions: []`. [D-4; §4 copy actions]
 
-- [ ] **3.5 ZIP export — raw source + resolved local images, NEVER the rendered/sanitized HTML (D-3's
-      resolution half, reused; §3.3 sealed).** `zipExport(host)` reuses `collectLocalImages`'s resolution logic
-      only (2.2) — ships the markdown source plus resolved local image files, paths rewritten to the archive's
-      layout. **Remote images stay unrewritten remote references, per Ruling 3** — not fetched, not embedded,
-      not silently dropped.
+- [ ] **3.5 ZIP export — raw markdown source, NEVER the rendered/sanitized HTML. ★ REDUCED, 2026-08-29 (M10
+      §3.1 gate, `decisions.md`): local-image file-copying is DROPPED from this task, by human ruling via
+      scope reduction — not built, not deferred-silently. ★ FLAGGED, NOT SILENTLY COLLAPSED: the remaining
+      scope is genuinely thin — see `decisions.md`'s 2026-08-29 M10 §3.1 entry's own flag, and confirm at
+      task time whether this still stands as its own task or folds elsewhere before implementing.** Shorn of
+      image copying, `zipExport(host)` packages the byte-identical markdown source into a `.zip` archive.
+      ~~reuses `collectLocalImages`'s resolution logic only (2.2) — ships the markdown source plus resolved
+      local image files, paths rewritten to the archive's layout~~ **struck, §3.1 gate: no local image files
+      to resolve or copy — `collectLocalImages` is not consumed here (see the orphan note in `decisions.md`'s
+      2026-08-29 M10 §3.1 entry).** **Both local and remote image references stay exactly as authored,
+      unrewritten, per §3.1's ruling (local) and per the still-standing half of Ruling 3 (remote)** — not
+      fetched, not embedded, not silently dropped, just untouched.
       Files: `src/export/zipExport.ts` · `src/app/exportControls.ts` · `tests/browser/zipExport.browser.test.ts`
       Verify: (**tests/browser** — Cr+Fx) the produced archive contains the exact markdown source (byte-
-      identical) and every locally-resolvable image, at rewritten paths that resolve correctly when the archive
-      is extracted and the markdown is re-opened. ★ **Ruling 3, re-checked not re-argued**: a remote-image
+      identical), extracted and re-opened correctly. ~~and every locally-resolvable image, at rewritten paths
+      that resolve correctly when the archive is extracted and the markdown is re-opened~~ **struck, §3.1
+      gate: no image files ship.** ★ **Ruling 3's remote half, re-checked not re-argued**: a remote-image
       fixture produces an unrewritten remote reference in the ZIP'd markdown, never a fetch attempt — the
       zero-network guard's own positive control for this task (see 9.2 for the milestone-wide version; this is
-      the per-task instance). App-page bytes stated against 3.4's own figure, decomposed. Content-script bytes
-      md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-3; §4 ZIP export;
-      Ruling 3]
+      the per-task instance). A local-image fixture likewise produces an unrewritten local reference (§3.1's
+      own new assertion, mirroring 3.1's). App-page bytes stated against 3.4's own figure, decomposed.
+      Content-script bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`.
+      [D-3; §4 ZIP export; Ruling 3; §3.1 gate ruling]
 
 *Group-3 acceptance (plan §6): §4's HTML/copy/ZIP criteria; §3.11 rows 3–7, 11, 14 for these controls and the
 panel that hosts them.*

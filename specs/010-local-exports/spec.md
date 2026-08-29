@@ -124,8 +124,8 @@ AGENTS.md #5, stated per item, the 007/008/009 shape:
 
 **HTML export**
 
-- When the user exports the current document as HTML, the system shall produce a single standalone file with all styling inlined and every locally-resolvable image embedded as Base64.
-- If the document references a remote image, then the system's handling shall follow whatever §9-3 rules — inline it, leave it as a remote reference, or omit it — but shall never silently fail the whole export over one unresolvable image.
+- When the user exports the current document as HTML, the system shall produce a single standalone file with all styling inlined ~~and every locally-resolvable image embedded as Base64~~. **★ LOCAL-IMAGE BASE64 EMBEDDING DROPPED, 2026-08-29 — a HUMAN RULING at the §3.1 gate (`decisions.md` M10 §3.1), resolving that gate's own stop-flag by scope reduction. Local images are not embedded; see §6.** Diagrams (rendered `<svg>` in the DOM already, never an `<img>`) are unaffected and still ship.
+- If the document references a remote image, then the system's handling shall follow whatever §9-3 rules — inline it, leave it as a remote reference, or omit it — but shall never silently fail the whole export over one unresolvable image. **§9-3's own ruling (a) — remote images stay unrewritten references — combined with the local-image drop above now states M10's entire image story: no image is embedded, local or remote; only rendered diagrams (not `<img>`-sourced) ship inline.**
 
 **DOCX export — ★ DEFERRED OUT OF M10, 2026-08-24 (`decisions.md` M10 §3.10). Clauses kept unstruck as the
 record of what gate 1 approved; none apply to M10's own acceptance criteria any longer (see §6).**
@@ -148,7 +148,7 @@ record of what gate 1 approved; none apply to M10's own acceptance criteria any 
 
 **ZIP export**
 
-- When the user exports the current document as a ZIP, the system shall include the markdown source and every locally-resolvable referenced image, with paths rewritten to match the archive's layout.
+- When the user exports the current document as a ZIP, the system shall include the markdown source ~~and every locally-resolvable referenced image, with paths rewritten to match the archive's layout~~. **★ LOCAL-IMAGE FILE-COPYING DROPPED, 2026-08-29 — same §3.1 gate ruling as HTML export's Base64 clause above (`decisions.md` M10 §3.1). No image is copied into the archive; a local image reference ships unrewritten, exactly as authored. See §6.**
 - The system's handling of remote images in a ZIP export shall follow §9-3's resolution.
 
 **Export shortcut & progress**
@@ -185,6 +185,19 @@ record of what gate 1 approved; none apply to M10's own acceptance criteria any 
 
 ## 6. Out of scope (explicit)
 
+- **★ Local-image embedding, in HTML export (§4, Base64) and ZIP export (§4, file-copying) — added
+  2026-08-29, a HUMAN RULING at the §3.1 gate (`decisions.md` M10 §3.1), resolving that gate's own
+  stop-flag.** The folder-source seam (`walkPolicy.ts`'s `isMarkdownFile` gate, both engine adapters) never
+  constructs a byte-readable reference to a non-markdown file — no local-image embedding capability exists
+  in the code as it landed, and extending the seam to add one is out of this milestone's own gate-2 sealed
+  scope. The human resolved the fork by scope reduction, not by extending the seam or by a Chromium-only
+  asymmetry. **What survives:** HTML export (text + translated CSS + rendered diagrams) and ZIP export
+  (markdown source) both still ship; remote images stay unrewritten references (§9-3, unchanged); a local
+  image reference is left broken/unrewritten in the export, the same state the app-page reader itself
+  already shows for a relative local image path today (`decisions.md`'s own D1 finding — not a regression
+  from current reader behavior). Home: a future milestone, paired with the seam-extension work a real
+  local-image capability requires on both engines. **Revisit-when:** local-image embedding returns to a
+  future milestone alongside that seam-extension work (one trigger).
 - **★ DOCX export, in full — added 2026-08-24, a HUMAN RULING at the §3.10 gate (`decisions.md` M10 §3.10),
   not part of the original gate-1 draft.** `docx`'s own measured weight (+373,820 B) busted the milestone's
   ~367 KiB `.output` headroom in combination with the ZIP writer; the human resolved the fork by scope
