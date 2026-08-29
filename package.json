@@ -38,7 +38,6 @@
     "wxt": "^0.20.27"
   },
   "dependencies": {
-    "client-zip": "^2.5.0",
     "diff": "^9.0.0",
     "dompurify": "^3.4.13",
     "markdown-it": "^14.3.0",

@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (M10 §3.1 gate RULED — local-image embedding dropped by scope reduction; 3.1/3.5
-reduced + UNBLOCKED.)*
+*Updated: 2026-08-29 (orphaned `client-zip` dependency removed — §3.1(cont.) ruling's deferred follow-up
+act landed, deps 7 → 6.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +11,32 @@ reduced + UNBLOCKED.)*
 
 ## Now (start here)
 
+**★★★★ ORPHANED `client-zip` DEPENDENCY REMOVED, 2026-08-29 — THE §3.1(cont.) RULING'S DEFERRED FOLLOW-UP
+ACT HAS LANDED. `dependencies` 7 → 6** (`pnpm remove client-zip`; 1 package pruned — client-zip carried
+zero transitives, delegating DEFLATE to the browser's `CompressionStream`). Not a numbered task — this is
+the cleanup §3.1(cont.) itself named, sitting between that ruling and task 3.1 without blocking either.
+Step 0 confirmed the precondition before removing: `client-zip` was imported by NOTHING in `src/`,
+`entrypoints/`, or `scripts/` (grep clean, re-confirmed at this head rather than carried on the ruling
+commit's earlier grep), and every `zipExport` reference left in `specs/010-local-exports/` is already
+struck-through — no live Files target referenced it. The original 6 dependencies (`diff`, `dompurify`,
+`markdown-it`, `markdown-it-task-lists`, `mermaid`, `shiki`) are untouched and intact. `pnpm audit --prod`
+clean (0 advisories) on the resulting tree. **`.output` is byte-unchanged on both engines** — 4,866,741 B
+(Chrome) / 4,866,857 B (Firefox), identical to the pre-removal baseline — because `client-zip` was never
+imported (task 3.5 never ran) and so never contributed built bytes; this was the expected result, verified
+for client-zip specifically rather than assumed from the `docx` precedent. Content-script md5 unchanged
+(`41e7607ab6b7f4b26f834a5130eac26e` Chrome / `69338e67dfd966eed0ceec68d2e873a7` Firefox); app-page chunk
+475,579 B unchanged; manifests 654 / 770 B, `permissions: []`, no `web_accessible_resources` — all
+unchanged. Full-suite Verify ran per rule 8 (production diff): browser suite green (136 files / 1399
+passed / 15 skipped / 0 failed, matches baseline), lint exit 0, golden diff empty, 007/009 fence tests
+intact (covered by the full green browser run). **Unit suite: 1058/1060 passed, 2 failed in
+`codeDetect.test.ts`** — the same pre-existing unlabeled-fence corpus drift already documented at the
+`docx` removal (corpus 23→26, split 7/16→7/19), confirmed the identical signature here, not a new third
+failure. SBOM not regenerated: gitignored/transient per the 1.1 precedent, not forced into the diff. **M10
+net-dependency change is now ZERO** — the milestone that began with a dependency-measurement hard gate
+(`docx` + `client-zip` both installed at 1.1) ends up adding no dependency at all, both now removed. The
+"`client-zip` installed-but-unused" interim language from the §3.1(cont.) entry below is now superseded —
+the removal it was waiting for has landed.
+*(Prior entry, kept for the record:)*
 **★★★★★ M10 §3.1(cont.) GATE RULED, 2026-08-29 — ZIP EXPORT (task 3.5) DROPPED FROM M10 ENTIRELY, DOWNSTREAM
 OF THE §3.1 LOCAL-IMAGE RULING BELOW. Task 3.5 is STRUCK WHOLE (not reduced) — active count 21 → 20, group 3
 now 4 active tasks. `client-zip` is ORPHANED (deps target 6). Next actionable task: still 3.1 (reduced).**
@@ -248,12 +274,13 @@ each milestone's one-paragraph close summary and links to the archived detail.
 ## Up next
 
 **M10 is IN PROGRESS (2026-08-29) — the §3.1 gate ruled (local-image embedding dropped, scope reduction),
-tasks 3.1/3.5 reduced + UNBLOCKED.** Next task: **3.1** (HTML export — the file-download exit, REDUCED per
-the §3.1 ruling) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually IMPORT
-`src/export/htmlExport.ts` and move app-page bytes. ~~also the first Base64-image-embedding consumer of
-2.2's `collectLocalImages` path resolution~~ **struck — that consumption was dropped by the §3.1 ruling;
+tasks 3.1/3.5 reduced + UNBLOCKED; the orphaned `client-zip` dependency removal has also landed (deps
+7→6, M10 net-dependency change now ZERO).** Next task: **3.1** (HTML export — the file-download exit,
+REDUCED per the §3.1 ruling) in `specs/010-local-exports/tasks.md`, group 3 — the first task to actually
+IMPORT `src/export/htmlExport.ts` and move app-page bytes. ~~also the first Base64-image-embedding consumer
+of 2.2's `collectLocalImages` path resolution~~ **struck — that consumption was dropped by the §3.1 ruling;
 2.2's `collectLocalImages` output is not consumed by 3.1's reduced scope (see § Now).** See § Now for the
-§3.1 ruling's full ripple, and for 2.2's own translation mechanism, drift guard, and byte/suite results.
+§3.1 ruling's full ripple, and for the dependency-removal act's detail.
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS but SUSPENDED at task 1.1's own fork (2026-08-24)
 — the next act is the spec revisit D-1's provisional condition names, not scoping a new milestone: a
 human-reviewed decision on `docx`'s own weight (subset the API surface used, a lazy-split strategy per spec
