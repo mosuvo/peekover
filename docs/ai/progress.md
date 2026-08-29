@@ -1,7 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (task 3.2 landed — the export panel, HTML export's row wired live, the app page's
-FIRST `htmlExport.ts` import.)*
+*Updated: 2026-08-29 (task 3.3 landed — Copy-as-HTML, the clipboard exit, the panel's 2nd row wired live.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,9 +10,80 @@ FIRST `htmlExport.ts` import.)*
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 3.2 LANDED, 2026-08-29 — THE EXPORT PANEL. Q1 RESOLVED (a): THIS TASK WIRES HTML EXPORT'S
-ROW LIVE — THE APP PAGE'S FIRST `htmlExport.ts` IMPORT, APP-PAGE BYTES MOVE FOR THE FIRST TIME IN M10. Next
-actionable task: 3.3 (Copy-as-HTML).**
+**★★★★★ M10 TASK 3.3 LANDED, 2026-08-29 — COPY-AS-HTML, THE CLIPBOARD EXIT. Next actionable task: 3.4
+(Copy-as-plain-text).**
+**Q1-verify — CONFIRMED (a): only the copy-html row changed.** `exportControls.ts` gained one field
+(`onCopyHtml`) and one `RowSpec.onClick`; no other row's shape moved. `htmlExport.ts` gained `copyAsHtml` +
+`plainTextOf`, both new exports, no existing export's signature changed.
+**Q2 — `plainTextOf(clone)` is the clone's RENDERED text, confirmed against §4's own text, NOT the raw
+source.** The raw markdown source is task 3.4's own distinct payload (§4: *"copy the raw source text exactly
+as authored"*) — if 3.3's fallback read the source instead, it would be byte-identical to 3.4's whole
+payload, the same two-paths-same-bytes redundancy the §3.1(cont.) ZIP ruling removed. Proven with a
+hostile-ish fixture: `**bold**` renders as "bold"; the captured `text/plain` Blob reads "bold", not
+"**bold**" and not the raw source string.
+**Q3 — THE REAL OS CLIPBOARD IS THE WRONG INSTRUMENT FOR THE SAME-ARTIFACT CHECK, MEASURED BEFORE THIS FILE
+WAS WRITTEN.** A throwaway probe against this harness (Chromium + Firefox, both real engines) found the
+native `text/html` clipboard format is LOSSY on both: Chromium discards the whole document structure and
+re-serializes it as a fragment with every rule turned into a per-element `getComputedStyle`-derived inline
+`style` — `<style>`, `<head>`, and the doctype are gone (this IS the transform task 4.1's Copy-as-rich-text
+will want); Firefox keeps more structure but reformats whitespace and silently drops the `<meta charset>`
+tag. Neither is a bug to route around — reading back through the real clipboard would answer a different
+question (did the OS's own rich-paste transform survive, which it provably does not, byte-for-byte, on
+either engine) than this task's own question (did `copyAsHtml` hand the clipboard API the SAME bytes
+`exportHtml` downloaded). **No new `vitest.config.ts` infra was added.** The same-artifact assertion instead
+CAPTURES the `ClipboardItem` via `diagramActions.browser.test.ts`'s own stubbed-`navigator.clipboard.write`
+shape (reused for a 2nd call site, still under rule-of-three) and reads the Blob directly with `getType()` —
+`copyAsHtml` itself runs for real, only the native `write()` call is intercepted. The separate
+permission-free/real-write claim is proven through the REAL clipboard instead, because `text/plain` (unlike
+`text/html`) round-trips UNMANGLED on both engines (same probe) — `tableCopy.browser.test.ts`'s own
+consent-and-gesture shape (CDP `clipboardReadWrite` grant for Chromium, gesture alone for Firefox,
+`readText()` in-page) is reused verbatim, driven through the real panel row.
+**Q4 — ALREADY RECORDED AT TASK 3.2, NOT RE-DECIDED HERE; the kickoff's framing was checked against reality
+and found wrong, flagged rather than followed.** The kickoff for this task assumed 3.3 was "the first task
+flipping a row live," making this "the natural place" to record the disabled-rows/day-one-shape decision.
+That premise does not hold: task 3.2 already flipped the FIRST row live (HTML export) and already recorded
+this exact decision — `decisions.md`'s 2026-08-29 M10 D-2/D-10/Ruling-2 (task 3.2) entry: *"The other 4 rows
+render as real, accessibly-named `<button>`s that are simply `disabled` — present so the panel reads as the
+whole feature on day one... inert until their own task supplies a handler."* 3.3 is the SECOND row to flip,
+not the first, and its own doc-comment update (`exportControls.ts`) cites 3.2's decision rather than
+re-arguing it — no duplicate decisions.md entry for this.
+**The same-artifact cross-sink assertion's firing control.** Run against two REAL documents (different
+content AND a different theme, built through the SAME pair of sinks) rather than argued abstractly: Doc A's
+downloaded file and Doc B's captured clipboard Blob are asserted NOT equal, and each is asserted to contain
+its own document's own text — proving the byte-comparison actually discriminates two different artifacts,
+not merely that a pure function returns the same string when called twice.
+**A genuine race, caught and fixed before landing.** The panel-level "clicking Copy as HTML writes to the
+REAL clipboard" test first polled `navigator.clipboard.readText()` for ANY non-empty value as its completion
+signal — which flaked intermittently under the FULL suite (passed in isolation, reproduced under
+`pnpm test:browser`'s full 140-file run): the real OS clipboard is a resource shared across every serially-run
+file in this suite, and the poll's first non-empty read was sometimes stale content left by an earlier file's
+own clipboard write, read back before this test's own write had landed. Fixed by matching on this fixture's
+own expected content rather than mere non-emptiness; two consecutive full `pnpm test:browser` runs came back
+green after the fix.
+**Necessary ripple — `tests/browser/exportPanel.browser.test.ts` (task 3.2's own file).** Flipping copy-html
+live moved the panel's ENABLED tab-stop set from 2 (close, HTML) to 3 (close, HTML, copy-HTML), which
+invalidated two of 3.2's own focus-trap assertions (Tab-from-last-stop / Shift-Tab-from-first-stop, both
+written when HTML was still the last enabled stop) and its "other 4 rows disabled" assertion (copy-html is
+no longer one of them). All three fixed in place; 3.2's own test intent (the trap wraps correctly; the
+not-yet-wired rows stay inert) is unchanged, only the concrete stop/row set is current.
+**Byte discipline — the delta, measured, decomposed, no stray import.** App-page chunk moves **483,331 →
+483,689 B (+358 B), identical on both engines** — `copyAsHtml`/`plainTextOf` are new exports from an
+ALREADY-imported module (`htmlExport.ts` landed at 3.2), so the delta is exactly this task's own new logic
+plus the one-row wiring, not a module landing. `.output` **4,874,851 B (Cr) / 4,874,967 B (Fx)**, same
++358 B delta both engines, ~367.6 KiB (Cr) headroom remaining, robustly under the 5 MiB ceiling. Content-
+script md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-identical to baseline**, confirmed by a full rebuild
+of both engines. Manifests **654 / 770 B**, `permissions: []` — clipboard.write needs no `clipboardWrite`
+permission (transient activation, re-confirmed against the real panel click). `dependencies` unchanged at 6.
+**Suite.** Unit: **1055/1055** (no flakes fired this run). Full browser suite: **140 files / 1447 passed /
+15 skipped, 0 failed** (138/1433/15 baseline + this task's new file, 7 tests × 2 engines = +14, minus/plus
+the 3 fixed-in-place `exportPanel.browser.test.ts` assertions which stayed the same count). Two consecutive
+full `pnpm test:browser` runs green after the race fix above. Lint/typecheck clean. Golden diff empty.
+**Full reasoning, the byte decomposition, and D-4's own implementing entry**: `decisions.md`'s 2026-08-29
+M10 D-4 (task 3.3) entry.
+
+*(Prior entry, kept for the record:)*
+**M10 TASK 3.2 LANDED, 2026-08-29 — THE EXPORT PANEL. Q1 RESOLVED (a): THIS TASK WIRES HTML EXPORT'S
+ROW LIVE — THE APP PAGE'S FIRST `htmlExport.ts` IMPORT, APP-PAGE BYTES MOVE FOR THE FIRST TIME IN M10.**
 **Q1 — the wiring model, resolved empirically, not just by reading.** §3.2's own body says the export ROWS
 land at "3.1, 3.3, 3.4, 4.1, 6.1/7.1" and that this task "tests the PANEL" — read at face value that could
 mean every row ships inert here. It doesn't: 3.1 already built `exportHtml` with nothing to call it, and no

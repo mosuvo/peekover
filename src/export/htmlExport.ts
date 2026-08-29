@@ -345,3 +345,39 @@ export function exportHtml(host: HTMLElement, basename: string): void {
   const doc = wrapInStandaloneDocument(clone, theme);
   downloadAs(doc, `${basename}.html`);
 }
+
+/**
+ * The `text/plain` fallback for `copyAsHtml`'s `ClipboardItem` — the clone's OWN RENDERED text, not
+ * the raw markdown source. This is deliberate: the raw source is task 3.4's distinct payload (§4:
+ * "copy the raw source text exactly as authored"). If this fallback read the source instead, it
+ * would be byte-identical to 3.4's whole payload — the same two-paths-same-bytes redundancy the
+ * §3.1(cont.) ZIP ruling removed. `text/html` + `text/plain` here are the SAME content (the clone) in
+ * two formats, the standard `ClipboardItem` idiom — not two different sources.
+ */
+function plainTextOf(clone: HTMLElement): string {
+  return clone.textContent ?? '';
+}
+
+/**
+ * Copy-as-HTML — the clipboard exit (task 3.3). SAME artifact as `exportHtml`: reuses 2.2's
+ * serializer/wrapper unchanged, no second serialization path, no image walk. Writes a two-format
+ * `ClipboardItem` (D-4) — `text/html` carrying the SAME standalone document `exportHtml` downloads,
+ * `text/plain` carrying the clone's rendered text as a readable fallback (see `plainTextOf` above).
+ * Permission-free: `navigator.clipboard.write()` needs no `clipboardWrite` permission because this is
+ * only ever invoked from a real click's transient activation (007/008's already-verified finding).
+ *
+ * A rejected write is rethrown, never swallowed — AGENTS.md #5 (never a false success) and §4's own
+ * degradation clause; the caller (`appShell.ts`) is responsible for surfacing the failure.
+ *
+ * @param host The shadow-root-owning reader host to copy.
+ */
+export async function copyAsHtml(host: HTMLElement): Promise<void> {
+  const { clone, theme } = serializeReaderDocument(host);
+  const doc = wrapInStandaloneDocument(clone, theme);
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      'text/html': new Blob([doc], { type: 'text/html' }),
+      'text/plain': new Blob([plainTextOf(clone)], { type: 'text/plain' }),
+    }),
+  ]);
+}

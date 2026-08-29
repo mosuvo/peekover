@@ -330,7 +330,13 @@ halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see belo
       diff). Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-2, D-10; Ruling 2; §3.10;
       §3.1(cont.); §4 Trust; rows 3, 4, 5, 11]
 
-- [ ] **3.3 Copy-as-HTML — the clipboard exit, SAME artifact as 3.1, different sink (D-3, D-4's HTML half).**
+- [x] **3.3 Copy-as-HTML — the clipboard exit, SAME artifact as 3.1, different sink (D-3, D-4's HTML half).
+      ★ LANDED, 2026-08-29 — the copy-html row goes live (2nd row wired, after 3.2's HTML row); the
+      same-artifact/cross-sink check compares REAL sink outputs (a captured `ClipboardItem` Blob vs the real
+      downloaded file) rather than the real OS clipboard, per a measured finding: the native `text/html`
+      clipboard format is lossy on BOTH engines (Chromium discards structure into computed-style-inlined
+      fragments; Firefox reformats whitespace and drops `<meta charset>`) — reading it back would prove a
+      different, irrelevant claim. Full reasoning in `decisions.md`'s 2026-08-29 M10 D-4 (task 3.3) entry.**
       `copyAsHtml(host)`: 2.2's `{clone}` (SAME call as 3.1 — no second serialization path; the `images`
       field named here previously was removed at task 3.1, §3.1 gate ruling — no image resolution left to
       share); `doc = wrapInStandaloneDocument(...)` (SAME bundled stylesheet as the file export —

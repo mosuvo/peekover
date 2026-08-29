@@ -1,6 +1,98 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-08-29 · M10 D-4 (task 3.3) — Copy-as-HTML lands: `copyAsHtml`/`plainTextOf` in `htmlExport.ts`, the
+  panel's 2nd row wired live, and the same-artifact cross-sink check uses a captured `ClipboardItem` rather
+  than a real OS clipboard round trip — a MEASURED finding, not a design preference.** D-4's HTML half is
+  this task's own first implementing commit (gate-1's D-4 approval, §7-2: *"`ClipboardItem` with `text/html`
+  + `text/plain`, reusing 007/008's already-verified permission-free clipboard finding"* — the plain-text
+  half remains task 3.4's).
+  **`copyAsHtml(host)`, VERBATIM to §3.3's own body**: `serializeReaderDocument(host)` +
+  `wrapInStandaloneDocument(clone, theme)` — the SAME two calls `exportHtml` makes (task 3.1), no second
+  serialization path, no image walk. `navigator.clipboard.write([new ClipboardItem({ 'text/html': ...,
+  'text/plain': plainTextOf(clone) })])`, awaited; a rejection is rethrown, never swallowed (AGENTS.md #5 —
+  no false success). `appShell.ts`'s own `onCopyHtml` handler does not catch-and-discard either: `tryStore`'s
+  best-effort swallow (used for storage ops elsewhere in that file) does not apply to a deliberate user copy
+  action, so a rejection surfaces as a genuine unhandled-rejection error. Per-action completion/failure UI (a
+  "Copied"/"Copy failed" state, `codeView.ts`'s own copy-button precedent) is task 9.1's own milestone-wide
+  scope, named but not built here.
+  **`plainTextOf(clone) = clone.textContent`, confirmed as the RENDERED text, not the raw source (this
+  task's own Q2).** §4's own line ("copy the raw source text exactly as authored") is task 3.4's distinct
+  payload; if 3.3's fallback read the source instead it would be byte-identical to 3.4's whole payload — the
+  two-paths-same-bytes redundancy the §3.1(cont.) ZIP ruling already removed once. Proven with a fixture
+  where the two diverge visibly: `**bold**` renders as "bold"; the captured fallback reads "bold", never
+  "**bold**" and never the raw source string.
+  **★ THE SAME-ARTIFACT / CROSS-SINK INSTRUMENT (this task's own Q3) — MEASURED, THEN CHOSEN, NOT ASSUMED.**
+  A throwaway probe against this harness (real Chromium AND Firefox, run before the real test file was
+  written) found the native `text/html` OS clipboard format is LOSSY on both engines: Chromium discards the
+  whole document — `<style>`, `<head>`, the doctype — and re-serializes the content as a fragment with every
+  rule turned into a per-element `getComputedStyle`-derived inline `style` attribute (this IS the transform
+  task 4.1's Copy-as-rich-text will actually want); Firefox preserves more structure but reformats whitespace
+  and silently drops the `<meta charset>` tag. Neither loss is a Peekover defect. It means a REAL clipboard
+  round trip would answer a different, irrelevant question — "did the OS's own rich-paste transform survive"
+  (it provably does not, byte-for-byte, on either engine) — instead of this task's own question: "did
+  `copyAsHtml` hand the Clipboard API the SAME bytes `exportHtml` downloaded." So the same-artifact assertion
+  CAPTURES the `ClipboardItem` instead, reusing `diagramActions.browser.test.ts`'s own stubbed-
+  `navigator.clipboard.write` shape (a SECOND call site for that shape, still under rule-of-three — no shared
+  helper extracted) and reads the Blob directly via `getType()`; `copyAsHtml` itself, `serializeReaderDocument`,
+  and `wrapInStandaloneDocument` all run unmodified — only the native `write()` call is intercepted. **No new
+  `vitest.config.ts` command was added** — this is reused/extended existing test infra, not new infra, unlike
+  what the task kickoff anticipated. The separate PERMISSION-FREE / real-write claim is proven through the
+  REAL clipboard, because `text/plain` (unlike `text/html`) round-trips UNMANGLED on both engines (same
+  probe) — `tableCopy.browser.test.ts`'s own consent-and-gesture shape (a Chromium-only CDP
+  `clipboardReadWrite`/`clipboardSanitizedWrite` grant, a real `userEvent.click`, `readText()` in-page,
+  Firefox needing no grant at all since it has no `clipboard-write` `PermissionName`) is reused verbatim,
+  driven through the real panel row so it also proves the row is live.
+  **The firing control.** The byte-identity comparison is exercised against two REAL documents (different
+  content AND a different theme, through the SAME pair of sinks) and asserted to come out UNEQUAL, each
+  containing only its own document's own text — proving the comparison discriminates two different artifacts
+  rather than trivially matching a pure function called twice.
+  **Q1-verify — CONFIRMED (a).** `exportControls.ts` gained one field (`ExportViewOptions.onCopyHtml`) and
+  set exactly one `RowSpec.onClick` (`copy-html`); no other row's shape changed. `htmlExport.ts` gained two
+  new exports (`copyAsHtml`, and the internal `plainTextOf`); no existing export's signature moved.
+  **Q4 — NOT RE-DECIDED HERE; the task kickoff's own framing was checked against reality and found wrong,
+  flagged rather than followed (WORKFLOW.md's "a kickoff is a hypothesis, not authority" rule).** The
+  kickoff assumed task 3.3 was "the first task flipping a row live" and treated that as the natural place to
+  record the disabled-rows/day-one-shape decision. That premise is false: task 3.2 flipped the FIRST row
+  live (HTML export) and ALREADY recorded this exact decision (this file's own 2026-08-29 M10 D-2/D-10/
+  Ruling-2 entry, immediately below: *"The other 4 rows render as real, accessibly-named `<button>`s that
+  are simply `disabled` — present so the panel reads as the whole feature on day one... inert until their
+  own task supplies a handler"*). Task 3.3 is the SECOND row to flip, not the first; `exportControls.ts`'s
+  own doc comment was updated to cite 3.2's decision rather than re-argue it, and no duplicate entry is
+  written here for the same call.
+  **A genuine cross-file race, caught and fixed before landing.** The panel-level real-clipboard test first
+  polled `navigator.clipboard.readText()` for ANY non-empty value as its completion signal (no completion UI
+  exists yet — task 9.1's own scope). That flaked intermittently under the FULL suite (green in isolation,
+  red under `pnpm test:browser`'s full 140-file run): the real OS clipboard is a resource shared across every
+  serially-run file in this suite (`fileParallelism:false`), and the poll's first non-empty read was
+  sometimes stale content an earlier file's own clipboard write left behind, read before THIS test's own
+  write had landed. Fixed by matching on this fixture's own expected content rather than mere non-emptiness.
+  Two consecutive full `pnpm test:browser` runs came back green after the fix.
+  **Necessary ripple — `tests/browser/exportPanel.browser.test.ts` (task 3.2's own file), not scope creep.**
+  Flipping copy-html live moved the panel's enabled tab-stop set from 2 (close, HTML) to 3 (close, HTML,
+  copy-HTML) — 3.2's own focus-trap test had hard-coded `html` as the LAST stop (Tab-from-last-stop wraps to
+  first; Shift-Tab-from-first wraps to last), which is no longer true now that copy-HTML is enabled and sits
+  after it in DOM order. Its "other 4 rows disabled" assertion also named `copy-html`, no longer accurate.
+  All three fixed in place to reference the CURRENT stop/row set; 3.2's own test intent (the trap wraps
+  correctly; not-yet-wired rows stay inert) is unchanged — this is the Files-list-adjacent ripple AGENTS.md's
+  workflow section names as necessary, not scope creep, tied to this task's own Verify clause (the same-row
+  disabled-state assertion) rather than an unrelated cleanup.
+  **Byte discipline.** App-page chunk **483,331 → 483,689 B (+358 B), identical on both engines** —
+  `copyAsHtml`/`plainTextOf` are new exports from an ALREADY-imported module (`htmlExport.ts` landed at 3.2),
+  so the delta is exactly this task's own new logic plus the one-row wiring, not a module landing. `.output`
+  **4,874,851 B (Cr) / 4,874,967 B (Fx)**, same +358 B delta both engines, ~367.6 KiB (Cr) headroom
+  remaining. Content-script md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-identical to baseline**,
+  confirmed by a full rebuild of both engines (not a stale directory). Manifests **654 / 770 B**,
+  `permissions: []` — re-confirmed against the REAL panel click, not merely cited. `dependencies` unchanged
+  at 6.
+  **Suite.** Unit: **1055/1055**, no flakes fired this run. Full browser suite: **140 files / 1447 passed /
+  15 skipped, 0 failed**, reproduced clean across two consecutive full runs after the race fix above.
+  Lint/typecheck clean. Golden diff empty.
+  **Revisit-when:** task 4.1 (Copy-as-rich-text) is the natural home for the Chromium fragment-with-inlined-
+  styles transform this task's own probe surfaced — it is likely close to (or exactly) what that task needs,
+  cited here so 4.1 does not re-derive it from scratch. Task 9.1 owns the completion/failure UI this task
+  named but did not build.
+
 - **2026-08-29 · M10 D-2 / D-10 (panel half) / Ruling 2 (task 3.2) — the export panel lands: `exportControls.ts`
   follows `storageControls.ts`'s own wiring, the mockup's shape (minus the 4 struck/out-of-scope rows) is
   carried for the 5 surviving rows, and Ruling 2's focus trap is discharged.** Three gate-2 approvals get

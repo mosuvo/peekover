@@ -122,7 +122,7 @@ import {
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
 import { createExportView } from './exportControls';
-import { exportHtml } from '../export/htmlExport';
+import { exportHtml, copyAsHtml } from '../export/htmlExport';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
@@ -858,6 +858,17 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // still fail after selection).
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
         if (host) exportHtml(host, basenameForExport());
+      },
+      onCopyHtml: () => {
+        // Same host-lookup, same non-render-state no-op as onExportHtml above. `copyAsHtml`
+        // rejects rather than resolving silently on a clipboard-write failure (AGENTS.md #5 — no
+        // false success); this call is intentionally NOT caught-and-swallowed here (`tryStore`'s
+        // best-effort pattern does not apply to a deliberate user copy action) — a rejection
+        // surfaces as a genuine unhandled-rejection error rather than a falsely-quiet no-op.
+        // Per-action completion/failure UI (a "Copied"/"Copy failed" state, `codeView.ts`'s own
+        // copy-button precedent) is task 9.1's own milestone-wide scope, not this task's.
+        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+        if (host) void copyAsHtml(host);
       },
       onClose: () => toggleExport(),
     });

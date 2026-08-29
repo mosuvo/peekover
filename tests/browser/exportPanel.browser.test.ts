@@ -141,6 +141,10 @@ const closeIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('.peekover-export__close')!;
 const htmlRowIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('[data-export="html"]')!;
+/** ★ Live as of task 3.3 — the LAST enabled stop in DOM order (close, html, copy-html), which is
+ *  what the wrap tests below need: 3.2's own trap test was written when `html` was still last. */
+const copyHtmlRowIn = (panel: HTMLElement): HTMLButtonElement =>
+  panel.querySelector<HTMLButtonElement>('[data-export="copy-html"]')!;
 
 function describeActive(): string {
   const el = document.activeElement;
@@ -240,27 +244,29 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const close = closeIn(panel);
-    const html = htmlRowIn(panel);
+    // ★ Live as of task 3.3: copy-html is now the LAST enabled stop in DOM order (close, html,
+    // copy-html) — `html` (3.2's own last stop) is now a MIDDLE stop.
+    const last = copyHtmlRowIn(panel);
 
-    html.focus();
-    expect(document.activeElement).toBe(html);
+    last.focus();
+    expect(document.activeElement).toBe(last);
     await userEvent.tab();
 
     expect(document.activeElement, `landed on ${describeActive()}`).toBe(close);
-    expect(document.activeElement).not.toBe(html);
+    expect(document.activeElement).not.toBe(last);
   });
 
   it('Shift-Tab from the FIRST stop wraps back to the LAST', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const close = closeIn(panel);
-    const html = htmlRowIn(panel);
+    const last = copyHtmlRowIn(panel);
 
     close.focus();
     expect(document.activeElement).toBe(close);
     await userEvent.tab({ shift: true });
 
-    expect(document.activeElement, `landed on ${describeActive()}`).toBe(html);
+    expect(document.activeElement, `landed on ${describeActive()}`).toBe(last);
     expect(document.activeElement).not.toBe(close);
   });
 
@@ -283,9 +289,10 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
     )!;
     const panel = await openPanel(container, toggle);
 
-    // Tab repeatedly — with the trap working this only ever cycles the panel's own two stops
-    // (close, the HTML row); without it, Tab would eventually walk into the document behind,
-    // and `behind` (a real, focusable control already on screen) is exactly what it would reach.
+    // Tab repeatedly — with the trap working this only ever cycles the panel's own enabled stops
+    // (close, HTML, copy-HTML as of task 3.3); without it, Tab would eventually walk into the
+    // document behind, and `behind` (a real, focusable control already on screen) is exactly what
+    // it would reach.
     for (let i = 0; i < 6; i += 1) {
       await userEvent.tab();
       expect(
@@ -334,9 +341,14 @@ describe('rows 6 + 7 — every row is a real <button> with a non-bare accessible
   });
 });
 
-// ── Q1(a) — HTML'S ROW IS WIRED LIVE; THE OTHER 4 ARE INERT ──────────────────────────────────
+// ── Q1(a) — HTML'S ROW IS WIRED LIVE; THE OTHER 4 WERE INERT AT 3.2 ──────────────────────────
+//
+// ★ UPDATED AT TASK 3.3: copy-html went live at that task (its own `copyAsHtml.browser.test.ts`
+// is where THAT row's liveness is proven) — this file only re-states the DAY-ONE-SHAPE remainder
+// (Q4's disabled-not-hidden decision, `decisions.md`'s 2026-08-29 M10 task-3.2 entry): the 3 rows
+// with no task landed yet stay disabled, and this task's own scope is unaffected by 3.3's edit.
 
-describe('Q1(a) — the HTML row drives the real exportHtml codepath; the other 4 are inert', () => {
+describe('Q1(a) — the HTML row drives the real exportHtml codepath; disabled rows stay disabled', () => {
   it('clicking "Export as HTML" downloads the real file (3.1\'s own codepath, driven through the panel)', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
@@ -350,13 +362,18 @@ describe('Q1(a) — the HTML row drives the real exportHtml codepath; the other 
     expect(probe.h1Text).toBe('alpha.md');
   });
 
-  it('the other 4 rows render disabled — no click handler, nothing to drive', async () => {
+  it('the 3 rows with no task landed yet render disabled — no click handler, nothing to drive', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
-    for (const key of ['copy-html', 'copy-plain-text', 'copy-rich-text', 'pdf']) {
+    for (const key of ['copy-plain-text', 'copy-rich-text', 'pdf']) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
-      expect(row.disabled, `row "${key}" should still be inert at task 3.2`).toBe(true);
+      expect(row.disabled, `row "${key}" should still be inert`).toBe(true);
     }
+    // copy-html went live at task 3.3 — asserted NOT disabled here as the boundary check for this
+    // file's own claim; its actual liveness (click -> real clipboard write) is 3.3's own test.
+    expect(panel.querySelector<HTMLButtonElement>('[data-export="copy-html"]')!.disabled).toBe(
+      false,
+    );
   });
 });
