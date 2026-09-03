@@ -12,6 +12,17 @@ import type { OpenFolderOutcome } from '../../src/app/folderSource';
 // .test.ts` (task 2.1) imports this module directly under plain Vitest, which has no
 // `@/…` resolver wired in (`vitest.config.ts` carries none). Relative works in both.
 
+/** True when focus is in a field we must not hijack Ctrl/Cmd+S from — mirrors
+ *  `readerMode.ts`'s own `isEditableTarget`; see the task-8.1 comment below for why this is a
+ *  small duplicate rather than an import. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return el.isContentEditable === true;
+}
+
 const root = document.getElementById('app');
 if (root) {
   /**
@@ -82,6 +93,35 @@ if (root) {
       },
     };
   }
+
+  /**
+   * ★ TASK 8.1 (D-5) — Ctrl/Cmd+S EXPORT SHORTCUT, APP-PAGE-ONLY BY CONSTRUCTION. Bound HERE, on
+   * `document`, inside this `if (root)` block — never in a shared module `mount.ts`/the content
+   * entrypoint also imports. That is the deliberate INVERSION of `readerMode.ts`'s
+   * `installToggleShortcut` (D-5's own rejected-alternative text): that listener is installed
+   * from a module BOTH surfaces run and scopes itself only by DOM shape (`data-mode` present),
+   * so it fires wherever that shape exists, regardless of which script mounted it. Binding here
+   * instead means the content-script bundle never carries this listener at all — proven by its
+   * bytes staying md5-identical across this task (see `exportShortcut.browser.test.ts` and
+   * `progress.md`'s own byte ledger), not merely by a DOM-shape guard that could be satisfied by
+   * either surface.
+   *
+   * `isEditableTarget` is a deliberate small duplicate of `readerMode.ts`'s own helper of the same
+   * name, not an import: importing from `readerMode.ts` would pull a content-script-oriented
+   * module into the app-page graph for one four-line guard — two call sites don't earn an
+   * extraction (this codebase's own rule-of-three precedent, `exportControls.ts`'s module doc
+   * comment).
+   */
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key.toLowerCase() !== 's') return;
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    if (isEditableTarget(e.target)) return;
+    // Suppresses the native "Save Page As" dialog regardless of what happens next — including
+    // the graceful no-op below when no export has ever run (`lastExportFormat` is `null`; §8's
+    // own M-1 walk-gate item owns what a first-ever Ctrl+S should do, not this handler).
+    e.preventDefault();
+    app.triggerLastExport();
+  });
 
   // DEV-ONLY manual seam (task 1.2). There is no folder source yet (group 3), so in
   // `pnpm dev` the human feeds a file by hand to confirm the reader pane renders it

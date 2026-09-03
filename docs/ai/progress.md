@@ -1,9 +1,9 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-03 (task 8.2 landed — `lastExportFormat`, the fifth `Settings` field, D-6; the read-path
-enumeration trap found real and closed across three sites, not just `settings.ts`; the write wired into
-`appShell.ts`'s panel handlers, closing the persistence unit task 8.1 needs. Group-8 order adjusted by human
-ruling: 8.3 deferred past 10.2.)*
+*Updated: 2026-09-03 (task 8.1 landed — the Ctrl/Cmd+S export shortcut, app-page-only, D-5 byte-proven
+content-script-identical; the five export handlers lifted to ONE dispatch path shared by the panel click and
+the shortcut, never a second `saveSettings+export` pair. Group-8 order adjusted by human ruling: 8.3 deferred
+past 10.2.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -13,7 +13,90 @@ ruling: 8.3 deferred past 10.2.)*
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 8.2 LANDED, 2026-09-03 — `lastExportFormat`, THE FIFTH `Settings` FIELD (D-6). THE
+**★★★★★ M10 TASK 8.1 LANDED, 2026-09-03 — THE Ctrl/Cmd+S EXPORT SHORTCUT, APP-PAGE-ONLY (D-5), PROVEN AT
+THE BYTE LEVEL, NOT JUST BY CODE REVIEW. THE FIVE EXPORT HANDLERS ARE LIFTED TO ONE DISPATCH PATH — A PANEL
+CLICK AND THE SHORTCUT REACH THE IDENTICAL FUNCTION, NEVER A SECOND `saveSettings+export` PAIR.**
+
+**The spine: one dispatch path, not a refactor risk.** `appShell.ts`'s five export-panel handlers
+(`onExportHtml`/`onCopyHtml`/`onCopyPlainText`/`onCopyRichText`/`onExportPdf`) were inline closures inside
+`renderExport()`, each its own `saveSettings({...}); <export>()` pair — 8.2's own persistence unit lived only
+there, unreachable from `main.ts`. Lifted verbatim (same bodies, same behavior, only relocated and named) into
+five functions in `mountAppShell`'s own closure; `renderExport()`'s callbacks now reference them directly, and
+a new `AppController.triggerLastExport()` reads `currentSettings().lastExportFormat` (settingsSeam.ts) and
+dispatches to the SAME five functions. Grepped to confirm no second `saveSettings+export` pair exists
+anywhere. The click path is behavior-preserving BY CONSTRUCTION: `exportPanel.browser.test.ts` (8.2's own
+write-proof block included) passed unchanged, no edits needed.
+
+**Q2 — the null case, confirmed a graceful no-op, not a place to pick a default.** `lastExportFormat` is
+`null` before any export has ever run; `triggerLastExport()`'s `switch` has no default-picking branch — `null`
+falls through to an explicit no-op. `main.ts`'s keydown handler calls `preventDefault()` unconditionally
+before reading the format, so the native dialog is suppressed even on this first-ever-Ctrl+S case, but no
+export runs and no default is written — task 10.1's own walk-gate item is left untouched.
+
+**Q3 — the binding location, proven at the BYTE level.** The listener binds inside `main.ts`'s own
+`if (root)` block (the app-page entrypoint), never in a module the content-script graph also reaches — the
+deliberate INVERSION of `readerMode.ts`'s `installToggleShortcut`, which scopes itself by DOM shape
+(`data-mode` present) rather than by which script installed it. Proof: content-script bundle stayed
+**BYTE-IDENTICAL to 8.2's landed state on both engines** (md5 unchanged), firing-control-confirmed via
+`git stash`/rebuild both engines — if the listener had leaked into the shared graph, this md5 would have
+moved. `isEditableTarget` is a small, deliberate duplicate of `readerMode.ts`'s own helper (two call sites,
+this codebase's own rule-of-three precedent), not an import — importing would pull a content-script-oriented
+module into the app-page graph for no functional reason.
+
+**The D-5 red-first negative — found genuinely fragile mid-task, then made robust, not just re-asserted.**
+This suite's browser test files run SERIALLY and share ONE real `document`/`window` per engine
+(`vitest.config.ts`'s own task-4.5 note); `appHarnessSeam.browser.test.ts` re-imports `main.ts` many times,
+and after this task EVERY import installs a real, never-torn-down keydown listener — this task's own test
+file does the same across its own tests. A first draft assumed an absolute "nothing reacts yet" / a fixed
+"+1" per `loadMain()` call; both broke in a real run (`expected 3 to be 2`, accumulated listeners from earlier
+tests summing into a stale cumulative spy count). Fixed by clearing the `preventDefault` spy before every
+measured dispatch, so each assertion reflects exactly one dispatch's own reaction count regardless of how
+many listeners already exist. The surviving proof: a content-script-shaped host (`mount()`, real `data-mode`)
+adds ZERO reactions; loading `main.ts` immediately after adds EXACTLY ONE.
+
+**The one-path proof — a real click and a real `triggerLastExport()` call produce the identical artifact.**
+HTML: a panel click downloads a real file; `triggerLastExport()` right after (no click at all) downloads a
+byte-equivalent one (same filename, same rendered `h1`). PDF: the row calls `window.print()` once;
+`triggerLastExport()` calls it a second time, through the identical guard. A second real race was caught here
+too: reading `currentSettings()` AFTER the real download-collection `await` let a still-pending
+`settingsPort.load()` from the same fresh mount clobber the snapshot (reproduced once, Firefox) — the SAME
+race `exportPanel.browser.test.ts`'s own 8.2 write-proof avoids by reading synchronously right after the
+click; fixed the same way, plus an explicit re-pin of the precondition before the second download (its own
+`await` reopens the same window).
+
+**Q4 — the `preventDefault` test-honesty limit, stated, not overclaimed.** A dispatched (non-trusted)
+`KeyboardEvent` lets a test read `defaultPrevented`/spy on `preventDefault` — provable — but CANNOT observe
+the browser's native save dialog actually being absent, a trusted-event-only default (the same limit
+`tocNetwork.browser.test.ts`'s own shortcut test already accepts). Stated explicitly in the test file's own
+header comment.
+
+**Byte discipline — measured on BOTH engines, firing-control confirmed.** App-page chunk **487,133 →
+487,735 B (+602 B)**, identical delta and identical content hash on both engines. Content-script:
+**UNCHANGED, 336,121 B, BOTH engines, md5 IDENTICAL to 8.2's landed state** — the D-5 byte proof. `.output`
+**4,879,636 → 4,880,238 B (+602 B)**, ~354.14 KiB (Cr) headroom remaining (was ~354.73 KiB at 8.2), robustly
+under the 5 MiB ceiling. Manifests **654 / 770 B** unchanged, `permissions: []`, no
+`web_accessible_resources` — a keydown listener + `preventDefault()` needs no manifest capability.
+`dependencies` (production) unchanged at **6**. `docs/trust/PERMISSIONS.md` untouched (no new capability).
+Golden EMPTY.
+
+**Suite.** Unit: **1056/1056**, unchanged (this task is browser-only). Full browser suite: **150 files /
+1517 passed / 15 skipped, 0 failed** (148/1503/15 baseline at 8.2 + this task's new 7-test file × 2 engines =
++14 passed, +2 files). Two intermediate runs each surfaced one failure in `diagramActions.browser.test.ts`
+(Firefox) or `tocScroll.browser.test.ts` (Firefox) — neither file touched by this task; re-running each in
+isolation and the full suite twice more showed the failure moves between them and eventually disappears
+entirely — a pre-existing, timing-sensitive carried flake (the same class as `diagramEnhancer.test.ts`'s own
+carried flake already named in this milestone's baselines), not a regression this task introduced. Lint +
+typecheck clean.
+
+**D-5, applied VERBATIM:** *"010 D-5 — the Ctrl+S listener lives in `entrypoints/app/main.ts`, app-page-only,
+not `readerMode.ts`'s app-page-blind pattern."* True as shipped, and proven at the byte level, not merely by
+code review.
+
+**Revisit-when:** task 10.1 lands and decides what a first-ever Ctrl+S (`lastExportFormat` still `null`)
+should do — this task deliberately left that case a no-op. Full record in `decisions.md`'s 2026-09-03 M10 D-5
+(task 8.1) entry.
+
+**★★★★★ (PRIOR) M10 TASK 8.2 LANDED, 2026-09-03 — `lastExportFormat`, THE FIFTH `Settings` FIELD (D-6). THE
 READ-PATH ENUMERATION TRAP `plan.md` CLAIMED ABSENT WAS FOUND REAL AT THREE SITES, CLOSED THE SAME WAY
 `codeTheme` CLOSED IT; THE WRITE (UNSTATED IN THE SEALED BODY) IS PINNED INTO `appShell.ts`'S PANEL
 HANDLERS, THE COMPLETE PERSISTENCE UNIT TASK 8.1 NEEDS TO READ.**

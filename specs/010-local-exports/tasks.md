@@ -535,21 +535,43 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
 
 ## 8 — Export shortcut, last-used format, progress indicator (D-5, D-6)
 
-- [ ] **8.1 The Ctrl/Cmd+S binding — `entrypoints/app/main.ts`, additive beside 009's existing
-      `__peekoverHarness` block, NEVER `readerMode.ts`'s app-page-blind pattern (D-5).** `event.preventDefault()`
-      suppresses the native "Save Page As" dialog; the handler reads `lastExportFormat()` (8.2) and invokes the
-      SAME export entry point the panel's own click handlers call (one invocation path, not two). Before any
-      export has ever run, there is no last-used format — §8's own M-1 walk-gate item governs what a first-ever
-      Ctrl+S does, not asserted here.
-      Files: `entrypoints/app/main.ts` · `tests/browser/exportShortcut.browser.test.ts`
+- [x] **8.1 The Ctrl/Cmd+S binding — `entrypoints/app/main.ts`, additive beside 009's existing
+      `__peekoverHarness` block, NEVER `readerMode.ts`'s app-page-blind pattern (D-5).** LANDED, 2026-09-03.
+      `event.preventDefault()` suppresses the native "Save Page As" dialog unconditionally; the handler reads
+      `currentSettings().lastExportFormat` (settingsSeam.ts, 8.2) and invokes the SAME export entry point the
+      panel's own click handlers call — never a second invocation path. Before any export has ever run,
+      `lastExportFormat` is `null`; `triggerLastExport()`'s dispatch has no default-picking branch, so this is
+      a graceful no-op (§8's own M-1 walk-gate item governs what a first-ever Ctrl+S does, not this task).
+      **★ THE SPINE: the five export handlers were SEALED inside `renderExport`'s closure (8.2's own body),
+      unreachable from `main.ts`. Lifted verbatim** (same bodies, same behavior, only relocated and named) into
+      five functions (`runExportHtml`/`runCopyHtml`/`runCopyPlainText`/`runCopyRichText`/`runExportPdf`) in
+      `mountAppShell`'s own closure; `renderExport()`'s five callbacks reference these functions directly, and
+      a new `AppController.triggerLastExport()` dispatches to the SAME five — grepped to confirm no second
+      `saveSettings({...}); <export>()` pair exists anywhere. The click path is behavior-preserving BY
+      CONSTRUCTION: `exportPanel.browser.test.ts` (8.2's own write-proof block included) passed UNCHANGED.
+      **★ Q3, PROVEN AT THE BYTE LEVEL, NOT JUST BY CODE REVIEW:** content-script bundle stayed
+      BYTE-IDENTICAL to 8.2's landed state on both engines (md5 unchanged), firing-control-confirmed via
+      `git stash`/rebuild both engines — the listener never leaked into the shared graph `readerMode.ts`/
+      `mount.ts` both surfaces import.
+      Files: `entrypoints/app/main.ts` · `tests/browser/exportShortcut.browser.test.ts` · NECESSARY RIPPLE
+      (flagged, structurally required by this task's own "one invocation path, not two" clause —
+      `decisions.md`'s D-5 entry gives the per-file justification): `src/app/appShell.ts` (the lift +
+      `triggerLastExport()` — main.ts cannot reach the sealed handlers without it).
       Verify: (**tests/browser** — Cr+Fx, cross-engine `preventDefault` behavior empirical, not assumed per
       §7-3's own text) Ctrl+S on the app page suppresses the native save dialog and triggers the last-used
       export. ★ **RED-FIRST, THE NEGATIVE HALF, PROVING THE SCOPE IS REAL**: the SAME keystroke on a
       content-script surface does nothing new — asserted by driving both surfaces in one test and confirming
       only the app page reacts (the exact inversion `readerMode.ts:124`'s existing app-page-blind listener would
-      produce if this task mistakenly reused that pattern, per D-5's own rejected-alternative text). Content-
-      script bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-5; §4
-      export shortcut; §7-3]
+      produce if this task mistakenly reused that pattern, per D-5's own rejected-alternative text) — made
+      ROBUST to this suite's own shared-`document`-across-files harness property (a first draft's absolute
+      reaction-count assumption broke in a real run; fixed with a spy cleared before every measured dispatch,
+      per `decisions.md`'s own account). Content-script bytes md5-identical, both engines, firing-control-
+      confirmed. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. App-page chunk
+      **487,133 → 487,735 B (+602 B)**, both engines. `.output` **4,879,636 → 4,880,238 B (+602 B)**,
+      ~354.14 KiB (Cr) headroom remaining. `dependencies` (production) unchanged at 6. Unit 1056/1056; full
+      browser suite 150 files/1517 passed/15 skipped/0 failed (a `diagramActions.browser.test.ts`/
+      `tocScroll.browser.test.ts` intermittent Firefox flake surfaced in two intermediate runs, confirmed
+      pre-existing and unrelated by isolated re-run), lint + typecheck clean. [D-5; §4 export shortcut; §7-3]
 
 - [x] **8.2 `lastExportFormat` — a FIFTH field on the one global `Settings` row, `codeTheme`'s own shape
       (D-6).** LANDED, 2026-09-03. `Settings` gains `lastExportFormat: string | null`;

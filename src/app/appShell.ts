@@ -98,7 +98,12 @@ import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { directPort } from '../settings/settingsPort';
-import { publishSettings, registerSettingsSink, saveSettings } from '../settings/settingsSeam';
+import {
+  currentSettings,
+  publishSettings,
+  registerSettingsSink,
+  saveSettings,
+} from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
 import {
   getCaptureEnabled as defaultGetCaptureEnabled,
@@ -505,6 +510,15 @@ export interface AppController {
    * mount; exposed so tests can await the async load deterministically.
    */
   refresh(): Promise<void>;
+  /**
+   * Task 8.1 (D-5): re-run the export/copy that `lastExportFormat` (8.2) names — the SAME
+   * dispatch every export panel row already goes through, never a second invocation path.
+   * `entrypoints/app/main.ts`'s Ctrl/Cmd+S handler is this method's only caller; the panel's own
+   * row clicks reach the identical named functions directly (see `renderExport`'s wiring below).
+   * Before any export has ever run, `lastExportFormat` is `null` — a graceful no-op (§8's own M-1
+   * walk-gate item owns what a first-ever Ctrl+S should do, not this method).
+   */
+  triggerLastExport(): void;
 }
 
 /**
@@ -878,80 +892,127 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     return name.replace(/\.[^./\\]+$/, '') || 'export';
   }
 
+  // ── THE FIVE EXPORT DISPATCH FUNCTIONS (task 8.1, D-5) ──────────────────────────────────────
+  //
+  // Lifted out of `renderExport`'s `createExportView` call so there is exactly ONE implementation
+  // of each export, reachable from TWO entry points: the panel row's own `onClick` (wired below)
+  // and `triggerLastExport()` (the `AppController` method `main.ts`'s Ctrl/Cmd+S handler calls).
+  // Never duplicate a `saveSettings({...}); <export>()` pair anywhere else — that would let the
+  // panel click and the keyboard shortcut diverge or double-write `lastExportFormat`, exactly the
+  // failure task 8.2's own "ONE write path" claim depends on this task not introducing.
+  //
+  // Task 8.2 (D-6): each function below persists ITS OWN key from `exportControls.ts`'s
+  // `RowSpec.key` vocabulary ('html' | 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'pdf')
+  // as `lastExportFormat` the instant its export actually fires. Written only inside each
+  // function's own "did the export actually run" guard, never on the defensive no-op branch — a
+  // no-op is not a "last used" format. `saveSettings` (settingsSeam.ts) is the same seam the
+  // theme/TOC/code-theme controls already persist through — best-effort, never throws on this UI
+  // path.
+
+  function runExportHtml(): void {
+    // The app page's live reader host (readerPane.ts's own class, the same selector the diff
+    // context above already uses) — absent during a designed non-render state (e.g. an
+    // unreadable file), in which case there is nothing to export and this is a silent no-op
+    // (AGENTS.md #5: no export UI is reachable without `activeFile`, but the read itself can
+    // still fail after selection).
+    const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+    if (host) {
+      saveSettings({ lastExportFormat: 'html' });
+      exportHtml(host, basenameForExport());
+    }
+  }
+
+  function runCopyHtml(): void {
+    // Same host-lookup, same non-render-state no-op as runExportHtml above. `copyAsHtml`
+    // rejects rather than resolving silently on a clipboard-write failure (AGENTS.md #5 — no
+    // false success); this call is intentionally NOT caught-and-swallowed here (`tryStore`'s
+    // best-effort pattern does not apply to a deliberate user copy action) — a rejection
+    // surfaces as a genuine unhandled-rejection error rather than a falsely-quiet no-op.
+    // Per-action completion/failure UI (a "Copied"/"Copy failed" state, `codeView.ts`'s own
+    // copy-button precedent) is task 9.1's own milestone-wide scope, not this task's.
+    const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+    if (host) {
+      saveSettings({ lastExportFormat: 'copy-html' });
+      void copyAsHtml(host);
+    }
+  }
+
+  function runCopyPlainText(): void {
+    // No host/clone lookup — this reads the SOURCE, via `activeFile.read()` (task 3.4's own
+    // Q1), never the rendered clone `runCopyHtml`/`runExportHtml` work from. `exportToggle` is
+    // disabled whenever `activeFile` is null, so the guard below is defensive only (never
+    // reachable through the shipped UI, matching `basenameForExport`'s own fallback comment).
+    // Same discard-the-promise shape as `runCopyHtml`: `copyAsPlainText` is async internally
+    // (it awaits the read, then the write), but this function stays sync and a rejection
+    // surfaces as a genuine unhandled-rejection error rather than a swallowed no-op
+    // (AGENTS.md #5 — no false success, covering the READ failure as well as the WRITE).
+    if (activeFile) {
+      saveSettings({ lastExportFormat: 'copy-plain-text' });
+      void copyAsPlainText(activeFile);
+    }
+  }
+
+  function runCopyRichText(): void {
+    // Same host-lookup, same non-render-state no-op as runCopyHtml above — `copyAsRichText`
+    // works off the CLONE (task 4.1's own Q4), never `activeFile.read()`. Same discard-the-
+    // promise / never-caught shape as every other copy function here: a rejection surfaces as a
+    // genuine unhandled-rejection error, never a false "copied" (AGENTS.md #5).
+    const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+    if (host) {
+      saveSettings({ lastExportFormat: 'copy-rich-text' });
+      void copyAsRichText(host);
+    }
+  }
+
+  function runExportPdf(): void {
+    // Same "nothing to export yet" guard as every function above, on the same host lookup — but
+    // `exportPdf` itself takes nothing: `window.print()` is document-global, so the guard here
+    // exists only to decide WHETHER to print, never what to print (there is no host param to
+    // thread through, per `exportPdf`'s own doc comment in exportControls.ts).
+    const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+    if (host) {
+      saveSettings({ lastExportFormat: 'pdf' });
+      exportPdf();
+    }
+  }
+
+  /**
+   * Task 8.1 (D-5): re-run whatever `lastExportFormat` (8.2) names, through the SAME five
+   * functions above — the `AppController` method `main.ts`'s Ctrl/Cmd+S handler calls. `null`
+   * (before any export has ever run) and any other unrecognized value are a graceful no-op: no
+   * default is picked here (that would pre-empt task 10.1's own first-ever-Ctrl+S walk-gate item).
+   */
+  function triggerLastExport(): void {
+    switch (currentSettings().lastExportFormat) {
+      case 'html':
+        runExportHtml();
+        break;
+      case 'copy-html':
+        runCopyHtml();
+        break;
+      case 'copy-plain-text':
+        runCopyPlainText();
+        break;
+      case 'copy-rich-text':
+        runCopyRichText();
+        break;
+      case 'pdf':
+        runExportPdf();
+        break;
+      default:
+        break;
+    }
+  }
+
   /** Render the export panel into its slot and move initial focus inside it — never left on the
    *  page behind, the same choice `openDiagramLightbox` makes for its own trap's entry point. */
   function renderExport(): void {
-    // Task 8.2 (D-6): each row below persists ITS OWN key from `exportControls.ts`'s `RowSpec.key`
-    // vocabulary ('html' | 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'pdf') as
-    // `lastExportFormat` the instant its export actually fires — this is the ONE write path every
-    // export takes (a panel click today; task 8.1's Ctrl+S re-invokes through these same handlers,
-    // so it can never diverge or double-write). Written only inside each row's own "did the export
-    // actually run" guard, never on the defensive no-op branch — a no-op is not a "last used"
-    // format. `saveSettings` (settingsSeam.ts) is the same seam the theme/TOC/code-theme controls
-    // already persist through — best-effort, never throws on this UI path.
     const view = createExportView(doc, {
-      onExportHtml: () => {
-        // The app page's live reader host (readerPane.ts's own class, the same selector the diff
-        // context above already uses) — absent during a designed non-render state (e.g. an
-        // unreadable file), in which case there is nothing to export and this is a silent no-op
-        // (AGENTS.md #5: no export UI is reachable without `activeFile`, but the read itself can
-        // still fail after selection).
-        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) {
-          saveSettings({ lastExportFormat: 'html' });
-          exportHtml(host, basenameForExport());
-        }
-      },
-      onCopyHtml: () => {
-        // Same host-lookup, same non-render-state no-op as onExportHtml above. `copyAsHtml`
-        // rejects rather than resolving silently on a clipboard-write failure (AGENTS.md #5 — no
-        // false success); this call is intentionally NOT caught-and-swallowed here (`tryStore`'s
-        // best-effort pattern does not apply to a deliberate user copy action) — a rejection
-        // surfaces as a genuine unhandled-rejection error rather than a falsely-quiet no-op.
-        // Per-action completion/failure UI (a "Copied"/"Copy failed" state, `codeView.ts`'s own
-        // copy-button precedent) is task 9.1's own milestone-wide scope, not this task's.
-        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) {
-          saveSettings({ lastExportFormat: 'copy-html' });
-          void copyAsHtml(host);
-        }
-      },
-      onCopyPlainText: () => {
-        // No host/clone lookup — this reads the SOURCE, via `activeFile.read()` (task 3.4's own
-        // Q1), never the rendered clone `onCopyHtml`/`onExportHtml` work from. `exportToggle` is
-        // disabled whenever `activeFile` is null, so the guard below is defensive only (never
-        // reachable through the shipped UI, matching `basenameForExport`'s own fallback comment).
-        // Same discard-the-promise shape as `onCopyHtml`: `copyAsPlainText` is async internally
-        // (it awaits the read, then the write), but this callback stays sync and a rejection
-        // surfaces as a genuine unhandled-rejection error rather than a swallowed no-op
-        // (AGENTS.md #5 — no false success, covering the READ failure as well as the WRITE).
-        if (activeFile) {
-          saveSettings({ lastExportFormat: 'copy-plain-text' });
-          void copyAsPlainText(activeFile);
-        }
-      },
-      onCopyRichText: () => {
-        // Same host-lookup, same non-render-state no-op as onCopyHtml above — `copyAsRichText`
-        // works off the CLONE (task 4.1's own Q4), never `activeFile.read()`. Same discard-the-
-        // promise / never-caught shape as every other copy row here: a rejection surfaces as a
-        // genuine unhandled-rejection error, never a false "copied" (AGENTS.md #5).
-        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) {
-          saveSettings({ lastExportFormat: 'copy-rich-text' });
-          void copyAsRichText(host);
-        }
-      },
-      onExportPdf: () => {
-        // Same "nothing to export yet" guard as every row above, on the same host lookup — but
-        // `exportPdf` itself takes nothing: `window.print()` is document-global, so the guard here
-        // exists only to decide WHETHER to print, never what to print (there is no host param to
-        // thread through, per `exportPdf`'s own doc comment in exportControls.ts).
-        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) {
-          saveSettings({ lastExportFormat: 'pdf' });
-          exportPdf();
-        }
-      },
+      onExportHtml: runExportHtml,
+      onCopyHtml: runCopyHtml,
+      onCopyPlainText: runCopyPlainText,
+      onCopyRichText: runCopyRichText,
+      onExportPdf: runExportPdf,
       onClose: () => toggleExport(),
     });
     exportPanel.replaceChildren(view.element);
@@ -1611,5 +1672,6 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     selectFile,
     openFolder: runOpenFolder,
     refresh: refreshPersisted,
+    triggerLastExport,
   };
 }

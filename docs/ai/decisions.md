@@ -1,6 +1,115 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-03 · M10 D-5 (task 8.1) — the Ctrl/Cmd+S export shortcut binds in `entrypoints/app/main.ts`,
+  app-page-only; the five export handlers are LIFTED to one dispatch path (click + shortcut), never
+  duplicated; a real byte-level proof (content-script md5 unchanged, both engines) backs the scoping
+  claim, not just a code-review assertion.**
+  `plan.md` §0 D-5, applied VERBATIM: *"010 D-5 — the Ctrl+S listener lives in
+  `entrypoints/app/main.ts`, app-page-only, not `readerMode.ts`'s app-page-blind pattern."*
+  **Q1 — THE DISPATCHER SHAPE: five named functions, one call site each, zero duplication.**
+  `appShell.ts`'s `renderExport()` used to build its five `createExportView` callbacks as inline
+  closures, each its own `saveSettings({...}); <export>()` pair. Lifted verbatim (no behavior
+  change) into five named functions in `mountAppShell`'s own closure (`runExportHtml`,
+  `runCopyHtml`, `runCopyPlainText`, `runCopyRichText`, `runExportPdf`); `renderExport()`'s five
+  callbacks now reference these functions directly, and a new `triggerLastExport()` — exposed on
+  `AppController`, the ONLY new public surface this task adds — reads `currentSettings()
+  .lastExportFormat` (settingsSeam.ts) and switches to the SAME five functions. There is no second
+  `saveSettings({...}); <export>()` pair anywhere, in `main.ts` or elsewhere — grepped to confirm.
+  The click path is BEHAVIOR-PRESERVING BY CONSTRUCTION (same functions, same bodies, only
+  relocated and named): `exportPanel.browser.test.ts` (8.2's own write-proof block included) passed
+  UNCHANGED, no edits needed to that file.
+  **Q2 — THE NULL CASE: a graceful no-op, no default picked, deferring to task 10.1.**
+  `lastExportFormat` is `null` before any export has ever run (8.2's own `DEFAULT_SETTINGS`).
+  `triggerLastExport()`'s `switch` has no `default` case that picks a format — `null` (and any
+  unrecognized value) falls through to an explicit no-op `break`. `main.ts`'s own keydown handler
+  calls `event.preventDefault()` UNCONDITIONALLY, before reading the format, so the native dialog is
+  suppressed even on this first-ever-Ctrl+S case — but no export runs and no default is written.
+  Proven in `exportShortcut.browser.test.ts`: `preventDefault` still fires, `lastExportFormat` stays
+  `null` after the dispatch.
+  **Q3 — THE BINDING LOCATION, PROVEN AT THE BYTE LEVEL, NOT JUST BY CODE REVIEW.** The listener is
+  added inside `main.ts`'s own `if (root)` block (app-page entrypoint only), never in a shared
+  module `mount.ts`/`readerMode.ts` both surfaces import — the deliberate INVERSION of
+  `readerMode.ts`'s `installToggleShortcut`, which scopes itself by DOM shape (`data-mode` present)
+  rather than by which script installed it. `isEditableTarget` is a small, deliberate DUPLICATE of
+  `readerMode.ts`'s own helper (four lines, two call sites — this codebase's own rule-of-three
+  precedent, `exportControls.ts`'s module doc comment), not an import: importing from
+  `readerMode.ts` would pull a content-script-oriented module into the app-page graph for no
+  functional reason. The byte-level proof: content-script bundle **336,121 B, BYTE-IDENTICAL to
+  8.2's landed state on both engines** (Cr md5 `f424a3b60e9d52bf5ac6a35a8afd2551`, Fx md5
+  `ebbf183adfd1e217ad01683043496ccc` — unchanged), firing-control-confirmed (`git stash -u` the
+  whole diff, rebuild both engines, app chunk reverts to exactly 487,133 B and the CS md5 was
+  already unchanged; `git stash pop` restored the tree). If the listener had leaked into the shared
+  graph, the CS md5 would have moved — it did not.
+  **Q4 — THE `preventDefault` TEST-HONESTY LIMIT, STATED, NOT OVERCLAIMED.** A dispatched
+  (non-trusted) `KeyboardEvent` lets a test read `event.defaultPrevented`/spy on
+  `KeyboardEvent.prototype.preventDefault` (both JS-visible on synthetic events), so
+  `exportShortcut.browser.test.ts` proves the handler CALLS `preventDefault()` on a Ctrl/Cmd+S
+  keydown. It does NOT and CANNOT observe the browser's native "Save Page As" dialog actually being
+  absent — a trusted-event-only default no automated harness can watch (the same limit
+  `tocNetwork.browser.test.ts`'s own backtick-shortcut test already accepts for its own
+  document-level handler). The test file's own header comment states this explicitly.
+  **THE D-5 RED-FIRST NEGATIVE — designed, broken by real test-harness state, then fixed to be
+  ROBUST rather than assume a pristine `document`.** `vitest.config.ts`'s own header comment records
+  that this suite's browser files run SERIALLY and share ONE real `document`/`window` per engine
+  (task 4.5's own viewport-leak fix). `appHarnessSeam.browser.test.ts` (task 2.1) re-imports this
+  same `entrypoints/app/main.ts` many times across its own tests; after this task, EVERY one of
+  those imports installs a real, never-torn-down `document`-level keydown listener — and this
+  task's OWN test file does the same across its own `it` blocks. A first draft asserted an ABSOLUTE
+  "Ctrl+S does nothing yet" before the first `loadMain()` call and a fixed "+1" after each
+  subsequent one; both assumptions broke in a real run (`expected 3 to be 2` — accumulated listeners
+  from earlier tests in the same file, each contributing their own `preventDefault()` call, summed
+  into a stale cumulative spy count). Fixed by never asserting an absolute count: a
+  `KeyboardEvent.prototype.preventDefault` spy is CLEARED before each measured dispatch
+  (`reactionsTo()`), so every assertion reflects exactly one dispatch's reaction count, immune to
+  how many listeners already exist. The surviving test: a content-script-shaped host (`mount()`,
+  real `data-mode`, the EXACT shape `readerMode.ts`'s own shortcut scopes itself by) adds ZERO
+  reactions; loading `main.ts` immediately after adds EXACTLY ONE — proving the reaction tracks
+  which script ran, never DOM shape. This can genuinely fail: reusing `readerMode.ts`'s pattern
+  would have made the content-script-shaped host react before `main.ts` ever imported.
+  **THE ONE-PATH PROOF — a real click and a real `triggerLastExport()` call produce the identical
+  artifact, not a mocked equivalence.** For HTML: clicking the panel row downloads a real file
+  (`alpha.html`, via the same `armExportDownload`/`collectExportDownload` commands 3.2/8.2 already
+  use); calling `triggerLastExport()` immediately after — no click at all — downloads a
+  byte-equivalent artifact (same filename, same rendered `h1`). For PDF: the row click calls
+  `window.print()` once; `triggerLastExport()` calls it a second time, through the identical guard.
+  **A second real race caught during this proof, root-caused, not worked around.** The HTML
+  one-path test's first draft read `currentSettings().lastExportFormat` AFTER `await
+  commands.collectExportDownload()` — a real async gap during which a still-pending
+  `settingsPort.load()` from the SAME fresh mount can resolve and clobber the in-memory snapshot
+  with a stale persisted value (measured: reproduced once, Firefox only). This is the SAME race
+  `exportPanel.browser.test.ts`'s own 8.2 write-proof avoids by reading `currentSettings()`
+  SYNCHRONOUSLY right after `.click()`, before any `await` reopens the window — fixed here the same
+  way (a synchronous read immediately after the click, plus an explicit `saveSettings()` re-pin of
+  the precondition before the second, `triggerLastExport()`-driven download, since ITS OWN
+  `collectExportDownload()` await reopens the same window a second time). Neither the PDF nor the
+  null-case one-path tests needed this fix — both stay fully synchronous between the write and the
+  read/replay.
+  **Byte discipline — measured on BOTH engines, firing-control confirmed.** App-page chunk
+  **487,133 → 487,735 B (+602 B)**, identical delta and identical content hash (`app-du5HRQ0J.js`)
+  on both engines. Content-script: **UNCHANGED, 336,121 B, BOTH engines, md5 IDENTICAL to 8.2's
+  landed state** (see Q3 above) — the D-5 byte proof. `.output` **4,879,636 → 4,880,238 B (+602 B)**,
+  same delta both engines, **~354.14 KiB (Cr) headroom** remaining (was ~354.73 KiB at 8.2 — the
+  −0.59 KiB matches the app-chunk delta exactly), robustly under the 5 MiB ceiling. Manifests
+  **654 / 770 B** unchanged, `permissions: []`, no `web_accessible_resources` — a keydown listener +
+  `preventDefault()` needs no manifest capability. `dependencies` (production) unchanged at **6** —
+  this task adds none. `docs/trust/PERMISSIONS.md` untouched (no new capability to disclose).
+  Golden EMPTY.
+  **Suite.** Unit: **1056/1056**, unchanged (this task is browser-only; no unit test touches
+  `main.ts`/`appShell.ts`'s export dispatch). Full browser suite: **150 files / 1517 passed / 15
+  skipped, 0 failed** (148/1503/15 baseline at 8.2 + this task's new 7-test file × 2 engines = +14
+  passed, +2 files). Two intermediate runs surfaced ONE failure each in `diagramActions.browser
+  .test.ts` (Firefox) and `tocScroll.browser.test.ts` (Firefox) respectively — neither file touched
+  by this task, and re-running each in isolation (and the full suite twice more) showed the failure
+  moves between them and eventually disappears entirely — a pre-existing, timing-sensitive carried
+  flake (the same class of finding `diagramEnhancer.test.ts`'s own carried flake already names in
+  this milestone's baselines), not a regression this task introduced. Lint + typecheck clean.
+  **Revisit-when:** task 10.1 lands and decides what a first-ever Ctrl+S (`lastExportFormat` still
+  `null`) should do — this task deliberately left that case a no-op rather than picking any default.
+  Also revisit if `appHarnessSeam.browser.test.ts`'s own repeated `loadMain()` calls ever need to
+  assert something about accumulated document-level listeners directly (not needed by this task —
+  worked around entirely inside `exportShortcut.browser.test.ts`'s own delta-based instrument).
+
 - **2026-09-03 · M10 D-6 (task 8.2) — `lastExportFormat` lands as the fifth `Settings` field,
   `codeTheme`'s own shape; PLAN.MD'S OWN "no enumeration trap" CLAIM WAS WRONG FOR THE READ PATH,
   corrected here by measurement; the WRITE is wired into `appShell.ts`'s panel handlers, closing
