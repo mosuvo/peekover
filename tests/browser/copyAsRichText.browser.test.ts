@@ -299,7 +299,7 @@ afterEach(async () => {
   await cdp().send('Browser.resetPermissions', { browserContextId: grantedContextId } as never);
 });
 
-describe('the export panel — Copy as rich text row goes live at this task, only pdf stays disabled', () => {
+describe('the export panel — Copy as rich text row goes live at this task (pdf went live later, at task 7.1)', () => {
   it('★ clicking "Copy as rich text" writes to the REAL clipboard, permission-free (D-4, re-confirmed)', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
@@ -324,16 +324,17 @@ describe('the export panel — Copy as rich text row goes live at this task, onl
     expect(plain).toContain('bold');
   });
 
-  it('only pdf stays disabled — this task touches one row', async () => {
+  it('pdf stayed disabled at this task (4.1 touches one row) — re-confirmed live as of task 7.1', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
-    const pdfRow = panel.querySelector<HTMLButtonElement>('[data-export="pdf"]')!;
-    expect(pdfRow.disabled, 'pdf should still be inert at task 4.1').toBe(true);
-
-    for (const key of ['html', 'copy-html', 'copy-plain-text', 'copy-rich-text']) {
+    // 4.1's own scope: html/copy-html/copy-plain-text/copy-rich-text are live, pdf was still the
+    // one gap. Task 7.1 closed it — this test now asserts the CURRENT state (all 5 live), not the
+    // task-4.1-era snapshot; pdf's own liveness proof is printMode.browser.test.ts's job, not this
+    // file's, but a stale `true` assertion here would misstate what the panel actually does today.
+    for (const key of ['html', 'copy-html', 'copy-plain-text', 'copy-rich-text', 'pdf']) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
-      expect(row.disabled, `row "${key}" should be live at task 4.1`).toBe(false);
+      expect(row.disabled, `row "${key}" should be live`).toBe(false);
     }
   });
 

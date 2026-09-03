@@ -121,7 +121,7 @@ import {
   type WatchTarget,
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
-import { createExportView } from './exportControls';
+import { createExportView, exportPdf } from './exportControls';
 import { exportHtml, copyAsHtml, copyAsRichText } from '../export/htmlExport';
 import { copyAsPlainText } from '../export/copyPlainText';
 
@@ -292,6 +292,19 @@ const DARK_TOKENS = /* css */ `
  * ships to every user's browser. Writing this block as CSS cost **+1.5 KB on the app-page chunk**
  * before it was moved up here. Long-form reasoning goes in this doc comment; the CSS keeps only
  * short pointers.
+ *
+ * THE @page MARGIN-BOX RELOCATION (010 D-7, task 7.1). readerCss.ts's own `@page` rule (same text)
+ * is INERT where it lives — CSS Paged Media's page-box configuration is a document-global concept
+ * a shadow-scoped stylesheet cannot deliver (measured, task 6.1: Chromium's print pipeline never
+ * reads a shadow root's own `@page` rule, regardless of engine support). `APP_CSS` below carries a
+ * COPY of that same block — a real document-level sheet, the ONE place in the app-page bundle
+ * `exportPdf()`'s `window.print()` can actually reach a page box from. Deliberately a COPY, not a
+ * MOVE: readerCss.ts's own copy stays because `htmlExport.ts`'s `extractPageBlocks()` pulls IT
+ * (not this one) into every standalone HTML export/Copy-as-HTML document, which is ALSO
+ * document-level once serialized (no shadow root in an exported file) and so ALSO renders
+ * correctly — an entirely different, already-shipped consumer this task must not silently break by
+ * moving the block out from under it. See readerCss.ts's own comment on its copy for the reverse
+ * pointer.
  */
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
@@ -446,6 +459,13 @@ const APP_CSS = /* css */ `
   .${SHELL_CLASS}__header,.${SHELL_CLASS}__folders{display:none!important}
   .${SHELL_CLASS}__body{display:block; height:auto}
   .${SHELL_CLASS}__reader{overflow:visible; height:auto; padding:0}
+}
+/* @page relocation (010 D-7, task 7.1) — a COPY of readerCss.ts's own @page rule; rationale in
+   the doc comment above APP_CSS. */
+@page{
+  margin:2cm 1.5cm 2.2cm;
+  @top-center{content:"Peekover"}
+  @bottom-center{content:"Page " counter(page) " of " counter(pages)}
 }
 `;
 
@@ -900,6 +920,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // genuine unhandled-rejection error, never a false "copied" (AGENTS.md #5).
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
         if (host) void copyAsRichText(host);
+      },
+      onExportPdf: () => {
+        // Same "nothing to export yet" guard as every row above, on the same host lookup — but
+        // `exportPdf` itself takes nothing: `window.print()` is document-global, so the guard here
+        // exists only to decide WHETHER to print, never what to print (there is no host param to
+        // thread through, per `exportPdf`'s own doc comment in exportControls.ts).
+        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+        if (host) exportPdf();
       },
       onClose: () => toggleExport(),
     });

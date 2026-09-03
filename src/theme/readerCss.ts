@@ -759,6 +759,13 @@ export const READER_CSS = /* css */ `
   @bottom-center{content:"Page " counter(page) " of " counter(pages)}
 }
 `;
+// KEPT HERE ON PURPOSE, task 7.1: this @page block stays inert for the LIVE reader (shadow-scoped,
+// see the finding below), but htmlExport.ts's extractPageBlocks() pulls this exact block out of
+// READER_CSS and ships it verbatim into every standalone HTML export / Copy-as-HTML document —
+// which has NO shadow root once serialized, so it is document-level there and (per this task's own
+// finding) DOES render. Task 7.1 additionally copies this text into appShell.ts's APP_CSS, a real
+// document-level sheet, so the LIVE app-page reader's own window.print() can reach a page box too.
+// Two copies, two distinct consumers — see appShell.ts's own comment on its copy.
 
 // ============================================================================
 // PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE — 010 D-7, task 6.1

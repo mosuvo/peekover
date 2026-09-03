@@ -43,6 +43,25 @@
 // WHERE the rule is declared). This is task 7.1's fork input; 7.1 rules on it (including whether
 // relocating the rule to a document-level stylesheet is worth pursuing before pricing a PDF-
 // generation dependency) — this task states the finding, it does not rule the fork.
+//
+// ── TASK 7.1's RULING, MEASURED IN THIS FILE ────────────────────────────────────────────────────
+//
+// Relocation, not a PDF-generation dependency: appShell.ts's `APP_CSS` gets its own copy of the
+// SAME `@page` block, a real document-level (light-DOM) stylesheet on the app-page surface —
+// the ONLY surface `exportPdf(host)`'s `window.print()` ever drives (§3.2). readerCss.ts's own
+// copy is KEPT, not moved — it still feeds `htmlExport.ts`'s `extractPageBlocks()`, an independent
+// consumer that ships this exact block into every standalone HTML export/Copy-as-HTML document,
+// which is ALSO document-level once serialized and ALSO renders correctly for the same reason.
+// CHROMIUM: the document-level copy renders (measured below) — Peekover ships PDF export with NO
+// new dependency, net-zero against 1.1's two-dependency budget. FIREFOX: placement does not change
+// the CSSOM-parse drop measured above — Firefox still discards the nested at-rules at parse time
+// regardless of where the stylesheet lives, so Firefox's printed page numbers remain a known gap
+// (decisions.md carries the stop-and-flag on whether that gap is acceptable). CONTENT-SCRIPT
+// SURFACE: has no document-level stylesheet of its own (confirmed: the entrypoint mounts directly
+// onto the raw page, all its CSS shadow-scoped) — PDF export never reaches that surface anyway
+// (§3.2), so this is not a regression, but its NATIVE browser-print margin boxes remain unfixed
+// unless a future task adds a document-level `<style>` injection there too (scoped, not built, by
+// this task — see decisions.md).
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { commands } from 'vitest/browser';
@@ -381,13 +400,17 @@ describe('Print mode — page-break rules (task 6.1, §4)', () => {
 // THE @page MARGIN-BOX FIDELITY PROBE — THIS TASK'S PRIMARY OUTPUT (D-7, §3.6/§7-4)
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 
-/** The shadow root's own `@page` rule(s) — both engines expose this via plain CSSOM, no seam
- *  needed. readerCss.ts writes ONE `@page{}` block (margin + the two nested margin-box at-rules
- *  together); if an engine drops the nested at-rules it does so INSIDE that same rule, never as a
- *  separate empty rule (verified this session against the real shipped `READER_CSS` text). */
-function findPageRules(shadow: ShadowRoot): CSSRule[] {
+/** The `@page` rule(s) inside any `<style>` under `root` — both engines expose this via plain
+ *  CSSOM, no seam needed. Works for a shadow root (readerCss.ts's shadow-scoped copy) OR a plain
+ *  light-DOM element/document (appShell.ts's `APP_CSS` copy, task 7.1's relocation target) —
+ *  `querySelectorAll` does not cross shadow boundaries either direction, so each call sees exactly
+ *  the `<style>` elements that actually live in `root`'s own tree. Both readerCss.ts and
+ *  appShell.ts write ONE `@page{}` block (margin + the two nested margin-box at-rules together);
+ *  if an engine drops the nested at-rules it does so INSIDE that same rule, never as a separate
+ *  empty rule (verified this session against the real shipped text of both). */
+function findPageRules(root: ParentNode): CSSRule[] {
   const rules: CSSRule[] = [];
-  for (const styleEl of Array.from(shadow.querySelectorAll('style'))) {
+  for (const styleEl of Array.from(root.querySelectorAll('style'))) {
     const sheet = (styleEl as HTMLStyleElement).sheet;
     if (!sheet) continue;
     for (const rule of Array.from(sheet.cssRules)) {
@@ -397,8 +420,8 @@ function findPageRules(shadow: ShadowRoot): CSSRule[] {
   return rules;
 }
 
-describe('Print mode — the @page margin-box fidelity PROBE, per engine (task 6.1, D-7, §7-4)', () => {
-  it('CSSOM-parse signal: does the engine retain the @top-center/@bottom-center at-rules at all', () => {
+describe('Print mode — the @page margin-box fidelity PROBE, per engine (tasks 6.1 + 7.1, D-7, §7-4/§3.6)', () => {
+  it('shadow-scoped copy (readerCss.ts), CSSOM-parse signal: does the engine retain the @top-center/@bottom-center at-rules at all', () => {
     const { shadow } = mountFullPage();
     const pageRules = findPageRules(shadow);
     // FIRING CONTROL: the ONE `@page{}` rule (margin + the two nested margin-box at-rules) must
@@ -416,6 +439,37 @@ describe('Print mode — the @page margin-box fidelity PROBE, per engine (task 6
     // with an EMPTY body (`@page { }`), silently dropping them at PARSE time. This is the ONE
     // engine-sniffed assertion in this file, deliberately: if a future engine build changes this,
     // the test goes RED, forcing a re-measurement of 7.1's fork input rather than drifting stale.
+    const isFirefox = navigator.userAgent.includes('Firefox');
+    if (isFirefox) {
+      expect(retainsMarginBoxContent).toBe(false);
+    } else {
+      expect(retainsMarginBoxContent).toBe(true);
+    }
+  });
+
+  it('document-level copy (appShell.ts APP_CSS, task 7.1), CSSOM-parse signal: does relocation change at-rule retention', async () => {
+    // Task 7.1's own relocation probe (D-7, §3.6 fork input): the SAME question the test above
+    // asks, against the OTHER copy — the one that lives in a plain light-DOM <style> (buildStyle in
+    // appShell.ts), never a shadow root. `container` is light DOM throughout; `findPageRules`
+    // cannot see the reader's own shadow-scoped copy from here (querySelectorAll does not cross
+    // the shadow boundary), so this is a clean read of ONLY the relocated copy.
+    const { container } = await mountContained();
+    const pageRules = findPageRules(container);
+    // FIRING CONTROL, same shape as the shadow-scoped test above.
+    expect(pageRules.length).toBe(1);
+    const pageRule = pageRules[0]!;
+    expect(pageRule.cssText).toContain('2cm');
+
+    const retainsMarginBoxContent = /@top-center|@bottom-center/.test(pageRule.cssText);
+
+    // MEASURED THIS SESSION (task 7.1, Playwright 1.61.1's bundled engines): placement does NOT
+    // change Firefox's behavior — its CSSOM still returns the rule with an EMPTY body, dropping the
+    // nested at-rules at PARSE time regardless of whether the stylesheet is shadow-scoped or
+    // document-level. Chromium retains both nested at-rules verbatim here too, as it did shadow-
+    // scoped — the difference this task's relocation exploits is RENDER, not parse (see the render
+    // test below); the parse-time picture is otherwise identical to the shadow-scoped copy's own
+    // result above. Same engine-sniffed-on-purpose shape as that test, for the same reason: a
+    // future engine change should turn this test red, not drift silently.
     const isFirefox = navigator.userAgent.includes('Firefox');
     if (isFirefox) {
       expect(retainsMarginBoxContent).toBe(false);
@@ -452,26 +506,26 @@ describe('Print mode — the @page margin-box fidelity PROBE, per engine (task 6
     // emulateMedia's on-screen approximation.
     expect(fullText).not.toContain('Zero network by default');
 
-    // THE PROBE ITSELF, AND THE FINDING IT SURFACED — NOT the simple "does Chromium support
-    // margin boxes" question this task set out to measure (it does — see the CSSOM-parse test
-    // above and this file's own module doc comment for the plain top-level-document control that
-    // proves it). Measured this session, TWICE independently (this test's real appShell mount, and
-    // a minimal imperative-`attachShadow` scratch replica): an `@page` rule whose OWN stylesheet
-    // lives INSIDE A SHADOW ROOT — exactly where D-7 places it (`readerCss.ts`'s `READER_CSS`,
-    // injected into the reader's shadow root, never the document) — is INERT for margin-box
-    // purposes even in Chromium. The shadow tree's own CONTENT still paginates correctly (`pageCount`
-    // above, `fullText`'s firing control above), but the page-box configuration itself is a
-    // document-global concept the print pipeline never reads from a shadow-scoped stylesheet. This
-    // is a STRONGER, more specific finding than "engine lacks support": the mechanism D-7 sealed
-    // (readerCss.ts) cannot deliver margin-box content AT ALL, on either engine, regardless of
-    // future browser support changes — moving the `@page` rule to a document-level stylesheet
-    // (e.g. appShell.ts's APP_CSS) is the one variable this session did NOT re-test inside THIS
-    // suite, but the isolated scratch replica confirms the SAME rule at the top level of a plain
-    // document DOES render (this file's module doc comment); relocating it is 7.1's decision to
-    // make, not 6.1's to silently perform.
+    // TASK 6.1's ORIGINAL FINDING (still true, and still why readerCss.ts's copy exists at all):
+    // an `@page` rule whose OWN stylesheet lives INSIDE A SHADOW ROOT — where `readerCss.ts`'s
+    // `READER_CSS` injects it — is INERT for margin-box purposes even in Chromium. The shadow
+    // tree's own CONTENT still paginates correctly (`pageCount` above, `fullText`'s firing control
+    // above), but the page-box configuration is a document-global concept the print pipeline never
+    // reads from a shadow-scoped stylesheet. `mountContained()` still mounts that same
+    // shadow-scoped copy (unchanged, task 7.1 did not remove it — see readerCss.ts's own comment on
+    // why) — so on its own it would still produce no header/footer text here.
+    //
+    // TASK 7.1's RELOCATION, MEASURED HERE: `container` ALSO now carries a second, document-level
+    // copy of the SAME `@page` rule (appShell.ts's `APP_CSS`, a light-DOM `<style>` serialized as a
+    // direct child of the printed page, never inside the `<template shadowrootmode="open">`
+    // `serializeWithShadowRoots` uses for the shadow tree). That copy is exactly the shape the
+    // module doc comment's plain top-level-document control already proved renders, and this test
+    // now confirms it renders on the REAL appShell-mounted surface `exportPdf()`'s `window.print()`
+    // actually drives — the two engine-support/shadow-inertness findings both still hold; what
+    // changed is WHERE the rule lives, not either finding.
     const headerPresent = result.perPageText.some((t) => t.includes('Peekover'));
     const footerPresent = result.perPageText.some((t) => /Page\s+\d+\s+of\s+\d+/.test(t));
-    expect(headerPresent).toBe(false);
-    expect(footerPresent).toBe(false);
+    expect(headerPresent).toBe(true);
+    expect(footerPresent).toBe(true);
   });
 });

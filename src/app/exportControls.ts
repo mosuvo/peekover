@@ -17,9 +17,9 @@
 // (`copyAsRichText`, task 4.1) — this is the INTENTIONAL day-one shape (task 3.2's own decision,
 // `decisions.md`): the panel shows its whole feature set from day one, discoverable, never a
 // surprise row appearing later; `disabled` is the honest "exists, not ready yet" signal, matching
-// `__cta`/`__pin`'s own disabled-not-hidden precedent. Only PDF (tasks 6.1/7.1) still renders as a
-// real, accessibly-named button that is `disabled`, inert until its own task supplies a handler —
-// the last row left.
+// `__cta`/`__pin`'s own disabled-not-hidden precedent. Task 7.1 flips the fifth and last: PDF
+// (`exportPdf`, task 7.1) — every row is now live, closing the day-one-shape shown-but-disabled
+// state this module opened with.
 
 export interface ExportViewOptions {
   /** Trigger the real HTML file-download export (task 3.1's `exportHtml`) — wired here since no
@@ -40,6 +40,13 @@ export interface ExportViewOptions {
    *  Sync signature matching `onCopyHtml`/`onCopyPlainText`'s own shape — the async write happens
    *  INSIDE `copyAsRichText`, and the caller discards the returned promise the same way. */
   onCopyRichText(): void;
+  /** Trigger PDF export (task 7.1's `exportPdf`) — the browser's own print pipeline
+   *  (`window.print()`), §3.6-sealed: no second rendering path. Unlike every other row above, this
+   *  one is NOT host/clone-scoped — `window.print()` prints the whole document, so there is nothing
+   *  for a handler to receive; the caller still gates the call on an active render existing (the
+   *  same "nothing to export yet" guard `onExportHtml` etc. use), it just does so without passing
+   *  anything through. */
+  onExportPdf(): void;
   /** Dismiss the panel. Called by the close button AND by the trap's own Escape handler — one
    *  close path, not two (appShell owns what "closed" means: emptying the slot + the focus
    *  restore, per Ruling 2). */
@@ -125,6 +132,19 @@ function buildRow(doc: Document, spec: RowSpec): HTMLButtonElement {
   return row;
 }
 
+/**
+ * PDF export (task 7.1, §3.6-sealed): the SAME pipeline the browser's own print command drives —
+ * no second rendering path, no PDF-generation dependency. `window.print()` is document-global (it
+ * has no target argument), so unlike `exportHtml`/`copyAsHtml`/`copyAsRichText` this takes no
+ * host/clone — there is nothing for it to receive. Chrome hiding, the fixed-viewport de-clip, and
+ * page-break rules live in readerCss.ts + appShell.ts's own `@media print` blocks (task 6.1); the
+ * `@page` margin-box rule that gives the printed output page numbers lives in BOTH files too — see
+ * appShell.ts's own comment on why relocation, not just chrome-hiding, was needed for that part.
+ */
+export function exportPdf(): void {
+  window.print();
+}
+
 /** The tabbable stops inside the open panel, in DOM order (`lightboxStops`'s own shape,
  *  `diagramView.ts`) — every real, ENABLED button this module put there. Disabled rows are
  *  excluded deliberately: the browser's own Tab order already skips them, and the wrap logic
@@ -199,6 +219,7 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
       title: 'PDF',
       subtext: "The browser's own print pipeline",
       actionLabel: 'Export as PDF',
+      onClick: opts.onExportPdf,
     },
   ];
   for (const spec of rows) element.append(buildRow(doc, spec));

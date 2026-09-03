@@ -279,17 +279,20 @@ describe('the export panel — Copy as plain text row goes live at this task, 2 
     expect(plain).not.toContain('<'); // never the exported/rendered HTML artifact
   });
 
-  it('only pdf stays disabled — this task touches one row', async () => {
+  it('pdf: disabled at this task (3.4), re-confirmed live as of task 7.1', async () => {
     // ★ RIPPLE, task 4.1: copy-rich-text went live one task later than this file, which invalidated
     // this assertion's row set (it originally named copy-rich-text among the still-disabled rows).
     // Fixed in place, mirroring 3.3's own ripple to `exportPanel.browser.test.ts` for the same
     // reason — copy-rich-text's own liveness is proven in `copyAsRichText.browser.test.ts`, not here.
+    // ★ RIPPLE AGAIN, task 7.1: pdf itself went live, the row this test was written to prove stayed
+    // inert — a stale `true` here would misstate the panel's current behavior, so this now asserts
+    // the CURRENT state; pdf's own liveness proof is printMode.browser.test.ts's job, not this file's.
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
     for (const key of ['pdf']) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
-      expect(row.disabled, `row "${key}" should still be inert at task 3.4`).toBe(true);
+      expect(row.disabled, `row "${key}" should be live`).toBe(false);
     }
     // And the HTML (3.2) + copy-HTML (3.3) rows stay live too — this task adds a row, it does not
     // touch either of those.

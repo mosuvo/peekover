@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-03 (task 6.1 landed — F5 print mode + the @page margin-box fidelity probe; the probe's finding feeds task 7.1's fork.)*
+*Updated: 2026-09-03 (task 7.1 landed — PDF export via window.print(), and the @page relocation that makes it deliver margin-box fidelity on the app-page/Chromium cell; net-zero new production dependency.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,10 +10,125 @@
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 6.1 LANDED, 2026-09-03 — F5 PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE. THE
-PROBE'S FINDING: INADEQUATE ON BOTH ENGINES, AND FOR A SHARPER REASON THAN "NO BROWSER SUPPORT." Next
-actionable task: 7.1 (PDF export — window.print() if the probe held; it did not, so 7.1 prices the
-named fallback against this task's own byte headroom).**
+**★★★★★ M10 TASK 7.1 LANDED, 2026-09-03 — PDF EXPORT IS window.print(), NO NEW DEPENDENCY. THE FORK
+6.1 HANDED FORWARD WAS RESHAPED, NOT BINARY: RELOCATING `@page` TO A DOCUMENT-LEVEL STYLESHEET (NOT
+PRICING A PDF-GENERATION LIBRARY) TURNED OUT TO BE THE CHEAP FIX ON CHROMIUM/APP-PAGE. A REAL,
+NAMED ASYMMETRY REMAINS AND IS STOP-AND-FLAGGED BELOW, NOT SILENTLY RULED.**
+
+**Why the kickoff's own binary fork ("adequate → wire window.print(); inadequate → price a PDF
+library") was incomplete, caught before any file moved.** 6.1 found neither pole: Chromium's ENGINE
+supports `@page` margin boxes (its own top-level-document control proved that); the SHADOW-SCOPED
+stylesheet D-7 sealed is what's inert. That opens a third, cheaper option the kickoff never named:
+relocate the rule to a document-level sheet and re-measure, before pricing any dependency. This task
+tried that first.
+
+**A load-bearing fact the kickoff also didn't carry forward, found before any edit: `htmlExport.ts`'s
+`extractPageBlocks()` already depends on `@page` staying inside `readerCss.ts`'s `READER_CSS`.** It
+pulls that exact block, verbatim, into every standalone HTML export/Copy-as-HTML document (tasks
+3.1/3.3) — which is document-level once serialized (no shadow root in an exported file), so it
+already renders correctly there, independent of anything 6.1/7.1 measured about the LIVE reader. The
+kickoff's own Q2 guidance ("prefer MOVE, the READER_CSS copy doesn't render anywhere") was built on a
+premise that was false for this second, already-shipped consumer — MOVE-ing `@page` out of
+`READER_CSS` would have silently regressed HTML export/copy's own print fidelity as a side effect of
+fixing an unrelated surface. Surfaced to the user before any code changed; the ruling (confirmed by
+the user) was **COPY, not MOVE**: `appShell.ts`'s `APP_CSS` gets its own copy of the identical `@page`
+block (document-level, light-DOM, the one place `exportPdf()`'s `window.print()` can reach a page box
+from); `readerCss.ts`'s copy is untouched, still feeding `extractPageBlocks()`. Two copies, two
+independent consumers, cross-referenced in both files' own comments.
+
+**THE RELOCATION PROBE, MEASURED (extends `printMode.browser.test.ts`, reusing 6.1's own
+`emulatePrintMedia`/`printToPdfAndExtractText` commands and `findPageRules` helper, generalized from
+`ShadowRoot` to `ParentNode` so it reads BOTH copies without change):**
+- **CSSOM-parse, document-level copy (new test):** Chromium retains both nested `@top-center`/
+  `@bottom-center` at-rules verbatim — same as the shadow-scoped copy. **Firefox still drops them at
+  PARSE time, unchanged by placement** — confirming 6.1's own hypothesis that Firefox's gap is a
+  parser property, not a shadow-scoping one; relocation does not touch it.
+- **Render signal, Chromium (6.1's own test, its final assertions flipped from `false`→`true` and its
+  comments updated to state BOTH findings — 6.1's shadow-scoped inertness, still true and still why
+  `readerCss.ts`'s copy exists, AND 7.1's relocation, newly measured true):** on the REAL
+  appShell-mounted, `exportPdf()`-driven surface, `printToPdfAndExtractText` now finds "Peekover" and
+  "Page X of Y" on every page of a genuinely multi-page fixture. **Chromium/app-page: FIXED, no
+  dependency.**
+
+**★ STOP-AND-FLAGGED, NOT RULED — the residual asymmetry, per the kickoff's own explicit instruction
+not to silently accept it:**
+- **Firefox never gets printed page numbers**, on any surface, regardless of relocation — a genuine
+  engine gap (parse-time, not this milestone's mechanism to fix).
+- **The content-script surface (`file://`/raw-host reader) has no document-level stylesheet at all**
+  (confirmed: the entrypoint mounts `<peekover-root>` directly onto the raw page; every CS style is
+  shadow-scoped, only the transient `HIDE_CSS` is light-DOM) — its NATIVE browser-print margin boxes
+  remain unfixed by this task. Not a NEW regression (`exportPdf()`/the panel button never reached that
+  surface anyway, §3.2 confines exports to the app page), but native Ctrl+P on that surface is a real,
+  separate gap this task did not close and did not build machinery for (a document-level `<style>`
+  injection there is scoped, in decisions.md, not built — new machinery/bytes on a surface D-2 has
+  kept byte-frozen all milestone, not CC's to add without a ruling).
+- Options put to the user for a ruling (decisions.md carries the full text): (i) ship app-page/
+  Chromium margin boxes now, state Firefox + content-script as known, deferred gaps, net-zero
+  dependency; (ii) also build the content-script document-level injection so both surfaces match on
+  Chromium (more machinery/bytes, Firefox still gapped); (iii) price a PDF-generation dependency for
+  full cross-engine/cross-surface parity. Evidence favors (i) — cheapest, consistent with export's
+  existing app-page confinement, and Firefox's own gap is unaffected by any of the three options.
+
+**The `window.print()` mechanism itself, built regardless of the fork's outcome (§3.6-sealed).**
+`exportPdf(): void { window.print(); }`, new in `exportControls.ts` — deliberately takes NO
+host/clone parameter, unlike every other export/copy row: `window.print()` is document-global, so
+there is nothing for it to receive (honestly answering the kickoff's own Q3). The panel's 5th and
+LAST disabled row goes live (`onExportPdf` on `ExportViewOptions`, wired in `appShell.ts` behind the
+same "nothing to export yet" host-existence guard every other row uses) — the export panel now shows
+its whole day-one feature set live, closing the shape task 3.2 opened. Proven in a new
+`tests/browser/pdfExport.browser.test.ts` (Cr+Fx): clicking the row calls `window.print()` exactly
+once, with no arguments.
+
+**The disabled-row ripple, fixed in place across FOUR sibling files (same pattern 4.1's own Q5
+established) — `copyAsHtml.browser.test.ts`, `copyAsPlainText.browser.test.ts`,
+`copyAsRichText.browser.test.ts`, `exportPanel.browser.test.ts`.** Each carried a hardcoded "pdf
+stays disabled" assertion (the day-one-shape boundary check its own task landed); all four flipped to
+assert the CURRENT state (pdf live) with an explicit ripple comment, mirroring 4.1's own
+copy-rich-text ripple chain. `exportPanel.browser.test.ts`'s Tab-wrap focus-trap tests also moved:
+`pdf` is now the LAST enabled stop in DOM order (`copy-rich-text` was last from 4.1 through 6.1); a
+new `pdfRowIn` helper replaces the now-unused `copyRichTextRowIn`, removed rather than left dead.
+
+**Byte discipline — the delta, measured on BOTH engines, decomposed, and caught a real
+CSS-in-template-literal mistake before it shipped.** First attempt wrote the relocation's full
+rationale as a CSS comment inside `appShell.ts`'s `APP_CSS` template literal — exactly the trap this
+file's own doc comment already names (a prior task's identical mistake cost +1.5 KB before it was
+fixed) — measured at **app chunk 486,409 → 487,742 B (+1,333 B)**. Caught by re-reading the diff,
+fixed by moving the long-form rationale into the `.ts`-level doc comment already sitting above
+`APP_CSS` (the file's own established convention: "long-form reasoning goes in this doc comment; the
+CSS keeps only short pointers") and shrinking the in-CSS comment to a short pointer, matching the
+print-mode block's own precedent. Re-measured: **app chunk 486,409 → 486,813 B (+404 B)** — the real
+cost of the `@page{...}` CSS text itself, the short in-CSS pointer comment, and the small JS wiring
+(`onExportPdf`, `exportPdf`, the row's `onClick`). **Content-script: UNCHANGED, 336,042 B, BOTH
+engines, md5 IDENTICAL to 6.1's landed state** (`09c2ac89a0ba9f634a05ab02aa4f476d` Cr /
+`6aa82bc8d6494c07c8ecd46695390ab9` Fx) — confirms the COPY-not-MOVE call: nothing in `readerCss.ts`
+changed byte-for-byte (only a `.ts`-level comment landed after `READER_CSS`'s closing backtick,
+outside the string, costing nothing shipped). `.output` **4,879,159 B (Cr)**, **~355.20 KiB headroom**
+remaining (was ~355.59 KiB at 6.1 — the −0.39 KiB matches the app-chunk delta exactly). Manifests
+**654 / 770 B** unchanged, `permissions: []`, no `web_accessible_resources`. `dependencies`
+(production) **unchanged at 6** — **the milestone ends this task having added ZERO new production
+dependencies**, the (i)-favoring evidence's own headline number.
+
+**Suite.** Unit: **1055/1055** clean. Full browser suite: **148 files / 1493 passed / 19 skipped, 0
+failed** (146/1491/15 baseline at 6.1 + this task's new 2-test file × 2 engines + printMode's 1 new
+test × 2 engines = +12 passed, +4 skipped from engine-count bookkeeping). Lint/typecheck clean.
+Golden diff empty. No new dependency, production or dev.
+
+**D-7, applied VERBATIM, PDF half now real:** *"PDF export is print mode driven through
+`window.print()`, not a second engine."* True as shipped — no PDF-generation library, no second
+rendering path, exactly the SAME pipeline `window.print()`/Ctrl+P always drove.
+
+**RULED, same session: option (i) — ship as-is.** Chromium/app-page margin boxes ship now; Firefox
+and the content-script surface stay KNOWN, deferred gaps, neither built around silently
+(decisions.md carries the full ruling entry).
+
+**Revisit-when:** a future task wants content-script print parity or Firefox/full cross-engine PDF
+parity is judged worth a genuine third dependency — neither is this milestone's scope now. Also
+revisit if a future Firefox release starts retaining the nested at-rules (the CSSOM-parse tests are
+deliberately engine-sniffed so that changes turn them red, not stale-green).
+
+**★★★★★ (PRIOR) M10 TASK 6.1 LANDED, 2026-09-03 — F5 PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE.
+THE PROBE'S FINDING: INADEQUATE ON BOTH ENGINES AT THAT TIME, AND FOR A SHARPER REASON THAN "NO
+BROWSER SUPPORT" — RESHAPED BY TASK 7.1'S OWN RELOCATION, ABOVE.**
 
 **The pass/fail bar, stated before measuring (spec §3.6/§7-4's own bar):** can Chromium AND Firefox
 render `@page` margin-box running content (page numbers via `counter(page)`/`counter(pages)`,

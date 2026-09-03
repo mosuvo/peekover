@@ -141,11 +141,11 @@ const closeIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('.peekover-export__close')!;
 const htmlRowIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('[data-export="html"]')!;
-/** ★ Live as of task 4.1 — the LAST enabled stop in DOM order (close, html, copy-html,
- *  copy-plain-text, copy-rich-text), which is what the wrap tests below need: 3.4's own trap test
- *  was written when `copy-plain-text` was still last. */
-const copyRichTextRowIn = (panel: HTMLElement): HTMLButtonElement =>
-  panel.querySelector<HTMLButtonElement>('[data-export="copy-rich-text"]')!;
+/** ★ Live as of task 7.1 — the LAST enabled stop in DOM order (close, html, copy-html,
+ *  copy-plain-text, copy-rich-text, pdf), which is what the wrap tests below need: 4.1's own trap
+ *  test was written when `copy-rich-text` was still last. */
+const pdfRowIn = (panel: HTMLElement): HTMLButtonElement =>
+  panel.querySelector<HTMLButtonElement>('[data-export="pdf"]')!;
 
 function describeActive(): string {
   const el = document.activeElement;
@@ -245,10 +245,10 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const close = closeIn(panel);
-    // ★ Live as of task 4.1: copy-rich-text is now the LAST enabled stop in DOM order (close,
-    // html, copy-html, copy-plain-text, copy-rich-text) — `copy-plain-text` (3.4's own last stop)
-    // is now a MIDDLE stop.
-    const last = copyRichTextRowIn(panel);
+    // ★ Live as of task 7.1: pdf is now the LAST enabled stop in DOM order (close, html,
+    // copy-html, copy-plain-text, copy-rich-text, pdf) — `copy-rich-text` (4.1's own last stop) is
+    // now a MIDDLE stop.
+    const last = pdfRowIn(panel);
 
     last.focus();
     expect(document.activeElement).toBe(last);
@@ -262,7 +262,7 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const close = closeIn(panel);
-    const last = copyRichTextRowIn(panel);
+    const last = pdfRowIn(panel);
 
     close.focus();
     expect(document.activeElement).toBe(close);
@@ -345,14 +345,15 @@ describe('rows 6 + 7 — every row is a real <button> with a non-bare accessible
 
 // ── Q1(a) — HTML'S ROW IS WIRED LIVE; THE OTHER 4 WERE INERT AT 3.2 ──────────────────────────
 //
-// ★ UPDATED AT TASKS 3.3/3.4/4.1: copy-html went live at 3.3, copy-plain-text at 3.4, copy-rich-text
-// at 4.1 (each row's own browser test — `copyAsHtml.browser.test.ts` / `copyAsPlainText.browser
-// .test.ts` / `copyAsRichText.browser.test.ts` — is where THAT row's liveness is proven) — this file
-// only re-states the DAY-ONE-SHAPE remainder (Q4's disabled-not-hidden decision, `decisions.md`'s
-// 2026-08-29 M10 task-3.2 entry): the 1 row with no task landed yet (pdf) stays disabled, and this
-// task's own scope is unaffected by any of the three edits.
+// ★ UPDATED AT TASKS 3.3/3.4/4.1/7.1: copy-html went live at 3.3, copy-plain-text at 3.4,
+// copy-rich-text at 4.1, pdf at 7.1 (each row's own browser test — `copyAsHtml.browser.test.ts` /
+// `copyAsPlainText.browser.test.ts` / `copyAsRichText.browser.test.ts` / `printMode.browser.test.ts`
+// — is where THAT row's liveness is proven) — this file only re-states the DAY-ONE-SHAPE remainder
+// (Q4's disabled-not-hidden decision, `decisions.md`'s 2026-08-29 M10 task-3.2 entry): as of 7.1
+// there is no row left with no task landed, and this task's own scope is unaffected by any of the
+// four edits.
 
-describe('Q1(a) — the HTML row drives the real exportHtml codepath; disabled rows stay disabled', () => {
+describe('Q1(a) — the HTML row drives the real exportHtml codepath; every row is live as of 7.1', () => {
   it('clicking "Export as HTML" downloads the real file (3.1\'s own codepath, driven through the panel)', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
@@ -366,25 +367,17 @@ describe('Q1(a) — the HTML row drives the real exportHtml codepath; disabled r
     expect(probe.h1Text).toBe('alpha.md');
   });
 
-  it('the 1 row with no task landed yet renders disabled — no click handler, nothing to drive', async () => {
+  it('no row renders disabled any more — 7.1 closed the last gap', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
-    for (const key of ['pdf']) {
+    for (const key of ['html', 'copy-html', 'copy-plain-text', 'copy-rich-text', 'pdf']) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
-      expect(row.disabled, `row "${key}" should still be inert`).toBe(true);
+      expect(row.disabled, `row "${key}" should be live`).toBe(false);
     }
-    // copy-html (3.3), copy-plain-text (3.4), and copy-rich-text (4.1) went live already — asserted
-    // NOT disabled here as the boundary check for this file's own claim; each row's actual liveness
-    // (click -> real clipboard write) is proven in its own task's test.
-    expect(panel.querySelector<HTMLButtonElement>('[data-export="copy-html"]')!.disabled).toBe(
-      false,
-    );
-    expect(
-      panel.querySelector<HTMLButtonElement>('[data-export="copy-plain-text"]')!.disabled,
-    ).toBe(false);
-    expect(
-      panel.querySelector<HTMLButtonElement>('[data-export="copy-rich-text"]')!.disabled,
-    ).toBe(false);
+    // copy-html (3.3), copy-plain-text (3.4), copy-rich-text (4.1), and pdf (7.1) all went live
+    // already — asserted NOT disabled here as the boundary check for this file's own claim; each
+    // row's actual liveness (click -> real clipboard write / real print) is proven in its own
+    // task's test.
   });
 });

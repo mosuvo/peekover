@@ -496,22 +496,42 @@ drop-content clause struck with it (DOCX was the only control that clause's math
 
 ## 7 — PDF export (`window.print()` driving group 6's pipeline; the fallback only if group 6's probe requires it)
 
-- [ ] **7.1 `exportPdf(host): window.print()` — the SAME pipeline the browser's own print command drives, no
-      second rendering path (§3.6, sealed).** If group 6's probe found the `@page` fidelity adequate, this task
-      is the whole of PDF export. **If group 6's probe found it inadequate, this task instead prices the named
-      fallback (a PDF-generation library) against D-1's already-thin headroom, through D-1's own measurement
-      discipline — a genuine THIRD dependency this milestone did not budget two for (plan risk 4), never adopted
-      reflexively.**
-      Files: `src/app/exportControls.ts` · (conditionally, only if group 6's probe requires the fallback)
-      `package.json` + a new `src/export/pdfExport.ts` · `tests/browser/pdfExport.browser.test.ts`
-      Verify: (**tests/browser** — Cr+Fx) triggering PDF export invokes `window.print()` against the print-mode
-      CSS group 6 built, producing output with reader chrome hidden and the fidelity group 6's probe found. If
-      the fallback branch is taken: the library's ablated cost is decomposed and priced explicitly at THIS
-      task's own commit (not folded into 1.1's figure, which covered only the two anticipated libraries),
-      against the headroom remaining after groups 1–6's own accumulated deltas. Golden EMPTY · manifest green
-      **654 / 770 B** · `permissions: []`. [D-7; §3.6; §4 PDF export; plan risk 4]
+- [x] **7.1 `exportPdf(): window.print()` — the SAME pipeline the browser's own print command drives, no
+      second rendering path (§3.6, sealed).** LANDED, 2026-09-03. **The kickoff's own binary fork
+      ("adequate → wire window.print(); inadequate → price a fallback library") was reshaped by 6.1's
+      own finding before this task started: Chromium's ENGINE supports `@page` margin boxes; the
+      SHADOW-SCOPED stylesheet D-7 sealed is what's inert — a third option (relocate to a
+      document-level stylesheet, re-measure) was cheaper than pricing a dependency and was tried
+      first, per this task's own extended investigation (flagged in decisions.md/progress.md, not a
+      silent substitution). RESULT: relocation renders on Chromium/app-page — **NO fallback
+      dependency needed, `dependencies` (production) stays 6.** A real residual (Firefox's own
+      parse-time gap; the content-script surface's lack of any document-level stylesheet) is
+      STOP-AND-FLAGGED to a human ruling in decisions.md, not silently accepted or silently built
+      around — see that entry for the options and the evidence.
+      Files: `src/app/exportControls.ts` (the `exportPdf`/`onExportPdf` wiring, the panel's 5th row
+      going live) · `src/app/appShell.ts` (necessary ripple: `APP_CSS` gains a document-level COPY of
+      readerCss.ts's own `@page` block — the relocation target; flagged, not a silent Files-list
+      substitution) · `src/theme/readerCss.ts` (comment only, cross-referencing the copy — no CSS
+      byte change) · `tests/browser/pdfExport.browser.test.ts` (new) ·
+      `tests/browser/printMode.browser.test.ts` (extended: a new document-level CSSOM-parse test, the
+      render-signal test's final assertions flipped true with updated findings) ·
+      `tests/browser/copyAsHtml.browser.test.ts` / `copyAsPlainText.browser.test.ts` /
+      `copyAsRichText.browser.test.ts` / `exportPanel.browser.test.ts` (ripple: the "pdf stays
+      disabled" assertions each carried, now stale, fixed in place — same pattern 4.1's own Q5
+      ripple used). No `package.json` change, no new `src/export/pdfExport.ts` — the fallback branch
+      was never reached.
+      Verify: (**tests/browser** — Cr+Fx) triggering PDF export invokes `window.print()` against the
+      print-mode CSS group 6 built, producing output with reader chrome hidden — GREEN. Fidelity:
+      Chromium/app-page renders margin-box page numbers (measured, `printToPdfAndExtractText`
+      firing-control proven); Firefox and the content-script surface do not (measured, stated,
+      stop-and-flagged, not silently patched over). No fallback branch taken, so no library cost to
+      decompose. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. Full suite:
+      unit 1055/1055, browser 148 files/1493 passed/19 skipped/0 failed, lint clean. [D-7; §3.6; §4
+      PDF export; plan risk 4]
 
-*Group-7 acceptance (plan §6): §4's PDF criteria.*
+*Group-7 acceptance (plan §6): §4's PDF criteria — MET on Chromium/app-page; Firefox and the
+content-script surface carry a named, flagged residual (decisions.md), not a silent gap. RULED,
+2026-09-03: option (i) — ship as-is, both gaps deferred, not built around.*
 
 ## 8 — Export shortcut, last-used format, progress indicator (D-5, D-6)
 

@@ -1,6 +1,108 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-03 · M10 task 7.1's stop-and-flag, RULED: option (i) — ship Chromium/app-page margin
+  boxes now, Firefox and the content-script surface stay deferred, KNOWN gaps.** Human-confirmed,
+  same session as the entry below. Neither gap is built around silently: Firefox's own CSSOM
+  drops the nested `@top-center`/`@bottom-center` at-rules at parse time regardless of placement
+  (a parser property, not something (ii) or (iii) below it changes except (iii)); the
+  content-script surface gets no new document-level `<style>` injection (option (ii), scoped but
+  not built) and no PDF-generation dependency is added (option (iii), priced-in-principle but not
+  pursued). `dependencies` (production) closes M10 at 6, unchanged from before this task.
+  **Revisit-when:** a future task wants content-script print parity (build (ii) then, scoped in the
+  entry below) or full cross-engine PDF parity is judged worth a genuine third dependency (price
+  (iii) then, through D-1's own discipline) — neither is this milestone's own scope now.
+
+- **2026-09-03 · M10 D-7 (PDF half, task 7.1) — PDF export ships as `window.print()`, NO new
+  dependency: relocating `@page` to a document-level stylesheet (not pricing a PDF-generation
+  library) resolved 6.1's own finding on Chromium/app-page. A residual asymmetry (Firefox, the
+  content-script surface) is STOP-AND-FLAGGED here for a human ruling, not silently accepted or
+  silently built around.**
+  **WHY THE KICKOFF'S OWN FORK WAS INCOMPLETE, CAUGHT AT STEP 0.** §7.1's sealed task text poses a
+  binary: 6.1's probe adequate → wire `window.print()` and stop; inadequate → price the named
+  PDF-generation-library fallback against D-1's headroom. 6.1's ACTUAL finding satisfies neither
+  pole — Chromium's ENGINE supports `@page` margin boxes (6.1's own plain-top-level-document control
+  proved that); the SHADOW-SCOPED stylesheet D-7 sealed is what's inert, a placement defect, not an
+  engine-support gap. That opens a third, cheaper option the kickoff's own text never names:
+  relocate the rule to a document-level stylesheet and re-measure BEFORE pricing any dependency.
+  Flagged explicitly rather than silently substituted — this task's own investigation extended past
+  the kickoff's literal binary because the kickoff itself, re-checked against 6.1's landed finding,
+  turned out not to have named the cheapest branch.
+  **A SECOND LOAD-BEARING FACT THE KICKOFF DIDN'T CARRY FORWARD, FOUND BEFORE ANY FILE MOVED:**
+  `htmlExport.ts`'s `extractPageBlocks()` (added at 6.1, as a necessary ripple of putting `@page`
+  into `READER_CSS` at all) already depends on `@page` staying inside `readerCss.ts`'s
+  `READER_CSS` — it pulls that exact block, verbatim, into every standalone HTML export /
+  Copy-as-HTML document (tasks 3.1/3.3's own already-shipped feature). An exported/copied HTML file
+  is a plain top-level document (no shadow root) once serialized, so that copy is ALSO
+  document-level and, per 6.1's own finding, SHOULD ALSO render correctly — an entirely separate,
+  independent consumer of the identical block, on a surface neither 6.1 nor the 7.1 kickoff's own
+  Q1-Q4 ever mention. **The kickoff's own Q2 guidance — "prefer MOVE `@page` to `appShell.ts`,
+  unless the READER_CSS copy earns its place; it doesn't render anywhere, flag as removable if
+  MOVE" — was built on a premise that is FALSE for this second consumer.** MOVE-ing `@page` out of
+  `READER_CSS` would have silently regressed HTML export/copy's own print fidelity, as an
+  unintended side effect of fixing an unrelated surface — exactly the kind of necessary-ripple
+  defect AGENTS.md's workflow rules exist to catch before drafting, not after. Surfaced to the user
+  directly (via a clarifying question, not a silent judgment call) before any code changed.
+  **THE RULING (user-confirmed): COPY, not MOVE.** `appShell.ts`'s `APP_CSS` gains its own COPY of
+  the identical `@page` block — a real document-level, light-DOM stylesheet, the one place in the
+  app-page bundle `exportPdf()`'s `window.print()` can actually reach a page box from.
+  `readerCss.ts`'s own copy is left untouched — it keeps feeding `extractPageBlocks()` for the
+  export/copy pipeline. Two copies, two independent, cross-referenced consumers (each file's own
+  comment points at the other) — a second literal, not a shared exported constant, matching this
+  codebase's own established convention for cross-module CSS values (`appShell.ts`'s
+  `LIGHT_TOKENS`/`DARK_TOKENS` are likewise a local re-authored copy, never imported from
+  `readerCss.ts`, despite carrying the same design-token values).
+  **THE RELOCATION PROBE, MEASURED (real engine, both Chromium and Firefox, extending 6.1's own
+  `printMode.browser.test.ts` — its `emulatePrintMedia`/`printToPdfAndExtractText` commands and its
+  `findPageRules` helper, generalized from `ShadowRoot` to `ParentNode` so the SAME function reads
+  either copy without change):**
+  - CSSOM-parse, the NEW document-level copy: Chromium retains both nested `@top-center`/
+    `@bottom-center` at-rules verbatim, same as the shadow-scoped copy. Firefox's CSSOM STILL drops
+    them at parse time, UNCHANGED by placement — confirming relocation does not touch a parser-level
+    property, only Chromium's render-level shadow-scoping defect.
+  - Render signal, Chromium, on the REAL `exportPdf()`-driven app-page surface (6.1's own test,
+    re-run with its final assertions flipped `false`→`true` once the copy landed, and its comments
+    updated to state both the still-true 6.1 finding and the new 7.1 finding together):
+    `printToPdfAndExtractText` now finds "Peekover" and "Page X of Y" on EVERY page of a genuinely
+    multi-page fixture. **Chromium/app-page: FIXED, zero new dependency.**
+  **★ STOP-AND-FLAGGED, PER THE KICKOFF'S OWN EXPLICIT INSTRUCTION NOT TO SILENTLY RULE THE
+  ASYMMETRY — options for a human ruling, not decided here:**
+  - **(i) Ship Chromium/app-page margin boxes now; state Firefox and the content-script surface as
+    known, deferred gaps; net-zero dependency.** Cheapest. Consistent with export already being
+    app-page-only by design (§3.2) — the content-script surface never had an "Export as PDF"
+    affordance to begin with, only its OWN native Ctrl+P story is at stake there, unaffected by
+    today's change either way.
+  - **(ii) Additionally build a document-level `<style>` injection on the content-script surface**
+    (the entrypoint currently has none — confirmed: it mounts `<peekover-root>` directly onto the
+    raw page, every reader style shadow-scoped, only the transient `HIDE_CSS` is light-DOM) so
+    native Ctrl+P on THAT surface also gets margin boxes on Chromium. More machinery, more bytes, on
+    a surface D-2 has kept byte-frozen all milestone — net-new scope this task did NOT build, scoped
+    only. Firefox stays gapped regardless.
+  - **(iii) Price a PDF-generation dependency (§7.1's own originally-named fallback) for full
+    cross-engine, cross-surface parity.** The only option that closes Firefox's gap. A genuine
+    THIRD dependency this milestone did not budget two for (plan risk 4) — would need D-1's own
+    measurement/ablation discipline applied at the commit that adds it, exactly as §7.1's sealed
+    text describes, if ever chosen.
+  **Verdict input, not a ruling: evidence favors (i).** Cheapest; consistent with export's existing
+  app-page confinement; Firefox's own gap is a parser property none of the three options change, so
+  it is not really "(ii) vs (iii)" trading Firefox parity — only (iii) buys that, at a real
+  dependency cost, for a printed-page-numbers nicety.
+  **BYTES, MEASURED BOTH ENGINES, WITH A REAL MISTAKE CAUGHT BEFORE IT SHIPPED:** first attempt
+  wrote the relocation's full rationale as a CSS comment INSIDE `appShell.ts`'s `APP_CSS` template
+  literal — the exact trap that file's own doc comment already names from a prior task (+1.5 KB,
+  previously paid and fixed) — measured at app chunk +1,333 B. Caught before commit, fixed by
+  moving the long-form rationale into the `.ts`-level doc comment already sitting above `APP_CSS`
+  and shrinking the in-CSS comment to a short pointer; re-measured at the REAL cost, **app chunk
+  486,409 → 486,813 B (+404 B)**. Content-script: **UNCHANGED, 336,042 B, both engines, md5
+  IDENTICAL to 6.1's landed state** — confirms COPY, not MOVE: `readerCss.ts` carries only a
+  `.ts`-level comment after `READER_CSS`'s closing backtick, outside the string, shipping nothing.
+  `.output` **4,879,159 B (Cr)**, **~355.20 KiB headroom** (was ~355.59 KiB at 6.1). Manifests
+  **654 / 770 B** unchanged, `permissions: []`. `dependencies` (production) **unchanged at 6** —
+  the milestone closes this task having added ZERO new production dependencies.
+  **Revisit-when:** the human ruling on (i)/(ii)/(iii) above; or if a future Firefox release starts
+  retaining the nested at-rules (both CSSOM-parse tests are deliberately engine-sniffed so that
+  changes turn them red, not stale-green).
+
 - **2026-09-03 · M10 D-7 / D-10 (print-half) / Ruling 4 (task 6.1) — F5 print mode lands, and the
   @page margin-box fidelity PROBE's result is INADEQUATE on both engines, for a sharper reason than
   "no browser support": the mechanism D-7 sealed (a shadow-scoped stylesheet) cannot deliver

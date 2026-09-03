@@ -313,19 +313,19 @@ describe('the export panel — Copy as HTML row goes live at this task, the othe
     expect(plain).toContain('Body of alpha.md.');
   });
 
-  it('only pdf stays disabled — this task touches one row', async () => {
+  it('pdf: disabled at this task (3.3), re-confirmed live as of task 7.1', async () => {
     // ★ RIPPLE, task 3.4: copy-plain-text went live one task later than this file, which invalidated
     // this assertion's row set (it originally named copy-plain-text among the still-disabled rows).
-    // Fixed in place then; ★ RIPPLE AGAIN, task 4.1: copy-rich-text also went live, leaving only pdf
-    // — this test's own intent (rows with no task landed yet stay inert) is unchanged, only the
-    // concrete row set is current. copy-rich-text's own liveness is proven in
-    // `copyAsRichText.browser.test.ts`, not here.
+    // Fixed in place then; ★ RIPPLE AGAIN, task 4.1: copy-rich-text also went live; ★ RIPPLE AGAIN,
+    // task 7.1: pdf itself went live, the row this test was written to prove stayed inert — a stale
+    // `true` here would misstate the panel's current behavior, so this now asserts the CURRENT
+    // state. pdf's own liveness proof is printMode.browser.test.ts's job, not this file's.
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
     for (const key of ['pdf']) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
-      expect(row.disabled, `row "${key}" should still be inert at task 3.3`).toBe(true);
+      expect(row.disabled, `row "${key}" should be live`).toBe(false);
     }
     // And the HTML-file row (3.2) stays live too — this task adds a row, it does not touch that one.
     expect(panel.querySelector<HTMLButtonElement>('[data-export="html"]')!.disabled).toBe(false);
