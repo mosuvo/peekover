@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-08-29 (task 3.3 landed — Copy-as-HTML, the clipboard exit, the panel's 2nd row wired live.)*
+*Updated: 2026-09-03 (task 3.4 landed — Copy-as-plain-text, the raw-source clipboard exit, the panel's 3rd row wired live.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,8 +10,58 @@
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 3.3 LANDED, 2026-08-29 — COPY-AS-HTML, THE CLIPBOARD EXIT. Next actionable task: 3.4
-(Copy-as-plain-text).**
+**★★★★★ M10 TASK 3.4 LANDED, 2026-09-03 — COPY-AS-PLAIN-TEXT, THE RAW-SOURCE CLIPBOARD EXIT. Next
+actionable task: 4.1 (Copy-as-rich-text).**
+**Q1 — the source-vs-screen consistency question, RESOLVED READ-FRESH, recorded as deliberate.**
+Nothing caches the raw source after render — `readerPane.ts`'s `select()` reads `file.read()` once
+and drops it — so `copyAsPlainText` reads `activeFile.read()` again at copy time. A file changed on
+disk mid-session (the watch feature, spec 005) COULD make that fresh read newer than the screen; §4's
+own text (*"copy the raw source text exactly as authored ... never re-derived from rendered DOM"*)
+settles that the FILE is the source of truth, not the screen — this is deliberate, not the "file A
+under file B's name" cross-feed class `readerPane.ts` guards against (that mixes two DIFFERENT
+documents; this only ever returns one document's own latest bytes). Full reasoning in `decisions.md`.
+**Q2 — the async handler shape, resolved without widening `RowSpec.onClick`.** `copyAsPlainText`
+is async internally (await the read, then the write); `ExportViewOptions.onCopyPlainText` and
+`appShell.ts`'s handler stay sync, matching `onCopyHtml`'s exact shape — the promise is discarded
+with `void`, and a rejection (read OR write) surfaces as a genuine unhandled-rejection error, never a
+false "copied" (AGENTS.md #5). This is the first row where a READ can fail, not just a WRITE.
+**Q3/Q4 — 008 D-10's clipboard pattern reproduced in a NEW sibling module.** `writeTextToClipboard`
+in `src/export/copyPlainText.ts` (not `htmlExport.ts` — that module's whole framing is D-3's
+clone-based serializer, and this control reads the raw source instead, never the clone). `writeText`,
+not `ClipboardItem` — permission-free, re-confirmed against the real panel click.
+**★ Raw-source-not-rendered proof, the mirror of 3.3's own Q2 proof.** `**bold**` copies as
+`**bold**`, never as "bold" — proving `copyAsPlainText` reads `source.read()`, never the rendered
+clone `copyAsHtml`'s fallback uses.
+**★ MEASURED, DURING VERIFY: Windows/Chromium's real OS clipboard normalizes `\n` to `\r\n` for plain
+text.** An engine/OS artifact (CF_UNICODETEXT's own convention), not a Peekover defect — the same
+KIND of finding 3.3's own probe made for `text/html`. The byte-identical-to-source claim (unicode,
+trailing whitespace, mixed CRLF/LF) is proven via a captured-`writeText` test that observes the
+string BEFORE the OS clipboard touches it; the real-clipboard panel test normalizes CRLF→LF on its
+read-back side only. Full record in `decisions.md`.
+**An unanticipated third ripple, found during Verify, not named in the kickoff.**
+`copyAsHtml.browser.test.ts`'s own "other 3 rows disabled" assertion (written at 3.3) named
+copy-plain-text among the still-inert rows; flipping that row live here would have made the assertion
+false. Fixed in place (now "the other 2 rows"), alongside the anticipated `exportPanel.browser
+.test.ts` trap-order ripple (enabled stops 3 → 4: close, html, copy-html, copy-plain-text).
+**Byte discipline — the delta, measured, decomposed, firing control fired.** App-page chunk moves
+**483,689 → 484,039 B (+350 B), identical on both engines**. Unlike 3.3, this is a genuinely NEW
+module landing (`copyPlainText.ts`, not new exports from an already-imported one) — firing control:
+`git stash`ing the whole diff and rebuilding Chrome returns the app chunk to exactly 483,689 B (a
+different content hash, confirming real content moved), content-script md5/size unchanged; `git
+stash pop` restored the tree exactly. `.output` **4,875,201 B (Cr) / 4,875,317 B (Fx)**, ~367.3 KiB
+(Cr) headroom remaining. Content-script md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-identical**,
+confirmed by a full rebuild of BOTH engines (Firefox rebuilt explicitly via `wxt build -b firefox`).
+Manifests **654 / 770 B**, `permissions: []`. `dependencies` unchanged at 6.
+**Suite.** Unit: **1053/1055** — the 2 failures are the standing `diagramEnhancer.test.ts`
+timing-flakiness carried item, confirmed pre-existing by an isolated re-run (58/58 green alone), not
+caused by this task. Full browser suite: **142 files / 1459 passed / 15 skipped, 0 failed**
+(140/1447/15 baseline + this task's new file, 6 tests × 2 engines = +12). Lint/typecheck clean.
+Golden diff empty.
+**Full reasoning, the byte decomposition, and D-4's own plain-text implementing entry**:
+`decisions.md`'s 2026-09-03 M10 D-4 (task 3.4) entry.
+
+*(Prior entry, kept for the record:)*
+**M10 TASK 3.3 LANDED, 2026-08-29 — COPY-AS-HTML, THE CLIPBOARD EXIT.**
 **Q1-verify — CONFIRMED (a): only the copy-html row changed.** `exportControls.ts` gained one field
 (`onCopyHtml`) and one `RowSpec.onClick`; no other row's shape moved. `htmlExport.ts` gained `copyAsHtml` +
 `plainTextOf`, both new exports, no existing export's signature changed.

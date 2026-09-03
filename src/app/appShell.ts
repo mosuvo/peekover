@@ -123,6 +123,7 @@ import {
 import { createStorageView } from './storageControls';
 import { createExportView } from './exportControls';
 import { exportHtml, copyAsHtml } from '../export/htmlExport';
+import { copyAsPlainText } from '../export/copyPlainText';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
 const SHELL_CLASS = 'peekover-app';
@@ -869,6 +870,17 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // copy-button precedent) is task 9.1's own milestone-wide scope, not this task's.
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
         if (host) void copyAsHtml(host);
+      },
+      onCopyPlainText: () => {
+        // No host/clone lookup — this reads the SOURCE, via `activeFile.read()` (task 3.4's own
+        // Q1), never the rendered clone `onCopyHtml`/`onExportHtml` work from. `exportToggle` is
+        // disabled whenever `activeFile` is null, so the guard below is defensive only (never
+        // reachable through the shipped UI, matching `basenameForExport`'s own fallback comment).
+        // Same discard-the-promise shape as `onCopyHtml`: `copyAsPlainText` is async internally
+        // (it awaits the read, then the write), but this callback stays sync and a rejection
+        // surfaces as a genuine unhandled-rejection error rather than a swallowed no-op
+        // (AGENTS.md #5 — no false success, covering the READ failure as well as the WRITE).
+        if (activeFile) void copyAsPlainText(activeFile);
       },
       onClose: () => toggleExport(),
     });

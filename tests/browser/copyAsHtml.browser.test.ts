@@ -313,11 +313,17 @@ describe('the export panel — Copy as HTML row goes live at this task, the othe
     expect(plain).toContain('Body of alpha.md.');
   });
 
-  it('the other 3 rows (copy-plain-text, copy-rich-text, pdf) stay disabled — this task touches one row', async () => {
+  it('the other 2 rows (copy-rich-text, pdf) stay disabled — this task touches one row', async () => {
+    // ★ RIPPLE, task 3.4: copy-plain-text went live one task later than this file, which invalidated
+    // this assertion's row set (it originally named copy-plain-text among the still-disabled rows).
+    // Fixed in place, mirroring the exact ripple 3.3 itself applied to `exportPanel.browser.test.ts`
+    // for the same reason — this test's own intent (rows with no task landed yet stay inert) is
+    // unchanged, only the concrete row set is current. copy-plain-text's own liveness is proven in
+    // `copyAsPlainText.browser.test.ts`, not here.
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
-    for (const key of ['copy-plain-text', 'copy-rich-text', 'pdf']) {
+    for (const key of ['copy-rich-text', 'pdf']) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
       expect(row.disabled, `row "${key}" should still be inert at task 3.3`).toBe(true);
     }

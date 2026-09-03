@@ -352,7 +352,7 @@ halves) — **ZIP export (3.5) STRUCK, 2026-08-29, M10 §3.1(cont.) — see belo
       re-applied per D-4's own text, not re-fetched a third time. Golden EMPTY · manifest green **654 / 770 B**
       · `permissions: []`. [D-3, D-4; §4 HTML export, copy actions]
 
-- [ ] **3.4 Copy-as-plain-text — `navigator.clipboard.writeText()`, the already-permission-free path (D-4).**
+- [x] **3.4 Copy-as-plain-text — `navigator.clipboard.writeText()`, the already-permission-free path (D-4).**
       Reuses 008 D-10's shipped mechanism verbatim, payload is the document's raw markdown source (§4: *"copy
       the raw source text exactly as authored"* — the retained-source-of-truth pattern 007 D-15/009 D-6 both
       establish, read directly, never re-derived from rendered DOM).

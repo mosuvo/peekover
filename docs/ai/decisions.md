@@ -1,6 +1,117 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-03 · M10 D-4 (task 3.4) — Copy-as-plain-text lands: `copyAsPlainText`/`writeTextToClipboard`
+  in a NEW sibling module (`src/export/copyPlainText.ts`, not `htmlExport.ts`), the panel's 3rd row
+  wired live, and a read-fresh-from-source policy is recorded as deliberate, not a consistency bug.**
+  D-4's plain-text half is this task's own first implementing commit (§3.4's own text: *"reuses 008
+  D-10's shipped mechanism verbatim"*; the HTML half landed at task 3.3). **`plan.md` §0's own D-4
+  text is NOT applied verbatim here** — that text is specific to the `ClipboardItem` `text/html` +
+  `text/plain` construction 3.3's `copyAsHtml` already used; 3.4's mechanism is a bare
+  `navigator.clipboard.writeText(text)`, a different call shape entirely, so this entry is written
+  fresh rather than forcing a mismatched citation.
+  **★ Q1 — THE SOURCE-VS-SCREEN CONSISTENCY QUESTION, RESOLVED READ-FRESH, RECORDED AS DELIBERATE.**
+  Confirmed against the real code first: `readerPane.ts`'s own `select()` awaits `file.read()` into a
+  local variable used once to build that call's `paint(...)` and drops it — no field on the pane, on
+  `appShell.ts`'s `activeFile`, or anywhere else retains the raw source after render. So
+  `copyAsPlainText` calls `source.read()` again, itself, at copy time. That reopens a question this
+  milestone's watch feature (spec 005) makes real: a file can change on disk while open, so a fresh
+  read at copy-time COULD return bytes newer than whatever the screen currently shows. This is NOT
+  the "file A's text under file B's name" cross-feed class `readerPane.ts`'s own `stopWatch()`
+  comment guards against (that mixes two DIFFERENT documents; this only ever returns one document's
+  own latest bytes). §4's own line settles which bytes are correct: *"copy the raw source text
+  exactly as authored ... read directly, never re-derived from rendered DOM."* The file is the
+  source of truth, not the screen — copying the freshest authored bytes honors "exactly as authored"
+  more faithfully than reproducing an earlier render, and reconstructing source from the clone is the
+  thing §4 forbids outright. §3.4's own body does not say otherwise; no mismatch to flag here.
+  **Q2 — the async handler shape, resolved WITHOUT widening `RowSpec.onClick`'s type.**
+  `copyAsPlainText(source): Promise<void>` is async internally (await the read, then the write); the
+  `ExportViewOptions.onCopyPlainText(): void` and `appShell.ts`'s own handler stay SYNC, matching
+  `onCopyHtml`'s exact shape — `if (activeFile) void copyAsPlainText(activeFile);` discards the
+  returned promise the same way `onCopyHtml` already discards `copyAsHtml`'s. A rejected READ never
+  reaches the write (the `await` inside `copyAsPlainText` short-circuits on throw); a rejected WRITE
+  is rethrown from that same function. Neither is swallowed — both surface as a genuine
+  unhandled-rejection error from the `void`-discarded call, never a false "copied" (AGENTS.md #5),
+  covering the READ failure as well as the WRITE for the first time in this panel (every earlier row
+  only had a WRITE that could fail). No `RowSpec.onClick` type change was needed.
+  **Q3 — 008 D-10's `tableTools.ts` `writeToClipboard` shape REPRODUCED, not imported.** That helper
+  is module-local to `tableTools.ts` and this is an independent call site (still under the
+  rule-of-three `exportControls.ts`'s own doc comment already applies to its focus trap — no shared
+  helper extracted). `writeTextToClipboard(text)` in the new module: try/catch around the
+  `navigator.clipboard` property read (undefined outside a secure context → reject) and the
+  `writeText` call itself (may throw before returning a promise → reject), both collapsing into one
+  rejection shape. `navigator.clipboard.writeText` needs no `clipboardWrite` manifest permission
+  (transient activation from the click; 007/008's already-verified finding, re-confirmed against the
+  real panel click below) — `writeText`, not `ClipboardItem`: plain text, one format.
+  **Q4 — a NEW SIBLING MODULE (`src/export/copyPlainText.ts`), not `htmlExport.ts`.** `htmlExport.ts`'s
+  whole framing is D-3's shared clone-based serializer — every export it carries takes a reader
+  `host` and works off the ALREADY-SANITIZED clone. `copyAsPlainText` reads a different thing
+  entirely (`MarkdownFile.read()`'s raw source, never the clone, never the DOM), so stretching
+  `htmlExport.ts`'s contract to cover a second, unrelated input shape was rejected in favor of a
+  small, separate module. The one exported type (`ReadableSource = { read(): Promise<string> }`) is
+  a LOCAL structural narrowing of `folderSource.ts`'s `MarkdownFile`, not an import of it — `src/app`
+  already depends on `src/export`, so importing `MarkdownFile` the other way would reverse that
+  layering; `activeFile` satisfies `ReadableSource` structurally with no adapter.
+  **Q5 — both carried items applied.** The panel-level real-clipboard test matches THIS fixture's own
+  expected content (never mere non-emptiness) in its poll, avoiding the shared-real-OS-clipboard race
+  3.3 hit. `tests/browser/exportPanel.browser.test.ts`'s trap-order assertions (Tab-from-last-stop /
+  Shift-Tab-from-first-stop, now `close, html, copy-html, copy-plain-text`) and its disabled-rows
+  list were updated in place, 3.2's own test intent unchanged.
+  **★ AN UNANTICIPATED THIRD RIPPLE, FOUND DURING VERIFY, NOT NAMED IN THE KICKOFF.**
+  `copyAsHtml.browser.test.ts`'s OWN "other 3 rows stay disabled" assertion (written at task 3.3)
+  named `copy-plain-text` among the still-inert rows — flipping that row live at 3.4 would have left
+  this assertion asserting a now-false thing (`row.disabled` toBe `true`) had it not been caught.
+  Fixed in place (now "the other 2 rows"), the same necessary-ripple shape as `exportPanel.browser
+  .test.ts`'s own ripple, tied to this task's own row-liveness change — confirmed via a targeted grep
+  for every remaining `copy-plain-text` reference in the tree before considering Verify complete.
+  **★ RAW-SOURCE-NOT-RENDERED PROOF, the mirror of 3.3's own Q2 proof.** A fixture whose source
+  visibly differs from its render (`**bold**` → "bold") is copied via a captured `writeText` stub:
+  the captured payload equals the fixture's SOURCE exactly, contains `**bold**`, and is asserted
+  `not.toBe` the mounted clone's own `textContent` — proving `copyAsPlainText` reads `source.read()`,
+  never the clone, the exact opposite of `copyAsHtml`'s `plainTextOf(clone)`.
+  **★ BYTE-IDENTICAL TO SOURCE, hostile fixture (unicode, trailing whitespace, mixed CRLF/LF),
+  proven via the captured-write direct-call test** — this is the code-level claim, and it is exact:
+  the string handed to `clipboard.writeText` is asserted `toBe` the fixture, character-for-character,
+  length-for-length.
+  **★ MEASURED, DURING VERIFY: THE REAL OS CLIPBOARD ON WINDOWS/CHROMIUM NORMALIZES `\n` TO `\r\n`
+  FOR PLAIN TEXT — an OS/engine artifact, not a Peekover defect, the same KIND of finding 3.3's own
+  probe made for `text/html`.** The panel-level real-clipboard test first asserted the round-tripped
+  `readText()` result `toBe` the LF-only fixture verbatim and reproducibly failed on Chromium (passed
+  on Firefox) with `\r\n` where `\n` was written — CF_UNICODETEXT's own Windows convention, applied
+  by the OS clipboard itself between `writeText` and `readText`, outside any code this task owns.
+  Confirmed NOT a `copyAsPlainText` defect: the captured-write tests (which observe the string BEFORE
+  the OS clipboard normalizes it) show the exact, unmodified fixture reaching `writeText`. Fixed by
+  normalizing CRLF→LF on the READ-BACK side of the real-clipboard comparison only — the
+  byte-identical-to-source claim itself stays proven by the captured-write test, untouched by this
+  fix; the real-clipboard test's own job (row is live, permission-free, writes THIS fixture's
+  content) is unaffected by the normalization.
+  **Byte discipline — the delta, measured, decomposed, firing control fired.** App-page chunk moves
+  **483,689 → 484,039 B (+350 B), identical on both engines** (`app-G-PkoaEJ.js`, byte-identical hash
+  on both builds). Unlike 3.3 (new exports from an ALREADY-imported module), this is a genuinely NEW
+  module landing in the graph (`copyPlainText.ts`) — attributed entirely to this task's own new logic
+  (`ReadableSource` is type-only, erased; `writeTextToClipboard` + `copyAsPlainText`'s real bodies)
+  plus the one-row wiring (`ExportViewOptions.onCopyPlainText`, one `RowSpec.onClick`, `appShell.ts`'s
+  handler). **Firing control**: `git stash` the entire diff and rebuild Chrome — the app chunk
+  returns to exactly **483,689 B** (`app-D2wfVcUY.js`, a different content hash, confirming real
+  content moved) and the content-script md5/size are unchanged at baseline; `git stash pop` restores
+  the working tree exactly, confirmed via `git status`. `.output` **4,875,201 B (Cr) / 4,875,317 B
+  (Fx)**, same +350 B delta both engines, ~367.3 KiB (Cr) headroom remaining, robustly under the 5
+  MiB ceiling. Content-script md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-identical to
+  baseline**, confirmed by a full rebuild of BOTH engines (not a stale directory — Firefox rebuilt
+  explicitly via `wxt build -b firefox`, the standing memory-of-record pitfall). Manifests **654 /
+  770 B**, `permissions: []` — `writeText` needs no `clipboardWrite` permission (transient
+  activation, re-confirmed against the real panel click). `dependencies` unchanged at 6.
+  **Suite.** Unit: **1053/1055** — the 2 failures are the standing `diagramEnhancer.test.ts`
+  timing-flakiness carried item, confirmed pre-existing by an isolated re-run (58/58 green alone),
+  not caused by this task (which touches neither file). Full browser suite: **142 files / 1459
+  passed / 15 skipped, 0 failed** (140/1447/15 baseline + this task's new file, 6 tests × 2 engines =
+  +12; the 2 ripple files' own test counts unchanged, only assertions/row-sets updated in place).
+  Lint/typecheck clean. Golden diff empty.
+  **Revisit-when:** the Windows/Chromium CRLF-normalization finding above is worth re-checking if a
+  future task needs an EXACT (not newline-normalized) real-clipboard round trip on this platform —
+  none does today. Task 9.1 owns the completion/failure UI this task named but did not build (same
+  standing note as 3.3's own entry).
+
 - **2026-08-29 · M10 D-4 (task 3.3) — Copy-as-HTML lands: `copyAsHtml`/`plainTextOf` in `htmlExport.ts`, the
   panel's 2nd row wired live, and the same-artifact cross-sink check uses a captured `ClipboardItem` rather
   than a real OS clipboard round trip — a MEASURED finding, not a design preference.** D-4's HTML half is

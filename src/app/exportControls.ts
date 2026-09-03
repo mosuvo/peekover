@@ -12,13 +12,14 @@
 // task 5.1, §3.10 gate) and the ZIP bundle (struck at task 3.5, §3.1(cont.) gate) are gone, and
 // the 2 publish rows (Gist, Medium/Dev.to) were never in scope (D-10). Task 3.2 built all 5
 // surviving rows as real buttons and wired exactly ONE live: HTML export (`exportHtml`, task 3.1).
-// Task 3.3 flips a second: Copy-as-HTML (`copyAsHtml`, task 3.3). Each remaining row's own task
-// (3.4, 4.1, 6.1/7.1) touches `exportControls.ts` again to flip ITS row from inert to live — this
-// is the INTENTIONAL day-one shape (task 3.2's own decision, `decisions.md`): the panel shows its
-// whole feature set from day one, discoverable, never a surprise row appearing later; `disabled` is
-// the honest "exists, not ready yet" signal, matching `__cta`/`__pin`'s own disabled-not-hidden
-// precedent. The remaining 3 (Copy-as-plain-text, Copy-as-rich-text, PDF) still render as real,
-// accessibly-named buttons that are `disabled`, inert until their own task supplies a click handler.
+// Task 3.3 flips a second: Copy-as-HTML (`copyAsHtml`, task 3.3). Task 3.4 flips a third:
+// Copy-as-plain-text (`copyAsPlainText`, task 3.4). Each remaining row's own task (4.1, 6.1/7.1)
+// touches `exportControls.ts` again to flip ITS row from inert to live — this is the INTENTIONAL
+// day-one shape (task 3.2's own decision, `decisions.md`): the panel shows its whole feature set
+// from day one, discoverable, never a surprise row appearing later; `disabled` is the honest
+// "exists, not ready yet" signal, matching `__cta`/`__pin`'s own disabled-not-hidden precedent. The
+// remaining 2 (Copy-as-rich-text, PDF) still render as real, accessibly-named buttons that are
+// `disabled`, inert until their own task supplies a click handler.
 
 export interface ExportViewOptions {
   /** Trigger the real HTML file-download export (task 3.1's `exportHtml`) — wired here since no
@@ -27,6 +28,13 @@ export interface ExportViewOptions {
   /** Trigger the clipboard copy-as-HTML export (task 3.3's `copyAsHtml`) — SAME artifact as
    *  `onExportHtml`, a different sink. */
   onCopyHtml(): void;
+  /** Trigger the clipboard copy-as-plain-text export (task 3.4's `copyAsPlainText`) — the raw
+   *  authored source, not the clone `onCopyHtml` works from. Sync signature matching `onCopyHtml`'s
+   *  own shape deliberately: the async read+write happens INSIDE `copyAsPlainText` itself, and the
+   *  caller (`appShell.ts`) discards the returned promise the same way it already does for
+   *  `onCopyHtml` — a rejection surfaces as a genuine unhandled-rejection error, never a silent
+   *  no-op (AGENTS.md #5). */
+  onCopyPlainText(): void;
   /** Dismiss the panel. Called by the close button AND by the trap's own Escape handler — one
    *  close path, not two (appShell owns what "closed" means: emptying the slot + the focus
    *  restore, per Ruling 2). */
@@ -170,6 +178,7 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
       title: 'Copy as plain text',
       subtext: 'The raw markdown source, exactly as authored',
       actionLabel: 'Copy as plain text',
+      onClick: opts.onCopyPlainText,
     },
     {
       key: 'copy-rich-text',
