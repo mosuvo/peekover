@@ -13,13 +13,13 @@
 // the 2 publish rows (Gist, Medium/Dev.to) were never in scope (D-10). Task 3.2 built all 5
 // surviving rows as real buttons and wired exactly ONE live: HTML export (`exportHtml`, task 3.1).
 // Task 3.3 flips a second: Copy-as-HTML (`copyAsHtml`, task 3.3). Task 3.4 flips a third:
-// Copy-as-plain-text (`copyAsPlainText`, task 3.4). Each remaining row's own task (4.1, 6.1/7.1)
-// touches `exportControls.ts` again to flip ITS row from inert to live — this is the INTENTIONAL
-// day-one shape (task 3.2's own decision, `decisions.md`): the panel shows its whole feature set
-// from day one, discoverable, never a surprise row appearing later; `disabled` is the honest
-// "exists, not ready yet" signal, matching `__cta`/`__pin`'s own disabled-not-hidden precedent. The
-// remaining 2 (Copy-as-rich-text, PDF) still render as real, accessibly-named buttons that are
-// `disabled`, inert until their own task supplies a click handler.
+// Copy-as-plain-text (`copyAsPlainText`, task 3.4). Task 4.1 flips a fourth: Copy-as-rich-text
+// (`copyAsRichText`, task 4.1) — this is the INTENTIONAL day-one shape (task 3.2's own decision,
+// `decisions.md`): the panel shows its whole feature set from day one, discoverable, never a
+// surprise row appearing later; `disabled` is the honest "exists, not ready yet" signal, matching
+// `__cta`/`__pin`'s own disabled-not-hidden precedent. Only PDF (tasks 6.1/7.1) still renders as a
+// real, accessibly-named button that is `disabled`, inert until its own task supplies a handler —
+// the last row left.
 
 export interface ExportViewOptions {
   /** Trigger the real HTML file-download export (task 3.1's `exportHtml`) — wired here since no
@@ -35,6 +35,11 @@ export interface ExportViewOptions {
    *  `onCopyHtml` — a rejection surfaces as a genuine unhandled-rejection error, never a silent
    *  no-op (AGENTS.md #5). */
   onCopyPlainText(): void;
+  /** Trigger the clipboard copy-as-rich-text export (task 4.1's `copyAsRichText`) — the clone's
+   *  semantic markup alone, no bundled `<style>` block, so a paste target's own styling applies.
+   *  Sync signature matching `onCopyHtml`/`onCopyPlainText`'s own shape — the async write happens
+   *  INSIDE `copyAsRichText`, and the caller discards the returned promise the same way. */
+  onCopyRichText(): void;
   /** Dismiss the panel. Called by the close button AND by the trap's own Escape handler — one
    *  close path, not two (appShell owns what "closed" means: emptying the slot + the focus
    *  restore, per Ruling 2). */
@@ -186,6 +191,7 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
       title: 'Copy as rich text',
       subtext: 'Paste straight into Google Docs or Word',
       actionLabel: 'Copy as rich text',
+      onClick: opts.onCopyRichText,
     },
     {
       key: 'pdf',

@@ -122,7 +122,7 @@ import {
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
 import { createExportView } from './exportControls';
-import { exportHtml, copyAsHtml } from '../export/htmlExport';
+import { exportHtml, copyAsHtml, copyAsRichText } from '../export/htmlExport';
 import { copyAsPlainText } from '../export/copyPlainText';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
@@ -881,6 +881,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // surfaces as a genuine unhandled-rejection error rather than a swallowed no-op
         // (AGENTS.md #5 — no false success, covering the READ failure as well as the WRITE).
         if (activeFile) void copyAsPlainText(activeFile);
+      },
+      onCopyRichText: () => {
+        // Same host-lookup, same non-render-state no-op as onCopyHtml above — `copyAsRichText`
+        // works off the CLONE (task 4.1's own Q4), never `activeFile.read()`. Same discard-the-
+        // promise / never-caught shape as every other copy row here: a rejection surfaces as a
+        // genuine unhandled-rejection error, never a false "copied" (AGENTS.md #5).
+        const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+        if (host) void copyAsRichText(host);
       },
       onClose: () => toggleExport(),
     });

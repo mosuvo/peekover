@@ -381,3 +381,37 @@ export async function copyAsHtml(host: HTMLElement): Promise<void> {
     }),
   ]);
 }
+
+/**
+ * Copy-as-rich-text — the clipboard exit for pasting into Google Docs / Word (task 4.1). A
+ * DIFFERENT payload from `copyAsHtml`'s, and the difference is load-bearing (D-4; tasks.md §4.1):
+ * the clone's SEMANTIC MARKUP ALONE — `clone.outerHTML`, no `wrapInStandaloneDocument` call, so no
+ * doctype, no `<head>`, no bundled `<style>` block, no reader-theme colors baked onto a `<body>`.
+ * The paste target's OWN default styling applies instead of the reader's light/dark/sepia theme —
+ * exactly the row's own subtext ("Paste straight into Google Docs or Word") and spec §3.2's persona
+ * line ("without carrying the reader's own styling along with it"). This is engine-independent:
+ * Peekover writes the identical fragment string on both Chromium and Firefox; what either engine's
+ * OS clipboard does with `text/html` AFTER that (3.3's own probe found Chromium re-serializes any
+ * written `text/html` into a `getComputedStyle`-inlined fragment on paste, Firefox reformats
+ * differently) is a paste-target-dependent transform outside this function's own bytes, the same
+ * way any paste into any external app is target-dependent — not a Peekover cross-engine asymmetry.
+ *
+ * Reuses `serializeReaderDocument`'s clone and `plainTextOf`'s fallback derivation verbatim — SAME
+ * clone, SAME `text/plain` shape `copyAsHtml` already uses; only the `text/html` payload differs.
+ * `wrapInStandaloneDocument` is deliberately never called here — calling it would make this payload
+ * byte-identical to `copyAsHtml`'s, collapsing 4.1 into 3.3.
+ *
+ * Same honest-failure shape as `copyAsHtml`: a rejected write is rethrown, never swallowed
+ * (AGENTS.md #5) — the caller (`appShell.ts`) surfaces the failure.
+ *
+ * @param host The shadow-root-owning reader host to copy.
+ */
+export async function copyAsRichText(host: HTMLElement): Promise<void> {
+  const { clone } = serializeReaderDocument(host);
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      'text/html': new Blob([clone.outerHTML], { type: 'text/html' }),
+      'text/plain': new Blob([plainTextOf(clone)], { type: 'text/plain' }),
+    }),
+  ]);
+}

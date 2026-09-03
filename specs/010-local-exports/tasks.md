@@ -402,7 +402,7 @@ panel that hosts them. ~~ZIP~~ **struck, M10 §3.1(cont.) — no ZIP-export crit
 
 ## 4 — Copy-as-rich-text (D-4's ClipboardItem construction, confirmed against current docs at task time)
 
-- [ ] **4.1 Copy-as-rich-text — a DIFFERENT payload from 3.3's Copy-as-HTML, and the difference is load-bearing
+- [x] **4.1 Copy-as-rich-text — a DIFFERENT payload from 3.3's Copy-as-HTML, and the difference is load-bearing
       (D-4).** Spec §3.2's own persona line is explicit: pastes cleanly into Google Docs/Word *"without carrying
       the reader's own styling along with it"* — unlike 3.3, which deliberately DOES carry the full bundled
       stylesheet (spec §4: *"the SAME standalone HTML §4's HTML-export criteria describe"*). So this task's

@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-03 (task 3.4 landed — Copy-as-plain-text, the raw-source clipboard exit, the panel's 3rd row wired live.)*
+*Updated: 2026-09-03 (task 4.1 landed — Copy-as-rich-text, the panel's 4th and LAST copy row wired live; only PDF stays disabled.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,8 +10,70 @@
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 3.4 LANDED, 2026-09-03 — COPY-AS-PLAIN-TEXT, THE RAW-SOURCE CLIPBOARD EXIT. Next
-actionable task: 4.1 (Copy-as-rich-text).**
+**★★★★★ M10 TASK 4.1 LANDED, 2026-09-03 — COPY-AS-RICH-TEXT, THE PANEL'S 4TH AND LAST COPY ROW WIRED
+LIVE. Only PDF (tasks 6.1/7.1) still renders disabled. Next actionable task: 6.1 (F5 print mode).**
+**Q1 — the 4.1-vs-3.3 byte-level difference.** `copyAsHtml` (3.3) wraps the clone into a full
+standalone document (doctype + `<head><style>…</style></head>` + `<body>`, baking the reader's OWN
+theme colors). `copyAsRichText` (4.1) is `clone.outerHTML` directly — no wrap, no doctype, no
+`<style>`, no baked theme — so a paste target's own default styling applies (Google Docs/Word).
+Deliberately never calls `wrapInStandaloneDocument`, which would collapse 4.1 into 3.3. Proven with a
+firing control: `copyAsHtml`'s own payload is asserted to CONTAIN the doctype/style markers first
+(proving the "absent" checks on `copyAsRichText`'s payload are capable of failing), then the two
+payloads (same host) are asserted structurally distinct and `not.toBe` each other.
+**Q1(b) — "no reader-theme-derived inline colors," checked against the real pipeline.** Grepped
+`src/` first: the only inline `.style.color`/`.style.backgroundColor` anywhere in the render
+pipeline is Shiki's syntax-highlight token coloring (`codeEnhancer.ts`), and `codeThemeControl.ts`'s
+own doc comment confirms that's an INDEPENDENT setting from the reader's `data-theme` — so Shiki
+colors are content-derived, not reader-theme-derived, and correctly ride along in the rich-text
+payload. No reader-theme color is ever inline on the clone (theme colors are CSS rules, shipped only
+via the `<style>` block 4.1's payload never carries), so simply omitting the wrap satisfies the
+clause with no stripping logic needed — proven structurally: the SAME fixture copied under light/
+dark/sepia produces byte-identical `text/html`.
+**Q2 — engine parity: self-produced, not OS-transform-reliant.** 3.3's own probe measured that the
+REAL OS clipboard's native `text/html` format reformats DIFFERENTLY per engine ON PASTE (Chromium
+inlines computed styles into a fragment; Firefox reformats whitespace). That transform is outside
+code this task owns — `copyAsRichText` itself writes the IDENTICAL fragment string on both engines
+(Cr+Fx real-engine suite, plus the theme-invariance test which would also catch an engine-specific
+leak). Whatever a paste TARGET later does with that fragment is inherently target-dependent, not a
+Peekover cross-engine asymmetry — a conscious call, not a silent gap.
+**Q3/Q4 — `ClipboardItem`, `plainTextOf` reused verbatim, in `htmlExport.ts` (no new module).** Same
+multi-format construction 3.3 already uses, re-confirmed against current Clipboard API docs per
+AGENTS.md's standing rule (unchanged shape). `plainTextOf(clone)` — module-private, 3.3's own
+fallback derivation — called directly, no new lines. Lives in `htmlExport.ts` beside `copyAsHtml`
+(works off the CLONE, like 3.3, unlike 3.4's raw-source read) — no sibling module needed.
+**The `file://` secure-context residual (008 D-10), re-checked and confirmed N/A.** Every export
+control, this one included, runs ONLY from the app page's `chrome-extension:`/`moz-extension:`
+origin — always secure, the SAME origin 3.3/3.4 already write from successfully. The payload's shape
+(fragment vs standalone document) doesn't change which origin the call executes from, so 008 D-10's
+`file://`-specific hedge doesn't transfer; no dedicated test needed, the same call 3.3/3.4 made.
+**Q5 — the disabled-row ripple, decided (a): ripple in place, not consolidated.** Three sibling files
+(`copyAsHtml.browser.test.ts`, `copyAsPlainText.browser.test.ts`, `exportPanel.browser.test.ts`)
+carried a hardcoded "these rows stay disabled" assertion naming `copy-rich-text`; all three fixed in
+place to name only `pdf`, plus `exportPanel.browser.test.ts`'s own Tab-wrap trap-order tests (the
+LAST enabled stop moves to `copy-rich-text`). Chose ripple-in-place over consolidating into one
+shared assertion because the churn nearly ends here — only PDF (6.1/7.1) is left to flip. Grepped the
+tree afterward for every stale reference; none remained.
+**A real-clipboard collision, caught before it could flake.** The panel-level real-clipboard test's
+first draft polled on a bare `'alpha.md'` substring — every sibling fixture in this suite ALSO names
+its file `alpha.md`, so the poll could resolve on a PRIOR file's leftover clipboard content.
+Reproduced once, fixed by giving the fixture a distinctive marker ("exported richly") no sibling
+carries, matching 3.3's own predicted race class.
+**Byte discipline — the delta, measured, decomposed, firing control fired.** App-page chunk moves
+**484,039 → 484,357 B (+318 B), identical on both engines** (`app-CuX2Qhtj.js`, byte-identical hash
+Cr+Fx — like 3.3, this is new EXPORTS from an already-imported module, not a new module landing).
+Firing control: `git stash -u` the diff, rebuild Chrome — app chunk returns to exactly **484,039 B**
+(`app-G-PkoaEJ.js`, the SAME hash 3.4's own entry recorded), content-script md5 unchanged; `git stash
+pop` restored the tree exactly. `.output` **4,875,519 B (Cr) / 4,875,635 B (Fx)**, ~358.75 KiB (Cr)
+headroom remaining. Content-script md5 **`41e7607a…` (Cr) / `69338e67…` (Fx) — byte-identical**,
+confirmed by a full rebuild of BOTH engines. Manifests **654 / 770 B**, `permissions: []`.
+`dependencies` unchanged at 6.
+**Suite.** Unit: **1055/1055** clean; a first run hit the standing `diagramEnhancer.test.ts`
+timing-flakiness carried item, confirmed pre-existing by isolated re-run (58/58 green alone). Full
+browser suite: **144 files / 1475 passed / 15 skipped, 0 failed** (142/1459/15 baseline + this task's
+new 8-test file × 2 engines = +2 files / +16 passed). Lint/typecheck clean. Golden diff empty.
+Full record in `decisions.md`.
+
+**★★★★★ (PRIOR) M10 TASK 3.4 LANDED, 2026-09-03 — COPY-AS-PLAIN-TEXT, THE RAW-SOURCE CLIPBOARD EXIT.**
 **Q1 — the source-vs-screen consistency question, RESOLVED READ-FRESH, recorded as deliberate.**
 Nothing caches the raw source after render — `readerPane.ts`'s `select()` reads `file.read()` once
 and drops it — so `copyAsPlainText` reads `activeFile.read()` again at copy time. A file changed on
