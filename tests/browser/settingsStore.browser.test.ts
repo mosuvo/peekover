@@ -132,6 +132,20 @@ describe('settings round-trip + merge (real engine)', () => {
     expect(s.codeTheme).toBe('vitesse-black');
     expect(s.theme).toBe('dark');
   });
+
+  it('putSettings({lastExportFormat}) writes, getSettings reads it back — the D-6 hand-enumeration trap task 8.2 filed and closed in the same task', async () => {
+    // Red-first, same class as the codeTheme test above: before store.ts's getSettings() extended
+    // its hand-enumeration to include lastExportFormat, this would write fine but read back
+    // DEFAULT_SETTINGS.lastExportFormat (null) regardless — the exact signature this pins.
+    await putSettings({ lastExportFormat: 'pdf' });
+    expect(await getSettings()).toMatchObject({ lastExportFormat: 'pdf' });
+
+    // Merges onto the row like every other field — a second patch untouched by it survives.
+    await putSettings({ theme: 'dark' });
+    const s = await getSettings();
+    expect(s.lastExportFormat).toBe('pdf');
+    expect(s.theme).toBe('dark');
+  });
 });
 
 describe('settings store — additive upgrade (real engine; jsdom-blind)', () => {
@@ -166,6 +180,7 @@ describe('settings store — additive upgrade (real engine; jsdom-blind)', () =>
       tocOpen: true,
       tocWidth: 321,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
 
     // Assert the on-disk schema directly: the store's declared version, all four pre-existing
@@ -202,6 +217,7 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
       tocOpen: true,
       tocWidth: 300,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
     expect(before.total).toBe(2); // 1 folder + the settings row
     const beforeText = before.lines.join(' ');
@@ -233,13 +249,15 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
 // of this is jsdom-blind (IndexedDB + the real read/write path), so it is proven here, non-vacuously.
 
 describe('capture flag — its own settings row, getSettings untouched (D-12, task 1.5, real engine)', () => {
-  it('defaults ON with no row; round-trips false/true; and getSettings stays exactly {theme,tocOpen,tocWidth,codeTheme}', async () => {
+  it('defaults ON with no row; round-trips false/true; and getSettings stays exactly {theme,tocOpen,tocWidth,codeTheme,lastExportFormat}', async () => {
     // Piece 1 DEFAULT — a fresh store has no 'capture' row, so read-with-default returns on.
     expect(await getCaptureEnabled()).toBe(true);
 
-    // ★ Piece 2 SHAPE INVARIANT — with NO reader row, getSettings returns exactly the four fields.
+    // ★ Piece 2 SHAPE INVARIANT — with NO reader row, getSettings returns exactly the five fields
+    // (task 8.2 grew this from four to five — D-6's own field).
     expect(Object.keys(await getSettings()).sort()).toEqual([
       'codeTheme',
+      'lastExportFormat',
       'theme',
       'tocOpen',
       'tocWidth',
@@ -251,10 +269,11 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
     expect(await getCaptureEnabled()).toBe(false);
 
     // ★ Piece 2 (the load-bearing half): a stored 'capture' row does NOT bleed into getSettings —
-    // its shape is still exactly the four fields, whether or not a 'reader' row also exists. A
+    // its shape is still exactly the five fields, whether or not a 'reader' row also exists. A
     // second shared-record field bleeding across rows would redden this.
     expect(Object.keys(await getSettings()).sort()).toEqual([
       'codeTheme',
+      'lastExportFormat',
       'theme',
       'tocOpen',
       'tocWidth',
@@ -262,6 +281,7 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
     await putSettings({ theme: 'dark' }); // now BOTH rows exist in the settings store…
     expect(Object.keys(await getSettings()).sort()).toEqual([
       'codeTheme',
+      'lastExportFormat',
       'theme',
       'tocOpen',
       'tocWidth',
@@ -296,6 +316,7 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
       tocOpen: null,
       tocWidth: null,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
     expect(both.total).toBe(2); // reader row + capture row
   });

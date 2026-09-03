@@ -27,25 +27,33 @@ export type ThemeSetting = 'auto' | EffectiveTheme;
  * are the 003 per-view TOC state promoted to persistence; `null` means "not set — fall back to
  * the 003 width-derived default" (never confuse `false`/`0` with "unset"). `codeTheme` is the
  * 009 D-9 fourth field — a Shiki theme id, independent of {@link ThemeSetting} (spec 009 §4:
- * "changing one shall never change the other").
+ * "changing one shall never change the other"). `lastExportFormat` is the 010 D-6 fifth field —
+ * the export panel row key (`'html' | 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'pdf'`)
+ * most recently used, read by the Ctrl/Cmd+S shortcut (task 8.1) to re-invoke the same export;
+ * kept as a plain `string` (not a union) so the panel's own row keys stay the one place that
+ * vocabulary is spelled, per `exportControls.ts`'s `RowSpec.key`.
  */
 export interface Settings {
   theme: ThemeSetting;
   tocOpen: boolean | null;
   tocWidth: number | null;
   codeTheme: string;
+  lastExportFormat: string | null;
 }
 
 /** The default reading preferences: Auto theme, TOC state unset (defer to the 003 width-derived
  *  behavior). `codeTheme` is `'github-dark'` — M-4a's CHOSEN default (`decisions.md` 2026-08-19 ·
  *  M9 8.5: sits mid-table on WCAG contrast against all three `readerCss.ts` `--code-bg` values;
- *  kept as shipped), not a placeholder. Used before anything is stored, after a wipe, and as the
- *  never-blank fallback when a settings read fails or times out (spec §4). */
+ *  kept as shipped), not a placeholder. `lastExportFormat` is `null` — D-6: there is genuinely no
+ *  default until task 10.1's walk-gate item picks the first-ever-Ctrl+S format; a non-null default
+ *  here would silently pre-empt that gate. Used before anything is stored, after a wipe, and as
+ *  the never-blank fallback when a settings read fails or times out (spec §4). */
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
   tocOpen: null,
   tocWidth: null,
   codeTheme: 'github-dark',
+  lastExportFormat: null,
 };
 
 /**

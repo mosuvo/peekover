@@ -15,10 +15,11 @@
 // trap test, `document.activeElement` IS the element actually holding focus here; there is no
 // shadow boundary to read through.
 
-import { describe, it, expect, afterEach } from 'vitest';
-import { page, userEvent, commands } from 'vitest/browser';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { page, userEvent, commands, cdp } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
+import { currentSettings, resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
 
 interface ExportDownloadProbe {
   suggestedFilename: string;
@@ -76,6 +77,7 @@ const containers: HTMLElement[] = [];
 afterEach(async () => {
   for (const c of containers.splice(0)) c.remove();
   await page.viewport(NARROW.width, NARROW.height);
+  resetSettingsSeamForTest(); // task 8.2's write-proof block (below) leaves the seam dirty
 });
 
 /** Mount the shell with an in-memory folder granted (no file selected yet — `activeFile` is
@@ -379,5 +381,88 @@ describe('Q1(a) — the HTML row drives the real exportHtml codepath; every row 
     // already — asserted NOT disabled here as the boundary check for this file's own claim; each
     // row's actual liveness (click -> real clipboard write / real print) is proven in its own
     // task's test.
+  });
+});
+
+// ── TASK 8.2 (D-6): THE WRITE — every row persists ITS OWN key as `lastExportFormat` ───────────
+//
+// The row → format-string wiring lives in `appShell.ts`'s handlers, not `exportControls.ts` (the
+// panel itself never sees `Settings`) — so this is the panel's own test file, alongside Q1(a)'s
+// codepath proof above, not a new file. `saveSettings` updates `settingsSeam.ts`'s module-level
+// snapshot SYNCHRONOUSLY (it does not await the seam's sink), so `currentSettings()` reflects the
+// write the instant `.click()` returns — no polling, no dependence on the underlying clipboard
+// write/print call actually succeeding (which is proven independently by each row's own task).
+
+/** `copyAsHtml.browser.test.ts`'s own `grantClipboardConsent`/reset shape, reused verbatim
+ *  (Chromium-only real browser CONSENT, never a manifest permission) — WITHOUT it the copy rows'
+ *  real clipboard write rejects `NotAllowedError`, which is irrelevant to this block's own claim
+ *  (the WRITE to `lastExportFormat` is synchronous, before the clipboard call) but pollutes the
+ *  suite with an unhandled rejection. */
+let grantedContextId: string | undefined;
+let consentGranted = false;
+async function clipboardWriteConsent(): Promise<PermissionState | 'unsupported'> {
+  try {
+    const status = await navigator.permissions.query({ name: 'clipboard-write' as PermissionName });
+    return status.state;
+  } catch {
+    return 'unsupported'; // Firefox: no such PermissionName — the trusted gesture alone suffices
+  }
+}
+async function grantClipboardConsent(): Promise<void> {
+  const info = (await cdp().send('Target.getTargetInfo', {} as never)) as {
+    targetInfo?: { browserContextId?: string };
+  };
+  grantedContextId = info?.targetInfo?.browserContextId;
+  consentGranted = true;
+  await cdp().send('Browser.grantPermissions', {
+    origin: location.origin,
+    browserContextId: grantedContextId,
+    permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
+  } as never);
+}
+
+describe('task 8.2 (D-6) — clicking a row persists its own key as lastExportFormat', () => {
+  afterEach(async () => {
+    if (!consentGranted) return;
+    consentGranted = false;
+    await cdp().send('Browser.resetPermissions', { browserContextId: grantedContextId } as never);
+  });
+
+  it('HTML export writes lastExportFormat: "html"', async () => {
+    const { container, toggle } = await mountWithFile();
+    const panel = await openPanel(container, toggle);
+    await commands.armExportDownload();
+
+    expect(currentSettings().lastExportFormat).not.toBe('html'); // firing control: not true already
+    htmlRowIn(panel).click();
+    expect(currentSettings().lastExportFormat).toBe('html');
+
+    await commands.collectExportDownload(); // drain the armed listener, like Q1(a) above
+  });
+
+  it('each remaining row writes ITS OWN row key — copy-html, copy-plain-text, copy-rich-text, pdf', async () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => undefined); // pdf row, no real dialog
+    if ((await clipboardWriteConsent()) !== 'unsupported') await grantClipboardConsent();
+
+    const cases: Array<[string, string]> = [
+      ['copy-html', 'copy-html'],
+      ['copy-plain-text', 'copy-plain-text'],
+      ['copy-rich-text', 'copy-rich-text'],
+      ['pdf', 'pdf'],
+    ];
+    for (const [dataKey, expected] of cases) {
+      const { container, toggle } = await mountWithFile();
+      const panel = await openPanel(container, toggle);
+      resetSettingsSeamForTest(); // isolate this row's write from the fresh mount's own load()
+
+      const row = panel.querySelector<HTMLButtonElement>(`[data-export="${dataKey}"]`)!;
+      // A TRUSTED gesture, not a raw DOM `.click()` — the copy rows call the real Clipboard API,
+      // which (like `copyAsHtml.browser.test.ts`'s own real-clipboard tests) needs one; `pdf`'s
+      // `window.print()` is stubbed above regardless.
+      await userEvent.click(row);
+      expect(currentSettings().lastExportFormat, `row "${dataKey}"`).toBe(expected);
+    }
+
+    printSpy.mockRestore();
   });
 });

@@ -76,7 +76,15 @@ function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => T): Pr
 /** Coerce an untrusted transport response into a well-formed {@link Settings}, filling any
  *  missing/garbled field from the default. Messaging structured-clones the value, and a broken
  *  or absent background yields `undefined` — this guarantees `load()` always resolves a complete
- *  Settings rather than propagating a partial shape. */
+ *  Settings rather than propagating a partial shape.
+ *
+ *  ★ This is a HAND-ENUMERATION site (task 8.2's own re-check of D-6's "no enumeration trap"
+ *  claim found it wrong for the read PATH, though `Settings` the type is structural): a field
+ *  missing from the object literal below type-checks fine and silently reads back as the
+ *  default, no test failure, no error — the same shape 006 D-12 named for `store.ts`. `codeTheme`
+ *  was already extended here at M9 8.5; `lastExportFormat` (D-6) is extended the same way, not
+ *  routed around, because it IS a global `Settings` field (unlike D-12's capture flag, which
+ *  deliberately lives in its own row precisely to dodge this trap). */
 function coerceSettings(value: unknown): Settings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_SETTINGS };
   const v = value as Partial<Settings>;
@@ -85,6 +93,7 @@ function coerceSettings(value: unknown): Settings {
     tocOpen: v.tocOpen === undefined ? DEFAULT_SETTINGS.tocOpen : v.tocOpen,
     tocWidth: v.tocWidth === undefined ? DEFAULT_SETTINGS.tocWidth : v.tocWidth,
     codeTheme: v.codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+    lastExportFormat: v.lastExportFormat ?? DEFAULT_SETTINGS.lastExportFormat,
   };
 }
 

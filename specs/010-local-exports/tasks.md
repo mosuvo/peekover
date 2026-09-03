@@ -551,20 +551,42 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       script bytes md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-5; §4
       export shortcut; §7-3]
 
-- [ ] **8.2 `lastExportFormat` — a FIFTH field on the one global `Settings` row, `codeTheme`'s own shape
-      (D-6).** `Settings` gains `lastExportFormat: string | null`; `DEFAULT_SETTINGS.lastExportFormat = null` —
-      `null` because there genuinely is no default until 10.1's walk-gate item picks the first-ever-Ctrl+S
-      format (a non-null default here would silently pre-empt that gate). `SettingsPort`'s three methods
-      unchanged in shape.
-      Files: `src/settings/settings.ts` · `src/settings/settings.test.ts` · `docs/trust/PERMISSIONS.md`
-      Verify: (**unit**) `Settings`/`DEFAULT_SETTINGS`'s new field, `SettingsPort` methods unchanged in shape —
-      confined diff. `docs/trust/PERMISSIONS.md`'s settings-row disclosure gains ONE more field name in its
-      EXISTING row — no new row, confined diff on that one line, the ONLY `PERMISSIONS.md` touch this milestone
-      makes. ★ **The `store.ts`-style compile-time enumeration trap D-6's own text flags as unconfirmed-not-
-      assumed is CHECKED HERE, at task time**: does `Settings`'s read path hand-enumerate fields the way
-      006-era `store.ts:185` once did, which would silently drop a new field on read with no type error? If so,
-      that is a stop-and-flag (the same class of defect 006 D-12 named), not a silent workaround. Golden EMPTY ·
-      manifest green **654 / 770 B** · `permissions: []`. [D-6; §3.7; §4 export shortcut]
+- [x] **8.2 `lastExportFormat` — a FIFTH field on the one global `Settings` row, `codeTheme`'s own shape
+      (D-6).** LANDED, 2026-09-03. `Settings` gains `lastExportFormat: string | null`;
+      `DEFAULT_SETTINGS.lastExportFormat = null`. `SettingsPort`'s three methods unchanged in shape.
+      **★ THE ENUMERATION TRAP: CHECKED, AND `plan.md`'s OWN "no trap" CLAIM WAS WRONG FOR THE READ PATH.**
+      `plan.md:256-260` claimed the trap was confirmed absent — true only of `settings.ts` (structural), false
+      of the actual read path: THREE sibling sites hand-enumerate `Settings` field-by-field and would silently
+      drop `lastExportFormat` on read (`store.ts`'s `getSettings()` — which already carried a comment from
+      D-12/task 1.5 predicting exactly this — and `describeStored()`, plus `settingsPort.ts`'s
+      `coerceSettings()`, the messaging-port read path). Corrected here by measurement, not inherited from the
+      plan; all three extended with `codeTheme`'s own established `?? DEFAULT_SETTINGS.field` pattern, and each
+      extension is proven with a round-trip test capable of failing (a unit test driving the real
+      `coerceSettings`, a real-engine `putSettings`/`getSettings` round trip mirroring `codeTheme`'s own D-12
+      trap test). **★ THE WRITE SITE, UNSTATED IN THE SEALED BODY, PINNED:** wired into `appShell.ts`'s five
+      export-panel handlers via `saveSettings` (`settingsSeam.ts` — the SAME generalized seam theme/TOC/
+      code-theme already use), each persisting its own `exportControls.ts` `RowSpec.key` the instant its export
+      actually fires (never on the defensive no-op branch) — ONE write path task 8.1's Ctrl+S will reuse, so it
+      can never diverge or double-write. Proven live (`exportPanel.browser.test.ts`, real engine): each of the
+      5 rows sets `lastExportFormat` to its own key.
+      Files: `src/settings/settings.ts` · `src/settings/settings.test.ts` · `docs/trust/PERMISSIONS.md` ·
+      NECESSARY RIPPLE (flagged, structurally required by this task's own Verify clause — decisions.md's D-6
+      entry gives the per-file justification): `src/settings/settingsPort.ts` + `settingsPort.test.ts` ·
+      `src/app/store.ts` · `tests/browser/settingsStore.browser.test.ts` ·
+      `tests/browser/settingsPort.browser.test.ts` · `src/app/appShell.ts` ·
+      `tests/browser/exportPanel.browser.test.ts`.
+      Verify: (**unit**) `Settings`/`DEFAULT_SETTINGS`'s new field, `SettingsPort` methods unchanged in shape.
+      `docs/trust/PERMISSIONS.md`'s settings-row disclosure gains ONE field name in its existing row, confined
+      one-line diff, the ONLY `PERMISSIONS.md` touch this milestone makes. ★ Enumeration trap checked (above) —
+      not a silent workaround, extended + flagged per `codeTheme`'s own precedent. Content-script bytes MOVE,
+      expected and disclosed (not D-2-breaking — `settings.ts`/`settingsPort.ts` are on the CS graph via
+      `messagingPort`): CS **336,042 → 336,121 B (+79 B)**, same delta both engines (Cr md5 `09c2ac89…` →
+      `f424a3b6…`; Fx md5 `6aa82bc8…` → `ebbf183a…`), firing-control-confirmed via `git stash`/rebuild both
+      engines. App-page chunk **486,813 → 487,133 B (+320 B)**, same firing control. `.output`
+      **4,879,159 → 4,879,636 B (+477 B)**, ~354.73 KiB (Cr) headroom remaining, robustly under the 5 MiB
+      ceiling. Manifests **654 / 770 B** unchanged, `permissions: []`. `dependencies` (production) unchanged at
+      6. Golden EMPTY. Full suite: unit 1056/1056 (+1, the coerceSettings round-trip test), browser 148
+      files/1503 passed/15 skipped/0 failed, lint + typecheck clean. [D-6; §3.7; §4 export shortcut]
 
 - [ ] **8.3 The progress indicator for heavy exports — a NEW affordance with NO sibling suite and NO mockup
       baseline (§3.8; plan §3.11 row 14).** Shown when a heavy-document export (per 10.2's M-2 threshold — a

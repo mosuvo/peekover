@@ -240,6 +240,13 @@ export async function getSettings(): Promise<Settings> {
     // back to the default — the same `??` guard `settingsPort.ts`'s `coerceSettings` and this
     // file's own `describeStored()` already use for the same field.
     codeTheme: row.codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+    // Task 8.2 (D-6): the SAME trap, extended the SAME way for the fifth field. A row predating
+    // 8.2 has no `lastExportFormat`, so the `??` guard falls back to the default (`null`) rather
+    // than writing `undefined`. This is task 8.2's own re-check finding: plan.md D-6 claimed
+    // "Settings itself has no enumeration trap" — true of the `settings.ts` type, but not of this
+    // READ PATH, which the D-12 comment two functions below already predicted would need exactly
+    // this extension ("the trap stays live for whoever adds the next Settings field").
+    lastExportFormat: row.lastExportFormat ?? DEFAULT_SETTINGS.lastExportFormat,
   };
 }
 
@@ -597,6 +604,9 @@ export async function describeStored(): Promise<StoredSummary> {
         tocOpen: settingsRow.tocOpen,
         tocWidth: settingsRow.tocWidth,
         codeTheme: settingsRow.codeTheme ?? DEFAULT_SETTINGS.codeTheme,
+        // Task 8.2 (D-6): same hand-enumeration extension as getSettings() above — a legacy row
+        // predating 8.2 falls back to the default rather than disclosing `undefined`.
+        lastExportFormat: settingsRow.lastExportFormat ?? DEFAULT_SETTINGS.lastExportFormat,
       }
     : null;
 

@@ -1,6 +1,9 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-03 (task 7.1 landed — PDF export via window.print(), and the @page relocation that makes it deliver margin-box fidelity on the app-page/Chromium cell; net-zero new production dependency.)*
+*Updated: 2026-09-03 (task 8.2 landed — `lastExportFormat`, the fifth `Settings` field, D-6; the read-path
+enumeration trap found real and closed across three sites, not just `settings.ts`; the write wired into
+`appShell.ts`'s panel handlers, closing the persistence unit task 8.1 needs. Group-8 order adjusted by human
+ruling: 8.3 deferred past 10.2.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,7 +13,99 @@
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 7.1 LANDED, 2026-09-03 — PDF EXPORT IS window.print(), NO NEW DEPENDENCY. THE FORK
+**★★★★★ M10 TASK 8.2 LANDED, 2026-09-03 — `lastExportFormat`, THE FIFTH `Settings` FIELD (D-6). THE
+READ-PATH ENUMERATION TRAP `plan.md` CLAIMED ABSENT WAS FOUND REAL AT THREE SITES, CLOSED THE SAME WAY
+`codeTheme` CLOSED IT; THE WRITE (UNSTATED IN THE SEALED BODY) IS PINNED INTO `appShell.ts`'S PANEL
+HANDLERS, THE COMPLETE PERSISTENCE UNIT TASK 8.1 NEEDS TO READ.**
+
+**Sequencing, on record:** group-8 order adjusted by human ruling ahead of this task — 8.2 → 8.1 land now
+(mechanism, applies to any export regardless of weight); **8.3 (the progress indicator) is DEFERRED PAST
+10.2**, because 8.3's own body names 10.2's M-2 heavy-threshold as its trigger and every surviving export
+path is synchronous DOM/string work or a single native API call (grep-confirmed) — building it before 10.2
+risks shipping an indicator that never fires. 8.3 waits for 10.2's number, then is either built or recorded
+as a measured non-build. This task did not touch 8.3.
+
+**Q1 — the enumeration trap, checked, and `plan.md`'s own claim corrected by measurement, not
+inherited.** `plan.md:256-260` asserted *"`Settings` itself has no such enumeration trap... confirmed at
+task time"* — true only of `settings.ts`, the interface/default file, which is purely structural. FALSE of
+the actual READ PATH: `store.ts`'s `getSettings()` (already carrying a D-12/task-1.5 comment predicting
+exactly this: *"the trap stays live for whoever adds the next `Settings` field"*), `store.ts`'s
+`describeStored()`, and `settingsPort.ts`'s `coerceSettings()` (the messaging-port read path) all
+hand-enumerate `Settings` field-by-field and would silently drop `lastExportFormat` on read — the same
+class of defect 006 D-12 named, and the same trap `codeTheme` (M9 8.5) already walked into. Resolution:
+extend all three with the SAME `field ?? DEFAULT_SETTINGS.field` guard `codeTheme` already uses — the
+established, precedent-following non-silent path (extended AND commented, not routed around a second
+time) — proven with round-trip tests capable of failing: a unit test drives the REAL `coerceSettings`
+(`settingsPort.test.ts`), and a real-engine test (`tests/browser/settingsStore.browser.test.ts`) mirrors
+`codeTheme`'s own D-12 trap test verbatim in shape (`putSettings({lastExportFormat: 'pdf'})` →
+`getSettings()`). Every existing shape-invariant assertion the extension touches (`Object.keys().sort()`
+pins in `settingsStore.browser.test.ts`, full-`Settings` `toEqual`s in `settingsPort.browser.test.ts`) was
+fixed in place to the current five-field shape — the same "ripple fixed in place" pattern task 4.1's own
+Q5 used.
+
+**Q2 — the write site, unstated in §8.2's sealed body, pinned.** A field with a reader but no writer is
+half a feature — task 8.1 has nothing to read without it — so 8.2, which owns the field, also owns making
+it a complete persistence unit. Wired into `appShell.ts`'s five export-panel handlers
+(`onExportHtml`/`onCopyHtml`/`onCopyPlainText`/`onCopyRichText`/`onExportPdf`), each calling
+`saveSettings({lastExportFormat: <own row key>})` from `settingsSeam.ts` — the SAME generalized seam
+theme/TOC/code-theme already persist through (task 6.1's own D-E generalization), not a second bespoke
+sink. ONE write path: a panel click today; task 8.1's Ctrl+S re-invokes through these SAME handlers per
+its own task text, so it can never diverge or double-write. The write fires only inside each handler's own
+"did the export actually run" guard, never the defensive no-op branch — a no-op is not a "last used"
+format. Vocabulary is `exportControls.ts`'s own `RowSpec.key` values verbatim (`'html' | 'copy-html' |
+'copy-plain-text' | 'copy-rich-text' | 'pdf'`), the exact strings 8.1 will switch on. Proven live in
+`exportPanel.browser.test.ts` (real engine, Cr+Fx): clicking each row sets `lastExportFormat` to its own
+key — the HTML row's write checked against a firing control (asserted NOT already equal beforehand), the
+remaining four rows driven through `userEvent.click` (a trusted gesture, needed for the real clipboard
+rows) with Chromium's clipboard consent granted per-test and `window.print()` stubbed for the PDF row (no
+real print dialog).
+
+**Q3 — default `null`, confirmed.** `DEFAULT_SETTINGS.lastExportFormat = null` — a non-null default here
+would silently pre-empt task 10.1's walk-gate pick of the first-ever-Ctrl+S format.
+
+**Necessary ripple beyond the sealed body's three-file Files list, flagged per AGENTS.md's workflow rule
+(decisions.md's D-6 entry carries the per-file justification), not a silent substitution:**
+`src/settings/settingsPort.ts` + `settingsPort.test.ts` (Q1's `coerceSettings` extension + its unit
+round-trip), `src/app/store.ts` + `tests/browser/settingsStore.browser.test.ts` +
+`tests/browser/settingsPort.browser.test.ts` (Q1's other two hand-enumeration sites + real-engine
+round-trip/shape-ripple proof), `src/app/appShell.ts` + `tests/browser/exportPanel.browser.test.ts` (Q2's
+write wiring + its live proof). Each is structurally required by §8.2's own Verify clause.
+
+**Byte discipline — measured on BOTH engines, firing-control confirmed (`git stash`/rebuild both engines,
+matching this milestone's own standing pitfall about a stale, un-rebuilt second engine).** Content-script
+bytes MOVE, expected and disclosed — `settings.ts`/`settingsPort.ts` ship to the CS graph via
+`messagingPort` (the content-script reader's own settings channel), so a fifth `Settings` field costs CS
+bytes exactly the way `codeTheme` (M9) once did; this is NOT a D-2 break (D-2 is about new export/copy
+CHROME never reaching the content-script graph, not about the shared settings vocabulary staying static
+forever — the same distinction task 6.1 measured for `readerCss.ts`'s print CSS). CS: **336,042 →
+336,121 B (+79 B)**, identical delta both engines (Cr md5 `09c2ac89a0ba9f634a05ab02aa4f476d` →
+`f424a3b60e9d52bf5ac6a35a8afd2551`; Fx md5 `6aa82bc8d6494c07c8ecd46695390ab9` →
+`ebbf183adfd1e217ad01683043496ccc`). App-page chunk: **486,813 → 487,133 B (+320 B)**, same firing
+control, same delta both engines. `.output` **4,879,159 → 4,879,636 B (+477 B)**, ~354.73 KiB (Cr)
+headroom remaining (was ~355.20 KiB at 7.1 — the −0.47 KiB matches the `.output` delta exactly), robustly
+under the 5 MiB ceiling. Manifests **654 / 770 B** unchanged, `permissions: []`, no
+`web_accessible_resources`. `dependencies` (production) unchanged at **6** — this task adds none.
+
+**`docs/trust/PERMISSIONS.md`.** Confined one-line diff, the ONLY touch this milestone makes: the
+IndexedDB-persistence row's settings-row disclosure gains "last-used export format" alongside the three
+existing field names — no new capability row (no new network path, no new manifest key).
+
+**Suite.** Unit: **1056/1056** (+1 — `settingsPort.test.ts`'s new `coerceSettings` round-trip test). Full
+browser suite: **148 files / 1503 passed / 15 skipped, 0 failed** (a first run of the new
+`exportPanel.browser.test.ts` write-proof block surfaced 3 unhandled clipboard-permission rejections —
+root-caused to a raw `.click()` needing a TRUSTED gesture for the real Clipboard API and missing the
+per-file `grantClipboardConsent()`/reset shape every other real-clipboard test file already carries;
+fixed by reusing that shape verbatim, not worked around). Lint + typecheck clean. Golden EMPTY.
+
+**D-6, applied VERBATIM:** *"010 D-6 — the export shortcut's memory is one more field on the settings row
+009 already widened for the same reason, not a new settings surface."* True as shipped — `codeTheme`'s
+own shape, extended the same way at every site that shape already touches.
+
+**Revisit-when:** task 8.1 lands and reads `lastExportFormat()` — confirm it switches on exactly these
+five strings and reuses these same five handlers (never a parallel export invocation). Full record in
+`decisions.md`'s 2026-09-03 M10 D-6 (task 8.2) entry.
+
+**★★★★★ (PRIOR) M10 TASK 7.1 LANDED, 2026-09-03 — PDF EXPORT IS window.print(), NO NEW DEPENDENCY. THE FORK
 6.1 HANDED FORWARD WAS RESHAPED, NOT BINARY: RELOCATING `@page` TO A DOCUMENT-LEVEL STYLESHEET (NOT
 PRICING A PDF-GENERATION LIBRARY) TURNED OUT TO BE THE CHEAP FIX ON CHROMIUM/APP-PAGE. A REAL,
 NAMED ASYMMETRY REMAINS AND IS STOP-AND-FLAGGED BELOW, NOT SILENTLY RULED.**

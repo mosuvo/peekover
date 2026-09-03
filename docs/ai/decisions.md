@@ -1,6 +1,61 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-03 · M10 D-6 (task 8.2) — `lastExportFormat` lands as the fifth `Settings` field,
+  `codeTheme`'s own shape; PLAN.MD'S OWN "no enumeration trap" CLAIM WAS WRONG FOR THE READ PATH,
+  corrected here by measurement; the WRITE is wired into `appShell.ts`'s panel handlers, closing
+  the persistence unit for task 8.1 to read.**
+  `plan.md` §0 D-6, applied VERBATIM: *"010 D-6 — the export shortcut's memory is one more field on
+  the settings row 009 already widened for the same reason, not a new settings surface."*
+  `Settings`/`DEFAULT_SETTINGS` gain `lastExportFormat: string | null`, default `null` (D-6's own
+  text: a non-null default would silently pre-empt task 10.1's walk-gate pick of the
+  first-ever-Ctrl+S format). `SettingsPort`'s three methods are unchanged in shape.
+  **Q1 — THE ENUMERATION TRAP, CHECKED, AND `plan.md`'s OWN CLAIM CORRECTED, NOT INHERITED.**
+  `plan.md:256-260` asserted *"`Settings` itself has no such enumeration trap... confirmed at task
+  time, not assumed"* — true only of `settings.ts`, the interface/default file, which is purely
+  structural. It is FALSE of the actual READ PATH: THREE sibling sites hand-enumerate `Settings`'s
+  fields field-by-field and would silently drop an unlisted one on read (no type error, no test
+  failure) — `store.ts`'s `getSettings()` (already carrying a comment predicting exactly this: *"the
+  trap stays live for whoever adds the next `Settings` field"*, written at D-12/task 1.5), `store.ts`'s
+  `describeStored()`, and `settingsPort.ts`'s `coerceSettings()` (the messaging-port read path). This
+  is the SAME class of defect `store.ts:185` filed at 006 D-12 and the SAME trap `codeTheme` (M9
+  8.5) already walked into and extended — precedent this task follows rather than treats as a fresh
+  stop-and-flag: extending the hand-enumeration, explicitly and commented (not silently), is the
+  established resolution D-12's own comment anticipated, not a workaround to route around a second
+  time. All three sites extended with the same `field ?? DEFAULT_SETTINGS.field` guard `codeTheme`
+  already uses. Proven, non-vacuously, with round-trip tests capable of failing: a unit test
+  (`settingsPort.test.ts`) drives `messagingPort`'s REAL `coerceSettings` (not a fake) end to end;
+  a real-engine test (`tests/browser/settingsStore.browser.test.ts`) mirrors `codeTheme`'s own D-12
+  trap test verbatim in shape — `putSettings({lastExportFormat: 'pdf'})` then `getSettings()` — the
+  same red-first signature (delete the guard, the assertion reads back `null` instead of `'pdf'`).
+  Every existing shape-invariant assertion this ripple touches (`settingsStore.browser.test.ts`'s
+  `Object.keys().sort()` pins, `settingsPort.browser.test.ts`'s full-`Settings` `toEqual`s) is fixed
+  in place to the current five-field shape, the same "ripple fixed in place" pattern task 4.1's own
+  Q5 used.
+  **Q2 — THE WRITE SITE, UNSTATED IN §8.2'S SEALED BODY, PINNED HERE.** A field with a reader but no
+  writer is half a feature — task 8.1 (Ctrl+S) has nothing to read without it — so 8.2, which owns
+  the field, also owns making it a COMPLETE persistence unit. Wired into `appShell.ts`'s five export-
+  panel handlers (`onExportHtml`/`onCopyHtml`/`onCopyPlainText`/`onCopyRichText`/`onExportPdf`),
+  each calling `saveSettings({lastExportFormat: <its own row key>})` from `settingsSeam.ts` — the
+  SAME generalized seam the theme/TOC/code-theme controls already persist through (task 6.1's own
+  D-E generalization), not a second bespoke sink. ONE write path: a panel click today; task 8.1's
+  Ctrl+S re-invokes through these SAME handlers (per its own task text, "the SAME export entry point
+  the panel's own click handlers call"), so it can never diverge or double-write. The write fires
+  only inside each handler's own "did the export actually run" guard (never on the defensive
+  host-absent/activeFile-absent no-op branch) — a no-op is not a "last used" format. The vocabulary
+  is `exportControls.ts`'s own `RowSpec.key` values verbatim — `'html' | 'copy-html' |
+  'copy-plain-text' | 'copy-rich-text' | 'pdf'` — the exact strings task 8.1 will switch on.
+  **Necessary ripple beyond §8.2's sealed Files list (`settings.ts` / `settings.test.ts` /
+  `PERMISSIONS.md` only), flagged per AGENTS.md's workflow rule rather than silently substituted:**
+  `settingsPort.ts` + `settingsPort.test.ts` (Q1's coerceSettings extension + its round-trip test),
+  `store.ts` + `tests/browser/settingsStore.browser.test.ts` + `tests/browser/settingsPort.browser
+  .test.ts` (Q1's other two hand-enumeration sites + their round-trip/shape-ripple proof),
+  `appShell.ts` + `tests/browser/exportPanel.browser.test.ts` (Q2's write wiring + its proof). Each
+  is structurally required by §8.2's own Verify clause (the enumeration-trap check demands proving
+  the read path; the field is not a complete persistence unit without its writer) — not scope creep.
+  **Revisit-when:** task 8.1 lands and reads `lastExportFormat()` — confirm it switches on exactly
+  these five strings and reuses these same five handlers, never a parallel export invocation.
+
 - **2026-09-03 · M10 task 7.1's stop-and-flag, RULED: option (i) — ship Chromium/app-page margin
   boxes now, Firefox and the content-script surface stay deferred, KNOWN gaps.** Human-confirmed,
   same session as the entry below. Neither gap is built around silently: Firefox's own CSSOM

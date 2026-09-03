@@ -98,7 +98,7 @@ import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { directPort } from '../settings/settingsPort';
-import { publishSettings, registerSettingsSink } from '../settings/settingsSeam';
+import { publishSettings, registerSettingsSink, saveSettings } from '../settings/settingsSeam';
 import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } from './store';
 import {
   getCaptureEnabled as defaultGetCaptureEnabled,
@@ -881,6 +881,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   /** Render the export panel into its slot and move initial focus inside it — never left on the
    *  page behind, the same choice `openDiagramLightbox` makes for its own trap's entry point. */
   function renderExport(): void {
+    // Task 8.2 (D-6): each row below persists ITS OWN key from `exportControls.ts`'s `RowSpec.key`
+    // vocabulary ('html' | 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'pdf') as
+    // `lastExportFormat` the instant its export actually fires — this is the ONE write path every
+    // export takes (a panel click today; task 8.1's Ctrl+S re-invokes through these same handlers,
+    // so it can never diverge or double-write). Written only inside each row's own "did the export
+    // actually run" guard, never on the defensive no-op branch — a no-op is not a "last used"
+    // format. `saveSettings` (settingsSeam.ts) is the same seam the theme/TOC/code-theme controls
+    // already persist through — best-effort, never throws on this UI path.
     const view = createExportView(doc, {
       onExportHtml: () => {
         // The app page's live reader host (readerPane.ts's own class, the same selector the diff
@@ -889,7 +897,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // (AGENTS.md #5: no export UI is reachable without `activeFile`, but the read itself can
         // still fail after selection).
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) exportHtml(host, basenameForExport());
+        if (host) {
+          saveSettings({ lastExportFormat: 'html' });
+          exportHtml(host, basenameForExport());
+        }
       },
       onCopyHtml: () => {
         // Same host-lookup, same non-render-state no-op as onExportHtml above. `copyAsHtml`
@@ -900,7 +911,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // Per-action completion/failure UI (a "Copied"/"Copy failed" state, `codeView.ts`'s own
         // copy-button precedent) is task 9.1's own milestone-wide scope, not this task's.
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) void copyAsHtml(host);
+        if (host) {
+          saveSettings({ lastExportFormat: 'copy-html' });
+          void copyAsHtml(host);
+        }
       },
       onCopyPlainText: () => {
         // No host/clone lookup — this reads the SOURCE, via `activeFile.read()` (task 3.4's own
@@ -911,7 +925,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // (it awaits the read, then the write), but this callback stays sync and a rejection
         // surfaces as a genuine unhandled-rejection error rather than a swallowed no-op
         // (AGENTS.md #5 — no false success, covering the READ failure as well as the WRITE).
-        if (activeFile) void copyAsPlainText(activeFile);
+        if (activeFile) {
+          saveSettings({ lastExportFormat: 'copy-plain-text' });
+          void copyAsPlainText(activeFile);
+        }
       },
       onCopyRichText: () => {
         // Same host-lookup, same non-render-state no-op as onCopyHtml above — `copyAsRichText`
@@ -919,7 +936,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // promise / never-caught shape as every other copy row here: a rejection surfaces as a
         // genuine unhandled-rejection error, never a false "copied" (AGENTS.md #5).
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) void copyAsRichText(host);
+        if (host) {
+          saveSettings({ lastExportFormat: 'copy-rich-text' });
+          void copyAsRichText(host);
+        }
       },
       onExportPdf: () => {
         // Same "nothing to export yet" guard as every row above, on the same host lookup — but
@@ -927,7 +947,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
         // exists only to decide WHETHER to print, never what to print (there is no host param to
         // thread through, per `exportPdf`'s own doc comment in exportControls.ts).
         const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
-        if (host) exportPdf();
+        if (host) {
+          saveSettings({ lastExportFormat: 'pdf' });
+          exportPdf();
+        }
       },
       onClose: () => toggleExport(),
     });

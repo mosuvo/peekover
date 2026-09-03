@@ -46,12 +46,13 @@ describe('resolveTheme — setting × OS → effective (pure, total)', () => {
 });
 
 describe('DEFAULT_SETTINGS — the never-blank fallback shape', () => {
-  it('is Auto theme, unset (null) TOC state, and the provisional code theme (D-9)', () => {
+  it('is Auto theme, unset (null) TOC state, the provisional code theme (D-9), and no last-used export format yet (D-6)', () => {
     expect(DEFAULT_SETTINGS).toEqual({
       theme: 'auto',
       tocOpen: null,
       tocWidth: null,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
   });
 });

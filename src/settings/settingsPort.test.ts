@@ -62,12 +62,19 @@ describe('directPort — cached snapshot + round-trip via the injected store', (
     expect(port.snapshot()).toEqual(DEFAULT_SETTINGS);
 
     const loaded = await port.load();
-    expect(loaded).toEqual({ theme: 'dark', tocOpen: true, tocWidth: 288, codeTheme: 'github-dark' });
+    expect(loaded).toEqual({
+      theme: 'dark',
+      tocOpen: true,
+      tocWidth: 288,
+      codeTheme: 'github-dark',
+      lastExportFormat: null,
+    });
     expect(port.snapshot()).toEqual({
       theme: 'dark',
       tocOpen: true,
       tocWidth: 288,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
   });
 
@@ -99,6 +106,7 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
       tocOpen: null,
       tocWidth: 320,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
 
     await port.save({ tocOpen: true });
@@ -112,12 +120,29 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
       tocOpen: true,
       tocWidth: 320,
       codeTheme: 'github-dark',
+      lastExportFormat: null,
     });
   });
 
   it('coerces a garbled/absent response into a complete Settings (never a partial shape)', async () => {
     const garbled: SettingsMessenger = async () => undefined; // e.g. no receiver / broken response
     expect(await messagingPort(garbled).load()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('save({lastExportFormat}) writes, load() reads it back through coerceSettings — the D-6 hand-enumeration trap task 8.2 filed and closed in the same task', async () => {
+    // RED-FIRST (this test's own firing control, reasoned rather than re-run for every field —
+    // `verification-greps-need-a-firing-control`): had `coerceSettings` NOT been extended with a
+    // `lastExportFormat` line, `messagingPort`'s GET path would drop the field on the object
+    // literal below, and `load()` would come back with `lastExportFormat: null` regardless of
+    // what was saved — silently, no type error, exactly the shape this test exists to catch.
+    const m = fakeMessenger();
+    const port = messagingPort(m.send);
+
+    await port.save({ lastExportFormat: 'copy-html' });
+    expect(m.store.current().lastExportFormat).toBe('copy-html'); // the save really reached the store
+
+    // A FRESH port (no warm cache) forces load() to go through the wire and coerceSettings again.
+    expect(await messagingPort(m.send).load()).toMatchObject({ lastExportFormat: 'copy-html' });
   });
 });
 
