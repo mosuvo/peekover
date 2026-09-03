@@ -196,6 +196,25 @@ function extractKeyframeBlocks(css: string): { plain: string; keyframes: string[
   return { plain, keyframes };
 }
 
+/** Pull the `@page { … }` block out of `css` untouched — 010 D-7's print-mode addition, one level
+ *  of nesting deeper than `@media`/`@keyframes` (its own `@top-center`/`@bottom-center` margin-box
+ *  at-rules), so it needs its own extractor rather than reusing either. `@page` never carries a
+ *  `:host` selector (there is no element context inside a page-box rule for `:host` to mean
+ *  anything), so — like keyframes — this is pass-through preservation only: a standalone HTML
+ *  export SHOULD carry the page-number/header/footer rule when the user prints the exported file
+ *  directly, exactly as printing the live reader would. */
+function extractPageBlocks(css: string): { plain: string; pageBlocks: string[] } {
+  const pageBlocks: string[] = [];
+  const plain = css.replace(/@page[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, (whole: string) => {
+    if (/:host/.test(whole)) {
+      throw new Error('translateReaderStylesheet: unexpected :host inside an @page block');
+    }
+    pageBlocks.push(whole);
+    return '';
+  });
+  return { plain, pageBlocks };
+}
+
 /** Classify + translate one rule against `theme`. `null` selector text on a `:host([data-attr=…])`
  *  match with a NON-theme attribute (or a non-matching theme value) signals DROP. */
 function classifyRule(
@@ -238,8 +257,10 @@ export interface TranslationDiagnostics {
 /**
  * Derive, LIVE from `READER_CSS`'s own text, the stylesheet a standalone export should ship — see
  * the module-level doc comment above for the one mechanical rule this applies. Throws if
- * `READER_CSS` no longer matches the flat-plus-one-@media-level shape the parser assumes (a
- * structural change, not a silent mistranslation) — the residual checks below are exact.
+ * `READER_CSS` no longer matches the flat-plus-one-@media/@keyframes/@page-level shape the parser
+ * assumes (a structural change, not a silent mistranslation) — the residual checks below are
+ * exact. `@page` (010 D-7) is extracted and carried verbatim, the same pass-through treatment
+ * `@keyframes` already gets, for the same reason: neither ever carries a `:host` selector.
  */
 export function translateReaderStylesheet(
   theme: EffectiveTheme,
@@ -247,7 +268,8 @@ export function translateReaderStylesheet(
 ): { css: string; diagnostics: TranslationDiagnostics } {
   const stripped = stripCssComments(source);
   const { plain: withoutKeyframes, keyframes } = extractKeyframeBlocks(stripped);
-  const { plain, media } = extractMediaBlocks(withoutKeyframes);
+  const { plain: withoutPage, pageBlocks } = extractPageBlocks(withoutKeyframes);
+  const { plain, media } = extractMediaBlocks(withoutPage);
   const { rules: flatRules, residual } = parseFlatRules(plain);
   if (residual.trim() !== '') {
     throw new Error('translateReaderStylesheet: unparsed text at the top level of READER_CSS');
@@ -283,7 +305,9 @@ export function translateReaderStylesheet(
     })
     .filter((s) => s !== '');
 
-  const css = [renderRules(flatOut), ...mediaOut, ...keyframes].filter((s) => s !== '').join('\n');
+  const css = [renderRules(flatOut), ...mediaOut, ...keyframes, ...pageBlocks]
+    .filter((s) => s !== '')
+    .join('\n');
   return { css, diagnostics: { hostSiteCount, carried, resolved, dropped } };
 }
 

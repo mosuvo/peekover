@@ -1,6 +1,6 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-03 (task 4.1 landed — Copy-as-rich-text, the panel's 4th and LAST copy row wired live; only PDF stays disabled.)*
+*Updated: 2026-09-03 (task 6.1 landed — F5 print mode + the @page margin-box fidelity probe; the probe's finding feeds task 7.1's fork.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,8 +10,128 @@
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 4.1 LANDED, 2026-09-03 — COPY-AS-RICH-TEXT, THE PANEL'S 4TH AND LAST COPY ROW WIRED
-LIVE. Only PDF (tasks 6.1/7.1) still renders disabled. Next actionable task: 6.1 (F5 print mode).**
+**★★★★★ M10 TASK 6.1 LANDED, 2026-09-03 — F5 PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE. THE
+PROBE'S FINDING: INADEQUATE ON BOTH ENGINES, AND FOR A SHARPER REASON THAN "NO BROWSER SUPPORT." Next
+actionable task: 7.1 (PDF export — window.print() if the probe held; it did not, so 7.1 prices the
+named fallback against this task's own byte headroom).**
+
+**The pass/fail bar, stated before measuring (spec §3.6/§7-4's own bar):** can Chromium AND Firefox
+render `@page` margin-box running content (page numbers via `counter(page)`/`counter(pages)`,
+header/footer via `@top-center`/`@bottom-center`) at production quality, per-engine, in their REAL
+print pipelines — not merely parse the syntax.
+
+**Chrome-hiding + page-breaks: PASS, both surfaces, both engines (the easy, expected half).** A new
+`@media print` block in `readerCss.ts`'s `READER_CSS` hides every reader chrome pill (mode/theme
+toggle, watch + note/disclosure, diff affordance/picker/status, agent-file badge, remote-load, net
+indicator, TOC, diagram lightbox) and the three in-flow per-block toolbars (code/table/diagram-
+actions); heading/code/table/blockquote page-break rules resolve `avoid` under print media. Real-
+engine `tests/browser/printMode.browser.test.ts` (Cr+Fx): 16/16 green, with SCREEN-mode firing
+controls (nothing is display:none before print engages) and a Ruling-4 structural assertion (below).
+
+**★ THE @page PROBE'S RESULT, STATED PLAINLY: INADEQUATE on BOTH engines, for TWO INDEPENDENT and
+DIFFERENT reasons — measured, not assumed, and the mechanism used differs by engine as anticipated.**
+- **CSSOM-parse signal (both engines, plain DOM read):** Chromium's parser RETAINS the `@top-center`/
+  `@bottom-center` nested at-rules verbatim inside the shipped `@page{}` rule. Firefox's parser
+  DROPS them silently at parse time — the SAME rule comes back with an EMPTY body (`@page { }`).
+- **Render signal (Chromium only — Playwright's `page.pdf()` throws `"PDF generation is only
+  supported for Headless Chromium"` on Firefox, a Playwright limitation, not a Firefox print-engine
+  finding; CSSOM-parse above is what carries Firefox's verdict):** a PLAIN, TOP-LEVEL-DOCUMENT
+  `@page` rule (an isolated scratch check, no shadow root) DOES render margin-box content correctly
+  in Chromium — proving the ENGINE supports the feature in general. But the SHIPPED mechanism (D-7's
+  own placement: the rule lives inside `readerCss.ts`'s `READER_CSS`, injected into the reader's
+  SHADOW ROOT) is INERT for margin-box rendering — confirmed twice independently (this task's real
+  appShell-mounted fixture via a fresh-page PDF probe, AND a minimal imperative-`attachShadow`
+  scratch replica): the shadow tree's own content paginates fine (30 real pages from a 440-paragraph
+  fixture), but NO margin-box text renders anywhere, on the ONLY surface 7.1's `exportPdf(host)`
+  ever drives (the app-page reader pane, §3.2).
+- **VERDICT: this is a STRONGER finding than "engine lacks support."** Chromium's engine is
+  adequate; the FILE D-7 sealed cannot deliver the feature through it, on either engine, independent
+  of any future browser update — a structural consequence of `@page` (a document-global concept)
+  living inside a shadow-scoped stylesheet, not a support gap a browser release could close.
+  Relocating the rule to a document-level stylesheet (e.g. `appShell.ts`'s `APP_CSS`) is untested by
+  this task and is 7.1's own call, not performed here.
+
+**★ Ruling 4 — CONFIRMED, CHECKED AS AN EXPLICIT DIFF CONSTRAINT.** `git diff src/theme/readerCss.ts`
+is purely additive (94 insertions, 0 deletions) — the shipped `.peekover-reader .peekover-code-
+toolbar{...}` rule (M9 9.1's spacing) is byte-for-byte unchanged; the new print rule references the
+SAME class name inside a DIFFERENT, additive `@media print` rule. `printMode.browser.test.ts`'s own
+test asserts this structurally (the existing rule's exact body text is `.toContain`ed; the print
+block is asserted NOT to contain its declarations). No stop-and-flag needed — the task's natural
+shape never touched the existing rule's body.
+
+**★ Content-script bytes: MOVED, +1,184 B, EXPECTED — NOT a D-2 break.** `readerCss.ts`'s
+`@media print`/`@page` addition ships to BOTH graphs by construction (`READER_CSS` is shared), and
+this is DESIRABLE, not a leak: printing a raw `file://` document via the content-script reader
+should ALSO get chrome-hiding and page-break rules. This is the SAME shape 009's own toolbar CSS
+addition took (+5,394 B to CS, accepted) — D-2's structural byte-identity guarantee is specifically
+about NEW EXPORT/COPY CHROME (app-page-only) never reaching the content-script graph; it was never a
+claim that shared reader-presentation CSS in `readerCss.ts` stays static forever, and task 6.1's own
+body text ("costs nothing there") was WRONG on this point, corrected here by measurement rather than
+followed blindly (AGENTS.md's own rule: a kickoff/task body is a hypothesis to verify, not authority,
+when it conflicts with an established precedent in the same file).
+
+**Byte discipline — the delta, measured, decomposed to a residual of 0 B.** Content-script:
+**334,858 → 336,042 B (+1,184 B)**, both engines (md5 necessarily changes — `readerCss.ts`'s own text
+changed — this is the FIRST task this milestone to move CS bytes, expected per the above). App-page
+chunk: **484,357 → 486,409 B (+2,052 B)**, decomposed exactly: +1,184 B is `READER_CSS`'s own shared
+addition (same bytes as the CS delta) + **868 B is `appShell.ts`'s own new `@media print` block** —
+a NECESSARY RIPPLE, flagged explicitly: task 6.1's Files list named only `readerCss.ts`, but this
+task's own Verify clause ("reader chrome hidden under print media") is unreachable in full without
+it — `.peekover-app__header` (brand, theme/code-theme controls, storage/export toggles+panels) and
+`.peekover-app__folders` (the side panel) are LIGHT-DOM siblings of the reader's shadow host; CSS
+scoped to a shadow tree cannot reach them by construction. `appShell.ts`'s print block ALSO fixes a
+second, real defect this task's own de-clip investigation surfaced: `.peekover-app{position:fixed;
+inset:0}` + `.peekover-app__reader{overflow:auto}` is exactly the shape that silently under-prints an
+app-shell layout (only the current scroll viewport paginates) — measured directly (a 43,557px-tall
+real fixture came back as `pageCount: 1` before this fix, confirmed via computed-style diagnostics,
+then fixed). `.output` **4,878,755 B (Cr) / 4,878,871 B (Fx)** (+3,236 B both, matching the two
+decomposed deltas exactly), **~355.59 KiB (Cr) headroom remaining**, robustly under the 5 MiB
+ceiling. `pnpm zip` **1,474,022 B (Cr) / 1,474,080 B (Fx)**. Manifests **654 / 770 B** unchanged,
+`permissions: []`, no `web_accessible_resources`. `dependencies` (production) unchanged at 6.
+
+**A second necessary ripple, a real regression caught by the full suite, not scope creep: `htmlExport.
+ts`'s `translateReaderStylesheet`.** This module parses `READER_CSS`'s own text LIVE to build
+standalone HTML exports, on an explicitly stated "flat-plus-one-@media/@keyframes-level" shape
+assumption (its own doc comment). The new top-level `@page{...}` rule (one level of NESTED braces —
+its own `@top-center{...}`/`@bottom-center{...}` at-rules) broke that assumption outright (`unparsed
+text at the top level of READER_CSS`, 9 test failures) — fixed by adding `extractPageBlocks`, the
+SAME pass-through-verbatim treatment `@keyframes` already gets (neither ever carries a `:host`
+selector). A standalone HTML export SHOULD carry the print/page rule — a user printing the exported
+file directly gets the same chrome-hiding and (for what it's worth) the same inert-in-a-shadow-root
+non-fidelity the live reader has. The drift-guard pin moved too (25 → 26 `:host`-scoped sites — the
+new `@media print{ :host{...} }` de-clip rule is a real, intended 26th site) and the diagram-CSS
+byte-pin moved (2,927 → 4,111 B — the print/page block lands after the diagram block, so its
+slice-to-end-of-string pin legitimately grew; both re-pinned with rationale, per each test's own
+"re-pin it here" instruction).
+
+**Suite.** Unit: **1055/1055** clean (after the two fixes above — first run surfaced 9 real
+failures, both root-caused and fixed, not worked around). Full browser suite: **146 files / 1491
+passed / 15 skipped, 0 failed** (144/1475/15 baseline + this task's new 8-test file × 2 engines =
++16 passed; the file count difference from a naive +2 is `printMode.browser.test.ts` counting as
+one file per engine instance already reflected in the 146 total). Lint/typecheck clean. Golden diff
+empty. `pdfjs-dist` added as a **devDependency only** (test-tooling, PDF text extraction for the
+render-signal probe — never touches the shipped bundle/manifest/`permissions: []`, not one of
+§3.4's governed "up to two additions", which counts production dependencies only).
+
+**D-7, applied VERBATIM** (`plan.md` §0's own text): *"010 D-7 — print mode is one more `@media
+print` block in the file that already owns every other theme's rules, and PDF export is print mode
+driven through `window.print()`, not a second engine."* The MECHANISM half lands as sealed
+(`readerCss.ts`); the fidelity finding (above) is this task's own measured output, not decided by D-7.
+**D-10, print-`@media`-block half, now real** (task 3.2's own text, applied again — plan §0's D-10
+text covers BOTH halves): *"010 D-10 — the export panel and the print @media block both predate this
+spec in the mockup, which corrects §7-7's own 'no mockup known to exist' framing the same way 009
+corrected an identical claim about code blocks."* The mockup's own print block
+(`design/mockup.html:430-435`) supplied the CHROME-HIDING design language (translated to this file's
+real class names, a strictly more complete translation than the mockup's own 5 generic classes — see
+`readerCss.ts`'s own doc comment); the mockup shows NO `@page` margin-box content at all, so the
+probe itself was built from spec text, not the mockup.
+
+**Revisit-when:** 7.1's fork — this task's finding is the input, not the ruling. If 7.1 (or a later
+task) relocates the `@page` rule to a document-level stylesheet and it then renders correctly, that
+is new information this entry's own "untested by this task" line anticipates, not a contradiction.
+
+**★★★★★ (PRIOR) M10 TASK 4.1 LANDED, 2026-09-03 — COPY-AS-RICH-TEXT, THE PANEL'S 4TH AND LAST COPY ROW WIRED
+LIVE. Only PDF (tasks 6.1/7.1) still renders disabled.**
 **Q1 — the 4.1-vs-3.3 byte-level difference.** `copyAsHtml` (3.3) wraps the clone into a full
 standalone document (doctype + `<head><style>…</style></head>` + `<body>`, baking the reader's OWN
 theme colors). `copyAsRichText` (4.1) is `clone.outerHTML` directly — no wrap, no doctype, no

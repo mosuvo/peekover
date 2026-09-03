@@ -436,6 +436,17 @@ const APP_CSS = /* css */ `
 }
 .${SHELL_CLASS}__pin:hover{background:var(--accent-soft)}
 .${SHELL_CLASS}__pin:disabled{opacity:.6; cursor:default}
+
+/* Print mode (010 D-7, task 6.1's necessary ripple — rationale: readerCss.ts's own print-mode .ts
+   comment, "THE DE-CLIPPING FIX" section). readerCss.ts's shadow-scoped rules cannot reach these
+   light-DOM shell elements, so the header/folders chrome-hiding and the fixed-viewport de-clip
+   live here instead — the only file that can. */
+@media print{
+  .${SHELL_CLASS}{position:static; inset:auto; height:auto; overflow:visible; display:block}
+  .${SHELL_CLASS}__header,.${SHELL_CLASS}__folders{display:none!important}
+  .${SHELL_CLASS}__body{display:block; height:auto}
+  .${SHELL_CLASS}__reader{overflow:visible; height:auto; padding:0}
+}
 `;
 
 /** Build the shell style element. */

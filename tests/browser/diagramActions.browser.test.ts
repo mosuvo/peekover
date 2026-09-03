@@ -783,13 +783,19 @@ describe('the shipped diagram CSS block', () => {
   // the suite green — the sheet-wide `:host *{animation-duration:.001ms!important}` at the top of
   // READER_CSS already covers the panel. The rationale lives in the `.ts` comment below the
   // literal, as this pin requires — a re-pin is what the message below asks for on a rule change.
-  it('is exactly 2,927 B — the pin that keeps prose out of the literal', () => {
+  //
+  // Re-pinned by 010 task 6.1: 2,927 -> 4,111 B, the +1,184 B being print mode's `@media print`
+  // chrome-hiding/de-clip/page-break block plus the `@page` margin-box probe rule — both land
+  // AFTER the diagram block (readerCss.ts's own tail), so this slice-to-end-of-string pin
+  // legitimately grows by the whole addition. Content-script delta accounted at this same +1,184 B
+  // (progress.md's own task 6.1 entry — READER_CSS ships to BOTH graphs by construction, D-2).
+  it('is exactly 4,111 B — the pin that keeps prose out of the literal', () => {
     expect(READER_CSS.indexOf(BLOCK_START)).toBeGreaterThan(0);
     expect(
       bytes,
       'the shipped diagram CSS moved. If that is a rule change, re-pin it here and account the ' +
         'content-script delta to the byte; if it is a comment, move it below the literal',
-    ).toBe(2927);
+    ).toBe(4111);
   });
 
   it('uses no `ch` in a layout-blocking property (retro finding 6)', () => {

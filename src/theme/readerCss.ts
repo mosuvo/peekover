@@ -738,7 +738,109 @@ export const READER_CSS = /* css */ `
 .peekover-diagram-lightbox__close:hover{background:var(--hl-soft)}
 .peekover-diagram-lightbox__view{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center}
 .peekover-diagram-lightbox__view svg{max-width:none;height:auto}
+
+/* Print mode (010 D-7, task 6.1) — chrome hidden, document de-clipped, page-break rules; the
+   @page margin-box fidelity PROBE follows below. Rationale: the .ts comment after this literal. */
+@media print{
+  :host{position:static;inset:auto;overflow:visible;height:auto;font-size:12pt}
+  .peekover-mode-toggle,.peekover-theme-toggle,.peekover-watch,.peekover-watch-note,
+  .peekover-watch-disclosure,.peekover-diff-affordance,.peekover-diff-picker,.peekover-diff-status,
+  .peekover-agent-badge,.peekover-remote-load,.peekover-net,.peekover-toc,.peekover-diagram-lightbox,
+  .peekover-table-tools,.peekover-diagram-actions,.peekover-code-toolbar{display:none!important}
+  .peekover-reader{max-width:100%;padding:0}
+  .peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
+  .peekover-reader h4,.peekover-reader h5,.peekover-reader h6{break-after:avoid;page-break-after:avoid}
+  .peekover-reader pre,.peekover-reader table,.peekover-reader blockquote,
+  .peekover-reader .peekover-diagram{break-inside:avoid;page-break-inside:avoid}
+}
+@page{
+  margin:2cm 1.5cm 2.2cm;
+  @top-center{content:"Peekover"}
+  @bottom-center{content:"Page " counter(page) " of " counter(pages)}
+}
 `;
+
+// ============================================================================
+// PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE — 010 D-7, task 6.1
+// ============================================================================
+// A `.ts` comment ON PURPOSE (finding 9, restated every milestone since): the rules above live
+// inside READER_CSS's template literal and ship verbatim to BOTH bundles, so the argument for them
+// lives here instead, where it costs nothing.
+//
+// ── WHAT COUNTS AS "NON-DOCUMENT CHROME" HERE, AND WHY THE LIST IS LONGER THAN THE MOCKUP'S ──────
+//
+// design/mockup.html:430-435 hides `.toolbar,.side,.toc,.status,.progress,.hintpill,.figtools,
+// .hint,.edbar` — but that is a single flat demo page with one stylesheet; those class names do
+// not exist anywhere in this tree (D-7's own text: "design language to carry, not readerCss.ts's
+// own rules yet to be written"). The real reader chrome is every `position:fixed` pill READER_CSS
+// already defines above (mode-toggle, theme-toggle, watch + its note/disclosure, the diff
+// affordance/picker/status trio, the agent-file badge, remote-load, the network indicator, the TOC
+// rail, the diagram lightbox) plus the three IN-FLOW per-block toolbars (code, table, diagram
+// actions) — a strictly MORE COMPLETE translation of "hide everything that is not the document"
+// than a literal copy of the mockup's own five-class list would have produced. `.peekover-diagram-
+// status` is DELIBERATELY NOT hidden: unlike the others, it is document-adjacent fallback content
+// (e.g. "diagram failed to render"), the printed-page equivalent of alt text, not an interactive
+// control — the same distinction §3.11's own routing table draws between chrome and content.
+//
+// ── RULING 4, HELD: THIS BLOCK IS THE ONLY THING THAT CHANGED ─────────────────────────────────
+//
+// `.peekover-code-toolbar` above is a NEW selector reference inside a NEW `@media print` block; the
+// EXISTING `.peekover-reader .peekover-code-toolbar{...}` rule (:651-655, M9 9.1's shipped spacing)
+// is byte-unchanged — verified by diffing that rule's own body specifically, not the file as a
+// whole (tests/browser/printMode.browser.test.ts's own Ruling-4 assertion; see there for the exact
+// mechanism). `!important` is used throughout this block because several hidden selectors are
+// styled at higher specificity elsewhere (`.peekover-reader .peekover-table-tools`, `.peekover-diff-
+// picker:not([hidden]) ~ .peekover-diff-status` in CONTAINED_CSS below) and a print stylesheet
+// relying on exact per-selector specificity arithmetic to win is the kind of fragile coupling this
+// codebase avoids elsewhere — the existing `:host *{animation-duration:.001ms!important}` reduced-
+// motion rule is the standing precedent for `!important` inside this file, not a new pattern.
+//
+// ── THE DE-CLIPPING FIX, AND WHY IT IS NOT PART OF THE PROBE ──────────────────────────────────
+//
+// `:host{position:fixed;inset:0;overflow:auto}` (the full-page content-script takeover, :58-66) is
+// exactly the shape that silently under-prints an app: a fixed-position, internally-scrolling
+// viewport prints only what is currently laid out in its box on many engines, not the full
+// document. `position:static;inset:auto;overflow:visible;height:auto` returns `:host` to normal
+// document flow so the browser's own pagination sees the WHOLE rendered document, not one scrolled
+// screenful. This is a well-established, uncontroversial print-CSS correction (not itself the
+// empirical unknown D-7 names) — the true probe is the `@page` block below. `font-size:12pt`
+// mirrors the mockup's own 12pt print body-copy convention (:434), translated from this file's
+// screen-size 17px serif base; headings keep their own explicit px sizes below `.peekover-reader`
+// and are unaffected (no `ch` unit anywhere in this block, the standing rule).
+//
+// In CONTAINED mode (the app-page reader pane), `:host` is ALREADY `position:relative;inset:auto`
+// unconditionally (CONTAINED_CSS below, injected as a later `<style>` in the same shadow root) —
+// this print rule's `position:static` is therefore a no-op there (a later, unconditional sheet
+// rule beats an earlier, print-conditional one at equal specificity), but `overflow:visible` still
+// applies (CONTAINED_CSS never touches `overflow`), which is the property that actually matters:
+// the CLIPPING container on the app-page surface is `.peekover-app__reader` in `appShell.ts`'s
+// `APP_CSS` (`overflow:auto`, a flex child of `.peekover-app__body`), a file OUTSIDE this shadow
+// root's cascade entirely — CSS scoped to a shadow tree cannot reach light-DOM ancestors by
+// construction, so THAT fix cannot live here. See appShell.ts's own new `@media print` block
+// (this task's necessary ripple, flagged in progress.md/the commit message — tasks.md's Files list
+// for 6.1 named only readerCss.ts, but "reader chrome hidden under print media" (this task's own
+// Verify clause) is unreachable in full without it: `.peekover-app__header` (the toolbar: brand,
+// theme/code-theme controls, storage/export toggles+panels) and `.peekover-app__folders` (the side
+// panel) are light-DOM siblings of the reader's shadow host, never selectors this file can hide).
+//
+// ── THE @page MARGIN-BOX PROBE — MEASURED, AND THE RESULT IS INADEQUATE ON BOTH ENGINES ───────
+//
+// `@top-center`/`@bottom-center` running content with `counter(page)`/`counter(pages)` is the
+// spec-standard CSS Paged Media mechanism (spec §3.6/§7-4's own uncertainty, plan risk 4). The
+// exact copy here ("Peekover" / "Page X of Y") is PROVISIONAL — §8 item 3 routes the FINAL header/
+// footer content and margin sizing to group 10's own walk-gate measurement, not this task.
+//
+// tests/browser/printMode.browser.test.ts is the PRIMARY OUTPUT this task produces (feeding task
+// 7.1's fork, §3.6, rather than ruling it here) and its finding is NOT the simple "does the engine
+// support margin boxes" question this rule set out to measure — Chromium DOES, verified against a
+// plain top-level-document control. The finding is SHARPER and WORSE: an `@page` rule whose own
+// stylesheet lives inside a SHADOW ROOT (exactly where this rule lives, injected via READER_CSS
+// into the reader's shadow root) is INERT for margin-box rendering purposes on EITHER engine —
+// the shadow tree's own content still paginates correctly, but no margin-box text renders at all,
+// a structural consequence of shadow encapsulation applied to a document-global CSS concept, not
+// an engine-support gap a future browser release could close. Firefox additionally drops the
+// nested at-rules at PARSE time regardless of where they live (its own, separate finding). See the
+// test file's own module doc comment for the full measurement (both signals, both engines).
 
 // ============================================================================
 // THE AGENT-FILE BADGE — 008 §3.11, task 1.3 (D-12)

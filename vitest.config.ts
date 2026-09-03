@@ -40,6 +40,91 @@ const emulateColorScheme: BrowserCommand<[value: 'light' | 'dark' | null]> = asy
   await page.emulateMedia({ colorScheme: value });
 };
 
+// ── Print-media emulation for the browser project (task 6.1) ──────────────────
+// Same seam as the two commands above: the in-page `page` API has no `emulateMedia`, and `cdp()`
+// is Chromium-only, so this server-side command is the one cross-engine (Chromium AND Firefox)
+// way to engage `@media print` — consumed by tests/browser/printMode.browser.test.ts. `null`
+// resets to the system default.
+const emulatePrintMedia: BrowserCommand<[value: 'print' | 'screen' | null]> = async (
+  { page },
+  value,
+) => {
+  await page.emulateMedia({ media: value });
+};
+
+// ── The `@page` margin-box fidelity PROBE's render half (task 6.1, D-7, §7-4) ─────────────────
+// The CSSOM-parse half of this probe (does the engine even RETAIN the `@top-center`/`@bottom-center`
+// nested at-rules) runs entirely in-page — plain `document`/shadow-root `styleSheets` reads, no
+// seam needed. This command is for the other half: does the engine's REAL PRINT PIPELINE actually
+// PAINT that content on the page. There is no in-page API for that (margin-box content is
+// generated print content, never a DOM node `getComputedStyle` can read), so it needs the
+// server-side Playwright `page`'s own `pdf()` — which drives the SAME underlying print pipeline
+// `window.print()` does (verified this session: Chromium's `page.pdf()` under `emulateMedia({media:
+// 'print'})` is print-css-driven exactly like a real print, not a separate renderer).
+//
+// ★ CHROMIUM-ONLY, AND THE FAILURE IS THE OTHER HALF OF THE FINDING, NOT AN ERROR TO SWALLOW —
+// verified this session: Playwright's `page.pdf()` throws `"PDF generation is only supported for
+// Headless Chromium"` on Firefox. That message is returned as `error`, not thrown across the
+// command boundary, so the test can assert on it and state Firefox's status plainly (the CSSOM-
+// parse half above is what actually carries Firefox's part of this probe's verdict).
+//
+// ★ A FRESH, ISOLATED PAGE — NOT THE `page` THE TEST RUNS IN — same isolation reasoning as
+// `probeFileUrlClipboard`/`collectExportDownload` above, but for a DIFFERENT hazard specific to
+// this command: verified this session, vitest's browser-mode test runs INSIDE AN IFRAME
+// (`location.href` carries its own `iframeId=` query param, `window.top !== window`). `page.pdf()`
+// always captures the TOP-LEVEL page — the runner shell wrapping that iframe — never the iframe's
+// own document, so calling it on the shared `page` silently produces a one-page PDF of the wrong
+// document (measured: a 43,000px-tall real fixture still came back as `pageCount: 1` before this
+// fix). The caller therefore serializes ITS OWN rendered DOM (including shadow roots, via
+// Declarative Shadow DOM `<template shadowrootmode="open">` — `open`-mode shadow roots only,
+// matching `mount.ts`'s own `SHADOW_MODE`) and hands the HTML string across the command boundary;
+// this command loads it into a genuinely fresh, top-level page and prints THAT.
+//
+// Text extraction uses `pdfjs-dist` (a new devDependency, TEST-ONLY — never touches the shipped
+// bundle, the manifest, or `permissions: []`; not one of §3.4's "up to two additions", which counts
+// PRODUCTION dependencies only) because a Chromium-generated PDF's content streams are not
+// grep-able raw bytes (FlateDecode-compressed) — there is no simpler dependency-free route to
+// "does this string appear on the rendered page" than a real PDF text-layer reader.
+interface PageMarginBoxProbe {
+  ok: boolean;
+  error: string | null;
+  pageCount: number;
+  perPageText: string[];
+}
+
+const printToPdfAndExtractText: BrowserCommand<[html: string]> = async (
+  { page },
+  html,
+): Promise<PageMarginBoxProbe> => {
+  const browser = page.context().browser();
+  if (!browser) {
+    return { ok: false, error: 'no Playwright Browser — cannot isolate a fresh page', pageCount: 0, perPageText: [] };
+  }
+  const context = await browser.newContext();
+  try {
+    const freshPage = await context.newPage();
+    await freshPage.setContent(html, { waitUntil: 'load' });
+    await freshPage.emulateMedia({ media: 'print' });
+    const buf = await freshPage.pdf({ printBackground: true, preferCSSPageSize: true });
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+    const perPageText: string[] = [];
+    for (let i = 1; i <= doc.numPages; i += 1) {
+      const p = await doc.getPage(i);
+      const content = await p.getTextContent();
+      const text = content.items
+        .map((it) => ('str' in it ? (it as { str: string }).str : ''))
+        .join(' ');
+      perPageText.push(text);
+    }
+    return { ok: true, error: null, pageCount: doc.numPages, perPageText };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e), pageCount: 0, perPageText: [] };
+  } finally {
+    await context.close();
+  }
+};
+
 // ── A REAL `file://` DOCUMENT, for D-10's clipboard residual (008 task 4.2) ───
 // The content script runs in the PAGE's context, and one of its two document
 // classes is `file://`, whose secure-context status MDN itself hedges ("the same
@@ -347,6 +432,8 @@ export default defineConfig({
             commands: {
               emulateReducedMotion,
               emulateColorScheme,
+              emulatePrintMedia,
+              printToPdfAndExtractText,
               probeFileUrlClipboard,
               armExportDownload,
               collectExportDownload,

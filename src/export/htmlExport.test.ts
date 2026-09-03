@@ -84,16 +84,21 @@ describe('serializeReaderDocument', () => {
 });
 
 describe('translateReaderStylesheet — the :host translation (finding (b))', () => {
-  it('pins the LIVE READER_CSS at exactly 25 :host-scoped rule sites', () => {
-    // Task 2.1's own finding (decisions.md, progress.md) counts 26 :host rule sites — but that
-    // grep ran over the WHOLE FILE, which also exports CONTAINED_CSS. This module only ever
-    // translates READER_CSS's own text (see the module doc comment on why CONTAINED_CSS is out
-    // of scope BY CONSTRUCTION, never fed into `translateReaderStylesheet` at all) — so READER_CSS
-    // alone carries 25 of the 26; the 26th (`readerCss.ts:1191`, CONTAINED_CSS's own `:host{
-    // position:relative; inset:auto; }`) is resolved by SCOPE, not by classification.
+  it('pins the LIVE READER_CSS at exactly 26 :host-scoped rule sites', () => {
+    // Task 2.1's own finding (decisions.md, progress.md) counted 26 :host rule sites over the
+    // WHOLE FILE (which also exports CONTAINED_CSS); this module only ever translates READER_CSS's
+    // own text (module doc comment: CONTAINED_CSS is out of scope BY CONSTRUCTION), so at 2.1 it
+    // pinned 25 — the 26th (`readerCss.ts:1191`, CONTAINED_CSS's own `:host{ position:relative;
+    // inset:auto; }`) is resolved by SCOPE, not by classification.
+    //
+    // 010 task 6.1 moves this count DELIBERATELY: the new `@media print{ :host{...} }` de-clipping
+    // rule (readerCss.ts, "THE DE-CLIPPING FIX") is a 26th `:host`-scoped site inside READER_CSS
+    // itself — a real, intended addition (bare `:host`, no attribute predicate, so it CARRIEs,
+    // translating to `body{position:static;...}` under `@media print` in every export, exactly as
+    // it should: a standalone HTML export the user prints directly should ALSO de-clip).
     const { diagnostics } = translateReaderStylesheet('light');
-    expect(diagnostics.hostSiteCount).toBe(25);
-    expect(diagnostics.carried + diagnostics.resolved + diagnostics.dropped).toBe(25);
+    expect(diagnostics.hostSiteCount).toBe(26);
+    expect(diagnostics.carried + diagnostics.resolved + diagnostics.dropped).toBe(26);
   });
 
   it('CARRY: translates bare :host to body, unconditionally, in every theme', () => {

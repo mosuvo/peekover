@@ -466,7 +466,7 @@ drop-content clause struck with it (DOCX was the only control that clause's math
 
 ## 6 — Print mode + the `@page` fidelity probe (D-7)
 
-- [ ] **6.1 F5 print mode — `@media print` rules in `readerCss.ts`, chrome-hiding only; the `@page` margin-box
+- [x] **6.1 F5 print mode — `@media print` rules in `readerCss.ts`, chrome-hiding only; the `@page` margin-box
       fidelity probe feeding group 7's go/no-go; Ruling 4's non-reopen respected as an explicit, checkable
       constraint (D-7).** `readerCss.ts` carries **no** `@media print`/`@page` rule today (re-confirmed at task
       time, matching plan D-7's own recon) — genuinely greenfield. New rules hide non-document chrome (toolbar,
