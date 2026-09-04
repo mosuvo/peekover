@@ -1,8 +1,10 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 9.2 landed — the zero-network guard across every export/copy/print action, in
-ONE test, real engine (Chromium + Firefox), against `restoreBlockedImages` shown firing live as the one
-control the plan named. Group 9 CLOSES. Test-only — no `src/` change.)*
+*Updated: 2026-09-04 (decision-record — task 8.3's build-or-drop deferred to task 10.4's decision gate,
+human-ruled; doc-only, no `src/`/test/build touched. Below that: task 9.2 landed — the zero-network guard
+across every export/copy/print action, in ONE test, real engine (Chromium + Firefox), against
+`restoreBlockedImages` shown firing live as the one control the plan named. Group 9 CLOSES. Test-only —
+no `src/` change.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,6 +13,18 @@ control the plan named. Group 9 CLOSES. Test-only — no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 DECISION-RECORD, 2026-09-04 — TASK 8.3's BUILD-OR-DROP DEFERRED TO TASK 10.4's DECISION GATE,
+HUMAN-RULED, ON 10.2's MEASURED NUMBER. DOC-ONLY — NO `src/`, TEST, OR BUILD TOUCHED.** Full reconciliation
+and attribution: `decisions.md`'s 2026-09-04 M10 §8.3/§10.4 entry. `tasks.md` §8.3/§10.4 annotated
+(deferred, not struck; count unchanged).
+
+**Group-10 sequence, for the record.** 10.1/10.2/10.3 MEASURE (each forbidden from choosing a value) →
+**10.4 is the human decision gate** — rules M-1's default format, M-2's heavy-document threshold, M-3's
+header/footer content, **and now 8.3's build-or-drop** (on 10.2's own number), plus the milestone's final
+byte-ledger reconciliation, all in one gate — → **10.5 IMPLEMENTS** the chosen constants, including
+building 8.3 if 10.4 rules it in, or recording its non-build if 10.4 rules it out. This entry frames the
+sequence only; the 10.x measurement tasks themselves have not run yet (§ Up next still lists 10.1 first).
 
 **★★★★★ M10 TASK 9.2 LANDED, 2026-09-04 — THE ZERO-NETWORK GUARD ACROSS EVERY EXPORT/COPY/PRINT ACTION,
 IN ONE TEST, BOTH ENGINES. GROUP 9 CLOSES.** `tests/browser/exportNetwork.browser.test.ts`, test-only.
@@ -248,7 +262,9 @@ HANDLERS, THE COMPLETE PERSISTENCE UNIT TASK 8.1 NEEDS TO READ.**
 10.2**, because 8.3's own body names 10.2's M-2 heavy-threshold as its trigger and every surviving export
 path is synchronous DOM/string work or a single native API call (grep-confirmed) — building it before 10.2
 risks shipping an indicator that never fires. 8.3 waits for 10.2's number, then is either built or recorded
-as a measured non-build. This task did not touch 8.3.
+as a measured non-build. This task did not touch 8.3. **Superseded/sharpened, 2026-09-04 (§ Now, above,
+and `decisions.md` M10 §8.3/§10.4): 8.3's build-or-drop is specifically deferred to task 10.4's decision
+gate, not just "past 10.2" — 10.2 produces the number, 10.4 rules on it.**
 
 **Q1 — the enumeration trap, checked, and `plan.md`'s own claim corrected by measurement, not
 inherited.** `plan.md:256-260` asserted *"`Settings` itself has no such enumeration trap... confirmed at

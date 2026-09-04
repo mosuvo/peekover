@@ -1,6 +1,52 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-04 · M10 §8.3/§10.4 — HUMAN RULING: TASK 8.3 (the progress indicator)'s BUILD-OR-DROP IS
+  DEFERRED TO TASK 10.4's DECISION GATE, RULED THERE ON 10.2's MEASURED EXPORT WALL-CLOCK — NOT DECIDED
+  IN ADVANCE. REVERSES a prior-turn lean toward building 8.3 now with its provisional placeholder
+  threshold; the reversal follows the reconciliation below, not a change of mind alone.**
+  **The reconciliation (the evidence input, checked against spec.md/tasks.md/the current code before
+  recording, not asserted from prose).**
+  - Spec §3.8's own named heavy-export examples — *"DOCX/ZIP serialization, HTML Base64-embedding of
+    large images"* (`spec.md:104`) — are THE THREE FEATURES this milestone has since dropped: DOCX
+    (§3.10, 2026-08-24 ruling, below), ZIP export in full (§3.1(cont.), 2026-08-29 ruling, below), and
+    local-image Base64/file embedding (§3.1, 2026-08-29 ruling, below). Every example the spec itself
+    gave for "what makes an export heavy" no longer exists in M10's surviving scope.
+  - The five surviving export paths split cleanly, read-confirmed against `appShell.ts`'s
+    `runExportHtml`/`runCopyHtml`/`runCopyPlainText`/`runCopyRichText`/`runExportPdf` (:919-1005) and
+    their callees: HTML export (`exportHtml`, `htmlExport.ts:367`) and PDF export (`exportPdf`,
+    `exportControls.ts:177`) are both declared `: void` — synchronous, no `await`, nothing returned to
+    await — so a progress indicator has no repaint window to render into around either. The three copy
+    paths (`copyAsHtml`/`copyAsPlainText`/`copyAsRichText`, driven via `.then(onCopied, onFailed)`) are
+    async internally but fast — a clipboard write, not a serialization pass. None of the five surviving
+    paths structurally resembles the multi-second operation §3.8 was written to cover.
+  - Spec §3.8 itself states the requirement CONDITIONALLY, not asserted: *"it must degrade to something
+    visible rather than a frozen-looking tab on a large document... the concrete threshold for 'heavy'
+    is §8's to measure, not this spec's to assert."* If 10.2's measurement finds no export ever crosses
+    a perceptible threshold, the requirement is vacuously satisfied by no indicator ever firing — the
+    same conditional shape §4's zero-network and print-degradation clauses already carry elsewhere in
+    this spec.
+  - Task 8.3's own sealed body already carries a threshold *"provisional placeholder here, EXPLICITLY
+    NAMED provisional... group-10's own measurement confirms or replaces it"* — the body already
+    anticipates 10.2 owning the real number. This ruling extends that: 10.4 (the gate that already rules
+    M-1's format, M-2's threshold, and M-3's header/footer, per `tasks.md` §10.4) also rules WHETHER 8.3
+    builds at all — "no export crosses any perceptible threshold" and "8.3 has nothing to indicate" are
+    the same finding stated two ways.
+  **The ruling.** 8.3 is NOT struck — it is not dropped, its FATE is deferred, distinct from a
+  §3.10/§3.1(cont.)-style strike — and stays an active task (group 8 still 3 tasks, `tasks.md`'s own
+  count line restated, not silently left stale), gated on 10.4. This routes the build-or-drop decision
+  to the gate that already exists to rule on group-10's measured numbers, rather than building an
+  affordance now that the sync/async reality above suggests will probably never fire, only to maybe drop
+  it later at that same gate.
+  **The reversal, named.** A prior-turn lean favored building 8.3 now with its provisional placeholder
+  threshold, treating the placeholder as sufficient to ship ahead of measurement. That lean predated this
+  reconciliation (the sync/async split, and the spec's-own-heavy-examples-all-dropped finding); recorded
+  here as a reversal on new evidence, not silently superseded.
+  **Attribution.** The ruling is the human's; the reconciliation above is the evidence input that
+  produced it.
+  **Revisit-when:** task 10.2 lands its wall-clock numbers — 10.4 then rules 8.3 build-or-drop on that
+  number, per this entry. `tasks.md` §8.3/§10.4 carry a pointer back here.
+
 - **2026-09-04 · M10 task 9.2 — the zero-network guard lands across every export/copy/print action in ONE
   test, real engine (Chromium + Firefox), against a control the observer is shown to actually see
   (`tests/browser/exportNetwork.browser.test.ts`, test-only). Closes group 9.**

@@ -611,7 +611,13 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       files/1503 passed/15 skipped/0 failed, lint + typecheck clean. [D-6; §3.7; §4 export shortcut]
 
 - [ ] **8.3 The progress indicator for heavy exports — a NEW affordance with NO sibling suite and NO mockup
-      baseline (§3.8; plan §3.11 row 14).** Shown when a heavy-document export (per 10.2's M-2 threshold — a
+      baseline (§3.8; plan §3.11 row 14). ★ BUILD-OR-DROP DEFERRED TO TASK 10.4's DECISION GATE, HUMAN-RULED
+      2026-09-04 (`decisions.md` M10 §8.3/§10.4) — NOT struck (its fate is deferred, distinct from a
+      §3.10/§3.1(cont.)-style strike); still an active task, count unchanged, gated on 10.4.** The
+      "provisional placeholder here, group-10's own measurement confirms or replaces it" framing below is
+      SUPERSEDED by that ruling: 10.4 rules not just the threshold value but whether 8.3 builds at all, on
+      10.2's measured export wall-clock — this task does not build until 10.4 has ruled.
+      Shown when a heavy-document export (per 10.2's M-2 threshold — a
       provisional placeholder here, EXPLICITLY NAMED provisional in the doc comment, group-10's own measurement
       confirms or replaces it, the same discipline 009 5.1/6.1 used) crosses that threshold; a polite live
       region announces progress state (row 9); if it animates, instant under `prefers-reduced-motion`, DOES
@@ -698,8 +704,10 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       — group 7's fallback (if adopted) is what this task's successor measures instead. Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [§8 M-3; §7-4; §3.6]
 
-- [ ] **10.4 ★ DECISION GATE (human) — M-1's format, M-2's threshold, M-3's header/footer content. Recorded in
-      `decisions.md` BEFORE any code sets a value.** Also the **byte ledger's final reconciliation**: `.output`
+- [ ] **10.4 ★ DECISION GATE (human) — M-1's format, M-2's threshold, M-3's header/footer content, AND 8.3's
+      BUILD-OR-DROP (deferred here 2026-09-04, `decisions.md` M10 §8.3/§10.4 — ruled on THIS task's own M-2
+      number, not decided in advance). Recorded in `decisions.md` BEFORE any code sets a value.** Also the
+      **byte ledger's final reconciliation**: `.output`
       and `pnpm zip` against the milestone-start baselines (**4,866,741 / 4,866,857 B**; **1,470,730 /
       1,470,788 B**), the full accumulated delta across every task's own stated figures, decomposed to a named
       residual — the binding record, not a separate measurement.
@@ -810,6 +818,9 @@ tasks** — group 5's sole task (5.1) is struck, DOCX export dropped from M10. 1
 tasks** — task 3.5 (ZIP export) is struck, downstream of the §3.1 local-image ruling; group 3 drops from 5 to
 4 active tasks, no group disappears (group 5 was already struck). 1 (1) · 2 (2) · 3 (4) · 4 (1) · ~~5 (1)~~
 struck · 6 (1) · 7 (1) · 8 (3) · 9 (2) · 10 (5) · 11 (3) = **20 active + 2 struck = 22 sealed.**
+**Count unchanged by the 2026-09-04 M10 §8.3/§10.4 ruling** — task 8.3's build-or-drop is deferred to 10.4,
+not struck, so it stays one of group 8's three active tasks; the count above stands until 10.4 rules and,
+if 8.3 is dropped there, restates it.
 
 *Gate: this file is a **DRAFT awaiting gate 3**. On approval, implementation may begin at **task 1.1, in a
 fresh session**, per WORKFLOW.md §5.3 — one commit per task, the `progress.md` Now-pointer advancing in that
