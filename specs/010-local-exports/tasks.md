@@ -644,7 +644,7 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       the defect's own signature, in its own units. Golden EMPTY · manifest green **654 / 770 B** ·
       `permissions: []`. [§3.9; §4 Degradation]
 
-- [ ] **9.2 The zero-network guard, across EVERY export/copy/print action, with D-8's own live mechanism as the
+- [x] **9.2 The zero-network guard, across EVERY export/copy/print action, with D-8's own live mechanism as the
       firing control, shown live in the SAME test (§3.11 row 12).** ★ Every export/copy path in this milestone
       is a single test run, not one test per action — the standing lesson applies with full force here because
       D-1's headroom pressure makes a missed request in any one path the kind of finding that changes group 10's

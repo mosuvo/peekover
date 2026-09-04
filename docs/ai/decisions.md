@@ -1,6 +1,54 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-04 · M10 task 9.2 — the zero-network guard lands across every export/copy/print action in ONE
+  test, real engine (Chromium + Firefox), against a control the observer is shown to actually see
+  (`tests/browser/exportNetwork.browser.test.ts`, test-only). Closes group 9.**
+  **Q1 — ONE CONTROL LANE, NOT TWO (a kickoff-vs-ground-truth mismatch, resolved against the file body).**
+  A kickoff drafted ahead of this task leaned toward arming both a bare-`fetch()` lane and a subresource
+  lane, citing `agentBadgeNetwork.browser.test.ts`'s own two-lane precedent for "observer completeness."
+  Checked against `plan.md`'s own §3.11 row 12 entry BEFORE drafting (AGENTS.md's "the file body is
+  ground truth" rule): that row already named its control, singular — *"the control fetch case being
+  D-8's own live mechanism ... the natural positive control to borrow rather than construct fresh."*
+  `tasks.md`'s own §9.2 body repeats "the positive control" the same way, never a second lane. Ruled: ONE
+  lane only, `restoreBlockedImages` (`mediaPolicy.ts:166`), because — unlike `agentBadgeNetwork`'s generic
+  render modules — grep confirms none of the five actions under test (`htmlExport.ts`, `copyPlainText.ts`,
+  `exportControls.ts`, `appShell.ts`'s five export-dispatch functions) ever calls `fetch`/
+  `XMLHttpRequest`; a bare-fetch control would prove the observer sees a request class this code has no
+  path to emit. The one lane these actions could plausibly open is the subresource lane (adopting the
+  reader's own clone into a document with a browsing context), which is exactly what
+  `restoreBlockedImages` exercises. The kickoff's lean is named here as the mismatch it was, not silently
+  followed.
+  **Q2 — the buffer dance.** `armTheProbe()`: `clearResourceTimings()` → fire the control (proving the
+  observer sees it) → remove the control's own adopted node → `clearResourceTimings()` again, handing the
+  five actions a clean buffer. Each action gets its own labeled `assertNoNetwork(label)` immediately after
+  it runs (never batched ahead of the instrument — the "check that found the defect must be the one seen
+  to fail" lesson), the buffer is never re-cleared between actions, one cumulative check reads the whole
+  run, and the control fires again at the end to prove the observer stayed live throughout — 
+  `agentBadgeNetwork`'s own arm→measure→re-arm shape, reused verbatim.
+  **Q3 — PDF/print.** `window.print()` is stubbed via `vi.spyOn` (`pdfExport.browser.test.ts`'s own
+  shape) — a real call opens a modal dialog that would hang the runner. The assertion is stated precisely
+  as *"Peekover's own path TO `window.print()` (the panel row → `exportPdf()` → the call) fires zero
+  requests,"* never a claim about the browser's own print-pipeline internals, which do not run here (the
+  call is stubbed) and which the page's own Resource Timing buffer could not observe regardless.
+  **Q4 — the drive, and non-vacuity.** All five actions run through the REAL export panel
+  (`exportDegrade.browser.test.ts`'s own `mountWithFile`/`openPanel`/`rowIn` shape, copied not imported).
+  HTML export: `armExportDownload`/`collectExportDownload` (task 3.1's own command pair) prove a real
+  download landed, carrying the fixture's own heading — non-vacuous. The three copy rows: real clipboard
+  consent granted via CDP (`exportDegrade.browser.test.ts`'s own shape), driven with `userEvent.click()`
+  for real transient activation, and `EXPORT_ROW_STATE_ATTR === 'done'` is reachable only via the real
+  `.then(onCopied, ...)` resolving — i.e. the real write succeeded. PDF: the `vi.spyOn` proves
+  `exportPdf()` → `window.print()` was actually reached. By-contrast proof (D-8's own text: the control
+  proves the export/copy paths are silent, using a mechanism export never calls): grep-confirmed the four
+  export-owning files never call `restoreBlockedImages` or `fetch`/`XMLHttpRequest`.
+  **Test-only.** No `src/` change; app-page bytes, both content-script md5s, `.output`, deps (6),
+  manifests (654/770 B), `permissions: []` and the Golden fixtures all unchanged — a test file ships
+  nothing. Group 9 CLOSES with this task.
+  **Revisit-when:** a sixth export/copy/print action is added to the panel (this test's action list would
+  then be incomplete by omission, not by a wrong assertion) — the next task adding a row should extend
+  this file's own action list rather than open a new one, per the "one test, not one per action" rule
+  this task's own body states.
+
 - **2026-09-04 · M10 task 9.1 — failure states land, AND (human ruling, this entry) the copy-completion
   affordance five prior tasks named but did not build lands in the SAME commit, because they are one
   code change: every copy handler's `void copyFn(...)` becomes `copyFn(...).then(onCopied, onFailed)`,

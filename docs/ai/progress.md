@@ -1,10 +1,8 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 9.1 landed — per-action failure states, AND, by human ruling, the copy-completion
-affordance three prior copy tasks (3.3/3.4/4.1) had already named but not built, in the SAME commit: every
-copy handler's `void copyFn(...)` became `copyFn(...).then(onCopied, onFailed)`, whose success branch IS the
-completion affordance. HTML export gets a failure-only report (a real serialization-throw path); PDF gets
-neither, on either outcome. Revert-and-fail actually performed, not merely described.)*
+*Updated: 2026-09-04 (task 9.2 landed — the zero-network guard across every export/copy/print action, in
+ONE test, real engine (Chromium + Firefox), against `restoreBlockedImages` shown firing live as the one
+control the plan named. Group 9 CLOSES. Test-only — no `src/` change.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -13,6 +11,66 @@ neither, on either outcome. Revert-and-fail actually performed, not merely descr
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 9.2 LANDED, 2026-09-04 — THE ZERO-NETWORK GUARD ACROSS EVERY EXPORT/COPY/PRINT ACTION,
+IN ONE TEST, BOTH ENGINES. GROUP 9 CLOSES.** `tests/browser/exportNetwork.browser.test.ts`, test-only.
+
+**Q1 — a kickoff-vs-ground-truth mismatch, resolved against the file body, not the kickoff.** A kickoff
+drafted ahead of this task leaned toward arming two firing-control lanes (a bare `fetch()` lane plus a
+subresource lane), citing `agentBadgeNetwork.browser.test.ts`'s own two-lane precedent for "observer
+completeness." Checked against `plan.md`'s own §3.11 row 12 text before drafting a line of test code
+(AGENTS.md's "the file body is ground truth" rule): that row already named ONE control —
+*"the control fetch case being D-8's own live mechanism ... the natural positive control to borrow
+rather than construct fresh."* `tasks.md`'s own §9.2 body repeats it the same way, "the positive
+control," singular. Ruled: ONE lane, because — unlike `agentBadgeNetwork`'s generic render modules —
+grep confirms none of the five actions under test ever calls `fetch`/`XMLHttpRequest` (`htmlExport.ts`,
+`copyPlainText.ts`, `exportControls.ts`, `appShell.ts`'s five export-dispatch functions); a bare-fetch
+control would prove the observer sees a request class this code has no path to emit. The lane these
+actions could plausibly open is the subresource one — adopting the reader's own clone into a document
+with a browsing context — exactly what `restoreBlockedImages` (`mediaPolicy.ts:166`, the same function
+`remoteMediaUi.ts:77`'s restore-button click handler calls) exercises. The kickoff's lean is named as
+the mismatch it was, not silently followed either way.
+
+**The mechanism.** `armSubresourceLane()` parses a hand-written placeholder (`.peekover-remote` +
+`data-peekover-src`) into an inert `<template>`'s `.content` first — never a detached div, the standing
+Firefox `@import` lesson — then imports it into a live, attached container (`restoreBlockedImages`'s own
+real call shape: an attached shadow root) and calls `restoreBlockedImages` directly, never through any
+of this milestone's own code. The real `<img>` it builds fetches; `awaitProbeUrls` (`awaitFetchedUrls`'s
+shape) proves the observer sees it before any of the five actions is measured. Buffer dance:
+`clearResourceTimings()` → fire the control → remove its own node → `clearResourceTimings()` again →
+each action gets its own labeled `assertNoNetwork(label)` immediately after it runs, unbatched, so a
+leak's own label is the one that fails → one cumulative check over the whole unclearedsince-arm buffer
+→ the control fires again to prove the observer stayed live. All five actions are driven through the
+REAL export panel (`exportDegrade.browser.test.ts`'s own `mountWithFile`/`openPanel`/`rowIn` shape,
+copied not imported): HTML export proven non-vacuous via `armExportDownload`/`collectExportDownload`
+(a real download, the fixture's own heading present); the three copy rows via real clipboard consent
+(CDP, `exportDegrade`'s own grant shape) plus `userEvent.click()`, non-vacuous because
+`EXPORT_ROW_STATE_ATTR === 'done'` is only reachable via the real `.then(onCopied, ...)` resolving; PDF
+via `vi.spyOn(window, 'print')` (`pdfExport.browser.test.ts`'s own stub shape — a real dialog would hang
+the runner), non-vacuous because the spy is asserted called exactly once. The claim for PDF is stated
+precisely: *Peekover's own path TO `window.print()` is silent* — not a claim about the browser's print
+internals, which never run here and which the page's own Resource Timing buffer could not see regardless.
+
+**Red-first, on the control's own non-vacuity check.** `restoreBlockedImages`'s return value was
+ablated to a hardcoded `0` (the call itself left in place but its result discarded) — both engines
+failed on `armSubresourceLane`'s own `expect(restored, ...).toBe(1)` assertion before the probe wait
+was ever reached, confirmed on a re-run, then reverted byte-for-byte and re-confirmed green on both
+engines.
+
+**Test-only — no `src/` change.** App-page chunk **489,076 B unchanged**; content-script **unchanged,
+both engines**; `.output` unchanged (no rebuild required — nothing to rebuild); manifests **654 / 770 B**
+unchanged, `permissions: []`; `dependencies` unchanged at **6**. Golden EMPTY.
+
+**Suite.** Unit: **1054/1056** this run — the 2 non-passes are `pipeline.perf.test.ts`'s perf-budget
+check (121.6ms vs a 100ms budget) and `golden.test.ts`'s huge-document test (a 5000ms timeout), both
+confirmed pre-existing machine-load noise by an isolated re-run immediately after (both green, well
+under budget/timeout, this task touches neither file). Full browser suite: **154 files / 1537 passed /
+15 skipped, 0 failed** (152/1535/15 baseline + this task's new file × 2 engines = +2 files, +2 passed —
+reconciles exactly). Lint + typecheck clean.
+
+**Revisit-when:** a sixth export/copy/print action is added to the panel — extend this file's own
+action list rather than open a new one, per this task's own "one test, not one per action" rule. Full
+record in `decisions.md`'s 2026-09-04 M10 task-9.2 entry.
 
 **★★★★★ M10 TASK 9.1 LANDED, 2026-09-04 — FAILURE STATES, AND (HUMAN RULING) THE COPY-COMPLETION
 AFFORDANCE THREE PRIOR TASKS NAMED BUT DID NOT BUILD, IN THE SAME COMMIT — BECAUSE THEY ARE ONE `.then`.**
