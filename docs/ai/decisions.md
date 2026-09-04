@@ -1,6 +1,151 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-04 · M10 GATE — TASK 10.4: THE HUMAN DECISION GATE (M-1/M-2/M-3 + 8.3's build-or-drop, RULED)
+  AND THE BYTE-LEDGER'S FINAL RECONCILIATION. Four rulings recorded verbatim below, each tied to the
+  finding it rests on — NOT re-adjudicated here; CC records what the human ruled.**
+
+  **RULING M-1 — the first-ever-Ctrl+S default export format: HTML EXPORT.** Rationale (human): Ctrl+S
+  means "save a file"; the native Save-Page-As dialog task 8.1 suppresses IS a save-to-file, so HTML
+  export (the one surviving path that produces a downloaded file) is the honest analog. Synchronous,
+  browser-native, no clipboard-consent surface to fail on a first try, and its sole failure mode
+  (`serializeReaderDocument`'s throw) is already reported by 9.1's `reportExportFailure`. Beats the
+  no-op (dead-on-first-press, the worst possible first experience), a copy default (clipboard consent is
+  itself a first-try failure surface), and PDF (an unprompted `window.print()` dialog is surprising on a
+  keystroke the user did not associate with printing). Rests on: task 10.1's four-candidate finding
+  (`progress.md`'s 2026-09-04 task-10.1 entry) — its own verdict-input already leaned HTML export; this
+  ruling adopts that lean as the chosen value.
+
+  **RULING M-2 — the "heavy document" progress-indicator threshold: NO THRESHOLD; NO SURVIVING EXPORT
+  IS "HEAVY."** Rationale (human): task 10.2 measured HTML-export/copy-as-HTML's shared serialize span
+  at **0.30 ms → 26.95 ms** across a 1 KB → ~1.12 MB corpus (`scripts/perf-export.ts`, median of warm 6,
+  Chromium) — an order of magnitude under any plausible "heavy enough to need a progress indicator" bar.
+  The element-density knee 10.2 found is real (not bytes-linear) but does not change this conclusion:
+  even the corpus's own worst case is imperceptibly fast. Spec §3.8's own named heavy-export examples —
+  *"DOCX/ZIP serialization, HTML Base64-embedding of large images"* (`spec.md:104`) — are all features
+  M10 has since dropped (DOCX at §3.10; ZIP export at §3.1(cont.); local-image embedding at §3.1). M-2's
+  finding: the surviving exports are uniformly fast; the "heavy document" 8.3 was scoped to indicate
+  progress on does not exist in M10's shipped surface. Rests on: task 10.2's own numbers
+  (`progress.md`'s 2026-09-04 task-10.2 entry).
+
+  **RULING 8.3 — the progress indicator's build-or-drop (deferred to this gate by the 2026-09-04 M10
+  §8.3/§10.4 entry immediately below this one): DROPPED — a MEASURED NON-BUILD, the milestone's FOURTH
+  scope reduction** (after DOCX export, §3.10; local-image embedding, §3.1; ZIP export, §3.1(cont.)).
+  Rationale (human): follows directly from Ruling M-2 (no export is heavy enough to need indicating) plus
+  a structural fact independent of any threshold — HTML export (Ruling M-1's chosen default) and PDF
+  export are both `exportHtml`/`exportPdf`'s own `: void` signatures: synchronous, no `await`, no repaint
+  window a progress indicator could render into. The three copy paths are async but fast (a clipboard
+  write, not a serialization pass) — nothing to show there either. 10.2's 26.95 ms figure IS the
+  justification, not a rounded stand-in for one. Struck in-place, mirroring task 5.1's (§3.10) and task
+  3.5's (§3.1(cont.)) whole-task-strike shape — the milestone's task-count audit trail stays intact, not
+  deleted. See `tasks.md` §8.3 for the struck body and the restated group-8/active-count lines.
+
+  **RULING M-3 — print header/footer content and margins: ALL THREE KEEP THEIR SHIPPED PROVISIONAL
+  VALUES.** Footer *"Page X of Y"* (proven-rendering on 7.1's shipped cell, most informative of 10.3's
+  candidates, no new mechanism). Header *"Peekover"* (safe, no-new-mechanism; the document-title
+  candidate is DEFERRED as a future enhancement — it reopens 10.5's "constants only, no new mechanism"
+  scope via an untested `string-set`/`string()` CSS mechanism, which this milestone's tail will not
+  spend on; 10.3's own feasibility caveat on that candidate is its recorded prerequisite for whoever picks
+  it up later). Margins **2cm / 1.5cm / 2.2cm** (kept as shipped; 10.3 correctly scoped margin fit as a
+  VISUAL question, not a numeric one — 11.1's already-budgeted human walk confirms it by eye; adjust there
+  only if the eye finds a problem, not here on prose alone). Rests on: task 10.3's candidate walk
+  (`progress.md`'s 2026-09-04 task-10.3 entry) and 7.1's own shipped-cell ruling (`decisions.md`'s
+  2026-09-03 entry). ★ **Net effect: 10.5's own M-3 implementation is a CONFIRMED NO-OP** — the shipped
+  `@page` block (`readerCss.ts:836-838`'s COPY in `appShell.ts`'s `APP_CSS`, per 7.1) already carries
+  exactly these three values — recorded here as a confirmed no-op, not a silent non-change, per the
+  standing "a PROPOSED comment left on a chosen value is a lie about the decision state" rule (008/009).
+
+  ---
+
+  **THE BYTE LEDGER'S FINAL RECONCILIATION (§10.4's own second half — the binding record, not a separate
+  measurement; every figure below is freshly measured at HEAD `0dfac7a`, both engines rebuilt from a
+  clean `.output/`, not carried from memory).**
+
+  **Milestone-start baselines (plan §0 D-1 / `tasks.md`'s own standing-invariants snapshot):** `.output`
+  **4,866,741 B (Cr) / 4,866,857 B (Fx)**; `pnpm zip` **1,470,730 B (Cr) / 1,470,788 B (Fx)**;
+  `dependencies` (production) **6**.
+
+  **The accumulated `.output` delta, task by task, confirmed against each task's own recorded commit
+  figure (not the prior-turn kickoff's own draft list, which mis-stated 3.2's figure — corrected below):**
+  1.1 net **0** (installed docx+client-zip for +380,358 B, both fully removed downstream of the §3.10/
+  §3.1(cont.) rulings — confirmed by the actual dependency list, not assumed) · 2.1 **0** (read-only) ·
+  2.2 **0** · 3.1 **0** (no consumer yet) · 3.2 **+7,752 B** (the first mover — **NOT** +2,052 B as a
+  prior-turn draft list had it; the actual landed figure, `475,579 → 483,331 B`, is confirmed directly
+  against `progress.md`'s own task-3.2 entry) · 3.3 **+358 B** · 3.4 **+350 B** · 3.5 struck, **0** ·
+  4.1 **+318 B** · 5.1 struck, **0** · 6.1 **+3,236 B** · 7.1 **+404 B** · 8.2 **+477 B** (landed BEFORE
+  8.1 in commit order, confirmed against `git log`) · 8.1 **+602 B** · 9.1 **+1,341 B** · 9.2 **0**
+  (test-only) · 10.1/10.2/10.3 **0** (doc-only, no `src/`/build touched, each self-confirms this in its
+  own entry). **Sum: 14,838 B.**
+
+  **Expected final = baseline + sum:** 4,866,741 + 14,838 = **4,881,579 B (Cr)**; 4,866,857 + 14,838 =
+  **4,881,695 B (Fx)**.
+
+  **Actual final, measured (`.output/chrome-mv3` and `.output/firefox-mv3`, fresh `pnpm build` /
+  `pnpm exec wxt build -b firefox`, byte-summed over every file in each tree):** **4,881,579 B (Cr)** /
+  **4,881,695 B (Fx)**.
+
+  **Residual: 0 B, both engines, exact.** Every task's own stated delta accounts for the entire
+  accumulated movement — nothing unexplained. Headroom against the ≤5 MiB (5,242,880 B) ceiling:
+  **361,301 B / ~352.8 KiB (Cr)**, **361,185 B / ~352.7 KiB (Fx)** — down from gate-1's ~367 KiB opening
+  headroom by exactly the 14,838 B this milestone spent, confirming D-1's fork was never triggered (the
+  accumulated delta fit inside the opening headroom the entire way through, with no single task coming
+  close to busting it).
+
+  **`pnpm zip`, measured the same way (`.output/peekover-0.0.0-chrome.zip` / `-firefox.zip`, freshly
+  rezipped, `pnpm zip` for Chrome and `pnpm exec wxt zip -b firefox` for Firefox — the standing
+  `-- -b firefox` trap avoided, per the tooling note already on file):** **1,474,790 B (Cr)** /
+  **1,474,848 B (Fx)** — delta from baseline **+4,060 B, both engines, identical**. Headroom against the
+  <2 MB (2,097,152 B) ceiling: **622,362 B / ~607.8 KiB (Cr)**, **622,304 B / ~607.7 KiB (Fx)**. ★
+  **Named, not smoothed over: zip was measured only at two intermediate checkpoints this milestone (task
+  3.2: +2,161 B; task 6.1: +3,292 B both engines), not at every task the way `.output` was** — the
+  standing-invariants text requires per-task delta tracking for app-page/`.output` bytes specifically,
+  never states the same for the compressed zip artifact, so this is a measurement-granularity gap in
+  the milestone's own record, not a residual defect: the +768 B between 6.1's own recorded zip delta
+  (+3,292 B) and the actual final zip delta (+4,060 B) corresponds to tasks 7.1–9.2's combined
+  `.output` growth of 2,824 B (4,881,579 − 4,878,755) compressing to 768 B, a ~27% compression ratio
+  consistent with source-code deltas elsewhere this milestone (unlike M9's Shiki JSON, which compressed
+  far harder). Both zip ceilings clear with wide margin regardless.
+
+  **THE DEPENDENCY LEDGER — THE CAPSTONE.** Production `dependencies`: **6** at milestone start (pre-1.1)
+  → **8** at task 1.1 (docx + the chosen ZIP writer, `client-zip`, installed for real per D-1's hard
+  gate) → **6** again, both removed downstream of the §3.10 (DOCX, 2026-08-24) and §3.1(cont.) (ZIP
+  export, 2026-08-29) human rulings. Confirmed directly against the installed tree at HEAD
+  (`Object.keys(require('./package.json').dependencies)` → `diff, dompurify, markdown-it,
+  markdown-it-task-lists, mermaid, shiki` — **exactly 6, exactly the milestone-start set, in the same
+  order**). **NET: ZERO new production dependencies landed in M10.** The milestone that opened with a
+  dependency-measurement hard gate (D-1, task 1.1's own fork) closes having added none — every dependency
+  task 1.1 installed was later removed by a human scope-reduction ruling, and no other task in this
+  milestone added one. Stated as the binding record.
+
+  **★ ONE MISMATCH FLAGGED, NOT SMOOTHED OVER (Q4/11.3 cross-check):** `tasks.md`'s own task 11.3 Verify
+  line (written at gate-3 seal, 2026-08-22, before either the DOCX or the ZIP-export strike existed)
+  states *"deps exactly 7 (assumes the §3.10 docx-removal follow-up act has landed by this task; if not,
+  deps 8 with `docx` installed-but-unused, named as a defect if still true here)"* — a figure that
+  presumed ZIP export would still ship (6 base + 1 surviving ZIP-writer = 7) and never anticipated
+  §3.1(cont.)'s later strike of ZIP export itself. That presumption is now stale: the actual, confirmed
+  count is **6**, not 7 or 8, because the ZIP writer was ALSO removed (§3.1(cont.)'s own follow-up act).
+  Flagged here for 11.3 to correct against ground truth rather than its own stale pre-written figure —
+  not corrected in `tasks.md` by this task, since 10.4's own Work scope is decisions.md + the §8.3 strike
+  + progress.md, not a second pass over 11.3's body.
+
+  **8.3's strike, applied to `tasks.md` in this same commit (mirroring §3.10/§3.1(cont.)'s own
+  whole-task-strike shape — struck in-place, never deleted):** active task count **20 → 19**; group 8
+  **3 active → 2 active** (8.1, 8.2 remain; 8.3 struck); §4 EARS coverage's *"Export shortcut &
+  progress"* row restated to name 8.3 as struck, measured-out-of-scope, citing 10.2's 26.95 ms figure
+  as the justification, the same citation shape the DOCX/ZIP EARS-row strikes already use.
+
+  **10.5's scope, reduced by this gate to ONE constant:** Ruling M-1 wires HTML as `lastExportFormat`'s
+  first-run default (the only value 10.5 actually sets). Ruling M-2/8.3 leave 10.5 nothing to build (8.3
+  struck — there is no threshold constant left to set). Ruling M-3 is a CONFIRMED NO-OP for 10.5 (the
+  shipped `@page` values already match the ruled ones) — 10.5 records this as a no-op rather than hunting
+  for M-3 constants to edit. `tasks.md` §10.5 is annotated accordingly in this same commit.
+
+  **Attribution.** All four rulings are the human's, recorded verbatim above; the byte ledger is CC's own
+  measurement, run fresh at this gate, not inherited from any prior task's own figures without
+  independent confirmation.
+  **Revisit-when:** task 10.5 lands HTML as the default (the only code this gate authorizes); 11.3
+  corrects its own stale dependency-count Verify line against the **6** confirmed here.
+
 - **2026-09-04 · M10 §8.3/§10.4 — HUMAN RULING: TASK 8.3 (the progress indicator)'s BUILD-OR-DROP IS
   DEFERRED TO TASK 10.4's DECISION GATE, RULED THERE ON 10.2's MEASURED EXPORT WALL-CLOCK — NOT DECIDED
   IN ADVANCE. REVERSES a prior-turn lean toward building 8.3 now with its provisional placeholder

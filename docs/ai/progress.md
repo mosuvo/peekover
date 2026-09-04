@@ -1,6 +1,13 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 10.3 landed — M-3's print header/footer/margin content candidates walked
+*Updated: 2026-09-04 (task 10.4 landed — THE HUMAN DECISION GATE: all four rulings recorded verbatim
+(M-1 → HTML export default; M-2 → no heavy-export threshold exists; 8.3 → DROPPED, the milestone's
+fourth scope reduction; M-3 → all three shipped provisional values kept, 10.5's own half a confirmed
+no-op) plus the byte ledger's final reconciliation — `.output` residual **0** against the summed
+per-task deltas on both engines, `pnpm zip` +4,060 B both engines, dependency capstone **net zero** new
+production dependencies across the whole milestone. Group 10 CLOSES bar 10.5 (now scoped to one
+constant). Doc-only — no `src/` change; `tasks.md` gets 8.3 struck in-place and counts restated (20 → 19
+active). Below that: task 10.3 landed — M-3's print header/footer/margin content candidates walked
 against the shipped provisional, per-axis reasoning and a verdict-input, no choice made; the 6.1-vs-7.1
 gate reconciled (7.1's relocation supersedes 6.1's raw "inadequate" — the walk proceeds, scoped to
 Chromium/app-page); a title-candidate feasibility caveat flagged for 10.4/10.5. Doc-only — no `src/`/
@@ -20,6 +27,84 @@ named. Group 9 CLOSES. Test-only — no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 10.4 LANDED, 2026-09-04 — THE HUMAN DECISION GATE: ALL FOUR RULINGS RECORDED, PLUS THE
+BYTE LEDGER'S FINAL RECONCILIATION. DOC-ONLY — NO `src/`, TEST, OR BUILD TOUCHED (the fresh builds run to
+measure the ledger produced no source diff; `.output/` is gitignored, not committed).**
+
+**The four rulings (human's; full text with rationale and the finding each rests on is in
+`decisions.md`'s 2026-09-04 M10 GATE (task 10.4) entry — not reproduced twice here):**
+- **M-1 → HTML export** is `lastExportFormat`'s first-run default. Rests on task 10.1's four-candidate
+  finding, whose own verdict-input already leaned this way.
+- **M-2 → no threshold; no surviving export is "heavy."** Rests on task 10.2's 0.30–26.95 ms serialize
+  measurement across the corpus — an order of magnitude under any plausible bar, and spec §3.8's own
+  named heavy-export examples (DOCX/ZIP/large-image embedding) are all features this milestone dropped.
+- **8.3 → DROPPED**, the milestone's fourth scope reduction (after DOCX §3.10, local-image embedding
+  §3.1, ZIP export §3.1(cont.)). Follows from M-2 plus a structural fact: HTML/PDF export are both
+  synchronous (`: void`, no repaint window), the three copy paths are async-but-fast. Struck in-place in
+  `tasks.md`, mirroring 5.1's/3.5's own whole-task-strike shape.
+- **M-3 → all three shipped provisional values kept** (footer "Page X of Y", header "Peekover", margins
+  2cm/1.5cm/2.2cm). The document-title header candidate is deferred as a future enhancement (its own
+  `string-set`/`string()` feasibility caveat, flagged at 10.3, is its prerequisite). **10.5's own M-3 half
+  is therefore a CONFIRMED NO-OP** — recorded as such, not a silent non-change.
+
+**The byte ledger's final reconciliation (fresh `pnpm build` + `pnpm exec wxt build -b firefox` from a
+clean `.output/`, both engines, at HEAD `0dfac7a`; every figure below is measured this task, not carried
+from memory).** Milestone-start baselines: `.output` **4,866,741 B (Cr) / 4,866,857 B (Fx)**; `pnpm zip`
+**1,470,730 B (Cr) / 1,470,788 B (Fx)**; deps **6**. Per-task `.output` deltas, confirmed against each
+task's own commit figure (correcting a prior-turn draft list that had 3.2 wrong — 3.2's actual figure is
+**+7,752 B**, not +2,052 B): 1.1 net 0 (docx+client-zip installed for +380,358 B, fully removed downstream
+of §3.10/§3.1(cont.)) · 2.1/2.2/3.1 each 0 · 3.2 +7,752 · 3.3 +358 · 3.4 +350 · 3.5 struck, 0 · 4.1 +318 ·
+5.1 struck, 0 · 6.1 +3,236 · 7.1 +404 · 8.2 +477 (landed before 8.1, confirmed against `git log`) · 8.1
++602 · 9.1 +1,341 · 9.2 0 · 10.1–10.3 each 0. **Sum: 14,838 B.** Expected final = baseline + sum =
+**4,881,579 B (Cr) / 4,881,695 B (Fx)**. **Actual final, measured: 4,881,579 B (Cr) / 4,881,695 B (Fx) —
+residual 0, exact, both engines.** `.output` headroom against the ≤5 MiB ceiling: **~352.8 KiB (Cr) /
+~352.7 KiB (Fx)**, down from gate-1's ~367 KiB opening headroom by exactly this milestone's own spend —
+D-1's fork was never triggered.
+
+`pnpm zip`, measured the same way: **1,474,790 B (Cr) / 1,474,848 B (Fx)**, +4,060 B both engines against
+baseline. Only two intermediate zip checkpoints exist in this milestone's own record (3.2: +2,161 B; 6.1:
++3,292 B) — the standing-invariants text requires per-task tracking for `.output`/app-page bytes, never
+states the same for the compressed zip artifact, so the +768 B gap between 6.1's own recorded zip delta
+and the final one is a measurement-granularity gap, named, not a residual defect: it corresponds to tasks
+7.1–9.2's combined `.output` growth (2,824 B) compressing to 768 B, ~27%, consistent with source-code
+deltas elsewhere this milestone. Zip headroom against the <2 MB ceiling: **~607.8 KiB (Cr) / ~607.7 KiB
+(Fx)**.
+
+**The dependency capstone.** Production `dependencies`: 6 at milestone start → 8 at task 1.1 (docx +
+`client-zip`, D-1's hard gate) → 6 again, both removed downstream of the §3.10/§3.1(cont.) human rulings.
+Confirmed directly against the installed tree at HEAD: `diff, dompurify, markdown-it,
+markdown-it-task-lists, mermaid, shiki` — exactly the milestone-start set. **NET: ZERO new production
+dependencies landed in M10** — the milestone that opened with a dependency-measurement hard gate closes
+having added none.
+
+**One mismatch flagged, not smoothed over.** `tasks.md`'s own task 11.3 Verify line (written at gate-3
+seal, 2026-08-22, before either the DOCX or ZIP-export strike existed) predicts *"deps exactly 7... if
+not, deps 8... named as a defect"* — a figure that presumed ZIP export would still ship. That premise is
+stale; the confirmed figure is **6**. Flagged here for 11.3 to correct against ground truth; not corrected
+in `tasks.md` by this task, since 10.4's own Work scope is `decisions.md` + the §8.3 strike +
+`progress.md`, not a second pass over 11.3's body.
+
+**`tasks.md` changes landing in this same commit.** §8.3 struck in-place (mirroring 5.1's/3.5's shape);
+active count **20 → 19**, group 8 **3 → 2** active tasks; the §4 EARS-coverage *"Export shortcut &
+progress"* row split, its progress half restated as struck/measured-out-of-scope; group-8 and group-10
+acceptance lines restated; §10.4 ticked; §10.5 annotated — M-1 wires the one surviving constant
+(`lastExportFormat` default = HTML), M-2/8.3 leave nothing to build, M-3 is a confirmed no-op.
+
+**Full reasoning, all four rulings verbatim, and the ledger's own full arithmetic:** `decisions.md`'s
+2026-09-04 M10 GATE (task 10.4) entry.
+
+**Byte discipline.** No `src/` change — the two fresh builds this task ran to measure the ledger are
+gitignored (`.output/`) and produced no source diff; app-page chunk, content-script md5s (both engines),
+manifests (**654 / 770 B**), `permissions: []`, and Golden fixtures all unchanged, confirmed by the
+measurement itself (a doc-only task that rebuilds to measure, never to change). `dependencies` unchanged
+at **6**. Full suite NOT re-run (doc-only ruling task per AGENTS.md's own carve-out; no production code
+changed) — the byte figures above are freshly measured, not assumed.
+
+**Revisit-when:** task 10.5 lands HTML as the default (the only code this gate authorizes); 11.3 corrects
+its own stale dependency-count Verify line against the **6** confirmed here.
+
+---
 
 **★★★★★ M10 TASK 10.3 LANDED, 2026-09-04 — M-3: PRINT HEADER/FOOTER/MARGIN CONTENT CANDIDATES WALKED
 AGAINST THE SHIPPED PROVISIONAL. NO CHOICE MADE (10.4's GATE OWNS THE CHOICE). DOC-ONLY — NO `src/`,

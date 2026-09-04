@@ -610,7 +610,19 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       6. Golden EMPTY. Full suite: unit 1056/1056 (+1, the coerceSettings round-trip test), browser 148
       files/1503 passed/15 skipped/0 failed, lint + typecheck clean. [D-6; §3.7; §4 export shortcut]
 
-- [ ] **8.3 The progress indicator for heavy exports — a NEW affordance with NO sibling suite and NO mockup
+**★ TASK 8.3 IS STRUCK, 2026-09-04 (M10 §10.4 human ruling, `decisions.md`) — THE PROGRESS INDICATOR IS
+DROPPED FROM M10 ENTIRELY, THE MILESTONE'S FOURTH SCOPE REDUCTION (after DOCX export §3.10, local-image
+embedding §3.1, ZIP export §3.1(cont.)). Ruled on 10.2's own measured number: HTML-export/copy-as-HTML's
+shared serialize span is 0.30 ms → 26.95 ms across the full corpus — no surviving export is "heavy," and
+HTML export (Ruling M-1's chosen default) plus PDF export are both synchronous (`: void`, no `await`, no
+repaint window to render a progress indicator into); the three copy paths are async but fast, nothing to
+show there either. Full reasoning banked in `decisions.md`'s 2026-09-04 M10 GATE (task 10.4) entry — cited
+here, not re-argued. Kept struck-in-place, not deleted, mirroring tasks 5.1's (§3.10) and 3.5's
+(§3.1(cont.)) own whole-task-strike shape — the milestone's task-count audit trail stays intact. Group 8 is
+now **2 active tasks** (8.1, 8.2), not 3; active count for M10 moves **20 → 19** (see the count restated at
+the group ordering / count block below).**
+
+- [ ] ~~**8.3 The progress indicator for heavy exports — a NEW affordance with NO sibling suite and NO mockup
       baseline (§3.8; plan §3.11 row 14). ★ BUILD-OR-DROP DEFERRED TO TASK 10.4's DECISION GATE, HUMAN-RULED
       2026-09-04 (`decisions.md` M10 §8.3/§10.4) — NOT struck (its fate is deferred, distinct from a
       §3.10/§3.1(cont.)-style strike); still an active task, count unchanged, gated on 10.4.** The
@@ -628,9 +640,12 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       pays anything below its own gate). ★ **Row 9**: polite live region, out of the a11y tree while empty.
       ★ **Row 10, both halves**: instant under reduced motion, animates without it. Content-script bytes
       md5-identical. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-1 (headroom-adjacent,
-      no new dependency); §3.8; §4 progress indicator; §8 M-2; row 9, 10, 14]
+      no new dependency); §3.8; §4 progress indicator; §8 M-2; row 9, 10, 14]~~ **STRUCK — see the note above
+      and `decisions.md` M10 GATE (task 10.4).**
 
-*Group-8 acceptance (plan §6): §4's shortcut/progress criteria; D-5's red-first negative-surface proof.*
+*Group-8 acceptance (plan §6): §4's shortcut criteria (8.1, 8.2); D-5's red-first negative-surface proof.
+~~The progress-indicator criteria~~ **struck, M10 §10.4 — no progress indicator ships in M10, 10.2's
+26.95 ms measurement is the justification, not a gap.***
 
 ## 9 — Systemic failure and degradation (the §3.9 failures groups 2–8 could not reach)
 
@@ -727,31 +742,52 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       — group 7's fallback (if adopted) is what this task's successor measures instead. Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [§8 M-3; §7-4; §3.6]
 
-- [ ] **10.4 ★ DECISION GATE (human) — M-1's format, M-2's threshold, M-3's header/footer content, AND 8.3's
+- [x] **10.4 ★ DECISION GATE (human) — M-1's format, M-2's threshold, M-3's header/footer content, AND 8.3's
       BUILD-OR-DROP (deferred here 2026-09-04, `decisions.md` M10 §8.3/§10.4 — ruled on THIS task's own M-2
       number, not decided in advance). Recorded in `decisions.md` BEFORE any code sets a value.** Also the
       **byte ledger's final reconciliation**: `.output`
       and `pnpm zip` against the milestone-start baselines (**4,866,741 / 4,866,857 B**; **1,470,730 /
       1,470,788 B**), the full accumulated delta across every task's own stated figures, decomposed to a named
       residual — the binding record, not a separate measurement.
+      **DONE 2026-09-04 — all four rulings recorded verbatim in `decisions.md`'s 2026-09-04 M10 GATE (task
+      10.4) entry: M-1 → HTML export; M-2 → no threshold, no surviving export is heavy; 8.3 → DROPPED
+      (struck below, the milestone's fourth scope reduction); M-3 → all three shipped provisional values
+      kept, 10.5's own M-3 half a confirmed no-op. The byte ledger reconciled: `.output` actual-final
+      **4,881,579 B (Cr) / 4,881,695 B (Fx)**, matching baseline + the summed per-task delta (14,838 B)
+      EXACTLY — residual **0**, both engines. `pnpm zip` actual-final **1,474,790 B (Cr) / 1,474,848 B
+      (Fx)** (+4,060 B both, only partially per-task-decomposed — named, not a defect, see the entry).
+      Dependency capstone: production deps **6**, net **zero** new dependencies across the whole
+      milestone (8 at task 1.1, back to 6 after the §3.10/§3.1(cont.) removals) — confirmed against the
+      installed tree, not assumed. One mismatch flagged for 11.3: its own pre-written "deps exactly 7"
+      Verify-line figure is stale (predates the ZIP-export strike); the confirmed figure is 6. Doc-only —
+      `docs/ai/decisions.md`, `specs/010-local-exports/tasks.md` (8.3 struck, counts restated, 10.5
+      annotated), `docs/ai/progress.md` touched; no `src/` change. Full reasoning:
+      `decisions.md`'s 2026-09-04 M10 GATE (task 10.4) entry.**
       Files: `docs/ai/decisions.md`
       Verify (**human gate**): each choice recorded with the measurement that justifies it, before 10.5. ★ **No
       code lands on an assumed number.** The byte ledger's residual is stated explicitly, unaccounted bytes
       named as a defect if any remain. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`.
       [§8 M-1…M-3; D-1]
 
-- [ ] **10.5 Implement the CHOSEN values — constants only, no new mechanism.** Sets `lastExportFormat`'s
-      first-run default logic (8.1/8.2's own placeholder, if any was left), 8.3's threshold, and 10.3's
-      header/footer template to 10.4's ruled values — a no-op edit if a placeholder already matched, recorded
+- [ ] **10.5 Implement the CHOSEN values — constants only, no new mechanism. ★ SCOPE REDUCED BY 10.4's
+      GATE TO ONE CONSTANT.** Sets `lastExportFormat`'s
+      first-run default logic (8.1/8.2's own placeholder, if any was left) to **HTML export** (Ruling M-1).
+      ~~8.3's threshold~~ — **N/A: 8.3 is struck (10.4's Ruling 8.3), no threshold constant exists to
+      set.** ~~10.3's header/footer template~~ — **CONFIRMED NO-OP (10.4's Ruling M-3): the shipped
+      `@page` block (`readerCss.ts:836-838`'s copy in `appShell.ts`'s `APP_CSS`, per 7.1) already carries
+      the ruled values (footer "Page X of Y", header "Peekover", margins 2cm/1.5cm/2.2cm) — recorded as a
+      confirmed no-op, not silently skipped.** A no-op edit if a placeholder already matched, recorded
       either way (008/009's "a PROPOSED comment left on a chosen value is a lie about the decision state" rule).
       Files: `src/app/exportControls.ts` · `src/settings/settings.ts` (if the default-format logic needs it) +
       tests
-      Verify: the threshold and header/footer cases pass against the CHOSEN values; every other task's own
-      orchestration is byte-identical — the diff confined to the constants/template block, asserted not
+      Verify: the default-format case passes against the CHOSEN value (HTML); the M-3 no-op is confirmed by an
+      empty diff against `readerCss.ts`/`appShell.ts`'s `@page` blocks; every other task's own
+      orchestration is byte-identical — the diff confined to the default-format constant, asserted not
       eyeballed. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [§8 M-1…M-3]
 
 *Group-10 acceptance (plan §6/§7): three findings produced, never chosen inside a measuring task; the byte
-ledger reconciled to a named residual.*
+ledger reconciled to a named residual. **MET, 2026-09-04, task 10.4** — all four rulings recorded, byte
+ledger residual **0** (`.output`, both engines), dependency capstone **net zero**.*
 
 ## 11 — Human milestone-close gate + retro + the records reconcile
 
@@ -810,7 +846,9 @@ ledger reconciled to a named residual.*
 clause no longer applies to M10; ZIP export's clause struck the same way, §3.1(cont.) — moved to spec.md §6).**
 *HTML export* → 2.2, 3.1 · ~~*DOCX export* → 5.1~~ (struck) ·
 *PDF export* → 6.1, 7.1 · *Copy actions* → 3.3, 3.4, 4.1, 9.1 · ~~*ZIP export* → 3.5~~ (struck) · *Export
-shortcut & progress* → 8.1–8.3 · *Print mode* → 6.1 · *Trust* → 1.1 (deps/bytes/manifest), 9.2 (network) ·
+shortcut* → 8.1, 8.2 · ~~*Progress indicator* → 8.3~~ (struck, §10.4 — 10.2's 26.95 ms measurement found no
+export heavy enough to indicate; the clause is measured-out-of-scope, not unmet) · *Print mode* → 6.1 ·
+*Trust* → 1.1 (deps/bytes/manifest), 9.2 (network) ·
 *Degradation* → 9.1, 9.2.
 
 **Group ordering, stated so it can be checked:** **1** is the hard gate the whole milestone's approval is
@@ -841,9 +879,10 @@ tasks** — group 5's sole task (5.1) is struck, DOCX export dropped from M10. 1
 tasks** — task 3.5 (ZIP export) is struck, downstream of the §3.1 local-image ruling; group 3 drops from 5 to
 4 active tasks, no group disappears (group 5 was already struck). 1 (1) · 2 (2) · 3 (4) · 4 (1) · ~~5 (1)~~
 struck · 6 (1) · 7 (1) · 8 (3) · 9 (2) · 10 (5) · 11 (3) = **20 active + 2 struck = 22 sealed.**
-**Count unchanged by the 2026-09-04 M10 §8.3/§10.4 ruling** — task 8.3's build-or-drop is deferred to 10.4,
-not struck, so it stays one of group 8's three active tasks; the count above stands until 10.4 rules and,
-if 8.3 is dropped there, restates it.
+**Count ACTIVE after the 2026-09-04 M10 §10.4 gate ruling** — task 8.3's build-or-drop, deferred to 10.4 by
+the M10 §8.3/§10.4 entry, is RULED: dropped, struck (`decisions.md`'s 2026-09-04 M10 GATE entry). Group 8
+drops from 3 to 2 active tasks (8.1, 8.2). 1 (1) · 2 (2) · 3 (4) · 4 (1) · ~~5 (1)~~ struck · 6 (1) · 7 (1)
+· 8 (2) · 9 (2) · 10 (5) · 11 (3) = **19 active + 3 struck = 22 sealed.**
 
 *Gate: this file is a **DRAFT awaiting gate 3**. On approval, implementation may begin at **task 1.1, in a
 fresh session**, per WORKFLOW.md §5.3 — one commit per task, the `progress.md` Now-pointer advancing in that
