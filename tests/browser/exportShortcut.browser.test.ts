@@ -17,8 +17,10 @@
 //       function — never a second `saveSettings({...}); <export>()` pair. Proven directly against
 //       `mountAppShell()` (no need to drive main.ts's own keydown wiring for this half): a row
 //       click and a `triggerLastExport()` call produce the SAME real artifact / the SAME
-//       `window.print()` call, and `lastExportFormat: null` (before any export has ever run) is a
-//       graceful no-op that picks no default (task 10.1 owns that).
+//       `window.print()` call. `lastExportFormat` now defaults to `'html'` (Ruling M-1,
+//       decisions.md 2026-09-04 · M10 10.4), so a first-ever `triggerLastExport()` — no click, no
+//       prior export — fires the HTML export; only a genuinely unrecognized stored value (never
+//       produced by `DEFAULT_SETTINGS` itself) is still a graceful no-op.
 //
 // ══ THE preventDefault TEST-HONESTY LIMIT (Q4, `diagramLightbox`'s own doc comment #5) ══════════
 //
@@ -212,19 +214,21 @@ describe('task 8.1 (D-5) — the Ctrl/Cmd+S listener is app-page-only, never sco
     }
   });
 
-  it('Q2 — lastExportFormat is null before any export has ever run: preventDefault STILL fires, but no export runs and no default is picked (defers to task 10.1)', async () => {
-    expect(currentSettings().lastExportFormat).toBeNull(); // firing control: genuinely null
+  it('Q2 — fresh install: lastExportFormat defaults to HTML (Ruling M-1), not null; preventDefault still fires with no file open (the host guard inside runExportHtml no-ops here, not the switch)', async () => {
+    expect(currentSettings().lastExportFormat).toBe('html'); // firing control: M-1's shipped default
 
     await loadMain();
     const spy = preventDefaultSpy();
     try {
       const reactions = reactionsTo(spy, document);
-      expect(reactions, 'the dialog is suppressed regardless of the null case').toBeGreaterThan(0);
+      expect(reactions, 'the dialog is suppressed even though no file is open yet').toBeGreaterThan(0);
     } finally {
       spy.mockRestore();
     }
 
-    expect(currentSettings().lastExportFormat).toBeNull(); // still null — no default was picked
+    // No file was ever opened in this bare `<div id="app">`, so `runExportHtml`'s own
+    // `.peekover-app__reader__host` guard no-ops — nothing here writes `lastExportFormat`.
+    expect(currentSettings().lastExportFormat).toBe('html');
   });
 });
 
@@ -347,17 +351,33 @@ describe('task 8.1 (D-5) — triggerLastExport() reaches the IDENTICAL function 
     }
   });
 
-  it('null lastExportFormat: triggerLastExport() is a graceful no-op — no default picked, no export runs', async () => {
+  it('fresh default (Ruling M-1): triggerLastExport() with no click and no prior export fires the HTML export — the shipped first-ever-Ctrl+S behavior', async () => {
+    const { app } = await mountWithFile();
+    resetSettingsSeamForTest(); // isolate from the fresh mount's own load(); lands on DEFAULT_SETTINGS
+    expect(currentSettings().lastExportFormat).toBe('html'); // firing control: M-1's shipped default, never touched by a click here
+
+    await commands.armExportDownload();
+    app.triggerLastExport(); // the Ctrl+S path's own call — no row click, no panel ever opened
+    const download = await commands.collectExportDownload();
+
+    expect(download.consoleErrors).toEqual([]);
+    expect(download.suggestedFilename).toBe('alpha.html');
+  });
+
+  it('unrecognized lastExportFormat (a genuinely corrupted/removed stored value): triggerLastExport() is a graceful no-op — the switch\'s defensive default: branch, no longer reachable via a fresh install now that the default is HTML (Ruling M-1)', async () => {
     const printSpy = vi.spyOn(window, 'print').mockImplementation(() => undefined);
     try {
       const { app } = await mountWithFile();
-      resetSettingsSeamForTest(); // isolate from the fresh mount's own load(); back to null
-      expect(currentSettings().lastExportFormat).toBeNull();
+      resetSettingsSeamForTest(); // isolate from the fresh mount's own load()
+      // Simulates a stored value from a since-removed export format — the only way `default:`
+      // is reached now that a fresh install's own default is the live 'html' case.
+      saveSettings({ lastExportFormat: 'some-removed-export-key' });
+      expect(currentSettings().lastExportFormat).toBe('some-removed-export-key'); // firing control: genuinely unrecognized, not null and not a live case
 
       expect(() => app.triggerLastExport()).not.toThrow();
 
       expect(printSpy).not.toHaveBeenCalled();
-      expect(currentSettings().lastExportFormat).toBeNull(); // still no default picked
+      expect(currentSettings().lastExportFormat).toBe('some-removed-export-key'); // unchanged — the no-op writes nothing
     } finally {
       printSpy.mockRestore();
     }

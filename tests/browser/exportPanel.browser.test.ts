@@ -19,7 +19,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { page, userEvent, commands, cdp } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
-import { currentSettings, resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
+import { currentSettings, resetSettingsSeamForTest, saveSettings } from '../../src/settings/settingsSeam';
 
 interface ExportDownloadProbe {
   suggestedFilename: string;
@@ -431,9 +431,13 @@ describe('task 8.2 (D-6) — clicking a row persists its own key as lastExportFo
   it('HTML export writes lastExportFormat: "html"', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
+    resetSettingsSeamForTest(); // isolate from the fresh mount's own load()
+    // The DEFAULT is now 'html' too (Ruling M-1), so seed a DIFFERENT value first — otherwise
+    // "not already html" below would be true by construction, not because the click did anything.
+    saveSettings({ lastExportFormat: 'pdf' });
     await commands.armExportDownload();
 
-    expect(currentSettings().lastExportFormat).not.toBe('html'); // firing control: not true already
+    expect(currentSettings().lastExportFormat).not.toBe('html'); // firing control: genuinely not html yet
     htmlRowIn(panel).click();
     expect(currentSettings().lastExportFormat).toBe('html');
 

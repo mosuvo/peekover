@@ -115,7 +115,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       tocOpen: true,
       tocWidth: 301,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
   });
 
@@ -131,7 +131,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       tocOpen: null,
       tocWidth: 264,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
     // …AND through the DIRECT port — proving the messaging SET hit the one real database that the
     // direct path reads (both ports, one engine, one DB).
@@ -140,7 +140,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       tocOpen: null,
       tocWidth: 264,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
   });
 
@@ -152,7 +152,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       tocOpen: false,
       tocWidth: null,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
   });
 
@@ -169,7 +169,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       tocOpen: null,
       tocWidth: 288,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
 
     // …but a renamed/misrouted type makes the handler DECLINE, so load() resolves to DEFAULT, NOT

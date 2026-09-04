@@ -1,6 +1,17 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 10.4 landed — THE HUMAN DECISION GATE: all four rulings recorded verbatim
+*Updated: 2026-09-04 (task 10.5 landed — Ruling M-1 IMPLEMENTED: `DEFAULT_SETTINGS.lastExportFormat` =
+`'html'` (was `null`), the one constant 10.4's gate reduced this task to. The constant change forced a real
+test ripple, not just a literal swap: 13 default-shape assertions across 4 files flipped `null` → `'html'`,
+and THREE tests whose own PREMISE was "fresh install is null" were REWRITTEN (an HTML-write firing control
+in `exportPanel.browser.test.ts`, plus `exportShortcut.browser.test.ts`'s two no-op tests split into a NEW
+fresh-default-fires-HTML case and a REWRITTEN unrecognized-stored-value no-op case). Byte ledger: the
+constant lives on THREE graphs, not the two assumed at kickoff — app-page, content-script, AND
+`background.js` (not previously named in this milestone's ledger prose) — each +2 B; `.output` **+6 B both
+engines** (Cr 4,881,579 → 4,881,585; Fx 4,881,695 → 4,881,701), content-script md5 genuinely MOVED (not
+unchanged), confirmed by a stash/rebuild diff. Full suite green (unit 1056/1056, browser 154 files/1535
+passed); lint 0. Group 10 CLOSES (10.1–10.5 all done); group 11 (human walk, retro, records-reconcile)
+remains. Below that: task 10.4 landed — THE HUMAN DECISION GATE: all four rulings recorded verbatim
 (M-1 → HTML export default; M-2 → no heavy-export threshold exists; 8.3 → DROPPED, the milestone's
 fourth scope reduction; M-3 → all three shipped provisional values kept, 10.5's own half a confirmed
 no-op) plus the byte ledger's final reconciliation — `.output` residual **0** against the summed
@@ -27,6 +38,74 @@ named. Group 9 CLOSES. Test-only — no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 10.5 LANDED, 2026-09-04 — RULING M-1 IMPLEMENTED: THE LAST IMPLEMENTATION TASK. GROUP 10
+CLOSES.**
+
+10.4's gate reduced 10.5 to ONE constant: `DEFAULT_SETTINGS.lastExportFormat` (`src/settings/settings.ts`)
+set to `'html'` (was `null`). M-2/8.3 left nothing to build (no threshold constant exists); M-3 confirmed a
+no-op — verified directly against both `@page` blocks (`readerCss.ts` / `appShell.ts`'s `APP_CSS`
+relocation), byte-identical to the ruled values (margin `2cm 1.5cm 2.2cm`, header "Peekover", footer "Page
+X of Y"), empty diff, not eyeballed.
+
+**★ The Files-line discrepancy (Q1).** §10.5's own Files line named `exportControls.ts` — wrong for the
+chosen (a) shape: `exportControls.ts` has no default-format logic and was never touched. The real files:
+`settings.ts` (the constant), `appShell.ts` + `main.ts` + `store.ts` (comments only, no logic change — the
+switch's `default: break` STAYS, now defending only a genuinely unrecognized stored value since
+`DEFAULT_SETTINGS` can no longer produce `null`), and the test ripple below.
+
+**★ Two ripple shapes, not one (Q2/Q3).** A constant change from `null` to `'html'` doesn't just flip
+literals — some tests' own PREMISE was "a fresh install is null," and swapping the literal on those would
+leave the test TITLE lying about the shipped state (008/009's rule). So:
+- **13 literal swaps** (mechanical): every `lastExportFormat: null` shape/round-trip assertion, across 4
+  files (`settings.test.ts` ×1, `settingsPort.test.ts` ×4, `settingsPort.browser.test.ts` ×5,
+  `settingsStore.browser.test.ts` ×3) → `'html'`.
+- **3 premise rewrites**, found across TWO files (kickoff's own reconcile named 2; a THIRD turned up
+  mid-task, exactly the shape the reconcile step exists to catch):
+  1. `exportPanel.browser.test.ts`'s `'HTML export writes lastExportFormat: "html"'` test had a firing
+     control — `expect(...).not.toBe('html')` — asserting the pre-click state wasn't already HTML. Under
+     (a) that's true by construction (the default IS `'html'`), so the control was dead. Rewritten to seed
+     `'pdf'` first, restoring a genuine "not html yet" precondition.
+  2. `exportShortcut.browser.test.ts`'s `'Q2 — lastExportFormat is null before any export...'` test (no file
+     open, bare app root) rewritten to assert the TRUE default (`'html'`) and explain why no export still
+     fires there (the reader-host guard inside `runExportHtml`, not the switch).
+  3. `exportShortcut.browser.test.ts`'s `'null lastExportFormat: triggerLastExport() is a graceful no-op'`
+     test split in two: a NEW test proving a fresh default's first-ever `triggerLastExport()` (no click, no
+     panel interaction) actually fires the HTML export (reusing 8.1's own
+     `armExportDownload`/`collectExportDownload` pair), and a REWRITTEN no-op test that seeds a genuinely
+     unrecognized stored value (`'some-removed-export-key'`) rather than relying on a `null` no fresh
+     install produces anymore.
+  Five stale doc comments asserting `null` as the shipped default were also corrected — `settings.ts`,
+  `appShell.ts` (×2: `AppController.triggerLastExport`'s interface doc + the switch's own), `main.ts`,
+  `store.ts`, `settingsPort.test.ts`, `settingsStore.browser.test.ts` — none left describing a
+  pre-ruling "provisional/pending" state that is now false.
+
+**★ The byte ledger — a THIRD graph, not the two assumed at kickoff.** `settings.ts`'s `DEFAULT_SETTINGS`
+literal is bundled into THREE build artifacts: the app-page chunk (via direct import), the content-script
+(via `messagingPort`/`coerceSettings`, already known) — AND **`background.js`**, the service worker's own
+`getSettings`/`putSettings` handlers, which this milestone's ledger prose had never separately named. Each
+moved by exactly **+2 B** (`"html"` vs `null` in minified output), both engines, confirmed with a
+`git stash`/rebuild diff (firing control: the stashed-clean rebuild reproduced 10.4's own recorded baseline
+figures exactly, before the stash was popped and the real diff taken). `.output` **4,881,579 → 4,881,585 B
+(Cr, +6)**, **4,881,695 → 4,881,701 B (Fx, +6)** — headroom ~352.8 KiB (Cr) / ~352.7 KiB (Fx), unchanged at
+this resolution. Content-script md5 **genuinely MOVED** (not "unchanged" — the first task since 8.2 to move
+it): Cr `f424a3b60e9d52bf5ac6a35a8afd2551` → `f4370ed3e354ff987d1c225c36c69c7f`; Fx
+`ebbf183adfd1e217ad01683043496ccc` → `13dda8673150d9844b59bf6cba0a123e`. App-page chunk **489,076 → 489,078
+B (+2, both engines)**. Manifests **654 / 770 B** unchanged, `permissions: []` unchanged, Golden EMPTY (no
+`git status` change under `tests/golden/`).
+
+**Verify.** Full suite green: unit **1056/1056**; browser **154/154 files** (1535 passed / 19 skipped —
+carried flakes, 0 failures, count shift from a prior run is test-order flake noise, not this task); lint
+**0** (`eslint . && tsc --noEmit`); 007's static-import fence **8/8** (`diagramImportFence.test.ts`), 009's
+own **9/9** (`codeImportFence.test.ts`), both run directly to confirm, unaffected by this task's diff.
+`decisions.md` **untouched** — 10.4 owns Ruling M-1's text; 10.5 only implements it, per §10.5's own
+IMPLEMENT (not DECIDE) framing.
+
+**Group 10 CLOSES** (10.1 candidates → 10.2 measurement → 10.3 walk → 10.4 human gate → 10.5 implementation,
+all done). **Group 11 remains**: 11.1 the human milestone-close walk (real Chromium + Firefox, no agent
+substitute), 11.2 the retro (fresh session, `/retro`), 11.3 the records reconcile that closes M10 — its own
+pre-written "deps exactly 7" Verify-line figure is already known-stale (10.4 flagged it; confirmed figure
+is 6), for 11.3 itself to correct.
 
 **★★★★★ M10 TASK 10.4 LANDED, 2026-09-04 — THE HUMAN DECISION GATE: ALL FOUR RULINGS RECORDED, PLUS THE
 BYTE LEDGER'S FINAL RECONCILIATION. DOC-ONLY — NO `src/`, TEST, OR BUILD TOUCHED (the fresh builds run to

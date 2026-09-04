@@ -769,7 +769,7 @@ the group ordering / count block below).**
       named as a defect if any remain. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`.
       [§8 M-1…M-3; D-1]
 
-- [ ] **10.5 Implement the CHOSEN values — constants only, no new mechanism. ★ SCOPE REDUCED BY 10.4's
+- [x] **10.5 Implement the CHOSEN values — constants only, no new mechanism. ★ SCOPE REDUCED BY 10.4's
       GATE TO ONE CONSTANT.** Sets `lastExportFormat`'s
       first-run default logic (8.1/8.2's own placeholder, if any was left) to **HTML export** (Ruling M-1).
       ~~8.3's threshold~~ — **N/A: 8.3 is struck (10.4's Ruling 8.3), no threshold constant exists to
@@ -778,8 +778,40 @@ the group ordering / count block below).**
       the ruled values (footer "Page X of Y", header "Peekover", margins 2cm/1.5cm/2.2cm) — recorded as a
       confirmed no-op, not silently skipped.** A no-op edit if a placeholder already matched, recorded
       either way (008/009's "a PROPOSED comment left on a chosen value is a lie about the decision state" rule).
-      Files: `src/app/exportControls.ts` · `src/settings/settings.ts` (if the default-format logic needs it) +
-      tests
+      **DONE 2026-09-04 — `DEFAULT_SETTINGS.lastExportFormat` set to `'html'` (was `null`); `triggerLastExport`'s
+      switch left UNCHANGED (`default: break` stays, now defending only a genuinely unrecognized stored
+      value — `DEFAULT_SETTINGS` itself can no longer produce one). ★ THE FILES-LINE WAS WRONG FOR (a):
+      `exportControls.ts` has no default-format logic and is untouched; the real files are `settings.ts`
+      (the constant) plus every test/comment that encoded the pre-ruling `null` default as fact — flagged,
+      not silently substituted. Two ripple shapes, not one: 13 literal `lastExportFormat: null` shape/
+      round-trip assertions across 4 files became `'html'` (mechanical); THREE tests whose own PREMISE was
+      "fresh install is null" were REWRITTEN, not swapped — `exportPanel.browser.test.ts`'s HTML-write
+      firing control (seeded a non-html value first, since "not already html" is no longer true by
+      construction) and `exportShortcut.browser.test.ts`'s two named no-op tests (split into a NEW
+      fresh-default HTML-fires case, reusing 8.1's own armExportDownload/collectExportDownload pair, and a
+      REWRITTEN unrecognized-stored-value no-op case, seeding a corrupted key rather than relying on a
+      `null` that no fresh install produces anymore). Five stale doc comments asserting `null` as the
+      shipped default corrected (`settings.ts`, `appShell.ts` ×2, `main.ts`, `store.ts`,
+      `settingsPort.test.ts`, `settingsStore.browser.test.ts`). M-3 confirmed no-op: empty diff verified
+      directly against both `@page` blocks (byte-identical `margin:2cm 1.5cm 2.2cm`, header "Peekover",
+      footer "Page X of Y"). Byte ledger: `settings.ts`'s literal is embedded on THREE graphs, not two as
+      assumed at kickoff — app-page chunk AND content-script (via `messagingPort`/`coerceSettings`) AND
+      **`background.js`** (the service worker's own `getSettings`/`putSettings`, not previously named in
+      this milestone's ledger prose). Each moved by exactly **+2 B** (`"html"` vs `null`), both engines:
+      `.output` **4,881,579 → 4,881,585 B (Cr)**, **4,881,695 → 4,881,701 B (Fx)**, **+6 B both**, confirmed
+      by a `git stash`/rebuild diff (firing control: baseline rebuilt bare, matched the recorded figures
+      exactly before the stash was popped). Content-script md5 MOVED (not unchanged) — Cr
+      `f424a3b60e9d52bf5ac6a35a8afd2551` → `f4370ed3e354ff987d1c225c36c69c7f`; Fx
+      `ebbf183adfd1e217ad01683043496ccc` → `13dda8673150d9844b59bf6cba0a123e` — consistent with a real,
+      expected 2-byte content move, not corruption. Headroom ~352.8 KiB (Cr) / ~352.7 KiB (Fx), unchanged at
+      this resolution. Full suite green: unit 1056/1056, browser 154/154 files (1535 passed / 19 skipped,
+      carried flakes, 0 failures); lint 0; 007's fence 8/8, 009's fence 9/9. `decisions.md` untouched — 10.4
+      owns Ruling M-1, this task only implements it. Group 10 CLOSES (10.1–10.5 all done).**
+      Files: `src/settings/settings.ts` · `src/app/appShell.ts` · `entrypoints/app/main.ts` ·
+      `src/app/store.ts` (comments only) · `src/settings/settings.test.ts` · `src/settings/settingsPort.test.ts`
+      · `tests/browser/settingsPort.browser.test.ts` · `tests/browser/settingsStore.browser.test.ts` ·
+      `tests/browser/exportPanel.browser.test.ts` · `tests/browser/exportShortcut.browser.test.ts` — NOT
+      `exportControls.ts` (the Files-line discrepancy above).
       Verify: the default-format case passes against the CHOSEN value (HTML); the M-3 no-op is confirmed by an
       empty diff against `readerCss.ts`/`appShell.ts`'s `@page` blocks; every other task's own
       orchestration is byte-identical — the diff confined to the default-format constant, asserted not

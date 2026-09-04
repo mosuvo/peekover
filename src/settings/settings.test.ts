@@ -52,7 +52,7 @@ describe('DEFAULT_SETTINGS — the never-blank fallback shape', () => {
       tocOpen: null,
       tocWidth: null,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
   });
 });

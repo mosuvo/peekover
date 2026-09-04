@@ -67,14 +67,14 @@ describe('directPort — cached snapshot + round-trip via the injected store', (
       tocOpen: true,
       tocWidth: 288,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
     expect(port.snapshot()).toEqual({
       theme: 'dark',
       tocOpen: true,
       tocWidth: 288,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
   });
 
@@ -106,7 +106,7 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
       tocOpen: null,
       tocWidth: 320,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
 
     await port.save({ tocOpen: true });
@@ -120,7 +120,7 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
       tocOpen: true,
       tocWidth: 320,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
   });
 
@@ -133,8 +133,8 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
     // RED-FIRST (this test's own firing control, reasoned rather than re-run for every field —
     // `verification-greps-need-a-firing-control`): had `coerceSettings` NOT been extended with a
     // `lastExportFormat` line, `messagingPort`'s GET path would drop the field on the object
-    // literal below, and `load()` would come back with `lastExportFormat: null` regardless of
-    // what was saved — silently, no type error, exactly the shape this test exists to catch.
+    // literal below, and `load()` would come back with `lastExportFormat: 'html'` (the default)
+    // regardless of what was saved — silently, no type error, exactly the shape this test exists to catch.
     const m = fakeMessenger();
     const port = messagingPort(m.send);
 

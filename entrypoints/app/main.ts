@@ -116,9 +116,10 @@ if (root) {
     if (e.key.toLowerCase() !== 's') return;
     if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
     if (isEditableTarget(e.target)) return;
-    // Suppresses the native "Save Page As" dialog regardless of what happens next — including
-    // the graceful no-op below when no export has ever run (`lastExportFormat` is `null`; §8's
-    // own M-1 walk-gate item owns what a first-ever Ctrl+S should do, not this handler).
+    // Suppresses the native "Save Page As" dialog regardless of what happens next — including a
+    // first-ever Ctrl+S, which now runs the HTML export (`lastExportFormat` defaults to `'html'`;
+    // Ruling M-1, decisions.md 2026-09-04 · M10 10.4), and the rarer no-op when the stored value
+    // is genuinely unrecognized.
     e.preventDefault();
     app.triggerLastExport();
   });

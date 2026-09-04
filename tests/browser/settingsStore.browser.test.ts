@@ -136,7 +136,7 @@ describe('settings round-trip + merge (real engine)', () => {
   it('putSettings({lastExportFormat}) writes, getSettings reads it back — the D-6 hand-enumeration trap task 8.2 filed and closed in the same task', async () => {
     // Red-first, same class as the codeTheme test above: before store.ts's getSettings() extended
     // its hand-enumeration to include lastExportFormat, this would write fine but read back
-    // DEFAULT_SETTINGS.lastExportFormat (null) regardless — the exact signature this pins.
+    // DEFAULT_SETTINGS.lastExportFormat ('html') regardless — the exact signature this pins.
     await putSettings({ lastExportFormat: 'pdf' });
     expect(await getSettings()).toMatchObject({ lastExportFormat: 'pdf' });
 
@@ -180,7 +180,7 @@ describe('settings store — additive upgrade (real engine; jsdom-blind)', () =>
       tocOpen: true,
       tocWidth: 321,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
 
     // Assert the on-disk schema directly: the store's declared version, all four pre-existing
@@ -217,7 +217,7 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
       tocOpen: true,
       tocWidth: 300,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
     expect(before.total).toBe(2); // 1 folder + the settings row
     const beforeText = before.lines.join(' ');
@@ -316,7 +316,7 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
       tocOpen: null,
       tocWidth: null,
       codeTheme: 'github-dark',
-      lastExportFormat: null,
+      lastExportFormat: 'html',
     });
     expect(both.total).toBe(2); // reader row + capture row
   });

@@ -515,8 +515,9 @@ export interface AppController {
    * dispatch every export panel row already goes through, never a second invocation path.
    * `entrypoints/app/main.ts`'s Ctrl/Cmd+S handler is this method's only caller; the panel's own
    * row clicks reach the identical named functions directly (see `renderExport`'s wiring below).
-   * Before any export has ever run, `lastExportFormat` is `null` — a graceful no-op (§8's own M-1
-   * walk-gate item owns what a first-ever Ctrl+S should do, not this method).
+   * Before any export has ever run, `lastExportFormat` is `'html'` — Ruling M-1's shipped default,
+   * so a first-ever Ctrl+S runs the HTML export; only a genuinely unrecognized stored value is a
+   * graceful no-op.
    */
   triggerLastExport(): void;
 }
@@ -1007,9 +1008,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   /**
    * Task 8.1 (D-5): re-run whatever `lastExportFormat` (8.2) names, through the SAME five
-   * functions above — the `AppController` method `main.ts`'s Ctrl/Cmd+S handler calls. `null`
-   * (before any export has ever run) and any other unrecognized value are a graceful no-op: no
-   * default is picked here (that would pre-empt task 10.1's own first-ever-Ctrl+S walk-gate item).
+   * functions above — the `AppController` method `main.ts`'s Ctrl/Cmd+S handler calls. A fresh
+   * install now defaults to `'html'` (Ruling M-1, `decisions.md` 2026-09-04 · M10 10.4), so a
+   * first-ever Ctrl+S runs `runExportHtml()` here, not a no-op. `default: break` stays live as
+   * defensive handling for a genuinely unrecognized stored value (a removed format key, corrupted
+   * storage) — a case `DEFAULT_SETTINGS` itself can no longer produce.
    */
   function triggerLastExport(): void {
     switch (currentSettings().lastExportFormat) {
