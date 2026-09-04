@@ -1609,6 +1609,22 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   red that PERSISTS across reruns, or that appears in any OTHER file, does NOT match this pattern and must
   be treated as real and investigated. Flag for the 11.2 retro alongside the codeDetect corpus-scan-
   brittleness note already logged there.
+- **CARRIED — the browser suite's shared-document cross-file listener leak: assert deltas, not
+  absolutes.** Found at task 8.1 (`exportShortcut.browser.test.ts`). The browser test suite runs files
+  SERIALLY, sharing ONE real `document`/`window` per engine (`vitest.config.ts`'s own task-4.5 note);
+  document-level listeners installed by one file — or by `appHarnessSeam.browser.test.ts`'s repeated
+  `main.ts` imports, or a file's own repeated `loadMain()` — LEAK into later files and are never torn down.
+  **Guidance for a future session:** a test asserting anything about a document-level listener's reaction
+  must use a DELTA-based instrument (a `preventDefault`/handler spy CLEARED before each measured dispatch,
+  asserting "this dispatch added exactly N reactions"), never an absolute count ("exactly N listeners
+  exist" / "nothing reacts yet") — the absolute form is contaminated by leaked listeners and fails or
+  passes by file run-order, not by the code under test. `exportShortcut.browser.test.ts`'s `reactionsTo()`
+  (8.1) is the worked reference. **Flag for the 11.2 retro alongside the codeDetect-corpus-brittleness and
+  enhancer-timing notes already retro-flagged directly above** — this is a fourth instance of the same
+  broad theme (the browser harness's shared cross-file state needs delta/specific-content assertions,
+  never absolute ones). The cross-file clipboard-consent-leak item (§ Carried items, above) is a third
+  prior instance of the same theme, though it is not itself yet marked for the 11.2 retro. The retro may
+  want to name this as ONE structural observation rather than four scattered ones.
 
 ## Closed milestones
 
