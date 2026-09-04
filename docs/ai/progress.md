@@ -1,7 +1,11 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 10.2 landed — M-2's export-serialize wall-clock measured across the corpus,
-per export type, no threshold chosen, that's 10.4's gate; a real non-bytes-linear knee found and
+*Updated: 2026-09-04 (task 10.3 landed — M-3's print header/footer/margin content candidates walked
+against the shipped provisional, per-axis reasoning and a verdict-input, no choice made; the 6.1-vs-7.1
+gate reconciled (7.1's relocation supersedes 6.1's raw "inadequate" — the walk proceeds, scoped to
+Chromium/app-page); a title-candidate feasibility caveat flagged for 10.4/10.5. Doc-only — no `src/`/
+test change. Below that: task 10.2 landed — M-2's export-serialize wall-clock measured across the
+corpus, per export type, no threshold chosen, that's 10.4's gate; a real non-bytes-linear knee found and
 reported, not smoothed over. New `scripts/perf-export.ts`, no `src/`/test change. Below that: task 10.1
 landed — M-1's first-ever-Ctrl+S default-format candidates produced with per-axis reasoning and a
 verdict-input; no default chosen. Below that: the 8.3 build-or-drop decision-record, then task 9.2
@@ -16,6 +20,183 @@ named. Group 9 CLOSES. Test-only — no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 10.3 LANDED, 2026-09-04 — M-3: PRINT HEADER/FOOTER/MARGIN CONTENT CANDIDATES WALKED
+AGAINST THE SHIPPED PROVISIONAL. NO CHOICE MADE (10.4's GATE OWNS THE CHOICE). DOC-ONLY — NO `src/`,
+TEST, OR BUILD TOUCHED.**
+
+**Q1 — THE GATE RECONCILIATION (load-bearing, checked before drafting).** §10.3's own tasks.md line
+gates on "group 6's fidelity probe having confirmed the mechanism can express them at all," and states
+"if group 6's probe found the `@page` mechanism inadequate, this task states that plainly and produces
+no candidates." Read verbatim and in isolation, 6.1's own verdict is "INADEQUATE on both engines" —
+which would trigger the no-candidates branch. **That is the wrong read of the current state.** 6.1's
+verdict was about the mechanism it shipped: `@page` living inside `readerCss.ts`'s shadow-scoped
+`READER_CSS`, which is structurally inert for margin-box rendering (a shadow root can't deliver a
+document-global page-box concept, independent of engine). Task 7.1 then investigated the SAME
+question one layer down, found the placement — not the engine — was the defect, and shipped a
+**relocation** (a COPY of the identical `@page` block into `appShell.ts`'s `APP_CSS`, a real
+document-level stylesheet) that DOES render margin-box content correctly on the surface `exportPdf()`
+actually drives (Chromium/app-page, measured via `printToPdfAndExtractText`, both "Peekover" and
+"Page X of Y" found on every page of a genuinely multi-page fixture). 7.1 is a supersession of 6.1's
+finding, not a parallel or later-dated note beside it — the ruled outcome (`decisions.md`'s 2026-09-03
+entry, option (i)) is "ship Chromium/app-page margin boxes now," which is a shipped, working,
+rendering header/footer. **So the mechanism CAN express header/footer content today, on the cell 7.1
+shipped — 10.3 walks candidates; the no-candidates branch does not apply.** Reading 10.3's gate against
+6.1's raw "inadequate" instead of 7.1's landed ruling would produce no candidates for content that is
+already shipped and is explicitly marked provisional pending this exact task — `readerCss.ts:836-838`'s
+own comment: *"the exact copy here ('Peekover' / 'Page X of Y') is PROVISIONAL — §8 item 3 routes the
+FINAL header/footer content and margin sizing to group 10's own walk-gate measurement, not this task."*
+Producing no candidates here would leave that provisional comment permanently unresolved for no reason
+grounded in current state. No contradiction in §10.3's own gate wording was found once read against 7.1
+rather than 6.1 alone — the "inadequate" branch is for a world where 7.1's relocation ALSO failed to
+render, which is not what happened.
+
+**Q2 — THE SCOPE CAVEAT.** The content this task walks renders on **Chromium/app-page only** (7.1's own
+ruled, named residual): Firefox's CSSOM drops the nested `@top-center`/`@bottom-center` at-rules at
+parse time, unchanged by placement (a parser property, confirmed by 7.1's own relocation probe, not a
+render-level gap the relocation could fix) — Firefox gets NO header/footer regardless of what content
+10.4 picks. The content-script surface has no document-level stylesheet at all (option (ii) in 7.1's
+stop-and-flag, scoped but not built) — it gets no header/footer either, for an entirely separate
+reason (no reachable page-box, not a parser gap). Both gaps are 7.1's own ruled, deferred residuals,
+restated here, not re-litigated. **10.4 rules M-3's content knowing it governs one cell — Chromium
+rendering the app-page reader via `window.print()`/PDF export — not a universal header/footer.** If a
+future task builds 7.1's option (ii) or (iii), it re-applies whatever 10.4 rules here to that surface;
+this task's candidates are content-only and travel unchanged to that hypothetical future surface.
+
+**Q3 — "THE DEMO DOCUMENT," RECONCILED AGAINST WHAT ACTUALLY EXISTS.** §10.3's own axis line (plan §7,
+tasks.md) says "walked against the demo document and a long golden fixture." No concrete demo-document
+file exists in this repository — `spec.md` F11's "✅ Demo document showcasing every feature (doubles as
+test fixture and marketing screenshot)" (`docs/product/spec.md:213`) names a piece of onboarding/
+marketing scope this milestone has not built (no onboarding entrypoint exists; `grep`-checked, none
+found), not a shipped fixture — checked before assuming one existed to walk against. The walk below
+substitutes the closest real proxies instead of fabricating a demo document: `tests/golden/fixtures/
+diagrams-50.md` (923 lines, 50 diagrams — already the repository's own long, real, committed golden
+fixture, and the SAME fixture-selection logic tasks.md's own text asks for: "a long golden fixture")
+stands in for "long," and `tests/golden/fixtures/gfm-torture.md` (tables, strikethrough, autolinks,
+task lists — the golden corpus's broadest single-fixture feature mix, though itself only 20 lines, not
+a true showcase) stands in for "typical short document" where the walk needs one. Neither substitution
+changes any candidate's reasoning below — the axes (header content, footer content, margin sizing) are
+about what the running content SHOWS, not about the specific document rendered under it — but the
+substitution is named so a future reader does not go looking for a demo.md this repo does not have.
+
+════════════════════════════════════════════════════════════════════════
+**THE WALK — candidates against the shipped provisional (`@top-center{content:"Peekover"}` /
+`@bottom-center{content:"Page " counter(page) " of " counter(pages)}` / `margin:2cm 1.5cm 2.2cm`,
+`readerCss.ts:756-760` and `appShell.ts:470-474`, identical copies), per axis, no choice.**
+════════════════════════════════════════════════════════════════════════
+
+**HEADER content candidates.**
+- **(i) "Peekover" (static brand — current provisional).** *Reasoning:* zero mechanism risk (already
+  shipped, a plain string, no new machinery). But it carries no information about the DOCUMENT being
+  printed — every export shows the same header regardless of content, which doesn't help a reader who
+  has separated the printed pages find their place, and print convention (word processors, PDF readers)
+  more often uses the header for document identity than for app branding.
+- **(ii) the exported document's own title (filename, or its first H1).** *Reasoning:* the conventional
+  choice for a multi-page printed document — lets someone who has physically separated the pages, or
+  who is looking at page 14 of a 30-page PDF, identify what document they're holding. `activeFile.name`
+  (the open document's own name minus extension) is already read at export time, verbatim, by
+  `appShell.ts:897-898`'s `basenameForExport()` — the value exists and needs no new read. **★
+  FEASIBILITY CAVEAT, FLAGGED NOT RESOLVED:** `@page`'s margin-box `content` property reliably supports
+  only plain strings and `counter()`/`counters()` across engines (which is exactly what the shipped
+  header/footer use today). A per-document DYNAMIC value needs CSS Paged Media's separate "running
+  headers" mechanism — `string-set: title content()` declared on an in-flow element, read back via
+  `content: string(title)` in the margin box — and that mechanism's own cross-engine support is a
+  materially different and shakier question than plain-string/counter support (6.1/7.1 never tested
+  it; it is not the same code path the shipped rule exercises). Even setting Firefox's already-confirmed
+  total non-support for `@page` margin-box content aside (Q2), if Chromium does not support
+  `string()`/`string-set` in this position, the ONLY way to express a dynamic title is a mechanism
+  CHANGE, not a content edit: either generating the `@page` CSS text per-export at runtime (today
+  `APP_CSS`/`READER_CSS` are static build-time template literals, not per-call templates — a new
+  code shape) or abandoning `@page`'s own margin box for a print-time in-flow DOM header element
+  positioned to approximate one (a materially different, page-count-fragile visual result, and no
+  longer "the mechanism 6.1/7.1 already built"). Either path is bigger than 10.5's own stated scope
+  ("implement the CHOSEN values — constants only, no new mechanism") — so if 10.4 leans toward (ii), it
+  is knowingly reopening 10.5's "no new mechanism" framing, and that should be decided AT 10.4, not
+  discovered partway through 10.5. **This task does not verify `string-set`/`string()` support one way
+  or the other — no browser test was run, per this task's own doc-only, no-code scope; the caveat is
+  that current-docs verification is a prerequisite for 10.5 if (ii) or (iv) is chosen, per AGENTS.md's
+  own "verify against current docs" rule.**
+- **(iii) nothing (footer-only header).** *Reasoning:* the footer's page-count already provides
+  wayfinding, and a clean top margin reduces per-page visual noise. Trivial to build (delete the
+  `@top-center` rule). Costs the brand identity a header otherwise carries "free" on every printed page.
+- **(iv) both title + brand (e.g. "Peekover — <title>").** *Reasoning:* combines (i)'s branding and
+  (ii)'s document identity, at the cost of (ii)'s full feasibility caveat plus a NEW risk (ii) alone
+  doesn't have: a centered margin-box header has limited width, and a longer document filename
+  concatenated with a brand prefix is more likely to wrap or need truncation than either half alone —
+  untested here, a real risk to name for whoever builds it.
+  **Verdict-input, not a choice:** the reasoning leans toward (ii)'s INTENT (a document-identifying
+  header reads as more useful than static branding) but candidate (ii) itself carries a real,
+  unverified feasibility risk that (i) and (iii) do not. If 10.4 wants the shape (ii) implies without
+  the risk, (i) or (iii) are the safe fallbacks; (ii)/(iv) should not be chosen without a current-docs
+  `string-set` check first (a 10.5-time prerequisite, not decided here).
+
+**FOOTER content candidates.**
+- **(i) "Page X of Y" (current provisional).** *Reasoning:* the most informative of the four — total
+  page count lets a reader confirm nothing is missing after physically separating printed pages, the
+  single strongest argument for a footer at all in a paginated document. Already proven working
+  (7.1's own measured render signal). Slightly more visual width in the footer box than the
+  alternatives below.
+- **(ii) "X / Y."** *Reasoning:* the identical information as (i), more compact, a common convention
+  (word processors and many PDF templates use this exact shorthand). Same `counter(page)`/
+  `counter(pages)` mechanism, same proven-working status — a content string change only, no feasibility
+  risk.
+- **(iii) just the page number.** *Reasoning:* simpler, tells a reader where they are but not how much
+  is left or whether a trailing page went missing — the one piece of information (i)/(ii) provide that
+  this candidate drops.
+- **(iv) nothing.** *Reasoning:* cleanest page, but for the exact scenario this milestone's own PDF
+  export exists to serve (a genuinely multi-page document, per 7.1's own multi-page fixture
+  requirement) page numbers are close to a print-convention expectation; dropping them is the
+  candidate most likely to read as a regression rather than a deliberate minimalist choice.
+  **Verdict-input, not a choice:** (i) and (ii) carry the same information at the same mechanism cost
+  and are the strongest two; the choice between them is purely a length/convention preference, not a
+  feasibility one. (iii) and (iv) each trade away real information for less visual weight — a
+  legitimate but weaker product-feel call.
+
+**MARGIN sizing.** Provisional: `margin: 2cm 1.5cm 2.2cm` (CSS 3-value shorthand: top 2cm, left/right
+1.5cm, bottom 2.2cm — both files identical).
+- **Does the header/footer fit?** A single centered line of small print text needs well under 1cm of
+  actual content height; 2cm (top) and 2.2cm (bottom) both give ample clearance on Chromium's own
+  proven-rendering output — no fit problem found by reasoning against the measured render signal (7.1
+  confirmed the text renders on every page; nothing in that finding suggests clipping).
+- **Why bottom (2.2cm) is larger than top (2cm) by 0.2cm, when both margin boxes hold one line of
+  similar text:** this reads as a deliberate optical-margin convention, not an oversight — printed
+  pages conventionally carry a slightly larger bottom margin than top so a page that is measured
+  perfectly symmetric doesn't LOOK bottom-heavy-empty to the eye (the same convention book and document
+  templates use). Plausible, not verified visually in this doc-only task — a candidate for 10.4's human
+  walk to confirm by eye, not something this task can settle by reasoning alone.
+- **Is the body column comfortable?** 1.5cm left/right is narrower than common U.S. Letter/Word/Docs
+  defaults (2.54cm / 1in is the typical processor default; 2–2.5cm is typical for A4 templates), which
+  means MORE usable body width per printed page than a conventional document margin would give —
+  arguably a benefit for a reading-focused product whose own `.peekover-reader` column already
+  constrains prose to a comfortable measure (748px) independent of the page margins. Against
+  `diagrams-50.md` specifically: diagram `<svg>` elements already render at `max-width:100%`
+  (`readerCss.ts:718`), so a narrower side margin gives WIDE diagrams more horizontal room at print
+  size — a concrete point in favor of the current (or an even narrower) side margin for diagram-heavy
+  documents, found by reasoning against this task's own long-fixture substitute (Q3).
+- **Convention tension, named not resolved:** 1.5cm is tight if a reader intends to physically bind or
+  three-hole-punch the printed output (typical binding margins run 2.5cm+ on the bound edge). This
+  product's own stated target is a digital PDF export/archive (§3.6's own framing), not office-binder
+  printing, so this tension is plausibly irrelevant to the actual use case — but it is a real,
+  unverified assumption about how people will actually use exported PDFs, named rather than dismissed.
+  **Verdict-input, not a choice:** no strong case was found by reasoning alone to change the shipped
+  provisional — the asymmetric top/bottom looks like a deliberate, defensible convention rather than an
+  accident, and the narrow sides are a plausible, arguably positive choice for this product's own
+  content shapes (prose + wide diagrams). The one genuine unknown is visual, not reasoned: whether the
+  margins LOOK right on a real printed/PDF page, which this doc-only task cannot settle — 10.4's own
+  human walk (plan §5's own "print/PDF output legibility against a real long document" item, already
+  budgeted) is where that gets confirmed, not here.
+
+**Doc-only — nothing built.** No `src/` change, no test file, no `@page` edit in `readerCss.ts` or
+`appShell.ts`, no `pnpm build`/`pnpm zip` run — this task touches no code path that could move a byte,
+so there is nothing to rebuild and no suite to re-run. Golden EMPTY (unchanged). Manifests **654 / 770
+B** unchanged, `permissions: []`. `dependencies` unchanged at 6. `decisions.md` NOT touched by this
+task — the ruling is 10.4's, recorded there when it rules. `tasks.md` 10.3 ticked, with a pointer to
+this entry (findings-only, per 10.3's own Files line).
+
+**Revisit-when:** 10.4 rules M-3 (alongside M-1, M-2, and 8.3's build-or-drop); if 10.4 leans toward
+header candidate (ii) or (iv), a current-docs `string-set`/`string()` support check is a PREREQUISITE
+for 10.5, not something 10.5 can assume; 10.4's own human walk (plan §5) is where the margin reasoning
+above gets visually confirmed, not this task. Next task: **10.4**.
 
 **★★★★★ M10 TASK 10.2 LANDED, 2026-09-04 — M-2: THE EXPORT-SERIALIZE WALL-CLOCK, MEASURED ACROSS THE
 CORPUS, PER EXPORT TYPE. NO THRESHOLD CHOSEN (10.4's GATE OWNS THE CHOICE). NEW

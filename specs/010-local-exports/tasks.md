@@ -706,10 +706,21 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       bias sentence. No threshold chosen here. Golden EMPTY · manifest green **654 / 770 B** ·
       `permissions: []`. [§8 M-2; §3.8; plan risk (bias, carried)]
 
-- [ ] **10.3 M-3 — print CSS's specific page-number/header/footer content and layout (§3.6/§7-4, §8), gated on
+- [x] **10.3 M-3 — print CSS's specific page-number/header/footer content and layout (§3.6/§7-4, §8), gated on
       group 6's fidelity probe having confirmed the mechanism can express them at all. PRODUCES A WALK; FORBIDDEN
       FROM CHOOSING.** Axes: what the header/footer actually shows (document title? page X of Y? both?) ·
       margin sizing. Walked against the demo document and a long golden fixture.
+      **DONE 2026-09-04 — the gate reconciled first (6.1's raw "inadequate" verdict is superseded by 7.1's
+      relocation, which ships a rendering header/footer on Chromium/app-page; the walk proceeds, scoped to
+      that one cell — Firefox/content-script get none regardless, 7.1's own named residual). Four header
+      candidates, four footer candidates, and a margin-sizing walk produced, each with per-axis reasoning
+      and a verdict-input, no choice made. A feasibility caveat flagged on the document-title header
+      candidate: `@page` margin boxes reliably support only plain strings/counters, not a per-document
+      dynamic value, without a separate, unverified `string-set`/`string()` mechanism — a prerequisite
+      check for 10.5 if chosen. "The demo document" named in this task's own axis line does not exist as a
+      concrete fixture in this repo (F11's onboarding demo is unbuilt product scope) — reconciled, and
+      substituted with `tests/golden/fixtures/diagrams-50.md` (long) and `gfm-torture.md` (short/typical).
+      Doc-only, nothing built. Full candidate analysis: `docs/ai/progress.md`'s 2026-09-04 task-10.3 entry.**
       Files: `docs/ai/progress.md` (findings only) + the task report
       Verify: candidates walked and recorded with the reasoning; no final layout chosen here. **If group 6's
       probe found the `@page` mechanism inadequate, this task states that plainly and produces no candidates**
