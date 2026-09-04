@@ -1,8 +1,9 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (decision-record — task 8.3's build-or-drop deferred to task 10.4's decision gate,
-human-ruled; doc-only, no `src/`/test/build touched. Below that: task 9.2 landed — the zero-network guard
-across every export/copy/print action, in ONE test, real engine (Chromium + Firefox), against
+*Updated: 2026-09-04 (task 10.1 landed — M-1's first-ever-Ctrl+S default-format candidates produced with
+per-axis reasoning and a verdict-input; no default chosen, that's 10.4's gate. Doc-only, no `src/`/test/
+build touched. Below that: the 8.3 build-or-drop decision-record, then task 9.2 landed — the zero-network
+guard across every export/copy/print action, in ONE test, real engine (Chromium + Firefox), against
 `restoreBlockedImages` shown firing live as the one control the plan named. Group 9 CLOSES. Test-only —
 no `src/` change.)*
 
@@ -13,6 +14,94 @@ no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 10.1 LANDED, 2026-09-04 — M-1: THE FIRST-EVER-Ctrl+S DEFAULT FORMAT, CANDIDATES
+PRODUCED WITH PER-AXIS REASONING AND A VERDICT-INPUT; NO DEFAULT CHOSEN (10.4's GATE OWNS THE CHOICE).
+DOC-ONLY — NO `src/`, TEST, OR BUILD TOUCHED.**
+
+**Q1 — the 009 8.4 precedent shape, reproduced.** §10.1's own body cites "the 009 8.4-style product-feel
+judgement shape." Read: 8.4 ("the default code theme, the collapse threshold, and the line-numbers/
+word-wrap defaults") is a candidate list, each candidate walked against the task's own named axes, with
+NO final value picked — 8.4's own line: *"an always-on answer is legitimate; it must be CHOSEN, not
+defaulted into,"* i.e. every candidate, including a null/off/no-op-shaped one, is stated as a real
+option, not a strawman. The choice landed two tasks later, at 8.5 (★ DECISION GATE, human, in
+`decisions.md`), "with the measurement that justifies it." 10.1 reproduces that exact shape: candidates
++ per-axis reasoning here, in `progress.md`, no constant touched; the choice lands at 10.4 (this
+milestone's own 8.5-equivalent), in `decisions.md`.
+
+**Q2 — the candidate set, confirmed to span the real range, including the "still a no-op" option.** The
+five export-panel row keys `triggerLastExport` (`appShell.ts:1015`) already switches on — `'html'`,
+`'copy-html'`, `'copy-plain-text'`, `'copy-rich-text'`, `'pdf'` — plus the genuine sixth option of
+leaving `lastExportFormat` permanently `null` until the user has exported once through the panel (8.1's
+own shipped `default: break;` no-op, kept forever rather than filled in). Four candidates below (no-op ·
+HTML export · a copy action, as a class · PDF), each read against §10.1's own two axes.
+
+**A — per-candidate axis reasoning.**
+
+- **(a) Keep the no-op — a first-ever Ctrl+S does nothing, forever, until the panel has been used once.**
+  *Likeliest-wanted:* weak. It makes no wrong guess (every one of the five real formats is a guess with
+  zero signal behind it), but it also fails the near-universal expectation that Ctrl+S does *something* —
+  8.2's own `preventDefault` already suppresses the browser's native Save Page As on this surface, so a
+  silent no-op reads as "the shortcut is broken," not as "the shortcut is being careful." *Fewest
+  failure modes:* the strongest candidate on this axis, definitionally — nothing executes, so nothing can
+  reject, throw, or pop a dialog. *Its own cost, stated plainly:* the shortcut exists but produces no
+  feedback on a first press, which is itself a softer failure mode — silent inaction is indistinguishable
+  from a dead binding to a first-time keyboard-first user who has never opened the panel.
+- **(b) Default to `'html'` (HTML export, `runExportHtml`).** *Likeliest-wanted:* the strongest match of
+  the four. Ctrl+S/Cmd+S universally means "save a file to disk" — 8.2's own doc comment already frames
+  the whole feature as re-invoking "the same export," and HTML export is the only one of the five that
+  produces a downloaded file, the most literal reading of what a suppressed native Save was about to do.
+  *Fewest failure modes:* a synchronous browser-native download, byte-proven at 8.1/9.2, no clipboard
+  consent surface, no native dialog. Per 9.1, its only failure mode is a `serializeReaderDocument` throw
+  — already caught and reported (`runExportHtml`'s `try/catch` → `reportExportFailure('html')`) — narrower
+  first-try failure surface than either a copy action or PDF.
+- **(c) Default to a copy action (`'copy-html'` / `'copy-plain-text'` / `'copy-rich-text'`, as a class —
+  this task does not adjudicate which of the three; that would be a narrower, separate axis).**
+  *Likeliest-wanted:* a weaker match to "save" semantics — a clipboard write doesn't persist a file, so
+  it's a less literal reading of what Ctrl+S suppressed, though it is arguably the fastest useful action
+  for a "paste this into another document" workflow. *Fewest failure modes:* per 9.1's own forced-failure
+  mechanism, `navigator.clipboard` writes CAN reject (permission/context) — a real first-try failure
+  surface a synchronous download doesn't carry. 9.1 now reports that failure via the live region rather
+  than failing silently, so it is not a *silent* failure mode, but it remains a live one on a surface the
+  user has never granted clipboard permission on before.
+- **(d) Default to `'pdf'` (`runExportPdf`, `window.print()`).** *Likeliest-wanted:* the weakest match —
+  `window.print()` opens the browser's native print dialog, a modal system surface the user did not ask
+  the panel to summon, on their very first, exploratory keypress. That reads as surprising rather than as
+  "saving." *Fewest failure modes:* `window.print()` is synchronous with no promise/throw surface (9.1:
+  "PDF gets neither report on either outcome"), so nothing can report a code-level failure — but the
+  candidate exchanges that for a UX-level one: an unprompted modal dialog interrupting a user who pressed
+  a shortcut they'd only just discovered still does something.
+
+**B — verdict-input (a lean + its tradeoff, NOT a choice — 10.4 rules).** The reasoning leans toward
+**(b) HTML export**, because it is the only candidate that scores well on BOTH axes at once — closest
+match to native Ctrl+S "save a file" semantics, and the narrowest first-try failure surface of the three
+candidates that do something. The tradeoff the human gate weighs: (a)'s no-op is strictly safer in the
+narrow "zero failure modes, ever" sense, at the cost of a shortcut that produces no feedback until the
+panel is discovered — a real product-feel call, not a numeric one, about whether "does nothing" or "does
+the closest analog to what it suppressed" is the better first impression. (c)'s copy actions are useful
+for a different workflow (paste-elsewhere) but carry the clipboard-consent risk (b) doesn't. (d)'s native
+dialog is the outlier on both axes and is the weakest of the four on this reasoning. Same shape spec §9
+item 2 used for the Ctrl+S scope ruling itself: a stated recommendation with its reasoning, decided by a
+human at the named gate, not asserted here.
+
+**The 8.1/8.2 null-case interaction, confirmed.** 8.2 set `DEFAULT_SETTINGS.lastExportFormat = null`
+specifically because "a non-null default here would silently pre-empt" this task's own walk-gate pick
+(`settings.ts:47-49`). 8.1 then made a first-ever Ctrl+S (`lastExportFormat` still `null`) a graceful
+no-op *"pending 10.1"* (`appShell.ts:1008-1013`). 10.1's candidates above are exactly what resolves that
+null: whichever candidate 10.4 rules in becomes what 10.5 wires into `DEFAULT_SETTINGS.lastExportFormat`
+(or, if 10.4 rules candidate (a), the no-op is confirmed permanent and no constant changes at all).
+
+**Doc-only — nothing built.** No `src/` change, no test file, no `pnpm build`/`pnpm zip` run — this task
+touches no code path that could move a byte, so there is nothing to rebuild and no suite to re-run.
+Golden EMPTY (unchanged). Manifests **654 / 770 B** unchanged, `permissions: []`. `dependencies`
+unchanged at 6. `decisions.md` NOT touched by this task — the ruling is 10.4's, recorded there when it
+rules; `tasks.md` 10.1 ticked, with a short pointer to this entry (findings-only, per 10.1's own Files
+line).
+
+**Revisit-when:** 10.4 rules M-1 (alongside M-2, M-3, and 8.3's build-or-drop); 10.5 wires the ruled
+value into `DEFAULT_SETTINGS.lastExportFormat` (a no-op edit, recorded either way, if 10.4 rules the
+no-op candidate in). Next task: **10.2** (M-2, the heavy-document threshold — produces numbers, forbidden
+from choosing).
 
 **★★★★★ M10 DECISION-RECORD, 2026-09-04 — TASK 8.3's BUILD-OR-DROP DEFERRED TO TASK 10.4's DECISION GATE,
 HUMAN-RULED, ON 10.2's MEASURED NUMBER. DOC-ONLY — NO `src/`, TEST, OR BUILD TOUCHED.** Full reconciliation
@@ -1176,11 +1265,16 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-09-04) — task 9.1 landed** (per-action failure states, plus, by human
-ruling, the copy-completion affordance three prior tasks had named but not built). Next task:
-**9.2** (the zero-network guard, across every export/copy/print action, with D-8's own live
-mechanism as the firing control, shown live in the same test) in `specs/010-local-exports/tasks.md`,
-group 9. See § Now for 9.1's full landing detail.
+**M10 is IN PROGRESS (2026-09-04) — task 10.1 landed** (M-1's first-ever-Ctrl+S default-format
+candidates, produced with per-axis reasoning and a verdict-input; no default chosen, that's 10.4's
+gate). Next task: **10.2** (M-2, the "heavy document" export-threshold measurement — produces numbers,
+forbidden from choosing) in `specs/010-local-exports/tasks.md`, group 10. See § Now for 10.1's full
+candidate analysis.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-04) — task 9.1 landed (per-action
+failure states, plus, by human ruling, the copy-completion affordance three prior tasks had named but
+not built). Next task: 9.2 (the zero-network guard, across every export/copy/print action, with D-8's
+own live mechanism as the firing control, shown live in the same test)~~ — **9.2, then 10.1, have since
+landed, see § Now.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-08-29) — task 3.2 landed (the export
 panel; Q1 resolved (a), HTML export's row wired live; app-page bytes moved for the first time in
 M10, 475,579 → 483,331 B). Next task: 3.3 (Copy-as-HTML — the clipboard exit, same artifact as 3.1,

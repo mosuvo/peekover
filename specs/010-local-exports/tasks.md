@@ -675,10 +675,14 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
 
 ## 10 — Measure (spec §8 M-1 · M-2 · M-3 — PRODUCE NUMBERS; FORBIDDEN FROM CHOOSING VALUES)
 
-- [ ] **10.1 M-1 — the default export format before any format has ever been used (§3.7, §8). PRODUCES A
+- [x] **10.1 M-1 — the default export format before any format has ever been used (§3.7, §8). PRODUCES A
       WALK-GATE JUDGEMENT; FORBIDDEN FROM CHOOSING.** Axes: which format a first-time user is likeliest to want
       · which format has the fewest failure modes to demonstrate on a first try. Nothing quantitative — the
       009 8.4-style product-feel judgement shape.
+      **DONE 2026-09-04 — four candidates produced (keep-no-op · HTML export · a copy action, as a class ·
+      PDF), each read against both axes; verdict-input leans HTML export, no default chosen. Full candidate
+      analysis + the 8.1/8.2 null-case reconciliation: `docs/ai/progress.md`'s 2026-09-04 task-10.1 entry.
+      Doc-only, nothing built.**
       Files: `docs/ai/progress.md` (findings only) + the task report
       Verify: candidates stated with their reasoning, no default chosen here. Golden EMPTY · manifest green
       **654 / 770 B** · `permissions: []`. [§8 M-1; §3.7]
