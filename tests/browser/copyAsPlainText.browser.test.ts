@@ -277,6 +277,11 @@ describe('the export panel — Copy as plain text row goes live at this task, 2 
     expect(plain?.replace(/\r\n/g, '\n')).toBe(PANEL_SOURCE);
     expect(plain).toContain('**bold**');
     expect(plain).not.toContain('<'); // never the exported/rendered HTML artifact
+
+    // ★ Task 9.1 (ruled — decisions.md): the same real click drives the row's own completion
+    // affordance too — proven here on the real click path.
+    expect(row.textContent).toContain('Copied');
+    expect(row.getAttribute('data-state')).toBe('done');
   });
 
   it('pdf: disabled at this task (3.4), re-confirmed live as of task 7.1', async () => {

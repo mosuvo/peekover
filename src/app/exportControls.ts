@@ -31,14 +31,13 @@ export interface ExportViewOptions {
   /** Trigger the clipboard copy-as-plain-text export (task 3.4's `copyAsPlainText`) — the raw
    *  authored source, not the clone `onCopyHtml` works from. Sync signature matching `onCopyHtml`'s
    *  own shape deliberately: the async read+write happens INSIDE `copyAsPlainText` itself, and the
-   *  caller (`appShell.ts`) discards the returned promise the same way it already does for
-   *  `onCopyHtml` — a rejection surfaces as a genuine unhandled-rejection error, never a silent
-   *  no-op (AGENTS.md #5). */
+   *  caller (`appShell.ts`) attaches `.then(onCopied, onFailed)` to report the outcome through
+   *  `ExportViewController.reportCopyOutcome` (task 9.1) — never a silent no-op (AGENTS.md #5). */
   onCopyPlainText(): void;
   /** Trigger the clipboard copy-as-rich-text export (task 4.1's `copyAsRichText`) — the clone's
    *  semantic markup alone, no bundled `<style>` block, so a paste target's own styling applies.
    *  Sync signature matching `onCopyHtml`/`onCopyPlainText`'s own shape — the async write happens
-   *  INSIDE `copyAsRichText`, and the caller discards the returned promise the same way. */
+   *  INSIDE `copyAsRichText`, and the caller reports its outcome the same `.then(...)` way. */
   onCopyRichText(): void;
   /** Trigger PDF export (task 7.1's `exportPdf`) — the browser's own print pipeline
    *  (`window.print()`), §3.6-sealed: no second rendering path. Unlike every other row above, this
@@ -53,12 +52,46 @@ export interface ExportViewOptions {
   onClose(): void;
 }
 
+/** The 3 rows whose action can produce a "Copied"/"Copy failed" completion state (task 9.1,
+ *  human-ruled — `decisions.md`'s M10 9.1 entry). HTML export and PDF are deliberately excluded:
+ *  each already has its own native browser signal for SUCCESS (the download shelf; the print
+ *  dialog), so a Peekover "Exported!" would be redundant with it — the same "still justified / not
+ *  redundant" discipline that dropped ZIP export earlier this milestone. */
+export type CopyRowKey = 'copy-html' | 'copy-plain-text' | 'copy-rich-text';
+
 export interface ExportViewController {
   /** The panel root — the caller slots this into the shell. */
   readonly element: HTMLElement;
+  /** Task 9.1: report a copy row's outcome once its clipboard promise settles — swaps THAT row's
+   *  own title text to "Copied"/"Copy failed", rewrites its `aria-label`, sets `data-state`, and
+   *  announces via the panel's own live region. `codeView.ts`'s copy-button shape (row 15/20),
+   *  REPRODUCED here, not imported — `buildCodeToolbar`'s `announce` closure is module-private to
+   *  the content-script render graph, unreachable from this app-page panel — the module doc
+   *  comment's own rule-of-three precedent (`diagramLightbox`'s trap plus this panel's), applied
+   *  again here. Never called for `'html'`/`'pdf'` — see `CopyRowKey`'s own doc comment. */
+  reportCopyOutcome(key: CopyRowKey, copied: boolean): void;
+  /** Task 9.1: report that HTML export itself threw before any download began (a serialization
+   *  throw — `htmlExport.ts`'s `serializeReaderDocument` — §3.9's own named failure mode) by
+   *  swapping the HTML row's title to "Export failed" + the same aria/data-state/announce shape
+   *  `reportCopyOutcome` uses. The HTML row's SUCCESS half is deliberately never reported (ruling:
+   *  the browser's own download UI already signals it) — this is the one-sided failure-only
+   *  counterpart, not a second completion affordance. */
+  reportExportFailure(key: 'html'): void;
 }
 
 const EC_CLASS = 'peekover-export';
+
+/** `data-state` on a row's own button once task 9.1's outcome reporters have resolved it —
+ *  `codeView.ts`'s `CODE_COPY_STATE_ATTR` name AND values (`'done'`/`'failed'`) reproduced
+ *  verbatim, not just the attribute name, so the two toolbars stay one vocabulary even though
+ *  they are two separate implementations (module doc comment: reproduced, not imported). */
+export const EXPORT_ROW_STATE_ATTR = 'data-state';
+
+/** Class on the panel's own polite live region (task 9.1) — `codeView.ts`'s `CODE_STATUS_CLASS`
+ *  role, a SEPARATE element in this module's own tree (see the doc comment above the region's own
+ *  construction, below). Exported so a test can select it directly, matching that sibling's own
+ *  precedent. */
+export const EXPORT_STATUS_CLASS = `${EC_CLASS}__status`;
 
 const EC_CSS = /* css */ `
 .${EC_CLASS}{
@@ -224,6 +257,62 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
   ];
   for (const spec of rows) element.append(buildRow(doc, spec));
 
+  // ── TASK 9.1's LIVE REGION — `codeView.ts`'s `CODE_STATUS_CLASS` shape, reproduced verbatim
+  // (role="status", hidden while empty so it sits outside the a11y tree until it has something to
+  // say; no dedicated CSS rule either, matching that module's own unstyled block precedent — grepped
+  // `readerCss.ts` to confirm before reproducing the choice, not just the markup). Placed after the
+  // rows, mirroring `buildCodeToolbar`'s own toolbar-then-status append order.
+  const status = doc.createElement('div');
+  status.className = EXPORT_STATUS_CLASS;
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+  const announce = (text: string): void => {
+    status.textContent = text;
+    status.hidden = text === '';
+  };
+  element.append(status);
+
+  /** Row lookup shared by both outcome reporters below — `buildRow`'s own `data-export` attribute
+   *  is the seam (already set on every row for a different reason: the focus-trap's stop list). */
+  function rowButton(key: string): HTMLButtonElement | null {
+    return element.querySelector<HTMLButtonElement>(`button[data-export="${key}"]`);
+  }
+  function rowTitleSpan(button: HTMLButtonElement): HTMLElement | null {
+    return button.querySelector<HTMLElement>(`.${EC_CLASS}__row-title`);
+  }
+  function rowActionLabel(key: string): string {
+    return rows.find((r) => r.key === key)?.actionLabel ?? '';
+  }
+
+  function reportCopyOutcome(key: CopyRowKey, copied: boolean): void {
+    const button = rowButton(key);
+    const titleSpan = button && rowTitleSpan(button);
+    if (!button || !titleSpan) return;
+    const label = rowActionLabel(key);
+    if (copied) {
+      titleSpan.textContent = 'Copied';
+      button.setAttribute('aria-label', `${label} — copied. Activate to copy again.`);
+      button.setAttribute(EXPORT_ROW_STATE_ATTR, 'done');
+      announce(`${label} copied.`);
+    } else {
+      titleSpan.textContent = 'Copy failed';
+      button.setAttribute('aria-label', `${label} — copy failed. Activate to try again.`);
+      button.setAttribute(EXPORT_ROW_STATE_ATTR, 'failed');
+      announce(`${label} could not be copied.`);
+    }
+  }
+
+  function reportExportFailure(key: 'html'): void {
+    const button = rowButton(key);
+    const titleSpan = button && rowTitleSpan(button);
+    if (!button || !titleSpan) return;
+    const label = rowActionLabel(key);
+    titleSpan.textContent = 'Export failed';
+    button.setAttribute('aria-label', `${label} — failed. Activate to try again.`);
+    button.setAttribute(EXPORT_ROW_STATE_ATTR, 'failed');
+    announce(`${label} failed.`);
+  }
+
   // ★ THE TRAP — copied inline from `openDiagramLightbox`'s own shape (`diagramView.ts`), not a
   // shared helper (see the module doc comment above). Tab off either end wraps to the other;
   // Escape asks the caller to close (appShell owns the open/close state and the restore).
@@ -248,5 +337,5 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
     }
   });
 
-  return { element };
+  return { element, reportCopyOutcome, reportExportFailure };
 }

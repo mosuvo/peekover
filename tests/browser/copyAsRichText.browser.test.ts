@@ -322,6 +322,11 @@ describe('the export panel — Copy as rich text row goes live at this task (pdf
     });
     expect(plain).toContain('alpha.md');
     expect(plain).toContain('bold');
+
+    // ★ Task 9.1 (ruled — decisions.md): the same real click drives the row's own completion
+    // affordance too — proven here on the real click path.
+    expect(row.textContent).toContain('Copied');
+    expect(row.getAttribute('data-state')).toBe('done');
   });
 
   it('pdf stayed disabled at this task (4.1 touches one row) — re-confirmed live as of task 7.1', async () => {

@@ -1,6 +1,143 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-04 · M10 task 9.1 — failure states land, AND (human ruling, this entry) the copy-completion
+  affordance five prior tasks named but did not build lands in the SAME commit, because they are one
+  code change: every copy handler's `void copyFn(...)` becomes `copyFn(...).then(onCopied, onFailed)`,
+  and the success branch of that `.then` IS the completion affordance.**
+  **THE RULING (human-confirmed).** §9.1's own sealed body owns FAILURE-STATES only (force a failure,
+  prove never-blank, prove no-false-success) — it never names a positive completion affordance. But
+  `tasks.md`'s own §3.11 sibling-checklist routing table (lines 135-138, read BEFORE this task, per
+  AGENTS.md's rule that the routing table is a discharged plan deliverable, not a hypothesis) already
+  routes row 9 (the polite live region) and row 10 (reduced motion) to "task 9.1 (completion/failure
+  state for every action)" and "task 9.1, for any copy-confirmation transition" — a textual basis in
+  `tasks.md` itself, not merely a prior task's own aside. Ruled:
+  - 9.1 builds BOTH halves as one code change (see above) — not scope creep, because every copy
+    handler's rejection was ALREADY surfaced only as a genuine unhandled-rejection error (AGENTS.md
+    #5's "never a false success" was already satisfied that way); 9.1's own failure-states obligation
+    requires replacing that with an explicit, user-visible failure state, and the SAME `.then`'s
+    success branch is the completion affordance — building one half without the other would mean
+    writing the `.then` twice, once now and once when a later task "discovers" the other branch.
+  - Completion UI is for the THREE COPY actions ONLY (Copy-as-HTML, Copy-as-plain-text, Copy-as-rich-
+    text). HTML export and PDF get NO Peekover completion affordance on SUCCESS: each already has its
+    own native browser signal (the download shelf; the print dialog), so a Peekover "Exported!" would
+    be redundant with it — the same "still justified / not redundant" discipline that dropped ZIP
+    export earlier this milestone (`decisions.md`'s §3.1(cont.) ruling). HTML export DOES still get a
+    FAILURE report (below) — a thrown serialization error has no native signal at all, unlike a
+    completed download — but PDF gets neither report on either outcome: `window.print()` has no
+    promise/throw surface for `appShell.ts`'s guard to catch, so there is nothing to force.
+  - The affordance REPRODUCES `codeView.ts`'s own copy-button shape (`buildCodeToolbar`'s row
+    15/20: per-button text swap + `aria-label` rewrite + a `data-state` attribute, using the SAME
+    values `'done'`/`'failed'` `CODE_COPY_STATE_ATTR` already uses, plus a `role="status"`
+    hidden-until-populated live region) rather than importing it — `buildCodeToolbar`'s own
+    `announce` closure is module-private, in the content-script render graph, unreachable from this
+    app-page panel. Two independent call sites (codeView's toolbar, this panel), the same
+    rule-of-three precedent `exportControls.ts`'s own module doc comment already states for its focus
+    trap — reproduced again here, not extracted into a shared helper.
+  **THE RECONCILIATION'S OWN FINDING, CORRECTING THE KICKOFF THAT PRECEDED THIS TASK — the kickoff
+  claimed "only 3.3/3.4 (not 3.1/4.1/7.1) actually deferred" completion UI to 9.1; checked against
+  `decisions.md`'s own landed entries before drafting, and that claim is WRONG about 4.1.** Task 4.1's
+  own 2026-09-03 entry (above, "Copy-as-rich-text lands") states verbatim: *"Task 9.1 still owns the
+  completion/failure UI every copy row in this panel has named but not built (same standing note as
+  3.3/3.4's own entries) — now covering all 4 live copy/export rows plus this one."* So all THREE copy
+  tasks (3.3, 3.4, 4.1) explicitly deferred, not two — which actually STRENGTHENS the ruling's coverage
+  (every copy row deferred it, none skipped) rather than narrowing it. Task 3.2 (HTML export's own
+  panel-wiring task) and task 7.1 (PDF) never deferred anything to 9.1 — consistent with the ruling's
+  native-signal exclusion, checked by reading both entries in full and confirming neither mentions a
+  9.1 deferral. Flagged here per AGENTS.md's "a kickoff is a hypothesis, not authority" rule, since a
+  kickoff's own factual claim about prior tasks turned out to be wrong at the file level, not just the
+  ambiguous-scope level a reconciliation normally catches.
+  **Q1 — THE void→then SEAM.** `appShell.ts`'s three copy handlers change `void copyFn(...)` to
+  `copyFn(...).then(onCopied, onFailed)`. The `.then` callbacks live in `mountAppShell`'s own closure
+  (where the handlers already are), not in `exportControls.ts` — so they reach the RIGHT row + the
+  panel's own live region through a new closure variable, `exportView: ExportViewController | null`,
+  set in `renderExport()` (the instant a fresh panel is built — `createExportView` is stateless and
+  rebuilt on every open, per that module's own doc comment) and cleared to `null` in `toggleExport`'s
+  close branch. A promise settling after the panel has closed is therefore a graceful no-op
+  (`exportView?.reportCopyOutcome(...)`), never an error. `ExportViewController` gained two methods:
+  `reportCopyOutcome(key: CopyRowKey, copied: boolean)` (the 3 copy rows) and
+  `reportExportFailure(key: 'html')` (the one-sided HTML failure report) — both implemented inside
+  `createExportView` using the row's own existing `data-export` attribute as the lookup seam (already
+  set on every row for a different reason: the focus trap's own stop list), so no new per-row state
+  needed threading through `RowSpec`.
+  **Q2 — THE LIVE REGION, REPRODUCED, NOT IMPORTED.** A `role="status"`, `hidden`-while-empty `<div>`
+  (`EXPORT_STATUS_CLASS`, exported for test selection, matching `CODE_STATUS_CLASS`'s own precedent)
+  is appended to the panel after its rows, with a module-local `announce(text)` closure exactly
+  matching `buildCodeToolbar`'s own shape — confirmed NOT an import (grepped `codeView.ts`'s exports;
+  `announce` is not one of them) and confirmed no dedicated CSS rule was needed either (grepped
+  `readerCss.ts` for `__status` before writing any — zero matches, so `codeView.ts`'s own toolbar
+  status div ships unstyled too; reproducing that choice, not inventing a new one).
+  **Q3 — HTML/PDF EXCLUDED, AND WHICH ONE HAS A FAILURE PATH.** `exportHtml` is synchronous and CAN
+  throw before any download begins: `serializeReaderDocument` throws when `.peekover-reader` is absent
+  from the host's shadow root — this is §3.9's own named "a serialization throw" mode, reachable in
+  THIS milestone's actual code (unlike "a library fails to load" or "an image cannot be read," which
+  have no forceable path left after the §3.1 gate ruling dropped local-image embedding and D-7 shipped
+  PDF with zero new library — noted so the sealed body's other two named modes are not silently
+  skipped without explanation). `runExportHtml` wraps the call in `try { exportHtml(...) } catch {
+  exportView?.reportExportFailure('html') }` — the ONE failure this row must still state itself,
+  since a thrown error has no native signal at all, unlike a completed download. `runExportPdf` gets
+  NEITHER a completion NOR a failure report, on either count: `window.print()` returns nothing and has
+  no promise to reject, so there is no throw surface for `appShell.ts`'s guard to catch, and the
+  ruling excludes its success half as native-signal-redundant regardless.
+  **Q4 — THE FORCED-FAILURE MECHANISM, PER MODE, AND WHY EACH ONE DOES NOT DESTROY WHAT IT PROVES
+  UNTOUCHED.** Copy rows: `navigator.clipboard` is replaced wholesale with a stub whose `write`/
+  `writeText` reject (`copyAsHtml.browser.test.ts`'s own rejection shape, reused for the panel click
+  path) — this touches nothing in the live DOM, so the reader subtree's reference-identity check is a
+  clean claim. HTML export: `serializeReaderDocument` calls `column.cloneNode(true)` on the LIVE
+  `.peekover-reader` element — patching `cloneNode` to throw as an OWN-PROPERTY override on that one
+  element instance (never removing or mutating the element itself) forces the exact real throw without
+  disturbing the rendered document at all, so the SAME node, SAME markup, survives the forced failure —
+  removing the element instead (the more obvious "make it throw" move) would have been self-defeating,
+  since the destruction performed TO force the failure would be indistinguishable from the defect this
+  test exists to catch.
+  **THE REVERT-AND-FAIL, ACTUALLY PERFORMED, NOT MERELY DESCRIBED (M6 finding 5).** `appShell.ts`'s
+  three `.then(onCopied, onFailed)` calls were reverted to the pre-9.1 `void copyFn(...)` shape and
+  `runExportHtml`'s `try/catch` was reverted to a bare call, then `exportDegrade.browser.test.ts` +
+  the three copy-row browser test files were re-run on both engines. Signature, exactly as predicted:
+  every forced-failure/forced-success arm's `until(() => row.getAttribute('data-state') === ...)`
+  timed out (a discarded promise settles into nothing a row can react to — the row is left exactly as
+  it started, "Copy as HTML"/etc, forever); Chromium AND Firefox both additionally surfaced the
+  original rejection/throw as a genuine unhandled error at the exact reverted call site
+  (`runCopyHtml`/`runCopyPlainText`/`runCopyRichText`/`runExportHtml`, confirmed via the test runner's
+  own unhandled-error attribution) — 20 of 60 assertions across 8 files went red. The wiring was then
+  restored verbatim (`git diff` re-checked against the pre-ablation state, byte-for-byte identical)
+  and the full set re-ran clean, 60/60. This is the defect's own signature: silent no-op OR an uncaught
+  error, never a stated failure — exactly what §9.1 exists to close.
+  **Necessary ripple, flagged per AGENTS.md's workflow rule (not a silent substitution).** §9.1's own
+  sealed Files list is `htmlExport.ts` · `exportControls.ts` · `exportDegrade.browser.test.ts` —
+  `appShell.ts` is NOT on it, but the `.then(onCopied, onFailed)` wiring can only live where the copy
+  handlers already are (`mountAppShell`'s own closure), which is `appShell.ts`, not
+  `exportControls.ts` — structurally required by this task's own Verify clause ("each forced failure
+  states itself distinctly"), which is unreachable without touching the handler that calls the failing
+  function. `htmlExport.ts` itself was NOT touched — `serializeReaderDocument`'s existing throw already
+  does everything Q3 needed; no source change to that file, only to its two consumers-through-the-
+  panel (`appShell.ts`) and the panel itself (`exportControls.ts`). The three copy-row browser test
+  files (`copyAsHtml`/`copyAsPlainText`/`copyAsRichText.browser.test.ts`) each gained one small
+  ripple: a real successful click now also proves the completion affordance on the SAME real-click
+  path those files already drive, and `copyAsHtml.browser.test.ts`'s own stale "no completion UI
+  exists yet (task 9.1's own scope)" comment was removed as no longer true.
+  **Byte discipline — measured on BOTH engines, firing-control confirmed (`git stash`/rebuild both
+  engines).** App-page chunk **487,735 → 489,076 B (+1,341 B)**, identical delta both engines. `.output`
+  **4,880,238 → 4,881,579 B (Cr, +1,341 B) / → 4,881,695 B (Fx)** — the delta decomposes exactly to the
+  app-page chunk's own move, residual 0. Content-script: **UNCHANGED, 336,121 B, BOTH engines, md5
+  IDENTICAL to 8.2's landed state** (Cr `f424a3b6…`, Fx `ebbf183a…`) — firing-control-confirmed via
+  `git stash`, full rebuild both engines: reverting the diff returns the app chunk to exactly
+  487,735 B and `.output` to exactly 4,880,238 B (Cr), byte-for-byte the pre-task baseline. This task
+  is app-page-only, as expected — the export panel is app-page DOM (D-2); no content-script path was
+  touched. Manifests **654 / 770 B** unchanged, `permissions: []`, no `web_accessible_resources`.
+  `dependencies` (production) unchanged at **6** — a live region and a row-state swap are DOM, no
+  new dependency. Golden EMPTY (no render-pipeline file touched).
+  **Suite.** Unit: **1056/1056** (a first run hit `diagramEnhancer.test.ts`'s standing carried
+  "enhancer-timing" flake — 2 failures — confirmed pre-existing by an isolated re-run, 58/58 clean;
+  this task touches no diagram file). Full browser suite: **152 files / 1535 passed / 15 skipped, 0
+  failed** (150/1517/15 baseline at 8.1 + this task's new 9-test file × 2 engines = +18 passed, +2
+  files — reconciles exactly). Lint + typecheck clean (`eslint . && tsc --noEmit`, zero errors) — one
+  real lint catch fixed in-flight: an unused `label` destructure in the forced-failure
+  `describe.each`-shaped loop, removed.
+  **Revisit-when:** none specific to this task — the ruling settles the completion-UI scope question
+  the reconciliation surfaced, and both halves (failure states, completion affordance) are now built
+  and proven together.
+
 - **2026-09-03 · M10 D-5 (task 8.1) — the Ctrl/Cmd+S export shortcut binds in `entrypoints/app/main.ts`,
   app-page-only; the five export handlers are LIFTED to one dispatch path (click + shortcut), never
   duplicated; a real byte-level proof (content-script md5 unchanged, both engines) backs the scoping

@@ -126,7 +126,7 @@ import {
   type WatchTarget,
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
-import { createExportView, exportPdf } from './exportControls';
+import { createExportView, exportPdf, type ExportViewController } from './exportControls';
 import { exportHtml, copyAsHtml, copyAsRichText } from '../export/htmlExport';
 import { copyAsPlainText } from '../export/copyPlainText';
 
@@ -883,6 +883,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // storage panel, plus the one thing that panel never needed: a focus target to restore to.
 
   let exportOpen = false;
+  /** Task 9.1: the currently-open panel's own controller, so the void→then callbacks below (which
+   *  live in this closure, not `exportControls.ts`) can report an outcome to the RIGHT row + live
+   *  region. `createExportView` is stateless and rebuilt fresh on every open (module doc comment),
+   *  so this reference is set in `renderExport` and cleared in `toggleExport`'s close branch —
+   *  never stale across an open/close cycle. `null` while closed is a graceful no-op (a promise
+   *  that settles after the panel closes has nothing left to update — never an error). */
+  let exportView: ExportViewController | null = null;
 
   /** The exported file's basename (task 3.1's own parameter) — the open document's own name,
    *  minus its extension. `exportToggle` is disabled whenever `activeFile` is null, so the
@@ -915,25 +922,37 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // unreadable file), in which case there is nothing to export and this is a silent no-op
     // (AGENTS.md #5: no export UI is reachable without `activeFile`, but the read itself can
     // still fail after selection).
+    // Task 9.1: `exportHtml` is synchronous and can throw before any download begins
+    // (`serializeReaderDocument`'s own throw when `.peekover-reader` is absent from the host's
+    // shadow root — §3.9's named "a serialization throw" mode). A thrown error here has NO native
+    // browser signal at all (unlike a completed download), so it is the one failure this row must
+    // still state itself — `reportExportFailure`, never `reportCopyOutcome` (ruling: HTML never
+    // gets a SUCCESS affordance, only this one-sided failure report).
     const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
     if (host) {
       saveSettings({ lastExportFormat: 'html' });
-      exportHtml(host, basenameForExport());
+      try {
+        exportHtml(host, basenameForExport());
+      } catch {
+        exportView?.reportExportFailure('html');
+      }
     }
   }
 
   function runCopyHtml(): void {
     // Same host-lookup, same non-render-state no-op as runExportHtml above. `copyAsHtml`
     // rejects rather than resolving silently on a clipboard-write failure (AGENTS.md #5 — no
-    // false success); this call is intentionally NOT caught-and-swallowed here (`tryStore`'s
-    // best-effort pattern does not apply to a deliberate user copy action) — a rejection
-    // surfaces as a genuine unhandled-rejection error rather than a falsely-quiet no-op.
-    // Per-action completion/failure UI (a "Copied"/"Copy failed" state, `codeView.ts`'s own
-    // copy-button precedent) is task 9.1's own milestone-wide scope, not this task's.
+    // false success). Task 9.1 (human-ruled, decisions.md): the caller now surfaces that
+    // rejection as an explicit UI state — `reportCopyOutcome` — rather than the prior
+    // unhandled-rejection-only signal; `.then(onCopied, onFailed)` can only ever run ONE branch,
+    // so a false "Copied" on a rejected write is structurally impossible.
     const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
     if (host) {
       saveSettings({ lastExportFormat: 'copy-html' });
-      void copyAsHtml(host);
+      copyAsHtml(host).then(
+        () => exportView?.reportCopyOutcome('copy-html', true),
+        () => exportView?.reportCopyOutcome('copy-html', false),
+      );
     }
   }
 
@@ -942,25 +961,31 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // Q1), never the rendered clone `runCopyHtml`/`runExportHtml` work from. `exportToggle` is
     // disabled whenever `activeFile` is null, so the guard below is defensive only (never
     // reachable through the shipped UI, matching `basenameForExport`'s own fallback comment).
-    // Same discard-the-promise shape as `runCopyHtml`: `copyAsPlainText` is async internally
-    // (it awaits the read, then the write), but this function stays sync and a rejection
-    // surfaces as a genuine unhandled-rejection error rather than a swallowed no-op
-    // (AGENTS.md #5 — no false success, covering the READ failure as well as the WRITE).
+    // Same `.then(onCopied, onFailed)` shape as `runCopyHtml` (task 9.1): `copyAsPlainText` is
+    // async internally (it awaits the read, then the write) and rejects on EITHER failure — a
+    // rejected read never reaches the write (AGENTS.md #5, covering both failure points with one
+    // reported outcome).
     if (activeFile) {
       saveSettings({ lastExportFormat: 'copy-plain-text' });
-      void copyAsPlainText(activeFile);
+      copyAsPlainText(activeFile).then(
+        () => exportView?.reportCopyOutcome('copy-plain-text', true),
+        () => exportView?.reportCopyOutcome('copy-plain-text', false),
+      );
     }
   }
 
   function runCopyRichText(): void {
     // Same host-lookup, same non-render-state no-op as runCopyHtml above — `copyAsRichText`
-    // works off the CLONE (task 4.1's own Q4), never `activeFile.read()`. Same discard-the-
-    // promise / never-caught shape as every other copy function here: a rejection surfaces as a
-    // genuine unhandled-rejection error, never a false "copied" (AGENTS.md #5).
+    // works off the CLONE (task 4.1's own Q4), never `activeFile.read()`. Same
+    // `.then(onCopied, onFailed)` shape as every other copy function here (task 9.1) — never a
+    // false "Copied" (AGENTS.md #5).
     const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
     if (host) {
       saveSettings({ lastExportFormat: 'copy-rich-text' });
-      void copyAsRichText(host);
+      copyAsRichText(host).then(
+        () => exportView?.reportCopyOutcome('copy-rich-text', true),
+        () => exportView?.reportCopyOutcome('copy-rich-text', false),
+      );
     }
   }
 
@@ -968,7 +993,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // Same "nothing to export yet" guard as every function above, on the same host lookup — but
     // `exportPdf` itself takes nothing: `window.print()` is document-global, so the guard here
     // exists only to decide WHETHER to print, never what to print (there is no host param to
-    // thread through, per `exportPdf`'s own doc comment in exportControls.ts).
+    // thread through, per `exportPdf`'s own doc comment in exportControls.ts). Task 9.1: NO
+    // completion or failure report here, on either count — the browser's own print dialog is the
+    // success signal (the ruling's redundancy call, same as HTML's success half), and
+    // `window.print()` itself has no promise/throw surface for this call to catch (unlike
+    // `exportHtml`, there is no serialization step here to fail).
     const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
     if (host) {
       saveSettings({ lastExportFormat: 'pdf' });
@@ -1015,6 +1044,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       onExportPdf: runExportPdf,
       onClose: () => toggleExport(),
     });
+    exportView = view; // task 9.1 — the void→then callbacks above report through this reference
     exportPanel.replaceChildren(view.element);
     view.element.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
   }
@@ -1028,6 +1058,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (exportOpen) {
       renderExport();
     } else {
+      exportView = null; // task 9.1 — a promise settling after close is a graceful no-op
       exportPanel.replaceChildren();
       if (exportToggle.isConnected) exportToggle.focus();
     }

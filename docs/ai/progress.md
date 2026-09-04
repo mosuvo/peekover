@@ -1,9 +1,10 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-03 (task 8.1 landed — the Ctrl/Cmd+S export shortcut, app-page-only, D-5 byte-proven
-content-script-identical; the five export handlers lifted to ONE dispatch path shared by the panel click and
-the shortcut, never a second `saveSettings+export` pair. Group-8 order adjusted by human ruling: 8.3 deferred
-past 10.2.)*
+*Updated: 2026-09-04 (task 9.1 landed — per-action failure states, AND, by human ruling, the copy-completion
+affordance three prior copy tasks (3.3/3.4/4.1) had already named but not built, in the SAME commit: every
+copy handler's `void copyFn(...)` became `copyFn(...).then(onCopied, onFailed)`, whose success branch IS the
+completion affordance. HTML export gets a failure-only report (a real serialization-throw path); PDF gets
+neither, on either outcome. Revert-and-fail actually performed, not merely described.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -13,7 +14,90 @@ past 10.2.)*
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 8.1 LANDED, 2026-09-03 — THE Ctrl/Cmd+S EXPORT SHORTCUT, APP-PAGE-ONLY (D-5), PROVEN AT
+**★★★★★ M10 TASK 9.1 LANDED, 2026-09-04 — FAILURE STATES, AND (HUMAN RULING) THE COPY-COMPLETION
+AFFORDANCE THREE PRIOR TASKS NAMED BUT DID NOT BUILD, IN THE SAME COMMIT — BECAUSE THEY ARE ONE `.then`.**
+
+**The reconciliation and the ruling.** §9.1's own sealed body owns failure-states only, but
+`tasks.md`'s own §3.11 sibling-checklist routing table (a discharged plan deliverable, read before
+this task per AGENTS.md) already routes rows 9/10 (the live region, reduced motion) to "task 9.1
+(completion/failure state for every action)" / "for any copy-confirmation transition" — a textual
+basis in `tasks.md` itself. Human-ruled: both halves are ONE code change (every copy handler's
+`void copyFn(...)` → `copyFn(...).then(onCopied, onFailed)`; the success branch of that `.then` IS
+the completion affordance), scoped to the THREE COPY rows only — HTML export and PDF get no
+Peekover completion UI on success (each has its own native browser signal: the download shelf; the
+print dialog), the same "not redundant" discipline that dropped ZIP export earlier this milestone.
+HTML export DOES still get a one-sided FAILURE report (`serializeReaderDocument`'s real throw path
+— §3.9's own named "a serialization throw" mode, the only one of that clause's three examples still
+reachable after this milestone's scope drops); PDF gets neither report on either outcome —
+`window.print()` has no promise/throw surface to catch.
+
+**The kickoff that preceded this task was checked against `decisions.md`'s own landed entries and
+found wrong on one factual point, not just an ambiguous-scope one.** It claimed only tasks 3.3/3.4
+deferred completion UI to 9.1, excluding 4.1. Task 4.1's own landed entry says otherwise, verbatim:
+*"Task 9.1 still owns the completion/failure UI every copy row in this panel has named but not
+built (same standing note as 3.3/3.4's own entries)."* All three copy tasks deferred it — which
+strengthens the ruling's coverage rather than narrowing it. Flagged per AGENTS.md's "a kickoff is a
+hypothesis, not authority" rule.
+
+**The mechanism.** `ExportViewController` (`exportControls.ts`) gained `reportCopyOutcome(key,
+copied)` and `reportExportFailure('html')`, both looking rows up via the existing `data-export`
+attribute (already there for the focus trap's stop list) and swapping that row's own title text +
+`aria-label` + a `data-state` attribute (`'done'`/`'failed'`, `codeView.ts`'s own
+`CODE_COPY_STATE_ATTR` vocabulary, reproduced not imported — its `announce` closure is
+module-private to the content-script render graph). A new `role="status"` hidden-while-empty live
+region, `codeView.ts`'s own shape reproduced verbatim (confirmed no dedicated CSS exists for that
+shape either, before reproducing the choice). `appShell.ts` gained a closure-level `exportView:
+ExportViewController | null`, set on every panel open and cleared on close, so the `.then`
+callbacks (which live in `appShell.ts`'s own closure, not `exportControls.ts`) can reach the right
+row; a promise settling after close is a graceful no-op, never an error. `runExportHtml` wraps its
+call in `try { exportHtml(...) } catch { exportView?.reportExportFailure('html') }`.
+
+**The forced-failure mechanism, per mode, without destroying what it proves untouched.** Copy rows:
+`navigator.clipboard` replaced wholesale with a rejecting stub (`copyAsHtml.browser.test.ts`'s own
+shape), touching nothing in the live DOM. HTML export: `serializeReaderDocument`'s
+`column.cloneNode(true)` call is patched to throw as an OWN-PROPERTY override on the LIVE
+`.peekover-reader` element instance — never removing or mutating the element — so the reader stays
+fully rendered, reference-identical, through the forced failure (removing the element instead would
+have been self-defeating: the destruction performed to force the failure would be
+indistinguishable from the defect the test exists to catch).
+
+**Revert-and-fail, actually performed (M6 finding 5), not merely described.** `appShell.ts`'s three
+`.then(onCopied, onFailed)` calls and `runExportHtml`'s `try/catch` were reverted to the pre-9.1
+`void copyFn(...)` / bare-call shape, and the new test file plus all three copy-row browser test
+files were re-run on both engines: 20/60 assertions went red, every forced arm's `until(() =>
+row.getAttribute('data-state') === ...)` timing out (a discarded promise settles into nothing a row
+can react to) and both engines additionally surfacing the original rejection/throw as a genuine
+unhandled error at the exact reverted call site. Wiring restored verbatim (`git diff` re-checked
+byte-for-byte against the pre-ablation state), full set re-run clean, 60/60.
+
+**Necessary ripple, flagged, not silent.** `appShell.ts` is not on §9.1's own sealed Files list
+(`htmlExport.ts` · `exportControls.ts` · `exportDegrade.browser.test.ts`), but the `.then` wiring
+can only live where the copy handlers already are — structurally required by this task's own Verify
+clause. `htmlExport.ts` itself needed no source change (`serializeReaderDocument`'s existing throw
+already does everything Q3 needed). The three copy-row browser test files each gained a small
+ripple: the same real click they already drive now also proves the completion affordance, and
+`copyAsHtml.browser.test.ts`'s stale "no completion UI exists yet" comment was removed.
+
+**Byte discipline — measured on BOTH engines, firing-control confirmed (`git stash`/rebuild both
+engines).** App-page chunk **487,735 → 489,076 B (+1,341 B)**, identical delta both engines.
+`.output` **4,880,238 → 4,881,579 B (Cr) / → 4,881,695 B (Fx)**, residual 0 against the app-chunk
+delta. Content-script: **UNCHANGED, 336,121 B, BOTH engines, md5 IDENTICAL to 8.2's landed state**
+(Cr `f424a3b6…`, Fx `ebbf183a…`) — firing-control-confirmed: reverting the diff and rebuilding both
+engines returns the app chunk and `.output` to exactly their pre-task baselines. App-page-only, as
+expected (D-2 — the export panel is app-page DOM). Manifests **654 / 770 B** unchanged, `permissions:
+[]`, no `web_accessible_resources`. `dependencies` (production) unchanged at **6**. Golden EMPTY.
+
+**Suite.** Unit: **1056/1056** (a first run hit `diagramEnhancer.test.ts`'s standing carried
+"enhancer-timing" flake, confirmed pre-existing by an isolated re-run, 58/58 clean — this task
+touches no diagram file). Full browser suite: **152 files / 1535 passed / 15 skipped, 0 failed**
+(150/1517/15 baseline at 8.1 + this task's new 9-test file × 2 engines = +18 passed, +2 files —
+reconciles exactly). Lint + typecheck clean.
+
+**Revisit-when:** none specific to this task — the ruling settles the completion-UI scope question
+the reconciliation surfaced, and both halves ship together, proven together. Full record in
+`decisions.md`'s 2026-09-04 M10 task-9.1 entry.
+
+**★★★★★ (PRIOR) M10 TASK 8.1 LANDED, 2026-09-03 — THE Ctrl/Cmd+S EXPORT SHORTCUT, APP-PAGE-ONLY (D-5), PROVEN AT
 THE BYTE LEVEL, NOT JUST BY CODE REVIEW. THE FIVE EXPORT HANDLERS ARE LIFTED TO ONE DISPATCH PATH — A PANEL
 CLICK AND THE SHORTCUT REACH THE IDENTICAL FUNCTION, NEVER A SECOND `saveSettings+export` PAIR.**
 
@@ -1018,10 +1102,15 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-08-29) — task 3.2 landed** (the export panel; Q1 resolved (a), HTML export's row
-wired live; app-page bytes moved for the first time in M10, 475,579 → 483,331 B). Next task: **3.3**
-(Copy-as-HTML — the clipboard exit, same artifact as 3.1, different sink) in
-`specs/010-local-exports/tasks.md`, group 3. See § Now for 3.2's full landing detail.
+**M10 is IN PROGRESS (2026-09-04) — task 9.1 landed** (per-action failure states, plus, by human
+ruling, the copy-completion affordance three prior tasks had named but not built). Next task:
+**9.2** (the zero-network guard, across every export/copy/print action, with D-8's own live
+mechanism as the firing control, shown live in the same test) in `specs/010-local-exports/tasks.md`,
+group 9. See § Now for 9.1's full landing detail.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-08-29) — task 3.2 landed (the export
+panel; Q1 resolved (a), HTML export's row wired live; app-page bytes moved for the first time in
+M10, 475,579 → 483,331 B). Next task: 3.3 (Copy-as-HTML — the clipboard exit, same artifact as 3.1,
+different sink)~~ — **3.3, 3.4, 4.1, 6.1, 7.1, 8.1, 8.2 and 9.1 have since landed, see § Now.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-08-29) — task 3.1 landed (HTML export's
 file-download exit, REDUCED per the §3.1 ruling; the `collectLocalImages` orphan removed in the same
 commit). Next task: 3.2 (the export panel — `exportControls.ts`'s overlay, `storageControls.ts`'s wiring

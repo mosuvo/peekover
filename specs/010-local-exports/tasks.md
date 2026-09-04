@@ -628,7 +628,7 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
 
 ## 9 — Systemic failure and degradation (the §3.9 failures groups 2–8 could not reach)
 
-- [ ] **9.1 Per-action failure states — library-load failure, a serialization throw, an unreadable local image,
+- [x] **9.1 Per-action failure states — library-load failure, a serialization throw, an unreadable local image,
       a failed copy — each states the failure and leaves the rendered document exactly as it was (§3.9).**
       Distinct from any per-task happy-path proof: here each failure mode is forced directly (a corrupted local
       image reference, a serialization exception, a rejected clipboard write) and the reader's own committed

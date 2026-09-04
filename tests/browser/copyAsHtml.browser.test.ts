@@ -295,12 +295,12 @@ describe('the export panel — Copy as HTML row goes live at this task, the othe
     if ((await clipboardWriteConsent()) !== 'unsupported') await grantClipboardConsent();
 
     await userEvent.click(copyHtmlRow);
-    // No completion UI exists yet (task 9.1's own scope) — the REAL clipboard acquiring THIS
-    // test's own rendered text IS the observable that the click's write actually ran and
-    // resolved. Matched on the fixture's own content, not merely "non-empty": the real OS
-    // clipboard is a resource shared across every serially-run file in this suite, and a bare
-    // non-empty check raced stale leftover content from an earlier file's own clipboard write
-    // (measured — this exact assertion flaked intermittently under the full suite until fixed).
+    // The REAL clipboard acquiring THIS test's own rendered text IS the observable that the
+    // click's write actually ran and resolved. Matched on the fixture's own content, not merely
+    // "non-empty": the real OS clipboard is a resource shared across every serially-run file in
+    // this suite, and a bare non-empty check raced stale leftover content from an earlier file's
+    // own clipboard write (measured — this exact assertion flaked intermittently under the full
+    // suite until fixed).
     const plain = await until(async () => {
       try {
         const text = await readTextBounded();
@@ -311,6 +311,12 @@ describe('the export panel — Copy as HTML row goes live at this task, the othe
     });
     expect(plain).toContain('alpha.md');
     expect(plain).toContain('Body of alpha.md.');
+
+    // ★ Task 9.1 (ruled — decisions.md): the SAME real click now also drives the row's own
+    // completion affordance — proven here on the real click path, not merely on the direct
+    // `reportCopyOutcome` unit-shaped assertions in `exportDegrade.browser.test.ts`.
+    expect(copyHtmlRow.textContent).toContain('Copied');
+    expect(copyHtmlRow.getAttribute('data-state')).toBe('done');
   });
 
   it('pdf: disabled at this task (3.3), re-confirmed live as of task 7.1', async () => {
