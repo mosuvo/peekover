@@ -1,11 +1,13 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 10.1 landed — M-1's first-ever-Ctrl+S default-format candidates produced with
-per-axis reasoning and a verdict-input; no default chosen, that's 10.4's gate. Doc-only, no `src/`/test/
-build touched. Below that: the 8.3 build-or-drop decision-record, then task 9.2 landed — the zero-network
-guard across every export/copy/print action, in ONE test, real engine (Chromium + Firefox), against
-`restoreBlockedImages` shown firing live as the one control the plan named. Group 9 CLOSES. Test-only —
-no `src/` change.)*
+*Updated: 2026-09-04 (task 10.2 landed — M-2's export-serialize wall-clock measured across the corpus,
+per export type, no threshold chosen, that's 10.4's gate; a real non-bytes-linear knee found and
+reported, not smoothed over. New `scripts/perf-export.ts`, no `src/`/test change. Below that: task 10.1
+landed — M-1's first-ever-Ctrl+S default-format candidates produced with per-axis reasoning and a
+verdict-input; no default chosen. Below that: the 8.3 build-or-drop decision-record, then task 9.2
+landed — the zero-network guard across every export/copy/print action, in ONE test, real engine
+(Chromium + Firefox), against `restoreBlockedImages` shown firing live as the one control the plan
+named. Group 9 CLOSES. Test-only — no `src/` change.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -14,6 +16,122 @@ no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 10.2 LANDED, 2026-09-04 — M-2: THE EXPORT-SERIALIZE WALL-CLOCK, MEASURED ACROSS THE
+CORPUS, PER EXPORT TYPE. NO THRESHOLD CHOSEN (10.4's GATE OWNS THE CHOICE). NEW
+`scripts/perf-export.ts`; NO `src/`, TEST, OR BUILD TOUCHED (a measurement instrument, ships nothing).**
+
+**Q1 — the axis reconciliation, checked before drafting.** §8 M-2's own tasks.md line-item text names
+three axes: document size, image count/bytes to embed, measured wall-clock per export type. That text
+predates the §3.1 gate ruling (`decisions.md`, 2026-08-29) — which postdates §8's own 2026-08-22 date —
+and which dropped ALL image embedding from M10: local images ship unrewritten, remote images ship as
+unfetched placeholders (`htmlExport.ts`'s own module doc comment). There is no image-bytes resolution
+step left in any export path for a measurement to time. The image axis is retired here, not silently
+dropped — named as the reconciliation AGENTS.md's workflow rules require between a task's own stale
+line text and the spec state that has since superseded it. Two axes remain, and both are measured:
+document size and per-export-type wall-clock.
+
+**Q1(b) — WHAT SPAN IS TIMED.** `htmlExport.ts`'s three export functions are each `serialize (clone +
+string-build) -> a browser-plumbing sink (downloadAs / clipboard.write / clipboard.writeText)`. Only
+the serialize half scales with document size and is Peekover's own compute; `downloadAs`/
+`clipboard.write` are fixed-shape browser API calls a progress indicator has no reason to wrap. This
+script brackets ONLY the serialize half — `downloadAs`/`clipboard.write` are never called at all (no
+permission dance needed, and nothing measured would be Peekover's). `copyAsPlainText`'s `source.read()`
+is different in KIND, not degree — no clone, no DOM, no serialize, an I/O read of raw source text
+(`MarkdownFile.read()` in production) — reported separately, labeled I/O, never folded into the
+serialize numbers. PDF's `window.print()` has no Peekover-side serialize step at all — no clone, no
+string built, nothing that scales with document size — so it has no number here, stated rather than
+silently omitted.
+
+**Q2 — the per-type breakdown, honest, not collapsed to one number.**
+- **HTML export / Copy-as-HTML SHARE one distribution** — both run the byte-identical
+  `serializeReaderDocument(host)` → `wrapInStandaloneDocument(clone, theme)` pair, so this is measured
+  once per iteration and reported for both, rather than fabricating two noisy samples of the same cost.
+  **★ This is the 8.3-decision-relevant number**: `exportHtml`/`copyAsHtml`/`copyAsRichText` are all
+  SYNCHRONOUS, but only `exportHtml`'s own trigger (`runExportHtml`) is what 8.3's progress indicator
+  would need to wrap — and per 8.3's own reconciliation, a progress indicator cannot render around a
+  synchronous call that blocks the very frame it needs to paint on.
+- **Copy-as-rich-text gets its own (cheaper) span** — `serializeReaderDocument` + a bare `clone.outerHTML`
+  read, no `wrapInStandaloneDocument`/CSS-translation cost.
+- **Copy-as-plain-text is I/O, not serialize, reported separately** — `source.read()` timed alone
+  (a `Blob(...).text()` stand-in for the real File System Access read; `writeTextToClipboard` excluded
+  from the bracket for the same plumbing reason `downloadAs`/`clipboard.write` are excluded elsewhere).
+  **This is a LOWER BOUND**: no disk latency exists in an in-memory Blob read, so the real production
+  number is expected to be this number or higher, never lower.
+- **PDF export: no Peekover-side cost exists to measure**, stated plainly, not a blank cell.
+
+**Q3 — house protocol, mirrored from `scripts/perf-diff.ts`.** 7 iterations, run 1 discarded as cold,
+median of the warm 6, min/max spread. Real built extension (`.output/chrome-mv3`), Playwright,
+`chrome-extension://<id>/app.html`. `mount`/`serializeReaderDocument`/`wrapInStandaloneDocument` bundled
+from SOURCE with esbuild (perf-diff.ts's own `bundleProductionModules` shape — the content script's
+isolated world exports nothing to bundle against instead), the same "production source, not the build
+artifact" residual perf-diff.ts and perf-watch.ts both already carry. **CHROMIUM ONLY** (Playwright
+cannot load an extension into Firefox, every perf-*.ts states this) — accepted as generalizing here
+because `cloneNode` + string concatenation is engine-neutral compute, no per-engine layout/paint
+involved, unlike 6.1's `@page` print-CSS divergence, which genuinely differs per engine. No exit-code
+gate on anything; no threshold chosen.
+
+**Q4 — corpus + BOTH bias clauses, with numbers.** Five real repository documents spanning the repo's
+own actual size range, live-measured at run time (not hand-typed): **67 markdown files total, 62 of
+them (93%) under 100 KB** — `tests/golden/fixtures/links.md` (1.0 KB), `specs/001-core-rendering/
+tasks.md` (5.6 KB), `specs/009-code-blocks/spec.md` (44.1 KB), `docs/ai/progress.md` (239.7 KB), `docs/
+ai/progress-archive.md` (782.0 KB) — plus `tests/golden/hugeDoc.ts`'s synthetic ~1.12 MB fixture, which
+exceeds every real document in the repository. All five real files are mermaid-fence-free (a mermaid
+fence would pull the lazy diagram engine into the mount/settle step, a confound outside this task's own
+scope). **Bias clause 1 (corpus composition):** entirely Peekover's own spec/planning/progress prose —
+headings, paragraphs, occasional tables and fences — not representative of arbitrary agent-authored
+documents (image density, list/table nesting depth, table width all differ). **Bias clause 2 (engine):**
+every number is Chromium-only, per Q3.
+
+**THE NUMBERS — HTML-export/Copy-as-HTML serialize, ★ the 8.3-decision-relevant span, median of warm 6:**
+
+| doc | bytes | ms (min–max) | elements | ms/1000 elements |
+|---|---|---|---|---|
+| tiny (`links.md`) | 1.0 KB | 0.30 (0.30–0.40) | 14 | 21.429 |
+| small (`001/tasks.md`) | 5.6 KB | 0.20 (0.10–0.40) | 33 | 6.061 |
+| medium (`009/spec.md`) | 44.1 KB | 0.50 (0.40–0.60) | 608 | 0.822 |
+| large (`progress.md`) | 239.7 KB | 2.10 (2.00–2.30) | 3,591 | 0.585 |
+| xlarge (`progress-archive.md`) | 782.0 KB | 3.75 (3.40–4.10) | 7,403 | 0.507 |
+| huge (synthetic `hugeDoc.ts`) | 1.12 MB | 26.95 (26.60–27.50) | 64,401 | 0.418 |
+
+Copy-as-rich-text (its own, cheaper span — no CSS translation): 0.00 / 0.00 / 0.30 / 1.70 / 3.45 / 26.90
+ms median, same doc order. Copy-as-plain-text I/O (source.read() ALONE, a lower bound, never folded into
+the two rows above): 0.30 / 0.20 / 0.60 / 1.75 / 4.10 / 4.25 ms median, same doc order — note it does
+**not** track the huge fixture's element-count blowup at all, confirming it is genuinely I/O-shaped, not
+serialize-shaped (the huge fixture's raw text is only ~1.4x the xlarge fixture's, and the I/O number
+scales with THAT, not with the 8.7x element-count jump the serialize numbers track).
+
+**★ RESULT AGAINST THE FAST-HYPOTHESIS — CONFIRMED FAST IN ABSOLUTE TERMS, BUT A REAL KNEE FOUND AND
+REPORTED, NOT SMOOTHED OVER.** The kickoff's own code-analysis hypothesis (cloneNode + string concat,
+plausibly single-to-low-tens-of-ms even at the largest fixture) is confirmed in absolute terms: 26.95 ms
+at 1.12 MB is well under any "heavy enough for a progress indicator" bar a human would plausibly set
+(hundreds-of-ms-to-seconds). **But the curve is NOT simply bytes-linear**: from xlarge to huge, bytes
+grew 1.47x while serialize time grew 7.19x — element count grew 8.70x, which tracks the TIME ratio far
+more closely than the BYTE ratio does. `cloneNode(true)`'s cost is a function of DOM NODE COUNT, not raw
+byte count — the ms/1000-elements column above **converges toward a floor (~0.4-0.5 ms/1000 elements)**
+as element count grows, rather than staying flat from the smallest doc: a fixed per-call overhead
+(clone construction, function-call/JIT cost) dominates the tiny/small cells and is amortized away at
+scale — the expected shape for a per-element-linear cost with a fixed base cost, not evidence against
+it. The huge synthetic fixture packs far more block-level elements (lists, a table, a Shiki-highlighted
+code fence, a blockquote per section) into every KB than this milestone's prose-heavy real corpus does —
+exactly bias clause 1's own density axis, now with a concrete number behind it. **A document unusually
+DENSE in code blocks/tables/lists relative to its byte count — plausible for real agent output, not
+just this synthetic fixture — would serialize slower than its byte count alone predicts.** Whether that
+knee is sharp enough to warrant a "heavy" cutoff, and on which axis (bytes or elements), is 10.4's own
+call from the numbers above; this task states the shape, not a bound.
+
+**No threshold chosen — §10.2's own thrice-stated prohibition, honored.** `scripts/perf-export.ts`
+emits no exit-code gate on any number; `decisions.md` is untouched by this task.
+
+**Doc + script only — nothing shipped.** New `scripts/perf-export.ts` (the instrument, `pnpm perf:export`,
+committed like its perf-diff.ts/perf-watch.ts siblings), lint + `tsc --noEmit` clean. No `src/` change,
+no test file, no `pnpm build`/`pnpm zip` run — a measurement instrument moves no shipped byte. Golden
+EMPTY (unchanged). Manifests **654 / 770 B** unchanged, `permissions: []`. `dependencies` unchanged at 6.
+`tasks.md` 10.2 ticked, with a pointer to this entry (numbers-only, per 10.2's own Files line).
+
+**Revisit-when:** 10.4 rules M-2 (alongside M-1, M-3, and 8.3's build-or-drop) from the numbers and the
+knee finding above. Next task: **10.3** (M-3, print CSS's page-number/header/footer content, gated on
+group 6's `@page` fidelity probe).
 
 **★★★★★ M10 TASK 10.1 LANDED, 2026-09-04 — M-1: THE FIRST-EVER-Ctrl+S DEFAULT FORMAT, CANDIDATES
 PRODUCED WITH PER-AXIS REASONING AND A VERDICT-INPUT; NO DEFAULT CHOSEN (10.4's GATE OWNS THE CHOICE).
@@ -100,8 +218,8 @@ line).
 
 **Revisit-when:** 10.4 rules M-1 (alongside M-2, M-3, and 8.3's build-or-drop); 10.5 wires the ruled
 value into `DEFAULT_SETTINGS.lastExportFormat` (a no-op edit, recorded either way, if 10.4 rules the
-no-op candidate in). Next task: **10.2** (M-2, the heavy-document threshold — produces numbers, forbidden
-from choosing).
+no-op candidate in). *(10.2 has since landed — see § Now above for M-2's own numbers; next task is
+10.3.)*
 
 **★★★★★ M10 DECISION-RECORD, 2026-09-04 — TASK 8.3's BUILD-OR-DROP DEFERRED TO TASK 10.4's DECISION GATE,
 HUMAN-RULED, ON 10.2's MEASURED NUMBER. DOC-ONLY — NO `src/`, TEST, OR BUILD TOUCHED.** Full reconciliation
@@ -1265,11 +1383,15 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-09-04) — task 10.1 landed** (M-1's first-ever-Ctrl+S default-format
-candidates, produced with per-axis reasoning and a verdict-input; no default chosen, that's 10.4's
-gate). Next task: **10.2** (M-2, the "heavy document" export-threshold measurement — produces numbers,
-forbidden from choosing) in `specs/010-local-exports/tasks.md`, group 10. See § Now for 10.1's full
-candidate analysis.
+**M10 is IN PROGRESS (2026-09-04) — task 10.2 landed** (M-2's export-serialize wall-clock, measured
+across the corpus per export type; no threshold chosen, that's 10.4's gate; a real element-count-driven
+knee found and reported). Next task: **10.3** (M-3, print CSS's page-number/header/footer content and
+layout, gated on group 6's `@page` fidelity probe) in `specs/010-local-exports/tasks.md`, group 10. See
+§ Now for 10.2's full numbers.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-04) — task 10.1 landed (M-1's
+first-ever-Ctrl+S default-format candidates, produced with per-axis reasoning and a verdict-input; no
+default chosen, that's 10.4's gate). Next task: 10.2 (M-2, the "heavy document" export-threshold
+measurement — produces numbers, forbidden from choosing)~~ — **10.2 has since landed, see § Now.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-04) — task 9.1 landed (per-action
 failure states, plus, by human ruling, the copy-completion affordance three prior tasks had named but
 not built). Next task: 9.2 (the zero-network guard, across every export/copy/print action, with D-8's

@@ -687,13 +687,21 @@ content-script surface carry a named, flagged residual (decisions.md), not a sil
       Verify: candidates stated with their reasoning, no default chosen here. Golden EMPTY · manifest green
       **654 / 770 B** · `permissions: []`. [§8 M-1; §3.7]
 
-- [ ] **10.2 M-2 — the "heavy document" threshold that triggers 8.3's progress indicator (§3.8, §8). PRODUCES
+- [x] **10.2 M-2 — the "heavy document" threshold that triggers 8.3's progress indicator (§3.8, §8). PRODUCES
       NUMBERS; FORBIDDEN FROM CHOOSING.** Axes: document size · image count/bytes to embed · measured wall-
       clock per export type at representative sizes, drawn from this repository's own documents and the golden
       fixtures — the same corpus discipline 008/009 both used, **bias stated**: this repository's own markdown
       is not a representative sample of arbitrary agent-authored documents (the identical caveat carried
       forward, not re-derived).
-      Files: `docs/ai/progress.md` (numbers only) + the task report
+      **DONE 2026-09-04 — the image-bytes axis retired (dropped by the §3.1 gate ruling, decisions.md
+      2026-08-29, which postdates this line's own text; no image resolution step remains to measure).
+      Serialize wall-clock measured across 6 corpus points (1 KB → ~1.12 MB, `scripts/perf-export.ts`,
+      Chromium, median of warm 6): 0.30 ms → 26.95 ms for HTML-export/copy-as-HTML's shared span
+      (★ the 8.3-decision-relevant number), confirmed fast in absolute terms but a real element-count-
+      driven knee found (not bytes-linear) and reported, not smoothed over. No threshold chosen. Full
+      numbers + both bias clauses: `docs/ai/progress.md`'s 2026-09-04 task-10.2 entry.**
+      Files: `docs/ai/progress.md` (numbers only) + the task report + `scripts/perf-export.ts` (the
+      measurement instrument, committed like its `perf-diff.ts`/`perf-watch.ts` siblings)
       Verify: wall-clock distribution across the corpus, per export type, reported with the corpus size and its
       bias sentence. No threshold chosen here. Golden EMPTY · manifest green **654 / 770 B** ·
       `permissions: []`. [§8 M-2; §3.8; plan risk (bias, carried)]
