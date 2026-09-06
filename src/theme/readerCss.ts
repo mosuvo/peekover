@@ -834,8 +834,10 @@ export const READER_CSS = /* css */ `
 //
 // `@top-center`/`@bottom-center` running content with `counter(page)`/`counter(pages)` is the
 // spec-standard CSS Paged Media mechanism (spec §3.6/§7-4's own uncertainty, plan risk 4). The
-// exact copy here ("Peekover" / "Page X of Y") is PROVISIONAL — §8 item 3 routes the FINAL header/
-// footer content and margin sizing to group 10's own walk-gate measurement, not this task.
+// exact copy here ("Peekover" / "Page X of Y") is FINAL, not provisional — Ruling M-3 (`decisions.md`
+// 2026-09-04 M10 GATE, task 10.4) walked these values (task 10.3) and ruled all three kept as shipped;
+// task 10.5 confirmed this a no-op (byte-identical to the ruled values). No longer routed to a future
+// gate.
 //
 // tests/browser/printMode.browser.test.ts is the PRIMARY OUTPUT this task produces (feeding task
 // 7.1's fork, §3.6, rather than ruling it here) and its finding is NOT the simple "does the engine

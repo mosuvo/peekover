@@ -133,16 +133,18 @@ plan §6's own hard sequencing constraint). Routing:
   itself first exists there) · rows 6, 7, 8 (button/name/decorative) → **task 3.2** and re-checked at **4.1**,
   ~~**5.1**~~ (struck, §3.10 — no DOCX row to re-check), **8.1** for each control those tasks add to the same
   panel · row 9 (polite live region) →
-  **task 8.3** (the progress indicator) and **task 9.1** (completion/failure state for every action) · row 10
-  (reduced motion) → **task 8.3** if the progress indicator animates, **task 9.1** for any copy-confirmation
+  ~~**task 8.3**~~ (the progress indicator, struck 2026-09-04, M10 §8.3/§10.4 — no indicator ships, so no
+  live-region content of its own to check) **and task 9.1** (completion/failure state for every action) · row 10
+  (reduced motion) → ~~**task 8.3** if the progress indicator animates~~ (struck, same ruling — no indicator to
+  check either half against), **task 9.1** for any copy-confirmation
   transition · row 11 (focus trap and restore, Ruling 2) → **task 3.2**, the panel's own open/close · row 12
   (zero-network with a firing control) → **task 9.2**, across every export/copy/print path in one test · row 13
   (`describe.each` both surfaces) → **`—`, out**, stated at first use: export chrome never reaches the
   content-script graph (D-2), so there is no second-surface arm to assert, unlike every prior milestone's own
   row 1/23 · **rows 1 and 2 → `—`, out**, for the reasons plan §3.11 itself states (no `mount()` seam to prove
-  absent from; no per-document capability gate to prove chrome grows from) · row 14 (progress indicator, the
-  shortcut's own confirmation, and Copy-as-HTML/plain-text having no sibling suite) → **tasks 3.1, 3.3, 8.1,
-  8.3**, each establishing its own baseline, enumerated not transcribed.
+  absent from; no per-document capability gate to prove chrome grows from) · row 14 (~~progress indicator~~
+  struck, same ruling — the shortcut's own confirmation, and Copy-as-HTML/plain-text having no sibling suite)
+  → **tasks 3.1, 3.3, 8.1**, each establishing its own baseline, enumerated not transcribed.
 
 **Human-run items budgeted UP FRONT (plan §5, not discovered late) — enumerated in 11.1's Verify, not
 rediscovered there:** whether the export panel reads as discoverable or as clutter (008/009's identical
@@ -854,7 +856,18 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
       `permissions: []`. [WORKFLOW.md §7.5]
 
 - [ ] **11.3 The records reconcile that closes M10 — the per-task D-value audit, closing the gap M9 named at
-      its own close.** `spec-coverage.md`'s F9/F5 rows move from their pre-milestone figures to their landed
+      its own close. ★ PARTIAL, 2026-09-06 — CHECKBOX LEFT UNTICKED. This task's own kickoff assumed 11.2
+      (the retro) had already run; ground truth at session start showed BOTH §11.1 and §11.2 still unticked,
+      no landing commit for either, and `retro.md` carrying zero M10 entries. Flagged to the user
+      (AGENTS.md's kickoff-vs-file-body rule) and confirmed: do the records-reconcile work now, do NOT
+      declare M10 closed. Everything below this note that does not depend on 11.1/11.2 having run was done
+      this session (the deps correction, the four-strikethrough audit, the D-value map, the F9/F5 re-score,
+      the carried-items retro-flag reconcile, the lastExportFormat comment sweep) — see `progress.md`'s
+      2026-09-06 § Now entry for the full report. What could NOT be done, because this Verify line's own
+      words require it: "11.1's pointer walk repeated as a discrete step on the final commit" — there is no
+      11.1 pointer walk yet to repeat. A future session ticks this box once 11.1 and 11.2 have actually
+      landed and this task's remaining Verify clauses are re-run against their real output.**
+      `spec-coverage.md`'s F9/F5 rows move from their pre-milestone figures to their landed
       figures. ★ **Every D-value's `decisions.md` entry is present and audited against whether it actually
       landed with its own implementing commit, not backfilled here** — the specific gap M9's own 9.3 named
       (*"none of D-1…D-13's thirteen pre-written entries ever landed with an implementing commit"*) is either
@@ -866,8 +879,17 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
       PERMISSIONS.md`'s one-field addition (8.2) is the ONLY change to that file** — confirmed, not assumed.
       11.1's pointer walk repeated as a discrete step on the final commit. `decisions.md` read and left
       untouched unless a genuine decision landed. Golden EMPTY · manifest green **654 / 770 B** ·
-      `permissions: []` · deps exactly **7** (assumes the §3.10 docx-removal follow-up act has landed by
-      this task; if not, deps **8** with `docx` installed-but-unused, named as a defect if still true here) ·
+      `permissions: []` · ~~deps exactly **7** (assumes the §3.10 docx-removal follow-up act has landed by
+      this task; if not, deps **8** with `docx` installed-but-unused, named as a defect if still true here)~~
+      **★ CORRECTED, 11.3, 2026-09-06 — this figure was STALE: written at gate-3 seal (2026-08-22), before
+      the §3.1(cont.) ZIP-export strike existed, it presumed ZIP export would still ship (6 base + 1
+      surviving ZIP writer = 7) and never anticipated the ZIP writer's own later removal. `decisions.md`'s
+      2026-09-04 M10 GATE (task 10.4) entry flagged this stale figure explicitly for 11.3 to correct against
+      ground truth. The CONFIRMED figure, verified against the installed tree
+      (`Object.keys(require('./package.json').dependencies)` → `diff, dompurify, markdown-it,
+      markdown-it-task-lists, mermaid, shiki`, exactly 6, the milestone-start set, in the same order): deps
+      exactly **6**. Net **zero** new production dependencies landed in M10 — every dependency task 1.1
+      installed (`docx` + `client-zip`) was later removed by human scope-reduction rulings (§3.10, §3.1(cont.)).**
       all forbidden paths (`sanitize.ts`, `mount.ts`, the
       content-script graph, `mediaPolicy.ts`/`remoteMediaUi.ts`, `diagramEngine.ts`/`codeEngine.ts`,
       `wxt.config.ts`) byte-identical or untouched, confirmed. [the D-value audit; M9 9.3's own gap, named]

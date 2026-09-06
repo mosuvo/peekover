@@ -1,6 +1,8 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-04 (task 10.5 landed — Ruling M-1 IMPLEMENTED: `DEFAULT_SETTINGS.lastExportFormat` =
+*Updated: 2026-09-06 (task 11.3's records-reconcile punch list worked, PARTIAL — M10 IS NOT CLOSED, 11.1
+and 11.2 remain outstanding; see § Now's top entry. Prior entry, kept: task 10.5 landed — Ruling M-1
+IMPLEMENTED: `DEFAULT_SETTINGS.lastExportFormat` =
 `'html'` (was `null`), the one constant 10.4's gate reduced this task to. The constant change forced a real
 test ripple, not just a literal swap: 13 default-shape assertions across 4 files flipped `null` → `'html'`,
 and THREE tests whose own PREMISE was "fresh install is null" were REWRITTEN (an HTML-write firing control
@@ -38,6 +40,94 @@ named. Group 9 CLOSES. Test-only — no `src/` change.)*
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**★★★★★ M10 TASK 11.3, PARTIAL — THE RECORDS-RECONCILE PUNCH LIST WORKED, 2026-09-06. ★ M10 IS NOT
+CLOSED. 11.3's own checkbox stays UNTICKED — see the flag below before reading further.**
+
+**★ A KICKOFF/GROUND-TRUTH MISMATCH, FLAGGED PER AGENTS.md'S RULE (the file body is ground truth, a
+kickoff is a hypothesis).** This task's own kickoff assumed *"11.2 has run"* and framed 11.3 as the task
+that closes M10. Ground truth at session start: `tasks.md` §11.1 and §11.2 were BOTH still `- [ ]`
+unticked, no commit touches either (`git log` confirms the last landed task is 10.5, `b9abd44`), and
+`retro.md` carries ZERO M10 entries. **11.1 is a human-only milestone-close walk (no agent substitute,
+AGENTS.md's own rule) and 11.2 is the `/retro` interview ritual, required in a FRESH SESSION by its own
+task text** — neither can be discharged inside this 11.3 session. The user was asked and chose: do the
+records-reconcile work now, but do NOT declare M10 closed. What follows is that work; 11.1 and 11.2
+remain the two tasks still standing between here and an actual close.
+
+**The six-item punch list, worked:**
+
+1. **★ THE STALE "deps exactly 7" — CORRECTED.** `tasks.md` §11.3's own pre-written Verify line (gate-3
+   seal, before the ZIP-export strike existed) is corrected in place (struck, not deleted) to the
+   CONFIRMED figure: **6**, verified fresh against the installed tree this session
+   (`Object.keys(require('./package.json').dependencies)` → `diff, dompurify, markdown-it,
+   markdown-it-task-lists, mermaid, shiki`). Net **zero** new production dependencies landed in M10.
+2. **★ THE LEDGER-PROSE "two graphs" → THREE — CORRECTED.** Task 8.2's own "Byte discipline" paragraph
+   (§ Now, below) named only content-script + app-page; a correction note is appended pointing at 10.5's
+   own finding (a third graph, `background.js`, the service worker's `getSettings`/`putSettings`) — the
+   durable framing is now "settings changes move three build artifacts, not two."
+3. **THE FOUR STRIKETHROUGHS — AUDITED, ONE REAL INCONSISTENCY FOUND AND CORRECTED.** DOCX (§3.10),
+   local-image embedding (§3.1), and ZIP export (§3.1(cont.)) were already struck consistently across
+   `spec.md`/`plan.md`/`tasks.md`. **The progress indicator's strike (§8.3/§10.4, 2026-09-04) existed ONLY
+   in `tasks.md`/`decisions.md` — `spec.md` and `plan.md` still described it as live, unstruck scope.**
+   Corrected: `spec.md` §3.1's IN-list/item-count, §3.8's own header, the EARS "Export shortcut & progress"
+   clause, the a11y NFR line, §6's out-of-scope list, and §8 item 2 all now carry the same struck-in-place
+   treatment the other three features already had. `plan.md`'s group-8 description, its own §4 EARS
+   coverage line, its §3.11 rows 9/10, and its M-2 measurement axis got the matching correction. `tasks.md`'s
+   own §3.11 routing block (rows 9, 10, 14) named task 8.3 as a live destination without the `~~5.1~~`-style
+   strike row 8 already uses — fixed to match. **Final count confirmed: 19 active / 3 struck = 22 sealed**
+   (`tasks.md`'s own count-restatement block, unchanged by this audit — verified correct, not re-derived).
+4. **★ THE PER-TASK D-VALUE AUDIT — THE MAP, below. Confirmed: M10 did NOT repeat M9's own named gap.**
+5. **THE CARRIED-ITEMS RETRO-FLAG ASYMMETRY — FOUND AND CORRECTED, FULL RECONCILE DEFERRED TO 11.2.** The
+   cross-file clipboard-consent-leak item (M8-era, § Carried items) was the one item of a four-item
+   "shared cross-file harness state" theme not yet flagged for the 11.2 retro — now flagged, consistent
+   with the other three. A dangling self-reference was also found and fixed: two entries claimed a
+   "codeDetect corpus-scan-brittleness note already logged" as its own carried-item bullet — no such
+   bullet exists; it lives only in task-landing narrative (the 2026-08-28/29 corpus re-pin). Both
+   references corrected to point at reality. **Since 11.2 has not run, none of these four items can yet be
+   marked "IN the retro"** — that step is 11.2's own, still outstanding. What PERSISTS past M10 (unresolved,
+   carried forward): all four shared-harness-state items, plus the pre-existing carried items untouched by
+   M10 (sepia, TOC/folder/reader virtualization, the shortcut-registry split, GFM table alignment, the
+   shared browser-test-helper module, the badge-lane/toolbar-styling pass, the D-6…D-12 ledger-text gap).
+   RESOLVED during M10: nothing new closed this milestone (the codeDetect corpus drift the theme cites was
+   a transient re-pin, not a carried item in its own right).
+6. **THE lastExportFormat COMMENT SWEEP — CONFIRMED CLEAN, ONE ADJACENT FINDING FIXED.** Repo-wide grep for
+   `pending 10.1`/`walk-gate`/`null default`/`pre-empt the gate` tied to `lastExportFormat` found nothing
+   10.5 missed — `settings.ts`'s doc comment, the test files, and the sealed spec/plan/tasks/decisions
+   records are all either already corrected or correctly preserved as historical record. **One adjacent,
+   different stale comment found and fixed** (comment-only, `tsc --noEmit` and `eslint` both clean after):
+   `readerCss.ts`'s `@page` probe comment still said the header/footer copy was "PROVISIONAL... routes to
+   group 10's own walk-gate measurement" — stale since Ruling M-3 (10.4) and its confirmed-no-op (10.5)
+   both landed. Corrected to state the values are FINAL.
+
+**★ THE D-VALUE → TASK MAP (item 4's own deliverable). M10 does NOT repeat M9's named gap** (*"none of
+D-1…D-13's thirteen pre-written entries ever landed with an implementing commit"*) — **every D-1…D-10 has
+a `decisions.md` entry dated at/near its own implementing task's commit, not backfilled here:**
+
+| D-value | Implementing task(s) | `decisions.md` entry |
+| --- | --- | --- |
+| D-1 (dependency headroom hard gate) | 1.1 (measure/decompose); cited defensively at struck 5.1/8.3, and at 10.4's byte-ledger close | 2026-08-24 M10 D-1 |
+| D-2 (export chrome app-page-only; CS byte-identity structural) | 3.2 (implementing); proven per-task at 1.1, 3.1, 4.1 | 2026-08-29 M10 D-2/D-10/Ruling-2 (task 3.2) |
+| D-3 (shared serializer: clone + resolve + bundle stylesheet) | 2.1 (verification) → 2.2 (implementing); reused at 3.1, 3.3 | 2026-08-29 M10 D-3 (task 2.2) |
+| D-4 (`ClipboardItem` html+plain-text construction) | 3.3 (HTML half), 4.1 (rich-text half), 3.4 (plain-text half — a DIFFERENT mechanism, `writeText`, self-disclosed as not literally D-4's own text) | 2026-08-29 M10 D-4 (task 3.3); 2026-09-03 M10 D-4 (task 4.1); 2026-09-03 M10 D-4 (task 3.4) |
+| D-5 (Ctrl/Cmd+S binding, app-page-only) | 8.1 | 2026-09-03 M10 D-5 (task 8.1) |
+| D-6 (`lastExportFormat`, fifth `Settings` field) | 8.2 | 2026-09-03 M10 D-6 (task 8.2) |
+| D-7 (print CSS + PDF via `window.print()`, `@page` fidelity probe) | 6.1 (print half), 7.1 (PDF half) | 2026-09-03 M10 D-7/D-10(print-half)/Ruling-4 (task 6.1); 2026-09-03 M10 D-7 (PDF half, task 7.1) |
+| D-8 (§7-5 resolved outright: `mediaPolicy.ts`'s remote-restore mechanism) | resolved outright at gate 2 (no build task — it already existed); reused live as the zero-network positive control at 9.2 | 2026-08-22 M10 GATE 2; 2026-09-04 M10 task-9.2 |
+| D-9 (§7-6 sibling-checklist audit) | discharged at gate 2 via the §3.11 routing table (`tasks.md`, pre-group-1 block); rows land at 3.2, 4.1, 8.1, 9.1, 9.2 (rows 9/10/14's progress-indicator half struck with 8.3) | 2026-08-22 M10 GATE 2 |
+| D-10 (mockup design translation) | 3.2 (panel half), 6.1 (print half) | 2026-08-29 M10 D-2/D-10/Ruling-2 (task 3.2); 2026-09-03 M10 D-7/D-10(print-half)/Ruling-4 (task 6.1) |
+
+**What remains before M10 can actually close:** **11.1** — the human-only milestone-close walk on real
+Chromium and real Firefox with the extension loaded (discoverability of the export panel, print/PDF
+legibility, the 10.1–10.3 candidates' actual feel, a wide-viewport record, a second network-tab
+confirmation, and the pointer walk over § Now/§ Blockers/§ Up next). **11.2** — the `/retro` interview, in
+a fresh session, folding in the four shared-harness-state carried items named above. **Then a final 11.3
+pass** — ticking its own checkbox, repeating the pointer walk *as a discrete step on the actual final
+commit* (its own Verify's own words — impossible to satisfy before 11.1 exists), and reconciling whichever
+carried items 11.2 actually resolves. Nothing else in this session's audit found a live defect blocking
+that sequence — the byte ledger (residual 0, both engines, per 10.4), the manifest pin, the golden pin, and
+every forbidden path (`sanitize.ts`, `mount.ts`, the content-script graph, `mediaPolicy.ts`/
+`remoteMediaUi.ts`, `diagramEngine.ts`/`codeEngine.ts`, `wxt.config.ts`) are all untouched by this session's
+doc-only edits.
 
 **★★★★★ M10 TASK 10.5 LANDED, 2026-09-04 — RULING M-1 IMPLEMENTED: THE LAST IMPLEMENTATION TASK. GROUP 10
 CLOSES.**
@@ -878,6 +968,11 @@ control, same delta both engines. `.output` **4,879,159 → 4,879,636 B (+477 B)
 headroom remaining (was ~355.20 KiB at 7.1 — the −0.47 KiB matches the `.output` delta exactly), robustly
 under the 5 MiB ceiling. Manifests **654 / 770 B** unchanged, `permissions: []`, no
 `web_accessible_resources`. `dependencies` (production) unchanged at **6** — this task adds none.
+**★ CORRECTED AT 11.3 (records reconcile) — this paragraph names TWO graphs (content-script, app-page);
+`settings.ts`'s `DEFAULT_SETTINGS` literal actually ships to a THIRD, `background.js` (the service
+worker's own `getSettings`/`putSettings`), never separately named until task 10.5 measured it. The
+durable correction: settings changes move THREE build artifacts, not two — see 10.5's own § Now entry
+above for the byte figures.**
 
 **`docs/trust/PERMISSIONS.md`.** Confined one-line diff, the ONLY touch this milestone makes: the
 IndexedDB-persistence row's settings-row disclosure gains "last-used export format" alongside the three
@@ -1728,11 +1823,17 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-09-04) — task 10.2 landed** (M-2's export-serialize wall-clock, measured
-across the corpus per export type; no threshold chosen, that's 10.4's gate; a real element-count-driven
-knee found and reported). Next task: **10.3** (M-3, print CSS's page-number/header/footer content and
-layout, gated on group 6's `@page` fidelity probe) in `specs/010-local-exports/tasks.md`, group 10. See
-§ Now for 10.2's full numbers.
+**M10 is IN PROGRESS (2026-09-06) — 11.3's records-reconcile punch list worked (PARTIAL, doc-only), see
+§ Now's top entry.** Next: **11.1** (the human-only milestone-close walk, real Chromium + real Firefox with
+the extension loaded — no agent substitute exists for this), then **11.2** (`/retro`, in a fresh session),
+then a final 11.3 pass that ticks its own checkbox and repeats the pointer walk on the actual closing
+commit. M10 does NOT close until all three have landed.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-04) — task 10.2 landed (M-2's
+export-serialize wall-clock, measured across the corpus per export type; no threshold chosen, that's
+10.4's gate; a real element-count-driven knee found and reported). Next task: 10.3 (M-3, print CSS's
+page-number/header/footer content and layout, gated on group 6's `@page` fidelity probe) in
+`specs/010-local-exports/tasks.md`, group 10.~~ — **10.3, 10.4, 10.5, then 11.3's own partial pass have
+since landed, see § Now.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-04) — task 10.1 landed (M-1's
 first-ever-Ctrl+S default-format candidates, produced with per-axis reasoning and a verdict-input; no
 default chosen, that's 10.4's gate). Next task: 10.2 (M-2, the "heavy document" export-threshold
@@ -1794,6 +1895,12 @@ measurement-driven or explicitly deferred.*
   and any future file that pins `prompt` after `diagramActions.browser.test.ts` runs will meet the same
   leak. **HOME:** whoever next adds a browser test that asserts a `prompt`/`denied` clipboard state,
   fixing `diagramActions.browser.test.ts`'s `resetPermissions` call to pass its `browserContextId`.
+  **★ FLAGGED FOR THE M10 11.2 RETRO, 2026-09-06 (11.3's own records reconcile) — reconciling the
+  asymmetry named at the shared-document-listener-leak entry below: this item is a THIRD prior instance
+  of the same broad theme (the browser harness's shared cross-file/cross-context state needs
+  delta/specific-content assertions, never absolute ones), alongside the enhancer-timing flake and the
+  shared-document cross-file listener leak (both already flagged there). All three are one structural
+  observation, not three scattered ones, for whenever 11.2 actually runs (it has not yet — see § Now).**
 - **★ FILED AT THE POST-M8 FRESHNESS SWEEP (2026-08-13) — THE D-6…D-12 `decisions.md` LEDGER GAP (found
   and named at 6.3's own D-VALUE AUDIT, never routed to this section).** `plan.md` §0 pre-writes verbatim
   `decisions.md` entry text for D-6 through D-12, each meant to land with its implementing commit — **none
@@ -2331,8 +2438,10 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   argument is what actually rules out the latter here. **Guidance for a future session:** a red confined to
   exactly these two files that clears on rerun matches this known pattern and does not need re-deriving. A
   red that PERSISTS across reruns, or that appears in any OTHER file, does NOT match this pattern and must
-  be treated as real and investigated. Flag for the 11.2 retro alongside the codeDetect corpus-scan-
-  brittleness note already logged there.
+  be treated as real and investigated. Flag for the 11.2 retro alongside the codeDetect repo-wide
+  unlabeled-fence corpus's own re-pin drift (observed 2026-08-28/29, `57d18b8` and the entries above it —
+  it has no bullet of its own in this section; it lives in the task-landing narrative above, cited here as
+  prior art, not "logged" as a separate carried item).
 - **CARRIED — the browser suite's shared-document cross-file listener leak: assert deltas, not
   absolutes.** Found at task 8.1 (`exportShortcut.browser.test.ts`). The browser test suite runs files
   SERIALLY, sharing ONE real `document`/`window` per engine (`vitest.config.ts`'s own task-4.5 note);
@@ -2344,11 +2453,14 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   exist" / "nothing reacts yet") — the absolute form is contaminated by leaked listeners and fails or
   passes by file run-order, not by the code under test. `exportShortcut.browser.test.ts`'s `reactionsTo()`
   (8.1) is the worked reference. **Flag for the 11.2 retro alongside the codeDetect-corpus-brittleness and
-  enhancer-timing notes already retro-flagged directly above** — this is a fourth instance of the same
+  enhancer-timing note already retro-flagged directly above** — this is a THIRD instance of the same
   broad theme (the browser harness's shared cross-file state needs delta/specific-content assertions,
-  never absolute ones). The cross-file clipboard-consent-leak item (§ Carried items, above) is a third
-  prior instance of the same theme, though it is not itself yet marked for the 11.2 retro. The retro may
-  want to name this as ONE structural observation rather than four scattered ones.
+  never absolute ones), a fourth counting the codeDetect corpus drift cited above (which the retro may
+  fold in or treat as a lesser instance of the same pattern, its own bytes never having caused a test
+  regression the way the other three did). The cross-file clipboard-consent-leak item (§ Carried items,
+  above) is now also flagged for the 11.2 retro (corrected at 11.3, 2026-09-06 — it was the one item of
+  this set not yet marked). **The retro may want to name this as ONE structural observation rather than
+  several scattered ones.**
 
 ## Closed milestones
 

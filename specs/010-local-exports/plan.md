@@ -527,8 +527,8 @@ same shape tested · `D` = a distinct assertion required · `—` = explicitly o
 | 6 | a real `<button>`, keyboard-operable, no `tabindex` of its own | `watchControl:339`; `themeControl:260` | **D** every export/copy row, the progress control if it carries any interactive element (a cancel affordance, if one ships — not asserted by spec §3.8, checked at task time) |
 | 7 | accessible name carrying selection AND action | `themeControl:250` | **D** *"Export as HTML"* / *"Copy as rich text"*, not bare icon glyphs (the mockup's own glyph-only rows, `:866-870`, need real accessible names — the mockup is a visual reference, not an a11y reference, the standing caveat every milestone's design-translation section states) |
 | 8 | decorative parts hidden from AT | `watchControl:348` | **D** the mockup's icon glyphs (◧ ▤ ⎙ ▣ ✂) if kept as decoration alongside a real accessible name |
-| 9 | polite live region, out of the a11y tree while empty | `diffChrome:651` | **D** export completion/failure state (§4: *"shall indicate completion… shall indicate the failure distinctly from success"*) and the progress indicator's own state, per §5's a11y NFR (*"announced to assistive technology, not conveyed by animation alone"*) |
-| 10 | reduced motion: no animation under reduce, DOES animate without it (non-vacuous) | `watchControl:358,694,709`; `diagramView`'s `.ok`-on-success transition (007/009 precedent) | **D** if the progress indicator or a copy-confirmation state animates, the standing `prefers-reduced-motion` invariant applies, both halves |
+| 9 | polite live region, out of the a11y tree while empty | `diffChrome:651` | **D** export completion/failure state (§4: *"shall indicate completion… shall indicate the failure distinctly from success"*) ~~and the progress indicator's own state, per §5's a11y NFR (*"announced to assistive technology, not conveyed by animation alone"*)~~ (struck, M10 §8.3/§10.4 — no progress indicator ships) |
+| 10 | reduced motion: no animation under reduce, DOES animate without it (non-vacuous) | `watchControl:358,694,709`; `diagramView`'s `.ok`-on-success transition (007/009 precedent) | **D** ~~if the progress indicator or~~ a copy-confirmation state animates, the standing `prefers-reduced-motion` invariant applies (struck for the progress-indicator half, M10 §8.3/§10.4) |
 | 11 | focus trap and restore | `diagramLightbox:244-373` (007's baseline, cited again by 009 as unused-but-available) | **D** — the export panel is a `role="dialog" aria-modal="true"` overlay per the mockup (D-2), and §5 requires every control keyboard-reachable; a modal panel needs the trap/restore contract 007 already established a baseline for, reused rather than re-derived from nothing |
 | 12 | zero-network with a control that FIRES | `remoteMedia:120,140` | **D** the same `/^https?:/i` predicate and `awaitFetchedUrls` shape, across every export/copy path — **with the control fetch case being D-8's own live mechanism**, since it is the one already-wired remote-fetch path in this codebase and is the natural positive control to borrow rather than construct fresh, provided invoking it does not require reusing 010's own code (it must not — the control proves the export/copy paths are silent, using a mechanism export never calls) |
 | 13 | `describe.each` over both surfaces | `watchControl:189` | **—** collapses to one surface by §3.2 (sealed); no second-surface case to assert, unlike 007/008/009's own row 1/23 pattern, because export chrome never reaches the second surface's graph at all (row 1's own note) |
@@ -668,9 +668,10 @@ footer probe this group's own result feeds into group 7's go/no-go. *Touches:* `
 **7 · PDF export.** `window.print()` driving group 6's pipeline; the fallback path only if group 6's probe
 requires it, priced against D-1's headroom before being adopted. *Acceptance:* §4's PDF criteria.
 
-**8 · Export shortcut, last-used format, progress indicator.** D-5, D-6. *Touches:* `entrypoints/app/main.ts`,
-`settings.ts`, `exportControls.ts`'s progress affordance. *Acceptance:* §4's shortcut/progress criteria; D-5's
-red-first negative-surface proof.
+**8 · Export shortcut, last-used format, ~~progress indicator~~ (struck, 2026-09-04, M10 §8.3/§10.4 —
+measured non-build, no surviving export is heavy).** D-5, D-6. *Touches:* `entrypoints/app/main.ts`,
+`settings.ts`. *Acceptance:* §4's shortcut criteria; D-5's red-first negative-surface proof. ~~The
+progress-indicator criteria~~ struck — no progress indicator ships in M10.
 
 **9 · Systemic failure and degradation.** The §3.9 failures groups 2–8 could not reach in the course of their
 own acceptance criteria. *Acceptance:* §4's Degradation clause in full.
@@ -681,7 +682,8 @@ own acceptance criteria. *Acceptance:* §4's Degradation clause in full.
 the byte-ledger statement this milestone's own thin headroom makes worth stating plainly either way.
 
 **§4 EARS coverage:** HTML export → 2, 3 · DOCX export → 5 (struck) · PDF export → 6, 7 · Copy actions → 3, 4
-· ~~ZIP export → 3~~ (struck, M10 §3.1(cont.)) · Export shortcut & progress → 8 · Print mode → 6 · Trust → 1
+· ~~ZIP export → 3~~ (struck, M10 §3.1(cont.)) · Export shortcut & progress → 8 (progress-indicator half
+struck, M10 §8.3/§10.4 — measured-out-of-scope, not unmet) · Print mode → 6 · Trust → 1
 (bytes/manifest), 9 (network) · Degradation → 9. Every remaining clause has at least one group.
 
 ## 7. Measurement plan (spec §8 M-1 · M-2 · M-3)
@@ -700,7 +702,9 @@ milestone's own numbers unusually load-bearing.*
   export duration across a size distribution drawn from this repository's own documents and the golden
   fixtures, the same corpus discipline 008's table-threshold and 009's collapse-threshold measurements both
   used, bias stated (this repository's own markdown is not a representative sample of arbitrary agent-authored
-  documents, the identical caveat 008/009 both carried for their own corpus-sourced measurements).
+  documents, the identical caveat 008/009 both carried for their own corpus-sourced measurements). **★
+  ANSWERED, 2026-09-04 (task 10.2/10.4): no threshold — 0.30–26.95 ms across the corpus, no surviving export
+  is heavy; the progress indicator itself is struck (M10 §8.3/§10.4).**
 - **M-3 — print CSS's specific page-number/header/footer content and layout (§3.6/§7-4, §8), once group 6's
   fidelity probe confirms the mechanism can express them at all.** Axes: what the header/footer actually shows
   (document title? page X of Y? both?) · margin sizing. Outputs: a walk against the demo document and a long

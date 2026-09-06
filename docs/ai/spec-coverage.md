@@ -32,6 +32,20 @@ are the `59dcb20` / `d470ab2` / `d7f424c` / `bdcb2ad` readings, unchanged. **F3 
 100%** — two of the nine items score PARTIAL and one scores NOT, named in full at F3 below; the method's
 own tie-break (*"ambiguity resolves toward NOT"*) is applied, not an inflated ✓.*
 
+***★ RE-AUDITED 2026-09-06 · HEAD `b9abd44`** (M10 / spec 010 "local exports" — task 11.3, the records
+reconcile, per tasks.md's own line — *"`spec-coverage.md`'s F9/F5 rows move from their pre-milestone
+figures to their landed figures"*). **Targeted re-verification of F9 (Export & Publishing) and F5's
+print-optimized-mode row ONLY**, against shipped code (`src/export/htmlExport.ts`,
+`src/export/copyPlainText.ts`, `src/app/exportControls.ts`, `entrypoints/app/main.ts`,
+`src/settings/settings.ts`, `src/theme/readerCss.ts`'s `@media print` block) and its tests. **No other
+section was re-scored:** F1–F4, F6–F12 and §6/§7 are the `174b94a` / `59dcb20` / `d470ab2` / `d7f424c` /
+`bdcb2ad` readings, unchanged. **F9 moves 0% → 38%** (4 of 13 items ship in full on both engines, 2 score
+PARTIAL, 7 do not — DOCX export, ZIP export and the progress indicator were each dropped from M10 by a
+human scope-reduction ruling, deferred not abandoned; the four publish paths remain on the pre-existing
+M11 routing decision). **F5 moves 36% → 38%** (print-optimized mode ✗→✓). ★ **11.1 (the milestone-close
+human walk) and 11.2 (the retro) have NOT yet run as of this audit** — this re-score reflects landed code
+only; a milestone-close walk finding, if any, is a matter for a future re-score, not this one.*
+
 *Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
 *Method: source code is the answer, the spec is only the question. No spec item is credited
 because a plan, a task list or a pipeline comment anticipates it.*
@@ -40,8 +54,11 @@ because a plan, a task list or a pipeline comment anticipates it.*
 
 ## Summary
 
-**Phase 1 (§5 F1–F12) is ~27% shipped by weighted feature count** — 53.0 credit points across
-198 enumerated items. Including §6 and §7 the whole-spec figure is **~31%** (71.0 / 227). The
+**Phase 1 (§5 F1–F12) is ~30% shipped by weighted feature count** — 59.0 credit points across
+198 enumerated items. Including §6 and §7 the whole-spec figure is **~34%** (77.0 / 227). The
+2026-09-06 re-audit moved **F9 from 0% to 38%** and **F5 from 36% to 38%** — M10 shipped HTML
+export, PDF export, all three copy actions, the export shortcut, and F5's print-optimized mode
+(details in F9/F5 below). The
 2026-08-03 re-audit moved **F2 from 3% to 42%** — M7 shipped Mermaid rendering, the hash-keyed
 cache, theme sync, copy/download, the lightbox and progressive enhancement. The 2026-08-22
 re-audit moved **F3 from 0% to 78%** — M9 shipped Shiki highlighting, the code-theme picker
@@ -139,18 +156,18 @@ the bottom with the question a human walk would settle.
 | F2 Math & diagrams *(re-audited 2026-08-03)* | 19 | 7 | 2 | 10 | 0 | 8.0 | **42%** |
 | F3 Code blocks *(re-audited 2026-08-22)* | 9 | 6 | 2 | 1 | 0 | 7.0 | **78%** |
 | F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
-| F5 Navigation & reading UX *(re-audited 2026-08-13)* | 39 | 13 | 2 | 24 | 0 | 14.0 | **36%** |
+| F5 Navigation & reading UX *(re-audited 2026-09-06, print mode)* | 39 | 14 | 2 | 23 | 0 | 15.0 | **38%** |
 | F6 Live updating & AI-workflow *(re-audited 2026-08-13)* | 13 | 7 | 2 | 4 | 0 | 8.0 | **62%** |
 | F7 Theming & appearance | 17 | 1 | 0 | 16 | 0 | 1.0 | **6%** |
 | F8 Editor mode | 21 | 0 | 2 | 19 | 0 | 1.0 | **5%** |
-| F9 Export & publishing | 13 | 0 | 0 | 13 | 0 | 0.0 | **0%** |
+| F9 Export & publishing *(re-audited 2026-09-06, M10 close)* | 13 | 4 | 2 | 7 | 0 | 5.0 | **38%** |
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **44** | **18** | **136** | **0** | **53.0** | **27%** |
+| **§5 total** | **198** | **49** | **20** | **129** | **0** | **59.0** | **30%** |
 | §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **57** | **28** | **142** | **0** | **71.0** | **31%** |
+| **Whole spec** | **227** | **62** | **30** | **135** | **0** | **77.0** | **34%** |
 
 *Every row except F2, F3, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
 HEAD `174b94a`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
@@ -260,7 +277,13 @@ dated audit, not a re-litigation of 007/008's own rows.***
 **F3 moved from a flat 0% to 78% at M9's close (2026-08-22)** — six of nine items ship in full, two are
 partial (a 6-language curated catalog rather than Shiki's 190+; a collapse/expand control rather than a
 per-block raw⇄rendered toggle), one is a real, named gap (auto-detection built and tested but
-deliberately unwired). **F9 (Export & Publishing) is now the only section at a flat 0%.**
+deliberately unwired). ~~**F9 (Export & Publishing) is now the only section at a flat 0%.**~~ **F9 moved
+from a flat 0% to 38% at M10's close (2026-09-06)** — four items ship in full (both engines), two are
+partial (HTML export ships without Base64 image embedding; PDF export's page-number fidelity is
+Chromium/app-page-only), and seven do not ship: DOCX/ZIP export and the progress indicator were each
+dropped from M10 by a human scope-reduction ruling (deferred, not abandoned), and the four publish paths
+remain on their pre-existing M11 routing decision. F10/F11 are the sections never touched by any
+milestone now (F3's own re-audit above already moved it off this list at M9's close).
 
 ## F4. File Sources & Handling
 
@@ -318,7 +341,7 @@ deliberately unwired). **F9 (Export & Publishing) is now the only section at a f
 | Presentation export as standalone HTML | ⭐ | ✗ | 0 hits | — |
 | Read-aloud (TTS, Web Speech API) | ⭐ | ✗ | 0 `speechSynthesis` hits | Zero-cost and zero-network by construction — a cheap ⭐ for M7. |
 | Raw ↔ rendered toggle (shortcut) | ✅ | ✓ | `src/render/readerMode.ts:26,80-96,129`; `tests/browser/readerSource.browser.test.ts` | `\` toggles; both surfaces. |
-| Print-optimized mode | ✅ | ✗ | **0 `@media print` rules** in `src/theme/readerCss.ts` (761 lines) | Blocks F9's PDF export, which is spec'd as a print-pipeline. |
+| Print-optimized mode | ✅ | **✓** *(M10, 2026-09-03)* | `src/theme/readerCss.ts` `@media print` block (task 6.1); `tests/browser/printMode.browser.test.ts`, Cr+Fx | Chrome hidden, page breaks respected, on both engines. The `@page` margin-box content (header/footer/page numbers) is a SEPARATE, PDF-export-specific fidelity question — see F9's PDF-export row; it does not gate this row's own criterion. |
 | Focus/reading mode (typographic column) | ⭐ | ~ | `readerCss.ts:82-85,207`; `src/theme/fonts.ts:39-53` (bundled Literata) | The typographic column ships as the **default**; there is no focus-mode toggle that hides chrome. |
 | Document mini-map | ⭐ | ✗ | 0 hits | — |
 
@@ -393,23 +416,27 @@ below is ✗ unless noted.
 
 ## F9. Export & Publishing
 
-**Section is flat 0%.** No `docx`, `jszip` dependency; no print CSS; no publish path.
+**★ RE-AUDITED AT M10's 11.3 (2026-09-06) — 0% → 38%.** M10 shipped the LOCAL half of F9 (HTML export,
+PDF export, all three copy actions, the export shortcut) plus F5's print mode as its prerequisite; DOCX
+export, ZIP export and the progress indicator were each dropped from M10 by a human scope-reduction ruling
+(`decisions.md` M10 §3.10, §3.1(cont.), §8.3/§10.4 respectively — deferred to a future milestone, not
+abandoned); the four publish paths remain out of scope on the pre-existing M11 routing decision.
 
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
-| HTML export (standalone, CSS inlined, images Base64) | ✅ | ✗ | 0 hits | Fonts are already Base64 data-URIs (`fonts.ts:32`) — one input ready. |
-| DOCX export | ✅ | ✗ | No `docx` dependency | — |
-| PDF export (print pipeline) | ✅ | ✗ | **No `@media print` rules exist** (`readerCss.ts`) | Blocked on F5's print mode. |
-| Copy as rich text | ✅ | ✗ | 0 hits | — |
-| Copy as HTML | ✅ | ✗ | 0 hits | — |
-| Copy as plain text | ✅ | ✗ | 0 hits | Raw source *is* held (`readerMode.ts:40-48`); nothing copies it. |
-| Publish → GitHub Gist | ✅ | ✗ | 0 hits; no token storage | Would be the first deliberate outbound network path. |
-| Publish → GitHub repo | ✅ | ✗ | 0 hits | — |
-| Publish → Medium | ✅ | ✗ | 0 hits | — |
-| Publish → Dev.to | ✅ | ✗ | 0 hits | — |
-| ZIP export | ✅ | ✗ | No `jszip` dependency | — |
-| Export shortcut (Ctrl/Cmd+S) | ✅ | ✗ | 0 hits | — |
-| Progress indicator for heavy documents | ✅ | ✗ | 0 hits | — |
+| HTML export (standalone, CSS inlined, images Base64) | ✅ | **~** *(M10, 2026-08-29)* | `src/export/htmlExport.ts`; `tests/browser/htmlExport.browser.test.ts`, Cr+Fx | Standalone file, CSS inlined — ships. Base64 image embedding does NOT ship (dropped, `decisions.md` M10 §3.1 — a local image reference is left unrewritten, the same as the app-page reader today). |
+| DOCX export | ✅ | ✗ | No `docx` dependency (installed then removed, `decisions.md` M10 §3.10) | Dropped from M10 — busted the milestone's byte headroom in combination with a ZIP writer. Revisit-when: paired with F2 math shipping first. |
+| PDF export (print pipeline) | ✅ | **~** *(M10, 2026-09-03)* | `src/app/exportControls.ts`'s `exportPdf`/`window.print()` (task 7.1); `tests/browser/pdfExport.browser.test.ts` | Ships via `window.print()` on the print-mode pipeline (F5, below). Chromium/app-page renders full fidelity (margin-box page numbers); Firefox and the content-script surface do NOT — a named, flagged residual (`decisions.md` 2026-09-03), not a silent gap. |
+| Copy as rich text | ✅ | **✓** *(M10, 2026-09-03)* | `src/export/htmlExport.ts`'s `copyAsRichText` (task 4.1); `tests/browser/copyAsRichText.browser.test.ts`, Cr+Fx | Semantic markup only, no reader stylesheet — pastes with the target's own styling. |
+| Copy as HTML | ✅ | **✓** *(M10, 2026-08-29)* | `src/export/htmlExport.ts`'s `copyAsHtml` (task 3.3); `tests/browser/copyAsHtml.browser.test.ts`, Cr+Fx | Same standalone-HTML artifact as the file export, to the clipboard. |
+| Copy as plain text | ✅ | **✓** *(M10, 2026-09-03)* | `src/export/copyPlainText.ts` (task 3.4); `tests/browser/copyAsPlainText.browser.test.ts`, Cr+Fx | Raw source, byte-identical, reused from 008 D-10's mechanism. |
+| Publish → GitHub Gist | ✅ | ✗ | 0 hits; no token storage | Deferred to M11 on a routing decision (spec 010 §3.1/§6) — the product's first deliberate, credential-bearing outbound network path. |
+| Publish → GitHub repo | ✅ | ✗ | 0 hits | Deferred to M11, same routing decision. |
+| Publish → Medium | ✅ | ✗ | 0 hits | Deferred to M11, same routing decision. |
+| Publish → Dev.to | ✅ | ✗ | 0 hits | Deferred to M11, same routing decision. |
+| ZIP export | ✅ | ✗ | No ZIP-writer dependency (`client-zip` installed then removed, `decisions.md` M10 §3.1(cont.)) | Dropped from M10 — shorn of local-image copying (§3.1), it was near-redundant with Copy-as-plain-text. Revisit-when: paired with the local-image/seam-extension work. |
+| Export shortcut (Ctrl/Cmd+S) | ✅ | **✓** *(M10, 2026-09-03)* | `entrypoints/app/main.ts` (task 8.1); `src/settings/settings.ts`'s `lastExportFormat` (task 8.2); `tests/browser/exportShortcut.browser.test.ts`, Cr+Fx | App-page-only (D-5), the same scoping precedent F6's app-page-only rows already use. Defaults to HTML export (Ruling M-1) before any export has ever run. |
+| Progress indicator for heavy documents | ✅ | ✗ | 0 hits | Dropped from M10 (`decisions.md` M10 §8.3/§10.4, Ruling 8.3) — task 10.2 measured no surviving M10 export as heavy enough to need one (0.30–26.95 ms across the corpus); a MEASURED non-build, not an unbuilt gap. |
 
 ## F10. AI Features
 
@@ -581,8 +608,12 @@ correct as the `d470ab2` reading; the governance it describes is what the fifth 
 
 | **M7** · `007-mermaid-diagrams` | **F2** (Mermaid rendering, theme sync, hash-keyed cache, cache clear + disclosure, PNG/SVG copy & download, zoom/pan lightbox, progressive post-mount enhancement — 3% → 42%) · **§6** (2 — a fifth network guard, `diagramNetwork.browser.test.ts`; 6 — `permissions: []` survived a fifth dependency and a lazy chunk, with no `web_accessible_resources`; 8 — a second, SVG-shaped sanitizer profile with the document profile untouched; 9 — the first dependency addition since M6, through the governed process; 17 — the diagram cache disclosed, bounded and erasable) · **§7** (6 — the "re-themed diagrams" sub-surface; 3, 7 — placeholder motion and the degrade-to-source-fence states) |
 | **M8** · `008-persona-1-qol` | **F5** (table tools: sort ✗→✓, quick filter ✗→✓, copy CSV/Markdown ✗→~ — no JSON) · **F6** (agent-file badge ✗→✓; tuned render defaults ✗→~, absorbed into the badge/table-tools set, not a distinct feature; compare any two files ✗→~, current-vs-picked, sealed narrower than "any two" by gate-1 §9-5) · **§6** (6, 8 — `permissions: []` and the sanitizer allow-list both survived a +10,486 B content-script / +10,503 B app-page reach, zero dependency added) · **§7** (unmoved — no new theming, motion or token work) |
+| **M9** · `009-code-blocks` | **F3** (Shiki syntax highlighting, per-block toolbar, collapsible long blocks, code themes — 0% → 78%) · **§6** (a sixth dependency, `shiki`, through the governed process; `permissions: []` and the sanitizer allow-list both survived) · **§7** (unmoved) |
+| **M10** · `010-local-exports` | **F9** (HTML export ~, PDF export ~, copy as rich text/HTML/plain text ✓, export shortcut ✓ — 0% → 38%; DOCX export, ZIP export and the progress indicator each dropped by a human scope-reduction ruling, not shipped) · **F5** (print-optimized mode ✗→✓) · **§6** (net **zero** new dependencies — `docx` and a ZIP writer were installed at task 1.1 and both later removed; `permissions: []` and no `web_accessible_resources` survived) · **§7** (unmoved) |
 
-**F3, F9, F10, F11 have never been touched by any milestone.** F7 was touched once and moved 6%.
+~~**F3, F9, F10, F11 have never been touched by any milestone.**~~ **F10 and F11 have never been touched
+by any milestone** — F3 left this list at M9 (0% → 78%), F9 left it at M10 (0% → 38%). F7 was touched once
+and moved 6%.
 **F2 left that list at M7** — it went from never-touched to 42% in one milestone, and it is the only
 section whose remaining ✗ rows (math) are a materially different feature from the ones that landed
 (diagrams). Three of the twelve functional sections plus F11 are untouched ground going into M8.
