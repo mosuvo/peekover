@@ -1,6 +1,54 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M11 GATE 1 — spec 011 (math rendering: KaTeX, contingent MathJax fallback, inline/block/
+  fence math, copy-as-LaTeX/MathML) APPROVED, WITH FOUR RULINGS (TWO SETTLED, ONE DEFERRAL-APPROVED, ONE
+  CONTINGENT-PENDING). `plan.md` is the next artifact and the next gate.** `specs/011-math-rendering/spec.md`
+  was reviewed and approved. **The spec's status line stays "draft (Gear-3 gate 1 — awaiting human approval
+  before `plan.md`)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the standing precedent from M7/M8/M9/M10:
+  007 still reads "draft" post-gate-1 (`e09520f`); 008 still reads "draft" post-gate-1 (`aaf990e`,
+  2026-08-03 M8 GATE 1); 009 still reads "draft" post-gate-1 (2026-08-14 M9 GATE 1); 010 still reads
+  "draft" post-gate-1 (2026-08-22 M10 GATE 1, below) — gate approvals live in the bank, not in the
+  artifact's status line.
+  **THE APPROVAL:** M11 delivers F2's remaining half — KaTeX-rendered inline `$…$` and block `$$…$$` math,
+  code-fence math (a ` ```math ` fence), copy-as-LaTeX and copy-as-MathML per formula, zero-network proof,
+  and a math-shaped sanitizer profile, at full scope. A MathJax fallback toggle ships CONTINGENTLY, per
+  RULING 1 below — the milestone's own dependency-set fork, measured, not assumed, at task 1.1.
+  **THE FOUR RULINGS, spec §9 (verbatim from the human's review):**
+  - **RULING 1 · §9-1, the math-render dependency set (KaTeX+MathJax vs. KaTeX-only): APPROVED THE
+    DEFERRAL — ruled from task 1.1's own byte measurement (§3.4/§8-1), forbidden from being assumed.**
+    Gate 1 approves that the dependency set is MEASURED-then-ruled, not chosen now — the M10 task-1.1
+    hard-gate pattern (`docx`'s own bust, below), applied deliberately because math's byte weight is the
+    milestone's own named central, front-loaded risk (§3.4: `.output` headroom ~352.8/352.7 KiB, zip
+    headroom ~607.8/607.7 KiB, the thinnest margin any gate-1 in this project's history has opened
+    against). The pre-stated fallback (KaTeX-only, if MathJax busts headroom) stands as §3.1 states it.
+    No recommendation was given or taken — the measurement has not run. **Revisit-when:** task 1.1's own
+    measurement, `plan.md`'s first move, before any rendering code is written.
+  - **RULING 2 · §9-2, the content-script surface disposition: CONFIRMED APP-PAGE-ONLY.** The manifest
+    argument (007's Mermaid precedent — a content script cannot load a separate packaged chunk without
+    `web_accessible_resources`) plus the materially thinner byte margin than 007 had; math on the
+    content-script surface is not built in M11 — math syntax stays literal text there, no affordance
+    (§3.2/§4). No revisit-when named in the spec beyond a future milestone reconsidering that surface's
+    capability set generally (§6) — this is a permanent scope decision for M11.
+  - **RULING 3 · §9-3, the math-shaped sanitizer profile's disposition: CONFIRMED.** A second, distinct,
+    math-specific sanitizer allow-list (007's SVG-profile precedent, D-1 shape); the document profile
+    stays untouched. Architectural soundness ruled now so `plan.md` enumerates the profile's exact
+    tag/attribute contents against a settled approach, not an open question (§3.5/§7-6).
+  - **RULING 4 · §9-4, what "the toggle" toggles if MathJax ships at all (global-always-MathJax vs.
+    automatic-fallback-on-KaTeX-gap): DEFERRED, explicitly moot until RULING 1's measurement shows
+    MathJax ships at all.** If task 1.1's measurement includes MathJax in the ruled dependency set, this
+    decision becomes live and is ruled then — a product-feel call, not a measured one, per §3.11/§9-4's
+    own framing. If RULING 1 excludes MathJax, this decision is vacated outright. **No lean is recorded as
+    binding** — whoever picks this up if MathJax ships rules it fresh as the product-feel call it is.
+    **Revisit-when:** immediately after RULING 1's own measurement resolves, only if MathJax is in scope.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install KaTeX or MathJax, or move dependencies off the
+  current 6; it does not resolve §3.6's math-cache lean, §7's nine open risks, or §8's three gate-3
+  measure-then-choose items — all remain `plan.md`'s/`tasks.md`'s to resolve against the actual code; it
+  reopens no other §3.x decision; it writes no `plan.md` or `tasks.md`.
+  **Not a blocker for:** gate 2 (`plan.md`) or any subsequent gate — nothing above is unresolved, each
+  ruling is stated so `plan.md` inherits it closed (or, for RULING 1/4, closed pending their own dependent
+  measurement).
+
 - **2026-09-06 · M10 §11.1 — RULING M-3's REVISIT-WHEN FIRES CLEAN: MARGINS/HEADER/FOOTER CONFIRMED-FINAL,
   NOT JUST PROVISIONAL.** Ruling M-3 (2026-09-04 M10 GATE, below) kept the shipped `@page` values
   provisional specifically pending "11.1's already-budgeted human walk," to "adjust there only if the eye

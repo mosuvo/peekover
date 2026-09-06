@@ -1,12 +1,15 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (M11 gate-1 spec DRAFTED — `specs/011-math-rendering/spec.md`, F2 math: KaTeX,
-contingent MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML — awaiting human gate-1
-approval, no `plan.md` yet. Byte budget framed as the milestone's central, front-loaded risk (§3.4): M10's
-own close left `.output` headroom ~352.8/352.7 KiB, zip headroom ~607.8/607.7 KiB, the thinnest margin any
-gate-1 has opened against; the spec states a contingent scope — full KaTeX+MathJax if task 1.1's own
-measurement shows both fit, KaTeX-only as the pre-stated fallback if not — rather than assuming either
-way, on the M10-DOCX-bust precedent. Prior entry, kept for the record: task 11.3 landed — the records
+*Updated: 2026-09-06 (M11 gate-1 APPROVED — `specs/011-math-rendering/spec.md`, F2 math: KaTeX, contingent
+MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML. Four §9 rulings recorded in
+`decisions.md`'s 2026-09-06 M11 GATE 1 entry: §9-1 (dependency set) APPROVED-THE-DEFERRAL, measured not
+assumed, at task 1.1; §9-2 (content-script surface) CONFIRMED app-page-only; §9-3 (sanitizer profile)
+CONFIRMED; §9-4 (toggle semantics) DEFERRED, contingent on §9-1's own measurement including MathJax at
+all. Per the M7–M10 precedent the spec's own status line/§9 text stay unedited — decisions.md is the
+approval of record. `plan.md` is next, a fresh session (C14); no `plan.md`/`tasks.md` exist yet. Byte
+budget stays the milestone's central, front-loaded risk (§3.4): M10's own close left `.output` headroom
+~352.8/352.7 KiB, zip headroom ~607.8/607.7 KiB, the thinnest margin any gate-1 has opened against.
+Prior entry, kept for the record: task 11.3 landed — the records
 reconcile that closes M10: the pointer walk repeated as a discrete step on this closing commit, the
 retro's four browser-suite shared-cross-file-state facets confirmed consolidated into one drafted standing
 rule (PLACED in `AGENTS.md`, 2026-09-06), and the pre-existing carried items reconfirmed untouched by M10.
@@ -21,27 +24,29 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
-**M11 gate-1 spec DRAFTED, 2026-09-06 — `specs/011-math-rendering/spec.md`, awaiting human approval.**
-M11 = F2 Math: KaTeX rendering (inline `$…$`, block `$$…$$`, ` ```math ` fence), copy-as-LaTeX/MathML,
-and a CONTINGENT MathJax fallback (ships only if task 1.1's own byte measurement shows it fits — see the
-spec's §3.1/§3.4/§9-1). Mirrors 007's (Mermaid) architecture — app-page-only, post-mount enhancement, a
-second math-shaped sanitizer profile alongside the existing SVG one — and 010's gate-1-draft format.
-**Nothing is implemented; no `plan.md` exists.** § Now's own next act is the human gate-1 read: the spec's
-§9 lists four questions gate 1 must answer, the first being the dependency-set fork (KaTeX+MathJax vs.
-KaTeX-only) that task 1.1's own measurement — not this draft — will ultimately settle. M10 closed
-2026-09-06; its own narrative (19 active tasks ticked + 3 struck-in-place = 22 sealed, human milestone-close
-walk ALL PASS, `/retro` banked, `spec-coverage.md` F9 0%→38% / F5 36%→38%) moved to
-[`progress-archive.md`](progress-archive.md) in the close-and-archive pass immediately prior to this one.
-See § Closed milestones below for the one-paragraph close summary and the link to the archived detail.
+**M11 gate 1 APPROVED, 2026-09-06 — `specs/011-math-rendering/spec.md`, four §9 rulings recorded in
+`decisions.md`'s M11 GATE 1 entry.** M11 = F2 Math: KaTeX rendering (inline `$…$`, block `$$…$$`,
+` ```math ` fence), copy-as-LaTeX/MathML, and a CONTINGENT MathJax fallback (ships only if task 1.1's own
+byte measurement shows it fits — §9-1 APPROVED-THE-DEFERRAL, measured not assumed). §9-2 (content-script
+surface) CONFIRMED app-page-only; §9-3 (sanitizer profile) CONFIRMED; §9-4 (toggle semantics) DEFERRED,
+contingent on §9-1 including MathJax at all. Mirrors 007's (Mermaid) architecture — app-page-only,
+post-mount enhancement, a second math-shaped sanitizer profile alongside the existing SVG one. Per the
+M7–M10 precedent, the spec's own status line/§9 text stay unedited post-gate-1 — decisions.md is the
+approval of record. **Nothing is implemented; no `plan.md` exists.** § Now's own next act is `plan.md`,
+a fresh session (C14). M10 closed 2026-09-06; its own narrative (19 active tasks ticked + 3 struck-in-place
+= 22 sealed, human milestone-close walk ALL PASS, `/retro` banked, `spec-coverage.md` F9 0%→38% / F5
+36%→38%) moved to [`progress-archive.md`](progress-archive.md) in the close-and-archive pass immediately
+prior to the gate-1 draft. See § Closed milestones below for the one-paragraph close summary and the link
+to the archived detail.
 
 ## Up next
 
-**Awaiting M11 gate 1.** Once the human approves (or redlines) `specs/011-math-rendering/spec.md`'s scope
-and answers its §9 questions, the next act is `plan.md` — a **fresh session** (C14) — whose own first move
-is task 1.1's byte-budget measurement (§3.4/§7-1/§8-1 of the spec): install KaTeX (and, separately,
-MathJax) for real against the current ~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip headroom, measure
-and decompose each to a residual, before any rendering code is written — the same order 007's own Group 1
-used for Mermaid and 010's own task 1.1 used for `docx`. No milestone is in progress past the spec draft.
+**`plan.md` is next — a fresh session (C14, gate 1 having just authorized it).** Its own first move is
+task 1.1's byte-budget measurement (§3.4/§7-1/§8-1 of the spec, per RULING 1 above): install KaTeX (and,
+separately, MathJax) for real against the current ~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip
+headroom, measure and decompose each to a residual, before any rendering code is written — the same order
+007's own Group 1 used for Mermaid and 010's own task 1.1 used for `docx`. No `plan.md`/`tasks.md` exist
+yet; no milestone is in progress past the gate-1 approval.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either

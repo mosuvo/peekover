@@ -81,7 +81,10 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 spec DRAFTED, 2026-09-06, awaiting
-  human approval.** M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 = F2 Math (KaTeX, contingent
-  MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML), human-ruled from the M11-scope menu.
-  No `plan.md` yet — gate 1 must approve the spec's §9 open decisions first.
+- Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 APPROVED, 2026-09-06, four §9 rulings
+  recorded in `decisions.md`. `plan.md` next (fresh session, C14) — its first move is task 1.1's byte
+  measurement (§3.1/§3.4/§8-1/§9-1: KaTeX+MathJax vs. KaTeX-only, measured not assumed).** M10
+  (`specs/010-local-exports/`) closed 2026-09-06. M11 = F2 Math (KaTeX, contingent MathJax fallback,
+  inline/block/fence math, copy-as-LaTeX/MathML). Per the M7–M10 precedent, the spec's own status line and
+  §9 text stay unedited post-gate-1 — `decisions.md`'s 2026-09-06 M11 GATE 1 entry is the approval of
+  record.
