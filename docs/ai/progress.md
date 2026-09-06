@@ -1,11 +1,17 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (task 11.3 landed — the records reconcile that closes M10: the pointer walk repeated
-as a discrete step on this closing commit, the retro's four browser-suite shared-cross-file-state facets
-confirmed consolidated into one drafted standing rule (PLACED in `AGENTS.md`, 2026-09-06), and the
-pre-existing carried items reconfirmed untouched by M10. M10 CLOSED, 2026-09-06. § Now's and § Up next's
-full M10 narrative moved verbatim to `progress-archive.md` in this same commit, following the
-M6/M7/M8/M9 archive-pass precedent. Next: between milestones — M11 has not started.)*
+*Updated: 2026-09-06 (M11 gate-1 spec DRAFTED — `specs/011-math-rendering/spec.md`, F2 math: KaTeX,
+contingent MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML — awaiting human gate-1
+approval, no `plan.md` yet. Byte budget framed as the milestone's central, front-loaded risk (§3.4): M10's
+own close left `.output` headroom ~352.8/352.7 KiB, zip headroom ~607.8/607.7 KiB, the thinnest margin any
+gate-1 has opened against; the spec states a contingent scope — full KaTeX+MathJax if task 1.1's own
+measurement shows both fit, KaTeX-only as the pre-stated fallback if not — rather than assuming either
+way, on the M10-DOCX-bust precedent. Prior entry, kept for the record: task 11.3 landed — the records
+reconcile that closes M10: the pointer walk repeated as a discrete step on this closing commit, the
+retro's four browser-suite shared-cross-file-state facets confirmed consolidated into one drafted standing
+rule (PLACED in `AGENTS.md`, 2026-09-06), and the pre-existing carried items reconfirmed untouched by M10.
+M10 CLOSED, 2026-09-06. § Now's and § Up next's full M10 narrative moved verbatim to `progress-archive.md`
+in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -15,18 +21,27 @@ M6/M7/M8/M9 archive-pass precedent. Next: between milestones — M11 has not sta
 
 ## Now (start here)
 
-**M10 closed 2026-09-06.** M11 (or whatever the next milestone is numbered) has not started — nothing is
-in progress. M10's narrative (19 active tasks ticked + 3 struck-in-place = 22 sealed, human milestone-close
+**M11 gate-1 spec DRAFTED, 2026-09-06 — `specs/011-math-rendering/spec.md`, awaiting human approval.**
+M11 = F2 Math: KaTeX rendering (inline `$…$`, block `$$…$$`, ` ```math ` fence), copy-as-LaTeX/MathML,
+and a CONTINGENT MathJax fallback (ships only if task 1.1's own byte measurement shows it fits — see the
+spec's §3.1/§3.4/§9-1). Mirrors 007's (Mermaid) architecture — app-page-only, post-mount enhancement, a
+second math-shaped sanitizer profile alongside the existing SVG one — and 010's gate-1-draft format.
+**Nothing is implemented; no `plan.md` exists.** § Now's own next act is the human gate-1 read: the spec's
+§9 lists four questions gate 1 must answer, the first being the dependency-set fork (KaTeX+MathJax vs.
+KaTeX-only) that task 1.1's own measurement — not this draft — will ultimately settle. M10 closed
+2026-09-06; its own narrative (19 active tasks ticked + 3 struck-in-place = 22 sealed, human milestone-close
 walk ALL PASS, `/retro` banked, `spec-coverage.md` F9 0%→38% / F5 36%→38%) moved to
-[`progress-archive.md`](progress-archive.md) in this same close-and-archive pass. See § Closed milestones
-below for the one-paragraph close summary and the link to the archived detail. **Next: the next
-milestone's scoping**, per AGENTS.md's "between milestones" pointer.
+[`progress-archive.md`](progress-archive.md) in the close-and-archive pass immediately prior to this one.
+See § Closed milestones below for the one-paragraph close summary and the link to the archived detail.
 
 ## Up next
 
-**Between milestones.** M10 closed 2026-09-06; its own § Now / § Up next narratives moved to
-[`progress-archive.md`](progress-archive.md) in this same pass (the M6/M7/M8/M9 archive-pass precedent).
-No milestone is in progress. The next act is scoping the next milestone (M11), which has not started.
+**Awaiting M11 gate 1.** Once the human approves (or redlines) `specs/011-math-rendering/spec.md`'s scope
+and answers its §9 questions, the next act is `plan.md` — a **fresh session** (C14) — whose own first move
+is task 1.1's byte-budget measurement (§3.4/§7-1/§8-1 of the spec): install KaTeX (and, separately,
+MathJax) for real against the current ~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip headroom, measure
+and decompose each to a residual, before any rendering code is written — the same order 007's own Group 1
+used for Mermaid and 010's own task 1.1 used for `docx`. No milestone is in progress past the spec draft.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either

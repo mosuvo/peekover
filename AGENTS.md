@@ -81,5 +81,7 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **between milestones.** M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 has
-  not started — no spec, no gate 1.
+- Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 spec DRAFTED, 2026-09-06, awaiting
+  human approval.** M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 = F2 Math (KaTeX, contingent
+  MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML), human-ruled from the M11-scope menu.
+  No `plan.md` yet — gate 1 must approve the spec's §9 open decisions first.
