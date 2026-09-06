@@ -1,7 +1,8 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (task 11.3's records-reconcile punch list worked, PARTIAL — M10 IS NOT CLOSED, 11.1
-and 11.2 remain outstanding; see § Now's top entry. Prior entry, kept: task 10.5 landed — Ruling M-1
+*Updated: 2026-09-06 (task 11.2 landed — the `/retro` interview, fresh session, per WORKFLOW.md §7.5;
+M10 IS STILL NOT CLOSED, a final 11.3 pass remains; see § Now's top entry. Prior entry, kept: task 11.3's
+records-reconcile punch list worked, PARTIAL. Prior entry, kept: task 10.5 landed — Ruling M-1
 IMPLEMENTED: `DEFAULT_SETTINGS.lastExportFormat` =
 `'html'` (was `null`), the one constant 10.4's gate reduced this task to. The constant change forced a real
 test ripple, not just a literal swap: 13 default-shape assertions across 4 files flipped `null` → `'html'`,
@@ -41,7 +42,31 @@ named. Group 9 CLOSES. Test-only — no `src/` change.)*
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 11.1 LANDED, 2026-09-06 — THE HUMAN MILESTONE-CLOSE WALK, RUN BY THE HUMAN ON REAL
+**★★★★★ M10 TASK 11.2 LANDED, 2026-09-06 — THE `/retro` INTERVIEW, FRESH SESSION, PER WORKFLOW.md §7.5.
+M10 is STILL NOT CLOSED** — a final 11.3 pass (repeating the pointer walk as a discrete step on the actual
+closing commit, folding in whichever carried items this retro resolved) is the only thing left.
+
+The interview asked three questions one at a time and got three short answers: **Q1 (where did the agent
+fail or need correction) — "it worked well,"** confirming the kickoff-is-a-hypothesis loop held throughout
+M10 (7.1, 9.1, 9.2, 10.3, 10.4 as reviewer-kickoff catches; 10.5 as a self-catch; 11.3's own false-premise
+refusal as the capstone) with no correction needed. **Q2 (missing/wrong rule) — "none that I can
+remember,"** but the session surfaced one candidate the human then chose to bank: the browser suite's
+shared cross-file state (clipboard races, the document-listener leak, enhancer timing-flakiness, codeDetect
+corpus drift — four facets of one theme, previously only scattered `progress.md` CARRIED notes) has no
+standing AGENTS.md rule; a line is now drafted in `docs/ai/retro.md`'s new entry for the human to place per
+C2. **Q3 (which ceremony was waste) — "nothing was wasted,"** no action.
+
+The retro entry (`docs/ai/retro.md`, 2026-09-06) also confirms the milestone's headline against the byte
+ledger: D-1's dependency-measurement hard gate **did bust** at task 1.1 (+4,550 B over the ~367 KiB
+headroom), suspending the milestone — but that was before four evidence-backed scope reductions (DOCX,
+local-image embedding, ZIP export, the progress indicator) shrank the surface, after which the
+accumulated delta (14,838 B) never came close to re-busting the reduced headroom (10.4's residual-0
+reconciliation). Metrics banked: corrections **7** (6 reviewer-kickoff catches + 1 executor self-catch,
+kept separate per the human's own correction), first-try verification **MOSTLY YES** (harness-flakiness
+incidents correctly classed as environment, not implementation failures), sessions **≈ 30** (an estimate,
+not hardened to false precision).
+
+*(Prior entry, kept for the record:)* **★★★★★ M10 TASK 11.1 LANDED, 2026-09-06 — THE HUMAN MILESTONE-CLOSE WALK, RUN BY THE HUMAN ON REAL
 CHROMIUM AND REAL FIREFOX, EXTENSION LOADED. ALL ITEMS PASS.** CC recorded this result; CC did not run
 the walk (no agent substitute exists for a task whose whole nature is human-only — the same rule 11.3's
 own note below cites). **M10 is STILL NOT CLOSED** — 11.2 (the `/retro` interview, fresh session) is

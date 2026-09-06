@@ -859,7 +859,7 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
       corrected the pointer state) — **no stale assertion found, none corrected.** Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [§5 human-gate list; §8 M-1…M-3; M6 finding 2]
 
-- [ ] **11.2 Retro (M10 close) — in a FRESH SESSION (the M5/M6/M7/M8/M9 precedent). Run `/retro`: the interview
+- [x] **11.2 Retro (M10 close) — in a FRESH SESSION (the M5/M6/M7/M8/M9 precedent). Run `/retro`: the interview
       ritual per WORKFLOW.md §7.5 — NOT a solo synthesis write-up.** ★ **This is stated explicitly because M9's
       own 9.2 caught exactly this failure shape once already** (a kickoff drafted for that session proposed a
       fully autonomous milestone-wide synthesis instead of the interview; M8's retro had already named the same
@@ -868,11 +868,22 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
       change how the next milestone runs, and what the gate caught. ★ **State whether D-1's headroom pressure
       (~367 KiB / ~612 KiB, the thinnest of any gate-1 close) actually bound anywhere across the milestone, or
       whether the fork's failure branch never fired** — the honest record either way, not assumed from group
-      1's own close alone.
+      1's own close alone. ★ **DONE, 2026-09-06, real `/retro` interview run (three questions asked one at a
+      time, answered "worked well" / "none" / "nothing wasted"; one AGENTS.md line drafted for the shared
+      cross-file harness state, per C2 left for the human to place).** The D-1 headroom question, answered:
+      **the fork's failure branch DID fire** — task 1.1's ablation busted the `.output` ceiling by 4,550 B,
+      suspending the milestone — but that was BEFORE the four scope reductions shrank the surface; across
+      the actually-shipped scope, the accumulated delta (14,838 B) never came close to re-busting the
+      reduced headroom (10.4's own residual-0 reconciliation). See `docs/ai/retro.md`'s new 2026-09-06 entry.
       Files: `docs/ai/retro.md` · `docs/ai/progress.md`
-      Verify: the entry is banked; `progress.md` shows M10 closed and points at what is next. Docs only — no
-      `src/`, test, `scripts/` or spec file touched. Golden EMPTY · manifest green **654 / 770 B** ·
-      `permissions: []`. [WORKFLOW.md §7.5]
+      Verify: the entry is banked. ★ **Verify-text correction, flagged not silently followed (AGENTS.md's
+      kickoff-vs-ground-truth rule): this line's pre-written text says "`progress.md` shows M10 closed" —
+      that presumed 11.2 would be the task that closes the milestone, but 11.3's own line names ITSELF "the
+      records reconcile that closes M10," and 11.3 is still unticked with its own Verify clauses
+      outstanding (the pointer walk against the actual final commit). `progress.md` therefore correctly
+      states M10 is STILL NOT CLOSED, not closed — following the stale pre-written Verify text here would
+      have shipped a false record.** Docs only — no `src/`, test, `scripts/` or spec file touched. Golden
+      EMPTY · manifest green **654 / 770 B** · `permissions: []`. [WORKFLOW.md §7.5]
 
 - [ ] **11.3 The records reconcile that closes M10 — the per-task D-value audit, closing the gap M9 named at
       its own close. ★ PARTIAL, 2026-09-06 — CHECKBOX LEFT UNTICKED. This task's own kickoff assumed 11.2

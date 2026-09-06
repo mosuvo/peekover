@@ -1,4 +1,80 @@
 # Retro log — Peekover
+- **2026-09-06 · M10 retro (spec 010 — local exports: HTML/PDF export, copy as rich-text/HTML/plain
+  text, export shortcut, print-optimized mode; `/retro` interview, fresh session, per WORKFLOW.md §7.5).
+  ★ M10 IS STILL NOT CLOSED — 11.2's own checkbox is ticked by this entry, but a final 11.3 pass (repeating
+  the pointer walk as a discrete step on the actual closing commit, folding in whichever carried items this
+  entry resolves) remains before the milestone is done.** **M10 opened with a dependency-measurement hard
+  gate that BUSTED, and closed having added ZERO net production dependencies.** Task 1.1 measured
+  `docx` + `client-zip` against the ~367 KiB (375,808 B) `.output` headroom: the combined ablation cost
+  **+380,358 B**, busting the ceiling by **4,550 B (~1.2% over)** — `docx` alone was **+373,820 B** of that.
+  The milestone was SUSPENDED at that fork. The resolution was not "find room" — it was **four
+  human-ruled scope reductions**, each evidence-backed, and both installed dependencies were later removed
+  (production deps: 6 → 8 at task 1.1 → 6 at close, confirmed against the installed tree, not assumed).
+  The gate's real output was scope discipline, not a go/no-go answer.
+  - **(1) THE FOUR SCOPE REDUCTIONS ARE ONE PATTERN — EVIDENCE RETIRED WHAT DIDN'T FIT, NONE CUT FOR TIME.**
+    DOCX export (§3.10) busted the byte ceiling — MEASURED out. Local-image embedding (§3.1) — the
+    folder-source seam retains no byte-readable local-image reference (D1), and local images were already
+    broken in the reader — DIAGNOSED out, and **empirically CONFIRMED at 11.1's human walk (finding A1)**,
+    the one finding no test harness could reach, verified by a human opening a real local-image document.
+    ZIP export (§3.1(cont.)) — redundant with copy-as-plain-text once images were gone — REASONED out. The
+    progress indicator (§8.3) — 10.2 measured no surviving export "heavy" (0.30–26.95 ms across a
+    1 KB–1.12 MB corpus) and the two remaining export paths are synchronous-can't-render or async-instant —
+    MEASURED out. The milestone SHRANK to fit reality rather than forcing features that didn't fit, and
+    shipped the survivors solidly: HTML export, three copy actions, PDF via `window.print()`, the Ctrl+S
+    shortcut defaulting to HTML, last-format memory, per-action failure states, zero-network, print mode.
+    `spec-coverage.md`'s F9 (Export & Publishing) moved **0% → 38%**, F5 (Navigation & Reading UX) moved
+    **36% → 38%** (11.3's re-score). No action — this is the milestone's story, not a rule gap.
+  - **(2) A MISSING STANDING RULE FOR THE BROWSER SUITE'S SHARED CROSS-FILE STATE — THE MILESTONE'S BIGGEST
+    REUSABLE ENGINEERING LESSON, HIT REPEATEDLY AND NEVER NAMED ONCE, STANDING.** The browser suite runs
+    files SERIALLY, sharing one real per-engine `document`/`window`, so any assertion about shared state
+    must be delta-based or specific-content-matched — never absolute or pristine-state-assuming. Four
+    facets this milestone: a cross-file clipboard-content race (M8-era, only flagged for this retro at
+    11.3), a document-listener cross-file leak (task 8.1 — `reactionsTo()`'s delta-spy is the worked
+    reference), enhancer timing-flakiness (clears on isolated rerun, ruled out as flaky-not-real by a causal
+    argument, not merely a clean rerun), and a lesser instance, codeDetect corpus-drift (a re-pin, not a
+    test regression). **Interview answer (Q2 — missing/wrong rule): none volunteered beyond this candidate,
+    which the session confirmed is worth banking.** → **ACTION (drafted, human to place/commit per C2):**
+    *"The browser test suite runs files serially sharing one real per-engine `document`/`window`; any
+    assertion about shared state (clipboard, document-level listeners, timing, module-level caches) must be
+    delta-based or specific-content-matched, distinguishable from a real regression by an isolated rerun —
+    never asserted as an absolute count or non-empty check."*
+  - **(3) THE KICKOFF-IS-A-HYPOTHESIS LOOP CAUGHT ITSELF REPEATEDLY, INCLUDING AT THE MOST TEMPTING MOMENT
+    TO CUT A CORNER — THE CLOSE. Interview answer (Q1 — where did the agent fail or need correction): "it
+    worked well" — no correction needed; the standing rule performed as designed.** Instances, confirmed
+    against decisions.md: **7.1** — the kickoff's own Q2 guidance ("prefer MOVE `@page` to `appShell.ts`")
+    was checked against 6.1's landed finding and found wrong; the kickoff's literal binary (adequate/
+    inadequate) turned out to have a third, cheaper option the kickoff never named. **9.1** — the kickoff's
+    framing of which tasks deferred completion-UI was checked against `tasks.md`'s own text and corrected.
+    **9.2** — the kickoff leaned toward arming two firing-control lanes; the code could only emit one, so
+    one lane, correctly. **10.3** — the gate clause pointed at 6.1's superseded "inadequate" finding; 7.1's
+    relocation superseded it, and the walk proceeded on the corrected premise. **10.4** — a prior-turn
+    kickoff's own byte-ledger draft had task 3.2's figure wrong (+2,052 B stated vs +7,752 B actual),
+    caught by re-summing against the task's own recorded commit figure. Five of these are reviewer-kickoff
+    catches; **10.5 is the one self-catch** — the executor's own reconcile step found a third premise-rewrite
+    and a third byte-graph (`background.js`) that neither the kickoff nor the first pass had named. **★ THE
+    CAPSTONE, at 11.3: a kickoff instructed "do 11.2 and 11.3" on the false premise that 11.1 was already
+    landed. Ground truth: 11.1 and 11.2 were both unticked, no landing commit for either, zero retro
+    entries.** The executor caught it, flagged it, asked, and refused to declare M10 closed on the false
+    premise — left 11.3's own checkbox unticked, did only the reconcile work that didn't depend on 11.1/11.2.
+    The value here was never either role being "right" — it was the discipline that a kickoff's claims get
+    verified against the code/record before acting, holding at the point where "just mark it done" was the
+    easy wrong move. No action — the standing AGENTS.md rule already covers this and worked six-for-six plus
+    one self-catch.
+  - **(4) WHAT WAS GENUINELY HARD, NAMED RATHER THAN SMOOTHED.** The DOCX bust suspended the whole milestone
+    mid-flight at task 1.1, with every task past it SUSPENDED pending a human spec revisit — a real stop,
+    not a formality. The `@page` print-fidelity engine-divergence forced the 6.1→7.1 relocation (Chromium/
+    app-page ships full fidelity; Firefox and the content-script surface do not — a named, flagged residual,
+    not a silent gap). The browser-suite harness flakiness (finding 2) recurred across the milestone rather
+    than being fixed once. And the reviewer's own false-premise-at-the-close (finding 3's capstone) is the
+    kind of error that, caught one session later, could have shipped a false "M10 CLOSED" record.
+  - **Interview answer (Q3 — which ceremony was waste): "nothing was wasted."** No action.
+  - **Metrics:** corrections = **7** (six reviewer-kickoff catches — 7.1, 9.1, 9.2, 10.3, 10.4, and 11.3's
+    capstone — plus **one executor self-catch**, 10.5, which is not a reviewer-kickoff miss and is counted
+    separately per the human's own correction to this entry's draft) · first-try verification pass =
+    **MOSTLY YES** — the harness-flakiness incidents (enhancer timing, the document-listener leak, codeDetect
+    corpus drift) are correctly classed as shared-cross-file-state environment artifacts, not first-try
+    implementation failures · sessions used **≈ 30** (an estimate, endorsed as such, not hardened to a false
+    precision — 3 gates, 1.1, 2.1–2.2, 3.1–3.5, 4.1, 5.1, 6.1, 7.1, 8.1–8.3, 9.1–9.2, 10.1–10.5, 11.1–11.3).
 - **2026-08-22 · M9 close (spec 009 — code blocks: Shiki syntax highlighting, per-block toolbar (copy /
   line-numbers / line-highlighting / word-wrap), code themes, collapsible blocks, systemic degradation
   paths).** Gate 1 → gate 2 (four rulings) → gate 3 (two rulings) → 24 tasks across nine groups: foundation
