@@ -68,8 +68,9 @@ measurement-driven or explicitly deferred.*
   named observation with ONE drafted standing rule** (*"the browser test suite runs files serially
   sharing one real per-engine `document`/`window`; any assertion about shared state … must be delta-based
   or specific-content-matched … never asserted as an absolute count or non-empty check"*) — **drafted,
-  human to place/commit per C2** (WORKFLOW.md — agent drafts, human owns), so the rule is not yet live in
-  `AGENTS.md`; this bullet's own guidance stays the concrete worked instance until it lands there.
+  human to place/commit per C2** (WORKFLOW.md — agent drafts, human owns) — **PLACED in `AGENTS.md`,
+  2026-09-06** (the M10→M11 seam edit); this bullet's own guidance stays the concrete worked instance
+  alongside the now-live rule.
 - **★ FILED AT THE POST-M8 FRESHNESS SWEEP (2026-08-13) — THE D-6…D-12 `decisions.md` LEDGER GAP (found
   and named at 6.3's own D-VALUE AUDIT, never routed to this section).** `plan.md` §0 pre-writes verbatim
   `decisions.md` entry text for D-6 through D-12, each meant to land with its implementing commit — **none
@@ -613,7 +614,7 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   `57d18b8` and the entries above it — it has no bullet of its own in this section; it now lives in the
   archived task-by-task narrative, `progress-archive.md`'s M10 entry, cited here as prior art) the
   `/retro` interview (11.2, `retro.md` 2026-09-06) consolidated into ONE named observation with ONE
-  drafted standing rule — human to place/commit per C2, so it is not yet live in `AGENTS.md`.**
+  drafted standing rule — **PLACED in `AGENTS.md`, 2026-09-06** (the M10→M11 seam edit).**
 - **CARRIED — the browser suite's shared-document cross-file listener leak: assert deltas, not
   absolutes.** Found at task 8.1 (`exportShortcut.browser.test.ts`). The browser test suite runs files
   SERIALLY, sharing ONE real `document`/`window` per engine (`vitest.config.ts`'s own task-4.5 note);
@@ -630,9 +631,9 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   2026-09-06) consolidated into ONE named observation, with ONE drafted standing rule: *"the browser test
   suite runs files serially sharing one real per-engine `document`/`window`; any assertion about shared
   state (clipboard, document-level listeners, timing, module-level caches) must be delta-based or
-  specific-content-matched … never asserted as an absolute count or non-empty check."* Placement is
-  PENDING — human to place/commit per C2 (WORKFLOW.md — agent drafts, human owns) — not yet live in
-  `AGENTS.md`. This bullet and the two it points at stay as the worked instances until it lands there.**
+  specific-content-matched … never asserted as an absolute count or non-empty check."* **PLACED in
+  `AGENTS.md`, 2026-09-06** (the M10→M11 seam edit). This bullet and the two it points at stay as the
+  worked instances alongside the now-live rule.**
 
 ## Closed milestones
 

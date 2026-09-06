@@ -74,5 +74,12 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - A milestone-close walk or human gate that requires a loaded browser extension (chrome://extensions,
   Firefox about:debugging) has no agent substitute — the automation surface cannot reach those pages. Mark
   such items human-only up front; do not attempt them or fake them with a test-suite run.
-- Current milestone: `specs/010-local-exports/` (M10) — 009 (code blocks) closed 2026-08-22; gate 1 drafted,
-  awaiting human approval before `plan.md`.
+- The browser test suite runs files SERIALLY, sharing one real per-engine `document`/`window` (and the OS
+  clipboard, the Resource Timing buffer, module-level caches). Any assertion about that shared state must be
+  DELTA-based or SPECIFIC-CONTENT-matched — never an absolute count, a non-empty check, or a pristine-state
+  assumption. A red that clears on an isolated rerun is the signature of this class (harness-shared-state),
+  distinguishable from a real regression, which persists or appears in another file. Worked references:
+  `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
+  clipboard matches in the copy tests.
+- Current milestone: **between milestones.** M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 has
+  not started — no spec, no gate 1.

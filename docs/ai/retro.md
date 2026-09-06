@@ -37,7 +37,8 @@
     *"The browser test suite runs files serially sharing one real per-engine `document`/`window`; any
     assertion about shared state (clipboard, document-level listeners, timing, module-level caches) must be
     delta-based or specific-content-matched, distinguishable from a real regression by an isolated rerun —
-    never asserted as an absolute count or non-empty check."*
+    never asserted as an absolute count or non-empty check."* **PLACED in `AGENTS.md`, 2026-09-06** (the
+    M10→M11 seam edit).
   - **(3) THE KICKOFF-IS-A-HYPOTHESIS LOOP CAUGHT ITSELF REPEATEDLY, INCLUDING AT THE MOST TEMPTING MOMENT
     TO CUT A CORNER — THE CLOSE. Interview answer (Q1 — where did the agent fail or need correction): "it
     worked well" — no correction needed; the standing rule performed as designed.** Instances, confirmed
