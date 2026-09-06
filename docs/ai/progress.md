@@ -2,7 +2,7 @@
 *The file every session reads first. Keep the "Now" section honest.*
 *Updated: 2026-09-06 (task 11.3 landed — the records reconcile that closes M10: the pointer walk repeated
 as a discrete step on this closing commit, the retro's four browser-suite shared-cross-file-state facets
-confirmed consolidated into one drafted standing rule (placement PENDING, human owns per C2), and the
+confirmed consolidated into one drafted standing rule (PLACED in `AGENTS.md`, 2026-09-06), and the
 pre-existing carried items reconfirmed untouched by M10. M10 CLOSED, 2026-09-06. § Now's and § Up next's
 full M10 narrative moved verbatim to `progress-archive.md` in this same commit, following the
 M6/M7/M8/M9 archive-pass precedent. Next: between milestones — M11 has not started.)*
@@ -667,8 +667,8 @@ provisional" into CONFIRMED-FINAL) both closed clean. 11.2 — the `/retro` inte
 WORKFLOW.md §7.5 — answered "it worked well" / "none" / "nothing wasted," and banked ONE reusable
 engineering lesson: the browser suite's shared cross-file `document`/`window` state (four facets —
 clipboard-content race, document-listener leak, enhancer timing-flakiness, codeDetect corpus-drift) needed
-delta/specific-content assertions throughout the milestone and had no standing rule naming it; a rule is now
-drafted for the human to place per C2 (agent drafts, human owns). A real, named residual is carried, not
+delta/specific-content assertions throughout the milestone and had no standing rule naming it; the rule is
+now **PLACED in `AGENTS.md`, 2026-09-06** (the M10→M11 seam edit). A real, named residual is carried, not
 silently patched: PDF export's `@page` margin-box fidelity works on Chromium/app-page only — Firefox and the
 content-script surface get none, ruled shipped-as-is (`decisions.md`, 2026-09-03).
 **★ THE RECORDS RECONCILE (11.3) CONFIRMED M10 DID NOT REPEAT M9'S OWN NAMED GAP:** every D-1…D-10 has a
