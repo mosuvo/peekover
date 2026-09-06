@@ -885,18 +885,34 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
       have shipped a false record.** Docs only — no `src/`, test, `scripts/` or spec file touched. Golden
       EMPTY · manifest green **654 / 770 B** · `permissions: []`. [WORKFLOW.md §7.5]
 
-- [ ] **11.3 The records reconcile that closes M10 — the per-task D-value audit, closing the gap M9 named at
-      its own close. ★ PARTIAL, 2026-09-06 — CHECKBOX LEFT UNTICKED. This task's own kickoff assumed 11.2
-      (the retro) had already run; ground truth at session start showed BOTH §11.1 and §11.2 still unticked,
-      no landing commit for either, and `retro.md` carrying zero M10 entries. Flagged to the user
-      (AGENTS.md's kickoff-vs-file-body rule) and confirmed: do the records-reconcile work now, do NOT
+- [x] **11.3 The records reconcile that closes M10 — the per-task D-value audit, closing the gap M9 named at
+      its own close. ★ PARTIAL, 2026-09-06 — CHECKBOX LEFT UNTICKED (first pass). This task's own kickoff
+      assumed 11.2 (the retro) had already run; ground truth at session start showed BOTH §11.1 and §11.2
+      still unticked, no landing commit for either, and `retro.md` carrying zero M10 entries. Flagged to the
+      user (AGENTS.md's kickoff-vs-file-body rule) and confirmed: do the records-reconcile work now, do NOT
       declare M10 closed. Everything below this note that does not depend on 11.1/11.2 having run was done
       this session (the deps correction, the four-strikethrough audit, the D-value map, the F9/F5 re-score,
       the carried-items retro-flag reconcile, the lastExportFormat comment sweep) — see `progress.md`'s
-      2026-09-06 § Now entry for the full report. What could NOT be done, because this Verify line's own
-      words require it: "11.1's pointer walk repeated as a discrete step on the final commit" — there is no
-      11.1 pointer walk yet to repeat. A future session ticks this box once 11.1 and 11.2 have actually
-      landed and this task's remaining Verify clauses are re-run against their real output.**
+      2026-09-06 § Now entry for the full report (now archived, `progress-archive.md`'s M10 entry).
+      ★ **FINAL PASS, 2026-09-06 — CHECKBOX TICKED, M10 CLOSED.** 11.1 (`db996ec`) and 11.2 (`a57dd19`) had
+      since landed, unblocking the three remaining Verify clauses: (1) the pointer walk repeated as a
+      discrete step on this closing commit — grepped `progress.md`/`tasks.md` for `is next`/`at the
+      gate`/`waiting on`/`this commit`/`← NEXT`/`remains`/`STILL NOT CLOSED`/`not closed`/`IN PROGRESS`;
+      every M10-in-progress pointer found (the `Updated:` line, § Now, § Up next) corrected to M10-closed,
+      and the whole task-by-task narrative moved verbatim to `progress-archive.md` in this same commit — the
+      M6/M7/M8/M9 archive-pass precedent, done here in the closing commit itself rather than a separate
+      later pass. (2) The retro's four browser-suite shared-cross-file-state facets (clipboard-consent leak,
+      document-listener leak, enhancer-timing flake, codeDetect corpus-drift) — already consolidated by
+      `retro.md`'s 2026-09-06 entry into ONE drafted standing rule — reconciled in `progress.md`'s § Carried
+      items: each of the three bearing bullets now reads RESOLVED-BY-RETRO, pointing at the one rule, whose
+      placement is PENDING (human to place/commit per C2 — agent drafts, human owns; not this task's job).
+      (3) The pre-existing carried items M10 never touched (sepia, TOC/folder/reader virtualization, the
+      shortcut-registry split, GFM table alignment, the shared browser-test-helper module, the
+      badge-lane/toolbar pass, the D-6…D-12 ledger-text gap) reconfirmed present and unchanged — they
+      PERSIST past M10, not closed by it. `progress.md`'s § Closed milestones gained the M10 one-paragraph
+      summary, mirroring M9's own shape, with the narrative link. No `AGENTS.md` edit (placement is the
+      human's, per C2). Doc-only: `docs/ai/progress.md`, `docs/ai/progress-archive.md`,
+      `specs/010-local-exports/tasks.md` — no `src/`, no build, no suite run (nothing built to verify).**
       `spec-coverage.md`'s F9/F5 rows move from their pre-milestone figures to their landed
       figures. ★ **Every D-value's `decisions.md` entry is present and audited against whether it actually
       landed with its own implementing commit, not backfilled here** — the specific gap M9's own 9.3 named
