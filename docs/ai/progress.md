@@ -1,6 +1,12 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (M11 `tasks.md` APPROVED at GATE 3, this session — `decisions.md`'s M11 GATE 3 entry —
+*Updated: 2026-09-06 (M11 task 1.1 IS DONE, this session — RULING 1 SETTLED as BRANCH (C): even KaTeX-only
+busts the current byte headroom (1,361,716 B measured vs. ~352.8/352.7 KiB headroom, ~3.8×over), MathJax
+independently busts headroom AND fails `pnpm audit --prod` (2 HIGH, via `@mathjax/src`'s `mj-context-menu`
+sub-tree). M11 GROUPS 2–9 ARE SUSPENDED — this is the milestone's LAST commit until a human-reviewed spec
+revisit. See `specs/011-math-rendering/tasks.md`'s 1.1 own RESULT block for the full decomposition. Prior
+entry, kept for context:
+M11 `tasks.md` APPROVED at GATE 3, same day — `decisions.md`'s M11 GATE 3 entry —
 `specs/011-math-rendering/tasks.md`, 9 groups / 16 tasks (18 if group 7 opens), three gate-3 findings ruled
 (the MathJax package name approved-as-candidate, the copy-as-MathML action's UI placement ruled
 panel/menu-row with task 6.2's text corrected, RULING 4's task-7.2 pause confirmed no-action-needed). ALL
@@ -50,7 +56,41 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
-**M11 `tasks.md` APPROVED at GATE 3, 2026-09-06 — `decisions.md`'s M11 GATE 3 entry —
+**★ M11 TASK 1.1 IS DONE, 2026-09-06 — RULING 1 SETTLED AS BRANCH (C): NEITHER ENGINE SHIPS AT CURRENT
+HEADROOM. M11 GROUPS 2–9 ARE SUSPENDED — THIS IS THE MILESTONE'S LAST COMMIT UNTIL A HUMAN-REVIEWED SPEC
+REVISIT.** `katex` ALONE, wired exactly as task 4.3 plans (`import('katex')` + `katex/dist/katex.min.css
+?inline`), decomposes to 258,852 B JS (a new lazy chunk — does NOT dedupe with mermaid's own transitive
+`katex ^0.16.45`, measured not assumed) + 29,916 B CSS text in the app chunk + **1,072,948 B of KaTeX's own
+font assets** (59 files, all three formats — Vite's CSS pipeline copies every `url()` KaTeX's stylesheet
+references once `?inline` resolves it) = **1,361,716 B total, ~3.8× the entire ~352.8/352.7 KiB `.output`
+headroom, alone**, and pushes `pnpm zip` 338,083 B over the <2 MB bound, alone. The verified MathJax
+package (`@mathjax/src@4.1.3` — see below, NOT `mathjax-full`) costs 1,339,852 B independently (no font
+assets, all JS, dominated by its SVG-output module) and separately fails `pnpm audit --prod` (2 HIGH, via
+its `mj-context-menu → rimraf → glob → minimatch → brace-expansion` sub-tree). Combined: 2,701,471 B.
+`@mdit/plugin-tex`'s own always-loaded floor (D-1's tokenizer, unconditional on both content-script and
+app-page graphs) is +3,957 B EACH (+7,914 B `.output` total) — real, but immaterial next to the engine
+costs. **Finding 1 resolved by live registry check, not taken on faith: `mathjax-full` is
+npm-DEPRECATED** ("Version 4 replaces this package with the scoped package @mathjax/src"), latest 3.2.2
+from 2022-06-08, four+ years stale — `@mathjax/src@4.1.3` (Apache-2.0, native ESM, actively maintained,
+last published 2026-07-03) is the verified, installed candidate instead, stated here per Finding 1's own
+"never silently substitute without stating it" instruction. `dependencies` moved **6 → 9**
+(`+@mathjax/src`, `+@mdit/plugin-tex`, `+katex`) — all three left installed, pending the human revisit's own
+call on whether to keep or revert them (branch (C) is silent on this, unlike branch (B)'s explicit MathJax
+revert; no keep-or-revert step was invented). Content-script bytes stayed md5-identical to HEAD throughout
+every arm (RULING 2 holds structurally), confirmed with a firing control (a scratch static `import katex`
+in the content-script moved CS bytes 336,123→595,331 B; reverted, restored exactly). **A citation
+divergence, flagged not silently followed:** this session's fresh clean rebuild measured content-script
+bytes at 336,123 B both engines, not the 334,858 B this repo's own standing-invariants text (`tasks.md`,
+AGENTS.md) states — `.output`/zip totals match the stated frame exactly, so only the CS-specific prose
+figure is stale (confirmed via `pnpm install --frozen-lockfile`: `node_modules` matches the committed
+lockfile, ruling out drift); this session's 336,123 B is authoritative going forward, per AGENTS.md's own
+"fresh clean build re-measures and is authoritative" framing. Full decomposition (all six ablation arms,
+governed-install assertions, SBOM/audit/licence results, the two carried API-shape/peer-dependency notes
+for task 3.2) is in `specs/011-math-rendering/tasks.md`'s own 1.1 RESULT block — read there, not
+re-derived. **No further M11 task may proceed** until a human reviews this measurement and either revisits
+`spec.md`'s scope (a subset/lazy-split font strategy, or scope reduction) or closes the milestone.
+Prior entry, kept for context:
+M11 `tasks.md` APPROVED at GATE 3, 2026-09-06 — `decisions.md`'s M11 GATE 3 entry —
 `specs/011-math-rendering/tasks.md`, 9 groups / 16 tasks (18 if group 7's contingent MathJax group opens).
 ★ ALL THREE M11 PLANNING GATES ARE NOW PASSED (gate 1 spec, gate 2 plan, gate 3 tasks). IMPLEMENTATION IS
 AUTHORIZED — task 1.1 onward, in a FRESH SESSION (C14).** `plan.md`'s own gate-2 approval (`decisions.md`'s
@@ -96,22 +136,37 @@ and the link to the archived detail.
 
 ## Up next
 
-**Task 1.1 is next — the milestone's own hard gate, in a FRESH SESSION (C14).** All three M11 planning
-gates (spec, plan, tasks) are passed; nothing routes back to a human planning review before implementation.
-`specs/011-math-rendering/tasks.md` decomposes `plan.md`'s nine groups into 16 tasks (18 if task 1.1 rules
-group 7 open) — task 1.1 installs `katex`, the candidate MathJax package (`mathjax-full`, gate-3-approved
-as the candidate to verify, not pinned), AND `@mdit/plugin-tex` (gate 2's own Group-1 measurement fix) for
-real against the current ~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip headroom, measures and decomposes
-each to its own residual, structured as an explicit three-way fork (KaTeX+MathJax ships / KaTeX-only, group
-7 struck / suspended pending a spec revisit). Groups 2–6 are unconditional; group 6's inline half builds the
-§8-1-ruled (b) document-level "copy all formulas as MathML" action, its UI placement now RULED panel/menu-
-row (gate 3) — task 6.2's own remaining call is only the exact row/label/menu-location within that shape.
-No implementation code exists yet; task 1.1 is the milestone's first implementation commit.
+**Nothing in M11 proceeds. Task 1.1 settled RULING 1 as BRANCH (C) — every remaining M11 task (groups
+2–9) is SUSPENDED**, per that task's own literal branch text: *"the commit is the LAST one in this
+milestone until a human-reviewed spec revisit... reopens it."* KaTeX alone (1,361,716 B, dominated by
+1,072,948 B of its own font assets) and MathJax alone (1,339,852 B, and a separate `pnpm audit --prod`
+failure) each independently bust the ~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip headroom — see
+§ Now above and `specs/011-math-rendering/tasks.md`'s own 1.1 RESULT block for the full measurement.
+**The next act is human, not agentic:** review the measurement and either (a) revisit `spec.md`'s scope
+(a font-subset/lazy-split strategy — even a woff2-only restriction still leaves `.output` ~183 KB over
+bound, so a real fix needs more than format-trimming — or a scope reduction), or (b) close M11 without
+shipping math rendering. Until that revisit, no session should attempt tasks 2.1 onward. **Also left for
+that revisit:** whether to revert `katex`/`@mdit/plugin-tex`/`@mathjax/src` from `package.json` (all three
+are currently installed, `dependencies` 6 → 9) or keep them installed for the revisit's own convenience —
+task 1.1's own branch (C) text is silent on this, unlike branch (B)'s explicit MathJax-revert instruction,
+and no keep-or-revert step was invented in their place.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **★ NEW AT M11 1.1, PRE-EXISTING, NOT CAUSED BY THIS TASK — `codeDetect.test.ts`'s CORPUS-DRIFT
+  RECURS.** `pnpm test` at 1.1's own close: 1053/1056 passed, 1 file / 3 tests red in
+  `src/render/codeDetect.test.ts` (the "reproduces the corpus split" / "scores every corpus item"
+  cases) — its live repo-wide unlabeled-fence scan now picks up an unlabeled fence at
+  `specs/011-math-rendering/plan.md:503` (an M11 gate-2 planning doc, landed before this session) that
+  its hardcoded `CODE_ITEMS`/count baseline predates. **Confirmed pre-existing, not introduced by 1.1**:
+  `git stash` + `pnpm test` at bare HEAD `a210c37` reproduces the identical 3 failures; `git stash pop`
+  restored. This is the SAME named pattern as the 11.2 retro's "codeDetect corpus-drift" facet (a
+  fixture that scans real repo prose drifts whenever new prose lands) — a recurrence, not a new class of
+  defect. Out of 1.1's own Files-list fence (package.json/pnpm-lock.yaml only); not fixed here. **HOME:**
+  whichever session next touches `codeDetect.test.ts` or re-calibrates its corpus baseline — likely
+  whoever closes out or reopens M11, since the drift's source is M11's own planning docs.
 - **✅ SETTLED AT 6.3 (M8's records reconcile) — THE PLACEMENT-TENSION NAMED AT 6.1: CARRIED-ITEMS-ONLY,
   NO NEW `tasks.md` CHECKBOX.** The item below is kept as written, because it is the record of the
   tension and why it was routed to 6.3. **The call:** M8's two 6.1 findings (the badge lane, the

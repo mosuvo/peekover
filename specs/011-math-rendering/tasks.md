@@ -132,7 +132,7 @@ RULING 4 (if it goes live) is task 7.2's own pause point, not a scheduled gate t
 
 ## 1 — The measurement (RULING 1 — HARD GATE, every later group is written against its result)
 
-- [ ] **1.1 Install `katex`, `@mdit/plugin-tex`, and the candidate MathJax package FOR REAL; measure and
+- [x] **1.1 Install `katex`, `@mdit/plugin-tex`, and the candidate MathJax package FOR REAL; measure and
       decompose; SETTLE RULING 1. ★ THE FORK IS EXPLICIT — this task cannot fail silently into task 2.1
       (D-1, D-2, D-10; RULING 1; the Group-1 measurement fix).** Resolve the MathJax package identity first
       (§ Gate-3 finding 1 — `mathjax-full`, verified against the current registry, not taken on faith).
@@ -172,6 +172,102 @@ RULING 4 (if it goes live) is task 7.2's own pause point, not a scheduled gate t
 (KaTeX-only, KaTeX+MathJax), PLUS `@mdit/plugin-tex`'s own always-loaded residual accounted for separately
 from either engine arm; scanner green with its self-test firing. This is the only valid outcome that
 authorizes group 2.*
+
+★ **RESULT — BRANCH (C): EVEN KATEX-ONLY BUSTS HEADROOM. RULING 1 SETTLED AS "NEITHER ENGINE SHIPS AT
+CURRENT HEADROOM"; GROUPS 2–9 ARE SUSPENDED, NOT AUTHORIZED.** Measured against the fresh clean-rebuild
+baseline (`.output` 4,881,585 B Cr / 4,881,701 B Fx, headroom ~352.8/352.7 KiB; zip 1,474,835/1,474,893 B,
+headroom ~607.8/607.7 KiB — this session's own re-measurement, superseding the stale content-script figure
+below): **(a)** `@mdit/plugin-tex`'s always-loaded floor (wired into `parse.ts`'s shared instance, scratch,
+reverted) costs **+3,957 B on EACH of the content-script and app-page graphs (+7,914 B `.output` total,
+both engines)** — a real, unconditional per-document tax, not a lazy cost. **(b)** `katex` ALONE, wired
+exactly as task 4.3 plans (dynamic `import('katex')` + `katex/dist/katex.min.css?inline`), decomposes to
+**258,852 B JS (new lazy chunk, does NOT dedupe with mermaid's own transitive `katex-B7rAX3Vi.js`, itself
+unchanged at 258,879 B — arm (f) measured, dedup does NOT hold) + 29,916 B CSS text inlined into the app
+chunk + 1,072,948 B of KaTeX's own font assets (59 files: 20 `.ttf` / 20 `.woff` / 19 `.woff2`, ALL THREE
+formats, copied into `.output/assets/` by Vite's CSS asset pipeline once the `?inline` import is resolved)
+= 1,361,716 B total**, alone, with no MathJax involved — **~3.8× the entire `.output` headroom**, and pushes
+`pnpm zip` to 2,435,235 B, **338,083 B over the <2 MB bound**, alone. A woff2-only restriction (dropping the
+`.woff`/`.ttf` fallback formats, both current Chrome and Firefox supporting woff2 natively) would save
+816,780 B (cutting fonts to 256,168 B) but STILL leaves `.output` ~183 KB over the 5 MiB bound before the JS
+chunk or CSS text are even added — reported as a data point for the human revisit, NOT adopted (subsetting
+fonts is a scope decision task 1.1 is forbidden from choosing). **(c)** the verified MathJax package (see
+Finding 1 below) ALONE costs **1,339,852 B, entirely JS (no separate font assets — SVG output embeds glyph
+data in-module), dominated by the SVG output jax's own 1,123,223 B chunk**, and independently fails
+`pnpm audit --prod` (2 HIGH vulnerabilities, below) — a second, independent disqualifier. **(d)** BOTH
+combined: **2,701,471 B measured** (vs. 2,701,568 B naive sum of (b)+(c) — a 97 B non-linearity, confirming
+no dedup/interaction between the two engines, expected and immaterial). **(e)** no unexpected transitive
+JS weight beyond what's named in (b)/(c)/(f); MathJax's transitive dependency tree does carry unexpected
+supply-chain surface (see Finding 2). **(f)** `katex`/mermaid's own transitive `katex ^0.16.45` do **NOT**
+dedupe — confirmed by ablation, two separate `katex-*.js` chunks ship. Content-script bytes **336,123 B
+both engines, md5-identical to HEAD across every arm** (RULING 2 holds structurally) — **a firing control
+was run** (a static `import katex from 'katex'` wired into `entrypoints/peekover.content.ts`, scratch,
+rebuilt: CS moved 336,123 → 595,331 B; reverted: CS restored byte- and md5-identical). **★ A base-line
+divergence, flagged per standing rule #1, not silently followed either way:** this session's clean
+`rm -rf .output` rebuild at HEAD `a210c37` measured content-script bytes at **336,123 B both engines**, not
+the **334,858 B** this file's own standing-invariants header (and AGENTS.md) states — `.output`/zip totals
+match the stated frame exactly, so the discrepancy is isolated to the CS-specific figure quoted in prose;
+`pnpm install --frozen-lockfile` confirms `node_modules` matches the committed lockfile exactly (not a
+drifted dependency), so the stale figure is a citation error carried in prose, not a build non-determinism
+— the same shape 009's own 2.1 baseline-citation divergence took (`progress-archive.md`). This session's own
+336,123 B fresh-build figure is authoritative going forward per AGENTS.md's own "your fresh clean build
+re-measures and is authoritative" framing; neither this file's header nor AGENTS.md is edited here (out of
+this task's Files-list fence) — carried for whoever next touches either.
+**FINDING 1 — THE VERIFIED MATHJAX PACKAGE IS `@mathjax/src@4.1.3`, NOT `mathjax-full`, STATED NOT SILENTLY
+SUBSTITUTED.** `mathjax-full` (npm registry, checked live) is **DEPRECATED** — `pnpm view mathjax-full
+deprecated` returns *"Version 4 replaces this package with the scoped package @mathjax/src"* — latest
+version 3.2.2, last published 2022-06-08, over four years stale. `@mathjax/src` is the actively maintained
+v4 successor: latest 4.1.3 (published 2026-07-03), Apache-2.0, `"type": "module"` (native ESM, no CJS
+interop needed), no install scripts, not deprecated. Installed and measured as the verified candidate per
+Finding 1's own instruction ("install and measure it instead if it's the honest candidate, but never
+silently substitute without stating it"). Wired via its documented direct-usage API
+(`@mathjax/src/js/{mathjax,input/tex,output/svg,adaptors/liteAdaptor,handlers/html}.js`, resolving through
+its `./js/*` → `./mjs/*` ESM export map) — SVG output chosen for the probe (no external font-asset
+dependency, unlike CHTML output, which would reopen the same font-asset question as (b)).
+**FINDING 2 — `pnpm audit --prod` EXIT=1, TWO HIGH-SEVERITY FINDINGS, BOTH VIA `@mathjax/src`.** Both are
+`brace-expansion` DoS advisories (GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895), reached via
+`@mathjax/src → mj-context-menu → rimraf → glob → minimatch → brace-expansion` — `mj-context-menu` is a
+right-click accessibility/context-menu FEATURE of MathJax this milestone would never wire up (spec §6's own
+IS-NOT list excludes any authoring/interactive surface for math), but it ships as a hard (non-optional)
+dependency of `@mathjax/src`, so its own vulnerable sub-tree comes along regardless. This is a SECOND,
+INDEPENDENT disqualifier for the MathJax arm, on top of (c)'s byte cost — not reached in the branch decision
+below because (b) alone already settles it, but recorded so a future revisit does not re-discover it.
+**GOVERNED INSTALL, ASSERTED:** `Object.keys(pkg.dependencies).length` **6 → 9** (`+@mathjax/src`,
+`+@mdit/plugin-tex`, `+katex`), asserted programmatically, not eyeballed. Licences: `katex` MIT,
+`@mdit/plugin-tex` MIT, `@mathjax/src` Apache-2.0 — no `preinstall`/`install`/`postinstall` script on any of
+the three (their own `scripts` are dev-only build/test/lint entries; `katex`'s `prepare: husky` does not run
+for a registry-installed dependency). `pnpm why --prod dompurify`: **one resolved copy** (`dompurify@3.4.13`,
+shared by `mermaid` and the root) — the 007 1.1 dedupe-gate shape holds. SBOM regenerated:
+**186 runtime components** (`sbom.cdx.json`, gitignored/transient per its own header — NOT staged, correcting
+this kickoff's assumption that it is a committed artifact), license roll-up MIT 126 / ISC 35 / BlueOak-1.0.0
+7 / BSD-3-Clause 7 / Apache-2.0 6 / MPL-2.0-OR-Apache-2.0 1 / BSD-2-Clause 1 / Python-2.0 1 / Unlicense 1 /
+Unknown 1 (one package's licence not resolved — a carried item, not chased here). A structurally distinct
+finding while regenerating: 17 packages (mostly `@mathjax/src`'s own tree — `commander` appears **twice**,
+i.e. two distinct versions coexist, a duplicate the SBOM surfaced but did not create) report "no integrity
+hash" from `generate-sbom.ts`'s lockfile scan — its regex does not match peer-dependency-suffixed
+`pnpm-lock.yaml` keys (e.g. `@mdit/plugin-tex@1.1.0(markdown-it@14.3.0)`), a pre-existing limitation newly
+exposed by this task's peer-dependency chain, out of this task's Files list (`generate-sbom.ts` is not
+touched), carried for whoever next revisits that script. **A NON-BLOCKING API-SHAPE NOTE, informational
+only (task 3.2's own job to resolve, not this task's):** `@mdit/plugin-tex`'s installed version (1.1.0)
+declares a **mandatory `render` option** (`md.use(tex, {render: fn})` throws without one) — a different
+shape than D-1's "tokenizer-only, our own renderer.rules on top" framing assumed. Probed live: after
+`md.use(tex, {render: <stub>})`, `md.renderer.rules['math_inline']`/`['math_block']` **are** present and
+overridable exactly as D-1/task 3.2 plans — so the mandatory option is satisfiable with a throwaway
+no-op function, not a "not usable standalone" blocker; flagged for 3.2 to verify directly rather than
+re-derive from scratch. `@mdit/plugin-tex` also declares a peer dependency on `markdown-it@^15.0.0`
+(this repo pins `^14.3.0`, installed `14.3.0`) — pnpm warns but does not block, and the plugin functions
+against 14.3.0 in the probe above; flagged, not resolved (a `markdown-it` version bump is outside this
+task's Files list and its own ripple is unassessed).
+**ACCEPTANCE — BRANCH (C).** Per this task's own literal branch text: *"every remaining task in this file
+is SUSPENDED; the commit is the LAST one in this milestone until a human-reviewed spec revisit... reopens
+it."* **Groups 2–9 are NOT authorized by this commit.** Per this task's own explicit flag, the disposition
+of the three installed packages (`katex`, `@mdit/plugin-tex`, `@mathjax/src` — keep installed for the
+revisit's convenience, or revert to 6 dependencies) is **NOT decided here** — branch (B)'s text names an
+explicit MathJax revert; branch (C) is silent on all three, and no keep-or-revert step is invented. **This
+commit ships all three installed (`dependencies` 6 → 9)**, `package.json`/`pnpm-lock.yaml` left exactly as
+the governed install produced them, pending the human's own call at the revisit. `git diff
+tests/golden/output/` **EMPTY**. Manifest **654 / 770 B**, `permissions: []`, no
+`web_accessible_resources` — confirmed unmoved even with KaTeX's fonts wired in the scratch probe (its
+`/assets/...` URLs resolve same-origin within the privileged app page; the hard-stop did NOT fire).
 
 ## 2 — The math sanitizer profile (D-5)
 
