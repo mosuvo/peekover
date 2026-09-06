@@ -380,20 +380,25 @@ and confirmed or corrected; `mount.ts` diff empty.*
       (block); §4 copy actions]
 
 - [ ] **6.2 Inline math's copy actions — text-selection for LaTeX (zero new code), a document-level "copy all
-      formulas as MathML" action (§8-1 ruled (b)). ★ UI PLACEMENT UNRESOLVED — see § Gate-3 finding 2,
-      resolved AT this task, not before it.** Copy-as-LaTeX for inline math is VERIFIED, not built: the
-      `<code class="peekover-math-inline">` element's own text content at rest is the literal `$…$` source
-      (D-7), so ordinary browser text-selection + copy already satisfies §4's "copy the exact source LaTeX as
-      authored" with zero new code — this task's job is to prove that, not to write a handler for it.
-      Copy-as-MathML is a NEW document-level action (one action, covering every formula in the document,
-      block and inline) that walks every `<math>` element post-render and serializes them, reusing
-      `XMLSerializer`, task 6.1's own mechanism, generalised to "all," not "one." Its trigger's placement is
-      this task's own decision (a toolbar control, a panel row, or a keyboard shortcut — task-time judgment,
-      confined; whichever is chosen is recorded in the commit, not silently assumed from a mockup that does
-      not exist for it).
-      Files: `src/render/mathView.ts` (the document-level MathML-collection function) · wherever the trigger
-      is placed (an existing chrome module — task-time choice, named in the commit) ·
-      `tests/browser/mathActions.browser.test.ts` (inline half, additive to 6.1's file)
+      formulas as MathML" action (§8-1 ruled (b)). ★ UI PLACEMENT RULED at gate 3 (`decisions.md`'s M11
+      GATE 3 entry) — a PANEL/MENU-ROW action, never a toolbar button and never a keyboard shortcut; this
+      task places the exact row/label/menu-location within that ruled shape, not the shape itself.** Copy-
+      as-LaTeX for inline math is VERIFIED, not built: the `<code class="peekover-math-inline">` element's
+      own text content at rest is the literal `$…$` source (D-7), so ordinary browser text-selection + copy
+      already satisfies §4's "copy the exact source LaTeX as authored" with zero new code — this task's job
+      is to prove that, not to write a handler for it. Copy-as-MathML is a NEW document-level action (one
+      action, covering every formula in the document, block and inline) that walks every `<math>` element
+      post-render and serializes them, reusing `XMLSerializer`, task 6.1's own mechanism, generalised to
+      "all," not "one." Its trigger's placement is RULED (gate 3): a panel/menu-row action wherever the
+      app-page's existing action affordances already live (the M10 export-panel precedent, or the
+      equivalent menu surface) — never prime toolbar real estate (a rare, document-level, export-shaped
+      action, not a frequent one) and never a global keyboard shortcut (§3.10's anti-clutter posture, §4's
+      no-new-global-single-key-shortcut constraint). This task's own decision is confined to the exact
+      row/label/menu-location within that ruled shape, recorded in the commit.
+      Files: `src/render/mathView.ts` (the document-level MathML-collection function) · the panel/menu-row's
+      host module (an existing chrome module carrying the app-page's action affordances — task-time choice
+      of exact row/label, named in the commit) · `tests/browser/mathActions.browser.test.ts` (inline half,
+      additive to 6.1's file)
       Verify: (**tests/browser** — Cr+Fx) selecting an inline formula's rendered text and copying it produces
       the exact `$…$` source, byte-identical, over a fixture including escaped `\$` — proving the
       zero-new-code claim, not merely asserting it. The document-level action produces a payload containing

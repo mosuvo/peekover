@@ -81,10 +81,16 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 APPROVED (2026-09-06, four §9 rulings)
-  and gate-2 APPROVED (2026-09-06 — `decisions.md`'s M11 GATE 2 entry); `tasks.md` is DRAFTED (gate-3
-  draft, this session — `specs/011-math-rendering/tasks.md`, 9 groups / 16 tasks, 18 if group 7 opens),
-  AWAITING HUMAN GATE-3 APPROVAL before implementation begins in a fresh session (C14).** `plan.md`'s
+- Current milestone: **M11 (`specs/011-math-rendering/`) — ALL THREE PLANNING GATES ARE PASSED: gate-1
+  APPROVED (2026-09-06, four §9 rulings), gate-2 APPROVED (2026-09-06 — `decisions.md`'s M11 GATE 2 entry),
+  and gate-3 APPROVED (2026-09-06 — `decisions.md`'s M11 GATE 3 entry, `specs/011-math-rendering/tasks.md`,
+  9 groups / 16 tasks, 18 if group 7 opens, three gate-3 findings ruled). ★ IMPLEMENTATION IS NOW
+  AUTHORIZED — task 1.1 (the byte-measurement hard gate settling RULING 1) is the next act, in a FRESH
+  SESSION (C14).** The three gate-3 findings: the concrete MathJax package name (`mathjax-full`) is
+  APPROVED AS TASK 1.1'S CANDIDATE TO VERIFY, not a pinned choice; the document-level "copy all formulas as
+  MathML" action's UI placement (§8-1 ruled (b)) is RULED a PANEL/MENU-ROW action, never a toolbar button
+  or keyboard shortcut, with task 6.2's own text corrected to state it; RULING 4's possible mid-task-7.2
+  pause is confirmed NO ACTION NEEDED, correctly deferred already. `plan.md`'s
   twelve D-values (D-1…D-12) are SEALED as
   M11's architecture — a new markdown-it passthrough-marker rule (D-1), the single-importer engine
   module(s) (D-2), the two-call-site enhancer wiring reused from 007 (D-3), the KaTeX
@@ -105,6 +111,7 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   amends spec §4's copy criterion, recorded in `decisions.md`'s gate-2 entry rather than by editing
   `spec.md` (sealed, per the M7–M10 precedent). M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 =
   F2 Math (KaTeX, contingent MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML). Per the
-  M7–M10 precedent, the spec's own status line and §9 text stay unedited post-gate-1, and `plan.md`'s own
-  status line likewise stays "draft awaiting gate 2" post-gate-2 — `decisions.md`'s 2026-09-06 M11 GATE 1
-  and GATE 2 entries are the approvals of record.
+  M7–M10 precedent, the spec's own status line and §9 text stay unedited post-gate-1, `plan.md`'s own
+  status line likewise stays "draft awaiting gate 2" post-gate-2, and `tasks.md`'s own status line stays
+  "DRAFT awaiting gate 3" post-gate-3 — `decisions.md`'s 2026-09-06 M11 GATE 1, GATE 2, and GATE 3 entries
+  are the approvals of record.

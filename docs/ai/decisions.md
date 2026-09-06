@@ -1,6 +1,59 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M11 GATE 3 — `tasks.md` (spec 011, math rendering) APPROVED, WITH THREE FINDINGS RULED
+  (ONE RULED-AS-FRAMED, ONE RULED CONCRETELY, ONE NO-ACTION-DEFERRED). IMPLEMENTATION IS AUTHORIZED — task
+  1.1 onward, a FRESH SESSION (C14), not here.** `specs/011-math-rendering/tasks.md` was reviewed and
+  approved at gate 3. **`tasks.md`'s own status line stays "DRAFT awaiting gate 3" and THIS ENTRY IS THE
+  APPROVAL OF RECORD** — the same bank-not-artifact precedent this project has held since M7:
+  007/008/009/010 all still read "draft" post-their-own-gates; `tasks.md`'s one substantive gate-3
+  correction (below) is made in the file's own task text, but its status line is not one of them.
+  **THE APPROVAL:** the nine-group / 16-task breakdown (18 if group 7 opens) is APPROVED as M11's
+  implementation plan. Task 1.1 — the byte-measurement hard gate, structured as the explicit three-way fork
+  (KaTeX+MathJax ships / KaTeX-only with group 7 struck / suspended pending a spec revisit) — settles
+  RULING 1 (§9-1), unchanged in shape from gate 1's own framing, now also measuring `@mdit/plugin-tex`
+  (D-1's tokenizer, an always-loaded parse-graph dependency) alongside `katex`/MathJax per gate 2's own
+  measurement fix. The sealed architecture (D-1…D-12, `plan.md` §0) and every prior gate ruling (gate-1's
+  four §9 rulings, gate-2's §8-1 = option (b) and the Group-1 `@mdit/plugin-tex` measurement fix) stay
+  inherited-closed throughout — no D-value and no prior ruling is reopened by this approval.
+  **FINDING 1 — THE CONCRETE MATHJAX PACKAGE NAME: APPROVED AS-FRAMED, NOT PINNED.** `tasks.md`'s preamble
+  named `mathjax-full` as task 1.1's working candidate to verify against the current registry (licence,
+  maintenance cadence, ESM/CJS shape, install scripts) before installing, on the identical
+  "measure, don't assume" posture 010's own Ruling 1 applied to its ZIP-writer package. **This gate does
+  NOT pin `mathjax-full` as the shipped package** — task 1.1 measures it and MAY find a lighter build (a
+  component build, a lazy-loadable distribution) fits the headroom better where the full build does not.
+  The candidate name is approved as the starting point for that measurement, not as a settled choice.
+  **FINDING 2 — THE DOCUMENT-LEVEL "COPY ALL FORMULAS AS MATHML" ACTION'S UI PLACEMENT: RULED.** `tasks.md`'s
+  preamble flagged this action (§8-1's ruled mechanism, gate-2 option (b)) as having no stated UI home — a
+  toolbar button, a keyboard shortcut, and a panel/menu row were named as live, undecided options, routed
+  to task 6.2 to resolve at task time. **RULED: a PANEL/MENU-ROW action — NEVER a toolbar button and NEVER
+  a keyboard shortcut.** Reasoning: this is a rare, document-level, export-shaped action, not a frequent
+  one, so it does not earn prime toolbar real estate; spec §3.10's anti-clutter posture and spec §4's
+  no-new-global-single-key-shortcut constraint both push against a shortcut. It lives as a menu/panel row
+  wherever the app-page's existing action affordances already live — the M10 export-panel precedent, or the
+  equivalent menu surface — with task 6.2 placing the exact row/label/menu-location concretely within that
+  ruled shape. **★ THIS RESOLVES THE FINDING `tasks.md` ROUTED TO TASK 6.2 AS OPEN**: 6.2 now builds a
+  panel/menu-row action, not an open-placement question. `tasks.md`'s own task 6.2 text is corrected in
+  place (2026-09-06) to state this ruled placement, per the one-substantive-correction rule this entry's
+  gate-2 counterpart used for `plan.md`'s own Group 1 fix.
+  **FINDING 3 — RULING 4 MAY PAUSE TASK 7.2: NO ACTION, CORRECTLY DEFERRED.** `tasks.md`'s preamble restated
+  (not newly raised) that RULING 4 (toggle semantics, gate-1 §9-4) stays moot until task 1.1 ships MathJax,
+  and that task 7.2 itself already notes it must stop and flag back for that ruling before scoping the
+  settings field/toggle concretely if group 7 opens before RULING 4 lands. **This finding needs no gate-3
+  action** — it is a correct restatement of an already-deferred contingency, not a new open question; task
+  7.2's own noted pause-point stands as written.
+  **WHAT THIS APPROVAL DOES:** approves the nine-group/16-task breakdown as M11's implementation plan;
+  approves-as-framed Finding 1 (the candidate package, not a pinned one); RULES Finding 2 (panel/menu-row
+  placement) and corrects `tasks.md`'s task 6.2 text to state it; confirms Finding 3 needs no action;
+  AUTHORIZES IMPLEMENTATION — task 1.1 onward — in a fresh session (C14), per WORKFLOW.md §5.3's "no
+  implementation code before `tasks.md` is approved," now satisfied. **All three of M11's planning gates
+  (gate 1 spec, gate 2 plan, gate 3 tasks) are now PASSED.**
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install any dependency, run task 1.1's own measurement
+  (RULING 1 stays open pending that task), pin the MathJax package name, or reopen any D-value, any prior
+  gate ruling, or any plan §3.5 audit row. It does not edit `spec.md` or `plan.md`. **Revisit-when:** task
+  1.1's own measurement (RULING 1, unchanged in shape by this gate); RULING 4 (toggle semantics), if and
+  only if RULING 1 ships MathJax and group 7 opens.
+
 - **2026-09-06 · M11 GATE 2 — `plan.md` (spec 011, math rendering) APPROVED AS THE SEALED ARCHITECTURE,
   WITH ONE RULING (§8-1) AND ONE MEASUREMENT FIX (GROUP 1). `tasks.md` is AUTHORIZED — a fresh session
   (C14), not written here.** `specs/011-math-rendering/plan.md` was reviewed and approved at gate 2.
