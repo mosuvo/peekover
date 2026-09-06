@@ -1,6 +1,16 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M10 §11.1 — RULING M-3's REVISIT-WHEN FIRES CLEAN: MARGINS/HEADER/FOOTER CONFIRMED-FINAL,
+  NOT JUST PROVISIONAL.** Ruling M-3 (2026-09-04 M10 GATE, below) kept the shipped `@page` values
+  provisional specifically pending "11.1's already-budgeted human walk," to "adjust there only if the eye
+  finds a problem, not here on prose alone." 11.1's walk ran (real Chromium, extension loaded) and found no
+  problem — margins **2cm/1.5cm/2.2cm**, header *"Peekover"*, footer *"Page X of Y"* all read correctly by
+  eye. No adjustment made, per the ruling's own revisit-when. **M-3's status moves from "kept provisional
+  pending visual walk" to CONFIRMED-FINAL** — nothing in the shipped `@page` block changes; this is a status
+  update on the ruling, not a new decision. Rests on: `tasks.md` §11.1's DONE record; `progress.md`'s
+  2026-09-06 § Now entry (task 11.1). No further revisit-when — the one condition M-3 named has now fired.
+
 - **2026-09-04 · M10 GATE — TASK 10.4: THE HUMAN DECISION GATE (M-1/M-2/M-3 + 8.3's build-or-drop, RULED)
   AND THE BYTE-LEDGER'S FINAL RECONCILIATION. Four rulings recorded verbatim below, each tied to the
   finding it rests on — NOT re-adjudicated here; CC records what the human ruled.**

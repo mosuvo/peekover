@@ -825,7 +825,7 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
 
 ## 11 — Human milestone-close gate + retro + the records reconcile
 
-- [ ] **11.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** Walk, on real
+- [x] **11.1 Milestone-close human gate (NAMED, required — not removable by adding more tests).** Walk, on real
       Chromium and real Firefox with an extension loaded (no harness reaches these): whether the export panel
       reads as discoverable or as clutter (008/009's identical question, transplanted a third time); print/PDF
       output legibility against a real long document; the 10.1–10.3 candidates' actual feel, confirming or
@@ -833,11 +833,30 @@ ledger residual **0** (`.output`, both engines), dependency capstone **net zero*
       extension into Firefox, so this walk is that engine's only evidence); **zero unexpected network with the
       Network tab open** across every export/copy/print path, a second confirmation alongside 9.2's automated
       one.
-      Verify (**human gate**): each item walked and its verdict recorded. ★ **The walk RECORDS ITS VIEWPORT(S)
-      the way it records its engines, and walks at least one WIDE viewport** (M6 finding 2). A *"reads as
-      clutter / broken / illegible"* verdict is a real finding → a task added below this line, not a silent
-      fix. ★ **POINTER WALK, DONE AS A DISCRETE STEP**: § Now, § Blockers and § Up next grepped for `is next`,
-      `at the gate`, `waiting on`, `this commit`, `← NEXT`; every stale assertion corrected. Golden EMPTY ·
+      **★ DONE, 2026-09-06 — HUMAN WALK RUN AND REPORTED BY THE HUMAN, RECORDED HERE BY CC (CC did not re-run
+      it — no agent substitute exists for this task by construction, AGENTS.md's own rule).** The human
+      walked the full checklist on real Chromium AND real Firefox, extension loaded: **ALL ITEMS PASS, no
+      SURPRISE, no FAIL.** Two verdicts called out specifically, being this walk's own reason for existing:
+      **A1** — the §3.1 local-image break confirmed (local images do NOT render in the reader export, the
+      expected result that confirms the §3.1 drop's own premise). **A2** — the M-3 margin/header/footer
+      visual check: margins, header ("Peekover"), footer ("Page X of Y") read correctly by eye on
+      Chromium/app-page — this is the visual sign-off 10.3/10.4 explicitly deferred here, and it turns
+      Ruling M-3's "keep provisional" (`decisions.md` 2026-09-04 M10 GATE) into **confirmed-final**: no
+      problem found, so no adjustment made, per that ruling's own revisit-when. The rest of the matrix — the
+      export-panel discoverability question, print/PDF legibility, the 10.1–10.3 candidates' feel, the
+      export/copy/print action matrix (C1–C4), the known-gaps-stay-gapped checks (B1 Firefox no `@page`
+      header, B2 content-script no `@page`), the failure state (D1 "Copy failed" never a false success), the
+      zero-network re-confirmation (E1), the permissions-empty check (F1), reader-survives (D2) — **ALL PASS,
+      both engines.**
+      Verify (**human gate**): each item walked and its verdict recorded — done, above. ★ **The walk RECORDS
+      ITS VIEWPORT(S) the way it records its engines, and walks at least one WIDE viewport** (M6 finding 2) —
+      included in the human's ALL ITEMS PASS report. A *"reads as clutter / broken / illegible"* verdict is a
+      real finding → a task added below this line, not a silent fix — **none reported; no task added.**
+      ★ **POINTER WALK, DONE AS A DISCRETE STEP**: § Now, § Blockers and § Up next grepped for `is next`,
+      `at the gate`, `waiting on`, `this commit`, `← NEXT` — run this task's own commit; only pre-existing
+      M7-era historical prose (§ Blockers, already correctly resolved and self-documenting) matched, and
+      `progress.md`'s own M10 § Now/§ Up next entries were already consistent (11.3's own session had already
+      corrected the pointer state) — **no stale assertion found, none corrected.** Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [§5 human-gate list; §8 M-1…M-3; M6 finding 2]
 
 - [ ] **11.2 Retro (M10 close) — in a FRESH SESSION (the M5/M6/M7/M8/M9 precedent). Run `/retro`: the interview

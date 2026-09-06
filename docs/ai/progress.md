@@ -41,7 +41,30 @@ named. Group 9 CLOSES. Test-only — no `src/` change.)*
 
 ## Now (start here)
 
-**★★★★★ M10 TASK 11.3, PARTIAL — THE RECORDS-RECONCILE PUNCH LIST WORKED, 2026-09-06. ★ M10 IS NOT
+**★★★★★ M10 TASK 11.1 LANDED, 2026-09-06 — THE HUMAN MILESTONE-CLOSE WALK, RUN BY THE HUMAN ON REAL
+CHROMIUM AND REAL FIREFOX, EXTENSION LOADED. ALL ITEMS PASS.** CC recorded this result; CC did not run
+the walk (no agent substitute exists for a task whose whole nature is human-only — the same rule 11.3's
+own note below cites). **M10 is STILL NOT CLOSED** — 11.2 (the `/retro` interview, fresh session) is
+next, then a final 11.3 pass.
+
+Two verdicts matter beyond a bare PASS, since they're this walk's own reason for being human-only:
+**A1** — the §3.1 local-image break confirmed (local images do NOT render in the reader export — the
+expected result that confirms the §3.1 scope-reduction's own premise, empirically, the one thing no test
+harness could reach). **A2** — the M-3 margin/header/footer visual check (margins, header "Peekover",
+footer "Page X of Y") reads correctly by eye on Chromium/app-page. **This turns Ruling M-3's "keep
+provisional" (`decisions.md` 2026-09-04 M10 GATE) into CONFIRMED-FINAL** — 10.3/10.4 explicitly deferred
+this visual acceptance to 11.1's own walk, and it found no problem, so no adjustment is made, per that
+ruling's own revisit-when. The rest of the checklist — export-panel discoverability, print/PDF
+legibility, the 10.1–10.3 candidates' actual feel, the C1–C4 export/copy/print matrix, the known-gaps
+(B1 Firefox no `@page` header, B2 content-script no `@page`), the failure state (D1, never a false
+success), the zero-network re-confirmation (E1), permissions-empty (F1), reader-survives (D2) — **ALL
+PASS, both engines. No SURPRISE, no FAIL.** The task's own pointer walk (grepped for `is next`, `at the
+gate`, `waiting on`, `this commit`, `← NEXT`) found nothing stale to correct — 11.3's own prior session
+had already left § Now/§ Up next consistent.
+
+**Sequence: 11.1 done → 11.2 (retro, fresh session) next → then a final 11.3 pass closes M10.**
+
+*(Prior entry, kept for the record:)* **M10 TASK 11.3, PARTIAL — THE RECORDS-RECONCILE PUNCH LIST WORKED, 2026-09-06. ★ M10 IS NOT
 CLOSED. 11.3's own checkbox stays UNTICKED — see the flag below before reading further.**
 
 **★ A KICKOFF/GROUND-TRUTH MISMATCH, FLAGGED PER AGENTS.md'S RULE (the file body is ground truth, a
@@ -1823,11 +1846,14 @@ each milestone's one-paragraph close summary and links to the archived detail.
 
 ## Up next
 
-**M10 is IN PROGRESS (2026-09-06) — 11.3's records-reconcile punch list worked (PARTIAL, doc-only), see
-§ Now's top entry.** Next: **11.1** (the human-only milestone-close walk, real Chromium + real Firefox with
-the extension loaded — no agent substitute exists for this), then **11.2** (`/retro`, in a fresh session),
-then a final 11.3 pass that ticks its own checkbox and repeats the pointer walk on the actual closing
-commit. M10 does NOT close until all three have landed.
+**M10 is IN PROGRESS (2026-09-06) — 11.1 landed (the human milestone-close walk, real Chromium + real
+Firefox, extension loaded, ALL ITEMS PASS — see § Now's top entry).** Next: **11.2** (`/retro`, in a fresh
+session), then a final 11.3 pass that ticks its own checkbox and repeats the pointer walk on the actual
+closing commit. M10 does NOT close until both have landed.
+*(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-06) — 11.3's records-reconcile punch
+list worked (PARTIAL, doc-only). Next: 11.1 (the human-only milestone-close walk, real Chromium + real
+Firefox with the extension loaded — no agent substitute exists for this), then 11.2 (`/retro`, in a fresh
+session), then a final 11.3 pass~~ — **11.1 has since landed, see § Now.**
 *(Prior entry, kept for the record:)* ~~M10 is IN PROGRESS (2026-09-04) — task 10.2 landed (M-2's
 export-serialize wall-clock, measured across the corpus per export type; no threshold chosen, that's
 10.4's gate; a real element-count-driven knee found and reported). Next task: 10.3 (M-3, print CSS's
