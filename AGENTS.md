@@ -82,8 +82,10 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
 - Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 APPROVED (2026-09-06, four §9 rulings)
-  and gate-2 APPROVED (2026-09-06, this session — `decisions.md`'s M11 GATE 2 entry); `tasks.md` is
-  AUTHORIZED, next up in a fresh session (C14).** `plan.md`'s twelve D-values (D-1…D-12) are SEALED as
+  and gate-2 APPROVED (2026-09-06 — `decisions.md`'s M11 GATE 2 entry); `tasks.md` is DRAFTED (gate-3
+  draft, this session — `specs/011-math-rendering/tasks.md`, 9 groups / 16 tasks, 18 if group 7 opens),
+  AWAITING HUMAN GATE-3 APPROVAL before implementation begins in a fresh session (C14).** `plan.md`'s
+  twelve D-values (D-1…D-12) are SEALED as
   M11's architecture — a new markdown-it passthrough-marker rule (D-1), the single-importer engine
   module(s) (D-2), the two-call-site enhancer wiring reused from 007 (D-3), the KaTeX
   `trust:false`/`throwOnError` config lockdown (D-4), a third named sanitizer profile admitting KaTeX's

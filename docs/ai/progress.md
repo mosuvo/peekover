@@ -1,6 +1,8 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (M11 `plan.md` APPROVED at GATE 2, this session — `decisions.md`'s M11 GATE 2 entry.
+*Updated: 2026-09-06 (M11 `tasks.md` DRAFTED at GATE 3, this session — `specs/011-math-rendering/tasks.md`,
+9 groups / 16 tasks, awaiting human gate-3 approval; no implementation yet. Prior entry, kept for context:
+`plan.md` APPROVED at GATE 2, same day — `decisions.md`'s M11 GATE 2 entry.
 Twelve D-values (D-1…D-12) are now SEALED as the architecture: D-1 a new markdown-it passthrough-marker
 rule (`@mdit/plugin-tex` as the tokenizer, our own render rules on top — never a rule that renders math
 itself); D-2 one single-importer engine module per engine (`mathEngine.ts`, contingently
@@ -44,8 +46,17 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
-**M11 `plan.md` APPROVED at GATE 2, 2026-09-06, this session — `decisions.md`'s M11 GATE 2 entry is the
-approval of record; `tasks.md` is AUTHORIZED, a fresh session (C14) next.** Gate 1's four §9 rulings
+**M11 `tasks.md` DRAFTED at GATE 3, 2026-09-06, this session — `specs/011-math-rendering/tasks.md`, 9
+groups / 16 tasks (18 if group 7's contingent MathJax group opens), AWAITING HUMAN GATE-3 APPROVAL before
+implementation begins in a fresh session (C14).** `plan.md`'s own gate-2 approval (`decisions.md`'s M11
+GATE 2 entry, 2026-09-06) is unchanged — `tasks.md` decomposes it, reopening no D-value. Task 1.1 (the
+byte-measurement hard gate settling RULING 1) is `tasks.md`'s own first task, structured as an explicit
+three-way fork (KaTeX+MathJax ships / KaTeX-only / suspended pending a spec revisit), unchanged in shape
+from gate 1's own framing, now also measuring `@mdit/plugin-tex` per gate 2's own measurement fix. Three
+gate-3 findings are flagged in `tasks.md`'s own preamble rather than resolved silently: the concrete
+MathJax package name (`mathjax-full` proposed, task 1.1's own job to verify), the document-level "copy all
+formulas as MathML" action's UI placement (§8-1 ruled (b) names the mechanism, not where it lives — task
+6.2's own call), and RULING 4's own possible mid-task-7.2 pause if group 7 opens. Gate 1's four §9 rulings
 (`decisions.md`'s M11 GATE 1 entry) stay inherited closed throughout: §9-1 (dependency set) still
 MEASURED-not-assumed, at task 1.1; §9-2 (content-script surface) CONFIRMED app-page-only; §9-3 (sanitizer
 profile) CONFIRMED; §9-4 (toggle semantics) DEFERRED, contingent on §9-1. `plan.md`'s twelve D-values
@@ -64,8 +75,9 @@ precedent). **Gate 2 also fixed Group 1's measurement list**: task 1.1 must meas
 (D-1's tokenizer, an always-loaded parse-graph dependency) alongside `katex`/MathJax, not only the two
 lazy render engines. Both corrections are made in `plan.md`'s own text (its status line stays "draft
 awaiting gate 2," per the M7–M10 precedent — the approval lives in `decisions.md`, not the status line).
-**Nothing is implemented; no `tasks.md` exists yet.** § Now's own next act is drafting `tasks.md`, a fresh
-session (C14). M10 closed 2026-09-06; its own narrative (19 active tasks ticked + 3 struck-in-place = 22
+**Nothing is implemented; `tasks.md` is a gate-3 DRAFT, not yet human-approved.** § Now's own next act is
+the human gate-3 review of `tasks.md`; on approval, implementation begins at task 1.1, a fresh session
+(C14). M10 closed 2026-09-06; its own narrative (19 active tasks ticked + 3 struck-in-place = 22
 sealed, human milestone-close walk ALL PASS, `/retro` banked, `spec-coverage.md` F9 0%→38% / F5 36%→38%)
 moved to [`progress-archive.md`](progress-archive.md) in the close-and-archive pass immediately prior to
 the gate-1 draft. See § Closed milestones below for the one-paragraph close summary and the link to the
@@ -73,15 +85,16 @@ archived detail.
 
 ## Up next
 
-**`tasks.md` is next — a fresh session (C14). Gate 2 is PASSED; `tasks.md` is AUTHORIZED, not yet
-written.** Per `plan.md`'s own group order, its first task is still task 1.1's byte-budget measurement
-(§3.4/§7-1/§8-1 of the spec, RULING 1, `plan.md` group 1): install KaTeX, the MathJax package, AND
-`@mdit/plugin-tex` (gate 2's own Group-1 measurement fix — D-1's tokenizer, an always-loaded parse-graph
-dependency, not a lazy render engine) for real against the current ~352.8/352.7 KiB `.output` /
-~607.8/607.7 KiB zip headroom, measure and decompose each to its own residual — unchanged in shape from
-gate 1 otherwise, now with `plan.md`'s own sealed architecture (twelve D-values, §8-1 ruled (b)) as the
-frame every later group is written against, including group 6's inline-copy half, unblocked by §8-1's own
-ruling. No `tasks.md` exists yet; no milestone is in progress past the gate-2 approval.
+**Human gate-3 review of `tasks.md` is next; on approval, implementation begins at task 1.1, a fresh
+session (C14).** `specs/011-math-rendering/tasks.md` decomposes `plan.md`'s nine groups into 16 tasks (18
+if task 1.1 rules group 7 open) — task 1.1 is the milestone's own hard gate: install `katex`, the
+candidate MathJax package (`mathjax-full`, flagged for task-time verification), AND `@mdit/plugin-tex`
+(gate 2's own Group-1 measurement fix) for real against the current ~352.8/352.7 KiB `.output` /
+~607.8/607.7 KiB zip headroom, measure and decompose each to its own residual, structured as an explicit
+three-way fork (KaTeX+MathJax ships / KaTeX-only, group 7 struck / suspended pending a spec revisit).
+Groups 2–6 are unconditional; group 6's inline half builds the §8-1-ruled (b) document-level
+"copy all formulas as MathML" action (its own UI placement flagged, unresolved, for task 6.2). No
+implementation code exists; no milestone is in progress past the gate-3 draft.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
