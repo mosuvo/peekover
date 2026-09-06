@@ -1,6 +1,16 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (M11 task 1.1 IS DONE, this session — RULING 1 SETTLED as BRANCH (C): even KaTeX-only
+*Updated: 2026-09-06 (REVISIT-RECORD AMENDMENT, doc-only, same session-day as 1.1 — folds four findings
+from 1.1's own measurement into this file's revisit framing so a future spec-revisit session inherits them
+rather than rediscovers them: a fourth, architecturally-distinct revisit path (KaTeX `output: 'mathml'`,
+§ Up next), a lean toward reverting the three installed-but-unused dependencies (§ Up next), a FALSIFIED
+milestone invariant — `@mdit/plugin-tex` puts math on the content-script module graph, which `tasks.md`'s
+own standing invariants say never happens (§ Carried items) — and the `@mdit/plugin-tex`/`markdown-it`
+peer-dependency mismatch restated as a latent correctness risk, not just a version warning (§ Carried
+items). No sealed artifact (`spec.md`/`plan.md`/`tasks.md` body) is edited; this is NOT task 2.1 and not a
+new milestone task — M11 stays SUSPENDED. All figures cited from `tasks.md`'s own committed 1.1 RESULT
+block; nothing is re-measured. Prior entry, kept for context:
+M11 task 1.1 IS DONE, this session — RULING 1 SETTLED as BRANCH (C): even KaTeX-only
 busts the current byte headroom (1,361,716 B measured vs. ~352.8/352.7 KiB headroom, ~3.8×over), MathJax
 independently busts headroom AND fails `pnpm audit --prod` (2 HIGH, via `@mathjax/src`'s `mj-context-menu`
 sub-tree). M11 GROUPS 2–9 ARE SUSPENDED — this is the milestone's LAST commit until a human-reviewed spec
@@ -151,6 +161,32 @@ are currently installed, `dependencies` 6 → 9) or keep them installed for the 
 task 1.1's own branch (C) text is silent on this, unlike branch (B)'s explicit MathJax-revert instruction,
 and no keep-or-revert step was invented in their place.
 
+**(d) A fourth revisit path, architecturally distinct from the three above (font-subset/lazy-split,
+scope-reduction, close-M11) — KaTeX's `output: 'mathml'` mode.** KaTeX can emit browser-native MathML with
+NO parallel HTML layout tree and NO bundled font assets, dropping BOTH the 1,072,948 B of KaTeX's own font
+assets AND the 29,916 B of inlined CSS text 1.1's arm (b) measured, at a stroke — leaving only the
+~258,852 B lazy JS chunk plus `@mdit/plugin-tex`'s own +3,957 B/+3,957 B always-loaded floor, a total that
+fits the ~352.8/352.7 KiB `.output` headroom comfortably. **This REOPENS D-4, it is not a config flip
+beneath it**: D-4 pins `output: 'htmlAndMathml'` as load-bearing for BOTH D-5 (the sanitizer profile admits
+KaTeX's HTML+MathML dual output) and D-6 (copy-as-MathML clones the `<math>` tree that dual output embeds)
+— switching to `output: 'mathml'` would simplify D-5 to a MathML-only allow-list (no parallel HTML
+vocabulary to admit) and change D-6's copy-as-MathML basis to cloning the only rendered tree, rather than
+one of two. **The open question this path trades in is rendering FIDELITY, not availability**: trading
+KaTeX's own pixel-tuned HTML/CSS layout for the browser engine's own native MathML typesetting is a
+quality/consistency call to settle with a real visual walk AT REVISIT — this note banks NEITHER current
+browser MathML support NOR fidelity as verified; whoever reopens M11 confirms both directly, the same
+measured-not-recalled posture every other figure in this record keeps.
+
+**A lean on the installed-dependency disposition 1.1 itself left open (task 1.1's own branch (C) text is
+silent on keep-vs-revert; this is a LEAN for the human to confirm at revisit, not a decision made here):**
+reverting `dependencies` 9 → 6 (`-@mathjax/src`, `-@mdit/plugin-tex`, `-katex`) is COSTLESS. 1.1's own
+content-script measurement is direct evidence for this: all three packages shipped installed in the
+committed state with no production import anywhere outside 1.1's own scratch-and-reverted probes, and
+`content-scripts/peekover.js` stayed md5-identical to HEAD across every arm — an unimported dependency
+moves zero bytes on the graph that carries it — and the `.output`/zip totals 1.1 measured against matched
+the pre-install headroom figures exactly. Reverting keeps `package.json` honest against the "never shipped
+installed-but-unused" spirit branch (B)'s own text states explicitly for the MathJax-only case.
+
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
@@ -167,6 +203,42 @@ measurement-driven or explicitly deferred.*
   defect. Out of 1.1's own Files-list fence (package.json/pnpm-lock.yaml only); not fixed here. **HOME:**
   whichever session next touches `codeDetect.test.ts` or re-calibrates its corpus baseline — likely
   whoever closes out or reopens M11, since the drift's source is M11's own planning docs.
+- **NEW AT THIS REVISIT-RECORD AMENDMENT, 2026-09-06 — A FALSIFIED MILESTONE INVARIANT: `@mdit/plugin-tex`
+  PUTS MATH ON THE CONTENT-SCRIPT MODULE GRAPH, WHICH `tasks.md`'s OWN STANDING INVARIANTS SAY NEVER
+  HAPPENS.** 1.1's own arm (a) measured `@mdit/plugin-tex` — D-1's tokenizer, wired into `parse.ts`'s
+  SHARED `md` instance — at **+3,957 B on EACH of the content-script and app-page graphs** (real,
+  unconditional on every document, math or not). `tasks.md`'s standing-invariants block states flatly:
+  "Content-script bytes — byte-identical for the WHOLE MILESTONE, structural, not contingent (D-3/RULING
+  2). Math never goes through `mount()` and never enters the content-script module graph." **That
+  invariant is FALSIFIED the moment task 3.2 lands the parse rule** — RULING 2 held for 1.1's own COMMITTED
+  state only because `parse.ts` was never actually wired with the tokenizer in the shipped diff (1.1's own
+  probe was scratch, reverted); the moment `parse.ts` genuinely gains `md.use(tex, ...)`,
+  `content-scripts/peekover.js` moves +3,957 B — a SECOND structural content-script mover the plan never
+  anticipated (D-11's contingent MathJax settings field was named as the ONLY one). **A behavioral cousin,
+  contingent on 3.2 landing as specified:** D-1's rule emits its passthrough markers (`<code
+  class="peekover-math-inline">`) from that SAME shared `parse.ts`, but `enhanceMath` is app-page-only
+  (D-3) — so a `$x$` span in a `file://`-opened document would render wrapped in monospace `<code>` styling
+  at rest, never enhanced, a visible artifact of D-1's rule leaking onto the content-script surface that
+  departs from spec §3.2's own framing ("no math affordance and no explanatory note ships on the
+  content-script reader in M11") — not an interactive affordance, but not plain literal text either.
+  **Neither is a defect IN 1.1** — M11 is suspended, and task 3.2 never landed — **both are COSTS a reopen
+  must price**, verified against the real tree at reopen time, not assumed from this note. **HOME:**
+  whoever reopens M11 — likely task 3.2's own kickoff, since that is where the invariant's falsification
+  actually lands.
+- **NEW AT THIS REVISIT-RECORD AMENDMENT, 2026-09-06 — THE `@mdit/plugin-tex` / `markdown-it`
+  PEER-DEPENDENCY MISMATCH IS A LATENT CORRECTNESS RISK, NOT JUST A VERSION WARNING.** 1.1 flagged,
+  informationally, that `@mdit/plugin-tex@1.1.0` declares a peer dependency on `markdown-it@^15.0.0`
+  against this repo's installed `14.3.0`, and that the plugin "functions in the probe" — but that probe
+  exercised only RULE REGISTRATION (`md.renderer.rules['math_inline']`/`['math_block']` present and
+  overridable after supplying a throwaway stub), never the TOKENIZER-CORRECTNESS edge cases D-1 chose a
+  maintained plugin FOR in the first place: `$5`-style false positives, code-span exclusion of a backtick
+  `$HOME`, escaping. **A plugin authored against `markdown-it` 15's own internals, running on 14.3.0, is a
+  latent correctness risk on exactly those cases** — task 3.2's own Verify line already plans to test them,
+  so this is not an untested gap, but a genuine possibility that 3.2 surfaces a real internals mismatch, and
+  closing it may force a `markdown-it` major-version bump whose OWN cross-stack ripple (parse rules,
+  plugins, golden fixtures) is unassessed by anything measured so far. **HOME:** the M11 reopen /
+  spec-revisit, to price alongside the byte problem before deciding whether task 3.2 proceeds on 14.3.0 or
+  the bump is folded into the reopen's own scope.
 - **✅ SETTLED AT 6.3 (M8's records reconcile) — THE PLACEMENT-TENSION NAMED AT 6.1: CARRIED-ITEMS-ONLY,
   NO NEW `tasks.md` CHECKBOX.** The item below is kept as written, because it is the record of the
   tension and why it was routed to 6.3. **The call:** M8's two 6.1 findings (the badge lane, the
