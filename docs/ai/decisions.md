@@ -1,6 +1,65 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M11 GATE 2 — `plan.md` (spec 011, math rendering) APPROVED AS THE SEALED ARCHITECTURE,
+  WITH ONE RULING (§8-1) AND ONE MEASUREMENT FIX (GROUP 1). `tasks.md` is AUTHORIZED — a fresh session
+  (C14), not written here.** `specs/011-math-rendering/plan.md` was reviewed and approved at gate 2.
+  **`plan.md`'s own status line stays "draft (Gear-3 gate 2 — awaiting human approval before `tasks.md`)"
+  and THIS ENTRY IS THE APPROVAL OF RECORD** — the same bank-not-artifact precedent this project has held
+  since M7: 007/008/009/010 all still read "draft" post-their-own-gates; `plan.md`'s two substantive
+  gate-2 corrections (below) are made in the plan text itself, but its status line is not one of them.
+  **THE APPROVAL:** the twelve D-values (D-1…D-12, `plan.md` §0) and the nine-group sequence (`plan.md`
+  §6) are APPROVED as M11's sealed architecture — `tasks.md` decomposes against this architecture; no
+  D-value is reopened. The four gate-1 rulings (`decisions.md`'s 2026-09-06 M11 GATE 1 entry) stay
+  inherited-closed, unchanged by this approval: RULING 1 (§9-1, the dependency set) remains MEASURED-not-
+  assumed at task 1.1; RULING 2 (app-page-only) and RULING 3 (the sanitizer profile) stay CONFIRMED;
+  RULING 4 (toggle semantics) stays DEFERRED, contingent on RULING 1.
+  **RULING §8-1 — THE INLINE-COPY AFFORDANCE GAP: OPTION (b) RULED.** `plan.md` §8-1 named two live
+  options for how inline math's copy-as-LaTeX/copy-as-MathML actions are reached, since D-7's inversion
+  (inline math has no sibling slot to anchor a per-formula hover/focus control group in) means block
+  math's own mechanism (D-6, the control group) cannot serve inline math unmodified. **RULED: inline math
+  relies on ORDINARY TEXT-SELECTION plus the browser's own copy — no dedicated per-formula inline chrome.**
+  A hover/focus popover on a `$x$` mid-sentence would itself be the clutter spec §3.10 declines a context
+  menu to avoid; option (a) (a keyboard-focusable `<code>` with its own popover) is REJECTED on that
+  ground. Concretely: copy-as-LaTeX for inline math is satisfied by select-and-copy of the retained source
+  text already on screen — zero new code, since the literal `$…$` source is what the `<code
+  class="peekover-math-inline">` element's own text content is at rest (D-7). Copy-as-MathML for inline
+  math — which text-selection cannot produce, since the rendered MathML tree is not what a text selection
+  serializes — is served by a DOCUMENT-LEVEL "copy all formulas as MathML" action (one action covering
+  every formula, block and inline, in the document), materially smaller in scope than a per-formula inline
+  popover would have been. **Block math's own control group (D-6/007 D-15's shape) is UNCHANGED by this
+  ruling** — it keeps per-formula copy-as-LaTeX and copy-as-MathML exactly as `plan.md` §0/D-6 already
+  states.
+  **★ THIS AMENDS SPEC §4's COPY CRITERION, recorded here rather than by editing `spec.md`, per the
+  gate-rulings-live-in-the-bank precedent this project has held since M7 (`spec.md` stays sealed;
+  `decisions.md`'s gate entry is where a ruling that revises a spec assumption lives).** §4, as written,
+  reads as if one hover/focus mechanism serves both inline and block math's per-formula copy actions. Post-
+  ruling, §4's copy criterion is: **block math offers per-formula copy-as-LaTeX AND copy-as-MathML through
+  its hover/focus control group, unchanged; inline math offers copy-as-LaTeX via ordinary text-selection of
+  its retained source, and copy-as-MathML via a document-level "copy all formulas as MathML" action, NOT a
+  per-formula inline affordance.** This is a genuine, honest gate-2 correction of a spec assumption `plan.md`
+  proved could not hold as literally written (D-7's forced inversion), not a silent scope change — the gap
+  was surfaced at gate 2 (`plan.md` §8-1, §3.5 audit's "new" row) and is ruled here, not patched around.
+  **THE GROUP-1 MEASUREMENT FIX.** `plan.md`'s Group 1 (task 1.1's byte measurement) named measuring
+  `katex` and the ruled MathJax package, but omitted `@mdit/plugin-tex` (D-1's chosen tokenizer) from that
+  measurement list. **This is corrected: Group 1 MUST also measure `@mdit/plugin-tex`**, because unlike
+  the two render engines (lazy-loaded only when a document contains math, D-2/§4), `@mdit/plugin-tex` is an
+  ALWAYS-LOADED parse-graph dependency (`parse.ts` uses it unconditionally per D-1) — a guaranteed byte
+  floor on every document, math or not, and omitting it from Group 1's measurement understated the
+  milestone's guaranteed cost. This is the M10-fonts-trap analogue: measure every new dependency, including
+  the one that is always loaded, not only the ones that are conditionally loaded. `plan.md`'s own Group 1
+  text is corrected in place (2026-09-06) to name `@mdit/plugin-tex` alongside `katex`/MathJax, measured
+  and decomposed to its own residual the same as the two engines.
+  **WHAT THIS APPROVAL DOES:** seals `plan.md`'s architecture (D-1…D-12, the nine groups); rules §8-1
+  (option (b)) and its §4 amendment (above); fixes Group 1's measurement list to include
+  `@mdit/plugin-tex`; AUTHORIZES `tasks.md` as the next artifact, in a fresh session (C14), per WORKFLOW.md
+  §5.3's "no implementation code before `tasks.md` is approved."
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install any dependency, write `tasks.md`, or run task
+  1.1's own measurement (RULING 1 stays open pending that task); it does not reopen any D-value, any
+  gate-1 ruling, or `plan.md` §3.5's audit rows beyond the one (§8-1) ruled above; it does not edit
+  `spec.md`. **Revisit-when:** task 1.1's own measurement (RULING 1, unchanged in shape by this gate);
+  RULING 4 (toggle semantics), if and only if RULING 1 ships MathJax.
+
 - **2026-09-06 · M11 GATE 1 — spec 011 (math rendering: KaTeX, contingent MathJax fallback, inline/block/
   fence math, copy-as-LaTeX/MathML) APPROVED, WITH FOUR RULINGS (TWO SETTLED, ONE DEFERRAL-APPROVED, ONE
   CONTINGENT-PENDING). `plan.md` is the next artifact and the next gate.** `specs/011-math-rendering/spec.md`

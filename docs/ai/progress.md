@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
-*Updated: 2026-09-06 (M11 `plan.md` drafted as a GATE-2 DRAFT, this session, awaiting human approval before
-`tasks.md`. Twelve D-values (D-1…D-12) seal the architecture: D-1 a new markdown-it passthrough-marker
+*Updated: 2026-09-06 (M11 `plan.md` APPROVED at GATE 2, this session — `decisions.md`'s M11 GATE 2 entry.
+Twelve D-values (D-1…D-12) are now SEALED as the architecture: D-1 a new markdown-it passthrough-marker
 rule (`@mdit/plugin-tex` as the tokenizer, our own render rules on top — never a rule that renders math
 itself); D-2 one single-importer engine module per engine (`mathEngine.ts`, contingently
 `mathJaxEngine.ts`); D-3 the enhancer rides 007's own two-call-site wiring (`readerPane.ts:187`,
@@ -15,15 +15,20 @@ inherits colour; unlike mermaid's baked-hex SVG); D-10 the MathJax contingency i
 point (dropping it deletes files, never unwinds KaTeX-groups' work); D-11 a MathJax settings field, if it
 ships, is one more key on the existing global `Settings` row; D-12 no cache is designed speculatively —
 group 8 measures render timing first. RULING 1 (§9-1, the dependency-set fork) stays MEASURED, not
-assumed — task 1.1 is `tasks.md`'s own first, hard-gating task, unchanged from gate 1. **One genuine
-spec-level gap surfaced at gate 2, not silently patched:** §4's copy-action criteria read as if one
-mechanism serves both inline and block math's copy-as-LaTeX/MathML; D-7's own forced inversion (inline
-math has no sibling slot to anchor a hover/focus control group in) shows it cannot, without new design —
-routed to `plan.md`'s §8-1 as an open gate-2 question, not resolved unilaterally. The four gate-1 rulings
-are INHERITED CLOSED throughout `plan.md` — none is re-opened. `tasks.md` does not exist yet; no
-implementation code has been written. Byte budget stays the milestone's central, front-loaded risk (§3.4):
-M10's own close left `.output` headroom ~352.8/352.7 KiB, zip headroom ~607.8/607.7 KiB, the thinnest
-margin any gate has opened against, unchanged since gate 1 because nothing has been installed yet.
+assumed — task 1.1 is `tasks.md`'s own first, hard-gating task, unchanged from gate 1, now ALSO measuring
+`@mdit/plugin-tex` alongside `katex`/MathJax (Group 1's gate-2 measurement fix — `@mdit/plugin-tex` is an
+always-loaded parse-graph dependency, a guaranteed byte floor, unlike the two lazy render engines). **The
+genuine gate-2-surfaced gap is RULED, not left open:** §8-1 (inline math's copy-as-LaTeX/MathML
+reachability, since D-7's forced inversion means block math's hover/focus control-group mechanism cannot
+serve inline math unmodified) is ruled OPTION (b) — inline copy-as-LaTeX via ordinary text-selection of
+the retained source (zero new code), copy-as-MathML via a document-level "copy all formulas as MathML"
+action, no per-formula inline chrome; block math's control group is unchanged. This amends spec §4's copy
+criterion, recorded in `decisions.md`'s gate-2 entry (spec.md stays sealed, per the M7–M10 precedent). The
+four gate-1 rulings remain INHERITED CLOSED throughout `plan.md` — none is re-opened by gate 2. `tasks.md`
+is AUTHORIZED but does not exist yet — its own drafting is a fresh session (C14); no implementation code
+has been written. Byte budget stays the milestone's central, front-loaded risk (§3.4): M10's own close
+left `.output` headroom ~352.8/352.7 KiB, zip headroom ~607.8/607.7 KiB, the thinnest margin any gate has
+opened against, unchanged since gate 1 because nothing has been installed yet.
 Prior entry, kept for the record: task 11.3 landed — the records
 reconcile that closes M10: the pointer walk repeated as a discrete step on this closing commit, the
 retro's four browser-suite shared-cross-file-state facets confirmed consolidated into one drafted standing
@@ -39,36 +44,44 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
-**M11 `plan.md` drafted as a GATE-2 DRAFT, 2026-09-06, this session — `specs/011-math-rendering/plan.md`,
-awaiting human approval before `tasks.md`.** Gate 1's four §9 rulings (`decisions.md`'s M11 GATE 1 entry)
-are inherited closed throughout: §9-1 (dependency set) still MEASURED-not-assumed, at task 1.1; §9-2
-(content-script surface) CONFIRMED app-page-only; §9-3 (sanitizer profile) CONFIRMED; §9-4 (toggle
-semantics) DEFERRED, contingent on §9-1. `plan.md` seals twelve D-values (D-1…D-12) — see this file's own
-header comment above for the full list — mirroring 007's (Mermaid) architecture throughout (app-page-only,
-post-mount enhancement, a third named sanitizer profile alongside the document and SVG ones) while naming
-four real points of divergence: a NEW markdown-it parse rule (007 needed none), KaTeX's dual HTML+MathML
-output reshaping the sanitizer profile and *giving* copy-as-MathML its mechanism for free, inline math's
-forced INVERSION of 007's sibling-figure shape (mutate-in-place, since inline content has no "beside"),
-and the MathJax contingency structured as a purely additive drop point. **One genuine spec-level gap
-surfaced at gate 2** — §4's copy-action criteria assume one mechanism serves both inline and block math;
-D-7's own inversion shows it cannot without new design — routed to `plan.md` §8-1 as an open question, not
-resolved unilaterally. Per the M7–M10 precedent, `plan.md`'s own status line stays "draft awaiting gate 2."
-**Nothing is implemented; no `tasks.md` exists.** § Now's own next act is gate 2 (human review of
-`plan.md`), then `tasks.md`, a fresh session (C14). M10 closed 2026-09-06; its own narrative (19 active
-tasks ticked + 3 struck-in-place = 22 sealed, human milestone-close walk ALL PASS, `/retro` banked,
-`spec-coverage.md` F9 0%→38% / F5 36%→38%) moved to [`progress-archive.md`](progress-archive.md) in the
-close-and-archive pass immediately prior to the gate-1 draft. See § Closed milestones below for the
-one-paragraph close summary and the link to the archived detail.
+**M11 `plan.md` APPROVED at GATE 2, 2026-09-06, this session — `decisions.md`'s M11 GATE 2 entry is the
+approval of record; `tasks.md` is AUTHORIZED, a fresh session (C14) next.** Gate 1's four §9 rulings
+(`decisions.md`'s M11 GATE 1 entry) stay inherited closed throughout: §9-1 (dependency set) still
+MEASURED-not-assumed, at task 1.1; §9-2 (content-script surface) CONFIRMED app-page-only; §9-3 (sanitizer
+profile) CONFIRMED; §9-4 (toggle semantics) DEFERRED, contingent on §9-1. `plan.md`'s twelve D-values
+(D-1…D-12) — see this file's own header comment above for the full list — are SEALED as M11's
+architecture, mirroring 007's (Mermaid) architecture throughout (app-page-only, post-mount enhancement, a
+third named sanitizer profile alongside the document and SVG ones) while naming four real points of
+divergence: a NEW markdown-it parse rule (007 needed none), KaTeX's dual HTML+MathML output reshaping the
+sanitizer profile and *giving* copy-as-MathML its mechanism for free, inline math's forced INVERSION of
+007's sibling-figure shape (mutate-in-place, since inline content has no "beside"), and the MathJax
+contingency structured as a purely additive drop point. **The one genuine spec-level gap surfaced at gate
+2 is RULED, not left open:** §8-1 (inline math's copy-as-LaTeX/MathML reachability) is ruled OPTION (b) —
+text-selection for copy-as-LaTeX, a document-level "copy all formulas as MathML" action for copy-as-MathML,
+no per-formula inline control group; block math's own control group is unchanged. This amends spec §4's
+copy criterion, recorded in `decisions.md`'s gate-2 entry (`spec.md` stays sealed, per the M7–M10
+precedent). **Gate 2 also fixed Group 1's measurement list**: task 1.1 must measure `@mdit/plugin-tex`
+(D-1's tokenizer, an always-loaded parse-graph dependency) alongside `katex`/MathJax, not only the two
+lazy render engines. Both corrections are made in `plan.md`'s own text (its status line stays "draft
+awaiting gate 2," per the M7–M10 precedent — the approval lives in `decisions.md`, not the status line).
+**Nothing is implemented; no `tasks.md` exists yet.** § Now's own next act is drafting `tasks.md`, a fresh
+session (C14). M10 closed 2026-09-06; its own narrative (19 active tasks ticked + 3 struck-in-place = 22
+sealed, human milestone-close walk ALL PASS, `/retro` banked, `spec-coverage.md` F9 0%→38% / F5 36%→38%)
+moved to [`progress-archive.md`](progress-archive.md) in the close-and-archive pass immediately prior to
+the gate-1 draft. See § Closed milestones below for the one-paragraph close summary and the link to the
+archived detail.
 
 ## Up next
 
-**`tasks.md` is next — a fresh session (C14), once gate 2 (human review of `plan.md`) has run.** Per
-`plan.md`'s own group order, its first task is still task 1.1's byte-budget measurement (§3.4/§7-1/§8-1 of
-the spec, RULING 1, `plan.md` group 1): install KaTeX (and, separately, MathJax) for real against the
-current ~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip headroom, measure and decompose each to a
-residual — unchanged in shape since gate 1, now with `plan.md`'s own architecture (twelve D-values) as the
-frame every later group is written against. No `tasks.md` exists yet; no milestone is in progress past
-the gate-2 draft.
+**`tasks.md` is next — a fresh session (C14). Gate 2 is PASSED; `tasks.md` is AUTHORIZED, not yet
+written.** Per `plan.md`'s own group order, its first task is still task 1.1's byte-budget measurement
+(§3.4/§7-1/§8-1 of the spec, RULING 1, `plan.md` group 1): install KaTeX, the MathJax package, AND
+`@mdit/plugin-tex` (gate 2's own Group-1 measurement fix — D-1's tokenizer, an always-loaded parse-graph
+dependency, not a lazy render engine) for real against the current ~352.8/352.7 KiB `.output` /
+~607.8/607.7 KiB zip headroom, measure and decompose each to its own residual — unchanged in shape from
+gate 1 otherwise, now with `plan.md`'s own sealed architecture (twelve D-values, §8-1 ruled (b)) as the
+frame every later group is written against, including group 6's inline-copy half, unblocked by §8-1's own
+ruling. No `tasks.md` exists yet; no milestone is in progress past the gate-2 approval.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either

@@ -694,7 +694,7 @@ D-8's reuse) · `D` = a distinct assertion is required · `I` = INVERTS for inli
 | 19 | reduced motion: no animation under reduce, DOES animate without it | `—` **NO ANIMATION IS SPECIFIED ANYWHERE IN §4/§5 FOR MATH.** Unlike diagrams' placeholder shimmer (007 D-11, itself only a WALK judgement, not built), math's own D-11(007)-analogue does not exist because §3.6's cache lean means no long-pending state is expected to need a shimmer at all. Named so a future task does not invent motion nothing asked for. | `—` same |
 | 20 | polite live region, out of the a11y tree while empty | `Y` — block math's own status region, mirroring `DIAGRAM_STATUS_CLASS`'s shape, for copy-action results | `—` no action exists to report (row 11) |
 | 21 | focus trap and restore (007's OWN new baseline, not a sibling's) | `—` **NO LIGHTBOX IS SPECIFIED FOR MATH ANYWHERE IN §4.** Unlike diagrams, a rendered formula is already text-scale and legible at its natural size; §4's acceptance criteria name no "open larger" affordance. Named explicitly so this absence is a scoping decision on the record, not a silently-dropped feature. | `—` same |
-| new | copy-as-LaTeX / copy-as-MathML (§4, this milestone's own two ⭐ items, no 007 analogue) | `D` — D-6's mechanism, exercised through the SAME hover/focus control-group shape row 11 gives block math | `D` — **NO PER-FORMULA CONTROL GROUP EXISTS for inline math (row 11), so these two actions need their OWN reachability mechanism for inline formulas specifically** — a keyboard-focusable inline element (the `<code>` itself, made focusable, `tabindex="0"`, with the two actions as a small popover or a context-independent keyboard shortcut scoped to the focused element) is this plan's OWN open question, not resolved by citing 007. **★ FLAGGED AS A GATE-2 FINDING BELOW (§8-1) — this is the one place spec §4's own acceptance criteria ("when a rendered formula is hovered or focused, the system shall offer copy-as-LaTeX and copy-as-MathML for that formula") reads as if it assumes ONE mechanism for both inline and block math, and D-7's own inversion means it cannot be one mechanism without new design.** |
+| new | copy-as-LaTeX / copy-as-MathML (§4, this milestone's own two ⭐ items, no 007 analogue) | `D` — D-6's mechanism, exercised through the SAME hover/focus control-group shape row 11 gives block math | `D` — **RULED AT GATE 2, 2026-09-06: OPTION (b) — text-selection for copy-as-LaTeX, a document-level "copy all formulas as MathML" action for copy-as-MathML, NO per-formula inline control group.** (Originally flagged here as open: NO PER-FORMULA CONTROL GROUP EXISTS for inline math (row 11), so these two actions needed their OWN reachability mechanism for inline formulas specifically — a keyboard-focusable inline element or a document-level action were the two live options. **★ WAS FLAGGED AS A GATE-2 FINDING (§8-1) — this was the one place spec §4's own acceptance criteria ("when a rendered formula is hovered or focused, the system shall offer copy-as-LaTeX and copy-as-MathML for that formula") read as if it assumed ONE mechanism for both inline and block math; D-7's own inversion meant it could not be one mechanism without new design. See `decisions.md`'s M11 GATE 2 entry for the binding ruling and the §4-copy-criterion amendment.**) |
 
 ---
 
@@ -801,14 +801,23 @@ rule landing**, not merely precedes its own test; **the MathJax group (7) is ope
 it in**, per D-10's own contingency structure.
 
 **1 · The byte measurement (task 1.1).** Install `katex` for real; separately install the MathJax package
-task 1.1 itself names concretely (spec does not pre-name one); measure `.output`/`pnpm zip` deltas for
-each, alone and combined, against the current ~352.8/352.7 KiB / ~607.8/607.7 KiB headroom, decomposed to
-a fully accounted residual (the D-11(007) four-component ablation shape). Measure the `katex`/mermaid's-
+task 1.1 itself names concretely (spec does not pre-name one); **ALSO install `@mdit/plugin-tex` (D-1's
+chosen tokenizer) and measure it alongside the two engines — GATE-2 FIX, 2026-09-06: `@mdit/plugin-tex`
+is an ALWAYS-LOADED parse-graph dependency (`parse.ts` uses it unconditionally, D-1), not a lazy
+render-engine chunk, so it is a guaranteed byte floor on every document regardless of RULING 1's outcome
+and regardless of whether a document contains math at all — omitting it from Group 1's measurement list
+understates the milestone's guaranteed cost, the same "measure every new dependency, including the
+always-loaded one" lesson M10's fonts trap named for its own always-present cost.** Measure
+`.output`/`pnpm zip` deltas for each of the three (`@mdit/plugin-tex`, `katex`, MathJax), alone and
+combined, against the current ~352.8/352.7 KiB / ~607.8/607.7 KiB headroom, decomposed to a fully
+accounted residual (the D-11(007) four-component ablation shape). Measure the `katex`/mermaid's-
 transitive-`katex` dedup/chunk-sharing question (§4 risk 3). Verify licence, no install scripts,
 `pnpm audit --prod` clean, single resolved `dompurify` still holds. Regenerate the SBOM. **THIS GROUP
 RULES §9-1 — its output is the fork every later group is written against.** *Touches:* `package.json`
 only. *Must NOT touch:* any render or app module. *Acceptance:* RULING 1 is settled with a decomposed,
-ablation-proven number in each arm (KaTeX-only, KaTeX+MathJax); scanner green with its self-test firing.
+ablation-proven number in each arm (KaTeX-only, KaTeX+MathJax), PLUS `@mdit/plugin-tex`'s own
+always-loaded residual accounted for separately from either engine arm; scanner green with its self-test
+firing.
 
 **2 · The math sanitizer profile.** D-5, standalone and testable against a hand-built KaTeX-shaped corpus
 before anything produces real output — the actual tag/attribute enumeration against installed KaTeX's real
@@ -839,10 +848,13 @@ half), `mathView.ts` (inline half). *Acceptance:* §4's inline rendering and deg
 persistence-of-the-`<code>`-element property (§5's test strategy) proven red-first.
 
 **6 · Copy-as-LaTeX / copy-as-MathML.** D-6's mechanism, for block math through the same hover/focus
-control-group shape 007 D-15/§3.11 established (row 11); for inline math, resolved per §8-1's own gate-2
-finding below BEFORE this group's own task is drafted at gate 3 — this group cannot be fully scoped until
-that finding is answered. *Acceptance:* §4's four copy-action criteria for whichever mechanism §8-1 rules;
-`permissions: []` re-proven; no `contextMenus` anywhere (§3.10).
+control-group shape 007 D-15/§3.11 established (row 11); for inline math, **§8-1 RULED (b) at gate 2,
+2026-09-06 — this group's inline half is UNBLOCKED and may be scoped at tasks.md.** *Acceptance:* §4's
+four copy-action criteria, per the gate-2 amendment: block math offers per-formula copy-as-LaTeX AND
+copy-as-MathML through its control group, unchanged; inline math offers copy-as-LaTeX via ordinary
+text-selection of the retained source (zero new code) and copy-as-MathML via a document-level "copy all
+formulas as MathML" action, NOT a per-formula inline affordance — `permissions: []` re-proven; no
+`contextMenus` anywhere (§3.10).
 
 **7 · MathJax (CONTINGENT on group 1's ruling — opened only if RULING 1 ships it).** D-2's second engine
 module, D-10's single dispatch branch, D-11's settings field (once RULING 4 is separately ruled — this
@@ -897,7 +909,10 @@ anything timed: A-B-A against a same-session HEAD control, floor reported beside
 ## 8. Gate-2 questions
 
 1. **★ THE INLINE COPY-AFFORDANCE MECHANISM (§3.5 audit's new row, §4 risk 1) — a real spec/architecture
-   gap surfaced by this plan, not a copy question.** Spec §4 reads as if one hover/focus mechanism serves
+   gap surfaced by this plan, not a copy question. ★ RULED AT GATE 2, 2026-09-06 — OPTION (b), below,
+   is the human-approved answer; see `decisions.md`'s M11 GATE 2 entry for the binding record and the
+   §4-copy-criterion amendment it carries. The two options are kept in full below for the record of what
+   was weighed, not as a still-open choice.** Spec §4 reads as if one hover/focus mechanism serves
    both inline and block formulas' copy-as-LaTeX/MathML; D-7's own structurally-forced inversion (inline
    math has no sibling slot to anchor a control group in, and inline hover-chrome would itself be the
    clutter spec §3.10 declines a context menu to avoid) means it cannot, without inventing a NEW kind of

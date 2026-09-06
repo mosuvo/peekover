@@ -81,23 +81,28 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 APPROVED (2026-09-06, four §9 rulings in
-  `decisions.md`); `plan.md` is now a GATE-2 DRAFT (2026-09-06, this session) awaiting human approval
-  before `tasks.md`.** `plan.md` states twelve D-values (D-1…D-12) sealing the architecture — a new
-  markdown-it passthrough-marker rule (D-1), the single-importer engine module(s) (D-2), the two-call-site
-  enhancer wiring reused from 007 (D-3), the KaTeX `trust:false`/`throwOnError` config lockdown (D-4), a
-  third named sanitizer profile admitting KaTeX's HTML+MathML dual output plus a new `style`-value
-  procedural filter (D-5), the zero-new-dependency copy-as-LaTeX/MathML mechanism (D-6), inline math's
-  mutate-in-place INVERSION of 007 D-15's sibling-figure shape (D-7), block/fence math's shared reuse of
-  007's own sibling-figure machinery (D-8), a leaned-and-verify no-theme-re-render claim (D-9), the
-  MathJax contingency structured as a purely additive drop point (D-10), the settings-field shape if it
-  ships (D-11), and the no-speculative-cache measurement obligation (D-12). **RULING 1 (§9-1, the
-  dependency-set fork) is still MEASURED, not assumed — task 1.1, `tasks.md`'s first task, is the
-  milestone's own hard gate**, unchanged from gate 1's own framing. One genuine spec-level gap surfaced at
-  gate 2, not silently patched: §4's copy-action criteria assume one mechanism serves both inline and
-  block math, which D-7's own forced inversion shows cannot hold without new design (`plan.md` §8-1,
-  routed to gate 2, not resolved there). M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 = F2 Math
-  (KaTeX, contingent MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML). Per the M7–M10
-  precedent, the spec's own status line and §9 text stay unedited post-gate-1 — `decisions.md`'s
-  2026-09-06 M11 GATE 1 entry is the approval of record; `plan.md`'s own status line likewise stays "draft
-  awaiting gate 2" by the same convention.
+- Current milestone: **M11 (`specs/011-math-rendering/`) — gate-1 APPROVED (2026-09-06, four §9 rulings)
+  and gate-2 APPROVED (2026-09-06, this session — `decisions.md`'s M11 GATE 2 entry); `tasks.md` is
+  AUTHORIZED, next up in a fresh session (C14).** `plan.md`'s twelve D-values (D-1…D-12) are SEALED as
+  M11's architecture — a new markdown-it passthrough-marker rule (D-1), the single-importer engine
+  module(s) (D-2), the two-call-site enhancer wiring reused from 007 (D-3), the KaTeX
+  `trust:false`/`throwOnError` config lockdown (D-4), a third named sanitizer profile admitting KaTeX's
+  HTML+MathML dual output plus a new `style`-value procedural filter (D-5), the zero-new-dependency
+  copy-as-LaTeX/MathML mechanism (D-6), inline math's mutate-in-place INVERSION of 007 D-15's
+  sibling-figure shape (D-7), block/fence math's shared reuse of 007's own sibling-figure machinery (D-8),
+  a leaned-and-verify no-theme-re-render claim (D-9), the MathJax contingency structured as a purely
+  additive drop point (D-10), the settings-field shape if it ships (D-11), and the no-speculative-cache
+  measurement obligation (D-12). **RULING 1 (§9-1, the dependency-set fork) is still MEASURED, not
+  assumed — task 1.1, `tasks.md`'s first task, is the milestone's own hard gate**, unchanged from gate 1's
+  own framing, now ALSO measuring `@mdit/plugin-tex` (D-1's tokenizer, an always-loaded parse-graph
+  dependency) alongside `katex`/MathJax per gate 2's own measurement fix. The one genuine spec-level gap
+  surfaced at gate 2 is RULED, not left open: §8-1 (inline math's copy-as-LaTeX/MathML reachability, since
+  D-7's inversion means block math's control-group mechanism cannot serve inline math unmodified) is ruled
+  OPTION (b) — inline copy-as-LaTeX via text-selection, copy-as-MathML via a document-level "copy all
+  formulas as MathML" action, no per-formula inline chrome; block math's control group is unchanged. This
+  amends spec §4's copy criterion, recorded in `decisions.md`'s gate-2 entry rather than by editing
+  `spec.md` (sealed, per the M7–M10 precedent). M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 =
+  F2 Math (KaTeX, contingent MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML). Per the
+  M7–M10 precedent, the spec's own status line and §9 text stay unedited post-gate-1, and `plan.md`'s own
+  status line likewise stays "draft awaiting gate 2" post-gate-2 — `decisions.md`'s 2026-09-06 M11 GATE 1
+  and GATE 2 entries are the approvals of record.
