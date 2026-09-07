@@ -1,6 +1,78 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M11 GATE 3 — REVISIT — the reopened `tasks.md` decomposition (spec 011, math rendering)
+  APPROVED. IMPLEMENTATION IS RE-AUTHORIZED — task 1.1-R onward, a FRESH SESSION. ALL THREE REOPEN GATES
+  (spec revisit, plan revisit, tasks revisit) ARE NOW PASSED.** `specs/011-math-rendering/tasks.md`'s dated
+  "TASKS REVISIT — 2026-09-06" block (draft `9f34e65`) was reviewed and approved at gate 3. **`tasks.md`'s
+  own status line stays "DRAFT awaiting gate 3 — REVISIT" and THIS ENTRY IS THE APPROVAL OF RECORD** — the
+  bank-not-artifact precedent held since M7 and through this milestone's own gate-1-revisit and
+  gate-2-revisit; the reopen changes the task BODY (a genuine re-decomposition caused by the plan reopen),
+  not its status line. The original `tasks.md` §§1–9 (including the original task 1.1's `[x]` and its
+  committed RESULT block — the branch-(C) measurement that caused this whole reopen) are PRESERVED as
+  history and were not un-ticked or overwritten.
+  **THE APPROVAL:** the reopened decomposition — **EIGHT groups, FIFTEEN tasks** (1-R:2 · 2-R:1 · 3-R:2 ·
+  4-R:3 · 5-R:1 · 6-R:2 · 7-R:1 · 8-R:3), group 7 (MathJax) REMOVED ENTIRELY (not struck-in-place; group
+  numbering collapses, original 8→7-R, 9→8-R) — is APPROVED as M11's reopened implementation plan. It
+  decomposes against `plan.md`'s PLAN REVISIT block (D-1-R…D-13, the (h) fidelity-spike-first sequence); no
+  D-N-R and no prior revisit ruling is reopened. The gate-1-revisit and gate-2-revisit rulings stay
+  inherited-closed: MathML/Temml direction (Temml candidate-to-verify, not pinned); the readable-on-both-
+  engines fidelity bar; the close-M11 pre-stated fallback firing on EITHER axis; MathJax struck; §9-2/§9-3
+  hold (§9-3 MathML-only), §9-4 vacated; §8-1 survives-and-simplifies with its original-gate-3 panel/menu-row
+  placement carried, not reopened.
+  **INPUT A — DISCHARGED, CONFIRMED.** The reopened Group 1-R (task 1.1-R) carries the font-loading
+  firing-control obligation as a real-engine (Chrome+Firefox) computed-`font-family` proof inside the app
+  page's shadow root — a rendered formula resolves to the bundled family, not a fallback — WITH a negative
+  control (a deliberately-wrong `@font-face` source must FAIL the same assertion), plus re-verification that
+  Temml's font needs no `web_accessible_resources` key. This is the obligation discharged concretely, not
+  restated.
+  **INPUT B — DISCHARGED, CONFIRMED.** The reopened decomposition rewrites the content-script byte invariant
+  as a DELTA assertion: bytes move by exactly the chosen tokenizer's own always-loaded floor, landing ONCE
+  at task 3.2-R (never at Group 1-R's scratch spike); pre-3.2-R tasks assert md5-identity against the
+  corrected **336,123 B** baseline, 3.2-R itself uses a DELTA firing control (floor moved by exactly the
+  expected amount, no more), and every task after 3.2-R asserts against 3.2-R's own post-floor figure, never
+  the pre-math baseline again — with the stale-form failure named explicitly so no later task carries it.
+  The `$x$`-renders-as-inert-`<code>`-on-`file://` behavioral cousin is priced as a named cost in task
+  3.1-R's golden audit.
+  **RULING R-a — the struck-package revert folded into task 1.1-R: RATIFIED.** The reopened 1.1-R reverts
+  `katex` and `@mathjax/src` (left installed by the original 1.1's deliberately-open branch-(C) disposition,
+  pending exactly this human-reviewed reopen; struck by REVISIT-RULINGS 1/4) IN THE SAME COMMIT as it
+  installs `temml` and resolves the tokenizer fork. This was a drafting-pass judgment call beyond the
+  tasks-revisit kickoff's literal text, flagged as such. **APPROVED as correct:** a byte gate cannot
+  honestly measure headroom against a dependency set still carrying two struck packages, so the revert
+  belongs inside 1.1-R, not deferred — the dep-count Verify (`9 → 8`) is coherent only because the revert
+  lands there. This resolves the disposition question the original branch (C) left open for the PROCEED
+  path; 1.2-R's CLOSE-M11 branch separately reverts `temml`/tokenizer/font in its own commit.
+  **RULING R-b — the 336,123 B content-script baseline is AUTHORITATIVE; the stale 334,858 B is
+  knowingly-superseded, not an error to chase now.** The original 1.1 measured content-script bytes at
+  336,123 B both engines on a fresh clean rebuild (its own base-line-divergence finding, `--frozen-lockfile`
+  confirming no dependency drift), where the original `tasks.md` standing-invariants header and AGENTS.md
+  both still state 334,858 B. The reopened TASKS REVISIT block carries 336,123 B correctly and explains the
+  divergence. **This gate confirms 336,123 B as the live figure for the reopened milestone**; the two stale
+  citations (the original header, AGENTS.md) are KNOWINGLY LEFT — each is outside every revisit's Files fence
+  and is superseded by the reopened block — carried for whoever next edits either, not corrected here (the
+  same don't-chase-outside-the-fence discipline the reopen has held throughout).
+  **RULING R-c — D-13's font-family finalization split across 1.1-R and 8.1-R: APPROVED AS A DELIBERATE
+  DEFERRAL.** Task 1.1-R chooses the bundled math-font family (Latin Modern Math / Noto Sans Math / STIX Two
+  Math) IF its representative-corpus glyph-coverage measurement makes one candidate clearly superior,
+  otherwise defers the final choice to task 8.1-R's full-document-scale walk (plan (h)'s own "if not already
+  settled" framing). **This is a sanctioned deferral, not an oversight** — whoever runs 1.1-R deferring the
+  family choice is following the approved plan, not leaving a gap; 8.1-R owns finalizing it if 1.1-R's
+  corpus did not.
+  **WHAT THIS AUTHORIZES:** implementation resumes at **task 1.1-R, in a fresh session**, per WORKFLOW.md
+  §5.3, now re-satisfied for the reopened decomposition. 1.1-R + 1.2-R together are the merged
+  fidelity-and-byte gate whose two-axis fork (PROCEED → Group 2-R onward; CLOSE-M11 → revert + suspend on
+  either axis failing) settles whether M11 ships math or closes — the structural mirror of how the original
+  task 1.1's fork gated the milestone.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install `temml`, any tokenizer package, or any math font
+  (1.1-R's job); pin the font family/subset strategy beyond what 1.1-R's corpus makes obvious (R-c); choose
+  finally between `@mdit/plugin-tex` and a Temml-native tokenizer (1.1-R's job); write render code; build the
+  extension; resolve the fidelity-and-byte fork (1.1-R/1.2-R's own outcome); correct the stale 334,858 B
+  citations (R-b); or edit any status line. It reopens no D-N-R and no prior ruling.
+  **Revisit-when:** task 1.1-R's tokenizer-fork resolution + byte measurement and task 1.2-R's fidelity walk
+  settle the PROCEED/CLOSE-M11 fork; RULING R-c's font-family choice finalizes at 1.1-R or 8.1-R; the D-N-R
+  landed-with-its-commit audit runs at task 8.3-R.
+
 - **2026-09-06 · M11 GATE 2 — REVISIT — the reopened `plan.md` architecture (spec 011, math rendering)
   APPROVED AS THE SEALED-REOPENED ARCHITECTURE, WITH TWO TASKS-REVISIT INPUTS RECORDED. The `tasks.md`
   REVISIT is AUTHORIZED as the next artifact and the last planning gate.** `specs/011-math-rendering/plan.md`'s
