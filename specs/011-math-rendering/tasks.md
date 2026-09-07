@@ -409,7 +409,7 @@ neutralised; `cleanMathStyle`'s open question resolved as found, one way or the 
 
 ## 3-R — The golden-fixture audit + the parse-stage rule (D-1-R) — GOLDEN GROWS HERE
 
-- [ ] **3.1-R ★ THE GOLDEN-FIXTURE AUDIT, RE-ENTERED — READ-ONLY, before the parse rule lands.** The
+- [x] **3.1-R ★ THE GOLDEN-FIXTURE AUDIT, RE-ENTERED — READ-ONLY, before the parse rule lands.** The
       original 3.1's own classification was run against the ORIGINAL tokenizer assumption before the
       milestone's suspension; **recognition grammar (escaping, code-span exclusion, delimiter handling) is
       a property of the CHOSEN TOKENIZER PACKAGE**, which 1.1-R's own fork reopened — even where the SAME
@@ -425,6 +425,124 @@ neutralised; `cleanMathStyle`'s open question resolved as found, one way or the 
       report. The behavioral-cousin cost stated as its own line, not folded into a fixture classification.
       Golden EMPTY (nothing built yet) · manifest green **654 / 770 B** · `permissions: []`. [D-1-R; §7-5;
       the gate-2-revisit-recorded behavioral cousin]
+
+★ **RESULT — ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1) —
+ZERO EXISTING GOLDEN FIXTURES CONTAIN A LITERAL `$`; THE RECOGNITION GRAMMAR WAS INSTEAD VERIFIED FRESH,
+EMPIRICALLY, AGAINST THE REAL INSTALLED `@mdit/plugin-tex@1.1.0` + `markdown-it@14.3.0`, AND A CONCRETE
+3.2-R DRAFTING DEFECT WAS SURFACED: THE FENCE-MATH PATH IS NOT COVERED BY OVERRIDING
+`renderer.rules['math_inline']`/`['math_block']` ALONE.**
+
+**THE ENUMERATION — every file under `tests/golden/**` grepped for a literal `$`, by path:**
+`fixtures/broken.md`, `fixtures/code.md`, `fixtures/diagrams-10.md`, `fixtures/diagrams-50.md`,
+`fixtures/gfm-torture.md`, `fixtures/headings-inline.md`, `fixtures/images.md`, `fixtures/inline-html.md`,
+`fixtures/links.md`, `fixtures/malicious.md`, `fixtures/nesting.md` — **zero matches, all eleven**. The
+generated ~1 MB huge-doc fixture (`hugeDoc.ts`'s `buildHugeDoc()`, golden.test.ts's tenth case) was read in
+full: every `$` in that file is JS template-literal interpolation syntax (`${i}`) inside `hugeDoc.ts`'s own
+source, and the MARKDOWN TEXT it emits (headings/prose/table cells/a fenced `js` block/a blockquote, all
+index-derived) contains no literal `$` byte anywhere in its output — confirmed by reading the generator, not
+inferred from the interpolation syntax alone. **`golden.test.ts` itself** was also grepped (it is not a
+fixture, but is part of `tests/golden/**`): its own two `$` occurrences are template-literal syntax in test
+code (`` `${name}.md` ``, `` `${source.length}B ... sha256=${digest}` ``), not markdown content.
+**Classification: N/A — the corpus to classify is empty.** matches-and-should: none. matches-and-should-not:
+none. does-not-match: none. This is itself the headline finding, not a null result to gloss over: the
+existing 10-case golden corpus (8 `FIXTURES` array entries + `images` + the huge-doc; `diagrams-10.md`/
+`diagrams-50.md` exist on disk but are not wired into `golden.test.ts`'s own snapshot set — confirmed by
+reading the file, they serve a perf fixture elsewhere) carries **zero false-positive/false-negative risk**
+from the new tokenizer landing at 3.2-R. 3.2-R's own "`git diff tests/golden/output/` reviewed, not empty"
+expectation is about the ONE NEW fixture it commits, not a diff against any of these ten.
+
+**THE GRAMMAR — VERIFIED EMPIRICALLY, REAL PACKAGES, THIS SESSION (not inherited from 1.1-R's own prior
+probe, per this task's own "never trusted across the suspend/reopen boundary" instruction), via a scratch
+`.mjs` script at the repo root using the actual installed `@mdit/plugin-tex@1.1.0` + `markdown-it@14.3.0`,
+reverted before this commit (`git status` after revert showed nothing).** Real ruler inspection
+(`md.inline.ruler.__rules__`/`md.block.ruler.__rules__`, printed directly): the tex plugin registers
+`math_inline_dollar` via `ruler.after('escape', ...)` — landing between `escape` and `backticks` in the
+inline chain — and `math_block_dollar` via `ruler.after('blockquote', ...)`, landing after `fence` in the
+block chain. **§7-5's own named risk (does inline-code consume its span's interior before the math rule can
+see it) is CONFIRMED, both directions, by rendered output, not by ruler-order reasoning alone**: `` `echo
+$HOME` `` → `<code>echo $HOME</code>` (no math wrapper); `` `code $notmath` `` → `<code>code
+$notmath</code>`; real math immediately before a code span (`Real math $x$ then code \`$HOME\` after.`) and
+immediately after one (`Code \`$HOME\` then real math $x$ after.`) both resolve each span correctly and
+independently — the code span's own `backticks` rule consumes its interior as one token before any `$`
+inside it is ever visited by the math rule, regardless of the two rules' relative ruler position (each rule
+only attempts at its own leading character, so there is no ordering conflict between them here — stated as a
+confirmed non-issue, not left as an assumption). A plain (non-`math`) fenced code block containing `$HOME`
+renders untouched (`<pre><code>echo $HOME\n</code></pre>`) — `mathFence` intercepts only `info === 'math'`.
+Other cases, all matching 1.1-R's own 51-formula corpus findings, now re-confirmed independently: `$5`/`$10`
+prices with no closing `$` on the same line → literal, no false positive (including the two-dollar-sign
+case `"Item A is $5 and item B is $10."`, which does NOT misfire as a spanning match — the plugin's own
+adjacent-whitespace guard, the same shape as emphasis-delimiter rules, rejects a closing `$` preceded by a
+space); escaped `\$5` (single and both-sided) → literal, `markdown-it`'s own `escape` rule fires first
+(consistent with the observed ruler order, `escape` immediately before `math_inline_dollar`); a `$5` GFM
+table cell → literal; an unbalanced lone `$` → literal, no crash; genuine `$x$` inline, `$$...$$` block, and
+a ` ```math ` fence all recognized correctly, the block and fence forms producing IDENTICAL token shapes
+downstream of the plugin's own tokenizing (confirming D-8-R's shared-mechanism premise at the tokenizer
+level, ahead of 4.2-R's own DOM-shape proof). **Zero misclassifications**, matching 1.1-R's own zero-defect
+result on the equivalent corpus.
+
+**★ A CONCRETE, VERIFIED DRAFTING-TIME DEFECT IN 3.2-R'S OWN TEXT, SURFACED BY THIS AUDIT'S "PREDICT WHAT
+3.2-R WILL PRODUCE" MANDATE.** `md.parse()`'s own token stream shows the ` ```math ` fence produces a token
+of type `fence` (`info: 'math'`) — NOT a `math_block` token; only the bare `$$...$$` form produces
+`math_block`. The installed plugin registers renderer overrides for THREE keys —
+`Object.keys(md.renderer.rules)` shows `fence`, `math_inline`, `math_block` — and its own `fence` override
+is what inspects `info === 'math'` and (only in that branch) calls the plugin's `render` option; a non-math
+fence falls through to ordinary fenced-code rendering via that same override. **A scratch reproduction
+proved this concretely**: overriding ONLY `md.renderer.rules['math_inline']`/`['math_block']` (exactly
+3.2-R's own stated plan — "no `temml` import... emit the markers ONLY," silent on `fence`) with a
+throwaway `render` stub passed to `md.use(tex, ...)` (mirroring 1.1-R's own "supplying a throwaway stub"
+technique) correctly produces the intended marker for `$x$` and `$$...$$`, but the ` ```math ` fence renders
+as the **literal throwaway-stub string** — because that path never reaches the overridden `math_block` key
+at all; it is owned entirely by the plugin's own untouched `fence` override, which still calls the stub
+`render` option. **This means 3.2-R's Files/Verify text, as currently worded, will silently under-cover the
+fence-math case** — D-8-R's own "block and fence share machinery" premise holds at the DOM/enhancer level
+(4.2-R) but does NOT hold for granted at the PARSE-RULE level without an explicit `fence`-key wrap (route
+`info === 'math'` through the same marker logic as `math_block`, else delegate to markdown-it's own default
+fence rendering) — or, as the only other viable fix this audit found, by making the `render` OPTION itself
+(not a separate `renderer.rules` override) the single place that emits the marker shape for all three token
+kinds uniformly. **Not resolved here** (this task is read-only) — flagged as a concrete correction 3.2-R's
+own kickoff/drafting must make, with the exact failure mode and both candidate fixes named, not left as a
+vague "watch out for fences" caution.
+
+**THE BEHAVIORAL COUSIN — PRICED, AS ITS OWN LINE, PER THE GATE-2-REVISIT RULING (INPUT B).** Once 3.2-R
+lands the parse rule on `parse.ts`'s SHARED `md` instance, a `$x$`/`$$...$$`/` ```math ` span in a
+`file://`-opened document rendered by the CONTENT-SCRIPT reader will emit the SAME passthrough marker
+(`<code class="peekover-math-inline">$…$</code>` etc.) that the app-page reader gets — but `enhanceMath`
+never runs there (D-3-R is app-page-only, §9-2 holds, RE-CONFIRMED by reading `mount.ts`'s own call sites:
+no `enhanceMath`/`enhanceDiagrams`-shaped call exists outside `readerPane.ts:187`/`appShell.ts:170`), so it
+renders as inert monospace `<code>` at rest. **This is a real, visible departure from spec §3.2's own "no
+math affordance and no explanatory note ships on the content-script reader" framing** — math syntax that
+was previously plain, unstyled text becomes a monospace-boxed span the moment 3.2-R lands, on every
+`file://` document, math or not. It is not fixable without violating D-3-R/§9-2's app-page-only architecture
+(the fix would require either a content-script-side `enhanceMath` — explicitly out of scope — or a
+content-script-side parse-time suppression of the marker, which would require the SAME shared `parse.ts` to
+know which surface it is running on, a new coupling this milestone's own D-2-R/D-3-R single-importer,
+app-page-only discipline does not currently have). **Flagged for 8.1-R's milestone-close walk as a carried
+item / candidate spec §3.2 amendment note** — not resolved here, per this task's own read-only scope and the
+gate-2-revisit ruling's own instruction not to fold it into a fixture classification.
+
+**STANDING INVARIANTS — CONFIRMED, ZERO SOURCE CHANGED.** `git status`/`git diff --stat` clean before this
+commit's own two file edits (this file + `docs/ai/progress.md`); the scratch grammar-probe script was
+created and deleted at the repo root, `git status` after deletion showed nothing. `pnpm lint` **EXIT=0**.
+Full `pnpm test`: **1085/1085 passed, ALL GREEN** — `codeDetect.test.ts`'s corpus-drift guardrail is no
+longer red; HEAD `45d4e76` (this session's own starting HEAD) already re-pinned it to the CURRENT true state
+(n=28, 8/20 split, 28/28 scored, per that commit's own message, `docs/ai/progress.md`'s "✅ RESOLVED"
+carried-item entry, and this session's own full-suite run independently confirming all three assertions
+pass) — the stale "exactly 3, not 4+" framing this task's own kickoff warned against is correctly NOT used
+here. This task adds no fenced code and touches no file `codeDetect` scans, so the re-pin is unaffected and
+holds unchanged. Content-script/`.output`/manifest bytes are **stated, not re-measured** (this task builds
+nothing and changes no `src/` file): 2.1-R's own last-confirmed figures stand — content-script **336,123 B**
+both engines, `.output` **4,881,585 B Cr / 4,881,701 B Fx**, manifest **654 / 770 B**, `permissions: []`.
+Golden `git diff tests/golden/output/` **EMPTY** (nothing built, nothing changed).
+
+**DIVERGENCE FROM THE KICKOFF, FLAGGED:** the kickoff's own §1 anticipated a nontrivial per-fixture
+classification table with danger cases to enumerate; the real corpus has none, so §1's table collapses to
+the single enumerate-and-confirm-empty finding above rather than a multi-row table — stated plainly rather
+than padded out. The kickoff did not anticipate the fence-renderer-key finding in §2 above; it is reported
+because the kickoff's own §0 instruction ("you must know exactly what 3.2-R is going to build") and the
+task's own "predict what 3.2-R will produce" framing both call for it directly.
+
+**ACCEPTANCE.** This task does NOT decide anything about 3.2-R's own implementation — it is read-only,
+findings-only. `git diff tests/golden/output/` EMPTY. No `src/` file touched.
 
 - [ ] **3.2-R `parse.ts` gains the RESOLVED tokenizer + the two passthrough render rules (D-1-R, D-7-R,
       D-8-R). ★ GOLDEN GROWS HERE — the reopened decomposition's own sole exception to the EMPTY pin. ★

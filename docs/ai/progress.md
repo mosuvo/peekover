@@ -66,6 +66,47 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 3.1-R LANDED, 2026-09-07 — THE GOLDEN-FIXTURE AUDIT, RE-ENTERED, READ-ONLY, UNDER THE OPEN
+1.2-R FORK. NEXT: TASK 3.2-R (`parse.ts` gains the resolved tokenizer + passthrough render rules) — WITH
+A CONCRETE DRAFTING-TIME CORRECTION IT MUST APPLY, NOT JUST ITS OWN STATED PLAN.** Every file under
+`tests/golden/**` was grepped for a literal `$`: **zero matches, all eleven fixtures plus the generated
+~1 MB huge-doc** (its `${i}` occurrences are `hugeDoc.ts`'s own JS template-literal syntax, confirmed by
+reading the generator — its emitted MARKDOWN TEXT carries no literal `$` byte). The existing golden corpus
+therefore carries **zero false-positive/false-negative risk** from the new tokenizer — a real, verified null
+result, not a skipped audit. The recognition grammar was instead verified empirically, fresh, against the
+REAL installed `@mdit/plugin-tex@1.1.0` + `markdown-it@14.3.0` (a scratch `.mjs` script at the repo root,
+reverted before commit): §7-5's own named risk (code-span exclusion) CONFIRMED both directions by rendered
+output (`` `echo $HOME` ``/`` `code $notmath` `` never match; genuine math immediately adjacent to a code
+span on either side still resolves correctly) — the `backticks` rule consumes its span's interior as one
+token before the math rule can ever see a `$` inside it, a structural non-issue regardless of the two rules'
+relative ruler position (`math_inline_dollar` registers between `escape` and `backticks`, `math_block_dollar`
+after `blockquote`/`fence`, printed directly from `md.inline.ruler.__rules__`/`md.block.ruler.__rules__`).
+`$5`/`$10` prices (incl. a two-dollar-sign same-line case), escaped `\$5`, a `$5` table cell, and an
+unbalanced lone `$` all confirmed literal, zero misclassifications — matching 1.1-R's own 51-formula-corpus
+result, now independently re-confirmed rather than inherited across the suspend/reopen boundary. **★ A
+concrete, verified drafting-time defect surfaced, not merely a caution**: `md.parse()`'s own token stream
+shows a ` ```math ` fence produces a `fence` token (`info: 'math'`), NOT a `math_block` token — the plugin
+owns THREE renderer keys (`fence`, `math_inline`, `math_block`); overriding only `math_inline`/`math_block`
+(3.2-R's own literal stated plan) leaves the fence path routed through the plugin's own untouched `fence`
+override, which still calls whatever throwaway `render` stub 4.1-R-style wiring supplies — a scratch
+reproduction proved the ` ```math ` fence renders as the literal stub string under exactly 3.2-R's own
+stated approach. 3.2-R must either wrap `renderer.rules['fence']` (route `info==='math'` through the same
+marker logic as `math_block`, else delegate to default fence rendering) or make the plugin's own `render`
+OPTION the single marker-emitting surface for all three token kinds — named as the two candidate fixes, not
+resolved here (read-only task). **The behavioral cousin priced, as its own line, per the gate-2-revisit
+ruling (INPUT B)**: once 3.2-R lands, a math span on a `file://` document renders as inert monospace `<code>`
+on the content-script reader (`enhanceMath` never runs there, D-3-R/§9-2 re-confirmed by reading `mount.ts`'s
+own call sites) — a real, visible departure from spec §3.2's "no math affordance" framing, not fixable
+without new cross-surface coupling `parse.ts`'s current single-instance/app-page-only discipline lacks;
+flagged for 8.1-R's milestone-close walk, not resolved here. Zero `src/` file touched; `pnpm lint` EXIT=0;
+full `pnpm test` **1085/1085 passed, ALL GREEN** (`codeDetect.test.ts`'s guardrail already re-pinned at HEAD
+`45d4e76`, n=28/8-20/28-28, unaffected by this task's own zero-diff-to-scanned-files scope). Bytes stated,
+not re-measured (no build ran): content-script **336,123 B** both engines, `.output` **4,881,585 B Cr /
+4,881,701 B Fx**, manifest **654 / 770 B**, `permissions: []` — 2.1-R's own last-confirmed figures, unmoved.
+Golden `git diff tests/golden/output/` EMPTY. See `specs/011-math-rendering/tasks.md` task 3.1-R's own
+RESULT block for the full enumeration and the empirical probe's complete case list. Prior entry, kept for
+context:
+
 **★ M11 TASK 2.1-R LANDED, 2026-09-07 — THE MathML-ONLY SANITIZER PROFILE (D-5-R), UNDER THE OPEN
 1.2-R FORK. NEXT: TASK 3.1-R (the golden-fixture audit).** `SANITIZE_MATH_CONFIG`/`sanitizeMath`/
 `MATH_ALLOWED_TAGS`/`MATH_ALLOWED_ATTR`/`hasDeniedMathStyleToken` landed in `src/render/sanitize.ts`
