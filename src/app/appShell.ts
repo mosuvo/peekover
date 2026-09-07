@@ -115,6 +115,7 @@ import { detectorForFile } from '../watch/detectorForFile';
 import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/watchController';
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
+import { enhanceMath } from '../render/mathEnhancer';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
 import { watchCapability } from '../watch/watchAvailability';
@@ -160,14 +161,19 @@ const SHELL_CLASS = 'peekover-app';
  * every watch update, so wiring `readerPane`'s site alone would ship a toolbar that vanished the
  * first time an agent rewrote the file on disk — 007 D-12's bug class, one surface over.
  *
- * 009 D-5 SITE 2 — `enhanceCode` appended third, same order as `readerPane.ts`'s site: neither
- * enhancer knows about another and a code fence cannot occur inside a mermaid fence or a GFM table,
- * so they cannot collide on a node, but the ordering is an implicit contract stated at both sites
- * rather than assumed at either.
+ * 009 D-5 SITE 2 — `enhanceCode` appended fourth (after M11's own math enhancer below), same order
+ * as `readerPane.ts`'s site: neither enhancer knows about another and a code fence cannot occur
+ * inside a mermaid fence, a math fence, or a GFM table, so they cannot collide on a node, but the
+ * ordering is an implicit contract stated at both sites rather than assumed at either.
+ *
+ * M11 D-3-R SITE 2 — `enhanceMath` appended third, immediately after `enhanceDiagrams`, same order
+ * as `readerPane.ts`'s site: a math fence and a mermaid fence are mutually exclusive fence shapes
+ * (`parse.ts`'s `info` dispatch), so there is nothing for the two enhancers to collide on either.
  */
 const renderWithEnhancements: RenderFn = (text, target, options) => {
   mount(text, target, options);
   enhanceDiagrams(target);
+  enhanceMath(target); // M11 D-3-R — same order/site as readerPane.ts's own math call
   enhanceTables(target);
   enhanceCode(target);
 };

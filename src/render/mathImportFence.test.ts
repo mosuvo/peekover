@@ -27,9 +27,14 @@
 // own exclusion) is scanned directly for a `temml` specifier — no traversal, no resolution, just
 // "does this string appear as an import/export specifier anywhere in the shipped tree." That
 // property holds regardless of whether anything imports `mathEngine.ts` yet, and keeps holding
-// once 4.2-R adds the call site (temml still reaches the tree through exactly one edge). The
-// graph-shaped clause-A/B/C/D fence this file's two precedents use becomes MEANINGFUL again once
-// a call site exists — flagged here as 4.2-R's own to add, not silently skipped.
+// once 4.2-R adds the call site (temml still reaches the tree through exactly one edge).
+//
+// ★ 4.2-R'S OWN ADDITION: the graph-shaped clause-A/B/C/D fence, now meaningful for the first
+// time — `mathEnhancer.ts` (this task) is `mathEngine.ts`'s first real call site, wired at BOTH
+// app-page entries and at NEITHER content-script one (D-3-R). `diagramImportFence.test.ts`'s own
+// `graphFrom`/`resolveLocal` shape is ported below (not imported — that file's own helpers are
+// module-private) rather than re-derived, since this exact reachability question is the one that
+// file already answers for mermaid.
 
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
@@ -287,5 +292,135 @@ describe('the math import fence — the firing control (this scanner is not sile
     // `temml-adjacent-but-different` does not equal 'temml' and does not start with 'temml/', so
     // `isTemml` must reject it — a prefix-only match would be a false positive on an unrelated pkg.
     expect(temmlEdgesIn('src/render/scratchOther.ts', other)).toEqual([]);
+  });
+});
+
+// ── 4.2-R: the graph-shaped fence, now meaningful (diagramImportFence.test.ts's own shape) ─────
+
+const CONTENT_ENTRY = 'entrypoints/peekover.content.ts';
+const APP_ENTRY = 'entrypoints/app/main.ts';
+const ENHANCER = 'src/render/mathEnhancer.ts';
+
+/** WXT's virtual module. Not a file on disk and not ours; it contributes no application edge. */
+const VIRTUAL = new Set(['#imports']);
+
+/** True for a specifier that names a file in THIS repository rather than a package. */
+function isLocal(spec: string): boolean {
+  return spec.startsWith('.') || spec.startsWith('@/');
+}
+
+/**
+ * Resolve a LOCAL specifier to a repo-relative `.ts` path, or `null` if it names something that is
+ * not a TypeScript module (an asset leaf). `undefined` means resolution FAILED — clause D's holes.
+ * Mirrors `diagramImportFence.test.ts`'s own `resolveLocal` exactly.
+ */
+function resolveLocal(fromFile: string, spec: string): string | null | undefined {
+  const bare = spec.split('?')[0];
+  const abs = bare.startsWith('@/')
+    ? path.resolve(ROOT, bare.slice(2))
+    : path.resolve(path.dirname(path.join(ROOT, fromFile)), bare);
+  if (/\.(woff2?|css|svg|png|json|html)$/i.test(bare)) return null; // an asset leaf, not a module
+  for (const candidate of [`${abs}.ts`, path.join(abs, 'index.ts'), abs]) {
+    if (fs.existsSync(candidate) && candidate.endsWith('.ts')) return rel(candidate);
+  }
+  return undefined;
+}
+
+interface Graph {
+  readonly modules: Set<string>;
+  readonly packages: Array<{ from: string; spec: string; line: number; dynamic: boolean }>;
+  readonly unresolved: string[];
+}
+
+/** Walk every edge — static AND dynamic, value AND type — out of `entry`. Uses THIS file's own
+ *  `edgesOf` (the string-span-aware scanner its header explains, not `diagramImportFence.test
+ *  .ts`'s simpler `blankComments`), so the graph walk and the whole-tree scan above share one
+ *  edge-extraction implementation. */
+function graphFrom(entry: string): Graph {
+  const modules = new Set<string>();
+  const packages: Graph['packages'] = [];
+  const unresolved: string[] = [];
+  const queue = [entry];
+
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+    if (modules.has(file)) continue;
+    modules.add(file);
+
+    for (const { spec, line, dynamic } of edgesOf(fs.readFileSync(path.join(ROOT, file), 'utf8'))) {
+      if (VIRTUAL.has(spec)) continue;
+      if (!isLocal(spec)) {
+        packages.push({ from: file, spec, line, dynamic });
+        continue;
+      }
+      const target = resolveLocal(file, spec);
+      if (target === undefined) {
+        unresolved.push(`${file}:${line} — '${spec}'`);
+        continue;
+      }
+      if (target === null) continue; // asset leaf
+      if (!modules.has(target)) queue.push(target);
+    }
+  }
+  return { modules, packages, unresolved };
+}
+
+const contentGraph = graphFrom(CONTENT_ENTRY);
+const appGraph = graphFrom(APP_ENTRY);
+
+describe('the math import fence — clause D, the traversal itself (non-vacuity)', () => {
+  it('walks two non-trivial graphs whose landmarks are present, with no unresolved edge', () => {
+    expect(contentGraph.modules.size).toBeGreaterThan(10);
+    expect(appGraph.modules.size).toBeGreaterThan(20);
+    expect([...appGraph.modules]).toEqual(
+      expect.arrayContaining([APP_ENTRY, 'src/app/appShell.ts', 'src/app/readerPane.ts']),
+    );
+    expect(
+      [...contentGraph.unresolved, ...appGraph.unresolved],
+      'these specifiers looked local but resolved to no .ts file — the walk could not follow ' +
+        'them, so the fence below cannot speak for what they reach. Fix the resolver or the ' +
+        'import:',
+    ).toEqual([]);
+  });
+});
+
+describe('the math import fence — clause A, the content-script graph (D-3-R)', () => {
+  it('reaches NEITHER mathEnhancer NOR mathEngine, by any edge', () => {
+    const offenders = [ENHANCER, ENGINE].filter((m) => contentGraph.modules.has(m));
+    expect(
+      offenders,
+      `the content-script entry (${CONTENT_ENTRY}) must not reach the math modules by any edge ` +
+        `— static, dynamic, or type-only. D-3-R's gate IS the module graph, not a runtime check: ` +
+        `a math marker on the content-script reader stays inert because it never learns the ` +
+        `enhancer exists. Reached:`,
+    ).toEqual([]);
+  });
+
+  it('imports no `temml` specifier anywhere in that graph', () => {
+    const offenders = contentGraph.packages
+      .filter((p) => isTemml(p.spec))
+      .map((p) => `${p.from}:${p.line} — import '${p.spec}'`);
+    expect(
+      offenders,
+      '`temml` in the content-script graph = the fence broke and D-3-R with it. Offending import(s):',
+    ).toEqual([]);
+  });
+});
+
+describe('the math import fence — clause B, the app-page graph IS the control', () => {
+  it('reaches BOTH math modules — so clause A is a real absence, not a broken walk', () => {
+    expect(
+      [...appGraph.modules],
+      `the app-page entry (${APP_ENTRY}) MUST reach both math modules — it is the only surface ` +
+        `that enhances. If this fails, the walker is broken and clause A's empty result is vacuous.`,
+    ).toEqual(expect.arrayContaining([ENHANCER, ENGINE]));
+  });
+
+  it('imports `temml` from within that graph', () => {
+    const found = appGraph.packages.filter((p) => isTemml(p.spec));
+    expect(
+      found.map((p) => `${p.from}:${p.line} — '${p.spec}'${p.dynamic ? ' (dynamic)' : ''}`),
+      'the app-page graph MUST import temml — the package-specifier half of the same control.',
+    ).not.toEqual([]);
   });
 });

@@ -66,6 +66,72 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 4.2-R LANDED, 2026-09-07 — BLOCK/FENCE MATH ENHANCER + VIEW, THE STIX TWO MATH FONT SHIPPED
+FOR REAL, UNDER THE OPEN 1.2-R FORK. ★ A REAL CONTENT-SCRIPT BYTE LEAK WAS INTRODUCED BY THIS TASK'S OWN
+FIRST ATTEMPT AND CAUGHT/FIXED BEFORE LANDING — CS BYTES ARE EXACT-MATCH UNMOVED (340,492 B, md5-identical
+to 3.2-R's floor). D-9-R'S THEME-INHERITANCE LEAN CONFIRMED WITH A FIRING CONTROL; INPUT A DISCHARGED FOR
+REAL WITH A CORRECTED (NON-VACUOUS) NEGATIVE CONTROL. NEXT: TASK 4.3-R (the zero-network guard for the
+bundled font; block math's §3.9 degradation paths).**
+`enhanceMath(host)` wired immediately after `enhanceDiagrams(host)` at both call sites — `readerPane.ts:187`
+/`appShell.ts:170`, RE-VERIFIED, no drift from plan (h)'s own R-0. `src/render/mathEnhancer.ts` (block half)
++ `src/render/mathView.ts` (block half) reuse 007 D-15's sibling-figure state machine, stripped of what
+D-12-R/D-9-R say this milestone does not need yet (no cache, no theme-re-render subscription, no per-render
+engine config — Temml is stateless). `mathSourceOf` peels `$$…$$` for dollar-block origin only, confirmed
+against the exact golden-fixture shape (a trailing `\n` survives inside the delimiters).
+**★ THE FONT MECHANISM — D-13'S SEALED `readerCss.ts`/`@font-face` TEXT WAS STALE (1.1-R's own flagged
+correction, now applied for real): `document.fonts.add(new FontFace(...))` via a NEW module,
+`src/theme/mathFont.ts`, and Temml's OWN shipped `Temml-STIX2.css`, machine-adapted (license/rule comments
+stripped, selectors scoped under `.peekover-reader`, `font-family` retargeted, the equation-numbering
+counter re-scoped from `body` to `.peekover-reader` — a third adaptation beyond the 1.2-R harness's own two,
+since this shadow tree has no `<body>`). Font asset URL-loaded (not `?inline`), taking the byte-forecast
+spike's own ~28.8 KiB lever; WAR re-verified absent on the real shipping wiring.
+**★ THE TASK'S OWN CENTRAL FINDING: A REAL CS-BYTE LEAK, CAUGHT AND FIXED IN THIS SAME COMMIT.** A first,
+literal attempt followed D-13's own sealed Files line and appended the adapted stylesheet into the SHARED
+`readerCss.ts`/`READER_CSS` — a fresh rebuild immediately showed content-script bytes moving 340,492 →
+348,778 B (+8,286 B), because `READER_CSS` is injected unconditionally by `mount.ts` on BOTH the
+content-script and app-page graphs; a CSS string baked into an always-loaded module cannot be tree-shaken
+the way `enhanceMath`'s dynamic `import('temml')` can. Fixed structurally: the adapted stylesheet + figure
+shell moved into a new, separate module (`src/theme/mathCss.ts`), injected as a SECOND `<style>` element by
+`mathEnhancer.ts` itself (app-page-only reachable) via `ensureMathStyle()` — never folded into the shared
+sheet. Rebuilt clean: content-script restored to **340,492 B, md5 `bcdcf231…` Cr / `49e218a1…` Fx — EXACT
+match to 3.2-R's own floor**, `grep -c temml` on both bundles returns 0. This is a live instance of 4.1-R's
+own §2-named hazard, caught by the very re-verification that section demanded.
+**INPUT A — DISCHARGED FOR REAL, WITH A METHODOLOGICAL CORRECTION.** Drafting the real-engine proof found,
+empirically on BOTH engines, that `document.fonts.check()` reads `true` even for a family name NOTHING ever
+registered (the API reports "nothing pending," not "this family exists") — a vacuous negative control,
+caught before it shipped. Replaced with a `canvas.measureText()` glyph-advance DIFFERENTIAL for U+2211 (∑)
+between our registered family and a nonexistent one: if the font were silently unapplied both would read the
+same fallback metric; they read genuinely different, both engines.
+**D-9-R — THE LEAN CONFIRMED, WITH A FIRING CONTROL.** A single rendered formula's computed `color`,
+measured at light/dark/sepia via three `setThemeSetting` calls with NO re-render, resolves to each theme's
+own `--ink` token and all three are pairwise distinct — native MathML really does paint via ordinary CSS
+`color` inheritance. Firing control: a hardcoded-colour `<style>` ablation makes the same flip read identical
+colours both times, proving the un-ablated assertion is a genuine instrument. Temml's own error UI (a
+hardcoded `errorColor`-styled node) is confirmed unreachable — a malformed formula produces only our own
+`.peekover-math-error` marker, zero `.temml-error` nodes anywhere.
+**D-8-R's shared-shape claim proven twice** (fake-engine `mathEnhancer.test.ts`, real-engine
+`mathBlock.browser.test.ts`): `$$…$$` and a ` ```math ` fence render to structurally identical figures, real
+`<math>` trees diffed byte-for-byte in the browser suite. `mathImportFence.test.ts` gained the graph-shaped
+clause-A/B/D reachability fence its own 4.1-R header named this task to add (6→11 tests): the content-script
+graph reaches neither math module and imports no `temml`; the app-page graph (the control) reaches both and
+does.
+**Bytes: CS unmoved (exact match); app-page +301,262 B both engines** over 4.1-R's own figure — decomposed
+as the `temml` chunk (204,010 B, unchanged), the URL-loaded font asset (86,224 B), and ≈11,028 B of
+enhancer/view/font-registration glue plus the adapted stylesheet (a real cost the milestone's own
+byte-forecast spike did not model, stated as a genuine gap). `.output` **5,191,586 B Cr / 5,191,702 B Fx** —
+headroom **51,294 B (50.1 KiB) Cr / 51,178 B (50.0 KiB) Fx, POSITIVE, comfortable** against the 5 MiB
+ceiling. Manifest **654 / 770 B**, `permissions: []`, no `web_accessible_resources` — unmoved. `pnpm lint`
+EXIT=0; full `pnpm test` **1145/1145 passed, ALL GREEN** (67 files — 21 new in `mathEnhancer.test.ts`, 3 new
+in `mathFont.test.ts`, 5 new in `mathImportFence.test.ts`); full `pnpm test:browser` **1553/1568 passed, 15
+pre-existing skips, ALL GREEN** (156 files, incl. the new `mathBlock.browser.test.ts`'s 7 cases × 2 engines).
+Two isolated, non-reproducing timing flakes (`tocScroll.browser.test.ts`, `diagramActions.browser.test.ts`,
+both Firefox) surfaced across repeated full-suite runs while verifying this task and were confirmed
+harness-shared-state per AGENTS.md's own standing rule, not a regression — neither touches math, neither
+persisted on an isolated re-run, and `tocScroll.browser.test.ts` passed clean on an unmodified HEAD via
+`git stash` in this same session. `git diff tests/golden/output/` EMPTY; `codeDetect` 14/14 standalone;
+007/009/M11 import fences 28/28 standalone. See `specs/011-math-rendering/tasks.md` task 4.2-R's own RESULT
+block for the full byte decomposition and every finding. Prior entry, kept for context:
+
 **★ M11 TASK 4.1-R LANDED, 2026-09-07 — `mathEngine.ts`, THE ONE `import('temml')`, UNDER THE OPEN 1.2-R
 FORK. THE D-4-R CONFIG LOCKDOWN RE-DERIVED FIELD-BY-FIELD AGAINST REAL INSTALLED TEMML SOURCE (`trust`/
 `throwOnError`/`annotate`, `output` correctly VACATED). ★ CONTENT-SCRIPT AND APP-PAGE BYTES BOTH UNMOVED —

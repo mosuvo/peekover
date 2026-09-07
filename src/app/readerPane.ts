@@ -18,6 +18,7 @@
 
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
+import { enhanceMath } from '../render/mathEnhancer';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
 import { stopWatch } from '../watch/watchRegistry';
@@ -185,6 +186,9 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // pre-paint — it leaves D-15's degraded state behind, so a fence whose diagram never
       // arrives is already showing its source rather than transitioning into showing it.
       enhanceDiagrams(host);
+      // M11 D-3-R — math enhancement, wired immediately after diagrams (D-3-R's own two call
+      // sites); the "listed, never composed" discipline the note below states applies here too.
+      enhanceMath(host);
       // 008 D-6 SITE 1 — the app page's initial select. The enhancers are LISTED, never composed:
       // a shared `enhance(host)` seam would be the tidy version and would put `diagramEnhancer`
       // (and mermaid's dynamic edge behind it) on the content-script graph the moment sites 3-4
@@ -195,13 +199,17 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // ORDER: diagrams first, then tables (plan §4 risk 5). Neither enhancer knows about the
       // other and a table cannot occur inside a mermaid fence, so they cannot collide on a node —
       // but the ordering is an implicit contract and is stated at the site rather than assumed.
+      // A math fence is a third, mutually exclusive fence shape (`parse.ts`'s `info` dispatch): it
+      // cannot nest a table either, so inserting `enhanceMath` above adds no new collision to reason
+      // about.
       //
       // `enhanceTables` is TOTAL (D-7): it cannot throw, so it cannot reach `paint`'s caller and
       // cannot cost the reader a document that already rendered correctly.
       enhanceTables(host);
-      // 009 D-5 SITE 1 — third in the list, after diagrams and tables (D-5's own text: "no ordering
-      // reason beyond newest last"; a markdown-it fence and a GFM table are siblings, and a mermaid
-      // fence does not nest a code block). Synchronous, same D-6 degraded-state property as above.
+      // 009 D-5 SITE 1 — fourth in the list, after diagrams, math and tables (D-5's own text: "no
+      // ordering reason beyond newest last"; a markdown-it fence and a GFM table are siblings, and
+      // neither a mermaid nor a math fence nests a code block). Synchronous, same D-6 degraded-state
+      // property as above.
       enhanceCode(host);
       return;
     }
