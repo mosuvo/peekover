@@ -66,8 +66,35 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASKS REVISIT DRAFTED, 2026-09-06 (reopened Temml/MathML decomposition, fidelity-spike-first
+Group 1-R gate, group 7 struck), AWAITING GATE-3-REVISIT APPROVAL — THE LAST PLANNING GATE.**
+`specs/011-math-rendering/tasks.md` gained a dated "## TASKS REVISIT — 2026-09-06" block, inserted after the
+header and before the original §§1–9 (preserved below it, unedited, including task 1.1's own `[x]`/RESULT —
+history, not overwritten). The block decomposes the gate-2-revisit-approved architecture
+(`decisions.md`'s "M11 GATE 2 — REVISIT" entry, `f767261`) into EIGHT groups / FIFTEEN tasks (down from the
+original nine groups/16-of-18 — group 7's MathJax tasks are removed entirely, not struck-in-place, and
+group numbering collapses accordingly: the original group 8 becomes 7-R, group 9 becomes 8-R). **Group 1-R
+is now TWO tasks, not one**: 1.1-R (CC byte-measurement — resolves the D-1-R tokenizer fork, reverts the
+original 1.1's leftover `katex`/`@mathjax/src` installs, installs `temml` + the font, discharges INPUT A's
+font-applies-in-shadow-root proof and INPUT B's exact tokenizer-floor figure) and 1.2-R (human-run,
+no-agent-substitute real Chrome+Firefox fidelity walk, judged against REVISIT-RULING 2's bar) — together the
+two-axis fork: PROCEED authorizes Group 2-R onward; CLOSE-M11 (either axis fails) reverts `temml`/tokenizer/
+font in the SAME commit and suspends everything else, resolving the disposition question the original 1.1's
+own branch (C) left open. **INPUT B's content-script invariant is rewritten as a delta assertion**: bytes
+move by exactly the tokenizer's own always-loaded floor, landing once at task 3.2-R (not at Group 1-R's own
+scratch spike) — every task before 3.2-R asserts md5-identity against **336,123 B** (this milestone's own
+authoritative pre-math baseline, per the original 1.1's base-line-divergence finding, not the stale
+334,858 B header figure), every task from 3.2-R on asserts against 3.2-R's own post-floor figure, never
+against the pre-math baseline again. The golden-fixture audit (3.1-R) re-enters because the tokenizer
+candidate itself was reopened by D-1-R, and prices the `$x$`-content-script behavioral cousin as a named
+cost. D-13 (the bundled math font) ships for real at 4.2-R, its shadow-root `@font-face` application
+already proven at 1.1-R. **No package installed, no render code, no build — a doc-only decomposition.**
+`plan.md`/`spec.md`/`decisions.md` are untouched; a human reviewing this block against `plan.md`'s own PLAN
+REVISIT block, and approving it, is the next event — implementation then resumes at task 1.1-R, in a fresh
+session. Prior entry, kept for context:
+
 **★ M11 PLAN REVISIT DRAFTED, 2026-09-06 (Temml/MathML D-value set, fidelity-spike-first group ordering),
-AWAITING GATE-2-REVISIT APPROVAL.** `specs/011-math-rendering/plan.md` gained a dated "## PLAN REVISIT —
+GATE-2-REVISIT APPROVED (`decisions.md`'s "M11 GATE 2 — REVISIT" entry, `f767261`).** `specs/011-math-rendering/plan.md` gained a dated "## PLAN REVISIT —
 2026-09-06" block, inserted right after the header and before the original §0 D-values (preserved below it,
 unedited, per the spec's own reopen convention extended here). The block rebuilds the architecture around
 the gate-1-revisit-approved MathML/Temml scope (`decisions.md`'s "M11 GATE 1 — REVISIT" entry, `2b70d94`):

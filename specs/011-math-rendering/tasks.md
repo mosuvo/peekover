@@ -1,5 +1,6 @@
 # Tasks 011 — Math rendering: KaTeX (+ contingent MathJax fallback) for inline/block/fence math (M11)
-*Gear 3 tasks stage — **DRAFT awaiting gate 3.** The human reviews these against the plan and either approves*
+*Gear 3 tasks stage — **DRAFT awaiting gate 3 — REVISIT.** The human reviews the reopened decomposition*
+*below (the "## TASKS REVISIT" block) against `plan.md`'s own "PLAN REVISIT" block and either approves*
 *or returns them with revisions. **No implementation code before this file is approved** (WORKFLOW.md §5.3).*
 *Approved upstream: `spec.md` — gate 1, banked in `decisions.md`'s **M11 GATE 1** entry (four §9 rulings,*
 *2026-09-06). `plan.md` — gate 2, banked in `decisions.md`'s **M11 GATE 2** entry (2026-09-06): the twelve*
@@ -9,6 +10,463 @@
 *real-engine test (`tests/browser/*`, Cr+Fx, red-first + non-vacuous) — never a trailing "add tests" task.*
 *Layout, computed style, an engine rendering into a live container, bytes-on-wire, and clipboard/selection*
 *behaviour are jsdom-**BLIND**: proven in the real engine, never in jsdom.*
+
+---
+
+## TASKS REVISIT — 2026-09-06 (post gate-2-revisit approval, reopened Temml/MathML decomposition)
+
+**★ THIS FILE'S DECOMPOSITION IS REOPENED. The sections below this block (§ Standing invariants onward,
+including task 1.1's own `[x]`/RESULT) are the ORIGINAL gate-3 draft, preserved for provenance — read as
+history, not as the current task list. This block is the current decomposition.** Task 1.1 is NOT
+un-ticked and its RESULT block is NOT overwritten — it HAPPENED (it settled RULING 1 as branch (C), the
+measurement that caused this whole reopen) and stays `[x]` as the historical record. Every task below is
+NEW, `[ ]`, and belongs to a freshly numbered group/task sequence that supersedes §§1–9 below in full,
+except for the historical 1.1 itself. This re-enters the gate cycle at **gate 3, the LAST planning gate
+before implementation resumes** — a draft, not an approval; the approval, if given, lands as a future
+`decisions.md` "M11 GATE 3 — REVISIT" entry, per the bank-not-artifact precedent this milestone's own
+gate-1-revisit and gate-2-revisit both held (`decisions.md`, `2b70d94`/`f767261`). `plan.md`/`spec.md`/
+`decisions.md` are untouched by this block.
+
+**Authority order (read before any task below):** (1) `plan.md`'s "PLAN REVISIT — 2026-09-06" block
+(`bee9a83`) is the ARCHITECTURE this decomposes — D-1-R…D-13, the (h) group sequence, the supersession
+map. (2) `decisions.md`'s "M11 GATE 2 — REVISIT" entry (`f767261`) is the RULINGS, and, critically,
+**INPUT A** and **INPUT B** — the two obligations this revisit must DISCHARGE below, not restate. (3)
+`spec.md`'s "REVISIT — 2026-09-06" block is the SCOPE (REVISIT-RULINGS 1–4). (4) The original §§1–9 below
+are what is SUPERSEDED — where this kickoff's own prose paraphrases that original text, the FILE (as
+re-read for this drafting pass) governs; one divergence is flagged in this drafting session's own report,
+not smoothed over here.
+
+**Gate-1-revisit rulings, inherited closed, unchanged by this decomposition:** REVISIT-RULING 1 (MathML/
+Temml direction, Temml named as candidate to verify) · REVISIT-RULING 2 (the fidelity bar — acceptable,
+readable math typesetting on BOTH Chrome and Firefox, explicitly not KaTeX-HTML equivalence) ·
+REVISIT-RULING 3 (the pre-stated close-M11 fallback, firing on EITHER the byte axis or the fidelity axis)
+· REVISIT-RULING 4 (MathJax struck permanently, reason recorded, D-10/D-11 vacated). §9-2 (app-page-only)
+and §9-3 (sanitizer profile, now MathML-only) still hold; §9-4 is vacated with RULING 4.
+
+### Discharging INPUT A and INPUT B (gate-2-revisit's own two obligations — concrete below, not restated)
+
+**INPUT B — the content-script byte invariant, REWRITTEN for the reopened milestone, replacing the
+original § Standing invariants' "byte-identical for the WHOLE MILESTONE" claim below (which stays
+unedited as history — it described the ORIGINAL KaTeX/MathJax decomposition, not this one):**
+
+> **Content-script bytes move by EXACTLY the chosen tokenizer's own always-loaded floor (Group 1-R
+> re-measures the exact figure for whichever candidate task 1.1-R resolves between `@mdit/plugin-tex` and
+> a Temml-native alternative) and by NOTHING ELSE, for the rest of the milestone.** The floor lands
+> exactly ONCE, at task 3.2-R (the parse-rule task) — never at Group 1-R itself, which only spikes the
+> figure in scratch, reverted before commit (mirroring the original 1.1's own scratch-probe discipline).
+> **Before 3.2-R lands:** every task asserts content-script bytes md5-identical against **336,123 B both
+> engines** — this session's own re-measured, authoritative pre-math baseline (the original 1.1's own
+> "base-line divergence, flagged" finding: a fresh `rm -rf .output` rebuild measured 336,123 B, not the
+> **334,858 B** this file's own § Standing invariants header below states — that stale figure is a
+> citation error in prose, not a build non-determinism, per 1.1's own RESULT block; 336,123 B is carried
+> forward here as the live figure, neither this file's header nor AGENTS.md is edited by this task). **From
+> 3.2-R onward:** every task asserts content-script bytes md5-identical against **336,123 B + the tokenizer
+> floor 1.1-R measured and 3.2-R confirmed against the real landed code** — not against 336,123 B alone,
+> and never again against the pre-math baseline. **The firing control flips accordingly**: pre-3.2-R tasks
+> use a zero-delta/md5-IDENTITY firing control (reference the candidate from a scratch content-script
+> import, rebuild, md5 moves, revert — the original 1.1's own shape). 3.2-R itself uses a DELTA firing
+> control — the SAME scratch-reference technique, but proving the floor moved by EXACTLY the expected
+> amount, no more, when landed for real (not reverted). Every task after 3.2-R reverts to an md5-IDENTITY
+> control, now checked against 3.2-R's OWN post-floor figure. **A task that asserts md5-identity against
+> 336,123 B alone after 3.2-R has landed has a WRONG Verify — state this explicitly in every task from
+> 3.2-R on, so no task silently carries the stale pre-floor form.** The behavioral cousin — a `$x$` span on
+> the content-script `file://` reader rendering as inert monospace `<code>` at rest, `enhanceMath` never
+> running there (§9-2 holds) — is priced as a named cost in task 3.1-R's own golden audit, not waved
+> through as unremarkable.
+
+**INPUT A — D-13's font-loading firing-control obligation, discharged as a Group 1-R deliverable (task
+1.1-R below), not deferred to Group 4-R's own shipping task:** Group 1-R's byte-measurement task must
+PROVE, real-engine (Cr+Fx — computed style is jsdom-blind), that the subsetted bundled math font actually
+LOADS AND APPLIES inside the app page's shadow root — a rendered formula's computed `font-family` resolves
+to the bundled family, not a fallback — not merely that its bytes landed in `.output`. This pairs with
+RE-VERIFYING (not assuming from KaTeX's own font precedent) that the font resolves same-origin within the
+privileged app page and needs no `web_accessible_resources` key — a bundler shape that forces one is an
+AGENTS.md #4 hard stop, checked here before Group 4-R ships the font for real.
+
+### Locked by the gates, reopened — CITED, never re-argued here
+
+- **plan D-1-R … D-13**, sealed at gate 2-revisit (`decisions.md`'s "M11 GATE 2 — REVISIT" entry). Every
+  task below names the D-value(s) it services and cites the exact `plan.md`'s own PLAN REVISIT-block text
+  as its `decisions.md` landing text — never re-authored — the identical per-task citation discipline the
+  original file used for D-1…D-12, now audited at the reopened task 8.3-R.
+- **§8-1's ruling SURVIVES AND SIMPLIFIES** (`decisions.md`'s original M11 GATE 2 entry, reaffirmed by the
+  gate-2-revisit entry): inline copy-as-LaTeX via text-selection, copy-as-MathML via a document-level
+  action cloning the ONE rendered tree — routed to task 6.2-R, UI placement already RULED at the
+  ORIGINAL gate 3 (a panel/menu-row, never a toolbar button, never a keyboard shortcut) and not reopened.
+- **spec §6's IS-NOT list is a fence, unchanged**: standalone `.math` files · math on the content-script
+  surface (RULING 2) · a math-authoring surface · cross-device sync · a math lightbox. No task below
+  proposes any of them.
+- **§3.5's sibling-checklist audit routing carries forward unchanged in SHAPE** (rows 1, 4, 6, 11, 14–17,
+  19–21, and the new copy-mechanism row) — only the D-value each row cites moves from the original D-N to
+  its D-N-R (e.g. row 4 → D-8-R, not D-8), stated per-task below, not re-derived from scratch.
+
+### The reopened group structure (decomposes plan (h); supersedes the original §§1–9 in full below)
+
+## 1-R — The merged fidelity-and-byte gate (plan (h) — HARD GATE, first, gating everything after it)
+
+- [ ] **1.1-R Resolve the tokenizer fork (D-1-R); govern the dependency set (revert `katex`/`@mathjax/src`,
+      install `temml` + the resolved tokenizer); subset and bundle the math font (D-13); measure and
+      decompose; discharge INPUT A and INPUT B's own exact-figure obligation.** Probe `@mdit/plugin-tex`
+      (still installed, unreverted since the original 1.1) against Temml's own current documentation for a
+      stated markdown-it integration — if Temml's docs name one, that settles D-1-R's candidate fork
+      without inventing a rival; if not, `@mdit/plugin-tex` (already verified tokenizer-only, per the
+      original 1.1's own probe) is confirmed as the candidate, its markdown-it `^15.0.0` peer-dep-vs-`14.3.0`
+      risk (carried plan-input (2)) exercised concretely (a `$5`-price / code-span-adjacent corpus) before
+      being treated as closed. **Govern the dependency set in this same commit**: `katex` and `@mathjax/src`
+      — left installed by the original 1.1's own explicit "not decided here" disposition, pending exactly
+      this human-reviewed reopen — are REMOVED (superseded by REVISIT-RULING 1's MathML direction; struck
+      permanently by REVISIT-RULING 4); `temml` is installed for real (D-2-R, candidate to verify: size,
+      licence, ESM shape, install scripts, LaTeX-macro coverage — the identical 1.1-shaped measurement
+      discipline, not a pin). Subset a representative-formula-corpus-driven WOFF2 from one of Latin Modern
+      Math / Noto Sans Math / STIX Two Math (D-13 — family chosen HERE if the corpus makes one candidate's
+      glyph coverage clearly superior, otherwise deferred to task 8.1-R per plan (h)'s own "if not already
+      settled" framing, stated either way), wired via the shadow-root CSS-injection pattern's own
+      `@font-face`, RE-VERIFIED (not assumed identical to `?inline`'s own `url()` shape, D-13's own flagged
+      distinct build/inject question) against this project's real bundler output.
+      Files: `package.json` · `pnpm-lock.yaml` · the subsetted font asset + its scratch CSS wiring (committed
+      only if Group 1-R's own PROCEED branch lands in 1.2-R below; otherwise reverted with the rest per that
+      task's own fork text)
+      Verify: `Object.keys(pkg.dependencies).length` moves **9 → 8** (`-katex`, `-@mathjax/src`,
+      `+temml`, `@mdit/plugin-tex` or its replacement retained), asserted not eyeballed, names confirmed.
+      `pnpm audit --prod` EXIT=0. Licence/install-script result recorded for `temml`. `.output`/`pnpm zip`
+      deltas decomposed to a fully accounted residual: **(a)** `temml`'s own JS **(b)** the tokenizer's own
+      always-loaded floor, priced separately — THE figure INPUT B's rewritten invariant cites **(c)** the
+      subsetted font's own bytes **(d)** all combined — against the current ~352.8/352.7 KiB / ~607.8/607.7
+      KiB headroom, **unchanged since nothing from the original 1.1's three packages was ever imported into
+      a build graph** (re-confirmed by a fresh clean rebuild before this task's own installs, not assumed).
+      **INPUT A discharged**: a real-engine (Cr+Fx) test proves a rendered formula's computed `font-family`
+      resolves to the bundled family inside the app page's shadow root — with a negative control (a
+      deliberately-wrong `@font-face` `src` must FAIL the same assertion) — and confirms no
+      `web_accessible_resources` key is needed (same-origin resolution inside the privileged app page,
+      re-verified for THIS font, not assumed from KaTeX's own precedent). Content-script bytes
+      md5-identical against **336,123 B** (INPUT B's pre-floor form), with a firing control (a scratch
+      content-script reference to `temml`, rebuilt, md5 moves; reverted, md5 restored). Golden EMPTY ·
+      manifest green **654 / 770 B** · `permissions: []`. [D-1-R, D-2-R, D-13; RULING 1 (already settled,
+      branch C); INPUT A; INPUT B (figure established)]
+
+- [ ] **1.2-R ★ HUMAN-RUN, NO AGENT SUBSTITUTE — real Chrome+Firefox visual-fidelity walk of Temml MathML
+      with the bundled font, judged against REVISIT-RULING 2's bar; THE TWO-AXIS FORK, EXPLICIT.**
+      Extension loaded, both engines (Playwright cannot load an extension into Firefox — the M6/9.1
+      precedent), a dense representative formula corpus (fractions, radicals, integrals, matrices, stretchy
+      delimiters, nested sub/superscripts) walked for **acceptable, readable math typesetting on BOTH
+      engines** — explicitly NOT visual equivalence to KaTeX's own HTML layout, per REVISIT-RULING 2's own
+      text.
+      Files: none in `src/` (a walk; scratch fixtures under `tests/fixtures/` or `scripts/`, discarded or
+      committed per task-time call, stated either way)
+      Verify: each formula class's own verdict recorded plainly (PASS/FAIL against the readable-on-both
+      bar) — no implicit "looked fine." ★ **THE FORK, stated as such in the commit message (the two-axis
+      mirror of the original 1.1's own three-way fork):**
+      - **PROCEED** — 1.1-R's byte measurement fits headroom on BOTH engines AND this walk clears
+        REVISIT-RULING 2's bar on BOTH engines → **Groups 2-R onward are AUTHORIZED**; `temml`/the
+        tokenizer/the font stay installed exactly as 1.1-R left them.
+      - **CLOSE-M11** — EITHER axis fails (the combined byte cost busts headroom, OR Chrome's rendering
+        falls below the readable-on-both bar) → REVISIT-RULING 3's pre-stated fallback fires. Every
+        remaining task in this reopened decomposition is SUSPENDED, and — resolving the disposition
+        question the original 1.1's own branch (C) explicitly left open — **`temml`, the tokenizer, and the
+        font asset are REVERTED in THIS SAME COMMIT** (a shippable milestone-close state cannot carry a
+        bust or an installed-but-unused engine; this reopen states its own fork's disposition explicitly
+        rather than repeating the original's own left-open ambiguity).
+      Golden EMPTY (unaffected by a walk) · manifest green **654 / 770 B** · `permissions: []`.
+      [REVISIT-RULING 2; REVISIT-RULING 3]
+
+*Group-1-R acceptance (plan (h)): both axes measured/walked against REVISIT-RULING 2/3's own bars; PROCEED
+authorizes Group 2-R onward against the actually-installed set; CLOSE-M11 reverts `temml`/tokenizer/font in
+the SAME commit and suspends every remaining task — the only two valid outcomes.*
+
+## 2-R — The math sanitizer profile (D-5-R)
+
+- [ ] **2.1-R `SANITIZE_MATH_CONFIG` / `sanitizeMath` — ONE MathML-only vocabulary, enumerated against REAL
+      installed Temml output (D-5-R).** `MATH_ALLOWED_TAGS` / `MATH_ALLOWED_ATTR` / `SANITIZE_MATH_CONFIG` /
+      `sanitizeMath` survey `temml.renderToMathML` (or whichever entry point 1.1-R's install confirmed)
+      directly, over a representative formula corpus — no KaTeX-output-derived starting hypothesis carried
+      forward. `cleanMathStyle`'s own open question (D-5-R) is RESOLVED AS FOUND: if Temml's real output
+      carries no `style` attribute, `style`/`cleanMathStyle` are simply ABSENT from the profile — a smaller
+      profile than the original D-5, stated as a finding, not a gap. `class` admitted generically by name
+      (carried). No `href`/`src` anywhere in the allow-list. `ALLOW_ARIA_ATTR: true` (carried, engine-
+      agnostic).
+      Files: `src/render/sanitize.ts` (additive only) · `src/render/sanitize.test.ts`
+      Verify: (**unit**) a hostile corpus built from Temml's own real tag/attribute vocabulary is
+      neutralised — an attempted disallowed MathML element (whatever the survey finds absent from Temml's
+      real output), an attempted bare `<a>`, and (only if the survey finds `style` present) a `style` value
+      carrying `url(...)`. The document and SVG profiles' three consts remain **byte-identical** to the
+      original (diffed). Content-script bytes md5-identical against **336,123 B** (pre-3.2-R, per INPUT B's
+      rewritten invariant). App-page bytes stated against 1.1-R's own figure, decomposed. Golden EMPTY ·
+      manifest green **654 / 770 B** · `permissions: []`. [D-5-R; RULING 3]
+
+*Group-2-R acceptance (plan (h)): the hostile corpus (built from Temml's REAL output, not KaTeX's) is
+neutralised; `cleanMathStyle`'s open question resolved as found, one way or the other, stated plainly.*
+
+## 3-R — The golden-fixture audit + the parse-stage rule (D-1-R) — GOLDEN GROWS HERE
+
+- [ ] **3.1-R ★ THE GOLDEN-FIXTURE AUDIT, RE-ENTERED — READ-ONLY, before the parse rule lands.** The
+      original 3.1's own classification was run against the ORIGINAL tokenizer assumption before the
+      milestone's suspension; **recognition grammar (escaping, code-span exclusion, delimiter handling) is
+      a property of the CHOSEN TOKENIZER PACKAGE**, which 1.1-R's own fork reopened — even where the SAME
+      package (`@mdit/plugin-tex`) wins, its grammar is re-confirmed fresh here, not inherited past the
+      milestone's own suspend/reopen boundary. Every existing golden fixture containing a literal `$` is
+      re-read and re-classified (matches-and-should / matches-and-should-not / does-not-match) against what
+      the RESOLVED tokenizer's own rule WILL produce. **The behavioral cousin is priced here, as a named
+      cost, per the gate-2-revisit ruling**: a math span on the content-script `file://` reader renders as
+      inert monospace `<code>` at rest — `enhanceMath` never runs there (§9-2 holds) — a real, visible
+      departure from spec §3.2's "no math affordance" framing, stated plainly, not waved through.
+      Files: none (read-only; findings recorded in the commit message)
+      Verify: every `$`-bearing fixture enumerated by path, classification + reasoning pasted into the
+      report. The behavioral-cousin cost stated as its own line, not folded into a fixture classification.
+      Golden EMPTY (nothing built yet) · manifest green **654 / 770 B** · `permissions: []`. [D-1-R; §7-5;
+      the gate-2-revisit-recorded behavioral cousin]
+
+- [ ] **3.2-R `parse.ts` gains the RESOLVED tokenizer + the two passthrough render rules (D-1-R, D-7-R,
+      D-8-R). ★ GOLDEN GROWS HERE — the reopened decomposition's own sole exception to the EMPTY pin. ★
+      INPUT B's FLOOR LANDS HERE, EXACTLY ONCE.** The marker WRAPPER shapes carry UNCHANGED from D-7/D-8
+      (`<code class="peekover-math-inline">$…$</code>` / `<pre><code class="language-math">$$…$$</code></pre>`,
+      escaped, sharing markdown-it's own `escapeHtml`) — engine-agnostic by construction, per D-7-R/D-8-R's
+      own "only the swapped-in content changes" text; what is genuinely re-verified here is the RECOGNITION
+      grammar behind those markers, per 3.1-R's own re-entered audit. `md.renderer.rules['math_inline']` /
+      `['math_block']` emit the markers ONLY — no `temml` import anywhere in this file (D-2-R's
+      single-importer discipline). The inline-code-consumes-first ordering property (spec §7-5) is
+      re-verified against the resolved tokenizer's real rule-registration order.
+      Files: `src/render/parse.ts` (additive) · `src/render/parse.test.ts` · one NEW committed golden
+      fixture pinning the (unchanged-shape) markers
+      Verify: (**unit**) recognition corpus (escaped `\$`, a `$5` price, a shell `$HOME` in a code span,
+      nested delimiters) against the RESOLVED tokenizer; code-span-exclusion proven directly. 3.1-R's audit
+      re-run against the NOW-REAL rule, every flagged fixture's diff reviewed and classified, pasted into
+      the commit. `git diff tests/golden/output/` **reviewed, not empty** — every hunk explained. **Content-
+      script bytes: THE FLOOR LANDS.** Assert bytes move from **336,123 B** to **336,123 B + 1.1-R's own
+      measured tokenizer-floor figure**, EXACTLY, via a DELTA firing control (the same scratch-reference
+      technique landed for real this time, not reverted) — confirming INPUT B's rewritten invariant is
+      discharged, not merely stated. **Every task from here on asserts CS bytes against THIS new figure, not
+      against 336,123 B alone** — stated explicitly in this task's own commit so no later task carries the
+      stale pre-floor form. Manifest green **654 / 770 B** · `permissions: []`. [D-1-R, D-7-R, D-8-R; §7-5;
+      INPUT B discharged]
+
+*Group-3-R acceptance (plan (h)): the re-entered audit's every flagged fixture is reviewed and classified;
+the (unchanged-shape) marker fixture is pinned; INPUT B's floor lands exactly once, proven by a delta
+firing control, not merely asserted.*
+
+## 4-R — Enhancer scaffolding: block math (D-2-R, D-3-R, D-4-R, D-8-R, D-9-R, D-13)
+
+- [ ] **4.1-R `mathEngine.ts` — the ONE `import('temml')`, the feature-detect, Temml's config lockdown
+      RE-DERIVED against the real installed package (D-2-R, D-4-R).** `import('temml')` as a static string
+      literal (the single-importer discipline D-2/D-2-R protect); `hasMathMarker`/`loadMathEngine` carried
+      from the original shape. **Temml's OWN failure semantics (throw vs. error-node vs. a rendered-error
+      element) and option defaults are read from its real installed source/docs — NOT ported from KaTeX's
+      `trust`/`throwOnError` shape** (carried plan-input (3), D-4-R). Whatever equivalent lockdown Temml
+      actually exposes is pinned explicitly, `Object.freeze`d. **The `output: 'htmlAndMathml'` pin is
+      correctly ABSENT here** — Temml has no output-mode duality to preserve (D-4-R's own VACATE, stated so
+      a reviewer does not go looking for it).
+      Files: `src/render/mathEngine.ts` · `src/render/mathEngine.test.ts` · `src/render/mathImportFence.test.ts`
+      Verify: (**unit**) feature-detect false → loader NOT invoked, asserted by call count (an uncalled spy
+      and a missing spy look identical otherwise). `scripts/check-dynamic-imports.ts` EXIT=0, self-test
+      fires. The re-derived config's fields asserted directly against Temml's real object (a future Temml
+      default change must not silently alter this project's posture). Content-script bytes md5-identical
+      against **3.2-R's own landed floor figure** (not 336,123 B alone — per INPUT B's post-floor form).
+      App-page bytes stated against 2.1-R's own figure. Golden EMPTY · manifest green **654 / 770 B** ·
+      `permissions: []`. [D-2-R, D-4-R]
+
+- [ ] **4.2-R Block/fence math enhancer + view (block half); the bundled font SHIPPED FOR REAL (D-13); D-9-R's
+      theme-inheritance measurement (D-3-R, D-8-R, D-9-R).** `enhanceMath(host)` wired immediately after
+      `enhanceDiagrams(host)` at both call sites, RE-VERIFIED per plan (h)'s own R-0 (`readerPane.ts:187`,
+      `appShell.ts:170`, unchanged, no drift). Block markers get the same synchronous-prologue/async-body
+      shape D-8 established, `sanitizeMath`'d, adopted via 007 D-15's sibling-figure flip. **The font
+      Group 1-R spiked in scratch is wired into `readerCss.ts`'s own shipped shadow-root CSS here, for
+      real** — the same asset, the same `@font-face` mechanism 1.1-R proved applies, now part of the built
+      extension rather than a reverted probe. **D-9-R's theme-inheritance claim is MEASURED, not assumed**:
+      a real contrast measurement of a rendered Temml formula's ink colour at light/dark/sepia, before/after
+      a theme flip with no re-render — including Temml's OWN error-rendering path (D-9-R's own named "one
+      new thing to verify") checked for a hardcoded error colour.
+      Files: `src/render/mathEnhancer.ts` (block half) · `src/render/mathView.ts` (block half) ·
+      `src/app/readerPane.ts:187` · `src/app/appShell.ts:170` · `src/theme/readerCss.ts` (block figure
+      styling + the font's `@font-face`, tokens verified against all three theme blocks)
+      Verify: (**tests/browser** — Cr+Fx) §4's block/fence rendering criteria against Temml's own `<math>`
+      output. D-8-R's shared-shape claim: a dollar-block and a fence formula produce IDENTICAL DOM shapes
+      post-render. §3.5 row 6 (`--reader-measure`). D-9-R's contrast measurement with its own firing control
+      (a hardcoded-colour ablation must FAIL). `mount.ts` diff EMPTY. Content-script bytes md5-identical
+      against 3.2-R's floor. App-page bytes stated against 4.1-R's own figure. Golden EMPTY · manifest green
+      **654 / 770 B** · `permissions: []`. [D-3-R, D-8-R, D-9-R, D-13; §3.5 rows 4(block), 6, 15(block),
+      17(block); §4 block/fence rendering]
+
+- [ ] **4.3-R The zero-network guard for the bundled font; block math's §3.9 degradation paths (D-4-R's
+      engine-failure and D-5-R's sanitize-rejection cases).** The font's CSS/asset resolution mirrors
+      `readerCss.ts`'s own shadow-root-injection pattern, never a runtime `<link>`. Per-formula try/catch
+      (engine-load failure document-wide; parse/render failure and sanitize-rejection per-formula).
+      Files: `src/render/mathEngine.ts` (additive to 4.1-R) · `tests/browser/mathNetwork.browser.test.ts` ·
+      `tests/browser/mathDegrade.browser.test.ts` (block half)
+      Verify: (**tests/browser** — Cr+Fx) zero requests import → render → sanitize → adopt on the real built
+      extension, PLUS a scratch ablation (a CDN swap-in, reverted) proving the guard would catch the trap.
+      All three of §3.9's failures degrade correctly for block math, each RED-FIRST. Content-script bytes
+      md5-identical against 3.2-R's floor. App-page bytes stated against 4.2-R's own figure. Golden EMPTY ·
+      manifest green **654 / 770 B** · `permissions: []`. [D-4-R, D-5-R; §3.5 row 1; §4 degradation]
+
+*Group-4-R acceptance (plan (h)): §4's block/fence rendering and degradation criteria against Temml's own
+output; D-9-R's lean measured and confirmed or corrected; the bundled font shipped for real and
+zero-network-proven; `mount.ts` diff empty.*
+
+## 5-R — Enhancer scaffolding: inline math (D-7-R's inversion, carried unchanged)
+
+- [ ] **5.1-R Inline math — `mathEnhancer.ts`/`mathView.ts` (inline half): mutate-in-place, no sibling
+      (D-7-R).** Identical mechanism to the original 5.1 — the `<code class="peekover-math-inline">`
+      element's own children are `replaceChildren`d on success, never the element itself; on any §3.9
+      failure the element's content is untouched; the in-place failure annotation (`title` + `data-math-
+      failed`) is unchanged. **Only the swapped-in content changes** — Temml's `<math>` tree instead of
+      KaTeX's dual HTML+MathML fragment.
+      Files: `src/render/mathEnhancer.ts` (inline half) · `src/render/mathView.ts` (inline half) ·
+      `tests/browser/mathInline.browser.test.ts` · `tests/browser/mathDegrade.browser.test.ts` (inline half)
+      Verify: (**tests/browser** — Cr+Fx) §4's inline rendering/degradation criteria. D-7-R's persistence
+      property, RED-FIRST (removing/replacing the element on success must go red naming the missing
+      anchor). The failure annotation carries BOTH `title` and `data-math-failed`/`aria-*`. The inline
+      formula's accessible name comes from the `<math>` tree itself post-render. No new control group, no
+      hover/focus popover, no new inline element (a negative assertion). Content-script bytes md5-identical
+      against 3.2-R's floor. App-page bytes stated against 4.3-R's own figure. Golden EMPTY · manifest green
+      **654 / 770 B** · `permissions: []`. [D-7-R; §3.5 rows 4(inline), 11(inline), 15(inline), 17(inline);
+      §4 inline rendering/degradation]
+
+*Group-5-R acceptance (plan (h)): §4's inline rendering/degradation criteria against Temml's own output;
+the persistence-of-the-`<code>`-element property proven red-first.*
+
+## 6-R — Copy-as-LaTeX / copy-as-MathML (D-6-R; §8-1 simplified, not reopened)
+
+- [ ] **6.1-R Block math's copy control group — copy-as-LaTeX (retained source, unchanged) and copy-as-
+      MathML (clone-and-serialize the ONE rendered `<math>` tree, D-6-R).** Reuses 007 D-15's own hover/
+      focus control-group shape verbatim. Copy-as-MathML SIMPLIFIES from the original's dual-output clone
+      to cloning the single tree every formula renders to — no output-mode choice left to make.
+      Files: `src/render/mathView.ts` (the control group) · `tests/browser/mathActions.browser.test.ts`
+      Verify: (**tests/browser** — Cr+Fx) copy-as-LaTeX returns byte-identical source, including an escaped-
+      `\$` fixture from 3.1-R's own audit. Copy-as-MathML returns a `<math>` root the browser's own XML
+      parser accepts round-trip. §3.5 rows 11, 14, 16, 20 (unchanged mechanism, re-proven). Content-script
+      bytes md5-identical against 3.2-R's floor. App-page bytes stated against 5.1-R's own figure. Golden
+      EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-6-R; §3.5 rows 11, 14, 16, 20,
+      new-row(block); §4 copy actions]
+
+- [ ] **6.2-R Inline math's copy actions — text-selection for LaTeX (verified, zero new code), the document-
+      level "copy all formulas as MathML" action, SIMPLIFIED (D-6-R; §8-1 UI placement carried, RULED at the
+      ORIGINAL gate 3, not reopened).** Copy-as-LaTeX for inline math is verified, not built (D-7-R's own
+      retained-source text). The document-level action now clones the ONE tree every formula (block and
+      inline) already renders to — no dual-output branch. UI placement (a panel/menu-row, never a toolbar
+      button, never a keyboard shortcut) is CARRIED from the original gate-3 ruling — this task places the
+      exact row/label/menu-location within that already-ruled shape, unchanged.
+      Files: `src/render/mathView.ts` (the document-level collection function) · the panel/menu-row's host
+      module (task-time choice, named in the commit) · `tests/browser/mathActions.browser.test.ts`
+      (additive)
+      Verify: (**tests/browser** — Cr+Fx) selecting an inline formula's rendered text and copying it
+      produces the exact `$…$` source, byte-identical, over an escaped-`\$` fixture. The document-level
+      action's payload contains every formula's `<math>` root (block AND inline), each round-trip-accepted.
+      §3.5's new row, inline half: no per-formula inline control group exists anywhere in the diff. Content-
+      script bytes md5-identical against 3.2-R's floor. App-page bytes stated against 6.1-R's own figure.
+      Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. No `contextMenus` permission. [D-6-R;
+      §8-1; §3.5 new-row(inline); §4 copy actions]
+
+*Group-6-R acceptance (plan (h)): the four copy-action criteria per the gate-2/gate-2-revisit amendment,
+simplified to one tree; `permissions: []` re-proven; no `contextMenus` anywhere.*
+
+## Group 7 (MathJax) — STRUCK ENTIRELY, PERMANENTLY, not carried as a dormant/contingent fork
+
+D-10/D-11 are VACATED permanently (`plan.md`'s PLAN REVISIT block; `decisions.md`'s "M11 GATE 1 — REVISIT"
+REVISIT-RULING 4). No line items exist for this group in the reopened decomposition — the original's own
+group 7 (tasks 7.1/7.2) is not renumbered into a later slot; **the group NUMBERING ITSELF COLLAPSES**: the
+original group 8 becomes this decomposition's group 7-R, and the original group 9 becomes group 8-R, below.
+
+## 7-R — Measure (D-12-R's cache lean; §3.6) *(was group 8)*
+
+- [ ] **7.1-R Render-timing measurement — 1/10/50-formula documents, feeding D-12-R's cache lean.** Same
+      shape as the original 8.1 (median AND floor, A-B-A against a same-session HEAD control, quiesced;
+      first-paint-with/without-math gates). **Temml's own render-cost profile (parse + native browser
+      MathML layout) is the NEW, unmeasured variable D-12-R names** — it could be faster (no JS-computed
+      layout) or slower (a less-optimized native MathML path in most browsers); this task measures it, does
+      not assume it mirrors KaTeX's own profile. **Forbidden from choosing a cache design from its own
+      output** (D-12-R's own binding text) — a contradicted no-cache lean routes to `progress.md`'s §
+      Carried items, never built here.
+      Files: none in `src/` (a measurement task; a scratch perf script under `scripts/` if needed, stated
+      committed or discarded)
+      Verify: all five outputs (wall-clock to all-formulas-resolved, time-to-first-formula, per-formula
+      amortized cost, first-paint-no-math ZERO delta, first-paint-with-math the same gate), median AND
+      floor. The no-cache lean CONFIRMED or CONTRADICTED, stated plainly. Content-script bytes md5-identical
+      against 3.2-R's floor (unchanged by a measurement task). Golden EMPTY · manifest green **654 / 770 B**
+      · `permissions: []`. [D-12-R; §3.6]
+
+*Group-7-R acceptance (plan (h)): D-12-R's lean confirmed or contradicted with real numbers against Temml's
+own measured render-cost profile; a contradicted lean produces a routed finding, never a cache built here.*
+
+## 8-R — Human milestone-close gate + retro + records reconcile *(was group 9)*
+
+- [ ] **8.1-R Human milestone-close walk — ALSO the venue for REVISIT-RULING 2's bar walked at FULL-DOCUMENT
+      scale (beyond 1.2-R's own corpus-level spike), and for D-13's font-family/subsetting choice
+      FINALIZED here if 1.1-R left it open.** Same axes as the original 9.1 (inline failure-marker visual
+      treatment, block control-group discoverability-vs-clutter, dense-formula legibility at the reading
+      column's width, Firefox everything, zero unexpected network, one wide viewport), re-pointed at
+      Temml/MathML, PLUS a full-document-scale re-walk of REVISIT-RULING 2's own readable-on-both bar (the
+      spike corpus at 1.2-R was necessarily narrower) and D-13's own family/subsetting finalization if not
+      already settled.
+      Files: `design/tokens.css` / `design/brand.html` (only if the walk finds a genuinely new token needed)
+      · `src/theme/readerCss.ts` (final CSS, if this walk's finding differs from 4.2-R's own styling)
+      Verify: each walked item's verdict recorded plainly (PASS, or a named finding routed to § Carried
+      items) — the full-scale REVISIT-RULING 2 walk gets its own explicit verdict, not folded into the
+      other axes. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [§7-9; REVISIT-RULING
+      2 (full-scale); D-13 (if not yet settled)]
+
+- [ ] **8.2-R `/retro` — the milestone retrospective, including this milestone's own three-gate reopen.**
+      Per the retro skill's own ritual, ALSO asking whether the fidelity-spike-first Group 1-R gate (a
+      genuinely new structural shape versus the original single byte gate) held up under real use, and
+      whether the spec→plan→tasks reopen sequence itself (three revisit gates, one milestone) surfaced
+      anything worth naming as precedent for a future milestone's own reopen.
+      Files: `docs/ai/retro.md`
+      Verify: the retro's own entry is banked, dated, cites this milestone's real (reopened) task numbers.
+      Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [WORKFLOW.md §7.5]
+
+- [ ] **8.3-R Records reconcile — `progress.md`, `decisions.md`'s D-N-R-landed audit, `spec-coverage.md`, the
+      final byte ledger, INPUT B's full-lifecycle closing proof.** ★ **A NEW audit against the REOPENED
+      ledger (D-1-R…D-13), not the original D-1…D-12 ledger** — each D-N-R's `decisions.md` entry checked
+      against whether it actually landed with its own implementing commit, the same discipline M9's own 9.3
+      gap named, not repeated. The final byte ledger decomposed across every task from 1.1-R on, against the
+      ~352.8/352.7 KiB / ~607.8/607.7 KiB headroom (the TRUE reopened-milestone-start figure — nothing from
+      the original 1.1's katex/MathJax/tex probe ever shipped in a build, so this IS the M10-close baseline,
+      restated, not re-derived). **Content-script bytes' final proof is against 3.2-R's own landed floor
+      figure** (336,123 B + the tokenizer floor) — NOT 334,858 B, NOT 336,123 B alone — the reopened
+      milestone's own closing invariant, discharging INPUT B's full lifecycle from rewrite through landing
+      through final confirmation.
+      Files: `docs/ai/progress.md` · `docs/ai/progress-archive.md` · `docs/ai/spec-coverage.md` ·
+      `docs/ai/decisions.md` (only if a genuine decision landed at 8.1-R/8.2-R not already banked)
+      Verify: § Baselines carries the final re-run numbers. Every D-N-R's landing commit named. `permissions:
+      []` confirmed intact. Content-script bytes md5-identical against 3.2-R's own floor figure — the
+      milestone's own closing proof it never moved again after landing once. Golden's own final diff — EMPTY
+      except 3.2-R's own reviewed hunk — confirmed once more against the committed fixture. [the D-N-R audit;
+      M9 9.3's own gap, named; INPUT B closing proof]
+
+---
+
+**§4 EARS coverage, reopened:** Rendering (Temml, always in scope) → tasks 3.2-R, 4.1-R, 4.2-R, 5.1-R (+
+content-script clause → 4.3-R/5.1-R's import-fence proofs) · MathJax fallback → **STRUCK, N/A PERMANENTLY**
+(not contingent — REVISIT-RULING 4) · Copy actions → 6.1-R, 6.2-R · Trust → 1.1-R (bytes/manifest/licence/
+font-apply), 4.3-R (network, block), 5.1-R (network, inline) · Degradation → 4.3-R, 5.1-R.
+
+**Supersession map (task level, for the record):**
+
+| Original | Disposition | Reopened |
+|---|---|---|
+| 1.1 (byte gate: KaTeX+MathJax+tex) | DONE, preserved as history — caused this reopen | — (historical, not superseded) |
+| 2.1 (sanitizer, KaTeX-derived) | SUPERSEDED — single Temml-derived MathML vocabulary | 2.1-R |
+| 3.1/3.2 (audit + parse rule) | RE-ENTERED (tokenizer candidate reopened by D-1-R) | 3.1-R / 3.2-R |
+| 4.1/4.2/4.3 (block enhancer, KaTeX) | SUPERSEDED — Temml engine + D-13 font shipped | 4.1-R / 4.2-R / 4.3-R |
+| 5.1 (inline enhancer) | CARRIES mechanism unchanged, content swapped | 5.1-R |
+| 6.1/6.2 (copy actions) | SIMPLIFIED — one tree, not a choice of two | 6.1-R / 6.2-R |
+| 7.1/7.2 (MathJax, contingent) | STRUCK PERMANENTLY, removed | — |
+| 8.1 (render timing) | CARRIES; Temml's own render-cost profile is new | 7.1-R |
+| 9.1/9.2/9.3 (human close/retro/reconcile) | CARRIES, re-pointed + full-scale walk + D-N-R audit | 8.1-R / 8.2-R / 8.3-R |
+
+**Count sealed at gate-3-revisit: EIGHT groups, FIFTEEN tasks** — 1-R (2) · 2-R (1) · 3-R (2) · 4-R (3) ·
+5-R (1) · 6-R (2) · 7-R (1) · 8-R (3). Group 7 (MathJax) removed entirely, not merely unopened — the
+original's own 16-of-18-if-group-7-struck count does not apply to this reopened decomposition.
+
+**What this TASKS REVISIT does NOT do:** install `temml`, any tokenizer package, or any math font (task
+1.1-R's own job); pin the bundled font family or subsetting strategy beyond what 1.1-R's own corpus makes
+obvious; choose finally between `@mdit/plugin-tex` and a Temml-native alternative (1.1-R's own job); write
+render code; build the extension; resolve the fidelity-and-byte gate (1.1-R/1.2-R's own fork); edit
+`plan.md`, `spec.md`, or `decisions.md`; or claim gate-3-revisit approval. **Revisit-when:** a human reviews
+this block against `plan.md`'s PLAN REVISIT block and either approves (a future `decisions.md` "M11 GATE 3
+— REVISIT" entry, implementation resuming at task 1.1-R in a fresh session) or returns it with revisions.
+
+---
+
+## The original §§1–9 below (superseded in full above, except task 1.1's own `[x]`/RESULT) — preserved for provenance, read as history
 
 **★ Standing invariants — bundle-budget snapshot (AGENTS.md kickoff-standing-invariants rule).** Current
 `.output` headroom **~352.8/352.7 KiB** against the **≤5 MiB** bound; `pnpm zip` headroom **~607.8/607.7 KiB**
