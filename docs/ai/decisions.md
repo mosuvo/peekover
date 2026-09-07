@@ -1,6 +1,69 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M11 GATE 2 — REVISIT — the reopened `plan.md` architecture (spec 011, math rendering)
+  APPROVED AS THE SEALED-REOPENED ARCHITECTURE, WITH TWO TASKS-REVISIT INPUTS RECORDED. The `tasks.md`
+  REVISIT is AUTHORIZED as the next artifact and the last planning gate.** `specs/011-math-rendering/plan.md`'s
+  dated "PLAN REVISIT — 2026-09-06" block (draft `bee9a83`) was reviewed and approved at gate 2. **The
+  plan's status line stays "draft (Gear-3 gate 2 — REVISIT — awaiting human approval before `tasks.md`
+  revisit)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the bank-not-artifact precedent held since M7 and
+  through this milestone's own gate-1-revisit; the reopen changes the plan BODY (a genuine architecture
+  re-draft caused by the spec reopen), not its status line.
+  **THE APPROVAL:** the revised D-value set (D-1-R … D-9-R, D-12-R, the new D-13, D-10/D-11 vacated) and the
+  reopened group sequence (fidelity-spike-first, group 7 struck) are APPROVED as M11's reopened architecture
+  — the reopened `tasks.md` decomposes against this, no D-N-R is reopened. The R-0 call-site re-verification
+  (`readerPane.ts:187`/`appShell.ts:170` unchanged at HEAD, no drift) is accepted as fact. The gate-1-revisit
+  rulings (`decisions.md`'s "M11 GATE 1 — REVISIT", 2b70d94) stay inherited-closed: MathML/Temml direction;
+  the readable-on-both-engines fidelity bar; the close-M11 pre-stated fallback; MathJax struck.
+  **THE REVISED ARCHITECTURE, CONFIRMED:**
+  - **The single engine module (D-2-R)** — one `mathEngine.ts` importing Temml (candidate to verify, not
+    pinned, not installed); MathJax's permanent strike collapses D-2's two-file contingency to one.
+  - **The re-derived config lockdown (D-4-R)** — Temml's failure semantics and option defaults verified
+    against the real installed package, NOT ported from KaTeX's `trust`/`throwOnError`; the `htmlAndMathml`
+    output-mode pin VACATED (no duality to preserve), and named as vacated, not silently dropped.
+  - **The simplified sanitizer profile (D-5-R)** — one MathML-only allow-list, enumerated against real
+    installed Temml output; `cleanMathStyle`'s own need left an OPEN QUESTION for the group-2-R task (does
+    Temml emit `style` at all), correctly not assumed either way.
+  - **The simplified copy path (D-6-R / §8-1)** — copy-as-LaTeX reads retained source (unchanged);
+    copy-all-as-MathML clones the single rendered `<math>` tree; §8-1 option (b) survives and simplifies.
+  - **The carried-mechanism D-values (D-3-R, D-7-R, D-8-R, D-9-R, D-12-R)** — surface/call-sites, inline
+    mutate-in-place, block sibling-figure, the theme-inheritance LEAN (strengthened for native MathML but
+    still a task-time measurement), and no-speculative-cache — all carry mechanism unchanged, re-pointed at
+    the revised set.
+  - **The new central budget line (D-13)** — one subsetted OpenType MATH font as a REQUIRED Chrome-fidelity
+    asset (Latin Modern Math / Noto Sans Math / STIX Two Math named, none chosen; family + subset strategy
+    the impl gate's call).
+  - **The group sequence (supersedes §6)** — Group 1-R is a MERGED fidelity-AND-byte gate (Temml JS +
+    tokenizer floor + subsetted font bytes measured together, AND a real-engine Chrome+Firefox visual walk
+    against the readable-on-both bar), passing-on-BOTH-axes-or-fire-the-close-M11-fallback (RULING 3);
+    nothing renders, sanitizes, or enhances ahead of it. Group 7 (MathJax) STRUCK ENTIRELY, not dormant.
+  **TWO INPUTS RECORDED FOR THE `tasks.md` REVISIT (flagged at gate-2-revisit review; the reopened `tasks.md`
+  must discharge them, not restate-and-move-on):**
+  - **INPUT A · D-13's font-loading needs a FIRING-CONTROL-shaped obligation, not a byte check alone.** The
+    plan (D-13) correctly flags the `@font-face` WOFF2 inside the shadow-root CSS-injection pattern as a
+    build/inject shape distinct from the original §1.4 KaTeX `url()` font handling, to be re-verified not
+    assumed. The reopened Group 1-R font task must PROVE the subsetted font actually loads AND applies inside
+    the shadow root (a rendered formula computes to the bundled family, not a fallback), not merely that the
+    bytes landed in `.output` — a font that ships but does not apply passes a naive byte check and fails the
+    visual walk for a plumbing reason masquerading as a fidelity one.
+  - **INPUT B · The content-script byte invariant must be REWRITTEN in the reopened `tasks.md`, with the
+    delta as the assertion, not zero.** D-1-R states the tokenizer lands on `parse.ts`'s shared markdown-it
+    instance — on BOTH graphs, +3,957 B each (task 1.1) — FALSIFYING `tasks.md`'s standing "content-script
+    bytes byte-identical for the whole milestone" invariant. The reopened `tasks.md`'s standing-invariants
+    block must read "content-script bytes move by EXACTLY the chosen tokenizer's own always-loaded floor
+    (the reopened Group 1-R re-measures the exact figure for the actually-chosen candidate) and by nothing
+    else" — and the CS-byte firing control becomes a DELTA assertion (the floor moved by exactly the
+    expected amount, no more), never a byte-identity/zero-delta assertion. The behavioral cousin (a `$x$`
+    span rendering as inert `<code>` on the `file://` reader, `enhanceMath` never running there) is priced
+    by the reopened group-3-R golden audit as a named cost, not waved through.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install Temml, any tokenizer package, or any math font;
+  pin the font family or subset strategy; choose the tokenizer between `@mdit/plugin-tex` and a Temml-native
+  alternative; write `tasks.md` or any render code; build the extension; resolve the fidelity-and-byte gate
+  (Group 1-R's own first task); or edit `plan.md`/`spec.md` status lines. It reopens no D-N-R.
+  **Revisit-when:** the `tasks.md` REVISIT (the next artifact, the last planning gate) decomposes the
+  reopened architecture into ordered tasks, discharging INPUT A and INPUT B above; the fidelity-and-byte
+  gate (Group 1-R) then settles the proceed-or-close fork the same way task 1.1 settled the dependency fork.
+
 - **2026-09-06 · M11 GATE 1 — REVISIT — the reopened `spec.md` scope (spec 011, math rendering) APPROVED,
   ON THE MathML/Temml PATH, WITH A RULED FIDELITY BAR AND A PRE-STATED CLOSE-M11 FALLBACK. The `plan.md`
   REVISIT is AUTHORIZED as the next artifact and the next gate.** `specs/011-math-rendering/spec.md`'s
