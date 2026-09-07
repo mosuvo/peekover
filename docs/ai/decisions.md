@@ -1,6 +1,46 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-07 · M11 1.2-R SEQUENCING DEVIATION — the fidelity walk's human PROCEED/CLOSE-M11 JUDGMENT is
+  DEFERRED to milestone-close; groups 2-R–8-R proceed CONDITIONALLY. A human-authorized build-at-risk
+  choice, banked so it is a decision on the record, not a silent corner-cut.** The reopened `tasks.md`
+  sequences Group 1-R (the merged fidelity-and-byte gate) FIRST, gating everything after it, so no
+  rendering/sanitizer/enhancer work begins until the PROCEED/CLOSE-M11 fork resolves (plan (h);
+  `decisions.md` M11 GATE 3 — REVISIT). Task 1.1-R (`a70a556`) discharged the BYTE axis and INPUT A; a
+  subsequent byte-forecast spike ruled the remaining groups COMFORTABLE (~26–27 KiB projected
+  end-of-milestone `.output` headroom both engines, plus a measured ~29 KiB URL-font reserve that does NOT
+  trigger `web_accessible_resources`). Task 1.2-R's other axis — the human Chrome+Firefox visual-fidelity
+  walk judged against REVISIT-RULING 2's readable-on-both bar — is HUMAN-RUN, NO AGENT SUBSTITUTE, and the
+  human is batching all hands-on testing to milestone-close by preference.
+  **THE DEVIATION:** 1.2-R is split into (i) its AGENT-PREPARABLE half — a durable, both-engine-loadable
+  fidelity harness (real Temml + the STIX Two Math subset via `document.fonts.add()`, rendering the dense
+  representative corpus) plus committed Chromium+Firefox screenshots, built now — and (ii) its
+  HUMAN-JUDGMENT half — the actual readable-on-both ruling — DEFERRED to the milestone-close walk (task
+  8.1-R's own human gate is the natural venue). **Task 1.2-R's box stays `[ ]`; the PROCEED/CLOSE-M11 fork
+  stays FORMALLY OPEN.** Groups 2-R–8-R proceed CONDITIONALLY on the explicit understanding that the
+  deferred human walk is where the fork actually resolves.
+  **THE CONDITIONS (binding on every task from 2-R on):** (1) each task from 2-R onward states, in its own
+  commit, that it proceeds UNDER THE OPEN 1.2-R FORK — built conditionally, not on a passed fidelity gate.
+  (2) If the milestone-close human walk rules CLOSE-M11 (Chrome rendering below REVISIT-RULING 2's bar),
+  REVISIT-RULING 3's fallback fires: the built groups-2-R–8-R work AND the temml/font/tokenizer install are
+  REVERTED (the same disposition 1.2-R's own CLOSE branch already specifies), and M11 closes shipping no
+  math. (3) The byte axis is NOT re-opened by this deviation — the forecast settled it; a late `.output`
+  bust from any group remains that group's own close trigger, independently.
+  **THE RISK, NAMED (this is a build-at-risk authorization, eyes open):** deferring the fidelity judgment
+  means groups 2-R–8-R are built ON TOP OF an unverified fidelity axis. If the close-walk rules CLOSE-M11,
+  that built work is discarded (a clean revert, not a rework — bounded, but real). The sealed plan put the
+  walk FIRST precisely to avoid this; this deviation accepts the exposure in exchange for batching hands-on
+  testing to close. The forecast having retired the BYTE axis means the deferred unknown is fidelity ALONE,
+  not fidelity-and-bytes — which bounds the risk but does not remove it.
+  **WHAT THIS DOES NOT CHANGE:** no D-value; no scope; REVISIT-RULING 2's readable-on-both bar (unchanged,
+  just judged later); REVISIT-RULING 3's fallback (unchanged, its trigger moved to the close-walk);
+  INPUT A/B (discharged/established at 1.1-R, unaffected); the requirement that the walk be real-engine,
+  both engines, extension-or-harness loaded, no agent substitute for the human judgment. It does not tick
+  1.2-R, approve any gate, or edit any status line.
+  **Revisit-when:** the milestone-close human fidelity walk (task 8.1-R) rules PROCEED (1.2-R ticks, M11
+  ships math) or CLOSE-M11 (RULING 3 fires, built work + install revert). Every conditional commit from
+  2-R on carries the open-fork caveat until then.
+
 - **2026-09-06 · M11 GATE 3 — REVISIT — the reopened `tasks.md` decomposition (spec 011, math rendering)
   APPROVED. IMPLEMENTATION IS RE-AUTHORIZED — task 1.1-R onward, a FRESH SESSION. ALL THREE REOPEN GATES
   (spec revisit, plan revisit, tasks revisit) ARE NOW PASSED.** `specs/011-math-rendering/tasks.md`'s dated
