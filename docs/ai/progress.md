@@ -66,8 +66,38 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
-**★ M11 REOPENED — SPEC REVISIT DRAFTED, 2026-09-06 (MathML/Temml, fidelity-first contingent scope, a
-close-M11 pre-stated fallback), AWAITING GATE-1-REVISIT APPROVAL.** `specs/011-math-rendering/spec.md`
+**★ M11 PLAN REVISIT DRAFTED, 2026-09-06 (Temml/MathML D-value set, fidelity-spike-first group ordering),
+AWAITING GATE-2-REVISIT APPROVAL.** `specs/011-math-rendering/plan.md` gained a dated "## PLAN REVISIT —
+2026-09-06" block, inserted right after the header and before the original §0 D-values (preserved below it,
+unedited, per the spec's own reopen convention extended here). The block rebuilds the architecture around
+the gate-1-revisit-approved MathML/Temml scope (`decisions.md`'s "M11 GATE 1 — REVISIT" entry, `2b70d94`):
+**D-1-R** (tokenizer — `@mdit/plugin-tex` and a Temml-native equivalent named side by side, not pinned;
+both carried plan-inputs — the falsified content-script-invariant cost and the markdown-it peer-dep risk —
+priced explicitly on this D-value); **D-2-R** (one engine module, not two — MathJax's permanent strike
+collapses D-2's own two-file contingency structure); **D-3-R** (app-page-only, the two call sites
+RE-VERIFIED at this session's HEAD — `readerPane.ts:187`/`appShell.ts:170`, unchanged, no drift); **D-4-R**
+(KaTeX's `trust`/`throwOnError` config re-derived, not ported, against real installed Temml — carried
+plan-input (3); the `htmlAndMathml` output-mode pin explicitly VACATED, not contradicted, since MathML is
+Temml's only output); **D-5-R** (sanitizer profile simplified to a single MathML-only vocabulary;
+`cleanMathStyle`'s own need left an open question pending real Temml output); **D-6-R** (copy-as-MathML
+simplified to cloning the one rendered tree, no dual-output choice); **D-7-R/D-8-R** (inline
+mutate-in-place and block sibling-figure mechanisms CARRY UNCHANGED — only the swapped-in content changes
+from KaTeX's dual tree to a single `<math>` tree); **D-9-R** (theme-inheritance lean carries, arguably
+strengthened for native MathML, still verify-at-task-time); **D-10/D-11 VACATED permanently** (no
+contingent second engine exists to need either); **D-12-R** (no speculative cache, measure first, carries
+unchanged); **D-13, NEW** (one subsetted bundled OpenType MATH font as a required Chrome-fidelity asset —
+Latin Modern Math / Noto Sans Math / STIX Two Math named, none chosen — the milestone's new central budget
+line). **The group sequence supersedes §6**: Group 1 is now a MERGED fidelity-and-byte gate (Temml + font
+byte measurement AND a real-engine Chrome+Firefox visual-fidelity walk over a dense corpus, judged against
+REVISIT-RULING 2's readable-on-both bar) that must PASS on both axes before Groups 2-R onward are
+authorized; failing either axis fires REVISIT-RULING 3's pre-stated CLOSE-M11 fallback. Group 7 (MathJax)
+is STRUCK ENTIRELY, not merely left unopened. **No package installed, no render code, no build — a doc-only
+architecture re-draft.** `tasks.md`/`decisions.md`/`spec.md` are untouched; the reopened `tasks.md` (the
+ORDER) is the next artifact and the next gate, once a human approves this plan-revisit block. Prior entry,
+kept for context:
+M11 REOPENED — SPEC REVISIT DRAFTED, 2026-09-06 (MathML/Temml, fidelity-first contingent scope, a
+close-M11 pre-stated fallback), GATE-1-REVISIT APPROVED (`decisions.md`'s "M11 GATE 1 — REVISIT" entry,
+`2b70d94`). `specs/011-math-rendering/spec.md`
 gained a dated "## REVISIT — 2026-09-06 (post task 1.1, branch (C))" block, the first structural post-gate
 reopen of any spec.md in this project's history (`git log` over every prior `specs/*/spec.md` commit shows
 only pre-gate-1 draft/harden/amend passes) — the original §1–§9 text is preserved below it, unedited, per
