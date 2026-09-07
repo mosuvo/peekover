@@ -66,6 +66,78 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 BYTE-FORECAST SPIKE, 2026-09-07 (measurement-only, NOT task 1.2-R, NOT a fork decision) —
+GROUPS 2-R THROUGH 8-R FORECAST AT ~7 KiB NET-NEW `.output`, BOTH ENGINES: COMFORTABLE.** Requested
+between 1.1-R and 1.2-R to forecast the app-page byte cost of the remaining reopened groups before
+1.2-R's own PROCEED/CLOSE-M11 fork spends the ~33 KiB `.output` headroom 1.1-R left. Fresh `rm -rf
+.output` rebuild at HEAD `a70a556` re-confirmed 1.1-R's own baseline unchanged: `.output` 4,881,585 B
+Cr / 4,881,701 B Fx, content-script 336,123 B both engines. A REALISTIC (not toy) scratch stand-in
+was built for real, for every group with app-page code — `_scratchMathSanitize.ts` (2.1-R: a
+MathML-only allow-list SIZED AGAINST REAL TEMML OUTPUT, probed this session on a 10-formula corpus —
+20 tags / 14 attrs, extrapolated toward 1.1-R's own 51-formula scale to ~38 tags / 23 attrs; **a real
+finding, not assumed: Temml's real output DOES carry a `style` attribute** — `display:block math;`,
+padding/`math-depth` layout metrics, never `url(` — so `cleanMathStyle`'s open question resolves
+"present, needs a value filter", the OPPOSITE of the scratch-optimistic "absent" branch this same
+spike's own kickoff named as a possibility), `_scratchMathEngine.ts` (4.1-R single-importer +
+config lockdown, 4.3-R's network-guard shape), `_scratchMathEnhancer.ts`+`_scratchMathView.ts`
+(4.2-R's block half — D-8-R's sibling-figure state machine, modeled on `diagramEnhancer.ts`/
+`diagramView.ts`'s own SHAPE but deliberately EXCLUDING their cache integration (D-12-R: no
+speculative cache, group 7-R measures first) and their theme-re-render subscriber (D-9-R's lean:
+math's CSS inherits colour, no re-render mechanism needed) — both real, cited exclusions, not
+oversights), `_scratchMathInline.ts` (5.1-R's mutate-in-place half), `_scratchMathActions.ts` (6.1-R
+block copy-as-LaTeX/MathML control group + 6.2-R's document-level "copy all as MathML" collector,
+modeled on `diagramView.ts`'s control-group shape but excluding its PNG-raster/lightbox machinery,
+which has no math equivalent). Wired into `appShell.ts`'s render path behind a never-true
+`window.__PEEKOVER_SCRATCH_MATH_FORECAST__` flag (1.1-R's own scratch-probe technique) so the
+bundler cannot prove the dynamic imports dead; Vite split each into its OWN chunk, which let the
+decomposition read directly off real chunk sizes rather than a further ablation pass.
+**MEASURED, ABLATED, BOTH ENGINES**: combined `.output` delta **+211,107 B**, identical Cr/Fx (Cr
+5,092,692 B, Fx 5,092,808 B — the 116 B gap is the pre-existing Cr/Fx baseline gap, unchanged);
+content-script **unmoved at 336,123 B both engines** (confirms groups 2-R/4-R/5-R/6-R stay
+app-page-only, as D-3-R requires). A firing-control ablation (temml-alone via this session's own
+call-site shape, group code disconnected) isolated the ALREADY-COUNTED temml floor at **+204,149 B**
+(32 B off 1.1-R's own +204,117 B — an immaterial call-site-shape difference, not a new
+non-linearity) — subtracting it gives the **NET-NEW groups-2-R–8-R cost: 6,958 B**, both engines (Fx
+temml-alone ablation assumed identical to Cr's, per 1.1-R's own confirmed engine-parity pattern for
+this exact chunk — not independently re-measured). Per-group decomposition, read directly off each
+scratch module's own emitted chunk: **2-R** (sanitizeMath) 1,243 B; **4-R** (mathEngine, shared
+between block+inline, 671 B + block enhancer/view combined 1,899 B) 2,570 B; **5-R** (inline half)
+1,030 B; **6-R** (both copy actions) 1,579 B — sum 6,422 B, plus 536 B of chunk-manifest/wiring
+overhead (five new dynamic-import boundaries), immaterial and in the same category 1.1-R's own 67–107
+B non-linearities named. **7-R/8-R: ~0 src bytes** (measurement + docs), stated not fabricated — no
+scratch module was needed or built for either. **PROJECTED END-OF-MILESTONE HEADROOM: 33,971 − 6,958
+= 27,013 B (26.4 KiB) Cr; 33,855 − 6,958 = 26,897 B (26.3 KiB) Fx — POSITIVE, both engines.** Against
+this spike's own COMFORTABLE/TIGHT/AT-RISK routing (>~15 KiB COMFORTABLE, <~15 KiB TIGHT, ~0/negative
+AT RISK): **COMFORTABLE** by the stated threshold, ~11–12 KiB above it — but flagged with a caveat,
+not smoothed over: this forecast's own sizing basis (a 10-formula sanitizer-corpus probe, not
+1.1-R's full 51-formula one; a document-level menu-row host module not modeled, since its real UI
+cost depends on wherever 6.2-R lands the row) could plausibly run 2–3× over this estimate without
+crossing back into TIGHT territory (a tripled ~21 KiB net-new cost still leaves ~13 KiB Cr / ~13 KiB
+Fx positive) — COMFORTABLE, but not by a margin so wide the fidelity walk should ignore bytes
+entirely, per the original kickoff's own framing. **THE URL-FONT LEVER — REAL-MEASURED, NOT
+ESTIMATED, AND ITS NAMED RISK IS CONTRADICTED.** A scratch non-`?inline` import of the SAME
+committed `assets/fonts/stix-two-math-subset.woff2` (Vite then emits it as its own file with a
+resolvable extension URL, `assets/stix-two-math-subset-*.woff2`) measured **+86,516 B `.output`**
+total (86,224 B raw asset + 292 B glue), against the base64-inline form's already-measured +115,356
+B — a **28,840 B (28.2 KiB) recovery**, matching this spike's own ~29 KB estimate almost exactly, now
+measured rather than guessed. **The kickoff's own named WAR risk did NOT materialize**: the built
+manifest after this scratch import shows `web_accessible_resources: null`, `permissions: []`
+unmoved — an app-page-only reference to a same-origin (`chrome-extension://…`) bundled asset needs
+no WAR key, the same same-origin reasoning 1.1-R's own INPUT A finding already established for the
+`?inline` form, now confirmed for the URL-loaded form too (caveat: probed from an app-page-only call
+site, matching D-3-R's own architecture — not tested from a content-script context, which would be a
+different question). **ROUTED RECOMMENDATION FOR 1.2-R: COMFORTABLE** — walk 1.2-R's fidelity gate
+without the byte axis forcing a scope decision; the URL-font lever stays banked as a low-cost,
+real-measured ~28 KiB cushion (no dependency change, no WAR cost) worth taking at 4.2-R regardless of
+how tight the walk leaves things, since it is strictly better than the current base64 form on every
+measured axis. **GUARDRAILS HELD**: every scratch module (six `src/render/_scratchMath*.ts` +
+`src/theme/_scratchMathFontUrl.ts`) and every `appShell.ts` wiring edit reverted before this commit —
+`git status` after revert showed only this file; a clean rebuild post-revert re-confirmed the exact
+4,881,585 B baseline, byte-for-byte. No dependency change. `tasks.md` untouched — this spike is not
+in its task sequence and does not tick any box. `codeDetect.test.ts` confirmed still exactly 3
+pre-existing failures after this edit, not 4. This is NOT task 1.2-R and does NOT decide
+PROCEED/CLOSE-M11 — a decision input routed here for that fork, next. Prior entry, kept for context:
+
 **★ M11 TASK 1.1-R LANDED, 2026-09-07 — TOKENIZER RETAINED, DEPS 9→8, FONT CHOSEN, BOTH BYTE-AXIS AND
 INPUT A DISCHARGED; FITS ON A KNIFE EDGE (~33 KiB `.output` HEADROOM BOTH ENGINES). NEXT: TASK 1.2-R,
 ★ HUMAN-RUN, NO AGENT SUBSTITUTE.** `@mdit/plugin-tex` is CONFIRMED the resolved tokenizer (D-1-R) — both
@@ -302,6 +374,12 @@ installed-but-unused" spirit branch (B)'s own text states explicitly for the Mat
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
+
+- **★ NEW AT THE 2026-09-07 BYTE-FORECAST SPIKE — THE URL-LOADED FONT LEVER, REAL-MEASURED (~28.2
+  KiB recovery, no WAR cost, no dependency change).** See § Now above for the full measurement. **HOME:**
+  whoever lands D-13's font wiring for real at task 4.2-R — take the lever there (a normal asset
+  import instead of `?inline`) rather than shipping the base64 form and revisiting later, since the
+  URL form is strictly better on every measured axis and the milestone's own headroom stays thin.
 
 - **★ NEW AT M11 1.1, PRE-EXISTING, NOT CAUSED BY THIS TASK — `codeDetect.test.ts`'s CORPUS-DRIFT
   RECURS.** `pnpm test` at 1.1's own close: 1053/1056 passed, 1 file / 3 tests red in
