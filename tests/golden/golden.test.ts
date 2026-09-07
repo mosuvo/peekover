@@ -54,6 +54,7 @@ const FIXTURES = [
   'inline-html',
   'links',
   'malicious',
+  'math',
   'nesting',
 ] as const;
 

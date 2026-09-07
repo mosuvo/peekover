@@ -544,7 +544,7 @@ task's own "predict what 3.2-R will produce" framing both call for it directly.
 **ACCEPTANCE.** This task does NOT decide anything about 3.2-R's own implementation — it is read-only,
 findings-only. `git diff tests/golden/output/` EMPTY. No `src/` file touched.
 
-- [ ] **3.2-R `parse.ts` gains the RESOLVED tokenizer + the two passthrough render rules (D-1-R, D-7-R,
+- [x] **3.2-R `parse.ts` gains the RESOLVED tokenizer + the two passthrough render rules (D-1-R, D-7-R,
       D-8-R). ★ GOLDEN GROWS HERE — the reopened decomposition's own sole exception to the EMPTY pin. ★
       INPUT B's FLOOR LANDS HERE, EXACTLY ONCE.** The marker WRAPPER shapes carry UNCHANGED from D-7/D-8
       (`<code class="peekover-math-inline">$…$</code>` / `<pre><code class="language-math">$$…$$</code></pre>`,
@@ -567,6 +567,152 @@ findings-only. `git diff tests/golden/output/` EMPTY. No `src/` file touched.
       against 336,123 B alone** — stated explicitly in this task's own commit so no later task carries the
       stale pre-floor form. Manifest green **654 / 770 B** · `permissions: []`. [D-1-R, D-7-R, D-8-R; §7-5;
       INPUT B discharged]
+
+★ **RESULT — ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1) —
+THE §2 CORRECTION LANDED AS FIX (a), THE ONLY VIABLE ONE GIVEN D-8-R'S OWN PEEL/UNPEEL ASYMMETRY; THE
+FLOOR LANDED BUT NOT "EXACTLY, NOTHING ELSE" AS SEALED — A MEASURED, EXPLAINED DIVERGENCE; GOLDEN GREW BY
+EXACTLY ONE FIXTURE.**
+
+**FENCE FIX CHOSEN: (a), an explicit `renderer.rules['fence']` wrap — NOT (b), the plugin's own `render`
+option as the uniform marker surface.** `@mdit/plugin-tex`'s real installed source (read directly,
+`node_modules/@mdit/plugin-tex/dist/index.js`) shows its `render` callback signature is
+`(content, displayMode, env)` — no fourth parameter distinguishing a fence-origin call from a
+dollar-block-origin call, and BOTH call it with `displayMode=true`. D-8-R's own sealed text requires
+`mathSourceOf`'s `$$`-peel for **dollar-origin content only** — fence content is passed **unpeeled**. A
+single uniform `render` surface (fix (b)) cannot honor that asymmetry: it would have to either add `$$` to
+fence content too (wrong) or omit it from block content too (wrong), with no signal available to tell the
+two calls apart. Fix (a) sidesteps this entirely: `md.use(tex, {render: ...})` is used ONLY for
+`math_inline`/`math_block` (dollar forms), each `$$`/`$`-wrapped explicitly in this project's own
+`render` callback; `mathFence` is left at its default `false` so the plugin never touches
+`renderer.rules['fence']` at all, and THIS project's own explicit fence wrap — installed AFTER the
+existing 009 `data-fence-meta` override — checks `token.info.trim() === 'math'`: true routes through the
+SAME `mathBlockMarker()` helper the dollar-block form uses, content **unpeeled** (no `$$` added); false
+delegates to `fenceRuleWithMeta`, the SAME 009 function reference captured before this wrap installs,
+never a reimplementation. Confirmed empirically (`node_modules` source read, then a live probe with
+`mathFence` unset): `Object.keys(md.renderer.rules)` still lists `fence` as core's own default/009's
+override, untouched by the plugin, exactly as fix (a) requires.
+
+**MARKER SHAPES — LANDED, MATCHING `plan.md:796-797`'s OWN FORMULA.** `mathInlineMarker(content)` →
+`<code class="peekover-math-inline">` + `escapeHtml('$'+content+'$')` + `</code>`. `mathBlockMarker`
+takes an ALREADY-ESCAPED inner string and wraps `<pre><code class="language-math">…</code></pre>\n` (the
+trailing `\n` added explicitly — our custom render bypasses `renderToken`, which is what normally supplies
+it; verified against the pinned 009 fence strings' own trailing `\n` convention). Called as
+`mathBlockMarker(escapeHtml('$$'+content+'$$'))` for `$$…$$` (dollar-block), and
+`mathBlockMarker(escapeHtml(token.content))` for a `math`-info fence — the UNPEELED case, no `$$` added.
+
+**RECOGNITION CORPUS — 13 NEW CASES, `src/render/parse.test.ts`, ALL GREEN, INCLUDING THE TWO
+NON-MATH-FENCE REGRESSION GUARDS.** Every case run against the REAL landed rule (not the tex plugin's
+default rendering — this project's own markers): inline `$x^2$` → `peekover-math-inline` marker;
+`$$…$$` block → `$$`-wrapped `language-math` marker, byte-pinned; a ` ```math ` fence → the SAME
+`language-math` shape, content UNPEELED, byte-pinned (**the §2 case**); **a ` ```js ` fence renders
+BYTE-IDENTICAL to its pre-task pinned string** (`'<pre><code class="language-js">const x = 1;\n</code></pre>\n'`)
+— **the regression guard**, direct, not inferred from Golden alone; **a ` ```mermaid ` fence likewise
+byte-identical** (`'<pre><code class="language-mermaid">graph TD;\nA--&gt;B;\n</code></pre>\n'`) — the
+second regression guard; a `data-fence-meta`-bearing fence (`` ```javascript {2,4} ``) still gets its
+attribute, unaffected by the math wrap; `` `echo $HOME` `` inside a code span excluded, both directions
+(math immediately after it still resolves); a `$5` price (no closing `$` on the line) stays literal; an
+escaped `\$5` stays literal; two adjacent inline formulas on one line both resolve independently (the
+nested-delimiters case); an unbalanced lone `$` does not crash; `<`/`>`/`&` inside a math marker are
+HTML-escaped via `md.utils.escapeHtml` (no new escaping mechanism, per this task's own sealed text); and a
+direct static-source assertion that `parse.ts` contains no `from 'temml'` / `import('temml')` anywhere
+(**D-2-R's single-importer discipline, proven at the source level, not just the built graph**). Full
+`src/render/parse.test.ts`: **37/37 passed.**
+
+**3.1-R's AUDIT RE-RUN AGAINST THE NOW-REAL RULE.** 3.1-R's own enumeration found ZERO existing golden
+fixtures containing a literal `$` — re-confirmed unchanged here (the corpus has not grown since; this
+task's own new fixture is the first `$`-bearing one). `git diff tests/golden/output/` shows **exactly one
+new file, `tests/golden/output/math.html`** — every one of the ten pre-existing snapshot files (`broken`,
+`code`, `gfm-torture`, `headings-inline`, `images`, `inline-html`, `links`, `malicious`, `nesting`, the
+huge-doc SHA-256) is **byte-identical**, confirmed both by `git status --porcelain tests/golden/output/`
+(shows only the `??` untracked new file, no `M`) and by the full `pnpm test` run below reporting the
+huge-doc's pinned digest unchanged. This is 3.1-R's own oracle discharged exactly as it predicted: the
+empty corpus carries zero risk, and the new tokenizer touches nothing pre-existing.
+
+**THE NEW FIXTURE, `tests/golden/fixtures/math.md`, EVERY HUNK OF ITS OUTPUT CLASSIFIED:**
+1. `<h1>Math</h1>` — a heading control, unrelated to math, confirms the fixture parses normally otherwise.
+2. `<code class="peekover-math-inline">$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$</code>` — the D-7-R
+   inline shape, expected.
+3–4. `<pre><code class="language-math">$$\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}\n$$</code></pre>`
+   — the D-8-R block shape, `$$`-wrapped, expected.
+5–6. `<pre><code class="language-math">\sum_{i=1}^n i = \frac{n(n+1)}{2}\n</code></pre>` — the SAME
+   D-8-R shape from a ` ```math ` fence, content UNPEELED (no `$$`) — **the §2 fix's own pinned proof.**
+7. `<p>Run <code>echo $HOME</code> in a shell -- not math. A coffee is $5, also not math.</p>` — the
+   negative control: code-span exclusion and a bare `$5` price both hold, neither becomes a marker.
+
+**CONTENT-SCRIPT BYTES — THE FLOOR LANDED, BUT NOT "EXACTLY, NOTHING ELSE" AS THE SEALED TEXT DEMANDED —
+A MEASURED DIVERGENCE, EXPLAINED, NOT SILENTLY ROUNDED.** Fresh `rm -rf .output` rebuilds, both engines,
+firing control landed FOR REAL (not reverted):
+- **Pre-image** (re-confirmed before this task's diff): CS **336,123 B** both engines, md5 `f4370ed3…` Cr
+  / `13dda867…` Fx — exact match to this task's own kickoff-stated baseline.
+- **Isolated tokenizer floor** (scratch: ONLY `md.use(tex, {render: () => '_scratchMathProbe'})` wired
+  into `parse.ts`, no fence wrap, no real markers — mirroring 1.1-R's own isolated-probe technique
+  exactly; reverted before the real build below): CS **340,099 B** both engines — **+3,976 B**, a further
+  **+17 B** drift past 1.1-R's own **+3,959 B** figure (an incidental patch-version movement in
+  `@mdit/plugin-tex`/`markdown-it` since that session, the same class of drift 1.1-R itself flagged
+  relative to an even earlier probe — not investigated further, per this task's own kickoff explicitly
+  inviting "use the fresh number, flag if it differs").
+- **Real landed delta** (the actual committed diff — tex import, the two marker functions, the fence
+  wrap): CS **340,492 B** both engines, md5 `bcdcf231d2980c60538dd5ade0b3088d` Cr /
+  `49e218a1f0bc2515a4e421b7a063e3d8` Fx — **+4,369 B**, decomposed as **+3,976 B** (the isolated floor,
+  re-measured fresh above) **+ 393 B** (this task's OWN marker-emission/fence-wrap render logic —
+  `mathInlineMarker`/`mathBlockMarker`/the fence-info check — necessarily new code the parse RULE itself
+  requires, not an incidental extra). **Confirmed genuinely floor-plus-necessary-logic, not a leak**: the
+  built content-script bundle was grepped directly for the literal string `temml` — **zero occurrences**
+  (`grep -c` exit 1, zero matches) — and no file beyond `src/render/parse.ts` (additive),
+  `src/render/parse.test.ts`, and the one new golden fixture pair changed in this task's diff, so no other
+  module reaches the content-script graph. **This is the divergence flagged, as instructed**: the sealed
+  Verify text's "336,123 B + 1.1-R's own measured tokenizer-floor figure, EXACTLY... by NOTHING ELSE" reads
+  as if the render logic itself contributes zero bytes; empirically it contributes 393 B, a small but
+  non-zero, fully accounted, fully necessary cost of actually landing the parse rule (as opposed to 1.1-R's
+  own throwaway-stub isolation, which by design measured the floor ALONE). **Not a violation of INPUT B's
+  own SUBSTANCE** ("content-script bytes move by exactly the tokenizer's own always-loaded floor... and by
+  NOTHING ELSE" — read in context as "nothing else EXTRANEOUS," i.e. no `temml`, no other module; this
+  task's own marker logic is the parse rule ITSELF, not an extraneous addition) — but a real gap between
+  the sealed text's literal "EXACTLY" and the measured number, stated plainly rather than smoothed over.
+- **★ NEW CS BASELINE, EFFECTIVE IMMEDIATELY: 340,492 B both engines, md5 `bcdcf231d2980c60538dd5ade0b3088d`
+  Cr / `49e218a1f0bc2515a4e421b7a063e3d8` Fx. Every task from 4.1-R onward asserts CS bytes against THIS
+  figure — never against 336,123 B alone, and never against the isolated-floor-only 340,099/+3,976 B
+  figure either (that number was a scratch probe, reverted, never landed).**
+
+**APP-PAGE BYTES, DECOMPOSED.** `.output` total: **4,890,324 B Cr / 4,890,440 B Fx** — **+8,739 B** both
+engines vs. the pre-image (4,881,585 / 4,881,701). Since `parse.ts` is shared by both the content-script
+AND app-page graphs, this decomposes to the SAME +4,369 B tax landing independently on each graph
+(4,369 × 2 = 8,738, a 1 B non-linearity vs. the measured 8,739, the same class of incidental
+chunk-manifest-overhead drift 1.1-R's own decomposition already named) — confirming the "on BOTH graphs"
+framing plan.md's own carried plan-input (1) states. App-page-only portion: **+4,370 B** (the total minus
+the CS-side +4,369 B).
+
+**STANDING INVARIANTS.** Manifest **654 / 770 B** both engines, `permissions: []` — UNMOVED. `pnpm lint`
+**EXIT=0**. Full `pnpm test`: **1099/1099 passed, ALL GREEN** (62 files) — includes the huge-doc's own
+pinned SHA-256 unchanged (confirming the golden-corpus byte-identity claim above independently) and
+`codeDetect.test.ts`'s corpus-drift guardrail unaffected (below). 007/009 import fences green as part of
+the same full-suite run.
+
+**CODEDETECT SCAN SCOPE — MEASURED, NOT ASSUMED: `tests/golden/fixtures/**` IS IN SCOPE, BUT THIS TASK'S
+OWN NEW FENCE DOES NOT ENTER THE CORPUS — BASELINE HOLDS UNCHANGED.** Reading `codeDetect.test.ts`'s own
+`scanUnlabeledFences` directly: it walks the WHOLE repo tree from `process.cwd()` (excluding
+`node_modules`/`.git`/`.output`/`.wxt`) for every `.md` file's fenced blocks with an **EMPTY** info
+string — confirmed in scope for `tests/golden/fixtures/**` by the function's own comment naming
+`tests/golden/fixtures/code.md`'s own prose fixture as one of the 20 already-counted non-code items. This
+task's new fixture (`tests/golden/fixtures/math.md`) has exactly one fence, and its info string is
+`"math"` — **non-empty** — so the scanner's own `if (info === '') out.push(...)` predicate never adds it.
+**Baseline holds UNCHANGED, measured**: `codeDetect.test.ts` run standalone, both pinned assertions still
+pass — corpus **n=28**, split **8/20**, all 28 scored (re-pinned at `45d4e76`, re-confirmed unaffected by
+2.1-R and 3.1-R, now re-confirmed unaffected by this task too).
+
+**DIVERGENCE FROM THE KICKOFF, FLAGGED:** the CS-byte firing control did NOT land "exactly the isolated
+floor," as detailed above — a genuine, measured gap from the sealed Verify text's literal wording, not
+merely from the kickoff's own paraphrase (the kickoff itself anticipated this possibility explicitly,
+"flag if it differs"). No other divergence: fix (a) was chosen and justified against fix (b)'s concrete
+incompatibility with D-8-R's own peel/unpeel asymmetry, a level of justification detail beyond what 3.1-R's
+audit itself established (the audit named both fixes as candidates without ruling between them).
+
+**ACCEPTANCE.** Golden grew by exactly one fixture; every pre-existing fixture stays byte-identical
+(3.1-R's own oracle, discharged). INPUT B's floor landed for real, with an honestly decomposed and
+explained (not hidden) gap between the sealed "exactly the floor" text and the measured number. No
+`temml` import in `parse.ts`, confirmed both by direct source grep and by the zero-occurrence content-script
+bundle grep. The non-math-fence regression guard (`` ```js ``/`` ```mermaid ``) passes directly, not just
+inferred from Golden's own silence.
 
 *Group-3-R acceptance (plan (h)): the re-entered audit's every flagged fixture is reviewed and classified;
 the (unchanged-shape) marker fixture is pinned; INPUT B's floor lands exactly once, proven by a delta

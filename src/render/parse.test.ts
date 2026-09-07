@@ -166,6 +166,84 @@ describe('parse — markdown-it GFM stage', () => {
     });
   });
 
+  describe('math passthrough (D-1-R, D-7-R, D-8-R) — markers only, no rendering', () => {
+    it('recognizes inline $x$ as an escaped peekover-math-inline marker', () => {
+      const html = parse('Inline $x^2$ here.');
+      expect(html).toContain('<code class="peekover-math-inline">$x^2$</code>');
+    });
+
+    it('recognizes $$...$$ block math as an escaped language-math marker, $$-wrapped', () => {
+      const html = parse('$$\na+b\n$$');
+      expect(html).toBe('<pre><code class="language-math">$$a+b\n$$</code></pre>\n');
+    });
+
+    it('recognizes a ```math fence as the SAME marker shape, content UNPEELED (the §2 fix)', () => {
+      const html = parse('```math\na+b\nc\n```');
+      expect(html).toBe('<pre><code class="language-math">a+b\nc\n</code></pre>\n');
+    });
+
+    it('a ```js fence renders EXACTLY as before the math fence-rule wrap (regression guard)', () => {
+      const html = parse('```js\nconst x = 1;\n```');
+      expect(html).toBe('<pre><code class="language-js">const x = 1;\n</code></pre>\n');
+    });
+
+    it('a ```mermaid fence renders EXACTLY as before the math fence-rule wrap (regression guard)', () => {
+      const html = parse('```mermaid\ngraph TD;\nA-->B;\n```');
+      expect(html).toBe(
+        '<pre><code class="language-mermaid">graph TD;\nA--&gt;B;\n</code></pre>\n',
+      );
+    });
+
+    it('a data-fence-meta-bearing fence still gets its attribute (D-8, unaffected by the math wrap)', () => {
+      const html = parse('```javascript {2,4}\ncode\n```');
+      expect(html).toContain('<pre><code data-fence-meta="{2,4}" class="language-javascript">');
+    });
+
+    it('excludes a shell $HOME inside a code span from becoming math', () => {
+      const html = parse('`echo $HOME` and $x$ math');
+      expect(html).toContain('<code>echo $HOME</code>');
+      expect(html).toContain('<code class="peekover-math-inline">$x$</code>');
+      expect(html).not.toContain('peekover-math-inline">$HOME');
+    });
+
+    it('does not treat a $5 price as math (no closing delimiter on the line)', () => {
+      const html = parse('Item is $5 today.');
+      expect(html).toBe('<p>Item is $5 today.</p>\n');
+      expect(html).not.toContain('peekover-math-inline');
+    });
+
+    it('does not treat an escaped \\$5 as math', () => {
+      const html = parse('Price is \\$5 today.');
+      expect(html).toBe('<p>Price is $5 today.</p>\n');
+      expect(html).not.toContain('peekover-math-inline');
+    });
+
+    it('handles two independent inline formulas on the same line (nested/adjacent delimiters)', () => {
+      const html = parse('$a$ and $b$ together');
+      expect(html).toContain('<code class="peekover-math-inline">$a$</code>');
+      expect(html).toContain('<code class="peekover-math-inline">$b$</code>');
+    });
+
+    it('does not crash on an unbalanced lone $', () => {
+      const html = parse('This costs $ and nothing else.');
+      expect(html).toBe('<p>This costs $ and nothing else.</p>\n');
+    });
+
+    it('HTML-escapes < > & inside a math marker via markdown-it\'s own escapeHtml', () => {
+      const html = parse('$a < b > c & d$');
+      expect(html).toContain('$a &lt; b &gt; c &amp; d$');
+      expect(html).not.toContain('<b');
+    });
+
+    it('has no temml import anywhere in this module (D-2-R single-importer discipline)', async () => {
+      const source = await import('node:fs/promises').then((fs) =>
+        fs.readFile(new URL('./parse.ts', import.meta.url), 'utf8'),
+      );
+      expect(source).not.toMatch(/from ['"]temml['"]/);
+      expect(source).not.toMatch(/import\(['"]temml['"]\)/);
+    });
+  });
+
   describe('inline HTML passthrough (html: true)', () => {
     // The parse stage intentionally does NOT sanitize — it lets raw HTML through
     // for the sanitize stage to neutralize. This asserts the passthrough exists.

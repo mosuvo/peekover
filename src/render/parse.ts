@@ -11,6 +11,7 @@
 
 import MarkdownIt, { type Options } from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
+import { tex } from '@mdit/plugin-tex';
 
 /**
  * Parser options. Options-object-first per the milestone plan: everything that
@@ -93,6 +94,64 @@ md.renderer.rules.fence = (tokens, idx, options, env, slf) => {
   const html = defaultFenceRule(tokens, idx, options, env, slf);
   token.attrs = originalAttrs;
   return html;
+};
+
+/**
+ * Math passthrough (D-1-R, D-7-R, D-8-R): a tokenize-only markdown-it rule
+ * (`@mdit/plugin-tex`) recognizes `$…$` / `$$…$$` and this project supplies
+ * its own `render` callback that emits an ESCAPED-TEXT marker — never
+ * rendered math (`mathEngine.ts`, group 4-R, owns actual rendering; no
+ * `temml` import belongs in this file, D-2-R's single-importer discipline).
+ * Marker shapes carry UNCHANGED from D-7/D-8 (`plan.md` lines 796-797):
+ *   inline -> `<code class="peekover-math-inline">$…$</code>`
+ *   block  -> `<pre><code class="language-math">$$…$$</code></pre>`
+ * `render(content, displayMode)` fires for `$…$` (displayMode false) and
+ * `$$…$$` (displayMode true) ONLY — never for a fence, since `mathFence`
+ * is left at its default `false`; a ` ```math ` fence is routed by the
+ * separate `fence`-rule wrap below, not by this callback.
+ */
+function mathInlineMarker(content: string): string {
+  return `<code class="peekover-math-inline">${md.utils.escapeHtml(`$${content}$`)}</code>`;
+}
+
+function mathBlockMarker(escapedInner: string): string {
+  // Trailing \n matches markdown-it's own block-rule convention (the default
+  // fence renderer's own template ends the same way) — our custom render
+  // bypasses `renderToken`, which is what normally appends it.
+  return `<pre><code class="language-math">${escapedInner}</code></pre>\n`;
+}
+
+md.use(tex, {
+  render: (content, displayMode) =>
+    displayMode
+      ? mathBlockMarker(md.utils.escapeHtml(`$$${content}$$`))
+      : mathInlineMarker(content),
+});
+
+/**
+ * Fence-math routing (D-1-R §2 correction — the 3.1-R audit's own concrete
+ * finding). `@mdit/plugin-tex`'s OWN `fence` override is opt-in via its
+ * `mathFence` option, left `false` above — a ` ```math ` fence therefore
+ * still produces an ordinary `fence` token (`info: 'math'`) that would
+ * otherwise fall through to the 009 `data-fence-meta` renderer above and
+ * render as escaped LITERAL TEXT, never becoming a math marker (proved by a
+ * scratch reproduction, per the audit). This wrap wires it up EXPLICITLY:
+ * a fence whose trimmed info is exactly "math" gets the SAME block-marker
+ * shape `math_block` gets, content passed UNPEELED — no `$$` added, since a
+ * fence supplies its own delimiter (D-8-R: `mathSourceOf`, a later task,
+ * peels `$$` for dollar-block origin only, never for fence origin). Every
+ * OTHER fence (`js`, `mermaid`, language-only, meta-bearing, bare) is
+ * delegated to the 009 `data-fence-meta` renderer above, BYTE-IDENTICAL —
+ * `fenceRuleWithMeta` is the SAME function reference, not a reimplementation.
+ */
+const fenceRuleWithMeta = md.renderer.rules.fence!;
+md.renderer.rules.fence = (tokens, idx, options, env, slf) => {
+  const token = tokens[idx];
+  const info = token.info ? md.utils.unescapeAll(token.info).trim() : '';
+  if (info === 'math') {
+    return mathBlockMarker(md.utils.escapeHtml(token.content));
+  }
+  return fenceRuleWithMeta(tokens, idx, options, env, slf);
 };
 
 /**

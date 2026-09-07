@@ -66,6 +66,40 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 3.2-R LANDED, 2026-09-07 — `parse.ts` GAINS THE RESOLVED TOKENIZER + PASSTHROUGH MARKERS
+(D-1-R, D-7-R, D-8-R), UNDER THE OPEN 1.2-R FORK. GOLDEN GREW BY EXACTLY ONE FIXTURE. INPUT B'S FLOOR
+LANDED — WITH A MEASURED, EXPLAINED GAP FROM THE SEALED "EXACTLY THE FLOOR" TEXT. ★ NEW CONTENT-SCRIPT
+BASELINE FOR EVERY TASK FROM 4.1-R ON: 340,492 B BOTH ENGINES (md5 `bcdcf231…` Cr / `49e218a1…` Fx) —
+NEVER 336,123 B ALONE AGAIN. NEXT: TASK 4.1-R (`mathEngine.ts` — the ONE `import('temml')`).**
+The §2 drafting-time defect 3.1-R surfaced (a ` ```math ` fence is routed by markdown-it's OWN `fence`
+token, not `math_block`) is fixed via candidate (a): an explicit `renderer.rules['fence']` wrap, installed
+AFTER the existing 009 `data-fence-meta` override and captured as its fallback — a math-info fence gets the
+SAME `<pre><code class="language-math">` shape `$$…$$` block math gets, content UNPEELED (no `$$` added);
+every other fence delegates to the SAME 009 function reference, unchanged. Candidate (b) — the plugin's
+own `render` option as a uniform marker surface for all three token kinds — was ruled OUT, not merely
+unchosen: its `(content, displayMode, env)` signature cannot distinguish a fence-origin call from a
+dollar-block-origin call, and D-8-R's own sealed text requires the `$$`-peel for dollar-origin ONLY, an
+asymmetry (b) has no way to honor. Direct regression-guard tests (not just Golden's own silence) confirm a
+` ```js ` and a ` ```mermaid ` fence render BYTE-IDENTICAL to their pre-task pinned strings. The new golden
+fixture (`tests/golden/fixtures/math.md`) pins all three marker shapes — inline, `$$`-block, and the
+math-fence's UNPEELED form — plus the negative controls (a code-span `$HOME`, a bare `$5` price, both
+staying literal); `git diff tests/golden/output/` shows exactly the one new file, every pre-existing
+snapshot byte-identical (3.1-R's own oracle, discharged). **CS bytes — the floor landed for real** (isolated
+scratch re-probe: 336,123 → 340,099 B, **+3,976 B**, a further +17 B drift past 1.1-R's own +3,959 B
+figure) **but the REAL landed delta is +4,369 B, not +3,976 B alone** — decomposed as the +3,976 B floor
+plus **+393 B** of this task's own necessary marker-emission/fence-wrap render logic, confirmed NOT a leak
+(zero `temml` occurrences grepped directly from the built content-script bundle; no other file beyond
+`parse.ts`/`parse.test.ts`/the new fixture pair changed). This is flagged as a genuine, measured gap from
+the sealed Verify text's literal "EXACTLY... by NOTHING ELSE" wording — the kickoff itself anticipated
+this ("flag if it differs from +3,959"). App-page `.output` total **+8,739 B** both engines, decomposing to
+the same +4,369 B tax landing independently on both graphs (parse.ts is shared), +4,370 B app-page-only.
+Manifest **654/770 B**, `permissions: []` — unmoved. `codeDetect`'s corpus (n=28, 8/20 split) is UNAFFECTED
+— its scanner is confirmed in-scope for `tests/golden/fixtures/**` but only counts EMPTY-info fences, and
+the new fixture's fence has info `"math"`, non-empty, so it never enters the corpus. `pnpm lint` EXIT=0;
+full `pnpm test` **1099/1099 passed, ALL GREEN** (62 files). See
+`specs/011-math-rendering/tasks.md` task 3.2-R's own RESULT block for the full byte decomposition, the
+fence-fix justification, and every classified golden hunk. Prior entry, kept for context:
+
 **★ M11 TASK 3.1-R LANDED, 2026-09-07 — THE GOLDEN-FIXTURE AUDIT, RE-ENTERED, READ-ONLY, UNDER THE OPEN
 1.2-R FORK. NEXT: TASK 3.2-R (`parse.ts` gains the resolved tokenizer + passthrough render rules) — WITH
 A CONCRETE DRAFTING-TIME CORRECTION IT MUST APPLY, NOT JUST ITS OWN STATED PLAN.** Every file under
