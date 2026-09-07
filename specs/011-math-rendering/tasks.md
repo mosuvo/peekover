@@ -720,7 +720,7 @@ firing control, not merely asserted.*
 
 ## 4-R — Enhancer scaffolding: block math (D-2-R, D-3-R, D-4-R, D-8-R, D-9-R, D-13)
 
-- [ ] **4.1-R `mathEngine.ts` — the ONE `import('temml')`, the feature-detect, Temml's config lockdown
+- [x] **4.1-R `mathEngine.ts` — the ONE `import('temml')`, the feature-detect, Temml's config lockdown
       RE-DERIVED against the real installed package (D-2-R, D-4-R).** `import('temml')` as a static string
       literal (the single-importer discipline D-2/D-2-R protect); `hasMathMarker`/`loadMathEngine` carried
       from the original shape. **Temml's OWN failure semantics (throw vs. error-node vs. a rendered-error
@@ -737,6 +737,163 @@ firing control, not merely asserted.*
       against **3.2-R's own landed floor figure** (not 336,123 B alone — per INPUT B's post-floor form).
       App-page bytes stated against 2.1-R's own figure. Golden EMPTY · manifest green **654 / 770 B** ·
       `permissions: []`. [D-2-R, D-4-R]
+
+★ **RESULT — ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1) — THE
+CONFIG LOCKDOWN RE-DERIVED FIELD-BY-FIELD AGAINST REAL INSTALLED `temml@0.13.5` SOURCE, ONE FIELD ADDED
+BEYOND KaTeX-ERA D-4's THREE-FIELD SHAPE (CITED, NOT INVENTED); THE IMPORT FENCE'S SHAPE GENUINELY DIVERGES
+FROM ITS 007/009 PRECEDENT, FLAGGED; A METHODOLOGICAL FIRING-CONTROL DEFECT WAS FOUND AND FIXED MID-TASK.**
+
+**`mathEngine.ts` — `hasMathMarker`/`loadMathEngine` CARRIED FROM THE ORIGINAL D-2 SHAPE, MIRRORING
+`diagramEngine.ts`'s `hasDiagramFence`/`loadDiagramEngine` EXACTLY.** `MATH_INLINE_SELECTOR =
+'code.peekover-math-inline'` / `MATH_BLOCK_SELECTOR = 'pre > code.language-math'` match 3.2-R's own landed
+marker shapes exactly (D-8-R's shared block/fence shape means one selector covers both origins). `loadTemml:
+EngineLoader = () => import('temml')` is the ONE `import('temml')` in the repository — a static string
+literal, the `check-dynamic-imports.ts` MUST_NOT_FIRE "bare-specifier lazy chunk" shape. Unlike
+`loadDiagramEngine`, there is no `engine.initialize(config)` step: Temml is stateless — `renderToString`
+takes its options PER CALL — so `loadMathEngine` returns the engine handle unconfigured; the caller supplies
+options via `mathEngineOptionsFor(displayMode)` at each render (group 4-R/5-R's own job).
+
+**THE CONFIG LOCKDOWN — RE-DERIVED, NOT PORTED, EACH FIELD CITED AGAINST REAL `node_modules/temml/src`
+SOURCE (read directly this session).** `MATH_ENGINE_CONFIG = Object.freeze({ trust: false, throwOnError:
+true, annotate: false })`:
+- **`throwOnError: true` — THE LOAD-BEARING FIELD.** `temml.js`'s `renderToMathMLTree` catches every
+  parse/build error and hands it to `renderError(error, expression, settings)`
+  (`node_modules/temml/temml.js:103-111`), whose own first line is `if (options.throwOnError ||
+  !(error instanceof ParseError)) { throw error; }`. With `throwOnError: true` that condition is
+  unconditionally true, so EVERY failure re-throws and NEVER reaches the branch that builds Temml's own
+  `<span class="temml-error">` node (an HTML `Span` from `domTree.js`, styled with `errorColor` — not a
+  MathML element the D-5-R sanitizer profile enumerated). `errorColor` is therefore deliberately ABSENT from
+  the pinned config: it configures a code path this pin makes unreachable.
+- **`trust: false` — Settings.js's own default (`Settings.js:48`), pinned EXPLICITLY** per D-4-R's own "pin
+  a security-relevant default rather than trust an unstated one." `Settings.prototype.isTrusted`
+  (`Settings.js:70-80`) gates `\class`/`\id`/`\style`/`\data` (`functions/html.js:68-70`) and
+  `\includegraphics`; 2.1-R's own finding (`\href`/`\url` unsupported outright, the html-function family
+  throwing "not trusted") is re-confirmed here as a genuine ABLATION, not merely cited (below).
+- **`annotate: false` — Settings.js's own default (`Settings.js:37`), pinned explicitly for the SAME
+  reason.** `sanitize.test.ts:967-969` (2.1-R's own 97-formula survey) already named this field BY NAME as
+  "the defaults 4.1-R will re-derive" — this is a genuine, cited addition beyond the KaTeX-era D-4's
+  three-field shape (`trust`/`throwOnError`/`output`), not an invented fourth field. It guards D-5-R's own
+  sanitizer-profile assumption (`<semantics>`/`<annotation>` confirmed ABSENT from real output specifically
+  because `annotate` defaults false) from a future Temml version silently flipping that default.
+- **`output` — CORRECTLY ABSENT** (D-4-R's own VACATE, stated explicitly per the kickoff's own instruction
+  so a reviewer does not go looking for it): Temml has no `output` option at all (absent from `Settings.js`'s
+  full field list) because MathML is the only output a MathML-output-strategy engine produces by construction.
+
+**REAL-TEMML PROOF, `mathEngine.test.ts`, 11/11 GREEN.** Feature-detect gate (call-count spy, paired
+negative/positive per 007's own "an uncalled spy and a missing spy look identical" discipline). Config
+frozen, asserted `toEqual({trust:false, throwOnError:true, annotate:false})` and `Object.keys(...).sort()
+=== ['annotate','throwOnError','trust']` (no fourth key). `mathEngineOptionsFor` merges `displayMode` without
+mutating the shared base. Against REAL installed `temml`: `\frac{a}{` (malformed) throws; an unrecognized
+control sequence throws (the SAME `renderError` OR-branch, a different producer); `annotate:false` confirmed
+keeping `<semantics>`/`<annotation>` out of real rendered `x^2` output. **The `trust` ABLATION**: `\class{
+peekover-injected}{x}` throws `/not trusted/` under the pinned config; the SAME formula with ONLY `trust`
+flipped `true` (never landed in `mathEngine.ts`, only in the test's own options object) SUCCEEDS and contains
+`peekover-injected` — proving the throw depends on the `trust: false` pin specifically, not on the formula
+being malformed some other way.
+
+**★ `mathImportFence.test.ts` GENUINELY DIVERGES FROM `diagramImportFence.test.ts`/`codeImportFence.test.ts`'S
+OWN GRAPH-WALK SHAPE — FLAGGED, NOT SILENTLY COPIED.** Both precedents landed AFTER their engine already had
+a real call site (007's diagram engine wired before task 3.4; 009's code engine at task 4.1, before its own
+fence at 4.5 — that file's own header states this). `mathEngine.ts` has NO call site yet (4.2-R/5.1-R's own
+job) — an entry-walk from either `entrypoints/peekover.content.ts` or `entrypoints/app/main.ts` reaches
+NEITHER `mathEngine.ts` NOR `temml` today, so a graph-shaped "app-page control MUST reach the engine" clause
+would find nothing and prove nothing. Instead this file performs a WHOLE-SHIPPED-TREE specifier scan
+(`check-dynamic-imports.ts`'s own `collectFiles`/self-test discipline: `src`+`entrypoints`, excluding
+`*.test.ts`/`*.d.ts`), asserting exactly one `temml` specifier in the tree, dynamic, in `mathEngine.ts` —
+a property that holds regardless of reachability and keeps holding once 4.2-R wires a call site. The
+graph-shaped clause-A/B/C/D fence becomes meaningful again once that call site exists — named here as
+4.2-R's own to add, not silently dropped.
+**A GENUINE GAP FOUND WHILE PORTING `diagramImportFence.test.ts`'S OWN `blankComments`, FIXED.** That
+function blanks comments but leaves string-literal CONTENT unmasked and untracked — harmless for its own
+subject file (whose only string content IS the specifier being matched), but this file's own MUST-NOT-FIRE
+fixture (`"never write import('temml') outside mathEngine.ts"`, mirroring `check-dynamic-imports.ts`'s own
+self-test case) reproducibly FALSE-POSITIVED: the regex matched `import('temml')`-shaped text sitting inside
+an OUTER string literal as if it were a real dynamic import. Fixed by porting `check-dynamic-imports.ts`'s
+own `maskComments`/`insideString` string-SPAN-tracking technique (not imported — that script is `scripts/`-
+only by its own stated exclusion, kept out of the shipped-tree scan this file performs) rather than
+weakening the test fixture. **Firing control, 6/6 green**: two MUST-FIRE cases (a second STATIC import, a
+second DYNAMIC import, each in an in-memory-only fixture module, never landed on disk) and two MUST-NOT-FIRE
+cases (comment/string prose mentioning temml — the fixed case above; an unrelated package name sharing no
+`/`-boundary prefix with `temml`) — proving the scanner is live, not silently broken, on the SAME function
+the real scan uses (not a re-implementation).
+
+**`check-dynamic-imports.ts` — EXIT=0 BOTH RUNS.** Self-test: 7 firing + 8 silent, all pass (unchanged by
+this task — `import('temml')` is exactly the "bare-specifier lazy chunk" shape its own MUST_NOT_FIRE fixture
+already sanctions). Real scan: **72 shipped files, 0 violations.**
+
+**CONTENT-SCRIPT BYTES — UNMOVED, WITH A FIRING CONTROL THAT SURFACED A REAL BUNDLING FACT.** Fresh
+`rm -rf .output` rebuild, both engines: **340,492 B**, md5 `bcdcf231d2980c60538dd5ade0b3088d` Cr /
+`49e218a1f0bc2515a4e421b7a063e3d8` Fx — EXACT match to 3.2-R's own landed floor figure, confirmed via
+`scripts/check-dynamic-imports.ts`'s companion `grep -c temml` returning **0** on both built bundles.
+**Firing control** (a scratch static VALUE import of `loadMathEngine` into `entrypoints/peekover.content.ts`,
+reverted before this commit): CS moved to **546,232 B both engines** (**+205,740 B**), md5 moved, `temml`
+grep **1** — a genuine finding, stated: a content script is built as ONE FILE with no code-splitting, so the
+dynamic `import('temml')` chunk gets INLINED directly into the content-script bundle rather than staying a
+separate lazy file the way it does on the app-page graph (below). Reverted: CS restored byte- and
+md5-identical to the figure above, `git status` after revert showed only this task's own three new files.
+
+**★ APP-PAGE BYTES — THE SEALED VERIFY TEXT'S OWN COMPARISON BASELINE IS STALE, FLAGGED.** 4.1-R's own
+sealed Verify line reads "App-page bytes stated against 2.1-R's own figure" (4,881,585 B Cr / 4,881,701 B
+Fx) — but 3.2-R (landed AFTER 4.1-R's text was drafted, BEFORE this task ran) already moved app-page bytes,
+because `parse.ts` is shared by both the content-script AND app-page graphs: 3.2-R's own RESULT block states
+`.output` **4,890,324 B Cr / 4,890,440 B Fx**, +8,739 B over 2.1-R's figure. Comparing against 2.1-R's stale
+number here would read a phantom +8,739 B delta that has nothing to do with this task. **The correct, measured
+comparison is 3.2-R's own landed figure**, matching this session's own §CS-baseline note (`tasks.md:672-675`,
+"every task from 4.1-R onward" — read here as applying symmetrically to the app-page figure, not only the
+CS one). Fresh rebuild: `.output` **4,890,324 B Cr / 4,890,440 B Fx — UNMOVED**, because `mathEngine.ts` has
+no call site on EITHER graph yet (4.2-R/5.1-R's own job) — it is dead code, fully tree-shaken, contributing
+zero bytes anywhere.
+**FIRING CONTROL — A NAIVE FIRST ATTEMPT WAS INSUFFICIENT, A REAL METHODOLOGICAL FINDING, NOT SMOOTHED
+OVER.** A scratch `void _scratchMathProbe;` reference (a plain expression statement referencing the imported
+binding without calling it) wired into `appShell.ts` moved `.output` by only **+54 B both engines** — noise-
+floor chunk-hash churn, not real code (confirmed: zero `temml` occurrences anywhere in the rebuilt app
+bundle). The minifier eliminates a bare `void <unused-reference>` as dead code BEFORE the bundler's own
+unused-import analysis runs, which then drops the whole `mathEngine.ts`/`temml` subgraph — a genuinely
+different failure mode from 2.1-R's own scratch probe (`sanitize.ts`, wired behind a runtime window flag,
+which DID move real bytes because a function CALL, unlike a bare reference, is never assumed side-effect-free
+by the minifier). **Corrected**: the SAME runtime-window-flag-guarded CALL discipline 2.1-R's own scratch
+probe used (`window.__PEEKOVER_SCRATCH_MATH_ENGINE__`, never true, reverted before commit) — this DID move
+real bytes: `.output` **5,094,676 B Cr / 5,094,792 B Fx**, **+204,352 B both engines**, decomposed as **(a)**
+a new lazy chunk `temml-*.js`, **204,010 B** — an EXACT independent reproduction of 1.1-R's own isolated-
+temml-chunk figure (1.1-R: "one new lazy chunk, 204,010 B"), confirming temml's own bytes are unchanged since
+that measurement — **(b)** **+342 B** eager glue (`mathEngine.ts`'s own always-loaded code plus this scratch's
+own wiring lines in `appShell.ts` — NOT a figure 4.2-R's real landing will match, since real wiring differs;
+stated as a decomposition proof, not a prediction). Content-script bytes stayed **340,492 B, UNMOVED**
+throughout this app-page-only scratch — confirming D-3-R's app-page-only isolation holds independent of
+which graph is wired. Reverted; a final fresh `rm -rf .output` rebuild, both engines, confirmed byte- AND
+md5-identical restoration: CS 340,492 B / `bcdcf231…` Cr / `49e218a1…` Fx; `.output` 4,890,324 B Cr /
+4,890,440 B Fx. `git status` after revert showed only this task's own three new files.
+
+**STANDING INVARIANTS.** Manifest **654 / 770 B** both engines, `permissions: []`, no
+`web_accessible_resources` key — UNMOVED. `pnpm lint` **EXIT=0**. Full `pnpm test`: **1116/1116 passed, ALL
+GREEN** (64 files — 1099 at 3.2-R's close + this task's own 11 (`mathEngine.test.ts`) + 6
+(`mathImportFence.test.ts`) = 17 new). `codeDetect.test.ts` run standalone: **14/14 passed**, corpus
+UNAFFECTED (this task adds no fenced markdown and touches no file the corpus scans). 007/009 import fences
+(`diagramImportFence.test.ts`/`codeImportFence.test.ts`) run standalone: **17/17 passed**, unaffected.
+`git diff tests/golden/output/` **EMPTY** — this task builds no markdown fixture and changes no render path.
+
+**DIVERGENCE FROM THE KICKOFF, FLAGGED:** the kickoff's own §2 anticipated possibly needing to pin
+`errorColor` or other Temml options beyond the three landed here; measured, `errorColor` is dead code under
+`throwOnError: true` (§ above) and is correctly excluded, stated rather than silently added. The kickoff's
+own §3 described the import fence as "the 007 diagramImportFence / 009 codeImportFence analog" without
+naming the reachability-shape mismatch; that mismatch — and the string-literal false-positive gap it exposed
+while porting `blankComments` — are both genuine findings this task's own drafting surfaced, not anticipated
+by the kickoff. The kickoff's own §4 predicted the app-page firing control would directly show "eager glue
+vs. lazy temml chunk decomposed"; the naive first attempt did not (§ above), a real methodological finding
+the kickoff did not anticipate, corrected within this task rather than reported as a gap for a later task.
+The two carried 4.2-R font inputs (D-13 mechanism: `document.fonts.add()`, not `readerCss.ts`'s own
+`@font-face`; stylesheet: the adapted `Temml-STIX2.css`, both already recorded in 1.1-R's own RESULT block)
+are NOT re-recorded here — this task's own diff does not touch them, and re-stating them a second time (the
+kickoff's own §5) would be redundant with 1.1-R's own already-committed record, not a new obligation this
+task discharges.
+
+**ACCEPTANCE.** The config lockdown is re-derived, cited field-by-field against real installed source, with
+`output` correctly absent. The single-importer guarantee is proven over the whole shipped tree with a firing
+control that itself required a real fix (the string-span gap). Content-script bytes are unmoved, proven with
+a firing control that surfaced a real bundling fact (content-script inlining vs. app-page chunk-splitting).
+App-page bytes are unmoved against the CORRECT (3.2-R) baseline, not the sealed text's stale one, proven with
+a firing control whose own first attempt failed usefully and was corrected in-task. `git diff
+tests/golden/output/` EMPTY. No `src/` file beyond this task's own three new files changed.
 
 - [ ] **4.2-R Block/fence math enhancer + view (block half); the bundled font SHIPPED FOR REAL (D-13); D-9-R's
       theme-inheritance measurement (D-3-R, D-8-R, D-9-R).** `enhanceMath(host)` wired immediately after

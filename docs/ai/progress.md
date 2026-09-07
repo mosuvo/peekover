@@ -66,11 +66,52 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 4.1-R LANDED, 2026-09-07 — `mathEngine.ts`, THE ONE `import('temml')`, UNDER THE OPEN 1.2-R
+FORK. THE D-4-R CONFIG LOCKDOWN RE-DERIVED FIELD-BY-FIELD AGAINST REAL INSTALLED TEMML SOURCE (`trust`/
+`throwOnError`/`annotate`, `output` correctly VACATED). ★ CONTENT-SCRIPT AND APP-PAGE BYTES BOTH UNMOVED —
+`mathEngine.ts` HAS NO CALL SITE ON EITHER GRAPH YET (4.2-R/5.1-R). NEXT: TASK 4.2-R (block/fence math
+enhancer + view; the bundled STIX Two Math font shipped for real).**
+No render path or golden fixture changes — this task is scaffolding only. `hasMathMarker`/`loadMathEngine`
+mirror `diagramEngine.ts`'s `hasDiagramFence`/`loadDiagramEngine` exactly, gated on 3.2-R's own landed marker
+selectors (`code.peekover-math-inline`, `pre > code.language-math`). The lockdown: `throwOnError: true` is
+the load-bearing field — `temml.js`'s own `renderError` re-throws unconditionally under it, so a formula's
+failure can never reach Temml's own `<span class="temml-error">` UI; `trust: false` (Settings.js's own
+default, pinned explicitly) is proven load-bearing with a genuine ABLATION (`\class{…}{…}` throws under the
+pin, succeeds when `trust` is flipped `true` in the test only); `annotate: false` is a field ADDED beyond the
+KaTeX-era D-4's three-field shape, cited to 2.1-R's own `sanitize.test.ts:967-969` forward-pointer rather
+than invented, guarding D-5-R's own "no `<semantics>`/`<annotation>`" sanitizer assumption from a future
+Temml default flip. `output` is correctly ABSENT (D-4-R's own VACATE — Temml has no such option).
+**`mathImportFence.test.ts` genuinely diverges from `diagramImportFence.test.ts`/`codeImportFence.test.ts`'s
+own entry-graph-walk shape**: both precedents landed AFTER their engine had a real call site; `mathEngine.ts`
+has none yet, so a graph walk from either entry point reaches it by no edge and a reachability-shaped control
+would prove nothing. Built instead as a whole-shipped-tree specifier scan (`check-dynamic-imports.ts`'s own
+`collectFiles` discipline), which while being ported off `diagramImportFence.test.ts`'s own `blankComments`
+surfaced a real gap in that shared helper (it does not track string-literal spans, so import-shaped TEXT
+inside a string false-positives) — fixed by porting `check-dynamic-imports.ts`'s own `maskComments`/
+`insideString` span-tracking instead of weakening the test. **Bytes: both graphs UNMOVED, each firing control
+surfacing a real finding.** Content-script: 340,492 B both engines unmoved (3.2-R's own floor); the firing
+control (a scratch static import into the content script, reverted) found the ~204 KB temml chunk gets
+INLINED directly into the content-script bundle rather than staying a separate lazy file — content scripts
+build as one file, no code-splitting. App-page: `.output` 4,890,324 B Cr / 4,890,440 B Fx unmoved — **the
+task's own sealed Verify text ("against 2.1-R's own figure") is stale**, since 3.2-R already moved app-page
+bytes (shared `parse.ts`); the correct baseline is 3.2-R's own landed figure, which this measures against. A
+naive first firing-control attempt (`void <unused reference>`) moved only +54 B noise — the minifier
+eliminates a bare unused reference before the bundler's own import-usage analysis runs, dead-coding the whole
+subgraph; corrected with a runtime-window-flag-guarded CALL (2.1-R's own scratch-probe discipline), which
+moved +204,352 B both engines, decomposed as 204,010 B (the lazy `temml-*.js` chunk — an exact independent
+reproduction of 1.1-R's own isolated-chunk figure) + 342 B eager glue. Both scratch edits reverted; a final
+fresh rebuild confirmed byte- and md5-identical restoration on both graphs. Manifest 654/770 B,
+`permissions: []` unmoved. `pnpm lint` EXIT=0; full `pnpm test` **1116/1116 passed, ALL GREEN** (64 files —
+17 new: 11 in `mathEngine.test.ts`, 6 in `mathImportFence.test.ts`). `codeDetect` (14/14 standalone) and the
+007/009 import fences (17/17 standalone) confirmed unaffected. See `specs/011-math-rendering/tasks.md` task
+4.1-R's own RESULT block for the full field-by-field config justification and both firing-control writeups.
+Prior entry, kept for context:
+
 **★ M11 TASK 3.2-R LANDED, 2026-09-07 — `parse.ts` GAINS THE RESOLVED TOKENIZER + PASSTHROUGH MARKERS
 (D-1-R, D-7-R, D-8-R), UNDER THE OPEN 1.2-R FORK. GOLDEN GREW BY EXACTLY ONE FIXTURE. INPUT B'S FLOOR
 LANDED — WITH A MEASURED, EXPLAINED GAP FROM THE SEALED "EXACTLY THE FLOOR" TEXT. ★ NEW CONTENT-SCRIPT
 BASELINE FOR EVERY TASK FROM 4.1-R ON: 340,492 B BOTH ENGINES (md5 `bcdcf231…` Cr / `49e218a1…` Fx) —
-NEVER 336,123 B ALONE AGAIN. NEXT: TASK 4.1-R (`mathEngine.ts` — the ONE `import('temml')`).**
+NEVER 336,123 B ALONE AGAIN.**
 The §2 drafting-time defect 3.1-R surfaced (a ` ```math ` fence is routed by markdown-it's OWN `fence`
 token, not `math_block`) is fixed via candidate (a): an explicit `renderer.rules['fence']` wrap, installed
 AFTER the existing 009 `data-fence-meta` override and captured as its fallback — a math-info fence gets the
