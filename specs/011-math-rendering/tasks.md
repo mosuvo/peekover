@@ -104,7 +104,7 @@ AGENTS.md #4 hard stop, checked here before Group 4-R ships the font for real.
 
 ## 1-R — The merged fidelity-and-byte gate (plan (h) — HARD GATE, first, gating everything after it)
 
-- [ ] **1.1-R Resolve the tokenizer fork (D-1-R); govern the dependency set (revert `katex`/`@mathjax/src`,
+- [x] **1.1-R Resolve the tokenizer fork (D-1-R); govern the dependency set (revert `katex`/`@mathjax/src`,
       install `temml` + the resolved tokenizer); subset and bundle the math font (D-13); measure and
       decompose; discharge INPUT A and INPUT B's own exact-figure obligation.** Probe `@mdit/plugin-tex`
       (still installed, unreverted since the original 1.1) against Temml's own current documentation for a
@@ -143,6 +143,134 @@ AGENTS.md #4 hard stop, checked here before Group 4-R ships the font for real.
       content-script reference to `temml`, rebuilt, md5 moves; reverted, md5 restored). Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [D-1-R, D-2-R, D-13; RULING 1 (already settled,
       branch C); INPUT A; INPUT B (figure established)]
+
+★ **RESULT — TOKENIZER RETAINED (`@mdit/plugin-tex`), DEPS 9→8, FONT CHOSEN (STIX Two Math), BOTH AXES-
+FEEDING FIGURES MEASURED — FITS, BUT ~33 KiB `.output` HEADROOM REMAINS ON BOTH ENGINES (down from
+~352.8/352.7 KiB), FLAGGED FOR 1.2-R'S OWN FORK.** Fresh `rm -rf .output` rebuild at HEAD `e378bd2`
+re-confirmed the exact frame this task's own kickoff stated: `.output` 4,881,585 B Cr / 4,881,701 B Fx
+(headroom ~352.8/352.7 KiB), zip 1,474,835/1,474,893 B (headroom ~607.8/607.7 KiB), content-script
+336,123 B both engines — nothing has drifted since the original 1.1.
+**D-1-R TOKENIZER FORK — `@mdit/plugin-tex` CONFIRMED, NO TEMML-NATIVE ALTERNATIVE ADOPTED.** Both real
+Temml-markdown-it candidates found on npm (`markdown-it-temml` / `@traeblain/markdown-it-temml`, and
+`markdown-it-math`'s own `markdown-it-math/temml` export) were inspected at the source level (not from
+memory): both register `md.renderer.rules['math_inline']`/`['math_block']` that call
+`temml.renderToString()` **synchronously inside the render rule** — i.e. `md.render()` itself produces
+final HTML, exactly the parse-time-render coupling D-1 rejected for `@mdit/plugin-katex`. Neither is a
+tokenize-only candidate. `@mdit/plugin-tex` (already installed, unreverted since the original 1.1) is
+therefore CONFIRMED as the resolved candidate — unchanged from D-1, only re-verified against Temml's own
+current docs rather than inherited. The `markdown-it@^15.0.0` peer-dep-vs-`14.3.0` risk (carried plan-input
+(2)) was exercised concretely against the ACTUAL installed plugin on 14.3.0 with a 51-formula corpus
+(price `$5`/`$10` — no false positive; escaped `\$5` — no false positive; `` `echo $HOME` `` and
+`` `code $notmath` `` code-spans — correctly excluded even adjacent to real math; standalone `$$...$$`
+block math AND a ` ```math ` fence — both correctly recognized as `math_block`, confirming D-8-R's shared
+mechanism; a table cell containing `$5` — no false positive; an unbalanced single `$` — no false positive,
+no crash). Zero misclassifications. The risk is exercised, not closed by assumption — it remains a
+version-string mismatch pnpm warns on but does not block, with no observed correctness defect.
+**DEPENDENCY GOVERNANCE.** `katex` and `@mathjax/src` removed; `temml@0.13.5` installed for real.
+`Object.keys(pkg.dependencies).length` **9 → 8**, asserted programmatically:
+`['@mdit/plugin-tex','diff','dompurify','markdown-it','markdown-it-task-lists','mermaid','shiki','temml']`.
+`pnpm audit --prod` **EXIT=0** (the two `@mathjax/src`-borne HIGH advisories are gone with the package).
+`temml`: MIT, ESM+CJS dual export, no install scripts, `sbom.cdx.json` (regenerated, gitignored/transient,
+NOT staged) confirms 168 runtime components (down from 186) with a resolved SHA-512 integrity hash.
+`pnpm why --prod dompurify`: one resolved copy (`dompurify@3.4.13`), dedupe gate still holds.
+**D-13 FONT — FAMILY CHOSEN HERE (not deferred): STIX Two Math.** A 51-formula representative corpus
+(fractions, nested radicals, single/double/triple/contour integrals, sum/product/coproduct/big-union-
+intersection, five matrix delimiter styles, `\left`/`\right` and four `\Bigl`-family nested stretchy
+delimiter sizes, nested sub/superscripts, the full lowercase+uppercase Greek alphabet, relations, set ops,
+`\nabla`/`\lim`/accents/over-under-braces, all eight math alphabet styles incl. the full A–Z under
+`\mathbb`/`\mathcal`/`\mathfrak`, named functions, arrows, digits) rendered through the REAL installed
+`temml` yields 313 distinct required codepoints (218 non-ASCII + printable ASCII). Full-glyph-set source
+TTFs for both plan-named non-deferred candidates were fetched from `google/fonts` (OFL-licensed,
+`ofl/stixtwomath/STIXTwoMath-Regular.ttf` 1,517,976 B; `ofl/notosansmath/NotoSansMath-Regular.ttf`
+1,015,396 B — NOT the fontsource npm packages' own pre-subsetted "latin" files, which cover only
+`U+0000-00FF`-ish ranges and are missing essentially every math-specific codepoint; a finding worth
+flagging for whoever next reaches for a "fontsource math font" package expecting a usable source). Coverage
+against the 313-codepoint set: **STIX Two Math misses only U+FE0E** (a zero-width variation selector,
+needs no glyph) — effectively 100%. **Noto Sans Math misses 5**, three of them real accent glyphs actually
+used by the corpus (U+00A8 diaeresis/`\ddot`, U+02D9 dot-above/`\dot`, U+203E overline/`\bar` — all common
+LaTeX accents) plus two zero-width non-issues. This is the "clearly superior" case plan (h)/1.1-R's own text
+names — STIX Two Math chosen now, not deferred to 8.1-R. Subsetted with `fonttools` `pyftsubset`
+(`--unicodes` the exact 313-codepoint set, `--layout-features='*'`, `--no-hinting`, `--flavor=woff2`);
+verified post-subset: `MATH` table intact (fontTools' subsetter closes the glyph list over it, pulling in
+stretchy-delimiter size-variant glyphs the `MathVariants` subtable references), 1115 glyphs, 318 cmap
+entries, coverage gap unchanged at exactly `U+FE0E`. Result: **86,224 B** raw WOFF2, committed at
+`assets/fonts/stix-two-math-subset.woff2`; `assets/fonts/OFL.txt` gained STIX's own copyright/RFN block
+(OFL-1.1, same license family as Literata's existing entry).
+**★ THE FONT-WIRING MECHANISM — D-13'S OWN TEXT WAS WRONG, FLAGGED, NOT SILENTLY FOLLOWED.** D-13/this
+task's own sealed text assumes "the shadow-root CSS-injection pattern's own `@font-face`." This project's
+OWN existing, already-shipped font module (`src/theme/fonts.ts`, header comment) documents a **prior, real
+finding that contradicts that assumption**: "Chromium does not reliably apply `@font-face` declared inside
+a shadow tree," which is why Literata is registered via the CSS Font Loading API
+(`document.fonts.add(new FontFace(...))`) instead — a mechanism that "participate[s] in font matching for
+the WHOLE document, shadow trees included, in both Chrome and Firefox." Per AGENTS.md's "verify against
+real behavior, not memory/assumption" rule, THIS task adopted the already-proven `document.fonts.add()`
+mechanism for the math font too, not the sealed text's assumed shadow-root `@font-face` rule. This is a
+real divergence from plan.md/tasks.md's own sealed D-13 text, flagged here rather than smoothed over;
+`plan.md`/`decisions.md` are not edited by this task (out of Files list) — whoever lands D-13 for real at
+4.2-R should carry `document.fonts.add()` forward, not the sealed text's `@font-face` framing.
+**INPUT A — DISCHARGED, REAL-ENGINE, BOTH AXES.** A scratch module (`src/theme/mathFontScratch.ts`,
+reverted before commit) registered the subsetted font via `document.fonts.add()` under a test family name.
+A real-engine browser test (`tests/browser/mathFontProbe.browser.test.ts`, reverted before commit; ran
+under `pnpm test:browser`, Chromium AND Firefox, 4/4 passed) proved: (1) `document.fonts.check()` resolves
+true for the registered family; (2) inside a `{mode:'open'}` shadow root (D-3-R's own app-page context), a
+`canvas.measureText()` glyph-advance measurement for U+2211 (∑) at 200px matches the font's OWN real
+`hmtx`-reported advance (936/1000 em → 187.2px) to sub-pixel tolerance, on BOTH engines — a rendering-level
+proof, not a declared-CSS-string check. **Negative control**: a `FontFace` with a garbage base64 `src`
+(`document.fonts.check()` → `false`; the same glyph measurement falls back to the generic stack and does
+NOT match 187.2px), on both engines — the proof is non-vacuous. No `web_accessible_resources` needed: the
+font is `?inline`-imported (base64 `data:` URI, same mechanism as Literata), never a fetchable extension
+URL — confirmed by inspecting the built chunk directly, not assumed from KaTeX's own precedent.
+**BYTE DECOMPOSITION — (a)–(d), ABLATED, ARM-BY-ARM, REVERTED BETWEEN ARMS.** **(a) `temml`'s own JS**
+(scratch dynamic `import('temml')` from an app-page-only call site, `appShell.ts`, reverted): one new lazy
+chunk, **204,010 B**, `.output` total +204,117 B both engines (a 107 B non-linearity from chunk-manifest
+overhead, immaterial) — content-script bytes UNMOVED (336,123 B, RULING 2 holds structurally: `temml` never
+reaches that graph via this call site). **(b) the tokenizer's own always-loaded floor** (scratch
+`md.use(tex,...)` wired into `parse.ts`'s shared instance, reverted) — **THE figure INPUT B's rewritten
+invariant cites**: content-script bytes **336,123 → 340,082 B, i.e. +3,959 B**, identically on both
+engines (a 2 B non-linearity vs. the original 1.1's own +3,957 B figure, from an incidental patch-version
+drift in `@mdit/plugin-tex`/`markdown-it` since that measurement — this session's own **+3,959 B** figure
+is the one 3.2-R must land against, per AGENTS.md's "fresh build re-measures and is authoritative" rule);
+`.output` total +7,918 B both engines (the SAME +3,959 B tax landing independently on both the
+content-script graph AND the app-page graph, since `parse.ts` is shared by both — confirms plan's own
+"on BOTH graphs" framing). Firing control: wired → CS md5 moved off `f4370ed3…`/`13dda867…`; reverted → CS
+byte- and md5-identical restored (both engines). **(c) the subsetted font's own bytes** (scratch dynamic
+`import('../theme/mathFontScratch')` from `appShell.ts`, reverted): one new lazy chunk, **115,217 B**
+(86,224 B raw WOFF2 at ~4/3 base64-inline expansion + a small JS wrapper), `.output` total +115,356 B both
+engines — content-script bytes UNMOVED. **(d) all combined** (all three scratch wirings simultaneously,
+reverted together): `.output` **5,208,909 B Cr / 5,209,025 B Fx** — i.e. **+327,324 B both engines** (vs.
+327,391 B naive sum of (a)+(b)+(c), a 67 B non-linearity from shared dynamic-import runtime-shim dedup
+across the two `appShell.ts` scratch edges, immaterial); content-script **340,082 B both engines** (the (b)
+tax only, confirming (a)/(c) stay app-page-only in combination too). **FIT VERDICT, BOTH ENGINES: FITS, ON
+A KNIFE EDGE.** `.output`: 5,242,880 − 5,208,909 = **33,971 B (33.2 KiB) Cr headroom**; 5,242,880 −
+5,209,025 = **33,855 B (33.1 KiB) Fx headroom** — down from ~352.8/352.7 KiB, i.e. **~90% of the original
+headroom is now spent**, before groups 2-R–8-R add a single byte of sanitizer/enhancer/copy-action code.
+`pnpm zip`: chrome 1,624,289 B / firefox 1,624,347 B — headroom ~461.8/461.7 KiB against `<2 MB`, comfortable
+(zip compresses the base64-bloated font chunk well). **★ Flagged plainly for 1.2-R's own fork, not decided
+here**: the byte axis technically FITS on both engines (positive headroom), but the `.output` margin is thin
+enough that 1.2-R should weigh it explicitly alongside the fidelity walk — a bust from any later group's own
+code is a live risk this task's own numbers make visible, not a comfortable margin the way the original 1.1
+Branch (A)/(B) numbers would have been.
+**§7 FONT-DISPOSITION TAKEN: THE RECOMMENDED READING, CONFIRMED CONSISTENT WITH 4.2-R'S OWN TEXT.** Per this
+task's own §7 flag: COMMITTED here — `package.json`, `pnpm-lock.yaml`, the subsetted font ASSET file
+(`assets/fonts/stix-two-math-subset.woff2`), `assets/fonts/OFL.txt`'s attribution addition. REVERTED before
+commit (scratch, per the original-1.1 `_scratchMathProbe` discipline) — `src/theme/mathFontScratch.ts`, the
+`tests/browser/mathFontProbe.browser.test.ts` INPUT A test, and every scratch call-site edit to
+`parse.ts`/`appShell.ts` used for the byte-decomposition ablations above. This matches 4.2-R's own "the font
+Group 1-R spiked in scratch is wired into `readerCss.ts` ... for real ... rather than a reverted probe" text
+exactly — the font ASSET persists from 1.1-R to 4.2-R; its CSS/registration wiring and its durable test are
+built fresh, for real, at 4.2-R (now using `document.fonts.add()`, per the mechanism finding above, not
+`readerCss.ts`'s own inline CSS the way D-13's text assumed — 4.2-R's own Files line naming `readerCss.ts`
+will need to route through `fonts.ts`'s own registration module instead, flagged for that task). No scratch
+code leaks into this commit: `git status` after revert showed only the intended paths.
+**STANDING INVARIANTS.** Golden EMPTY. Manifest **654 / 770 B** both engines, `permissions: []`, no
+`web_accessible_resources` — confirmed unmoved even with the font's `?inline` data URI wired in the scratch
+probe. `pnpm lint` EXIT=0. Full `pnpm test` (unit): 1053/1056 passed — the 3 pre-existing `codeDetect`
+failures (banked corpus count/split/miss, driven by `plan.md`'s own PLAN REVISIT block adding two fenced
+fragments the accuracy corpus scans) are UNCHANGED at exactly 3, not 4+, and not caused by this task's own
+diff (this task touches no file that corpus scans). 007/009 import fences: 8/8 + 9/9, all 17 green. Real-
+engine `pnpm test:browser` run for INPUT A: 4/4 passed, Chromium + Firefox.
+**ACCEPTANCE.** Both Group-1-R axes this task owns (byte measurement, INPUT A) are DISCHARGED. This task
+does NOT decide PROCEED/CLOSE-M11 — that is 1.2-R's own fork, next. `git diff tests/golden/output/` EMPTY.
 
 - [ ] **1.2-R ★ HUMAN-RUN, NO AGENT SUBSTITUTE — real Chrome+Firefox visual-fidelity walk of Temml MathML
       with the bundled font, judged against REVISIT-RULING 2's bar; THE TWO-AXIS FORK, EXPLICIT.**

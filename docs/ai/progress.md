@@ -66,8 +66,43 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 1.1-R LANDED, 2026-09-07 — TOKENIZER RETAINED, DEPS 9→8, FONT CHOSEN, BOTH BYTE-AXIS AND
+INPUT A DISCHARGED; FITS ON A KNIFE EDGE (~33 KiB `.output` HEADROOM BOTH ENGINES). NEXT: TASK 1.2-R,
+★ HUMAN-RUN, NO AGENT SUBSTITUTE.** `@mdit/plugin-tex` is CONFIRMED the resolved tokenizer (D-1-R) — both
+real Temml-native markdown-it plugins found on npm couple `temml.renderToString()` synchronously into
+`renderer.rules`, the exact parse-time-render pattern D-1 rejected; neither was adopted. `katex`/
+`@mathjax/src` removed, `temml@0.13.5` installed for real; `dependencies` **9 → 8**. `pnpm audit --prod`
+EXIT=0. **D-13's font family is CHOSEN, not deferred: STIX Two Math** — a 51-formula representative corpus
+rendered through real `temml` needs 313 codepoints; STIX Two Math (sourced full-glyph-set from
+`google/fonts`, NOT the fontsource npm package's own pre-subsetted "latin" file, which lacks nearly every
+math codepoint) misses only a zero-width variation selector, while Noto Sans Math misses three real accent
+glyphs (`\dot`/`\ddot`/`\bar`) — a clearly-superior-coverage finding. Subsetted to **86,224 B** WOFF2
+(`fonttools pyftsubset`, MATH table + stretchy-variant closure verified intact), committed at
+`assets/fonts/stix-two-math-subset.woff2`. **★ A real divergence from D-13's own sealed text, flagged, not
+silently followed**: D-13 assumed a shadow-root `@font-face` wiring mechanism; this project's OWN existing
+`fonts.ts` already documents a prior real finding that Chromium does not reliably apply `@font-face` inside
+a shadow tree, and uses `document.fonts.add()` instead — THIS task adopted that already-proven mechanism
+for the math font too (INPUT A's real-engine Chromium+Firefox test, with a negative control, proves it
+resolves via `document.fonts.add()`); whoever lands D-13 for real at 4.2-R should carry that forward, not
+the sealed `@font-face` framing. Byte decomposition (a) `temml` JS alone +204,117 B `.output` both engines,
+CS unmoved; (b) the tokenizer's own always-loaded floor **+3,959 B** on EACH graph (this session's own
+figure — 2 B off the original 1.1's +3,957 B, an incidental patch-version drift, THIS is the figure 3.2-R
+must land against) — CS moves 336,123→340,082 B when landed; (c) the font's own bytes +115,356 B `.output`
+both engines (base64-inline expansion), CS unmoved; (d) all combined **+327,324 B `.output` both engines**
+(a 67 B non-linearity off the naive sum, immaterial), CS +3,959 B only (confirms (a)/(c) stay app-page-only
+in combination). **FIT VERDICT: fits both engines, but only ~33.2/33.1 KiB `.output` headroom remains**
+(down from ~352.8/352.7 KiB — ~90% spent), flagged plainly for 1.2-R's own fork to weigh alongside the
+fidelity walk. `pnpm zip` headroom stays comfortable (~461.8/461.7 KiB). The font ASSET is committed here
+per this task's own §7 disposition call; its CSS/registration wiring and INPUT A's own test are scratch,
+reverted before commit (mirroring the original 1.1's `_scratchMathProbe` discipline) — built for real, using
+`document.fonts.add()`, at 4.2-R. Golden EMPTY, manifest **654 / 770 B** `permissions: []` unmoved, lint
+EXIT=0, full `pnpm test` 1053/1056 (the 3 pre-existing `codeDetect` corpus failures unchanged, not this
+task's diff), 007/009 import fences 8/8+9/9 green, real-engine `pnpm test:browser` 4/4 for INPUT A. This
+task does NOT decide PROCEED/CLOSE-M11 — 1.2-R's own two-axis fork, next, is what does. Full evidence:
+`specs/011-math-rendering/tasks.md` task 1.1-R's own RESULT block. Prior entry, kept for context:
+
 **★ M11 TASKS REVISIT DRAFTED, 2026-09-06 (reopened Temml/MathML decomposition, fidelity-spike-first
-Group 1-R gate, group 7 struck), AWAITING GATE-3-REVISIT APPROVAL — THE LAST PLANNING GATE.**
+Group 1-R gate, group 7 struck), GATE-3-REVISIT APPROVED — THE LAST PLANNING GATE PASSED.**
 `specs/011-math-rendering/tasks.md` gained a dated "## TASKS REVISIT — 2026-09-06" block, inserted after the
 header and before the original §§1–9 (preserved below it, unedited, including task 1.1's own `[x]`/RESULT —
 history, not overwritten). The block decomposes the gate-2-revisit-approved architecture
