@@ -11,11 +11,16 @@
 // here (decisions.md 2026-07-14): a payload inert under jsdom is not proof it is inert
 // in Chrome/Firefox, so the SVG profile's real-engine check is task 2.2's, not this
 // file's. Every claim below is a jsdom claim.
+//
+// The MATH profile (task 2.1-R · D-5-R) adds a fourth suite, same two halves, run
+// against REAL installed `temml` output rather than a hand-authored fixture — the tag
+// and attribute enumeration IS the survey, not a copy of one performed elsewhere.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import DOMPurify from 'dompurify';
+import temml from 'temml';
 import {
   sanitize,
   ALLOWED_TAGS,
@@ -29,6 +34,11 @@ import {
   SVG_URI_SAFE_ATTR,
   SANITIZE_SVG_CONFIG,
   cleanSvgCss,
+  sanitizeMath,
+  MATH_ALLOWED_TAGS,
+  MATH_ALLOWED_ATTR,
+  SANITIZE_MATH_CONFIG,
+  hasDeniedMathStyleToken,
 } from './sanitize';
 import { parse } from './parse';
 import { MALICIOUS_CASES } from '../../tests/fixtures/malicious-html';
@@ -854,6 +864,565 @@ describe('sanitizeSvg — the SVG profile (D-1)', () => {
       expect(SOURCE).toContain('export function sanitize(html: string): string');
       expect(SOURCE).toContain('export function sanitizeSvg(svg: string): string');
       expect(SOURCE.length).toBeGreaterThan(6000);
+    });
+
+    // ★ task 2.1-R's own Verify: "the document AND SVG profiles' three consts remain
+    // byte-identical to the original (diffed)" — the document trio above pre-dates this
+    // task; the SVG trio's own pin did not exist until now. Same mechanism, same failure
+    // mode it guards (a widening on either untrusted-source-adjacent profile).
+    it('SVG_ALLOWED_TAGS is byte-identical', () => {
+      expect(
+        declarationSource('SVG_ALLOWED_TAGS', '] as const;'),
+        'SVG_ALLOWED_TAGS changed — task 2.1-R (D-5-R) must be additive-only to the SVG profile',
+      ).toBe(`export const SVG_ALLOWED_TAGS = [
+  // root & grouping
+  'svg', 'g', 'defs', 'symbol', 'use', 'clipPath',
+  // shapes
+  'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
+  // text
+  'text', 'tspan',
+  // arrowheads & gradients
+  'marker', 'linearGradient', 'stop',
+  // accessible name & description (§5 — every diagram carries an accessible name)
+  'title', 'desc',
+  // the engine's own stylesheet — ADMITTED (option B), gated by cleanSvgCss below
+  'style',
+] as const;`);
+    });
+
+    it('SVG_ALLOWED_ATTR is byte-identical', () => {
+      expect(
+        declarationSource('SVG_ALLOWED_ATTR', '] as const;'),
+        'SVG_ALLOWED_ATTR changed — task 2.1-R (D-5-R) must be additive-only to the SVG profile',
+      ).toBe(`export const SVG_ALLOWED_ATTR = [
+  // identity & hooks (see the \`id\` note above)
+  'id', 'class', 'title',
+  // geometry
+  'x', 'y', 'dx', 'dy', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r',
+  'x1', 'y1', 'x2', 'y2', 'd', 'points', 'transform', 'transform-origin',
+  // viewport
+  'viewBox', 'preserveAspectRatio', 'overflow', 'xmlns', 'xmlns:xlink',
+  // paint
+  'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
+  'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'visibility',
+  // text
+  'font-family', 'font-size', 'font-style', 'font-weight',
+  'text-anchor', 'dominant-baseline', 'alignment-baseline',
+  // arrowheads & gradients
+  'marker-start', 'marker-mid', 'marker-end',
+  'markerWidth', 'markerHeight', 'markerUnits', 'refX', 'refY', 'orient',
+  'gradientUnits', 'offset', 'stop-color', 'stop-opacity',
+  // clipping
+  'clip-path', 'clip-rule',
+  // internal fragment references ONLY — see SVG_ALLOWED_URI_REGEXP
+  'href', 'xlink:href',
+  // accessibility (\`aria-*\` arrives via ALLOW_ARIA_ATTR, not by name)
+  'role',
+] as const;`);
+    });
+
+    it('SANITIZE_SVG_CONFIG is byte-identical', () => {
+      expect(
+        declarationSource('SANITIZE_SVG_CONFIG', '};'),
+        'SANITIZE_SVG_CONFIG changed — task 2.1-R (D-5-R) must be additive-only to the SVG profile',
+      ).toBe(`export const SANITIZE_SVG_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
+  ALLOWED_TAGS: /*#__PURE__*/ SVG_ALLOWED_TAGS.slice(),
+  ALLOWED_ATTR: /*#__PURE__*/ SVG_ALLOWED_ATTR.slice(),
+  ALLOWED_URI_REGEXP: SVG_ALLOWED_URI_REGEXP,
+  ADD_URI_SAFE_ATTR: /*#__PURE__*/ SVG_URI_SAFE_ATTR.slice(), // DIVERGENCE 3 — see above
+  ALLOW_UNKNOWN_PROTOCOLS: false, // keep unknown schemes disallowed
+  ALLOW_DATA_ATTR: false, // no data-* attributes (the engine's own bookkeeping)
+  ALLOW_ARIA_ATTR: true, // DIVERGENCE 1 — see above
+  SAFE_FOR_XML: true, // DOMPurify default; kept explicit for review
+  RETURN_DOM: false, // return an SVG string
+  RETURN_DOM_FRAGMENT: false,
+};`);
+    });
+  });
+});
+
+// ── THE MATH PROFILE (task 2.1-R · D-5-R) ────────────────────────────────────
+//
+// ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07, "M11 1.2-R SEQUENCING
+// DEVIATION") — built conditionally, per the banked deviation's own condition 1. Groups
+// 2-R–8-R are authorized to proceed while the human fidelity walk's PROCEED/CLOSE-M11
+// judgment is deferred to milestone-close (task 8.1-R); a CLOSE-M11 ruling there reverts
+// this work along with the temml/tokenizer/font install, per the deviation's condition 2.
+//
+// Unlike the SVG profile's hand-authored hostile corpus, the ALLOW-LIST ITSELF is derived
+// from a SURVEY of real installed `temml@0.13.5` output below — the enumeration IS the
+// test, not a fixture copied from one run elsewhere. 97 real LaTeX formulas are rendered:
+// the 48-entry dense corpus + 10 inline samples `harness/math-fidelity/corpus.js` built for
+// 1.2-R's own fidelity walk (same classes: fractions, radicals, integrals, big-operators,
+// matrices, stretchy delimiters, sub/superscripts, Greek, relations, set ops, nabla/lim,
+// accents, over/under-braces, math alphabets, named functions, arrows, digits), PLUS 39
+// formulas this task added to reach producers neither corpus exercised: `\color`/
+// `\textcolor`/`\colorbox`/`\fcolorbox` (the `style`/`mathcolor`/`mathbackground`
+// colour-value producers), `\boxed`/`\overline`/`\underline`/`\cancel`/`\bcancel`/
+// `\xcancel`/`\sout`/`\fbox`/`\phase`/`\textcircled`/`\angl`/`\longdiv` (the `menclose`/
+// `notation` family), `\reflectbox`/`\raisebox`/`\kern`/`\llap`/`\rlap`/`\cancelto`/
+// `\hphantom`/`\vphantom` (more `style`-bearing layout producers), `\text`/`\textbf`, and
+// `align`/`cases`/`array`/`\overset`/`\underset`/`\stackrel`/`\substack`/`\xrightarrow`/
+// `\xleftarrow`/`\binom`/`\pmod`/`\tag` (table/script/equation-numbering shapes). All 97
+// render error-free with `throwOnError: true` (temml's own default settings — `trust`
+// defaults to `false`, `annotate` to `false`, confirmed against the installed
+// `Settings.js`, not assumed).
+//
+// This corpus is duplicated here rather than imported from `harness/math-fidelity/corpus.js`
+// on purpose: the harness is a human-walk tool (1.2-R), a plain global script with no
+// import/export (`file://` pages cannot load ES modules), and this suite's own claims must
+// not depend on that file's own shape surviving unchanged for an unrelated purpose.
+
+/** One real LaTeX formula this survey renders through the installed `temml`. */
+interface MathCorpusEntry {
+  readonly label: string;
+  readonly latex: string;
+  readonly displayMode: boolean;
+}
+
+const MATH_SURVEY_CORPUS: readonly MathCorpusEntry[] = [
+  // ── the 1.2-R harness's own 48-formula dense corpus (display mode) ──────────
+  { label: 'simple fraction', latex: String.raw`\frac{a}{b}`, displayMode: true },
+  { label: 'nested fraction', latex: String.raw`\frac{1}{1+\frac{1}{1+\frac{1}{x}}}`, displayMode: true },
+  { label: 'binomial-style fraction', latex: String.raw`\dfrac{n!}{k!(n-k)!}`, displayMode: true },
+  { label: 'square root', latex: String.raw`\sqrt{x+1}`, displayMode: true },
+  { label: 'nth root', latex: String.raw`\sqrt[n]{x^n+y^n}`, displayMode: true },
+  { label: 'nested radical', latex: String.raw`\sqrt{1+\sqrt{1+\sqrt{1+x}}}`, displayMode: true },
+  { label: 'single integral', latex: String.raw`\int_0^1 x^2\,dx`, displayMode: true },
+  { label: 'double integral', latex: String.raw`\iint_D f(x,y)\,dA`, displayMode: true },
+  { label: 'triple integral', latex: String.raw`\iiint_V \rho(x,y,z)\,dV`, displayMode: true },
+  { label: 'contour integral', latex: String.raw`\oint_C \mathbf{F}\cdot d\mathbf{r}`, displayMode: true },
+  { label: 'sum', latex: String.raw`\sum_{i=1}^{n} i^2`, displayMode: true },
+  { label: 'product', latex: String.raw`\prod_{k=1}^{n} \frac{k}{k+1}`, displayMode: true },
+  { label: 'coproduct', latex: String.raw`\coprod_{i \in I} A_i`, displayMode: true },
+  { label: 'big union', latex: String.raw`\bigcup_{n=1}^{\infty} A_n`, displayMode: true },
+  { label: 'big intersection', latex: String.raw`\bigcap_{n=1}^{\infty} A_n`, displayMode: true },
+  {
+    label: 'pmatrix (parens)',
+    latex: String.raw`\begin{pmatrix} a & b \\ c & d \end{pmatrix}`,
+    displayMode: true,
+  },
+  {
+    label: 'bmatrix (brackets)',
+    latex: String.raw`\begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}`,
+    displayMode: true,
+  },
+  {
+    label: 'Bmatrix (braces)',
+    latex: String.raw`\begin{Bmatrix} a & b \\ c & d \end{Bmatrix}`,
+    displayMode: true,
+  },
+  {
+    label: 'vmatrix (determinant)',
+    latex: String.raw`\begin{vmatrix} a & b \\ c & d \end{vmatrix}`,
+    displayMode: true,
+  },
+  { label: 'Vmatrix (norm)', latex: String.raw`\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}`, displayMode: true },
+  { label: 'left/right parens', latex: String.raw`\left(\frac{a}{b}\right)`, displayMode: true },
+  {
+    label: 'nested Big-family',
+    latex: String.raw`\Biggl(\biggl(\Bigl(\bigl(x\bigr)\Bigr)\biggr)\Biggr)`,
+    displayMode: true,
+  },
+  {
+    label: 'left/right brackets around fraction stack',
+    latex: String.raw`\left[\frac{1}{1+\frac{1}{x}}\right]`,
+    displayMode: true,
+  },
+  { label: 'nested superscript tower', latex: String.raw`x^{y^{z^2}}`, displayMode: true },
+  { label: 'nested sub/superscript', latex: String.raw`a_{i_{j_k}}^{b^{c^d}}`, displayMode: true },
+  { label: 'sub and sup together', latex: String.raw`x_i^2 + y_j^3`, displayMode: true },
+  {
+    label: 'full lowercase Greek alphabet',
+    latex:
+      String.raw`\alpha\beta\gamma\delta\epsilon\zeta\eta\theta\iota\kappa\lambda\mu` +
+      String.raw`\nu\xi\pi\rho\sigma\tau\upsilon\phi\chi\psi\omega`,
+    displayMode: true,
+  },
+  {
+    label: 'full uppercase Greek alphabet',
+    latex: String.raw`\Gamma\Delta\Theta\Lambda\Xi\Pi\Sigma\Upsilon\Phi\Psi\Omega`,
+    displayMode: true,
+  },
+  {
+    label: 'equalities/inequalities',
+    latex: String.raw`a=b\neq c\leq d\geq e\approx f\equiv g\sim h\propto i`,
+    displayMode: true,
+  },
+  {
+    label: 'set operations',
+    latex: String.raw`A\cup B\cap C\subset D\subseteq E, x\in F, y\notin G, H=\emptyset`,
+    displayMode: true,
+  },
+  { label: 'gradient', latex: String.raw`\nabla f(x,y,z)`, displayMode: true },
+  { label: 'limit', latex: String.raw`\lim_{x\to\infty}\frac{1}{x}=0`, displayMode: true },
+  {
+    label: 'hat/bar/dot/ddot/tilde/vec',
+    latex: String.raw`\hat{a}\ \bar{b}\ \dot{c}\ \ddot{d}\ \tilde{e}\ \vec{f}`,
+    displayMode: true,
+  },
+  {
+    label: 'overbrace/underbrace',
+    latex: String.raw`\overbrace{a+b+c}^{n\text{ terms}}\underbrace{x+y}_{\text{sum}}`,
+    displayMode: true,
+  },
+  { label: 'mathbb', latex: String.raw`\mathbb{ABCXYZ}`, displayMode: true },
+  { label: 'mathcal', latex: String.raw`\mathcal{ABCXYZ}`, displayMode: true },
+  { label: 'mathfrak', latex: String.raw`\mathfrak{ABCXYZ}`, displayMode: true },
+  { label: 'mathrm', latex: String.raw`\mathrm{ABCxyz}`, displayMode: true },
+  { label: 'mathit', latex: String.raw`\mathit{ABCxyz}`, displayMode: true },
+  { label: 'mathbf', latex: String.raw`\mathbf{ABCxyz}`, displayMode: true },
+  { label: 'mathsf', latex: String.raw`\mathsf{ABCxyz}`, displayMode: true },
+  { label: 'mathtt', latex: String.raw`\mathtt{ABCxyz}`, displayMode: true },
+  {
+    label: 'trig/log/exp',
+    latex: String.raw`\sin x + \cos x + \tan x + \log x + \ln x + \exp x`,
+    displayMode: true,
+  },
+  {
+    label: 'max/min/sup/inf',
+    latex: String.raw`\max_{x\in S} f(x) + \min_{x\in S} f(x) + \sup_x g(x) + \inf_x g(x)`,
+    displayMode: true,
+  },
+  {
+    label: 'basic arrows',
+    latex: String.raw`a\rightarrow b\quad c\Rightarrow d\quad e\leftarrow f\quad g\Leftrightarrow h`,
+    displayMode: true,
+  },
+  {
+    label: 'mapsto and vertical arrows',
+    latex: String.raw`x\mapsto x^2\quad \uparrow\ \downarrow\ \Uparrow\ \Downarrow`,
+    displayMode: true,
+  },
+  {
+    label: 'digits in an expression',
+    latex: String.raw`3.14159 + 2.71828 = 5.85987, \quad 10^{100}`,
+    displayMode: true,
+  },
+  {
+    label: 'digits in subscripts/exponents',
+    latex: String.raw`x_0 + x_1 + x_2 + \cdots + x_{10}^{20}`,
+    displayMode: true,
+  },
+  // ── the 1.2-R harness's own 10 inline samples (inline mode) ──────────────────
+  { label: 'inline fraction', latex: String.raw`\frac{a}{b}`, displayMode: false },
+  { label: 'inline radical', latex: String.raw`\sqrt{x+1}`, displayMode: false },
+  { label: 'inline sub/superscript tower', latex: String.raw`x^{y^{z^2}}`, displayMode: false },
+  { label: 'inline Greek', latex: String.raw`\alpha, \beta, \gamma`, displayMode: false },
+  { label: 'inline relation chain', latex: String.raw`a \leq b \leq c`, displayMode: false },
+  { label: 'inline accent', latex: String.raw`\hat{\theta}`, displayMode: false },
+  { label: 'inline limit', latex: String.raw`\lim_{x\to\infty}\frac{1}{x}=0`, displayMode: false },
+  { label: 'inline arrow', latex: String.raw`x\mapsto x^2`, displayMode: false },
+  { label: 'inline named function', latex: String.raw`\sin^2 x + \cos^2 x = 1`, displayMode: false },
+  { label: 'inline digits', latex: String.raw`n = 10^{100}`, displayMode: false },
+  // ── 2.1-R's own additions: colour/box/decoration producers ───────────────────
+  { label: 'color', latex: String.raw`\color{red}x+y`, displayMode: true },
+  { label: 'textcolor', latex: String.raw`\textcolor{blue}{x}`, displayMode: true },
+  { label: 'colorbox', latex: String.raw`\colorbox{yellow}{x}`, displayMode: true },
+  { label: 'fcolorbox', latex: String.raw`\fcolorbox{red}{blue}{x}`, displayMode: true },
+  { label: 'boxed', latex: String.raw`\boxed{x}`, displayMode: true },
+  { label: 'overline', latex: String.raw`\overline{x}`, displayMode: true },
+  { label: 'underline', latex: String.raw`\underline{x}`, displayMode: true },
+  { label: 'cancel', latex: String.raw`\cancel{x}`, displayMode: true },
+  { label: 'bcancel', latex: String.raw`\bcancel{x}`, displayMode: true },
+  { label: 'xcancel', latex: String.raw`\xcancel{x}`, displayMode: true },
+  { label: 'sout', latex: String.raw`\sout{x}`, displayMode: true },
+  { label: 'fbox', latex: String.raw`\fbox{x}`, displayMode: true },
+  { label: 'phase', latex: String.raw`\phase{x}`, displayMode: true },
+  { label: 'textcircled', latex: String.raw`\textcircled{x}`, displayMode: true },
+  { label: 'angl', latex: String.raw`\angl{x}`, displayMode: true },
+  { label: 'longdiv', latex: String.raw`\longdiv{x}`, displayMode: true },
+  { label: 'reflectbox', latex: String.raw`\reflectbox{x}`, displayMode: true },
+  { label: 'raisebox', latex: String.raw`\raisebox{2pt}{x}`, displayMode: true },
+  { label: 'kern', latex: String.raw`\kern 2pt x`, displayMode: true },
+  { label: 'llap', latex: String.raw`\llap{x}`, displayMode: true },
+  { label: 'rlap', latex: String.raw`\rlap{x}`, displayMode: true },
+  { label: 'delimiter colour (mathcolor)', latex: String.raw`\left(\color{red}x\right)`, displayMode: true },
+  { label: 'cancelto', latex: String.raw`\cancelto{0}{x}`, displayMode: true },
+  { label: 'hphantom', latex: String.raw`\hphantom{x}`, displayMode: true },
+  { label: 'vphantom', latex: String.raw`\vphantom{x}`, displayMode: true },
+  { label: 'text', latex: String.raw`\text{hello}`, displayMode: true },
+  { label: 'textbf', latex: String.raw`\textbf{bold text}`, displayMode: true },
+  {
+    label: 'align (equation-numbering span)',
+    latex: String.raw`\begin{align} a &= b \\ c &= d \end{align}`,
+    displayMode: true,
+  },
+  { label: 'cases', latex: String.raw`\begin{cases} a & b \\ c & d \end{cases}`, displayMode: true },
+  { label: 'overset', latex: String.raw`\overset{a}{b}`, displayMode: true },
+  { label: 'underset', latex: String.raw`\underset{a}{b}`, displayMode: true },
+  { label: 'stackrel', latex: String.raw`\stackrel{a}{b}`, displayMode: true },
+  { label: 'substack', latex: String.raw`\substack{a \\ b}`, displayMode: true },
+  { label: 'xrightarrow', latex: String.raw`\xrightarrow{f}`, displayMode: true },
+  { label: 'xleftarrow', latex: String.raw`\xleftarrow[g]{f}`, displayMode: true },
+  { label: 'binom', latex: String.raw`\binom{n}{k}`, displayMode: true },
+  { label: 'pmod', latex: String.raw`\pmod{n}`, displayMode: true },
+  { label: 'tag', latex: String.raw`a \tag{1}`, displayMode: true },
+  {
+    label: 'array',
+    latex: String.raw`\begin{array}{cc} a & b \\ c & d \end{array}`,
+    displayMode: true,
+  },
+];
+
+/** Every formula rendered through the REAL installed `temml`, with `throwOnError: true`
+ *  (a parse/render failure here is a corpus-authoring bug, not a fixture to tolerate) and
+ *  Temml's own default `trust`/`annotate` (both `false` — this survey exercises the
+ *  defaults 4.1-R will re-derive, not a hardened config invented for this test). */
+function renderMathCorpus(): { entry: MathCorpusEntry; html: string }[] {
+  return MATH_SURVEY_CORPUS.map((entry) => ({
+    entry,
+    html: temml.renderToString(entry.latex, {
+      throwOnError: true,
+      displayMode: entry.displayMode,
+    }),
+  }));
+}
+
+/** Every distinct element tag name and attribute name the real corpus above produces. */
+function surveyRealMathOutput(rendered: { html: string }[]): { tags: Set<string>; attrs: Set<string> } {
+  const tags = new Set<string>();
+  const attrs = new Set<string>();
+  for (const { html } of rendered) {
+    for (const el of elementsOf(html)) {
+      tags.add(el.localName.toLowerCase());
+      for (const attr of el.attributes) attrs.add(attr.name);
+    }
+  }
+  return { tags, attrs };
+}
+
+describe('sanitizeMath — the math profile (task 2.1-R · D-5-R)', () => {
+  const rendered = renderMathCorpus();
+
+  it('all 97 corpus formulas render error-free under real temml (the survey itself is valid)', () => {
+    expect(rendered).toHaveLength(97);
+    for (const { entry, html } of rendered) {
+      expect(html, `${entry.label} (${entry.latex}) produced no <math>`).toContain('<math');
+    }
+  });
+
+  describe('the allow-list is enumerated against REAL installed temml output', () => {
+    const { tags: realTags, attrs: realAttrs } = surveyRealMathOutput(rendered);
+
+    it('surveys exactly the tag set this profile allow-lists — 24 tags', () => {
+      expect(MATH_ALLOWED_TAGS.length).toBe(24);
+      expect([...realTags].sort()).toEqual([...MATH_ALLOWED_TAGS].sort());
+    });
+
+    it('surveys exactly the attribute set this profile allow-lists — 25 attributes', () => {
+      expect(MATH_ALLOWED_ATTR.length).toBe(25);
+      expect([...realAttrs].sort()).toEqual([...MATH_ALLOWED_ATTR].sort());
+    });
+
+    it('real Temml output never emits `semantics`/`annotation` (annotate defaults to false)', () => {
+      // D-5's own hypothesis list carried these forward from KaTeX; confirmed ABSENT here
+      // — admitting them would be exactly the "attribute surface with no producer" this
+      // profile's construction refuses everywhere else.
+      expect(realTags.has('semantics')).toBe(false);
+      expect(realTags.has('annotation')).toBe(false);
+      expect(rendered.some(({ html }) => /<semantics|<annotation/.test(html))).toBe(false);
+    });
+
+    it('the ONE HTML tag — `span` — is real, producer-confirmed, and carries only `class`', () => {
+      const alignEntry = rendered.find(({ entry }) => entry.label === 'align (equation-numbering span)');
+      expect(alignEntry?.html).toContain('<span class="tml-eqn">');
+      const spans = elementsOf(alignEntry?.html ?? '').filter((el) => el.localName === 'span');
+      expect(spans.length).toBeGreaterThan(0);
+      for (const span of spans) {
+        expect([...span.attributes].map((a) => a.name)).toEqual(['class']);
+      }
+    });
+
+    it('`mathcolor`/`mathbackground` are real producers (delimiter colour, colorbox)', () => {
+      expect(realAttrs.has('mathcolor')).toBe(true);
+      expect(realAttrs.has('mathbackground')).toBe(true);
+    });
+  });
+
+  describe('cleanMathStyle zero-strips REAL Temml output (measured, not assumed)', () => {
+    it('every real `style` value from the corpus is SAFE — no false positive', () => {
+      const styleValues = rendered.flatMap(({ html }) =>
+        elementsOf(html)
+          .map((el) => el.getAttribute('style'))
+          .filter((v): v is string => v !== null),
+      );
+      expect(styleValues.length).toBeGreaterThan(0); // the corpus DOES exercise `style`
+      for (const value of styleValues) {
+        expect(hasDeniedMathStyleToken(value), `false positive on real style: "${value}"`).toBe(false);
+      }
+    });
+
+    it('sanitizeMath is byte-identical (a no-op) on every real corpus formula', () => {
+      // The strongest form of "zero-strip": not merely "nothing looks stripped", but the
+      // sanitized string equals the engine's own output, character for character — modulo
+      // DOMPurify's own SERIALIZATION choice (measured, not a stripping difference): a
+      // literal U+00A0 non-breaking space round-trips through DOMPurify's parser as the
+      // named entity `&nbsp;`. Both render and select identically; nothing was removed.
+      const normalize = (s: string): string => s.replace(/&nbsp;/g, ' ');
+      for (const { entry, html } of rendered) {
+        expect(normalize(sanitizeMath(html)), `${entry.label} was altered by sanitizeMath`).toBe(html);
+      }
+    });
+
+    it('the real style property vocabulary is exactly what the doc comment names', () => {
+      const props = new Set<string>();
+      for (const { html } of rendered) {
+        for (const el of elementsOf(html)) {
+          const style = el.getAttribute('style');
+          if (!style) continue;
+          for (const decl of style.split(';')) {
+            const prop = decl.split(':')[0]?.trim();
+            if (prop) props.add(prop);
+          }
+        }
+      }
+      expect([...props].sort()).toEqual(
+        [
+          'border', 'bottom', 'color', 'display', 'left', 'math-depth', 'padding',
+          'padding-left', 'padding-right', 'position', 'right', 'transform', 'width',
+        ].sort(),
+      );
+    });
+  });
+
+  describe('the hostile corpus is neutralized', () => {
+    it('drops a MathML element the survey found absent (`mglyph`)', () => {
+      const out = sanitizeMath('<math><mglyph src="evil.png"/><mi>x</mi></math>');
+      expect(survivingElements(out, 'mglyph')).toEqual([]);
+      expect(out).toContain('<mi>x</mi>');
+    });
+
+    it('drops `<annotation>` outright — carried markup does not survive as markup', () => {
+      const out = sanitizeMath(
+        '<math><semantics><mi>x</mi>' +
+          '<annotation encoding="application/x-tex"><b onclick="alert(1)">hi</b></annotation>' +
+          '</semantics></math>',
+      );
+      expect(survivingElements(out, 'annotation')).toEqual([]);
+      expect(survivingElements(out, 'semantics')).toEqual([]);
+      expect(survivingElements(out, 'b')).toEqual([]);
+      expect(out).not.toContain('onclick');
+      expect(out).toContain('<mi>x</mi>');
+    });
+
+    it('drops a bare `<a>` (no anchor producer, trust:false closes every route anyway)', () => {
+      const out = sanitizeMath('<math><mi>x</mi><a href="javascript:alert(1)">click</a></math>');
+      expect(survivingElements(out, 'a')).toEqual([]);
+      expect(out).not.toContain('javascript:');
+    });
+
+    it('strips an attempted `href`/`src` on an otherwise-allowed element', () => {
+      const out = sanitizeMath(
+        '<math><mi href="javascript:alert(1)" src="https://evil.example/x">x</mi></math>',
+      );
+      expect(survivingAttrs(out, (name) => name === 'href' || name === 'src')).toEqual([]);
+      expect(out).toContain('<mi>x</mi>');
+    });
+
+    it('strips a `style` value carrying a `url(` token, keeping the element', () => {
+      const out = sanitizeMath('<math><mi style="color:red;background:url(http://evil.example/x)">x</mi></math>');
+      expect(survivingAttrValues(out, (v) => /url\(/i.test(v))).toEqual([]);
+      expect(out).toContain('<mi>x</mi>');
+    });
+
+    it('strips a `style` value carrying an `expression(` token', () => {
+      const out = sanitizeMath('<math><mi style="width:expression(alert(1))">x</mi></math>');
+      expect(survivingAttrValues(out, (v) => /expression\(/i.test(v))).toEqual([]);
+      expect(out).toContain('<mi>x</mi>');
+    });
+
+    it('does NOT over-strip a value that merely CONTAINS the substring `url(` mid-identifier', () => {
+      // Boundary check: `curl(` must not be mistaken for `url(` the way `cleanSvgCss`'s
+      // own CSS_IDENT_CHAR test guards against for the SVG profile.
+      expect(hasDeniedMathStyleToken('color:curl(1)')).toBe(false);
+      const out = sanitizeMath('<math><mi style="color:red">x</mi></math>');
+      expect(out).toBe('<math><mi style="color:red">x</mi></math>');
+    });
+
+    it('a fresh NO-HOOK DOMPurify instance still denies url()/expression() — the ALLOW-LIST is not the only thing standing between an attacker and a fetch', () => {
+      // Unlike the data: URI denial (allow-list-driven, hook-independent, §2.2), this
+      // filter genuinely IS the hook: `style` is admitted by the allow-list itself, so a
+      // no-hook run must NOT be clean. Proves the hook is load-bearing, not decorative.
+      const noHook = DOMPurify(window);
+      const out = noHook.sanitize(
+        '<math><mi style="background:url(http://evil.example/x)">x</mi></math>',
+        SANITIZE_MATH_CONFIG,
+      ) as string;
+      expect(
+        survivingAttrValues(out, (v) => /url\(/i.test(v)),
+        'url() survived WITHOUT the hook — the hook is load-bearing here, unlike the data: denial',
+      ).not.toEqual([]);
+    });
+  });
+
+  describe('safe formula-generated HTML is preserved (we do not over-strip)', () => {
+    it('keeps a plain rendered fraction intact', () => {
+      const html = temml.renderToString(String.raw`\frac{a}{b}`, { throwOnError: true, displayMode: true });
+      expect(sanitizeMath(html)).toBe(html);
+    });
+
+    it('keeps the accessible-name-bearing tree (ALLOW_ARIA_ATTR: true is load-bearing)', () => {
+      const html = '<math aria-label="x over y"><mfrac><mi>x</mi><mi>y</mi></mfrac></math>';
+      const out = sanitizeMath(html);
+      expect(out).toContain('aria-label="x over y"');
+    });
+
+    it('keeps `class` generically, by name, with no value enumeration', () => {
+      const html = '<math class="tml-display tml-jot custom-future-class"><mi>x</mi></math>';
+      expect(sanitizeMath(html)).toBe(html);
+    });
+  });
+
+  describe('the three profiles are independent', () => {
+    it('markdown source still cannot produce a <math> through the document profile', () => {
+      expect(sanitize('<math><mi>x</mi></math>')).toBe('');
+    });
+
+    it('the document profile is not widened by the math profile existing', () => {
+      sanitizeMath('<math><mi style="background:url(http://evil.example/x)">x</mi></math>');
+      expect(sanitize('<math><mi>x</mi></math>')).toBe('');
+      // `div` and `style` are still both absent from the document profile — a leaked
+      // math-profile allowance would show up here first.
+      expect(sanitize('<div style="color:red">x</div>')).toBe('x');
+    });
+
+    it('the SVG profile is not widened by the math profile existing, and vice versa', () => {
+      expect(survivingElements(sanitizeSvg('<svg><math><mi>x</mi></math></svg>'), 'math')).toEqual([]);
+      expect(survivingElements(sanitizeMath('<math><svg><rect/></svg></math>'), 'svg')).toEqual([]);
+    });
+
+    it('the mathStyleHook does not leak onto a later sanitizeSvg/sanitize call', () => {
+      sanitizeMath('<math><mi style="background:url(http://evil.example/x)">x</mi></math>');
+      // `style` is not admitted by either other profile, so this is really testing that no
+      // stray hook throws or otherwise misbehaves outside its own scoped call.
+      expect(sanitize('<p style="color:red">hi</p>')).toBe('<p>hi</p>');
+      expect(
+        survivingElements(sanitizeSvg('<svg><style>.a{fill:red}</style></svg>'), 'style'),
+      ).toHaveLength(1);
+    });
+  });
+
+  // ── THE BYTE-UNTOUCHED PIN (this profile's own consts, additive-only going forward) ──
+  describe('the math profile source is reviewable as data (source-text pin)', () => {
+    const SOURCE = readFileSync(resolve(process.cwd(), 'src/render/sanitize.ts'), 'utf8');
+
+    function declarationSource(name: string, terminator: string): string {
+      const start = SOURCE.indexOf(`export const ${name}`);
+      expect(start, `${name} declaration not found in sanitize.ts`).toBeGreaterThan(-1);
+      const end = SOURCE.indexOf(terminator, start);
+      expect(end, `${name} has no ${terminator} terminator in sanitize.ts`).toBeGreaterThan(-1);
+      return SOURCE.slice(start, end + terminator.length);
+    }
+
+    it('MATH_ALLOWED_TAGS matches the exported array, source and runtime in lockstep', () => {
+      const src = declarationSource('MATH_ALLOWED_TAGS', '] as const;');
+      for (const tag of MATH_ALLOWED_TAGS) expect(src).toContain(`'${tag}'`);
+    });
+
+    it('the pin reads the real file (the control that fires)', () => {
+      expect(SOURCE).toContain('export function sanitizeMath(html: string): string');
+      expect(SOURCE).toContain('MATH_STYLE_DENIED_TOKENS');
     });
   });
 });

@@ -303,7 +303,7 @@ the SAME commit and suspends every remaining task — the only two valid outcome
 
 ## 2-R — The math sanitizer profile (D-5-R)
 
-- [ ] **2.1-R `SANITIZE_MATH_CONFIG` / `sanitizeMath` — ONE MathML-only vocabulary, enumerated against REAL
+- [x] **2.1-R `SANITIZE_MATH_CONFIG` / `sanitizeMath` — ONE MathML-only vocabulary, enumerated against REAL
       installed Temml output (D-5-R).** `MATH_ALLOWED_TAGS` / `MATH_ALLOWED_ATTR` / `SANITIZE_MATH_CONFIG` /
       `sanitizeMath` survey `temml.renderToMathML` (or whichever entry point 1.1-R's install confirmed)
       directly, over a representative formula corpus — no KaTeX-output-derived starting hypothesis carried
@@ -320,6 +320,89 @@ the SAME commit and suspends every remaining task — the only two valid outcome
       original (diffed). Content-script bytes md5-identical against **336,123 B** (pre-3.2-R, per INPUT B's
       rewritten invariant). App-page bytes stated against 1.1-R's own figure, decomposed. Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [D-5-R; RULING 3]
+
+★ **RESULT — ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1) —
+`cleanMathStyle`'s OPEN QUESTION RESOLVED THE OPPOSITE WAY THE TASK'S OWN "IF ABSENT" TEXT NAMED: `style`
+IS PRESENT, A FILTER WAS BUILT. 24 TAGS / 25 ATTRS ENUMERATED AGAINST 97 REAL RENDERED FORMULAS, BOTH
+BYTE-AXES ZERO-DELTA, BOTH ENGINES.** `SANITIZE_MATH_CONFIG`/`sanitizeMath`/`MATH_ALLOWED_TAGS`/
+`MATH_ALLOWED_ATTR`/`hasDeniedMathStyleToken` landed in `src/render/sanitize.ts`, additive only, following
+`sanitizeSvg`'s own third-profile construction (allow-list as data, a scoped `uponSanitizeAttribute` hook
+for the one procedural filter, `/*#__PURE__*/ …slice()` for content-script tree-shaking).
+**ENUMERATION — 24 tags, 25 attrs, against 97 real `temml@0.13.5` renders** (`sanitize.test.ts`'s own
+`MATH_SURVEY_CORPUS`: the 1.2-R harness's 48-formula dense corpus + its 10 inline samples, plus 39 formulas
+this task added — `\color`/`\textcolor`/`\colorbox`/`\fcolorbox`/`\boxed`/`\overline`/`\underline`/
+`\cancel`/`\bcancel`/`\xcancel`/`\sout`/`\fbox`/`\phase`/`\textcircled`/`\angl`/`\longdiv`/`\reflectbox`/
+`\raisebox`/`\kern`/`\llap`/`\rlap`/`\cancelto`/`\hphantom`/`\vphantom`/`\text`/`\textbf`/`align`/`cases`/
+`array`/`\overset`/`\underset`/`\stackrel`/`\substack`/`\xrightarrow`/`\xleftarrow`/`\binom`/`\pmod`/`\tag` —
+to reach producers the fidelity corpus never exercised). Zero render errors across all 97
+(`throwOnError: true`, Temml's own default `trust`/`annotate`, both `false`). Tags: `math`, `menclose`,
+`mfrac`, `mi`, `mn`, `mo`, `mover`, `mpadded`, `mphantom`, `mroot`, `mrow`, `mspace`, `msqrt`, `mstyle`,
+`msub`, `msubsup`, `msup`, `mtable`, `mtd`, `mtext`, `mtr`, `munder`, `munderover`, plus **`span`** (see
+below). `semantics`/`annotation` — D-5's own KaTeX-derived hypothesis — CONFIRMED ABSENT (`annotate`
+defaults `false`, verified against `temml`'s own `Settings.js`), not carried forward.
+**★ D-5-R's OWN "every tag Temml emits is a MathML tag" claim HOLDS ALMOST, NOT ENTIRELY — ONE MEASURED
+EXCEPTION.** `\begin{align}`'s equation-numbering hook emits `<mtext><span class="tml-eqn"></span></mtext>`
+— a genuine HTML tag embedded inside the MathML tree at an `mtext` text-integration point (verified against
+DOMPurify 3.4.13's own `MATHML_TEXT_INTEGRATION_POINTS` handling, not assumed). It carries only `class` in
+every survey render. Admitted (`span`), stated as a real, harmless, producer-confirmed exception rather than
+smoothed into the tag list silently.
+**★ `cleanMathStyle`'S OPEN QUESTION — RESOLVED, AND THE OPPOSITE WAY THE BYTE-FORECAST SPIKE'S OWN
+10-FORMULA PROBE HAD ALREADY FOUND (progress.md, 2026-09-07): `style` IS PRESENT.** Real properties across
+97 formulas: `border`, `bottom`, `color`, `display`, `left`, `math-depth`, `padding`, `padding-left`,
+`padding-right`, `position`, `right`, `transform`, `width` — layout metrics, keywords, and validated
+colours, never a URL. `hasDeniedMathStyleToken` denies any `url(`/`expression(` token at an
+identifier-boundary (mirrors `cleanSvgCss`'s own `CSS_IDENT_CHAR` boundary test, without its
+comment/escape/fixpoint machinery — a `style` ATTRIBUTE value has no rules to reason about, so a plain
+substring scan suffices), wired as a hook scoped around `sanitizeMath`'s own call, exactly like `cssPassHook`
+is scoped around `sanitizeSvg`.
+**★ A GENUINE DIVERGENCE FROM D-5-R's/D-5's OWN "STRUCTURALLY IMPOSSIBLE" FRAMING, MEASURED NOT CARRIED
+FORWARD.** `\color`/`\textcolor`/`\colorbox`/`\fcolorbox` are NOT gated by `trust` (no `isTrusted` check
+anywhere in `functions/color.js`, read from the real installed source) and DO let LaTeX source reach a
+`style` value's text (`\color{red}x` → `style="color:#ff0000;"`). What DOES hold, measured: `validateColor`'s
+own regex (`/^(#[a-f0-9]{3}|#?[a-f0-9]{6}|[a-z]+)$/i`) admits only a hex triplet or ASCII letters — no `(`,
+no `:`, no `;` — so no real producer can ever place a `url(`/`expression(` token in a `style` value.
+`hasDeniedMathStyleToken` is real defense-in-depth for exactly this gap, not a response to an unreachable
+threat. Separately confirmed (all six BLOCKED under Temml's own default `trust: false`, exercised not
+trusted): `\href`/`\url` are unsupported function names outright; `\class`/`\id`/`\style`/`\data`/
+`\includegraphics` all throw `Function "…" is not trusted`.
+**HOSTILE CORPUS — NEUTRALISED.** A disallowed MathML element (`mglyph`, survey-absent); `<annotation>`
+carrying markup (`<b onclick=…>`) — the whole wrapper denied by absence, no injected markup survives; a
+bare `<a href="javascript:…">`; an attempted `href`/`src` on an allowed element; a `style` value carrying
+`url(`; a `style` value carrying `expression(`; a boundary check proving `curl(` is NOT mistaken for `url(`
+(no false positive); a fresh NO-HOOK DOMPurify instance proving the style filter — unlike the `data:`
+denial — genuinely IS hook-load-bearing (the allow-list alone admits `style`, so an un-hooked run is NOT
+clean, the opposite finding from the SVG profile's own §2.2 mirror, stated so a reader does not assume the
+same "allow-list-driven, hook-independent" shape here).
+**ZERO-STRIP, MEASURED.** `sanitizeMath` is a byte-identical no-op on all 97 real corpus renders (modulo
+DOMPurify's own `&nbsp;`-entity re-serialization of a literal U+00A0, a measured serialization choice, not
+a stripping difference).
+**DOCUMENT + SVG PROFILES — BYTE-IDENTICAL, PINNED, NOT JUST DIFFED BY EYE.** `sanitize.test.ts` already
+pinned the document profile's three consts; this task ADDS the equivalent pin for `SVG_ALLOWED_TAGS`/
+`SVG_ALLOWED_ATTR`/`SANITIZE_SVG_CONFIG` (absent until now) — all three asserted byte-identical to the
+pre-task source text.
+**BYTES — ZERO DELTA, BOTH AXES, BOTH ENGINES, MEASURED WITH A FIRING CONTROL.** Fresh `rm -rf .output`
+rebuilds: content-script **336,123 B**, md5 `f4370ed3…` Cr / `13dda867…` Fx — UNMOVED, both engines.
+`.output` total **4,881,585 B Cr / 4,881,701 B Fx** — UNMOVED, both engines (this task's own code tree-shakes
+to zero bytes on the app page too, since `sanitizeMath` has no call site until group 4-R). Manifest
+**654 / 770 B**, `permissions: []`, both engines. **Firing control**: a scratch static import of
+`sanitizeMath` wired into `appShell.ts` behind a never-true `window.__PEEKOVER_SCRATCH_MATH_SANITIZE__`
+flag (reverted before commit) moved `.output` Cr from 4,881,585 → 4,882,773 B (**+1,188 B**) with the
+content script UNMOVED — proving the zero real-build delta is genuine tree-shaking, not an accidental
+non-build. `git status` after revert showed only `sanitize.ts`/`sanitize.test.ts` changed.
+**STANDING INVARIANTS.** `pnpm lint` EXIT=0. Full `pnpm test`: 1082/1085 passed — the SAME 3 pre-existing
+`codeDetect` failures as HEAD `21e8488` (confirmed via `git stash`, IDENTICAL failure set before and after
+this task's diff: corpus n=28 not 26, 21/7 split not 19/7, one miss at `specs/011-math-rendering/plan.md:790`
+— a real drift from this file's own header text and from this task's kickoff, which both assumed 1.1-R's
+stale "exactly 3, not 4+" framing without re-stating the actual numbers; NOT caused by this task, which
+touches no file the corpus scans). Golden `git diff` EMPTY. 007/009 import fences (`codeImportFence.test.ts`,
+`diagramImportFence.test.ts`) green, part of the same full-suite run.
+**DIVERGENCE FROM THE KICKOFF, FLAGGED:** the kickoff's own §3 speculated Temml emits `<semantics>`/
+`<annotation>` "the MathML-standard way" and proposed admitting them for a future copy-as-LaTeX-from-the-tree
+mechanism. Measured: real default-config Temml does NOT emit either (`annotate: false`), and D-6-R's own
+sealed text already routes copy-as-LaTeX through the RETAINED SOURCE TEXT, never the rendered tree — so
+this task did not admit them. Not a gap; a corrected assumption, per this task's own instruction to follow
+`tasks.md`'s own text over the kickoff's prose where they disagree, and `tasks.md`'s own text names no
+`annotation`/`semantics` requirement.
 
 *Group-2-R acceptance (plan (h)): the hostile corpus (built from Temml's REAL output, not KaTeX's) is
 neutralised; `cleanMathStyle`'s open question resolved as found, one way or the other, stated plainly.*

@@ -792,3 +792,197 @@ export function sanitizeSvg(svg: string): string {
     DOMPurify.removeHook('afterSanitizeElements', cssPassHook);
   }
 }
+
+// ── THE MATH PROFILE (D-5-R) ─────────────────────────────────────────────────
+//
+// A THIRD named sanitizer (007 D-1's own pattern, now a third instance), for Temml's
+// rendered `<math>` output (M11, spec 011). Same construction as the two profiles above:
+// the allow-list is DATA, every tag/attribute NOT listed is dropped by construction, there
+// is no FORBID list, and the document/SVG profiles' three consts above are BYTE-UNTOUCHED —
+// re-asserted by this file's own source-text pin (`sanitize.test.ts`).
+//
+// ★ ONE vocabulary, not two (D-5-R's own SIMPLIFICATION of the original D-5, which admitted
+// KaTeX's HTML visual tree ALONGSIDE its embedded MathML tree). Temml is a MathML-output
+// engine with no parallel HTML layout to preserve — every tag it emits is a MathML tag,
+// with exactly ONE measured exception (below).
+//
+// The tag/attribute sets below are ENUMERATED AGAINST REAL INSTALLED `temml@0.13.5` OUTPUT
+// (`sanitize.test.ts`'s own survey, run over 97 real-rendered formulas: 1.1-R's/1.2-R's own
+// 48-formula corpus plus its 10 inline samples, plus 39 formulas this task added to reach
+// producers those two corpora never exercised — `\color`/`\textcolor`/`\colorbox`/
+// `\fcolorbox`/`\boxed`/`\overline`/`\underline`/`\cancel`/`\bcancel`/`\xcancel`/`\sout`/
+// `\fbox`/`\phase`/`\textcircled`/`\angl`/`\longdiv`/`\reflectbox`/`\raisebox`/`\kern`/
+// `\llap`/`\rlap`/`\cancelto`/`\hphantom`/`\vphantom`/`align`/`cases`/`array`/`\overset`/
+// `\underset`/`\stackrel`/`\substack`/`\xrightarrow`/`\xleftarrow`/`\binom`/`\pmod`/`\tag`),
+// NOT carried forward from D-5's own KaTeX-output-derived starting hypothesis — a
+// MathML-output library need not (and, measured, does not) emit the same tag/attribute
+// breadth KaTeX's `htmlAndMathml` mode did. `menclose`/`mpadded`/`mstyle` DO survive from
+// D-5's own hypothesis list, confirmed real producers here too; D-5's `semantics`/
+// `annotation` do NOT — real Temml output (`annotate` defaults to `false`, confirmed
+// against `Settings.js`) never emits either, so admitting them would be exactly the
+// "attribute surface with no producer" this profile's own construction refuses everywhere
+// else, and they are absent by design, not by oversight.
+//
+// ★ THE ONE MEASURED EXCEPTION — `span`. `\begin{align}`'s own equation-numbering hook
+// (`buildMathML.js`'s `<mtext><span class="tml-eqn"></span></mtext>`, a CSS-counter anchor
+// for auto-numbered rows) is a genuine HTML tag Temml embeds INSIDE its MathML tree, at an
+// `mtext` text-integration point DOMPurify's own MathML-namespace handling already expects
+// (`MATHML_TEXT_INTEGRATION_POINTS`, verified against dompurify 3.4.13's real source, not
+// assumed). It carries no attribute beyond `class` (generic, below) in any survey render, so
+// admitting it costs nothing beyond the one tag name. This is named explicitly because
+// D-5-R's own plan text states "every tag Temml emits is a MathML tag" — measured here to be
+// ALMOST true, with this one real, harmless exception, not smoothed into the tag list
+// silently.
+export const MATH_ALLOWED_TAGS = [
+  'math', 'menclose', 'mfrac', 'mi', 'mn', 'mo', 'mover', 'mpadded', 'mphantom',
+  'mroot', 'mrow', 'mspace', 'msqrt', 'mstyle', 'msub', 'msubsup', 'msup',
+  'mtable', 'mtd', 'mtext', 'mtr', 'munder', 'munderover',
+  'span', // the one HTML tag Temml embeds — see the doc comment above
+] as const;
+
+/**
+ * The only attributes allowed on any element of a rendered formula. Every value below is
+ * geometry, a layout metric, a keyword, or a validated colour — nothing that can name a
+ * network resource. `class` is admitted generically, by NAME, the same posture the document
+ * and SVG profiles already take (`:41-50`, `:230-238`) — Temml's own internal class names
+ * (`tml-display`, `tml-eqn`, `tml-cancel`, `tml-jot`, …) need zero enumeration, the identical
+ * saving D-5 already banked for KaTeX's own class names.
+ *
+ * `mathcolor` and `mathbackground` are REAL producers here (`\left(\color{…}…\right)`'s
+ * stretchy-delimiter colouring; `\colorbox`/`\fcolorbox`'s background), each carrying only
+ * what `validateColor`/`colorFromSpec` already validated (a hex triplet or an
+ * ASCII-letters-only name — see the `style`/`cleanMathStyle` note below, the identical
+ * value space). Admitted the same way `class` is: by name, not by enumerating every colour.
+ *
+ * NO `href`/`src`/`xlink:href` anywhere below. `\href`/`\url`/`\includegraphics` are not
+ * Temml functions Temml's parser recognizes at all with this survey's settings, confirmed
+ * against real installed output (`\href{…}{…}` throws `Unsupported function name`), and
+ * `\class`/`\id`/`\style`/`\data` (Temml's own generic HTML-attribute escape hatch,
+ * `functions/html.js`) all throw `Function "…" is not trusted` under Temml's own DEFAULT
+ * `trust: false` (`Settings.js:48`) — the survey exercised all six, not merely trusted the
+ * `trust: false` posture to close them. Denied by absence anyway, the same
+ * belt-and-suspenders the SVG profile applies to `foreignObject` (`:239-254`).
+ */
+export const MATH_ALLOWED_ATTR = [
+  'class',
+  'accent', 'depth', 'display', 'displaystyle', 'fence', 'form', 'height',
+  'linethickness', 'lspace', 'mathbackground', 'mathcolor', 'mathvariant',
+  'maxsize', 'minsize', 'movablelimits', 'notation', 'rspace', 'scriptlevel',
+  'separator', 'stretchy', 'style', 'symmetric', 'voffset', 'width',
+] as const;
+
+/**
+ * `style` IS admitted (unlike the SVG profile's own `style`-ATTRIBUTE denial, `:240-244`) —
+ * Temml's own layout mechanism is `style`-attribute-driven the same way KaTeX's was (D-5's
+ * own `:503-519` reasoning carries), confirmed by survey: `display`, `math-depth`, `padding`/
+ * `padding-left`/`padding-right`, `position`, `left`/`right`/`bottom`, `width`, `border`,
+ * `color`, and `transform` are the real properties 97 rendered formulas produced — all
+ * numeric layout, a keyword, or a validated colour, never a URL.
+ *
+ * ★ D-5-R's OWN "structurally impossible" framing (`plan.md`'s D-5-R text, `:160-166`,
+ * inherited from D-5's `:513-515`) DOES NOT FULLY HOLD FOR TEMML, measured here rather than
+ * carried forward — `\color`/`\textcolor`/`\colorbox`/`\fcolorbox` are NOT gated by
+ * `trust` (no `isTrusted` check anywhere in `functions/color.js`, confirmed by reading the
+ * real installed source) and DO let LaTeX source reach a `style` value's text
+ * (`style="color:#ff0000;"`, produced by `\color{red}x` with plain default settings). What
+ * DOES hold, measured: `validateColor`'s own regex (`/^(#[a-f0-9]{3}|#?[a-f0-9]{6}|[a-z]+)$/i`)
+ * admits only a hex triplet or ASCII letters — no digit outside a hex triplet, no `(`, no
+ * `:`, no `;`, no whitespace — so no real producer can ever place a `url(` or `expression(`
+ * token in a `style` value. {@link cleanMathStyle} is defense-in-depth for exactly this gap
+ * between "the real producer can't" and "the allow-list shouldn't have to trust that it
+ * never will" — the identical posture 007 D-1 already took for `<style>`'s own CSS text,
+ * restated for an attribute value with no comments/nesting/at-rules to reason about, so the
+ * scan below is a plain ident-boundary-aware substring check, not `cleanSvgCss`'s own
+ * multi-round tokenizer.
+ */
+const MATH_STYLE_DENIED_TOKENS = ['url(', 'expression('];
+
+/** True if `token` occurs in `lowerValue` at an identifier boundary — `curl(` cannot be
+ *  mistaken for `url(`, mirroring `cleanSvgCss`'s own `CSS_IDENT_CHAR` boundary test
+ *  (`:472-478`) without needing its escape/comment machinery (see the doc comment above for
+ *  why a `style` ATTRIBUTE value doesn't need it: no real producer can reach one). */
+function hasMathStyleTokenAt(lowerValue: string, token: string): boolean {
+  let i = lowerValue.indexOf(token);
+  while (i !== -1) {
+    const before = lowerValue[i - 1];
+    if (before === undefined || !/[\w-]/.test(before)) return true;
+    i = lowerValue.indexOf(token, i + 1);
+  }
+  return false;
+}
+
+/**
+ * True if a MathML `style` attribute value contains a `url(` or `expression(` token — the
+ * two lanes through which an inline style could name a network resource or (in legacy
+ * trident) execute script. See the doc comment above {@link MATH_STYLE_DENIED_TOKENS} for
+ * why this is defense-in-depth rather than a response to an observed real producer.
+ */
+export function hasDeniedMathStyleToken(value: string): boolean {
+  const lower = value.toLowerCase();
+  return MATH_STYLE_DENIED_TOKENS.some((token) => hasMathStyleTokenAt(lower, token));
+}
+
+/**
+ * Denies a `style` attribute whose value trips {@link hasDeniedMathStyleToken}. Scoped
+ * around {@link sanitizeMath}'s own call, exactly like {@link cssPassHook} is scoped around
+ * {@link sanitizeSvg} (`:743-755`) — not module scope, so this math-only concern cannot
+ * touch the document/SVG profiles' own calls, and so it tree-shakes off the content script
+ * the same way {@link cssPassHook} does when `sanitizeMath` has no call site.
+ */
+const mathStyleHook = (_node: Node, data: { attrName: string; attrValue: string; keepAttr: boolean }): void => {
+  if (data.attrName === 'style' && hasDeniedMathStyleToken(data.attrValue)) {
+    data.keepAttr = false;
+  }
+};
+
+/**
+ * The math profile's DOMPurify configuration. `ALLOWED_URI_REGEXP`/`ADD_URI_SAFE_ATTR` are
+ * DELIBERATELY ABSENT — unlike the SVG profile (`:255-301`), this profile has no URI-bearing
+ * attribute in its allow-list at all, so DOMPurify's own default handles the (empty) case
+ * correctly and there is nothing for either key to gate. Stated explicitly per D-5-R's own
+ * text (`plan.md:530-535`) so a future reader does not go looking for a config key this
+ * profile has no use for.
+ *
+ * `ALLOW_ARIA_ATTR: true` diverges from the document profile exactly as the SVG profile does
+ * (007 D-1 DIVERGENCE 1, `:347-354`) and for the identical reason — spec §5 requires every
+ * rendered formula to carry a genuine accessible representation, and a browser's own native
+ * MathML accessibility tree is the mechanism.
+ *
+ * `/*#__PURE__*\/ …slice()`, NOT a spread — the same content-script fence `SANITIZE_SVG_CONFIG`
+ * uses (`:380-388`) and for the identical reason: `sanitizeMath` has no call site yet (D-3-R's
+ * app-page-only wiring lands at group 4-R), so this profile must tree-shake to zero bytes on
+ * BOTH the content script and, until then, the app page too. MEASURED: a fresh build with
+ * this task's own diff shows the content script md5-identical and the app page byte-identical
+ * to the pre-task figure (`sanitize.test.ts`'s own byte-decomposition note carries the
+ * numbers). Do NOT "simplify" either `.slice()` back to a spread.
+ */
+export const SANITIZE_MATH_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
+  ALLOWED_TAGS: /*#__PURE__*/ MATH_ALLOWED_TAGS.slice(),
+  ALLOWED_ATTR: /*#__PURE__*/ MATH_ALLOWED_ATTR.slice(),
+  ALLOW_UNKNOWN_PROTOCOLS: false, // keep unknown schemes disallowed
+  ALLOW_DATA_ATTR: false, // no data-* attributes
+  ALLOW_ARIA_ATTR: true, // diverges from the document profile — see above
+  SAFE_FOR_XML: true, // DOMPurify default; kept explicit for review
+  RETURN_DOM: false, // return an HTML string
+  RETURN_DOM_FRAGMENT: false,
+};
+
+/**
+ * Sanitize a rendered formula's MathML into markup that is safe to insert into the DOM.
+ *
+ * Separate from {@link sanitize} and {@link sanitizeSvg} on purpose (007 D-1's own pattern,
+ * D-5-R): this profile permits MathML elements and neither of the other two profiles may
+ * learn to. Callers hold exactly one of the three, never a flag.
+ *
+ * @param html MathML markup produced by the bundled `temml` engine.
+ * @returns Sanitized markup string containing only allow-listed tags/attributes, with any
+ *          `style` value naming a `url(`/`expression(` token stripped.
+ */
+export function sanitizeMath(html: string): string {
+  DOMPurify.addHook('uponSanitizeAttribute', mathStyleHook);
+  try {
+    return DOMPurify.sanitize(html, SANITIZE_MATH_CONFIG) as string;
+  } finally {
+    DOMPurify.removeHook('uponSanitizeAttribute', mathStyleHook);
+  }
+}

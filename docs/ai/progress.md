@@ -66,9 +66,41 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 2.1-R LANDED, 2026-09-07 — THE MathML-ONLY SANITIZER PROFILE (D-5-R), UNDER THE OPEN
+1.2-R FORK. NEXT: TASK 3.1-R (the golden-fixture audit).** `SANITIZE_MATH_CONFIG`/`sanitizeMath`/
+`MATH_ALLOWED_TAGS`/`MATH_ALLOWED_ATTR`/`hasDeniedMathStyleToken` landed in `src/render/sanitize.ts`
+(additive only), enumerated against 97 real `temml@0.13.5` renders — 24 tags, 25 attrs — not carried
+forward from D-5's KaTeX-derived hypothesis. `cleanMathStyle`'s open question resolved: `style` IS
+present (the byte-forecast spike's own 10-formula probe had already found this; this task confirmed it
+at full-corpus scale), so a filter was built (`hasDeniedMathStyleToken`, an ident-boundary-aware
+`url(`/`expression(` scan, scoped as a hook around `sanitizeMath` the way `cssPassHook` scopes around
+`sanitizeSvg`). Two genuine divergences from the sealed plan text, both measured not carried forward:
+(1) D-5-R's own "every tag Temml emits is a MathML tag" holds ALMOST, not entirely — `\begin{align}`'s
+equation-numbering hook emits one real HTML `<span class="tml-eqn">` nested inside the MathML tree,
+admitted as the one named exception; (2) D-5-R's inherited "structurally impossible" framing for
+source-controlled `style` values does NOT fully hold — `\color`/`\textcolor`/`\colorbox`/`\fcolorbox`
+are NOT `trust`-gated and DO let LaTeX source reach a `style` value's text, though `validateColor`'s own
+regex bars every character a `url(`/`expression(` token would need, so no real producer can trip the new
+filter — `hasDeniedMathStyleToken` is real defense-in-depth for that gap, not decoration. Hostile corpus
+neutralised (disallowed element, hostile `<annotation>`, bare `<a>`, attempted `href`/`src`, `style`
+carrying `url(`/`expression(`, a false-positive boundary check, a no-hook control proving the style
+filter is genuinely hook-load-bearing — unlike the SVG profile's own allow-list-driven `data:` denial).
+Zero-strip proven on all 97 real renders (byte-identical, modulo a `&nbsp;`-entity serialization
+non-issue). Document + SVG profiles' consts pinned byte-identical (the SVG pin didn't exist until this
+task added it). Bytes: content-script **336,123 B** and `.output` **4,881,585 B Cr / 4,881,701 B Fx** —
+UNMOVED, both axes, both engines (this task's own code tree-shakes to zero until group 4-R wires it in;
+a scratch firing control proved the tree-shaking is real, not an unbuilt no-op: +1,188 B when force-
+referenced, reverted before commit). Manifest **654 / 770 B**, `permissions: []`. Full `pnpm test`:
+1082/1085 — the SAME 3 pre-existing `codeDetect` failures as HEAD `21e8488` (confirmed via `git stash`
+before/after this task's diff; NOT caused by this task, but the actual numbers have drifted since
+`tasks.md`'s own header text and this task's kickoff — both still read the stale "exactly 3, not 4+"
+framing without the real corpus-size/split numbers, flagged for whoever next re-pins that header).
+Golden EMPTY. See `specs/011-math-rendering/tasks.md` task 2.1-R's own RESULT block for the full survey
+findings. Prior entry, kept for context:
+
 **★ M11 1.2-R'S FIDELITY HARNESS STAGED, 2026-09-07 — HUMAN PROCEED/CLOSE-M11 JUDGMENT STAYS
-DEFERRED TO MILESTONE-CLOSE; GROUPS 2-R–8-R PROCEED CONDITIONALLY, UNDER THE OPEN 1.2-R FORK. NEXT:
-TASK 2.1-R.** Corrects this file's own stale prior pointer (which read "NEXT: TASK 1.2-R, HUMAN-RUN,
+DEFERRED TO MILESTONE-CLOSE; GROUPS 2-R–8-R PROCEED CONDITIONALLY, UNDER THE OPEN 1.2-R FORK.** Corrects
+this file's own stale prior pointer (which read "NEXT: TASK 1.2-R, HUMAN-RUN,
 NO AGENT SUBSTITUTE" as if that task were next up standalone) to reflect `decisions.md`'s
 2026-09-07 "M11 1.2-R SEQUENCING DEVIATION" entry: 1.1-R's byte axis is discharged (fits, ~33 KiB
 `.output` headroom both engines), the byte-forecast spike below rules groups 2-R–8-R COMFORTABLE
