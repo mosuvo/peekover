@@ -1,6 +1,67 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-06 · M11 GATE 1 — REVISIT — the reopened `spec.md` scope (spec 011, math rendering) APPROVED,
+  ON THE MathML/Temml PATH, WITH A RULED FIDELITY BAR AND A PRE-STATED CLOSE-M11 FALLBACK. The `plan.md`
+  REVISIT is AUTHORIZED as the next artifact and the next gate.** `specs/011-math-rendering/spec.md`'s
+  dated "REVISIT — 2026-09-06 (post task 1.1, branch (C))" block (draft `e13284f`) was reviewed and
+  approved. **The spec's status line stays "draft (Gear-3 gate 1 — REVISIT — awaiting human approval
+  before `plan.md` revisit)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the same bank-not-artifact
+  precedent held since M7 (007–010 and the original M11 GATE 1/2/3 all read "draft" post-gate); the reopen
+  changes the spec BODY (a genuine scope re-draft caused by task 1.1's branch (C)), but not its status line.
+  **THE REOPEN CAUSE (inherited-closed, not re-litigated):** task 1.1 (`ae83fa1`) settled RULING 1 (§9-1)
+  as branch (C) — client-side HTML-rendered math does not fit the ~352.8/352.7 KiB `.output` /
+  ~607.8/607.7 KiB zip headroom (KaTeX busts ~3.8×, 1,072,948 B of it self-hosted fonts; MathJax busts
+  independently AND fails `pnpm audit --prod`). M11 reopens on the one path that evidence leaves live.
+  **THE APPROVAL — the reopened scope (spec REVISIT (a)–(g)) is the current milestone scope; `plan.md`
+  decomposes against it, no clause below is reopened:**
+  - **REVISIT-RULING 1 · Direction — APPROVED: reopen on browser-native MathML output.** Leading engine
+    candidate **Temml** (a lightweight KaTeX-derived LaTeX→MathML converter, coverage ≥ KaTeX), NAMED AS
+    THE CANDIDATE TO VERIFY 1.1-style (size/licence/ESM shape/install-scripts/coverage against the real
+    package) at the reopened implementation gate — NOT pinned, NOT installed by this approval. App-page-only,
+    zero-network, lazy-loaded, degrade-to-source all carry from the original.
+  - **REVISIT-RULING 2 · The fidelity bar — RULED (a product-feel call, ruled fresh by the human, the same
+    posture the original §9-4 reserved for product-feel decisions): ACCEPTABLE, READABLE MATH TYPESETTING
+    ON BOTH CHROME AND FIREFOX, WITHIN HEADROOM.** Explicitly NOT "visually equivalent to KaTeX's HTML
+    layout on both engines" — the stricter bar would pre-select close-M11 (MathML cannot promise KaTeX-HTML
+    fidelity on Chrome), so the reopen is ruled at the readable-on-both bar. Chrome's known MathML layout
+    limitations (radical/integral/stretchy-delimiter sizing on system fonts) are the reason spec REVISIT (c)
+    treats a bundled OpenType MATH font as required; whether the bar is met with the chosen font is the
+    gate's own measurement, not this approval's assumption.
+  - **REVISIT-RULING 3 · The pre-stated fallback — APPROVED: CLOSE M11 (ship no math rendering) if the
+    reopened implementation's first task — a real-engine Chrome+Firefox visual-fidelity walk of Temml
+    MathML with the chosen bundled math font, PLUS the byte measurement of Temml JS + font + CSS against
+    headroom — fails on EITHER axis (font busts headroom, or Chrome rendering falls below RULING 2's bar).**
+    The symmetric analogue of the original KaTeX-only fallback; a legitimate, named outcome, not a failure
+    to plan around.
+  - **REVISIT-RULING 4 · MathJax — STRUCK, permanently, reason recorded.** Task 1.1 measured it busting
+    headroom (1,339,852 B) AND failing `pnpm audit --prod` (2 HIGH, via `mj-context-menu → … →
+    brace-expansion`); its SVG-output "browser-independent fidelity rescue" angle was considered and ruled
+    out on those same two grounds. Not to be re-proposed without re-measuring both figures fresh. §3.11/§9-4
+    (the MathJax toggle) are VACATED accordingly.
+  **THE ORIGINAL §9 RULINGS, RECONCILED (as stated in spec REVISIT (g), confirmed here):** §9-1 (dependency
+  set) SETTLED by task 1.1, superseded by REVISIT-RULING 1. §9-2 (app-page-only) STILL HOLDS, unchanged.
+  §9-3 (a distinct math-shaped sanitizer profile) STILL HOLDS, now SIMPLIFIED to a MathML-only allow-list
+  (no parallel KaTeX HTML vocabulary). §9-4 VACATED (RULING 4). Gate-2's §8-1 (inline copy: text-selection
+  for LaTeX, a document-level copy-all-as-MathML action) SURVIVES and SIMPLIFIES — the copy-all action now
+  clones the single MathML tree every formula already renders to. The original §3.7 zero-network requirement
+  HOLDS, its firing control re-aimed at a remote MATH-FONT fetch specifically.
+  **CARRIED INTO THE `plan.md` REVISIT as engine-agnostic inputs (not resolved here):** (1) the math
+  tokenizer lands on `parse.ts`'s shared markdown-it instance, on BOTH the app-page and content-script
+  graphs (+3,957 B each, task 1.1), FALSIFYING `tasks.md`'s "math never enters the content-script graph"
+  invariant the moment a parse rule lands — the reopened plan prices this, does not assume it away; (2) the
+  `@mdit/plugin-tex` ↔ `markdown-it@^15`-vs-`14.3.0` peer-dep tokenizer-correctness risk; (3) Temml's own
+  failure semantics (throw vs. error-node vs. a rendered error element) and option defaults are NOT assumed
+  to match KaTeX's — the plan re-derives the D-4-analog config lockdown against the real installed Temml,
+  not by porting KaTeX's `throwOnError`/`trust` shape by reflex.
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install Temml or any math font, pin either, choose the
+  bundled math-font family (Latin Modern Math / Noto Sans Math / STIX Two Math — the plan/impl gate's call),
+  choose the tokenizer, write `plan.md` or `tasks.md`, resolve the fidelity-and-byte gate (RULING 3's own
+  first reopened task), or edit `spec.md`'s status line. It reopens no clause of the REVISIT block it approves.
+  **Revisit-when:** the `plan.md` REVISIT (the next artifact, next gate) decomposes the reopened scope into
+  a revised D-value set with a fidelity-spike-first task ordering; the fidelity-and-byte gate (RULING 3)
+  then settles the proceed-or-close fork the same way task 1.1 settled the dependency fork.
+
 - **2026-09-06 · M11 GATE 3 — `tasks.md` (spec 011, math rendering) APPROVED, WITH THREE FINDINGS RULED
   (ONE RULED-AS-FRAMED, ONE RULED CONCRETELY, ONE NO-ACTION-DEFERRED). IMPLEMENTATION IS AUTHORIZED — task
   1.1 onward, a FRESH SESSION (C14), not here.** `specs/011-math-rendering/tasks.md` was reviewed and
