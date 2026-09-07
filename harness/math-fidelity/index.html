@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peekover M11 — math fidelity harness</title>
+<!-- design/tokens.css: the same brand tokens the real reader uses (paper/ink/one-highlighter) —
+     AGENTS.md's "never hardcode colors" rule applies to this harness too. Custom properties defined
+     on :root are inherited into shadow trees (shadow DOM does not stop custom-property inheritance),
+     so app.js's shadow-root <style> can reference var(--ink) etc. via this same link. -->
+<link rel="stylesheet" href="../../design/tokens.css">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); }
+  header {
+    position: sticky; top: 0; z-index: 1; background: var(--panel);
+    border-bottom: 1px solid var(--line); padding: 0.75rem 1rem;
+    display: flex; gap: 0.75rem; align-items: baseline; flex-wrap: wrap;
+  }
+  header h1 { font-family: var(--sans); font-size: 0.95rem; margin: 0; }
+  header button {
+    font-family: var(--sans); font-size: 0.8rem; border: 1px solid var(--line);
+    background: var(--accent-soft); color: var(--ink); border-radius: var(--r);
+    padding: 0.35rem 0.7rem; cursor: pointer;
+  }
+  main { padding: 1.25rem 1.5rem 4rem; max-width: 56rem; margin: 0 auto; }
+  .harness-preamble { font-family: var(--sans); font-size: 0.82rem; color: var(--muted); }
+  .harness-preamble code { font-family: var(--mono); background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>M11 math fidelity harness — Temml + STIX Two Math subset</h1>
+  <button id="themeToggle" type="button">theme: light</button>
+</header>
+<main>
+  <p class="harness-preamble">
+    ★ This is a <strong>harness</strong>, not the shipping render path (that's groups 3-R/4-R,
+    unbuilt). It renders the real installed <code>temml</code> into a <code>{mode:'open'}</code>
+    shadow root, with the bundled STIX Two Math subset registered via
+    <code>document.fonts.add()</code> — task 1.1-R's own proven mechanism, not a shadow-root
+    <code>@font-face</code>. It renders NO fidelity verdict — the readable-on-both judgment is a
+    human milestone-close walk (tasks 1.2-R/8.1-R), deferred per <code>decisions.md</code>'s
+    2026-09-07 "M11 1.2-R SEQUENCING DEVIATION" entry. This page is a plain <code>file://</code>
+    document with no build step — open it directly in Chrome and in Firefox.
+  </p>
+  <div id="host"></div>
+</main>
+<!-- Classic (non-module) scripts only: file:// pages cannot load ES modules cross-file in either
+     Chromium or Firefox (CORS-blocked for `type="module"` imports), so every script below is a
+     plain global script. -->
+<script src="../../node_modules/temml/dist/temml.min.js"></script>
+<script src="../../node_modules/dompurify/dist/purify.min.js"></script>
+<script src="stixFont.js"></script>
+<script src="temmlStixCss.js"></script>
+<script src="corpus.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

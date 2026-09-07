@@ -66,6 +66,43 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 1.2-R'S FIDELITY HARNESS STAGED, 2026-09-07 — HUMAN PROCEED/CLOSE-M11 JUDGMENT STAYS
+DEFERRED TO MILESTONE-CLOSE; GROUPS 2-R–8-R PROCEED CONDITIONALLY, UNDER THE OPEN 1.2-R FORK. NEXT:
+TASK 2.1-R.** Corrects this file's own stale prior pointer (which read "NEXT: TASK 1.2-R, HUMAN-RUN,
+NO AGENT SUBSTITUTE" as if that task were next up standalone) to reflect `decisions.md`'s
+2026-09-07 "M11 1.2-R SEQUENCING DEVIATION" entry: 1.1-R's byte axis is discharged (fits, ~33 KiB
+`.output` headroom both engines), the byte-forecast spike below rules groups 2-R–8-R COMFORTABLE
+(~26–27 KiB projected end-of-milestone headroom, plus a real-measured ~29 KiB URL-font reserve) —
+but 1.2-R's OTHER axis, the human real-Chrome+Firefox visual-fidelity walk against REVISIT-RULING
+2's readable-on-both bar, is HUMAN-RUN, NO AGENT SUBSTITUTE, and the human is batching all hands-on
+testing to the milestone-close walk (task 8.1-R) by preference. **Task 1.2-R's box stays `[ ]`; the
+PROCEED/CLOSE-M11 fork stays FORMALLY OPEN.** This session built 1.2-R's own AGENT-PREPARABLE half:
+a durable, both-engine-loadable fidelity harness at `harness/math-fidelity/index.html` — a
+self-contained `file://` page (no build step; open directly in Chrome and in Firefox) that renders
+a 48-formula dense corpus (matching 1.1-R's own class list: fractions, radicals, single/double/
+triple/contour integrals, big-operators, all five matrix delimiter styles, nested stretchy
+delimiters, nested sub/superscripts, full Greek, relations, set ops, `\nabla`/`\lim`/accents/
+over-under-braces, all eight math-alphabet styles, named functions, arrows, digits — inline AND
+block/display samples) through the REAL installed `temml`, into a `{mode:'open'}` shadow root
+(mirroring D-3-R's own app-page context), with the committed STIX Two Math subset registered via
+`document.fonts.add()` — task 1.1-R's own proven mechanism, not a shadow-root `@font-face`. The
+harness reuses Temml's OWN shipped `Temml-STIX2.css` verbatim (adapted only to drop its broken
+relative `@font-face` and retarget its `font-family` rule at the harness's own registered family) —
+the real stylesheet Temml recommends, not an ad hoc replacement, so this evidence doesn't
+under-represent what groups 4-R/8-R will actually need to ship. Every DOM insertion is routed
+through DOMPurify (AGENTS.md #3, unconditional even for this harness's own author-controlled
+corpus). Chromium AND Firefox screenshots (`harness/math-fidelity/screenshots/{chromium,firefox}.png`,
+captured via `harness/math-fidelity/capture.ts`, real headless engines — matching this project's own
+`vitest.config.ts` browser-project convention of treating headless Chromium/Firefox as "real
+engine") are committed as staged evidence: **0 temml-error spans, 0 console errors, both engines** —
+a fact, not a fidelity verdict; no PASS/readable-on-both judgment is rendered by this session, that
+judgment is reserved for the human walk. **Groups 2-R onward are AUTHORIZED to proceed
+CONDITIONALLY** per the banked deviation's own three conditions (every 2-R-onward commit states it
+proceeds under the open fork; a CLOSE-M11 ruling at 8.1-R reverts all of it plus the temml/tokenizer/
+font install in the same commit; the byte axis is not reopened by this deviation). **NEXT: task
+2.1-R** (`SANITIZE_MATH_CONFIG`/`sanitizeMath`, D-5-R), the sanitizer profile enumerated against
+REAL installed Temml output. Prior entry, kept for context:
+
 **★ M11 BYTE-FORECAST SPIKE, 2026-09-07 (measurement-only, NOT task 1.2-R, NOT a fork decision) —
 GROUPS 2-R THROUGH 8-R FORECAST AT ~7 KiB NET-NEW `.output`, BOTH ENGINES: COMFORTABLE.** Requested
 between 1.1-R and 1.2-R to forecast the app-page byte cost of the remaining reopened groups before
