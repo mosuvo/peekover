@@ -1,6 +1,6 @@
 # Spec 011 — Math rendering: KaTeX (+ MathJax fallback, contingent) for inline/block/fence math
 
-**Status:** draft (Gear-3 gate 1 — awaiting human approval before `plan.md`)
+**Status:** draft (Gear-3 gate 1 — REVISIT — awaiting human approval before `plan.md` revisit)
 **Scope:** **011 delivers M11 — F2's remaining half.** M7 shipped F2's diagram half (Mermaid, 3% → 42%,
 `spec-coverage.md`); the seven rows M7 left untouched are all math/formula rows — KaTeX, the MathJax
 fallback toggle, inline `$…$`, block `$$…$$`, code-fence math, and the two ⭐ copy-as-LaTeX/MathML
@@ -25,6 +25,107 @@ SVG-profile precedent, §157-405) and `package.json` (six production dependencie
 `dompurify`, `markdown-it`, `markdown-it-task-lists`, `mermaid`, `shiki`). **Every `file:line` cited here
 must be re-derived by `plan.md` against the actual tree at its own HEAD** — 007/009/010 all make the same
 demand for the same reason, and no KaTeX/MathJax package has been installed or inspected for this draft.
+
+---
+
+## REVISIT — 2026-09-06 (post task 1.1, branch (C))
+
+**★ THIS SPEC IS REOPENED. The sections below this block (§1 onward) are the ORIGINAL gate-1 draft,
+preserved for provenance — read them as history, not as current scope. This REVISIT block is the current
+scope. Where a clause below states it SUPERSEDES an original §-numbered clause, the REVISIT text governs;
+the original text is not edited in place, per the M7–M10 precedent of never rewriting a sealed section
+body, extended here to a reopened one. This is the first spec in this project's history to be
+structurally reopened after gate work began on it (`git log` over every `specs/*/spec.md` commit shows
+every prior spec.md edit was a pre-gate-1 draft/harden/amend pass, never a post-gate reopen) — this block
+establishes the convention rather than following one.**
+
+**(a) The reopen cause.** Task 1.1 (commit `ae83fa1`) measured RULING 1 (§9-1) and settled it as BRANCH
+(C): KaTeX alone busts `.output` headroom by ~3.8× (1,361,716 B measured against ~352.8/352.7 KiB
+headroom, 1,072,948 B of it KaTeX's own bundled font assets), and MathJax alone busts headroom
+independently (1,339,852 B) AND fails `pnpm audit --prod` (2 HIGH, via `@mathjax/src`'s
+`mj-context-menu` sub-tree). Neither client-side, HTML-rendered math engine fits this milestone's
+~352.8/352.7 KiB `.output` / ~607.8/607.7 KiB zip headroom. M11 reopens on a MathML-output strategy — the
+one path task 1.1's own evidence leaves live, per `progress.md`'s § Up next path (d).
+
+**(b) SUPERSEDES §3.1 (milestone scope) and §3.8/§9-1 (the dependency set).** Reopened in-scope: client-
+side rendering of inline `$…$`, block `$$…$$`, and a ` ```math ` fence to **browser-native MathML**,
+app-page-only (§3.2 unchanged, see (g)), zero-network, lazy-loaded, degrade-to-source (§3.9 unchanged).
+**Leading engine candidate: Temml** — a lightweight LaTeX→MathML library, a KaTeX-derived parser that
+drops KaTeX's HTML/CSS layout and font machinery and emits MathML only, with LaTeX-macro coverage at or
+above KaTeX's. Temml is **NAMED AS THE CANDIDATE TO VERIFY**, in the exact 1.1-shaped sense the original
+spec named KaTeX/MathJax — size, licence, ESM shape, install scripts, and LaTeX coverage all re-measured
+against the actual package at the reopened implementation gate, **NOT pinned and NOT installed here**.
+Copy-as-LaTeX still reads the retained source text (D-6 unchanged in spirit); copy-as-MathML clones the
+rendered `<math>` tree — now the **only** rendered tree, simpler than the original D-6's dual-output
+clone, since there is no parallel KaTeX HTML layout to choose between.
+
+**(c) SUPERSEDES §3.7 — THE FONT FRAMING CORRECTION. This is a correction to the record, stated as one,
+not a silent rewrite.** MathML output does **not** make math rendering font-free. Firefox falls back to
+its own bundled OpenType MATH font automatically; **Chromium does not render MathML acceptably without a
+page-supplied OpenType MATH font** — radical and integral sizing, stretchy delimiters, and script
+placement degrade visibly on a system font. So the reopened scope treats **one subsetted OpenType MATH
+font** (candidates: Latin Modern Math, Noto Sans Math, STIX Two Math — TBD at the reopened gate) as a
+**required bundled asset for Chrome fidelity**, not an optional nicety. Its fit inside the
+~352.8/352.7 KiB headroom is a **measurement**; its rendering quality on both engines is a **visual-walk
+gate** (see (d)). This corrects the prior revisit-record amendment's § Up next path (d) framing — *"no
+bundled font assets… fits comfortably"* — which was true for Firefox and false for Chrome. The byte
+problem shifts from "59 KaTeX font files, 1,072,948 B" to "one subsetted math font, fit and quality both
+TBD" — a large improvement over the struck path, not a free lunch.
+
+**(d) THE NEW CENTRAL, FRONT-LOADED RISK — mirroring the original §3.4's byte-first discipline.** The
+original spec front-loaded BYTES as the milestone's central uncertainty, with a pre-stated KaTeX-only
+fallback. Bytes are now conditionally solvable via MathML, so the reopened central uncertainty is
+**CHROME MATHML RENDERING FIDELITY**, paired with the font's own byte cost. In-scope here is stated
+**CONTINGENTLY on a FIDELITY-AND-BYTE GATE** — the reopened implementation's first task (its exact shape
+is `plan.md`'s/`tasks.md`'s to decompose, not written here): a real-engine Chrome-and-Firefox visual walk,
+extension loaded, of Temml-rendered MathML with the chosen bundled math font over a dense representative
+formula corpus, plus the byte measurement of the Temml JS + font + supporting CSS against headroom. **PASS
+BAR: acceptable, readable math typesetting on BOTH engines, within headroom.** **PRE-STATED FALLBACK if
+the gate fails on either axis** (the font busts headroom, or Chrome's rendering falls below the bar) —
+**CLOSE M11, ship no math rendering.** This is the symmetric analogue of the original spec's KaTeX-only
+fallback, and, like that one, a legitimate, named, non-defeatist outcome, not a failure to plan around.
+
+**(e) MathJax is STRUCK from consideration entirely.** Task 1.1 measured it busting headroom
+independently (1,339,852 B) AND failing `pnpm audit --prod` (2 HIGH, via
+`mj-context-menu → rimraf → glob → minimatch → brace-expansion`). MathJax's SVG output was considered,
+briefly, as a browser-independent fidelity rescue (consistent rendering across engines, sidestepping the
+Chrome-MathML-fidelity question in (d) entirely) — and is ruled out on those same two measured grounds, so
+a future reader does not re-propose it without re-measuring both figures fresh. §3.11/§9-4 (the MathJax
+toggle) are VACATED accordingly (see (g)).
+
+**(f) TWO ENGINE-AGNOSTIC REOPEN COSTS, carried forward from the revisit-record amendment because they
+survive the engine change unchanged.** (1) The math tokenizer — whether `@mdit/plugin-tex` or Temml's own
+— lands on `parse.ts`'s shared markdown-it instance, which is on **both** the app-page and content-script
+module graphs; task 1.1 measured this at +3,957 B on **each** graph. This falsifies `tasks.md`'s own
+standing invariant that math never enters the content-script graph the moment the parse rule lands
+(`progress.md`'s carried-items entry, 2026-09-06) — a cost the reopened plan must price, not assume away.
+(2) `@mdit/plugin-tex@1.1.0`'s declared peer dependency on `markdown-it@^15.0.0` against this repo's
+installed `14.3.0` is a **latent tokenizer-correctness risk** (false-positive `$`-price matches, code-span
+exclusion, escaping) — untested by task 1.1's own registration-only probe — not merely a version-string
+warning, per the same `progress.md` carried-items entry. Both apply whether the reopened tokenizer is
+`@mdit/plugin-tex` or a Temml-native equivalent; the reopened plan re-verifies which tokenizer is actually
+used before assuming either cost's shape is unchanged.
+
+**(g) RECONCILING THE ORIGINAL §9 GATE-1 RULINGS.** §9-1 (the dependency-set fork) is **SETTLED by task
+1.1**, and its outcome (branch C) is what this REVISIT reopens on — §9-1 itself is superseded by (b)/(d)
+above; it does not carry forward as an open question. §9-2 (app-page-only, §3.2) **STILL HOLDS**,
+unchanged — nothing about switching HTML-rendered math for MathML changes the manifest/byte-margin
+reasoning §3.2 gave. §9-3 (the distinct math-shaped sanitizer profile, §3.5) **STILL HOLDS**, now
+**simplified**: a MathML-only allow-list, with no parallel KaTeX HTML vocabulary to admit alongside it.
+§9-4 (the MathJax toggle's trigger semantics, §3.11) is **VACATED** — MathJax is struck (e), so there is
+no toggle to define. §8-1 (inline math's copy-as-LaTeX/MathML reachability, gate-2's own ruling: option
+(b), text-selection for LaTeX, a document-level "copy all formulas as MathML" action for MathML) **largely
+survives and simplifies further** — the document-level copy-all action now clones the single MathML tree
+every formula already renders to, rather than choosing between KaTeX's two output modes. **§3.7's
+zero-network requirement (unchanged, AGENTS.md #1) STILL HOLDS**; its firing control must now be re-aimed
+at a remote MATH-FONT fetch specifically (the bundled OpenType MATH font is the new asset most likely to
+be integrated via a CDN-style reference by a naive quick-start), not only a remote formula-data fetch as
+originally framed.
+
+**What this REVISIT does NOT do:** install any package, write any render code, build the extension, or
+touch `plan.md`/`tasks.md`/`decisions.md`. The reopened implementation plan — the real D-value rework
+(Temml as the engine, a MathML-only sanitizer profile, one bundled math font, a fidelity-spike-first task
+ordering per (d)) — is the next gate's work, not this one's.
 
 ---
 

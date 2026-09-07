@@ -66,9 +66,26 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
-**★ M11 TASK 1.1 IS DONE, 2026-09-06 — RULING 1 SETTLED AS BRANCH (C): NEITHER ENGINE SHIPS AT CURRENT
+**★ M11 REOPENED — SPEC REVISIT DRAFTED, 2026-09-06 (MathML/Temml, fidelity-first contingent scope, a
+close-M11 pre-stated fallback), AWAITING GATE-1-REVISIT APPROVAL.** `specs/011-math-rendering/spec.md`
+gained a dated "## REVISIT — 2026-09-06 (post task 1.1, branch (C))" block, the first structural post-gate
+reopen of any spec.md in this project's history (`git log` over every prior `specs/*/spec.md` commit shows
+only pre-gate-1 draft/harden/amend passes) — the original §1–§9 text is preserved below it, unedited, per
+the M7–M10 sealed-section precedent extended to a reopen. The REVISIT reopens scope on browser-native
+MathML output (Temml named as the candidate to verify, not installed), corrects the prior revisit-record
+amendment's font framing (Firefox self-falls-back to a MathML font; **Chrome needs one bundled** — the
+byte problem shifts from KaTeX's 1,072,948 B of fonts to one subsetted math font, fit and quality both
+TBD), states the new central risk as a Chrome-MathML-fidelity-and-byte gate with a pre-stated
+close-M11 fallback symmetric to the original KaTeX-only one, and strikes MathJax entirely (busts headroom
+independently AND fails `pnpm audit --prod`, 2 HIGH). §9-1 is settled (superseded by the reopen); §9-2/§9-3
+still hold (§9-3 simplifies to a MathML-only allow-list); §9-4 is vacated. The spec's status line reads
+"draft (Gear-3 gate 1 — REVISIT — awaiting human approval before `plan.md` revisit)". **No package
+installed, no render code, no build — a scope/doc edit only.** `plan.md`/`tasks.md`/`decisions.md` are
+untouched; the reopened D-value rework (Temml, a MathML-only sanitizer profile, one bundled math font,
+fidelity-spike-first task ordering) is the next gate's work. Prior entry, kept for context:
+M11 TASK 1.1 IS DONE, 2026-09-06 — RULING 1 SETTLED AS BRANCH (C): NEITHER ENGINE SHIPS AT CURRENT
 HEADROOM. M11 GROUPS 2–9 ARE SUSPENDED — THIS IS THE MILESTONE'S LAST COMMIT UNTIL A HUMAN-REVIEWED SPEC
-REVISIT.** `katex` ALONE, wired exactly as task 4.3 plans (`import('katex')` + `katex/dist/katex.min.css
+REVISIT. `katex` ALONE, wired exactly as task 4.3 plans (`import('katex')` + `katex/dist/katex.min.css
 ?inline`), decomposes to 258,852 B JS (a new lazy chunk — does NOT dedupe with mermaid's own transitive
 `katex ^0.16.45`, measured not assumed) + 29,916 B CSS text in the app chunk + **1,072,948 B of KaTeX's own
 font assets** (59 files, all three formats — Vite's CSS pipeline copies every `url()` KaTeX's stylesheet
@@ -162,7 +179,10 @@ task 1.1's own branch (C) text is silent on this, unlike branch (B)'s explicit M
 and no keep-or-revert step was invented in their place.
 
 **(d) A fourth revisit path, architecturally distinct from the three above (font-subset/lazy-split,
-scope-reduction, close-M11) — KaTeX's `output: 'mathml'` mode.** KaTeX can emit browser-native MathML with
+scope-reduction, close-M11) — KaTeX's `output: 'mathml'` mode.** *(Pointer: this path's font framing —
+"fits comfortably," no bundled font — is CORRECTED at the reopened spec's REVISIT block §(c): MathML
+self-falls-back to a font on Firefox but needs one bundled for Chrome fidelity. Read the REVISIT block,
+not this paragraph, for the current font-cost framing.)* KaTeX can emit browser-native MathML with
 NO parallel HTML layout tree and NO bundled font assets, dropping BOTH the 1,072,948 B of KaTeX's own font
 assets AND the 29,916 B of inlined CSS text 1.1's arm (b) measured, at a stroke — leaving only the
 ~258,852 B lazy JS chunk plus `@mdit/plugin-tex`'s own +3,957 B/+3,957 B always-loaded floor, a total that
