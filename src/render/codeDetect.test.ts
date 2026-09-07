@@ -150,18 +150,30 @@ describe('detectLanguage — accuracy against this repository\'s own unlabeled-f
   // at M10 hygiene (HEAD 4b16a23, n=23→26) after confirming the drift is legitimate corpus growth —
   // 3 new unlabeled fences in specs/010-local-exports/plan.md (a file that didn't exist at 8.3/8.4),
   // each independently confirmed non-code — not a detectLanguage regression: the pre-existing
-  // 23-item subset still splits 7/16 under today's code. A future change in this number is again a
-  // FLAG condition for the task that observes it, not a silent re-baseline.
-  it('reproduces the current banked corpus size (n=26), zero drift since the M10 hygiene re-pin', () => {
-    expect(corpus.length).toBe(26);
+  // 23-item subset still splits 7/16 under today's code. Re-pinned AGAIN here (standalone
+  // maintenance, HEAD defb797, n=26→28) after the same confirmation: 2 new unlabeled fences in
+  // specs/011-math-rendering/plan.md (a file that didn't exist at the M10 re-pin either) — line 790,
+  // the parse-stage wiring snippet (real `md.use(tex, …)` / `md.renderer.rules[…] = …` calls, the
+  // same "illustrative-but-real API shape" standard `specs/004…/plan.md:30`'s object literal and
+  // `specs/009…/plan.md:118`'s input/output pair already set), independently confirmed CODE and
+  // added to {@link CODE_ITEMS} below; and line 816, the enhancer pseudocode block (carries this
+  // repo's own 2+ `word # comment` annotation convention, already declined by
+  // `isAnnotatedPseudocode`), confirmed non-code and left out. The pre-existing 26-item subset still
+  // splits 7/19 under today's code — this is corpus growth, not a detectLanguage regression. A
+  // future change in this number is again a FLAG condition for the task that observes it, not a
+  // silent re-baseline.
+  it('reproduces the current banked corpus size (n=28), zero drift since this re-pin', () => {
+    expect(corpus.length).toBe(28);
   });
 
-  // Ground truth assigned by inspection (8.3's own methodology) — 7 genuine code items, 16
+  // Ground truth assigned by inspection (8.3's own methodology) — 8 genuine code items, 20
   // non-code (this repo's "annotated pseudocode" convention, directory trees, a bare file list,
   // and tests/golden/fixtures/code.md's one deliberate prose fixture). 8.3's own per-item labels
   // were never banked past the aggregate 7/16 split and the one named false positive
   // (specs/008-persona-1-qol/plan.md:220's placeholder angle brackets) — this table is this
-  // task's OWN independent re-assignment against that same aggregate, not a transcription.
+  // task's OWN independent re-assignment against that same aggregate, not a transcription. The
+  // eighth entry (specs/011-math-rendering/plan.md:790) was added at this file's own n=26→28 re-pin,
+  // above.
   const CODE_ITEMS = new Set([
     'specs/002-active-source-foundation/plan.md:138',
     'specs/004-themes-settings/plan.md:30',
@@ -170,16 +182,17 @@ describe('detectLanguage — accuracy against this repository\'s own unlabeled-f
     'specs/005-watch-diff/plan.md:62',
     'specs/005-watch-diff/plan.md:87',
     'specs/009-code-blocks/plan.md:118',
+    'specs/011-math-rendering/plan.md:790',
   ]);
 
-  it('reproduces the 7/19 code/non-code split this task\'s own re-assignment converged on', () => {
+  it('reproduces the 8/20 code/non-code split this task\'s own re-assignment converged on', () => {
     const key = (f: UnlabeledFence): string => `${f.file}:${f.startLine}`;
     const codeCount = corpus.filter((f) => CODE_ITEMS.has(key(f))).length;
-    expect(codeCount).toBe(7);
-    expect(corpus.length - codeCount).toBe(19);
+    expect(codeCount).toBe(8);
+    expect(corpus.length - codeCount).toBe(20);
   });
 
-  it('scores every corpus item\'s CODE-vs-DECLINE call correctly (26/26 on this task\'s own re-assignment)', () => {
+  it('scores every corpus item\'s CODE-vs-DECLINE call correctly (28/28 on this task\'s own re-assignment)', () => {
     const key = (f: UnlabeledFence): string => `${f.file}:${f.startLine}`;
     const misses: string[] = [];
     for (const fence of corpus) {

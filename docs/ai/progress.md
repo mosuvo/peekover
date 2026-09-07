@@ -450,8 +450,9 @@ measurement-driven or explicitly deferred.*
   import instead of `?inline`) rather than shipping the base64 form and revisiting later, since the
   URL form is strictly better on every measured axis and the milestone's own headroom stays thin.
 
-- **★ NEW AT M11 1.1, PRE-EXISTING, NOT CAUSED BY THIS TASK — `codeDetect.test.ts`'s CORPUS-DRIFT
-  RECURS.** `pnpm test` at 1.1's own close: 1053/1056 passed, 1 file / 3 tests red in
+- **✅ RESOLVED AT THE 2026-09-07 CODEDETECT-DRIFT MAINTENANCE (standalone, HEAD `defb797`) — NEW AT
+  M11 1.1, PRE-EXISTING, NOT CAUSED BY THIS TASK — `codeDetect.test.ts`'s CORPUS-DRIFT RECURS.**
+  `pnpm test` at 1.1's own close: 1053/1056 passed, 1 file / 3 tests red in
   `src/render/codeDetect.test.ts` (the "reproduces the corpus split" / "scores every corpus item"
   cases) — its live repo-wide unlabeled-fence scan now picks up an unlabeled fence at
   `specs/011-math-rendering/plan.md:503` (an M11 gate-2 planning doc, landed before this session) that
@@ -461,7 +462,15 @@ measurement-driven or explicitly deferred.*
   fixture that scans real repo prose drifts whenever new prose lands) — a recurrence, not a new class of
   defect. Out of 1.1's own Files-list fence (package.json/pnpm-lock.yaml only); not fixed here. **HOME:**
   whichever session next touches `codeDetect.test.ts` or re-calibrates its corpus baseline — likely
-  whoever closes out or reopens M11, since the drift's source is M11's own planning docs.
+  whoever closes out or reopens M11, since the drift's source is M11's own planning docs. **Resolved**:
+  the intent was confirmed genuine (the live repo-wide `.md` scan, specs/ included, is the established
+  8.3/8.4/M10 methodology, not a scoping bug); by 2.1-R the same doc had grown one more fence
+  (`plan.md:790`, since renumbered as the doc grew — the line shifted, the fence didn't move files) plus
+  a sibling at `:816`, for n=26→28. `plan.md:790` (the `parse.ts` wiring snippet — real `md.use(tex,
+  …)` / `md.renderer.rules[…] = …` calls) was independently confirmed CODE and added to `CODE_ITEMS`;
+  `:816` (the enhancer's own annotated-pseudocode block) was confirmed non-code and left out. All three
+  assertions re-pinned to the current true state (n=28, 8/20 split, 28/28 scored) — exact-and-current
+  again, not a bare count.
 - **NEW AT THIS REVISIT-RECORD AMENDMENT, 2026-09-06 — A FALSIFIED MILESTONE INVARIANT: `@mdit/plugin-tex`
   PUTS MATH ON THE CONTENT-SCRIPT MODULE GRAPH, WHICH `tasks.md`'s OWN STANDING INVARIANTS SAY NEVER
   HAPPENS.** 1.1's own arm (a) measured `@mdit/plugin-tex` — D-1's tokenizer, wired into `parse.ts`'s
