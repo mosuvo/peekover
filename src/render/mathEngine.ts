@@ -84,6 +84,24 @@
 // and this module does not. {@link mathEngineOptionsFor} merges it in per call, mirroring
 // `diagramEngineConfigFor`'s per-theme merge shape (`diagramEngine.ts:417-419`) — the SAME base
 // object every call starts from, so a config drift can only ever happen in ONE place.
+//
+// ── 4.3-R: THE ENGINE-LOAD-FAILURE GUARD IS {@link loadMathEngine}'S OWN CATCH SITE, ALREADY HERE ─
+//
+// D-4-R's "engine-failure" case (§3.9's first failure: the chunk fails to load, document-wide) is
+// not new code — it is `mathEnhancer.ts`'s `renderMathBlocks` awaiting {@link loadMathEngine} inside
+// a try/catch, so a rejected `import('temml')` (a 404, a CSP block, an exhausted retry) degrades
+// every pending fence identically, in one place, because this function's own promise is the single
+// seam every failure of that shape passes through. `tests/browser/mathDegrade.browser.test.ts`
+// (task 4.3-R) proves the degradation, real engine, both browsers, RED-FIRST via a fixture-level
+// ablation (the identical document rendering successfully once the injected rejecting loader is
+// removed) rather than a fresh source-level revert of an already-precedented mechanism (D-8-R's own
+// "reuse 007's sibling-figure machinery verbatim" — `diagramDegrade.browser.test.ts`'s own "6.1"
+// block already earned that shape's red-first proof against `mermaid`, cited as standing precedent
+// per AGENTS.md's own ablation rule). `tests/browser/mathNetwork.browser.test.ts` (same task) proves
+// the OTHER half of D-4-R's own name for this task — that the exact call sequence this function
+// gates (`import('temml')` here, `renderToString`/`sanitizeMath`/adopt/`registerMathFont` in
+// `mathEnhancer.ts`) issues zero off-origin network, with a firing control specific to §3.7's own
+// named font-fetch trap.
 
 export const MATH_INLINE_SELECTOR = 'code.peekover-math-inline';
 export const MATH_BLOCK_SELECTOR = 'pre > code.language-math';

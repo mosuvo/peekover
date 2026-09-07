@@ -1059,7 +1059,7 @@ no WAR. `mount.ts` diff EMPTY (no `src/render/mount.ts` edit in this task's diff
 EXACT-match unmoved, proven with a firing control that itself found and fixed a real leak this task's own
 first attempt introduced. `git diff tests/golden/output/` EMPTY.
 
-- [ ] **4.3-R The zero-network guard for the bundled font; block math's §3.9 degradation paths (D-4-R's
+- [x] **4.3-R The zero-network guard for the bundled font; block math's §3.9 degradation paths (D-4-R's
       engine-failure and D-5-R's sanitize-rejection cases).** The font's CSS/asset resolution mirrors
       `readerCss.ts`'s own shadow-root-injection pattern, never a runtime `<link>`. Per-formula try/catch
       (engine-load failure document-wide; parse/render failure and sanitize-rejection per-formula).
@@ -1071,9 +1071,115 @@ first attempt introduced. `git diff tests/golden/output/` EMPTY.
       md5-identical against 3.2-R's floor. App-page bytes stated against 4.2-R's own figure. Golden EMPTY ·
       manifest green **654 / 770 B** · `permissions: []`. [D-4-R, D-5-R; §3.5 row 1; §4 degradation]
 
+★ **RESULT — ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1) —
+ZERO OFF-ORIGIN NETWORK PROVEN OVER THE REAL PATH, WITH A FONT-SPECIFIC FIRING CONTROL DISCHARGING §3.7'S
+NAMED TRAP; ALL THREE §3.9 DEGRADATION PATHS PROVEN FOR BLOCK MATH, REAL TEMML, BOTH ENGINES; CS UNMOVED,
+EXACT MATCH.**
+
+**NO CODE CHANGE WAS NEEDED IN `mathEnhancer.ts`/`mathView.ts` — A DIVERGENCE FROM THE KICKOFF, FLAGGED.**
+The kickoff's own §2 read as if this task builds new guard/degradation code; reading the ALREADY-LANDED
+4.2-R source found all three §3.9 paths already implemented as code (`renderMathBlocks`'s document-wide
+try/catch around `loadMathEngine`; `renderMathFormula`'s per-formula try/catch around `renderToString` and
+around the `sanitizeMath`-then-`<math>`-root check) — D-8-R's own "reuse 007's sibling-figure machinery
+verbatim" means this mechanism is a byte-for-byte structural port of `diagramEnhancer.ts`'s own shape,
+already exercised end-to-end (fake engine) by `mathEnhancer.test.ts`'s own "§3.9's three failures" describe
+block. This task's real job, and the sealed Files line's own text ("(D-4-R's engine-failure and D-5-R's
+sanitize-rejection cases)" as a PARENTHETICAL naming what the tests prove, not what ships) — write the
+BROWSER-LEVEL, REAL-ENGINE proof these paths hold for Temml specifically, which `mathEnhancer.test.ts`'s
+jsdom+fake-engine suite structurally cannot reach (that file's own header names exactly this gap). The one
+`src/render/mathEngine.ts` change actually made is a DOC-COMMENT ADDITION (additive, per the sealed Files
+line), pointing at the two new test files and stating that {@link loadMathEngine}'s own promise is the single
+seam every engine-load failure passes through — zero behavioural change, confirmed by byte-identical rebuild.
+
+**★ RED-FIRST, DISCHARGED BY CITATION FOR THE SHARED MECHANISM (AGENTS.md's own ablation rule), EARNED FRESH
+FOR WHAT IS GENUINELY NEW.** AGENTS.md: "A test extension that mirrors an already-established pattern's
+shape doesn't need its own per-extension ablation — the pattern's original ablation is standing precedent,
+cite it instead of re-earning it." The STATE-MACHINE-LEVEL claims (one document-wide catch fails every fence
+identically; an isolated per-fence failure leaves siblings untouched; a sanitizer rejection after a
+successful render still degrades to source) cite `diagramDegrade.browser.test.ts`'s own "6.1" block and
+`diagramRender.browser.test.ts`'s own render-failure/sanitize-rejection arms as standing precedent, rather
+than re-deriving a fresh source-level revert against `mathEnhancer.ts` for a mechanism D-8-R already carries
+unchanged. What genuinely IS new, and got its own non-vacuous proof: (1) arm B's real parse-failure surface —
+a genuinely malformed, unterminated `\frac{a}{` thrown by the REAL installed `temml`; (2) arm C's real
+sanitize-rejection surface — `instrumentedMath()` (`tests/browser/mathDegrade.browser.test.ts`, porting
+`diagramRender.browser.test.ts`'s own `instrumented({ svg })` technique to Temml) wraps the REAL
+`loadMathEngine()`/`renderToString` and corrupts only the returned string (stripping the `<math>` root) for
+one formula, leaving the sibling's real output untouched — the engine genuinely ran and genuinely succeeded
+(captured in a `raw[]` array asserted to contain a real `<math` tag) before the corruption made it
+unrecognisable to `sanitizeMath`'s allow-list; (3) every arm's own RED-FIRST CONTROL is a FIXTURE-LEVEL
+ablation rather than a source-level one — arm A's control re-runs the identical multi-formula document with
+the rejecting loader simply omitted (production `import('temml')`) and requires full rendering; arm C's
+control re-runs `instrumentedMath` with the IDENTITY transform (no corruption at all) over the same seam and
+requires both formulas to render — each demonstrated, not assumed, by an actual run of both arms of the pair
+in this same commit.
+
+**★ THE ZERO-NETWORK GUARD, WITH THE FONT-SPECIFIC FIRING CONTROL §3.7 NAMES.**
+`tests/browser/mathNetwork.browser.test.ts`, Cr+Fx: a fresh `$$x^2$$` render through the real production path
+(`createReaderPane` → `mount()` → D-3-R's real call site → `import('temml')` → `renderToString` →
+`sanitizeMath` → adopt → `registerMathFont()`) reads **zero OFF-ORIGIN resource-timing entries**, with two
+non-vacuity axes (the formula genuinely rendered a `<math>` root; something real DID cross the wire in this
+harness — same-origin dev-server fetches of the temml chunk and/or the font asset) and a THIRD, D-13-specific
+one: the bundled STIX Two Math subset was itself fetched, found by its committed asset name, and resolved
+SAME-ORIGIN. **The font-specific firing control** constructs a live `FontFace` with an OFF-ORIGIN `url()`
+source (the loopback-cross-origin technique `diagramNetwork.browser.test.ts`'s own TIER 2 established —
+`127.0.0.1:PORT` against a `localhost:PORT` page, cross-origin by the same-origin rule, answered by the same
+local process, nothing ever leaves the machine) and `document.fonts.add()`s it — the EXACT mechanism
+`mathFont.ts`'s own `registerMathFont()` uses, with NO production module touched — and proves the SAME
+off-origin predicate that read zero above genuinely catches the request. **A genuine source-level ablation
+was also run by hand while drafting this file** (swapping `mathFont.ts`'s bundled-asset import for a
+hardcoded remote URL, rebuilding, re-running the real-path arm): it turned that arm red, the remote URL
+appearing in the off-origin list — reverted before commit, narrated here rather than shipped as permanent
+test code, since nothing in the suite can rebuild the extension mid-run. **One drafting-time finding, fixed
+before commit**: `registerMathFont()`'s idempotent `registered` flag means only the FIRST math render in a
+given test file's module instance ever puts the font on the wire — Firefox in particular appeared to serve a
+second `FontFace` construction against the same URL from its in-process font cache without a second Resource
+Timing entry, even after `resetMathFontForTest()`. Fixed by reading the font's own URL out of the file's one
+guaranteed-cold render rather than relying on a second, reset one.
+
+**★ THE THREE §3.9 DEGRADATION PATHS, REAL TEMML, BOTH ENGINES.** `tests/browser/mathDegrade.browser.test.ts`
+— **arm A** (engine-load failure, document-wide): three distinct fenced formulas, an injected rejecting
+loader; all three fail IDENTICALLY, each showing its OWN full source, no figures left over, a marker on each
+naming "the math engine could not be loaded," prose at both ends of the document intact, an untouched
+non-math fence neighbour unaffected — non-vacuity axis 1 (placeholders existed, read synchronously before the
+async body ran) plus the red-first control (same fixture, loader omitted, renders all three). **arm B**
+(per-formula render failure): a genuinely malformed `\frac{a}{` fence degrades to its own source with "this
+formula could not be rendered," its well-formed `y^2` sibling still renders a real `<math>` tree in the SAME
+document pass — Temml's own error UI confirmed absent (`throwOnError:true`'s own lockdown, re-confirmed here
+rather than only in `mathBlock.browser.test.ts`'s D-9-R arm). **arm C** (sanitize rejection): `instrumentedMath`
+corrupts one real `renderToString` return value (its `<math>` root stripped) while leaving the sibling's real
+output untouched; the corrupted formula degrades to source with "the rendered formula was rejected by the
+sanitizer," the untouched sibling renders normally, and the `raw[]` capture proves the engine genuinely
+succeeded before the corruption. **One divergence from the kickoff's own framing, flagged**: §3.5 row 15's
+"state in text+aria, never colour alone" language led the kickoff to expect an `aria`/`title` annotation; the
+LANDED `markMathFailed` (D-8-R's "carries unchanged" from `markDiagramFailed`, verified by reading
+`mathView.ts`) carries neither — the degradation states failure via a VISIBLE TEXT marker paragraph only, the
+same mechanism `diagramView.ts`'s own precedent uses. This file tests what actually landed, not an
+attribute shape the sealed mechanism never had.
+
+**BYTES — UNMOVED, EXACT MATCH, BOTH ENGINES; NO PRODUCTION BEHAVIOUR CHANGED.** Fresh `rm -rf .output`
+rebuild both BEFORE and AFTER this task's one doc-comment addition: content-script **340,492 B**, md5
+`bcdcf231d2980c60538dd5ade0b3088d` Cr / `49e218a1f0bc2515a4e421b7a063e3d8` Fx — unmoved, exact match to
+3.2-R's own floor, both readings. `.output` **5,191,586 B Cr / 5,191,702 B Fx** — unmoved, exact match to
+4.2-R's own figure. Headroom **51,294 B (50.1 KiB) Cr / 51,178 B (50.0 KiB) Fx — POSITIVE, unchanged**.
+Manifest **654 / 770 B**, `permissions: []`, no `web_accessible_resources` — unmoved, both engines.
+
+**STANDING INVARIANTS.** `pnpm lint` **EXIT=0**. Full `pnpm test` (unit): **1145/1145 passed, ALL GREEN, byte-
+for-byte the SAME 66 files/1145 tests as 4.2-R's own close** — this task added no unit tests (both new files
+are `tests/browser/*.browser.test.ts`). Full `pnpm test:browser` (Cr+Fx): **1571/1586 passed,
+15 pre-existing skips, ALL GREEN, NO FLAKES this run** (160 files — 156 at 4.2-R's close + 4 new: this task's
+two files × 2 engines; 18 new tests — `mathNetwork.browser.test.ts`'s 3 × 2 engines + `mathDegrade.browser
+.test.ts`'s 6 × 2 engines). `git diff tests/golden/output/` **EMPTY** (this task touches no parse/render
+path). `codeDetect.test.ts` and the 007/009/M11 import fences confirmed unaffected, run inside the same full
+`pnpm test` pass above (this task's diff added no fence-scanned fixture and touched no import graph).
+
+**ACCEPTANCE.** §4's block/fence degradation criteria hold for all three §3.9 paths against Temml's own real
+output, both engines. The zero-network claim holds over the real production path with a firing control
+specific to §3.7's own named font-fetch trap. Content-script bytes are EXACT-match unmoved. `git diff
+tests/golden/output/` EMPTY.
+
 *Group-4-R acceptance (plan (h)): §4's block/fence rendering and degradation criteria against Temml's own
 output; D-9-R's lean measured and confirmed or corrected; the bundled font shipped for real and
-zero-network-proven; `mount.ts` diff empty.*
+zero-network-proven; `mount.ts` diff empty. — ALL DISCHARGED across 4.1-R–4.3-R.*
 
 ## 5-R — Enhancer scaffolding: inline math (D-7-R's inversion, carried unchanged)
 

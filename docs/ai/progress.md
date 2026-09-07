@@ -66,6 +66,65 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 4.3-R LANDED, 2026-09-07 — ZERO OFF-ORIGIN NETWORK PROVEN OVER THE REAL BLOCK/FENCE MATH
+PATH WITH A FONT-SPECIFIC FIRING CONTROL (§3.7'S NAMED TRAP), ALL THREE §3.9 DEGRADATION PATHS PROVEN
+REAL-ENGINE BOTH BROWSERS, UNDER THE OPEN 1.2-R FORK. GROUP 4-R IS NOW FULLY DISCHARGED. NEXT: TASK 5.1-R
+(inline math's own enhancer/view half, D-7-R's mutate-in-place inversion).**
+**★ A DIVERGENCE FROM THE KICKOFF, FLAGGED RATHER THAN SILENTLY FOLLOWED**: reading the already-landed
+4.2-R source found all three §3.9 degradation paths already implemented as code in `mathEnhancer.ts`
+(D-8-R's own "reuse 007's sibling-figure machinery verbatim" — a byte-for-byte structural port of
+`diagramEnhancer.ts`'s own try/catch shape, already exercised end-to-end with a fake engine by
+`mathEnhancer.test.ts`, 4.2-R). This task's real job — and the sealed `tasks.md` Files line's own
+literal text, which names only `mathEngine.ts`, `mathNetwork.browser.test.ts`, and `mathDegrade.browser
+.test.ts` — was the BROWSER-LEVEL, REAL-TEMML proof those paths hold, which jsdom+fake-engine structurally
+cannot reach. `mathEngine.ts` gained a doc-comment addition only (additive, zero behavioural change,
+confirmed by a byte-identical rebuild before/after).
+**RED-FIRST, DISCHARGED BY CITATION FOR THE SHARED MECHANISM, EARNED FRESH FOR WHAT IS GENUINELY NEW** —
+AGENTS.md's own ablation rule: a test extension mirroring an already-established pattern's shape cites
+that pattern's own original ablation as standing precedent rather than re-earning a fresh one.
+`diagramDegrade.browser.test.ts`'s "6.1" block and `diagramRender.browser.test.ts`'s render-failure/
+sanitize-rejection arms are cited for the STATE-MACHINE-LEVEL claims (document-wide uniformity, per-fence
+isolation, latest-moment sanitize rejection); what got its OWN fresh, non-vacuous proof: a genuinely
+malformed, unterminated `\frac{a}{` thrown by the real installed `temml` (arm B), and `instrumentedMath()`
+(porting `diagramRender.browser.test.ts`'s own `instrumented({ svg })` technique to Temml) wrapping the
+REAL `loadMathEngine()`/`renderToString` and corrupting only the returned string for one formula while its
+sibling's real output stays untouched (arm C) — the engine's genuine success captured in a `raw[]` array
+before the corruption made the string unrecognisable to `sanitizeMath`. Every arm's own RED-FIRST CONTROL
+is a FIXTURE-LEVEL ablation (the rejecting loader omitted; the identity-transform wrapper), each actually
+run in this commit, not merely asserted.
+**THE ZERO-NETWORK GUARD + THE FONT-SPECIFIC FIRING CONTROL §3.7 NAMES.** `mathNetwork.browser.test.ts`,
+Cr+Fx: a fresh render through the real production path reads zero OFF-ORIGIN resource-timing entries, with
+three non-vacuity axes (a real `<math>` root adopted; real same-origin traffic crossed the wire; the STIX
+Two Math subset itself was fetched, by its committed asset name, and resolved same-origin). The firing
+control constructs a live `FontFace` with an OFF-ORIGIN `url()` source (the loopback-cross-origin technique
+`diagramNetwork.browser.test.ts`'s own TIER 2 established) and `document.fonts.add()`s it — the EXACT
+mechanism `mathFont.ts`'s `registerMathFont()` uses, no production module touched — proving the same
+off-origin predicate genuinely catches the request §3.7 names. A genuine source-level ablation (swapping
+`mathFont.ts`'s bundled-asset import for a hardcoded remote URL, rebuilding) was also run by hand while
+drafting this file: it turned the real-path arm red; reverted before commit, narrated rather than shipped,
+since nothing in the suite can rebuild the extension mid-run. **A drafting-time finding, fixed before
+commit**: `registerMathFont()`'s idempotent flag meant only the file's FIRST math render ever puts the font
+on the wire — Firefox served a second `FontFace` construction from its in-process font cache without a
+second Resource Timing entry even after `resetMathFontForTest()` — fixed by reading the font's own URL out
+of the guaranteed-cold first render instead.
+**ONE DIVERGENCE IN THE DEGRADATION SHAPE, FLAGGED**: the kickoff's §3.5 row 15 framing expected an
+`aria`/`title` failure annotation; the LANDED `markMathFailed` (D-8-R's "carries unchanged" from
+`markDiagramFailed`) carries neither — only a visible TEXT marker paragraph, the same mechanism
+`diagramView.ts`'s own precedent uses. This task's tests assert what actually landed.
+**BYTES — UNMOVED, EXACT MATCH, BOTH ENGINES.** Fresh `rm -rf .output` rebuilds before AND after this
+task's one doc-comment addition: content-script **340,492 B**, md5 `bcdcf231…` Cr / `49e218a1…` Fx —
+unmoved, exact match to 3.2-R's own floor. `.output` **5,191,586 B Cr / 5,191,702 B Fx** — unmoved, exact
+match to 4.2-R's own figure. Headroom **51,294 B (50.1 KiB) Cr / 51,178 B (50.0 KiB) Fx**, unchanged.
+Manifest **654 / 770 B**, `permissions: []`, no `web_accessible_resources` — unmoved. `pnpm lint` EXIT=0;
+full `pnpm test` **1145/1145 passed, ALL GREEN, byte-for-byte the same 66 files/1145 tests as 4.2-R's own
+close** (this task added no unit tests). Full `pnpm test:browser` **1571/1586 passed, 15 pre-existing
+skips, ALL GREEN, NO FLAKES this run** (160 files — 156 at 4.2-R's close + this task's two new files × 2
+engines; 18 new tests — `mathNetwork.browser.test.ts`'s 3 × 2 + `mathDegrade.browser.test.ts`'s 6 × 2).
+`git diff tests/golden/output/` EMPTY; `codeDetect`/007/009/M11 import fences confirmed unaffected inside
+the same full `pnpm test` pass (this task touches no parse/render path and no import graph). See
+`specs/011-math-rendering/tasks.md` task 4.3-R's own RESULT block for the full writeup. Prior entry, kept
+for context:
+
 **★ M11 TASK 4.2-R LANDED, 2026-09-07 — BLOCK/FENCE MATH ENHANCER + VIEW, THE STIX TWO MATH FONT SHIPPED
 FOR REAL, UNDER THE OPEN 1.2-R FORK. ★ A REAL CONTENT-SCRIPT BYTE LEAK WAS INTRODUCED BY THIS TASK'S OWN
 FIRST ATTEMPT AND CAUGHT/FIXED BEFORE LANDING — CS BYTES ARE EXACT-MATCH UNMOVED (340,492 B, md5-identical
