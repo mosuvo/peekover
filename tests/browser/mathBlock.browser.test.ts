@@ -232,6 +232,26 @@ describe("D-9-R — theme inheritance, measured (not assumed)", () => {
   });
 });
 
+describe('regression guard — Temml bundling defect (decisions.md 2026-09-09, patches/temml.patch)', () => {
+  it('a formula containing a real LaTeX control word renders through the bundled chunk', async () => {
+    // The historical defect: Temml's Lexer builds its token regex from a string carrying lone
+    // UTF-16 surrogate escapes; the Vite/WXT bundling pipeline (Vitest's browser-mode dependency
+    // pre-bundle drives the SAME esbuild step as `pnpm build`'s `.output`) silently corrupted them
+    // to U+FFFD, which intercepted every `\<word>` before the control-word alternative ever ran —
+    // `\alpha`/`\frac`/any multi-letter macro threw `Unsupported function name`. This renders
+    // through the REAL `import('temml')` dynamic import (D-3-R's own call site, via `mount()` ->
+    // `enhanceMath` -> `loadTemml`), not `node_modules/temml` read in isolation — a version bump
+    // that reintroduces the corruption (or breaks `patches/temml.patch`'s match) trips this red.
+    const { shadow } = await appPageReader('$$\\frac{a}{b} + \\alpha$$\n');
+    await settleMath(shadow, 1);
+
+    const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
+    expect(figure?.getAttribute(MATH_STATE_ATTR)).toBe('rendered');
+    expect(figure?.querySelector('math')).not.toBeNull();
+    expect(shadow.querySelectorAll(`.${MATH_ERROR_CLASS}`)).toHaveLength(0);
+  });
+});
+
 /** Convert a `#rrggbb` (or already-`rgb(...)`) token read off a CSS custom property into the
  *  `rgb(r, g, b)` string `getComputedStyle(...).color` returns, so the two can be compared
  *  directly without a colour-parsing dependency. */

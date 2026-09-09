@@ -1,6 +1,85 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-09 · M11 TEMML-BUNDLING DEFECT — FIXED via `pnpm patch` (fork-level spike, human-authorized,
+  NOT a tasks.md task). The shipped `.output` now renders LaTeX macros through the real bundled chunk,
+  both engines. 1.2-R's fidelity-walk blocker is UNBLOCKED.**
+  This is the real fix the same-day TEMML-BUNDLING DEFECT entry below (its own "CHEAP FIXES TRIED" list)
+  routed as fork-level: `pnpm patch temml` (`patches/temml.patch`, tracked in `pnpm-workspace.yaml`'s
+  `patchedDependencies` and in `pnpm-lock.yaml`'s `temml@0.13.5(patch_hash=ba3cf1c4e69c92884339e800d3a
+  03eea07a2734bd97f4f0c8e62839df1d74134)` snapshot).
+  **THE PATCH.** Temml's `Lexer.js`-derived `tokenRegexString` built two regex fragments —
+  `controlSymbolRegexString` (`"\\\\[^\uD800-\uDFFF]"`) and the astral-surrogate-pair alternative
+  (`"[\uD800-\uDBFF][\uDC00-\uDFFF]"`) — from SOURCE-LEVEL lone-surrogate escapes. The patch rebuilds
+  both from four `String.fromCharCode(0xD800/0xDBFF/0xDC00/0xDFFF)` calls at RUNTIME and string-concatenates
+  the results into the same pattern text, producing an IDENTICAL compiled regex (same code units, same
+  matching behavior) while leaving no `\uD8xx`–`\uDFxx` escape in the module's static source for the
+  Vite/Rollup/esbuild pipeline to mangle. Applied identically to all three files a `pnpm patch` of this
+  package can reach: `dist/temml.mjs` (the "import"-condition file Vite/WXT's ESM resolution — and hence
+  `import('temml')`, `mathEngine.ts`'s single call site, D-2-R — actually consumes and bundles),
+  `dist/temml.cjs` (the "require"-condition file, for consistency), and `src/Lexer.js` (source parity /
+  upstream-patch readability; not itself consumed by the build). Precedent for the mechanism already
+  existed unmangled inside temml's OWN codebase: `dist/temml.mjs`'s wide-character-alphabet code
+  (`String.fromCharCode(0xd835, 0xdc00 + i)`, math bold/italic/etc.) uses the identical
+  numeric-literal-not-source-escape shape and was never corrupted — confirming the construction survives
+  this bundler pipeline.
+  **ACCEPTANCE, MEASURED AGAINST THE SHIPPED `.output`, NOT THE TEST PATH.** Fresh `rm -rf .output` builds,
+  both engines (`pnpm build`, `wxt build -b firefox`): the rebuilt `temml-CsuG5rjZ.js` chunk is
+  BYTE-IDENTICAL across engines (md5 `093903c70ee57e4f1047aedcafa327e8`), contains ZERO U+FFFD in either
+  chunk, and its minified `fromCharCode(55296/56319/56320/57343)` calls (decimal for
+  0xD800/0xDBFF/0xDC00/0xDFFF) confirm the runtime-construction survived minification. A Node script
+  importing the REAL built chunk directly (`file://…/chunks/temml-*.js`, not `node_modules/temml` in
+  isolation) rendered `\alpha`, `\frac{a}{b}`, and `\text{hi}` to `<math>…` successfully, both engines —
+  the actual production path, not the Vitest dep-optimizer shortcut the prior spike's route (b) fixed
+  without touching this. The SAME script's degradation check confirmed a genuinely malformed
+  `\frac{a}{` still throws (temml's error path, our `throwOnError:true` lockdown, untouched).
+  **THE PERMANENT REGRESSION GUARD.** `tests/browser/mathBlock.browser.test.ts` gained a
+  "regression guard — Temml bundling defect" describe block: renders `$$\frac{a}{b} + \alpha$$` through
+  the REAL app-page path (`appPageReader` → `mount()`/`enhanceMath` → `loadTemml`'s own
+  `import('temml')`, D-3-R's real call site — the same Vite dependency-pre-bundle route that
+  first surfaced the defect), and asserts `data-math="rendered"` with a real `<math>` child and zero
+  `.peekover-math-error` elements. A future temml version bump that reintroduces the corruption, or
+  changes the regex construction enough to break this patch's string match, trips this test.
+  **FULL SUITE.** `pnpm test` (unit): 66 files / 1145 tests, all passed. `pnpm test:browser` (both
+  engines): 1625 passed / 15 skipped; TWO failures (`copyAsHtml.browser.test.ts`'s real-clipboard
+  content match, `mathNetwork.browser.test.ts`'s "font fetched in this window" claim) reproduced
+  identically across two full-suite runs but BOTH PASSED CLEANLY when their files were run in isolation —
+  AGENTS.md's own documented harness-shared-state signature (serially-run files sharing one
+  window/clipboard/module-level caches; a red that clears in isolation, not one that persists or spreads
+  to another file). Neither touches macro content or the lexer path this patch changes; `mathBlock.browser.
+  test.ts` already rendered several `$$x^2$$` formulas (D-8-R/INPUT A/D-9-R blocks) before this patch,
+  so any registerMathFont()-idempotency cross-file leak into `mathNetwork.browser.test.ts` (alphabetically
+  later) predates this change. Not investigated further — out of this spike's scope. `pnpm lint`
+  (eslint + tsc --noEmit): clean.
+  **BYTES.** Both engines: content-script **340,492 B**, unchanged (temml is app-page-only — confirms it
+  never touched the CS graph). Manifest 654 B (chrome) / 770 B (firefox), unchanged. `temml-CsuG5rjZ.js`
+  chunk 204,126 B, byte-identical both engines. `.output` totals 5,195,294 B (chrome) / 5,195,410 B
+  (firefox) — headroom vs the 5 MiB (5,242,880 B) ceiling is **~46.5 KiB (chrome) / ~46.4 KiB (firefox)**,
+  essentially unchanged from 6.1-R's own ~46.6/46.5 KiB citation (the runtime-construction patch added a
+  small handful of bytes to the chunk, as expected — nowhere near the ceiling). No `web_accessible_
+  resources` key in either manifest (font asset still same-origin URL-loaded, D-13, untouched).
+  **GOVERNANCE.** `pnpm audit --prod`: no known vulnerabilities. SBOM (`pnpm sbom`) regenerated:
+  BYTE-IDENTICAL — the hand-rolled generator (`scripts/generate-sbom.ts`) sources component metadata from
+  `pnpm list --prod --json` / `pnpm licenses list --prod --json` / `pnpm-lock.yaml`'s base
+  `resolution.integrity`, none of which vary for a locally patched package (a pnpm-patched dependency still
+  resolves to the same upstream registry tarball reference); the actual patch record lives only in
+  `pnpm-lock.yaml`'s `temml@0.13.5(patch_hash=…)` snapshot key and in `patches/temml.patch` itself, which
+  the generator does not currently read. Noted as a pre-existing generator limitation (it has no
+  patched-dependency representation at all, not something this one patch broke) — NOT fixed here, out of
+  this spike's scope. Licence: temml is MIT; a local patch of an MIT dependency carries no additional
+  licence obligation, distributed alongside it under `patches/`. `single-dompurify` and codeDetect
+  invariants: unaffected (covered by the full unit-suite pass above; this patch touches only `temml`).
+  Golden fixtures: empty diff (no golden-file change).
+  **WHAT THIS DOES NOT CHANGE.** No D-value; no tasks.md box ticked (this is a fix spike, not a milestone
+  task); no engine swap; no Vite plugin; no render/feature code touched (`mount.ts`, the sanitizer
+  profiles, `mathEnhancer.ts`/`mathView.ts` — all untouched). This does NOT resolve the 1.2-R fork by
+  itself — it re-arms it: the milestone-close human fidelity walk (task 8.1-R) still owns the
+  PROCEED/CLOSE-M11 judgment on fidelity grounds now that macro rendering is UNBLOCKED (it can test
+  actual MathML fidelity, RULING 2's real axis, instead of failing on the very first macro).
+  **Revisit-when:** the milestone-close human fidelity walk (task 8.1-R) makes its PROCEED/CLOSE-M11
+  call — this fix is now one of its inputs, having cleared the blocker without pre-deciding the walk. The
+  sequence resumes at task 6.2-R.
+
 - **2026-09-09 · M11 SEQUENCING + TEMML-BUNDLING DEFECT — OUT-OF-SEQUENCE INVESTIGATION SPIKE RUN BEFORE
   6.2-R, ROUTED CLOSE-M11-LEANING: no cheap bundler-config fix survives contact with the shipped `.output`.**
   6.1-R's own header surfaced a shipped-build defect (real Temml macros — `\alpha`, `\frac`, any multi-letter

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  temml:
+    hash: ba3cf1c4e69c92884339e800d3a03eea07a2734bd97f4f0c8e62839df1d74134
+    path: patches/temml.patch
+
 importers:
 
   .:
@@ -31,7 +36,7 @@ importers:
         version: 4.4.3
       temml:
         specifier: ^0.13.5
-        version: 0.13.5
+        version: 0.13.5(patch_hash=ba3cf1c4e69c92884339e800d3a03eea07a2734bd97f4f0c8e62839df1d74134)
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -5912,7 +5917,7 @@ snapshots:
 
   symbol-tree@3.2.4: {}
 
-  temml@0.13.5: {}
+  temml@0.13.5(patch_hash=ba3cf1c4e69c92884339e800d3a03eea07a2734bd97f4f0c8e62839df1d74134): {}
 
   thread-stream@3.2.0:
     dependencies:

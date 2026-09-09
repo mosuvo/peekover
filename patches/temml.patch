@@ -1,0 +1,102 @@
+diff --git a/dist/temml.cjs b/dist/temml.cjs
+index 7c6d4fc0ca04f1cfd9fc2d403b252790ef9ccb85..eff90351510452a7a54d564e3871a41c4a0915f1 100644
+--- a/dist/temml.cjs
++++ b/dist/temml.cjs
+@@ -11949,7 +11949,19 @@ const functions = _functions;
+  */
+ const spaceRegexString = "[ \r\n\t]";
+ const controlWordRegexString = "\\\\[a-zA-Z@]+";
+-const controlSymbolRegexString = "\\\\[^\uD800-\uDFFF]";
++// PATCH (peekover, temml-bundling defect): the lone (unpaired) UTF-16 surrogate escapes below
++// were previously written as source-level `\uD800`/`\uDBFF`/`\uDC00`/`\uDFFF` literals. Some
++// bundler pipelines (Vite/Rollup/esbuild, chained the way WXT drives them) re-serialize those
++// escapes to literal UTF-8 text, which cannot represent an unpaired surrogate and silently
++// corrupts each one to U+FFFD, ballooning this character class and breaking all control-word
++// lexing (`\alpha`, `\frac`, etc.). Building the code units at RUNTIME via `String.fromCharCode`
++// keeps the identical regex pattern string (same code units, same matching behavior) while
++// leaving no `\uD8xx`-`\uDFxx` escape in the module's static source for a bundler to mangle.
++const highSurrogateStart = String.fromCharCode(0xD800);
++const highSurrogateEnd = String.fromCharCode(0xDBFF);
++const lowSurrogateStart = String.fromCharCode(0xDC00);
++const lowSurrogateEnd = String.fromCharCode(0xDFFF);
++const controlSymbolRegexString = "\\\\[^" + highSurrogateStart + "-" + lowSurrogateEnd + "]";
+ const controlWordWhitespaceRegexString = `(${controlWordRegexString})${spaceRegexString}*`;
+ const controlSpaceRegexString = "\\\\(\n|[ \r\t]+\n?)[ \r\t]*";
+ const combiningDiacriticalMarkString = "[\u0300-\u036f]";
+@@ -11959,7 +11971,7 @@ const tokenRegexString =
+   `${controlSpaceRegexString}|` +  // whitespace
+   "([!-\\[\\]-\u2027\u202A-\uD7FF\uF900-\uFFFF]" + // single codepoint
+   `${combiningDiacriticalMarkString}*` + // ...plus accents
+-  "|[\uD800-\uDBFF][\uDC00-\uDFFF]" + // surrogate pair
++  "|[" + highSurrogateStart + "-" + highSurrogateEnd + "][" + lowSurrogateStart + "-" + lowSurrogateEnd + "]" + // surrogate pair
+   `${combiningDiacriticalMarkString}*` + // ...plus accents
+   "|\\\\verb\\*([^]).*?\\4" + // \verb*
+   "|\\\\verb([^*a-zA-Z]).*?\\5" + // \verb unstarred
+diff --git a/dist/temml.mjs b/dist/temml.mjs
+index fc885318f8293be5c2068ab84cda5d50bdbd9229..80d541cda45bca160a5d71c607b4cc8f416fccd4 100644
+--- a/dist/temml.mjs
++++ b/dist/temml.mjs
+@@ -11947,7 +11947,19 @@ const functions = _functions;
+  */
+ const spaceRegexString = "[ \r\n\t]";
+ const controlWordRegexString = "\\\\[a-zA-Z@]+";
+-const controlSymbolRegexString = "\\\\[^\uD800-\uDFFF]";
++// PATCH (peekover, temml-bundling defect): the lone (unpaired) UTF-16 surrogate escapes below
++// were previously written as source-level `\uD800`/`\uDBFF`/`\uDC00`/`\uDFFF` literals. Some
++// bundler pipelines (Vite/Rollup/esbuild, chained the way WXT drives them) re-serialize those
++// escapes to literal UTF-8 text, which cannot represent an unpaired surrogate and silently
++// corrupts each one to U+FFFD, ballooning this character class and breaking all control-word
++// lexing (`\alpha`, `\frac`, etc.). Building the code units at RUNTIME via `String.fromCharCode`
++// keeps the identical regex pattern string (same code units, same matching behavior) while
++// leaving no `\uD8xx`-`\uDFxx` escape in the module's static source for a bundler to mangle.
++const highSurrogateStart = String.fromCharCode(0xD800);
++const highSurrogateEnd = String.fromCharCode(0xDBFF);
++const lowSurrogateStart = String.fromCharCode(0xDC00);
++const lowSurrogateEnd = String.fromCharCode(0xDFFF);
++const controlSymbolRegexString = "\\\\[^" + highSurrogateStart + "-" + lowSurrogateEnd + "]";
+ const controlWordWhitespaceRegexString = `(${controlWordRegexString})${spaceRegexString}*`;
+ const controlSpaceRegexString = "\\\\(\n|[ \r\t]+\n?)[ \r\t]*";
+ const combiningDiacriticalMarkString = "[\u0300-\u036f]";
+@@ -11957,7 +11969,7 @@ const tokenRegexString =
+   `${controlSpaceRegexString}|` +  // whitespace
+   "([!-\\[\\]-\u2027\u202A-\uD7FF\uF900-\uFFFF]" + // single codepoint
+   `${combiningDiacriticalMarkString}*` + // ...plus accents
+-  "|[\uD800-\uDBFF][\uDC00-\uDFFF]" + // surrogate pair
++  "|[" + highSurrogateStart + "-" + highSurrogateEnd + "][" + lowSurrogateStart + "-" + lowSurrogateEnd + "]" + // surrogate pair
+   `${combiningDiacriticalMarkString}*` + // ...plus accents
+   "|\\\\verb\\*([^]).*?\\4" + // \verb*
+   "|\\\\verb([^*a-zA-Z]).*?\\5" + // \verb unstarred
+diff --git a/src/Lexer.js b/src/Lexer.js
+index 379c5c9935af30eadb858c90d038b3201347b22b..e357792ec426c94eab256a8beafbcdce559d7d01 100644
+--- a/src/Lexer.js
++++ b/src/Lexer.js
+@@ -41,7 +41,19 @@ import { Token } from "./Token";
+  */
+ const spaceRegexString = "[ \r\n\t]";
+ const controlWordRegexString = "\\\\[a-zA-Z@]+";
+-const controlSymbolRegexString = "\\\\[^\uD800-\uDFFF]";
++// PATCH (peekover, temml-bundling defect): the lone (unpaired) UTF-16 surrogate escapes below
++// were previously written as source-level `\uD800`/`\uDBFF`/`\uDC00`/`\uDFFF` literals. Some
++// bundler pipelines (Vite/Rollup/esbuild, chained the way WXT drives them) re-serialize those
++// escapes to literal UTF-8 text, which cannot represent an unpaired surrogate and silently
++// corrupts each one to U+FFFD, ballooning this character class and breaking all control-word
++// lexing (`\alpha`, `\frac`, etc.). Building the code units at RUNTIME via `String.fromCharCode`
++// keeps the identical regex pattern string (same code units, same matching behavior) while
++// leaving no `\uD8xx`-`\uDFxx` escape in the module's static source for a bundler to mangle.
++const highSurrogateStart = String.fromCharCode(0xD800);
++const highSurrogateEnd = String.fromCharCode(0xDBFF);
++const lowSurrogateStart = String.fromCharCode(0xDC00);
++const lowSurrogateEnd = String.fromCharCode(0xDFFF);
++const controlSymbolRegexString = "\\\\[^" + highSurrogateStart + "-" + lowSurrogateEnd + "]";
+ const controlWordWhitespaceRegexString = `(${controlWordRegexString})${spaceRegexString}*`
+ const controlSpaceRegexString = "\\\\(\n|[ \r\t]+\n?)[ \r\t]*";
+ const combiningDiacriticalMarkString = "[\u0300-\u036f]";
+@@ -51,7 +63,7 @@ const tokenRegexString =
+   `${controlSpaceRegexString}|` +  // whitespace
+   "([!-\\[\\]-\u2027\u202A-\uD7FF\uF900-\uFFFF]" + // single codepoint
+   `${combiningDiacriticalMarkString}*` + // ...plus accents
+-  "|[\uD800-\uDBFF][\uDC00-\uDFFF]" + // surrogate pair
++  "|[" + highSurrogateStart + "-" + highSurrogateEnd + "][" + lowSurrogateStart + "-" + lowSurrogateEnd + "]" + // surrogate pair
+   `${combiningDiacriticalMarkString}*` + // ...plus accents
+   "|\\\\verb\\*([^]).*?\\4" + // \verb*
+   "|\\\\verb([^*a-zA-Z]).*?\\5" + // \verb unstarred
