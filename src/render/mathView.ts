@@ -20,6 +20,24 @@
 // hover/focus control-group shape row 11 gives block math", landing at task 6.1-R). Building an
 // empty control group now would be chrome with nothing to control — 6.1-R adds it to this same
 // `markMathRendered`, not a new function.
+//
+// ── INLINE (D-7-R, 5.1-R) — THE MUTATE-IN-PLACE INVERSION, NO SIBLING AT ALL ────────────────────
+//
+// Block/fence math sits BESIDE its source (a sibling `<figure>` hides the `<pre>`); inline math has
+// no "beside" to use, so `markMathInlineRendered`/`markMathInlineFailed` mutate the SAME
+// `<code class="peekover-math-inline">` element `mathEnhancer.ts` found — never removing it, never
+// wrapping it, never inserting a sibling. `MATH_STATE_ATTR` is reused unchanged (a different tag +
+// class selector from block's `pre[data-math]`, so there is no cross-shape collision to worry
+// about — D-8-R's own "kept distinct from `data-diagram`" concern is about a DIFFERENT engine's
+// selector, not a different SHAPE of the same engine's own attribute). On success the element's
+// children are replaced with the sanitized `<math>` fragment; on failure they are left untouched
+// (the literal `$…$` source stays the visible, accessible content) and the element gains an
+// ANNOTATION — `title` (a native tooltip) plus `data-math-failed` (the reason, machine-readable) —
+// never a new node, since a sibling would break inline prose flow (the named reason D-7 rejected
+// one). This satisfies §3.5 row 15's own **D** requirement ("text+aria, never colour alone") more
+// directly than block's own text-only marker does; that inconsistency between the two engines'
+// failure UI is a real one, not resolved here (out of this task's Files scope) — routed to 6.1-R/
+// 8.1-R's own carried-item list, per 4.3-R's own flag (`tasks.md`, 4.3-R RESULT).
 
 /** The state attribute both halves of the pair carry. Distinct from `data-diagram` (D-8-R). */
 export const MATH_STATE_ATTR = 'data-math';
@@ -30,6 +48,10 @@ export const MATH_FIGURE_CLASS = 'peekover-math';
 /** Class on §3.9's inline marker (this task builds the structure; 4.3-R proves every failure path
  *  red-first). */
 export const MATH_ERROR_CLASS = 'peekover-math-error';
+
+/** The in-place annotation attribute inline math's own failure state carries (D-7-R). Named by
+ *  `plan.md`'s D-7-R text exactly — never a class, since nothing new is inserted for it to style. */
+export const MATH_INLINE_FAILED_ATTR = 'data-math-failed';
 
 /** The three states a math marker can be in — identical in shape to `DiagramState`. */
 export type MathState = 'pending' | 'rendered' | 'failed';
@@ -89,4 +111,33 @@ export function markMathFailed(pre: Element, figure: HTMLElement, reason: string
   marker.className = MATH_ERROR_CLASS;
   marker.textContent = `Formula not shown — ${reason}.`;
   pre.after(marker);
+}
+
+/**
+ * D-7-R's flip, for one rendered inline formula: replace the `<code class="peekover-math-inline">`
+ * element's OWN children with the sanitized `<math>` fragment. The element itself is never removed,
+ * never wrapped, never replaced — this is the persistence property `mathInline.browser.test.ts`
+ * proves red-first. `content` is a NODE, mirroring {@link markMathRendered}'s own signature
+ * discipline — this module never acquires an innerHTML assignment.
+ *
+ * No aria-label is set: §3.5 row 17's own D requirement is that the accessible name comes from the
+ * `<math>` tree itself post-render, so nothing here should override it.
+ */
+export function markMathInlineRendered(code: Element, content: Node): void {
+  code.replaceChildren(content);
+  code.setAttribute(MATH_STATE_ATTR, 'rendered');
+}
+
+/**
+ * The degraded state for inline math: the element's content — the literal `$…$` source — is left
+ * completely UNTOUCHED (no `replaceChildren`, no removal), and gains an in-place annotation naming
+ * the failure: `title` (a native tooltip) plus {@link MATH_INLINE_FAILED_ATTR} (machine-readable,
+ * §3.5 row 15's own D requirement — a colour-blind or non-hover reader still learns which formula
+ * failed and why). Never a sibling node — D-7's own named reason: a sibling would break inline prose
+ * flow mid-sentence.
+ */
+export function markMathInlineFailed(code: Element, reason: string): void {
+  code.setAttribute(MATH_STATE_ATTR, 'failed');
+  code.setAttribute(MATH_INLINE_FAILED_ATTR, reason);
+  code.setAttribute('title', `Formula not shown — ${reason}.`);
 }

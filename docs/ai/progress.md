@@ -66,6 +66,61 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 5.1-R LANDED, 2026-09-09 — INLINE MATH'S D-7-R MUTATE-IN-PLACE INVERSION, THE
+PERSISTENCE PROPERTY PROVEN RED-FIRST BOTH ENGINES, ALL THREE §3.9 PATHS DEGRADED WITH INLINE'S OWN
+TEXT+ARIA ANNOTATION SHAPE, UNDER THE OPEN 1.2-R FORK. GROUP 5-R IS NOW FULLY DISCHARGED. NEXT: GROUP
+6-R (copy-as-LaTeX/MathML, tasks 6.1-R/6.2-R).**
+**THE MECHANISM.** `mathEnhancer.ts`'s private render body was generalized to handle BOTH block/fence
+pairs and inline markers from ONE `loadMathEngine` call per `enhanceMath` invocation (D-3-R's single
+call site, never two engine loads). Inline markers get NO synchronous structure (no figure, no
+wrapper) — only `MATH_STATE_ATTR='pending'` set directly on the `<code class="peekover-math-inline">`
+element itself, which is what makes a second, concurrent `enhanceMath` call idempotent (proven both
+engines). On success, `markMathInlineRendered` `replaceChildren`s the SAME element with the sanitized
+`<math>` tree; on any §3.9 failure, `markMathInlineFailed` leaves the literal `$…$` content
+completely untouched and adds an in-place `title` + `data-math-failed` annotation — never a sibling.
+**★ THE PERSISTENCE PROPERTY, RED-FIRST, BOTH ENGINES.** A genuine ablation (`markMathInlineRendered`
+rewritten to build a NEW element and `replaceWith` it) was run and reverted: the persistence test went
+RED on both engines, naming the exact missing anchor (`Object.is` reference-identity failure, plus an
+expando `Symbol` that did not survive) — the concrete, non-vacuous discharge of D-7-R's own named
+control.
+**THE THREE §3.9 PATHS, INLINE, REAL TEMML, BOTH ENGINES.** `mathDegrade.browser.test.ts` gained three
+new arms (D/E/F, additive to 4.3-R's own A/B/C for block/fence): engine-load failure (document-wide,
+both inline formulas fail identically, content untouched, no sibling); per-marker render failure
+(isolated, the well-formed sibling still renders); sanitize rejection (the latest-moment failure,
+`instrumentedMath` corrupting one real render while the sibling's real output stays untouched). Per
+AGENTS.md's citation rule, the state-machine-level claims cite arms A/B/C as already-earned; what is
+genuinely new and gets its own fresh proof is the CONTENT-UNTOUCHED + IN-PLACE-ANNOTATION shape itself
+— block's own degrade path (drop the placeholder, add a sibling paragraph) is the opposite shape.
+**★ ROW 15's D REQUIREMENT — SATISFIED FOR INLINE, RE-CONFIRMING AND ROUTING 4.3-R's OWN FLAG.**
+`markMathInlineFailed` carries BOTH `title` (native tooltip) AND `data-math-failed` (machine-readable)
+— this genuinely satisfies §3.5 row 15's own "text+aria, never colour alone" language more literally
+than block's own `markMathFailed`, which 4.3-R's own RESULT found carries NEITHER. **This is a real,
+now twice-confirmed inconsistency between the two engines' own failure UI**, not resolved here (out of
+this task's Files scope) — restated as a CARRIED ITEM for 6.1-R or 8.1-R's milestone-close walk to
+reconcile, whichever lands first.
+**ROW 11 — A DRAFTING-TIME FINDING, FIXED.** A first draft of the "no control group" negative
+assertion used an absolute zero-buttons-in-the-shadow count and went red — not a defect in
+`enhanceMath`, but a wrong assumption: the app-page reader pane's own pre-existing chrome (the
+diff-compare pill, export controls) already carries buttons unrelated to math. Fixed to a DELTA-based
+assertion (counts captured before enhancement, asserted unchanged after) plus a scoped check (no
+button inside the marker or its immediate parent).
+**BYTES — CS UNMOVED (EXACT MATCH), APP-PAGE +621 B BOTH ENGINES, HEADROOM STILL COMFORTABLE.** Fresh
+`rm -rf .output` rebuilds both engines, before AND after this task's diff: content-script **340,492
+B**, md5 `bcdcf231…` Cr / `49e218a1…` Fx — unmoved, exact match to 3.2-R's own floor (inline reuses
+the same app-page-only call site; no new content-script reach). `.output` **5,192,207 B Cr / 5,192,323
+B Fx** — **+621 B both engines** over 4.3-R's own figure (5,191,586 / 5,191,702), eager glue only — no
+new lazy chunk, since inline reuses `mathEngine.ts`/`mathCss.ts`/`mathFont.ts` verbatim. Headroom
+**50,673 B (49.5 KiB) Cr / 50,557 B (49.4 KiB) Fx — positive**, down only ~620 B from 4.3-R's own
+~50.1/50.0 KiB. Manifest **654 / 770 B**, `permissions: []`, no `web_accessible_resources` — unmoved.
+**STANDING INVARIANTS.** `pnpm lint` EXIT=0; `tsc --noEmit` clean. Full `pnpm test` (unit):
+**1145/1145 passed, ALL GREEN, byte-for-byte the same 66 files/1145 tests as 4.3-R's own close** (this
+task added zero unit tests — all new coverage is `tests/browser/*`, per its own sealed Files line).
+Full `pnpm test:browser` (Cr+Fx): **1597/1612 passed, 15 pre-existing skips, ALL GREEN, NO FLAKES this
+run** (162 files — 160 at 4.3-R's close + `mathInline.browser.test.ts` × 2 engines; 26 new tests —
+7×2 + the 3 new degrade arms' 6×2). `git diff tests/golden/output/` EMPTY. `codeDetect`/007/009/M11
+import fences: 42/42 standalone. See `specs/011-math-rendering/tasks.md` task 5.1-R's own RESULT block
+for the full writeup. Prior entry, kept for context:
+
 **★ M11 TASK 4.3-R LANDED, 2026-09-07 — ZERO OFF-ORIGIN NETWORK PROVEN OVER THE REAL BLOCK/FENCE MATH
 PATH WITH A FONT-SPECIFIC FIRING CONTROL (§3.7'S NAMED TRAP), ALL THREE §3.9 DEGRADATION PATHS PROVEN
 REAL-ENGINE BOTH BROWSERS, UNDER THE OPEN 1.2-R FORK. GROUP 4-R IS NOW FULLY DISCHARGED. NEXT: TASK 5.1-R

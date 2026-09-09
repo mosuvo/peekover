@@ -1,5 +1,24 @@
-// ★ BLOCK/FENCE MATH'S §3.9 DEGRADATION, REAL ENGINE, BOTH BROWSERS (task 4.3-R, block half — the
-// inline half is 5.1-R's own file, per this file's own Files line).
+// ★ BLOCK/FENCE MATH'S §3.9 DEGRADATION, REAL ENGINE, BOTH BROWSERS (task 4.3-R, block half). ★
+// INLINE MATH'S OWN §3.9 DEGRADATION (task 5.1-R, arms D/E/F below) is this SAME file's own inline
+// half, per 5.1-R's own Files line — arms A/B/C above are block/fence's, untouched by this task.
+//
+// ── INLINE'S OWN DIVERGENCE FROM BLOCK'S DEGRADATION SHAPE (D-7-R) ────────────────────────────
+//
+// Block degrades by DROPPING the placeholder figure and adding a NEW sibling `<p>` naming the
+// failure (`markMathFailed`). Inline has no figure and no sibling to add (D-7's own "no beside" —
+// a sibling would break prose flow mid-sentence): `markMathInlineFailed` leaves the `<code
+// class="peekover-math-inline">` element's content COMPLETELY UNTOUCHED (the literal `$…$` source
+// stays the visible, accessible text) and adds an IN-PLACE ANNOTATION on that same element — `title`
+// (a native tooltip) plus `data-math-failed` (machine-readable) — never a new node. Arms D/E/F below
+// prove this shape for all three §3.9 failures, mirroring arms A/B/C's own state-machine coverage
+// (document-wide engine failure, per-marker render failure with sibling isolation, latest-moment
+// sanitize rejection) but asserting inline's own annotation shape rather than block's sibling-marker
+// shape. Per AGENTS.md's ablation rule, the STATE-MACHINE-LEVEL claims (one document-wide catch
+// fails every marker identically; an isolated per-marker failure leaves siblings untouched; a
+// sanitizer rejection after a genuine successful render still degrades) cite arms A/B/C above (and,
+// through them, `diagramDegrade.browser.test.ts`/`diagramRender.browser.test.ts`'s own standing
+// precedent) as already-earned — what is NEW and gets its own non-vacuous proof here is the
+// CONTENT-UNTOUCHED + IN-PLACE-ANNOTATION shape itself, which block's own arms never exercise.
 //
 // §3.9's three failures, restated for math: the engine fails to load (document-wide — no fence got
 // as far as having its own failure); a formula fails to parse or render (per-fence, isolated); the
@@ -44,8 +63,19 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { mount } from '../../src/render/mount';
 import { enhanceMath } from '../../src/render/mathEnhancer';
-import { loadTemml, type EngineLoader, type MathEngine, type MathEngineModule } from '../../src/render/mathEngine';
-import { MATH_ERROR_CLASS, MATH_FIGURE_CLASS, MATH_STATE_ATTR } from '../../src/render/mathView';
+import {
+  loadTemml,
+  MATH_INLINE_SELECTOR,
+  type EngineLoader,
+  type MathEngine,
+  type MathEngineModule,
+} from '../../src/render/mathEngine';
+import {
+  MATH_ERROR_CLASS,
+  MATH_FIGURE_CLASS,
+  MATH_INLINE_FAILED_ATTR,
+  MATH_STATE_ATTR,
+} from '../../src/render/mathView';
 
 const FIGURE_SELECTOR = `figure.${MATH_FIGURE_CLASS}`;
 const PRE_SELECTOR = `pre[${MATH_STATE_ATTR}]`;
@@ -88,6 +118,11 @@ function fences(shadow: ShadowRoot): HTMLElement[] {
 
 function placeholders(shadow: ShadowRoot): Element[] {
   return [...shadow.querySelectorAll(`${FIGURE_SELECTOR}[${MATH_STATE_ATTR}="pending"]`)];
+}
+
+/** Every inline marker under `shadow`, in document order — arms D/E/F's own equivalent of {@link fences}. */
+function inlineMarkers(shadow: ShadowRoot): HTMLElement[] {
+  return [...shadow.querySelectorAll<HTMLElement>(MATH_INLINE_SELECTOR)];
 }
 
 /**
@@ -308,5 +343,134 @@ describe('C — sanitizeMath rejects the output: the LATEST-moment failure (D-5-
     expect(pres.map((p) => p.getAttribute(MATH_STATE_ATTR))).toEqual(['rendered', 'rendered']);
     expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(2);
     expect(shadow.querySelectorAll(`.${MATH_ERROR_CLASS}`)).toHaveLength(0);
+  }, 30_000);
+});
+
+// ── ARM D — INLINE: the engine chunk never arrives ────────────────────────────────────────────
+
+describe('D — inline: the engine fails to load, document-wide (D-4-R, D-7-R)', () => {
+  const DOC =
+    `${OPENING} Formula one is $alpha^2$ and formula two is $beta^2$, both inline, in one sentence. ${CLOSING}\n`;
+
+  const chunkUnavailable: EngineLoader = async () => {
+    throw new Error('Failed to fetch dynamically imported module: chunks/temml (test-only)');
+  };
+
+  it('★ every inline marker degrades IDENTICALLY: content untouched, annotation added, no sibling', async () => {
+    const shadow = enhancedReader(DOC, chunkUnavailable);
+    await settleMath(shadow);
+
+    const markers = inlineMarkers(shadow);
+    expect(markers).toHaveLength(2);
+    for (const m of markers) {
+      expect(m.getAttribute(MATH_STATE_ATTR)).toBe('failed');
+      // D-7-R: content is NEVER touched — the literal $…$ source is still exactly what it was.
+      expect(m.querySelector('math')).toBeNull();
+      expect(m.getAttribute(MATH_INLINE_FAILED_ATTR)).toContain('engine could not be loaded');
+      expect(m.getAttribute('title')).toContain('engine could not be loaded');
+      // Never a sibling node — the annotation lives ON the element itself.
+      expect(m.parentElement?.children).toHaveLength(2); // the two <code> markers, nothing added
+    }
+    expect(markers[0].textContent).toBe('$alpha^2$');
+    expect(markers[1].textContent).toBe('$beta^2$');
+
+    // Never a blank page (AGENTS.md #5) — prose survives on both sides.
+    expect(shadow.textContent).toContain(OPENING);
+    expect(shadow.textContent).toContain(CLOSING);
+  }, 30_000);
+
+  it('★ NON-VACUOUS / RED-FIRST CONTROL: the SAME fixture, import succeeding, DOES render both', async () => {
+    const shadow = enhancedReader(DOC); // no loader override: the real production import('temml')
+    await settleMath(shadow);
+
+    const markers = inlineMarkers(shadow);
+    expect(markers.map((m) => m.getAttribute(MATH_STATE_ATTR))).toEqual(['rendered', 'rendered']);
+    for (const m of markers) {
+      expect(m.querySelector('math')).not.toBeNull();
+      expect(m.hasAttribute(MATH_INLINE_FAILED_ATTR)).toBe(false);
+      expect(m.hasAttribute('title')).toBe(false);
+    }
+  }, 30_000);
+});
+
+// ── ARM E — INLINE: a single formula fails to parse/render; its sibling is unaffected ──────────
+
+describe('E — inline: a formula fails to render, isolated to its own marker (D-4-R throwOnError:true)', () => {
+  const BAD = '\\frac{a}{';
+  const GOOD = 'y^2';
+  const DOC = `${OPENING} A bad one: $${BAD}$ and a good one: $${GOOD}$. ${CLOSING}\n`;
+
+  it('the malformed marker degrades with its source untouched; the well-formed sibling still renders', async () => {
+    const shadow = enhancedReader(DOC); // real import('temml')
+    await settleMath(shadow);
+
+    const [bad, good] = inlineMarkers(shadow);
+    expect(bad.getAttribute(MATH_STATE_ATTR)).toBe('failed');
+    expect(bad.textContent).toBe(`$${BAD}$`); // content untouched, D-7-R
+    expect(bad.querySelector('math')).toBeNull();
+    expect(bad.getAttribute(MATH_INLINE_FAILED_ATTR)).toContain('could not be rendered');
+    expect(bad.getAttribute('title')).toContain('could not be rendered');
+
+    expect(good.getAttribute(MATH_STATE_ATTR)).toBe('rendered');
+    expect(good.querySelector('math')).not.toBeNull();
+    expect(good.hasAttribute(MATH_INLINE_FAILED_ATTR)).toBe(false);
+
+    // Temml's OWN error UI never reaches the DOM (throwOnError:true, `mathEngine.ts`'s lockdown) —
+    // re-confirmed here, inline-specific.
+    expect(shadow.querySelectorAll('.temml-error')).toHaveLength(0);
+    expect(shadow.textContent).toContain(OPENING);
+    expect(shadow.textContent).toContain(CLOSING);
+  }, 30_000);
+
+  it('CONTROL: with only the well-formed formula present, the harness renders it (non-vacuity)', async () => {
+    const shadow = enhancedReader(`Only a good one here: $${GOOD}$.\n`);
+    await settleMath(shadow);
+    const [marker] = inlineMarkers(shadow);
+    expect(marker.getAttribute(MATH_STATE_ATTR)).toBe('rendered');
+    expect(marker.querySelector('math')).not.toBeNull();
+  }, 30_000);
+});
+
+// ── ARM F — INLINE: sanitizeMath rejects a genuinely successful render ─────────────────────────
+
+describe('F — inline: sanitizeMath rejects the output, the LATEST-moment failure (D-5-R, D-7-R)', () => {
+  const BAD_SOURCE = 'bad^2';
+  const GOOD_SOURCE = 'good^2';
+  const DOC = `${OPENING} Bad: $${BAD_SOURCE}$ Good: $${GOOD_SOURCE}$. ${CLOSING}\n`;
+
+  it('a real render whose output is corrupted degrades with source untouched; the untouched sibling renders', async () => {
+    const { loader, raw } = instrumentedMath((mathml, source) =>
+      source.includes('bad') ? mathml.replace(/<math\b[^>]*>/, '<mathcorrupted>').replace('</math>', '') : mathml,
+    );
+    const shadow = enhancedReader(DOC, loader);
+    await settleMath(shadow);
+
+    // THE ENGINE GENUINELY SUCCEEDED for the bad formula too.
+    expect(raw.some((r) => r.includes('<math'))).toBe(true);
+    expect(raw.length).toBe(2);
+
+    const [bad, good] = inlineMarkers(shadow);
+    expect(bad.getAttribute(MATH_STATE_ATTR)).toBe('failed');
+    expect(bad.textContent).toBe(`$${BAD_SOURCE}$`); // content untouched, D-7-R
+    expect(bad.querySelector('math')).toBeNull();
+    expect(bad.getAttribute(MATH_INLINE_FAILED_ATTR)).toContain('rejected by the sanitizer');
+    expect(bad.getAttribute('title')).toContain('rejected by the sanitizer');
+
+    expect(good.getAttribute(MATH_STATE_ATTR)).toBe('rendered');
+    expect(good.querySelector('math')).not.toBeNull();
+
+    expect(shadow.textContent).toContain(OPENING);
+    expect(shadow.textContent).toContain(CLOSING);
+  }, 30_000);
+
+  it('★ RED-FIRST CONTROL: the SAME wrapper WITHOUT the corruption renders both formulas normally', async () => {
+    const { loader, raw } = instrumentedMath((mathml) => mathml);
+    const shadow = enhancedReader(DOC, loader);
+    await settleMath(shadow);
+
+    expect(raw.length).toBe(2);
+    const markers = inlineMarkers(shadow);
+    expect(markers.map((m) => m.getAttribute(MATH_STATE_ATTR))).toEqual(['rendered', 'rendered']);
+    for (const m of markers) expect(m.hasAttribute(MATH_INLINE_FAILED_ATTR)).toBe(false);
   }, 30_000);
 });

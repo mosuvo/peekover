@@ -1,6 +1,7 @@
-// mathEnhancer — the synchronous prologue and the async render body for BLOCK/FENCE math (D-8-R),
-// this task's own "(block half)" — inline math's mutate-in-place half lands at 5.1-R, added to this
-// same file/function rather than a sibling one (D-3-R's single `enhanceMath(host)` call site).
+// mathEnhancer — the synchronous prologue and the async render body for BOTH block/fence math
+// (D-8-R, sibling-figure) and inline math (D-7-R, mutate-in-place) — one `enhanceMath(host)` call
+// site per D-3-R, never two. Inline's own half (5.1-R) is added to this same file/function rather
+// than a sibling one, exactly as D-3-R names.
 //
 // ── WHY THIS IS SIMPLER THAN diagramEnhancer.ts, AND WHERE THAT SIMPLICITY COMES FROM ───────────
 //
@@ -30,6 +31,7 @@
 
 import {
   MATH_BLOCK_SELECTOR,
+  MATH_INLINE_SELECTOR,
   loadMathEngine,
   mathEngineOptionsFor,
   type EngineLoader,
@@ -38,7 +40,14 @@ import {
 import { sanitizeMath } from './sanitize';
 import { registerMathFont } from '../theme/mathFont';
 import { buildMathStyle } from '../theme/mathCss';
-import { MATH_STATE_ATTR, insertMathPlaceholder, markMathFailed, markMathRendered } from './mathView';
+import {
+  MATH_STATE_ATTR,
+  insertMathPlaceholder,
+  markMathFailed,
+  markMathInlineFailed,
+  markMathInlineRendered,
+  markMathRendered,
+} from './mathView';
 
 /** Marks the extra `<style>` this module injects, so a second `enhanceMath` call on an
  *  already-styled shadow root does not append a duplicate sheet. */
@@ -109,8 +118,29 @@ export function mathSourceOf(pre: Element): string {
 }
 
 /**
- * D-6-R's render -> sanitize -> adopt sequence, for one formula. Extracted so every pair in the
- * loop below shares ONE implementation — mirrors `drawDiagram`'s own extraction, minus the
+ * Every inline math marker under `root`, in document order (D-7-R). Mirrors `mathFencesIn`'s own
+ * shape, but there is no `<pre>` parent to climb to — the `<code class="peekover-math-inline">`
+ * element itself is both the source and, on success, the mutated target.
+ */
+export function mathInlineMarkersIn(root: ParentNode): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(MATH_INLINE_SELECTOR));
+}
+
+/**
+ * Read an inline marker's bare LaTeX source. `parse.ts`'s own marker (`parse.ts:114`) wraps content
+ * in a single leading/trailing `$` (never `$$` — that shape is block/fence-only, D-8-R), so this
+ * peels exactly those two delimiter characters, content-shape only, never origin metadata.
+ * `textContent`, never markup — same untrusted-source discipline as {@link mathSourceOf}.
+ */
+export function mathInlineSourceOf(code: Element): string {
+  const raw = code.textContent ?? '';
+  return raw.length >= 2 && raw.startsWith('$') && raw.endsWith('$') ? raw.slice(1, -1) : raw;
+}
+
+/**
+ * D-6-R's render -> sanitize -> adopt sequence, for one formula — shared by block/fence AND inline
+ * (only `displayMode` differs between them, D-4-R's own per-call fact). Extracted so every marker in
+ * the loop below shares ONE implementation — mirrors `drawDiagram`'s own extraction, minus the
  * cache/theme parameters neither D-12-R nor D-9-R need here.
  *
  * Adoption mirrors `mount.ts:131-133`'s pattern: the sanitized string is parsed into a
@@ -118,10 +148,15 @@ export function mathSourceOf(pre: Element): string {
  * to a live element. A fragment with no `<math>` root is a sanitize rejection, not a formula — the
  * same "never an empty box" check `adoptSanitizedSvg` performs for diagrams.
  */
-function renderMathFormula(doc: Document, engine: MathEngine, source: string): MathOutcome {
+function renderMathFormula(
+  doc: Document,
+  engine: MathEngine,
+  source: string,
+  displayMode: boolean,
+): MathOutcome {
   let rendered: string;
   try {
-    rendered = engine.renderToString(source, mathEngineOptionsFor(true));
+    rendered = engine.renderToString(source, mathEngineOptionsFor(displayMode));
   } catch {
     return { failure: RENDER_FAILED };
   }
@@ -136,17 +171,21 @@ function renderMathFormula(doc: Document, engine: MathEngine, source: string): M
 }
 
 /**
- * The async body: register the font, load the engine once, then draw each pending fence into its
- * placeholder.
+ * The async body: register the font, load the engine once for BOTH block/fence and inline markers
+ * (D-3-R's single call site — one engine load per `enhanceMath` invocation, never two), then draw
+ * every pending marker.
  *
  * Sequential, in document order — Temml has no shared measuring container to race over the way
  * mermaid does (`renderDiagrams`'s own comment), but a document with many formulas should not fan
- * out an unbounded number of simultaneous engine calls on first paint either.
+ * out an unbounded number of simultaneous engine calls on first paint either. Block/fence pairs are
+ * drawn before inline markers; both loops are otherwise independent (a failure in one is invisible
+ * to the other, per §4's isolation criterion).
  */
-async function renderMathBlocks(
+async function renderMath(
   doc: Document,
   shadow: ShadowRoot,
   pairs: readonly MathPair[],
+  inline: readonly HTMLElement[],
   loader: EngineLoader | undefined,
 ): Promise<void> {
   registerMathFont(); // fire-and-forget; see the module header
@@ -155,25 +194,35 @@ async function renderMathBlocks(
   try {
     engine = await loadMathEngine(shadow, loader);
   } catch {
-    // §3.9's first failure. Document-wide by nature: no fence got as far as having its own.
+    // §3.9's first failure. Document-wide by nature: no marker got as far as having its own.
     for (const pair of pairs) markMathFailed(pair.pre, pair.figure, ENGINE_LOAD_FAILED);
+    for (const code of inline) markMathInlineFailed(code, ENGINE_LOAD_FAILED);
     return;
   }
   if (!engine) return; // the feature-detect said no marker; the prologue disagrees, so do nothing.
 
   for (const pair of pairs) {
-    const outcome = renderMathFormula(doc, engine, mathSourceOf(pair.pre));
+    const outcome = renderMathFormula(doc, engine, mathSourceOf(pair.pre), true);
     if ('failure' in outcome) {
       markMathFailed(pair.pre, pair.figure, outcome.failure);
       continue;
     }
     markMathRendered(pair.pre, pair.figure, outcome.content);
   }
+
+  for (const code of inline) {
+    const outcome = renderMathFormula(doc, engine, mathInlineSourceOf(code), false);
+    if ('failure' in outcome) {
+      markMathInlineFailed(code, outcome.failure);
+      continue;
+    }
+    markMathInlineRendered(code, outcome.content);
+  }
 }
 
 /**
- * D-3-R's entry point: put D-8-R's structure around every block/fence math marker in a freshly
- * mounted reader, schedule the render, and return.
+ * D-3-R's entry point: put D-8-R's structure around every block/fence math marker, claim every
+ * inline marker (D-7-R), schedule the render, and return.
  *
  * Called from both app-page mount paths and from nowhere else — `readerPane.ts` and `appShell.ts`,
  * immediately after `enhanceDiagrams` (D-3-R). The content script reaches neither, which is why a
@@ -181,17 +230,18 @@ async function renderMathBlocks(
  * behavioral cousin): the gate is the module graph, not a runtime check, and it is what keeps
  * `temml` and the STIX font off the content script entirely.
  *
- * No-ops on a host with no shadow root and on a document with no block/fence markers — the
- * overwhelmingly common case. The empty-list return is in front of every await, so on a math-free
+ * No-ops on a host with no shadow root and on a document with no math markers at all — the
+ * overwhelmingly common case. The empty-check return is in front of every await, so on a math-free
  * document neither `registerMathFont()` nor `loadMathEngine`'s dynamic `import('temml')` is ever
  * evaluated.
  *
- * Idempotent over an already-enhanced tree: a fence that already carries `data-math` is skipped, so
- * a second call cannot produce a second placeholder or a second render of the same fence.
+ * Idempotent over an already-enhanced tree: a block/fence fence or an inline marker that already
+ * carries `data-math` is skipped, so a second call cannot produce a second placeholder, a second
+ * render, or a second `replaceChildren` of the same marker.
  *
- * Inline math's own markers (5.1-R) are untouched by this function today — only
- * `MATH_BLOCK_SELECTOR` is queried, never `MATH_INLINE_SELECTOR`. 5.1-R adds inline handling to this
- * same function rather than a sibling one, per D-3-R's single `enhanceMath(host)` call site.
+ * Inline markers get NO synchronous structure inserted (D-7-R: "their pending state IS their
+ * already-committed literal `$…$` text") — only `MATH_STATE_ATTR` is set on the element itself, to
+ * claim it against a second, concurrent `enhanceMath` call before this one's async body settles.
  */
 export function enhanceMath(host: HTMLElement, options: MathEnhanceOptions = {}): void {
   const shadow = host.shadowRoot;
@@ -202,10 +252,18 @@ export function enhanceMath(host: HTMLElement, options: MathEnhanceOptions = {})
     if (pre.hasAttribute(MATH_STATE_ATTR)) continue;
     pairs.push({ pre, figure: insertMathPlaceholder(pre) });
   }
-  if (pairs.length === 0) return;
+
+  const inline: HTMLElement[] = [];
+  for (const code of mathInlineMarkersIn(shadow)) {
+    if (code.hasAttribute(MATH_STATE_ATTR)) continue;
+    code.setAttribute(MATH_STATE_ATTR, 'pending');
+    inline.push(code);
+  }
+
+  if (pairs.length === 0 && inline.length === 0) return;
 
   ensureMathStyle(shadow);
 
   // Everything above is synchronous and already committed; everything below is off this stack.
-  void renderMathBlocks(host.ownerDocument, shadow, pairs, options.loader);
+  void renderMath(host.ownerDocument, shadow, pairs, inline, options.loader);
 }
