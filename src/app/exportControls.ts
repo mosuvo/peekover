@@ -20,6 +20,15 @@
 // `__cta`/`__pin`'s own disabled-not-hidden precedent. Task 7.1 flips the fifth and last: PDF
 // (`exportPdf`, task 7.1) — every row is now live, closing the day-one-shape shown-but-disabled
 // state this module opened with.
+//
+// ── M11 task 6.2-R adds a SIXTH row, not in the original M10 mockup: "Copy formulas as MathML"
+// (§8-1(b)'s document-level action, D-6-R). Gate 3's own ruling (`decisions.md`, 2026-09-06 M11
+// GATE 3 FINDING 2) named this panel — "the M10 export-panel precedent" — as the home for that
+// action, NEVER a toolbar button or a keyboard shortcut. It is wired live from the day it lands
+// (there is no "not ready yet" period to show `disabled` for, unlike the four rows above), and it
+// rejects with no clipboard write when the open document has no rendered formula — never a false
+// "Copied" (AGENTS.md #5) — surfaced through the SAME `reportCopyOutcome` shape the three other
+// copy rows already use, no new outcome vocabulary.
 
 export interface ExportViewOptions {
   /** Trigger the real HTML file-download export (task 3.1's `exportHtml`) — wired here since no
@@ -46,18 +55,26 @@ export interface ExportViewOptions {
    *  same "nothing to export yet" guard `onExportHtml` etc. use), it just does so without passing
    *  anything through. */
   onExportPdf(): void;
+  /** Trigger the document-level copy-all-formulas-as-MathML action (M11 task 6.2-R, D-6-R,
+   *  §8-1(b)) — the sole home §8-1(b)'s ruling gives inline math's copy-as-MathML, since inline
+   *  has no per-formula control group of its own (D-7-R). Sync signature matching the three other
+   *  copy rows' own shape — the async collect+write happens INSIDE `copyAllMathAsMathml`, and the
+   *  caller reports its outcome through the same `.then(onCopied, onFailed)` -> `reportCopyOutcome`
+   *  path. Rejects (never resolves falsely) when the document has no rendered formula yet. */
+  onCopyMathMathml(): void;
   /** Dismiss the panel. Called by the close button AND by the trap's own Escape handler — one
    *  close path, not two (appShell owns what "closed" means: emptying the slot + the focus
    *  restore, per Ruling 2). */
   onClose(): void;
 }
 
-/** The 3 rows whose action can produce a "Copied"/"Copy failed" completion state (task 9.1,
- *  human-ruled — `decisions.md`'s M10 9.1 entry). HTML export and PDF are deliberately excluded:
- *  each already has its own native browser signal for SUCCESS (the download shelf; the print
- *  dialog), so a Peekover "Exported!" would be redundant with it — the same "still justified / not
- *  redundant" discipline that dropped ZIP export earlier this milestone. */
-export type CopyRowKey = 'copy-html' | 'copy-plain-text' | 'copy-rich-text';
+/** The 4 rows whose action can produce a "Copied"/"Copy failed" completion state (task 9.1,
+ *  human-ruled — `decisions.md`'s M10 9.1 entry — extended to `'copy-math-mathml'` at M11 task
+ *  6.2-R, the identical shape). HTML export and PDF are deliberately excluded: each already has
+ *  its own native browser signal for SUCCESS (the download shelf; the print dialog), so a Peekover
+ *  "Exported!" would be redundant with it — the same "still justified / not redundant" discipline
+ *  that dropped ZIP export earlier this milestone. */
+export type CopyRowKey = 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'copy-math-mathml';
 
 export interface ExportViewController {
   /** The panel root — the caller slots this into the shell. */
@@ -253,6 +270,14 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
       subtext: "The browser's own print pipeline",
       actionLabel: 'Export as PDF',
       onClick: opts.onExportPdf,
+    },
+    {
+      key: 'copy-math-mathml',
+      glyph: '∑', // ∑
+      title: 'Copy formulas as MathML',
+      subtext: 'Every rendered formula in this document, as MathML',
+      actionLabel: 'Copy formulas as MathML',
+      onClick: opts.onCopyMathMathml,
     },
   ];
   for (const spec of rows) element.append(buildRow(doc, spec));

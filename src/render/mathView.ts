@@ -27,6 +27,17 @@
 // `mathSourceOf`'s own doc comment states), so the duplication is a small, low-drift-risk cost
 // bought for keeping this task's own diff inside `mathView.ts` alone (its sealed Files line).
 //
+// ── 6.2-R: THE DOCUMENT-LEVEL "COPY ALL FORMULAS AS MathML" ACTION (§8-1(b)) ───────────────────
+//
+// Inline math has no per-formula control group to put a copy-as-MathML button in (D-7-R: a
+// sibling would break prose flow) — §8-1(b)'s ruling routes inline's own copy-as-MathML through
+// ONE document-level action instead, that collects EVERY currently-rendered `<math>` root (block
+// AND inline) and serializes each with the SAME `serializedMathMl` helper 6.1-R's per-formula
+// action already uses. This module owns the collection/serialization (`copyAllMathAsMathml`); the
+// panel/menu-row itself lives in `exportControls.ts` (the M10 export-panel precedent named at
+// gate 3) — a document-level action is app-page chrome, not a per-figure control, so it belongs
+// beside the other document-level copy rows, not in this file's own per-formula group.
+//
 // ── WHY THE STATE ATTRIBUTE IS ITS OWN NAME, NOT `data-diagram` ───────────────────────────────
 //
 // D-8-R's own sealed text: "The `data-math` three-state attribute (`pending`/`rendered`/`failed`),
@@ -314,6 +325,54 @@ async function copyMathAsLatex(figure: HTMLElement): Promise<void> {
 async function copyMathAsMathml(figure: HTMLElement): Promise<void> {
   const mathml = serializedMathMl(currentMathRoot(figure));
   await writeMathText(figure.ownerDocument, mathml);
+}
+
+// ── §8-1(b) / D-6-R: THE DOCUMENT-LEVEL "COPY ALL FORMULAS AS MathML" ACTION (task 6.2-R) ────
+//
+// The gate-2 ruling routes inline copy-as-MathML through ONE document-level action, since
+// text-selection (inline's own copy-as-LaTeX mechanism, §8-1(b)) cannot produce a rendered TREE
+// for inline math — there is no per-formula inline control group to put a button in (D-7-R, 5.1-R
+// re-confirmed). This action collects every CURRENTLY RENDERED `<math>` root — block/fence AND
+// inline, in document order — and serializes each with the SAME `serializedMathMl` clone-and-
+// -XMLSerializer helper 6.1-R's per-formula action already uses. Zero new dependencies (D-6-R):
+// still just `Element.cloneNode` + `XMLSerializer`, now looped rather than called once.
+//
+// A `<math>` element exists in the DOM only once its own formula has actually rendered — a
+// pending or failed marker never contains one — so `querySelectorAll('math')` needs no separate
+// `data-math` filtering of its own to exclude them.
+
+/** Every rendered `<math>` root under `root` (a shadow root, in production), in document order —
+ *  both block/fence figures and inline markers, whichever have actually settled to `rendered`. */
+export function allMathRootsIn(root: ParentNode): Element[] {
+  return Array.from(root.querySelectorAll('math'));
+}
+
+/**
+ * Serialize every rendered formula into ONE clipboard payload — one well-formed `<math>` root per
+ * line (each individually round-trip-parseable; the payload as a whole is not itself one
+ * well-formed XML document, since multiple root elements can never be). Throws when the document
+ * has nothing rendered yet — never a false "Copied" (AGENTS.md #5); the caller (the panel row's
+ * `onClick`) surfaces the rejection as `reportCopyOutcome(key, false)`, the same shape every other
+ * copy row already uses for a failed write.
+ */
+export function serializedMathMlDocument(root: ParentNode): string {
+  const roots = allMathRootsIn(root);
+  if (roots.length === 0) throw new Error('this document has no rendered formulas');
+  return roots.map(serializedMathMl).join('\n');
+}
+
+/**
+ * Copy every rendered formula in `host`'s shadow tree to the clipboard as MathML (§8-1(b)). The
+ * panel/menu-row action's own entry point — `host` is the app-page reader host `appShell.ts`
+ * already resolves for every other export/copy row, never a build-time closure over a specific
+ * figure (mirrors this module's own per-formula actions' "resolve from the live DOM" discipline,
+ * widened to the whole document).
+ */
+export async function copyAllMathAsMathml(host: HTMLElement): Promise<void> {
+  const shadow = host.shadowRoot;
+  if (!shadow) throw new Error('this document has no rendered formulas');
+  const mathml = serializedMathMlDocument(shadow);
+  await writeMathText(host.ownerDocument, mathml);
 }
 
 /** One action's strings — mirrors `DiagramActionCopy` exactly. Row 17's names carry BOTH the

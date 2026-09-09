@@ -116,6 +116,7 @@ import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/w
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceMath } from '../render/mathEnhancer';
+import { copyAllMathAsMathml } from '../render/mathView';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
 import { watchCapability } from '../watch/watchAvailability';
@@ -906,7 +907,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     return name.replace(/\.[^./\\]+$/, '') || 'export';
   }
 
-  // ── THE FIVE EXPORT DISPATCH FUNCTIONS (task 8.1, D-5) ──────────────────────────────────────
+  // ── THE FIVE EXPORT DISPATCH FUNCTIONS (task 8.1, D-5), PLUS A SIXTH (M11 task 6.2-R) ─────────
   //
   // Lifted out of `renderExport`'s `createExportView` call so there is exactly ONE implementation
   // of each export, reachable from TWO entry points: the panel row's own `onClick` (wired below)
@@ -915,13 +916,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // panel click and the keyboard shortcut diverge or double-write `lastExportFormat`, exactly the
   // failure task 8.2's own "ONE write path" claim depends on this task not introducing.
   //
-  // Task 8.2 (D-6): each function below persists ITS OWN key from `exportControls.ts`'s
-  // `RowSpec.key` vocabulary ('html' | 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'pdf')
-  // as `lastExportFormat` the instant its export actually fires. Written only inside each
-  // function's own "did the export actually run" guard, never on the defensive no-op branch — a
-  // no-op is not a "last used" format. `saveSettings` (settingsSeam.ts) is the same seam the
-  // theme/TOC/code-theme controls already persist through — best-effort, never throws on this UI
-  // path.
+  // Task 8.2 (D-6): each of the ORIGINAL FIVE functions below persists ITS OWN key from
+  // `exportControls.ts`'s `RowSpec.key` vocabulary ('html' | 'copy-html' | 'copy-plain-text' |
+  // 'copy-rich-text' | 'pdf') as `lastExportFormat` the instant its export actually fires. Written
+  // only inside each function's own "did the export actually run" guard, never on the defensive
+  // no-op branch — a no-op is not a "last used" format. `saveSettings` (settingsSeam.ts) is the
+  // same seam the theme/TOC/code-theme controls already persist through — best-effort, never
+  // throws on this UI path. The SIXTH function (`runCopyMathMathml`, M11 task 6.2-R) deliberately
+  // does NOT persist a `lastExportFormat` — see its own doc comment for why.
 
   function runExportHtml(): void {
     // The app page's live reader host (readerPane.ts's own class, the same selector the diff
@@ -1013,12 +1015,39 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   }
 
   /**
+   * M11 task 6.2-R (D-6-R, §8-1(b)): copy every rendered formula in the open document (block AND
+   * inline) to the clipboard as MathML — `copyAllMathAsMathml` does the collect+serialize+write,
+   * this function only resolves the live host and reports the outcome, same shape as
+   * `runCopyHtml`/`runCopyRichText` above. `copyAllMathAsMathml` REJECTS (never resolves) when the
+   * document has no rendered formula yet, so `reportCopyOutcome('copy-math-mathml', false)` is the
+   * honest result on an empty document — never a false "Copied" (AGENTS.md #5).
+   *
+   * ★ DELIBERATELY NOT WIRED INTO `lastExportFormat`/`triggerLastExport` (task 8.1/8.2's own
+   * Ctrl/Cmd+S "repeat last export" mechanism) — that vocabulary lives in `settings.ts`, outside
+   * this task's own sealed Files line, and nothing in 6.2-R's own Verify text asks for a keyboard
+   * shortcut path (§8-1's own ruling is explicit that this action gets NEITHER a toolbar button NOR
+   * a keyboard shortcut). Extending `lastExportFormat` here would be unrequested ripple into a file
+   * this task does not own — left as a stated scope decision, not an oversight.
+   */
+  function runCopyMathMathml(): void {
+    const host = readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+    if (host) {
+      copyAllMathAsMathml(host).then(
+        () => exportView?.reportCopyOutcome('copy-math-mathml', true),
+        () => exportView?.reportCopyOutcome('copy-math-mathml', false),
+      );
+    }
+  }
+
+  /**
    * Task 8.1 (D-5): re-run whatever `lastExportFormat` (8.2) names, through the SAME five
    * functions above — the `AppController` method `main.ts`'s Ctrl/Cmd+S handler calls. A fresh
    * install now defaults to `'html'` (Ruling M-1, `decisions.md` 2026-09-04 · M10 10.4), so a
    * first-ever Ctrl+S runs `runExportHtml()` here, not a no-op. `default: break` stays live as
    * defensive handling for a genuinely unrecognized stored value (a removed format key, corrupted
-   * storage) — a case `DEFAULT_SETTINGS` itself can no longer produce.
+   * storage) — a case `DEFAULT_SETTINGS` itself can no longer produce. `'copy-math-mathml'` is not
+   * (and, per the scope decision above, will not become) a `lastExportFormat` value, so it needs no
+   * case here.
    */
   function triggerLastExport(): void {
     switch (currentSettings().lastExportFormat) {
@@ -1051,6 +1080,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       onCopyPlainText: runCopyPlainText,
       onCopyRichText: runCopyRichText,
       onExportPdf: runExportPdf,
+      onCopyMathMathml: runCopyMathMathml,
       onClose: () => toggleExport(),
     });
     exportView = view; // task 9.1 — the void→then callbacks above report through this reference

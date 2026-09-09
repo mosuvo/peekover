@@ -65,11 +65,51 @@
 // diagnosing/patching esbuild's dependency bundling of `temml` is far outside this task's own Files
 // line (`src/render/mathView.ts`, this test file) and is a decision for whoever owns 1.2-R's own
 // fork next, flagged here in full technical detail rather than smoothed over or silently avoided.
+//
+// ── ★ UPDATE, TASK 6.2-R: THE BUNDLING DEFECT ABOVE IS NOW PATCHED (`af8cf9b`, `patches/temml.patch`) ──
+//
+// `\alpha`/`\frac`/any named macro now renders correctly in the real shipped chunk — confirmed
+// fresh this session (a `\alpha` fixture below renders through the real dynamically-loaded chunk
+// without throwing). The fixtures below use macros freely where a macro is what the test needs.
+//
+// ── ★★★ A SEPARATE, NEW DEFECT THIS TASK FOUND: §8-1(b)'S OWN "TEXT-SELECTION" CLAIM IS FALSE FOR
+// A SUCCESSFULLY-RENDERED INLINE FORMULA — VERIFIED, NOT FIXED, PER THIS TASK'S "verify, don't
+// build" SCOPE ═══════════════════════════════════════════════════════════════════════════════════
+//
+// `decisions.md`'s M11 GATE 2 §8-1(b) ruling: inline copy-as-LaTeX is "select-and-copy of the
+// retained source text already on screen — zero new code, since the literal `$…$` source is what
+// the `<code class="peekover-math-inline">` element's own text content is AT REST (D-7)." Measured
+// directly, real engine, both browsers, against a SETTLED (successfully rendered) formula: FALSE.
+// `markMathInlineRendered` (5.1-R, already committed, red-first-proven) does
+// `code.replaceChildren(content)` on success — the literal `$…$` text is PERMANENTLY REPLACED by
+// Temml's `<math>` tree the instant rendering succeeds, which happens automatically and near-
+// instantly for essentially every formula a real user will ever look at on the app page. Temml's
+// own `annotate: false` pin (`mathEngine.ts`, D-4-R) means the rendered tree carries no hidden
+// source annotation either — there is no fallback recovery path. Selecting a settled `Inline
+// $x + \$5$` formula's own `<code>` element and pressing Ctrl+C copies `"x\r\n+\r\n$\r\n5\r\n"` on
+// Chromium and `"x+$5"` on Firefox — in both cases the rendered GLYPH string (the SAME "collapsed,
+// backslash-free" shape 6.1-R's own copy-as-MathML test already found for the identical
+// underlying `<math>` tree, now confirmed for inline's own success-state text-selection
+// specifically), never the retained source. The claim genuinely DOES hold in two narrower states —
+// a FAILED formula (§3.9 never touches content, so the source persists FOREVER) and the
+// content-script surface (§9-2: `enhanceMath` never runs there, so every marker stays in its
+// literal-source "rest" state permanently) — both proven below, alongside the settled-formula
+// negative proven equally directly. ★ FLAGGED for `progress.md`'s carried items / 8.1-R's
+// milestone-close walk / a possible fresh §8-1 gate reopening: for the COMMON case — a
+// successfully rendered inline formula on the app page, the primary surface this whole milestone
+// targets — THERE IS CURRENTLY NO WAY TO RECOVER ITS LATEX SOURCE BY ANY MEANS. Not fixed here: a
+// fix needs either new per-formula inline chrome (§8-1(b) explicitly rules that out) or a DOM-shape
+// change to what `markMathInlineRendered` retains on success — a D-7-R architecture change,
+// decided at a gate, not invented inside this task's own diff. Human-reviewed 2026-09-09: ship the
+// honest verification (this task), route the gap as a carried item, build nothing new.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { userEvent, cdp } from 'vitest/browser';
 import { createReaderPane } from '../../src/app/readerPane';
 import { mount } from '../../src/render/mount';
+import { mountAppShell, type AppStore } from '../../src/app/appShell';
+import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
+import { EXPORT_STATUS_CLASS, EXPORT_ROW_STATE_ATTR } from '../../src/app/exportControls';
 import {
   MATH_ACTION_CLASS,
   MATH_ACTIONS_CLASS,
@@ -97,6 +137,24 @@ const ESCAPED_DOLLAR_SOURCE = 'x + \\$5\n';
 /** A genuinely multi-line dollar-block. Retained source: `x^2 +\ny^2\n`. */
 const MULTILINE_DOC = '$$\nx^2 +\ny^2\n$$\n';
 const MULTILINE_SOURCE = 'x^2 +\ny^2\n';
+
+// ── 6.2-R's own fixtures — inline origin. Retained source, after the single-`$` peel, carries NO
+// trailing newline (verified via a scratch `parse()` probe this session — unlike dollar-BLOCK
+// origin, inline's own captured token content never carries one). ─────────────────────────────
+
+/** Inline's own escaped-`\$` fixture, mirroring `ESCAPED_DOLLAR_DOC` above. */
+const INLINE_ESCAPED_DOLLAR_DOC = 'Inline $x + \\$5$ more text.\n';
+const INLINE_ESCAPED_DOLLAR_SOURCE = 'x + \\$5';
+
+/** A macro fixture — `\alpha` now renders (the temml lone-surrogate patch, `af8cf9b`, see header). */
+const INLINE_MACRO_DOC = 'Macro inline $\\alpha$ here.\n';
+const INLINE_MACRO_SOURCE = '\\alpha';
+
+/** A genuinely malformed inline formula — mirrors `mathDegrade.browser.test.ts`'s own `\frac{a}{`
+ *  fixture (an unterminated brace), confirmed via a scratch probe to tokenize as ONE inline
+ *  formula whose content is exactly `\frac{a}{`. */
+const INLINE_MALFORMED_DOC = 'Inline $\\frac{a}{$ stays broken.\n';
+const INLINE_MALFORMED_SOURCE = '\\frac{a}{';
 
 const cleanup: HTMLElement[] = [];
 
@@ -138,6 +196,77 @@ async function settleMath(shadow: ShadowRoot, expectedCount: number): Promise<vo
   }
   throw new Error('math markers never settled');
 }
+
+// ── 6.2-R's own harness additions ────────────────────────────────────────────────────────────
+
+const inlineCodeIn = (shadow: ShadowRoot): HTMLElement =>
+  shadow.querySelector<HTMLElement>('code.peekover-math-inline')!;
+
+/** Select an element's full text contents with a REAL Range/Selection, then press a REAL
+ *  Ctrl+C — §8-1(b)'s own "ordinary text-selection" mechanism, exercised directly with no
+ *  Peekover code participating in producing the clipboard content. */
+async function selectAndCopy(el: Element): Promise<void> {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const selection = document.getSelection()!;
+  selection.removeAllRanges();
+  selection.addRange(range);
+  await userEvent.keyboard('{Control>}c{/Control}');
+}
+
+/** The document-level "copy all formulas as MathML" action lives in the EXPORT PANEL
+ *  (`appShell.ts`/`exportControls.ts`), not the reader pane alone — this harness mirrors
+ *  `exportPanel.browser.test.ts`'s own `mountWithFile`/`openPanel` shape (each browser test file
+ *  owns its own copy; nothing here is shared/imported across files). */
+function fakeStore(): AppStore {
+  return {
+    putFolder: async () => undefined,
+    deleteFolder: async () => undefined,
+    putRecent: async () => undefined,
+  };
+}
+function mdFile(text: string): MarkdownFile {
+  return { path: 'doc.md', name: 'doc.md', read: async () => text };
+}
+function memorySource(text: string): FolderSource {
+  return { name: 'docs', truncated: false, persistable: false, files: [mdFile(text)] };
+}
+
+async function mountWithMath(
+  markdown: string,
+): Promise<{ container: HTMLElement; toggle: HTMLButtonElement; shadow: ShadowRoot }> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  cleanup.push(container);
+  const app = mountAppShell(container, {
+    openFolder: async () => ({ ok: true, source: memorySource(markdown) }),
+    store: fakeStore(),
+  });
+  await app.openFolder();
+  const fileBtn = await waitFor(() =>
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+  );
+  fileBtn.click();
+  const host = await waitFor(() =>
+    container.querySelector<HTMLElement>('.peekover-app__reader__host'),
+  );
+  if (!host.shadowRoot) throw new Error('reader pane produced no mounted host');
+  return {
+    container,
+    toggle: container.querySelector<HTMLButtonElement>('.peekover-app__export-toggle')!,
+    shadow: host.shadowRoot,
+  };
+}
+
+async function openExportPanel(container: HTMLElement, toggle: HTMLButtonElement): Promise<HTMLElement> {
+  toggle.click();
+  return waitFor(() => container.querySelector<HTMLElement>('.peekover-export'));
+}
+
+const mathMlRowIn = (panel: HTMLElement): HTMLButtonElement =>
+  panel.querySelector<HTMLButtonElement>('[data-export="copy-math-mathml"]')!;
+const exportStatusIn = (panel: HTMLElement): HTMLElement =>
+  panel.querySelector<HTMLElement>(`.${EXPORT_STATUS_CLASS}`)!;
 
 const actionsIn = (figure: Element) => figure.querySelector<HTMLElement>(`.${MATH_ACTIONS_CLASS}`)!;
 const statusIn = (figure: Element) => figure.querySelector<HTMLElement>(`.${MATH_STATUS_CLASS}`)!;
@@ -449,6 +578,175 @@ describe('6.1-R · inline math is untouched by this task — no control group an
   });
 });
 
+// ══ 6.2-R · §8-1(b) INLINE COPY-AS-LATEX — VERIFIED, AND FOUND FALSE FOR A RENDERED FORMULA ═══
+//
+// See this file's own header for the full technical account. Three real states, all measured
+// directly rather than assumed: a SETTLED (successfully rendered) formula — the ruling's own claim
+// falsified; a FAILED formula — the claim genuinely holds, forever; the content-script surface —
+// the claim genuinely holds, forever (D-3-R, `enhanceMath` never runs there). No new per-formula
+// inline chrome is added anywhere in this diff — row 11's own negative (5.1-R, re-confirmed by
+// 6.1-R immediately above) is unaffected by this section and is not re-proven here.
+
+describe('6.2-R · §8-1(b) — a SETTLED formula: text-selection copies the rendered glyph, NOT the source', () => {
+  it('★ THE DEFECT, DEMONSTRATED: an escaped-`\\$` fixture, once rendered, no longer yields its source on copy', async () => {
+    const { shadow } = await appPageReader(INLINE_ESCAPED_DOLLAR_DOC);
+    await settleMath(shadow, 1);
+    const code = inlineCodeIn(shadow);
+    expect(code.getAttribute(MATH_STATE_ATTR), 'firing control: genuinely settled, not pending').toBe(
+      'rendered',
+    );
+
+    await ensureClipboardWritable();
+    await selectAndCopy(code);
+    // Normalizing engine-specific token-join whitespace (Chromium's own CRLF-per-token
+    // linearization of the MathML layout vs. Firefox's single line) — the claim under test is
+    // "is this the retained source", not "how does each engine join MathML tokens on copy".
+    const copied = crlfToLf(await navigator.clipboard.readText()).replace(/\n/g, '');
+
+    expect(copied, "the gate-2 ruling's own claim").not.toBe(INLINE_ESCAPED_DOLLAR_SOURCE);
+    expect(copied, 'the rendered glyph string instead').toBe('x+$5');
+  });
+
+  it('a macro fixture ($\\alpha$) copies the rendered glyph too — the temml patch does not change this defect', async () => {
+    const { shadow } = await appPageReader(INLINE_MACRO_DOC);
+    await settleMath(shadow, 1);
+    const code = inlineCodeIn(shadow);
+    expect(code.getAttribute(MATH_STATE_ATTR)).toBe('rendered');
+
+    await ensureClipboardWritable();
+    await selectAndCopy(code);
+    const copied = crlfToLf(await navigator.clipboard.readText()).replace(/\n/g, '');
+
+    expect(copied).not.toBe(`$${INLINE_MACRO_SOURCE}$`);
+    expect(copied, "the rendered glyph never carries the macro's own backslash").not.toContain('\\');
+  });
+});
+
+describe('6.2-R · §8-1(b) — the two states where the claim genuinely holds, verified', () => {
+  it('a FAILED formula keeps its source selectable FOREVER (§3.9 never touches content)', async () => {
+    const { shadow } = await appPageReader(INLINE_MALFORMED_DOC);
+    await settleMath(shadow, 1);
+    const code = inlineCodeIn(shadow);
+    expect(code.getAttribute(MATH_STATE_ATTR), 'firing control: genuinely failed').toBe('failed');
+
+    await ensureClipboardWritable();
+    await selectAndCopy(code);
+    expect(crlfToLf(await navigator.clipboard.readText())).toBe(`$${INLINE_MALFORMED_SOURCE}$`);
+  });
+
+  it('the content-script surface never enhances, so its marker stays selectable-as-source permanently', async () => {
+    const shadow = contentScriptReader(INLINE_ESCAPED_DOLLAR_DOC);
+    const code = inlineCodeIn(shadow);
+    expect(code.hasAttribute(MATH_STATE_ATTR), 'firing control: D-3-R — never enhanced here').toBe(
+      false,
+    );
+
+    await ensureClipboardWritable();
+    await selectAndCopy(code);
+    expect(crlfToLf(await navigator.clipboard.readText())).toBe(`$${INLINE_ESCAPED_DOLLAR_SOURCE}$`);
+  });
+});
+
+// ══ 6.2-R · THE DOCUMENT-LEVEL "COPY ALL FORMULAS AS MathML" ACTION (§8-1(b), D-6-R) ══════════
+//
+// Lives in the export panel — `appShell.ts`'s `runCopyMathMathml` + `exportControls.ts`'s new
+// `copy-math-mathml` row, gate-3-RULED placement (a panel/menu-row, never a toolbar button, never
+// a keyboard shortcut — `decisions.md`'s M11 GATE 3 FINDING 2). The row's own generic shape (real
+// button, accessible name, keyboard reachability) is proven for ALL SIX rows, this one included,
+// by `exportPanel.browser.test.ts`'s own rows-6+7 suite (updated this task to expect 6 rows) — not
+// re-proven here. What IS proven here is this row's own LIVE BEHAVIOUR: it actually collects and
+// serializes every rendered formula, block and inline, through the real clipboard.
+
+describe('6.2-R · the document-level MathML action — collects block AND inline, each round-trip-accepted', () => {
+  it('a document with one block and one inline formula copies BOTH as individually well-formed <math> roots', async () => {
+    const { container, toggle, shadow } = await mountWithMath(
+      '$$x^2 + y^2$$\n\nInline $z^2$ formula.\n',
+    );
+    await settleMath(shadow, 2);
+    const panel = await openExportPanel(container, toggle);
+
+    await ensureClipboardWritable();
+    await userEvent.click(mathMlRowIn(panel));
+    await waitFor(() => exportStatusIn(panel).textContent || null);
+
+    const payload = await navigator.clipboard.readText();
+    const lines = payload.split('\n').filter((l) => l.length > 0);
+    expect(lines).toHaveLength(2);
+    for (const line of lines) {
+      const parsed = new DOMParser().parseFromString(line, 'application/xml');
+      expect(parsed.querySelector('parsererror'), `not well-formed XML: ${line}`).toBeNull();
+      expect(parsed.documentElement.localName).toBe('math');
+      expect(parsed.documentElement.namespaceURI).toBe(MATHML_NS);
+    }
+    expect(lines.some((l) => l.includes('x') && l.includes('y')), 'the block formula').toBe(true);
+    expect(lines.some((l) => l.includes('z')), 'the inline formula').toBe(true);
+  });
+
+  it('reflects genuinely different documents, not a fixed/cached string', async () => {
+    const first = await mountWithMath('$$a$$\n');
+    await settleMath(first.shadow, 1);
+    const panel1 = await openExportPanel(first.container, first.toggle);
+    await ensureClipboardWritable();
+    await userEvent.click(mathMlRowIn(panel1));
+    await waitFor(() => exportStatusIn(panel1).textContent || null);
+    const payloadA = await navigator.clipboard.readText();
+
+    const second = await mountWithMath('$$bbb$$\n');
+    await settleMath(second.shadow, 1);
+    const panel2 = await openExportPanel(second.container, second.toggle);
+    await ensureClipboardWritable();
+    await userEvent.click(mathMlRowIn(panel2));
+    await waitFor(() => exportStatusIn(panel2).textContent || null);
+    const payloadB = await navigator.clipboard.readText();
+
+    expect(payloadA).not.toBe(payloadB);
+    expect(new DOMParser().parseFromString(payloadA, 'application/xml').documentElement.textContent).toBe(
+      'a',
+    );
+    expect(new DOMParser().parseFromString(payloadB, 'application/xml').documentElement.textContent).toBe(
+      'bbb',
+    );
+  });
+
+  it('the row is a real button whose accessible name carries the action, and the live region confirms', async () => {
+    const { container, toggle, shadow } = await mountWithMath('$$x^2$$\n');
+    await settleMath(shadow, 1);
+    const panel = await openExportPanel(container, toggle);
+    const row = mathMlRowIn(panel);
+
+    expect(row.tagName).toBe('BUTTON');
+    expect(row.getAttribute('aria-label')).toBe('Copy formulas as MathML');
+    const status = exportStatusIn(panel);
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.hidden).toBe(true);
+
+    await ensureClipboardWritable();
+    await userEvent.click(row);
+    await waitFor(() => status.textContent || null);
+
+    expect(row.getAttribute('aria-label')).toBe(
+      'Copy formulas as MathML — copied. Activate to copy again.',
+    );
+    expect(row.getAttribute(EXPORT_ROW_STATE_ATTR)).toBe('done');
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe('Copy formulas as MathML copied.');
+  });
+
+  it('a document with NO rendered formula reports failure — never a false "Copied" (AGENTS.md #5)', async () => {
+    const { container, toggle } = await mountWithMath('# No math here\n\nJust prose.\n');
+    const panel = await openExportPanel(container, toggle);
+    const row = mathMlRowIn(panel);
+    const status = exportStatusIn(panel);
+
+    await ensureClipboardWritable();
+    await userEvent.click(row);
+    await waitFor(() => status.textContent || null);
+
+    expect(row.getAttribute(EXPORT_ROW_STATE_ATTR)).toBe('failed');
+    expect(status.textContent).toContain('could not be copied');
+  });
+});
+
 // ══ THE MANIFEST — `permissions: []` RE-PROVEN AFTER A REAL COPY HAS RUN, NO `contextMenus` ═══
 
 const BUILT_MANIFESTS = import.meta.glob('/.output/*/manifest.json', {
@@ -467,7 +765,7 @@ function capabilityViolations(manifest: Record<string, unknown>): string[] {
   return found;
 }
 
-describe('6.1-R · the manifest asked for nothing, not even after a real copy ran', () => {
+describe('6.1-R/6.2-R · the manifest asked for nothing, not even after a real copy ran', () => {
   it('the check FIRES on a manifest that does ask for `contextMenus`', () => {
     expect(capabilityViolations({ permissions: ['contextMenus'] })).toContain(
       'permissions requests: contextMenus',
@@ -478,15 +776,65 @@ describe('6.1-R · the manifest asked for nothing, not even after a real copy ra
   it.skipIf(Object.keys(BUILT_MANIFESTS).length === 0)(
     '★ BOTH built manifests still read `permissions: []` after copy-as-LaTeX and copy-as-MathML ran',
     async () => {
+      // ★ 6.2-R's own robustness fix (a pre-existing hazard this task's added test volume
+      // surfaced, not a defect this task's own logic introduced, and not fixable by fixture
+      // content — measured directly): `appPageReader`'s bare pane gives no real watch target, so
+      // `mount()`'s own `buildWatchChrome` always renders the `position:fixed` "Watching isn't
+      // available…" note, anchored a constant distance from the test iframe's OWN bottom edge —
+      // which auto-sizes to the rendered content's height. Because the note's position is pinned
+      // relative to that same auto-growing bottom edge, no amount of fixture content moves a
+      // trailing formula out from under it: the note simply trails the content, real-engine, both
+      // browsers (measured: `getBoundingClientRect()` on both elements showed the note's box
+      // growing to keep the same offset from the frame's bottom regardless of document length).
+      // This test's own CLAIM is the post-copy MANIFEST state, not click realism — real-pointer
+      // click interaction is already proven elsewhere in this file (row 16, `mathActions
+      // .browser.test.ts`'s own keyboard-activation test) — so this ONE test uses a plain
+      // synthetic `.click()` instead of `clickAndSettle`'s real-pointer `userEvent.click()`,
+      // sidestepping the hit-test hazard entirely rather than chasing fixture-size heuristics.
       const { shadow } = await appPageReader('$$x^2$$\n');
       await settleMath(shadow, 1);
       const figure = shadow.querySelector(FIGURE_SELECTOR)!;
 
+      const clickAndSettleSynthetic = async (button: HTMLElement): Promise<string> => {
+        statusIn(figure).textContent = '';
+        button.click();
+        return waitFor(() => statusIn(figure).textContent || null);
+      };
+
       await ensureClipboardWritable();
-      expect(await clickAndSettle(figure, latexButtonIn(figure))).toBe('Formula 1 copied as LaTeX.');
-      expect(await clickAndSettle(figure, mathmlButtonIn(figure))).toBe(
+      expect(await clickAndSettleSynthetic(latexButtonIn(figure))).toBe('Formula 1 copied as LaTeX.');
+      expect(await clickAndSettleSynthetic(mathmlButtonIn(figure))).toBe(
         'Formula 1 copied as MathML.',
       );
+
+      const engines = Object.keys(BUILT_MANIFESTS).sort();
+      expect(engines, 'both engines must have been built for this re-proof').toEqual([
+        '/.output/chrome-mv3/manifest.json',
+        '/.output/firefox-mv3/manifest.json',
+      ]);
+      for (const engine of engines) {
+        expect(capabilityViolations(BUILT_MANIFESTS[engine]), engine).toEqual([]);
+      }
+    },
+  );
+
+  // ── 6.2-R's own re-proof, kept SEPARATE from the test above rather than combined into it: the
+  // two harnesses (`appPageReader`'s bare reader pane vs. `mountWithMath`'s full app shell, folder
+  // tree, and watch-availability note included) do not share a container-cleanup lifecycle, and a
+  // first drafting attempt that ran BOTH harnesses inside one `it` produced real-browser pointer-
+  // event interception from the still-mounting app shell's own watch-note banner onto the bare
+  // pane's control-group buttons — a harness-shared-state hazard (AGENTS.md), not a defect in
+  // either harness alone. Kept as its own test/container lifecycle, the interception does not occur.
+  it.skipIf(Object.keys(BUILT_MANIFESTS).length === 0)(
+    '★ BOTH built manifests still read `permissions: []` after the document-level MathML action ran',
+    async () => {
+      const { container, toggle, shadow } = await mountWithMath('$$y^2$$\n');
+      await settleMath(shadow, 1);
+      const panel = await openExportPanel(container, toggle);
+
+      await ensureClipboardWritable();
+      await userEvent.click(mathMlRowIn(panel));
+      await waitFor(() => exportStatusIn(panel).textContent || null);
 
       const engines = Object.keys(BUILT_MANIFESTS).sort();
       expect(engines, 'both engines must have been built for this re-proof').toEqual([

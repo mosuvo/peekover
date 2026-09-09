@@ -143,11 +143,11 @@ const closeIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('.peekover-export__close')!;
 const htmlRowIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('[data-export="html"]')!;
-/** ★ Live as of task 7.1 — the LAST enabled stop in DOM order (close, html, copy-html,
- *  copy-plain-text, copy-rich-text, pdf), which is what the wrap tests below need: 4.1's own trap
- *  test was written when `copy-rich-text` was still last. */
-const pdfRowIn = (panel: HTMLElement): HTMLButtonElement =>
-  panel.querySelector<HTMLButtonElement>('[data-export="pdf"]')!;
+/** ★ Live as of M11 task 6.2-R — the LAST enabled stop in DOM order (close, html, copy-html,
+ *  copy-plain-text, copy-rich-text, pdf, copy-math-mathml), which is what the wrap tests below
+ *  need: 7.1's own trap test was written when `pdf` was still last. */
+const mathMlRowIn = (panel: HTMLElement): HTMLButtonElement =>
+  panel.querySelector<HTMLButtonElement>('[data-export="copy-math-mathml"]')!;
 
 function describeActive(): string {
   const el = document.activeElement;
@@ -247,10 +247,10 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const close = closeIn(panel);
-    // ★ Live as of task 7.1: pdf is now the LAST enabled stop in DOM order (close, html,
-    // copy-html, copy-plain-text, copy-rich-text, pdf) — `copy-rich-text` (4.1's own last stop) is
-    // now a MIDDLE stop.
-    const last = pdfRowIn(panel);
+    // ★ Live as of M11 task 6.2-R: copy-math-mathml is now the LAST enabled stop in DOM order
+    // (close, html, copy-html, copy-plain-text, copy-rich-text, pdf, copy-math-mathml) — `pdf`
+    // (7.1's own last stop) is now a MIDDLE stop.
+    const last = mathMlRowIn(panel);
 
     last.focus();
     expect(document.activeElement).toBe(last);
@@ -264,7 +264,7 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const close = closeIn(panel);
-    const last = pdfRowIn(panel);
+    const last = mathMlRowIn(panel);
 
     close.focus();
     expect(document.activeElement).toBe(close);
@@ -312,13 +312,20 @@ describe('row 11 — the export panel traps focus and restores it (Ruling 2)', (
 
 // ── ROWS 6 + 7 — EVERY ROW IS A REAL BUTTON, ACCESSIBLE NAME CARRIES SELECTION + ACTION ──────
 
+// ★ M11 task 6.2-R added a SIXTH row ('copy-math-mathml', §8-1(b)'s document-level "copy all
+// formulas as MathML" action) to this SAME panel — the gate-3-ruled home for it, per
+// `decisions.md`'s M11 GATE 3 FINDING 2. This file's own row-count/label assertions below are
+// updated to 6 accordingly; that row's OWN live behaviour (collect+serialize+clipboard) is proven
+// in `mathActions.browser.test.ts`, not here — this file only re-confirms the shared PANEL
+// mechanics (count, real-button shape, accessible-name shape) still hold with a 6th row present.
+
 describe('rows 6 + 7 — every row is a real <button> with a non-bare accessible name', () => {
-  it('all 5 rows are real buttons, keyboard-operable, no tabindex of their own', async () => {
+  it('all 6 rows are real buttons, keyboard-operable, no tabindex of their own', async () => {
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const rows = rowsIn(panel);
 
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(6);
     for (const row of rows) {
       expect(row.tagName).toBe('BUTTON');
       expect(row.type).toBe('button');
@@ -337,6 +344,7 @@ describe('rows 6 + 7 — every row is a real <button> with a non-bare accessible
       'copy-plain-text': 'Copy as plain text',
       'copy-rich-text': 'Copy as rich text',
       pdf: 'Export as PDF',
+      'copy-math-mathml': 'Copy formulas as MathML',
     };
     for (const [key, label] of Object.entries(expected)) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
@@ -373,14 +381,21 @@ describe('Q1(a) — the HTML row drives the real exportHtml codepath; every row 
     const { container, toggle } = await mountWithFile();
     const panel = await openPanel(container, toggle);
 
-    for (const key of ['html', 'copy-html', 'copy-plain-text', 'copy-rich-text', 'pdf']) {
+    for (const key of [
+      'html',
+      'copy-html',
+      'copy-plain-text',
+      'copy-rich-text',
+      'pdf',
+      'copy-math-mathml',
+    ]) {
       const row = panel.querySelector<HTMLButtonElement>(`[data-export="${key}"]`)!;
       expect(row.disabled, `row "${key}" should be live`).toBe(false);
     }
-    // copy-html (3.3), copy-plain-text (3.4), copy-rich-text (4.1), and pdf (7.1) all went live
-    // already — asserted NOT disabled here as the boundary check for this file's own claim; each
-    // row's actual liveness (click -> real clipboard write / real print) is proven in its own
-    // task's test.
+    // copy-html (3.3), copy-plain-text (3.4), copy-rich-text (4.1), pdf (7.1), and
+    // copy-math-mathml (M11 6.2-R) all went live already — asserted NOT disabled here as the
+    // boundary check for this file's own claim; each row's actual liveness (click -> real
+    // clipboard write / real print) is proven in its own task's test.
   });
 });
 

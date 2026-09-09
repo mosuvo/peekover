@@ -1525,7 +1525,7 @@ decomposed. `permissions: []` re-proven post-exercise. `git diff tests/golden/ou
 esbuild/temml bundling defect is flagged in full technical detail for 1.2-R's own fork, not fixed or
 silently worked around beyond this task's own fixture choices.
 
-- [ ] **6.2-R Inline math's copy actions — text-selection for LaTeX (verified, zero new code), the document-
+- [x] **6.2-R Inline math's copy actions — text-selection for LaTeX (verified, zero new code), the document-
       level "copy all formulas as MathML" action, SIMPLIFIED (D-6-R; §8-1 UI placement carried, RULED at the
       ORIGINAL gate 3, not reopened).** Copy-as-LaTeX for inline math is verified, not built (D-7-R's own
       retained-source text). The document-level action now clones the ONE tree every formula (block and
@@ -1542,6 +1542,140 @@ silently worked around beyond this task's own fixture choices.
       script bytes md5-identical against 3.2-R's floor. App-page bytes stated against 6.1-R's own figure.
       Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. No `contextMenus` permission. [D-6-R;
       §8-1; §3.5 new-row(inline); §4 copy actions]
+
+★ **RESULT — ★ PROCEEDS UNDER THE STILL-OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1;
+the 2026-09-09 TEMML-BUNDLING DEFECT — FIXED entry cleared the blocker that had paused this task, and the
+same day's harness eyeball read acceptable against RULING 2's bar — 8.1-R's own formal walk still owns
+PROCEED/CLOSE-M11). ★★ THE VERIFY CLAUSE'S OWN PREMISE IS FALSE FOR A SUCCESSFULLY-RENDERED INLINE
+FORMULA — MEASURED DIRECTLY, REAL ENGINE, BOTH BROWSERS, NOT ASSUMED — VERIFIED HONESTLY RATHER THAN
+FORCED TO PASS. THE DOCUMENT-LEVEL ACTION LANDED CLEAN AT THE GATE-3-RULED PANEL/MENU-ROW PLACEMENT.**
+
+**PREFLIGHT.** HEAD `af8cf9b` confirmed, tree clean. Fresh `rm -rf .output` rebuilds BOTH engines BEFORE
+any change: content-script **340,492 B**, md5 `bcdcf231…` Cr / `49e218a1…` Fx; `.output` **5,195,294 B Cr /
+5,195,410 B Fx**; manifest **654 / 770 B**, `permissions: []` — EXACT match to the kickoff's own stated
+baselines, all four figures.
+
+**★★★ THE §8-1(b) DEFECT — DISCOVERED WHILE DRAFTING, CONFIRMED THREE WAYS, NOT SMOOTHED OVER.** This
+task's own Verify clause names "selecting an inline formula's rendered text and copying it produces the
+exact `$…$` source." Before writing a test that would assert this, a real-browser scratch probe (Cr+Fx)
+selected a SETTLED, successfully-rendered `Inline $x + \$5$` formula's own `<code class="peekover-math-
+inline">` element and pressed a REAL Ctrl+C: Chromium's clipboard read `"x\r\n+\r\n$\r\n5\r\n"`; Firefox's
+read `"x+$5"` — NEITHER is the retained source `x + \$5`; both are the rendered GLYPH string (the SAME
+"collapsed, backslash-free" shape 6.1-R's own copy-as-MathML test already found for the identical
+underlying `<math>` tree). Root cause: `markMathInlineRendered` (5.1-R, already committed, red-first-
+proven) does `code.replaceChildren(content)` on success — the literal `$…$` text is PERMANENTLY REPLACED
+by Temml's `<math>` tree the instant rendering succeeds, and `annotate: false` (4.2-R's own pin,
+`mathEngine.ts`) means the rendered tree carries no fallback source annotation. Since rendering happens
+automatically and near-instantly for essentially every formula on the app page, THIS IS THE COMMON CASE,
+not an edge case. Confirmed genuine (not a probe-drafting mistake) three ways: the identical result on
+BOTH engines; the SAME collapsed-glyph shape 6.1-R's own copy-as-MathML test independently found for the
+identical `<math>` tree; and re-confirmed against a macro fixture (`$\alpha$`, now renders post-temml-
+patch) showing the identical defect. ★ **Human-reviewed mid-task (2026-09-09, a direct question, not a
+unilateral call): ship the honest verification, route the gap as a carried item (`progress.md`), build
+nothing new** — a fix needs either new per-formula inline chrome (§8-1(b) explicitly rules this out) or a
+D-7-R architecture change to what `markMathInlineRendered` retains on success, both gate-level decisions,
+not a task-diff invention. The claim genuinely DOES hold in two narrower states, both proven directly: a
+FAILED formula (§3.9 never touches content, so the source persists FOREVER) and the content-script surface
+(§9-2, `enhanceMath` never runs there at all, so every marker stays in its literal-source "rest" state
+permanently). `tests/browser/mathActions.browser.test.ts` ships all three findings as real, passing tests
+— the settled-formula NEGATIVE, the failed-formula POSITIVE, and the content-script POSITIVE — rather than
+a single test asserting the (false) literal Verify text.
+
+**THE DOCUMENT-LEVEL ACTION — CLEAN, NO SURPRISES.** `mathView.ts` gained `allMathRootsIn` (every
+currently-rendered `<math>` root under a shadow root — a `<math>` element exists only once its own formula
+has rendered, so no `data-math` filtering is needed), `serializedMathMlDocument` (one well-formed `<math>`
+root per line, throws on an empty document — never a false "Copied," AGENTS.md #5), and
+`copyAllMathAsMathml(host)` (the entry point, reused `writeMathText`/`serializedMathMl` from 6.1-R, zero
+new dependencies). The row: `exportControls.ts` gained a SIXTH row, "Copy formulas as MathML"
+(`copy-math-mathml`), placed in the EXISTING M10 export panel — the exact "nearest sibling" home
+`decisions.md`'s M11 GATE 3 FINDING 2 named as the panel/menu-row home, never reopened, never a toolbar
+button or shortcut. `appShell.ts`'s new `runCopyMathMathml` dispatch function resolves the live reader host
+and reports through the SAME `reportCopyOutcome`/live-region mechanism the three other copy rows already
+use — no new UI vocabulary. Deliberately NOT wired into `lastExportFormat`/Ctrl+S's "repeat last export"
+(outside this task's Files line; no Verify clause asked for it) — a stated scope decision, not an
+oversight, carried to `progress.md` for whoever wants that later.
+
+**NECESSARY RIPPLE — `exportPanel.browser.test.ts` (not in this task's sealed Files line, required to
+keep the existing suite green).** Adding a 6th row to the shared export panel broke that file's own
+pre-existing absolute assertions: the row count (5→6) and the "last enabled stop" identity (pdf→
+copy-math-mathml, since `copy-math-mathml` is now appended after `pdf` in DOM order) — both fixed in
+place, plus the accessible-name-label map and the "no row renders disabled" list extended to include the
+new row. This is the panel's own generic-shape test file re-confirming its own claims still hold with a
+6th row present, not a re-litigation of anything sealed.
+
+**A REAL, ORDER-DEPENDENT TEST-HARNESS FLAKE FOUND AND FIXED, UNRELATED TO THIS TASK'S OWN LOGIC.**
+Drafting this task's own tests surfaced a genuine flake in 6.1-R's own PRE-EXISTING manifest re-proof test:
+once enough OTHER tests ran before it in the same file, its real-pointer `userEvent.click()` started
+failing with `<p role="status" class="peekover-watch-note">…intercepts pointer events`, real engine, both
+browsers. Root-caused with `getBoundingClientRect()` on both elements (not guessed): `appPageReader`'s bare
+pane provides no real watch target, so `mount()`'s own `buildWatchChrome` always renders the
+`position:fixed` "Watching isn't available…" note, anchored a constant offset from the TEST IFRAME's own
+auto-sizing bottom edge — which grows with document content, so the note's absolute position trails the
+content regardless of fixture length; no amount of added prose escapes it (measured, not assumed — a
+first attempt using leading prose failed identically). Fixed by switching that ONE test's own button
+activation from `userEvent.click()` to a plain synthetic `.click()`: this test's own claim is the post-copy
+MANIFEST state, not click realism (real-pointer keyboard/click interaction is already proven elsewhere in
+this file, row 16) — confirmed the synthetic click still exercises the real `copyMathAsLatex`/
+`copyMathAsMathml` clipboard write end-to-end (the test asserts the exact success message from the live
+region, which only appears once the real promise resolves). Confirmed via AGENTS.md's own harness-shared-
+state signature: the failing test passed in isolation (`-t` filtered to just it) and failed only when run
+after this task's own added tests — a pre-existing fragility this task's growth surfaced, not a regression
+in this task's own diff.
+
+**TESTS — `mathActions.browser.test.ts`, 9 NEW TESTS × 2 ENGINES, PLUS ONE MANIFEST TEST SPLIT INTO TWO —
+ALL GREEN.** Inline copy-as-LaTeX (3 describe blocks): the settled-formula NEGATIVE (escaped-`\$` fixture
+AND a macro fixture, both proving the rendered-glyph result, not the source); the failed-formula and
+content-script POSITIVES (both proving byte-identical source recovery, real clipboard). The document-level
+action (1 describe block, 4 tests): block-AND-inline collection with each line individually
+`DOMParser`-round-tripped; two different documents produce two different, individually-round-tripping
+payloads; the row's own real-button/accessible-name/live-region shape (a light confirmation — the row's
+GENERIC shape, shared with every other row, is proven for all six rows by `exportPanel.browser.test.ts`'s
+own updated rows-6+7 suite, not re-proven here); a zero-formula document reports FAILURE, never a false
+"Copied." The manifest re-proof (2 tests, kept separate rather than combined — mixing `appPageReader`'s
+bare pane with `mountWithMath`'s full app-shell harness inside ONE test produced the exact interception
+above during drafting, a harness-shared-state hazard, not a defect in either harness alone): the original
+per-formula re-proof (now synthetic-click, see above) and a new one exercising the document-level action
+through the real export panel.
+
+**ROW 11's NEGATIVE — CITED, NOT RE-EARNED.** §3.5's "no per-formula inline control group exists anywhere
+in the diff" is unaffected by this task (no new per-formula inline chrome is added anywhere) — 6.1-R's own
+re-confirmation of 5.1-R's negative (`tests/browser/mathActions.browser.test.ts`, "inline math is untouched
+by this task — no control group anywhere") is cited per AGENTS.md's ablation-citation rule, not duplicated.
+
+**BYTES — A-B REBUILD, BOTH ENGINES.** Content-script **340,492 B**, md5 `bcdcf231…` Cr / `49e218a1…` Fx —
+UNMOVED, exact match to 3.2-R's own floor; `grep -c temml` on both built content scripts: **0**. `.output`
+**5,196,020 B Cr / 5,196,136 B Fx** — **+726 B both engines** over 6.1-R+the temml-patch's own figure
+(5,195,294 / 5,195,410) — the document-level action + row glue landing on the already-loaded app-page
+graph (no new lazy chunk). Headroom: 5,242,880 − 5,196,020 = **46,860 B (45.8 KiB) Cr**; 5,242,880 −
+5,196,136 = **46,744 B (45.6 KiB) Fx** — POSITIVE, down ~726 B from 6.1-R's own ~46.6/46.5 KiB. Manifest
+**654 / 770 B**, `permissions: []`, no `web_accessible_resources`, no `contextMenus` — unmoved, both
+engines, re-proven against BOTH built manifests after the document-level action ran for real.
+
+**STANDING INVARIANTS.** `pnpm lint` **EXIT=0**. `tsc --noEmit` clean. Full `pnpm test` (unit):
+**1145/1145 passed, ALL GREEN, byte-for-byte the same 66 files/1145 tests as 6.1-R's own close** (this
+task added zero unit tests — all new coverage is `tests/browser/*`, per its own sealed Files line). Full
+`pnpm test:browser` (Cr+Fx), against the freshly rebuilt `.output`: **164 files, 1645 passed, 15
+pre-existing skips (unchanged), ALL GREEN, NO FLAKES this run**. `git diff tests/golden/output/` **EMPTY**
+(this task builds no markdown fixture and touches no parse/mount path). `mount.ts` untouched.
+`codeDetect.test.ts` + 007/009/M11 import fences run standalone: **28/28 passed**, unaffected.
+
+**DIVERGENCE FROM THE KICKOFF, FLAGGED.** The kickoff's own §1 anticipated this task would VERIFY §8-1(b)'s
+claim and find it TRUE (with a macro fixture proving "source not rendered glyph," newly meaningful now
+that macros render). Measured: the claim is FALSE for the exact scenario the kickoff itself asked to
+verify (a settled, successfully-rendered formula) — a genuine, escalated finding, not a drafting mistake,
+confirmed with the user directly mid-task rather than decided unilaterally. The kickoff's own §7 Files line
+did not anticipate `exportPanel.browser.test.ts` needing edits — a necessary ripple from adding a 6th row
+to a FILE that test already pins by absolute count, not scope creep (the alternative, a brand-new panel
+elsewhere, would have been actual scope creep away from the gate-3-named home). The kickoff did not
+anticipate the watch-note test-harness flake — found during drafting, root-caused, fixed minimally.
+
+**ACCEPTANCE.** The document-level action's four criteria (collection, round-trip, accessible naming,
+never-false-success) proven real-engine both browsers. Inline copy-as-LaTeX is VERIFIED, not built — found
+TRUE in two narrow states and FALSE in the common case, both outcomes proven directly and neither smoothed
+over. `permissions: []` re-proven post-exercise, no `contextMenus`. Content-script bytes EXACT-match
+unmoved; app-page delta measured and decomposed. `git diff tests/golden/output/` EMPTY. The §8-1(b) defect
+and the two scope decisions (no `lastExportFormat` wiring; the watch-note flake fix) are routed to
+`progress.md`'s carried items for 8.1-R/a future gate, not resolved here.
 
 *Group-6-R acceptance (plan (h)): the four copy-action criteria per the gate-2/gate-2-revisit amendment,
 simplified to one tree; `permissions: []` re-proven; no `contextMenus` anywhere.*
