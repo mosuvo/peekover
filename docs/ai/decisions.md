@@ -1,6 +1,64 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-09 · M11 SEQUENCING + TEMML-BUNDLING DEFECT — OUT-OF-SEQUENCE INVESTIGATION SPIKE RUN BEFORE
+  6.2-R, ROUTED CLOSE-M11-LEANING: no cheap bundler-config fix survives contact with the shipped `.output`.**
+  6.1-R's own header surfaced a shipped-build defect (real Temml macros — `\alpha`, `\frac`, any multi-letter
+  control word — throw `Unsupported function name` through the actually-bundled chunk, arithmetic-only
+  fixtures never having exercised it). The reviewer/human paused the task sequence (6.2-R deferred) to run
+  this spike BEFORE 1.2-R's own deferred fidelity walk, since that walk and every remaining task rest on a
+  render path that cannot render the "dense representative formula corpus" 1.2-R's own bar requires. This is
+  a decision on the record, the same class as the 1.2-R sequencing deviation above.
+  **ROOT CAUSE, CONFIRMED:** Temml's `Lexer.js` builds its token regex from a string containing the LONE
+  (unpaired) UTF-16 surrogate escapes `\uD800`/`\uDBFF`/`\uDC00`/`\uDFFF` (the astral-surrogate-pair
+  alternative, sitting BEFORE the control-word alternative in the source's own alternation order). Somewhere
+  in the actual Vite/Rollup/esbuild chunking pipeline WXT drives for a dynamically-imported chunk, those lone
+  surrogates get evaluated to real (invalid) UTF-16 code units and then re-serialized as literal UTF-8 text —
+  which cannot represent an unpaired surrogate, so each one silently becomes U+FFFD. The corrupted character
+  class (`[� d800-� dbff][� dc00-￿ dfff]`) balloons into an enormous range that happens to
+  include `\` and every following letter, and because regex alternation is first-match-wins, it now
+  intercepts every `\<word>` before the control-word alternative ever runs — hence `\a`/`\f`/`\t` as the
+  "unsupported function name". Confirmed byte-for-byte identical in the shipped `.output/chrome-mv3/chunks/
+  temml-*.js` and in Vitest's browser-mode dep-optimizer cache; confirmed CLEAN in `node_modules/temml/dist/
+  temml.mjs` read directly and in bare `esbuild.transform`/`esbuild.build` calls against that same file
+  (any charset, minified or not) — the corruption is specific to Vite/WXT's own pipeline, not to esbuild in
+  isolation, and not reproducible with esbuild alone.
+  **CHEAP FIXES TRIED, IN ORDER, EACH MEASURED, EACH REVERTED — NONE SURVIVES FOR THE SHIPPED BUILD:**
+  (a) `esbuild.charset` forced both directions (`'utf8'` and `'ascii'`) plus `optimizeDeps.esbuildOptions.
+  charset` alongside it, in `wxt.config.ts`'s `vite()` hook — BYTE-IDENTICAL rebuilt chunk both times. Root
+  cause: WXT's own Vite builder (`core/builders/vite/index.mjs`) unconditionally overwrites
+  `config.esbuild.charset = "ascii"` AFTER reading user config, so this knob was never actually reaching
+  whatever step corrupts the chunk, in either direction.
+  (b) `optimizeDeps.exclude: ['temml']` — FIXED the Vitest browser-mode test path outright (confirmed: a
+  scratch macro test rendering `\alpha` through the real dynamic import passed in BOTH Chromium and Firefox
+  once the dep-optimizer stopped touching temml) but had ZERO effect on `pnpm build`'s `.output` (production
+  `vite build` does not consult `optimizeDeps` at all — byte-identical chunk). This partial fix was NOT
+  landed: keeping it would make the test suite stop exercising the actually-shipped bundled path, which is
+  the exact coverage gap 6.1-R just closed — adopting it would re-open that gap by construction, hiding the
+  defect rather than fixing it.
+  (c) `build.minify: false` — content-script size roughly doubled (340 KB → 682 KB unminified), proving the
+  config WAS being read, but the temml chunk still carried the identical corrupted regex. Minification is not
+  the corrupting step.
+  (d) `build.target: 'esnext'` — byte-identical chunk, no effect.
+  (e) `build.rollupOptions.external: ['temml']` — removes the chunk from the bundle graph entirely, which
+  "fixes" the byte corruption only by deleting the feature: a bare `import('temml')` cannot resolve at
+  runtime in an MV3 content script (no `node_modules`, no bare-specifier resolution in the browser). Not
+  viable; not adopted.
+  All five were reverted in full — `wxt.config.ts` and `vitest.config.ts` are back to their pre-spike
+  committed content, `.output` and the Vitest dep-optimizer cache were cleared, no scratch files remain.
+  **OUTCOME: CLOSE-M11-LEANING / FORK-LEVEL INPUT, not fixed.** "Temml cannot render macros through this
+  toolchain via any cheap bundler-config change" is a genuine input to the deferred 1.2-R PROCEED/CLOSE-M11
+  fork. A real fix (patching Temml's own regex construction to avoid embedding lone surrogates — e.g.
+  building the surrogate-pair alternative from `String.fromCharCode` at runtime instead of a source-level
+  escape, or a Vite plugin that transforms/vendors only this one string) is more than "cheap config" and is
+  explicitly OUT OF THIS SPIKE'S SCOPE — it is 1.2-R's own fork territory, for the human to authorize.
+  **WHAT THIS DOES NOT CHANGE:** no D-value; no tasks.md box ticked; no engine swap; no feature code; the
+  1.2-R fork stays exactly as open as the 2026-09-07 entry above left it, now carrying this finding as input.
+  **Revisit-when:** the milestone-close human fidelity walk / PROCEED-CLOSE-M11 fork (task 8.1-R) makes its
+  call — this finding is one of its inputs. If PROCEED, the render-path fix becomes a hard prerequisite
+  (whatever form it takes) before any macro-bearing fixture can be trusted; if CLOSE-M11, this finding is
+  moot along with the rest of REVISIT-RULING 3's fallback.
+
 - **2026-09-07 · M11 1.2-R SEQUENCING DEVIATION — the fidelity walk's human PROCEED/CLOSE-M11 JUDGMENT is
   DEFERRED to milestone-close; groups 2-R–8-R proceed CONDITIONALLY. A human-authorized build-at-risk
   choice, banked so it is a decision on the record, not a silent corner-cut.** The reopened `tasks.md`

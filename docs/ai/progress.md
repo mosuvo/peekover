@@ -66,6 +66,29 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TEMML-BUNDLING DEFECT SPIKE RUN, 2026-09-09 — OUT-OF-SEQUENCE, NOT TASK 6.2-R. ROUTED
+CLOSE-M11-LEANING / FORK-LEVEL: NO CHEAP BUNDLER-CONFIG FIX SURVIVES FOR THE SHIPPED `.output`. NEXT:
+the human/reviewer's call on whether 6.2-R resumes now (still under the open 1.2-R fork, defect
+routed) or 1.2-R's fork is pulled forward. See `decisions.md`'s 2026-09-09 entry for the full record.**
+6.1-R's own header (below) surfaced the corrupted-Temml-regex defect; the reviewer paused 6.2-R to spike
+this BEFORE 1.2-R's own walk. Five cheap fixes were tried against the REAL fast repro (a Node `import()`
+of the actually-built chunk, rendering `\alpha`/`\frac`/`\text`) — `esbuild.charset` both directions plus
+`optimizeDeps.esbuildOptions.charset` (byte-identical rebuilt chunk both times: WXT's own Vite builder
+unconditionally overwrites `config.esbuild.charset = "ascii"` after user config runs, so this knob never
+reached whatever actually corrupts the chunk), `optimizeDeps.exclude: ['temml']` (FIXED the Vitest
+browser-mode test path outright — confirmed both Chromium and Firefox — but zero effect on `pnpm build`'s
+`.output`, since production `vite build` never consults `optimizeDeps`; NOT landed, since adopting it
+would make the test suite stop exercising the actually-shipped bundled path, undoing the exact coverage
+gap 6.1-R just closed), `build.minify: false` (content-script roughly doubled unminified, proving the
+config was read — chunk still corrupted, so minification isn't the cause), `build.target: 'esnext'`
+(byte-identical, no effect), and `build.rollupOptions.external: ['temml']` (removes the chunk instead of
+fixing it — a bare `import('temml')` cannot resolve at runtime in an MV3 content script; not viable). All
+five were fully reverted; `wxt.config.ts`/`vitest.config.ts` are back to their pre-spike committed
+content, `.output` and the Vitest dep cache were cleared. A real fix (patching how Temml's own regex
+embeds lone UTF-16 surrogates, or a dedicated Vite plugin) is bigger than "cheap config" and is explicitly
+1.2-R's own fork territory — this spike does not attempt it. No `tasks.md` box ticked; no feature code; no
+engine swap; no D-value touched.
+
 **★ M11 TASK 6.1-R LANDED, 2026-09-09 — BLOCK MATH'S COPY CONTROL GROUP (D-6-R, §8-1),
 `diagramView.ts`'s OWN §3.11 MECHANISM REUSED VERBATIM, UNDER THE OPEN 1.2-R FORK. ★ A LIKELY
 MILESTONE-CRITICAL, PREVIOUSLY-UNDISCOVERED ESBUILD/TEMML BUNDLING DEFECT WAS SURFACED WHILE DRAFTING
