@@ -66,6 +66,43 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★★ M11 TASK 7.1-R LANDED, 2026-09-09 — RENDER-TIMING MEASUREMENT (D-12-R; §3.6), BOTH ENGINES, A
+DENSE MACRO-HEAVY CORPUS THROUGH THE REAL `enhanceMath`→`temml.renderToString`→`sanitizeMath`→adopt
+PATH. ★★ THE NO-CACHE LEAN IS CONFIRMED — real per-formula cost ~100-200µs both engines, trivially
+cheap; no cache built. A ZERO-PRODUCTION-DIFF TASK (nothing under `src/` touched). NEXT: 8.1-R, the
+human milestone-close walk (this is the last automatable task before it).**
+**THE NUMBERS.** Raw engine-primitive per-formula cost (the SAME render→sanitize→adopt sequence
+`renderMathFormula` wraps, timed directly, no DOM/paint around it): Chromium 110.0/123.2/132.8µs
+median at n=1/10/50 (floors 108.0/121.6/96.2µs); Firefox 200.0/180.0/143.6µs median (floors
+200.0/168.0/142.4µs). Firefox runs ~30-80% slower per-formula than Chromium for this corpus
+(Temml's own render-cost profile, MEASURED not assumed to mirror any prior engine's) — both still
+trivially cheap: even 50 dense formulas cost under 7.2ms total, an order of magnitude under one
+animation frame. First-paint gates: math-free vs math-bearing paint-latency delta is negative-or-
+near-zero at every size, both engines (never positive-and-material) — math adds no measurable paint
+cost, and resolves strictly AFTER paint by construction (`enhanceMath`'s own "everything below is
+off this stack" comment, confirmed empirically in all 240 samples, never inverted). The standing
+<165ms floor was REASONED from already-banked figures (the `perf:app` 50KB baseline plus this
+task's own paint/render deltas), not independently re-run through the packed-extension harness this
+task — a stated divergence, see `tasks.md`'s own RESULT block.
+**THE DRIVER — A DIVERGENCE FROM THE KICKOFF'S OWN `scripts/` FRAMING, FOR A REAL REASON.** Every
+existing `scripts/perf-*.ts` (perf-first-paint, perf-app-first-paint, perf-watch) is Chromium-only
+by established precedent (Playwright cannot load an unpacked extension into Firefox); reaching
+Firefox at all for a real-engine measurement needed vitest's own `browser` project instead (the same
+harness `tests/browser/mathBlock.browser.test.ts` already uses). The scratch harness therefore lived
+under `tests/browser/`, was run directly via `pnpm vitest run --project browser <path>`, and was
+DELETED before this commit once its numbers were recorded — a permanent non-gating timing test would
+tax every future `pnpm test:browser` run for a question this task already answered once.
+**A GENUINE MID-TASK FINDING: rAF-grain polling could not see inside the render cost.** The first
+DOM-mount harness (real `createReaderPane`→`pane.select()`→`enhanceMath()`) polled via
+`requestAnimationFrame` and read time-to-first-formula identical to wall-clock-all-resolved for
+every N including 50, both engines — because `mathEnhancer.ts`'s `renderMath` loop has no `await`
+between formulas, so all N renders complete inside one synchronous JS block, comfortably inside a
+single ~16.7ms frame. Even switching to `setTimeout(0)`-grain polling read the same — the real cost
+is smaller than that resolution too. The raw engine-primitive measurement above (a direct
+before/after `performance.now()` delta around a tight synchronous loop, no polling at all) is what
+actually resolved the number; this progression is itself part of the finding, not noise to omit.
+Full writeup: `specs/011-math-rendering/tasks.md` task 7.1-R's own RESULT block. Prior entry, kept for context:
+
 **★★ M11 TASK 6.2-R LANDED, 2026-09-09 — INLINE'S COPY-AS-LATEX VERIFIED (AND FOUND FALSE FOR THE
 COMMON CASE), THE DOCUMENT-LEVEL "COPY ALL FORMULAS AS MathML" ACTION BUILT AT THE GATE-3-RULED
 PANEL/MENU-ROW PLACEMENT, UNDER THE STILL-OPEN 1.2-R FORK. ★★ A CONFIRMED DEFECT IN GATE-2's OWN

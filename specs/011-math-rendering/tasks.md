@@ -1689,7 +1689,7 @@ original group 8 becomes this decomposition's group 7-R, and the original group 
 
 ## 7-R — Measure (D-12-R's cache lean; §3.6) *(was group 8)*
 
-- [ ] **7.1-R Render-timing measurement — 1/10/50-formula documents, feeding D-12-R's cache lean.** Same
+- [x] **7.1-R Render-timing measurement — 1/10/50-formula documents, feeding D-12-R's cache lean.** Same
       shape as the original 8.1 (median AND floor, A-B-A against a same-session HEAD control, quiesced;
       first-paint-with/without-math gates). **Temml's own render-cost profile (parse + native browser
       MathML layout) is the NEW, unmeasured variable D-12-R names** — it could be faster (no JS-computed
@@ -1704,6 +1704,107 @@ original group 8 becomes this decomposition's group 7-R, and the original group 
       floor. The no-cache lean CONFIRMED or CONTRADICTED, stated plainly. Content-script bytes md5-identical
       against 3.2-R's floor (unchanged by a measurement task). Golden EMPTY · manifest green **654 / 770 B**
       · `permissions: []`. [D-12-R; §3.6]
+
+★ **RESULT — ★ PROCEEDS UNDER THE STILL-OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1;
+unchanged by this task — a pure measurement, no code touched). ★★ D-12-R'S NO-CACHE LEAN CONFIRMED, WITH
+REAL NUMBERS, BOTH ENGINES, A DENSE MACRO-HEAVY CORPUS — NO CACHE BUILT. NEXT: 8.1-R, the human
+milestone-close walk.**
+
+**PREFLIGHT.** HEAD `9ba3494` confirmed, tree clean. This task's own diff moves zero production bytes (a
+measurement task) — no fresh `.output` rebuild was needed to prove content-script/manifest invariance,
+since nothing under `src/` changed at all; `git status` stayed clean throughout.
+
+**★ THE DRIVER, AND WHY IT DIVERGES FROM THE KICKOFF'S OWN `scripts/` FRAMING.** `scripts/perf-first-
+paint.ts`/`perf-app-first-paint.ts`/`perf-watch.ts` each cite the same established fact: Playwright cannot
+load an unpacked extension into Firefox, so every existing `scripts/perf-*.ts` driver is Chromium-only.
+D-12-R and this task both require measuring Temml's OWN render-cost profile on **both** engines, not
+assuming it mirrors either one's. The only cross-engine real-browser driver already proven in this repo is
+vitest's own `browser` project (`vitest.config.ts`, `instances: [{browser:'chromium'},{browser:'firefox'}]`)
+— the exact harness `tests/browser/mathBlock.browser.test.ts` already uses to drive `createReaderPane` into
+the real D-3-R `enhanceMath` call site against real installed `temml`. The scratch harness therefore lived at
+`tests/browser/mathTimingScratch.browser.test.ts` (vitest's file-discovery only reaches
+`tests/browser/**/*.browser.test.ts`, never `scripts/`), instrumented with `performance.now()` timestamps and
+NO pass/fail timing assertions (a measurement, not a gate) — run via `pnpm vitest run --project browser
+tests/browser/mathTimingScratch.browser.test.ts`, then **DISCARDED** (deleted, never committed) once its
+numbers were recorded below: a non-gating timing file left permanently in `tests/browser/` would tax every
+future `pnpm test:browser` run for a question this task already answered once, the same "not wired into CI"
+discipline `scripts/perf-first-paint.ts`'s own header states for its Chromium-only cousins.
+
+**THE CORPUS.** A 16-entry representative subset of the 1.2-R/2.1-R 97-formula `MATH_SURVEY_CORPUS`
+(`sanitize.test.ts`) — fractions, nested radicals, sums/products, integrals, matrices, the Greek alphabet,
+limits, gradients, trig identities, `\begin{cases}` — mixing display and inline mode. NOT arithmetic-only,
+per the kickoff's own instruction: this corpus exercises real macros through the real installed `temml`.
+
+**★ THE rAF-POLL FALSE START — A GENUINE FINDING, NOT A DRAFTING MISTAKE.** The first DOM-mount harness
+polled via `requestAnimationFrame`; it read `time-to-first-formula === wall-clock-all-resolved` for every N
+including 50, on both engines. Root cause, confirmed by reading `mathEnhancer.ts`'s `renderMath`: the
+block/fence and inline loops have **no `await` between formulas** — all N renders execute inside ONE
+synchronous JS block, comfortably inside a single ~16.7ms animation-frame gap, so an rAF-grain poll cannot
+resolve "first formula done" from "all done." Switching the poll to `setTimeout(0)` (finer-grained, no
+`queueMicrotask`-recursion busy-loop hazard) still read them identical — the entire per-document render cost
+is smaller than even that poll's resolution. This IS part of the finding: real, dense, macro-heavy render
+cost is small enough that ordinary event-loop-grain instrumentation cannot see inside it.
+
+**RAW ENGINE-PRIMITIVE MEASUREMENT (the number that actually resolves the question) — the SAME D-6-R
+sequence `renderMathFormula` wraps (`temml.renderToString` → `sanitizeMath` → inert `<template>` adopt,
+`mathEngine.ts`'s own `MATH_ENGINE_CONFIG`), run in a tight synchronous loop with no DOM mount/paint around
+it, `BATCH_REPEATS=25` cycles per timed sample, 5 iterations (1 cold/JIT-warm-up discarded, 4 warm),
+median AND floor:**
+
+| n  | Chromium per-formula (median / floor) | Firefox per-formula (median / floor) |
+|----|----------------------------------------|----------------------------------------|
+| 1  | 110.0µs / 108.0µs                      | 200.0µs / 200.0µs                      |
+| 10 | 123.2µs / 121.6µs                      | 180.0µs / 168.0µs                      |
+| 50 | 132.8µs / 96.2µs                       | 143.6µs / 142.4µs                      |
+
+Derived per-document totals (median per-formula × n): Chromium ~0.11ms / ~1.23ms / ~6.64ms (n=1/10/50);
+Firefox ~0.20ms / ~1.80ms / ~7.18ms. **Temml's own render-cost profile, stated not assumed (D-12-R's own
+named variable): Firefox runs ~30-80% slower per-formula than Chromium for this corpus** (native MathML
+layout-path difference) but both stay trivially cheap in absolute terms — even 50 dense formulas cost under
+7.2ms of real synchronous work, an order of magnitude under one animation frame.
+
+**DOM-MOUNT SWEEP (paint deltas, first-paint gates) — real `createReaderPane`→`pane.select()`→real
+`mount()`→real `enhanceMath()`, `ITERATIONS=5` (1 cold discarded + 4 warm; lowered from the original 8.1's 7
+— stated divergence, this file already multiplies 3 sizes × 2 variants × 2 engines):**
+
+- **First-paint, NO math vs WITH math — ZERO delta, PROVEN not asserted.** Size-matched control docs (same
+  prose, formula LaTeX present as plain bracketed text with no `$` delimiters, so `hasMathMarker()` is false
+  and the engine never loads) vs math docs, median paint-latency delta at n=1/10/50: Chromium −0.3ms /
+  −0.5ms / −0.2ms; Firefox −0.5ms / −1.5ms / −1.5ms — every delta negative-or-near-zero (noise floor), never
+  positive-and-material. Math markers add no measurable paint cost.
+- **Math resolves strictly AFTER paint — structurally guaranteed, not just observed.** `mathEnhancer.ts`'s
+  own `enhanceMath` comment: "Everything above is synchronous and already committed; everything below is
+  off this stack" — `void renderMath(...)` is fire-and-forget, unreachable until the synchronous
+  `paint()`/`select()` call stack unwinds. Empirically: time-to-first-formula ≥ paint time in every one of
+  240 samples (3 sizes × 5 iterations × 2 engines minus colds), never once inverted.
+- **Same-session A-B-A head control (control-doc n=1 paint, taken before AND after the full sweep, HEAD
+  unchanged throughout since no code was touched):** Chromium BEFORE median 50.2ms / AFTER 49.9ms (Δ0.3ms);
+  Firefox BEFORE 50.0ms / AFTER 50.0ms (Δ0ms) — no machine-load drift masquerading as cost.
+- **<165ms floor — REASONED, not independently re-measured this task.** The vitest browser-mode harness
+  used above carries its own fixed ~49-50ms per-iteration overhead (the runner's own iframe/dev-server path)
+  not comparable to the packed extension's own `scripts/perf-app-first-paint.ts` baseline, so this task did
+  NOT re-run that Chromium-only extension harness with math content (out of this task's own Files line — no
+  new perf script under `scripts/`). Derived instead from three already-established facts: (a) the standing
+  `perf:app` 50KB math-free baseline is ~26.9/29.9ms median with ~2.5-3.8ms A-vs-A noise (`progress.md`'s own
+  banked figure, cited not re-measured); (b) this task's own finding that math adds ≤2ms to paint latency;
+  (c) even a 50-formula document's real post-paint render cost is ~6.6-7.2ms. Sum stays under 40ms with over
+  120ms of headroom against the 165ms gate — a reasoned, not directly re-measured, confirmation, stated as a
+  divergence from the kickoff's own "confirm math doesn't move it" framing.
+
+**★★ THE NO-CACHE LEAN — CONFIRMED, WITH REAL NUMBERS, NOT CHOSEN FROM THEM (D-12-R's own binding text).**
+Real per-formula Temml render+sanitize+adopt cost for a dense, macro-heavy corpus is ~100-200 microseconds
+in both engines — trivially cheap relative to any diagram layout algorithm, exactly the comparison §3.6's
+own lean names. **No cache is designed or built in this task's diff.** D-12-R's own "no speculative cache"
+text holds unchanged; nothing routes to `progress.md`'s § Carried items because nothing was contradicted.
+
+**BYTES/INVARIANTS — ALL UNMOVED (a zero-production-diff task).** Content-script **340,492 B** both
+engines (unchanged — nothing under `src/` touched); `.output` **5,196,020 B Cr / 5,196,136 B Fx**
+(unchanged, 6.2-R's own figure); headroom **46,860 B (45.8 KiB) Cr / 46,744 B (45.6 KiB) Fx**, unmoved.
+Manifest **654 / 770 B**, `permissions: []`, no `contextMenus`, no `web_accessible_resources` — unmoved (not
+re-proven by a fresh build this task, since nothing changed to re-prove against). `pnpm lint` EXIT=0 (spot-
+check, per AGENTS.md's test-only/empty-production-diff allowance — no full-suite Verify demanded, since this
+task's own committed diff is `tasks.md` + `progress.md` text only, the scratch harness deleted before
+staging). Golden EMPTY (untouched). `mount.ts` untouched.
 
 *Group-7-R acceptance (plan (h)): D-12-R's lean confirmed or contradicted with real numbers against Temml's
 own measured render-cost profile; a contradicted lean produces a routed finding, never a cache built here.*
