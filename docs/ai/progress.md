@@ -66,6 +66,73 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★ M11 TASK 6.1-R LANDED, 2026-09-09 — BLOCK MATH'S COPY CONTROL GROUP (D-6-R, §8-1),
+`diagramView.ts`'s OWN §3.11 MECHANISM REUSED VERBATIM, UNDER THE OPEN 1.2-R FORK. ★ A LIKELY
+MILESTONE-CRITICAL, PREVIOUSLY-UNDISCOVERED ESBUILD/TEMML BUNDLING DEFECT WAS SURFACED WHILE DRAFTING
+THIS TASK'S OWN TESTS — SEE ITS OWN BLOCK BELOW, FLAGGED FOR 1.2-R's OWN FORK, NOT FIXED HERE. NEXT:
+TASK 6.2-R (inline's copy actions; the document-level copy-all-as-MathML action).**
+**★★ THE BUNDLING DEFECT, READ THIS BEFORE 1.2-R's OWN WALK.** `markMathRendered`'s own control-group
+tests needed a macro-based LaTeX fixture (`\alpha`, `\text{...}`) to prove copy-as-LaTeX reads the
+RETAINED SOURCE rather than the rendered tree. Every such fixture threw `Unsupported function name:
+\a`/`\t` — not a fixture-drafting mistake (confirmed three independent ways: Vitest's own dependency
+pre-bundle of `temml`, reproduced even after `rm -rf node_modules/.vite`; the IDENTICAL corrupted byte
+pattern grepped directly out of the ACTUAL SHIPPED `.output/chrome-mv3/chunks/temml-*.js`; and a plain
+Node `import()` of that exact pre-bundled file, outside any browser). Root cause: esbuild's dependency
+bundling (used by both Vitest's optimizer and this project's own WXT/Vite/Rollup production build)
+corrupts `temml`'s `Lexer.js`-derived astral-surrogate-pair regex alternative
+(`[\uD800-\uDBFF][\uDC00-\uDFFF]`) — the lone-surrogate escapes cannot survive as standalone Unicode
+scalars and get replaced with literal U+FFFD characters, turning a narrow "one astral character" match
+into an enormous `0x30`-`0xFFFD` range that now intercepts the backslash and the FIRST letter of every
+LaTeX control word before the real control-word alternative gets a chance — so Temml throws on `\alpha`,
+`\text`, `\frac`, essentially any named macro. Every EXISTING real-browser math test only ever used bare
+arithmetic (`x^2`, `y^2`, `z^2`) or a deliberately-malformed fixture, so this was invisible until now.
+**`tasks.md`'s own 1.2-R (the human fidelity walk judging REVISIT-RULING 2's bar) is still `[ ]`
+UNCHECKED, and its own "dense representative formula corpus" explicitly includes fractions/radicals/
+Greek letters — i.e. macros — so that walk is very likely to hit this defect in the ACTUAL SHIPPED
+BUILD once it reaches any macro-based formula.** Not investigated further or fixed here (diagnosing/
+patching esbuild's own dependency bundling of `temml` is well outside 6.1-R's own Files line) — the full
+technical trace lives in `tests/browser/mathActions.browser.test.ts`'s own header comment. This is
+handed to whoever runs 1.2-R's own fork next as the first thing to know before starting the walk.
+**THE CONTROL GROUP ITSELF.** `mathView.ts`'s `markMathRendered` now builds (or re-attaches, on a
+second call to the SAME figure) a `mathControlsOf(figure) ?? buildMathControls(figure)` control group —
+byte-for-byte the same reuse shape `diagramView.ts`'s own `markDiagramRendered` uses for diagrams. Two
+real `<button>`s (`role="group"` container, `role="status"` live region, `hidden` while silent):
+copy-as-LaTeX resolves the figure's sibling `<pre>` at ACTIVATION TIME (row 14) and copies its retained
+source text byte-identical (a small peel-function duplicate of `mathEnhancer.ts`'s own `mathSourceOf`,
+kept local to avoid a `mathView`<->`mathEnhancer` import cycle); copy-as-MathML clones and serializes
+the figure's OWN live `<math>` root via `XMLSerializer` — D-6-R's own SIMPLIFICATION from the original
+two-output design, since Temml produces exactly one tree. Zero new dependencies. No CSS was added
+(`mathCss.ts` is outside this task's Files line and none of rows 11/14/16/20 mandate a specific visual
+treatment) — the two buttons ship visible-by-default rather than hover-revealed; a deliberate, stated
+scope decision, not an oversight.
+**THE BLOCK/INLINE ANNOTATION RECONCILIATION — DECIDED HERE.** 4.3-R/5.1-R flagged that block's own
+failure marker (`markMathFailed`) carried only visible text, while inline's own (`markMathInlineFailed`)
+also carries `title` + a machine-readable attribute, satisfying §3.5 row 15 more literally. Since this
+task already owns `mathView.ts`, and the fix is small/mechanical/visually inert, it was DECIDED HERE
+rather than routed a third time: `markMathFailed` now sets the SAME `title` + `MATH_INLINE_FAILED_ATTR`
+pair on the still-visible `<pre>`. The constant keeps its "INLINE"-named identifier (renaming would
+ripple into `mathDegrade.browser.test.ts`, outside this task's Files line) — only its shared VALUE
+matters for row 15, now satisfied identically by both engines' failure UI.
+**BYTES — CS UNMOVED (EXACT MATCH, md5-IDENTICAL), APP-PAGE +2,971 B BOTH ENGINES, HEADROOM STILL
+POSITIVE.** A-B rebuild (stash/rebuild/measure, pop/rebuild/measure — both engines): content-script
+**340,492 B**, md5 `bcdcf231…` Cr / `49e218a1…` Fx — UNMOVED, exact match to 3.2-R's own floor;
+`grep -c temml` on both built content scripts: **0**. `.output` **5,195,178 B Cr / 5,195,294 B Fx** —
+**+2,971 B both engines** over 5.1-R's own figure (5,192,207 / 5,192,323), the control-group glue
+landing on the already-loaded app-page graph (no new lazy chunk). Headroom: 5,242,880 − 5,195,178 =
+**47,702 B (46.6 KiB) Cr**; 5,242,880 − 5,195,294 = **47,586 B (46.5 KiB) Fx** — positive, down ~2.9 KB
+from 5.1-R's own ~49.5/49.4 KiB. Manifest **654 / 770 B**, `permissions: []`, no `contextMenus`, no
+`web_accessible_resources` — unmoved, re-proven by a real-clipboard-exercised browser test reading the
+BUILT manifests directly.
+**STANDING INVARIANTS.** `pnpm lint` EXIT=0; `tsc --noEmit` clean. Full `pnpm test` (unit): **1145/1145
+passed, ALL GREEN, byte-for-byte the same 66 files/1145 tests as 5.1-R's own close** (this task added
+zero unit tests — all new coverage is `tests/browser/mathActions.browser.test.ts`, per its sealed Files
+line). Full `pnpm test:browser` (Cr+Fx), against the freshly rebuilt `.output`: **164 files, 1625
+passed, 15 pre-existing skips (unchanged), ALL GREEN** (162 at 5.1-R's close + this task's one new file
+× 2 engines; 13 new tests × 2). `git diff tests/golden/output/` EMPTY; `mount.ts` untouched;
+`codeDetect`/007/009/M11 import fences: 42/42 standalone, unaffected. See
+`specs/011-math-rendering/tasks.md` task 6.1-R's own RESULT block for the full writeup. Prior entry,
+kept for context:
+
 **★ M11 TASK 5.1-R LANDED, 2026-09-09 — INLINE MATH'S D-7-R MUTATE-IN-PLACE INVERSION, THE
 PERSISTENCE PROPERTY PROVEN RED-FIRST BOTH ENGINES, ALL THREE §3.9 PATHS DEGRADED WITH INLINE'S OWN
 TEXT+ARIA ANNOTATION SHAPE, UNDER THE OPEN 1.2-R FORK. GROUP 5-R IS NOW FULLY DISCHARGED. NEXT: GROUP

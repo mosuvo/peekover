@@ -1358,7 +1358,7 @@ the persistence-of-the-`<code>`-element property proven red-first.*
 
 ## 6-R — Copy-as-LaTeX / copy-as-MathML (D-6-R; §8-1 simplified, not reopened)
 
-- [ ] **6.1-R Block math's copy control group — copy-as-LaTeX (retained source, unchanged) and copy-as-
+- [x] **6.1-R Block math's copy control group — copy-as-LaTeX (retained source, unchanged) and copy-as-
       MathML (clone-and-serialize the ONE rendered `<math>` tree, D-6-R).** Reuses 007 D-15's own hover/
       focus control-group shape verbatim. Copy-as-MathML SIMPLIFIES from the original's dual-output clone
       to cloning the single tree every formula renders to — no output-mode choice left to make.
@@ -1369,6 +1369,161 @@ the persistence-of-the-`<code>`-element property proven red-first.*
       bytes md5-identical against 3.2-R's floor. App-page bytes stated against 5.1-R's own figure. Golden
       EMPTY · manifest green **654 / 770 B** · `permissions: []`. [D-6-R; §3.5 rows 11, 14, 16, 20,
       new-row(block); §4 copy actions]
+
+★ **RESULT — ★ PROCEEDS UNDER THE OPEN 1.2-R FORK (decisions.md 2026-09-07 deviation, condition 1) —
+THE CONTROL GROUP LANDED, `diagramView.ts`'s OWN §3.11 MECHANISM REUSED VERBATIM, BOTH ACTIONS PROVEN
+REAL-CLIPBOARD ON BOTH ENGINES. ★ A LIKELY MILESTONE-CRITICAL, PREVIOUSLY-UNDISCOVERED ESBUILD/TEMML
+BUNDLING DEFECT WAS SURFACED WHILE DRAFTING THIS TASK'S OWN FIXTURES, CONFIRMED THREE INDEPENDENT WAYS,
+FLAGGED FOR 1.2-R'S OWN FORK — NOT FIXED HERE.**
+
+**PREFLIGHT.** HEAD `6aa6964` confirmed, tree clean. Fresh `rm -rf .output` rebuilds BOTH engines BEFORE
+any change: content-script **340,492 B**, md5 `bcdcf231…` Cr / `49e218a1…` Fx; `.output` **5,192,207 B
+Cr / 5,192,323 B Fx**; manifest **654 / 770 B**, `permissions: []` — EXACT match to the kickoff's own
+stated baselines, all four figures.
+
+**★ THE BUNDLING DEFECT — DISCOVERED WHILE DRAFTING, NOT WORKED AROUND SILENTLY.** This task's own
+copy-as-LaTeX Verify clause names "an escaped-`\$` fixture from 3.1-R's own audit"; drafting a
+macro-bearing fixture (`\text{Cost: \$5}`) to exercise it, and a `\alpha` fixture for the "reads the
+retained source, not the rendered tree" property, both threw `ParseError: Unsupported function name:
+\t`/`\a` — real Temml, real dynamically-imported browser chunk, both engines. **Confirmed via three
+independent routes, not assumed**: (1) Vitest's own dependency pre-bundle of `temml`
+(`node_modules/.vite/vitest/*/deps/temml.js`), reproduced even after `rm -rf node_modules/.vite` to rule
+out a stale cache; (2) the IDENTICAL corrupted byte pattern (`[�d800-�dbff][�dc00-�dfff]`, replacing
+`[\uD800-\uDBFF][\uDC00-\uDFFF]`) grepped directly out of the ACTUAL SHIPPED
+`.output/chrome-mv3/chunks/temml-*.js`; (3) a plain Node `import()` of that exact pre-bundled file,
+outside any browser, reproduces the identical throw — proving this is baked into the FILE CONTENT, not
+a browser runtime quirk. **Root cause, traced to the actual source**: esbuild's dependency-bundling step
+(used by both Vitest's optimizer and this project's own WXT/Vite/Rollup production build) cannot
+represent `temml`'s `Lexer.js`-derived `tokenRegexString`'s astral-surrogate-pair alternative
+(`[\uD800-\uDBFF][\uDC00-\uDFFF]`) — lone surrogates are not valid standalone Unicode scalar values, so
+each `\uD800`-style escape is silently replaced with a literal U+FFFD character on the way through. The
+resulting character class is no longer a narrow "one astral character" match; it becomes an enormous
+`0x30`–`0xFFFD` range that includes the backslash (`0x5C`) and every ASCII letter. Because JS regex
+alternation returns the FIRST alternative that matches at a position (not the longest), this corrupted
+alternative — which sits BEFORE the control-word alternative (`(\\[a-zA-Z@]+)…`) in `tokenRegexString`
+— now intercepts every `\<word>` and consumes only its first two characters, so Temml's parser sees a
+one-letter "function name" and throws for `\alpha`, `\text`, `\frac`, and essentially every non-trivial
+LaTeX macro. Control SYMBOLS (`\$`, a backslash followed by exactly one NON-letter) are unaffected — the
+corrupted range's lower bound (`0x30`) excludes `$` (`0x24`), so escaped-dollar fixtures render fine and
+were used for this task's own tests instead. **Every EXISTING real-browser math test
+(`mathBlock`/`mathDegrade`/`mathNetwork.browser.test.ts`) only ever used bare-arithmetic fixtures
+(`x^2`/`y^2`/`z^2`) or a fixture DELIBERATELY malformed for an unrelated reason (`\frac{a}{`, expected to
+fail anyway) — none exercised a well-formed macro through the real dynamically-loaded chunk, so this
+defect has been invisible until this task's own drafting hit it.** ★ **FLAGGED AS LIKELY
+MILESTONE-CRITICAL, NOT INVESTIGATED FURTHER OR FIXED HERE**: task 1.2-R (the human fidelity walk judging
+REVISIT-RULING 2's bar) is still `[ ]` UNCHECKED, and its own "dense representative formula corpus"
+explicitly names fractions/nested radicals/Greek letters — i.e. macros — so that walk, run against the
+real loaded extension, is very likely to hit this exact defect on the very first macro-based formula it
+tries, in the ACTUAL SHIPPED PRODUCTION BUILD (confirmed above, not merely a test-harness artifact).
+Diagnosing/patching esbuild's own dependency bundling of `temml` is far outside this task's own Files
+line — this is handed to whoever runs 1.2-R's own fork next, in full technical detail (this block, and
+`tests/browser/mathActions.browser.test.ts`'s own header comment), rather than smoothed over.
+
+**THE CONTROL GROUP — `diagramView.ts`'s OWN §3.11 MECHANISM, REUSED VERBATIM.** `markMathRendered` now
+does `const controls = mathControlsOf(figure) ?? buildMathControls(figure)`, then
+`figure.replaceChildren(content, controls.group, controls.status)` — content FIRST
+(`mathEnhancer.test.ts:235`'s own firstElementChild pin, unaffected), byte-for-byte the same
+build-once/re-attach-on-a-later-call shape `markDiagramRendered` uses. Two real `<button>`s inside a
+`role="group"` container (no `tabindex` of their own — row 16), a `role="status"`/`hidden`-while-silent
+live region (row 20). **Both actions resolve their artifact from the LIVE DOM AT ACTIVATION TIME (row
+14), never a build-time closure**: `sourcePreOf(figure)` reads `figure.previousElementSibling` (the
+`<pre>` `insertMathPlaceholder` put there and nothing ever moves); `currentMathRoot(figure)` reads
+`figure.querySelector('math')`. Copy-as-LaTeX reads the RETAINED SOURCE via `retainedMathSource(pre)` —
+a small (2-line) DUPLICATE of `mathEnhancer.ts`'s own `mathSourceOf` $$-peel, kept local to `mathView.ts`
+specifically to avoid a `mathView`<->`mathEnhancer` import cycle (`mathEnhancer.ts` already imports FROM
+`mathView.ts`), stated as a deliberate, low-drift-risk cost rather than smoothed over. Copy-as-MathML
+clones the figure's own `<math>` root, sets `xmlns` on the clone (mirrors `diagramSvgText`'s own explicit
+`xmlns`, belt-and-suspenders over automatic namespace serialization), and serializes via
+`XMLSerializer` — D-6-R's own SIMPLIFICATION, one tree, zero output-mode branch, **zero new
+dependencies** (`cloneNode` + `XMLSerializer`, both platform built-ins `diagramView.ts` already uses for
+SVG). **NO CSS ADDED** — a deliberate, stated scope decision: none of rows 11/14/16/20 mandate a
+hover-reveal visual treatment, and `mathCss.ts` is outside this task's own sealed Files line, so the two
+buttons ship visible-by-default (unstyled) rather than reaching into a file this task does not own.
+
+**THE BLOCK/INLINE ANNOTATION RECONCILIATION — DECIDED HERE, NOT ROUTED A THIRD TIME.** 4.3-R/5.1-R
+flagged that `markMathFailed` (block) carried only a visible TEXT paragraph while `markMathInlineFailed`
+(inline) also carries `title` + a machine-readable attribute, satisfying §3.5 row 15 more literally.
+Since this task already owns `mathView.ts` (the control-group task) and the fix is small, mechanical,
+and visually inert (a `title` attribute paints no chrome; a `data-*` attribute is inert to layout), it
+is DECIDED HERE: `markMathFailed` now sets the SAME `title` + `MATH_INLINE_FAILED_ATTR` pair on the
+still-visible `<pre>`, mirroring inline's own shape exactly. The constant keeps its "INLINE"-named
+identifier (renaming it would ripple into `mathDegrade.browser.test.ts`, outside this task's own Files
+line) — only its shared VALUE (`'data-math-failed'`) matters for row 15, now satisfied identically by
+both engines' own failure markers.
+
+**TESTS — `mathActions.browser.test.ts`, 13 NEW TESTS × 2 ENGINES, ALL GREEN.** Rows 11/16/17/20: a
+rendered figure carries exactly two real, painted `<button>`s (found BY CLASS ALONE, never
+`button.${class}`, per the tag-qualified-selector hazard); reachable and activatable by REAL keyboard
+alone (`userEvent.tab()` + `{Enter}`, never `.click()`); the accessible name carries both the selection
+and the action, before and after (`Formula 2. Activate to copy it as LaTeX.` -> `Formula 2 copied as
+LaTeX. Activate to copy it again.`); the live region is `role=status`, `hidden` while silent, painted
+once it speaks. Copy-as-LaTeX: an escaped-`\$` fixture (`$$x + \$5$$\n`, retained source `x + \$5\n`
+— WITH the trailing newline the tex plugin's own captured token content carries even for a single-line
+formula, measured via a scratch `parse()` probe) copies BYTE-IDENTICAL through the REAL clipboard on
+both engines (Chromium's own CRLF clipboard normalization measured and normalized before comparison,
+matching `tableCopy.browser.test.ts`'s own documented finding); a multi-line dollar-block copies
+byte-identical including its own trailing newline; a dedicated test proves the copy reads the RETAINED
+SOURCE, not the rendered tree, on three independent axes at once (the source keeps its escaping
+backslash, its interior spacing, and its trailing newline; the live `<math>` tree's own `textContent`
+has none of the three). Copy-as-MathML: the clipboard text is a well-formed `<math>` root a real
+`DOMParser` round-trips (`application/xml`, no `parsererror`, correct `localName`/`namespaceURI`), its
+`textContent` matches the LIVE tree's own exactly (the artifact on screen, not a stale copy), and two
+different formulas produce two different, individually-round-tripping MathML strings (not a fixed/cached
+string). Row 14 (control group re-attached, never rebuilt across a second render): proven directly
+against the exported `markMathRendered` (math ships no theme-triggered re-render today per D-9-R, so
+production never calls it twice on one figure yet — the FUNCTION's own property is proven regardless,
+future-proofing the reuse-across-re-render shape) — group/status node IDENTITY unchanged across a second
+call, content genuinely swaps, content stays first. **RED-FIRST, genuinely run and reverted**: an
+ablation forcing `buildMathControls(figure)` unconditionally (dropping the `mathControlsOf(figure) ??`
+reuse) made this test's own identity assertions fail with the exact `Object.is` mismatch message named
+in the test's own header comment. Inline re-confirmed: an inline-only document carries zero
+`.peekover-math-actions`/`.peekover-math-status`/figures anywhere; the content-script surface reaches
+neither `enhanceMath` nor this control group (D-3-R). Manifest: `permissions: []` re-proven against BOTH
+built manifests AFTER a real copy-as-LaTeX and copy-as-MathML have actually run (exercise-before-absence,
+`tableCopy.browser.test.ts`'s own re-proof shape) — no `contextMenus`, no `host_permissions`, no
+`web_accessible_resources`.
+
+**BYTES — A-B REBUILD (stash/measure/pop/measure), BOTH ENGINES.** Content-script **340,492 B**, md5
+`bcdcf231…` Cr / `49e218a1…` Fx — UNMOVED, exact match to 3.2-R's own floor, both BEFORE and AFTER this
+task's diff; `grep -c temml` on both built content scripts: **0**. `.output` **5,195,178 B Cr /
+5,195,294 B Fx** — **+2,971 B both engines**, identical delta on both engines, over 5.1-R's own unmoved
+figure (5,192,207 / 5,192,323) — the control-group glue landing on the already-loaded app-page graph
+(no new lazy chunk; `markMathRendered`/the new helper functions live in the same eagerly-loaded
+`mathView.ts` module the figure-placeholder mechanism already ships in). **Headroom: 5,242,880 −
+5,195,178 = 47,702 B (46.6 KiB) Cr; 5,242,880 − 5,195,294 = 47,586 B (46.5 KiB) Fx — POSITIVE**, down
+~2.9 KB from 5.1-R's own ~49.5/49.4 KiB. Manifest **654 / 770 B**, `permissions: []`, no
+`web_accessible_resources` — unmoved, both engines.
+
+**STANDING INVARIANTS.** `pnpm lint` **EXIT=0**. `tsc --noEmit` clean. Full `pnpm test` (unit):
+**1145/1145 passed, ALL GREEN, byte-for-byte the same 66 files/1145 tests as 5.1-R's own close** (this
+task added zero unit tests, per its own sealed Files line — all new coverage is `tests/browser/*`).
+Full `pnpm test:browser` (Cr+Fx), run against the freshly rebuilt `.output`: **164 files, 1625 passed,
+15 pre-existing skips (unchanged), ALL GREEN, NO FLAKES this run** (162 files at 5.1-R's close + this
+task's one new file × 2 engines = 164; 13 new tests × 2 = 26 new passing tests). `git diff
+tests/golden/output/` **EMPTY** (this task builds no
+markdown fixture and touches no parse/mount path). `mount.ts` untouched. `codeDetect.test.ts` + 007/009/
+M11 import fences run standalone: **42/42 passed**, unaffected.
+
+**DIVERGENCE FROM THE KICKOFF, FLAGGED.** The kickoff's own §2 named `exportShortcut.browser.test.ts` as
+"the same clipboard mechanism" to reuse — read directly, that file never touches the clipboard at all
+(it is the Ctrl/Cmd+S dialog-suppression test). The real worked reference for a real-clipboard
+writeText/readText round trip, gated on the two engines' differing consent models, is
+`tableCopy.browser.test.ts` (task 3.8); its `clipboardWriteConsent`/`grantClipboardConsent` helpers were
+duplicated here instead, matching `diagramActions.browser.test.ts`'s own independent duplication of the
+identical shape. The kickoff's own §4 CS-isolation framing (`+205 KB standing hazard`) referred to a
+figure from an earlier, superseded decomposition (the original KaTeX/MathJax dual-dependency design) —
+this reopened milestone's own content-script floor is +3,959 B (3.2-R), not +205 KB; the kickoff's own
+number was carried forward from stale prose rather than this file's own current baseline, and is
+corrected here rather than propagated.
+
+**ACCEPTANCE.** The four copy-action criteria (existence, keyboard, accessible naming, live-region
+confirmation) proven real-engine both browsers. Copy-as-LaTeX/MathML both proven byte-identical/
+well-formed against the REAL clipboard, both engines, with the retained-source-vs-rendered-tree
+distinction proven non-vacuously. Row 14 proven RED-FIRST. The block/inline annotation inconsistency is
+DECIDED, not routed again. Content-script bytes EXACT-match unmoved; app-page delta measured and
+decomposed. `permissions: []` re-proven post-exercise. `git diff tests/golden/output/` EMPTY. The
+esbuild/temml bundling defect is flagged in full technical detail for 1.2-R's own fork, not fixed or
+silently worked around beyond this task's own fixture choices.
 
 - [ ] **6.2-R Inline math's copy actions — text-selection for LaTeX (verified, zero new code), the document-
       level "copy all formulas as MathML" action, SIMPLIFIED (D-6-R; §8-1 UI placement carried, RULED at the
