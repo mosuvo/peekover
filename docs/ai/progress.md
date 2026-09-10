@@ -66,6 +66,17 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★★★ M11 1.2-R PROCEED RULED, 2026-09-10 — THE HUMAN FIDELITY WALK RESOLVES THE DEFERRED FORK. M11 SHIPS
+MATH RENDERING.** The 8.1-R milestone-close walk (`harness/math-fidelity/walk-corpus.md`, both engines, the
+real packed extension) cleared REVISIT-RULING 2's readable-on-both bar over all eight fidelity classes plus
+the §9-2 content-script cousin, post the radical-render font fix below. The 2026-09-07 conditional-proceed
+deviation is CLEARED — every group 2-R–8-R commit that proceeded "under the open 1.2-R fork" is now
+retroactively on the PROCEED path; `tasks.md`'s 1.2-R box is ticked. §8-1(b) (6.2-R's inline copy-source
+recovery gap) is RULED fix-before-close — a REQUIRED task before 8.2-R/8.3-R, not a carried gap. Approval of
+record: `decisions.md`'s 2026-09-10 "M11 8.1-R / 1.2-R" entry. **NEXT: the §8-1(b) fix (a D-7-R inline-
+retention change), then 8.2-R (`/retro`) and 8.3-R (records reconcile) close the milestone.** Prior entry,
+kept for context:
+
 **★★ M11 RADICAL-RENDER DEFECT SPIKE — FIXED AT THE ROOT, 2026-09-10 — NOT THE SANITIZER, THE
 BUNDLED FONT.** The 8.1-R walk found `\sqrt{x^2+y^2}` rendering as `x²+y²` and `\sqrt[3]{8}` as
 `8` with an orphan `3` — the radicand surviving, the radical WRAPPER (and root index bracket)

@@ -1,6 +1,52 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-10 · M11 8.1-R / 1.2-R — THE HUMAN FIDELITY WALK RESOLVES THE DEFERRED FORK: **PROCEED**. M11
+  SHIPS MATH RENDERING. The 2026-09-07 conditional-proceed deviation is CLEARED; every group 2-R–8-R commit
+  that proceeded "under the open 1.2-R fork" is now retroactively on the PROCEED path.** The sealed 1.2-R
+  fidelity gate (RULING 2's readable-on-both-engines bar) was walked by the human against the real PACKED
+  EXTENSION — Chrome (`.output/chrome-mv3`, loaded unpacked) and Firefox (`.output/firefox-mv3`, temporary
+  add-on) — over the full `harness/math-fidelity/walk-corpus.md` corpus (the eight fidelity classes + the
+  §9-2 content-script cousin). **This entry is the approval of record; 1.2-R's box is ticked in `tasks.md`
+  (the gate ran), but its body text and `spec.md` stay as-is (bank-not-artifact for the ruling itself).**
+  **THE WALK — WHAT WAS SEEN, BOTH ENGINES:** all eight classes render acceptably-and-readably on both
+  engines — stretchy delimiters (extenders grow to content height, Chrome's own weak spot, clean), radicals
+  (√ with a vinculum over the whole radicand at every nesting level), big operators at display size
+  (∫/∑/∏/∮, size-variant glyphs), matrices (five delimiter styles, grid-aligned), nested scripts/fractions,
+  accent glyphs (x̂ ȳ ż ẅ v⃗ ũ, no tofu), inline-vs-block flow, Greek + a dense formula. Theme flip
+  (light/dark/sepia) re-colours formulas on both engines (D-9-R confirmed by eye, not just the 4.2-R
+  measurement). The §9-2 content-script cousin (a `$x$` in a `file://` doc rendering as inert monospace
+  `<code>`) reads acceptably, not jarring — no §3.2 amendment needed.
+  **★ THE WALK WAS NOT A RUBBER STAMP — IT CAUGHT A MILESTONE-CRITICAL DEFECT AND SENT IT BACK.** The FIRST
+  walk (same day) found the radicals class BROKEN on Chrome: `\sqrt{x^2+y^2}` rendered as `x²+y²`,
+  `\sqrt[3]{8}` as `8`, the nested radical as `1+1+1+x` — the radical SIGN drawn as nothing, the radicand
+  surviving. Root-caused (a diagnosis spike, `b8f4a20`): NOT the sanitizer (msqrt/mroot were allowed) and
+  NOT Temml (it emitted correct `<mroot>`), but the BUNDLED FONT — task 1.1-R subset
+  `stix-two-math-subset.woff2` by scanning Temml's rendered TEXT for codepoints, a method structurally blind
+  to U+221A (the radical sign is drawn by the browser from the font's OpenType MATH table, never emitted as
+  a text character). Firefox masked it via OS font-fallback; Chrome, with no system math font, reserved 0px.
+  Fixed by re-subsetting from the same google/fonts source with U+221A added (+384 B, 318 codepoints diffed
+  glyph-for-glyph zero-regression), with an engine-aware, geometry-based regression guard (red-first on
+  Chrome; Firefox already masked). The walk above is the RE-walk, post-fix, both engines clean. **This is
+  the third instance this milestone of the same failure class — a correct-looking method, green tests, blind
+  to a specific untested case (the bundling lone-surrogate defect; the §8-1(b) copy-source gap; this
+  font-subset MATH-table blind spot) — each surfaced ONLY by a human looking at real rendered output. The
+  8.1-R walk existing as a human gate, not an agent check, is why M11 does not ship broken radicals.**
+  **FIRST-PAINT:** measured 0.05s on the packed extension — comfortably under the <165ms floor (converting
+  7.1-R's reasoned claim to a measured one, as that task's own divergence flagged). Content-script math stays
+  literal (§9-2), app-page math renders after first paint.
+  **THE §8-1(b) INLINE SOURCE-RECOVERY GAP — RULED FIX-BEFORE-CLOSE, not ship-with-a-gap.** 6.2-R proved a
+  successfully-rendered inline formula has no way to recover its LaTeX source (an in-scope §4 capability that
+  silently fails for the common case). The human ruled: FIX IT before M11 closes (a D-7-R inline-retention
+  change), not ship it as a carried gap. This is now a REQUIRED task before 8.2-R/8.3-R — the milestone does
+  not close with a known-broken in-scope copy capability.
+  **WHAT THIS RULING DOES:** resolves the 1.2-R fork as PROCEED; ticks 1.2-R; clears the 2026-09-07
+  conditional-proceed deviation (groups 2-R–8-R's conditional work is now unconditional-PROCEED); records the
+  radical defect + fix as the walk's own finding; rules §8-1(b) fix-before-close.
+  **WHAT IT DOES NOT DO:** it does not close M11 (8.2-R retro + 8.3-R records reconcile remain, plus the
+  §8-1(b) fix); it does not edit spec.md or 1.2-R's body; it installs/builds nothing. **Revisit-when:** the
+  §8-1(b) fix lands, then 8.2-R (retro) and 8.3-R (records reconcile) close the milestone.
+
 - **2026-09-10 · M11 RADICAL-RENDER DEFECT — FIXED at the font asset (fix spike, NOT a tasks.md task).
   The 8.1-R walk found `\sqrt`/`\sqrt[n]{}` rendering with the radicand intact but no radical sign or
   root index bracket, both engines. 8.1-R's own radical blocker is CLEARED (the PROCEED/CLOSE-M11

@@ -272,7 +272,7 @@ engine `pnpm test:browser` run for INPUT A: 4/4 passed, Chromium + Firefox.
 **ACCEPTANCE.** Both Group-1-R axes this task owns (byte measurement, INPUT A) are DISCHARGED. This task
 does NOT decide PROCEED/CLOSE-M11 — that is 1.2-R's own fork, next. `git diff tests/golden/output/` EMPTY.
 
-- [ ] **1.2-R ★ HUMAN-RUN, NO AGENT SUBSTITUTE — real Chrome+Firefox visual-fidelity walk of Temml MathML
+- [x] **1.2-R ★ HUMAN-RUN, NO AGENT SUBSTITUTE — real Chrome+Firefox visual-fidelity walk of Temml MathML
       with the bundled font, judged against REVISIT-RULING 2's bar; THE TWO-AXIS FORK, EXPLICIT.**
       Extension loaded, both engines (Playwright cannot load an extension into Firefox — the M6/9.1
       precedent), a dense representative formula corpus (fractions, radicals, integrals, matrices, stretchy
@@ -296,6 +296,16 @@ does NOT decide PROCEED/CLOSE-M11 — that is 1.2-R's own fork, next. `git diff 
         rather than repeating the original's own left-open ambiguity).
       Golden EMPTY (unaffected by a walk) · manifest green **654 / 770 B** · `permissions: []`.
       [REVISIT-RULING 2; REVISIT-RULING 3]
+
+★ **RESULT — PROCEED, 2026-09-10 (decisions.md's M11 8.1-R / 1.2-R entry is the approval of record).** The
+human walk (`harness/math-fidelity/walk-corpus.md`, all eight fidelity classes + the §9-2 content-script
+cousin, real packed extension, both engines) cleared REVISIT-RULING 2's readable-on-both bar. The FIRST walk
+attempt found the radicals class broken on Chrome (the U+221A font-subset blind spot, fixed at `b8f4a20`);
+the RE-walk post-fix passed clean on both engines. The 2026-09-07 conditional-proceed deviation is CLEARED —
+every group 2-R–8-R commit that proceeded "under the open 1.2-R fork" is retroactively on the PROCEED path.
+§8-1(b) (inline copy-source recovery, found broken at 6.2-R) is RULED fix-before-close, a required task
+before 8.2-R/8.3-R. This does NOT close M11 — 8.2-R (retro) and 8.3-R (records reconcile) remain, after the
+§8-1(b) fix lands. Full trace: `decisions.md`'s 2026-09-10 entry.
 
 *Group-1-R acceptance (plan (h)): both axes measured/walked against REVISIT-RULING 2/3's own bars; PROCEED
 authorizes Group 2-R onward against the actually-installed set; CLOSE-M11 reverts `temml`/tokenizer/font in
