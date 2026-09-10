@@ -66,6 +66,11 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**8.1-R walk-corpus staged, 2026-09-10** — `harness/math-fidelity/walk-corpus.md` (a human walk
+aid, not a test) is committed: the eight fidelity classes + theme-flip note + the §9-2
+content-script cousin section, ready for the human milestone-close walk. Nothing else changed
+(`codeDetect` n=28 held, no fences added). NEXT: the human walks it, both engines, per 8.1-R.
+
 **★★ RULE-9 HARDENING RESOLVED, 2026-09-10 — THE FULL BROWSER SUITE NOW GOES GREEN IN ONE PASS,
 REPEATABLY (4/4 consecutive full `pnpm test:browser` runs), CLEARING THE MILESTONE-CLOSE
 PREREQUISITE FOR 8.1-R. TEST-FILES-ONLY, no `src/` diff, no assertion intent weakened. Full detail
