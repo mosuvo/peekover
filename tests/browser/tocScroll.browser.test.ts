@@ -58,15 +58,19 @@ function buildDoc(): string {
 
 /** Poll `scroller.scrollTop` until it stops changing (smooth scroll animates over several
  *  frames) or we time out, then return the settled offset. Instant scrolls settle on the
- *  first read; this makes the measurement independent of smooth-vs-instant behavior. */
+ *  first read; this makes the measurement independent of smooth-vs-instant behavior.
+ *
+ *  ★ 8 consecutive stable reads, not 3 (AGENTS.md #9 — widened alongside `waitForScrollable`
+ *  above, same root cause: a value that pauses for a few polls purely from CPU/layout
+ *  contention with another running test file must not be read as "settled" one poll early). */
 async function settle(scroller: HTMLElement): Promise<number> {
   let prev = Number.NaN;
   let stable = 0;
-  for (let i = 0; i < 160; i += 1) {
+  for (let i = 0; i < 320; i += 1) {
     const cur = scroller.scrollTop;
     if (cur === prev) {
       stable += 1;
-      if (stable >= 3) return cur;
+      if (stable >= 8) return cur;
     } else {
       stable = 0;
     }
@@ -79,13 +83,34 @@ async function settle(scroller: HTMLElement): Promise<number> {
 /** Wait until the scroll box has laid out and its content overflows (so it can actually
  *  scroll). mount() is synchronous but the engine lays out on a later frame, so immediately
  *  after mount `scrollHeight === clientHeight` and a `scrollTop` write clamps to 0 — this
- *  polls until the overflow is real, making the observer-sanity control meaningful. */
+ *  polls until the overflow is real, making the observer-sanity control meaningful.
+ *
+ *  ★ REQUIRES the overflow reading to be STABLE across several consecutive polls, not merely
+ *  true once (a harness-shared-state finding, AGENTS.md #9): `watchControl.browser.test.ts`'s
+ *  own `waitForSettled` header measured this reader's `scrollHeight` swinging from 81798px on
+ *  first overflow to 26069px once truly settled (a late web-font swap or a transitional layout
+ *  pass, not a one-shot event) — a single "is it > clientHeight yet" read can catch the box
+ *  mid-swing and hand back a height that is about to change again. Measured directly: under the
+ *  extra CPU/layout load of running alongside another browser test file, a 3-consecutive-read
+ *  window (this function's own prior shape) was not always long enough to outlast that swing,
+ *  producing exactly the `s2` "greater than itself" and scroll-spy off-by-one flakes this session
+ *  root-caused. Widening the window does not change what is asserted — only how patiently this
+ *  waits for the geometry it asserts against to actually be final. */
 async function waitForScrollable(scroller: HTMLElement): Promise<void> {
-  for (let i = 0; i < 160; i += 1) {
-    if (scroller.scrollHeight > scroller.clientHeight + 4) return;
+  let prev = Number.NaN;
+  let stable = 0;
+  for (let i = 0; i < 320; i += 1) {
+    const h = scroller.scrollHeight;
+    if (h > scroller.clientHeight + 4 && h === prev) {
+      stable += 1;
+      if (stable >= 8) return;
+    } else {
+      stable = 0;
+    }
+    prev = h;
     await new Promise<void>((r) => setTimeout(r, 25));
   }
-  throw new Error('scroll box never became scrollable (content did not overflow)');
+  throw new Error('scroll box never became scrollable (content did not overflow, or kept reflowing)');
 }
 
 /** Click a TOC entry and wait for its scroll to finish. `.click()` dispatches exactly the
@@ -314,15 +339,22 @@ function activeCount(links: HTMLElement[]): number {
 /** Poll until the active index stops changing (the spy updates over a frame or two after a
  *  scroll settles) or we time out, then return it. Waiting for STABILITY — not for an expected
  *  value — keeps the assertion non-vacuous: a wrong-but-stable active index is returned and then
- *  fails the caller's `expect`, rather than being masked by a poll-until-equal. */
+ *  fails the caller's `expect`, rather than being masked by a poll-until-equal.
+ *
+ *  ★ 8 consecutive stable reads, not 3 (AGENTS.md #9, same widening as `settle`/
+ *  `waitForScrollable` above): under load from another concurrently-running test file, three
+ *  quick polls can land on the SAME stale index in the gap before the IntersectionObserver's
+ *  own callback for the just-reached section actually fires — measured as this session's
+ *  scroll-spy off-by-one ("expected 5 got 4"). A longer stable window still returns the FIRST
+ *  index the spy settles on; it never masks a genuinely wrong one. */
 async function stableActiveIndex(links: HTMLElement[]): Promise<number> {
   let prev = Number.NaN;
   let stable = 0;
-  for (let i = 0; i < 160; i += 1) {
+  for (let i = 0; i < 320; i += 1) {
     const cur = activeIndex(links);
     if (cur === prev) {
       stable += 1;
-      if (stable >= 3) return cur;
+      if (stable >= 8) return cur;
     } else {
       stable = 0;
     }

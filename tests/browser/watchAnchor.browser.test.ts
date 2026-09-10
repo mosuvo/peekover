@@ -84,14 +84,21 @@ async function waitFor<T>(fn: () => T | null | undefined, tries = 150): Promise<
  * the LAST heading every time, on both engines. Stability, not mere overflow, is the real
  * precondition for any geometry assertion in this file.
  */
+// ★ 8 consecutive stable reads, not 3 (AGENTS.md #9 — widened this session): the 3-read/60ms
+// window above was measured against an isolated run of this file; running alongside another
+// browser test file adds enough CPU/layout contention that the SAME reflow this header already
+// names can outlast 60ms, and this session caught it doing exactly that (`readingAt`/`offsetAfter`
+// reading a stale 0 only when a second file shared the run, never in isolation). Widening the
+// window changes nothing about what is asserted — only how long this waits for the geometry it
+// measures to actually be final.
 async function waitForScrollable(scroller: HTMLElement): Promise<void> {
   let prev = Number.NaN;
   let stable = 0;
-  for (let i = 0; i < 200; i += 1) {
+  for (let i = 0; i < 400; i += 1) {
     const h = scroller.scrollHeight;
     if (h > scroller.clientHeight + 4 && h === prev) {
       stable += 1;
-      if (stable >= 3) return;
+      if (stable >= 8) return;
     } else {
       stable = 0;
     }
@@ -101,15 +108,16 @@ async function waitForScrollable(scroller: HTMLElement): Promise<void> {
   throw new Error('scroll box never settled (content did not overflow, or kept reflowing)');
 }
 
-/** Poll `scrollTop` until it stops changing (the full-page :host scrolls smoothly). */
+/** Poll `scrollTop` until it stops changing (the full-page :host scrolls smoothly). Same
+ *  8-consecutive-stable-read widening as `waitForScrollable` above, same reason. */
 async function settle(scroller: HTMLElement): Promise<number> {
   let prev = Number.NaN;
   let stable = 0;
-  for (let i = 0; i < 150; i += 1) {
+  for (let i = 0; i < 300; i += 1) {
     const cur = scroller.scrollTop;
     if (cur === prev) {
       stable += 1;
-      if (stable >= 3) return cur;
+      if (stable >= 8) return cur;
     } else {
       stable = 0;
     }

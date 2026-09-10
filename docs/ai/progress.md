@@ -66,6 +66,15 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★★ RULE-9 HARDENING RESOLVED, 2026-09-10 — THE FULL BROWSER SUITE NOW GOES GREEN IN ONE PASS,
+REPEATABLY (4/4 consecutive full `pnpm test:browser` runs), CLEARING THE MILESTONE-CLOSE
+PREREQUISITE FOR 8.1-R. TEST-FILES-ONLY, no `src/` diff, no assertion intent weakened. Full detail
+in § Carried items (the resolved bullet) and each fixed file's own header comment. ONE genuine
+divergence flagged, NOT fixed (out of the browser-only fence): two UNIT-suite wall-clock budgets
+(`pipeline.perf.test.ts`, `golden.test.ts`) are concurrency-sensitive on this machine, confirmed
+pre-existing via `git stash` against bare HEAD — carried as its own item. NEXT: 8.1-R, the human
+milestone-close walk, now genuinely unblocked on this prerequisite. Prior entry, kept for context:**
+
 **★★ M11 TASK 7.1-R LANDED, 2026-09-09 — RENDER-TIMING MEASUREMENT (D-12-R; §3.6), BOTH ENGINES, A
 DENSE MACRO-HEAVY CORPUS THROUGH THE REAL `enhanceMath`→`temml.renderToString`→`sanitizeMath`→adopt
 PATH. ★★ THE NO-CACHE LEAN IS CONFIRMED — real per-formula cost ~100-200µs both engines, trivially
@@ -987,13 +996,63 @@ measurement-driven or explicitly deferred.*
   `scripts/generate-sbom.ts` has no patched-dependency representation; the patch record lives only
   in `pnpm-lock.yaml`'s `patch_hash` + `patches/` (named already in the temml-patch commit's own
   message).
-- **(★ milestone-close PREREQUISITE for 8.1-R) The full browser suite must go green in ONE pass —
-  cross-file shared-state hardening for `mathNetwork`/`copyAsHtml`/`tocScroll`/`diagramActions`**
-  (reset font-registration/clipboard/Resource-Timing per file; specific-content assertions). 8.1-R's
-  own walk gates on this. (Restated from the 6.2-R kickoff's own §5; not newly discovered this task
-  — the `tocScroll`/`diagramActions` Firefox flakes are the named ambient ones, per 5.1-R's own
-  RESULT block. 6.2-R's own NEW flake above is a THIRD, now-fixed instance of the same class,
-  confirming this prerequisite's own premise rather than adding to its scope.)
+- **✅ RESOLVED, 2026-09-10 (RULE-9 HARDENING, TEST-FILES-ONLY, standalone session, HEAD `13795f2`)
+  — THE MILESTONE-CLOSE PREREQUISITE FOR 8.1-R: THE FULL BROWSER SUITE NOW GOES GREEN IN ONE PASS,
+  REPEATABLY.** RED first, then fixed, per file:
+  - **`diagramActions.browser.test.ts` (confirmed, not hypothetical — this WAS the leak's own
+    source, previously routed around defensively by `tableCopy.browser.test.ts`/
+    `mathActions.browser.test.ts`, never fixed at the root).** Its §7.3 `afterEach` called
+    `Browser.resetPermissions` with NO `browserContextId`, which clears the DEFAULT context and
+    leaves the grant this file made (WITH an id) outlived. Fixed at the source: the grant's
+    `browserContextId` is now captured and reused at reset, plus an `afterEach` assertion the
+    consent did not survive — the exact shape `tableCopy.browser.test.ts` already had to duct-tape
+    around. This removes the coupling for every future file, not just the two that happened to
+    defend themselves already.
+  - **`mathNetwork.browser.test.ts` — investigated, NOT fixed (no red found).** The kickoff's own
+    hypothesis (an idempotent `registerMathFont()` flag surviving from an earlier math test file,
+    making the "guaranteed-cold first render" claim false) did not reproduce: run standalone, in a
+    5-file math-only combination, and inside 4 full-suite passes, its font-specific non-vacuity
+    assertion held every time. Left untouched per "don't fix blind" — a real fix here would need a
+    reproduced red first.
+  - **`tocScroll.browser.test.ts` / `watchAnchor.browser.test.ts` / `watchControl.browser.test.ts`
+    — a THIRD class, found fresh this session, not named in the kickoff.** Bisected from a real
+    failure on a 4th consecutive full-suite pass down to a 2-file repro (`tocScroll` + any unrelated
+    second file), confirmed non-deterministic and confirmed clean in isolation every time (the rule-9
+    signature). Root mechanism: `watchAnchor.browser.test.ts`'s and `watchControl.browser.test.ts`'s
+    own header comments already document a measured 3× layout swing on first mount
+    (scrollHeight 81798px → 26069px) before the reader truly settles; each file's own
+    "wait until scrollable/settled" helper required only 3 consecutive stable reads across 60ms
+    before trusting the geometry, which was long enough in isolation but not always under the
+    extra CPU/layout contention of a second browser test file sharing the run. Fixed by widening
+    every affected helper (`waitForScrollable` ×2, `waitForSettled`, and the three `settle`/
+    `stableActiveIndex` scroll-completion pollers) from 3-consecutive-stable to 8-consecutive-stable,
+    with a proportionally longer timeout budget. No assertion's claim changed — only how patiently
+    each waits for the geometry it measures to actually be final.
+  - **Acceptance:** `pnpm test:browser` green in ONE pass, 164/164 files, 1645/1645 passed (15
+    pre-existing skips), across **4 consecutive full runs** after the fix (the exact combination that
+    reproduced red pre-fix — `tocNetwork`+`tocPersist`+`tocScroll`+`watchAnchor`+`watchControl`, and
+    `tocScroll`+`wipe` — also reran clean 3/3 each). No test's assertion intent was weakened; every
+    fix narrows or removes an isolation gap (a consent-reset id, a settle-poll's patience), never a
+    threshold the test's own claim depends on.
+  - **★ A DIVERGENCE, FLAGGED RATHER THAN SILENTLY ABSORBED: two UNIT-project tests
+    (`src/render/pipeline.perf.test.ts`'s parse+sanitize budget, `tests/golden/golden.test.ts`'s
+    huge-document case) intermittently failed on wall-clock/timeout grounds during this session's
+    `pnpm test` runs, ONLY when run as part of the full 66-file unit suite, always passing instantly
+    run alone.** Confirmed PRE-EXISTING and unrelated to this session's diff: reproduced identically
+    on bare, unmodified HEAD via `git stash` (both failed there too, byte-for-byte the same
+    assertions). Out of this task's TEST-FILES-ONLY-under-`tests/browser/` fence (these are unit
+    tests, not browser tests, and not touched by this session's diff) — not fixed here, carried as
+    its own item below.
+- **NEW AT THE RULE-9 HARDENING SESSION, 2026-09-10 — TWO UNIT-SUITE WALL-CLOCK BUDGETS ARE
+  CONCURRENCY-SENSITIVE: `pipeline.perf.test.ts`'s parse+sanitize budget and `golden.test.ts`'s
+  huge-document case.** Both intermittently red inside a full `pnpm test` run (worker-thread
+  contention from the other ~64 files sharing this machine's cores), both green in <3s run alone,
+  both confirmed to fail IDENTICALLY on bare unmodified HEAD (`git stash` + `pnpm test`) — a
+  pre-existing property of this dev machine's core count against these two tests' fixed
+  thresholds, not a regression from anything in this session. **HOME:** whoever next touches either
+  file — a defensible fix is a per-machine-relative budget or an explicit CPU-count-aware skip
+  rather than a bigger constant, but that call belongs to that session, not this one (out of the
+  browser-suite-only fence this session ran under).
 - **(record) The 2026-09-09 harness eyeball: both engines read acceptable against RULING 2's bar;
   fidelity risk substantially de-risked; the FORMAL 1.2-R walk (8.1-R) still owns the
   PROCEED/CLOSE-M11 ruling** — this did NOT tick 1.2-R or resolve the fork. (Restated from the

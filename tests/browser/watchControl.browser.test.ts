@@ -519,15 +519,22 @@ describe('watch control — geometry against the conditional chrome', () => {
 // `scrollHeight` at 81798 px on first overflow and 26069 px once settled, and a scroll write in
 // that window clamps silently. `waitForSettled` below polls for a stable height.
 
-/** Wait until the scroll box overflows AND its content height has STOPPED CHANGING. */
+/** Wait until the scroll box overflows AND its content height has STOPPED CHANGING.
+ *
+ *  ★ 8 consecutive stable reads, not 3 (AGENTS.md #9 — widened this session): the 3-read/60ms
+ *  window above was long enough in isolation but not always under the extra CPU/layout
+ *  contention of another browser test file running in the same suite pass — this session caught
+ *  it landing exactly on the header's own named swing (81798px -> 26069px) one read early,
+ *  producing a `before` of 0 downstream. Widening changes nothing about what is asserted, only
+ *  how long this waits for the height it measures to actually be final. */
 async function waitForSettled(scroller: HTMLElement): Promise<void> {
   let prev = Number.NaN;
   let stable = 0;
-  for (let i = 0; i < 200; i += 1) {
+  for (let i = 0; i < 400; i += 1) {
     const h = scroller.scrollHeight;
     if (h > scroller.clientHeight + 4 && h === prev) {
       stable += 1;
-      if (stable >= 3) return;
+      if (stable >= 8) return;
     } else {
       stable = 0;
     }
@@ -537,15 +544,16 @@ async function waitForSettled(scroller: HTMLElement): Promise<void> {
   throw new Error('scroll box never settled (no overflow, or it kept reflowing)');
 }
 
-/** Poll `scrollTop` until it stops changing (the reader scrolls smoothly by default). */
+/** Poll `scrollTop` until it stops changing (the reader scrolls smoothly by default). Same
+ *  8-consecutive-stable-read widening as `waitForSettled` above, same reason. */
 async function settle(scroller: HTMLElement): Promise<number> {
   let prev = Number.NaN;
   let stable = 0;
-  for (let i = 0; i < 150; i += 1) {
+  for (let i = 0; i < 300; i += 1) {
     const cur = scroller.scrollTop;
     if (cur === prev) {
       stable += 1;
-      if (stable >= 3) return cur;
+      if (stable >= 8) return cur;
     } else {
       stable = 0;
     }

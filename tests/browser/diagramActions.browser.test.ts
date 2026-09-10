@@ -918,17 +918,26 @@ async function clipboardWriteConsent(): Promise<PermissionState | 'unsupported'>
  * `Browser.grantPermissions` needs the `browserContextId` because a Playwright page lives in a
  * non-default context; without it the grant lands elsewhere and the state stays `prompt` (measured).
  * Nothing is rebuilt, nothing is re-manifested — only the browser's consent moves.
+ *
+ * ★ AND THE CONTEXT ID IS KEPT, BECAUSE THE RESET NEEDS IT TOO — MEASURED (AGENTS.md #9). A
+ * `Browser.resetPermissions` sent with no `browserContextId` clears the DEFAULT context and leaves
+ * THIS one granted, and the browser window is shared across every file in the run: an earlier draft
+ * of this file's own `afterEach` reset with no id, which is exactly what `tableCopy.browser.test.ts`'s
+ * own header names as the leak its file has to defend against. Fixed at the source instead of
+ * leaving every later file to duct-tape around it.
  */
 let consentGranted = false;
+let grantedContextId: string | undefined;
 
 async function grantClipboardWriteConsent(): Promise<void> {
   consentGranted = true;
   const info = (await cdp().send('Target.getTargetInfo', {} as never)) as {
     targetInfo?: { browserContextId?: string };
   };
+  grantedContextId = info?.targetInfo?.browserContextId;
   await cdp().send('Browser.grantPermissions', {
     origin: location.origin,
-    browserContextId: info?.targetInfo?.browserContextId,
+    browserContextId: grantedContextId,
     permissions: ['clipboardSanitizedWrite'],
   } as never);
 }
@@ -968,10 +977,15 @@ describe('★ 7.3 — the UNSTUBBED half: the engine’s own clipboard and the a
 
   afterEach(async () => {
     // Undo any consent this section granted, so the browser context leaves these files as it found
-    // them. Guarded by the flag rather than by an engine sniff: `cdp()` is Chromium-only.
+    // them. Guarded by the flag rather than by an engine sniff: `cdp()` is Chromium-only. Reset by
+    // the SAME `browserContextId` the grant used — an id-less reset clears the DEFAULT context only
+    // and leaves this one granted for whichever file runs next (the fix above).
     if (!consentGranted) return;
     consentGranted = false;
-    await cdp().send('Browser.resetPermissions', {} as never);
+    await cdp().send('Browser.resetPermissions', { browserContextId: grantedContextId } as never);
+    // The instrument for the cleanup itself: if the consent survived, say so HERE rather than in
+    // whichever file happens to run next and pin `prompt`.
+    expect(await clipboardWriteConsent(), 'the granted consent outlived this file').toBe('prompt');
   });
 
   it('is talking to the browser’s own clipboard — no own property, `write` is [native code]', () => {
