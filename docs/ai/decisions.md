@@ -1,6 +1,70 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-10 · M11 §8-1(b) FIX — INLINE SOURCE-RECOVERY via a `data-*` attribute, not a hidden DOM
+  node (fix spike, NOT a numbered tasks.md task — discharges the 8.1-R "fix-before-close" ruling
+  immediately above). §8-1(b) is now FULLY DISCHARGED — 8.2-R (`/retro`)/8.3-R (records reconcile) can
+  proceed.**
+  **TWO MECHANISMS DIAGNOSED, BOTH MEASURED AGAINST REAL BROWSER BEHAVIOUR BEFORE PICKING ONE.**
+  Mechanism 1 — a `data-math-source` attribute set directly via `Element.setAttribute` on the already-
+  mounted `<code class="peekover-math-inline">` element, inside `markMathInlineRendered`, BEFORE it
+  replaces the element's children. Diagnosed: `sanitizeMath`'s `ALLOW_DATA_ATTR: false` (`sanitize.ts`)
+  is IRRELEVANT — that config gates the RENDERED FORMULA STRING Temml produces (what becomes the
+  `<math>` fragment replacing the element's children), never the container's own attributes, which are
+  set the identical way `markMathInlineFailed` already sets `title`/`data-math-failed` on the same
+  element (existing, already-shipped precedent). No sanitizer profile is touched or widened —
+  `sanitize.ts` has a ZERO-LINE diff in this fix. Measured directly (real Chromium + Firefox): a value
+  carrying a literal newline AND a backslash round-trips `setAttribute`/`getAttribute` byte-identical,
+  and survives an `outerHTML`-serialize-then-reparse round trip identically too.
+  Mechanism 2 — a visually-hidden source node beside the `<math>` tree, preserving §8-1(b)'s ORIGINAL
+  "ordinary text-selection" mechanism. Diagnosed with a real `Range`/`Selection`/Ctrl+C round trip, both
+  engines: selecting a whole SENTENCE around an inline formula pollutes the copied prose with the hidden
+  source mid-word (`"Before text \r\nx\r\n$x+y$ after text."` Chromium / `"Before text x$x+y$ after
+  text."` Firefox) — a regression to the single most common text-copy action, for any document
+  containing inline math. Adding `user-select:none` to the hidden node closes that hole (both engines
+  correctly exclude it from a whole-sentence copy) but ALSO removes it from a copy that selects ONLY the
+  `<code>` element itself — the one selection §8-1(b)'s own mechanism depends on, measured the same
+  session. There is no CSS-only middle ground: browser text selection is RANGE-based, not node-scoped,
+  so "selectable in isolation, excluded from a wider selection" is not an available state.
+  **PICKED: mechanism 1**, on the measured trade-off above. It costs nothing in the sanitizer, adds no
+  visible/selectable DOM (no prose-copy pollution, no accessibility double-announce risk), and needs no
+  new per-formula inline chrome (row 11 — still negative, re-confirmed). What it needs is a way to READ
+  the attribute, since inline has no per-formula control group of its own (D-7-R) and row 11 forbids
+  adding one — routed through a NEW document-level "Copy formulas as LaTeX" action
+  (`copyAllMathAsLatex`/`serializedMathSourceDocument`/`allMathSourcesIn`, `mathView.ts`), parallel to
+  6.2-R's own "Copy formulas as MathML" action, the SAME gate-3-ruled panel/menu-row placement
+  (`decisions.md`'s M11 GATE 3 FINDING 2) — a SEVENTH export-panel row, wired live from day one, never a
+  toolbar button or keyboard shortcut, never wired into `lastExportFormat` (identical scope decision to
+  `copy-math-mathml`'s own, for the identical reason).
+  **WHAT DID NOT CHANGE.** Block math's existing per-figure copy-as-LaTeX button is untouched
+  (`copyMathAsLatex`/`retainedMathSource` unmodified) — the new document-level action reuses it for
+  block formulas and adds only the inline half. D-7-R's mutate-in-place persistence property (the
+  `<code>` element itself is never removed/wrapped/replaced) is unchanged — the new attribute is set on
+  the SAME element, before the same `replaceChildren` call. Row 11's "no per-formula inline control
+  group" negative is unchanged — no button, no chrome, appears next to any inline formula. Text-
+  selection of a SETTLED inline formula still copies the rendered glyph, never the source — this is now
+  the PERMANENT, BY-DESIGN shape (the source is recovered a different way), not a residual defect;
+  `mathActions.browser.test.ts`'s own pre-existing tests for that shape are reworded to state this,
+  assertions unchanged.
+  **RED-FIRST.** A real ablation (commenting out the one `setAttribute` line in
+  `markMathInlineRendered`) was run and reverted: the new recovery-guard tests in
+  `mathActions.browser.test.ts` went RED on both engines, `expected '' to be 'x + \$5'` — the exact
+  "no mechanism, no recovery" signature the 6.2-R gap named. Reverted before this commit.
+  **VERIFY.** Full unit (1145/1145, two pre-existing concurrency-sensitive wall-clock flakes —
+  `pipeline.perf.test.ts`/`golden.test.ts` — confirmed via isolated rerun, the same standing carried
+  item, unrelated to this diff's files) and full browser (164 files, 1663/1663 passed + 15 skipped, up
+  from 1651 — the 6 new tests × 2 engines, GREEN IN ONE PASS, repeated twice) suites green; `pnpm lint`
+  EXIT=0. `git diff tests/golden/output/` EMPTY; `mount.ts` untouched; `sanitize.ts` untouched (ZERO-line
+  diff, confirms mechanism 1's own "no sanitizer widening" claim). Fresh both-engine rebuild:
+  content-script **340,492 B UNMOVED, md5-identical** to the standing floor (`bcdcf231…` Cr /
+  `49e218a1…` Fx); `.output` **5,197,425 B Cr / 5,197,541 B Fx**, **+1,021 B both engines** over the
+  post-radical-fix figure (5,196,404 / 5,196,520) — the new panel row + attribute-retention glue landing
+  on the already-loaded app-page graph, no new lazy chunk; headroom vs the 5 MiB ceiling **~44.4/44.3
+  KiB** (was ~45.4/45.3 KiB). Manifest **654 / 770 B**, `permissions: []` — unmoved.
+  **REVISIT WHEN:** never, absent a NEW inline-source-recovery requirement (e.g. a per-formula inline
+  affordance row 11 would then have to un-forbid) — mechanism 1's own trade-off (document-level
+  aggregate, not per-formula) is the settled shape for as long as row 11's own ruling stands.
+
 - **2026-09-10 · M11 8.1-R / 1.2-R — THE HUMAN FIDELITY WALK RESOLVES THE DEFERRED FORK: **PROCEED**. M11
   SHIPS MATH RENDERING. The 2026-09-07 conditional-proceed deviation is CLEARED; every group 2-R–8-R commit
   that proceeded "under the open 1.2-R fork" is now retroactively on the PROCEED path.** The sealed 1.2-R

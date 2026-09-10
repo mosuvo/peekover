@@ -1,6 +1,9 @@
 // mathView — D-15's structure reused for block/fence math (D-8-R): the same three states, the
 // same sibling-<figure>-hides-the-<pre> mechanism `diagramView.ts` established. Builds no markup
 // from a formula's LaTeX source and imports no engine: it is the shape `mathEnhancer.ts` mutates.
+// (Imports ONE pure string constant from `mathEngine.ts` below, §8-1(b)'s own fix — that module's
+// `temml` import is a dynamic one gated inside a function, never evaluated by this static import,
+// so nothing here changes what graph either module is reachable from, D-3-R's own invariant.)
 //
 // ── 6.1-R: THE PER-FORMULA CONTROL GROUP (D-6-R, §8-1) ────────────────────────────────────────
 //
@@ -71,6 +74,51 @@
 // directly than block's own text-only marker does; that inconsistency between the two engines'
 // failure UI is a real one, not resolved here (out of this task's Files scope) — routed to 6.1-R/
 // 8.1-R's own carried-item list, per 4.3-R's own flag (`tasks.md`, 4.3-R RESULT).
+//
+// ── §8-1(b) FIX — INLINE SOURCE-RECOVERY (D-7-R, ruled fix-before-close at 8.1-R) ────────────────
+//
+// 6.2-R measured the gate-2 ruling's own claim FALSE for the common case: once `markMathInlineRendered`
+// replaces a `<code class="peekover-math-inline">` element's children with the rendered `<math>` tree,
+// the literal `$…$` source is gone — text-selection of the element then copies the rendered GLYPH
+// string, never the source (this file's own header above still describes the PRE-fix shape; see
+// `mathActions.browser.test.ts`'s own header for the full measured account).
+//
+// TWO candidate mechanisms were diagnosed against real engine behaviour before picking one:
+//
+//   1. A `data-*` ATTRIBUTE on the `<code>` element, set via `Element.setAttribute` — the mechanism
+//      below, `MATH_INLINE_SOURCE_ATTR`. Diagnosed: `sanitizeMath`'s `ALLOW_DATA_ATTR: false`
+//      (`sanitize.ts`) is IRRELEVANT here — that config gates the RENDERED FORMULA STRING Temml
+//      produces (what becomes the `<math>` fragment `replaceChildren`s the element's CHILDREN), never
+//      the `<code>` CONTAINER's own attributes, which this fix sets directly on an already-mounted
+//      DOM node the same way `markMathInlineFailed` already sets `title`/`MATH_INLINE_FAILED_ATTR` on
+//      it — no sanitizer profile is touched or widened. Measured directly (a scratch real-browser
+//      probe, both engines): a value containing a literal newline AND a backslash
+//      (`retainedMathInlineSource`'s own worst-case shape) round-trips `setAttribute`/`getAttribute`
+//      byte-identical, and survives an `outerHTML`-serialize-then-reparse round trip identically too.
+//   2. A VISUALLY-HIDDEN SOURCE NODE beside the `<math>` tree, so ordinary text-selection of the
+//      `<code>` element keeps recovering the source (preserving §8-1(b)'s ORIGINAL mechanism).
+//      Diagnosed, both engines, with a real `Range`/`Selection`/Ctrl+C round trip: selecting a whole
+//      SENTENCE around an inline formula pollutes the copied prose with the hidden source mid-word
+//      (`"Before text \r\nx\r\n$x+y$ after text."` Chromium / `"Before text x$x+y$ after text."`
+//      Firefox) — a regression to the single most common text-copy action, for any document
+//      containing inline math. Adding `user-select:none` to the hidden node closes THAT hole (both
+//      engines correctly exclude it from a whole-sentence copy) but, measured immediately after,
+//      ALSO removes it from a copy that selects ONLY the `<code>` element itself — the one selection
+//      §8-1(b)'s own mechanism depends on. There is no CSS-only middle ground: browser text selection
+//      is RANGE-based, not node-scoped, so "selectable in isolation, excluded from a wider selection"
+//      is not an available state. Mechanism 2 REJECTED on this measured, unresolvable trade-off.
+//
+// PICKED: mechanism 1. It costs nothing in the sanitizer, adds no visible/selectable DOM (no prose-
+// copy or double-announce risk), and needs no new per-formula inline chrome (row 11, still negative).
+// What it DOES need: a way to READ the attribute, since inline has no per-formula control group to
+// put a copy affordance in (D-7-R) and row 11 forbids adding one — routed through a NEW document-
+// level "copy all formulas as LaTeX" action below, parallel to 6.2-R's own "copy all formulas as
+// MathML" (`allMathRootsIn`/`serializedMathMlDocument`/`copyAllMathAsMathml`), the exact shape the
+// diagnosis above names as the clean fit. Lives beside that action in `exportControls.ts` — a
+// document-level action is app-page chrome, not a per-figure control (this file's own 6.2-R header,
+// restated).
+
+import { MATH_INLINE_SELECTOR } from './mathEngine';
 
 /** The state attribute both halves of the pair carry. Distinct from `data-diagram` (D-8-R). */
 export const MATH_STATE_ATTR = 'data-math';
@@ -85,6 +133,15 @@ export const MATH_ERROR_CLASS = 'peekover-math-error';
 /** The in-place annotation attribute inline math's own failure state carries (D-7-R). Named by
  *  `plan.md`'s D-7-R text exactly — never a class, since nothing new is inserted for it to style. */
 export const MATH_INLINE_FAILED_ATTR = 'data-math-failed';
+
+/** §8-1(b) FIX — the inline-only source-retention attribute {@link markMathInlineRendered} sets
+ *  directly on the `<code>` element BEFORE replacing its children, so a rendered inline formula's
+ *  LaTeX source survives past the instant its "AT REST" text content stops being it. Set via
+ *  `Element.setAttribute` on an already-mounted node — never through `sanitizeMath` (which only
+ *  ever sees the RENDERED formula string, never this container's own attributes) — the identical
+ *  posture {@link MATH_INLINE_FAILED_ATTR} already established on this same element. See this
+ *  file's own §8-1(b) FIX header for the two-mechanism diagnosis that picked this one. */
+export const MATH_INLINE_SOURCE_ATTR = 'data-math-source';
 
 /** The three states a math marker can be in — identical in shape to `DiagramState`. */
 export type MathState = 'pending' | 'rendered' | 'failed';
@@ -168,6 +225,18 @@ export function markMathFailed(pre: Element, figure: HTMLElement, reason: string
 }
 
 /**
+ * Read an inline marker's bare LaTeX source. DUPLICATES `mathEnhancer.ts`'s own
+ * `mathInlineSourceOf` peeling rule exactly (content-shape only, never origin metadata) rather than
+ * importing it — this file's own header states why (a `mathView` <-> `mathEnhancer` import cycle).
+ * Must be called BEFORE {@link markMathInlineRendered} replaces `code`'s children — `code.textContent`
+ * is only still the literal `$…$` source at that instant (D-7-R's own "AT REST" property).
+ */
+function retainedMathInlineSource(code: Element): string {
+  const raw = code.textContent ?? '';
+  return raw.length >= 2 && raw.startsWith('$') && raw.endsWith('$') ? raw.slice(1, -1) : raw;
+}
+
+/**
  * D-7-R's flip, for one rendered inline formula: replace the `<code class="peekover-math-inline">`
  * element's OWN children with the sanitized `<math>` fragment. The element itself is never removed,
  * never wrapped, never replaced — this is the persistence property `mathInline.browser.test.ts`
@@ -176,8 +245,15 @@ export function markMathFailed(pre: Element, figure: HTMLElement, reason: string
  *
  * No aria-label is set: §3.5 row 17's own D requirement is that the accessible name comes from the
  * `<math>` tree itself post-render, so nothing here should override it.
+ *
+ * ── §8-1(b) FIX ────────────────────────────────────────────────────────────────────────────────
+ *
+ * {@link MATH_INLINE_SOURCE_ATTR} is set FIRST, reading the source while it is still `code`'s own
+ * text content — the one instant this function has it — so it survives the `replaceChildren` call
+ * that follows. See this file's own §8-1(b) FIX header for the two-mechanism diagnosis.
  */
 export function markMathInlineRendered(code: Element, content: Node): void {
+  code.setAttribute(MATH_INLINE_SOURCE_ATTR, retainedMathInlineSource(code));
   code.replaceChildren(content);
   code.setAttribute(MATH_STATE_ATTR, 'rendered');
 }
@@ -373,6 +449,64 @@ export async function copyAllMathAsMathml(host: HTMLElement): Promise<void> {
   if (!shadow) throw new Error('this document has no rendered formulas');
   const mathml = serializedMathMlDocument(shadow);
   await writeMathText(host.ownerDocument, mathml);
+}
+
+// ── §8-1(b) FIX: THE DOCUMENT-LEVEL "COPY ALL FORMULAS AS LaTeX" ACTION ───────────────────────
+//
+// This file's own §8-1(b) FIX header names this action as the read side of the inline
+// source-recovery fix (mechanism 1, `MATH_INLINE_SOURCE_ATTR`): inline has no per-formula control
+// group to put a copy affordance in (D-7-R) and row 11 forbids adding one, so recovering an
+// inline formula's LaTeX source is routed through ONE document-level action, mirroring
+// `copyAllMathAsMathml` immediately above — block math keeps its own EXISTING per-figure
+// copy-as-LaTeX button (`copyMathAsLatex`, unaffected), this action just adds an aggregate reading
+// each RENDERED formula's retained source (block: its sibling `<pre>`, already exposed via
+// {@link retainedMathSource}; inline: the attribute this fix sets on `markMathInlineRendered`).
+
+/**
+ * Every rendered formula's retained LaTeX source, in document order — block/fence figures (their
+ * sibling `<pre>`) and inline markers ({@link MATH_INLINE_SOURCE_ATTR}) alike. ONE combined
+ * selector (mirrors {@link allMathRootsIn}'s own single-query shape) so block/inline interleaving
+ * in the document survives — two separate queries concatenated would group every block before every
+ * inline regardless of where each actually sits. Only `rendered` markers are included — a pending
+ * or failed marker has no settled source for this action to report (mirrors `allMathRootsIn`'s own
+ * "only what has actually rendered" scope).
+ */
+export function allMathSourcesIn(root: ParentNode): string[] {
+  const selector = [
+    `figure.${MATH_FIGURE_CLASS}[${MATH_STATE_ATTR}="rendered"]`,
+    `${MATH_INLINE_SELECTOR}[${MATH_STATE_ATTR}="rendered"]`,
+  ].join(', ');
+  return Array.from(root.querySelectorAll<HTMLElement>(selector), (el) =>
+    el.tagName === 'FIGURE'
+      ? retainedMathSource(sourcePreOf(el))
+      : (el.getAttribute(MATH_INLINE_SOURCE_ATTR) ?? ''),
+  );
+}
+
+/**
+ * Serialize every rendered formula's LaTeX source into ONE clipboard payload, one formula per
+ * BLANK-LINE-separated paragraph — a bare `\n` (mirrors {@link serializedMathMlDocument}'s own
+ * join) would be ambiguous for a genuinely multi-line block source (a formula's own retained text
+ * can itself carry interior newlines, unlike a single well-formed MathML root, which is always
+ * self-delimiting XML). Throws when the document has nothing rendered yet — never a false "Copied"
+ * (AGENTS.md #5), the same contract {@link serializedMathMlDocument} holds.
+ */
+export function serializedMathSourceDocument(root: ParentNode): string {
+  const sources = allMathSourcesIn(root);
+  if (sources.length === 0) throw new Error('this document has no rendered formulas');
+  return sources.join('\n\n');
+}
+
+/**
+ * Copy every rendered formula's LaTeX source in `host`'s shadow tree to the clipboard (§8-1(b)
+ * FIX) — mirrors {@link copyAllMathAsMathml}'s own shape exactly, one artifact type earlier in the
+ * render pipeline.
+ */
+export async function copyAllMathAsLatex(host: HTMLElement): Promise<void> {
+  const shadow = host.shadowRoot;
+  if (!shadow) throw new Error('this document has no rendered formulas');
+  const source = serializedMathSourceDocument(shadow);
+  await writeMathText(host.ownerDocument, source);
 }
 
 /** One action's strings — mirrors `DiagramActionCopy` exactly. Row 17's names carry BOTH the

@@ -66,6 +66,35 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★★★ M11 §8-1(b) FIX LANDED, 2026-09-10 — INLINE MATH'S LaTeX SOURCE IS NOW RECOVERABLE, VIA A
+DOCUMENT-LEVEL "COPY FORMULAS AS LaTeX" ACTION, NOT A CHANGE TO WHAT TEXT-SELECTION COPIES. THIS
+DISCHARGES THE 8.1-R "FIX-BEFORE-CLOSE" RULING — 8.2-R (`/retro`) AND 8.3-R (RECORDS RECONCILE) ARE
+NOW UNBLOCKED.** Two mechanisms were diagnosed against real Chromium + Firefox behaviour before
+picking one: a `data-math-source` attribute set via `Element.setAttribute` on the `<code>` element
+BEFORE `markMathInlineRendered` replaces its children (PICKED — costs nothing in the sanitizer,
+since `sanitizeMath`'s `ALLOW_DATA_ATTR: false` gates the RENDERED FORMULA STRING, never the
+container's own attributes; `sanitize.ts` has a ZERO-line diff in this fix); a visually-hidden
+source node beside the `<math>` tree (REJECTED, measured — it pollutes ordinary prose copy with the
+hidden LaTeX mid-sentence on both engines, and adding `user-select:none` to close that hole ALSO
+removes it from the one selection §8-1(b)'s own original mechanism depended on — no CSS-only middle
+ground exists, browser selection is range-based, not node-scoped). The read side is a NEW,
+SEVENTH export-panel row, "Copy formulas as LaTeX" (`copyAllMathAsLatex`, `mathView.ts`), parallel
+to 6.2-R's own "Copy formulas as MathML" row, the same gate-3-ruled panel placement, never wired
+into `lastExportFormat`. Block math's existing per-figure copy-as-LaTeX button, D-7-R's
+mutate-in-place persistence, and row 11's "no per-formula inline chrome" negative are all unchanged.
+Red-first proven (a real ablation of the one new `setAttribute` line went red on both engines,
+reverted before commit). Full unit (1145/1145, two pre-existing unrelated concurrency-sensitive
+wall-clock flakes cleared on isolated rerun — the standing carried item) and full browser (164
+files, 1663 passed + 15 skipped, up from 1651, green in one pass, repeated twice) suites green;
+`pnpm lint` EXIT=0; golden EMPTY; `sanitize.ts`/`mount.ts` untouched. Fresh both-engine rebuild:
+content-script **340,492 B UNMOVED, md5-identical**; `.output` **5,197,425 B Cr / 5,197,541 B Fx**,
+**+1,021 B both engines** over the post-radical-fix figure — headroom vs the 5 MiB ceiling
+**~44.4/44.3 KiB** (was ~45.4/45.3 KiB). Manifest **654 / 770 B**, `permissions: []` — unmoved. No
+`tasks.md` box ticked (a fix spike discharging 8.1-R's own ruling, not a numbered task — the same
+"fix spike, not a task" shape the radical-render fix below used). Full trace: `decisions.md`'s
+2026-09-10 "M11 §8-1(b) FIX" entry. **NEXT: 8.2-R (`/retro`), then 8.3-R (records reconcile) close
+the milestone.** Prior entry, kept for context:
+
 **★★★ M11 1.2-R PROCEED RULED, 2026-09-10 — THE HUMAN FIDELITY WALK RESOLVES THE DEFERRED FORK. M11 SHIPS
 MATH RENDERING.** The 8.1-R milestone-close walk (`harness/math-fidelity/walk-corpus.md`, both engines, the
 real packed extension) cleared REVISIT-RULING 2's readable-on-both bar over all eight fidelity classes plus

@@ -29,6 +29,15 @@
 // rejects with no clipboard write when the open document has no rendered formula — never a false
 // "Copied" (AGENTS.md #5) — surfaced through the SAME `reportCopyOutcome` shape the three other
 // copy rows already use, no new outcome vocabulary.
+//
+// ── §8-1(b) FIX adds a SEVENTH row: "Copy formulas as LaTeX" ─────────────────────────────────
+//
+// The 8.1-R milestone-close walk RULED fix-before-close (`decisions.md`, 2026-09-10): a
+// successfully-rendered inline formula had no way to recover its LaTeX source at all (6.2-R's own
+// measured gap). `mathView.ts` gained a `MATH_INLINE_SOURCE_ATTR` retention mechanism (see that
+// file's own §8-1(b) FIX header for the two-mechanism diagnosis) and the aggregate read side,
+// `copyAllMathAsLatex` — this row is that action's SAME panel/menu-row home, the identical
+// gate-3-ruled placement `copy-math-mathml` already uses, wired live from day one the same way.
 
 export interface ExportViewOptions {
   /** Trigger the real HTML file-download export (task 3.1's `exportHtml`) — wired here since no
@@ -62,19 +71,32 @@ export interface ExportViewOptions {
    *  caller reports its outcome through the same `.then(onCopied, onFailed)` -> `reportCopyOutcome`
    *  path. Rejects (never resolves falsely) when the document has no rendered formula yet. */
   onCopyMathMathml(): void;
+  /** Trigger the document-level copy-all-formulas-as-LaTeX action (§8-1(b) FIX) — the sole home
+   *  for recovering an inline formula's LaTeX source, since inline has no per-formula control
+   *  group of its own (D-7-R) and row 11 forbids adding one. Sync signature matching the other
+   *  copy rows' own shape — the async collect+write happens INSIDE `copyAllMathAsLatex`, and the
+   *  caller reports its outcome through the same `.then(onCopied, onFailed)` -> `reportCopyOutcome`
+   *  path. Rejects (never resolves falsely) when the document has no rendered formula yet. */
+  onCopyMathLatex(): void;
   /** Dismiss the panel. Called by the close button AND by the trap's own Escape handler — one
    *  close path, not two (appShell owns what "closed" means: emptying the slot + the focus
    *  restore, per Ruling 2). */
   onClose(): void;
 }
 
-/** The 4 rows whose action can produce a "Copied"/"Copy failed" completion state (task 9.1,
+/** The rows whose action can produce a "Copied"/"Copy failed" completion state (task 9.1,
  *  human-ruled — `decisions.md`'s M10 9.1 entry — extended to `'copy-math-mathml'` at M11 task
- *  6.2-R, the identical shape). HTML export and PDF are deliberately excluded: each already has
- *  its own native browser signal for SUCCESS (the download shelf; the print dialog), so a Peekover
- *  "Exported!" would be redundant with it — the same "still justified / not redundant" discipline
- *  that dropped ZIP export earlier this milestone. */
-export type CopyRowKey = 'copy-html' | 'copy-plain-text' | 'copy-rich-text' | 'copy-math-mathml';
+ *  6.2-R and to `'copy-math-latex'` at the §8-1(b) FIX, the identical shape both times). HTML
+ *  export and PDF are deliberately excluded: each already has its own native browser signal for
+ *  SUCCESS (the download shelf; the print dialog), so a Peekover "Exported!" would be redundant
+ *  with it — the same "still justified / not redundant" discipline that dropped ZIP export earlier
+ *  this milestone. */
+export type CopyRowKey =
+  | 'copy-html'
+  | 'copy-plain-text'
+  | 'copy-rich-text'
+  | 'copy-math-mathml'
+  | 'copy-math-latex';
 
 export interface ExportViewController {
   /** The panel root — the caller slots this into the shell. */
@@ -278,6 +300,14 @@ export function createExportView(doc: Document, opts: ExportViewOptions): Export
       subtext: 'Every rendered formula in this document, as MathML',
       actionLabel: 'Copy formulas as MathML',
       onClick: opts.onCopyMathMathml,
+    },
+    {
+      key: 'copy-math-latex',
+      glyph: '∫', // ∫
+      title: 'Copy formulas as LaTeX',
+      subtext: 'Every rendered formula in this document, as LaTeX source',
+      actionLabel: 'Copy formulas as LaTeX',
+      onClick: opts.onCopyMathLatex,
     },
   ];
   for (const spec of rows) element.append(buildRow(doc, spec));

@@ -265,6 +265,9 @@ async function openExportPanel(container: HTMLElement, toggle: HTMLButtonElement
 
 const mathMlRowIn = (panel: HTMLElement): HTMLButtonElement =>
   panel.querySelector<HTMLButtonElement>('[data-export="copy-math-mathml"]')!;
+/** §8-1(b) FIX's own row. */
+const mathLatexRowIn = (panel: HTMLElement): HTMLButtonElement =>
+  panel.querySelector<HTMLButtonElement>('[data-export="copy-math-latex"]')!;
 const exportStatusIn = (panel: HTMLElement): HTMLElement =>
   panel.querySelector<HTMLElement>(`.${EXPORT_STATUS_CLASS}`)!;
 
@@ -578,17 +581,25 @@ describe('6.1-R · inline math is untouched by this task — no control group an
   });
 });
 
-// ══ 6.2-R · §8-1(b) INLINE COPY-AS-LATEX — VERIFIED, AND FOUND FALSE FOR A RENDERED FORMULA ═══
+// ══ 6.2-R · §8-1(b) INLINE COPY-AS-LATEX BY TEXT-SELECTION — TWO STATES, ONE GENUINE NON-CASE ═══
 //
-// See this file's own header for the full technical account. Three real states, all measured
-// directly rather than assumed: a SETTLED (successfully rendered) formula — the ruling's own claim
-// falsified; a FAILED formula — the claim genuinely holds, forever; the content-script surface —
-// the claim genuinely holds, forever (D-3-R, `enhanceMath` never runs there). No new per-formula
-// inline chrome is added anywhere in this diff — row 11's own negative (5.1-R, re-confirmed by
-// 6.1-R immediately above) is unaffected by this section and is not re-proven here.
+// See this file's own header for the full technical account of 6.2-R's own measurement. Text-
+// selection of a SETTLED (successfully rendered) formula copies the rendered GLYPH string, never
+// the source — 6.2-R found this FALSE against the gate-2 ruling's own "select-and-copy the retained
+// source" claim, and it stays true post-§8-1(b)-FIX: `MATH_INLINE_SOURCE_ATTR` (`mathView.ts`) is
+// an invisible DATA ATTRIBUTE, never a selectable node, so it changes NOTHING about what a
+// `Range`/Ctrl+C selection of the `<code>` element itself copies (mechanism 1's own point — see
+// `mathView.ts`'s own §8-1(b) FIX header for why mechanism 2, a visible/selectable hidden node,
+// was rejected). This is no longer a residual DEFECT for the settled case — it is now the
+// EXPECTED, permanent shape: the settled case recovers its source through the document-level
+// "copy formulas as LaTeX" action instead (§8-1(b) FIX — proven further below), never through
+// selecting the formula itself. A FAILED formula and the content-script surface still recover
+// their source by plain selection, unaffected by any of this — proven unchanged below. No new
+// per-formula inline chrome is added anywhere in this diff — row 11's own negative (5.1-R,
+// re-confirmed by 6.1-R immediately above) is unaffected by this section and is not re-proven here.
 
-describe('6.2-R · §8-1(b) — a SETTLED formula: text-selection copies the rendered glyph, NOT the source', () => {
-  it('★ THE DEFECT, DEMONSTRATED: an escaped-`\\$` fixture, once rendered, no longer yields its source on copy', async () => {
+describe('6.2-R · §8-1(b) — a SETTLED formula: text-selection copies the rendered glyph, NOT the source (still true, by design — see the FIX below)', () => {
+  it('an escaped-`\\$` fixture, once rendered, still yields the rendered glyph on plain text-selection, never the source', async () => {
     const { shadow } = await appPageReader(INLINE_ESCAPED_DOLLAR_DOC);
     await settleMath(shadow, 1);
     const code = inlineCodeIn(shadow);
@@ -607,7 +618,7 @@ describe('6.2-R · §8-1(b) — a SETTLED formula: text-selection copies the ren
     expect(copied, 'the rendered glyph string instead').toBe('x+$5');
   });
 
-  it('a macro fixture ($\\alpha$) copies the rendered glyph too — the temml patch does not change this defect', async () => {
+  it('a macro fixture ($\\alpha$) copies the rendered glyph too — unaffected by the temml patch or the §8-1(b) FIX', async () => {
     const { shadow } = await appPageReader(INLINE_MACRO_DOC);
     await settleMath(shadow, 1);
     const code = inlineCodeIn(shadow);
@@ -744,6 +755,138 @@ describe('6.2-R · the document-level MathML action — collects block AND inlin
 
     expect(row.getAttribute(EXPORT_ROW_STATE_ATTR)).toBe('failed');
     expect(status.textContent).toContain('could not be copied');
+  });
+});
+
+// ══ §8-1(b) FIX · THE DOCUMENT-LEVEL LaTeX ACTION — THE RED-FIRST INLINE SOURCE-RECOVERY GUARD ═
+//
+// This is the test 6.2-R could NOT write — the gap was real then (no mechanism existed to recover
+// a settled inline formula's source by ANY means). `mathView.ts` gained `MATH_INLINE_SOURCE_ATTR`
+// (set on `markMathInlineRendered`, mechanism 1 of that file's own two-mechanism diagnosis) and
+// `copyAllMathAsLatex`/`serializedMathSourceDocument`/`allMathSourcesIn` (the document-level read
+// side, mirroring 6.2-R's own MathML action exactly). Lives in the SAME export panel —
+// `appShell.ts`'s `runCopyMathLatex` + `exportControls.ts`'s new `copy-math-latex` row, the
+// identical gate-3-ruled placement (`decisions.md`'s M11 GATE 3 FINDING 2) `copy-math-mathml`
+// already uses. The row's own generic shape (real button, accessible name, keyboard reachability)
+// is proven for ALL SEVEN rows by `exportPanel.browser.test.ts`'s own rows-6+7 suite (updated this
+// task to expect 7) — not re-proven here; what IS proven here is this row's own LIVE BEHAVIOUR.
+//
+// ── ★ RED-FIRST, GENUINELY RUN ────────────────────────────────────────────────────────────────
+//
+// A real ablation (commenting out `markMathInlineRendered`'s own
+// `code.setAttribute(MATH_INLINE_SOURCE_ATTR, ...)` line in `mathView.ts`, rebuilding nothing —
+// this suite runs against source, not `.output`) was run by hand while drafting the first test
+// below: it read RED, `expected '' to be 'x + \\$5\n'` — `allMathSourcesIn`'s own
+// `el.getAttribute(MATH_INLINE_SOURCE_ATTR) ?? ''` fallback returning the empty string for every
+// inline marker, the exact "no mechanism, no recovery" shape 6.2-R's own gap named. Reverted
+// before this commit, per AGENTS.md's ablation-not-narration rule.
+
+describe('§8-1(b) FIX · a SETTLED inline formula recovers its exact LaTeX source via the document-level action', () => {
+  it('★ THE FIX, PROVEN: an escaped-`\\$` inline fixture recovers its byte-identical source, never the glyph', async () => {
+    const { container, toggle, shadow } = await mountWithMath(INLINE_ESCAPED_DOLLAR_DOC);
+    await settleMath(shadow, 1);
+    const code = inlineCodeIn(shadow);
+    expect(code.getAttribute(MATH_STATE_ATTR), 'firing control: genuinely settled').toBe('rendered');
+    const panel = await openExportPanel(container, toggle);
+
+    await ensureClipboardWritable();
+    await userEvent.click(mathLatexRowIn(panel));
+    await waitFor(() => exportStatusIn(panel).textContent || null);
+
+    const copied = crlfToLf(await navigator.clipboard.readText());
+    expect(copied, 'the exact retained source, byte-identical').toBe(INLINE_ESCAPED_DOLLAR_SOURCE);
+    expect(copied, 'never the rendered glyph string').not.toBe('x+$5');
+  });
+
+  it('a macro fixture ($\\alpha$) recovers its own source too, backslash intact', async () => {
+    const { container, toggle, shadow } = await mountWithMath(INLINE_MACRO_DOC);
+    await settleMath(shadow, 1);
+    const panel = await openExportPanel(container, toggle);
+
+    await ensureClipboardWritable();
+    await userEvent.click(mathLatexRowIn(panel));
+    await waitFor(() => exportStatusIn(panel).textContent || null);
+
+    expect(crlfToLf(await navigator.clipboard.readText())).toBe(INLINE_MACRO_SOURCE);
+  });
+
+  it('a document with one block and one inline formula recovers BOTH sources, blank-line-separated', async () => {
+    const { container, toggle, shadow } = await mountWithMath(
+      '$$x^2 + y^2$$\n\nInline $z^2$ formula.\n',
+    );
+    await settleMath(shadow, 2);
+    const panel = await openExportPanel(container, toggle);
+
+    await ensureClipboardWritable();
+    await userEvent.click(mathLatexRowIn(panel));
+    await waitFor(() => exportStatusIn(panel).textContent || null);
+
+    const payload = crlfToLf(await navigator.clipboard.readText());
+    // The block source's OWN trailing newline (dollar-block origin, this file's own header) plus
+    // the `\n\n` separator itself produces three consecutive newlines at the boundary — trimming
+    // each part is the honest way to check "two formulas, boundary hygiene present", without
+    // asserting the exact newline COUNT at that boundary (not this test's own claim).
+    const parts = payload.split('\n\n').map((p) => p.trim());
+    expect(parts, `unexpected payload shape: ${JSON.stringify(payload)}`).toHaveLength(2);
+    expect(parts.some((p) => p.includes('x^2') && p.includes('y^2')), 'the block formula').toBe(true);
+    expect(parts.some((p) => p === 'z^2'), 'the inline formula, byte-identical once trimmed').toBe(
+      true,
+    );
+  });
+
+  it('the row is a real button whose accessible name carries the action, and the live region confirms', async () => {
+    const { container, toggle, shadow } = await mountWithMath(INLINE_MACRO_DOC);
+    await settleMath(shadow, 1);
+    const panel = await openExportPanel(container, toggle);
+    const row = mathLatexRowIn(panel);
+
+    expect(row.tagName).toBe('BUTTON');
+    expect(row.getAttribute('aria-label')).toBe('Copy formulas as LaTeX');
+    const status = exportStatusIn(panel);
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.hidden).toBe(true);
+
+    await ensureClipboardWritable();
+    await userEvent.click(row);
+    await waitFor(() => status.textContent || null);
+
+    expect(row.getAttribute('aria-label')).toBe(
+      'Copy formulas as LaTeX — copied. Activate to copy again.',
+    );
+    expect(row.getAttribute(EXPORT_ROW_STATE_ATTR)).toBe('done');
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe('Copy formulas as LaTeX copied.');
+  });
+
+  it('a document with NO rendered formula reports failure — never a false "Copied" (AGENTS.md #5)', async () => {
+    const { container, toggle } = await mountWithMath('# No math here\n\nJust prose.\n');
+    const panel = await openExportPanel(container, toggle);
+    const row = mathLatexRowIn(panel);
+    const status = exportStatusIn(panel);
+
+    await ensureClipboardWritable();
+    await userEvent.click(row);
+    await waitFor(() => status.textContent || null);
+
+    expect(row.getAttribute(EXPORT_ROW_STATE_ATTR)).toBe('failed');
+    expect(status.textContent).toContain('could not be copied');
+  });
+
+  it('a FAILED formula contributes nothing — only RENDERED formulas are collected', async () => {
+    const { container, toggle, shadow } = await mountWithMath(
+      `${INLINE_MALFORMED_DOC}\n$$x^2$$\n`,
+    );
+    await settleMath(shadow, 2);
+    const panel = await openExportPanel(container, toggle);
+
+    await ensureClipboardWritable();
+    await userEvent.click(mathLatexRowIn(panel));
+    await waitFor(() => exportStatusIn(panel).textContent || null);
+
+    const payload = crlfToLf(await navigator.clipboard.readText());
+    // Dollar-block origin carries its own trailing newline in the retained source (this file's own
+    // header, `ESCAPED_DOLLAR_SOURCE`'s shape) — the same rule applies here, not bare `'x^2'`.
+    expect(payload, 'only the one rendered formula, the failed one excluded').toBe('x^2\n');
   });
 });
 
