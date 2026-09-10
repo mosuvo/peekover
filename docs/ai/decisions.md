@@ -1,6 +1,45 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-10 · M11 RADICAL-RENDER DEFECT — FIXED at the font asset (fix spike, NOT a tasks.md task).
+  The 8.1-R walk found `\sqrt`/`\sqrt[n]{}` rendering with the radicand intact but no radical sign or
+  root index bracket, both engines. 8.1-R's own radical blocker is CLEARED (the PROCEED/CLOSE-M11
+  fork itself is still open — only a human re-walk resolves it).**
+  **DIAGNOSIS.** The kickoff's own prior — a D-5-R sanitizer allow-list gap — is CONFIRMED FALSE:
+  `msqrt`/`mroot` were already in `MATH_ALLOWED_TAGS`, 2.1-R's own `MATH_SURVEY_CORPUS` already
+  carried radical fixtures, and a real-Temml-through-real-`sanitizeMath()` trace showed the structure
+  surviving byte-for-byte. The actual mechanism: Temml's `<msqrt>`/`<mroot>` output carries no
+  character for the radical sign at all — the browser draws it purely from the font's OpenType
+  `MATH` table (`MathVariants`, keyed off U+221A). Task 1.1-R's font subset
+  (`assets/fonts/stix-two-math-subset.woff2`) derived its `--unicodes` set by scanning Temml's
+  RENDERED TEXT for codepoints used — a method structurally blind to a codepoint the renderer needs
+  but the DOM text never carries. U+221A was absent from both the subset's `cmap` and its
+  `MathVariants` coverage (confirmed directly with `fontTools`), despite 1.1-R's own RESULT block
+  correctly reporting "no gap beyond U+FE0E" against the text-derived set it actually measured — the
+  set itself just never contained U+221A. Confirmed via geometry, real engine, before any fix:
+  Chromium's `msqrt`/`mroot` stayed correctly `display: block math` throughout but reserved exactly
+  0px of extra width for the radical sign.
+  **THE FIX.** Re-subsetted from the same source 1.1-R used (`google/fonts`
+  `ofl/stixtwomath/STIXTwoMath-Regular.ttf`, re-fetched, byte-identical to 1.1-R's own recorded
+  1,517,976 B), same `pyftsubset` flags, original 318-codepoint set (read back off the shipped
+  subset's own `cmap`, diffed glyph-for-glyph — zero regression) plus U+221A. 86,224 B → 86,608 B
+  (+384 B). `MathVariants.VertGlyphCoverage` now covers the radical glyph; `numGlyphs` 1115→1125 (the
+  size-variant assembly parts 1.1-R's own glyph-closure mechanism pulls in automatically, just never
+  given U+221A as a seed before).
+  **REGRESSION GUARD.** `tests/browser/mathBlock.browser.test.ts`, geometry-based (extra width beyond
+  the bare radicand — DOM-shape alone can't see this class of defect), all three 8.1-R walk fixtures,
+  red-first proven on Chromium (Firefox's pre-fix reading was not zero — it was already falling back
+  to a system math font per-glyph for the one missing character, via the `font-family: 'Peekover
+  Math', math;` stack's own generic fallback; the fix removes that inconsistency on both engines).
+  **VERIFY.** Full unit (1145/1145) and full browser (1651/1651, 15 skipped) suites green in one pass;
+  lint EXIT=0; golden unchanged; fresh both-engine rebuild — content-script 340,492 B UNMOVED,
+  manifest/permissions unchanged, `.output` headroom ~45.4/45.3 KiB (was ~45.8/45.6 KiB — the entire
+  movement is the +384 B font delta). Full trace: `docs/ai/progress.md`'s 2026-09-10 entry.
+  **REVISIT WHEN:** the font is ever re-subsetted for any other reason — the codepoint-discovery
+  method (scan rendered text) is still structurally blind to any FUTURE non-textual MathML-native
+  construct Temml might add that needs its own font glyph with no DOM-text representation; re-seed
+  from the shipped `cmap` (as this fix did), never re-derive the set from a text scan alone.
+
 - **2026-09-09 · M11 TEMML-BUNDLING DEFECT — FIXED via `pnpm patch` (fork-level spike, human-authorized,
   NOT a tasks.md task). The shipped `.output` now renders LaTeX macros through the real bundled chunk,
   both engines. 1.2-R's fidelity-walk blocker is UNBLOCKED.**

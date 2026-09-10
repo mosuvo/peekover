@@ -252,6 +252,67 @@ describe('regression guard — Temml bundling defect (decisions.md 2026-09-09, p
   });
 });
 
+describe('regression guard — radical glyph missing from the bundled font subset (M11 RADICAL-RENDER spike)', () => {
+  // The 8.1-R human fidelity walk found \sqrt/\sqrt[n]{} rendering with the radicand intact but NO
+  // radical sign or index bracket, on BOTH engines, despite a fully correct <msqrt>/<mroot> DOM tree
+  // surviving parse -> Temml -> sanitizeMath unmodified (proven separately: sanitizeMath's own D-5-R
+  // allow-list already listed msqrt/mroot, and 2.1-R's own MATH_SURVEY_CORPUS already carried three
+  // radical fixtures — the DOM-shape path was never broken). The real cause: the committed
+  // `assets/fonts/stix-two-math-subset.woff2` (task 1.1-R) derived its `--unicodes` set by scanning
+  // Temml's RENDERED TEXT for codepoints actually used — but Temml's own <msqrt>/<mroot> output
+  // carries NO character for the radical sign at all (verified: raw Temml MathML for `\sqrt{...}` is
+  // pure structure, no U+221A anywhere in it); the browser draws the surd purely from the font's own
+  // OpenType MATH table (`MathVariants`, keyed off U+221A), a codepoint no text-scan could ever find.
+  // U+221A was therefore silently absent from both the subset's `cmap` and its `MathVariants`
+  // vertical-glyph-construction coverage — confirmed directly against the shipped asset with
+  // `fontTools` before this fix, re-subsetted from the SAME `google/fonts` STIXTwoMath-Regular.ttf
+  // source task 1.1-R used, with U+221A added to the original 318-codepoint set (nothing else
+  // added or removed — diffed glyph-for-glyph against the pre-fix cmap).
+  //
+  // A DOM-shape assertion alone (`.querySelector('msqrt')`) would NOT catch this class of defect —
+  // the structure was never wrong. The instrument here is GEOMETRY: a browser that actually draws
+  // the radical sign reserves real horizontal space for it beyond the bare radicand/base, on both
+  // engines; a browser silently skipping an unavailable glyph reserves none (measured exactly `0`
+  // extra width pre-fix, both msqrt and mroot, in Chromium — this test's own red-first proof).
+  const settleOne = async (markdown: string): Promise<ShadowRoot> => {
+    const { shadow } = await appPageReader(markdown);
+    await settleMath(shadow, 1);
+    return shadow;
+  };
+
+  it('\\sqrt{x^2+y^2} — the radical sign reserves real width beyond its radicand', async () => {
+    const shadow = await settleOne('$$\\sqrt{x^2+y^2}$$\n');
+    const msqrt = shadow.querySelector<HTMLElement>(`${FIGURE_SELECTOR} msqrt`);
+    const mrow = shadow.querySelector<HTMLElement>(`${FIGURE_SELECTOR} msqrt > mrow`);
+    if (!msqrt || !mrow) throw new Error('expected a rendered msqrt > mrow');
+    const extraWidth = msqrt.getBoundingClientRect().width - mrow.getBoundingClientRect().width;
+    expect(extraWidth).toBeGreaterThan(3);
+  });
+
+  it('\\sqrt[3]{8} — the root reserves real width beyond its bare base digit', async () => {
+    const shadow = await settleOne('$$\\sqrt[3]{8}$$\n');
+    const mroot = shadow.querySelector<HTMLElement>(`${FIGURE_SELECTOR} mroot`);
+    const base = mroot?.firstElementChild as HTMLElement | null; // the radicand, `<mn>8</mn>`
+    if (!mroot || !base) throw new Error('expected a rendered mroot with a base child');
+    const extraWidth = mroot.getBoundingClientRect().width - base.getBoundingClientRect().width;
+    expect(extraWidth).toBeGreaterThan(3);
+  });
+
+  it('\\sqrt{1+\\sqrt{1+\\sqrt{1+x}}} — EVERY nested radical draws its own sign, not just the outer one', async () => {
+    const shadow = await settleOne('$$\\sqrt{1+\\sqrt{1+\\sqrt{1+x}}}$$\n');
+    const roots = [...shadow.querySelectorAll<HTMLElement>(`${FIGURE_SELECTOR} msqrt`)];
+    expect(roots).toHaveLength(3); // one per nesting level — the radicand-survives-wrapper-vanishes
+    // defect would still leave three <msqrt> elements in the DOM; only the geometry below tells them
+    // apart from three silently-unsigned radicands.
+    for (const msqrt of roots) {
+      const mrow = msqrt.querySelector<HTMLElement>(':scope > mrow');
+      if (!mrow) throw new Error('expected each msqrt to wrap an mrow');
+      const extraWidth = msqrt.getBoundingClientRect().width - mrow.getBoundingClientRect().width;
+      expect(extraWidth).toBeGreaterThan(3);
+    }
+  });
+});
+
 /** Convert a `#rrggbb` (or already-`rgb(...)`) token read off a CSS custom property into the
  *  `rgb(r, g, b)` string `getComputedStyle(...).color` returns, so the two can be compared
  *  directly without a colour-parsing dependency. */

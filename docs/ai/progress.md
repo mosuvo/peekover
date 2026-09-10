@@ -66,6 +66,76 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★★ M11 RADICAL-RENDER DEFECT SPIKE — FIXED AT THE ROOT, 2026-09-10 — NOT THE SANITIZER, THE
+BUNDLED FONT.** The 8.1-R walk found `\sqrt{x^2+y^2}` rendering as `x²+y²` and `\sqrt[3]{8}` as
+`8` with an orphan `3` — the radicand surviving, the radical WRAPPER (and root index bracket)
+vanishing, on both engines. The kickoff's own strong prior — a D-5-R sanitizer allow-list gap,
+`sanitizeMath` unwrapping `<msqrt>`/`<mroot>` the way DOMPurify drops any disallowed element — is
+**CONFIRMED FALSE**, concretely: `msqrt`/`mroot` were already in `MATH_ALLOWED_TAGS`, 2.1-R's own
+`MATH_SURVEY_CORPUS` (`sanitize.test.ts`) already carries three radical fixtures ("square root",
+"nth root", "nested radical"), and a direct trace of real installed Temml's raw MathML through the
+real `sanitizeMath()` for all three walk fixtures showed the structure surviving byte-for-byte —
+`<msqrt>`/`<mroot>` present before AND after sanitization, jsdom-checked. The DOM-shape path was
+never broken.
+**THE REAL MECHANISM — task 1.1-R's font subset is missing the radical glyph.** Temml's own
+`<msqrt>`/`<mroot>` MathML output carries NO character for the radical sign anywhere in it (raw
+output for `\sqrt[3]{8}` is exactly `<mroot><mn>8</mn><mn>3</mn></mroot>` — pure structure, zero
+text). The browser draws the surd itself, purely from the active font's OpenType `MATH` table
+(`MathVariants`, keyed off U+221A's glyph ID for the vertical-construction assembly). Task 1.1-R
+derived its `--unicodes` subsetting set by scanning **rendered TEXT** for codepoints Temml actually
+emits — a method that can never see a codepoint the renderer needs but the DOM text never carries.
+U+221A was silently absent from both `assets/fonts/stix-two-math-subset.woff2`'s `cmap` (confirmed
+directly with `fontTools`, pre-fix: `0x221A in cmap` → `False`) and its `MathVariants` stretchy
+coverage — despite 1.1-R's own RESULT block claiming "coverage gap unchanged at exactly U+FE0E"
+(that claim is accurate for what it measured — 318 cmap entries, U+FE0E the only gap in the
+313-codepoint *text-derived* set — but the set itself never contained U+221A to begin with, because
+no formula's rendered text ever does). **Real-engine geometry confirmed the mechanism before any
+fix**: Chromium's `msqrt`/`mroot` computed `display` stayed correctly `block math` throughout (never
+demoted to ordinary flow), yet reserved **exactly 0px** of extra width beyond the bare radicand for
+the radical sign (both `\sqrt{x^2+y^2}` and `\sqrt[3]{8}`) — a browser genuinely drawing the surd
+from a present glyph, versus one silently skipping an absent one, is a geometry question, not a
+DOM-shape one; this is why the existing test suite (DOM-shape-only) never caught it.
+**THE FIX.** Re-subsetted from the SAME source 1.1-R used (`google/fonts`
+`ofl/stixtwomath/STIXTwoMath-Regular.ttf`, re-fetched, byte-identical size 1,517,976 B to 1.1-R's own
+recorded figure) with the ORIGINAL 318-codepoint set (read back off the shipped subset's own `cmap`,
+diffed glyph-for-glyph to confirm zero regression) plus U+221A added — nothing else added or
+removed. `pyftsubset` flags unchanged from 1.1-R's own (`--layout-features='*' --no-hinting
+--flavor=woff2`). Result: **86,608 B** (was 86,224 B, **+384 B**), `MathVariants.VertGlyphCoverage`
+now includes the radical glyph, `numGlyphs` 1115→1125 (the base glyph + its size-variant assembly
+parts pyftsubset's own closure pulled in automatically, 1.1-R's own already-proven mechanism, just
+never given U+221A as a seed). Post-fix, the same geometry probe reads real extra width on Chromium
+(0px → 20.6px for `\sqrt{x^2+y^2}`, 9.5px → 30.1px total `mroot` width for `\sqrt[3]{8}`) — the
+radical sign now genuinely draws. Firefox's pre-fix reading was NOT zero (12.6px) — Firefox was
+already falling back to a system math font per-glyph for the one character our subset lacked (the
+`font-family: 'Peekover Math', math;` stack's own generic `math` fallback), which is why the walk's
+"both engines" description and this task's own geometry probe diverge slightly for Firefox
+specifically; the fix removes the inconsistency either way, both engines now drawing from OUR own
+committed asset rather than an uncontrolled system fallback.
+**REGRESSION GUARD** — `tests/browser/mathBlock.browser.test.ts`, a new `describe` block, all three
+8.1-R walk-corpus fixtures, geometry-based (extra width beyond the bare radicand/base — a DOM-shape
+assertion alone would not have caught this class of defect), red-first PROVEN: reverted to the
+original font, Chromium fails all 3 (`expected 0 to be greater than 3`, `expected 1.09375...`),
+Firefox still passes (the fallback masking above) — a real, reported asymmetry, not swept under a
+uniform "both engines red" claim. Re-applied, both engines green, 6/6.
+**VERIFY, SHIPPED BUILD, BOTH ENGINES.** Full `pnpm test` (unit): 66 files / 1145 tests green in one
+pass (an unrelated 3-test flake on the first run — `diagramEnhancer.test.ts` timeouts, nothing this
+task touches — cleared on an isolated rerun and on a second full-suite run, matching AGENTS.md's own
+harness-shared-state signature). Full `pnpm test:browser`: 164 files / 1651 passed, 15 skipped, green
+in one pass (rule-9 hardening held). `pnpm lint` EXIT=0. Golden: unchanged (11/11, pre-mount
+snapshot never touches a binary font asset). Fresh `rm -rf .output` rebuild, both engines:
+content-script **340,492 B UNMOVED both engines** (a font-asset-only change stays off that graph, as
+D-3-R requires); manifest 654/770 B, permissions `[]`, both unchanged; `.output` totals Cr
+5,196,404 B / Fx 5,196,520 B (the pre-existing 116 B gap, unchanged) — **headroom vs. the 5 MiB
+ceiling ~45.4/45.3 KiB** (was ~45.8/45.6 KiB; the +384 B font delta is the entire movement, as
+expected for an asset-only fix touching no code path).
+**THIS CLEARS THE RADICAL BLOCKER, NOT THE FORK.** 8.1-R's own PROCEED/CLOSE-M11 human ruling is
+untouched by this spike — radicals now render correctly, so 8.1-R is RE-WALKABLE, but the human
+walk itself is still the only thing that can resolve the fork. §8-1(b) (inline source-recovery) is
+untouched, out of this spike's scope fence. No `tasks.md` box ticked (a fix spike, not a numbered
+task). Full trace, byte decomposition, and the red-first evidence: `decisions.md`'s 2026-09-10
+entry. NEXT: 8.1-R, the human milestone-close walk, re-run now that this blocker is cleared. Prior
+entry, kept for context:
+
 **8.1-R walk-corpus staged, 2026-09-10** — `harness/math-fidelity/walk-corpus.md` (a human walk
 aid, not a test) is committed: the eight fidelity classes + theme-flip note + the §9-2
 content-script cousin section, ready for the human milestone-close walk. Nothing else changed
