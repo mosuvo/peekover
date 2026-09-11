@@ -44,6 +44,10 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - Tests colocated: `foo.ts` + `foo.test.ts`. Pipeline stages get golden-file tests in `tests/golden/`.
 - Before finalizing a dependency, API, or config choice, verify it against current official docs — training knowledge of fast-moving tools (WXT, DOMPurify, browser/store policy) is often stale.
 - Write control/NULL characters as \uXXXX escapes, never literal bytes — especially inside regex character classes.
+- A specialized or math font must be subset by its required-glyph-set — including OpenType MATH-table
+  constructions (radicals, delimiter extenders, operator size-variants) — never by scanning rendered text for
+  codepoints; text-scanning is blind to glyphs the browser draws from font tables rather than emitting as
+  characters (M11's font-subset MATH-table blind spot, `docs/ai/retro.md` 2026-09-11).
 - When the mechanism that made a value PROVISIONAL becomes real, remove the provisional constant rather than
   updating its comment in place — if a single source of truth already carries the resolved value, a second
   copy is drift risk, not documentation.

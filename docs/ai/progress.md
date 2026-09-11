@@ -66,6 +66,29 @@ in this same commit, following the M6/M7/M8/M9 archive-pass precedent.)*
 
 ## Now (start here)
 
+**★★★ M11 8.2-R (`/retro`) BANKED, 2026-09-11 — THE MILESTONE RETROSPECTIVE, RUN AS THE INTERVIEW RITUAL
+PER WORKFLOW.md §7.5, NOT SOLO SYNTHESIS. NEXT: 8.3-R (RECORDS RECONCILE) CLOSES THE MILESTONE.** All
+three standard questions plus four milestone-specific experiential ones (the 8.2-R kickoff's own addition)
+were answered by the human and banked in `docs/ai/retro.md`'s 2026-09-11 entry — none is pending. Headline:
+this milestone hit the SAME failure class three times (the temml bundling lone-surrogate defect, the
+§8-1(b) inline-copy-source gap, the font-subset MATH-table blind spot on radicals) — each a correct-looking
+method with green tests, blind to a specific untested case, each caught only when a human looked at real
+rendered output. The one standing-rule action (Q2, the font-subset blind spot) is PLACED, not just
+drafted — a new `AGENTS.md` Style & structure bullet: subset a specialized/math font by its
+required-glyph-set (including OpenType MATH-table constructions), never by scanning rendered text for
+codepoints. Two further actions are DRAFTED for the human to place per C2 (not placed this session): running
+the informal fidelity eyeball as soon as a new rendering surface first renders rather than deferring it to a
+formal fork's own close (experiential Q1); and preferring shorter, more frequent human check-ins over long
+autonomous bisection runs as a milestone approaches its human-gated close (experiential Q4(b)), plus a
+hygiene note on confirming the tree/background processes are clean before each close-adjacent task
+(experiential Q4(c)). The reopen-from-a-busted-gate decision (three fresh REVISIT gates) and the
+fidelity-spike-first Group 1-R gate shape were both confirmed as right calls that earned their keep
+(experiential Q2/Q3) — this retro entry is now the banked precedent for the next busted-gate milestone. No
+ceremony was named as waste (Q3). Corrections = 0; defects caught by human gate/fix-spike = 3 (the three
+above); sessions used ≈ 24 (estimate). No `src/` touched. Full trace: `docs/ai/retro.md`'s 2026-09-11 entry.
+`tasks.md`'s 8.2-R box ticked. **NEXT: 8.3-R (records reconcile) closes the milestone.** Prior entry, kept
+for context:
+
 **★★★ M11 §8-1(b) FIX LANDED, 2026-09-10 — INLINE MATH'S LaTeX SOURCE IS NOW RECOVERABLE, VIA A
 DOCUMENT-LEVEL "COPY FORMULAS AS LaTeX" ACTION, NOT A CHANGE TO WHAT TEXT-SELECTION COPIES. THIS
 DISCHARGES THE 8.1-R "FIX-BEFORE-CLOSE" RULING — 8.2-R (`/retro`) AND 8.3-R (RECORDS RECONCILE) ARE

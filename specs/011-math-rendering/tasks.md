@@ -1836,7 +1836,7 @@ own measured render-cost profile; a contradicted lean produces a routed finding,
       other axes. Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [§7-9; REVISIT-RULING
       2 (full-scale); D-13 (if not yet settled)]
 
-- [ ] **8.2-R `/retro` — the milestone retrospective, including this milestone's own three-gate reopen.**
+- [x] **8.2-R `/retro` — the milestone retrospective, including this milestone's own three-gate reopen.**
       Per the retro skill's own ritual, ALSO asking whether the fidelity-spike-first Group 1-R gate (a
       genuinely new structural shape versus the original single byte gate) held up under real use, and
       whether the spec→plan→tasks reopen sequence itself (three revisit gates, one milestone) surfaced

@@ -1,4 +1,110 @@
 # Retro log — Peekover
+- **2026-09-11 · M11 retro (spec 011 — math rendering: Temml/MathML inline `$…$` and block `$$…$$`/fence
+  math, KaTeX's original approach REOPENED and replaced via a three-gate REVISIT, copy-as-LaTeX/MathML;
+  `/retro` interview, per WORKFLOW.md §7.5, task 8.2-R).
+  ★ M11 IS STILL NOT CLOSED — 8.3-R (records reconcile) remains before the milestone is done.** Per §7.5,
+  this retro ran as an INTERVIEW, not solo synthesis: the human answered all three standard questions plus
+  four milestone-specific experiential ones the 8.2-R kickoff added (whether the deferred 1.2-R fidelity-walk
+  fork was worth deferring, whether the reopen-from-a-busted-gate decision was right, whether the
+  fidelity-spike-first Group 1-R gate held up, and process). All seven answers are banked verbatim-in-substance
+  below; none is invented or left pending.
+  **THE HEADLINE, CITED NOT RE-DERIVED: THREE INSTANCES OF ONE FAILURE CLASS.** `decisions.md`'s 2026-09-10
+  "M11 8.1-R / 1.2-R" entry names it directly: the temml bundling lone-surrogate defect (`decisions.md`
+  2026-09-09, macros silently didn't render, fixed via `pnpm patch`), the §8-1(b) inline-copy-source gap
+  (`decisions.md` 2026-09-10, a rendered inline formula's LaTeX source was unrecoverable), and the font-subset
+  MATH-table blind spot (`decisions.md` 2026-09-10 "M11 RADICAL-RENDER DEFECT", radicals rendered as bare
+  radicands). **Each was a correct-looking method with GREEN TESTS, blind to a specific untested case, and
+  each surfaced only when a human looked at real rendered output** — the bundling defect at macro-fixture
+  drafting, the copy gap at 6.2-R's own proof, the radical defect at the 8.1-R walk (twice — the walk found it,
+  the re-walk confirmed the fix). No new action beyond what's below: the reusable lesson (green tests over a
+  method's own corpus prove it against what it was tested on, not against what it's blind to) is the milestone's
+  central finding, and it is why AGENTS.md's existing "a milestone-close walk or human gate has no agent
+  substitute" rule (placed at the M8 seam) is load-bearing rather than ceremonial — confirmed by the human's own
+  process answer below (experiential Q4(a)).
+  1. **Q1 — where did the agent fail or need correction? Human's answer: "Agent was good" — no correction
+     needed beyond the three observable defects above, each caught by process (the human gate / a fix-spike
+     diagnosis), not by a mid-task correction to the agent's approach.** → **Action: none.**
+  2. **Q2 — which rule/context was missing or wrong? Human's answer: the font-subset blind spot, specifically.**
+     Task 1.1-R subset the bundled math font (`stix-two-math-subset.woff2`) by scanning Temml's rendered TEXT
+     for codepoints — structurally blind to U+221A, which the browser draws from the font's OpenType MATH
+     table (`MathVariants` stretchy-construction coverage) rather than emitting as a text character. → **ACTION
+     — a NEW standing rule, PLACED (not just drafted) in `AGENTS.md`'s Style & structure section, 2026-09-11 (the
+     M11 retro edit):** *"A specialized or math font must be subset by its required-glyph-set — including
+     OpenType MATH-table constructions (radicals, delimiter extenders, operator size-variants) — never by
+     scanning rendered text for codepoints; text-scanning is blind to glyphs the browser draws from font tables
+     rather than emitting as characters."* Findable by the next milestone that bundles a font, so it is not
+     rediscovered by walk the way M11 rediscovered it.
+  3. **Q3 — which ceremony was waste? Human's answer: "None — all of it earned its keep" (the three-gate
+     reopen, Golden-grows, the fix-spike shape, the deferred fidelity fork).** → **Action: none.**
+  4. **Experiential Q1 — the deferred 1.2-R fidelity-walk fork (six groups, 2-R–8-R, built under the open
+     fork before 8.1-R resolved it at close). Human's answer, verbatim in substance:** *"Deferring was
+     net-sound — the risk was bounded (the byte-forecast de-risked the byte axis, and nothing built-at-risk
+     actually had to revert), and the eventual radical fix was small. But it did delay catching the radical
+     defect by several tasks: the broken font subset landed at 1.1-R and wasn't seen until the close walk after
+     7.1-R. The reusable lesson is that the harness eyeball is cheap enough to run right after the font first
+     renders (4.2-R), not at close — doing so would have caught the radical defect earlier at essentially no
+     cost. Defer the formal fork if you want, but do the informal fidelity eyeball as soon as there's something
+     to look at."* → **Action (drafted, human to place/commit per C2) — a WORKFLOW.md candidate, not placed this
+     session:** *"A deferred formal fidelity/quality fork does not excuse deferring the informal eyeball — the
+     first cheap human glance at a new rendering surface's real output happens as soon as that surface first
+     renders, not at the fork's own close."*
+  5. **Experiential Q2 — the reopen decision itself (M11 reopened, via three fresh REVISIT gates, rather than
+     closing when the 1.1 byte hard gate busted; `decisions.md`'s 2026-09-06 "M11 GATE 1/2/3 — REVISIT"
+     entries). Human's answer, verbatim in substance:** *"Right call. It shipped math, which was the point, and
+     the three fresh REVISIT gates plus three fix-spikes all earned their keep — none was wasted overhead. The
+     reusable finding is that reopening a milestone from a busted hard gate, through fresh spec/plan/tasks
+     REVISIT gates, is a validated pattern, not a one-off scramble — the next busted-gate milestone has
+     precedent to follow rather than improvise."* → **Action: none — this retro entry itself is the banked
+     precedent** (per WORKFLOW.md §7.5's own instruction that a ritual task's kickoff should read "the target
+     log's own history," this entry is now that history for the next busted-gate milestone).
+  6. **Experiential Q3 — the fidelity-spike-first Group 1-R gate (`decisions.md`'s 2026-09-06 "M11 GATE 3 —
+     REVISIT" entry: a merged fidelity-AND-byte gate, replacing the original single byte-only gate shape).
+     Human's answer, verbatim in substance:** *"It held and earned its keep — it caught the byte bust (1.1
+     branch C, the whole reason the milestone reopened) and front-loaded the fidelity risk so the fork resolved
+     on measured evidence rather than vibes. The one wrinkle worth naming: it was really 'byte-spike-first,
+     fidelity-spike-deferred' — the byte half ran first as designed, but the fidelity half (1.2-R) slid to close
+     by choice (see experiential Q1). The structure is reusable, with the note that deferring half of a merged
+     gate re-opens the exact question the gate was built to close early."* → **Action: none — the wrinkle is
+     the naming this task's own kickoff asked for; a future merged gate should read this alongside experiential
+     Q1's drafted action.**
+  7. **Experiential Q4 — process. Human's answer, verbatim in substance, three parts:** **(a)** *"The human
+     gate caught what the tests missed — three times (the bundling defect, the copy-source gap, the radical
+     blind spot), each a green-tested method blind to an untested case, each surfaced only by a human looking
+     at real rendered output. Keeping 8.1-R a human walk with no agent substitute is what kept the milestone
+     from shipping broken radicals; it earned its existence."* — confirms the headline finding above and the
+     existing AGENTS.md "no agent substitute" rule; **action: none, rule already stands and held.** **(b)**
+     *"Agent runs on the close/measurement tasks got very long (6.1-R, 6.2-R, the rule-9 hardening each ran
+     multi-hour with heavy autonomous bisection) — the results were sound, but as we approached the
+     human-gated close the loop wanted more human check-ins on the seams, not fewer."* → **Action (drafted,
+     human to place/commit per C2):** *"As a milestone approaches its human-gated close, prefer shorter,
+     more frequent check-in sessions on close/measurement tasks over long autonomous bisection runs — the
+     seams near a human gate are exactly where a check-in is cheapest and most valuable."* **(c)** *"Background/
+     loop activity surfaced twice near close that wasn't driven by the active task (a stray shell, a stray font
+     search) — benign both times, but the hygiene lesson is to confirm the tree is clean before each code task
+     at milestone-close, and to understand what's firing those processes."* → **Action (drafted, human to
+     place/commit per C2):** *"At milestone close, confirm the working tree and any background/loop processes
+     are clean and accounted for before starting each task — a stray shell or unrelated background search
+     carried between close-adjacent tasks is a hygiene defect even when benign."*
+  **Other observable findings, cited not re-derived, tied to the answers above.** The rule-9 (harness-shared-
+  state) rule placed at the M10→M11 seam (`AGENTS.md`, the M10 retro's own action) FIRED repeatedly and
+  correctly this milestone — 4.3-R's Resource Timing buffer, 5.1-R's button count, 6.2-R's watch-note, and a
+  dedicated rule-9 hardening pass (`decisions.md`/`tasks.md`'s own 8.1-b entry, "full browser suite green in ONE
+  pass, repeatably") — it held up under M11's heaviest browser-test load yet; no refinement requested (Q2/Q3).
+  "Golden grows" (3.1-R's read-only audit before the parse rule landed, then 3.2-R's own growth) is this
+  milestone's shape-difference from M10's "Golden EMPTY," and per Q3 ("all of it earned its keep") it is
+  confirmed as not having caused friction worth naming as its own finding. The fix-spike shape — three defects
+  (bundling, radical, §8-1(b)) fixed via out-of-sequence spike tasks rather than numbered `tasks.md` entries,
+  each banked as its own dated `decisions.md` entry with the pivot recorded — is the same discipline Q3 and
+  experiential Q2 both confirm earned its keep: no silent detours, no full re-gates, each spike is its own
+  citable record.
+  **Metrics:** corrections = **0** (Q1: "agent was good," no mid-task correction to the agent's approach) ·
+  distinct from corrections, **defects caught by human gate / fix-spike diagnosis = 3** (bundling, §8-1(b),
+  radical — each shipped past a first green test-suite run, per the headline finding, not classed as an
+  agent-execution first-try failure) · first-try verification pass = **MOSTLY YES**, with the three
+  above as the named, already-cited exceptions · sessions used **≈ 24** (an estimate: 3 original planning
+  gates + 3 REVISIT gates + 15 tasks across reopened groups 1-R–8-R including this retro + 3 out-of-sequence
+  fix spikes — bundling, radical, §8-1(b)). **All seven interview answers landed from the human this session —
+  none is marked pending.** 8.3-R (records reconcile) closes the milestone next.
 - **2026-09-06 · M10 retro (spec 010 — local exports: HTML/PDF export, copy as rich-text/HTML/plain
   text, export shortcut, print-optimized mode; `/retro` interview, fresh session, per WORKFLOW.md §7.5).
   ★ M10 IS STILL NOT CLOSED — 11.2's own checkbox is ticked by this entry, but a final 11.3 pass (repeating
