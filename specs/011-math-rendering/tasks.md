@@ -1845,7 +1845,7 @@ own measured render-cost profile; a contradicted lean produces a routed finding,
       Verify: the retro's own entry is banked, dated, cites this milestone's real (reopened) task numbers.
       Golden EMPTY · manifest green **654 / 770 B** · `permissions: []`. [WORKFLOW.md §7.5]
 
-- [ ] **8.3-R Records reconcile — `progress.md`, `decisions.md`'s D-N-R-landed audit, `spec-coverage.md`, the
+- [x] **8.3-R Records reconcile — `progress.md`, `decisions.md`'s D-N-R-landed audit, `spec-coverage.md`, the
       final byte ledger, INPUT B's full-lifecycle closing proof.** ★ **A NEW audit against the REOPENED
       ledger (D-1-R…D-13), not the original D-1…D-12 ledger** — each D-N-R's `decisions.md` entry checked
       against whether it actually landed with its own implementing commit, the same discipline M9's own 9.3
@@ -1863,6 +1863,27 @@ own measured render-cost profile; a contradicted lean produces a routed finding,
       milestone's own closing proof it never moved again after landing once. Golden's own final diff — EMPTY
       except 3.2-R's own reviewed hunk — confirmed once more against the committed fixture. [the D-N-R audit;
       M9 9.3's own gap, named; INPUT B closing proof]
+
+★ **RESULT — M11 CLOSED. EVERY D-N-R LANDS WITH A NAMED COMMIT (D-10/D-11 correctly zero, vacated); ONE
+DIVERGENCE NAMED (no per-D-value standalone `decisions.md` bullet, unlike the original M8-era convention —
+mitigated, not the M9-shaped total gap, since every landing is fully documented in each task's own commit
+message and this file's own RESULT blocks); F2 42%→68%; BYTE LEDGER CLOSED AT CONTENT-SCRIPT 340,492 B BOTH
+ENGINES, md5-IDENTICAL TO 3.2-R's OWN FLOOR.** Full trace, D-value-by-D-value commit table, byte
+decomposition, and every carried item's disposition: `decisions.md`'s 2026-09-11 "M11 CLOSED" entry;
+`progress.md` § Closed milestones' own M11 summary + archived narrative.
+**★ 8.1-R's OWN CHECKBOX/RESULT BLOCK ABOVE WAS LEFT UNTICKED, NAMED NOT SILENTLY FIXED.** Its work landed
+(the human fidelity walk, `harness/math-fidelity/walk-corpus.md` committed at `482f2af`, the PROCEED ruling
+banked in `decisions.md`'s 2026-09-10 "M11 8.1-R / 1.2-R" entry) but this task's own Files-list fence does
+not extend to ticking a DIFFERENT task's box — that is out of scope here, per AGENTS.md's own Files-list
+discipline, and is left for a future session's own call.
+**HONESTY OVER CELEBRATION, PER THIS TASK'S OWN GUARDRAIL.** The unit suite does NOT get an unqualified
+"all green" — `pipeline.perf.test.ts`/`golden.test.ts` are two confirmed-pre-existing, concurrency-sensitive
+wall-clock flakes (re-confirmed at this close, HEAD `6eff5dc`, no diff: red inside the full suite, green in
+isolation in <3s), deferred-post-M11, stated plainly in `decisions.md`. Every other carried item is
+dispositioned in `progress.md` § Carried items, each updated in place rather than silently dropped.
+Golden `git diff tests/golden/output/` EMPTY. `permissions: []`, no `web_accessible_resources`, no
+`contextMenus` — confirmed intact on a fresh both-engine rebuild. `pnpm lint` EXIT=0. codeDetect 14/14
+(n=28, unaffected — this task's own diff adds no scanned fence). **M11 IS CLOSED.**
 
 ---
 

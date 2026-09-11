@@ -1,6 +1,75 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-09-11 · M11 CLOSED — math rendering shipped (Temml/MathML inline `$…$`/block `$$…$$`/fence,
+  copy-as-LaTeX/MathML, both engines), task 8.3-R's records reconcile.**
+  **THE D-N-R-LANDED AUDIT (M9's own named gap, checked again, not repeated).** Every reopened D-value
+  lands with a named implementing commit: D-1-R (tokenizer, `a70a556` resolved → `abdbbf3` landed on
+  `parse.ts` for real) · D-2-R (engine module, `442a76f`) · D-3-R (call sites, `3afec7c`) · D-4-R
+  (config lockdown, `442a76f`, extended `546293d`) · D-5-R (sanitizer profile, `defb797`) · D-6-R (copy
+  mechanism, `2b920b1` block + `9ba3494` inline) · D-7-R (inline inversion, `abdbbf3` markers →
+  `6aa6964` full inversion → `63aedb4` fix-before-close) · D-8-R (block/fence reuse, `abdbbf3` +
+  `3afec7c`) · D-9-R (no-theme-re-render lean, measured `3afec7c`, confirmed by eye at the 8.1-R walk) ·
+  D-12-R (cache measurement, `13795f2`, no-cache lean CONFIRMED) · D-13 (font, chosen/subsetted
+  `a70a556`, wired for real `3afec7c`, corrected `b8f4a20`). D-10/D-11 confirmed VACATED with
+  **correctly zero** implementing commits (REVISIT-RULING 4 struck MathJax permanently). **Unlike M9's
+  gap, no D-value went undocumented** — every one is documented in full in its own task's commit
+  message AND `tasks.md`'s own detailed RESULT block. **One real divergence, named not smoothed over:**
+  no D-value received its OWN standalone `decisions.md` bullet the way the original M8-era per-D-value
+  convention intended (`plan.md` §0's pre-written-citation-text shape) — this file's own M11 entries are
+  gate-, fix-spike-, and human-walk-shaped, not per-D-value. The landing text lives in `tasks.md` and
+  git history instead. This is a lesser-degree recurrence of the M9 class of gap (a missing artifact in
+  THIS file), mitigated by the fact that the substance is fully recorded elsewhere, unlike M9's total
+  absence.
+  **★ 8.1-R'S OWN `tasks.md` CHECKBOX/RESULT BLOCK WAS NEVER COMPLETED, NAMED HERE.** The task's work
+  landed — the human fidelity walk ran, `harness/math-fidelity/walk-corpus.md` was committed
+  (`482f2af`), and the PROCEED ruling was banked (`decisions.md`'s 2026-09-10 "M11 8.1-R / 1.2-R"
+  entry, merging 8.1-R's own full-document-scale walk with 1.2-R's fork resolution) — but task 8.1-R's
+  own `[ ]`/RESULT slot in `tasks.md` was left exactly as drafted. 8.3-R's own Files-list fence does not
+  include `specs/011-math-rendering/tasks.md` beyond ticking 8.3-R's own box, so this is named here
+  rather than silently fixed by this task; a future session ticking it retroactively (or leaving it,
+  per the 007-checkbox-convention precedent that the pointer, not the box, is the done-ness signal) is
+  a call for whoever next touches that file.
+  **F2 RE-SCORED: 42% → 68%** (`spec-coverage.md`). Four rows ✗→✓ (the default-engine row, now Temml/
+  MathML not KaTeX — a ruled substitution; inline; block; fence), two ✗→~ (copy-as-LaTeX/MathML ship as
+  document-level panel actions, not right-click), MathJax stays ✗ **permanently by ruling**. Whole-spec
+  figure moves 34% → 36%.
+  **THE BYTE LEDGER, CLOSED — fresh build, both engines, HEAD `6eff5dc`.** Content-script **340,492 B**,
+  md5-identical to 3.2-R's own landed floor (`bcdcf231…` Cr / `49e218a1…` Fx) — the milestone's own
+  closing invariant, proven never to have moved again after landing once at 3.2-R. `.output`
+  **5,197,425 B Cr / 5,197,541 B Fx**, headroom **~44.4 KiB Cr / ~44.3 KiB Fx** against the 5 MiB bound.
+  `pnpm zip` **1.63 MB**, headroom comfortable. Manifest **654 / 770 B**, `permissions: []`, no
+  `web_accessible_resources`, no `contextMenus`. **The ~28.2 KiB URL-loaded-font lever (byte-forecast
+  spike, 2026-09-07) was TAKEN at 4.2-R, not left as a separate reserve** — `src/theme/mathFont.ts`
+  imports the subsetted WOFF2 without `?inline`, a real asset file, confirmed in `.output/*/assets/`;
+  the current headroom already reflects that recovery, so it is spent margin, not available-if-needed.
+  **CARRIED ITEMS, DISPOSITIONED HONESTLY (`progress.md` § Carried items, each updated in place):**
+  §8-1(b) inline source-recovery — ✅ RESOLVED (`63aedb4`). The 6.2-R harness-shared-state flake — ✅
+  RESOLVED. `runCopyMathMathml`/`runCopyMathLatex` not wired to `lastExportFormat` — STANDING, a
+  doubly-confirmed deliberate scope decision. The `@mdit/plugin-tex` content-script invariant
+  falsification — ✅ RESOLVED (priced by INPUT B's rewritten invariant, landed at 3.2-R, confirmed
+  unmoved since). The `@mdit/plugin-tex`/`markdown-it` peer-dependency mismatch — MITIGATED, not
+  eliminated (two independent zero-misclassification grammar audits, 1.1-R and 3.1-R; the version
+  itself was never bumped). Two post-M11 follow-ups (upstream the temml patch; the SBOM
+  patched-dependency blind spot) — STANDING, deferred-post-M11. **★ THE TWO UNIT-SUITE WALL-CLOCK
+  FLAKES (`pipeline.perf.test.ts`, `golden.test.ts`) ARE STILL STANDING, RE-CONFIRMED AT THIS CLOSE**
+  (full `pnpm test` at HEAD `6eff5dc`, no diff: same two tests red, both green in isolation in <3s) —
+  **the milestone's "suite green" claim carries this caveat explicitly; the BROWSER suite goes green in
+  ONE pass repeatably (rule-9 hardening), the UNIT suite does not, and this is not rounded into "all
+  green."** Two of the retro's three drafted process actions (the informal-eyeball timing rule; the
+  shorter-check-ins-plus-tree-hygiene-near-close rule) are DRAFTED, not placed — the human's own call
+  per C2. The font-subset MATH-table rule (the retro's third action) IS placed, `AGENTS.md` Style &
+  structure, 2026-09-11.
+  **THE REOPEN-FROM-A-BUSTED-GATE ARC IS VALIDATED, per the human's own 8.2-R retro answer:** a
+  suspended milestone, reopened via three fresh REVISIT gates (spec/plan/tasks) rather than closed
+  outright, shipped the feature the busted gate almost cost — "the next busted-gate milestone has
+  precedent to follow rather than improvise" (`retro.md` 2026-09-11).
+  **WHAT THIS ENTRY DOES:** closes M11. Moves § Now's/§ Up next's full M11 narrative to
+  `progress-archive.md`, verbatim. Does not edit `spec.md`/`plan.md`/`tasks.md`'s sealed bodies (beyond
+  8.3-R's own checkbox) and does not re-open any D-value or ruling.
+  **Revisit-when:** never for the closed facts above; the two drafted-not-placed retro actions and the
+  two post-M11 follow-ups each get their own future session per their own HOME notes in `progress.md`.
+
 - **2026-09-10 · M11 §8-1(b) FIX — INLINE SOURCE-RECOVERY via a `data-*` attribute, not a hidden DOM
   node (fix spike, NOT a numbered tasks.md task — discharges the 8.1-R "fix-before-close" ruling
   immediately above). §8-1(b) is now FULLY DISCHARGED — 8.2-R (`/retro`)/8.3-R (records reconcile) can

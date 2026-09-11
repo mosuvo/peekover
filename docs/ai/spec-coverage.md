@@ -46,6 +46,19 @@ M11 routing decision). **F5 moves 36% → 38%** (print-optimized mode ✗→✓)
 human walk) and 11.2 (the retro) have NOT yet run as of this audit** — this re-score reflects landed code
 only; a milestone-close walk finding, if any, is a matter for a future re-score, not this one.*
 
+***★ RE-AUDITED 2026-09-11 · HEAD `6eff5dc`+8.3-R** (M11 / spec 011 "math rendering" closed at task
+8.3-R, the records reconcile, per that task's own line — *"`spec-coverage.md`'s F2 re-scored"*).
+**Targeted re-verification of F2's seven math/formula rows ONLY**, against shipped code
+(`src/render/mathEngine.ts`, `mathEnhancer.ts`, `mathView.ts`, `parse.ts`'s tex-plugin wiring,
+`src/theme/mathFont.ts`, `src/app/exportControls.ts`'s copy-math rows) and its tests. **No other
+section was re-scored:** F1, F3–F12 and §6/§7 are the `174b94a` / `59dcb20` / `d470ab2` / `d7f424c` /
+`bdcb2ad` / `b9abd44` readings, unchanged. **F2 moves 42% → 68%** (four rows ✗→✓, two ✗→~, one —
+MathJax — stays ✗ permanently by ruling, not as a gap). **★ The engine that shipped is Temml/MathML,
+not the spec's own literally-named KaTeX** — M11 reopened via a human-reviewed three-gate REVISIT
+after KaTeX and MathJax both busted the byte/audit gate at task 1.1 (`decisions.md`'s 2026-09-06 GATE
+1/2/3 — REVISIT entries); the KaTeX row is credited for the CAPABILITY (a default math engine, both
+browsers) against a ruled fidelity bar, stated as a named substitution, never a silent one.*
+
 *Subject: `docs/product/spec.md` §5 (F1–F12), §6 (Security & Privacy), §7 (UI/UX).*
 *Method: source code is the answer, the spec is only the question. No spec item is credited
 because a plan, a task list or a pipeline comment anticipates it.*
@@ -54,27 +67,33 @@ because a plan, a task list or a pipeline comment anticipates it.*
 
 ## Summary
 
-**Phase 1 (§5 F1–F12) is ~30% shipped by weighted feature count** — 59.0 credit points across
-198 enumerated items. Including §6 and §7 the whole-spec figure is **~34%** (77.0 / 227). The
-2026-09-06 re-audit moved **F9 from 0% to 38%** and **F5 from 36% to 38%** — M10 shipped HTML
-export, PDF export, all three copy actions, the export shortcut, and F5's print-optimized mode
-(details in F9/F5 below). The
-2026-08-03 re-audit moved **F2 from 3% to 42%** — M7 shipped Mermaid rendering, the hash-keyed
-cache, theme sync, copy/download, the lightbox and progressive enhancement. The 2026-08-22
-re-audit moved **F3 from 0% to 78%** — M9 shipped Shiki highlighting, the code-theme picker
-(20 themes), the per-block toolbar (copy / line numbers / line highlighting / word wrap) and
-collapsible long blocks; two items score PARTIAL (a 6-language curated catalog, not 190+; a
-collapse/expand control rather than a per-block raw⇄rendered toggle) and one scores NOT
-(auto-detection is built and tested but deliberately unwired to any live document, 8.6's own
-AskUserQuestion resolution). **These two rows are the whole of the §5 and whole-spec movement**;
-no other section was re-scored (see the enumeration correction below for the +1 item, which
-predates and is unrelated to F3's move).
+**Phase 1 (§5 F1–F12) is ~32% shipped by weighted feature count** — 64.0 credit points across
+198 enumerated items. Including §6 and §7 the whole-spec figure is **~36%** (82.0 / 227). The
+2026-09-11 re-audit moved **F2 from 42% to 68%** — M11 shipped math rendering (Temml/MathML inline,
+block, fence; copy-as-LaTeX/MathML as document-level actions) on top of M7's already-shipped diagram
+half. The 2026-09-06 re-audit moved **F9 from 0% to 38%** and **F5 from 36% to 38%** — M10 shipped
+HTML export, PDF export, all three copy actions, the export shortcut, and F5's print-optimized mode
+(details in F9/F5 below). The 2026-08-22 re-audit moved **F3 from 0% to 78%** — M9 shipped Shiki
+highlighting, the code-theme picker (20 themes), the per-block toolbar (copy / line numbers / line
+highlighting / word wrap) and collapsible long blocks; two items score PARTIAL (a 6-language curated
+catalog, not 190+; a collapse/expand control rather than a per-block raw⇄rendered toggle) and one
+scores NOT (auto-detection is built and tested but deliberately unwired to any live document, 8.6's
+own AskUserQuestion resolution). **These three rows (F2, F9/F5, F3) are the whole of the §5 and
+whole-spec movement since M7's own close**; no other section was re-scored (see the enumeration
+correction below for the +1 item, which predates and is unrelated to F3's move).
 
-**F2 is 42%, not "done".** The row covers two halves and only one shipped: **every diagram item that
-M7 scoped is now ✓ or ~, and every math item is still ✗** — no `katex`, no MathJax, no `$…$`, no
-`$$…$$`, no code-fence math, no copy-as-LaTeX/MathML. Standalone `.mermaid` files, the additional
-engines, and dark-mode image adaptation are also still ✗, each deferred by name in `specs/007-mermaid-diagrams/spec.md` §6. Reading 42% as "diagrams and math are handled" is the
-one misreading this number invites; the honest sentence is **diagrams shipped, math did not.**
+**F2 is 68%, both halves now ship in substance.** M7 shipped the diagram half; M11 shipped the math
+half — **but as Temml/MathML, not the spec's own literally-named KaTeX**, a human-ruled substitution
+after both KaTeX and MathJax busted the byte/audit gate. Inline `$…$`, block `$$…$$`, code-fence math,
+and copy-as-LaTeX/MathML (via document-level panel actions, not the spec's literal "right-click"
+mechanism — `permissions: []` holds, no `contextMenus`) all ship, both engines. **Three rows remain ✗,
+none of them a math/formula gap anymore:** additional engines (Graphviz/Vega/PlantUML, a named post-v1
+stretch), standalone diagram-file rendering (a sealed 007 scope decision), and dark-mode image
+adaptation (routed to a future media/theming pass). The MathJax fallback toggle is ✗ **permanently, by
+ruling** (REVISIT-RULING 4 — it independently busted both the byte gate and `pnpm audit --prod`), not
+an open gap. Reading 68% as "F2 is done" is still the one misreading this number invites — three named
+deferrals remain — but "diagrams shipped, math did not" is no longer the honest sentence; both halves
+shipped, on the engine and mechanism a human ruling actually chose.
 
 **★ The persona-#1 figure is NOT re-derived by this pass and the 2026-07-27 reading of ~56% is now an
 undercount.** That figure counts 10 of 18 sub-items *"across folder browser, watch mode, diff view,
@@ -89,8 +108,11 @@ moved 0% → 78% at M9's close (2026-08-22)** — Shiki highlighting, ≥14 (20 
 themes, copy/line-numbers/line-highlighting/word-wrap and collapsible blocks all ship; what remains is
 a 6-language curated catalog rather than Shiki's 190+, and auto-detection built but not wired to a
 live document (F3 below has the full accounting). The Technical writer still has no editor and no
-export (F8 4.8%, F9 0%), and the Student still has no math — **F2's 42% buys the Student nothing**,
-since all five math items and both formula-copy items remain ✗.
+export (F8 4.8%, F9 0%). The Student's math picture is stale here — **F2 moved to 68% at M11's close
+(2026-09-11)**, after this paragraph's own reading (5 of 7 math/formula items ✗) was written; math
+now renders, both engines. This paragraph's persona-#1/#5 figures are NOT re-derived by that move —
+see the settled 56%/68%-boundary discussion below, which this F2 change is an input to, not a
+re-walk of.
 
 **★ SETTLED 2026-08-03 — PERSONA #1 IS 56%, ON THE GAP LENS. A HUMAN RULING, NOT A RE-DERIVATION.**
 The paragraph above says the ~56% *"needs its own derivation"*. It has since had one, and the
@@ -122,13 +144,16 @@ this paragraph** — that number has not been walked and would smuggle a re-deri
 note. What is safe to say: the persona-#1 figure is **more stale after M8 than before it**, and the next
 session that needs it should re-walk it rather than trust either 56% or an arithmetic guess.
 
-**What this ruling does NOT do in this file.** It does not re-score F2's rows. Uncertain-items §5
-already records the consequence its own arithmetic names — items 4 and 5 moving together would drop
-F2 from 42% to roughly 24% (seven ✓ → ~) — and that re-score is **CARRIED, not applied here**: it is
-a row-level re-audit and this entry records a persona figure. **F2's 42% and its seven ✓ marks stand
-in this document until that re-audit runs.** The *cost* of closing the gap — what rendering on the
-content-script surface would take and which decisions it reopens — is a separate M8-scoping input and
-is deliberately **not** asserted here; 007 §3.2 and 006 §3.2 are its primary sources.
+**What this ruling did NOT do in this file, and what M11's own F2 re-score above still does not
+do.** It does not re-score F2's rows on the app-page-only question. Uncertain-items §5 already
+records the consequence its own arithmetic names — **updated for M11's own eleven ✓ rows (the
+original seven diagram rows plus the four math rows M11 added, all app-page-only by the same §9-2/
+RULING-2 precedent): items 4 and 5 moving together would drop F2 from 68% to roughly 39% (eleven ✓ →
+~, i.e. 7.5/19 credit)** — and that re-score is **CARRIED, not applied here**: it is a row-level
+re-audit and this entry records a persona figure. **F2's 68% and its eleven ✓ marks stand in this
+document until that re-audit runs.** The *cost* of closing the gap — what rendering on the
+content-script surface would take and which decisions it reopens — is a separate scoping input and is
+deliberately **not** asserted here; 007 §3.2, 006 §3.2 and 011 §9-2/RULING 2 are its primary sources.
 
 **Weighting method.** Each spec bullet is decomposed into its sub-items and each sub-item counted
 once, unweighted (a bullet listing seven extended-syntax features counts seven). Credit is
@@ -153,7 +178,7 @@ the bottom with the question a human walk would settle.
 | Section | Items | ✓ | ~ | ✗ | ? | Credit | Coverage |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | F1 Rendering engine | 24 | 6 | 3 | 15 | 0 | 7.5 | **31%** |
-| F2 Math & diagrams *(re-audited 2026-08-03)* | 19 | 7 | 2 | 10 | 0 | 8.0 | **42%** |
+| F2 Math & diagrams *(re-audited 2026-09-11)* | 19 | 11 | 4 | 4 | 0 | 13.0 | **68%** |
 | F3 Code blocks *(re-audited 2026-08-22)* | 9 | 6 | 2 | 1 | 0 | 7.0 | **78%** |
 | F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
 | F5 Navigation & reading UX *(re-audited 2026-09-06, print mode)* | 39 | 14 | 2 | 23 | 0 | 15.0 | **38%** |
@@ -164,16 +189,17 @@ the bottom with the question a human walk would settle.
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **49** | **20** | **129** | **0** | **59.0** | **30%** |
+| **§5 total** | **198** | **53** | **22** | **123** | **0** | **64.0** | **32%** |
 | §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **62** | **30** | **135** | **0** | **77.0** | **34%** |
+| **Whole spec** | **227** | **66** | **32** | **129** | **0** | **82.0** | **36%** |
 
 *Every row except F2, F3, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
 HEAD `174b94a`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
 below) without moving that item off `~`, since two of its three named sub-surfaces are still absent. F5
 and F6 moved at M8 (2026-08-13) — three rows in each, six total, all cited below in their own sections.
-F3 moved at M9 (2026-08-22) — six rows ✗→✓, two ✗→~, cited in full at F3 below.*
+F3 moved at M9 (2026-08-22) — six rows ✗→✓, two ✗→~, cited in full at F3 below. **F2 moved again at M11
+(2026-09-11)** — four rows ✗→✓, two ✗→~, cited in full at F2 above.*
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -211,25 +237,35 @@ sections in the document, and they are the two that no competitor can copy in an
 
 ## F2. Math & Diagrams
 
-***Re-audited 2026-08-03 at HEAD `59dcb20`, against shipped code.** 7 rows moved ✗ → ✓ and one ✗ → ~;
-**ten rows did not move**, and all seven math/formula rows are among them. Every changed mark carries
-a module or test pointer below — a task in `specs/007-mermaid-diagrams/tasks.md` was not accepted as
-evidence that anything shipped. **Surface: all seven ✓ rows are the APP-PAGE reader only** — spec 007
+***Re-audited 2026-08-03 at HEAD `59dcb20`** (diagrams, against shipped code — see that pass's own note
+below) **and 2026-09-11 at HEAD `6eff5dc`+8.3-R** (math, against M11's shipped code, spec 011). The
+2026-08-03 pass: 7 rows moved ✗ → ✓ and one ✗ → ~; ten rows did not move, and all seven math/formula
+rows were among them. **Surface: all seven diagram ✓ rows are the APP-PAGE reader only** — spec 007
 §3.2 decided the content-script `file://` / raw-host reader renders no diagrams, and that fence is
 asserted structurally by `src/render/diagramImportFence.test.ts`. They are scored ✓ rather than ~ on
 this document's own precedent (F6's `Diff view — inline` and `Watch mode` are ✓ with the same
 app-page-only note); **the surface question itself is raised for a human at uncertain-items §5, not
-priced into the score.***
+priced into the score.** **The 2026-09-11 pass: four of the seven math/formula rows move ✗ → ✓, two
+move ✗ → ~, one (MathJax) stays ✗ PERMANENTLY BY RULING.** Every changed mark carries a module or test
+pointer below — a task in `specs/011-math-rendering/tasks.md` was not accepted as evidence that
+anything shipped. **★ The engine that shipped is Temml/MathML, NOT KaTeX** — M11's own task 1.1 busted
+the byte headroom for both KaTeX and MathJax, and a human-reviewed three-gate REVISIT
+(`decisions.md`'s 2026-09-06 GATE 1/2/3 — REVISIT entries) reopened the milestone on the MathML/Temml
+direction instead; the "KaTeX (default)" row below is credited for shipping THE CAPABILITY the spec
+item names (a default math-rendering engine), stated as a ruled substitution, not a silent one. **Math
+rows are ALSO app-page-only** (§9-2/RULING 2, confirmed structurally by
+`src/render/mathImportFence.test.ts`), scored ✓ on the identical precedent as the diagram rows above —
+not priced into the score, same as the diagram surface question.***
 
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
-| KaTeX (default) | ✅ | ✗ | Still no `katex` dependency (`package.json` — five runtime deps, none math); 0 grep hits in `src/`, `entrypoints/` | **Unmoved.** Explicitly out of 007 (`specs/007-mermaid-diagrams/spec.md` §6, *"KaTeX / MathJax and all math rendering"*). |
-| MathJax fallback toggle | ✅ | ✗ | No dependency; 0 hits | **Unmoved.** As above. |
-| Inline `$…$` | ✅ | ✗ | No math plugin in `parse.ts` | **Unmoved.** |
-| Block `$$…$$` | ✅ | ✗ | As above | **Unmoved.** |
-| Code-fence math | ✅ | ✗ | As above | **Unmoved.** A `mermaid` fence is enhanced; 007 §6 forbids drifting into fence handling generally, and no other fence language is touched. |
-| Right-click → copy as LaTeX | ⭐ | ✗ | No context-menu code anywhere; `permissions: []` (`wxt.config.ts:18`) excludes `contextMenus` | **Unmoved.** M7's own copy/download affordances deliberately avoided a context menu for exactly this reason (007 §3.11) — the permission event was declined, not spent. |
-| Right-click → copy as MathML | ⭐ | ✗ | As above | **Unmoved.** |
+| KaTeX (default) | ✅ | **✓** *(2026-09-11, ruled substitution)* | `src/theme/mathFont.ts`/`src/render/mathEngine.ts` — `temml@0.13.5` is the shipped engine, NOT KaTeX (`decisions.md`'s 2026-09-06 M11 GATE 1 — REVISIT entry: KaTeX busted `.output` headroom by ~3.8× at task 1.1, MathJax independently failed `pnpm audit --prod`; a human-reviewed three-gate REVISIT reopened M11 on MathML/Temml instead); `tests/browser/mathBlock.browser.test.ts`, `mathEnhancer.browser.test.ts` | **A named substitution, not a silent one.** Credited for shipping the CAPABILITY (default math-rendering engine, both engines) the item names — the spec's own literal "KaTeX" naming is superseded by a ruled fidelity bar (readable-on-both-engines, explicitly not KaTeX-HTML equivalence, REVISIT-RULING 2). |
+| MathJax fallback toggle | ✅ | ✗ | `@mathjax/src` installed then REMOVED (task 1.1-R, `decisions.md`'s 2026-09-06 REVISIT-RULING 4); 0 hits in shipped `src/` | **Unmoved, but now PERMANENTLY struck by ruling, not merely absent.** MathJax busted `.output` headroom alone (1,339,852 B) AND independently failed `pnpm audit --prod` (two HIGH advisories via `mj-context-menu`'s `brace-expansion` sub-tree) — REVISIT-RULING 4 vacates the contingency (D-10/D-11) permanently, not contingently. |
+| Inline `$…$` | ✅ | **✓** *(2026-09-11)* | `src/render/parse.ts` (`@mdit/plugin-tex`'s `math_inline_dollar` rule → `<code class="peekover-math-inline">`); `src/render/mathEnhancer.ts:246` `enhanceMath`; `tests/browser/mathInline.browser.test.ts` | Mutate-in-place (D-7-R) — the `<code>` element is never removed/wrapped, its children replaced with the rendered `<math>` tree on success. |
+| Block `$$…$$` | ✅ | **✓** *(2026-09-11)* | `src/render/parse.ts` (`math_block_dollar` rule); `src/render/mathEnhancer.ts` block path; `src/render/mathView.ts` (control group: copy-as-LaTeX button, copy-as-MathML); `tests/browser/mathBlock.browser.test.ts` | Sibling-figure reuse of 007's own D-8 machinery (D-8-R), a per-figure copy-as-LaTeX button. |
+| Code-fence math | ✅ | **✓** *(2026-09-11)* | `src/render/parse.ts`'s `fence` renderer override (`info === 'math'` routed through the same marker logic as `math_block`, a real drafting-time defect 3.1-R's own audit caught and 3.2-R fixed); ` ```math ` fence support confirmed by test | Shares D-8-R's block machinery, confirmed at the DOM/enhancer level, not merely the tokenizer level. |
+| Right-click → copy as LaTeX | ⭐ | **~** *(2026-09-11)* | `src/render/mathView.ts:494` `serializedMathSourceDocument`; `src/app/exportControls.ts` `onCopyMathLatex`/`'copy-math-latex'` row; a `data-math-source` attribute recovers inline sources (the §8-1(b) fix, `decisions.md` 2026-09-10); `tests/browser/mathActions.browser.test.ts` | **Mechanism ships; NOT via right-click.** Block math gets a per-figure copy-as-LaTeX button; inline copies via ordinary text-selection of the retained source PLUS a document-level "Copy formulas as LaTeX" panel action. `permissions: []` holds — no `contextMenus`, same zero-permission posture 007's copy/download affordances already set. |
+| Right-click → copy as MathML | ⭐ | **~** *(2026-09-11)* | `src/app/exportControls.ts` `onCopyMathMathml`/`'copy-math-mathml'` row (task 6.2-R); clones the rendered `<math>` tree, one document-level action covering every formula; `tests/browser/mathActions.browser.test.ts` | **Mechanism ships; NOT via right-click.** Same panel/menu-row placement as the LaTeX action above (gate-3-ruled, `decisions.md` GATE 3 FINDING 2) — a document-level action, never per-formula inline chrome (row 11 stays negative), never a toolbar button or shortcut. |
 | Mermaid rendering (8 diagram kinds) | ✅ | **✓** | `src/render/diagramEngine.ts:425` (`loadMermaid`, the one `import('mermaid')` in the tree), `:440` `hasDiagramFence`, `:453` `loadDiagramEngine`; `src/render/diagramEnhancer.ts:678` `enhanceDiagrams`; wired at `src/app/appShell.ts:139` and `src/app/readerPane.ts:185`; `tests/browser/diagramRender.browser.test.ts`, `diagramDegrade.browser.test.ts`; fixtures `tests/golden/fixtures/diagrams-10.md`, `diagrams-50.md` | **Was "the largest single hole in persona #1's column"; M7 closed it on the app page.** The path is diagram-kind-agnostic (source text → engine → `sanitize.ts:380` `SANITIZE_SVG_CONFIG` → adopt), so it is not gated on a kind allow-list. Of the spec's eight named kinds, **seven are fixtured** (flowchart, sequence, class, state, ER, gantt, pie); **`gitGraph` appears nowhere in the repo** — rendered by construction, unproven by test. |
 | Mermaid theme auto-sync with light/dark | ✅ | **✓** | `diagramEngine.ts:417` `diagramEngineConfigFor(theme)`; `diagramEnhancer.ts:169` `DIAGRAM_THEME_ATTR`; `tests/browser/diagramTheme.browser.test.ts` | Theme is a component of the cache key (`src/app/diagramCache.ts:171`), so a flip re-renders through the cache rather than retinting the SVG (007 §3.7); the previous rendering stays on screen until its replacement is ready. |
 | Additional engines (Graphviz/Vega/PlantUML) | ✅ | ✗ | No dependencies; 0 hits | **Unmoved.** The spec's own post-v1 stretch clause, restated as out of scope at 007 §6. |
@@ -244,16 +280,26 @@ priced into the score.***
 | Auto dark-mode: images dimmed/inverted | ⭐ | ✗ | `src/render/mediaPolicy.ts` classifies and blocks remote media; it does not adapt appearance | **Unmoved.** Named out of scope at 007 §6 (*"the other half of the dark-mode row"*), routed to a media/theming pass. |
 
 *(**19 items** — see the enumeration correction in § Summary; the "additional engines" row covers one
-item, and the KaTeX/MathJax and inline/block/fence rows are counted separately as listed. Credit:
-7 × 1.0 + 2 × 0.5 = **8.0 / 19 = 42%**.)*
+item, and the KaTeX/MathJax and inline/block/fence rows are counted separately as listed. Credit at
+M7 close (diagrams only): 7 × 1.0 + 2 × 0.5 = 8.0 / 19 = 42%. **Credit at M11 close (2026-09-11, math
+added): 11 × 1.0 + 4 × 0.5 = 13.0 / 19 = 68%** — the four diagram/math rows that moved ✗→✓ at M11
+(KaTeX-row-as-Temml, inline, block, fence) plus the seven M7 diagram ✓ rows = 11 full credits; the two
+M7 diagram ~ rows (cache controls, no file-size limit) plus the two new M11 math ~ rows (copy-as-LaTeX,
+copy-as-MathML — mechanism ships, not via right-click) = 4 half credits.)*
 
-**What the 42% is made of, stated so it cannot be rounded up.** M7 shipped **the diagram half**:
-rendering, the hash-keyed persistent cache, theme sync, copy/download, the lightbox, post-mount
-progressive enhancement, the degradation paths, and a second SVG-shaped sanitizer profile
-(`sanitize.ts:200-380`) that leaves the document profile untouched. It shipped **none of the math
-half** and none of F2's three other deferrals. Ten of nineteen rows are still ✗, seven of them math or
-formula rows — so **F2 is now the section where "what's left" is a different feature from "what
-landed"**, which is not true of any other partially-covered section in this document.
+**What the 68% is made of, stated so it cannot be rounded up.** M7 shipped the diagram half: rendering,
+the hash-keyed persistent cache, theme sync, copy/download, the lightbox, post-mount progressive
+enhancement, the degradation paths, and a second SVG-shaped sanitizer profile (`sanitize.ts:200-380`).
+**M11 shipped the math half — but as Temml/MathML, not the spec's own literally-named KaTeX** (a
+human-ruled substitution after KaTeX and MathJax both busted the byte/audit gate), plus a THIRD
+sanitizer profile (a single MathML-only allow-list, `sanitizeMath`) and a bundled subsetted math font
+(D-13, STIX Two Math). **Three rows are still ✗: additional engines (Graphviz/Vega/PlantUML, a named
+post-v1 stretch), standalone diagram-file rendering (a sealed 007 scope decision), and images
+dimmed/inverted (routed to a future media/theming pass) — none is a math/formula gap anymore.** The
+MathJax row stays ✗ **permanently, by ruling** (REVISIT-RULING 4), not as an open gap. F2 is no longer
+the section where "what's left" is a wholesale different feature from "what landed" — both halves of
+the spec's own two-part framing (diagrams, math) now ship in substance, with three named, ruled
+deferrals remaining.
 
 ## F3. Code Blocks
 
@@ -610,13 +656,17 @@ correct as the `d470ab2` reading; the governance it describes is what the fifth 
 | **M8** · `008-persona-1-qol` | **F5** (table tools: sort ✗→✓, quick filter ✗→✓, copy CSV/Markdown ✗→~ — no JSON) · **F6** (agent-file badge ✗→✓; tuned render defaults ✗→~, absorbed into the badge/table-tools set, not a distinct feature; compare any two files ✗→~, current-vs-picked, sealed narrower than "any two" by gate-1 §9-5) · **§6** (6, 8 — `permissions: []` and the sanitizer allow-list both survived a +10,486 B content-script / +10,503 B app-page reach, zero dependency added) · **§7** (unmoved — no new theming, motion or token work) |
 | **M9** · `009-code-blocks` | **F3** (Shiki syntax highlighting, per-block toolbar, collapsible long blocks, code themes — 0% → 78%) · **§6** (a sixth dependency, `shiki`, through the governed process; `permissions: []` and the sanitizer allow-list both survived) · **§7** (unmoved) |
 | **M10** · `010-local-exports` | **F9** (HTML export ~, PDF export ~, copy as rich text/HTML/plain text ✓, export shortcut ✓ — 0% → 38%; DOCX export, ZIP export and the progress indicator each dropped by a human scope-reduction ruling, not shipped) · **F5** (print-optimized mode ✗→✓) · **§6** (net **zero** new dependencies — `docx` and a ZIP writer were installed at task 1.1 and both later removed; `permissions: []` and no `web_accessible_resources` survived) · **§7** (unmoved) |
+| **M11** · `011-math-rendering` | **F2** (inline `$…$` ✗→✓, block `$$…$$` ✗→✓, code-fence math ✗→✓, the default engine row ✗→✓ (Temml/MathML, a ruled substitution for the spec's own named KaTeX), copy-as-LaTeX ✗→~, copy-as-MathML ✗→~ (document-level actions, not right-click) — 42% → 68%; MathJax fallback toggle stays ✗ permanently by ruling, not shipped) · **§6** (net **+2** dependencies at close — `-katex`, `-@mathjax/src`, `+@mdit/plugin-tex`, `+temml`; `permissions: []` and no `web_accessible_resources` survived a bundled font asset) · **§7** (unmoved — no new theming, motion or token work) |
 
 ~~**F3, F9, F10, F11 have never been touched by any milestone.**~~ **F10 and F11 have never been touched
 by any milestone** — F3 left this list at M9 (0% → 78%), F9 left it at M10 (0% → 38%). F7 was touched once
 and moved 6%.
-**F2 left that list at M7** — it went from never-touched to 42% in one milestone, and it is the only
-section whose remaining ✗ rows (math) are a materially different feature from the ones that landed
-(diagrams). Three of the twelve functional sections plus F11 are untouched ground going into M8.
+**F2 left the "one-milestone-only" club at M11** — it moved a SECOND time (42% → 68%, 2026-09-11), after
+M7's own 3% → 42% — and it is no longer the section whose remaining ✗ rows are a materially different
+feature from the ones that landed: M11 shipped the math half M7 left untouched, so what remains (additional
+engines, standalone diagram-file rendering, dark-mode image adaptation, and MathJax permanently struck) is
+three named scope deferrals plus one ruled-permanent absence, not a whole missing feature. F10 and F11
+remain the only untouched ground going into the next milestone.
 
 ## What's genuinely uncertain and needs an eye-check
 
