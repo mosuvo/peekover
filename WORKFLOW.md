@@ -246,6 +246,7 @@ Log a decision when: choosing between libraries/approaches, changing architectur
 - **Execute:** one task at a time, in `tasks.md` order. Prefer test-first on logic-heavy tasks: have the agent write a failing test → minimal code to pass → refactor (agents default to code-first; you must invert it).
 - **Review:** evidence, not assertions (C6). Strong pattern: a **fresh context reviews the diff** — second session/subagent/another model — because the writer grading its own work is the weakest link. Challenge prompt that works: "Grill me on these changes — prove this works."
 - **Ship:** conventional commit per task or coherent group; PR when the spec's acceptance criteria are all green. You read every diff (C9).
+- **The informal fidelity eyeball is not excused by a deferred formal fork.** A deferred formal fidelity/quality fork does not excuse deferring the informal eyeball — the first cheap human glance at a new rendering surface's real output happens as soon as that surface first renders, not at the fork's own close (M11 retro, `docs/ai/retro.md` 2026-09-11).
 
 ### 7.3 End ritual (never skip — 3 minutes)
 1. Update `progress.md` (move Done items, set Next, note blockers + session notes).
@@ -259,6 +260,7 @@ Log a decision when: choosing between libraries/approaches, changing architectur
 - **Correctness first (C15):** before starting a big task, verify the loaded docs are current — one wrong "fact" (a renamed file, a dead command) does more damage than a missing one.
 - Corrected the same mistake twice → C11: clear, improve the prompt or the rules file, restart.
 - Recurring correction across sessions → it's a missing rule; add one line to AGENTS.md (and delete a stale one to stay under budget).
+- **Approaching a milestone's human-gated close:** prefer shorter, more frequent check-in sessions on close/measurement tasks over long autonomous bisection runs — the seams near a human gate are exactly where a check-in is cheapest and most valuable. Confirm the working tree and any background/loop processes are clean and accounted for before starting each close-adjacent task — a stray shell or unrelated background search carried between close-adjacent tasks is a hygiene defect even when benign (M11 retro, `docs/ai/retro.md` 2026-09-11).
 
 ---
 
