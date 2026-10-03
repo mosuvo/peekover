@@ -275,11 +275,13 @@ Kept deliberately short — each one exists because a competitor visibly fails a
 | First render (typical README) | < 165 ms                                                         | "Instant" is the first impression and the review quote                           |
 | Large docs                    | 10 MB / 50k lines stays smooth (virtualized rendering)           | AI agents produce huge files; competitors choke                                  |
 | Diagram-heavy docs            | 50 Mermaid diagrams: first open ≤ 5 s, cached reopen < 1 s       | Matches docu.md's benchmark, the only published perf bar in the category         |
-| Package size                  | ≤ 5 MiB base; heavy engines lazy-loaded as local chunks          | md-reader ships 11.4 MiB; size is a store-listing trust signal                   |
+| Package size                  | ≤ 7 MiB base; heavy engines lazy-loaded as local chunks          | md-reader ships 11.4 MiB; 7 MiB stays under two-thirds its size — trust signal holds |
 | Reliability                   | Render failure degrades to raw view — never a blank page         | Blank pages are the #1 source of 1-star reviews in this category                 |
 | Quality gate                  | E2E suite over the demo doc + golden-image rendering tests in CI | A free-time project stays shippable only if regressions are caught automatically |
 
 *(Corrected 2026-07-27: the first-render row read "< 150 ms" — the operative first-paint gate has been "< 165 ms" since the M6 B2 re-baseline, taken after the working-day median breached the 150 ms bar on a codebase ~40% larger than M1's; the rescope preserves the gate's codebase-discipline signal while keeping the promise honest about real usage conditions. See `docs/ai/decisions.md` 2026-07-26. Revisit-when: M7's Mermaid pipeline adds measurement pressure this row must reflect.)*
+
+*(Revised 2026-10-03: the package-size row moved from "≤ 5 MiB" to "≤ 7 MiB" — a human product ruling, taken as the M12 (F8 Editor Mode) prerequisite, to give CodeMirror 6 (~500–607 KB, lazy-loaded) real working room instead of re-sweating the ceiling every task. The trust-signal rationale is preserved, re-stated honestly at the new ratio: 7 MiB is still under two-thirds md-reader's 11.4 MiB, not "less than half" as the prior ≤ 5 MiB framing implied. This does not touch the first-render row above — package size and first-paint speed are separate gates, and the editor's lazy dynamic-import keeps first-paint cost at zero. See `docs/ai/decisions.md` 2026-10-03. Revisit-when: the size positioning is re-examined, or a milestone approaches the 7 MiB bound the way M11 approached 5.)*
 
 ---
 

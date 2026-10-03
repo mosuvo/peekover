@@ -26,7 +26,7 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - **markdown-it** (+ plugins for GFM/footnotes/etc.) — one parser, options-driven
 - **DOMPurify** (sanitize), **Shiki** (code), **KaTeX** (math), **Mermaid** (diagrams, lazy)
 - **CodeMirror 6** (editor, Phase-1-late)
-- No UI framework for the reader view — vanilla TS + CSS custom properties. Keep it light (≤5MB packed).
+- No UI framework for the reader view — vanilla TS + CSS custom properties. Keep it light (≤7MB packed).
 
 ## Commands
 

@@ -1,6 +1,45 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-03 · M12 PREREQUISITE — package-size ceiling revised 5 MiB → 7 MiB (7,340,032 B), a human
+  product ruling, doc-only.**
+  **WHAT:** the self-imposed `.output` package ceiling moves from ≤ 5 MiB to ≤ 7 MiB, effective now.
+  Edited where stated: `AGENTS.md`'s stack-rule line, `docs/product/spec.md` §8's Package size row (+ a
+  dated revision footnote, same pattern as the 2026-07-27 first-render-row correction), `docs/ai/brief.md`'s
+  "Success (v1)" line, and `site/index.html`'s public "whole extension: ≤X MB" marketing line — the last two
+  weren't named in this task's kickoff but were found live-stating the old number and confirmed in-session
+  as in-scope (AskUserQuestion), since a stale copy left standing is exactly the future-contradiction risk
+  this same ruling's own audit step warns against. No enforcement test/script constant exists anywhere in
+  the repo (grepped for `5,242,880` / `5242880` / `5 * 1024 * 1024` across `.ts`/`.js`/`.json` — zero hits);
+  the ceiling has only ever been measured by hand at milestone close, never pinned in code.
+  **WHY IT EXISTED:** the only stated reason (spec §8) was a store-listing trust signal against md-reader's
+  11.4 MiB — a competitive-positioning choice, not a platform limit (Chrome's real ceiling is ~2 GB,
+  Firefox's ~200 MB, per this session's editor-feasibility spike).
+  **WHY 7:** unblocks F8 Editor Mode (CodeMirror 6, ~500–607 KB measured, lazy-loaded) with real working
+  room, so M12 doesn't re-sweat the ceiling every task the way M11's ~44 KiB headroom forced. Measured
+  just now (fresh build, HEAD `21b97fa`, both engines): `.output` **5,197,425 B (Cr) / 5,197,541 B (Fx)**
+  — unmoved since M11's 8.3-R close, no production code has landed since. Against the new 7 MiB
+  (7,340,032 B) bound that's **2,142,607 B / ~2.04 MiB (Cr), 2,142,491 B / ~2.04 MiB (Fx) headroom** — note
+  this is measured, not the kickoff's own rough "~1.3 MiB" estimate, which undercounted; CodeMirror's
+  ~500–607 KB fits with over 3× room to spare even before any lazy-load discipline. And 7 MiB is still
+  ~61% of md-reader's 11.4 MiB — "under two-thirds", so the trust-signal positioning holds; it would not
+  hold as "under half" (the old framing), which is why spec.md §8's prose was re-worded, not just its number.
+  **WHAT DOES NOT CHANGE:** the < 165 ms first-paint gate (spec §8's own row above Package size) is
+  UNTOUCHED. The ceiling is package SIZE; speed is a separate gate. The editor lazy-loads (dynamic import,
+  app-page, same shape as temml/mermaid/shiki), so first-paint stays instant — raising the size ceiling
+  spends none of the speed discipline. Do not read "5→7" as "we relaxed being fast/light"; only the
+  store-listing size number moved, deliberately, for the editor.
+  **WHAT THIS UNBLOCKS:** M12 = F8 Editor Mode, CodeMirror 6 lazy-loaded, scoped against the 7 MiB ceiling.
+  Its own task-1.1 dependency gate becomes a confirmation of a measured-to-fit cost, not a bust risk.
+  **WHAT STAYS AS-IS (historical, not rewritten):** every closed-milestone byte ledger in `progress.md`,
+  `progress-archive.md`, `decisions.md`'s own prior entries, `retro.md`, and the M3/M4/M9/M10 `spec.md`/
+  `tasks.md`/`plan.md` files that measured "against the 5 MiB bound" at their own time — those are dated
+  facts about what was true then, not the live rule, and are left untouched. `docs/ai/architecture.md`'s
+  M1-era "Shiki bundle size vs 5MB budget" open question is the same class (a dated, already-resolved
+  unknown) and is likewise left as-is.
+  **REVISIT-WHEN:** the size positioning is re-examined, or a future milestone approaches 7 MiB the way
+  M11 approached 5 — the same raise-or-trim ruling recurs, with this entry as precedent.
+
 - **2026-09-11 · M11 CLOSED — math rendering shipped (Temml/MathML inline `$…$`/block `$$…$$`/fence,
   copy-as-LaTeX/MathML, both engines), task 8.3-R's records reconcile.**
   **THE D-N-R-LANDED AUDIT (M9's own named gap, checked again, not repeated).** Every reopened D-value

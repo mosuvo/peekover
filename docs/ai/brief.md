@@ -7,4 +7,4 @@
 **Business model:** none, deliberately. Credibility/audience play. $0 infra (GitHub Pages, store fees only).
 **Brand:** paper, ink, one highlighter. "Raw in. Reading out." Trust is shown, not claimed
 (receipts: no servers, no telemetry, 0 network calls, reproducible builds).
-**Success (v1):** ships on Chrome+Firefox+Edge, <150ms render, ≤5MB, a launch post worth reading.
+**Success (v1):** ships on Chrome+Firefox+Edge, <150ms render, ≤7MB, a launch post worth reading.
