@@ -85,37 +85,10 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M11 (`specs/011-math-rendering/`) — ALL THREE PLANNING GATES ARE PASSED: gate-1
-  APPROVED (2026-09-06, four §9 rulings), gate-2 APPROVED (2026-09-06 — `decisions.md`'s M11 GATE 2 entry),
-  and gate-3 APPROVED (2026-09-06 — `decisions.md`'s M11 GATE 3 entry, `specs/011-math-rendering/tasks.md`,
-  9 groups / 16 tasks, 18 if group 7 opens, three gate-3 findings ruled). ★ IMPLEMENTATION IS NOW
-  AUTHORIZED — task 1.1 (the byte-measurement hard gate settling RULING 1) is the next act, in a FRESH
-  SESSION (C14).** The three gate-3 findings: the concrete MathJax package name (`mathjax-full`) is
-  APPROVED AS TASK 1.1'S CANDIDATE TO VERIFY, not a pinned choice; the document-level "copy all formulas as
-  MathML" action's UI placement (§8-1 ruled (b)) is RULED a PANEL/MENU-ROW action, never a toolbar button
-  or keyboard shortcut, with task 6.2's own text corrected to state it; RULING 4's possible mid-task-7.2
-  pause is confirmed NO ACTION NEEDED, correctly deferred already. `plan.md`'s
-  twelve D-values (D-1…D-12) are SEALED as
-  M11's architecture — a new markdown-it passthrough-marker rule (D-1), the single-importer engine
-  module(s) (D-2), the two-call-site enhancer wiring reused from 007 (D-3), the KaTeX
-  `trust:false`/`throwOnError` config lockdown (D-4), a third named sanitizer profile admitting KaTeX's
-  HTML+MathML dual output plus a new `style`-value procedural filter (D-5), the zero-new-dependency
-  copy-as-LaTeX/MathML mechanism (D-6), inline math's mutate-in-place INVERSION of 007 D-15's
-  sibling-figure shape (D-7), block/fence math's shared reuse of 007's own sibling-figure machinery (D-8),
-  a leaned-and-verify no-theme-re-render claim (D-9), the MathJax contingency structured as a purely
-  additive drop point (D-10), the settings-field shape if it ships (D-11), and the no-speculative-cache
-  measurement obligation (D-12). **RULING 1 (§9-1, the dependency-set fork) is still MEASURED, not
-  assumed — task 1.1, `tasks.md`'s first task, is the milestone's own hard gate**, unchanged from gate 1's
-  own framing, now ALSO measuring `@mdit/plugin-tex` (D-1's tokenizer, an always-loaded parse-graph
-  dependency) alongside `katex`/MathJax per gate 2's own measurement fix. The one genuine spec-level gap
-  surfaced at gate 2 is RULED, not left open: §8-1 (inline math's copy-as-LaTeX/MathML reachability, since
-  D-7's inversion means block math's control-group mechanism cannot serve inline math unmodified) is ruled
-  OPTION (b) — inline copy-as-LaTeX via text-selection, copy-as-MathML via a document-level "copy all
-  formulas as MathML" action, no per-formula inline chrome; block math's control group is unchanged. This
-  amends spec §4's copy criterion, recorded in `decisions.md`'s gate-2 entry rather than by editing
-  `spec.md` (sealed, per the M7–M10 precedent). M10 (`specs/010-local-exports/`) closed 2026-09-06. M11 =
-  F2 Math (KaTeX, contingent MathJax fallback, inline/block/fence math, copy-as-LaTeX/MathML). Per the
-  M7–M10 precedent, the spec's own status line and §9 text stay unedited post-gate-1, `plan.md`'s own
-  status line likewise stays "draft awaiting gate 2" post-gate-2, and `tasks.md`'s own status line stays
-  "DRAFT awaiting gate 3" post-gate-3 — `decisions.md`'s 2026-09-06 M11 GATE 1, GATE 2, and GATE 3 entries
-  are the approvals of record.
+- Current milestone: **M12 (`specs/012-editor-mode/`) — gate-1 spec DRAFTED, 2026-10-03, awaiting human
+  approval.** M11 (`specs/011-math-rendering/`) closed 2026-09-11 (Temml/MathML math, both engines). M12
+  = F8 Editor Mode's focused core (edit → live preview → save-back via CodeMirror 6, lazy-loaded), scoped
+  against the 2026-10-03 package-size ceiling ruling (≤ 5 MiB → ≤ 7 MiB, taken specifically as this
+  milestone's prerequisite). No `plan.md` yet — gate 1 must rule the spec's §9 open decisions (D-A
+  in-shell mode, D-B the save-back write surface, D-C live-preview mechanism, D-D the dependency gate's
+  framing) first.
