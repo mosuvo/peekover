@@ -1,6 +1,72 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-03 · M12 GATE 1 — spec 012 (Editor Mode, focused core: edit → live preview → save-back, via
+  CodeMirror 6) APPROVED, ALL FOUR §9 DECISIONS RULED. `plan.md` is the next artifact and the next gate,
+  fresh session.** `specs/012-editor-mode/spec.md` was reviewed and approved. **The spec's status line
+  stays "draft (Gear-3 gate 1 — awaiting human approval before `plan.md`)" and THIS ENTRY IS THE APPROVAL
+  OF RECORD** — the standing precedent from M7–M11: 007 still reads "draft" post-gate-1 (`e09520f`); 008
+  still reads "draft" post-gate-1 (`aaf990e`, 2026-08-03 M8 GATE 1); 009 still reads "draft" post-gate-1
+  (2026-08-14 M9 GATE 1); 010 still reads "draft" post-gate-1 (2026-08-22 M10 GATE 1); 011 still reads
+  "draft" post-gate-1 (2026-09-06 M11 GATE 1) — gate approvals live in the bank, not in the artifact's
+  status line.
+  **THE RULINGS, spec §9 (verbatim from the human's review):**
+  - **D-A · §9-1, in-shell mode vs. a separate editor surface: APPROVED.** Edit is a third state on the
+    existing app-page shell / `readerMode.ts`'s `ReaderMode` shape (currently `'reading' | 'raw'`), NOT a
+    new entrypoint — the spec's own recommendation, confirmed as stated (§3.3). CodeMirror is lazy-loaded,
+    never eager; the §3.3 lazy-load discipline is part of the approval, not a separate, optional concern —
+    the ~2.04 MiB headroom §3.6 reports is not licence to skip it.
+  - **D-B · §9-2, the save-back write surface — TWO questions, APPROVED AS THE SPEC'S OWN THREE-WAY
+    ROUTING (§3.4), WITH ONE HUMAN ADDITION.** (i) **The permission mechanism** (does the File System
+    Access write capability need a manifest permission, or is it the same user-gesture web-platform
+    capability folder-read already is?) is a **TASK-LEVEL verification**, not a human gate — verified
+    against the current File System Access API spec (§7-1), the same way task 1.1 measures bytes every
+    milestone — and escalates back to a human gate ONLY IF it surprises by requiring a manifest permission
+    (AGENTS.md #4). No recommendation is given or taken on the outcome itself; only on how to find out.
+    (ii) **The conflict/overwrite policy** (§7-3/§8-1) is a **GATE-3 product-feel decision**, from a
+    measured walk of the conflict scenario, not chosen by a task or assumed here. (iii) **The
+    `PERMISSIONS.md` trust-ledger update** — replacing the current "cannot write" claim — is a
+    **MANDATORY, non-negotiable, tested acceptance criterion** (§4), not contingent on (i)'s outcome: the
+    ledger must state honestly that Peekover can now write to a file the user explicitly opened for
+    editing. ★ **THE HUMAN ADDITION:** the exact WORDING of that new ledger claim is a trust-story
+    POSITIONING call — the same class as the 2026-10-03 ceiling reword from "under half" to "under
+    two-thirds" — and comes back to the human for a one-sentence sign-off when `plan.md`/the save task
+    drafts it, separate from the mandatory-ness of making the edit at all. **Revisit-when:** §7-1's own
+    task-level verification, before any save-path code is written; the ledger-wording sign-off, when the
+    save task drafts the sentence.
+  - **D-C · §9-3, live preview through the existing render pipeline, debounced, no new sanitizer profile:
+    APPROVED.** CodeMirror is a second text-producer for the same `sanitize(parse(source))` consumer every
+    milestone since M1 already built; it introduces no new generated-markup shape DOMPurify has never
+    seen, unlike 007's Mermaid SVG or 011's Temml/MathML output — AGENTS.md #3 is satisfied by reuse
+    (§3.5), nothing new to build. The debounce interval itself is explicitly NOT ruled here — it stays a
+    gate-3 number (§8-2), measured against a representative document size.
+  - **D-D · §9-4, the dependency gate framed as a CONFIRMATION, not a bust-risk fork: APPROVED.** Task 1.1
+    re-measures CodeMirror 6's real import graph's actual delta against the reported ~500–607 KB figure /
+    ~2.04 MiB headroom (§3.6) as a confirmation of an already-measured-to-fit dependency, not a scope fork
+    the way M10's docx bust or M11's KaTeX/MathJax bust each were. The human did not ask for CodeMirror's
+    fit to be treated as still genuinely open — the §9-4 distrust escape (treat the prior spike numbers as
+    unproven) was offered in the spec and explicitly declined.
+  **WHAT THIS APPROVAL AUTHORIZES:** `plan.md` (the HOW), next, in a FRESH SESSION, resolving spec §7's
+  seven open risks against the ACTUAL tree at its own HEAD (every `file:line` citation re-derived), with
+  particular front-loaded force on §7-1 (the FSA write-permission mechanism, the milestone's own central,
+  front-loaded risk per §3.4) and §7-3 (the conflict policy, including the watch-relay-while-editing
+  collision §3.4-iii names).
+  **WHAT THIS APPROVAL DOES NOT DO:** it does not install CodeMirror 6 or move any dependency; it does not
+  resolve §7's remaining risks (the exact write-mode-upgrade mechanism, CodeMirror's real package shape,
+  the debounce target, design translation, the sibling-checklist audit) or §8's three gate-3
+  measure-then-choose items (conflict UX, debounce interval, snapshot integration) — all remain
+  `plan.md`'s/`tasks.md`'s to resolve against the actual code; it reopens no §3.x decision; it writes no
+  `plan.md` or `tasks.md`; it edits no manifest and no `PERMISSIONS.md` row (the ledger update is §4's
+  mandatory acceptance criterion for the SAVE task to land, not this gate's to pre-empt).
+  **WHAT STAYS AS-IS:** spec.md's body and status line, sealed per the M7–M11 precedent — this entry is
+  the approval, not an edit to the sealed spec. The < 165 ms first-paint gate and the ≤ 7 MiB ceiling
+  (2026-10-03, above) are inherited unchanged. `permissions: []` holds unless D-B-i's own verification
+  surprises.
+  **Not a blocker for:** gate 2 (`plan.md`) or any subsequent gate — nothing above is unresolved, each
+  ruling is stated so `plan.md` inherits it closed (or, for D-B-i/D-B-ii, closed pending their own
+  dependent task-level verification or gate-3 measurement).
+  **Revisit-when:** never for the ruling itself; gate 2 (`plan.md`'s own review) is the next human gate.
+
 - **2026-10-03 · M12 PREREQUISITE — package-size ceiling revised 5 MiB → 7 MiB (7,340,032 B), a human
   product ruling, doc-only.**
   **WHAT:** the self-imposed `.output` package ceiling moves from ≤ 5 MiB to ≤ 7 MiB, effective now.

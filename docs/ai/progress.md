@@ -30,28 +30,34 @@ archive-pass precedent.)*
 copy-as-LaTeX/MathML, both engines. See § Closed milestones below for the one-paragraph summary and the
 link to the full archived narrative.
 
-**M12 gate-1 spec DRAFTED, 2026-10-03 (`specs/012-editor-mode/spec.md`), awaiting human approval.**
-Preceded by a human product ruling the same day (`decisions.md`) raising the package-size ceiling
-≤ 5 MiB → ≤ 7 MiB specifically to give CodeMirror 6 real working room, and by this session's own
+**M12 gate-1 APPROVED, 2026-10-03 (`decisions.md`'s M12 GATE 1 entry) — `plan.md` is next, fresh
+session.** Preceded by a human product ruling the same day (`decisions.md`) raising the package-size
+ceiling ≤ 5 MiB → ≤ 7 MiB specifically to give CodeMirror 6 real working room, and by this session's own
 editor-feasibility spike (CodeMirror 6 measured ~500–607 KB, lazy-loadable, app-page-only; CodeJar
 rejected as too thin). M12 = F8 Editor Mode's focused core — edit → live preview → save-back — not the
 full ~21-item surface `spec-coverage.md`'s F8 row (5%) names; the remaining items are explicitly deferred
-to a later F8 pass (spec §6). The spec frames four open decisions for gate 1 (§9): D-A in-shell mode vs.
-a new surface (recommended: confirm in-shell), D-B the save-back write surface — the milestone's own
-central risk, since M1–M11 only ever read files and this is the first write path, with its permission
-mechanism recommended as a task-level verification and its conflict/overwrite policy recommended as a
-later product gate, D-C live preview through the existing render pipeline (recommended: confirm, no new
-sanitizer profile needed), and D-D the dependency gate reframed as a confirmation rather than a bust-risk
-fork, since CodeMirror is already measured to fit with ~2.04 MiB headroom to spare. **No `plan.md` yet —
-gate 1 must rule §9 before planning starts, in a fresh session.**
+to a later F8 pass (spec §6). Gate 1 ruled all four §9 decisions: **D-A** in-shell mode on the existing
+`readerMode.ts` shape, approved as recommended. **D-B** the save-back write surface, approved as the
+spec's own three-way routing — (i) the permission mechanism is a task-level verification against the
+current File System Access API spec, escalating to a human gate only if it surprises; (ii) the
+conflict/overwrite policy is a gate-3 product-feel decision from a measured walk; (iii) the
+`PERMISSIONS.md` ledger update is a mandatory, tested acceptance criterion — **plus a human addition: the
+new ledger sentence's exact wording comes back for a one-sentence sign-off when the save task drafts it.**
+**D-C** live preview through the existing render pipeline, debounced, no new sanitizer profile — approved
+as recommended. **D-D** the dependency gate reframed as a confirmation (not a bust-risk fork like M10's
+docx or M11's KaTeX/MathJax) — approved; the human declined the spec's own offered distrust escape. Spec
+body stays sealed/"draft" per M7–M11 precedent; the approval lives in `decisions.md`.
 
 ## Up next
 
-**Gate 1 on `specs/012-editor-mode/spec.md`** — a human decision, not an agent task. Once ruled,
-`plan.md` is the next artifact, generated fresh against the actual tree at its own HEAD (every spec-level
-`file:line` citation re-derived, per the spec's own evidence-base note). M11 closed with no forced
-follow-on task of its own — every carried item from its close is either resolved, a deferred-post-M11
-standing item, or a human-drafted-not-placed retro action (see § Carried items below).
+**`plan.md` on `specs/012-editor-mode/spec.md`** — the next artifact, a fresh session, resolving §7's
+seven open risks against the actual tree at its own HEAD (every spec-level `file:line` citation
+re-derived), with front-loaded force on §7-1 (the FSA write-permission mechanism) and §7-3 (the conflict
+policy, including the watch-relay-while-editing collision). **Carried obligation for the save task:**
+route the drafted `PERMISSIONS.md` ledger-wording sentence (D-B-iii) to the human for sign-off before it
+lands — mandatory to land, but not mandatory to word unilaterally. M11 closed with no forced follow-on
+task of its own — every carried item from its close is either resolved, a deferred-post-M11 standing
+item, or a human-drafted-not-placed retro action (see § Carried items below).
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
