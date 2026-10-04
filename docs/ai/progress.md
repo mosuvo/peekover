@@ -68,11 +68,42 @@ residual, resolved in group 3's own text); the D-9 ledger sign-off is task 5.1, 
 BEFORE the first write commit. The draft carries six findings (F-1…F-6) from re-deriving the plan's
 citations and six questions (Q1–Q6) for gate 3 — read those first. No code, no dependency installed.
 
+**M12 D-4 RE-RULED, then gate-3 APPROVED, 2026-10-04 (`decisions.md`'s M12 D-4 RE-RULED and M12 GATE 3
+entries) — implementation is authorized; task 1.1 is next, fresh session.** Doc-only session, no build.
+- **D-4's mechanism corrected.** The chrome investigation found gate 2's premise false: `mount()` always
+  composes chrome (`mount.ts:157-211`), and the watch / diff / identity registries are module-level
+  singletons, so a nested preview `mount()` gets three LIVE hazards (a preview watch pill, a
+  preview-acting diff, a preview TOC rail the backtick can resolve to). CSS-hiding cannot undo registry
+  wiring. The human ruled **Option B** — an additive `chrome?: boolean` on `mount()`, default `true`, every
+  existing caller byte-identical — over editorView composing its own primitives, which would fork the
+  sanitize → inert-template → adopt path into a third copy. The nested shadow-root boundary is unchanged.
+  `mount.ts` itself was NOT edited this session; that is task 2.2's.
+- **`tasks.md` redlined to it**: F-3, task 2.2 (now: add the option, prove existing callers
+  byte-identical, build the preview on it, the three hazards proven absent red-first), the Gate-2 locked
+  line, group 2's acceptance, 3.3's scroll clause, 7.1's walk item, and the content-script / `mount.ts`
+  standing invariants. The scroll-preservation finding (`resolveScrollContainer` falls back to a
+  non-scrolling nested host) is carried into 2.2 as a design requirement.
+- **Gate 3: Q1–Q6 all approved as proposed** — the fence is scanner fixtures + `editorImportFence.test.ts`;
+  group 3 is three tasks; the conflict policy is ruled at 5.5 on 5.3's safe floor; the provisional
+  debounce is cost-proportional at multiplier 1; no material-cost threshold; the content-script invariant
+  is "zero `codemirror` bytes + decomposed glue", not "340,492 B unmoved". Spec / plan / tasks status
+  lines stay "draft"; `decisions.md` is the approval of record.
+
 ## Up next
 
-**Gate 3 — the human's review of `specs/012-editor-mode/tasks.md` (drafted 2026-10-04).** On approval,
-implementation begins at task 1.1 in a fresh session. The paragraph below is the brief that draft was
-written to, kept for provenance.
+**M12 implementation — task 1.1 (install `codemirror` + `@codemirror/lang-markdown`, measure four arms on
+both engines, choose the setup from the number), fresh session.** Gate 3 approved 2026-10-04. Test-first,
+one commit per task, this file's Now-pointer advancing in that same commit. Task 1.1's own clean rebuild
+re-measures the byte snapshot and is authoritative. **Carried touchpoints — the task-level human gates:**
+- **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
+- **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
+- **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
+- Also: the informal eyeball at 3.2 (the editor's first render); 6.2's numbers → the §8-2 debounce ruling;
+  6.3 STOPS and surfaces a material nested-host cost; 2.2 stops-and-flags if `mount()`'s post-commit
+  wiring needs guarding beyond the ruled `chrome` range.
+
+*Superseded, kept for provenance:* gate 3 — the human's review of `specs/012-editor-mode/tasks.md`
+(drafted 2026-10-04). The paragraph below is the brief that draft was written to.
 
 **`tasks.md` on `specs/012-editor-mode/plan.md`** — the next artifact, a fresh session, and the final
 gate (gate 3) before implementation: decompose the plan's seven groups into tasks, re-deriving every

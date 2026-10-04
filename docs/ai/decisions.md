@@ -1,6 +1,104 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · M12 GATE 3 APPROVED — `tasks.md` (the WHAT-in-what-order) approved; implementation is
+  authorized, beginning at task 1.1, fresh session. The FINAL gate.**
+  `specs/012-editor-mode/tasks.md` was reviewed and approved **as redlined to the D-4 re-ruling in the
+  entry directly below** — gate 3 approves the CORRECTED task list, not the draft at `87ee130`. The file's
+  status line stays "DRAFT awaiting gate 3" and **THIS ENTRY IS THE APPROVAL OF RECORD** (the M7–M11
+  precedent; 011's `tasks.md` still reads "DRAFT" post-gate-3).
+  **THE SIX GATE-3 QUESTIONS, RULED — all approved as proposed:**
+  - **Q1 · D-10's import fence (F-1): APPROVED.** Task 1.1 adds the two stay-silent scanner fixtures to
+    `check-dynamic-imports.ts`'s `MUST_NOT_FIRE`; task 3.1 creates `src/render/editorImportFence.test.ts`
+    on `diagramImportFence.test.ts`'s four-clause shape — the test is what actually proves the exclusion.
+  - **Q2 · Group 3 is THREE tasks: APPROVED.** 3.1 engine · 3.2 enhancer + control + editor pane · 3.3
+    debounced live preview, which gets its own red.
+  - **Q3 · The conflict policy is ruled MID-IMPLEMENTATION, at 5.5, on a safe floor: APPROVED.** 5.3 ships
+    the floor common to all three §8-1 options (no write, the status says the file changed on disk, the
+    buffer is retained); 5.5 is the human's walk and ruling; 5.6 builds what is ruled. Gate 3 did NOT rule
+    the policy directly, so 5.5 is not struck.
+  - **Q4 · The provisional debounce: APPROVED.** D-5's cost-proportional cooldown at multiplier 1, marked
+    PROVISIONAL in one place, until the §8-2 ruling; 6.4 applies the ruling and REMOVES the marker.
+  - **Q5 · No material-cost threshold: APPROVED.** 6.3 reports every delta that clears its own A-B-A noise
+    floor, with the number; the human judges.
+  - **Q6 · The content-script byte invariant: APPROVED as "zero `codemirror` bytes, and every
+    content-script move is the named task's own decomposed glue."** The gate-3 kickoff's literal
+    "340,492 B unmoved" was WRONG — `readerMode.ts`, `readerCss.ts`, `watchController.ts` (and, after the
+    re-ruling below, `mount.ts`) are on the content-script graph and on plan §2's Touch list. The plan's
+    Touch list is right; the invariant is reconciled to it.
+  **THE D-4 RE-RULING IS INCORPORATED:** `tasks.md`'s F-3 and task 2.2 are corrected to Option B (the
+  additive `mount()` `chrome: false` option), with the Gate-2 locked line, group 2's acceptance, 3.3's
+  scroll clause, 7.1's walk item and the two affected standing invariants reconciled to match.
+  **THE GATE-2 CARRIES, CONFIRMED LANDED IN `tasks.md`:** group 3's tests run on an UNWATCHED document, the
+  precondition asserted in each test (the residual resolved in group 3's own text); the D-9 ledger sign-off
+  is task 5.1, a human gate sequenced BEFORE the first write (5.3); D-4's nested-host cost measurement
+  (6.3) surfaces a material cost to the human and STOPS — it does not file it.
+  **WHAT THIS AUTHORIZES:** implementation, task 1.1 first, FRESH SESSION, test-first, one commit per task,
+  `progress.md`'s Now-pointer advancing in that same commit — nothing before it. The human-gate items land
+  where `tasks.md` placed them: the live picker + a real local-disk write (5.x / 7.1), Firefox everything
+  (7.1), the conflict-UX walk (5.5), the design-translation walk (7.1), the ledger sign-off (5.1), the
+  WIDE-viewport recording (2.2 / 7.1), and the informal eyeball when the editor FIRST renders (3.2, per the
+  placed WORKFLOW rule).
+  **WHAT STAYS AS-IS:** `spec.md` + `plan.md` bodies and status lines (sealed). The < 165 ms first-paint
+  gate, the ≤ 7 MiB ceiling and `permissions: []` all hold. Gate-1 and gate-2 rulings are inherited
+  unchanged — D-4's MECHANISM corrected per the entry below, its shadow-root-boundary core intact.
+  **Revisit-when:** never for the ruling — gate 3 is the last gate. The next human touchpoints are the
+  task-level human gates `tasks.md` names: 5.1 (ledger), 5.5 (conflict UX), 7.1 (close walk).
+
+- **2026-10-04 · M12 D-4 RE-RULED — the live-preview mechanism, corrected after the chrome investigation.
+  Gate 2's "the preview is a `mount()` call, `mount.ts` byte-untouched" premise was FALSE; the human ruled
+  an additive `mount()` chrome option (Option B). Gate 3 is banked in the entry above, on this corrected
+  design.** Doc-only: this entry RULES that the `mount.ts` edit is authorized; the edit itself is task
+  2.2's, in implementation.
+  **★ WHAT WAS WRONG:** gate 2 approved D-4 (the nested-host preview) on the premise that the preview is
+  a plain `mount()` call and `mount.ts` stays byte-untouched. The chrome investigation (read-only, HEAD
+  `87ee130`; its citations re-read against the tree when this entry was written) found `mount()`
+  UNCONDITIONALLY composes chrome — the mode pill (`mount.ts:157`), the theme control (`:169`) and the
+  reading column (`:211`) — plus registry-gated chrome: watch (`:183`), diff (`:191`), the agent badge
+  (`:198`) and the TOC rail (`:209-210`). And — the worse finding, which `tasks.md`'s F-3 missed — the
+  watch target, the diff context and the document identity are MODULE-LEVEL SINGLETONS
+  (`watchRegistry.ts:74`, `diffRegistry.ts:178`, `docIdentity.ts:59`; the app page registers them at
+  `appShell.ts:1287/1340/1364`), so a nested `mount()` gets THREE LIVE HAZARDS, not cosmetic duplicates:
+  a preview watch pill that starts watching INTO the preview, a diff pill acting on the preview rather
+  than the document, and a TOC backtick that can toggle the preview's rail. CSS-hiding (`tasks.md`'s F-3
+  disposition) CANNOT fix this — CSS cannot undo registry wiring.
+  **★ WHAT IS RULED (Option B):** `mount()` gains ONE additive option, `chrome?: boolean` (default
+  `true`), guarding the chrome composition (`:157-201`, `:209-210`), so the preview calls
+  `mount(text, nestedHost, { contained: true, preserveReading: true, chrome: false })` and gets the
+  reading column WITHOUT chrome or registry wiring. Additive and safe: every existing caller omits it and
+  is BYTE-IDENTICAL to today — proven at task time (the existing `mount()` tests stay green; the
+  content-script and app-page bytes move only by the option's own guard glue, decomposed).
+  **★ WHY OPTION B OVER OPTION A:** Option A — `editorView.ts` composes the pipeline primitives itself,
+  `mount.ts` LITERALLY untouched — was REJECTED. It creates a THIRD independent copy of the
+  security-critical sanitize → inert-`<template>` → adopt sequence (the investigation's own words: *"its
+  own never-blank fallback, its own scroll preservation"*), and a second or third copy of the SANITIZER
+  path is a trust-surface risk — DOMPurify config drift is an XSS hole — worse than a byte-touch to
+  `mount.ts`. **"`mount.ts` byte-untouched" was a PROXY for the real invariant: ONE trusted
+  render + sanitize path.** Option B serves the real invariant; Option A sacrifices it to preserve the
+  proxy. Gate 2's own reason for rejecting partial-replace ("don't fork the render path") ARGUES FOR
+  Option B — Option A is the one that forks it. The scroll-preservation edge the investigation found
+  (`resolveScrollContainer` walks `parentElement`, which is `null` for a direct shadow-root child, so a
+  nested host falls back to itself and does not scroll) is likewise solved ONCE under Option B, not
+  re-solved a third time inside `editorView.ts` under Option A.
+  **Stated, not hidden:** this ends `mount.ts`'s zero-diff streak (006 D-15, 011 D-3, the plan's D-4
+  text) and adds a `MountOptions` field — the thing gate 2 called "a permanent widening of `mount()`'s
+  contract". The difference the ruling rests on: partial-replace would have added a second CONTRACT
+  beside "I own this host's entire shadow root"; `chrome: false` leaves that contract whole and only
+  omits chrome from what is committed.
+  **★ WHAT THIS CORRECTS, NOT REOPENS:** the nested-host SHADOW-ROOT boundary — D-4's core, the editor's
+  DOM protected from the preview's re-render — still HOLDS. Only the "it is a plain `mount()` call /
+  `mount.ts` untouched" mechanism claim is corrected, to "it is a `mount()` call WITH the new
+  `chrome: false` option; `mount.ts` gains one additive, default-safe option." The gate-2 approval stands
+  with this corrected mechanism; the human re-ruled on the true premise. `plan.md`'s body (D-4, §2's
+  "Explicitly NOT touched") stays sealed and uncorrected in place — this entry is the correction of
+  record, and `tasks.md` is redlined to it.
+  **Revisit-when:** never for the ruling; the additive option's byte-safety is proven at task 2.2
+  (implementation). Two consequences of the ruled guard range are named in 2.2 for the human to see
+  there: `mount()`'s post-commit wiring (`:219-233`) is outside the range and still runs on the nested
+  host — needing to guard any of it is a stop-and-flag, not a judgment call; and the remote-load bar +
+  network indicator (`:199-201`) are inside it, so a preview shows remote media blocked with no
+  in-preview opt-in (the media policy still runs; nothing leaves the machine).
+
 - **2026-10-04 · M12 GATE 2 APPROVED — plan 012 (Editor Mode, the HOW) §8 questions ruled. `tasks.md` is
   the next artifact and the FINAL gate before implementation, fresh session.**
   `specs/012-editor-mode/plan.md` was reviewed and approved. **The plan's status line stays "draft (Gear-3

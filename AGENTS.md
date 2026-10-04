@@ -85,8 +85,9 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M12 (`specs/012-editor-mode/`) — gate-2 APPROVED (2026-10-04, `decisions.md`'s M12
-  GATE 2 entry); `tasks.md` is next, fresh session, the final gate before implementation.** M11 (`specs/011-math-rendering/`) closed 2026-09-11
+- Current milestone: **M12 (`specs/012-editor-mode/`) — gate-3 APPROVED (2026-10-04, `decisions.md`'s M12
+  GATE 3 entry); implementation authorized, task 1.1 next, fresh session. D-4 re-ruled to an additive
+  `mount()` `chrome: false` option (Option B) after the chrome investigation.** M11 (`specs/011-math-rendering/`) closed 2026-09-11
   (Temml/MathML math, both engines). M12 = F8 Editor Mode's focused core (edit → live preview → save-back
   via CodeMirror 6, lazy-loaded), scoped against the 2026-10-03 package-size ceiling ruling (≤ 5 MiB →
   ≤ 7 MiB, taken specifically as this milestone's prerequisite). Gate 1 ruled all four §9 decisions: D-A
@@ -97,10 +98,22 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   Gate 2 (2026-10-04) ruled the plan's four §8 questions:
   §8-1 / D-1 — a dedicated edit-entry control, not a third state on the bare `\` key (approved).
   §8-2 / D-9 — draft ledger wording on track; the actual sign-off is still owed at the save task (group 5).
-  §8-3 / D-4 — nested-host live preview, `mount.ts` byte-untouched (approved); built at group 2, cost
-  measured at group 6 — a material cost there is a finding for the human, not a number to file.
+  §8-3 / D-4 — nested-host live preview (approved); built at group 2, cost measured at group 6 — a
+  material cost there is a finding for the human, not a number to file. MECHANISM RE-RULED 2026-10-04
+  (`decisions.md`'s M12 D-4 RE-RULED entry): gate 2's "plain `mount()` call, `mount.ts` byte-untouched"
+  premise was false — `mount()` always composes chrome, and the watch/diff/identity registries are
+  module-level singletons, so a nested mount wires them live. The preview is `mount()` with a new additive
+  `chrome?: boolean` (default `true`, every existing caller byte-identical); chosen over editorView
+  composing its own primitives because that forks the sanitize → inert-template → adopt path. `mount.ts`'s
+  one authorized edit is task 2.2's; the shadow-root boundary is unchanged.
   §8-4 / D-8 — watch+edit SUPPORTED, DEGRADED via `watchController.ts`'s existing deferral gate; edit exit
   does not auto-flush (approved).
-  Spec and plan bodies stay sealed/"draft" per M7–M11 precedent — `tasks.md` decomposes the plan's seven
-  groups, re-deriving every `file:line` against the actual tree, and runs group 3's nested-host tests on an
-  unwatched document (group 4 closes the collision later).
+  Gate 3 (2026-10-04) approved `tasks.md` (22 tasks, seven groups) as redlined to the D-4 re-ruling, all
+  six questions as proposed: Q1 import fence = scanner fixtures + a new `editorImportFence.test.ts`; Q2
+  group 3 is three tasks; Q3 the conflict policy is ruled at 5.5, mid-implementation, on 5.3's safe floor;
+  Q4 provisional debounce = cost-proportional, multiplier 1, until §8-2; Q5 no material-cost threshold —
+  6.3 reports every delta above its A-B-A noise floor; Q6 the content-script invariant is "zero
+  `codemirror` bytes + every move is the named task's decomposed glue", not a literal "unmoved".
+  Spec, plan and tasks status lines stay sealed/"draft" per M7–M11 precedent — `decisions.md` is the
+  approval of record. Group 3's tests run on an unwatched document (group 4 closes the collision later).
+  Task-level human gates still ahead: 5.1 (ledger wording), 5.5 (conflict UX), 7.1 (close walk).

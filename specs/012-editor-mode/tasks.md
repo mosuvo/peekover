@@ -12,6 +12,13 @@
 *style, an engine rendering into a live container, bytes-on-wire, a real file write and focus/keyboard*
 *behaviour are jsdom-**BLIND**: proven in the real engine, never in jsdom.*
 *Drafted 2026-10-04 at HEAD `3efc426` (tree clean, no stray process).*
+*★ **REDLINED 2026-10-04 at HEAD `87ee130`, to `decisions.md`'s **M12 D-4 RE-RULED** entry, then approved at*
+*gate 3 (`decisions.md`'s **M12 GATE 3** entry — the approval of record; this status line stays "DRAFT" per*
+*the M7–M11 precedent).** The draft's F-3 disposition and task 2.2 were written to a premise the chrome*
+*investigation found false ("the preview is a plain `mount()` call, `mount.ts` byte-untouched"). The human*
+*re-ruled D-4's MECHANISM to Option B — an additive, default-`true` `chrome?: boolean` option on `mount()`.*
+*Corrected here: the Gate-2 locked line · F-3 · 2.1's `mount.ts` clause · 2.2 · group 2's acceptance · 3.3's*
+*scroll clause · 7.1's walk item · the content-script and zero-diff standing invariants. Nothing else moved.*
 
 ---
 
@@ -35,8 +42,10 @@ forward to the immediately-prior task's own measured figure.**
   sign-off) · D-C the existing pipeline, debounced, no new sanitizer profile · D-D the dependency gate is a
   confirmation, not a fork.
 - **Gate 2 (plan §8):** D-1 a dedicated edit-entry control, the bare `\` key stays a binary reading↔raw
-  cycle · D-4 the nested preview host, `mount.ts` byte-untouched, built at group 2 and its cost measured at
-  group 6 · D-8 watch+edit SUPPORTED, DEGRADED, edit exit does not auto-flush · D-9's candidate wording on
+  cycle · D-4 the nested preview host, built at group 2 and its cost measured at group 6 — **its mechanism
+  RE-RULED 2026-10-04 (`decisions.md`, M12 D-4 RE-RULED): the preview is `mount()` called with the new
+  additive `chrome: false` option; `mount.ts` gains that ONE default-safe option at task 2.2 and is
+  otherwise untouched. The shadow-root boundary — D-4's core — is unchanged** · D-8 watch+edit SUPPORTED, DEGRADED, edit exit does not auto-flush · D-9's candidate wording on
   track, sign-off still owed at group 5 · D-7 content comparison is the conflict-detection LEAD; metadata
   decides nothing.
 - **Plan D-1 … D-10.** Every task names the D-value(s) it implements; each D-value's `decisions.md` entry is
@@ -95,10 +104,19 @@ forward to the immediately-prior task's own measured figure.**
   not reopened** — → task 2.1 proves the hazard red-first in the real engine and makes the shortcut inert
   while `data-mode === 'edit'`.
 - **F-3 · A nested `mount()` composes the FULL reader chrome and touches module-level registries.** D-4's
-  nested host is a real `mount()` call, so the preview pane receives its own mode-toggle pill, theme
-  control, TOC rail, and `registerReaderSource`/TOC-registry entries. Whether that is acceptable in a
-  preview pane is unassessed. → task 2.2 reports exactly what lands; hiding chrome by CSS scoped to the
-  nested host is in scope, **any fix needing a `mount.ts` edit is a STOP** (D-4's zero-diff is ruled).
+  nested host is a real `mount()` call, so the preview pane receives its own mode-toggle pill
+  (`mount.ts:157`), theme control (`:169`) and TOC rail (`:209-210`), plus the registry-gated chrome —
+  watch (`:183`), diff (`:191`), agent badge (`:198`). **RESOLVED BY THE D-4 RE-RULING (2026-10-04,
+  `decisions.md`).** The watch target, diff context and document identity are MODULE-LEVEL SINGLETONS
+  (`watchRegistry.ts:74`, `diffRegistry.ts:178`, `docIdentity.ts:59`; registered by the app page at
+  `appShell.ts:1287/1340/1364`), so on the app page a nested `mount()` composes them LIVE — three hazards,
+  not cosmetic duplicates: a preview watch pill that starts watching INTO the preview, a diff affordance
+  acting on the preview rather than the document, and a preview TOC rail the backtick can resolve to
+  instead of the document's. **CSS-hiding is REJECTED** — it cannot undo registry wiring; a hidden control
+  is still wired. **The fix is the additive `mount()` option `chrome?: boolean` (default `true`), and a
+  `mount.ts` edit for it is NOT a stop: it is the AUTHORIZED, additive, default-safe edit**, proven
+  byte-identical for every existing caller. → task 2.2 adds the option and builds the preview on it. Any
+  `mount.ts` edit BEYOND that one option is still a stop-and-flag.
 - **F-4 · D-8 needs two signals across an import fence the plan's "Touches: `watchController.ts` only"
   does not account for.** `watchController.ts` is on the content-script graph and may import no editor
   module. It needs IN: "does this edit session hold unsaved changes"; and OUT: "an external change was
@@ -209,36 +227,78 @@ has no caller until 3.2 wires the control, so both tasks ship as tested-but-unre
       new guard — the mode flips to `'raw'`, in those units. The assertion that found the defect is the
       one seen to fail (no cheaper check ahead of it). Positive control in the same file: in `'reading'`,
       `\` still flips to `'raw'` and back. Shortcut-listener assertions are delta-based (shared
-      `document`). `mount.ts` zero-diff. Content-script bytes: stated against 1.1's figure — `readerMode.ts`
+      `document`). `mount.ts` zero-diff IN THIS TASK (its one authorized edit is 2.2's). Content-script
+      bytes: stated against 1.1's figure — `readerMode.ts`
       and `readerCss.ts` ARE on the content-script graph, so this task is expected to MOVE that number by
       its own glue; the delta is decomposed and justified, and any `codemirror` byte in it is a hard stop.
       Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-1]
 
-- [ ] **2.2 The split-pane shell + the nested preview host, proven not to disturb the outer shadow root
-      (D-4).** TEST FIRST. `editorView.ts` (shell half): on edit entry build, once, two sibling elements
-      inside the outer host's shadow root beside the reading column — a source-pane slot and a preview
-      element that gets its OWN shadow root; preview updates are `mount(text, nestedHost, { contained:
-      true, preserveReading: true })`, never a call on the outer host; teardown on exit. `readerCss.ts`
-      gains the two-column layout per `design/mockup.html:300-304` (tokens verified against
-      `design/tokens.css` before use; a narrow-viewport stack). No CodeMirror — the source slot holds a
-      placeholder the test drives.
-      Files: `src/render/editorView.ts` (new) · `src/render/editorView.test.ts` (new) ·
-      `src/theme/readerCss.ts` · `tests/browser/editorNestedHost.browser.test.ts` (new)
-      Verify: (**real engine, Cr+Fx**) the outer shadow root's `mount()`-composed chrome is the SAME node
-      set, serialising byte-identical, across (i) ten enter/exit toggles and (ii) twenty nested preview
-      re-renders; the outer reading column node is identical by reference before and after. **Red-first,
-      in the defect's own units:** point the preview's `mount()` at the outer host → the source-pane node
-      is gone from the outer root (the editor destroyed). The outer host's module-level registry entries
-      (reader source, TOC host) are unchanged by a nested mount — delta-asserted. **F-3's report:** what
-      chrome and registrations the nested mount produced, listed plainly, with what was hidden by CSS and
-      what was left. Layout proven by hit-test at one NARROW and one WIDE viewport, both recorded.
-      `git diff --stat src/render/mount.ts` EMPTY — and if any item above cannot be met without editing
-      `mount.ts`, STOP and flag. Content-script bytes stated and decomposed (`readerCss.ts` again).
-      Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-4]
+- [ ] **2.2 `mount()`'s additive `chrome: false` option + the split-pane shell + the nested preview host
+      built on it (D-4 as RE-RULED 2026-10-04; F-3).** TEST FIRST, in two halves, the option first.
+      **(a) The option.** `MountOptions` gains ONE field, `chrome?: boolean`, default `true`. When `false`,
+      `mount()` skips the chrome composition — the mode pill, theme control, watch chrome, diff chrome,
+      agent badge and the remote-load bar + network indicator (`mount.ts:157-201`) and the TOC rail
+      (`:209-210`) — and commits the reader stylesheet(s) and the reading column only. The
+      `sanitize(parse())` → inert `<template>` → `applyMediaPolicy` → adopt sequence (`:118-143`) is NOT
+      touched and NOT duplicated: the single trusted render path is the reason this option exists. Every
+      existing caller omits the field and is byte-identical to today. **(b) The shell.** `editorView.ts`
+      (shell half): on edit entry build, once, two sibling elements inside the outer host's shadow root
+      beside the reading column — a source-pane slot and a preview element that gets its OWN shadow root;
+      preview updates are `mount(text, nestedHost, { contained: true, preserveReading: true, chrome:
+      false })`, never a call on the outer host; teardown on exit. `readerCss.ts` gains the two-column
+      layout per `design/mockup.html:300-304` (tokens verified against `design/tokens.css` before use; a
+      narrow-viewport stack). No CodeMirror — the source slot holds a placeholder the test drives.
+      **★ Scroll — designed for here, not discovered at 3.3.** `preserveReading` resolves its scroller
+      through `resolveScrollContainer(host, true)` (`scrollContainer.ts:41`), which walks
+      `host.parentElement` — `null` for a direct child of a shadow root — and then falls back to the host
+      itself, which does not scroll under `CONTAINED_CSS`. An anchor captured against a non-scrolling
+      element restores nothing, silently. So the shell makes a REAL scroller resolvable: the nested host
+      sits inside a wrapper element in the outer shadow root that is the preview pane's scroll box (or the
+      nested host is itself made the scrolling element). Which, is this task's to choose and state.
+      **★ Named so they are reported, not assumed:** (i) `mount()`'s post-commit wiring (`:219-233` —
+      `registerReaderSource`, `setReaderMode`, the two shortcut installers, the TOC un-register,
+      `initReaderRuntime`) sits OUTSIDE the ruled guard range and still runs on the nested host; the task
+      reports what each does on a chrome-less host. If any of it must be guarded too, that is a
+      STOP-and-flag — the ruling names `:157-201` + `:209-210`, and widening it is the human's call.
+      (ii) The remote-load bar and network indicator are inside the ruled range, so a preview holding
+      remote media shows it blocked with no in-preview opt-in. `applyMediaPolicy` (`:134`) still runs, so
+      nothing leaves the machine; stated in the report for the human to see.
+      Files: `src/render/mount.ts` (the ONE authorized edit — the option field + its guard) ·
+      `src/render/mount.test.ts` · `src/render/editorView.ts` (new) · `src/render/editorView.test.ts`
+      (new) · `src/theme/readerCss.ts` · `tests/browser/editorNestedHost.browser.test.ts` (new)
+      Verify: **Existing callers byte-identical:** `mount.test.ts`, `mount.fallback.test.ts` and the whole
+      browser suite green with NO existing assertion edited; a new case pins that an omitted `chrome` and
+      `chrome: true` commit the same serialised shadow root as each other; `git diff src/render/mount.ts`
+      is the option field, its doc comment and the guard, nothing else. **Content-script bytes** (`mount.ts`
+      and `readerCss.ts` are both on that graph): the delta stated against 2.1's figure and decomposed into
+      the guard glue and the layout CSS as SEPARATE arms plus the both-ablated arm (a shared helper hides
+      from marginal arms), md5 under ablation, residual accounted. (**real engine, Cr+Fx**) the outer
+      shadow root's `mount()`-composed chrome is the SAME node set, serialising byte-identical, across (i)
+      ten enter/exit toggles and (ii) twenty nested preview re-renders; the outer reading column node is
+      identical by reference before and after. **Red-first, in the defect's own units:** point the
+      preview's `mount()` at the outer host → the source-pane node is gone from the outer root (the editor
+      destroyed). ★ **The three hazards proven ABSENT, red-first, with the registries LIVE** — a watch
+      target and a diff context registered, an agent-file identity set, a preview document of ≥ 2 headings,
+      so every arm of the chrome WOULD compose: the nested shadow root holds no watch control, no diff
+      affordance, no TOC rail, no mode pill, no theme control and no agent badge (each selected by class
+      alone); the nested host is not a registered TOC host, and a backtick toggles the OUTER document's
+      rail (delta-asserted). **Ablation:** drop `chrome: false` from the preview's call → the preview
+      watch control, the preview diff affordance and the preview rail all appear and the backtick resolves
+      to the preview — each asserted in those units, the hazard assertion being the one seen to fail.
+      **Positive control, same file:** the outer host, mounted without the option under the same registry
+      state, DOES carry all of that chrome. The preview's reading column is present and non-empty, so
+      "no chrome" is not "nothing rendered". The outer host's own registry entries (reader source, TOC
+      host) are unchanged by a nested mount — delta-asserted. **Scroll:** the element
+      `resolveScrollContainer` returns for the nested host is asserted by IDENTITY to be the preview's
+      real scroll box (not the nested host by fallback, not the outer pane). Layout proven by hit-test at
+      one NARROW and one WIDE viewport, both recorded. Full suite (production code changed). Golden EMPTY
+      · manifest **654 / 770 B** · `permissions: []`. [D-4]
 
-*Group-2 acceptance (plan §6): entering/exiting `'edit'` leaves the outer host's chrome byte-identical
-across repeated toggles; the nested host's `mount()` calls never touch the outer shadow root; `mount.ts`
-zero-diff; the `\` key cannot eject an editing user.*
+*Group-2 acceptance (plan §6, D-4's mechanism as re-ruled): entering/exiting `'edit'` leaves the outer
+host's chrome byte-identical across repeated toggles; the nested host's `mount()` calls never touch the
+outer shadow root; the preview carries the reading column with NO chrome and NO registry wiring;
+`mount.ts`'s diff is the one additive `chrome` option and every existing caller is byte-identical; the `\`
+key cannot eject an editing user.*
 
 ## 3 — Engine module + enhancer scaffolding + live preview (D-2, D-3, D-5's mechanism)
 
@@ -305,7 +365,9 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       mechanism; Q4).** TEST FIRST. The editor's update listener feeds the buffer to 2.2's nested
       `mount()` through a NEW coalescing cooldown instance scoped to the preview (D-5's cost-proportional
       shape — newest text wins, never a queue), using the PROVISIONAL value Q4 settles, marked as such in
-      one place. The preview keeps its scroll position across updates (`preserveReading`). A preview
+      one place. The preview keeps its scroll position across updates (`preserveReading`, against the
+      scroll box 2.2 made resolvable — proven here under real typing: scroll the preview to a marker, type,
+      the marker is still in view; red-first by resolving to the non-scrolling fallback). A preview
       render failure shows the reader's existing render-failure state IN THE PREVIEW PANE while the buffer
       stays intact and editable.
       Files: `src/render/editorView.ts` · `src/render/editorView.test.ts` ·
@@ -551,8 +613,10 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       intent**, not its variable names · the browser's own **unload dialog** and anything 6.1 named ·
       the **reload / duplicated-tab re-prompt** if 5.7 could not drive it · **zero unexpected network
       with the Network tab open** across load, preview, save · **at least one WIDE viewport, recorded
-      like an engine** (new chrome ships this milestone) plus the viewports 2.2 recorded · F-3's nested
-      preview chrome, judged by eye. *The informal fidelity eyeball is NOT this task's — it was owed at
+      like an engine** (new chrome ships this milestone) plus the viewports 2.2 recorded · the nested
+      preview pane judged by eye as a chrome-less reading column (F-3 / D-4 re-ruled: no pill, no theme
+      control, no rail, no watch or diff affordance in it), including a document with remote media, which
+      shows blocked with no in-preview opt-in. *The informal fidelity eyeball is NOT this task's — it was owed at
       3.2, when the editor first rendered.*
       Files: `docs/ai/progress.md` (verdicts) · `src/theme/readerCss.ts` only if a walked item returns a
       named styling finding
@@ -598,8 +662,9 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
   SPECIFIC-CONTENT-matched, never absolute, non-empty or pristine.
 - **Content-script bytes — 340,492 B both engines.** The editor is app-page-only: **no `codemirror` byte
   ever enters `content-scripts/peekover.js`; one that does is a hard stop and an import-fence failure.**
-  ★ Stated honestly rather than as a blanket "unmoved" (Q6 — the human's to confirm): `readerMode.ts`, `readerCss.ts` and
-  `watchController.ts` are shared with the content-script graph, so tasks 2.1, 2.2, 4.1, 4.2 (and any CSS
+  ★ Stated honestly rather than as a blanket "unmoved" (Q6 — RULED at gate 3, as proposed): `readerMode.ts`,
+  `readerCss.ts`, `watchController.ts` — and `mount.ts`, for 2.2's `chrome` option guard — are shared with
+  the content-script graph, so tasks 2.1, 2.2, 4.1, 4.2 (and any CSS
   touch in 3.2 / 5.3) are expected to move that figure by their own small glue. Each such task states the
   delta, decomposes it, and proves by md5 under ablation that it is that glue and nothing else. Every OTHER
   task proves md5 identity against the prior task's build — by md5, never by grep.
@@ -609,9 +674,11 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
   hard stop — none is expected (plan §1).
 - **Golden EMPTY, every task** — `git diff tests/golden/output/` empty for the whole milestone (D-C: no new
   parse/sanitize shape; unlike 011, nothing grows).
-- **`mount.ts`, `chromiumFolderSource.ts`, `htmlExport.ts` zero-diff for the whole milestone**, checked by
+- **`chromiumFolderSource.ts`, `htmlExport.ts` zero-diff for the whole milestone**, checked by
   `git diff --stat` per task; so are the diagram/math modules and `runReader.ts` / `mountReader.ts` /
-  `contentWatch.ts`.
+  `contentWatch.ts`. **`mount.ts` has exactly ONE authorized diff — task 2.2's additive `chrome` option
+  (D-4 re-ruled 2026-10-04) — and is zero-diff in every other task**, checked the same way; a second
+  `mount.ts` edit anywhere is a stop-and-flag.
 - **Full-suite Verify whenever production code changes**; test-only tasks (5.7) may use the targeted suite
   plus an adjacent-surface spot-check.
 - **Zero network by default** — nothing in this milestone is a user-triggered network call; there is no
