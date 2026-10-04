@@ -1,6 +1,6 @@
 // readerMode — the Raw <-> Reading view toggle for a mounted reader. Two ways in:
 // a focusable pill inside the shadow root, and a single bare-key shortcut. State is
-// a `data-mode` attribute on the shadow host ('reading' | 'raw'); CSS in readerCss.ts
+// a `data-mode` attribute on the shadow host ('reading' | 'raw' | 'edit'); CSS in readerCss.ts
 // keys view visibility off it, so a toggle is a pure attribute flip — it NEVER
 // re-runs parse/sanitize (that happened once, at mount). The raw view is built lazily
 // the first time the user switches to it — just the source as textContent, no parse —
@@ -12,6 +12,10 @@
 //
 // Scoping is the delicate part (see installToggleShortcut): the key listener must
 // never swallow keys on pages we did not render.
+//
+// 'edit' (012 D-1) is the third mode and the one that is NOT a pure attribute flip: it is
+// reached only through the async enterEditMode, never through setReaderMode or the toggle.
+// This module imports no editor — the engine arrives as an injected loader.
 
 const HOST_TAG = 'peekover-root';
 
@@ -25,7 +29,7 @@ const HOST_TAG = 'peekover-root';
  */
 export const TOGGLE_KEY = '\\';
 
-export type ReaderMode = 'reading' | 'raw';
+export type ReaderMode = 'reading' | 'raw' | 'edit';
 
 /**
  * Per-host raw source, stashed so the raw view can be built lazily on first toggle
@@ -50,14 +54,15 @@ export function readerSourceFor(host: HTMLElement): string | undefined {
 }
 
 /** Reflect the current mode onto the toggle button's label + aria-label. In reading
- *  mode the control offers "Raw" (the next view); in raw mode it offers "Reading". */
+ *  mode the control offers "Raw" (the next view); in raw mode it offers "Reading". In
+ *  edit it offers "Raw" too — toggleReaderMode is binary, so that is where a click goes. */
 function labelToggle(host: HTMLElement, mode: ReaderMode): void {
   const btn = host.shadowRoot?.querySelector<HTMLButtonElement>('.peekover-mode-toggle');
   if (!btn) return;
-  btn.textContent = mode === 'reading' ? 'Raw' : 'Reading';
+  btn.textContent = mode === 'raw' ? 'Reading' : 'Raw';
   btn.setAttribute(
     'aria-label',
-    mode === 'reading' ? 'Show raw markdown source' : 'Show reading view',
+    mode === 'raw' ? 'Show reading view' : 'Show raw markdown source',
   );
 }
 
@@ -75,17 +80,70 @@ function ensureRawView(host: HTMLElement): void {
   shadow.appendChild(pre);
 }
 
-/** Set the reader's view mode: build the raw view if needed, flip the host attribute
- *  (CSS swaps visibility), and relabel the control. No reparse on any path. */
-export function setReaderMode(host: HTMLElement, mode: ReaderMode): void {
-  if (mode === 'raw') ensureRawView(host);
+/** Flip the host attribute (CSS swaps visibility) and relabel the control. */
+function applyMode(host: HTMLElement, mode: ReaderMode): void {
   host.setAttribute('data-mode', mode);
   labelToggle(host, mode);
+}
+
+/**
+ * Set the reader's view mode: build the raw view if needed, flip the host attribute
+ * (CSS swaps visibility), and relabel the control. No reparse on any path. Synchronous.
+ *
+ * 'edit' is NOT settable here — it lands in 'reading'. The type admits it only because
+ * mount()'s carried-mode restore hands back whatever `data-mode` was live, and a
+ * `preserveReading` re-render during an edit session (a watch tick, until 012 D-8 defers
+ * it) has by then dropped the editor with `replaceChildren`. Writing a bare 'edit' there
+ * would hide the reading column and the raw view with nothing in their place — a blank
+ * page. Any call here also ends the edit session, so a later exit cannot return to a
+ * mode remembered from a session that no longer exists.
+ */
+export function setReaderMode(host: HTMLElement, mode: ReaderMode): void {
+  if (mode === 'raw') ensureRawView(host);
+  editReturn.delete(host);
+  applyMode(host, mode === 'edit' ? 'reading' : mode);
 }
 
 /** Flip reading <-> raw. Pure view swap — reader content identity is preserved. */
 export function toggleReaderMode(host: HTMLElement): void {
   setReaderMode(host, host.getAttribute('data-mode') === 'raw' ? 'reading' : 'raw');
+}
+
+/** Per-host: the mode an edit session was entered from, so its exit can return there. */
+const editReturn = new WeakMap<HTMLElement, ReaderMode>();
+
+/** What enterEditMode is handed: where the engine comes from, and what to build with it. */
+export interface EnterEditOptions<E> {
+  /** Loads the editor engine. Injected, so this module never names it. */
+  loader: () => Promise<E>;
+  /** Builds the edit view from the loaded engine, before the mode flips. It owns its own
+   *  cleanup: if it rejects, it must leave the host's DOM as it found it. */
+  build?: (engine: E, host: HTMLElement) => void | Promise<void>;
+}
+
+/**
+ * Enter edit mode: load, THEN build, THEN flip `data-mode` and relabel — in that order, so
+ * the host is never in 'edit' with no editor behind it. A rejection from either step
+ * propagates to the caller with the mode, the attribute and the control untouched. The
+ * mode to return to is read at the flip, not at the call, so a toggle made while the
+ * engine was loading is the one honoured.
+ */
+export async function enterEditMode<E>(
+  host: HTMLElement,
+  { loader, build }: EnterEditOptions<E>,
+): Promise<void> {
+  const engine = await loader();
+  await build?.(engine, host);
+  const from = host.getAttribute('data-mode');
+  if (from === 'edit') return;
+  editReturn.set(host, from === 'raw' ? 'raw' : 'reading');
+  applyMode(host, 'edit');
+}
+
+/** Leave edit mode for the mode it was entered from. Does nothing outside edit. */
+export function exitEditMode(host: HTMLElement): void {
+  if (host.getAttribute('data-mode') !== 'edit') return;
+  setReaderMode(host, editReturn.get(host) ?? 'reading');
 }
 
 /**
@@ -121,6 +179,10 @@ let shortcutInstalled = false;
  *     `data-mode`). So on a render failure (raw + banner, no data-mode) and on any
  *     page without our reader, the key passes straight through untouched;
  *   - it ignores the event when focus is in an input/textarea/select/contenteditable;
+ *   - it does nothing while the host is in 'edit' (012 F-2). The guard above cannot cover
+ *     an editor: a key typed inside the shadow root reaches this listener retargeted to
+ *     the host, which is not editable, so a typed backslash would be swallowed and would
+ *     throw the user out to Raw;
  *   - preventDefault fires ONLY after we have decided to handle it.
  * The content script that calls this runs only in matched markdown contexts, so the
  * listener is never even added on other pages; the once-guard prevents duplicate
@@ -136,6 +198,7 @@ export function installToggleShortcut(): void {
     if (isEditableTarget(e.target)) return;
     const host = document.querySelector<HTMLElement>(HOST_TAG);
     if (!host || !host.hasAttribute('data-mode')) return;
+    if (host.getAttribute('data-mode') === 'edit') return;
     e.preventDefault();
     toggleReaderMode(host);
   });

@@ -24,7 +24,20 @@
 // var(--accent): those two ALWAYS contrast — opposite ends of the theme — so that
 // pairing is safe and is not a trap case.)
 
-/** The <style> payload for the reader shadow root: tokens + reading typography. */
+/**
+ * The <style> payload for the reader shadow root: tokens + reading typography.
+ *
+ * VIEW VISIBILITY AND `data-mode="edit"` (012 task 2.1). The two original rules each hide the
+ * OTHER view for their own mode, so a third `data-mode` value matched neither and both the
+ * reading column and the raw <pre> stayed on screen. 'edit' is therefore a second selector on
+ * EACH of those two rules, hiding both; what takes their place is the edit view a later task
+ * builds. It is folded into the existing rules rather than written as a rule of its own so that
+ * READER_CSS gains no new `:host` rule site (htmlExport.test.ts pins that count; human-ruled at
+ * 2.1 — the export drops every `data-mode` rule either way). Nothing here can blank a
+ * page on its own: readerMode.ts writes 'edit' only from enterEditMode, after the edit view is
+ * built, and its setReaderMode turns a carried 'edit' back into 'reading'. Rationale for rules
+ * in this file belongs up here — a comment inside the template literal ships as bytes.
+ */
 export const READER_CSS = /* css */ `
 /* ============ Design tokens (design/tokens.css — verbatim) ============ */
 :host{
@@ -196,16 +209,16 @@ export const READER_CSS = /* css */ `
 /* View visibility is driven PURELY by data-mode on the host, so toggling is an
    attribute flip — parse/sanitize never re-run. The failure path sets NO data-mode
    (banner + raw is the only view there), so neither rule hides its raw <pre>. */
-:host([data-mode="reading"]) .peekover-raw{display:none}
-:host([data-mode="raw"]) .peekover-reader{display:none}
+:host([data-mode="reading"]) .peekover-raw,:host([data-mode="edit"]) .peekover-raw{display:none}
+:host([data-mode="raw"]) .peekover-reader,:host([data-mode="edit"]) .peekover-reader{display:none}
 
 /* ============ Diff view (task 6.1, D-15) ============ */
 /* Entering a diff is an ATTRIBUTE FLIP, not a re-render: data-diff="active" on the HOST — mirroring
    data-watch/data-mode — hides the reading column while a lazily-built sibling .peekover-diff
    (diffView.ts) takes its place. The host attribute survives replaceChildren (like data-watch); the
    .peekover-reader DOM is never touched, so exit is just clearing the attribute + restoring the
-   reading anchor. SEPARATE from data-mode on purpose (readerMode.ts guards its Raw shortcut on
-   data-mode; a third data-mode value would change that shipped semantic). */
+   reading anchor. SEPARATE from data-mode on purpose: a diff is not a view mode (data-mode is
+   'reading' | 'raw' | 'edit' — readerMode.ts's ReaderMode). */
 :host([data-diff="active"]) .peekover-reader{display:none}
 
 /* The diff occupies the reading column's space — same centered measure and padding as

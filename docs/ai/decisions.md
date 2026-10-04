@@ -1,6 +1,40 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · 012 D-1 — `ReaderMode` extends to a third literal, `'edit'`, not a sibling flag. Landed
+  with task 2.1 (plan §0 D-1's draft entry text, verbatim):**
+  "012 D-1 — edit rides `readerMode.ts`'s own carried-mode machinery as a third
+  `ReaderMode` value, not a parallel boolean, because `mount.ts`'s `preserveReading`/`CarriedReading.mode`
+  restore path (mount.ts:70-77, 216, 223) and `watchController.ts`'s attribute-gated deferral (below, D-8)
+  both already key off the ONE `data-mode` attribute; a sibling flag would be a second source of truth for
+  the same question."
+  [Task 2.1 implements D-1's `ReaderMode` half — the type, the async `enterEditMode` (which takes its
+  engine as an injected `{ loader }` and an optional `build` step, where the plan's draft signature was
+  `enterEditMode(host)`), and `exitEditMode`. D-1's other half, the dedicated edit-entry control, lands at
+  task 3.2. Citations re-derived at `c173d4e`: `mount.ts:70-77`, `:216` and `:223` are unmoved. One thing
+  the quoted text does not say, stated so it is not assumed: `mount()`'s restore path does type-check
+  against the widened union with `mount.ts` byte-untouched, but `'edit'` is not RESTORED across a
+  `preserveReading` re-render — `replaceChildren` has dropped the editor by then, so
+  `setReaderMode(host, 'edit')` lands in `'reading'` rather than leaving both views hidden with nothing
+  in their place. D-8 (group 4) is what stops that re-render happening during an edit session.]
+  [★ HUMAN RULING, task 2.1, 2026-10-04 — the `\` guard is DEFENSE-IN-DEPTH. Re-deriving F-2 found the
+  hazard cannot fire today on the surface edit mode runs on: `installToggleShortcut` resolves its host
+  with `document.querySelector('peekover-root')` (`readerMode.ts`), and the app-page reader host is a
+  plain `<div>` (`readerPane.ts:167-168`), so `\` is already inert there (the 2026-07-17 CARRIED
+  HARDENING entry). The guard ships anyway, and its real-engine red-first and positive control run on
+  the `peekover-root` shape, where the listener is live; the app-page-shape case in
+  `editMode.browser.test.ts` is a pin that passes with or without the guard. Rejected: unifying the
+  shortcuts on a host registry now (a shipped-behaviour change beyond 2.1), and shipping no guard
+  (departs from 2.1's Verify line and group 2's acceptance). **Revisit-when:** the carried "unify the two
+  keyboard shortcuts on ONE host registry" item is taken up — the guard becomes load-bearing then, and
+  its proof should move to the app-page shape.]
+  [★ HUMAN RULING, task 2.1, 2026-10-04 — the edit visibility CSS adds NO new `:host` rule site. A
+  separate `:host([data-mode="edit"])` rule moved `htmlExport.test.ts`'s pin of READER_CSS's `:host`
+  rule sites from 26 to 27 (the rule was correctly DROPPED by the export translation; export output
+  was unchanged). Ruled: fold `'edit'` into the two existing `data-mode` rules as a second selector on
+  each — the count stays 26, no existing assertion is edited, no file outside 2.1's list changes.
+  Rejected: moving the pin to 27.]
+
 - **2026-10-04 · M12 TASK 1.1 EXTENDED — `markdown()`'s default keymap ships AS-IS; §6's deferred
   "smart lists/continuation" is a PEEKOVER-BUILT deferral, the same reading as find/replace and lint.
   Human-ruled, extending Option A.** Doc-only: this entry closes the item the M12 TASK 1.1 entry (two

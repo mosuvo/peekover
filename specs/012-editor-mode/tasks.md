@@ -255,7 +255,7 @@ settled at 1.1; "the governed install is clean" is completed by 1.2's audit EXIT
 *Nothing in this group imports `codemirror`. The engine is an injected loader (a stub in tests); production
 has no caller until 3.2 wires the control, so both tasks ship as tested-but-unreached code.*
 
-- [ ] **2.1 `ReaderMode` gains `'edit'`; async `enterEditMode` / its exit; the `\` shortcut made inert in
+- [x] **2.1 `ReaderMode` gains `'edit'`; async `enterEditMode` / its exit; the `\` shortcut made inert in
       edit mode (D-1; F-2).** TEST FIRST. `ReaderMode = 'reading' | 'raw' | 'edit'`. New exported async
       `enterEditMode(host, { loader })`: load, THEN build, THEN flip `data-mode` and relabel — never a
       half-state; a rejected loader leaves `data-mode` and the DOM exactly as they were. An exit path back
@@ -279,6 +279,15 @@ has no caller until 3.2 wires the control, so both tasks ship as tested-but-unre
       and `readerCss.ts` ARE on the content-script graph, so this task is expected to MOVE that number by
       its own glue; the delta is decomposed and justified, and any `codemirror` byte in it is a hard stop.
       Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-1]
+      ★ *Post-landing, 2026-10-04 — two human rulings taken at this task, both recorded in
+      `decisions.md`'s 012 D-1 entry and `progress.md`'s 2.1 record. (i) F-2's hazard does not fire on
+      the app-page host (a `<div>`, which the shortcut's `querySelector('peekover-root')` never
+      resolves), so the guard ships as DEFENSE-IN-DEPTH and its real-engine red-first + positive control
+      run on the `peekover-root` shape; the app-page-shape case is a pin, not a proof. (ii) The edit
+      visibility CSS is folded into the two existing `data-mode` rules as extra selectors, not a new
+      rule, so `htmlExport.test.ts`'s 26-`:host`-site pin is unmoved and no file beyond this line's
+      list changed. `enterEditMode` also takes an optional injected `build` step — the seam 2.2 plugs
+      its shell into. Measured: content script 342,339 B both engines (+178 B) — 2.2's snapshot.*
 
 - [ ] **2.2 `mount()`'s additive `chrome: false` option + the split-pane shell + the nested preview host
       built on it (D-4 as RE-RULED 2026-10-04; F-3).** TEST FIRST, in two halves, the option first.

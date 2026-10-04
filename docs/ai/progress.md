@@ -1,11 +1,12 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-04 (M12 task 1.2 DONE — the audit bump). M12 (`specs/012-editor-mode/`, F8 Editor Mode's
-focused core) is in implementation: gates 1–3 approved, task 1.1 (the governed CodeMirror install) and
-task 1.2 (`markdown-it` 14.3.2 + `dompurify` 3.4.16, `pnpm audit --prod` EXIT=0) landed; **task 2.1 is
-next.** Current numbers: `.output` 5,200,689 B (Cr) / 5,200,805 B (Fx) against ≤ 7 MiB, content script
-342,161 B both engines, `dependencies` 10, `permissions: []`. M11 (math rendering, Temml/MathML) closed
+*Updated: 2026-10-04 (M12 task 2.1 DONE — `ReaderMode` `'edit'`). M12 (`specs/012-editor-mode/`, F8 Editor
+Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1 (the governed CodeMirror
+install), 1.2 (the audit bump) and 2.1 (`ReaderMode` gains `'edit'`, `enterEditMode` / `exitEditMode`, the
+backslash shortcut inert in edit) landed; **task 2.2 is next.** Current numbers: `.output` 5,201,045 B
+(Cr) / 5,201,161 B (Fx) against ≤ 7 MiB, content script 342,339 B both engines, `dependencies` 10,
+`permissions: []`. M11 (math rendering, Temml/MathML) closed
 2026-09-11 — its summary is under § Closed milestones, its narrative in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
@@ -204,17 +205,79 @@ also 0). 1.1's audit clause is CLOSED.**
 - **Noted, nothing changed:** `mermaid` resolves 11.16.1, where M7's records cite 11.16.0 — it has been
   11.16.1 since `8f6c59f` (the pre-009 audit bump), not a move of this task's.
 
+**M12 task 2.1 DONE, 2026-10-04 — `ReaderMode = 'reading' | 'raw' | 'edit'`; async `enterEditMode` and
+`exitEditMode`; the backslash shortcut inert in edit; the edit visibility CSS. Tested-but-unreached: no
+production caller until 3.2, nothing imports `codemirror`. `mount.ts` zero-diff. D-1's `decisions.md`
+entry landed with it. Two human rulings were taken mid-task (both in that entry).**
+- **★ Hazard (a) — F-2 does NOT fire on the surface edit mode runs on (human-ruled: guard as
+  defense-in-depth).** `installToggleShortcut` resolves `document.querySelector('peekover-root')`; the
+  app-page host is a `<div>` (`readerPane.ts:167-168`), so the listener returns before it acts — the
+  2026-07-17 carried inertness. The guard (`data-mode === 'edit'` → return, before `preventDefault`)
+  ships anyway; it becomes load-bearing when the carried "unify the two shortcuts on one host registry"
+  item lands. Its red-first and positive control run on the `peekover-root` shape and say so; the
+  app-page-shape case is a pin that passes with or without the guard (it stayed green under ablation).
+  F-2's retargeting claim, "read from the code, not yet observed", is now OBSERVED on both engines.
+- **Hazard (b) — the type ripple needs no `mount.ts` edit.** The widened union type-checks against
+  `mount.ts:74/223/261` untouched (`tsc` 0). At runtime a `preserveReading` re-render during edit hands
+  `'edit'` back to `setReaderMode` after `replaceChildren` has dropped the editor; `setReaderMode(host,
+  'edit')` therefore lands in `'reading'` and ends the edit session (a later exit cannot resurrect a
+  stale return mode). Never a bare `'edit'` with both views hidden. Group 4 (D-8) stops the re-render.
+- **The build seam.** `enterEditMode(host, { loader, build? })`: `await loader()`, then
+  `await build?.(engine, host)`, then the flip + relabel. 2.2 plugs its shell in as `build`; a rejection
+  from either step propagates with the host untouched (`build` owns cleanup of its own partial DOM). The
+  return mode is read at the flip, not at the call. `exitEditMode(host)` is a no-op outside edit.
+  Teardown on exit is 2.2's own, called beside `exitEditMode` — no seam added for it.
+- **Stated, not hidden:** the mode pill in edit reads "Raw" (`toggleReaderMode` stays binary, so that is
+  where its click goes — and it leaves edit without `exitEditMode`). What the pill does during an edit
+  session is 3.2's to decide when it adds the edit control.
+- **★ The `:host` pin (human-ruled: fold).** A separate `[data-mode="edit"]` rule moved
+  `htmlExport.test.ts`'s 26-`:host`-site pin to 27 (persistent, not a flake). Ruled: `'edit'` is a second
+  selector on each of the two existing `data-mode` rules — count stays 26, no assertion edited.
+- **Red-first.** Unit, before implementation: 9 failed (`enterEditMode is not a function`). Unit ablation
+  (flip before the await): 4 failed — the pending-state case `expected 'edit' to be 'reading'`. Browser,
+  guard removed: 4 failed (textarea + contenteditable × Cr + Fx), `expected 'raw' to be 'edit'`, the
+  mode assertion first. Browser, CSS reverted: 4 failed, `expected 'block' to be 'none'`. Positive
+  control (reading: `\` writes `raw`, then from raw writes `reading`) green on both engines. Listener
+  instruments are per-press deltas (the `data-mode` writes to this host; `preventDefault` calls on a `\`
+  keydown), driven by real trusted key presses.
+- **Bytes, clean rebuild, both engines (baseline re-derived at `c173d4e`, matched the cited figures):**
+
+  | | Baseline | Post-2.1 | Delta | Headroom vs 7,340,032 B |
+  |---|---|---|---|---|
+  | `.output` Chrome | 5,200,689 B | 5,201,045 B | +356 B | 2,138,987 B |
+  | `.output` Firefox | 5,200,805 B | 5,201,161 B | +356 B | 2,138,871 B |
+  | zip Chrome | 1,629,302 B | 1,629,407 B | +105 B | — |
+  | zip Firefox | 1,629,360 B | 1,629,465 B | +105 B | — |
+  | `content-scripts/peekover.js` | 342,161 B | 342,339 B | +178 B | — |
+  | content-script md5 Cr / Fx | `966f0198…` / `ae78e2ad…` | `d4d48d23969c91750e055be61a3ea767` / `5ff11e424a1b5fd669e446b888ce9875` | — | — |
+
+- **Decomposed, residual 0.** Two files change size, the same on both engines: the content script and
+  the app chunk (`chunks/app-*.js` 511,410 → 511,588 B), +178 B each = 356. Content-script arms, by
+  ablation: `readerMode.ts` reverted → 342,231 B (arm **108 B**: the guard, the `'edit'` → `'reading'`
+  branch, the `editReturn` WeakMap + its delete; `enterEditMode`/`exitEditMode` tree-shake out, having
+  no caller); `readerCss.ts` reverted → 342,269 B (arm **70 B**); both reverted → 342,161 B, md5
+  identical to baseline on both engines. 108 + 70 = 178. Zero `codemirror` bytes in the content script:
+  still unreferenced, 1.1's firing control is the standing proof (a 0-count grep here proves nothing).
+- **Suites, all green:** lint 0 · unit 1155 / 1155 (66 files; `readerMode.test.ts` 17, `mount.test.ts`
+  10, `mount.fallback.test.ts` 3, `tocView.test.ts` 27, `htmlExport.test.ts` 13, `golden.test.ts` 11) ·
+  browser 1675 pass / 15 skip (83 files per engine; `editMode` 6, `watchRemount` 12, `tocNetwork` 2,
+  `exportShortcut` 8, per engine). The carried wall-clock flakes did not fire. Golden diff EMPTY ·
+  `mount.ts` and every other zero-diff file EMPTY · manifest 654 / 770 B, `permissions: []`.
+
 ## Up next
 
-**FIRST — M12 task 2.1** (`ReaderMode` gains `'edit'`, async `enterEditMode`, the backslash shortcut inert
-in edit mode), fresh session, test-first, one commit per task. **Byte snapshot for its kickoff (1.2's
-measured figures):** `.output` 5,200,689 B (Cr) / 5,200,805 B (Fx) against ≤ 7 MiB (7,340,032 B) —
-headroom 2,139,343 / 2,139,227 B · zip 1,629,302 / 1,629,360 B · content script 342,161 B both engines,
-md5 `966f01988eccd126e02ab05667dd0676` (Cr) / `ae78e2adaccd79fdb73f4d5be0974f93` (Fx) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 10 · SBOM 191 · lint 0 · unit 1145 · browser 1663 / 15
-skipped · golden empty. CodeMirror is installed but unreferenced; the +605,443 B lands at 3.1.
+**FIRST — M12 task 2.2** (`mount()`'s additive `chrome: false` option + the split-pane shell + the nested
+preview host), fresh session, test-first, one commit per task. The shell plugs into 2.1's
+`enterEditMode` as its `build` step. **Byte snapshot for its kickoff (2.1's measured figures):**
+`.output` 5,201,045 B (Cr) / 5,201,161 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 2,138,987 /
+2,138,871 B · zip 1,629,407 / 1,629,465 B · content script 342,339 B both engines, md5
+`d4d48d23969c91750e055be61a3ea767` (Cr) / `5ff11e424a1b5fd669e446b888ce9875` (Fx) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 · unit 1155 · browser 1675 / 15 skipped ·
+golden empty. CodeMirror is installed but unreferenced; the +605,443 B lands at 3.1.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it from 1.2 on.
+figure above supersedes it.
+*(2.1's own kickoff snapshot, superseded: 1.2's figures — `.output` 5,200,689 / 5,200,805 B, content
+script 342,161 B.)*
 **Before 3.1: nothing is owed on the editor defaults.** `markdown()`'s default keymap is RULED ship-as-is
 (2026-10-04, `decisions.md`'s M12 TASK 1.1 EXTENDED entry), beside the `basicSetup` ruling; 7.1's walk
 now carries one item for the editing feel of those defaults.
