@@ -1,6 +1,60 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · 012 D-4 — LANDED at task 2.2: the live preview is `mount()` on a nested host, called
+  with the additive `chrome: false` option. The decision of record is the "M12 D-4 RE-RULED" entry below;
+  this entry records what was built on it.**
+  Plan §0 D-4's draft entry text, quoted because `tasks.md` lands each D-value's draft with its
+  implementing commit — **SUPERSEDED IN MECHANISM, not current:**
+  "012 D-4 — `mount()`'s own `shadow.replaceChildren(...)` contract (`mount.ts:218`) rebuilds a host's
+  ENTIRE shadow root on every call, chrome included; calling `mount()` on the document's own host for
+  live-preview purposes would destroy the editor's own DOM (and every other piece of mount-composed
+  chrome) on every debounced keystroke. The preview pane is therefore `mount()` called on a FRESH child
+  host, created once when edit mode begins and torn down when it ends — `mount.ts` itself stays
+  byte-untouched (006 D-15, re-affirmed every milestone since, unbroken here)."
+  Its first sentence and the nested-host conclusion stand. Its last clause — "`mount.ts` itself stays
+  byte-untouched" — was falsified by the chrome investigation and re-ruled; `mount.ts` gained one
+  additive option here, exactly as M12 D-4 RE-RULED authorizes.
+  **What 2.2 built:**
+  - **The option.** `MountOptions.chrome?: boolean`, default `true`. `git diff src/render/mount.ts` is
+    the field, its doc comment and the guard: one `const chrome = options.chrome !== false`, an
+    `if (chrome)` on each of the five chrome pushes, `chrome &&` on the remote-load condition, and the
+    rail built as `chrome ? buildTocView(…) : null`. The ruled range was unmoved (`:157-201`,
+    `:209-210` at `f9e6439`). `sanitize(parse())` → inert `<template>` → `applyMediaPolicy` → adopt is
+    untouched and not duplicated. An omitted field and `true` commit the same serialised root.
+  - **The shell.** `src/render/editorView.ts` — `buildEditorShell` / `renderPreview` /
+    `teardownEditorShell` / `editorShellFor`. Build appends, once, a `<style>` and one grid container
+    holding a source slot and a preview pane; the preview pane holds the nested host. It plugs into
+    2.1's `enterEditMode` as `build`; teardown is called beside `exitEditMode` and removes exactly what
+    build added. `renderPreview` is the one place the preview `mount()` call is written.
+  - **The scroll choice: a wrapper, not the nested host.** The nested host sits inside the preview pane
+    (`.peekover-editor__preview`, `overflow:auto`, definite height), so `resolveScrollContainer(nested,
+    true)` finds it by its computed overflow. Making the nested host itself scroll was rejected: it
+    would be reached only through `resolveScrollContainer`'s fallback, which is the same answer a
+    failed resolution gives.
+  - **Where the CSS lives: a new `EDITOR_CSS` export in `readerCss.ts`,** injected by the shell as its
+    own `<style>` and removed with it. Not in `READER_CSS` (its `:host([data-mode="edit"])` gates would
+    move `htmlExport.test.ts`'s 26-site pin — 2.1's finding) and not in `CONTAINED_CSS` (which ships to
+    the content script). Measured: it contributes 0 B to every built file today, the shell having no
+    production caller until 3.2.
+  - **Post-commit wiring (`mount.ts:238-252` after the edit; `:219-233` as ruled), on the nested host —
+    all harmless, none guarded:** `registerReaderSource` stores the preview text under the nested
+    host's own key; `setReaderMode` writes `data-mode="reading"` to the nested host and finds no pill to
+    relabel; `removeAttribute('data-diff')` is a no-op; both shortcut installers are once-guarded and
+    already installed; with no rail composed, `unregisterTocHost(nested)` runs — which is what keeps
+    the preview out of the TOC registry; `initReaderRuntime` registers the nested host as a themed host
+    and writes `data-theme`, which is NEEDED (the nested root carries its own token block, so without it
+    the preview would stay light under a dark theme). No outer-host registry entry is touched: a nested
+    render makes zero attribute writes to the outer host.
+  **Two things the human should see, neither ruled:** (i) the shell's height is a definite `60vh` where
+  the mockup has `min-height:60vh` — a minimum-height pane never scrolls, and the scroll box has to be
+  real; its margin is the reading column's own padding so it clears the corner chrome and the open TOC
+  rail. Both are 7.1 design-walk items. (ii) After a pill bypass (the mode pill leaves edit through
+  `toggleReaderMode`, with no teardown) the shell stays in the DOM, hidden by `EDITOR_CSS`, and a
+  re-entry reuses it — a carry for 3.2, which owns the pill's behaviour in edit.
+  **No human ruling was taken during this task.** D-4's cost is measured at 6.3.
+  **Revisit-when:** 6.3's measurement; 3.2, for the pill bypass.
+
 - **2026-10-04 · 012 D-1 — `ReaderMode` extends to a third literal, `'edit'`, not a sibling flag. Landed
   with task 2.1 (plan §0 D-1's draft entry text, verbatim):**
   "012 D-1 — edit rides `readerMode.ts`'s own carried-mode machinery as a third

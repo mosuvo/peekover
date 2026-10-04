@@ -64,6 +64,22 @@ export interface MountOptions {
    * keystroke.
    */
   preserveReading?: boolean;
+  /**
+   * Compose the reader CHROME beside the reading column (012 D-4 as re-ruled, task 2.2).
+   *
+   * ON by default, and an omitted field is byte-identical to `true` — every caller that predates
+   * the option is unchanged. `false` commits the stylesheet(s) and the reading column ONLY: no mode
+   * pill, theme control, watch chrome, diff chrome, agent badge, remote-load bar, network indicator
+   * or TOC rail. The edit view's live preview is the one caller that sets it — a nested host, where
+   * chrome built from the module-level watch / diff / identity registries would be wired LIVE to
+   * the preview instead of the document. Hiding it with CSS would leave that wiring in place.
+   *
+   * It skips composition and nothing else: parse -> sanitize -> the inert <template> -> the media
+   * policy run exactly as before, so remote media is still blocked (with no in-preview opt-in), and
+   * the post-commit wiring still runs — with no rail composed, the host is un-registered as a TOC
+   * host by the same branch a rail-less document takes.
+   */
+  chrome?: boolean;
 }
 
 /** What a `preserveReading` mount carries across its own `replaceChildren`. */
@@ -154,7 +170,8 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // win by source order; every other child, and their order, is identical.
     const children: Node[] = [buildReaderStyle()];
     if (options.contained) children.push(buildContainedStyle());
-    children.push(buildModeToggle(host));
+    const chrome = options.chrome !== false;
+    if (chrome) children.push(buildModeToggle(host));
     // Theme control (task 5.1), composed through THIS one seam so both surfaces get it with no
     // per-surface branching — same discipline as the TOC rail below. It is chrome: pushed as a
     // SIBLING of the reading column, never inside `root`, so `.peekover-reader` stays
@@ -166,7 +183,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // here, INCLUDING chrome wrongly appended into `root`. The golden diff is therefore not the
     // guard people assume; the DOM sibling relationship is asserted directly in
     // tests/browser/themeControl.browser.test.ts (verified red by appending to `root`).
-    children.push(buildThemeControl());
+    if (chrome) children.push(buildThemeControl());
     // Watch control (spec 005 task 4.1), composed through THIS one seam for the same reason the
     // theme control and the TOC rail are — both surfaces get it with no per-surface branching. A
     // SIBLING of the reading column, never inside `root`, so `.peekover-reader` stays
@@ -180,7 +197,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // disabled control. The control itself holds no controller reference — it reaches
     // start/stop through the module-level registry, because `replaceChildren` destroys it on every
     // render, INCLUDING the renders a running watch causes. See src/watch/watchRegistry.ts.
-    children.push(...buildWatchChrome(host));
+    if (chrome) children.push(...buildWatchChrome(host));
     // Diff affordance (spec 006 task 6.2), composed through THIS same seam — and it is the ONLY
     // diff module this file imports (plan §1.4's import fence: `diffChrome.ts` reaches the engine
     // and the view through closures the app page provisions on the diff registry, so neither
@@ -188,15 +205,15 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // Returns `[]` — with NO explanatory note — on a surface that registered no diff context
     // (D-14, §3.2: the user never saw a history feature there, so there is nothing to be told they
     // are missing). Siblings of the reading column, like every other piece of chrome above.
-    children.push(...buildDiffChrome(host));
+    if (chrome) children.push(...buildDiffChrome(host));
     // Agent-file badge (008 task 1.3, D-1/D-2) — the FIFTH instance of the pattern above, and the
     // whole cost in this file of not threading the document's name through MountOptions. It reads
     // the module-level identity registry at BUILD time and returns `[]` — with NO note — when the
     // name is absent or unrecognized, so this line is unconditional and mount() stays read-only
     // library (006 D-15): it reads a data holder, writes nothing, owns nothing, and branches on
     // nothing about the app. Why a registry and not MountOptions: src/render/docIdentity.ts.
-    children.push(...buildAgentBadge());
-    if (blockedCount > 0) {
+    if (chrome) children.push(...buildAgentBadge());
+    if (chrome && blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }
     // Table-of-contents rail (task 2.2), composed through THIS one seam so both surfaces
@@ -206,7 +223,9 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // entirely, so a thin doc grows no rail chrome. Placed alongside the pills, BEFORE
     // `root`, as a sibling of the reading column — never inside it, so `.peekover-reader`
     // stays byte-identical (golden-friendly). Committed by the SAME replaceChildren below.
-    const tocRail = buildTocView(host, buildTocModel(root), { contained: options.contained });
+    const tocRail = chrome
+      ? buildTocView(host, buildTocModel(root), { contained: options.contained })
+      : null;
     if (tocRail) children.push(tocRail);
     children.push(root);
 

@@ -1,12 +1,12 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-04 (M12 task 2.1 DONE — `ReaderMode` `'edit'`). M12 (`specs/012-editor-mode/`, F8 Editor
-Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1 (the governed CodeMirror
-install), 1.2 (the audit bump) and 2.1 (`ReaderMode` gains `'edit'`, `enterEditMode` / `exitEditMode`, the
-backslash shortcut inert in edit) landed; **task 2.2 is next.** Current numbers: `.output` 5,201,045 B
-(Cr) / 5,201,161 B (Fx) against ≤ 7 MiB, content script 342,339 B both engines, `dependencies` 10,
-`permissions: []`. M11 (math rendering, Temml/MathML) closed
+*Updated: 2026-10-04 (M12 task 2.2 DONE — `mount()`'s `chrome: false` option + the split-pane shell + the
+nested preview host). M12 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation:
+gates 1–3 approved, tasks 1.1 (the governed CodeMirror install), 1.2 (the audit bump), 2.1 (`ReaderMode`
+gains `'edit'`) and 2.2 landed — group 2 is complete; **task 3.1 is next.** Current numbers: `.output`
+5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB, content script 342,384 B both engines,
+`dependencies` 10, `permissions: []`. M11 (math rendering, Temml/MathML) closed
 2026-09-11 — its summary is under § Closed milestones, its narrative in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
@@ -264,20 +264,115 @@ entry landed with it. Two human rulings were taken mid-task (both in that entry)
   `exportShortcut` 8, per engine). The carried wall-clock flakes did not fire. Golden diff EMPTY ·
   `mount.ts` and every other zero-diff file EMPTY · manifest 654 / 770 B, `permissions: []`.
 
+**M12 task 2.2 DONE, 2026-10-04 — `mount()` gains the additive `chrome?: boolean` (default `true`);
+`editorView.ts` builds the split-pane shell and the nested preview host on it; `EDITOR_CSS` lays it out.
+Tested-but-unreached: no production caller until 3.2, nothing imports `codemirror`. `mount.ts`'s ONE
+authorized diff is spent. D-4's `decisions.md` landing entry is in the same commit. No human ruling was
+needed; nothing hit a stop.**
+- **Step 0(a) — the guard range was unmoved** at `f9e6439`: pill `:157`, theme `:169`, watch `:183`, diff
+  `:191`, badge `:198`, remote bar + indicator `:199-201`, rail `:209-210`; stylesheets `:155-156` and the
+  reading column `:211` outside it. `tocRail` is read again by the post-commit wiring, so the guard keeps
+  the declaration and makes it `null` — that is what let the range be guarded with nothing else touched.
+  The diff: one `const chrome = options.chrome !== false`, `if (chrome)` on five pushes, `chrome &&` on the
+  remote-load condition, the rail as a conditional. No line re-indented, no comment moved.
+- **Step 0(b) — the post-commit wiring is harmless on the nested host; none of it is guarded.**
+  `registerReaderSource`: the preview text, under the nested host's own key. `setReaderMode`:
+  `data-mode="reading"` on the nested host, no pill to relabel. `removeAttribute('data-diff')`: no-op. The
+  two installers: once-guarded, already installed. `unregisterTocHost(nested)`: runs because no rail was
+  composed — this is what keeps the preview out of the TOC registry. `initReaderRuntime`: the nested host
+  becomes a themed host and gets `data-theme` — NEEDED, since the nested root carries its own token block.
+  A nested render makes ZERO attribute writes to the outer host (measured), and the outer host's
+  registered source is unchanged.
+- **Step 0(c) — the CSS is a new `EDITOR_CSS` export in `readerCss.ts`,** injected by the shell as its own
+  `<style>` and removed with it. `READER_CSS` gains nothing, so `htmlExport.test.ts`'s pin stays 26 with
+  no file outside the list touched. Tokens: `--line`, `--r`, `--code-bg`, `--ink`, `--mono` (all in
+  `design/tokens.css` and `READER_CSS`'s `:host` block), plus `--toc-w`, `READER_CSS`'s own rail width.
+- **The scroll choice: a wrapper.** The nested host sits inside `.peekover-editor__preview`
+  (`overflow:auto`, definite height); `resolveScrollContainer(nested, true)` returns it by identity. The
+  nested-host-scrolls alternative would have been reached only through the resolver's fallback — the
+  same answer a failed resolution gives.
+- **★ Step 0(d) — bypass state, a carry for 3.2.** The shell is `display:none` unless the host carries
+  `data-mode="edit"`. After enter → pill click (which leaves edit through `toggleReaderMode`, no
+  teardown): nothing of the shell is on screen in raw or in reading, on both engines. What REMAINS in the
+  outer shadow root: the shell's `<style>`, the grid container, the source slot (and whatever was built
+  into it), the preview pane and the nested host with its shadow root — hidden, and reused by the next
+  `buildEditorShell` rather than duplicated. 3.2 owns what the pill does in edit.
+- **Step 0(e) — the seam is consumed, `readerMode.ts` zero-diff.** `buildEditorShell(host)` is the `build`
+  step; it is idempotent, throws before creating anything on a host with no shadow root, and removes its
+  own nodes if the initial render throws. `teardownEditorShell(host)` is called beside `exitEditMode`.
+- **Shape notes for the human (7.1's walk), none ruled:** the two panes are children of ONE grid
+  container (the mockup's `.editor`), which is the reading column's sibling; the shell's height is a
+  definite `60vh` (90vh stacked) where the mockup has `min-height:60vh`, because a minimum-height pane
+  never scrolls; its margin is the reading column's own `56px 32px 130px`, and it yields `--toc-w` to an
+  open rail. A preview holding remote media shows it blocked with no in-preview opt-in (the bar is inside
+  the ruled range); the media policy still runs.
+- **Red-first.** Unit, before the option: 1 failed — the `chrome: false` case, `['STYLE','STYLE','BUTTON',
+  'BUTTON','BUTTON','DIV','NAV','DIV']` against `['STYLE','STYLE','DIV']`. The omitted-vs-`true` equality
+  cannot be red before the option exists; it was seen red under a wrong default (`=== true`), the
+  equality being the assertion that failed. Unit, before the shell: the file failed to import. Browser,
+  both engines, by editing `editorView.ts`'s one `mount()` call: **routed at the outer host** → `the
+  source pane is gone: expected false to be true`; **`chrome: false` dropped** → `expected
+  ['peekover-watch', …(2)] to deeply equal []` (the watch control, the diff affordance and the rail all
+  composed) and, for the backtick, `expected ['data-toc=open'] to deeply equal []` (the key resolved to
+  the preview). CSS, one property at a time: preview without `overflow:auto` → the resolver returned the
+  nested host; no at-rest `display:none` → `expected 'grid' to be 'none'`; no narrow stack → `592.6 ≤ 58`
+  failed; no rail yield → `1367 ≤ 1150` failed (by rect — the pane's centre is not under the rail, so
+  the hit-test alone does not see it).
+- **Hazards absent, positive control firing — registries LIVE** (a watch target, a diff context,
+  `CLAUDE.md` as the identity, a two-heading preview): the nested root is `[STYLE, STYLE, DIV]` with none
+  of the six chrome classes and a non-empty reading column; the outer host, same registry state, carries
+  all six. A real backtick writes `data-toc` to the outer host and nothing to the preview.
+- **Outer-chrome identity:** the same node set, serialising identically, across ten enter/exit toggles
+  and across twenty preview re-renders; the outer reading column identical by reference.
+- **Viewports, by hit-test:** WIDE **1400×900** — side by side, equal widths, rail open, the preview's
+  right edge left of the rail. NARROW **414×896** — stacked, source above preview. Both engines.
+- **Bytes, clean rebuild, both engines (baseline re-derived at `f9e6439`, matched the cited figures):**
+
+  | | Baseline | Post-2.2 | Delta | Headroom vs 7,340,032 B |
+  |---|---|---|---|---|
+  | `.output` Chrome | 5,201,045 B | 5,201,135 B | +90 B | 2,138,897 B |
+  | `.output` Firefox | 5,201,161 B | 5,201,251 B | +90 B | 2,138,781 B |
+  | zip Chrome | 1,629,407 B | 1,629,492 B | +85 B | — |
+  | zip Firefox | 1,629,465 B | 1,629,550 B | +85 B | — |
+  | `content-scripts/peekover.js` | 342,339 B | 342,384 B | +45 B | — |
+  | content-script md5 Cr / Fx | `d4d48d23…` / `5ff11e42…` | `129deda5156522a75ac41eaabbdc1c5f` / `94c2d14b9e08144f0c932415edb28acf` | — | — |
+
+- **Decomposed, residual 0.** Two files change size, the same on both engines: the content script and
+  the app chunk (`chunks/app-*.js` 511,588 → 511,633 B), +45 B each = 90; 82 other chunks are renamed by
+  the hash cascade at unchanged sizes. Arms, each a full rebuild compared file-by-file: **`mount.ts`
+  reverted, `EDITOR_CSS` and `editorView.ts` kept** → every file md5-identical to baseline (the guard arm
+  is the whole **45 B**; the CSS and the shell contribute **0 B** anywhere); **`readerCss.ts` reverted and
+  `editorView.ts` removed, guard kept** → every file md5-identical to post (CSS arm **0 B**, and
+  `editorView.ts` reaches no built file — proven by the build, not by grep); both ablated is the baseline
+  build itself. 45 + 0 = 45. Zero `codemirror` bytes in the content script: still unreferenced, 1.1's
+  firing control is the standing proof.
+- **Suites:** lint 0 · unit 1168 / 1168 (67 files; `mount.test.ts` 12, `mount.fallback.test.ts` 3,
+  `editorView.test.ts` 11, `htmlExport.test.ts` 13 — pin still 26, `tocView.test.ts` 27,
+  `readerMode.test.ts` 17, `golden.test.ts` 11) · browser 1699 pass / 15 skip (84 files per engine; per
+  engine: `editorNestedHost` 12, `editMode` 6, `watchRemount` 12, `watchControl` 36, `watchDiffDefer` 2,
+  `diffChrome` 39, `diffView` 10, `tocNetwork` 2, `themeControl` 19). No red on the full run; the carried
+  wall-clock flakes did not fire. NO existing assertion edited. Golden diff EMPTY · `readerMode.ts`,
+  `htmlExport.ts`, `htmlExport.test.ts` and every other zero-diff file EMPTY · manifest 654 / 770 B,
+  `permissions: []`.
+
 ## Up next
 
-**FIRST — M12 task 2.2** (`mount()`'s additive `chrome: false` option + the split-pane shell + the nested
-preview host), fresh session, test-first, one commit per task. The shell plugs into 2.1's
-`enterEditMode` as its `build` step. **Byte snapshot for its kickoff (2.1's measured figures):**
-`.output` 5,201,045 B (Cr) / 5,201,161 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 2,138,987 /
-2,138,871 B · zip 1,629,407 / 1,629,465 B · content script 342,339 B both engines, md5
-`d4d48d23969c91750e055be61a3ea767` (Cr) / `5ff11e424a1b5fd669e446b888ce9875` (Fx) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 · unit 1155 · browser 1675 / 15 skipped ·
+**FIRST — M12 task 3.1** (`editorEngine.ts`, the ONE CodeMirror importer, and
+`editorImportFence.test.ts`), fresh session, test-first, one commit per task. Group 3's browser tests run
+on an UNWATCHED document, the precondition asserted in each. **Byte snapshot for its kickoff (2.2's
+measured figures):** `.output` 5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB (7,340,032 B) —
+headroom 2,138,897 / 2,138,781 B · zip 1,629,492 / 1,629,550 B · content script 342,384 B both engines,
+md5 `129deda5156522a75ac41eaabbdc1c5f` (Cr) / `94c2d14b9e08144f0c932415edb28acf` (Fx) — 3.1 must hold
+these md5s · manifest 654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 · unit 1168 · browser 1699 / 15 skipped ·
 golden empty. CodeMirror is installed but unreferenced; the +605,443 B lands at 3.1.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it.
-*(2.1's own kickoff snapshot, superseded: 1.2's figures — `.output` 5,200,689 / 5,200,805 B, content
-script 342,161 B.)*
+figure above supersedes it. `mount.ts` is zero-diff from here on: its one authorized edit landed at 2.2.
+**Carried into group 3 from 2.2:** the shell (`buildEditorShell` / `renderPreview` /
+`teardownEditorShell`) has no production caller — 3.2 wires it and builds the editor into the source
+slot; 3.2 also owns the mode pill in edit, which today leaves edit with no teardown and leaves the shell
+in the DOM, hidden; 3.3 drives `renderPreview` and proves the scroll box under real typing.
+*(2.2's own kickoff snapshot, superseded: 2.1's figures — `.output` 5,201,045 / 5,201,161 B, content
+script 342,339 B.)*
 **Before 3.1: nothing is owed on the editor defaults.** `markdown()`'s default keymap is RULED ship-as-is
 (2026-10-04, `decisions.md`'s M12 TASK 1.1 EXTENDED entry), beside the `basicSetup` ruling; 7.1's walk
 now carries one item for the editing feel of those defaults.
@@ -286,8 +381,8 @@ now carries one item for the editing feel of those defaults.
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
 - Also: the informal eyeball at 3.2 (the editor's first render); 6.2's numbers → the §8-2 debounce ruling;
-  6.3 STOPS and surfaces a material nested-host cost; 2.2 stops-and-flags if `mount()`'s post-commit
-  wiring needs guarding beyond the ruled `chrome` range.
+  6.3 STOPS and surfaces a material nested-host cost. (2.2's stop-and-flag did not fire: the post-commit
+  wiring needed no guard.)
 
 *Superseded, kept for provenance:* gate 3 — the human's review of `specs/012-editor-mode/tasks.md`
 (drafted 2026-10-04). The paragraph below is the brief that draft was written to.

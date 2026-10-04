@@ -289,7 +289,7 @@ has no caller until 3.2 wires the control, so both tasks ship as tested-but-unre
       list changed. `enterEditMode` also takes an optional injected `build` step — the seam 2.2 plugs
       its shell into. Measured: content script 342,339 B both engines (+178 B) — 2.2's snapshot.*
 
-- [ ] **2.2 `mount()`'s additive `chrome: false` option + the split-pane shell + the nested preview host
+- [x] **2.2 `mount()`'s additive `chrome: false` option + the split-pane shell + the nested preview host
       built on it (D-4 as RE-RULED 2026-10-04; F-3).** TEST FIRST, in two halves, the option first.
       **(a) The option.** `MountOptions` gains ONE field, `chrome?: boolean`, default `true`. When `false`,
       `mount()` skips the chrome composition — the mode pill, theme control, watch chrome, diff chrome,
@@ -349,6 +349,18 @@ has no caller until 3.2 wires the control, so both tasks ship as tested-but-unre
       real scroll box (not the nested host by fallback, not the outer pane). Layout proven by hit-test at
       one NARROW and one WIDE viewport, both recorded. Full suite (production code changed). Golden EMPTY
       · manifest **654 / 770 B** · `permissions: []`. [D-4]
+      ★ *Post-landing, 2026-10-04 — no human ruling was needed; the choices this line left to the
+      task, recorded in `decisions.md`'s 012 D-4 entry and `progress.md`'s 2.2 record. (i) Scroll: the
+      nested host sits inside a wrapper pane that is the preview's scroll box. (ii) The layout CSS is a
+      new `EDITOR_CSS` export in `readerCss.ts`, injected by the shell — not `READER_CSS`, so the
+      26-`:host`-site pin is unmoved, and 0 B reach any built file until 3.2 wires a caller. (iii) The
+      two panes are children of ONE grid container that is the reading column's sibling, where this
+      line says "two sibling elements" — the mockup's `.editor` shape. (iv) The shell's height is a
+      definite `60vh` where the mockup has `min-height` (a real scroll box needs one) — a 7.1 walk
+      item. (v) The post-commit wiring is harmless on the nested host and nothing beyond the ruled
+      range was guarded. (vi) After a mode-pill bypass the shell stays in the DOM, hidden, and is
+      reused on re-entry — a carry for 3.2. Measured: content script 342,384 B both engines (+45 B,
+      the guard alone) — 3.1's snapshot.*
 
 *Group-2 acceptance (plan §6, D-4's mechanism as re-ruled): entering/exiting `'edit'` leaves the outer
 host's chrome byte-identical across repeated toggles; the nested host's `mount()` calls never touch the

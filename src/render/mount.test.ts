@@ -231,3 +231,49 @@ describe('mount — parse -> sanitize -> shadow DOM', () => {
     expect(host.hasAttribute('data-network')).toBe(false);
   });
 });
+
+// 012 task 2.2 (D-4 as re-ruled) — the additive `chrome` option. The registry-gated arms (watch,
+// diff, agent badge) are proven with the registries LIVE in the real engine
+// (tests/browser/editorNestedHost.browser.test.ts); here the document itself makes every
+// unconditional arm compose: two headings for the rail, a remote image for the load bar.
+describe('mount — the `chrome` option', () => {
+  const DOC = '# One\n\ntext\n\n## Two\n\n![pic](https://example.com/pic.png)';
+  const CHROME = [
+    '.peekover-mode-toggle',
+    '.peekover-theme-toggle',
+    '.peekover-toc',
+    '.peekover-remote-load',
+    '.peekover-net',
+  ];
+
+  it('an omitted `chrome` and `chrome: true` commit the same serialised shadow root', () => {
+    const omitted = makeHost();
+    const explicit = makeHost();
+    mount(DOC, omitted, { contained: true });
+    mount(DOC, explicit, { contained: true, chrome: true });
+
+    // The equality first, so it is the assertion seen to fail when the default is wrong.
+    expect(omitted.shadowRoot!.innerHTML).toBe(explicit.shadowRoot!.innerHTML);
+    // Firing control: the comparison was over a root that really carries the chrome.
+    for (const sel of CHROME) expect(omitted.shadowRoot!.querySelector(sel), sel).not.toBeNull();
+  });
+
+  it('`chrome: false` commits the stylesheet(s) and the reading column, and no chrome', () => {
+    const host = makeHost();
+    mount(DOC, host, { contained: true, chrome: false });
+    const shadow = host.shadowRoot!;
+
+    expect([...shadow.children].map((el) => el.tagName)).toEqual(['STYLE', 'STYLE', 'DIV']);
+    expect(shadow.lastElementChild?.className).toBe('peekover-reader');
+    for (const sel of CHROME) expect(shadow.querySelector(sel), sel).toBeNull();
+
+    // "No chrome" is not "nothing rendered", and the media policy still ran.
+    expect(shadow.querySelector('.peekover-reader h2')?.textContent).toBe('Two');
+    expect(shadow.querySelector('.peekover-remote')).not.toBeNull();
+    expect(remoteRefs(host)).toEqual([]);
+
+    const bare = makeHost();
+    mount(DOC, bare, { chrome: false });
+    expect([...bare.shadowRoot!.children].map((el) => el.tagName)).toEqual(['STYLE', 'DIV']);
+  });
+});

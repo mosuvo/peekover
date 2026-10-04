@@ -1332,3 +1332,56 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-diff-picker:not([hidden]) ~ .peekover-diff-status{ top:calc(50px + min(46vh,320px) + 6px); }
 .peekover-remote-load{ left:176px; }
 `;
+
+// ============================================================================
+// EDITOR variant — the edit view's split pane (012 task 2.2, D-4).
+// ============================================================================
+// A THIRD string, injected by editorView.ts as its own <style> in the document host's shadow root
+// when the edit view is built, and removed with it. Kept out of READER_CSS and CONTAINED_CSS on
+// purpose:
+//
+//   - htmlExport's translation reads READER_CSS only and pins its `:host` rule sites, so the
+//     `:host([data-mode="edit"])` gates below would move that pin; here they cannot.
+//   - nothing on the content-script graph imports this export, so it ships to the app page alone
+//     (the edit view is app-page-only) — CONTAINED_CSS, by contrast, rides into the content script.
+//
+// All rationale is in this comment: the literal below ships as written.
+//
+// VISIBILITY. The shell is `display:none` at rest and laid out ONLY under `data-mode="edit"` on
+// the host. That is what keeps it off screen when edit is left by a path that runs no teardown
+// (the mode pill's toggle) — its panes are descendants, so they are hidden with it.
+//
+// LAYOUT, from design/mockup.html's `.editor` (:300-304): two equal columns, a 1px --line border
+// with the --r radius and clipped corners, the source pane on --code-bg in the mono face, the
+// preview divided from it by a --line rule. Two departures, both forced:
+//   - HEIGHT is definite (60vh) where the mockup has `min-height:60vh`. A pane whose height is
+//     only a minimum grows to its content and never scrolls, and the preview must be a real
+//     scroll box (editorView.ts, THE SCROLL BOX).
+//   - the MARGIN is the reading column's own padding (56px 32px 130px, `.peekover-reader`), so
+//     the split clears the same corner chrome the column clears; and while the TOC rail is open
+//     it gives up --toc-w on the right exactly as the column does, so it never sits under the
+//     rail. The mockup's `margin-top:8px` assumes a page with no such chrome.
+// The preview pane takes no padding of its own: the nested reader's column brings its own.
+//
+// NARROW (<= 720px): the two panes stack, source above preview, each still a definite height.
+//
+// Tokens used, each present in design/tokens.css and in READER_CSS's :host block: --line, --r,
+// --code-bg, --ink, --mono. --toc-w is READER_CSS's own rail-width property, not a design token.
+export const EDITOR_CSS = /* css */ `
+.peekover-editor{display:none}
+:host([data-mode="edit"]) .peekover-editor{
+  display:grid;grid-template-columns:1fr 1fr;
+  height:60vh;margin:56px 32px 130px;
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+}
+:host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:calc(var(--toc-w) + 32px)}
+.peekover-editor__source{
+  min-width:0;overflow:auto;
+  background:var(--code-bg);color:var(--ink);font:13.5px/1.8 var(--mono);
+}
+.peekover-editor__preview{min-width:0;overflow:auto;border-left:1px solid var(--line)}
+@media (max-width:720px){
+  :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:1fr 1fr;height:90vh}
+  .peekover-editor__preview{border-left:none;border-top:1px solid var(--line)}
+}
+`;
