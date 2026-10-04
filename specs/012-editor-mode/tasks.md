@@ -214,7 +214,7 @@ forward to the immediately-prior task's own measured figure.**
       clause was met as written. The setup chosen is `basicSetup`; its §6 consequence is ruled ship-as-is
       (same entry; see the §6 fence line above).
 
-- [ ] **1.2 The audit bump — `markdown-it` 14.3.0 → 14.3.1, `dompurify` 3.4.13 → 3.4.16; restores `pnpm
+- [x] **1.2 The audit bump — `markdown-it` 14.3.0 → 14.3.1, `dompurify` 3.4.13 → 3.4.16; restores `pnpm
       audit --prod` EXIT=0 and CLOSES 1.1's unmet audit clause. DISCOVERED task, human-scheduled
       2026-10-04; runs BEFORE 2.1.** Not a version-number edit: `markdown-it` is the parser and `dompurify`
       the sanitizer, so both sit on the render path of BOTH surfaces (content script and app page) and the
@@ -236,6 +236,12 @@ forward to the immediately-prior task's own measured figure.**
       zero `codemirror` bytes in the content script still holds (CodeMirror is unreferenced until 3.1).
       Lint EXIT=0 · manifest **654 / 770 B** · `permissions: []`. The measured figures become 2.1's
       kickoff snapshot. [closes 1.1's audit clause; no D-value]
+      ★ **POST-LANDING NOTE, 2026-10-04 (`decisions.md`, M12 TASK 1.2).** Landed with ONE human-ruled
+      deviation from the line above: **`markdown-it` went to 14.3.2, not 14.3.1** (floor `^14.3.2`), to
+      also close GHSA-r7fv-28h4-cvq7 (smartquotes; `typographer` is off here, so hygiene, not exposure).
+      `dompurify` landed at 3.4.16 as written. Every Verify clause was met: audit EXIT=0, full suite green
+      on both engines, Golden EMPTY. Measured: `.output` 5,200,689 / 5,200,805 B (+3,264 B each), content
+      script 342,161 B (+1,669 B) — these are 2.1's kickoff snapshot.
 
 *Group-1 acceptance (plan §6): D-D's confirmation is settled with a decomposed, ablation-proven number on
 both engines; the setup choice is made from measurement and recorded; the governed install is clean. This

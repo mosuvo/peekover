@@ -1,6 +1,49 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · M12 TASK 1.2 — the `markdown-it` target moves 14.3.1 → 14.3.2, to also close
+  GHSA-r7fv-28h4-cvq7. Human-ruled, a FLAGGED deviation from `tasks.md`'s named 14.3.1. `dompurify`'s
+  target is unchanged at 3.4.16.**
+  **★ WHAT WAS FOUND:** task 1.2's Step-1 registry check found `markdown-it` 14.3.2 (published 2026-09-12,
+  dist-tag `v14-legacy`; `latest` is 15.0.2). It fixes a SECOND advisory the task line did not know about:
+  GHSA-r7fv-28h4-cvq7, high, *"Quadratic complexity in smartquotes with unmatched closing quotes"*, read
+  from markdown-it's own repository advisory — affected `>= 15.0.0, < 15.0.2` and `< 14.3.2`, patched
+  15.0.2 / 14.3.2. It is NOT yet in the global advisory database (`api.github.com/advisories/…` → 404; the
+  npm bulk-advisory endpoint returns `{}` for 14.3.1), so `pnpm audit` passes on 14.3.1 TODAY and would
+  have gone red again on ingestion — re-opening the exact clause 1.2 exists to close. And a plain install
+  under the task's own `^14.3.1` floor resolves to 14.3.2 anyway, so landing 14.3.1 "exactly" would have
+  needed a deliberate lockfile pin below a known fix.
+  **★ THE RULING:** land 14.3.2, floor `^14.3.2`; still no `overrides` / `resolutions`.
+  **★ THE EVIDENCE, as required before the bump:**
+  (a) *The smartquotes path is off.* The advisory's own text: only `typographer: true` is affected.
+  `src/render/parse.ts:27` sets `typographer: false`; `parse.ts:43` is the ONLY `MarkdownIt` construction
+  in non-test source, and nothing shipped calls `.set()` / `.configure()` or names `smartquotes`; neither
+  `@mdit/plugin-tex` nor `markdown-it-task-lists` touches the option. So GHSA-r7fv is closed as hygiene,
+  not as a live exposure — unlike GHSA-253c-mchw-3w2r, which IS live here (`linkify: true`, `parse.ts:26`).
+  (b) *The full 14.3.1 → 14.3.2 diff.* Upstream compare: 2 commits ("Backported 15.0.2 fixes", "14.3.2
+  released"), 4 files — `lib/rules_core/smartquotes.mjs` (+48 / −27), `CHANGELOG.md`, `package.json` (the
+  version line), `test/markdown-it/pathological.test.mjs` (+5, not published). Published tarballs, 63
+  files each: `lib/rules_core/smartquotes.mjs`, `package.json` (version line only), and the six `dist/`
+  bundles + maps regenerated from that one source change — every hunk in `dist/markdown-it.js` and
+  `dist/index.cjs.js` sits inside the smartquotes rule (plus the version banner). Our ESM import resolves
+  to `index.mjs` → `lib/`, not `dist/`. No other source logic moved.
+  (c) *`dompurify`.* 3.4.16 is the registry `latest` and the newest 3.4.x; no advisory, global or
+  repo-level, lists it as affected. It also closes a repo-level sibling, GHSA-6688-9rhm-gjv2 (low,
+  `<= 3.4.15`, another `IN_PLACE` path — not one this repo uses).
+  **★ RE-CONFIRMED, because this bump trips a standing revisit-when:** the 2026-07-28 M7 §2.2 AMENDMENT
+  asks for a re-confirmation if DOMPurify changes `_isValidAttribute`'s branch structure. 3.4.16's dist is
+  rebuilt by a different bundler and the function is re-expressed as early returns with a
+  `_matchesNameCheck` helper. Read side by side against 3.4.13: the same acceptance branches in the same
+  order with the same conditions — `URI_SAFE_ATTRIBUTES` · `IS_ALLOWED_URI` over the
+  `ATTR_WHITESPACE`-stripped value · `data:` on `{src, xlink:href, href}` for a `DATA_URI_TAGS` member,
+  never `script` · `ALLOW_UNKNOWN_PROTOCOLS` · empty value. A re-expression, not a semantic change; the
+  closure argument stands, and `sanitize.test.ts`'s no-hook guard and the real-engine
+  `diagramSanitize` / `diagramSecure` / `sanitize` browser files are green on 3.4.16, both engines.
+  **Unchanged:** `@mdit/plugin-tex`'s `^15.0.0` peer range is still unmet (now "found 14.3.2"); the carried
+  peer-dependency item stands as written.
+  **Revisit-when:** an advisory against `markdown-it` 14.3.2; or a `markdown-it` 15 bump, which re-runs the
+  math grammar corpus per the carried peer-dependency item (`progress.md` § Carried items).
+
 - **2026-10-04 · M12 TASK 1.1 — `basicSetup` ships AS-IS; §6's deferred find/replace + lint are
   PEEKOVER-BUILT deferrals, not a mandate to suppress CodeMirror's standard defaults. Human-ruled
   (Option A).** Doc-only: this entry rules the §6 consequence of task 1.1's setup choice (`e001f9e`); the

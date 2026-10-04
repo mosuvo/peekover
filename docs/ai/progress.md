@@ -1,21 +1,12 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-09-11 (M11 CLOSED, task 8.3-R — records reconcile). Task 8.3-R landed the records
-reconcile that closes M11: a fresh D-N-R-landed audit (every reopened D-value from D-1-R through D-13 tied
-to its own implementing commit; D-10/D-11 confirmed vacated with no commit, correctly), `spec-coverage.md`'s
-F2 re-scored 42%→68% (the math half shipped as Temml/MathML, not KaTeX — a ruled substitution, not a
-silent one), the byte ledger closed (content-script 340,492 B both engines, the milestone's own closing
-invariant, md5-identical to 3.2-R's own landed floor; `.output` headroom ~44.4/44.3 KiB Cr/Fx against the
-5 MiB bound), and every carried item dispositioned — including the two concurrency-sensitive unit-suite
-wall-clock flakes (`pipeline.perf.test.ts`/`golden.test.ts`), stated plainly rather than rounded into "all
-green." M11 shipped inline `$…$`, block `$$…$$` and fence math via Temml/MathML (KaTeX was reopened and
-replaced after a busted byte gate — REVISIT-RULING 1), copy-as-LaTeX (text-selection + a document-level
-action) and copy-as-MathML (a document-level action), both engines, `permissions: []` unmoved. § Now's and
-§ Up next's full M11 narrative (three REVISIT gates, the reopened nine-task decomposition, three
-out-of-sequence fix-spikes, the 8.1-R human fidelity walk that caught a broken-radicals defect and sent it
-back, `/retro`) moved verbatim to `progress-archive.md` in this same commit, following the M6–M10
-archive-pass precedent.)*
+*Updated: 2026-10-04 (M12 task 1.2 DONE — the audit bump). M12 (`specs/012-editor-mode/`, F8 Editor Mode's
+focused core) is in implementation: gates 1–3 approved, task 1.1 (the governed CodeMirror install) and
+task 1.2 (`markdown-it` 14.3.2 + `dompurify` 3.4.16, `pnpm audit --prod` EXIT=0) landed; **task 2.1 is
+next.** Current numbers: `.output` 5,200,689 B (Cr) / 5,200,805 B (Fx) against ≤ 7 MiB, content script
+342,161 B both engines, `dependencies` 10, `permissions: []`. M11 (math rendering, Temml/MathML) closed
+2026-09-11 — its summary is under § Closed milestones, its narrative in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -145,17 +136,81 @@ ruled.** Doc-only session, no build, no dependency change.
   as deferred. The ruling named find/replace and lint only; extending it is the human's call. Owed
   before 3.1.
 
+**M12 task 1.2 DONE, 2026-10-04 — the audit bump: `markdown-it` 14.3.0 → 14.3.2, `dompurify` 3.4.13 →
+3.4.16. `pnpm audit --prod` EXIT=0 ("No known vulnerabilities found"; the CI form `--audit-level low`
+also 0). 1.1's audit clause is CLOSED.**
+- **★ ONE HUMAN-RULED DEVIATION (`decisions.md`, M12 TASK 1.2): `markdown-it` landed at 14.3.2, not the
+  task's named 14.3.1.** The registry check found 14.3.2 (2026-09-12), which also fixes GHSA-r7fv-28h4-cvq7
+  (high; smartquotes quadratic; `< 14.3.2`) — published only in markdown-it's own repo advisories so far,
+  so audit passes on 14.3.1 today and would have re-reddened on ingestion. `^14.3.1` resolves to 14.3.2 on
+  a plain install anyway. Floors are `^14.3.2` / `^3.4.16`; no overrides.
+- **Advisories, read at source.** GHSA-253c-mchw-3w2r (markdown-it, moderate): two quadratic paths under
+  `linkify: true` — `rules_core/linkify` rebuilding `children` per linkified token, `rules_inline/linkify`
+  rescanning `state.pending` at every `://`. **Exercised here**: `parse.ts:26` sets `linkify: true`, so a
+  few hundred KB of soft-broken emails could stall a render; availability only. GHSA-r7fv-28h4-cvq7: needs
+  `typographer: true`; `parse.ts:27` has it off — **not exercised**. GHSA-p98j-92pf-mc4p (dompurify, low):
+  under `IN_PLACE`, a node-REMOVING `afterSanitizeElements` / `afterSanitizeAttributes` hook leaves the
+  detached subtree's `on*` handlers armed. **Not exercised**: no profile uses `IN_PLACE` (all three sanitize
+  strings). `sanitizeSvg` is the only profile with an afterSanitize hook (`cssPassHook`, `sanitize.ts:788`)
+  and it rewrites `<style>` text, never removes a node; `sanitize()` and `sanitizeMath` use
+  `uponSanitizeAttribute` only.
+- **Dependent ranges admit both targets, one copy each:** `mermaid` 11.16.1 declares `dompurify ^3.3.3`;
+  `@mdit/plugin-tex` 1.1.0 (and `@mdit/helper`) declare an OPTIONAL peer `markdown-it ^15.0.0` — unmet
+  before and after (carried item, unchanged); `markdown-it-task-lists` declares none.
+- **Lockfile +17 / −17:** only the two packages' versions and integrities moved, plus the
+  `(markdown-it@…)` peer suffix on the two `@mdit` entries (their versions did not). Temml `patch_hash`
+  `ba3cf1c4…` unchanged, `patches/` byte-identical, the patch confirmed present in the installed copy.
+- **Bytes, clean rebuild, both engines — baseline re-derived, and it matched the cited figures exactly:**
+
+  | | Baseline (`0eef927`) | Post-bump | Delta | Headroom vs 7,340,032 B |
+  |---|---|---|---|---|
+  | `.output` Chrome | 5,197,425 B | 5,200,689 B | +3,264 B | 2,139,343 B |
+  | `.output` Firefox | 5,197,541 B | 5,200,805 B | +3,264 B | 2,139,227 B |
+  | zip Chrome | 1,627,711 B | 1,629,302 B | +1,591 B | — |
+  | zip Firefox | 1,627,770 B | 1,629,360 B | +1,590 B | — |
+  | `content-scripts/peekover.js` | 340,492 B | 342,161 B | +1,669 B | — |
+  | content-script md5 Cr / Fx | `bcdcf231…` / `49e218a1…` | `966f0198…` / `ae78e2ad…` | — | — |
+
+- **Decomposed, residual 0:** exactly two files change size, the same on both engines — the content
+  script (+1,669 B) and the app chunk (`chunks/app-*.js` 509,815 → 511,410 B, +1,595 B); 1,669 + 1,595 =
+  3,264. Both carry the parser and the sanitizer. The app chunk's new content hash renames 81 other
+  chunks that import it (same sizes, as a multiset) and rewrites `app.html`'s reference at an unchanged
+  495 B. Not split per package — the Verify line asks per file. 135 files per engine, before and after.
+- **Firing control (attribution):** pre-bump `package.json` + lockfile restored, reinstalled, rebuilt —
+  EVERY file md5-identical to baseline on both engines; bump restored, rebuilt — every file md5-identical
+  to the first post-bump build. Zero `codemirror` bytes in the content script: still unreferenced, 1.1's
+  firing control is the standing proof.
+- **Suites — all green on the first full run, no flake observed:** lint 0 · unit 1145 / 1145 (66 files)
+  · browser 1663 pass / 15 skip (chromium 838 + 1, firefox 825 + 14; 82 files per engine).
+  Sanitizer, all profiles — `sanitize.test.ts` 119: `sanitize()` 38, `sanitizeSvg` 55 (exact-set,
+  denied-by-absence, the no-hook guard and the `<style>` CSS pass among them), `sanitizeMath` 26; real
+  engines, per engine: `sanitize.browser` 31, `diagramSanitize` 5, `diagramSecure` 9, `diagramStyleCss`
+  18, `diagramRender` 19, `mathInline` 7, `mathBlock` 11, `mathDegrade` 12. Parser and math grammar —
+  `parse.test.ts` 37 (the `$5` false-positive, code-span exclusion and escaping cases included). Golden —
+  `golden.test.ts` 11, HUGE-DOCUMENT included; `git diff tests/golden/output/` EMPTY. `pipeline.perf.test.ts`
+  1 / 1. The two carried wall-clock flakes did not fire in two unit runs.
+- **`_isValidAttribute` re-confirmed** (the M7 §2.2 AMENDMENT's revisit-when): 3.4.16 re-expresses it as
+  early returns; same branches, same order, same conditions. Recorded in the M12 TASK 1.2 entry.
+- **Governance:** `dependencies` 10, names unchanged · `dompurify` one copy (3.4.16), `markdown-it` one
+  copy (14.3.2) · licences MIT and (MPL-2.0 OR Apache-2.0), unchanged; neither version has install
+  scripts · SBOM regenerated (transient, not staged): **191 components**, unchanged — MIT 143, ISC 35,
+  BSD-3-Clause 7, Apache-2.0 1, BSD-2-Clause 1, Python-2.0 1, Unlicense 1, (MPL-2.0 OR Apache-2.0) 1,
+  Unknown 1; the generator still does not represent the temml patch (carried blind spot) · manifest
+  654 / 770 B, `permissions: []`, no `web_accessible_resources`, no `contextMenus`; `manifest.test.ts` 8.
+- **Noted, nothing changed:** `mermaid` resolves 11.16.1, where M7's records cite 11.16.0 — it has been
+  11.16.1 since `8f6c59f` (the pre-009 audit bump), not a move of this task's.
+
 ## Up next
 
-**FIRST — M12 task 1.2, the audit bump: `markdown-it` 14.3.0 → 14.3.1 and `dompurify` 3.4.13 → 3.4.16.
-It closes 1.1's audit clause** (restores `pnpm audit --prod` EXIT=0). Its own task and commit, fresh
-session. The parser and the sanitizer move, so it is a real regression check: full suite on both engines
-(golden + sanitizer tests named), Golden EMPTY or stop-and-flag, SBOM regenerated, bytes re-measured on
-both engines including the content script and decomposed. Byte snapshot for its kickoff: `.output`
-5,197,425 / 5,197,541 B, headroom 2,142,607 / 2,142,491 B, content script 340,492 B, `dependencies` 10 —
-CodeMirror is installed but unreferenced, so nothing shipped has moved yet; the +605,443 B lands at 3.1.
-**Then M12 task 2.1** (`ReaderMode` gains `'edit'`, async `enterEditMode`, the backslash shortcut inert in
-edit mode), fresh session, test-first, one commit per task, on 1.2's re-measured snapshot.
+**FIRST — M12 task 2.1** (`ReaderMode` gains `'edit'`, async `enterEditMode`, the backslash shortcut inert
+in edit mode), fresh session, test-first, one commit per task. **Byte snapshot for its kickoff (1.2's
+measured figures):** `.output` 5,200,689 B (Cr) / 5,200,805 B (Fx) against ≤ 7 MiB (7,340,032 B) —
+headroom 2,139,343 / 2,139,227 B · zip 1,629,302 / 1,629,360 B · content script 342,161 B both engines,
+md5 `966f01988eccd126e02ab05667dd0676` (Cr) / `ae78e2adaccd79fdb73f4d5be0974f93` (Fx) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 10 · SBOM 191 · lint 0 · unit 1145 · browser 1663 / 15
+skipped · golden empty. CodeMirror is installed but unreferenced; the +605,443 B lands at 3.1.
+`tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
+figure above supersedes it from 1.2 on.
 **Before 3.1:** the human's word on `markdown()`'s default list-continuation keymap vs §6's "smart
 lists/continuation" (the open item above). The `basicSetup` ruling itself is done.
 **Carried touchpoints — the task-level human gates:**
