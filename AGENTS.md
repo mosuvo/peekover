@@ -86,7 +86,9 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
 - Current milestone: **M12 (`specs/012-editor-mode/`) — gate-3 APPROVED (2026-10-04, `decisions.md`'s M12
-  GATE 3 entry); implementation authorized, task 1.1 next, fresh session. D-4 re-ruled to an additive
+  GATE 3 entry); implementation underway — task 1.1 DONE (`basicSetup`, ruled ship-as-is: `decisions.md`'s
+  M12 TASK 1.1 entry), task 1.2 (the `markdown-it`/`dompurify` audit bump, closing 1.1's audit clause) next,
+  then 2.1, fresh session. D-4 re-ruled to an additive
   `mount()` `chrome: false` option (Option B) after the chrome investigation.** M11 (`specs/011-math-rendering/`) closed 2026-09-11
   (Temml/MathML math, both engines). M12 = F8 Editor Mode's focused core (edit → live preview → save-back
   via CodeMirror 6, lazy-loaded), scoped against the 2026-10-03 package-size ceiling ruling (≤ 5 MiB →

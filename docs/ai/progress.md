@@ -129,15 +129,35 @@ import of a constructed `EditorView` (reverted); the `.output` delta is identica
   plan D-2 says the winner ships its default bindings unmodified. Human ruling 2026-10-04: record
   `basicSetup`, carry this to be ruled before task 3.1 first uses the setup.
 
+**M12 task-1.1 CLOSE, 2026-10-04 (`decisions.md`'s M12 TASK 1.1 entry) — both OPEN items above are
+ruled.** Doc-only session, no build, no dependency change.
+- **`basicSetup` ships AS-IS (Option A).** §6's deferred find/replace + lint are read as PEEKOVER-BUILT
+  deferrals, not a mandate to strip CodeMirror's defaults; plan D-2's "default bindings unmodified" holds
+  literally. CodeMirror's Ctrl-F search and autocompletion are present for free. Recorded precisely:
+  `lintKeymap` is bindings only — no lint source, so no linting runs. The cost, stated: §6's IS-NOT text
+  reads slightly loosened; its sealed text is untouched and the `decisions.md` entry is the
+  reconciliation of record. Strip-the-keymaps (bends D-2) and `minimalSetup` (a thinner editor to save
+  ~97 KB) were both rejected.
+- **The audit failure has an owner: task 1.2** (`tasks.md`, a DISCOVERED task — 22 → 23), before 2.1.
+  1.1's "audit EXIT=0" clause is recorded as unmet at `e001f9e` and closed by 1.2.
+- **★ STILL OPEN, same class, surfaced by this session — NOT ruled:** `markdown()` defaults to
+  `addKeymap: true`, binding Enter to list/markup continuation, and §6 lists "smart lists/continuation"
+  as deferred. The ruling named find/replace and lint only; extending it is the human's call. Owed
+  before 3.1.
+
 ## Up next
 
-**First: the audit bump — `markdown-it` → 14.3.1 and `dompurify` → 3.4.16 (its own task and commit: the
-parser and the sanitizer move, so golden + full suite + both-engine bytes).** It restores `pnpm audit
---prod` EXIT=0, the clause task 1.1 left open. **Then M12 task 2.1** (`ReaderMode` gains `'edit'`, async
-`enterEditMode`, the backslash shortcut inert in edit mode), fresh session, test-first, one commit per
-task. Byte snapshot for its kickoff: `.output` 5,197,425 / 5,197,541 B, headroom 2,142,607 / 2,142,491 B,
-content script 340,492 B, `dependencies` 10 — CodeMirror is installed but unreferenced, so nothing shipped
-has moved yet; the +605,443 B lands at 3.1. **Before 3.1:** the `basicSetup`-vs-IS-NOT-fence ruling above.
+**FIRST — M12 task 1.2, the audit bump: `markdown-it` 14.3.0 → 14.3.1 and `dompurify` 3.4.13 → 3.4.16.
+It closes 1.1's audit clause** (restores `pnpm audit --prod` EXIT=0). Its own task and commit, fresh
+session. The parser and the sanitizer move, so it is a real regression check: full suite on both engines
+(golden + sanitizer tests named), Golden EMPTY or stop-and-flag, SBOM regenerated, bytes re-measured on
+both engines including the content script and decomposed. Byte snapshot for its kickoff: `.output`
+5,197,425 / 5,197,541 B, headroom 2,142,607 / 2,142,491 B, content script 340,492 B, `dependencies` 10 —
+CodeMirror is installed but unreferenced, so nothing shipped has moved yet; the +605,443 B lands at 3.1.
+**Then M12 task 2.1** (`ReaderMode` gains `'edit'`, async `enterEditMode`, the backslash shortcut inert in
+edit mode), fresh session, test-first, one commit per task, on 1.2's re-measured snapshot.
+**Before 3.1:** the human's word on `markdown()`'s default list-continuation keymap vs §6's "smart
+lists/continuation" (the open item above). The `basicSetup` ruling itself is done.
 **Carried touchpoints — the task-level human gates:**
 - **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).

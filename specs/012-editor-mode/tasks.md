@@ -19,6 +19,10 @@
 *re-ruled D-4's MECHANISM to Option B — an additive, default-`true` `chrome?: boolean` option on `mount()`.*
 *Corrected here: the Gate-2 locked line · F-3 · 2.1's `mount.ts` clause · 2.2 · group 2's acceptance · 3.3's*
 *scroll clause · 7.1's walk item · the content-script and zero-diff standing invariants. Nothing else moved.*
+*★ **REDLINED 2026-10-04 at HEAD `e001f9e`, to `decisions.md`'s **M12 TASK 1.1** entry (post-landing).** Task*
+*1.1 landed with its audit clause unmet and a §6 collision flagged; the human ruled both. Added here: the*
+*post-landing note at 1.1 · the DISCOVERED task **1.2** (the audit bump, before 2.1) · a pointer on the §6*
+*fence line · group 1's acceptance, sequencing constraint (1) and the count reconciled to 1.2. Nothing else moved.*
 
 ---
 
@@ -54,7 +58,11 @@ forward to the immediately-prior task's own measured figure.**
   keymap · find/replace · lint · transforms · image paste · snippets · import converters · drafts/autosave/
   editor snapshots · metrics · multi-file editing · editor settings · any content-script edit affordance.
   `design/mockup.html`'s `.edbar` toolbar depicts F8's end state and is NOT built (plan §3 risk 6). **No
-  task proposes any of them.**
+  task proposes any of them.** ★ *Reconciled 2026-10-04 (`decisions.md`, M12 TASK 1.1): the fence is on
+  what Peekover BUILDS. `basicSetup` ships as-is, so CodeMirror's own Ctrl-F search and autocompletion are
+  present and are NOT suppressed (`lintKeymap` is bindings only — no lint source, no linting runs). No task
+  builds a Peekover find/replace or lint, and no task strips the defaults. Still open, owed before 3.1:
+  whether the same reading covers `markdown()`'s default list-continuation keymap ("smart lists").*
 - **Plan §3.5's sibling-checklist audit — routed, not re-derived:** row 1 (app-page-only) → 1.1, 3.1 · row 4
   (the editor's DOM survives a re-render it does not control — the INVERTED property) → 2.2, 3.3 · consent/
   revoke/re-prompt → 5.1, 5.3 · zero-network with a firing control → 5.7 · row 15 (state in text and
@@ -198,10 +206,42 @@ forward to the immediately-prior task's own measured figure.**
       authorized; the shipping arm does NOT fit inside headroom (not expected) → every later task is
       SUSPENDED and the finding goes to the human. Golden EMPTY · manifest **654 / 770 B** ·
       `permissions: []`. [D-2, D-10; D-D]
+      ★ **POST-LANDING NOTE, 2026-10-04 (landed `e001f9e`; `decisions.md`, M12 TASK 1.1).** Ticked with ONE
+      Verify clause NOT met: **`pnpm audit --prod` exits 1** at this commit, on two PRE-EXISTING advisories
+      the CodeMirror install did not touch — `markdown-it` 14.3.0 (moderate, GHSA-253c-mchw-3w2r, fixed
+      14.3.1) and `dompurify` 3.4.13 (low, GHSA-p98j-92pf-mc4p, fixed 3.4.16). Human-ruled: commit 1.1
+      flagged; **the clause is OWNED and CLOSED by task 1.2 below, which runs BEFORE 2.1.** Every other
+      clause was met as written. The setup chosen is `basicSetup`; its §6 consequence is ruled ship-as-is
+      (same entry; see the §6 fence line above).
+
+- [ ] **1.2 The audit bump — `markdown-it` 14.3.0 → 14.3.1, `dompurify` 3.4.13 → 3.4.16; restores `pnpm
+      audit --prod` EXIT=0 and CLOSES 1.1's unmet audit clause. DISCOVERED task, human-scheduled
+      2026-10-04; runs BEFORE 2.1.** Not a version-number edit: `markdown-it` is the parser and `dompurify`
+      the sanitizer, so both sit on the render path of BOTH surfaces (content script and app page) and the
+      bump is a real regression check. Verify both target versions and their advisories against the
+      current registry first (never from training knowledge, and not only from this line). Bump exactly
+      those two; no other dependency moves, and no `src/` edit is expected — a test that goes red is a
+      finding to surface, not a fixture to update.
+      Files: `package.json` · `pnpm-lock.yaml` · `docs/ai/progress.md` (the Now-pointer)
+      Verify: **`pnpm audit --prod` EXIT=0**, output pasted. FULL suite green — unit and browser, both
+      engines (production dependencies change, so the full-suite rule applies) — with the sanitizer tests
+      and the golden suite named explicitly in the report. **Golden EMPTY** (`git diff tests/golden/output/`)
+      — a parser bump is the one thing this milestone that could move it; a non-empty diff is a
+      STOP-and-flag with the diff shown, never a regenerate. `pnpm why --prod dompurify` still one copy.
+      `dependencies` stays **10**, names unchanged. SBOM regenerated (transient, not staged), component
+      count + licence roll-up recorded against 1.1's 191. **Bytes re-measured on BOTH engines** by clean
+      rebuild — `.output`, `pnpm zip`, and `content-scripts/peekover.js` — against 1.1's baseline
+      (5,197,425 / 5,197,541 B; content script 340,492 B): a parser/sanitizer bump may move them,
+      INCLUDING the content script, and each delta is stated and decomposed per file as the bump's own;
+      zero `codemirror` bytes in the content script still holds (CodeMirror is unreferenced until 3.1).
+      Lint EXIT=0 · manifest **654 / 770 B** · `permissions: []`. The measured figures become 2.1's
+      kickoff snapshot. [closes 1.1's audit clause; no D-value]
 
 *Group-1 acceptance (plan §6): D-D's confirmation is settled with a decomposed, ablation-proven number on
 both engines; the setup choice is made from measurement and recorded; the governed install is clean. This
-is the only outcome that authorizes group 2.*
+is the only outcome that authorizes group 2.* ★ *As landed: D-D's confirmation and the setup choice are
+settled at 1.1; "the governed install is clean" is completed by 1.2's audit EXIT=0. Group 2 starts after
+1.2.*
 
 ## 2 — `ReaderMode` extension + the nested-host mechanism (D-1, D-4) — BEFORE any CodeMirror wiring
 
@@ -702,14 +742,17 @@ affordance on the content-script reader → 3.1, 3.2 · CodeMirror cannot load �
 5.1, 5.3. Every clause has at least one task.
 
 **The three hard sequencing constraints, as enforced:** (1) 1.1 is the sole member of group 1 and the
-stated authorization for group 2; no later task assumes the setup choice. (2) D-4's nested host is 2.2;
+stated authorization for group 2; no later task assumes the setup choice (★ post-landing: the discovered
+1.2 joins group 1 as a dependency-hygiene bump — it measures no CodeMirror arm and changes no setup; 1.1
+is still the byte gate). (2) D-4's nested host is 2.2;
 the first preview wiring is 3.3; nothing in 3.1–3.2 calls a preview. (3) D-8 is 4.1–4.2; group 5's network
 and degrade tests (5.3, 5.4, 5.7) follow them. Group 3's own tests precede group 4 and are fenced by the
 unwatched-document rule stated at the head of group 3.
 
 **Count proposed for gate 3: SEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (3) · 4 (2) · 5 (7) · 6 (4) ·
 7 (3). Three are human gates (5.1, 5.5, 7.1); two are contingent on a ruling's content (5.6, 6.4); 5.5 is
-struck if gate 3 answers Q3 directly.
+struck if gate 3 answers Q3 directly. ★ *Post-landing, 2026-10-04: **23 tasks** — group 1 is (2) with the
+discovered 1.2 (the audit bump). Gate 3 approved 22; 1.2 is human-scheduled, `decisions.md` M12 TASK 1.1.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

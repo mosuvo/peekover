@@ -1,6 +1,54 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · M12 TASK 1.1 — `basicSetup` ships AS-IS; §6's deferred find/replace + lint are
+  PEEKOVER-BUILT deferrals, not a mandate to suppress CodeMirror's standard defaults. Human-ruled
+  (Option A).** Doc-only: this entry rules the §6 consequence of task 1.1's setup choice (`e001f9e`); the
+  choice itself was 1.1's to make from the number (gate 3, the entry below) and is not reopened.
+  **★ THE COLLISION:** task 1.1 chose `basicSetup` by plan D-2's rule (*"`basicSetup` unless its cost
+  surprises"*): +97,226 B over `minimalSetup` in the shipping combination, 4.5% of headroom — not a
+  surprising cost. `basicSetup` bundles `searchKeymap` (the Ctrl-F find/replace panel), `lintKeymap` and
+  `autocompletion()` (read from `node_modules/codemirror/dist/index.js` at this HEAD, not from memory).
+  Spec §6's IS-NOT fence lists find & replace and markdown linting as DEFERRED. Plan D-2 says the chosen
+  setup *"ships its own default bindings unmodified"*. So D-2 ("defaults unmodified") and §6
+  ("find/replace + lint out") collide: `basicSetup`'s defaults INCLUDE those features.
+  **★ THE RULING (Option A):** ship `basicSetup` AS-IS, defaults unmodified — D-2 held literally. §6's
+  "find & replace and markdown linting are deferred" is read as what it MEANT — Peekover does not BUILD
+  its own find/replace UI or lint engine this milestone — NOT as a mandate to strip CodeMirror's standard
+  behaviour. CodeMirror's built-in Ctrl-F search and its autocomplete are PRESENT, for free, and that is
+  acceptable: a markdown editor whose Ctrl-F does nothing would be the "technically-an-editor" result the
+  quality bar rejects elsewhere (the reason the feasibility spike rejected CodeJar as too thin, in
+  miniature). The user gets a MORE capable focused-core editor, not a crippled one. §6 itself supports the
+  reading: its own formatting-toolbar bullet says *"CodeMirror 6's own default bindings ship unmodified"*.
+  **★ WHY NOT (b) strip-the-keymaps or (c) `minimalSetup`:** (b) would bend D-2 — modifying `basicSetup`'s
+  defaults — to satisfy §6 literally, satisfying neither principle cleanly. (c) `minimalSetup` honours
+  both literally but ships a thinner editor (no find, no autocomplete) for a SMALLER byte cost — rejected
+  because editor capability outweighs the ~97 KB, and §6's intent is met by (a) anyway.
+  **★ THE HONEST COST, RECORDED:** §6's IS-NOT text now reads slightly loosened — find/replace is PRESENT
+  (CodeMirror's), just not Peekover-built. This entry is the reconciliation of record; §6's sealed text
+  and plan D-2's stay as-is (the M7–M11 precedent — the ruling lives here). `tasks.md`'s locked-gates
+  line carries a pointer to this entry. A future F8 pass that builds Peekover's OWN find/replace or lint
+  (richer than CodeMirror's defaults) is unaffected — this rules only that M12 does not SUPPRESS the
+  defaults, not that it builds more.
+  **Stated precisely, so the record does not over-claim:** what `basicSetup` ships for lint is
+  `lintKeymap` ONLY — the key bindings. No `linter()` source is configured by `basicSetup` and none is
+  added, so NO markdown linting runs and no diagnostics appear; "lint is present" means inert bindings,
+  not a lint feature. Find/replace and autocompletion are the two defaults a user can actually reach.
+  **★ SAME CLASS, NOT COVERED BY THIS RULING — surfaced, not silently folded in:** `markdown()` from
+  `@codemirror/lang-markdown` defaults to `addKeymap: true`, which binds Enter to
+  `insertNewlineContinueMarkup` (and Backspace to `deleteMarkupBackward`) — i.e. list continuation, and
+  §6 lists "smart lists/continuation" as deferred. The human's ruling named find/replace and lint; its
+  reasoning (do not suppress the engine's defaults) reads onto this too, but that extension is the
+  human's to confirm, not this entry's to assume. Owed before task 3.1 first calls `markdown()`.
+  **Revisit-when:** a future F8 pass that wants Peekover-authored find/replace or lint beyond
+  CodeMirror's defaults; or if the close walk (7.1) finds the default search/autocomplete UI jarring
+  against the reader's own aesthetic — then a task-level styling reconciliation, not a re-ruling.
+  **ALSO BANKED HERE — the audit carry:** `pnpm audit --prod` exits 1 at `e001f9e` on two PRE-EXISTING
+  advisories the CodeMirror install did not touch (`markdown-it` 14.3.0, moderate, GHSA-253c-mchw-3w2r,
+  fixed 14.3.1; `dompurify` 3.4.13, low, GHSA-p98j-92pf-mc4p, fixed 3.4.16), so task 1.1's "audit EXIT=0"
+  Verify clause is NOT met at its commit. Human-ruled: it is closed by a dedicated bump task, **1.2,
+  BEFORE 2.1** (`tasks.md`) — an explicit owner, not a silently carried unmet clause.
+
 - **2026-10-04 · M12 GATE 3 APPROVED — `tasks.md` (the WHAT-in-what-order) approved; implementation is
   authorized, beginning at task 1.1, fresh session. The FINAL gate.**
   `specs/012-editor-mode/tasks.md` was reviewed and approved **as redlined to the D-4 re-ruling in the
