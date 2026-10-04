@@ -85,8 +85,8 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M12 (`specs/012-editor-mode/`) — gate-1 APPROVED (2026-10-03, `decisions.md`'s M12
-  GATE 1 entry); `plan.md` is next, fresh session.** M11 (`specs/011-math-rendering/`) closed 2026-09-11
+- Current milestone: **M12 (`specs/012-editor-mode/`) — gate-2 APPROVED (2026-10-04, `decisions.md`'s M12
+  GATE 2 entry); `tasks.md` is next, fresh session, the final gate before implementation.** M11 (`specs/011-math-rendering/`) closed 2026-09-11
   (Temml/MathML math, both engines). M12 = F8 Editor Mode's focused core (edit → live preview → save-back
   via CodeMirror 6, lazy-loaded), scoped against the 2026-10-03 package-size ceiling ruling (≤ 5 MiB →
   ≤ 7 MiB, taken specifically as this milestone's prerequisite). Gate 1 ruled all four §9 decisions: D-A
@@ -94,6 +94,13 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   permission mechanism = task-level verification, conflict policy = gate-3, ledger update = mandatory —
   plus a human sign-off on the new ledger-wording), D-C live-preview mechanism (approved, existing
   pipeline, no new sanitizer), D-D the dependency gate (approved as a confirmation, not a bust-fork).
-  Spec body stays sealed/"draft" per M7–M11 precedent — `plan.md` must re-derive every `file:line` against
-  the actual tree, with front-loaded force on §7-1 (FSA write-permission mechanism) and §7-3 (conflict
-  policy).
+  Gate 2 (2026-10-04) ruled the plan's four §8 questions:
+  §8-1 / D-1 — a dedicated edit-entry control, not a third state on the bare `\` key (approved).
+  §8-2 / D-9 — draft ledger wording on track; the actual sign-off is still owed at the save task (group 5).
+  §8-3 / D-4 — nested-host live preview, `mount.ts` byte-untouched (approved); built at group 2, cost
+  measured at group 6 — a material cost there is a finding for the human, not a number to file.
+  §8-4 / D-8 — watch+edit SUPPORTED, DEGRADED via `watchController.ts`'s existing deferral gate; edit exit
+  does not auto-flush (approved).
+  Spec and plan bodies stay sealed/"draft" per M7–M11 precedent — `tasks.md` decomposes the plan's seven
+  groups, re-deriving every `file:line` against the actual tree, and runs group 3's nested-host tests on an
+  unwatched document (group 4 closes the collision later).

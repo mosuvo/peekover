@@ -48,14 +48,36 @@ as recommended. **D-D** the dependency gate reframed as a confirmation (not a bu
 docx or M11's KaTeX/MathJax) — approved; the human declined the spec's own offered distrust escape. Spec
 body stays sealed/"draft" per M7–M11 precedent; the approval lives in `decisions.md`.
 
+**M12 gate-2 APPROVED, 2026-10-04 (`decisions.md`'s M12 GATE 2 entry) — `tasks.md` is next, fresh
+session, the final gate before implementation.** `specs/012-editor-mode/plan.md` (the HOW) approved; its
+body and "draft" status line stay sealed, the approval lives in `decisions.md`. The four §8 rulings:
+- **§8-1 / D-1** — a dedicated edit-entry control, not a third state on the bare `\` toggle key. Approved.
+- **§8-2 / D-9** — the draft ledger wording is on track; no sign-off taken at this gate.
+- **§8-3 / D-4** — nested-host live preview, `mount.ts` byte-untouched; partial-replace `mount()` declined.
+  Approved, with the build-at-group-2 / measure-at-group-6 sequencing accepted as proposed.
+- **§8-4 / D-8** — watch+edit is SUPPORTED, DEGRADED: `watchController.ts`'s existing deferral gate
+  extended, external changes surface through D-7's save-time content-compare, edit exit does not
+  auto-flush. Approved.
+
+Gate-1's four §9 rulings are inherited unchanged; D-7's content-comparison lead stands.
+
 ## Up next
 
-**`plan.md` on `specs/012-editor-mode/spec.md`** — the next artifact, a fresh session, resolving §7's
-seven open risks against the actual tree at its own HEAD (every spec-level `file:line` citation
-re-derived), with front-loaded force on §7-1 (the FSA write-permission mechanism) and §7-3 (the conflict
-policy, including the watch-relay-while-editing collision). **Carried obligation for the save task:**
-route the drafted `PERMISSIONS.md` ledger-wording sentence (D-B-iii) to the human for sign-off before it
-lands — mandatory to land, but not mandatory to word unilaterally. M11 closed with no forced follow-on
+**`tasks.md` on `specs/012-editor-mode/plan.md`** — the next artifact, a fresh session, and the final
+gate (gate 3) before implementation: decompose the plan's seven groups into tasks, re-deriving every
+`file:line` against its own HEAD. No implementation code before `tasks.md` is approved (WORKFLOW.md
+§5.3). **Carried into it:**
+- **The D-B(iii) ledger-wording sign-off is still owed at group 5** — the save task drafts the final
+  `PERMISSIONS.md` sentence and routes it to the human before it lands; mandatory to land, not to word
+  unilaterally. Gate 2 did not take it.
+- **Group 3's nested-host tests run on an UNWATCHED document** — group 3's live preview lands before
+  group 4 closes the watch/edit collision, so no watch may fire mid-test. A gate-2 residual for
+  `tasks.md` to resolve; the plan body states the hazard only for group 5's tests (§6).
+- **D-4's build-then-measure consequence** — the nested host is built at group 2 and its cost measured
+  at group 6. If that cost is material it is a finding to surface to the human, not a number to file,
+  and overturning the nested host by then is a rework of groups 2–5. Accepted on the record.
+
+M11 closed with no forced follow-on
 task of its own — every carried item from its close is either resolved, a deferred-post-M11 standing
 item, or a human-drafted-not-placed retro action (see § Carried items below).
 

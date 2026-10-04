@@ -1,6 +1,55 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · M12 GATE 2 APPROVED — plan 012 (Editor Mode, the HOW) §8 questions ruled. `tasks.md` is
+  the next artifact and the FINAL gate before implementation, fresh session.**
+  `specs/012-editor-mode/plan.md` was reviewed and approved. **The plan's status line stays "draft (Gear-3
+  gate 2 — awaiting human approval before `tasks.md`)" and THIS ENTRY IS THE APPROVAL OF RECORD** — the
+  M7–M11 precedent: gate approvals live in the bank, not in the artifact's status line.
+  **THE RULINGS, plan §8:**
+  - **§8-1 · D-1 (edit-entry control): APPROVED.** A dedicated edit-entry control, NOT a third state on
+    the bare `\` toggle key — an accidental key press must not load a ~500 KB engine and change what
+    typing does; matches the product spec's own "Toggle: Read ↔ Edit" as a named control.
+  - **§8-2 · D-9 (draft ledger wording): ON TRACK, no sign-off taken now.** The candidate ledger sentence
+    reads right in the project's trust voice; the ACTUAL one-sentence sign-off remains gate-1's own
+    D-B(iii) obligation, deferred to the save task (group 5) when it drafts the final wording — unchanged
+    by this gate.
+  - **§8-3 · D-4 (nested-host live preview): APPROVED — nested host, cost measured at group 6 as
+    proposed.** `mount()`'s full-shadow-root `replaceChildren` contract (`mount.ts:218`) means a live
+    preview cannot render into the document's own host without destroying the editor; the nested-host
+    design keeps `mount.ts` byte-untouched (the invariant every milestone relies on) at the cost of a
+    second shadow root the plan expects to be small. The rejected alternative — teaching `mount()` a
+    partial-replace mode — was weighed with its real appeal (one shadow root, no nesting cost) and
+    declined: a permanent widening of `mount()`'s contract for one feature, paid by every caller. ★ **THE
+    SEQUENCING IS RULED ACCEPTED AS PROPOSED:** the nested host is BUILT at group 2 and its cost MEASURED
+    at group 6 — the architecture is ruled on before its cost is known, deliberately (the measurement
+    needs the real thing mounted beside a real CodeMirror instance to be worth anything). The human did
+    NOT pull the cost-probe forward before group 2. ★ **CARRIED CONSEQUENCE:** if group 6 finds the
+    nesting cost material, that is a finding to surface to the human, NOT a number to file — and since
+    groups 2–5 will stand on the nested host by then, overturning it would be a rework. This consequence
+    is accepted, on the record, as part of the ruling.
+  - **§8-4 · D-8 (watch+edit collision): APPROVED — SUPPORTED, DEGRADED.** Editing a watched document
+    pauses its live re-render (via extending `watchController.ts`'s existing diff-deferral gate, not a
+    parallel mechanism), surfacing external changes through D-7's save-time content-compare rather than a
+    live watch notification. Not DISALLOWED (too restrictive) and not fuller-SUPPORTED-with-live-merge
+    (out of the focused core's scope, undesigned). The one asymmetry — edit-mode exit does NOT auto-flush
+    the deferred render the way a diff's exit does, because that would destroy unsaved work — is part of
+    the approval.
+  **INHERITED FROM GATE-1, unchanged:** the four §9 rulings (in-shell, save-back three-way routing + the
+  ledger-wording sign-off obligation, existing-pipeline preview, dependency-as-confirmation). **D-7's
+  content-comparison conflict-detection lead** (flipped by human ruling 2026-10-04, metadata a
+  measurement-gated optimization) stands as the plan's own resolution, confirmed by this approval.
+  **WHAT THIS AUTHORIZES:** `tasks.md` (the WHAT-in-what-order), next, FRESH SESSION, the FINAL gate
+  before implementation — decomposing the plan's seven groups into tasks, re-deriving every `file:line`
+  against its own HEAD, and resolving the one residual this gate carries to `tasks.md`: group 3's
+  nested-host tests run on an UNWATCHED document, so no watch can fire mid-test before group 4 closes the
+  collision. (Named at this gate, not in the sealed plan body — plan §6 states the hazard only for group
+  5's tests, by ordering group 4 ahead of them; group 3's live preview lands before group 4 and has the
+  same exposure.) No implementation code before `tasks.md` is approved (WORKFLOW.md §5.3).
+  **WHAT STAYS AS-IS:** `plan.md`'s body + status line (sealed, M7–M11 precedent). The < 165 ms
+  first-paint gate, the ≤ 7 MiB ceiling, and `permissions: []` all hold.
+  **Revisit-when:** never for the ruling; gate 3 (`tasks.md`'s own review) is the next human gate.
+
 - **2026-10-03 · M12 GATE 1 — spec 012 (Editor Mode, focused core: edit → live preview → save-back, via
   CodeMirror 6) APPROVED, ALL FOUR §9 DECISIONS RULED. `plan.md` is the next artifact and the next gate,
   fresh session.** `specs/012-editor-mode/spec.md` was reviewed and approved. **The spec's status line
