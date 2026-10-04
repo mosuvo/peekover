@@ -89,12 +89,56 @@ entries) — implementation is authorized; task 1.1 is next, fresh session.** Do
   is "zero `codemirror` bytes + decomposed glue", not "340,492 B unmoved". Spec / plan / tasks status
   lines stay "draft"; `decisions.md` is the approval of record.
 
+**M12 task 1.1 DONE, 2026-10-04 — `codemirror` 6.0.2 + `@codemirror/lang-markdown` 6.5.2 installed,
+measured, governed; D-D CONFIRMED; `basicSetup` chosen.** Baseline re-derived by a clean rebuild (not
+cited) and it matches: `.output` 5,197,425 B (Cr) / 5,197,541 B (Fx), content script 340,492 B, manifest
+654 / 770 B. Installing alone moves zero shipped bytes. Arms measured through a scratch app-page dynamic
+import of a constructed `EditorView` (reverted); the `.output` delta is identical on both engines:
+
+| Arm | `.output` delta | zip delta | Headroom left (Cr / Fx) |
+|---|---|---|---|
+| (a) `codemirror` + `basicSetup` | +382,623 B | +121,521 B | 1,759,984 / 1,759,868 B |
+| (b) `codemirror` + `minimalSetup` | +281,094 B | +90,392 B | 1,861,513 / 1,861,397 B |
+| (c) `@codemirror/lang-markdown` alone | +465,064 B | +159,323 B | 1,677,543 / 1,677,427 B |
+| (d) **shipping: `basicSetup` + `markdown()`** | **+605,443 B** | +203,368 B | **1,537,164 / 1,537,048 B** |
+| (e) `minimalSetup` + `markdown()` | +508,217 B | +173,681 B | 1,634,390 / 1,634,274 B |
+| (z) empty probe (glue control) | +135 B | +380 B | — |
+
+- **Decomposed, residual 0 per file:** every arm is the probe chunk plus +93 B of `import()` glue in the
+  app chunk; no other file changes size. Net of the 135 B glue: shared core (state/view/language/
+  autocomplete/lezer) 242,109 B · `basicSetup`-only 140,379 B · markdown-only 222,820 B = 605,308 B.
+  `lang-markdown` is the larger half because `markdown()` statically pulls `lang-html` → `lang-css` +
+  `lang-javascript` and their Lezer grammars. The spike's ~500–607 KB is CONFIRMED (508 KB / 605 KB).
+- **Setup choice — `basicSetup`.** Rule (plan D-2): `basicSetup` unless its cost surprises. It costs
+  +97,226 B over `minimalSetup` in the shipping combination (4.5% of headroom) and the shipping arm lands
+  inside the spike range, so it does not. The shipping arm uses 28% of headroom.
+- **App-page-only:** content-script md5 identical to baseline in every arm, both engines. Firing control —
+  a scratch static `codemirror` import in `entrypoints/peekover.content.ts` moved it 340,492 → 622,009 B
+  with a new md5; reverted, rebuilt, byte-identical to baseline again.
+- **Governance:** 23 packages added, all MIT, none with install scripts; lockfile +212 / −0; `dompurify`
+  still one copy; `dependencies` 8 → 10; SBOM regenerated (transient) at 191 components. Scanner self-test
+  7 firing + 10 silent with the two new stay-silent fixtures (gate-3 Q1); the content-script EXCLUSION
+  proof is still task 3.1's `editorImportFence.test.ts`. Lint 0 · unit 1145 · browser 1663 (15 skipped) ·
+  golden unchanged · `permissions: []`.
+- **★ OPEN — `pnpm audit --prod` exits 1, so 1.1's audit clause is NOT met.** Two advisories on
+  PRE-EXISTING dependencies the install did not touch: `markdown-it` 14.3.0 (moderate,
+  GHSA-253c-mchw-3w2r, fixed 14.3.1) and `dompurify` 3.4.13 (low, GHSA-p98j-92pf-mc4p, fixed 3.4.16).
+  Human ruling 2026-10-04: commit 1.1 with this flagged; the bump is its own task, next.
+- **★ OPEN — `basicSetup` vs spec §6's IS-NOT fence.** `basicSetup` bundles `searchKeymap` (a find/replace
+  panel on Ctrl-F), `lintKeymap` and `autocompletion()`; spec §6 lists find/replace and lint as OUT, while
+  plan D-2 says the winner ships its default bindings unmodified. Human ruling 2026-10-04: record
+  `basicSetup`, carry this to be ruled before task 3.1 first uses the setup.
+
 ## Up next
 
-**M12 implementation — task 1.1 (install `codemirror` + `@codemirror/lang-markdown`, measure four arms on
-both engines, choose the setup from the number), fresh session.** Gate 3 approved 2026-10-04. Test-first,
-one commit per task, this file's Now-pointer advancing in that same commit. Task 1.1's own clean rebuild
-re-measures the byte snapshot and is authoritative. **Carried touchpoints — the task-level human gates:**
+**First: the audit bump — `markdown-it` → 14.3.1 and `dompurify` → 3.4.16 (its own task and commit: the
+parser and the sanitizer move, so golden + full suite + both-engine bytes).** It restores `pnpm audit
+--prod` EXIT=0, the clause task 1.1 left open. **Then M12 task 2.1** (`ReaderMode` gains `'edit'`, async
+`enterEditMode`, the backslash shortcut inert in edit mode), fresh session, test-first, one commit per
+task. Byte snapshot for its kickoff: `.output` 5,197,425 / 5,197,541 B, headroom 2,142,607 / 2,142,491 B,
+content script 340,492 B, `dependencies` 10 — CodeMirror is installed but unreferenced, so nothing shipped
+has moved yet; the +605,443 B lands at 3.1. **Before 3.1:** the `basicSetup`-vs-IS-NOT-fence ruling above.
+**Carried touchpoints — the task-level human gates:**
 - **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).

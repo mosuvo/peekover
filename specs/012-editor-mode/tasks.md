@@ -173,7 +173,7 @@ forward to the immediately-prior task's own measured figure.**
 
 ## 1 — The byte measurement + governed install (D-D's CONFIRMATION — HARD GATE, gates every later group)
 
-- [ ] **1.1 Install `codemirror` + `@codemirror/lang-markdown` FOR REAL; measure, decompose, CHOOSE the
+- [x] **1.1 Install `codemirror` + `@codemirror/lang-markdown` FOR REAL; measure, decompose, CHOOSE the
       setup from the number; govern the install (D-2, D-10; D-D).** Verify both packages against the
       current registry first (name, licence, maintenance, ESM shape, install scripts — never from
       training knowledge). Clean rebuild at HEAD to re-establish the baseline. Then, via a scratch

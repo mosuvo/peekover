@@ -302,6 +302,11 @@ const MUST_NOT_FIRE: ReadonlyArray<{ name: string; src: string }> = [
   { name: 'bare-specifier lazy chunk (spec §10 Shiki pattern)', src: `const s = await import('shiki');` },
   { name: 'relative lazy chunk', src: `const m = await import('./heavy/mermaid');` },
   { name: 'scoped-package lazy chunk', src: `await import('@scope/pkg/sub');` },
+  // M12 task 1.1 (gate-3 Q1). These two document the editor's lazy-chunk shape and nothing more:
+  // this list is the scanner's stay-silent self-test, NOT a forbidden-specifier list. What keeps
+  // CodeMirror off the content-script graph is `src/render/editorImportFence.test.ts` (task 3.1).
+  { name: 'editor engine lazy chunk (M12 CodeMirror)', src: `const cm = await import('codemirror');` },
+  { name: 'editor language lazy chunk (M12 CodeMirror)', src: `await import('@codemirror/lang-markdown');` },
   { name: 'ordinary static import', src: `import DOMPurify from 'dompurify';` },
   { name: 'line comment mentioning a dynamic import', src: `// await import(anything) is banned here` },
   { name: 'block comment mentioning a dynamic import', src: `/* do not use import(x) */` },
