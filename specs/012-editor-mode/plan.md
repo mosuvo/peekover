@@ -2,7 +2,9 @@
 
 **Status:** draft (Gear-3 gate 2 — awaiting human approval before `tasks.md`)
 **Date:** 2026-10-03 · revised 2026-10-04 (D-7 flipped to content-comparison lead by human ruling; seam-check
-fixes to cross-references after the parallel-draft merge — still a draft, nothing here approves it)
+fixes to cross-references after the parallel-draft merge; then a gate-2 framing pass — D-4 gains its
+Rejected paragraph and its build-then-measure sequencing, D-8 reads PROPOSED rather than ruled, no outcome
+changed — still a draft, nothing here approves it)
 **Spec:** `specs/012-editor-mode/spec.md`, approved at gate 1 (`decisions.md`'s 2026-10-03 **M12 GATE 1**
 entry, all four §9 rulings). This plan is the HOW; it resolves the spec's seven §7 risks against the
 **actual code at HEAD `a08dfff`**, not against the spec document. No §3.x decision is reopened, and nothing
@@ -194,6 +196,29 @@ update does not snap the preview pane back to its top on every keystroke. This i
 spec §3.5's "second producer, same consumer": the consumer is `mount()`, called with the SAME options shape
 an existing caller already uses, on a host nobody but the editor module ever sees.
 
+*Rejected (this plan's lean — gate-2's to confirm or overturn, §8 question 3 below):* teaching `mount()` a "replace only
+PART of my shadow root" mode, so the live preview re-renders into a region of the DOCUMENT'S OWN host and no
+nested host exists. **Its appeal is real and is stated, not strawmanned:** ONE shadow root instead of two —
+no nesting, no second `attachShadow`, none of the per-edit-session second-shadow-root cost §4 risk 3 names
+as unmeasured, and the preview would be the reading column itself rather than a second copy of the reader's
+styles and chrome-composition running beside it. **Why this plan leans against it:** a partial-replace mode
+is new `mount.ts` surface — a second contract beside "I own this host's entire shadow root" (`mount.ts:218`)
+— carrying its own test burden, and it is a PERMANENT widening of `mount()` for one feature's benefit, paid
+by every caller and every later milestone that reads that function. It also breaks with the standing
+precedent of solving a new view BESIDE `mount()` rather than inside it (006 D-15's sibling-view-not-a-
+`MountOptions`-field, *"mount() stays read-only library"*; 011 D-3). The nested host buys a byte-untouched
+`mount.ts` at the price of a second shadow root whose overhead this plan EXPECTS to be small — an
+expectation, not a measurement.
+
+**The sequencing trade, named so gate-2 rules with it visible:** the nested host is BUILT at group 2 and its
+cost is MEASURED at group 6 (§7) — the architecture is ruled on, and built on, before its cost is known. This
+is a deliberate ordering, not an oversight: the measurement needs the real thing mounted beside a real
+CodeMirror instance to be worth anything. Its consequence is stated rather than absorbed: **if group 6 finds
+the nesting cost material, that is a finding to carry back to the human, not a number to file** — and by then
+groups 2–5 stand on the nested host, so overturning it would be a rework, not a redline. Gate-2 may instead
+ask for the nested-host cost to be probed before group 2 commits to it; this plan does not propose that, and
+does not foreclose it.
+
 ### D-5 · The editor→preview debounce candidate mechanism — named, not chosen. The interval stays gate-3's (§8-2), per spec.
 
 The spec explicitly forbids this plan from inventing a number (§3.5, §8-2) — but it does not forbid naming
@@ -323,7 +348,7 @@ correct by default; metadata earns a role only on measurement.
 lines, already builds a snapshot/file/text diff affordance — / force-overwrite-with-confirmation) — that
 stays §8-1's own gate-3 ruling, from a walk of a real conflicting-edit scenario, per spec.
 
-### D-8 · ★ THE WATCH/EDIT COLLISION — SUPPORTED, DEGRADED: editing a watched document PAUSES its live re-render via the SAME deferral gate `watchController.ts` already built for a displayed diff, with one necessary asymmetry on exit. RESOLVES §7-3's own named sharpest risk.
+### D-8 · ★ THE WATCH/EDIT COLLISION — SUPPORTED, DEGRADED: editing a watched document PAUSES its live re-render via the SAME deferral gate `watchController.ts` already built for a displayed diff, with one necessary asymmetry on exit. PROPOSED — resolves §7-3's own named sharpest risk IF confirmed at gate 2.
 
 `decisions.md` entry draft: *"012 D-8 — the watch relay's own DECISION 4 (2026-07-23, `watchController.ts`'s
 `data-diff`-gated deferral) is the exact mechanism the edit/watch collision needs, extended by one more
@@ -358,7 +383,7 @@ edit mode with NO unsaved changes, the deferred render simply flushes (equivalen
 all); if they exit with unsaved changes pending, or attempt to save, the conflict surfaces through §8-1's
 own gate-3 UX rather than through a silent DOM replacement.
 
-**Ruling, stated as the spec itself asked for:** editing a watched document is **SUPPORTED, DEGRADED** —
+**Proposed ruling (gate-2's to confirm, this plan's §8 question 4), stated as the spec itself asked for:** editing a watched document is **SUPPORTED, DEGRADED** —
 not disallowed (the user may still enter edit mode on a watched file) and not fully live (the reader will
 not see the watch relay's own re-render WHILE editing — correct, since showing it would require tearing
 down the exact DOM the user is typing into). This composes cleanly with the existing architecture because
@@ -479,7 +504,9 @@ injected `save` field; one new call-site line for `enhanceEditor`) · `package.j
 mime type, so the file itself does not change. Listed so `tasks.md` finds the fallback's one primitive and
 builds no second Blob/anchor mechanism — not because it is edited).
 
-**Explicitly NOT touched** — `src/render/mount.ts` (D-4's own central finding: zero diff, checkable at zero
+**Explicitly NOT touched** — `src/render/mount.ts` (CONDITIONAL on gate-2 confirming D-4 — if this plan's §8 question 3 is
+overturned in favour of a partial-replace mode, this entry moves to Touch and this list is re-derived; as
+proposed, it is D-4's own central finding: zero diff, checkable at zero
 call sites — the SAME property 006 D-15/011 D-3 already hold, now proven to survive a milestone that writes,
 not merely reads) · `src/app/chromiumFolderSource.ts` (§1's own finding: no second permission path is needed
 — `pickDirectory`/`fileNodeFromHandle` are byte-untouched) · `src/render/diagramEngine.ts` /
@@ -503,7 +530,9 @@ sanitizer profile" reasoning means golden stays untouched, unlike 011's own math
    `requestPermission({mode:'readwrite'})` call on `MarkdownFile.handle` at save time (D-6).
 3. **§7-3, the conflict policy and the watch-collision.** The MECHANISM half is RESOLVED: conflict
    detection via content comparison against the `originalText` snapshot (D-7 — `lastModified`/`size` is a
-   measurement-gated optimization only, never the correctness decision); the watch/edit collision is SUPPORTED, DEGRADED,
+   measurement-gated optimization only, never the correctness decision); the watch/edit collision is
+   PROPOSED as SUPPORTED, DEGRADED (gate-2's
+   to confirm, this plan's §8 question 4),
    via extending `watchController.ts`'s existing diff-deferral gate (D-8) rather than inventing a parallel
    mechanism. The POLICY half (what the user sees on a conflict) stays gate-3's own (§8-1), per the spec's
    own routing.
@@ -676,7 +705,8 @@ decomposed number; the setup choice is made from measurement, not guessed.
 architecturally novel group, landed BEFORE any CodeMirror wiring so the split-pane shell exists and is
 proven not to disturb `mount.ts`'s own zero-diff property before the editor itself is built into it.
 *Touches:* `readerMode.ts`, `readerCss.ts` (the split-pane CSS, tokens verified against `design/
-tokens.css`/`design/mockup.html`). *Must NOT touch:* `mount.ts`. *Acceptance:* entering/exiting `'edit'`
+tokens.css`/`design/mockup.html`). *Must NOT touch:* `mount.ts` (as D-4 proposes — this group's
+whole shape is conditional on gate-2's ruling on this plan's §8 question 3). *Acceptance:* entering/exiting `'edit'`
 leaves the outer host's chrome byte-identical across repeated toggles; the nested host's own `mount()` calls
 never touch the outer shadow root.
 
@@ -691,7 +721,8 @@ proven red-first.
 save-back so the collision is closed before a conflict can ever reach the save path untested. *Touches:*
 `watchController.ts` only. *Must NOT touch:* `diffView.ts`/the diff feature's own substance — this group
 widens an existing gate, it does not touch what the gate protects. *Acceptance:* D-8's SUPPORTED-DEGRADED
-ruling proven both directions (deferred while editing, flushed or conflict-routed on exit).
+proposal (as confirmed at gate 2) proven both directions (deferred while editing, flushed or conflict-routed
+on exit).
 
 **5 · Save-back (D-6, D-7, D-9).** The permission upgrade, the write/download fork, conflict detection,
 `PERMISSIONS.md`'s ledger update (mandatory, wording pending human sign-off), the save-failure degrade path.
@@ -756,12 +787,15 @@ as the firing control.*
    reads wrong against the project's own trust voice, before the save task inherits it.
 3. **D-4's architectural weight** — this plan found a genuine new constraint (`mount()`'s full-shadow-root
    contract) the spec did not surface, and resolved it with a nested-host design rather than a `mount.ts`
-   change. Confirm this is the right trade (a second shadow root per edit session) versus the alternative
-   this plan rejected implicitly — teaching `mount()` itself a "replace only part of me" mode, which would
-   break its own byte-untouched invariant for every milestone that depends on it. **No recommendation
-   hidden here beyond the lean already stated in D-4** — surfaced explicitly because it is the plan's own
-   biggest architectural call, not a mechanical one.
-4. **D-8's SUPPORTED-DEGRADED ruling for watch+edit** — confirm this reads as the right product behaviour
+   change. Confirm or overturn that trade (a second shadow root per edit session) versus the alternative —
+   teaching `mount()` itself a "replace only part of me" mode. **Both sides are argued in D-4's own
+   *Rejected* paragraph**: the alternative's real appeal (one shadow root, no nesting cost) and why this
+   plan leans against it (new, permanent `mount()` surface for one feature). D-4 also names the sequencing
+   this ruling accepts: the nested host is built at group 2 and its cost measured only at group 6. **No
+   recommendation hidden here beyond the lean already stated in D-4** — surfaced explicitly because it is
+   the plan's own biggest architectural call, not a mechanical one, and because §2's Files list and §6's
+   group 2 are written to D-4's proposal and are conditional on this answer.
+4. **D-8's SUPPORTED-DEGRADED proposal for watch+edit** — confirm this reads as the right product behaviour
    (an editing session goes quiet to the watch relay rather than losing work) rather than DISALLOWED
    (blocking edit mode entirely on a watched document) or a fuller SUPPORTED (attempting to merge external
    changes live, which this plan did not design and considers out of scope for the focused core).
