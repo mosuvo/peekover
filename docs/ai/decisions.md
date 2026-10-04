@@ -1,6 +1,41 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-04 · M12 TASK 1.1 EXTENDED — `markdown()`'s default keymap ships AS-IS; §6's deferred
+  "smart lists/continuation" is a PEEKOVER-BUILT deferral, the same reading as find/replace and lint.
+  Human-ruled, extending Option A.** Doc-only: this entry closes the item the M12 TASK 1.1 entry (two
+  below) surfaced as "SAME CLASS, NOT COVERED BY THIS RULING" and left owed before task 3.1. That entry is
+  not reworded; this one sits beside it.
+  **★ THE RULING:** `markdown()` from `@codemirror/lang-markdown` is called with its defaults. `addKeymap`
+  stays `true`; Enter's list/markup continuation and Backspace's delete-markup-backward ship unmodified.
+  **★ THE READING OF §6:** "smart lists/continuation" is deferred as something Peekover BUILDS — its own
+  list behaviour — not as a mandate to suppress the engine's defaults. This is the reading the
+  `basicSetup` entry applied to find/replace and lint, extended to a third item by the same reasoning: a
+  markdown editor whose Enter does not continue a list is the thinner editor Option A already declined.
+  Plan D-2's "default bindings unmodified" holds literally, for the language package as for the setup.
+  **★ REJECTED — `markdown({ addKeymap: false })`.** It honours §6's text literally at roughly zero byte
+  cost (not measured — a config flag, no dependency change), but it MODIFIES an engine default, which is the posture
+  Option A rejected when it declined to strip `basicSetup`'s keymaps. Satisfying §6 literally here while
+  reading it by intent two items earlier would be two readings of one fence.
+  **★ THE INSTALLED-PACKAGE EVIDENCE** (`@codemirror/lang-markdown` 6.5.2, read at HEAD `8cbac42`, not
+  from memory): `node_modules/@codemirror/lang-markdown/dist/index.js:407` destructures the config with
+  `addKeymap = true`; `:398-401` defines `markdownKeymap` as exactly two bindings — `:399` `Enter` →
+  `insertNewlineContinueMarkup`, `:400` `Backspace` → `deleteMarkupBackward`; `:423-424` installs it, when
+  `addKeymap` is truthy, as `Prec.high(keymap.of(markdownKeymap))`. `dist/index.d.ts:82-85` documents the
+  option: *"Set this to false to disable installation of the Markdown keymap."*
+  **Stated precisely, so the record does not under-claim:** "called with its defaults" also covers the two
+  other behavioural defaults on that same line `:407` — `completeHTMLTags = true` (HTML tag completion)
+  and `pasteURLAsLink = true` (pasting a URL over a selection wraps it as a link). The human's ruling
+  named the keymap; its terms (defaults, unmodified) reach these too, and they are named here rather than
+  left to be discovered at 3.1.
+  **★ THE HONEST COST, RECORDED:** §6's IS-NOT text now reads loosened on a THIRD item — find/replace,
+  lint (bindings only), and list continuation are all present as CodeMirror's, none as Peekover's. §6's
+  sealed text and plan D-2's stay as-is; this entry, beside the `basicSetup` entry, is the reconciliation
+  of record. `tasks.md`'s locked-gates line points here.
+  **Revisit-when:** the 7.1 close walk finds continuation or delete-markup-backward jarring in real
+  editing — then a task-level reconsideration, not a silent re-ruling; or a future F8 pass builds
+  Peekover's own smart-list behaviour.
+
 - **2026-10-04 · M12 TASK 1.2 — the `markdown-it` target moves 14.3.1 → 14.3.2, to also close
   GHSA-r7fv-28h4-cvq7. Human-ruled, a FLAGGED deviation from `tasks.md`'s named 14.3.1. `dompurify`'s
   target is unchanged at 3.4.16.**

@@ -131,7 +131,11 @@ ruled.** Doc-only session, no build, no dependency change.
   ~97 KB) were both rejected.
 - **The audit failure has an owner: task 1.2** (`tasks.md`, a DISCOVERED task — 22 → 23), before 2.1.
   1.1's "audit EXIT=0" clause is recorded as unmet at `e001f9e` and closed by 1.2.
-- **★ STILL OPEN, same class, surfaced by this session — NOT ruled:** `markdown()` defaults to
+- **✅ RULED 2026-10-04 (`decisions.md`'s M12 TASK 1.1 EXTENDED entry) — ships AS-IS: `markdown()` is
+  called with its defaults, `addKeymap` stays `true`; §6's "smart lists/continuation" is read as a
+  Peekover-built deferral, the same reading as find/replace and lint. `markdown({ addKeymap: false })`
+  rejected. The item below is kept as written.** *★ STILL OPEN, same class, surfaced by this session —
+  NOT ruled:* `markdown()` defaults to
   `addKeymap: true`, binding Enter to list/markup continuation, and §6 lists "smart lists/continuation"
   as deferred. The ruling named find/replace and lint only; extending it is the human's call. Owed
   before 3.1.
@@ -211,8 +215,9 @@ md5 `966f01988eccd126e02ab05667dd0676` (Cr) / `ae78e2adaccd79fdb73f4d5be0974f93`
 skipped · golden empty. CodeMirror is installed but unreferenced; the +605,443 B lands at 3.1.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
 figure above supersedes it from 1.2 on.
-**Before 3.1:** the human's word on `markdown()`'s default list-continuation keymap vs §6's "smart
-lists/continuation" (the open item above). The `basicSetup` ruling itself is done.
+**Before 3.1: nothing is owed on the editor defaults.** `markdown()`'s default keymap is RULED ship-as-is
+(2026-10-04, `decisions.md`'s M12 TASK 1.1 EXTENDED entry), beside the `basicSetup` ruling; 7.1's walk
+now carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
 - **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).

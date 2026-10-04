@@ -61,8 +61,9 @@ forward to the immediately-prior task's own measured figure.**
   task proposes any of them.** ★ *Reconciled 2026-10-04 (`decisions.md`, M12 TASK 1.1): the fence is on
   what Peekover BUILDS. `basicSetup` ships as-is, so CodeMirror's own Ctrl-F search and autocompletion are
   present and are NOT suppressed (`lintKeymap` is bindings only — no lint source, no linting runs). No task
-  builds a Peekover find/replace or lint, and no task strips the defaults. Still open, owed before 3.1:
-  whether the same reading covers `markdown()`'s default list-continuation keymap ("smart lists").*
+  builds a Peekover find/replace or lint, and no task strips the defaults.* ★ *RULED 2026-10-04
+  (`decisions.md`, M12 TASK 1.1 EXTENDED): the same reading covers `markdown()`'s default keymap ("smart
+  lists") — it ships as-is, `addKeymap` left `true`; nothing is owed before 3.1 on this.*
 - **Plan §3.5's sibling-checklist audit — routed, not re-derived:** row 1 (app-page-only) → 1.1, 3.1 · row 4
   (the editor's DOM survives a re-render it does not control — the INVERTED property) → 2.2, 3.3 · consent/
   revoke/re-prompt → 5.1, 5.3 · zero-network with a firing control → 5.7 · row 15 (state in text and
@@ -662,7 +663,10 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       like an engine** (new chrome ships this milestone) plus the viewports 2.2 recorded · the nested
       preview pane judged by eye as a chrome-less reading column (F-3 / D-4 re-ruled: no pill, no theme
       control, no rail, no watch or diff affordance in it), including a document with remote media, which
-      shows blocked with no in-preview opt-in. *The informal fidelity eyeball is NOT this task's — it was owed at
+      shows blocked with no in-preview opt-in · ★ *added 2026-10-04 (`decisions.md`, M12 TASK 1.1
+      EXTENDED):* the **editing feel of CodeMirror's shipped defaults**, each with its own verdict —
+      Ctrl-F search · autocompletion · Enter list continuation · Backspace delete-markup-backward.
+      *The informal fidelity eyeball is NOT this task's — it was owed at
       3.2, when the editor first rendered.*
       Files: `docs/ai/progress.md` (verdicts) · `src/theme/readerCss.ts` only if a walked item returns a
       named styling finding
