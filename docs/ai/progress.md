@@ -61,7 +61,18 @@ body and "draft" status line stay sealed, the approval lives in `decisions.md`. 
 
 Gate-1's four §9 rulings are inherited unchanged; D-7's content-comparison lead stands.
 
+**M12 `tasks.md` DRAFTED, 2026-10-04 — awaiting gate 3 (NOT approved, NOT sealed).**
+`specs/012-editor-mode/tasks.md` decomposes the plan's seven groups into 22 test-first tasks with the
+three hard sequencing constraints enforced. Group 3's tests run on an UNWATCHED document (the gate-2
+residual, resolved in group 3's own text); the D-9 ledger sign-off is task 5.1, a human gate sequenced
+BEFORE the first write commit. The draft carries six findings (F-1…F-6) from re-deriving the plan's
+citations and six questions (Q1–Q6) for gate 3 — read those first. No code, no dependency installed.
+
 ## Up next
+
+**Gate 3 — the human's review of `specs/012-editor-mode/tasks.md` (drafted 2026-10-04).** On approval,
+implementation begins at task 1.1 in a fresh session. The paragraph below is the brief that draft was
+written to, kept for provenance.
 
 **`tasks.md` on `specs/012-editor-mode/plan.md`** — the next artifact, a fresh session, and the final
 gate (gate 3) before implementation: decompose the plan's seven groups into tasks, re-deriving every
