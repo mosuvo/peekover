@@ -1,6 +1,81 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-05 · M12 TASK 3.2 — informal eyeball DEFERRED to 7.1 (human ruling).**
+  **★ The ruling.** The informal fidelity eyeball owed at task 3.2 — the first cheap human glance at
+  the editor's real output — is DEFERRED by the human to the M12 milestone-close walk (task 7.1), to be
+  done once, at the end. Meanwhile as many of its checks as a real engine can answer are automated.
+  **★ This DEPARTS from two written rules, stated plainly.** WORKFLOW §7.2: "the first cheap human
+  glance at a new rendering surface's real output happens as soon as that surface first renders, not at
+  the fork's own close". `tasks.md` 3.2: "THE INFORMAL EYEBALL IS OWED AT THIS TASK … not deferred to
+  7.1". Both say the opposite of what was ruled. Neither text is edited: the rule stands for the next
+  surface, and this entry is the exception of record for this one.
+  **★ The risk taken.** The rule exists because of M11 (`retro.md` 2026-09-11): three defects were
+  caught only by eye, none by a suite that was green throughout. Deferring means anything only an eye
+  catches is found after groups 3.3–6 have built on the editor — the live preview, the watch/edit
+  collision, save-back, the unsaved guard — so a late find costs rework on more code than it would
+  today. The proxies below shrink that exposure; they do not remove it.
+  **★ The compensating proxies** — `tests/browser/editorEyeballProxy.browser.test.ts`, test-only, zero
+  production diff, Chromium AND Firefox in the vitest harness page, every fixture asserting it is
+  unwatched. Bar stated before measuring: WCAG 2.1 AA, text 4.5:1, non-text UI 3:1; light is the
+  control arm. Method: 007's contrast sweep (`diagramTheme.browser.test.ts` — computed colour, WCAG
+  relative luminance, the background found by walking the ancestors across the shadow boundary),
+  extended to composite translucent layers source-over in sRGB down to the first opaque ancestor, with
+  CodeMirror's selection layer (a sibling of the text, not an ancestor) inserted by hand and a
+  gradient measured at its worst stop. Results — identical on both engines in every row:
+  1. *Contrast of CodeMirror's own surfaces* — 27 pairs per theme. **Clear on both themes:** body text
+     15.74 light / 13.61 dark; text on the active-line band 15.43 / 6.18; the drawn caret 15.43 / 6.18;
+     search-panel label, field text, button and close 14.94–21 (the panel stays a light slab on dark);
+     plain search-match text 15.75 / 4.85; the selected completion 4.63. **Below the bar on DARK only
+     (light passes — the dark theme's own defects):** selected text on the selection **1.16:1**
+     focused / **1.14:1** unfocused (light ink on CodeMirror's light selection); the current search
+     match's text **1.52:1**; an unselected autocomplete option **1.09:1** (light ink inherited onto
+     the tooltip's `#f5f5f5`). **Below the bar on BOTH (not theme defects):** gutter line numbers 2.38
+     light / 3.26 dark — `--faint`, 3.2's own rule; the active line number 2.36 / 4.34. **Non-text
+     pairs under 3:1:** the active-line band against the pane 1.02 / 2.2; the gutter rule 1.11 / 1.13;
+     the search field's border 1.67 and fill 1.09 against its panel (both themes); and, on light only,
+     the selection 1.27 / 1.24, the search panel 1.04 and the tooltip 1.04 (border 1.69) against the
+     pane. Every surface opened in the harness, including Ctrl-F by a real keypress and the tooltip by
+     typing `<`.
+  2. *Collisions at the top-right* — 414×896 and 1400×900, rail open and collapsed, reading then edit.
+     The edit control, the mode pill and the TOC handle are pairwise disjoint and each is hit at its
+     own centre, in every case; the control never reaches the rail's list; with the rail OPEN the
+     split pane ends 32 px (wide) / 124.7 px (narrow) left of the rail. **ONE OVERLAP FOUND — the
+     proxy's stop condition:** in edit with the rail COLLAPSED the TOC handle covers the split pane's
+     top-right corner by **103×26 px**, at both viewports, on both engines (handle at 52–82 px; the
+     pane starts at 56 px and reserves the rail's width only while it is open).
+     **★ Second human ruling, same day, on that stop:** PIN it as a known finding. The test keeps
+     every other relation asserted, keeps this one relation in this one state out of its violations,
+     and asserts it is still present — so the fixing commit must delete the pin. Not fixed here.
+     *Read differently from the kickoff, flagged:* "the control against the rail" is asserted against
+     the rail's handle and list, not its box — the rail's top padding exists so pills sit over it, and
+     the mode pill has always been inside that box (56.5×30 px, the precedent; the control 35–104×30).
+     *Reported, not asserted:* at 414 px with the rail open the split pane is 100 px wide.
+  3. *GFM and R1's dialect, as drawn.* Task marker `[ ]` / `[x]` coloured `#221199`; table header
+     cells bold + underlined, every `|` and the delimiter row `#404740`; `~~struck~~` line-through on
+     text and marks. **R1's cost, measured not judged:** `H~2~O` and `x^2^` style ONLY the two marks
+     (`#404740`) — the enclosed character gets no span; `:smile:` is coloured `#aa1111`. A heading
+     fires the instrument, a plain line is silent. **Found on the way (outside the kickoff's list of
+     surfaces):** those highlight colours are CodeMirror's light-page defaults and on the dark pane
+     read **1.69:1** (every markup mark), **1.24:1** (the task marker), **2.15:1** (the emoji) — on
+     light 8.44 / 11.52 / 6.62.
+  4. *The Ctrl/Cmd+S hazard — CONFIRMED as 3.2 read it, on both engines.* With `main.ts`'s listener
+     installed and focus inside CodeMirror's content, a real Ctrl+S is `preventDefault`ed once (the
+     guard does not engage: the key reaches `document` retargeted to the host; a light-DOM input, the
+     control arm, is guarded). With `lastExportFormat` `'html'` it downloads an HTML export of the
+     ON-DISK document — the unsaved buffer text is not in it, nor any editor markup — and the editor
+     stays open with its buffer intact. With `null` nothing is exported and nothing else happens: the
+     native dialog is suppressed and the key does nothing. (`null` is not a state a fresh install or
+     the store produces — M-1's default is `'html'` — it was set through the seam because the kickoff
+     asked.) Nothing is asserted about what it should do: that is 5.x's ruling.
+  **★ What cannot be proxied.** The overall aesthetic; whether the type and spacing read comfortably;
+  whether a light search panel or tooltip on a dark pane is acceptable when its contrast number
+  passes; the feel of typing, selecting and the caret; and the loaded extension itself — the harness
+  page is not `app.html` under the extension's CSP, and Firefox cannot load the extension under
+  automation at all.
+  **Revisit-when:** any proxy finding is routed for a fix (the pin goes with the overlap's fix); or
+  7.1, where the deferred eyeball is walked and every finding above gets a verdict.
+
 - **2026-10-05 · M12 TASK 3.2 — three HUMAN RULINGS taken in this task's kickoff: R1 (GFM highlighting),
   R2 (the engine memo key), R3 (the mode pill during edit). Banked here; each landed in 3.2's commit.**
   **★ R1 — `createView` builds `markdown({ base: markdownLanguage })`.** This AMENDS "called with its

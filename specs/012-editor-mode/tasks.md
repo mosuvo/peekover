@@ -478,6 +478,13 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       after a failed chunk fetch the control's "try again" cannot succeed without a page reload, even
       though the engine's own memo forgets the failure. Measured: `.output` 5,813,470 / 5,813,586 B
       (+612,335), content script 342,384 B both engines, md5 unchanged — 3.3's snapshot.*
+      ★ *2026-10-05 — THE INFORMAL EYEBALL ABOVE IS DEFERRED TO 7.1 BY HUMAN RULING
+      (`decisions.md`, "M12 TASK 3.2 — informal eyeball DEFERRED to 7.1"), a stated departure from
+      this line's own clause and from WORKFLOW §7.2. In its place:
+      `tests/browser/editorEyeballProxy.browser.test.ts` (test-only, both engines) measures what a
+      real engine can — contrast of CodeMirror's surfaces on light and dark, collisions at the
+      top-right, GFM / R1 as drawn, Ctrl/Cmd+S in the editor. Its findings are in that entry and in
+      `progress.md` § Carried items; the eyeball itself is 7.1's added walk item.*
 
 - [ ] **3.3 The debounced live preview into the nested host; the preview-failure degrade (D-4, D-5's
       mechanism; Q4).** TEST FIRST. The editor's update listener feeds the buffer to 2.2's nested
@@ -738,7 +745,19 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       EXTENDED):* the **editing feel of CodeMirror's shipped defaults**, each with its own verdict —
       Ctrl-F search · autocompletion · Enter list continuation · Backspace delete-markup-backward.
       *The informal fidelity eyeball is NOT this task's — it was owed at
-      3.2, when the editor first rendered.*
+      3.2, when the editor first rendered.* ★ *added 2026-10-05, SUPERSEDING the sentence before
+      this one (`decisions.md`, "M12 TASK 3.2 — informal eyeball DEFERRED to 7.1"):* **the deferred
+      3.2 informal eyeball** — human-only: the editor's overall look on light and dark; whether the
+      type, spacing and split read comfortably; whether CodeMirror's light search panel, tooltip and
+      selection are acceptable on the dark pane; the feel of typing, selecting and the caret; all of
+      it in the LOADED extension, Firefox included. Plus a verdict on every proxy finding
+      (`progress.md` § Carried items, E-1…E-8): E-1 the collapsed TOC handle over the split pane's
+      corner (103×26 px, pinned in the test) · E-2 dark-only unreadable text — selected text 1.16:1,
+      the current search match 1.52:1, autocomplete options 1.09:1 · E-3 dark-only highlight colours
+      — markup marks 1.69:1, task marker 1.24:1, emoji 2.15:1 · E-4 gutter line numbers 2.38 / 3.26:1
+      on both themes · E-5 the non-text pairs under 3:1 · E-6 the 100 px split pane at 414 px with
+      the rail open · E-7 Ctrl/Cmd+S in the editor exports the on-disk document · E-8 R1's
+      sub/superscript and emoji highlighting as drawn.
       Files: `docs/ai/progress.md` (verdicts) · `src/theme/readerCss.ts` only if a walked item returns a
       named styling finding
       Verify: every axis above gets its own stated verdict — PASS, or a named finding routed to § Carried

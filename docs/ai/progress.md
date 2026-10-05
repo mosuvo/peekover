@@ -4,7 +4,9 @@
 *Updated: 2026-10-05 (M12 task 3.2 DONE — `editorEnhancer.ts`, the edit control, the editor pane and the
 save-capability injection; CodeMirror's bytes first ship here). M12 (`specs/012-editor-mode/`, F8 Editor
 Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 2.1, 2.2, 3.1 and 3.2
-landed; **task 3.3 (the debounced live preview) is next.** **From 3.2 the editor is REACHABLE on `main`
+landed; **task 3.3 (the debounced live preview) is next.** **3.2's informal eyeball is DEFERRED to 7.1
+by human ruling (2026-10-05); automated proxies stand in and filed eight findings (E-1…E-8, § Carried
+items).** **From 3.2 the editor is REACHABLE on `main`
 and can lose edits — exit discards without a warning (6.1), a watch re-render destroys the buffer
 (4.1–4.2), and Save reports "not yet available" (5.3): planned sequencing, not released.** Current
 numbers: `.output` 5,813,470 B (Cr) / 5,813,586 B (Fx) against ≤ 7 MiB, content script 342,384 B both
@@ -534,7 +536,8 @@ the kickoff (R1–R3) and are banked in `decisions.md` with D-3's landing and D-
   and its test, the diagram/math modules, `runReader.ts`, `mountReader.ts`, `contentWatch.ts`,
   `src/watch/*`) · `permissions: []`.
 - **★ The informal eyeball is OWED and NOT done** — it is the human's (WORKFLOW §7.2); the steps are in
-  this task's report. Nothing in the suites stands in for it.
+  this task's report. Nothing in the suites stands in for it. *(2026-10-05: DEFERRED to 7.1 by human
+  ruling — the record directly below.)*
 - **Surfaced for the human, none ruled:**
   1. *Styling choices no ruling covers:* the control's wording and placement; five token-only rules that
      make CodeMirror fill its pane, take the pane's mono face, and draw its gutter / caret / cursor from
@@ -555,12 +558,116 @@ the kickoff (R1–R3) and are banked in `decisions.md` with D-3's landing and D-
   5. *`AGENTS.md`'s "Current milestone" paragraph still says "task 1.1 DONE, task 1.2 next".* Stale
      since 1.2; not in any task's file list. Left untouched.
 
+**M12 task 3.2 — the informal eyeball DEFERRED to 7.1, 2026-10-05 (human ruling; `decisions.md`'s
+entry of that name). Automated proxies stand in: `tests/browser/editorEyeballProxy.browser.test.ts`,
+test-only, ZERO production diff, 11 tests per engine, green on Chromium and Firefox.** A departure from
+WORKFLOW §7.2 and `tasks.md` 3.2's clause, accepted on the record with M11's three by-eye-only defects
+as the named risk. The proxies measure; they are not the eyeball.
+
+- **Method.** WCAG 2.1 AA, stated before measuring: text 4.5:1, non-text 3:1; light is the control.
+  007's sweep (`diagramTheme.browser.test.ts`: computed colour, relative luminance, background found by
+  walking ancestors across the shadow boundary) plus compositing — translucent layers flattened
+  source-over in sRGB down to the first opaque ancestor; the selection layer (a sibling of the text)
+  inserted by hand beneath the in-content layers; a gradient taken at its worst stop.
+- **Proxy 1 — contrast, 27 pairs × 2 themes × 2 engines. Chromium = Firefox on every row.** Every
+  surface opened (Ctrl-F by a real keypress; the tooltip by typing `<`). ✗ = below the bar.
+
+  | Surface · pair | Bar | Light | Dark |
+  |---|---|---|---|
+  | content · body text on the pane | 4.5 | 15.74 | 13.61 |
+  | active line · band against the pane | 3 | 1.02 ✗ | 2.2 ✗ |
+  | active line · text on the band | 4.5 | 15.43 | 6.18 |
+  | gutter · line number | 4.5 | 2.38 ✗ | 3.26 ✗ |
+  | gutter · ACTIVE line number on its band | 4.5 | 2.36 ✗ | 4.34 ✗ |
+  | gutter · active-number band against the gutter | 3 | 1.01 ✗ | 14.15 |
+  | gutter · rule against the pane | 3 | 1.11 ✗ | 1.13 ✗ |
+  | caret · drawn caret on the active line | 3 | 15.43 | 6.18 |
+  | selection, focused · against the pane | 3 | 1.27 ✗ | 11.22 |
+  | selection, focused · selected text on it | 4.5 | 12.95 | **1.16 ✗** |
+  | selection, unfocused · against the pane | 3 | 1.24 ✗ | 11.46 |
+  | selection, unfocused · selected text on it | 4.5 | 13.15 | **1.14 ✗** |
+  | search panel · panel against the pane | 3 | 1.04 ✗ | 14.83 |
+  | search panel · top rule against the pane | 3 | 1.2 ✗ | 11.91 |
+  | search panel · label text | 4.5 | 19.26 | 19.26 |
+  | search panel · typed text in the field | 4.5 | 21 | 21 |
+  | search panel · field border against the panel | 3 | 1.67 ✗ | 1.67 ✗ |
+  | search panel · field fill against the panel | 3 | 1.09 ✗ | 1.09 ✗ |
+  | search panel · button text (worst gradient stop) | 4.5 | 14.94 | 14.94 |
+  | search panel · close × | 4.5 | 19.26 | 19.26 |
+  | search match · matched text | 4.5 | 15.75 | 4.85 |
+  | search match, current · its text | 4.5 | 9.86 | **1.52 ✗** |
+  | autocomplete · tooltip against the pane | 3 | 1.04 ✗ | 14.83 |
+  | autocomplete · tooltip border against the pane | 3 | 1.69 ✗ | 8.42 |
+  | autocomplete · an option's text | 4.5 | 16.37 | **1.09 ✗** |
+  | autocomplete · the SELECTED option's text | 4.5 | 4.63 | 4.63 |
+  | autocomplete · selected band against the tooltip | 3 | 4.25 | 4.25 |
+
+  Bold = fails on dark with light clear: the dark theme's own defects (light ink on CodeMirror's
+  light selection / tooltip). The panel, tooltip and selection are un-themed light slabs on the dark
+  pane — their numbers pass; whether that LOOKS acceptable is the human's.
+- **Proxy 2 — collisions, 414×896 and 1400×900, rail open and collapsed. Identical on both engines
+  (± 0.1 px).** Reading: control / pill / handle pairwise disjoint, each hit at its own centre, in all
+  four cases. Edit: control × handle none; control × rail list none; control × pane none.
+
+  | Viewport | Rail | Mode | Asserted overlaps | Pane right → rail left |
+  |---|---|---|---|---|
+  | 414×896 | open | reading | none | — |
+  | 414×896 | open | edit | none | +124.7 px clear (pane only 100 px wide) |
+  | 414×896 | collapsed | reading | none | — |
+  | 414×896 | collapsed | edit | **pane × handle 103×26 px** | handle box over the pane |
+  | 1400×900 | open | reading | none | — |
+  | 1400×900 | open | edit | none | +32 px clear |
+  | 1400×900 | collapsed | reading | none | — |
+  | 1400×900 | collapsed | edit | **pane × handle 103×26 px** | handle box over the pane |
+
+  The overlap was the proxy's stop condition; the human ruled it PINNED (kept out of the violations,
+  asserted still present, so the fix must delete `KNOWN_PANE_UNDER_HANDLE`). Reported, by design: the
+  control sits inside the rail's BOX (35–104×30 px) exactly as the mode pill does (56.5×30 px) — the
+  rail's top padding is there for it; asserted against the handle and the list instead.
+- **Proxy 3 — GFM and R1 as drawn. Identical on both engines.** Spans and what differs from the line;
+  the last two columns are the span colours' contrast on the pane.
+
+  | Source | Styled ranges | Style | On light | On dark |
+  |---|---|---|---|---|
+  | `# Heading` | `#` · the text | mark `#404740`; both bold + underline | 8.44 · 15.74 | 1.69 ✗ · 13.61 |
+  | `- [ ] task` | `-` · `[ ]` | `#404740` · `#221199` | 8.44 · 11.52 | 1.69 ✗ · 1.24 ✗ |
+  | table header row | each pipe · each cell | pipe `#404740`; all bold + underline | 8.44 · 15.74 | 1.69 ✗ · 13.61 |
+  | table delimiter and body rows | the delimiter row · each pipe | `#404740` | 8.44 | 1.69 ✗ |
+  | `~~struck~~` | `~~` · `struck` · `~~` | line-through; marks `#404740` | 8.44 · 15.74 | 1.69 ✗ · 13.61 |
+  | `H~2~O` (R1) | the two `~` ONLY | `#404740`; the `2` gets no span | 8.44 | 1.69 ✗ |
+  | `x^2^` (R1) | the two `^` ONLY | `#404740`; the `2` gets no span | 8.44 | 1.69 ✗ |
+  | `:smile:` (R1) | `:smile:` | `#aa1111` | 6.62 | 2.15 ✗ |
+  | plain line (control) | none | — | — | — |
+
+  The dark column is beyond the kickoff's listed surfaces — found because the spans' colours were
+  being read anyway: CodeMirror's default highlight palette is a light-page palette.
+- **Proxy 4 — Ctrl/Cmd+S with focus in the editor: 3.2's read is CONFIRMED, both engines identical.**
+  Dispatched key: 1 reaction at `document`, **1 at the editor's content** (Ctrl and Meta alike), 0 at a
+  light-DOM input (the guard's control arm). Real Ctrl+S, focus in CodeMirror, buffer carrying an
+  unsaved marker: `'html'` → `preventDefault` ×1 and ONE export of the on-disk document (21,487
+  chars; no buffer marker, no editor markup), confirmed again as a real download; editor still in
+  edit, buffer intact. `null` → `preventDefault` ×1 and nothing else — the key is swallowed. Nothing
+  asserted about what it should do. The download is named `export.html` here because the route
+  (`loadMain()` + `main.ts`'s dev `__peekover.selectFile`) sets no active file; from a folder it would
+  carry the file's name. `null` is not a state the store yields (it loads as `'html'`).
+- **Proxy 5 — what this is NOT.** The vitest harness page on both engines, not a loaded extension: no
+  extension CSP, no `app.html`, no real settings store, no browser-chrome handling of Ctrl+S / Ctrl+F,
+  and no Firefox extension load at all. All of that, and the look itself, is 7.1's.
+- **Kickoff vs repo, flagged:** (i) "against the rail" read as handle + list, not the box (above);
+  (ii) `lastExportFormat: null` is seam-only (above); (iii) the default reporter prints console output
+  only for FAILED tests — the `EYEBALL {json}` records need `--reporter=verbose`; (iv) 7.1's sentence
+  "the informal fidelity eyeball is NOT this task's" is superseded in place by a dated note.
+- **Verify.** New file 22 / 22 (11 per engine). Targeted: `editorRender`, `editorNestedHost`,
+  `editMode`, `exportShortcut` — 72 / 72 across both engines. lint 0. `git diff --stat`: the test file
+  and three records, no `src/`, `entrypoints/` or package file; golden EMPTY. No build was run — the
+  byte figures in § Up next are 3.2's and cannot have moved.
+
 ## Up next
 
 **FIRST — M12 task 3.3** (the debounced live preview into the nested host; the preview-failure degrade
 — D-4, D-5's mechanism; Q4's PROVISIONAL cost-proportional debounce, multiplier 1), fresh session,
 test-first, one commit. Its browser tests run on an UNWATCHED document, the precondition asserted in
-each. **3.2's informal eyeball is still owed by the human** — do it before or alongside 3.3.
+each. **3.2's informal eyeball is DEFERRED to 7.1** (human ruling, 2026-10-05) — not owed before 3.3.
 **Byte snapshot for its kickoff (3.2's measured figures):** `.output` 5,813,470 B (Cr) / 5,813,586 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,526,562 / 1,526,446 B · zip 1,836,121 / 1,836,179 B · content
 script 342,384 B both engines, md5 `129deda5156522a75ac41eaabbdc1c5f` (Cr) /
@@ -581,8 +688,9 @@ figure above supersedes it. `mount.ts` and `readerMode.ts` are zero-diff from he
   text is `view.state.doc.toString()` — LF-normalised, which is what `mount()` should be handed.
 - **`editorDegrade.browser.test.ts` exists** (3.3's Files line lists it): its first describe block must
   STAY first — it observes the page's first real engine load.
-- **Open, for the human, from 3.2's record:** the Ctrl/Cmd+S-in-the-editor hazard (read, not observed);
-  the dark-theme look of CodeMirror's un-themed parts; the failed-chunk "try again" finding.
+- **Open, for the human, from 3.2's record:** the Ctrl/Cmd+S-in-the-editor hazard (now OBSERVED and
+  confirmed — E-7); the dark-theme look of CodeMirror's un-themed parts (now MEASURED — E-2…E-5); the
+  failed-chunk "try again" finding.
 **Carried into group 3 from 2.2:** 3.3 drives `renderPreview` and proves the scroll box under real typing.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
@@ -590,7 +698,7 @@ EXTENDED entries); 7.1's walk carries one item for the editing feel of those def
 - **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
-- Also: the informal eyeball at 3.2 (the editor's first render); 6.2's numbers → the §8-2 debounce ruling;
+- Also: the informal eyeball owed at 3.2, DEFERRED to 7.1 (2026-10-05); 6.2's numbers → the §8-2 debounce ruling;
   6.3 STOPS and surfaces a material nested-host cost. (2.2's stop-and-flag did not fire: the post-commit
   wiring needed no guard.)
 
@@ -619,6 +727,29 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-05 — THE 3.2 EYEBALL PROXIES' FINDINGS (E-1…E-8). Home for all eight: the 7.1 walk,
+  unless the human routes one elsewhere sooner. None is fixed; the numbers are in the record above
+  § Up next and in `decisions.md`'s "informal eyeball DEFERRED" entry. Both engines agree on each.**
+  - **E-1 · the collapsed TOC handle covers the split pane's top-right corner — 103×26 px**, in edit,
+    rail collapsed, at 414×896 and 1400×900. `EDITOR_CSS` reserves the rail only while it is open.
+    PINNED in `editorEyeballProxy.browser.test.ts` (`KNOWN_PANE_UNDER_HANDLE`) — the fix deletes it.
+  - **E-2 · dark only, text unreadable:** selected text 1.16:1 (1.14 unfocused); the current search
+    match 1.52:1; unselected autocomplete options 1.09:1. Light: 12.95 / 9.86 / 16.37.
+  - **E-3 · dark only, highlight colours:** markup marks (`#`, `-`, the table pipe, `~~`, `~`, `^`)
+    1.69:1; the task marker 1.24:1; the emoji shortcode 2.15:1. CodeMirror's default palette is
+    light-page.
+  - **E-4 · both themes, gutter numbers:** 2.38:1 light / 3.26:1 dark (`--faint`, 3.2's own rule); the
+    active line's number 2.36 / 4.34.
+  - **E-5 · non-text pairs under 3:1:** active-line band 1.02 / 2.2; gutter rule 1.11 / 1.13; search
+    field border 1.67 and fill 1.09 (both themes); light only — selection 1.27, search panel 1.04,
+    tooltip 1.04 (border 1.69) against the pane. Several are arguably decorative; the bar was applied
+    as stated.
+  - **E-6 · at 414 px with the rail OPEN the split pane is 100 px wide** (source pane 98 px). No
+    overlap — reported, not asserted.
+  - **E-7 · Ctrl/Cmd+S in the editor runs the export shortcut** — downloads the ON-DISK document as
+    HTML (not the buffer); with no export format it is swallowed. A ruling is owed before 5.3.
+  - **E-8 · R1 as drawn:** `H~2~O` / `x^2^` colour only their marks; `:smile:` is coloured `#aa1111`.
+    Measured, not judged.
 - **✅ RESOLVED AT THE §8-1(b) FIX, 2026-09-10 (`63aedb4`) — NEW AT TASK 6.2-R, 2026-09-09 — GATE-2's
   §8-1(b) RULING WAS FALSE FOR A SUCCESSFULLY-RENDERED INLINE FORMULA (THE COMMON CASE); NO WAY TO
   RECOVER ITS LATEX SOURCE EXISTED THEN.** The 8.1-R human walk ruled this fix-before-close, not
