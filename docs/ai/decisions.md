@@ -1,6 +1,98 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-05 · 012 D-5 — LANDED at task 3.3: the editor→preview debounce is the cost-proportional
+  cooldown, a new instance per edit session; multiplier 1, provisional. ONE HUMAN RULING was taken in
+  this task — how the preview-failure degrade's red-first is recorded.**
+  Plan §0 D-5's text, quoted verbatim because `tasks.md` lands each D-value's draft with its
+  implementing commit. It names a mechanism candidate and chooses no number, and it still describes
+  what was built:
+  "The spec explicitly forbids this plan from inventing a number (§3.5, §8-2) — but it does not forbid
+  naming a MECHANISM candidate, and one already exists in this codebase solving the identical shape of
+  problem: `watchController.ts`'s DECISION 3 cost-proportional cooldown (`COOLDOWN_MULTIPLIER`,
+  `watchController.ts:183-191`) throttles bursty external updates and coalesces to the newest text,
+  never queuing. CodeMirror's own `onChange`/update listener is a structurally identical burst source
+  (keystroke-rate, not file-write-rate). **Named as the leading candidate for the debounce mechanism**
+  (reuse the cost-proportional shape, a NEW instance scoped to the preview host, not a shared
+  module-level one) — the actual interval/multiplier is still the gate-3 measurement's to produce (§7
+  below), and a fixed-vs-adaptive choice is explicitly §8-2's own axis, not this plan's to resolve."
+  [The multiplier is 1 and PROVISIONAL (gate 3's Q4): `PREVIEW_COOLDOWN_MULTIPLIER` in
+  `editorView.ts`, the one place it is marked. 6.2 measures; the human rules the interval (§8-2); 6.4
+  applies that ruling and REMOVES the constant.]
+  ["The gate-3 measurement" is task 6.2's; gate 3 ruled only that something provisional ships until
+  then. The cited `watchController.ts` range is `:182-191` at this HEAD (the constant at `:191`).]
+  ["Scoped to the preview host": one instance per edit SESSION, held beside the session and cancelled
+  with it — the same lifetime, since a session builds its preview host once.]
+  **What 3.3 built — `createPreviewCooldown(render, now)` in `src/render/editorView.ts`.** It mirrors
+  the watch's mechanism (the 2026-07-21 spec-005 5.2 and 5.3 entries) and keeps all three structural
+  properties the 5.3 entry names:
+  - **The timer is not re-armed per change.** `push` arms one timer aimed at `readyAt` and leaves it;
+    later changes only replace the single pending slot. `flush` re-checks the clock and re-arms for a
+    remainder only. Ablated to a re-arming timer, three unit tests red — among them a stream that never
+    goes quiet rendering once where it must render at least five times.
+  - **The `now` clock is injected**, so "a 10 ms render waits 10 ms, a 400 ms render waits 400 ms" is
+    exact, measured from when the render FINISHED.
+  - **Discarding a pending render has two independent guards**, and each hides the other: ending a
+    session cancels its cooldown, timer and all; and at fire time the feed renders only while its own
+    session is still the host's live one. Each is asserted on its own in the unit suite — the first by
+    the pending timer's own handle being cleared, the second by an outer re-mount (which runs no
+    teardown) followed by a fresh shell. With both removed, the text an exit discarded appears in the
+    NEXT session's preview, on both engines. (`renderPreview`'s own live-shell check, from 2.2, is a
+    third layer: it is why a render into a torn-down shell cannot be produced at all.)
+  **Stated so they are not assumed:** the first render is immediate, and the render at BUILD is neither
+  timed nor "the first" — the first keystroke renders at once, synchronously, inside that keystroke.
+  `watchController.ts` is not imported, not edited, and has no helper to extract (its cooldown is
+  closure state interleaved with the diff deferral, snapshot capture and the update signal — group 4
+  owns that file). The feed is the last line of 3.2's one update listener; `editorEngine.ts` is
+  untouched. The cooldown is handed the editor's document, which is read only when it is rendered.
+  **★ HUMAN RULING, 2026-10-05 — the degrade's red-first: RECORD BOTH REDS.** `tasks.md` 3.3's Verify
+  line says "reverted (let the throw propagate) → the editor or the buffer is lost". That is false in
+  mechanism, and was measured, not argued. `mount()` degrades every failure in its own pipeline to its
+  banner and raw source — in the host it was handed, the NESTED one — so the reader's failure state
+  appears in the preview pane with no code in `editorView.ts` involved. With a throw forced OUT of
+  `mount()` and the feed's `try/catch` removed, on both engines: the editor is the same connected node,
+  the buffer is byte-identical, typing continues, the preview recovers. CodeMirror runs every update
+  listener inside its own `try/catch` (`@codemirror/view` 6.43.13, `dist/index.js:8074`), and a
+  timer's throw unwinds nothing. The options put to the human: record both reds · the literal revert
+  only · drop the feed's guard · stop for a `tasks.md` redline. Ruled: the first. So:
+  - *the literal revert* (the guard removed) reds in its TRUE units — `a preview failure reached the
+    page as an error: expected [ …(24) ] to deeply equal []`, both engines; nothing is lost;
+  - *the revert that does lose the editor* — a failed feed render handled the way the BUILD render is
+    (`teardownEditorShell`, rethrow) — reds `the editor node was lost: expected false to be true`,
+    both engines.
+  `tasks.md`'s Verify text is left as written; its post-landing note carries the correction. The feed
+  keeps its guard: a throw that leaves `mount()` is logged (`[peekover] preview render failed`) and
+  the feed carries on — unlike the render at build, it never tears the shell down.
+  **Forcing a failure needed no production seam.** The tests override `replaceChildren` on the nested
+  shadow root: throwing for the rendered column only is a failure `mount()` handles itself; throwing
+  for the fallback too is one that leaves it.
+  **Three findings reported with this task, none ruled, none fixed** (`progress.md` § Carried items):
+  - **P-1 · the reader's enhancers do not run in the preview.** A mermaid fence is the raw
+    `<pre><code class="language-mermaid">`, `$x^2$` is the literal text in its un-enhanced
+    `code.peekover-math-inline`, and a code fence is unwrapped and un-highlighted — at build and after
+    typing, both engines — where the outer document has the figure with its SVG, the `<math>` element
+    and the highlighted fence. The reason: the enhancers are called at the two app-page call sites with
+    the OUTER host only; `renderPreview` calls `mount()` and nothing else; and a query on the outer
+    root does not cross into the nested shadow root. Preview fidelity against the reader is the
+    human's to rule, before 7.1.
+  - **P-2 · the first key after a pause pays one whole render inside its own keystroke.** "The first
+    render is immediate" means synchronous: on a 212,682-byte document that key's dispatch took 217.7
+    ms (Chromium) / 205.0 ms (Firefox) in the harness; the keys behind it landed in 2.3 / 4.0 ms. On a
+    small document every key renders (13 keys, 13 renders) because the cooldown is shorter than the
+    gap between keys. This is the watch's shape, as ruled for Q4; whether it suits typing is §8-2's.
+  - **P-3 · under a driven burst the engines differ by ~50×:** 512 keys cost 4 feed renders on
+    Chromium and 193 on Firefox (Chromium runs queued input ahead of the timer). Human typing speed
+    was not measured. For 6.2.
+  **Bytes, ablated, both engines identical:** +535 B, all of it in the app chunk (517,369 → 517,904).
+  The feed without the cooldown (the listener calling the guarded render directly) is +114 B; putting
+  the cooldown between them is the other +421 B. Residual 0 — a path decomposition, exact by
+  construction; the second path (the cooldown built and cancelled but never fed, +525 B; the `push`
+  call, +10 B) is where a shared piece would have shown. The content script is md5-identical in every
+  arm, and MOVED (+388 B) when the content-script entry was made to call the cooldown — the
+  instrument fires.
+  **Revisit-when:** 6.2's numbers and the §8-2 ruling (6.4 then removes the constant); the human's
+  ruling on P-1; group 4, which makes the WATCHED document reach this code for the first time.
+
 - **2026-10-05 · M12 TASK 3.2 — informal eyeball DEFERRED to 7.1 (human ruling).**
   **★ The ruling.** The informal fidelity eyeball owed at task 3.2 — the first cheap human glance at
   the editor's real output — is DEFERRED by the human to the M12 milestone-close walk (task 7.1), to be

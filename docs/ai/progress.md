@@ -1,17 +1,18 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-05 (M12 task 3.2 DONE — `editorEnhancer.ts`, the edit control, the editor pane and the
-save-capability injection; CodeMirror's bytes first ship here). M12 (`specs/012-editor-mode/`, F8 Editor
-Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 2.1, 2.2, 3.1 and 3.2
-landed; **task 3.3 (the debounced live preview) is next.** **3.2's informal eyeball is DEFERRED to 7.1
-by human ruling (2026-10-05); automated proxies stand in and filed eight findings (E-1…E-8, § Carried
-items).** **From 3.2 the editor is REACHABLE on `main`
-and can lose edits — exit discards without a warning (6.1), a watch re-render destroys the buffer
-(4.1–4.2), and Save reports "not yet available" (5.3): planned sequencing, not released.** Current
-numbers: `.output` 5,813,470 B (Cr) / 5,813,586 B (Fx) against ≤ 7 MiB, content script 342,384 B both
-engines (md5 unchanged since 2.2), `dependencies` 10, `permissions: []`. M11 (math rendering,
-Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
+*Updated: 2026-10-05 (M12 task 3.3 DONE — the live preview: the editor's buffer reaches the nested
+host through a cost-proportional cooldown; the preview-failure degrade. **Group 3 is complete.**) M12
+(`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
+tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2 and 3.3 landed; **task 4.1 (the watch/edit collision) is next.**
+**3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
+and filed eight findings (E-1…E-8, § Carried items). 3.3 filed three more (P-1…P-3) — P-1, the
+preview's enhancers not running, wants a human ruling before 7.1.** **The editor is REACHABLE on
+`main` and can lose edits — exit discards without a warning (6.1), a watch re-render destroys the
+buffer (4.1–4.2), and Save reports "not yet available" (5.3): planned sequencing, not released.**
+Current numbers: `.output` 5,814,005 B (Cr) / 5,814,121 B (Fx) against ≤ 7 MiB, content script
+342,384 B both engines (md5 unchanged since 2.2), `dependencies` 10, `permissions: []`. M11 (math
+rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
@@ -662,36 +663,136 @@ as the named risk. The proxies measure; they are not the eyeball.
   and three records, no `src/`, `entrypoints/` or package file; golden EMPTY. No build was run — the
   byte figures in § Up next are 3.2's and cannot have moved.
 
+**M12 task 3.3 DONE, 2026-10-05 — the live preview: the editor's buffer reaches the nested host through
+a cost-proportional cooldown; the preview-failure degrade (D-4, D-5's mechanism). ★ GROUP 3 IS
+COMPLETE** — spec §4's edit and preview clauses hold on an unwatched document, D-4 is proven red-first
+under real typing, the engine has one importer and is absent from the content script, Save is plumbed
+and not wired to disk. One human ruling was taken (the degrade's red-first); `decisions.md`'s 012 D-5
+entry is the record.
+- **What landed, in `src/render/editorView.ts` and nowhere else in production.**
+  `createPreviewCooldown(render, now)` — the watch's shape rebuilt as one instance per edit session:
+  first render immediate · wait = the last render's cost, from its END · one pending slot, newest wins
+  · the timer never re-armed per change · `flush` re-arms only for a remainder · an injected `now`.
+  `PREVIEW_COOLDOWN_MULTIPLIER = 1` is the one place marked provisional (Q4; 6.4 removes it). The feed
+  is the last line of 3.2's one update listener (dirty tracking unchanged); it hands the cooldown the
+  editor's document, read only when rendered. `BuildEditorOptions` gains `now`. `endEditorSession`
+  cancels the session's cooldown.
+- **Step 0, re-derived.** (a) `createView`'s `extra` is a CodeMirror `Extension` (one or an array) — no
+  engine change. (b) The render at BUILD is not timed and is not "the first": the first keystroke
+  renders at once. `watchController.ts` has nothing extractable. (c) A pending render has THREE layers
+  against outliving its session, not two: `renderPreview`'s live-shell check (2.2), the session's
+  cancel, and the feed's fire-time session check. (d) `mount()` catches every failure in its own
+  pipeline and degrades it in the host it was handed — the nested one.
+- **★ The human ruling — tasks.md 3.3's revert clause is false in mechanism; record both reds.** "Let
+  the throw propagate → the editor or the buffer is lost" did not reproduce: CodeMirror runs update
+  listeners inside its own `try/catch` (`@codemirror/view` 6.43.13 `dist/index.js:8074`). The Verify
+  text is unedited; its post-landing note carries the correction.
+- **Red-first, each seen with its own signature.** Unit, before implementation: 13 of the 16 new tests
+  red (the other three are negative claims, each red under its own ablation below).
+
+  | Ablation | Where | Signature (both engines unless unit) |
+  |---|---|---|
+  | session cancel removed (guard A) | unit | `expected "clearTimeout" to be called with arguments: [ {…} ]` — that test alone |
+  | fire-time session check removed (guard B) | unit | `expected [ Array(1) ] to deeply equal []` — that test alone |
+  | both removed | unit · browser | unit: A, B and exit-then-re-enter red · browser: `the discarded text was rendered: expected 'qzxIntro line.…' not to contain 'qz'` |
+  | either guard alone | browser | GREEN — each hides the other (the reason for the unit pair) |
+  | timer re-armed per change | unit | `expected "setTimeout" to be called 1 times, but got 3 times` · `renders during the stream: expected 1 to be greater than or equal to 5` · `expected 40 to be 10` |
+  | preview pane `overflow:hidden` (scroll fallback) | browser | `the marker left the view: expected 710.6 to be less than 538` |
+  | the feed's render routed at the OUTER host | browser | `the editor node was destroyed mid-typing: expected false to be true` |
+  | feed guard removed (the LITERAL degrade revert) | browser · unit | `a preview failure reached the page as an error: expected [ …(24) ] to deeply equal []` — editor and buffer intact |
+  | failed feed render torn down like the build render | browser | `the editor node was lost: expected false to be true` |
+
+- **Real engine, Chromium and Firefox, every fixture asserted unwatched.**
+  - *Marker:* 13 typed keys appear in the nested host's column and nowhere in the outer one; the outer
+    registered source is still the file. 13 feed renders for 13 keys on that small document (the
+    cooldown is shorter than the gap between keys), after 1 at build.
+  - *Responsiveness:* on a 212,682-byte document, 7 of 8 keys landed in the buffer while a render was
+    pending in the cooldown (2.3 ms / 4.0 ms for the slowest of them). "Pending" is waiting in the
+    cooldown — `mount()` is synchronous, a render is never in flight.
+  - *Coalescing:* 16 keys → 2 feed renders, plus the 1 at build, counted apart.
+  - *Scroll:* scrolled to a marker heading, then 16 paragraphs typed above it (718 px of new content
+    in a 538 px pane): the marker sits at −7.6 → −7.4 px from the pane's top (Chromium, 4 renders) /
+    −7.9 → −9.4 px (Firefox, 193 renders).
+  - *Exit while pending:* no commit into the torn-down preview host in the 700 ms after, no error;
+    re-entering at once, the discarded text never reaches the new session's preview.
+  - *Degrade:* a forced render throw shows the reader's banner and raw source inside the preview
+    pane (348×72 px in a 348×402 px pane), none in the outer root; the buffer is byte-identical, the
+    next key lands, and the preview recovers when rendering does. A throw that leaves `mount()`:
+    48 forced throws, 24 logged by the feed, 0 reached the page.
+- **★ FINDING P-1 — the reader's enhancers do not run in the preview** (§ Carried items; home: a human
+  ruling before 7.1). In units, identical on both engines, at build and after a key:
+
+  | | Outer document | Preview |
+  |---|---|---|
+  | ` ```mermaid ` | figure 1, SVG 1 | figure 0, SVG 0 — the raw `pre > code.language-mermaid` |
+  | `$x^2$` | `<math>` 1 | `<math>` 0 — the literal `$x^2$` in `code.peekover-math-inline` |
+  | ` ```javascript ` | wrapper 1, highlighted 1 | wrapper 0, highlighted 0 — a plain `pre > code` |
+  | ` ```js ` | wrapper 1, state `failed` (not a highlighter key) | wrapper 0 |
+
+  Reason: the enhancers are called at the two app-page call sites with the OUTER host; `renderPreview`
+  calls `mount()` only; a query on the outer root does not cross into the nested shadow root.
+- **Findings P-2 and P-3** (§ Carried items; home: 6.2 and the §8-2 ruling): the first key after a
+  pause renders synchronously inside its own keystroke — 217.7 ms (Cr) / 205.0 ms (Fx) on the large
+  document; and under a driven burst 512 keys cost 4 renders on Chromium, 193 on Firefox.
+- **Appearance proxies (human-authorized addition) — every pair MATCHED, no finding.** Preview column
+  against outer column: light — ink `rgb(22, 23, 31)`, paper `rgb(251, 251, 248)`, `Literata, Georgia,
+  serif`; dark — ink `rgb(234, 235, 243)`, paper `rgb(18, 20, 28)`, same face. A flip while editing
+  re-themes the preview each way, and holds across the next feed render.
+- **Bytes, both engines, against 3.2's figures (clean rebuild first: reproduced exactly).** `.output`
+  5,814,005 B (Cr) / 5,814,121 B (Fx), +535 each; headroom 1,526,027 / 1,525,911 B. Zips 1,836,279 /
+  1,836,337 B (+158). ONE file changed size: the app chunk, 517,369 → 517,904 B. Decomposed by
+  ablation: the feed without the cooldown +114 B; the cooldown +421 B; residual 0 (a path
+  decomposition; second path: cooldown unfed +525 B, the `push` call +10 B). Content script 342,384 B,
+  md5 `129deda5156522a75ac41eaabbdc1c5f` / `94c2d14b9e08144f0c932415edb28acf` — IDENTICAL in every
+  arm, and MOVED to 342,772 B when the content-script entry was made to call the cooldown. Manifest
+  654 / 770 B, `permissions: []`, `dependencies` 10.
+- **Verify.** lint 0 · unit **1243** (70 files; `editorView` 27, `editorEnhancer` 28, `editorEngine`
+  21, `editorImportFence` 10, `readerMode` 17, `mount` 12, `htmlExport` 13 with the 26-site pin) ·
+  browser **1779 pass / 15 skip** (176 files, 88 per engine; per engine `editorPreview` 10,
+  `editorDegrade` 9, `editorRender` 10, `editorNestedHost` 12,
+  `editorEyeballProxy` 11) · scanner and `--self-test` EXIT 0 (79 shipped files; 7 firing + 10 silent) · golden diff EMPTY · the
+  zero-diff list empty. No red on the full run; the two carried wall-clock flakes did not fire. No existing assertion edited: `editorDegrade` gained a block, its
+  seven cases stand.
+- **Kickoff vs repo, flagged.** (i) The degrade revert, above. (ii) "Route the preview at the OUTER
+  host" — done on the feed's render; `renderPreview` itself routed there destroys the shell at build.
+  (iii) "The marker leaves the view" needed more inserted than the pane is tall. (iv) "A ```js fence"
+  is not highlighted by the reader itself; a ```javascript fence was added as the code row's control.
+  (v) Plan §0 D-5 has no one-line "entry draft"; its paragraph was quoted whole. (vi) Console records
+  need `--reporter=verbose`, and `pnpm test:browser -- --reporter=…` does not pass the flag through —
+  call `pnpm exec vitest` directly.
+
 ## Up next
 
-**FIRST — M12 task 3.3** (the debounced live preview into the nested host; the preview-failure degrade
-— D-4, D-5's mechanism; Q4's PROVISIONAL cost-proportional debounce, multiplier 1), fresh session,
-test-first, one commit. Its browser tests run on an UNWATCHED document, the precondition asserted in
-each. **3.2's informal eyeball is DEFERRED to 7.1** (human ruling, 2026-10-05) — not owed before 3.3.
-**Byte snapshot for its kickoff (3.2's measured figures):** `.output` 5,813,470 B (Cr) / 5,813,586 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,526,562 / 1,526,446 B · zip 1,836,121 / 1,836,179 B · content
+**FIRST — M12 task 4.1** (the watch/edit collision: the deferral gate widens to `data-mode === 'edit'`;
+a clean exit flushes — D-8, direction 1 and the clean half of direction 2), fresh session, test-first,
+one commit. **This is where the WATCHED document is first tested** — group 3's unwatched rule ends
+here. Files: `src/watch/watchController.ts` · `watchController.test.ts` ·
+`tests/browser/editorWatch.browser.test.ts` (new). `watchController.ts` IS on the content-script
+graph: 4.1's content-script delta is stated, decomposed, and is its own glue only.
+**Byte snapshot for its kickoff (3.3's measured figures):** `.output` 5,814,005 B (Cr) / 5,814,121 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,526,027 / 1,525,911 B · zip 1,836,279 / 1,836,337 B · content
 script 342,384 B both engines, md5 `129deda5156522a75ac41eaabbdc1c5f` (Cr) /
-`94c2d14b9e08144f0c932415edb28acf` (Fx) — 3.3 must hold these md5s · the app chunk 517,369 B, the three
-CodeMirror lazy chunks 54,680 + 209,493 + 342,426 B · manifest 654 / 770 B, `permissions: []` ·
-`dependencies` 10 · lint 0 · unit 1227 · browser 1733 / 15 skipped · golden empty.
+`94c2d14b9e08144f0c932415edb28acf` (Fx) · the app chunk 517,904 B, the three CodeMirror lazy chunks
+54,680 + 209,493 + 342,426 B · manifest 654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 ·
+unit 1243 · browser 1779 / 15 skipped · golden empty.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it. `mount.ts` and `readerMode.ts` are zero-diff from here on.
-**Carried inputs to 3.3, from 3.2:**
-- **The build-time preview render counts.** `buildEditorShell` already renders the document into the
-  preview once, at build (2.2). Any render-count assertion in 3.3 ("a burst coalesces — render count
-  strictly below keystroke count") must be DELTA-based from after entry, or it is off by one.
-- **Dirty compares NORMALISED text.** The dirty attribute is the buffer against
-  `normaliseLineBreaks(originalText)`; `originalText` itself is the raw read. The update listener that
-  writes it is the one `buildEditor` passes through `createView`'s `extra` — 3.3's preview feed joins
-  that same listener (or a second one in the same `extra`); it does not replace it.
-- **The session is the seam:** `editorSessionFor(host)` → `{ view, originalText, save }`. The preview
-  text is `view.state.doc.toString()` — LF-normalised, which is what `mount()` should be handed.
-- **`editorDegrade.browser.test.ts` exists** (3.3's Files line lists it): its first describe block must
-  STAY first — it observes the page's first real engine load.
-- **Open, for the human, from 3.2's record:** the Ctrl/Cmd+S-in-the-editor hazard (now OBSERVED and
-  confirmed — E-7); the dark-theme look of CodeMirror's un-themed parts (now MEASURED — E-2…E-5); the
-  failed-chunk "try again" finding.
-**Carried into group 3 from 2.2:** 3.3 drives `renderPreview` and proves the scroll box under real typing.
+figure above supersedes it.
+**Carried inputs to 4.1, from 3.3:**
+- **★ The fallback that sends 'edit' to 'reading' on a re-render (2.1) does NOT protect unsaved text —
+  D-8's deferral is the only guard; 4.1's red-first must show buffer loss without it.**
+- **A watch re-render during edit meets the preview's cooldown.** An outer re-mount drops the editor's
+  view and runs no teardown, so the session's pending preview timer is still armed; only the feed's
+  fire-time session check stops it (`editorView.ts`; unit test "GUARD B, alone"). 4.1's deferral means
+  that re-mount no longer happens during edit — the check stays as the layer under it.
+- **The preview renders with `preserveReading`**, as the watch's own renders do. The 2026-07-21 5.3
+  entry's revisit-when ("if a second caller ever sets `preserveReading`") is now met: the two callers
+  are on different hosts (the watch on the outer, the preview on the nested), each with its own
+  cooldown.
+- **Console records** in browser tests print only under `pnpm exec vitest run --project browser
+  --reporter=verbose`; `pnpm test:browser -- --reporter=verbose` does not pass the flag through.
+**Open, for the human, before 7.1:** P-1 (the preview's enhancers — § Carried items). **For 6.2 and the
+§8-2 ruling:** P-2, P-3. Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor, a ruling owed before 5.3),
+E-1…E-6 and E-8 (the 7.1 walk), the failed-chunk "try again" finding.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
@@ -727,6 +828,25 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-05 — TASK 3.3's FINDINGS (P-1…P-3). None is fixed and none was ruled; the numbers are in
+  the 3.3 record above § Up next and in `decisions.md`'s 012 D-5 entry. Both engines agree unless
+  stated.**
+  - **P-1 · the reader's enhancers do not run in the live preview. Home: HUMAN RULING BEFORE 7.1.** A
+    mermaid fence, `$x^2$` and a code fence render in the document (figure + SVG, `<math>`,
+    highlighted) and stay raw source in the preview (the fence's `<pre><code>`, the literal `$x^2$`,
+    an un-highlighted block). The enhancers are wired at the two app-page call sites on the OUTER host
+    only; `renderPreview` calls `mount()` and nothing else. The question is preview fidelity against
+    the reader: accept a plain preview, or wire the enhancers to the nested host (a new task — it
+    touches the two call sites or `editorView.ts`, and re-runs lazy engines on every preview render).
+    Measured by `editorPreview.browser.test.ts`'s REPORTED test; nothing is pinned.
+  - **P-2 · the first key after a pause pays one whole preview render inside its own keystroke. Home:
+    6.2 → the §8-2 ruling.** The cooldown's first render is immediate, which here means synchronous:
+    217.7 ms (Chromium) / 205.0 ms (Firefox) on a 212,682-byte document, in the harness. Keys that
+    arrive inside the cooldown are unaffected (2.3 / 4.0 ms). On a small document every key renders.
+  - **P-3 · under a driven burst, 512 keys cost 4 feed renders on Chromium and 193 on Firefox. Home:
+    6.2.** Chromium runs queued input ahead of the cooldown's timer. Human typing speed was not
+    measured, and the scroll restore drifted 1.5 px over Firefox's 193 renders (0.2 px over
+    Chromium's 4).
 - **NEW 2026-10-05 — THE 3.2 EYEBALL PROXIES' FINDINGS (E-1…E-8). Home for all eight: the 7.1 walk,
   unless the human routes one elsewhere sooner. None is fixed; the numbers are in the record above
   § Up next and in `decisions.md`'s "informal eyeball DEFERRED" entry. Both engines agree on each.**

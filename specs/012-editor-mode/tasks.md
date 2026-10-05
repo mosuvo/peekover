@@ -486,7 +486,7 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       top-right, GFM / R1 as drawn, Ctrl/Cmd+S in the editor. Its findings are in that entry and in
       `progress.md` § Carried items; the eyeball itself is 7.1's added walk item.*
 
-- [ ] **3.3 The debounced live preview into the nested host; the preview-failure degrade (D-4, D-5's
+- [x] **3.3 The debounced live preview into the nested host; the preview-failure degrade (D-4, D-5's
       mechanism; Q4).** TEST FIRST. The editor's update listener feeds the buffer to 2.2's nested
       `mount()` through a NEW coalescing cooldown instance scoped to the preview (D-5's cost-proportional
       shape — newest text wins, never a queue), using the PROVISIONAL value Q4 settles, marked as such in
@@ -508,6 +508,38 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       buffer is lost, asserted in those units. The preview's own enhancers (diagrams/math/code) —
       whether they run in the nested host is REPORTED, with the reason. Content-script bytes md5-identical.
       App-page delta decomposed. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-4, D-5]
+      ★ *Post-landing, 2026-10-05 — one human ruling was taken in this task (the degrade's red-first,
+      iii below), recorded in `decisions.md`'s 012 D-5 entry and `progress.md`'s 3.3 record. (i) **The
+      cooldown** is `createPreviewCooldown` in `editorView.ts`, one instance per edit session, mirroring
+      the watch's shape (first render immediate · wait = the last render's cost, from its END · one
+      pending slot, newest wins · the timer never re-armed per change · an injected `now`).
+      `watchController.ts` is neither imported nor edited; it holds no extractable helper. The render at
+      BUILD is not timed and does not count as "the first" — the first keystroke renders at once. The
+      multiplier is `PREVIEW_COOLDOWN_MULTIPLIER = 1`, the ONE place marked provisional; 6.4 removes it.
+      (ii) **The feed joins 3.2's listener** — one listener, one `docChanged` check, dirty tracking
+      unchanged; `editorEngine.ts` untouched. It hands the cooldown the editor's document, read only
+      when it is rendered. (iii) **★ This line's revert clause is FALSE IN MECHANISM, and is left as
+      written.** "Reverted (let the throw propagate) → the editor or the buffer is lost" was not
+      reproducible: with the feed's guard removed and a throw forced out of `mount()`, the editor node,
+      the buffer and further typing all survive on both engines — CodeMirror runs every update listener
+      inside its own `try/catch`, and `mount()` degrades its own failures inside the NESTED host. What
+      that revert costs is that the throw reaches the page as an error. **Human ruling: record both
+      reds** — the literal revert in its true units, and the revert that does lose the editor (a failed
+      feed render handled the way the BUILD render is: tear down, rethrow). (iv) **A pending render and
+      its session:** three layers, not two — `renderPreview`'s live-shell check (2.2), the session's
+      cancel, and the feed's fire-time session check. The last two hide each other, so each is seen red
+      alone in the unit suite; in the browser only both-removed reds. (v) **D-4's red-first** is the
+      FEED's render routed at the outer host — routing `renderPreview` itself there kills the shell at
+      build, before any typing. (vi) **The scroll red-first** is `EDITOR_CSS`'s preview pane made
+      `overflow:hidden` (an ablation in `readerCss.ts`, reverted): resolution falls back to the nested
+      host and nothing is restored. One inserted paragraph only moves the marker by its own height, so
+      the test types more above the marker than the pane is tall. (vii) **The preview's enhancers do
+      NOT run in the nested host** — a FINDING for the human (`progress.md` § Carried items, P-1; home:
+      a human ruling before 7.1). (viii) **Human-authorized addition (2026-10-05):** preview-appearance
+      proxies in `editorPreview.browser.test.ts`; every pair matched. (ix) **No production seam was
+      added to force a failure** — the tests override `replaceChildren` on the nested shadow root.
+      Measured: `.output` 5,814,005 / 5,814,121 B (+535, all in the app chunk), content script
+      342,384 B both engines, md5 unchanged — 4.1's snapshot.*
 
 *Group-3 acceptance (plan §6): spec §4's edit and preview EARS clauses hold on an unwatched document; D-4's
 nested-host property is proven red-first under real typing; the engine has exactly one importer and is

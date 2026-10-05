@@ -12,8 +12,8 @@
 //
 //     mount(text, previewHost, { contained: true, preserveReading: true, chrome: false })
 //
-// through `renderPreview` below, the ONE place it is written. At 3.2 that still runs once, at
-// build; feeding it from the editor's buffer is 3.3's. `chrome: false` is load-bearing, not
+// through `renderPreview` below, the ONE place it is written. It runs once at build, and then
+// from the editor's buffer (THE FEED, below). `chrome: false` is load-bearing, not
 // cosmetic: the watch target, the diff context and the document identity are module-level
 // singletons, so a nested mount that composed chrome would wire a watch control, a diff affordance
 // and a TOC rail to the PREVIEW (decisions.md, M12 D-4 RE-RULED). It is the same single
@@ -61,6 +61,36 @@
 // Nothing here writes a file, asks for a permission or names a handle type. `save` is a function
 // the app page hands in; the session carries it and, at 3.2, nothing calls it.
 //
+// ── THE FEED: THE BUFFER REACHES THE PREVIEW THROUGH A COOLDOWN (3.3; D-5's mechanism) ─────────
+//
+// The update listener that tracks dirtiness also hands the editor's document to a
+// `createPreviewCooldown` instance, which decides WHEN `renderPreview` runs. Its shape is the
+// watch's cost-proportional cooldown (decisions.md 2026-07-21, spec 005 tasks 5.2 / 5.3), built
+// again here as a new instance scoped to one edit session — `watchController.ts` is not imported.
+// Three things about it are structural, and each breaks quietly:
+//
+//   - The first render is immediate; after each render the next may not START until as long as
+//     that render took has passed, measured from when it FINISHED. The render at build is not
+//     timed and does not count: the first keystroke renders at once.
+//   - One pending slot, and the newest document takes it. Never a queue.
+//   - The timer is NOT re-armed when another change arrives. Pushing the deadline out on every
+//     keystroke is a trailing debounce, which shows nothing until the typing stops. `flush`
+//     re-checks the clock and re-arms only for a remainder, so the wait is defined by the clock.
+//
+// `mount()` is synchronous, so a render is never "in flight" — a pending render is one WAITING in
+// the cooldown, and keystrokes land in the buffer while it waits.
+//
+// A PENDING RENDER MUST NOT OUTLIVE ITS SESSION, and two things see to it, each of which the
+// other would hide if it were removed: ending a session CANCELS its cooldown, timer and all
+// (the exit path); and at fire time the feed renders only while its own session is still the
+// host's live one (an outer re-mount drops the view and runs no teardown, so nothing cancelled).
+// Without the second, an orphaned session's text lands in the next shell built on that host.
+//
+// A PREVIEW FAILURE IS NOT AN EDITOR FAILURE. `mount()` degrades its own failures to its banner
+// and raw source — in the host it was given, which is the nested one, so that state appears in
+// the preview pane and the editor is untouched. Should a throw ever leave `mount()` itself, the
+// feed logs it and carries on: unlike the render at build, it never tears the shell down.
+//
 // App-page only, and not on the content-script graph: nothing the content script imports reaches
 // this module.
 
@@ -101,6 +131,85 @@ export interface EditorSession {
 /** What `buildEditor` is handed beside the engine. */
 export interface BuildEditorOptions {
   save?: EditorSave;
+  /** The clock the preview's cooldown is measured on. Injected for tests, which need to control
+   *  what a render costs; production passes nothing and gets `performance.now`. */
+  now?: () => number;
+}
+
+/**
+ * How much idle the preview gets per unit of render cost: 1 — the cooldown equals what the last
+ * render took. PROVISIONAL (tasks.md Q4): 6.2 measures, the human rules the interval (spec §8-2),
+ * and 6.4 applies that ruling and removes this constant.
+ */
+export const PREVIEW_COOLDOWN_MULTIPLIER = 1;
+
+/** Text for the preview. The editor's document is one, and is only read when it is rendered. */
+export interface PreviewText {
+  toString(): string;
+}
+
+/** One preview's cooldown: `push` the newest text, `cancel` whatever is waiting. */
+export interface PreviewCooldown {
+  push(text: PreviewText): void;
+  cancel(): void;
+}
+
+/**
+ * The preview's cost-proportional cooldown (the module comment's THE FEED). `render` is called
+ * with the newest pushed text: at once when no cooldown is running, otherwise once it has passed.
+ */
+export function createPreviewCooldown(
+  render: (text: string) => void,
+  now: () => number = () => performance.now(),
+): PreviewCooldown {
+  /** The earliest time the next render may START. 0 = render immediately. */
+  let readyAt = 0;
+  /** The one pending text, or null. There is never a second: the newest REPLACES this. */
+  let pending: PreviewText | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  function renderNow(text: PreviewText): void {
+    const started = now();
+    render(text.toString());
+    // From the END, not the start: measured from the start there would be no gap at all.
+    readyAt = now();
+    readyAt += (readyAt - started) * PREVIEW_COOLDOWN_MULTIPLIER;
+  }
+
+  function flush(): void {
+    timer = null;
+    if (pending === null) return;
+    // A timer may fire early; then the cooldown has not passed, so wait out the remainder.
+    const remaining = readyAt - now();
+    if (remaining > 0) {
+      timer = setTimeout(flush, remaining);
+      return;
+    }
+    const text = pending;
+    pending = null;
+    renderNow(text);
+  }
+
+  return {
+    push(text) {
+      const wait = readyAt - now();
+      if (wait <= 0 && timer === null) {
+        renderNow(text);
+        return;
+      }
+      // Coalesce, do not queue. The timer already armed is left alone — see THE FEED.
+      pending = text;
+      if (timer === null) timer = setTimeout(flush, wait);
+    },
+    cancel() {
+      // Both halves: a cleared slot with a live timer would still fire after the session ended.
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      pending = null;
+    },
+  };
 }
 
 /**
@@ -144,6 +253,9 @@ function liveShell(host: HTMLElement): BuiltShell | undefined {
 /** Per outer host: its edit session. */
 const sessions = new WeakMap<HTMLElement, EditorSession>();
 
+/** Per session: the cooldown its preview renders go through. */
+const previews = new WeakMap<EditorSession, PreviewCooldown>();
+
 /** The host's session, only while its view is still in that host's shell — an outer re-mount
  *  drops the view with the shell, and a stale session must not be handed back. */
 export function editorSessionFor(host: HTMLElement): EditorSession | undefined {
@@ -153,11 +265,13 @@ export function editorSessionFor(host: HTMLElement): EditorSession | undefined {
   return undefined;
 }
 
-/** End the host's session, live or stale: destroy the view and clear the dirty attribute. */
+/** End the host's session, live or stale: cancel its pending preview render, destroy the view
+ *  and clear the dirty attribute. */
 function endEditorSession(host: HTMLElement): void {
   const session = sessions.get(host);
   if (!session) return;
   sessions.delete(host);
+  previews.get(session)?.cancel();
   session.view.destroy();
   host.removeAttribute(EDITOR_DIRTY_ATTR);
 }
@@ -172,7 +286,7 @@ function endEditorSession(host: HTMLElement): void {
 export function buildEditor(
   engine: EditorEngine,
   host: HTMLElement,
-  { save }: BuildEditorOptions = {},
+  { save, now }: BuildEditorOptions = {},
 ): EditorSession {
   const live = editorSessionFor(host);
   if (live) return live;
@@ -181,6 +295,15 @@ export function buildEditor(
   const shell = buildEditorShell(host);
   const originalText = readerSourceFor(host) ?? '';
   const baseline = normaliseLineBreaks(originalText);
+  let session: EditorSession | undefined;
+  const preview = createPreviewCooldown((text) => {
+    if (!session || editorSessionFor(host) !== session) return; // orphaned by an outer re-mount
+    try {
+      renderPreview(host, text);
+    } catch (err) {
+      console.warn('[peekover] preview render failed', err);
+    }
+  }, now);
   try {
     const view = engine.createView(
       shell.source,
@@ -192,10 +315,12 @@ export function buildEditor(
         const dirty = doc.length !== baseline.length || doc.toString() !== baseline;
         if (dirty) host.setAttribute(EDITOR_DIRTY_ATTR, 'true');
         else host.removeAttribute(EDITOR_DIRTY_ATTR);
+        preview.push(doc);
       }),
     );
-    const session: EditorSession = { view, originalText, save };
+    session = { view, originalText, save };
     sessions.set(host, session);
+    previews.set(session, preview);
     return session;
   } catch (err) {
     teardownEditorShell(host);

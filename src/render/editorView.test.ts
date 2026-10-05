@@ -8,7 +8,9 @@
 // Layout, the resolved scroll box, the registry-gated chrome with the registries live and the
 // backtick are real-engine-or-nothing — tests/browser/editorNestedHost.browser.test.ts.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 vi.mock('./mount', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./mount')>();
@@ -17,12 +19,18 @@ vi.mock('./mount', async (importOriginal) => {
 
 import { mount } from './mount';
 import { enterEditMode, exitEditMode } from './readerMode';
+import { loadEditorEngine, type EditorEngine } from './editorEngine';
 import {
+  EDITOR_DIRTY_ATTR,
   EDITOR_PREVIEW_CLASS,
   EDITOR_PREVIEW_HOST_CLASS,
   EDITOR_SHELL_CLASS,
   EDITOR_SOURCE_CLASS,
+  PREVIEW_COOLDOWN_MULTIPLIER,
+  buildEditor,
   buildEditorShell,
+  createPreviewCooldown,
+  editorSessionFor,
   editorShellFor,
   renderPreview,
   teardownEditorShell,
@@ -207,5 +215,353 @@ describe('as enterEditMode’s build step (2.1’s seam)', () => {
     await expect(enterEditMode(host, { loader: async () => null, build })).rejects.toThrow();
     expect(host.hasAttribute('data-mode')).toBe(false);
     expect(host.childNodes.length).toBe(0);
+  });
+});
+
+// ════ TASK 3.3 — THE PREVIEW'S COST-PROPORTIONAL COOLDOWN, AND THE FEED BEHIND IT ══════════════
+//
+// The rule under test is the watch's (decisions.md 2026-07-21, spec 005 tasks 5.2 / 5.3), in a
+// NEW instance scoped to the preview: after a render finishes, the next may not START until as
+// long as that render TOOK has elapsed; whatever arrives in between coalesces into ONE pending
+// render carrying the NEWEST text; the first render is immediate; the timer is never re-armed per
+// change.
+//
+// The clock is injected for the reason it is there: the distinguishing property is that the wait
+// is PROPORTIONAL TO WHAT A RENDER COST, and a jsdom render costs nothing measurable. The fake
+// render BURNS clock time; timer time advances 1 ms at a time in lockstep, so a wait is a number.
+//
+// The clock, the rig and the two tests that carry the property mirror `watchController.test.ts`'s
+// 5.3 block. Everything about layout — where the preview is scrolled to, that real keys land while
+// a render waits — is real-engine-or-nothing: tests/browser/editorPreview.browser.test.ts.
+
+/** `burn` is time a render consumed; `advance` is time passing with timers running. Separate
+ *  because a synchronous render does NOT let timers run. */
+function fakeClock(): { now: () => number; burn: (ms: number) => void; advance: (ms: number) => void } {
+  let t = 10_000;
+  return {
+    now: () => t,
+    burn: (ms) => {
+      t += ms;
+    },
+    advance: (ms) => {
+      // 1 ms at a time, so a timer fires at its due millisecond and not at the end of a jump.
+      for (let i = 0; i < ms; i += 1) {
+        t += 1;
+        vi.advanceTimersByTime(1);
+      }
+    },
+  };
+}
+
+interface CooldownRig {
+  cooldown: ReturnType<typeof createPreviewCooldown>;
+  renders: { text: string; at: number }[];
+  clock: ReturnType<typeof fakeClock>;
+}
+
+/** A cooldown whose render costs exactly `costMs` of clock time, every time. */
+function cooldownRig(costMs: number): CooldownRig {
+  const clock = fakeClock();
+  const renders: { text: string; at: number }[] = [];
+  const cooldown = createPreviewCooldown((text) => {
+    renders.push({ text, at: clock.now() });
+    clock.burn(costMs); // THE RENDER'S COST — the quantity the cooldown is proportional to
+  }, clock.now);
+  return { cooldown, renders, clock };
+}
+
+/** Advance until a render lands, or give up. */
+function advanceUntilRender(r: CooldownRig, limit = 5000): void {
+  const target = r.renders.length + 1;
+  for (let i = 0; i < limit && r.renders.length < target; i += 1) r.clock.advance(1);
+}
+
+describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s mechanism)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders the FIRST text immediately — nothing to be proportional to yet', () => {
+    const r = cooldownRig(40);
+    const at = r.clock.now();
+
+    r.cooldown.push('first');
+
+    expect(r.renders).toEqual([{ text: 'first', at }]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ THE WAIT SCALES WITH THE RENDER COST, from when the render FINISHED — the test a fixed window fails', () => {
+    const measure = (costMs: number): number => {
+      const r = cooldownRig(costMs);
+      r.cooldown.push('first'); // immediate; costs `costMs` of clock time
+      const finishedAt = r.clock.now();
+      r.cooldown.push('second'); // inside the cooldown -> pending
+      expect(r.renders).toHaveLength(1);
+      advanceUntilRender(r);
+      expect(r.renders).toHaveLength(2);
+      return r.renders[1].at - finishedAt;
+    };
+
+    const cheap = measure(10);
+    const expensive = measure(400);
+
+    // A 10 ms render waits 10 ms; a 400 ms render waits 400 ms.
+    expect(cheap).toBe(10 * PREVIEW_COOLDOWN_MULTIPLIER);
+    expect(expensive).toBe(400 * PREVIEW_COOLDOWN_MULTIPLIER);
+    expect(expensive).toBeGreaterThan(cheap * 10);
+  });
+
+  it('★ COALESCES a burst: exactly ONE pending render, carrying the NEWEST text', () => {
+    // The count AND the content: a coalescer that keeps the FIRST text passes a count-only test.
+    const r = cooldownRig(40);
+    r.cooldown.push('v0');
+    expect(r.renders).toHaveLength(1);
+
+    for (let i = 1; i <= 10; i += 1) r.cooldown.push(`v${i}`); // ten changes inside the cooldown
+    expect(r.renders, 'nothing may render during the cooldown').toHaveLength(1);
+    expect(vi.getTimerCount(), 'one pending render, not a queue of ten').toBe(1);
+
+    r.clock.advance(5000);
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v10']); // v1..v9 never rendered at all
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ the timer is NOT re-armed per change — a later change does not push the render out', () => {
+    // Re-arming on every change IS a trailing debounce. Changes arrive 10 ms apart inside a 40 ms
+    // cooldown: the pending render must land 40 ms after the first render FINISHED, not 40 ms
+    // after the last change.
+    const r = cooldownRig(40);
+    const armed = vi.spyOn(globalThis, 'setTimeout');
+    r.cooldown.push('v0');
+    const finishedAt = r.clock.now();
+
+    r.cooldown.push('v1');
+    r.clock.advance(10);
+    r.cooldown.push('v2');
+    r.clock.advance(10);
+    r.cooldown.push('v3');
+    expect(armed, 'one timer for three changes').toHaveBeenCalledTimes(1);
+    advanceUntilRender(r);
+
+    expect(r.renders[1]).toEqual({ text: 'v3', at: finishedAt + 40 });
+    armed.mockRestore();
+  });
+
+  it('★ does not STARVE: a stream that never goes quiet still renders', () => {
+    // What a trailing debounce loses. A change every 10 ms for 600 ms never leaves 40 ms of quiet.
+    const r = cooldownRig(40);
+    for (let i = 0; i < 60; i += 1) {
+      r.cooldown.push(`v${i}`);
+      r.clock.advance(10);
+    }
+    expect(r.renders.length, 'renders during the stream').toBeGreaterThanOrEqual(5);
+    expect(r.renders.length, 'and still fewer than the changes').toBeLessThan(60);
+  });
+
+  it('a QUIET GAP produces a render per change, and leaves no timer behind', () => {
+    const r = cooldownRig(40);
+    r.cooldown.push('a');
+    r.clock.advance(200);
+    r.cooldown.push('b');
+    r.clock.advance(200);
+    r.cooldown.push('c');
+
+    expect(r.renders.map((x) => x.text)).toEqual(['a', 'b', 'c']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ cancel() drops the pending render — the TIMER, not only the text', () => {
+    const r = cooldownRig(40);
+    r.cooldown.push('rendered');
+    r.cooldown.push('pending');
+    expect(vi.getTimerCount(), 'the pending render is armed').toBe(1);
+
+    r.cooldown.cancel();
+
+    expect(vi.getTimerCount()).toBe(0);
+    r.clock.advance(5000);
+    expect(r.renders.map((x) => x.text)).toEqual(['rendered']);
+  });
+
+  it('holds the text it is given unread until it renders it', () => {
+    // The feed hands over the editor's document, not a string built on every keystroke.
+    const r = cooldownRig(40);
+    let reads = 0;
+    const lazy = (text: string): { toString(): string } => ({
+      toString: () => {
+        reads += 1;
+        return text;
+      },
+    });
+    r.cooldown.push(lazy('v0'));
+    r.cooldown.push(lazy('v1'));
+    r.cooldown.push(lazy('v2'));
+    expect(reads).toBe(1); // v0 rendered; v1 was replaced unread; v2 is waiting
+    r.clock.advance(5000);
+    expect(reads).toBe(2);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v2']);
+  });
+
+  it('the multiplier is 1, and is marked PROVISIONAL in exactly one place', () => {
+    expect(PREVIEW_COOLDOWN_MULTIPLIER).toBe(1);
+    const source = readFileSync(join(process.cwd(), 'src/render/editorView.ts'), 'utf8');
+    expect(source.match(/PROVISIONAL/g) ?? []).toHaveLength(1);
+  });
+});
+
+describe('the feed — the editor’s buffer reaches the nested host through the cooldown (3.3)', () => {
+  let actualMount: typeof mount;
+  beforeAll(async () => {
+    actualMount = (await vi.importActual<typeof import('./mount')>('./mount')).mount;
+  });
+  afterEach(() => {
+    for (const host of hosts) teardownEditorShell(host);
+    vi.mocked(mount).mockImplementation(actualMount);
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  interface Editing {
+    host: HTMLElement;
+    engine: EditorEngine;
+    clock: ReturnType<typeof fakeClock>;
+    view: NonNullable<ReturnType<typeof editorSessionFor>>['view'];
+    previewHost: HTMLElement;
+  }
+
+  /** An edit session on the REAL engine whose every preview render costs `costMs` of an injected
+   *  clock. The engine is loaded before the timers are faked; the build-time render is cleared
+   *  from the spy, so every count below is of renders the FEED made. */
+  async function editing(costMs: number): Promise<Editing> {
+    const host = mountedHost();
+    const engine = await loadEditorEngine(host);
+    vi.useFakeTimers();
+    const clock = fakeClock();
+    vi.mocked(mount).mockImplementation((...args) => {
+      clock.burn(costMs);
+      actualMount(...args);
+    });
+    const { view } = buildEditor(engine, host, { now: clock.now });
+    vi.mocked(mount).mockClear();
+    return { host, engine, clock, view, previewHost: editorShellFor(host)!.previewHost };
+  }
+
+  /** Append to the buffer — the document-model stand-in for a keystroke. */
+  const type = (e: Editing, text: string): void =>
+    e.view.dispatch({ changes: { from: e.view.state.doc.length, insert: text } });
+
+  const rendered = (): string[] => vi.mocked(mount).mock.calls.map(([text]) => text);
+
+  it('★ a change renders the BUFFER into the nested host, at once, with the preview’s three options', async () => {
+    const e = await editing(40);
+
+    type(e, 'X');
+
+    const calls = vi.mocked(mount).mock.calls;
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toBe(`${DOC}X`);
+    expect(calls[0][0]).toBe(e.view.state.doc.toString());
+    expect(calls[0][1]).toBe(e.previewHost);
+    expect(calls[0][2]).toEqual({ contained: true, preserveReading: true, chrome: false });
+    expect(e.previewHost.shadowRoot!.querySelector('.peekover-reader')?.textContent).toContain('More.X');
+    // Dirty tracking is the same listener, unchanged.
+    expect(e.host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+  });
+
+  it('★ a burst coalesces: fewer renders than changes, the last carrying the whole buffer', async () => {
+    const e = await editing(40);
+
+    for (const ch of 'abcdef') type(e, ch);
+    expect(rendered()).toEqual([`${DOC}a`]);
+    e.clock.advance(5000);
+
+    expect(rendered()).toEqual([`${DOC}a`, `${DOC}abcdef`]);
+  });
+
+  it('an update that changes no text feeds nothing', async () => {
+    const e = await editing(40);
+    e.view.dispatch({ selection: { anchor: 3 } });
+    e.clock.advance(5000);
+    expect(rendered()).toEqual([]);
+  });
+
+  it('★ GUARD A, alone — teardown CLEARS the pending timer, by its own handle', async () => {
+    // Guard B (below) would also stop this render at fire time, so "nothing rendered" cannot see
+    // a teardown that forgot to cancel. The timer's own handle can.
+    const e = await editing(40);
+    type(e, 'a');
+    const armed = vi.spyOn(globalThis, 'setTimeout');
+    const cleared = vi.spyOn(globalThis, 'clearTimeout');
+    type(e, 'b'); // inside the cooldown -> pending
+    const arming = armed.mock.calls.findIndex(([, delay]) => delay === 40);
+    expect(arming, 'the pending render armed a 40 ms timer').toBeGreaterThan(-1);
+    const handle = armed.mock.results[arming].value as ReturnType<typeof setTimeout>;
+
+    teardownEditorShell(e.host);
+
+    expect(cleared).toHaveBeenCalledWith(handle);
+    e.clock.advance(5000);
+    expect(rendered()).toEqual([`${DOC}a`]);
+  });
+
+  it('★ GUARD B, alone — a session an outer re-mount orphaned never renders into the shell built after it', async () => {
+    // No teardown runs on this path, so guard A never does: the timer is still armed. Without the
+    // fire-time check the orphan's text lands in the NEW shell's preview — the cross-feed.
+    const e = await editing(40);
+    type(e, 'a');
+    type(e, ' STALE'); // pending
+    mount(DOC, e.host, { contained: true }); // the outer re-mount: shell and view are dropped
+    const fresh = buildEditorShell(e.host);
+    expect(fresh.previewHost).not.toBe(e.previewHost);
+    vi.mocked(mount).mockClear();
+
+    e.clock.advance(5000);
+
+    expect(rendered().filter((text) => text.includes('STALE'))).toEqual([]);
+    expect(rendered()).toEqual([]);
+    expect(fresh.previewHost.shadowRoot!.textContent).not.toContain('STALE');
+  });
+
+  it('★ exit while a render is pending, then re-enter: the discarded text never reaches the new session', async () => {
+    const e = await editing(40);
+    type(e, 'a');
+    type(e, ' DISCARDED'); // pending
+
+    exitEditMode(e.host);
+    teardownEditorShell(e.host);
+    const next = buildEditor(e.engine, e.host, { now: e.clock.now });
+    vi.mocked(mount).mockClear();
+    e.clock.advance(5000);
+
+    expect(rendered()).toEqual([]);
+    expect(next.view.state.doc.toString()).toBe(DOC);
+    expect(editorShellFor(e.host)!.previewHost.shadowRoot!.textContent).not.toContain('DISCARDED');
+  });
+
+  it('★ a render that throws OUT of mount() never leaves the feed: the view and the buffer stand, and the next change renders', async () => {
+    const e = await editing(40);
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const failure = new Error('mount itself failed');
+    vi.mocked(mount).mockImplementationOnce(() => {
+      e.clock.burn(40);
+      throw failure;
+    });
+
+    expect(() => type(e, 'a')).not.toThrow();
+
+    expect(warned).toHaveBeenCalledWith('[peekover] preview render failed', failure);
+    expect(e.view.state.doc.toString()).toBe(`${DOC}a`);
+    expect(e.view.dom.isConnected).toBe(true);
+    expect(editorSessionFor(e.host)?.view).toBe(e.view);
+    // Still editable, and the preview catches up once the failed render's own cooldown has passed.
+    type(e, 'b');
+    e.clock.advance(5000);
+    expect(rendered().at(-1)).toBe(`${DOC}ab`);
+    expect(e.previewHost.shadowRoot!.querySelector('.peekover-reader')?.textContent).toContain('More.ab');
   });
 });
