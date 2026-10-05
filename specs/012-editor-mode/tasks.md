@@ -550,7 +550,7 @@ absent from the content-script graph; Save is plumbed and NOT wired to disk.*
 *This is where the WATCHED document is first tested. `diffView.ts` and the diff feature's substance are not
 touched; this group widens a gate, not what it protects.*
 
-- [ ] **4.1 The deferral gate widens to `data-mode === 'edit'`; a clean exit flushes (D-8, direction 1 +
+- [x] **4.1 The deferral gate widens to `data-mode === 'edit'`; a clean exit flushes (D-8, direction 1 +
       the clean half of direction 2).** TEST FIRST. `diffDisplayed`'s condition gains the literal
       `data-mode` read (no import — the 5.1 fence's Clause C) at BOTH sites (`flushPending`, `onText`), and
       the observer's `attributeFilter` gains `data-mode`. Exiting edit mode with NO dirty attribute flushes
@@ -567,6 +567,34 @@ touched; this group widens a gate, not what it protects.*
       watch is really firing). The existing `data-diff` deferral tests stay green, untouched. Content-
       script bytes: `watchController.ts` IS on that graph — the delta is stated, decomposed, and is this
       task's own glue only. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-8]
+      ★ *Post-landing, 2026-10-05 — no human ruling was taken; two judgment calls are flagged in
+      `decisions.md`'s 012 D-8 entry for one. (i) **★ THE EXIT-ORDER FINDING, an input to 4.2.**
+      `editorEnhancer.ts:124-125` leaves edit as `exitEditMode` then `teardownEditorShell`, both
+      synchronous, and the teardown removes the dirty attribute (`editorView.ts:276`). The observer's
+      callback is a microtask and runs after both, so an attribute READ in `watchController.ts` cannot
+      tell a dirty exit from a clean one — 4.2's "with the dirty attribute present, leaving edit does
+      NOT call `renderNow`" cannot be built as written. Open to 4.2: the observer's own RECORDS (the
+      dirty attribute's removal, with its old value, arrives in the same batch — reasoned, not
+      measured), or a change outside 4.2's file list (the exit order, or a literal the editor leaves
+      behind). (ii) **★ THE INTERIM STATE.** At 4.1 every exit flushes. Leaving edit with unsaved
+      text discards the buffer (3.2; the guard is 6.1) and then shows the on-disk text. 4.1 claims
+      no dirty-exit property and no test asserts one; "with NO dirty attribute" in this line's own
+      text is therefore true of every exit the controller sees. (iii) **What was built:**
+      `deferring()` = a displayed diff OR `data-mode === 'edit'`, read at both sites; the observer
+      filters `data-diff` and `data-mode` and flushes when NOTHING defers any longer. It does not
+      read `oldValue` — the flush acts only on text labelled deferred, so a reading <-> raw flip
+      releases nothing. `onDiffExited` and `installDiffObserver` keep their names. (iv) **The
+      "changed again" line is not said on an edit-only flush** — it names the comparison; it is said
+      when a diff was displayed while the text was held (a new flag). Plan §0 D-8: a clean exit
+      "simply flushes (equivalent to never having edited at all)". Flagged for a ruling. (v) **The
+      real-engine red-first** shows the editor's DOM replaced AND the typed text lost, in one
+      assertion; the positive control is inside the same tests, after the exit. The watch is
+      hand-driven through the detector seam (the `watchDiffDefer` precedent), into a controller
+      built with the default render — so the flush here does not re-install the edit control;
+      production's `renderWithEnhancements` does. Measured: `.output` 5,814,275 / 5,814,391 B
+      (+270), content script 342,520 B both engines (+136, md5
+      `e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`), the app chunk
+      518,038 B (+134) — 4.2's snapshot.*
 
 - [ ] **4.2 The exit asymmetry: a DIRTY exit does not auto-flush; the deferred change is raised as D-7's
       early hint (D-8, the unsafe half of direction 2; F-4).** TEST FIRST. With the dirty attribute

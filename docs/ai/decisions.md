@@ -1,6 +1,96 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-05 · 012 D-8 — the deferral half LANDED at task 4.1: while a document is being edited the
+  watch renders nothing, and leaving edit flushes what was held. The exit ASYMMETRY (a dirty exit must
+  not auto-flush) is NOT built — it is task 4.2's, and 4.1 found why it cannot be built in
+  `watchController.ts` by an attribute read. No human ruling was taken in this task; two judgment
+  calls are flagged below for one.**
+  Plan §0 D-8's entry draft, quoted verbatim because `tasks.md` lands each D-value's draft with its
+  implementing commit:
+  "012 D-8 — the watch relay's own DECISION 4 (2026-07-23, `watchController.ts`'s `data-diff`-gated
+  deferral) is the exact mechanism the edit/watch collision needs, extended by one more gated
+  condition; the one new wrinkle is that an edit session's exit-flush cannot be silent the way a
+  diff's is, because unlike a displayed diff (read-only), an edit session holds unsaved local state a
+  silent `replaceChildren` would destroy."
+  [Task 4.1 implements the first clause — the deferral widening — and the CLEAN-exit flush. Task 4.2
+  implements the second clause: the dirty-exit asymmetry and the "changed on disk while you edited"
+  hint. Until 4.2 lands, the second clause describes nothing in the code.]
+  [The draft's "silent the way a diff's is" is not what a diff's exit does: since 006 D-11 that flush
+  sets the "changed again" line (`CHANGED_AGAIN_NOTE`). Read it as "unconditional".]
+  **What 4.1 built, in `src/watch/watchController.ts` and nowhere else in production** (its
+  DECISION 5 comment is the in-code record):
+  - **One more gated condition, at both sites.** `deferring(target)` is `diffDisplayed(target) ||
+    target.getAttribute('data-mode') === 'edit'`, read in `onText` and in `flushPending` (the path a
+    cooldown timer armed BEFORE edit entry takes). `data-mode` and `edit` are literals — the 5.1
+    fence's Clause C; no import was added. The unit suite drives the real `enterEditMode` /
+    `exitEditMode` against the controller, so a respelling in `readerMode.ts` goes red.
+  - **The same observer, one more attribute.** `attributeFilter` is `[data-diff, data-mode]`. The
+    callback asks whether ANYTHING still defers and, if nothing does, runs the one exit flush
+    (`onDiffExited`, name kept). So: leaving edit under an open diff releases nothing; closing a diff
+    while editing releases nothing; whichever goes last releases the newest held text, once.
+  - **★ SUPERSEDED IN MECHANISM — the kickoff's "flush only when `oldValue` is `'edit'`".** The
+    observer does not read `oldValue`. It now also hears every reading ↔ raw flip and the `data-mode`
+    write `mount()` makes on each render; none of them can release anything, because the flush acts
+    only on text labelled DEFERRED (`pendingSetByDefer`), and that label is set only while something
+    defers and cleared by the flush. The behaviour the kickoff asked for holds and is asserted (a flip
+    with nothing pending renders nothing; a flip does not release a cooldown-pending render early —
+    red when the label check is removed). **Flagged as a deviation.**
+  - **The flush is an ordinary watch render** — `renderNow`: `preserveReading`, the update signal, the
+    snapshot capture (006 D-11's "captures normally" — asserted in the real engine: the flush stored
+    the document it replaced).
+  - **★ JUDGMENT CALL, FLAGGED FOR A RULING — the "changed again" line is not said on an edit-only
+    flush.** `tasks.md` 4.1 says the exit flushes "exactly as a diff exit does", and a diff exit sets
+    `CHANGED_AGAIN_NOTE`: "This document changed again while the comparison was open — the newer
+    version is shown above." On an edit exit no comparison was open, so that sentence would be false.
+    Plan §0 D-8 says a clean exit "simply flushes (equivalent to never having edited at all)" — an
+    ordinary watch update, which flashes the control and says nothing. That is what was built: a new
+    flag (`pendingHeldUnderDiff`) records whether a diff was displayed at any point while the text
+    was held, and the line is said only then. The diff-only path is unchanged and its seven existing
+    tests are unedited. The alternatives, for the human: say the existing line anyway (false copy) ·
+    write new copy for the edit case (a product-copy decision, and 4.2's hint is the natural place
+    for it).
+  **★ THE EXIT-ORDER FINDING — an input to 4.2, reported and not worked around.**
+  `editorEnhancer.ts:124-125` leaves edit as `exitEditMode(host)` then `teardownEditorShell(host)`,
+  both synchronous, inside one click handler. `exitEditMode` (`readerMode.ts:144`) writes `data-mode`;
+  `teardownEditorShell` (`editorView.ts:393`) calls `endEditorSession`, which removes
+  `data-edit-dirty` (`editorView.ts:276`). A MutationObserver callback is a microtask: it runs after
+  both. So when `watchController.ts` learns that the host left edit, the dirty attribute is already
+  gone — **an attribute READ at that point cannot tell a dirty exit from a clean one**, and 4.2's "with
+  the dirty attribute present, leaving edit does NOT call `renderNow`" cannot be built as written.
+  What that leaves 4.2, none of it chosen here:
+  - *inside `watchController.ts`:* the observer's RECORDS still carry it — `data-edit-dirty` added to
+    the filter with `attributeOldValue` would deliver the removal (old value `"true"`) in the same
+    batch as the mode change. Reasoned from the DOM standard, not measured;
+  - *outside 4.2's file list:* the exit order changed, or the editor leaving a literal behind before
+    its teardown clears the attribute. Either touches `editorEnhancer.ts` / `editorView.ts`.
+  And under any of them: at 4.2, as at 4.1, the exit has ALREADY discarded the buffer (3.2; the guard
+  is 6.1). Withholding the flush on a dirty exit protects no text until 6.1 — it only keeps the
+  on-disk text from replacing a reading column the user was not editing.
+  **THE INTERIM STATE, stated so it is not assumed.** At 4.1 every exit reaches the controller looking
+  clean. Leaving edit with unsaved text discards the buffer (3.2) and then shows the on-disk text,
+  including a change that arrived while editing. 4.1 claims no dirty-exit property, and no test
+  asserts one.
+  **The cooldown's three structural properties (the 2026-07-21 spec-005 5.3 entry) — each whole.**
+  (1) *The timer is not re-armed per change:* the widened condition returns before any timer is armed
+  in `onText`, and in `flushPending` it returns before the early-fire re-arm, exactly where the diff
+  condition already did; no `setTimeout` was added. (2) *The injected `now`:* untouched, and the new
+  tests run on it. (3) *Two independent guards on a document switch:* `stop()` and `start()` both
+  still call `cancelPending`, which now also clears the new flag.
+  **Red-first.** Unit, before the change: 5 of the 10 new tests red (`expected [ 'v0', 'v1' ] to
+  deeply equal [ 'v0' ]`); four of the other five are negative or exit-side claims seen red under
+  their own ablation (the `data-mode` filter entry removed · the line said unconditionally · the
+  callback asking about edit only · the DEFERRED-label check removed), and one — a flip with nothing
+  pending renders nothing — has no ablation that reddens it alone. Real engine, both engines, the
+  `data-mode` read removed: `outerRootMutations: 1`, `editorNodeConnected: false`, `mode: "reading"`,
+  no live session, the typed text on screen nowhere. The positive control is in the same tests: with
+  edit off, the same change through the same seam mutates the outer root.
+  **Bytes.** Content script 342,384 → 342,520 B (+136) on both engines; the app chunk 517,904 →
+  518,038 B (+134); no other file changed size. `progress.md`'s 4.1 record has the decomposition.
+  *Revisit-when:* 4.2 (the asymmetry, the hint, and whether the edit-exit flush should say anything);
+  6.1 (the unsaved-changes guard — until it lands a dirty exit loses the buffer whatever the watch
+  does).
+
 - **2026-10-05 · 012 D-5 — LANDED at task 3.3: the editor→preview debounce is the cost-proportional
   cooldown, a new instance per edit session; multiplier 1, provisional. ONE HUMAN RULING was taken in
   this task — how the preview-failure degrade's red-first is recorded.**

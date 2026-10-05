@@ -29,6 +29,9 @@ import { resetWatchRegistryForTest, watchNote } from './watchRegistry';
 // `.ts` only). That exemption is what makes the drift check below possible at all: production
 // `watchController.ts` may not import the view, so the test imports BOTH sides and compares them.
 import { DIFF_HOST_ATTR, DIFF_ACTIVE } from '../render/diffView';
+// The same exemption, for the same reason (012 task 4.1): the controller reads `data-mode` by
+// literal, and the drift check at the bottom of the D-8 block drives the module that writes it.
+import { enterEditMode, exitEditMode } from '../render/readerMode';
 
 /** A detector whose callback this test drives by hand — the seam, with no timers involved. */
 function fakeDetector(): { detector: ChangeDetector; fire: (text: string) => void; stops: number } {
@@ -675,5 +678,245 @@ describe('watchController — D-11: a displayed diff defers the re-render (task 
     // so this pins that the view still writes a non-empty value rather than a bare attribute
     // some future presence check might read differently.
     expect(DIFF_ACTIVE.length).toBeGreaterThan(0);
+  });
+});
+
+// ════ 012 TASK 4.1 — D-8: EDIT MODE DEFERS THE RE-RENDER; LEAVING IT FLUSHES ═════════════════════
+//
+// The rule under test: while the host's `data-mode` is the literal `edit`, the loop renders
+// NOTHING — by either path, `onText` or a cooldown timer already in flight — and holds the newest
+// text in the one pending slot. When the host leaves edit and no diff is displayed, that text
+// renders once, through the same `renderNow` every other watch render takes.
+//
+// The attribute is set by hand, as the D-11 block above does and for the same reason; the drift
+// check at the bottom drives the real `enterEditMode` / `exitEditMode` instead. Whether a real
+// editor survives a real external change is the real-engine half, in
+// tests/browser/editorWatch.browser.test.ts.
+//
+// ── WHAT IS NOT HERE ─────────────────────────────────────────────────────────────────────────────
+//
+// Nothing in this block reads the editor's dirty attribute, and neither does the controller at
+// 4.1: every exit from edit flushes. What a DIRTY exit should do instead is task 4.2's.
+
+/** A mid-document host in the mode `mount()` leaves a rendered document in. */
+function readingHost(): HTMLElement {
+  const host = midDocumentHost();
+  host.setAttribute('data-mode', 'reading');
+  return host;
+}
+
+describe('watchController — D-8: edit mode defers the re-render (012 task 4.1)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('DEFERS while data-mode="edit": no render, no timer, no signal — the text is held', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    expect(r.renders).toHaveLength(1);
+
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000); // well past any cooldown from the render above
+    r.fire('v1 — arrives while the document is being edited');
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(vi.getTimerCount(), 'no timer may be armed by a deferred change').toBe(0);
+    expect(r.signals).toBe(1);
+
+    // HELD, not dropped: the same text is what the exit renders.
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual([
+      'v0',
+      'v1 — arrives while the document is being edited',
+    ]);
+  });
+
+  it('A TIMER ARMED BEFORE EDIT ENTRY and firing during it renders nothing — it converts', async () => {
+    // The `flushPending` site — the path `onText`'s condition does not cover.
+    const r = rig(400);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0'); // renders, and arms a 400 ms cooldown
+    r.fire('v1'); // inside it -> pending, timer armed
+    expect(vi.getTimerCount(), 'the cooldown timer really is armed').toBe(1);
+
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(2000); // the timer fires in here
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(vi.getTimerCount(), 'and it did not re-arm itself either').toBe(0);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']); // converted, not lost
+  });
+
+  it('LEAVING EDIT flushes exactly ONE render, carrying the NEWEST deferred text', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+
+    r.fire('v1');
+    r.fire('v2');
+    r.fire('v3');
+    await observerTick();
+    expect(r.renders).toHaveLength(1);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v3']);
+    expect(r.renders[1].host).toBe(host);
+    expect(r.signals).toBe(2); // the flush is a watch render like any other: one flash
+    r.clock.advance(5000);
+    expect(r.renders, 'and nothing renders it a second time').toHaveLength(2);
+  });
+
+  it('leaving edit for RAW flushes too — the exit is "not edit", whichever mode it returns to', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    r.clock.advance(5000);
+    r.fire('v1');
+
+    host.setAttribute('data-mode', 'raw');
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+  });
+
+  it('A reading <-> raw FLIP WITH NOTHING PENDING renders nothing', async () => {
+    // The observer now sees every mode flip, and `mount()` itself rewrites `data-mode` on every
+    // render. None of those may cause a render.
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    r.clock.advance(5000);
+
+    host.setAttribute('data-mode', 'raw');
+    await observerTick();
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    host.setAttribute('data-mode', 'reading'); // what a re-render writes: the same value again
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(r.signals).toBe(1);
+    expect(watchNote()).toBeNull();
+  });
+
+  it('a reading <-> raw flip does not release a COOLDOWN-pending render early', async () => {
+    // Pending on the clock is not pending on a deferral: only the timer may release it.
+    const r = rig(400);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    const finishedAt = r.clock.now();
+    r.fire('v1'); // inside the 400 ms cooldown
+
+    host.setAttribute('data-mode', 'raw');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+
+    advanceUntilRender(r, finishedAt);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(r.renders[1].at - finishedAt).toBeGreaterThanOrEqual(400 * COOLDOWN_MULTIPLIER);
+  });
+
+  it('WITH A DIFF DISPLAYED, leaving edit does NOT flush — the diff still defers', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    enterDiffOn(host);
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+
+    host.setAttribute('data-mode', 'reading'); // edit ends, the comparison is still open
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+
+    exitDiffOn(host);
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(watchNote()).toBe(CHANGED_AGAIN_NOTE); // it DID arrive while a comparison was open
+  });
+
+  it('AND THE REVERSE: closing a diff while still editing does not flush — edit still defers', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    enterDiffOn(host);
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+
+    exitDiffOn(host);
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+  });
+
+  it('THE "CHANGED AGAIN" LINE IS THE COMPARISON’S: an edit-only deferral flushes without it', async () => {
+    // The line reads "…while the comparison was open". No comparison was open here, so saying it
+    // would be a sentence about an event that did not happen (the D-11 block's own standard).
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']); // non-vacuous: the flush did run
+    expect(watchNote()).toBeNull();
+  });
+
+  it('DRIFT CHECK: the literals are what readerMode really writes on entering and leaving edit', async () => {
+    // The controller may not import `readerMode`'s mode names any more than `diffView`'s attribute
+    // (Clause C), so it reads `data-mode` / `edit` as literals. This drives the real writer: if
+    // either spelling moved, the deferral would silently stop firing and this goes red.
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+
+    await enterEditMode(host, { loader: async () => ({}) });
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+
+    exitEditMode(host);
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
   });
 });

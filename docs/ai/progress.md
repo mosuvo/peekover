@@ -1,17 +1,19 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-05 (M12 task 3.3 DONE — the live preview: the editor's buffer reaches the nested
-host through a cost-proportional cooldown; the preview-failure degrade. **Group 3 is complete.**) M12
+*Updated: 2026-10-05 (M12 task 4.1 DONE — the watch's deferral gate widens to edit mode: an external
+change renders nothing while a document is being edited, and leaving edit flushes it.) M12
 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
-tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2 and 3.3 landed; **task 4.1 (the watch/edit collision) is next.**
+tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3 and 4.1 landed; **task 4.2 (the dirty-exit asymmetry and the
+hint) is next — and 4.1 found it cannot be built as its line is written (the exit-order finding).**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
 and filed eight findings (E-1…E-8, § Carried items). 3.3 filed three more (P-1…P-3) — P-1, the
 preview's enhancers not running, wants a human ruling before 7.1.** **The editor is REACHABLE on
-`main` and can lose edits — exit discards without a warning (6.1), a watch re-render destroys the
-buffer (4.1–4.2), and Save reports "not yet available" (5.3): planned sequencing, not released.**
-Current numbers: `.output` 5,814,005 B (Cr) / 5,814,121 B (Fx) against ≤ 7 MiB, content script
-342,384 B both engines (md5 unchanged since 2.2), `dependencies` 10, `permissions: []`. M11 (math
+`main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
+available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
+(4.1).**
+Current numbers: `.output` 5,814,275 B (Cr) / 5,814,391 B (Fx) against ≤ 7 MiB, content script
+342,520 B both engines (moved at 4.1 by its own glue, +136 B), `dependencies` 10, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -761,33 +763,160 @@ entry is the record.
   need `--reporter=verbose`, and `pnpm test:browser -- --reporter=…` does not pass the flag through —
   call `pnpm exec vitest` directly.
 
+**M12 task 4.1 DONE, 2026-10-05 — the watch's deferral gate widens to edit mode; leaving edit flushes
+(D-8, direction 1 and the clean half of direction 2).** The first WATCHED-document editor test. No
+human ruling was taken; two judgment calls and one finding are flagged for one. `decisions.md`'s 012
+D-8 entry is the record.
+- **What landed, in `src/watch/watchController.ts` and nowhere else in production** (its DECISION 5
+  comment). `deferring(target)` — a displayed diff OR the literal `data-mode === 'edit'` — read at
+  both sites (`onText`, and `flushPending` for a timer armed before edit entry). The observer's
+  filter is `[data-diff, data-mode]`; its callback flushes when NOTHING defers any longer. No import
+  added (Clause C). The flush is `renderNow`: `preserveReading`, the signal, the capture.
+- **Step 0, re-derived at `07a7d08`.** (a) The two reads were `flushPending` `:494` and `onText`
+  `:524`, the filter `:341` — as `tasks.md` cites. (b) The observer now hears every reading ↔ raw
+  flip and `mount()`'s own `data-mode` write per render; none releases anything, because the flush
+  acts only on text labelled deferred. Edit entered under an open diff, or a diff closed while
+  editing: nothing is released until both are gone. (c) and (d) are the two items below.
+- **★ THE EXIT-ORDER FINDING (step 0(c)) — an input to 4.2, not worked around.**
+  `editorEnhancer.ts:124-125`: `exitEditMode(host)` then `teardownEditorShell(host)`, both
+  synchronous, in one click handler. `exitEditMode` (`readerMode.ts:144`) writes `data-mode`;
+  `teardownEditorShell` (`editorView.ts:393`) → `endEditorSession` removes `data-edit-dirty`
+  (`editorView.ts:276`). The observer's callback is a microtask, after both. **The kickoff's reading
+  holds: an attribute read in `watchController.ts` cannot tell a dirty exit from a clean one.** One
+  qualification: the observer's RECORDS could (the dirty attribute's removal arrives in the same
+  batch with its old value) — reasoned, not measured. § Up next carries the options.
+- **★ THE INTERIM STATE (step 0(d)).** Every exit reaches the controller looking clean and flushes.
+  Leaving edit with unsaved text discards the buffer (3.2; the guard is 6.1) and then shows the
+  on-disk text, including what arrived while editing. 4.1 claims no dirty-exit property.
+- **★ Judgment calls, flagged.** (i) *The observer does not read `oldValue`* — the kickoff asked for
+  "flush only when `oldValue` is `'edit'`"; the built condition is "the text was deferred and nothing
+  defers now", which gives the same behaviour without a second source of truth. (ii) *The "changed
+  again" line is not said on an edit-only flush* — it reads "…while the comparison was open". A new
+  flag records whether a diff was displayed while the text was held; the line is said only then.
+  `tasks.md` says "exactly as a diff exit does"; plan §0 D-8 says a clean exit "simply flushes
+  (equivalent to never having edited at all)". The diff-only path is unchanged.
+- **The cooldown's three properties, each whole.** No timer is armed or re-armed by the new
+  condition (it returns where the diff condition already did) · the injected `now` is untouched ·
+  `stop()` and `start()` both still call `cancelPending`, which also clears the new flag.
+- **Red-first.** Unit, before the change: 5 of the 10 new tests red.
+
+  | Ablation | Where | Signature |
+  |---|---|---|
+  | none — unchanged `07a7d08` | unit | 5 red: `expected [ 'v0', 'v1' ] to deeply equal [ 'v0' ]` (defers · timer armed before entry · reverse · drift) and `to have a length of 1 but got 2` (leaving edit) |
+  | the `data-mode` read removed | unit | the same 5 |
+  | the `data-mode` filter entry removed | unit · browser | unit: 7 red, among them "leaving edit for RAW flushes too" · browser: `waitFor timed out: the deferred text to reach the reading column after the exit` |
+  | the line said on every flush | unit | 1 red: the edit-only flush sets the note |
+  | the callback asks about edit only | unit | 6 red: 5 EXISTING `data-diff` tests and "with a diff displayed, leaving edit does not flush" |
+  | the deferred-label check removed | unit | 1 red: a mode flip releases a cooldown-pending render early |
+  | the `data-mode` read removed | browser, both engines | `the external change re-rendered the document under the editor`: `outerRootMutations` 1 (want 0) · `editorNodeConnected` false · `mode` "reading" · `outerColumnIsTheSameNode` false — and `the external change destroyed the editor and the unsaved text in it`: `editorNodeConnected` false · `liveSessionBuffer` null · `typedTextOnScreen` false |
+
+  One new unit test — a reading ↔ raw flip with nothing pending renders nothing — has no ablation
+  that reddens it alone.
+- **Real engine, Chromium and Firefox (414 × 896; no new chrome), every fixture asserted WATCHED.**
+  The watch is hand-driven through the detector seam (the `watchDiffDefer` precedent).
+  - *Deferred:* one external change in edit → 0 mutation records on the outer root's child list and
+    inside the outer reading column; the editor node is the same connected node; the buffer is the
+    file as opened.
+  - *Clean exit:* the reading column shows the new text; the mode is `reading`; no "changed again"
+    line; the flush captured the document it replaced (one snapshot, the text as opened).
+  - *Typed buffer:* 8 typed characters survive the external change — same node, same session, mode
+    `edit`, dirty attribute still set — and the next key lands in the same buffer.
+  - *Nothing arrived:* a clean exit re-renders nothing (same column node, no line, no snapshot).
+  - *Positive control, inside the same tests:* with edit off, the same change through the same seam
+    → 1 mutation record on the outer root, and the new text in the column.
+- **Bytes, both engines, against 3.3's figures (clean rebuild first: reproduced exactly).** `.output`
+  5,814,275 B (Cr) / 5,814,391 B (Fx), +270 each; headroom 1,525,757 / 1,525,641 B. Zips 1,836,372 /
+  1,836,430 B (+93). TWO files changed size, residual 0:
+
+  | | Content script | App chunk |
+  |---|---|---|
+  | 3.3 baseline | 342,384 B | 517,904 B |
+  | 4.1 | 342,520 B (+136) | 518,038 B (+134) |
+  | the deferral-read glue (the `data-mode` read) | 38 | 38 |
+  | the observer glue (the filter entry) | 12 | 12 |
+  | the held-under-a-diff flag (the line's condition) | 35 | 37 |
+  | the two helpers those hang on (`deferring`, `markDeferred`) | 51 | 47 |
+  | residual | 0 | 0 |
+
+  Each of the first three is the full build minus the build with that piece removed; the three pairs
+  and the triple are additive to the byte (50 · 73 · 47 · 85 in the content script; 50 · 75 · 49 · 87
+  in the app chunk), so the helpers' figure is a measured remainder, not a fit. **With all four
+  removed, every built file is name- and md5-identical to the baseline on both engines** — content
+  script `129deda5156522a75ac41eaabbdc1c5f` (Cr) / `94c2d14b9e08144f0c932415edb28acf` (Fx). New md5
+  `e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`. The three CodeMirror
+  chunks are unchanged (54,680 + 209,493 + 342,426 B) and no editor module is in the content script:
+  `editorImportFence` green, and the content script's whole delta is accounted for above. Manifest
+  654 / 770 B, `permissions: []`, `dependencies` 10.
+- **Verify.** lint 0 · unit **1253** (70 files; `watchController` 36 — 26 existing, unedited, + 10 —
+  `editorView` 27, `editorEnhancer` 28, `editorEngine` 21, `readerMode` 17, `mount` 12; the two fences
+  over what `watchController.ts` may import: `diffEngine` 15 (the 5.1 fence, Clause C) and
+  `editorImportFence` 10) · browser **1785 pass / 15 skip** (178 files, 89 per engine; per engine
+  `editorWatch` 3, `watchDiffDefer` 2, `watchControl` 36, `watchRemount` 12, `diffChrome` 39,
+  `diffView` 10, `editorPreview` 10, `editorDegrade` 9, `editorRender` 10, `editorNestedHost` 12,
+  `editorEyeballProxy` 11) · scanner and `--self-test` EXIT 0 (79 shipped files; 7 firing + 10
+  silent) · golden diff EMPTY · the zero-diff list empty. The full browser run and the first full
+  unit run had no red. **One red, classified:** a second, verbose unit run started as the browser
+  run's engines were shutting down timed out two `diagramEnhancer` tests (`Test timed out in
+  5000ms`; that run took 44 s against 10 s). Green in isolation (58 / 58) and on the full rerun
+  (1253). A wall-clock timeout on a loaded machine — NOT one of the two carried flakes, and in a
+  file this task does not touch. No existing assertion edited: `watchController.test.ts` is
+  +243 / −0, and `watchDiffDefer.browser.test.ts` is zero-diff.
+- **Kickoff vs repo, flagged.** (i) `oldValue`, above. (ii) The "changed again" line, above. (iii)
+  "The observer cannot tell a dirty exit from a clean one" — true of a read, not of its records. (iv)
+  The decomposition has four parts, not two: the kickoff's "read glue vs observer glue" leaves 86 B
+  (content script) unaccounted until the flag and the helpers are ablated too. (v) The positive
+  control is inside the deferral tests (the standing invariant's "in the same test"), after the exit,
+  rather than a separate edit-off test: a watch render through the default render removes the edit
+  control, so it cannot come first. (vi) `tasks.md` names the diff-deferral browser file
+  `watchDiffDefer` — that is its real name. (vii) Plan §0 D-8's draft says a diff's exit flush is
+  "silent"; it has not been since 006 D-11. Quoted verbatim, annotated.
+
 ## Up next
 
-**FIRST — M12 task 4.1** (the watch/edit collision: the deferral gate widens to `data-mode === 'edit'`;
-a clean exit flushes — D-8, direction 1 and the clean half of direction 2), fresh session, test-first,
-one commit. **This is where the WATCHED document is first tested** — group 3's unwatched rule ends
-here. Files: `src/watch/watchController.ts` · `watchController.test.ts` ·
-`tests/browser/editorWatch.browser.test.ts` (new). `watchController.ts` IS on the content-script
-graph: 4.1's content-script delta is stated, decomposed, and is its own glue only.
-**Byte snapshot for its kickoff (3.3's measured figures):** `.output` 5,814,005 B (Cr) / 5,814,121 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,526,027 / 1,525,911 B · zip 1,836,279 / 1,836,337 B · content
-script 342,384 B both engines, md5 `129deda5156522a75ac41eaabbdc1c5f` (Cr) /
-`94c2d14b9e08144f0c932415edb28acf` (Fx) · the app chunk 517,904 B, the three CodeMirror lazy chunks
+**FIRST — M12 task 4.2** (the exit asymmetry: a DIRTY exit does not auto-flush; the deferred change is
+raised as D-7's early hint — D-8, the unsafe half of direction 2; F-4), fresh session, test-first, one
+commit. Files, per `tasks.md`: `src/watch/watchController.ts` · `watchController.test.ts` ·
+`tests/browser/editorWatch.browser.test.ts`.
+**★ 4.2's NAMED INPUT — the exit-order finding (4.1; `decisions.md`'s 012 D-8 entry). Its kickoff must
+rule on this BEFORE drafting the work; do not guess a workaround in `watchController.ts`.**
+`editorEnhancer.ts:124-125` leaves edit as `exitEditMode` then `teardownEditorShell`, both synchronous;
+the teardown removes `data-edit-dirty` (`editorView.ts:276`). The watch's observer runs as a microtask,
+after both — so 4.2's own line, "with the dirty attribute present, leaving edit does NOT call
+`renderNow`", cannot be built as an attribute read. The options, none chosen:
+- **(a) the observer's records** — add `data-edit-dirty` to the filter with `attributeOldValue`; its
+  removal (old value `"true"`) arrives in the same batch as the mode change. Stays inside 4.2's file
+  list. Reasoned from the DOM standard, NOT measured — 4.2 measures it on both engines first. It also
+  makes the observer hear every dirty ↔ clean flip while typing.
+- **(b) the exit order changes**, or **(c) the editor leaves a literal behind** before its teardown
+  clears the attribute. Both touch `editorEnhancer.ts` / `editorView.ts` — outside 4.2's file list, so
+  a necessary-ripple enumeration or a human ruling.
+- **Under any of them:** until 6.1, the exit has already DISCARDED the buffer when the watch hears of
+  it. Withholding the flush protects no typed text at 4.2; and "once the session is no longer dirty
+  (saved, or discarded through 6.1's guard) the flush proceeds" has no trigger yet — neither save
+  (5.3) nor the guard (6.1) exists. What releases a withheld flush at 4.2 needs stating.
+- **Also for that ruling:** whether a flush after editing should SAY anything. 4.1 says nothing on an
+  edit-only flush (the "changed again" line names the comparison); 4.2's hint is the natural home.
+**Byte snapshot for its kickoff (4.1's measured figures):** `.output` 5,814,275 B (Cr) / 5,814,391 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,525,757 / 1,525,641 B · zip 1,836,372 / 1,836,430 B · content
+script 342,520 B both engines, md5 `e051533e430646c410dfa7c5a200da2d` (Cr) /
+`a791ceae1241502dede01f25738b3d33` (Fx) · the app chunk 518,038 B, the three CodeMirror lazy chunks
 54,680 + 209,493 + 342,426 B · manifest 654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 ·
-unit 1243 · browser 1779 / 15 skipped · golden empty.
+unit 1253 · browser 1785 / 15 skipped · golden empty.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it.
-**Carried inputs to 4.1, from 3.3:**
-- **★ The fallback that sends 'edit' to 'reading' on a re-render (2.1) does NOT protect unsaved text —
-  D-8's deferral is the only guard; 4.1's red-first must show buffer loss without it.**
-- **A watch re-render during edit meets the preview's cooldown.** An outer re-mount drops the editor's
-  view and runs no teardown, so the session's pending preview timer is still armed; only the feed's
-  fire-time session check stops it (`editorView.ts`; unit test "GUARD B, alone"). 4.1's deferral means
-  that re-mount no longer happens during edit — the check stays as the layer under it.
-- **The preview renders with `preserveReading`**, as the watch's own renders do. The 2026-07-21 5.3
-  entry's revisit-when ("if a second caller ever sets `preserveReading`") is now met: the two callers
-  are on different hosts (the watch on the outer, the preview on the nested), each with its own
-  cooldown.
+figure above supersedes it. `watchController.ts` is on the content-script graph: 4.2 moves that figure
+again, by its own glue only, decomposed.
+**Carried inputs to 4.2, from 4.1:**
+- **The interim state 4.2 changes.** Every exit from edit flushes. A dirty exit discards the buffer
+  (3.2) and then shows the on-disk text. No test asserts it, so 4.2 edits no assertion to change it.
+- **`editorWatch.browser.test.ts`'s rig** is hand-driven with the default render, so a flush there does
+  not re-install the edit control (production's `renderWithEnhancements` does). A 4.2 test that needs
+  the control AFTER a watch render must build its controller with a render that calls `enhanceEditor`.
+- **Its positive control fires a capture** (fire-and-forget) and waits it out; a test that ends with a
+  watch render and does not wait rejects into the next test when the store's connection closes.
+- **A heredoc whose body holds an apostrophe fails the whole command** (twice this session) — write
+  the file, then run it.
+- **The full browser suite does not finish inside one 10-minute tool call** on this machine — run it
+  in the background, or in batches.
 - **Console records** in browser tests print only under `pnpm exec vitest run --project browser
   --reporter=verbose`; `pnpm test:browser -- --reporter=verbose` does not pass the flag through.
 **Open, for the human, before 7.1:** P-1 (the preview's enhancers — § Carried items). **For 6.2 and the

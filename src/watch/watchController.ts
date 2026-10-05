@@ -133,6 +133,36 @@
 // surface (no affordance, no view, no registry), so `data-diff` is never set there, the deferral
 // never fires, and the coalescer behaves exactly as 5.3 shipped. That is an architectural fact
 // about which graph reaches the registry, not a runtime check — and it is proven as one.
+//
+// ══ DECISION 5 — EDIT MODE DEFERS THE RE-RENDER TOO (012 D-8, task 4.1) ══════════════════════════
+//
+// 012 gives the host a third thing a re-render would replace: the editor, and the text typed into
+// it. `mount()` ends in `replaceChildren` on the host's whole shadow root, so a watch render during
+// an edit session drops the editor's DOM — and the mode's own fallback (an 'edit' host re-renders
+// into 'reading') keeps the page from going blank, not the buffer from being lost. So DECISION 4's
+// gate is widened by one condition rather than joined by a second mechanism:
+//
+//     WHILE THE HOST'S `data-mode` IS `edit`, NOTHING RENDERS — at either site, `onText` or a
+//     cooldown timer already in flight. The newest text is held in the same single slot, and it
+//     renders when the host is in neither state: not in edit, and no diff displayed.
+//
+// `data-mode` and `edit` are LITERALS here for DECISION 4's reason: `readerMode.ts` writes them,
+// and this module reads the attribute rather than importing a name for it. The unit suite drives
+// the real `enterEditMode` / `exitEditMode` against the controller, so a respelling goes red.
+//
+// THE SAME OBSERVER, ONE MORE ATTRIBUTE. It now also hears every reading <-> raw flip, and the
+// `data-mode` write `mount()` makes on each render. None of those can release anything: the
+// callback acts only on text that was DEFERRED, and only when nothing defers any longer.
+//
+// THE FLUSH IS AN ORDINARY WATCH RENDER — `renderNow`, so `preserveReading`, the update signal and
+// the snapshot capture all happen as they do for any other. The "changed again" line is NOT part
+// of it unless a comparison really was open while the text was held: that sentence names the
+// comparison, and an edit-only deferral saying it would describe something that did not happen.
+//
+// ★ WHAT 4.1 DOES NOT DO. Every exit from edit flushes, whether or not the buffer had unsaved
+// changes — this module does not read the editor's dirty attribute, and by the time the observer
+// runs the exit has already removed it. Until tasks 4.2 and 6.1 land, leaving edit discards the
+// buffer (3.2), and the flush then shows the text that is on disk.
 
 import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
@@ -317,12 +347,28 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
    * a sentence about an event that did not occur.
    */
   let pendingSetByDefer = false;
-  /** Watches the host's `data-diff` so every exit path flushes. Null while not watching. */
+  /** Was a diff displayed at any point while {@link pendingText} was being held? Only then is
+   *  the "changed again" line true of the flush (DECISION 5). */
+  let pendingHeldUnderDiff = false;
+  /** Watches the host's `data-diff` and `data-mode` so every exit path flushes. Null while not
+   *  watching. */
   let diffObserver: MutationObserver | null = null;
 
   /** Is a diff on screen in this host right now? D-15's attribute, read directly (DECISION 4). */
   function diffDisplayed(target: HTMLElement): boolean {
     return target.hasAttribute(DIFF_DISPLAYED_ATTR);
+  }
+
+  /** Must a render into this host wait? A displayed diff (DECISION 4) or an edit session
+   *  (DECISION 5) — both read off the host, both literal. */
+  function deferring(target: HTMLElement): boolean {
+    return diffDisplayed(target) || target.getAttribute('data-mode') === 'edit';
+  }
+
+  /** Label {@link pendingText} as held by a deferral, and note whether a diff is part of why. */
+  function markDeferred(target: HTMLElement): void {
+    pendingSetByDefer = true;
+    if (diffDisplayed(target)) pendingHeldUnderDiff = true;
   }
 
   /**
@@ -332,13 +378,20 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
    * `data-diff` is never set and the callback therefore never runs (D-14). That is deliberate:
    * ONE code path, and the surface difference stays an architectural fact about which graph
    * registers a diff context rather than a runtime branch this module has to keep true.
+   *
+   * Since 012 it watches `data-mode` as well (DECISION 5), and the callback asks whether ANYTHING
+   * still defers — so leaving edit under an open diff, or closing a diff while editing, releases
+   * nothing until the other has gone too.
    */
   function installDiffObserver(target: HTMLElement): void {
     diffObserver?.disconnect();
     diffObserver = new MutationObserver(() => {
-      if (!diffDisplayed(target)) onDiffExited();
+      if (!deferring(target)) onDiffExited();
     });
-    diffObserver.observe(target, { attributes: true, attributeFilter: [DIFF_DISPLAYED_ATTR] });
+    diffObserver.observe(target, {
+      attributes: true,
+      attributeFilter: [DIFF_DISPLAYED_ATTR, 'data-mode'],
+    });
   }
 
   /**
@@ -352,15 +405,20 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
    * which the loop rendered nothing at all — there is no pile-up to prevent, and making the reader
    * wait after they closed the comparison would look like a hang. `renderNow` sets `readyAt` from
    * this render's own cost on the way out, so the next change is throttled normally.
+   *
+   * The name is 006's and is kept: this is also what runs when the host leaves EDIT (DECISION 5).
+   * The render is the same either way; the line is said only if a comparison was open.
    */
   function onDiffExited(): void {
     const target = host;
     if (!running || !target || !pendingSetByDefer || pendingText === null) return;
     const text = pendingText;
+    const heldUnderDiff = pendingHeldUnderDiff;
     pendingText = null;
     pendingSetByDefer = false;
+    pendingHeldUnderDiff = false;
     renderNow(text, target);
-    setWatchNote(CHANGED_AGAIN_NOTE);
+    if (heldUnderDiff) setWatchNote(CHANGED_AGAIN_NOTE);
   }
 
   /**
@@ -383,6 +441,7 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     // reason — and the flag has to go with it, or a later diff exit on the NEW document would
     // fire the "changed again" line about a change that happened in the OLD one.
     pendingSetByDefer = false;
+    pendingHeldUnderDiff = false;
   }
 
   /** Stop without going through the WatchTarget surface, so the dead-read path and an explicit
@@ -491,8 +550,9 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     // prevent, arriving by the one path that does not go through `onText`. So the pending text
     // CONVERTS: the timer is already cleared above, the text stays in the single slot, and it is
     // re-labelled as deferred so the exit flushes it and accounts for it.
-    if (diffDisplayed(target)) {
-      pendingSetByDefer = true;
+    // The same holds for a timer armed before EDIT was entered (DECISION 5).
+    if (deferring(target)) {
+      markDeferred(target);
       return;
     }
     // A timer may fire fractionally early (clamping, a coarse clock, a busy main thread). Then the
@@ -521,9 +581,10 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     // nothing to do with it. `cancelPending` drops both the text and the defer flag on every
     // teardown, so a document switch during a displayed diff loses this text exactly as it loses
     // a cooldown-pending one — 4.3's cross-feed bug does not reappear one level up.
-    if (diffDisplayed(target)) {
+    // An edit session defers on the same condition, into the same slot (DECISION 5).
+    if (deferring(target)) {
       pendingText = text;
-      pendingSetByDefer = true;
+      markDeferred(target);
       return;
     }
 
