@@ -26,6 +26,9 @@
 //       (tasks.md 3.1): the same walker, started at `editorEngine.ts`, MUST find both specifiers.
 //       That is what makes clause A's empty result an absence rather than a matcher that stopped
 //       matching. 3.2 owes the app-page half — `appGraph` reaching the engine — beside this one.
+//       ★ PAID AT 3.2: `enhanceEditor` is wired at the two app-page call sites, and the app-page
+//       half is its own describe block below, BESIDE the engine's own edge rather than in place of
+//       it — the 3.1 assertions are unedited.
 //   C — THE LAZINESS PIN. Scanned over EVERY shipped `.ts` file under `src/` and `entrypoints/`
 //       (tests and `.d.ts` excluded — never bundled), not over the union of the two entry graphs
 //       as 007 does: with no caller yet, the engine is in neither graph, and a union scan would
@@ -60,6 +63,9 @@ const ENGINE = 'src/render/editorEngine.ts';
 /** 2.2's shell — a second editor module that already exists, so clause A's name match is seen to
  *  match something other than the engine. */
 const EDITOR_VIEW = 'src/render/editorView.ts';
+/** 3.2's enhancer — the module the two app-page call sites import, and so the first edge from
+ *  the app-page graph into the editor. */
+const ENHANCER = 'src/render/editorEnhancer.ts';
 
 /** The two specifiers clause C permits, and the only ones. */
 const PERMITTED = ['@codemirror/lang-markdown', 'codemirror'];
@@ -348,6 +354,32 @@ describe('the editor import fence — clause B, the control (the engine module\'
         "matcher is broken and clause A's empty result is vacuous. Found: " +
         found.map(describeEdge).join(', '),
     ).toEqual(PERMITTED);
+  });
+});
+
+describe("the editor import fence — clause B's APP-PAGE half (task 3.2: the app graph reaches the engine)", () => {
+  // 3.1 left this half owed: with no production caller, "the app page imports codemirror" was
+  // false. 3.2 wires `enhanceEditor` at the two app-page call sites, so the firing control is now
+  // the graph a user's edit actually travels — the same walker, the same matcher, the same run as
+  // clause A, started one entry over.
+  it('the app-page graph reaches the enhancer, the view and the engine', () => {
+    expect([...appGraph.modules]).toEqual(expect.arrayContaining([ENHANCER, EDITOR_VIEW, ENGINE]));
+    // And they are the editor modules the name match sees — clause A's matcher, firing.
+    expect([...appGraph.modules].filter(isEditorModule).sort()).toEqual(
+      [ENGINE, ENHANCER, EDITOR_VIEW].sort(),
+    );
+    expect(shipped).toContain(ENHANCER);
+  });
+
+  it('the SAME walker over the app-page graph finds both CodeMirror specifiers — in the engine alone', () => {
+    const found = appGraph.packages.filter((p) => isCodeMirror(p.spec));
+    expect(
+      [...new Set(found.map((p) => p.spec))].sort(),
+      'the app-page walk MUST find both CodeMirror specifiers — if it finds none, nothing on the ' +
+        "app page can load the editor and clause A's empty result proves no exclusion. Found: " +
+        found.map(describeEdge).join(', '),
+    ).toEqual(PERMITTED);
+    expect(found.every((p) => p.from === ENGINE && p.dynamic)).toBe(true);
   });
 });
 

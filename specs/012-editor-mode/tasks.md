@@ -416,7 +416,7 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       lone CR are normalized to LF by the editor's document; a trailing newline, present or absent, is
       preserved. 3.2's dirty comparison and 5.2 / 5.3 are written against that.*
 
-- [ ] **3.2 `editorEnhancer.ts` + the edit-entry control + the editor pane + the save-capability
+- [x] **3.2 `editorEnhancer.ts` + the edit-entry control + the editor pane + the save-capability
       injection point (D-1, D-3; F-4, F-5).** TEST FIRST. `enhanceEditor(host, { save })` appended at the
       two app-page call sites (`readerPane.ts:191`, `appShell.ts:177`) immediately after `enhanceMath` —
       LISTED, never composed into a shared seam. It installs a dedicated edit-entry `<button>` beside the
@@ -444,6 +444,40 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       the task report asks the human for a cheap glance at the real thing — not deferred to 7.1. Content-
       script bytes md5-identical to 3.1's, proven by ablation. App-page delta decomposed. Golden EMPTY ·
       manifest **654 / 770 B** · `permissions: []`. [D-1, D-3]
+      ★ *Post-landing, 2026-10-05 — three human rulings were taken in this task's kickoff (R1–R3),
+      recorded in `decisions.md`'s M12 TASK 3.2, 012 D-3 and 012 D-1 (control half) entries and
+      `progress.md`'s 3.2 record. (i) **R1** — `createView` builds `markdown({ base:
+      markdownLanguage })`: GFM task lists / tables / strikethrough are syntax to the editor; footnotes
+      still are not. +65 B. (ii) **R2** — the engine load is keyed on the OUTER host; edit → reading →
+      edit is one load. (iii) **R3** — the mode pill is hidden in edit and the edit control is the exit
+      (`exitEditMode` + `teardownEditorShell`); 2.2's pill bypass is closed. (iv) **Necessary ripples
+      beyond this line's Files list, each authorized in the kickoff:** `editorImportFence.test.ts`
+      (clause B's app-page half — 3.1's note ii — added beside the engine's own edge, no 3.1 assertion
+      edited) · `editorEngine.ts` + `editorEngine.test.ts` (R1 only; the recording fake's `markdown`
+      argument pin is the ONE existing assertion changed). (v) **The content-script resolution:** this
+      line's Verify ("md5-identical to 3.1's") and the standing-invariants note ("a CSS touch in 3.2 …
+      expected to move that figure") disagreed. Resolved to the Verify line: the control's CSS is a new
+      `EDIT_CONTROL_CSS` export injected by the enhancer, and R3's hide rule is in `EDITOR_CSS` — neither
+      reaches the content script. **Measured md5-identical on both engines in every arm, and seen to
+      MOVE (342,384 → 956,490 B) when the content-script mount was un-gated** — the instrument fires.
+      (vi) **F-5 as resolved:** `createReaderPane(doc, { save }?)` gains an optional options parameter;
+      `renderWithEnhancements` becomes a function of `save` returning the render, instantiated once
+      inside `mountAppShell`. No file beyond the two app files and the editor modules. (vii) **The
+      dirty comparison** is against `originalText` put through the editor's own line-break rule
+      (`normaliseLineBreaks`, in `editorView.ts`) — 006 D-5's `normalise` was NOT reused: it rewrites
+      CRLF only, and the editor also breaks on a lone CR. `originalText` stays raw. The attribute is
+      `data-edit-dirty="true"` on the outer host, removed (not "false") when clean — the literal 4.2
+      and 6.1 read. (viii) **"Fx via the harness page"** is not defined anywhere in this file or the
+      plan. Read as the vitest browser harness page: both engines run `editorRender` and
+      `editorDegrade` there in full (10 + 7 tests each), through `readerPane.ts`'s real call site. A
+      LOADED extension on Firefox cannot be driven (plan §5) — that is the informal eyeball here and
+      7.1. (ix) **The save control:** this line threads the capability into the session and builds no
+      save UI — the control is 5.3's. (x) Two 3.1 unknowns, observed in the harness on both engines: a
+      second `import()` of the engine's specifiers fetches nothing (first 2 requests, repeat 0); **a
+      repeated `import()` of a URL whose fetch FAILED makes no second request and rejects again** — so
+      after a failed chunk fetch the control's "try again" cannot succeed without a page reload, even
+      though the engine's own memo forgets the failure. Measured: `.output` 5,813,470 / 5,813,586 B
+      (+612,335), content script 342,384 B both engines, md5 unchanged — 3.3's snapshot.*
 
 - [ ] **3.3 The debounced live preview into the nested host; the preview-failure degrade (D-4, D-5's
       mechanism; Q4).** TEST FIRST. The editor's update listener feeds the buffer to 2.2's nested

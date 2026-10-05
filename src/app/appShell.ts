@@ -116,6 +116,7 @@ import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/w
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceMath } from '../render/mathEnhancer';
+import { enhanceEditor, type EditorSave } from '../render/editorEnhancer';
 import { copyAllMathAsLatex, copyAllMathAsMathml } from '../render/mathView';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
@@ -170,14 +171,28 @@ const SHELL_CLASS = 'peekover-app';
  * M11 D-3-R SITE 2 — `enhanceMath` appended third, immediately after `enhanceDiagrams`, same order
  * as `readerPane.ts`'s site: a math fence and a mermaid fence are mutually exclusive fence shapes
  * (`parse.ts`'s `info` dispatch), so there is nothing for the two enhancers to collide on either.
+ *
+ * 012 D-3 SITE 2 — `enhanceEditor` listed immediately after `enhanceMath`, as at `readerPane.ts`'s
+ * site. It needs the shell's save capability, and that is why this is now a function OF `save`
+ * returning the render rather than the render itself (tasks.md F-5): the capability is built
+ * inside `mountAppShell`, where the open file lives, and this const is module-level and cannot
+ * close over it. The body is otherwise the same list in the same order, and the name still says
+ * what it does. `mount()` rebuilds the chrome on every watch re-render, so without this line the
+ * edit control would be gone after the first one.
  */
-const renderWithEnhancements: RenderFn = (text, target, options) => {
-  mount(text, target, options);
-  enhanceDiagrams(target);
-  enhanceMath(target); // M11 D-3-R — same order/site as readerPane.ts's own math call
-  enhanceTables(target);
-  enhanceCode(target);
-};
+const renderWithEnhancements =
+  (save: EditorSave): RenderFn =>
+  (text, target, options) => {
+    mount(text, target, options);
+    enhanceDiagrams(target);
+    enhanceMath(target); // M11 D-3-R — same order/site as readerPane.ts's own math call
+    enhanceEditor(target, { save }); // 012 D-3 — same order/site as readerPane.ts's own editor call
+    enhanceTables(target);
+    enhanceCode(target);
+  };
+
+/** What the editor's injected save reports until the write itself lands (012 task 5.3). */
+const SAVE_NOT_YET_AVAILABLE = 'Saving is not yet available.';
 
 /** The subset of `store` the shell uses. The write methods are required (grant flow, group 3);
  *  the read + pin methods (group 5) are OPTIONAL so a 3-method fake store (existing jsdom /
@@ -648,7 +663,20 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   foldersContent.className = `${SHELL_CLASS}__folders-content`;
   folders.append(foldersContent);
 
-  const readerPane: ReaderPaneController = createReaderPane(doc);
+  // ── THE EDITOR'S SAVE CAPABILITY (012 D-3; tasks.md F-5) ──────────────────────────────────
+  //
+  // Built HERE and handed down, never reached for from below: the reader pane and the editor
+  // modules receive a function and call it, and none of them holds a handle or names a handle
+  // type. This closure is the one place that will — it is declared inside `mountAppShell`, where
+  // `activeFile` (and the handle that file may carry) lives.
+  //
+  // ★ PLUMBING ONLY AT TASK 3.2. The body reports that saving is not yet available and does
+  // nothing else: no write, no permission request, nothing on disk, no download. The write lands
+  // at task 5.3, in this body, behind the ledger sign-off (5.1).
+  const saveActiveDocument: EditorSave = async () => ({ ok: false, reason: SAVE_NOT_YET_AVAILABLE });
+  const renderEnhanced = renderWithEnhancements(saveActiveDocument);
+
+  const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
 
   body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, body);
@@ -1335,7 +1363,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       detector,
       contained: true,
       docId,
-      render: renderWithEnhancements,
+      render: renderEnhanced,
     });
     registerWatchTarget(controller);
 

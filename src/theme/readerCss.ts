@@ -1367,8 +1367,33 @@ export const CONTAINED_CSS = /* css */ `
 //
 // Tokens used, each present in design/tokens.css and in READER_CSS's :host block: --line, --r,
 // --code-bg, --ink, --mono. --toc-w is READER_CSS's own rail-width property, not a design token.
+//
+// THE ENGINE'S VIEW IN THE SOURCE PANE (012 task 3.2). CodeMirror brings its own base stylesheet,
+// written for a light page. Five rules, the least that makes the view usable in this pane in
+// every theme — NOT a Peekover editor theme (none is built; the engine's setup adds no theme):
+//   - `.cm-editor` takes the pane's full height. By default it is only as tall as its text, which
+//     leaves the rest of the pane a dead area: a click there neither focuses the editor nor
+//     scrolls it. Found by this task's own hit-test at the pane's centre.
+//   - `.cm-scroller` inherits the pane's face and leading. Its default (`monospace`, 1.4) is what
+//     silently defeated the `--mono` face this pane has set since 2.2.
+//   - the gutter, the caret and the drawn cursor read the tokens. Their defaults are a light-grey
+//     strip and a BLACK caret, and on the dark theme's --code-bg a black caret is invisible.
+// Each selector carries three classes so it outranks the engine's own two-class rules whichever
+// sheet the cascade meets last. What is left at the engine's defaults, and so is still light-page
+// colouring in the dark theme — the active-line band, the selection, the search panel, the
+// completion tooltip — is a design-walk item (7.1), reported at this task, not decided here.
+// Tokens used: --faint, --line, --ink.
+//
+// THE MODE PILL IS HIDDEN IN EDIT (012 task 3.2, human ruling R3). The pill's click is
+// toggleReaderMode, which leaves edit for Raw WITHOUT the edit view's teardown — the bypass 2.1
+// and 2.2 carried. While the host is in edit the pill is therefore not offered at all, and the
+// edit control (EDIT_CONTROL_CSS below) is the one way out. The rule is HERE, in the sheet that
+// exists only while an edit view does, and not in READER_CSS: a `:host([data-mode="edit"])` rule
+// there is a new `:host` site (htmlExport.test.ts pins the count) and would ship to the content
+// script, which has no edit mode.
 export const EDITOR_CSS = /* css */ `
 .peekover-editor{display:none}
+:host([data-mode="edit"]) .peekover-mode-toggle{display:none}
 :host([data-mode="edit"]) .peekover-editor{
   display:grid;grid-template-columns:1fr 1fr;
   height:60vh;margin:56px 32px 130px;
@@ -1379,9 +1404,55 @@ export const EDITOR_CSS = /* css */ `
   min-width:0;overflow:auto;
   background:var(--code-bg);color:var(--ink);font:13.5px/1.8 var(--mono);
 }
+.peekover-editor__source .cm-editor{height:100%}
+.peekover-editor__source .cm-editor .cm-scroller{font-family:inherit;line-height:inherit}
+.peekover-editor__source .cm-editor .cm-gutters{background:transparent;color:var(--faint);border-right-color:var(--line)}
+.peekover-editor__source .cm-editor .cm-content{caret-color:var(--ink)}
+.peekover-editor__source .cm-editor .cm-cursor{border-left-color:var(--ink)}
 .peekover-editor__preview{min-width:0;overflow:auto;border-left:1px solid var(--line)}
 @media (max-width:720px){
   :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:1fr 1fr;height:90vh}
   .peekover-editor__preview{border-left:none;border-top:1px solid var(--line)}
 }
+`;
+
+// ============================================================================
+// EDIT CONTROL — the edit-entry button (012 task 3.2, D-1's control half).
+// ============================================================================
+// A FOURTH string, injected by editorEnhancer.ts as its own <style> beside the control it styles.
+// The control is at REST in reading and raw mode, so EDITOR_CSS — present only while an edit view
+// is built — cannot carry it; and it is app-page-only, so neither READER_CSS nor CONTAINED_CSS may
+// (both ride into the content script; tasks.md 3.2 holds that bundle md5-identical). Nothing on the
+// content-script graph imports this export.
+//
+// All rationale is in this comment: the literal below ships as written.
+//
+// THE PILL FAMILY. Typography, fill, border, radius, padding, shadow and hover are the mode
+// toggle's own declarations (READER_CSS, `.peekover-mode-toggle`), so the two read as one group.
+//
+// PLACEMENT: on the mode pill's row, to its LEFT. `position:absolute` outright — this sheet is
+// only ever injected on the contained app-page host, whose :host CONTAINED_CSS makes the
+// positioning context, so there is no fixed→absolute override to pair with it. `right:116px` is
+// the pill's own 16px inset, plus the pill at its WIDER label ("Reading", in raw mode), plus a gap;
+// the two are asserted not to overlap, under both pill labels, on both engines, at a narrow and a
+// wide viewport (tests/browser/editorRender.browser.test.ts). It does not move in edit, when the
+// pill is hidden: the control the user just activated stays under the pointer as the exit.
+//
+// PRINT: the reader's print rule hides its chrome by an explicit class list in READER_CSS, which
+// this control is not on and cannot be added to from here — so it hides itself.
+//
+// No `:host` selector, so no new `:host` rule site anywhere. Tokens used, each present in
+// design/tokens.css and in READER_CSS's :host block: --sans, --muted, --panel, --line, --shadow,
+// --ink, --faint.
+export const EDIT_CONTROL_CSS = /* css */ `
+.peekover-edit-toggle{
+  position:absolute;top:16px;right:116px;z-index:2;
+  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;
+  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
+  transition:color .15s,background .15s,border-color .15s;
+}
+.peekover-edit-toggle:hover{color:var(--ink);border-color:var(--faint)}
+@media print{.peekover-edit-toggle{display:none!important}}
 `;

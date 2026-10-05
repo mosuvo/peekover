@@ -1,6 +1,117 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-05 · M12 TASK 3.2 — three HUMAN RULINGS taken in this task's kickoff: R1 (GFM highlighting),
+  R2 (the engine memo key), R3 (the mode pill during edit). Banked here; each landed in 3.2's commit.**
+  **★ R1 — `createView` builds `markdown({ base: markdownLanguage })`.** This AMENDS "called with its
+  defaults" in the M12 TASK 1.1 EXTENDED entry (below) for `base` ALONE: `addKeymap`, `completeHTMLTags`
+  and `pasteURLAsLink` are not named in the config object and stay at the package's defaults. It answers
+  the question 3.1 left with the human (012 D-2's first finding). `markdownLanguage` comes from
+  `@codemirror/lang-markdown` — the same permitted specifier, destructured at the same `import()`; the
+  fence's clause C is unmoved at exactly two dynamic edges.
+  *Authorized ripple:* `src/render/editorEngine.ts` and `editorEngine.test.ts`. The ONE existing
+  assertion this task changed is the recording fake's pin on `markdown`'s arguments — `toEqual([])` became
+  `toEqual([{ base: 'MARKDOWN_LANGUAGE' }])` — because the ruling changes the behaviour it pins.
+  *Evidence, now a committed test (3.1's risk-6 measurement re-run):* on one GFM document through each
+  language's own parser, `markdownLanguage`'s tree has `Task`, `TaskMarker`, `Table`, `TableHeader`,
+  `TableRow` and `Strikethrough`; `commonmarkLanguage`'s — the replaced default — has none of them, and
+  both have `Document` / `BulletList` / `ListItem` / `Paragraph` (so the walk saw the document). A third
+  test reads the syntax tree out of the VIEW the engine builds (through the language's own state field —
+  no further CodeMirror package is imported even in the test) and finds the GFM nodes there, and not in
+  a control view built on bare `markdown()`. **Footnotes are still syntax under NEITHER base** —
+  asserted, stated, not fixed (`@lezer/markdown` ships no footnote extension).
+  *Byte arm, ablated, both engines:* **+65 B**, all of it in the app chunk (517,304 → 517,369 B). The
+  three lazy chunks are byte-for-byte the same size under either base — `lang-markdown`'s chunk already
+  carries `markdownLanguage`, which `markdown()` references internally.
+  **★ R2 — the engine load is keyed on the OUTER reader host.** `enhanceEditor` hands
+  `loadEditorEngine` the document host it was called with, so edit → reading → edit reuses one load.
+  This closes the question 012 D-2 left open ("which element 3.2 passes"). Proven with a spy on the
+  module loader: one call across two edit sessions on one host, a second call for a second host (the
+  control) — unit, and on both engines with the real engine.
+  **★ R3 — the mode pill is HIDDEN while `data-mode="edit"`, and the edit control is the exit.** Its
+  label and accessible name change to say so ("Edit" / "Edit this document" at rest; "Stop editing" /
+  "Stop editing and return to the document" while editing), and activating it runs `exitEditMode` +
+  `teardownEditorShell`. This closes the pill bypass carried from 2.1 / 2.2 (the pill left edit through
+  `toggleReaderMode` with no teardown, leaving the shell in the DOM, hidden). The hide rule is one line
+  in `EDITOR_CSS` — the sheet that exists only while an edit view does — so `READER_CSS` gains no
+  `:host` site and `htmlExport.test.ts`'s 26-site pin is unmoved. 2.2's own bypass test still passes
+  unedited: it drives the pill with `.click()`, which a hidden button still honours, and it never goes
+  through the enhancer.
+  **Revisit-when:** the 7.1 walk finds GFM highlighting or the exit wording wrong in real use; a later
+  task wants a footnote grammar (a new dependency — a stop-and-ask).
+
+- **2026-10-05 · 012 D-3 — LANDED at task 3.2: save-back is an INJECTED capability from `appShell.ts`;
+  editor mounting rides the two app-page post-mount call sites. No human ruling was needed for the
+  mechanism — F-5 left it to the task under D-3's fixed constraint.**
+  Plan §0 D-3's draft entry text, quoted because `tasks.md` lands each D-value's draft with its
+  implementing commit — **SUPERSEDED IN MECHANISM, not current:**
+  "012 D-3 — `enhanceEditor`-shaped mounting rides the same two call sites
+  007/011 established, but the handle the save action needs is passed IN from `appShell.ts` as an injected
+  dependency (the `WatchControllerOptions.render`/`signal`/`now` precedent, `watchController.ts:268-280`),
+  never imported or reached for by an enhancer module — keeping every render-pipeline module capability-free
+  exactly as `diagramEnhancer.ts`/`mathEnhancer.ts` already are."
+  Its two-call-sites clause and its conclusion stand. What is superseded is "the handle … is passed IN":
+  **no handle crosses the boundary — a FUNCTION does.** (The plan's own body already says "a save
+  callback closing over `activeFile`'s own `handle`"; the one-line draft compressed that into the wrong
+  noun.) The cited precedent is at `watchController.ts:254-280` at this HEAD (`render` `:269`, `signal`
+  `:271`, `now` `:279`).
+  **What 3.2 built (F-5's resolution — two app files plus the editor modules, nothing else):**
+  - **The type.** `EditorSave = (text: string) => Promise<EditorSaveOutcome>`, `EditorSaveOutcome =
+    { ok: true } | { ok: false; reason: string }` — declared in `editorView.ts`, re-exported from
+    `editorEnhancer.ts`. A function type; it names no handle.
+  - **The capability is built in `mountAppShell`** (`appShell.ts:676`, `saveActiveDocument`), inside the
+    closure where `activeFile` lives (`:715`) — so 5.3 writes its body there and nothing below it changes.
+    **At 3.2 the body is PLUMBING ONLY:** it resolves `{ ok: false, reason: 'Saving is not yet
+    available.' }` and does nothing else — no write, no `requestPermission`, nothing on disk, no download.
+  - **F-5's first shape problem** (`createReaderPane(doc)` had no options): it gains an optional second
+    parameter, `ReaderPaneOptions { save?: EditorSave }`, default `{}`. Every existing caller — every test
+    that builds a bare pane — is unchanged. `readerPane.ts` passes the function to `enhanceEditor` and
+    neither calls it nor looks inside it.
+  - **F-5's second shape problem** (`renderWithEnhancements` is module-level; `activeFile` is closure
+    state): the module-level const becomes a function OF `save` that returns the render —
+    `renderWithEnhancements(save): RenderFn` — and `mountAppShell` makes the one instance it hands the
+    watch controller (`renderEnhanced`, `:677`, used at `:1366`). The body is the same list in the same
+    order, with `enhanceEditor(target, { save })` LISTED immediately after `enhanceMath`, as at
+    `readerPane.ts:213`. Never composed into a shared seam.
+  - **Where it ends up:** `enhanceEditor(host, { save })` → `buildEditor(engine, host, { save })` → the
+    edit session (`EditorSession.save`). **Nothing calls it at this task** — the save control is 5.3's.
+  **Pinned:** read from source, neither `readerPane.ts` nor any `src/render/editor*.ts` contains the
+  handle type's name (a firing control finds it in `folderSource.ts`); `enhanceEditor` sits between
+  `enhanceMath` and `enhanceTables` at both sites; a pane created with a `save` threads it into the
+  session by identity; the real `mountAppShell`'s injected save resolves "not yet available".
+  **Bytes, ablated:** the shell-side plumbing alone (both `enhanceEditor` lines removed) is +104 B on the
+  app chunk; the content script is md5-identical in every arm.
+  **Revisit-when:** 5.3 (the body, behind 5.1's ledger sign-off) — if the write needs more than the
+  buffer text (the conflict compare needs `originalText`), `EditorSave`'s signature widens there.
+
+- **2026-10-05 · 012 D-1 — the CONTROL half LANDED at task 3.2** (the `ReaderMode` half landed at 2.1,
+  entry below, whose quoted draft text covers both). A short note on what was built on it:
+  `src/render/editorEnhancer.ts`'s `enhanceEditor` installs one real `<button>`
+  (`.peekover-edit-toggle`) in the app-page host's shadow root, directly after the mode pill, and
+  re-installs it after every outer `mount()` (both call sites run it post-mount; it is idempotent). It
+  calls 2.1's `enterEditMode(host, { loader, build })` — load, THEN build, THEN flip — with
+  `loader = () => loadEditorEngine(host)` (R2) and `build` = `editorView.ts`'s new `buildEditor`, which
+  builds 2.2's shell and the engine's view in its source slot, seeded from the host's registered source.
+  The bare `\` key and the pill stay binary reading ↔ raw, as ruled; the pill is hidden in edit (R3,
+  above). Nothing is installed on a render-failure fallback (no `data-mode`) or on the content-script
+  reader, which never imports this module (`editorImportFence.test.ts`, clause A).
+  **Its stylesheet home** — the choice this task's kickoff asked to be re-derived: a new
+  `EDIT_CONTROL_CSS` export in `readerCss.ts`, injected by the enhancer as its own `<style>` beside the
+  control (the `mathCss` / `ensureMathStyle` precedent). Not `EDITOR_CSS` (present only during edit; the
+  control is at rest in reading), not `READER_CSS` or `CONTAINED_CSS` (both ship to the content script).
+  It has no `:host` selector. **Measured: the content script is md5-identical to 3.1's on both engines**
+  — `tasks.md`'s Verify line holds, and its standing-invariants allowance for "a CSS touch in 3.2" was
+  not needed.
+  **Choices made here that no ruling covers — for the human's eye at this task's informal glance:**
+  (i) the wording — "Edit", "Stop editing", "Editor unavailable"; (ii) the placement — on the pill's
+  row, to its left (`right:116px`), not moving in edit; (iii) five token-only rules in `EDITOR_CSS` that
+  make CodeMirror's view fill its pane, inherit the pane's mono face, and put its gutter, caret and
+  cursor on the reader's tokens (its defaults are a light-grey gutter and a black caret — invisible on
+  the dark theme's pane). The active-line band, the selection, the search panel and the completion
+  tooltip are LEFT at CodeMirror's light-page defaults — a 7.1 design-walk item, not decided here.
+  **Revisit-when:** the eyeball / 7.1 walk; the carried "unify the two keyboard shortcuts on one host
+  registry" item (the `\` guard's proof moves to the app-page shape then).
+
 - **2026-10-05 · 012 D-10 — LANDED at task 3.1: the content-script exclusion is proven by
   `src/render/editorImportFence.test.ts`. The decision of record is "M12 GATE 3" Q1 (below); this entry
   records what was built on it.**

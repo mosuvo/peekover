@@ -19,6 +19,7 @@
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceMath } from '../render/mathEnhancer';
+import { enhanceEditor, type EditorSave } from '../render/editorEnhancer';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
 import { stopWatch } from '../watch/watchRegistry';
@@ -108,6 +109,17 @@ const STATE_COPY: Record<Exclude<ReaderOutcome['kind'], 'render'>, { title: stri
   },
 };
 
+/**
+ * What the pane is created with (012 D-3). `save` is the editor's save capability: a FUNCTION the
+ * app shell builds and hands in, which this module passes on to `enhanceEditor` without calling
+ * it or looking inside it. The pane stays capability-free — it holds no handle and names no
+ * handle type; whatever the function closes over is the shell's business. Optional, so every
+ * caller that predates it (and every test that builds a bare pane) is unchanged.
+ */
+export interface ReaderPaneOptions {
+  save?: EditorSave;
+}
+
 /** The public handle appShell (and later group 3) drives the pane through. */
 export interface ReaderPaneController {
   /** The pane root element — appShell slots this into the page body. */
@@ -149,7 +161,10 @@ function buildState(doc: Document, outcome: Exclude<ReaderOutcome, { kind: 'rend
  * so re-selecting a file re-attaches the same host and re-renders cleanly, with no
  * duplicate roots or leaked listeners (the exact property mount.ts documents).
  */
-export function createReaderPane(doc: Document): ReaderPaneController {
+export function createReaderPane(
+  doc: Document,
+  { save }: ReaderPaneOptions = {},
+): ReaderPaneController {
   const element = doc.createElement('main');
   element.className = PANE_CLASS;
   element.setAttribute('role', 'main');
@@ -189,6 +204,13 @@ export function createReaderPane(doc: Document): ReaderPaneController {
       // M11 D-3-R — math enhancement, wired immediately after diagrams (D-3-R's own two call
       // sites); the "listed, never composed" discipline the note below states applies here too.
       enhanceMath(host);
+      // 012 D-3 SITE 1 — the edit control, immediately after math (D-3's own two call sites), and
+      // LISTED like the rest: `editorEnhancer` reaches the one CodeMirror importer, so a shared
+      // seam would carry that edge to the content script exactly as the note below describes for
+      // diagrams. It touches no fence and no table — it adds a control beside the mode pill — so
+      // it brings no ordering question of its own. `save` is the pane's injected capability,
+      // passed through untouched.
+      enhanceEditor(host, { save });
       // 008 D-6 SITE 1 — the app page's initial select. The enhancers are LISTED, never composed:
       // a shared `enhance(host)` seam would be the tidy version and would put `diagramEnhancer`
       // (and mermaid's dynamic edge behind it) on the content-script graph the moment sites 3-4

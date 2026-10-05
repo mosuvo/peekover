@@ -44,7 +44,12 @@ function fakeModules(): { modules: EditorModules; built: RecordedConfig[]; markd
     }
   }
   const markdown = vi.fn(() => 'MARKDOWN_SUPPORT');
-  const modules = { EditorView: FakeView, basicSetup: 'BASIC_SETUP', markdown } as unknown as EditorModules;
+  const modules = {
+    EditorView: FakeView,
+    basicSetup: 'BASIC_SETUP',
+    markdown,
+    markdownLanguage: 'MARKDOWN_LANGUAGE',
+  } as unknown as EditorModules;
   return { modules, built, markdown };
 }
 
@@ -141,9 +146,11 @@ describe('the engine — the ruled setup, defaults unmodified', () => {
     expect(built[0].parent).toBe(parent);
     expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', []]);
 
-    // `markdown()` — no config object at all, so every default on its signature stands.
+    // `markdown({ base: markdownLanguage })` — R1 (decisions.md, 2026-10-05) amends "called with
+    // its defaults" for `base` ALONE. The config object carries that one key, so `addKeymap`,
+    // `completeHTMLTags` and `pasteURLAsLink` are still whatever the package defaults them to.
     expect(markdown).toHaveBeenCalledTimes(1);
-    expect(markdown.mock.calls[0]).toEqual([]);
+    expect(markdown.mock.calls[0]).toEqual([{ base: 'MARKDOWN_LANGUAGE' }]);
   });
 
   it("appends the CALLER's extension after the ruled pair, never in place of it", async () => {
@@ -228,6 +235,93 @@ describe('the REAL package, through the default loader', () => {
       view.dispatch({ changes: { from: view.state.doc.length, insert: '\r\ntyped\r\n' } });
       expect(view.state.doc.toString()).toBe('seed\ntyped\n');
     } finally {
+      view.destroy();
+      outer.remove();
+    }
+  });
+
+  // ── PLAN §4 RISK 6, RE-MEASURED UNDER R1 (decisions.md, 2026-10-05) ──────────────────────────
+  //
+  // 3.1 measured this once and reported it: the default base is strict CommonMark, so GFM task
+  // lists, tables and strikethrough were not syntax to the editor. R1 rules the base to
+  // `markdownLanguage`. The measurement is now a committed test with both arms in it — the ruled
+  // base HAS the nodes, and the base it replaced does NOT, on the same document through the same
+  // walk, so the first half cannot pass on a walk that names nothing.
+  const GFM_DOC = [
+    '- [ ] an open task',
+    '- [x] a done task',
+    '',
+    '| a | b |',
+    '| - | - |',
+    '| 1 | 2 |',
+    '',
+    'some ~~struck~~ text',
+    '',
+    'a footnote reference[^1]',
+    '',
+    '[^1]: the footnote body',
+    '',
+  ].join('\n');
+  const GFM_NODES = ['Task', 'TaskMarker', 'Table', 'TableHeader', 'TableRow', 'Strikethrough'];
+
+  /** Every node name a language's own parser produces for `doc`. */
+  function nodeNames(language: { parser: { parse(input: string): { iterate(spec: { enter(node: { name: string }): void }): void } } }, doc: string): Set<string> {
+    const names = new Set<string>();
+    language.parser.parse(doc).iterate({ enter: (node) => void names.add(node.name) });
+    return names;
+  }
+
+  it('R1 — under markdownLanguage the tree has task-list, table and strikethrough nodes; the default base has none', async () => {
+    const { markdownLanguage } = await loadCodeMirror();
+    const { commonmarkLanguage } = await import('@codemirror/lang-markdown');
+
+    const ruled = nodeNames(markdownLanguage, GFM_DOC);
+    const replaced = nodeNames(commonmarkLanguage, GFM_DOC);
+    expect(GFM_NODES.filter((name) => !ruled.has(name))).toEqual([]);
+    expect(GFM_NODES.filter((name) => replaced.has(name))).toEqual([]);
+    // Both walks saw the document: the nodes the two bases share are in both.
+    for (const shared of ['Document', 'BulletList', 'ListItem', 'Paragraph']) {
+      expect(ruled.has(shared), `ruled: ${shared}`).toBe(true);
+      expect(replaced.has(shared), `replaced: ${shared}`).toBe(true);
+    }
+  });
+
+  it('R1 — footnotes are STILL not syntax, under either base (stated, not fixed)', async () => {
+    const { markdownLanguage } = await loadCodeMirror();
+    const { commonmarkLanguage } = await import('@codemirror/lang-markdown');
+    for (const language of [markdownLanguage, commonmarkLanguage]) {
+      const footnoteish = [...nodeNames(language, GFM_DOC)].filter((name) => /footnote/i.test(name));
+      expect(footnoteish).toEqual([]);
+    }
+  });
+
+  it('R1 — the view the ENGINE builds parses GFM; a view on the replaced default does not', async () => {
+    // The two tests above measure the languages. This one measures the VIEW: the syntax tree the
+    // editor state itself holds, read from the language state field. (`isActiveAt` cannot tell
+    // the two bases apart — they share one language-data facet, 3.1's finding — so it is not the
+    // instrument.) The field is reached through the language's own class, so no further
+    // CodeMirror package is imported even here.
+    const { EditorView, basicSetup, markdown, markdownLanguage } = await loadCodeMirror();
+    const languageField = (markdownLanguage.constructor as unknown as { state: unknown }).state;
+    type TreeHolder = { tree: { iterate(spec: { enter(node: { name: string }): void }): void } };
+    const treeNames = (state: { field(f: never): unknown }): Set<string> => {
+      const names = new Set<string>();
+      (state.field(languageField as never) as TreeHolder).tree.iterate({
+        enter: (node) => void names.add(node.name),
+      });
+      return names;
+    };
+
+    const { view, outer } = await viewOn(GFM_DOC);
+    const control = new EditorView({ doc: GFM_DOC, extensions: [basicSetup, markdown()] });
+    try {
+      const ruled = treeNames(view.state);
+      const replaced = treeNames(control.state);
+      expect(GFM_NODES.filter((name) => !ruled.has(name))).toEqual([]);
+      expect(GFM_NODES.filter((name) => replaced.has(name))).toEqual([]);
+      expect(replaced.has('BulletList'), 'the control view parsed the document too').toBe(true);
+    } finally {
+      control.destroy();
       view.destroy();
       outer.remove();
     }

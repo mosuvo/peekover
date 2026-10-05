@@ -1,7 +1,7 @@
 // editorEngine — the ONE module in the tree that imports CodeMirror (plan 012 D-2), and the load
 // gate in front of it. It owns three things and nothing else: the two dynamic imports, the ruled
 // setup, and the per-host memo. It builds no chrome, knows nothing about the split pane, and
-// touches no file handle — the edit view is `editorView.ts`'s, wired by a later task.
+// touches no file handle — the edit view is `editorView.ts`'s, wired by `editorEnhancer.ts`.
 //
 // ── D-2: ONE IMPORTER, TWO STATIC LITERAL SPECIFIERS ──────────────────────────────────────────
 //
@@ -22,13 +22,17 @@
 // This one has no such gate: entering edit mode IS the trigger, unconditionally. What it has
 // instead is "loaded once per host".
 //
-// ── THE SETUP IS RULED, AND IT IS THE DEFAULTS ────────────────────────────────────────────────
+// ── THE SETUP IS RULED: THE DEFAULTS, AND ONE NAMED BASE ──────────────────────────────────────
 //
-// `basicSetup` as shipped, and `markdown()` called with no argument (decisions.md, M12 TASK 1.1 and
-// M12 TASK 1.1 EXTENDED). Nothing is stripped and nothing is added: no bespoke keymap, no theme, no
-// language configuration. `markdown()`'s default base is strict CommonMark, so GFM tables, task
-// lists and strikethrough are not recognised as syntax by the editor's highlighter — a known,
-// reported consequence of the ruling, not something to configure around here.
+// `basicSetup` as shipped, and `markdown({ base: markdownLanguage })` (decisions.md: M12 TASK 1.1,
+// M12 TASK 1.1 EXTENDED, and the 2026-10-05 task-3.2 ruling R1 that amends the second for `base`
+// alone). `markdown()`'s own default base is strict CommonMark, under which GFM tables, task lists
+// and strikethrough are not syntax to the editor's highlighter; `markdownLanguage` is the same
+// package's GFM-configured language, reached through the same permitted specifier. That one key
+// is the whole of the configuration: `addKeymap`, `completeHTMLTags` and `pasteURLAsLink` are not
+// named and stay at the package's defaults. Nothing else is stripped and nothing else is added —
+// no bespoke keymap, no theme. Footnotes are syntax under NEITHER base; that is reported, not
+// configured around.
 //
 // ── THE MEMO, AND WHAT A FAILURE DOES TO IT ───────────────────────────────────────────────────
 //
@@ -46,11 +50,11 @@
  * the engine. Destructured at the import so the bundler can drop what is not named.
  */
 export const loadCodeMirror = async () => {
-  const [{ EditorView, basicSetup }, { markdown }] = await Promise.all([
+  const [{ EditorView, basicSetup }, { markdown, markdownLanguage }] = await Promise.all([
     import('codemirror'),
     import('@codemirror/lang-markdown'),
   ]);
-  return { EditorView, basicSetup, markdown };
+  return { EditorView, basicSetup, markdown, markdownLanguage };
 };
 
 /** The members of the two packages this module uses — and all it uses. Inferred from the dynamic
@@ -80,11 +84,15 @@ export interface EditorEngine {
   createView(parent: HTMLElement, doc: string, extra?: EditorExtension): EditorViewHandle;
 }
 
-function engineFrom({ EditorView, basicSetup, markdown }: EditorModules): EditorEngine {
+function engineFrom({ EditorView, basicSetup, markdown, markdownLanguage }: EditorModules): EditorEngine {
   return {
     EditorView,
     createView: (parent, doc, extra = []) =>
-      new EditorView({ doc, parent, extensions: [basicSetup, markdown(), extra] }),
+      new EditorView({
+        doc,
+        parent,
+        extensions: [basicSetup, markdown({ base: markdownLanguage }), extra],
+      }),
   };
 }
 

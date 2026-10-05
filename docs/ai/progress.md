@@ -1,14 +1,16 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-05 (M12 task 3.1 DONE — `editorEngine.ts`, the one CodeMirror importer, and
-`editorImportFence.test.ts`). M12 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in
-implementation: gates 1–3 approved, tasks 1.1 (the governed CodeMirror install), 1.2 (the audit bump), 2.1
-(`ReaderMode` gains `'edit'`), 2.2 (`mount()`'s `chrome: false` + the split-pane shell) and 3.1 landed;
-**task 3.2 is next.** Current numbers (unchanged by 3.1 — the engine has no caller yet): `.output`
-5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB, content script 342,384 B both engines,
-`dependencies` 10, `permissions: []`. M11 (math rendering, Temml/MathML) closed
-2026-09-11 — its summary is under § Closed milestones, its narrative in `progress-archive.md`.)*
+*Updated: 2026-10-05 (M12 task 3.2 DONE — `editorEnhancer.ts`, the edit control, the editor pane and the
+save-capability injection; CodeMirror's bytes first ship here). M12 (`specs/012-editor-mode/`, F8 Editor
+Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 2.1, 2.2, 3.1 and 3.2
+landed; **task 3.3 (the debounced live preview) is next.** **From 3.2 the editor is REACHABLE on `main`
+and can lose edits — exit discards without a warning (6.1), a watch re-render destroys the buffer
+(4.1–4.2), and Save reports "not yet available" (5.3): planned sequencing, not released.** Current
+numbers: `.output` 5,813,470 B (Cr) / 5,813,586 B (Fx) against ≤ 7 MiB, content script 342,384 B both
+engines (md5 unchanged since 2.2), `dependencies` 10, `permissions: []`. M11 (math rendering,
+Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
+`progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -447,40 +449,141 @@ hit a stop. Three things are surfaced for the human — the two ★ findings and
   `chromiumFolderSource.ts`, `htmlExport.ts`, the diagram/math modules, `runReader.ts`, `mountReader.ts`,
   `contentWatch.ts`, `scripts/check-dynamic-imports.ts`) · manifest 654 / 770 B, `permissions: []`.
 
+**M12 task 3.2 DONE, 2026-10-05 — the edit control, the editor pane and the save-capability injection.
+`enhanceEditor(host, { save })` is wired at the two app-page call sites; activating the control loads
+CodeMirror, builds it into 2.2's source slot and enters edit. This is the task where CodeMirror's bytes
+first ship (+612,335 B `.output`, the content script md5-identical). Three human rulings were taken in
+the kickoff (R1–R3) and are banked in `decisions.md` with D-3's landing and D-1's control half.**
+
+> **★ HONESTY NOTE — WHAT `main` SHIPS FROM THIS COMMIT.** The editor is now REACHABLE from the app page,
+> and it can lose edits. **Leaving edit discards the buffer with no warning** (the unsaved-changes guard
+> is 6.1). **A watch re-render during an edit destroys the buffer** (4.1–4.2; the watch pill is still
+> live beside the editor). **Save does not exist** — the injected capability reports "not yet
+> available" and nothing calls it (5.3). This is planned sequencing on an unreleased branch, not a
+> shipped state: nothing here is released, and it must not be until groups 4–6 land.
+
+- **Step-0 re-derivations, all four clear — no stop.** (a) *The seed is the raw read:* `readerPane.ts:268`
+  `await file.read()` → `classifyReaderOutcome` passes `read.text` through verbatim (`trim()` only tests
+  for emptiness) → `mount(outcome.text, host, …)` (`:198`) → `registerReaderSource(host, source)`
+  (`mount.ts:238`). (b) *The normaliser:* 006 D-5's `normalise` (`app/snapshots.ts:259`) would pull
+  nothing new into the app graph (`appShell.ts` and `diffEngine.ts` already import that module) but is
+  NOT equivalent — it rewrites CRLF only, and CodeMirror splits on `/\r\n?|\n/` (`@codemirror/state`
+  `dist/index.js:608`), so a lone CR also becomes a break. A one-line `normaliseLineBreaks` is in
+  `editorView.ts`, tested as a pure function. (c) *F-5:* see `decisions.md` 012 D-3. (d) *The control's
+  stylesheet:* `CONTAINED_CSS` rides into the content script, so the home is an enhancer-injected
+  `<style>` from a new `EDIT_CONTROL_CSS` export.
+- **Tests first, seen red.** `editorEnhancer.test.ts` before the module existed (unresolvable import);
+  the fence's clause-B app-page half (2 red: the app graph reached no editor module and found no
+  CodeMirror specifier); R1's pin and its three measurements (4 red).
+- **What was built.** `editorEnhancer.ts` (new): one `<button>` after the mode pill + its own `<style>`,
+  idempotent, re-installed after every outer `mount()`, nothing on a failed render. `editorView.ts`
+  (editor half): `buildEditor` / `editorSessionFor` / `dropStaleEditorSession` / `normaliseLineBreaks` /
+  `EDITOR_DIRTY_ATTR`, and `teardownEditorShell` now ends the session first. The session keeps
+  `originalText` RAW and writes `data-edit-dirty="true"` on the OUTER host while the buffer differs
+  from it (normalised), removing it when it matches again. `readerCss.ts`: `EDIT_CONTROL_CSS` (new
+  export) and, in `EDITOR_CSS`, R3's pill-hide rule plus five rules for the engine's view.
+- **Degrade (§3.7), red-first on both engines.** A rejecting loader — and a REAL failed module fetch
+  (`import()` of a URL the server lacks) — leaves the prior mode (reading, and raw), no shell, no
+  `.cm-editor`, the shadow root's children unchanged, the document still on screen, the control reading
+  "Editor unavailable". *Reverted* (flip on click, load after, swallow the failure): unit `expected
+  'edit' to be 'reading'`; browser, Cr and Fx alike, `the document is still in its prior mode: expected
+  'edit' to be 'reading'` / `… to be 'raw'` — 5 of 7 red per engine, the positive control among them.
+- **Absent on the content-script reader, red-first by un-gating.** With `enhanceEditor(host)` added to
+  `mountReader.ts` (reverted): the browser test reds on both engines (`expected <button …> to be null`),
+  fence clause A reds on both its assertions, and the built content script goes 342,384 → 956,490 B.
+- **Real engine, Chromium + Firefox, every fixture asserting it is UNWATCHED.** LF fixture: the view is
+  on screen in the source slot, fills it, and its state and DRAWN text equal the source. CRLF fixture:
+  the view holds the LF-normalised text, `originalText` is the raw CRLF string, the dirty attribute is
+  absent on entry. Real typed keys land in the buffer and set the attribute; the editor's own Ctrl-Z
+  clears it. The control, selected by class alone, is a `<button type="button">`; Enter enters, Space
+  exits; its name carries the state. It is hit-testable and never overlaps the pill under either pill
+  label, at 414×896 and 1400×900 (gap 20 px beside "Reading", 43–44 px beside "Raw"). R3: the pill is
+  `display:none` in edit; after the exit the shadow root's children are the same nodes as before entry.
+- **R2's memo, and the two `import()` observations** (harness page, not the built extension): the module
+  loader runs once across edit → reading → edit and again for a second host. The page's first
+  `import()` of the engine's specifiers made 2 requests, the repeat 0 — both engines. **A repeated
+  `import()` of a URL whose fetch failed made 1 request then 0, and rejected both times — both
+  engines.** The engine's memo forgets a failure, but the browser's module map does not: after a failed
+  chunk fetch, "try again" needs a reload. (A packaged extension's chunks are local files, so this is a
+  corrupted-install case.) The control's wording does not promise success; flagged for the human.
+- **Bytes, clean rebuilds, both engines identical arm for arm.** Baseline at `3affcae` matched 3.1's
+  figures exactly. Post-change: **`.output` 5,813,470 B (Cr) / 5,813,586 B (Fx), +612,335 B** — headroom
+  1,526,562 / 1,526,446 B (~1.46 MiB) · zip 1,836,121 / 1,836,179 B (+206,629) · manifest 654 / 770 B.
+  Decomposed by ablation, residual 0:
+
+  | Arm | `.output` (Cr) | Step | What it is |
+  |---|---|---|---|
+  | A · baseline (`3affcae`) | 5,201,135 | — | — |
+  | E · both `enhanceEditor` lines removed | 5,201,239 | +104 | shell plumbing: the save closure, the render-of-`save`, the pane option |
+  | B · engine imports stubbed out | 5,206,555 | +5,316 | enhancer + view + control + their CSS, in the app chunk |
+  | C · real engine, default base | 5,813,405 | +606,850 | three lazy chunks (54,680 + 209,493 + 342,426 = 606,599) + 251 B import glue in the app chunk |
+  | D · R1 (`markdownLanguage`) | 5,813,470 | +65 | R1, all in the app chunk; the lazy chunks are unchanged |
+
+  Only two built names change size: the app chunk (511,633 → 517,369 B, +5,736) and the three new
+  chunks. 135 files → 138. **Content script md5-identical to 3.1's in arms A, E, B, C and D on both
+  engines** (`129deda5…` Cr / `94c2d14b…` Fx), and it MOVES under the un-gate arm — an identity proven
+  with an instrument seen to fire, not a grep. 3.1's scratch estimate was +607,325 B; the real figure
+  for the engine alone is +606,850.
+- **Suites.** lint 0 · unit **1227** / 1227 (70 files; `editorEnhancer` 28, `editorEngine` 21,
+  `editorImportFence` 10, `editorView` 11, `readerMode` 17, `readerPane` 11, `appShell` 62,
+  `htmlExport` 13 with its 26-site pin unmoved) · scanner clean over 79 shipped files, self-test 7
+  firing + 10 silent · browser **1733 pass / 15 skip** (172 files, 86 per engine; `editorRender` 10,
+  `editorDegrade` 7, `editorNestedHost` 12, `editMode` 6 per engine). No red on the full run; the carried
+  wall-clock flakes did not fire. One existing assertion edited — R1's authorized pin. Golden diff
+  EMPTY · zero-diff files EMPTY (`mount.ts`, `readerMode.ts`, `chromiumFolderSource.ts`, `htmlExport.ts`
+  and its test, the diagram/math modules, `runReader.ts`, `mountReader.ts`, `contentWatch.ts`,
+  `src/watch/*`) · `permissions: []`.
+- **★ The informal eyeball is OWED and NOT done** — it is the human's (WORKFLOW §7.2); the steps are in
+  this task's report. Nothing in the suites stands in for it.
+- **Surfaced for the human, none ruled:**
+  1. *Styling choices no ruling covers:* the control's wording and placement; five token-only rules that
+     make CodeMirror fill its pane, take the pane's mono face, and draw its gutter / caret / cursor from
+     the reader's tokens (its black caret is invisible on the dark pane). The active-line band,
+     selection, search panel and completion tooltip are left at CodeMirror's light-page defaults — look
+     at them in the dark theme.
+  2. *A stale session is ended on re-install.* When an outer `mount()` replaces a host mid-edit (a
+     document switch), `enhanceEditor` destroys the orphaned view and clears the dirty attribute, so it
+     cannot describe the next document. It is this task's own attribute kept truthful, not watch
+     handling — but it is behaviour the task line did not spell out.
+  3. *Ctrl/Cmd+S while typing in the editor — read from the code, NOT observed.* `main.ts`'s export
+     shortcut guards with `isEditableTarget(e.target)`; a key typed inside the shadow root reaches
+     `document` retargeted to the host, which is not editable. So Ctrl+S in the editor is expected to
+     run the last export (an HTML download of the on-disk document, not the buffer). It is F-2's hazard
+     class on the app page, and `main.ts` is outside this task's files. Owed a look before 5.3 makes
+     Ctrl+S mean "save" in anyone's head.
+  4. *Printing while in edit* is untested: the reading column is hidden in edit.
+  5. *`AGENTS.md`'s "Current milestone" paragraph still says "task 1.1 DONE, task 1.2 next".* Stale
+     since 1.2; not in any task's file list. Left untouched.
+
 ## Up next
 
-**FIRST — M12 task 3.2** (`editorEnhancer.ts`, the edit-entry control, the editor pane, the
-save-capability injection point), fresh session, test-first, one commit per task. Group 3's browser tests
-run on an UNWATCHED document, the precondition asserted in each. The informal eyeball is owed at this task.
-**Byte snapshot for its kickoff (3.1's measured figures — identical to 2.2's, the engine being
-unreached):** `.output` 5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom
-2,138,897 / 2,138,781 B · zip 1,629,492 / 1,629,550 B · content script 342,384 B both engines, md5
-`129deda5156522a75ac41eaabbdc1c5f` (Cr) / `94c2d14b9e08144f0c932415edb28acf` (Fx) — 3.2 must hold these
-md5s (a CSS touch that reaches the content script is the one stated exception, decomposed) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 · unit 1194 · browser 1699 / 15 skipped · golden empty.
-**The CodeMirror chunk lands at 3.2, not before:** expect about **+607 KB** `.output` (3.1's scratch
-measurement: +607,325 B, three lazy chunks), leaving roughly 1.46 MiB of headroom.
+**FIRST — M12 task 3.3** (the debounced live preview into the nested host; the preview-failure degrade
+— D-4, D-5's mechanism; Q4's PROVISIONAL cost-proportional debounce, multiplier 1), fresh session,
+test-first, one commit. Its browser tests run on an UNWATCHED document, the precondition asserted in
+each. **3.2's informal eyeball is still owed by the human** — do it before or alongside 3.3.
+**Byte snapshot for its kickoff (3.2's measured figures):** `.output` 5,813,470 B (Cr) / 5,813,586 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,526,562 / 1,526,446 B · zip 1,836,121 / 1,836,179 B · content
+script 342,384 B both engines, md5 `129deda5156522a75ac41eaabbdc1c5f` (Cr) /
+`94c2d14b9e08144f0c932415edb28acf` (Fx) — 3.3 must hold these md5s · the app chunk 517,369 B, the three
+CodeMirror lazy chunks 54,680 + 209,493 + 342,426 B · manifest 654 / 770 B, `permissions: []` ·
+`dependencies` 10 · lint 0 · unit 1227 · browser 1733 / 15 skipped · golden empty.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it. `mount.ts` is zero-diff from here on.
-**Named inputs to 3.2, from 3.1:**
-- **The fence's clause B owes its app-page half** — once a caller exists, `editorImportFence.test.ts`
-  must also assert the app graph reaches `editorEngine.ts`. That file is NOT in 3.2's Files list: a
-  necessary ripple, to be enumerated in the kickoff.
-- **The memo key** — which element is handed to `loadEditorEngine` (see 3.1's record). Open.
-- **The dirty comparison on a CRLF file** — the buffer is LF-normalized; a raw compare against
-  `originalText` is dirty on entry.
-- **The themeRegistry finding** — teardown already unregisters the nested host; the pill-bypass path
-  leaves it registered and connected, by design while the shell is reused. 3.2 owns the pill in edit, so
-  whatever it does there must keep those two in step.
-- **GFM highlighting** — the human's answer on `base: markdownLanguage`, if one is wanted before the
-  editor is first looked at.
-- **Not verified at 3.1, real-engine only:** that a repeated `import()` after a failed chunk fetch
-  retries; that a second host's load costs no re-fetch.
-**Carried into group 3 from 2.2:** the shell (`buildEditorShell` / `renderPreview` /
-`teardownEditorShell`) has no production caller — 3.2 wires it and builds the editor into the source
-slot; 3.2 also owns the mode pill in edit, which today leaves edit with no teardown and leaves the shell
-in the DOM, hidden; 3.3 drives `renderPreview` and proves the scroll box under real typing.
-*(3.1's own kickoff snapshot was 2.2's figures, unchanged.)*
+figure above supersedes it. `mount.ts` and `readerMode.ts` are zero-diff from here on.
+**Carried inputs to 3.3, from 3.2:**
+- **The build-time preview render counts.** `buildEditorShell` already renders the document into the
+  preview once, at build (2.2). Any render-count assertion in 3.3 ("a burst coalesces — render count
+  strictly below keystroke count") must be DELTA-based from after entry, or it is off by one.
+- **Dirty compares NORMALISED text.** The dirty attribute is the buffer against
+  `normaliseLineBreaks(originalText)`; `originalText` itself is the raw read. The update listener that
+  writes it is the one `buildEditor` passes through `createView`'s `extra` — 3.3's preview feed joins
+  that same listener (or a second one in the same `extra`); it does not replace it.
+- **The session is the seam:** `editorSessionFor(host)` → `{ view, originalText, save }`. The preview
+  text is `view.state.doc.toString()` — LF-normalised, which is what `mount()` should be handed.
+- **`editorDegrade.browser.test.ts` exists** (3.3's Files line lists it): its first describe block must
+  STAY first — it observes the page's first real engine load.
+- **Open, for the human, from 3.2's record:** the Ctrl/Cmd+S-in-the-editor hazard (read, not observed);
+  the dark-theme look of CodeMirror's un-themed parts; the failed-chunk "try again" finding.
+**Carried into group 3 from 2.2:** 3.3 drives `renderPreview` and proves the scroll box under real typing.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
