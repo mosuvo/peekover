@@ -1,6 +1,107 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-05 · 012 D-10 — LANDED at task 3.1: the content-script exclusion is proven by
+  `src/render/editorImportFence.test.ts`. The decision of record is "M12 GATE 3" Q1 (below); this entry
+  records what was built on it.**
+  Plan §0 D-10's draft text, quoted because `tasks.md` lands each D-value's draft with its implementing
+  commit — **SUPERSEDED IN MECHANISM, not current:**
+  "Spec §3.2's own reasoning (no `FileSystemFileHandle` ever reaches the content-script graph;
+  `editorEngine.ts`'s specifier would need `web_accessible_resources`, which `tests/manifest.test.ts`
+  forbids outright) is re-confirmed, not re-argued. **Checked concretely:**
+  `scripts/check-dynamic-imports.ts`'s `MUST_NOT_FIRE` fixture (the same mechanism that already polices
+  `katex`/`mermaid`/`temml` staying out of the content-script module graph) gains `codemirror` and
+  `@codemirror/lang-markdown` to its forbidden-specifier list — a task-1.1-adjacent, mechanical addition,
+  named here so tasks.md does not have to rediscover which file owns this check."
+  Its first sentence stands. Its "checked concretely" sentence is false in mechanism (`tasks.md` F-1):
+  `MUST_NOT_FIRE` is the scanner's stay-SILENT self-test, there is no forbidden-specifier list, and that
+  script polices specifier STATICNESS, not the content-script graph.
+  **What is built, per M12 GATE 3 Q1:**
+  - **The two stay-silent fixtures** landed at task 1.1 (`e001f9e`) — they document the editor's lazy
+    shape and prove nothing about exclusion. Self-test today: 7 firing + 10 silent, EXIT=0.
+  - **The fence, this task.** Four clauses on `diagramImportFence.test.ts`'s shape, 8 assertions.
+    **A** — the content-script graph reaches no `src/render/editor*.ts` module (matched by name, so a
+    later editor module is covered without an edit) and imports no `codemirror` / `@codemirror/*`
+    specifier. **B** — the control: the same walker started at `editorEngine.ts` finds both specifiers.
+    **C** — over every shipped `.ts` file under `src/` and `entrypoints/` (tests and `.d.ts` excluded),
+    the only CodeMirror imports are two DYNAMIC edges in `editorEngine.ts`; no static specifier, type-only
+    included. **D** — non-vacuity: landmarks present, every local specifier resolved, the tree scan saw
+    the editor modules.
+  - **Seen red** before the module existed (4 of 8 failing: B, both C assertions, and D's tree-scan
+    landmark). The pattern's own ablation is 007 task 3.4's and 009 task 4.5's standing precedent.
+  **Two things stated so they are not assumed:** (i) clause B is the engine's OWN edge, not the app-page
+  graph — nothing imports the engine until 3.2. **3.2 owes the app-page half** (the app graph reaching
+  `editorEngine.ts`), which means an edit to this test file that 3.2's Files list does not name: a
+  necessary ripple to enumerate in 3.2's kickoff. (ii) Clause C scans the shipped tree, not the union of
+  the two entry graphs as 007 does — with no caller, a union scan would pass on nothing.
+  **The byte side, measured:** with the engine added and unreached, every shipped file is md5-identical
+  to 2.2's build on both engines; under a scratch app-page caller the content script's md5 is unchanged.
+  **No human ruling was taken during this task.**
+  **Revisit-when:** 3.2 wires the caller (clause B's app-page half); any later task that wants a third
+  CodeMirror specifier — clause C reds, and that is a stop-and-ask, not a count to bump.
+
+- **2026-10-05 · 012 D-2 — `src/render/editorEngine.ts` is the ONE module importing CodeMirror. Landed
+  with task 3.1 (plan §0 D-2's draft entry text, verbatim):**
+  "012 D-2 — one engine module, static-literal specifiers, on 007 D-13's /
+  011 D-2's own single-importer fence, extended to CodeMirror. No feature-detect gate is needed the way
+  diagrams/math need one — entering edit mode IS the trigger, unconditionally — so the gate is `loaded once
+  per host`, not `loaded if content present`."
+  [The permitted set is exactly TWO dynamic specifiers, `codemirror` and `@codemirror/lang-markdown`, both
+  inside `loadCodeMirror` — where 007's fence pins one. There is no third specifier and no static one:
+  `EditorView` comes through the `codemirror` meta-package's own re-export (`dist/index.d.ts:2`), and
+  every type the module names is INFERRED from the two dynamic edges (`Awaited<ReturnType<typeof
+  loadCodeMirror>>`), so there is no `import type` and no `typeof import(…)` either. 009 met a type-only
+  import in its engine and permitted it by name; this engine needed none, so the fence permits none.]
+  [The setup is `basicSetup` + `markdown()` with NO argument — the two rulings below (M12 TASK 1.1, M12
+  TASK 1.1 EXTENDED), unmodified. The engine adds no extension of its own.]
+  [The surface, all of it: `loadCodeMirror` (the default module loader — the two imports) ·
+  `loadEditorEngine(host, loader = loadCodeMirror): Promise<EditorEngine>` (the memoized gate; a caller
+  hands 2.1's seam `{ loader: () => loadEditorEngine(el) }`) · `EditorEngine` = `{ EditorView,
+  createView(parent, doc, extra?) }` · the types `EditorModules`, `EditorModuleLoader`,
+  `EditorViewHandle`, `EditorExtension`. `createView`'s optional `extra` is the caller's own wiring (3.2's
+  dirty tracking and 3.3's preview both need an update listener, which CodeMirror takes only as an
+  extension); it is appended after the ruled pair and cannot replace it. `EditorView` is exposed so a
+  caller reaches `EditorView.updateListener` without importing anything.]
+  [★ THE MEMO KEY — moved from the plan's text, and OPEN for 3.2. The plan keys the memo on "the
+  editor's own nested host". The engine keys on whatever `HTMLElement` it is handed and does not choose.
+  Two facts from the tree make "the nested host" unavailable as written: `enterEditMode` loads, THEN
+  builds (2.1), so the nested host — created by `build` — does not exist when the loader runs; and
+  `teardownEditorShell` discards it on exit (2.2), so it would not be the same element on re-entry
+  anyway. Keyed on the OUTER host the memo spans edit → reading → edit as `tasks.md` intends; keyed on a
+  per-session element it holds only within a session. Which element 3.2 passes is a question for its
+  kickoff, not settled here. Unverified and not claimed: that a second host's fresh `import()` costs no
+  re-fetch (the browser's module map should answer it; jsdom cannot show it — a 3.2 real-engine item).]
+  [Rejection: a rejected load is evicted as it settles. Every caller already waiting on that promise
+  sees the rejection; the next call starts a new load and runs the loader again. A loader that throws
+  synchronously is a rejection too. So 3.2's degrade path may simply ask again — nothing remembers the
+  failure. Not verified: whether the BROWSER retries a failed chunk fetch on a repeated `import()` of the
+  same specifier; that is engine behaviour, 3.2's to observe.]
+  **Two findings reported with this task, neither ruled, neither configured around:**
+  - **Plan §4 risk 6 — `markdown()`'s defaults are strict CommonMark; GFM is NOT recognised.**
+    `@codemirror/lang-markdown` 6.5.2 `dist/index.js:407` defaults `base` to `commonmarkLanguage`;
+    `markdownLanguage` (`:63-74`) is the one configured with `[GFM, Subscript, Superscript, Emoji]`, and
+    `@lezer/markdown` 1.7.2's `GFM` is `[Table, TaskList, Strikethrough, Autolink]`. Measured on one
+    document through both: the default tree has none of `Task`, `TaskMarker`, `Table*`, `Strikethrough`,
+    `URL`; `{ base: markdownLanguage }` has all of them. **Footnotes are recognised by NEITHER** —
+    `@lezer/markdown` ships no footnote extension. The effect is the editor's syntax highlighting (and
+    table folding) only: the preview renders through markdown-it regardless, and the ruled Enter /
+    Backspace keymap is live under the default base (its `isActiveAt` checks share one language-data
+    facet across both languages; Enter on `- [ ] todo` continues `- [ ] ` in both arms, measured). The
+    one-option remedy, `markdown({ base: markdownLanguage })`, MODIFIES a ruled default — the human's to
+    rule, not this task's.
+  - **Plan D-7's open note — line endings do NOT survive the editor; the trailing newline does.**
+    Seeded into a view and read back (`state.doc.toString()` and `state.sliceDoc()` agree; the state's
+    line break is `\n`): `a\nb\n` → identical · `a\nb` → identical · `a\r\nb\r\n` → `a\nb\n` ·
+    `a\r\nb` → `a\nb` · `a\r\nb\nc\rd\r\n` → `a\nb\nc\nd\n` · `a\rb` → `a\nb` · empty → empty. Text
+    inserted later is normalized the same way. So a CRLF file's buffer differs from its on-disk text in
+    every line ending before the user types anything — which is why `originalText` never passes through
+    the editor, and what 3.2's dirty comparison and 5.2 / 5.3's compare-and-write must be written against
+    (a naive buffer ≠ `originalText` test marks every CRLF file dirty on entry; a naive write converts it
+    to LF). Pinned in `editorEngine.test.ts`.
+  **No human ruling was taken during this task.**
+  **Revisit-when:** 3.2's kickoff (the memo key; the dirty comparison on a CRLF file); 5.2 / 5.3 (what a
+  save writes for a CRLF file); the human's answer on GFM highlighting.
+
 - **2026-10-04 · 012 D-4 — LANDED at task 2.2: the live preview is `mount()` on a nested host, called
   with the additive `chrome: false` option. The decision of record is the "M12 D-4 RE-RULED" entry below;
   this entry records what was built on it.**

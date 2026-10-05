@@ -378,7 +378,7 @@ document with watch OFF and **asserts that precondition in the test itself** (th
 fails loudly instead of flaking. No group-3 test switches watch on. The watched-document path is group 4's
 OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
 
-- [ ] **3.1 `editorEngine.ts` — the ONE CodeMirror importer; the content-script fence (D-2, D-10; Q1).**
+- [x] **3.1 `editorEngine.ts` — the ONE CodeMirror importer; the content-script fence (D-2, D-10; Q1).**
       TEST FIRST (the fence test is written before the module and is red until it exists and is lazy).
       Static-literal dynamic imports of `codemirror` and `@codemirror/lang-markdown`, the setup 1.1 chose,
       its default bindings unmodified (no bespoke keymap). Load memoized per nested host
@@ -399,6 +399,22 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       App-page bytes stated against 2.2's figure, the lazy chunk's size matching 1.1's shipping arm within
       a stated residual. Content-script bytes md5-identical to 2.2's. Golden EMPTY · manifest
       **654 / 770 B** · `permissions: []`. [D-2, D-10]
+      ★ *Post-landing, 2026-10-05 — no human ruling was taken; what this line left open or got wrong,
+      recorded in `decisions.md`'s 012 D-2 and 012 D-10 entries and `progress.md`'s 3.1 record. (i) Clause
+      C's permitted set is TWO dynamic edges (`codemirror`, `@codemirror/lang-markdown`), not "the one";
+      no static or type-only specifier — the engine's types are inferred. It scans the shipped tree, not
+      the union of the entry graphs, which would be empty of the engine until 3.2. (ii) Clause B is the
+      engine's own edge; **3.2 owes its app-page half — an edit to `editorImportFence.test.ts`, a
+      necessary ripple 3.2's Files list does not name.** (iii) "App-page bytes … the lazy chunk's size"
+      does not apply at this task: with no caller the bundler emits NO CodeMirror chunk and every shipped
+      file is md5-identical to 2.2's. The chunk was measured through a reverted scratch caller (+607,325
+      B, three chunks; +1,882 B over 1.1's arm); **it lands at 3.2.** (iv) The memo key: the engine keys
+      on the element it is handed. "The nested host" does not exist when `enterEditMode`'s loader runs
+      and is discarded by teardown — which element 3.2 passes is OPEN, for 3.2's kickoff. (v) Risk 6:
+      `markdown()`'s defaults are strict CommonMark — no GFM task-list / table / strikethrough
+      highlighting, and no footnotes under any base. Reported, not configured. (vi) D-7's note: CRLF and
+      lone CR are normalized to LF by the editor's document; a trailing newline, present or absent, is
+      preserved. 3.2's dirty comparison and 5.2 / 5.3 are written against that.*
 
 - [ ] **3.2 `editorEnhancer.ts` + the edit-entry control + the editor pane + the save-capability
       injection point (D-1, D-3; F-4, F-5).** TEST FIRST. `enhanceEditor(host, { save })` appended at the

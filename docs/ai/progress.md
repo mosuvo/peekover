@@ -1,10 +1,11 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-04 (M12 task 2.2 DONE — `mount()`'s `chrome: false` option + the split-pane shell + the
-nested preview host). M12 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation:
-gates 1–3 approved, tasks 1.1 (the governed CodeMirror install), 1.2 (the audit bump), 2.1 (`ReaderMode`
-gains `'edit'`) and 2.2 landed — group 2 is complete; **task 3.1 is next.** Current numbers: `.output`
+*Updated: 2026-10-05 (M12 task 3.1 DONE — `editorEngine.ts`, the one CodeMirror importer, and
+`editorImportFence.test.ts`). M12 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in
+implementation: gates 1–3 approved, tasks 1.1 (the governed CodeMirror install), 1.2 (the audit bump), 2.1
+(`ReaderMode` gains `'edit'`), 2.2 (`mount()`'s `chrome: false` + the split-pane shell) and 3.1 landed;
+**task 3.2 is next.** Current numbers (unchanged by 3.1 — the engine has no caller yet): `.output`
 5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB, content script 342,384 B both engines,
 `dependencies` 10, `permissions: []`. M11 (math rendering, Temml/MathML) closed
 2026-09-11 — its summary is under § Closed milestones, its narrative in `progress-archive.md`.)*
@@ -355,27 +356,133 @@ needed; nothing hit a stop.**
   `htmlExport.ts`, `htmlExport.test.ts` and every other zero-diff file EMPTY · manifest 654 / 770 B,
   `permissions: []`.
 
+**M12 task 3.1 DONE, 2026-10-05 — `src/render/editorEngine.ts` is the ONE module importing CodeMirror;
+`editorImportFence.test.ts` proves the content script cannot reach it. Tested-but-unreached: no production
+caller until 3.2, so NO CodeMirror chunk is emitted and every shipped file is md5-identical to 2.2's.
+D-2's and D-10's `decisions.md` landing entries are in the same commit. No human ruling was taken; nothing
+hit a stop. Three things are surfaced for the human — the two ★ findings and the open memo key below.**
+- **The fence, written first and seen red** (module absent: 4 of 8 failing — clause B, both clause-C
+  assertions, clause D's tree-scan landmark). Four clauses, 8 assertions, on `diagramImportFence.test.ts`'s
+  shape: **A** the content-script graph reaches no `src/render/editor*.ts` module (by name) and no
+  `codemirror` / `@codemirror/*` specifier · **B** the control — the same walker started at
+  `editorEngine.ts` finds both specifiers (the engine's OWN edge; the app page reaches nothing until 3.2)
+  · **C** over every shipped `.ts` under `src/` + `entrypoints/`, the only CodeMirror imports are two
+  DYNAMIC edges in `editorEngine.ts`, no static or type-only one · **D** non-vacuity. The pattern's
+  ablation is 007 3.4's / 009 4.5's, cited.
+- **The specifier set: exactly two**, `codemirror` and `@codemirror/lang-markdown`, both dynamic, both in
+  `loadCodeMirror`. `EditorView` comes through `codemirror`'s re-export; every type is inferred from the
+  two edges, so there is no `import type` and no third specifier.
+- **The surface:** `loadCodeMirror` · `loadEditorEngine(host, loader?)` · `EditorEngine` = `{ EditorView,
+  createView(parent, doc, extra?) }` · types `EditorModules`, `EditorModuleLoader`, `EditorViewHandle`,
+  `EditorExtension`. 2.1's seam takes `{ loader: () => loadEditorEngine(el) }`. `createView` builds
+  `basicSetup` + `markdown()` (no argument), then the caller's optional `extra` — the engine adds nothing
+  of its own. `extra` exists because 3.2 / 3.3 need an update listener and CodeMirror takes one only as an
+  extension.
+- **Memo + retry:** one promise per host in a `WeakMap`; two loads for one host return the SAME promise
+  (pending or settled), the loader runs once, and a second host runs it again (the control). A REJECTED
+  load is evicted as it settles — waiting callers get the rejection, the next call retries. A loader that
+  throws synchronously is a rejection too.
+- **What jsdom was and was not asked:** the memo, the setup (on a recording fake) and the document
+  round-trip (text in, text out — no layout) are unit tests. That a view renders, focuses or takes typed
+  input is NOT claimed here — 3.2's real-engine tests.
+- **Bytes, clean rebuild, both engines.** Baseline re-derived at `d505890`, matching the cited figures;
+  post-3.1 **every one of 135 files md5-identical to baseline on both engines** — `.output` 5,201,135 /
+  5,201,251 B, zip 1,629,492 / 1,629,550 B, content script 342,384 B, md5 unchanged. **2.2's Up-next line
+  "the +605,443 B lands at 3.1" was wrong: with no caller there is no chunk. It lands at 3.2.**
+- **The chunk, measured through a scratch app-page caller (reverted):** `.output` **+607,325 B** on both
+  engines (5,808,460 / 5,808,576 B; headroom would be 1,531,572 / 1,531,456 B), zip +205,275 B. Decomposed,
+  residual 0: three new lazy chunks — 342,426 B (the shared core) + 209,493 B (`lang-markdown`) + 54,680 B
+  (`codemirror`: the `EditorView` re-export + the setups) = 606,599 B — plus the app chunk 511,633 →
+  512,359 B (+726 B); 81 chunks renamed at unchanged sizes, `app.html` rewritten at 495 B. **Against 1.1's
+  shipping arm (+605,443 B = a 605,350 B probe chunk + 93 B glue): +1,882 B.** +1,249 B in the chunks: one
+  probe chunk became three (two dynamic entries and their shared core, each with its own import/export
+  table), and each entry keeps its package's whole namespace (`minimalSetup`, `commonmarkLanguage`, … —
+  destructuring at the `import()` did not shake them). +633 B in the app chunk: this module's own glue
+  (the memo, `engineFrom`, the loader) and the scratch caller, where 1.1 had a bare `import()`. That split
+  is read from the emitted chunks, NOT ablated arm by arm — a 0.3% residual, re-measured for real at 3.2.
+  Content-script md5 unchanged under the scratch caller, both engines; after the revert, every file
+  md5-identical to the post-change build.
+- **★ Finding for the human — plan §4 risk 6: `markdown()`'s defaults do NOT recognise GFM.** The default
+  `base` is `commonmarkLanguage` (`lang-markdown` 6.5.2 `dist/index.js:407`); measured, the default tree
+  has no `Task` / `TaskMarker` / `Table*` / `Strikethrough` / `URL` node and `{ base: markdownLanguage }`
+  has all of them. Footnotes are recognised under NEITHER (`@lezer/markdown` 1.7.2 has no footnote
+  extension). Highlighting (and table folding) only: the preview is markdown-it's, and the ruled Enter /
+  Backspace keymap works under the default base (measured: `- [ ] todo` continues `- [ ] ` either way).
+  Nothing was configured — defaults are ruled. **Question owed an answer before or at 3.2's eyeball:**
+  keep strict-CommonMark highlighting, or rule `markdown({ base: markdownLanguage })`?
+- **★ Finding for 3.2 / 5.2 / 5.3 — D-7's round-trip, measured** (`doc.toString()` and `sliceDoc()` agree):
+
+  | Case | Input | Output | Preserved |
+  |---|---|---|---|
+  | LF, trailing newline | `a\nb\n` | `a\nb\n` | Y |
+  | LF, no trailing newline | `a\nb` | `a\nb` | Y |
+  | CRLF, trailing newline | `a\r\nb\r\n` | `a\nb\n` | N |
+  | CRLF, no trailing newline | `a\r\nb` | `a\nb` | N |
+  | mixed CRLF / LF / lone CR | `a\r\nb\nc\rd\r\n` | `a\nb\nc\nd\n` | N |
+  | lone CR | `a\rb` | `a\nb` | N |
+  | empty | (empty) | (empty) | Y |
+
+  Every line ending becomes LF; whether the text ends in a newline is kept. Inserted text is normalized
+  the same way. So on a CRLF file the buffer differs from `originalText` before a keystroke: **3.2's
+  dirty attribute cannot be a raw `buffer !== originalText`** (it would mark every CRLF file dirty on
+  entry), and 5.3 must decide what a save writes for one. D-7's baseline never passes through the editor.
+- **★ Open for 3.2's kickoff — the memo key.** The plan says "the editor's own nested host". But
+  `enterEditMode` loads THEN builds, so the nested host does not exist when the loader runs, and
+  `teardownEditorShell` discards it on exit. The engine keys on whatever element it is handed; the outer
+  host is the key under which edit → reading → edit actually reuses the promise.
+- **Read-only, carried from 2.2's review — module-level collections a nested `mount()` writes to:**
+  `themeRegistry.ts`'s `themeHosts` is a `Set`, self-pruning (`!isConnected` entries dropped before every
+  broadcast) with an exported `unregisterThemeHost`. `initReaderRuntime` registers the nested host;
+  **`teardownEditorShell` already unregisters it** (`editorView.ts:143`) after removing its nodes — so
+  nothing is left registered on the `exitEditMode` path. On the pill-bypass path there is no teardown: the
+  nested host stays connected (hidden) AND registered, which is right while the shell is reused — it keeps
+  receiving theme flips. `readerMode.ts`'s `sources` and `editReturn`, and `editorView.ts`'s `shells`, are
+  `WeakMap`s keyed by host — nothing to unregister. `tocView.ts`'s `tocHosts` (a `Set`, also
+  connected-pruned): the nested mount composes no rail and calls `unregisterTocHost(nested)`, so it is
+  never in it. No leak found; 3.1 changed none of those files.
+- **Suites:** lint 0 · unit 1194 / 1194 (69 files; `editorImportFence` 8, `editorEngine` 18,
+  `diagramImportFence` 8, `codeImportFence` 9, `mathImportFence` 11, `editorView` 11) · scanner self-test
+  7 firing + 10 silent, scan clean over 78 shipped files · browser 1699 pass / 15 skip (168 files, 84 per engine — unchanged from 2.2, as it must be: no browser file was added or touched; `editorNestedHost` 12 and `editMode` 6 per engine, 2.2's counts). No red on the full run; the carried wall-clock flakes did not fire. NO existing test or fixture edited. Golden diff EMPTY · every
+  zero-diff file EMPTY (`mount.ts`, `readerPane.ts`, `appShell.ts`, `editorView.ts`, `readerMode.ts`,
+  `chromiumFolderSource.ts`, `htmlExport.ts`, the diagram/math modules, `runReader.ts`, `mountReader.ts`,
+  `contentWatch.ts`, `scripts/check-dynamic-imports.ts`) · manifest 654 / 770 B, `permissions: []`.
+
 ## Up next
 
-**FIRST — M12 task 3.1** (`editorEngine.ts`, the ONE CodeMirror importer, and
-`editorImportFence.test.ts`), fresh session, test-first, one commit per task. Group 3's browser tests run
-on an UNWATCHED document, the precondition asserted in each. **Byte snapshot for its kickoff (2.2's
-measured figures):** `.output` 5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB (7,340,032 B) —
-headroom 2,138,897 / 2,138,781 B · zip 1,629,492 / 1,629,550 B · content script 342,384 B both engines,
-md5 `129deda5156522a75ac41eaabbdc1c5f` (Cr) / `94c2d14b9e08144f0c932415edb28acf` (Fx) — 3.1 must hold
-these md5s · manifest 654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 · unit 1168 · browser 1699 / 15 skipped ·
-golden empty. CodeMirror is installed but unreferenced; the +605,443 B lands at 3.1.
+**FIRST — M12 task 3.2** (`editorEnhancer.ts`, the edit-entry control, the editor pane, the
+save-capability injection point), fresh session, test-first, one commit per task. Group 3's browser tests
+run on an UNWATCHED document, the precondition asserted in each. The informal eyeball is owed at this task.
+**Byte snapshot for its kickoff (3.1's measured figures — identical to 2.2's, the engine being
+unreached):** `.output` 5,201,135 B (Cr) / 5,201,251 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom
+2,138,897 / 2,138,781 B · zip 1,629,492 / 1,629,550 B · content script 342,384 B both engines, md5
+`129deda5156522a75ac41eaabbdc1c5f` (Cr) / `94c2d14b9e08144f0c932415edb28acf` (Fx) — 3.2 must hold these
+md5s (a CSS touch that reaches the content script is the one stated exception, decomposed) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 · unit 1194 · browser 1699 / 15 skipped · golden empty.
+**The CodeMirror chunk lands at 3.2, not before:** expect about **+607 KB** `.output` (3.1's scratch
+measurement: +607,325 B, three lazy chunks), leaving roughly 1.46 MiB of headroom.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it. `mount.ts` is zero-diff from here on: its one authorized edit landed at 2.2.
+figure above supersedes it. `mount.ts` is zero-diff from here on.
+**Named inputs to 3.2, from 3.1:**
+- **The fence's clause B owes its app-page half** — once a caller exists, `editorImportFence.test.ts`
+  must also assert the app graph reaches `editorEngine.ts`. That file is NOT in 3.2's Files list: a
+  necessary ripple, to be enumerated in the kickoff.
+- **The memo key** — which element is handed to `loadEditorEngine` (see 3.1's record). Open.
+- **The dirty comparison on a CRLF file** — the buffer is LF-normalized; a raw compare against
+  `originalText` is dirty on entry.
+- **The themeRegistry finding** — teardown already unregisters the nested host; the pill-bypass path
+  leaves it registered and connected, by design while the shell is reused. 3.2 owns the pill in edit, so
+  whatever it does there must keep those two in step.
+- **GFM highlighting** — the human's answer on `base: markdownLanguage`, if one is wanted before the
+  editor is first looked at.
+- **Not verified at 3.1, real-engine only:** that a repeated `import()` after a failed chunk fetch
+  retries; that a second host's load costs no re-fetch.
 **Carried into group 3 from 2.2:** the shell (`buildEditorShell` / `renderPreview` /
 `teardownEditorShell`) has no production caller — 3.2 wires it and builds the editor into the source
 slot; 3.2 also owns the mode pill in edit, which today leaves edit with no teardown and leaves the shell
 in the DOM, hidden; 3.3 drives `renderPreview` and proves the scroll box under real typing.
-*(2.2's own kickoff snapshot, superseded: 2.1's figures — `.output` 5,201,045 / 5,201,161 B, content
-script 342,339 B.)*
-**Before 3.1: nothing is owed on the editor defaults.** `markdown()`'s default keymap is RULED ship-as-is
-(2026-10-04, `decisions.md`'s M12 TASK 1.1 EXTENDED entry), beside the `basicSetup` ruling; 7.1's walk
-now carries one item for the editing feel of those defaults.
+*(3.1's own kickoff snapshot was 2.2's figures, unchanged.)*
+**The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
+EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
 - **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
