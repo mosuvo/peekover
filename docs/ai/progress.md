@@ -1,12 +1,12 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-06 (five human rulings after task 4.1, R4–R8 — doc-only, no code moved; `decisions.md`'s
-"M12 RULINGS after task 4.1" entry.) M12
+*Updated: 2026-10-06 (task 4.2 landed — the "changed on disk while you were editing" hint, per R6;
+`decisions.md`'s "012 D-8 — 4.2 landed" entry.) M12
 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
-tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3 and 4.1 landed; **task 4.2 is next, RE-SCOPED (R6) to the
-"changed on disk while you were editing" hint; then the discovered 3.4 (editor legibility + preview
-fidelity); then 5.1.**
+tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3, 4.1 and 4.2 landed; **the discovered task 3.4 (editor
+legibility + preview fidelity) is next; then 5.1. Group 4 is complete except for the dirty-exit
+property, which now lives in 6.1 (R6).**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
 and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are now routed to 3.4. 3.3
 filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RULED (R7) and routed to
@@ -14,8 +14,8 @@ filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RU
 `main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
 available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
 (4.1).**
-Current numbers: `.output` 5,814,275 B (Cr) / 5,814,391 B (Fx) against ≤ 7 MiB, content script
-342,520 B both engines (moved at 4.1 by its own glue, +136 B), `dependencies` 10, `permissions: []`. M11 (math
+Current numbers: `.output` 5,814,537 B (Cr) / 5,814,653 B (Fx) against ≤ 7 MiB, content script
+342,652 B both engines (moved at 4.2 by its own glue, +132 B), `dependencies` 10, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -910,21 +910,115 @@ number above stands unmeasured-again. `decisions.md`'s "M12 RULINGS after task 4
   the first is outside the fence and left, flagged. (vi) `tasks.md`'s header carries a REDLINED line
   per earlier redline; none was added for this one — the kickoff's "no status line".
 
+**M12 task 4.2 DONE, 2026-10-06 — the "changed on disk while you were editing" hint (D-8; R6).**
+While the watch holds an external change behind an edit session, the outer host carries
+`data-watch-changed-in-edit`. No UI, no copy, no CSS: 5.3 consumes it. No human ruling was taken;
+three judgment calls are flagged. `decisions.md`'s "012 D-8 — 4.2 landed" entry is the record.
+**Group 4 is complete except for the dirty-exit property, which is 6.1's (R6).**
+- **What landed, in `src/watch/watchController.ts` and nowhere else in production** (its DECISION 6
+  comment). `CHANGED_IN_EDIT_ATTR` (exported, presence-only, value `""`) and one writer,
+  `syncEditHint`: present iff a change is held behind a deferral AND `data-mode === 'edit'`. Called
+  from `markDeferred`, the observer's still-deferring branch, the exit flush (before its render) and
+  `cancelPending`. `stopSelf` calls `cancelPending` before dropping `host`. No import added.
+- **Step 0, re-derived at `26c3883`.**
+  (a) *Held, and why.* "Held" is `pendingSetByDefer` with `pendingText` non-null. The controller
+  recorded that a DIFF was part of why (`pendingHeldUnderDiff`, 4.1) and nothing about edit; the
+  hint reads `data-mode` at write time instead of adding a flag.
+  (b) *Every end of a held deferral:* the observer's flush (`onDiffExited`) · `cancelPending`, reached
+  from `stopSelf` (an explicit `stop()`, and `onReadError`'s dead-read stop — a fourth path the
+  task line does not name) and from `start()`. Nothing else clears `pendingSetByDefer`.
+  (c) *The name:* `data-watch-changed-in-edit`. `:host([data-watch="active"])` in `readerCss.ts`
+  matches the attribute named `data-watch` only, so the prefix collides with nothing.
+  (d) *The last rendered text:* not held, but readable — `readerSourceFor(host)`, already imported
+  and read in `renderNow`. A changed-and-changed-back file is therefore detectable in one line, and
+  is deliberately NOT detected (judgment call 2).
+- **★ Judgment calls, flagged.** (1) *"During edit" is a state.* Edit + diff both deferring, edit
+  left → the text stays held, the hint goes; text held under a diff, edit then entered → the hint
+  appears. (2) *No content compare* — it would be a second, weaker copy of D-7's. **For 5.3:** a
+  file that changes and changes back keeps the hint, and 5.3's "on conflict — or on 4.2's hint"
+  would, read literally, refuse a save D-7 allows. (3) *The hint clears when the watch stops*,
+  though the disk did change.
+- **The cooldown's three clauses, each whole.** *From the end:* the flush's hint write sits before
+  `renderNow`, outside the block it times; `readyAt` is computed as before. *Multiplier 1:*
+  untouched. *Coalesce, do not queue:* still one slot, and no timer is armed, re-armed or cancelled
+  by the new code — the hint's attribute is not in the observer's filter, so writing it calls
+  nothing back. And 4.1's three: no timer from the new condition · the injected `now` untouched ·
+  `stop()` and `start()` both still reach `cancelPending`.
+- **Red-first.** Unit, before the change: **13 red / 38 green** (the 36 existing; the two
+  silent-direction cases hold before the change, as they must).
+
+  | Ablation | Where | Signature |
+  |---|---|---|
+  | none — unchanged `26c3883` | unit | 13 red: `expected false to be true` (12) and the literal's pin |
+  | the set (`markDeferred`'s call) | unit · browser, both engines | unit 11 red · browser 2 per engine: `an external change held during edit is not marked on the host` (`hint` false, `hintValue` null) and `the hint, with the unsaved buffer untouched beside it` |
+  | the flush's clear | unit · browser, both engines | unit 5 red · browser 1 per engine: `the hint outlived the change it was about: expected { hint: true, mode: 'reading' }` |
+  | the teardown's clear (`cancelPending`) | unit · browser, both engines | unit 3 red (`stop()`, the document switch, the dead read) · browser 1 per engine: `a stopped watch left its hint on the host` |
+  | the observer's re-read | unit | 2 red: edit ends under an open diff · edit entered over text held under a diff |
+
+- **Real engine, Chromium and Firefox, every fixture asserted WATCHED** (the 4.1 rig, hand-driven).
+  - *Held:* one external change in edit → the hint present (value `""`), ONE write of the attribute,
+    0 mutation records on the outer root, the editor the same connected node, the buffer the file as
+    opened.
+  - *Exit:* the hint gone (two writes in all: one set, one removal), mode `reading`, the on-disk
+    text in the column, no note (R4), the flush captured the document it replaced.
+  - *Typed buffer:* 8 typed characters byte-identical under the hint, dirty still set; `stop()` in
+    edit → the hint gone, the editor and its text not; a `start()` on another host → absent on both.
+  - *Nothing arrived:* in edit, across the exit and on the watch render after it → ZERO writes of
+    the attribute (counted on the host), with the watch shown live by that render.
+- **Bytes, both engines (clean rebuild at HEAD first: 4.1's figures reproduced exactly).** `.output`
+  5,814,537 B (Cr) / 5,814,653 B (Fx), +262 each; headroom 1,525,495 / 1,525,379 B. Zips 1,836,518 /
+  1,836,576 B (+146). TWO files changed size, on both engines:
+
+  | | Content script | App chunk |
+  |---|---|---|
+  | 4.1 baseline | 342,520 B | 518,038 B |
+  | 4.2 | 342,652 B (+132) | 518,168 B (+130) |
+  | the helper and the constant (`syncEditHint`, the literal) | 109 | 108 |
+  | the set (`markDeferred`'s call) | 5 | 5 |
+  | the observer's re-read | 4 | 4 |
+  | the flush's clear | 5 | 5 |
+  | the teardown's clear | 8 | 8 |
+  | a minifier step at three or more call sites | 1 | 0 |
+  | residual | 0 | 0 |
+
+  Sixteen arms — every subset of the four call sites, both engines for the 0-, 1-, 3- and 4-site
+  arms, Chromium for the six pairs. The helper's figure is over-determined (each one-site arm minus
+  that site's marginal gives 109 / 108, four times), and every pair is additive to the byte. The
+  content script's 1 B is located, not fitted: all four three-site arms and the full build carry it,
+  no pair or single does, and the app chunk never does. Of the helper's bytes, 31 are the name
+  (measured by swapping the literal for a one-character one). **With all four calls removed and the
+  `stopSelf` reorder reverted, every built file is name-, size- and md5-identical to the baseline on
+  both engines** (`e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`); with the
+  reorder kept, sizes are identical and the md5 moves — the reorder costs 0 B. New md5
+  `97b1b8690f195acb499a464fee532b34` (Cr) / `c0115d89b10be306ffa0c77d2234a63e` (Fx). The three
+  CodeMirror chunks are unchanged (54,680 + 209,493 + 342,426 B). Manifest 654 / 770 B,
+  `permissions: []`, `dependencies` 10.
+- **Verify.** lint 0 · unit **1268** (70 files; `watchController` 51 — 36 existing, unedited, + 15 —
+  `editorView` 27, `editorEnhancer` 28, `editorEngine` 21, `readerMode` 17, `mount` 12; the two fences
+  over what `watchController.ts` may import: `diffEngine` 15 and `editorImportFence` 10) · browser
+  **1791 pass / 15 skip** (178 files, 89 per engine; per engine `editorWatch` 6 — 4.1's 3, unedited,
+  + 3 — `watchDiffDefer` 2, `watchControl` 36, `watchRemount` 12, `diffChrome` 39, `diffView` 10,
+  `editorPreview` 10, `editorDegrade` 9, `editorRender` 10, `editorNestedHost` 12,
+  `editorEyeballProxy` 11) · scanner and `--self-test` EXIT 0 (79 shipped files; 7 firing + 10
+  silent) · golden diff EMPTY · the zero-diff list empty. **No red in any run, and none of the
+  carried flakes fired** — although lint and the unit suite ran beside the browser suite's first
+  minute (an unintended overlap, not repeated). No existing assertion edited:
+  `watchController.test.ts` is +354 / −0 apart from two names added to its import list, and
+  `editorWatch.browser.test.ts` is +186 / −1, the one line being its `watchController` import.
+- **Kickoff vs repo, flagged.** (i) "`start(otherHost)` while held → removed from the first host":
+  `start()` on a running controller is a no-op (005); the document switch is `stop()` then
+  `start()`, tested, with the bare `start()` pinned beside it. (ii) "No import of any editor or
+  readerMode module": the controller has imported `readerSourceFor` from `readerMode` since 006;
+  nothing was added. (iii) "Set vs clear vs the constant": a shared helper and four call sites, as
+  above. (iv) The kickoff's unit list has eight cases; fifteen were written — the seven extra are the
+  literal's pin, hint-gone-before-the-render, the two "state" cases, the dead read, the bare
+  `start()` and the absent-otherwise case. (v) Group 4's acceptance line still reads "conflict-routed
+  (never auto-flushed) on a dirty one" — carried from the rulings record, still outside the fence.
+
 ## Up next
 
-**The order, as ruled 2026-10-06: 4.2 (re-scoped) → 3.4 (discovered) → 5.1.**
-**FIRST — M12 task 4.2, RE-SCOPED by R6** (the "changed on disk while you were editing" HINT — D-8;
-D-7's early hint only; F-4), fresh session, test-first, one commit. Files, per `tasks.md`:
-`src/watch/watchController.ts` · `watchController.test.ts` · `tests/browser/editorWatch.browser.test.ts`.
-- **What it is:** `watchController.ts` sets a literal host attribute while it holds an external change
-  deferred during edit, and clears it when that deferral ends — the flush, a document switch, `stop()`.
-  Absent otherwise, including on a diff-only deferral. No UI (5.3 consumes it). Red-first both
-  directions; zero renders while held; the editor intact.
-- **What it is NOT:** no dirty-exit detection, no withheld flush, no read of `data-edit-dirty`, no
-  edit to `editorEnhancer.ts` / `editorView.ts`. The exit-order finding (4.1) is ANSWERED by R6, not
-  worked around: the asymmetry is 6.1's. The flush stays silent (R4).
-- **Open for its kickoff:** the attribute's literal name — 4.2 chooses and records it; 5.3 reads it.
-**THEN — M12 task 3.4, DISCOVERED 2026-10-06** (editor legibility + preview fidelity — R7, R8; E-1,
+**The order, as ruled 2026-10-06: 4.2 (LANDED) → 3.4 (discovered) → 5.1.**
+**FIRST — M12 task 3.4, DISCOVERED 2026-10-06** (editor legibility + preview fidelity — R7, R8; E-1,
 E-2, E-3, P-1). Files and Verify in `tasks.md`, after 3.3's block. **Two open items its kickoff must
 settle BEFORE drafting:** `@codemirror/language` is not a direct dependency and does not resolve
 today (an install is a governed, necessary ripple beyond the listed files — `package.json`, the
@@ -934,29 +1028,37 @@ math, code).
 (D-9) · CRLF-on-save (3.1's finding: the editor normalizes CRLF / lone CR to LF — what a save writes
 for a CRLF file) · Ctrl/Cmd+S in edit (E-7). `tasks.md` 5.1's body names the ledger wording only; the
 other two ride its kickoff.
-**Byte snapshot for 4.2's kickoff (4.1's measured figures, kept — nothing was built since):** `.output` 5,814,275 B (Cr) / 5,814,391 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,525,757 / 1,525,641 B · zip 1,836,372 / 1,836,430 B · content
-script 342,520 B both engines, md5 `e051533e430646c410dfa7c5a200da2d` (Cr) /
-`a791ceae1241502dede01f25738b3d33` (Fx) · the app chunk 518,038 B, the three CodeMirror lazy chunks
+**Byte snapshot for 3.4's kickoff (4.2's measured figures):** `.output` 5,814,537 B (Cr) / 5,814,653 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,525,495 / 1,525,379 B · zip 1,836,518 / 1,836,576 B · content
+script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
+`c0115d89b10be306ffa0c77d2234a63e` (Fx) · the app chunk 518,168 B, the three CodeMirror lazy chunks
 54,680 + 209,493 + 342,426 B · manifest 654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 ·
-unit 1253 · browser 1785 / 15 skipped · golden empty.
+unit 1268 · browser 1791 / 15 skipped · golden empty.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it. `watchController.ts` is on the content-script graph: 4.2 moves that figure
-again, by its own glue only, decomposed.
-**Carried inputs to 4.2, from 4.1:**
-- **The interim state — 4.2 does NOT change it (R6); 6.1 does.** Every exit from edit flushes. A dirty
-  exit discards the buffer (3.2) and then shows the on-disk text. No test asserts it.
+figure above supersedes it. 3.4 is editor-side: the content script should NOT move there, md5 included.
+**Carried inputs, from 4.2:**
+- **For 5.3 — the hint's literal is `data-watch-changed-in-edit`** (`CHANGED_IN_EDIT_ATTR` in
+  `watchController.ts`), presence-only. Read it by literal; pin the literal to the export in a test.
+- **For 5.3 — ★ an open product call, for the human.** The hint makes no content comparison, so a
+  file that changed and changed back still carries it. `tasks.md` 5.3 says "on conflict — or on 4.2's
+  hint" → the safe floor; read literally that refuses a save D-7's compare would allow. Whether the
+  hint REFUSES or only prompts the compare to rule is 5.3's kickoff question.
+- **For 6.1 — the dirty-exit property is the only part of group 4 left.** "Stay" must leave the hint
+  and the deferral in place; "discard" clears the hint through the ordinary flush. The interim state
+  stands until then: every exit flushes, and a dirty exit discards the buffer (3.2).
 - **`editorWatch.browser.test.ts`'s rig** is hand-driven with the default render, so a flush there does
-  not re-install the edit control (production's `renderWithEnhancements` does). A 4.2 test that needs
-  the control AFTER a watch render must build its controller with a render that calls `enhanceEditor`.
+  not re-install the edit control (production's `renderWithEnhancements` does). Its controller is
+  the last entry of the file's `controllers` array.
 - **Its positive control fires a capture** (fire-and-forget) and waits it out; a test that ends with a
   watch render and does not wait rejects into the next test when the store's connection closes.
-- **A heredoc whose body holds an apostrophe fails the whole command** (twice this session) — write
-  the file, then run it.
+- **A heredoc whose body holds an unbalanced apostrophe fails the whole command** (again this
+  session) — write the file, then run it.
 - **The full browser suite does not finish inside one 10-minute tool call** on this machine — run it
-  in the background, or in batches.
+  in the background, and do not run the unit suite beside it.
 - **Console records** in browser tests print only under `pnpm exec vitest run --project browser
   --reporter=verbose`; `pnpm test:browser -- --reporter=verbose` does not pass the flag through.
+- **A clean two-engine build is ~20 s** — every subset of a handful of call sites is affordable as a
+  byte arm, and over-determines the shared helper.
 **Routed 2026-10-06 (R7, R8):** P-1, E-1, E-2, E-3 → task 3.4. **For 6.2 and the §8-2 ruling:** P-2,
 P-3 (and R7's enhancer cost). Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor — the save-time batch
 at 5.1, before 5.3), E-4, E-5, E-6 and E-8 (the 7.1 walk), the failed-chunk "try again" finding.

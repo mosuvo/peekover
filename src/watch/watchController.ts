@@ -163,6 +163,28 @@
 // changes — this module does not read the editor's dirty attribute, and by the time the observer
 // runs the exit has already removed it. Until tasks 4.2 and 6.1 land, leaving edit discards the
 // buffer (3.2), and the flush then shows the text that is on disk.
+//
+// ══ DECISION 6 — A CHANGE HELD DURING EDIT IS MARKED ON THE HOST (012 D-8, task 4.2; ruling R6) ══
+//
+// DECISION 5 keeps an external change away from the editor. That leaves the person editing with no
+// way to learn the file moved under them, and the save path (task 5.3) with no early sign of it. So
+// the controller says so, in the one vocabulary this module already speaks — a host attribute:
+//
+//     `CHANGED_IN_EDIT_ATTR` IS ON THE HOST EXACTLY WHILE BOTH ARE TRUE: a change is being HELD
+//     behind a deferral, AND the host is in edit. Present or absent — never a "false" value.
+//
+// ONE FUNCTION WRITES IT, AND IT WRITES WHAT IS TRUE NOW. `syncEditHint` is called wherever either
+// half can change: where text becomes held (`markDeferred` — `onText`, and a cooldown timer that
+// converts), where the mode or the diff flag moves while text stays held (the observer), and where
+// the hold ends (the flush, and `cancelPending` — `stop()`, a dead read, a document switch). So
+// there is no "set" site to forget a "clear" for, and a diff-only deferral never sets it: that one
+// already has its own sentence (DECISION 4).
+//
+// ★ IT IS A HINT, AND ONLY THAT. Nothing here compares content: a file that changed and changed back
+// still reads as "changed". D-7's save-time compare (5.3) is what rules whether a save is safe, and
+// this attribute never stands in for it. Nothing displays it at 4.2, and the flush is as silent as
+// DECISION 5 left it (R4). R6 also moved the dirty-exit question out of this module: the guard is
+// task 6.1's, and DECISION 5's interim note stands until it lands.
 
 import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
@@ -232,6 +254,16 @@ export const COOLDOWN_MULTIPLIER = 1;
  * which the fence exempts.
  */
 export const DIFF_DISPLAYED_ATTR = 'data-diff';
+
+/**
+ * "This file changed on disk while it was being edited" — a host attribute, PRESENCE-only
+ * (DECISION 6). Written by this module and by nothing else.
+ *
+ * Exported for its READER, task 5.3's save path, which sits behind the same kind of fence this
+ * module does: it names the attribute by literal and pins that literal to this export in a test,
+ * the way this module's own tests pin `data-diff` and `data-mode`.
+ */
+export const CHANGED_IN_EDIT_ATTR = 'data-watch-changed-in-edit';
 
 /**
  * The D-11 "changed again" line — the gate-3 product decision, in the copy that shipped.
@@ -369,6 +401,16 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
   function markDeferred(target: HTMLElement): void {
     pendingSetByDefer = true;
     if (diffDisplayed(target)) pendingHeldUnderDiff = true;
+    syncEditHint(target);
+  }
+
+  /** Make the hint say what is true of this host NOW: a change is held, and it is being edited
+   *  (DECISION 6). Idempotent — an attribute already in the right state is not written again. */
+  function syncEditHint(target: HTMLElement): void {
+    target.toggleAttribute(
+      CHANGED_IN_EDIT_ATTR,
+      pendingSetByDefer && target.getAttribute('data-mode') === 'edit',
+    );
   }
 
   /**
@@ -382,11 +424,16 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
    * Since 012 it watches `data-mode` as well (DECISION 5), and the callback asks whether ANYTHING
    * still defers — so leaving edit under an open diff, or closing a diff while editing, releases
    * nothing until the other has gone too.
+   *
+   * While something still defers, the hint is re-read instead (DECISION 6): edit entered or left
+   * under an open diff changes whether held text is held DURING EDIT, without releasing it. The
+   * hint's own attribute is not in the filter, so writing it cannot call this back.
    */
   function installDiffObserver(target: HTMLElement): void {
     diffObserver?.disconnect();
     diffObserver = new MutationObserver(() => {
-      if (!deferring(target)) onDiffExited();
+      if (deferring(target)) syncEditHint(target);
+      else onDiffExited();
     });
     diffObserver.observe(target, {
       attributes: true,
@@ -417,6 +464,9 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     pendingText = null;
     pendingSetByDefer = false;
     pendingHeldUnderDiff = false;
+    // Nothing is held any more, so the hint goes — BEFORE the render, and outside the block
+    // `renderNow` times: the cooldown is still measured over the render alone (DECISION 6).
+    syncEditHint(target);
     renderNow(text, target);
     if (heldUnderDiff) setWatchNote(CHANGED_AGAIN_NOTE);
   }
@@ -442,6 +492,9 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     // fire the "changed again" line about a change that happened in the OLD one.
     pendingSetByDefer = false;
     pendingHeldUnderDiff = false;
+    // The hint goes with the text it was about (DECISION 6) — which is why `stopSelf` calls this
+    // while it still knows the host.
+    if (host) syncEditHint(host);
   }
 
   /** Stop without going through the WatchTarget surface, so the dead-read path and an explicit
@@ -449,9 +502,9 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
   function stopSelf(): void {
     if (!running) return;
     running = false;
+    cancelPending(); // before `host` is dropped: it clears the hint on that host (DECISION 6)
     host = null;
     consecutiveFailures = 0;
-    cancelPending();
     // D-11: the exit watcher belongs to the host this watch was rendering into, so it goes when
     // the watch does. A surviving observer would call `onDiffExited` for a host nobody is watching.
     diffObserver?.disconnect();

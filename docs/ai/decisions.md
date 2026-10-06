@@ -1,6 +1,63 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-06 · 012 D-8 — 4.2 landed (the hint, per R6): while the watch holds an external change
+  behind an edit session, the outer host carries `data-watch-changed-in-edit`. No UI; task 5.3 consumes
+  it. No human ruling was taken; three judgment calls are flagged below.**
+  **The attribute.** `data-watch-changed-in-edit`, presence-only (written with `toggleAttribute`, so its
+  value is the empty string — never `"false"`), on the OUTER host, beside `data-diff` / `data-mode` /
+  `data-edit-dirty`. Exported from `src/watch/watchController.ts` as `CHANGED_IN_EDIT_ATTR`; that module
+  is its only writer. 5.3 reads it by literal and pins the literal to the export in a test (the
+  `data-diff` / `data-mode` precedent). No import was added (the 5.1 fence's Clause C).
+  **Where it sets and clears — one function, `syncEditHint`, which writes what is true NOW:** present
+  iff a change is held behind a deferral AND `data-mode === 'edit'`. It is called at every point either
+  half can move (the file's DECISION 6 comment is the in-code record):
+  - *where text becomes held* — `markDeferred`, which both deferral sites share: `onText`, and
+    `flushPending` when a cooldown timer armed before edit entry fires during it;
+  - *where the mode or the diff flag moves while text stays held* — the existing observer, in the
+    branch that used to do nothing ("something still defers");
+  - *where the hold ends* — the exit flush (`onDiffExited`, before its render) and `cancelPending`,
+    which is `stop()`, the dead-read stop, and both halves of a document switch (`stop()` then
+    `start()`). `stopSelf` now calls `cancelPending` before it drops `host`, so the clear has a host
+    to act on — a reorder of two statements, byte-neutral.
+  A diff-only deferral never writes it (asserted as zero writes of the attribute, not just absence).
+  **★ JUDGMENT CALL 1 — "held during edit" is read as a STATE, not as "set at arrival, cleared at the
+  end of the deferral".** `tasks.md` says the attribute is "ABSENT otherwise — … outside edit". With
+  edit AND a diff both deferring, leaving edit does not end the deferral (the diff still holds the
+  text, 4.1), so a set-then-clear-at-the-end build would leave the hint on a host that is no longer
+  being edited. As built it goes when edit ends and the text stays held. The mirror case follows from
+  the same rule and is also built: text held under a diff, THEN edit entered → the hint appears with
+  the edit (the disk is ahead of the buffer the editor just opened). Neither case is in the kickoff's
+  list; both are tested and both red when the observer's re-read is removed.
+  **★ JUDGMENT CALL 2 — step 0(d): NO content comparison.** The controller keeps no copy of the last
+  rendered text, but it can already read it: `readerSourceFor(host)`, imported since 006 and read in
+  `renderNow` for the snapshot capture. So "the file returned to exactly what is on screen" IS
+  detectable without new state, in one line. It was not added: (i) R6 — the hint never replaces D-7's
+  save-time compare, and a hint that is itself a content compare is a second, weaker copy of it
+  (against the rendered text, not the buffer's baseline; not at save time); (ii) the flush re-renders
+  that text regardless, as at 4.1, so "a change is held" stays the single fact the attribute and the
+  flush both follow. **Consequence, stated for 5.3:** a file that changes and changes back while being
+  edited still carries the hint. `tasks.md` 5.3 routes "on conflict — or on 4.2's hint" to the safe
+  floor; read literally, that refuses a save D-7's compare would allow, until edit is left.
+  **★ JUDGMENT CALL 3 — the hint clears when the WATCH stops, even though the disk did change.**
+  `stop()` (the user turning watch off mid-edit, or a dead read) drops the held text, and the hint goes
+  with it: the controller no longer holds anything to be true about. This is the kickoff's own
+  `stop()` case; it is recorded because it is the plainest instance of why the hint is early notice
+  only — an unwatched document never has it at all.
+  **Unchanged:** the flush (an ordinary watch render, silent — R4), the cooldown, the "changed again"
+  line, the interim state (every exit flushes; a dirty exit discards the buffer — 6.1's guard).
+  **Kickoff vs repo, flagged.** (a) "`start(otherHost)` while held → removed from the first host":
+  `start()` on a RUNNING controller is the idempotent no-op it has been since 005, so it removes
+  nothing — and should not, the change is still held for the first host. A document switch is
+  `stop()` then `start()`; that is what is tested, with the bare `start()` pinned as a no-op beside it.
+  (b) "no import of any editor or readerMode module": `watchController.ts` has imported
+  `readerSourceFor` from `readerMode` since 006. No import was added or removed. (c) "set vs clear vs
+  the constant": the decomposition is a shared helper plus four call sites (progress.md's 4.2 record).
+  *Revisit-when:* 5.3's kickoff — what the hint does to a save (judgment call 2's consequence: refuse,
+  or prompt D-7's compare to rule) is a product call for the human, not 5.3's to assume; 6.1 — "stay"
+  must leave the hint in place and "discard" must clear it (it will, through the flush); any task
+  that wants the hint to survive a stopped watch.
+
 - **2026-10-06 · M12 RULINGS after task 4.1 — five human rulings (R4–R8): an edit-exit flush is silent;
   4.1's state-based flush is accepted; task 4.2 is RE-SCOPED to the "changed on disk while you were
   editing" hint; the live preview runs the reader's enhancers; the editor import fence widens to a third

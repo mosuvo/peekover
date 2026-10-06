@@ -20,6 +20,8 @@ import {
   AT_BOTTOM_SLACK_PX,
   COOLDOWN_MULTIPLIER,
   CHANGED_AGAIN_NOTE,
+  CHANGED_IN_EDIT_ATTR,
+  DEAD_AFTER_FAILURES,
   DIFF_DISPLAYED_ATTR,
 } from './watchController';
 import type { ChangeDetector, OnText } from './changeDetector';
@@ -917,6 +919,358 @@ describe('watchController — D-8: edit mode defers the re-render (012 task 4.1)
 
     exitEditMode(host);
     await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+  });
+});
+
+// ════ 012 TASK 4.2 — D-8 / R6: THE "CHANGED ON DISK WHILE YOU WERE EDITING" HINT ════════════════
+//
+// The rule under test: the host carries `CHANGED_IN_EDIT_ATTR` exactly while BOTH are true — the
+// controller is holding an external change behind a deferral, and the host is in edit. Present or
+// absent, never a "false" value. Nothing displays it at this task (5.3 reads it).
+//
+// It is asserted in both directions throughout: every test that shows it SET also shows the state
+// it was absent in beforehand, and every way a held change stops being held — the flush, `stop()`,
+// a document switch, a dead read — is shown to take it away again.
+//
+// 4.1's block above is unedited; these sit beside it and reuse its helpers.
+
+/** Is the hint on this host? Presence is the whole of its meaning. */
+const hinted = (host: HTMLElement): boolean => host.hasAttribute(CHANGED_IN_EDIT_ATTR);
+
+/** Every write of the hint attribute on `host`, so "set once" is a count and not an inference. */
+function hintWrites(host: HTMLElement): { count: () => number } {
+  const records: MutationRecord[] = [];
+  const observer = new MutationObserver((batch) => void records.push(...batch));
+  observer.observe(host, { attributes: true, attributeFilter: [CHANGED_IN_EDIT_ATTR] });
+  return {
+    count: () => {
+      records.push(...observer.takeRecords());
+      return records.length;
+    },
+  };
+}
+
+describe('watchController — D-8: the changed-while-editing hint (012 task 4.2, R6)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('the name is a data- literal, and it is not the diff flag', () => {
+    // Pinned so a rename reddens here; 5.3 reads this attribute and will pin its own side.
+    expect(CHANGED_IN_EDIT_ATTR).toBe('data-watch-changed-in-edit');
+    expect(CHANGED_IN_EDIT_ATTR).not.toBe(DIFF_DISPLAYED_ATTR);
+  });
+
+  it('SETS the hint when external text arrives while data-mode="edit" — and renders nothing', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    expect(hinted(host), 'in edit with nothing held: absent').toBe(false);
+
+    r.fire('v1');
+
+    expect(hinted(host)).toBe(true);
+    expect(host.getAttribute(CHANGED_IN_EDIT_ATTR), 'present-or-absent, never "false"').not.toBe('false');
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('a SECOND change while still held leaves it set — written once, and still nothing renders', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    const writes = hintWrites(host);
+
+    r.fire('v1');
+    r.fire('v2');
+    await observerTick();
+
+    expect(hinted(host)).toBe(true);
+    expect(writes.count(), 'one write of the attribute across two held changes').toBe(1);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+  });
+
+  it('LEAVING EDIT renders the newest held text AND removes the hint', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+    r.fire('v2');
+    expect(hinted(host)).toBe(true);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v2']);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('is gone BEFORE the flush renders — the render never sees a stale hint', async () => {
+    resetWatchRegistryForTest();
+    const fake = fakeDetector();
+    const clock = fakeClock();
+    const seen: boolean[] = [];
+    const host = readingHost();
+    const controller = createWatchController({
+      detector: fake.detector,
+      docId: null,
+      render: (_text, target) => void seen.push(hinted(target)),
+      signal: () => {},
+      now: clock.now,
+    });
+    controller.start(host);
+    fake.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    fake.fire('v1');
+    expect(hinted(host)).toBe(true);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+
+    expect(seen).toEqual([false, false]);
+  });
+
+  it('a DIFF-ONLY deferral never sets it — held, flushed, and not one write of the attribute', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    const writes = hintWrites(host);
+    enterDiffOn(host);
+    await observerTick();
+    r.clock.advance(5000);
+
+    r.fire('v1');
+    await observerTick();
+    expect(r.renders.map((x) => x.text), 'non-vacuous: the text IS held').toEqual(['v0']);
+    expect(hinted(host)).toBe(false);
+
+    exitDiffOn(host);
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(hinted(host)).toBe(false);
+    expect(writes.count()).toBe(0);
+  });
+
+  it('EDIT + DIFF both deferring: the diff closing leaves it set; leaving edit flushes and removes it', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    enterDiffOn(host);
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+    expect(hinted(host)).toBe(true);
+
+    exitDiffOn(host);
+    await observerTick();
+    expect(r.renders.map((x) => x.text), 'still held').toEqual(['v0']);
+    expect(hinted(host), 'still set').toBe(true);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('EDIT ENDS under a still-open diff: the text stays held, the hint does not — outside edit it is absent', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    enterDiffOn(host);
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+    expect(hinted(host)).toBe(true);
+
+    host.setAttribute('data-mode', 'reading'); // the comparison is still open
+    await observerTick();
+
+    expect(r.renders.map((x) => x.text), 'the diff still defers').toEqual(['v0']);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('text held under a diff, THEN edit entered: the hint appears with the edit — the disk is ahead of the buffer', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    enterDiffOn(host);
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+    expect(hinted(host), 'diff-only so far').toBe(false);
+
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+
+    expect(hinted(host)).toBe(true);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+  });
+
+  it('stop() while held removes it, and nothing renders afterwards', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+    expect(hinted(host)).toBe(true);
+
+    r.controller.stop();
+    expect(hinted(host)).toBe(false);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    r.clock.advance(5000);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('a DOCUMENT SWITCH while held (stop, then start on another host) removes it from the first and never puts it on the second', async () => {
+    const r = rig(40);
+    const hostA = readingHost();
+    const hostB = readingHost();
+    r.controller.start(hostA);
+    r.fire('A: rendered');
+    hostA.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('A: held');
+    expect(hinted(hostA)).toBe(true);
+    const writesB = hintWrites(hostB);
+
+    r.controller.stop();
+    r.controller.start(hostB);
+    await observerTick();
+
+    expect(hinted(hostA)).toBe(false);
+    expect(hinted(hostB)).toBe(false);
+    r.fire('B: first');
+    expect(r.renders.map((x) => x.text)).toEqual(['A: rendered', 'B: first']);
+    expect(hinted(hostB)).toBe(false);
+    expect(writesB.count()).toBe(0);
+  });
+
+  it('start(otherHost) WITHOUT a stop is the idempotent no-op it always was: still watching the first host, hint and all', async () => {
+    const r = rig(40);
+    const hostA = readingHost();
+    const hostB = readingHost();
+    r.controller.start(hostA);
+    r.fire('v0');
+    hostA.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    r.fire('v1');
+
+    r.controller.start(hostB); // ignored: the controller is running
+
+    expect(hinted(hostA), 'the change is still held for A').toBe(true);
+    expect(hinted(hostB)).toBe(false);
+    hostA.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => ({ text: x.text, host: x.host }))).toEqual([
+      { text: 'v0', host: hostA },
+      { text: 'v1', host: hostA },
+    ]);
+    expect(hinted(hostA)).toBe(false);
+  });
+
+  it('a DEAD READ while held stops the watch and takes the hint with it', async () => {
+    resetWatchRegistryForTest();
+    const seam: { text?: OnText; error?: (cause: unknown) => void } = {};
+    const controller = createWatchController({
+      detector: {
+        start(text, error) {
+          seam.text = text;
+          seam.error = error;
+        },
+        stop() {},
+      },
+      docId: null,
+      render: () => {},
+      signal: () => {},
+      now: () => 0,
+    });
+    const host = readingHost();
+    controller.start(host);
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    seam.text?.('v1');
+    expect(hinted(host)).toBe(true);
+
+    for (let i = 0; i < DEAD_AFTER_FAILURES; i += 1) seam.error?.(new Error('unreadable'));
+
+    expect(controller.isWatching()).toBe(false);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('THE COOLDOWN-TIMER PATH: a timer armed before edit and firing during it sets the hint, renders nothing', async () => {
+    const r = rig(400);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0'); // renders, and arms a 400 ms cooldown
+    r.fire('v1'); // inside it -> pending on the clock, timer armed
+    expect(vi.getTimerCount()).toBe(1);
+
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    expect(hinted(host), 'pending on the CLOCK is not held: not yet').toBe(false);
+
+    r.clock.advance(2000); // the timer fires in here, and converts
+
+    expect(hinted(host)).toBe(true);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(vi.getTimerCount(), 'and nothing re-armed').toBe(0);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('ABSENT OTHERWISE: an ordinary watch render outside edit, and an edit session nothing arrives in', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    const writes = hintWrites(host);
+    r.controller.start(host);
+    r.fire('v0');
+    r.clock.advance(5000);
+    r.fire('v1');
+    expect(hinted(host)).toBe(false);
+
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    expect(hinted(host)).toBe(false);
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+
+    expect(hinted(host)).toBe(false);
+    expect(writes.count()).toBe(0);
     expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
   });
 });

@@ -633,7 +633,7 @@ touched; this group widens a gate, not what it protects.*
       `e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`), the app chunk
       518,038 B (+134) — 4.2's snapshot.*
 
-- [ ] **4.2 The "changed on disk while you were editing" HINT (D-8; D-7's early hint only; F-4).**
+- [x] **4.2 The "changed on disk while you were editing" HINT (D-8; D-7's early hint only; F-4).**
       ★ **RE-SCOPED 2026-10-06 by human ruling R6 (`decisions.md`, "M12 RULINGS after task 4.1"). This
       block is the task; the original body is kept beneath it, SUPERSEDED.** *Why:* 3.2's exit tears
       down — removing `data-edit-dirty` — before the watch's observer runs, so `watchController.ts`
@@ -659,6 +659,28 @@ touched; this group widens a gate, not what it protects.*
       Content-script bytes stated against 4.1's 342,520 B and decomposed — `watchController.ts` IS on
       that graph, and the delta is this task's own glue only. Golden EMPTY · manifest **654 / 770 B**
       · `permissions: []`. [D-8, D-7 (the hint only); R6]
+      ★ *Post-landing, 2026-10-06 — no human ruling was taken; three judgment calls are flagged in
+      `decisions.md`'s "012 D-8 — 4.2 landed" entry for one.* (i) **THE LITERAL:
+      `data-watch-changed-in-edit`**, on the outer host, presence-only (its value is the empty string,
+      never `"false"`), exported from `watchController.ts` as `CHANGED_IN_EDIT_ATTR`. 5.3 reads it by
+      literal and pins it to that export in a test. (ii) **What was built:** one function,
+      `syncEditHint`, writes "a change is held AND `data-mode` is `edit`" at every point either half
+      can move — `markDeferred` (both deferral sites), the observer's still-deferring branch, the exit
+      flush, and `cancelPending` (`stop()`, the dead-read stop, a document switch). `stopSelf` calls
+      `cancelPending` before dropping `host`. No import added. (iii) **★ "During edit" is a state,
+      not "set at arrival":** with edit and a diff both deferring, leaving edit keeps the text held
+      and REMOVES the hint (this line's "ABSENT … outside edit"); text held under a diff, then edit
+      entered, SETS it. Neither is in this line's Verify; both are tested. (iv) **★ No content
+      compare** — the controller could make one (`readerSourceFor`, already imported), and does not:
+      a file that changes and changes back still carries the hint. **An input to 5.3:** its "on
+      conflict — or on 4.2's hint" refuses, read literally, a save D-7's compare would allow. (v) The
+      hint clears when the watch STOPS, though the disk did change — early notice only. (vi) **A
+      fourth clearing path** beside this line's three: the dead-read stop (the same teardown as
+      `stop()`), tested. (vii) "A document switch" is `stop()` then `start()`; a bare
+      `start(otherHost)` on a running controller is 005's idempotent no-op and is pinned as one.
+      Measured: `.output` 5,814,537 / 5,814,653 B (+262), content script 342,652 B both engines
+      (+132, md5 `97b1b8690f195acb499a464fee532b34` / `c0115d89b10be306ffa0c77d2234a63e`), the app
+      chunk 518,168 B (+130) — 3.4's snapshot.
       ★ *SUPERSEDED by R6, 2026-10-06 — the original 4.2, struck in place and kept for provenance (the
       M10 precedent). Nothing below is built at this task:*
       ~~**4.2 The exit asymmetry: a DIRTY exit does not auto-flush; the deferred change is raised as D-7's
