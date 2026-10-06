@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
     "@mdit/plugin-tex": "^1.1.0",
     "codemirror": "^6.0.2",
     "diff": "^9.0.0",

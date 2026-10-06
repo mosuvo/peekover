@@ -32,17 +32,23 @@
 //   C — THE LAZINESS PIN. Scanned over EVERY shipped `.ts` file under `src/` and `entrypoints/`
 //       (tests and `.d.ts` excluded — never bundled), not over the union of the two entry graphs
 //       as 007 does: with no caller yet, the engine is in neither graph, and a union scan would
-//       pass on nothing. The permitted set is EXACTLY TWO edges, both DYNAMIC, both in
-//       `editorEngine.ts`: `codemirror` and `@codemirror/lang-markdown`. There is NO static
-//       specifier at all — 007 has one named JSON leaf and 009 three named leaves; this has none.
+//       pass on nothing. The permitted set is EXACTLY THREE edges, all DYNAMIC, all in
+//       `editorEngine.ts`: `codemirror`, `@codemirror/lang-markdown` and `@codemirror/language`.
+//       There is NO static specifier at all — 007 has one named JSON leaf and 009 three named
+//       leaves; this has none.
+//       ★ WIDENED AT 3.4 (decisions.md, M12 RULINGS after task 4.1 — R8): two edges until then.
+//       The third is the human's answer to a stop-and-ask for that ONE specifier, so the editor's
+//       highlight colours can come from design tokens. A FOURTH is a new stop-and-ask, not a
+//       count to bump: the style is built from the third package's own exports precisely so that
+//       `@lezer/highlight` is never written.
 //   D — TRAVERSAL NON-VACUITY. The graphs are non-trivial with named landmarks, every local
 //       specifier resolved, and the tree scan saw the files it is claimed to have seen.
 //
 // TYPE-ONLY IMPORTS COUNT AS EDGES (007's stated policy, applied to clause C by 009). 009 met one
 // in its engine and PERMITTED it by name. This fence permits none, because the engine needs none:
-// its types are inferred from the two dynamic edges themselves, so no `import type` and no
+// its types are inferred from the dynamic edges themselves, so no `import type` and no
 // `typeof import(…)` type query is written. The walker is 007's, unadjusted — it would read a
-// `typeof import('codemirror')` as a third dynamic edge and red clause C's count, which is the
+// `typeof import('codemirror')` as one more dynamic edge and red clause C's count, which is the
 // stricter reading and the intended one.
 //
 // The pattern's red-first ablation is standing precedent — 007 task 3.4's and 009 task 4.5's — and
@@ -67,8 +73,8 @@ const EDITOR_VIEW = 'src/render/editorView.ts';
  *  the app-page graph into the editor. */
 const ENHANCER = 'src/render/editorEnhancer.ts';
 
-/** The two specifiers clause C permits, and the only ones. */
-const PERMITTED = ['@codemirror/lang-markdown', 'codemirror'];
+/** The three specifiers clause C permits, and the only ones (sorted, as the assertions sort). */
+const PERMITTED = ['@codemirror/lang-markdown', '@codemirror/language', 'codemirror'];
 
 /** Trees WXT bundles — `scripts/check-dynamic-imports.ts`'s SHIPPED_ROOTS. */
 const SHIPPED_ROOTS = ['src', 'entrypoints'];
@@ -339,7 +345,7 @@ describe('the editor import fence — clause A, the content-script graph (spec �
 });
 
 describe('the editor import fence — clause B, the control (the engine module\'s own edge)', () => {
-  it('the SAME walker, started at editorEngine.ts, finds both CodeMirror specifiers', () => {
+  it('the SAME walker, started at editorEngine.ts, finds every permitted CodeMirror specifier', () => {
     // THE CONTROL FIRES HERE OR CLAUSE A MEANS NOTHING. Same walker, same matcher, same run,
     // opposite verdict. ★ Until task 3.2 this is the engine's own edge, not the app-page graph:
     // nothing imports the engine yet (see the header). 3.2 adds the app-page half.
@@ -350,7 +356,7 @@ describe('the editor import fence — clause B, the control (the engine module\'
     const found = engineGraph.packages.filter((p) => isCodeMirror(p.spec));
     expect(
       [...new Set(found.map((p) => p.spec))].sort(),
-      'the walk from the engine MUST find both CodeMirror specifiers — if it finds none, the ' +
+      'the walk from the engine MUST find every permitted CodeMirror specifier — if it finds none, the ' +
         "matcher is broken and clause A's empty result is vacuous. Found: " +
         found.map(describeEdge).join(', '),
     ).toEqual(PERMITTED);
@@ -371,11 +377,11 @@ describe("the editor import fence — clause B's APP-PAGE half (task 3.2: the ap
     expect(shipped).toContain(ENHANCER);
   });
 
-  it('the SAME walker over the app-page graph finds both CodeMirror specifiers — in the engine alone', () => {
+  it('the SAME walker over the app-page graph finds every permitted CodeMirror specifier — in the engine alone', () => {
     const found = appGraph.packages.filter((p) => isCodeMirror(p.spec));
     expect(
       [...new Set(found.map((p) => p.spec))].sort(),
-      'the app-page walk MUST find both CodeMirror specifiers — if it finds none, nothing on the ' +
+      'the app-page walk MUST find every permitted CodeMirror specifier — if it finds none, nothing on the ' +
         "app page can load the editor and clause A's empty result proves no exclusion. Found: " +
         found.map(describeEdge).join(', '),
     ).toEqual(PERMITTED);
@@ -384,19 +390,20 @@ describe("the editor import fence — clause B's APP-PAGE half (task 3.2: the ap
 });
 
 describe('the editor import fence — clause C, the chunk stays LAZY (D-2)', () => {
-  it('the ONLY CodeMirror imports in the shipped tree are the TWO dynamic edges in editorEngine.ts', () => {
+  it('the ONLY CodeMirror imports in the shipped tree are the THREE dynamic edges in editorEngine.ts', () => {
     expect(
       treeEdges.map(describeEdge),
-      `D-2: exactly two CodeMirror imports in the repository's shipped tree — \`import('codemirror')\` ` +
-        `and \`import('@codemirror/lang-markdown')\`, both in ${ENGINE}. A third specifier ` +
-        `(\`@codemirror/state\`, \`@codemirror/view\`) is not permitted: use the \`codemirror\` ` +
-        `re-export, or stop and ask. Found:`,
-    ).toHaveLength(2);
+      `D-2 as amended by R8: exactly three CodeMirror imports in the repository's shipped tree — ` +
+        `\`import('codemirror')\`, \`import('@codemirror/lang-markdown')\` and ` +
+        `\`import('@codemirror/language')\`, all in ${ENGINE}. A fourth specifier ` +
+        `(\`@codemirror/state\`, \`@codemirror/view\`, \`@lezer/highlight\`) is not permitted: use ` +
+        `what the three already export, or stop and ask. Found:`,
+    ).toHaveLength(3);
     expect(treeEdges.map((p) => p.spec).sort()).toEqual(PERMITTED);
     expect(treeEdges.every((p) => p.from === ENGINE)).toBe(true);
   });
 
-  it('both are DYNAMIC, and there is no static CodeMirror specifier — type-only included', () => {
+  it('all three are DYNAMIC, and there is no static CodeMirror specifier — type-only included', () => {
     // THE STRUCTURAL CLAIM THE BYTE FENCE CANNOT MAKE. A static `import … from 'codemirror'` puts
     // the engine in whatever chunk its importer lands in — from 3.2 on, the app page's EAGER
     // chunk. An `import type` erases, but it is one keystroke from a value import and 007's policy
@@ -405,6 +412,23 @@ describe('the editor import fence — clause C, the chunk stays LAZY (D-2)', () 
       treeEdges.filter((p) => !p.dynamic).map(describeEdge),
       'no static CodeMirror specifier is permitted anywhere in the shipped tree. Found:',
     ).toEqual([]);
-    expect(treeEdges.filter((p) => p.dynamic)).toHaveLength(2);
+    expect(treeEdges.filter((p) => p.dynamic)).toHaveLength(3);
+  });
+
+  it('no `@lezer/*` or `style-mod` specifier is written anywhere — the fourth edge the highlight style could reach for (3.4)', () => {
+    // `isCodeMirror` matches by the CodeMirror scope, and the highlight tags live OUTSIDE it, in
+    // `@lezer/highlight`: the count above would not see that import at all. So the packages a
+    // highlight style is conventionally built from are scanned for by name, over the same tree.
+    // The engine reuses the tag objects `@codemirror/language`'s own default style already holds.
+    const beyond = shipped.flatMap((from) =>
+      edgesOf(readFileSync(join(ROOT, from), 'utf8'))
+        .filter((e) => e.spec.startsWith('@lezer/') || e.spec === 'style-mod')
+        .map((e) => describeEdge({ ...e, from })),
+    );
+    expect(
+      beyond,
+      'R8 permits ONE more specifier, `@codemirror/language`. A parser or style package imported ' +
+        'directly is a fourth edge — a stop-and-ask, not a count to bump. Found:',
+    ).toEqual([]);
   });
 });

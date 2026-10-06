@@ -91,11 +91,42 @@
 // the preview pane and the editor is untouched. Should a throw ever leave `mount()` itself, the
 // feed logs it and carries on: unlike the render at build, it never tears the shell down.
 //
+// ── THE PREVIEW IS ENHANCED LIKE THE READER (3.4; human rulings R7 and R10) ────────────────────
+//
+// After every preview render — the one at build and each one the feed makes — the reader's four
+// enhancers run on the NESTED host, in the order the two app-page call sites run them
+// (`readerPane.ts`, `appShell.ts`): diagrams, math, tables, code. `enhanceEditor` sits between
+// math and tables there and is NOT called here: a preview has no edit control of its own. So a
+// mermaid fence, a formula, a table and a code fence look in the preview as they will in the
+// document. Without this the preview held the raw fence, the literal formula and an un-highlighted
+// block (finding P-1).
+//
+// A host that is re-rendered and enhanced again is what the watch already does to the OUTER host
+// (`appShell.ts`'s render closure runs the same four after each watch `mount()`): every render
+// arrives through `replaceChildren`, so the enhancers always meet fresh, unmarked nodes, and each
+// drops a late result for a node that has since left the document.
+//
+// The enhancers are synchronous to CALL and asynchronous to FINISH — each inserts its placeholder
+// and returns, and the lazy engine fills it in later. So the cooldown, which times `renderPreview`,
+// measures the mount and the placeholders and NOT the engines' work: that cost is untimed here,
+// and is task 6.2's to measure.
+//
+// A FAILED ENHANCEMENT IS NOT A FAILED RENDER. Each enhancer is called under its own guard: a
+// throw is logged and the next one still runs. Unguarded, a throw at build would leave
+// `buildEditorShell` through its own catch — tearing the edit view down — and a throw under typing
+// would be taken for a failed render and skip every enhancer after it.
+//
 // App-page only, and not on the content-script graph: nothing the content script imports reaches
-// this module.
+// this module. That is what lets it import the enhancers directly — the reader's call sites LIST
+// them rather than share a seam precisely so that no module the content script reaches names the
+// diagram, math or code enhancer.
 
 import { mount } from './mount';
 import { readerSourceFor } from './readerMode';
+import { enhanceDiagrams } from './diagramEnhancer';
+import { enhanceMath } from './mathEnhancer';
+import { enhanceTables } from './tableEnhancer';
+import { enhanceCode } from './codeEnhancer';
 import type { EditorEngine, EditorViewHandle } from './editorEngine';
 import { EDITOR_CSS } from '../theme/readerCss';
 import { unregisterThemeHost } from '../theme/themeRegistry';
@@ -381,11 +412,28 @@ export function buildEditorShell(host: HTMLElement): EditorShell {
   return shell;
 }
 
-/** Render `text` into the host's preview. Does nothing when the host has no shell. */
+/** The reader's enhancers, in its call sites' order — see the module comment. */
+const PREVIEW_ENHANCERS: ReadonlyArray<(host: HTMLElement) => void> = [
+  enhanceDiagrams,
+  enhanceMath,
+  enhanceTables,
+  enhanceCode,
+];
+
+/** Render `text` into the host's preview, then enhance it as the reader enhances a document.
+ *  Does nothing when the host has no shell. */
 export function renderPreview(host: HTMLElement, text: string): void {
   const built = liveShell(host);
   if (!built) return;
-  mount(text, built.shell.previewHost, { contained: true, preserveReading: true, chrome: false });
+  const { previewHost } = built.shell;
+  mount(text, previewHost, { contained: true, preserveReading: true, chrome: false });
+  for (const enhance of PREVIEW_ENHANCERS) {
+    try {
+      enhance(previewHost);
+    } catch (err) {
+      console.warn('[peekover] preview enhancement failed', err);
+    }
+  }
 }
 
 /** Remove exactly what `buildEditorShell` added, ending the edit session built in it first.

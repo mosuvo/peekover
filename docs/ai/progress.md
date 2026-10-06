@@ -1,21 +1,22 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-06 (task 4.2 landed — the "changed on disk while you were editing" hint, per R6;
-`decisions.md`'s "012 D-8 — 4.2 landed" entry.) M12
+*Updated: 2026-10-06 (task 3.4 landed — token-driven editor colours, dark legibility, the handle
+clearance, the reader's enhancers in the preview; `decisions.md`'s two "M12 TASK 3.4" entries.) M12
 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
-tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3, 4.1 and 4.2 landed; **the discovered task 3.4 (editor
-legibility + preview fidelity) is next; then 5.1. Group 4 is complete except for the dirty-exit
-property, which now lives in 6.1 (R6).**
+tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 4.1 and 4.2 landed; **5.1 — a HUMAN GATE — is next.
+Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
+**★ `pnpm audit --prod` EXITS 1 — one LOW `katex` advisory via `mermaid`, red before 3.4 too; carried
+by ruling R13 to a dedicated bump task (§ Carried items).**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
-and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are now routed to 3.4. 3.3
-filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RULED (R7) and routed to
-3.4.** **The editor is REACHABLE on
+and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are RESOLVED at 3.4. 3.3
+filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RESOLVED at 3.4.**
+**The editor is REACHABLE on
 `main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
 available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
 (4.1).**
-Current numbers: `.output` 5,814,537 B (Cr) / 5,814,653 B (Fx) against ≤ 7 MiB, content script
-342,652 B both engines (moved at 4.2 by its own glue, +132 B), `dependencies` 10, `permissions: []`. M11 (math
+Current numbers: `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx) against ≤ 7 MiB, content script
+342,652 B both engines (md5-identical across 3.4), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1015,27 +1016,99 @@ three judgment calls are flagged. `decisions.md`'s "012 D-8 — 4.2 landed" entr
   `start()` and the absent-otherwise case. (v) Group 4's acceptance line still reads "conflict-routed
   (never auto-flushed) on a dirty one" — carried from the rulings record, still outside the fence.
 
+**M12 task 3.4 DONE, 2026-10-06 — editor legibility + preview fidelity (R7–R14; E-1, E-2, E-3,
+P-1).** `decisions.md`'s two "M12 TASK 3.4" entries are the record: the landing entry (mechanisms,
+tables, bytes, governance) and the six human rulings (R9–R14). `tasks.md` 3.4's ★ post-landing note
+lists every place the task line was read or exceeded.
+- **What landed.** *Engine:* a third dynamic edge, `@codemirror/language`, and a non-fallback
+  highlight style built from that package's own default style with every colour a design token —
+  two-tone by ruling R11 (`--muted` for markup, comments, link / task furniture; `--del` for
+  `invalid`; `--ink` for the rest). No `@lezer/highlight`. *`EDITOR_CSS`:* the selection and the
+  current search match on `--hl-soft`, the tooltip on `--panel` (E-2); `margin-top:90px` while the
+  rail is collapsed (E-1). *`editorView.ts`:* `renderPreview` runs diagrams, math, tables, code on
+  the nested host after each mount, each under its own guard (R7, R10).
+- **★ Found and fixed here:** a highlight style built per HOST draws nothing on Firefox from the
+  second host on (its rules are in CodeMirror's shared constructed sheet and do not apply). The
+  style is built once per page. Found by proxy 3 on Firefox, which passed in isolation.
+- **Before → after, both engines identical.** *E-3, dark:* markup marks 1.69 → 6.54 · task marker
+  1.24 → 6.54 · emoji shortcode 2.15 → 13.61 (light 8.44 → 5.49 · 11.52 → 5.49 · 6.62 → 15.74).
+  *E-2, dark:* selected text 1.16 → 5.03 (unfocused 1.14 → 5.03) · current match 1.52 → 10.52 ·
+  autocomplete option 1.09 → 14.45 (light 12.95 → 15.8 · 9.86 → 16.31 · 16.37 → 16.18). *E-1:*
+  pane × handle 103.1×26 px → none, 8 px clear, at 414×896 and 1400×900; rail-open geometry
+  unchanged. *P-1:* the preview's census equals the outer document's at build and after a key
+  (1 figure + SVG, 1 `<math>`, 2 wrapped fences / 1 highlighted, 1 table toolbar; was all zeros).
+- **Red-first.** Before the change: unit 10 red (fence 4, engine 6) · browser 8 red per engine, the
+  same eight on each (proxy 1 dark `E-2 pairs below AA … [ …(4) ]`; proxy 2 both collapsed cases;
+  proxy 3 light `expected [ '#221199' ] to deeply equal [ '#5d6070' ]` and dark `[ …(19) ]` spans
+  below AA; the preview's `at build: the mermaid fence has its figure: expected +0 to be 1`, the
+  theme-flip and the containment tests). Ablations after: a fourth `@codemirror/state` edge (4
+  red) · an `@lezer/highlight` edge (1) · a type-only static import (3) · the style per engine
+  (unit 1; Firefox proxy 3) · the style as a fallback (2) · the enhancer guard removed (`an
+  enhancer failure at build cost the edit view`) · one guard for all four (`the table enhancer ran
+  after the three that threw: expected +0 to be 1`) — the last two on both engines.
+- **Bytes, both engines.** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx), **+2,433**; headroom
+  1,523,062 / 1,522,946 B. Zips 1,838,328 / 1,838,386 B (+1,810). Arms by ablation: highlight
+  style 1,844 (app 945 + CodeMirror lazy chunks 899) · E-2 376 · E-1 82 · enhancer calls 131 ·
+  residual 0. App chunk 518,168 → 519,702 B; the CodeMirror lazy chunks are now FOUR (35,035 +
+  54,846 + 209,748 + 307,869 B, +899 over the three). All four arms ablated: all 276 shipped files
+  name-, size- and md5-identical to the post-install baseline, itself identical to 4.2's. Content
+  script 342,652 B, md5 unchanged in every arm, and MOVED (344,389 B) when un-gated. Manifest
+  654 / 770 B, `permissions: []`, `dependencies` 11.
+- **Governance (R9).** 6.12.4, the one copy CodeMirror resolves; lockfile +3 lines, no resolved
+  version moved; MIT, no install hook; SBOM 191 (unchanged), not staged; `dompurify` and
+  `markdown-it` one copy each. **`pnpm audit --prod` EXIT=1 — not met, carried (R13).**
+- **Verify.** lint 0 · unit **1273** (70 files; `editorEngine` 25 — 21 + 4,
+  two pins edited by R14 — `editorImportFence` 11 — 10 + 1, its three count pins moved 2 → 3 —
+  `editorView` 27 and `editorEnhancer` 28, both unedited; `htmlExport` 13, its `:host` pin still 26) ·
+  browser **1795 pass / 15 skip** (178 files, 89 per engine, run alone; per engine `editorPreview`
+  12 — 10, the REPORTED test replaced by three — `editorEyeballProxy` 11, `editorRender` 10,
+  `editorDegrade` 9, `editorNestedHost` 12, `editorWatch` 6; the enhancers' own files per engine:
+  diagram 138 over 12 files, math 62 over 5, table 98 over 7, code 60 over 7) · scanner and
+  `--self-test` EXIT 0 (79 shipped files; 7 firing + 10 silent) · golden diff EMPTY · the zero-diff
+  list empty (`mount.ts`, `readerMode.ts`, `editorEnhancer.ts`, `watchController.ts`, the four
+  enhancer modules, `readerPane.ts`, `appShell.ts`, `htmlExport.ts` and its test,
+  `chromiumFolderSource.ts`, `runReader.ts`, `mountReader.ts`, `contentWatch.ts`). **No red in the
+  final runs, and none of the carried flakes fired.** Two reds on the way, both classified: the
+  one-time harness reload after the install (cleared on rerun), and the Firefox-only highlight
+  defect (real — persisted on rerun, reproduced in isolation over 14 hosts, fixed).
+
 ## Up next
 
-**The order, as ruled 2026-10-06: 4.2 (LANDED) → 3.4 (discovered) → 5.1.**
-**FIRST — M12 task 3.4, DISCOVERED 2026-10-06** (editor legibility + preview fidelity — R7, R8; E-1,
-E-2, E-3, P-1). Files and Verify in `tasks.md`, after 3.3's block. **Two open items its kickoff must
-settle BEFORE drafting:** `@codemirror/language` is not a direct dependency and does not resolve
-today (an install is a governed, necessary ripple beyond the listed files — `package.json`, the
-lockfile, `dependencies` 10 → 11); and whether `enhanceTables` runs in the preview (R7 names diagrams,
-math, code).
-**THEN — M12 task 5.1, the save-time batch for the human:** the `PERMISSIONS.md` ledger wording
-(D-9) · CRLF-on-save (3.1's finding: the editor normalizes CRLF / lone CR to LF — what a save writes
-for a CRLF file) · Ctrl/Cmd+S in edit (E-7). `tasks.md` 5.1's body names the ledger wording only; the
-other two ride its kickoff.
-**Byte snapshot for 3.4's kickoff (4.2's measured figures):** `.output` 5,814,537 B (Cr) / 5,814,653 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,525,495 / 1,525,379 B · zip 1,836,518 / 1,836,576 B · content
+**The order, as ruled 2026-10-06: 4.2 (LANDED) → 3.4 (LANDED) → 5.1.**
+**NEXT — M12 task 5.1, a HUMAN GATE: the save-time batch.** Its kickoff carries four items, and
+`tasks.md` 5.1's body names only the first:
+- the `PERMISSIONS.md` ledger wording (D-9);
+- CRLF-on-save (3.1's finding: the editor normalizes CRLF / lone CR to LF — what a save writes for a
+  CRLF file);
+- Ctrl/Cmd+S in edit (E-7);
+- whether 4.2's hint REFUSES a save or only warns (the open product call under "Carried inputs,
+  from 4.2" below).
+**Also for the human, from 3.4 — none blocks 5.1:** schedule the `katex` bump task (R13, § Carried
+items) · the import-shape opportunity on the two existing CodeMirror edges (below).
+**Byte snapshot for 5.1's kickoff (3.4's measured figures):** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,523,062 / 1,522,946 B · zip 1,838,328 / 1,838,386 B · content
 script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
-`c0115d89b10be306ffa0c77d2234a63e` (Fx) · the app chunk 518,168 B, the three CodeMirror lazy chunks
-54,680 + 209,493 + 342,426 B · manifest 654 / 770 B, `permissions: []` · `dependencies` 10 · lint 0 ·
-unit 1268 · browser 1791 / 15 skipped · golden empty.
+`c0115d89b10be306ffa0c77d2234a63e` (Fx) · the app chunk 519,702 B, the four CodeMirror lazy chunks
+35,035 + 54,846 + 209,748 + 307,869 B · manifest 654 / 770 B, `permissions: []` · `dependencies` 11 ·
+lint 0 · unit 1273 · browser 1795 / 15 skipped · golden empty · **`pnpm audit --prod` EXIT=1 (R13)**.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
-figure above supersedes it. 3.4 is editor-side: the content script should NOT move there, md5 included.
+figure above supersedes it.
+**Carried inputs, from 3.4:**
+- **★ An import's SHAPE decides whether the bundler tree-shakes it.** `import('pkg').then(({ a }) =>
+  ({ a }))` drops the package's unused exports; `const [{ a }] = await Promise.all([import('pkg')])`
+  keeps them all. For `@codemirror/language` the difference was 10,883 B. The two existing edges
+  in `editorEngine.ts` (`codemirror`, `@codemirror/lang-markdown`) are written the second way and
+  were NOT changed — outside 3.4, unmeasured, the human's to schedule.
+- **A CodeMirror extension that owns CSS must be a page-level singleton.** Built per host, its
+  rules do not apply on Firefox from the second host on. A test that passes in isolation and
+  fails after other hosts in the same file is this signature — it is NOT harness-shared-state.
+- **A new dependency reloads the browser harness once.** The first browser run after an install
+  prints "optimized dependencies changed. reloading" and reds whatever file was running; rerun.
+  `vitest.config.ts` has no `optimizeDeps.include`, so a cold checkout sees it too.
+- **The preview's enhancers finish asynchronously.** A test that reads the preview after a key
+  must wait for the engines, and should wait without throwing so a red names its own units.
+- **`python - <<'EOF'` still collapses `\\n` and still fails on an apostrophe** — write the script
+  with the Write tool, then run it. Twice more this session.
 **Carried inputs, from 4.2:**
 - **For 5.3 — the hint's literal is `data-watch-changed-in-edit`** (`CHANGED_IN_EDIT_ATTR` in
   `watchController.ts`), presence-only. Read it by literal; pin the literal to the export in a test.
@@ -1059,8 +1132,9 @@ figure above supersedes it. 3.4 is editor-side: the content script should NOT mo
   --reporter=verbose`; `pnpm test:browser -- --reporter=verbose` does not pass the flag through.
 - **A clean two-engine build is ~20 s** — every subset of a handful of call sites is affordable as a
   byte arm, and over-determines the shared helper.
-**Routed 2026-10-06 (R7, R8):** P-1, E-1, E-2, E-3 → task 3.4. **For 6.2 and the §8-2 ruling:** P-2,
-P-3 (and R7's enhancer cost). Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor — the save-time batch
+**RESOLVED at 3.4 (R7–R14):** P-1, E-1, E-2, E-3. **For 6.2 and the §8-2 ruling:** P-2,
+P-3, and the enhancers' cost — every preview render re-runs the lazy engines, and the cooldown does
+not time that work. Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor — the save-time batch
 at 5.1, before 5.3), E-4, E-5, E-6 and E-8 (the 7.1 walk), the failed-chunk "try again" finding.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
@@ -1097,11 +1171,30 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-06 — TASK 3.4's CARRIED ITEMS. `decisions.md`'s two "M12 TASK 3.4" entries have the
+  numbers.**
+  - **★ `pnpm audit --prod` EXITS 1 (R13). Home: a dedicated bump task, HUMAN-SCHEDULED, before
+    7.1.** GHSA-238p-pmpm-9mq7, low, `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`; installed
+    0.16.47, the newest inside mermaid's `^0.16.45`. Red before 3.4's install as well. Closing it
+    needs a `pnpm.overrides` entry (1.2 ruled "still no overrides") or a mermaid release. Whether
+    Peekover's diagram path can reach the affected trust setting is NOT assessed — the bump task's
+    first step.
+  - **A `--muted` mark on the dark active-line band reads 2.97:1 (R12 — reported, not fixed). Home:
+    the 7.1 walk.** Light 5.38. The band is CodeMirror's default; making it token-driven is a
+    fourth surface beyond E-2's three.
+  - **The dark selection is hard to SEE: its fill against the pane is 1.29:1** (was 11.22, with
+    unreadable text on it); the dark tooltip against the pane 1.06. **Home: the 7.1 walk.** No
+    existing token gives both readable selected text and a 3:1 fill.
+  - **The two-tone palette and the preview's new chrome** (code and table toolbars, diagram
+    actions and lightbox, math actions — all inside the nested host) were measured, not seen.
+    **Home: the 7.1 walk.**
+  - **`invalid` draws in `--del`, 4.35:1 on light.** Nothing in a markdown document is tagged
+    `invalid`; stated, not asserted.
 - **NEW 2026-10-05 — TASK 3.3's FINDINGS (P-1…P-3). None is fixed and none was ruled; the numbers are in
   the 3.3 record above § Up next and in `decisions.md`'s 012 D-5 entry. Both engines agree unless
   stated.**
-  - **P-1 · ★ RULED 2026-10-06 (R7) — ROUTED TO TASK 3.4: the preview runs the reader's enhancers.
-    Not yet built; the finding below stands until 3.4 lands.** *As filed:*
+  - **P-1 · ✅ RESOLVED AT TASK 3.4, 2026-10-06 (R7, R10): the preview runs the reader's four
+    enhancers, and its census is asserted equal to the outer document's.** *As filed:*
     **the reader's enhancers do not run in the live preview. Home: HUMAN RULING BEFORE 7.1.** A
     mermaid fence, `$x^2$` and a code fence render in the document (figure + SVG, `<math>`,
     highlighted) and stay raw source in the preview (the fence's `<pre><code>`, the literal `$x^2$`,
@@ -1122,27 +1215,32 @@ measurement-driven or explicitly deferred.*
   unless the human routes one elsewhere sooner. None is fixed; the numbers are in the record above
   § Up next and in `decisions.md`'s "informal eyeball DEFERRED" entry. Both engines agree on each.**
   **★ ROUTED 2026-10-06 (`decisions.md`, "M12 RULINGS after task 4.1"): E-1, E-2 and E-3 → TASK 3.4
-  (E-3 by R8). E-7 → the save-time batch at 5.1. E-4, E-5, E-6 and E-8 stay 7.1 walk items. None is
-  fixed yet.**
-  - **E-1 · [→ 3.4] the collapsed TOC handle covers the split pane's top-right corner — 103×26 px**, in edit,
+  (E-3 by R8). E-7 → the save-time batch at 5.1. E-4, E-5, E-6 and E-8 stay 7.1 walk items.**
+  **✅ E-1, E-2 and E-3 are RESOLVED AT TASK 3.4 (2026-10-06); the other five are not fixed.**
+  - **E-1 · ✅ RESOLVED at 3.4 (the pane starts 8 px below the handle; the pin is deleted) ·** *as
+    filed:* **the collapsed TOC handle covers the split pane's top-right corner — 103×26 px**, in edit,
     rail collapsed, at 414×896 and 1400×900. `EDITOR_CSS` reserves the rail only while it is open.
     PINNED in `editorEyeballProxy.browser.test.ts` (`KNOWN_PANE_UNDER_HANDLE`) — the fix deletes it.
-  - **E-2 · [→ 3.4] dark only, text unreadable:** selected text 1.16:1 (1.14 unfocused); the current search
+  - **E-2 · ✅ RESOLVED at 3.4 (5.03 / 5.03 / 10.52 / 14.45 on dark, asserted) ·** *as filed:*
+    **dark only, text unreadable:** selected text 1.16:1 (1.14 unfocused); the current search
     match 1.52:1; unselected autocomplete options 1.09:1. Light: 12.95 / 9.86 / 16.37.
-  - **E-3 · [→ 3.4, R8] dark only, highlight colours:** markup marks (`#`, `-`, the table pipe, `~~`, `~`, `^`)
+  - **E-3 · ✅ RESOLVED at 3.4 (6.54 / 6.54 / 13.61 on dark, asserted; two-tone by R11) ·** *as
+    filed:* **dark only, highlight colours:** markup marks (`#`, `-`, the table pipe, `~~`, `~`, `^`)
     1.69:1; the task marker 1.24:1; the emoji shortcode 2.15:1. CodeMirror's default palette is
     light-page.
   - **E-4 · both themes, gutter numbers:** 2.38:1 light / 3.26:1 dark (`--faint`, 3.2's own rule); the
     active line's number 2.36 / 4.34.
   - **E-5 · non-text pairs under 3:1:** active-line band 1.02 / 2.2; gutter rule 1.11 / 1.13; search
     field border 1.67 and fill 1.09 (both themes); light only — selection 1.27, search panel 1.04,
-    tooltip 1.04 (border 1.69) against the pane. Several are arguably decorative; the bar was applied
+    tooltip 1.04 (border 1.69) against the pane. *After 3.4: selection 1.04 light / 1.29 dark,
+    tooltip 1.03 / 1.06 — see 3.4's carried items above.* Several are arguably decorative; the bar was applied
     as stated.
   - **E-6 · at 414 px with the rail OPEN the split pane is 100 px wide** (source pane 98 px). No
     overlap — reported, not asserted.
   - **E-7 · Ctrl/Cmd+S in the editor runs the export shortcut** — downloads the ON-DISK document as
     HTML (not the buffer); with no export format it is swallowed. A ruling is owed before 5.3.
-  - **E-8 · R1 as drawn:** `H~2~O` / `x^2^` colour only their marks; `:smile:` is coloured `#aa1111`.
+  - **E-8 · R1 as drawn:** `H~2~O` / `x^2^` colour only their marks; `:smile:` is coloured `#aa1111`
+    *(after 3.4 the marks are `--muted` and `:smile:` draws in `--ink`, uncoloured)*.
     Measured, not judged.
 - **✅ RESOLVED AT THE §8-1(b) FIX, 2026-09-10 (`63aedb4`) — NEW AT TASK 6.2-R, 2026-09-09 — GATE-2's
   §8-1(b) RULING WAS FALSE FOR A SUCCESSFULLY-RENDERED INLINE FORMULA (THE COMMON CASE); NO WAY TO

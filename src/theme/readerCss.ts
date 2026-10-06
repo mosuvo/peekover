@@ -1380,9 +1380,38 @@ export const CONTAINED_CSS = /* css */ `
 //     strip and a BLACK caret, and on the dark theme's --code-bg a black caret is invisible.
 // Each selector carries three classes so it outranks the engine's own two-class rules whichever
 // sheet the cascade meets last. What is left at the engine's defaults, and so is still light-page
-// colouring in the dark theme — the active-line band, the selection, the search panel, the
-// completion tooltip — is a design-walk item (7.1), reported at this task, not decided here.
+// colouring in the dark theme — the active-line band, the search panel — is a design-walk item
+// (7.1), reported at this task, not decided here.
 // Tokens used: --faint, --line, --ink.
+//
+// THREE MORE OF THE ENGINE'S SURFACES, FROM TOKENS (012 task 3.4 — finding E-2). The engine has no
+// dark theme of its own here, so its LIGHT-page rules apply under every theme, and on the dark
+// pane three text pairs fell below WCAG AA (measured by tests/browser/editorEyeballProxy): selected
+// text on the selection 1.16:1, the current search match's text 1.52:1, an autocomplete option
+// 1.09:1 — light ink on a light fill each time. Each fill now comes from a token, so it follows
+// the theme with the ink:
+//   - THE SELECTION is --hl-soft, focused or not — the reader's own `::selection` colour. The
+//     engine's focused rule is five classes deep (`&light.cm-focused > .cm-scroller >
+//     .cm-selectionLayer .cm-selectionBackground`), so this selector carries SIX; one rule covers
+//     the focused and the unfocused state because it outranks both.
+//   - THE CURRENT SEARCH MATCH is --hl-soft with an --ink rule under it (the brand's "ink +
+//     highlighter underline"). --hl itself is not used as a fill: it is yellow in every theme, so
+//     text on it needs a literal dark colour, which this sheet does not write. The other matches
+//     keep the engine's translucent yellow, which already cleared AA on both themes.
+//   - THE TOOLTIP (autocomplete) is --panel with --ink text and a --line border. The SELECTED
+//     option keeps the engine's own blue band and white text, which already cleared AA.
+// These are in THIS sheet rather than an `EditorView.theme()` so the engine's setup stays the
+// ruled pair plus one highlight style, and so they sit with the five rules above that already
+// restyle the engine from here. Tokens used: --hl-soft, --ink, --panel, --line.
+//
+// THE COLLAPSED TOC HANDLE (012 task 3.4 — finding E-1). A collapsed rail shrinks to its handle,
+// a pill at the top right from 52px to 82px down; the pane started at 56px and reserved the
+// rail's width only while the rail was OPEN, so the handle covered the pane's top-right corner by
+// 103x26px at every width. While the rail is collapsed the pane now starts at 90px — 8px below
+// the handle. A TOP offset
+// rather than a right reservation: reserving the handle's width would take ~135px from a pane
+// that is 350px wide on a narrow screen, and would depend on the width of the handle's label.
+// A document with no rail has no `data-toc` and keeps the 56px margin.
 //
 // THE MODE PILL IS HIDDEN IN EDIT (012 task 3.2, human ruling R3). The pill's click is
 // toggleReaderMode, which leaves edit for Raw WITHOUT the edit view's teardown — the bypass 2.1
@@ -1400,6 +1429,7 @@ export const EDITOR_CSS = /* css */ `
   border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
 }
 :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:calc(var(--toc-w) + 32px)}
+:host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{margin-top:90px}
 .peekover-editor__source{
   min-width:0;overflow:auto;
   background:var(--code-bg);color:var(--ink);font:13.5px/1.8 var(--mono);
@@ -1409,6 +1439,9 @@ export const EDITOR_CSS = /* css */ `
 .peekover-editor__source .cm-editor .cm-gutters{background:transparent;color:var(--faint);border-right-color:var(--line)}
 .peekover-editor__source .cm-editor .cm-content{caret-color:var(--ink)}
 .peekover-editor__source .cm-editor .cm-cursor{border-left-color:var(--ink)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-scroller .cm-selectionLayer .cm-selectionBackground{background:var(--hl-soft)}
+.peekover-editor__source .cm-editor .cm-searchMatch-selected{background:var(--hl-soft);box-shadow:inset 0 -2px 0 var(--ink)}
+.peekover-editor__source .cm-editor .cm-tooltip{background:var(--panel);color:var(--ink);border-color:var(--line)}
 .peekover-editor__preview{min-width:0;overflow:auto;border-left:1px solid var(--line)}
 @media (max-width:720px){
   :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:1fr 1fr;height:90vh}

@@ -1,6 +1,250 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-06 · M12 TASK 3.4 — LANDED: the editor's highlight colours come from design tokens (R8,
+  E-3); dark-theme selection, current search match and autocomplete reach AA from tokens (E-2); the
+  collapsed TOC handle no longer covers the split pane (E-1); the preview runs the reader's four
+  enhancers (R7, R10 — P-1). Six human rulings were taken for or in this task — R9–R14, the entry
+  below. One defect was found and fixed on the way (a highlight style built per host draws nothing
+  on Firefox from the second host on), and one audit clause is NOT met (R13).**
+  **THE SPECIFIER ROUTE — three dynamic edges, no fourth.** `editorEngine.ts` gains
+  `import('@codemirror/language')` beside the two it had, and names `HighlightStyle`,
+  `defaultHighlightStyle` and `syntaxHighlighting` from it. The style is BUILT FROM the default one:
+  `defaultHighlightStyle.specs` (the property exists in the installed 6.12.4) is mapped spec for spec,
+  the `tag` objects reused as they are and only `color` replaced — so no tag is named and
+  `@lezer/highlight`, where the tags live, is never written. A tag is recognised by its name, read
+  with `String()`. It is registered NON-fallback after the ruled pair, which displaces the fallback
+  default `basicSetup` registers; the ruled pair is unchanged and still first.
+  The fence (`editorImportFence.test.ts`) permits exactly three, all dynamic, all in the engine, and
+  gains one assertion: no `@lezer/*` or `style-mod` specifier anywhere in the shipped tree — the
+  fence's own matcher is scoped to `codemirror` / `@codemirror/*` and would not have seen that edge.
+  Seen red: a fourth `@codemirror/state` edge (4 tests), an `@lezer/highlight` edge (1), a type-only
+  static import of the third package (3).
+  **THE PALETTE → TOKEN MAP (R11: two-tone).** On `--code-bg` only `--ink` (15.74 light / 13.61 dark)
+  and `--muted` (5.49 / 6.54) clear AA for text in both themes; `--del` is 4.35 / 5.98, `--warn`
+  3.21 / 7.58, `--ok` 3.08 / 7.30, `--faint` 2.38 / 3.26. So the default style's fourteen coloured
+  roles map onto two tokens and one exception:
+
+  | Default style's role (its own grouping) | Token |
+  |---|---|
+  | `meta` (markdown's own marks) | `--muted` |
+  | `atom` · `bool` · `url` · `contentSeparator` · `labelName` | `--muted` |
+  | `comment` | `--muted` |
+  | `invalid` | `--del` |
+  | `keyword` | `--ink` |
+  | `literal` · `inserted` | `--ink` |
+  | `string` · `deleted` | `--ink` |
+  | `regexp` · `escape` · `special(string)` | `--ink` |
+  | `definition(variableName)` | `--ink` |
+  | `local(variableName)` | `--ink` |
+  | `typeName` · `namespace` | `--ink` |
+  | `className` | `--ink` |
+  | `special(variableName)` · `macroName` | `--ink` |
+  | `definition(propertyName)` | `--ink` |
+
+  The five specs that carry no colour (link, heading, emphasis, strong, strikethrough — weight,
+  slant and decoration) pass through as the same objects and are now what carries structure. A coloured
+  spec a later version adds falls to `--ink`. `invalid` in `--del` is below AA on light (4.35) — it
+  was 3.53 in the default red, and nothing in a markdown document is tagged `invalid`; stated, not
+  asserted.
+  **E-3 as measured, both engines identical** (`editorEyeballProxy`, proxy 3 — 23 spans per theme):
+  markup marks (`#`, `-`, `|`, `~~`, `~`, `^`) 8.44 → 5.49 light, **1.69 → 6.54 dark**; the task
+  marker 11.52 → 5.49, **1.24 → 6.54**; the emoji shortcode 6.62 → 15.74, **2.15 → 13.61**. Every
+  span is now asserted ≥ 4.5:1 on both themes, and asserted to draw in exactly `--muted` or `--ink`
+  as the host's theme resolves them. *Light is lower than it was for the marks and still clears AA —
+  "un-regressed" is read as "still passes", flagged.*
+  **★ FOUND AND FIXED — A HIGHLIGHT STYLE PER HOST DRAWS NOTHING ON FIREFOX.** The engine is loaded
+  per host (R2), and the first build made the style per engine. CodeMirror keeps every view's rules
+  in ONE constructed stylesheet per document, adopted by each shadow root; a style per host inserted
+  a fresh set of rules into that shared sheet for every host. On Firefox, from the second host on,
+  the rules were PRESENT in the sheet and the sheet was adopted, and they did not apply — the editor
+  drew with no highlight styling at all, weight and decoration included. Chromium applied them.
+  Measured over 14 hosts on each engine. The style is now built once per page (a `WeakMap` keyed on
+  the default style object) and shared by every engine, as the default style always was. Seen red:
+  the unit test (`define` called 2 times) and, on Firefox only, proxy 3 (`the task marker draws in
+  --muted: expected [ '#16171f' ]`). *The Firefox mechanism itself was not isolated further.*
+  **E-2's MECHANISM — `EDITOR_CSS`, not `EditorView.theme()`.** `tasks.md` 3.4's Files line places it
+  in `EDITOR_CSS`; the kickoff offered either, so the file was followed. The engine has no dark theme
+  here, so its LIGHT rules apply under every theme. Three rules, each a token:
+  - the selection is `--hl-soft`, focused or not — the reader's own `::selection`. The engine's
+    focused rule is five classes deep, so the selector carries SIX and wins whichever sheet loads last;
+  - the current search match is `--hl-soft` with an inset `--ink` rule under it. `--hl` is not used as
+    a fill: text on it needs a literal dark colour (`readerCss.ts`'s own note), which this sheet does
+    not write;
+  - the tooltip is `--panel` with `--ink` text and a `--line` border.
+
+  | E-2 pair (text, bar 4.5:1) | Light | Dark |
+  |---|---|---|
+  | selected text on the selection, focused | 12.95 → 15.8 | **1.16 → 5.03** |
+  | selected text on the selection, unfocused | 13.15 → 15.8 | **1.14 → 5.03** |
+  | the current search match's text | 9.86 → 16.31 | **1.52 → 10.52** |
+  | an unselected autocomplete option | 16.37 → 16.18 | **1.09 → 14.45** |
+
+  Identical on both engines; all four are now asserted on both themes, with four neighbouring pairs
+  that passed at 3.2 asserted not to have been traded away (body text 15.74 / 13.61, text on the
+  active band 15.43 / 6.18, a plain match 15.75 / 4.85, the selected completion 4.63 — all unmoved).
+  **★ THE COST, STATED:** the selection's fill against the pane (non-text, never asserted) went
+  1.27 → 1.04 on light and **11.22 → 1.29 on dark**; the tooltip against the pane 14.83 → 1.06 on
+  dark. No existing token gives selected text ≥ 4.5:1 AND a fill ≥ 3:1 against the pane in either
+  theme: the fill's relative luminance would have to fall in 0.1448–0.1464 on dark and
+  0.2147–0.2587 on light, and no token does. Text legibility was chosen — it is what E-2 names.
+  A 7.1 walk item.
+  **★ REPORTED, NOT FIXED (R12):** a `--muted` mark on CodeMirror's active-line band reads 5.38:1 on
+  light and **2.97:1 on dark**, both engines. The band is the engine's default and stays so.
+  **E-1's MECHANISM — a top offset while the rail is collapsed.** One rule:
+  `:host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{margin-top:90px}`. The collapsed
+  handle ends at 82 px; the pane now starts at 90 px. A right reservation was rejected: it would take
+  about 135 px from a pane that is 350 px wide at 414 px, and depend on the handle label's width.
+
+  | Viewport, rail | Pane before | Pane after | Pane × handle |
+  |---|---|---|---|
+  | 414×896, collapsed | 32,56 → 382,862 | 32,90 → 382,896 | 103.1×26 px → none (8 px clear) |
+  | 1400×900, collapsed | 32,56 → 1368,596 | 32,90 → 1368,630 | 103.1×26 px → none (8 px clear) |
+  | 414×896, open | 32,56 → 132,862 | unchanged | none; 124.7 px left of the rail |
+  | 1400×900, open | 32,56 → 1118,596 | unchanged | none; 32 px left of the rail |
+
+  `KNOWN_PANE_UNDER_HANDLE` and its "still present" assertion are DELETED; the relation is asserted
+  like every other, in every state. *At 414 px collapsed the pane's bottom edge is now at the
+  viewport's (896); the page scrolls, as before.* *Firefox drew the handle 28 px high in one run and
+  30 px in another (web-font timing); the clearance is 8–10 px either way.*
+  **THE ENHANCERS ON THE NESTED HOST (R7, R10).** `renderPreview` calls `mount()` and then
+  `enhanceDiagrams`, `enhanceMath`, `enhanceTables`, `enhanceCode` on the nested host — the order of
+  the two app-page call sites (`readerPane.ts:203-235`, `appShell.ts:187-191`), without
+  `enhanceEditor`, which sits between math and tables there and has no meaning in a preview.
+  - *Safe on a host re-rendered under them:* it is what the watch already does to the OUTER host
+    (`appShell.ts`'s render closure runs the same four after each watch `mount()`); every render
+    arrives through `replaceChildren`, so each enhancer meets unmarked nodes.
+  - *Each call is guarded on its own.* Unguarded, a throw at build leaves `buildEditorShell` through
+    its catch and edit mode is never entered (seen red: `an enhancer failure at build cost the edit
+    view: expected 'reading' to be 'edit'`); under one guard for all four, the enhancers after the
+    one that threw are skipped (seen red: `the table enhancer ran after the three that threw:
+    expected +0 to be 1`). Both engines. No production seam: the test makes `querySelectorAll` throw
+    on a preview host's shadow root.
+  - *As measured, both engines:* at build and again after a keystroke the preview's census equals
+    the outer document's — one figure with an SVG, one `<math>`, two wrapped code fences of which
+    the `javascript` one is highlighted (`js` is `failed` in the reader too), one table toolbar.
+    Before: 0 / 0 / 0 / 0 / 0, the literal `$x^2$` and the raw fence.
+  - *Chrome the preview gains:* the code block's toolbar (line numbers, wrap, copy, collapse); the
+    table's toolbar (sort, filter, copy) — its state resets on every re-render, as R10 accepts; the
+    diagram's actions and its lightbox, which opens inside the nested host; the math copy actions.
+    None of it was walked by a human — 7.1.
+  - *A theme flip re-themes the preview's diagram*, each way, and a diagram drawn by the next render
+    is born in the theme in force (asserted). The nested host registers with the diagram
+    enhancer's own host registry on its first diagram; a discarded one is pruned by `isConnected`.
+  - **★ FOR 6.2:** the cooldown times `renderPreview`, and the enhancers are synchronous to CALL and
+    asynchronous to FINISH — it times the mount and the placeholders, NOT the engines' work. Each
+    preview render re-runs every lazy engine on fresh nodes, untimed.
+  - `editorView.ts` imports the four enhancers directly. It is app-page-only and the fence's clause A
+    is unchanged and green: the content-script graph reaches no editor module.
+  **BYTES, both engines identical in every delta.** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx),
+  **+2,433**; headroom 1,523,062 / 1,522,946 B. Zips 1,838,328 / 1,838,386 B (+1,810).
+
+  | Arm (full minus ablated) | Bytes | Where |
+  |---|---|---|
+  | the highlight style, incl. the third edge | 1,844 | app chunk 945 · CodeMirror lazy chunks 899 |
+  | E-2's three rules | 376 | app chunk |
+  | E-1's rule | 82 | app chunk |
+  | the enhancer calls | 131 | app chunk |
+  | residual | 0 | |
+
+  The app chunk is 518,168 → 519,702 B (+1,534). The CodeMirror lazy chunks go from three
+  (54,680 + 209,493 + 342,426) to four (35,035 + 54,846 + 209,748 + 307,869), +899 B. No other file
+  changed size. With all four arms ablated every one of the 276 shipped files is name-, size- and
+  md5-identical to the post-install baseline, which is itself identical to HEAD's — the install
+  alone moves no byte.
+  **★ THE IMPORT'S SHAPE IS WORTH 10,883 B.** Written like the other two edges — destructured out of
+  the `Promise.all` result — the third edge cost **+13,316 B**: the bundler kept every export of
+  `@codemirror/language`. Naming the three exports in a `.then` on the import itself is a shape it
+  can read, and the same build is +2,433 B. **Not done, flagged for the human:** the two existing
+  edges are destructured the first way, so the same change there may recover bytes too. It is
+  outside this task, and is not measured.
+  **Content script: 342,652 B, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
+  `c0115d89b10be306ffa0c77d2234a63e` (Fx) — identical to 4.2's in every arm**, and seen to MOVE
+  (344,389 B, +1,737, both md5s changed) when the content-script entry was made to reference
+  `EDITOR_CSS`. Manifest 654 / 770 B, `permissions: []`, `dependencies` 11.
+  **GOVERNANCE (R9).** Installed 6.12.4 — the version the `codemirror` meta-package already resolves,
+  registry integrity equal to the lockfile's · `pnpm why`: one version (also one each of
+  `@codemirror/state`, `@codemirror/view`, `@lezer/highlight`, `dompurify`, `markdown-it`) · lockfile
+  diff: three added lines, the importer entry; no resolved version moved · MIT; scripts are `test`
+  and `prepare`, no install hook · SBOM regenerated, 191 components (unchanged — the package was
+  already transitive), not staged · **`pnpm audit --prod` EXIT=1 — NOT MET, see R13.**
+  *Flagged:* `pnpm add` wrote an exact pin; the range is `^6.12.4`. An exact pin would leave a second
+  copy behind the next time CodeMirror's own range resolves higher — the identity hazard R9 names.
+  **THE HARNESS, ONCE:** the first browser run after the install reloaded mid-file ("optimized
+  dependencies changed. reloading") — Vite's dev pre-bundler meeting the new specifier. It cleared on
+  the next run and does not touch the shipped bundle; a cold checkout will see it once.
+  **Verify.** lint 0 · unit **1273** (70 files; `editorEngine` 25 — 21 + 4,
+  two pins edited by R14 — `editorImportFence` 11 — 10 + 1, its three count pins moved 2 → 3 —
+  `editorView` 27 and `editorEnhancer` 28, both unedited; `htmlExport` 13, its `:host` pin still 26) ·
+  browser **1795 pass / 15 skip** (178 files, 89 per engine, run alone; per engine `editorPreview`
+  12 — 10, the REPORTED test replaced by three — `editorEyeballProxy` 11, `editorRender` 10,
+  `editorDegrade` 9, `editorNestedHost` 12, `editorWatch` 6; the enhancers' own files per engine:
+  diagram 138 over 12 files, math 62 over 5, table 98 over 7, code 60 over 7) · scanner and
+  `--self-test` EXIT 0 (79 shipped files; 7 firing + 10 silent) · golden diff EMPTY · the zero-diff
+  list empty (`mount.ts`, `readerMode.ts`, `editorEnhancer.ts`, `watchController.ts`, the four
+  enhancer modules, `readerPane.ts`, `appShell.ts`, `htmlExport.ts` and its test,
+  `chromiumFolderSource.ts`, `runReader.ts`, `mountReader.ts`, `contentWatch.ts`). **No red in the
+  final runs, and none of the carried flakes fired.** Two reds on the way, both classified: the
+  one-time harness reload after the install (cleared on rerun), and the Firefox-only highlight
+  defect (real — persisted on rerun, reproduced in isolation over 14 hosts, fixed).
+  *Revisit-when:* the 7.1 walk (the two-tone palette, the dark selection's visibility, a muted mark
+  on the active band, the preview's new chrome); 6.2 (the enhancers' untimed cost per render); the
+  katex bump (R13); a CodeMirror upgrade — re-run `pnpm why @codemirror/language` and the palette
+  test, whose fourteen rows pin the default style's own grouping.
+
+- **2026-10-06 · M12 TASK 3.4 — six HUMAN RULINGS: R9 and R10 in the task's kickoff; R11–R14 taken
+  in the task, each on a stop the kickoff itself set. Banked here; each landed in 3.4's commit.** The
+  numbering continues R1–R8; *R11–R14 are numbered by the agent, for reference — the human gave the
+  answers, not the numbers.*
+  **★ R9 — INSTALL `@codemirror/language` as a direct dependency (`dependencies` 10 → 11), governed
+  like 1.1 / 1.2.** It answers the install question R8 and `tasks.md` 3.4 left open. Conditions, each
+  a stop if unmet: the installed version is exactly the one CodeMirror already resolves (a second
+  copy would silently break the highlight style — CodeMirror matches extensions by object identity)
+  · `pnpm why` shows one copy · the lockfile diff adds the direct entry and moves no resolved version
+  · licence and no-install-scripts checked against the registry · `pnpm audit --prod` EXIT=0 · the
+  SBOM regenerated (transient, not staged), count recorded against 191 · `dompurify` and
+  `markdown-it` still one copy each. *Authorized ripples:* `package.json`, `pnpm-lock.yaml`. Results
+  are in the landing entry above; the audit condition was NOT met and went back to the human (R13).
+  **★ R10 — the preview runs ALL FOUR of the reader's enhancers — diagrams, math, tables, code — in
+  the reader's call-site order, on the nested host after each preview render.** This widens R7,
+  which named three. Tables included: their toolbar is accepted in the preview, and its state
+  resets on each re-render.
+  **★ R11 — THE PALETTE IS TWO-TONE.** The kickoff's stop at step 0(b) fired: the default highlight
+  style has fourteen coloured roles, and only `--ink` and `--muted` clear AA for text on `--code-bg`
+  in both themes. Options put: two-tone ink / muted, with `invalid` in `--del` · the semantic tokens
+  (`--del` / `--ok` / `--warn`), colourful on dark and 3.08–4.35:1 on light, which regresses the
+  light control arm · new syntax tokens, a brand decision touching `design/tokens.css`. **Ruled: the
+  first.** *Why (the human's choice of the recommended option):* AA on both themes, no new token,
+  on-brand — paper, ink, one highlighter.
+  **★ R12 — a `--muted` mark on the active-line band is REPORTED, not fixed.** Under R11 a muted
+  mark on CodeMirror's dark active-line band falls below AA (estimated 3.7:1 when asked; measured
+  2.97:1). Options put: report it and carry it to 7.1 · make the band token-driven now, a fourth
+  surface beyond the three `tasks.md` names for E-2. **Ruled: report only.**
+  **★ R13 — THE AUDIT CLAUSE IS CARRIED, NOT MET.** `pnpm audit --prod` exits 1 on one LOW advisory,
+  GHSA-238p-pmpm-9mq7 (*"KaTeX: Existing prototype pollution can bypass trust restrictions"*,
+  `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`). It is NOT caused by this install: with the
+  change stashed and HEAD's lockfile reinstalled the audit exits 1 the same way — the advisory was
+  ingested after 1.2 restored exit 0. Installed `katex` is 0.16.47, the newest inside mermaid's
+  `^0.16.45`; the patched range is outside it, so closing it needs a `pnpm.overrides` entry (the 1.2
+  ruling was "still no overrides") or a mermaid release. It ships, as mermaid's lazy `katex` chunk;
+  whether Peekover's diagram path can reach the affected trust setting was NOT assessed. Options
+  put: proceed and carry it to a dedicated bump task · fix it inside 3.4 with an override · revert
+  the install and stop. **Ruled: proceed and carry** — the 1.1 → 1.2 precedent; 3.4 moves no
+  resolved version. *Home:* a dedicated bump task, human-scheduled, before 7.1 (`progress.md`
+  § Carried items).
+  **★ R14 — TWO EXISTING PINS IN `editorEngine.test.ts` ARE EDITED.** The kickoff asked for the
+  highlight style "appended after the ruled pair" in `createView` AND that no existing assertion
+  beyond its two authorized ones be edited; the file pins the view's extension list exactly, twice.
+  Both could not hold. Options put: authorize the two pin edits · keep the pins and have the caller
+  pass the style in. **Ruled: authorize.** Each `toEqual` gained the one element
+  (`'TOKEN_HIGHLIGHT'`), the first test's title was updated, and a new test asserts the ruled pair
+  is still first and unmodified. The R1 precedent (3.2), same file, same pin.
+  **Also authorized by `tasks.md` 3.4 itself, stated so they are not mistaken for drift:** the fence's
+  three count pins (2 → 3) and its permitted list; `KNOWN_PANE_UNDER_HANDLE` and its assertion,
+  deleted; the 3.3 REPORTED test, turned into assertions.
+  *Revisit-when:* the 7.1 walk's verdict on the two-tone palette (R11) and the active band (R12);
+  the katex bump task (R13).
+
 - **2026-10-06 · 012 D-8 — 4.2 landed (the hint, per R6): while the watch holds an external change
   behind an edit session, the outer host carries `data-watch-changed-in-edit`. No UI; task 5.3 consumes
   it. No human ruling was taken; three judgment calls are flagged below.**

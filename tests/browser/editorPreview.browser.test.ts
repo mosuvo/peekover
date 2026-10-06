@@ -4,9 +4,9 @@
 // the NESTED host's rendered document and nowhere in the outer reading column; that keys keep
 // landing in the buffer while a preview render waits; that a burst costs fewer renders than keys;
 // that the preview stays where it was scrolled to; that the editor's own DOM survives its preview
-// (D-4); that leaving edit with a render waiting renders nothing afterwards; what the reader's
-// enhancers do in the preview (reported); and that the preview is drawn in the document's own
-// ink, paper and type on both themes (the appearance proxies).
+// (D-4); that leaving edit with a render waiting renders nothing afterwards; that the reader's
+// four enhancers run in the preview (3.4 — reported at 3.3, asserted since); and that the preview
+// is drawn in the document's own ink, paper and type on both themes (the appearance proxies).
 //
 // ══ "PENDING" ═══════════════════════════════════════════════════════════════════════════════════
 //
@@ -40,6 +40,11 @@
 //                   discarded by an exit appears in the next session's preview. Either one alone
 //                   leaves this file green (each hides the other); each is seen red on its own in
 //                   src/render/editorView.test.ts.
+//   enhancers     — (3.4) `renderPreview`'s enhancer calls removed: the preview is back in P-1's
+//                   measured state — no figure, no `<math>`, no wrapped or highlighted fence, no
+//                   table toolbar — and the theme-flip test finds no diagram to re-theme.
+//   containment   — (3.4) the guard around each enhancer removed: an enhancer that throws at
+//                   build takes the edit view with it (edit mode is never entered).
 //
 // ══ EVERY TEST ASSERTS IT IS UNWATCHED (tasks.md, group 3's rule) ═══════════════════════════════
 //
@@ -114,6 +119,11 @@ const FIDELITY_DOC = [
   `${FENCE}javascript`,
   'const other = 7;',
   FENCE,
+  '',
+  '| name | count |',
+  '| ---- | ----- |',
+  '| beta | 2     |',
+  '| alfa | 1     |',
   '',
 ].join('\n');
 
@@ -515,10 +525,16 @@ describe('012 task 3.3 — leaving edit with a render pending', () => {
   });
 });
 
-// ── The preview's enhancers — REPORTED ───────────────────────────────────────────────────────
+// ── The preview's enhancers — ASSERTED (3.4; R7, R10) ────────────────────────────────────────
+//
+// At 3.3 this block REPORTED finding P-1: the reader's enhancers ran on the outer host only, so
+// the preview held the raw mermaid fence, the literal formula and an un-highlighted block. The
+// human ruled the preview runs them (R7), tables included (R10), and 3.4 built it — so the same
+// census is now ASSERTED: the nested host's column holds exactly what the reader's own column
+// holds for the same document, at build and again after a keystroke has rebuilt it.
 
-describe('012 task 3.3 — REPORTED: what the reader’s enhancers do in the preview', () => {
-  /** What a reading column holds for each of the three enhanced kinds. */
+describe('012 task 3.4 — the reader’s four enhancers run in the preview (P-1; R7, R10)', () => {
+  /** What a reading column holds for each of the four enhanced kinds. */
   const census = (column: Element): Record<string, number> => ({
     mermaidSource: column.querySelectorAll('pre > code.language-mermaid').length,
     diagramFigure: column.querySelectorAll('.peekover-diagram').length,
@@ -529,34 +545,58 @@ describe('012 task 3.3 — REPORTED: what the reader’s enhancers do in the pre
     javascriptSource: column.querySelectorAll('pre > code.language-javascript').length,
     codeWrapper: column.querySelectorAll('.peekover-code').length,
     codeHighlighted: column.querySelectorAll('.peekover-code pre.shiki').length,
+    table: column.querySelectorAll('table').length,
+    tableToolbar: column.querySelectorAll('.peekover-table-tools').length,
   });
   const codeStates = (column: Element): string[] =>
     [...column.querySelectorAll('.peekover-code')].map((el) => el.getAttribute('data-code') ?? 'none');
+  /** The four finished states: a diagram's SVG, a formula, a highlighted fence, a table toolbar. */
+  const finished = (column: Element): boolean => {
+    const c = census(column);
+    return c.diagramSvg > 0 && c.mathRendered > 0 && c.codeHighlighted > 0 && c.tableToolbar > 0;
+  };
+  /** Give the lazy engines time, and NEVER throw: a column that stays un-enhanced is then read by
+   *  the assertions below in its own units, not reported as a timeout. */
+  const lazyEnginesSettle = async (column: () => Element, ms = 45000): Promise<void> => {
+    const until = performance.now() + ms;
+    while (!finished(column()) && performance.now() < until) await sleep(50);
+  };
+
+  async function enterEdit(host: HTMLElement): Promise<Editing> {
+    controlIn(host).click();
+    await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
+    const session = editorSessionFor(host)!;
+    const shell = editorShellFor(host)!;
+    return { host, shell, session, view: session.view };
+  }
 
   // TWO code fences. `js` is what the task names; it is not a key the highlighter knows, so the
   // OUTER reader leaves it un-highlighted too (state `failed`). `javascript` is, and is the code
   // row's firing control.
-  it('a mermaid fence, inline math and two code fences: rendered in the document, and what the preview holds', async () => {
+  it('★ a mermaid fence, inline math, two code fences and a table: enhanced in the preview at build, and again after a keystroke', async () => {
     const host = await openInPane(FIDELITY_DOC);
     const outer = outerColumn(host);
-    // FIRING CONTROL: on the outer host — where the two call sites run them — all three render.
+    // FIRING CONTROL: on the outer host — where the two call sites run them — all four render.
     await waitFor(() => outer.querySelector('.peekover-diagram svg'), 'the outer diagram rendered', 60000);
     await waitFor(() => outer.querySelector('math'), 'the outer formula rendered', 60000);
     await waitFor(() => outer.querySelector('.peekover-code pre.shiki'), 'the outer javascript fence was highlighted', 60000);
     const outerCensus = census(outer);
     record(`enhancers — outer code fence state(s): ${JSON.stringify(codeStates(outer))}`);
 
-    controlIn(host).click();
-    await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
-    const session = editorSessionFor(host)!;
-    const shell = editorShellFor(host)!;
-    const e: Editing = { host, shell, session, view: session.view };
-    const atBuild = census(previewColumn(shell));
+    const e = await enterEdit(host);
+    const { shell, session } = e;
+    await lazyEnginesSettle(() => previewColumn(shell));
+    const builtColumn = previewColumn(shell);
+    const atBuild = census(builtColumn);
+
     session.view.focus();
     await waitFor(() => host.shadowRoot!.activeElement?.closest('.cm-editor'), 'focus in the editor');
     await userEvent.keyboard('z');
     await waitFor(settled(e), 'the preview caught up with the buffer');
-    await sleep(2500); // long enough for a lazy engine, had one been asked for
+    // The key's render REPLACED the nested root's children: what is enhanced below is a NEW
+    // column, so "still enhanced" cannot be the build's work surviving.
+    expect(previewColumn(shell), 'the keystroke re-rendered the preview').not.toBe(builtColumn);
+    await lazyEnginesSettle(() => previewColumn(shell));
     const afterTyping = census(previewColumn(shell));
 
     record(`enhancers — outer document:      ${JSON.stringify(outerCensus)}`);
@@ -567,20 +607,132 @@ describe('012 task 3.3 — REPORTED: what the reader’s enhancers do in the pre
         previewColumn(shell).querySelector('code.peekover-math-inline')?.textContent ?? null,
       )}; its mermaid fence reads ${JSON.stringify(
         previewColumn(shell).querySelector('pre > code.language-mermaid')?.textContent ?? null,
-      )}`,
+      )}; its code fence state(s): ${JSON.stringify(codeStates(previewColumn(shell)))}`,
     );
 
     expect(outerCensus.diagramSvg, 'outer diagram').toBeGreaterThan(0);
     expect(outerCensus.mathRendered, 'outer formula').toBeGreaterThan(0);
     expect(outerCensus.codeWrapper, 'outer code fences, wrapped by their enhancer').toBe(2);
     expect(outerCensus.codeHighlighted, 'outer highlighted fence').toBeGreaterThan(0);
-    // The preview holds the three SOURCE elements the enhancers look for — so "not rendered"
-    // below is read off a column that has something to render, not an empty one.
+    expect(outerCensus.tableToolbar, 'outer table toolbar').toBe(1);
+    // The preview holds the three SOURCE elements the enhancers look for — so the rows below are
+    // read off a column that has something to render, not an empty one.
     expect(afterTyping.mermaidSource + afterTyping.diagramFigure).toBeGreaterThan(0);
     expect(afterTyping.mathInlineSource + afterTyping.mathRendered).toBeGreaterThan(0);
     expect(afterTyping.jsSource + afterTyping.javascriptSource + afterTyping.codeWrapper).toBeGreaterThan(0);
+
+    // P-1, AS ASSERTIONS — each of the four, named, at build and after the key.
+    for (const [when, seen] of [['at build', atBuild], ['after a key', afterTyping]] as const) {
+      expect(seen.diagramFigure, `${when}: the mermaid fence has its figure`).toBe(1);
+      expect(seen.diagramSvg, `${when}: the figure holds an SVG`).toBe(1);
+      expect(seen.mathRendered, `${when}: $x^2$ is a <math> element`).toBeGreaterThan(0);
+      expect(seen.codeWrapper, `${when}: both code fences are wrapped`).toBe(2);
+      expect(seen.codeHighlighted, `${when}: the javascript fence is highlighted`).toBe(1);
+      expect(seen.tableToolbar, `${when}: the table has its toolbar`).toBe(1);
+      // And, taken whole, the preview holds what the reader holds for this document.
+      expect(seen, `${when}: the preview's census equals the outer document's`).toEqual(outerCensus);
+    }
+    expect(codeStates(previewColumn(shell)).sort()).toEqual(codeStates(outer).sort());
     expectUnwatched(host);
-  }, 240000);
+  }, 300000);
+
+  it('★ a theme flip WHILE editing re-themes the preview’s diagram, each way', async () => {
+    await page.viewport(WIDE.width, WIDE.height);
+    setThemeSetting('light');
+    const host = await openInPane(FIDELITY_DOC);
+    const e = await enterEdit(host);
+    e.view.focus();
+    await waitFor(() => host.shadowRoot!.activeElement?.closest('.cm-editor'), 'focus in the editor');
+    await userEvent.keyboard('z'); // a feed render has happened: this is the live preview's diagram
+    await waitFor(settled(e), 'the preview caught up with the buffer');
+
+    const figure = (): HTMLElement | null => previewColumn(e.shell).querySelector<HTMLElement>('.peekover-diagram');
+    const drawnAt = (theme: string) => (): boolean =>
+      figure()?.getAttribute('data-diagram-theme') === theme && figure()!.querySelector('svg') !== null;
+    await waitFor(drawnAt('light'), 'the preview diagram is drawn, light', 60000);
+    const lightSvg = figure()!.querySelector('svg')!.outerHTML;
+
+    setThemeSetting('dark');
+    await waitFor(drawnAt('dark'), 'the preview diagram re-themed to dark', 60000);
+    const darkSvg = figure()!.querySelector('svg')!.outerHTML;
+    expect(darkSvg, 'the dark diagram is a different drawing, not a relabelled one').not.toBe(lightSvg);
+    record(`theme flip while editing: the preview diagram is ${figure()!.getAttribute('data-diagram-theme')} (svg ${lightSvg.length} -> ${darkSvg.length} chars)`);
+    // FIRING CONTROL: the outer document's diagram took the same flip.
+    await waitFor(
+      () => outerColumn(host).querySelector('.peekover-diagram')?.getAttribute('data-diagram-theme') === 'dark',
+      'the outer diagram re-themed to dark',
+      60000,
+    );
+
+    // A diagram drawn by the NEXT feed render is born in the theme now in force.
+    const before = previewColumn(e.shell);
+    await userEvent.keyboard('k');
+    await waitFor(settled(e), 'the preview caught up with the buffer');
+    expect(previewColumn(e.shell)).not.toBe(before);
+    await waitFor(drawnAt('dark'), 'the re-rendered preview diagram is drawn dark', 60000);
+
+    setThemeSetting('light');
+    await waitFor(drawnAt('light'), 'the preview diagram re-themed back to light', 60000);
+    expect(buffer(e), 'the buffer rode through both flips').toBe(`zk${FIDELITY_DOC}`);
+    expectUnwatched(host);
+  }, 300000);
+
+  it('★ an enhancer that throws costs neither the edit view nor the buffer — at build or under typing — and the next enhancer still runs', async () => {
+    // No production seam: `querySelectorAll` on a PREVIEW host's shadow root is made to throw. The
+    // diagram, math and code enhancers all open with it; `mount()` never calls it on the root, and
+    // the table enhancer reaches its tables through the column — so three enhancers fail, the
+    // render itself does not, and the fourth has work it can still do.
+    const original = ShadowRoot.prototype.querySelectorAll;
+    let forced = 0;
+    ShadowRoot.prototype.querySelectorAll = function failing(this: ShadowRoot, selectors: string) {
+      if (this.host.classList.contains(EDITOR_PREVIEW_HOST_CLASS)) {
+        forced += 1;
+        throw new Error('forced enhancer failure (3.4)');
+      }
+      return original.call(this, selectors);
+    } as typeof original;
+    const watch = watchForErrors();
+    let host: HTMLElement;
+    try {
+      host = await openInPane(FIDELITY_DOC);
+      controlIn(host).click();
+      // Bounded, and not a throw: when the build is lost, the assertion below says so.
+      for (let i = 0; i < 250 && host.getAttribute('data-mode') !== 'edit'; i += 1) await sleep(20);
+      expect(forced, 'the instrument fired during the build').toBeGreaterThan(0);
+      expect(host.getAttribute('data-mode'), 'an enhancer failure at build cost the edit view').toBe('edit');
+
+      const session = editorSessionFor(host)!;
+      const shell = editorShellFor(host)!;
+      const e: Editing = { host, shell, session, view: session.view };
+      expect(
+        previewColumn(shell).querySelectorAll('.peekover-table-tools').length,
+        'at build: the table enhancer ran after the three that threw',
+      ).toBe(1);
+
+      const atBuild = forced;
+      session.view.focus();
+      await waitFor(() => host.shadowRoot!.activeElement?.closest('.cm-editor'), 'focus in the editor');
+      await userEvent.keyboard('zqx');
+      await waitFor(settled(e), 'the preview caught up with the buffer');
+      expect(forced, 'the instrument fired again under typing').toBeGreaterThan(atBuild);
+      expect(buffer(e), 'the buffer is exactly what was typed').toBe(`zqx${FIDELITY_DOC}`);
+      expect(e.view.dom.isConnected, 'the editor node is still in the document').toBe(true);
+      expect(previewColumn(shell).textContent, 'the preview shows the typed text').toContain('zqxIntro line.');
+      expect(
+        previewColumn(shell).querySelectorAll('.peekover-table-tools').length,
+        'after a key: the table enhancer ran after the three that threw',
+      ).toBe(1);
+      expectUnwatched(host);
+    } finally {
+      ShadowRoot.prototype.querySelectorAll = original;
+      watch.stop();
+    }
+    // Each failure is LOGGED, by name — and none reached the page, nor was mistaken for a failed
+    // render (which would have skipped every enhancer after the first).
+    const logged = watch.errors.filter((line) => line.includes('preview enhancement failed'));
+    expect(logged.length, 'three enhancers failed at build and three more per render').toBeGreaterThanOrEqual(6);
+    expect(watch.errors.filter((line) => !line.includes('preview enhancement failed'))).toEqual([]);
+  }, 120000);
 });
 
 // ── Appearance proxies ───────────────────────────────────────────────────────────────────────

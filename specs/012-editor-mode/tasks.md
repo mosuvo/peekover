@@ -541,7 +541,7 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       Measured: `.output` 5,814,005 / 5,814,121 B (+535, all in the app chunk), content script
       342,384 B both engines, md5 unchanged — 4.1's snapshot.*
 
-- [ ] **3.4 Editor legibility + preview fidelity (R7, R8; E-1, E-2, E-3, P-1).** ★ **DISCOVERED
+- [x] **3.4 Editor legibility + preview fidelity (R7, R8; E-1, E-2, E-3, P-1).** ★ **DISCOVERED
       2026-10-06; runs AFTER 4.2 and BEFORE 5.1** — human-ruled and human-scheduled (`decisions.md`,
       "M12 RULINGS after task 4.1": R7, R8). Numbered in group 3 because it finishes group 3's
       surfaces; it does not run in group 3's position. TEST FIRST. Four things, one commit: **(P-1 /
@@ -577,6 +577,42 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       file, or route them to the human. The reader's call sites also run `enhanceTables` between math
       and code; R7 names diagrams, math and code — whether tables run in the preview is the same
       kickoff's question.
+      ★ *Post-landing, 2026-10-06 — six human rulings were taken for or in this task (R9–R14),
+      recorded in `decisions.md`'s two "M12 TASK 3.4" entries and `progress.md`'s 3.4 record.
+      (i) **Both open items above are RULED.** **R9** — `@codemirror/language` is installed as a
+      direct dependency at the version CodeMirror already resolves (6.12.4, `^6.12.4`;
+      `dependencies` 10 → 11); `package.json` and `pnpm-lock.yaml` are the authorized ripples, and
+      the install alone moves no shipped byte. **R10** — the preview runs ALL FOUR enhancers,
+      tables included, in the reader's order. (ii) **★ ONE VERIFY-ADJACENT CLAUSE IS NOT MET, AND
+      IS CARRIED (R13):** R9's `pnpm audit --prod` EXIT=0. It exits 1 on a LOW `katex` advisory
+      (via `mermaid`) that is red at this task's parent commit too. Its home is a dedicated bump
+      task, human-scheduled, before 7.1 — the 1.1 → 1.2 precedent. (iii) **The palette is TWO-TONE
+      (R11).** "The editor's syntax-highlight colours come from design tokens" could not mean a
+      colour per role: on `--code-bg` only `--ink` and `--muted` clear AA for text in both themes.
+      Markup, comments and link / task furniture draw in `--muted`, `invalid` in `--del`, every
+      other role in `--ink`. (iv) **The style is built from `@codemirror/language`'s OWN default
+      style** — its specs mapped, its tag objects reused — so `@lezer/highlight` is never
+      imported; the fence gained an assertion for exactly that edge, which its scope-based matcher
+      could not see. (v) **★ The style is built ONCE PER PAGE, not per engine.** Built per host it
+      drew nothing on Firefox from the second host on (rules present in CodeMirror's shared
+      constructed sheet, not applied) — found by this task's own proxy, fixed here. (vi) **E-2 is
+      in `EDITOR_CSS`,** as this line's Files list says, not an `EditorView.theme()` (the kickoff
+      offered both). Its cost, stated: the dark selection's fill against the pane fell 11.22 →
+      1.29:1 (non-text, never asserted) — no token satisfies both that and the text. (vii)
+      **Reported, not fixed (R12):** a `--muted` mark on the dark active-line band reads 2.97:1.
+      (viii) **"Light un-regressed" is read as "still clears AA":** the markup marks are 5.49:1 on
+      light where the default palette gave 8.44. (ix) **Two existing pins in
+      `editorEngine.test.ts` were edited by authorization (R14)** — the exact extension list gains
+      the highlight between the ruled pair and the caller. (x) **This line's "two arms" are FOUR**
+      (the kickoff's decomposition): the highlight style 1,844 B, E-2 376, E-1 82, the enhancer
+      calls 131 — residual 0. (xi) **The third edge's import SHAPE is worth 10,883 B:** named in a
+      `.then` on the import itself the bundler drops the package's unused exports; destructured
+      out of `Promise.all` like the two existing edges it keeps them all. The existing two were
+      not changed — flagged for the human. (xii) **A failed enhancement is guarded per enhancer:**
+      unguarded, a throw at build costs the edit view. (xiii) **For 6.2:** the cooldown times the
+      mount and the enhancers' placeholders, not the lazy engines' work.
+      Measured: `.output` 5,816,970 / 5,817,086 B (+2,433), content script 342,652 B both engines,
+      md5 unchanged and seen to move under un-gating — 5.1's snapshot.*
 
 *Group-3 acceptance (plan §6): spec §4's edit and preview EARS clauses hold on an unwatched document; D-4's
 nested-host property is proven red-first under real typing; the engine has exactly one importer and is

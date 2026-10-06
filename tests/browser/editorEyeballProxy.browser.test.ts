@@ -18,6 +18,17 @@
 //      listener installed.
 //   5. (No test.) The load path — see the note on the harness below.
 //
+// ══ ★ 3.4 TURNED THREE FINDINGS INTO ASSERTIONS (decisions.md, M12 TASK 3.4) ═══════════════════
+//
+// What the block below says about proxies 1 and 3 was true of every pair when this file landed.
+// Task 3.4 fixed three of the findings, and the pairs they named are now ASSERTED, in both themes:
+//   • E-2 — selected text on the selection (focused and unfocused), the current search match's
+//     text, an unselected autocomplete option: `E2_PAIRS`, proxy 1;
+//   • E-3 — every highlight-styled span on the pane, and that the colours ARE the design tokens:
+//     proxy 3;
+//   • E-1 — the split pane against the collapsed TOC handle: proxy 2, its pin deleted.
+// Every other pair is still a measurement, reported and not asserted.
+//
 // ══ A PROXY THAT FINDS A DEFECT REPORTS IT; IT DOES NOT FAIL ════════════════════════════════════
 //
 // Proxies 1, 3 and 4 are MEASUREMENTS. Their numbers are printed as `EYEBALL {json}` lines and
@@ -469,9 +480,27 @@ const lineEl = (host: HTMLElement, n: number): HTMLElement =>
 const lineStart = (doc: string, n: number): number =>
   doc.split('\n').slice(0, n - 1).reduce((sum, l) => sum + l.length + 1, 0);
 
+/** E-2 (3.4): the text pairs the 3.2 sweep found below AA on dark. Asserted on BOTH themes — light
+ *  passed before the fix and is the control arm that must not have been traded away for dark. */
+const E2_PAIRS = [
+  'selection (focused) — selected text on the selection',
+  'selection (unfocused) — selected text on the selection',
+  'search match (selected) — the current match’s text on its colour',
+  'autocomplete — an option’s text on the tooltip',
+] as const;
+
+/** Text pairs that cleared AA on both themes at 3.2 and sit on or beside a surface 3.4 restyled:
+ *  the fix must not have cost any of them. */
+const E2_NEIGHBOURS = [
+  'content — body text on the pane',
+  'active line — body text on the band',
+  'search match — matched text on the match colour',
+  'autocomplete — the SELECTED option’s text on its band',
+] as const;
+
 describe('3.2 eyeball proxy 1 — contrast of CodeMirror’s own surfaces, light (control) and dark', () => {
   it.each(['light', 'dark'] as const)(
-    '%s: every pair is MEASURED and recorded against the stated bar (findings are reported, not asserted)',
+    '%s: every pair is MEASURED and recorded against the stated bar; E-2’s pairs are ASSERTED at AA (3.4)',
     async (theme) => {
       await page.viewport(WIDE.width, WIDE.height);
       setThemeSetting(theme);
@@ -760,6 +789,17 @@ describe('3.2 eyeball proxy 1 — contrast of CodeMirror’s own surfaces, light
       // Non-vacuity only: the sweep saw the editor. Which pairs clear the bar is the REPORT.
       expect(rows.length, 'the sweep measured the always-present surfaces').toBeGreaterThanOrEqual(6);
       expect(rows.every((r) => Number.isFinite(r.ratio) && r.ratio >= 1)).toBe(true);
+
+      // ── E-2, ASSERTED (3.4) ────────────────────────────────────────────────────────────────
+      const measured = new Map(rows.map((r) => [`${r.surface} — ${r.pair}`, r]));
+      for (const pairs of [E2_PAIRS, E2_NEIGHBOURS]) {
+        // Measured FIRST: a surface that never opened has no row, and no row is not a pass.
+        expect(pairs.filter((name) => !measured.has(name)), `${theme}: pairs the sweep did not reach`).toEqual([]);
+      }
+      const below = (pairs: readonly string[]): string[] =>
+        pairs.filter((name) => measured.get(name)!.ratio < TEXT_BAR).map((name) => `${name}: ${measured.get(name)!.ratio}:1`);
+      expect(below(E2_PAIRS), `${theme}: E-2 pairs below AA (text ${TEXT_BAR}:1)`).toEqual([]);
+      expect(below(E2_NEIGHBOURS), `${theme}: pairs that passed at 3.2 and no longer do`).toEqual([]);
       expectUnwatched(host);
     },
   );
@@ -783,20 +823,14 @@ describe('3.2 eyeball proxy 1 — contrast of CodeMirror’s own surfaces, light
 // Every violation is collected and recorded before the one assertion, so a first red cannot hide
 // a second.
 //
-// ★ ONE KNOWN FINDING IS PINNED, NOT ASSERTED AWAY (human ruling, 2026-10-05, on this proxy's own
-// stop-and-report). In EDIT with the rail COLLAPSED the TOC handle sits over the split pane's
-// top-right corner — measured 103×26px at both viewports on both engines: the collapsed rail puts
-// its handle at 52–82px, and EDITOR_CSS starts the pane at 56px and reserves the rail's width only
-// while the rail is OPEN. The handle is on top (its centre hit-test returns it), so it covers the
-// corner of the preview pane when wide and of the SOURCE pane when stacked. Filed in
-// `progress.md` § Carried items for the 7.1 walk; not fixed here (this task is test-only).
-// The pin is exactly that one relation in that one state: it is kept out of `violations`, and
-// asserted STILL PRESENT, so the commit that fixes it has to delete `KNOWN_PANE_UNDER_HANDLE` and
-// the relation goes back to being asserted like the rest. Any other overlap, or this one in any
-// other state, still reds.
-
-/** The pinned finding's relation and the one rail state it is pinned in — see the block above. */
-const KNOWN_PANE_UNDER_HANDLE = { pair: 'split pane × handle', rail: 'collapsed' } as const;
+// ★ E-1 — THE ONE FINDING THIS PROXY PINNED IS FIXED, AND ITS PIN IS DELETED (3.4). In EDIT with
+// the rail COLLAPSED the TOC handle sat over the split pane's top-right corner — 103×26px at both
+// viewports on both engines: the collapsed rail puts its handle at 52–82px, and EDITOR_CSS started
+// the pane at 56px, reserving the rail's width only while the rail is OPEN. A human ruling
+// (2026-10-05) pinned that one relation in that one state out of `violations` and asserted it
+// STILL PRESENT, so that the fixing commit had to delete the pin. 3.4 is that commit: the pane now
+// starts below the collapsed handle, and `split pane × handle` is asserted like every other pair,
+// in every state.
 
 const COLLISION_DOC = '# Sample document\n\nBody text.\n\n## Second heading\n\nMore body.\n\n### Third\n\nEnd.\n';
 
@@ -917,11 +951,8 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
       'split pane × handle': overlapPx(edit.shell, edit.handle),
       'split pane × rail': rail === 'open' ? overlapPx(edit.shell, edit.rail) : null,
     };
-    const known: string[] = [];
     for (const [pair, o] of Object.entries(editPairs)) {
-      if (!o) continue;
-      const pinned = pair === KNOWN_PANE_UNDER_HANDLE.pair && rail === KNOWN_PANE_UNDER_HANDLE.rail;
-      (pinned ? known : violations).push(`edit: ${pair} overlap ${px(o)}`);
+      if (o) violations.push(`edit: ${pair} overlap ${px(o)}`);
     }
     const paneClearance = Number((edit.rail.left - edit.shell.right).toFixed(1));
     if (rail === 'open' && paneClearance < 0) {
@@ -936,6 +967,7 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
       hitTests: editHits,
       asserted: Object.fromEntries(Object.entries(editPairs).map(([k, o]) => [k, px(o)])),
       paneRightToRailLeft: `${paneClearance}px`,
+      paneTopToHandleBottom: `${Number((edit.shell.top - edit.handle.bottom).toFixed(1))}px`,
       reported: {
         'control × rail BOX (pill-over-rail, by design)': px(overlapPx(edit.control, edit.rail)),
         'split pane × collapsed rail BOX': rail === 'collapsed' ? px(overlapPx(edit.shell, edit.rail)) : 'n/a (open)',
@@ -943,13 +975,12 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
         'source pane width': `${Math.round(sourcePane.getBoundingClientRect().width)}px`,
       },
     });
-    record('collision-summary', { viewport, rail, violations, knownFinding: known });
+    record('collision-summary', { viewport, rail, violations });
 
     expect(violations, `${viewport}, rail ${rail}: overlaps or covered controls`).toEqual([]);
-    expect(
-      known.length,
-      'the pinned finding is present exactly where it was filed — if a fix removed it, delete the pin',
-    ).toBe(rail === KNOWN_PANE_UNDER_HANDLE.rail ? 1 : 0);
+    // The clearance is not bought by shrinking the pane to nothing.
+    expect(edit.shell.bottom - edit.shell.top, 'the split pane still has its height').toBeGreaterThan(300);
+    expect(edit.shell.right - edit.shell.left, 'the split pane still has a width').toBeGreaterThan(90);
     expectUnwatched(host);
   });
 });
@@ -980,8 +1011,23 @@ const DIALECT_DOC = `${DIALECT_LINES.join('\n')}\n`;
 
 interface DrawnSpan {
   text: string;
+  /** The span's own computed colour, as `#rrggbb`. */
+  ink: string;
   differs: Record<string, string>;
   contrast: number;
+}
+
+/** What a design token computes to on `host`, as `#rrggbb` — read off a probe that draws in it,
+ *  so the answer is whatever the theme attribute on the host makes of the token right now. */
+function tokenColour(host: HTMLElement, token: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = `var(${token})`;
+  host.shadowRoot!.append(probe);
+  try {
+    return hex(parseColor(getComputedStyle(probe).color));
+  } finally {
+    probe.remove();
+  }
 }
 
 /** The highlight-styled spans of one drawn line: each span's text and every watched property on
@@ -1002,6 +1048,7 @@ function drawnSpans(line: HTMLElement): DrawnSpan[] {
     const bg = flatten(backdrop.layers);
     return {
       text: span.textContent ?? '',
+      ink: hex(parseColor(cs.color)),
       differs,
       contrast: Number(contrastRatio(over(inkOf(span), bg), bg).toFixed(2)),
     };
@@ -1010,7 +1057,7 @@ function drawnSpans(line: HTMLElement): DrawnSpan[] {
 
 describe('3.2 eyeball proxy 3 — GFM and R1’s dialect, as drawn', () => {
   it.each(['light', 'dark'] as const)(
-    '%s: which ranges receive a highlight-styled span, and its computed style (measured, not judged)',
+    '%s: which ranges receive a highlight-styled span, and its computed style; E-3’s colours are ASSERTED tokens at AA (3.4)',
     async (theme) => {
       await page.viewport(WIDE.width, WIDE.height);
       setThemeSetting(theme);
@@ -1048,6 +1095,48 @@ describe('3.2 eyeball proxy 3 — GFM and R1’s dialect, as drawn', () => {
       // The instrument fires and stays silent where it should — the R1 lines are NOT asserted.
       expect(byLine.get('# Heading control')!.length, 'a heading is highlighted (the instrument fires)').toBeGreaterThan(0);
       expect(byLine.get('plain control line'), 'plain prose gets no styled span (the instrument is silent)').toEqual([]);
+
+      // ── E-3, ASSERTED (3.4) ────────────────────────────────────────────────────────────────
+      const drawn = [...byLine.entries()].flatMap(([line, spans]) => spans.map((span) => ({ line, ...span })));
+      expect(drawn.length, 'the sweep saw the dialect’s spans').toBeGreaterThan(20);
+      expect(
+        drawn
+          .filter((s) => s.contrast < TEXT_BAR)
+          .map((s) => `${JSON.stringify(s.text)} in ${JSON.stringify(s.line)}: ${s.ink}, ${s.contrast}:1`),
+        `${theme}: highlight-styled spans below AA (text ${TEXT_BAR}:1) on the pane`,
+      ).toEqual([]);
+
+      // And the colours ARE the tokens, whatever the theme makes of them — the three ranges the
+      // 3.2 sweep named: a task marker, the table's pipes, the emoji shortcode.
+      const muted = tokenColour(host, '--muted');
+      const ink = tokenColour(host, '--ink');
+      expect(muted, 'the two tokens are told apart').not.toBe(ink);
+      const inkOfSpan = (line: string, text: string): string[] =>
+        byLine.get(line)!.filter((s) => s.text === text).map((s) => s.ink);
+      expect(inkOfSpan('- [ ] task', '[ ]'), 'the task marker draws in --muted').toEqual([muted]);
+      expect(inkOfSpan('| a | b |', '|'), 'every pipe of the header row draws in --muted').toEqual([muted, muted, muted]);
+      expect(inkOfSpan('smile :smile: emoji', ':smile:'), 'the emoji shortcode draws in --ink').toEqual([ink]);
+      // No span anywhere draws in a colour that is neither token.
+      expect([...new Set(drawn.map((s) => s.ink))].filter((c) => c !== muted && c !== ink)).toEqual([]);
+
+      // ── REPORTED, not asserted (human ruling, 2026-10-06): a --muted mark on the ACTIVE line.
+      // The band is CodeMirror's own default and stays so; this is a 7.1 walk item.
+      const taskLine = DIALECT_LINES.indexOf('- [ ] task');
+      view.dispatch({ selection: { anchor: lineStart(DIALECT_DOC, taskLine + 1) } });
+      await focusEditor(host);
+      await frames();
+      const onBand = [...host.shadowRoot!.querySelectorAll<HTMLElement>('.cm-content .cm-line')][taskLine];
+      expect(onBand.classList.contains('cm-activeLine'), 'the task line now carries the active band').toBe(true);
+      const marker = drawnSpans(onBand).find((s) => s.text === '[ ]');
+      record('active-band', {
+        theme,
+        pair: 'a --muted mark on the active-line band',
+        ink: marker?.ink,
+        ratio: marker?.contrast,
+        bar: TEXT_BAR,
+        pass: (marker?.contrast ?? 0) >= TEXT_BAR,
+      });
+      expect(marker, 'the marker was measured on the band').toBeDefined();
       expectUnwatched(host);
     },
   );

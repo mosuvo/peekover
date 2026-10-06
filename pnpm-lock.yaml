@@ -16,6 +16,9 @@ importers:
       '@codemirror/lang-markdown':
         specifier: ^6.5.2
         version: 6.5.2
+      '@codemirror/language':
+        specifier: ^6.12.4
+        version: 6.12.4
       '@mdit/plugin-tex':
         specifier: ^1.1.0
         version: 1.1.0(markdown-it@14.3.2)

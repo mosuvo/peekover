@@ -10,6 +10,9 @@
 //      M12 TASK 1.1 EXTENDED), asserted on a fake view class that records what it was constructed
 //      with: `markdown` is called with NO argument, and nothing the engine adds sits between the
 //      ruled pair and the caller's own extension.
+//      ★ 3.4 (R8) ADDS ONE THING BETWEEN THEM: the token-driven highlight style. The ruled pair is
+//      still first and still unmodified, the caller's extension still last; the two exact-list
+//      pins below gained that one element by human authorization (decisions.md, M12 TASK 3.4).
 //   3. THE ROUND-TRIP (plan D-7's open note), against the REAL package through the engine's own
 //      default loader. This is a claim about CodeMirror's DOCUMENT MODEL — text in, text out —
 //      which involves no layout, so a view constructed in jsdom answers it honestly.
@@ -23,6 +26,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   loadCodeMirror,
   loadEditorEngine,
+  tokenHighlightSpecs,
   type EditorEngine,
   type EditorModuleLoader,
   type EditorModules,
@@ -35,8 +39,27 @@ interface RecordedConfig {
   extensions?: unknown;
 }
 
-/** Stand-in modules: three distinguishable values and a view class that records its config. */
-function fakeModules(): { modules: EditorModules; built: RecordedConfig[]; markdown: ReturnType<typeof vi.fn> } {
+/** A stand-in highlight tag: all the engine reads of one is its name, through `String()`. */
+const fakeTag = (name: string): { toString(): string } => ({ toString: () => name });
+
+/** A stand-in default style: one spec per token the map can produce, one grouped spec, and one
+ *  with no colour at all. The colours are placeholders the engine must REPLACE, never read. */
+const FAKE_SPECS = [
+  { tag: fakeTag('meta'), color: 'DEFAULT_META' },
+  { tag: fakeTag('heading'), textDecoration: 'underline', fontWeight: 'bold' },
+  { tag: [fakeTag('string'), fakeTag('deleted')], color: 'DEFAULT_STRING' },
+  { tag: [fakeTag('atom'), fakeTag('url')], color: 'DEFAULT_ATOM' },
+  { tag: fakeTag('invalid'), color: 'DEFAULT_INVALID' },
+];
+
+/** Stand-in modules: distinguishable values and a view class that records its config. */
+function fakeModules(): {
+  modules: EditorModules;
+  built: RecordedConfig[];
+  markdown: ReturnType<typeof vi.fn>;
+  define: ReturnType<typeof vi.fn>;
+  syntaxHighlighting: ReturnType<typeof vi.fn>;
+} {
   const built: RecordedConfig[] = [];
   class FakeView {
     constructor(config: RecordedConfig) {
@@ -44,13 +67,18 @@ function fakeModules(): { modules: EditorModules; built: RecordedConfig[]; markd
     }
   }
   const markdown = vi.fn(() => 'MARKDOWN_SUPPORT');
+  const define = vi.fn((specs: unknown) => ({ TOKEN_STYLE: specs }));
+  const syntaxHighlighting = vi.fn(() => 'TOKEN_HIGHLIGHT');
   const modules = {
     EditorView: FakeView,
     basicSetup: 'BASIC_SETUP',
     markdown,
     markdownLanguage: 'MARKDOWN_LANGUAGE',
+    HighlightStyle: { define },
+    defaultHighlightStyle: { specs: FAKE_SPECS },
+    syntaxHighlighting,
   } as unknown as EditorModules;
-  return { modules, built, markdown };
+  return { modules, built, markdown, define, syntaxHighlighting };
 }
 
 const host = (): HTMLElement => document.createElement('div');
@@ -134,7 +162,7 @@ describe('loadEditorEngine — a rejected load is not cached', () => {
 });
 
 describe('the engine — the ruled setup, defaults unmodified', () => {
-  it('builds a view from basicSetup + markdown() and NOTHING of its own', async () => {
+  it('builds a view from basicSetup + markdown(), then its ONE addition — the token highlight (3.4)', async () => {
     const { modules, built, markdown } = fakeModules();
     const engine = await loadEditorEngine(host(), () => Promise.resolve(modules));
     const parent = host();
@@ -144,7 +172,7 @@ describe('the engine — the ruled setup, defaults unmodified', () => {
     expect(view).toBeInstanceOf(modules.EditorView);
     expect(built[0].doc).toBe('seed text');
     expect(built[0].parent).toBe(parent);
-    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', []]);
+    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', 'TOKEN_HIGHLIGHT', []]);
 
     // `markdown({ base: markdownLanguage })` — R1 (decisions.md, 2026-10-05) amends "called with
     // its defaults" for `base` ALONE. The config object carries that one key, so `addKeymap`,
@@ -158,13 +186,156 @@ describe('the engine — the ruled setup, defaults unmodified', () => {
     const engine = await loadEditorEngine(host(), () => Promise.resolve(modules));
 
     engine.createView(host(), '', 'CALLER_EXTENSION' as unknown as Parameters<EditorEngine['createView']>[2]);
-    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', 'CALLER_EXTENSION']);
+    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', 'TOKEN_HIGHLIGHT', 'CALLER_EXTENSION']);
+  });
+
+  it('3.4 — the ruled pair is unchanged and still FIRST; the highlight sits after it, before the caller', async () => {
+    const { modules, built, markdown } = fakeModules();
+    const engine = await loadEditorEngine(host(), () => Promise.resolve(modules));
+    engine.createView(host(), '', 'CALLER_EXTENSION' as unknown as Parameters<EditorEngine['createView']>[2]);
+    const extensions = built[0].extensions as unknown[];
+    expect(extensions.slice(0, 2)).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT']);
+    expect(markdown.mock.calls[0]).toEqual([{ base: 'MARKDOWN_LANGUAGE' }]);
+    expect(extensions.indexOf('TOKEN_HIGHLIGHT')).toBe(2);
+    expect(extensions.at(-1)).toBe('CALLER_EXTENSION');
   });
 
   it('exposes the view class itself, for the static facets a caller builds extensions from', async () => {
     const { modules } = fakeModules();
     const engine = await loadEditorEngine(host(), () => Promise.resolve(modules));
     expect(engine.EditorView).toBe(modules.EditorView);
+  });
+});
+
+describe('the engine — the token-driven highlight style (3.4; R8, E-3)', () => {
+  const TOKEN_COLOUR = /^var\(--(ink|muted|del)\)$/;
+
+  it('is built ONCE per page — shared by every engine and every view — from the default style’s own specs with every colour replaced by a token', async () => {
+    const { modules, built, define, syntaxHighlighting } = fakeModules();
+    const engine = await loadEditorEngine(host(), () => Promise.resolve(modules));
+    engine.createView(host(), 'one');
+    engine.createView(host(), 'two');
+    // A SECOND HOST loads a second engine from the same modules — and gets the same style. One
+    // built per host is the defect: on Firefox its rules did not apply from the second host on
+    // (tests/browser/editorEyeballProxy, proxy 3, is where that is seen in a real engine).
+    const second = await loadEditorEngine(host(), () => Promise.resolve(modules));
+    expect(second).not.toBe(engine);
+    second.createView(host(), 'three');
+    expect(built.map((config) => (config.extensions as unknown[])[2])).toEqual([
+      'TOKEN_HIGHLIGHT',
+      'TOKEN_HIGHLIGHT',
+      'TOKEN_HIGHLIGHT',
+    ]);
+
+    expect(define).toHaveBeenCalledTimes(1);
+    const specs = define.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(specs).toHaveLength(FAKE_SPECS.length);
+    // The TAG objects are the default style's own — reused, never rebuilt. That is the whole
+    // route: no tag is named through a fourth package.
+    specs.forEach((spec, i) => expect(spec.tag).toBe(FAKE_SPECS[i].tag));
+    expect(specs.map((spec) => spec.color)).toEqual([
+      'var(--muted)', // meta
+      undefined, // heading — it had no colour, and gains none
+      'var(--ink)', // string / deleted
+      'var(--muted)', // atom / url
+      'var(--del)', // invalid
+    ]);
+    // A spec with no colour passes through as the SAME object; the others keep every other key.
+    expect(specs[1]).toBe(FAKE_SPECS[1]);
+    expect(JSON.stringify(specs)).not.toContain('DEFAULT_');
+    // The default style's specs were read, not written to.
+    expect(FAKE_SPECS.map((spec) => spec.color)).toEqual([
+      'DEFAULT_META',
+      undefined,
+      'DEFAULT_STRING',
+      'DEFAULT_ATOM',
+      'DEFAULT_INVALID',
+    ]);
+
+    // NON-FALLBACK: the style alone, no options object. `{ fallback: true }` is how basicSetup
+    // registers the default palette, and a second fallback would not displace it.
+    expect(syntaxHighlighting).toHaveBeenCalledTimes(1);
+    expect(syntaxHighlighting.mock.calls[0]).toEqual([{ TOKEN_STYLE: specs }]);
+  });
+
+  it('tokenHighlightSpecs over the REAL default style: every colour is a var(--token), nothing else moves', async () => {
+    const { defaultHighlightStyle } = await loadCodeMirror();
+    const defaults = defaultHighlightStyle.specs;
+    const mapped = tokenHighlightSpecs(defaults);
+
+    expect(mapped).toHaveLength(defaults.length);
+    const coloured = mapped.filter((spec) => 'color' in spec);
+    // Non-vacuity: the installed default style has fourteen coloured specs, and all were seen.
+    expect(defaults.filter((spec) => 'color' in spec)).toHaveLength(14);
+    expect(coloured).toHaveLength(14);
+    expect(coloured.filter((spec) => !TOKEN_COLOUR.test(String(spec.color)))).toEqual([]);
+
+    const row = (spec: (typeof mapped)[number]): string =>
+      `${[spec.tag].flat().map(String).join(' ')} -> ${String(spec.color)}`;
+    // The whole palette, as ruled (decisions.md, M12 TASK 3.4): markup, comments and link/task
+    // furniture in --muted, invalid in --del, every other role in --ink.
+    expect(coloured.map(row)).toEqual([
+      'meta -> var(--muted)',
+      'keyword -> var(--ink)',
+      'atom bool url contentSeparator labelName -> var(--muted)',
+      'literal inserted -> var(--ink)',
+      'string deleted -> var(--ink)',
+      'regexp escape special(string) -> var(--ink)',
+      'definition(variableName) -> var(--ink)',
+      'local(variableName) -> var(--ink)',
+      'typeName namespace -> var(--ink)',
+      'className -> var(--ink)',
+      'special(variableName) macroName -> var(--ink)',
+      'definition(propertyName) -> var(--ink)',
+      'comment -> var(--muted)',
+      'invalid -> var(--del)',
+    ]);
+
+    // Everything that is not a colour is untouched: same tags, same weight / style / decoration.
+    mapped.forEach((spec, i) => {
+      expect(spec.tag).toBe(defaults[i].tag);
+      expect({ ...spec, color: null }).toEqual({ ...defaults[i], color: null });
+    });
+  });
+
+  it('the view the ENGINE builds highlights with the token style; a view on the ruled pair alone uses the default', async () => {
+    // Read from the STATE, which involves no layout: the class each view's active highlighter
+    // gives the `meta` tag, and the rule that class carries in the view's own style modules.
+    // `highlightingFor` is the third package's own reader — imported here, in a test, as
+    // `@codemirror/lang-markdown` already is below; the fence scans shipped files only.
+    const { EditorView, basicSetup, markdown, markdownLanguage, defaultHighlightStyle } = await loadCodeMirror();
+    const { highlightingFor } = await import('@codemirror/language');
+    const meta = defaultHighlightStyle.specs.find((spec) => String(spec.tag) === 'meta')!.tag;
+    const ruleFor = (view: InstanceType<typeof EditorView>): string => {
+      const cls = highlightingFor(view.state, [meta].flat());
+      expect(cls, 'the view has a highlighter that styles `meta`').toBeTruthy();
+      return view.state
+        .facet(EditorView.styleModule)
+        .map((module) => module.getRules())
+        .join('\n')
+        .split('\n')
+        .filter((rule) => rule.startsWith(`.${cls} `))
+        .join('\n');
+    };
+
+    const outer = host();
+    document.body.append(outer);
+    const slot = document.createElement('div');
+    outer.attachShadow({ mode: 'open' }).append(slot);
+    const view = (await loadEditorEngine(outer)).createView(slot, '# heading\n');
+    const control = new EditorView({ doc: '# heading\n', extensions: [basicSetup, markdown({ base: markdownLanguage })] });
+    try {
+      expect(ruleFor(view)).toContain('color: var(--muted)');
+      // THE CONTROL: the same reader on the same setup WITHOUT the engine's addition finds the
+      // default palette's own literal — so the line above is the style, not a reader that sees
+      // nothing. (The literal is CodeMirror's, read back; it is not a colour this repo sets.)
+      expect(ruleFor(control)).toMatch(/color: #[0-9a-f]{3,6}/);
+      expect(ruleFor(control)).not.toContain('var(--');
+    } finally {
+      control.destroy();
+      view.destroy();
+      outer.remove();
+    }
   });
 });
 
