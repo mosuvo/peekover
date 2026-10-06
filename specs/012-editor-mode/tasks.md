@@ -541,6 +541,43 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       Measured: `.output` 5,814,005 / 5,814,121 B (+535, all in the app chunk), content script
       342,384 B both engines, md5 unchanged — 4.1's snapshot.*
 
+- [ ] **3.4 Editor legibility + preview fidelity (R7, R8; E-1, E-2, E-3, P-1).** ★ **DISCOVERED
+      2026-10-06; runs AFTER 4.2 and BEFORE 5.1** — human-ruled and human-scheduled (`decisions.md`,
+      "M12 RULINGS after task 4.1": R7, R8). Numbered in group 3 because it finishes group 3's
+      surfaces; it does not run in group 3's position. TEST FIRST. Four things, one commit: **(P-1 /
+      R7)** after each preview render, the reader's enhancers — diagrams, math, code, in the reader's
+      order — run on the NESTED host; **(E-3 / R8)** the editor's syntax-highlight colours come from
+      design tokens, through a highlight style built on a third dynamic specifier,
+      `@codemirror/language`; **(E-2)** dark-theme selected text, the current search match and
+      autocomplete options reach AA, from tokens; **(E-1)** the collapsed TOC handle no longer covers
+      the split pane's top-right corner.
+      Files: `src/render/editorView.ts` (the enhancers on the nested host) · `src/theme/readerCss.ts`
+      (`EDITOR_CSS`: E-1's handle clearance, E-2's dark selection / search-match / tooltip colours from
+      tokens) · `src/render/editorEngine.ts` + `src/render/editorEngine.test.ts` (the token-driven
+      highlight style via `@codemirror/language`) · `src/render/editorImportFence.test.ts` (the
+      permitted set 2 → 3, still dynamic-only) · `tests/browser/editorEyeballProxy.browser.test.ts`
+      (delete the `KNOWN_PANE_UNDER_HANDLE` pin; E-1 / E-2 / E-3 become passing assertions) ·
+      `tests/browser/editorPreview.browser.test.ts` (P-1's REPORTED test becomes assertions)
+      Verify: (**real engine, both**) every E-2 and E-3 pair ≥ WCAG AA on dark, with light
+      un-regressed (light is the control arm, as in the proxy); E-1's overlap gone at both viewports
+      (414×896 and 1400×900) with the pin DELETED, not loosened; mermaid, math and code render in the
+      nested host — **red-first:** without the enhancer calls the preview holds the raw fence, the
+      literal formula and the un-highlighted block (P-1's measured state). (**unit**) the fence permits
+      EXACTLY three dynamic specifiers — `codemirror`, `@codemirror/lang-markdown`,
+      `@codemirror/language` — no static or type-only one, clause A unchanged. Content script
+      **md5-identical to 4.2's** (`EDITOR_CSS` does not reach it — 3.2's note v is the precedent, and
+      its un-gating control is the instrument). App-page bytes decomposed into two arms — the
+      highlight style, and the enhancer calls. Group 3's unwatched-document rule applies to every
+      fixture. Full suite · Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [R7, R8]
+      ★ *Open for this task's kickoff, checked at `2466f2e` and NOT decided here:* `@codemirror/language`
+      is not a direct dependency (`package.json` names `codemirror` and `@codemirror/lang-markdown`;
+      `node_modules/@codemirror/` holds `lang-markdown` only), so the specifier does not resolve as the
+      tree stands. If 3.4 installs it, `package.json`, the lockfile and whatever the 1.1 governed
+      install touched are necessary ripples this Files list does not name — enumerate them there, per
+      file, or route them to the human. The reader's call sites also run `enhanceTables` between math
+      and code; R7 names diagrams, math and code — whether tables run in the preview is the same
+      kickoff's question.
+
 *Group-3 acceptance (plan §6): spec §4's edit and preview EARS clauses hold on an unwatched document; D-4's
 nested-host property is proven red-first under real typing; the engine has exactly one importer and is
 absent from the content-script graph; Save is plumbed and NOT wired to disk.*
@@ -596,7 +633,35 @@ touched; this group widens a gate, not what it protects.*
       `e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`), the app chunk
       518,038 B (+134) — 4.2's snapshot.*
 
-- [ ] **4.2 The exit asymmetry: a DIRTY exit does not auto-flush; the deferred change is raised as D-7's
+- [ ] **4.2 The "changed on disk while you were editing" HINT (D-8; D-7's early hint only; F-4).**
+      ★ **RE-SCOPED 2026-10-06 by human ruling R6 (`decisions.md`, "M12 RULINGS after task 4.1"). This
+      block is the task; the original body is kept beneath it, SUPERSEDED.** *Why:* 3.2's exit tears
+      down — removing `data-edit-dirty` — before the watch's observer runs, so `watchController.ts`
+      cannot see a dirty exit (4.1's note i); and once 6.1's guard lands a dirty exit never completes
+      with the buffer alive ("stay" keeps edit mode and the deferral; "discard" clears dirty and the
+      flush proceeds as a clean exit), so no dirty-exit detection is needed anywhere. The asymmetry
+      moves into 6.1's Verify. Until 6.1, the interim state 4.1 recorded stands: an exit discards the
+      buffer, then shows the on-disk text.
+      TEST FIRST. `watchController.ts` sets a LITERAL host attribute while it holds an external change
+      deferred during edit, and clears it when that deferral ends. The literal is chosen here and
+      recorded in this task's post-landing note; no import (the 5.1 fence's Clause C). **No UI at this
+      task** — 5.3 consumes the attribute (the status text and the safe floor). The hint NEVER replaces
+      D-7's save-time content compare. The flush itself is unchanged and stays silent (R4).
+      Files: `src/watch/watchController.ts` · `src/watch/watchController.test.ts` ·
+      `tests/browser/editorWatch.browser.test.ts`
+      Verify: (**unit** and **real engine**, WATCHED document) the attribute is SET while an external
+      change is held during edit, and ABSENT otherwise — in edit with nothing held, outside edit, and
+      on a diff-only deferral (text held under a displayed diff, edit never entered). It CLEARS when
+      the deferral ends, by each path: the flush, a document switch, `stop()`. **Red-first, both
+      directions:** never set → the held-during-edit case fails; never cleared → each of the three
+      clearing cases fails, in its own units. ZERO renders while held (4.1's property, re-asserted with
+      the attribute present). The editor intact: the same connected node, the buffer byte-identical.
+      Content-script bytes stated against 4.1's 342,520 B and decomposed — `watchController.ts` IS on
+      that graph, and the delta is this task's own glue only. Golden EMPTY · manifest **654 / 770 B**
+      · `permissions: []`. [D-8, D-7 (the hint only); R6]
+      ★ *SUPERSEDED by R6, 2026-10-06 — the original 4.2, struck in place and kept for provenance (the
+      M10 precedent). Nothing below is built at this task:*
+      ~~**4.2 The exit asymmetry: a DIRTY exit does not auto-flush; the deferred change is raised as D-7's
       early hint (D-8, the unsafe half of direction 2; F-4).** TEST FIRST. With the dirty attribute
       present, leaving edit mode does NOT call `renderNow` with the deferred text; the deferred text stays
       in the single pending slot and a literal attribute/event on the host signals "changed on disk while
@@ -611,7 +676,7 @@ touched; this group widens a gate, not what it protects.*
       sequence with a CLEAN buffer flushes (4.1's case) — so the gate is not simply refusing every flush.
       A document switch during the deferral drops the pending text (the existing `cancelPending`
       contract), no cross-feed. Content-script bytes stated and decomposed. Golden EMPTY · manifest
-      **654 / 770 B** · `permissions: []`. [D-8, D-7 (the hint only)]
+      **654 / 770 B** · `permissions: []`. [D-8, D-7 (the hint only)]~~
 
 *Group-4 acceptance (plan §6): SUPPORTED-DEGRADED is proven in BOTH directions, red-first — deferred while
 editing; flushed on a clean exit, conflict-routed (never auto-flushed) on a dirty one.*
@@ -744,6 +809,15 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       guard is removed on exit (no listener left behind on the shared `window`). What headless cannot
       prove about the browser's own unload dialog is NAMED and moved to 7.1. Content-script bytes
       md5-identical. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [spec §4]
+      ★ *Added 2026-10-06 by human ruling R6 (`decisions.md`, "M12 RULINGS after task 4.1") — THE
+      DIRTY-EXIT ASYMMETRY IS THIS TASK'S, moved here from 4.2.* (**real engine**, WATCHED document)
+      with an external change deferred during edit and the buffer dirty: **(i)** an exit attempt →
+      "stay" → still in edit, NO flush, the deferral and 4.2's hint both persist, the buffer intact;
+      **(ii)** "discard" → dirty clears → the exit completes → the flush shows the on-disk text and the
+      hint clears. **Red-first:** the exit tearing down before the guard decides → the buffer is lost
+      with no prompt, asserted as lost text. *What releases the flush is leaving edit, as at 4.1 — so
+      "(which releases 4.2's deferred flush)" in this line's opening text is superseded in mechanism:
+      4.2 withholds nothing.*
 
 - [ ] **6.2 The debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from choosing.** Preview
       re-render wall-clock across a document-size corpus mirroring `perf-watch.ts`'s 50 KB / 1 MB shape
@@ -907,12 +981,17 @@ stated authorization for group 2; no later task assumes the setup choice (★ po
 is still the byte gate). (2) D-4's nested host is 2.2;
 the first preview wiring is 3.3; nothing in 3.1–3.2 calls a preview. (3) D-8 is 4.1–4.2; group 5's network
 and degrade tests (5.3, 5.4, 5.7) follow them. Group 3's own tests precede group 4 and are fenced by the
-unwatched-document rule stated at the head of group 3.
+unwatched-document rule stated at the head of group 3. ★ *2026-10-06 (`decisions.md`, "M12 RULINGS after
+task 4.1"): the discovered **3.4** runs BETWEEN 4.2 and 5.1 — after D-8's two tasks, before the first
+save task. It reorders none of the three constraints; its fixtures keep group 3's unwatched rule.*
 
 **Count proposed for gate 3: SEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (3) · 4 (2) · 5 (7) · 6 (4) ·
 7 (3). Three are human gates (5.1, 5.5, 7.1); two are contingent on a ruling's content (5.6, 6.4); 5.5 is
 struck if gate 3 answers Q3 directly. ★ *Post-landing, 2026-10-04: **23 tasks** — group 1 is (2) with the
 discovered 1.2 (the audit bump). Gate 3 approved 22; 1.2 is human-scheduled, `decisions.md` M12 TASK 1.1.*
+★ *2026-10-06: **24 tasks** — group 3 is (4) with the discovered 3.4 (editor legibility + preview fidelity),
+human-ruled and human-scheduled between 4.2 and 5.1, `decisions.md` "M12 RULINGS after task 4.1". 4.2 is
+re-scoped by the same entry (R6), not added or struck — the count moves by 3.4 alone.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

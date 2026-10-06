@@ -1,14 +1,16 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-05 (M12 task 4.1 DONE — the watch's deferral gate widens to edit mode: an external
-change renders nothing while a document is being edited, and leaving edit flushes it.) M12
+*Updated: 2026-10-06 (five human rulings after task 4.1, R4–R8 — doc-only, no code moved; `decisions.md`'s
+"M12 RULINGS after task 4.1" entry.) M12
 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
-tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3 and 4.1 landed; **task 4.2 (the dirty-exit asymmetry and the
-hint) is next — and 4.1 found it cannot be built as its line is written (the exit-order finding).**
+tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3 and 4.1 landed; **task 4.2 is next, RE-SCOPED (R6) to the
+"changed on disk while you were editing" hint; then the discovered 3.4 (editor legibility + preview
+fidelity); then 5.1.**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
-and filed eight findings (E-1…E-8, § Carried items). 3.3 filed three more (P-1…P-3) — P-1, the
-preview's enhancers not running, wants a human ruling before 7.1.** **The editor is REACHABLE on
+and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are now routed to 3.4. 3.3
+filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RULED (R7) and routed to
+3.4.** **The editor is REACHABLE on
 `main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
 available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
 (4.1).**
@@ -871,32 +873,68 @@ D-8 entry is the record.
   `watchDiffDefer` — that is its real name. (vii) Plan §0 D-8's draft says a diff's exit flush is
   "silent"; it has not been since 006 D-11. Quoted verbatim, annotated.
 
+**M12 RULINGS after task 4.1, 2026-10-06 — five human rulings (R4–R8), all as the reviewer leaned.**
+Doc-only session: `decisions.md`, `tasks.md` and this file; no `src/`, no tests, no build, so every
+number above stands unmeasured-again. `decisions.md`'s "M12 RULINGS after task 4.1" entry is the record.
+- **R4 — an edit-exit flush is SILENT** beyond the normal watch flash. The "changed again" line names
+  the comparison view and would be false. What 4.1 built stands; no code owed.
+- **R5 — 4.1's state-based flush is ACCEPTED** ("the text was deferred, and nothing defers any more")
+  in place of an `oldValue` check. The flagged deviation is closed.
+- **R6 — 4.2 is RE-SCOPED to the hint.** `watchController.ts` sets a literal host attribute while it
+  holds an external change deferred during edit and clears it when that deferral ends; no UI; 5.3
+  consumes it; it never replaces D-7's save-time compare. No dirty-exit detection is built anywhere:
+  the asymmetry is now 6.1's Verify ("stay" / "discard", red-first). Until 6.1 the interim state
+  stands — an exit discards the buffer, then shows the on-disk text.
+- **R7 — P-1: the preview runs the reader's enhancers** (diagrams, math, code, the reader's order) on
+  the nested host after each preview render. Cost measured at 6.2. Lands at 3.4.
+- **R8 — E-3: the import fence widens to a third DYNAMIC specifier, `@codemirror/language`**, for
+  token-driven highlight colours. Amends 012 D-2 / D-10's two-specifier set; clause A unchanged. Lands
+  at 3.4 with E-1 and E-2.
+- **`tasks.md` as redlined:** 4.2 carries a RE-SCOPED block (original body struck in place beneath it)
+  · 6.1's Verify gains the dirty-exit property · the DISCOVERED task **3.4** sits after 3.3's block
+  and runs after 4.2, before 5.1 · 23 → **24 tasks**. No other task body and no status line touched;
+  spec and plan stay sealed.
+- **Unchanged:** E-4, E-5, E-6, E-8 → the 7.1 walk · E-7 → the save-time batch at 5.1 · P-2, P-3 → 6.2.
+- **Kickoff vs repo, flagged.** (i) **`@codemirror/language` does not resolve today** — it is not a
+  direct dependency and `node_modules/@codemirror/` holds `lang-markdown` only. R8 as ruled needs an
+  install the kickoff's 3.4 Files list does not name (`package.json`, the lockfile, `dependencies`
+  10 → 11); recorded as an open item on 3.4, not decided. (ii) The reader also runs `enhanceTables`
+  between math and code; R7 names three enhancers — 3.4's kickoff question. (iii) 7.1's walk list
+  ALREADY names E-1…E-8, so no line was added there; it still asks a verdict on E-1, E-2, E-3 and
+  E-7, which is harmless (a verdict on a fix) and left as written. (iv) E-7 "remains in the save-time
+  batch owed at 5.1": no file named such a batch before today — the files said "a ruling is owed
+  before 5.3", and 5.1's own body names the ledger wording only. Recorded as ruled; 5.1's body is not
+  edited, so its KICKOFF must carry CRLF-on-save and E-7. (v) Group 4's acceptance line still reads
+  "conflict-routed (never auto-flushed) on a dirty one", and 6.1's opening text "(which releases 4.2's
+  deferred flush)" — both written to the old 4.2. The second is corrected inside 6.1's appended note;
+  the first is outside the fence and left, flagged. (vi) `tasks.md`'s header carries a REDLINED line
+  per earlier redline; none was added for this one — the kickoff's "no status line".
+
 ## Up next
 
-**FIRST — M12 task 4.2** (the exit asymmetry: a DIRTY exit does not auto-flush; the deferred change is
-raised as D-7's early hint — D-8, the unsafe half of direction 2; F-4), fresh session, test-first, one
-commit. Files, per `tasks.md`: `src/watch/watchController.ts` · `watchController.test.ts` ·
-`tests/browser/editorWatch.browser.test.ts`.
-**★ 4.2's NAMED INPUT — the exit-order finding (4.1; `decisions.md`'s 012 D-8 entry). Its kickoff must
-rule on this BEFORE drafting the work; do not guess a workaround in `watchController.ts`.**
-`editorEnhancer.ts:124-125` leaves edit as `exitEditMode` then `teardownEditorShell`, both synchronous;
-the teardown removes `data-edit-dirty` (`editorView.ts:276`). The watch's observer runs as a microtask,
-after both — so 4.2's own line, "with the dirty attribute present, leaving edit does NOT call
-`renderNow`", cannot be built as an attribute read. The options, none chosen:
-- **(a) the observer's records** — add `data-edit-dirty` to the filter with `attributeOldValue`; its
-  removal (old value `"true"`) arrives in the same batch as the mode change. Stays inside 4.2's file
-  list. Reasoned from the DOM standard, NOT measured — 4.2 measures it on both engines first. It also
-  makes the observer hear every dirty ↔ clean flip while typing.
-- **(b) the exit order changes**, or **(c) the editor leaves a literal behind** before its teardown
-  clears the attribute. Both touch `editorEnhancer.ts` / `editorView.ts` — outside 4.2's file list, so
-  a necessary-ripple enumeration or a human ruling.
-- **Under any of them:** until 6.1, the exit has already DISCARDED the buffer when the watch hears of
-  it. Withholding the flush protects no typed text at 4.2; and "once the session is no longer dirty
-  (saved, or discarded through 6.1's guard) the flush proceeds" has no trigger yet — neither save
-  (5.3) nor the guard (6.1) exists. What releases a withheld flush at 4.2 needs stating.
-- **Also for that ruling:** whether a flush after editing should SAY anything. 4.1 says nothing on an
-  edit-only flush (the "changed again" line names the comparison); 4.2's hint is the natural home.
-**Byte snapshot for its kickoff (4.1's measured figures):** `.output` 5,814,275 B (Cr) / 5,814,391 B (Fx)
+**The order, as ruled 2026-10-06: 4.2 (re-scoped) → 3.4 (discovered) → 5.1.**
+**FIRST — M12 task 4.2, RE-SCOPED by R6** (the "changed on disk while you were editing" HINT — D-8;
+D-7's early hint only; F-4), fresh session, test-first, one commit. Files, per `tasks.md`:
+`src/watch/watchController.ts` · `watchController.test.ts` · `tests/browser/editorWatch.browser.test.ts`.
+- **What it is:** `watchController.ts` sets a literal host attribute while it holds an external change
+  deferred during edit, and clears it when that deferral ends — the flush, a document switch, `stop()`.
+  Absent otherwise, including on a diff-only deferral. No UI (5.3 consumes it). Red-first both
+  directions; zero renders while held; the editor intact.
+- **What it is NOT:** no dirty-exit detection, no withheld flush, no read of `data-edit-dirty`, no
+  edit to `editorEnhancer.ts` / `editorView.ts`. The exit-order finding (4.1) is ANSWERED by R6, not
+  worked around: the asymmetry is 6.1's. The flush stays silent (R4).
+- **Open for its kickoff:** the attribute's literal name — 4.2 chooses and records it; 5.3 reads it.
+**THEN — M12 task 3.4, DISCOVERED 2026-10-06** (editor legibility + preview fidelity — R7, R8; E-1,
+E-2, E-3, P-1). Files and Verify in `tasks.md`, after 3.3's block. **Two open items its kickoff must
+settle BEFORE drafting:** `@codemirror/language` is not a direct dependency and does not resolve
+today (an install is a governed, necessary ripple beyond the listed files — `package.json`, the
+lockfile, `dependencies` 10 → 11); and whether `enhanceTables` runs in the preview (R7 names diagrams,
+math, code).
+**THEN — M12 task 5.1, the save-time batch for the human:** the `PERMISSIONS.md` ledger wording
+(D-9) · CRLF-on-save (3.1's finding: the editor normalizes CRLF / lone CR to LF — what a save writes
+for a CRLF file) · Ctrl/Cmd+S in edit (E-7). `tasks.md` 5.1's body names the ledger wording only; the
+other two ride its kickoff.
+**Byte snapshot for 4.2's kickoff (4.1's measured figures, kept — nothing was built since):** `.output` 5,814,275 B (Cr) / 5,814,391 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,525,757 / 1,525,641 B · zip 1,836,372 / 1,836,430 B · content
 script 342,520 B both engines, md5 `e051533e430646c410dfa7c5a200da2d` (Cr) /
 `a791ceae1241502dede01f25738b3d33` (Fx) · the app chunk 518,038 B, the three CodeMirror lazy chunks
@@ -906,8 +944,8 @@ unit 1253 · browser 1785 / 15 skipped · golden empty.
 figure above supersedes it. `watchController.ts` is on the content-script graph: 4.2 moves that figure
 again, by its own glue only, decomposed.
 **Carried inputs to 4.2, from 4.1:**
-- **The interim state 4.2 changes.** Every exit from edit flushes. A dirty exit discards the buffer
-  (3.2) and then shows the on-disk text. No test asserts it, so 4.2 edits no assertion to change it.
+- **The interim state — 4.2 does NOT change it (R6); 6.1 does.** Every exit from edit flushes. A dirty
+  exit discards the buffer (3.2) and then shows the on-disk text. No test asserts it.
 - **`editorWatch.browser.test.ts`'s rig** is hand-driven with the default render, so a flush there does
   not re-install the edit control (production's `renderWithEnhancements` does). A 4.2 test that needs
   the control AFTER a watch render must build its controller with a render that calls `enhanceEditor`.
@@ -919,9 +957,9 @@ again, by its own glue only, decomposed.
   in the background, or in batches.
 - **Console records** in browser tests print only under `pnpm exec vitest run --project browser
   --reporter=verbose`; `pnpm test:browser -- --reporter=verbose` does not pass the flag through.
-**Open, for the human, before 7.1:** P-1 (the preview's enhancers — § Carried items). **For 6.2 and the
-§8-2 ruling:** P-2, P-3. Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor, a ruling owed before 5.3),
-E-1…E-6 and E-8 (the 7.1 walk), the failed-chunk "try again" finding.
+**Routed 2026-10-06 (R7, R8):** P-1, E-1, E-2, E-3 → task 3.4. **For 6.2 and the §8-2 ruling:** P-2,
+P-3 (and R7's enhancer cost). Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor — the save-time batch
+at 5.1, before 5.3), E-4, E-5, E-6 and E-8 (the 7.1 walk), the failed-chunk "try again" finding.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
@@ -960,7 +998,9 @@ measurement-driven or explicitly deferred.*
 - **NEW 2026-10-05 — TASK 3.3's FINDINGS (P-1…P-3). None is fixed and none was ruled; the numbers are in
   the 3.3 record above § Up next and in `decisions.md`'s 012 D-5 entry. Both engines agree unless
   stated.**
-  - **P-1 · the reader's enhancers do not run in the live preview. Home: HUMAN RULING BEFORE 7.1.** A
+  - **P-1 · ★ RULED 2026-10-06 (R7) — ROUTED TO TASK 3.4: the preview runs the reader's enhancers.
+    Not yet built; the finding below stands until 3.4 lands.** *As filed:*
+    **the reader's enhancers do not run in the live preview. Home: HUMAN RULING BEFORE 7.1.** A
     mermaid fence, `$x^2$` and a code fence render in the document (figure + SVG, `<math>`,
     highlighted) and stay raw source in the preview (the fence's `<pre><code>`, the literal `$x^2$`,
     an un-highlighted block). The enhancers are wired at the two app-page call sites on the OUTER host
@@ -979,12 +1019,15 @@ measurement-driven or explicitly deferred.*
 - **NEW 2026-10-05 — THE 3.2 EYEBALL PROXIES' FINDINGS (E-1…E-8). Home for all eight: the 7.1 walk,
   unless the human routes one elsewhere sooner. None is fixed; the numbers are in the record above
   § Up next and in `decisions.md`'s "informal eyeball DEFERRED" entry. Both engines agree on each.**
-  - **E-1 · the collapsed TOC handle covers the split pane's top-right corner — 103×26 px**, in edit,
+  **★ ROUTED 2026-10-06 (`decisions.md`, "M12 RULINGS after task 4.1"): E-1, E-2 and E-3 → TASK 3.4
+  (E-3 by R8). E-7 → the save-time batch at 5.1. E-4, E-5, E-6 and E-8 stay 7.1 walk items. None is
+  fixed yet.**
+  - **E-1 · [→ 3.4] the collapsed TOC handle covers the split pane's top-right corner — 103×26 px**, in edit,
     rail collapsed, at 414×896 and 1400×900. `EDITOR_CSS` reserves the rail only while it is open.
     PINNED in `editorEyeballProxy.browser.test.ts` (`KNOWN_PANE_UNDER_HANDLE`) — the fix deletes it.
-  - **E-2 · dark only, text unreadable:** selected text 1.16:1 (1.14 unfocused); the current search
+  - **E-2 · [→ 3.4] dark only, text unreadable:** selected text 1.16:1 (1.14 unfocused); the current search
     match 1.52:1; unselected autocomplete options 1.09:1. Light: 12.95 / 9.86 / 16.37.
-  - **E-3 · dark only, highlight colours:** markup marks (`#`, `-`, the table pipe, `~~`, `~`, `^`)
+  - **E-3 · [→ 3.4, R8] dark only, highlight colours:** markup marks (`#`, `-`, the table pipe, `~~`, `~`, `^`)
     1.69:1; the task marker 1.24:1; the emoji shortcode 2.15:1. CodeMirror's default palette is
     light-page.
   - **E-4 · both themes, gutter numbers:** 2.38:1 light / 3.26:1 dark (`--faint`, 3.2's own rule); the

@@ -1,6 +1,84 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-06 · M12 RULINGS after task 4.1 — five human rulings (R4–R8): an edit-exit flush is silent;
+  4.1's state-based flush is accepted; task 4.2 is RE-SCOPED to the "changed on disk while you were
+  editing" hint; the live preview runs the reader's enhancers; the editor import fence widens to a third
+  dynamic specifier. Doc-only — no code moved in this commit; each ruling lands at the task it names.**
+  All five were ruled as the reviewer leaned. The numbering continues 3.2's R1–R3 (the M12 TASK 3.2
+  entry, below). R4 and R5 answer the two judgment calls the 012 D-8 / 4.1 entry flagged; R6 answers its
+  exit-order finding; R7 answers P-1 (the 012 D-5 / 3.3 entry); R8 answers E-3 (the "informal eyeball
+  DEFERRED" entry) and the stop-and-ask the 012 D-10 entry's revisit-when set on a third specifier.
+  **★ R4 — an edit-exit flush is SILENT beyond the normal watch flash.** Leaving edit with a held
+  external change renders it as an ordinary watch update: the control flashes and nothing is said.
+  *Why:* the existing "changed again" note names the comparison view ("…while the comparison was
+  open"), and on an edit exit no comparison was open — the sentence would be false. The useful moment to
+  tell the user is DURING edit, and that is R6's hint. Plan §0 D-8's "equivalent to never having edited
+  at all" holds. This is what 4.1 built (`pendingHeldUnderDiff`: the line is said only when a diff was
+  displayed while the text was held); it stands as built, with no code change owed.
+  *Revisit-when:* the 7.1 walk finds a silent flush after editing surprising in real use; or new copy
+  for the edit case is wanted — a product-copy decision, not a task's.
+  **★ R5 — 4.1's state-based flush is ACCEPTED in place of an `oldValue` check.** The built condition
+  is "the text was deferred, and nothing defers any more"; 4.1's kickoff had asked for "flush only when
+  `oldValue` is `'edit'`".
+  *Why:* it is the same tested behaviour without a second source of truth — the flush acts only on text
+  labelled deferred, so a reading ↔ raw flip, or `mount()`'s own `data-mode` write, releases nothing
+  (asserted, and red when the label check is removed). The deviation the 012 D-8 entry flagged is closed.
+  *Revisit-when:* a later task needs the observer to tell WHICH mode was left — none is planned.
+  **★ R6 — task 4.2 is RE-SCOPED to the "changed on disk while you were editing" HINT. The dirty-exit
+  asymmetry is not built at 4.2 and not built in `watchController.ts` at all.**
+  *Why, from 4.1's step-0(c):*
+  - 3.2's exit tears down — removing `data-edit-dirty` — before the watch's observer runs, so
+    `watchController.ts` cannot see a dirty exit;
+  - once 6.1's guard lands, a dirty exit never completes with the buffer alive: "stay" keeps edit mode
+    (the deferral simply continues), and "discard" clears dirty (the flush proceeds, as a clean exit).
+    So no dirty-exit detection is needed anywhere.
+  *What 4.2 now is:* `watchController.ts` sets a literal host attribute while it holds an external
+  change deferred during edit, and clears it when that deferral ends. No UI at 4.2; task 5.3 consumes it
+  (the status text and the safe floor). **The hint NEVER replaces D-7's save-time content compare.**
+  *Where the asymmetry went:* into 6.1's Verify (a dirty exit attempt with a change deferred — "stay"
+  and "discard", both directions, red-first).
+  *Until 6.1:* the interim state 4.1 recorded stands — an exit discards the buffer, then shows the
+  on-disk text.
+  *Rejected:* building the exit guard at 4.2 — it reorders 6.1 into group 4.
+  *Not ruled here:* the attribute's name. 4.2 chooses the literal and records it; 5.3 reads that literal.
+  `tasks.md` 4.2 carries a dated RE-SCOPED block; its original body is kept below it, marked
+  superseded, not deleted.
+  *Revisit-when:* 4.2's kickoff (the literal; the three clearing paths — flush, a document switch,
+  stop); 5.3 (what the status says when the hint is present); 6.1 (the asymmetry's two directions). If
+  6.1's guard is ever descoped, the interim state becomes permanent and this ruling is re-opened.
+  **★ R7 — P-1: the live preview runs the reader's enhancers — diagrams, math, code, in the reader's
+  order — on the nested host after each preview render.**
+  *Why:* gate 1's D-C ruled the preview is "the existing pipeline"; a live preview that diverges from
+  the reader on M7 / M9 / M11's content defeats its purpose.
+  *Cost:* measured at 6.2, not assumed (the lazy engines now re-run per preview render; P-2 and P-3 are
+  inputs to the same measurement).
+  *Lands at:* the discovered task 3.4.
+  *Revisit-when:* 6.2's numbers show the enhancers dominate the preview's render cost — that is a
+  finding for the §8-2 ruling, not a reason to drop them silently.
+  **★ R8 — E-3: the editor import fence is WIDENED to a third DYNAMIC specifier,
+  `@codemirror/language`, so the syntax-highlight colours can come from design tokens.** Still
+  dynamic-only, still exactly enumerated, still app-page only; clause A is unchanged. **This AMENDS the
+  two-specifier permitted set of the 012 D-2 and 012 D-10 entries (below)** — their text is not edited;
+  from task 3.4 the permitted set is exactly THREE dynamic edges: `codemirror`,
+  `@codemirror/lang-markdown`, `@codemirror/language`. It is the human's answer to 012 D-10's
+  stop-and-ask, for this one specifier; a fourth is a new stop-and-ask, not a count to bump.
+  *Why:* CodeMirror's default highlight palette is a light-page one and reads 1.24–2.15:1 on the dark
+  pane (E-3); AGENTS.md forbids hardcoded colours, and a token-driven highlight style is defined
+  through that package.
+  *Lands at:* 3.4, together with **E-1** (the collapsed TOC handle over the split pane's corner) and
+  **E-2** (dark-theme selected text, the current search match and autocomplete options below AA).
+  *Stated so it is not assumed (checked at `2466f2e`, not ruled):* `@codemirror/language` is not a
+  direct dependency — `package.json` names `codemirror` and `@codemirror/lang-markdown` only, and
+  `node_modules/@codemirror/` holds `lang-markdown` alone — so the specifier does not resolve today.
+  Whether 3.4 installs it (`dependencies` 10 → 11, a governed install with files beyond 3.4's list) is
+  for 3.4's kickoff; the package's bytes are already in the shared lazy chunk either way.
+  *Revisit-when:* 3.4's kickoff (the install question above); any later task that wants a fourth
+  CodeMirror specifier; the 7.1 walk's verdict on the token-driven colours.
+  **Also stated, unchanged by these rulings:** E-4, E-5, E-6 and E-8 remain 7.1 walk items. E-7
+  (Ctrl/Cmd+S in edit) remains owed before the first write, in the save-time batch at 5.1 — with the
+  ledger wording and CRLF-on-save. P-2 and P-3 remain 6.2 inputs.
+
 - **2026-10-05 · 012 D-8 — the deferral half LANDED at task 4.1: while a document is being edited the
   watch renders nothing, and leaving edit flushes what was held. The exit ASYMMETRY (a dirty exit must
   not auto-flush) is NOT built — it is task 4.2's, and 4.1 found why it cannot be built in
