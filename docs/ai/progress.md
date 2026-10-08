@@ -1,13 +1,16 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-06 (task 3.4 landed — token-driven editor colours, dark legibility, the handle
-clearance, the reader's enhancers in the preview; `decisions.md`'s two "M12 TASK 3.4" entries.) M12
+*Updated: 2026-10-08 (task 5.1 — the HUMAN GATE — is SIGNED: the `PERMISSIONS.md` ledger wording,
+save-time rulings A–C, routes 1–7; `decisions.md`'s "M12 TASK 5.1" entry. Doc-only, no build.) M12
 (`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
-tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 4.1 and 4.2 landed; **5.1 — a HUMAN GATE — is next.
-Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
-**★ `pnpm audit --prod` EXITS 1 — one LOW `katex` advisory via `mermaid`, red before 3.4 too; carried
-by ruling R13 to a dedicated bump task (§ Carried items).**
+tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2 and 5.1 landed; **the discovered 1.3 — the
+katex audit exception — is next, then 5.2.**
+**Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
+**★ `pnpm audit --prod` EXITS 1 — one LOW `katex` advisory via `mermaid`, red before 3.4 too; R13 is
+RE-ROUTED (2026-10-08) from a bump to a reviewed, documented exception — task 1.3 (§ Carried items).**
+**`PERMISSIONS.md` still says "cannot write" — correctly: no write path exists until 5.3, whose
+commit carries the signed text.**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
 and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are RESOLVED at 3.4. 3.3
 filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RESOLVED at 3.4.**
@@ -1072,20 +1075,40 @@ lists every place the task line was read or exceeded.
   one-time harness reload after the install (cleared on rerun), and the Firefox-only highlight
   defect (real — persisted on rerun, reproduced in isolation over 14 hosts, fixed).
 
+**M12 task 5.1 DONE, 2026-10-08 — the HUMAN GATE: the ledger wording is SIGNED, and the save-time
+batch is ruled ("sign as proposed, all leans").** `decisions.md`'s "M12 TASK 5.1" entry is the record
+and holds the signed text verbatim. Doc-only: three files, no `src/`, no build, `PERMISSIONS.md`
+untouched.
+- **Signed.** (a) the summary sentence — "cannot change any file on disk except the one file the user
+  has opened for editing"; (b) the final "Edit save-back" row, landing at 5.4; (b′) the interim row,
+  landing at 5.3 — (b) with the download fallback stated as "does not save". Copy both from
+  `decisions.md`, never from here.
+- **Rulings.** **A** — a uniformly-CRLF file saves as CRLF; anything else saves the editor's LF and
+  the status says so; the baseline advances to the written text. **B** — Ctrl/Cmd+S in edit runs
+  Save (answers E-7); outside edit it exports. **C** — 4.2's hint warns, D-7's compare decides
+  (closes 4.2's open product call).
+- **Routes.** Two-stage ledger text (5.3 interim, 5.4 final) · the handle is bound at edit entry, and
+  Revoke / close / switch end the edit session (5.3, red-first) · a force-overwrite ruling at 5.5
+  re-signs the row at 5.6 · 5.3 makes the ledger's consistency edits, 5.7 adds the zero-network
+  save-path sentence · `chromiumFolderSource.ts` gets a comment-only correction at 5.3 · the
+  pre-picker consent line is a 7.1 verdict · "Wipe all data" not closing an open folder is carried
+  outside M12.
+- **`tasks.md`.** 5.1 ticked · a ★ REDLINE block at the head of 5.3 · ★ notes on 5.4, 5.6, 5.7 · the
+  discovered 1.3 · three 7.1 walk items · 24 → 25 tasks.
+
 ## Up next
 
-**The order, as ruled 2026-10-06: 4.2 (LANDED) → 3.4 (LANDED) → 5.1.**
-**NEXT — M12 task 5.1, a HUMAN GATE: the save-time batch.** Its kickoff carries four items, and
-`tasks.md` 5.1's body names only the first:
-- the `PERMISSIONS.md` ledger wording (D-9);
-- CRLF-on-save (3.1's finding: the editor normalizes CRLF / lone CR to LF — what a save writes for a
-  CRLF file);
-- Ctrl/Cmd+S in edit (E-7);
-- whether 4.2's hint REFUSES a save or only warns (the open product call under "Carried inputs,
-  from 4.2" below).
-**Also for the human, from 3.4 — none blocks 5.1:** schedule the `katex` bump task (R13, § Carried
-items) · the import-shape opportunity on the two existing CodeMirror edges (below).
-**Byte snapshot for 5.1's kickoff (3.4's measured figures):** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx)
+**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (the katex exception) → 5.2 → 5.3 (with its
+redline) → 5.4 → 5.5 (human) → 5.6 → 5.7.**
+**NEXT — M12 task 1.3, DISCOVERED: the katex advisory as a reviewed, documented exception (R13 route
+(i)).** `tasks.md` 1.3 is the line. Its first step is the reachability analysis; a reachable advisory
+is a STOP, not an ignore. It verifies pnpm's audit-ignore key against the INSTALLED pnpm, and moves
+no dependency and no production byte.
+**THEN — 5.2, 5.3.** 5.3's kickoff is drafted from its ★ REDLINE block, not only from its body: the
+interim ledger row, rulings A–C, the two route-2 clauses, the comment-only edit.
+**Ruled 2026-10-08, was "for the human" here:** the four save-time items (ledger wording, CRLF,
+Ctrl/Cmd+S, the hint) · the `katex` task (→ 1.3) · the import shape (→ post-M12, § Carried items).
+**Byte snapshot — UNCHANGED across 5.1 (doc-only), carries to 1.3's kickoff (3.4's measured figures):** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,523,062 / 1,522,946 B · zip 1,838,328 / 1,838,386 B · content
 script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
 `c0115d89b10be306ffa0c77d2234a63e` (Fx) · the app chunk 519,702 B, the four CodeMirror lazy chunks
@@ -1098,7 +1121,8 @@ figure above supersedes it.
   ({ a }))` drops the package's unused exports; `const [{ a }] = await Promise.all([import('pkg')])`
   keeps them all. For `@codemirror/language` the difference was 10,883 B. The two existing edges
   in `editorEngine.ts` (`codemirror`, `@codemirror/lang-markdown`) are written the second way and
-  were NOT changed — outside 3.4, unmeasured, the human's to schedule.
+  were NOT changed — outside 3.4, unmeasured, the human's to schedule. *Ruled 2026-10-08: deferred
+  to post-M12 (§ Carried items).*
 - **A CodeMirror extension that owns CSS must be a page-level singleton.** Built per host, its
   rules do not apply on Firefox from the second host on. A test that passes in isolation and
   fails after other hosts in the same file is this signature — it is NOT harness-shared-state.
@@ -1115,7 +1139,8 @@ figure above supersedes it.
 - **For 5.3 — ★ an open product call, for the human.** The hint makes no content comparison, so a
   file that changed and changed back still carries it. `tasks.md` 5.3 says "on conflict — or on 4.2's
   hint" → the safe floor; read literally that refuses a save D-7's compare would allow. Whether the
-  hint REFUSES or only prompts the compare to rule is 5.3's kickoff question.
+  hint REFUSES or only prompts the compare to rule is 5.3's kickoff question. *✅ RULED 2026-10-08
+  (ruling C): the hint WARNS, the compare DECIDES.*
 - **For 6.1 — the dirty-exit property is the only part of group 4 left.** "Stay" must leave the hint
   and the deferral in place; "discard" clears the hint through the ordinary flush. The interim state
   stands until then: every exit flushes, and a dirty exit discards the buffer (3.2).
@@ -1134,12 +1159,14 @@ figure above supersedes it.
   byte arm, and over-determines the shared helper.
 **RESOLVED at 3.4 (R7–R14):** P-1, E-1, E-2, E-3. **For 6.2 and the §8-2 ruling:** P-2,
 P-3, and the enhancers' cost — every preview render re-runs the lazy engines, and the cooldown does
-not time that work. Still open from 3.2: E-7 (Ctrl/Cmd+S in the editor — the save-time batch
-at 5.1, before 5.3), E-4, E-5, E-6 and E-8 (the 7.1 walk), the failed-chunk "try again" finding.
+not time that work. **RULED at 5.1 (2026-10-08):** E-7 — Ctrl/Cmd+S in edit saves, built at 5.3
+(ruling B). Still open from 3.2: E-4, E-5, E-6 and E-8 (the 7.1 walk), the failed-chunk "try again"
+finding.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
-- **5.1 — the `PERMISSIONS.md` ledger-wording sign-off**, before the first write commit (5.3).
+- **5.1 — the `PERMISSIONS.md` ledger-wording sign-off** — ✅ SIGNED 2026-10-08. Re-opened only if
+  5.5 rules force-overwrite (the row is re-signed at 5.6).
 - **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
 - Also: the informal eyeball owed at 3.2, DEFERRED to 7.1 (2026-10-05); 6.2's numbers → the §8-2 debounce ruling;
@@ -1171,10 +1198,20 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-08 — TASK 5.1's ROUTINGS (`decisions.md`, "M12 TASK 5.1").**
+  - **R13 → TASK 1.3**, next: a reviewed, documented exception, not a bump (no mermaid release carries
+    a patched katex; an override is rejected). Reachable → STOP and escalate.
+  - **E-9 → the 7.1 walk, PRIORITY.** The dark selection's fill, 1.29:1 against the pane — filed
+    under that name at 5.1; the measurement is 3.4's (below). Likely a dedicated selection token.
+  - **"Wipe all data" does not close an open folder → OUTSIDE M12.** The folder-read row's "revokes"
+    is loose today (route 7). No task owns it; the human's to schedule after the milestone.
+  - **The import-shape optimisation → POST-M12.** ~10.8 KB per original CodeMirror edge
+    (`codemirror`, `@codemirror/lang-markdown` in `editorEngine.ts`), unmeasured on those two.
+  - **The pre-picker consent line (`capability.ts`) → a 7.1 verdict**, unchanged until then (route 6).
 - **NEW 2026-10-06 — TASK 3.4's CARRIED ITEMS. `decisions.md`'s two "M12 TASK 3.4" entries have the
   numbers.**
-  - **★ `pnpm audit --prod` EXITS 1 (R13). Home: a dedicated bump task, HUMAN-SCHEDULED, before
-    7.1.** GHSA-238p-pmpm-9mq7, low, `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`; installed
+  - **★ `pnpm audit --prod` EXITS 1 (R13). Home: ~~a dedicated bump task~~ → TASK 1.3, a documented
+    exception (re-routed 2026-10-08, above).** GHSA-238p-pmpm-9mq7, low, `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`; installed
     0.16.47, the newest inside mermaid's `^0.16.45`. Red before 3.4's install as well. Closing it
     needs a `pnpm.overrides` entry (1.2 ruled "still no overrides") or a mermaid release. Whether
     Peekover's diagram path can reach the affected trust setting is NOT assessed — the bump task's
@@ -1183,7 +1220,8 @@ measurement-driven or explicitly deferred.*
     the 7.1 walk.** Light 5.38. The band is CodeMirror's default; making it token-driven is a
     fourth surface beyond E-2's three.
   - **The dark selection is hard to SEE: its fill against the pane is 1.29:1** (was 11.22, with
-    unreadable text on it); the dark tooltip against the pane 1.06. **Home: the 7.1 walk.** No
+    unreadable text on it); the dark tooltip against the pane 1.06. **Home: the 7.1 walk — the
+    selection half is E-9, PRIORITY (2026-10-08).** No
     existing token gives both readable selected text and a 3:1 fill.
   - **The two-tone palette and the preview's new chrome** (code and table toolbars, diagram
     actions and lightbox, math actions — all inside the nested host) were measured, not seen.

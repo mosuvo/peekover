@@ -244,6 +244,22 @@ forward to the immediately-prior task's own measured figure.**
       on both engines, Golden EMPTY. Measured: `.output` 5,200,689 / 5,200,805 B (+3,264 B each), content
       script 342,161 B (+1,669 B) — these are 2.1's kickoff snapshot.
 
+- [ ] **1.3 The katex advisory (GHSA-238p-pmpm-9mq7, via mermaid) — a reviewed, documented exception
+      (R13 route (i)). DISCOVERED 2026-10-08; runs AFTER 5.1 and BEFORE 5.2.** Human-ruled and
+      human-scheduled (`decisions.md`, "M12 TASK 5.1", (v)): no mermaid release carries a patched
+      katex, so a bump cannot close R13; an override and a red audit are both rejected.
+      Files: `package.json` (pnpm's audit-ignore configuration — verify the exact key against the
+      INSTALLED pnpm's documentation; if pnpm cannot ignore a single advisory, STOP) ·
+      `docs/ai/decisions.md` · `docs/ai/progress.md` · `tasks.md`
+      Verify: the advisory read at source. A reachability analysis against this repo's mermaid
+      configuration (`htmlLabels: false`, `securityLevel: 'strict'`, the secure-list hardening,
+      `sanitizeSvg`'s post-processing) — does any shipped path reach the vulnerable katex code?
+      **If REACHABLE → STOP and escalate, no ignore.** If not → an ignore naming exactly that one
+      GHSA, with its revisit-when (an upstream mermaid that accepts katex ≥ 0.18.2). `pnpm audit
+      --prod` and `--audit-level low` EXIT=0 WITH the ignore and EXIT=1 WITHOUT it (the firing
+      control). No dependency moves; no production byte moves (build both engines, md5-identical).
+      CI's supply-chain workflow honours the same config — state how. [R13; no D-value]
+
 *Group-1 acceptance (plan §6): D-D's confirmation is settled with a decomposed, ablation-proven number on
 both engines; the setup choice is made from measurement and recorded; the governed install is clean. This
 is the only outcome that authorizes group 2.* ★ *As landed: D-D's confirmation and the setup choice are
@@ -744,7 +760,10 @@ editing; flushed on a clean exit, conflict-routed (never auto-flushed) on a dirt
 *Ordered so no commit ever holds a write without the compare in front of it, and no commit ever holds a
 write beside a ledger that says "cannot write".*
 
-- [ ] **5.1 ★ HUMAN GATE — the `PERMISSIONS.md` ledger wording sign-off (D-9; gate-1 D-B(iii); F-6).**
+- [x] **5.1 ★ HUMAN GATE — the `PERMISSIONS.md` ledger wording sign-off (D-9; gate-1 D-B(iii); F-6).**
+      ★ **SIGNED 2026-10-08** — `decisions.md`, "M12 TASK 5.1 — the `PERMISSIONS.md` ledger wording
+      SIGNED by the human": the summary sentence, the final row and the interim row are banked there
+      verbatim, with save-time rulings A–C and routes 1–7. Nothing was written to `PERMISSIONS.md`.
       The agent drafts the FINAL wording — the `:52` summary-sentence replacement and the new five-column
       "Edit save-back" row — starting from plan D-9's candidate and corrected against what groups 3–4
       actually built, then **routes it to the human and STOPS.** The sentence is a trust-story positioning
@@ -769,6 +788,31 @@ write beside a ledger that says "cannot write".*
 
 - [ ] **5.3 The write path — permission at the save gesture, compare BEFORE write, the safe floor, the
       save-failure degrade, the status region; the signed ledger lands in THIS commit (D-6, D-7, D-9).**
+      ★ **REDLINE, 2026-10-08 — to `decisions.md`'s "M12 TASK 5.1 — the `PERMISSIONS.md` ledger wording
+      SIGNED by the human" entry. It ADDS to this task's scope and Verify; where it and the body below
+      disagree, it rules.**
+      - **The ledger.** `PERMISSIONS.md` receives SIGNED (a) and SIGNED (b′) — the INTERIM row —
+        EXACTLY; a ledger-text test pins both. Plus route 4's consistency edits: the ledger heading's
+        enumeration of capabilities (`:31`), "the last four rows" (`:33-36`), and a cross-reference
+        from the folder-read row's "read-only" to the new row (`:40-41`).
+      - **Route 5.** `src/app/chromiumFolderSource.ts`'s "Read-only mode: Peekover never writes to the
+        chosen folder" comment gets a COMMENT-ONLY correction — a named exception to that file's
+        zero-diff rule (this body's own clause and the standing invariant), proven by md5-identical
+        bundles on BOTH engines.
+      - **Route 2, two red-first clauses.** (i) The file handle is bound to the edit session AT EDIT
+        ENTRY, never read from the current file at click time. (ii) Revoke, closing the folder and
+        switching folders END any open edit session, its bound handle with it — a save after either
+        writes nothing. Selecting another file while editing stays 6.1's guard.
+      - **Ruling A — CRLF.** A file whose raw read (`originalText`) was uniformly CRLF round-trips as
+        CRLF; mixed endings / a lone CR → the editor's LF, and the status says the line endings were
+        normalised; the baseline advances to the text actually WRITTEN.
+      - **Ruling B — Ctrl/Cmd+S.** With `data-mode="edit"` it runs the same Save as the button;
+        outside edit it exports, unchanged. Red-first, both directions. *Ripples:*
+        `entrypoints/app/main.ts` · `tests/browser/exportShortcut.browser.test.ts`.
+      - **Ruling C — the hint WARNS, the compare DECIDES.** Hint present + content unchanged → the
+        save proceeds and the status warns; hint present + content changed → the safe floor.
+        Red-first. ★ *The sentence below, "On conflict — or on 4.2's hint — the SAFE FLOOR", is
+        SUPERSEDED for the hint half only; the conflict half stands. Kept, not deleted.*
       TEST FIRST. The injected `save` capability's body in `appShell.ts`: at the Save click,
       `handle.requestPermission({ mode: 'readwrite' })`; on `'granted'`, re-read through the existing
       `read()` seam, run 5.2's predicate, and only on no-conflict `createWritable()` → write → `close()`,
@@ -807,6 +851,9 @@ write beside a ledger that says "cannot write".*
       unchanged). `git diff --stat src/export/htmlExport.ts` EMPTY. `permissions: []` (this is the plain
       web download, not `chrome.downloads`). Content-script bytes md5-identical. Golden EMPTY · manifest
       **654 / 770 B**. [D-6]
+      ★ *Added 2026-10-08 (`decisions.md`, "M12 TASK 5.1", route 1):* **`docs/trust/PERMISSIONS.md`
+      joins this task's Files.** It replaces the interim row (b′) with SIGNED (b) EXACTLY, pinned by
+      the ledger-text test.
 
 - [ ] **5.5 ★ HUMAN DECISION GATE — the conflict/overwrite POLICY, from a walk (spec §8-1; D-B(ii); Q3).**
       The human walks a real conflicting edit (a watched file changed externally while being edited)
@@ -827,6 +874,8 @@ write beside a ledger that says "cannot write".*
       file without the ruled, explicit user action — red-first on that path. State in text and `aria-*`,
       never colour alone. Content-script bytes md5-identical. Golden EMPTY · manifest **654 / 770 B** ·
       `permissions: []`. [§8-1; D-7]
+      ★ *Added 2026-10-08 (`decisions.md`, "M12 TASK 5.1", route 3):* **if 5.5 rules force-overwrite,
+      the ledger row is RE-SIGNED by the human before 5.6 lands.**
 
 - [ ] **5.7 The zero-network proof across load, preview and save, with a firing control; `permissions: []`
       re-proven (spec §4 Trust).** TEST FIRST. Lands after group 4 by constraint — the collision is
@@ -842,6 +891,9 @@ write beside a ledger that says "cannot write".*
       plainly and the item moves to 7.1, not faked. `permissions: []` on both built manifests. Empty
       production diff → targeted-suite Verify plus an adjacent-surface spot-check. Golden EMPTY ·
       manifest **654 / 770 B**. [spec §4 Trust]
+      ★ *Added 2026-10-08 (`decisions.md`, "M12 TASK 5.1", route 4):* **`docs/trust/PERMISSIONS.md`
+      joins this task's Files** for the zero-network section's save-path sentence — factual, drafted
+      at 5.7 after the proof, routed to the reviewer.
 
 *Not a task — the OPTIONAL metadata-reliability probe (plan §7).* Nothing ships waiting on it; it is not
 scheduled here. If a later session runs it, it may at most promote metadata to a pre-check that falls
@@ -949,7 +1001,14 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       — markup marks 1.69:1, task marker 1.24:1, emoji 2.15:1 · E-4 gutter line numbers 2.38 / 3.26:1
       on both themes · E-5 the non-text pairs under 3:1 · E-6 the 100 px split pane at 414 px with
       the rail open · E-7 Ctrl/Cmd+S in the editor exports the on-disk document · E-8 R1's
-      sub/superscript and emoji highlighting as drawn.
+      sub/superscript and emoji highlighting as drawn. ★ *added 2026-10-08 (`decisions.md`, "M12
+      TASK 5.1"):* **E-9, a PRIORITY item** — in dark the selection's fill reads 1.29:1 against the
+      pane (was 11.22): selected text is readable (5.03) but the region is barely visible; a design
+      decision, likely a dedicated selection token · the **pre-picker consent line**
+      (`capability.ts`, unchanged by route 6) — a verdict on whether it still reads true beside
+      save-back · **real-disk permission behaviour** — the write prompt, per-handle independence
+      from the folder grant, the per-tab / reload re-prompt, and what the browser does with a grant
+      after Revoke.
       Files: `docs/ai/progress.md` (verdicts) · `src/theme/readerCss.ts` only if a walked item returns a
       named styling finding
       Verify: every axis above gets its own stated verdict — PASS, or a named finding routed to § Carried
@@ -1042,6 +1101,9 @@ and degrade tests (5.3, 5.4, 5.7) follow them. Group 3's own tests precede group
 unwatched-document rule stated at the head of group 3. ★ *2026-10-06 (`decisions.md`, "M12 RULINGS after
 task 4.1"): the discovered **3.4** runs BETWEEN 4.2 and 5.1 — after D-8's two tasks, before the first
 save task. It reorders none of the three constraints; its fixtures keep group 3's unwatched rule.*
+★ *2026-10-08 (`decisions.md`, "M12 TASK 5.1"): the discovered **1.3** (the katex audit exception) runs
+BETWEEN 5.1 and 5.2 — after the sign-off, before the first save task's code. It is group 1's by subject
+(dependency hygiene), not by position; it reorders none of the three constraints.*
 
 **Count proposed for gate 3: SEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (3) · 4 (2) · 5 (7) · 6 (4) ·
 7 (3). Three are human gates (5.1, 5.5, 7.1); two are contingent on a ruling's content (5.6, 6.4); 5.5 is
@@ -1050,6 +1112,8 @@ discovered 1.2 (the audit bump). Gate 3 approved 22; 1.2 is human-scheduled, `de
 ★ *2026-10-06: **24 tasks** — group 3 is (4) with the discovered 3.4 (editor legibility + preview fidelity),
 human-ruled and human-scheduled between 4.2 and 5.1, `decisions.md` "M12 RULINGS after task 4.1". 4.2 is
 re-scoped by the same entry (R6), not added or struck — the count moves by 3.4 alone.*
+★ *2026-10-08: **25 tasks** — group 1 is (3) with the discovered 1.3 (the katex advisory exception, R13
+route (i)), human-ruled and human-scheduled between 5.1 and 5.2, `decisions.md` "M12 TASK 5.1".*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

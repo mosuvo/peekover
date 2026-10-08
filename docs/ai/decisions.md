@@ -1,6 +1,88 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-08 · M12 TASK 5.1 — the `PERMISSIONS.md` ledger wording SIGNED by the human (D-9; gate-1
+  D-B(iii)), and the save-time rulings. Doc-only — nothing is written to `PERMISSIONS.md` and no code
+  moves in this commit; the signed text lands at 5.3 (interim) and 5.4 (final), per F-6.**
+  The human's sign-off, 2026-10-08, verbatim: **"sign as proposed, all leans"**. It covers the wording
+  below, rulings A–C, routes 1–7, the R13 re-route, E-9's home and the import-shape deferral.
+  **(i) THE SIGNED TEXT, VERBATIM.** Copied from the sign-off; emphasis and backticks are part of the
+  text. Each signed item is one unwrapped line, so no line break falls inside it.
+  **SIGNED (a) — the summary sentence.** It replaces *"It cannot read outside a chosen folder, cannot
+  write, and cannot reach the network."*:
+
+  > It cannot read outside a chosen folder, cannot reach the network, and cannot change any file on disk except the one file the user has opened for editing — and that only when they click Save, never on its own.
+
+  **SIGNED (b) — the new ledger row, final form (lands at 5.4):**
+
+  > | **Edit save-back (M12 / spec 012)** | User opens a document for editing on the app page and clicks **Save**; one click per save. **Nothing saves on a timer and there is no autosave.** On Chromium that click asks the browser for write access to that one file (`handle.requestPermission({ mode: 'readwrite' })`); the browser shows its own prompt whenever it does not already hold that grant. | Only the **one file being edited** — never another file, and never the folder: the folder handle stays read-only (`mode: 'read'`), and write access is asked for on that file's own handle, at the click, not before. Immediately before writing, Peekover re-reads the file and compares it with what it last read or wrote; if the file changed on disk in between, it **writes nothing**, says so in words, and keeps the edit on screen. (The check and the write are two steps: a change landing in the instant between them is not caught.) On Firefox, on any route with no live file handle, and when the write prompt is declined, Save hands the text to the browser as an ordinary **download** instead and changes nothing in the folder. **Never touches the network.** | **No new storage.** The write goes to the user's own file on their own disk. The per-file handle lives in memory for the open tab only and is never written to IndexedDB — the stored handle in the folder-read row is the *folder's*, and stays read-only. | The **Save** button and the status line beside it, which says in words what happened: saved, saved as a download, not saved because the file changed on disk, or failed. Declining the browser's write prompt is always safe — the edit becomes a download. **Revoke** on the folder chip closes the folder and drops the file handle with it, so nothing can be saved until the folder is opened again. The chip shows that a folder is open; it does **not** show whether the browser holds a write grant for a file, and Revoke does not ask the browser to withdraw one — that grant is the browser's, visible and removable in its own site-permission controls. |
+
+  **SIGNED (b′) — the INTERIM row, landed at 5.3 and replaced by (b) at 5.4.** It is (b) with exactly
+  these three substitutions:
+  - in "What it can touch", the sentence beginning "On Firefox, on any route with no live file handle"
+    becomes:
+
+    > On Firefox, on any route with no live file handle, and when the write prompt is declined, Save does not save: it says so in words, keeps the edit on screen, and changes nothing on disk.
+
+  - in "How the user sees & revokes it", the outcome list becomes:
+
+    > saved, not saved because the file changed on disk, not available here, or failed
+
+  - and the sentence "Declining the browser's write prompt is always safe — the edit becomes a
+    download." becomes:
+
+    > Declining the browser's write prompt is always safe — nothing is written and the edit stays on screen.
+
+  **(ii) Why the summary sentence says "change any file on disk", not "write".** M10's exports and this
+  milestone's download fallback create files through the browser's download, which is not Peekover
+  changing a file. "Cannot write anything" would have been false on the day it landed.
+  **(iii) RULINGS A–C.**
+  **★ A — CRLF on save.** If the file's raw read (`originalText`) was uniformly CRLF, the save writes
+  CRLF; otherwise it writes the editor's LF, and the status says the line endings were normalised.
+  D-7's baseline advances to the text actually WRITTEN.
+  **★ B — Ctrl/Cmd+S while `data-mode="edit"` runs the same Save as the button.** It lands at 5.3.
+  Outside edit the export shortcut is unchanged. *Why:* an existing app shortcut changing meaning by
+  mode, not the bespoke keymap §6 defers. *Ripples named for 5.3:* `entrypoints/app/main.ts`,
+  `tests/browser/exportShortcut.browser.test.ts`. Answers E-7.
+  **★ C — 4.2's hint WARNS; D-7's content compare DECIDES.** The status says the file changed on disk
+  while the user was editing; the save proceeds iff the compare finds the on-disk text equal to the
+  baseline. Supersedes `tasks.md` 5.3's "On conflict — or on 4.2's hint — the SAFE FLOOR" for the hint
+  half. R6 stated in practice; it answers the open product call the 012 D-8 / 4.2 entry's judgment
+  call 2 left for 5.3's kickoff.
+  **(iv) ROUTES 1–7.**
+  - **1 · the 5.3 → 5.4 gap** → the two-stage text above; `PERMISSIONS.md` joins 5.4's Files for the
+    swap.
+  - **2 · the wrong-file window AND the Revoke tension** → 5.3 binds the file handle to the edit
+    session at edit entry (never read from the current file at click time), AND Revoke, closing the
+    folder and switching folders end any open edit session (its bound handle with it). Both are 5.3
+    Verify clauses, red-first. Selecting another file while editing stays 6.1's guard.
+  - **3 ·** if 5.5 rules force-overwrite, the row is re-signed at 5.6.
+  - **4 ·** 5.3 makes the consistency edits that are not the positioning sentence: the ledger
+    heading's enumeration of capabilities (`PERMISSIONS.md:31`), "the last four rows" (`:33-36`), and
+    a cross-reference from the folder-read row's "read-only" to the new row (`:40-41`). The
+    zero-network section gains the save path at 5.7, after the proof; `PERMISSIONS.md` joins 5.7's
+    Files.
+  - **5 ·** `src/app/chromiumFolderSource.ts`'s "Read-only mode: Peekover never writes to the chosen
+    folder" comment gets a COMMENT-ONLY correction at 5.3 — a named exception to that file's milestone
+    zero-diff rule, proven by md5-identical bundles on both engines.
+  - **6 ·** `capability.ts`'s pre-picker consent line → unchanged; a verdict item on the 7.1 walk.
+  - **7 ·** "Wipe all data" does not close an open folder (the folder-read row's "revokes" is loose
+    today) → carried, outside M12.
+  **(v) R13 RE-ROUTED.** No mermaid release carries a patched katex (every version through 12.1.0 pins
+  katex ^0.16.x; patched is ≥ 0.18.2), so a bump cannot close it. **Ruled route (i): a reviewed,
+  documented exception — the discovered task 1.3** (`tasks.md`), which runs after 5.1 and before 5.2.
+  *Rejected:* an override (a breaking 0.x jump forced onto a dependency that did not ask for it);
+  leaving the audit red. *The registry claim is recorded as ruled; this doc-only session did not
+  re-check it — 1.3 reads the advisory at source.*
+  **(vi) E-9 (filed here).** In dark, the selection's fill reads 1.29:1 against the pane, down from
+  11.22 — selected text is now readable (5.03) but the region is barely visible (the M12 TASK 3.4
+  landing entry's "THE COST, STATED", below). It is a design decision (likely a dedicated selection
+  token) → a PRIORITY item on the 7.1 walk.
+  **(vii) The 3.4 import-shape optimisation** (~10.8 KB per original CodeMirror edge) → deferred to
+  post-M12, carried.
+  *Revisit-when:* 5.5 rules force-overwrite (re-sign at 5.6); 1.3's reachability analysis finds the
+  advisory reachable (escalate); 7.1's walk.
+
 - **2026-10-06 · M12 TASK 3.4 — LANDED: the editor's highlight colours come from design tokens (R8,
   E-3); dark-theme selection, current search match and autocomplete reach AA from tokens (E-2); the
   collapsed TOC handle no longer covers the split pane (E-1); the preview runs the reader's four
