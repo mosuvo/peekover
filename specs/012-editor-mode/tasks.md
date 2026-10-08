@@ -791,7 +791,7 @@ write beside a ledger that says "cannot write".*
       Verify: the human's one-sentence sign-off, quoted verbatim, banked in `decisions.md`. Until it
       exists, 5.3 does not start. [D-9; D-B(iii)]
 
-- [ ] **5.2 The conflict-detection predicate and the baseline's lifecycle — pure, no write (D-7).** TEST
+- [x] **5.2 The conflict-detection predicate and the baseline's lifecycle — pure, no write (D-7).** TEST
       FIRST. A pure predicate over two strings (strict equality of the re-read text against
       `originalText`); the baseline rule: set from the raw read at seed, advanced to the written text
       after a successful write, never derived from the editor's document.
@@ -802,6 +802,13 @@ write beside a ledger that says "cannot write".*
       the written text and an immediate second compare reports no conflict. **Asserted by reading the
       module's own source: no `lastModified` and no `size` is read anywhere on this path.** Content-script
       bytes md5-identical. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-7]
+      ★ *Post-landing, 2026-10-08 (`decisions.md`, "012 D-7"):* the predicate is `hasConflict(baseline,
+      reread)`. `session.originalText` IS the baseline — no frozen seed copy — moved only by
+      `session.advanceBaseline(written)`, which 5.3 calls with exactly the string it wrote. The dirty
+      attribute reads the same baseline, normalised (the ONE-BASELINE rule, so the compare and the
+      attribute cannot disagree after a write). Neither has a caller yet; clearing dirty at the save
+      stays 5.3's. The lifecycle runs the LF and CRLF write cases (ruling A). The source-read check
+      matches whole words, comments included. App chunk +50 B; content script md5-identical.
 
 - [ ] **5.3 The write path — permission at the save gesture, compare BEFORE write, the safe floor, the
       save-failure degrade, the status region; the signed ledger lands in THIS commit (D-6, D-7, D-9).**

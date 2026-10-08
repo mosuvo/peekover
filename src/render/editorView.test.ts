@@ -32,8 +32,10 @@ import {
   createPreviewCooldown,
   editorSessionFor,
   editorShellFor,
+  hasConflict,
   renderPreview,
   teardownEditorShell,
+  type EditorSave,
 } from './editorView';
 
 const DOC = '# Outer\n\nBody.\n\n## Second\n\nMore.';
@@ -563,5 +565,167 @@ describe('the feed — the editor’s buffer reaches the nested host through the
     e.clock.advance(5000);
     expect(rendered().at(-1)).toBe(`${DOC}ab`);
     expect(e.previewHost.shadowRoot!.querySelector('.peekover-reader')?.textContent).toContain('More.ab');
+  });
+});
+
+// ════ TASK 5.2 — THE CONFLICT PREDICATE AND THE ONE BASELINE (D-7) ════════════════════════════
+//
+// The save-time compare (D-7) and the dirty attribute (3.2) both answer "what was the file, last we
+// knew?" — the compare against the RAW text, the attribute against it put through the editor's own
+// line-break rule. They read ONE baseline, `session.originalText`: the raw read at seed, advanced to
+// the exact string written after a successful save. Two copies could disagree after a write.
+//
+// The CRLF and lone-CR cases are mandatory, not decorative: the editor's document turns both into LF
+// before the user types anything (012 D-2's round-trip finding, `editorEngine.test.ts`), so a
+// compare or a baseline that passed through the editor would hide exactly these differences.
+//
+// Nothing here writes a file: the write, the re-read and the permission are 5.3's.
+
+describe('hasConflict — strict equality of the re-read text against the baseline (D-7)', () => {
+  it('equal text is no conflict', () => {
+    expect(hasConflict('# A\n\nBody.\n', '# A\n\nBody.\n')).toBe(false);
+    expect(hasConflict('', '')).toBe(false);
+    expect(hasConflict('a\r\nb\r\n', 'a\r\nb\r\n')).toBe(false);
+  });
+
+  // [baseline, re-read, what the difference is]
+  const DIFFERENT: ReadonlyArray<[string, string, string]> = [
+    ['# Title\n\nalpha\n', '# Title\n\nbravo\n', 'SAME LENGTH'],
+    ['a\r\nb\r\n', 'a\nb\n', 'line endings only: CRLF vs LF'],
+    ['a\nb\n', 'a\nb', 'trailing newline only'],
+    ['a\rb', 'a\nb', 'line endings only: lone CR vs LF, same length too'],
+    ['', 'x', 'empty vs non-empty'],
+  ];
+
+  for (const [baseline, reread, what] of DIFFERENT) {
+    it(`any difference is a conflict — ${what}`, () => {
+      expect(hasConflict(baseline, reread)).toBe(true);
+    });
+  }
+
+  it('the SAME-LENGTH cases really are the same length (the fixtures would prove nothing otherwise)', () => {
+    expect(DIFFERENT[0][0].length).toBe(DIFFERENT[0][1].length);
+    expect(DIFFERENT[3][0].length).toBe(DIFFERENT[3][1].length);
+  });
+
+  it('is order-safe: hasConflict(a, b) === hasConflict(b, a)', () => {
+    const pairs: ReadonlyArray<[string, string]> = [
+      ['same', 'same'],
+      ...DIFFERENT.map(([a, b]): [string, string] => [a, b]),
+    ];
+    for (const [a, b] of pairs) expect(hasConflict(a, b)).toBe(hasConflict(b, a));
+  });
+});
+
+describe('the session baseline — one source of truth for the compare and the dirty attribute (5.2)', () => {
+  afterEach(() => {
+    for (const host of hosts) teardownEditorShell(host);
+  });
+
+  type View = NonNullable<ReturnType<typeof editorSessionFor>>['view'];
+
+  /** A real-engine edit session on a document mounted from `source`. */
+  async function editing(source: string, save?: EditorSave) {
+    const host = mountedHost(source);
+    const engine = await loadEditorEngine(host);
+    const session = buildEditor(engine, host, { save });
+    return { host, session, view: session.view };
+  }
+
+  const append = (view: View, text: string): void =>
+    view.dispatch({ changes: { from: view.state.doc.length, insert: text } });
+
+  const deleteLast = (view: View, n: number): void =>
+    view.dispatch({ changes: { from: view.state.doc.length - n, to: view.state.doc.length } });
+
+  const CRLF_DOC = '# Title\r\n\r\nBody line.\r\n';
+
+  it('★ is the RAW read at seed — a CRLF file’s baseline is CRLF, not the editor’s LF buffer', async () => {
+    const { session, view } = await editing(CRLF_DOC);
+    expect(session.originalText).toBe(CRLF_DOC);
+    expect(view.state.doc.toString()).toBe('# Title\n\nBody line.\n'); // the editor did normalise
+    expect(hasConflict(session.originalText, CRLF_DOC)).toBe(false); // an untouched file re-reads clean
+  });
+
+  it('is never derived from the editor’s document: typing leaves it unchanged', async () => {
+    const { session, view } = await editing(CRLF_DOC);
+    append(view, 'typed');
+    deleteLast(view, 2);
+    expect(session.originalText).toBe(CRLF_DOC);
+  });
+
+  for (const [what, written] of [
+    ['an LF write', '# Title\n\nBody line.\nmore\n'],
+    ['a CRLF write (ruling A)', '# Title\r\n\r\nBody line.\r\nmore\r\n'],
+  ] as const) {
+    it(`★ after ${what}, the baseline is EXACTLY the written string, and an immediate re-read is no conflict`, async () => {
+      const { session, view } = await editing(CRLF_DOC);
+      append(view, 'more\n');
+
+      session.advanceBaseline(written); // what 5.3 calls once its write has succeeded
+
+      expect(session.originalText).toBe(written);
+      expect(hasConflict(session.originalText, written)).toBe(false); // a second save does not conflict with the first
+      expect(hasConflict(session.originalText, CRLF_DOC)).toBe(true); // and the seed is no longer the baseline
+    });
+  }
+
+  it('a refused or failed save does not move it — only the advance seam does', async () => {
+    const refused = async () => ({ ok: false as const, reason: 'cannot save here yet' });
+    const failed = async (): Promise<never> => {
+      throw new Error('the writable threw');
+    };
+    for (const save of [refused, failed]) {
+      const { session, view } = await editing(CRLF_DOC, save);
+      append(view, 'edit');
+      await session.save!(view.state.doc.toString()).catch(() => undefined);
+      expect(session.originalText).toBe(CRLF_DOC);
+    }
+  });
+
+  it('★ dirty AGREES with the compare after an advance: returning the buffer to the written text clears it', async () => {
+    const { host, session, view } = await editing(DOC);
+    append(view, 'X');
+    session.advanceBaseline(`${DOC}X`); // the save wrote the buffer
+    append(view, 'Y');
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+
+    deleteLast(view, 1); // back to exactly what was written
+
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+  });
+
+  it('★ the same after a CRLF write: the dirty side normalises the ONE baseline', async () => {
+    const { host, session, view } = await editing(CRLF_DOC);
+    append(view, 'more\n');
+    session.advanceBaseline('# Title\r\n\r\nBody line.\r\nmore\r\n');
+    append(view, 'Y');
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+
+    deleteLast(view, 1);
+
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+  });
+
+  it('before an advance, the seed still drives dirty', async () => {
+    const { host, view } = await editing(DOC);
+    append(view, 'X');
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+    append(view, 'Y');
+    deleteLast(view, 1);
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true'); // `${DOC}X` is not the seed
+    deleteLast(view, 1);
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+  });
+});
+
+describe('no file metadata on the conflict path (D-7)', () => {
+  // Content comparison is the shipped mechanism; metadata is not read at all until a measurement
+  // promotes it (plan D-7). Whole words, comments included: the module names neither, so a match is
+  // a read — or a comment that should say "metadata" instead.
+  it('editorView.ts names neither `lastModified` nor `size`', () => {
+    const source = readFileSync(join(process.cwd(), 'src/render/editorView.ts'), 'utf8');
+    expect(source.match(/\blastModified\b/g) ?? []).toEqual([]);
+    expect(source.match(/\bsize\b/g) ?? []).toEqual([]);
   });
 });

@@ -1,11 +1,11 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-08 (task 1.3 — the katex advisory — landed as a documented audit exception on R15's
-proof: a mermaid fence carrying `$$` degrades before the engine, so katex is unreachable by
-construction; `decisions.md`'s "M12 TASK 1.3" and "R15" entries.) M12 (`specs/012-editor-mode/`, F8
+*Updated: 2026-10-08 (task 5.2 — D-7's conflict predicate `hasConflict` and the ONE baseline the
+compare and the dirty attribute both read; no write, no wiring; `decisions.md`'s "012 D-7" entry.)
+M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
-3.1, 3.2, 3.3, 3.4, 4.1, 4.2 and 5.1 landed; **5.2 is next.**
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 5.1 and 5.2 landed; **5.3 is next.**
 **Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
@@ -18,8 +18,8 @@ filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RE
 `main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
 available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
 (4.1).**
-Current numbers: `.output` 5,817,102 B (Cr) / 5,817,218 B (Fx) against ≤ 7 MiB, content script
-342,652 B both engines (md5-identical across 3.4 and 1.3), `dependencies` 11, `permissions: []`. M11 (math
+Current numbers: `.output` 5,817,152 B (Cr) / 5,817,268 B (Fx) against ≤ 7 MiB, content script
+342,652 B both engines (md5-identical across 3.4, 1.3 and 5.2), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1119,23 +1119,65 @@ audit exception, NOT REACHABLE BY CONSTRUCTION (R15). `pnpm audit --prod` EXITS 
   Firefox processes — find them by command line and `taskkill //T`. And `node -e` inside bash eats
   `$$` (the shell's PID) — write the script with the Write tool.
 
+**M12 task 5.2 DONE, 2026-10-08 — D-7's conflict predicate and the ONE baseline. Pure; no write, no
+caller yet.** `decisions.md`'s "012 D-7" entry is the record. Two files: `editorView.ts` and its test.
+- **Built.** `hasConflict(baseline, reread)` — strict `!==`, exported, pure. The session's
+  `originalText` is now THE baseline: the raw read at seed, moved only by the new
+  `session.advanceBaseline(written)` (5.3 calls it after a successful write, with exactly the string
+  written — ruling A's CRLF included). The dirty listener compares against the same baseline,
+  normalised, recomputed in the same advance. `originalText` stayed the name (plan D-7 and `tasks.md`
+  both name it as the value that advances); no frozen seed copy is kept.
+- **Tests.** `editorView.test.ts` 27 → 44 (+17), RED first (12 failed). Ablations, each red in its own
+  units and restored byte-identical: a normalised compare (CRLF-vs-LF and lone-CR cases) · a length
+  compare (both same-length cases) · a baseline from the editor's document (3 lifecycle cases) · the
+  dirty side not advancing (both dirty-agreement cases, beyond the kickoff) · the source-read check
+  with an added `lastModified` read, then a `size` read.
+- **Bytes.** App chunk +50 B = the getter, the advance method and one extra `let`; residual 0. The dirty
+  listener's change is a rename (0 B); `hasConflict` has no caller yet and tree-shakes to 0. Content
+  script md5-identical both engines. Zip +215 / +215 B: every chunk importing the app chunk carries its
+  renamed hash (same length, so no other file changed size) and recompresses.
+- **Full suite.** One red, NOT on the known-flake list: `mathNetwork.browser.test.ts` (Firefox), "the
+  STIX Two Math subset was never fetched in this window". Cleared in isolation (6/6). See § Carried
+  items — the failure an earlier investigation predicted but could not reproduce. The cause was not
+  investigated here.
+
 ## Up next
 
-**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (DONE — the katex exception, R15) → 5.2 → 5.3
-(with its redline) → 5.4 → 5.5 (human) → 5.6 → 5.7.**
-**NEXT — M12 task 5.2.** `tasks.md` 5.2 is the line.
-**THEN — 5.3.** 5.3's kickoff is drafted from its ★ REDLINE block, not only from its body: the
-interim ledger row, rulings A–C, the two route-2 clauses, the comment-only edit.
+**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (DONE — the katex exception, R15) → 5.2 (DONE)
+→ 5.3 (with its redline) → 5.4 → 5.5 (human) → 5.6 → 5.7.**
+**NEXT — M12 task 5.3.** `tasks.md` 5.3 is the line, and its ★ REDLINE block RULES where it and the
+body disagree. Draft the kickoff from the block, not only from the body:
+- **The ledger.** SIGNED (a) and the INTERIM row (b′) land in `PERMISSIONS.md` EXACTLY, copied from
+  `decisions.md`'s "M12 TASK 5.1", pinned by a ledger-text test; plus route 4's consistency edits
+  (`:31`, `:33-36`, `:40-41`).
+- **Route 5.** `chromiumFolderSource.ts`'s "Read-only mode" comment — a COMMENT-ONLY correction,
+  md5-identical bundles on both engines.
+- **Route 2, red-first.** (i) The handle is bound to the edit session AT EDIT ENTRY, never read from
+  the current file at click time. (ii) Revoke, closing the folder and switching folders END the edit
+  session and its handle — a save after either writes nothing.
+- **Ruling A.** A uniformly-CRLF raw read (`session.originalText`) writes CRLF; mixed / lone CR writes
+  the editor's LF and the status says the endings were normalised. Then
+  `session.advanceBaseline(<exactly what was written>)`.
+- **Ruling B.** Ctrl/Cmd+S in `data-mode="edit"` runs Save; outside edit it exports. Red-first both
+  ways. Ripples: `entrypoints/app/main.ts`, `tests/browser/exportShortcut.browser.test.ts`.
+- **Ruling C.** The hint (`data-watch-changed-in-edit`) WARNS; `hasConflict` DECIDES.
+- **The body.** Permission at the click → re-read through `read()` → `hasConflict(session.originalText,
+  reread)` → only on no conflict `createWritable()` → write → `close()` → advance → clear dirty. Safe
+  floor on conflict; a thrown write keeps the buffer and dirty; a real `<button>`; a polite live
+  region; SAME-LENGTH red-first on a real OPFS handle.
+- **What 5.2 left for it:** the advance seam and `hasConflict` have NO caller yet; clearing dirty at
+  the save is 5.3's (advance does not touch the attribute); the re-read, the write and the permission.
 **Ruled 2026-10-08, was "for the human" here:** the four save-time items (ledger wording, CRLF,
 Ctrl/Cmd+S, the hint) · the `katex` task (→ 1.3, landed via R15) · the import shape (→ post-M12,
 § Carried items).
-**Byte snapshot — 1.3's measured figures, carry to 5.2's kickoff:** `.output` 5,817,102 B (Cr) / 5,817,218 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,522,930 / 1,522,814 B · zip 1,838,265 / 1,838,323 B · content
+**Byte snapshot — 5.2's measured figures, carry to 5.3's kickoff:** `.output` 5,817,152 B (Cr) / 5,817,268 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,522,880 / 1,522,764 B · zip 1,838,480 / 1,838,538 B · content
 script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
-`c0115d89b10be306ffa0c77d2234a63e` (Fx), unchanged · the app chunk 519,834 B (+132, R15's guard), the
+`c0115d89b10be306ffa0c77d2234a63e` (Fx), unchanged · the app chunk 519,884 B (+50, 5.2's baseline) · the
 four CodeMirror lazy chunks 35,035 + 54,846 + 209,748 + 307,869 B · katex 258,879 B (ships, unreachable)
-· manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1297 · browser
-1803 / 15 skipped · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+· manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1314 · browser
+1803 / 15 skipped (1802 + one isolated-rerun-cleared red, § Carried items) · golden empty ·
+**`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
 figure above supersedes it.
 **Carried inputs, from 3.4:**
@@ -1220,6 +1262,16 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-08 — from TASK 5.2.**
+  - **CI's pnpm `version: 10` floats; a future 10.x could change where auditConfig is read and silently
+    drop 1.3's ignore — pin via a `packageManager` field.** Home: post-M12. Reviewer-noted.
+  - **`mathNetwork.browser.test.ts` — a REPRODUCED red (Firefox, full suite run alone).** "the STIX Two
+    Math subset was never fetched in this window … expected 0 to be greater than 0"
+    (`:167`); cleared in an isolated rerun (6/6, both engines). It is the failure the earlier
+    investigation (this section, "investigated, NOT fixed (no red found)") predicted from an idempotent
+    `registerMathFont()` surviving an earlier math file — but this session did not check the cause.
+    Classified harness-shared-state by the rerun rule; not touched by 5.2's diff. Home: the next
+    session with a test-harness slot. A red to bisect now exists.
 - **NEW 2026-10-08 — TASK 1.3's LIMITATION (R15, `decisions.md`).**
   - **User-facing: math inside a mermaid diagram renders as SOURCE (R15).** Any mermaid fence whose
     source contains `$$` degrades with the reason "its source contains math ($$), which diagrams do

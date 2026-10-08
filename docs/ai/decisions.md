@@ -1,6 +1,51 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-08 · 012 D-7 — the conflict-DETECTION predicate and the ONE baseline LANDED at task 5.2.
+  Content comparison, strict equality; no metadata; no write, no caller yet.**
+  **The plan's text.** Plan §0 D-7 carries NO "`decisions.md` entry draft" sentence (D-1 to D-6 and
+  D-8 each do), so its heading and lead stand in for one, verbatim:
+  *"D-7 · The conflict-DETECTION mechanism (not the policy) — CONTENT COMPARISON is the LEAD and the
+  shipped default; `lastModified`/`size` is a measurement-gated optimization that may only ever fall
+  through to it. RESOLVES §7-3's mechanism half. FLIPPED 2026-10-04 by human ruling (this draft
+  previously led with metadata)."* — and — *"The edit session retains `originalText`: the exact
+  string the file's own `read()` returned and the editor buffer was seeded from … compared to
+  `originalText` by strict string equality. **A difference is a conflict** … After a successful
+  write, `originalText` becomes the text just written."* The quoted text carries the flipped lead
+  only; no superseded metadata lead appears in it. The flip itself has no entry of its own here: it
+  is recorded in the plan's revision line (2026-10-04) and confirmed in the M12 GATE 2 entry ("D-7's
+  content-comparison conflict-detection lead … stands").
+  **What 5.2 built** (`src/render/editorView.ts`, its test):
+  - **The predicate.** `hasConflict(baseline, reread)` — `reread !== baseline`, exported, pure: no
+    I/O, no DOM, no metadata. Not normalised (a line-ending-only change on disk is a change), not a
+    length check (a same-length rewrite is a change). Order-safe.
+  - **The ONE-BASELINE rule.** `session.originalText` is THE baseline: the raw read at seed, never
+    derived from the editor's document. The dirty attribute compares the buffer against the same
+    value, normalised — both copies are set only together. *Why:* the compare (raw) and the dirty
+    attribute (normalised) both answer "what was the file last?"; held separately, after a write one
+    could say the buffer matches the file and the other that it does not. *Why the name stays
+    `originalText` and no frozen seed is kept:* the plan and `tasks.md` both name `originalText` as
+    the value that becomes the written text, and a second, stale copy is what 5.3 could compare
+    against by mistake.
+  - **The advance seam.** `session.advanceBaseline(written)` sets the baseline to EXACTLY the string
+    written. 5.3 calls it after a successful write; nothing calls it yet. It does not touch the dirty
+    attribute.
+  - **Ruling A in the lifecycle.** After an LF write and after a CRLF write, the baseline is exactly
+    that string and an immediate re-read of it is no conflict. A CRLF file's seed baseline is CRLF,
+    not the editor's LF buffer. A refused or throwing save does not move it.
+  - **No metadata, asserted.** A test reads `editorView.ts` and finds neither `lastModified` nor
+    `size` as whole words, comments included. Firing control: an added `lastModified` read, then a
+    `size` read, each reds it.
+  - **Red-first:** a normalised compare, a length compare, a baseline taken from the editor's
+    document, and a dirty side that does not advance — each red in its own units.
+  **Bytes.** App chunk +50 B (the getter, the advance method, one `let`); `hasConflict` tree-shakes
+  until 5.3 calls it. Content script md5-identical both engines.
+  **What stays 5.3's:** the re-read through `read()`, the permission at the click, the write, clearing
+  dirty at the save, and ruling A's choice of text to write (CRLF or LF) and its status line.
+  **No human ruling was taken during this task.**
+  *Revisit-when:* 5.3 wires the seam (the first caller); §7's optional metadata probe, if ever run —
+  it may only add a pre-check that falls through to `hasConflict`.
+
 - **2026-10-08 · M12 TASK 1.3 — GHSA-238p-pmpm-9mq7 (katex via mermaid): a reviewed, documented audit
   exception, standing on R15's math gate (below). Verdict: NOT REACHABLE BY CONSTRUCTION — mermaid's
   only katex entry requires `$$`, which degrades before `engine.render` (R15).** The escalation that

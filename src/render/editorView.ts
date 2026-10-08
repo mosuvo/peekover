@@ -61,6 +61,20 @@
 // Nothing here writes a file, asks for a permission or names a handle type. `save` is a function
 // the app page hands in; the session carries it and, at 3.2, nothing calls it.
 //
+// ── ONE BASELINE, AND THE CONFLICT PREDICATE (5.2; D-7) ────────────────────────────────────────
+//
+// `originalText` is not frozen at the seed: it is what the file LAST WAS as far as this session
+// knows — the raw read at entry, then, after each successful save, EXACTLY the string written
+// (`advanceBaseline`, the seam the write path calls; ruling A's CRLF text included). Otherwise the
+// second save of a session would compare against text the first one replaced, and conflict with
+// itself. The dirty attribute reads the SAME value, normalised: kept as two copies, the compare and
+// the attribute could disagree after a write about whether the buffer matches the file.
+//
+// The save-time compare is `hasConflict`: strict equality of two strings, nothing else. Not
+// normalised (a line-ending-only change on disk is a change), not a length check (a same-length
+// rewrite is a change), and no file metadata — content comparison is the shipped mechanism, and
+// metadata is not read at all until a measurement promotes it to a pre-check (plan D-7).
+//
 // ── THE FEED: THE BUFFER REACHES THE PREVIEW THROUGH A COOLDOWN (3.3; D-5's mechanism) ─────────
 //
 // The update listener that tracks dirtiness also hands the editor's document to a
@@ -149,14 +163,23 @@ export type EditorSaveOutcome = { ok: true } | { ok: false; reason: string };
  *  about where the text goes. */
 export type EditorSave = (text: string) => Promise<EditorSaveOutcome>;
 
-/** One edit session: the view, what it was seeded from, and the capability it was handed. */
+/** One edit session: the view, the baseline, and the capability it was handed. */
 export interface EditorSession {
   /** The engine's view, built in the shell's source slot. */
   readonly view: EditorViewHandle;
-  /** The registered source the view was seeded from — RAW, exactly as the file was read. */
+  /** The baseline — what the file last was, RAW: the registered source the view was seeded from,
+   *  exactly as read, until a save advances it. Never derived from the editor's document. */
   readonly originalText: string;
+  /** After a SUCCESSFUL write only: make `written` — exactly the string written — the baseline. */
+  advanceBaseline(written: string): void;
   /** The injected save, or `undefined` on a surface that provided none. */
   readonly save: EditorSave | undefined;
+}
+
+/** D-7's save-time compare: has the file changed since the baseline? Strict equality — see the
+ *  module comment for why nothing weaker. */
+export function hasConflict(baseline: string, reread: string): boolean {
+  return reread !== baseline;
 }
 
 /** What `buildEditor` is handed beside the engine. */
@@ -324,8 +347,10 @@ export function buildEditor(
   endEditorSession(host); // a session an outer re-mount left behind
 
   const shell = buildEditorShell(host);
-  const originalText = readerSourceFor(host) ?? '';
-  const baseline = normaliseLineBreaks(originalText);
+  const seed = readerSourceFor(host) ?? '';
+  // THE baseline, raw, and the editor's view of it — only ever set together, here and in advance.
+  let baseline = seed;
+  let normalisedBaseline = normaliseLineBreaks(seed);
   let session: EditorSession | undefined;
   const preview = createPreviewCooldown((text) => {
     if (!session || editorSessionFor(host) !== session) return; // orphaned by an outer re-mount
@@ -338,18 +363,29 @@ export function buildEditor(
   try {
     const view = engine.createView(
       shell.source,
-      originalText,
+      seed,
       engine.EditorView.updateListener.of((update) => {
         if (!update.docChanged) return;
         const { doc } = update.state;
         // Length first: a different length settles it without building the string.
-        const dirty = doc.length !== baseline.length || doc.toString() !== baseline;
+        const dirty =
+          doc.length !== normalisedBaseline.length || doc.toString() !== normalisedBaseline;
         if (dirty) host.setAttribute(EDITOR_DIRTY_ATTR, 'true');
         else host.removeAttribute(EDITOR_DIRTY_ATTR);
         preview.push(doc);
       }),
     );
-    session = { view, originalText, save };
+    session = {
+      view,
+      get originalText() {
+        return baseline;
+      },
+      advanceBaseline(written) {
+        baseline = written;
+        normalisedBaseline = normaliseLineBreaks(written);
+      },
+      save,
+    };
     sessions.set(host, session);
     previews.set(session, preview);
     return session;
