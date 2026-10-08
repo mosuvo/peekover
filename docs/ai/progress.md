@@ -1,14 +1,14 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-08 (task 5.1 — the HUMAN GATE — is SIGNED: the `PERMISSIONS.md` ledger wording,
-save-time rulings A–C, routes 1–7; `decisions.md`'s "M12 TASK 5.1" entry. Doc-only, no build.) M12
-(`specs/012-editor-mode/`, F8 Editor Mode's focused core) is in implementation: gates 1–3 approved,
-tasks 1.1, 1.2, 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2 and 5.1 landed; **the discovered 1.3 — the
-katex audit exception — is next, then 5.2.**
+*Updated: 2026-10-08 (task 1.3 — the katex advisory — landed as a documented audit exception on R15's
+proof: a mermaid fence carrying `$$` degrades before the engine, so katex is unreachable by
+construction; `decisions.md`'s "M12 TASK 1.3" and "R15" entries.) M12 (`specs/012-editor-mode/`, F8
+Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2 and 5.1 landed; **5.2 is next.**
 **Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
-**★ `pnpm audit --prod` EXITS 1 — one LOW `katex` advisory via `mermaid`, red before 3.4 too; R13 is
-RE-ROUTED (2026-10-08) from a bump to a reviewed, documented exception — task 1.3 (§ Carried items).**
+**`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
+User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
 **`PERMISSIONS.md` still says "cannot write" — correctly: no write path exists until 5.3, whose
 commit carries the signed text.**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
@@ -18,8 +18,8 @@ filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RE
 `main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
 available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
 (4.1).**
-Current numbers: `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx) against ≤ 7 MiB, content script
-342,652 B both engines (md5-identical across 3.4), `dependencies` 11, `permissions: []`. M11 (math
+Current numbers: `.output` 5,817,102 B (Cr) / 5,817,218 B (Fx) against ≤ 7 MiB, content script
+342,652 B both engines (md5-identical across 3.4 and 1.3), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1096,24 +1096,46 @@ untouched.
 - **`tasks.md`.** 5.1 ticked · a ★ REDLINE block at the head of 5.3 · ★ notes on 5.4, 5.6, 5.7 · the
   discovered 1.3 · three 7.1 walk items · 24 → 25 tasks.
 
+**M12 task 1.3 DONE, 2026-10-08 — GHSA-238p-pmpm-9mq7 (katex via mermaid) is a reviewed, documented
+audit exception, NOT REACHABLE BY CONSTRUCTION (R15). `pnpm audit --prod` EXITS 0 again.**
+`decisions.md`'s "M12 TASK 1.3" and "R15" entries are the record.
+- **The STOP, then R15.** The first analysis found katex reachable from author input (`$$` in a
+  sequence/state/class diagram; flowchart labels force HTML labels on `$$`) with no mermaid config
+  that closes it. Ruled R15: a fence whose source has `$$` degrades before `engine.render`
+  (`hasDiagramMath` in `diagramEnhancer.ts`, beside `hasRemoteReference`). Named zero-diff exception:
+  `diagramEnhancer.ts` and its tests only.
+- **Completeness.** One `import("katex")` in mermaid's whole core graph, behind `if (!hasKatex(text))
+  return text`. Entity spellings of `$` (`&dollar;`, `&#36`, `#36;`…) measured to reach katex 0
+  times, both engines.
+- **Tests.** `diagramEnhancer.test.ts` 58 → 82: the superset against mermaid's real `hasKatex` + the
+  drift pin (GHSA-named messages). New `diagramKatexGate.browser.test.ts`, Cr+Fx, with a firing
+  control. Red-first on all of them, including mermaid's chunk ablated and restored md5-identical.
+- **The ignore.** `package.json` → `pnpm.auditConfig.ignoreGhsas: ["GHSA-238p-pmpm-9mq7"]`, verified
+  in pnpm's code for 10.33.0, 10.34.6 (what CI's `version: 10` resolves) and 10.0.0. Audit EXIT=0
+  with, EXIT=1 without, both forms; JSON suppresses exactly that id. No workflow edit.
+- **Bytes.** App chunk +132 B = the guard, residual 0; content script md5-identical; katex chunk still
+  ships (258,879 B, now unreachable); lockfile zero-diff.
+- **Gotcha, banked:** Stopping a background vitest task (TaskStop) orphans its node + Playwright
+  Firefox processes — find them by command line and `taskkill //T`. And `node -e` inside bash eats
+  `$$` (the shell's PID) — write the script with the Write tool.
+
 ## Up next
 
-**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (the katex exception) → 5.2 → 5.3 (with its
-redline) → 5.4 → 5.5 (human) → 5.6 → 5.7.**
-**NEXT — M12 task 1.3, DISCOVERED: the katex advisory as a reviewed, documented exception (R13 route
-(i)).** `tasks.md` 1.3 is the line. Its first step is the reachability analysis; a reachable advisory
-is a STOP, not an ignore. It verifies pnpm's audit-ignore key against the INSTALLED pnpm, and moves
-no dependency and no production byte.
-**THEN — 5.2, 5.3.** 5.3's kickoff is drafted from its ★ REDLINE block, not only from its body: the
+**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (DONE — the katex exception, R15) → 5.2 → 5.3
+(with its redline) → 5.4 → 5.5 (human) → 5.6 → 5.7.**
+**NEXT — M12 task 5.2.** `tasks.md` 5.2 is the line.
+**THEN — 5.3.** 5.3's kickoff is drafted from its ★ REDLINE block, not only from its body: the
 interim ledger row, rulings A–C, the two route-2 clauses, the comment-only edit.
 **Ruled 2026-10-08, was "for the human" here:** the four save-time items (ledger wording, CRLF,
-Ctrl/Cmd+S, the hint) · the `katex` task (→ 1.3) · the import shape (→ post-M12, § Carried items).
-**Byte snapshot — UNCHANGED across 5.1 (doc-only), carries to 1.3's kickoff (3.4's measured figures):** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,523,062 / 1,522,946 B · zip 1,838,328 / 1,838,386 B · content
+Ctrl/Cmd+S, the hint) · the `katex` task (→ 1.3, landed via R15) · the import shape (→ post-M12,
+§ Carried items).
+**Byte snapshot — 1.3's measured figures, carry to 5.2's kickoff:** `.output` 5,817,102 B (Cr) / 5,817,218 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,522,930 / 1,522,814 B · zip 1,838,265 / 1,838,323 B · content
 script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
-`c0115d89b10be306ffa0c77d2234a63e` (Fx) · the app chunk 519,702 B, the four CodeMirror lazy chunks
-35,035 + 54,846 + 209,748 + 307,869 B · manifest 654 / 770 B, `permissions: []` · `dependencies` 11 ·
-lint 0 · unit 1273 · browser 1795 / 15 skipped · golden empty · **`pnpm audit --prod` EXIT=1 (R13)**.
+`c0115d89b10be306ffa0c77d2234a63e` (Fx), unchanged · the app chunk 519,834 B (+132, R15's guard), the
+four CodeMirror lazy chunks 35,035 + 54,846 + 209,748 + 307,869 B · katex 258,879 B (ships, unreachable)
+· manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1297 · browser
+1803 / 15 skipped · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
 figure above supersedes it.
 **Carried inputs, from 3.4:**
@@ -1198,9 +1220,16 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-08 — TASK 1.3's LIMITATION (R15, `decisions.md`).**
+  - **User-facing: math inside a mermaid diagram renders as SOURCE (R15).** Any mermaid fence whose
+    source contains `$$` degrades with the reason "its source contains math ($$), which diagrams do
+    not render". Peekover's own Temml math is unaffected. **Home: a 7.1 verdict.** Rendering math in
+    diagrams is a ruling, not a task (and needs mermaid on katex ≥ 0.18.2 first).
 - **NEW 2026-10-08 — TASK 5.1's ROUTINGS (`decisions.md`, "M12 TASK 5.1").**
-  - **R13 → TASK 1.3**, next: a reviewed, documented exception, not a bump (no mermaid release carries
-    a patched katex; an override is rejected). Reachable → STOP and escalate.
+  - **✅ RESOLVED at 1.3 (R15) — R13 → TASK 1.3**, next: a reviewed, documented exception, not a bump
+    (no mermaid release carries a patched katex; an override is rejected). Reachable → STOP and
+    escalate. *It was reachable; R15 made it unreachable by construction, and the ignore landed on
+    that proof.*
   - **E-9 → the 7.1 walk, PRIORITY.** The dark selection's fill, 1.29:1 against the pane — filed
     under that name at 5.1; the measurement is 3.4's (below). Likely a dedicated selection token.
   - **"Wipe all data" does not close an open folder → OUTSIDE M12.** The folder-read row's "revokes"
@@ -1210,8 +1239,8 @@ measurement-driven or explicitly deferred.*
   - **The pre-picker consent line (`capability.ts`) → a 7.1 verdict**, unchanged until then (route 6).
 - **NEW 2026-10-06 — TASK 3.4's CARRIED ITEMS. `decisions.md`'s two "M12 TASK 3.4" entries have the
   numbers.**
-  - **★ `pnpm audit --prod` EXITS 1 (R13). Home: ~~a dedicated bump task~~ → TASK 1.3, a documented
-    exception (re-routed 2026-10-08, above).** GHSA-238p-pmpm-9mq7, low, `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`; installed
+  - **✅ RESOLVED-BY-EXCEPTION at 1.3 (R15, 2026-10-08) — ★ `pnpm audit --prod` EXITS 1 (R13). Home:
+    ~~a dedicated bump task~~ → TASK 1.3, a documented exception (re-routed 2026-10-08, above).** GHSA-238p-pmpm-9mq7, low, `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`; installed
     0.16.47, the newest inside mermaid's `^0.16.45`. Red before 3.4's install as well. Closing it
     needs a `pnpm.overrides` entry (1.2 ruled "still no overrides") or a mermaid release. Whether
     Peekover's diagram path can reach the affected trust setting is NOT assessed — the bump task's

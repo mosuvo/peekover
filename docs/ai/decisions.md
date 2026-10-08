@@ -1,6 +1,140 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-08 · M12 TASK 1.3 — GHSA-238p-pmpm-9mq7 (katex via mermaid): a reviewed, documented audit
+  exception, standing on R15's math gate (below). Verdict: NOT REACHABLE BY CONSTRUCTION — mermaid's
+  only katex entry requires `$$`, which degrades before `engine.render` (R15).** The escalation that
+  preceded it, and its ruling, are R15's entry below. Closes R13.
+  **(i) THE ADVISORY, AT SOURCE** (GitHub advisory API, read 2026-10-08). GHSA-238p-pmpm-9mq7 /
+  CVE-2026-103923, *"KaTeX: Existing prototype pollution can bypass trust restrictions"*, LOW (CVSS 4.0
+  2.1, `AV:N/AC:L/AT:P/PR:N/UI:A/VC:N/VI:N/VA:N/SC:L/SI:L/SA:N`), CWE-807, published 2026-10-05.
+  `katex >= 0.11.0, < 0.18.2`; patched 0.18.2. Class: a READ-SIDE prototype-pollution gadget — where
+  `Object.prototype` is ALREADY polluted (katex does not pollute it), katex reads inherited `trust`,
+  setting metadata (`default`, `processor`) and namespace entries as if set; an inherited `trust: true`
+  lets an author's math emit links (user-interaction XSS) or load attacker-chosen resources. The
+  trigger is any `katex.render*` call in a polluted realm; the input is author math.
+  **(ii) THE REGISTRY, RE-CHECKED** (`npm view`, 2026-10-08) — no mermaid release accepts a patched katex:
+
+  | mermaid | published | `dependencies.katex` |
+  |---|---|---|
+  | 11.16.1 (installed) | 2026-08-04 | `^0.16.45` |
+  | 11.17.0 | 2026-08-19 | `^0.16.47` |
+  | 11.17.1 | 2026-08-24 | `^0.16.47` |
+  | 11.17.2 | 2026-08-25 | `^0.16.47` |
+  | 12.0.0 | 2026-09-10 | `^0.16.47` |
+  | 12.1.0 (latest) | 2026-10-02 | `^0.16.47` |
+
+  No peer or optional katex in any. katex's own `latest` is 0.19.0.
+  **(iii) WHERE KATEX SHIPS.** It still ships — the ignore is about reachability, not presence:
+  `chunks/katex-B7rAX3Vi.js`, 258,879 B, both engines, md5 `06883a1e…` (unchanged by this task),
+  katex 0.16.47. LAZY: its only importer is mermaid's common chunk
+  (`chunks/chunk-I66GZJ75-*.js`, `import('./katex-B7rAX3Vi.js')`). Zero katex in the content script;
+  the app chunk's only `katex` text is mermaid's inlined `package.json` (`engineVersion`, D-3).
+  **(iv) WHY THE FIRST VERDICT WAS A STOP (the R15 escalation).** The kickoff's premise — that
+  `htmlLabels: false` / D-6's config gate mermaid's math — is FALSE: `chunk-QR6OTTB3.mjs:4754` sets
+  `useHtmlLabels = true` whenever a label has `$$`, and sequence diagrams call katex with no
+  `htmlLabels` test at all. No config key closes it: `:5211`'s gate is `isMathMLSupported()`
+  (`window.MathMLElement`, true in both engines) `|| legacyMathML || forceLegacyMathML`, and the two
+  keys only WIDEN it. `calculateMathMLDimensions` (`:5194-5206`) inserts katex output into the LIVE
+  `document.body` mid-render, before `sanitizeSvg`. So the only argument left was "no prototype-pollution
+  primitive exists in the shipped realm" — not provable. Escalated; ruled R15.
+  **(v) COMPLETENESS — EVERY ROUTE INTO KATEX REQUIRES `$$`** (installed `mermaid@11.16.1`,
+  `dist/chunks/mermaid.core/`; the package's `import`/`module` entry is `dist/mermaid.core.mjs`, which
+  references katex nowhere):
+
+  | Route | Site | Gated by |
+  |---|---|---|
+  | THE ONE katex import + call | `chunk-I66GZJ75.mjs:5215` `import("katex")`, `:5221` `katex.renderToString`, inside `renderKatexUnsanitized` (`:5207`) | its FIRST statement, `:5208` `if (!hasKatex(text)) return text`; `hasKatex` (`:5193`) tests `katexRegex = /\$\$(.*?)\$\$/g` (`:5192`); then `:5211` |
+  | `renderKatexSanitized` | `:5233-5235` | wraps the above |
+  | `calculateMathMLDimensions` | `:5194-5206` | calls `renderKatexSanitized` → the same gate |
+  | shared labels (flowchart, state, class…) | `chunk-WRU74C26.mjs:217` `addHtmlSpan`, `:378` | `hasKatex(node.label)`; reached when `useHtmlLabels`, which `chunk-QR6OTTB3.mjs:4754` forces on `hasKatex(textContent)` |
+  | sequence | `sequenceDiagram-SI44F4Z6.mjs:1978` (unconditional call → the inner gate), `:2200 :2287 :2390 :2458 :2518 :2608 :2674 :2746` (actor drawers, `hasKatex(actor.description)`), `:2883 :2898` (notes), `:3011 :3015` (`byKatex`), `:3324`, `:3414-3415` (messages), `:3467`, `:4203 :4277 :4329` (layout) | `hasKatex(...)`, or the inner gate |
+
+  A whole-dist sweep (`import("katex")`, `from "katex"`, `require("katex")`) finds ONE site. Mermaid
+  tests a LABEL, which is a substring of the source, so the remaining question was whether a parser
+  TRANSFORM can manufacture `$$` from a source that has none: `sanitizeText` (`:5090-5101`) always
+  runs DOMPurify, which decodes character references, and `encodeEntities`' `#\w+;` misses
+  `&dollar;`. **Measured, real engine, both engines, `katex.renderToString` call-counted (instrument
+  control: 3 calls):** literal `$$` → sequence message 3, note 3, actor 1, state 4, class 1;
+  flowchart (4 shapes) 0, block 0 under our config. Entity forms → **0 in every case**: `&dollar;`
+  (flowchart, edge, state, class, block), `&#36` / `&#36;` / `&#x24;`, mermaid's `#36;` and
+  `#dollar;`, `$<br>$` splits (flowchart and sequence). (The scratch probe was not kept.)
+  **(vi) THE GUARD (R15).** `src/render/diagramEnhancer.ts`: `hasDiagramMath(source)` =
+  `source.includes('$$')`, checked at `drawDiagram`'s step zero right after `hasRemoteReference` —
+  before the cache read and before `engine.render`, which has one call site (`drawDiagram`), reached
+  from both the first render and the re-theme. A carrying fence takes §3.8's existing degrade path
+  with its own reason, *"its source contains math ($$), which diagrams do not render"*. Broader than
+  mermaid's test on purpose (unbalanced, across lines, in a directive): a superset, and a false
+  positive costs one diagram shown as source.
+  **(vii) THE TESTS — the premises pin.** `src/render/diagramEnhancer.test.ts`, 58 → 82 (+24, cases
+  added only): the SUPERSET over a 15-source corpus against mermaid's REAL `hasKatex`, imported in the
+  test from the installed chunk (whole source and every line); the corpus is non-vacuous; no single-`$`
+  over-degrade; the DRIFT PIN (the regex text, exactly one `import("katex")` in the core graph and in
+  that chunk, reached only past `if (!hasKatex(text)) return text`), every message naming this GHSA;
+  the degrade, per-fence and Temml-beside cases. `tests/browser/diagramKatexGate.browser.test.ts`
+  (NEW — §4's `diagramSourceGuard` file measures the wire, this measures our own chunk loading and
+  running; mixing them blurs both files' zeros), Cr+Fx, the production app-page path: a flowchart
+  and a sequence `$$x^2$$` each degrade to visible source, with ZERO katex artifacts in the live light
+  DOM (MutationObserver: `#katex-temp`, `.katex`, `math`) and ZERO katex-chunk requests (delta
+  Resource Timing); a plain diagram beside one renders; a FIRING CONTROL (last, so katex is cold
+  until then) drives the same source straight into the engine and sees both.
+  **RED-FIRST, all observed:** browser, guard line removed — sequence arm: chunk requested 1, katex
+  ran (`katex-temp` ×2 + output) both engines; flowchart arm: rendered instead of degrading (katex
+  not called — (v)). Unit: guard absent → 14 red. Drift, mermaid's chunk ABLATED in `node_modules`
+  and restored md5-identical (`4e1d70b4…`): the gate made `if (!text)` → the gate pin reds with the
+  GHSA message; the regex made `/\$(.*?)\$/g` → the drift pin AND the superset (live `hasKatex`,
+  `$x$ and $y$`) red. Predicate narrowed to `/\$\$[A-Za-z]/` → the superset reds on `$$$$`.
+  **(viii) THE IGNORE.** Key `auditConfig.ignoreGhsas`, in the root `package.json`'s `pnpm` field —
+  `"pnpm": { "auditConfig": { "ignoreGhsas": ["GHSA-238p-pmpm-9mq7"] } }`. Exactly one id; no
+  threshold, wildcard or CVE list. Verified in the INSTALLED pnpm's code, not its help (the help lists
+  only `--ignore <CVE>`): 10.33.0 reads `auditConfig` from `manifest.pnpm` (`getOptionsFromRootManifest`,
+  `pnpm.cjs:17907-17916`) and drops an advisory iff `ignoreGhsas.includes(github_advisory_id)`
+  (`:137484-137492`). `pnpm-workspace.yaml` untouched.
+  **(ix) FIRING CONTROL.** WITH: `pnpm audit --prod` EXIT=0, `--audit-level low` EXIT=0 (both "1 low
+  (1 ignored)"). WITHOUT (reverted to HEAD's `package.json`): both EXIT=1, naming GHSA-238p-pmpm-9mq7.
+  Restored. JSON: without → `[GHSA-238p-pmpm-9mq7]`, with → `[]`; suppressed = exactly that id.
+  **(x) CI.** `supply-chain.yml`'s audit job runs `pnpm audit --prod --audit-level low` from the repo
+  root after `pnpm install --frozen-lockfile` — the same command, reading the same root
+  `package.json`. Its `pnpm/action-setup@v4` `version: 10` resolves the newest 10.x (10.34.6 today),
+  whose code is the same as 10.33.0's (`ignoreGhsas` filter, `auditConfig` picked from
+  `manifest.pnpm`); the 10.x floor, 10.0.0, reads `rootProjectManifest.pnpm.auditConfig.ignoreGhsas`
+  — also `package.json`. So every pnpm CI can resolve honours it; no workflow edit. (A
+  `pnpm-workspace.yaml` key would NOT be read at 10.0.0 — the reason it lives in `package.json`, as
+  `tasks.md` 1.3 named.) The full-tree advisory step and OSV are unchanged and still report katex.
+  **(xi) NOTHING ELSE MOVED.** `pnpm-lock.yaml` zero-diff; `pnpm install --frozen-lockfile` EXIT=0.
+  Clean rebuild, both engines, against a HEAD build: content script, manifest and katex chunk
+  md5-IDENTICAL; 138 of 139 files per engine byte-identical after content-hash normalisation; the one
+  real change is the app chunk, 519,702 → 519,834 B (+132), decomposed exactly as the guard's three
+  minified pieces — the reason string 65 B, `hasDiagramMath` 39 B, the step-zero check 28 B —
+  residual 0. Every other md5 moved by the app chunk's NEW HASH alone (same-length names).
+  `.output` 5,817,102 / 5,817,218 B (+132 each); zip 1,838,265 / 1,838,323 B (−63 each, compression).
+  **Suites (full — production code changed):** lint EXIT=0 · unit 1297 (+24, all `diagramEnhancer`;
+  70 files) · browser, run alone, 1803 passed / 15 skipped (+8, the new file; 180 files) — named:
+  diagramKatexGate 8, diagramRender 38, diagramSecure 18, diagramSanitize 10, diagramNetwork 12,
+  diagramStyleCss 36, diagramSourceGuard 8, editorPreview 24, htmlExport 8 (browser) + 13 (unit,
+  the 26-site pin) · scanner EXIT=0, `--self-test` EXIT=0 · golden EMPTY. No known flake fired.
+  **Revisit-when:** an upstream mermaid accepts katex ≥ 0.18.2 → remove the ignore AND the guard, bump,
+  re-verify (the drift pin and the browser control show whether math comes back); a mermaid bump reds
+  the drift pin → re-assess before editing it; any wish to render math inside diagrams → a RULING, not a
+  task; the advisory is re-scored.
+
+- **2026-10-08 · R15 — HUMAN RULING on task 1.3's escalation: katex is made unreachable BY CONSTRUCTION,
+  folded into 1.3, one commit.** 1.3's reachability analysis STOPPED: katex IS reachable from author
+  input (any `$$` in a sequence, state or class diagram; flowchart labels force HTML labels on `$$`), no
+  mermaid config key closes it, and "no prototype-pollution primitive exists" could not be shown with
+  evidence. Options put: (1) close the math path in our code, then land the ignore; (2) an exception on
+  the narrower argument; (3) the advisory's `Object.prototype` workaround in our code; (4) the rejected
+  override / red audit. **Ruled (1):** any mermaid fence whose source contains `$$` goes to the EXISTING
+  source-fallback path in `diagramEnhancer.ts` before `engine.render`, the same shape and placement as
+  M7's `hasRemoteReference` guard; then the ignore lands on that proof. **Named exception to M12's
+  zero-diff rule for the diagram modules:** `src/render/diagramEnhancer.ts` and its tests ONLY —
+  `diagramEngine.ts`, `sanitize.ts` and the view stay zero-diff. The planned `diagramEngine.test.ts`
+  premises pin is DROPPED: the guard's tests are the premises pin. **Accepted cost:** math inside a
+  mermaid diagram shows as source; Peekover's own Temml math is unaffected. **Interpretation, flagged:**
+  "reusing its degrade path and copy" is read as the same path and the same marker FORM with a reason
+  naming this cause — the remote-reference sentence would be false for a math fence.
+  *Revisit-when:* as 1.3's entry above.
+
 - **2026-10-08 · M12 TASK 5.1 — the `PERMISSIONS.md` ledger wording SIGNED by the human (D-9; gate-1
   D-B(iii)), and the save-time rulings. Doc-only — nothing is written to `PERMISSIONS.md` and no code
   moves in this commit; the signed text lands at 5.3 (interim) and 5.4 (final), per F-6.**

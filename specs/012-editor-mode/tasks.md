@@ -244,7 +244,7 @@ forward to the immediately-prior task's own measured figure.**
       on both engines, Golden EMPTY. Measured: `.output` 5,200,689 / 5,200,805 B (+3,264 B each), content
       script 342,161 B (+1,669 B) — these are 2.1's kickoff snapshot.
 
-- [ ] **1.3 The katex advisory (GHSA-238p-pmpm-9mq7, via mermaid) — a reviewed, documented exception
+- [x] **1.3 The katex advisory (GHSA-238p-pmpm-9mq7, via mermaid) — a reviewed, documented exception
       (R13 route (i)). DISCOVERED 2026-10-08; runs AFTER 5.1 and BEFORE 5.2.** Human-ruled and
       human-scheduled (`decisions.md`, "M12 TASK 5.1", (v)): no mermaid release carries a patched
       katex, so a bump cannot close R13; an override and a red audit are both rejected.
@@ -259,6 +259,23 @@ forward to the immediately-prior task's own measured figure.**
       --prod` and `--audit-level low` EXIT=0 WITH the ignore and EXIT=1 WITHOUT it (the firing
       control). No dependency moves; no production byte moves (build both engines, md5-identical).
       CI's supply-chain workflow honours the same config — state how. [R13; no D-value]
+      ★ **REDLINE, 2026-10-08 — to `decisions.md`'s "R15" entry (the analysis above STOPPED: katex IS
+      reachable from author `$$`, and no mermaid config closes it).** Scope widened by R15, in this one
+      commit: a mermaid fence whose source contains `$$` degrades to the existing source fallback
+      before `engine.render`, and the ignore lands on that proof. Files ADD
+      `src/render/diagramEnhancer.ts` (the guard), `src/render/diagramEnhancer.test.ts` (the superset +
+      drift pin + degrade cases — R15 drops the separate `diagramEngine.test.ts` pin) and
+      `tests/browser/diagramKatexGate.browser.test.ts` (new, real engine, Cr+Fx). A NAMED EXCEPTION to
+      M12's zero-diff rule for the diagram modules: `diagramEnhancer.ts` and its tests ONLY
+      (`diagramEngine.ts`, `sanitize.ts`, the view stay zero-diff). "No production byte moves" becomes:
+      content script md5-identical both engines; the app-chunk delta decomposed as the guard, residual
+      0; the katex chunk still ships. Production code changed, so the FULL suite is owed.
+      ★ **POST-LANDING NOTE, 2026-10-08 (`decisions.md`, M12 TASK 1.3).** Every clause met as
+      redlined. Verdict NOT REACHABLE BY CONSTRUCTION; the ignore is `pnpm.auditConfig.ignoreGhsas:
+      ["GHSA-238p-pmpm-9mq7"]` in `package.json` (read there by every pnpm 10.x CI can resolve); audit
+      EXIT=0 with, EXIT=1 without, both forms. App chunk +132 B (the guard, residual 0); content script
+      md5-identical; lockfile zero-diff. **Accepted cost (R15): math inside a mermaid diagram renders as
+      source** — a 7.1 verdict item.
 
 *Group-1 acceptance (plan §6): D-D's confirmation is settled with a decomposed, ablation-proven number on
 both engines; the setup choice is made from measurement and recorded; the governed install is clean. This
@@ -1113,7 +1130,8 @@ discovered 1.2 (the audit bump). Gate 3 approved 22; 1.2 is human-scheduled, `de
 human-ruled and human-scheduled between 4.2 and 5.1, `decisions.md` "M12 RULINGS after task 4.1". 4.2 is
 re-scoped by the same entry (R6), not added or struck — the count moves by 3.4 alone.*
 ★ *2026-10-08: **25 tasks** — group 1 is (3) with the discovered 1.3 (the katex advisory exception, R13
-route (i)), human-ruled and human-scheduled between 5.1 and 5.2, `decisions.md` "M12 TASK 5.1".*
+route (i)), human-ruled and human-scheduled between 5.1 and 5.2, `decisions.md` "M12 TASK 5.1". R15
+widens 1.3's scope, not the count.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

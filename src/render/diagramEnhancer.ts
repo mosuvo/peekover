@@ -180,6 +180,12 @@ const SANITIZE_REJECTED = 'the drawn diagram was rejected by the sanitizer';
 const REMOTE_REFERENCE = 'its source references a remote resource';
 
 /**
+ * R15's math gate, same form. Distinct from {@link REMOTE_REFERENCE} because it is a distinct
+ * cause: the fence is declined for its math, not for a reference.
+ */
+const DIAGRAM_MATH = 'its source contains math ($$), which diagrams do not render';
+
+/**
  * Does this diagram source carry a reference to a remote resource? Two sub-patterns, both over the
  * raw text and neither knowing anything about mermaid's grammar (see the module header for why
  * that is the point rather than a shortcut).
@@ -217,6 +223,21 @@ const REMOTE_REFERENCE_RE = /\bhttps?:[^\s"'`]|(?:^|[\s"'`([{,;:=|])\/\/[A-Za-z0
 /** {@link REMOTE_REFERENCE_RE} as a predicate. Exported so the boundary can be asserted case by case. */
 export function hasRemoteReference(source: string): boolean {
   return REMOTE_REFERENCE_RE.test(source);
+}
+
+/**
+ * Does this diagram source carry `$$`? R15 (decisions.md, M12 TASK 1.3): katex is made
+ * unreachable BY CONSTRUCTION rather than assessed as unexploitable. The installed mermaid has ONE
+ * route into katex (`renderKatexUnsanitized`), and it returns early unless a label matches
+ * `/\$\$(.*?)\$\$/`. A label is a substring of the source, so a source with no `$$` cannot reach
+ * it — and a source that has one degrades here instead. That is the premise GHSA-238p-pmpm-9mq7's
+ * audit exception stands on; `diagramEnhancer.test.ts` pins it against the installed mermaid.
+ *
+ * Deliberately broader than mermaid's test (unbalanced, split across lines, inside a directive):
+ * the gate must be a SUPERSET, and a false positive costs only a diagram shown as source.
+ */
+export function hasDiagramMath(source: string): boolean {
+  return source.includes('$$');
 }
 
 /**
@@ -324,6 +345,9 @@ async function drawDiagram(
   // `render()`, which is the only moment at which its reference could have gone out; it takes
   // §3.8's degrade path and the fences around it are untouched (§4's per-fence isolation).
   if (hasRemoteReference(source)) return { failure: REMOTE_REFERENCE };
+  // R15: the same step, for katex (GHSA-238p-pmpm-9mq7). A `$$` fence never reaches `render()`,
+  // the only place mermaid could load and run katex.
+  if (hasDiagramMath(source)) return { failure: DIAGRAM_MATH };
 
   // Step one: THE CACHE (D-3, D-4, task 4.3). The key is content-addressed over the three
   // things that change what this diagram LOOKS like — the source, the effective theme, and the

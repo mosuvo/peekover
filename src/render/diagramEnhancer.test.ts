@@ -17,6 +17,10 @@
 // tests/browser/diagramRender.browser.test.ts on both engines.
 
 import { describe, it, expect, vi, afterEach, type Mock } from 'vitest';
+import { createRequire } from 'node:module';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { mount } from './mount';
 import {
   DIAGRAM_FENCE_SELECTOR,
@@ -24,6 +28,7 @@ import {
   diagramFencesIn,
   diagramSourceOf,
   enhanceDiagrams,
+  hasDiagramMath,
   hasRemoteReference,
 } from './diagramEnhancer';
 import {
@@ -631,6 +636,187 @@ describe("§4's source guard degrades a carrying fence and never calls the engin
     // The scan did not consume, trim or normalise anything on the way past.
     expect(render.mock.calls[0][1]).toBe('graph TD; A-->B;\n');
     expect(diagramSourceOf(shadow.querySelector('pre')!)).toBe('graph TD; A-->B;\n');
+  });
+});
+
+// ── R15 / GHSA-238p-pmpm-9mq7: THE MATH GATE (decisions.md, M12 TASK 1.3) ─────────────────────
+//
+// The audit exception for katex-via-mermaid stands on ONE premise: katex is unreachable because
+// every route into it requires `$$`, and a fence carrying `$$` degrades before `engine.render`.
+// These blocks ARE that premise's pin (R15 dropped the separate diagramEngine.test.ts pin):
+//
+//   1. THE SUPERSET — over a corpus, every input mermaid's OWN detection flags, ours flags too.
+//      Compared against mermaid's real `hasKatex`, imported from the INSTALLED package here in
+//      the test (never from shipped code — the import fence scans shipped files only).
+//   2. THE DRIFT PIN — the installed mermaid still has exactly ONE `import("katex")`, behind
+//      `if (!hasKatex(text)) return text`, with the regex quoted in decisions.md. A mermaid bump
+//      that moves any of it reds HERE, before the exception can silently outlive its proof.
+//   3. THE DEGRADE — a carrying fence never reaches the engine, and the fence beside it renders.
+//
+// Whether katex is REQUESTED on a real engine is the browser file's question
+// (`tests/browser/diagramKatexGate.browser.test.ts`, both engines) — jsdom loads no chunk at all.
+
+/** The installed mermaid's ESM core chunks — the graph `import('mermaid')` resolves to. */
+function mermaidCoreFiles(): string[] {
+  const root = dirname(createRequire(import.meta.url).resolve('mermaid/package.json'));
+  const chunks = join(root, 'dist', 'chunks', 'mermaid.core');
+  return [
+    join(root, 'dist', 'mermaid.core.mjs'),
+    ...readdirSync(chunks)
+      .filter((f) => f.endsWith('.mjs'))
+      .map((f) => join(chunks, f)),
+  ];
+}
+
+/** The one core chunk that defines mermaid's `$$` detection. */
+function katexGateChunk(): string {
+  const hits = mermaidCoreFiles().filter((f) => readFileSync(f, 'utf8').includes('var katexRegex ='));
+  expect(hits, 'GHSA-238p-pmpm-9mq7: mermaid no longer defines `katexRegex` in ONE core chunk — ' +
+    're-assess the audit exception (decisions.md, M12 TASK 1.3)').toHaveLength(1);
+  return hits[0];
+}
+
+const DRIFT = 'GHSA-238p-pmpm-9mq7 (decisions.md, M12 TASK 1.3): the installed mermaid changed its ' +
+  'katex entry — the audit exception rests on it; re-assess before touching this assertion';
+
+describe('R15 — the math-gate predicate is a SUPERSET of mermaid’s own `$$` detection', () => {
+  /** Mixed on purpose: some mermaid flags, some it does not; ours must flag every one it does. */
+  const CORPUS: readonly [string, string][] = [
+    ['a sequence message', 'sequenceDiagram\n  A->>B: $$x^2$$'],
+    ['a quoted flowchart label', 'flowchart TD\n  A["$$x^2$$"]'],
+    ['an unquoted label', 'graph TD\n  A[$$x^2$$] --> B'],
+    ['an edge label', 'graph TD\n  A -->|$$x$$| B'],
+    ['a state description', 'stateDiagram-v2\n  s1: $$x^2$$'],
+    ['empty math', 'sequenceDiagram\n  A->>B: $$$$'],
+    ['two formulas on a line', 'sequenceDiagram\n  A->>B: $$a$$ and $$b$$'],
+    ['$$ inside a %%{init}%% directive', '%%{init: {"title": "$$x$$"}}%%\ngraph TD\n  A-->B'],
+    ['an ESCAPED \\$$', 'sequenceDiagram\n  A->>B: \\$$x\\$$'],
+    ['$$ unbalanced', 'sequenceDiagram\n  A->>B: $$x^2'],
+    ['$$ across lines', 'sequenceDiagram\n  A->>B: $$x\n  B->>A: y$$'],
+    ['a single $', 'sequenceDiagram\n  A->>B: costs $5'],
+    ['single $ pairs', 'sequenceDiagram\n  A->>B: $x$ and $y$'],
+    ['a plain flowchart', 'graph TD; A-->B;'],
+    ['a plain sequence diagram', 'sequenceDiagram\n  Alice->>Bob: hello'],
+  ];
+
+  it.each(CORPUS)('flags whatever mermaid flags: %s', async (_name, source) => {
+    const { hasKatex } = (await import(/* @vite-ignore */ pathToFileURL(katexGateChunk()).href)) as {
+      hasKatex: (text: string) => boolean;
+    };
+    // The superset is asserted over the whole source AND every line of it: mermaid tests a LABEL,
+    // which is a substring of the source, so a label it would flag must sit inside what we scan.
+    for (const text of [source, ...source.split('\n')]) {
+      if (hasKatex(text)) {
+        expect(hasDiagramMath(source), `mermaid flags ${JSON.stringify(text)} and we do not`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('the corpus is not vacuous: mermaid flags some of it and leaves some alone', async () => {
+    const { hasKatex } = (await import(/* @vite-ignore */ pathToFileURL(katexGateChunk()).href)) as {
+      hasKatex: (text: string) => boolean;
+    };
+    const flagged = CORPUS.filter(([, s]) => s.split('\n').some((l) => hasKatex(l)));
+    expect(flagged.length).toBeGreaterThan(0);
+    expect(flagged.length).toBeLessThan(CORPUS.length);
+  });
+
+  it('does NOT flag a single $ or a diagram with no math (no over-degrade)', () => {
+    expect(hasDiagramMath('sequenceDiagram\n  A->>B: costs $5')).toBe(false);
+    expect(hasDiagramMath('sequenceDiagram\n  A->>B: $x$ and $y$')).toBe(false);
+    expect(hasDiagramMath('graph TD; A-->B;')).toBe(false);
+  });
+
+  it('answers the same on a second call', () => {
+    const source = 'sequenceDiagram\n  A->>B: $$x$$';
+    expect(hasDiagramMath(source)).toBe(true);
+    expect(hasDiagramMath(source)).toBe(true);
+  });
+});
+
+describe('R15 — the DRIFT PIN: the installed mermaid’s katex entry is still the one 1.3 assessed', () => {
+  it('detects math with exactly /\\$\\$(.*?)\\$\\$/g', () => {
+    const src = readFileSync(katexGateChunk(), 'utf8');
+    expect(src, DRIFT).toContain('var katexRegex = /\\$\\$(.*?)\\$\\$/g;');
+  });
+
+  it('has exactly ONE `import("katex")` in its whole core graph', () => {
+    const imports = mermaidCoreFiles().flatMap((f) =>
+      readFileSync(f, 'utf8').includes('import("katex")') ? [f] : [],
+    );
+    expect(imports, DRIFT).toHaveLength(1);
+    expect(imports[0], DRIFT).toBe(katexGateChunk());
+    // And exactly one occurrence inside that file.
+    expect(readFileSync(imports[0], 'utf8').split('import("katex")'), DRIFT).toHaveLength(2);
+  });
+
+  it('reaches that import only past `if (!hasKatex(text)) return text`', () => {
+    const src = readFileSync(katexGateChunk(), 'utf8');
+    const fn = src.indexOf('var renderKatexUnsanitized =');
+    const gate = src.indexOf('if (!hasKatex(text)) {\n    return text;\n  }', fn);
+    const entry = src.indexOf('import("katex")', fn);
+    expect(fn, DRIFT).toBeGreaterThan(-1);
+    expect(gate, DRIFT).toBeGreaterThan(fn);
+    // The gate is the function's FIRST statement and precedes the import.
+    expect(src.slice(fn, gate).split('\n'), DRIFT).toHaveLength(2);
+    expect(entry, DRIFT).toBeGreaterThan(gate);
+  });
+});
+
+describe('R15 — a fence carrying `$$` degrades and never reaches the engine', () => {
+  const CARRYING = 'sequenceDiagram\n  Alice->>Bob: $$x^2$$';
+
+  it('the carrying fence reaches `failed` with a marker naming THIS cause', async () => {
+    const { host, shadow } = mountedHost(fence('mermaid', CARRYING));
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const pre = shadow.querySelector('pre');
+    expect(pre?.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    const marker = shadow.querySelector(`.${DIAGRAM_ERROR_CLASS}`);
+    expect(marker?.textContent).toContain('contains math');
+    expect(marker?.textContent).not.toContain('could not be drawn');
+    expect(marker?.textContent).not.toContain('references a remote resource');
+    expect(render, 'GHSA-238p-pmpm-9mq7: a `$$` fence reached engine.render').toHaveBeenCalledTimes(0);
+    // §3.8's shape: the source stays visible, no stranded empty box.
+    expect(pre?.textContent).toContain('$$x^2$$');
+    expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(0);
+  });
+
+  it('PER-FENCE: the carrying fence degrades, the plain one beside it renders', async () => {
+    const { host, shadow } = mountedHost(
+      fence('mermaid', CARRYING) + '\n' + fence('mermaid', 'graph TD; A-->B;'),
+    );
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    const [carrying, clean] = [...shadow.querySelectorAll('pre[data-diagram]')];
+    expect(carrying.getAttribute(DIAGRAM_STATE_ATTR)).toBe('failed');
+    expect(clean.getAttribute(DIAGRAM_STATE_ATTR)).toBe('rendered');
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][1]).toBe('graph TD; A-->B;\n');
+  });
+
+  it('Peekover’s own math outside the fence does not degrade the diagram beside it', async () => {
+    const { host, shadow } = mountedHost(
+      '$$x^2$$\n\n' + fence('mermaid', 'graph TD; A-->B;'),
+    );
+    const { module, render } = fakeEngine(() => SVG);
+
+    enhanceDiagrams(host, { loader: async () => module });
+    await settle();
+
+    // `pre[data-diagram]`, not `pre`: M11 retains a <pre> as the math block's copy source.
+    expect(shadow.querySelector('pre[data-diagram]')?.getAttribute(DIAGRAM_STATE_ATTR)).toBe(
+      'rendered',
+    );
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });
 
