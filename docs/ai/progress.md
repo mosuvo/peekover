@@ -1,25 +1,27 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-08 (task 5.2 — D-7's conflict predicate `hasConflict` and the ONE baseline the
-compare and the dirty attribute both read; no write, no wiring; `decisions.md`'s "012 D-7" entry.)
+*Updated: 2026-10-09 (task 5.3 — **Save now writes on Chromium; `PERMISSIONS.md` carries the
+interim row; the download lands at 5.4**; `decisions.md`'s "012 D-6 — LANDED at task 5.3" entry.)
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
-3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 5.1 and 5.2 landed; **5.3 is next.**
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 5.1, 5.2 and 5.3 landed; **5.4 is next.**
 **Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
-**`PERMISSIONS.md` still says "cannot write" — correctly: no write path exists until 5.3, whose
-commit carries the signed text.**
+**`PERMISSIONS.md` carries SIGNED (a) and the INTERIM row (b′) since 5.3, pinned by
+`tests/permissionsLedger.test.ts`; 5.4 swaps (b′) for the final row (b) with the download.**
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
 and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are RESOLVED at 3.4. 3.3
 filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RESOLVED at 3.4.**
 **The editor is REACHABLE on
-`main` and can lose edits — exit discards without a warning (6.1), and Save reports "not yet
-available" (5.3): planned sequencing, not released. A watch re-render no longer destroys the buffer
-(4.1).**
-Current numbers: `.output` 5,817,152 B (Cr) / 5,817,268 B (Fx) against ≤ 7 MiB, content script
-342,652 B both engines (md5-identical across 3.4, 1.3 and 5.2), `dependencies` 11, `permissions: []`. M11 (math
+`main` and can still lose edits: an exit discards without a warning (6.1), and so do Revoke, a
+folder switch and a closed folder, which since 5.3 END the edit session (a question with the human —
+`decisions.md`). Save writes on Chromium; on Firefox, on a route with no file handle and when the
+write prompt is declined it says "not available here" and keeps the edit (the download is 5.4).
+Planned sequencing, not released. A watch re-render no longer destroys the buffer (4.1).**
+Current numbers: `.output` 5,820,589 B (Cr) / 5,820,705 B (Fx) against ≤ 7 MiB, content script
+342,652 B both engines (md5-identical across 3.4, 1.3, 5.2 and 5.3), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1141,43 +1143,94 @@ caller yet.** `decisions.md`'s "012 D-7" entry is the record. Two files: `editor
   items — the failure an earlier investigation predicted but could not reproduce. The cause was not
   investigated here.
 
+**M12 task 5.3 DONE, 2026-10-09 — Save writes on Chromium: permission at the click, the re-read and
+the compare BEFORE the write, the safe floor; the interim ledger row in the same commit; rulings A–C;
+routes 2 and 5.** `decisions.md`'s "012 D-6 — LANDED at task 5.3" entry is the record.
+- **Preflight deviation, human-approved.** The tree was NOT clean at kickoff: a comment-only diff in
+  `chromiumFolderSource.ts` and an untracked `tests/permissionsLedger.test.ts`, both from an
+  interrupted earlier start on this task. The human chose "adopt the leftovers". Both were
+  re-derived: the comment is route 5's (md5-proven); the test's literals were checked against the
+  5.1 entry by the test itself, and one adopted assertion was wrong and fixed — a bare
+  `/cannot write\b/` also matched the watch-relay row, which says that of the relay, truthfully.
+- **Built.** `EditorSave` is a binder (called once, at edit entry); the bound save takes
+  `{ text, baseline }`. `writeBack` in `appShell.ts` is the write. `textForDisk` / `isUniformCrlf`
+  (ruling A), `saveStatusText`, the save bar and `saveEditorSession` are in `editorView.ts`.
+  `AppController.saveEdit()` is ruling B's door for `main.ts`. `endEditSession()` runs at Revoke,
+  `paintIdle` and a folder switch. CSS in `EDITOR_CSS` only.
+- **Red-first, all observed** (the entry lists each): unit 27 red before the implementation; the
+  ledger 3 red, and one word dropped → red; in the real engine the compare, the view's catch, the
+  binding and the endings each ablated → red in their own units (out-of-band text gone from disk;
+  the failure silent; file B overwritten; a write landing after Revoke / close / switch); ruling B
+  both directions, both engines.
+- **Bytes.** App chunk 519,884 → 523,321 B (+3,437), decomposed to a −2 B residual (the entry's
+  table). Content script md5-identical both engines, with a firing control. Route 5: 278 of 278
+  shipped files md5-identical with only that file reverted.
+- **Full suite.** lint 0 · unit 1347 (+33: `editorView` +26, the ledger test 7) · browser, run
+  alone, 1821 passed / 29 skipped (+18 passed: `editorSave` 16, `exportShortcut` +2; +14 skipped:
+  `editorSave`'s Chromium-only cases on Firefox), 182 files, ZERO reds — no known flake fired,
+  `mathNetwork` included (6/6) · scanner clean over 79 files, self-test 7 + 10 · `pnpm audit --prod`
+  EXIT=0 · golden empty. Named: `editorSave` 16 (15 Cr + 1 Fx; 14 skipped) · `exportShortcut` 18 ·
+  `editorView` 70 · `editorEnhancer` 28 · `editorRender` 20 · `editorWatch` 12 · `editorPreview` 24
+  · `editorDegrade` 18 · `permissionsLedger` 7 · `firefoxFolderSource` 8 (unit; there is no
+  `chromiumFolderSource` unit file — its coverage is `folderGrant` 12 and `folderDrop` 10, browser)
+  · `htmlExport` 13 unit (the 26-site pin unmoved) + 8 browser · `manifest` 8.
+- **Zero-diff, confirmed:** `mount.ts`, `readerMode.ts`, `watchController.ts`, `editorEngine.ts`,
+  the diagram / math / code / table modules, `htmlExport.ts`, `runReader.ts`, `mountReader.ts`,
+  `contentWatch.ts`, `tests/golden/output/` — and `readerPane.ts`, `editorEnhancer.ts`.
+- **Kickoff vs file, flagged.** (i) The kickoff's "outcome carrying a KIND … 'failed'": `failed` is
+  a REJECTION, not a returned kind, so that one catch exists once. (ii) "CLEAR the dirty attribute
+  explicitly": built as a recompute against the advanced baseline — a bare removal would mark text
+  typed during the save as saved. (iii) `tasks.md` 5.3's body says "cannot save here yet"; the
+  redline's "not available here" rules. (iv) Three existing assertions were re-spelled (the entry
+  lists them); none was edited to make a behaviour pass that it used to forbid.
+- **Not proven here, by construction → 7.1:** the browser's real write prompt, a real folder on a
+  real disk, and Ctrl/Cmd+S pressed (not dispatched) inside the editor — including that the
+  keystroke carries the activation `requestPermission` needs.
+
 ## Up next
 
-**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (DONE — the katex exception, R15) → 5.2 (DONE)
-→ 5.3 (with its redline) → 5.4 → 5.5 (human) → 5.6 → 5.7.**
-**NEXT — M12 task 5.3.** `tasks.md` 5.3 is the line, and its ★ REDLINE block RULES where it and the
-body disagree. Draft the kickoff from the block, not only from the body:
-- **The ledger.** SIGNED (a) and the INTERIM row (b′) land in `PERMISSIONS.md` EXACTLY, copied from
-  `decisions.md`'s "M12 TASK 5.1", pinned by a ledger-text test; plus route 4's consistency edits
-  (`:31`, `:33-36`, `:40-41`).
-- **Route 5.** `chromiumFolderSource.ts`'s "Read-only mode" comment — a COMMENT-ONLY correction,
-  md5-identical bundles on both engines.
-- **Route 2, red-first.** (i) The handle is bound to the edit session AT EDIT ENTRY, never read from
-  the current file at click time. (ii) Revoke, closing the folder and switching folders END the edit
-  session and its handle — a save after either writes nothing.
-- **Ruling A.** A uniformly-CRLF raw read (`session.originalText`) writes CRLF; mixed / lone CR writes
-  the editor's LF and the status says the endings were normalised. Then
-  `session.advanceBaseline(<exactly what was written>)`.
-- **Ruling B.** Ctrl/Cmd+S in `data-mode="edit"` runs Save; outside edit it exports. Red-first both
-  ways. Ripples: `entrypoints/app/main.ts`, `tests/browser/exportShortcut.browser.test.ts`.
-- **Ruling C.** The hint (`data-watch-changed-in-edit`) WARNS; `hasConflict` DECIDES.
-- **The body.** Permission at the click → re-read through `read()` → `hasConflict(session.originalText,
-  reread)` → only on no conflict `createWritable()` → write → `close()` → advance → clear dirty. Safe
-  floor on conflict; a thrown write keeps the buffer and dirty; a real `<button>`; a polite live
-  region; SAME-LENGTH red-first on a real OPFS handle.
-- **What 5.2 left for it:** the advance seam and `hasConflict` have NO caller yet; clearing dirty at
-  the save is 5.3's (advance does not touch the attribute); the re-read, the write and the permission.
-**Ruled 2026-10-08, was "for the human" here:** the four save-time items (ledger wording, CRLF,
-Ctrl/Cmd+S, the hint) · the `katex` task (→ 1.3, landed via R15) · the import shape (→ post-M12,
-§ Carried items).
-**Byte snapshot — 5.2's measured figures, carry to 5.3's kickoff:** `.output` 5,817,152 B (Cr) / 5,817,268 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,522,880 / 1,522,764 B · zip 1,838,480 / 1,838,538 B · content
+**The order, as ruled 2026-10-08: 5.1 (SIGNED) → 1.3 (DONE) → 5.2 (DONE) → 5.3 (DONE, 2026-10-09)
+→ 5.4 → 5.5 (human) → 5.6 → 5.7.**
+**NEXT — M12 task 5.4, the download fallback.** `tasks.md` 5.4 is the line, with its 2026-10-08
+addition (`PERMISSIONS.md` joins its Files).
+- **The seam is one branch.** `writeBack` (`appShell.ts`) returns `{ kind: 'unavailable' }` at two
+  points — no handle / no `requestPermission`, and write access not granted. 5.4 turns those into
+  `downloadAs(text, <the bound file's name>, <an explicit markdown mime type>)` and a new outcome
+  kind; the THIRD `unavailable` (a binding the shell dropped) must stay a refusal — nothing may be
+  downloaded after Revoke.
+- **What text is downloaded** is a question the line does not answer: the buffer's LF, or ruling
+  A's `textForDisk`? There is no baseline to trust on a route with no re-read. Ask, do not assume.
+- **The ledger.** Replace the interim row (b′) with SIGNED (b) EXACTLY. `tests/permissionsLedger.test.ts`
+  holds both forms already (`SUBSTITUTIONS`): the swap is flipping which form is asserted present
+  and which absent — a test change, by design.
+- **The status copy** gains "saved as a download"; the six lines drafted at 5.3 are still unreviewed
+  (`decisions.md`).
+- **`editorSave.browser.test.ts`'s no-handle case asserts ZERO anchor clicks** ("no download: that
+  is task 5.4") — that assertion is 5.4's to change, deliberately.
+**With the human, from 5.3:** (1) should 6.1's guard also cover Revoke, a folder switch and a closed
+folder? They now end an edit session and discard a dirty buffer unasked — and a CANCELLED re-pick
+from the reopen hub, or a non-folder dropped on the page, takes the same path. (2) On a watched
+document a save's own write raises 4.2's hint, so later saves in that session say the file changed
+on disk while editing (reasoned, not observed) — for 5.5's walk or a ruling. (3) The status copy.
+(4) `editorEnhancer.ts:28-30`'s comment is stale ("Nothing calls `save`") — outside 5.3's Files.
+**Byte snapshot — 5.3's measured figures, carry to 5.4's kickoff:** `.output` 5,820,589 B (Cr) / 5,820,705 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,519,443 / 1,519,327 B · zip 1,839,360 / 1,839,418 B · content
 script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
-`c0115d89b10be306ffa0c77d2234a63e` (Fx), unchanged · the app chunk 519,884 B (+50, 5.2's baseline) · the
-four CodeMirror lazy chunks 35,035 + 54,846 + 209,748 + 307,869 B · katex 258,879 B (ships, unreachable)
-· manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1314 · browser
-1803 / 15 skipped (1802 + one isolated-rerun-cleared red, § Carried items) · golden empty ·
-**`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+`c0115d89b10be306ffa0c77d2234a63e` (Fx), unchanged · the app chunk 523,321 B (+3,437) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1347 · browser 1821 / 29 skipped
+(zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 5.3:**
+- **A test that must stub a handle method builds its `FolderSource` by hand.** `folderSourceFromHandle`
+  walks the directory and mints NEW handle objects, so a stub on the test's handle never reaches the
+  shell. `editorSave.browser.test.ts`'s `diskFile()` hands the shell the same object it keeps.
+- **Firefox's origin-private-file-system handles have no `requestPermission`** — a walked OPFS folder
+  there gives files WITH a handle that still cannot be written, so the save answers `unavailable`
+  (seen in `exportShortcut`'s ruling-B case). 5.4's Firefox route is reachable that way too.
+- **An ablation must be seen to fail on the claim, not on a cheaper check ahead of it.** The endings
+  test first reddened on "no longer in edit"; the disk read-back was moved in front so the red is the
+  write landing.
+- **Removal arms over-count where one piece is reachable only through another** (`textForDisk`
+  through the write) and under-count a helper two pieces share (`readerHost`) — pair arms settle both.
 `tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
 figure above supersedes it.
 **Carried inputs, from 3.4:**

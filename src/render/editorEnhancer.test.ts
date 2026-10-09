@@ -113,17 +113,23 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
     }
   });
 
+  // RE-SPELLED AT 5.3. The injected capability is now a binder, called once at edit entry, so
+  // "by identity" is the identity of what it RETURNED, and "nothing invokes it" (true of 3.2's
+  // plumbing) became "it is bound once, and the bound save is not called until a Save".
   it('readerPane threads an injected save into the session, by identity', async () => {
-    const save: EditorSave = vi.fn(async () => ({ ok: false as const, reason: 'fake' }));
+    const bound = vi.fn(async () => ({ kind: 'unavailable' as const }));
+    const save = vi.fn<EditorSave>(() => bound);
     const pane = createReaderPane(document, { save });
     document.body.appendChild(pane.element);
     hosts.push(pane.element);
     await pane.select({ name: 'doc.md', read: async () => DOC });
     const host = pane.element.querySelector<HTMLElement>('.peekover-app__reader__host')!;
 
+    expect(save).not.toHaveBeenCalled(); // not at mount: nothing is bound until edit is entered
     await clickUntil(host, 'edit');
-    expect(editorSessionFor(host)!.save).toBe(save);
-    expect(save).not.toHaveBeenCalled(); // plumbing only: nothing invokes it at this task
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(editorSessionFor(host)!.save).toBe(bound);
+    expect(bound).not.toHaveBeenCalled(); // entering edit saves nothing
   });
 
   it('a pane created with no options still edits; its session simply has no save', async () => {
@@ -137,7 +143,10 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
     expect(editorSessionFor(host)!.save).toBeUndefined();
   });
 
-  it('★ appShell injects a save whose body reports "not yet available" — and does nothing else', async () => {
+  // RE-SPELLED AT 5.3: 3.2's body was a stub that said "not yet available". The body is now the
+  // write (tests/browser/editorSave.browser.test.ts). What jsdom can still say of it is the route
+  // with nothing to write to: this file carries no handle, so the answer is `unavailable`.
+  it('★ appShell injects a save that, for a file with no handle, answers "unavailable" — and does nothing else', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     hosts.push(container);
@@ -146,7 +155,8 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
       deleteFolder: async () => undefined,
       putRecent: async () => undefined,
     };
-    const file: MarkdownFile = { path: 'notes.md', name: 'notes.md', read: async () => DOC };
+    const read = vi.fn(async () => DOC);
+    const file: MarkdownFile = { path: 'notes.md', name: 'notes.md', read };
     const source: FolderSource = { name: 'notes', files: [file], truncated: false, persistable: false };
     const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store });
     await app.openFolder();
@@ -160,9 +170,10 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
     await clickUntil(host, 'edit');
     const { save } = editorSessionFor(host)!;
     expect(typeof save).toBe('function');
-    const outcome = await save!('edited text');
-    expect(outcome.ok).toBe(false);
-    expect(outcome).toEqual({ ok: false, reason: expect.stringMatching(/not yet available/i) });
+    read.mockClear();
+    const outcome = await save!({ text: 'edited text', baseline: DOC });
+    expect(outcome).toEqual({ kind: 'unavailable' });
+    expect(read).not.toHaveBeenCalled(); // nothing to compare against, so nothing is re-read
   });
 });
 

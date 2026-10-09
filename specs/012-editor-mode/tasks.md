@@ -810,7 +810,7 @@ write beside a ledger that says "cannot write".*
       stays 5.3's. The lifecycle runs the LF and CRLF write cases (ruling A). The source-read check
       matches whole words, comments included. App chunk +50 B; content script md5-identical.
 
-- [ ] **5.3 The write path — permission at the save gesture, compare BEFORE write, the safe floor, the
+- [x] **5.3 The write path — permission at the save gesture, compare BEFORE write, the safe floor, the
       save-failure degrade, the status region; the signed ledger lands in THIS commit (D-6, D-7, D-9).**
       ★ **REDLINE, 2026-10-08 — to `decisions.md`'s "M12 TASK 5.1 — the `PERMISSIONS.md` ledger wording
       SIGNED by the human" entry. It ADDS to this task's scope and Verify; where it and the body below
@@ -862,6 +862,21 @@ write beside a ledger that says "cannot write".*
       write" claim is absent and the signed sentence present. `tests/manifest.test.ts` green,
       `permissions: []` on BOTH built manifests. Content-script bytes md5-identical. App-page delta
       decomposed. Golden EMPTY · manifest **654 / 770 B**. [D-6, D-7, D-9]
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "012 D-6 — LANDED at task 5.3"):* the injected
+      `EditorSave` is a BINDER, called once at edit entry; the session's bound save takes
+      `{ text, baseline }` and answers `saved` (with the string written) / `conflict` /
+      `unavailable`, a rejection being `failed`. The write is `writeBack` in `appShell.ts`; ruling
+      A's `textForDisk` and the status copy are in `editorView.ts`; Ctrl/Cmd+S goes through
+      `AppController.saveEdit()`. The no-handle and declined routes say "not available here" (the
+      redline and the signed row), not this body's "cannot save here yet". `chromiumFolderSource.ts`
+      is NOT zero-diff: its comment was corrected (route 5, md5-proven). **Ripples beyond this
+      line's Files, each forced by the signature change:** `src/render/editorView.test.ts`,
+      `src/render/editorEnhancer.test.ts` (three assertions re-spelled, listed in the entry).
+      `readerPane.ts` and `editorEnhancer.ts` are zero-diff. App chunk +3,437 B; content script
+      md5-identical. **One question is with the human** — whether 6.1's guard should also cover
+      Revoke, a folder switch and a closed folder, which now end an edit session and discard a
+      dirty buffer unasked — and one finding for 5.5: on a watched document a save's own write
+      raises 4.2's hint.
 
 - [ ] **5.4 The download fallback — the no-handle and declined-write routes (D-6).** TEST FIRST. With
       `activeFile.handle` undefined (Firefox; a dropped file) or permission not granted, Save calls the

@@ -57,6 +57,8 @@ import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppController, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { currentSettings, resetSettingsSeamForTest, saveSettings } from '../../src/settings/settingsSeam';
+import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
+import { EDITOR_STATUS_CLASS, editorSessionFor } from '../../src/render/editorView';
 
 function preventDefaultSpy(): ReturnType<typeof vi.spyOn> {
   return vi.spyOn(KeyboardEvent.prototype, 'preventDefault');
@@ -380,6 +382,139 @@ describe('task 8.1 (D-5) — triggerLastExport() reaches the IDENTICAL function 
       expect(currentSettings().lastExportFormat).toBe('some-removed-export-key'); // unchanged — the no-op writes nothing
     } finally {
       printSpy.mockRestore();
+    }
+  });
+});
+
+// ── (C) RULING B (012 task 5.3) — IN EDIT THE SHORTCUT IS SAVE; OUTSIDE EDIT IT IS UNCHANGED ─────
+//
+// Cases ADDED; nothing above is edited. The real `main.ts` listener, the real shell, the real
+// editor — the folder arrives through the `__peekoverHarness` seam on an origin-private-file-system
+// handle, because that is the only way a file gets opened in `main.ts`'s own shell without the
+// native picker (`appHarnessSeam.browser.test.ts`).
+//
+// THE INSTRUMENT, AND WHY IT IS A DELTA. An HTML export ends in a synthetic anchor click
+// (`htmlExport.ts`'s `downloadAs`), so anchor clicks per keystroke count exports — the spy also
+// swallows the click, so nothing is really downloaded. But every `main.ts` an earlier test or file
+// loaded left its listener on `document`, and one whose shell had a file open still exports on
+// every Ctrl+S. So the count is never read as an absolute: `stray` is what those listeners
+// contribute BEFORE this test's own page exists, and each claim is "this page added one export"
+// or "this page added none".
+//
+// The key is dispatched AT THE READER HOST: that is where `document` sees a real keystroke in the
+// editor arrive from (the editor is inside the host's shadow root, and the event is retargeted).
+//
+// RED-FIRST, both directions (progress.md's 5.3 record): the `saveEdit()` line removed from
+// `main.ts` → in edit this page exports. The export made unreachable → outside edit it does not.
+
+const SHORTCUT_ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
+
+describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and exports otherwise', () => {
+  const DOC_TEXT = '# Shortcut doc\n\nBody on disk.\n';
+  const TYPED = 'typed zqs';
+  let dirName: string | null = null;
+
+  async function opfsFolder(): Promise<{ dir: FileSystemDirectoryHandle; file: FileSystemFileHandle } | null> {
+    try {
+      const root = await navigator.storage.getDirectory();
+      dirName = `export-shortcut-5-3-${Math.trunc(performance.now())}`;
+      const dir = await root.getDirectoryHandle(dirName, { create: true });
+      const file = await dir.getFileHandle('notes.md', { create: true });
+      const w = await file.createWritable();
+      await w.write(DOC_TEXT);
+      await w.close();
+      if (typeof dir.values !== 'function') return null;
+      return { dir, file };
+    } catch {
+      return null;
+    }
+  }
+
+  afterEach(async () => {
+    delete window.__peekoverHarness;
+    if (dirName) {
+      const root = await navigator.storage.getDirectory();
+      await root.removeEntry(dirName, { recursive: true }).catch(() => undefined);
+      dirName = null;
+    }
+  });
+
+  it('★ RED-FIRST, both directions: reading → one export, as before; editing → a save and NO export; reading again → the export is back', async () => {
+    const folder = await opfsFolder();
+    if (!folder) {
+      console.log(`[5.3][${SHORTCUT_ENGINE}] ruling B: no usable origin private file system — not run on this engine`);
+      return;
+    }
+    const anchorClicks = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const spy = preventDefaultSpy();
+    try {
+      /** One Ctrl+S at `target`: how many listeners prevented the default, how many exports ran. */
+      const press = (target: EventTarget, meta = false): { reactions: number; exports: number } => {
+        saveSettings({ lastExportFormat: 'html' }); // re-pinned per press: a late settings load can move it
+        const before = anchorClicks.mock.calls.length;
+        const reactions = reactionsTo(spy, target, { meta });
+        return { reactions, exports: anchorClicks.mock.calls.length - before };
+      };
+
+      const stray = press(document); // what listeners left by earlier loads contribute
+
+      history.replaceState(null, '', `${location.pathname}?__peekoverHarness`);
+      await loadMain();
+      await window.__peekoverHarness!.openFromHandle(folder.dir);
+      const fileBtn = await waitFor(() =>
+        appRoot!.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
+      );
+      fileBtn.click();
+      const host = await waitFor(() => {
+        const el = appRoot!.querySelector<HTMLElement>('.peekover-app__reader__host');
+        return el?.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`) ? el : null;
+      });
+      expect(host.getAttribute('data-mode')).toBe('reading');
+
+      // OUTSIDE EDIT — the export, unchanged.
+      const reading = press(host);
+      expect(reading.reactions, 'this page prevents the default').toBe(stray.reactions + 1);
+      expect(reading.exports, 'outside edit this page adds exactly one export').toBe(stray.exports + 1);
+
+      // IN EDIT — a save, and no export.
+      host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      await waitFor(() => host.getAttribute('data-mode') === 'edit');
+      const session = editorSessionFor(host)!;
+      session.view.dispatch({ changes: { from: session.view.state.doc.length, insert: TYPED } });
+      const status = host.shadowRoot!.querySelector<HTMLElement>(`.${EDITOR_STATUS_CLASS}`)!;
+      expect(status.hidden, 'no save has run yet').toBe(true);
+
+      const editing = press(host);
+      expect(editing.reactions, 'the default is prevented in edit too').toBe(reading.reactions);
+      expect(editing.exports, 'in edit this page adds NO export').toBe(stray.exports);
+      await waitFor(() => !status.hidden);
+      const said = status.textContent ?? '';
+      const onDisk = await (await folder.file.getFile()).text();
+      console.log(`[5.3][${SHORTCUT_ENGINE}] ruling B: in edit, Ctrl+S → ${JSON.stringify(said)}; written=${onDisk === DOC_TEXT + TYPED}`);
+      // The SAME save as the button: its outcome, in the button's own status region. Chromium
+      // grants the write; an engine whose handles cannot ask for write access says so.
+      if (SHORTCUT_ENGINE === 'chromium') {
+        expect(said).toBe('Saved.');
+        expect(onDisk).toBe(DOC_TEXT + TYPED);
+      } else {
+        expect(said).toMatch(/^(Saved\.|Not saved: saving is not available here\.)/);
+        expect([DOC_TEXT, DOC_TEXT + TYPED]).toContain(onDisk);
+      }
+
+      // Cmd+S is the same key.
+      status.hidden = true;
+      const editingMeta = press(host, true);
+      expect(editingMeta.exports, 'Cmd+S in edit: no export either').toBe(stray.exports);
+      await waitFor(() => !status.hidden);
+
+      // OUT OF EDIT AGAIN — the export is back.
+      host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      await waitFor(() => host.getAttribute('data-mode') !== 'edit');
+      const after = press(host);
+      expect(after.exports, 'after leaving edit the export is back').toBe(stray.exports + 1);
+    } finally {
+      spy.mockRestore();
+      anchorClicks.mockRestore();
     }
   });
 });

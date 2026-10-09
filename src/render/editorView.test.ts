@@ -32,11 +32,22 @@ import {
   createPreviewCooldown,
   editorSessionFor,
   editorShellFor,
+  EDITOR_BAR_CLASS,
+  EDITOR_CHANGED_HINT_ATTR,
+  EDITOR_SAVE_CLASS,
+  EDITOR_STATUS_CLASS,
   hasConflict,
+  isUniformCrlf,
   renderPreview,
+  saveEditorSession,
+  saveStatusText,
   teardownEditorShell,
+  textForDisk,
   type EditorSave,
+  type EditorSaveOutcome,
+  type EditorSaveRequest,
 } from './editorView';
+import { CHANGED_IN_EDIT_ATTR } from '../watch/watchController';
 
 const DOC = '# Outer\n\nBody.\n\n## Second\n\nMore.';
 
@@ -671,14 +682,18 @@ describe('the session baseline — one source of truth for the compare and the d
   }
 
   it('a refused or failed save does not move it — only the advance seam does', async () => {
-    const refused = async () => ({ ok: false as const, reason: 'cannot save here yet' });
-    const failed = async (): Promise<never> => {
+    // 5.3 changed the injected capability's SHAPE (it binds at entry and takes the baseline), so
+    // the two fakes and the call are re-spelled; what is asserted is unchanged.
+    const refused: EditorSave = () => async () => ({ kind: 'unavailable' });
+    const failed: EditorSave = () => async (): Promise<never> => {
       throw new Error('the writable threw');
     };
     for (const save of [refused, failed]) {
       const { session, view } = await editing(CRLF_DOC, save);
       append(view, 'edit');
-      await session.save!(view.state.doc.toString()).catch(() => undefined);
+      await session
+        .save!({ text: view.state.doc.toString(), baseline: session.originalText })
+        .catch(() => undefined);
       expect(session.originalText).toBe(CRLF_DOC);
     }
   });
@@ -727,5 +742,279 @@ describe('no file metadata on the conflict path (D-7)', () => {
     const source = readFileSync(join(process.cwd(), 'src/render/editorView.ts'), 'utf8');
     expect(source.match(/\blastModified\b/g) ?? []).toEqual([]);
     expect(source.match(/\bsize\b/g) ?? []).toEqual([]);
+  });
+});
+
+// ── 012 task 5.3 — the save half: ruling A's text, the status copy, and what a save may move ───
+
+describe('ruling A — the text a save writes (5.3)', () => {
+  it('★ "uniformly CRLF" is: has a CRLF, no bare LF, no lone CR', () => {
+    expect(isUniformCrlf('a\r\nb\r\n')).toBe(true);
+    expect(isUniformCrlf('a\r\nb')).toBe(true); // no trailing break is still uniform
+    expect(isUniformCrlf('a\nb\n')).toBe(false); // LF
+    expect(isUniformCrlf('a\r\nb\nc\r\n')).toBe(false); // mixed: one bare LF
+    expect(isUniformCrlf('\nb\r\n')).toBe(false); // a bare LF as the first character
+    expect(isUniformCrlf('a\r\nb\rc\r\n')).toBe(false); // a lone CR
+    expect(isUniformCrlf('a\r\n\r')).toBe(false); // a lone CR as the last character
+    expect(isUniformCrlf('one line')).toBe(false); // no break at all: nothing to preserve
+    expect(isUniformCrlf('')).toBe(false);
+  });
+
+  const BUFFER = 'one\ntwo\n\nthree'; // what the editor hands over: LF only
+
+  it.each([
+    ['an LF file', 'x\ny\n', BUFFER],
+    ['a uniformly CRLF file', 'x\r\ny\r\n', 'one\r\ntwo\r\n\r\nthree'],
+    ['a mixed file', 'x\r\ny\nz', BUFFER],
+    ['a file with a lone CR', 'x\ry\r\n', BUFFER],
+    ['an empty file', '', BUFFER],
+  ])('%s → the expected bytes', (_what, baseline, expected) => {
+    expect(textForDisk(BUFFER, baseline)).toBe(expected);
+  });
+
+  it('a CRLF write, read back through the editor’s own rule, is the buffer (no doubled CR)', () => {
+    const written = textForDisk(BUFFER, 'x\r\ny\r\n');
+    expect(written).not.toContain('\r\r');
+    expect(written.replace(/\r\n?/g, '\n')).toBe(BUFFER);
+  });
+
+  it('an empty buffer writes an empty file, whatever the endings were', () => {
+    expect(textForDisk('', 'x\r\ny\r\n')).toBe('');
+    expect(textForDisk('', 'x\n')).toBe('');
+  });
+});
+
+describe('the status copy — one line per outcome, said in words (5.3; the signed interim row)', () => {
+  const saved = (normalised: boolean, changedWhileEditing: boolean): string =>
+    saveStatusText({ kind: 'saved', normalised, changedWhileEditing });
+
+  it('names each of the row’s four outcomes distinctly', () => {
+    const lines = [
+      saved(false, false),
+      saveStatusText({ kind: 'conflict' }),
+      saveStatusText({ kind: 'unavailable' }),
+      saveStatusText({ kind: 'failed' }),
+    ];
+    expect(new Set(lines).size).toBe(4);
+    expect(lines[0]).toBe('Saved.');
+    expect(lines[1]).toMatch(/^Not saved: the file changed on disk\./);
+    expect(lines[2]).toMatch(/^Not saved: saving is not available here\./);
+    expect(lines[3]).toMatch(/^The save failed\./);
+  });
+
+  it('every line that is not "saved" says the edit is still here; only "failed" does not claim nothing was written', () => {
+    for (const kind of ['conflict', 'unavailable', 'failed'] as const) {
+      expect(saveStatusText({ kind })).toMatch(/your edit is still here\.$/i);
+    }
+    expect(saveStatusText({ kind: 'conflict' })).toContain('Nothing was written');
+    expect(saveStatusText({ kind: 'unavailable' })).toContain('Nothing was written');
+    expect(saveStatusText({ kind: 'failed' })).not.toContain('Nothing was written');
+  });
+
+  it('★ rulings A and C QUALIFY "saved" — each alone, and both', () => {
+    expect(saved(true, false)).toBe('Saved. Line endings were normalised to LF.');
+    expect(saved(false, true)).toMatch(/^Saved\. The file changed on disk while you were editing/);
+    expect(saved(false, true)).not.toContain('normalised');
+    const both = saved(true, true);
+    expect(both).toContain('Line endings were normalised to LF.');
+    expect(both).toContain('The file changed on disk while you were editing');
+    expect(both.startsWith('Saved.')).toBe(true);
+  });
+});
+
+describe('the save control and what a save may move (5.3)', () => {
+  afterEach(() => {
+    for (const host of hosts) teardownEditorShell(host);
+  });
+
+  type View = NonNullable<ReturnType<typeof editorSessionFor>>['view'];
+  const append = (view: View, text: string): void =>
+    view.dispatch({ changes: { from: view.state.doc.length, insert: text } });
+
+  /** A binder whose bound save answers from `answer`, recording every request it was sent. */
+  function fakeSave(answer: (request: EditorSaveRequest) => Promise<EditorSaveOutcome>) {
+    const requests: EditorSaveRequest[] = [];
+    const bind = vi.fn<EditorSave>(() => (request) => {
+      requests.push(request);
+      return answer(request);
+    });
+    return { bind, requests };
+  }
+
+  async function editing(source: string, save?: EditorSave) {
+    const host = mountedHost(source);
+    const engine = await loadEditorEngine(host);
+    const session = buildEditor(engine, host, { save });
+    const shadow = host.shadowRoot!;
+    return {
+      host,
+      session,
+      view: session.view,
+      button: () => shadow.querySelector<HTMLElement>(`.${EDITOR_SAVE_CLASS}`),
+      status: () => shadow.querySelector<HTMLElement>(`.${EDITOR_STATUS_CLASS}`),
+    };
+  }
+
+  it('★ the capability is BOUND once, at build — not at the click', async () => {
+    const { bind } = fakeSave(async ({ text }) => ({ kind: 'saved', written: text }));
+    const { host, view } = await editing(DOC, bind);
+    expect(bind).toHaveBeenCalledTimes(1);
+
+    append(view, 'X');
+    await saveEditorSession(host);
+    await saveEditorSession(host);
+
+    expect(bind).toHaveBeenCalledTimes(1);
+  });
+
+  it('the control is one real <button> in a bar, with a status region that is hidden while empty', async () => {
+    const { bind } = fakeSave(async ({ text }) => ({ kind: 'saved', written: text }));
+    const { host, button, status } = await editing(DOC, bind);
+    const bars = host.shadowRoot!.querySelectorAll(`.${EDITOR_BAR_CLASS}`);
+    expect(bars).toHaveLength(1);
+    expect(button()!.tagName).toBe('BUTTON'); // selected by class alone
+    expect((button() as HTMLButtonElement).type).toBe('button');
+    expect(button()!.textContent).toBe('Save');
+    expect(status()!.getAttribute('role')).toBe('status');
+    expect(status()!.hidden).toBe(true);
+    expect(status()!.textContent).toBe('');
+  });
+
+  it('a session with no save capability gets no control at all', async () => {
+    const { host, session } = await editing(DOC);
+    expect(session.save).toBeUndefined();
+    expect(host.shadowRoot!.querySelector(`.${EDITOR_BAR_CLASS}`)).toBeNull();
+    await expect(saveEditorSession(host)).resolves.toBeUndefined();
+  });
+
+  it('★ the request carries the BUFFER and the session’s raw baseline', async () => {
+    const CRLF = '# T\r\n\r\nBody.\r\n';
+    const { bind, requests } = fakeSave(async () => ({ kind: 'conflict' }));
+    const { host, view } = await editing(CRLF, bind);
+    append(view, 'typed');
+    await saveEditorSession(host);
+    expect(requests).toEqual([{ text: '# T\n\nBody.\ntyped', baseline: CRLF }]);
+  });
+
+  it('★ SUCCESS: the baseline advances to exactly what was written, dirty clears, the status says saved', async () => {
+    const { bind } = fakeSave(async ({ text }) => ({ kind: 'saved', written: text }));
+    const { host, session, view, button, status } = await editing(DOC, bind);
+    append(view, 'X');
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+
+    button()!.click();
+    await vi.waitFor(() => expect(status()!.hidden).toBe(false));
+
+    expect(session.originalText).toBe(`${DOC}X`);
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+    expect(status()!.textContent).toBe('Saved.');
+    expect(button()!.textContent).toBe('Save');
+  });
+
+  it.each([
+    ['a conflict', async (): Promise<EditorSaveOutcome> => ({ kind: 'conflict' }), /file changed on disk/],
+    ['an unavailable route', async (): Promise<EditorSaveOutcome> => ({ kind: 'unavailable' }), /not available here/],
+    [
+      'a save that throws',
+      async (): Promise<EditorSaveOutcome> => {
+        throw new Error('the writable threw');
+      },
+      /save failed/,
+    ],
+  ])('★ %s moves NOTHING: baseline, dirty and buffer as they were — and says so in text', async (_what, answer, said) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { bind } = fakeSave(answer);
+    const { host, session, view, status } = await editing(DOC, bind);
+    append(view, 'X');
+
+    await saveEditorSession(host);
+
+    expect(session.originalText).toBe(DOC);
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+    expect(view.state.doc.toString()).toBe(`${DOC}X`);
+    expect(status()!.hidden).toBe(false);
+    expect(status()!.textContent).toMatch(said);
+    warn.mockRestore();
+  });
+
+  it('★ text typed WHILE the save is in flight stays dirty against the new baseline', async () => {
+    let release!: (outcome: EditorSaveOutcome) => void;
+    const { bind } = fakeSave(() => new Promise<EditorSaveOutcome>((r) => (release = r)));
+    const { host, session, view } = await editing(DOC, bind);
+    append(view, 'X');
+    const saving = saveEditorSession(host);
+    append(view, 'Y'); // lands after the buffer was read
+    release({ kind: 'saved', written: `${DOC}X` });
+    await saving;
+
+    expect(session.originalText).toBe(`${DOC}X`);
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+  });
+
+  it('a second activation while one save is in flight sends nothing more', async () => {
+    let release!: (outcome: EditorSaveOutcome) => void;
+    const { bind, requests } = fakeSave(() => new Promise<EditorSaveOutcome>((r) => (release = r)));
+    const { host, button } = await editing(DOC, bind);
+    const first = saveEditorSession(host);
+    expect(button()!.textContent).toBe('Saving…');
+    expect(button()!.getAttribute('aria-busy')).toBe('true');
+    await saveEditorSession(host);
+    expect(requests).toHaveLength(1);
+    release({ kind: 'conflict' });
+    await first;
+    expect(button()!.hasAttribute('aria-busy')).toBe(false);
+  });
+
+  it('★ ruling A in the status: a mixed-ending file saved as LF is "normalised"; the NEXT save is not', async () => {
+    const { bind } = fakeSave(async ({ text, baseline }) => ({ kind: 'saved', written: textForDisk(text, baseline) }));
+    const { host, session, view, status } = await editing('a\r\nb\nc', bind);
+    append(view, 'X');
+    await saveEditorSession(host);
+    expect(session.originalText).toBe('a\nb\ncX');
+    expect(status()!.textContent).toBe('Saved. Line endings were normalised to LF.');
+
+    append(view, 'Y');
+    await saveEditorSession(host);
+    expect(status()!.textContent).toBe('Saved.');
+  });
+
+  it('a uniformly CRLF file saved as CRLF is not "normalised", and dirty clears against the CRLF baseline', async () => {
+    const { bind } = fakeSave(async ({ text, baseline }) => ({ kind: 'saved', written: textForDisk(text, baseline) }));
+    const { host, session, view, status } = await editing('a\r\nb\r\n', bind);
+    append(view, 'X');
+    await saveEditorSession(host);
+    expect(session.originalText).toBe('a\r\nb\r\nX');
+    expect(status()!.textContent).toBe('Saved.');
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+  });
+
+  it('★ ruling C: the hint, read at the activation, QUALIFIES a save that went through — and decides nothing', async () => {
+    const outcomes: EditorSaveOutcome[] = [{ kind: 'saved', written: `${DOC}X` }, { kind: 'conflict' }];
+    const { bind, requests } = fakeSave(async () => outcomes.shift()!);
+    const { host, view, status } = await editing(DOC, bind);
+    append(view, 'X');
+    host.toggleAttribute(EDITOR_CHANGED_HINT_ATTR, true);
+
+    await saveEditorSession(host);
+    expect(requests, 'the hint did not stop the save being attempted').toHaveLength(1);
+    expect(status()!.textContent).toMatch(/^Saved\. The file changed on disk while you were editing/);
+
+    await saveEditorSession(host); // the compare says conflict: the safe floor, hint or no hint
+    expect(status()!.textContent).toMatch(/^Not saved: the file changed on disk\./);
+  });
+
+  it('DRIFT PIN: the hint literal read here is the one watchController writes', () => {
+    expect(EDITOR_CHANGED_HINT_ATTR).toBe(CHANGED_IN_EDIT_ATTR);
+  });
+
+  it('teardown removes the bar with the rest, and a later session gets exactly one', async () => {
+    const { bind } = fakeSave(async ({ text }) => ({ kind: 'saved', written: text }));
+    const { host } = await editing(DOC, bind);
+    teardownEditorShell(host);
+    expect(host.shadowRoot!.querySelector(`.${EDITOR_BAR_CLASS}`)).toBeNull();
+    const engine = await loadEditorEngine(host);
+    buildEditor(engine, host, { save: bind });
+    expect(host.shadowRoot!.querySelectorAll(`.${EDITOR_BAR_CLASS}`)).toHaveLength(1);
+    expect(bind).toHaveBeenCalledTimes(2); // one binding per session
   });
 });

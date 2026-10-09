@@ -73,7 +73,7 @@ import {
   getSnapshotMeta,
   getSnapshotText,
 } from './snapshots';
-import { readerSourceFor } from '../render/readerMode';
+import { exitEditMode, readerSourceFor } from '../render/readerMode';
 import { registerDiffContext, createDiffContext } from '../render/diffRegistry';
 // The identity seam (008 task 1.4, D-1). Data only, imports nothing — the app page's half of the
 // same registry the content script writes from `runReader`.
@@ -116,7 +116,15 @@ import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/w
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceMath } from '../render/mathEnhancer';
-import { enhanceEditor, type EditorSave } from '../render/editorEnhancer';
+import { EDIT_CONTROL_CLASS, enhanceEditor, type EditorSave } from '../render/editorEnhancer';
+import {
+  hasConflict,
+  saveEditorSession,
+  teardownEditorShell,
+  textForDisk,
+  type EditorSaveOutcome,
+  type EditorSaveRequest,
+} from '../render/editorView';
 import { copyAllMathAsLatex, copyAllMathAsMathml } from '../render/mathView';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
@@ -191,8 +199,57 @@ const renderWithEnhancements =
     enhanceCode(target);
   };
 
-/** What the editor's injected save reports until the write itself lands (012 task 5.3). */
-const SAVE_NOT_YET_AVAILABLE = 'Saving is not yet available.';
+/** The file one edit session may write, fixed at edit entry — and dropped (`file` set to null)
+ *  when that session is ended from the shell's side: Revoke, a closed folder, a folder switch. */
+interface EditBinding {
+  file: MarkdownFile | null;
+}
+
+/** `requestPermission` is not in the DOM lib's handle type yet (`reopen.ts` types the folder
+ *  handle's the same way). Optional: an engine with handles but without it cannot grant a write. */
+type WritableFileHandle = FileSystemFileHandle & {
+  requestPermission?(descriptor: { mode: 'readwrite' }): Promise<PermissionState>;
+};
+
+/**
+ * THE WRITE (012 task 5.3; D-6, D-7, ruling A) — the one place Peekover changes a file on disk.
+ *
+ * In this order, and the order is the design:
+ *   1. WRITE ACCESS, asked of the browser on the bound file's OWN handle, first — while the Save
+ *      click's activation is fresh. Never on the folder handle, never before the click.
+ *   2. THE RE-READ, through the bound file's own `read()`, then `hasConflict` against the session's
+ *      baseline. A difference is the SAFE FLOOR: nothing is written.
+ *   3. THE WRITE: `textForDisk` chooses the bytes (ruling A), then createWritable → write → close.
+ *      The answer carries exactly that string, which the session makes its new baseline.
+ *
+ * No handle (Firefox; any route without one), write access not granted, or a binding the shell
+ * has since dropped → `unavailable`, and nothing is read or written. A throw from the re-read or
+ * the write is not caught here: it rejects, the edit view reports "failed", and the half-open
+ * writable is aborted so nothing of it is committed. The two steps are not atomic — a change
+ * landing between the compare and the write is not caught (the ledger row says so).
+ */
+async function writeBack(
+  binding: EditBinding,
+  { text, baseline }: EditorSaveRequest,
+): Promise<EditorSaveOutcome> {
+  const file = binding.file;
+  const handle: WritableFileHandle | undefined = file?.handle;
+  if (!file || !handle?.requestPermission) return { kind: 'unavailable' };
+  const granted = await handle.requestPermission({ mode: 'readwrite' }).catch(() => 'denied' as const);
+  if (granted !== 'granted' || binding.file !== file) return { kind: 'unavailable' };
+  if (hasConflict(baseline, await file.read())) return { kind: 'conflict' };
+  if (binding.file !== file) return { kind: 'unavailable' }; // dropped while the file was re-read
+  const written = textForDisk(text, baseline);
+  const writable = await handle.createWritable();
+  try {
+    await writable.write(written);
+    await writable.close();
+  } catch (err) {
+    await writable.abort().catch(() => undefined);
+    throw err;
+  }
+  return { kind: 'saved', written };
+}
 
 /** The subset of `store` the shell uses. The write methods are required (grant flow, group 3);
  *  the read + pin methods (group 5) are OPTIONAL so a 3-method fake store (existing jsdom /
@@ -542,6 +599,12 @@ export interface AppController {
    * graceful no-op.
    */
   triggerLastExport(): void;
+  /**
+   * Ruling B (012 task 5.3): if the open document is being edited, run its Save — the same one
+   * the edit view's Save button runs — and return `true`; otherwise do nothing and return
+   * `false`. `main.ts`'s Ctrl/Cmd+S handler calls this first and exports only on `false`.
+   */
+  saveEdit(): boolean;
 }
 
 /**
@@ -667,13 +730,20 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   //
   // Built HERE and handed down, never reached for from below: the reader pane and the editor
   // modules receive a function and call it, and none of them holds a handle or names a handle
-  // type. This closure is the one place that will — it is declared inside `mountAppShell`, where
+  // type. This closure is the one place that does — it is declared inside `mountAppShell`, where
   // `activeFile` (and the handle that file may carry) lives.
   //
-  // ★ PLUMBING ONLY AT TASK 3.2. The body reports that saving is not yet available and does
-  // nothing else: no write, no permission request, nothing on disk, no download. The write lands
-  // at task 5.3, in this body, behind the ledger sign-off (5.1).
-  const saveActiveDocument: EditorSave = async () => ({ ok: false, reason: SAVE_NOT_YET_AVAILABLE });
+  // ★ IT BINDS AT EDIT ENTRY (task 5.3, route 2(i)). The edit view calls this once as a session
+  // begins, and what it gets back can only ever write the file that was open THEN: `activeFile`
+  // is read here, into the binding, and never again. A save reading `activeFile` at the click
+  // would write whatever file had since been opened. One binding is live at a time — beginning a
+  // session drops the one before it, so a save function kept from an ended session writes nothing.
+  let editBinding: EditBinding | null = null;
+  const saveActiveDocument: EditorSave = () => {
+    if (editBinding) editBinding.file = null;
+    const binding: EditBinding = (editBinding = { file: activeFile });
+    return (request) => writeBack(binding, request);
+  };
   const renderEnhanced = renderWithEnhancements(saveActiveDocument);
 
   const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
@@ -1162,6 +1232,39 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     exportToggle.disabled = activeFile == null;
   }
 
+  /** The reader pane's mount host, or null while a designed state is showing. */
+  const readerHost = (): HTMLElement | null =>
+    readerPane.element.querySelector<HTMLElement>('.peekover-app__reader__host');
+
+  /**
+   * END ANY OPEN EDIT SESSION (task 5.3, route 2(ii)) — called where the folder is revoked, closed
+   * or switched. The binding goes FIRST, so from this line no save can write, including one whose
+   * function was taken earlier; then edit is left the way the user leaves it — the edit control,
+   * whose click is exit + teardown and puts its own label back (ruling R3). The direct calls
+   * after it are the same two steps, for a host whose control is somehow not there.
+   *
+   * ★ IT DISCARDS AN UNSAVED BUFFER WITHOUT ASKING. So does every other exit today; the guard is
+   * task 6.1's, and 6.1 names closing the tab, selecting another file and leaving edit — not
+   * these paths. Reported at 5.3 as a question, not decided here.
+   */
+  function endEditSession(): void {
+    if (editBinding) editBinding.file = null;
+    editBinding = null;
+    const host = readerHost();
+    if (host?.getAttribute('data-mode') !== 'edit') return;
+    host.shadowRoot?.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)?.click();
+    if (host.getAttribute('data-mode') !== 'edit') return;
+    exitEditMode(host);
+    teardownEditorShell(host);
+  }
+
+  function saveEdit(): boolean {
+    const host = readerHost();
+    if (host?.getAttribute('data-mode') !== 'edit') return false;
+    void saveEditorSession(host);
+    return true;
+  }
+
   // --- reopen-hub (recents/pins) view -------------------------------------
 
   /** Does the remembered folder for `folderId` still carry a live handle (Chromium)? Decides
@@ -1526,6 +1629,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    *  optionally above a designed notice (e.g. "No folder was opened." after a cancel). Never
    *  blank. */
   function paintIdle(notice?: { text: string; tone?: 'warn' }): void {
+    endEditSession(); // the folder is closed: no session may outlive it (5.3, route 2(ii))
     grantState = IDLE_GRANT;
     activeFolderId = null;
     activeSource = null;
@@ -1645,6 +1749,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     }
 
     const source = outcome.source;
+    endEditSession(); // a folder switch: the session belonged to the folder being left (5.3)
     activeFolderId = existingFolderId ?? newId();
     const folderId = activeFolderId;
     setActiveFile(null);
@@ -1736,6 +1841,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   /** Revoke: drop the in-memory handle + delete the stored folder record, then return to
    *  the idle affordance and clear the reader. Real, not cosmetic (spec 002 §3.2). */
   async function revokeAccess(): Promise<void> {
+    // FIRST, before any await below: Revoke drops the file handle with the folder (5.3, route
+    // 2(ii); the ledger's edit save-back row), so no save can land while the store is cleared.
+    endEditSession();
     const folderId = activeFolderId;
     if (folderId) {
       // D-10: revoke ERASES the folder's snapshots — contents must not outlive access to their
@@ -1795,5 +1903,6 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     openFolder: runOpenFolder,
     refresh: refreshPersisted,
     triggerLastExport,
+    saveEdit,
   };
 }

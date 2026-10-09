@@ -1,6 +1,171 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · 012 D-6 — LANDED at task 5.3: Save WRITES on Chromium — write access asked at the
+  click, the file re-read and compared BEFORE the write, the safe floor on a conflict — with the
+  interim `PERMISSIONS.md` row in the same commit. The download fallback is NOT built (5.4). No
+  human ruling was taken during this task; ONE QUESTION is put to the human at the end of this
+  entry, and three findings are flagged.**
+  **The plan's text.** Plan §0 D-6's draft entry, quoted because `tasks.md` lands each D-value's
+  draft with its implementing commit: *"012 D-6 — `FileSystemFileHandle.requestPermission({mode:'readwrite'})`
+  is a standard web-platform, per-handle, user-gesture-gated API with no browser-extension manifest
+  counterpart; verified against the current WICG File System Access spec, MDN, and Chrome's own
+  extension-context discussion, not training knowledge. §7-1's own central risk did not surprise."*
+  That sentence is about the permission mechanism only, and 5.3 built on it as written:
+  `permissions: []` is unmoved on both manifests. The plan's D-6 BODY also describes the fallback
+  ("on anything else … fall back to a client-side download — reusing … `downloadAs`") — **that part
+  lands at 5.4, not here**: at 5.3 a save with no handle, or with write access not granted, says
+  "not available here" and writes nothing (the signed interim row).
+  **THE SAVE SIGNATURE (D-3's revisit-when, taken).** `editorView.ts`:
+  - `EditorSave = () => EditorSessionSave` — the injected capability is now a BINDER. Its name is
+    kept, so `readerPane.ts` and both `enhanceEditor(…, { save })` call sites are zero-diff.
+  - `EditorSessionSave = ({ text, baseline }) => Promise<EditorSaveOutcome>` — `text` is the buffer
+    (LF), `baseline` is `session.originalText`.
+  - `EditorSaveOutcome = { kind: 'saved'; written } | { kind: 'conflict' } | { kind: 'unavailable' }`;
+    a REJECTION is the fourth outcome, `failed`. One-to-one with the signed interim row's list —
+    "saved, not saved because the file changed on disk, not available here, or failed". Ruling A's
+    "line endings normalised" and ruling C's "changed on disk while you were editing" are QUALIFIERS
+    on `saved`, added by the view (`EditorSaveResult`), not outcomes of their own.
+  No render module names `FileSystemFileHandle` (the 3.2 source pin is unedited and green).
+  **THE BINDING (route 2(i)).** `buildEditor` calls the binder ONCE, at edit entry. Its body in
+  `appShell.ts` reads `activeFile` there, into a per-session binding object, and never again; the
+  bound save takes the handle AND `read()` from that object. A later `setActiveFile` moves the
+  variable, not the binding. One binding is live at a time: beginning a session drops the one
+  before it.
+  **THE ENDINGS (route 2(ii)).** `endEditSession()` runs at three places — the first statement of
+  `revokeAccess` (before its store awaits), `paintIdle` (the one painter of "no folder is open"),
+  and the success branch of `applyOutcome` (a folder switch). It nulls the binding's file FIRST, so
+  a save function taken earlier answers `unavailable`, then leaves edit by clicking the edit
+  control — R3's exit, which also puts the control's label back — with the two direct calls behind
+  it. `editorEnhancer.ts` is zero-diff.
+  **THE ORDER OF A SAVE.** `writeBack` (module-level in `appShell.ts`): `requestPermission({ mode:
+  'readwrite' })` on the bound file's own handle → on `'granted'`, the re-read through the bound
+  `read()` → `hasConflict(baseline, reread)` → `textForDisk` → `createWritable()` → `write` →
+  `close()` → `{ kind: 'saved', written }`. The view then calls `session.advanceBaseline(written)`
+  and RECOMPUTES the dirty attribute against the new baseline — not a bare removal, so text typed
+  while the save was in flight stays dirty. A throw from the re-read or the write is not caught in
+  the shell: the half-open writable is aborted and the rejection reaches the view's one catch,
+  which says "failed". A throw from `requestPermission` itself is read as not granted.
+  **RULING A, AS BUILT.** `isUniformCrlf(text)`: contains `\r\n`, and no `\n` without a `\r` before
+  it, and no `\r` without a `\n` after it. Uniform → the buffer with `\n` → `\r\n`; anything else
+  (LF, mixed, a lone CR, no break at all, empty) → the buffer's LF. The status adds "Line endings
+  were normalised to LF." exactly when the baseline held a `\r` and the written text holds none.
+  **RULING B, AS BUILT.** `AppController.saveEdit(): boolean` — true iff the reader host is
+  `data-mode="edit"`, in which case it has started that session's save (`saveEditorSession`, the
+  function the button's click runs). `main.ts`: `preventDefault()`, then `if (app.saveEdit())
+  return;`, then the export as before. `main.ts` imports no editor module.
+  **RULING C, AS BUILT.** The hint is read by literal (`EDITOR_CHANGED_HINT_ATTR`, drift-pinned in
+  `editorView.test.ts` to `watchController`'s export) at the activation, before the first await. It
+  reaches nothing but the status line.
+  **THE CONTROLS.** A bar at the top of the edit shell, built with the SESSION (so
+  `buildEditorShell` alone still builds two panes): a `<button>` reading "Save" ("Saving…" and
+  `aria-busy` while one runs; a second activation meanwhile does nothing) and a `role="status"`
+  line, `hidden` while empty. No outcome has a colour. CSS is in `EDITOR_CSS` only.
+  **THE INTERIM LEDGER LANDED.** `PERMISSIONS.md` carries SIGNED (a) and the interim row (b′) of the
+  "M12 TASK 5.1" entry (below) — copied out of that entry by a script, not retyped — plus route 4's
+  three consistency edits. `tests/permissionsLedger.test.ts` (new; beside `manifest.test.ts`, there
+  being no earlier test of this file's text) pins both exactly, the old summary sentence absent,
+  (b)'s three download sentences absent, and that its own literals are the 5.1 entry's text.
+  **ROUTE 5.** `chromiumFolderSource.ts`'s comment now says the FOLDER handle is read-only and that
+  a file opened for editing may be written at Save through its own handle. COMMENT ONLY: a build with
+  ONLY that file put back to HEAD is md5-identical to the full build in all 278 shipped files (139
+  per engine).
+  **TESTS, RED-FIRST.** Unit, `editorView.test.ts` 44 → 70 (+26; 27 red before the
+  implementation, the re-spelled case among them): the outcome → status mapping, `isUniformCrlf` /
+  `textForDisk` over LF, uniform-CRLF, mixed, lone-CR and empty, bound-once, advance and dirty
+  moving ONLY on `saved`, typed-during-save staying dirty, the hint as a qualifier, the drift pin.
+  `tests/permissionsLedger.test.ts` 7 (3 red against the unedited ledger; one word dropped from
+  (a) → red). Real engine, `tests/browser/editorSave.browser.test.ts` (new) — 15 on Chromium on
+  origin-private-file-system handles, 1 on both engines (the no-handle route; on Firefox the other
+  14 are skipped by design): save + second save · SAME-LENGTH · ruling A on disk, both shapes ·
+  the failing writable · the declined prompt · permission before re-read · the control ·
+  ruling C (i) and (ii) on a WATCHED document · route 2(i) · route 2(ii) ×3. Each fixture asserts
+  its watch state. The failure and the declined prompt are stubs on the TEST'S OWN handle
+  (`createWritable`, `requestPermission`) — the object the shell holds; no seam was added to
+  production code. Ablations, each red in its own units and restored:
+  - the compare removed → SAME-LENGTH: status "Saved.", the out-of-band text GONE from disk; and
+    ruling C (ii) saves.
+  - the view's catch removed → the failing writable leaves the status EMPTY (the failure silent).
+  - the binding read at the click → route 2(i): file B overwritten, A not written.
+  - `endEditSession` made a no-op → all three endings: the captured save answers `saved` and the
+    file is written.
+  - `exportShortcut.browser.test.ts` 16 → 18 (one case added, both engines; nothing existing
+    edited): the `saveEdit()` line removed from `main.ts` → in edit the page exports (1, want 0);
+    the export made unreachable → outside edit it does not (0, want 1). On Firefox the in-edit save
+    answers "not available here" — its handles cannot ask for write access.
+  **BYTES.** Content script md5-IDENTICAL, both engines (`97b1b869…` / `c0115d89…`,
+  342,652 B); the instrument fires — one rule added to `CONTAINED_CSS` moves both md5s and the
+  bytes to 342,658. Manifests 654 / 770 B, `permissions: []`. The app chunk is the ONLY file whose
+  bytes changed: 519,884 → 523,321 B (**+3,437**), both engines; 83 other files per engine
+  changed md5 by the app chunk's new hash alone (same-length names, every one the same number of bytes).
+  `.output` 5,820,589 / 5,820,705 B (+3,437 each; headroom 1,519,443 / 1,519,327 B under 7 MiB);
+  zip 1,839,360 / 1,839,418 B (+880 each). Decomposed by removal arms (each a Chrome build with
+  one piece taken out; pairs where a marginal could hide a shared piece):
+
+  | Piece | Alone | Notes |
+  |---|---|---|
+  | the controls — bar, `run`, the status copy, `saveEditorSession`, the binder call | 1,429 | what is left with every arm below removed |
+  | the CSS (`EDITOR_CSS`) | 658 | |
+  | the save body (`writeBack`) | 365 | plus the two shared rows below |
+  | endings (`endEditSession`, three call sites) | 205 | |
+  | ruling B (`saveEdit`, the `main.ts` line) | 186 | |
+  | ruling C (the hint read, its sentence) | 174 | |
+  | ruling A (the qualifier, its sentence) | 98 | plus the shared row below |
+  | the binding (the object, its drop, two re-checks) | 36 | plus the shared row below |
+  | shared: `textForDisk` + `isUniformCrlf`, reachable only through the body | 146 | body ∩ ruling A |
+  | shared: the two `binding.file` re-checks inside the body | 53 | body ∩ binding |
+  | shared: `readerHost()`, kept by either of its two callers | 65 | ruling B + endings |
+  | shared: the `editBinding` variable | 24 | binding + endings |
+  | **sum** | **3,439** | measured +3,437 — **residual −2 B, not attributed** |
+  **THE STATUS COPY — DRAFTED, FOR REVIEW (not signed text; the agent's wording):**
+  - saved — "Saved."
+  - saved, ruling A — "Saved. Line endings were normalised to LF."
+  - saved, ruling C — "Saved. The file changed on disk while you were editing, but its content was
+    the same when checked."
+  - conflict — "Not saved: the file changed on disk. Nothing was written, and your edit is still
+    here."
+  - not available — "Not saved: saving is not available here. Nothing was written, and your edit
+    is still here."
+  - failed — "The save failed. Your edit is still here." (It does not claim nothing was written: a
+    failure at `close()` cannot promise that.)
+  - while running — the button reads "Saving…".
+  `tasks.md` 5.3's body says these routes "report 'cannot save here yet'"; the REDLINE and the
+  signed row say "not available here", and the redline rules.
+  **★ THE QUESTION FOR THE HUMAN (step 0(c)).** Revoke, a folder switch and a closed folder now END
+  an open edit session — and so DISCARD a dirty buffer, without asking. 6.1's guard names closing
+  or reloading the tab, selecting another file, and leaving edit; it does not name these three.
+  *Should 6.1's guard also cover Revoke, a folder switch and a closed folder — or is discarding
+  there accepted?* One of them is easy to reach by accident: `paintIdle` also runs when a re-pick
+  from the reopen hub is CANCELLED or fails, and when something that is not a folder is dropped on
+  the page — those already closed the open folder before this task; they now also end the edit.
+  **FINDINGS, FLAGGED.**
+  - **On a WATCHED document, a save's own write raises the hint.** The watch sees the file change
+    (it did — Peekover wrote it), holds it behind the edit, and sets `data-watch-changed-in-edit`.
+    Every LATER save in that session is then "Saved. The file changed on disk while you were
+    editing…", which is true of the disk and misleading about its cause. `watchController.ts` is
+    zero-diff at this task, so it is not fixed here. Reasoned from 4.2's rule (the attribute is set
+    whenever a change is held during edit), NOT observed: this task's watched fixtures are
+    hand-driven. Home: 5.5's walk, or a ruling before it.
+  - **The binding snapshots `activeFile`, which is not always the file on screen.** `selectFolderFile`
+    sets `activeFile` before the file's read resolves, and `AppController.selectFile` (the
+    store-free seam; in production only the DEV console handle) does not set it at all. In those
+    windows a session could bind a file other than the one in its buffer. The compare is what
+    protects it — the baseline is the buffer's file, the re-read is the bound file's — so a write
+    needs the two files to hold identical text. Not built around; stated.
+  - **`editorEnhancer.ts:28-30` is now stale** ("Nothing calls `save` (the save control is 5.3)").
+    The file is outside 5.3's list and nothing in the Verify line requires it, so it was left.
+  **Existing assertions re-spelled (three; the behaviour each pinned is what 5.3 replaces — the R1
+  precedent):** `editorEnhancer.test.ts` — "readerPane threads an injected save … by identity" (the
+  identity is now of what the binder returned; "nothing invokes it" became "bound once, and the
+  bound save not called") and "appShell injects a save whose body reports 'not yet available'"
+  (now: for a file with no handle it answers `unavailable` and re-reads nothing);
+  `editorView.test.ts` — "a refused or failed save does not move it" (the two fakes and the call
+  take the new shape; what is asserted is unchanged). Both files are ripples the type change
+  forces under the lint and unit clauses.
+  *Revisit-when:* 5.4 (the download; the row (b′) → (b) swap is a change to the ledger test) · 5.5
+  (the walk, on this floor) · 6.1 (the question above) · 7.1 (the live picker, a real prompt, a real
+  disk; the status copy; Ctrl/Cmd+S pressed for real in the editor).
+
 - **2026-10-08 · 012 D-7 — the conflict-DETECTION predicate and the ONE baseline LANDED at task 5.2.
   Content comparison, strict equality; no metadata; no write, no caller yet.**
   **The plan's text.** Plan §0 D-7 carries NO "`decisions.md` entry draft" sentence (D-1 to D-6 and

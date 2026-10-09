@@ -121,6 +121,10 @@ if (root) {
     // Ruling M-1, decisions.md 2026-09-04 · M10 10.4), and the rarer no-op when the stored value
     // is genuinely unrecognized.
     e.preventDefault();
+    // Ruling B (012 task 5.3): while the document is being edited this is Save — the edit view's
+    // own, reached through the shell, so no editor module is imported here. Outside edit
+    // `saveEdit()` does nothing and returns false, and the export runs exactly as before.
+    if (app.saveEdit()) return;
     app.triggerLastExport();
   });
 

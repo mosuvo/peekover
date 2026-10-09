@@ -31,8 +31,11 @@ interface DirectoryPickerWindow {
 }
 
 /**
- * Open the native directory picker (one user gesture → the OS folder dialog). Read-only
- * mode: Peekover never writes to the chosen folder. This is the ONE line that cannot run
+ * Open the native directory picker (one user gesture → the OS folder dialog). The FOLDER
+ * handle is read-only (`mode: 'read'`): nothing is ever written through it. One file the user
+ * opens for editing may be written when they click Save — through that file's OWN handle, after
+ * the browser grants write access to it (012 task 5.3; the edit save-back row in
+ * `docs/trust/PERMISSIONS.md`). This is the ONE line that cannot run
  * headlessly (Task 0) — real-engine tests bypass it and drive `folderSourceFromHandle`
  * with an OPFS handle instead; the live picker is confirmed at the human gate (6.3).
  */

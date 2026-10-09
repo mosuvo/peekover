@@ -1420,16 +1420,43 @@ export const CONTAINED_CSS = /* css */ `
 // exists only while an edit view does, and not in READER_CSS: a `:host([data-mode="edit"])` rule
 // there is a new `:host` site (htmlExport.test.ts pins the count) and would ship to the content
 // script, which has no edit mode.
+//
+// THE SAVE BAR (012 task 5.3). A row across the top of the split, inside its border: the Save
+// button, then the status line. The grid gains a first row sized to the bar (`auto`), and the two
+// panes are PLACED in the row below it — placed, not auto-flowed, because a session with no save
+// capability has no bar, and auto-flow would then put the panes in the `auto` row and collapse
+// them to their content. With no bar that first row is simply empty and takes no height. Stacked
+// (<= 720px) the preview moves to a third row. `minmax(0,1fr)` rather than `1fr`: a pane is a
+// scroll box and must not grow the row to fit what it holds.
+//   - The button is the pill family's shape at the bar's scale, in --ink on --panel with a --line
+//     border; hover moves the border to --faint, as the edit control's does.
+//   - The status line is --ink text and nothing else. No outcome has a colour: what happened is
+//     said in words (the control's own text while a save is running, this line once it has ended),
+//     so there is no state here that colour alone carries.
+//   - `min-width:0` lets a long status line wrap inside the bar instead of widening the grid.
+// Tokens used, each already in this sheet's set: --line, --panel, --ink, --faint, --sans.
 export const EDITOR_CSS = /* css */ `
 .peekover-editor{display:none}
 :host([data-mode="edit"]) .peekover-mode-toggle{display:none}
 :host([data-mode="edit"]) .peekover-editor{
-  display:grid;grid-template-columns:1fr 1fr;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);
   height:60vh;margin:56px 32px 130px;
   border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
 }
 :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:calc(var(--toc-w) + 32px)}
 :host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{margin-top:90px}
+.peekover-editor__bar{
+  grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:12px;
+  padding:6px 10px;border-bottom:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font:12.5px/1.4 var(--sans);
+}
+.peekover-editor__save{
+  flex:none;font:inherit;font-weight:600;color:var(--ink);background:var(--panel);
+  border:1px solid var(--line);border-radius:999px;padding:4px 14px;cursor:pointer;
+}
+.peekover-editor__save:hover{border-color:var(--faint)}
+.peekover-editor__status{margin:0;min-width:0}
+.peekover-editor__source,.peekover-editor__preview{grid-row:2}
 .peekover-editor__source{
   min-width:0;overflow:auto;
   background:var(--code-bg);color:var(--ink);font:13.5px/1.8 var(--mono);
@@ -1444,8 +1471,8 @@ export const EDITOR_CSS = /* css */ `
 .peekover-editor__source .cm-editor .cm-tooltip{background:var(--panel);color:var(--ink);border-color:var(--line)}
 .peekover-editor__preview{min-width:0;overflow:auto;border-left:1px solid var(--line)}
 @media (max-width:720px){
-  :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:1fr 1fr;height:90vh}
-  .peekover-editor__preview{border-left:none;border-top:1px solid var(--line)}
+  :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);height:90vh}
+  .peekover-editor__preview{grid-row:3;border-left:none;border-top:1px solid var(--line)}
 }
 `;
 
