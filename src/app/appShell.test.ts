@@ -1719,3 +1719,164 @@ describe('appShell (008 task 3.4 — the table toolbar reaches the app page, D-6
     expect(toolbarsIn(host)[0]).not.toBe(first);
   });
 });
+
+// ── 012 task 6.1 — the unsaved-changes guard: which triggers ask, and when the action runs ─────
+//
+// The decision and its timing, with a REAL edit session (the engine loads in jsdom): with unsaved
+// changes each trigger shows the dialog and its action has not begun; without them the action
+// simply runs. Focus containment, `inert` and a real Escape are the real-engine suite's
+// (tests/browser/editorUnsaved.browser.test.ts), and the dialog's own contract is
+// `unsavedGuard.test.ts`'s.
+describe('appShell (012 task 6.1 — the unsaved-changes guard)', () => {
+  let container: HTMLElement;
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  const DIALOG = '.peekover-unsaved';
+  const dialog = (): HTMLElement | null => container.querySelector<HTMLElement>(DIALOG);
+  const hostOf = (): HTMLElement => container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+  const control = (): HTMLElement => hostOf().shadowRoot!.querySelector<HTMLElement>('.peekover-edit-toggle')!;
+  const dropNow = (): boolean =>
+    container.querySelector('.peekover-app')!.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+
+  async function until(fn: () => unknown, what: string): Promise<void> {
+    const end = Date.now() + 15000;
+    while (!fn()) {
+      if (Date.now() > end) throw new Error(`timed out: ${what}`);
+      await new Promise<void>((r) => setTimeout(r, 10));
+    }
+  }
+
+  /** `docs` open with a.md on screen and IN EDIT; `dirty` types into it. */
+  async function editing(dirty: boolean) {
+    const calls = { picker: 0, regrant: 0, drop: 0, readsOfB: 0 };
+    const b: MarkdownFile = {
+      path: 'b.md',
+      name: 'b.md',
+      read: async () => {
+        calls.readsOfB += 1;
+        return '# B';
+      },
+    };
+    let pickerOutcome: OpenFolderOutcome = { ok: true, source: sourceOf('docs', [mdFile('a.md', '# A\n\nbody'), b]) };
+    const store = memStore({
+      folders: [folderRow({ id: 'H', name: 'kept-handle', handle: {} as FileSystemDirectoryHandle })],
+      pins: [{ id: 'p', kind: 'folder', folderId: 'H', path: '', name: 'kept-handle', pinnedAt: 1 }],
+    });
+    const app = mountAppShell(container, {
+      store,
+      openFolder: async () => {
+        calls.picker += 1;
+        return pickerOutcome;
+      },
+      reopenFromHandle: async () => {
+        calls.regrant += 1;
+        return { ok: true, source: sourceOf('kept-handle', []) };
+      },
+      dropToOutcome: async () => {
+        calls.drop += 1;
+        return { ok: true, source: sourceOf('dropped', []) };
+      },
+    });
+    await app.openFolder();
+    calls.picker = 0;
+    pickerOutcome = { ok: true, source: sourceOf('picked', []) };
+    container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
+    await until(() => hostOf()?.shadowRoot?.querySelector('.peekover-edit-toggle'), 'the edit control');
+    control().click();
+    await until(() => hostOf().getAttribute('data-mode') === 'edit', 'edit mode');
+    const { editorSessionFor } = await import('../render/editorView');
+    const session = editorSessionFor(hostOf())!;
+    if (dirty) session.view.dispatch({ changes: { from: 0, insert: 'typed ' } });
+    return { app, calls, buffer: () => editorSessionFor(hostOf())?.view.state.doc.toString() };
+  }
+
+  type Rig = Awaited<ReturnType<typeof editing>>;
+  const TRIGGERS: [string, (rig: Rig) => void][] = [
+    ['the edit control', () => control().click()],
+    ['a tree selection', () => container.querySelectorAll<HTMLElement>('[role="treeitem"][data-kind="file"]')[1].click()],
+    ['Revoke', () => container.querySelector<HTMLElement>('.peekover-app__chip-revoke')!.click()],
+    ['openFolder()', ({ app }) => void app.openFolder()],
+    ['a reopen-hub entry', () => container.querySelector<HTMLElement>('.peekover-recents__entry')!.click()],
+    ['a drop', () => void dropNow()],
+    ['selectFile()', ({ app }) => void app.selectFile({ name: 'seam.md', read: async () => '# seam' })],
+  ];
+
+  it.each(TRIGGERS)('★ DIRTY — %s asks, and nothing of the action has begun', async (_name, trigger) => {
+    const rig = await editing(true);
+    const before = rig.buffer();
+    trigger(rig);
+    await flush();
+    await flush();
+
+    expect(rig.buffer(), 'the typed text is still in a live session').toBe(before);
+    expect(dialog(), 'the guard asked').not.toBeNull();
+    expect(rig.calls.picker).toBe(0);
+    expect(rig.calls.regrant).toBe(0);
+    expect(rig.calls.readsOfB).toBe(0);
+    expect(container.querySelector('.peekover-app__chip')?.textContent).toContain('docs');
+
+    container.querySelector<HTMLElement>('.peekover-unsaved__keep')!.click();
+    await flush();
+    expect(dialog()).toBeNull();
+    expect(rig.buffer()).toBe(before);
+    expect(hostOf().getAttribute('data-mode')).toBe('edit');
+    expect(rig.calls.picker + rig.calls.regrant + rig.calls.readsOfB, 'and Keep editing started nothing').toBe(0);
+  });
+
+  it.each(TRIGGERS)('CLEAN — %s asks nothing', async (_name, trigger) => {
+    const rig = await editing(false);
+    trigger(rig);
+    expect(dialog(), 'no dialog at the trigger').toBeNull();
+    await flush();
+    await flush();
+    expect(dialog(), 'and none after').toBeNull();
+    expect(container.querySelector('.peekover-app__reader__host')?.getAttribute('data-mode') ?? null).not.toBe('edit');
+  });
+
+  it('★ Discard edits starts the action INSIDE its own click — where the picker gets its activation', async () => {
+    const rig = await editing(true);
+    void rig.app.openFolder();
+    await flush();
+    expect(rig.calls.picker).toBe(0);
+
+    container.querySelector<HTMLElement>('.peekover-unsaved__discard')!.click();
+    expect(rig.calls.picker, 'called before the click returned').toBe(1);
+    expect(hostOf().getAttribute('data-mode'), 'and the session was ended first').not.toBe('edit');
+    await flush();
+    await flush();
+    expect(container.querySelector('.peekover-app__chip')?.textContent).toContain('picked');
+  });
+
+  it('★ a drop is captured DURING its event, then asked about; Keep editing drops it', async () => {
+    const rig = await editing(true);
+    const before = rig.buffer();
+    dropNow();
+    expect(rig.calls.drop, 'taken before the event returned').toBe(1);
+    await flush();
+    await flush();
+    expect(dialog()).not.toBeNull();
+    expect(container.querySelector('.peekover-app__chip')?.textContent, 'not applied while asking').toContain('docs');
+
+    container.querySelector<HTMLElement>('.peekover-unsaved__keep')!.click();
+    await flush();
+    await flush();
+    expect(container.querySelector('.peekover-app__chip')?.textContent, 'and never applied').toContain('docs');
+    expect(rig.buffer()).toBe(before);
+  });
+
+  it('while the question is up, another trigger is ignored', async () => {
+    const rig = await editing(true);
+    control().click();
+    await flush();
+    dropNow();
+    void rig.app.openFolder();
+    await flush();
+    expect(container.querySelectorAll(DIALOG)).toHaveLength(1);
+    expect(rig.calls.drop).toBe(0);
+    expect(rig.calls.picker).toBe(0);
+  });
+});

@@ -58,6 +58,11 @@
 // because the modules that read it (the watch deferral, the unsaved-changes guard) sit on the far
 // side of an import fence and may not import this one (tasks.md F-4).
 //
+// THE TAB-CLOSE GUARD IS WRITTEN WITH IT (6.1). `markDirty` is the one place the attribute is set
+// or removed, and it adds or removes this host's `beforeunload` listener in the same call: the
+// browser asks before closing or reloading exactly while the attribute is present. Every in-page
+// way out is asked about by the app page instead (`app/unsavedGuard.ts`), which reads the attribute.
+//
 // Nothing here writes a file, asks for a permission or names a handle type. `save` is a function
 // the app page hands in; what this module does with it is THE SAVE HALF, below.
 //
@@ -439,6 +444,35 @@ export function editorSessionFor(host: HTMLElement): EditorSession | undefined {
   return undefined;
 }
 
+/** Per dirty host: its claim on the tab closing or reloading (task 6.1). */
+const unloadClaims = new WeakMap<HTMLElement, (event: BeforeUnloadEvent) => void>();
+
+/**
+ * Write the dirty attribute — and, WITH it, the `beforeunload` claim: while a host is dirty the
+ * browser asks before the tab closes or reloads, and at no other time. The two are written here
+ * and nowhere else, so neither can be present without the other; a listener is added once per
+ * dirty host and removed the moment that host is clean or its session ends, leaving nothing on
+ * the window. The dialog raised is the browser's own — a page can put no words in it.
+ */
+function markDirty(host: HTMLElement, dirty: boolean): void {
+  const claim = unloadClaims.get(host);
+  if (dirty) {
+    host.setAttribute(EDITOR_DIRTY_ATTR, 'true');
+    if (claim) return;
+    const ask = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+      event.returnValue = true; // engines that predate preventDefault() here
+    };
+    unloadClaims.set(host, ask);
+    window.addEventListener('beforeunload', ask);
+    return;
+  }
+  host.removeAttribute(EDITOR_DIRTY_ATTR);
+  if (!claim) return;
+  unloadClaims.delete(host);
+  window.removeEventListener('beforeunload', claim);
+}
+
 /** End the host's session, live or stale: cancel its pending preview render, destroy the view
  *  and clear the dirty attribute. */
 function endEditorSession(host: HTMLElement): void {
@@ -448,7 +482,7 @@ function endEditorSession(host: HTMLElement): void {
   previews.get(session)?.cancel();
   saveBars.get(session)?.bar.remove();
   session.view.destroy();
-  host.removeAttribute(EDITOR_DIRTY_ATTR);
+  markDirty(host, false);
 }
 
 /** Run a save on the host's live session, exactly as its Save button does. Resolves once the
@@ -483,9 +517,7 @@ export function buildEditor(
   /** The dirty attribute, written from the one baseline. Length first: a different length
    *  settles it without building the string. */
   const syncDirty = (doc: EditorDoc): void => {
-    const dirty = doc.length !== normalisedBaseline.length || doc.toString() !== normalisedBaseline;
-    if (dirty) host.setAttribute(EDITOR_DIRTY_ATTR, 'true');
-    else host.removeAttribute(EDITOR_DIRTY_ATTR);
+    markDirty(host, doc.length !== normalisedBaseline.length || doc.toString() !== normalisedBaseline);
   };
   const preview = createPreviewCooldown((text) => {
     if (!session || editorSessionFor(host) !== session) return; // orphaned by an outer re-mount

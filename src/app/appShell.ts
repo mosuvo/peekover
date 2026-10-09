@@ -130,6 +130,7 @@ import {
   type EditorSaveOutcome,
   type EditorSaveRequest,
 } from '../render/editorView';
+import { hasUnsavedEdit, openUnsavedDialog } from './unsavedGuard';
 import { copyAllMathAsLatex, copyAllMathAsMathml } from '../render/mathView';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
@@ -796,6 +797,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // takes a file only when the one selected IS the one rendered (`renderedFile`); otherwise it
   // binds nothing — not `ended` — and Save is the download (5.4), under the rendered file's name.
   let editBinding: EditBinding | null = null;
+  // The unsaved-changes guard's two flags (task 6.1; the block above `askToDiscard`).
+  let asking = false;
+  let passing = false;
   const saveActiveDocument: EditorSave = () => {
     if (editBinding) dropBinding(editBinding);
     const file = renderedFile === activeFile ? activeFile : null;
@@ -851,6 +855,23 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
 
+  // EXIT 1 OF THE GUARD — "Stop editing" (task 6.1). In CAPTURE, so the shell hears the click
+  // before the control inside the reader's shadow root does: with unsaved changes it goes no
+  // further until the user has answered, and "Keep editing" means it never arrives.
+  readerPane.element.addEventListener(
+    'click',
+    (event) => {
+      if (passing || !hasUnsavedEdit(readerHost())) return;
+      const control = event
+        .composedPath()
+        .find((node) => (node as Partial<Element>).classList?.contains(EDIT_CONTROL_CLASS));
+      if (!control) return;
+      event.stopPropagation();
+      askToDiscard(() => exitByControl(control as HTMLElement));
+    },
+    true,
+  );
+
   body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, body);
   container.replaceChildren(shell);
@@ -875,7 +896,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   });
   shell.addEventListener('drop', (e) => {
     e.preventDefault(); // FIRST — stop the browser navigating to the dropped folder
-    void runDrop(e.dataTransfer);
+    if (busy || asking) return;
+    // TAKEN NOW, asked about after (task 6.1): what a drop carries is only readable during this
+    // dispatch, so the routing starts here whatever the answer will be. "Keep editing" abandons
+    // its result — nothing of it is applied.
+    const dropped = dropToOutcomeFn(e.dataTransfer);
+    dropped.catch(() => undefined);
+    void guarded(() => runDrop(dropped));
   });
 
   // --- grant state + the active folder ------------------------------------
@@ -1352,18 +1379,90 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    * whose click is exit + teardown and puts its own label back (ruling R3). The direct calls
    * after it are the same two steps, for a host whose control is somehow not there.
    *
-   * ★ IT DISCARDS AN UNSAVED BUFFER WITHOUT ASKING. So does every other exit today; the guard is
-   * task 6.1's, and ruling R16 puts these three paths under it.
+   * ★ IT DISCARDS AN UNSAVED BUFFER WITHOUT ASKING — the asking is done before it is called
+   * (task 6.1, below). By the time a path reaches this the session is clean, or the user has
+   * answered "Discard edits"; its click goes through the guard for that reason.
    */
   function endEditSession(): void {
     if (editBinding) dropBinding(editBinding);
     editBinding = null;
     const host = readerHost();
     if (host?.getAttribute('data-mode') !== 'edit') return;
-    host.shadowRoot?.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)?.click();
+    exitByControl(host.shadowRoot?.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`));
     if (host.getAttribute('data-mode') !== 'edit') return;
     exitEditMode(host);
     teardownEditorShell(host);
+  }
+
+  // ── THE UNSAVED-CHANGES GUARD (012 task 6.1; rulings R6, R16, R23) ─────────────────────────
+  //
+  // Every way out of an edit session asks first when the buffer has unsaved changes
+  // (`hasUnsavedEdit`), and asks nothing when it has none. It asks AT THE TRIGGER — the first
+  // line where what the user wants is known and nothing has happened yet — because by the time
+  // a session is ENDING the thing that ended it is already done: the other file is being read,
+  // the folder is switched, the re-pick was cancelled.
+  //
+  //   the edit control ............ the capture listener on the reader pane (above)
+  //   a file in the tree .......... `onSelect`, before `selectFolderFile` starts the read
+  //   Revoke ...................... the chip's callback
+  //   opening a folder ............ the CTA and `AppController.openFolder`, before the picker
+  //   a reopen-hub entry .......... before the re-grant, or the picker of a re-pick
+  //   a drop ...................... in the drop handler, once its contents are taken
+  //   `AppController.selectFile` .. the call
+  //   tab close / reload .......... `beforeunload` — `editorView.ts`, the browser's own dialog
+  //
+  // "KEEP EDITING" PERFORMS NOTHING: no read, no picker, no re-grant, no state written. So a
+  // watched document's held change stays held and 4.2's hint stays up (R6, the stay direction).
+  //
+  // "DISCARD EDITS" ENDS THE SESSION, THEN ACTS — both inside the click, which is what gives a
+  // picker or a permission request its user activation. On the shell's paths the ending is
+  // `endEditSession`: the binding goes first, so nothing is written or downloaded afterwards.
+  // On the edit control it is the control's OWN exit and the binding is kept — R19 needs it:
+  // after Save, more typing and a discard, the reading view must still show what was saved, and
+  // `showSaved` refuses a dropped binding. Either way the dirty attribute clears as edit is
+  // left, and a watch then flushes what it held — the on-disk text (R6, the discard direction).
+  //
+  // A re-pick cancelled AFTER "Discard edits" closes the folder as it always did; the edit is
+  // already gone, by the user's answer. While a question is up a further trigger is ignored.
+
+  /** Send a click to the edit control THROUGH the guard: an exit already answered for, or the
+   *  shell ending a session itself. */
+  function exitByControl(control: HTMLElement | null | undefined): void {
+    passing = true;
+    try {
+      control?.click();
+    } finally {
+      passing = false;
+    }
+  }
+
+  /** Put the question. `onDiscard` runs inside the "Discard edits" click. */
+  function askToDiscard(onDiscard: () => void, onKeep?: () => void): void {
+    if (asking) return;
+    asking = true;
+    openUnsavedDialog(shell, editBinding?.name, {
+      onKeep: () => {
+        asking = false;
+        onKeep?.();
+      },
+      onDiscard: () => {
+        asking = false;
+        onDiscard();
+      },
+    });
+  }
+
+  /** Run `action` — at once when nothing is unsaved; otherwise only on "Discard edits", after
+   *  the session is ended. Resolves when the action has, or when the user keeps editing. */
+  function guarded(action: () => Promise<void>): Promise<void> {
+    if (asking) return Promise.resolve();
+    if (!hasUnsavedEdit(readerHost())) return action();
+    return new Promise((resolve) => {
+      askToDiscard(() => {
+        endEditSession();
+        resolve(action());
+      }, resolve);
+    });
   }
 
   function saveEdit(): boolean {
@@ -1403,8 +1502,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     return createRecentsView(doc, {
       recents,
       pins,
-      onOpenRecent: (e) => void reopenFolder(e.folderId, e.path),
-      onOpenPin: (e) => void reopenFolder(e.folderId, e.kind === 'file' ? e.path : undefined),
+      onOpenRecent: (e) => void guarded(() => reopenFolder(e.folderId, e.path)),
+      onOpenPin: (e) => void guarded(() => reopenFolder(e.folderId, e.kind === 'file' ? e.path : undefined)),
       onUnpin: (e) => void unpin(e.id),
     }).element;
   }
@@ -1770,7 +1869,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     cta.type = 'button';
     cta.className = `${SHELL_CLASS}__cta`;
     cta.textContent = 'Open a folder';
-    cta.addEventListener('click', () => void runOpenFolder());
+    cta.addEventListener('click', () => void guarded(runOpenFolder));
 
     wrap.append(msg, line, cta);
 
@@ -1796,7 +1895,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const wrap = doc.createElement('div');
     wrap.className = `${SHELL_CLASS}__folderview`;
 
-    const chip = buildGrantChip(doc, grantState, () => void revokeAccess());
+    const chip = buildGrantChip(doc, grantState, () => void guarded(revokeAccess));
     if (chip) wrap.append(chip);
 
     // The read-only-snapshot honesty note, driven by the SEAM's `persistable` bit — never by
@@ -1820,7 +1919,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const treeView = createTreeView(doc, {
       files: source.files,
       truncated: source.truncated,
-      onSelect: (file) => void selectFolderFile(file),
+      onSelect: (file) => void guarded(() => selectFolderFile(file)),
     });
     wrap.append(treeView.element);
 
@@ -1898,11 +1997,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     }
   }
 
-  /** Handle a folder dropped on the app page. `dataTransfer` MUST be captured synchronously in
-   *  the drop handler (its items are only live during the event); the routing pulls everything
-   *  engine-bound from it before its first await (see `openFolderFromDrop`). Funnels through the
+  /** Apply a folder dropped on the app page. `dropped` is the routing the drop handler STARTED
+   *  during the event (a `DataTransfer`'s items are only live then; the routing pulls everything
+   *  engine-bound from it before its first await — see `openFolderFromDrop`). Funnels through the
    *  SAME `applyOutcome` as the CTA, so chip/tree/snapshot-note/never-blank states come free. */
-  async function runDrop(dataTransfer: DataTransfer | null): Promise<void> {
+  async function runDrop(dropped: Promise<OpenFolderOutcome>): Promise<void> {
     if (busy) return;
     busy = true;
     try {
@@ -1910,7 +2009,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       // metadata is frozen at drop time, `File.text()` still reads FRESH BYTES — which is why the
       // detector compares content and why this route can watch at all.
       activeRoute = 'drop';
-      await applyOutcome(await dropToOutcomeFn(dataTransfer));
+      await applyOutcome(await dropped);
     } finally {
       busy = false;
     }
@@ -2011,11 +2110,12 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   return {
     // The store-free seam shows a file the shell holds no record of: no folder file is rendered.
-    selectFile: (file) => {
-      renderedFile = null;
-      return selectFile(file);
-    },
-    openFolder: runOpenFolder,
+    selectFile: (file) =>
+      guarded(() => {
+        renderedFile = null;
+        return selectFile(file);
+      }),
+    openFolder: () => guarded(runOpenFolder),
     refresh: refreshPersisted,
     triggerLastExport,
     saveEdit,

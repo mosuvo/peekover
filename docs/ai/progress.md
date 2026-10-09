@@ -1,7 +1,10 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 5.8 — **every network guard now reads its zero only after a later
+*Updated: 2026-10-09 (task 6.1 — **the unsaved-changes guard: every way out of a dirty edit asks
+first, at the trigger, in an in-page dialog (R23); tab close and reload raise the browser's own**;
+`decisions.md`'s "M12 TASK 6.1 — LANDED" and "M12 RULING R23" entries; the dialog's copy awaits
+review. Before it, task 5.8 — **every network guard now reads its zero only after a later
 request has landed (19 files); `PERMISSIONS.md`'s zero-network section says four surfaces, with
 the REVIEWED edit save-back sentence; the `diagramSourceGuard` and `mathNetwork` shared-state reds
 are closed by their causes**; `decisions.md`'s "M12 TASK 5.8 — LANDED" and "M12 RULING R22"
@@ -11,8 +14,8 @@ Chromium and downloads everywhere else; `PERMISSIONS.md` carries the final signe
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 5.7 and 5.8 landed; 5.5 RULED without its walk
-(R21 — the walk is on 7.1's list); 5.6 struck; **6.1 is next — the unsaved-changes guard.**
-**Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
+(R21 — the walk is on 7.1's list); 5.6 struck; 6.1 landed; **6.2 is next — the debounce
+measurement.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
 **`PERMISSIONS.md` carries SIGNED (a) since 5.3 and the FINAL signed row (b) since 5.4, pinned by
@@ -20,20 +23,27 @@ User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 ve
 **3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
 and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are RESOLVED at 3.4. 3.3
 filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RESOLVED at 3.4.**
-**★ HONESTY NOTE — the editor is REACHABLE on `main` and can still lose edits.** An exit still
-discards WITHOUT A WARNING until 6.1 — and so do Revoke, a folder switch and a closed folder, which
-since 5.3 END the edit session (R16 puts all three under 6.1's guard; a cancelled re-pick and a
-non-folder drop take the closed-folder path). A DOWNLOAD does not make the edit safe in the folder:
-the file there is unchanged and the buffer stays dirty — by design. Selecting another file while
-editing destroys the session when that file's read resolves (seen at 4.3 — 6.1's, and the reason
-its guard must act at the selection). Save writes on Chromium; on Firefox, on a route
+**★ HONESTY NOTE — the editor is REACHABLE on `main`, and since 6.1 it no longer loses edits
+without asking.** With unsaved changes, each of these asks first — "Keep editing" / "Discard
+edits" — and "Keep editing" does nothing at all: Stop editing; selecting a file in the tree;
+Revoke; opening a folder; a reopen-hub entry (a live handle, a re-pick, a re-pick then
+cancelled); a drop (a folder or not); the shell's `selectFile` seam. Closing or reloading the tab
+raises the browser's own dialog. A clean session is left without a word. **Named plainly, what is
+still not asked about or not proven:** an extension reload or update, a crash, a discarded tab —
+nothing can ask; the browser's OWN unload dialog has not been SEEN (headless cannot — 7.1); the
+native picker after the dialog is 7.1's; on Stop editing, a Save already in flight when "Discard
+edits" is answered may still complete; and one sequence is unmeasured — Save, then an external
+change, then leaving edit, where the reading view may show the saved text over the newer on-disk
+text (4.3's road, not 6.1's; `decisions.md`). The dialog's copy is drafted, not reviewed.
+A DOWNLOAD does not make the edit safe in the folder: the file there is unchanged and the buffer
+stays dirty — by design, so every exit after one still asks. Save writes on Chromium; on Firefox, on a route
 with no file handle and when the write prompt is declined it downloads. Planned sequencing, not
 released. A watch re-render no longer destroys the buffer (4.1). *Fixed at 4.3, so no longer
 caveats:* the false "changed on disk while you were editing" hint after a save (it was real, on
 every save of a watched document); a save writing the wrong file in the window after another file
 is selected (it was real too); and a stale reading view after Save + Stop editing (unwatched).
-Current numbers: `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx) against ≤ 7 MiB, content script
-342,806 B both engines (+154 at 4.3, its own glue; md5-identical across 3.4, 1.3, 5.2, 5.3 and 5.4 before it), `dependencies` 11, `permissions: []`. M11 (math
+Current numbers: `.output` 5,825,623 B (Cr) / 5,825,739 B (Fx) against ≤ 7 MiB (+3,594 at 6.1, all
+in the app chunk), content script 342,806 B both engines (md5-identical across 5.7, 5.8 and 6.1; +154 at 4.3), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1345,30 +1355,68 @@ entries are the record. Test and records only: no production byte moved.
   sixteen files now import the diagram helper; AGENTS.md's "module-level caches" wording does
   not match what was measured (`decisions.md`, item 8).
 
+**M12 task 6.1 DONE, 2026-10-09 — the unsaved-changes guard at every exit, asked at the trigger
+(R6, R16, R23).** `decisions.md`'s "M12 TASK 6.1 — LANDED" and "M12 RULING R23" entries are the
+record.
+- **The exits, each asked in `appShell.ts` before its action:** the edit control (a capture-phase
+  click listener on the reader pane) · the tree's `onSelect` · Revoke · the CTA and
+  `AppController.openFolder` · a reopen-hub entry · a drop · `AppController.selectFile`. Tab
+  close and reload: `beforeunload`, written with the dirty attribute by `editorView.ts`'s
+  `markDirty`.
+- **It asks only for a dirty edit** (`hasUnsavedEdit`); after a download it still asks.
+- **R23's dialog** — new app-only `src/app/unsavedGuard.ts`: "Keep editing" (focused; Escape) /
+  "Discard edits", naming the file; the rest of the shell `inert`; hand-rolled like the export
+  panel. **Copy drafted, for review:** "Discard unsaved edits?" · "“notes.md” has edits that are
+  not saved to the file in its folder. If you discard them, they are gone."
+- **Deferral.** Discard runs the action inside its own click (the picker's activation). A drop's
+  contents are taken during the drop event, then applied or abandoned. A re-pick cancelled after
+  a discard closes the folder as before; the edit is already gone.
+- **★ On the edit control, discard keeps the save binding** (R19); the shell's paths drop it
+  first. A departure from the kickoff, following `tasks.md`.
+- **R6.** Stay: zero re-mounts, the hint and the watch persist. Discard: one flush, the on-disk
+  text, the hint gone. No code added for it.
+- **Red-first.** `editorUnsaved.browser.test.ts` (new, 84 cases): at HEAD 60 red — every one of
+  the ten in-page paths on both engines, on its first assertion, as LOST TEXT — and 22 green
+  (the clean direction). Ablations: the guard unconditional → 24 red (the clean cases);
+  `inert` unset → the inert case red on both.
+- **Four existing steps re-spelled, no assertion edited** (`editorSave` ×3, `exportShortcut`
+  ×1): each made a dirty exit and now answers "Discard edits". ★ One is WEAKENED — "moving the
+  open file to B…": its 5.3 ablation can no longer redden it. The human's call.
+- **Bytes.** `.output` +3,594 on each engine, all in the app chunk (524,607 → 528,201),
+  decomposed to residual 0. Content script md5-identical; the control (the guard imported from
+  `mount.ts`) moves it to 542,575 B.
+- **Verify.** lint 0 · unit 1412 (+40) · browser alone, 186 files, 1927 / 45 skipped, zero reds
+  (392 s) · scanner 80 files, self-test 7 + 10 · audit EXIT=0 · golden empty. A run before the
+  re-spellings had `copyAsHtml` red on Chromium once (14/14 alone) — the known clipboard flake.
+- **Moved to 7.1, not faked:** the browser's own unload dialog; the native picker from the
+  Discard click; a real desktop drop over a dirty edit; the dialog's look in both themes and
+  wide; its screen-reader announcement.
+- **Flagged, unmeasured:** Save → an external change → leaving edit may show the saved text over
+  the newer on-disk text (`showSaved` after the watch's flush). 4.3's road; not probed.
+
 ## Up next
 
-**Group 5 is complete: 5.5 ruled (R21), 5.6 struck, 5.7 landed, 5.8 (discovered, R22) landed. 26 tasks.**
-**NEXT — M12 task 6.1, the unsaved-changes guard.** `tasks.md` 6.1 is the line, with R6's and
-R16's redlines: tab close, selecting another file, leaving edit — and Revoke, a folder switch and
-a closed folder. Both directions: dirty → the guard; clean → silence. After a download the buffer
-is still dirty, so the guard fires — intended.
-- **Owed to the human, not blocking 6.1:** the 5.5 walk, now on 7.1's list. (`PERMISSIONS.md`'s
-  zero-network sentence was reviewed and landed at 5.8, R22.)
-- **The browser suite now takes about 375 s** (was 227 s): each network guard waits ~2.3 s for
-  a refused loopback request to land before it reads a zero (5.8).
-**★ CARRIED FOR 6.1's KICKOFF — the guard fires at the TRIGGER: the file selection, the folder
-picker, a drop, a re-pick — not at the session's ending.** That is: before the picker opens and
-before a drop or a re-pick is processed — on a folder switch or a
-cancelled re-pick the triggering outcome has already happened by the time `endEditSession` runs.
-4.3 adds the same for a file SELECTION: the edit session is destroyed when the newly selected
-file's read resolves and `readerPane` re-mounts the host, so "stay" must be asked before
-`selectFolderFile` starts the read.
-**Byte snapshot — 4.3's measured figures, RE-MEASURED UNCHANGED at 5.7 and again at 5.8 (every shipped file md5-identical); carry to the next kickoff:** `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,518,003 / 1,517,887 B · zip 1,839,751 / 1,839,809 B · content
+**Group 5 is complete; 6.1 landed. 26 tasks.**
+**NEXT — M12 task 6.2, the debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from
+choosing.** `tasks.md` 6.2 is the line: preview re-render wall-clock over a size corpus, median
+and floor, A-B-A against a same-session control. Its numbers go to the human's §8-2 ruling.
+- **Owed to the human, not blocking 6.2:** the review of 6.1's dialog copy (R23); the call on the
+  weakened route-2(i) case; the 5.5 walk, on 7.1's list.
+- **The browser suite takes about 390 s** alone (6.1 added ~15 s).
+**Byte snapshot — 6.1's measured figures; carry to the next kickoff:** `.output` 5,825,623 B (Cr) / 5,825,739 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,514,409 / 1,514,293 B · zip 1,840,955 / 1,841,013 B · content
 script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
-`ecc31688b4f49167502a39edca7b9e51` (Fx) — MOVED at 4.3 (+154) · the app chunk 524,607 B (+744) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1372 · browser 1845 / 43 skipped
-(5.8's second full run: zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+`ecc31688b4f49167502a39edca7b9e51` (Fx) — unmoved since 4.3 · the app chunk 528,201 B (+3,594) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1412 · browser 1927 / 45 skipped
+(zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 6.1:**
+- **A test that leaves a DIRTY edit through the shell meets the dialog.** Answer it
+  (`.peekover-unsaved__discard` / `__keep`), or the awaited `app.openFolder()` /
+  `app.selectFile()` does not resolve until someone does.
+- **`editorUnsaved.browser.test.ts`'s `PATHS` table** drives every exit with stood-in picker,
+  re-grant and drop stubs that record whether they were called inside the event.
+- **A heredoc fails on an apostrophe in a node script** — three more times this session. Write
+  the script with the Write tool.
 **Carried inputs, from 4.3:**
 - **The app page's OWN watch can be driven in the harness on Chromium:** a hand-built persistable
   `FolderSource` over an OPFS handle, select the file, click `.peekover-watch` — the shell's
@@ -1494,6 +1542,20 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-09 — from TASK 6.1's kickoff: three items given a home.**
+  - **Split the network wait into a small dedicated test helper** (5.8, deviation 4 — the guards
+    import `helpers/diagramWindow.ts`). Home: **7.3**.
+  - **Suite cost +~150 s from `wireSettled`;** settle once per file if CI time bites. Home:
+    **post-M12**.
+  - **`copyAsHtml` / the OS clipboard shared between the two engines' runs** — a KNOWN FLAKE
+    (seen again at 6.1: one red in one full run of two, 14/14 alone).
+- **NEW 2026-10-09 — from TASK 6.1.**
+  - **The dialog's copy is drafted, not reviewed** (R23). Home: the human, on landing.
+  - **`editorSave`'s "moving the open file to B…" is weakened** by its added discard step: the
+    kept save always answers `unavailable`. Home: the human's call — rebuild on a clean buffer,
+    or retire it to 4.3's switch-window cases.
+  - **Unmeasured: Save → external change → leaving edit** may show the saved text over the
+    newer on-disk text. Home: the human's call; 7.1 at the latest.
 - **NEW 2026-10-09 — from TASK 5.8.**
   - **`copyAsHtml.browser.test.ts` — one red in one full-suite run of two (Chromium).** Its
     clipboard read returned another test's text ("Body exported richly, with bold text"); 14/14

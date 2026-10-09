@@ -1,6 +1,173 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 6.1 — LANDED: the unsaved-changes guard at every exit, asked at the
+  TRIGGER; an in-page dialog (R23); `beforeunload` for tab close and reload. The dialog's copy is
+  DRAFTED, for review. Four existing test steps re-spelled, named below; one of them weakened a
+  test, flagged.**
+  **THE EXITS, each with its trigger and what "Keep editing" leaves.** All in `appShell.ts` except
+  the last. The question is put where the user's intent is first known and nothing has happened:
+  1. *The edit control ("Stop editing").* A CAPTURE-phase click listener on the reader pane hears
+     the click before the control inside the reader's shadow root does; with unsaved changes it
+     stops there. Stay: the click never arrives.
+  2. *A file in the tree.* `onSelect`, before `selectFolderFile` starts the read (4.3's finding).
+     Stay: the other file is never read; the open file and the pin bar are unchanged.
+  3. *Revoke.* The chip's callback. Stay: the grant and the stored folder are untouched.
+  4. *Opening a folder.* The CTA and `AppController.openFolder`. Stay: no picker.
+  5. *A reopen-hub entry* — a live handle (the re-grant) or a re-pick (the picker). Stay: neither
+     is asked for.
+  6. *A drop* — a folder, or something that is not one. Stay: nothing of it is applied.
+  7. *`AppController.selectFile`* (the store-free seam). Stay: nothing is read.
+  8. *Tab close / reload.* `beforeunload`, in `editorView.ts`. The browser's own dialog.
+  `paintIdle`, `applyOutcome` and `revokeAccess` keep their `endEditSession`: by then the session
+  is clean or already discarded. While a question is up a further trigger is ignored.
+  **IT ASKS ONLY WHEN** the host is in edit AND carries `data-edit-dirty` (`hasUnsavedEdit`). A
+  clean session is left without a word on every path. After a DOWNLOAD the attribute is still
+  there, so every exit asks — intended (5.4).
+  **THE DEFERRAL MECHANICS.**
+  - *Activation.* "Discard edits" calls the action SYNCHRONOUSLY from inside its own click, after
+    the dialog is closed and the session ended. So the picker, and a handle's permission request,
+    start in a click's own task. Holds on both engines by construction — asserted with a stood-in
+    picker that records it was called before the click returned. The NATIVE picker after the
+    dialog is 7.1's.
+  - *A drop.* `dropToOutcome` is called DURING the drop event, before anything is asked — a
+    `DataTransfer`'s items exist only then. Its promise is held; "Discard edits" applies it;
+    "Keep editing" abandons it. So on a stay the dropped folder WAS walked and read, and nothing
+    of it was applied: `activeRoute`, the folder, the tree and the session are as they were.
+  - *A re-pick that is cancelled.* The question comes before the picker. After "Discard edits"
+    the edit is gone; cancelling the picker then closes the folder as it always did. There is no
+    way to ask after the picker — its outcome has already happened.
+  **"DISCARD", AND ONE DEPARTURE FROM THE KICKOFF.** On the shell's paths discard is
+  `endEditSession` as 5.3 built it — the binding dropped first, so nothing is written or
+  downloaded afterwards — then the action. On the EDIT CONTROL it is the control's own exit and
+  the binding is KEPT: `showSaved` refuses a dropped binding, so dropping it would leave an
+  unwatched reading view stale after Save → more typing → discard (R19). The kickoff said discard
+  always ends the session "as 5.3 built it"; `tasks.md` says each path offers the choice "exactly
+  as leaving edit does" — the file was followed. *Consequence, stated:* on that one path a Save
+  the user had already started when they answered may still complete, writing what they asked to
+  save at that click. The discard itself writes nothing.
+  **R6'S ASYMMETRY, AS BUILT** — on the app page's own watch, an external change held, the buffer
+  dirty (Chromium, 4.3's rig). *Stay:* nothing runs, so nothing changes — still in edit, zero
+  re-mounts, the hint present, the watch running, the document behind still the text as opened;
+  measured on the edit control and on a file selection. *Discard:* the control's exit tears down,
+  dirty clears, the watch's observer sees edit left and flushes what it held — the on-disk text,
+  exactly ONE re-mount, the hint gone, the file on disk untouched. No code was added for it.
+  *Interplay with 4.3.* `ownWrite`: untouched — a discard announces nothing, because it writes
+  nothing. `showSaved`: on the control path it still runs, with the kept binding. ★ NOT MEASURED,
+  flagged: Save, THEN an external change is held, THEN more typing and a discard. The watch
+  flushes the external text first and `showSaved` then finds the source different from what it
+  wrote; reading its code, it would render the SAVED text over the newer on-disk text. That
+  sequence does not need 6.1 (a clean exit after Save and an external change takes the same
+  road), so it is 4.3's, unprobed here. For the human to schedule.
+  **`beforeunload`.** `markDirty` in `editorView.ts` is now the one place the dirty attribute is
+  set or removed, and it adds or removes that host's listener in the same call: one listener per
+  dirty host, however much is typed; gone when the buffer matches the file again, when a save
+  writes, when the session ends or is dropped as stale. `preventDefault()` plus `returnValue`.
+  Measured on both engines with a cancelable synthetic event: claimed while dirty and after
+  "Keep editing"; not claimed before, in a clean session, or after "Discard edits"; listeners
+  added minus removed = 0.
+  **THE DIALOG (R23)** — `src/app/unsavedGuard.ts`, app-only, its own `<style>`. Hand-rolled
+  `role="dialog"` + `aria-modal`, like the export panel and the lightbox — not `showModal()`:
+  jsdom has neither that nor `inert`'s behaviour, and a hand-rolled one can be asserted in both.
+  A child of the shell (it inherits the theme tokens) covering it; every OTHER child of the shell
+  is `inert` while it is open. Named by its title, described by its body. Tab wraps between the
+  two buttons; Escape is "Keep editing"; focus returns to where it was, followed into the
+  reader's shadow root.
+  **THE COPY — DRAFTED BY THE AGENT, FOR REVIEW (R23).**
+  - Title: "Discard unsaved edits?"
+  - Body: "“notes.md” has edits that are not saved to the file in its folder. If you discard
+    them, they are gone." — with no file name: "This document has edits …".
+  - Buttons: "Keep editing" (first, focused) · "Discard edits".
+  - No status line after a discard: the action itself is what the user then sees.
+  The name is the file the session was opened on (`EditBinding.name`), set as text.
+  **TESTS, RED-FIRST.** New `tests/browser/editorUnsaved.browser.test.ts` — 84 cases, 82 pass + 2
+  skipped (R6 is Chromium-only): 42 Chromium + 40 Firefox. At HEAD, before any implementation:
+  60 red (31 + 29), 22 green — the clean direction. EVERY one of the ten in-page paths was red on
+  BOTH engines on its first assertion, the typed text: `expected '<no live edit session — the
+  buffer is gone>' to be '# Guard doc…'` — lost text, in that path's own units, with no prompt.
+  With the guard: stay, discard and clean hold on all ten, both engines. Ablations, each restored
+  byte-identical: the guard made unconditional → the 20 clean cases and 4 more red, 24 in all
+  (`tasks.md`'s named red); `inert` not set → "the page behind is inert" red on both, on focus.
+  Unit +40 (1372 → 1412): `unsavedGuard.test.ts` 17 (new), `appShell.test.ts` +17 (every
+  trigger, dirty and clean, with a real edit session in jsdom; the action inside the click; the
+  drop taken during its event), `editorView.test.ts` +6 (the listener). 13 of them red at HEAD,
+  plus the unresolved module.
+  **EXISTING TESTS — FOUR STEPS RE-SPELLED, NO ASSERTION EDITED.** Each made a dirty exit by the
+  code path and now meets the question; each answers "Discard edits" and goes on:
+  `editorSave` "leaving edit WITHOUT a save", "a DOWNLOAD is not a save", "moving the open file
+  to B…", and `exportShortcut`'s ruling-B case (where its save was a download). ★ FLAGGED: the
+  third is WEAKENED. Discard ends the session, so its kept save now always answers
+  `unavailable`; the test still passes on the "or nothing is" arm it already had, but its 5.3
+  ablation (the binding read at the click → B overwritten) can no longer redden it. 4.3's
+  switch-window cases still pin the binding. Whether to rebuild that case on a clean buffer is
+  the human's call.
+  **BYTES.** `.output` 5,825,623 (Cr) / 5,825,739 (Fx), **+3,594** each; headroom 1,514,409 /
+  1,514,293 B under 7 MiB. zip 1,840,955 / 1,841,013 (+1,204). Manifests 654 / 770 B,
+  `permissions: []`. One file changed size on each engine, the app chunk: 524,607 → 528,201
+  (the other chunks are renamed by its hash, sizes identical).
+  *The content script: md5-IDENTICAL* — 342,806 B, `c4f59f1a…` (Cr) / `ecc31688…` (Fx), in the
+  final build and in every arm. *The control that moves it:* `unsavedGuard` imported from
+  `mount.ts` → 542,575 B on both engines, new md5s; removed, identical again.
+  *The app chunk, by Chrome removal arms in sequence (they land on the baseline exactly):*
+
+  | Piece | Bytes |
+  |---|---|
+  | `beforeunload` (`editorView.ts` as at HEAD) | 234 |
+  | the dialog's CSS | 940 |
+  | the dialog — DOM, copy, trap, `inert`, focus | 1,731 |
+  | trigger: the `selectFile` seam | 8 |
+  | trigger: a drop (capture, early return, the abandoned result) | 47 |
+  | trigger: the reopen hub | 16 |
+  | trigger: opening a folder | 10 |
+  | trigger: Revoke | 2 |
+  | trigger: the tree — the last `guarded` caller, so `guarded` goes with it | 104 |
+  | trigger: the edit control — the listener, and `hasUnsavedEdit` with it | 460 |
+  | the two flags, `exitByControl`, `askToDiscard` and the import, once nothing calls them | 42 |
+  | **sum** | **3,594** — measured +3,594, **residual 0** |
+
+  **FULL SUITE.** lint 0 · unit 1412 · browser, run alone, 186 files, 1927 passed / 45 skipped,
+  ZERO reds (392 s) · scanner clean over 80 files, self-test 7 + 10 · `pnpm audit --prod` EXIT=0
+  · golden empty. Named: `editorUnsaved` 82 (+2 skipped) · `editorSave` 30 (+24) ·
+  `editorWatch` 12 · `editorRender` 20 · `exportShortcut` 18 · `folderGrant` 12 ·
+  `folderDrop` 10 · `handlePersist` 14 · `firefoxFallback` 14 · unit `editorEnhancer` 32 ·
+  `editorView` 82 · `appShell` 79 · `unsavedGuard` 17 · `permissionsLedger` 9 · `htmlExport`
+  13 (the 26-site pin green). An earlier full run, before the four re-spellings, had those four
+  red and one more: `copyAsHtml` on Chromium (another test's clipboard text) — 14/14 alone and
+  clean in the final run; the known shared-clipboard flake.
+  **MOVED TO 7.1, NOT FAKED.** The browser's OWN unload dialog on close and reload, both engines
+  (a synthetic event raises none; a browser may also skip it for a page never interacted with).
+  The native picker opening from the "Discard edits" click, both engines. A real drag from the
+  desktop over a dirty edit. The dialog seen in both themes and at a wide viewport, and heard in
+  a screen reader.
+  **STILL NOT ASKED ABOUT, NAMED.** An extension reload or update, a crash, a discarded tab —
+  nothing can ask. A Save already in flight when "Discard edits" is answered on the edit control
+  (above).
+  **KICKOFF VS FILE, FLAGGED.** (1) The test file is `editorUnsaved…` (`tasks.md`), not
+  `editorGuard…`. (2) Discard on the edit control keeps the binding (above). (3) "The tree
+  highlight" does not exist; the pin bar is the open-file indicator and is what is asserted.
+  (4) With a folder open there is no "Open a folder" button — the picker is reached from a hub
+  re-pick; the CTA is guarded for a seam-fed file edited with no folder. (5) Ripples beyond the
+  Files list: `src/app/unsavedGuard.ts` + its test (R23) · `appShell.test.ts` and
+  `editorView.test.ts` (the unit clauses) · `editorEnhancer.ts`, comment only · `editorSave`
+  and `exportShortcut` browser tests (the re-spelled steps). `readerPane.ts`,
+  `watchController.ts`, `mount.ts`, `readerMode.ts`, `editorEngine.ts`, `htmlExport.ts`,
+  `readerCss.ts`, `PERMISSIONS.md` and the goldens are zero-diff.
+  *Revisit-when:* the copy's review · 7.1 (the list above) · the human's call on the weakened
+  route-2(i) case and on the unmeasured save-then-external-change exit.
+
+- **2026-10-09 · M12 RULING R23 — HUMAN RULING: the unsaved-changes guard is an IN-PAGE DIALOG,
+  not `window.confirm()`.** Given in task 6.1's kickoff, dated 2026-10-09, marked there "approved
+  by the human running this prompt". The agent chose nothing; this entry records it.
+  - Two real `<button>`s — "Keep editing" (DEFAULT focus; Escape = keep) and "Discard edits".
+  - It names the file.
+  - It is modal for the app: focus contained, the page behind inert.
+  - It is announced to assistive tech; its state is in text, never colour alone.
+  - Tab close / reload uses the browser's own `beforeunload` dialog — the only one a page may
+    raise there.
+  - The copy is drafted by the agent and reviewed on landing (the R18 / R20 practice).
+  *Outcome:* built at 6.1 (the entry above); the copy awaits review.
+  *Revisit-when:* the copy's review; the 7.1 walk.
+
 - **2026-10-09 · M12 TASK 5.8 — LANDED: every network guard reads its zero only after a later
   request has landed; `PERMISSIONS.md`'s zero-network section says four surfaces; the
   `diagramSourceGuard` and `mathNetwork` shared-state reds are closed, each by its cause. Test and

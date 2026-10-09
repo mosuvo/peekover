@@ -526,6 +526,12 @@ describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and export
 
       // OUT OF EDIT AGAIN — the export is back.
       host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      // RE-SPELLED AT 6.1 (a step, not an assertion): where the save above was a DOWNLOAD — the
+      // route an engine whose handles cannot ask for write access takes — the edit is still
+      // unsaved, so leaving it now asks first. Answer "Discard edits" when asked; where the save
+      // wrote, nothing is asked and nothing is clicked.
+      await new Promise<void>((r) => setTimeout(r, 50));
+      appRoot!.querySelector<HTMLElement>('.peekover-unsaved__discard')?.click();
       await waitFor(() => host.getAttribute('data-mode') !== 'edit');
       const after = press(host);
       expect(after.exports, 'after leaving edit the export is back').toBe(stray.exports + 1);

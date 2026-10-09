@@ -25,9 +25,11 @@
 //
 // The state is in the control's TEXT and its accessible name, never in colour alone.
 //
-// ★ WHAT IT DOES NOT DO YET, STATED SO IT IS NOT ASSUMED. Leaving edit DISCARDS whatever in the
-// buffer was not saved, with no warning (the unsaved-changes guard is task 6.1). What WAS saved is
-// shown by the reading view once edit is left — the app page's doing, not this module's (4.3, R19).
+// ★ WHAT IT DOES NOT DO, STATED SO IT IS NOT ASSUMED. The click handler below leaves edit and
+// DISCARDS whatever in the buffer was not saved — it asks nothing. The question is the app page's
+// (6.1): `appShell.ts` hears the click first and, when there are unsaved changes, holds it until
+// the user has answered. What WAS saved is shown by the reading view once edit is left — also
+// the app page's doing, not this module's (4.3, R19).
 //
 // `save` is called by the edit view's own Save control (5.3), never from here. A watch update that
 // arrives during an edit no longer touches the editor: it is held until edit is left (4.1–4.2).

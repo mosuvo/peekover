@@ -1084,7 +1084,7 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
 
 ## 6 — Unsaved-changes guard + measurements (§4's guard clause; D-5's interval; D-4's cost)
 
-- [ ] **6.1 The unsaved-changes guard — tab close, in-app navigation, leaving edit mode; BOTH directions
+- [x] **6.1 The unsaved-changes guard — tab close, in-app navigation, leaving edit mode; BOTH directions
       (spec §4; plan §3.5 "new").** TEST FIRST. With the dirty attribute set: a `beforeunload`-class guard
       on close/reload; a guard on selecting another file in the folder tree (`selectFolderFile`); a guard
       on leaving edit mode. With it clear: none of the three prompts. A confirmed discard clears dirty
@@ -1122,6 +1122,30 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       re-pick) has already happened by the time the guard can ask. And: after a DOWNLOAD (5.4) the
       buffer is still dirty — the folder's file is unchanged — so the guard fires on every exit
       after one. That is intended (5.4's landing entry) and belongs in this Verify.
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 6.1 — LANDED" and "M12 RULING
+      R23"):* **(i) It asks at the TRIGGER, in `appShell.ts`** — the edit control (a capture-phase
+      click listener on the reader pane), the tree's `onSelect`, Revoke, the CTA and
+      `AppController.openFolder`, a reopen-hub entry, a drop, `AppController.selectFile` — and
+      `beforeunload` in `editorView.ts`, written with the dirty attribute by one function. That
+      answers this line's "not ruled": on (b) and (c) nothing has happened yet when it asks.
+      **(ii) R23 — an in-page dialog**, new app-only `src/app/unsavedGuard.ts`: "Keep editing"
+      (focused; Escape) / "Discard edits", naming the file, the rest of the shell `inert`. Its
+      copy is DRAFTED, for review. **(iii) Discard runs the action inside its own click** (the
+      picker's activation); a drop's contents are taken during the drop event and applied or
+      abandoned by the answer. **(iv) ★ On the edit control, discard keeps the save binding** —
+      R19 needs it; the shell's paths drop it first, as 5.3 built. **(v) R6:** stay runs nothing,
+      so the deferral and the hint persist; discard is an ordinary exit and the watch flushes —
+      no code added for it. **(vi) Files beyond this line's list:** `unsavedGuard.ts` + its
+      test, `appShell.test.ts`, `editorView.test.ts`, `editorEnhancer.ts` (comment only), and
+      one added step in four existing browser cases (`editorSave` ×3, `exportShortcut` ×1) that
+      made a dirty exit — no assertion edited; one of them is weakened, flagged in the entry.
+      **Red-first:** all ten in-page paths red at HEAD on both engines, as lost text; the
+      unconditional guard reddens the clean cases. **Measured:** `.output` 5,825,623 / 5,825,739
+      B (+3,594), the app chunk 528,201 B (+3,594, residual 0), content script md5-identical
+      (342,806 B), manifests 654 / 770 B, `permissions: []`; unit 1412; browser 1927 / 45
+      skipped, zero reds. **Moved to 7.1:** the browser's own unload dialog; the native picker
+      from the Discard click; a real desktop drop over a dirty edit; the dialog's look and its
+      screen-reader announcement.
 
 - [ ] **6.2 The debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from choosing.** Preview
       re-render wall-clock across a document-size corpus mirroring `perf-watch.ts`'s 50 KB / 1 MB shape

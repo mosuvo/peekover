@@ -30,6 +30,7 @@ import {
   buildEditor,
   buildEditorShell,
   createPreviewCooldown,
+  dropStaleEditorSession,
   editorSessionFor,
   editorShellFor,
   EDITOR_BAR_CLASS,
@@ -1103,5 +1104,128 @@ describe('the save control and what a save may move (5.3)', () => {
     buildEditor(engine, host, { save: bind });
     expect(host.shadowRoot!.querySelectorAll(`.${EDITOR_BAR_CLASS}`)).toHaveLength(1);
     expect(bind).toHaveBeenCalledTimes(2); // one binding per session
+  });
+});
+
+// ── 012 task 6.1 — the tab-close guard follows the dirty attribute ─────────────────────────────
+//
+// The window is shared by every test in this file, so the claims are a DELTA: listeners this
+// test's session added minus those it removed, and whether a cancelable `beforeunload` offered
+// to the window is claimed now compared with before the session existed.
+describe('beforeunload is claimed only while a session is dirty (6.1)', () => {
+  afterEach(() => {
+    for (const host of hosts) teardownEditorShell(host);
+    vi.restoreAllMocks();
+  });
+
+  type View = NonNullable<ReturnType<typeof editorSessionFor>>['view'];
+  const append = (view: View, text: string): void =>
+    view.dispatch({ changes: { from: view.state.doc.length, insert: text } });
+  const dropLast = (view: View): void =>
+    view.dispatch({ changes: { from: view.state.doc.length - 1, to: view.state.doc.length, insert: '' } });
+
+  function unloadClaimed(): boolean {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  }
+
+  function listeners() {
+    const adds = vi.spyOn(window, 'addEventListener');
+    const removes = vi.spyOn(window, 'removeEventListener');
+    const count = (spy: typeof adds): number => spy.mock.calls.filter(([name]) => name === 'beforeunload').length;
+    return { added: () => count(adds), removed: () => count(removes), live: () => count(adds) - count(removes) };
+  }
+
+  async function editing(save?: EditorSave) {
+    const host = mountedHost(DOC);
+    const engine = await loadEditorEngine(host);
+    const session = buildEditor(engine, host, { save });
+    return { host, view: session.view };
+  }
+
+  it('★ a clean session adds nothing; the first unsaved change adds ONE listener; later ones add no more', async () => {
+    const base = unloadClaimed();
+    const seen = listeners();
+    const { view } = await editing();
+    expect(seen.added()).toBe(0);
+    expect(unloadClaimed()).toBe(base);
+
+    append(view, 'X');
+    expect(seen.live()).toBe(1);
+    expect(unloadClaimed()).toBe(true);
+
+    append(view, 'Y');
+    append(view, 'Z');
+    expect(seen.added()).toBe(1);
+  });
+
+  it('★ the listener goes when the buffer is put back to the file', async () => {
+    const base = unloadClaimed();
+    const seen = listeners();
+    const { view } = await editing();
+    append(view, 'X');
+    dropLast(view);
+    expect(seen.live()).toBe(0);
+    expect(unloadClaimed()).toBe(base);
+  });
+
+  it('★ a SAVE that writes clears it; a DOWNLOAD does not', async () => {
+    const base = unloadClaimed();
+    const seen = listeners();
+    let answer: 'saved' | 'downloaded' = 'downloaded';
+    const { host, view } = await editing(() => async ({ text }) =>
+      answer === 'saved'
+        ? { kind: 'saved', written: text }
+        : { kind: 'downloaded', written: text, filename: 'notes.md' },
+    );
+    append(view, 'X');
+
+    await saveEditorSession(host);
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(true);
+    expect(seen.live(), 'after a download the edit is still unsaved').toBe(1);
+    expect(unloadClaimed()).toBe(true);
+
+    answer = 'saved';
+    await saveEditorSession(host);
+    expect(seen.live()).toBe(0);
+    expect(unloadClaimed()).toBe(base);
+  });
+
+  it('★ teardown of a dirty session removes it — nothing is left on the window', async () => {
+    const base = unloadClaimed();
+    const seen = listeners();
+    const { host, view } = await editing();
+    append(view, 'X');
+    expect(seen.live()).toBe(1);
+    teardownEditorShell(host);
+    expect(seen.live()).toBe(0);
+    expect(unloadClaimed()).toBe(base);
+  });
+
+  it('a session orphaned by an outer re-mount gives it up when the stale session is dropped', async () => {
+    const base = unloadClaimed();
+    const seen = listeners();
+    const { host, view } = await editing();
+    append(view, 'X');
+    mount(DOC, host, { contained: true });
+    dropStaleEditorSession(host);
+    expect(seen.live()).toBe(0);
+    expect(unloadClaimed()).toBe(base);
+  });
+
+  it('two dirty hosts hold one listener each, released independently', async () => {
+    const base = unloadClaimed();
+    const seen = listeners();
+    const one = await editing();
+    const two = await editing();
+    append(one.view, 'X');
+    append(two.view, 'X');
+    expect(seen.live()).toBe(2);
+    teardownEditorShell(one.host);
+    expect(unloadClaimed(), 'the other host still has unsaved changes').toBe(true);
+    teardownEditorShell(two.host);
+    expect(seen.live()).toBe(0);
+    expect(unloadClaimed()).toBe(base);
   });
 });

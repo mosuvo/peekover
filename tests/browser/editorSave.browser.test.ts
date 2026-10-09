@@ -247,6 +247,18 @@ function type(session: EditorSession, text: string): void {
 
 const buffer = (session: EditorSession): string => session.view.state.doc.toString();
 
+/** 6.1 — ANSWER THE UNSAVED-CHANGES QUESTION WITH "Discard edits". Three cases in this file leave
+ *  a DIRTY edit by the code path (each says so at its call). Since 6.1 that exit asks first, so
+ *  each now gives the answer that lets the exit it was written about go ahead. A STEP was added;
+ *  no assertion in any of them changed. The guard itself is editorUnsaved.browser.test.ts's. */
+async function discardEdits(container: HTMLElement): Promise<void> {
+  const discard = await waitFor(
+    () => container.querySelector<HTMLElement>('.peekover-unsaved__discard'),
+    'the unsaved-changes question',
+  );
+  discard.click();
+}
+
 /** Click Save and wait for the outcome's line. The status empties when a save starts, so a line
  *  left by an earlier save cannot be mistaken for this one's. */
 async function clickSave(host: HTMLElement): Promise<string> {
@@ -663,7 +675,15 @@ describe.runIf(CHROMIUM)('012 task 5.3 — route 2(i): the file is bound to the 
     const save = session.save!;
     const request = { text: buffer(session), baseline: session.originalText };
 
-    await select(container, b.file); // by the code path; the guard on this is task 6.1's
+    // RE-SPELLED AT 6.1 (a step, not an assertion): this was `await select(container, b.file)`,
+    // which now waits on the guard's question. The same click, then "Discard edits", then the
+    // same wait. The discard ends the session, so the save below answers `unavailable` and A is
+    // not written — the "or nothing is" arm of the assertion that was already here.
+    [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')]
+      .find((el) => el.textContent === b.file.name)!
+      .click();
+    await discardEdits(container);
+    await select(container, b.file);
 
     const outcome = await save(request);
 
@@ -1015,12 +1035,13 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
 
   it('CONTROL: leaving edit WITHOUT a save re-renders nothing — the column is the same node, the text as opened', async () => {
     const { file } = await diskFile('r19-nosave', ON_DISK);
-    const { host } = await opened(file);
+    const { host, container } = await opened(file);
     const column = outerColumn(host);
     const session = await enterEdit(host);
     type(session, TYPED);
 
     controlIn(host).click();
+    await discardEdits(container); // 6.1: a dirty exit asks first
     await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await new Promise<void>((r) => setTimeout(r, 100));
 
@@ -1031,7 +1052,8 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
   it('a DOWNLOAD is not a save: Stop editing after one leaves the reading view as opened', async () => {
     const { fh, file } = await diskFile('r19-download', ON_DISK);
     (fh as unknown as { requestPermission: () => Promise<PermissionState> }).requestPermission = async () => 'denied';
-    const { host } = await opened(file);
+    const rig = await opened(file);
+    const { host } = rig;
     const session = await enterEdit(host);
     type(session, TYPED);
     const downloads = watchDownloads();
@@ -1039,6 +1061,7 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
     expect(said).toBe(downloadLine(file.name));
 
     controlIn(host).click();
+    await discardEdits(rig.container); // 6.1: after a download the edit is still unsaved, so it asks
     await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await new Promise<void>((r) => setTimeout(r, 100));
 
