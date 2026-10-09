@@ -247,7 +247,7 @@ function type(session: EditorSession, text: string): void {
 
 const buffer = (session: EditorSession): string => session.view.state.doc.toString();
 
-/** 6.1 — ANSWER THE UNSAVED-CHANGES QUESTION WITH "Discard edits". Three cases in this file leave
+/** 6.1 — ANSWER THE UNSAVED-CHANGES QUESTION WITH "Discard edits". Two cases in this file leave
  *  a DIRTY edit by the code path (each says so at its call). Since 6.1 that exit asks first, so
  *  each now gives the answer that lets the exit it was written about go ahead. A STEP was added;
  *  no assertion in any of them changed. The guard itself is editorUnsaved.browser.test.ts's. */
@@ -664,34 +664,38 @@ describe.runIf(CHROMIUM)('012 task 5.3 — ruling C, on a WATCHED document (Chro
 // ── Route 2 — the binding, and the endings ────────────────────────────────────────────────────
 
 describe.runIf(CHROMIUM)('012 task 5.3 — route 2(i): the file is bound to the edit session at edit entry (Chromium)', () => {
-  it('★ moving the open file to B after entering edit on A cannot make a save write B', async () => {
+  // REBUILT AT 4.4 (human ruling R24(iii), 2026-10-09), NOT RETIRED. The 5.3 case here — "★ moving
+  // the open file to B after entering edit on A cannot make a save write B" — TYPED into A before
+  // selecting B. Since 6.1 that exit asks, and "Discard edits" ends the session, so its kept save
+  // could only answer `unavailable`: the case passed whatever the binding did and could no longer
+  // fail. R24(iii) ruled it retired UNLESS a meaningful form still exists. One does: with a CLEAN
+  // buffer the guard says nothing, B is selected with the session's binding still live, and a
+  // save function taken at edit entry can still be called — the shape of a save that lands late.
+  // So the case is rebuilt on a clean buffer, and it can go red again: with the binding moved to
+  // the active file at the call, B is overwritten (progress.md's 4.4 record). 4.3's switch-window
+  // cases below pin the entry half of the same property.
+  it('★ a save bound to A at edit entry writes A — never B — after B has been selected (clean buffer: the guard is silent)', async () => {
     // Identical text in both, so the compare cannot be what protects B: the baseline matches it.
     const a = await diskFile('bound-a', ON_DISK);
     const b = await diskFile('bound-b', ON_DISK);
     const { container } = await mountApp([a.file, b.file]);
     const host = await select(container, a.file);
     const session = await enterEdit(host);
-    type(session, TYPED);
     const save = session.save!;
-    const request = { text: buffer(session), baseline: session.originalText };
+    // What a save of A would carry — built by hand; the buffer itself is left CLEAN.
+    const request = { text: ON_DISK + TYPED, baseline: session.originalText };
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR), 'the fixture is clean').toBe(false);
 
-    // RE-SPELLED AT 6.1 (a step, not an assertion): this was `await select(container, b.file)`,
-    // which now waits on the guard's question. The same click, then "Discard edits", then the
-    // same wait. The discard ends the session, so the save below answers `unavailable` and A is
-    // not written — the "or nothing is" arm of the assertion that was already here.
-    [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')]
-      .find((el) => el.textContent === b.file.name)!
-      .click();
-    await discardEdits(container);
     await select(container, b.file);
+    expect(container.querySelector('.peekover-unsaved'), 'a clean edit is left without a question').toBeNull();
 
     const outcome = await save(request);
 
     const [diskA, diskB] = [await readDisk(a.fh), await readDisk(b.fh)];
-    record(`route 2(i): outcome=${outcome.kind}; A written=${diskA === ON_DISK + TYPED}; B untouched=${diskB === ON_DISK}`);
+    record(`route 2(i), rebuilt: outcome=${outcome.kind}; A written=${diskA === ON_DISK + TYPED}; B untouched=${diskB === ON_DISK}`);
     expect(diskB, 'B is byte-identical').toBe(ON_DISK);
-    expect([ON_DISK, ON_DISK + TYPED], 'A is written, or nothing is').toContain(diskA);
-    expect(outcome.kind === 'saved' ? diskA : ON_DISK + TYPED).toBe(ON_DISK + TYPED);
+    expect(outcome.kind, 'the save is still A’s').toBe('saved');
+    expect(diskA, 'and A is what it wrote').toBe(ON_DISK + TYPED);
   });
 });
 
@@ -1144,5 +1148,240 @@ describe.runIf(CHROMIUM)('012 task 4.3 — (ii): edit entry binds the file the r
     expect(await clickSave(host)).toBe('Saved.');
     expect(await readDisk(b.fh)).toBe(ON_DISK + TYPED);
     expect(await readDisk(a.fh)).toBe(ON_DISK);
+  });
+});
+
+// ══ 012 TASK 4.4 — LEAVING EDIT SHOWS THE NEWEST TEXT (R24) ═════════════════════════════════════
+//
+// Cases ADDED. One claim: once edit is left, the reading view shows the NEWEST text the file is
+// known to hold — an external change the watch was holding beats Peekover's own earlier write —
+// and it gets there in ONE re-render. Five sequences, each on the app page's OWN watch (the
+// shell's controller and detector, switched on with the reader's watch control), each read off
+// the page AND off the disk:
+//
+//   S1  watched · Edit · type · Save · somebody else writes the file (held) · Stop editing
+//   S2  as S1, then a second Save (refused: the safe floor) · Stop editing → "Discard edits"
+//   S3  REVERSED ORDER: Edit FIRST · Watch on · type · Save · Stop editing
+//   S4  Edit · type · Save · THEN Watch on · Stop editing
+//   S5  the 4.3 control: watched · Edit · type · Save · Stop editing
+//
+// What step 0 observed at 67f2ac5, and the red-first, are in progress.md's 4.4 record.
+
+describe.runIf(CHROMIUM)('012 task 4.4 — leaving edit shows the NEWEST text, in one render (Chromium)', () => {
+  const record44 = (line: string): void => console.log(`[4.4][${ENGINE}] ${line}`);
+  const SAVED = ON_DISK + TYPED;
+  const detected = (): Promise<void> => new Promise<void>((r) => setTimeout(r, 1600));
+
+  async function startWatch(host: HTMLElement): Promise<void> {
+    const pill = host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`);
+    expect(pill, 'the app page offers its watch control for this file').not.toBeNull();
+    pill!.click();
+    await waitFor(() => isWatching(), 'the app page’s own watch to start');
+  }
+
+  /** The file open on the app page, selected, NOT yet watched and not in edit. */
+  async function onPage(label: string): Promise<App & { host: HTMLElement; fh: FileSystemFileHandle }> {
+    const { fh, file } = await diskFile(label, ON_DISK);
+    const rig = await mountApp([file]);
+    const host = await select(rig.container, file);
+    return { ...rig, host, fh };
+  }
+
+  /** Somebody else writes the file while it is being edited; wait until the watch holds it. */
+  async function externalChange(host: HTMLElement, fh: FileSystemFileHandle): Promise<void> {
+    await writeDisk(fh, OUT_OF_BAND);
+    await waitFor(() => host.hasAttribute(CHANGED_IN_EDIT_ATTR), 'the hint, for the held external change', 8000);
+  }
+
+  /** Stop editing — answering the unsaved-changes question if it is asked — then let the exit,
+   *  the watch and any echo settle, and read what the page and the disk hold. */
+  async function leaveAndRead(
+    name: string,
+    rig: { host: HTMLElement; container: HTMLElement; fh: FileSystemFileHandle },
+    remounts: { count: () => number; stop: () => void },
+  ): Promise<{ source: string | undefined; column: string; disk: string; remounts: number; hint: boolean; asked: boolean }> {
+    const { host, container, fh } = rig;
+    controlIn(host).click();
+    await new Promise<void>((r) => setTimeout(r, 60));
+    const discard = container.querySelector<HTMLElement>('.peekover-unsaved__discard');
+    discard?.click();
+    await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
+    await detected();
+    const seen = {
+      source: readerSourceFor(host),
+      column: outerColumn(host).textContent ?? '',
+      disk: await readDisk(fh),
+      remounts: remounts.count(),
+      hint: host.hasAttribute(CHANGED_IN_EDIT_ATTR),
+      asked: discard !== null,
+    };
+    remounts.stop();
+    const which = (text: string | undefined): string =>
+      text === OUT_OF_BAND ? 'EXTERNAL' : text === SAVED ? 'SAVED' : text === ON_DISK ? 'AS-OPENED' : 'other';
+    record44(
+      `${name}: reading view=${which(seen.source)} · disk=${which(seen.disk)} · remounts=${seen.remounts} · ` +
+        `hint=${seen.hint} · the guard asked=${seen.asked}`,
+    );
+    return seen;
+  }
+
+  it('★ S1: Save, then an external change is held → leaving edit shows the EXTERNAL text, not the save', async () => {
+    const rig = await onPage('s1');
+    try {
+      await startWatch(rig.host);
+      const session = await enterEdit(rig.host);
+      type(session, TYPED);
+      expect(await clickSave(rig.host)).toBe('Saved.');
+      await detected();
+      await externalChange(rig.host, rig.fh);
+      const remounts = countRemounts(rig.host);
+
+      const seen = await leaveAndRead('S1', rig, remounts);
+
+      expect(seen.disk, 'the fixture: the disk holds the external text').toBe(OUT_OF_BAND);
+      expect(seen.source, 'the reading view is the NEWEST text — what is on disk').toBe(OUT_OF_BAND);
+      expect(seen.column).toContain('changed zsb');
+      expect(seen.column).not.toContain(TYPED.trim());
+      expect(seen.remounts, 'in one re-render').toBe(1);
+      expect(seen.hint).toBe(false);
+      expect(seen.asked, 'a saved buffer is clean: nothing is asked').toBe(false);
+    } finally {
+      stopWatch();
+    }
+  });
+
+  it('★ S2: as S1, then a refused second Save and "Discard edits" → still the EXTERNAL text', async () => {
+    const rig = await onPage('s2');
+    try {
+      await startWatch(rig.host);
+      const session = await enterEdit(rig.host);
+      type(session, TYPED);
+      expect(await clickSave(rig.host)).toBe('Saved.');
+      await detected();
+      await externalChange(rig.host, rig.fh);
+      type(session, ' more');
+      expect(await clickSave(rig.host), 'the safe floor').toMatch(/^Not saved: the file changed on disk\./);
+      const remounts = countRemounts(rig.host);
+
+      const seen = await leaveAndRead('S2', rig, remounts);
+
+      expect(seen.asked, 'the buffer is dirty: the guard asked, and was told to discard').toBe(true);
+      expect(seen.disk, 'nothing was written over the external text').toBe(OUT_OF_BAND);
+      expect(seen.source, 'the reading view is the NEWEST text — what is on disk').toBe(OUT_OF_BAND);
+      expect(seen.column).toContain('changed zsb');
+      expect(seen.column).not.toContain(TYPED.trim());
+      expect(seen.remounts, 'in one re-render').toBe(1);
+      expect(seen.hint).toBe(false);
+    } finally {
+      stopWatch();
+    }
+  });
+
+  it('★ S3, the REVERSED observer order: Edit first, THEN Watch on, type, Save → the saved text, in one render', async () => {
+    const rig = await onPage('s3');
+    try {
+      const session = await enterEdit(rig.host);
+      await startWatch(rig.host);
+      type(session, TYPED);
+      expect(await clickSave(rig.host)).toBe('Saved.');
+      await detected();
+      const hintAfterSave = rig.host.hasAttribute(CHANGED_IN_EDIT_ATTR);
+      const remounts = countRemounts(rig.host);
+
+      const seen = await leaveAndRead('S3', rig, remounts);
+
+      expect(hintAfterSave, 'our own write raised no hint').toBe(false);
+      expect(seen.disk).toBe(SAVED);
+      expect(seen.source, 'the reading view is the saved text').toBe(SAVED);
+      expect(seen.column).toContain(TYPED.trim());
+      expect(seen.remounts, 'in one re-render').toBe(1);
+      expect(seen.hint).toBe(false);
+      expect(isWatching(), 'and the watch is still live').toBe(true);
+    } finally {
+      stopWatch();
+    }
+  });
+
+  it('★ S4: Edit, type, Save, THEN Watch on → the saved text, in one render', async () => {
+    const rig = await onPage('s4');
+    try {
+      const session = await enterEdit(rig.host);
+      type(session, TYPED);
+      expect(await clickSave(rig.host)).toBe('Saved.');
+      await startWatch(rig.host);
+      await detected();
+      const hintAfterWatch = rig.host.hasAttribute(CHANGED_IN_EDIT_ATTR);
+      const remounts = countRemounts(rig.host);
+
+      const seen = await leaveAndRead('S4', rig, remounts);
+
+      expect(hintAfterWatch, 'a watch started after the save sees no change').toBe(false);
+      expect(seen.disk).toBe(SAVED);
+      expect(seen.source, 'the reading view is the saved text').toBe(SAVED);
+      expect(seen.column).toContain(TYPED.trim());
+      expect(seen.remounts, 'in one re-render').toBe(1);
+      expect(seen.hint).toBe(false);
+      expect(isWatching()).toBe(true);
+    } finally {
+      stopWatch();
+    }
+  });
+
+  it('S5, the 4.3 control: watched, Edit, type, Save, Stop editing → the saved text, in one render', async () => {
+    const rig = await onPage('s5');
+    try {
+      await startWatch(rig.host);
+      const session = await enterEdit(rig.host);
+      type(session, TYPED);
+      expect(await clickSave(rig.host)).toBe('Saved.');
+      await detected();
+      const remounts = countRemounts(rig.host);
+
+      const seen = await leaveAndRead('S5', rig, remounts);
+
+      expect(seen.disk).toBe(SAVED);
+      expect(seen.source).toBe(SAVED);
+      expect(seen.remounts, 'in one re-render').toBe(1);
+      expect(seen.hint).toBe(false);
+      expect(seen.asked).toBe(false);
+    } finally {
+      stopWatch();
+    }
+  });
+
+  it('★ S6, UNWATCHED: a second save still in flight when edit is left (R25) → the view shows the first save, then the second when it lands', async () => {
+    const rig = await onPage('s6');
+    // The second write prompt is held open until the test answers it.
+    let prompts = 0;
+    let answer: (state: PermissionState) => void = () => undefined;
+    (rig.fh as unknown as { requestPermission: () => Promise<PermissionState> }).requestPermission = () => {
+      prompts += 1;
+      return prompts === 1 ? Promise.resolve('granted') : new Promise<PermissionState>((r) => (answer = r));
+    };
+    const session = await enterEdit(rig.host);
+    type(session, TYPED);
+    expect(await clickSave(rig.host)).toBe('Saved.');
+    type(session, ' second');
+    saveButtonIn(rig.host).click(); // in flight: waiting on the prompt
+    await waitFor(() => prompts === 2, 'the second write prompt');
+    const remounts = countRemounts(rig.host);
+
+    controlIn(rig.host).click(); // dirty → the guard asks
+    (await waitFor(() => rig.container.querySelector<HTMLElement>('.peekover-unsaved__discard'), 'the question')).click();
+    await waitFor(() => rig.host.getAttribute('data-mode') !== 'edit', 'edit to be left');
+    await waitFor(() => readerSourceFor(rig.host) === SAVED, 'the first save in the reading view', 4000).catch(() => undefined);
+    const afterExit = readerSourceFor(rig.host);
+
+    answer('granted');
+    await waitFor(() => readerSourceFor(rig.host) === `${SAVED} second`, 'the second save in the reading view', 4000).catch(
+      () => undefined,
+    );
+    const disk = await readDisk(rig.fh);
+    record44(`S6: after exit=${afterExit === SAVED ? 'SAVE 1' : 'other'} · after the late save: view=${readerSourceFor(rig.host) === disk ? 'the disk' : 'STALE'} · remounts=${remounts.count()}`);
+    expect(afterExit, 'leaving edit shows the first save').toBe(SAVED);
+    expect(disk, 'the save the user had started completed (R25)').toBe(`${SAVED} second`);
+    expect(readerSourceFor(rig.host), 'and the reading view follows it').toBe(disk);
+    expect(remounts.count(), 'one render each').toBe(2);
+    remounts.stop();
   });
 });

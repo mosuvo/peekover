@@ -220,6 +220,10 @@ interface EditBinding {
   written?: string;
   /** Stops this session's watch for its own exit. */
   release?: () => void;
+  /** A node of the document as it was mounted when this session began (or when the shell last
+   *  rendered it for this session). Once it is no longer connected, somebody else has rendered
+   *  the document since — the watch — and what they rendered is newer (4.4). */
+  mounted?: Node | null;
 }
 
 /** End a binding: from here its save neither writes nor downloads. */
@@ -810,10 +814,13 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     });
     const host = readerHost();
     if (host) {
+      binding.mounted = host.shadowRoot?.firstChild;
       const left = new MutationObserver(() => {
         if (host.getAttribute('data-mode') === 'edit') return;
         left.disconnect();
-        showSaved(binding, host);
+        // In a microtask: after EVERY observer on this host has seen edit left, whichever was
+        // created first — so a watch has flushed what it held before this decides (4.4).
+        queueMicrotask(() => showSaved(binding, host));
       });
       left.observe(host, { attributes: true, attributeFilter: ['data-mode'] });
       binding.release = () => left.disconnect();
@@ -835,12 +842,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    * This re-renders it with the text the session last wrote — through the same render a watch
    * update uses, so the document comes back enhanced and with its edit control.
    *
-   * ★ AT MOST ONE RENDER, AND THE ORDER IS WHY. On a WATCHED document the watch already holds
-   * that text (`ownWrite`) and renders it itself as edit is left: its observer on this host was
-   * created when the watch started — before this session's — so it runs first, and by the time
-   * this looks, the host's source IS the saved text and there is nothing to do. On an unwatched
-   * one nothing else will render it, and this does. Either order ends the same; a watch started
-   * in mid-edit holds nothing, and then this render is the one.
+   * ★ THE NEWEST TEXT WINS, IN ONE RENDER (task 4.4, R24). A running watch flushes what it held
+   * as edit is left — the text this session wrote (`ownWrite`), or an EXTERNAL change that
+   * arrived after it, which is newer and is what the file now holds. So this runs only once
+   * every observer on the host has run (the exit observer defers it by a microtask: the watch's
+   * may have been created before or after this session's), and then:
+   *   • the document was re-mounted since the session began → the watch rendered; leave it. This
+   *     is what stops the saved text being painted over a newer external one (seen at 4.4), and
+   *     it is identity, not text: an external change BACK to the text as opened still counts.
+   *   • otherwise nothing else will render it — unwatched, or a watch started after the save,
+   *     which holds nothing — and this does.
    *
    * Not after a download (nothing in the folder changed), not for a session the shell ended,
    * and not once another file has been selected: the host is about to be that file's.
@@ -849,7 +860,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const text = binding.written;
     if (text === undefined || binding.ended || activeFile !== binding.file) return;
     if (host.getAttribute('data-mode') === 'edit' || readerSourceFor(host) === text) return;
+    if (binding.mounted?.isConnected === false) return;
     renderEnhanced(text, host, { contained: true, preserveReading: true });
+    binding.mounted = host.shadowRoot?.firstChild; // a later save of this session starts from here
   }
   const renderEnhanced = renderWithEnhancements(saveActiveDocument);
 

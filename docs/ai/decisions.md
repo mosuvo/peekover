@@ -1,6 +1,112 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 4.4 — LANDED: leaving edit shows the NEWEST text, in one render; the
+  reversed observer order measured; the route-2(i) case REBUILT, not retired. One defect and one
+  double render were seen and fixed in `appShell.ts`; `watchController.ts` is untouched.**
+  **WHAT WAS OBSERVED FIRST (step 0), at `67f2ac5`, Chromium, on the app page's OWN watch** —
+  its controller and detector, switched on with the reader's watch control; nothing hand-driven.
+  After leaving edit and letting the watch settle:
+
+  | | Reading view | Disk | Re-mounts | Hint | The guard asked |
+  |---|---|---|---|---|---|
+  | S1 · watched, Edit, type, Save, external write (held), Stop editing | **the SAVE** | external | **2** | gone | no — the buffer was clean |
+  | S2 · as S1, a second Save (refused), Stop editing → Discard | **the SAVE** | external | **2** | gone | yes |
+  | S3 · REVERSED: Edit, Watch on, type, Save, Stop editing | the save | the save | **2** | gone | no |
+  | S4 · Edit, type, Save, Watch on, Stop editing | the save | the save | 1 | gone | no |
+  | S5 · the 4.3 control | the save | the save | 1 | gone | no |
+
+  **S1 and S2 were WRONG:** the reading view showed Peekover's own earlier save while the file
+  held somebody else's newer text — stale against the disk, with the hint already cleared and the
+  watch still running (it would not correct itself: the detector had already reported that
+  text). The watch flushed the external text as edit was left, and `showSaved` then rendered the
+  save over it. This is the sequence 6.1 flagged unmeasured; it does not need the guard (S1 never
+  asks). **S3 showed the right text, rendered twice:** the session's exit observer was created
+  before the watch's, so the shell rendered the save and the watch then flushed the same text.
+  S4 and S5 were right, in one render.
+  **THE RULE, AS BUILT — "exit converges on the newest known text", decided in `showSaved`
+  (`appShell.ts`).** Two changes, and no second render anywhere:
+  - *The decision waits for every observer.* The exit observer now runs `showSaved` in a
+    microtask. Observer callbacks for one mutation are delivered together, in creation order;
+    a microtask queued from one of them runs after all of them. So whichever was created first,
+    a running watch has flushed what it held before the shell decides.
+  - *A re-mounted document is left alone.* The binding keeps a node of the document as mounted at
+    edit entry (`EditBinding.mounted`, the shadow root's first child — `mount()` replaces them
+    all). If it is no longer connected when `showSaved` runs, something rendered the document
+    since — only the watch can — and what it rendered is the newest text: its own held external
+    change, or the save it was told of. Identity, not text, on purpose: an external change BACK
+    to the text as opened still counts as newer. After the shell's own render the node is taken
+    again, so a later save of the same session is judged from there.
+  The existing "the source already IS the written text" check stays. *Under the rule:* S1 / S2 —
+  the watch flushes the external text, the shell sees a re-mount and stands down: the external
+  text, one render. S3 — the watch flushes the save first (the microtask), the shell finds the
+  source equal: one render. S4 — a watch started after the save holds nothing (`ownWrite` on a
+  stopped controller is a no-op), nothing re-mounts, the shell renders: one render. S5 — as 4.3.
+  **A SIXTH SEQUENCE, ADDED — S6, unwatched, R25's accepted path:** Save; type; a second Save
+  left waiting on its write prompt; Stop editing → Discard; then the prompt is granted. The view
+  shows the first save on exit and the second when it lands — two renders, one each. It is the
+  case the "node taken again" line exists for, and it reddens without it.
+  **TESTS, RED-FIRST** — `editorSave.browser.test.ts`, a new block "012 task 4.4", S1–S6,
+  Chromium. At HEAD (S1–S5): 3 red, 2 green — S1 and S2 on the claim (`the reading view is the
+  NEWEST text — what is on disk`), S3 on `in one re-render: expected 2 to be 1`. With the fix:
+  all six green. Ablations, each restored byte-identical (md5 checked):
+  - the re-mounted check removed → S1 and S2 red, the save over the external text, 2 re-mounts;
+  - the microtask removed → S3 red, 2 re-mounts;
+  - the node not taken again → S6 red, the view STALE after the late save.
+  **R24(iii) — THE ROUTE-2(i) CASE IS REBUILT, NOT RETIRED. A departure from the ruling's first
+  clause, under its second.** R24(iii) ruled the case retired "since … its state is unreachable
+  by design", and added: "If a meaningful form of it still exists, say so and rebuild it
+  instead." One does. The guard is silent for a CLEAN buffer, so B can still be selected with
+  A's session and binding alive, and a save function taken at edit entry can still be called —
+  the shape of a save that lands late. The case now enters edit on A, types nothing, builds the
+  request by hand, selects B (asserting no question), calls the kept save, and asserts B
+  byte-identical, the outcome `saved`, and A written. **It can fail again:** with the binding
+  moved to the active file at the call, B is overwritten — red on "B is byte-identical". The old
+  case's text is replaced by a named comment at its place; its step re-spelled at 6.1 goes with
+  it. 4.3's switch-window cases still pin the entry half. *If the human still wants it retired,
+  that is a deletion.*
+  **BYTES.** `.output` 5,825,744 (Cr) / 5,825,860 (Fx), **+121** each; headroom 1,514,288 /
+  1,514,172 B under 7 MiB. zip 1,841,144 / 1,841,202 (+189). Manifests 654 / 770 B,
+  `permissions: []`. One file changed size on each engine: the app chunk, 528,201 → 528,322.
+  *The content script: md5-IDENTICAL* (342,806 B; `c4f59f1a…` / `ecc31688…`) —
+  `watchController.ts` was not touched, and it held in every arm. *The app chunk, by Chrome
+  removal arms in sequence, landing on the baseline:* the microtask 20 · the node taken again
+  37 · the re-mounted check and the node taken at entry 64 = **121, residual 0**.
+  **FULL SUITE.** lint 0 · unit 1412 · browser, run alone, 186 files, 1933 passed / 51 skipped,
+  ZERO reds (397 s) · scanner clean over 80 files, self-test 7 + 10 · `pnpm audit --prod`
+  EXIT=0 · golden empty. `editorSave` 36 (+30 skipped) · `editorUnsaved` 82 (+2) ·
+  `editorWatch` 12 · `exportShortcut` 18 · unit `watchController` 64. No flake fired.
+  **NOT COVERED, NAMED.** All six sequences are Chromium: the app page's own watch on a writable
+  handle exists only there. A watch turned on mid-edit is driven by a programmatic click on the
+  watch control; whether a user can reach that control while editing was not looked at. S6's
+  held prompt is a stub on the handle. A real external editor racing a real save is 7.1's.
+  **KICKOFF VS FILE, FLAGGED.** (1) R24(iii): rebuilt, not retired (above). (2) S6 is beyond the
+  kickoff's five. (3) The kickoff offered "showSaved defers to an active watch that holds a
+  newer text"; no query was added to the controller — the re-mount is the evidence, so
+  `watchController.ts`, its test and the content script are zero-diff. (4) Files changed:
+  `appShell.ts`, `editorSave.browser.test.ts`, the three records — no ripple.
+  *Revisit-when:* the human's word on the rebuilt case · 7.1 (a real disk and a real editor) ·
+  any later change to which module renders at an edit exit.
+
+- **2026-10-09 · M12 RULINGS R24–R25 — two HUMAN RULINGS taken in task 4.4's kickoff: a
+  discovered task 4.4 between 6.1 and 6.2; 6.1's dialog copy and its deviation 2 approved.**
+  Stated in the kickoff as approved by the human running it, dated 2026-10-09. The agent chose
+  nothing; this entry records them.
+  **★ R24 — DISCOVERED task 4.4, "exit shows the NEWEST text", runs AFTER 6.1 and BEFORE 6.2.
+  Count 26 → 27.** (i) Observe first; after leaving edit the reading view must show the NEWEST
+  text the file is known to hold — an external change held by the watch beats Peekover's own
+  earlier write. Fix only what is seen to be wrong. (ii) Measure the REVERSED observer order
+  (Watch turned on AFTER entering edit) and Watch turned on after a save, before the exit — and
+  remove "the reversed observer order" from 7.1's walk list once measured. (iii) RETIRE
+  `editorSave`'s "moving the open file to B after entering edit on A…" case, with a named note
+  pointing to 4.3's switch-window cases; "If a meaningful form of it still exists, say so and
+  rebuild it instead." *Outcome:* (i) two sequences wrong, fixed; (ii) measured, one double
+  render fixed, the 7.1 item removed; (iii) a meaningful form exists — REBUILT (the entry above).
+  **★ R25 — 6.1's dialog copy is APPROVED as drafted, and deviation 2 is accepted** — discard on
+  the edit control leaves edit as the control does, so a save already in flight may complete.
+  *Outcome:* nothing to change; S6 (4.4) now pins what the reading view does when that save lands.
+  *Revisit-when:* the 7.1 walk.
+
 - **2026-10-09 · M12 TASK 6.1 — LANDED: the unsaved-changes guard at every exit, asked at the
   TRIGGER; an in-page dialog (R23); `beforeunload` for tab close and reload. The dialog's copy is
   DRAFTED, for review. Four existing test steps re-spelled, named below; one of them weakened a

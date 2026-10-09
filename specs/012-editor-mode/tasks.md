@@ -809,6 +809,38 @@ touched; this group widens a gate, not what it protects.*
       342,652 → 342,806 B (+154: the method 114, the token 40; both removed → md5-identical to
       baseline on both engines); app chunk +744 B, residual 0.
 
+- [x] **4.4 ★ DISCOVERED 2026-10-09 (R24) — leaving edit shows the NEWEST text.** Runs AFTER 6.1
+      and BEFORE 6.2. OBSERVE FIRST, on the app page's own watch (Chromium): S1 watched, Edit,
+      type, Save, an out-of-band write (held), Stop editing · S2 as S1 with a refused second Save
+      and a Discard · S3 the REVERSED order — Edit, then Watch on, type, Save, Stop editing · S4
+      Edit, type, Save, then Watch on, Stop editing · S5 the 4.3 control. After leaving edit the
+      reading view shows the newest text the file is known to hold — an external change held by
+      the watch beats Peekover's own earlier write. Fix only what is seen to be wrong; no second
+      render. Retire `editorSave`'s "moving the open file to B…" case — or rebuild it, if a
+      meaningful form still exists.
+      Files: `src/app/appShell.ts` · `src/watch/watchController.ts` (+ its test) only if the fix
+      needs it · `tests/browser/editorSave.browser.test.ts`
+      Verify: (**real engine, Chromium**) S1–S5 each assert the column = the newest text and the
+      re-mount count; the fix ablated → the wrong text returns, in its own units; the content
+      script md5-identical if `watchController.ts` is untouched; the app-chunk delta decomposed,
+      residual 0; the full suite. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`.
+      [R24]
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 4.4 — LANDED" and "M12 RULINGS
+      R24–R25"):* **(i) SEEN at `67f2ac5`:** S1 and S2 WRONG — the reading view showed the save
+      while the disk held the external text, 2 re-mounts; S3 the right text in 2 re-mounts; S4
+      and S5 right, 1 each. **(ii) THE FIX, in `showSaved` (`appShell.ts`) only:** the exit
+      observer runs it in a microtask, after every observer on the host; and it stands down when
+      the document was re-mounted since edit entry (a node kept on the binding) — the watch
+      rendered, and that is newer. `watchController.ts` untouched. After: S1 / S2 the external
+      text, S3–S5 the save, ONE re-mount each. **(iii) S6 added** — a second save in flight when
+      edit is left (R25): the view follows it when it lands. **(iv) ★ The route-2(i) case is
+      REBUILT, not retired:** with a clean buffer the guard is silent, so a kept save can still
+      be called after B is selected; it asserts A written and B untouched, and reddens when the
+      binding is moved to the active file. **Ablations:** the re-mount check → S1, S2 red; the
+      microtask → S3 red; the node not re-taken → S6 red. **Measured:** `.output` 5,825,744 /
+      5,825,860 B (+121), the app chunk 528,322 B (+121: 20 + 37 + 64, residual 0), content
+      script md5-identical (342,806 B); unit 1412; browser 1933 / 51 skipped, zero reds.
+
 *Group-4 acceptance (plan §6): SUPPORTED-DEGRADED is proven in BOTH directions, red-first — deferred while
 editing; flushed on a clean exit, conflict-routed (never auto-flushed) on a dirty one.*
 
@@ -1231,10 +1263,10 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       description; this is the walk it was owed, and a changed mind here RE-OPENS R21: a watched
       file, an external change, Save → refused and told, the edit still on screen · changed and
       changed BACK (reverted) → the save proceeds, with the warning · a DECLINED write prompt → a
-      download · Ctrl/Cmd+S saves · Stop editing after a save shows the saved text. · **the
-      REVERSED observer order, unmeasured** — Watch turned on AFTER entering edit, then save, then
-      exit: the view shows the saved text; one render or two, NOTED (4.3 measured only
-      watch-then-edit). · **the network windows 5.7 could not drive** — the reload /
+      download · Ctrl/Cmd+S saves · Stop editing after a save shows the saved text. ·
+      ★ *2026-10-09 — "the REVERSED observer order, unmeasured" was listed here and is REMOVED:
+      measured at task 4.4 (R24(ii)) — Watch turned on after entering edit, and after a save;
+      the saved text, one render each (`decisions.md`, "M12 TASK 4.4 — LANDED").* · **the network windows 5.7 could not drive** — the reload /
       duplicated-tab write re-prompt (plan §4 risk 2); the browser's own write prompt; a REAL
       download reaching the downloads folder; the Ctrl/Cmd+S KEY in the loaded page; and edit →
       preview → save with the Network tab open where the editor's chunks are extension-scheme
@@ -1363,6 +1395,9 @@ RULING R21"): 1 (3) · 2 (2) · 3 (4) · 4 (3) · 5 (6) · 6 (4) · 7 (3). One h
 ★ *2026-10-09: **26 tasks** — group 5 is (7) with the discovered 5.8 (network-guard hardening),
 human-ruled and human-scheduled between 5.7 and 6.1, `decisions.md` "M12 RULING R22": 1 (3) · 2 (2)
 · 3 (4) · 4 (3) · 5 (7) · 6 (4) · 7 (3).*
+★ *2026-10-09: **27 tasks** — group 4 is (4) with the discovered 4.4 (exit shows the newest text),
+human-ruled and human-scheduled between 6.1 and 6.2, `decisions.md` "M12 RULINGS R24–R25": 1 (3) ·
+2 (2) · 3 (4) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing: … 5.8 → 6.1 → **4.4** → 6.2.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a
