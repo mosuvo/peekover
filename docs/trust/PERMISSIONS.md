@@ -223,3 +223,12 @@ honors it is **behavioral**, on three surfaces:
 
 So the manifest requests no network capability, and the reader, folder mode and watch mode are all
 **tested to make none**.
+
+**The edit save-back path** — entering edit, the live preview, and Save, including its download
+fallback — makes **no network request**: `tests/browser/editorNetwork.browser.test.ts` asserts, on
+the Resource Timing buffer and on the page's own network calls in real Chromium and Firefox (the
+write to the file on Chromium, the only engine with a file handle to write through), that nothing
+leaves the page's origin while the editor loads, while a document with diagrams, math, code and a
+table is typed into and re-previewed, or while a save writes, is refused or becomes a download —
+and, non-vacuously, that a remote reference deliberately placed in the same view **does** register
+in the same test.

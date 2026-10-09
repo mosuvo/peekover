@@ -949,7 +949,14 @@ write beside a ledger that says "cannot write".*
       argument omitted → `text/html` observed. App chunk +542 B, residual 0; content script
       md5-identical. The download's status copy is drafted, for review (R18).
 
-- [ ] **5.5 ★ HUMAN DECISION GATE — the conflict/overwrite POLICY, from a walk (spec §8-1; D-B(ii); Q3).**
+- [x] **5.5 ★ HUMAN DECISION GATE — the conflict/overwrite POLICY, from a walk (spec §8-1; D-B(ii); Q3).**
+      ★ **RULED 2026-10-09 — R21 (`decisions.md`, "M12 RULING R21"): REFUSE AND TELL.** The safe floor
+      5.3 built is the shipped policy: on a conflict nothing is written, the status says so in
+      words, the edit stays on screen. No diff view and no force-overwrite in M12. **Ruled from the
+      description, NOT from a walk** — a stated departure from this line's "from a walk", by the
+      human's choice to do the manual checking in one sitting (like the 3.2 eyeball deferral). **The
+      walk is DEFERRED to 7.1**, which now lists it; if it changes the human's mind, R21 is
+      re-opened. The signed ledger row already says this, so nothing is re-signed.
       The human walks a real conflicting edit (a watched file changed externally while being edited)
       against the three axes — refuse and tell · offer `diffChrome.ts`'s diff view · force-overwrite
       behind an explicit confirmation — on 5.3's safe floor, and RULES. The agent prepares the scenario
@@ -958,7 +965,7 @@ write beside a ledger that says "cannot write".*
       Verify: the ruling banked verbatim. 5.6 does not start without it. *(Struck if gate 3 rules the
       policy directly — Q3.)* [§8-1]
 
-- [ ] **5.6 The conflict UX, as ruled at 5.5.** TEST FIRST. Builds exactly the ruled option on top of the
+- [ ] ~~**5.6 The conflict UX, as ruled at 5.5.** TEST FIRST. Builds exactly the ruled option on top of the
       safe floor. ★ **Its Files and Verify cannot be fully written before 5.5** — "refuse" may need no
       code beyond 5.3's floor; "diff view" reuses `diffChrome.ts`; "force-overwrite" adds a confirmation
       that must itself be un-skippable. The kickoff for this task is drafted from the ruling's text.
@@ -969,9 +976,13 @@ write beside a ledger that says "cannot write".*
       never colour alone. Content-script bytes md5-identical. Golden EMPTY · manifest **654 / 770 B** ·
       `permissions: []`. [§8-1; D-7]
       ★ *Added 2026-10-08 (`decisions.md`, "M12 TASK 5.1", route 3):* **if 5.5 rules force-overwrite,
-      the ledger row is RE-SIGNED by the human before 5.6 lands.**
+      the ledger row is RE-SIGNED by the human before 5.6 lands.**~~
+      ★ **STRUCK 2026-10-09 — R21 (`decisions.md`, "M12 RULING R21").** This task was contingent on a
+      policy that needed building. The ruled policy — refuse and tell — is 5.3's safe floor as it
+      stands: nothing is built, and nothing is re-signed (the route-3 note above does not trigger).
+      Kept, not deleted; the box stays unticked because nothing was done. Count 26 → 25.
 
-- [ ] **5.7 The zero-network proof across load, preview and save, with a firing control; `permissions: []`
+- [x] **5.7 The zero-network proof across load, preview and save, with a firing control; `permissions: []`
       re-proven (spec §4 Trust).** TEST FIRST. Lands after group 4 by constraint — the collision is
       closed, so no watch-triggered remount can race the request log. Request-level, real engine, never a
       DOM-shape assertion.
@@ -988,6 +999,32 @@ write beside a ledger that says "cannot write".*
       ★ *Added 2026-10-08 (`decisions.md`, "M12 TASK 5.1", route 4):* **`docs/trust/PERMISSIONS.md`
       joins this task's Files** for the zero-network section's save-path sentence — factual, drafted
       at 5.7 after the proof, routed to the reviewer.
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 5.7 — LANDED"):* three windows, each a
+      time bracket read by request START — LOAD (the edit control → a live CodeMirror view),
+      PREVIEW (a fence for each of the four enhancers, a mermaid fence carrying `$$`, real keys
+      and a typed remote image, through the re-render) and SAVE (the download with no handle and
+      the Ctrl/Cmd+S path, both engines; on Chromium the granted write, leaving edit after it, a
+      refused conflict, a declined prompt, and write + echo + external change + refusal on a
+      document the app page is watching). **Zero off-origin in every window on every engine it
+      runs on.** The claim is OFF-ORIGIN, not this line's "zero requests": the harness serves the
+      lazy chunks over `http://localhost`, as `diagramNetwork` and `mathNetwork` already state.
+      Two instruments: Resource Timing (the shared buffer united with a per-window
+      `PerformanceObserver`) and a log of `fetch` / XHR / `sendBeacon` / `WebSocket` /
+      `EventSource` calls. **The firing control is in every window:** this line's "remote
+      reference adopted without passing through a sanitizer" (a node-built SVG `<image href>`
+      put into the measured surface), plus a bare `fetch` and a `WebSocket` — all on the
+      loopback, all seen. **★ A finding about the instrument:** Resource Timing records a request
+      when it ENDS, so a reading taken after a flush misses one still in flight — the first
+      red-first ablation stayed GREEN. The claim is therefore read a second time, after the
+      control's own request has landed; with that, the ablation is red in all ten cases (7 Cr +
+      3 Fx), on the claim, naming the leak. `permissions: []`: `tests/manifest.test.ts` green
+      (config-derived) and both BUILT manifests read directly. **Moved to 7.1, not faked:** plan
+      §4 risk 2's reload / duplicated-tab permission probe (an OPFS handle is granted without a
+      prompt, and a test cannot reload the page it runs in), the browser's own write prompt, a
+      real download, the Ctrl/Cmd+S key through `main.ts`'s listener, and extension-scheme chunk
+      loads. `PERMISSIONS.md`'s sentence is DRAFTED and flagged for review — it is not signed
+      text; SIGNED (a) and (b) are byte-exact (the ledger test, unchanged). Every shipped file is
+      md5-identical to a build at `644b63b`, both engines.
 
 *Not a task — the OPTIONAL metadata-reliability probe (plan §7).* Nothing ships waiting on it; it is not
 scheduled here. If a later session runs it, it may at most promote metadata to a pre-check that falls
@@ -1118,7 +1155,19 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       (`capability.ts`, unchanged by route 6) — a verdict on whether it still reads true beside
       save-back · **real-disk permission behaviour** — the write prompt, per-handle independence
       from the folder grant, the per-tab / reload re-prompt, and what the browser does with a grant
-      after Revoke.
+      after Revoke. ★ *added 2026-10-09 (`decisions.md`, "M12 RULING R21" and "M12 TASK 5.7 —
+      LANDED"):* **the DEFERRED 5.5 conflict walk** — R21 ruled refuse-and-tell from the
+      description; this is the walk it was owed, and a changed mind here RE-OPENS R21: a watched
+      file, an external change, Save → refused and told, the edit still on screen · changed and
+      changed BACK (reverted) → the save proceeds, with the warning · a DECLINED write prompt → a
+      download · Ctrl/Cmd+S saves · Stop editing after a save shows the saved text. · **the
+      REVERSED observer order, unmeasured** — Watch turned on AFTER entering edit, then save, then
+      exit: the view shows the saved text; one render or two, NOTED (4.3 measured only
+      watch-then-edit). · **the network windows 5.7 could not drive** — the reload /
+      duplicated-tab write re-prompt (plan §4 risk 2); the browser's own write prompt; a REAL
+      download reaching the downloads folder; the Ctrl/Cmd+S KEY in the loaded page; and edit →
+      preview → save with the Network tab open where the editor's chunks are extension-scheme
+      URLs — on Firefox too.
       Files: `docs/ai/progress.md` (verdicts) · `src/theme/readerCss.ts` only if a walked item returns a
       named styling finding
       Verify: every axis above gets its own stated verdict — PASS, or a named finding routed to § Carried
@@ -1218,6 +1267,9 @@ BETWEEN 5.1 and 5.2 — after the sign-off, before the first save task's code. I
 runs BETWEEN 5.4 and 5.5 — after the download exists (its mismatch route IS the download), before the
 conflict walk (which should not be walked over a false hint). It is group 4's by subject, not by
 position; it reorders none of the three constraints.*
+★ *2026-10-09 (`decisions.md`, "M12 RULING R21"): **5.5 is ruled without its walk and 5.6 is
+struck**, so group 5 ends at 5.7 and **6.1 follows 5.7**. The walk 5.5 named moves to 7.1. It
+reorders none of the three constraints: 5.7 still follows 4.1–4.3.*
 
 **Count proposed for gate 3: SEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (3) · 4 (2) · 5 (7) · 6 (4) ·
 7 (3). Three are human gates (5.1, 5.5, 7.1); two are contingent on a ruling's content (5.6, 6.4); 5.5 is
@@ -1232,6 +1284,9 @@ widens 1.3's scope, not the count.*
 ★ *2026-10-09: **26 tasks** — group 4 is (3) with the discovered 4.3 (save-path hardening, R17),
 human-ruled and human-scheduled between 5.4 and 5.5, `decisions.md` "M12 RULINGS R16–R18". R16 widens
 6.1's scope, not the count.*
+★ *2026-10-09: **25 tasks** — group 5 is (6) with 5.6 STRUCK by human ruling R21 (`decisions.md`, "M12
+RULING R21"): 1 (3) · 2 (2) · 3 (4) · 4 (3) · 5 (6) · 6 (4) · 7 (3). One human gate remains (7.1;
+5.1 is signed and 5.5 is ruled); one task is still contingent on a ruling's content (6.4).*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

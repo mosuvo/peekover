@@ -1,6 +1,157 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 5.7 — LANDED: the zero-network proof across edit, preview and save, with
+  a firing control in every window; `permissions: []` re-proven; `PERMISSIONS.md`'s zero-network
+  sentence DRAFTED and flagged for review. Test and records only — no production byte moved. One
+  finding about the instrument, and one about an existing guard file, are flagged at the end.**
+  **STEP 0 (a) — WHAT "NETWORK" MEANS IN THE EXISTING INSTRUMENTS.** Resource Timing entry names
+  matching `/^https?:/i` ("on the wire"), then `isOffOrigin` — not under `location.origin` ("left
+  our origin"). `blob:`, `data:` and the extension schemes are excluded by scheme. Harness-origin
+  traffic is NOT excluded and is why the claims are off-origin: the dev server serves our own lazy
+  chunks over `http://localhost`, where the product serves them from the package. The window in
+  `helpers/diagramWindow.ts` is the mermaid measuring container's lifetime, applied to each
+  entry's `startTime`. The firing control is a node-built SVG `<image href>` — never a parsed
+  string, because a Firefox inert parse consumes the load — pointed at `127.0.0.1:PORT`, a
+  different origin on the same loopback.
+  **STEP 0 (b) — THE THREE WINDOWS**, each a time bracket: `performance.now()` at the opening,
+  every reading by request START at or after it.
+  - *LOAD* — the click on the edit control to a live CodeMirror view, on an unwatched file.
+  - *PREVIEW* — a document with a mermaid fence, a mermaid fence carrying `$$` (R15), block and
+    inline math, a `javascript` fence and a table; from edit entry, through the build render,
+    real keys, a typed REMOTE image reference (`127.0.0.1`, its own URL) and the re-render, until
+    the four enhancers have finished on the re-rendered column. The reader's own first render is
+    let finish BEFORE the window, so the window is the preview's. Asserted inside it: one diagram
+    SVG, two or more `<math>`, one highlighted fence, one table toolbar; the `$$` fence degraded
+    with "contains math", no katex artifact in the live document and no katex chunk request
+    (`diagramKatexGate`'s two instruments); the typed image present as a blocked placeholder,
+    never a live `<img>`, and never requested.
+  - *SAVE* — five windows. Both engines: the download with no handle, by the Save button and by
+    `saveEdit()` (what Ctrl/Cmd+S calls). Chromium: a granted write, `saveEdit()` and then
+    leaving edit (R19's re-render), unwatched; a refused conflict, unwatched; a declined prompt
+    → the download; and, on a document the app page is itself watching, a write, the wait for
+    its echo, an external change and the refused save (4.3's revisit-when).
+  **STEP 0 (c) — ENGINES.** LOAD, PREVIEW and the no-handle download run on both. The write, the
+  conflict, the declined prompt and the watched save are Chromium-only: they need a
+  `FileSystemFileHandle`, and Firefox's folder routes produce none.
+  **THE INSTRUMENT.** Two, united in one reading. *The wire:* Resource Timing by the shared
+  predicate, read from the buffer AND from a `PerformanceObserver` opened with the window, so a
+  full buffer cannot become a quiet zero. *The calls:* `fetch`, `XMLHttpRequest.open`,
+  `sendBeacon`, `WebSocket` and `EventSource`, wrapped for the window and passed through — a
+  WebSocket never enters Resource Timing and AGENTS.md #1 names it. The kickoff asked for
+  "Resource Timing plus whatever the existing instruments also use"; the call log is beyond what
+  they use, and is flagged as an addition.
+  **THE FIRING CONTROL — IN EVERY WINDOW.** After the claim is read and before the window closes,
+  a leak is put into the surface that was measured: `tasks.md` 5.7's "remote reference adopted
+  without passing through a sanitizer" (`injectLiveImageHref` into the edit shell, the preview
+  column or the reading column), a bare `fetch` and a `WebSocket`. The same reading must then
+  name all three. All on the loopback. Caught in all ten runs: image, fetch on the wire, fetch
+  in the call log, WebSocket in the call log.
+  **RESULT — requests leaving the origin: ZERO, every window, every engine it runs on.**
+
+  | Window | Chromium | Firefox |
+  |---|---|---|
+  | LOAD | 0 off-origin (5 same-origin module requests, a cold editor load); control caught | 0 (5 same-origin); control caught |
+  | PREVIEW | 0 (0 same-origin — the engines were warm from the reader's render); control caught | 0 (0); control caught |
+  | SAVE download, no handle (+ `saveEdit()`) | 0; control caught | 0; control caught |
+  | SAVE write + `saveEdit()` + exit, unwatched | 0; control caught | Chromium-only |
+  | SAVE conflict, unwatched | 0; control caught | Chromium-only |
+  | SAVE download, declined prompt | 0; control caught | Chromium-only |
+  | SAVE write + echo + external change + refusal, watched | 0; control caught | Chromium-only |
+
+  **RED-FIRST, AND WHAT IT FOUND.** The ablation adopts a leak into the surface BEFORE the claim is
+  read. Its first run was GREEN on both engines — the claim did not see a leak adopted 1.5 s
+  earlier. Cause: Resource Timing records a request when it ENDS, and a refused loopback
+  connection takes about two seconds to fail on this machine, so the request was in neither the
+  buffer nor the observer yet. The helper now reads the claim TWICE: after a flush, and again
+  once the control's own off-origin request has landed, with the control's probes taken out —
+  any earlier off-origin request has had longer. Re-run: RED in all ten cases (7 Chromium, 3
+  Firefox), each on the claim's own assertion, each naming the ablation's URL. Restored
+  byte-identical (md5).
+  **`permissions: []`.** `tests/manifest.test.ts` green (it reads the config-derived manifest, as
+  its header says), and both BUILT manifests read directly after the rebuild: `permissions: []`,
+  654 / 770 B, md5-identical to the build at `644b63b`.
+  **THE SENTENCE, AS LANDED — DRAFTED BY THE AGENT, NOT SIGNED; FOR REVIEW.** One sentence, its own
+  paragraph at the end of `PERMISSIONS.md`'s "Zero-network evidence" section (wrapped there; one
+  line here):
+
+  > **The edit save-back path** — entering edit, the live preview, and Save, including its download fallback — makes **no network request**: `tests/browser/editorNetwork.browser.test.ts` asserts, on the Resource Timing buffer and on the page's own network calls in real Chromium and Firefox (the write to the file on Chromium, the only engine with a file handle to write through), that nothing leaves the page's origin while the editor loads, while a document with diagrams, math, code and a table is typed into and re-previewed, or while a save writes, is refused or becomes a download — and, non-vacuously, that a remote reference deliberately placed in the same view **does** register in the same test.
+
+  *Two things left alone, for the reviewer:* the section still says "on three surfaces" above
+  its bullets and "the reader, folder mode and watch mode are all tested to make none" below
+  them. The fence was "the save-path sentence ONLY", so neither was edited and the sentence was
+  placed after them rather than as a fourth bullet. And "no network request" is the product
+  claim; what the test measures is "nothing leaves the page's origin", which the sentence says.
+  **No pin was added to `tests/permissionsLedger.test.ts`** (zero-diff): the sentence is unsigned
+  and under review, and a pin would turn the reviewer's edit into a red test. That file still
+  proves SIGNED (a) and (b) byte-exact — green, 9 of 9.
+  **MOVED TO 7.1, NOT FAKED.** Plan §4 risk 2's reload / duplicated-tab permission probe: an OPFS
+  handle is granted without a prompt, and a test cannot reload the page it runs in. The
+  browser's own write prompt. A real download (the anchor click is swallowed here, as in
+  `editorSave`). The Ctrl/Cmd+S KEY: its listener is `entrypoints/app/main.ts`'s, which the
+  harness does not load. And the loaded extension itself, where the chunks are extension-scheme
+  URLs — on Firefox too. `tasks.md` 7.1 lists each.
+  **BYTES — NOTHING MOVED.** Clean rebuild of both engines before the change (stashed, at
+  `644b63b`) and after: all 278 shipped files (139 per engine) md5-identical. `.output`
+  5,822,029 / 5,822,145 B; zip 1,839,751 / 1,839,809 B; content script 342,806 B, md5
+  `c4f59f1a…` (Cr) / `ecc31688…` (Fx); app chunk 524,607 B; `dependencies` 11. `git diff --stat`
+  over `src/`, `entrypoints/`, `package.json`, the lockfile and the configs: EMPTY.
+  **VERIFY (an empty production diff — AGENTS.md's targeted rule).** lint 0. The new file: 14
+  (7 Chromium + 3 Firefox passed, 4 skipped on Firefox). Spot-check, one run of seven browser
+  files: `diagramNetwork` 12 · `diagramKatexGate` 8 · `editorSave` 30 (+24 skipped) ·
+  `editorPreview` 24 · `editorNetwork` 10 (+4) green; THREE REDS, none in the new file, each
+  cleared by an isolated rerun — `mathNetwork` on Firefox (the known font case; 6/6 alone) and
+  `diagramSourceGuard`'s PER-FENCE on both engines (8/8 alone; see the finding below). Unit:
+  `permissionsLedger` + `manifest` 17 of 17. `pnpm audit --prod` EXIT=0. Golden empty. Beyond
+  the targeted rule, because a new browser file is where shared state bites: the FULL browser
+  suite, run alone — 184 files, 1845 passed / 43 skipped (+10 / +4, all this file), ZERO reds;
+  and the full unit suite, 1372 of 1372.
+  **FINDING 1, FLAGGED — the same blind spot is in the existing guard files.** Every zero-network
+  file here reads the buffer after `flush()` (about 180 ms). Resource Timing cannot show a
+  request still in flight then. Their firing controls await their own request, so the controls
+  are sound; it is the ZERO readings that are short-sighted for a slow request. Not touched —
+  outside this task's fence. Home: the human's call (§ Carried items).
+  **FINDING 2, FLAGGED — `diagramSourceGuard`'s PER-FENCE red is order-dependent and predates
+  this task.** It reproduces with `diagramNetwork` + `diagramSourceGuard` run together and
+  nothing else — the new file absent — on both engines: twelve SAME-ORIGIN flowchart chunk
+  requests land inside its window, against a bare `toEqual([])`. Green alone and green in the
+  full suite's order. Cause not established (a guess, unchecked: the warm-up's diagram comes
+  from the on-device diagram cache an earlier file filled, so the flowchart definition is not
+  loaded until the test's own render). Not a network finding — nothing left the origin. Not
+  touched. Home: the next session with a test-harness slot (§ Carried items).
+  **KICKOFF vs FILE, FLAGGED.** (i) `tasks.md` 5.7 says "zero requests leave the origin" — met as
+  written — but its group text and the kickoff's "zero network" are both served by the
+  off-origin claim, stated above. (ii) The kickoff's SAVE window names four cases; a declined
+  prompt and a watched save were added (the second is 4.3's revisit-when). (iii) The kickoff
+  named a typed remote image nowhere; it was added to PREVIEW as the likeliest real leak on this
+  path. (iv) R21 arrived inside this kickoff, not as a separate session — banked below as the
+  human's ruling, with that provenance.
+  *Revisit-when:* the 7.1 walk (the windows moved there; the sentence's review); any change to
+  how the editor's chunks are loaded; a decision on finding 1.
+
+- **2026-10-09 · M12 RULING R21 — HUMAN RULING: the conflict / overwrite POLICY is REFUSE AND TELL
+  (spec §8-1; `tasks.md` 5.5). The walk is deferred to 7.1; 5.6 is struck; 26 → 25 tasks.**
+  Given by the human in task 5.7's kickoff, dated 2026-10-09, marked there "approved by the human
+  running this prompt". The agent chose nothing; this entry records it.
+  **THE POLICY.** The safe floor 5.3 built IS the shipped policy: on a conflict nothing is
+  written, the status says so in words, and the edit stays on screen. No diff view and no
+  force-overwrite in M12.
+  **THE LEDGER.** The signed row already says exactly this ("it **writes nothing**, says so in
+  words, and keeps the edit on screen"), so nothing is re-signed; 5.6's route-3 note does not
+  trigger.
+  **THE WALK IS DEFERRED TO 7.1 — a stated departure.** `tasks.md` 5.5 says the policy is ruled
+  "from a walk". It was ruled from the description instead, by the human's choice to do the
+  manual checking in one sitting — the same shape as the 3.2 eyeball deferral. `tasks.md` 7.1
+  now lists the walk. **If the 7.1 walk changes the human's mind, R21 is re-opened.**
+  **5.6 IS STRUCK.** It was contingent on a policy that needed building; this one does not. Struck
+  in place in `tasks.md`, kept, with a dated note.
+  **REJECTED, with the reasons:**
+  - *The diff view* — new UI and a merge story. Backlog, after M12.
+  - *Force-overwrite* — contradicts the signed row, and is the one path that can destroy another
+    writer's change.
+  *Revisit-when:* the 7.1 walk; any later proposal to add a diff view or an overwrite (the row
+  is re-signed first).
+
 - **2026-10-09 · M12 TASK 4.3 — LANDED: a save's own write is not an external change (R17(i)); edit
   entry binds the file the reader RENDERED (R17(ii)); after a save, leaving edit shows the saved
   text (R19); one stale comment. No human ruling was taken during the task; three judgment calls

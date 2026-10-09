@@ -1,14 +1,15 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 4.3 — **a save's own write is no longer taken for an external change;
-edit binds the file the reader rendered; after a save, leaving edit shows the saved text**;
-`decisions.md`'s "M12 TASK 4.3 — LANDED" and "M12 RULINGS R19–R20" entries. Save writes on Chromium
-and downloads everywhere else; `PERMISSIONS.md` carries the final signed row.)
+*Updated: 2026-10-09 (task 5.7 — **zero network across entering edit, the live preview and Save,
+proven at the request level on both engines; the conflict policy is RULED — refuse and tell (R21);
+5.6 is STRUCK; GROUP 5 IS COMPLETE**; `decisions.md`'s "M12 TASK 5.7 — LANDED" and "M12 RULING
+R21" entries. Save writes on Chromium and downloads everywhere else; `PERMISSIONS.md` carries the
+final signed row, and a drafted zero-network sentence awaiting review.)
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
-3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3 and 5.4 landed; **5.5 is next — the human's
-conflict walk.**
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4 and 5.7 landed; 5.5 RULED without its walk
+(R21 — the walk is on 7.1's list); 5.6 struck; **6.1 is next — the unsaved-changes guard.**
 **Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
@@ -1277,32 +1278,65 @@ record.
   Firefox's polled watch (its app-page routes have no handle; the drag route polls) with a save —
   there Save is a download and writes nothing, so (i) cannot arise.
 
+**M12 task 5.7 DONE, 2026-10-09 — zero network across edit, preview and save, proven on both
+engines with a firing control in every window; R21 banked (refuse and tell; 5.6 struck). GROUP 5
+IS COMPLETE.** `decisions.md`'s "M12 TASK 5.7 — LANDED" and "M12 RULING R21" entries are the
+record. Test and records only: no production byte moved.
+- **R21 (human, in this task's kickoff).** The conflict policy is REFUSE AND TELL — 5.3's safe
+  floor, as built. No diff view, no force-overwrite in M12. Ruled from the description; the walk
+  is deferred to 7.1 and re-opens R21 if it changes the human's mind. 5.6 struck, 26 → 25 tasks.
+- **Built.** `tests/browser/editorNetwork.browser.test.ts` — three windows (LOAD · PREVIEW · five
+  SAVE cases), two instruments (Resource Timing, buffer + observer; a log of fetch / XHR / beacon
+  / WebSocket / EventSource calls), and the control in every window.
+- **Result.** Zero requests left the origin in every window: LOAD, PREVIEW and the no-handle
+  download on Chromium and Firefox; the write, the conflict, the declined prompt and the watched
+  save on Chromium. R15's gate held inside the PREVIEW window. A typed remote image was blocked,
+  not fetched.
+- **Red-first, and a finding.** The first ablation was GREEN: Resource Timing records a request
+  when it ends, and a leak adopted 1.5 s before the reading was still in flight. The claim is
+  now read a second time, after the control's own request lands. Re-run: red in all ten cases
+  (7 Cr + 3 Fx), on the claim, naming the leak. Restored byte-identical.
+- **`PERMISSIONS.md`.** One sentence, at the end of the zero-network section — DRAFTED, NOT
+  SIGNED, for review. Left alone for the reviewer: "on three surfaces" and the closing line's
+  three names. SIGNED (a) and (b) byte-exact; `permissionsLedger.test.ts` zero-diff and green.
+- **Bytes.** All 278 shipped files md5-identical to a build at `644b63b`, both engines.
+  `permissions: []` on both built manifests.
+- **Verify (targeted — an empty production diff).** lint 0 · the new file 14 (7 Cr + 3 Fx; 4
+  skipped) · spot-check: three reds, none in the new file, each cleared alone — `mathNetwork`
+  on Firefox (the known font case) and `diagramSourceGuard`'s PER-FENCE on both engines (NEW;
+  § Carried items) · unit `permissionsLedger` + `manifest` 17 · audit EXIT=0 · golden empty.
+  Also run, beyond the rule: the full browser suite alone — 184 files, 1845 passed / 43 skipped,
+  zero reds — and the full unit suite, 1372.
+- **Moved to 7.1, not faked:** the reload / duplicated-tab write re-prompt (plan §4 risk 2); the
+  browser's own write prompt; a real download; the Ctrl/Cmd+S key through `main.ts`; the loaded
+  extension's extension-scheme chunk loads, Firefox included.
+- **Kickoff vs file, flagged.** The claim is off-origin (the harness serves our chunks over
+  http). A declined-prompt window, a watched window and a typed remote image were added to what
+  the kickoff listed. The call log goes beyond the existing instruments. R21 arrived inside the
+  kickoff.
+
 ## Up next
 
-**The order, as ruled 2026-10-09 (R17): 5.4 (DONE) → 4.3 (DONE) → 5.5 (human) → 5.6 → 5.7.**
-**NEXT — M12 task 5.5, the HUMAN conflict walk.** `tasks.md` 5.5 is the line. It needs a loaded
-extension and has no agent substitute: the human walks a real conflicting edit on 5.3's safe
-floor and rules the policy — refuse and tell · offer the diff view · force-overwrite behind an
-explicit confirmation. The agent prepares the scenario and records the ruling; it chooses nothing.
-- **What the walk now stands on.** The hint means what it says: after 4.3 it appears only for a
-  change Peekover did not write. A save says "Saved." and nothing more unless the file really
-  moved under the edit.
-- **The scenario to prepare:** a watched folder file, edited; an external editor changes it; Save
-  → "Not saved: the file changed on disk…", buffer kept. Then the variations: changed and changed
-  back (saves, with ruling C's warning); a declined write prompt (a download); Revoke mid-edit.
-- **If force-overwrite is ruled, the ledger row is re-signed before 5.6 lands** (`tasks.md` 5.6).
-**★ CARRIED FOR 6.1's KICKOFF.** The guard must fire at the TRIGGER (before the picker opens,
-before a drop or a re-pick is processed), not at the session's ending — on a folder switch or a
+**Group 5 is complete: 5.5 ruled (R21), 5.6 struck, 5.7 landed. 25 tasks.**
+**NEXT — M12 task 6.1, the unsaved-changes guard.** `tasks.md` 6.1 is the line, with R6's and
+R16's redlines: tab close, selecting another file, leaving edit — and Revoke, a folder switch and
+a closed folder. Both directions: dirty → the guard; clean → silence. After a download the buffer
+is still dirty, so the guard fires — intended.
+- **Owed to the human, not blocking 6.1:** a review of `PERMISSIONS.md`'s drafted zero-network
+  sentence (`decisions.md`, "M12 TASK 5.7 — LANDED"), and the 5.5 walk, now on 7.1's list.
+**★ CARRIED FOR 6.1's KICKOFF — the guard fires at the TRIGGER: the file selection, the folder
+picker, a drop, a re-pick — not at the session's ending.** That is: before the picker opens and
+before a drop or a re-pick is processed — on a folder switch or a
 cancelled re-pick the triggering outcome has already happened by the time `endEditSession` runs.
 4.3 adds the same for a file SELECTION: the edit session is destroyed when the newly selected
 file's read resolves and `readerPane` re-mounts the host, so "stay" must be asked before
 `selectFolderFile` starts the read.
-**Byte snapshot — 4.3's measured figures, carry to the next kickoff:** `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx)
+**Byte snapshot — 4.3's measured figures, RE-MEASURED UNCHANGED at 5.7 (every shipped file md5-identical); carry to the next kickoff:** `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,518,003 / 1,517,887 B · zip 1,839,751 / 1,839,809 B · content
 script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
 `ecc31688b4f49167502a39edca7b9e51` (Fx) — MOVED at 4.3 (+154) · the app chunk 524,607 B (+744) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1372 · browser 1835 / 39 skipped
-(zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1372 · browser 1845 / 43 skipped
+(zero reds, 5.7's full run) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
 **Carried inputs, from 4.3:**
 - **The app page's OWN watch can be driven in the harness on Chromium:** a hand-built persistable
   `FolderSource` over an OPFS handle, select the file, click `.peekover-watch` — the shell's
@@ -1392,9 +1426,11 @@ finding.
 **The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
 EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
 **Carried touchpoints — the task-level human gates:**
-- **5.1 — the `PERMISSIONS.md` ledger-wording sign-off** — ✅ SIGNED 2026-10-08. Re-opened only if
-  5.5 rules force-overwrite (the row is re-signed at 5.6).
-- **5.5 — the conflict/overwrite policy**, from a walk on 5.3's safe floor (loaded extension, human-only).
+- **5.1 — the `PERMISSIONS.md` ledger-wording sign-off** — ✅ SIGNED 2026-10-08. R21 ruled
+  refuse-and-tell, which the row already says: nothing is re-signed.
+- **5.5 — the conflict/overwrite policy** — ✅ RULED 2026-10-09 (R21): refuse and tell. Ruled from
+  the description; its walk is deferred to 7.1 and re-opens R21 if it changes the human's mind.
+- **`PERMISSIONS.md`'s zero-network sentence** — drafted at 5.7, NOT signed; a review is owed.
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
 - Also: the informal eyeball owed at 3.2, DEFERRED to 7.1 (2026-10-05); 6.2's numbers → the §8-2 debounce ruling;
   6.3 STOPS and surfaces a material nested-host cost. (2.2's stop-and-flag did not fire: the post-commit
@@ -1425,6 +1461,23 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-09 — from TASK 5.7 and its kickoff.**
+  - **`readerPane.select` has no ordering guard** — two reads that resolve out of order paint in
+    resolution order, so the screen and the file tree can disagree; saving stays safe because a
+    mismatch downloads (4.3's finding 5). Home: outside M12.
+  - **The reversed observer order is unmeasured** — Watch turned on AFTER entering edit, then
+    save, then exit. 4.3 measured one render for watch-then-edit only. Home: 7.1 (listed there).
+  - **`diagramSourceGuard.browser.test.ts` — a REPRODUCED, order-dependent red, both engines.**
+    PER-FENCE (`:228`): twelve same-origin flowchart chunk requests inside its window against a
+    bare `toEqual([])`. Reproduces with `diagramNetwork` + `diagramSourceGuard` run together and
+    nothing else; 8/8 alone; green in the full suite's order. Harness-shared-state by the rerun
+    rule; nothing left the origin. Cause not established. Home: the next session with a
+    test-harness slot.
+  - **Every zero-network guard reads its zero after a ~180 ms flush, and Resource Timing records
+    a request only when it ENDS** — so a slow off-origin request still in flight is invisible to
+    those zeros. Found at 5.7 (a red-first ablation that stayed green); `editorNetwork` reads
+    its claim a second time after its control lands. The other files are untouched. Home: the
+    human's call — not scheduled.
 - **NEW 2026-10-08 — from TASK 5.2.**
   - **CI's pnpm `version: 10` floats; a future 10.x could change where auditConfig is read and silently
     drop 1.3's ignore — pin via a `packageManager` field.** Home: post-M12. Reviewer-noted.
