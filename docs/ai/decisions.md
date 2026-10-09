@@ -1,6 +1,203 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 6.3 — LANDED: the nested preview host's cost MEASURED against an
+  ablated single-root control, both engines; first paint with edit never entered MEASURED against
+  a pre-M12 build. FORBIDDEN FROM CHOOSING: this entry recommends nothing. Two nesting deltas
+  cleared the noise floor and went to the human, who ruled them NOT MATERIAL (R27, below). No
+  production byte moved.**
+  **WHAT 6.3 ASKS (re-derived from `tasks.md` before anything ran).** (1) First-paint and memory
+  delta of the nested preview shadow root beside the outer one, isolated from CodeMirror — arms
+  editor only · editor + nested preview · an ablated single-root control; A-B-A, floor beside
+  median. (2) The existing first-paint gate on a document that never enters edit, against the
+  pre-M12 baseline: zero delta, or the delta is a defect. Both tables pasted. No threshold (gate
+  3, Q5): every delta above the A-B-A noise floor goes to the human, and a material one STOPS the
+  task instead of being filed.
+  **THE HARNESS — committed, re-runnable; not in any suite, not in CI.**
+  - *Part 1:* a new `--part nested` on `scripts/perf-edit-preview.ts`, its arms in
+    `perf-edit-preview.page.ts`. Production SOURCE bundled by esbuild and served on loopback, as
+    at 6.2. *Re-run:* `pnpm perf:edit-preview -- --part nested` (both engines, about 35 minutes;
+    `--engine`, `--docs profile:size,…`, `--nested-reps` cut it up), then `-- --report --out <dir>`.
+  - *Part 2:* new `scripts/perf-edit-never-entered.ts`. It runs the two EXISTING gates
+    (`perf-first-paint.ts --size 50kb`, `perf-app-first-paint.ts`), unchanged, with the working
+    directory pointed at each build in turn, and prints them side by side. *Re-run:* build HEAD;
+    `git archive <commit> | tar -x -C <dir>`, install and build there; then `pnpm exec tsx
+    scripts/perf-edit-never-entered.ts --baseline <label>=<dir> [--baseline …] --rounds 5`.
+  - **Every table of this run is committed as `scripts/perf-edit-preview.nested.results.md`.** The
+    tables below are a selection from it.
+  **PART 1 — THE ARMS.** One document, a FRESH BROWSER for every sample, then edit entered.
+  *R* reading only (the base for memory) · *E* editor only: the shell and CodeMirror's view, the
+  preview pane empty · *S* THE ABLATED CONTROL: the preview's content as a second reading column
+  inside the OUTER shadow root — no nested host, no second `attachShadow`, no second copy of the
+  reader's stylesheets (the alternative plan D-4 rejected, built in the harness so it can be
+  priced) · *N* the harness's copy of what ships: a nested host and production's own
+  `mount(text, previewHost, { contained, preserveReading, chrome: false })` · *P* production's
+  `buildEditor`, as the Edit control calls it · *E again*, last in every repetition — the same arm
+  twice in one session, the control every difference is read against. E is first and last, the
+  three between rotate. **N − S is the nested root itself.**
+  - *Why E, S and N are harness constructions:* production's `buildEditorShell` always renders the
+    preview as it builds, and nothing in `src/` renders a preview without a nested host. They
+    build the shell from `buildEditorShell`'s own lines and differ only in the preview pane.
+  - *S is like for like with `mount()` where it can be:* the same `sanitize(parse())`, the inert
+    `<template>`, the media policy, and the reading-anchor capture and restore `preserveReading`
+    runs. What it leaves out is what the nested host adds: two `<style>` elements rebuilt on
+    every render (43,901 characters), the commit into a second root, the post-commit wiring.
+  - *The enhancers run in P only.* They find the reading column as the FIRST `.peekover-reader`
+    in a host's root, which in S is the hidden reading view. So on prose P ≈ N (the copy's
+    fidelity, shown); on the enhancer-heavy document P − N is the enhancers, not the nesting.
+  - *A bias found in the smoke run and removed:* the outer sheet insets every `.peekover-reader`
+    by the open TOC rail's width, so S's column was half as wide and twice as tall as N's
+    (109,692 px against 56,674) and S paid for layout N did not. S now resets it; the tables
+    print both arms' preview height and element count, equal in every row.
+  **WHAT IS MEASURED.** *Entering edit:* before `enterEditMode` → the 2nd animation frame after it
+  resolved (*paint*), and the build step alone (*build*) — on a page's FIRST entry (CodeMirror's
+  chunks fetched and compiled inside it) and on re-entries. *One preview re-render:* the call, and
+  out to the 2nd frame. *Memory, after forced collections on the first entry:* V8's heap and
+  Blink's own heap (Chromium, DevTools protocol), and the private bytes of every browser process
+  from the OS (both engines). Corpus: 6.2's prose document at 2,245 B / 50,503 B / 1,000,489 B and
+  its enhancer-heavy 50,377 B. Five browsers per arm (three at 1 MB); 6 re-entries and 10
+  re-renders each (3 and 5 at 1 MB).
+  **THE NESTED ROOT ITSELF, N − S (median; ms unless marked).** The last column is *E again − E*.
+
+  | | Chromium | Firefox | the same arm twice |
+  |---|--:|--:|--:|
+  | build, first entry · prose small | +0.1 (13.6 vs 13.5) | +1 (15 vs 14) | Cr +0.2 · Fx +1 |
+  | build, first entry · prose 50 KB | −0.3 (22.9 vs 23.2) | **+4** (37 vs 33) | Cr 0.0 · Fx +2 |
+  | build, first entry · heavy 50 KB | −0.4 (28.3 vs 28.7) | **+7** (50 vs 43); repeat +8 | Cr −0.1 · Fx −1 |
+  | build, first entry · prose 1 MB | +2.3 (174.2 vs 171.9) | **+59** (330 vs 271); repeat **+57** | Cr −0.8 · Fx +1 |
+  | paint, first entry · prose 1 MB | −4.3 (468 vs 473) | +58 (758 vs 700); repeat +208 (763 vs 555) | Cr −1.3 · Fx −2 |
+  | build, re-entry · every document | −0.4 … +1.2 | 0 … +3 | Cr ±0.6 · Fx ±1 |
+  | re-render, the call · prose 1 MB | −0.5 (344.7 vs 345.2) | +4 (292 vs 288); repeat +3 | — |
+  | re-render, to the 2nd frame · prose 1 MB | +2.1 (390 vs 388) | +1; repeat +7 (of 435) | — |
+  | Blink heap | **+7 … +9 KB**, at every size | not readable | 0 … 4 KB (16 KB, small) |
+  | JS heap | −2 … −5 KB | not readable | 0 … 3 KB |
+  | whole browser, private bytes | −1.4 … +0.5 MB | −10 … +9 MB | Cr 0.3 … 5.6 MB · Fx 2 … 17 MB |
+
+  **FOR SCALE — what the other differences are (Chromium; Firefox agrees in shape).**
+
+  | median | prose small | prose 50 KB | heavy 50 KB | prose 1 MB |
+  |---|--:|--:|--:|--:|
+  | S − E, first paint, ms (the preview's content) | +3.9 | +22.8 | +33.4 | +388.7 |
+  | S − E, Blink heap, KB | +189 | +4,099 | +6,037 | +80,069 |
+  | E − R, JS heap, KB (CodeMirror and the shell) | +2,445 | +3,293 | +2,938 | +4,481 |
+  | P − N, first paint, ms (production vs the copy) | +0.4 | −0.4 | +36.5 (the enhancers) | +5.6 |
+  | P − N, Blink heap, KB | +1 | +1 | +14,048 (the enhancers) | +2 |
+
+  **WHAT THE TABLES SHOW — described, not ranked.**
+  - *Chromium.* No timing difference between the nested and the single-root preview clears the
+    control, at any size, on entry, re-entry or re-render. The second root costs about 9 KB of
+    Blink heap and six DOM nodes, the same at 2 KB and at 1 MB.
+  - *Firefox.* The FIRST time edit is entered on a page, the build step is slower with the nested
+    root, growing with the document: +1, +4, +7–8, +57–59 ms. At 1 MB that is about 18 % of the
+    build. The time to paint on that first entry moved with it but not steadily (+58 and +208 ms
+    in two runs; the single-root arm's own first paint read 700 and 555). It is NOT there on
+    re-entry (0 … +3 ms) nor on a re-render (+1 … +7 ms of 435). P shows the same step as N, so
+    it is the shipped path's, not the copy's. **Not attributed:** nothing here says which part of
+    the first nested mount on Firefox scales with the document.
+  - *What dominates either way.* The preview is a second rendered copy of the document: at 1 MB
+    +78 MB of Blink heap and about +390 ms to the first paint on Chromium, with one root or two.
+    Entering edit also DROPS the reading view's layout (`display:none`): Blink heap in E is below
+    R by 2.9 MB at 50 KB and 65 MB at 1 MB.
+  **PART 2 — FIRST PAINT, EDIT NEVER ENTERED (Chromium; pooled warm runs, ms).** Three builds:
+  HEAD; `0541886`, the last commit before task 1.1 — its content script reproduces the recorded
+  pre-M12 pin exactly (340,492 B, md5 `bcdcf231…`), the firing control that the baseline is the
+  right tree; and `8cbac42`, after tasks 1.1–1.2 (CodeMirror installed, `markdown-it` /
+  `dompurify` bumped) and before any editor code. HEAD first in each of five rounds, and last.
+
+  | Gate | Build | warm runs | median | floor | per-invocation medians |
+  |---|---|--:|--:|--:|--:|
+  | content script, 50.4 KB | HEAD | 36 | 141.3 | 135.8 | 139.6 – 144.3 |
+  | | pre-M12 `0541886` | 30 | 140.3 | 136.8 | 138.9 – 141.8 |
+  | | deps bump `8cbac42` | 30 | 140.6 | 134.6 | 139.4 – 141.6 |
+  | app page, 50.4 KB | HEAD | 36 | 90.9 | 85.6 | 89.4 – 92.8 |
+  | | pre-M12 `0541886` | 30 | 88.5 | 86.0 | 87.8 – 89.0 |
+  | | deps bump `8cbac42` | 30 | 91.7 | 85.8 | 91.0 – 93.4 |
+
+  - *HEAD − pre-M12:* content script median **+1.0**, floor **−1.0**; app page median **+2.4**,
+    floor **−0.4**. *HEAD against itself* across its six invocations: medians span 4.8 ms
+    (content script) and 3.3 ms (app page), floors 3.7 and 2.5 ms. Both differences are inside
+    that, and the floors agree to within 1 ms. Both gates read well under `GATE_MS = 165`.
+  - *Where the app page's median moved:* the build with the bumped dependencies and NO editor
+    code reads 91.7 — above HEAD. Whatever moved the median was there before the editor was.
+  - *The structural half — the claim the timing cannot make.* On HEAD's build, on the app page,
+    from load to 1.5 s after first paint with edit never entered: 4 requests. Activating Edit
+    then requests 4 more (`chunks/dist-*.js` — the firing control: the instrument sees chunk
+    requests). **Of those four, requested before edit was entered: 0.** The editor is post-mount
+    and waits for the gesture.
+  - *Against `tasks.md`'s "ZERO delta … or the delta is a defect":* the difference is zero within
+    the noise this protocol has, not a literal zero, and is stated as that.
+  **THE NOISE, AND THE LIMITS.**
+  - One machine (13th-gen Core i7-13700, 24 threads, 64 GB, Windows 11, node 24.11.1), headless
+    browsers, each run alone. A stray command during a run moved one app-page reading by 8 ms
+    (the first, discarded pass) — the re-run was left untouched.
+  - *paint* has a two-frame floor (about 32 ms on Chromium; Firefox's headless figures cluster
+    near 60 ms), so on documents up to 50 KB it hides differences the *build* column shows.
+    Firefox's clock resolves 1 ms.
+  - 1 MB rows are three browsers per arm. The Firefox first-entry build figure repeated to 2 ms
+    across two runs; its first-PAINT figure did not, and is an order of magnitude.
+  - **Firefox memory is not measured in any useful sense.** No heap figure reaches a harness;
+    whole-browser private bytes differ by 2–17 MB between two runs of the same arm.
+  - Production source, not the production build; an http origin; a bare page with no app shell.
+    S is a construction of the rejected alternative, not a design anyone built — it has no
+    theming of its own, no TOC handling, no enhancers.
+  - Part 2 is Chromium only: Playwright cannot load an extension into Firefox. Firefox's
+    never-entered first paint is unmeasured here, as every first-paint number in this project is.
+  - Memory is read once, on the first entry. Growth over many renders or sessions was not
+    looked at.
+  **VERIFY.** `git diff` over `src/`, `entrypoints/`, `wxt.config.ts`, `package.json` and the
+  lockfile: empty. Two clean two-engine builds — the working tree, and pristine HEAD (`55dfbad`,
+  the changes stashed) — all 139 shipped files md5-identical on Chromium and on Firefox, and
+  identical to the build the measurements ran against. `.output` 5,825,713 / 5,825,829 B;
+  content script 342,806 B (`c4f59f1a…` / `ecc31688…`); the app chunk 528,291 B; manifests
+  654 / 770 B, `permissions: []`. `pnpm lint` EXIT=0 (it covers the three scripts). The suites
+  were NOT re-run: nothing they run changed, and neither project lists a file under `scripts/`.
+  **CLOSES.** "012 D-4 — LANDED at task 2.2" — "D-4's cost is measured at 6.3", and its
+  revisit-when — with the N − S rows above. "M12 GATE 3 APPROVED", Q5 and its carried consequence
+  ("surfaces a material cost to the human and STOPS"): surfaced, and ruled (R27). "M12 TASK 6.2 —
+  LANDED" and "M12 TASK 6.4 — LANDED", revisit-when "6.3". Plan §4 risk 3 and plan §7's two
+  group-6 bullets are measured.
+  **KICKOFF VS FILE, FLAGGED.**
+  1. The kickoff asked for one commit with records; `tasks.md` says a material cost stops the
+     task and is not filed. The deltas were put to the human before any record was written; the
+     records follow the ruling.
+  2. *Files.* `tasks.md` names "a perf script under `scripts/`". Four files: the driver and its
+     in-page half (both existing, extended), `perf-edit-never-entered.ts` (new — Part 2 has to
+     run two gates across builds, which the edit-view harness cannot), and the results file.
+     `package.json` is untouched.
+  3. *The harness's stale labels are fixed, as the kickoff asked:* its first candidate is now "C1
+     shipped (R26 …)" and the header no longer says "stays 1 and PROVISIONAL". The `C1` prefix is
+     kept, so `--candidates C1,C2` selects what it did. 6.2's committed results file is a record
+     of that day and is unchanged.
+  4. "A-B-A … an ablated single-root control": the control arm is E twice; S is the ablation.
+     Arms are interleaved per repetition, every sample in its own browser.
+  5. "Against the pre-M12 baseline": measured against a BUILD of the pre-M12 tree in the same
+     session, not against the figures `progress.md` § Baselines carries from August — those are
+     another session's and another machine state's.
+  6. A third build (`8cbac42`) is beyond the task line; it is what says the app page's median
+     moved before the editor existed.
+  7. The first full run stopped once on a fresh browser that never loaded the page. The nested
+     part now retakes such a sample whole and logs it; the committed run had none.
+  *Revisit-when:* the 7.1 walk on Firefox with a large document (the first entry into edit) ·
+  real use showing documents near 1 MB edited on Firefox · any wish to attribute the Firefox
+  first-entry cost — the harness has the two arms that isolate it.
+
+- **2026-10-09 · M12 RULING R27 — HUMAN RULING: the nested preview host's cost is NOT MATERIAL.
+  012 D-4 stands as built.** Given during task 6.3, on the measurements in the entry above, in
+  answer to the question gate 3's Q5 reserved for the human. The agent chose nothing: it laid out
+  the two deltas that cleared the noise floor and three options — *not material, file it* ·
+  *material, stop here* (6.3 left unticked, no figure in `progress.md`, D-4 awaiting a ruling) ·
+  *attribute the Firefox cost first* — and waited.
+  **THE RULING, quoted:** "Not material — file it".
+  **WHAT WAS IN FRONT OF THE HUMAN.** (1) Chromium: the second shadow root costs 7–9 KB of Blink
+  heap at every document size; no timing difference clears the control. (2) Firefox: on the first
+  entry into edit on a page, the build step is slower with the nested root — +4 ms at 50 KB,
+  +7–8 ms on the enhancer-heavy 50 KB, +57–59 ms at 1 MB (of about 330); the first paint at 1 MB
+  +58 and +208 ms in two runs; nothing on re-entry or re-render; not attributed. (3) That groups
+  2–5 stand on the nested host, so overturning it would be a rework. (4) First paint with edit
+  never entered: inside the noise on both gates, and no editor chunk requested before Edit.
+  *Outcome:* 6.3 is ticked and filed; the D-4 deferral is closed.
+  *Revisit-when:* the 7.1 walk (Firefox, a large document, the first entry into edit).
+
 - **2026-10-09 · M12 TASK 6.4 — LANDED: the preview's first render leaves the keystroke (R26;
   spec §8-2). The PROVISIONAL constant is removed. Run BEFORE 6.3, by the order check below.**
   **THE ORDER CHECK.** `tasks.md` lists 6.3 before 6.4. 6.3 measures the nested preview host's

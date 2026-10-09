@@ -1209,7 +1209,7 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       the 1 MB typing rows are one run each. **(v)** Zero production diff: all 139 shipped files
       md5-identical on both engines; `PREVIEW_COOLDOWN_MULTIPLIER` is still 1 and PROVISIONAL.
 
-- [ ] **6.3 ★ The nested-host cost measurement, and first paint with edit mode never entered (D-4; plan §4
+- [x] **6.3 ★ The nested-host cost measurement, and first paint with edit mode never entered (D-4; plan §4
       risk 3). FORBIDDEN from choosing.** First-paint and memory delta of the nested preview shadow root
       beside the outer one, isolated from CodeMirror's own footprint (arms: editor only · editor + nested
       preview · an ablated single-root control); and the existing first-paint gate on a document that
@@ -1222,6 +1222,37 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       stand on the nested host, so the report states plainly that overturning it is a rework. A
       non-material result is stated with its number and its noise floor. Content-script bytes
       md5-identical. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-4]
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 6.3 — LANDED" and "M12 RULING
+      R27") — NOTHING IS CHOSEN; THE COST WAS SURFACED AND RULED NOT MATERIAL.* **(i) The
+      scripts:** a new `--part nested` on `scripts/perf-edit-preview.ts` (+ its in-page half), and
+      new `scripts/perf-edit-never-entered.ts`, which runs the two existing first-paint gates
+      across builds; COMMITTED, reusable, in no suite. Every table is committed as
+      `scripts/perf-edit-preview.nested.results.md`. `package.json` is untouched. **(ii) The
+      arms**, a fresh browser per sample: reading only · editor only · the preview in the SAME
+      root (the ablated control — a harness construction, since nothing in `src/` renders one) ·
+      the preview in a NESTED root (the harness's copy of what ships) · production's
+      `buildEditor` · editor only again (the A-B-A control). **(iii) The nested root itself,
+      nested minus single-root:** *Chromium* — no timing difference clears the control at any
+      size; **+7 … +9 KB of Blink heap**, the same at 2 KB and at 1 MB (control 0–4 KB).
+      *Firefox* — on a page's FIRST entry into edit the build step is slower: +1 ms small, +4 ms
+      at 50 KB, +7–8 ms enhancer-heavy 50 KB, **+57–59 ms at 1 MB** (of about 330; two runs);
+      first paint at 1 MB +58 and +208 ms in two runs; nothing on re-entry or on a re-render;
+      not attributed. Firefox memory: not usefully measurable (whole-browser bytes differ 2–17 MB
+      between two runs of one arm). **(iv) THE GATE-2 CARRIED CONSEQUENCE, DISCHARGED:** both
+      deltas clear the noise floor, so they were put to the human BEFORE any record was written,
+      with the rework stated. **R27: "Not material — file it".** D-4 stands as built. **(v) First
+      paint, never entered** (Chromium; HEAD minus a same-session BUILD of `0541886`, whose
+      content script reproduces the pre-M12 pin, 340,492 B): content script median +1.0 ms /
+      floor −1.0; app page median +2.4 / floor −0.4; HEAD against itself spans 4.8 and 3.3 ms.
+      A build with the bumped dependencies and no editor code reads above HEAD on the app page.
+      Zero within noise — not a literal zero, and said so. Structurally: 0 of the 4 editor
+      chunks are requested before Edit is activated; activating it requests all 4. **(vi)**
+      Zero production diff: all 139 shipped files md5-identical to a clean build of HEAD on both
+      engines; content script 342,806 B (`c4f59f1a…` / `ecc31688…`); manifests 654 / 770 B,
+      `permissions: []`; lint 0; suites not re-run (nothing they run changed). **(vii) Also in
+      this diff, by the kickoff:** the harness's stale 6.2-day labels ("C1 today", "stays 1 and
+      PROVISIONAL") now describe the shipped R26 scheduler. **Moved to 7.1:** on Firefox, the
+      first entry into edit on a large document.
 
 - [x] **6.4 Apply the human's §8-2 ruling; remove the PROVISIONAL marker (D-5; Q4).** TEST FIRST. The
       ruled interval/multiplier (and adaptive rule, if ruled) replaces 3.3's provisional value; the

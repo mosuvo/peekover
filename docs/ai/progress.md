@@ -1,7 +1,11 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 6.4 — **the preview's first render no longer runs inside the keystroke
+*Updated: 2026-10-09 (task 6.3 — **the nested preview host's cost MEASURED against a single-root
+control on both engines, and first paint with edit never entered MEASURED against a pre-M12 build;
+two nesting deltas cleared the noise floor and were ruled NOT MATERIAL (R27); no production byte
+moved; GROUP 6 IS COMPLETE**; `decisions.md`'s "M12 TASK 6.3 — LANDED" and "M12 RULING R27"
+entries and `scripts/perf-edit-preview.nested.results.md`. Before it, task 6.4 — **the preview's first render no longer runs inside the keystroke
 (R26, the spec §8-2 ruling: 6.2's candidate C2); the provisional constant is removed; applied
 BEFORE 6.3**; `decisions.md`'s "M12 RULING R26" and "M12 TASK 6.4 — LANDED" entries. Before it,
 task 6.2 — **the live-preview debounce MEASURED across sizes, two content
@@ -22,8 +26,8 @@ Chromium and downloads everywhere else; `PERMISSIONS.md` carries the final signe
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 5.7 and 5.8 landed; 5.5 RULED without its walk
-(R21 — the walk is on 7.1's list); 5.6 struck; 6.1, the discovered 4.4, 6.2 and 6.4 landed (§8-2
-RULED, R26); **6.3 is next — the nested-host cost measurement.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
+(R21 — the walk is on 7.1's list); 5.6 struck; 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed (§8-2
+RULED, R26; the nested-host cost ruled not material, R27); **group 6 is complete — 7.1, the human's milestone-close walk, is next.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
 **`PERMISSIONS.md` carries SIGNED (a) since 5.3 and the FINAL signed row (b) since 5.4, pinned by
@@ -1476,23 +1480,66 @@ record. R25: 6.1's dialog copy approved; its deviation 2 accepted.
   (393 s) · scanner 80 files, self-test 7 + 10 · audit EXIT=0 · golden empty.
 - **Left as it was, flagged:** the harness (`scripts/`, zero-diff) still labels its first row
   "C1 today (first render in the key)"; that row now measures the shipped R26 scheduler.
+  *✅ Re-labelled at 6.3.*
+
+**M12 task 6.3 DONE, 2026-10-09 — the nested preview host's cost and the never-entered first
+paint measured; NOTHING CHOSEN; the cost ruled NOT MATERIAL (R27).** `decisions.md`'s "M12 TASK
+6.3 — LANDED" and "M12 RULING R27" entries are the record; every table is in
+`scripts/perf-edit-preview.nested.results.md`.
+- **The harness:** a new `--part nested` on `scripts/perf-edit-preview.ts` (about 35 minutes for
+  both engines), and new `scripts/perf-edit-never-entered.ts`, which runs the two existing
+  first-paint gates across builds. Neither is in a suite.
+- **Arms, a fresh browser per sample:** reading only · editor only · editor + the preview in the
+  SAME root (the ablated control, a harness construction) · editor + the preview in a NESTED root
+  (the harness's copy of what ships) · production's `buildEditor` · editor only again (the
+  control). Nested minus single-root is the nested root itself.
+- **Chromium:** no timing difference clears the control on entry, re-entry or re-render at any
+  size; the second root costs 7–9 KB of Blink heap, the same at 2 KB and at 1 MB (control 0–4 KB).
+- **Firefox:** on the FIRST entry into edit on a page the build step is slower with the nested
+  root — +1 ms small, +4 ms at 50 KB, +7–8 ms on the enhancer-heavy 50 KB, +57–59 ms at 1 MB (of
+  about 330; repeated in a second run). First paint at 1 MB moved +58 and +208 ms in two runs.
+  Nothing on re-entry (0 … +3 ms) or on a re-render. Not attributed.
+- **For scale:** the preview's content, with one root or two, is +78 MB of Blink heap and about
+  +390 ms to the first paint at 1 MB on Chromium; CodeMirror and the shell are +2.4 … +4.5 MB of
+  JS heap.
+- **R27, the human's ruling on those deltas:** "Not material — file it". D-4 stands as built; its
+  deferral ("cost measured at 6.3") is closed.
+- **First paint, edit never entered (Chromium, HEAD minus a build of `0541886`):** content script
+  median +1.0 ms / floor −1.0 ms (141.3 vs 140.3); app page median +2.4 / floor −0.4 (90.9 vs
+  88.5). HEAD against itself spans 4.8 and 3.3 ms. A build with the bumped dependencies and no
+  editor code reads 91.7 on the app page. Zero within noise, not a literal zero.
+- **The editor is not fetched before edit:** on the app page, 0 of the 4 editor chunks are
+  requested before Edit is activated; activating it requests all 4.
+- **Noise and limits:** one machine, headless; *paint* has a two-frame floor; 1 MB rows are three
+  browsers per arm; Firefox memory is not usefully measured (whole-browser bytes differ 2–17 MB
+  between two runs of one arm); source, not the build; the first-paint gates are Chromium only.
+- **Verify:** zero production diff; 139 shipped files md5-identical to a clean build of
+  `55dfbad` on both engines; lint 0; suites not re-run — nothing they run changed.
 
 ## Up next
 
-**Group 5 is complete; 6.1, the discovered 4.4, 6.2 and 6.4 landed. 27 tasks.**
-**NEXT — M12 task 6.3, the nested-host cost measurement and first paint with edit never entered
-(D-4; plan §4 risk 3). FORBIDDEN from choosing.** `tasks.md` 6.3 is the line. ★ Its own
-acceptance: a MATERIAL nesting cost is a finding surfaced to the human — the task STOPS and
-reports — not a number filed here. After it, group 7.
-- **Owed to the human, not blocking 6.3:** a word on the REBUILT route-2(i) case (R24(iii) ruled
+**GROUP 6 IS COMPLETE: 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed. 28 tasks.**
+**NEXT — M12 task 7.1, the HUMAN-ONLY milestone-close walk.** `tasks.md` 7.1 is the line. Every
+item on it needs a loaded extension and has no agent substitute — it is the human's, not a
+session's to attempt or to stand in for with a suite run.
+- **Added to 7.1's list by 6.3 (R27's revisit-when):** on Firefox, the first entry into edit on a
+  large document.
+- **Owed to the human:** a word on the REBUILT route-2(i) case (R24(iii) ruled
   it retired unless a meaningful form existed; one did); the 5.5 walk, on 7.1's list.
 - **The browser suite takes about 395 s** alone.
-**Byte snapshot — 6.4's measured figures; carry to the next kickoff:** `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx)
+**Byte snapshot — 6.4's measured figures, re-measured unchanged at 6.3; carry to the next kickoff:** `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,514,319 / 1,514,203 B · zip 1,841,082 / 1,841,140 B · content
 script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
 `ecc31688b4f49167502a39edca7b9e51` (Fx) — unmoved since 4.3 · the app chunk 528,291 B (−31) · manifest
 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1417 · browser 1933 / 51 skipped
 (zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 6.3:**
+- **A baseline tree for an A-B-A is `git archive <commit> | tar -x -C <dir>`,** installed and
+  built there; `perf-edit-never-entered.ts --baseline <label>=<dir>` does the rest. Pass a
+  Windows-style path (`C:/…`): an MSYS `/c/…` path resolves under the current drive.
+- **Leave the machine alone during a timed run** — one process listing moved a reading by 8 ms.
+- **A harness arm that reuses the outer root inherits the outer host's state** (the open TOC
+  rail's inset halved a column's width); print the geometry of both arms before comparing them.
 **Carried inputs, from 6.4:**
 - **A preview render is now always a task after the key.** A unit test that types and then
   reads the preview runs one task first (`vi.advanceTimersByTime(0)` — `editorView.test.ts`'s
@@ -1617,7 +1664,7 @@ EXTENDED entries); 7.1's walk carries one item for the editing feel of those def
   Not signed positioning text; no ledger pin.
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
 - Also: the informal eyeball owed at 3.2, DEFERRED to 7.1 (2026-10-05); 6.2's numbers → the §8-2 debounce ruling;
-  6.3 STOPS and surfaces a material nested-host cost. (2.2's stop-and-flag did not fire: the post-commit
+  6.3 STOPS and surfaces a material nested-host cost — ✅ surfaced and RULED not material 2026-10-09 (R27). (2.2's stop-and-flag did not fire: the post-commit
   wiring needed no guard.)
 
 *Superseded, kept for provenance:* gate 3 — the human's review of `specs/012-editor-mode/tasks.md`
