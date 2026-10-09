@@ -822,6 +822,35 @@ describe('the status copy — one line per outcome, said in words (5.3; the sign
   });
 });
 
+describe('the status copy for a download (5.4; the signed final row’s "saved as a download")', () => {
+  const said = (normalised: boolean, changedWhileEditing: boolean, filename = 'notes.md'): string =>
+    saveStatusText({ kind: 'downloaded', filename, normalised, changedWhileEditing });
+
+  it('★ says what was downloaded, by name, and that the file in the folder was not changed', () => {
+    expect(said(false, false)).toBe('Saved as a download: notes.md. The file in the folder was not changed.');
+    expect(said(false, false, 'a b.markdown')).toContain('a b.markdown');
+  });
+
+  it('is its own line: not "Saved.", and none of the three lines that are not a save', () => {
+    const line = said(false, false);
+    expect(line.startsWith('Saved.')).toBe(false);
+    expect(line).not.toBe(saveStatusText({ kind: 'saved', normalised: false, changedWhileEditing: false }));
+    for (const kind of ['conflict', 'unavailable', 'failed'] as const) {
+      expect(line).not.toBe(saveStatusText({ kind }));
+    }
+    expect(line).not.toMatch(/not available/i);
+  });
+
+  it('rulings A and C qualify it — each alone, and both, after the two fixed sentences', () => {
+    const base = said(false, false);
+    expect(said(true, false)).toBe(`${base} Line endings were normalised to LF.`);
+    expect(said(false, true)).toBe(`${base} That file changed on disk while you were editing.`);
+    expect(said(true, true)).toBe(
+      `${base} Line endings were normalised to LF. That file changed on disk while you were editing.`,
+    );
+  });
+});
+
 describe('the save control and what a save may move (5.3)', () => {
   afterEach(() => {
     for (const host of hosts) teardownEditorShell(host);
@@ -1005,6 +1034,64 @@ describe('the save control and what a save may move (5.3)', () => {
 
   it('DRIFT PIN: the hint literal read here is the one watchController writes', () => {
     expect(EDITOR_CHANGED_HINT_ATTR).toBe(CHANGED_IN_EDIT_ATTR);
+  });
+
+  // ── 5.4 — the download outcome. What it is asked to write and where is the app page's
+  // (`editorEnhancer.test.ts`, tests/browser/editorSave.browser.test.ts); what a session MOVES
+  // on it is here: nothing.
+
+  const downloaded = (text: string, baseline: string): EditorSaveOutcome => ({
+    kind: 'downloaded',
+    written: textForDisk(text, baseline),
+    filename: 'notes.md',
+  });
+
+  it('★ A DOWNLOAD moves NOTHING: the baseline is not advanced, dirty is not cleared, the buffer is kept', async () => {
+    const { bind, requests } = fakeSave(async ({ text, baseline }) => downloaded(text, baseline));
+    const { host, session, view, button, status } = await editing(DOC, bind);
+    append(view, 'X');
+
+    await saveEditorSession(host);
+
+    expect(session.originalText, 'the file on disk is unchanged, so the baseline is too').toBe(DOC);
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR), 'still unsaved: the guard must still see it').toBe('true');
+    expect(view.state.doc.toString()).toBe(`${DOC}X`);
+    expect(status()!.hidden).toBe(false);
+    expect(status()!.textContent).toBe('Saved as a download: notes.md. The file in the folder was not changed.');
+    expect(button()!.textContent).toBe('Save');
+
+    await saveEditorSession(host); // and so a second one is asked for the same baseline
+    expect(requests.map((r) => r.baseline)).toEqual([DOC, DOC]);
+  });
+
+  it('★ ruling A qualifies a download from the text DOWNLOADED: mixed endings → "normalised"; uniform CRLF → not', async () => {
+    const { bind } = fakeSave(async ({ text, baseline }) => downloaded(text, baseline));
+    const mixed = await editing('a\r\nb\nc', bind);
+    append(mixed.view, 'X');
+    await saveEditorSession(mixed.host);
+    expect(mixed.status()!.textContent).toBe(
+      'Saved as a download: notes.md. The file in the folder was not changed. Line endings were normalised to LF.',
+    );
+    expect(mixed.session.originalText).toBe('a\r\nb\nc');
+
+    const crlf = await editing('a\r\nb\r\n', bind);
+    append(crlf.view, 'X');
+    await saveEditorSession(crlf.host);
+    expect(crlf.status()!.textContent).toBe('Saved as a download: notes.md. The file in the folder was not changed.');
+    expect(crlf.host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+  });
+
+  it('ruling C qualifies a download too: the hint adds its sentence, and decides nothing', async () => {
+    const { bind } = fakeSave(async ({ text, baseline }) => downloaded(text, baseline));
+    const { host, view, status } = await editing(DOC, bind);
+    append(view, 'X');
+    host.toggleAttribute(EDITOR_CHANGED_HINT_ATTR, true);
+
+    await saveEditorSession(host);
+
+    expect(status()!.textContent).toBe(
+      'Saved as a download: notes.md. The file in the folder was not changed. That file changed on disk while you were editing.',
+    );
   });
 
   it('teardown removes the bar with the rest, and a later session gets exactly one', async () => {

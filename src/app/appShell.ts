@@ -138,7 +138,7 @@ import {
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
 import { createExportView, exportPdf, type ExportViewController } from './exportControls';
-import { exportHtml, copyAsHtml, copyAsRichText } from '../export/htmlExport';
+import { exportHtml, copyAsHtml, copyAsRichText, downloadAs } from '../export/htmlExport';
 import { copyAsPlainText } from '../export/copyPlainText';
 
 /** CSS class on the shell root; scopes every rule so nothing leaks to the document. */
@@ -199,11 +199,24 @@ const renderWithEnhancements =
     enhanceCode(target);
   };
 
-/** The file one edit session may write, fixed at edit entry — and dropped (`file` set to null)
- *  when that session is ended from the shell's side: Revoke, a closed folder, a folder switch. */
+/** The file one edit session may write, fixed at edit entry — and dropped (`file` set to null,
+ *  `ended` set) when that session is ended from the shell's side: Revoke, a closed folder, a
+ *  folder switch. `ended` is what tells a dropped binding from one that never had a file. */
 interface EditBinding {
   file: MarkdownFile | null;
+  ended?: true;
 }
+
+/** End a binding: from here its save neither writes nor downloads. */
+function dropBinding(binding: EditBinding): void {
+  binding.file = null;
+  binding.ended = true;
+}
+
+/** The type a saved-as-download file is given — said explicitly: `downloadAs` defaults to HTML. */
+const MARKDOWN_MIME = 'text/markdown';
+/** The download's name when the session is bound to no file, so there is no name to use. */
+const DOWNLOAD_FALLBACK_NAME = 'document.md';
 
 /** `requestPermission` is not in the DOM lib's handle type yet (`reopen.ts` types the folder
  *  handle's the same way). Optional: an engine with handles but without it cannot grant a write. */
@@ -222,33 +235,54 @@ type WritableFileHandle = FileSystemFileHandle & {
  *   3. THE WRITE: `textForDisk` chooses the bytes (ruling A), then createWritable → write → close.
  *      The answer carries exactly that string, which the session makes its new baseline.
  *
- * No handle (Firefox; any route without one), write access not granted, or a binding the shell
- * has since dropped → `unavailable`, and nothing is read or written. A throw from the re-read or
- * the write is not caught here: it rejects, the edit view reports "failed", and the half-open
- * writable is aborted so nothing of it is committed. The two steps are not atomic — a change
- * landing between the compare and the write is not caught (the ledger row says so).
+ * A throw from the re-read or the write is not caught here: it rejects, the edit view reports
+ * "failed", and the half-open writable is aborted so nothing of it is committed. The two steps
+ * are not atomic — a change landing between the compare and the write is not caught (the ledger
+ * row says so).
+ *
+ * ── WHERE IT CANNOT WRITE, IT DOWNLOADS (task 5.4; D-6) ───────────────────────────────────────
+ *
+ * No handle that can ask for write access (every Firefox route; any session bound to no file),
+ * or write access not granted → the SAME text a write would have used (`textForDisk`, ruling A)
+ * goes to the browser as an ordinary download, under the file's own name and an explicit
+ * markdown type. `downloadAs` is the export's own blob-and-anchor download: no permission, no
+ * network. Nothing is re-read and nothing is compared — nothing on disk is being overwritten —
+ * and the answer is `downloaded`, on which the session moves nothing. A throw from the download
+ * rejects like any other, and is "failed".
+ *
+ * NOT on a conflict: the safe floor offers no download. And NOT for a binding the shell has
+ * dropped — that stays `unavailable`, with nothing read, written or downloaded: Revoke means
+ * nothing more leaves this session.
  */
 async function writeBack(
   binding: EditBinding,
   { text, baseline }: EditorSaveRequest,
 ): Promise<EditorSaveOutcome> {
+  if (binding.ended) return { kind: 'unavailable' };
   const file = binding.file;
   const handle: WritableFileHandle | undefined = file?.handle;
-  if (!file || !handle?.requestPermission) return { kind: 'unavailable' };
-  const granted = await handle.requestPermission({ mode: 'readwrite' }).catch(() => 'denied' as const);
-  if (granted !== 'granted' || binding.file !== file) return { kind: 'unavailable' };
-  if (hasConflict(baseline, await file.read())) return { kind: 'conflict' };
-  if (binding.file !== file) return { kind: 'unavailable' }; // dropped while the file was re-read
-  const written = textForDisk(text, baseline);
-  const writable = await handle.createWritable();
-  try {
-    await writable.write(written);
-    await writable.close();
-  } catch (err) {
-    await writable.abort().catch(() => undefined);
-    throw err;
+  if (file && handle?.requestPermission) {
+    const granted = await handle.requestPermission({ mode: 'readwrite' }).catch(() => 'denied' as const);
+    if (binding.file !== file) return { kind: 'unavailable' }; // dropped while the prompt was up
+    if (granted === 'granted') {
+      if (hasConflict(baseline, await file.read())) return { kind: 'conflict' };
+      if (binding.file !== file) return { kind: 'unavailable' }; // dropped while the file was re-read
+      const written = textForDisk(text, baseline);
+      const writable = await handle.createWritable();
+      try {
+        await writable.write(written);
+        await writable.close();
+      } catch (err) {
+        await writable.abort().catch(() => undefined);
+        throw err;
+      }
+      return { kind: 'saved', written };
+    }
   }
-  return { kind: 'saved', written };
+  const written = textForDisk(text, baseline);
+  const filename = file?.name || DOWNLOAD_FALLBACK_NAME;
+  downloadAs(written, filename, MARKDOWN_MIME);
+  return { kind: 'downloaded', written, filename };
 }
 
 /** The subset of `store` the shell uses. The write methods are required (grant flow, group 3);
@@ -740,7 +774,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // session drops the one before it, so a save function kept from an ended session writes nothing.
   let editBinding: EditBinding | null = null;
   const saveActiveDocument: EditorSave = () => {
-    if (editBinding) editBinding.file = null;
+    if (editBinding) dropBinding(editBinding);
     const binding: EditBinding = (editBinding = { file: activeFile });
     return (request) => writeBack(binding, request);
   };
@@ -1238,8 +1272,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   /**
    * END ANY OPEN EDIT SESSION (task 5.3, route 2(ii)) — called where the folder is revoked, closed
-   * or switched. The binding goes FIRST, so from this line no save can write, including one whose
-   * function was taken earlier; then edit is left the way the user leaves it — the edit control,
+   * or switched. The binding goes FIRST, so from this line no save can write or download (5.4),
+   * including one whose function was taken earlier; then edit is left the way the user leaves it — the edit control,
    * whose click is exit + teardown and puts its own label back (ruling R3). The direct calls
    * after it are the same two steps, for a host whose control is somehow not there.
    *
@@ -1248,7 +1282,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    * these paths. Reported at 5.3 as a question, not decided here.
    */
   function endEditSession(): void {
-    if (editBinding) editBinding.file = null;
+    if (editBinding) dropBinding(editBinding);
     editBinding = null;
     const host = readerHost();
     if (host?.getAttribute('data-mode') !== 'edit') return;

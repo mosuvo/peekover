@@ -143,10 +143,58 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
     expect(editorSessionFor(host)!.save).toBeUndefined();
   });
 
-  // RE-SPELLED AT 5.3: 3.2's body was a stub that said "not yet available". The body is now the
-  // write (tests/browser/editorSave.browser.test.ts). What jsdom can still say of it is the route
-  // with nothing to write to: this file carries no handle, so the answer is `unavailable`.
-  it('★ appShell injects a save that, for a file with no handle, answers "unavailable" — and does nothing else', async () => {
+  // ── The route → download decision (5.4; D-6) ───────────────────────────────────────────────
+  //
+  // What jsdom can say of the shell's save is the routes with nothing to write to. jsdom has no
+  // `URL.createObjectURL`, so a stand-in records the blob `downloadAs` builds, and the anchor
+  // click — which would otherwise be a navigation jsdom does not implement — is swallowed and
+  // recorded. The real blob, the real click and both engines: tests/browser/editorSave.browser.test.ts.
+
+  interface Captured {
+    filename: string;
+    type: string;
+    text: string;
+  }
+
+  /** The blob's text, byte for byte (FileReader: jsdom's Blob predates `text()` in some versions). */
+  const blobText = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(blob);
+    });
+
+  /** Record every download from here on. The two URL functions are left in place afterwards:
+   *  `downloadAs` revokes its URL a task later, after the test that made it has returned. */
+  function captureDownloads(): { settled: () => Promise<Captured[]>; restore: () => void } {
+    const blobs = new Map<string, Blob>();
+    URL.createObjectURL = (object: Blob | MediaSource) => {
+      const url = `blob:test/${blobs.size + 1}`;
+      blobs.set(url, object as Blob);
+      return url;
+    };
+    URL.revokeObjectURL = () => undefined;
+    const clicked: { filename: string; href: string }[] = [];
+    const clicks = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clicked.push({ filename: this.download, href: this.getAttribute('href') ?? '' });
+      });
+    return {
+      settled: () =>
+        Promise.all(
+          clicked.map(async ({ filename, href }) => {
+            const blob = blobs.get(href)!;
+            return { filename, type: blob.type, text: await blobText(blob) };
+          }),
+        ),
+      restore: () => clicks.mockRestore(),
+    };
+  }
+
+  /** The app shell with `file` open and in edit; the session's bound save, and the container. */
+  async function shellEditing(file: MarkdownFile) {
     const container = document.createElement('div');
     document.body.appendChild(container);
     hosts.push(container);
@@ -155,8 +203,6 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
       deleteFolder: async () => undefined,
       putRecent: async () => undefined,
     };
-    const read = vi.fn(async () => DOC);
-    const file: MarkdownFile = { path: 'notes.md', name: 'notes.md', read };
     const source: FolderSource = { name: 'notes', files: [file], truncated: false, persistable: false };
     const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store });
     await app.openFolder();
@@ -166,14 +212,100 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
       expect(el?.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`)).toBeTruthy();
       return el!;
     });
-
     await clickUntil(host, 'edit');
     const { save } = editorSessionFor(host)!;
     expect(typeof save).toBe('function');
+    return { container, host, save: save! };
+  }
+
+  // RE-SPELLED AT 5.4 (and at 5.3 before it: 3.2's body was a stub that said "not yet available").
+  // This was "★ appShell injects a save that, for a file with no handle, answers "unavailable" —
+  // and does nothing else": the interim answer for a route that now downloads. "Nothing is
+  // re-read" is unchanged.
+  it('★ appShell injects a save that, for a file with no handle, DOWNLOADS the text under the file’s own name', async () => {
+    const read = vi.fn(async () => DOC);
+    const { save } = await shellEditing({ path: 'docs/notes.md', name: 'notes.md', read });
     read.mockClear();
-    const outcome = await save!({ text: 'edited text', baseline: DOC });
-    expect(outcome).toEqual({ kind: 'unavailable' });
+    const downloads = captureDownloads();
+
+    const outcome = await save({ text: 'edited text\n', baseline: DOC }).finally(downloads.restore);
+
+    expect(outcome).toEqual({ kind: 'downloaded', written: 'edited text\n', filename: 'notes.md' });
+    expect(await downloads.settled()).toEqual([
+      { filename: 'notes.md', type: 'text/markdown', text: 'edited text\n' },
+    ]);
     expect(read).not.toHaveBeenCalled(); // nothing to compare against, so nothing is re-read
+  });
+
+  it('★ ruling A reaches the download: a uniformly CRLF baseline → CRLF bytes in the blob; a mixed one → LF', async () => {
+    const { save } = await shellEditing({ path: 'notes.md', name: 'notes.md', read: async () => CRLF_DOC });
+    const downloads = captureDownloads();
+
+    const crlf = await save({ text: 'one\ntwo\n', baseline: CRLF_DOC });
+    const mixed = await save({ text: 'one\ntwo\n', baseline: MIXED_DOC }).finally(downloads.restore);
+
+    expect(crlf).toMatchObject({ kind: 'downloaded', written: 'one\r\ntwo\r\n' });
+    expect(mixed).toMatchObject({ kind: 'downloaded', written: 'one\ntwo\n' });
+    expect((await downloads.settled()).map((d) => d.text)).toEqual(['one\r\ntwo\r\n', 'one\ntwo\n']);
+  });
+
+  it('★ write access NOT granted → the same download, and no writable is ever opened', async () => {
+    const asked: unknown[] = [];
+    const createWritable = vi.fn();
+    const handle = {
+      requestPermission: async (descriptor: unknown) => {
+        asked.push(descriptor);
+        return 'denied' as const;
+      },
+      createWritable,
+    } as unknown as FileSystemFileHandle;
+    const read = vi.fn(async () => DOC);
+    const { save } = await shellEditing({ path: 'notes.md', name: 'notes.md', read, handle });
+    read.mockClear();
+    const downloads = captureDownloads();
+
+    const outcome = await save({ text: 'edited text', baseline: DOC }).finally(downloads.restore);
+
+    expect(asked).toEqual([{ mode: 'readwrite' }]);
+    expect(outcome).toEqual({ kind: 'downloaded', written: 'edited text', filename: 'notes.md' });
+    expect(await downloads.settled()).toEqual([
+      { filename: 'notes.md', type: 'text/markdown', text: 'edited text' },
+    ]);
+    expect(createWritable).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled(); // no compare: nothing on disk is overwritten
+  });
+
+  it('a session bound to NO file (the store-free select seam) downloads under the fallback name', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    hosts.push(container);
+    const app = mountAppShell(container, {
+      store: { putFolder: async () => undefined, deleteFolder: async () => undefined, putRecent: async () => undefined },
+    });
+    await app.selectFile({ name: 'loose.md', read: async () => DOC }); // sets no active file
+    const host = await vi.waitFor(() => {
+      const el = container.querySelector<HTMLElement>('.peekover-app__reader__host');
+      expect(el?.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`)).toBeTruthy();
+      return el!;
+    });
+    await clickUntil(host, 'edit');
+    const downloads = captureDownloads();
+
+    const outcome = await editorSessionFor(host)!.save!({ text: 'edited', baseline: DOC }).finally(downloads.restore);
+
+    expect(outcome).toEqual({ kind: 'downloaded', written: 'edited', filename: 'document.md' });
+    expect((await downloads.settled()).map((d) => d.filename)).toEqual(['document.md']);
+  });
+
+  it('★ a session the shell ENDED still answers "unavailable": nothing is downloaded after Revoke', async () => {
+    const { container, save } = await shellEditing({ path: 'notes.md', name: 'notes.md', read: async () => DOC });
+    const downloads = captureDownloads();
+
+    container.querySelector<HTMLButtonElement>('.peekover-app__chip-revoke')!.click();
+    const outcome = await save({ text: 'edited text', baseline: DOC }).finally(downloads.restore);
+
+    expect(outcome).toEqual({ kind: 'unavailable' });
+    expect(await downloads.settled()).toEqual([]);
   });
 });
 

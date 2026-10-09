@@ -445,15 +445,26 @@ describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and export
       console.log(`[5.3][${SHORTCUT_ENGINE}] ruling B: no usable origin private file system — not run on this engine`);
       return;
     }
-    const anchorClicks = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    // ★ 5.4 — THE INSTRUMENT TELLS AN EXPORT FROM A SAVE. Since 5.4 a save that cannot write ends
+    // in an anchor click too (the download fallback — on Firefox, whose handles cannot ask for
+    // write access, that is this test's in-edit route), so "anchor clicks" stopped meaning
+    // "exports". Each click's `download` name is recorded: the save's download is this document's
+    // own `notes.md`, and everything else is an export. No assertion below changed its number.
+    const SAVED_AS = 'notes.md';
+    const clicked: string[] = [];
+    const anchorClicks = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clicked.push(this.download);
+      });
     const spy = preventDefaultSpy();
     try {
       /** One Ctrl+S at `target`: how many listeners prevented the default, how many exports ran. */
       const press = (target: EventTarget, meta = false): { reactions: number; exports: number } => {
         saveSettings({ lastExportFormat: 'html' }); // re-pinned per press: a late settings load can move it
-        const before = anchorClicks.mock.calls.length;
+        const before = clicked.length;
         const reactions = reactionsTo(spy, target, { meta });
-        return { reactions, exports: anchorClicks.mock.calls.length - before };
+        return { reactions, exports: clicked.slice(before).filter((name) => name !== SAVED_AS).length };
       };
 
       const stray = press(document); // what listeners left by earlier loads contribute
@@ -492,13 +503,19 @@ describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and export
       const onDisk = await (await folder.file.getFile()).text();
       console.log(`[5.3][${SHORTCUT_ENGINE}] ruling B: in edit, Ctrl+S → ${JSON.stringify(said)}; written=${onDisk === DOC_TEXT + TYPED}`);
       // The SAME save as the button: its outcome, in the button's own status region. Chromium
-      // grants the write; an engine whose handles cannot ask for write access says so.
+      // grants the write; an engine whose handles cannot ask for write access downloads instead.
+      // RE-SPELLED AT 5.4: the second alternative was "Not saved: saving is not available here."
+      // — the interim line for a route that now downloads. The disk claim is unchanged.
+      const savedAs = clicked.filter((name) => name === SAVED_AS).length;
       if (SHORTCUT_ENGINE === 'chromium') {
         expect(said).toBe('Saved.');
         expect(onDisk).toBe(DOC_TEXT + TYPED);
+        expect(savedAs, 'a save that wrote downloads nothing').toBe(0);
       } else {
-        expect(said).toMatch(/^(Saved\.|Not saved: saving is not available here\.)/);
+        expect(said).toMatch(/^(Saved\.$|Saved as a download: notes\.md\.)/);
         expect([DOC_TEXT, DOC_TEXT + TYPED]).toContain(onDisk);
+        expect(savedAs, 'a download exactly when the status says so').toBe(said === 'Saved.' ? 0 : 1);
+        if (savedAs === 1) expect(onDisk, 'a download changes nothing in the folder').toBe(DOC_TEXT);
       }
 
       // Cmd+S is the same key.

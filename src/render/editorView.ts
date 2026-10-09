@@ -93,12 +93,21 @@
 //     is awaited. The hint in particular must be read first: on a watched document the save's own
 //     write is a change on disk, and raises the hint once it lands.
 //   - the bound save is handed `{ text, baseline }` and answers `saved` (with exactly the string
-//     it wrote), `conflict` or `unavailable`. Asking for write access, re-reading the file,
-//     `hasConflict` and the write itself all happen on the app page's side of that call.
+//     it wrote), `downloaded`, `conflict` or `unavailable`. Asking for write access, re-reading
+//     the file, `hasConflict`, the write and the download all happen on the app page's side of
+//     that call.
 //   - ONLY `saved` moves anything: the baseline advances to what was written and the dirty
 //     attribute is recomputed against it. Recomputed, not removed — text typed while the save was
 //     in flight is not in the file, and must stay dirty.
-//   - a save that REJECTS is the fourth outcome, "failed", and the catch that makes it one is
+//   - `downloaded` (5.4) is where the app page could not write — no file handle, or write access
+//     not granted — and handed the text to the browser as a download instead. It MOVES NOTHING:
+//     the file in the folder is unchanged, so the baseline is not advanced and dirty is not
+//     cleared. The edit is still unsaved as far as the folder goes, and whatever guards an exit
+//     must still see it. The status names the file downloaded and says the folder's was not
+//     changed; rulings A and C qualify it as they do `saved`.
+//   - `unavailable` is what is left for a session the app page has ENDED (Revoke, a closed or
+//     switched folder): nothing is written and nothing is downloaded. Its view is gone by then.
+//   - a save that REJECTS is the last outcome, "failed", and the catch that makes it one is
 //     here and nowhere else. The buffer is not touched on any path.
 //
 // RULING A — WHAT IS WRITTEN. The buffer is LF. If the baseline was uniformly CRLF (`isUniformCrlf`)
@@ -210,9 +219,11 @@ export interface EditorSaveRequest {
   baseline: string;
 }
 
-/** What a save answers. `saved` carries EXACTLY the string written. A rejection is "failed". */
+/** What a save answers. `saved` carries EXACTLY the string written; `downloaded` carries the same
+ *  for the string handed to the browser, and the name it went under. A rejection is "failed". */
 export type EditorSaveOutcome =
   | { kind: 'saved'; written: string }
+  | { kind: 'downloaded'; written: string; filename: string }
   | { kind: 'conflict' }
   | { kind: 'unavailable' };
 
@@ -223,10 +234,14 @@ export type EditorSessionSave = (request: EditorSaveRequest) => Promise<EditorSa
  *  session's save. This module calls both and knows nothing else about where the text goes. */
 export type EditorSave = () => EditorSessionSave;
 
-/** What the status line is told: an outcome, with ruling A's and ruling C's qualifiers on `saved`. */
+/** What the status line is told: an outcome, with ruling A's and ruling C's qualifiers on the two
+ *  that handed the text over — `saved` and `downloaded`. */
 export type EditorSaveResult =
   | { kind: 'saved'; normalised: boolean; changedWhileEditing: boolean }
+  | { kind: 'downloaded'; filename: string; normalised: boolean; changedWhileEditing: boolean }
   | { kind: 'conflict' | 'unavailable' | 'failed' };
+
+const NORMALISED_TEXT = ' Line endings were normalised to LF.';
 
 /** The status line for a save — its outcome in words (see THE SAVE HALF). */
 export function saveStatusText(result: EditorSaveResult): string {
@@ -234,10 +249,16 @@ export function saveStatusText(result: EditorSaveResult): string {
     case 'saved':
       return (
         'Saved.' +
-        (result.normalised ? ' Line endings were normalised to LF.' : '') +
+        (result.normalised ? NORMALISED_TEXT : '') +
         (result.changedWhileEditing
           ? ' The file changed on disk while you were editing, but its content was the same when checked.'
           : '')
+      );
+    case 'downloaded':
+      return (
+        `Saved as a download: ${result.filename}. The file in the folder was not changed.` +
+        (result.normalised ? NORMALISED_TEXT : '') +
+        (result.changedWhileEditing ? ' That file changed on disk while you were editing.' : '')
       );
     case 'conflict':
       return 'Not saved: the file changed on disk. Nothing was written, and your edit is still here.';
@@ -549,16 +570,19 @@ function addSaveBar(
     let result: EditorSaveResult;
     try {
       const outcome = await save({ text, baseline: before });
-      if (outcome.kind === 'saved') {
-        session.advanceBaseline(outcome.written);
-        // Only while this is still the host's session: the attribute is the host's, and a
-        // session that ended mid-save must not write it for whatever came after.
-        if (sessions.get(host) === session) syncDirty(session.view.state.doc);
-        result = {
-          kind: 'saved',
-          normalised: before.includes('\r') && !outcome.written.includes('\r'),
-          changedWhileEditing,
-        };
+      if (outcome.kind === 'saved' || outcome.kind === 'downloaded') {
+        const normalised = before.includes('\r') && !outcome.written.includes('\r');
+        if (outcome.kind === 'saved') {
+          session.advanceBaseline(outcome.written);
+          // Only while this is still the host's session: the attribute is the host's, and a
+          // session that ended mid-save must not write it for whatever came after.
+          if (sessions.get(host) === session) syncDirty(session.view.state.doc);
+          result = { kind: 'saved', normalised, changedWhileEditing };
+        } else {
+          // A DOWNLOAD MOVES NOTHING: the file in the folder is as it was, so the baseline and
+          // the dirty attribute are too (THE SAVE HALF).
+          result = { kind: 'downloaded', filename: outcome.filename, normalised, changedWhileEditing };
+        }
       } else {
         result = outcome;
       }

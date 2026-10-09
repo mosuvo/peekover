@@ -1,6 +1,140 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · 012 D-6 — the DOWNLOAD FALLBACK LANDED at task 5.4: where Save cannot write, it hands
+  the text to the browser as a download and changes nothing in the folder; `PERMISSIONS.md` carries
+  the FINAL signed row (D-9). No human ruling was taken during this task; the download's status
+  copy is DRAFTED and flagged for review (R18), and two judgment calls are flagged below.**
+  **THE ROUTES.** `writeBack` (`appShell.ts`) downloads on exactly these, and on nothing else:
+  - the bound file has no handle, or a handle that cannot ask for write access — every Firefox
+    route (its folder routes give no handle; its origin-private-file-system handles have no
+    `requestPermission`);
+  - `requestPermission({ mode: 'readwrite' })` answers anything but `'granted'`, or throws;
+  - the session is bound to no file at all (`activeFile` was null at edit entry — today only the
+    store-free `AppController.selectFile` seam; R17(ii) will add a mismatch).
+  The permission is still asked FIRST where it can be; nothing is re-read and nothing is compared
+  on a download route — nothing on disk is being overwritten.
+  **`unavailable` IS KEPT, and is no longer reachable on those routes.** It is now only what a
+  binding the shell DROPPED answers — Revoke, a closed folder, a folder switch, a newer session —
+  including one dropped while the write prompt was up. Nothing is read, written or downloaded.
+  `EditBinding` gained `ended`, set by `dropBinding`, because "dropped" and "never had a file" were
+  both `file: null` and must now part ways. The status line for `unavailable` is unchanged and
+  has no live view left to show it. *Judgment call 1, flagged:* the kind could have been removed
+  and the dropped binding made a rejection ("failed"); it was kept because 5.3's route 2(ii) test
+  pins `unavailable` after an ending and no existing assertion had to move.
+  **WHAT IS DOWNLOADED.** `textForDisk(buffer, baseline)` — ruling A applies, so the bytes are the
+  ones a disk write would have been: a uniformly CRLF file downloads as CRLF, anything else as LF.
+  Through the existing `downloadAs(text, filename, 'text/markdown')`: `htmlExport.ts` is ZERO-DIFF
+  (its third parameter already goes straight to the `Blob`). The filename is the bound
+  `MarkdownFile.name` on every route that has a file; `document.md` when the session is bound to
+  none. No `chrome.downloads`, no permission, no network.
+  **WHAT A DOWNLOAD MOVES — NOTHING.** The new outcome `{ kind: 'downloaded', written, filename }`
+  does not advance the baseline, does not recompute or clear dirty, and leaves the buffer alone
+  (`editorView.ts`, `run`). The file in the folder is unchanged, so the edit is still unsaved
+  there: 6.1's guard will still fire on exit after a download, and that is intended. A throw from
+  the download rejects and is "failed", through the view's one catch.
+  **THE CONFLICT ROUTE IS UNCHANGED:** the safe floor, and no download is offered (a control in
+  the real-engine suite pins zero downloads there, and on a granted write).
+  **THE LEDGER SWAP.** `PERMISSIONS.md`'s edit save-back row is now SIGNED (b) of the "M12 TASK
+  5.1" entry (below) — cut out of that entry by a script and written over the interim row, then
+  compared: 2,062 bytes, byte for byte equal. One line of the ledger changed. The signed text is
+  not restated here. `tests/permissionsLedger.test.ts` 7 → 9: (b) present exactly and as a whole
+  table line; each of (b)'s three download texts present once; (b′)'s three texts absent; (a)
+  still present; the old summary still absent; and its literals still cross-checked against the
+  5.1 entry. Red-first: with the ledger unedited, 3 of the 9 red.
+  **THE STATUS COPY — DRAFTED, FOR REVIEW (R18; the agent's wording, not signed text):**
+  - downloaded — "Saved as a download: `<name>`. The file in the folder was not changed."
+  - downloaded, ruling A — … + " Line endings were normalised to LF."
+  - downloaded, with 4.2's hint present — … + " That file changed on disk while you were
+    editing." *Judgment call 2, flagged:* ruling C's sentence for `saved` ("…but its content was
+    the same when checked") would be false here — no compare runs — so the download says only
+    what the hint knows.
+  **TESTS, RED-FIRST.** Unit 1347 → 1359 (+12). `editorView.test.ts` 70 → 76: the copy (3), a
+  download moves nothing, ruling A and the hint as qualifiers. `editorEnhancer.test.ts` 28 → 32:
+  the route decision through the real shell in jsdom — no handle, CRLF bytes in the blob, write
+  access not granted, the no-file fallback name, and an ENDED session still `unavailable` with
+  nothing downloaded. Before the implementation 10 were red across the two files (the
+  ended-session case green, as it must be: it is the control). Real engine,
+  `editorSave.browser.test.ts`, through `watchDownloads()` — the anchor click swallowed, the blob
+  read through the clicked anchor's own `href`: Save and then `saveEdit()` (Ctrl/Cmd+S's path) on
+  a no-handle file, BOTH engines — type `text/markdown`, the file's name, the exact buffer, dirty
+  and the baseline kept; ruling A's CRLF and mixed fixtures, both engines; a download that throws
+  → "failed", both engines; Chromium: a declined prompt → a download with the file on disk
+  byte-identical; controls — a granted write and a conflict download nothing. Before the
+  implementation: 4 red on Chromium, 4 on Firefox, both controls green. Ablations, each restored
+  byte-identical:
+  - the download put back to `unavailable` → unit 4 red; real engine 4 + 4 red — no download, the
+    status "Not saved: saving is not available here…"; the "ended session" unit case stays green.
+  - the markdown type omitted (`tasks.md` 5.4's own red-first) → `text/html` is observed: unit 2
+    red, real engine 3 Chromium + 2 Firefox red, each on the type assertion itself.
+  **Existing assertions re-spelled (four; each pinned the interim "not available here" on a route
+  that now downloads):** `editorSave.browser.test.ts` — "★ NOT AVAILABLE: a declined write prompt
+  writes nothing and keeps the edit" (now "★ DECLINED…"; its disk, buffer and dirty claims
+  unchanged) and the no-handle describe's one case, which also asserted zero anchor clicks ("no
+  download: that is task 5.4"); `editorEnhancer.test.ts` — "appShell injects a save that, for a
+  file with no handle, answers 'unavailable'"; `exportShortcut.browser.test.ts` — the Firefox
+  alternative of ruling B's in-edit status. In that last file the INSTRUMENT also changed, not an
+  assertion: an anchor click named `notes.md` is the save's download and is no longer counted as
+  an export. **Ripples beyond the kickoff's Files list, each forced by the full-suite clause:**
+  `src/render/editorEnhancer.test.ts`, `tests/browser/exportShortcut.browser.test.ts`.
+  **BYTES.** Content script md5-IDENTICAL, both engines (`97b1b869…` / `c0115d89…`, 342,652 B).
+  Manifests 654 / 770 B, byte-identical, `permissions: []`. The app chunk is the only file whose
+  size changed: 523,321 → 523,863 B (**+542**), both engines. `.output` 5,821,131 / 5,821,247 B
+  (+542 each; headroom 1,518,901 / 1,518,785 B under 7 MiB); zip 1,839,560 / 1,839,618 B (+200
+  each). Decomposed by Chrome arms — each side alone, then one piece out of each:
+
+  | Piece | Bytes | Arm |
+  |---|---|---|
+  | the view: the `downloaded` branch in `run`, the result type's case, the shared "normalised" constant | 183 | `appShell.ts` at HEAD (+342) less the copy |
+  | the copy: the download's two sentences | 159 | the full build with both emptied |
+  | the routing: `ended`, `dropBinding`, `writeBack` restructured around the grant | 100 | `editorView.ts` at HEAD, the download call out |
+  | the download call: `textForDisk`, the name and its fallback, `downloadAs`, the type | 100 | the full build with the call out |
+  | **sum** | **542** | measured +542 — **residual 0** |
+
+  The two sides are independent: view alone +342, routing alone +200. A second clean rebuild
+  reproduced every figure.
+  **FULL SUITE.** lint 0 · unit 1359 · browser, run alone, 1827 passed / 31 skipped, 182 files,
+  zero reds (no known flake fired) · scanner clean, self-test 7 + 10 · `pnpm audit --prod` EXIT=0
+  · golden empty. `editorSave` 22 (19 Chromium + 3 Firefox; 16 skipped) · `exportShortcut` 18.
+  **KICKOFF vs FILE, flagged.** (i) `tasks.md` 5.4 says "the buffer text"; the kickoff says
+  `textForDisk`. The body predates ruling A, whose signed text is "the save writes CRLF", and the
+  signed row calls the download a Save — so ruling A was followed. The two differ only for a
+  uniformly CRLF file. (ii) The body's Files are `appShell.ts`, the browser test and (by its ★)
+  `PERMISSIONS.md`; `editorView.ts` and its test carry the outcome kind and the copy the body's
+  own "the status says" needs. (iii) The kickoff's MIME red-first was "a wrong type"; the body's
+  "omit the argument → the default is observed" was run.
+  **NOT PROVEN HERE → 7.1.** A real browser download landing in the user's downloads folder (the
+  click is swallowed in every test); Firefox with the extension loaded; and a download issued
+  AFTER a real write prompt is declined — the click's activation may be spent by then, and
+  headless cannot say whether the browser still lets the download through.
+  *Revisit-when:* 4.3 (R17 — the binding, and a save's own write) · 5.5 (the walk) · 6.1 (the
+  guard must fire after a download; R16's three paths) · 5.7 (zero network across a
+  download-fallback save) · 7.1 (above; the copy).
+
+- **2026-10-09 · M12 RULINGS R16–R18 — three HUMAN RULINGS taken in task 5.4's kickoff: 6.1's guard
+  covers every path that ends an edit session; a discovered task 4.3 (save-path hardening) runs
+  between 5.4 and 5.5; 5.3's status copy is approved.** Stated in the kickoff as approved by the
+  human running it, dated 2026-10-09. They answer the question and two of the findings at the end
+  of the "012 D-6 — LANDED at task 5.3" entry (below).
+  **★ R16 — the unsaved-changes guard also covers every path that ENDS an edit session.** 6.1's
+  guard covers, beside its own three exits: Revoke; a folder switch (`applyOutcome`'s success
+  branch); a closed folder (`paintIdle` — which also fires on a cancelled or failed re-pick from
+  the reopen hub and on a non-folder drop). With a dirty buffer, each offers stay / discard like
+  leaving edit; red-first per path. `tasks.md` 6.1 is redlined. *Answers 5.3's question.*
+  **★ R17 — DISCOVERED task 4.3, "Save-path hardening", runs AFTER 5.4 and BEFORE 5.5.**
+  (i) A save's own write is NOT an external change: on a watched document, Peekover's successful
+  write must neither raise `CHANGED_IN_EDIT_ATTR` nor sit deferred as an external change. Observe
+  first, red-first, on a watched document — 5.3 reasoned it and did not see it. (ii) Edit entry
+  binds the file whose text the reader actually RENDERED, not whatever `activeFile` is at that
+  instant; a mismatch binds nothing, and Save then takes the no-handle route — the download.
+  Red-first with two files of IDENTICAL text, in the switch window. (iii)
+  `editorEnhancer.ts:28-30`'s stale "Nothing calls `save`" comment. Files and Verify are in
+  `tasks.md` 4.3. Count 25 → 26. *Answers 5.3's first two findings and routes its third.*
+  **★ R18 — 5.3's status copy is APPROVED as drafted** (the six lines in the 5.3 entry). Lines
+  drafted at 5.4 are reviewed on landing — the three in the entry above.
+  *Revisit-when:* 4.3's kickoff (it decides `watchController.ts` or the detector seam for (i)) ·
+  6.1's kickoff (R16's three paths join its Verify).
+
 - **2026-10-09 · 012 D-6 — LANDED at task 5.3: Save WRITES on Chromium — write access asked at the
   click, the file re-read and compared BEFORE the write, the safe floor on a conflict — with the
   interim `PERMISSIONS.md` row in the same commit. The download fallback is NOT built (5.4). No

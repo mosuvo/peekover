@@ -769,6 +769,30 @@ touched; this group widens a gate, not what it protects.*
       contract), no cross-feed. Content-script bytes stated and decomposed. Golden EMPTY · manifest
       **654 / 770 B** · `permissions: []`. [D-8, D-7 (the hint only)]~~
 
+- [ ] **4.3 ★ DISCOVERED — Save-path hardening: a save's own write is not an external change; edit
+      entry binds the file the reader RENDERED; one stale comment (D-6, D-8; R17).**
+      ★ *Added 2026-10-09 by human ruling R17 (`decisions.md`, "M12 RULINGS R16–R18"). It runs AFTER
+      5.4 and BEFORE 5.5 — group 4's by subject (the watch and the edit session), not by position.*
+      TEST FIRST.
+      **(i) A save's own write is NOT an external change.** On a WATCHED document, Peekover's
+      successful write must neither raise `CHANGED_IN_EDIT_ATTR` nor sit deferred as an external
+      change. **OBSERVE FIRST**, red-first, on a watched document — 5.3 reasoned it and did not see
+      it (its watched fixtures are hand-driven).
+      **(ii) Edit entry binds the file whose text the reader actually RENDERED**, not whatever
+      `activeFile` is at that instant. A mismatch binds NOTHING — Save then takes the no-handle
+      route, which since 5.4 is the download. Red-first with two files of IDENTICAL text, in the
+      switch window (`selectFolderFile` sets `activeFile` before the file's read resolves).
+      **(iii)** `editorEnhancer.ts:28-30`'s stale "Nothing calls `save`" comment, corrected.
+      Files: `src/watch/watchController.ts` (+ its test; or the detector seam it uses — 4.3's
+      kickoff decides) · `src/app/appShell.ts` · `src/render/editorEnhancer.ts` (comment) ·
+      `tests/browser/editorWatch.browser.test.ts` · `tests/browser/editorSave.browser.test.ts`
+      Verify: (i) and (ii) each red-first as stated above, in the real engine. Content-script bytes
+      STATED and decomposed — `watchController.ts` IS on that graph. Golden EMPTY · manifest
+      **654 / 770 B** · `permissions: []`. *(R17 gives the three items, the Files and these
+      invariants; the per-clause Verify wording is its kickoff's to write. Suggested there, the
+      agent's note: a firing control for (i) — a genuinely external change after a save still
+      raises the hint, so the fix is not "never hint".)* [D-6, D-8; R17]
+
 *Group-4 acceptance (plan §6): SUPPORTED-DEGRADED is proven in BOTH directions, red-first — deferred while
 editing; flushed on a clean exit, conflict-routed (never auto-flushed) on a dirty one.*
 
@@ -878,7 +902,7 @@ write beside a ledger that says "cannot write".*
       dirty buffer unasked — and one finding for 5.5: on a watched document a save's own write
       raises 4.2's hint.
 
-- [ ] **5.4 The download fallback — the no-handle and declined-write routes (D-6).** TEST FIRST. With
+- [x] **5.4 The download fallback — the no-handle and declined-write routes (D-6).** TEST FIRST. With
       `activeFile.handle` undefined (Firefox; a dropped file) or permission not granted, Save calls the
       existing `downloadAs` with the buffer text, the document's own filename and an EXPLICIT markdown
       mime type; no compare runs (nothing on disk is overwritten); the status says the edit was saved as
@@ -893,6 +917,21 @@ write beside a ledger that says "cannot write".*
       ★ *Added 2026-10-08 (`decisions.md`, "M12 TASK 5.1", route 1):* **`docs/trust/PERMISSIONS.md`
       joins this task's Files.** It replaces the interim row (b′) with SIGNED (b) EXACTLY, pinned by
       the ledger-text test.
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "012 D-6 — the DOWNLOAD FALLBACK LANDED at task
+      5.4"):* `writeBack` downloads where it cannot write — no handle that can ask for write access
+      (every Firefox route), write access not granted, or a session bound to no file — and answers a
+      new outcome, `downloaded`, on which the session moves NOTHING: the baseline is not advanced
+      and dirty is not cleared, so 6.1's guard still fires after a download. `unavailable` is kept
+      for a binding the shell dropped: nothing downloads after Revoke. **What is downloaded is
+      ruling A's `textForDisk`, not this body's "the buffer text"** — they differ only for a
+      uniformly CRLF file (flagged in the entry). The name is the bound file's; `document.md` when
+      there is none. `htmlExport.ts` is zero-diff. The ledger row is SIGNED (b), byte for byte.
+      **Beyond this line's Files:** `src/render/editorView.ts` + its test (the outcome kind, the
+      copy), `tests/permissionsLedger.test.ts`, and two ripples the full suite forced —
+      `src/render/editorEnhancer.test.ts`, `tests/browser/exportShortcut.browser.test.ts` (four
+      assertions re-spelled, listed in the entry). The MIME red-first ran as written here: the
+      argument omitted → `text/html` observed. App chunk +542 B, residual 0; content script
+      md5-identical. The download's status copy is drafted, for review (R18).
 
 - [ ] **5.5 ★ HUMAN DECISION GATE — the conflict/overwrite POLICY, from a walk (spec §8-1; D-B(ii); Q3).**
       The human walks a real conflicting edit (a watched file changed externally while being edited)
@@ -967,6 +1006,22 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       with no prompt, asserted as lost text. *What releases the flush is leaving edit, as at 4.1 — so
       "(which releases 4.2's deferred flush)" in this line's opening text is superseded in mechanism:
       4.2 withholds nothing.*
+      ★ *REDLINE, 2026-10-09 by human ruling R16 (`decisions.md`, "M12 RULINGS R16–R18") — THE GUARD
+      ALSO COVERS EVERY PATH THAT ENDS AN EDIT SESSION. It ADDS to this task's scope and Verify.*
+      Since 5.3 three shell paths end an open edit session (`endEditSession`), and each discards a
+      dirty buffer unasked. With the dirty attribute set, each now offers stay / discard exactly as
+      leaving edit does; with it clear, none prompts:
+      **(a) Revoke** (`revokeAccess`).
+      **(b) a folder switch** (`applyOutcome`'s success branch).
+      **(c) a closed folder** (`paintIdle`) — which ALSO fires on a cancelled or failed re-pick
+      from the reopen hub and on a non-folder drop.
+      **Red-first PER PATH:** with the guard absent on that path, the buffer is lost with no
+      prompt, asserted as lost text — three reds, each in its own units.
+      *Not ruled, for this task's kickoff (the agent's notes, 5.4):* what "stay" leaves standing on
+      each path — on (b) and (c) the outcome that triggered it (a newly granted folder; a cancelled
+      re-pick) has already happened by the time the guard can ask. And: after a DOWNLOAD (5.4) the
+      buffer is still dirty — the folder's file is unchanged — so the guard fires on every exit
+      after one. That is intended (5.4's landing entry) and belongs in this Verify.
 
 - [ ] **6.2 The debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from choosing.** Preview
       re-render wall-clock across a document-size corpus mirroring `perf-watch.ts`'s 50 KB / 1 MB shape
@@ -1143,6 +1198,10 @@ save task. It reorders none of the three constraints; its fixtures keep group 3'
 ★ *2026-10-08 (`decisions.md`, "M12 TASK 5.1"): the discovered **1.3** (the katex audit exception) runs
 BETWEEN 5.1 and 5.2 — after the sign-off, before the first save task's code. It is group 1's by subject
 (dependency hygiene), not by position; it reorders none of the three constraints.*
+★ *2026-10-09 (`decisions.md`, "M12 RULINGS R16–R18"): the discovered **4.3** (save-path hardening)
+runs BETWEEN 5.4 and 5.5 — after the download exists (its mismatch route IS the download), before the
+conflict walk (which should not be walked over a false hint). It is group 4's by subject, not by
+position; it reorders none of the three constraints.*
 
 **Count proposed for gate 3: SEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (3) · 4 (2) · 5 (7) · 6 (4) ·
 7 (3). Three are human gates (5.1, 5.5, 7.1); two are contingent on a ruling's content (5.6, 6.4); 5.5 is
@@ -1154,6 +1213,9 @@ re-scoped by the same entry (R6), not added or struck — the count moves by 3.4
 ★ *2026-10-08: **25 tasks** — group 1 is (3) with the discovered 1.3 (the katex advisory exception, R13
 route (i)), human-ruled and human-scheduled between 5.1 and 5.2, `decisions.md` "M12 TASK 5.1". R15
 widens 1.3's scope, not the count.*
+★ *2026-10-09: **26 tasks** — group 4 is (3) with the discovered 4.3 (save-path hardening, R17),
+human-ruled and human-scheduled between 5.4 and 5.5, `decisions.md` "M12 RULINGS R16–R18". R16 widens
+6.1's scope, not the count.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

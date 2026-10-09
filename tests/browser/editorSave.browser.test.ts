@@ -36,6 +36,21 @@
 // Files run serially on one `document` and one origin private file system. Every file this suite
 // creates has a name no other test uses and is removed afterwards; the watch, diff and theme
 // registries are reset around each test; text is matched by markers; download counts are deltas.
+//
+// ══ 012 TASK 5.4 — THE DOWNLOAD (D-6) ═══════════════════════════════════════════════════════════
+//
+// Where Save cannot write — no handle (every Firefox route), or write access not granted — it
+// hands the text to the browser as a download and changes nothing in the folder. Cases ADDED,
+// except two that pinned "not available here" on a route that now downloads: each is RE-SPELLED
+// in place and says so above its `it`.
+//
+// THE INSTRUMENT is `watchDownloads()`: a download ends in a synthetic anchor click
+// (`htmlExport.ts`'s `downloadAs`), so the spy swallows the click — nothing is really downloaded
+// — and reads the blob behind the anchor's own `href`, which it knows because it also watches
+// `URL.createObjectURL`. Every claim matches THIS test's file by name, never a bare count.
+//
+// RED-FIRST (progress.md's 5.4 record): the routes put back to "not available" → no download and
+// the status says not available. The markdown type omitted → `text/html` is what is observed.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -70,6 +85,7 @@ import {
 const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 const CHROMIUM = ENGINE === 'chromium';
 const record = (line: string): void => console.log(`[5.3][${ENGINE}] ${line}`);
+const record54 = (line: string): void => console.log(`[5.4][${ENGINE}] ${line}`);
 
 const NARROW = { width: 414, height: 896 };
 
@@ -211,6 +227,51 @@ async function clickSave(host: HTMLElement): Promise<string> {
   await waitFor(() => !statusIn(host).hidden, 'the save to report');
   return statusIn(host).textContent ?? '';
 }
+
+// ── The download instrument (5.4) ─────────────────────────────────────────────────────────────
+
+interface SeenDownload {
+  filename: string;
+  /** The blob's own type — what the browser is told the file is. */
+  type: string | undefined;
+  /** The blob's bytes, decoded — read through the anchor's `href`. */
+  text: () => Promise<string | undefined>;
+}
+
+/** From here until `restore()`: swallow every anchor click and record what it would have
+ *  downloaded. The blob is found by the clicked anchor's `href`. */
+function watchDownloads(): { seen: SeenDownload[]; named: (name: string) => SeenDownload[]; restore: () => void } {
+  const blobs = new Map<string, Blob>();
+  const realCreate = URL.createObjectURL.bind(URL);
+  const create = vi.spyOn(URL, 'createObjectURL').mockImplementation((object) => {
+    const url = realCreate(object);
+    if (object instanceof Blob) blobs.set(url, object);
+    return url;
+  });
+  const seen: SeenDownload[] = [];
+  const clicks = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      const blob = blobs.get(this.href);
+      seen.push({
+        filename: this.download,
+        type: blob?.type,
+        text: async () => (blob ? new TextDecoder().decode(await blob.arrayBuffer()) : undefined),
+      });
+    });
+  return {
+    seen,
+    named: (name) => seen.filter((d) => d.filename === name),
+    restore: () => {
+      clicks.mockRestore();
+      create.mockRestore();
+    },
+  };
+}
+
+const MARKDOWN = 'text/markdown';
+const downloadLine = (name: string): string =>
+  `Saved as a download: ${name}. The file in the folder was not changed.`;
 
 beforeEach(async () => {
   resetDiffRegistryForTest();
@@ -357,7 +418,11 @@ describe.runIf(CHROMIUM)('012 task 5.3 — Save writes the buffer to the file be
     expect(await readDisk(fh)).toBe(ON_DISK + TYPED);
   });
 
-  it('★ NOT AVAILABLE: a declined write prompt writes nothing and keeps the edit', async () => {
+  // RE-SPELLED AT 5.4. This was "★ NOT AVAILABLE: a declined write prompt writes nothing and keeps
+  // the edit", and pinned the status "Not saved: saving is not available here." — the interim
+  // behaviour 5.4 replaces. What it asserted of the DISK, the buffer and dirty is unchanged; the
+  // status line is now the download's, and the download itself is read.
+  it('★ DECLINED: a declined write prompt writes nothing to the file — the edit becomes a download, and stays on screen', async () => {
     const { fh, file } = await diskFile('declined', ON_DISK);
     const asked: unknown[] = [];
     (fh as unknown as { requestPermission: (d: unknown) => Promise<PermissionState> }).requestPermission =
@@ -365,15 +430,63 @@ describe.runIf(CHROMIUM)('012 task 5.3 — Save writes the buffer to the file be
         asked.push(descriptor);
         return 'denied';
       };
+    let reads = 0;
+    const realRead = file.read;
+    file.read = async () => {
+      reads += 1;
+      return realRead();
+    };
     const { host } = await opened(file);
     const session = await enterEdit(host);
     type(session, TYPED);
+    const readsBefore = reads;
+    const downloads = watchDownloads();
 
-    const said = await clickSave(host);
+    const said = await clickSave(host).finally(downloads.restore);
 
+    const mine = downloads.named(file.name);
+    record54(`declined: ${JSON.stringify(said)}; downloads=${mine.length}; type=${mine[0]?.type}; disk untouched=${(await readDisk(fh)) === ON_DISK}`);
     expect(asked, 'write access was asked for, on this file, at the click').toEqual([{ mode: 'readwrite' }]);
-    expect(said).toMatch(/^Not saved: saving is not available here\./);
-    expect(await readDisk(fh)).toBe(ON_DISK);
+    expect(await readDisk(fh), 'the file on disk is byte-identical').toBe(ON_DISK);
+    expect(mine, 'one download, named as the file').toHaveLength(1);
+    expect(downloads.seen, 'and nothing else was downloaded').toHaveLength(1);
+    expect(mine[0].type, 'a markdown type — never text/html').toBe(MARKDOWN);
+    expect(await mine[0].text(), 'the buffer, exactly').toBe(ON_DISK + TYPED);
+    expect(said).toBe(downloadLine(file.name));
+    expect(reads - readsBefore, 'no compare runs: nothing on disk is overwritten').toBe(0);
+    expect(buffer(session)).toBe(ON_DISK + TYPED);
+    expect(host.getAttribute(EDITOR_DIRTY_ATTR), 'the file is unchanged, so the edit is still unsaved').toBe('true');
+    expect(session.originalText, 'a download does not advance the baseline').toBe(ON_DISK);
+  });
+
+  it('★ CONTROL (5.4): write access granted → still a disk write, and NO download', async () => {
+    const { fh, file } = await diskFile('granted-control', ON_DISK);
+    const { host } = await opened(file);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+    const downloads = watchDownloads();
+
+    const said = await clickSave(host).finally(downloads.restore);
+
+    expect(said).toBe('Saved.');
+    expect(await readDisk(fh)).toBe(ON_DISK + TYPED);
+    expect(downloads.seen, 'a save that wrote downloads nothing').toHaveLength(0);
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+  });
+
+  it('★ CONTROL (5.4): a conflict → the safe floor, and NO download is offered', async () => {
+    const { fh, file } = await diskFile('conflict-control', ON_DISK);
+    const { host } = await opened(file);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+    await writeDisk(fh, OUT_OF_BAND);
+    const downloads = watchDownloads();
+
+    const said = await clickSave(host).finally(downloads.restore);
+
+    expect(said).toMatch(/^Not saved: the file changed on disk\./);
+    expect(await readDisk(fh)).toBe(OUT_OF_BAND);
+    expect(downloads.seen, 'the conflict route does not download').toHaveLength(0);
     expect(buffer(session)).toBe(ON_DISK + TYPED);
     expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
   });
@@ -600,35 +713,128 @@ describe.runIf(CHROMIUM)('012 task 5.3 — route 2(ii): Revoke, closing the fold
 
 // ── The no-handle route — BOTH engines; on Firefox, the route a real user is on ───────────────
 
-describe('012 task 5.3 — a file with no handle: Save says it is not available here (Chromium + Firefox)', () => {
-  it('★ nothing is written, nothing is downloaded, and the edit stays on screen', async () => {
+// RE-SPELLED AT 5.4. This was "012 task 5.3 — a file with no handle: Save says it is not available
+// here", whose one case — "★ nothing is written, nothing is downloaded, and the edit stays on
+// screen" — pinned the status "Not saved: saving is not available here." and ZERO anchor clicks
+// ("no download: that is task 5.4"). Both are the interim behaviour 5.4 replaces. What it asserted
+// of the re-read count, the buffer, dirty, the baseline and the control is unchanged.
+
+describe('012 task 5.4 — a file with no handle: Save is a download (Chromium + Firefox)', () => {
+  /** A read-only snapshot file: no handle — what every Firefox folder route produces. */
+  function snapshot(label: string, text: string): { file: MarkdownFile; reads: () => number } {
+    seq += 1;
+    const name = `${label}-${seq}-${Math.trunc(performance.now())}.md`;
     let reads = 0;
-    const file: MarkdownFile = {
-      path: 'snapshot.md',
-      name: 'snapshot.md',
-      read: async () => {
-        reads += 1;
-        return ON_DISK;
+    return {
+      file: {
+        path: name,
+        name,
+        read: async () => {
+          reads += 1;
+          return text;
+        },
       },
+      reads: () => reads,
     };
-    const { host } = await opened(file, false); // a read-only snapshot: no handle, not persistable
+  }
+
+  it('★ Save, then Ctrl/Cmd+S: each is one download — a markdown type, the file’s own name, the exact buffer — and the edit stays unsaved', async () => {
+    const { file, reads } = snapshot('snapshot', ON_DISK);
+    const { app, host } = await opened(file, false); // not persistable, like the route it stands for
     const session = await enterEdit(host);
     type(session, TYPED);
-    const readsBefore = reads;
-    const anchorClicks = vi.spyOn(HTMLAnchorElement.prototype, 'click');
-    const clicksBefore = anchorClicks.mock.calls.length;
+    const readsBefore = reads();
+    const downloads = watchDownloads();
+    try {
+      const said = await clickSave(host);
 
-    const said = await clickSave(host);
+      const first = downloads.named(file.name);
+      record54(`no handle, Save: ${JSON.stringify(said)}; downloads=${first.length}; type=${first[0]?.type}; re-reads=${reads() - readsBefore}`);
+      expect(first, 'one download, named as the file').toHaveLength(1);
+      expect(downloads.seen, 'and nothing else was downloaded').toHaveLength(1);
+      expect(first[0].type, 'a markdown type — never text/html').toBe(MARKDOWN);
+      expect(await first[0].text(), 'the buffer, exactly').toBe(ON_DISK + TYPED);
+      expect(said, 'the status says saved as a download').toBe(downloadLine(file.name));
+      expect(reads() - readsBefore, 'with no handle there is nothing to compare against').toBe(0);
+      expect(buffer(session)).toBe(ON_DISK + TYPED);
+      expect(host.getAttribute(EDITOR_DIRTY_ATTR), 'dirty is kept: the file in the folder is unchanged').toBe('true');
+      expect(session.originalText, 'the baseline is not advanced').toBe(ON_DISK);
+      expect(saveButtonIn(host).tagName).toBe('BUTTON');
 
-    const downloads = anchorClicks.mock.calls.length - clicksBefore;
-    anchorClicks.mockRestore();
-    record(`no handle: ${JSON.stringify(said)}; downloads=${downloads}; re-reads=${reads - readsBefore}`);
-    expect(said).toMatch(/^Not saved: saving is not available here\./);
-    expect(downloads, 'no download: that is task 5.4').toBe(0);
-    expect(reads - readsBefore, 'with no handle there is nothing to compare against').toBe(0);
+      // Ctrl/Cmd+S in edit is `AppController.saveEdit()` (ruling B) — the same Save.
+      type(session, ' more');
+      expect(app.saveEdit(), 'in edit, the shortcut path is a save').toBe(true);
+      expect(statusIn(host).hidden, 'the status empties as the save starts').toBe(true);
+      await waitFor(() => !statusIn(host).hidden, 'the shortcut save to report');
+
+      const both = downloads.named(file.name);
+      record54(`no handle, Ctrl/Cmd+S: ${JSON.stringify(statusIn(host).textContent)}; downloads=${both.length - 1}; type=${both[1]?.type}`);
+      expect(both, 'one more download').toHaveLength(2);
+      expect(both[1].type).toBe(MARKDOWN);
+      expect(await both[1].text()).toBe(`${ON_DISK + TYPED} more`);
+      expect(statusIn(host).textContent).toBe(downloadLine(file.name));
+      expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+      expect(session.originalText).toBe(ON_DISK);
+    } finally {
+      downloads.restore();
+    }
+  });
+
+  it('★ RULING A applies to the download: a uniformly CRLF file downloads as CRLF; a mixed one as LF, and the status says so', async () => {
+    const downloads = watchDownloads();
+    try {
+      const crlf = snapshot('snapshot-crlf', '# T\r\n\r\nBody.\r\n');
+      const a = await opened(crlf.file, false);
+      const sessionA = await enterEdit(a.host);
+      type(sessionA, 'more\n');
+      const saidA = await clickSave(a.host);
+      const gotA = downloads.named(crlf.file.name);
+      expect(gotA).toHaveLength(1);
+      expect(await gotA[0].text(), 'the bytes a disk write would have been').toBe('# T\r\n\r\nBody.\r\nmore\r\n');
+      expect(saidA, 'CRLF kept: no qualifier').toBe(downloadLine(crlf.file.name));
+      expect(sessionA.originalText).toBe('# T\r\n\r\nBody.\r\n');
+
+      const mixed = snapshot('snapshot-mixed', '# T\r\n\nBody.\rTail.\n');
+      const b = await opened(mixed.file, false);
+      const sessionB = await enterEdit(b.host);
+      type(sessionB, 'more\n');
+      const saidB = await clickSave(b.host);
+      const gotB = downloads.named(mixed.file.name);
+      record54(`ruling A: crlf → ${JSON.stringify(await gotA[0].text())}; mixed → ${JSON.stringify(saidB)}`);
+      expect(gotB).toHaveLength(1);
+      expect(await gotB[0].text()).toBe('# T\n\nBody.\nTail.\nmore\n');
+      expect(saidB).toBe(`${downloadLine(mixed.file.name)} Line endings were normalised to LF.`);
+      expect(gotB[0].type).toBe(MARKDOWN);
+    } finally {
+      downloads.restore();
+    }
+  });
+
+  it('★ a download that THROWS is "failed", said in text — the buffer and dirty kept', async () => {
+    const { file } = snapshot('snapshot-throws', ON_DISK);
+    const { host } = await opened(file, false);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+    const create = vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
+      throw new Error('the download threw (test)');
+    });
+    const clicks = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    saveButtonIn(host).click();
+    await waitFor(() => !statusIn(host).hidden, 'the save to report', 3000).catch(() => undefined);
+    const said = statusIn(host).textContent ?? '';
+    const clicked = clicks.mock.calls.length;
+    warn.mockRestore();
+    clicks.mockRestore();
+    create.mockRestore();
+
+    record54(`download throws: ${JSON.stringify(said)}`);
+    expect(said, 'the failure is SAID').toMatch(/^The save failed\./);
+    expect(clicked, 'nothing was downloaded').toBe(0);
     expect(buffer(session)).toBe(ON_DISK + TYPED);
     expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
     expect(session.originalText).toBe(ON_DISK);
-    expect(saveButtonIn(host).tagName).toBe('BUTTON');
+    expect(saveButtonIn(host).textContent, 'the control is usable again').toBe('Save');
   });
 });
