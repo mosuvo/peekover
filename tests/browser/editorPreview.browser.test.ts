@@ -355,8 +355,12 @@ describe('012 task 3.3 — keys land while a render waits; a burst costs fewer r
 
     expect(log.length, 'the instrument saw every key').toBe(KEYS.length);
     expect(buffer(e), 'every key is in the buffer').toBe(`${KEYS}${BIG_DOC}`);
-    // The first key renders at once; nothing was pending for it to wait behind.
-    expect(log[0].after - log[0].before, 'the first key rendered immediately').toBe(1);
+    // RE-SPELLED AT 6.4 (human ruling R26, spec §8-2). This was "The first key renders at once":
+    // `expect(log[0].after - log[0].before, 'the first key rendered immediately').toBe(1)`. R26
+    // moves that render out of the keystroke into a 0 ms task, so the first key — like every
+    // other — commits NOTHING inside its own dispatch. Asserted for every key, the first by name.
+    expect(log[0].after - log[0].before, 'R26: the first key rendered nothing inside its own dispatch').toBe(0);
+    expect(log.filter((k) => !waited(k)), 'R26: no key renders inside its own dispatch').toEqual([]);
     // Two consecutive keys that rendered nothing: the first scheduled a render, and the second
     // landed in the buffer while that render was still waiting.
     const pair = log.findIndex((k, i) => i > 0 && waited(k) && waited(log[i - 1]) && k.before === log[i - 1].after);
@@ -367,7 +371,7 @@ describe('012 task 3.3 — keys land while a render waits; a burst costs fewer r
     expect(previewColumn(e.shell).textContent).toContain(`${KEYS}Intro line.`);
 
     record(
-      `responsiveness: first key's dispatch (its render) took ${log[0].ms.toFixed(1)} ms; ` +
+      `responsiveness: first key's dispatch (no render in it, R26) took ${log[0].ms.toFixed(1)} ms; ` +
         `${log.filter(waited).length} of ${log.length} keys landed while a render was pending; ` +
         `slowest waiting key ${Math.max(...log.filter(waited).map((k) => k.ms)).toFixed(1)} ms; ` +
         `${atBuild} render at build`,

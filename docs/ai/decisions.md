@@ -1,6 +1,129 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 6.4 — LANDED: the preview's first render leaves the keystroke (R26;
+  spec §8-2). The PROVISIONAL constant is removed. Run BEFORE 6.3, by the order check below.**
+  **THE ORDER CHECK.** `tasks.md` lists 6.3 before 6.4. 6.3 measures the nested preview host's
+  first-paint and memory cost and the never-entered first paint; nothing in its text depends on
+  the debounce, and nothing in it says it must precede 6.4. What it measures runs THROUGH the
+  preview, so measuring it on the scheduler that ships is the better order — the case R26's
+  kickoff authorized. 6.4 was applied first; `tasks.md` carries a dated sequencing note.
+  **STEP 0 — WHERE THE IMMEDIATE RENDER WAS, AND WHAT PINNED IT (listed before any change).**
+  One site: `createPreviewCooldown`'s `push`, which called `renderNow` in place when the
+  cooldown had elapsed and no timer was armed; the feed (`buildEditor`'s update listener) only
+  calls `push`. What pinned it, found by applying the change to a scratch tree and reading the
+  reds: ELEVEN cases in `editorView.test.ts` — seven in the cooldown block ("renders the FIRST
+  text immediately"; WAIT SCALES; COALESCES; NOT re-armed; QUIET GAP; cancel(); holds the text
+  unread) and four in the feed block ("a change renders … at once"; a burst coalesces; GUARD A;
+  a render that throws) — and ONE case in `editorPreview.browser.test.ts`, on both engines ("a
+  keystroke lands in the buffer while a preview render is pending"). No other test in the
+  repository pinned it: the full suites confirm that. (A twelfth unit red in the scratch run,
+  in the baseline block, was a timer leaked by the un-re-spelled feed cases; it needed no edit.)
+  **THE CHANGE** — `createPreviewCooldown`, `src/render/editorView.ts`. `push` no longer
+  renders: it takes the pending slot and, when no timer is armed, arms one for whatever is left
+  of the cooldown — 0 ms when nothing is. `flush`, `renderNow`, `cancel` and the feed's
+  fire-time guard are untouched. `PREVIEW_COOLDOWN_MULTIPLIER` is REMOVED (not kept as a named
+  constant): R26 rules multiplier 1, tasks.md 6.4 and AGENTS.md's provisional-constant rule both
+  say remove rather than re-comment, and a constant whose only value is 1 would be a second
+  place to read what the arithmetic already says — `readyAt += readyAt - started`. THE FEED's
+  module comment states R26; no "PROVISIONAL" remains on the path.
+  **TESTS FIRST, RED AT HEAD.** Unit, 9 red of 87 before the implementation: the four new R26
+  cooldown cases (never synchronous; keys before the task coalesce into it; after a quiet gap
+  too; `cancel()` clears the 0 ms task), the new guard case (teardown clears the 0 ms timer, by
+  its handle), the marker-is-gone case, and three re-spelled cases whose step now needs the
+  task. Real engine: the re-spelled case red on both engines — `R26: the first key rendered
+  nothing inside its own dispatch: expected 1 to be +0`. After: unit 1417 (+5), all green.
+  **THE STRUCTURAL PROPERTIES, EACH RE-ASSERTED** with the numbers it had: the wait is measured
+  from a render's END (a 10 ms render waits 10 ms, a 400 ms one 400 ms); one pending slot,
+  newest wins (ten changes → one render of `v10`); the timer is not re-armed per change (one
+  `setTimeout` for three changes; the render lands 40 ms after the first FINISHED); no
+  starvation under a stream that never goes quiet; the injected `now`; guard A on a cooldown
+  timer AND on the 0 ms task; guard B on a cooldown-pending text AND on a 0 ms-pending one.
+  **RE-SPELLINGS — named; nothing loosened beyond what R26 changes.**
+  - *Replaced:* "renders the FIRST text immediately" → the R26 cases. "the multiplier is 1, and
+    is marked PROVISIONAL in exactly one place" → "nothing on this path is PROVISIONAL any more,
+    and the provisional constant is gone".
+  - *A `task()` added after the push that used to render in place, every number kept:* WAIT
+    SCALES (and `N * PREVIEW_COOLDOWN_MULTIPLIER` → `N`, twice) · COALESCES · NOT re-armed (the
+    timer spy now starts after the first render, so it still counts the changes' timers) ·
+    QUIET GAP · `cancel()` · holds the text unread (plus: unread until its task) · GUARD A ·
+    GUARD B (so its stale text is cooldown-pending, as the case means) · a render that throws
+    (the task runs inside the same "does not throw").
+  - *Expected values changed, because the behaviour did:* "a change renders the BUFFER …" — was
+    "at once"; now zero renders inside the dispatch, then the same render a task later. "a
+    burst coalesces" — six keys in one task were `[a]` then `[a, abcdef]`; now `[]` then
+    `[abcdef]`: one render.
+  - *Browser:* `expect(log[0].after - log[0].before, 'the first key rendered immediately')
+    .toBe(1)` → `.toBe(0)`, and for EVERY key no render inside its own dispatch. Its record
+    line re-worded. Measured there after: 8 of 8 keys landed while a render was pending.
+  **CONFIRMED AGAINST THE MEASUREMENT** — 6.2's harness, unchanged, re-run on the slice R26
+  cites (enhancer-heavy 50 KB, 150 ms between keys, two runs, ms). Its "C1" row imports the
+  shipped scheduler, so it now measures R26; "C1-copy" is still the old behaviour.
+
+  | | key p50 | key p95 | busy p95 | keys busy ≥ 50 ms | renders | stale: text |
+  |---|--:|--:|--:|--:|--:|--:|
+  | Chromium · the SHIPPED scheduler | 5.4 | 29 | 42 | 1/48 | 24 | 43 |
+  | Chromium · C2 (harness) | 4.1 | 35 | 48 | 1/48 | 24 | 63 |
+  | Chromium · the old behaviour (C1-copy) | 3.2 | 8 | 78 | 48/48 | 24 | 35 |
+  | Firefox · the SHIPPED scheduler | 71 | 151 | 189 | 39/48 | 20 | 64 |
+  | Firefox · C2 (harness) | 96 | 300 | 476 | 44/48 | 17 | 92 |
+  | Firefox · the old behaviour (C1-copy) | 306 | 542 | 2,231 | 48/48 | 24 | 612 |
+
+  The shipped row tracks C2 on both engines, inside the ~2x noise 6.2 stated, and the old
+  behaviour sits where C1 sat. No mismatch. (On Chromium the shipped row's key p95 is 29 ms
+  against the old behaviour's 8: with the render in a task of its own, a key can land behind
+  it — the same shape C2 showed at 6.2, p95 18. The main thread's busy time per key fell from
+  78 to 42 ms.)
+  **BYTES.** `.output` 5,825,713 (Cr) / 5,825,829 (Fx), **−31** each; headroom 1,514,319 /
+  1,514,203 B under 7 MiB. zip 1,841,082 / 1,841,140 (−62). Manifests 654 / 770 B,
+  `permissions: []`. One file changed size per engine: the app chunk, 528,322 → 528,291.
+  *The content script: md5-IDENTICAL* (342,806 B; `c4f59f1a…` / `ecc31688…`), in every arm.
+  *The app chunk, by Chrome removal arms in sequence, landing on the baseline:* R26's `push`
+  −27 · the constant's removal −4 = **−31, residual 0**.
+  **FULL SUITE.** lint 0 · unit 1417 · browser, run alone, 186 files, 1933 passed / 51 skipped,
+  ZERO reds (393 s) · scanner clean over 80 files, self-test 7 + 10 · `pnpm audit --prod`
+  EXIT=0 · golden empty. Named: unit `editorView` 87 · `editorPreview` 24 · `editorRender`
+  20 · `editorDegrade` 18 · `editorSave` 36 (+30 skipped) · `editorUnsaved` 82 (+2) ·
+  `editorWatch` 12. No flake fired.
+  **012 D-5's REVISIT-WHEN IS CLOSED.** D-5 named the cooldown as a candidate and left its
+  interval to §8-2. R26 is that ruling; nothing about the debounce is provisional any more.
+  **KICKOFF VS FILE, FLAGGED.** (1) 6.4 ran before 6.3 (above). (2) `scripts/` is zero-diff as
+  fenced, which leaves the harness's label "C1 today (x1, first render in the key)" and its
+  header's "stays 1 and PROVISIONAL" describing 6.2's day, not today's: the row now measures
+  the shipped R26 scheduler. A wording fix for whoever next touches the harness. (3) The
+  harness flags are its real ones: `--part typing --sizes 50k --profiles heavy --rates 150
+  --candidates C1,C2 --reps 2`, with `--out` pointed away from 6.2's results. (4) No ripple:
+  the three Files and the three records.
+  *Revisit-when:* the 7.1 walk (typing feel; documents around 1 MB) · real use showing large
+  documents being edited · 6.3.
+
+- **2026-10-09 · M12 RULING R26 — HUMAN RULING, the spec §8-2 decision of record: the live
+  preview's scheduler is C2 from task 6.2.** Given in task 6.4's kickoff, dated 2026-10-09,
+  marked there "approved by the human running this prompt". The agent chose nothing — 6.2 was
+  forbidden from choosing and recommended nothing; this entry records the ruling.
+  **THE RULING.** Today's cost-proportional cooldown with multiplier 1, except that a render
+  which would run immediately runs instead in a 0 ms task — never synchronously inside the
+  keystroke that triggered it. Keys arriving before that task runs coalesce into it: one
+  pending slot, newest text wins. Every other structural property of 012 D-5 stands: the wait
+  is measured from a render's END; one pending slot; the timer is never re-armed per change;
+  the injected `now`; both cancellation guards.
+  **WHY (6.2's numbers).** On the heavy 50 KB document in Firefox, C1 rendered inside nearly
+  every keystroke — key p50 ~370 ms, preview ~740 ms behind — against C2's ~96 ms and ~90 ms:
+  better on both axes and well outside the ~2x noise. Chromium is unchanged within noise, with
+  busy time per key down from ~75 ms to ~27 ms. Nothing regresses on small or prose documents.
+  **REJECTED.**
+  - *A trailing debounce (C4)* — it stops updating the preview while you type.
+  - *Larger multipliers (C3)* — they help only when a render outlasts the key gap, and sat
+    inside the noise.
+  - *A large-document fallback* — it adds a second mechanism and an unmeasured threshold (6.2's
+    1 MB rows are one run each).
+  **STATED LIMITATION.** Documents around 1 MB stay slow to type in — 1 MB prose: ~330 ms per
+  render, keys queue behind it; enhancer-heavy 1 MB on Firefox: seconds per key under every
+  candidate. Recorded as a known limitation and a 7.1 verdict item; revisit if real use shows
+  large documents being edited.
+  *Outcome:* applied at 6.4 (the entry above).
+  *Revisit-when:* the 7.1 verdict on large documents.
+
 - **2026-10-09 · M12 TASK 6.2 — LANDED: the live-preview debounce MEASURED — sizes, two content
   profiles, seven candidates, both engines. FORBIDDEN FROM CHOOSING: this entry recommends
   nothing. The numbers go to the human for the spec §8-2 ruling. No production byte moved.**

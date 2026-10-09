@@ -26,7 +26,6 @@ import {
   EDITOR_PREVIEW_HOST_CLASS,
   EDITOR_SHELL_CLASS,
   EDITOR_SOURCE_CLASS,
-  PREVIEW_COOLDOWN_MULTIPLIER,
   buildEditor,
   buildEditorShell,
   createPreviewCooldown,
@@ -284,13 +283,30 @@ function cooldownRig(costMs: number): CooldownRig {
   return { cooldown, renders, clock };
 }
 
+/** ONE TASK BOUNDARY, with the clock standing still: run the timers that are due NOW — which is
+ *  where a render that "would run immediately" runs since ruling R26 (012 task 6.4). */
+const task = (): void => void vi.advanceTimersByTime(0);
+
 /** Advance until a render lands, or give up. */
 function advanceUntilRender(r: CooldownRig, limit = 5000): void {
   const target = r.renders.length + 1;
   for (let i = 0; i < limit && r.renders.length < target; i += 1) r.clock.advance(1);
 }
 
-describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s mechanism)', () => {
+// ══ RE-SPELLED AT 6.4 (human ruling R26, 2026-10-09 — spec §8-2) ═══════════════════════════════
+//
+// R26: a render that would run immediately runs in a 0 ms TASK instead — never synchronously
+// inside the push (the keystroke) that asked for it. Every other property of the cooldown
+// stands. Eleven existing cases in this file pinned the synchronous first render, most of them
+// only as a STEP ("push; it has rendered; now…"). Each is marked "R26" where it changed:
+//   - "renders the FIRST text immediately" is REPLACED by the three R26 cases that open the
+//     block below — its claim is the behaviour R26 removes;
+//   - in the rest, a `task()` is added after the push that used to render in place, and nothing
+//     else moves: the wait, the coalescing, the single timer, the cancel and the lazy read are
+//     asserted with the numbers they had;
+//   - the two expressions written as `N * PREVIEW_COOLDOWN_MULTIPLIER` are now `N`: the constant
+//     is gone (the last case of this block), and the ruled multiplier is 1.
+describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s mechanism; R26)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -298,20 +314,68 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
     vi.useRealTimers();
   });
 
-  it('renders the FIRST text immediately — nothing to be proportional to yet', () => {
+  it('★ R26: push NEVER renders synchronously — the first text renders in the next task, once', () => {
     const r = cooldownRig(40);
     const at = r.clock.now();
+    const armed = vi.spyOn(globalThis, 'setTimeout');
 
     r.cooldown.push('first');
+
+    expect(r.renders, 'nothing has rendered inside the push').toEqual([]);
+    expect(armed, 'one timer').toHaveBeenCalledTimes(1);
+    expect(armed.mock.calls[0][1], 'a 0 ms task: nothing to be proportional to yet').toBe(0);
+    armed.mockRestore();
+
+    task();
 
     expect(r.renders).toEqual([{ text: 'first', at }]);
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('★ R26: keys pushed before that task runs COALESCE into it — one render, the newest text', () => {
+    const r = cooldownRig(40);
+
+    r.cooldown.push('a');
+    r.cooldown.push('ab');
+    r.cooldown.push('abc');
+    expect(r.renders).toEqual([]);
+    expect(vi.getTimerCount(), 'one pending task for three pushes').toBe(1);
+
+    task();
+
+    expect(r.renders.map((x) => x.text)).toEqual(['abc']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ R26: after a QUIET GAP too — a cooldown long expired still does not render inside the push', () => {
+    const r = cooldownRig(40);
+    r.cooldown.push('a');
+    task();
+    r.clock.advance(500);
+
+    r.cooldown.push('b');
+    expect(r.renders.map((x) => x.text), 'not inside the push').toEqual(['a']);
+    task();
+    expect(r.renders.map((x) => x.text)).toEqual(['a', 'b']);
+  });
+
+  it('★ R26: cancel() clears the pending 0 ms task — the timer, not only the text', () => {
+    const r = cooldownRig(40);
+    r.cooldown.push('never');
+    expect(vi.getTimerCount()).toBe(1);
+
+    r.cooldown.cancel();
+
+    expect(vi.getTimerCount()).toBe(0);
+    r.clock.advance(5000);
+    expect(r.renders).toEqual([]);
+  });
+
   it('★ THE WAIT SCALES WITH THE RENDER COST, from when the render FINISHED — the test a fixed window fails', () => {
     const measure = (costMs: number): number => {
       const r = cooldownRig(costMs);
-      r.cooldown.push('first'); // immediate; costs `costMs` of clock time
+      r.cooldown.push('first');
+      task(); // R26: the first render, in its own task; costs `costMs` of clock time
       const finishedAt = r.clock.now();
       r.cooldown.push('second'); // inside the cooldown -> pending
       expect(r.renders).toHaveLength(1);
@@ -324,8 +388,8 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
     const expensive = measure(400);
 
     // A 10 ms render waits 10 ms; a 400 ms render waits 400 ms.
-    expect(cheap).toBe(10 * PREVIEW_COOLDOWN_MULTIPLIER);
-    expect(expensive).toBe(400 * PREVIEW_COOLDOWN_MULTIPLIER);
+    expect(cheap).toBe(10);
+    expect(expensive).toBe(400);
     expect(expensive).toBeGreaterThan(cheap * 10);
   });
 
@@ -333,6 +397,7 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
     // The count AND the content: a coalescer that keeps the FIRST text passes a count-only test.
     const r = cooldownRig(40);
     r.cooldown.push('v0');
+    task(); // R26
     expect(r.renders).toHaveLength(1);
 
     for (let i = 1; i <= 10; i += 1) r.cooldown.push(`v${i}`); // ten changes inside the cooldown
@@ -350,8 +415,9 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
     // cooldown: the pending render must land 40 ms after the first render FINISHED, not 40 ms
     // after the last change.
     const r = cooldownRig(40);
-    const armed = vi.spyOn(globalThis, 'setTimeout');
     r.cooldown.push('v0');
+    task(); // R26
+    const armed = vi.spyOn(globalThis, 'setTimeout'); // from here: the timers the CHANGES arm
     const finishedAt = r.clock.now();
 
     r.cooldown.push('v1');
@@ -384,6 +450,7 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
     r.cooldown.push('b');
     r.clock.advance(200);
     r.cooldown.push('c');
+    task(); // R26: the last one too is a task away
 
     expect(r.renders.map((x) => x.text)).toEqual(['a', 'b', 'c']);
     expect(vi.getTimerCount()).toBe(0);
@@ -392,6 +459,7 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
   it('★ cancel() drops the pending render — the TIMER, not only the text', () => {
     const r = cooldownRig(40);
     r.cooldown.push('rendered');
+    task(); // R26
     r.cooldown.push('pending');
     expect(vi.getTimerCount(), 'the pending render is armed').toBe(1);
 
@@ -413,6 +481,8 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
       },
     });
     r.cooldown.push(lazy('v0'));
+    expect(reads, 'R26: unread until its task').toBe(0);
+    task();
     r.cooldown.push(lazy('v1'));
     r.cooldown.push(lazy('v2'));
     expect(reads).toBe(1); // v0 rendered; v1 was replaced unread; v2 is waiting
@@ -421,10 +491,15 @@ describe('createPreviewCooldown — the cost-proportional cooldown (3.3; D-5’s
     expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v2']);
   });
 
-  it('the multiplier is 1, and is marked PROVISIONAL in exactly one place', () => {
-    expect(PREVIEW_COOLDOWN_MULTIPLIER).toBe(1);
+  // REPLACES "the multiplier is 1, and is marked PROVISIONAL in exactly one place" (6.4): R26
+  // rules multiplier 1, so the provisional constant is REMOVED, not re-commented (tasks.md 6.4;
+  // AGENTS.md's provisional-constant rule). The value is pinned by behaviour — the WAIT SCALES
+  // case above asserts a 10 ms render waits 10 ms and a 400 ms render 400 ms.
+  it('★ 6.4: nothing on this path is PROVISIONAL any more, and the provisional constant is gone', async () => {
     const source = readFileSync(join(process.cwd(), 'src/render/editorView.ts'), 'utf8');
-    expect(source.match(/PROVISIONAL/g) ?? []).toHaveLength(1);
+    expect(source).not.toMatch(/PROVISIONAL/);
+    expect(source).not.toMatch(/PREVIEW_COOLDOWN_MULTIPLIER/);
+    expect(Object.keys(await import('./editorView'))).not.toContain('PREVIEW_COOLDOWN_MULTIPLIER');
   });
 });
 
@@ -471,10 +546,15 @@ describe('the feed — the editor’s buffer reaches the nested host through the
 
   const rendered = (): string[] => vi.mocked(mount).mock.calls.map(([text]) => text);
 
-  it('★ a change renders the BUFFER into the nested host, at once, with the preview’s three options', async () => {
+  // RE-SPELLED AT 6.4 (R26): was "… into the nested host, at once, …" and read the render straight
+  // after the dispatch. The render now happens a task later; what it is asserted to BE is unchanged.
+  it('★ a change renders the BUFFER into the nested host — in the next task, never inside the keystroke (R26) — with the preview’s three options', async () => {
     const e = await editing(40);
 
     type(e, 'X');
+    expect(vi.mocked(mount).mock.calls, 'R26: nothing rendered inside the dispatch').toHaveLength(0);
+    expect(e.host.getAttribute(EDITOR_DIRTY_ATTR), 'the buffer and dirty tracking did not wait').toBe('true');
+    task();
 
     const calls = vi.mocked(mount).mock.calls;
     expect(calls).toHaveLength(1);
@@ -491,10 +571,12 @@ describe('the feed — the editor’s buffer reaches the nested host through the
     const e = await editing(40);
 
     for (const ch of 'abcdef') type(e, ch);
-    expect(rendered()).toEqual([`${DOC}a`]);
+    // RE-SPELLED AT 6.4 (R26): this was `[DOC + 'a']` here and `[DOC + 'a', DOC + 'abcdef']` after —
+    // the first key rendered in place. Now six keys in one task are ONE render of the whole buffer.
+    expect(rendered()).toEqual([]);
     e.clock.advance(5000);
 
-    expect(rendered()).toEqual([`${DOC}a`, `${DOC}abcdef`]);
+    expect(rendered()).toEqual([`${DOC}abcdef`]);
   });
 
   it('an update that changes no text feeds nothing', async () => {
@@ -509,6 +591,7 @@ describe('the feed — the editor’s buffer reaches the nested host through the
     // a teardown that forgot to cancel. The timer's own handle can.
     const e = await editing(40);
     type(e, 'a');
+    task(); // R26: the first key's render, in its own task
     const armed = vi.spyOn(globalThis, 'setTimeout');
     const cleared = vi.spyOn(globalThis, 'clearTimeout');
     type(e, 'b'); // inside the cooldown -> pending
@@ -523,11 +606,41 @@ describe('the feed — the editor’s buffer reaches the nested host through the
     expect(rendered()).toEqual([`${DOC}a`]);
   });
 
+  it('★ R26 — GUARD A on the 0 ms task: teardown before the first render’s task clears THAT timer', async () => {
+    const e = await editing(40);
+    const armed = vi.spyOn(globalThis, 'setTimeout');
+    const cleared = vi.spyOn(globalThis, 'clearTimeout');
+    type(e, 'a'); // nothing has rendered: its render is a 0 ms task away
+    const arming = armed.mock.calls.findIndex(([, delay]) => delay === 0);
+    expect(arming, 'the first render armed a 0 ms timer').toBeGreaterThan(-1);
+    const handle = armed.mock.results[arming].value as ReturnType<typeof setTimeout>;
+
+    teardownEditorShell(e.host);
+
+    expect(cleared).toHaveBeenCalledWith(handle);
+    e.clock.advance(5000);
+    expect(rendered()).toEqual([]);
+  });
+
+  it('★ R26 — GUARD B on the 0 ms task: an orphaned session’s first render never lands in the next shell', async () => {
+    const e = await editing(40);
+    type(e, ' STALE'); // pending in its 0 ms task; no teardown will run
+    mount(DOC, e.host, { contained: true }); // the outer re-mount: shell and view are dropped
+    const fresh = buildEditorShell(e.host);
+    vi.mocked(mount).mockClear();
+
+    e.clock.advance(5000);
+
+    expect(rendered()).toEqual([]);
+    expect(fresh.previewHost.shadowRoot!.textContent).not.toContain('STALE');
+  });
+
   it('★ GUARD B, alone — a session an outer re-mount orphaned never renders into the shell built after it', async () => {
     // No teardown runs on this path, so guard A never does: the timer is still armed. Without the
     // fire-time check the orphan's text lands in the NEW shell's preview — the cross-feed.
     const e = await editing(40);
     type(e, 'a');
+    task(); // R26: so that ' STALE' below is pending in the COOLDOWN, as this case means it to be
     type(e, ' STALE'); // pending
     mount(DOC, e.host, { contained: true }); // the outer re-mount: shell and view are dropped
     const fresh = buildEditorShell(e.host);
@@ -566,7 +679,12 @@ describe('the feed — the editor’s buffer reaches the nested host through the
       throw failure;
     });
 
-    expect(() => type(e, 'a')).not.toThrow();
+    // RE-SPELLED AT 6.4 (R26): the throwing render is a task after the key, so the task is run
+    // inside the same "does not throw".
+    expect(() => {
+      type(e, 'a');
+      task();
+    }).not.toThrow();
 
     expect(warned).toHaveBeenCalledWith('[peekover] preview render failed', failure);
     expect(e.view.state.doc.toString()).toBe(`${DOC}a`);

@@ -1223,7 +1223,7 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       non-material result is stated with its number and its noise floor. Content-script bytes
       md5-identical. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [D-4]
 
-- [ ] **6.4 Apply the human's §8-2 ruling; remove the PROVISIONAL marker (D-5; Q4).** TEST FIRST. The
+- [x] **6.4 Apply the human's §8-2 ruling; remove the PROVISIONAL marker (D-5; Q4).** TEST FIRST. The
       ruled interval/multiplier (and adaptive rule, if ruled) replaces 3.3's provisional value; the
       provisional constant is REMOVED, not re-commented.
       Files: `src/render/editorView.ts` · `src/render/editorView.test.ts` · `docs/ai/decisions.md`
@@ -1232,6 +1232,29 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       Content-script bytes md5-identical. Golden EMPTY · manifest **654 / 770 B** · `permissions: []`.
       *(If the human rules the provisional value AS the answer, this task is the marker removal alone.)*
       [D-5; §8-2]
+      ★ *SEQUENCING, 2026-10-09 — 6.4 WAS APPLIED BEFORE 6.3.* 6.3's text has no dependence on
+      the debounce and no reason to precede this task; what it measures runs through the
+      preview, so it is better measured on the scheduler that ships. Authorized in R26's kickoff
+      (`decisions.md`, "M12 TASK 6.4 — LANDED", the order check). 6.3 is next.
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 RULING R26" and "M12 TASK 6.4 —
+      LANDED"):* **(i) THE RULING, quoted:** "Today's cost-proportional cooldown with multiplier
+      1, except that a render which would run immediately runs instead in a 0 ms task — never
+      synchronously inside the keystroke that triggered it. Keys arriving before that task runs
+      coalesce into it: one pending slot, newest text wins." So NOT the marker removal alone:
+      the multiplier is the provisional value, the first render's timing is new. **(ii) THE
+      CHANGE:** `createPreviewCooldown`'s `push` no longer renders; it arms a timer for what
+      is left of the cooldown, 0 ms when nothing is. `PREVIEW_COOLDOWN_MULTIPLIER` is REMOVED;
+      no "PROVISIONAL" remains on the path. **(iii) PINNED:** unit — push never renders
+      synchronously, keys before the task coalesce, the 0 ms task is cancelled by teardown and
+      refused for an orphaned session, and the marker is gone; 9 red before the change (the
+      provisional behaviour differs from the ruled one). 3.3's coalescing test is green, with
+      its first-key step re-spelled. **(iv) RE-SPELLINGS, named in the entry:** eleven unit
+      cases and one browser case pinned the synchronous first render. **(v) Confirmed on 6.2's
+      harness:** the shipped scheduler now measures as C2 did, both engines. **Measured:**
+      `.output` 5,825,713 / 5,825,829 B (−31), the app chunk 528,291 B (−31: −27 and −4,
+      residual 0), content script md5-identical (342,806 B); unit 1417; browser 1933 / 51
+      skipped, zero reds. **STATED LIMITATION (R26):** documents around 1 MB stay slow to type
+      in — a 7.1 verdict item.
 
 *Group-6 acceptance (plan §6): the guard warns with unsaved changes and is silent without, on every exit;
 the measurements produce numbers and choose nothing; a material nested-host cost is in front of the human.*
@@ -1284,7 +1307,11 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       download · Ctrl/Cmd+S saves · Stop editing after a save shows the saved text. ·
       ★ *2026-10-09 — "the REVERSED observer order, unmeasured" was listed here and is REMOVED:
       measured at task 4.4 (R24(ii)) — Watch turned on after entering edit, and after a save;
-      the saved text, one render each (`decisions.md`, "M12 TASK 4.4 — LANDED").* · **the network windows 5.7 could not drive** — the reload /
+      the saved text, one render each (`decisions.md`, "M12 TASK 4.4 — LANDED").* ·
+      ★ *added 2026-10-09 (`decisions.md`, "M12 RULING R26"):* **a VERDICT on large documents** —
+      R26's stated limitation: documents around 1 MB are slow to type in (1 MB prose ~330 ms
+      per preview render; enhancer-heavy 1 MB on Firefox, seconds per key). Edit one for real
+      and say whether it is acceptable as shipped; an unacceptable verdict re-opens R26. · **the network windows 5.7 could not drive** — the reload /
       duplicated-tab write re-prompt (plan §4 risk 2); the browser's own write prompt; a REAL
       download reaching the downloads folder; the Ctrl/Cmd+S KEY in the loaded page; and edit →
       preview → save with the Network tab open where the editor's chunks are extension-scheme

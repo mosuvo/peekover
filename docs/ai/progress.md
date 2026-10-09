@@ -1,9 +1,11 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 6.2 — **the live-preview debounce MEASURED across sizes, two content
-profiles, seven candidates and both engines; nothing chosen, no production byte moved — the
-numbers wait on the human's §8-2 ruling**; `decisions.md`'s "M12 TASK 6.2 — LANDED" entry and
+*Updated: 2026-10-09 (task 6.4 — **the preview's first render no longer runs inside the keystroke
+(R26, the spec §8-2 ruling: 6.2's candidate C2); the provisional constant is removed; applied
+BEFORE 6.3**; `decisions.md`'s "M12 RULING R26" and "M12 TASK 6.4 — LANDED" entries. Before it,
+task 6.2 — **the live-preview debounce MEASURED across sizes, two content
+profiles, seven candidates and both engines; nothing chosen, no production byte moved**; `decisions.md`'s "M12 TASK 6.2 — LANDED" entry and
 `scripts/perf-edit-preview.results.md`. Before it, task 4.4, DISCOVERED (R24) — **leaving edit now shows the NEWEST text: an
 external change the watch held beats Peekover's own earlier save (it did not — seen and fixed);
 one render in either observer order; the route-2(i) test rebuilt**; `decisions.md`'s "M12 TASK
@@ -20,8 +22,8 @@ Chromium and downloads everywhere else; `PERMISSIONS.md` carries the final signe
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 5.7 and 5.8 landed; 5.5 RULED without its walk
-(R21 — the walk is on 7.1's list); 5.6 struck; 6.1, the discovered 4.4 and 6.2 landed; **the
-human's §8-2 ruling is next, then 6.3 and 6.4.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
+(R21 — the walk is on 7.1's list); 5.6 struck; 6.1, the discovered 4.4, 6.2 and 6.4 landed (§8-2
+RULED, R26); **6.3 is next — the nested-host cost measurement.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
 **`PERMISSIONS.md` carries SIGNED (a) since 5.3 and the FINAL signed row (b) since 5.4, pinned by
@@ -49,8 +51,8 @@ released. A watch re-render no longer destroys the buffer (4.1). *Fixed at 4.3, 
 caveats:* the false "changed on disk while you were editing" hint after a save (it was real, on
 every save of a watched document); a save writing the wrong file in the window after another file
 is selected (it was real too); and a stale reading view after Save + Stop editing (unwatched).
-Current numbers: `.output` 5,825,744 B (Cr) / 5,825,860 B (Fx) against ≤ 7 MiB (+121 at 4.4, +3,594 at
-6.1, all in the app chunk), content script 342,806 B both engines (md5-identical across 5.7, 5.8 and 6.1; +154 at 4.3), `dependencies` 11, `permissions: []`. M11 (math
+Current numbers: `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx) against ≤ 7 MiB (−31 at 6.4, +121 at 4.4,
++3,594 at 6.1, all in the app chunk), content script 342,806 B both engines (md5-identical across 5.7, 5.8 and 6.1; +154 at 4.3), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1452,26 +1454,52 @@ record. R25: 6.1's dialog copy approved; its deviation 2 accepted.
 - **Verify:** zero production diff; 139 shipped files md5-identical on both engines; lint 0;
   unit 1412 (11.7 s, unchanged); the browser project's 186 files unchanged and not re-run.
 
+**M12 task 6.4 DONE, 2026-10-09 — the preview's first render leaves the keystroke (R26; spec
+§8-2).** `decisions.md`'s "M12 RULING R26" and "M12 TASK 6.4 — LANDED" entries are the record.
+- **R26, the §8-2 ruling:** 6.2's C2 — the cost-proportional cooldown, multiplier 1, with a
+  render that would run at once moved into a 0 ms task; keys before that task coalesce into it.
+  Rejected: a trailing debounce, larger multipliers, a large-document fallback.
+- **The change:** `createPreviewCooldown`'s `push` never renders; it arms a timer for what is
+  left of the cooldown (0 ms when nothing is). `PREVIEW_COOLDOWN_MULTIPLIER` is REMOVED; no
+  "PROVISIONAL" is left on the path.
+- **Order:** applied BEFORE 6.3 — 6.3's text does not depend on the debounce, and what it
+  measures runs through the preview that now ships.
+- **Step 0:** one render site (`push`); eleven unit cases and one browser case pinned it. Each
+  is re-spelled and named; the cooldown's other properties are re-asserted with their numbers.
+- **Red-first:** unit 9 red, browser 2 (one case, both engines) before the change.
+- **Confirmed on 6.2's harness** (heavy 50 KB, 150 ms between keys): the shipped scheduler now
+  reads key p50 5.4 ms / busy p95 42 ms on Chromium and 71 ms / 189 ms on Firefox, beside C2's
+  4.1 / 48 and 96 / 476; the old behaviour 3.2 / 78 and 306 / 2,231.
+- **Bytes:** −31 on each engine, all in the app chunk (528,322 → 528,291): −27 and −4,
+  residual 0. Content script md5-identical.
+- **Verify:** lint 0 · unit 1417 (+5) · browser alone, 186 files, 1933 / 51 skipped, zero reds
+  (393 s) · scanner 80 files, self-test 7 + 10 · audit EXIT=0 · golden empty.
+- **Left as it was, flagged:** the harness (`scripts/`, zero-diff) still labels its first row
+  "C1 today (first render in the key)"; that row now measures the shipped R26 scheduler.
+
 ## Up next
 
-**Group 5 is complete; 6.1, the discovered 4.4 and 6.2 landed. 27 tasks.**
-**NEXT — THE HUMAN's spec §8-2 RULING: the preview's debounce — a mechanism and a value, from
-6.2's tables.** Until it is given, `PREVIEW_COOLDOWN_MULTIPLIER` stays 1, PROVISIONAL. Then, per
-`tasks.md`'s order: **6.3** (the nested-host cost and never-entered first paint — it does not
-wait on the ruling) and **6.4** (apply the ruling; remove the provisional constant).
-- **For the ruling, 6.2 raises three things it could not settle:** whether the first render
-  belongs inside the keystroke (P-2); whether whatever times the cooldown should see the
-  enhancers' asynchronous half (R7) — on Firefox it is what holds the keys; and what a 1 MB
-  document's cadence is.
-- **Owed to the human, not blocking 6.2:** a word on the REBUILT route-2(i) case (R24(iii) ruled
+**Group 5 is complete; 6.1, the discovered 4.4, 6.2 and 6.4 landed. 27 tasks.**
+**NEXT — M12 task 6.3, the nested-host cost measurement and first paint with edit never entered
+(D-4; plan §4 risk 3). FORBIDDEN from choosing.** `tasks.md` 6.3 is the line. ★ Its own
+acceptance: a MATERIAL nesting cost is a finding surfaced to the human — the task STOPS and
+reports — not a number filed here. After it, group 7.
+- **Owed to the human, not blocking 6.3:** a word on the REBUILT route-2(i) case (R24(iii) ruled
   it retired unless a meaningful form existed; one did); the 5.5 walk, on 7.1's list.
 - **The browser suite takes about 395 s** alone.
-**Byte snapshot — 4.4's measured figures; carry to the next kickoff:** `.output` 5,825,744 B (Cr) / 5,825,860 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,514,288 / 1,514,172 B · zip 1,841,144 / 1,841,202 B · content
+**Byte snapshot — 6.4's measured figures; carry to the next kickoff:** `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,514,319 / 1,514,203 B · zip 1,841,082 / 1,841,140 B · content
 script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
-`ecc31688b4f49167502a39edca7b9e51` (Fx) — unmoved since 4.3 · the app chunk 528,322 B (+121) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1412 · browser 1933 / 51 skipped
+`ecc31688b4f49167502a39edca7b9e51` (Fx) — unmoved since 4.3 · the app chunk 528,291 B (−31) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1417 · browser 1933 / 51 skipped
 (zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 6.4:**
+- **A preview render is now always a task after the key.** A unit test that types and then
+  reads the preview runs one task first (`vi.advanceTimersByTime(0)` — `editorView.test.ts`'s
+  `task()`); a test that types and never advances leaves a 0 ms timer for the next test.
+- **To check a scheduler change against 6.2:** `pnpm perf:edit-preview -- --part typing --sizes
+  50k --profiles heavy --rates 150 --candidates C1,C2 --reps 2 --out <a fresh directory>`, then
+  `-- --report --out <it>`. About three minutes for both engines.
 **Carried inputs, from 6.2:**
 - **`perf-edit-preview.page.ts` holds the candidate schedulers** — a ruled mechanism can be
   checked there before 6.4 writes it into `editorView.ts`.
@@ -1617,6 +1645,13 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-09 — from RULING R26 (task 6.4).**
+  - **Documents around 1 MB are slow to type in (R26's stated limitation).** 1 MB prose: ~330 ms
+    per preview render, keys queue behind it; enhancer-heavy 1 MB on Firefox: seconds per key
+    under every candidate 6.2 measured. Shipped as a known limitation. Home: **a 7.1 verdict**
+    (listed there); an unacceptable verdict re-opens R26.
+  - **The harness's "C1 today" label and its "PROVISIONAL" header line are out of date** — the
+    row measures the shipped R26 scheduler. Home: whoever next touches `scripts/perf-edit-preview*`.
 - **NEW 2026-10-09 — from TASK 6.1's kickoff: three items given a home.**
   - **Split the network wait into a small dedicated test helper** (5.8, deviation 4 — the guards
     import `helpers/diagramWindow.ts`). Home: **7.3**.

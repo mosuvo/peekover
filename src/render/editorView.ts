@@ -126,17 +126,25 @@
 // of the same import fence as the dirty attribute). It never refuses a save and never allows one:
 // it only adds a sentence to a save that the compare let through.
 //
-// ── THE FEED: THE BUFFER REACHES THE PREVIEW THROUGH A COOLDOWN (3.3; D-5's mechanism) ─────────
+// ── THE FEED: THE BUFFER REACHES THE PREVIEW THROUGH A COOLDOWN (3.3; D-5's mechanism; R26) ────
 //
 // The update listener that tracks dirtiness also hands the editor's document to a
 // `createPreviewCooldown` instance, which decides WHEN `renderPreview` runs. Its shape is the
 // watch's cost-proportional cooldown (decisions.md 2026-07-21, spec 005 tasks 5.2 / 5.3), built
 // again here as a new instance scoped to one edit session — `watchController.ts` is not imported.
-// Three things about it are structural, and each breaks quietly:
 //
-//   - The first render is immediate; after each render the next may not START until as long as
-//     that render took has passed, measured from when it FINISHED. The render at build is not
-//     timed and does not count: the first keystroke renders at once.
+// THE RULED BEHAVIOUR (human ruling R26, 2026-10-09 — spec §8-2, applied at task 6.4, on task
+// 6.2's measurements). Four things about it are structural, and each breaks quietly:
+//
+//   - A RENDER NEVER RUNS INSIDE THE KEYSTROKE THAT ASKED FOR IT. One that could run at once —
+//     the first of a session, or any after a pause — runs in a 0 ms task instead, so the key's
+//     own task ends with the character in the buffer and nothing else done. Keys that arrive
+//     before that task runs coalesce into it. Measured at 6.2: with the render inside the key,
+//     the next key waited behind it — on an enhancer-heavy 50 KB document in Firefox keys took
+//     hundreds of milliseconds; deferred, about a quarter of that, and the preview was no staler.
+//   - After each render the next may not START until as long as that render took has passed
+//     (the multiplier is 1), measured from when it FINISHED. The render at build is not timed
+//     and does not count.
 //   - One pending slot, and the newest document takes it. Never a queue.
 //   - The timer is NOT re-armed when another change arrives. Pushing the deadline out on every
 //     keystroke is a trailing debounce, which shows nothing until the typing stops. `flush`
@@ -173,8 +181,9 @@
 //
 // The enhancers are synchronous to CALL and asynchronous to FINISH — each inserts its placeholder
 // and returns, and the lazy engine fills it in later. So the cooldown, which times `renderPreview`,
-// measures the mount and the placeholders and NOT the engines' work: that cost is untimed here,
-// and is task 6.2's to measure.
+// measures the mount and the placeholders and NOT the engines' work: that cost is untimed here.
+// Task 6.2 measured it (it is what holds keys on a large enhancer-heavy document); R26 leaves it
+// untimed, and records that documents around 1 MB stay slow to type in.
 //
 // A FAILED ENHANCEMENT IS NOT A FAILED RENDER. Each enhancer is called under its own guard: a
 // throw is logged and the next one still runs. Unguarded, a throw at build would leave
@@ -312,13 +321,6 @@ export interface BuildEditorOptions {
   now?: () => number;
 }
 
-/**
- * How much idle the preview gets per unit of render cost: 1 — the cooldown equals what the last
- * render took. PROVISIONAL (tasks.md Q4): 6.2 measures, the human rules the interval (spec §8-2),
- * and 6.4 applies that ruling and removes this constant.
- */
-export const PREVIEW_COOLDOWN_MULTIPLIER = 1;
-
 /** Text for the preview. The editor's document is one, and is only read when it is rendered. */
 export interface PreviewText {
   toString(): string;
@@ -332,13 +334,14 @@ export interface PreviewCooldown {
 
 /**
  * The preview's cost-proportional cooldown (the module comment's THE FEED). `render` is called
- * with the newest pushed text: at once when no cooldown is running, otherwise once it has passed.
+ * with the newest pushed text — never inside `push` itself: in a 0 ms task when no cooldown is
+ * running, otherwise once it has passed. The cooldown equals what the last render took (R26).
  */
 export function createPreviewCooldown(
   render: (text: string) => void,
   now: () => number = () => performance.now(),
 ): PreviewCooldown {
-  /** The earliest time the next render may START. 0 = render immediately. */
+  /** The earliest time the next render may START. 0 = as soon as a task can run. */
   let readyAt = 0;
   /** The one pending text, or null. There is never a second: the newest REPLACES this. */
   let pending: PreviewText | null = null;
@@ -349,7 +352,7 @@ export function createPreviewCooldown(
     render(text.toString());
     // From the END, not the start: measured from the start there would be no gap at all.
     readyAt = now();
-    readyAt += (readyAt - started) * PREVIEW_COOLDOWN_MULTIPLIER;
+    readyAt += readyAt - started;
   }
 
   function flush(): void {
@@ -368,14 +371,10 @@ export function createPreviewCooldown(
 
   return {
     push(text) {
-      const wait = readyAt - now();
-      if (wait <= 0 && timer === null) {
-        renderNow(text);
-        return;
-      }
       // Coalesce, do not queue. The timer already armed is left alone — see THE FEED.
       pending = text;
-      if (timer === null) timer = setTimeout(flush, wait);
+      // Never rendered HERE (R26): with no cooldown left to wait out, the timer is a 0 ms task.
+      if (timer === null) timer = setTimeout(flush, Math.max(0, readyAt - now()));
     },
     cancel() {
       // Both halves: a cleared slot with a live timer would still fire after the session ended.
