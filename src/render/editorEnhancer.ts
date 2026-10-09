@@ -25,9 +25,12 @@
 //
 // The state is in the control's TEXT and its accessible name, never in colour alone.
 //
-// ★ WHAT IT DOES NOT DO YET, STATED SO IT IS NOT ASSUMED. Leaving edit DISCARDS the buffer with no
-// warning (the unsaved-changes guard is task 6.1). Nothing calls `save` (the save control is 5.3).
-// A watch re-render during an edit drops the editor (tasks 4.1–4.2).
+// ★ WHAT IT DOES NOT DO YET, STATED SO IT IS NOT ASSUMED. Leaving edit DISCARDS whatever in the
+// buffer was not saved, with no warning (the unsaved-changes guard is task 6.1). What WAS saved is
+// shown by the reading view once edit is left — the app page's doing, not this module's (4.3, R19).
+//
+// `save` is called by the edit view's own Save control (5.3), never from here. A watch update that
+// arrives during an edit no longer touches the editor: it is held until edit is left (4.1–4.2).
 //
 // ── THE ENGINE LOAD IS KEYED ON THE OUTER HOST (human ruling R2) ───────────────────────────────
 //

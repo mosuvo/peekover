@@ -185,6 +185,39 @@
 // this attribute never stands in for it. Nothing displays it at 4.2, and the flush is as silent as
 // DECISION 5 left it (R4). R6 also moved the dirty-exit question out of this module: the guard is
 // task 6.1's, and DECISION 5's interim note stands until it lands.
+//
+// ══ DECISION 7 — A SAVE'S OWN WRITE IS NOT AN EXTERNAL CHANGE (012 task 4.3; rulings R17(i), R19) ══
+//
+// From 5.3 the app page WRITES the watched file. The detector cannot know who wrote: it sees the
+// file change, and DECISION 6 then marked Peekover's own save as "changed on disk while you were
+// editing" — observed at 4.3 on a really watched file, on the first Save, every time. So the writer
+// says so:
+//
+//     `ownWrite(text)` — "this exact text is what Peekover has just written to the file."
+//
+// It does two things, and the second is why this is not simply a filter:
+//
+//   • THE TEXT IS REMEMBERED (`ownText`), and while it is, the detector reporting that same text is
+//     an ECHO: dropped, no hint, nothing held as external. A DIFFERENT text ends that at once — the
+//     file is no longer what Peekover wrote — and is an external change exactly as before. That
+//     covers "ours, then theirs" arriving as one detection: only theirs is reported, and it differs.
+//   • THE TEXT IS STILL THE DOCUMENT'S NEWEST (R19). It takes the single pending slot like any
+//     other text an edit session defers, WITHOUT the hint, and renders when edit is left — an
+//     ordinary watch render (`renderNow`: `preserveReading`, the signal, the snapshot of the text
+//     it replaces). Announced outside edit (a save that finished after the exit) it renders at once.
+//     Dropping the echo alone would leave the reading view on the text from before the save.
+//
+// INVARIANT: while `ownText` is set, that text is either in the pending slot or already rendered.
+// That is what lets the echo be dropped without asking what is on screen.
+//
+// WHAT IT CANNOT TELL APART, ACCEPTED: an external write of EXACTLY the text Peekover wrote, while
+// the token lives. Nothing differs on disk, so nothing is lost. And one residual, stated: a detector
+// read already in flight when a SECOND save lands can report the FIRST save's text after the second
+// was announced; that stale report differs from the token, so it reads as external until the next
+// report. It needs two saves inside one detection, and it costs a hint — never a write (D-7).
+//
+// The app page calls this; nothing here imports an editor module (the fence's Clause C stands).
+// `stop()` and a document switch clear it with everything else (`cancelPending`).
 
 import { mount, type MountOptions } from '../render/mount';
 import { resolveScrollContainer } from '../render/scrollContainer';
@@ -341,13 +374,20 @@ export interface WatchControllerOptions {
   now?: () => number;
 }
 
+/** The controller: the registry's {@link WatchTarget}, plus the one thing its owner tells it. */
+export interface WatchController extends WatchTarget {
+  /** Peekover has just written exactly `text` to the watched file (DECISION 7). A no-op while
+   *  the watch is not running. */
+  ownWrite(text: string): void;
+}
+
 /**
  * Build the controller as a {@link WatchTarget} — the shape task 4.1's registry holds and the
  * rebuilt-every-mount control drives. Registering it REPLACES whatever occupied the slot (4.1's
  * thin detector-backed adapter), which is why the control must read the registry at click time
  * rather than capture a reference.
  */
-export function createWatchController(options: WatchControllerOptions): WatchTarget {
+export function createWatchController(options: WatchControllerOptions): WatchController {
   const {
     detector,
     docId,
@@ -386,6 +426,10 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
    *  watching. */
   let diffObserver: MutationObserver | null = null;
 
+  /** The text Peekover itself last wrote to this file, while that is still what the file holds
+   *  as far as this watch knows (DECISION 7). Null otherwise. */
+  let ownText: string | null = null;
+
   /** Is a diff on screen in this host right now? D-15's attribute, read directly (DECISION 4). */
   function diffDisplayed(target: HTMLElement): boolean {
     return target.hasAttribute(DIFF_DISPLAYED_ATTR);
@@ -405,11 +449,12 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
   }
 
   /** Make the hint say what is true of this host NOW: a change is held, and it is being edited
-   *  (DECISION 6). Idempotent — an attribute already in the right state is not written again. */
+   *  (DECISION 6) — and the held text is not Peekover's own write (DECISION 7). Idempotent — an
+   *  attribute already in the right state is not written again. */
   function syncEditHint(target: HTMLElement): void {
     target.toggleAttribute(
       CHANGED_IN_EDIT_ATTR,
-      pendingSetByDefer && target.getAttribute('data-mode') === 'edit',
+      pendingSetByDefer && pendingText !== ownText && target.getAttribute('data-mode') === 'edit',
     );
   }
 
@@ -487,6 +532,7 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
       pendingTimer = null;
     }
     pendingText = null;
+    ownText = null; // DECISION 7: the token is about the document being left
     // D-11: a DEFERRED pending text is dropped by exactly the same teardown, for exactly the same
     // reason — and the flag has to go with it, or a later diff exit on the NEW document would
     // fire the "changed again" line about a change that happened in the OLD one.
@@ -626,6 +672,11 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     if (!running || !target) return;
     consecutiveFailures = 0; // a good read clears the streak; only CONSECUTIVE failures count
 
+    // DECISION 7: Peekover's own write, read back — already pending or already rendered. Any
+    // other text means the file is no longer what Peekover wrote.
+    if (text === ownText) return;
+    ownText = null;
+
     // D-11 (DECISION 4) — THE WHOLE OF THE DEFERRAL, and it is one condition. A diff is on screen,
     // so nothing renders: no render, no timer, no signal. The text takes the coalescer's single
     // pending slot (newest wins, exactly as during a cooldown) and `onDiffExited` releases it when
@@ -678,6 +729,25 @@ export function createWatchController(options: WatchControllerOptions): WatchTar
     },
     stop: stopSelf,
     isWatching: () => running,
+    ownWrite(text) {
+      const target = host;
+      if (!running || !target) return;
+      ownText = text;
+      // The newest text of the document, whoever wrote it: whatever was pending predates it.
+      if (deferring(target)) {
+        pendingText = text;
+        markDeferred(target); // held for the exit — and `syncEditHint` sees it is ours
+        return;
+      }
+      if (pendingTimer !== null) {
+        clearTimeout(pendingTimer);
+        pendingTimer = null;
+      }
+      pendingText = null;
+      // Not re-checked against the cooldown, for `onDiffExited`'s reason: one render, released
+      // by a gesture (the Save), not a burst.
+      renderNow(text, target);
+    },
   };
 }
 

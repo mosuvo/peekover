@@ -769,7 +769,7 @@ touched; this group widens a gate, not what it protects.*
       contract), no cross-feed. Content-script bytes stated and decomposed. Golden EMPTY · manifest
       **654 / 770 B** · `permissions: []`. [D-8, D-7 (the hint only)]~~
 
-- [ ] **4.3 ★ DISCOVERED — Save-path hardening: a save's own write is not an external change; edit
+- [x] **4.3 ★ DISCOVERED — Save-path hardening: a save's own write is not an external change; edit
       entry binds the file the reader RENDERED; one stale comment (D-6, D-8; R17).**
       ★ *Added 2026-10-09 by human ruling R17 (`decisions.md`, "M12 RULINGS R16–R18"). It runs AFTER
       5.4 and BEFORE 5.5 — group 4's by subject (the watch and the edit session), not by position.*
@@ -792,6 +792,22 @@ touched; this group widens a gate, not what it protects.*
       invariants; the per-clause Verify wording is its kickoff's to write. Suggested there, the
       agent's note: a firing control for (i) — a genuinely external change after a save still
       raises the hint, so the fix is not "never hint".)* [D-6, D-8; R17]
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 4.3 — LANDED" and "M12 RULINGS
+      R19–R20"):* **R19 joined this task** — after a save, leaving edit shows the saved text,
+      watched and unwatched. **Observed first, on the app page's own watch (a real observer on a
+      real file):** the hint was raised by every save and the next save carried the false sentence;
+      the unwatched reading view was stale after Save + Stop editing; and in (ii)'s window file B
+      was really overwritten on disk. **(i)** `createWatchController` returns a `WatchController`
+      with `ownWrite(text)`: the text is held for the exit WITHOUT the hint, its echo from the
+      detector is dropped, and any other text is external as before (`watchController.ts`,
+      DECISION 7). **(ii)** `appShell.ts` tracks `renderedFile`; a mismatch binds nothing and Save
+      downloads under the rendered file's name. **R19** `showSaved` in `appShell.ts` — one render
+      on exit, the watch's own where there is one. **(iii)** the comment is corrected.
+      `watchController.ts` was the file for (i), not the detector seam. `editorWatch.browser.test.ts`
+      is ZERO-DIFF (its rig drives its own controller; (i) needed the shell's — the cases are in
+      `editorSave.browser.test.ts`); nothing beyond this line's Files was touched. Content script
+      342,652 → 342,806 B (+154: the method 114, the token 40; both removed → md5-identical to
+      baseline on both engines); app chunk +744 B, residual 0.
 
 *Group-4 acceptance (plan §6): SUPPORTED-DEGRADED is proven in BOTH directions, red-first — deferred while
 editing; flushed on a clean exit, conflict-routed (never auto-flushed) on a dirty one.*

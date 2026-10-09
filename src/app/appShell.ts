@@ -112,7 +112,12 @@ import {
 import { getCaptureFlag, setCaptureFlag } from './captureFlag';
 import { createTreeView } from './treeView';
 import { detectorForFile } from '../watch/detectorForFile';
-import { createWatchController, DEAD_READ_NOTE, type RenderFn } from '../watch/watchController';
+import {
+  createWatchController,
+  DEAD_READ_NOTE,
+  type RenderFn,
+  type WatchController,
+} from '../watch/watchController';
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceMath } from '../render/mathEnhancer';
@@ -134,7 +139,6 @@ import {
   resetWatchTarget,
   setWatchNote,
   stopWatch,
-  type WatchTarget,
 } from '../watch/watchRegistry';
 import { createStorageView } from './storageControls';
 import { createExportView, exportPdf, type ExportViewController } from './exportControls';
@@ -205,12 +209,23 @@ const renderWithEnhancements =
 interface EditBinding {
   file: MarkdownFile | null;
   ended?: true;
+  /** The name of the file the reader was showing at edit entry — what a download is called
+   *  when the session is bound to no file (4.3). A name only: never a handle. */
+  name?: string;
+  /** The bound file's watch, told of each write so it is not taken for an external change (4.3). */
+  watch?: WatchController | null;
+  /** The text this session last WROTE to the bound file — what the reading view must show once
+   *  edit is left (R19). Undefined until a save has written; a download does not set it. */
+  written?: string;
+  /** Stops this session's watch for its own exit. */
+  release?: () => void;
 }
 
 /** End a binding: from here its save neither writes nor downloads. */
 function dropBinding(binding: EditBinding): void {
   binding.file = null;
   binding.ended = true;
+  binding.release?.();
 }
 
 /** The type a saved-as-download file is given — said explicitly: `downloadAs` defaults to HTML. */
@@ -280,7 +295,7 @@ async function writeBack(
     }
   }
   const written = textForDisk(text, baseline);
-  const filename = file?.name || DOWNLOAD_FALLBACK_NAME;
+  const filename = file?.name || binding.name || DOWNLOAD_FALLBACK_NAME;
   downloadAs(written, filename, MARKDOWN_MIME);
   return { kind: 'downloaded', written, filename };
 }
@@ -768,16 +783,70 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // `activeFile` (and the handle that file may carry) lives.
   //
   // ★ IT BINDS AT EDIT ENTRY (task 5.3, route 2(i)). The edit view calls this once as a session
-  // begins, and what it gets back can only ever write the file that was open THEN: `activeFile`
+  // begins, and what it gets back can only ever write the file that was open THEN: the file
   // is read here, into the binding, and never again. A save reading `activeFile` at the click
   // would write whatever file had since been opened. One binding is live at a time — beginning a
   // session drops the one before it, so a save function kept from an ended session writes nothing.
+  //
+  // ★ AND THE FILE IT BINDS IS THE ONE THE READER RENDERED (task 4.3, R17(ii)). `activeFile` moves
+  // the moment a file is SELECTED, before its read resolves; until then the reader is still
+  // showing the file before it, and that is the text an edit session would be seeded from. In
+  // that window a binding of `activeFile` wrote file B with file A's text — observed at 4.3,
+  // with two files of identical text, so the compare had nothing to refuse. So the binding
+  // takes a file only when the one selected IS the one rendered (`renderedFile`); otherwise it
+  // binds nothing — not `ended` — and Save is the download (5.4), under the rendered file's name.
   let editBinding: EditBinding | null = null;
   const saveActiveDocument: EditorSave = () => {
     if (editBinding) dropBinding(editBinding);
-    const binding: EditBinding = (editBinding = { file: activeFile });
-    return (request) => writeBack(binding, request);
+    const file = renderedFile === activeFile ? activeFile : null;
+    const binding: EditBinding = (editBinding = {
+      file,
+      name: renderedFile?.name,
+      watch: file && activeWatch,
+    });
+    const host = readerHost();
+    if (host) {
+      const left = new MutationObserver(() => {
+        if (host.getAttribute('data-mode') === 'edit') return;
+        left.disconnect();
+        showSaved(binding, host);
+      });
+      left.observe(host, { attributes: true, attributeFilter: ['data-mode'] });
+      binding.release = () => left.disconnect();
+    }
+    return async (request) => {
+      const outcome = await writeBack(binding, request);
+      if (outcome.kind === 'saved') {
+        binding.written = outcome.written;
+        binding.watch?.ownWrite(outcome.written);
+        if (host) showSaved(binding, host); // a save that finished after edit was left
+      }
+      return outcome;
+    };
   };
+
+  /**
+   * R19 — ONCE EDIT IS LEFT, THE READING VIEW SHOWS WHAT WAS SAVED. The reading column is not
+   * touched while a document is edited, so after a save it still holds the text from before it.
+   * This re-renders it with the text the session last wrote — through the same render a watch
+   * update uses, so the document comes back enhanced and with its edit control.
+   *
+   * ★ AT MOST ONE RENDER, AND THE ORDER IS WHY. On a WATCHED document the watch already holds
+   * that text (`ownWrite`) and renders it itself as edit is left: its observer on this host was
+   * created when the watch started — before this session's — so it runs first, and by the time
+   * this looks, the host's source IS the saved text and there is nothing to do. On an unwatched
+   * one nothing else will render it, and this does. Either order ends the same; a watch started
+   * in mid-edit holds nothing, and then this render is the one.
+   *
+   * Not after a download (nothing in the folder changed), not for a session the shell ended,
+   * and not once another file has been selected: the host is about to be that file's.
+   */
+  function showSaved(binding: EditBinding, host: HTMLElement): void {
+    const text = binding.written;
+    if (text === undefined || binding.ended || activeFile !== binding.file) return;
+    if (host.getAttribute('data-mode') === 'edit' || readerSourceFor(host) === text) return;
+    renderEnhanced(text, host, { contained: true, preserveReading: true });
+  }
   const renderEnhanced = renderWithEnhancements(saveActiveDocument);
 
   const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
@@ -817,6 +886,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // The open folder's source (for pinning) + the last-selected file (for pinning that file).
   let activeSource: FolderSource | null = null;
   let activeFile: MarkdownFile | null = null;
+  // The folder file whose text the reader is SHOWING: set as each select's render commits, so the
+  // last one painted wins. Behind `activeFile` while a newly selected file is still being read.
+  let renderedFile: MarkdownFile | null = null;
+  // `activeFile`'s watch controller, or null where that file cannot be watched (task 4.3).
+  let activeWatch: WatchController | null = null;
   let busy = false;
   // The hub slot inside the current view (idle or granted). Kept as a reference so the async
   // persisted-load updates JUST the hub, never repainting the affordance or touching grant
@@ -1263,6 +1337,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    *  every assignment site below goes through this instead of setting `activeFile` bare. */
   function setActiveFile(file: MarkdownFile | null): void {
     activeFile = file;
+    if (!file) renderedFile = null;
     exportToggle.disabled = activeFile == null;
   }
 
@@ -1278,8 +1353,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    * after it are the same two steps, for a host whose control is somehow not there.
    *
    * ★ IT DISCARDS AN UNSAVED BUFFER WITHOUT ASKING. So does every other exit today; the guard is
-   * task 6.1's, and 6.1 names closing the tab, selecting another file and leaving edit — not
-   * these paths. Reported at 5.3 as a question, not decided here.
+   * task 6.1's, and ruling R16 puts these three paths under it.
    */
   function endEditSession(): void {
     if (editBinding) dropBinding(editBinding);
@@ -1378,6 +1452,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     stopWatch();
     installWatchForFile(file);
     await selectFile(file);
+    renderedFile = file; // its render has committed (4.3, R17(ii))
     renderPinBar();
     if (activeFolderId) {
       const folderId = activeFolderId;
@@ -1460,6 +1535,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       // No target at all — `buildWatchChrome` then renders the explanation ALONE, never a toggle.
       resetWatchTarget();
       setWatchNote(decision.note);
+      activeWatch = null;
       return;
     }
     setWatchNote(null);
@@ -1476,7 +1552,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // then stop and explain. Without this, an observation that died over an unreadable file would
     // leave the pill reading "Watching" over a watch that had ended — the exact silent-stop the
     // ladder exists to prevent, reintroduced one level up.
-    let controller: WatchTarget | null = null;
+    let controller: WatchController | null = null;
     const detector = detectorForFile(file, {
       onDead: () => {
         controller?.stop();
@@ -1502,6 +1578,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       docId,
       render: renderEnhanced,
     });
+    activeWatch = controller;
     registerWatchTarget(controller);
 
     // THE DIFF CONTEXT (task 2.1) — registered ALONGSIDE the watch target and under the SAME
@@ -1933,7 +2010,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   void refreshPersisted();
 
   return {
-    selectFile,
+    // The store-free seam shows a file the shell holds no record of: no folder file is rendered.
+    selectFile: (file) => {
+      renderedFile = null;
+      return selectFile(file);
+    },
     openFolder: runOpenFolder,
     refresh: refreshPersisted,
     triggerLastExport,

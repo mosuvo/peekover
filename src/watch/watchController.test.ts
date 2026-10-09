@@ -1274,3 +1274,209 @@ describe('watchController — D-8: the changed-while-editing hint (012 task 4.2,
     expect(r.renders.map((x) => x.text)).toEqual(['v0', 'v1']);
   });
 });
+
+// ── 012 task 4.3 (R17(i), R19) — a save's own write is not an external change ────────────────
+//
+// The app page tells the controller the text it has just written (`ownWrite`). That text is
+// Peekover's, so it raises no hint — but it is still the newest text of the document, so the
+// reading view must end up showing it (R19): it is held like any other text while edit defers,
+// and rendered on exit. What the detector then reports of it is an echo, and is dropped.
+
+describe('watchController — a save’s own write is not an external change (012 task 4.3, R17(i))', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A watched host, one render in, now in edit with the cooldown long past. */
+  async function editing(): Promise<{ r: CooldownRig; host: HTMLElement }> {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    host.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.clock.advance(5000);
+    return { r, host };
+  }
+
+  it('★ announced as our own, then arriving from the detector in edit → NO hint, nothing rendered, no timer', async () => {
+    const { r, host } = await editing();
+    const writes = hintWrites(host);
+
+    r.controller.ownWrite('saved');
+    expect(hinted(host), 'the announcement itself raises nothing').toBe(false);
+    r.fire('saved'); // the detector reads our write back
+    r.fire('saved');
+    await observerTick();
+
+    expect(hinted(host)).toBe(false);
+    expect(writes.count(), 'the hint attribute was never written').toBe(0);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ FIRING CONTROL: the same sequence WITHOUT the announcement is an external change — the hint', async () => {
+    const { r, host } = await editing();
+    r.fire('saved');
+    expect(hinted(host)).toBe(true);
+  });
+
+  it('★ R19: leaving edit renders the saved text, ONCE — and the detector’s later echo renders nothing more', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text), 'the reading view gets the saved text').toEqual(['v0', 'saved']);
+    expect(watchNote(), 'and it is not announced as a change').toBeNull();
+
+    r.clock.advance(5000);
+    r.fire('saved'); // a slow poll reporting our write after the exit
+    r.clock.advance(5000);
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'saved']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ a DIFFERENT text after it is external: the hint, as before — and the exit renders that one', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+    r.fire('saved');
+    expect(hinted(host)).toBe(false);
+
+    r.fire('theirs');
+
+    expect(hinted(host)).toBe(true);
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'theirs']);
+    expect(hinted(host)).toBe(false);
+  });
+
+  it('★ ours then theirs, COALESCED into one detection: the detector reports only theirs → the hint', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+
+    r.fire('theirs'); // our write was never reported on its own
+
+    expect(hinted(host)).toBe(true);
+  });
+
+  it('once theirs has arrived, our text is no longer "ours": the file going back to it is a change', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+    r.fire('theirs');
+    r.fire('saved'); // someone put it back — an echo only while the token lives
+
+    expect(hinted(host), 'still held as an external change').toBe(true);
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'saved']);
+  });
+
+  it('a second save replaces the first: the newest own text is the one held, and still no hint', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved 1');
+    r.fire('saved 1');
+    r.controller.ownWrite('saved 2');
+    r.fire('saved 2');
+    expect(hinted(host)).toBe(false);
+
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'saved 2']);
+  });
+
+  it('an external change HELD before the save is superseded by it: the hint clears, the exit shows the saved text', async () => {
+    const { r, host } = await editing();
+    r.fire('theirs');
+    expect(hinted(host)).toBe(true);
+
+    r.controller.ownWrite('saved'); // the save compared and wrote: this is what is on disk now
+
+    expect(hinted(host)).toBe(false);
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'saved']);
+  });
+
+  it('announced OUTSIDE edit (a save that finished after the exit) → rendered at once, once', async () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.start(host);
+    r.fire('v0');
+    r.clock.advance(5000);
+
+    r.controller.ownWrite('saved');
+    r.fire('saved');
+    r.clock.advance(5000);
+
+    expect(r.renders.map((x) => x.text)).toEqual(['v0', 'saved']);
+    expect(hinted(host)).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('★ STOP clears it: the held text is dropped unrendered, and after a restart the same text is an ordinary change', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+
+    r.controller.stop();
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    expect(r.renders.map((x) => x.text), 'nothing renders into a stopped watch').toEqual(['v0']);
+
+    r.controller.start(host);
+    r.fire('saved');
+    expect(r.renders.map((x) => x.text), 'no token survived: it renders like any change').toEqual(['v0', 'saved']);
+  });
+
+  it('★ A DOCUMENT SWITCH clears it: stop, then start on another host — the old text reaches neither', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+    const other = readingHost();
+
+    r.controller.stop();
+    r.controller.start(other);
+    other.setAttribute('data-mode', 'edit');
+    await observerTick();
+    r.fire('saved'); // on the NEW document this is somebody else's text
+
+    expect(hinted(other), 'the token did not follow the controller to the new document').toBe(true);
+    expect(r.renders.filter((x) => x.host === other)).toEqual([]);
+    expect(r.renders.filter((x) => x.host === host).map((x) => x.text)).toEqual(['v0']);
+  });
+
+  it('is a no-op on a watch that is not running', () => {
+    const r = rig(40);
+    const host = readingHost();
+    r.controller.ownWrite('saved'); // never started
+    r.controller.start(host);
+    r.fire('saved');
+    expect(r.renders.map((x) => x.text), 'nothing was remembered: it renders').toEqual(['saved']);
+    r.controller.stop();
+    r.controller.ownWrite('later');
+    expect(r.renders.map((x) => x.text)).toEqual(['saved']);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('THE COOLDOWN IS UNTOUCHED: the exit render of our text sets it from its own cost, from the END, and coalesces', async () => {
+    const { r, host } = await editing();
+    r.controller.ownWrite('saved');
+    host.setAttribute('data-mode', 'reading');
+    await observerTick();
+    const rendered = r.renders[1];
+    expect(rendered.text).toBe('saved');
+    const ended = rendered.at + 40;
+
+    r.fire('a'); // inside the cooldown that render earned
+    r.fire('b');
+    expect(r.renders).toHaveLength(2);
+    expect(vi.getTimerCount(), 'one timer, not one per change').toBe(1);
+
+    advanceUntilRender(r, r.clock.now());
+    expect(r.renders.map((x) => x.text), 'the newest wins; "a" is never rendered').toEqual(['v0', 'saved', 'b']);
+    expect(r.renders[2].at - ended, 'as long as the render took, measured from its end').toBe(40 * COOLDOWN_MULTIPLIER);
+  });
+});

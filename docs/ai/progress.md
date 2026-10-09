@@ -1,15 +1,15 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 5.4 — **Save writes on Chromium and downloads everywhere else;
-`PERMISSIONS.md` carries the final signed row**; `decisions.md`'s "012 D-6 — the DOWNLOAD FALLBACK
-LANDED at task 5.4" and "M12 RULINGS R16–R18" entries.)
+*Updated: 2026-10-09 (task 4.3 — **a save's own write is no longer taken for an external change;
+edit binds the file the reader rendered; after a save, leaving edit shows the saved text**;
+`decisions.md`'s "M12 TASK 4.3 — LANDED" and "M12 RULINGS R19–R20" entries. Save writes on Chromium
+and downloads everywhere else; `PERMISSIONS.md` carries the final signed row.)
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
-3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 5.1, 5.2, 5.3 and 5.4 landed; **4.3 is next (discovered, R17), then
-5.5.**
-**Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6), and the
-discovered 4.3 (R17).**
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3 and 5.4 landed; **5.5 is next — the human's
+conflict walk.**
+**Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
 **`PERMISSIONS.md` carries SIGNED (a) since 5.3 and the FINAL signed row (b) since 5.4, pinned by
@@ -21,13 +21,16 @@ filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RE
 discards WITHOUT A WARNING until 6.1 — and so do Revoke, a folder switch and a closed folder, which
 since 5.3 END the edit session (R16 puts all three under 6.1's guard; a cancelled re-pick and a
 non-folder drop take the closed-folder path). A DOWNLOAD does not make the edit safe in the folder:
-the file there is unchanged and the buffer stays dirty — by design. And on a watched document a
-save's own write may raise a false "changed on disk while you were editing" hint on later saves
-(reasoned at 5.3, not yet observed — 4.3, R17). Save writes on Chromium; on Firefox, on a route
+the file there is unchanged and the buffer stays dirty — by design. Selecting another file while
+editing destroys the session when that file's read resolves (seen at 4.3 — 6.1's, and the reason
+its guard must act at the selection). Save writes on Chromium; on Firefox, on a route
 with no file handle and when the write prompt is declined it downloads. Planned sequencing, not
-released. A watch re-render no longer destroys the buffer (4.1).
-Current numbers: `.output` 5,821,131 B (Cr) / 5,821,247 B (Fx) against ≤ 7 MiB, content script
-342,652 B both engines (md5-identical across 3.4, 1.3, 5.2, 5.3 and 5.4), `dependencies` 11, `permissions: []`. M11 (math
+released. A watch re-render no longer destroys the buffer (4.1). *Fixed at 4.3, so no longer
+caveats:* the false "changed on disk while you were editing" hint after a save (it was real, on
+every save of a watched document); a save writing the wrong file in the window after another file
+is selected (it was real too); and a stale reading view after Save + Stop editing (unwatched).
+Current numbers: `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx) against ≤ 7 MiB, content script
+342,806 B both engines (+154 at 4.3, its own glue; md5-identical across 3.4, 1.3, 5.2, 5.3 and 5.4 before it), `dependencies` 11, `permissions: []`. M11 (math
 rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
 `progress-archive.md`.)*
 
@@ -1235,34 +1238,85 @@ handle, a declined prompt); `PERMISSIONS.md` carries the final signed row; rulin
   Firefox with the extension loaded; and a download issued after a REAL write prompt is declined
   (the click's activation may be spent by then).
 
+**M12 task 4.3 DONE, 2026-10-09 — save-path hardening: a save's own write is not an external change
+(R17(i)); edit binds the file the reader rendered (R17(ii)); leaving edit after a save shows the
+saved text (R19); rulings R19–R20 banked.** `decisions.md`'s "M12 TASK 4.3 — LANDED" entry is the
+record.
+- **Observed first, on the app page's own watch** (Chromium; a real `FileSystemObserver` on a real
+  file, switched on with the watch control — nothing hand-driven): the hint was on the host after
+  EVERY save and the next save said the file had changed on disk; the UNWATCHED reading view was
+  stale after Save + Stop editing (watched converged, by the false-external path); and in the
+  switch window file B was really overwritten on disk.
+- **Built.** `watchController.ts`: `ownWrite(text)` on the returned `WatchController` — the text is
+  held for the exit without the hint, its echo is dropped, any other text is external (DECISION 7).
+  `appShell.ts`: `renderedFile` (a mismatch binds nothing → the download, under the rendered file's
+  name); `showSaved` (one render on exit — the watch's own where there is one); the `ownWrite`
+  call after each write. `editorEnhancer.ts`: the comment. No ripple beyond 4.3's Files.
+- **Red-first, all observed.** Unit 12 of 13 red before the implementation; real engine 3 red on
+  the three claims. Ablations, each restored byte-identical: the announcement removed → the hint
+  and the false sentence return; the binding reverted → B overwritten, read off disk; the exit
+  render removed → the unwatched column stale; the hint exemption and the echo drop (unit) → 4 and
+  5 red.
+- **Bytes.** Content script 342,652 → 342,806 B (+154 = the method 114 + the token 40, residual
+  0; both removed → md5-identical to baseline on both engines). App chunk 523,863 → 524,607 B
+  (+744, residual 0 — the entry's table). Manifests byte-identical, `permissions: []`.
+- **Full suite.** lint 0 · unit 1372 (+13, all `watchController`) · browser, run alone, 1835
+  passed / 39 skipped (+8 / +8, all `editorSave`), 182 files, ZERO reds — no known flake fired,
+  `mathNetwork` included (6/6) · scanner clean over 79 files, self-test 7 + 10 · `pnpm audit
+  --prod` EXIT=0 · golden empty. Named: `watchController` 64 · `editorSave` 30 (27 Cr + 3 Fx; 24
+  skipped) · `editorWatch` 12 · `watchDiffDefer` 4 · `watchControl` 72 · `watchRemount` 24 ·
+  `exportShortcut` 18 · `editorView` 76 · `editorEnhancer` 32.
+- **Zero-diff, confirmed:** `mount.ts`, `readerMode.ts`, `editorEngine.ts`, `editorView.ts`,
+  `readerPane.ts`, `htmlExport.ts`, `PERMISSIONS.md`, `contentWatch.ts`, `changeDetector.ts`,
+  `detectorForFile.ts`, `tests/browser/editorWatch.browser.test.ts`, `tests/golden/output/`.
+- **Kickoff vs file, flagged.** (i) `tasks.md` 4.3 has no R19; the kickoff adds it as a human
+  ruling — banked, and noted on the task. (ii) The kickoff's Files include
+  `editorWatch.browser.test.ts`; it was not needed and is unchanged. (iii) The kickoff allowed a
+  ripple into `editorView.ts` for R19; none was needed.
+- **Not proven here, by construction → 7.1:** a real external editor racing a save on a real disk;
+  Firefox's polled watch (its app-page routes have no handle; the drag route polls) with a save —
+  there Save is a download and writes nothing, so (i) cannot arise.
+
 ## Up next
 
-**The order, as ruled 2026-10-09 (R17): 5.4 (DONE) → 4.3 (discovered) → 5.5 (human) → 5.6 → 5.7.**
-**NEXT — M12 task 4.3, save-path hardening.** `tasks.md` 4.3 is the line; `decisions.md`'s "M12
-RULINGS R16–R18" is its authority. Three items:
-- **(i) A save's own write is not an external change.** OBSERVE FIRST on a really watched document
-  — 5.3 reasoned that the hint is raised, and nobody has seen it. `editorSave.browser.test.ts`'s
-  `watched()` rig is hand-driven (it fires the detector itself), so it cannot show this as it
-  stands; `editorWatch.browser.test.ts` is the other rig. The kickoff decides whether the fix is in
-  `watchController.ts` or in the detector seam it uses.
-- **(ii) Bind the file the reader RENDERED.** `saveActiveDocument` (`appShell.ts`) snapshots
-  `activeFile`; `selectFolderFile` sets that before the read resolves. A mismatch binds nothing,
-  which since 5.4 means `{ file: null }` and NOT `ended` → the download, as `document.md`. If 4.3
-  wants the rendered file's NAME on that download, the binding needs a name of its own.
-- **(iii)** `editorEnhancer.ts:28-30`'s stale comment.
-- **`watchController.ts` is on the content-script graph:** the md5 WILL move at 4.3 — state the
-  bytes and decompose them (4.2's precedent: +132 B).
-**With the human, from 5.4:** (1) the download's status copy, three lines (`decisions.md`). (2) Two
-judgment calls in the same entry: `unavailable` kept for a dropped binding rather than removed;
-the hint's sentence on a download says only "That file changed on disk while you were editing."
-(3) For 6.1's kickoff: what "stay" leaves standing on a folder switch and a cancelled re-pick,
-where the triggering outcome has already happened (`tasks.md` 6.1's redline).
-**Byte snapshot — 5.4's measured figures, carry to 4.3's kickoff:** `.output` 5,821,131 B (Cr) / 5,821,247 B (Fx)
-against ≤ 7 MiB (7,340,032 B) — headroom 1,518,901 / 1,518,785 B · zip 1,839,560 / 1,839,618 B · content
-script 342,652 B both engines, md5 `97b1b8690f195acb499a464fee532b34` (Cr) /
-`c0115d89b10be306ffa0c77d2234a63e` (Fx), unchanged · the app chunk 523,863 B (+542) · manifest
-654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1359 · browser 1827 / 31 skipped
+**The order, as ruled 2026-10-09 (R17): 5.4 (DONE) → 4.3 (DONE) → 5.5 (human) → 5.6 → 5.7.**
+**NEXT — M12 task 5.5, the HUMAN conflict walk.** `tasks.md` 5.5 is the line. It needs a loaded
+extension and has no agent substitute: the human walks a real conflicting edit on 5.3's safe
+floor and rules the policy — refuse and tell · offer the diff view · force-overwrite behind an
+explicit confirmation. The agent prepares the scenario and records the ruling; it chooses nothing.
+- **What the walk now stands on.** The hint means what it says: after 4.3 it appears only for a
+  change Peekover did not write. A save says "Saved." and nothing more unless the file really
+  moved under the edit.
+- **The scenario to prepare:** a watched folder file, edited; an external editor changes it; Save
+  → "Not saved: the file changed on disk…", buffer kept. Then the variations: changed and changed
+  back (saves, with ruling C's warning); a declined write prompt (a download); Revoke mid-edit.
+- **If force-overwrite is ruled, the ledger row is re-signed before 5.6 lands** (`tasks.md` 5.6).
+**★ CARRIED FOR 6.1's KICKOFF.** The guard must fire at the TRIGGER (before the picker opens,
+before a drop or a re-pick is processed), not at the session's ending — on a folder switch or a
+cancelled re-pick the triggering outcome has already happened by the time `endEditSession` runs.
+4.3 adds the same for a file SELECTION: the edit session is destroyed when the newly selected
+file's read resolves and `readerPane` re-mounts the host, so "stay" must be asked before
+`selectFolderFile` starts the read.
+**Byte snapshot — 4.3's measured figures, carry to the next kickoff:** `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,518,003 / 1,517,887 B · zip 1,839,751 / 1,839,809 B · content
+script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
+`ecc31688b4f49167502a39edca7b9e51` (Fx) — MOVED at 4.3 (+154) · the app chunk 524,607 B (+744) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1372 · browser 1835 / 39 skipped
 (zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 4.3:**
+- **The app page's OWN watch can be driven in the harness on Chromium:** a hand-built persistable
+  `FolderSource` over an OPFS handle, select the file, click `.peekover-watch` — the shell's
+  controller and a real `FileSystemObserver`. `editorSave.browser.test.ts`'s `appWatched()`. Stop
+  it with `stopWatch()` in a `finally`: the registry reset does not stop a detector.
+- **A hand-driven controller registered over the shell's is NOT the one the shell talks to.** The
+  shell calls `ownWrite` on the controller it built; `watched()` in the same file replaces only the
+  registry slot.
+- **Two observers on one host run in creation order.** The watch's (made at watch start) runs
+  before the edit session's (made at edit entry) — which is why a watched exit renders once.
+- **`countRemounts()`** (same file) counts re-mounts of the outer document by the reading column
+  leaving the shadow root — use it wherever "rendered exactly once" is the claim.
+- **A heredoc fails on an apostrophe in a node script's COMMENTS too** — twice more this session.
+  Write the script with the Write tool.
 **Carried inputs, from 5.4:**
 - **A save that cannot write ends in an anchor click.** Any test that counts anchor clicks as
   exports must tell them apart by the anchor's `download` name (`exportShortcut`'s ruling-B case

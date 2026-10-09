@@ -57,6 +57,7 @@ import { page, userEvent } from 'vitest/browser';
 
 import { mountAppShell, type AppController, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile, OpenFolderOutcome } from '../../src/app/folderSource';
+import { getSnapshotMeta, getSnapshotText } from '../../src/app/snapshots';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { getDiffContext, isDiffContextRegistered, resetDiffRegistryForTest } from '../../src/render/diffRegistry';
 import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
@@ -70,15 +71,17 @@ import {
   type EditorSaveOutcome,
   type EditorSession,
 } from '../../src/render/editorView';
+import { readerSourceFor } from '../../src/render/readerMode';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import type { ChangeDetector } from '../../src/watch/changeDetector';
-import { resetWatchControlsForTest } from '../../src/watch/watchControl';
+import { resetWatchControlsForTest, WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
 import { CHANGED_IN_EDIT_ATTR, createWatchController } from '../../src/watch/watchController';
 import {
   isWatching,
   registerWatchTarget,
   resetWatchRegistryForTest,
+  stopWatch,
   type WatchTarget,
 } from '../../src/watch/watchRegistry';
 
@@ -86,6 +89,7 @@ const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 const CHROMIUM = ENGINE === 'chromium';
 const record = (line: string): void => console.log(`[5.3][${ENGINE}] ${line}`);
 const record54 = (line: string): void => console.log(`[5.4][${ENGINE}] ${line}`);
+const record43 = (line: string): void => console.log(`[4.3][${ENGINE}] ${line}`);
 
 const NARROW = { width: 414, height: 896 };
 
@@ -199,6 +203,30 @@ async function opened(file: MarkdownFile, persistable = true): Promise<App & { h
 
 const controlIn = (host: HTMLElement): HTMLElement =>
   host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
+/** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
+const outerColumn = (host: HTMLElement): HTMLElement =>
+  [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
+/** How many times the outer document is RE-MOUNTED from here on: `mount()` ends in
+ *  `replaceChildren` on the host's shadow root, which removes the reading column each time. */
+function countRemounts(host: HTMLElement): { count: () => number; stop: () => void } {
+  let remounts = 0;
+  const tally = (batch: MutationRecord[]): void => {
+    for (const record of batch) {
+      for (const node of record.removedNodes) {
+        if (node instanceof HTMLElement && node.classList.contains('peekover-reader')) remounts += 1;
+      }
+    }
+  };
+  const observer = new MutationObserver(tally);
+  observer.observe(host.shadowRoot!, { childList: true });
+  return {
+    count: () => {
+      tally(observer.takeRecords());
+      return remounts;
+    },
+    stop: () => observer.disconnect(),
+  };
+}
 const saveButtonIn = (host: HTMLElement): HTMLElement =>
   host.shadowRoot!.querySelector<HTMLElement>(`.${EDITOR_SAVE_CLASS}`)!;
 const statusIn = (host: HTMLElement): HTMLElement =>
@@ -836,5 +864,262 @@ describe('012 task 5.4 — a file with no handle: Save is a download (Chromium +
     expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
     expect(session.originalText).toBe(ON_DISK);
     expect(saveButtonIn(host).textContent, 'the control is usable again').toBe('Save');
+  });
+});
+
+// ══ 012 TASK 4.3 — SAVE-PATH HARDENING (R17, R19) ═══════════════════════════════════════════════
+//
+// Cases ADDED; nothing above is edited. Three claims, each read off the page and off the disk:
+//
+//   (i)  A save's own write is not an external change. THE WATCH HERE IS THE APP PAGE'S OWN — its
+//        controller, its detector (on Chromium a real `FileSystemObserver` on the file's handle),
+//        switched on with the reader's watch control. Nothing is hand-driven: the only way the
+//        watch learns of a write is by seeing the file change. Step 0 observed, on this rig, the
+//        hint raised by the first Save and the second Save's status carrying the false sentence.
+//   R19  After Save and then Stop editing, the reading view shows the saved text — watched and
+//        unwatched. Step 0 observed the unwatched column stale.
+//   (ii) Edit entry binds the file the reader RENDERED. In the window where another file has been
+//        selected and its read has not resolved, the session binds nothing, and Save downloads.
+//
+// RED-FIRST (progress.md's 4.3 record): the announcement removed → the hint and the false
+// sentence return. The exit's convergence removed → the unwatched column is stale. The binding
+// put back to "whatever is active" → file B is overwritten, read back off disk.
+
+describe.runIf(CHROMIUM)('012 task 4.3 — a save’s own write, on a document the app page itself is watching (Chromium)', () => {
+  /** The file open and WATCHED through the reader's own watch control: the shell's controller,
+   *  the shell's detector. Asserted, since a watched document is the premise. */
+  async function appWatched(file: MarkdownFile): Promise<App & { host: HTMLElement }> {
+    const rig = await mountApp([file]);
+    const host = await select(rig.container, file);
+    const pill = host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`);
+    expect(pill, 'the app page offers its watch control for this file').not.toBeNull();
+    pill!.click();
+    await waitFor(() => isWatching(), 'the app page’s own watch to start');
+    return { ...rig, host };
+  }
+
+  /** Long enough for the watch to have seen a write: the observer reports within tens of
+   *  milliseconds, the polled fallback once a second. */
+  const detected = (): Promise<void> => new Promise<void>((r) => setTimeout(r, 1600));
+
+  it('★ (i) Save → the hint is ABSENT; a second Save says "Saved." and nothing more; then an EXTERNAL change raises it', async () => {
+    const { fh, file } = await diskFile('own-write', ON_DISK);
+    const { host } = await appWatched(file);
+    try {
+      const session = await enterEdit(host);
+      type(session, TYPED);
+
+      expect(await clickSave(host)).toBe('Saved.');
+      await detected();
+      const hintAfterFirst = host.hasAttribute(CHANGED_IN_EDIT_ATTR);
+
+      type(session, ' again');
+      const second = await clickSave(host);
+      await detected();
+      record43(`(i): hint after save 1=${hintAfterFirst}; save 2 → ${JSON.stringify(second)}; hint after save 2=${host.hasAttribute(CHANGED_IN_EDIT_ATTR)}`);
+      expect(hintAfterFirst, 'our own write raised no hint').toBe(false);
+      expect(second, 'and the next save does not say the file changed on disk').toBe('Saved.');
+      expect(host.hasAttribute(CHANGED_IN_EDIT_ATTR)).toBe(false);
+      expect(await readDisk(fh)).toBe(`${ON_DISK + TYPED} again`);
+
+      // THE FIRING CONTROL — the same watch, the same host: somebody else's write IS a change.
+      await writeDisk(fh, OUT_OF_BAND);
+      await waitFor(() => host.hasAttribute(CHANGED_IN_EDIT_ATTR), 'the hint, for a change that is not ours', 6000).catch(
+        () => undefined,
+      );
+      expect(host.hasAttribute(CHANGED_IN_EDIT_ATTR), 'an external change after our save still raises the hint').toBe(true);
+      type(session, ' third');
+      expect(await clickSave(host), 'and the compare still decides').toMatch(/^Not saved: the file changed on disk\./);
+      expect(await readDisk(fh)).toBe(OUT_OF_BAND);
+    } finally {
+      stopWatch();
+    }
+  });
+
+  it('★ R19, WATCHED: Save → Stop editing → the reading view shows the saved text, and the watch is still live', async () => {
+    const { fh, file } = await diskFile('r19-watched', ON_DISK);
+    const { host } = await appWatched(file);
+    try {
+      const session = await enterEdit(host);
+      type(session, TYPED);
+      expect(await clickSave(host)).toBe('Saved.');
+      await detected(); // the watch has seen the write by now: an echo, if it is going to be one
+      const docId = getDiffContext()!.docId;
+      const remounts = countRemounts(host);
+
+      controlIn(host).click(); // Stop editing
+      await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
+      await waitFor(() => readerSourceFor(host) === ON_DISK + TYPED, 'the reading view to take the saved text', 4000).catch(
+        () => undefined,
+      );
+      await detected();
+      const rendered = remounts.count();
+      remounts.stop();
+      // ONE render: the watch's own, as edit is left — the shell's exit render finds nothing to do,
+      // and the detector's echo of the write renders nothing more.
+      expect(rendered, 'the document was re-rendered exactly once').toBe(1);
+      // And it was a WATCH render: the text it replaced is in the document's history.
+      const entries = (await getSnapshotMeta()).find((m) => m.docId === docId)?.entries ?? [];
+      const kept = await Promise.all(entries.map((e) => getSnapshotText(e.id)));
+      expect(kept, 'the pre-save text was captured as a snapshot').toEqual([ON_DISK]);
+
+      record43(`R19 watched: column shows typed=${outerColumn(host).textContent?.includes(TYPED.trim())}; source is saved=${readerSourceFor(host) === ON_DISK + TYPED}`);
+      expect(readerSourceFor(host), 'the document on screen is the saved text').toBe(ON_DISK + TYPED);
+      expect(outerColumn(host).textContent).toContain(TYPED.trim());
+      expect(host.hasAttribute(CHANGED_IN_EDIT_ATTR)).toBe(false);
+      expect(host.shadowRoot!.querySelector(`.${EDITOR_SHELL_CLASS}`), 'the edit view is gone').toBeNull();
+      expect(isWatching()).toBe(true);
+
+      // Still a live watch: an external change now re-renders the reading view.
+      await writeDisk(fh, OUT_OF_BAND);
+      await waitFor(() => outerColumn(host).textContent?.includes('changed zsb'), 'the external change to render', 6000).catch(
+        () => undefined,
+      );
+      expect(outerColumn(host).textContent).toContain('changed zsb');
+    } finally {
+      stopWatch();
+    }
+  });
+});
+
+describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromium)', () => {
+  it('★ Save → Stop editing → the reading view shows the saved text; editing again starts from it', async () => {
+    const { fh, file } = await diskFile('r19-unwatched', ON_DISK);
+    const { host } = await opened(file); // asserts: not watched
+    const session = await enterEdit(host);
+    type(session, TYPED);
+    expect(await clickSave(host)).toBe('Saved.');
+    expect(await readDisk(fh)).toBe(ON_DISK + TYPED);
+    const remounts = countRemounts(host);
+
+    controlIn(host).click(); // Stop editing
+    await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
+    await new Promise<void>((r) => setTimeout(r, 100));
+    const rendered = remounts.count();
+    remounts.stop();
+
+    record43(`R19 unwatched: column shows typed=${outerColumn(host).textContent?.includes(TYPED.trim())}; source is saved=${readerSourceFor(host) === ON_DISK + TYPED}`);
+    expect(outerColumn(host).textContent, 'the reading column shows what was saved').toContain(TYPED.trim());
+    expect(rendered, 'by one re-render').toBe(1);
+    expect(readerSourceFor(host)).toBe(ON_DISK + TYPED);
+    expect(host.getAttribute('data-mode'), 'in the mode it was left in').toBe('reading');
+    expect(host.shadowRoot!.querySelector(`.${EDITOR_SHELL_CLASS}`)).toBeNull();
+    expect(controlIn(host).textContent, 'the edit control is back at rest').toBe('Edit');
+    expect(isWatching()).toBe(false);
+
+    const again = await enterEdit(host);
+    expect(buffer(again), 'a new session is seeded from the saved text').toBe(ON_DISK + TYPED);
+    expect(again.originalText).toBe(ON_DISK + TYPED);
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
+  });
+
+  it('CONTROL: leaving edit WITHOUT a save re-renders nothing — the column is the same node, the text as opened', async () => {
+    const { file } = await diskFile('r19-nosave', ON_DISK);
+    const { host } = await opened(file);
+    const column = outerColumn(host);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+
+    controlIn(host).click();
+    await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
+    await new Promise<void>((r) => setTimeout(r, 100));
+
+    expect(outerColumn(host), 'no re-render: the same reading column').toBe(column);
+    expect(readerSourceFor(host)).toBe(ON_DISK);
+  });
+
+  it('a DOWNLOAD is not a save: Stop editing after one leaves the reading view as opened', async () => {
+    const { fh, file } = await diskFile('r19-download', ON_DISK);
+    (fh as unknown as { requestPermission: () => Promise<PermissionState> }).requestPermission = async () => 'denied';
+    const { host } = await opened(file);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+    const downloads = watchDownloads();
+    const said = await clickSave(host).finally(downloads.restore);
+    expect(said).toBe(downloadLine(file.name));
+
+    controlIn(host).click();
+    await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
+    await new Promise<void>((r) => setTimeout(r, 100));
+
+    expect(readerSourceFor(host), 'the folder’s file is unchanged, and so is the reading view').toBe(ON_DISK);
+    expect(await readDisk(fh)).toBe(ON_DISK);
+  });
+});
+
+describe.runIf(CHROMIUM)('012 task 4.3 — (ii): edit entry binds the file the reader RENDERED (Chromium)', () => {
+  it('★ in the switch window — B selected, its read still pending, A on screen — Edit, type, Save: NEITHER file changes; the edit is a download under A’s name', async () => {
+    // IDENTICAL text in both, so the compare cannot be what protects B: the baseline matches it.
+    const a = await diskFile('switch-a', ON_DISK);
+    const b = await diskFile('switch-b', ON_DISK);
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let gated = true;
+    const realRead = b.file.read;
+    b.file.read = async () => {
+      if (gated) {
+        gated = false; // only the OPEN's read is held; a save's re-read is not
+        await held;
+      }
+      return realRead();
+    };
+    const { container } = await mountApp([a.file, b.file]);
+    const host = await select(container, a.file);
+    const downloads = watchDownloads();
+    try {
+      // Start opening B, and do not wait: A is still what the reader shows.
+      [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')]
+        .find((el) => el.textContent === b.file.name)!
+        .click();
+      await new Promise<void>((r) => setTimeout(r, 50));
+      expect(outerColumn(host).textContent, 'A is still on screen').toContain('zsa');
+      expect(gated, 'B’s read has started and is being held').toBe(false);
+
+      const session = await enterEdit(host);
+      type(session, TYPED);
+      const said = await clickSave(host);
+
+      const [diskA, diskB] = [await readDisk(a.fh), await readDisk(b.fh)];
+      record43(`(ii): ${JSON.stringify(said)}; A untouched=${diskA === ON_DISK}; B untouched=${diskB === ON_DISK}; downloads=${JSON.stringify(downloads.seen.map((d) => d.filename))}`);
+      // The disk first: it is the claim.
+      expect(diskB, 'B — the file that was merely selected — is byte-identical').toBe(ON_DISK);
+      expect(diskA, 'and A is not written either: a mismatch binds nothing').toBe(ON_DISK);
+      expect(downloads.seen.map((d) => d.filename), 'one download, under the name of the file on screen').toEqual([a.file.name]);
+      expect(await downloads.seen[0].text()).toBe(ON_DISK + TYPED);
+      expect(downloads.seen[0].type).toBe(MARKDOWN);
+      expect(said).toBe(downloadLine(a.file.name));
+      expect(host.getAttribute(EDITOR_DIRTY_ATTR)).toBe('true');
+    } finally {
+      downloads.restore();
+      release();
+      await new Promise<void>((r) => setTimeout(r, 100));
+    }
+  });
+
+  it('CONTROL: with no switch in flight, the same gesture on A WRITES A', async () => {
+    const a = await diskFile('noswitch-a', ON_DISK);
+    const b = await diskFile('noswitch-b', ON_DISK);
+    const { container } = await mountApp([a.file, b.file]);
+    const host = await select(container, a.file);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+
+    expect(await clickSave(host)).toBe('Saved.');
+    expect(await readDisk(a.fh)).toBe(ON_DISK + TYPED);
+    expect(await readDisk(b.fh)).toBe(ON_DISK);
+  });
+
+  it('once B’s render has committed, B is the bound file: Edit, type, Save writes B and not A', async () => {
+    const a = await diskFile('after-a', ON_DISK);
+    const b = await diskFile('after-b', ON_DISK);
+    const { container } = await mountApp([a.file, b.file]);
+    await select(container, a.file);
+    const host = await select(container, b.file);
+    const session = await enterEdit(host);
+    type(session, TYPED);
+
+    expect(await clickSave(host)).toBe('Saved.');
+    expect(await readDisk(b.fh)).toBe(ON_DISK + TYPED);
+    expect(await readDisk(a.fh)).toBe(ON_DISK);
   });
 });

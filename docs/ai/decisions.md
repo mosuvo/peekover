@@ -1,6 +1,146 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 4.3 — LANDED: a save's own write is not an external change (R17(i)); edit
+  entry binds the file the reader RENDERED (R17(ii)); after a save, leaving edit shows the saved
+  text (R19); one stale comment. No human ruling was taken during the task; three judgment calls
+  and one finding are flagged at the end.**
+  **WHAT WAS OBSERVED FIRST (step 0), on Chromium, before any change.** Through the app page's OWN
+  watch — its controller, its detector (a real `FileSystemObserver` on an origin-private-file-system
+  handle), switched on with the reader's watch control; nothing hand-driven:
+  - *R17(i).* After the first Save the hint `data-watch-changed-in-edit` WAS on the host — already
+    there when the status line appeared — and stayed. The second Save said "Saved. The file changed
+    on disk while you were editing, but its content was the same when checked." The self-write was
+    held as a deferred change. So 5.3's reasoning was right, and it happens on every save.
+  - *R19, watched.* After Save and Stop editing the reading column showed the saved text (the held
+    self-write flushed on exit — the right result by the wrong road).
+  - *R19, UNWATCHED.* The reading column was STALE: it, and the host's registered source, still held
+    the text from open, 2.5 s later too. Nothing was going to fix it.
+  - *R17(ii)* was then seen as a test red at HEAD, not just reasoned: with file B selected and its
+    read held pending, Edit on the still-displayed A, type, Save → "Saved.", and **B was overwritten
+    on disk** with A's edit. Two files of identical text, so D-7's compare had nothing to refuse.
+  **MECHANISM (i) — `ownWrite`, in `watchController.ts` (DECISION 7 there).** "Last known text"
+  lives in the DETECTOR (`pollingDetector`'s `lastText`; the observer's own read), which cannot know
+  who wrote. So the writer tells the controller: `createWatchController` now returns a
+  `WatchController` — the registry's `WatchTarget` plus `ownWrite(text)`. The shell calls it after
+  each successful write, on the controller it built for the bound file. Two effects:
+  - the text is remembered (`ownText`); while it is, the detector reporting that same text is an
+    echo and is dropped — no hint, nothing held as external. Any OTHER text clears the token and is
+    an external change exactly as before. That covers "ours then theirs" coalesced into one
+    detection: only theirs is reported, and it differs.
+  - the text takes the single pending slot WITHOUT the hint (`syncEditHint` exempts a held text
+    that is the token) and renders when edit is left — an ordinary watch render, so the snapshot of
+    the text it replaces is still captured. Announced outside edit, it renders at once. This half
+    is R19's clarification: dropping the echo alone would leave the reading view stale.
+  `stop()` and a document switch clear the token (`cancelPending`). No import was added to
+  `watchController.ts`; the 5.1 fence's Clause C stands, and `contentWatch.ts` is zero-diff.
+  **ACCEPTED AS INDISTINGUISHABLE.** An external write of EXACTLY the text Peekover wrote, while the
+  token lives: nothing differs on disk, so nothing is lost. **One residual, stated:** a detector
+  read already in flight when a SECOND save lands can report the first save's text after the second
+  was announced; it differs from the token, so it reads as external until the next report. It
+  needs two saves inside one detection and costs a hint, never a write — D-7's compare still rules.
+  **MECHANISM (ii) — `renderedFile`, in `appShell.ts`.** "The file the reader rendered" is set as
+  each `selectFolderFile`'s render commits (after its `selectFile` resolves — last painted wins),
+  and cleared when no file is active and when the store-free `AppController.selectFile` seam shows
+  a file. The binder takes a file only when `renderedFile === activeFile`; otherwise it binds
+  `{ file: null }` — NOT `ended` — and Save is 5.4's download. **The download carries the rendered
+  file's name:** the binding gained a `name` (a name only, never a handle) — it cost one field, so
+  R17's silence was resolved the cheap way. With no rendered file it is still `document.md`.
+  **MECHANISM R19 — `showSaved`, in `appShell.ts`.** The binding remembers the text it last WROTE.
+  A `MutationObserver` on the host's `data-mode`, made at edit entry, runs it as edit is left; the
+  bound save runs it too, for a save that finishes after the exit. It re-renders the host with
+  that text through `renderEnhanced` — the watch's own render closure — only if the host's source
+  is not already that text. **Order, and why there is one render, not two:** on a watched document
+  the controller's observer on the same host was created when the watch started, before this
+  session's, so it runs first and flushes the held text; `showSaved` then finds the source already
+  equal and does nothing. Measured in the real engine: exactly ONE re-mount on a watched exit, and
+  the pre-save text in the document's snapshot history; exactly one on an unwatched exit. Not after
+  a download (nothing was written), not for a session the shell ended, not once another file has
+  been selected. **No ripple was needed:** `editorView.ts`, `editorEnhancer.ts` (beyond its comment)
+  and `readerPane.ts` are untouched — the kickoff allowed for one and it did not arise.
+  **THE COMMENT.** `editorEnhancer.ts:28-30` no longer says nothing calls `save` or that a watch
+  re-render drops the editor. Comment-only: its bytes are in no arm.
+  **TESTS, RED-FIRST.** Unit, `watchController.test.ts` 51 → 64 (+13): the echo raises no hint and
+  renders nothing; without the announcement the same sequence IS the hint (the firing control);
+  the exit renders the saved text once and a late echo renders nothing; a different text is
+  external; ours-then-theirs coalesced; a second save; a held external change superseded; outside
+  edit; stop and a document switch clear the token; a no-op when not running; the cooldown from
+  the end, coalesced, after an own render. Real engine, Chromium, `editorSave.browser.test.ts`
+  +8 (30 there): (i) on the app page's own watch — hint absent, the second Save exactly "Saved.",
+  then an out-of-band write raises the hint and the next Save is the safe floor; R19 watched (one
+  re-mount, the snapshot, the watch still live) and unwatched (one re-mount; a new session seeded
+  from the saved text); two controls — no save, no re-render; a download is not a save; (ii) in
+  the switch window — neither file changes on disk, one download under A's name; and two controls
+  — no switch writes A; a committed switch writes B. `editorWatch.browser.test.ts` is zero-diff:
+  its rig hand-drives a controller of its own, and (i) needed the shell's.
+  Before the implementation: unit 12 of the 13 red (the method did not exist; the firing control
+  green, as it must be); real engine 3 red on the
+  three claims — the hint present, the unwatched column stale, B overwritten. Ablations, each red
+  in its own units and restored byte-identical:
+  - the shell's `ownWrite` call removed → (i): the hint after save 1, and the false sentence on save 2.
+  - the binding put back to `activeFile` → (ii): "Saved.", B overwritten, read back off disk.
+  - `showSaved`'s render removed → R19 unwatched: the column stale (watched stays green, as observed).
+  - the hint exemption removed (unit) → 4 red; the echo drop removed (unit) → 5 red.
+  **BYTES.** `.output` 5,822,029 / 5,822,145 B (+898 each; headroom 1,518,003 / 1,517,887 B under
+  7 MiB); zip 1,839,751 / 1,839,809 B (+191 each). Two files changed size, the same on both
+  engines; manifests byte-identical, `permissions: []`.
+  *The content script — EXPECTED to move, `watchController.ts` being on its graph:* 342,652 →
+  342,806 B (**+154**), md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
+  `ecc31688b4f49167502a39edca7b9e51` (Fx). Decomposed: the `ownWrite` method 114 · the token (the
+  variable, the echo drop, the hint exemption, the teardown clear) 40 = 154, **residual 0**. With
+  both removed the content script is md5-IDENTICAL to baseline on BOTH engines (`97b1b869…` /
+  `c0115d89…`). It carries the method and never calls it: no content-script path writes a file.
+  *The app chunk:* 523,863 → 524,607 B (**+744**), by Chrome removal arms taken in sequence:
+
+  | Piece | Bytes | Alone |
+  |---|---|---|
+  | R19 — the exit observer, `written`, `showSaved` | 405 | 405 |
+  | the announcement — the call, the binding's watch, `activeWatch` | 72 | 70 |
+  | (ii) — `renderedFile`, its writes, the binding's name | 75 | 82 |
+  | the controller — method 114 + token 36 (it is in this chunk too) | 151 | 150 |
+  | the bound save's wrapper (async, the `saved` branch, the host lookup) — shared by R19 and the announcement | 41 | — |
+  | **sum** | **744** | measured +744 — **residual 0** |
+
+  The "alone" figures differ from the sequential ones by at most 7 B (minifier interaction between
+  pieces that share a local); the sequence is what sums.
+  **FULL SUITE.** lint 0 · unit 1372 (+13, all `watchController`) · browser, run alone, 1835
+  passed / 39 skipped (+8 passed on Chromium, +8 skipped on Firefox: all `editorSave`), 182 files,
+  zero reds — no known flake fired, `mathNetwork` included (6/6) · scanner clean over 79 files,
+  self-test 7 + 10 · `pnpm audit --prod` EXIT=0 · golden empty. `watchController` 64 ·
+  `editorSave` 30 (27 Chromium + 3 Firefox; 24 skipped) · `editorWatch` 12 · `watchDiffDefer` 4 ·
+  `watchControl` 72 · `watchRemount` 24 · `exportShortcut` 18 · `editorView` 76 ·
+  `editorEnhancer` 32. A second clean rebuild reproduced every byte figure.
+  **JUDGMENT CALLS, FLAGGED.** (1) The watch renders Peekover's own save as an ordinary watch
+  render, so the pre-save text is still captured as a snapshot and the watch control flashes —
+  kept because that is what happened before this task; "drop the echo and let the shell render"
+  would have silently stopped capturing it. (2) A mismatch at edit entry binds nothing even though
+  the file on screen is known (R17's text); binding the rendered file instead would save it, and
+  is the human's call. (3) The download in a mismatch is named after the rendered file.
+  **FINDING, FLAGGED — for 6.1.** In the switch window the edit session is destroyed when the
+  pending file's read resolves: `readerPane` re-mounts the shared host, and the buffer is gone
+  with no prompt. That is "selecting another file", which 6.1 names — but it shows the guard has
+  to act at the SELECTION, not when the session ends. `readerPane.select` also has no ordering
+  guard: two reads resolving out of order paint in resolution order. `renderedFile` follows the
+  paint, so the binding stays right; the stale paint itself is not this task's.
+  *Revisit-when:* 5.5 (the walk — now over a hint that means what it says) · 6.1 (the finding
+  above; R16) · 5.7 (zero network across a save on a watched document) · 7.1 (a real disk, a real
+  external editor racing a save).
+
+- **2026-10-09 · M12 RULINGS R19–R20 — two HUMAN RULINGS taken in task 4.3's kickoff: after a save,
+  leaving edit shows the saved text; 5.4's download copy and its two judgment calls are approved.**
+  Stated in the kickoff as approved by the human running it, dated 2026-10-09.
+  **★ R19 — after a successful Save and then leaving edit, the READING view shows the SAVED text**
+  — on a watched AND an unwatched document. Observe first: if it already holds on both, record the
+  evidence and change nothing for it; if not, fix it in 4.3, red-first, as a necessary ripple.
+  It CLARIFIES R17(i): Peekover's own write must not raise the hint or be treated as an EXTERNAL
+  change — but the reading view must still end up showing it. "Drop the self-write" is not an
+  acceptable fix if it leaves the reading view stale. *Outcome:* it held watched and did NOT hold
+  unwatched; fixed at 4.3 (the entry above).
+  **★ R20 — 5.4's download status copy (three lines) is APPROVED as drafted, and its two judgment
+  calls are accepted:** `unavailable` is kept for a dropped binding; the download's hint sentence
+  claims no compare. Closes the review R18 left open for the lines drafted at 5.4.
+  *Revisit-when:* 7.1 (the copy, read on a real page).
+
 - **2026-10-09 · 012 D-6 — the DOWNLOAD FALLBACK LANDED at task 5.4: where Save cannot write, it hands
   the text to the browser as a download and changes nothing in the folder; `PERMISSIONS.md` carries
   the FINAL signed row (D-9). No human ruling was taken during this task; the download's status
