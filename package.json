@@ -22,6 +22,7 @@
     "perf:snapshot-capture": "tsx scripts/perf-snapshot-capture.ts",
     "perf:diff": "tsx scripts/perf-diff.ts",
     "perf:export": "tsx scripts/perf-export.ts",
+    "perf:edit-preview": "tsx scripts/perf-edit-preview.ts",
     "lint": "eslint . && tsc --noEmit",
     "postinstall": "wxt prepare"
   },

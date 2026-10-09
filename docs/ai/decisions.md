@@ -1,6 +1,259 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 6.2 — LANDED: the live-preview debounce MEASURED — sizes, two content
+  profiles, seven candidates, both engines. FORBIDDEN FROM CHOOSING: this entry recommends
+  nothing. The numbers go to the human for the spec §8-2 ruling. No production byte moved.**
+  **THE HARNESS — committed, re-runnable.** `scripts/perf-edit-preview.ts` (the driver) and
+  `scripts/perf-edit-preview.page.ts` (the in-page half); `pnpm perf:edit-preview` (one new
+  `package.json` script entry). Not in any test suite and not in CI — `perf-watch.ts`'s
+  disposition. The page runs production SOURCE — `mount`, `enterEditMode`, `loadEditorEngine`,
+  `buildEditorShell`, `renderPreview` and the lazy engines behind them — bundled and minified
+  by esbuild (reached through `tsx`, as `perf-watch.ts` does), code-split, served from a
+  loopback server the script starts. ONE thing in the page is the harness's own: the scheduler
+  between the editor and the preview. *Re-run:* `pnpm perf:edit-preview` (everything, about an
+  hour), or in pieces with `--engine`, `--part render|typing`, `--sizes`, `--profiles`,
+  `--rates`, `--reps`, `--candidates`; `-- --report` prints the tables from the results on
+  disk. **The complete output of this run is committed as
+  `scripts/perf-edit-preview.results.md`** (28 typing tables and 2 render tables); the tables
+  below are a selection from it.
+  **THE CORPUS.** Sizes mirror `perf-watch.ts`'s 50 KB / 1 MB shape plus a small document.
+  - *prose* — headings, paragraphs with inline marks, lists, a quotation: 2,245 B (5 sections) ·
+    50,503 B (118) · 1,000,489 B (2,318).
+  - *enhancer-heavy* — every section a code fence, a table, one block and two inline formulas;
+    every fourth a mermaid diagram, each distinct: 2,481 B (1 mermaid, 4 fences, 4 + 8 math, 4
+    tables) · 50,377 B (21 mermaid, 81 fences, 81 + 162 math, 81 tables) · 1,000,416 B (395
+    mermaid, 1,578 fences, 1,578 + 3,156 math, 1,578 tables). The density is the agent's
+    choice, not a measured norm: about one diagram per 2.5 KB is dense.
+  **THE CANDIDATES — in the harness only, never in `src/`.** C1 today: production's
+  `createPreviewCooldown`, imported as it ships — the first render inside the keystroke, then a
+  cooldown equal to the render's cost. C1-copy: the harness's own copy of that cooldown, the
+  control for the candidates built from it. C2: the same, the first render moved into a 0 ms
+  task (`setTimeout(…, 0)`). C3: multiplier 2, and 3. C4: a fixed trailing debounce, 150 ms and
+  300 ms.
+  **HOW TYPING IS DRIVEN.** Real key events through the browser's input path, 24 keys a run,
+  sent at fixed wall-clock times by timers in the DRIVER process and never awaited one after
+  another — so a key that arrives during a render waits behind it, as a person's does (P-3: a
+  driven burst is not typing). Page times and send times are epochs on two clocks; the offset
+  is calibrated per run and subtracted. Rates: 250 ms between keys (~48 wpm), 150 ms (~80 wpm),
+  80 ms (~150 wpm, a burst). Each run opens the document fresh, lets the first preview settle
+  and pauses 600 ms, so its first key is a first key after a pause (P-2). Candidates are
+  interleaved inside each (run, rate). Two runs per candidate at small and 50 KB; ONE run, at
+  150 ms only, at 1 MB.
+  **RENDER WALL-CLOCK — tasks.md 6.2's own table; median beside floor (ms).** *sync* is one
+  `renderPreview` (`mount()` + the enhancers' synchronous half) — what the cooldown times
+  today. *quiet* is until the preview's DOM has been still for 400 ms — the enhancers'
+  asynchronous half, which nothing times (R7). The reference document (small prose) is measured
+  before and after every other one: A-B-A, in one session.
+
+  **Render wall-clock — chromium**
+
+  | Document | n | sync median | sync floor | quiet median | quiet floor |
+  |---|--:|--:|--:|--:|--:|
+  | REFERENCE before (prose, small) | 10 | 3.5 | 1.8 | 4 | 2 |
+  | prose small | 12 | 3.7 | 1.6 | 4 | 2 |
+  | REFERENCE after prose small (prose, small) | 10 | 2.1 | 1.5 | 2 | 2 |
+  | prose 50k | 12 | 21.7 | 18.4 | 22 | 18 |
+  | REFERENCE after prose 50k (prose, small) | 10 | 4.3 | 1.4 | 4 | 2 |
+  | prose 1m | 5 | 334.1 | 330.8 | 334 | 331 |
+  | REFERENCE after prose 1m (prose, small) | 10 | 4.3 | 1.4 | 4 | 2 |
+  | heavy small | 12 | 5.9 | 2.7 | 13 | 7 |
+  | REFERENCE after heavy small (prose, small) | 10 | 3.9 | 1.6 | 4 | 2 |
+  | heavy 50k | 12 | 38.3 | 33.6 | 191 | 182 |
+  | REFERENCE after heavy 50k (prose, small) | 10 | 4.9 | 1.5 | 5 | 2 |
+  | heavy 1m | 5 | 1696.0 | 1616.9 | 1703 | 1624 |
+  | REFERENCE after heavy 1m (prose, small) | 10 | 1.5 | 1.3 | 2 | 1 |
+
+  **Render wall-clock — firefox**
+
+  | Document | n | sync median | sync floor | quiet median | quiet floor |
+  |---|--:|--:|--:|--:|--:|
+  | REFERENCE before (prose, small) | 10 | 3.0 | 2.0 | 3 | 2 |
+  | prose small | 12 | 4.0 | 1.0 | 4 | 2 |
+  | REFERENCE after prose small (prose, small) | 10 | 5.0 | 2.0 | 5 | 2 |
+  | prose 50k | 12 | 20.0 | 15.0 | 20 | 15 |
+  | REFERENCE after prose 50k (prose, small) | 10 | 4.0 | 1.0 | 4 | 1 |
+  | prose 1m | 5 | 309.0 | 301.0 | 309 | 301 |
+  | REFERENCE after prose 1m (prose, small) | 10 | 4.0 | 2.0 | 5 | 2 |
+  | heavy small | 12 | 8.0 | 4.0 | 20 | 15 |
+  | REFERENCE after heavy small (prose, small) | 10 | 5.0 | 3.0 | 5 | 3 |
+  | heavy 50k | 12 | 54.0 | 47.0 | 333 | 295 |
+  | REFERENCE after heavy 50k (prose, small) | 10 | 6.0 | 2.0 | 6 | 2 |
+  | heavy 1m | 5 | 3680.0 | 3490.0 | 23094 | 10514 |
+  | REFERENCE after heavy 1m (prose, small) | 10 | 2.0 | 1.0 | 2 | 1 |
+
+  **TYPING — a selection (ms; column notes are in the results file).** *key* = sent → in the
+  buffer; *busy* = sent → main thread free (floor ≈ 19 ms Chromium, 11–13 ms Firefox).
+
+  **Typing — chromium · heavy · 50k · 150 ms between keys (24 keys, 2 run(s) per candidate)**
+
+  | Candidate | first key | key p50 | key p95 | key max | busy p95 | busy max | keys busy ≥ 50 ms | long tasks | renders | while typing | render median | stale: text | stale: settled |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | C1 today | 3 | 3.8 | 7 | 8 | 73 | 75 | 48/48 | 4 | 24 | 23 | 36.2 | 39 | 876 |
+  | C1-copy | 2 | 3.6 | 10 | 34 | 78 | 192 | 46/48 | 2 | 23 | 22 | 35.7 | 39 | 672 |
+  | C2 deferred | 2 | 3.7 | 18 | 74 | 27 | 79 | 1/48 | 3 | 24 | 23 | 35.9 | 42 | 806 |
+  | C3 x2 | 2 | 3.5 | 7 | 8 | 76 | 84 | 47/48 | 3 | 24 | 23 | 36.4 | 38 | 702 |
+  | C3 x3 | 2 | 3.9 | 12 | 19 | 74 | 79 | 21/48 | 3 | 24 | 23 | 36.0 | 43 | 850 |
+  | C4 trailing 150 ms | 2 | 5.2 | 66 | 70 | 75 | 80 | 13/48 | 0 | 7 | 6 | 40.7 | 242 | 411 |
+  | C4 trailing 300 ms | 2 | 2.7 | 6 | 7 | 20 | 20 | 0/48 | 0 | 1 | 0 | 41.5 | 351 | 505 |
+
+  **Typing — firefox · heavy · 50k · 150 ms between keys (24 keys, 2 run(s) per candidate)**
+
+  | Candidate | first key | key p50 | key p95 | key max | busy p95 | busy max | keys busy ≥ 50 ms | long tasks | renders | while typing | render median | stale: text | stale: settled |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | C1 today | 2 | 366.8 | 815 | 888 | 2756 | 2994 | 48/48 | n/a | 24 | 19 | 48.0 | 737 | 2652 |
+  | C1-copy | 30 | 432.5 | 1014 | 1060 | 3236 | 3515 | 48/48 | n/a | 18 | 16 | 47.0 | 219 | 1854 |
+  | C2 deferred | 31 | 96.2 | 203 | 510 | 392 | 519 | 46/48 | n/a | 17 | 16 | 48.0 | 90 | 1682 |
+  | C3 x2 | 14 | 572.0 | 1003 | 1058 | 3221 | 3508 | 48/48 | n/a | 21 | 17 | 47.0 | 672 | 2500 |
+  | C3 x3 | 17 | 129.4 | 1267 | 1552 | 1725 | 1827 | 45/48 | n/a | 10 | 8 | 47.0 | 253 | 1640 |
+  | C4 trailing 150 ms | 13 | 28.1 | 111 | 132 | 225 | 238 | 15/48 | n/a | 4 | 3 | 55.0 | 208 | 557 |
+  | C4 trailing 300 ms | 2 | 4.4 | 12 | 24 | 15 | 25 | 0/48 | n/a | 1 | 0 | 49.0 | 361 | 887 |
+
+  **Typing — chromium · prose · 1m · 150 ms between keys (24 keys, 1 run(s) per candidate)**
+
+  | Candidate | first key | key p50 | key p95 | key max | busy p95 | busy max | keys busy ≥ 50 ms | long tasks | renders | while typing | render median | stale: text | stale: settled |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | C1 today | 7 | 38.9 | 311 | 322 | 379 | 412 | 14/24 | 6 | 6 | 5 | 346.2 | 419 | 419 |
+  | C1-copy | 7 | 15.6 | 298 | 372 | 441 | 580 | 14/24 | 8 | 6 | 5 | 337.3 | 602 | 602 |
+  | C2 deferred | 7 | 31.0 | 321 | 332 | 390 | 408 | 12/24 | 9 | 6 | 5 | 349.5 | 595 | 595 |
+  | C3 x2 | 6 | 10.7 | 275 | 279 | 335 | 434 | 9/24 | 6 | 5 | 4 | 350.2 | 1162 | 1162 |
+  | C3 x3 | 6 | 10.7 | 283 | 333 | 395 | 507 | 9/24 | 6 | 4 | 3 | 354.0 | 1467 | 1467 |
+  | C4 trailing 150 ms | 6 | 10.8 | 228 | 362 | 284 | 424 | 3/24 | 3 | 2 | 1 | 340.0 | 510 | 510 |
+  | C4 trailing 300 ms | 6 | 6.9 | 13 | 14 | 19 | 20 | 0/24 | 1 | 1 | 0 | 348.3 | 657 | 657 |
+
+  **Typing — firefox · prose · 1m · 150 ms between keys (24 keys, 1 run(s) per candidate)**
+
+  | Candidate | first key | key p50 | key p95 | key max | busy p95 | busy max | keys busy ≥ 50 ms | long tasks | renders | while typing | render median | stale: text | stale: settled |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | C1 today | 11 | 235.4 | 465 | 596 | 1032 | 1134 | 21/24 | n/a | 6 | 5 | 314.0 | 402 | 402 |
+  | C1-copy | 12 | 201.5 | 401 | 541 | 471 | 595 | 19/24 | n/a | 7 | 6 | 310.0 | 1280 | 1280 |
+  | C2 deferred | 23 | 281.0 | 690 | 819 | 883 | 963 | 21/24 | n/a | 6 | 5 | 315.0 | 1052 | 1052 |
+  | C3 x2 | 10 | 86.3 | 380 | 464 | 467 | 526 | 14/24 | n/a | 5 | 4 | 317.0 | 722 | 722 |
+  | C3 x3 | 45 | 77.4 | 369 | 390 | 498 | 523 | 14/24 | n/a | 4 | 3 | 297.0 | 717 | 717 |
+  | C4 trailing 150 ms | 9 | 16.5 | 23 | 26 | 26 | 26 | 0/24 | n/a | 1 | 0 | 312.0 | 474 | 474 |
+  | C4 trailing 300 ms | 11 | 18.4 | 22 | 25 | 26 | 28 | 0/24 | n/a | 1 | 0 | 311.0 | 624 | 624 |
+
+  **Typing — chromium · heavy · 1m · 150 ms between keys (24 keys, 1 run(s) per candidate)**
+
+  | Candidate | first key | key p50 | key p95 | key max | busy p95 | busy max | keys busy ≥ 50 ms | long tasks | renders | while typing | render median | stale: text | stale: settled |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | C1 today | 4 | 1560.9 | 3009 | 3146 | 5269 | 5424 | 24/24 | 8 | 2 | 1 | 1708.4 | 4162 | 6721 |
+  | C1-copy | 7 | 1429.6 | 2320 | 2474 | 2505 | 2655 | 24/24 | 526 | 2 | 1 | 1609.8 | 3680 | 89121 |
+  | C2 deferred | 32 | 1424.1 | 2755 | 2892 | 5139 | 5274 | 24/24 | 9 | 2 | 1 | 1626.0 | 3862 | 6520 |
+  | C3 x2 | 4 | 1584.8 | 3169 | 3321 | 3338 | 3491 | 24/24 | 8 | 2 | 1 | 1596.5 | 4782 | 7240 |
+  | C3 x3 | 5 | 1526.9 | 2658 | 2810 | 2912 | 2992 | 24/24 | 17 | 2 | 1 | 1603.8 | 5871 | 8377 |
+  | C4 trailing 150 ms | 4 | 7.7 | 1957 | 2109 | 4611 | 4766 | 6/24 | 7 | 2 | 1 | 1660.6 | 5827 | 8500 |
+  | C4 trailing 300 ms | 7 | 19.6 | 52 | 66 | 124 | 125 | 10/24 | 26 | 1 | 0 | 1715.0 | 2067 | 4711 |
+
+  **Typing — firefox · heavy · 1m · 150 ms between keys (24 keys, 1 run(s) per candidate)**
+
+  | Candidate | first key | key p50 | key p95 | key max | busy p95 | busy max | keys busy ≥ 50 ms | long tasks | renders | while typing | render median | stale: text | stale: settled |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | C1 today | 420 | 3302.7 | 4737 | 4857 | 25176 | 25309 | 24/24 | n/a | 2 | 1 | 3897.0 | 13644 | 23899 |
+  | C1-copy | 10 | 3181.0 | 4538 | 4686 | 24994 | 25097 | 24/24 | n/a | 2 | 1 | 3914.0 | 13721 | 22471 |
+  | C2 deferred | 29 | 2708.9 | 4040 | 4159 | 24021 | 24120 | 23/24 | n/a | 2 | 1 | 3553.0 | 12694 | 21556 |
+  | C3 x2 | 30 | 4182.4 | 5473 | 5605 | 32982 | 33114 | 24/24 | n/a | 2 | 1 | 4166.0 | 20282 | 30630 |
+  | C3 x3 | 26 | 3027.9 | 4403 | 4532 | 12253 | 12386 | 24/24 | n/a | 2 | 1 | 3878.0 | 16634 | 33483 |
+  | C4 trailing 150 ms | 614 | 3439.7 | 4845 | 4917 | 25717 | 25806 | 22/24 | n/a | 2 | 1 | 3903.0 | 14408 | 25104 |
+  | C4 trailing 300 ms | 424 | 3467.5 | 4861 | 4996 | 25041 | 25169 | 22/24 | n/a | 2 | 1 | 3929.0 | 14356 | 23281 |
+
+  **WHAT THE TABLES SHOW — described, not ranked.**
+  - *Small documents, and prose up to 50 KB (both engines, all three rates).* A render costs
+    2–20 ms. Every candidate keeps keys at the floor (p50 2–7 ms). The cooldown candidates
+    render on essentially every key (24 renders for 24 keys) and the preview is current within
+    ~5–25 ms of the last key. The trailing debounce shows the final text its own interval later
+    (≈ 160–190 ms, ≈ 310–350 ms) and — the starvation the spec names — renders NOTHING while
+    typing whenever the gap between keys is shorter than the interval: C4-300 at every rate
+    measured, C4-150 at 80 ms.
+  - *The first key after a pause (P-2).* Its own latency is at the floor everywhere it could be
+    measured cleanly: the character is in the buffer BEFORE the render it triggers. What C1
+    costs shows in *busy*: on the heavy 50 KB document the main thread stays busy ~75 ms per key
+    on Chromium with the render inside the key (47–48 of 48 keys ≥ 50 ms) against ~20–27 ms
+    with the first render deferred (C2: 1 of 48). On prose 50 KB the same split is ~30 ms
+    against ~19 ms. The next key is what pays, if it arrives inside that window.
+  - *Enhancer-heavy 50 KB — where the engines part.* Chromium: sync 38 ms, quiet 190 ms; at
+    250 and 150 ms between keys every cooldown candidate keeps key p50 at 2–4 ms, and at 80 ms
+    it rises to 17–29 ms with fewer renders (11–16). Firefox: sync 54 ms, quiet 333 ms, and at
+    150 ms between keys the cooldown candidates hold keys for hundreds of milliseconds — C1 p50
+    367, max 888; C1-copy 433; C3 x2 572 — with *busy* in the seconds, while C2 (96) and C3 x3
+    (129) sit lower and C4-300 stays at the floor (4 ms) with one render. At 250 ms Firefox is
+    back near 16–30 ms p50 with long tails (max 316–1,203). The cooldown times the 54 ms
+    synchronous half; the work that holds the keys is the asynchronous half it does not see.
+  - *1 MB prose.* One render is ~310–340 ms on both engines. Cooldown candidates render 4–6
+    times in a 24-key run; keys queue behind them (p95 ≈ 275–320 ms Chromium, 370–690 ms
+    Firefox; median 11–39 ms Chromium, 77–281 ms Firefox). A higher multiplier means fewer
+    renders (6 → 5 → 4) and, on Chromium, a staler preview after the last key (419 → 1,162 →
+    1,467 ms). C4-300 keeps keys at 7–18 ms with one render, 620–660 ms after the last key.
+  - *1 MB enhancer-heavy.* One render is 1.7 s (Chromium) / 3.7 s (Firefox) synchronous, and on
+    Firefox the preview is not quiet for 10–23 s. No candidate keeps typing responsive: key p50
+    is 1.4–1.6 s on Chromium for every cooldown candidate and 2.7–4.2 s on Firefox for EVERY
+    candidate, the trailing debounce included — there the first key alone waits 420–610 ms in
+    three of seven rows, before any render of the run has begun. Only C4-300 on Chromium stays
+    low (p50 20 ms, one render).
+  - *Renders per run.* Wherever a render costs less than the gap between keys, the multiplier
+    changes nothing: a cooldown of 1x, 2x or 3x a 4–38 ms render has expired before the next
+    key. It bites only once render cost × (1 + multiplier) exceeds the key gap.
+  **THE NOISE — read every difference against it.** One machine (13th-gen Core i7-13700, 24
+  threads, 64 GB, Windows 11), headless browsers, the two engines run one after the other with
+  nothing else started. *The control inside the run is C1 against C1-copy — the same mechanism
+  twice.* On small and prose documents the two agree to within a couple of milliseconds. On the
+  heavy 50 KB document on Firefox they do NOT: key p50 367 vs 433 at 150 ms, 266 vs 521 at
+  80 ms, key max 50 vs 1,203 at 250 ms. So on the rows where the candidates differ most, two
+  runs cannot separate two cooldown variants that differ by less than about 2x; the trailing
+  debounce's distance from all of them is far outside that. The 1 MB rows are ONE run each and
+  are an order of magnitude, not a figure. Render tables: the reference document's median moved
+  between 1.5 and 4.9 ms across the Chromium session (floor 1.3–1.8) and 2–6 ms on Firefox —
+  drift of a few milliseconds, small beside every 50 KB and 1 MB figure and comparable to the
+  small-document figures themselves. Firefox's clock resolves 1 ms.
+  **LIMITS, NAMED.**
+  - Production source, not the production build; an http origin, not the extension's; a bare
+    page with no app shell around the reader. Row-to-row comparison on this machine, not a
+    statement about a user's.
+  - *quiet* and *stale: settled* mean "no DOM mutation for 400 ms", capped at 120 s. Work that
+    pauses longer than that and resumes is undercounted — and the heavy 1 MB preview held 207
+    drawn diagrams of 395 when Chromium called it quiet, so that row's *quiet* (≈ its *sync*)
+    is certainly too low. Whether the rest are deferred by design was not looked into.
+  - The heavy 1 MB typing rows start 600 ms after a warm-up render that the same undercount
+    may have cut short: enhancer work left over from BEFORE the run is the likeliest reason
+    every candidate there, the trailing debounce included, is slow from the first key. That is
+    the enhancers' cost (R7), seen but not isolated.
+  - Typing appends at the END of the document; the diagram cache is warm after the first
+    render; no measurement was taken with a watch running, a diff displayed, or at spec §8's
+    10 MB / 50k-line ceiling.
+  - *busy* has a floor of its own and Firefox has no Long Tasks API: "keys busy ≥ 50 ms" is the
+    one long-task measure both engines share.
+  **THE TWO AXES §8-2 ASKS TO HAVE LAID OUT — laid out, not resolved.**
+  - *Fixed vs adaptive.* A fixed trailing interval protects keystrokes on every document
+    measured except the heavy 1 MB one on Firefox, and pays for it on every document — the
+    small ones included — with a preview that waits its interval after the last key and does
+    not move at all while typing is faster than it. The cost-proportional cooldown is current
+    within a render's time on anything up to prose 50 KB, and protects keystrokes only as far
+    as the cost it times is the cost that blocks.
+  - *The large-document cadence.* At 1 MB a single render outlasts several keys on both
+    engines. What that cadence should be, and whether the untimed asynchronous half belongs in
+    whatever times it, is the ruling's.
+  **VERIFY.** `git diff --stat` over `src/` and `entrypoints/` empty. A clean two-engine
+  build: all 139 shipped files md5-identical to 4.4's build on Chromium and on Firefox —
+  `.output` 5,825,744 / 5,825,860 B, content script 342,806 B (`c4f59f1a…` / `ecc31688…`),
+  manifests 654 / 770 B, `permissions: []`. lint 0 (it covers both new scripts) · unit 1412 in
+  11.70 s (11.73 s before) · the browser project still lists 186 files and neither project
+  lists the harness · scanner clean over 80 files · `pnpm audit --prod` EXIT=0 · golden empty.
+  The full browser suite was NOT re-run: nothing it runs changed.
+  **KICKOFF VS FILE, FLAGGED.** (1) `tasks.md` 6.2 asks for render wall-clock across the size
+  corpus, median and floor, A-B-A, with the two axes laid out. The kickoff asked for much more
+  — candidates, keystroke latency, long tasks, staleness, renders per run, two profiles. Both
+  were done; the candidate tables are how the axes are laid out, and everything beyond the
+  render table exceeds the task line and is marked as such here. (2) "A-B-A … interleaved": the
+  reference document brackets every measured one; the measured documents themselves run as
+  blocks, not interleaved sample by sample. Candidates ARE interleaved. (3) Files: tasks.md
+  names "a perf script under `scripts/`" and `package.json`. Three files are under
+  `scripts/` — the driver, its in-page half, and the results file. (4) An idle callback was
+  offered for C2; a 0 ms task was used. (5) p95 over 46 keys (two runs) is close to the
+  maximum; it is printed beside the max for that reason.
+  *Revisit-when:* the human's §8-2 ruling (6.4 applies it and removes the PROVISIONAL marker) ·
+  6.3 (the nested host's cost) · any wish to isolate the enhancers' asynchronous half — the
+  harness times it only by DOM silence.
+
 - **2026-10-09 · M12 TASK 4.4 — LANDED: leaving edit shows the NEWEST text, in one render; the
   reversed observer order measured; the route-2(i) case REBUILT, not retired. One defect and one
   double render were seen and fixed in `appShell.ts`; `watchController.ts` is untouched.**

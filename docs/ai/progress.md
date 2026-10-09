@@ -1,7 +1,10 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 4.4, DISCOVERED (R24) — **leaving edit now shows the NEWEST text: an
+*Updated: 2026-10-09 (task 6.2 — **the live-preview debounce MEASURED across sizes, two content
+profiles, seven candidates and both engines; nothing chosen, no production byte moved — the
+numbers wait on the human's §8-2 ruling**; `decisions.md`'s "M12 TASK 6.2 — LANDED" entry and
+`scripts/perf-edit-preview.results.md`. Before it, task 4.4, DISCOVERED (R24) — **leaving edit now shows the NEWEST text: an
 external change the watch held beats Peekover's own earlier save (it did not — seen and fixed);
 one render in either observer order; the route-2(i) test rebuilt**; `decisions.md`'s "M12 TASK
 4.4 — LANDED" and "M12 RULINGS R24–R25" entries. R25: 6.1's dialog copy APPROVED. Before it,
@@ -17,8 +20,8 @@ Chromium and downloads everywhere else; `PERMISSIONS.md` carries the final signe
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 5.7 and 5.8 landed; 5.5 RULED without its walk
-(R21 — the walk is on 7.1's list); 5.6 struck; 6.1 and the discovered 4.4 landed; **6.2 is next —
-the debounce measurement.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
+(R21 — the walk is on 7.1's list); 5.6 struck; 6.1, the discovered 4.4 and 6.2 landed; **the
+human's §8-2 ruling is next, then 6.3 and 6.4.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
 User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
 **`PERMISSIONS.md` carries SIGNED (a) since 5.3 and the FINAL signed row (b) since 5.4, pinned by
@@ -1423,12 +1426,43 @@ record. R25: 6.1's dialog copy approved; its deviation 2 accepted.
 - **Not covered:** Firefox (no writable watched handle there); whether a user can reach the
   watch control while editing; a real external editor — 7.1.
 
+**M12 task 6.2 DONE, 2026-10-09 — the live-preview debounce measured; NOTHING CHOSEN.**
+`decisions.md`'s "M12 TASK 6.2 — LANDED" entry is the record; every table is in
+`scripts/perf-edit-preview.results.md`.
+- **The harness:** `scripts/perf-edit-preview.ts` + `.page.ts`, `pnpm perf:edit-preview`. It
+  bundles production source (esbuild via `tsx`, like `perf-watch.ts`), serves it on loopback,
+  and drives Chromium and Firefox. Not in any suite. About an hour for everything; `--engine`,
+  `--part`, `--sizes`, `--profiles` cut it up; `-- --report` reprints the tables.
+- **Render wall-clock (one `renderPreview`, median ms, Cr / Fx):** prose small 3.7 / 4.0 · prose
+  50 KB 22 / 20 · prose 1 MB 334 / 309 · heavy small 5.9 / 8 · heavy 50 KB 38 / 54 · heavy 1 MB
+  1,696 / 3,680. The enhancers' asynchronous half (DOM silence): heavy 50 KB 191 / 333; heavy
+  1 MB on Firefox 10–23 s.
+- **Candidates, by real keys at 250 / 150 / 80 ms:** today's cooldown · a copy of it (control) ·
+  first render deferred · multiplier 2, 3 · trailing debounce 150, 300 ms.
+- **What the tables show, unranked:** up to prose 50 KB every candidate keeps keys at the
+  floor, the cooldowns render on every key, and the trailing debounce shows nothing while
+  typing is faster than its interval. With the render inside the key the main thread is busy
+  ~75 ms per key on heavy 50 KB (Chromium) against ~20–27 ms deferred. On heavy 50 KB FIREFOX
+  holds keys for hundreds of ms under the cooldown candidates at 150 ms between keys. At 1 MB
+  a render outlasts several keys; on heavy 1 MB no candidate keeps typing responsive.
+- **Noise:** the two identical candidates differ by up to ~2x on heavy 50 KB on Firefox; 1 MB
+  rows are one run each. One machine, headless.
+- **Limits:** source not build; "settled" means 400 ms of DOM silence and undercounts; typing
+  appends at the end; nothing at the 10 MB ceiling, and nothing under a watch or a diff.
+- **Verify:** zero production diff; 139 shipped files md5-identical on both engines; lint 0;
+  unit 1412 (11.7 s, unchanged); the browser project's 186 files unchanged and not re-run.
+
 ## Up next
 
-**Group 5 is complete; 6.1 and the discovered 4.4 landed. 27 tasks.**
-**NEXT — M12 task 6.2, the debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from
-choosing.** `tasks.md` 6.2 is the line: preview re-render wall-clock over a size corpus, median
-and floor, A-B-A against a same-session control. Its numbers go to the human's §8-2 ruling.
+**Group 5 is complete; 6.1, the discovered 4.4 and 6.2 landed. 27 tasks.**
+**NEXT — THE HUMAN's spec §8-2 RULING: the preview's debounce — a mechanism and a value, from
+6.2's tables.** Until it is given, `PREVIEW_COOLDOWN_MULTIPLIER` stays 1, PROVISIONAL. Then, per
+`tasks.md`'s order: **6.3** (the nested-host cost and never-entered first paint — it does not
+wait on the ruling) and **6.4** (apply the ruling; remove the provisional constant).
+- **For the ruling, 6.2 raises three things it could not settle:** whether the first render
+  belongs inside the keystroke (P-2); whether whatever times the cooldown should see the
+  enhancers' asynchronous half (R7) — on Firefox it is what holds the keys; and what a 1 MB
+  document's cadence is.
 - **Owed to the human, not blocking 6.2:** a word on the REBUILT route-2(i) case (R24(iii) ruled
   it retired unless a meaningful form existed; one did); the 5.5 walk, on 7.1's list.
 - **The browser suite takes about 395 s** alone.
@@ -1438,6 +1472,12 @@ script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
 `ecc31688b4f49167502a39edca7b9e51` (Fx) — unmoved since 4.3 · the app chunk 528,322 B (+121) · manifest
 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1412 · browser 1933 / 51 skipped
 (zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 6.2:**
+- **`perf-edit-preview.page.ts` holds the candidate schedulers** — a ruled mechanism can be
+  checked there before 6.4 writes it into `editorView.ts`.
+- **Keys are sent on a timer and never awaited in sequence;** an awaited loop slows the typist
+  whenever the page is busy and hides the wait.
+- **A message-channel "main thread free" stamp has a floor of its own** (~19 ms Chromium).
 **Carried inputs, from 4.4:**
 - **Two observers on one host run in creation order, and a microtask queued from one runs after
   all of them** — which is how the shell decides last without knowing who was first.

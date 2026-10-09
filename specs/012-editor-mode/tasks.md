@@ -1179,7 +1179,7 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       from the Discard click; a real desktop drop over a dirty edit; the dialog's look and its
       screen-reader announcement.
 
-- [ ] **6.2 The debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from choosing.** Preview
+- [x] **6.2 The debounce-interval measurement (spec §8-2; D-5). FORBIDDEN from choosing.** Preview
       re-render wall-clock across a document-size corpus mirroring `perf-watch.ts`'s 50 KB / 1 MB shape
       plus a typical small document; median AND floor; A-B-A against a same-session control, interleaved,
       quiesced.
@@ -1190,6 +1190,24 @@ three surfaces; `permissions: []` re-proven; the ledger carries the human-signed
       picked, no production constant changes in this diff.** The numbers go to the human for the §8-2
       ruling. Content-script bytes md5-identical. Golden EMPTY · manifest **654 / 770 B** ·
       `permissions: []`. [D-5; §8-2]
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 6.2 — LANDED") — NO VALUE AND NO
+      MECHANISM IS CHOSEN.* **(i) The script:** `scripts/perf-edit-preview.ts` + its in-page half
+      `perf-edit-preview.page.ts`, COMMITTED and reusable; `pnpm perf:edit-preview` (the one
+      `package.json` change); not in any suite. The whole output is committed beside them as
+      `scripts/perf-edit-preview.results.md`. **(ii) The render table** (ms, median / floor,
+      one `renderPreview`): prose small 3.7 / 1.6 (Cr), 4.0 / 1.0 (Fx) · prose 50 KB 21.7 / 18.4,
+      20 / 15 · prose 1 MB 334 / 331, 309 / 301 · enhancer-heavy small 5.9 / 2.7, 8 / 4 · heavy
+      50 KB 38.3 / 33.6, 54 / 47 · heavy 1 MB 1,696 / 1,617, 3,680 / 3,490. The enhancers'
+      asynchronous half, timed by DOM silence: heavy 50 KB 191 (Cr) / 333 (Fx); heavy 1 MB on
+      Firefox 10–23 s. A reference document brackets every measured one (A-B-A). **(iii) BEYOND
+      THIS LINE, by the kickoff:** seven candidate schedulers (today's cooldown, a copy of it as
+      the control, the first render deferred, multiplier 2 and 3, a trailing debounce of 150 and
+      300 ms) driven by real keys at 250 / 150 / 80 ms, on both profiles, sizes and engines —
+      keystroke latency, main-thread busy time, renders per run, staleness. That is how the
+      fixed-vs-adaptive axis and the large-document cadence are laid out. **(iv) Noise, stated:**
+      the two identical candidates differ by up to ~2x on the heavy 50 KB document on Firefox;
+      the 1 MB typing rows are one run each. **(v)** Zero production diff: all 139 shipped files
+      md5-identical on both engines; `PREVIEW_COOLDOWN_MULTIPLIER` is still 1 and PROVISIONAL.
 
 - [ ] **6.3 ★ The nested-host cost measurement, and first paint with edit mode never entered (D-4; plan §4
       risk 3). FORBIDDEN from choosing.** First-paint and memory delta of the nested preview shadow root
