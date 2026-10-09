@@ -88,6 +88,8 @@
 // filter, so a leak to ANY host would land in them.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { userEvent, cdp } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
@@ -178,7 +180,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** Entry names recorded for ONE probe token — the CONTROL's reading, scoped so a control can never
@@ -551,6 +553,7 @@ describe('3.11 · row 22 — sort → filter → copy put NOTHING on the wire', 
         announced,
         'the copy did not complete — a zero over a refused write measures less than the copy',
       ).toBe('Copied 2 rows as CSV.');
+      await wireSettled();
       await assertNoNetwork('copy');
 
       // ★ AND THE PROBE IS STILL LIVE. Without this, a probe that went blind midway through the
@@ -658,6 +661,7 @@ describe('3.11 · row 22 — every action, each measured against a probe armed j
       for (const leg of LEGS) {
         await armTheProbe(); // fires both lanes, then hands back a clean buffer
         await leg.run(table);
+        await wireSettled();
         await assertNoNetwork(leg.label);
       }
 

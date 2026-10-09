@@ -58,6 +58,8 @@
 // hand, under the same armed probe, rather than driving a control that does not exist.
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { userEvent, cdp } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
@@ -116,7 +118,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 function probeUrls(token: string): string[] {
@@ -402,6 +404,7 @@ describe('4.4 · row 22 — the code-block pipeline puts NOTHING on the wire', (
 
       // ── COLLAPSE (pre-built directly — 6.1 has not landed the control) ──────────────────────
       preBuildCollapsedState(shadow);
+      await wireSettled();
       await assertNoNetwork('collapse');
 
       // ★ AND THE PROBE IS STILL LIVE — without this, a probe gone blind mid-run would report a
@@ -434,16 +437,19 @@ describe('4.4 · row 22 — every stage, each measured against a probe armed jus
         wrapper?.getAttribute(CODE_STATE_ATTR),
         'the fence never reached a terminal state — this leg would measure a broken path',
       ).toBe('rendered');
+      await wireSettled();
       await assertNoNetwork('engine-load + tokenize + theme-select');
 
       // COPY — armed fresh, moments before the click.
       await armTheProbe();
       expect(await copyAndSettle(shadow)).toBe('Code block 1 copied.');
+      await wireSettled();
       await assertNoNetwork('copy');
 
       // COLLAPSE — armed fresh, moments before the direct attribute set.
       await armTheProbe();
       preBuildCollapsedState(shadow);
+      await wireSettled();
       await assertNoNetwork('collapse');
 
       // The probe outlived every leg.

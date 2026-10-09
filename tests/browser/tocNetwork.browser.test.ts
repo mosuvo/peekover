@@ -36,6 +36,8 @@
 // internet — but http(s) still classifies as an on-wire entry exactly as a CDN URL would.
 
 import { describe, it, expect, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
@@ -58,7 +60,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** Flush and assert NOTHING new hit the wire — the buffer was cleared before the measured
@@ -272,7 +274,7 @@ describe('TOC zero-network guard — no TOC action touches the wire (task 4.1, b
     await exerciseEveryTocAction(host, host, assertNoNetwork);
 
     // FINAL cumulative zero, then a closing control proving the observer stayed live all along.
-    await flush();
+    await wireSettled();
     expect(networkedUrls(), 'cumulative: no TOC action put a byte on the wire').toEqual([]);
     await controlFetchRegisters();
   });
@@ -304,7 +306,7 @@ describe('TOC zero-network guard — no TOC action touches the wire (task 4.1, b
 
     await exerciseEveryTocAction(host, scroller, assertNoNetwork);
 
-    await flush();
+    await wireSettled();
     expect(networkedUrls(), 'cumulative: no TOC action put a byte on the wire').toEqual([]);
     await controlFetchRegisters();
   });

@@ -72,6 +72,8 @@
 // fired again to prove the observer stayed live through the entire run.
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { userEvent, commands, cdp } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
@@ -178,7 +180,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 function probeUrls(token: string): string[] {
@@ -355,7 +357,7 @@ describe('9.2 — zero network across every export/copy/print action, against an
 
     // CUMULATIVE — the buffer was never re-cleared since armTheProbe's own final clear, so this
     // also re-reads every action above.
-    await flush();
+    await wireSettled();
     expect(
       networkedUrls(),
       'cumulative: some export/copy/print action put a byte on the wire',

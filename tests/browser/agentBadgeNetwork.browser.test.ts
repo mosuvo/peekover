@@ -58,6 +58,8 @@
 // the verbatim predicate rather than a token filter so a leak to ANY host would land in them.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { mount } from '../../src/render/mount';
 import { runReader, removeHideStyle } from '../../src/render/runReader';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
@@ -110,7 +112,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** Entry names recorded for one probe token — the CONTROL's reading, scoped so a control can never
@@ -425,7 +427,7 @@ describe.each(SURFACES)(
       await assertNoNetwork('re-render');
 
       // CUMULATIVE — the buffer was never re-cleared, so this also re-reads every step above.
-      await flush();
+      await wireSettled();
       expect(
         networkedUrls(),
         'cumulative: some step of the badge lifecycle put a byte on the wire',
@@ -470,6 +472,7 @@ describe('the seam in isolation — recognize + build touches nothing, for every
     }
     expect(host.children).toHaveLength(AGENT_FILE_NAMES.size);
 
+    await wireSettled();
     await assertNoNetwork('register → recognize → build → commit, all five names');
 
     // The probe stayed live across the whole sweep.

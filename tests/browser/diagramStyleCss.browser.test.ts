@@ -43,6 +43,8 @@
 // property under test.
 
 import { describe, it, expect, beforeEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { wireSettled } from './helpers/diagramWindow';
 import DOMPurify from 'dompurify';
 import mermaid from 'mermaid';
 import type { MermaidConfig } from 'mermaid';
@@ -257,7 +259,7 @@ describe('the CSS pass — an adopted <style> carries no external reference (D-1
       );
       expect(
         await adopting(out, async () => {
-          await flush();
+          await wireSettled();
           return fetchedUrls(token);
         }),
         'the adopted artifact FETCHED — the pass misses this lane and the hole is live',
@@ -314,7 +316,7 @@ describe('the CSS pass — an adopted <style> carries no external reference (D-1
     expect(css, `the @import SURVIVED the pass: ${css}`).not.toContain('@import');
     expect(
       await adopting(out, async () => {
-        await flush();
+        await wireSettled();
         return fetchedUrls(token);
       }),
       'the adopted artifact FETCHED an @import — the at-rule lane is still open',
@@ -364,7 +366,7 @@ describe('the CSS pass — an adopted <style> carries no external reference (D-1
     expect(css, `the bare-string image-set SURVIVED the pass: ${css}`).not.toContain(url);
     expect(
       await adopting(out, async () => {
-        await flush();
+        await wireSettled();
         return fetchedUrls(token);
       }),
       'the adopted artifact FETCHED an image-set string',
@@ -426,7 +428,7 @@ describe('the CSS pass — an adopted <style> carries no external reference (D-1
     expect(after, 'the pass introduced an external reference').not.toMatch(/url\((?!#)/i);
     expect(
       await adopting(out, async () => {
-        await flush();
+        await wireSettled();
         return performance.getEntriesByType('resource').map((e) => e.name).filter((n) => n.includes(token));
       }),
       'the adopted real diagram fetched something',

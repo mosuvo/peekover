@@ -77,7 +77,68 @@ export function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
+}
+
+// ── Reading a ZERO only once the wire has settled (012 task 5.8) ──────────────────────────
+//
+// ★ Resource Timing records a request when it ENDS, not when it starts. A request still in flight
+// is not in the buffer, so a zero read after {@link flush} alone says only that nothing has
+// FINISHED. Measured at 012 task 5.7 and again, per file, at 5.8: a deliberately slow off-origin
+// request issued inside the measured window left every guard file green.
+//
+// {@link wireSettled} closes that. It issues one more request — the SENTINEL — to the off-origin
+// loopback, and resolves only when that request is itself in the buffer. Anything the window
+// issued to that destination BEFORE the sentinel has by then had at least as long to finish, so a
+// zero read after it is a reading of what was issued, not of what happened to be done.
+//
+// What it does NOT prove, stated so it is not over-read: a request to a host slower than the
+// sentinel's own failure (a black-holed address that takes a minute to time out) can still
+// outlast it. The sentinel is a calibrated wait, not an unbounded one.
+//
+// The sentinel is itself an http(s) entry, so every whole-buffer reading filters it out with
+// {@link isSentinel}. It is on the loopback like every probe here: nothing leaves the machine.
+
+const SENTINEL_SEGMENT = '/__peekover_sentinel__/';
+let sentinelSeq = 0;
+
+/** True for a {@link wireSettled} sentinel's own entry — never a request of the code under test. */
+export function isSentinel(name: string): boolean {
+  return name.includes(SENTINEL_SEGMENT);
+}
+
+/**
+ * Resolve once a request issued NOW has landed in the Resource Timing buffer. Call it after the
+ * measured work and before reading a zero; filter the reading with {@link isSentinel}.
+ *
+ * Throws if the sentinel never reaches the buffer: the buffer is then full or the observer blind,
+ * and a zero read from it would be the vacuous green this exists to prevent.
+ */
+export async function wireSettled(): Promise<void> {
+  await flush();
+  sentinelSeq += 1;
+  const url = offOriginProbeUrl(
+    `${SENTINEL_SEGMENT}${sentinelSeq}-${Math.trunc(performance.now())}.txt`,
+  );
+  void fetch(url, { mode: 'no-cors' }).catch(() => undefined);
+  const landed = (): boolean =>
+    performance.getEntriesByType('resource').some((entry) => entry.name === url);
+  const deadline = performance.now() + 20_000;
+  while (!landed() && performance.now() < deadline) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
+  }
+  if (!landed()) {
+    throw new Error(
+      'the wire sentinel never reached the Resource Timing buffer — the buffer is full or the ' +
+        'observer is blind, so a zero read here would be vacuous',
+    );
+  }
+  // One more flush, and it is load-bearing. Two requests to the same refused destination can fail
+  // in the same instant, and the engine may then record the LATER one first: measured on Firefox,
+  // a leak issued 200 ms before the sentinel was still missing when the sentinel appeared, about
+  // one run in two. The sentinel landing says the earlier request has ended; this lets its entry
+  // be written.
+  await flush();
 }
 
 /**
@@ -157,7 +218,7 @@ export function networkedInWindow(w: MeasureWindow): string[] {
     .getEntriesByType('resource')
     .filter((entry) => entry.startTime >= w.open! && entry.startTime <= end)
     .map((entry) => entry.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** The OFF-ORIGIN entries inside the window — 3.3's claim reads exactly this list. */
@@ -260,7 +321,9 @@ export async function renderAndBracket(
   try {
     const shadow = await appPageReader(markdown);
     await settleDiagrams(shadow);
-    await flush();
+    // Not a bare flush (5.8): every caller reads a zero off this window, so the wire is settled
+    // here, once, and every file that brackets a render inherits it.
+    await wireSettled();
     return { shadow, window: watch.window };
   } finally {
     watch.stop();
@@ -306,10 +369,28 @@ export async function resetBetweenReadings(): Promise<void> {
  * Observed on both engines. That is precisely why 3.3's claim is scoped to OFF-ORIGIN rather than to
  * a bare emptiness: a whole-buffer `toEqual([])` would be measuring which diagram type the warm-up
  * happened to use, not whether anything left our origin.
+ *
+ * ★ THE WARM-UP RENDERS A SOURCE NO EARLIER RENDER HAS USED (012 task 5.8). The reader keeps an
+ * on-device diagram cache keyed by a hash of the diagram source, in IndexedDB — and IndexedDB,
+ * unlike the module graph, SURVIVES from one test file to the next in a run. A cache hit skips
+ * `engine.render` altogether (`diagramEnhancer.ts`), and with it mermaid's lazy load of the
+ * diagram type's definition. So when an earlier file had already rendered {@link BENIGN_DOC}, this
+ * warm-up loaded mermaid's core, was served the stored SVG, and warmed NOTHING else: measured in
+ * the `diagramNetwork` → `diagramSourceGuard` order, 20 requests and no flowchart definition,
+ * against 32 with it when run first. The first uncached `graph TD` in a test then pulled the
+ * twelve flowchart chunks inside its own window. A label unique to this call makes the warm-up a
+ * cache MISS every time, which is the only way it does what its name says.
  */
 export async function warmEngine(): Promise<string[]> {
   performance.clearResourceTimings();
-  const { shadow } = await renderAndBracket(BENIGN_DOC);
+  const uncached = BENIGN_DOC.replace(
+    'A[Alpha]',
+    `A[Warm ${Date.now().toString(36)}${Math.trunc(performance.now())}]`,
+  );
+  expect(uncached, 'the warm-up document is BENIGN_DOC unchanged — it may be a cache hit').not.toBe(
+    BENIGN_DOC,
+  );
+  const { shadow } = await renderAndBracket(uncached);
   // The warm-up must itself have SUCCEEDED, or every later arm is measuring a broken path.
   expect(
     shadow.querySelector(`figure.${DIAGRAM_FIGURE_CLASS} svg`),

@@ -1026,6 +1026,53 @@ write beside a ledger that says "cannot write".*
       text; SIGNED (a) and (b) are byte-exact (the ledger test, unchanged). Every shipped file is
       md5-identical to a build at `644b63b`, both engines.
 
+- [x] **5.8 ★ DISCOVERED 2026-10-09 (R22) — test hardening: every network guard reads its zero only
+      after a later request has landed; `PERMISSIONS.md`'s zero-network section says four surfaces;
+      two shared-state reds closed.** Runs AFTER 5.7 and BEFORE 6.1. Test and records only.
+      (i) Apply 5.7's instrument fix to every zero-reading network guard, ideally once in the shared
+      helper; red-first per file with a deliberately slow off-origin leak — green before (the blind
+      spot), red after — on each engine the file runs on; per-file wall-clock recorded.
+      (ii) `PERMISSIONS.md`: 5.7's drafted paragraph is replaced by the REVIEWED sentence, as a
+      fourth bullet; the surface count and the closing line made true. Not signed positioning text;
+      no ledger pin.
+      (iii) `diagramSourceGuard`'s PER-FENCE red: find the cause, then decide by what the test
+      claims — re-spell an over-broad assertion, or keep the strictness and fix the shared state.
+      (iv) `mathNetwork`'s Firefox shared-state red: find the cause; fix it test-side only, without
+      weakening the off-origin claim.
+      Files: `tests/browser/helpers/diagramWindow.ts` · the zero-reading browser test files ·
+      `docs/trust/PERMISSIONS.md` (the zero-network section only)
+      Verify: (**real engine, Cr+Fx**) the slow leak green before and red after, per file, per
+      engine; both known failing orders green; the full browser suite, run alone; unit; lint;
+      `tests/permissionsLedger.test.ts` green and UNEDITED; every shipped file md5-identical to
+      `3a4bcd2`'s build; golden EMPTY · manifest **654 / 770 B** · `permissions: []`. [R22]
+      ★ *Post-landing, 2026-10-09 (`decisions.md`, "M12 TASK 5.8 — LANDED"):* **(i)** NINETEEN
+      files read a network zero off Resource Timing besides `editorNetwork` — not the five the
+      kickoff named. `helpers/diagramWindow.ts` gains `wireSettled()` (issue an off-origin loopback
+      sentinel, resolve when it is in the buffer, then one more flush) and `isSentinel()`;
+      `renderAndBracket` settles itself, so the three files that bracket through it inherit the fix
+      untouched; the other sixteen import it and settle at the LAST read of each buffer epoch.
+      Slow leak, each file ALONE: green in all 19 before, red in all 19 after, on both engines.
+      **Two findings on the way:** on Chromium a refused request can fail in ~30 ms when it rides
+      an earlier attempt, so the leak is only reliably slow when a file runs alone; and on Firefox
+      two requests to one refused destination can be recorded later-one-first — hence the trailing
+      flush (without it two files stayed green on Firefox about one run in two). **Cost:** test
+      time across the 19 files 74.5 → 342.7 s both engines; the full browser suite 227 → ~375 s
+      wall. **(ii)** landed exactly; the ledger test unedited, 9 of 9. **(iii)** CAUSE: the
+      warm-up render was a diagram-cache HIT — IndexedDB survives from file to file — so it skipped
+      `engine.render` and never loaded the flowchart definition; the test's own first uncached
+      `graph TD` then loaded it inside the window. The test's zero is over SAME-ORIGIN probes, so
+      off-origin would have gutted it: the strictness is KEPT and `warmEngine` now renders a
+      source no earlier render used. No assertion edited. **(iv)** CAUSE: NOT
+      `registerMathFont()`'s idempotence — `document.fonts` holds no math face when the file
+      starts. Firefox serves a font it already holds with no request and no Resource Timing entry.
+      ONE assertion RE-SPELLED, named in the file: "a font request was seen in this window"
+      measured whether the browser's cache was cold. It is now: the face is LOADED (new, both
+      engines; red on both when registration is ablated), a font request is REQUIRED on Chromium
+      as before, and any request seen is same-origin. The off-origin claim is untouched.
+      **Verify:** both failing orders green; full browser suite 184 files, 1845 / 43 — one run with
+      one red in an untouched file (`copyAsHtml`, the shared OS clipboard; 14/14 alone), a second
+      run with none; unit 1372; all 278 shipped files md5-identical.
+
 *Not a task — the OPTIONAL metadata-reliability probe (plan §7).* Nothing ships waiting on it; it is not
 scheduled here. If a later session runs it, it may at most promote metadata to a pre-check that falls
 through to 5.2's compare.
@@ -1270,6 +1317,8 @@ position; it reorders none of the three constraints.*
 ★ *2026-10-09 (`decisions.md`, "M12 RULING R21"): **5.5 is ruled without its walk and 5.6 is
 struck**, so group 5 ends at 5.7 and **6.1 follows 5.7**. The walk 5.5 named moves to 7.1. It
 reorders none of the three constraints: 5.7 still follows 4.1–4.3.*
+★ *2026-10-09 (`decisions.md`, "M12 RULING R22"): the discovered **5.8** (network-guard hardening)
+runs AFTER 5.7 and BEFORE 6.1. Test-only; it reorders none of the three constraints.*
 
 **Count proposed for gate 3: SEVEN groups, 22 tasks** — 1 (1) · 2 (2) · 3 (3) · 4 (2) · 5 (7) · 6 (4) ·
 7 (3). Three are human gates (5.1, 5.5, 7.1); two are contingent on a ruling's content (5.6, 6.4); 5.5 is
@@ -1287,6 +1336,9 @@ human-ruled and human-scheduled between 5.4 and 5.5, `decisions.md` "M12 RULINGS
 ★ *2026-10-09: **25 tasks** — group 5 is (6) with 5.6 STRUCK by human ruling R21 (`decisions.md`, "M12
 RULING R21"): 1 (3) · 2 (2) · 3 (4) · 4 (3) · 5 (6) · 6 (4) · 7 (3). One human gate remains (7.1;
 5.1 is signed and 5.5 is ruled); one task is still contingent on a ruling's content (6.4).*
+★ *2026-10-09: **26 tasks** — group 5 is (7) with the discovered 5.8 (network-guard hardening),
+human-ruled and human-scheduled between 5.7 and 6.1, `decisions.md` "M12 RULING R22": 1 (3) · 2 (2)
+· 3 (4) · 4 (3) · 5 (7) · 6 (4) · 7 (3).*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

@@ -261,6 +261,10 @@ async function claimThenControl(w: NetWindow, surface: HTMLElement, label: strin
   ) {
     await new Promise<void>((r) => setTimeout(r, 25));
   }
+  // One more flush (5.8): two requests to the same refused destination can fail in the same
+  // instant and be recorded later-one-first — `wireSettled` in helpers/diagramWindow.ts has the
+  // measurement. The control landing says an earlier request has ended; this lets it be written.
+  await flush();
   const after = leftOrigin(w);
   record(
     `${label}: same-origin requests in window=${sameOrigin}; left origin=${left.length}; ` +

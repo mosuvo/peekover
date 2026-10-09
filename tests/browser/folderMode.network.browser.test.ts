@@ -28,6 +28,8 @@
 // runs on both engines unconditionally.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { folderSourceFromHandle } from '../../src/app/chromiumFolderSource';
 import { mount } from '../../src/render/mount';
 import {
@@ -53,7 +55,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** A same-origin, absolute, http(s) URL → classifyMediaUrl() returns 'remote' → BLOCKED. */
@@ -168,7 +170,7 @@ describe('folder mode — real-engine zero-network guard (bytes on the wire)', (
     mount(await file.read(), host);
     expect(host.shadowRoot?.querySelector('h1')?.textContent).toContain('Index heading');
 
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: not one http(s) request hit the wire across the whole folder path.
     expect(networkedUrls()).toEqual([]);
@@ -190,7 +192,7 @@ describe('folder mode — real-engine zero-network guard (bytes on the wire)', (
     const markdown = `# Doc from a folder\n\n![a](${urls[0]})\n\n![b](${urls[1]})`;
 
     mount(markdown, host);
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: neither image was fetched — zero bytes on the wire for the folder file.
     const fetched = performance

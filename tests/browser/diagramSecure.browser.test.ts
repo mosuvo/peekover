@@ -45,6 +45,8 @@
 // render is the only window, which is what makes "0 requests" attributable to the config.
 
 import { describe, it, expect, beforeEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { wireSettled } from './helpers/diagramWindow';
 import mermaid from 'mermaid';
 import type { MermaidConfig } from 'mermaid';
 import { DIAGRAM_ENGINE_CONFIG } from '../../src/render/diagramEngine';
@@ -105,19 +107,6 @@ function fetchedUrls(token: string): string[] {
     .getEntriesByType('resource')
     .map((e) => e.name)
     .filter((name) => name.includes(`/__peekover_probe__/${token}/`));
-}
-
-/**
- * A macrotask + rAF + settle. Long enough that a request fired during render has reached the
- * Resource-Timing buffer (a same-origin 404 resolves fast). Sound for the ZERO direction: if
- * no request fired, no wait length changes the answer.
- */
-function flush(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      requestAnimationFrame(() => setTimeout(resolve, 60));
-    }, 120);
-  });
 }
 
 /**
@@ -206,7 +195,7 @@ describe('D-6 — the hardened `secure` list closes the directive-injection fetc
       HARDENED_CONFIG,
       diagram(`%%{init:{"themeCSS":".node rect{background-image:url(${url})}"}}%%`),
     );
-    await flush();
+    await wireSettled();
 
     expect(svg, 'the themeCSS payload still reaches the generated <style>').not.toContain(url);
     expect(
@@ -241,7 +230,7 @@ describe('D-6 — the hardened `secure` list closes the directive-injection fetc
       HARDENED_CONFIG,
       diagram(`%%{init:{"fontFamily":"serif; background-image: url(${url})"}}%%`),
     );
-    await flush();
+    await wireSettled();
 
     expect(svg, 'the fontFamily payload still reaches the generated <style>').not.toContain(url);
     expect(
@@ -262,7 +251,7 @@ describe('D-6 — the hardened `secure` list closes the directive-injection fetc
         `%%{init:{"secure":[],"themeCSS":".node rect{background-image:url(${url})}"}}%%`,
       ),
     );
-    await flush();
+    await wireSettled();
 
     expect(svg, 'a directive re-widened `secure` — the hardening is bypassable').not.toContain(
       url,

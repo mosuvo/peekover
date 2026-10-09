@@ -198,7 +198,7 @@ here changes `permissions: []`.
 
 `permissions: []` means the manifest requests no network capability — no `host_permissions`,
 `webRequest`, or any fetch-granting permission. That is the manifest promise; the proof that Peekover
-honors it is **behavioral**, on three surfaces:
+honors it is **behavioral**, on four surfaces:
 
 - **The reader** blocks remote resources by default: `src/render/mediaPolicy.ts` neutralizes remote
   media before it can load, and `tests/browser/remoteMedia.browser.test.ts` asserts at the request
@@ -221,14 +221,11 @@ honors it is **behavioral**, on three surfaces:
   with no network indicator. Watching is out of scope on network-loaded documents entirely, and the
   reader says so rather than offering a control that cannot work.
 
-So the manifest requests no network capability, and the reader, folder mode and watch mode are all
-**tested to make none**.
+- **The edit save-back path** — opening the editor, the live preview, and Save, including its
+  download fallback — makes **no network request** either.
+  `tests/browser/editorNetwork.browser.test.ts` checks this in real Chromium and Firefox (the write
+  itself on Chromium, the only engine that can write a file), and shows the check can see a request
+  by placing a deliberate remote reference in the same view.
 
-**The edit save-back path** — entering edit, the live preview, and Save, including its download
-fallback — makes **no network request**: `tests/browser/editorNetwork.browser.test.ts` asserts, on
-the Resource Timing buffer and on the page's own network calls in real Chromium and Firefox (the
-write to the file on Chromium, the only engine with a file handle to write through), that nothing
-leaves the page's origin while the editor loads, while a document with diagrams, math, code and a
-table is typed into and re-previewed, or while a save writes, is refused or becomes a download —
-and, non-vacuously, that a remote reference deliberately placed in the same view **does** register
-in the same test.
+So the manifest requests no network capability, and the reader, folder mode, watch mode and edit
+save-back are all **tested to make none**.

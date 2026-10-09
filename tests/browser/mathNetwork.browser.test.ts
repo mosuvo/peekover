@@ -40,8 +40,11 @@
 // injection below is what ships, and it exercises the identical predicate that ablation exercised.)
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { createReaderPane } from '../../src/app/readerPane';
 import { MATH_FIGURE_CLASS, MATH_STATE_ATTR } from '../../src/render/mathView';
+import { MATH_FONT_FAMILY } from '../../src/theme/mathFont';
 
 const FIGURE_SELECTOR = `figure.${MATH_FIGURE_CLASS}`;
 
@@ -54,7 +57,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** True when `name` left this page's own origin. */
@@ -128,16 +131,16 @@ afterEach(() => {
 describe('4.3-R — zero OFF-ORIGIN network for the real block/fence math path (§3.7, D-4-R)', () => {
   // ★ Both claims below share ONE render. `registerMathFont()` is idempotent (`mathFont.ts`'s own
   // module-level `registered` flag): only the FIRST math render in this file's own module instance
-  // ever puts the font asset on the wire at all — Firefox in particular appears to serve a second
-  // `FontFace` construction against the same URL from its in-process font cache without emitting a
-  // second Resource Timing entry (observed while drafting this file: a second, `resetMathFontForTest`
-  // -reset render read zero font requests on Firefox even though the SAME-ORIGIN reading was
-  // otherwise correct). Reading the font's own URL out of THIS window — the guaranteed-cold one —
-  // avoids relying on a cache behaviour this file has no need to depend on.
+  // ever registers the font. Whether that render puts the font ON THE WIRE is the browser's call,
+  // not this file's: Firefox serves a font it already holds without a request and without a
+  // Resource Timing entry — within a file (a `resetMathFontForTest`-reset second render read zero
+  // font requests while drafting this) AND across files in one run (012 task 5.8: this file's first
+  // render after `editorNetwork` had fetched the same URL). So this window is the first REGISTRATION,
+  // never a guaranteed-cold FETCH, and the font assertions below are spelled for that.
   it('★ import -> render -> sanitize -> adopt -> font-registration issues ZERO off-origin requests, and the font itself resolves SAME-ORIGIN', async () => {
     const shadow = await appPageReader('$$x^2$$\n');
     await settleMath(shadow, 1);
-    await flush();
+    await wireSettled();
 
     // NON-VACUITY, axis 1: the render genuinely succeeded — a broken/no-op path would trivially
     // pass the zero-request claim below for the wrong reason.
@@ -157,14 +160,40 @@ describe('4.3-R — zero OFF-ORIGIN network for the real block/fence math path (
     ).toBeGreaterThan(0);
 
     // NON-VACUITY, axis 3 (D-13, belt-and-suspenders on the URL-loaded font form): the bundled
-    // asset really was fetched, by its committed name (`mathFont.ts`'s own import path), and it
-    // resolved SAME-ORIGIN.
-    const fontRequests = seen.filter((u) => /stix-two-math-subset/i.test(u));
+    // asset really ARRIVED, and whatever of its fetch can be seen resolved SAME-ORIGIN.
+    //
+    // ★ RE-SPELLED at 012 task 5.8 — this was `expect(fontRequests.length).toBeGreaterThan(0)`, "the
+    // STIX Two Math subset was never fetched in this window". That measured the wrong property: not
+    // whether the font is same-origin, but whether the BROWSER'S FONT CACHE WAS COLD. Measured in
+    // the failing order (`editorNetwork` → this file, Firefox): before the render `document.fonts`
+    // held no Peekover Math face at all — so nothing of `registerMathFont()`'s idempotence had
+    // survived from the earlier file, the hypothesis this red was carried under — and after it the
+    // face was `loaded` with NO Resource Timing entry for it. Firefox had kept the font from the
+    // earlier file's fetch of the same URL and served it without a request. (Chromium records an
+    // entry either way: transferSize 300 revalidated, 86,908 cold.)
+    //
+    // So the property is asked in the two parts that are actually observable:
+    //   (a) the face this render registered is LOADED — the URL-loaded form was exercised and the
+    //       bytes arrived. New, and stricter than a request count: a fetch that 404s also counts.
+    //   (b) a font request is in this window — REQUIRED on Chromium, exactly as before; on Firefox
+    //       its absence is allowed, because a cached font makes none. Any that is here must be
+    //       same-origin, unchanged.
+    // The off-origin claim below is untouched, and is what a remote font would trip.
+    const faces = [...document.fonts].filter((face) => face.family.includes(MATH_FONT_FAMILY));
+    expect(faces.length, 'no Peekover Math face was registered — the font path did not run').toBeGreaterThan(0);
+    await Promise.all(faces.map((face) => face.loaded.catch(() => undefined)));
     expect(
-      fontRequests.length,
-      'the STIX Two Math subset was never fetched in this window — either it failed to register or ' +
-        'this test is not exercising the URL-loaded form 4.2-R shipped',
-    ).toBeGreaterThan(0);
+      faces.map((face) => face.status),
+      'the math font was registered but did not LOAD — its bytes never arrived',
+    ).toEqual(faces.map(() => 'loaded'));
+    const fontRequests = seen.filter((u) => /stix-two-math-subset/i.test(u));
+    if (!navigator.userAgent.includes('Firefox')) {
+      expect(
+        fontRequests.length,
+        'the STIX Two Math subset was never fetched in this window — either it failed to register or ' +
+          'this test is not exercising the URL-loaded form 4.2-R shipped',
+      ).toBeGreaterThan(0);
+    }
     for (const url of fontRequests) {
       expect(isOffOrigin(url), `the font asset resolved OFF-ORIGIN: ${url}`).toBe(false);
     }
@@ -217,7 +246,7 @@ describe('COLD LOAD — the engine/font import fetched only our own package', ()
   it('a first-ever math render in this window touches nothing off-origin', async () => {
     const shadow = await appPageReader('$$z^2$$\n');
     await settleMath(shadow, 1);
-    await flush();
+    await wireSettled();
     expect(networkedUrls().filter(isOffOrigin)).toEqual([]);
   }, 30_000);
 });

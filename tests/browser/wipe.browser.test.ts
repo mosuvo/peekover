@@ -28,6 +28,8 @@
 //      slice the plan sequences into group 2.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import {
   putFolder,
   putRecent,
@@ -185,14 +187,14 @@ describe('trust controls — real-engine wipe + describe + zero-network', () => 
     await getPins();
     await describeStored();
     await wipeAll();
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: not one http(s) request hit the wire for any storage op. (OPFS +
     // IndexedDB are on-device; a handle `put` is structured clone, not a fetch.)
     const networked = performance
       .getEntriesByType('resource')
       .map((e) => e.name)
-      .filter((name) => /^https?:/i.test(name));
+      .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
     expect(networked).toEqual([]);
 
     // NON-VACUOUS: prove the observer actually sees requests — a control same-origin fetch
@@ -204,7 +206,7 @@ describe('trust controls — real-engine wipe + describe + zero-network', () => 
     const afterProbe = performance
       .getEntriesByType('resource')
       .map((e) => e.name)
-      .filter((name) => /^https?:/i.test(name));
+      .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
     expect(afterProbe).toContain(probe);
   });
 });

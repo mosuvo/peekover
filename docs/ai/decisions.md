@@ -1,6 +1,177 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-09 · M12 TASK 5.8 — LANDED: every network guard reads its zero only after a later
+  request has landed; `PERMISSIONS.md`'s zero-network section says four surfaces; the
+  `diagramSourceGuard` and `mathNetwork` shared-state reds are closed, each by its cause. Test and
+  records only — no production byte moved. One assertion re-spelled, named below.**
+  **(i) THE INSTRUMENT. SCOPE FOUND AT PREFLIGHT: NINETEEN FILES, not five.** Besides
+  `editorNetwork` (fixed at 5.7), nineteen browser files read a network zero off Resource Timing:
+  `agentBadgeNetwork`, `codeNetwork`, `diagramKatexGate`, `diagramNetwork`, `diagramSecure`,
+  `diagramSourceGuard`, `diagramStyleCss`, `exportNetwork`, `firefoxFallback`,
+  `folderMode.network`, `handlePersist`, `mathNetwork`, `remoteMedia`, `settingsPort`,
+  `snapshotCapture`, `tableNetwork`, `tocNetwork`, `watchNetwork`, `wipe`. Three of them assert
+  off-origin; the rest assert zero http(s), whole-buffer or scoped to their own probe token. All
+  share the blind spot, so all were done.
+  **THE SHARED-HELPER CHANGE** (`tests/browser/helpers/diagramWindow.ts`):
+  - `wireSettled()` — flush, issue ONE request to the off-origin loopback (the sentinel), wait
+    until it is in the Resource Timing buffer, then flush once more. It THROWS if the sentinel
+    never reaches the buffer (a full buffer or a blind observer would otherwise read as a zero).
+  - `isSentinel()` — the sentinel is itself an http(s) entry; whole-buffer readers filter it.
+  - `renderAndBracket` ends in `wireSettled()` instead of `flush()`, so `diagramNetwork`,
+    `diagramSourceGuard` and `diagramKatexGate` inherit the fix with ZERO diff of their own.
+  - The other sixteen files import the two functions. In each, the settle replaces the flush in
+    front of the LAST zero read of each buffer epoch (or is inserted before it); a whole-buffer
+    reader gains the sentinel filter. Per-step reads inside an epoch keep their quick flush —
+    the buffer is cumulative, so the settled closing read covers every step before it. No
+    assertion's expected value, matcher or message changed in fifteen of the sixteen; the
+    sixteenth is `mathNetwork`, whose one re-spelled assertion is (iv) below.
+  **WHAT IT PROVES, AND WHAT IT DOES NOT.** A request issued to that destination BEFORE the
+  sentinel has had at least as long to end. A request to a host slower than the sentinel's own
+  failure (a black-holed address) can still outlast it: a calibrated wait, not an unbounded one.
+  **RED-FIRST, PER FILE.** A script plants one slow off-origin leak (a `fetch` to
+  `127.0.0.1:PORT`, named so the file's own reader would match it — the probe token where the
+  reader is token-scoped, a `katex-…js` name for the katex gate) inside the measured window, above
+  the settle. Each file run ALONE, both engines:
+
+  | File | Before the fix | After the fix |
+  |---|---|---|
+  | all 19, Chromium | GREEN (the blind spot) | RED, the leak named |
+  | all 19, Firefox | GREEN (the blind spot) | RED, the leak named |
+
+  Per file, after: one red test per engine, except `diagramStyleCss` (6 per engine — the leak
+  sits in a per-lane loop) and `folderMode.network` (2 per engine — two claims, two leaks).
+  `diagramKatexGate` reds on its request COUNT, which names no URL. Every file restored
+  byte-identical afterwards (md5 over `tests/browser`).
+  **TWO FINDINGS THE RED-FIRST RUN PRODUCED.**
+  - *Chromium, the "slow" leak is not always slow.* Run together in one browser, three files
+    went red BEFORE the fix: the leak failed in about 30 ms (measured: a sentinel with duration
+    32 ms, against 2,037 ms cold) because it rode an attempt on the same refused destination
+    that an earlier file had just made. So the blind spot is real but intermittent in a shared
+    run, and the before-proof was taken per file, alone.
+  - *Firefox, later-one-first.* Without the trailing flush, `diagramNetwork` and
+    `diagramKatexGate` stayed GREEN on Firefox after the fix in one run and went red in the
+    next. Measured: the leak (issued 200 ms before the sentinel) and the sentinel are recorded
+    with the same end, and the sentinel's entry can be written first. With the flush: red on
+    both engines, 3 runs of 3, each file. `editorNetwork`'s own second read gained the same
+    flush.
+  **COST, WALL-CLOCK.** Test time per file, Chromium / Firefox, seconds, before → after:
+  `agentBadgeNetwork` 2.8 → 9.7 / 2.7 → 9.7 · `codeNetwork` 2.8 → 12.5 / 2.7 → 12.4 ·
+  `diagramKatexGate` 0.7 → 7.4 / 0.7 → 9.5 · `diagramNetwork` 4.5 → 22.9 / 4.4 → 22.9 ·
+  `diagramSecure` 0.8 → 7.5 / 0.8 → 7.5 · `diagramSourceGuard` 1.2 → 10.0 / 1.1 → 10.0 ·
+  `diagramStyleCss` 3.1 → 23.2 / 3.0 → 23.2 · `exportNetwork` 1.6 → 3.8 / 1.6 → 3.9 ·
+  `firefoxFallback` 0.4 → 2.7 / 0.4 → 2.6 · `folderMode.network` 0.8 → 5.3 / 1.0 → 5.5 ·
+  `handlePersist` 0.3 → 2.7 / 1.3 → 3.5 · `mathNetwork` 1.8 → 5.2 / 2.7 → 7.2 · `remoteMedia`
+  0.6 → 5.1 / 0.6 → 5.0 · `settingsPort` 0.3 → 2.6 / 0.5 → 2.7 · `snapshotCapture` 0.9 → 3.1 /
+  1.0 → 3.3 · `tableNetwork` 4.6 → 21.6 / 4.5 → 21.5 · `tocNetwork` 8.3 → 12.8 / 6.6 → 13.2 ·
+  `watchNetwork` 1.3 → 8.0 / 1.2 → 8.0 · `wipe` 0.4 → 2.1 / 0.5 → 2.8. **Sum: 74.5 → 342.7 s**
+  across both engines. Each settle costs about 2.3 s, the time a refused loopback connection
+  takes to fail here. **The full browser suite: 227 s → 371 / 379 s wall** (two runs).
+  **(ii) THE SENTENCE AND THE SECTION.** 5.7's drafted paragraph is replaced by the reviewed
+  sentence (R22), as a FOURTH BULLET in the section's own form, wrapped as its bullets are:
+
+  > - **The edit save-back path** — opening the editor, the live preview, and Save, including its download fallback — makes **no network request** either. `tests/browser/editorNetwork.browser.test.ts` checks this in real Chromium and Firefox (the write itself on Chromium, the only engine that can write a file), and shows the check can see a request by placing a deliberate remote reference in the same view.
+
+  "on three surfaces" → "on four surfaces"; the closing line now reads "the reader, folder
+  mode, watch mode and edit save-back are all **tested to make none**." SIGNED (a) and (b)
+  untouched: `tests/permissionsLedger.test.ts` is unedited and green, 9 of 9. No pin (R22).
+  **(iii) `diagramSourceGuard` PER-FENCE — CAUSE AND RESOLUTION.**
+  - *Whose requests.* The twelve are mermaid's own lazy FLOWCHART definition
+    (`flowDiagram-…js` and its chunks), same-origin, loaded by the test's own clean
+    `graph TD` fence.
+  - *Why only after `diagramNetwork`.* `warmEngine` rendered `BENIGN_DOC`, a `graph TD`, to
+    warm exactly that definition. But the reader caches rendered diagrams in IndexedDB by a hash
+    of the source, and IndexedDB SURVIVES from one test file to the next in a run (the module
+    graph does not: the second file re-fetches mermaid's core). `diagramNetwork` renders the
+    same `BENIGN_DOC`. So in the second file the warm-up was a cache HIT, which skips
+    `engine.render` (`diagramEnhancer.ts`) and with it the lazy definition. Measured in that
+    order, both engines: warm-up traffic 32 requests WITH the flowchart definition in the first
+    file, 20 WITHOUT it in the second.
+  - *Decided by what the test claims.* Its zero is NOT "nothing leaves the origin": every probe
+    in the file is SAME-ORIGIN by design (its header says so), so an off-origin re-spelling would
+    have let the very reference under test through. It intends the strict property — nothing on
+    the wire in the window — so the strictness is KEPT and the shared state is fixed.
+  - *The fix.* `warmEngine` renders `BENIGN_DOC` with a label unique to the call: a cache miss
+    every time, so the warm-up warms. No assertion edited; `diagramSourceGuard` is zero-diff.
+  - *Red → green, same order* (`diagramNetwork` → `diagramSourceGuard`, forced by clearing
+    vitest's duration cache): 2 red (both engines) before; 20 of 20 after.
+  - Not a product behaviour to report: the cache did what it is for.
+  **(iv) `mathNetwork` ON FIREFOX — CAUSE AND RESOLUTION.**
+  - *Reproduced in two files:* `editorNetwork` → `mathNetwork`, Firefox, every time.
+  - *The carried hypothesis is FALSE.* It was `registerMathFont()`'s idempotent flag surviving an
+    earlier math file. Measured at this file's first render in the failing order: `document.fonts`
+    held NO Peekover Math face beforehand. Nothing of the registration survives.
+  - *The cause.* After that render the face was `loaded` — with NO Resource Timing entry for the
+    font. Firefox had kept the font from the earlier file's fetch of the same URL and served it
+    without a request. Chromium records an entry either way (transferSize 300 revalidated,
+    86,908 cold), which is why this was Firefox-only.
+  - *THE ONE RE-SPELLED ASSERTION.* `mathNetwork.browser.test.ts`, "NON-VACUITY, axis 3":
+    `expect(fontRequests.length).toBeGreaterThan(0)` — "the STIX Two Math subset was never
+    fetched in this window". **It measured the wrong property:** whether the browser's font
+    cache was cold, not whether the font is same-origin. Re-spelled in two observable parts:
+    (a) NEW, both engines — the face this render registered is LOADED; (b) a font request in the
+    window is still REQUIRED on Chromium, exactly as before, and on Firefox its absence is
+    allowed; any that is seen must be same-origin, unchanged. The reason is written above the
+    assertion. **The off-origin claim is untouched.**
+  - *Not weaker where it matters:* with registration ablated (a temporary production edit,
+    restored, md5-checked) the new (a) is RED on both engines — "no Peekover Math face was
+    registered". The old assertion could not tell a font that 404s from one that loads.
+  - *Red → green, same order:* 1 red (Firefox) before; 16 passed / 4 skipped after.
+  - No production code was needed.
+  **VERIFY.** lint 0. Both known failing orders green — the seven-file spot-check (98 passed / 28
+  skipped; it ran `editorSave`, `editorPreview`, `editorNetwork`, `diagramNetwork`,
+  `mathNetwork`, `diagramSourceGuard`, `diagramKatexGate` on both engines, which holds both
+  triggers in their triggering order, though not 5.7's exact sequence) and the pair (20 of 20).
+  The full browser suite, alone, TWICE: run 1 — 184 files, 1844 passed / 43 skipped, ONE RED, in
+  an untouched file: `copyAsHtml` on Chromium read another test's text off the OS clipboard
+  (14 of 14 alone — harness-shared-state, the clipboard is shared by the two engines' runs);
+  run 2 — 1845 / 43, zero reds. Unit 1372. `permissionsLedger` + `manifest` 17. `pnpm audit
+  --prod` EXIT=0. Golden empty.
+  **BYTES — NOTHING MOVED.** A clean two-engine build: all 278 shipped files md5-identical to
+  `3a4bcd2`'s. `.output` 5,822,029 / 5,822,145 B; zip 1,839,751 / 1,839,809 B; content script
+  342,806 B, `c4f59f1a…` / `ecc31688…`; manifests 654 / 770 B, `permissions: []`. Production
+  diff EMPTY.
+  **JUDGMENT CALLS AND MISMATCHES, FLAGGED.**
+  1. *Nineteen files, not the kickoff's "at least" five* — every one that reads a network zero.
+  2. *Settled at the closing read of each buffer epoch, not at every per-step read.* Settling
+     all of them would cost roughly twice as much again; the cumulative read covers them.
+  3. *Not settled:* the controls' own inert-parse contrasts ("the inert `<template>` parse
+     dispatched a request", in four files). They are about a same-origin probe that answers in
+     milliseconds, and are part of the control, not a claim about the product.
+  4. *Sixteen files now import `helpers/diagramWindow.ts`,* which also pulls in the reader pane
+     and the diagram modules. A separate small helper would be cleaner; a new file was outside
+     the fence. The human's call.
+  5. *Two local `flush` helpers removed* (`diagramSecure`, `watchNetwork`) — unused once the
+     settle replaced them; lint required it.
+  6. *Comments left as they were.* Several files still say a flush is "a sound zero-requests
+     proof". Each now carries a one-line pointer to the helper, where the correction is written
+     once; the old sentences were not rewritten file by file.
+  7. *The Firefox branch in (iv)* is the one place a check differs by engine.
+  8. *AGENTS.md's wording.* It says the browser files share one `document`/`window` and
+     "module-level caches". Measured here: a later file starts with an empty `document.fonts`
+     and re-fetches mermaid's core, so neither the document's fonts nor module state carried
+     over. What did carry over: IndexedDB, the browser's font and HTTP caches, the Resource
+     Timing destination state, and the OS clipboard. Not edited — outside this task's files.
+  *Revisit-when:* the suite's wall-clock becomes a problem (a cheaper sentinel, or item 2
+  revisited); a guard file is added (it must settle before its zero); the helper is split.
+
+- **2026-10-09 · M12 RULING R22 — HUMAN RULING: a DISCOVERED test-hardening task, 5.8, after 5.7
+  and before 6.1; 25 → 26 tasks. `PERMISSIONS.md`'s zero-network sentence is REVIEWED.**
+  Given by the human in task 5.8's kickoff, dated 2026-10-09, marked there "approved by the
+  human running this prompt". The agent chose nothing; this entry records it.
+  **THE TASK.** Four items: (i) apply 5.7's instrument fix to every zero-reading network guard,
+  red-first per file; (ii) the reviewed sentence, and the section's count and closing line made
+  true; (iii) find and resolve `diagramSourceGuard`'s PER-FENCE red; (iv) find and resolve
+  `mathNetwork`'s Firefox shared-state red, test-side only. A fix that needs production code is
+  a STOP and a report.
+  **THE SENTENCE.** Reviewer-tightened from 5.7's draft and approved by the human. It is NOT
+  signed positioning text, so it gets no ledger pin; SIGNED (a) and (b) are untouched:
+
+  > **The edit save-back path** — opening the editor, the live preview, and Save, including its download fallback — makes **no network request** either. `tests/browser/editorNetwork.browser.test.ts` checks this in real Chromium and Firefox (the write itself on Chromium, the only engine that can write a file), and shows the check can see a request by placing a deliberate remote reference in the same view.
+
+  This closes the review 5.7's landing entry left owed.
+  *Revisit-when:* the 7.1 walk.
+
 - **2026-10-09 · M12 TASK 5.7 — LANDED: the zero-network proof across edit, preview and save, with
   a firing control in every window; `permissions: []` re-proven; `PERMISSIONS.md`'s zero-network
   sentence DRAFTED and flagged for review. Test and records only — no production byte moved. One

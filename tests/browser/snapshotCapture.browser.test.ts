@@ -12,6 +12,8 @@
 // empty-stores assertion is a real observation, not a broken instrument.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { mount } from '../../src/render/mount';
 import { createWatchController } from '../../src/watch/watchController';
 import { installContentWatch } from '../../src/watch/contentWatch';
@@ -240,7 +242,7 @@ describe('snapshot capture — zero network across capture + eviction (task 1.4)
     for (let i = 0; i <= SNAPSHOT_COUNT_PER_DOC; i += 1) {
       await storeSnapshot(evictDoc, `# state ${i}\n\nbody ${i}\n`);
     }
-    await flushNet();
+    await wireSettled();
 
     // NON-VACUOUS eviction: the per-doc count bound held (cap+1 written, cap kept).
     expect(await metaFor(evictDoc)).toHaveLength(SNAPSHOT_COUNT_PER_DOC);
@@ -250,7 +252,7 @@ describe('snapshot capture — zero network across capture + eviction (task 1.4)
     const networked = performance
       .getEntriesByType('resource')
       .map((e) => e.name)
-      .filter((name) => /^https?:/i.test(name));
+      .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
     expect(networked).toEqual([]);
 
     // NON-VACUOUS: a control same-origin fetch DOES land in the buffer, so the zero-count is a real
@@ -261,7 +263,7 @@ describe('snapshot capture — zero network across capture + eviction (task 1.4)
     const afterProbe = performance
       .getEntriesByType('resource')
       .map((e) => e.name)
-      .filter((name) => /^https?:/i.test(name));
+      .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
     expect(afterProbe).toContain(probe);
   });
 });

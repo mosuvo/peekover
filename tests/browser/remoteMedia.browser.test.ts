@@ -20,6 +20,8 @@
 // `remote`, so the policy blocks it by default exactly as it would a real CDN URL.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { wireSettled } from './helpers/diagramWindow';
 import { mount } from '../../src/render/mount';
 
 // A unique path token per document so one test's resource-timing entries can never
@@ -121,7 +123,7 @@ describe('remote media — real-engine no-leak (bytes on the wire)', () => {
     const { token, markdown } = freshDoc();
 
     mount(markdown, host);
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: the engine put nothing on the wire for these images.
     expect(fetchedUrls(token)).toEqual([]);
@@ -141,7 +143,7 @@ describe('remote media — real-engine no-leak (bytes on the wire)', () => {
     const { token, urls, markdown } = freshDoc();
 
     mount(markdown, host);
-    await flush();
+    await wireSettled();
     // Pre-condition: still zero on the wire before the click.
     expect(fetchedUrls(token)).toEqual([]);
 

@@ -43,6 +43,8 @@
 // on-wire entry exactly as a CDN URL would.
 
 import { describe, it, expect, beforeEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { pollingDetector } from '../../src/watch/changeDetector';
 import { WATCH_READ, relayRead, type WatchMessage } from '../../src/watch/watchRelay';
 
@@ -55,15 +57,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
-}
-
-/** A macrotask + rAF + settle — the same window every other guard file uses. Sound for a ZERO
- *  assertion in the way a wait never can be: if no request fired, no wait length changes that. */
-function flush(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => requestAnimationFrame(() => setTimeout(resolve, 60)), 120);
-  });
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** THE CONTROL, awaited rather than sampled (see the header). Polls the same buffer the assertion
@@ -103,7 +97,7 @@ describe('watch loop — real-engine zero-network (bytes on the wire)', () => {
     // Long enough for several ticks at a 20 ms interval.
     await new Promise<void>((resolve) => setTimeout(resolve, 300));
     detector.stop();
-    await flush();
+    await wireSettled();
 
     // The loop genuinely ran — otherwise the zero-assert below would be vacuous for the most
     // boring possible reason (nothing happened at all).
@@ -135,7 +129,7 @@ describe('watch loop — real-engine zero-network (bytes on the wire)', () => {
       () => 'resolved',
       () => 'rejected',
     );
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: it asked the background and gave up. It did not go to the wire itself.
     expect(networkedUrls(), 'relayRead fetched its own URL as a fallback').toEqual([]);
@@ -163,7 +157,7 @@ describe('watch loop — real-engine zero-network (bytes on the wire)', () => {
     });
     await new Promise<void>((resolve) => setTimeout(resolve, 300));
     detector.stop();
-    await flush();
+    await wireSettled();
 
     expect(attempts, 'the relay was never called — vacuous').toBeGreaterThan(2);
     expect(networkedUrls()).toEqual([]);

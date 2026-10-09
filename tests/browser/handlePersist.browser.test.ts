@@ -35,6 +35,8 @@
 // labelled a mechanism stand-in, never the disk permission behaviour.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import {
   putFolder,
   getFolders,
@@ -362,7 +364,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 describe('reopen/rehydrate — zero network (bytes on the wire)', () => {
@@ -383,7 +385,7 @@ describe('reopen/rehydrate — zero network (bytes on the wire)', () => {
       expect(back.handle).toBeDefined();
       const outcome = await reopenFromHandle(back.handle!);
       expect(outcome.ok).toBe(true);
-      await flush();
+      await wireSettled();
 
       // GROUND TRUTH: not one http(s) request across persist → rehydrate → re-grant → walk.
       expect(networkedUrls()).toEqual([]);

@@ -1,14 +1,16 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-09 (task 5.7 — **zero network across entering edit, the live preview and Save,
-proven at the request level on both engines; the conflict policy is RULED — refuse and tell (R21);
-5.6 is STRUCK; GROUP 5 IS COMPLETE**; `decisions.md`'s "M12 TASK 5.7 — LANDED" and "M12 RULING
-R21" entries. Save writes on Chromium and downloads everywhere else; `PERMISSIONS.md` carries the
-final signed row, and a drafted zero-network sentence awaiting review.)
+*Updated: 2026-10-09 (task 5.8 — **every network guard now reads its zero only after a later
+request has landed (19 files); `PERMISSIONS.md`'s zero-network section says four surfaces, with
+the REVIEWED edit save-back sentence; the `diagramSourceGuard` and `mathNetwork` shared-state reds
+are closed by their causes**; `decisions.md`'s "M12 TASK 5.8 — LANDED" and "M12 RULING R22"
+entries. Before it, 5.7: zero network across entering edit, the live preview and Save, proven on
+both engines; the conflict policy RULED — refuse and tell (R21); 5.6 STRUCK. Save writes on
+Chromium and downloads everywhere else; `PERMISSIONS.md` carries the final signed row.)
 M12 (`specs/012-editor-mode/`, F8
 Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
-3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4 and 5.7 landed; 5.5 RULED without its walk
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 5.7 and 5.8 landed; 5.5 RULED without its walk
 (R21 — the walk is on 7.1's list); 5.6 struck; **6.1 is next — the unsaved-changes guard.**
 **Groups 3 and 4 are complete except for the dirty-exit property, which lives in 6.1 (R6).**
 **`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
@@ -1315,15 +1317,45 @@ record. Test and records only: no production byte moved.
   the kickoff listed. The call log goes beyond the existing instruments. R21 arrived inside the
   kickoff.
 
+**M12 task 5.8 DONE, 2026-10-09 — every network guard reads its zero only after a later
+request has landed; `PERMISSIONS.md`'s zero-network section says four surfaces; two shared-state
+reds closed by their causes (R22).** `decisions.md`'s "M12 TASK 5.8 — LANDED" and "M12 RULING R22"
+entries are the record. Test and records only: no production byte moved.
+- **(i) The instrument.** Nineteen files read a network zero besides `editorNetwork`.
+  `helpers/diagramWindow.ts` gains `wireSettled()` and `isSentinel()`; `renderAndBracket`
+  settles itself (three files inherit, zero-diff); sixteen files settle before the closing zero
+  of each buffer epoch. Slow leak, each file alone: GREEN in all 19 before, RED in all 19 after,
+  both engines. Cost: 74.5 → 342.7 s of test time across the 19; the full suite 227 → ~375 s.
+- **Two findings.** On Chromium a refused request can fail in ~30 ms when it rides an earlier
+  attempt — the blind spot is intermittent in a shared run. On Firefox two requests to one
+  refused destination can be recorded later-one-first — hence a flush AFTER the sentinel.
+- **(ii) `PERMISSIONS.md`.** The reviewed sentence as a fourth bullet; "four surfaces"; the
+  closing line names all four. Ledger test unedited, green.
+- **(iii) `diagramSourceGuard` PER-FENCE.** Cause: the warm-up was a diagram-cache hit (IndexedDB
+  survives from file to file), so it never loaded the flowchart definition. Strictness kept;
+  `warmEngine` renders an uncached source. No assertion edited.
+- **(iv) `mathNetwork`, Firefox.** Cause: NOT the registration flag — Firefox serves a font it
+  already holds with no request and no Resource Timing entry. One assertion re-spelled, named
+  in the file: the face is LOADED (new, both engines), a request is still required on Chromium.
+- **Verify.** lint 0 · both failing orders green · full browser suite alone, twice: 1844 + one
+  red in untouched `copyAsHtml` (the OS clipboard; 14/14 alone), then 1845, zero reds; 43
+  skipped · unit 1372 · audit EXIT=0 · golden empty · all 278 shipped files md5-identical to
+  `3a4bcd2`'s build.
+- **Flagged.** Per-step reads inside an epoch are not settled (the closing read covers them);
+  sixteen files now import the diagram helper; AGENTS.md's "module-level caches" wording does
+  not match what was measured (`decisions.md`, item 8).
+
 ## Up next
 
-**Group 5 is complete: 5.5 ruled (R21), 5.6 struck, 5.7 landed. 25 tasks.**
+**Group 5 is complete: 5.5 ruled (R21), 5.6 struck, 5.7 landed, 5.8 (discovered, R22) landed. 26 tasks.**
 **NEXT — M12 task 6.1, the unsaved-changes guard.** `tasks.md` 6.1 is the line, with R6's and
 R16's redlines: tab close, selecting another file, leaving edit — and Revoke, a folder switch and
 a closed folder. Both directions: dirty → the guard; clean → silence. After a download the buffer
 is still dirty, so the guard fires — intended.
-- **Owed to the human, not blocking 6.1:** a review of `PERMISSIONS.md`'s drafted zero-network
-  sentence (`decisions.md`, "M12 TASK 5.7 — LANDED"), and the 5.5 walk, now on 7.1's list.
+- **Owed to the human, not blocking 6.1:** the 5.5 walk, now on 7.1's list. (`PERMISSIONS.md`'s
+  zero-network sentence was reviewed and landed at 5.8, R22.)
+- **The browser suite now takes about 375 s** (was 227 s): each network guard waits ~2.3 s for
+  a refused loopback request to land before it reads a zero (5.8).
 **★ CARRIED FOR 6.1's KICKOFF — the guard fires at the TRIGGER: the file selection, the folder
 picker, a drop, a re-pick — not at the session's ending.** That is: before the picker opens and
 before a drop or a re-pick is processed — on a folder switch or a
@@ -1331,12 +1363,12 @@ cancelled re-pick the triggering outcome has already happened by the time `endEd
 4.3 adds the same for a file SELECTION: the edit session is destroyed when the newly selected
 file's read resolves and `readerPane` re-mounts the host, so "stay" must be asked before
 `selectFolderFile` starts the read.
-**Byte snapshot — 4.3's measured figures, RE-MEASURED UNCHANGED at 5.7 (every shipped file md5-identical); carry to the next kickoff:** `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx)
+**Byte snapshot — 4.3's measured figures, RE-MEASURED UNCHANGED at 5.7 and again at 5.8 (every shipped file md5-identical); carry to the next kickoff:** `.output` 5,822,029 B (Cr) / 5,822,145 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,518,003 / 1,517,887 B · zip 1,839,751 / 1,839,809 B · content
 script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
 `ecc31688b4f49167502a39edca7b9e51` (Fx) — MOVED at 4.3 (+154) · the app chunk 524,607 B (+744) · manifest
 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1372 · browser 1845 / 43 skipped
-(zero reds, 5.7's full run) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+(5.8's second full run: zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
 **Carried inputs, from 4.3:**
 - **The app page's OWN watch can be driven in the harness on Chromium:** a hand-built persistable
   `FolderSource` over an OPFS handle, select the file, click `.peekover-watch` — the shell's
@@ -1430,7 +1462,8 @@ EXTENDED entries); 7.1's walk carries one item for the editing feel of those def
   refuse-and-tell, which the row already says: nothing is re-signed.
 - **5.5 — the conflict/overwrite policy** — ✅ RULED 2026-10-09 (R21): refuse and tell. Ruled from
   the description; its walk is deferred to 7.1 and re-opens R21 if it changes the human's mind.
-- **`PERMISSIONS.md`'s zero-network sentence** — drafted at 5.7, NOT signed; a review is owed.
+- **`PERMISSIONS.md`'s zero-network sentence** — ✅ REVIEWED and landed 2026-10-09 (R22, task 5.8).
+  Not signed positioning text; no ledger pin.
 - **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
 - Also: the informal eyeball owed at 3.2, DEFERRED to 7.1 (2026-10-05); 6.2's numbers → the §8-2 debounce ruling;
   6.3 STOPS and surfaces a material nested-host cost. (2.2's stop-and-flag did not fire: the post-commit
@@ -1461,19 +1494,35 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
 
+- **NEW 2026-10-09 — from TASK 5.8.**
+  - **`copyAsHtml.browser.test.ts` — one red in one full-suite run of two (Chromium).** Its
+    clipboard read returned another test's text ("Body exported richly, with bold text"); 14/14
+    alone; the next full run was clean. The OS clipboard is shared by the two engines' runs.
+    Harness-shared-state by the rerun rule; the file is untouched by 5.8. Home: the next session
+    with a test-harness slot.
+  - **The network guards import `helpers/diagramWindow.ts`** for `wireSettled` / `isSentinel`,
+    which drags the reader pane and diagram modules into sixteen unrelated files. A small
+    dedicated helper would be cleaner. Home: the human's call — not scheduled.
+  - **AGENTS.md says the browser files share "module-level caches".** Measured at 5.8: a later
+    file starts with an empty `document.fonts` and re-fetches mermaid's core. What carries from
+    file to file is IndexedDB, the browser's font and HTTP caches, and the OS clipboard. Home: a
+    wording fix at the next retro (7.2).
 - **NEW 2026-10-09 — from TASK 5.7 and its kickoff.**
   - **`readerPane.select` has no ordering guard** — two reads that resolve out of order paint in
     resolution order, so the screen and the file tree can disagree; saving stays safe because a
     mismatch downloads (4.3's finding 5). Home: outside M12.
   - **The reversed observer order is unmeasured** — Watch turned on AFTER entering edit, then
     save, then exit. 4.3 measured one render for watch-then-edit only. Home: 7.1 (listed there).
-  - **`diagramSourceGuard.browser.test.ts` — a REPRODUCED, order-dependent red, both engines.**
+  - **✅ RESOLVED at 5.8 (cause: the warm-up was a diagram-cache hit; `warmEngine` now renders an
+    uncached source) — `diagramSourceGuard.browser.test.ts` — a REPRODUCED, order-dependent red,
+    both engines.**
     PER-FENCE (`:228`): twelve same-origin flowchart chunk requests inside its window against a
     bare `toEqual([])`. Reproduces with `diagramNetwork` + `diagramSourceGuard` run together and
     nothing else; 8/8 alone; green in the full suite's order. Harness-shared-state by the rerun
     rule; nothing left the origin. Cause not established. Home: the next session with a
     test-harness slot.
-  - **Every zero-network guard reads its zero after a ~180 ms flush, and Resource Timing records
+  - **✅ RESOLVED at 5.8 (nineteen files settle the wire before their zero; red-first per file) —
+    Every zero-network guard reads its zero after a ~180 ms flush, and Resource Timing records
     a request only when it ENDS** — so a slow off-origin request still in flight is invisible to
     those zeros. Found at 5.7 (a red-first ablation that stayed green); `editorNetwork` reads
     its claim a second time after its control lands. The other files are untouched. Home: the
@@ -1481,7 +1530,9 @@ measurement-driven or explicitly deferred.*
 - **NEW 2026-10-08 — from TASK 5.2.**
   - **CI's pnpm `version: 10` floats; a future 10.x could change where auditConfig is read and silently
     drop 1.3's ignore — pin via a `packageManager` field.** Home: post-M12. Reviewer-noted.
-  - **`mathNetwork.browser.test.ts` — a REPRODUCED red (Firefox, full suite run alone).** "the STIX Two
+  - **✅ RESOLVED at 5.8 — the cause was NOT the registration flag: Firefox serves a font it
+    already holds with no request and no Resource Timing entry; the assertion was re-spelled.**
+    **`mathNetwork.browser.test.ts` — a REPRODUCED red (Firefox, full suite run alone).** "the STIX Two
     Math subset was never fetched in this window … expected 0 to be greater than 0"
     (`:167`); cleared in an isolated rerun (6/6, both engines). It is the failure the earlier
     investigation (this section, "investigated, NOT fixed (no red found)") predicted from an idempotent
@@ -1633,7 +1684,8 @@ measurement-driven or explicitly deferred.*
     consent did not survive — the exact shape `tableCopy.browser.test.ts` already had to duct-tape
     around. This removes the coupling for every future file, not just the two that happened to
     defend themselves already.
-  - **`mathNetwork.browser.test.ts` — investigated, NOT fixed (no red found).** The kickoff's own
+  - **(✅ closed at 5.8 — see the 2026-10-08 entry above; the hypothesis here was false.)
+    `mathNetwork.browser.test.ts` — investigated, NOT fixed (no red found).** The kickoff's own
     hypothesis (an idempotent `registerMathFont()` flag surviving from an earlier math test file,
     making the "guaranteed-cold first render" claim false) did not reproduce: run standalone, in a
     5-file math-only combination, and inside 4 full-suite passes, its font-specific non-vacuity

@@ -30,6 +30,8 @@
 // ─────────────────────────────────────────────────────────────────────────────────────────
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import {
   getSettings,
   putSettings,
@@ -87,7 +89,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 let uid = 0;
@@ -191,7 +193,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
     await messagingPort(loopbackMessenger(listener)).save({ tocWidth: 300 });
     await messagingPort(loopbackMessenger(listener)).load();
     await wipeAll();
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: not one http(s) request hit the wire — settings live entirely on-device.
     expect(networkedUrls()).toEqual([]);

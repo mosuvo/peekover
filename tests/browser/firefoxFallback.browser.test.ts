@@ -23,6 +23,8 @@
 // that silently persisted a handle would fail it.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+// 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
+import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import {
   folderSourceFromFileList,
   READ_ONLY_SNAPSHOT_NOTE,
@@ -71,7 +73,7 @@ function networkedUrls(): string[] {
   return performance
     .getEntriesByType('resource')
     .map((e) => e.name)
-    .filter((name) => /^https?:/i.test(name));
+    .filter((name) => /^https?:/i.test(name) && !isSentinel(name));
 }
 
 /** A capturing store so the appShell integration needs no IndexedDB assertions in that slice. */
@@ -239,7 +241,7 @@ describe('Firefox fallback — zero network (bytes on the wire)', () => {
     mount(await file.read(), host);
     expect(host.shadowRoot?.querySelector('h1')?.textContent).toContain('Index heading');
 
-    await flush();
+    await wireSettled();
 
     // GROUND TRUTH: not one http(s) request hit the wire across the whole snapshot path
     // (FileList + File.text() are on-device; there is no fetch anywhere).
