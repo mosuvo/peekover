@@ -11,6 +11,13 @@
 
 ## Now (start here)
 
+**M13 SPEC DRAFTED, AWAITING GATE 1 (2026-10-30).** `specs/013-first-release/spec.md` — "a truthful, on-design first
+release": truth (site, README, SECURITY.md), CI (push to main, `packageManager`, the Dependabot count), design conformance
+on every shipped surface (incl. the five carried reader-polish items), a minimal F11 onboarding page, release hygiene (0.1.0,
+CHANGELOG, PNG icons, privacy policy, listing text, tagged-release workflow, SBOM, checksums), screenshots last. Going live is
+out. The human rules §9's twenty questions (Q8 toolbar consolidation and §8-1 font placement are the big ones) before
+`plan.md` is written in a fresh session. Preflight: HEAD `14f20d7` = origin/main; `pnpm audit --prod` EXIT 0, 2026-10-30.
+
 **M12 CLOSED, 2026-10-30 (task 7.3 — records reconcile).** Editor Mode's focused core shipped on both engines: the Edit
 control, CodeMirror 6 (lazy, app-page-only) beside a live preview that is the reader's own `mount()` on a nested host,
 Save (Chromium writes, elsewhere downloads, a conflict refuses and tells — R21), the watch/edit collision supported-degraded,
@@ -22,7 +29,8 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**M12 is closed and nothing is in flight. The next milestone is not yet scheduled — the human's call.** Where to start:
+**M13 spec drafted, awaiting gate 1** (`specs/013-first-release/spec.md`, §9). On approval: `plan.md` (gate 2) in a fresh
+session, then `tasks.md` (gate 3). The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
