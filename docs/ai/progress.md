@@ -68,6 +68,10 @@ rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed mi
 
 ## Now (start here)
 
+**M12 task 7.2 DONE, 2026-10-30 — the M12 retro is banked (`retro.md`, "M12 retro"); 7.1 stays OPEN.** The
+walk's verdicts for A1/A2/A4/A8, B10 and C–G were never reported (listed in the retro and `tasks.md` 7.1);
+A (1–8, bar the R29 items, re-checked) and B (9–11) are ok. Five rules placed: `AGENTS.md` ×3, `WORKFLOW.md` ×2.
+
 **M12 task 1.4 DONE, 2026-10-30 — `dompurify` 3.4.17 and `markdown-it` 14.3.3 (R30).** The five
 advisories closed; `pnpm audit --prod` EXIT=0 again (the katex ignore the only one); the content script
 moved +1,389 B (expected); golden empty. Record: `decisions.md`'s "M12 TASK 1.4 — LANDED".
@@ -1530,9 +1534,10 @@ paint measured; NOTHING CHOSEN; the cost ruled NOT MATERIAL (R27).** `decisions.
 **GROUP 6 IS COMPLETE: 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed; the discovered 3.5 (the
 7.1-walk polish, R28 / R29) landed 2026-10-30, and the discovered 1.4 (the dompurify / markdown-it advisories, R30) the same day.
 29 tasks** (tasks.md's groups sum to 27 before 3.5; the earlier "28" was an off-by-one, flagged).
-**NEXT — the human's re-check of the R29 items (list in `decisions.md`'s "M12 TASK 3.5" record and the
-task report) PLUS a quick reading-view glance (task 1.4 moved the parser and the sanitizer), THEN 7.2.** Then 7.1's walk resumes where it stopped (parts A–B were ok except the R29
-items). **7.1, the HUMAN-ONLY milestone-close walk:** `tasks.md` 7.1 is the line. Every
+**NEXT — M12 task 7.3 (records reconcile).** The 3.5 / 1.4 re-check is done ("all 7 ok"). 7.3 also reconciles
+the task count between `tasks.md` and `progress.md` and `AGENTS.md`'s stale current-milestone line (retro, h). **7.1 is
+still OPEN** for the unreported walk verdicts — the human's. Still owed, as above: parts C–G and the blanks in A/B.
+**7.1, the HUMAN-ONLY milestone-close walk:** `tasks.md` 7.1 is the line. Every
 item on it needs a loaded extension and has no agent substitute — it is the human's, not a
 session's to attempt or to stand in for with a suite run.
 - **Added to 7.1's list by 6.3 (R27's revisit-when):** on Firefox, the first entry into edit on a

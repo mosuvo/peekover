@@ -75,6 +75,16 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - Every task kickoff's standing-invariants block states the current bundle-budget snapshot (bytes used /
   ceiling / headroom), not only at milestone close — a small tax that surfaces a ceiling-breach before it
   lands instead of at measurement time.
+- Every task's preflight runs `pnpm audit --prod` and the kickoff's invariants block states its exit and
+  date. An advisory can land mid-milestone with no code change (M12: katex at 1.3, dompurify and
+  markdown-it at 1.4); the earlier it shows, the cheaper the bump (M12 retro, `docs/ai/retro.md`).
+- A guard that reads a ZERO (network, leak, collision) is fired by a control that includes a SLOW case, not
+  only a fast one, and is read only after something later has settled. Resource Timing records a request
+  when it ENDS, so an early zero is blind to a slow leak (M12 retro; `wireSettled()` in
+  `tests/browser/helpers/diagramWindow.ts`).
+- Author scripts and multi-line files with the file tool, not a shell heredoc (it collapses doubled
+  backslashes and rejects an unbalanced apostrophe). After a stopped browser run, check for orphaned node
+  and Playwright processes before the next one (M12 retro).
 - A milestone-close walk or human gate that requires a loaded browser extension (chrome://extensions,
   Firefox about:debugging) has no agent substitute — the automation surface cannot reach those pages. Mark
   such items human-only up front; do not attempt them or fake them with a test-suite run.

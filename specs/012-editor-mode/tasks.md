@@ -1384,17 +1384,25 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       URLs — on Firefox too.
       Files: `docs/ai/progress.md` (verdicts) · `src/theme/readerCss.ts` only if a walked item returns a
       named styling finding
+      ★ *2026-10-30 — NOT TICKED. The walk report gave A (1–8) ok except the R29 items (fixed at 3.5, re-checked
+      "all 7 ok") and B (9–11) ok. Never reported as verdicts: A1 · A2 (E-9) · A4 · A8 · B10, and C (12–18),
+      D (19–22), E (23–27), F (28), G (29–30). The 1.4 reading-view glance: ok. Tick when each has its own
+      stated verdict or a named finding (`decisions.md`, `retro.md` "M12 retro").*
       Verify: every axis above gets its own stated verdict — PASS, or a named finding routed to § Carried
       items. No implicit "looked fine". Engines and viewports recorded. Golden EMPTY · manifest
       **654 / 770 B** · `permissions: []`.
 
-- [ ] **7.2 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s own prior
+- [x] **7.2 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s own prior
       entries first. Includes: whether the re-derivation discipline's catches at this gate (F-1…F-6) cost
       or saved; whether the unwatched-document rule held; whether build-then-measure on D-4 was the right
       trade.
       Files: `docs/ai/retro.md` (+ `AGENTS.md` / `WORKFLOW.md` only for a rule the retro actually places)
       Verify: the entry is banked, dated, cites real task numbers; every answer ends in an action or an
       explicit "none".
+      ★ *2026-10-30: banked in `docs/ai/retro.md` ("M12 retro"). Written from the record and the reviewer's
+      seed lessons, not as an interview. Answers this line's three questions (F-1…F-6 saved; the unwatched
+      rule held; build-then-measure on D-4 was right) and ten seed lessons. Five rules placed: `AGENTS.md` ×3,
+      `WORKFLOW.md` ×2.*
 
 - [ ] **7.3 Records reconcile.** `progress.md`'s M12 narrative moved to `progress-archive.md`; every
       D-value (D-1…D-10) audited against the commit that landed its `decisions.md` entry, gaps named;

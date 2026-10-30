@@ -1,4 +1,145 @@
 # Retro log — Peekover
+- **2026-10-30 · M12 retro (spec 012 — Editor Mode: edit → live preview → save-back via CodeMirror 6,
+  lazy-loaded, nested-host preview, watch/edit collision, the unsaved-changes guard; `/retro`, per
+  WORKFLOW.md §7.5, task 7.2).
+  ★ M12 IS NOT CLOSED — 7.1 stays OPEN for the verdicts the human's walk report left blank (below) and
+  7.3 (records reconcile) remains.** **This retro was written from the record and the reviewer's ten seed
+  lessons, NOT as an interview** — a stated departure from the M11 retro (`retro.md` 2026-09-11), which
+  was one. The human's re-check of the 3.5 polish and the 1.4 reading view ("all 7 ok", 2026-10-30) is
+  the only human input; every claim below cites a `decisions.md` entry, a task or a commit, and the
+  reviewer reads this on landing. Each seed lesson was checked against the record and is marked KEPT,
+  SHARPENED or REJECTED, with the reason.
+  **THE HEADLINE, CITED NOT RE-DERIVED: AN INSTRUMENT OR A PREMISE WAS WEAKER THAN IT LOOKED, AND IT WAS
+  FOUND BY LOOKING AT THE REAL SURFACE.** Four instances. (1) The network-zero instrument: Resource
+  Timing records a request when it ENDS, so every zero-reading file was blind to a slow leak. The helper
+  dates from M7 (`ace4543`, 2026-07-30, "3.3 — the measurement-window off-origin guard"); 5.7 saw it
+  (`decisions.md` "M12 TASK 5.7"); 5.8 fixed nineteen files (R22). (2) A kickoff premise: 1.3 assumed
+  `htmlLabels: false` gated mermaid's math; mermaid sets `useHtmlLabels = true` for any `$$` label and
+  sequence diagrams call katex with no `htmlLabels` test at all (`decisions.md` "M12 TASK 1.3" (iv)) →
+  R15. (3) Two task-line premises: 3.3's Verify said a reverted guard "loses the editor", and measuring
+  showed it does not (`decisions.md` "012 D-5 … 3.3": CodeMirror runs update listeners in its own
+  try/catch), and 4.1's exit-order finding became R6. (4) The proxies: 3.2's eyeball proxies measured
+  contrast and collisions numerically (E-1…E-9) and even recorded "the panel stays a light slab on dark"
+  as CLEAR — the walk then found the search panel's look, the split's height, native scrollbars, the
+  snapshot notice on text and the narrow rail, which no proxy measured (R28, R29 → 3.5).
+  **THE THREE QUESTIONS `tasks.md` 7.2 ASKS.**
+  A. **Did the re-derivation discipline's catches at this gate (F-1…F-6) cost or save?** SAVED, in five
+     of six cases, at the price of one gate session that ended in a redline. F-1 (D-10 named the wrong
+     mechanism — the scanner polices specifier staticness, the fence tests police the graph) became
+     `editorImportFence.test.ts` at 3.1 (`decisions.md` "012 D-10 — LANDED at task 3.1"). F-2 (the
+     bare `\` shortcut fires inside the editor) became the ruled defence-in-depth guard at 2.1 ("012
+     D-1"). F-3 was the big one: gate 2's "plain `mount()`, `mount.ts` byte-untouched" premise was false
+     — `mount()` always composes chrome and the watch/diff/identity registries are module-level
+     singletons — found at the gate and re-ruled to the additive `chrome` option (`decisions.md` "M12 D-4
+     RE-RULED"), instead of at 2.2 with a nested mount wiring live registries. F-5 (D-3's injection
+     point) is the shape 3.2 landed ("012 D-3 — LANDED at task 3.2"). F-6 (the ledger must not be false
+     between commits) is why the signed text landed at 5.3 interim and 5.4 final ("M12 TASK 5.1").
+     **F-4 is not cited by name in any `decisions.md` entry**; whether it saved anything cannot be shown
+     from the record. **Limit, stated:** the discipline caught STRUCTURAL premises (module graphs,
+     scanner semantics, what a call composes). Every BEHAVIOURAL premise that failed — 3.3's revert
+     clause, 4.1's exit order, 1.3's `htmlLabels`, 4.4's stale reads — surfaced at build time.
+     → **Action: keep the gate re-derivation; no rule change. The behavioural class is covered by lesson
+     a (observe first).**
+  B. **Did the unwatched-document rule hold?** HELD as a fence: group 3's fixtures asserted unwatched and
+     no group-3 test was perturbed by a watch; group 4 closed the collision afterwards (4.1–4.4). The
+     rule did not make the unwatched path correct by itself: 4.3's step 0 saw the UNWATCHED reading
+     column stale after a save and an exit — nothing would ever have fixed it (R19, `decisions.md` "M12
+     TASK 4.3") — but that defect belongs to save-then-exit, which did not exist until group 5, so it is
+     the rule doing its job, not failing it. → **Action: none.** (When a later feature adds a way to
+     change the text, add the unwatched exit to its step 0, as 4.3 did.)
+  C. **Was build-then-measure on D-4 the right trade?** YES. Group 2 built the nested host; 6.3 priced it
+     against an ablated single-root control, and the human ruled the cost not material on the numbers
+     (R27, "Not material — file it"): Chromium 7–9 KB of Blink heap, no timing difference; Firefox +57–59
+     ms of about 330 on the first entry into edit at 1 MB; first paint with edit never entered inside the
+     noise on both gates and no editor chunk requested before Edit. Overturning D-4 at 6.3 would have
+     been a rework of groups 2–5, so the order carried a risk the number retired; it did not move.
+     The one open edge is Firefox, large document, first entry — R27's revisit-when, on 7.1's list.
+     → **Action: none to the rule. Carry R27's Firefox edge to the human's 7.1 walk (still unreported).**
+  **THE SEED LESSONS, CHECKED AGAINST THE RECORD.**
+  a. **Observe first — KEPT.** 4.3's step 0 saw the self-write held as an external change on every save
+     (R17(i)), the unwatched stale column (R19), and — as a red at HEAD, not an argument — file B
+     overwritten on disk with file A's edit (R17(ii), `decisions.md` "M12 TASK 4.3"); 4.4's table showed
+     S1 and S2 WRONG (the reading view held Peekover's own save while the disk held someone else's newer
+     text) and S3 right but rendered twice ("M12 TASK 4.4"); 1.3's premise and 5.8's nineteen files are
+     above. A fix written from the kickoff's account would have shipped all four wrongly. → **Action:
+     keep it as a standing kickoff clause. It is a kickoff clause, not a repo rule, so no file is
+     edited.**
+  b. **The kickoff is a hypothesis; the agent stopped — KEPT, already a rule.** 1.3 stopped and
+     escalated (R15); 3.3 measured the revert clause and put four options (recorded, ruled); 4.1's exit
+     order went to the human (R6). `AGENTS.md` already says it. → **Action: none; the rule is
+     load-bearing, keep it in every kickoff.**
+  c. **Deferring the eyeball — SHARPENED.** The 3.2 ruling departed from two written rules and said so
+     (`decisions.md` "M12 TASK 3.2 — informal eyeball DEFERRED to 7.1"; WORKFLOW §7.2). The proxies were
+     real work (27 contrast pairs per theme, collisions, both engines) and caught E-1…E-9 early; 3.4
+     fixed E-1…E-3. But the risk the ruling named — a late find costs rework on more code — was paid: the
+     walk's findings became 3.5 after 6.4. The sharpening: a proxy can PASS the bar and still be wrong
+     (the light search slab on dark passed 14.94–21:1). → **Action: placed in `WORKFLOW.md` (rule 4).**
+  d. **A trust instrument weaker than believed since M7 — KEPT, sharpened by a second half.** Cause and
+     scope as in the headline; 5.8's own limit is stated in its entry ("a calibrated wait, not an
+     unbounded one"). The sharpening: a guard that reads zero must be fired by a SLOW case and read only
+     after something later has settled. → **Action: placed in `AGENTS.md` (rule 2).**
+  e. **The audit went red with no code change — SHARPENED (three times, not two).** 1.2 (the audit clause
+     task 1.1 left unmet, plus a second markdown-it advisory not yet in the database), 1.3 (katex, published 2026-10-05,
+     found 10-08), 1.4 (dompurify and markdown-it; dompurify 3.4.17 was published 2026-10-12 and the red
+     was first seen at 3.5's Verify on 10-30). 6.3 recorded EXIT=0 on 10-09. → **Action: placed in
+     `AGENTS.md` (rule 1) — run the audit at every task's preflight and state its date.**
+  f. **Pre-existing reader defects surfaced only through the M12 walk — KEPT.** 3.5's step 0 compared
+     HEAD with 0541886 (pre-M12) and found the unstyled native buttons (f) and the math block's code
+     toolbar (g) IDENTICAL at both — M12 did not introduce them; the reader's dark UI had gone unwalked
+     (`decisions.md` "M12 TASK 3.5"). → **Action: placed in `WORKFLOW.md` (rule 5) — the close walk
+     includes the reader's untouched surfaces in both themes.**
+  g. **Measure separate from decide — KEPT.** 6.2 and 6.3 were "FORBIDDEN from choosing" (their commit
+     subjects say "no choice made": `fbc7c33`, `acd2c26`); the human ruled in one reply each (R26 for the
+     debounce, R27 for the nested cost) and 6.4 landed the same day. → **Action: none; keep it.**
+  h. **Record drift — KEPT.** `AGENTS.md`'s current-milestone paragraph still read "task 1.1 DONE … 1.2
+     next" through the whole milestone; `tasks.md`'s groups summed to 27 while `progress.md` said 28
+     (flagged at 3.5, recorded as 29 after 1.4). → **Action: none new — 7.3 already owns `AGENTS.md`'s
+     current-milestone line; 7.3 also reconciles the task count between `tasks.md` and `progress.md`.**
+  i. **Tooling friction — KEPT.** Recurring in the 3.5 and 1.4 sessions: a heredoc collapsed doubled
+     backslashes in a script, a Windows rewrite left a mixed line-ending working copy (committed blobs
+     stayed LF: `git ls-files --eol` on 2ceef0d's ten files), and a stopped browser run leaves node and
+     Playwright alive. → **Action: placed in `AGENTS.md` (rule 3).**
+  j. **Thirty rulings — SHARPENED, partly REJECTED.** R1–R30 were all taken after the three gates, which
+     had settled fourteen items (gate 1: D-A…D-D; gate 2: §8-1…§8-4; gate 3: Q1…Q6). By their titles
+     (my reading, not an audited tally): planned deferrals 3 (R21 the conflict policy, R26 the debounce,
+     R27 the nested cost); advisories 3 (R13/R15/R30); the walk 2 (R28, R29); the other 22 arose from
+     something a task found while building — a false premise, an unobserved defect, a product call nobody
+     had listed. So the volume reflects discoveries more than plan gaps; the gates cannot list what is not
+     yet known. Each ruling was banked in the same commit, with its words. → **Action: none to the
+     gates. Keep banking each ruling with its landing.**
+  **WHAT WENT WELL.** Measure-then-rule (6.2, 6.3); red-first with real engines (every fix above was seen
+  red on both engines first); stopping on false premises (1.3, 3.3, 4.1); the 5.8 sweep finding its own
+  scope at preflight (19 files, not 5); the zero-diff content-script fence — the content script did not
+  move from 4.3 to 3.5 (342,806 B), and moved at 1.4 only by the dependency bump, decomposed by package;
+  `permissions: []` and the 654 / 770 B manifests intact throughout.
+  **THE NUMBERS THAT CLOSED THE MILESTONE (at 1.4, `3ad539a`).** `.output` 5,830,859 B (Cr) / 5,830,975 B
+  (Fx) against 7,340,032 B: headroom 1,509,173 / 1,509,057 B — 633,434 B used of the 2,142,607 / 2,142,491
+  B starting headroom (about 29.6%). Zips 1,842,763 / 1,842,822 B. Content script 344,195 B, md5
+  `b0ff62df…` (Cr) / `3413dae0…` (Fx); 7.3 owns its decomposition against the starting figure. App chunk
+  532,048 B. Manifests 654 / 770 B, `permissions: []`; `dependencies` 11; SBOM 191. Suites: lint 0, unit
+  1417, browser 1961 passed / 51 skipped (188 files), golden empty; `pnpm audit --prod` EXIT=0 with the
+  katex ignore the only one. **The editor's cost:** `basicSetup` +97,226 B over `minimalSetup` (task 1.1);
+  the nested root 7–9 KB of Blink heap, Firefox +57–59 ms on the first entry at 1 MB (R27); about 330 ms
+  per preview render of 1 MB prose, seconds per key for enhancer-heavy 1 MB on Firefox — shipped as a
+  known limitation (R26). Thirty-eight M12 commits, 2026-10-03 → 2026-10-30; twenty-nine tasks.
+  **7.1's CLOSE.** The walk report (2026-10-30) gave: A (1–8) ok except the R29 items — fixed at 3.5 and
+  re-checked "all 7 ok"; B (9–11) ok. **Not reported:** A1 · A2 (the dark selection, E-9) · A4 (gutter
+  numbers) · A8 (editing feel) · B10 (the R15 note); C (12–18, saving), D (19–22, conflict; 19 whether
+  refuse-and-tell is enough), E (23–27, guard; 27 whether the consent line is still true), F (28, 1 MB —
+  an unacceptable verdict re-opens R26), G (29–30, Firefox) — each came back as an unfilled option, not a
+  verdict. 7.1's Verify requires a stated verdict per axis, so **7.1 is NOT ticked.**
+  **THE CARRIED LIST'S HEADLINE (detail is 7.3's, `progress.md` § Carried items).** The post-M12
+  reader-polish task: (f), (g), the left sidebar on narrow screens, (d)'s narrow case, option C, the 130
+  px bottom band; R26's 1 MB limitation; R15's math-in-mermaid-as-source cost; E-9 and the 3.x findings
+  routed to 7.1; the unreported 7.1 verdicts above.
+  **RULES PLACED BY THIS RETRO (the only edits outside the logs):** `AGENTS.md` — the audit at every
+  preflight; a zero-reading guard needs a slow-case control and a settled read; scripts by the file tool
+  and a process check after a stopped browser run. `WORKFLOW.md` — the first-render glance survives a
+  deferral; the close walk covers the untouched surfaces in both themes. Wording is in the commit message
+  and the task report.
+  Metrics: rulings=30 · tasks=29 · commits=38 · first-try verification pass=no — the 3.5 browser run had
+  ten reds, all one ruling's consequence, authorized and re-spelled · sessions=not counted.
+
 - **2026-09-11 · M11 retro (spec 011 — math rendering: Temml/MathML inline `$…$` and block `$$…$$`/fence
   math, KaTeX's original approach REOPENED and replaced via a three-gate REVISIT, copy-as-LaTeX/MathML;
   `/retro` interview, per WORKFLOW.md §7.5, task 8.2-R).
