@@ -647,6 +647,26 @@ OWN test, written there. The same rule binds 3.2's and 3.3's degrade tests.
       Measured: `.output` 5,816,970 / 5,817,086 B (+2,433), content script 342,652 B both engines,
       md5 unchanged and seen to move under un-gating — 5.1's snapshot.*
 
+- [x] **3.5 7.1-walk polish (R28, R29).** ★ **DISCOVERED 2026-10-30; runs AFTER 6.3 and BEFORE the
+      human re-check of its items and 7.2** — human-ruled and human-scheduled (`decisions.md`, "M12 TASK
+      3.5 — LANDED"). Numbered in group 3 because it finishes group 3's surfaces; it does not run in
+      group 3's position. TEST FIRST, real engine, both engines. Five fixes, one commit: **(a)** the
+      Ctrl-F search panel from tokens, legible in both themes · **(b)** the split fills the pane's
+      height, with themed scrollbars · **(c)** the TOC rail hidden while editing at ≤ 1400 px · **(d)**
+      the M6 snapshot notice off the text (an app-only rule in `EDIT_CONTROL_CSS`; WIDE only) · **(e/R28)**
+      long lines wrap (`EditorView.lineWrapping`). **(f)/(g) were checked first and are PRE-EXISTING**
+      (native filter-clear / sort / math-action buttons; the display-math block's code toolbar) — not
+      M12's, carried. **Authorized test edits:** R28's two exact-list pins, and ten assertions re-spelled
+      to R29(c) (`editorNestedHost` 2.2 WIDE rail-open → 1500 px plus a new 1400 px hidden-rail case;
+      `editorEyeballProxy` proxy 2's edit arm), each named in the landing entry. Files:
+      `src/render/editorEngine.ts` · `editorEngine.test.ts` · `editorView.ts` · `src/theme/readerCss.ts` ·
+      `tests/browser/editorWalkPolish.browser.test.ts` (new) · the two re-spelled test files · the records.
+      Bytes: +2,358 B on the app chunk only, content script md5 unchanged. Verify: lint 0 · unit 1417 ·
+      browser 1961 / 51 skipped, zero reds.
+      ★ *7.1 walk verdicts to date (the human's, parts A–B): ok, except the R29 items above — now fixed
+      and owed a re-check.* ★ *CARRIED to the post-M12 reader-polish task:* (f), (g), the left sidebar on
+      narrow screens, (d)'s NARROW case, option C, reclaiming the 130 px bottom band.
+
 *Group-3 acceptance (plan §6): spec §4's edit and preview EARS clauses hold on an unwatched document; D-4's
 nested-host property is proven red-first under real typing; the engine has exactly one importer and is
 absent from the content-script graph; Save is plumbed and NOT wired to disk.*
@@ -1474,6 +1494,10 @@ human-ruled and human-scheduled between 5.7 and 6.1, `decisions.md` "M12 RULING 
 ★ *2026-10-09: **27 tasks** — group 4 is (4) with the discovered 4.4 (exit shows the newest text),
 human-ruled and human-scheduled between 6.1 and 6.2, `decisions.md` "M12 RULINGS R24–R25": 1 (3) ·
 2 (2) · 3 (4) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing: … 5.8 → 6.1 → **4.4** → 6.2.*
+
+★ *2026-10-30: **28 tasks** — group 3 is (5) with the discovered 3.5 (the 7.1-walk polish, R28 / R29),
+human-ruled and human-scheduled between 6.3 and the human's re-check, `decisions.md` "M12 TASK 3.5 —
+LANDED": 1 (3) · 2 (2) · 3 (5) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing: … 6.4 → 6.3 → **3.5** → 7.1.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

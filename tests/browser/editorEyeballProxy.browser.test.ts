@@ -937,27 +937,25 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
       rail: boxOf(railEl),
       shell: boxOf(shellEl),
     };
+    // R29(c) (012 7.1-walk polish): at <= 1400px wide the rail is hidden while editing, so the rail
+    // and its handle are ABSENT here (this test's two viewports are 414 and 1400). What the edit view
+    // still shows must not collide: the control (Stop editing) is hit-testable and clear of the split.
     const editHits = {
       control: hitAtCentre(control) === control,
-      handle: hitAtCentre(handle) === handle,
     };
     for (const [who, hit] of Object.entries(editHits)) {
       if (!hit) violations.push(`edit: the ${who}'s centre does not hit the ${who}`);
     }
+    const hidden = (b: Box): boolean => b.right - b.left === 0 && b.bottom - b.top === 0;
+    if (!hidden(edit.rail)) violations.push(`edit: the rail is still laid out (${fmt(edit.rail)}) at ${size.width}px`);
+    if (!hidden(edit.handle)) violations.push(`edit: the rail handle is still laid out (${fmt(edit.handle)}) at ${size.width}px`);
     const editPairs: Record<string, { w: number; h: number } | null> = {
-      'control × handle': overlapPx(edit.control, edit.handle),
-      'control × rail LIST': rail === 'open' ? overlapPx(edit.control, boxOf(list)) : null,
       'control × split pane': overlapPx(edit.control, edit.shell),
-      'split pane × handle': overlapPx(edit.shell, edit.handle),
-      'split pane × rail': rail === 'open' ? overlapPx(edit.shell, edit.rail) : null,
     };
     for (const [pair, o] of Object.entries(editPairs)) {
       if (o) violations.push(`edit: ${pair} overlap ${px(o)}`);
     }
     const paneClearance = Number((edit.rail.left - edit.shell.right).toFixed(1));
-    if (rail === 'open' && paneClearance < 0) {
-      violations.push(`edit: the split pane's right edge is ${-paneClearance}px past the rail's left edge`);
-    }
     const sourcePane = inHost(host, EDITOR_SOURCE_CLASS)!;
     record('collision', {
       viewport,

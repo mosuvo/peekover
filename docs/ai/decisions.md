@@ -1,6 +1,101 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-30 · M12 TASK 3.5 — LANDED: the 7.1-walk polish (rulings R28, R29; two decisions; one
+  authorization). Search panel from tokens, a split that fills the pane, themed scrollbars, the rail
+  hidden while editing at ≤ 1400 px, the snapshot notice off the text (wide), long lines wrap. The
+  content script is byte-identical.**
+  **RULINGS (human, banked here).**
+  - **R28 — the editor wraps long lines.** `EditorView.lineWrapping` from the `codemirror`
+    re-export, placed after the ruled pair and the highlight style and before the caller's
+    extension. The two exact-list pins in `editorEngine.test.ts` are updated (the one authorized
+    assertion change of the kickoff; the list gains `LINE_WRAPPING` at index 3).
+  - **R29 — FIX NOW (a)–(e).** (a) the Ctrl-F search panel restyled from tokens, legible in both
+    themes · (b) the split fills the available height, with themed scrollbars · (c) below a
+    breakpoint the TOC rail is hidden while editing · (d) the M6 snapshot notice never sits on
+    text · (e) R28. **CHECK FIRST (f)/(g)**, fixed only if M12 introduced them. **CARRY:** the left
+    sidebar on narrow screens. **ACCEPT:** sub/sup/emoji render literally (E-8).
+  - **Decision 1 — (d) is option A:** an app-only rule in `EDIT_CONTROL_CSS` (moves the watch
+    disclosure to `bottom:16px;left:176px`), the content script untouched. (d) is asserted at WIDE
+    only. The NARROW case of (d), and option C (the notice in the flow / dismissible), are CARRIED
+    to the post-M12 reader-polish task with the left sidebar.
+  - **Decision 2 — reclaim the 130 px bottom band if it can be done safely with app-only sheets,
+    else keep it at tolerance 162 px, say which way it went and carry it. IT WENT THE
+    KEEP-THE-BAND WAY.** Geometry (host-relative, measured at 1300 / 1400 / 1401 / 1500): Compare
+    (16,12)–(101,44) · the Edit control y 16–46, its right edge hostW−116 · the collapsed handle
+    y 52–82 · the open rail from hostW−250. The pills (130 and 109 px wide) would fit the top row,
+    but the notice (220×110, wrap-dependent) cannot be placed there without a magic-number top
+    margin. The test tolerance is `24 + 130 + 8 = 162`. CARRIED: "reclaim the band", with the pill
+    stack.
+  - **AUTHORIZATION (human, 2026-10-30) — option 1 for the 10 reds.** The 1400 px breakpoint stands
+    (chosen from measurement: the rail-open panes drop under 360 px up to a 1403 px viewport).
+    Re-spelling the 10 existing assertions is authorized as part of R29(c), each kept to the
+    property it protected wherever that still applies:
+    1. `editorNestedHost` 2.2 "WIDE 1400x900 … rail open" (2 cases, both engines) — MOVED to
+       1500×900, where the rail is shown in edit, so "the preview's right edge stops at the rail's
+       left edge" is still asserted (a firing control, `rail.width > 0`, was added). BESIDE it, a
+       new 1400×900 case: the rail is not laid out in edit and both panes are ≥ 360 px.
+    2. `editorEyeballProxy` proxy 2, "nothing collides at the top-right" (8 cases: NARROW/WIDE ×
+       open/collapsed × 2 engines) — the READING arm is unchanged (rail and handle present and
+       hit-testable). The EDIT arm now asserts the rail and its handle are not laid out (both
+       viewports, 414 and 1400, are ≤ 1400), the control's centre hits the control, and the control
+       does not overlap the split. Reason each changed: the rail is `display:none` in edit at
+       ≤ 1400, which R29(c) rules.
+    **The re-spelled 2.2 case, ablated:** the rail rule's breakpoint set to `0px` → the new 1400
+    case and all 8 proxy-2 cases go red on both engines (10 reds); file restored byte-identical
+    (md5 `9d8cb397…`).
+  **STEP 0 — before any code (both engines; computed styles read from the real app page).**
+  - *(a)* CodeMirror's `&light` rules (gradient button, white field, black text) applied under
+    every theme — the panel was light-on-dark in dark.
+  - *(b)* the split was a fixed `60vh`: 227 px above the bottom at WIDE, 137 px past the viewport
+    at NARROW; the scrollbars were the UA's.
+  - *(c)* the rail-open panes drop under 360 px up to a 1403 px viewport → the breakpoint is 1400.
+  - *(d)* the notice is `position:absolute` against the document-height host; at WIDE it measures
+    x 360–580, y 590–700, and the pills sit at x 360–490, y 750–820.
+  - *(f)* **PRE-EXISTING, not M12's.** In dark, on both engines, every computed-style key of the
+    filter-clear / sort / math-action buttons is identical at HEAD and at 0541886 (pre-M12): native
+    buttons (2px outset, light grey, Arial / MS Shell Dlg); no CSS rule for those classes at either
+    commit. **CARRIED.**
+  - *(g)* **PRE-EXISTING, not M12's.** Same comparison: the display-math block carries the code
+    toolbar "math · Line numbers · Wrap · Copy" at both commits. **CARRIED.**
+  **THE FIXES (RED → green, both engines, `tests/browser/editorWalkPolish.browser.test.ts`, 26
+  tests, real `mountAppShell`, theme supplied through the store).**
+  - *R28 / (e)* — `editorEngine.ts` + the two pins; red: the long-line-wraps tests.
+  - *(a)* — 11 search-panel rules in `EDITOR_CSS`, tokens only; text pairs ≥ 4.5 and token-colour
+    assertions, both themes.
+  - *(b)* — `followPaneHeight` in `editorView.ts` (a ResizeObserver-measured `--peekover-edit-avail`,
+    released on teardown) + `EDITOR_CSS` height / margins / `color-scheme` / `scrollbar-color`;
+    bottom gap ≤ 162, no horizontal scroll, thumb = `--faint` in both themes and both scrollers.
+  - *(c)* — a `@media (max-width:1400px)` block; rail hidden at 1300 / 1400 / 414-stacked, visible at
+    1500, panes ≥ 359, reading unchanged, the rail back after leaving edit.
+  - *(d)* — the option-A rule; WIDE reading and edit: no text line box under the notice, no overlap
+    with the split or with the Watch / Theme pills.
+  **ABLATIONS — each red on both engines, files restored byte-identical:** R28 → the wrap tests ·
+  A → search panel light / dark · B-css → bottom-edge and scrollbar tests · B-js → bottom-edge tests
+  · C → the rail at 1300 / 1400 / 414 · D → the WIDE notice test.
+  **BYTES (both engines identical, all on `chunks/app.js`; arms over-determined, residual 0).**
+  R28 +15 · the `editorView.ts` helper +410 · `EDITOR_CSS` +1,882 (A search panel 1,395; B height /
+  scrollbars 237; C rail 250) · option A +51 → **+2,358 B**. The B arm is derived from the independent
+  only-B arm (237) and the text delta (1,882 = 1,395 + 237 + 250); the leave-one-out noB variant was
+  flawed (136 B off) and discarded. Option B in `CONTAINED_CSS` would have cost +55 B in the content
+  script — not taken. **Snapshot after:** `.output` 5,828,071 B (Cr) / 5,828,187 B (Fx) vs ≤ 7 MiB —
+  headroom 1,511,961 / 1,511,845 · zips 1,841,465 / 1,841,523 (+383 each) · content script 342,806 B
+  both engines, md5 `c4f59f1a…` (Cr) / `ecc31688…` (Fx) UNCHANGED · manifest 654 / 770 B,
+  `permissions: []` · app chunk 530,649 B · the scratch baseline reproduced 6.3's figures exactly.
+  **SUITES.** lint EXIT 0 · unit 1417 / 1417 · browser 1961 passed / 51 skipped (188 files; run
+  alone, zero reds) — 1933 + the 26 new + the new 1400 case (2) · scanner and `--self-test` EXIT 0 ·
+  golden empty. The first browser run had 10 reds, all R29(c)'s consequence in the two files above
+  (a finding, surfaced, then authorized — not flakes). **`pnpm audit --prod` EXIT 1: 6
+  vulnerabilities (dompurify critical + high, markdown-it high + low, dompurify low), IDENTICAL at
+  HEAD with this change stashed.** 6.3 recorded EXIT 0 with one ignore; the advisories are newer. No
+  dependency file moved. Not this task's; it is the pending `markdown-it` / `dompurify` bump (task
+  1.2's subject) — flagged for the human.
+  **CARRIED (home: the post-M12 reader-polish task, `progress.md` § Carried items).** (f) native
+  filter-clear / sort / math-action buttons · (g) the display-math block's code toolbar · the left
+  sidebar on narrow screens · (d)'s NARROW case · option C · reclaiming the 130 px band (with the
+  pill stack).
+  **Revisit-when:** 7.1's walk returns a verdict on any R29 item; or the reader-polish task opens.
+
 - **2026-10-09 · M12 TASK 6.3 — LANDED: the nested preview host's cost MEASURED against an
   ablated single-root control, both engines; first paint with edit never entered MEASURED against
   a pre-M12 build. FORBIDDEN FROM CHOOSING: this entry recommends nothing. Two nesting deltas

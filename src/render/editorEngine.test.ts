@@ -62,6 +62,7 @@ function fakeModules(): {
 } {
   const built: RecordedConfig[] = [];
   class FakeView {
+    static lineWrapping = 'LINE_WRAPPING';
     constructor(config: RecordedConfig) {
       built.push(config);
     }
@@ -172,7 +173,7 @@ describe('the engine — the ruled setup, defaults unmodified', () => {
     expect(view).toBeInstanceOf(modules.EditorView);
     expect(built[0].doc).toBe('seed text');
     expect(built[0].parent).toBe(parent);
-    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', 'TOKEN_HIGHLIGHT', []]);
+    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', 'TOKEN_HIGHLIGHT', 'LINE_WRAPPING', []]);
 
     // `markdown({ base: markdownLanguage })` — R1 (decisions.md, 2026-10-05) amends "called with
     // its defaults" for `base` ALONE. The config object carries that one key, so `addKeymap`,
@@ -186,7 +187,13 @@ describe('the engine — the ruled setup, defaults unmodified', () => {
     const engine = await loadEditorEngine(host(), () => Promise.resolve(modules));
 
     engine.createView(host(), '', 'CALLER_EXTENSION' as unknown as Parameters<EditorEngine['createView']>[2]);
-    expect(built[0].extensions).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT', 'TOKEN_HIGHLIGHT', 'CALLER_EXTENSION']);
+    expect(built[0].extensions).toEqual([
+      'BASIC_SETUP',
+      'MARKDOWN_SUPPORT',
+      'TOKEN_HIGHLIGHT',
+      'LINE_WRAPPING',
+      'CALLER_EXTENSION',
+    ]);
   });
 
   it('3.4 — the ruled pair is unchanged and still FIRST; the highlight sits after it, before the caller', async () => {
@@ -197,6 +204,8 @@ describe('the engine — the ruled setup, defaults unmodified', () => {
     expect(extensions.slice(0, 2)).toEqual(['BASIC_SETUP', 'MARKDOWN_SUPPORT']);
     expect(markdown.mock.calls[0]).toEqual([{ base: 'MARKDOWN_LANGUAGE' }]);
     expect(extensions.indexOf('TOKEN_HIGHLIGHT')).toBe(2);
+    // R28 — line wrapping sits after the highlight and before the caller's extension.
+    expect(extensions.indexOf('LINE_WRAPPING')).toBe(3);
     expect(extensions.at(-1)).toBe('CALLER_EXTENSION');
   });
 

@@ -37,8 +37,10 @@
 // package's GFM-configured language, reached through the same permitted specifier. That one key
 // is the whole of the configuration: `addKeymap`, `completeHTMLTags` and `pasteURLAsLink` are not
 // named and stay at the package's defaults. Nothing else is stripped — no bespoke keymap, no
-// theme — and ONE thing is added after the pair, below. Footnotes are syntax under NEITHER base;
-// that is reported, not configured around.
+// theme — and TWO things are added after the pair, below: the highlight style, and line wrapping
+// (R28, 7.1 walk: `EditorView.lineWrapping`, from the `codemirror` re-export — no new specifier; a
+// long line wraps in the pane instead of scrolling it sideways). Footnotes are syntax under NEITHER
+// base; that is reported, not configured around.
 //
 // ── THE HIGHLIGHT STYLE: THE DEFAULT ONE, WITH EVERY COLOUR A DESIGN TOKEN (3.4; R8, E-3) ─────
 //
@@ -205,7 +207,13 @@ function engineFrom(modules: EditorModules): EditorEngine {
       new EditorView({
         doc,
         parent,
-        extensions: [basicSetup, markdown({ base: markdownLanguage }), tokenHighlight, extra],
+        extensions: [
+          basicSetup,
+          markdown({ base: markdownLanguage }),
+          tokenHighlight,
+          EditorView.lineWrapping,
+          extra,
+        ],
       }),
   };
 }

@@ -204,6 +204,7 @@ import { enhanceCode } from './codeEnhancer';
 import type { EditorEngine, EditorViewHandle } from './editorEngine';
 import { EDITOR_CSS } from '../theme/readerCss';
 import { unregisterThemeHost } from '../theme/themeRegistry';
+import { resolveScrollContainer } from './scrollContainer';
 
 export const EDITOR_SHELL_CLASS = 'peekover-editor';
 export const EDITOR_SOURCE_CLASS = 'peekover-editor__source';
@@ -410,6 +411,39 @@ interface BuiltShell {
   shell: EditorShell;
   /** Exactly what build appended to the outer shadow root — and so exactly what teardown removes. */
   added: Element[];
+  /** Stops following the reader pane's height and clears the property it wrote on the host. */
+  release: () => void;
+}
+
+/** The custom property carrying the reader pane's usable height (px) to `EDITOR_CSS`. Set on the
+ *  OUTER host, so it inherits into its shadow root; absent when there is no scrolling pane. */
+export const EDITOR_AVAIL_PROP = '--peekover-edit-avail';
+
+/**
+ * Keep `EDITOR_AVAIL_PROP` equal to the height of the box the split can fill: the reader pane's
+ * content box (7.1 walk, R29(b)). The pane is the scroll container (`scrollContainer.ts`), and the
+ * host inside it has `height:auto`, so no percentage can reach the pane's height from the shadow
+ * root; this is the one measurement that can. It reads the pane — a flex item of a fixed-viewport
+ * shell — and never the split, so writing the property cannot change what is measured.
+ *
+ * With no scrolling ancestor (a bare pane, as many tests mount it) the property is left unset and
+ * `EDITOR_CSS` falls back to its viewport-relative height. Returns the release function.
+ */
+function followPaneHeight(host: HTMLElement): () => void {
+  const pane = resolveScrollContainer(host, true);
+  if (pane === host || typeof ResizeObserver === 'undefined') return () => undefined;
+  const measure = (): void => {
+    const style = getComputedStyle(pane);
+    const content = pane.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+    if (content > 0) host.style.setProperty(EDITOR_AVAIL_PROP, `${Math.floor(content)}px`);
+  };
+  measure();
+  const observer = new ResizeObserver(measure);
+  observer.observe(pane);
+  return () => {
+    observer.disconnect();
+    host.style.removeProperty(EDITOR_AVAIL_PROP);
+  };
 }
 
 /** Per outer host: its built shell. Weak, so a discarded host takes its entry with it. */
@@ -421,6 +455,7 @@ function liveShell(host: HTMLElement): BuiltShell | undefined {
   const built = shells.get(host);
   if (!built) return undefined;
   if (built.added.every((node) => node.parentNode === host.shadowRoot)) return built;
+  built.release();
   shells.delete(host);
   return undefined;
 }
@@ -674,7 +709,7 @@ export function buildEditorShell(host: HTMLElement): EditorShell {
   root.append(source, preview);
 
   const shell: EditorShell = { source, preview, previewHost };
-  shells.set(host, { shell, added: [style, root] });
+  shells.set(host, { shell, added: [style, root], release: followPaneHeight(host) });
   shadow.append(style, root);
   try {
     renderPreview(host, readerSourceFor(host) ?? '');
@@ -716,6 +751,7 @@ export function teardownEditorShell(host: HTMLElement): void {
   const built = shells.get(host);
   if (!built) return;
   shells.delete(host);
+  built.release();
   for (const node of built.added) node.remove();
   unregisterThemeHost(built.shell.previewHost);
 }

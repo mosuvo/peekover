@@ -1435,16 +1435,47 @@ export const CONTAINED_CSS = /* css */ `
 //     so there is no state here that colour alone carries.
 //   - `min-width:0` lets a long status line wrap inside the bar instead of widening the grid.
 // Tokens used, each already in this sheet's set: --line, --panel, --ink, --faint, --sans.
+//
+// THE 7.1 WALK'S POLISH (012 R28, R29; decisions.md "M12 TASK 3.5").
+//   - HEIGHT. The split was a fixed 60vh. It now fills the reader pane: editorView.ts measures the
+//     pane's content box (a ResizeObserver on the scroll container) into `--peekover-edit-avail` on
+//     the host, and the split is that minus its own top and bottom margins. No percentage can do
+//     this — the host sits in `height:auto` wrappers — and the shell's header height is not a
+//     constant. With no scrolling pane (a bare pane in a test) the property is unset and the height
+//     falls back to `--edit-fallback`, 60vh as before (90vh stacked). The margins are kept: the top
+//     clears the corner chrome and the bottom 130px is the clearance the bottom-left pill stack
+//     (net 16, theme 56, watch 96) was always given; reclaiming it means moving that stack.
+//   - SCROLLBARS. `scrollbar-color` (thumb --faint, transparent track) on the split, inherited by
+//     both scrollers, and `color-scheme` by theme so native controls and any scrollbar left at
+//     auto follow it. Both engines expose `scrollbar-color`; neither exposes the native bar's own
+//     colours, so the test reads the computed property.
+//   - THE RAIL. At or below 1400px the rail is hidden while editing. With it open each pane
+//     measured under 360px up to that width: folder pane 320 + reader padding 48 + split margins
+//     64 + rail 250 + 32 leave 720 for two panes at 1403px. Leaving edit shows the rail again.
+//   - THE SEARCH PANEL (Ctrl-F). The engine's panel is light-page colouring under every theme
+//     (`&light` rules, a gradient button, a white field, black text). Panel, field, buttons, labels
+//     and the close mark now draw from --panel, --paper, --line and --ink. Each selector is four
+//     classes deep so it outranks the engine's three-to-four-class rules whichever sheet is last.
+// Tokens used: --panel, --paper, --ink, --line, --faint, --accent-soft.
 export const EDITOR_CSS = /* css */ `
 .peekover-editor{display:none}
 :host([data-mode="edit"]) .peekover-mode-toggle{display:none}
 :host([data-mode="edit"]) .peekover-editor{
+  --edit-top:56px;--edit-bottom:130px;--edit-fallback:60vh;
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);
-  height:60vh;margin:56px 32px 130px;
+  height:calc(var(--peekover-edit-avail,calc(var(--edit-fallback) + var(--edit-top) + var(--edit-bottom))) - var(--edit-top) - var(--edit-bottom));
+  margin:var(--edit-top) 32px var(--edit-bottom);
   border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  color-scheme:light;scrollbar-color:var(--faint) transparent;
 }
+:host([data-mode="edit"][data-theme="dark"]) .peekover-editor{color-scheme:dark}
 :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:calc(var(--toc-w) + 32px)}
-:host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{margin-top:90px}
+:host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{--edit-top:90px}
+@media (max-width:1400px){
+  :host([data-mode="edit"]) .peekover-toc{display:none}
+  :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:32px}
+  :host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{--edit-top:56px}
+}
 .peekover-editor__bar{
   grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:12px;
   padding:6px 10px;border-bottom:1px solid var(--line);
@@ -1469,9 +1500,19 @@ export const EDITOR_CSS = /* css */ `
 .peekover-editor .peekover-editor__source .cm-editor .cm-scroller .cm-selectionLayer .cm-selectionBackground{background:var(--hl-soft)}
 .peekover-editor__source .cm-editor .cm-searchMatch-selected{background:var(--hl-soft);box-shadow:inset 0 -2px 0 var(--ink)}
 .peekover-editor__source .cm-editor .cm-tooltip{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-panels{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-panels-bottom{border-top:1px solid var(--line)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-panels-top{border-bottom:1px solid var(--line)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-textfield{background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.peekover-editor .peekover-editor__source .cm-editor .cm-button{background:var(--panel);background-image:none;color:var(--ink);border:1px solid var(--line);border-radius:4px;cursor:pointer}
+.peekover-editor .peekover-editor__source .cm-editor .cm-button:hover{border-color:var(--faint)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-button:active{background:var(--accent-soft);background-image:none}
+.peekover-editor .peekover-editor__source .cm-editor .cm-search label{color:var(--ink)}
+.peekover-editor .peekover-editor__source .cm-editor .cm-search [name="close"]{background:transparent;color:var(--ink);cursor:pointer}
+.peekover-editor .peekover-editor__source .cm-editor .cm-search input[type="checkbox"]{accent-color:var(--ink)}
 .peekover-editor__preview{min-width:0;overflow:auto;border-left:1px solid var(--line)}
 @media (max-width:720px){
-  :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);height:90vh}
+  :host([data-mode="edit"]) .peekover-editor{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) minmax(0,1fr);--edit-fallback:90vh}
   .peekover-editor__preview{grid-row:3;border-left:none;border-top:1px solid var(--line)}
 }
 `;
@@ -1504,6 +1545,19 @@ export const EDITOR_CSS = /* css */ `
 // No `:host` selector, so no new `:host` rule site anywhere. Tokens used, each present in
 // design/tokens.css and in READER_CSS's :host block: --sans, --muted, --panel, --line, --shadow,
 // --ink, --faint.
+//
+// THE CAPTURE NOTICE'S SEAT (012 R29(d), 7.1 walk). READER_CSS seats `.peekover-watch-disclosure`
+// at `bottom:176px; left:16px` — measured from the HOST's bottom, which on the contained pane is
+// the end of the DOCUMENT (or of the split), so it landed on the last lines of text and on the
+// split's lower-left corner. The notice exists on the app page alone (it needs a registered diff
+// context), and this sheet is injected on exactly that page's hosts, so the override lives here and
+// the content-script bundle is untouched. It moves into the clearance band every column and split
+// already keeps (130px under the text; the pill stack takes the band's left 130px, so the notice
+// sits right of it, 176px in). The notice is ~110px tall at its own 34ch width, which the band's
+// 16px floor + 110 + the 4px left over the column's padding holds. Its NARROW seat is not solved:
+// the folder pane leaves a reader ~150px wide there, so the notice cannot fit beside the pills —
+// carried with the left sidebar to the post-M12 reader-polish task. Moving the notice into the
+// flow, or making it dismissible, is that task's too.
 export const EDIT_CONTROL_CSS = /* css */ `
 .peekover-edit-toggle{
   position:absolute;top:16px;right:116px;z-index:2;
@@ -1514,5 +1568,6 @@ export const EDIT_CONTROL_CSS = /* css */ `
   transition:color .15s,background .15s,border-color .15s;
 }
 .peekover-edit-toggle:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-watch-disclosure{bottom:16px;left:176px}
 @media print{.peekover-edit-toggle{display:none!important}}
 `;

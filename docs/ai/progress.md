@@ -68,6 +68,11 @@ rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed mi
 
 ## Now (start here)
 
+**M12 task 3.5 DONE, 2026-10-30 — the 7.1-walk polish (R28, R29).** Search panel from tokens, a
+split that fills the pane, themed scrollbars, the rail hidden while editing at ≤ 1400 px, the snapshot
+notice off the text (wide), long lines wrap; content script byte-identical. Record: `decisions.md`'s
+"M12 TASK 3.5 — LANDED". Up next: the human's re-check of the R29 items, then 7.2.
+
 **M11 CLOSED, 2026-09-11 (task 8.3-R — records reconcile).** Math rendering shipped: inline `$…$`, block
 `$$…$$` and fence math via Temml/MathML (KaTeX was reopened and replaced after a busted byte gate),
 copy-as-LaTeX/MathML, both engines. See § Closed milestones below for the one-paragraph summary and the
@@ -1518,8 +1523,12 @@ paint measured; NOTHING CHOSEN; the cost ruled NOT MATERIAL (R27).** `decisions.
 
 ## Up next
 
-**GROUP 6 IS COMPLETE: 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed. 28 tasks.**
-**NEXT — M12 task 7.1, the HUMAN-ONLY milestone-close walk.** `tasks.md` 7.1 is the line. Every
+**GROUP 6 IS COMPLETE: 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed; the discovered 3.5 (the
+7.1-walk polish, R28 / R29) landed 2026-10-30. 28 tasks** (tasks.md's groups sum to 27 before 3.5; the
+previous line's "28" was an off-by-one, flagged).
+**NEXT — the human's re-check of the R29 items (list in `decisions.md`'s "M12 TASK 3.5" record and the
+task report), THEN 7.2.** Then 7.1's walk resumes where it stopped (parts A–B were ok except the R29
+items). **7.1, the HUMAN-ONLY milestone-close walk:** `tasks.md` 7.1 is the line. Every
 item on it needs a loaded extension and has no agent substitute — it is the human's, not a
 session's to attempt or to stand in for with a suite run.
 - **Added to 7.1's list by 6.3 (R27's revisit-when):** on Firefox, the first entry into edit on a
@@ -1527,6 +1536,12 @@ session's to attempt or to stand in for with a suite run.
 - **Owed to the human:** a word on the REBUILT route-2(i) case (R24(iii) ruled
   it retired unless a meaningful form existed; one did); the 5.5 walk, on 7.1's list.
 - **The browser suite takes about 395 s** alone.
+**Byte snapshot — 3.5 (2026-10-30), supersedes 6.4's below:** `.output` 5,828,071 B (Cr) / 5,828,187 B (Fx)
+headroom 1,511,961 / 1,511,845 B · zip 1,841,465 / 1,841,523 B · content script 342,806 B both engines, md5
+`c4f59f1a…` / `ecc31688…` UNCHANGED · app chunk 530,649 B (+2,358) · manifest 654 / 770 B, `permissions: []` ·
+lint 0 · unit 1417 · browser 1961 / 51 skipped (zero reds) · golden empty · **`pnpm audit --prod` EXIT 1 — 6
+vulnerabilities, identical at HEAD (newer advisories on dompurify and markdown-it; the pending bump, task
+1.2's subject); flagged for the human.**
 **Byte snapshot — 6.4's measured figures, re-measured unchanged at 6.3; carry to the next kickoff:** `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx)
 against ≤ 7 MiB (7,340,032 B) — headroom 1,514,319 / 1,514,203 B · zip 1,841,082 / 1,841,140 B · content
 script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
@@ -1691,6 +1706,20 @@ item, or a human-drafted-not-placed retro action (see § Carried items below).
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
+
+- **NEW 2026-10-30 — from task 3.5 (R28, R29).** Home: **the post-M12 reader-polish task** (with the left
+  sidebar), unless a 7.1 verdict re-opens one.
+  - **(f) the filter-clear, sort and math-action buttons are native-styled** (2px outset, light grey,
+    system font) in dark. PRE-EXISTING — identical at HEAD and at pre-M12 0541886, no CSS rule for them.
+  - **(g) the display-math block carries the code toolbar** ("math · Line numbers · Wrap · Copy").
+    PRE-EXISTING, same comparison.
+  - **The left sidebar on narrow screens** (R29 CARRY).
+  - **(d)'s NARROW case, and option C** — the M6 snapshot notice moved into the flow or made dismissible.
+    Decision 1 fixed it at WIDE only, in an app-only rule.
+  - **Reclaiming the 130 px bottom band** under the split (Decision 2 kept it, tolerance 162 px); it needs
+    the pill stack moved, and the notice cannot be placed in the top row without a magic number.
+  - **`pnpm audit --prod` is red at HEAD** (6 vulnerabilities, newer advisories) — see the byte snapshot.
+  - **Accepted (R29):** sub/sup/emoji render literally (E-8).
 
 - **NEW 2026-10-09 — from RULING R26 (task 6.4).**
   - **Documents around 1 MB are slow to type in (R26's stated limitation).** 1 MB prose: ~330 ms

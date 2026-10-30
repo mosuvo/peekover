@@ -405,8 +405,12 @@ describe('012 task 2.2 — the preview’s scroll box', () => {
 });
 
 describe('012 task 2.2 — the split, by hit-test', () => {
-  it(`WIDE ${WIDE.width}x${WIDE.height}: source and preview sit side by side, rail open`, async () => {
-    await page.viewport(WIDE.width, WIDE.height);
+  // R29(c): the rail is hidden while editing at <= 1400px, so the "clear of the open rail" arm lives
+  // at a viewport where the rail is shown in edit; the 1400px arm below pins the hidden rail instead.
+  const WIDE_RAIL = { width: 1500, height: 900 };
+
+  it(`WIDE ${WIDE_RAIL.width}x${WIDE_RAIL.height}: source and preview sit side by side, rail open`, async () => {
+    await page.viewport(WIDE_RAIL.width, WIDE_RAIL.height);
     liveRegistries();
     const host = mountOuter();
     const shell = await enterEdit(host);
@@ -429,7 +433,21 @@ describe('012 task 2.2 — the split, by hit-test', () => {
     expect(Math.abs(sr.width - pr.width)).toBeLessThanOrEqual(2);
     // Clear of the open rail: the preview's right edge stops at the rail's left edge.
     const rail = host.shadowRoot!.querySelector('.peekover-toc')!.getBoundingClientRect();
+    expect(rail.width, 'firing control: the rail is laid out at this width').toBeGreaterThan(0);
     expect(pr.right).toBeLessThanOrEqual(rail.left);
+  });
+
+  it(`WIDE ${WIDE.width}x${WIDE.height}: the rail is hidden in edit and both panes are at least 360px`, async () => {
+    await page.viewport(WIDE.width, WIDE.height);
+    liveRegistries();
+    const host = mountOuter();
+    const shell = await enterEdit(host);
+    await frames();
+
+    const rail = host.shadowRoot!.querySelector('.peekover-toc')!.getBoundingClientRect();
+    expect(rail.width, 'the rail is not laid out in edit at 1400px').toBe(0);
+    expect(shell.source.getBoundingClientRect().width).toBeGreaterThanOrEqual(360);
+    expect(shell.preview.getBoundingClientRect().width).toBeGreaterThanOrEqual(360);
   });
 
   it(`NARROW ${NARROW.width}x${NARROW.height}: the panes stack, source above preview`, async () => {
