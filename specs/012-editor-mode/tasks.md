@@ -1330,7 +1330,7 @@ the measurements produce numbers and choose nothing; a material nested-host cost
 *Per WORKFLOW §7.4's close-adjacent rule: short check-in sessions here, tree and background processes
 confirmed clean before each task. Every item in 7.1 needs a loaded extension and has NO agent substitute.*
 
-- [ ] **7.1 ★ HUMAN-ONLY milestone-close walk.** Budgeted up front: **the live picker + a real local-disk
+- [x] **7.1 ★ HUMAN-ONLY milestone-close walk.** Budgeted up front: **the live picker + a real local-disk
       write and re-read** (headless cannot drive `showDirectoryPicker`; OPFS is not the user's disk) ·
       **Firefox everything** — edit, preview, the download save (Playwright cannot load the extension
       there) · the **conflict UX** as ruled at 5.5, against a real external edit of a watched file · the
@@ -1388,6 +1388,15 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       "all 7 ok") and B (9–11) ok. Never reported as verdicts: A1 · A2 (E-9) · A4 · A8 · B10, and C (12–18),
       D (19–22), E (23–27), F (28), G (29–30). The 1.4 reading-view glance: ok. Tick when each has its own
       stated verdict or a named finding (`decisions.md`, `retro.md` "M12 retro").*
+      ★ *2026-10-30 — TICKED (supersedes the "NOT TICKED" note above; the human's verdicts arrived). Chromium
+      unless marked; wide desktop plus narrow: **A (1–8)** ok, except the R29 items — fixed at 3.5, re-checked ok
+      on the 1.4 build · **B (9–11)** ok — R15's diagram note accepted · **C (12–18) saving** ok · **D (19–22)
+      conflict** ok — refuse-and-tell is enough, R21 stands · **E (23–27) guard** ok — the consent line still reads
+      true · **F (28) 1 MB: NOT WALKED** — R26's stated limitation stands, carried · **G (29–30) Firefox** ok · the
+      1.4 reading-view glance ok. F is a stated verdict ("not walked, R26 stands"), which is what Verify asks for;
+      it does not block the close (R26 shipped it as a known limitation on measured numbers; an unacceptable
+      verdict is the only thing that re-opens it). Golden EMPTY across the milestone · manifests 654 / 770 B ·
+      `permissions: []`. `decisions.md`, "M12 CLOSED".*
       Verify: every axis above gets its own stated verdict — PASS, or a named finding routed to § Carried
       items. No implicit "looked fine". Engines and viewports recorded. Golden EMPTY · manifest
       **654 / 770 B** · `permissions: []`.
@@ -1404,7 +1413,7 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       rule held; build-then-measure on D-4 was right) and ten seed lessons. Five rules placed: `AGENTS.md` ×3,
       `WORKFLOW.md` ×2.*
 
-- [ ] **7.3 Records reconcile.** `progress.md`'s M12 narrative moved to `progress-archive.md`; every
+- [x] **7.3 Records reconcile.** `progress.md`'s M12 narrative moved to `progress-archive.md`; every
       D-value (D-1…D-10) audited against the commit that landed its `decisions.md` entry, gaps named;
       `spec-coverage.md`'s F8 row re-scored; the final byte ledger decomposed across every task from 1.1
       against the 2,142,607 / 2,142,491 B starting headroom; `AGENTS.md`'s current-milestone line.
@@ -1413,6 +1422,13 @@ confirmed clean before each task. Every item in 7.1 needs a loaded extension and
       Verify: every D-value's landing commit named; the closing content-script figure stated with each
       task's own justified delta summing to it and zero `codemirror` bytes in it; `.output` ≤ 7,340,032 B
       on both engines; `permissions: []` intact throughout; golden's milestone diff EMPTY.
+      ★ *2026-10-30 — DONE (`decisions.md`, "M12 CLOSED"): every D-value's landing commit named (D-9 has no
+      standalone heading, D-5 landed twice — gaps named); the content script 340,492 → 344,195 B, +3,703, each
+      task's delta justified and summing to it, zero `codemirror` bytes; `.output` 5,830,859 / 5,830,975 B ≤
+      7,340,032 B; `permissions: []` throughout; `tests/golden/` has no diff across the milestone. `spec-coverage.md`
+      F8 re-scored 5% → 17%. The M12 narrative moved to `progress-archive.md`; `AGENTS.md`'s current-milestone
+      line and its "module-level caches" sentence corrected. The kickoff's file list omitted `spec-coverage.md`
+      and the D-value / byte-ledger audits; this line's own text was followed.*
 
 ---
 
@@ -1526,6 +1542,11 @@ LANDED": 1 (3) · 2 (2) · 3 (5) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing
 advisories, R30), human-ruled and human-scheduled between 3.5 and 7.2, `decisions.md` "M12 TASK 1.4 —
 LANDED": 1 (4) · 2 (2) · 3 (5) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing: … 6.3 → 3.5 → **1.4** → 7.1
 (the human's re-check of the 3.5 and 1.4 items, then 7.2).*
+
+★ *2026-10-30 (7.3's reconcile): **29 tasks, verified by counting the file** — 21 planned (gate 3's 22 less the
+struck 5.6) + 8 discovered (1.2, 1.3, 1.4, 3.4, 3.5, 4.3, 4.4, 5.8), 30 numbered lines with the struck one; every
+count line above is TRUE. The off-by-one lived in `progress.md` (its 6.3 commit `acd2c26` wrote "28" with no task
+added), not here. Ticked at the close: all 29.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

@@ -108,7 +108,7 @@ moved 0% → 78% at M9's close (2026-08-22)** — Shiki highlighting, ≥14 (20 
 themes, copy/line-numbers/line-highlighting/word-wrap and collapsible blocks all ship; what remains is
 a 6-language curated catalog rather than Shiki's 190+, and auto-detection built but not wired to a
 live document (F3 below has the full accounting). The Technical writer still has no editor and no
-export (F8 4.8%, F9 0%). The Student's math picture is stale here — **F2 moved to 68% at M11's close
+export (F8 4.8% at that reading — **17% since M12's close, 2026-10-30**; F9 0%). The Student's math picture is stale here — **F2 moved to 68% at M11's close
 (2026-09-11)**, after this paragraph's own reading (5 of 7 math/formula items ✗) was written; math
 now renders, both engines. This paragraph's persona-#1/#5 figures are NOT re-derived by that move —
 see the settled 56%/68%-boundary discussion below, which this F2 change is an input to, not a
@@ -184,22 +184,22 @@ the bottom with the question a human walk would settle.
 | F5 Navigation & reading UX *(re-audited 2026-09-06, print mode)* | 39 | 14 | 2 | 23 | 0 | 15.0 | **38%** |
 | F6 Live updating & AI-workflow *(re-audited 2026-08-13)* | 13 | 7 | 2 | 4 | 0 | 8.0 | **62%** |
 | F7 Theming & appearance | 17 | 1 | 0 | 16 | 0 | 1.0 | **6%** |
-| F8 Editor mode | 21 | 0 | 2 | 19 | 0 | 1.0 | **5%** |
+| F8 Editor mode *(re-audited 2026-10-30, M12 close)* | 21 | 1 | 5 | 15 | 0 | 3.5 | **17%** |
 | F9 Export & publishing *(re-audited 2026-09-06, M10 close)* | 13 | 4 | 2 | 7 | 0 | 5.0 | **38%** |
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
 | F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **53** | **22** | **123** | **0** | **64.0** | **32%** |
+| **§5 total** | **198** | **54** | **25** | **119** | **0** | **66.5** | **34%** |
 | §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **66** | **32** | **129** | **0** | **82.0** | **36%** |
+| **Whole spec** | **227** | **67** | **35** | **125** | **0** | **84.5** | **37%** |
 
 *Every row except F2, F3, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
 HEAD `174b94a`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
 below) without moving that item off `~`, since two of its three named sub-surfaces are still absent. F5
 and F6 moved at M8 (2026-08-13) — three rows in each, six total, all cited below in their own sections.
 F3 moved at M9 (2026-08-22) — six rows ✗→✓, two ✗→~, cited in full at F3 below. **F2 moved again at M11
-(2026-09-11)** — four rows ✗→✓, two ✗→~, cited in full at F2 above.*
+(2026-09-11)** — four rows ✗→✓, two ✗→~, cited in full at F2 above. **F8 moved at M12 (2026-10-30)** — one row ✗→✓, three ✗→~, cited in full at F8 below.*
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -433,19 +433,24 @@ milestone now (F3's own re-audit above already moved it off this list at M9's cl
 
 ## F8. Editor Mode
 
-**No `codemirror` dependency and zero grep hits anywhere in `src/` or `entrypoints/`.** Every row
-below is ✗ unless noted.
+**★ RE-AUDITED AT M12's CLOSE (2026-10-30) — 5% → 17%.** M12 shipped F8's focused core: edit → live preview →
+save-back (`decisions.md`, "M12 CLOSED"). Of 21 rows: 1 ✅ (the Read ↔ Edit toggle), 5 ~ (the two snapshot rows M6 already
+had, plus the split pane, list continuation and find & replace), 15 ✗. Scored 1 for ✅ and 0.5 for ~ as everywhere here:
+(1 + 2.5) / 21 = 16.7%. **Two ~ are CodeMirror's own defaults, not Peekover-built features** — `basicSetup` and
+`markdown()` ship unmodified by ruling (`decisions.md`, "M12 TASK 1.1" and "M12 TASK 1.1 EXTENDED"); the spec's §6 keeps
+Peekover's own versions deferred. Everything else below is ✗ unless noted. Save-back (File System Access write on
+Chromium, a download elsewhere) is not an F8 row; it is the milestone's loop and is scored nowhere here.
 
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
-| Read ↔ Edit toggle | ✅ | ✗ | No editor; `readerMode.ts:28` knows only `reading\|raw` | The M6 gate recorded a first-time user expecting to edit — carried, `decisions.md` 2026-07-26. |
-| Split pane with scroll sync | ✅ | ✗ | — | — |
+| Read ↔ Edit toggle | ✅ | **✅** *(M12, 2026-10-30)* | `src/render/readerMode.ts` (`'edit'`), `src/render/editorEnhancer.ts` (the Edit / Stop editing control), `src/render/editorView.ts`; `tests/browser/editorNestedHost.browser.test.ts`, `editorWalkPolish.browser.test.ts`, both engines | A dedicated control, not the `\` key (plan D-1). The M6 gate's first-time-user expectation is met. |
+| Split pane with scroll sync | ✅ | **~** *(M12, 2026-10-30)* | `src/render/editorView.ts`, `EDITOR_CSS` in `src/theme/readerCss.ts`; the 7.1 walk (A, B ok) | The split (source beside a live preview) ships; **scroll sync does not** — deferred by spec §6. |
 | Visual table editor | ✅ | ✗ | — | — |
 | CSV paste/import → markdown table | ✅ | ✗ | 0 `csv` hits | — |
 | Formatting toolbar | ✅ | ✗ | — | — |
 | Full keyboard shortcuts | ✅ | ✗ | Two shortcuts exist repo-wide (`\`, `` ` ``) | — |
-| Smart lists / continuation | ✅ | ✗ | — | — |
-| Find & replace with regex | ✅ | ✗ | — | — |
+| Smart lists / continuation | ✅ | **~** *(M12, 2026-10-30)* | `src/render/editorEngine.ts` (`markdown()` defaults: Enter → `insertNewlineContinueMarkup`) | CodeMirror's own continuation ships unmodified (ruled); no Peekover-built smart lists. |
+| Find & replace with regex | ✅ | **~** *(M12, 2026-10-30)* | `src/render/editorEngine.ts` (`basicSetup`'s search panel, restyled from tokens at 3.5) | CodeMirror's own Ctrl-F panel (regex, replace) ships unmodified (ruled); no Peekover-built find & replace. |
 | Markdown linting | ✅ | ✗ | No `markdownlint` dependency | — |
 | Auto-format | ✅ | ✗ | — | — |
 | Text transforms | ✅ | ✗ | — | — |
@@ -612,7 +617,7 @@ no amount of pipeline design substitutes.
 | Highlighting | Shiki (lazy) | ✗ | **F3 = 0%.** |
 | Math | KaTeX (+ MathJax lazy chunk) | ✗ | **F2's seven math/formula rows all ✗** — unchanged by M7. |
 | Diagrams | Mermaid; viz.js later | ✓ `mermaid ^11.16.0` | **Provisioned at M7** — the persona-#1 killer-feature gap, closed on the app-page reader. Emitted as **lazy async chunks behind one `import()`**, never statically inlined, and kept off the content-script graph (`diagramImportFence.test.ts`). viz.js still ✗. |
-| Editor | CodeMirror 6 | ✗ | **F8 = 5%.** |
+| Editor | CodeMirror 6 | ✓ `codemirror ^6.0.2`, `@codemirror/lang-markdown ^6.5.2` | **Provisioned at M12 (1.1)**, lazy, app-page-only, behind the one-importer fence (`editorEngine.ts`); zero bytes in the content script. **F8 = 17%.** |
 | Diff | `diff` + custom renderer | ✓ `diff ^9.0.0` | Added at M6 — the first `dependencies` addition since M1, taken as a governed act. |
 | Search | MiniSearch | ✗ | Blocks F5 cross-file search. |
 | Clipper/import | Readability + Turndown | ✗ | Blocks F4 clipper and F8 html→md import. |

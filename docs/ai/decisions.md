@@ -1,6 +1,142 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-30 · M12 CLOSED — Editor Mode's focused core shipped (edit → live preview → save-back via
+  CodeMirror 6, lazy-loaded, nested-host preview, watch/edit collision, the unsaved-changes guard; both
+  engines), task 7.3's records reconcile. 31 rulings, 29 tasks, 40 commits.**
+  **WHAT SHIPPED.** A dedicated Edit control on the app-page reader enters a third mode, `edit`
+  (`readerMode.ts`; D-1): a CodeMirror 6 source pane beside a live preview that is the reader's own
+  `mount()` on a nested shadow host with `chrome: false` (D-4 as RE-RULED), running the reader's four
+  enhancers (R7). The editor is app-page-only and lazy: `editorEngine.ts` is the one importer (D-2) and
+  `editorImportFence.test.ts` proves it never reaches the content script (D-10). Save writes on Chromium
+  after a permission request at the click, with a compare-before-write conflict predicate and one baseline
+  (D-6, D-7) — refuse and tell (R21); where Save cannot write (Firefox, no handle, a declined prompt) it
+  downloads. Watching a document and editing it is supported, degraded (D-8): the watch defers while a
+  document is edited, leaving edit flushes, and a hint tells the user the file changed (R6). Every exit from
+  a dirty edit asks first, in an in-page dialog (R23). Syntax colours come from design tokens (R8, R11); the
+  7.1 walk's polish landed at 3.5 (R28 line wrapping; R29 search panel, full-height split, themed
+  scrollbars, the rail hidden at ≤ 1400 px, the snapshot notice off the text at wide). `permissions: []`,
+  the ledger's edit sentences signed (D-9 / 5.1) and the zero-network claim proven across load, preview and
+  save with a firing control in every window (5.7, 5.8).
+  **THE 7.1 WALK — verdicts as the human reported them (2026-10-30), Chromium unless marked, wide desktop
+  plus narrow.**
+  | Axis | Verdict |
+  | --- | --- |
+  | A (1–8) the look | ok, except the R29 items — fixed at 3.5, re-checked ok on the 1.4 build (E-9, E-4, E-8 and R12 accepted as walked) |
+  | B (9–11) the preview | ok — R15's diagram note accepted |
+  | C (12–18) saving | ok |
+  | D (19–22) conflict | ok — refuse-and-tell is enough; R21 stands |
+  | E (23–27) the guard | ok — the consent line still reads true |
+  | F (28) a 1 MB document | **NOT WALKED** — R26's stated limitation stands, carried |
+  | G (29–30) Firefox | ok |
+  | The 1.4 reading-view glance | ok |
+  **7.1 IS TICKED** although F was not walked: 7.1's Verify asks for "its own stated verdict" per axis, and
+  F's is "not walked, R26's limitation stands" — a stated verdict, with the item carried (below). It does
+  not block the close: R26 shipped it as a known limitation on measured numbers (about 330 ms per render of
+  1 MB prose; seconds per key for enhancer-heavy 1 MB on Firefox), and only an unacceptable verdict could
+  re-open it. **Named, not smoothed over:** no one has typed in a 1 MB document in the loaded extension.
+  The walk was Chromium for the walked axes except G; the engines and viewports are the human's report and
+  are not instrumented here.
+  **THE D-VALUE AUDIT (D-1…D-10), each against the commit that added its `decisions.md` entry** (found with
+  `git log -S` on the entry heading, then read):
+  | D | Landing entry (heading) | Commit |
+  | --- | --- | --- |
+  | D-1 | "012 D-1 — `ReaderMode` extends…" (2.1); "the CONTROL half" (3.2) | `f9e6439`; `02caba9` |
+  | D-2 | "012 D-2 — `editorEngine.ts` is the ONE module…" (3.1) | `3affcae` |
+  | D-3 | "012 D-3 — LANDED at task 3.2" | `02caba9` |
+  | D-4 | "M12 D-4 RE-RULED" (the mechanism); "012 D-4 — LANDED at task 2.2" | `0541886`; `d505890` |
+  | D-5 | "012 D-5 — LANDED at task 3.3" (provisional); R26 and 6.4 (final) | `07a7d08`; `55dfbad` |
+  | D-6 | "012 D-6 — LANDED at task 5.3" (write); "the DOWNLOAD FALLBACK" (5.4) | `c5fffbb`; `4242955` |
+  | D-7 | "012 D-7 — the conflict-DETECTION predicate…" (5.2) | `5960976` |
+  | D-8 | "012 D-8 — the deferral half" (4.1); "4.2 landed" (the hint) | `2466f2e`; `3465e15` |
+  | D-9 | "M12 TASK 5.1" (the signed text); interim at 5.3, final in 5.4's D-6 entry | `e5d5c10`; `c5fffbb`; `4242955` |
+  | D-10 | "012 D-10 — LANDED at task 3.1" | `3affcae` |
+  **GAPS, NAMED.** Every D-value lands with a named commit and a `decisions.md` entry. **Two divergences:**
+  D-9 has no standalone "012 D-9" bullet — its text is the 5.1 sign-off entry and the 5.3 / 5.4 landings (the
+  substance is complete; the heading is missing); D-5 landed twice, provisionally at 3.3 and finally at 6.4
+  through R26, so its one-line landing is a pair. Neither is a missing artifact.
+  **THE TASK COUNT, RECONCILED.** `tasks.md` holds **29 tasks** — gate 3 approved 22, of which 5.6 was struck
+  (R21), leaving 21 planned; **eight were discovered** (1.2, 1.3, 1.4, 3.4, 3.5, 4.3, 4.4, 5.8) — and one
+  struck line, 5.6, so 30 numbered lines. 21 + 8 = 29. By group: 1 (4) · 2 (2) · 3 (5) · 4 (4) · 5 (7) ·
+  6 (4) · 7 (3). **`tasks.md`'s count lines were right all along** (22 → 23 → 24 → 25 → 26 → 25 → 26 → 27 →
+  28 → 29). **The off-by-one was `progress.md`'s:** its 6.4 and 6.1 lines said 27 (correct), and the 6.3
+  commit `acd2c26` wrote "28 tasks" in § Up next with no task added. 3.5's commit then wrote "tasks.md's
+  groups sum to 27… the earlier 28 was an off-by-one", and the 1.4 line made it 29 — now true in both files.
+  **THE BYTE LEDGER, CLOSED.** Fresh builds, both engines identical, HEAD `3ad539a` (docs-only since).
+  `.output` **5,830,859 B (Cr) / 5,830,975 B (Fx)** against 7,340,032 B: headroom **1,509,173 / 1,509,057 B**
+  — **633,434 B** of the starting 2,142,607 / 2,142,491 B (about 29.6%) spent, **identical on both engines**
+  (5,197,425 / 5,197,541 → 5,830,859 / 5,830,975). Zips 1,842,763 / 1,842,822 B. Manifests **654 / 770 B**,
+  `permissions: []`, `wxt.config.ts` unchanged across the milestone, no `web_accessible_resources`. Golden:
+  `tests/golden/` has **no diff across the milestone** (`git diff 38c2c50^ HEAD -- tests/golden/` empty).
+  **The content script, decomposed across every task from 1.1** — 340,492 B at the start, **344,195 B** at
+  the close, **+3,703 B**, each step the named task's own glue, and ZERO `codemirror` bytes in it (the fence,
+  3.1, and a grep of the built file):
+  | Task | Δ content script | Why | After |
+  | --- | ---: | --- | ---: |
+  | start (M11 close) | | | 340,492 |
+  | 1.1 | 0 | the editor is app-page-only | 340,492 |
+  | 1.2 | +1,669 | `markdown-it` 14.3.2 + `dompurify` 3.4.16 (both on the graph) | 342,161 |
+  | 2.1 | +178 | `readerMode.ts` / `readerCss.ts` glue: the `edit` mode, the `\` defence-in-depth guard, the edit-visibility selectors | 342,339 |
+  | 2.2 | +45 | the guard alone (`decisions.md`, "012 D-4 — LANDED at task 2.2") | 342,384 |
+  | 3.1–3.3 | 0 | md5-identical on both engines | 342,384 |
+  | 4.1 | +136 | `watchController.ts`'s deferral widening | 342,520 |
+  | 4.2 | +132 | the hint's signal (`watchController.ts`) | 342,652 |
+  | 3.4 | 0 | md5 unchanged (seen to move under un-gating) | 342,652 |
+  | 4.3 | +154 | `ownWrite` (114) and the token (40) | 342,806 |
+  | 4.4 … 3.5 | 0 | md5-identical (3.5's four arms all on `chunks/app.js`) | 342,806 |
+  | 1.4 | +1,389 | `dompurify` 3.4.17 (+989) and `markdown-it` 14.3.3 (+397), 3 B interaction | 344,195 |
+  | **sum** | **+3,703** | 1,669 + 178 + 45 + 136 + 132 + 154 + 1,389 | **344,195** |
+  *Method:* the 4.1–4.3 and 2.x figures are the tasks' own recorded measurements; 7.3 re-measured the
+  commits that touch the content script (`8cbac42`, `f9e6439`, `d505890`, `3affcae`, `02caba9`, `07a7d08`,
+  `2466f2e`, `3465e15`, `a88e957`, `644b63b`) in a scratch tree built with the CURRENT dependencies; every
+  one read exactly 1,389 B above its recorded figure (the 1.4 bump), except 4.2's, which read 4 B more —
+  a minifier-naming interaction. Equal md5s (`ae6ff9eb` for 2.2–3.3; `eaf0385c` for 4.2 and 3.4) corroborate
+  the zero rows. The 4 B is stated, not hidden.
+  **The editor's measured cost.** Package: `basicSetup` +97,226 B over `minimalSetup` (1.1, 4.5% of the
+  headroom then). The editor chunks load only on Edit — no editor chunk is requested before it (R27) and
+  first paint with edit never entered is inside the noise on both gates (6.3). The nested preview root:
+  7–9 KB of Blink heap on Chromium; Firefox +57–59 ms of about 330 on the first entry into edit at 1 MB
+  (R27, unattributed). Typing: about 330 ms per preview render of 1 MB prose, enhancer-heavy 1 MB on
+  Firefox seconds per key (R26). The 3.5 polish added +2,358 B and 1.4 +1,399 B, all in `chunks/app.js`.
+  **Suites at the close.** `pnpm lint` EXIT=0 · unit 1417 · browser 1961 passed / 51 skipped (188 files) ·
+  golden empty · scanner and `--self-test` EXIT=0 · `pnpm audit --prod` EXIT=0 (one ignore, GHSA-238p-pmpm-9mq7,
+  2026-10-30 14:49) · 7.3 is doc-only: a clean two-engine build is md5-identical to `3ad539a`'s on every
+  shipped file.
+  **THE RETRO** is banked in `retro.md` ("M12 retro", 2026-10-30): the three questions `tasks.md` 7.2 asks
+  (F-1…F-6 saved; the unwatched rule held; build-then-measure on D-4 was right) and ten seed lessons; five
+  rules placed, KEPT by the human (R31, below).
+  **SPEC-COVERAGE: F8 RE-SCORED 5% → 17%** (`spec-coverage.md`): 1 shipped, 5 partial, 15 not, of 21 — the
+  Read ↔ Edit toggle ✗ → ✓; the split pane, smart lists / continuation and find & replace with regex ✗ → ~
+  (the split ships, scroll sync is deferred; list continuation and search ship as CodeMirror's own defaults,
+  not as Peekover-built features: `decisions.md`'s "M12 TASK 1.1" entries). §5 total 32% → 34%, whole spec
+  36% → 37%. The sealed `spec.md` / `plan.md` / `tasks.md` status lines stay "draft" per the M7–M11
+  precedent (spec 011 reads "draft" after its close).
+  **CARRIED, AND WHERE.** One consolidated list, `progress.md` § Carried items ("POST-M12 CONSOLIDATED
+  LIST"): reader polish (the unstyled native buttons, the code toolbar on display math, the snapshot notice
+  in the flow / dismissible and its narrow case, the 130 px band, the left sidebar on narrow screens) ·
+  the editor at 1 MB (R26) and Firefox's first-entry cost (R27) · `readerPane.select`'s ordering guard ·
+  "Wipe all data" not closing an open folder · the failed-chunk "try again" copy · the unguarded exits ·
+  test infrastructure (the helper split, the +~150 s, the clipboard flake) · supply chain (the `packageManager`
+  pin, the katex ignore's revisit-when) · the ~10.8 KB import-shape saving. Accepted, not to be
+  re-litigated: E-4, E-5, E-8, R12 as walked, and R15. The M12 narrative moved to `progress-archive.md`.
+  **AGENTS.md** — the stale Current-milestone paragraph now says M12 closed; the browser-suite sentence that
+  said the files share "module-level caches" is corrected (5.8 measured IndexedDB, the font and HTTP caches
+  and the OS clipboard; modules and `document.fonts` do not carry).
+  **Revisit-when:** F is walked and returns an unacceptable verdict (re-opens R26); an upstream mermaid
+  releases on katex ≥ 0.18.2 (drop the ignore); the reader-polish task opens.
+
+- **2026-10-30 · M12 RULING R31 — HUMAN RULING: the five rules the 7.2 retro placed are KEPT.** Given by
+  the human on 2026-10-30, in task 7.3's kickoff, on the wording the 7.2 commit `f54602d` landed. The agent
+  chose nothing; this entry records it. **`AGENTS.md`:** (1) every task's preflight runs `pnpm audit --prod`
+  and the kickoff's invariants block states its exit and date; (2) a guard that reads a zero is fired by a
+  control that includes a SLOW case and is read only after something later has settled; (3) scripts and
+  multi-line files are authored with the file tool, not a shell heredoc, and orphaned node / Playwright
+  processes are checked after a stopped browser run. **`WORKFLOW.md`:** (4) the informal first-render glance
+  survives a deferral, and automated proxies are a supplement; (5) a milestone-close walk covers the
+  reader's own untouched surfaces in both themes. *Why:* each is a measured M12 failure with a concrete
+  practice change (`retro.md`, "M12 retro", lessons c, d, e, f, i). *Revisit-when:* the next milestone's
+  retro finds one waste or wrong.
+
 - **2026-10-30 · M12 TASK 1.4 — LANDED: `dompurify` 3.4.16 → 3.4.17 and `markdown-it` 14.3.2 → 14.3.3,
   the lowest versions that patch all five advisories `pnpm audit --prod` reported (R30). `pnpm audit
   --prod` EXIT=0 again. No override, no new ignore, no `src/` change, no golden change. The content

@@ -1,7 +1,7 @@
 # Progress archive — Peekover
 *Closed-milestone narrative, moved out of `docs/ai/progress.md` on 2026-07-19 (M1–M4), 2026-07-21
 (M5), 2026-07-27 (M6), 2026-08-22 (the combined M7/M8/M9 pass), 2026-09-06 (M10, same-commit as its
-own close, task 11.3) and 2026-09-11 (M11, same-commit as its own close, task 8.3-R), so that file could go
+own close, task 11.3) and 2026-09-11 (M11, same-commit as its own close, task 8.3-R) and 2026-10-30 (M12, same-commit as its own close, task 7.3), so that file could go
 back to being ~150–200 lines a session actually reads before starting work.*
 
 **This is a READ-ON-DEMAND file. Nothing here is required to start a session.** `progress.md` carries a
@@ -27,6 +27,1898 @@ read as a statement about the present; `progress.md` is the only file that makes
 § Baselines note claiming *"the content script registers 4.1's thin detector adapter and never
 re-renders"* was true when written and was **fixed by task 4.8** — the content script now gets a real
 `createWatchController`. The corrected statement is in `progress.md`.
+
+---
+
+## M12 · spec 012 — Editor Mode (focused core): edit → live preview → save-back via CodeMirror 6, lazy-loaded · CLOSED 2026-10-30
+
+*Moved out of `docs/ai/progress.md` on 2026-10-30, same-commit as the milestone's own close (task 7.3), verbatim and
+unreconciled — so figures in it are as of the task that wrote them, and a later paragraph supersedes an earlier one.
+The decisions of record are `decisions.md`'s M12 entries (the close is "M12 CLOSED"); the retro is `retro.md`'s "M12 retro".*
+
+### The pre-`§ Now` byline chain
+
+*Updated: 2026-10-09 (task 6.3 — **the nested preview host's cost MEASURED against a single-root
+control on both engines, and first paint with edit never entered MEASURED against a pre-M12 build;
+two nesting deltas cleared the noise floor and were ruled NOT MATERIAL (R27); no production byte
+moved; GROUP 6 IS COMPLETE**; `decisions.md`'s "M12 TASK 6.3 — LANDED" and "M12 RULING R27"
+entries and `scripts/perf-edit-preview.nested.results.md`. Before it, task 6.4 — **the preview's first render no longer runs inside the keystroke
+(R26, the spec §8-2 ruling: 6.2's candidate C2); the provisional constant is removed; applied
+BEFORE 6.3**; `decisions.md`'s "M12 RULING R26" and "M12 TASK 6.4 — LANDED" entries. Before it,
+task 6.2 — **the live-preview debounce MEASURED across sizes, two content
+profiles, seven candidates and both engines; nothing chosen, no production byte moved**; `decisions.md`'s "M12 TASK 6.2 — LANDED" entry and
+`scripts/perf-edit-preview.results.md`. Before it, task 4.4, DISCOVERED (R24) — **leaving edit now shows the NEWEST text: an
+external change the watch held beats Peekover's own earlier save (it did not — seen and fixed);
+one render in either observer order; the route-2(i) test rebuilt**; `decisions.md`'s "M12 TASK
+4.4 — LANDED" and "M12 RULINGS R24–R25" entries. R25: 6.1's dialog copy APPROVED. Before it,
+task 6.1 — **the unsaved-changes guard: every way out of a dirty edit asks
+first, at the trigger, in an in-page dialog (R23); tab close and reload raise the browser's own**;
+`decisions.md`'s "M12 TASK 6.1 — LANDED" and "M12 RULING R23" entries. Before it, task 5.8 — **every network guard now reads its zero only after a later
+request has landed (19 files); `PERMISSIONS.md`'s zero-network section says four surfaces, with
+the REVIEWED edit save-back sentence; the `diagramSourceGuard` and `mathNetwork` shared-state reds
+are closed by their causes**; `decisions.md`'s "M12 TASK 5.8 — LANDED" and "M12 RULING R22"
+entries. Before it, 5.7: zero network across entering edit, the live preview and Save, proven on
+both engines; the conflict policy RULED — refuse and tell (R21); 5.6 STRUCK. Save writes on
+Chromium and downloads everywhere else; `PERMISSIONS.md` carries the final signed row.)
+M12 (`specs/012-editor-mode/`, F8
+Editor Mode's focused core) is in implementation: gates 1–3 approved, tasks 1.1, 1.2, 1.3, 2.1, 2.2,
+3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 5.4, 5.7 and 5.8 landed; 5.5 RULED without its walk
+(R21 — the walk is on 7.1's list); 5.6 struck; 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed (§8-2
+RULED, R26; the nested-host cost ruled not material, R27); **group 6 is complete — 7.1, the human's milestone-close walk, is next.** **Groups 3 and 4 are complete: the dirty-exit property landed at 6.1 (R6).**
+**`pnpm audit --prod` EXITS 0 again — one documented ignore, GHSA-238p-pmpm-9mq7 (R13 RESOLVED at 1.3).
+User-facing cost: math inside a mermaid diagram renders as source (R15, a 7.1 verdict).**
+**`PERMISSIONS.md` carries SIGNED (a) since 5.3 and the FINAL signed row (b) since 5.4, pinned by
+`tests/permissionsLedger.test.ts` — byte for byte the 5.1 entry's text.**
+**3.2's informal eyeball is DEFERRED to 7.1 by human ruling (2026-10-05); automated proxies stand in
+and filed eight findings (E-1…E-8, § Carried items) — E-1, E-2 and E-3 are RESOLVED at 3.4. 3.3
+filed three more (P-1…P-3) — P-1, the preview's enhancers not running, is RESOLVED at 3.4.**
+**★ HONESTY NOTE — the editor is REACHABLE on `main`, and since 6.1 it no longer loses edits
+without asking.** With unsaved changes, each of these asks first — "Keep editing" / "Discard
+edits" — and "Keep editing" does nothing at all: Stop editing; selecting a file in the tree;
+Revoke; opening a folder; a reopen-hub entry (a live handle, a re-pick, a re-pick then
+cancelled); a drop (a folder or not); the shell's `selectFile` seam. Closing or reloading the tab
+raises the browser's own dialog. A clean session is left without a word. **Named plainly, what is
+still not asked about or not proven:** an extension reload or update, a crash, a discarded tab —
+nothing can ask; the browser's OWN unload dialog has not been SEEN (headless cannot — 7.1); the
+native picker after the dialog is 7.1's; on Stop editing, a Save already in flight when "Discard
+edits" is answered may still complete (accepted, R25 — and the reading view follows it when it
+lands, 4.4). *Fixed at 4.4, so no longer a caveat:* after Save and then an external change,
+leaving edit showed the SAVED text over the newer on-disk text (it was real, on a watched
+document); it now shows the external text. The dialog's copy is approved (R25).
+A DOWNLOAD does not make the edit safe in the folder: the file there is unchanged and the buffer
+stays dirty — by design, so every exit after one still asks. Save writes on Chromium; on Firefox, on a route
+with no file handle and when the write prompt is declined it downloads. Planned sequencing, not
+released. A watch re-render no longer destroys the buffer (4.1). *Fixed at 4.3, so no longer
+caveats:* the false "changed on disk while you were editing" hint after a save (it was real, on
+every save of a watched document); a save writing the wrong file in the window after another file
+is selected (it was real too); and a stale reading view after Save + Stop editing (unwatched).
+Current numbers: `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx) against ≤ 7 MiB (−31 at 6.4, +121 at 4.4,
++3,594 at 6.1, all in the app chunk), content script 342,806 B both engines (md5-identical across 5.7, 5.8 and 6.1; +154 at 4.3), `dependencies` 11, `permissions: []`. M11 (math
+rendering, Temml/MathML) closed 2026-09-11 — its summary is under § Closed milestones, its narrative in
+`progress-archive.md`.)*
+
+### § Now — every M12 task record, newest first
+
+**M12 task 7.2 DONE, 2026-10-30 — the M12 retro is banked (`retro.md`, "M12 retro"); 7.1 stays OPEN.** The
+walk's verdicts for A1/A2/A4/A8, B10 and C–G were never reported (listed in the retro and `tasks.md` 7.1);
+A (1–8, bar the R29 items, re-checked) and B (9–11) are ok. Five rules placed: `AGENTS.md` ×3, `WORKFLOW.md` ×2.
+
+**M12 task 1.4 DONE, 2026-10-30 — `dompurify` 3.4.17 and `markdown-it` 14.3.3 (R30).** The five
+advisories closed; `pnpm audit --prod` EXIT=0 again (the katex ignore the only one); the content script
+moved +1,389 B (expected); golden empty. Record: `decisions.md`'s "M12 TASK 1.4 — LANDED".
+
+**M12 task 3.5 DONE, 2026-10-30 — the 7.1-walk polish (R28, R29).** Search panel from tokens, a
+split that fills the pane, themed scrollbars, the rail hidden while editing at ≤ 1400 px, the snapshot
+notice off the text (wide), long lines wrap; content script byte-identical. Record: `decisions.md`'s
+"M12 TASK 3.5 — LANDED". Up next: the human's re-check of the R29 items, then 7.2.
+
+**M11 CLOSED, 2026-09-11 (task 8.3-R — records reconcile).** Math rendering shipped: inline `$…$`, block
+`$$…$$` and fence math via Temml/MathML (KaTeX was reopened and replaced after a busted byte gate),
+copy-as-LaTeX/MathML, both engines. See § Closed milestones below for the one-paragraph summary and the
+link to the full archived narrative.
+
+**M12 gate-1 APPROVED, 2026-10-03 (`decisions.md`'s M12 GATE 1 entry) — `plan.md` is next, fresh
+session.** Preceded by a human product ruling the same day (`decisions.md`) raising the package-size
+ceiling ≤ 5 MiB → ≤ 7 MiB specifically to give CodeMirror 6 real working room, and by this session's own
+editor-feasibility spike (CodeMirror 6 measured ~500–607 KB, lazy-loadable, app-page-only; CodeJar
+rejected as too thin). M12 = F8 Editor Mode's focused core — edit → live preview → save-back — not the
+full ~21-item surface `spec-coverage.md`'s F8 row (5%) names; the remaining items are explicitly deferred
+to a later F8 pass (spec §6). Gate 1 ruled all four §9 decisions: **D-A** in-shell mode on the existing
+`readerMode.ts` shape, approved as recommended. **D-B** the save-back write surface, approved as the
+spec's own three-way routing — (i) the permission mechanism is a task-level verification against the
+current File System Access API spec, escalating to a human gate only if it surprises; (ii) the
+conflict/overwrite policy is a gate-3 product-feel decision from a measured walk; (iii) the
+`PERMISSIONS.md` ledger update is a mandatory, tested acceptance criterion — **plus a human addition: the
+new ledger sentence's exact wording comes back for a one-sentence sign-off when the save task drafts it.**
+**D-C** live preview through the existing render pipeline, debounced, no new sanitizer profile — approved
+as recommended. **D-D** the dependency gate reframed as a confirmation (not a bust-risk fork like M10's
+docx or M11's KaTeX/MathJax) — approved; the human declined the spec's own offered distrust escape. Spec
+body stays sealed/"draft" per M7–M11 precedent; the approval lives in `decisions.md`.
+
+**M12 gate-2 APPROVED, 2026-10-04 (`decisions.md`'s M12 GATE 2 entry) — `tasks.md` is next, fresh
+session, the final gate before implementation.** `specs/012-editor-mode/plan.md` (the HOW) approved; its
+body and "draft" status line stay sealed, the approval lives in `decisions.md`. The four §8 rulings:
+- **§8-1 / D-1** — a dedicated edit-entry control, not a third state on the bare `\` toggle key. Approved.
+- **§8-2 / D-9** — the draft ledger wording is on track; no sign-off taken at this gate.
+- **§8-3 / D-4** — nested-host live preview, `mount.ts` byte-untouched; partial-replace `mount()` declined.
+  Approved, with the build-at-group-2 / measure-at-group-6 sequencing accepted as proposed.
+- **§8-4 / D-8** — watch+edit is SUPPORTED, DEGRADED: `watchController.ts`'s existing deferral gate
+  extended, external changes surface through D-7's save-time content-compare, edit exit does not
+  auto-flush. Approved.
+
+Gate-1's four §9 rulings are inherited unchanged; D-7's content-comparison lead stands.
+
+**M12 `tasks.md` DRAFTED, 2026-10-04 — awaiting gate 3 (NOT approved, NOT sealed).**
+`specs/012-editor-mode/tasks.md` decomposes the plan's seven groups into 22 test-first tasks with the
+three hard sequencing constraints enforced. Group 3's tests run on an UNWATCHED document (the gate-2
+residual, resolved in group 3's own text); the D-9 ledger sign-off is task 5.1, a human gate sequenced
+BEFORE the first write commit. The draft carries six findings (F-1…F-6) from re-deriving the plan's
+citations and six questions (Q1–Q6) for gate 3 — read those first. No code, no dependency installed.
+
+**M12 D-4 RE-RULED, then gate-3 APPROVED, 2026-10-04 (`decisions.md`'s M12 D-4 RE-RULED and M12 GATE 3
+entries) — implementation is authorized; task 1.1 is next, fresh session.** Doc-only session, no build.
+- **D-4's mechanism corrected.** The chrome investigation found gate 2's premise false: `mount()` always
+  composes chrome (`mount.ts:157-211`), and the watch / diff / identity registries are module-level
+  singletons, so a nested preview `mount()` gets three LIVE hazards (a preview watch pill, a
+  preview-acting diff, a preview TOC rail the backtick can resolve to). CSS-hiding cannot undo registry
+  wiring. The human ruled **Option B** — an additive `chrome?: boolean` on `mount()`, default `true`, every
+  existing caller byte-identical — over editorView composing its own primitives, which would fork the
+  sanitize → inert-template → adopt path into a third copy. The nested shadow-root boundary is unchanged.
+  `mount.ts` itself was NOT edited this session; that is task 2.2's.
+- **`tasks.md` redlined to it**: F-3, task 2.2 (now: add the option, prove existing callers
+  byte-identical, build the preview on it, the three hazards proven absent red-first), the Gate-2 locked
+  line, group 2's acceptance, 3.3's scroll clause, 7.1's walk item, and the content-script / `mount.ts`
+  standing invariants. The scroll-preservation finding (`resolveScrollContainer` falls back to a
+  non-scrolling nested host) is carried into 2.2 as a design requirement.
+- **Gate 3: Q1–Q6 all approved as proposed** — the fence is scanner fixtures + `editorImportFence.test.ts`;
+  group 3 is three tasks; the conflict policy is ruled at 5.5 on 5.3's safe floor; the provisional
+  debounce is cost-proportional at multiplier 1; no material-cost threshold; the content-script invariant
+  is "zero `codemirror` bytes + decomposed glue", not "340,492 B unmoved". Spec / plan / tasks status
+  lines stay "draft"; `decisions.md` is the approval of record.
+
+**M12 task 1.1 DONE, 2026-10-04 — `codemirror` 6.0.2 + `@codemirror/lang-markdown` 6.5.2 installed,
+measured, governed; D-D CONFIRMED; `basicSetup` chosen.** Baseline re-derived by a clean rebuild (not
+cited) and it matches: `.output` 5,197,425 B (Cr) / 5,197,541 B (Fx), content script 340,492 B, manifest
+654 / 770 B. Installing alone moves zero shipped bytes. Arms measured through a scratch app-page dynamic
+import of a constructed `EditorView` (reverted); the `.output` delta is identical on both engines:
+
+| Arm | `.output` delta | zip delta | Headroom left (Cr / Fx) |
+|---|---|---|---|
+| (a) `codemirror` + `basicSetup` | +382,623 B | +121,521 B | 1,759,984 / 1,759,868 B |
+| (b) `codemirror` + `minimalSetup` | +281,094 B | +90,392 B | 1,861,513 / 1,861,397 B |
+| (c) `@codemirror/lang-markdown` alone | +465,064 B | +159,323 B | 1,677,543 / 1,677,427 B |
+| (d) **shipping: `basicSetup` + `markdown()`** | **+605,443 B** | +203,368 B | **1,537,164 / 1,537,048 B** |
+| (e) `minimalSetup` + `markdown()` | +508,217 B | +173,681 B | 1,634,390 / 1,634,274 B |
+| (z) empty probe (glue control) | +135 B | +380 B | — |
+
+- **Decomposed, residual 0 per file:** every arm is the probe chunk plus +93 B of `import()` glue in the
+  app chunk; no other file changes size. Net of the 135 B glue: shared core (state/view/language/
+  autocomplete/lezer) 242,109 B · `basicSetup`-only 140,379 B · markdown-only 222,820 B = 605,308 B.
+  `lang-markdown` is the larger half because `markdown()` statically pulls `lang-html` → `lang-css` +
+  `lang-javascript` and their Lezer grammars. The spike's ~500–607 KB is CONFIRMED (508 KB / 605 KB).
+- **Setup choice — `basicSetup`.** Rule (plan D-2): `basicSetup` unless its cost surprises. It costs
+  +97,226 B over `minimalSetup` in the shipping combination (4.5% of headroom) and the shipping arm lands
+  inside the spike range, so it does not. The shipping arm uses 28% of headroom.
+- **App-page-only:** content-script md5 identical to baseline in every arm, both engines. Firing control —
+  a scratch static `codemirror` import in `entrypoints/peekover.content.ts` moved it 340,492 → 622,009 B
+  with a new md5; reverted, rebuilt, byte-identical to baseline again.
+- **Governance:** 23 packages added, all MIT, none with install scripts; lockfile +212 / −0; `dompurify`
+  still one copy; `dependencies` 8 → 10; SBOM regenerated (transient) at 191 components. Scanner self-test
+  7 firing + 10 silent with the two new stay-silent fixtures (gate-3 Q1); the content-script EXCLUSION
+  proof is still task 3.1's `editorImportFence.test.ts`. Lint 0 · unit 1145 · browser 1663 (15 skipped) ·
+  golden unchanged · `permissions: []`.
+- **★ OPEN — `pnpm audit --prod` exits 1, so 1.1's audit clause is NOT met.** Two advisories on
+  PRE-EXISTING dependencies the install did not touch: `markdown-it` 14.3.0 (moderate,
+  GHSA-253c-mchw-3w2r, fixed 14.3.1) and `dompurify` 3.4.13 (low, GHSA-p98j-92pf-mc4p, fixed 3.4.16).
+  Human ruling 2026-10-04: commit 1.1 with this flagged; the bump is its own task, next.
+- **★ OPEN — `basicSetup` vs spec §6's IS-NOT fence.** `basicSetup` bundles `searchKeymap` (a find/replace
+  panel on Ctrl-F), `lintKeymap` and `autocompletion()`; spec §6 lists find/replace and lint as OUT, while
+  plan D-2 says the winner ships its default bindings unmodified. Human ruling 2026-10-04: record
+  `basicSetup`, carry this to be ruled before task 3.1 first uses the setup.
+
+**M12 task-1.1 CLOSE, 2026-10-04 (`decisions.md`'s M12 TASK 1.1 entry) — both OPEN items above are
+ruled.** Doc-only session, no build, no dependency change.
+- **`basicSetup` ships AS-IS (Option A).** §6's deferred find/replace + lint are read as PEEKOVER-BUILT
+  deferrals, not a mandate to strip CodeMirror's defaults; plan D-2's "default bindings unmodified" holds
+  literally. CodeMirror's Ctrl-F search and autocompletion are present for free. Recorded precisely:
+  `lintKeymap` is bindings only — no lint source, so no linting runs. The cost, stated: §6's IS-NOT text
+  reads slightly loosened; its sealed text is untouched and the `decisions.md` entry is the
+  reconciliation of record. Strip-the-keymaps (bends D-2) and `minimalSetup` (a thinner editor to save
+  ~97 KB) were both rejected.
+- **The audit failure has an owner: task 1.2** (`tasks.md`, a DISCOVERED task — 22 → 23), before 2.1.
+  1.1's "audit EXIT=0" clause is recorded as unmet at `e001f9e` and closed by 1.2.
+- **✅ RULED 2026-10-04 (`decisions.md`'s M12 TASK 1.1 EXTENDED entry) — ships AS-IS: `markdown()` is
+  called with its defaults, `addKeymap` stays `true`; §6's "smart lists/continuation" is read as a
+  Peekover-built deferral, the same reading as find/replace and lint. `markdown({ addKeymap: false })`
+  rejected. The item below is kept as written.** *★ STILL OPEN, same class, surfaced by this session —
+  NOT ruled:* `markdown()` defaults to
+  `addKeymap: true`, binding Enter to list/markup continuation, and §6 lists "smart lists/continuation"
+  as deferred. The ruling named find/replace and lint only; extending it is the human's call. Owed
+  before 3.1.
+
+**M12 task 1.2 DONE, 2026-10-04 — the audit bump: `markdown-it` 14.3.0 → 14.3.2, `dompurify` 3.4.13 →
+3.4.16. `pnpm audit --prod` EXIT=0 ("No known vulnerabilities found"; the CI form `--audit-level low`
+also 0). 1.1's audit clause is CLOSED.**
+- **★ ONE HUMAN-RULED DEVIATION (`decisions.md`, M12 TASK 1.2): `markdown-it` landed at 14.3.2, not the
+  task's named 14.3.1.** The registry check found 14.3.2 (2026-09-12), which also fixes GHSA-r7fv-28h4-cvq7
+  (high; smartquotes quadratic; `< 14.3.2`) — published only in markdown-it's own repo advisories so far,
+  so audit passes on 14.3.1 today and would have re-reddened on ingestion. `^14.3.1` resolves to 14.3.2 on
+  a plain install anyway. Floors are `^14.3.2` / `^3.4.16`; no overrides.
+- **Advisories, read at source.** GHSA-253c-mchw-3w2r (markdown-it, moderate): two quadratic paths under
+  `linkify: true` — `rules_core/linkify` rebuilding `children` per linkified token, `rules_inline/linkify`
+  rescanning `state.pending` at every `://`. **Exercised here**: `parse.ts:26` sets `linkify: true`, so a
+  few hundred KB of soft-broken emails could stall a render; availability only. GHSA-r7fv-28h4-cvq7: needs
+  `typographer: true`; `parse.ts:27` has it off — **not exercised**. GHSA-p98j-92pf-mc4p (dompurify, low):
+  under `IN_PLACE`, a node-REMOVING `afterSanitizeElements` / `afterSanitizeAttributes` hook leaves the
+  detached subtree's `on*` handlers armed. **Not exercised**: no profile uses `IN_PLACE` (all three sanitize
+  strings). `sanitizeSvg` is the only profile with an afterSanitize hook (`cssPassHook`, `sanitize.ts:788`)
+  and it rewrites `<style>` text, never removes a node; `sanitize()` and `sanitizeMath` use
+  `uponSanitizeAttribute` only.
+- **Dependent ranges admit both targets, one copy each:** `mermaid` 11.16.1 declares `dompurify ^3.3.3`;
+  `@mdit/plugin-tex` 1.1.0 (and `@mdit/helper`) declare an OPTIONAL peer `markdown-it ^15.0.0` — unmet
+  before and after (carried item, unchanged); `markdown-it-task-lists` declares none.
+- **Lockfile +17 / −17:** only the two packages' versions and integrities moved, plus the
+  `(markdown-it@…)` peer suffix on the two `@mdit` entries (their versions did not). Temml `patch_hash`
+  `ba3cf1c4…` unchanged, `patches/` byte-identical, the patch confirmed present in the installed copy.
+- **Bytes, clean rebuild, both engines — baseline re-derived, and it matched the cited figures exactly:**
+
+  | | Baseline (`0eef927`) | Post-bump | Delta | Headroom vs 7,340,032 B |
+  |---|---|---|---|---|
+  | `.output` Chrome | 5,197,425 B | 5,200,689 B | +3,264 B | 2,139,343 B |
+  | `.output` Firefox | 5,197,541 B | 5,200,805 B | +3,264 B | 2,139,227 B |
+  | zip Chrome | 1,627,711 B | 1,629,302 B | +1,591 B | — |
+  | zip Firefox | 1,627,770 B | 1,629,360 B | +1,590 B | — |
+  | `content-scripts/peekover.js` | 340,492 B | 342,161 B | +1,669 B | — |
+  | content-script md5 Cr / Fx | `bcdcf231…` / `49e218a1…` | `966f0198…` / `ae78e2ad…` | — | — |
+
+- **Decomposed, residual 0:** exactly two files change size, the same on both engines — the content
+  script (+1,669 B) and the app chunk (`chunks/app-*.js` 509,815 → 511,410 B, +1,595 B); 1,669 + 1,595 =
+  3,264. Both carry the parser and the sanitizer. The app chunk's new content hash renames 81 other
+  chunks that import it (same sizes, as a multiset) and rewrites `app.html`'s reference at an unchanged
+  495 B. Not split per package — the Verify line asks per file. 135 files per engine, before and after.
+- **Firing control (attribution):** pre-bump `package.json` + lockfile restored, reinstalled, rebuilt —
+  EVERY file md5-identical to baseline on both engines; bump restored, rebuilt — every file md5-identical
+  to the first post-bump build. Zero `codemirror` bytes in the content script: still unreferenced, 1.1's
+  firing control is the standing proof.
+- **Suites — all green on the first full run, no flake observed:** lint 0 · unit 1145 / 1145 (66 files)
+  · browser 1663 pass / 15 skip (chromium 838 + 1, firefox 825 + 14; 82 files per engine).
+  Sanitizer, all profiles — `sanitize.test.ts` 119: `sanitize()` 38, `sanitizeSvg` 55 (exact-set,
+  denied-by-absence, the no-hook guard and the `<style>` CSS pass among them), `sanitizeMath` 26; real
+  engines, per engine: `sanitize.browser` 31, `diagramSanitize` 5, `diagramSecure` 9, `diagramStyleCss`
+  18, `diagramRender` 19, `mathInline` 7, `mathBlock` 11, `mathDegrade` 12. Parser and math grammar —
+  `parse.test.ts` 37 (the `$5` false-positive, code-span exclusion and escaping cases included). Golden —
+  `golden.test.ts` 11, HUGE-DOCUMENT included; `git diff tests/golden/output/` EMPTY. `pipeline.perf.test.ts`
+  1 / 1. The two carried wall-clock flakes did not fire in two unit runs.
+- **`_isValidAttribute` re-confirmed** (the M7 §2.2 AMENDMENT's revisit-when): 3.4.16 re-expresses it as
+  early returns; same branches, same order, same conditions. Recorded in the M12 TASK 1.2 entry.
+- **Governance:** `dependencies` 10, names unchanged · `dompurify` one copy (3.4.16), `markdown-it` one
+  copy (14.3.2) · licences MIT and (MPL-2.0 OR Apache-2.0), unchanged; neither version has install
+  scripts · SBOM regenerated (transient, not staged): **191 components**, unchanged — MIT 143, ISC 35,
+  BSD-3-Clause 7, Apache-2.0 1, BSD-2-Clause 1, Python-2.0 1, Unlicense 1, (MPL-2.0 OR Apache-2.0) 1,
+  Unknown 1; the generator still does not represent the temml patch (carried blind spot) · manifest
+  654 / 770 B, `permissions: []`, no `web_accessible_resources`, no `contextMenus`; `manifest.test.ts` 8.
+- **Noted, nothing changed:** `mermaid` resolves 11.16.1, where M7's records cite 11.16.0 — it has been
+  11.16.1 since `8f6c59f` (the pre-009 audit bump), not a move of this task's.
+
+**M12 task 2.1 DONE, 2026-10-04 — `ReaderMode = 'reading' | 'raw' | 'edit'`; async `enterEditMode` and
+`exitEditMode`; the backslash shortcut inert in edit; the edit visibility CSS. Tested-but-unreached: no
+production caller until 3.2, nothing imports `codemirror`. `mount.ts` zero-diff. D-1's `decisions.md`
+entry landed with it. Two human rulings were taken mid-task (both in that entry).**
+- **★ Hazard (a) — F-2 does NOT fire on the surface edit mode runs on (human-ruled: guard as
+  defense-in-depth).** `installToggleShortcut` resolves `document.querySelector('peekover-root')`; the
+  app-page host is a `<div>` (`readerPane.ts:167-168`), so the listener returns before it acts — the
+  2026-07-17 carried inertness. The guard (`data-mode === 'edit'` → return, before `preventDefault`)
+  ships anyway; it becomes load-bearing when the carried "unify the two shortcuts on one host registry"
+  item lands. Its red-first and positive control run on the `peekover-root` shape and say so; the
+  app-page-shape case is a pin that passes with or without the guard (it stayed green under ablation).
+  F-2's retargeting claim, "read from the code, not yet observed", is now OBSERVED on both engines.
+- **Hazard (b) — the type ripple needs no `mount.ts` edit.** The widened union type-checks against
+  `mount.ts:74/223/261` untouched (`tsc` 0). At runtime a `preserveReading` re-render during edit hands
+  `'edit'` back to `setReaderMode` after `replaceChildren` has dropped the editor; `setReaderMode(host,
+  'edit')` therefore lands in `'reading'` and ends the edit session (a later exit cannot resurrect a
+  stale return mode). Never a bare `'edit'` with both views hidden. Group 4 (D-8) stops the re-render.
+- **The build seam.** `enterEditMode(host, { loader, build? })`: `await loader()`, then
+  `await build?.(engine, host)`, then the flip + relabel. 2.2 plugs its shell in as `build`; a rejection
+  from either step propagates with the host untouched (`build` owns cleanup of its own partial DOM). The
+  return mode is read at the flip, not at the call. `exitEditMode(host)` is a no-op outside edit.
+  Teardown on exit is 2.2's own, called beside `exitEditMode` — no seam added for it.
+- **Stated, not hidden:** the mode pill in edit reads "Raw" (`toggleReaderMode` stays binary, so that is
+  where its click goes — and it leaves edit without `exitEditMode`). What the pill does during an edit
+  session is 3.2's to decide when it adds the edit control.
+- **★ The `:host` pin (human-ruled: fold).** A separate `[data-mode="edit"]` rule moved
+  `htmlExport.test.ts`'s 26-`:host`-site pin to 27 (persistent, not a flake). Ruled: `'edit'` is a second
+  selector on each of the two existing `data-mode` rules — count stays 26, no assertion edited.
+- **Red-first.** Unit, before implementation: 9 failed (`enterEditMode is not a function`). Unit ablation
+  (flip before the await): 4 failed — the pending-state case `expected 'edit' to be 'reading'`. Browser,
+  guard removed: 4 failed (textarea + contenteditable × Cr + Fx), `expected 'raw' to be 'edit'`, the
+  mode assertion first. Browser, CSS reverted: 4 failed, `expected 'block' to be 'none'`. Positive
+  control (reading: `\` writes `raw`, then from raw writes `reading`) green on both engines. Listener
+  instruments are per-press deltas (the `data-mode` writes to this host; `preventDefault` calls on a `\`
+  keydown), driven by real trusted key presses.
+- **Bytes, clean rebuild, both engines (baseline re-derived at `c173d4e`, matched the cited figures):**
+
+  | | Baseline | Post-2.1 | Delta | Headroom vs 7,340,032 B |
+  |---|---|---|---|---|
+  | `.output` Chrome | 5,200,689 B | 5,201,045 B | +356 B | 2,138,987 B |
+  | `.output` Firefox | 5,200,805 B | 5,201,161 B | +356 B | 2,138,871 B |
+  | zip Chrome | 1,629,302 B | 1,629,407 B | +105 B | — |
+  | zip Firefox | 1,629,360 B | 1,629,465 B | +105 B | — |
+  | `content-scripts/peekover.js` | 342,161 B | 342,339 B | +178 B | — |
+  | content-script md5 Cr / Fx | `966f0198…` / `ae78e2ad…` | `d4d48d23969c91750e055be61a3ea767` / `5ff11e424a1b5fd669e446b888ce9875` | — | — |
+
+- **Decomposed, residual 0.** Two files change size, the same on both engines: the content script and
+  the app chunk (`chunks/app-*.js` 511,410 → 511,588 B), +178 B each = 356. Content-script arms, by
+  ablation: `readerMode.ts` reverted → 342,231 B (arm **108 B**: the guard, the `'edit'` → `'reading'`
+  branch, the `editReturn` WeakMap + its delete; `enterEditMode`/`exitEditMode` tree-shake out, having
+  no caller); `readerCss.ts` reverted → 342,269 B (arm **70 B**); both reverted → 342,161 B, md5
+  identical to baseline on both engines. 108 + 70 = 178. Zero `codemirror` bytes in the content script:
+  still unreferenced, 1.1's firing control is the standing proof (a 0-count grep here proves nothing).
+- **Suites, all green:** lint 0 · unit 1155 / 1155 (66 files; `readerMode.test.ts` 17, `mount.test.ts`
+  10, `mount.fallback.test.ts` 3, `tocView.test.ts` 27, `htmlExport.test.ts` 13, `golden.test.ts` 11) ·
+  browser 1675 pass / 15 skip (83 files per engine; `editMode` 6, `watchRemount` 12, `tocNetwork` 2,
+  `exportShortcut` 8, per engine). The carried wall-clock flakes did not fire. Golden diff EMPTY ·
+  `mount.ts` and every other zero-diff file EMPTY · manifest 654 / 770 B, `permissions: []`.
+
+**M12 task 2.2 DONE, 2026-10-04 — `mount()` gains the additive `chrome?: boolean` (default `true`);
+`editorView.ts` builds the split-pane shell and the nested preview host on it; `EDITOR_CSS` lays it out.
+Tested-but-unreached: no production caller until 3.2, nothing imports `codemirror`. `mount.ts`'s ONE
+authorized diff is spent. D-4's `decisions.md` landing entry is in the same commit. No human ruling was
+needed; nothing hit a stop.**
+- **Step 0(a) — the guard range was unmoved** at `f9e6439`: pill `:157`, theme `:169`, watch `:183`, diff
+  `:191`, badge `:198`, remote bar + indicator `:199-201`, rail `:209-210`; stylesheets `:155-156` and the
+  reading column `:211` outside it. `tocRail` is read again by the post-commit wiring, so the guard keeps
+  the declaration and makes it `null` — that is what let the range be guarded with nothing else touched.
+  The diff: one `const chrome = options.chrome !== false`, `if (chrome)` on five pushes, `chrome &&` on the
+  remote-load condition, the rail as a conditional. No line re-indented, no comment moved.
+- **Step 0(b) — the post-commit wiring is harmless on the nested host; none of it is guarded.**
+  `registerReaderSource`: the preview text, under the nested host's own key. `setReaderMode`:
+  `data-mode="reading"` on the nested host, no pill to relabel. `removeAttribute('data-diff')`: no-op. The
+  two installers: once-guarded, already installed. `unregisterTocHost(nested)`: runs because no rail was
+  composed — this is what keeps the preview out of the TOC registry. `initReaderRuntime`: the nested host
+  becomes a themed host and gets `data-theme` — NEEDED, since the nested root carries its own token block.
+  A nested render makes ZERO attribute writes to the outer host (measured), and the outer host's
+  registered source is unchanged.
+- **Step 0(c) — the CSS is a new `EDITOR_CSS` export in `readerCss.ts`,** injected by the shell as its own
+  `<style>` and removed with it. `READER_CSS` gains nothing, so `htmlExport.test.ts`'s pin stays 26 with
+  no file outside the list touched. Tokens: `--line`, `--r`, `--code-bg`, `--ink`, `--mono` (all in
+  `design/tokens.css` and `READER_CSS`'s `:host` block), plus `--toc-w`, `READER_CSS`'s own rail width.
+- **The scroll choice: a wrapper.** The nested host sits inside `.peekover-editor__preview`
+  (`overflow:auto`, definite height); `resolveScrollContainer(nested, true)` returns it by identity. The
+  nested-host-scrolls alternative would have been reached only through the resolver's fallback — the
+  same answer a failed resolution gives.
+- **★ Step 0(d) — bypass state, a carry for 3.2.** The shell is `display:none` unless the host carries
+  `data-mode="edit"`. After enter → pill click (which leaves edit through `toggleReaderMode`, no
+  teardown): nothing of the shell is on screen in raw or in reading, on both engines. What REMAINS in the
+  outer shadow root: the shell's `<style>`, the grid container, the source slot (and whatever was built
+  into it), the preview pane and the nested host with its shadow root — hidden, and reused by the next
+  `buildEditorShell` rather than duplicated. 3.2 owns what the pill does in edit.
+- **Step 0(e) — the seam is consumed, `readerMode.ts` zero-diff.** `buildEditorShell(host)` is the `build`
+  step; it is idempotent, throws before creating anything on a host with no shadow root, and removes its
+  own nodes if the initial render throws. `teardownEditorShell(host)` is called beside `exitEditMode`.
+- **Shape notes for the human (7.1's walk), none ruled:** the two panes are children of ONE grid
+  container (the mockup's `.editor`), which is the reading column's sibling; the shell's height is a
+  definite `60vh` (90vh stacked) where the mockup has `min-height:60vh`, because a minimum-height pane
+  never scrolls; its margin is the reading column's own `56px 32px 130px`, and it yields `--toc-w` to an
+  open rail. A preview holding remote media shows it blocked with no in-preview opt-in (the bar is inside
+  the ruled range); the media policy still runs.
+- **Red-first.** Unit, before the option: 1 failed — the `chrome: false` case, `['STYLE','STYLE','BUTTON',
+  'BUTTON','BUTTON','DIV','NAV','DIV']` against `['STYLE','STYLE','DIV']`. The omitted-vs-`true` equality
+  cannot be red before the option exists; it was seen red under a wrong default (`=== true`), the
+  equality being the assertion that failed. Unit, before the shell: the file failed to import. Browser,
+  both engines, by editing `editorView.ts`'s one `mount()` call: **routed at the outer host** → `the
+  source pane is gone: expected false to be true`; **`chrome: false` dropped** → `expected
+  ['peekover-watch', …(2)] to deeply equal []` (the watch control, the diff affordance and the rail all
+  composed) and, for the backtick, `expected ['data-toc=open'] to deeply equal []` (the key resolved to
+  the preview). CSS, one property at a time: preview without `overflow:auto` → the resolver returned the
+  nested host; no at-rest `display:none` → `expected 'grid' to be 'none'`; no narrow stack → `592.6 ≤ 58`
+  failed; no rail yield → `1367 ≤ 1150` failed (by rect — the pane's centre is not under the rail, so
+  the hit-test alone does not see it).
+- **Hazards absent, positive control firing — registries LIVE** (a watch target, a diff context,
+  `CLAUDE.md` as the identity, a two-heading preview): the nested root is `[STYLE, STYLE, DIV]` with none
+  of the six chrome classes and a non-empty reading column; the outer host, same registry state, carries
+  all six. A real backtick writes `data-toc` to the outer host and nothing to the preview.
+- **Outer-chrome identity:** the same node set, serialising identically, across ten enter/exit toggles
+  and across twenty preview re-renders; the outer reading column identical by reference.
+- **Viewports, by hit-test:** WIDE **1400×900** — side by side, equal widths, rail open, the preview's
+  right edge left of the rail. NARROW **414×896** — stacked, source above preview. Both engines.
+- **Bytes, clean rebuild, both engines (baseline re-derived at `f9e6439`, matched the cited figures):**
+
+  | | Baseline | Post-2.2 | Delta | Headroom vs 7,340,032 B |
+  |---|---|---|---|---|
+  | `.output` Chrome | 5,201,045 B | 5,201,135 B | +90 B | 2,138,897 B |
+  | `.output` Firefox | 5,201,161 B | 5,201,251 B | +90 B | 2,138,781 B |
+  | zip Chrome | 1,629,407 B | 1,629,492 B | +85 B | — |
+  | zip Firefox | 1,629,465 B | 1,629,550 B | +85 B | — |
+  | `content-scripts/peekover.js` | 342,339 B | 342,384 B | +45 B | — |
+  | content-script md5 Cr / Fx | `d4d48d23…` / `5ff11e42…` | `129deda5156522a75ac41eaabbdc1c5f` / `94c2d14b9e08144f0c932415edb28acf` | — | — |
+
+- **Decomposed, residual 0.** Two files change size, the same on both engines: the content script and
+  the app chunk (`chunks/app-*.js` 511,588 → 511,633 B), +45 B each = 90; 82 other chunks are renamed by
+  the hash cascade at unchanged sizes. Arms, each a full rebuild compared file-by-file: **`mount.ts`
+  reverted, `EDITOR_CSS` and `editorView.ts` kept** → every file md5-identical to baseline (the guard arm
+  is the whole **45 B**; the CSS and the shell contribute **0 B** anywhere); **`readerCss.ts` reverted and
+  `editorView.ts` removed, guard kept** → every file md5-identical to post (CSS arm **0 B**, and
+  `editorView.ts` reaches no built file — proven by the build, not by grep); both ablated is the baseline
+  build itself. 45 + 0 = 45. Zero `codemirror` bytes in the content script: still unreferenced, 1.1's
+  firing control is the standing proof.
+- **Suites:** lint 0 · unit 1168 / 1168 (67 files; `mount.test.ts` 12, `mount.fallback.test.ts` 3,
+  `editorView.test.ts` 11, `htmlExport.test.ts` 13 — pin still 26, `tocView.test.ts` 27,
+  `readerMode.test.ts` 17, `golden.test.ts` 11) · browser 1699 pass / 15 skip (84 files per engine; per
+  engine: `editorNestedHost` 12, `editMode` 6, `watchRemount` 12, `watchControl` 36, `watchDiffDefer` 2,
+  `diffChrome` 39, `diffView` 10, `tocNetwork` 2, `themeControl` 19). No red on the full run; the carried
+  wall-clock flakes did not fire. NO existing assertion edited. Golden diff EMPTY · `readerMode.ts`,
+  `htmlExport.ts`, `htmlExport.test.ts` and every other zero-diff file EMPTY · manifest 654 / 770 B,
+  `permissions: []`.
+
+**M12 task 3.1 DONE, 2026-10-05 — `src/render/editorEngine.ts` is the ONE module importing CodeMirror;
+`editorImportFence.test.ts` proves the content script cannot reach it. Tested-but-unreached: no production
+caller until 3.2, so NO CodeMirror chunk is emitted and every shipped file is md5-identical to 2.2's.
+D-2's and D-10's `decisions.md` landing entries are in the same commit. No human ruling was taken; nothing
+hit a stop. Three things are surfaced for the human — the two ★ findings and the open memo key below.**
+- **The fence, written first and seen red** (module absent: 4 of 8 failing — clause B, both clause-C
+  assertions, clause D's tree-scan landmark). Four clauses, 8 assertions, on `diagramImportFence.test.ts`'s
+  shape: **A** the content-script graph reaches no `src/render/editor*.ts` module (by name) and no
+  `codemirror` / `@codemirror/*` specifier · **B** the control — the same walker started at
+  `editorEngine.ts` finds both specifiers (the engine's OWN edge; the app page reaches nothing until 3.2)
+  · **C** over every shipped `.ts` under `src/` + `entrypoints/`, the only CodeMirror imports are two
+  DYNAMIC edges in `editorEngine.ts`, no static or type-only one · **D** non-vacuity. The pattern's
+  ablation is 007 3.4's / 009 4.5's, cited.
+- **The specifier set: exactly two**, `codemirror` and `@codemirror/lang-markdown`, both dynamic, both in
+  `loadCodeMirror`. `EditorView` comes through `codemirror`'s re-export; every type is inferred from the
+  two edges, so there is no `import type` and no third specifier.
+- **The surface:** `loadCodeMirror` · `loadEditorEngine(host, loader?)` · `EditorEngine` = `{ EditorView,
+  createView(parent, doc, extra?) }` · types `EditorModules`, `EditorModuleLoader`, `EditorViewHandle`,
+  `EditorExtension`. 2.1's seam takes `{ loader: () => loadEditorEngine(el) }`. `createView` builds
+  `basicSetup` + `markdown()` (no argument), then the caller's optional `extra` — the engine adds nothing
+  of its own. `extra` exists because 3.2 / 3.3 need an update listener and CodeMirror takes one only as an
+  extension.
+- **Memo + retry:** one promise per host in a `WeakMap`; two loads for one host return the SAME promise
+  (pending or settled), the loader runs once, and a second host runs it again (the control). A REJECTED
+  load is evicted as it settles — waiting callers get the rejection, the next call retries. A loader that
+  throws synchronously is a rejection too.
+- **What jsdom was and was not asked:** the memo, the setup (on a recording fake) and the document
+  round-trip (text in, text out — no layout) are unit tests. That a view renders, focuses or takes typed
+  input is NOT claimed here — 3.2's real-engine tests.
+- **Bytes, clean rebuild, both engines.** Baseline re-derived at `d505890`, matching the cited figures;
+  post-3.1 **every one of 135 files md5-identical to baseline on both engines** — `.output` 5,201,135 /
+  5,201,251 B, zip 1,629,492 / 1,629,550 B, content script 342,384 B, md5 unchanged. **2.2's Up-next line
+  "the +605,443 B lands at 3.1" was wrong: with no caller there is no chunk. It lands at 3.2.**
+- **The chunk, measured through a scratch app-page caller (reverted):** `.output` **+607,325 B** on both
+  engines (5,808,460 / 5,808,576 B; headroom would be 1,531,572 / 1,531,456 B), zip +205,275 B. Decomposed,
+  residual 0: three new lazy chunks — 342,426 B (the shared core) + 209,493 B (`lang-markdown`) + 54,680 B
+  (`codemirror`: the `EditorView` re-export + the setups) = 606,599 B — plus the app chunk 511,633 →
+  512,359 B (+726 B); 81 chunks renamed at unchanged sizes, `app.html` rewritten at 495 B. **Against 1.1's
+  shipping arm (+605,443 B = a 605,350 B probe chunk + 93 B glue): +1,882 B.** +1,249 B in the chunks: one
+  probe chunk became three (two dynamic entries and their shared core, each with its own import/export
+  table), and each entry keeps its package's whole namespace (`minimalSetup`, `commonmarkLanguage`, … —
+  destructuring at the `import()` did not shake them). +633 B in the app chunk: this module's own glue
+  (the memo, `engineFrom`, the loader) and the scratch caller, where 1.1 had a bare `import()`. That split
+  is read from the emitted chunks, NOT ablated arm by arm — a 0.3% residual, re-measured for real at 3.2.
+  Content-script md5 unchanged under the scratch caller, both engines; after the revert, every file
+  md5-identical to the post-change build.
+- **★ Finding for the human — plan §4 risk 6: `markdown()`'s defaults do NOT recognise GFM.** The default
+  `base` is `commonmarkLanguage` (`lang-markdown` 6.5.2 `dist/index.js:407`); measured, the default tree
+  has no `Task` / `TaskMarker` / `Table*` / `Strikethrough` / `URL` node and `{ base: markdownLanguage }`
+  has all of them. Footnotes are recognised under NEITHER (`@lezer/markdown` 1.7.2 has no footnote
+  extension). Highlighting (and table folding) only: the preview is markdown-it's, and the ruled Enter /
+  Backspace keymap works under the default base (measured: `- [ ] todo` continues `- [ ] ` either way).
+  Nothing was configured — defaults are ruled. **Question owed an answer before or at 3.2's eyeball:**
+  keep strict-CommonMark highlighting, or rule `markdown({ base: markdownLanguage })`?
+- **★ Finding for 3.2 / 5.2 / 5.3 — D-7's round-trip, measured** (`doc.toString()` and `sliceDoc()` agree):
+
+  | Case | Input | Output | Preserved |
+  |---|---|---|---|
+  | LF, trailing newline | `a\nb\n` | `a\nb\n` | Y |
+  | LF, no trailing newline | `a\nb` | `a\nb` | Y |
+  | CRLF, trailing newline | `a\r\nb\r\n` | `a\nb\n` | N |
+  | CRLF, no trailing newline | `a\r\nb` | `a\nb` | N |
+  | mixed CRLF / LF / lone CR | `a\r\nb\nc\rd\r\n` | `a\nb\nc\nd\n` | N |
+  | lone CR | `a\rb` | `a\nb` | N |
+  | empty | (empty) | (empty) | Y |
+
+  Every line ending becomes LF; whether the text ends in a newline is kept. Inserted text is normalized
+  the same way. So on a CRLF file the buffer differs from `originalText` before a keystroke: **3.2's
+  dirty attribute cannot be a raw `buffer !== originalText`** (it would mark every CRLF file dirty on
+  entry), and 5.3 must decide what a save writes for one. D-7's baseline never passes through the editor.
+- **★ Open for 3.2's kickoff — the memo key.** The plan says "the editor's own nested host". But
+  `enterEditMode` loads THEN builds, so the nested host does not exist when the loader runs, and
+  `teardownEditorShell` discards it on exit. The engine keys on whatever element it is handed; the outer
+  host is the key under which edit → reading → edit actually reuses the promise.
+- **Read-only, carried from 2.2's review — module-level collections a nested `mount()` writes to:**
+  `themeRegistry.ts`'s `themeHosts` is a `Set`, self-pruning (`!isConnected` entries dropped before every
+  broadcast) with an exported `unregisterThemeHost`. `initReaderRuntime` registers the nested host;
+  **`teardownEditorShell` already unregisters it** (`editorView.ts:143`) after removing its nodes — so
+  nothing is left registered on the `exitEditMode` path. On the pill-bypass path there is no teardown: the
+  nested host stays connected (hidden) AND registered, which is right while the shell is reused — it keeps
+  receiving theme flips. `readerMode.ts`'s `sources` and `editReturn`, and `editorView.ts`'s `shells`, are
+  `WeakMap`s keyed by host — nothing to unregister. `tocView.ts`'s `tocHosts` (a `Set`, also
+  connected-pruned): the nested mount composes no rail and calls `unregisterTocHost(nested)`, so it is
+  never in it. No leak found; 3.1 changed none of those files.
+- **Suites:** lint 0 · unit 1194 / 1194 (69 files; `editorImportFence` 8, `editorEngine` 18,
+  `diagramImportFence` 8, `codeImportFence` 9, `mathImportFence` 11, `editorView` 11) · scanner self-test
+  7 firing + 10 silent, scan clean over 78 shipped files · browser 1699 pass / 15 skip (168 files, 84 per engine — unchanged from 2.2, as it must be: no browser file was added or touched; `editorNestedHost` 12 and `editMode` 6 per engine, 2.2's counts). No red on the full run; the carried wall-clock flakes did not fire. NO existing test or fixture edited. Golden diff EMPTY · every
+  zero-diff file EMPTY (`mount.ts`, `readerPane.ts`, `appShell.ts`, `editorView.ts`, `readerMode.ts`,
+  `chromiumFolderSource.ts`, `htmlExport.ts`, the diagram/math modules, `runReader.ts`, `mountReader.ts`,
+  `contentWatch.ts`, `scripts/check-dynamic-imports.ts`) · manifest 654 / 770 B, `permissions: []`.
+
+**M12 task 3.2 DONE, 2026-10-05 — the edit control, the editor pane and the save-capability injection.
+`enhanceEditor(host, { save })` is wired at the two app-page call sites; activating the control loads
+CodeMirror, builds it into 2.2's source slot and enters edit. This is the task where CodeMirror's bytes
+first ship (+612,335 B `.output`, the content script md5-identical). Three human rulings were taken in
+the kickoff (R1–R3) and are banked in `decisions.md` with D-3's landing and D-1's control half.**
+
+> **★ HONESTY NOTE — WHAT `main` SHIPS FROM THIS COMMIT.** The editor is now REACHABLE from the app page,
+> and it can lose edits. **Leaving edit discards the buffer with no warning** (the unsaved-changes guard
+> is 6.1). **A watch re-render during an edit destroys the buffer** (4.1–4.2; the watch pill is still
+> live beside the editor). **Save does not exist** — the injected capability reports "not yet
+> available" and nothing calls it (5.3). This is planned sequencing on an unreleased branch, not a
+> shipped state: nothing here is released, and it must not be until groups 4–6 land.
+
+- **Step-0 re-derivations, all four clear — no stop.** (a) *The seed is the raw read:* `readerPane.ts:268`
+  `await file.read()` → `classifyReaderOutcome` passes `read.text` through verbatim (`trim()` only tests
+  for emptiness) → `mount(outcome.text, host, …)` (`:198`) → `registerReaderSource(host, source)`
+  (`mount.ts:238`). (b) *The normaliser:* 006 D-5's `normalise` (`app/snapshots.ts:259`) would pull
+  nothing new into the app graph (`appShell.ts` and `diffEngine.ts` already import that module) but is
+  NOT equivalent — it rewrites CRLF only, and CodeMirror splits on `/\r\n?|\n/` (`@codemirror/state`
+  `dist/index.js:608`), so a lone CR also becomes a break. A one-line `normaliseLineBreaks` is in
+  `editorView.ts`, tested as a pure function. (c) *F-5:* see `decisions.md` 012 D-3. (d) *The control's
+  stylesheet:* `CONTAINED_CSS` rides into the content script, so the home is an enhancer-injected
+  `<style>` from a new `EDIT_CONTROL_CSS` export.
+- **Tests first, seen red.** `editorEnhancer.test.ts` before the module existed (unresolvable import);
+  the fence's clause-B app-page half (2 red: the app graph reached no editor module and found no
+  CodeMirror specifier); R1's pin and its three measurements (4 red).
+- **What was built.** `editorEnhancer.ts` (new): one `<button>` after the mode pill + its own `<style>`,
+  idempotent, re-installed after every outer `mount()`, nothing on a failed render. `editorView.ts`
+  (editor half): `buildEditor` / `editorSessionFor` / `dropStaleEditorSession` / `normaliseLineBreaks` /
+  `EDITOR_DIRTY_ATTR`, and `teardownEditorShell` now ends the session first. The session keeps
+  `originalText` RAW and writes `data-edit-dirty="true"` on the OUTER host while the buffer differs
+  from it (normalised), removing it when it matches again. `readerCss.ts`: `EDIT_CONTROL_CSS` (new
+  export) and, in `EDITOR_CSS`, R3's pill-hide rule plus five rules for the engine's view.
+- **Degrade (§3.7), red-first on both engines.** A rejecting loader — and a REAL failed module fetch
+  (`import()` of a URL the server lacks) — leaves the prior mode (reading, and raw), no shell, no
+  `.cm-editor`, the shadow root's children unchanged, the document still on screen, the control reading
+  "Editor unavailable". *Reverted* (flip on click, load after, swallow the failure): unit `expected
+  'edit' to be 'reading'`; browser, Cr and Fx alike, `the document is still in its prior mode: expected
+  'edit' to be 'reading'` / `… to be 'raw'` — 5 of 7 red per engine, the positive control among them.
+- **Absent on the content-script reader, red-first by un-gating.** With `enhanceEditor(host)` added to
+  `mountReader.ts` (reverted): the browser test reds on both engines (`expected <button …> to be null`),
+  fence clause A reds on both its assertions, and the built content script goes 342,384 → 956,490 B.
+- **Real engine, Chromium + Firefox, every fixture asserting it is UNWATCHED.** LF fixture: the view is
+  on screen in the source slot, fills it, and its state and DRAWN text equal the source. CRLF fixture:
+  the view holds the LF-normalised text, `originalText` is the raw CRLF string, the dirty attribute is
+  absent on entry. Real typed keys land in the buffer and set the attribute; the editor's own Ctrl-Z
+  clears it. The control, selected by class alone, is a `<button type="button">`; Enter enters, Space
+  exits; its name carries the state. It is hit-testable and never overlaps the pill under either pill
+  label, at 414×896 and 1400×900 (gap 20 px beside "Reading", 43–44 px beside "Raw"). R3: the pill is
+  `display:none` in edit; after the exit the shadow root's children are the same nodes as before entry.
+- **R2's memo, and the two `import()` observations** (harness page, not the built extension): the module
+  loader runs once across edit → reading → edit and again for a second host. The page's first
+  `import()` of the engine's specifiers made 2 requests, the repeat 0 — both engines. **A repeated
+  `import()` of a URL whose fetch failed made 1 request then 0, and rejected both times — both
+  engines.** The engine's memo forgets a failure, but the browser's module map does not: after a failed
+  chunk fetch, "try again" needs a reload. (A packaged extension's chunks are local files, so this is a
+  corrupted-install case.) The control's wording does not promise success; flagged for the human.
+- **Bytes, clean rebuilds, both engines identical arm for arm.** Baseline at `3affcae` matched 3.1's
+  figures exactly. Post-change: **`.output` 5,813,470 B (Cr) / 5,813,586 B (Fx), +612,335 B** — headroom
+  1,526,562 / 1,526,446 B (~1.46 MiB) · zip 1,836,121 / 1,836,179 B (+206,629) · manifest 654 / 770 B.
+  Decomposed by ablation, residual 0:
+
+  | Arm | `.output` (Cr) | Step | What it is |
+  |---|---|---|---|
+  | A · baseline (`3affcae`) | 5,201,135 | — | — |
+  | E · both `enhanceEditor` lines removed | 5,201,239 | +104 | shell plumbing: the save closure, the render-of-`save`, the pane option |
+  | B · engine imports stubbed out | 5,206,555 | +5,316 | enhancer + view + control + their CSS, in the app chunk |
+  | C · real engine, default base | 5,813,405 | +606,850 | three lazy chunks (54,680 + 209,493 + 342,426 = 606,599) + 251 B import glue in the app chunk |
+  | D · R1 (`markdownLanguage`) | 5,813,470 | +65 | R1, all in the app chunk; the lazy chunks are unchanged |
+
+  Only two built names change size: the app chunk (511,633 → 517,369 B, +5,736) and the three new
+  chunks. 135 files → 138. **Content script md5-identical to 3.1's in arms A, E, B, C and D on both
+  engines** (`129deda5…` Cr / `94c2d14b…` Fx), and it MOVES under the un-gate arm — an identity proven
+  with an instrument seen to fire, not a grep. 3.1's scratch estimate was +607,325 B; the real figure
+  for the engine alone is +606,850.
+- **Suites.** lint 0 · unit **1227** / 1227 (70 files; `editorEnhancer` 28, `editorEngine` 21,
+  `editorImportFence` 10, `editorView` 11, `readerMode` 17, `readerPane` 11, `appShell` 62,
+  `htmlExport` 13 with its 26-site pin unmoved) · scanner clean over 79 shipped files, self-test 7
+  firing + 10 silent · browser **1733 pass / 15 skip** (172 files, 86 per engine; `editorRender` 10,
+  `editorDegrade` 7, `editorNestedHost` 12, `editMode` 6 per engine). No red on the full run; the carried
+  wall-clock flakes did not fire. One existing assertion edited — R1's authorized pin. Golden diff
+  EMPTY · zero-diff files EMPTY (`mount.ts`, `readerMode.ts`, `chromiumFolderSource.ts`, `htmlExport.ts`
+  and its test, the diagram/math modules, `runReader.ts`, `mountReader.ts`, `contentWatch.ts`,
+  `src/watch/*`) · `permissions: []`.
+- **★ The informal eyeball is OWED and NOT done** — it is the human's (WORKFLOW §7.2); the steps are in
+  this task's report. Nothing in the suites stands in for it. *(2026-10-05: DEFERRED to 7.1 by human
+  ruling — the record directly below.)*
+- **Surfaced for the human, none ruled:**
+  1. *Styling choices no ruling covers:* the control's wording and placement; five token-only rules that
+     make CodeMirror fill its pane, take the pane's mono face, and draw its gutter / caret / cursor from
+     the reader's tokens (its black caret is invisible on the dark pane). The active-line band,
+     selection, search panel and completion tooltip are left at CodeMirror's light-page defaults — look
+     at them in the dark theme.
+  2. *A stale session is ended on re-install.* When an outer `mount()` replaces a host mid-edit (a
+     document switch), `enhanceEditor` destroys the orphaned view and clears the dirty attribute, so it
+     cannot describe the next document. It is this task's own attribute kept truthful, not watch
+     handling — but it is behaviour the task line did not spell out.
+  3. *Ctrl/Cmd+S while typing in the editor — read from the code, NOT observed.* `main.ts`'s export
+     shortcut guards with `isEditableTarget(e.target)`; a key typed inside the shadow root reaches
+     `document` retargeted to the host, which is not editable. So Ctrl+S in the editor is expected to
+     run the last export (an HTML download of the on-disk document, not the buffer). It is F-2's hazard
+     class on the app page, and `main.ts` is outside this task's files. Owed a look before 5.3 makes
+     Ctrl+S mean "save" in anyone's head.
+  4. *Printing while in edit* is untested: the reading column is hidden in edit.
+  5. *`AGENTS.md`'s "Current milestone" paragraph still says "task 1.1 DONE, task 1.2 next".* Stale
+     since 1.2; not in any task's file list. Left untouched.
+
+**M12 task 3.2 — the informal eyeball DEFERRED to 7.1, 2026-10-05 (human ruling; `decisions.md`'s
+entry of that name). Automated proxies stand in: `tests/browser/editorEyeballProxy.browser.test.ts`,
+test-only, ZERO production diff, 11 tests per engine, green on Chromium and Firefox.** A departure from
+WORKFLOW §7.2 and `tasks.md` 3.2's clause, accepted on the record with M11's three by-eye-only defects
+as the named risk. The proxies measure; they are not the eyeball.
+
+- **Method.** WCAG 2.1 AA, stated before measuring: text 4.5:1, non-text 3:1; light is the control.
+  007's sweep (`diagramTheme.browser.test.ts`: computed colour, relative luminance, background found by
+  walking ancestors across the shadow boundary) plus compositing — translucent layers flattened
+  source-over in sRGB down to the first opaque ancestor; the selection layer (a sibling of the text)
+  inserted by hand beneath the in-content layers; a gradient taken at its worst stop.
+- **Proxy 1 — contrast, 27 pairs × 2 themes × 2 engines. Chromium = Firefox on every row.** Every
+  surface opened (Ctrl-F by a real keypress; the tooltip by typing `<`). ✗ = below the bar.
+
+  | Surface · pair | Bar | Light | Dark |
+  |---|---|---|---|
+  | content · body text on the pane | 4.5 | 15.74 | 13.61 |
+  | active line · band against the pane | 3 | 1.02 ✗ | 2.2 ✗ |
+  | active line · text on the band | 4.5 | 15.43 | 6.18 |
+  | gutter · line number | 4.5 | 2.38 ✗ | 3.26 ✗ |
+  | gutter · ACTIVE line number on its band | 4.5 | 2.36 ✗ | 4.34 ✗ |
+  | gutter · active-number band against the gutter | 3 | 1.01 ✗ | 14.15 |
+  | gutter · rule against the pane | 3 | 1.11 ✗ | 1.13 ✗ |
+  | caret · drawn caret on the active line | 3 | 15.43 | 6.18 |
+  | selection, focused · against the pane | 3 | 1.27 ✗ | 11.22 |
+  | selection, focused · selected text on it | 4.5 | 12.95 | **1.16 ✗** |
+  | selection, unfocused · against the pane | 3 | 1.24 ✗ | 11.46 |
+  | selection, unfocused · selected text on it | 4.5 | 13.15 | **1.14 ✗** |
+  | search panel · panel against the pane | 3 | 1.04 ✗ | 14.83 |
+  | search panel · top rule against the pane | 3 | 1.2 ✗ | 11.91 |
+  | search panel · label text | 4.5 | 19.26 | 19.26 |
+  | search panel · typed text in the field | 4.5 | 21 | 21 |
+  | search panel · field border against the panel | 3 | 1.67 ✗ | 1.67 ✗ |
+  | search panel · field fill against the panel | 3 | 1.09 ✗ | 1.09 ✗ |
+  | search panel · button text (worst gradient stop) | 4.5 | 14.94 | 14.94 |
+  | search panel · close × | 4.5 | 19.26 | 19.26 |
+  | search match · matched text | 4.5 | 15.75 | 4.85 |
+  | search match, current · its text | 4.5 | 9.86 | **1.52 ✗** |
+  | autocomplete · tooltip against the pane | 3 | 1.04 ✗ | 14.83 |
+  | autocomplete · tooltip border against the pane | 3 | 1.69 ✗ | 8.42 |
+  | autocomplete · an option's text | 4.5 | 16.37 | **1.09 ✗** |
+  | autocomplete · the SELECTED option's text | 4.5 | 4.63 | 4.63 |
+  | autocomplete · selected band against the tooltip | 3 | 4.25 | 4.25 |
+
+  Bold = fails on dark with light clear: the dark theme's own defects (light ink on CodeMirror's
+  light selection / tooltip). The panel, tooltip and selection are un-themed light slabs on the dark
+  pane — their numbers pass; whether that LOOKS acceptable is the human's.
+- **Proxy 2 — collisions, 414×896 and 1400×900, rail open and collapsed. Identical on both engines
+  (± 0.1 px).** Reading: control / pill / handle pairwise disjoint, each hit at its own centre, in all
+  four cases. Edit: control × handle none; control × rail list none; control × pane none.
+
+  | Viewport | Rail | Mode | Asserted overlaps | Pane right → rail left |
+  |---|---|---|---|---|
+  | 414×896 | open | reading | none | — |
+  | 414×896 | open | edit | none | +124.7 px clear (pane only 100 px wide) |
+  | 414×896 | collapsed | reading | none | — |
+  | 414×896 | collapsed | edit | **pane × handle 103×26 px** | handle box over the pane |
+  | 1400×900 | open | reading | none | — |
+  | 1400×900 | open | edit | none | +32 px clear |
+  | 1400×900 | collapsed | reading | none | — |
+  | 1400×900 | collapsed | edit | **pane × handle 103×26 px** | handle box over the pane |
+
+  The overlap was the proxy's stop condition; the human ruled it PINNED (kept out of the violations,
+  asserted still present, so the fix must delete `KNOWN_PANE_UNDER_HANDLE`). Reported, by design: the
+  control sits inside the rail's BOX (35–104×30 px) exactly as the mode pill does (56.5×30 px) — the
+  rail's top padding is there for it; asserted against the handle and the list instead.
+- **Proxy 3 — GFM and R1 as drawn. Identical on both engines.** Spans and what differs from the line;
+  the last two columns are the span colours' contrast on the pane.
+
+  | Source | Styled ranges | Style | On light | On dark |
+  |---|---|---|---|---|
+  | `# Heading` | `#` · the text | mark `#404740`; both bold + underline | 8.44 · 15.74 | 1.69 ✗ · 13.61 |
+  | `- [ ] task` | `-` · `[ ]` | `#404740` · `#221199` | 8.44 · 11.52 | 1.69 ✗ · 1.24 ✗ |
+  | table header row | each pipe · each cell | pipe `#404740`; all bold + underline | 8.44 · 15.74 | 1.69 ✗ · 13.61 |
+  | table delimiter and body rows | the delimiter row · each pipe | `#404740` | 8.44 | 1.69 ✗ |
+  | `~~struck~~` | `~~` · `struck` · `~~` | line-through; marks `#404740` | 8.44 · 15.74 | 1.69 ✗ · 13.61 |
+  | `H~2~O` (R1) | the two `~` ONLY | `#404740`; the `2` gets no span | 8.44 | 1.69 ✗ |
+  | `x^2^` (R1) | the two `^` ONLY | `#404740`; the `2` gets no span | 8.44 | 1.69 ✗ |
+  | `:smile:` (R1) | `:smile:` | `#aa1111` | 6.62 | 2.15 ✗ |
+  | plain line (control) | none | — | — | — |
+
+  The dark column is beyond the kickoff's listed surfaces — found because the spans' colours were
+  being read anyway: CodeMirror's default highlight palette is a light-page palette.
+- **Proxy 4 — Ctrl/Cmd+S with focus in the editor: 3.2's read is CONFIRMED, both engines identical.**
+  Dispatched key: 1 reaction at `document`, **1 at the editor's content** (Ctrl and Meta alike), 0 at a
+  light-DOM input (the guard's control arm). Real Ctrl+S, focus in CodeMirror, buffer carrying an
+  unsaved marker: `'html'` → `preventDefault` ×1 and ONE export of the on-disk document (21,487
+  chars; no buffer marker, no editor markup), confirmed again as a real download; editor still in
+  edit, buffer intact. `null` → `preventDefault` ×1 and nothing else — the key is swallowed. Nothing
+  asserted about what it should do. The download is named `export.html` here because the route
+  (`loadMain()` + `main.ts`'s dev `__peekover.selectFile`) sets no active file; from a folder it would
+  carry the file's name. `null` is not a state the store yields (it loads as `'html'`).
+- **Proxy 5 — what this is NOT.** The vitest harness page on both engines, not a loaded extension: no
+  extension CSP, no `app.html`, no real settings store, no browser-chrome handling of Ctrl+S / Ctrl+F,
+  and no Firefox extension load at all. All of that, and the look itself, is 7.1's.
+- **Kickoff vs repo, flagged:** (i) "against the rail" read as handle + list, not the box (above);
+  (ii) `lastExportFormat: null` is seam-only (above); (iii) the default reporter prints console output
+  only for FAILED tests — the `EYEBALL {json}` records need `--reporter=verbose`; (iv) 7.1's sentence
+  "the informal fidelity eyeball is NOT this task's" is superseded in place by a dated note.
+- **Verify.** New file 22 / 22 (11 per engine). Targeted: `editorRender`, `editorNestedHost`,
+  `editMode`, `exportShortcut` — 72 / 72 across both engines. lint 0. `git diff --stat`: the test file
+  and three records, no `src/`, `entrypoints/` or package file; golden EMPTY. No build was run — the
+  byte figures in § Up next are 3.2's and cannot have moved.
+
+**M12 task 3.3 DONE, 2026-10-05 — the live preview: the editor's buffer reaches the nested host through
+a cost-proportional cooldown; the preview-failure degrade (D-4, D-5's mechanism). ★ GROUP 3 IS
+COMPLETE** — spec §4's edit and preview clauses hold on an unwatched document, D-4 is proven red-first
+under real typing, the engine has one importer and is absent from the content script, Save is plumbed
+and not wired to disk. One human ruling was taken (the degrade's red-first); `decisions.md`'s 012 D-5
+entry is the record.
+- **What landed, in `src/render/editorView.ts` and nowhere else in production.**
+  `createPreviewCooldown(render, now)` — the watch's shape rebuilt as one instance per edit session:
+  first render immediate · wait = the last render's cost, from its END · one pending slot, newest wins
+  · the timer never re-armed per change · `flush` re-arms only for a remainder · an injected `now`.
+  `PREVIEW_COOLDOWN_MULTIPLIER = 1` is the one place marked provisional (Q4; 6.4 removes it). The feed
+  is the last line of 3.2's one update listener (dirty tracking unchanged); it hands the cooldown the
+  editor's document, read only when rendered. `BuildEditorOptions` gains `now`. `endEditorSession`
+  cancels the session's cooldown.
+- **Step 0, re-derived.** (a) `createView`'s `extra` is a CodeMirror `Extension` (one or an array) — no
+  engine change. (b) The render at BUILD is not timed and is not "the first": the first keystroke
+  renders at once. `watchController.ts` has nothing extractable. (c) A pending render has THREE layers
+  against outliving its session, not two: `renderPreview`'s live-shell check (2.2), the session's
+  cancel, and the feed's fire-time session check. (d) `mount()` catches every failure in its own
+  pipeline and degrades it in the host it was handed — the nested one.
+- **★ The human ruling — tasks.md 3.3's revert clause is false in mechanism; record both reds.** "Let
+  the throw propagate → the editor or the buffer is lost" did not reproduce: CodeMirror runs update
+  listeners inside its own `try/catch` (`@codemirror/view` 6.43.13 `dist/index.js:8074`). The Verify
+  text is unedited; its post-landing note carries the correction.
+- **Red-first, each seen with its own signature.** Unit, before implementation: 13 of the 16 new tests
+  red (the other three are negative claims, each red under its own ablation below).
+
+  | Ablation | Where | Signature (both engines unless unit) |
+  |---|---|---|
+  | session cancel removed (guard A) | unit | `expected "clearTimeout" to be called with arguments: [ {…} ]` — that test alone |
+  | fire-time session check removed (guard B) | unit | `expected [ Array(1) ] to deeply equal []` — that test alone |
+  | both removed | unit · browser | unit: A, B and exit-then-re-enter red · browser: `the discarded text was rendered: expected 'qzxIntro line.…' not to contain 'qz'` |
+  | either guard alone | browser | GREEN — each hides the other (the reason for the unit pair) |
+  | timer re-armed per change | unit | `expected "setTimeout" to be called 1 times, but got 3 times` · `renders during the stream: expected 1 to be greater than or equal to 5` · `expected 40 to be 10` |
+  | preview pane `overflow:hidden` (scroll fallback) | browser | `the marker left the view: expected 710.6 to be less than 538` |
+  | the feed's render routed at the OUTER host | browser | `the editor node was destroyed mid-typing: expected false to be true` |
+  | feed guard removed (the LITERAL degrade revert) | browser · unit | `a preview failure reached the page as an error: expected [ …(24) ] to deeply equal []` — editor and buffer intact |
+  | failed feed render torn down like the build render | browser | `the editor node was lost: expected false to be true` |
+
+- **Real engine, Chromium and Firefox, every fixture asserted unwatched.**
+  - *Marker:* 13 typed keys appear in the nested host's column and nowhere in the outer one; the outer
+    registered source is still the file. 13 feed renders for 13 keys on that small document (the
+    cooldown is shorter than the gap between keys), after 1 at build.
+  - *Responsiveness:* on a 212,682-byte document, 7 of 8 keys landed in the buffer while a render was
+    pending in the cooldown (2.3 ms / 4.0 ms for the slowest of them). "Pending" is waiting in the
+    cooldown — `mount()` is synchronous, a render is never in flight.
+  - *Coalescing:* 16 keys → 2 feed renders, plus the 1 at build, counted apart.
+  - *Scroll:* scrolled to a marker heading, then 16 paragraphs typed above it (718 px of new content
+    in a 538 px pane): the marker sits at −7.6 → −7.4 px from the pane's top (Chromium, 4 renders) /
+    −7.9 → −9.4 px (Firefox, 193 renders).
+  - *Exit while pending:* no commit into the torn-down preview host in the 700 ms after, no error;
+    re-entering at once, the discarded text never reaches the new session's preview.
+  - *Degrade:* a forced render throw shows the reader's banner and raw source inside the preview
+    pane (348×72 px in a 348×402 px pane), none in the outer root; the buffer is byte-identical, the
+    next key lands, and the preview recovers when rendering does. A throw that leaves `mount()`:
+    48 forced throws, 24 logged by the feed, 0 reached the page.
+- **★ FINDING P-1 — the reader's enhancers do not run in the preview** (§ Carried items; home: a human
+  ruling before 7.1). In units, identical on both engines, at build and after a key:
+
+  | | Outer document | Preview |
+  |---|---|---|
+  | ` ```mermaid ` | figure 1, SVG 1 | figure 0, SVG 0 — the raw `pre > code.language-mermaid` |
+  | `$x^2$` | `<math>` 1 | `<math>` 0 — the literal `$x^2$` in `code.peekover-math-inline` |
+  | ` ```javascript ` | wrapper 1, highlighted 1 | wrapper 0, highlighted 0 — a plain `pre > code` |
+  | ` ```js ` | wrapper 1, state `failed` (not a highlighter key) | wrapper 0 |
+
+  Reason: the enhancers are called at the two app-page call sites with the OUTER host; `renderPreview`
+  calls `mount()` only; a query on the outer root does not cross into the nested shadow root.
+- **Findings P-2 and P-3** (§ Carried items; home: 6.2 and the §8-2 ruling): the first key after a
+  pause renders synchronously inside its own keystroke — 217.7 ms (Cr) / 205.0 ms (Fx) on the large
+  document; and under a driven burst 512 keys cost 4 renders on Chromium, 193 on Firefox.
+- **Appearance proxies (human-authorized addition) — every pair MATCHED, no finding.** Preview column
+  against outer column: light — ink `rgb(22, 23, 31)`, paper `rgb(251, 251, 248)`, `Literata, Georgia,
+  serif`; dark — ink `rgb(234, 235, 243)`, paper `rgb(18, 20, 28)`, same face. A flip while editing
+  re-themes the preview each way, and holds across the next feed render.
+- **Bytes, both engines, against 3.2's figures (clean rebuild first: reproduced exactly).** `.output`
+  5,814,005 B (Cr) / 5,814,121 B (Fx), +535 each; headroom 1,526,027 / 1,525,911 B. Zips 1,836,279 /
+  1,836,337 B (+158). ONE file changed size: the app chunk, 517,369 → 517,904 B. Decomposed by
+  ablation: the feed without the cooldown +114 B; the cooldown +421 B; residual 0 (a path
+  decomposition; second path: cooldown unfed +525 B, the `push` call +10 B). Content script 342,384 B,
+  md5 `129deda5156522a75ac41eaabbdc1c5f` / `94c2d14b9e08144f0c932415edb28acf` — IDENTICAL in every
+  arm, and MOVED to 342,772 B when the content-script entry was made to call the cooldown. Manifest
+  654 / 770 B, `permissions: []`, `dependencies` 10.
+- **Verify.** lint 0 · unit **1243** (70 files; `editorView` 27, `editorEnhancer` 28, `editorEngine`
+  21, `editorImportFence` 10, `readerMode` 17, `mount` 12, `htmlExport` 13 with the 26-site pin) ·
+  browser **1779 pass / 15 skip** (176 files, 88 per engine; per engine `editorPreview` 10,
+  `editorDegrade` 9, `editorRender` 10, `editorNestedHost` 12,
+  `editorEyeballProxy` 11) · scanner and `--self-test` EXIT 0 (79 shipped files; 7 firing + 10 silent) · golden diff EMPTY · the
+  zero-diff list empty. No red on the full run; the two carried wall-clock flakes did not fire. No existing assertion edited: `editorDegrade` gained a block, its
+  seven cases stand.
+- **Kickoff vs repo, flagged.** (i) The degrade revert, above. (ii) "Route the preview at the OUTER
+  host" — done on the feed's render; `renderPreview` itself routed there destroys the shell at build.
+  (iii) "The marker leaves the view" needed more inserted than the pane is tall. (iv) "A ```js fence"
+  is not highlighted by the reader itself; a ```javascript fence was added as the code row's control.
+  (v) Plan §0 D-5 has no one-line "entry draft"; its paragraph was quoted whole. (vi) Console records
+  need `--reporter=verbose`, and `pnpm test:browser -- --reporter=…` does not pass the flag through —
+  call `pnpm exec vitest` directly.
+
+**M12 task 4.1 DONE, 2026-10-05 — the watch's deferral gate widens to edit mode; leaving edit flushes
+(D-8, direction 1 and the clean half of direction 2).** The first WATCHED-document editor test. No
+human ruling was taken; two judgment calls and one finding are flagged for one. `decisions.md`'s 012
+D-8 entry is the record.
+- **What landed, in `src/watch/watchController.ts` and nowhere else in production** (its DECISION 5
+  comment). `deferring(target)` — a displayed diff OR the literal `data-mode === 'edit'` — read at
+  both sites (`onText`, and `flushPending` for a timer armed before edit entry). The observer's
+  filter is `[data-diff, data-mode]`; its callback flushes when NOTHING defers any longer. No import
+  added (Clause C). The flush is `renderNow`: `preserveReading`, the signal, the capture.
+- **Step 0, re-derived at `07a7d08`.** (a) The two reads were `flushPending` `:494` and `onText`
+  `:524`, the filter `:341` — as `tasks.md` cites. (b) The observer now hears every reading ↔ raw
+  flip and `mount()`'s own `data-mode` write per render; none releases anything, because the flush
+  acts only on text labelled deferred. Edit entered under an open diff, or a diff closed while
+  editing: nothing is released until both are gone. (c) and (d) are the two items below.
+- **★ THE EXIT-ORDER FINDING (step 0(c)) — an input to 4.2, not worked around.**
+  `editorEnhancer.ts:124-125`: `exitEditMode(host)` then `teardownEditorShell(host)`, both
+  synchronous, in one click handler. `exitEditMode` (`readerMode.ts:144`) writes `data-mode`;
+  `teardownEditorShell` (`editorView.ts:393`) → `endEditorSession` removes `data-edit-dirty`
+  (`editorView.ts:276`). The observer's callback is a microtask, after both. **The kickoff's reading
+  holds: an attribute read in `watchController.ts` cannot tell a dirty exit from a clean one.** One
+  qualification: the observer's RECORDS could (the dirty attribute's removal arrives in the same
+  batch with its old value) — reasoned, not measured. § Up next carries the options.
+- **★ THE INTERIM STATE (step 0(d)).** Every exit reaches the controller looking clean and flushes.
+  Leaving edit with unsaved text discards the buffer (3.2; the guard is 6.1) and then shows the
+  on-disk text, including what arrived while editing. 4.1 claims no dirty-exit property.
+- **★ Judgment calls, flagged.** (i) *The observer does not read `oldValue`* — the kickoff asked for
+  "flush only when `oldValue` is `'edit'`"; the built condition is "the text was deferred and nothing
+  defers now", which gives the same behaviour without a second source of truth. (ii) *The "changed
+  again" line is not said on an edit-only flush* — it reads "…while the comparison was open". A new
+  flag records whether a diff was displayed while the text was held; the line is said only then.
+  `tasks.md` says "exactly as a diff exit does"; plan §0 D-8 says a clean exit "simply flushes
+  (equivalent to never having edited at all)". The diff-only path is unchanged.
+- **The cooldown's three properties, each whole.** No timer is armed or re-armed by the new
+  condition (it returns where the diff condition already did) · the injected `now` is untouched ·
+  `stop()` and `start()` both still call `cancelPending`, which also clears the new flag.
+- **Red-first.** Unit, before the change: 5 of the 10 new tests red.
+
+  | Ablation | Where | Signature |
+  |---|---|---|
+  | none — unchanged `07a7d08` | unit | 5 red: `expected [ 'v0', 'v1' ] to deeply equal [ 'v0' ]` (defers · timer armed before entry · reverse · drift) and `to have a length of 1 but got 2` (leaving edit) |
+  | the `data-mode` read removed | unit | the same 5 |
+  | the `data-mode` filter entry removed | unit · browser | unit: 7 red, among them "leaving edit for RAW flushes too" · browser: `waitFor timed out: the deferred text to reach the reading column after the exit` |
+  | the line said on every flush | unit | 1 red: the edit-only flush sets the note |
+  | the callback asks about edit only | unit | 6 red: 5 EXISTING `data-diff` tests and "with a diff displayed, leaving edit does not flush" |
+  | the deferred-label check removed | unit | 1 red: a mode flip releases a cooldown-pending render early |
+  | the `data-mode` read removed | browser, both engines | `the external change re-rendered the document under the editor`: `outerRootMutations` 1 (want 0) · `editorNodeConnected` false · `mode` "reading" · `outerColumnIsTheSameNode` false — and `the external change destroyed the editor and the unsaved text in it`: `editorNodeConnected` false · `liveSessionBuffer` null · `typedTextOnScreen` false |
+
+  One new unit test — a reading ↔ raw flip with nothing pending renders nothing — has no ablation
+  that reddens it alone.
+- **Real engine, Chromium and Firefox (414 × 896; no new chrome), every fixture asserted WATCHED.**
+  The watch is hand-driven through the detector seam (the `watchDiffDefer` precedent).
+  - *Deferred:* one external change in edit → 0 mutation records on the outer root's child list and
+    inside the outer reading column; the editor node is the same connected node; the buffer is the
+    file as opened.
+  - *Clean exit:* the reading column shows the new text; the mode is `reading`; no "changed again"
+    line; the flush captured the document it replaced (one snapshot, the text as opened).
+  - *Typed buffer:* 8 typed characters survive the external change — same node, same session, mode
+    `edit`, dirty attribute still set — and the next key lands in the same buffer.
+  - *Nothing arrived:* a clean exit re-renders nothing (same column node, no line, no snapshot).
+  - *Positive control, inside the same tests:* with edit off, the same change through the same seam
+    → 1 mutation record on the outer root, and the new text in the column.
+- **Bytes, both engines, against 3.3's figures (clean rebuild first: reproduced exactly).** `.output`
+  5,814,275 B (Cr) / 5,814,391 B (Fx), +270 each; headroom 1,525,757 / 1,525,641 B. Zips 1,836,372 /
+  1,836,430 B (+93). TWO files changed size, residual 0:
+
+  | | Content script | App chunk |
+  |---|---|---|
+  | 3.3 baseline | 342,384 B | 517,904 B |
+  | 4.1 | 342,520 B (+136) | 518,038 B (+134) |
+  | the deferral-read glue (the `data-mode` read) | 38 | 38 |
+  | the observer glue (the filter entry) | 12 | 12 |
+  | the held-under-a-diff flag (the line's condition) | 35 | 37 |
+  | the two helpers those hang on (`deferring`, `markDeferred`) | 51 | 47 |
+  | residual | 0 | 0 |
+
+  Each of the first three is the full build minus the build with that piece removed; the three pairs
+  and the triple are additive to the byte (50 · 73 · 47 · 85 in the content script; 50 · 75 · 49 · 87
+  in the app chunk), so the helpers' figure is a measured remainder, not a fit. **With all four
+  removed, every built file is name- and md5-identical to the baseline on both engines** — content
+  script `129deda5156522a75ac41eaabbdc1c5f` (Cr) / `94c2d14b9e08144f0c932415edb28acf` (Fx). New md5
+  `e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`. The three CodeMirror
+  chunks are unchanged (54,680 + 209,493 + 342,426 B) and no editor module is in the content script:
+  `editorImportFence` green, and the content script's whole delta is accounted for above. Manifest
+  654 / 770 B, `permissions: []`, `dependencies` 10.
+- **Verify.** lint 0 · unit **1253** (70 files; `watchController` 36 — 26 existing, unedited, + 10 —
+  `editorView` 27, `editorEnhancer` 28, `editorEngine` 21, `readerMode` 17, `mount` 12; the two fences
+  over what `watchController.ts` may import: `diffEngine` 15 (the 5.1 fence, Clause C) and
+  `editorImportFence` 10) · browser **1785 pass / 15 skip** (178 files, 89 per engine; per engine
+  `editorWatch` 3, `watchDiffDefer` 2, `watchControl` 36, `watchRemount` 12, `diffChrome` 39,
+  `diffView` 10, `editorPreview` 10, `editorDegrade` 9, `editorRender` 10, `editorNestedHost` 12,
+  `editorEyeballProxy` 11) · scanner and `--self-test` EXIT 0 (79 shipped files; 7 firing + 10
+  silent) · golden diff EMPTY · the zero-diff list empty. The full browser run and the first full
+  unit run had no red. **One red, classified:** a second, verbose unit run started as the browser
+  run's engines were shutting down timed out two `diagramEnhancer` tests (`Test timed out in
+  5000ms`; that run took 44 s against 10 s). Green in isolation (58 / 58) and on the full rerun
+  (1253). A wall-clock timeout on a loaded machine — NOT one of the two carried flakes, and in a
+  file this task does not touch. No existing assertion edited: `watchController.test.ts` is
+  +243 / −0, and `watchDiffDefer.browser.test.ts` is zero-diff.
+- **Kickoff vs repo, flagged.** (i) `oldValue`, above. (ii) The "changed again" line, above. (iii)
+  "The observer cannot tell a dirty exit from a clean one" — true of a read, not of its records. (iv)
+  The decomposition has four parts, not two: the kickoff's "read glue vs observer glue" leaves 86 B
+  (content script) unaccounted until the flag and the helpers are ablated too. (v) The positive
+  control is inside the deferral tests (the standing invariant's "in the same test"), after the exit,
+  rather than a separate edit-off test: a watch render through the default render removes the edit
+  control, so it cannot come first. (vi) `tasks.md` names the diff-deferral browser file
+  `watchDiffDefer` — that is its real name. (vii) Plan §0 D-8's draft says a diff's exit flush is
+  "silent"; it has not been since 006 D-11. Quoted verbatim, annotated.
+
+**M12 RULINGS after task 4.1, 2026-10-06 — five human rulings (R4–R8), all as the reviewer leaned.**
+Doc-only session: `decisions.md`, `tasks.md` and this file; no `src/`, no tests, no build, so every
+number above stands unmeasured-again. `decisions.md`'s "M12 RULINGS after task 4.1" entry is the record.
+- **R4 — an edit-exit flush is SILENT** beyond the normal watch flash. The "changed again" line names
+  the comparison view and would be false. What 4.1 built stands; no code owed.
+- **R5 — 4.1's state-based flush is ACCEPTED** ("the text was deferred, and nothing defers any more")
+  in place of an `oldValue` check. The flagged deviation is closed.
+- **R6 — 4.2 is RE-SCOPED to the hint.** `watchController.ts` sets a literal host attribute while it
+  holds an external change deferred during edit and clears it when that deferral ends; no UI; 5.3
+  consumes it; it never replaces D-7's save-time compare. No dirty-exit detection is built anywhere:
+  the asymmetry is now 6.1's Verify ("stay" / "discard", red-first). Until 6.1 the interim state
+  stands — an exit discards the buffer, then shows the on-disk text.
+- **R7 — P-1: the preview runs the reader's enhancers** (diagrams, math, code, the reader's order) on
+  the nested host after each preview render. Cost measured at 6.2. Lands at 3.4.
+- **R8 — E-3: the import fence widens to a third DYNAMIC specifier, `@codemirror/language`**, for
+  token-driven highlight colours. Amends 012 D-2 / D-10's two-specifier set; clause A unchanged. Lands
+  at 3.4 with E-1 and E-2.
+- **`tasks.md` as redlined:** 4.2 carries a RE-SCOPED block (original body struck in place beneath it)
+  · 6.1's Verify gains the dirty-exit property · the DISCOVERED task **3.4** sits after 3.3's block
+  and runs after 4.2, before 5.1 · 23 → **24 tasks**. No other task body and no status line touched;
+  spec and plan stay sealed.
+- **Unchanged:** E-4, E-5, E-6, E-8 → the 7.1 walk · E-7 → the save-time batch at 5.1 · P-2, P-3 → 6.2.
+- **Kickoff vs repo, flagged.** (i) **`@codemirror/language` does not resolve today** — it is not a
+  direct dependency and `node_modules/@codemirror/` holds `lang-markdown` only. R8 as ruled needs an
+  install the kickoff's 3.4 Files list does not name (`package.json`, the lockfile, `dependencies`
+  10 → 11); recorded as an open item on 3.4, not decided. (ii) The reader also runs `enhanceTables`
+  between math and code; R7 names three enhancers — 3.4's kickoff question. (iii) 7.1's walk list
+  ALREADY names E-1…E-8, so no line was added there; it still asks a verdict on E-1, E-2, E-3 and
+  E-7, which is harmless (a verdict on a fix) and left as written. (iv) E-7 "remains in the save-time
+  batch owed at 5.1": no file named such a batch before today — the files said "a ruling is owed
+  before 5.3", and 5.1's own body names the ledger wording only. Recorded as ruled; 5.1's body is not
+  edited, so its KICKOFF must carry CRLF-on-save and E-7. (v) Group 4's acceptance line still reads
+  "conflict-routed (never auto-flushed) on a dirty one", and 6.1's opening text "(which releases 4.2's
+  deferred flush)" — both written to the old 4.2. The second is corrected inside 6.1's appended note;
+  the first is outside the fence and left, flagged. (vi) `tasks.md`'s header carries a REDLINED line
+  per earlier redline; none was added for this one — the kickoff's "no status line".
+
+**M12 task 4.2 DONE, 2026-10-06 — the "changed on disk while you were editing" hint (D-8; R6).**
+While the watch holds an external change behind an edit session, the outer host carries
+`data-watch-changed-in-edit`. No UI, no copy, no CSS: 5.3 consumes it. No human ruling was taken;
+three judgment calls are flagged. `decisions.md`'s "012 D-8 — 4.2 landed" entry is the record.
+**Group 4 is complete except for the dirty-exit property, which is 6.1's (R6).**
+- **What landed, in `src/watch/watchController.ts` and nowhere else in production** (its DECISION 6
+  comment). `CHANGED_IN_EDIT_ATTR` (exported, presence-only, value `""`) and one writer,
+  `syncEditHint`: present iff a change is held behind a deferral AND `data-mode === 'edit'`. Called
+  from `markDeferred`, the observer's still-deferring branch, the exit flush (before its render) and
+  `cancelPending`. `stopSelf` calls `cancelPending` before dropping `host`. No import added.
+- **Step 0, re-derived at `26c3883`.**
+  (a) *Held, and why.* "Held" is `pendingSetByDefer` with `pendingText` non-null. The controller
+  recorded that a DIFF was part of why (`pendingHeldUnderDiff`, 4.1) and nothing about edit; the
+  hint reads `data-mode` at write time instead of adding a flag.
+  (b) *Every end of a held deferral:* the observer's flush (`onDiffExited`) · `cancelPending`, reached
+  from `stopSelf` (an explicit `stop()`, and `onReadError`'s dead-read stop — a fourth path the
+  task line does not name) and from `start()`. Nothing else clears `pendingSetByDefer`.
+  (c) *The name:* `data-watch-changed-in-edit`. `:host([data-watch="active"])` in `readerCss.ts`
+  matches the attribute named `data-watch` only, so the prefix collides with nothing.
+  (d) *The last rendered text:* not held, but readable — `readerSourceFor(host)`, already imported
+  and read in `renderNow`. A changed-and-changed-back file is therefore detectable in one line, and
+  is deliberately NOT detected (judgment call 2).
+- **★ Judgment calls, flagged.** (1) *"During edit" is a state.* Edit + diff both deferring, edit
+  left → the text stays held, the hint goes; text held under a diff, edit then entered → the hint
+  appears. (2) *No content compare* — it would be a second, weaker copy of D-7's. **For 5.3:** a
+  file that changes and changes back keeps the hint, and 5.3's "on conflict — or on 4.2's hint"
+  would, read literally, refuse a save D-7 allows. (3) *The hint clears when the watch stops*,
+  though the disk did change.
+- **The cooldown's three clauses, each whole.** *From the end:* the flush's hint write sits before
+  `renderNow`, outside the block it times; `readyAt` is computed as before. *Multiplier 1:*
+  untouched. *Coalesce, do not queue:* still one slot, and no timer is armed, re-armed or cancelled
+  by the new code — the hint's attribute is not in the observer's filter, so writing it calls
+  nothing back. And 4.1's three: no timer from the new condition · the injected `now` untouched ·
+  `stop()` and `start()` both still reach `cancelPending`.
+- **Red-first.** Unit, before the change: **13 red / 38 green** (the 36 existing; the two
+  silent-direction cases hold before the change, as they must).
+
+  | Ablation | Where | Signature |
+  |---|---|---|
+  | none — unchanged `26c3883` | unit | 13 red: `expected false to be true` (12) and the literal's pin |
+  | the set (`markDeferred`'s call) | unit · browser, both engines | unit 11 red · browser 2 per engine: `an external change held during edit is not marked on the host` (`hint` false, `hintValue` null) and `the hint, with the unsaved buffer untouched beside it` |
+  | the flush's clear | unit · browser, both engines | unit 5 red · browser 1 per engine: `the hint outlived the change it was about: expected { hint: true, mode: 'reading' }` |
+  | the teardown's clear (`cancelPending`) | unit · browser, both engines | unit 3 red (`stop()`, the document switch, the dead read) · browser 1 per engine: `a stopped watch left its hint on the host` |
+  | the observer's re-read | unit | 2 red: edit ends under an open diff · edit entered over text held under a diff |
+
+- **Real engine, Chromium and Firefox, every fixture asserted WATCHED** (the 4.1 rig, hand-driven).
+  - *Held:* one external change in edit → the hint present (value `""`), ONE write of the attribute,
+    0 mutation records on the outer root, the editor the same connected node, the buffer the file as
+    opened.
+  - *Exit:* the hint gone (two writes in all: one set, one removal), mode `reading`, the on-disk
+    text in the column, no note (R4), the flush captured the document it replaced.
+  - *Typed buffer:* 8 typed characters byte-identical under the hint, dirty still set; `stop()` in
+    edit → the hint gone, the editor and its text not; a `start()` on another host → absent on both.
+  - *Nothing arrived:* in edit, across the exit and on the watch render after it → ZERO writes of
+    the attribute (counted on the host), with the watch shown live by that render.
+- **Bytes, both engines (clean rebuild at HEAD first: 4.1's figures reproduced exactly).** `.output`
+  5,814,537 B (Cr) / 5,814,653 B (Fx), +262 each; headroom 1,525,495 / 1,525,379 B. Zips 1,836,518 /
+  1,836,576 B (+146). TWO files changed size, on both engines:
+
+  | | Content script | App chunk |
+  |---|---|---|
+  | 4.1 baseline | 342,520 B | 518,038 B |
+  | 4.2 | 342,652 B (+132) | 518,168 B (+130) |
+  | the helper and the constant (`syncEditHint`, the literal) | 109 | 108 |
+  | the set (`markDeferred`'s call) | 5 | 5 |
+  | the observer's re-read | 4 | 4 |
+  | the flush's clear | 5 | 5 |
+  | the teardown's clear | 8 | 8 |
+  | a minifier step at three or more call sites | 1 | 0 |
+  | residual | 0 | 0 |
+
+  Sixteen arms — every subset of the four call sites, both engines for the 0-, 1-, 3- and 4-site
+  arms, Chromium for the six pairs. The helper's figure is over-determined (each one-site arm minus
+  that site's marginal gives 109 / 108, four times), and every pair is additive to the byte. The
+  content script's 1 B is located, not fitted: all four three-site arms and the full build carry it,
+  no pair or single does, and the app chunk never does. Of the helper's bytes, 31 are the name
+  (measured by swapping the literal for a one-character one). **With all four calls removed and the
+  `stopSelf` reorder reverted, every built file is name-, size- and md5-identical to the baseline on
+  both engines** (`e051533e430646c410dfa7c5a200da2d` / `a791ceae1241502dede01f25738b3d33`); with the
+  reorder kept, sizes are identical and the md5 moves — the reorder costs 0 B. New md5
+  `97b1b8690f195acb499a464fee532b34` (Cr) / `c0115d89b10be306ffa0c77d2234a63e` (Fx). The three
+  CodeMirror chunks are unchanged (54,680 + 209,493 + 342,426 B). Manifest 654 / 770 B,
+  `permissions: []`, `dependencies` 10.
+- **Verify.** lint 0 · unit **1268** (70 files; `watchController` 51 — 36 existing, unedited, + 15 —
+  `editorView` 27, `editorEnhancer` 28, `editorEngine` 21, `readerMode` 17, `mount` 12; the two fences
+  over what `watchController.ts` may import: `diffEngine` 15 and `editorImportFence` 10) · browser
+  **1791 pass / 15 skip** (178 files, 89 per engine; per engine `editorWatch` 6 — 4.1's 3, unedited,
+  + 3 — `watchDiffDefer` 2, `watchControl` 36, `watchRemount` 12, `diffChrome` 39, `diffView` 10,
+  `editorPreview` 10, `editorDegrade` 9, `editorRender` 10, `editorNestedHost` 12,
+  `editorEyeballProxy` 11) · scanner and `--self-test` EXIT 0 (79 shipped files; 7 firing + 10
+  silent) · golden diff EMPTY · the zero-diff list empty. **No red in any run, and none of the
+  carried flakes fired** — although lint and the unit suite ran beside the browser suite's first
+  minute (an unintended overlap, not repeated). No existing assertion edited:
+  `watchController.test.ts` is +354 / −0 apart from two names added to its import list, and
+  `editorWatch.browser.test.ts` is +186 / −1, the one line being its `watchController` import.
+- **Kickoff vs repo, flagged.** (i) "`start(otherHost)` while held → removed from the first host":
+  `start()` on a running controller is a no-op (005); the document switch is `stop()` then
+  `start()`, tested, with the bare `start()` pinned beside it. (ii) "No import of any editor or
+  readerMode module": the controller has imported `readerSourceFor` from `readerMode` since 006;
+  nothing was added. (iii) "Set vs clear vs the constant": a shared helper and four call sites, as
+  above. (iv) The kickoff's unit list has eight cases; fifteen were written — the seven extra are the
+  literal's pin, hint-gone-before-the-render, the two "state" cases, the dead read, the bare
+  `start()` and the absent-otherwise case. (v) Group 4's acceptance line still reads "conflict-routed
+  (never auto-flushed) on a dirty one" — carried from the rulings record, still outside the fence.
+
+**M12 task 3.4 DONE, 2026-10-06 — editor legibility + preview fidelity (R7–R14; E-1, E-2, E-3,
+P-1).** `decisions.md`'s two "M12 TASK 3.4" entries are the record: the landing entry (mechanisms,
+tables, bytes, governance) and the six human rulings (R9–R14). `tasks.md` 3.4's ★ post-landing note
+lists every place the task line was read or exceeded.
+- **What landed.** *Engine:* a third dynamic edge, `@codemirror/language`, and a non-fallback
+  highlight style built from that package's own default style with every colour a design token —
+  two-tone by ruling R11 (`--muted` for markup, comments, link / task furniture; `--del` for
+  `invalid`; `--ink` for the rest). No `@lezer/highlight`. *`EDITOR_CSS`:* the selection and the
+  current search match on `--hl-soft`, the tooltip on `--panel` (E-2); `margin-top:90px` while the
+  rail is collapsed (E-1). *`editorView.ts`:* `renderPreview` runs diagrams, math, tables, code on
+  the nested host after each mount, each under its own guard (R7, R10).
+- **★ Found and fixed here:** a highlight style built per HOST draws nothing on Firefox from the
+  second host on (its rules are in CodeMirror's shared constructed sheet and do not apply). The
+  style is built once per page. Found by proxy 3 on Firefox, which passed in isolation.
+- **Before → after, both engines identical.** *E-3, dark:* markup marks 1.69 → 6.54 · task marker
+  1.24 → 6.54 · emoji shortcode 2.15 → 13.61 (light 8.44 → 5.49 · 11.52 → 5.49 · 6.62 → 15.74).
+  *E-2, dark:* selected text 1.16 → 5.03 (unfocused 1.14 → 5.03) · current match 1.52 → 10.52 ·
+  autocomplete option 1.09 → 14.45 (light 12.95 → 15.8 · 9.86 → 16.31 · 16.37 → 16.18). *E-1:*
+  pane × handle 103.1×26 px → none, 8 px clear, at 414×896 and 1400×900; rail-open geometry
+  unchanged. *P-1:* the preview's census equals the outer document's at build and after a key
+  (1 figure + SVG, 1 `<math>`, 2 wrapped fences / 1 highlighted, 1 table toolbar; was all zeros).
+- **Red-first.** Before the change: unit 10 red (fence 4, engine 6) · browser 8 red per engine, the
+  same eight on each (proxy 1 dark `E-2 pairs below AA … [ …(4) ]`; proxy 2 both collapsed cases;
+  proxy 3 light `expected [ '#221199' ] to deeply equal [ '#5d6070' ]` and dark `[ …(19) ]` spans
+  below AA; the preview's `at build: the mermaid fence has its figure: expected +0 to be 1`, the
+  theme-flip and the containment tests). Ablations after: a fourth `@codemirror/state` edge (4
+  red) · an `@lezer/highlight` edge (1) · a type-only static import (3) · the style per engine
+  (unit 1; Firefox proxy 3) · the style as a fallback (2) · the enhancer guard removed (`an
+  enhancer failure at build cost the edit view`) · one guard for all four (`the table enhancer ran
+  after the three that threw: expected +0 to be 1`) — the last two on both engines.
+- **Bytes, both engines.** `.output` 5,816,970 B (Cr) / 5,817,086 B (Fx), **+2,433**; headroom
+  1,523,062 / 1,522,946 B. Zips 1,838,328 / 1,838,386 B (+1,810). Arms by ablation: highlight
+  style 1,844 (app 945 + CodeMirror lazy chunks 899) · E-2 376 · E-1 82 · enhancer calls 131 ·
+  residual 0. App chunk 518,168 → 519,702 B; the CodeMirror lazy chunks are now FOUR (35,035 +
+  54,846 + 209,748 + 307,869 B, +899 over the three). All four arms ablated: all 276 shipped files
+  name-, size- and md5-identical to the post-install baseline, itself identical to 4.2's. Content
+  script 342,652 B, md5 unchanged in every arm, and MOVED (344,389 B) when un-gated. Manifest
+  654 / 770 B, `permissions: []`, `dependencies` 11.
+- **Governance (R9).** 6.12.4, the one copy CodeMirror resolves; lockfile +3 lines, no resolved
+  version moved; MIT, no install hook; SBOM 191 (unchanged), not staged; `dompurify` and
+  `markdown-it` one copy each. **`pnpm audit --prod` EXIT=1 — not met, carried (R13).**
+- **Verify.** lint 0 · unit **1273** (70 files; `editorEngine` 25 — 21 + 4,
+  two pins edited by R14 — `editorImportFence` 11 — 10 + 1, its three count pins moved 2 → 3 —
+  `editorView` 27 and `editorEnhancer` 28, both unedited; `htmlExport` 13, its `:host` pin still 26) ·
+  browser **1795 pass / 15 skip** (178 files, 89 per engine, run alone; per engine `editorPreview`
+  12 — 10, the REPORTED test replaced by three — `editorEyeballProxy` 11, `editorRender` 10,
+  `editorDegrade` 9, `editorNestedHost` 12, `editorWatch` 6; the enhancers' own files per engine:
+  diagram 138 over 12 files, math 62 over 5, table 98 over 7, code 60 over 7) · scanner and
+  `--self-test` EXIT 0 (79 shipped files; 7 firing + 10 silent) · golden diff EMPTY · the zero-diff
+  list empty (`mount.ts`, `readerMode.ts`, `editorEnhancer.ts`, `watchController.ts`, the four
+  enhancer modules, `readerPane.ts`, `appShell.ts`, `htmlExport.ts` and its test,
+  `chromiumFolderSource.ts`, `runReader.ts`, `mountReader.ts`, `contentWatch.ts`). **No red in the
+  final runs, and none of the carried flakes fired.** Two reds on the way, both classified: the
+  one-time harness reload after the install (cleared on rerun), and the Firefox-only highlight
+  defect (real — persisted on rerun, reproduced in isolation over 14 hosts, fixed).
+
+**M12 task 5.1 DONE, 2026-10-08 — the HUMAN GATE: the ledger wording is SIGNED, and the save-time
+batch is ruled ("sign as proposed, all leans").** `decisions.md`'s "M12 TASK 5.1" entry is the record
+and holds the signed text verbatim. Doc-only: three files, no `src/`, no build, `PERMISSIONS.md`
+untouched.
+- **Signed.** (a) the summary sentence — "cannot change any file on disk except the one file the user
+  has opened for editing"; (b) the final "Edit save-back" row, landing at 5.4; (b′) the interim row,
+  landing at 5.3 — (b) with the download fallback stated as "does not save". Copy both from
+  `decisions.md`, never from here.
+- **Rulings.** **A** — a uniformly-CRLF file saves as CRLF; anything else saves the editor's LF and
+  the status says so; the baseline advances to the written text. **B** — Ctrl/Cmd+S in edit runs
+  Save (answers E-7); outside edit it exports. **C** — 4.2's hint warns, D-7's compare decides
+  (closes 4.2's open product call).
+- **Routes.** Two-stage ledger text (5.3 interim, 5.4 final) · the handle is bound at edit entry, and
+  Revoke / close / switch end the edit session (5.3, red-first) · a force-overwrite ruling at 5.5
+  re-signs the row at 5.6 · 5.3 makes the ledger's consistency edits, 5.7 adds the zero-network
+  save-path sentence · `chromiumFolderSource.ts` gets a comment-only correction at 5.3 · the
+  pre-picker consent line is a 7.1 verdict · "Wipe all data" not closing an open folder is carried
+  outside M12.
+- **`tasks.md`.** 5.1 ticked · a ★ REDLINE block at the head of 5.3 · ★ notes on 5.4, 5.6, 5.7 · the
+  discovered 1.3 · three 7.1 walk items · 24 → 25 tasks.
+
+**M12 task 1.3 DONE, 2026-10-08 — GHSA-238p-pmpm-9mq7 (katex via mermaid) is a reviewed, documented
+audit exception, NOT REACHABLE BY CONSTRUCTION (R15). `pnpm audit --prod` EXITS 0 again.**
+`decisions.md`'s "M12 TASK 1.3" and "R15" entries are the record.
+- **The STOP, then R15.** The first analysis found katex reachable from author input (`$$` in a
+  sequence/state/class diagram; flowchart labels force HTML labels on `$$`) with no mermaid config
+  that closes it. Ruled R15: a fence whose source has `$$` degrades before `engine.render`
+  (`hasDiagramMath` in `diagramEnhancer.ts`, beside `hasRemoteReference`). Named zero-diff exception:
+  `diagramEnhancer.ts` and its tests only.
+- **Completeness.** One `import("katex")` in mermaid's whole core graph, behind `if (!hasKatex(text))
+  return text`. Entity spellings of `$` (`&dollar;`, `&#36`, `#36;`…) measured to reach katex 0
+  times, both engines.
+- **Tests.** `diagramEnhancer.test.ts` 58 → 82: the superset against mermaid's real `hasKatex` + the
+  drift pin (GHSA-named messages). New `diagramKatexGate.browser.test.ts`, Cr+Fx, with a firing
+  control. Red-first on all of them, including mermaid's chunk ablated and restored md5-identical.
+- **The ignore.** `package.json` → `pnpm.auditConfig.ignoreGhsas: ["GHSA-238p-pmpm-9mq7"]`, verified
+  in pnpm's code for 10.33.0, 10.34.6 (what CI's `version: 10` resolves) and 10.0.0. Audit EXIT=0
+  with, EXIT=1 without, both forms; JSON suppresses exactly that id. No workflow edit.
+- **Bytes.** App chunk +132 B = the guard, residual 0; content script md5-identical; katex chunk still
+  ships (258,879 B, now unreachable); lockfile zero-diff.
+- **Gotcha, banked:** Stopping a background vitest task (TaskStop) orphans its node + Playwright
+  Firefox processes — find them by command line and `taskkill //T`. And `node -e` inside bash eats
+  `$$` (the shell's PID) — write the script with the Write tool.
+
+**M12 task 5.2 DONE, 2026-10-08 — D-7's conflict predicate and the ONE baseline. Pure; no write, no
+caller yet.** `decisions.md`'s "012 D-7" entry is the record. Two files: `editorView.ts` and its test.
+- **Built.** `hasConflict(baseline, reread)` — strict `!==`, exported, pure. The session's
+  `originalText` is now THE baseline: the raw read at seed, moved only by the new
+  `session.advanceBaseline(written)` (5.3 calls it after a successful write, with exactly the string
+  written — ruling A's CRLF included). The dirty listener compares against the same baseline,
+  normalised, recomputed in the same advance. `originalText` stayed the name (plan D-7 and `tasks.md`
+  both name it as the value that advances); no frozen seed copy is kept.
+- **Tests.** `editorView.test.ts` 27 → 44 (+17), RED first (12 failed). Ablations, each red in its own
+  units and restored byte-identical: a normalised compare (CRLF-vs-LF and lone-CR cases) · a length
+  compare (both same-length cases) · a baseline from the editor's document (3 lifecycle cases) · the
+  dirty side not advancing (both dirty-agreement cases, beyond the kickoff) · the source-read check
+  with an added `lastModified` read, then a `size` read.
+- **Bytes.** App chunk +50 B = the getter, the advance method and one extra `let`; residual 0. The dirty
+  listener's change is a rename (0 B); `hasConflict` has no caller yet and tree-shakes to 0. Content
+  script md5-identical both engines. Zip +215 / +215 B: every chunk importing the app chunk carries its
+  renamed hash (same length, so no other file changed size) and recompresses.
+- **Full suite.** One red, NOT on the known-flake list: `mathNetwork.browser.test.ts` (Firefox), "the
+  STIX Two Math subset was never fetched in this window". Cleared in isolation (6/6). See § Carried
+  items — the failure an earlier investigation predicted but could not reproduce. The cause was not
+  investigated here.
+
+**M12 task 5.3 DONE, 2026-10-09 — Save writes on Chromium: permission at the click, the re-read and
+the compare BEFORE the write, the safe floor; the interim ledger row in the same commit; rulings A–C;
+routes 2 and 5.** `decisions.md`'s "012 D-6 — LANDED at task 5.3" entry is the record.
+- **Preflight deviation, human-approved.** The tree was NOT clean at kickoff: a comment-only diff in
+  `chromiumFolderSource.ts` and an untracked `tests/permissionsLedger.test.ts`, both from an
+  interrupted earlier start on this task. The human chose "adopt the leftovers". Both were
+  re-derived: the comment is route 5's (md5-proven); the test's literals were checked against the
+  5.1 entry by the test itself, and one adopted assertion was wrong and fixed — a bare
+  `/cannot write\b/` also matched the watch-relay row, which says that of the relay, truthfully.
+- **Built.** `EditorSave` is a binder (called once, at edit entry); the bound save takes
+  `{ text, baseline }`. `writeBack` in `appShell.ts` is the write. `textForDisk` / `isUniformCrlf`
+  (ruling A), `saveStatusText`, the save bar and `saveEditorSession` are in `editorView.ts`.
+  `AppController.saveEdit()` is ruling B's door for `main.ts`. `endEditSession()` runs at Revoke,
+  `paintIdle` and a folder switch. CSS in `EDITOR_CSS` only.
+- **Red-first, all observed** (the entry lists each): unit 27 red before the implementation; the
+  ledger 3 red, and one word dropped → red; in the real engine the compare, the view's catch, the
+  binding and the endings each ablated → red in their own units (out-of-band text gone from disk;
+  the failure silent; file B overwritten; a write landing after Revoke / close / switch); ruling B
+  both directions, both engines.
+- **Bytes.** App chunk 519,884 → 523,321 B (+3,437), decomposed to a −2 B residual (the entry's
+  table). Content script md5-identical both engines, with a firing control. Route 5: 278 of 278
+  shipped files md5-identical with only that file reverted.
+- **Full suite.** lint 0 · unit 1347 (+33: `editorView` +26, the ledger test 7) · browser, run
+  alone, 1821 passed / 29 skipped (+18 passed: `editorSave` 16, `exportShortcut` +2; +14 skipped:
+  `editorSave`'s Chromium-only cases on Firefox), 182 files, ZERO reds — no known flake fired,
+  `mathNetwork` included (6/6) · scanner clean over 79 files, self-test 7 + 10 · `pnpm audit --prod`
+  EXIT=0 · golden empty. Named: `editorSave` 16 (15 Cr + 1 Fx; 14 skipped) · `exportShortcut` 18 ·
+  `editorView` 70 · `editorEnhancer` 28 · `editorRender` 20 · `editorWatch` 12 · `editorPreview` 24
+  · `editorDegrade` 18 · `permissionsLedger` 7 · `firefoxFolderSource` 8 (unit; there is no
+  `chromiumFolderSource` unit file — its coverage is `folderGrant` 12 and `folderDrop` 10, browser)
+  · `htmlExport` 13 unit (the 26-site pin unmoved) + 8 browser · `manifest` 8.
+- **Zero-diff, confirmed:** `mount.ts`, `readerMode.ts`, `watchController.ts`, `editorEngine.ts`,
+  the diagram / math / code / table modules, `htmlExport.ts`, `runReader.ts`, `mountReader.ts`,
+  `contentWatch.ts`, `tests/golden/output/` — and `readerPane.ts`, `editorEnhancer.ts`.
+- **Kickoff vs file, flagged.** (i) The kickoff's "outcome carrying a KIND … 'failed'": `failed` is
+  a REJECTION, not a returned kind, so that one catch exists once. (ii) "CLEAR the dirty attribute
+  explicitly": built as a recompute against the advanced baseline — a bare removal would mark text
+  typed during the save as saved. (iii) `tasks.md` 5.3's body says "cannot save here yet"; the
+  redline's "not available here" rules. (iv) Three existing assertions were re-spelled (the entry
+  lists them); none was edited to make a behaviour pass that it used to forbid.
+- **Not proven here, by construction → 7.1:** the browser's real write prompt, a real folder on a
+  real disk, and Ctrl/Cmd+S pressed (not dispatched) inside the editor — including that the
+  keystroke carries the activation `requestPermission` needs.
+
+**M12 task 5.4 DONE, 2026-10-09 — Save falls back to a download where it cannot write (Firefox, no
+handle, a declined prompt); `PERMISSIONS.md` carries the final signed row; rulings R16–R18 banked.**
+`decisions.md`'s "012 D-6 — the DOWNLOAD FALLBACK LANDED at task 5.4" entry is the record.
+- **Rulings, from the kickoff.** R16 — 6.1's guard also covers Revoke, a folder switch and a closed
+  folder (`tasks.md` 6.1 redlined). R17 — a discovered task 4.3, save-path hardening, between 5.4
+  and 5.5 (25 → 26 tasks). R18 — 5.3's status copy approved.
+- **Built.** `writeBack` (`appShell.ts`) ends in `downloadAs(textForDisk(buffer, baseline), <the
+  bound file's name>, 'text/markdown')` wherever it cannot write, and answers a new outcome,
+  `downloaded`. `EditBinding.ended` tells a binding the shell dropped (still `unavailable`:
+  nothing downloads after Revoke) from one that never had a file (downloads as `document.md`).
+  In `editorView.ts` a `downloaded` outcome moves NOTHING — baseline, dirty and buffer as they
+  were — and has its own status line. `htmlExport.ts` zero-diff.
+- **The ledger.** The row was cut from the 5.1 entry by a script and compared: 2,062 bytes, equal.
+  One line of `PERMISSIONS.md` changed. Ledger test 7 → 9, 3 red against the unedited ledger.
+- **Red-first, all observed.** Unit: 10 red before the implementation. Real engine: 4 red on
+  Chromium and 4 on Firefox before it, both controls green. Ablations, each restored
+  byte-identical: the download put back to "not available" → no download and the status says not
+  available (unit 4; real engine 4 + 4); the markdown type omitted → `text/html` observed, red on
+  the type assertion (unit 2; real engine 3 + 2).
+- **Bytes.** App chunk 523,321 → 523,863 B (+542), both engines, decomposed to residual 0 (the
+  entry's table: view 183 · copy 159 · routing 100 · the download call 100). Content script
+  md5-identical both engines; manifests byte-identical, `permissions: []`.
+- **Full suite.** lint 0 · unit 1359 (+12: `editorView` +6, `editorEnhancer` +4, the ledger test
+  +2) · browser, run alone, 1827 passed / 31 skipped (+6 passed, +2 skipped: all `editorSave`),
+  182 files, ZERO reds — no known flake fired, `mathNetwork` included (6/6) · scanner clean over
+  79 files, self-test 7 + 10 · `pnpm audit --prod` EXIT=0 · golden empty. Named: `editorSave` 22
+  (19 Cr + 3 Fx; 16 skipped) · `exportShortcut` 18 · `editorView` 76 · `editorEnhancer` 32 ·
+  `permissionsLedger` 9 · `htmlExport` 13 unit (the 26-site pin unmoved) + 8 browser ·
+  `firefoxFolderSource` 8 · `manifest` 8. A second clean rebuild reproduced every byte figure.
+- **Zero-diff, confirmed:** `htmlExport.ts`, `watchController.ts`, `editorEnhancer.ts`, `mount.ts`,
+  `readerMode.ts`, `editorEngine.ts`, `readerPane.ts`, `entrypoints/app/main.ts`,
+  `tests/golden/output/`.
+- **Kickoff vs file, flagged.** (i) The body says "the buffer text"; the kickoff, and ruling A,
+  say `textForDisk` — followed ruling A (they differ only for a uniformly CRLF file). (ii)
+  `editorView.ts` and its test are beyond the body's Files. (iii) The MIME red-first ran in the
+  body's form. (iv) Two ripples beyond the kickoff's Files, forced by the full suite:
+  `editorEnhancer.test.ts` and `exportShortcut.browser.test.ts`. Four assertions re-spelled, each
+  one that pinned "not available here" on a route that now downloads (the entry lists them).
+- **Not proven here, by construction → 7.1:** a real download landing in the downloads folder;
+  Firefox with the extension loaded; and a download issued after a REAL write prompt is declined
+  (the click's activation may be spent by then).
+
+**M12 task 4.3 DONE, 2026-10-09 — save-path hardening: a save's own write is not an external change
+(R17(i)); edit binds the file the reader rendered (R17(ii)); leaving edit after a save shows the
+saved text (R19); rulings R19–R20 banked.** `decisions.md`'s "M12 TASK 4.3 — LANDED" entry is the
+record.
+- **Observed first, on the app page's own watch** (Chromium; a real `FileSystemObserver` on a real
+  file, switched on with the watch control — nothing hand-driven): the hint was on the host after
+  EVERY save and the next save said the file had changed on disk; the UNWATCHED reading view was
+  stale after Save + Stop editing (watched converged, by the false-external path); and in the
+  switch window file B was really overwritten on disk.
+- **Built.** `watchController.ts`: `ownWrite(text)` on the returned `WatchController` — the text is
+  held for the exit without the hint, its echo is dropped, any other text is external (DECISION 7).
+  `appShell.ts`: `renderedFile` (a mismatch binds nothing → the download, under the rendered file's
+  name); `showSaved` (one render on exit — the watch's own where there is one); the `ownWrite`
+  call after each write. `editorEnhancer.ts`: the comment. No ripple beyond 4.3's Files.
+- **Red-first, all observed.** Unit 12 of 13 red before the implementation; real engine 3 red on
+  the three claims. Ablations, each restored byte-identical: the announcement removed → the hint
+  and the false sentence return; the binding reverted → B overwritten, read off disk; the exit
+  render removed → the unwatched column stale; the hint exemption and the echo drop (unit) → 4 and
+  5 red.
+- **Bytes.** Content script 342,652 → 342,806 B (+154 = the method 114 + the token 40, residual
+  0; both removed → md5-identical to baseline on both engines). App chunk 523,863 → 524,607 B
+  (+744, residual 0 — the entry's table). Manifests byte-identical, `permissions: []`.
+- **Full suite.** lint 0 · unit 1372 (+13, all `watchController`) · browser, run alone, 1835
+  passed / 39 skipped (+8 / +8, all `editorSave`), 182 files, ZERO reds — no known flake fired,
+  `mathNetwork` included (6/6) · scanner clean over 79 files, self-test 7 + 10 · `pnpm audit
+  --prod` EXIT=0 · golden empty. Named: `watchController` 64 · `editorSave` 30 (27 Cr + 3 Fx; 24
+  skipped) · `editorWatch` 12 · `watchDiffDefer` 4 · `watchControl` 72 · `watchRemount` 24 ·
+  `exportShortcut` 18 · `editorView` 76 · `editorEnhancer` 32.
+- **Zero-diff, confirmed:** `mount.ts`, `readerMode.ts`, `editorEngine.ts`, `editorView.ts`,
+  `readerPane.ts`, `htmlExport.ts`, `PERMISSIONS.md`, `contentWatch.ts`, `changeDetector.ts`,
+  `detectorForFile.ts`, `tests/browser/editorWatch.browser.test.ts`, `tests/golden/output/`.
+- **Kickoff vs file, flagged.** (i) `tasks.md` 4.3 has no R19; the kickoff adds it as a human
+  ruling — banked, and noted on the task. (ii) The kickoff's Files include
+  `editorWatch.browser.test.ts`; it was not needed and is unchanged. (iii) The kickoff allowed a
+  ripple into `editorView.ts` for R19; none was needed.
+- **Not proven here, by construction → 7.1:** a real external editor racing a save on a real disk;
+  Firefox's polled watch (its app-page routes have no handle; the drag route polls) with a save —
+  there Save is a download and writes nothing, so (i) cannot arise.
+
+**M12 task 5.7 DONE, 2026-10-09 — zero network across edit, preview and save, proven on both
+engines with a firing control in every window; R21 banked (refuse and tell; 5.6 struck). GROUP 5
+IS COMPLETE.** `decisions.md`'s "M12 TASK 5.7 — LANDED" and "M12 RULING R21" entries are the
+record. Test and records only: no production byte moved.
+- **R21 (human, in this task's kickoff).** The conflict policy is REFUSE AND TELL — 5.3's safe
+  floor, as built. No diff view, no force-overwrite in M12. Ruled from the description; the walk
+  is deferred to 7.1 and re-opens R21 if it changes the human's mind. 5.6 struck, 26 → 25 tasks.
+- **Built.** `tests/browser/editorNetwork.browser.test.ts` — three windows (LOAD · PREVIEW · five
+  SAVE cases), two instruments (Resource Timing, buffer + observer; a log of fetch / XHR / beacon
+  / WebSocket / EventSource calls), and the control in every window.
+- **Result.** Zero requests left the origin in every window: LOAD, PREVIEW and the no-handle
+  download on Chromium and Firefox; the write, the conflict, the declined prompt and the watched
+  save on Chromium. R15's gate held inside the PREVIEW window. A typed remote image was blocked,
+  not fetched.
+- **Red-first, and a finding.** The first ablation was GREEN: Resource Timing records a request
+  when it ends, and a leak adopted 1.5 s before the reading was still in flight. The claim is
+  now read a second time, after the control's own request lands. Re-run: red in all ten cases
+  (7 Cr + 3 Fx), on the claim, naming the leak. Restored byte-identical.
+- **`PERMISSIONS.md`.** One sentence, at the end of the zero-network section — DRAFTED, NOT
+  SIGNED, for review. Left alone for the reviewer: "on three surfaces" and the closing line's
+  three names. SIGNED (a) and (b) byte-exact; `permissionsLedger.test.ts` zero-diff and green.
+- **Bytes.** All 278 shipped files md5-identical to a build at `644b63b`, both engines.
+  `permissions: []` on both built manifests.
+- **Verify (targeted — an empty production diff).** lint 0 · the new file 14 (7 Cr + 3 Fx; 4
+  skipped) · spot-check: three reds, none in the new file, each cleared alone — `mathNetwork`
+  on Firefox (the known font case) and `diagramSourceGuard`'s PER-FENCE on both engines (NEW;
+  § Carried items) · unit `permissionsLedger` + `manifest` 17 · audit EXIT=0 · golden empty.
+  Also run, beyond the rule: the full browser suite alone — 184 files, 1845 passed / 43 skipped,
+  zero reds — and the full unit suite, 1372.
+- **Moved to 7.1, not faked:** the reload / duplicated-tab write re-prompt (plan §4 risk 2); the
+  browser's own write prompt; a real download; the Ctrl/Cmd+S key through `main.ts`; the loaded
+  extension's extension-scheme chunk loads, Firefox included.
+- **Kickoff vs file, flagged.** The claim is off-origin (the harness serves our chunks over
+  http). A declined-prompt window, a watched window and a typed remote image were added to what
+  the kickoff listed. The call log goes beyond the existing instruments. R21 arrived inside the
+  kickoff.
+
+**M12 task 5.8 DONE, 2026-10-09 — every network guard reads its zero only after a later
+request has landed; `PERMISSIONS.md`'s zero-network section says four surfaces; two shared-state
+reds closed by their causes (R22).** `decisions.md`'s "M12 TASK 5.8 — LANDED" and "M12 RULING R22"
+entries are the record. Test and records only: no production byte moved.
+- **(i) The instrument.** Nineteen files read a network zero besides `editorNetwork`.
+  `helpers/diagramWindow.ts` gains `wireSettled()` and `isSentinel()`; `renderAndBracket`
+  settles itself (three files inherit, zero-diff); sixteen files settle before the closing zero
+  of each buffer epoch. Slow leak, each file alone: GREEN in all 19 before, RED in all 19 after,
+  both engines. Cost: 74.5 → 342.7 s of test time across the 19; the full suite 227 → ~375 s.
+- **Two findings.** On Chromium a refused request can fail in ~30 ms when it rides an earlier
+  attempt — the blind spot is intermittent in a shared run. On Firefox two requests to one
+  refused destination can be recorded later-one-first — hence a flush AFTER the sentinel.
+- **(ii) `PERMISSIONS.md`.** The reviewed sentence as a fourth bullet; "four surfaces"; the
+  closing line names all four. Ledger test unedited, green.
+- **(iii) `diagramSourceGuard` PER-FENCE.** Cause: the warm-up was a diagram-cache hit (IndexedDB
+  survives from file to file), so it never loaded the flowchart definition. Strictness kept;
+  `warmEngine` renders an uncached source. No assertion edited.
+- **(iv) `mathNetwork`, Firefox.** Cause: NOT the registration flag — Firefox serves a font it
+  already holds with no request and no Resource Timing entry. One assertion re-spelled, named
+  in the file: the face is LOADED (new, both engines), a request is still required on Chromium.
+- **Verify.** lint 0 · both failing orders green · full browser suite alone, twice: 1844 + one
+  red in untouched `copyAsHtml` (the OS clipboard; 14/14 alone), then 1845, zero reds; 43
+  skipped · unit 1372 · audit EXIT=0 · golden empty · all 278 shipped files md5-identical to
+  `3a4bcd2`'s build.
+- **Flagged.** Per-step reads inside an epoch are not settled (the closing read covers them);
+  sixteen files now import the diagram helper; AGENTS.md's "module-level caches" wording does
+  not match what was measured (`decisions.md`, item 8).
+
+**M12 task 6.1 DONE, 2026-10-09 — the unsaved-changes guard at every exit, asked at the trigger
+(R6, R16, R23).** `decisions.md`'s "M12 TASK 6.1 — LANDED" and "M12 RULING R23" entries are the
+record.
+- **The exits, each asked in `appShell.ts` before its action:** the edit control (a capture-phase
+  click listener on the reader pane) · the tree's `onSelect` · Revoke · the CTA and
+  `AppController.openFolder` · a reopen-hub entry · a drop · `AppController.selectFile`. Tab
+  close and reload: `beforeunload`, written with the dirty attribute by `editorView.ts`'s
+  `markDirty`.
+- **It asks only for a dirty edit** (`hasUnsavedEdit`); after a download it still asks.
+- **R23's dialog** — new app-only `src/app/unsavedGuard.ts`: "Keep editing" (focused; Escape) /
+  "Discard edits", naming the file; the rest of the shell `inert`; hand-rolled like the export
+  panel. **Copy drafted, for review:** "Discard unsaved edits?" · "“notes.md” has edits that are
+  not saved to the file in its folder. If you discard them, they are gone."
+- **Deferral.** Discard runs the action inside its own click (the picker's activation). A drop's
+  contents are taken during the drop event, then applied or abandoned. A re-pick cancelled after
+  a discard closes the folder as before; the edit is already gone.
+- **★ On the edit control, discard keeps the save binding** (R19); the shell's paths drop it
+  first. A departure from the kickoff, following `tasks.md`.
+- **R6.** Stay: zero re-mounts, the hint and the watch persist. Discard: one flush, the on-disk
+  text, the hint gone. No code added for it.
+- **Red-first.** `editorUnsaved.browser.test.ts` (new, 84 cases): at HEAD 60 red — every one of
+  the ten in-page paths on both engines, on its first assertion, as LOST TEXT — and 22 green
+  (the clean direction). Ablations: the guard unconditional → 24 red (the clean cases);
+  `inert` unset → the inert case red on both.
+- **Four existing steps re-spelled, no assertion edited** (`editorSave` ×3, `exportShortcut`
+  ×1): each made a dirty exit and now answers "Discard edits". ★ One is WEAKENED — "moving the
+  open file to B…": its 5.3 ablation can no longer redden it. The human's call.
+- **Bytes.** `.output` +3,594 on each engine, all in the app chunk (524,607 → 528,201),
+  decomposed to residual 0. Content script md5-identical; the control (the guard imported from
+  `mount.ts`) moves it to 542,575 B.
+- **Verify.** lint 0 · unit 1412 (+40) · browser alone, 186 files, 1927 / 45 skipped, zero reds
+  (392 s) · scanner 80 files, self-test 7 + 10 · audit EXIT=0 · golden empty. A run before the
+  re-spellings had `copyAsHtml` red on Chromium once (14/14 alone) — the known clipboard flake.
+- **Moved to 7.1, not faked:** the browser's own unload dialog; the native picker from the
+  Discard click; a real desktop drop over a dirty edit; the dialog's look in both themes and
+  wide; its screen-reader announcement.
+- **Flagged, unmeasured:** Save → an external change → leaving edit may show the saved text over
+  the newer on-disk text (`showSaved` after the watch's flush). 4.3's road; not probed.
+  *✅ Measured and fixed at 4.4 — it was real.*
+
+**M12 task 4.4 DONE, 2026-10-09 — DISCOVERED (R24): leaving edit shows the newest text, in one
+render.** `decisions.md`'s "M12 TASK 4.4 — LANDED" and "M12 RULINGS R24–R25" entries are the
+record. R25: 6.1's dialog copy approved; its deviation 2 accepted.
+- **Seen first, at `67f2ac5`, on the app page's own watch (Chromium):** S1 (Save, then an
+  external change, Stop editing) and S2 (the same, a refused second Save, Discard) showed the
+  SAVE while the disk held the external text — 2 re-mounts. S3 (Edit, then Watch on) showed the
+  right text in 2 re-mounts. S4 (Watch on after the save) and S5 (4.3's control): right, 1 each.
+- **The fix, in `showSaved` only:** the exit observer runs it in a microtask, after every
+  observer on the host; and it stands down when the document was re-mounted since edit entry —
+  the watch rendered, and that is the newest text. `watchController.ts` is untouched.
+- **After:** S1 / S2 the external text; S3–S5 the save; ONE re-mount each. S6 (added): a second
+  save in flight when edit is left lands afterwards and the view follows it.
+- **Red-first.** At HEAD 3 red (S1, S2 on the text; S3 on the count). Ablations: the re-mount
+  check → S1, S2; the microtask → S3; the node not taken again → S6. Each restored by md5.
+- **★ The route-2(i) case is REBUILT, not retired** (R24(iii)'s second clause): a clean buffer
+  is left without a question, so a kept save can still be called after B is selected. It
+  reddens when the binding is moved to the active file. The human may still strike it.
+- **Bytes.** +121 on each engine, all in the app chunk (528,201 → 528,322): 20 + 37 + 64,
+  residual 0. Content script md5-identical.
+- **Verify.** lint 0 · unit 1412 · browser alone, 186 files, 1933 / 51 skipped, zero reds
+  (397 s) · scanner 80 files, self-test 7 + 10 · audit EXIT=0 · golden empty.
+- **Not covered:** Firefox (no writable watched handle there); whether a user can reach the
+  watch control while editing; a real external editor — 7.1.
+
+**M12 task 6.2 DONE, 2026-10-09 — the live-preview debounce measured; NOTHING CHOSEN.**
+`decisions.md`'s "M12 TASK 6.2 — LANDED" entry is the record; every table is in
+`scripts/perf-edit-preview.results.md`.
+- **The harness:** `scripts/perf-edit-preview.ts` + `.page.ts`, `pnpm perf:edit-preview`. It
+  bundles production source (esbuild via `tsx`, like `perf-watch.ts`), serves it on loopback,
+  and drives Chromium and Firefox. Not in any suite. About an hour for everything; `--engine`,
+  `--part`, `--sizes`, `--profiles` cut it up; `-- --report` reprints the tables.
+- **Render wall-clock (one `renderPreview`, median ms, Cr / Fx):** prose small 3.7 / 4.0 · prose
+  50 KB 22 / 20 · prose 1 MB 334 / 309 · heavy small 5.9 / 8 · heavy 50 KB 38 / 54 · heavy 1 MB
+  1,696 / 3,680. The enhancers' asynchronous half (DOM silence): heavy 50 KB 191 / 333; heavy
+  1 MB on Firefox 10–23 s.
+- **Candidates, by real keys at 250 / 150 / 80 ms:** today's cooldown · a copy of it (control) ·
+  first render deferred · multiplier 2, 3 · trailing debounce 150, 300 ms.
+- **What the tables show, unranked:** up to prose 50 KB every candidate keeps keys at the
+  floor, the cooldowns render on every key, and the trailing debounce shows nothing while
+  typing is faster than its interval. With the render inside the key the main thread is busy
+  ~75 ms per key on heavy 50 KB (Chromium) against ~20–27 ms deferred. On heavy 50 KB FIREFOX
+  holds keys for hundreds of ms under the cooldown candidates at 150 ms between keys. At 1 MB
+  a render outlasts several keys; on heavy 1 MB no candidate keeps typing responsive.
+- **Noise:** the two identical candidates differ by up to ~2x on heavy 50 KB on Firefox; 1 MB
+  rows are one run each. One machine, headless.
+- **Limits:** source not build; "settled" means 400 ms of DOM silence and undercounts; typing
+  appends at the end; nothing at the 10 MB ceiling, and nothing under a watch or a diff.
+- **Verify:** zero production diff; 139 shipped files md5-identical on both engines; lint 0;
+  unit 1412 (11.7 s, unchanged); the browser project's 186 files unchanged and not re-run.
+
+**M12 task 6.4 DONE, 2026-10-09 — the preview's first render leaves the keystroke (R26; spec
+§8-2).** `decisions.md`'s "M12 RULING R26" and "M12 TASK 6.4 — LANDED" entries are the record.
+- **R26, the §8-2 ruling:** 6.2's C2 — the cost-proportional cooldown, multiplier 1, with a
+  render that would run at once moved into a 0 ms task; keys before that task coalesce into it.
+  Rejected: a trailing debounce, larger multipliers, a large-document fallback.
+- **The change:** `createPreviewCooldown`'s `push` never renders; it arms a timer for what is
+  left of the cooldown (0 ms when nothing is). `PREVIEW_COOLDOWN_MULTIPLIER` is REMOVED; no
+  "PROVISIONAL" is left on the path.
+- **Order:** applied BEFORE 6.3 — 6.3's text does not depend on the debounce, and what it
+  measures runs through the preview that now ships.
+- **Step 0:** one render site (`push`); eleven unit cases and one browser case pinned it. Each
+  is re-spelled and named; the cooldown's other properties are re-asserted with their numbers.
+- **Red-first:** unit 9 red, browser 2 (one case, both engines) before the change.
+- **Confirmed on 6.2's harness** (heavy 50 KB, 150 ms between keys): the shipped scheduler now
+  reads key p50 5.4 ms / busy p95 42 ms on Chromium and 71 ms / 189 ms on Firefox, beside C2's
+  4.1 / 48 and 96 / 476; the old behaviour 3.2 / 78 and 306 / 2,231.
+- **Bytes:** −31 on each engine, all in the app chunk (528,322 → 528,291): −27 and −4,
+  residual 0. Content script md5-identical.
+- **Verify:** lint 0 · unit 1417 (+5) · browser alone, 186 files, 1933 / 51 skipped, zero reds
+  (393 s) · scanner 80 files, self-test 7 + 10 · audit EXIT=0 · golden empty.
+- **Left as it was, flagged:** the harness (`scripts/`, zero-diff) still labels its first row
+  "C1 today (first render in the key)"; that row now measures the shipped R26 scheduler.
+  *✅ Re-labelled at 6.3.*
+
+**M12 task 6.3 DONE, 2026-10-09 — the nested preview host's cost and the never-entered first
+paint measured; NOTHING CHOSEN; the cost ruled NOT MATERIAL (R27).** `decisions.md`'s "M12 TASK
+6.3 — LANDED" and "M12 RULING R27" entries are the record; every table is in
+`scripts/perf-edit-preview.nested.results.md`.
+- **The harness:** a new `--part nested` on `scripts/perf-edit-preview.ts` (about 35 minutes for
+  both engines), and new `scripts/perf-edit-never-entered.ts`, which runs the two existing
+  first-paint gates across builds. Neither is in a suite.
+- **Arms, a fresh browser per sample:** reading only · editor only · editor + the preview in the
+  SAME root (the ablated control, a harness construction) · editor + the preview in a NESTED root
+  (the harness's copy of what ships) · production's `buildEditor` · editor only again (the
+  control). Nested minus single-root is the nested root itself.
+- **Chromium:** no timing difference clears the control on entry, re-entry or re-render at any
+  size; the second root costs 7–9 KB of Blink heap, the same at 2 KB and at 1 MB (control 0–4 KB).
+- **Firefox:** on the FIRST entry into edit on a page the build step is slower with the nested
+  root — +1 ms small, +4 ms at 50 KB, +7–8 ms on the enhancer-heavy 50 KB, +57–59 ms at 1 MB (of
+  about 330; repeated in a second run). First paint at 1 MB moved +58 and +208 ms in two runs.
+  Nothing on re-entry (0 … +3 ms) or on a re-render. Not attributed.
+- **For scale:** the preview's content, with one root or two, is +78 MB of Blink heap and about
+  +390 ms to the first paint at 1 MB on Chromium; CodeMirror and the shell are +2.4 … +4.5 MB of
+  JS heap.
+- **R27, the human's ruling on those deltas:** "Not material — file it". D-4 stands as built; its
+  deferral ("cost measured at 6.3") is closed.
+- **First paint, edit never entered (Chromium, HEAD minus a build of `0541886`):** content script
+  median +1.0 ms / floor −1.0 ms (141.3 vs 140.3); app page median +2.4 / floor −0.4 (90.9 vs
+  88.5). HEAD against itself spans 4.8 and 3.3 ms. A build with the bumped dependencies and no
+  editor code reads 91.7 on the app page. Zero within noise, not a literal zero.
+- **The editor is not fetched before edit:** on the app page, 0 of the 4 editor chunks are
+  requested before Edit is activated; activating it requests all 4.
+- **Noise and limits:** one machine, headless; *paint* has a two-frame floor; 1 MB rows are three
+  browsers per arm; Firefox memory is not usefully measured (whole-browser bytes differ 2–17 MB
+  between two runs of one arm); source, not the build; the first-paint gates are Chromium only.
+- **Verify:** zero production diff; 139 shipped files md5-identical to a clean build of
+  `55dfbad` on both engines; lint 0; suites not re-run — nothing they run changed.
+
+### § Up next — the handoffs between tasks, byte snapshots and carried inputs as they stood at the close
+
+**GROUP 6 IS COMPLETE: 6.1, the discovered 4.4, 6.2, 6.4 and 6.3 landed; the discovered 3.5 (the
+7.1-walk polish, R28 / R29) landed 2026-10-30, and the discovered 1.4 (the dompurify / markdown-it advisories, R30) the same day.
+29 tasks** (tasks.md's groups sum to 27 before 3.5; the earlier "28" was an off-by-one, flagged).
+**NEXT — M12 task 7.3 (records reconcile).** The 3.5 / 1.4 re-check is done ("all 7 ok"). 7.3 also reconciles
+the task count between `tasks.md` and `progress.md` and `AGENTS.md`'s stale current-milestone line (retro, h). **7.1 is
+still OPEN** for the unreported walk verdicts — the human's. Still owed, as above: parts C–G and the blanks in A/B.
+**7.1, the HUMAN-ONLY milestone-close walk:** `tasks.md` 7.1 is the line. Every
+item on it needs a loaded extension and has no agent substitute — it is the human's, not a
+session's to attempt or to stand in for with a suite run.
+- **Added to 7.1's list by 6.3 (R27's revisit-when):** on Firefox, the first entry into edit on a
+  large document.
+- **Owed to the human:** a word on the REBUILT route-2(i) case (R24(iii) ruled
+  it retired unless a meaningful form existed; one did); the 5.5 walk, on 7.1's list.
+- **The browser suite takes about 395 s** alone.
+**Byte snapshot — 1.4 (2026-10-30), supersedes 3.5's below:** `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx),
+headroom 1,509,173 / 1,509,057 B · zip 1,842,763 / 1,842,822 B · content script **344,195 B** both engines, md5
+`b0ff62df…` (Cr) / `3413dae0…` (Fx) — MOVED +1,389 (dompurify +989, markdown-it +397) · app chunk 532,048 B
+(+1,399) · manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · SBOM 191 · lint 0 · unit 1417 ·
+browser 1961 / 51 skipped (zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore,
+GHSA-238p-pmpm-9mq7), `--audit-level low` EXIT=0.
+**Byte snapshot — 3.5 (2026-10-30), supersedes 6.4's below:** `.output` 5,828,071 B (Cr) / 5,828,187 B (Fx)
+headroom 1,511,961 / 1,511,845 B · zip 1,841,465 / 1,841,523 B · content script 342,806 B both engines, md5
+`c4f59f1a…` / `ecc31688…` UNCHANGED · app chunk 530,649 B (+2,358) · manifest 654 / 770 B, `permissions: []` ·
+lint 0 · unit 1417 · browser 1961 / 51 skipped (zero reds) · golden empty · **`pnpm audit --prod` EXIT 1 — 6
+vulnerabilities, identical at HEAD (newer advisories on dompurify and markdown-it) — ✅ CLOSED by task 1.4.**
+**Byte snapshot — 6.4's measured figures, re-measured unchanged at 6.3; carry to the next kickoff:** `.output` 5,825,713 B (Cr) / 5,825,829 B (Fx)
+against ≤ 7 MiB (7,340,032 B) — headroom 1,514,319 / 1,514,203 B · zip 1,841,082 / 1,841,140 B · content
+script 342,806 B both engines, md5 `c4f59f1a9397c22b93a013c1522a55d5` (Cr) /
+`ecc31688b4f49167502a39edca7b9e51` (Fx) — unmoved since 4.3 · the app chunk 528,291 B (−31) · manifest
+654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1417 · browser 1933 / 51 skipped
+(zero reds) · golden empty · **`pnpm audit --prod` EXIT=0** (one ignore, GHSA-238p-pmpm-9mq7).
+**Carried inputs, from 6.3:**
+- **A baseline tree for an A-B-A is `git archive <commit> | tar -x -C <dir>`,** installed and
+  built there; `perf-edit-never-entered.ts --baseline <label>=<dir>` does the rest. Pass a
+  Windows-style path (`C:/…`): an MSYS `/c/…` path resolves under the current drive.
+- **Leave the machine alone during a timed run** — one process listing moved a reading by 8 ms.
+- **A harness arm that reuses the outer root inherits the outer host's state** (the open TOC
+  rail's inset halved a column's width); print the geometry of both arms before comparing them.
+**Carried inputs, from 6.4:**
+- **A preview render is now always a task after the key.** A unit test that types and then
+  reads the preview runs one task first (`vi.advanceTimersByTime(0)` — `editorView.test.ts`'s
+  `task()`); a test that types and never advances leaves a 0 ms timer for the next test.
+- **To check a scheduler change against 6.2:** `pnpm perf:edit-preview -- --part typing --sizes
+  50k --profiles heavy --rates 150 --candidates C1,C2 --reps 2 --out <a fresh directory>`, then
+  `-- --report --out <it>`. About three minutes for both engines.
+**Carried inputs, from 6.2:**
+- **`perf-edit-preview.page.ts` holds the candidate schedulers** — a ruled mechanism can be
+  checked there before 6.4 writes it into `editorView.ts`.
+- **Keys are sent on a timer and never awaited in sequence;** an awaited loop slows the typist
+  whenever the page is busy and hides the wait.
+- **A message-channel "main thread free" stamp has a floor of its own** (~19 ms Chromium).
+**Carried inputs, from 4.4:**
+- **Two observers on one host run in creation order, and a microtask queued from one runs after
+  all of them** — which is how the shell decides last without knowing who was first.
+- **`editorSave.browser.test.ts`'s 4.4 block** (`onPage`, `startWatch`, `externalChange`,
+  `leaveAndRead`) drives the app page's own watch in any order and reports view / disk /
+  re-mounts / hint in one line.
+**Carried inputs, from 6.1:**
+- **A test that leaves a DIRTY edit through the shell meets the dialog.** Answer it
+  (`.peekover-unsaved__discard` / `__keep`), or the awaited `app.openFolder()` /
+  `app.selectFile()` does not resolve until someone does.
+- **`editorUnsaved.browser.test.ts`'s `PATHS` table** drives every exit with stood-in picker,
+  re-grant and drop stubs that record whether they were called inside the event.
+- **A heredoc fails on an apostrophe in a node script** — three more times this session. Write
+  the script with the Write tool.
+**Carried inputs, from 4.3:**
+- **The app page's OWN watch can be driven in the harness on Chromium:** a hand-built persistable
+  `FolderSource` over an OPFS handle, select the file, click `.peekover-watch` — the shell's
+  controller and a real `FileSystemObserver`. `editorSave.browser.test.ts`'s `appWatched()`. Stop
+  it with `stopWatch()` in a `finally`: the registry reset does not stop a detector.
+- **A hand-driven controller registered over the shell's is NOT the one the shell talks to.** The
+  shell calls `ownWrite` on the controller it built; `watched()` in the same file replaces only the
+  registry slot.
+- **Two observers on one host run in creation order.** The watch's (made at watch start) runs
+  before the edit session's (made at edit entry) — which is why a watched exit renders once.
+- **`countRemounts()`** (same file) counts re-mounts of the outer document by the reading column
+  leaving the shadow root — use it wherever "rendered exactly once" is the claim.
+- **A heredoc fails on an apostrophe in a node script's COMMENTS too** — twice more this session.
+  Write the script with the Write tool.
+**Carried inputs, from 5.4:**
+- **A save that cannot write ends in an anchor click.** Any test that counts anchor clicks as
+  exports must tell them apart by the anchor's `download` name (`exportShortcut`'s ruling-B case
+  now does). On Firefox every in-edit save is one.
+- **The download happens synchronously inside the Save activation on a no-handle route** — there is
+  no await before `downloadAs` — and only after the prompt's await on a declined one.
+- **jsdom has no `URL.createObjectURL`.** A unit test that reaches `downloadAs` must stand one in,
+  swallow the anchor click, and leave `revokeObjectURL` defined: the revoke runs a task later.
+- **`editorSave.browser.test.ts`'s `watchDownloads()`** reads a download's type and bytes through
+  the clicked anchor's `href`; reuse it for 5.7's download-fallback save.
+- **A heredoc collapses `\\n` inside a node script too** — a multi-line string swap written that
+  way silently matched nothing (it threw; nothing was written). Edit tool, or a script file.
+**Carried inputs, from 5.3:**
+- **A test that must stub a handle method builds its `FolderSource` by hand.** `folderSourceFromHandle`
+  walks the directory and mints NEW handle objects, so a stub on the test's handle never reaches the
+  shell. `editorSave.browser.test.ts`'s `diskFile()` hands the shell the same object it keeps.
+- **Firefox's origin-private-file-system handles have no `requestPermission`** — a walked OPFS folder
+  there gives files WITH a handle that still cannot be written, so the save answers `unavailable`
+  (seen in `exportShortcut`'s ruling-B case). 5.4's Firefox route is reachable that way too.
+- **An ablation must be seen to fail on the claim, not on a cheaper check ahead of it.** The endings
+  test first reddened on "no longer in edit"; the disk read-back was moved in front so the red is the
+  write landing.
+- **Removal arms over-count where one piece is reachable only through another** (`textForDisk`
+  through the write) and under-count a helper two pieces share (`readerHost`) — pair arms settle both.
+`tasks.md`'s standing-invariants block still prints the content script as 340,492 B (sealed text) — the
+figure above supersedes it.
+**Carried inputs, from 3.4:**
+- **★ An import's SHAPE decides whether the bundler tree-shakes it.** `import('pkg').then(({ a }) =>
+  ({ a }))` drops the package's unused exports; `const [{ a }] = await Promise.all([import('pkg')])`
+  keeps them all. For `@codemirror/language` the difference was 10,883 B. The two existing edges
+  in `editorEngine.ts` (`codemirror`, `@codemirror/lang-markdown`) are written the second way and
+  were NOT changed — outside 3.4, unmeasured, the human's to schedule. *Ruled 2026-10-08: deferred
+  to post-M12 (§ Carried items).*
+- **A CodeMirror extension that owns CSS must be a page-level singleton.** Built per host, its
+  rules do not apply on Firefox from the second host on. A test that passes in isolation and
+  fails after other hosts in the same file is this signature — it is NOT harness-shared-state.
+- **A new dependency reloads the browser harness once.** The first browser run after an install
+  prints "optimized dependencies changed. reloading" and reds whatever file was running; rerun.
+  `vitest.config.ts` has no `optimizeDeps.include`, so a cold checkout sees it too.
+- **The preview's enhancers finish asynchronously.** A test that reads the preview after a key
+  must wait for the engines, and should wait without throwing so a red names its own units.
+- **`python - <<'EOF'` still collapses `\\n` and still fails on an apostrophe** — write the script
+  with the Write tool, then run it. Twice more this session.
+**Carried inputs, from 4.2:**
+- **For 5.3 — the hint's literal is `data-watch-changed-in-edit`** (`CHANGED_IN_EDIT_ATTR` in
+  `watchController.ts`), presence-only. Read it by literal; pin the literal to the export in a test.
+- **For 5.3 — ★ an open product call, for the human.** The hint makes no content comparison, so a
+  file that changed and changed back still carries it. `tasks.md` 5.3 says "on conflict — or on 4.2's
+  hint" → the safe floor; read literally that refuses a save D-7's compare would allow. Whether the
+  hint REFUSES or only prompts the compare to rule is 5.3's kickoff question. *✅ RULED 2026-10-08
+  (ruling C): the hint WARNS, the compare DECIDES.*
+- **For 6.1 — the dirty-exit property is the only part of group 4 left.** "Stay" must leave the hint
+  and the deferral in place; "discard" clears the hint through the ordinary flush. The interim state
+  stands until then: every exit flushes, and a dirty exit discards the buffer (3.2).
+- **`editorWatch.browser.test.ts`'s rig** is hand-driven with the default render, so a flush there does
+  not re-install the edit control (production's `renderWithEnhancements` does). Its controller is
+  the last entry of the file's `controllers` array.
+- **Its positive control fires a capture** (fire-and-forget) and waits it out; a test that ends with a
+  watch render and does not wait rejects into the next test when the store's connection closes.
+- **A heredoc whose body holds an unbalanced apostrophe fails the whole command** (again this
+  session) — write the file, then run it.
+- **The full browser suite does not finish inside one 10-minute tool call** on this machine — run it
+  in the background, and do not run the unit suite beside it.
+- **Console records** in browser tests print only under `pnpm exec vitest run --project browser
+  --reporter=verbose`; `pnpm test:browser -- --reporter=verbose` does not pass the flag through.
+- **A clean two-engine build is ~20 s** — every subset of a handful of call sites is affordable as a
+  byte arm, and over-determines the shared helper.
+**RESOLVED at 3.4 (R7–R14):** P-1, E-1, E-2, E-3. **For 6.2 and the §8-2 ruling:** P-2,
+P-3, and the enhancers' cost — every preview render re-runs the lazy engines, and the cooldown does
+not time that work. **RULED at 5.1 (2026-10-08):** E-7 — Ctrl/Cmd+S in edit saves, built at 5.3
+(ruling B). Still open from 3.2: E-4, E-5, E-6 and E-8 (the 7.1 walk), the failed-chunk "try again"
+finding.
+**The editor defaults are RULED ship-as-is** (2026-10-04, `decisions.md`'s M12 TASK 1.1 and M12 TASK 1.1
+EXTENDED entries); 7.1's walk carries one item for the editing feel of those defaults.
+**Carried touchpoints — the task-level human gates:**
+- **5.1 — the `PERMISSIONS.md` ledger-wording sign-off** — ✅ SIGNED 2026-10-08. R21 ruled
+  refuse-and-tell, which the row already says: nothing is re-signed.
+- **5.5 — the conflict/overwrite policy** — ✅ RULED 2026-10-09 (R21): refuse and tell. Ruled from
+  the description; its walk is deferred to 7.1 and re-opens R21 if it changes the human's mind.
+- **`PERMISSIONS.md`'s zero-network sentence** — ✅ REVIEWED and landed 2026-10-09 (R22, task 5.8).
+  Not signed positioning text; no ledger pin.
+- **7.1 — the milestone-close walk** (live picker + real disk write, Firefox everything, WIDE viewport).
+- Also: the informal eyeball owed at 3.2, DEFERRED to 7.1 (2026-10-05); 6.2's numbers → the §8-2 debounce ruling;
+  6.3 STOPS and surfaces a material nested-host cost — ✅ surfaced and RULED not material 2026-10-09 (R27). (2.2's stop-and-flag did not fire: the post-commit
+  wiring needed no guard.)
+
+*Superseded, kept for provenance:* gate 3 — the human's review of `specs/012-editor-mode/tasks.md`
+(drafted 2026-10-04). The paragraph below is the brief that draft was written to.
+
+**`tasks.md` on `specs/012-editor-mode/plan.md`** — the next artifact, a fresh session, and the final
+gate (gate 3) before implementation: decompose the plan's seven groups into tasks, re-deriving every
+`file:line` against its own HEAD. No implementation code before `tasks.md` is approved (WORKFLOW.md
+§5.3). **Carried into it:**
+- **The D-B(iii) ledger-wording sign-off is still owed at group 5** — the save task drafts the final
+  `PERMISSIONS.md` sentence and routes it to the human before it lands; mandatory to land, not to word
+  unilaterally. Gate 2 did not take it.
+- **Group 3's nested-host tests run on an UNWATCHED document** — group 3's live preview lands before
+  group 4 closes the watch/edit collision, so no watch may fire mid-test. A gate-2 residual for
+  `tasks.md` to resolve; the plan body states the hazard only for group 5's tests (§6).
+- **D-4's build-then-measure consequence** — the nested host is built at group 2 and its cost measured
+  at group 6. If that cost is material it is a finding to surface to the human, not a number to file,
+  and overturning the nested host by then is a rework of groups 2–5. Accepted on the record.
+
+M11 closed with no forced follow-on
+task of its own — every carried item from its close is either resolved, a deferred-post-M11 standing
+item, or a human-drafted-not-placed retro action (see § Carried items below).
+
+### § Carried items — the M12 items as they stood before the consolidation (superseded by `progress.md`'s POST-M12 CONSOLIDATED LIST)
+
+- **NEW 2026-10-30 — from task 3.5 (R28, R29).** Home: **the post-M12 reader-polish task** (with the left
+  sidebar), unless a 7.1 verdict re-opens one.
+  - **(f) the filter-clear, sort and math-action buttons are native-styled** (2px outset, light grey,
+    system font) in dark. PRE-EXISTING — identical at HEAD and at pre-M12 0541886, no CSS rule for them.
+  - **(g) the display-math block carries the code toolbar** ("math · Line numbers · Wrap · Copy").
+    PRE-EXISTING, same comparison.
+  - **The left sidebar on narrow screens** (R29 CARRY).
+  - **(d)'s NARROW case, and option C** — the M6 snapshot notice moved into the flow or made dismissible.
+    Decision 1 fixed it at WIDE only, in an app-only rule.
+  - **Reclaiming the 130 px bottom band** under the split (Decision 2 kept it, tolerance 162 px); it needs
+    the pill stack moved, and the notice cannot be placed in the top row without a magic number.
+  - ~~**`pnpm audit --prod` is red at HEAD**~~ ✅ closed by task 1.4 (R30), 2026-10-30.
+  - **Accepted (R29):** sub/sup/emoji render literally (E-8).
+
+- **NEW 2026-10-09 — from RULING R26 (task 6.4).**
+  - **Documents around 1 MB are slow to type in (R26's stated limitation).** 1 MB prose: ~330 ms
+    per preview render, keys queue behind it; enhancer-heavy 1 MB on Firefox: seconds per key
+    under every candidate 6.2 measured. Shipped as a known limitation. Home: **a 7.1 verdict**
+    (listed there); an unacceptable verdict re-opens R26.
+  - **The harness's "C1 today" label and its "PROVISIONAL" header line are out of date** — the
+    row measures the shipped R26 scheduler. Home: whoever next touches `scripts/perf-edit-preview*`.
+- **NEW 2026-10-09 — from TASK 6.1's kickoff: three items given a home.**
+  - **Split the network wait into a small dedicated test helper** (5.8, deviation 4 — the guards
+    import `helpers/diagramWindow.ts`). Home: **7.3**.
+  - **Suite cost +~150 s from `wireSettled`;** settle once per file if CI time bites. Home:
+    **post-M12**.
+  - **`copyAsHtml` / the OS clipboard shared between the two engines' runs** — a KNOWN FLAKE
+    (seen again at 6.1: one red in one full run of two, 14/14 alone).
+- **NEW 2026-10-09 — from TASK 6.1.**
+  - **✅ APPROVED (R25) — The dialog's copy is drafted, not reviewed** (R23).
+  - **✅ REBUILT at 4.4 on a clean buffer (R24(iii)) — `editorSave`'s "moving the open file to
+    B…" is weakened** by its added discard step: the kept save always answers `unavailable`.
+  - **✅ MEASURED and FIXED at 4.4 (it was real) — Unmeasured: Save → external change → leaving
+    edit** may show the saved text over the newer on-disk text.
+- **NEW 2026-10-09 — from TASK 5.8.**
+  - **`copyAsHtml.browser.test.ts` — one red in one full-suite run of two (Chromium).** Its
+    clipboard read returned another test's text ("Body exported richly, with bold text"); 14/14
+    alone; the next full run was clean. The OS clipboard is shared by the two engines' runs.
+    Harness-shared-state by the rerun rule; the file is untouched by 5.8. Home: the next session
+    with a test-harness slot.
+  - **The network guards import `helpers/diagramWindow.ts`** for `wireSettled` / `isSentinel`,
+    which drags the reader pane and diagram modules into sixteen unrelated files. A small
+    dedicated helper would be cleaner. Home: the human's call — not scheduled.
+  - **AGENTS.md says the browser files share "module-level caches".** Measured at 5.8: a later
+    file starts with an empty `document.fonts` and re-fetches mermaid's core. What carries from
+    file to file is IndexedDB, the browser's font and HTTP caches, and the OS clipboard. Home: a
+    wording fix at the next retro (7.2).
+- **NEW 2026-10-09 — from TASK 5.7 and its kickoff.**
+  - **`readerPane.select` has no ordering guard** — two reads that resolve out of order paint in
+    resolution order, so the screen and the file tree can disagree; saving stays safe because a
+    mismatch downloads (4.3's finding 5). Home: outside M12.
+  - **✅ MEASURED at 4.4 (two renders seen, now one; removed from 7.1's list) — The reversed
+    observer order is unmeasured** — Watch turned on AFTER entering edit, then
+    save, then exit. 4.3 measured one render for watch-then-edit only.
+  - **✅ RESOLVED at 5.8 (cause: the warm-up was a diagram-cache hit; `warmEngine` now renders an
+    uncached source) — `diagramSourceGuard.browser.test.ts` — a REPRODUCED, order-dependent red,
+    both engines.**
+    PER-FENCE (`:228`): twelve same-origin flowchart chunk requests inside its window against a
+    bare `toEqual([])`. Reproduces with `diagramNetwork` + `diagramSourceGuard` run together and
+    nothing else; 8/8 alone; green in the full suite's order. Harness-shared-state by the rerun
+    rule; nothing left the origin. Cause not established. Home: the next session with a
+    test-harness slot.
+  - **✅ RESOLVED at 5.8 (nineteen files settle the wire before their zero; red-first per file) —
+    Every zero-network guard reads its zero after a ~180 ms flush, and Resource Timing records
+    a request only when it ENDS** — so a slow off-origin request still in flight is invisible to
+    those zeros. Found at 5.7 (a red-first ablation that stayed green); `editorNetwork` reads
+    its claim a second time after its control lands. The other files are untouched. Home: the
+    human's call — not scheduled.
+- **NEW 2026-10-08 — from TASK 5.2.**
+  - **CI's pnpm `version: 10` floats; a future 10.x could change where auditConfig is read and silently
+    drop 1.3's ignore — pin via a `packageManager` field.** Home: post-M12. Reviewer-noted.
+  - **✅ RESOLVED at 5.8 — the cause was NOT the registration flag: Firefox serves a font it
+    already holds with no request and no Resource Timing entry; the assertion was re-spelled.**
+    **`mathNetwork.browser.test.ts` — a REPRODUCED red (Firefox, full suite run alone).** "the STIX Two
+    Math subset was never fetched in this window … expected 0 to be greater than 0"
+    (`:167`); cleared in an isolated rerun (6/6, both engines). It is the failure the earlier
+    investigation (this section, "investigated, NOT fixed (no red found)") predicted from an idempotent
+    `registerMathFont()` surviving an earlier math file — but this session did not check the cause.
+    Classified harness-shared-state by the rerun rule; not touched by 5.2's diff. Home: the next
+    session with a test-harness slot. A red to bisect now exists.
+- **NEW 2026-10-08 — TASK 1.3's LIMITATION (R15, `decisions.md`).**
+  - **User-facing: math inside a mermaid diagram renders as SOURCE (R15).** Any mermaid fence whose
+    source contains `$$` degrades with the reason "its source contains math ($$), which diagrams do
+    not render". Peekover's own Temml math is unaffected. **Home: a 7.1 verdict.** Rendering math in
+    diagrams is a ruling, not a task (and needs mermaid on katex ≥ 0.18.2 first).
+- **NEW 2026-10-08 — TASK 5.1's ROUTINGS (`decisions.md`, "M12 TASK 5.1").**
+  - **✅ RESOLVED at 1.3 (R15) — R13 → TASK 1.3**, next: a reviewed, documented exception, not a bump
+    (no mermaid release carries a patched katex; an override is rejected). Reachable → STOP and
+    escalate. *It was reachable; R15 made it unreachable by construction, and the ignore landed on
+    that proof.*
+  - **E-9 → the 7.1 walk, PRIORITY.** The dark selection's fill, 1.29:1 against the pane — filed
+    under that name at 5.1; the measurement is 3.4's (below). Likely a dedicated selection token.
+  - **"Wipe all data" does not close an open folder → OUTSIDE M12.** The folder-read row's "revokes"
+    is loose today (route 7). No task owns it; the human's to schedule after the milestone.
+  - **The import-shape optimisation → POST-M12.** ~10.8 KB per original CodeMirror edge
+    (`codemirror`, `@codemirror/lang-markdown` in `editorEngine.ts`), unmeasured on those two.
+  - **The pre-picker consent line (`capability.ts`) → a 7.1 verdict**, unchanged until then (route 6).
+- **NEW 2026-10-06 — TASK 3.4's CARRIED ITEMS. `decisions.md`'s two "M12 TASK 3.4" entries have the
+  numbers.**
+  - **✅ RESOLVED-BY-EXCEPTION at 1.3 (R15, 2026-10-08) — ★ `pnpm audit --prod` EXITS 1 (R13). Home:
+    ~~a dedicated bump task~~ → TASK 1.3, a documented exception (re-routed 2026-10-08, above).** GHSA-238p-pmpm-9mq7, low, `katex >= 0.11.0 < 0.18.2`, path `mermaid > katex`; installed
+    0.16.47, the newest inside mermaid's `^0.16.45`. Red before 3.4's install as well. Closing it
+    needs a `pnpm.overrides` entry (1.2 ruled "still no overrides") or a mermaid release. Whether
+    Peekover's diagram path can reach the affected trust setting is NOT assessed — the bump task's
+    first step.
+  - **A `--muted` mark on the dark active-line band reads 2.97:1 (R12 — reported, not fixed). Home:
+    the 7.1 walk.** Light 5.38. The band is CodeMirror's default; making it token-driven is a
+    fourth surface beyond E-2's three.
+  - **The dark selection is hard to SEE: its fill against the pane is 1.29:1** (was 11.22, with
+    unreadable text on it); the dark tooltip against the pane 1.06. **Home: the 7.1 walk — the
+    selection half is E-9, PRIORITY (2026-10-08).** No
+    existing token gives both readable selected text and a 3:1 fill.
+  - **The two-tone palette and the preview's new chrome** (code and table toolbars, diagram
+    actions and lightbox, math actions — all inside the nested host) were measured, not seen.
+    **Home: the 7.1 walk.**
+  - **`invalid` draws in `--del`, 4.35:1 on light.** Nothing in a markdown document is tagged
+    `invalid`; stated, not asserted.
+- **NEW 2026-10-05 — TASK 3.3's FINDINGS (P-1…P-3). None is fixed and none was ruled; the numbers are in
+  the 3.3 record above § Up next and in `decisions.md`'s 012 D-5 entry. Both engines agree unless
+  stated.**
+  - **P-1 · ✅ RESOLVED AT TASK 3.4, 2026-10-06 (R7, R10): the preview runs the reader's four
+    enhancers, and its census is asserted equal to the outer document's.** *As filed:*
+    **the reader's enhancers do not run in the live preview. Home: HUMAN RULING BEFORE 7.1.** A
+    mermaid fence, `$x^2$` and a code fence render in the document (figure + SVG, `<math>`,
+    highlighted) and stay raw source in the preview (the fence's `<pre><code>`, the literal `$x^2$`,
+    an un-highlighted block). The enhancers are wired at the two app-page call sites on the OUTER host
+    only; `renderPreview` calls `mount()` and nothing else. The question is preview fidelity against
+    the reader: accept a plain preview, or wire the enhancers to the nested host (a new task — it
+    touches the two call sites or `editorView.ts`, and re-runs lazy engines on every preview render).
+    Measured by `editorPreview.browser.test.ts`'s REPORTED test; nothing is pinned.
+  - **P-2 · the first key after a pause pays one whole preview render inside its own keystroke. Home:
+    6.2 → the §8-2 ruling.** The cooldown's first render is immediate, which here means synchronous:
+    217.7 ms (Chromium) / 205.0 ms (Firefox) on a 212,682-byte document, in the harness. Keys that
+    arrive inside the cooldown are unaffected (2.3 / 4.0 ms). On a small document every key renders.
+  - **P-3 · under a driven burst, 512 keys cost 4 feed renders on Chromium and 193 on Firefox. Home:
+    6.2.** Chromium runs queued input ahead of the cooldown's timer. Human typing speed was not
+    measured, and the scroll restore drifted 1.5 px over Firefox's 193 renders (0.2 px over
+    Chromium's 4).
+- **NEW 2026-10-05 — THE 3.2 EYEBALL PROXIES' FINDINGS (E-1…E-8). Home for all eight: the 7.1 walk,
+  unless the human routes one elsewhere sooner. None is fixed; the numbers are in the record above
+  § Up next and in `decisions.md`'s "informal eyeball DEFERRED" entry. Both engines agree on each.**
+  **★ ROUTED 2026-10-06 (`decisions.md`, "M12 RULINGS after task 4.1"): E-1, E-2 and E-3 → TASK 3.4
+  (E-3 by R8). E-7 → the save-time batch at 5.1. E-4, E-5, E-6 and E-8 stay 7.1 walk items.**
+  **✅ E-1, E-2 and E-3 are RESOLVED AT TASK 3.4 (2026-10-06); the other five are not fixed.**
+  - **E-1 · ✅ RESOLVED at 3.4 (the pane starts 8 px below the handle; the pin is deleted) ·** *as
+    filed:* **the collapsed TOC handle covers the split pane's top-right corner — 103×26 px**, in edit,
+    rail collapsed, at 414×896 and 1400×900. `EDITOR_CSS` reserves the rail only while it is open.
+    PINNED in `editorEyeballProxy.browser.test.ts` (`KNOWN_PANE_UNDER_HANDLE`) — the fix deletes it.
+  - **E-2 · ✅ RESOLVED at 3.4 (5.03 / 5.03 / 10.52 / 14.45 on dark, asserted) ·** *as filed:*
+    **dark only, text unreadable:** selected text 1.16:1 (1.14 unfocused); the current search
+    match 1.52:1; unselected autocomplete options 1.09:1. Light: 12.95 / 9.86 / 16.37.
+  - **E-3 · ✅ RESOLVED at 3.4 (6.54 / 6.54 / 13.61 on dark, asserted; two-tone by R11) ·** *as
+    filed:* **dark only, highlight colours:** markup marks (`#`, `-`, the table pipe, `~~`, `~`, `^`)
+    1.69:1; the task marker 1.24:1; the emoji shortcode 2.15:1. CodeMirror's default palette is
+    light-page.
+  - **E-4 · both themes, gutter numbers:** 2.38:1 light / 3.26:1 dark (`--faint`, 3.2's own rule); the
+    active line's number 2.36 / 4.34.
+  - **E-5 · non-text pairs under 3:1:** active-line band 1.02 / 2.2; gutter rule 1.11 / 1.13; search
+    field border 1.67 and fill 1.09 (both themes); light only — selection 1.27, search panel 1.04,
+    tooltip 1.04 (border 1.69) against the pane. *After 3.4: selection 1.04 light / 1.29 dark,
+    tooltip 1.03 / 1.06 — see 3.4's carried items above.* Several are arguably decorative; the bar was applied
+    as stated.
+  - **E-6 · at 414 px with the rail OPEN the split pane is 100 px wide** (source pane 98 px). No
+    overlap — reported, not asserted.
+  - **E-7 · Ctrl/Cmd+S in the editor runs the export shortcut** — downloads the ON-DISK document as
+    HTML (not the buffer); with no export format it is swallowed. A ruling is owed before 5.3.
+  - **E-8 · R1 as drawn:** `H~2~O` / `x^2^` colour only their marks; `:smile:` is coloured `#aa1111`
+    *(after 3.4 the marks are `--muted` and `:smile:` draws in `--ink`, uncoloured)*.
+    Measured, not judged.
 
 ---
 

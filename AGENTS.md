@@ -89,43 +89,19 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   Firefox about:debugging) has no agent substitute — the automation surface cannot reach those pages. Mark
   such items human-only up front; do not attempt them or fake them with a test-suite run.
 - The browser test suite runs files SERIALLY, sharing one real per-engine `document`/`window` (and the OS
-  clipboard, the Resource Timing buffer, module-level caches). Any assertion about that shared state must be
+  clipboard, the Resource Timing buffer, IndexedDB, the font and HTTP caches — modules and `document.fonts`
+  do NOT carry between files: M12 task 5.8 measured it). Any assertion about that shared state must be
   DELTA-based or SPECIFIC-CONTENT-matched — never an absolute count, a non-empty check, or a pristine-state
   assumption. A red that clears on an isolated rerun is the signature of this class (harness-shared-state),
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **M12 (`specs/012-editor-mode/`) — gate-3 APPROVED (2026-10-04, `decisions.md`'s M12
-  GATE 3 entry); implementation underway — task 1.1 DONE (`basicSetup`, ruled ship-as-is: `decisions.md`'s
-  M12 TASK 1.1 entry), task 1.2 (the `markdown-it`/`dompurify` audit bump, closing 1.1's audit clause) next,
-  then 2.1, fresh session. D-4 re-ruled to an additive
-  `mount()` `chrome: false` option (Option B) after the chrome investigation.** M11 (`specs/011-math-rendering/`) closed 2026-09-11
-  (Temml/MathML math, both engines). M12 = F8 Editor Mode's focused core (edit → live preview → save-back
-  via CodeMirror 6, lazy-loaded), scoped against the 2026-10-03 package-size ceiling ruling (≤ 5 MiB →
-  ≤ 7 MiB, taken specifically as this milestone's prerequisite). Gate 1 ruled all four §9 decisions: D-A
-  in-shell mode (approved), D-B the save-back write surface (approved as the spec's three-way routing —
-  permission mechanism = task-level verification, conflict policy = gate-3, ledger update = mandatory —
-  plus a human sign-off on the new ledger-wording), D-C live-preview mechanism (approved, existing
-  pipeline, no new sanitizer), D-D the dependency gate (approved as a confirmation, not a bust-fork).
-  Gate 2 (2026-10-04) ruled the plan's four §8 questions:
-  §8-1 / D-1 — a dedicated edit-entry control, not a third state on the bare `\` key (approved).
-  §8-2 / D-9 — draft ledger wording on track; the actual sign-off is still owed at the save task (group 5).
-  §8-3 / D-4 — nested-host live preview (approved); built at group 2, cost measured at group 6 — a
-  material cost there is a finding for the human, not a number to file. MECHANISM RE-RULED 2026-10-04
-  (`decisions.md`'s M12 D-4 RE-RULED entry): gate 2's "plain `mount()` call, `mount.ts` byte-untouched"
-  premise was false — `mount()` always composes chrome, and the watch/diff/identity registries are
-  module-level singletons, so a nested mount wires them live. The preview is `mount()` with a new additive
-  `chrome?: boolean` (default `true`, every existing caller byte-identical); chosen over editorView
-  composing its own primitives because that forks the sanitize → inert-template → adopt path. `mount.ts`'s
-  one authorized edit is task 2.2's; the shadow-root boundary is unchanged.
-  §8-4 / D-8 — watch+edit SUPPORTED, DEGRADED via `watchController.ts`'s existing deferral gate; edit exit
-  does not auto-flush (approved).
-  Gate 3 (2026-10-04) approved `tasks.md` (22 tasks, seven groups) as redlined to the D-4 re-ruling, all
-  six questions as proposed: Q1 import fence = scanner fixtures + a new `editorImportFence.test.ts`; Q2
-  group 3 is three tasks; Q3 the conflict policy is ruled at 5.5, mid-implementation, on 5.3's safe floor;
-  Q4 provisional debounce = cost-proportional, multiplier 1, until §8-2; Q5 no material-cost threshold —
-  6.3 reports every delta above its A-B-A noise floor; Q6 the content-script invariant is "zero
-  `codemirror` bytes + every move is the named task's decomposed glue", not a literal "unmoved".
-  Spec, plan and tasks status lines stay sealed/"draft" per M7–M11 precedent — `decisions.md` is the
-  approval of record. Group 3's tests run on an unwatched document (group 4 closes the collision later).
-  Task-level human gates still ahead: 5.1 (ledger wording), 5.5 (conflict UX), 7.1 (close walk).
+- Current milestone: **none in flight — M12 (`specs/012-editor-mode/`) CLOSED 2026-10-30.** Editor Mode's focused
+  core shipped on both engines: a dedicated Edit control, CodeMirror 6 (lazy, app-page-only, behind the
+  one-importer fence) beside a live preview that is the reader's own `mount()` on a nested host, Save (writes on
+  Chromium, downloads elsewhere, refuses and tells on a conflict), the watch/edit collision supported-degraded, and
+  the unsaved-changes guard. `permissions: []`; content script 344,195 B with zero `codemirror` bytes; `.output`
+  5,830,859 / 5,830,975 B against the 7 MiB ceiling. **Next: not yet scheduled.** `docs/ai/progress.md` § Carried
+  items holds the consolidated post-M12 list (the reader-polish task with the left sidebar is the one
+  `decisions.md` names); the human schedules. Records: `decisions.md`'s "M12 CLOSED"; the retro is `retro.md`'s
+  "M12 retro". Spec, plan and tasks status lines stay sealed/"draft" per the M7–M12 precedent.
