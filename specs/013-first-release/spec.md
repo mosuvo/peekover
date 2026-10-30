@@ -1,6 +1,8 @@
 # Spec 013 — A truthful, on-design first release
 
-**Status:** draft (Gear-3 gate 1 — awaiting human approval before `plan.md`)
+**Status:** **approved at gate 1 (2026-10-30)** — with the human's answers banked in `decisions.md` ("M13 GATE 1
+APPROVED") and the changes to this draft recorded as dated notes in §10; the body below is the draft as approved,
+not rewritten. Next: `plan.md` (gate 2).
 **Scope:** **013 delivers M13 — make what already ships honest, on-design and releasable; no new reader
 features.** Five strands, in the human's own scope statement of 2026-10-30: (1) TRUTH — the site, the README
 and `SECURITY.md` say only what ships; (2) CI — the gate runs on `main` too, pnpm is pinned, a stale comment is
@@ -432,6 +434,41 @@ is forbidden from choosing from.*
 20. **Q20 · Edge.** Chrome's zip is the Edge package. **Recommendation:** in scope as listing text and assets only
     (Edge requires a 250–10,000-character description and a 1:1 logo of at least 128 px, recommended 300 px).
 
+## 10. Gate-1 notes (2026-10-30)
+
+*The human's answers to §9 are in `decisions.md`, "M13 GATE 1 APPROVED". Answers that took the recommendation
+as written (Q1, Q2 with the dark shadow, Q4, Q5, Q6, Q7, Q11, Q12, Q14, Q16, Q17, Q18, Q20) change nothing below.
+These notes record where an answer changes or narrows the draft; where a note and the body disagree, the note
+governs.*
+
+1. **Q3 + Q10 — no content-script ceiling now; a default for §8-1.** §5 "Bytes" ("gate 1 sets a number") and §8-1's
+   open axes are superseded by this default: the **app page** loads all design fonts from the extension package
+   (no `web_accessible_resources`, no network); the **file:// content-script reader** keeps Literata and uses
+   close-matching **system fallback stacks** for UI and code, adding **no font bytes** (§8-1 arm (b), and §9-Q10's
+   restyled-pills arm unless the numbers argue otherwise). The §4 font criterion is read accordingly: on the
+   content script, "UI chrome in Bricolage / code in Sometype" becomes "UI chrome and code in their system
+   fallback stacks". §8-1 still measures; it may argue for another arm only by bringing bytes and first paint
+   (against 165 ms with its ~15 ms headroom) to the human, who sets a ceiling then, if at all.
+2. **Q8 — the toolbar merge, mock first.** No toolbar implementation before the human approves a static mock (both
+   themes; 1440 / 1080 / 414). §8-2's mock is therefore a hard gate, not only an input. Test re-spellings that
+   follow from moved chrome are **authorized per surface**, each named with the property it protected kept
+   (resolves §7-1's process).
+3. **Q9 — the status line, test-backed.** Every statement on it must be backed by a test; anything that cannot be
+   proven is left off (sharpens §9-Q9's "only true facts").
+4. **Q13 — the snapshot notice is also permanent.** One-time and dismissible where it appears, **and** the same
+   disclosure stays permanently reachable in the Stored data panel (a trust disclosure must not disappear with a
+   dismissal). Adds an acceptance criterion: when the notice has been dismissed, the Stored data panel shall still
+   show the snapshot disclosure.
+5. **Q15 — contact and repository.** (a) `hello@peekover.dev` is **not confirmed**; the human does not plan to buy
+   a domain for now. Under §3.2/§3.3 it is treated as not live: no surface presents it as a working channel, and
+   the replacement channel is open (`plan.md` proposes; GitHub private vulnerability reporting is the fallback,
+   usable once the repo is public). **Flagged:** this conflicts with `decisions.md` 2026-07-11 ("peekover.dev
+   owned+verified") — the truth pass must check the README's and site's peekover.dev references and the privacy
+   policy's home against whichever is true, assuming neither. (b) The repository goes **public at release**: docs
+   may link it; nothing in M13 may depend on it being readable before then. (c) The site **self-hosts its fonts**
+   — now in scope for the truth/site pass.
+6. **Q19 — the privacy policy is linked from all three store listings** (adds to §3.8's listing text).
+
 ---
 
 ## Appendix A — design inventory and gap analysis
@@ -579,7 +616,7 @@ Firefox zip already produces an AMO-ready sources archive.
 
 ---
 
-_Gate status: this spec is a **DRAFT awaiting gate 1**. On approval, `plan.md` — the HOW — is the next artifact
+_Gate status: **approved at gate 1 (2026-10-30)** — see §10. Next, `plan.md` — the HOW — is the next artifact
 and gate, written in a **fresh session**, resolving §7 against the actual code; `tasks.md` is gate 3. **No
 implementation code before tasks.md is approved** (WORKFLOW.md §5.3). The design walk is human-only and needs a
 loaded extension from a fresh production build of both engines — no agent substitute (AGENTS.md)._

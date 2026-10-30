@@ -1,6 +1,53 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-30 · M13 GATE 1 APPROVED — spec 013 ("a truthful, on-design first release",
+  `specs/013-first-release/spec.md`) approved by the human, with the answers below to its §9 questions.**
+  Where an answer changes the draft, the change is recorded in the spec as a dated gate-1 note (§10), not
+  rewritten into the requirements.
+  - **Q1** version **0.1.0**.
+  - **Q2** `tokens.css` wins where the design files disagree (brand.html's `--accent-soft`, `--del`, night
+    paper); **adopt the mockup's dark `--shadow`** (rgba(0,0,0,.5)) into `tokens.css`.
+  - **Q3 + Q10 (fonts) — NO content-script byte ceiling is set now.** Default position for the §8-1 measurement:
+    the **app page** loads all design fonts from the extension package (no `web_accessible_resources`, no
+    network); the **file:// content-script reader** keeps its reading serif (Literata) and uses close-matching
+    **system fallback stacks** for UI and code text, adding **no font bytes**. The measurement may argue
+    otherwise only by bringing the numbers (bytes; first paint against the 165 ms gate and its ~15 ms headroom)
+    to the human; a ceiling is set then, if at all.
+  - **Q4** pin each code copy of the tokens to `tokens.css` with a test.
+  - **Q5** keep R11 (two-tone editor palette). **Q6** sepia stays dormant. **Q7** keep the 748 px measure.
+  - **Q8 — YES, merge the app page's chrome into the mockup's single toolbar, WITH A GUARD:** a static mock of the
+    toolbar (both themes; 1440 / 1080 / 414) is approved by the human BEFORE any implementation (§8-2).
+    **Authorization:** test re-spellings that follow from moved chrome are authorized per surface, each named
+    with the property it protected kept (the R29(c) precedent).
+  - **Q9 — YES, a quiet app-page status line, but every statement on it must be backed by a test;** anything that
+    cannot be proven is left off.
+  - **Q11** keep the TOC's behaviour, adopt the mockup's look. **Q12** at ≤ 1080 px the folder pane becomes an
+    overlay behind a "Files" control.
+  - **Q13 — one-time and dismissible, AND the same disclosure stays permanently reachable in the Stored data
+    panel** (it is a trust disclosure).
+  - **Q14** as recommended (code blocks keep Line numbers / Wrap / Copy, restyled; display math loses the code
+    toolbar and keeps Copy LaTeX / MathML; table buttons styled from tokens).
+  - **Q15** (a) **`hello@peekover.dev` — NOT CONFIRMED.** The human: *"I am not sure about this one yet as I am
+    not gonna buy a domain for this at least now."* Under the spec's truth rule the address is treated as
+    **not live**: no surface may present it as a working channel. The replacement channel is OPEN (GitHub private
+    vulnerability reporting is the draft's fallback, usable once the repo is public); `plan.md` proposes, the
+    human confirms. **★ FLAGGED, NOT RESOLVED:** this conflicts with the 2026-07-11 entry ("domain peekover.dev
+    owned+verified"). The README's "Site: https://peekover.dev", the site's own URL and the privacy policy's
+    home all depend on which is true — the truth pass must not assume either. (`gecko.id`
+    `peekover@peekover.dev` is an identifier, not a mailbox, and needs no domain.) (b) **Repository public: YES,
+    at release** — docs may link the repo; nothing in M13 may depend on it being readable before then.
+    (c) The site **self-hosts its fonts: YES**.
+  - **Q16** as recommended: a minimal reproducible-build check (double build, compared checksums,
+    `REPRODUCING.md`), a one-page threat model, artifact attestations in the release workflow; **withdraw signed
+    tags**. **Q17** the release workflow owns the SBOM. **Q18** auto-open onboarding on install only.
+    **Q19** `docs/trust/PRIVACY.md`, linked from the store listings. **Q20** Edge: listing text and assets only,
+    the Chrome zip.
+  **Why:** the human's rulings at gate 1, taken on the draft's recommendations except where stated (Q3/Q10's
+  default, Q8's mock-first guard, Q9's test-backed rule, Q13's permanent disclosure, Q15). **Next:** `plan.md`
+  (gate 2) in a fresh session. **Revisit-when:** §8-1's measurement brings numbers back (fonts); Q15(a) is
+  answered (contact channel and the domain).
+
 - **2026-10-30 · M12 CLOSED — Editor Mode's focused core shipped (edit → live preview → save-back via
   CodeMirror 6, lazy-loaded, nested-host preview, watch/edit collision, the unsaved-changes guard; both
   engines), task 7.3's records reconcile. 31 rulings, 29 tasks, 40 commits.**
