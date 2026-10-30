@@ -277,6 +277,21 @@ forward to the immediately-prior task's own measured figure.**
       md5-identical; lockfile zero-diff. **Accepted cost (R15): math inside a mermaid diagram renders as
       source** — a 7.1 verdict item.
 
+- [x] **1.4 The dompurify / markdown-it advisories (R30).** ★ **DISCOVERED 2026-10-30; runs AFTER the
+      7.1-walk polish (3.5) and BEFORE 7.2** — human-ruled and human-scheduled (`decisions.md`, "M12
+      TASK 1.4 — LANDED", R30). Numbered in group 1 by subject (dependency hygiene), not by position;
+      the 1.1 → 1.2 → 1.3 precedent. A governed bump of `dompurify` 3.4.16 → 3.4.17 and `markdown-it`
+      14.3.2 → 14.3.3, the lowest versions patching all five advisories `pnpm audit --prod` reported;
+      no override, the katex ignore stays the only one. Files: `package.json` · `pnpm-lock.yaml` · the
+      records. Verdicts: three dompurify flaws NOT reachable (no `SAFE_FOR_TEMPLATES` / `IN_PLACE` /
+      `PARSER_MEDIA_TYPE`), two markdown-it flaws reachable (`html: true`, default reference rule);
+      `_isValidAttribute` byte-identical, hook contract unchanged; one copy each; audit EXIT=0 with
+      and without `--audit-level low`; golden EMPTY. Bytes: app chunk +1,399 B, **content script
+      +1,389 B** (md5 moved, expected: dompurify +989, markdown-it +397). Verify: lint 0 · unit 1417 ·
+      browser 1961 / 51 skipped, zero reds.
+      ★ *Human re-check owed: the 3.5 list, plus a quick reading-view glance (the parser and the
+      sanitizer moved).*
+
 *Group-1 acceptance (plan §6): D-D's confirmation is settled with a decomposed, ablation-proven number on
 both engines; the setup choice is made from measurement and recorded; the governed install is clean. This
 is the only outcome that authorizes group 2.* ★ *As landed: D-D's confirmation and the setup choice are
@@ -1498,6 +1513,11 @@ human-ruled and human-scheduled between 6.1 and 6.2, `decisions.md` "M12 RULINGS
 ★ *2026-10-30: **28 tasks** — group 3 is (5) with the discovered 3.5 (the 7.1-walk polish, R28 / R29),
 human-ruled and human-scheduled between 6.3 and the human's re-check, `decisions.md` "M12 TASK 3.5 —
 LANDED": 1 (3) · 2 (2) · 3 (5) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing: … 6.4 → 6.3 → **3.5** → 7.1.*
+
+★ *2026-10-30: **29 tasks** — group 1 is (4) with the discovered 1.4 (the dompurify / markdown-it
+advisories, R30), human-ruled and human-scheduled between 3.5 and 7.2, `decisions.md` "M12 TASK 1.4 —
+LANDED": 1 (4) · 2 (2) · 3 (5) · 4 (4) · 5 (7) · 6 (4) · 7 (3). Sequencing: … 6.3 → 3.5 → **1.4** → 7.1
+(the human's re-check of the 3.5 and 1.4 items, then 7.2).*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it,
 redlines it, and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a

@@ -1,6 +1,96 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-30 · M12 TASK 1.4 — LANDED: `dompurify` 3.4.16 → 3.4.17 and `markdown-it` 14.3.2 → 14.3.3,
+  the lowest versions that patch all five advisories `pnpm audit --prod` reported (R30). `pnpm audit
+  --prod` EXIT=0 again. No override, no new ignore, no `src/` change, no golden change. The content
+  script MOVES +1,389 B (expected: both packages are on its graph).**
+  **R30 — HUMAN RULING (2026-10-30).** A DISCOVERED task 1.4, "the dompurify / markdown-it
+  advisories", runs AFTER the 7.1-walk polish (3.5) and BEFORE 7.2: a governed bump of both packages to
+  the lowest versions that patch every advisory `pnpm audit --prod` reports for them. No overrides; the
+  1.3 katex ignore stays the only ignore. STOP and report if either package has no patched release, the
+  bump changes any golden output, or a sanitizer hook relies on an internal the new version changed.
+  None of the three occurred.
+  **STEP 0 — THE ADVISORIES, AT SOURCE** (`pnpm audit --prod --json` at 2ceef0d: 6 findings, 5
+  advisories + the 1.3 katex ignore; REACHABILITY is recorded, not used to skip — R30 bumps regardless).
+  - **GHSA-cg2g-xh64-v4q7 · dompurify · CRITICAL** · affected `>=3.4.4 <=3.4.16`, patched `>=3.4.17` ·
+    `SAFE_FOR_TEMPLATES` bypass: split template expressions survive in attached shadow-root content on
+    DOM output modes. *Reachability: NO.* `SAFE_FOR_TEMPLATES` is set by none of the three profiles
+    (`sanitize.ts` `SANITIZE_CONFIG` :117, `SANITIZE_SVG_CONFIG` :390, the math config), and every call
+    returns a STRING (`RETURN_DOM: false`, :125 / :399; calls at :154, :790, :984).
+  - **GHSA-mrv2-3pqr-j5jr · dompurify · HIGH** · `<=3.4.16` → `>=3.4.17` · `IN_PLACE`: a hook that removes
+    a parent or sibling leaves the detached subtree's event handlers armed (incomplete fix of
+    GHSA-p98j-92pf-mc4p). *Reachability: NO.* `IN_PLACE` is set nowhere in `src/` or `entrypoints/`;
+    the hooks (:141 `uponSanitizeAttribute`, :788 `afterSanitizeElements`) never run in place.
+  - **GHSA-c6gr-qvv4-5v3f · dompurify · LOW** · `<=3.4.16` → `>=3.4.17` · the SMIL `attributeName=href`
+    guard is skipped when `PARSER_MEDIA_TYPE` is `application/xhtml+xml`. *Reachability: NO.*
+    `PARSER_MEDIA_TYPE` is set nowhere; the default `text/html` lowercases names.
+  - **GHSA-gfr2-rv44-r23c · markdown-it · HIGH** · `>=14.1.0 <14.3.3` → `>=14.3.3` · quadratic-time
+    rendering of one multi-line link reference definition with DEFAULT options (a 14.0 regression).
+    *Reachability: YES* — `parse.ts:43` builds the one `MarkdownIt` instance; the rule is on by default.
+    A denial of service of the reader tab, not a data exposure.
+  - **GHSA-vfgh-jcmw-g37q · markdown-it · LOW** · `<14.3.3` → `>=14.3.3` · quadratic-time inline HTML
+    parsing WITH `html` enabled. *Reachability: YES* — `html: true`, `parse.ts:25`.
+  - *Unchanged:* GHSA-238p-pmpm-9mq7 (katex via mermaid), the 1.3 / R15 ignore, `package.json`
+    `pnpm.auditConfig.ignoreGhsas` — the only suppression.
+  **STEP 1 — VERSIONS.** Registry: `dompurify` 3.4.17 (published 2026-10-12, the newest 3.4.x and the
+  lowest patched); `markdown-it` 14.3.3 (dist-tag `v14-legacy`; `latest` is 15.0.3, NOT taken — the 15
+  line re-opens the math-grammar peer-range item, `progress.md` § Carried items). `mermaid@11.16.1`
+  declares `dompurify ^3.3.3`, so 3.4.17 satisfies it and ONE copy resolves: `pnpm why --prod
+  dompurify` → "Found 1 version" (3.4.17, via mermaid and the root); `markdown-it` → "Found 1 version"
+  (14.3.3, via `@mdit/plugin-tex`, `@mdit/helper` and the root).
+  **STEP 2 — THE BUMP.** `pnpm add dompurify@^3.4.17 markdown-it@^14.3.3` (caret, as the repo pins).
+  `package.json`: two lines. `pnpm-lock.yaml`: 34 lines, EVERY resolved-version change — `dompurify`
+  3.4.16 → 3.4.17 (importer, snapshot, package entry, mermaid's pointer); `markdown-it` 14.3.2 →
+  14.3.3 (importer, snapshot, package entry); `@mdit/helper` and `@mdit/plugin-tex` peer-suffix keys
+  `(markdown-it@14.3.2)` → `(…14.3.3)`. No other package moved. `pnpm install --frozen-lockfile` EXIT=0.
+  `dependencies` stays 11.
+  **STEP 3 — THE SANITIZER RE-CONFIRMATION (the 1.2 precedent).** Published tarballs, 3.4.16 vs 3.4.17,
+  `src/purify.ts` read side by side. *`_isValidAttribute` (127 lines): BYTE-IDENTICAL* — the same
+  acceptance branches in the same order. *The hook contract:* `uponSanitizeAttribute` still runs
+  immediately after the attribute is read and before the named-props step, the value checks and
+  `forceKeepAttr` / `keepAttr`; `afterSanitizeElements` still runs after `_sanitizeElements`. Our
+  `uponSanitizeAttribute` hook (`sanitize.ts:141`) reads `data.attrName` / `data.attrValue` and sets
+  `data.keepAttr`; the math hook (:982) and the CSS pass (:788) use the same two events — none depends
+  on a changed internal. *What did change:* the two value checks (comment / raw-text closers; the
+  animated-`href` guard) were lifted into `_isUnsafeAttributeValue` and run at the SAME position; the
+  `attributeName` comparison is now case-insensitive (GHSA-c6gr — stricter, never looser); a
+  `_markVisited` call for `IN_PLACE` (unused here); a text-content markup probe for literal-text
+  elements (`ELEMENT_MARKUP_PROBE`). All stricter or off-path. Same ⇒ no STOP.
+  *`markdown-it` 14.3.2 → 14.3.3:* three source files, all rewrites for the two quadratic cases —
+  `rules_block/reference.mjs` (a direct scan of `state.src`; labels over 999 code points are now
+  rejected, CommonMark's own limit), `rules_inline/html_inline.mjs` (+ `state_inline.mjs`'s
+  `skipHtmlSpecial` flag; an unterminated comment / PI / declaration / CDATA stays text), and the
+  regenerated `dist/` bundles. Our ESM import resolves to `lib/`. (The tarball ships no CHANGELOG; the
+  diff is the changelog.) Output differs only for a label over 999 code points or an unterminated HTML
+  special — neither is in any golden, confirmed by the golden run.
+  **STEP 4 — VERIFY.**
+  - `pnpm audit --prod` EXIT=0 (`1 low (1 ignored)` = the katex ignore); `--audit-level low` EXIT=0; the
+    JSON lists 0 advisories and `package.json` carries the one `ignoreGhsas` entry — no other
+    suppression, no overrides.
+  - SBOM regenerated, transient, NOT staged: 191 components (was 191); dompurify 3.4.17, markdown-it
+    14.3.3.
+  - **BYTES** (clean two-engine rebuild, both engines identical; every file that changed size):
+    `chunks/app.js` +1,399 B · `content-scripts/peekover.js` +1,389 B · nothing else. `.output`
+    5,830,859 B (Cr) / 5,830,975 B (Fx), +2,788 (vs 5,828,071 / 5,828,187); headroom 1,509,173 /
+    1,509,057 B against 7 MiB. Zips 1,842,763 / 1,842,822 B (+1,298 / +1,299). Content script 344,195 B,
+    md5 `b0ff62df…` (Cr) / `3413dae0…` (Fx) — MOVED, as expected. Manifests 654 / 770 B,
+    `permissions: []`. **Content script by package** (single-package arms, over-determined): dompurify
+    alone +989, markdown-it alone +397, both +1,389 — a 3 B interaction (minifier names). The app chunk:
+    +1,002 / +389 / +1,399 (residual 8). One arm artifact to know about: the markdown-it-only arm showed
+    a +29 KB mermaid chunk — `pnpm add` of the older dompurify re-resolved something in that scratch
+    arm; the REAL tree's diff shows only the two files above, and the restored lockfile is md5-identical
+    to the verified one.
+  - **SUITES.** `pnpm lint` EXIT=0 · unit 1417 / 1417 (the named: `parse` 37 · `sanitize` 119 ·
+    `golden` 11) · browser, run ALONE, `--reporter=verbose`: 188 files, 1961 passed / 51 skipped, zero
+    reds (the named: `sanitize.browser` 62 · `diagramSanitize` 10 · `mathNetwork` 6 ·
+    `editorPreview` 24 · `editorSave` 36 pass / 30 skip (Chromium-only OPFS) · every `*Network` 56
+    pass / 4 skip · every `*Secure` 18) · scanner and `--self-test` EXIT=0 · `git diff --exit-code
+    tests/golden/output/` EMPTY (never regenerated). No known flake fired.
+  **Revisit-when:** a new advisory against either package (re-run this task's shape); or a
+  `markdown-it` 15 bump (the math-grammar peer-range item); or DOMPurify changing `_isValidAttribute`'s
+  branches again.
+
 - **2026-10-30 · M12 TASK 3.5 — LANDED: the 7.1-walk polish (rulings R28, R29; two decisions; one
   authorization). Search panel from tokens, a split that fills the pane, themed scrollbars, the rail
   hidden while editing at ≤ 1400 px, the snapshot notice off the text (wide), long lines wrap. The
