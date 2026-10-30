@@ -11,6 +11,13 @@
 
 ## Now (start here)
 
+**M13 PLAN DRAFTED, AWAITING GATE 2 (2026-10-30).** `specs/013-first-release/plan.md` — D-1…D-17 (tokens pinned by one
+test; app-page fonts as packaged assets, content script on system stacks; the font measurement; the app-built toolbar with a
+`mount()` option, the Edit control moved into it, the 130 px band reclaimed; the snapshot notice D-12-safe; three test-backed
+status-line statements; the ≤1080 px Files overlay; onboarding; truth via a claims ledger; CI; release with a reproducibility
+spike; icons via Playwright; a contrast rule; census-first test re-spellings) and fifteen gate-2 questions G-1…G-15. Q15 is
+still OPEN (human, this session) and is G-1. Preflight: HEAD `3bb3b93`; `pnpm audit --prod` EXIT 0, 2026-10-30.
+
 **M13 GATE 1 APPROVED (2026-10-30).** The human answered all twenty §9 questions — banked in `decisions.md`, "M13 GATE 1
 APPROVED"; the changes are dated notes in the spec's §10. Key: no content-script font ceiling now (app page loads the design
 fonts from the package; the file:// reader adds no font bytes, system fallbacks for UI/code); the toolbar merge needs a
@@ -33,8 +40,8 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**M13: `plan.md` (gate 2), in a fresh session** — from `specs/013-first-release/spec.md` as approved (read §10's gate-1 notes
-first; they govern where they differ from the body), then `tasks.md` (gate 3). Plan must propose the Q15(a) contact channel. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**M13: the human rules gate 2 on `plan.md` (§8, G-1…G-15); then `tasks.md` (gate 3) in a fresh session**, from the plan's §6
+groups. The first human gate after that is group 3's static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
