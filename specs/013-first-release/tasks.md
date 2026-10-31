@@ -9,6 +9,9 @@
 *the model that did the work); the human reviews the pasted evidence and pushes — an agent NEVER pushes. Each*
 *capability gets its OWN real-engine test where the property is jsdom-blind (layout, computed style, fonts, bytes on*
 *the wire, focus) — never a trailing "add tests" task.*
+*★ **APPROVED AT GATE 3 (2026-10-31)** — `decisions.md`'s **M13 GATE 3 APPROVED** is the approval of record (Q1–Q6 all*
+*on the recommendations, Q4 with a condition); changes are the dated gate-3 notes at the foot of this file and the ★*
+*notes at 7.4 and 8.1; the body below is not rewritten. Next: task 1.1 in a fresh session.*
 *Drafted 2026-10-31 at HEAD `afc8b1d` (tree clean). No production, test, package or workflow byte has changed since the*
 *plan's HEAD `3bb3b93` (`git diff --stat 3bb3b93 HEAD -- src entrypoints tests wxt.config.ts package.json .github` is*
 *empty), so the plan's code citations hold; the preflight below re-checks the ones tasks lean on.*
@@ -592,6 +595,9 @@ math without the code toolbar; content-script first paint inside 165 ms.*
       each). `actionlint` (if available locally) EXIT 0, or each workflow parsed. The sources-zip rebuild compared with
       the shipped Firefox zip — "no differences" (or file-identical under G-8), digests pasted. **The dry run is the
       human's (G-9), after the branch is pushed** — recorded at 8.1. No production bytes. [D-14; G-9; §9-1]
+      ★ *Gate-3 note, 2026-10-31 (Q6; `decisions.md`, "M13 GATE 3 APPROVED"): when 7.4 lands, the human pushes — a
+      `workflow_dispatch` workflow must be on the default branch to be run — and triggers the dry run then; 8.1
+      records the result, and a failure becomes a discovered task. The agent never pushes.*
 - [ ] **7.5 Store listing text for Chrome, Firefox, Edge (gate-1 Q19, Q20).** Each meets that store's documented
       length rules (re-read at the task, cited); each links `https://peekover.dev/privacy/` ("live at release");
       Edge = text + assets, the Chrome zip; every sentence in the ledger.
@@ -630,6 +636,10 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       Files: `docs/ai/progress.md` (verdicts) · discovered fix tasks as found
       Verify: every cell has its own verdict — no implicit "looked fine"; engines and viewports recorded; each "fix"
       becomes a numbered discovered task run before group 9. Golden EMPTY · `permissions: []`.
+      ★ *Gate-3 note, 2026-10-31 (Q4; `decisions.md`, "M13 GATE 3 APPROVED") — ADDED TO THIS VERIFY:* **every pending
+      list (2.2's contrast census, 5.1's native-control sweep) is either EMPTY, or each remaining row is accepted by the
+      human BY NAME in this task's record.** Nothing is carried out of M13 silently; a row neither fixed nor accepted
+      blocks the tick. The dry-run result recorded here follows the 7.4 note (Q6).
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
@@ -765,6 +775,24 @@ permission (8.1).
 6. **Q6 · When the release dry run happens (G-9).** (a) As soon as 7.4 lands — you push and run it, and 8.1 records the
    result (a failure becomes a discovered task before the walk ends); (b) only inside the walk. **Recommendation:
    (a).**
+
+## Gate-3 notes (2026-10-31)
+
+*The human's answers to Q1–Q6 are in `decisions.md`, "M13 GATE 3 APPROVED". Where a note and the body disagree, the note
+governs.*
+
+1. **Q1 YES** — the pills drop in 4.5 with D-8, the band in 4.6, as drafted. **No commit may lose a function or the
+   capture disclosure** — a standing check on every group-4 task, not only 4.5.
+2. **Q2 YES** — `tests/ciConfig.test.ts`, `tests/truthPins.test.ts`, `specs/013-first-release/census.md` authorized.
+3. **Q3 YES** — 40 tasks, as counted above.
+4. **Q4 YES, with a condition** — the pending lists may only shrink, **and by 8.1 each is EMPTY or every remaining row is
+   accepted by the human by name in 8.1's record**; added to 8.1's Verify (★ note there). This supersedes 5.7's "each
+   remaining row named and routed" as the end state: routing alone no longer closes a row.
+5. **Q5 YES** — 2.2 stops with ONE batched question for every contrast failure outside G-4/G-5, before 2.3.
+6. **Q6 YES** — the human pushes when 7.4 lands and triggers the dry run (★ note at 7.4); 8.1 records it.
+
+*Gate: this file was a **DRAFT awaiting gate 3** and is now **APPROVED (2026-10-31)** — see the gate-3 notes above. The
+paragraph below is the draft's text, kept as written.*
 
 *Gate: this file is a **DRAFT awaiting gate 3** — review material, not a sealed list. Gate 3 approves it, redlines it,
 and answers Q1–Q6. **What approval authorizes:** implementation, beginning at **task 1.1, in a fresh session**, task by

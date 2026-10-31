@@ -1,6 +1,24 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-31 · M13 GATE 3 APPROVED — tasks 013 (`specs/013-first-release/tasks.md`) approved by the human, with the
+  answers below to its Q1–Q6. 40 tasks, nine groups. Changes are dated gate-3 notes in tasks.md; the body is not
+  rewritten.**
+  - **Q1 YES** — the app page drops the pills in **4.5, with D-8**, and the band (D-7) is reclaimed in **4.6**. **No
+    commit may lose a function or the capture disclosure.**
+  - **Q2 YES** — `tests/ciConfig.test.ts`, `tests/truthPins.test.ts` and `specs/013-first-release/census.md` are
+    authorized beyond plan §2's list.
+  - **Q3 YES** — the splits; **40 tasks**.
+  - **Q4 YES, WITH A CONDITION** — each pending list (2.2's contrast census, 5.1's native-control sweep) may only
+    shrink, **AND by the design walk (8.1) it is either EMPTY or every remaining row is accepted by the human BY NAME in
+    8.1's record. Nothing is carried out of M13 silently.** Added to 8.1's Verify as a gate-3 note.
+  - **Q5 YES** — 2.2 stops and brings every contrast failure outside G-4/G-5 to the human as **ONE batched question**,
+    before 2.3.
+  - **Q6 YES** — when 7.4 lands, **the human pushes** (a `workflow_dispatch` workflow must be on the default branch to be
+    run) and triggers the dry run; 8.1 records the result. The agent still never pushes.
+  **Why:** the human's rulings at gate 3, all on the recommendations, Q4 with its condition. **Next:** task 1.1 in a fresh
+  session. **Revisit-when:** a pending row cannot be fixed and the human declines to accept it at 8.1; the dry run fails.
+
 - **2026-10-31 · M13 GATE 2 APPROVED — plan 013 (`specs/013-first-release/plan.md`) approved by the human, with the
   answers below to its §8 questions. Changes to the draft are dated gate-2 notes in the plan's §9; the body is not
   rewritten.**
