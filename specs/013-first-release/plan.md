@@ -1,6 +1,8 @@
 # Plan 013 — A truthful, on-design first release (M13)
 
-**Status:** draft (Gear-3 gate 2 — awaiting human approval before `tasks.md`)
+**Status:** **approved at gate 2 (2026-10-31)** — the human's answers are banked in `decisions.md` ("M13 GATE 2
+APPROVED"); changes to this draft are dated notes in §9, which govern where they differ from the body below. Next:
+`tasks.md` (gate 3).
 **Date:** 2026-10-30
 **Spec:** `specs/013-first-release/spec.md`, approved at gate 1 (`decisions.md`, "M13 GATE 1 APPROVED"). **§10's
 gate-1 notes were read first and govern where they differ from the spec body** — in particular: no content-script
@@ -552,8 +554,61 @@ against the walked build. 9.2 store screenshots, 1280×800, light and dark (G-11
 15. **G-15 · Where the dismissal lives (D-8).** (a) its own app-only row in the settings store; (b) a field on
     `Settings` (touches the content-script graph). **Recommendation: (a).**
 
+## 9. Gate-2 notes (2026-10-31)
+
+*The human's answers to §8 are in `decisions.md`, "M13 GATE 2 APPROVED". G-2, G-3, G-4, G-5, G-7, G-10, G-11, G-12,
+G-14 and G-15 took the recommendation and change nothing below. These notes record where an answer changes or
+extends the plan; where a note and the body disagree, the note governs.*
+
+1. **G-1 — Q15 resolved: peekover.dev is registered; the site is peekover.dev on GitHub Pages.**
+   - D-12's "domain-neutral" text is superseded: README, site, SECURITY.md, PRIVACY.md and the store text use
+     peekover.dev URLs, each marked **"live at release"** in the claims ledger, and no surface presents one as live
+     before go-live. Group 9's truth re-check and a go-live checklist item verify that each URL resolves.
+   - **Privacy policy URL (proposed): `https://peekover.dev/privacy/`**, served by `site/privacy/index.html`, whose
+     text a unit test keeps identical to `docs/trust/PRIVACY.md` (one source, pinned — the D-1 pattern). The three
+     store listings link that URL (Q19).
+   - **Pages configuration is prepared, not turned on.** The site lives in `site/`, which GitHub Pages cannot publish
+     from a branch (branch publishing serves the root or `/docs`), so M13 adds a Pages deploy workflow
+     (`.github/workflows/pages.yml`, `workflow_dispatch` only — never on push, so nothing publishes during M13) and
+     the custom-domain record. Whether the custom domain is set by a `CNAME` file or only in the repository's Pages
+     settings for an Actions-based deploy is verified against GitHub's current Pages docs in that task; whichever
+     applies, the settings step goes on the go-live checklist. Pointing DNS and enabling Pages are go-live steps.
+   - **Contacts:** security reports → GitHub private vulnerability reporting (live when the repo is public); general
+     contact → GitHub issues. **`hello@peekover.dev` appears nowhere as a working channel** until the human confirms
+     a test message arrived; then it becomes a second security channel and the contact address (a two-file edit).
+     `gecko.id` (`peekover@peekover.dev`) is unchanged.
+2. **G-6 — fonts, with conditions.** D-2 is extended: (a) the OFL licence texts for Literata, Bricolage Grotesque,
+   Sometype Mono and STIX Two Math **ship in the package** (`public/licenses/`, copied verbatim by WXT) and are
+   credited in a root `NOTICE` file and the README; (b) the subset ranges are **at least Latin + Latin Extended**
+   (U+0000–00FF, U+0100–024F, plus the chrome's own enumerated glyphs), stated in `assets/fonts/README.md`; (c) the
+   bytes are measured in 2.4. A unit test asserts every bundled font family has its licence file in `public/licenses/`.
+3. **G-8 — the fallback claim is worded exactly "file-identical"** wherever it appears (SECURITY.md, REPRODUCING.md,
+   the claims ledger, the CHANGELOG), if task 7.3 cannot reach byte-identical zips.
+4. **G-9 — the dry run, with attestations conditional.** GitHub's docs (2026-10-31): on Free, Pro and Team plans
+   *"artifact attestations are only available for public repositories"* (docs.github.com/en/code-security/
+   getting-started/github-security-features). D-14's attestation step therefore runs only when the repository is
+   public (`if: ${{ !github.event.repository.private }}`), is skipped — and reported as skipped in the run summary —
+   in the human's dry run, and is proven at the real release with `gh attestation verify` (a go-live checklist
+   item). SECURITY.md and REPRODUCING.md promise attestations "from the first public release", not before.
+5. **G-13 — Node 22** is stated in `docs/trust/REPRODUCING.md` and in the AMO sources' `SOURCE_CODE_REVIEW.md`, with
+   AMO's differing default (Node 24.14.0 / npm 11.9.0) named, as their policy requires.
+6. **ADDED — the Firefox file:// check (group 8).** The walk opens a local `.md` via `file://` directly, not through
+   the app page, on a fresh Firefox profile with the built extension. D-11's Firefox branch ("no toggle") rests on
+   the 2026-07-14 record, unverified for MV3. If Firefox requires a grant, onboarding gains a Firefox branch as a
+   **discovered task** (detection or instructions, still no new permission — or a stop if one would be needed).
+7. **ADDED — the go-live checklist, `docs/store/GO-LIVE.md`** (new task 7.6, written by M13, run by the human). Items:
+   point DNS at GitHub Pages and set the custom domain; run the Pages workflow; verify every "live at release" URL
+   in the claims ledger resolves; send and confirm a test message to `hello@peekover.dev` (registrar forwarding),
+   then decide the email edit; make the repository public; enable private vulnerability reporting; cut and push the
+   real `v0.1.0` tag; confirm the release workflow's attestations and `gh attestation verify`; download the draft
+   release's zips and check them against `SHA256SUMS`; publish the release; submit to the Chrome Web Store, AMO
+   (with the sources zip) and Edge Add-ons. Each item names the evidence that shows it is done.
+8. **Task groups, adjusted:** 7.2 writes SECURITY.md with the G-1 contacts; 7.4 adds the conditional attestation
+   and `pages.yml`; **7.6 (new)** the go-live checklist; 9.1 adds `site/privacy/` and checks the "live at release"
+   markings; group 8 gains the Firefox file:// check.
+
 ---
 
-_Gate status: this plan is a **DRAFT awaiting gate 2**. On approval, `tasks.md` (gate 3) is written in a fresh
+_Gate status: **approved at gate 2 (2026-10-31)** — see §9. Next, `tasks.md` (gate 3) is written in a fresh
 session. No implementation before `tasks.md` is approved (WORKFLOW.md §5.3). Group 3's mock, group 8's walk and
 group 9's re-check are human gates with no agent substitute; group 2.4 becomes one only if its numbers argue._

@@ -1,6 +1,47 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-31 · M13 GATE 2 APPROVED — plan 013 (`specs/013-first-release/plan.md`) approved by the human, with the
+  answers below to its §8 questions. Changes to the draft are dated gate-2 notes in the plan's §9; the body is not
+  rewritten.**
+  - **G-1 / Q15 — RESOLVED (domain).** peekover.dev **is registered** (human, 2026-10-31); the 2026-07-11 record
+    stands (a dated note is added to the GATE 1 entry's Q15). For the first release: the site is **peekover.dev,
+    served from GitHub Pages with the custom domain**; the privacy policy lives at a peekover.dev URL (the plan
+    proposes `https://peekover.dev/privacy/`). Pointing DNS at Pages and turning the site on are **go-live steps,
+    outside M13**; M13 prepares the Pages configuration and writes the URLs. **Until go-live no surface presents
+    peekover.dev as already live:** the claims ledger marks each peekover.dev URL "live at release", and group 9's
+    truth re-check plus a go-live checklist item verify each resolves before anything is published. **Email still
+    unconfirmed:** `hello@peekover.dev` appears nowhere as a working channel until the human confirms a test message
+    arrived (forwarding at the registrar — the human's step, a go-live checklist item); if confirmed later it becomes
+    a second security channel and the contact address. **Security reports:** GitHub private vulnerability reporting
+    (live when the repo goes public at release). **General contact:** GitHub issues. `gecko.id` unchanged.
+  - **G-2** the app-built toolbar + one `mount()` option. **G-3** the indicator + Resource Timing. **G-4** the watch
+    pill's text in ink; green on the dot and border. **G-5** information-bearing `--faint` text → `--muted`.
+  - **G-6 YES, with conditions:** the fonts' OFL licence files ship in the package and are credited (README and a
+    NOTICE file); the subset ranges are stated — at least Latin + Latin Extended — and the bytes measured in 2.4.
+  - **G-7** report-only: stop and report above +2 KB on the content script per task. **G-8** "file-identical",
+    worded exactly so everywhere. **G-10** install only. **G-11** scripted captures; the human picks. **G-12**
+    decorative ticks only. **G-13** Node 22, stated in REPRODUCING.md (and the AMO sources README) for AMO's rebuild.
+    **G-14** the additive `manifest.test.ts` edit is authorized. **G-15** the dismissal lives in its own
+    app-page-only row.
+  - **G-9 YES, one manual dry run — conditioned on attestations.** Verified 2026-10-31 against GitHub's docs: *"If you
+    are on a GitHub Free, GitHub Pro, or GitHub Team plan, artifact attestations are only available for public
+    repositories. To use artifact attestations in private or internal repositories, you must be on a GitHub
+    Enterprise Cloud plan"* (docs.github.com/en/code-security/getting-started/github-security-features). The repo is
+    private until release on a personal account, so **the attestation step is conditional** (runs only when the
+    repository is public), is skipped in the dry run, and is proven at the real release; the plan and the release
+    checklist say so.
+  - **ADDED — a Firefox file:// check in the design walk (group 8):** open a local `.md` via `file://` directly (not
+    the app page) on a fresh profile with the built extension. D-11's "Firefox needs no toggle" rests on a July
+    record (`decisions.md` 2026-07-14) unverified for MV3; if access must be granted on Firefox, onboarding gains a
+    Firefox branch as a discovered task.
+  - **ADDED — a GO-LIVE CHECKLIST** collecting every human step after M13: DNS → GitHub Pages, the email test
+    message, making the repo public, enabling private vulnerability reporting, the real release tag (and its
+    attestation check), the store submissions. M13 writes it; the human runs it.
+  **Why:** the human's rulings at gate 2. **Next:** `tasks.md` (gate 3) in a fresh session. **Revisit-when:** the
+  email is confirmed; the plan changes to Enterprise Cloud (attestations on a private repo); the Firefox walk check
+  finds a toggle.
+
 - **2026-10-30 · M13 GATE 1 APPROVED — spec 013 ("a truthful, on-design first release",
   `specs/013-first-release/spec.md`) approved by the human, with the answers below to its §9 questions.**
   Where an answer changes the draft, the change is recorded in the spec as a dated gate-1 note (§10), not
@@ -38,6 +79,9 @@
     `peekover@peekover.dev` is an identifier, not a mailbox, and needs no domain.) (b) **Repository public: YES,
     at release** — docs may link the repo; nothing in M13 may depend on it being readable before then.
     (c) The site **self-hosts its fonts: YES**.
+    *Note added 2026-10-31 (gate 2), resolving the flag above without rewording either entry:* the human confirms
+    **peekover.dev IS REGISTERED** — the 2026-07-11 "owned+verified" record stands. The email remains unconfirmed.
+    See "M13 GATE 2 APPROVED", G-1.
   - **Q16** as recommended: a minimal reproducible-build check (double build, compared checksums,
     `REPRODUCING.md`), a one-page threat model, artifact attestations in the release workflow; **withdraw signed
     tags**. **Q17** the release workflow owns the SBOM. **Q18** auto-open onboarding on install only.

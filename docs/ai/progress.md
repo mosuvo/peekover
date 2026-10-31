@@ -11,7 +11,15 @@
 
 ## Now (start here)
 
-**M13 PLAN DRAFTED, AWAITING GATE 2 (2026-10-30).** `specs/013-first-release/plan.md` — D-1…D-17 (tokens pinned by one
+**M13 GATE 2 APPROVED (2026-10-31).** The human answered G-1…G-15 — banked in `decisions.md`, "M13 GATE 2 APPROVED";
+changes are dated notes in the plan's §9. Key: Q15 resolved — peekover.dev is registered; the site is peekover.dev on GitHub
+Pages (DNS and Pages are go-live steps; every peekover.dev URL is "live at release" until then; privacy at
+`/privacy/`); `hello@peekover.dev` is still unconfirmed and appears nowhere as working; security reports via GitHub private
+vulnerability reporting, contact via issues. Fonts' OFL licences ship in the package with a NOTICE. Attestations need a public
+repo on this plan, so the step is conditional and proven at the real release. Added: a Firefox file:// walk check, and a
+go-live checklist (`docs/store/GO-LIVE.md`, task 7.6) the human runs after M13.
+
+**M13 PLAN DRAFTED (2026-10-30), now approved — the draft's summary:** `specs/013-first-release/plan.md` — D-1…D-17 (tokens pinned by one
 test; app-page fonts as packaged assets, content script on system stacks; the font measurement; the app-built toolbar with a
 `mount()` option, the Edit control moved into it, the 130 px band reclaimed; the snapshot notice D-12-safe; three test-backed
 status-line statements; the ≤1080 px Files overlay; onboarding; truth via a claims ledger; CI; release with a reproducibility
@@ -40,8 +48,8 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**M13: the human rules gate 2 on `plan.md` (§8, G-1…G-15); then `tasks.md` (gate 3) in a fresh session**, from the plan's §6
-groups. The first human gate after that is group 3's static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**M13: `tasks.md` (gate 3), in a fresh session** — from `plan.md` §6's groups as amended by §9's gate-2 notes (read §9
+first). The first human gate after that is group 3's static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
