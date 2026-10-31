@@ -119,7 +119,7 @@ and date** (AGENTS.md, the M12 retro rule).
 
 ## 1 — CI + truth, first pass (D-12, D-13)
 
-- [ ] **1.1 CI: push to `main`, pnpm from `packageManager`, the Dependabot count, Node pinned (D-13; G-13; F-4).**
+- [x] **1.1 CI: push to `main`, pnpm from `packageManager`, the Dependabot count, Node pinned (D-13; G-13; F-4).**
       TEST FIRST. Re-confirm the pnpm version that wrote the lockfile (10.33.0 at drafting) and verify
       `pnpm/action-setup@v4`'s behaviour against its current README (it reads `packageManager` when `version` is
       absent; both present and different is an error). `ci.yml` `on:` gains `push: branches: [main]`; the four
@@ -139,6 +139,11 @@ and date** (AGENTS.md, the M12 retro rule).
       milestone baseline). Golden EMPTY · manifest 654 / 770 B · `permissions: []` · audit EXIT 0 stated with date.
       **Human, after push (not the agent):** the CI run on `main` is visible in Actions — recorded at 8.1.
       [D-13; G-13]
+      ★ *Landed 2026-10-31 (`decisions.md`, "M13 TASK 1.1"):* as drafted, with three task-time calls — (a) `engines.node`
+      is **`>=22`**, not `>=22 <23` (pnpm only warns on a mismatch; local dev runs Node 24.11.1); (b) every `setup-node`
+      reads **`node-version-file: .nvmrc`**, so `.nvmrc` is CI's one Node pin, and the test pins it; (c) a second stale
+      count ("The four libraries") was dropped and is pinned too. `ciConfig.test.ts` 5 cases, red-first on all five;
+      all 278 shipped files md5-identical to HEAD, both engines. Unit 1422.
 
 - [ ] **1.2 README + SECURITY.md: withdraw what does not ship; start the claims ledger (D-12; G-1; G-8).** TEST
       FIRST. README rewritten to shipped features with one "Planned" section and no install link; the

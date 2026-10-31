@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-31 (M13 GATE 3 APPROVED — tasks.md, 40 tasks; next task 1.1). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,13 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 1.1 LANDED (2026-10-31) — CI on push to `main`; pnpm from `packageManager` (10.33.0); Node 22 from `.nvmrc`.**
+`ci.yml` now runs on `push: branches: [main]` + `pull_request`; the four `pnpm/action-setup` steps drop `version: 10`;
+every `setup-node` reads `.nvmrc` (`22`); `engines.node` `>=22` (advisory — local dev stays on 24); the Dependabot header's
+count is gone (two copies). New `tests/ciConfig.test.ts` (5, red-first). No shipped byte changed: 278 files md5-identical
+to HEAD, both engines. Record: `decisions.md`, "M13 TASK 1.1". **For the human: push now — the first CI run on `main`
+covers the whole M12 tree** (CI incl. the browser suite on both engines, plus Supply chain); 8.1 records it.
 
 **M13 GATE 3 APPROVED (2026-10-31).** The human approved `specs/013-first-release/tasks.md` — 40 tasks, nine groups — with
 Q1–Q6 on the recommendations (banked in `decisions.md`, "M13 GATE 3 APPROVED"; dated gate-3 notes in tasks.md). Key: the
@@ -64,16 +71,16 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**M13: task 1.1 (CI — push to `main`, pnpm from `packageManager`, the Dependabot count, Node pinned), in a fresh session,** per `specs/013-first-release/tasks.md` (read its gate-3 notes first). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger), in a fresh session,** per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
 the snapshot notice, the 130 px band) is the one `decisions.md` names. Per the new rule, the next kickoff's preflight runs
 `pnpm audit --prod` and states its exit and date.
-**Byte snapshot — the M12 close (2026-10-30), carry to the next kickoff:** `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against
+**Byte snapshot — M13 task 1.1 (2026-10-31): `.output`, content script, manifests and unit RE-MEASURED (unit 1417 → 1422, the rest identical to the M12 close); zip, app chunk, SBOM and browser CARRIED from the M12 close, carry to the next kickoff:** `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against
 ≤ 7 MiB (7,340,032 B) — headroom 1,509,173 / 1,509,057 B · zip 1,842,763 / 1,842,822 B · content script **344,195 B** both
 engines, md5 `b0ff62df…` (Cr) / `3413dae0…` (Fx) · app chunk 532,048 B · manifest 654 / 770 B, `permissions: []` ·
-`dependencies` 11 · SBOM 191 · lint 0 · unit 1417 · browser 1961 / 51 skipped (188 files, about 395 s alone) · golden empty ·
+`dependencies` 11 · SBOM 191 · lint 0 · unit 1422 · browser 1961 / 51 skipped (188 files, about 395 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0 (one ignore, GHSA-238p-pmpm-9mq7).
 
 ### Carried items

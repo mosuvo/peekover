@@ -3,7 +3,7 @@
 #
 # ── WHY MINOR+PATCH AUTO-PR AND MAJORS IGNORED ───────────────────────────────────────────
 #
-# Peekover has FOUR runtime dependencies and every addition is a governed act (the `diff`
+# Peekover has a small set of runtime dependencies, each a governed addition (the `diff`
 # package needed a plan gate). A major-version bump on any of them is the same weight of
 # decision as an addition — dompurify 3→4 could change the sanitizer's defaults, which is
 # AGENTS.md #3 territory, and markdown-it majors move parser output, which re-bakes every
@@ -31,7 +31,7 @@ updates:
       prefix-development: 'chore(deps-dev)'
       include: scope
     groups:
-      # The four libraries that reach a user's browser. Kept in their own PR so the golden
+      # The libraries that reach a user's browser. Kept in their own PR so the golden
       # and browser suites are read carefully rather than skimmed alongside tooling churn.
       runtime:
         dependency-type: production

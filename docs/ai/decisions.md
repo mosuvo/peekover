@@ -1,6 +1,35 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-31 · M13 TASK 1.1 — CI runs on push to `main`; pnpm comes from `packageManager`; Node 22 from one pin
+  (`.nvmrc`); the Dependabot count is gone. Implements D-13, G-13 (F-4). No shipped byte changed.**
+  - **Triggers.** `ci.yml` before: `pull_request` only. After: `push: branches: [main]` + `pull_request`. No double
+    run — push is `main`-only, so a PR branch fires `pull_request` alone and a merge fires `push` once. The whole job
+    runs on push, browser suite included (tasks.md asks for nothing lighter). `supply-chain.yml` already ran on push to
+    `main` (unchanged); `ai-hygiene.yml` stays PR-only and has no pnpm step (F-4).
+  - **pnpm: `"packageManager": "pnpm@10.33.0"`** — the local `pnpm --version` (10.33.0) that wrote the lockfile
+    (`lockfileVersion: '9.0'`); `pnpm install --frozen-lockfile` EXIT 0 with it set, lockfile untouched. All four
+    `pnpm/action-setup@v4` steps (`ci.yml` ×1, `supply-chain.yml` ×3) drop `with: version: 10`. The action's README
+    (checked 2026-10-31) says `version` is optional when `packageManager` is set — *"Omit `version` input to use the
+    version in the `packageManager` … field"*; it no longer documents the both-set-and-different error the plan cites,
+    which is moot now that `version` is gone. Its README examples are at `@v6`; the pin stays `@v4` (a major bump is
+    Dependabot's/a deliberate act, not this task's).
+  - **Node: one shared pin.** `.nvmrc` = `22`; every `actions/setup-node` step reads `node-version-file: .nvmrc`
+    instead of a literal `node-version: 22`, so CI and AMO's stated version have one source. `engines.node` is
+    **`>=22`, not the tasks.md draft's `>=22 <23`** ("range confirmed at the task"): probed 2026-10-31, pnpm without
+    engine-strict only WARNS on a root-engines mismatch (exit 0), so `<23` would print a warning on every local
+    install — local development (and all of M12) runs on Node 24.11.1, so declaring 24 unsupported would be false.
+    No `engine-strict`; the exact pin is CI's, and REPRODUCING.md (7.3) states it.
+  - **Dependabot.** "FOUR runtime dependencies" → "a small set of runtime dependencies, each a governed addition"
+    (plan wording); also "The four libraries that reach a user's browser" → "The libraries …" (a second copy of the
+    same stale count, not named in tasks.md, caught on read-through; the test pins both spellings).
+  - **Test: `tests/ciConfig.test.ts`** (5 cases, plain-text checks — no YAML parser is a direct dependency). Red at
+    HEAD on all five, each on its own clause; green after. Ablation: removing the push trigger reds only that case.
+  - **Next push:** CI (lint, unit, browser suite on both engines, build) and Supply chain run on `main` for the first
+    time over the whole M12 tree. The human records the run at 8.1.
+  - Why: D-13 — "every change is checked" is only true if `main` is checked; one version source per tool is the floor
+    for 7.3's reproducibility claim. Revisit-when: Node 22 nears end of life (G-13), or the action pin moves to v5+.
+
 - **2026-10-31 · M13 GATE 3 APPROVED — tasks 013 (`specs/013-first-release/tasks.md`) approved by the human, with the
   answers below to its Q1–Q6. 40 tasks, nine groups. Changes are dated gate-3 notes in tasks.md; the body is not
   rewritten.**
