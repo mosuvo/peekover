@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-10-31 (M13 tasks.md drafted, awaiting gate 3). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,15 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASKS DRAFTED (2026-10-31) — awaiting gate 3.** `specs/013-first-release/tasks.md`: nine groups, **40 tasks** —
+1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) · 9 (5). Human gates: 3.1 the toolbar mock · 2.5 the font
+ruling only if it arises · 8.1 the design walk (with the Firefox file:// check, onboarding on a real install, the dry run)
+· 9.2 the truth re-check · 9.3 the screenshot pick. The census (4.0) precedes any toolbar code. Findings F-1…F-9 (notably:
+`mount()` already has M12's `chrome` option, so D-5's is a separate `pills`; a third 130 px band on the diff; more dead site
+links than four; dropping the pills before D-8 would hide the capture disclosure, so the drop moves to 4.5 with D-8 and the
+band to 4.6). Six gate-3 questions Q1–Q6. Preflight: HEAD `afc8b1d`, no production byte since the plan's HEAD; `pnpm audit
+--prod` EXIT 0, 2026-10-31.
 
 **M13 GATE 2 APPROVED (2026-10-31).** The human answered G-1…G-15 — banked in `decisions.md`, "M13 GATE 2 APPROVED";
 changes are dated notes in the plan's §9. Key: Q15 resolved — peekover.dev is registered; the site is peekover.dev on GitHub
@@ -48,8 +57,7 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**M13: `tasks.md` (gate 3), in a fresh session** — from `plan.md` §6's groups as amended by §9's gate-2 notes (read §9
-first). The first human gate after that is group 3's static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**M13: gate 3 — the human reviews `specs/013-first-release/tasks.md` and answers Q1–Q6.** On approval, task 1.1 in a fresh session. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
