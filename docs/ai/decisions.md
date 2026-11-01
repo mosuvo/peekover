@@ -59,6 +59,60 @@
     Bytes: content script 344,266 → **344,278 B (+12)**, app chunk 532,135 → **532,147 B (+12)**, both engines;
     `.output` 5,831,041 / 5,831,157 B; zips 1,842,739 / 1,842,797 B; manifests 654 / 770 B; `permissions: []`.
     Verify: lint 0 · unit 1422 / 1423 twice (only the perf flake, 112.9 / 133.9 ms) · full browser suite alone, both engines: **1969 passed / 0 failed / 51 skipped (2020, 190 files, 357 s), EXIT 0.** Golden EMPTY · `pnpm audit --prod` EXIT 0.
+  - **ADDENDUM 2026-11-01, second (PR #14's CI: a 1.4 regression and the OSV upload; a third commit on the branch).**
+    **A · REGRESSION FROM 1.4 — storagePanelOverlay (both engines on CI).** CI: the navigator and reader rects were
+    top 132 / height 764 before the Stored data panel opened and top 93 / height 803 after. **Cause — not a panel-top
+    constant:** the open panel was already anchored to the header's actual bottom (`top:100%`). The header's HEIGHT
+    changed. Once 1.4 let it wrap, the CLOSED, empty `__storage-slot` stayed in the flex row as a zero-width item that
+    still took a `gap`. At 414px in DejaVu Sans that gap pushed Export to a third row (header bottom 132); opening the
+    panel takes the slot out of flow (`position:absolute`), Export fits on row two, and the header shrinks to 93, so
+    the page under it jumps 39px. Reproduced here at this branch's HEAD with DejaVu forced on the shell's `--sans`:
+    the same 132 → 93 on both engines, slot at x 323 on row two, Export at y 90 → 51. **Fix (CSS, app page):**
+    `.peekover-app__storage-slot:empty{display:none}` — the closed slot is out of the row, so opening the panel cannot
+    change the header's height. **Other overlays checked:** the storage panel, the export panel and the code-theme
+    picker are all `top:100%` of their own anchors; the unsaved-changes dialog is `inset:0`, centred; there is no
+    folder overlay yet (4.8). None assumes a header height. One soft assumption is left and reported, not changed:
+    the storage panel's `max-height:min(70vh,calc(100vh - 5rem))` treats the header as about 5rem; it only binds
+    below about a 266px-tall viewport. **Red-first, font-independent:** a new storagePanelOverlay case sweeps the
+    header's width from 280 to 1100px in 2px steps and requires the same header height with the panel closed and open
+    at every width. Red at HEAD in Inter on both engines (388px: 132 → 93, plus 9 more widths); green after; the rule
+    ablated → red. The original CI reds (DejaVu forced): red at HEAD, 12 / 12 after.
+    **FONT PARITY.** Here the cloud image ships `/etc/fonts/conf.d/56-prefer-inter.conf`, which makes `system-ui`,
+    `sans-serif`, "Segoe UI" and others resolve to Inter. Measured by width-matching against every installed face:
+    Chromium `system-ui` = Inter, `sans-serif` = Liberation Sans; Firefox both = Inter. With that one rule excluded
+    (a per-process `FONTCONFIG_FILE`, scratch only), both engines resolve `system-ui` to DejaVu Sans; Firefox
+    `sans-serif` = DejaVu Sans, Chromium `sans-serif` = Liberation Sans. CI's `ubuntu-latest` has no Inter; its
+    `system-ui` is DejaVu Sans by inference, not observation (no runner shell here): DejaVu reproduces both CI
+    geometries to the pixel (the pill 160.10 → `[360,…,520]`, the header 132 → 93). **Proposal (not applied):** the
+    cloud environment's setup script removes that rule so this host resolves fonts as CI does, e.g.
+    `rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f` (or `apt-get remove fonts-inter` if the rule ships
+    with it). Until then, a browser run can be pointed at a fontconfig without it via `FONTCONFIG_FILE`.
+    **B · OSV — the SARIF upload, not a finding.** The scan ran (779 packages, exit 1 = advisories present, absorbed by
+    `continue-on-error`); `github/codeql-action/upload-sarif@v3` failed "Resource not accessible by integration …
+    get-a-workflow-run". **It failed on main too:** Supply chain on `ea856df` failed on that step with the same error,
+    and every Supply chain run on main listed — `14f20d7` and the weekly runs back to 2026-10-12 — concluded failure.
+    **Docs** (docs.github.com is not allowed in this session; read via the GitHub docs pages surfaced by search and the
+    codeql-action README on raw.githubusercontent.com): upload-sarif needs `security-events: write`, plus `actions:
+    read` and `contents: read` on a private repository ("Uploading a SARIF file to GitHub"; the codeql-action README:
+    "Workflows in private repositories must additionally have the `contents: read` permission"). Code scanning on a
+    private repository needs GitHub Code Security, i.e. GitHub Team or Enterprise; a personal account on Free or Pro
+    has it on public repositories only ("Private repository enablement"; the codeql-action README: private repositories
+    "owned by an organisation with GitHub Advanced Security enabled"). The repository is private and personal, so
+    **the upload cannot work here on this plan, whatever the permissions.** **Fix (`supply-chain.yml`):** the upload
+    runs only when the repository is public (`if: ${{ always() && !github.event.repository.private }}` — the
+    attestation pattern, plan G-9) and moves to `upload-sarif@v4` (v3 is deprecated in December 2026); the SARIF is
+    always kept as a workflow artifact (`actions/upload-artifact@v4`, `osv-results-sarif`). The job keeps its least
+    privilege for the public case, `contents: read` + `security-events: write`; `actions: read` would be needed only
+    for an upload on a private repository with Code Security, which is noted in the workflow. **The scan stays
+    advisory** (`continue-on-error`) — the human's choice this session, against the instruction's "failing the job on
+    real findings": the scan exits 1 today on dev-tree advisories, and the recorded split keeps `pnpm audit --prod` as
+    the blocking gate. Pinned red-first in `tests/ciConfig.test.ts` (red at HEAD on the v3 pin; green after).
+    **Bytes:** content script unchanged (344,278 B, md5 `b27e0c8b…` / `16cd9bd7…`); app chunk 532,147 → **532,187 B
+    (+40 = `.${$}__storage-slot:empty{display:none}` + newline)**, both engines; `.output` 5,831,081 / 5,831,197 B; zips
+    1,842,676 / 1,842,734 B; manifests 654 / 770 B; `permissions: []`.
+    **Verify:** lint 0 · unit 1423 / 1424 twice (only the perf flake, 185.5 / 124.3 ms) · full browser suite alone:
+    1971 passed / 0 failed / 51 skipped (2022, 190 files, 374 s), EXIT 0 · the same suite with the CI font (fontconfig without the Inter rule): 1971 passed / 0 failed / 51 skipped (2022, 190 files, 369 s), EXIT 0 · golden EMPTY ·
+    `pnpm audit --prod` EXIT 0.
 
 - **2026-11-01 · M13 RULING — the Linux reds (HUMAN).** On the cloud environment check's findings: (1) diffChrome
   remote-load lane — PRODUCT: position the notice from the comparison pill's laid-out edge, not a fixed 176px; prefer CSS

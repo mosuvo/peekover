@@ -179,4 +179,36 @@ describe('the storage panel opens as an OVERLAY — the page under it does not m
     expect(box(slot).height).toBe(0);
     expect(box(folders)).toEqual(before);
   });
+
+  // ── M13 task 1.4, second addendum — the header's HEIGHT must not change when the panel opens ──
+  // 1.4 let the header wrap. On CI's font (DejaVu Sans) at 414px the CLOSED, empty slot still sat
+  // in the flex row as a zero-width item — and took a .6rem gap — which pushed Export to a third
+  // row (header bottom 132); opening the panel takes the slot out of flow, Export fits on row two
+  // (bottom 93), and the navigator and reader jumped up 39px (CI run on PR #14). Whether that gap is
+  // the one that tips a row depends on the font, so this case does not pick a font or a width: it
+  // sweeps the header's width and requires the SAME header height with the panel closed and open at
+  // every width. Somewhere in the sweep, with any font, the slack in a row is smaller than the gap.
+  it("the header's height is the same with the panel closed and open, at every header width", async () => {
+    const { container, header, toggle } = await mountGranted();
+    const widths: number[] = [];
+    for (let w = 280; w <= 1100; w += 2) widths.push(w);
+    const heights = (): number[] =>
+      widths.map((w) => {
+        header.style.width = `${w}px`;
+        return Math.round(header.getBoundingClientRect().height);
+      });
+
+    const closed = heights();
+    await openPanel(container, toggle);
+    const open = heights();
+    header.style.width = '';
+
+    // Non-vacuous: the sweep really crosses wrap boundaries (more than one header height seen).
+    expect(new Set(closed).size, 'the sweep never made the header wrap').toBeGreaterThan(1);
+    const moved = widths.filter((_, i) => closed[i] !== open[i]);
+    expect(
+      moved.map((w) => `${w}px: ${closed[widths.indexOf(w)]} -> ${open[widths.indexOf(w)]}`),
+      'header widths at which opening the panel changed the header height',
+    ).toEqual([]);
+  });
 });

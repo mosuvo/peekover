@@ -77,6 +77,36 @@ describe('CI config (013 task 1.1, D-13)', () => {
     expect(pkg.engines?.node).toBe('>=22');
   });
 
+  // ── M13 task 1.4, second addendum — the OSV job's SARIF upload (PR #14; every main run since
+  // at least 2026-10-12 failed here). The repository is PRIVATE and owned by a personal account;
+  // GitHub's docs: code scanning on a private repository needs GitHub Code Security, i.e. GitHub
+  // Team or Enterprise — Free and Pro get it on public repositories only. So the upload runs only
+  // when the repository is public (the attestation pattern, plan G-9), the scan keeps running and
+  // stays advisory (`continue-on-error` — the recorded blocking/advisory split; `pnpm audit --prod`
+  // blocks), and the SARIF is kept as a workflow artifact meanwhile. codeql-action moves to v4
+  // (v3 is deprecated in December 2026).
+  it('the OSV job: scan advisory, SARIF kept as an artifact, upload v4 and only on a public repo', () => {
+    const text = read('.github/workflows/supply-chain.yml');
+    const job = /^ {2}osv:\n((?: {4,}.*\n|\s*\n)*)/m.exec(text)?.[1] ?? '';
+    expect(job, 'supply-chain.yml has an osv job').not.toBe('');
+    const jobSteps = steps(job);
+    const scan = jobSteps.find((s) => s.includes('uses: google/osv-scanner-action/'));
+    const upload = jobSteps.find((s) => s.includes('uses: github/codeql-action/upload-sarif@'));
+    const artifact = jobSteps.find((s) => s.includes('uses: actions/upload-artifact@'));
+    expect(scan, 'the scan step').toBeDefined();
+    expect(scan!).toMatch(/^\s*continue-on-error: true\s*$/m);
+    expect(upload, 'the upload step').toBeDefined();
+    expect(upload!).toMatch(/uses: github\/codeql-action\/upload-sarif@v4\s*$/m);
+    expect(upload!).toMatch(/^\s*if: .*!github\.event\.repository\.private/m);
+    expect(artifact, 'the SARIF is kept as a workflow artifact').toBeDefined();
+    expect(artifact!).toMatch(/osv-results\.sarif/);
+    // Least privilege: the job grants what the upload needs on a public repository, nothing broader.
+    expect(job).toMatch(/^ {4}permissions:\n {6}contents: read\n {6}security-events: write\n/m);
+    // No workflow still uses CodeQL Action v3.
+    const v3 = workflows.filter(({ text: t }) => /uses: github\/codeql-action\/[\w-]+@v3\b/.test(t)).map((w) => w.file);
+    expect(v3, 'workflows still on codeql-action v3').toEqual([]);
+  });
+
   it('dependabot.yml states no runtime-dependency count', () => {
     const text = read('.github/dependabot.yml');
     const COUNT = '\\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|\\d+)\\s+';

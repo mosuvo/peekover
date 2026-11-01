@@ -452,6 +452,16 @@ const DARK_TOKENS = /* css */ `
  * of leaving the viewport; at a wide viewport the row fits and nothing moves. A deliberately MINIMAL
  * stop-gap: group 4's toolbar work (M13 tasks 4.x) replaces this header and supersedes the rule.
  * Asserted in tests/browser/appHeaderNarrow.browser.test.ts.
+ *
+ * THE EMPTY STORAGE SLOT TAKES NO PLACE IN THE ROW (1.4, second addendum). Once the header could wrap,
+ * the CLOSED `__storage-slot` — an empty, zero-width flex item — still took a `gap` in its row. At a
+ * width where that gap tipped the next control onto a new row, opening the panel (which takes the
+ * slot out of flow) removed the gap, the header lost a row, and the navigator and reader jumped up:
+ * on CI's font at 414px the header went 132 → 93px (PR #14's storagePanelOverlay red). `:empty`
+ * now sets `display:none`, so the slot is out of the row in both states and opening the panel
+ * cannot change the header's height. The open panel itself was already anchored to the header's
+ * actual bottom (`top:100%`), as are the export and code-theme popovers (against their own
+ * triggers). Asserted by the header-width sweep in tests/browser/storagePanelOverlay.browser.test.ts.
  */
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
@@ -524,6 +534,7 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS}__storage-toggle:hover{background:var(--accent-soft)}
 .${SHELL_CLASS}__storage-toggle[aria-expanded="true"]{background:var(--accent-soft)}
 /* "Stored data" panel: overlay dropped from the header, not a band in flow — see doc comment. */
+.${SHELL_CLASS}__storage-slot:empty{display:none}
 .${SHELL_CLASS}__storage-slot:not(:empty){
   position:absolute; top:100%; right:1rem; z-index:5;
   width:min(560px,calc(100vw - 2rem));

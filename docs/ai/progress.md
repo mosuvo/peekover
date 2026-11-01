@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,26 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 1.4 SECOND ADDENDUM (2026-11-01) — PR #14 failed CI twice over; both fixed on the branch.** Record:
+`decisions.md`, "M13 TASK 1.4", the second ADDENDUM.
+- **storagePanelOverlay (1.4 regression, both engines on CI).** Not a panel-top constant: the closed, EMPTY
+  `__storage-slot` stayed in the wrapping header's row and took a flex gap; on CI's DejaVu Sans at 414px that pushed
+  Export to a third row (header 132px), and opening the panel (slot out of flow) dropped it back to two (93px) — the page
+  jumped 39px. Reproduced here with DejaVu forced (same numbers, both engines). Fix: `__storage-slot:empty{display:none}`.
+  A header-width sweep (280–1100px) now requires the same header height closed and open: red at HEAD in Inter (388px:
+  132 → 93), green after, ablated → red. The other header overlays already anchor with `top:100%`; the storage panel's
+  `max-height … 100vh - 5rem` is a reported soft assumption (binds only below ~266px tall).
+- **Font parity.** This host's `/etc/fonts/conf.d/56-prefer-inter.conf` makes `system-ui` / `sans-serif` Inter (Chromium
+  `sans-serif` = Liberation Sans); without it both engines give DejaVu Sans for `system-ui`, as CI does (inferred: it
+  reproduces CI's geometry to the pixel). **Proposal for the human:** the environment's setup script removes that rule
+  (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`) so "green here" predicts "green in CI".
+- **OSV (Supply chain).** The scan ran; the SARIF upload could not: the repo is private and personal, and code scanning on
+  a private repository needs GitHub Code Security (Team/Enterprise). It has failed on main since at least 2026-10-12. The
+  upload now runs only on a public repository, on `upload-sarif@v4`; the SARIF is kept as an artifact; the scan stays
+  advisory (the human's choice); `ciConfig.test.ts` pins it (red-first).
+- **Verify:** lint 0 · unit 1423 / 1424 (perf flake only) · browser 1971 passed / 0 failed / 51 skipped (2022, 190 files, 374 s), EXIT 0 · CI-font run 1971 passed / 0 failed / 51 skipped (2022, 190 files, 369 s), EXIT 0 · app chunk
+  +40 B (532,187), content script unchanged, manifests unchanged, `permissions: []` · golden EMPTY · audit EXIT 0.
 
 **M13 TASK 1.4 ADDENDUM (2026-11-01) — the human's follow-ups A and B, a second commit on the same branch.** A — the
 diagramActions keyboard-reveal red is a TEST fix (ruled), not a flake: cause proven (the figure `:hover` at the test's start,
@@ -176,8 +196,9 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human opens the pull request** from `claude/loving-turing-bpgzi0` (the cloud check's records + task 1.4) and
-**merges it once CI is green** — that run is also the push check's `ci.yml` half. If CI goes red on the diagramActions
+**First, PR #14 re-runs CI on the second addendum's commit; the human merges it once CI and Supply chain are green**, and
+rules on the font-parity proposal (the environment setup step). The pull request from `claude/loving-turing-bpgzi0` (the
+cloud check's records + task 1.4) is open; merge it once CI is green — that run is also the push check's `ci.yml` half. If CI goes red on the diagramActions
 reveal test, that is a regression of the 1.4 addendum's fix, not a flake — report it. The only known flake is
 `pipeline.perf` (re-run on a red).
 **Then M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger)** — 1.2, 1.3 and 2.1
@@ -205,7 +226,11 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Superseded by the 1.4 ADDENDUM (2026-11-01) — carry THESE to the next kickoff:** `.output` 5,831,041 B (Cr) / 5,831,157 B
+**Superseded by the 1.4 SECOND ADDENDUM (2026-11-01) — carry THESE to the next kickoff:** `.output` 5,831,081 B (Cr) /
+5,831,197 B (Fx) — headroom 1,508,951 / 1,508,835 B · zip 1,842,676 / 1,842,734 B · content script **344,278 B** both engines
+(unchanged), md5 `b27e0c8b…` / `16cd9bd7…` · app chunk 532,187 B (+40) · manifest 654 / 770 B, `permissions: []` · lint 0 ·
+unit 1423 / 1424 (the perf flake) · browser 1971 passed / 0 failed / 51 skipped (2022, 190 files, 374 s), EXIT 0 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
+**The 1.4 ADDENDUM's figures (superseded above):** `.output` 5,831,041 B (Cr) / 5,831,157 B
 (Fx) — headroom 1,508,991 / 1,508,875 B · zip 1,842,739 / 1,842,797 B · content script **344,278 B** both engines (+12), md5
 `b27e0c8b…` (Cr) / `16cd9bd7…` (Fx) · app chunk 532,147 B (+12) · manifest 654 / 770 B, `permissions: []` · lint 0 · unit
 1422 / 1423 (the perf flake) · browser 1969 passed / 0 failed / 51 skipped of 2020 (190 files, 357 s alone) · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.

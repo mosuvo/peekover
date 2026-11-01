@@ -99,8 +99,9 @@ jobs:
       - uses: actions/checkout@v4
 
       # OSV reads pnpm-lock.yaml directly (no install needed) and covers the whole tree,
-      # including advisories that predate or postdate the npm registry's own feed. Results go
-      # to the Security tab as SARIF; the step does not fail the build for the same
+      # including advisories that predate or postdate the npm registry's own feed. Results are kept
+      # as a SARIF artifact, and go to the Security tab once the repository is public; the step
+      # does not fail the build for the same
       # dev-vs-prod reason documented in the header — `pnpm audit --prod` is the blocking gate.
       - name: Run OSV scanner
         uses: google/osv-scanner-action/osv-scanner-action@v2.2.4
@@ -111,9 +112,24 @@ jobs:
             --format=sarif
             --output=osv-results.sarif
 
-      - name: Upload OSV results
+      # The SARIF is always kept as a workflow artifact, so the findings are readable from the
+      # run whether or not the Security tab can take them.
+      - name: Keep OSV results as an artifact
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-results-sarif
+          path: osv-results.sarif
+          if-no-files-found: warn
+
+      # Code scanning (SARIF upload) on a PRIVATE repository needs GitHub Code Security (Team or
+      # Enterprise); a personal Free/Pro account has it on public repositories only. Upload while
+      # private failed every run ("Resource not accessible by integration"), so the upload runs only
+      # once the repository is public — the attestation pattern (plan G-9). If it is ever run on a
+      # private repository with Code Security, the job also needs `actions: read`.
+      - name: Upload OSV results
+        if: ${{ always() && !github.event.repository.private }}
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: osv-results.sarif
           category: osv-scanner

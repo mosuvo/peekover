@@ -174,7 +174,14 @@ and date** (AGENTS.md, the M12 retro rule).
       proven to start the hover reveal); red 2/6 → 0/6 on each engine; TEST fix, not a known flake. B — no minimum
       browser version is set, and anchor positioning needs Chrome/Edge 125+, Firefox 147+, so `left:176px` now precedes
       the anchored `left` in the same rule (an older engine keeps the old lane); source-order unit check. Bytes +12 B
-      on the content script and the app chunk. Files added: `tests/browser/diagramActions.browser.test.ts`,
+      on the content script and the app chunk. ★ *Second addendum 2026-11-01 (PR #14's CI):* the wrapping header
+      changed height when the Stored data panel opened (the closed, empty slot still took a flex gap; on CI's DejaVu
+      the header went 132 → 93px) — fixed with `__storage-slot:empty{display:none}`, pinned by a header-width sweep
+      (red at HEAD in Inter, green after); the OSV SARIF upload (failing on main since at least 2026-10-12) now runs
+      only on a public repository, on codeql-action v4, with the SARIF kept as an artifact; the scan stays advisory.
+      Font parity: this host prefers Inter via fontconfig; CI resolves DejaVu Sans — a setup-script change proposed.
+      App chunk +40 B; content script unchanged. Files added: `tests/browser/storagePanelOverlay.browser.test.ts`,
+      `.github/workflows/supply-chain.yml`, `tests/ciConfig.test.ts`. Earlier files added: `tests/browser/diagramActions.browser.test.ts`,
       `src/render/diffChrome.test.ts`.
 
 - [ ] **1.2 README + SECURITY.md: withdraw what does not ship; start the claims ledger (D-12; G-1; G-8).** TEST
