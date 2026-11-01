@@ -1,6 +1,39 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 CLOUD ENVIRONMENT CHECK — the first Linux cloud session, before any M13 task. Records only; no
+  production, test or config byte changed. Three browser reds reported with proposed fixes; nothing fixed — the human
+  rules.** Checkout `main` `ea856df`, tree clean. Ubuntu 24.04.5, Node v22.23.4 (`.nvmrc` 22), pnpm 10.33.0
+  (`packageManager`), Playwright 1.61.1 with Chrome for Testing 149.0.7827.55 and Firefox 151.0. The first browser
+  download was refused (`cdn.playwright.dev`, not allowlisted); the check stopped and was resumed after the human
+  allowed `cdn.playwright.dev` and `playwright.download.prss.microsoft.com`. Exits: frozen install 0 (lockfile
+  unchanged) · `pnpm audit --prod` 0 (2026-11-01) · lint 0 · unit 1 (1420 / 1422: the golden ~1 MB case at 6.1–6.5 s
+  against 5 s, output SHA-256 still matching the pin, and the parse+sanitize perf budget, 93–136 ms against 100 — the
+  host's speed; CI's unit step was green) · `sanitize.browser.test.ts` 0 on both engines · full browser suite 1 (3 failed /
+  1950 passed / 59 skipped, 351 s).
+  - **The kickoff's context was partly wrong, and the job log is the authority:** CI #18's 7 reds are copyAsHtml
+    (Chromium) · diffChrome remote-load lanes at 1280 and 1400 (Chromium AND Firefox, 4) · editorUnsaved inert (Chromium
+    AND Firefox, 2) — not all Firefox, and one is not layout.
+  - **diffChrome (4; green here).** Font metrics: in DejaVu Sans (CI's fallback) the "Close comparison" pill is 160.10 px,
+    so its right edge is 520.10 against the opt-in's 520.00 (CI's exact rects); in Inter (here) 145.23, a 14.77 px gap; on
+    Windows (Segoe) 136. A 0.10 px overlap, so the strict test is right. The 176 px lane offset was derived from one OS's
+    metrics. Proposed PRODUCT: place the opt-in off the pill's laid-out edge. Task 2.4 makes the face OS-independent on the
+    app page; the offset must still be re-derived from Bricolage.
+  - **editorUnsaved (2; reproduced).** The header does not wrap: at 414 px it is 454 (Cr) / 470 (Fx) px wide in Inter,
+    so the Export control's centre is off-screen and `elementFromPoint` returns `null`. A user on Linux at that width
+    sees Export clipped. Proposed PRODUCT: wrap or collapse the header at narrow widths. Task 2.4 fixes it only if
+    Bricolage is 40–56 px shorter there (unmeasured).
+  - **copyAsHtml (1; reproduced).** Harness-shared-state: the wait accepts any clipboard text containing `alpha.md`, and
+    `copyAsRichText`'s fixture (run just before it on Linux) contains it. Green alone and paired. Proposed TEST: wait on
+    `Body of alpha.md.`.
+  - **Skips 59 vs 51:** 8 build-gated tests (`mathActions` ×2, `tableCopy` ×1, `diagramActions` ×1, per engine) skip
+    with no `.output`; with it they ran (144 / 144).
+  - **Linux build:** the clean two-engine build and zips are identical to the Windows snapshot on every recorded figure
+    (`.output`, file count, zips, content-script md5 `b0ff62df…` / `3413dae0…`, app chunk, manifests). Recorded beside
+    the Windows baseline in `progress.md`; neither is chosen. Bears on 7.3: no OS difference was found.
+  Why recorded: CI on `main` is red, and the first cloud host differs from the Windows baseline in fonts and speed.
+  Revisit-when: the human rules on the three reds, or task 2.4 lands (re-measure both layout cases in Bricolage).
+
 - **2026-10-31 · HUMAN RULING — cloud sessions may push the agent's own branch; `main` stays the human's.** In the
   human's words: "From M13 onward, development may run in a cloud session. There the agent MAY push its OWN working
   branch (never main) so the human can review and merge it through a pull request (which runs ci.yml). Merging to main

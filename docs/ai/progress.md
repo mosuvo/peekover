@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,68 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 CLOUD ENVIRONMENT CHECK (2026-11-01) — records only, no production/test/config byte changed.** Record of decision:
+`decisions.md`, "M13 CLOUD ENVIRONMENT CHECK". Checkout: `main` at `ea856df` (the working branch fast-forwarded to it),
+`git status --porcelain` empty.
+- **Environment.** Ubuntu 24.04.5 LTS (kernel 6.18.44), 4 CPUs, 15 GiB. Node **v22.23.4** (`.nvmrc` 22). pnpm **10.33.0**
+  (`packageManager`). Playwright 1.61.1 → **Chrome for Testing 149.0.7827.55** (chromium 1228) and **Firefox 151.0**
+  (firefox 1532). The first install attempt was refused (403, host `cdn.playwright.dev` not allowlisted); the human added
+  `cdn.playwright.dev` and `playwright.download.prss.microsoft.com`, and the retry installed both (EXIT 0). `system-ui` /
+  `sans-serif` resolve to **Inter** here (fontconfig); Segoe UI on the Windows baseline; **DejaVu Sans** on CI's
+  `ubuntu-latest` (inferred: it reproduces CI's rects to 0.1 px — below).
+- **Commands.** `pnpm install --frozen-lockfile` EXIT 0, lockfile md5 unchanged · `pnpm audit --prod` EXIT 0, 2026-11-01
+  (1 low, ignored: GHSA-238p-pmpm-9mq7) · `pnpm lint` EXIT 0 · `pnpm test` **EXIT 1: 1420 / 1422** — two TIMING reds on this
+  host (CI #18's unit step was green): `pipeline.perf.test.ts` (parse+sanitize 135.9 ms in the full run, 93–99 ms alone,
+  budget 100) and `golden.test.ts`'s ~1 MB case (below) · `sanitize.browser.test.ts` both engines EXIT 0, 62 / 62 · full
+  browser suite alone EXIT 1: **3 failed | 1950 passed | 59 skipped (2012), 188 files, 351 s wall** (vitest 348.9 s;
+  Windows about 395 s; CI #18 299 s).
+- **Golden ~1 MB** (`tests/golden/golden.test.ts`, 5 s default timeout): times out on every run here — 6.19 / 6.24 / 6.51 s
+  beside the perf file, 6.11 / 6.53 s alone; with `--testTimeout=60000` it passes in 5.95 s and its SHA-256 matches the
+  pin (`8bc5094c…`). Output correct, host too slow for the budget.
+- **The reds — CI #18 had 7 (not all Firefox, not all layout): this run reproduces 3, each with a proposed fix for the
+  human's ruling (nothing fixed):**
+  1–4. `diffChrome` "clears the remote-load opt-in that shares the top band" at 1280 and 1400, **Chromium and Firefox**
+     (CI: 4 reds; here: GREEN). Cause: font metrics, not an edge-comparison bug. The pill's width = label text + 36 px
+     (30 padding, 16 × 0.25 letter-spacing, 2 border); the lane offset 176 = 136 (Segoe) + 16 + 24 gap. Measured
+     "Close comparison" at 600 12.5px: Inter 109.23 → pill 145.23, right edge 505.23 (gap 14.77, green); **DejaVu Sans
+     124.10 → pill 160.10, right edge 520.10 vs remote-load's 520.00** — CI's `[360,89,520,120] vs [520,93,777,122]`
+     exactly. `intersects()` is strict (`<`), and the overlap is real: 0.10 px — the pills butt, the 24 px gap is gone.
+     **Proposed: PRODUCT** — place the opt-in off the pill's laid-out edge (a shared row with a gap) instead of a
+     constant derived from one OS's metrics; the test stays as written (property: the two lanes never overlap, in both
+     label states). **Task 2.4:** removes the OS variance (the app page then renders the pill in bundled Bricolage on
+     every OS) but does not by itself guarantee the fit — the 176 must be re-derived from Bricolage's measured width.
+  5–6. `editorUnsaved` "the page behind is inert", **Chromium and Firefox** (CI: same 2; here: same 2, same message).
+     Cause: at the test's NARROW viewport (414 × 896) the app header does not wrap: its content is 454 px wide
+     (Chromium) / 470 px (Firefox) in Inter, so the Export control sits at x 390–454 / 391–454 and its centre (422) is
+     OFF-SCREEN — `elementFromPoint` returns `null` there, which the test reads as "not under the dialog". Brand 16–83,
+     tag 93–142, theme 152–222, code theme 232–297, Stored data 307–371, Export 390–454 (Chromium). The dialog itself is
+     inert-correct for every on-screen control. **Real for a user:** at 414 px with Inter or DejaVu as the system face,
+     the Export pill is clipped at the right edge (failure screenshot: "Ex…"); Segoe fits, so Windows was green.
+     **Proposed: PRODUCT** — the header wraps or collapses at narrow widths (group 4's header/toolbar work); the test
+     keeps its property, optionally probing the on-screen part of each control so the overflow is asserted on its own.
+     **Task 2.4:** replaces the shell's `system-ui` with Bricolage; it fixes this only if Bricolage's run is ≥ 40 / 56
+     px shorter at 414 — unmeasured, and the header still has no overflow rule, so not a fix by construction.
+  7. `copyAsHtml` "clicking Copy as HTML writes to the REAL clipboard", **Chromium only** (CI: same; here: same message —
+     received `alpha.md\nBody exported richly, with bold text, of alpha.md.`). Not layout: **harness-shared-state**
+     (AGENTS.md). The received text is `copyAsRichText.browser.test.ts`'s `PANEL_SOURCE` verbatim; that file runs just
+     before this one on Linux (log lines 3255–3263 vs 3299), and this test's wait predicate accepts any clipboard text
+     containing `alpha.md`, which that fixture also contains. Green alone (14 / 14, twice) and with copyAsRichText (30 /
+     30). **Proposed: TEST** — wait on this fixture's own `Body of alpha.md.` (the specific-content match the copy tests
+     already use); property kept: the real click writes THIS test's text to the real clipboard. Task 2.4: irrelevant.
+- **Skips, 59 vs 51 — explained.** All 8 extra skips are build-gated: `mathActions` (2 per engine), `tableCopy` (1 per
+  engine) and `diagramActions` (1 per engine) `skipIf` no `/.output/*/manifest.json` exists. CI builds after the browser
+  step, and this run had no `.output`; the Windows runs had one. After the build, those three files ran 144 / 144, none
+  skipped. The other 51 are the engine gates (`runIf(CHROMIUM)`, `skipIf(HAS_OBSERVER)`).
+- **Linux baseline (clean build: `rm -rf .output`; `pnpm build`; `pnpm exec wxt build -b firefox`; `pnpm zip`;
+  `pnpm exec wxt zip -b firefox` — all EXIT 0):** identical to the Windows snapshot on every recorded figure. `.output`
+  5,830,859 B (Cr) / 5,830,975 B (Fx), 139 files each · zip 1,842,763 / 1,842,822 B (md5 `6b13acae…` / `e95a349d…`;
+  sources zip 3,756,472 B) · content script 344,195 B, md5 **`b0ff62df…` (Cr) / `3413dae0…` (Fx) — the same as Windows** ·
+  app chunk `app-BlvZ9Mc8.js` 532,048 B · manifest 654 / 770 B. The engines differ only in `content-scripts/peekover.js`
+  and `manifest.json`. No Windows per-file list or full md5 is on record, so "every shipped file" is compared through the
+  totals, the file count and the md5 prefixes; for a future comparison the sorted per-file md5 list hashes to sha256
+  `8bbe58cf08b5bf4f…` (Cr) / `da88d71129ad86b8…` (Fx) (`cd .output/<engine> && find . -type f -print0 | sort -z | xargs
+  -0 md5sum | sha256sum`). Bearing on 7.3: no difference between the two OSes was found.
 
 **HANDING OFF TO A CLOUD SESSION (2026-10-31).** From M13 onward development may run in a cloud session, where the agent
 may push its OWN working branch (never `main`) for the human to review and merge by pull request; locally the agent still
@@ -80,12 +142,12 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the cloud environment check** (the first cloud session, before any task): the checkout is at or after this
-handoff's commit; Node 22 per `.nvmrc` and pnpm 10.33.0 per `packageManager`; `pnpm install --frozen-lockfile`,
-`pnpm lint`, `pnpm test`, `pnpm build` and `pnpm exec wxt build -b firefox` all pass; the browser suite's Playwright
-Chromium and Firefox launch (`pnpm test:browser`); `pnpm audit --prod` exit and date; the agent can push a non-`main`
-branch and the human can open a pull request from it that runs `ci.yml`. Any failure is reported, not routed around.
-The AGENTS.md "Windows/Git-Bash local environment" notes do not apply there.
+**First, the human's ruling on the browser reds** (the cloud environment check is done — Now, above): for each of the
+three classes — diffChrome lanes (PRODUCT proposed), the narrow-header overflow behind editorUnsaved (PRODUCT proposed),
+copyAsHtml's clipboard wait (TEST proposed) — accept, redirect or route; and whether the two unit timing reds on the
+cloud host (the golden ~1 MB timeout, the parse+sanitize budget) need a ruling. CI on `main` stays red until all three
+are dealt with (CI #18 failed on each). The push check is pending: this session pushed its own branch with the check's records
+commit; the human opening a pull request from it is the `ci.yml` half.
 **Then M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger)** — 1.2, 1.3 and 2.1
 have not landed; only 1.1 has (`02e9fae`). Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
@@ -98,6 +160,12 @@ the snapshot notice, the 130 px band) is the one `decisions.md` names. Per the n
 engines, md5 `b0ff62df…` (Cr) / `3413dae0…` (Fx) · app chunk 532,048 B · manifest 654 / 770 B, `permissions: []` ·
 `dependencies` 11 · SBOM 191 · lint 0 · unit 1422 · browser 1961 / 51 skipped (188 files, about 395 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0 (one ignore, GHSA-238p-pmpm-9mq7).
+**Linux baseline beside it — the cloud environment check (2026-11-01, Ubuntu 24.04, Node 22.23.4, pnpm 10.33.0; neither is
+chosen as the right one):** `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx), 139 files each · zip 1,842,763 / 1,842,822 B ·
+content script 344,195 B, md5 `b0ff62df…` / `3413dae0…` · app chunk 532,048 B · manifest 654 / 770 B — **identical to the
+Windows figures above**. Lint 0 · unit 1420 / 1422 (2 timing reds on this host) · browser 1950 passed / 3 failed / 59
+skipped of 2012 (188 files, 351 s alone; the 8 extra skips are build-gated — they run when `.output` exists) · golden
+empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
