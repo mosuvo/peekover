@@ -1,6 +1,73 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger starts (D-12; G-1;
+  G-8). No shipped byte changed.** Branch restarted from `main` at `c7b62b0` (PR #14's merge).
+  - **Withdrawn** (each kept as a "withdrawn" ledger row with its reason): the slogan and "beautiful, instant reading"
+    (no evidence for the adjectives); "Status: pre-release, building milestone 1" (false); "Site: https://peekover.dev"
+    as a live link; "never sold (an ownership change voids the listing …)" (no listing); "reproducible builds" as
+    current; "`pnpm dev` once milestone 1 lands"; the npm-typosquat note (no evidence on record); SECURITY's
+    `hello@peekover.dev` with its 48h target, the hall of fame, and "reproducible builds … verified in CI".
+  - **Kept, now evidenced:** free and open source (MIT); no permissions; no network by default; no telemetry; the
+    PERMISSIONS link. **Added:** a plain description; "What it does today" (14 lines); "Limits" (diagrams, math and
+    code highlighting on the app page only; the Chromium "Allow access to file URLs" setting; Save downloads in
+    Firefox; Firefox's watch limits; the Firefox file:// open not yet checked on a real install); ONE "Planned"
+    section (store listings, the reproducible-build check, the threat model and attestations, the privacy policy and
+    site at peekover.dev "neither online yet", and the unscheduled DOCX / ZIP / AI / publishing); build-from-source
+    steps run in this session (Node 22, pnpm 10.33.0, `pnpm install --frozen-lockfile`, `pnpm build`,
+    `pnpm exec wxt build -b firefox`, all EXIT 0). SECURITY.md: reporting via GitHub private vulnerability reporting
+    (opens when the repository is public), issues for the rest; seven true-today lines; four items "Planned for the
+    first public release". G-1 (gate-2 note 1) supersedes D-12's "remove the Site line": the URLs stay, marked "live at
+    release" in the ledger and "not online yet" in the text.
+  - **The ledger, `docs/store/claims.md`:** one Markdown table, columns `# · Surface · Sentence · Evidence ·
+    Status`; one row per sentence (the documents are written one sentence per line, and the test normalizes them the
+    same way). **72 rows: 47 true now · 4 live at release · 6 planned · 15 withdrawn** (README 42 live rows, SECURITY
+    15). Evidence is a backticked path (a test, a code file, a workflow, a record) or a named task.
+  - **The tests, `tests/truthPins.test.ts` (15 cases, unit):** the ledger exists, every status is one of the four,
+    every non-withdrawn row has evidence and every backticked evidence path exists (it caught `site/privacy/`, not yet
+    built); every sentence of README and SECURITY.md has a row for its surface; no `hello@peekover.dev`; no
+    install-shaped link, store URL or "available in the store"; every peekover.dev URL has a "live at release" row;
+    reproducibility, threat model, attestations, signed tags, audits and "verified in CI" only under a "Planned"
+    heading; no "190+ languages", KaTeX, MathJax, "30+ themes", "9 fonts", and DOCX / ZIP / AI / publishing only under
+    "Planned"; every README feature line has a "true now" row with evidence; exactly one README "Planned" section.
+    **Red at HEAD on 9 of 15**; green after. **Ablation:** "190+ languages" into README → 3 red (no ledger row, the
+    false-figure pin, the feature line); restored byte-identical (md5).
+  - **The fence rule:** `src/render/codeDetect.test.ts` scans every `.md` in the repository for UNLABELED fences and
+    pins the corpus at n=28, so README's one command block is labeled `bash` (skipped by the scan); the corpus test
+    stayed green.
+  - **Verify:** lint 0 · unit 1438 / 1439 twice (only `pipeline.perf`, 208.5 / 141.0 ms) · permissionsLedger,
+    manifest and codeDetect green · clean two-engine build identical to `main`'s on all 139 files per engine (content
+    script 344,278 B, `b27e0c8b…` / `16cd9bd7…`); no browser suite (zero shipped change) · NUL count 0 on every edited
+    file, both counters fired on a control · golden EMPTY · `pnpm audit --prod` EXIT 0, 2026-11-01 · PERMISSIONS.md
+    untouched.
+  - **Flagged:** (a) tasks.md's Verify says "md5 identical to 1.1"; 1.4 moved the bytes, so the reference is `main`.
+    (b) The kickoff's checks beyond the Verify line (planned-only mechanisms, false figures, evidence paths, one
+    Planned section) are in the same authorized test file. (c) Font parity is not in place: `fc-match system-ui` is
+    Inter here; the environment setup step has not run.
+  Revisit-when: 1.3 (the site joins the ledger), 7.2 (PRIVACY, THREAT-MODEL, SECURITY final), 9.2 (the re-check).
+  - **ADDENDUM 2026-11-01 (the human's 1.2 review; a second commit on the branch, before the PR).**
+    **Surface accuracy, verified from the code:** both surfaces (tabs and the app page) — rendering, DOMPurify, the TOC
+    (`src/render/mount.ts`), table sort / filter / copy (`src/render/mountReader.ts` and `src/app/readerPane.ts` both
+    call the table enhancer), themes, remote-image blocking. Watching — the app page, and tabs only for a file opened
+    from disk (`src/watch/contentWatch.ts` + `src/watch/watchRelay.ts`, which refuses non-file:// URLs; not raw hosts,
+    `src/watch/watchAvailability.ts` case c; not Firefox tabs). App page ONLY — snapshots (the tab watcher has docId
+    null and captures nothing, `src/watch/contentWatch.ts`), compare with a snapshot and with another file (only
+    `src/app/appShell.ts` registers the diff context), diagrams / math / code (the import fences), export / print /
+    copy (`src/app/exportControls.ts`, from the app shell), the editor (the Edit control, from `src/app/readerPane.ts` /
+    `src/app/appShell.ts`), folder browsing. README now says "On the app page, …" in each app-page-only bullet, and
+    Limits gains "In a tab, snapshots, comparison, … are not available" and "Watching does not work for raw files from
+    GitHub, GitLab or Bitbucket" (the old diagrams/math/code limit folds into the first).
+    **Wording:** the opening sentence is the human's ("turns raw markdown files into formatted, readable pages");
+    "Takes over" → "Renders"; ONE "Planned" section with two labelled parts, "For the first public release:" and
+    "Later, not yet scheduled:" (DOCX and ZIP export, AI features, publishing) — truthPins' one-Planned-section case
+    stays green. The Firefox "not yet checked on a real install" limit stays; its ledger row says "REMOVE OR UPDATE
+    AFTER 8.1". **Spelling:** "Licence" kept — the repository's other markdown uses licence / Licence 65 times against
+    license 8 (the file stays `LICENSE`, the name GitHub looks for).
+    **Ledger:** 75 rows — 47 true now · 4 live at release · 9 planned · 15 withdrawn (README 45 live rows, SECURITY 15);
+    each feature row names its surface. truthPins 15 / 15; the ablation ("190+ languages") → 3 red, restored
+    byte-identical. Lint 0; unit 1438 / 1439 (the perf flake only, 214.4 ms). No shipped file changed (README and the
+    ledger are not packaged).
+
 - **2026-11-01 · M13 TASK 1.4 — CI green on Linux (DISCOVERED; landed on `claude/loving-turing-bpgzi0`).** Implements the
   ruling below, red-first on both engines in the Linux cloud session.
   - **(1) diffChrome lane, PRODUCT.** `CONTAINED_CSS`: `.peekover-diff-affordance{…anchor-name:--peekover-diff}` and
