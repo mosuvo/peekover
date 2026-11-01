@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,15 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**HANDING OFF TO A CLOUD SESSION (2026-10-31).** From M13 onward development may run in a cloud session, where the agent
+may push its OWN working branch (never `main`) for the human to review and merge by pull request; locally the agent still
+never pushes (`decisions.md`, 2026-10-31 HUMAN RULING; AGENTS.md "Pushing"). Handoff sweep, docs only: the local memory's
+lessons not already recorded moved into AGENTS.md ("Verification traps"; Windows-only ones under "Windows/Git-Bash local
+environment"), and AGENTS.md's milestone line now says M13 is in flight. Local state at the sweep: tree clean, one local
+branch (`main`), no stashes, `main` 7 commits ahead of `origin/main` — **the human pushes them.** Where M13 stands: **only
+1.1 has landed (`02e9fae`); 1.2, 1.3 and 2.1 have NOT** (tasks.md unchecked, no commit). The handoff prompt named 2.2 as
+next, which presumes those three — flagged, and the human chose 1.2 (below).
 
 **M13 TASK 1.1 LANDED (2026-10-31) — CI on push to `main`; pnpm from `packageManager` (10.33.0); Node 22 from `.nvmrc`.**
 `ci.yml` now runs on `push: branches: [main]` + `pull_request`; the four `pnpm/action-setup` steps drop `version: 10`;
@@ -71,7 +80,14 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger), in a fresh session,** per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the cloud environment check** (the first cloud session, before any task): the checkout is at or after this
+handoff's commit; Node 22 per `.nvmrc` and pnpm 10.33.0 per `packageManager`; `pnpm install --frozen-lockfile`,
+`pnpm lint`, `pnpm test`, `pnpm build` and `pnpm exec wxt build -b firefox` all pass; the browser suite's Playwright
+Chromium and Firefox launch (`pnpm test:browser`); `pnpm audit --prod` exit and date; the agent can push a non-`main`
+branch and the human can open a pull request from it that runs `ci.yml`. Any failure is reported, not routed around.
+The AGENTS.md "Windows/Git-Bash local environment" notes do not apply there.
+**Then M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger)** — 1.2, 1.3 and 2.1
+have not landed; only 1.1 has (`02e9fae`). Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,

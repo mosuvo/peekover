@@ -44,6 +44,8 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - Tests colocated: `foo.ts` + `foo.test.ts`. Pipeline stages get golden-file tests in `tests/golden/`.
 - Before finalizing a dependency, API, or config choice, verify it against current official docs — training knowledge of fast-moving tools (WXT, DOMPurify, browser/store policy) is often stale.
 - Write control/NULL characters as \uXXXX escapes, never literal bytes — especially inside regex character classes.
+  Authoring text that mentions a NUL escape can still emit the real byte (the test stays green); after writing such
+  a file, count NULs two ways (`tr -d -c '\000' < F | wc -c` and python `count(b'\x00')`), each fired on a control.
 - A specialized or math font must be subset by its required-glyph-set — including OpenType MATH-table
   constructions (radicals, delimiter extenders, operator size-variants) — never by scanning rendered text for
   codepoints; text-scanning is blind to glyphs the browser draws from font tables rather than emitting as
@@ -57,6 +59,34 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - Full-suite Verify is mandatory whenever production code changes. Test-only tasks with an empty production
   diff may use targeted-suite Verify plus a spot-check that adjacent surfaces weren't inadvertently touched,
   instead of the full suite.
+
+## Verification traps (each one cost a milestone a wrong green)
+
+- A zero-network or remote-media guard runs in `tests/browser/` on Resource Timing — jsdom loads no subresources.
+  Neutralize remote media in an inert `<template>`/`DOMParser` document; a "detached" div of the live one fetches.
+- Firefox: an inert parse of `@import` (DOMPurify does one) consumes that URL's load, so a fetch control routed
+  through the sanitizer reads NO-FETCH. The live-route arm adopts markup no sanitizer has touched.
+- A grep over a built bundle proves nothing until it fires on a target that contains the thing — minified
+  identifiers match nowhere. Grep strings, classes or `data-` attributes, or ablate and diff the bytes.
+- `pnpm build` is Chromium-only; `.output/firefox-mv3` is whatever last built it. Build both engines
+  (`pnpm exec wxt build -b firefox`) and see a control move both before trusting a zero delta.
+- A perf red: measure the baseline in the same session, interleaved A-B-A, then ablate the suspect line.
+  A re-run of the same build only re-measures the machine.
+- Byte deltas from two additions that share a helper: ablating each alone leaves the helper in both arms. Use
+  S0..S3 plus one arm that re-measures an unknown another way, so the residual is a check, not an identity.
+- Tree-shaking: an unused export whose initializer spreads (`[...ARR]`) is retained; `/*#__PURE__*/ ARR.slice()`
+  drops. A dynamic import destructured out of `Promise.all` keeps the whole namespace; name exports in a `.then`.
+- CSS inside a template literal (`APP_CSS`, `READER_CSS`) is string content: its comments ship. Rationale goes in
+  the doc comment above the literal.
+- In a multi-assertion helper, the instrument that found the defect runs first — an earlier cheap check
+  swallows its red under ablation. Select by class alone (`.x`, not `button.x`) when the test asserts the tag.
+- Vitest reads its environment directive out of any comment, prose included — describe it, never spell the
+  token, and assert the environment itself where the test depends on it.
+- "Needs no permission": headless Chromium reads a browser consent (e.g. `clipboard-write`) as `prompt` where
+  real Chrome grants it. Ablate the consent (CDP `Browser.grantPermissions` with the `browserContextId`), not
+  the manifest, and pin the off arm.
+- Firefox: a CSS-owning CodeMirror extension (`HighlightStyle`, theme) built per host stops applying from the
+  second host on. Build it once per page.
 
 ## Workflow (the short version — full: WORKFLOW.md)
 
@@ -96,12 +126,20 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   distinguishable from a real regression, which persists or appears in another file. Worked references:
   `exportShortcut.browser.test.ts`'s `reactionsTo()` delta-spy (document listeners); the specific-content
   clipboard matches in the copy tests.
-- Current milestone: **none in flight — M12 (`specs/012-editor-mode/`) CLOSED 2026-10-30.** Editor Mode's focused
-  core shipped on both engines: a dedicated Edit control, CodeMirror 6 (lazy, app-page-only, behind the
-  one-importer fence) beside a live preview that is the reader's own `mount()` on a nested host, Save (writes on
-  Chromium, downloads elsewhere, refuses and tells on a conflict), the watch/edit collision supported-degraded, and
-  the unsaved-changes guard. `permissions: []`; content script 344,195 B with zero `codemirror` bytes; `.output`
-  5,830,859 / 5,830,975 B against the 7 MiB ceiling. **Next: not yet scheduled.** `docs/ai/progress.md` § Carried
-  items holds the consolidated post-M12 list (the reader-polish task with the left sidebar is the one
-  `decisions.md` names); the human schedules. Records: `decisions.md`'s "M12 CLOSED"; the retro is `retro.md`'s
-  "M12 retro". Spec, plan and tasks status lines stay sealed/"draft" per the M7–M12 precedent.
+- **Pushing.** Locally, an agent never pushes; the human pushes. In a cloud session (M13 onward) the agent MAY push
+  its OWN working branch — never `main` — so the human can review and merge it through a pull request (which runs
+  `ci.yml`). Merging to `main` is always the human's. Never force-push. (`decisions.md`, 2026-10-31 HUMAN RULING.)
+- Current milestone: **M13 (`specs/013-first-release/`) in flight — a truthful, on-design first release.** Gates 1–3
+  approved; 40 tasks in nine groups; task 1.1 landed (`02e9fae`, 2026-10-31). Where tasks stand and what is next:
+  `docs/ai/progress.md`. M12 (Editor Mode) CLOSED 2026-10-30 — `decisions.md`'s "M12 CLOSED", `retro.md`'s "M12
+  retro". Spec, plan and tasks status lines stay sealed/"draft" per the M7–M12 precedent.
+
+## Windows/Git-Bash local environment (does not apply to a Linux cloud session)
+
+- Stopping a background browser run (TaskStop) leaves the pnpm/vitest node and Playwright Firefox alive: list
+  `node.exe`/`firefox.exe` by command line (`Get-CimInstance Win32_Process` in a `.ps1` run with `-File`), then
+  `taskkill //F //T //PID <pnpm node>`. Better: wrap probe runs in `timeout 200 …`.
+- A refused loopback connection (`127.0.0.1:PORT` against a `localhost` dev server) takes ~2 s to fail here —
+  the "slow leak" the zero-network controls rely on. Re-measure it before relying on it elsewhere.
+- The Git Bash tool rejects a heredoc whose body has an unbalanced apostrophe, quoted delimiter or not.
+- Local dev runs Node 24; CI pins Node 22 (`.nvmrc`).

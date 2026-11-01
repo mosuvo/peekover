@@ -1,6 +1,18 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-10-31 · HUMAN RULING — cloud sessions may push the agent's own branch; `main` stays the human's.** In the
+  human's words: "From M13 onward, development may run in a cloud session. There the agent MAY push its OWN working
+  branch (never main) so the human can review and merge it through a pull request (which runs ci.yml). Merging to main
+  stays the human's. Locally, the never-push rule is unchanged." Why: a cloud session's commits exist only in that
+  session until pushed, and a pull request is where the human reviews and where `ci.yml` (push-to-`main` +
+  `pull_request` since M13 task 1.1) runs. The agent still never pushes `main`, never merges, never force-pushes.
+  AGENTS.md's Workflow section carries the rule (it had no push rule of its own before; the never-push wording lived
+  in each milestone's tasks.md header, e.g. `specs/013-first-release/tasks.md` line 9, and in M13 GATE 3's Q6).
+  Same commit: the local-memory sweep — the lessons not already in AGENTS.md or a decisions entry moved into
+  AGENTS.md's new "Verification traps" section; the Windows-only ones into its "Windows/Git-Bash local environment"
+  note. Revisit-when: the human changes where development runs, or a branch-protection rule replaces this.
+
 - **2026-10-31 · M13 TASK 1.1 — CI runs on push to `main`; pnpm comes from `packageManager`; Node 22 from one pin
   (`.nvmrc`); the Dependabot count is gone. Implements D-13, G-13 (F-4). No shipped byte changed.**
   - **Triggers.** `ci.yml` before: `pull_request` only. After: `push: branches: [main]` + `pull_request`. No double
