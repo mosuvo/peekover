@@ -1,6 +1,64 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 TASK 2.2 — one contrast helper, the census and its inventory; G-4 and G-5 applied; a pending list
+  awaiting the human (D-16; gate-2 G-4, G-5; gate-3 Q4, Q5). STOPS with one batched question (Q5) — 2.3 does not
+  start.** Branch restarted from `main` at `6f1833d` (PR #17's merge); font parity applied (`fc-match system-ui` →
+  DejaVu Sans).
+  - **The helper, `tests/browser/helpers/contrast.ts`:** WCAG 2.1 relative luminance and ratio; computed colours parsed
+    (`rgb()`, `rgba()`, `color(srgb …)`; anything else throws); a translucent background composited source-over in
+    sRGB onto every layer beneath it down to the first opaque ancestor, crossing shadow roots (canvas white if none);
+    a translucent foreground (its alpha × every ancestor's `opacity`) composited over that before the ratio. Thresholds
+    4.5 / 3 (large: 24px, or 18.66px bold) / 3 (non-text). **The two moves (assertions unchanged):**
+    `editorEyeballProxy.browser.test.ts` (its colour arithmetic and backdrop walk, 124 lines; its own self-test of the
+    arithmetic now exercises the shared helper) and `diagramTheme.browser.test.ts` (luminance and the ratio).
+    Equivalence: the eyeball proxy's 108 recorded rows, before and after, have identical ratios on both engines.
+  - **The census, `tests/browser/contrastCensus.browser.test.ts` (both engines, both themes):** the content-script
+    reader (a file:// fixture — watching active, the agent badge, a blocked image — and a raw-host fixture), the app
+    shell with its reader pane (code highlighted, math rendered), the editor, the three panels (Stored data, Export, the
+    code-theme picker) and the unsaved-changes dialog — 8 surfaces × 2 themes. Every visible element with its own text,
+    against its composited backdrop; 4.5:1, or 3:1 for large text. **Follows tasks.md 2.2 / D-16 (text nodes), not the
+    kickoff's wider scope — flagged:** non-text UI boundaries (1.4.11) and hover / focus states are not in the census
+    (the eyeball proxy keeps CodeMirror's non-text rows); SVG text (diagram labels — diagramTheme's) and pseudo-element
+    content are out. Exempt by name: disabled controls (WCAG 1.4.3's inactive-component exemption), the M12 accepted
+    list (E-4 gutter numbers, R12 the dark active-line mark, `invalid`; E-5 and E-9 are non-text) — unchanged and
+    separate — and G-5's decorative uses. Stabilised against two measurement artefacts found on the way: a theme change
+    is followed by a 400 ms settle (a colour transition read mid-way measured the previous theme), and the app page's
+    theme is set before it mounts (a re-highlight after a theme change could be read mid-swap).
+  - **The first run — the inventory — 54 failing rows (27 per engine, identical on both):** tab reader (file) light 3 /
+    dark 2, tab reader (raw host) 2 / 2, app page 5 / 5, editor 4 / 4; the three panels and the dialog 0. Seven causes:
+    the active watch pill's "Watching" in `--ok` (light, 3.17:1 on panel); markdown `h6` in `--faint` (2.60 / 3.70);
+    the blocked-image badge in `--faint` (2.44 / 3.46); the code toolbar's language label in `--faint` (2.60 / 3.70);
+    the "granted:" chip prefix in `--faint` (2.60 / 3.70); the default code theme's comment colour (`#6a737d` on
+    `#24292e`, 3.05:1, both page themes, app page and editor preview).
+  - **G-4 (before → after):** the active pill's text `--ok` → `--ink`, its hover text likewise; the border is now
+    `--ok` (the ruling's "green on the dot and border" — the border was `--line` before, so this ADDS a declaration,
+    where tasks.md's byte note expected −1 B per site; flagged). The dot stays `--ok`. Census row 3.17:1 → gone.
+  - **G-5 (`--faint` → `--muted` for information-bearing text):** markdown `h6`; `li::marker` (ordered-list numbers carry
+    order); the diff picker's snapshot size; the blocked-image badge; the code toolbar's language label; the reader
+    pane's state detail; the "granted:" chip prefix; the recents section titles and their kind label; the Stored data
+    group titles. Measured after: `h6`, the badge, the language label and the prefix pass (`--muted` 6.01:1 light on
+    paper, 7.44 dark). The other swaps did not render in the census fixtures (empty store, no recents, no error state,
+    no snapshots) — applied by the ruling, not census-proven. **Decorative, kept `--faint`, each with its reason:** the
+    tree's twisty glyph (state also in `aria-expanded` and the child list), the TOC button's ☰ glyph (an icon; the
+    button has an `aria-label`), code line numbers (they repeat each line's position — the same kind as M12's accepted
+    E-4; a judgment, flagged), the editor's scrollbar colour (not text).
+  - **Red → green and ablations (both engines):** before the edits the census failed on the G-4 and G-5 rows; after,
+    it is green. Reverting G-4's text colour → the census reds "Watching" #1f9d55 on #f4f4ef, 3.17:1; reverting the
+    `h6` swap → it reds "Heading six" #9a9dac on #fbfbf8, 2.6:1, on every surface. Each restored byte-identical.
+  - **THE PENDING LIST (Q4), awaiting the human's 2.2 ruling:** ONE cause, 8 rows — the default code theme's
+    (`github-dark`) comment colour `#6a737d` on `#24292e`, 3.05:1, on the app page and in the editor's preview, light
+    and dark (the code block keeps its own theme in both), both engines. It may only shrink; a row on it that passes, or
+    a failure off it, is a red.
+  - **Bytes:** content script 344,317 → **344,342 B (+25 = G-4: +24 on the active rule, +1 on hover; G-5's swaps are
+    length-neutral)**, md5 `12cdc950…` (Cr) / `bf0108c8…` (Fx); app chunk 532,505 → **532,530 B (+25, the same reader
+    CSS; the app sheets' swaps are length-neutral)**. `.output` 5,831,488 / 5,831,604 B; zips 1,842,879 / 1,842,938 B;
+    manifests 654 / 770 B; `permissions: []`. G-7 holds.
+  - **Verify:** lint 0 · unit 1451 / 1452 twice (only `pipeline.perf`) · the full browser suite alone, both engines,
+    under the CI font: 2003 passed / 0 failed / 51 skipped (2054, 194 files, 388 s), EXIT 0 · golden EMPTY · `pnpm audit --prod` EXIT 0, 2026-11-01.
+  Revisit-when: the human's ruling on the batched question (the pending list); groups 4–5 (the toolbar and surface
+  restyles re-run the census); 8.1 (Q4: the list is empty or each row accepted by name).
+
 - **2026-11-01 · M13 TASK 2.1 — `design/tokens.css` is the single source; every code copy is pinned to it (D-1;
   gate-1 Q2, Q4).** Branch restarted from `main` at `9a4828e` (PR #16's merge). Font parity applied this session (the
   human's 2026-11-01 ruling: `rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`; `fc-match system-ui` →

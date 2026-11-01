@@ -89,7 +89,7 @@ const PANE_CSS = /* css */ `
   color:var(--muted,#5D6070);
 }
 .${PANE_CLASS}__state-title{font-weight:600}
-.${PANE_CLASS}__state-detail{color:var(--faint,#9A9DAC); font-size:.85rem; max-width:40ch}
+.${PANE_CLASS}__state-detail{color:var(--muted,#5D6070); font-size:.85rem; max-width:40ch}
 .${PANE_CLASS}__host{display:block}
 `;
 

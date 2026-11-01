@@ -601,7 +601,7 @@ const APP_CSS = /* css */ `
   border:1px solid var(--line); border-radius:999px; background:var(--paper);
   font-size:.82rem; color:var(--muted);
 }
-.${SHELL_CLASS}__chip-prefix{color:var(--faint)}
+.${SHELL_CLASS}__chip-prefix{color:var(--muted)}
 .${SHELL_CLASS}__chip-name{color:var(--ink); font-weight:600; word-break:break-word}
 .${SHELL_CLASS}__chip-revoke{
   font:inherit; font-size:.78rem; color:var(--ink); background:transparent;

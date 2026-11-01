@@ -62,7 +62,7 @@ const RV_CSS = /* css */ `
 .${RV_CLASS}__section{display:flex; flex-direction:column; gap:.3rem; min-width:0}
 .${RV_CLASS}__title{
   font-size:.72rem; text-transform:uppercase; letter-spacing:.06em;
-  color:var(--faint,#9A9DAC); font-weight:650;
+  color:var(--muted,#5D6070); font-weight:650;
 }
 .${RV_CLASS}__list{display:flex; flex-direction:column; gap:1px; min-width:0}
 .${RV_CLASS}__row{display:flex; align-items:center; gap:.3rem; min-width:0}
@@ -75,7 +75,7 @@ const RV_CSS = /* css */ `
 .${RV_CLASS}__name{
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; gap:.35rem; align-items:baseline;
 }
-.${RV_CLASS}__kind{color:var(--faint,#9A9DAC); font-size:.75em; flex:0 0 auto}
+.${RV_CLASS}__kind{color:var(--muted,#5D6070); font-size:.75em; flex:0 0 auto}
 .${RV_CLASS}__hint{color:var(--muted,#5D6070); font-size:.72rem}
 .${RV_CLASS}__unpin{
   font:inherit; font-size:.75rem; flex:0 0 auto; color:var(--muted,#5D6070);

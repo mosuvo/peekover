@@ -287,6 +287,11 @@ toolbar.*
       helper on the same inputs (spot table). Bytes: `--faint`→`--muted` is length-neutral and `--ok`→`--ink` is −1 B
       per site, so the content-script delta is expected to be a few bytes — stated and decomposed. Full suite. Golden
       EMPTY · manifest 654 / 770 B · `permissions: []`. [D-16; G-4, G-5]
+      ★ *Landed 2026-11-01, LEFT OPEN (`decisions.md`, "M13 TASK 2.2"): the line's own STOP — one batched question for
+      every below-AA pair outside G-4 / G-5 — is with the human, so 2.2 is not ticked until the ruling.* The helper (two
+      moves, identical ratios), the census (8 surfaces × 2 themes × 2 engines; text nodes, per this line — the kickoff's
+      non-text and state scope flagged), the inventory (54 rows, 7 causes), G-4 and G-5 applied and ablated; the pending
+      list is one cause, 8 rows (the default code theme's comment colour, 3.05:1). Content script +25 B, app chunk +25 B.
 
 - [ ] **2.3 Font assets: source, subset, provenance, licences in the package, NOTICE (D-2's assets; G-6; F-5, F-8).**
       TEST FIRST. Verify against current sources before acting: the OFL status of Bricolage Grotesque and Sometype Mono

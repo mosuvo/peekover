@@ -114,7 +114,7 @@ export const READER_CSS = /* css */ `
 .peekover-reader h3{font-size:20px;margin:36px 0 10px}
 .peekover-reader h4{font-size:16px;margin:28px 0 8px}
 .peekover-reader h5{font-size:13px;margin:24px 0 8px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.peekover-reader h6{font-size:12px;margin:24px 0 8px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint)}
+.peekover-reader h6{font-size:12px;margin:24px 0 8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
 
 /* ---- prose ---- */
 .peekover-reader p{margin:0 0 16px}
@@ -142,7 +142,7 @@ export const READER_CSS = /* css */ `
 /* ---- lists ---- */
 .peekover-reader ul,.peekover-reader ol{margin:0 0 16px;padding-left:1.5em}
 .peekover-reader li{margin:6px 0}
-.peekover-reader li::marker{color:var(--faint)}
+.peekover-reader li::marker{color:var(--muted)}
 .peekover-reader li > ul,.peekover-reader li > ol{margin:6px 0 0}
 
 /* task lists (markdown-it-task-lists): rendered checkboxes, disabled */
@@ -316,8 +316,8 @@ export const READER_CSS = /* css */ `
 .peekover-watch:hover{color:var(--ink);border-color:var(--faint)}
 /* ACTIVE: the mockup's green. Driven off the HOST attribute, so it survives replaceChildren —
    which matters precisely because watching is what causes the re-render. */
-:host([data-watch="active"]) .peekover-watch{color:var(--ok)}
-:host([data-watch="active"]) .peekover-watch:hover{color:var(--ok);background:var(--ok-soft)}
+:host([data-watch="active"]) .peekover-watch{color:var(--ink);border-color:var(--ok)}
+:host([data-watch="active"]) .peekover-watch:hover{color:var(--ink);background:var(--ok-soft)}
 
 .peekover-watch__dot{
   flex:none;width:7px;height:7px;border-radius:50%;
@@ -437,7 +437,7 @@ export const READER_CSS = /* css */ `
 }
 .peekover-diff-picker__item:hover{color:var(--ink);background:var(--paper)}
 .peekover-diff-picker__when{font-weight:600}
-.peekover-diff-picker__size{color:var(--faint);font-variant-numeric:tabular-nums}
+.peekover-diff-picker__size{color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* The fallback / empty-state line (plan §1.5, §7-8) — shown BESIDE the untouched reader when a
    comparison cannot be made: the document stays exactly on screen, data-diff is never set, never
@@ -480,7 +480,7 @@ export const READER_CSS = /* css */ `
 }
 .peekover-remote__badge{
   flex:none;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--faint);
+  color:var(--muted);
 }
 .peekover-remote__alt{font-style:italic;overflow-wrap:anywhere}
 
@@ -668,7 +668,7 @@ export const READER_CSS = /* css */ `
   font-family:var(--sans);font-size:12px;color:var(--muted);
 }
 .peekover-reader .peekover-code-toolbar__lang{
-  margin-right:auto;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+  margin-right:auto;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
 }
 .peekover-reader .peekover-code-toolbar button{
   font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--panel);
