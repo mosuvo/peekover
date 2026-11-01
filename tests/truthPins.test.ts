@@ -179,3 +179,154 @@ describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
     expect(planned).toHaveLength(1);
   });
 });
+
+// ── 013 task 1.3 — the site (site/index.html) joins: the same rules, over HTML ─────────────────
+// The site's VISIBLE text is extracted without a parser dependency: tags are tokenized, the
+// content of <script>, <style>, <svg> and <head> is skipped (the hero's demo document, `class="demo"`,
+// is sample content, not a claim, and is skipped too), every tag boundary is a word break, and a
+// block element (headings, paragraphs, list items, divs, buttons …) ends a text block. A link to an
+// http(s) URL is written "text (url)", as in the markdown surfaces. The feature explorer's items
+// live in the page script (`const F = {…}`) and are rendered at load, so they are visible text too:
+// their category names and item strings are extracted from that literal. The ONE planned section is
+// the element with id="planned"; text inside it is planned.
+
+const SITE = 'site/index.html';
+const site = read(SITE);
+
+type Block = { text: string; planned: boolean; section: string; label: boolean };
+
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', mdash: '—', ndash: '–', hellip: '…' };
+const decode = (t: string): string =>
+  t.replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e: string) =>
+    e[0] === '#' ? String.fromCodePoint(parseInt(e.slice(1).replace(/^x/i, ''), /^#x/i.test(e) ? 16 : 10)) : ENTITIES[e.toLowerCase()] ?? m,
+  );
+
+const SKIP = new Set(['script', 'style', 'svg', 'head', 'title']);
+const BLOCK = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'ul', 'ol', 'div', 'section', 'header', 'footer', 'nav', 'table', 'tr', 'td', 'th', 'button', 'main', 'aside']);
+const VOID = new Set(['br', 'img', 'input', 'meta', 'link', 'hr', 'source', 'wbr']);
+
+function siteBlocks(html: string): Block[] {
+  const blocks: Block[] = [];
+  const stack: Array<{ tag: string; skip: boolean; planned: boolean; section: string; label: boolean; href?: string }> = [];
+  let buf = '';
+  const top = () => stack[stack.length - 1];
+  const flush = () => {
+    const t = decode(buf).replace(/\s+/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
+    if (t) blocks.push({ text: t, planned: top()?.planned ?? false, section: top()?.section ?? '', label: top()?.label ?? false });
+    buf = '';
+  };
+  const body = html.replace(/<!--[\s\S]*?-->/g, '').replace(/<!DOCTYPE[^>]*>/i, '');
+  for (const m of body.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)([^>]*)>|([^<]+)/g)) {
+    const [, close, rawTag, attrs, text] = m;
+    if (text !== undefined) {
+      if (!top()?.skip) buf += text;
+      continue;
+    }
+    const tag = rawTag.toLowerCase();
+    if (close) {
+      const i = stack.map((s) => s.tag).lastIndexOf(tag);
+      if (i < 0) continue;
+      const el = stack[i];
+      if (!el.skip && el.href) buf += ` (${el.href}) `;
+      if (BLOCK.has(tag) && !el.skip) flush();
+      stack.length = i;
+      buf += ' ';
+      continue;
+    }
+    if (VOID.has(tag)) {
+      buf += ' ';
+      continue;
+    }
+    const parent = top();
+    const cls = /\bclass="([^"]*)"/.exec(attrs)?.[1] ?? '';
+    const id = /\bid="([^"]*)"/.exec(attrs)?.[1];
+    const href = /\bhref="(https?:[^"]*)"/.exec(attrs)?.[1];
+    // Icon-only elements (a card's glyph, the theme and menu buttons, the search box's glyph) carry no words.
+    const skip = (parent?.skip ?? false) || SKIP.has(tag) || /(^|\s)(demo|ic|mode|burger|exsearch)(\s|$)/.test(cls);
+    if (BLOCK.has(tag) && !parent?.skip) flush();
+    stack.push({
+      tag,
+      skip,
+      planned: (parent?.planned ?? false) || id === 'planned',
+      section: (tag === 'section' || tag === 'header' || tag === 'footer' || tag === 'nav') && id ? id : parent?.section ?? '',
+      // A label, not a claim: headings, the navigation (top and mobile) and the footer's link lists.
+      label: (parent?.label ?? false) || /^h[1-6]$/.test(tag) || tag === 'nav' || tag === 'footer' || /(^|\s)mnav(\s|$)/.test(cls),
+      href,
+    });
+    buf += ' ';
+  }
+  flush();
+  // The explorer's rendered items: the category names and item strings of the page script's `F`.
+  const F = /const F\s*=\s*\{([\s\S]*?)\n\};/.exec(html)?.[1] ?? '';
+  for (const m of F.matchAll(/"((?:[^"\\]|\\.)*)"\s*:|\["((?:[^"\\]|\\.)*)"/g)) {
+    // A category name is a label; an item is a claim.
+    blocks.push({ text: decode(m[1] ?? m[2]), planned: false, section: 'everything', label: m[1] !== undefined });
+  }
+  return blocks;
+}
+
+const siteSentences = (): Array<Block> =>
+  siteBlocks(site).flatMap((b) => b.text.split(/(?<=\.)\s+(?=[A-Z])/).map((s) => ({ ...b, text: s.trim() })));
+
+describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
+  it('has no dead link: no href="#", and every in-page anchor names an id that exists', () => {
+    expect(site.match(/href="#"/g) ?? [], 'href="#" links').toEqual([]);
+    const ids = new Set([...site.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+    const missing = [...site.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]).filter((t) => !ids.has(t));
+    expect(missing, 'in-page anchors without a target').toEqual([]);
+  });
+
+  it('has no install-shaped link or button and no store claim while no listing exists', () => {
+    const text = siteBlocks(site).map((b) => b.text).join('\n');
+    expect(text, 'an "Add to …" / "Install" call to action').not.toMatch(/\badd to (chrome|edge|firefox)\b|\binstall (now|free)\b|\bone click from your browser/i);
+    expect(site, 'a store URL').not.toMatch(/chromewebstore\.google\.com|chrome\.google\.com\/webstore|addons\.mozilla\.org|microsoftedge\.microsoft\.com\/addons/i);
+    expect(text, 'an "available in the store" claim').not.toMatch(/available (in|on|from) (the )?(chrome web store|store|stores|firefox add-ons|amo|edge add-ons)/i);
+  });
+
+  it('every sentence of visible site text has a ledger row for the site', () => {
+    const rows = ledgerRows().filter((r) => r.surface === 'site' && r.status !== 'withdrawn');
+    const known = new Set(rows.map((r) => r.sentence));
+    const unledgered = [...new Set(siteSentences().map((s) => s.text))].filter((t) => !known.has(t));
+    expect(unledgered, 'site sentences with no ledger row').toEqual([]);
+  });
+
+  it('carries none of the known false figures, and unbuilt features appear only in the planned section', () => {
+    const outside = siteSentences().filter((s) => !s.planned).map((s) => s.text);
+    for (const [what, re] of [
+      ['"190+ languages"', /\b190\+?\s*languages\b/i],
+      ['KaTeX', /\bKaTeX\b/i],
+      ['MathJax', /\bMathJax\b/i],
+      ['"30+ themes"', /\b30\+?\s*themes\b/i],
+      ['"9 fonts"', /\b(9|nine)\s+(research-picked\s+)?(fonts|faces|typefaces)\b/i],
+      ['an unmeasured speed figure', /<\s*150\s*ms|\b150\s*ms\b/i],
+      ['the feature/first counts', /\b78 features\b|\b36 (industry )?firsts\b|\bFIRST\b|industry first/],
+    ] as const) {
+      expect(outside.filter((t) => re.test(t)), `the site claims ${what}`).toEqual([]);
+    }
+    const NOT_BUILT =
+      /\bDOCX\b|\bZIP\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|chat with the document|\bAI (rewrite|features?|assist|web-clip)|\bpublish(ing)?\b|side-by-side|presentation mode|read-aloud|text-to-speech|\bTTS\b|reproducible build|threat model|attestation|signed release|hall[- ]of[- ]fame|\bcoming (soon|to)\b|\bphase 2\b/i;
+    const bad = outside.filter((t) => NOT_BUILT.test(t));
+    expect(bad, 'unbuilt features presented outside the planned section').toEqual([]);
+    expect(site.match(/\bid="planned"/g) ?? [], 'exactly one planned section').toHaveLength(1);
+  });
+
+  it('states app-page-only features as such (the 1.2 surface table)', () => {
+    // Snapshots, comparison, diagrams, math, code highlighting, export / print / copy of the document,
+    // the editor and folder browsing work on the app page only (decisions.md "M13 TASK 1.2", addendum).
+    // A sentence naming one must say "app page", or sit in the #editor section, whose label says it.
+    // Labels (headings, navigation, category names) are exempt: they name a card, not a surface.
+    const APP_ONLY = /\bsnapshot|\bcompar(e|ison)\b|\bdiagram|\bmermaid\b|\bmath\b|\btemml\b|\bhighlight|\bexport|print to PDF|\beditor\b|\bfolder\b/i;
+    const unstated = siteSentences()
+      .filter((s) => !s.planned && !s.label && s.section !== 'editor' && APP_ONLY.test(s.text) && !/app page/i.test(s.text))
+      .map((s) => `[${s.section || 'top'}] ${s.text}`);
+    expect(unstated, 'app-page-only features not stated as such').toEqual([]);
+  });
+
+  it('names no hello@peekover.dev address, and every peekover.dev / repo URL has a "live at release" row', () => {
+    expect(site).not.toMatch(/hello@peekover\.dev/i);
+    const urls = [...site.matchAll(/https?:\/\/(?:[\w-]+\.)*(?:peekover\.dev|github\.com\/mosuvo\/peekover)[^\s"'<)]*/gi)].map((m) => m[0]);
+    const rows = ledgerRows().filter((r) => r.surface === 'site' && r.status === 'live at release');
+    const unmarked = [...new Set(urls)].filter((u) => !rows.some((r) => r.sentence.includes(u)));
+    expect(unmarked, 'site URLs without a "live at release" row').toEqual([]);
+  });
+});

@@ -1,6 +1,61 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 TASK 1.3 — the site says only what ships; dead links resolved; the site joins the claims ledger
+  (D-12; G-1; F-3). No shipped byte changed.** Branch restarted from `main` at `5f83ba7` (PR #15's merge).
+  - **Edited (text, links and the explorer's data only; layout, classes and styles kept — restyling and self-hosted
+    fonts are 9.1's):** the hero (the README's description; no install button); the agent-output cards (watch, what
+    changed, compare two files, the agent-file badge — each with its surface); the reading cards (the syntax that
+    ships; math, diagrams, code and folders "on the app page"; TOC, tables, themes / raw view / Literata, never a
+    blank page, sources); the editor section labelled "ON THE APP PAGE" (editor, Save, snapshots, export); the
+    security list and receipt (no servers, no network by default, no permissions, open source with the CI checks that
+    exist; "$0" without "forever"); the explorer (34 shipped items in 9 categories; the "Firsts" tab and star marks
+    removed); principles; setup (build from source, the file-URL switch, open a file or the app page); the footer.
+  - **The ONE planned section:** the old AI section became `id="planned"`: "For the first public release:" (store
+    listings, the two-builds check, the threat model, attestations, the privacy policy and this website at
+    peekover.dev, "neither online yet") and "Later, not yet scheduled:" (AI, DOCX and ZIP export, publishing,
+    presentation mode, read-aloud, other raw file types). The AI chat demo and its timers, and the "Phase 2" section,
+    were removed (Phase 2's file types folded into "Later").
+  - **Dead links (17 `href="#"`, F-3):** the four "Add to Chrome" calls to action (nav, hero, band, final) and the
+    final Edge and Firefox buttons → the plain non-link line "Not in stores yet — build from source" (a span; the
+    hero adds a "Build it from the repository" link to `…/peekover#build-from-source`); "★ GitHub" ×3 →
+    `https://github.com/mosuvo/peekover`; the footer's repo links → the repository, `…/blob/main/docs/trust/SECURITY.md`,
+    `…/blob/main/docs/trust/PERMISSIONS.md`, `…/releases`, `…/issues` (threat model, changelog and translate dropped
+    from the labels). Every repo URL is "live at release" in the ledger (the repository is private until release).
+    In-page anchors: #ai, #reading, #editor, #security, #planned (new), #everything, #top — each target exists.
+  - **Numbers checked:** kept with evidence — "6 languages" (`codeEngine.ts`), "under 7 MB" (`.output` 5,831,081 /
+    5,831,197 B), "two or more headings" (`tocView.ts`), the receipt's zeros, "$0", "© 2026"; the explorer's count is
+    computed from its own list. Removed — "<150 ms" (×2), "78 features · 36 firsts", "190+ languages", "14+ code
+    themes", "9 fonts", "30+ themes", "3 widths", "50 diagrams in <1s", "10 MB files", "8 languages → 27",
+    "Zoom 50–400%", "verified July 2026".
+  - **Withdrawn** (34 site rows, each with its reason): every "FIRST" badge; on-device / BYOK AI and the chat demo;
+    transcript rendering; Copy for AI; the "extended family" syntax; KaTeX / MathJax, Graphviz, Vega; project mode's
+    wiki-links, search and link checker; presentation mode, read-aloud, custom CSS, settings sync; the editing kit and
+    table editor; DOCX / ZIP / publishing; per-origin permissions; reproducible / signed builds, the threat model, the
+    hall of fame; the ownership pledge; the store install steps, guided setup and tour; Phase 2; the JSON-viewer story.
+  - **The ledger:** 289 rows — 214 true now · 14 live at release · 12 planned · 49 withdrawn. The site: 214 rows
+    (167 true now · 10 live at release · 3 planned · 34 withdrawn); README 57; SECURITY 18.
+  - **The tests (`tests/truthPins.test.ts`, +6 site cases, 21 in all):** the visible text is extracted without a
+    parser dependency (scripts, styles, SVG, the hero's demo document and icon-only elements skipped; links written
+    "text (url)"; the explorer's items read from the page script's `F` literal); labels (headings, navigation, footer,
+    category names) are exempt from the app-page rule only. Cases: no `href="#"` and every in-page anchor's id exists;
+    no install-shaped call to action, store URL or "available in" claim; every site sentence has a ledger row; no false
+    figure (190+ languages, KaTeX, MathJax, 30+ themes, 9 fonts, the 150 ms figure, the feature/first counts) and no
+    unbuilt feature outside `id="planned"`, which exists exactly once; app-page-only features say "app page" (or sit
+    in #editor); no hello@ address and every peekover.dev / repo URL has a "live at release" row. **Red at HEAD: 5 of
+    6** (the sixth — no hello@, no unmarked URL — held at HEAD, which had no URL). **Ablations:** "190+ languages" into
+    the explorer → 2 red; one `href="#"` back → 2 red; each restored byte-identical (md5).
+  - **Verify:** lint 0 · unit 1444 / 1445 twice (only `pipeline.perf`, 198.8 / 147.6 ms) · truthPins, codeDetect,
+    permissionsLedger, manifest green · the page opened from `file://` in Chrome for Testing 149 and Firefox 151: no
+    page or console error, the explorer renders 34 items and its search filters · clean two-engine build identical to
+    `main`'s on all 139 files per engine (`site/` is not packaged: its text is in no `.output` file) · NUL 0 on every
+    edited file · `pnpm audit --prod` EXIT 0, 2026-11-01. No HTML validator or link checker exists in the repository;
+    the truthPins anchor case is the link check.
+  - **Flagged:** (a) font parity still not in place (`fc-match system-ui` = Inter); no browser layout check was needed.
+    (b) The site's unused CSS (`.typing`, `.exitem.st`, `.aichatd`, `.p2`) stays — removing styles is 9.1's.
+    (c) tasks.md's Verify says "md5 identical to 1.2": `main` is 1.2, so the comparison is against `main`.
+  Revisit-when: 9.1 (self-hosted fonts, `site/privacy/`, the "live at release" sweep), 9.2 (the re-check).
+
 - **2026-11-01 · M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger starts (D-12; G-1;
   G-8). No shipped byte changed.** Branch restarted from `main` at `c7b62b0` (PR #14's merge).
   - **Withdrawn** (each kept as a "withdrawn" ledger row with its reason): the slogan and "beautiful, instant reading"
