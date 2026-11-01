@@ -443,6 +443,15 @@ const DARK_TOKENS = /* css */ `
  * correctly — an entirely different, already-shipped consumer this task must not silently break by
  * moving the block out from under it. See readerCss.ts's own comment on its copy for the reverse
  * pointer.
+ *
+ * THE HEADER WRAPS (M13 task 1.4; `decisions.md`, "M13 RULING — the Linux reds"). The header was
+ * one non-wrapping flex row, so its width was whatever the system face made it: at 414px it laid out
+ * 454px (Chromium) / 470px (Firefox) in Inter on Linux, and the Export control sat off the right edge
+ * — clipped for the user, and unreachable by pointer (CI #18's editorUnsaved red). Segoe UI happened
+ * to fit, so Windows never showed it. `flex-wrap:wrap` lets the controls drop to a second row instead
+ * of leaving the viewport; at a wide viewport the row fits and nothing moves. A deliberately MINIMAL
+ * stop-gap: group 4's toolbar work (M13 tasks 4.x) replaces this header and supersedes the rule.
+ * Asserted in tests/browser/appHeaderNarrow.browser.test.ts.
  */
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
@@ -464,7 +473,7 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS} :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 
 .${SHELL_CLASS}__header{
-  flex:0 0 auto; display:flex; align-items:center; gap:.6rem;
+  flex:0 0 auto; display:flex; flex-wrap:wrap; align-items:center; gap:.6rem;
   padding:.7rem 1rem; border-bottom:1px solid var(--line); background:var(--panel);
   position:relative; /* containing block for __storage-slot's overlay — see APP_CSS doc comment */
 }

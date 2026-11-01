@@ -1,6 +1,53 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 TASK 1.4 — CI green on Linux (DISCOVERED; landed on `claude/loving-turing-bpgzi0`).** Implements the
+  ruling below, red-first on both engines in the Linux cloud session.
+  - **(1) diffChrome lane, PRODUCT.** `CONTAINED_CSS`: `.peekover-diff-affordance{…anchor-name:--peekover-diff}` and
+    `.peekover-remote-load{left:calc(anchor(--peekover-diff right,-8px) + 24px)}` — CSS anchor positioning, no JS. It
+    needs the pill before the opt-in in tree order (`mount()` pushes diff chrome first) — probed on both engines first.
+    With no laid-out pill the fallback puts the opt-in at 16px, its READER_CSS slot. New test: the pill widened
+    font-independently (min-width 320px) must keep a 24px gap and not overlap; red at HEAD (gap 14.77), green after at
+    1280 and 1400, the rule ablated → red. CI's exact rects reproduced at HEAD with DejaVu Sans forced; green after.
+    **One test edit beyond "the test is unchanged", ruled by the human mid-task:** the existing lane test stored the
+    opt-in's rect in the "Compare" state and reused it after the label widened; the anchored opt-in moves (473 → 529), so
+    the rect went stale. It now re-reads the rect. Property unchanged.
+  - **(2) header, PRODUCT, minimal.** `flex-wrap:wrap` on `.peekover-app__header` (APP_CSS, app page only); rationale in
+    the doc comment above APP_CSS, naming group 4's toolbar as its successor. New
+    `tests/browser/appHeaderNarrow.browser.test.ts` (414 × 896 and a 1280 control): red at HEAD (Export [390,41,454,71]
+    past 414, both engines), green after; editorUnsaved's inert case green; ablated → both red.
+  - **(3) copyAsHtml, TEST.** The wait matches "Body of alpha.md.". CI's order pinned with a scratch sequencer: HEAD went
+    red 1 in 9 bare (a race), 2 of 3 with copyAsRichText's leftover seeded before the click; the fix: 3 of 3 green with the
+    seed. Removed from `progress.md`'s known-flakes list.
+  - **(4) golden ~1 MB, TEST.** `{ timeout: 30_000 }` on that case: 6.0–6.5 s measured on the 4-CPU cloud host, under 5 s
+    on Windows and CI; 30 s is about 4.6× the slowest run, so a hang still fails. Red at HEAD (6.47 / 6.01 s), green
+    after; the SHA-256 pin unchanged.
+  - **(5) perf budget** unchanged; timings recorded in `progress.md` (§ Carried items 4).
+  - **Bytes** (clean two-engine build against a same-session HEAD rebuild, which reproduced `b0ff62df` / `3413dae0`):
+    content script 344,195 → **344,266 B (+71 = `anchor-name` 29 + `left` 42)**, md5 `2ef5a824…` / `47017c73…`; app chunk
+    532,048 → **532,135 B (+87 = the same 71, since `readerCss.ts` is on both graphs, + `flex-wrap:wrap; ` 16)**. No other
+    file changed size or content beyond chunk-name hashes. `.output` 5,831,017 / 5,831,133 B; zips 1,842,849 / 1,842,907 B;
+    manifests 654 / 770 B; `permissions: []`. Far under G-7's +2 KB; the 26-site `:host` pin untouched.
+  - **Verify:** lint 0 · unit 1421 / 1422 (the perf flake, red on both runs in the full suite, green alone) · full browser
+    suite alone 1967 passed / 2 failed / 51 skipped (344 s). **Both reds are outside the known flakes:** diagramActions "is
+    REVEALED by keyboard focus" (Cr+Fx), the group's starting opacity 0.16 / 0.156. PRE-EXISTING: with HEAD's production
+    files restored, the same pinned Firefox order went red 2 of 5 (with 1.4, 1 of 4); 54 / 54 alone. The human chose to
+    commit and list it as a flake, UNRULED. Golden EMPTY · `pnpm audit --prod` EXIT 0, 2026-11-01.
+  - **Flagged:** the ruling named "AGENTS.md's known-flakes list" — there is none in AGENTS.md; the list is
+    `progress.md` § Carried items 4, updated there; AGENTS.md unchanged.
+  Revisit-when: group 4's toolbar replaces the header (drop the wrap rule with it); task 2.4 lands Bricolage (re-measure the
+  lane — it is now font-independent by construction); the human rules on the diagramActions flake.
+
+- **2026-11-01 · M13 RULING — the Linux reds (HUMAN).** On the cloud environment check's findings: (1) diffChrome
+  remote-load lane — PRODUCT: position the notice from the comparison pill's laid-out edge, not a fixed 176px; prefer CSS
+  (one lane, the 24px gap) over JS measurement; the test is unchanged. (2) editorUnsaved, header at 414px — PRODUCT,
+  minimal: the app header wraps (or otherwise keeps every control inside the viewport) at narrow widths; CSS only, app
+  page; group 4's toolbar supersedes it. (3) copyAsHtml — TEST: wait for this fixture's own "Body of alpha.md."; remove it
+  from the known flakes. (4) golden ~1 MB — TEST: a per-test timeout long enough for slower runners; the SHA-256
+  unchanged. (5) the pipeline.perf budget (100 ms) — UNCHANGED, a known flake, re-run on a red. All of it runs now as a
+  DISCOVERED task 1.4 "CI green on Linux", before 1.2, on this branch; count 40 → 41. Why: CI on `main` is red, and every
+  red was a Linux-only condition the Windows runs could not show. Revisit-when: group 4 (the header) and 2.4 (fonts).
+
 - **2026-11-01 · M13 CLOUD ENVIRONMENT CHECK — the first Linux cloud session, before any M13 task. Records only; no
   production, test or config byte changed. Three browser reds reported with proposed fixes; nothing fixed — the human
   rules.** Checkout `main` `ea856df`, tree clean. Ubuntu 24.04.5, Node v22.23.4 (`.nvmrc` 22), pnpm 10.33.0

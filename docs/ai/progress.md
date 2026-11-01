@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,31 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 1.4 LANDED (2026-11-01) — CI green on Linux (DISCOVERED; the human's rulings on the Linux reds; count 40 → 41).**
+Records: `decisions.md`, "M13 RULING — the Linux reds" and "M13 TASK 1.4"; tasks.md 1.4 (ticked). Red-first, both engines,
+on the Linux cloud host:
+- **diffChrome lane — PRODUCT.** `CONTAINED_CSS`: the pill is a CSS anchor and the remote-load opt-in sits
+  `anchor(--peekover-diff right) + 24px` after it (fallback 16px when no pill) — no fixed 176px, no JS. New test (pill
+  widened font-independently; asserts no overlap and the 24px gap): red at HEAD (gap 14.77), green after at 1280 and 1400,
+  ablated → red. CI's exact `[360,89,520,120] vs [520,…]` reproduced at HEAD by forcing DejaVu Sans; green after. The
+  existing lane test re-reads the opt-in's rect after the label change (the human's ruling — its stored rect went stale).
+- **App header at 414px — PRODUCT, minimal.** `flex-wrap:wrap` on `.peekover-app__header` (APP_CSS; group 4's toolbar
+  supersedes it). New `tests/browser/appHeaderNarrow.browser.test.ts`: red at HEAD (Export [390,41,454,71] past 414), green
+  after; editorUnsaved's inert case green; ablated → both red.
+- **copyAsHtml — TEST.** The wait matches "Body of alpha.md.". CI's order pinned (a scratch sequencer): HEAD red 1 in 9
+  bare, 2 of 3 with copyAsRichText's leftover seeded; fixed: 3 of 3 green. Removed from the known flakes.
+- **golden ~1 MB — TEST.** Per-test timeout 30 s: red at HEAD (6.47 / 6.01 s vs 5 s), green after (6.30 / 6.01 s), SHA-256
+  pin unchanged.
+- **perf budget — UNCHANGED** (known flake; this session's timings in § Carried items 4).
+- **Verify:** lint 0 · unit 1421 / 1422 twice (the perf flake, 151.9 / 112.0 ms; green alone) · full browser suite alone
+  1967 passed / **2 failed** / 51 skipped (2020, 190 files, 344 s) — both reds are diagramActions "is REVEALED by keyboard
+  focus" (Cr+Fx), PRE-EXISTING (red 2 of 5 at HEAD's production code in the same order), listed UNRULED by the human's
+  choice · clean two-engine build: content script **+71 B** (344,266; = `anchor-name` 29 + `left` 42), app chunk **+87 B**
+  (532,135; the same 71 + `flex-wrap` 16), nothing else moved, manifests 654 / 770 B, `permissions: []` · golden EMPTY ·
+  audit EXIT 0 (2026-11-01).
+- **Flagged:** the ruling asked to edit "AGENTS.md's known-flakes list" — AGENTS.md has none; the list is this file's
+  § Carried items 4, updated there. AGENTS.md is unchanged.
 
 **M13 CLOUD ENVIRONMENT CHECK (2026-11-01) — records only, no production/test/config byte changed.** Record of decision:
 `decisions.md`, "M13 CLOUD ENVIRONMENT CHECK". Checkout: `main` at `ea856df` (the working branch fast-forwarded to it),
@@ -142,12 +167,10 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human's ruling on the browser reds** (the cloud environment check is done — Now, above): for each of the
-three classes — diffChrome lanes (PRODUCT proposed), the narrow-header overflow behind editorUnsaved (PRODUCT proposed),
-copyAsHtml's clipboard wait (TEST proposed) — accept, redirect or route; and whether the two unit timing reds on the
-cloud host (the golden ~1 MB timeout, the parse+sanitize budget) need a ruling. CI on `main` stays red until all three
-are dealt with (CI #18 failed on each). The push check is pending: this session pushed its own branch with the check's records
-commit; the human opening a pull request from it is the `ci.yml` half.
+**First, the human opens the pull request** from `claude/loving-turing-bpgzi0` (the cloud check's records + task 1.4) and
+**merges it once CI is green** — that run is also the push check's `ci.yml` half. If CI goes red on the diagramActions
+reveal test (the UNRULED pre-existing flake — Now, above; § Carried items 4), a re-run is the known-flake route; the
+human's ruling on it is still open.
 **Then M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger)** — 1.2, 1.3 and 2.1
 have not landed; only 1.1 has (`02e9fae`). Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
@@ -166,6 +189,13 @@ content script 344,195 B, md5 `b0ff62df…` / `3413dae0…` · app chunk 532,048
 Windows figures above**. Lint 0 · unit 1420 / 1422 (2 timing reds on this host) · browser 1950 passed / 3 failed / 59
 skipped of 2012 (188 files, 351 s alone; the 8 extra skips are build-gated — they run when `.output` exists) · golden
 empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
+**Byte snapshot — M13 task 1.4 (2026-11-01, Linux cloud, clean two-engine build), carry to the next kickoff:** `.output`
+5,831,017 B (Cr) / 5,831,133 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,509,015 / 1,508,899 B · zip 1,842,849 /
+1,842,907 B · content script **344,266 B** both engines (+71), md5 `2ef5a824…` (Cr) / `47017c73…` (Fx) · app chunk 532,135 B
+(+87) · every other shipped file the same size and content as a same-session HEAD rebuild (chunk-name hashes aside) ·
+manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
+2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
+`pnpm audit --prod` EXIT=0, 2026-11-01.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
@@ -223,8 +253,18 @@ R29's CARRY).
   `isSentinel`, dragging the reader pane and the diagram modules into sixteen unrelated files. *Source:* 5.8, deviation 4.
   *Home:* the next session with a harness slot (the human's call).
 - **The suite's +~150 s** from `wireSettled` — settle once per file if CI time bites. *Source:* 6.1 kickoff. *Home:* post-M12.
-- **`copyAsHtml.browser.test.ts` and the shared OS clipboard** — a KNOWN FLAKE (one red in a full run of two; 14/14 alone).
-  *Source:* 5.8 / 6.1. *Home:* the same harness slot.
+- ~~**`copyAsHtml.browser.test.ts` and the shared OS clipboard** — a KNOWN FLAKE~~ — **RESOLVED by M13 task 1.4
+  (2026-11-01), removed from the known flakes:** the wait now matches the fixture's own "Body of alpha.md.", so
+  copyAsRichText's leftover can no longer end it early (`decisions.md`, "M13 TASK 1.4").
+- **`src/render/pipeline.perf.test.ts` (parse+sanitize budget 100 ms)** — a KNOWN FLAKE, budget UNCHANGED by ruling
+  (`decisions.md`, "M13 RULING — the Linux reds", 5): re-run on a red. Linux cloud host, 2026-11-01: in full unit runs
+  135.9 / 151.9 / 112.0 ms (red); alone 93.1–99.2 ms (green).
+- **`diagramActions.browser.test.ts` "is REVEALED by keyboard focus, not only by hover"** — listed as a flake, **UNRULED**
+  (the human chose to list it pending a ruling, 2026-11-01). The group's starting opacity reads 0.16 / 0.156, not `0`:
+  mid-transition before the test touches it, most likely the pointer left over the figure by an earlier file
+  (unverified). Pre-existing: with HEAD's production code, the pinned Firefox order tableScope → codeNetwork →
+  editorEyeballProxy → diagramActions went red 2 of 5; 54 / 54 alone. Seen in task 1.4's full run on both engines.
+  *Home:* the human's ruling.
 
 **5 · SUPPLY CHAIN**
 - **Pin pnpm via `packageManager`** — CI's `version: 10` floats; a future 10.x could change where `auditConfig` is read and

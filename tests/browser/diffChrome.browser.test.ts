@@ -550,13 +550,54 @@ describe('placement clears the existing chrome (measured, not chosen)', () => {
     pickerIn(host)!.querySelector<HTMLButtonElement>('[role="option"]')!.click();
     await waitFor(() => host.getAttribute('data-diff') === 'active');
     expect(pillIn(host)!.textContent).toBe('Close comparison');
+    // M13 task 1.4 (human ruling, 2026-11-01): the opt-in is now anchored to the pill's laid-out
+    // edge, so it MOVES when the label widens — its rect is re-read here, not reused from the
+    // "Compare" state. The property is unchanged: no overlap in either label state.
     expectNoOverlap(
       'diff affordance (exit)',
       pillIn(host)!.getBoundingClientRect(),
       'remote-load',
-      remoteRect,
+      remote!.getBoundingClientRect(),
     );
   });
+
+  // ── M13 TASK 1.4 — THE LANE FOLLOWS THE PILL'S LAID-OUT EDGE, ON ANY FONT ───────────────────
+  // CI's Linux runner (system face DejaVu Sans) laid "Close comparison" out 160.10px wide, so its
+  // right edge reached 520.10 against the opt-in's fixed left:176 (520.00 here): the case above went
+  // red on a font this machine does not use. A test that depends on the host's fonts cannot be
+  // red-first everywhere, so this one widens the pill ITSELF (min-width, a font-independent width
+  // well past 136 + 24) and asserts the property the ruling names: the opt-in sits a fixed 24px gap
+  // after the pill's right edge, wherever that edge is laid out. Red at the fixed offset (the pill
+  // runs under the opt-in); green once the opt-in is anchored to the pill (CONTAINED_CSS).
+  it.each(GEOMETRY_WIDTHS)(
+    "the opt-in's lane starts 24px after the pill's LAID-OUT edge, however wide the pill is, at %s",
+    async (_w, size) => {
+      await page.viewport(size.width, size.height);
+      const host = await mountAppPage(`${docV2()}\n\n![blocked](https://example.invalid/x.png)\n`);
+      await seedSnapshot();
+      await flush();
+      host.setAttribute('data-toc', 'open');
+
+      pillIn(host)!.click();
+      await waitFor(() => pickerIn(host)!.hidden === false);
+      pickerIn(host)!.querySelector<HTMLButtonElement>('[role="option"]')!.click();
+      await waitFor(() => host.getAttribute('data-diff') === 'active');
+      expect(pillIn(host)!.textContent).toBe('Close comparison');
+
+      for (const minWidth of ['', '320px']) {
+        pillIn(host)!.style.minWidth = minWidth;
+        const pill = pillIn(host)!.getBoundingClientRect();
+        const remote = shadowOf(host).querySelector<HTMLElement>('.peekover-remote-load');
+        expect(remote, 'remote-load opt-in absent — the blocked-media fixture stopped working').not.toBeNull();
+        const remoteRect = remote!.getBoundingClientRect();
+        // Non-vacuous: the widened arm really is wider than the old fixed lane allowed (152px).
+        if (minWidth) expect(pill.width).toBeGreaterThan(152);
+        expectNoOverlap(`diff affordance (exit, min-width ${minWidth || 'none'})`, pill, 'remote-load', remoteRect);
+        expect(remoteRect.left - pill.right, `gap after the pill (min-width ${minWidth || 'none'})`).toBeCloseTo(24, 1);
+      }
+      pillIn(host)!.style.minWidth = '';
+    },
+  );
 });
 
 // ── The flow, end to end, through the REAL engine and the REAL view ───────────────────────────

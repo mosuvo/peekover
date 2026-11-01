@@ -301,10 +301,14 @@ describe('the export panel — Copy as HTML row goes live at this task, the othe
     // this suite, and a bare non-empty check raced stale leftover content from an earlier file's
     // own clipboard write (measured — this exact assertion flaked intermittently under the full
     // suite until fixed).
+    // ★ M13 task 1.4: the wait matches "Body of alpha.md." — this fixture's own body line — not
+    // merely "alpha.md". copyAsRichText.browser.test.ts's fixture ALSO contains "alpha.md", and when
+    // it runs just before this file (as on CI's Linux order) the first read could return its
+    // leftover before this click's write landed, so the wait ended early on the wrong text.
     const plain = await until(async () => {
       try {
         const text = await readTextBounded();
-        return text.includes('alpha.md') ? text : null;
+        return text.includes('Body of alpha.md.') ? text : null;
       } catch {
         return null;
       }

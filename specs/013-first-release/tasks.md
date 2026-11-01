@@ -145,6 +145,31 @@ and date** (AGENTS.md, the M12 retro rule).
       count ("The four libraries") was dropped and is pinned too. `ciConfig.test.ts` 5 cases, red-first on all five;
       all 278 shipped files md5-identical to HEAD, both engines. Unit 1422.
 
+- [x] **1.4 CI green on Linux (DISCOVERED 2026-11-01 — the cloud environment check; run before 1.2).** ★ *Added by
+      the human's rulings on the Linux reds (`decisions.md`, "M13 RULING — the Linux reds"); count 40 → 41.* CI #18
+      (the first run on `main`, `ea856df`, GitHub's Linux runner) failed with 7 browser reds the Windows runs never
+      showed. (1) diffChrome remote-load lane — PRODUCT: the opt-in is positioned from the comparison pill's laid-out
+      edge, not a fixed 176px; CSS over JS. (2) editorUnsaved, header at 414px — PRODUCT, minimal: the app header
+      keeps every control inside the viewport (wraps); CSS only, app page; group 4's toolbar supersedes it. (3)
+      copyAsHtml — TEST: the wait matches this fixture's own "Body of alpha.md.". (4) golden ~1 MB — TEST: a per-test
+      timeout for slower runners; the pinned SHA-256 unchanged. (5) the pipeline.perf budget — UNCHANGED, a known
+      flake.
+      Files: `src/theme/readerCss.ts` · `src/app/appShell.ts` · `tests/browser/diffChrome.browser.test.ts` ·
+      `tests/browser/appHeaderNarrow.browser.test.ts` (new — the ruling's real-engine header check) ·
+      `tests/browser/copyAsHtml.browser.test.ts` · `tests/golden/golden.test.ts` · records (`decisions.md`,
+      `progress.md`, this file)
+      Verify: red-first, both engines, in the Linux cloud session: (1) red at HEAD font-independently (the pill
+      widened), green after at 1280 and 1400, ablate → red; (2) every header control inside the viewport at 414 × 896,
+      red at HEAD, green after, editorUnsaved's inert case green, ablate → red; (3) red in CI's order, green after;
+      (4) the timeout red before, green after. Lint 0 · unit green (perf: known flake) · the full browser suite alone,
+      zero reds outside the known flakes · clean two-engine build, bytes per moved file, manifests unchanged,
+      `permissions: []` · golden EMPTY · audit EXIT 0.
+      ★ *Landed 2026-11-01 (`decisions.md`, "M13 TASK 1.4"):* CSS anchor positioning (`anchor-name` on the pill,
+      `left:calc(anchor(--peekover-diff right,-8px) + 24px)` on the opt-in) and `flex-wrap:wrap` on the header. One
+      ruled test edit beyond the plan: the existing lane test re-reads the opt-in's rect after the label changes (the
+      human chose it when the anchored opt-in made its stored rect stale). Bytes: content script +71 B, app chunk
+      +87 B, both engines; nothing else moved.
+
 - [ ] **1.2 README + SECURITY.md: withdraw what does not ship; start the claims ledger (D-12; G-1; G-8).** TEST
       FIRST. README rewritten to shipped features with one "Planned" section and no install link; the
       "Site: https://peekover.dev" line kept only in a form that does not present the site as live (wording is the
@@ -731,6 +756,8 @@ dismissal → 4.5. Every clause has at least one task.
 
 **Sequencing (dependency order; serial — WORKFLOW §7.2):**
 1. **Group 1 first** (1.1 → 1.2 → 1.3): cheapest, stops the overclaiming now; 1.1's rebuild is the milestone baseline.
+   ★ *2026-11-01 (the Linux reds ruling): 1.1 → **1.4** → 1.2 → 1.3 — the discovered 1.4 (CI green on Linux) runs
+   before 1.2; its rebuild (+71 B content script, +87 B app chunk) is the new baseline.*
 2. **2.1 → 2.2 → 2.3 → 2.4 → 2.5 → 2.6.** The census (2.2) precedes every restyle (groups 4–5); fonts (2.3–2.4) precede
    the measurement (2.5); if 2.5's gate arises, nothing after it starts until the human rules.
 3. **3.1 needs 2.3's woff2 files and 2.6's mark; its written approval is banked before 4.0.** No group-4 task starts
@@ -749,7 +776,7 @@ dismissal → 4.5. Every clause has at least one task.
 9. **9.1 → 9.2 → 9.3 → 9.4 → 9.5.** Screenshots last, from the walked build (spec §3.9).
 
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
-9 (5). **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a
