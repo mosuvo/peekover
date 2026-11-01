@@ -184,7 +184,7 @@ and date** (AGENTS.md, the M12 retro rule).
       `.github/workflows/supply-chain.yml`, `tests/ciConfig.test.ts`. Earlier files added: `tests/browser/diagramActions.browser.test.ts`,
       `src/render/diffChrome.test.ts`.
 
-- [ ] **1.2 README + SECURITY.md: withdraw what does not ship; start the claims ledger (D-12; G-1; G-8).** TEST
+- [x] **1.2 README + SECURITY.md: withdraw what does not ship; start the claims ledger (D-12; G-1; G-8).** TEST
       FIRST. README rewritten to shipped features with one "Planned" section and no install link; the
       "Site: https://peekover.dev" line kept only in a form that does not present the site as live (wording is the
       task's, recorded in the ledger as "live at release"). `SECURITY.md` withdraws "reproducible builds … verified in
@@ -201,6 +201,12 @@ and date** (AGENTS.md, the M12 retro rule).
       SECURITY.md (the address). Each numeric claim removed or its evidence named in the ledger. Production bytes:
       none — content-script and `.output` md5 identical to 1.1. Golden EMPTY · manifest 654 / 770 B ·
       `permissions: []`. [D-12; G-1]
+      ★ *Landed 2026-11-01 (`decisions.md`, "M13 TASK 1.2"):* README and SECURITY.md rewritten; `claims.md` 72 rows
+      (47 true now · 4 live at release · 6 planned · 15 withdrawn); `truthPins.test.ts` 15 cases, red at HEAD on 9.
+      Beyond the Verify line, the kickoff added (and the test pins): unbuilt mechanisms only under "Planned", the known
+      false figures absent, every "true now" row's evidence path exists, exactly one README "Planned" section. The
+      peekover.dev URLs sit under README's "Planned", marked not online yet (G-1 supersedes D-12's removal). Build
+      identical to `main`'s, all 139 files per engine (the snapshot moved at 1.4, so the reference is `main`, not 1.1).
 
 - [ ] **1.3 Site content pass: shipped features + "Planned", every dead link resolved, numbers checked (D-12; F-3).**
       TEST FIRST. `site/index.html`: on-device AI, BYOK, 30+ themes, publishing, presentation mode, command palette,
