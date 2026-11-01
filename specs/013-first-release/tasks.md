@@ -267,7 +267,7 @@ toolbar.*
       `b27e0c8b` / `16cd9bd7`), app chunk +318 B. Unit pin red at HEAD 3 / 7, browser 6 / 10; every kind ablated. The one
       on-screen change: the dark shadow.
 
-- [ ] **2.2 One contrast helper, the census, the inventory; G-4 and G-5 applied (D-16; G-4, G-5).** TEST FIRST.
+- [x] **2.2 One contrast helper, the census, the inventory; G-4 and G-5 applied (D-16; G-4, G-5).** TEST FIRST.
       `tests/browser/helpers/contrast.ts` replaces the two private copies (both tests re-pointed, their assertions
       unchanged — cite them as the ablation precedent). `tests/browser/contrastCensus.browser.test.ts`: on the
       content-script reader (file:// fixture and one raw-host fixture), the app shell, reader pane, editor, the three
@@ -292,6 +292,10 @@ toolbar.*
       moves, identical ratios), the census (8 surfaces × 2 themes × 2 engines; text nodes, per this line — the kickoff's
       non-text and state scope flagged), the inventory (54 rows, 7 causes), G-4 and G-5 applied and ablated; the pending
       list is one cause, 8 rows (the default code theme's comment colour, 3.05:1). Content script +25 B, app chunk +25 B.
+      ★ *Closed 2026-11-01 (`decisions.md`, "M13 RULING — the Peekover code theme"):* the human ruled on the batched
+      question after a 20-theme measurement (only `light-plus` passes every emitted token; no dark theme does) and the
+      design check (code follows the page theme, `mockup.html:152,157`). The 8 pending rows stay on the census's list,
+      each marked "→ resolved by task 5.8 (Peekover code theme)"; Q4 holds. Non-text contrast (1.4.11) is carried to 8.1.
 
 - [ ] **2.3 Font assets: source, subset, provenance, licences in the package, NOTICE (D-2's assets; G-6; F-5, F-8).**
       TEST FIRST. Verify against current sources before acting: the OFL status of Bricolage Grotesque and Sometype Mono
@@ -385,6 +389,11 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
       the file in Chrome and Firefox, annotates, approves in writing. **The approval — with any changes — is banked in
       `decisions.md` before 4.0 starts;** a change that alters D-5's architecture is a plan redline, not a mock edit.
       No production bytes. [D-5; D-9, D-10 drawn; gate-1 Q8]
+      ★ *2026-11-01 (the 2.2 ruling, `decisions.md` "M13 RULING — the Peekover code theme"):* the mock also carries a
+      **sample code block** — the main token kinds of the six shipped languages (default text, keywords, comments,
+      strings, numbers and constants, types and attributes, functions and tags) — in **light and dark**, coloured by task
+      5.8's proposed mapping on `--code-bg`, so the human approves the Peekover code theme by eye at this gate, including
+      its three flagged new light values (strings `#197E44`, numbers `#B34F2E`, types `#966319`).
 
 ## 4 — Toolbar implementation (D-5 … D-10, D-17)
 
@@ -545,6 +554,32 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       Verify: (**Cr+Fx**) a display-math block carries no code toolbar (selected by class alone; red-first: restore the
       attachment → present); Copy LaTeX still copies (specific-content clipboard match); sweep pending rows deleted.
       Bytes: content script moves — stated. Full suite. Golden EMPTY · manifest · `permissions: []`. [Q14]
+- [ ] **5.8 The Peekover code theme — the default, built from design tokens, following the page theme (DISCOVERED
+      2026-11-01; the human's 2.2 ruling, `decisions.md` "M13 RULING — the Peekover code theme"; count 41 → 42).** TEST
+      FIRST. A light/dark code theme drawn from tokens, as `design/mockup.html` shows (`:152` `.codeblock pre` on
+      `--code-bg`; `:157` tokens coloured from page tokens), becomes the DEFAULT code theme in place of `github-dark`. The
+      20 shipped Shiki themes stay selectable and unchanged; a user's saved code-theme choice is untouched. **Proposed
+      mapping, approved by eye in 3.1's mock** (ratios on `--code-bg`, light `#F1F1EB` / dark `#1C2030`, measured
+      2026-11-01): default text `--ink` (15.74 / 13.61); keywords `--accent` at 500 (15.74 / 13.61); comments `--muted`
+      (5.49 / 6.54 — not the mockup's `--faint`, 2.38 / 3.26, per G-5's logic); functions and tags `--ink`; strings `--ok`
+      in dark (7.30) and a **NEW light value `#197E44`** (4.51; `--ok` is 3.08); numbers and constants `--del` in dark
+      (5.98) and a **NEW light value `#B34F2E`** (4.55; `--del` is 4.35); types and attributes `--warn` in dark (7.58)
+      and a **NEW light value `#966319`** (4.52; `--warn` is 3.21). The three new values are the nearest same-hue
+      colours that pass; each is flagged for the human (at 3.1), with the alternative of an existing token (`--ink` /
+      `--muted`) at the cost of hue. The mechanism (Shiki's CSS-variables theme, or a theme object built from the tokens)
+      is chosen at the task against Shiki's current docs; an approved new value lands in `design/tokens.css` and joins
+      2.1's pin.
+      Files: `src/render/codeEngine.ts` (the theme) · `src/settings/settings.ts` (the default) · `src/theme/readerCss.ts`
+      (code-token rules, if CSS-variable based) · `design/tokens.css` (only an approved new value) ·
+      `tests/designTokens.test.ts` (a new value joins the pin) · `tests/browser/contrastCensus.browser.test.ts` (pending
+      rows removed) · tests that pin `github-dark` as the default (re-spelled, each named, the property kept) · a test of
+      the saved choice
+      Verify: (**unit**) every token colour of the Peekover theme ≥ 4.5:1 on `--code-bg`, light and dark, with the
+      values parsed from `tokens.css` at test time; red-first: point comments at `--faint` → red at 2.38 (light) / 3.26
+      (dark). (**Cr+Fx**) the census's 8 pending rows go GREEN and its pending list is EMPTY (Q4); ablation: restore
+      `github-dark` as the default → the census reds on exactly those rows. A saved choice (e.g. `monokai`, in the real
+      IndexedDB) survives the default change and a re-mount. Bytes: content script and theme chunk deltas stated and
+      decomposed (tripwire applies). Full suite. Golden EMPTY · manifest · `permissions: []`. [D-16; the 2.2 ruling]
 - [ ] **5.4 Panels, unsaved dialog, lightbox, diff + picker.** TEST FIRST. `.panelbox` card (radius 14, one shadow),
       header row, list rows with hints; the dialog as `.overlay` scrim + card + ink primary; lightbox per
       `mockup.html:226`; diff and picker restyled, still inline (006 D-15).
@@ -805,6 +840,8 @@ dismissal → 4.5. Every clause has at least one task.
    without it.
 4. **4.0 (the census) before any toolbar code.** Then 4.1 → 4.2 → 4.3 → 4.4 → **4.5 (the pills drop, with D-8)** → 4.6
    (the band, only after the pills are gone) → 4.7 → 4.8.
+5. ★ *2026-11-01 (the 2.2 ruling): **5.8 runs right after 5.3** (5.3 → 5.8 → 5.4), once 3.1's approval has fixed its
+   token mapping.*
 5. **Group 5 after group 4** (the sweep and census rows shrink against the final toolbar); **5.6's first paint after
    2.4's stacks and the restyle.**
 6. **Group 6 after group 5** (built once in the finished language, spec §3.10-5); 6.1 before 6.2 (the page exists
@@ -817,7 +854,7 @@ dismissal → 4.5. Every clause has at least one task.
 9. **9.1 → 9.2 → 9.3 → 9.4 → 9.5.** Screenshots last, from the walked build (spec §3.9).
 
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
-9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

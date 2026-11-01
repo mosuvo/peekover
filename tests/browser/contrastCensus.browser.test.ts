@@ -127,25 +127,27 @@ export const G5_DECORATIVE_PSEUDO: Array<{ rule: string; reason: string }> = [
 ];
 
 /**
- * THE PENDING LIST (gate-3 Q4) — `engine · surface · theme · selector`. Every row is "awaiting the
- * human's 2.2 ruling". It may only shrink.
+ * THE PENDING LIST (gate-3 Q4) — `engine · surface · theme · selector`. The human ruled on 2.2's batched
+ * question (2026-11-01, decisions.md "M13 RULING — the Peekover code theme"): every row below is resolved by task
+ * 5.8, which makes a token-built code theme the default. It may only shrink; by 8.1 it is empty or each row is
+ * accepted by the human by name.
  */
 const PENDING: ReadonlySet<string> = new Set<string>([
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'chromium · app page · light · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'chromium · app page · dark · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'chromium · editor · light · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'chromium · editor · dark · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'firefox · app page · light · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'firefox · app page · dark · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'firefox · editor · light · .line > span',
-  // awaiting the human's 2.2 ruling — the default code theme's comment colour (#6a737d on #24292e, 3.05:1)
+  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
   'firefox · editor · dark · .line > span',
 ]);
 

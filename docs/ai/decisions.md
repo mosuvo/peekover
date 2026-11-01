@@ -1,6 +1,33 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 RULING — the Peekover code theme (HUMAN; 2.2's batched question).** (1) The DEFAULT code theme
+  becomes a Peekover code theme: a light/dark pair built from design tokens that follows the page theme, as
+  `design/mockup.html` shows. Every token colour reaches 4.5:1 on `--code-bg` in light AND dark; where a design token
+  fails as code text, the nearest passing value is proposed — an existing token first (comments → `--muted`, per G-5),
+  any new value flagged. (2) A DISCOVERED task in group 5 beside 5.3 — **5.8** (count 41 → 42); its mapping is shown in
+  3.1's static mock as a sample code block (the six shipped languages' main token kinds), light and dark, approved by
+  eye at that gate. (3) The 20 shipped Shiki themes stay selectable and unchanged; only the default changes; a saved
+  choice is untouched. (4) **2.2 closes now:** its 8 pending rows stay on the census's list, each marked "→ resolved by
+  task 5.8 (Peekover code theme)"; Q4 holds. (5) Carried to 8.1: non-text contrast (WCAG 1.4.11).
+  - **Why — the measurement (2026-11-01, Shiki 4.4.3, a six-language corpus, every emitted token colour against the
+    theme's own background, the shared helper, bar 4.5):** only `light-plus` passes (worst 4.59:1, light); no dark theme
+    passes. Worst emitted token per theme: dark-plus 4.22, slack-dark 4.03, andromeeda 4.00, monokai 3.93, aurora-x
+    3.69, github-light 3.49 (light), min-dark 3.43, laserwave 3.20, **github-dark 3.05 (today's default, comments)**, red
+    2.83, solarized-dark 2.79, plastic 2.66, vesper 2.65, slack-ochin 2.53 (light), horizon-bright 2.38 (light),
+    vitesse-black 2.16, horizon 1.98, min-light 1.76 (light), vitesse-light 1.73 (light). `github-dark-default` is not
+    shipped. So no shipped light/dark pair passes.
+  - **Why — the design:** code follows the page theme. `mockup.html:152` — `.codeblock pre{… background:var(--code-bg);
+    …}`; `--code-bg` is `#F1F1EB` in light (`:14`), `#1C2030` in dark (`:27`), `#EFE5CF` in sepia (`:262`); `:157` —
+    `.tok-k{color:var(--accent);font-weight:500}.tok-s{color:var(--ok)}.tok-c{color:var(--faint);font-style:italic}`.
+    brand.html has no code-block style (only "Sometype Mono — code, …").
+  - **The proposed mapping (5.8; ratios on `--code-bg`):** text `--ink` 15.74 / 13.61; keywords `--accent` 15.74 /
+    13.61; comments `--muted` 5.49 / 6.54 (`--faint` 2.38 / 3.26 fails); strings `--ok` dark 7.30, light **new
+    `#197E44`** 4.51 (`--ok` 3.08); numbers / constants `--del` dark 5.98, light **new `#B34F2E`** 4.55 (`--del` 4.35);
+    types / attributes `--warn` dark 7.58, light **new `#966319`** 4.52 (`--warn` 3.21). The three new light values are
+    flagged for the human at 3.1.
+  Revisit-when: 3.1 (the mapping approved by eye), 5.8 (lands; the pending list empties), 8.1 (Q4).
+
 - **2026-11-01 · M13 TASK 2.2 — one contrast helper, the census and its inventory; G-4 and G-5 applied; a pending list
   awaiting the human (D-16; gate-2 G-4, G-5; gate-3 Q4, Q5). STOPS with one batched question (Q5) — 2.3 does not
   start.** Branch restarted from `main` at `6f1833d` (PR #17's merge); font parity applied (`fc-match system-ui` →
@@ -58,6 +85,13 @@
     under the CI font: 2003 passed / 0 failed / 51 skipped (2054, 194 files, 388 s), EXIT 0 · golden EMPTY · `pnpm audit --prod` EXIT 0, 2026-11-01.
   Revisit-when: the human's ruling on the batched question (the pending list); groups 4–5 (the toolbar and surface
   restyles re-run the census); 8.1 (Q4: the list is empty or each row accepted by name).
+  - **ADDENDUM 2026-11-01 — the human ruled; 2.2 CLOSES.** The batched question went back with a 20-theme measurement
+    (only `light-plus` passes every emitted token; no dark theme does) and the design finding (code follows the page
+    theme, `mockup.html:152, 157`; `--code-bg` at `:14, 27, 262`). The ruling ("M13 RULING — the Peekover code theme",
+    above): a token-built default code theme, discovered task **5.8**, shown in 3.1's mock. The census's 8 pending rows
+    are kept, each now marked "→ resolved by task 5.8 (Peekover code theme)"; re-run after the marking: green, the
+    pending list naming exactly those 8 rows (22 / 22 passed, both engines; the 8 rows: chromium and firefox × app page and editor × light and dark, `.line > span`). No production change in this commit. 2.2 ticked.
+    Carried to 8.1: non-text contrast (WCAG 1.4.11 — control boundaries and focus indicators, both themes).
 
 - **2026-11-01 · M13 TASK 2.1 — `design/tokens.css` is the single source; every code copy is pinned to it (D-1;
   gate-1 Q2, Q4).** Branch restarted from `main` at `9a4828e` (PR #16's merge). Font parity applied this session (the
