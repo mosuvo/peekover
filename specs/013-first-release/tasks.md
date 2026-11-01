@@ -169,6 +169,13 @@ and date** (AGENTS.md, the M12 retro rule).
       ruled test edit beyond the plan: the existing lane test re-reads the opt-in's rect after the label changes (the
       human chose it when the anchored opt-in made its stored rect stale). Bytes: content script +71 B, app chunk
       +87 B, both engines; nothing else moved.
+      ★ *Addendum 2026-11-01 (the human's follow-ups A and B; `decisions.md`, "M13 TASK 1.4", ADDENDUM):* A —
+      diagramActions' keyboard-reveal test starts from a known pointer state (a resting pointer over the figure was
+      proven to start the hover reveal); red 2/6 → 0/6 on each engine; TEST fix, not a known flake. B — no minimum
+      browser version is set, and anchor positioning needs Chrome/Edge 125+, Firefox 147+, so `left:176px` now precedes
+      the anchored `left` in the same rule (an older engine keeps the old lane); source-order unit check. Bytes +12 B
+      on the content script and the app chunk. Files added: `tests/browser/diagramActions.browser.test.ts`,
+      `src/render/diffChrome.test.ts`.
 
 - [ ] **1.2 README + SECURITY.md: withdraw what does not ship; start the claims ledger (D-12; G-1; G-8).** TEST
       FIRST. README rewritten to shipped features with one "Planned" section and no install link; the

@@ -37,6 +37,28 @@
     `progress.md` § Carried items 4, updated there; AGENTS.md unchanged.
   Revisit-when: group 4's toolbar replaces the header (drop the wrap rule with it); task 2.4 lands Bricolage (re-measure the
   lane — it is now font-independent by construction); the human rules on the diagramActions flake.
+  - **ADDENDUM 2026-11-01 (the human's two follow-ups; same branch, a second commit).**
+    **A · diagramActions "is REVEALED by keyboard focus" — HUMAN RULING: TEST fix, not a known flake.** Cause PROVEN
+    (an instrumented run, the pinned Firefox order): on every red, at the test's start the figure matched `:hover`
+    (shadow chain reader > figure > `button.peekover-diagram-open`), `:focus-within` false, nothing focused, opacity
+    0.084 / 0.172 / 0.100 / 0.116 — a resting pointer over the figure (x 32–382, y 312–806) had started the hover reveal.
+    A green run with `:hover` true read opacity 0 (the read beat the transition), and one had no hover. The product reveals
+    only on `:hover` / `:focus-within` (readerCss.ts) — no product defect. Fix: the test hovers a neutral 8×8 point at the
+    viewport's top-left corner, asserts the figure is no longer `:hover`, and waits for opacity 0 before focusing. Red
+    rate in the reproducing orders (scratch sequencer), 6 runs each: **before — Firefox 2/6, Chromium 2/6; after — 0/6
+    and 0/6.** Alone 54 / 54. Ablating the product's `:focus-within` reveal → red ("focusing a control never revealed the
+    group"), so the property (keyboard focus alone reveals) is still guarded.
+    **B · the anchor fallback.** The manifests set NO minimum version (no `minimum_chrome_version`, no gecko
+    `strict_min_version`; Edge is not listed and takes the Chromium build). `anchor-name` and `anchor()` need Chrome
+    125+, Edge 125+, Firefox 147+ (MDN browser-compat-data, read 2026-11-01). So an older installable engine drops the
+    anchored `left` at parse time. As landed, it then fell back to READER_CSS's `left:16px`, the pill's own slot, so the
+    two overlapped: **the old value was NOT the fallback.** Probed on both engines with an unknown function in place of
+    `anchor()`: without a fallback `left` = 16px, with one 176px. Fixed with one declaration in the same rule,
+    `left:176px;` BEFORE the anchored `left`, so a supporting engine takes the later one. Pinned by a source-order unit
+    check (`src/render/diffChrome.test.ts`, red before, green after; jsdom has no cascade, and no test needs an old engine).
+    Bytes: content script 344,266 → **344,278 B (+12)**, app chunk 532,135 → **532,147 B (+12)**, both engines;
+    `.output` 5,831,041 / 5,831,157 B; zips 1,842,739 / 1,842,797 B; manifests 654 / 770 B; `permissions: []`.
+    Verify: lint 0 · unit 1422 / 1423 twice (only the perf flake, 112.9 / 133.9 ms) · full browser suite alone, both engines: **1969 passed / 0 failed / 51 skipped (2020, 190 files, 357 s), EXIT 0.** Golden EMPTY · `pnpm audit --prod` EXIT 0.
 
 - **2026-11-01 · M13 RULING — the Linux reds (HUMAN).** On the cloud environment check's findings: (1) diffChrome
   remote-load lane — PRODUCT: position the notice from the comparison pill's laid-out edge, not a fixed 176px; prefer CSS

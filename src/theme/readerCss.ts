@@ -1330,6 +1330,15 @@ export const READER_CSS = /* css */ `
 // READER_CSS slot, the place it would sit if the diff chrome did not exist. The human ruled CSS over
 // JS measurement (2026-11-01). Asserted in tests/browser/diffChrome.browser.test.ts ("the opt-in's
 // lane starts 24px after the pill's LAID-OUT edge"), which widens the pill font-independently.
+//
+// THE OLD FIXED LANE STAYS AS THE FALLBACK FOR ENGINES WITHOUT ANCHOR POSITIONING (1.4 addendum).
+// `anchor-name` / `anchor()` need Chrome and Edge 125+, Firefox 147+ (MDN browser-compat-data,
+// 2026-11-01), and the manifests set no minimum version. An engine without them drops the anchored
+// `left` at parse time and keeps the declaration before it. That is `left:176px` in the same rule:
+// the old lane, clear of the widest Windows label, instead of READER_CSS's `left:16px`, which is the
+// pill's own slot. So the same rule says `left:176px` and then the anchored `left`; a supporting
+// engine takes the later one. The order is pinned in src/render/diffChrome.test.ts. This is not a
+// provisional constant: it is what an older engine gets, for as long as no minimum version is set.
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
 .peekover-mode-toggle,
@@ -1349,7 +1358,7 @@ export const CONTAINED_CSS = /* css */ `
 .peekover-diff-status{ top:50px; }
 /* 2.4 — the status takes its own lane WHILE the picker is open. Why + derivation: the .ts above */
 .peekover-diff-picker:not([hidden]) ~ .peekover-diff-status{ top:calc(50px + min(46vh,320px) + 6px); }
-.peekover-remote-load{ left:calc(anchor(--peekover-diff right,-8px) + 24px); }
+.peekover-remote-load{ left:176px; left:calc(anchor(--peekover-diff right,-8px) + 24px); }
 `;
 
 // ============================================================================

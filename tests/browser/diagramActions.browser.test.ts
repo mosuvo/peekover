@@ -576,6 +576,20 @@ describe('the control group — accessibility', () => {
     const { figure } = await oneFigure();
     const group = groupIn(figure);
 
+    // ★ M13 task 1.4 addendum: START FROM A KNOWN POINTER STATE. The real pointer is shared across
+    // the serially-run files (harness-shared-state, AGENTS.md); an earlier file could leave it
+    // resting where this figure renders, so the figure matched `:hover` before the test touched it
+    // and the 120ms reveal was already running (opacity 0.08-0.17 read at the start — measured on
+    // both engines, with `:focus-within` false). Move the pointer to a neutral point outside every
+    // figure, then let the group settle at 0, so what reveals it below is keyboard focus alone.
+    const neutral = document.createElement('div');
+    neutral.style.cssText = 'position:fixed;top:0;left:0;width:8px;height:8px;z-index:2147483647';
+    document.body.appendChild(neutral);
+    cleanup.push(neutral);
+    await userEvent.hover(neutral);
+    expect(figure.matches(':hover'), 'the pointer still rests on the figure').toBe(false);
+    await until(() => getComputedStyle(group).opacity === '0', 80).catch(() => undefined);
+
     // Hidden by opacity — which is what keeps the buttons in the tab order at all. `display:none`
     // or `visibility:hidden` would make the keyboard half of §3.11 unreachable.
     expect(getComputedStyle(group).opacity).toBe('0');

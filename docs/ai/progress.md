@@ -11,6 +11,15 @@
 
 ## Now (start here)
 
+**M13 TASK 1.4 ADDENDUM (2026-11-01) — the human's follow-ups A and B, a second commit on the same branch.** A — the
+diagramActions keyboard-reveal red is a TEST fix (ruled), not a flake: cause proven (the figure `:hover` at the test's start,
+`:focus-within` false, opacity 0.08–0.17 — a resting pointer); the test now starts from a neutral pointer and a settled
+opacity 0; red 2/6 → 0/6 on each engine in the reproducing orders; `:focus-within` ablated → red. B — the manifests set no
+minimum browser version, and anchor positioning needs Chrome/Edge 125+, Firefox 147+; as landed, an older engine fell
+back to `left:16px` (on the pill), so `left:176px` now precedes the anchored `left` (source-order unit check). Bytes +12 B
+on the content script (344,278) and the app chunk (532,147), both engines. Known flakes now: only `pipeline.perf`.
+Verify: lint 0 · unit 1422 / 1423 (the perf flake only) · full browser suite alone **1969 passed / 0 failed / 51 skipped** (2020, 190 files, 357 s) · golden EMPTY · audit EXIT 0. Record: `decisions.md`, "M13 TASK 1.4", ADDENDUM.
+
 **M13 TASK 1.4 LANDED (2026-11-01) — CI green on Linux (DISCOVERED; the human's rulings on the Linux reds; count 40 → 41).**
 Records: `decisions.md`, "M13 RULING — the Linux reds" and "M13 TASK 1.4"; tasks.md 1.4 (ticked). Red-first, both engines,
 on the Linux cloud host:
@@ -169,8 +178,8 @@ ledger decomposed across every task, the task count reconciled).
 
 **First, the human opens the pull request** from `claude/loving-turing-bpgzi0` (the cloud check's records + task 1.4) and
 **merges it once CI is green** — that run is also the push check's `ci.yml` half. If CI goes red on the diagramActions
-reveal test (the UNRULED pre-existing flake — Now, above; § Carried items 4), a re-run is the known-flake route; the
-human's ruling on it is still open.
+reveal test, that is a regression of the 1.4 addendum's fix, not a flake — report it. The only known flake is
+`pipeline.perf` (re-run on a red).
 **Then M13: task 1.2 (README + SECURITY.md: withdraw what does not ship; start the claims ledger)** — 1.2, 1.3 and 2.1
 have not landed; only 1.1 has (`02e9fae`). Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
@@ -196,6 +205,10 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
+**Superseded by the 1.4 ADDENDUM (2026-11-01) — carry THESE to the next kickoff:** `.output` 5,831,041 B (Cr) / 5,831,157 B
+(Fx) — headroom 1,508,991 / 1,508,875 B · zip 1,842,739 / 1,842,797 B · content script **344,278 B** both engines (+12), md5
+`b27e0c8b…` (Cr) / `16cd9bd7…` (Fx) · app chunk 532,147 B (+12) · manifest 654 / 770 B, `permissions: []` · lint 0 · unit
+1422 / 1423 (the perf flake) · browser 1969 passed / 0 failed / 51 skipped of 2020 (190 files, 357 s alone) · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
@@ -259,12 +272,12 @@ R29's CARRY).
 - **`src/render/pipeline.perf.test.ts` (parse+sanitize budget 100 ms)** — a KNOWN FLAKE, budget UNCHANGED by ruling
   (`decisions.md`, "M13 RULING — the Linux reds", 5): re-run on a red. Linux cloud host, 2026-11-01: in full unit runs
   135.9 / 151.9 / 112.0 ms (red); alone 93.1–99.2 ms (green).
-- **`diagramActions.browser.test.ts` "is REVEALED by keyboard focus, not only by hover"** — listed as a flake, **UNRULED**
-  (the human chose to list it pending a ruling, 2026-11-01). The group's starting opacity reads 0.16 / 0.156, not `0`:
-  mid-transition before the test touches it, most likely the pointer left over the figure by an earlier file
-  (unverified). Pre-existing: with HEAD's production code, the pinned Firefox order tableScope → codeNetwork →
-  editorEyeballProxy → diagramActions went red 2 of 5; 54 / 54 alone. Seen in task 1.4's full run on both engines.
-  *Home:* the human's ruling.
+- ~~**`diagramActions.browser.test.ts` "is REVEALED by keyboard focus, not only by hover"**~~ — **RESOLVED by the 1.4
+  addendum (2026-11-01), not a known flake** (the human ruled a TEST fix): a resting pointer over the figure was proven to
+  start the hover reveal; the test now starts from a neutral pointer and a settled opacity 0. Red 2/6 → 0/6 on each
+  engine (`decisions.md`, "M13 TASK 1.4", ADDENDUM).
+- **The known flakes, as they now stand: ONE — `pipeline.perf.test.ts`** (above). copyAsHtml and diagramActions are
+  resolved; nothing is unruled.
 
 **5 · SUPPLY CHAIN**
 - **Pin pnpm via `packageManager`** — CI's `version: 10` floats; a future 10.x could change where `auditConfig` is read and
