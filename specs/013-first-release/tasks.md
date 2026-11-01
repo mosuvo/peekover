@@ -228,6 +228,9 @@ and date** (AGENTS.md, the M12 retro rule).
       the real URLs, "live at release"); one `id="planned"` section; the site's ledger rows 214 (167 · 10 · 3 · 34);
       truthPins +6 site cases, red at HEAD on 5; the page renders without error in both engines; build identical to
       `main`'s.
+      ★ *Review addendum 2026-11-01:* the security heading, the watch wording (card and explorer), the no-telemetry
+      evidence; "UPDATE AT GO-LIVE" on every not-in-stores line and the Setup "Build" step, carried to 7.6 as a go-live
+      step; ledger 291 rows (the site 216).
 
 *Group-1 acceptance (spec §4 Truth + CI): README, site and SECURITY.md describe only what ships or say "Planned"; no
 install link; numbers evidenced or gone; the ledger exists; CI pinned and triggered on `main`.*

@@ -366,7 +366,7 @@ flowchart LR
   <h2 class="sec rv">Your agents write markdown all night.<br>This is where you read it.</h2>
   <p class="sub rv">Coding agents write CLAUDE.md files, specs, plans and changelogs faster than anyone can read them raw. Peekover renders them, and on the app page it can watch them and show what changed.</p>
   <div class="grid">
-    <div class="card hlite rv"><span class="ic">◉</span><h3>Watch mode</h3><p>Leave a document open and it re-renders when the file changes on disk, keeping your reading position. It works on the app page, and in a tab showing a file opened from disk, except in Firefox.</p></div>
+    <div class="card hlite rv"><span class="ic">◉</span><h3>Watch mode</h3><p>Leave a document open and it re-renders when the file changes on disk, keeping your reading position. It works on the app page, and in Chromium-based browsers also in a tab showing a file opened from disk. Firefox has some limits; the README lists them.</p></div>
     <div class="card rv"><span class="ic">Δ</span><h3>What changed</h3><p>On the app page, Peekover keeps snapshots on your device while it watches a document, and shows what changed since one of them.</p></div>
     <div class="card rv"><span class="ic">⇆</span><h3>Compare two files</h3><p>On the app page, pick another markdown file in the folder and read the difference.</p></div>
     <div class="card rv"><span class="ic">◈</span><h3>Agent-file badge</h3><p><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>spec.md</code>, <code>plan.md</code> and <code>tasks.md</code> get a badge saying what kind of file they are.</p></div>
@@ -423,14 +423,14 @@ flowchart LR
   <span class="eyebrow rv">IN PLAIN SIGHT</span>
   <div class="receiptwrap">
     <div>
-      <h2 class="sec rv">Other extensions say “trust us.”<br>We show receipts.</h2>
+      <h2 class="sec rv">Don’t take our word for it.<br>Read the receipt.</h2>
       <p class="sub rv">Peekover has no server of its own and asks for no browser permissions.</p>
       <ul class="checks rv">
         <li><b>No servers.</b> There is no backend, no database and no account.</li>
         <li><b>No network by default.</b> The only requests are ones you trigger, such as loading remote images, and the page shows an indicator when that happens.</li>
         <li><b>No permissions.</b> The manifest requests none; <code>PERMISSIONS.md</code> lists each capability used without one.</li>
         <li><b>Open source (MIT).</b> CI checks that no code is loaded from outside the package, audits the production dependencies, and generates a software bill of materials.</li>
-        <li><b>No ads, no paid tier, no telemetry.</b> The README says so.</li>
+        <li><b>No ads, no paid tier, no telemetry.</b> The code has none, and the tests check that the extension makes no network requests by default.</li>
       </ul>
     </div>
     <div class="rstage rv">
@@ -570,7 +570,7 @@ const F={
  "Rendering":[["Tables, task lists, strikethrough, bare-URL links"],["Inline HTML, cleaned with DOMPurify"],["Raw text with an error banner if rendering fails"],["Remote images blocked until you load them"],["A raw view of the markdown"]],
  "Sources":[["Markdown files opened from disk"],["Raw files on GitHub, GitLab and Bitbucket"],["A folder you pick or drag in, on the app page"]],
  "Navigation":[["Table of contents rail"],["Folder browser with pins and recents, on the app page"],["Table sort, filter and copy"]],
- "Watch & compare":[["Watch a file for changes, on the app page and in tabs for files from disk (not Firefox tabs)"],["Snapshots while watching, on the app page"],["Compare with a snapshot, on the app page"],["Compare with another file in the folder, on the app page"],["A badge for CLAUDE.md, AGENTS.md, spec.md, plan.md and tasks.md"]],
+ "Watch & compare":[["Watch a file for changes, on the app page and, in Chromium-based browsers, in a tab showing a file from disk"],["Snapshots while watching, on the app page"],["Compare with a snapshot, on the app page"],["Compare with another file in the folder, on the app page"],["A badge for CLAUDE.md, AGENTS.md, spec.md, plan.md and tasks.md"]],
  "Math, diagrams & code":[["Math with Temml, on the app page"],["Copy a formula as LaTeX or MathML, on the app page"],["Mermaid diagrams with a zoom view, on the app page"],["Copy or download a diagram, on the app page"],["Code highlighting for 6 languages, on the app page"],["Code themes, copy, line numbers and wrap, on the app page"]],
  "Theming":[["Light, dark and auto themes"],["The Literata reading face"]],
  "Editor":[["Markdown editor with a live preview, on the app page"],["Save writes in Chromium-based browsers and downloads in Firefox, on the app page"],["Asks before discarding unsaved changes, on the app page"]],

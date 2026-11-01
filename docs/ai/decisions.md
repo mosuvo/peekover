@@ -55,6 +55,20 @@
     (b) The site's unused CSS (`.typing`, `.exitem.st`, `.aichatd`, `.p2`) stays — removing styles is 9.1's.
     (c) tasks.md's Verify says "md5 identical to 1.2": `main` is 1.2, so the comparison is against `main`.
   Revisit-when: 9.1 (self-hosted fonts, `site/privacy/`, the "live at release" sweep), 9.2 (the re-check).
+  - **ADDENDUM 2026-11-01 (the human's 1.3 review; a second commit on the branch, before the PR).** (1) The security
+    heading is now "Don’t take our word for it. Read the receipt." — no claim about other extensions. (2) The watch
+    card: "It works on the app page, and in Chromium-based browsers also in a tab showing a file opened from disk.
+    Firefox has some limits; the README lists them." The explorer's watch item now says the same ("on the app page and,
+    in Chromium-based browsers, in a tab showing a file from disk"). (3) "The README says so." → "The code has none,
+    and the tests check that the extension makes no network requests by default." — evidence: the zero-network tests
+    and `scripts/check-dynamic-imports.ts`. (4) "UPDATE AT GO-LIVE" on every not-in-stores line and the Setup step
+    "Build": 7 rows. The four plain-text rows stay "true now"; the three rows that also carry a repository URL (nav,
+    hero, final call to action) stay "live at release", as truthPins requires of every repo URL. `docs/store/GO-LIVE.md`
+    does not exist yet (task 7.6 creates it), so "replace the not-in-stores lines with the real store links" is carried
+    for 7.6 in `progress.md`. **Ledger:** 291 rows — 216 true now · 14 live at release · 12 planned · 49 withdrawn; the
+    site 216 (169 · 10 · 3 · 34). truthPins 21 / 21; both ablations ("190+ languages", one `href="#"`) red again,
+    restored byte-identical; the page renders without error in both engines; unit 1444 / 1445 (the perf flake only).
+    No shipped file changed.
 
 - **2026-11-01 · M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger starts (D-12; G-1;
   G-8). No shipped byte changed.** Branch restarted from `main` at `c7b62b0` (PR #14's merge).
