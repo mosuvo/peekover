@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-01 (M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger (75 rows, after the review addendum); no shipped byte; next the human merges the 1.2 PR, then task 1.3, the site pass). Earlier: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-11-01 (M13 TASK 1.3 + review addendum — the site says only what ships; 17 dead links resolved; the ledger 291 rows; a go-live step carried for 7.6; no shipped byte; next the human merges the 1.3 PR, then task 2.1, tokens). Earlier: 2026-11-01 (M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger (75 rows, after the review addendum); no shipped byte; next the human merges the 1.2 PR, then task 1.3, the site pass). Earlier: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,20 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 1.3 LANDED (2026-11-01) — the site says only what ships; dead links resolved; the site joins the ledger.**
+Record: `decisions.md`, "M13 TASK 1.3". Branch restarted from `main` at `5f83ba7` (PR #15's merge).
+- `site/index.html`: text, links and the explorer's data rewritten to what ships, with the 1.2 surface table's
+  app-page qualifiers; ONE `id="planned"` section ("For the first public release:" / "Later, not yet scheduled:"); the AI
+  chat demo and Phase 2 removed; 17 `href="#"` resolved (install-shaped → "Not in stores yet — build from source"; repo
+  links → real GitHub URLs, "live at release"). Layout and styles untouched (9.1 restyles and self-hosts fonts).
+- Ledger: 291 rows after the review addendum (216 true now · 14 live at release · 12 planned · 49 withdrawn); the site
+  216 (169 · 10 · 3 · 34). Review addendum: the security heading, the watch wording, the no-telemetry evidence, and
+  "UPDATE AT GO-LIVE" on every not-in-stores line (a go-live step carried for 7.6, § Carried items).
+- truthPins +6 site cases (21): red at HEAD on 5; both ablations red; restored byte-identical.
+- Verify: lint 0 · unit 1444 / 1445 (the perf flake only) · the page renders in both engines without error · build
+  identical to `main`'s, all 139 files per engine; `site/` not packaged · NUL 0 · audit EXIT 0. Font parity still not
+  in place (`fc-match system-ui` = Inter).
 
 **M13 TASK 1.2 LANDED (2026-11-01) — README and SECURITY.md say only what ships; the claims ledger starts.** Record:
 `decisions.md`, "M13 TASK 1.2". Branch restarted from `main` at `c7b62b0` (PR #14's merge, containing `c49a070`).
@@ -216,13 +230,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human reviews and merges task 1.2's pull request** (branch `claude/loving-turing-bpgzi0`; README.md and
-SECURITY.md are the first thing visitors read — the wording is the human's to approve), and rules on the font-parity
-proposal: this session's preflight found `fc-match system-ui` still Inter (`/etc/fonts/conf.d/56-prefer-inter.conf`
-present), so the environment setup step has not run.
-**Then M13: task 1.3 (the site content pass: `site/index.html` to shipped features + "Planned", every dead link
-resolved, numbers checked; the site's rows join `docs/store/claims.md`; `tests/truthPins.test.ts` extended to the
-site).** 1.1, 1.4 and 1.2 have landed; 1.3 and 2.1 have not. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human reviews and merges task 1.3's pull request** (branch `claude/loving-turing-bpgzi0`; the site's
+visible text is in the report — the wording is the human's to approve), and rules on the font-parity setup step
+(`fc-match system-ui` is still Inter here).
+**Then M13: task 2.1 (`tokens.css` is the single source; every code copy pinned by one test — `tests/designTokens.test.ts`).**
+Group 1 is complete: 1.1, 1.4, 1.2 and 1.3 have landed. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -258,6 +270,13 @@ unit 1423 / 1424 (the perf flake) · browser 1971 passed / 0 failed / 51 skipped
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
+
+#### FOR M13 TASK 7.6 — THE GO-LIVE CHECKLIST (`docs/store/GO-LIVE.md` does not exist yet; 7.6 creates it)
+- **Replace the not-in-stores lines with the real store links** (the human's 1.3 review, 2026-11-01). Every "Not in
+  stores yet — build from source" line on the site (nav, hero, band, final call to action), the site's Setup step
+  "Build", and README's "Peekover is not in any browser store yet" / "To try it, build it from source" lines. The
+  site's rows carry "UPDATE AT GO-LIVE" in `docs/store/claims.md`. *Source:* `decisions.md`, "M13 TASK 1.3", review
+  addendum. *Home:* 7.6 lists it as a go-live step; the human runs it after M13.
 
 #### POST-M12 CONSOLIDATED LIST (2026-10-30, task 7.3)
 *One list, deduplicated, replacing the per-task M12 items that stood here (they are preserved verbatim in

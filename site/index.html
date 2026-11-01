@@ -272,32 +272,33 @@ footer h5{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var
     Peekover
   </a>
   <div class="navlinks">
-    <a href="#ai">AI-native</a><a href="#reading">Reading</a><a href="#editor">Editor</a><a href="#security">Security</a><a href="#everything">Everything</a>
+    <a href="#ai">Agent output</a><a href="#reading">Reading</a><a href="#editor">Editor</a><a href="#security">Security</a><a href="#planned">Planned</a>
   </div>
   <div class="right">
     <button class="mode" onclick="flipTheme()" aria-label="Toggle dark mode" id="modeBtn">☾</button>
-    <a class="ghost" href="#" onclick="return false">★ GitHub</a>
-    <a class="cta" href="#" onclick="return false">Add to Chrome — Free</a>
+    <a class="ghost" href="https://github.com/mosuvo/peekover">GitHub</a>
+    <span class="nostore">Not in stores yet — build from source</span>
     <button class="burger" onclick="document.getElementById('mnav').classList.toggle('open')" aria-label="Menu">☰</button>
   </div>
 </nav>
 <div class="mnav" id="mnav">
-  <a href="#ai" onclick="mclose()">AI-native</a><a href="#reading" onclick="mclose()">Reading</a><a href="#editor" onclick="mclose()">Editor</a><a href="#security" onclick="mclose()">Security</a><a href="#everything" onclick="mclose()">Everything</a><a href="#" onclick="mclose();return false">★ GitHub</a>
+  <a href="#ai" onclick="mclose()">Agent output</a><a href="#reading" onclick="mclose()">Reading</a><a href="#editor" onclick="mclose()">Editor</a><a href="#security" onclick="mclose()">Security</a><a href="#planned" onclick="mclose()">Planned</a><a href="https://github.com/mosuvo/peekover" onclick="mclose()">GitHub</a>
 </div>
 
 <!-- ================= HERO ================= -->
 <header class="hero wrap" id="top">
   <div class="herogrid">
     <div>
-      <span class="eyebrow">PEEK OVER YOUR DOCS!</span>
+      <span class="eyebrow">PEEK OVER YOUR DOCS</span>
       <h1>Raw in.<br><span class="flip">Reading</span> out.</h1>
-      <p class="lede">The free, open-source extension that turns raw markdown — including the piles of it your AI agents write — into beautiful, instant reading. Plus an editor. Plus on-device AI. With <b>zero network calls</b>.</p>
+      <p class="lede">Peekover is a free, open-source browser extension that turns raw markdown files into formatted, readable pages, including the ones your AI agents write. It asks for no browser permissions and makes <b>no network requests</b> unless you ask it to.</p>
       <div class="btnrow">
-        <a class="cta big" href="#" onclick="return false">Add to Chrome — it’s free, forever</a>
+        <span class="nostore">Not in stores yet — build from source</span>
+        <a class="ghost big" href="https://github.com/mosuvo/peekover#build-from-source">Build it from the repository</a>
         <a class="ghost big" href="#everything">See everything ↓</a>
       </div>
       <div class="trust">
-        <span>open source · MIT</span><span>no servers</span><span>no telemetry</span><span>&lt;150 ms render</span><span>Edge · Firefox · Brave too</span>
+        <span>open source · MIT</span><span>no servers</span><span>no telemetry</span><span>no permissions</span><span>Chrome · Edge · Firefox</span>
       </div>
     </div>
     <div>
@@ -354,80 +355,65 @@ flowchart LR
 <!-- ================= MARQUEE ================= -->
 <div class="marqueewrap" aria-hidden="true"><div class="marquee">
   <div class="track">
-    <span>MARKDOWN → READING</span><span>✦</span><span>WATCH MODE FOR AI AGENTS</span><span>✦</span><span>ZERO NETWORK CALLS</span><span>✦</span><span>FREE FOREVER</span><span>✦</span><span>OPEN SOURCE</span><span>✦</span><span>78 FEATURES · 36 FIRSTS</span><span>✦</span>
-    <span>MARKDOWN → READING</span><span>✦</span><span>WATCH MODE FOR AI AGENTS</span><span>✦</span><span>ZERO NETWORK CALLS</span><span>✦</span><span>FREE FOREVER</span><span>✦</span><span>OPEN SOURCE</span><span>✦</span><span>78 FEATURES · 36 FIRSTS</span><span>✦</span>
+    <span>MARKDOWN → READING</span><span>✦</span><span>WATCH MODE</span><span>✦</span><span>NO NETWORK BY DEFAULT</span><span>✦</span><span>FREE</span><span>✦</span><span>OPEN SOURCE</span><span>✦</span><span>NO PERMISSIONS</span><span>✦</span>
+    <span>MARKDOWN → READING</span><span>✦</span><span>WATCH MODE</span><span>✦</span><span>NO NETWORK BY DEFAULT</span><span>✦</span><span>FREE</span><span>✦</span><span>OPEN SOURCE</span><span>✦</span><span>NO PERMISSIONS</span><span>✦</span>
   </div>
 </div></div>
 
 <!-- ================= AI NATIVE ================= -->
 <section id="ai" class="wrap">
-  <span class="eyebrow rv">BUILT FOR THE AI ERA</span>
+  <span class="eyebrow rv">FOR AGENT OUTPUT</span>
   <h2 class="sec rv">Your agents write markdown all night.<br>This is where you read it.</h2>
-  <p class="sub rv">Claude Code, Cursor and friends produce CLAUDE.md files, specs, plans and changelogs faster than anyone can read them raw. Peekover was designed for exactly this. <span class="first">FIRST</span> marks what no other viewer ships.</p>
+  <p class="sub rv">Coding agents write CLAUDE.md files, specs, plans and changelogs faster than anyone can read them raw. Peekover renders them, and on the app page it can watch them and show what changed.</p>
   <div class="grid">
-    <div class="card hlite rv"><span class="ic">◉</span><h3>Watch mode <span class="first">FIRST</span></h3><p>Leave the file open — it re-renders the instant your agent saves, auto-scrolls to what’s new, and flashes the change. No refresh, no lost scroll position.</p></div>
-    <div class="card rv"><span class="ic">Δ</span><h3>Diff view <span class="first">FIRST</span></h3><p>See exactly what changed since your last look — inline or side-by-side, from locally kept snapshots. Audit every agent edit.</p></div>
-    <div class="card rv"><span class="ic">⇆</span><h3>Compare two files <span class="first">FIRST</span></h3><p>Spec v1 vs v2, plan vs reality — pick any two files in the folder and read the difference.</p></div>
-    <div class="card rv"><span class="ic">◈</span><h3>Agent-file awareness <span class="first">FIRST</span></h3><p><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>.cursorrules</code> get a badge, tuned rendering, and watch + diff switched on automatically.</p></div>
-    <div class="card rv"><span class="ic">💬</span><h3>Transcript rendering <span class="first">FIRST</span></h3><p>Markdown session logs read like conversations — chat bubbles on, plain headings off, your choice.</p></div>
-    <div class="card rv"><span class="ic">✂</span><h3>Copy for AI <span class="first">FIRST</span></h3><p>One click copies any doc or section as clean, normalized markdown sized for a context window — plus a web-page → markdown clipper for feeding agents.</p></div>
+    <div class="card hlite rv"><span class="ic">◉</span><h3>Watch mode</h3><p>Leave a document open and it re-renders when the file changes on disk, keeping your reading position. It works on the app page, and in Chromium-based browsers also in a tab showing a file opened from disk. Firefox has some limits; the README lists them.</p></div>
+    <div class="card rv"><span class="ic">Δ</span><h3>What changed</h3><p>On the app page, Peekover keeps snapshots on your device while it watches a document, and shows what changed since one of them.</p></div>
+    <div class="card rv"><span class="ic">⇆</span><h3>Compare two files</h3><p>On the app page, pick another markdown file in the folder and read the difference.</p></div>
+    <div class="card rv"><span class="ic">◈</span><h3>Agent-file badge</h3><p><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>spec.md</code>, <code>plan.md</code> and <code>tasks.md</code> get a badge saying what kind of file they are.</p></div>
   </div>
 </section>
 
 <!-- ================= READING ================= -->
 <section id="reading" class="wrap">
-  <span class="eyebrow rv">READING, UPGRADED</span>
-  <h2 class="sec rv">Everything renders. <mark>Everything.</mark></h2>
-  <p class="sub rv">Full CommonMark + GFM and the whole extended family — plus navigation that makes a folder of markdown feel like a documentation site.</p>
+  <span class="eyebrow rv">READING</span>
+  <h2 class="sec rv">Raw markdown in. <mark>A page out.</mark></h2>
+  <p class="sub rv">CommonMark with the GitHub additions for tables, task lists, strikethrough and bare links, cleaned before it reaches the page.</p>
   <div class="grid">
-    <div class="card rv"><span class="ic">✒</span><h3>The whole syntax</h3><p>Tables, task lists, strikethrough, footnotes, abbreviations, definition lists, super/subscript, emoji shortnames, GitHub alerts, YAML frontmatter cards, sanitized inline HTML, MDX-aware — one battle-tested engine.</p></div>
-    <div class="card rv"><span class="ic">∑</span><h3>Math &amp; diagrams</h3><p>KaTeX (MathJax fallback), Mermaid with theme sync, Graphviz &amp; Vega, standalone <code>.mermaid</code>/<code>.dot</code> files, copy formulas as LaTeX <span class="first">FIRST</span>, per-diagram PNG/SVG export, smart cache: 50 diagrams reopen in &lt;1s.</p></div>
-    <div class="card rv"><span class="ic">{}</span><h3>Code, properly</h3><p>190+ languages, 14+ code themes, copy button, line numbers, word wrap, local language auto-detection, collapsible long blocks <span class="first">FIRST</span>.</p></div>
-    <div class="card hlite rv"><span class="ic">▤</span><h3>Project mode <span class="first">FIRST</span></h3><p>Open a folder: file tree, wiki-links + backlinks, relative links that navigate in place, cross-file full-text search, and a broken-link checker for the whole folder.</p></div>
-    <div class="card rv"><span class="ic">☰</span><h3>Navigation that follows you</h3><p>Scroll-spy TOC (a whisper-thin rail until you need it), in-document search with section context <span class="first">FIRST</span>, heading permalinks + text-fragment deep links <span class="first">FIRST</span>, hover previews, recents, pinned files, scroll-position memory.</p></div>
-    <div class="card rv"><span class="ic">◫</span><h3>Present &amp; interact</h3><p>Presentation mode (<code>---</code> = slide), export decks as standalone HTML <span class="first">FIRST</span>, sortable tables with copy-as-CSV/JSON <span class="first">FIRST</span>, and checkboxes that write back to the file <span class="first">FIRST</span>.</p></div>
-    <div class="card rv"><span class="ic">Aa</span><h3>Reading, your way</h3><p>9 research-picked fonts (Literata default; Atkinson Hyperlegible &amp; Lexend for accessibility), type size, line height, paragraph gap, 3 widths, focus mode, read-aloud, 30+ themes, custom CSS, per-file frontmatter overrides <span class="first">FIRST</span>, settings sync.</p></div>
-    <div class="card rv"><span class="ic">⚡</span><h3>Instant, always</h3><p>&lt;150 ms first render, 10 MB files stay smooth, no size limits (progressive loading), never a blank page — failures degrade to raw view. The whole extension: ≤7 MB.</p></div>
-    <div class="card rv"><span class="ic">🌐</span><h3>Any source</h3><p>Local files, remote URLs, GitHub/GitLab/Bitbucket raw links, drag-and-drop, paste-to-render scratchpad, render selection on any page — with granular per-origin permissions and a local-only master switch.</p></div>
+    <div class="card rv"><span class="ic">✒</span><h3>The syntax</h3><p>Tables, task lists, strikethrough, bare-URL links and inline HTML, all cleaned with DOMPurify before they are shown.</p></div>
+    <div class="card rv"><span class="ic">∑</span><h3>Math &amp; diagrams</h3><p>On the app page: math rendered with Temml, Mermaid diagrams with a zoom view, and buttons to copy a formula as LaTeX or MathML and to copy or download a diagram.</p></div>
+    <div class="card rv"><span class="ic">{}</span><h3>Code</h3><p>On the app page: highlighting for JavaScript, Python, JSON, CSS, HTML and Bash, a choice of code themes, and copy, line numbers and wrap on each block.</p></div>
+    <div class="card hlite rv"><span class="ic">▤</span><h3>Folders</h3><p>On the app page, opened from the toolbar button: open a folder, browse its markdown files, pin files and reopen recent ones.</p></div>
+    <div class="card rv"><span class="ic">☰</span><h3>Contents</h3><p>A table of contents rail for documents with two or more headings. Select a heading to jump to it.</p></div>
+    <div class="card rv"><span class="ic">◫</span><h3>Tables</h3><p>Sort, filter and copy any table.</p></div>
+    <div class="card rv"><span class="ic">Aa</span><h3>Reading, your way</h3><p>Light and dark themes that follow your system by default, a raw view, and the Literata reading face.</p></div>
+    <div class="card rv"><span class="ic">⚡</span><h3>Never a blank page</h3><p>If rendering fails, you get the raw text with an error banner. The whole extension is under 7 MB.</p></div>
+    <div class="card rv"><span class="ic">🌐</span><h3>Sources</h3><p>Markdown files opened from disk, and raw files on GitHub, GitLab and Bitbucket. Remote images stay blocked until you choose to load them.</p></div>
   </div>
 </section>
 
 <!-- ================= EDITOR ================= -->
 <section id="editor" class="wrap">
-  <span class="eyebrow rv">ONE KEYSTROKE AWAY</span>
+  <span class="eyebrow rv">ON THE APP PAGE</span>
   <h2 class="sec rv">A reader first. An editor when you need it.</h2>
-  <p class="sub rv">Hit Edit and the page splits: markdown left, live preview right, scroll-synced.</p>
+  <p class="sub rv">On the app page, Edit opens the markdown beside a live preview.</p>
   <div class="grid g4">
-    <div class="card rv"><span class="ic">✎</span><h3>Full editing kit</h3><p>Formatting toolbar, smart lists, regex find &amp; replace, snippets &amp; emoji picker, image paste (embed or save alongside), text transforms, markdownlint auto-format.</p></div>
-    <div class="card rv"><span class="ic">▦</span><h3>Visual table editor</h3><p>Build tables with a UI; paste CSV and it becomes markdown. Import HTML and Jupyter notebooks — all converted locally.</p></div>
-    <div class="card rv"><span class="ic">⟲</span><h3>Snapshots</h3><p>Autosave with local version history — restore or diff any snapshot. Nothing leaves your machine.</p></div>
-    <div class="card rv"><span class="ic">⇩</span><h3>Export &amp; publish</h3><p>Standalone HTML, DOCX with <b>editable equations</b>, typeset PDF, ZIP bundles, rich-text copy — plus Gist, GitHub, Medium &amp; Dev.to with <b>your own tokens</b>.</p></div>
+    <div class="card rv"><span class="ic">✎</span><h3>Editor</h3><p>A plain markdown editor beside a live preview. It asks before discarding unsaved changes.</p></div>
+    <div class="card rv"><span class="ic">▦</span><h3>Save</h3><p>Save writes the file back in Chromium-based browsers such as Chrome and Edge; in Firefox it downloads a copy. If the file changed on disk meanwhile, Save stops and tells you.</p></div>
+    <div class="card rv"><span class="ic">⟲</span><h3>Snapshots</h3><p>Kept on your device while a document is watched. Turn them off or erase them under Stored data.</p></div>
+    <div class="card rv"><span class="ic">⇩</span><h3>Export</h3><p>A standalone HTML file, print to PDF, and copy as HTML, plain text or rich text.</p></div>
   </div>
 </section>
 
 <!-- ================= AI FEATURES ================= -->
-<section class="wrap">
-  <span class="eyebrow rv">✦ AI — OPT-IN, NEVER AUTOMATIC</span>
+<section class="wrap" id="planned">
+  <span class="eyebrow rv">PLANNED</span>
   <div class="split">
     <div>
-      <h2 class="sec rv">On-device first.<br>Your key for the rest.</h2>
+      <h2 class="sec rv">Not built yet.</h2>
       <ul class="checks rv">
-        <li><b>On-device AI by default</b> — summarize, translate, proofread via the browser’s built-in model. No key, no cost, works offline.</li>
-        <li><b>Bring your own key</b> — Anthropic, OpenAI, Google, OpenRouter, or local Ollama. Calls go browser → provider. <b>We never proxy, never see keys or content.</b></li>
-        <li><b>Everything AI can do:</b> summarize · explain · chat with the document · rewrite with line-by-line diff accept/reject · translate · proofread · generate outlines, tables, diagrams &amp; alt-text · AI web-clipping.</li>
-        <li><b>The amber dot</b> — a visible network indicator fires on every outbound call, and a one-time explainer shows exactly what leaves your machine before any AI runs.</li>
+        <li><b>For the first public release:</b> listings in the Chrome, Firefox and Edge stores; a check in CI that two builds of the same source produce the same files; a one-page threat model; attestations on release files; a privacy policy at https://peekover.dev/privacy/ and this website at https://peekover.dev, neither online yet.</li>
+        <li><b>Later, not yet scheduled:</b> on-device and bring-your-own-key AI features, DOCX and ZIP export, publishing, presentation mode, read-aloud, and other raw file types such as JSON, YAML, TOML and CSV.</li>
       </ul>
-    </div>
-    <div class="aichatd rv">
-      <div class="h">💬 Chat with this document <span style="margin-left:auto;font-weight:500;font-size:10px;color:var(--faint);font-family:var(--mono)">CLAUDE.md as context</span></div>
-      <div class="b">
-        <div class="m u">what did the agent change overnight?</div>
-        <div class="m a">Three commits: the rate-limiter plan moved to <b>done</b>, two new boundaries were added, and the changelog gained v0.4.1. <span style="color:var(--faint)">· sourced from your file</span></div>
-        <div class="m u">show me the risky one</div>
-        <div class="typing" id="typing"><i></i><i></i><i></i></div>
-        <div class="m a" id="lateMsg" style="display:none">The boundary change on <b>migrations/</b> — here’s the diff since your last look ↗</div>
-      </div>
-      <div class="net"><span class="netdot" id="landNet"></span> <span id="landNetText">no network calls</span></div>
     </div>
   </div>
 </section>
@@ -437,21 +423,21 @@ flowchart LR
   <span class="eyebrow rv">IN PLAIN SIGHT</span>
   <div class="receiptwrap">
     <div>
-      <h2 class="sec rv">Other extensions say “trust us.”<br>We show receipts.</h2>
-      <p class="sub rv">Extensions get sold, hijacked, and turned into adware — it happened to the most popular JSON viewer on the store. Peekover is architected so there’s nothing to betray you with.</p>
+      <h2 class="sec rv">Don’t take our word for it.<br>Read the receipt.</h2>
+      <p class="sub rv">Peekover has no server of its own and asks for no browser permissions.</p>
       <ul class="checks rv">
-        <li><b>No servers, ever.</b> No backend to breach, no database to leak, no account to phish.</li>
-        <li><b>Zero network by default</b> — the only calls possible are ones <i>you</i> trigger, each with a visible indicator.</li>
-        <li><b>Minimal permissions</b>, requested per-origin at the moment of use — a published <code>PERMISSIONS.md</code> justifies every manifest line, and updates never silently add permissions.</li>
-        <li><b>Open source (MIT), reproducible builds</b> — byte-comparable to the store artifact, signed releases, published SBOM, locked dependencies, a threat model in the repo, and a security hall-of-fame.</li>
-        <li><b>The ownership pledge:</b> never sold, never ads or affiliate injection, never data collection. In writing, in the README.</li>
+        <li><b>No servers.</b> There is no backend, no database and no account.</li>
+        <li><b>No network by default.</b> The only requests are ones you trigger, such as loading remote images, and the page shows an indicator when that happens.</li>
+        <li><b>No permissions.</b> The manifest requests none; <code>PERMISSIONS.md</code> lists each capability used without one.</li>
+        <li><b>Open source (MIT).</b> CI checks that no code is loaded from outside the package, audits the production dependencies, and generates a software bill of materials.</li>
+        <li><b>No ads, no paid tier, no telemetry.</b> The code has none, and the tests check that the extension makes no network requests by default.</li>
       </ul>
     </div>
     <div class="rstage rv">
       <div class="receipt" aria-label="Privacy receipt">
         <h4>PEEKOVER ★ RECEIPT</h4>
-        <div class="rsub">— what we collect · printed locally —</div>
-        <div class="stamp">AUDITABLE ✓</div>
+        <div class="rsub">— what the extension collects —</div>
+        <div class="stamp">OPEN SOURCE</div>
         <div class="rline"><span>Your files uploaded</span><b>0</b></div>
         <div class="rline"><span>Telemetry events</span><b>0</b></div>
         <div class="rline"><span>Analytics scripts</span><b>0</b></div>
@@ -460,7 +446,7 @@ flowchart LR
         <div class="rline"><span>Remote code loaded</span><b>0</b></div>
         <div class="rline"><span>Network calls (default)</span><b>0</b></div>
         <div class="rline total"><span>TOTAL COLLECTED</span><b>0</b></div>
-        <div class="rline"><span>Price</span><b>$0 — forever</b></div>
+        <div class="rline"><span>Price</span><b>$0</b></div>
         <div class="barcode" aria-hidden="true"></div>
         <div class="thanks">THANK YOU FOR READING</div>
       </div>
@@ -471,38 +457,24 @@ flowchart LR
 <!-- ================= MID CTA BAND ================= -->
 <div class="band rv">
   <div class="in">
-    <b>The extension that collects nothing. Costs nothing. Hides nothing.</b>
-    <a class="cta big" href="#" onclick="return false">Add to Chrome — Free</a>
+    <b>The extension that collects nothing and costs nothing.</b>
+    <span class="nostore">Not in stores yet — build from source</span>
   </div>
 </div>
 
 <!-- ================= EVERYTHING EXPLORER ================= -->
 <section id="everything" class="wrap">
   <span class="eyebrow rv">THE FULL LIST</span>
-  <h2 class="sec rv">Every feature. Searchable, of course.</h2>
-  <p class="sub rv">78 features matched against every competitor, 36 industry firsts — indexed the way Peekover indexes your docs. Type to find one, or browse by category.</p>
+  <h2 class="sec rv">Everything it does today. Searchable.</h2>
+  <p class="sub rv">What the extension does today, by category. Type to find a feature, or browse by category.</p>
   <div class="explorer rv">
     <div class="exhead">
-      <div class="exsearch">🔍 <input id="exq" placeholder="Find a feature… try “diff”, “font”, or “export”" oninput="exRender()"></div>
+      <div class="exsearch">🔍 <input id="exq" placeholder="Find a feature… try “watch”, “table”, or “export”" oninput="exRender()"></div>
       <span class="excount" id="excount"></span>
     </div>
     <div class="tabs" id="tabs"></div>
-    <div class="exbody"><div class="exgrid" id="exgrid"></div><div class="exempty" id="exempty" style="display:none">No feature by that name — yet. Suggest it on GitHub?</div></div>
-    <div class="exfoot"><span style="color:#C9A227;font-weight:800">★</span> = ships in no other markdown extension (verified July 2026) · <span style="color:var(--ok);font-weight:800">✓</span> = feature-parity with the best of every competitor</div>
-  </div>
-</section>
-
-<!-- ================= PHASE 2 ================= -->
-<section class="wrap tight">
-  <div class="p2 rv">
-    <div style="flex:1;min-width:260px">
-      <span class="eyebrow">NEXT: PHASE 2</span>
-      <h2 class="sec" style="font-size:clamp(22px,3vw,32px)">One trusted viewer for <i>every</i> raw file.</h2>
-      <p style="font-size:14px;color:var(--muted);max-width:52ch">The same reading experience, the same nothing-to-betray-you architecture — coming to JSON trees, JSONL agent logs, YAML, TOML and sortable CSV tables. Replace four extensions with one you can audit.</p>
-    </div>
-    <div class="files">
-      <span class="f on">.md</span><span class="f on">.mdx</span><span class="f on">.mermaid</span><span class="f">.json</span><span class="f">.jsonl</span><span class="f">.yaml</span><span class="f">.toml</span><span class="f">.csv</span>
-    </div>
+    <div class="exbody"><div class="exgrid" id="exgrid"></div><div class="exempty" id="exempty" style="display:none">No feature by that name. Planned work is listed under Planned.</div></div>
+    <div class="exfoot">“App page” marks a feature that works only on the app page, opened from the toolbar button.</div>
   </div>
 </section>
 
@@ -511,10 +483,10 @@ flowchart LR
   <div class="principles rv">
     <h2 class="sec">Free means free. Here’s the deal.</h2>
     <div class="row">
-      <div class="p"><b>No price, no tiers</b>$0 today, $0 later. No “Pro” nags, no locked features, no trials.</div>
-      <div class="p"><b>No ads, no funnels</b>We will never inject, promote, or upsell. Not even our own stuff.</div>
-      <div class="p"><b>Never sold</b>Any ownership change voids the listing — expect releases only from this repo. It’s in the README.</div>
-      <div class="p"><b>Yours to inspect</b>MIT licensed, reproducible builds, annotated permissions. Fork it if we ever break the deal.</div>
+      <div class="p"><b>No price, no tiers</b>No “Pro” version, no locked features, no trials.</div>
+      <div class="p"><b>No ads, no funnels</b>Nothing injected, promoted or upsold.</div>
+      <div class="p"><b>Built in the open</b>The specs, plans and decisions are in the repository.</div>
+      <div class="p"><b>Yours to inspect</b>MIT licensed, with every capability explained in PERMISSIONS.md. Fork it if we ever break the deal.</div>
     </div>
   </div>
 </section>
@@ -522,11 +494,11 @@ flowchart LR
 <!-- ================= SETUP ================= -->
 <section class="wrap tight">
   <span class="eyebrow rv">SETUP</span>
-  <h2 class="sec rv">Reading in under a minute.</h2>
+  <h2 class="sec rv">From source to reading.</h2>
   <div class="steps">
-    <div class="step rv"><h3>Install</h3><p>One click from your browser’s store. Works on web markdown immediately — no permission needed yet.</p></div>
-    <div class="step rv"><h3>Flip one switch</h3><p>For local files, the guided setup deep-links you to “Allow access to file URLs” — and detects the flip the moment you make it.</p></div>
-    <div class="step rv"><h3>Peek</h3><p>Open any .md file, folder, or raw URL. That’s it — the tour (✨) shows you the rest.</p></div>
+    <div class="step rv"><h3>Build</h3><p>Peekover is not in the stores yet. Build it from source with Node 22 and pnpm, as the README explains, and load the unpacked build.</p></div>
+    <div class="step rv"><h3>Flip one switch</h3><p>For files on your disk in Chromium-based browsers, turn on “Allow access to file URLs” for Peekover in the extension settings.</p></div>
+    <div class="step rv"><h3>Peek</h3><p>Open a markdown file from disk or a raw link, or open the app page from the toolbar button and pick a folder.</p></div>
   </div>
 </section>
 
@@ -541,10 +513,8 @@ flowchart LR
   </svg>
   <h2>Your files deserve<br>better than raw.</h2>
   <div class="btnrow" style="justify-content:center">
-    <a class="cta big" href="#" onclick="return false">Add to Chrome — Free</a>
-    <a class="ghost big" href="#" onclick="return false">Edge</a>
-    <a class="ghost big" href="#" onclick="return false">Firefox</a>
-    <a class="ghost big" href="#" onclick="return false">★ Star on GitHub</a>
+    <span class="nostore">Not in stores yet — build from source</span>
+    <a class="ghost big" href="https://github.com/mosuvo/peekover">GitHub</a>
   </div>
   <p style="margin-top:18px;font-family:var(--mono);font-size:12px;color:var(--faint)">Free, for everyone, in plain sight.</p>
 </section>
@@ -559,10 +529,10 @@ flowchart LR
         </div>
         <p style="max-width:30ch">Raw in. Reading out.<br>Made in plain sight. © 2026 · MIT</p>
       </div>
-      <div><h5>This page</h5><ul><li><a href="#ai">AI-native reading</a></li><li><a href="#editor">Editor</a></li><li><a href="#security">Security</a></li><li><a href="#everything">Every feature</a></li></ul></div>
-      <div><h5>In the repo ↗</h5><ul><li><a href="#" onclick="return false">github.com/mosuvo/peekover</a></li><li><a href="#" onclick="return false">SECURITY.md · threat model</a></li><li><a href="#" onclick="return false">PERMISSIONS.md</a></li><li><a href="#" onclick="return false">Releases · changelog</a></li><li><a href="#" onclick="return false">Report a bug · translate</a></li></ul></div>
+      <div><h5>This page</h5><ul><li><a href="#ai">Agent output</a></li><li><a href="#editor">Editor</a></li><li><a href="#security">Security</a></li><li><a href="#planned">Planned</a></li><li><a href="#everything">Every feature</a></li></ul></div>
+      <div><h5>In the repo ↗</h5><ul><li><a href="https://github.com/mosuvo/peekover">github.com/mosuvo/peekover</a></li><li><a href="https://github.com/mosuvo/peekover/blob/main/docs/trust/SECURITY.md">SECURITY.md</a></li><li><a href="https://github.com/mosuvo/peekover/blob/main/docs/trust/PERMISSIONS.md">PERMISSIONS.md</a></li><li><a href="https://github.com/mosuvo/peekover/releases">Releases</a></li><li><a href="https://github.com/mosuvo/peekover/issues">Report a bug</a></li></ul></div>
     </div>
-    <p class="repohint">One page is all we ship — the docs live in the open-source repo, where you can verify them. That’s the point.</p>
+    <p class="repohint">This site is one page. The documentation lives in the repository, next to the code it describes.</p>
     <div class="bigword" aria-hidden="true">Peekover</div>
   </div>
 </footer>
@@ -591,46 +561,27 @@ function setDemo(pretty,fromUser=true){
 }
 let flip=false;
 setInterval(()=>{if(!userTouched){flip=!flip;setDemo(flip,false)}},2800);
-/* ---------- chat typing + network pulse ---------- */
-setInterval(()=>{
-  const d=document.getElementById('landNet'),t=document.getElementById('landNetText');
-  d.style.background='#D99A2B';t.textContent='1 call → your API key (direct)';
-  setTimeout(()=>{
-    document.getElementById('typing').style.display='none';
-    document.getElementById('lateMsg').style.display='block';
-    d.style.background='var(--faint)';t.textContent='no network calls';
-  },1600);
-  setTimeout(()=>{
-    document.getElementById('lateMsg').style.display='none';
-    document.getElementById('typing').style.display='flex';
-  },6200);
-},8000);
 /* ---------- reveal ---------- */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.1});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 
 /* ---------- feature explorer ---------- */
 const F={
- "Rendering":[["CommonMark + full GFM"],["Tables, task lists, strikethrough, autolinks"],["Footnotes, abbreviations, definition lists"],["Super/subscript, highlight marks"],["Emoji shortnames → 😄"],["GitHub alerts (NOTE→CAUTION)"],["YAML frontmatter cards"],["Frontmatter sets theme/width/TOC per file",1],["MDX-aware, sanitized inline HTML"],["Smart typography + engine option toggles"],["Content-Type detection, per-origin patterns & encoding"],["Wiki-links [[…]] + backlinks panel",1]],
- "Math & diagrams":[["KaTeX + MathJax fallback"],["Inline + block math"],["Copy as LaTeX / MathML",1],["Mermaid — all types, theme-synced"],["Graphviz DOT · Vega charts"],["Standalone .mermaid / .dot files"],["Per-diagram PNG/SVG export"],["Smart diagram cache + cache controls"],["No file-size limit, progressive load"],["Zoom/pan lightbox"],["Auto dark-mode media adaptation",1]],
- "Code":[["190+ languages (Shiki)"],["14+ code themes"],["Copy, line numbers, wrap, line highlight"],["Local language auto-detect"],["Collapsible long blocks",1]],
- "Sources":[["Local files & folders"],["Remote URLs · Git raw links"],["Drag-and-drop · paste scratchpad"],["Render selection on any page"],["Granular per-origin permissions"],["Local-only master switch"],["Web page → Markdown clipper",1],["Copy for AI (context-sized)",1]],
- "Navigation":[["Scroll-spy TOC rail"],["Folder browser + pinned + recents"],["Project mode: local docs site",1],["Cross-file full-text search",1],["In-doc search with section context",1],["Broken-link checker",1],["Scroll-position memory"],["Progress bar, word count, read time"],["Link preview cards · image gallery"],["Zoom 50–400% · 3 reading widths"],["Heading permalinks + text-fragment links",1],["Footnote & wiki hover previews",1],["Checkboxes that write back to the file",1],["Table sort/filter + CSV/JSON copy",1],["Presentation mode"],["Deck export as standalone HTML",1],["Read-aloud (browser TTS)",1],["Raw toggle · print mode"],["Focus mode + document mini-map",1]],
- "AI-workflow":[["Auto-reload on file change"],["Watch mode — live agent output",1],["Diff since your last look",1],["Compare any two files",1],["CLAUDE.md / AGENTS.md awareness",1],["Chat-transcript rendering",1],["Local MCP bridge (exploration)",1]],
- "Theming":[["Light / dark / auto + sepia"],["GitHub-identical themes"],["30+ themes, contrast-checked"],["Custom CSS: global / origin / document"],["9 fonts incl. accessibility picks"],["Type size, line height, paragraph gap"],["Per-file & per-folder overrides"],["Settings export + sync"]],
- "Editor":[["Split-pane, scroll-synced live preview"],["Visual table editor + CSV import"],["Toolbar + full keyboard shortcuts"],["Regex find & replace"],["markdownlint auto-format"],["Text transforms · snippets · emoji picker"],["Image paste (embed or save)"],["HTML & Jupyter import"],["Autosave + version snapshots"],["Document metrics panel"]],
- "Export & publish":[["Standalone HTML (embedded images)"],["DOCX with editable equations"],["Typeset PDF · ZIP bundle"],["Copy as rich text / HTML / plain"],["Gist · GitHub · Medium · Dev.to (your tokens)"],["⌘S export shortcut + progress"]],
- "AI (opt-in)":[["On-device: summarize, translate, proofread"],["BYOK: any provider, incl. local Ollama"],["Chat with the document"],["Rewrite with inline diff accept/reject"],["Explain selection"],["Generate outline / table / diagram / alt-text"],["AI web-clip"],["One-time consent explainer"],["Visible network indicator"]],
- "Onboarding":[["Guided setup, permission auto-detected"],["Zero-config on web URLs"],["⌘K command palette"],["Customizable shortcuts + ? cheat-sheet"],["Extension-conflict detection"],["Feature-tour demo document"]],
- "For everyone":[["8 languages at launch → 27 target"],["RTL support"],["WCAG 2.1 AA accessibility",1],["Reduced-motion respected"],["Chrome · Edge · Firefox · Brave · Opera · Vivaldi"]]
+ "Rendering":[["Tables, task lists, strikethrough, bare-URL links"],["Inline HTML, cleaned with DOMPurify"],["Raw text with an error banner if rendering fails"],["Remote images blocked until you load them"],["A raw view of the markdown"]],
+ "Sources":[["Markdown files opened from disk"],["Raw files on GitHub, GitLab and Bitbucket"],["A folder you pick or drag in, on the app page"]],
+ "Navigation":[["Table of contents rail"],["Folder browser with pins and recents, on the app page"],["Table sort, filter and copy"]],
+ "Watch & compare":[["Watch a file for changes, on the app page and, in Chromium-based browsers, in a tab showing a file from disk"],["Snapshots while watching, on the app page"],["Compare with a snapshot, on the app page"],["Compare with another file in the folder, on the app page"],["A badge for CLAUDE.md, AGENTS.md, spec.md, plan.md and tasks.md"]],
+ "Math, diagrams & code":[["Math with Temml, on the app page"],["Copy a formula as LaTeX or MathML, on the app page"],["Mermaid diagrams with a zoom view, on the app page"],["Copy or download a diagram, on the app page"],["Code highlighting for 6 languages, on the app page"],["Code themes, copy, line numbers and wrap, on the app page"]],
+ "Theming":[["Light, dark and auto themes"],["The Literata reading face"]],
+ "Editor":[["Markdown editor with a live preview, on the app page"],["Save writes in Chromium-based browsers and downloads in Firefox, on the app page"],["Asks before discarding unsaved changes, on the app page"]],
+ "Export":[["Standalone HTML file, on the app page"],["Print to PDF, on the app page"],["Copy as HTML, plain text or rich text, on the app page"]],
+ "Trust":[["No permissions in the manifest"],["No network requests by default"],["No telemetry and no analytics"],["MIT licence"]]
 };
 const ALL=[];Object.entries(F).forEach(([cat,items])=>items.forEach(([t,st])=>ALL.push({cat,t,st:!!st})));
-let curTab='Firsts';
+let curTab='All';
 function buildTabs(){
   const tabs=document.getElementById('tabs');
-  const firsts=ALL.filter(i=>i.st).length;
-  let html=`<button class="tab gold ${curTab==='Firsts'?'on':''}" onclick="setTab('Firsts')">★ Firsts <em>${firsts}</em></button>`;
-  html+=`<button class="tab ${curTab==='All'?'on':''}" onclick="setTab('All')">All <em>${ALL.length}</em></button>`;
+  let html=`<button class="tab ${curTab==='All'?'on':''}" onclick="setTab('All')">All <em>${ALL.length}</em></button>`;
   for(const cat of Object.keys(F)) html+=`<button class="tab ${curTab===cat?'on':''}" onclick="setTab('${cat}')">${cat} <em>${F[cat].length}</em></button>`;
   tabs.innerHTML=html;
 }
@@ -638,11 +589,11 @@ function setTab(t){curTab=t;document.getElementById('exq').value='';buildTabs();
 function exRender(){
   const q=document.getElementById('exq').value.trim().toLowerCase();
   let items=q ? ALL.filter(i=>i.t.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q))
-              : curTab==='All'?ALL : curTab==='Firsts'?ALL.filter(i=>i.st) : ALL.filter(i=>i.cat===curTab);
+              : curTab==='All'?ALL : ALL.filter(i=>i.cat===curTab);
   const grid=document.getElementById('exgrid');
-  grid.innerHTML=items.map(i=>`<div class="exitem ${i.st?'st':''}">${i.t}${(q||curTab==='All'||curTab==='Firsts')?`<span class="cat">${i.cat}</span>`:''}</div>`).join('');
+  grid.innerHTML=items.map(i=>`<div class="exitem ${i.st?'st':''}">${i.t}${(q||curTab==='All')?`<span class="cat">${i.cat}</span>`:''}</div>`).join('');
   document.getElementById('exempty').style.display=items.length?'none':'block';
-  document.getElementById('excount').textContent=q?`${items.length} match${items.length===1?'':'es'}`:`${ALL.length} features · ${ALL.filter(i=>i.st).length} firsts`;
+  document.getElementById('excount').textContent=q?`${items.length} match${items.length===1?'':'es'}`:`${ALL.length} features`;
 }
 buildTabs();exRender();
 </script>

@@ -211,7 +211,7 @@ and date** (AGENTS.md, the M12 retro rule).
       page, …"; Limits gains the tab and raw-host lines), the human's opening sentence, "Renders", one "Planned" section
       in two labelled parts, "Licence" kept (the repo's spelling); ledger 75 rows (47 · 4 · 9 · 15).
 
-- [ ] **1.3 Site content pass: shipped features + "Planned", every dead link resolved, numbers checked (D-12; F-3).**
+- [x] **1.3 Site content pass: shipped features + "Planned", every dead link resolved, numbers checked (D-12; F-3).**
       TEST FIRST. `site/index.html`: on-device AI, BYOK, 30+ themes, publishing, presentation mode, command palette,
       27 languages, "reproducible builds" moved to one "Planned" section or removed; every `href="#"` resolved per F-3
       (install-shaped → the plain non-link line "Not in stores yet — build from source" + the repo link); every number
@@ -223,6 +223,14 @@ and date** (AGENTS.md, the M12 retro rule).
       outside "Planned" has a ledger row with evidence. **Red-first** on today's file (eleven-plus `href="#"`). The
       page opened locally in Chromium and Firefox renders without error (agent glance, not the walk). Production bytes:
       none — md5 identical to 1.2. Golden EMPTY · manifest 654 / 770 B · `permissions: []`. [D-12]
+      ★ *Landed 2026-11-01 (`decisions.md`, "M13 TASK 1.3"):* text, links and the explorer's data rewritten (layout and
+      styles kept for 9.1); 17 `href="#"` resolved (install-shaped → "Not in stores yet — build from source"; repo links →
+      the real URLs, "live at release"); one `id="planned"` section; the site's ledger rows 214 (167 · 10 · 3 · 34);
+      truthPins +6 site cases, red at HEAD on 5; the page renders without error in both engines; build identical to
+      `main`'s.
+      ★ *Review addendum 2026-11-01:* the security heading, the watch wording (card and explorer), the no-telemetry
+      evidence; "UPDATE AT GO-LIVE" on every not-in-stores line and the Setup "Build" step, carried to 7.6 as a go-live
+      step; ledger 291 rows (the site 216).
 
 *Group-1 acceptance (spec §4 Truth + CI): README, site and SECURITY.md describe only what ships or say "Planned"; no
 install link; numbers evidenced or gone; the ledger exists; CI pinned and triggered on `main`.*
