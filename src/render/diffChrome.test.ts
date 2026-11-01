@@ -740,3 +740,26 @@ describe('buildDiffChrome — the seam: no context reference is captured', () =>
     window.removeEventListener('error', spy);
   });
 });
+
+// ── M13 task 1.4 addendum — the remote-load lane on an engine WITHOUT anchor positioning ──────
+// `anchor-name` / `anchor()` need Chrome and Edge 125+ and Firefox 147+ (MDN browser-compat-data,
+// checked 2026-11-01), and the manifests set no minimum version, so an older engine can install
+// Peekover. There the anchored `left` is an invalid declaration and is DROPPED at parse time; what
+// applies is whatever `left` the cascade held before it. That must be the old fixed lane (176px,
+// clear of the widest Windows label), not READER_CSS's `left:16px` (the pill's own slot, so the
+// two would overlap). jsdom applies no cascade, so this pins SOURCE ORDER inside the one rule: the
+// fixed value first, the anchored value after it. A supporting engine takes the later declaration.
+describe('the remote-load lane — fallback for engines without anchor positioning', () => {
+  it('declares left:176px BEFORE the anchored left, in the same CONTAINED_CSS rule', () => {
+    const rule = /\.peekover-remote-load\{([^}]*)\}/.exec(CONTAINED_CSS);
+    expect(rule, 'CONTAINED_CSS has a .peekover-remote-load rule').not.toBeNull();
+    const body = rule![1];
+    const fixed = body.indexOf('left:176px');
+    const anchored = body.indexOf('left:calc(anchor(--peekover-diff right');
+    expect(anchored, 'the anchored left is present').toBeGreaterThanOrEqual(0);
+    expect(fixed, 'the fixed fallback is present').toBeGreaterThanOrEqual(0);
+    expect(fixed, 'the fixed fallback comes first, so the anchored value wins where supported').toBeLessThan(anchored);
+    // Exactly one rule: a second .peekover-remote-load rule later in the sheet could re-order the cascade.
+    expect(CONTAINED_CSS.match(/\.peekover-remote-load\{/g)).toHaveLength(1);
+  });
+});

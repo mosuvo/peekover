@@ -443,6 +443,25 @@ const DARK_TOKENS = /* css */ `
  * correctly — an entirely different, already-shipped consumer this task must not silently break by
  * moving the block out from under it. See readerCss.ts's own comment on its copy for the reverse
  * pointer.
+ *
+ * THE HEADER WRAPS (M13 task 1.4; `decisions.md`, "M13 RULING — the Linux reds"). The header was
+ * one non-wrapping flex row, so its width was whatever the system face made it: at 414px it laid out
+ * 454px (Chromium) / 470px (Firefox) in Inter on Linux, and the Export control sat off the right edge
+ * — clipped for the user, and unreachable by pointer (CI #18's editorUnsaved red). Segoe UI happened
+ * to fit, so Windows never showed it. `flex-wrap:wrap` lets the controls drop to a second row instead
+ * of leaving the viewport; at a wide viewport the row fits and nothing moves. A deliberately MINIMAL
+ * stop-gap: group 4's toolbar work (M13 tasks 4.x) replaces this header and supersedes the rule.
+ * Asserted in tests/browser/appHeaderNarrow.browser.test.ts.
+ *
+ * THE EMPTY STORAGE SLOT TAKES NO PLACE IN THE ROW (1.4, second addendum). Once the header could wrap,
+ * the CLOSED `__storage-slot` — an empty, zero-width flex item — still took a `gap` in its row. At a
+ * width where that gap tipped the next control onto a new row, opening the panel (which takes the
+ * slot out of flow) removed the gap, the header lost a row, and the navigator and reader jumped up:
+ * on CI's font at 414px the header went 132 → 93px (PR #14's storagePanelOverlay red). `:empty`
+ * now sets `display:none`, so the slot is out of the row in both states and opening the panel
+ * cannot change the header's height. The open panel itself was already anchored to the header's
+ * actual bottom (`top:100%`), as are the export and code-theme popovers (against their own
+ * triggers). Asserted by the header-width sweep in tests/browser/storagePanelOverlay.browser.test.ts.
  */
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
@@ -464,7 +483,7 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS} :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 
 .${SHELL_CLASS}__header{
-  flex:0 0 auto; display:flex; align-items:center; gap:.6rem;
+  flex:0 0 auto; display:flex; flex-wrap:wrap; align-items:center; gap:.6rem;
   padding:.7rem 1rem; border-bottom:1px solid var(--line); background:var(--panel);
   position:relative; /* containing block for __storage-slot's overlay — see APP_CSS doc comment */
 }
@@ -515,6 +534,7 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS}__storage-toggle:hover{background:var(--accent-soft)}
 .${SHELL_CLASS}__storage-toggle[aria-expanded="true"]{background:var(--accent-soft)}
 /* "Stored data" panel: overlay dropped from the header, not a band in flow — see doc comment. */
+.${SHELL_CLASS}__storage-slot:empty{display:none}
 .${SHELL_CLASS}__storage-slot:not(:empty){
   position:absolute; top:100%; right:1rem; z-index:5;
   width:min(560px,calc(100vw - 2rem));

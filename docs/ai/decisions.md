@@ -1,6 +1,162 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 TASK 1.4 — CI green on Linux (DISCOVERED; landed on `claude/loving-turing-bpgzi0`).** Implements the
+  ruling below, red-first on both engines in the Linux cloud session.
+  - **(1) diffChrome lane, PRODUCT.** `CONTAINED_CSS`: `.peekover-diff-affordance{…anchor-name:--peekover-diff}` and
+    `.peekover-remote-load{left:calc(anchor(--peekover-diff right,-8px) + 24px)}` — CSS anchor positioning, no JS. It
+    needs the pill before the opt-in in tree order (`mount()` pushes diff chrome first) — probed on both engines first.
+    With no laid-out pill the fallback puts the opt-in at 16px, its READER_CSS slot. New test: the pill widened
+    font-independently (min-width 320px) must keep a 24px gap and not overlap; red at HEAD (gap 14.77), green after at
+    1280 and 1400, the rule ablated → red. CI's exact rects reproduced at HEAD with DejaVu Sans forced; green after.
+    **One test edit beyond "the test is unchanged", ruled by the human mid-task:** the existing lane test stored the
+    opt-in's rect in the "Compare" state and reused it after the label widened; the anchored opt-in moves (473 → 529), so
+    the rect went stale. It now re-reads the rect. Property unchanged.
+  - **(2) header, PRODUCT, minimal.** `flex-wrap:wrap` on `.peekover-app__header` (APP_CSS, app page only); rationale in
+    the doc comment above APP_CSS, naming group 4's toolbar as its successor. New
+    `tests/browser/appHeaderNarrow.browser.test.ts` (414 × 896 and a 1280 control): red at HEAD (Export [390,41,454,71]
+    past 414, both engines), green after; editorUnsaved's inert case green; ablated → both red.
+  - **(3) copyAsHtml, TEST.** The wait matches "Body of alpha.md.". CI's order pinned with a scratch sequencer: HEAD went
+    red 1 in 9 bare (a race), 2 of 3 with copyAsRichText's leftover seeded before the click; the fix: 3 of 3 green with the
+    seed. Removed from `progress.md`'s known-flakes list.
+  - **(4) golden ~1 MB, TEST.** `{ timeout: 30_000 }` on that case: 6.0–6.5 s measured on the 4-CPU cloud host, under 5 s
+    on Windows and CI; 30 s is about 4.6× the slowest run, so a hang still fails. Red at HEAD (6.47 / 6.01 s), green
+    after; the SHA-256 pin unchanged.
+  - **(5) perf budget** unchanged; timings recorded in `progress.md` (§ Carried items 4).
+  - **Bytes** (clean two-engine build against a same-session HEAD rebuild, which reproduced `b0ff62df` / `3413dae0`):
+    content script 344,195 → **344,266 B (+71 = `anchor-name` 29 + `left` 42)**, md5 `2ef5a824…` / `47017c73…`; app chunk
+    532,048 → **532,135 B (+87 = the same 71, since `readerCss.ts` is on both graphs, + `flex-wrap:wrap; ` 16)**. No other
+    file changed size or content beyond chunk-name hashes. `.output` 5,831,017 / 5,831,133 B; zips 1,842,849 / 1,842,907 B;
+    manifests 654 / 770 B; `permissions: []`. Far under G-7's +2 KB; the 26-site `:host` pin untouched.
+  - **Verify:** lint 0 · unit 1421 / 1422 (the perf flake, red on both runs in the full suite, green alone) · full browser
+    suite alone 1967 passed / 2 failed / 51 skipped (344 s). **Both reds are outside the known flakes:** diagramActions "is
+    REVEALED by keyboard focus" (Cr+Fx), the group's starting opacity 0.16 / 0.156. PRE-EXISTING: with HEAD's production
+    files restored, the same pinned Firefox order went red 2 of 5 (with 1.4, 1 of 4); 54 / 54 alone. The human chose to
+    commit and list it as a flake, UNRULED. Golden EMPTY · `pnpm audit --prod` EXIT 0, 2026-11-01.
+  - **Flagged:** the ruling named "AGENTS.md's known-flakes list" — there is none in AGENTS.md; the list is
+    `progress.md` § Carried items 4, updated there; AGENTS.md unchanged.
+  Revisit-when: group 4's toolbar replaces the header (drop the wrap rule with it); task 2.4 lands Bricolage (re-measure the
+  lane — it is now font-independent by construction); the human rules on the diagramActions flake.
+  - **ADDENDUM 2026-11-01 (the human's two follow-ups; same branch, a second commit).**
+    **A · diagramActions "is REVEALED by keyboard focus" — HUMAN RULING: TEST fix, not a known flake.** Cause PROVEN
+    (an instrumented run, the pinned Firefox order): on every red, at the test's start the figure matched `:hover`
+    (shadow chain reader > figure > `button.peekover-diagram-open`), `:focus-within` false, nothing focused, opacity
+    0.084 / 0.172 / 0.100 / 0.116 — a resting pointer over the figure (x 32–382, y 312–806) had started the hover reveal.
+    A green run with `:hover` true read opacity 0 (the read beat the transition), and one had no hover. The product reveals
+    only on `:hover` / `:focus-within` (readerCss.ts) — no product defect. Fix: the test hovers a neutral 8×8 point at the
+    viewport's top-left corner, asserts the figure is no longer `:hover`, and waits for opacity 0 before focusing. Red
+    rate in the reproducing orders (scratch sequencer), 6 runs each: **before — Firefox 2/6, Chromium 2/6; after — 0/6
+    and 0/6.** Alone 54 / 54. Ablating the product's `:focus-within` reveal → red ("focusing a control never revealed the
+    group"), so the property (keyboard focus alone reveals) is still guarded.
+    **B · the anchor fallback.** The manifests set NO minimum version (no `minimum_chrome_version`, no gecko
+    `strict_min_version`; Edge is not listed and takes the Chromium build). `anchor-name` and `anchor()` need Chrome
+    125+, Edge 125+, Firefox 147+ (MDN browser-compat-data, read 2026-11-01). So an older installable engine drops the
+    anchored `left` at parse time. As landed, it then fell back to READER_CSS's `left:16px`, the pill's own slot, so the
+    two overlapped: **the old value was NOT the fallback.** Probed on both engines with an unknown function in place of
+    `anchor()`: without a fallback `left` = 16px, with one 176px. Fixed with one declaration in the same rule,
+    `left:176px;` BEFORE the anchored `left`, so a supporting engine takes the later one. Pinned by a source-order unit
+    check (`src/render/diffChrome.test.ts`, red before, green after; jsdom has no cascade, and no test needs an old engine).
+    Bytes: content script 344,266 → **344,278 B (+12)**, app chunk 532,135 → **532,147 B (+12)**, both engines;
+    `.output` 5,831,041 / 5,831,157 B; zips 1,842,739 / 1,842,797 B; manifests 654 / 770 B; `permissions: []`.
+    Verify: lint 0 · unit 1422 / 1423 twice (only the perf flake, 112.9 / 133.9 ms) · full browser suite alone, both engines: **1969 passed / 0 failed / 51 skipped (2020, 190 files, 357 s), EXIT 0.** Golden EMPTY · `pnpm audit --prod` EXIT 0.
+  - **ADDENDUM 2026-11-01, second (PR #14's CI: a 1.4 regression and the OSV upload; a third commit on the branch).**
+    **A · REGRESSION FROM 1.4 — storagePanelOverlay (both engines on CI).** CI: the navigator and reader rects were
+    top 132 / height 764 before the Stored data panel opened and top 93 / height 803 after. **Cause — not a panel-top
+    constant:** the open panel was already anchored to the header's actual bottom (`top:100%`). The header's HEIGHT
+    changed. Once 1.4 let it wrap, the CLOSED, empty `__storage-slot` stayed in the flex row as a zero-width item that
+    still took a `gap`. At 414px in DejaVu Sans that gap pushed Export to a third row (header bottom 132); opening the
+    panel takes the slot out of flow (`position:absolute`), Export fits on row two, and the header shrinks to 93, so
+    the page under it jumps 39px. Reproduced here at this branch's HEAD with DejaVu forced on the shell's `--sans`:
+    the same 132 → 93 on both engines, slot at x 323 on row two, Export at y 90 → 51. **Fix (CSS, app page):**
+    `.peekover-app__storage-slot:empty{display:none}` — the closed slot is out of the row, so opening the panel cannot
+    change the header's height. **Other overlays checked:** the storage panel, the export panel and the code-theme
+    picker are all `top:100%` of their own anchors; the unsaved-changes dialog is `inset:0`, centred; there is no
+    folder overlay yet (4.8). None assumes a header height. One soft assumption is left and reported, not changed:
+    the storage panel's `max-height:min(70vh,calc(100vh - 5rem))` treats the header as about 5rem; it only binds
+    below about a 266px-tall viewport. **Red-first, font-independent:** a new storagePanelOverlay case sweeps the
+    header's width from 280 to 1100px in 2px steps and requires the same header height with the panel closed and open
+    at every width. Red at HEAD in Inter on both engines (388px: 132 → 93, plus 9 more widths); green after; the rule
+    ablated → red. The original CI reds (DejaVu forced): red at HEAD, 12 / 12 after.
+    **FONT PARITY.** Here the cloud image ships `/etc/fonts/conf.d/56-prefer-inter.conf`, which makes `system-ui`,
+    `sans-serif`, "Segoe UI" and others resolve to Inter. Measured by width-matching against every installed face:
+    Chromium `system-ui` = Inter, `sans-serif` = Liberation Sans; Firefox both = Inter. With that one rule excluded
+    (a per-process `FONTCONFIG_FILE`, scratch only), both engines resolve `system-ui` to DejaVu Sans; Firefox
+    `sans-serif` = DejaVu Sans, Chromium `sans-serif` = Liberation Sans. CI's `ubuntu-latest` has no Inter; its
+    `system-ui` is DejaVu Sans by inference, not observation (no runner shell here): DejaVu reproduces both CI
+    geometries to the pixel (the pill 160.10 → `[360,…,520]`, the header 132 → 93). **Proposal (not applied):** the
+    cloud environment's setup script removes that rule so this host resolves fonts as CI does, e.g.
+    `rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f` (or `apt-get remove fonts-inter` if the rule ships
+    with it). Until then, a browser run can be pointed at a fontconfig without it via `FONTCONFIG_FILE`.
+    **B · OSV — the SARIF upload, not a finding.** The scan ran (779 packages, exit 1 = advisories present, absorbed by
+    `continue-on-error`); `github/codeql-action/upload-sarif@v3` failed "Resource not accessible by integration …
+    get-a-workflow-run". **It failed on main too:** Supply chain on `ea856df` failed on that step with the same error,
+    and every Supply chain run on main listed — `14f20d7` and the weekly runs back to 2026-10-12 — concluded failure.
+    **Docs** (docs.github.com is not allowed in this session; read via the GitHub docs pages surfaced by search and the
+    codeql-action README on raw.githubusercontent.com): upload-sarif needs `security-events: write`, plus `actions:
+    read` and `contents: read` on a private repository ("Uploading a SARIF file to GitHub"; the codeql-action README:
+    "Workflows in private repositories must additionally have the `contents: read` permission"). Code scanning on a
+    private repository needs GitHub Code Security, i.e. GitHub Team or Enterprise; a personal account on Free or Pro
+    has it on public repositories only ("Private repository enablement"; the codeql-action README: private repositories
+    "owned by an organisation with GitHub Advanced Security enabled"). The repository is private and personal, so
+    **the upload cannot work here on this plan, whatever the permissions.** **Fix (`supply-chain.yml`):** the upload
+    runs only when the repository is public (`if: ${{ always() && !github.event.repository.private }}` — the
+    attestation pattern, plan G-9) and moves to `upload-sarif@v4` (v3 is deprecated in December 2026); the SARIF is
+    always kept as a workflow artifact (`actions/upload-artifact@v4`, `osv-results-sarif`). The job keeps its least
+    privilege for the public case, `contents: read` + `security-events: write`; `actions: read` would be needed only
+    for an upload on a private repository with Code Security, which is noted in the workflow. **The scan stays
+    advisory** (`continue-on-error`) — the human's choice this session, against the instruction's "failing the job on
+    real findings": the scan exits 1 today on dev-tree advisories, and the recorded split keeps `pnpm audit --prod` as
+    the blocking gate. Pinned red-first in `tests/ciConfig.test.ts` (red at HEAD on the v3 pin; green after).
+    **Bytes:** content script unchanged (344,278 B, md5 `b27e0c8b…` / `16cd9bd7…`); app chunk 532,147 → **532,187 B
+    (+40 = `.${$}__storage-slot:empty{display:none}` + newline)**, both engines; `.output` 5,831,081 / 5,831,197 B; zips
+    1,842,676 / 1,842,734 B; manifests 654 / 770 B; `permissions: []`.
+    **Verify:** lint 0 · unit 1423 / 1424 twice (only the perf flake, 185.5 / 124.3 ms) · full browser suite alone:
+    1971 passed / 0 failed / 51 skipped (2022, 190 files, 374 s), EXIT 0 · the same suite with the CI font (fontconfig without the Inter rule): 1971 passed / 0 failed / 51 skipped (2022, 190 files, 369 s), EXIT 0 · golden EMPTY ·
+    `pnpm audit --prod` EXIT 0.
+
+- **2026-11-01 · M13 RULING — the Linux reds (HUMAN).** On the cloud environment check's findings: (1) diffChrome
+  remote-load lane — PRODUCT: position the notice from the comparison pill's laid-out edge, not a fixed 176px; prefer CSS
+  (one lane, the 24px gap) over JS measurement; the test is unchanged. (2) editorUnsaved, header at 414px — PRODUCT,
+  minimal: the app header wraps (or otherwise keeps every control inside the viewport) at narrow widths; CSS only, app
+  page; group 4's toolbar supersedes it. (3) copyAsHtml — TEST: wait for this fixture's own "Body of alpha.md."; remove it
+  from the known flakes. (4) golden ~1 MB — TEST: a per-test timeout long enough for slower runners; the SHA-256
+  unchanged. (5) the pipeline.perf budget (100 ms) — UNCHANGED, a known flake, re-run on a red. All of it runs now as a
+  DISCOVERED task 1.4 "CI green on Linux", before 1.2, on this branch; count 40 → 41. Why: CI on `main` is red, and every
+  red was a Linux-only condition the Windows runs could not show. Revisit-when: group 4 (the header) and 2.4 (fonts).
+
+- **2026-11-01 · M13 CLOUD ENVIRONMENT CHECK — the first Linux cloud session, before any M13 task. Records only; no
+  production, test or config byte changed. Three browser reds reported with proposed fixes; nothing fixed — the human
+  rules.** Checkout `main` `ea856df`, tree clean. Ubuntu 24.04.5, Node v22.23.4 (`.nvmrc` 22), pnpm 10.33.0
+  (`packageManager`), Playwright 1.61.1 with Chrome for Testing 149.0.7827.55 and Firefox 151.0. The first browser
+  download was refused (`cdn.playwright.dev`, not allowlisted); the check stopped and was resumed after the human
+  allowed `cdn.playwright.dev` and `playwright.download.prss.microsoft.com`. Exits: frozen install 0 (lockfile
+  unchanged) · `pnpm audit --prod` 0 (2026-11-01) · lint 0 · unit 1 (1420 / 1422: the golden ~1 MB case at 6.1–6.5 s
+  against 5 s, output SHA-256 still matching the pin, and the parse+sanitize perf budget, 93–136 ms against 100 — the
+  host's speed; CI's unit step was green) · `sanitize.browser.test.ts` 0 on both engines · full browser suite 1 (3 failed /
+  1950 passed / 59 skipped, 351 s).
+  - **The kickoff's context was partly wrong, and the job log is the authority:** CI #18's 7 reds are copyAsHtml
+    (Chromium) · diffChrome remote-load lanes at 1280 and 1400 (Chromium AND Firefox, 4) · editorUnsaved inert (Chromium
+    AND Firefox, 2) — not all Firefox, and one is not layout.
+  - **diffChrome (4; green here).** Font metrics: in DejaVu Sans (CI's fallback) the "Close comparison" pill is 160.10 px,
+    so its right edge is 520.10 against the opt-in's 520.00 (CI's exact rects); in Inter (here) 145.23, a 14.77 px gap; on
+    Windows (Segoe) 136. A 0.10 px overlap, so the strict test is right. The 176 px lane offset was derived from one OS's
+    metrics. Proposed PRODUCT: place the opt-in off the pill's laid-out edge. Task 2.4 makes the face OS-independent on the
+    app page; the offset must still be re-derived from Bricolage.
+  - **editorUnsaved (2; reproduced).** The header does not wrap: at 414 px it is 454 (Cr) / 470 (Fx) px wide in Inter,
+    so the Export control's centre is off-screen and `elementFromPoint` returns `null`. A user on Linux at that width
+    sees Export clipped. Proposed PRODUCT: wrap or collapse the header at narrow widths. Task 2.4 fixes it only if
+    Bricolage is 40–56 px shorter there (unmeasured).
+  - **copyAsHtml (1; reproduced).** Harness-shared-state: the wait accepts any clipboard text containing `alpha.md`, and
+    `copyAsRichText`'s fixture (run just before it on Linux) contains it. Green alone and paired. Proposed TEST: wait on
+    `Body of alpha.md.`.
+  - **Skips 59 vs 51:** 8 build-gated tests (`mathActions` ×2, `tableCopy` ×1, `diagramActions` ×1, per engine) skip
+    with no `.output`; with it they ran (144 / 144).
+  - **Linux build:** the clean two-engine build and zips are identical to the Windows snapshot on every recorded figure
+    (`.output`, file count, zips, content-script md5 `b0ff62df…` / `3413dae0…`, app chunk, manifests). Recorded beside
+    the Windows baseline in `progress.md`; neither is chosen. Bears on 7.3: no OS difference was found.
+  Why recorded: CI on `main` is red, and the first cloud host differs from the Windows baseline in fonts and speed.
+  Revisit-when: the human rules on the three reds, or task 2.4 lands (re-measure both layout cases in Bricolage).
+
 - **2026-10-31 · HUMAN RULING — cloud sessions may push the agent's own branch; `main` stays the human's.** In the
   human's words: "From M13 onward, development may run in a cloud session. There the agent MAY push its OWN working
   branch (never main) so the human can review and merge it through a pull request (which runs ci.yml). Merging to main

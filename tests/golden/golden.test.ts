@@ -108,8 +108,15 @@ describe('golden — images.md through the remote-resource policy', () => {
 const HUGE_DOC_SHA256 =
   '8bc5094c20b56b978c9048e99e3e35bf8aacdacf5313f8849c36f728bde61bbd';
 
+// Per-test timeout (M13 task 1.4): 30 s, not vitest's 5 s default. This case does real work —
+// parse + sanitize of ~1.2 MB — and its time is the RUNNER's speed, not a property under test:
+// measured 6.0–6.5 s on the 4-CPU Linux cloud host (2026-11-01), under 5 s on the Windows and CI
+// machines. 30 s is about 4.6× the slowest measured run, so a slower runner passes while a hang still
+// fails. Correctness is untouched: the pinned SHA-256 below is the guard, and it is unchanged.
+const HUGE_DOC_TIMEOUT_MS = 30_000;
+
 describe('golden — huge (~1 MB) document', () => {
-  it('produces byte-stable output (pinned SHA-256) with expected structure', () => {
+  it('produces byte-stable output (pinned SHA-256) with expected structure', { timeout: HUGE_DOC_TIMEOUT_MS }, () => {
     const source = buildHugeDoc();
     // Source is generated with \n only, so no normalization is needed here.
     const html = render(source);
