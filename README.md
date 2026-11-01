@@ -1,6 +1,6 @@
 # Peekover
 
-Peekover is a free, open-source browser extension that shows raw markdown files as formatted pages you can read.
+Peekover is a free, open-source browser extension that turns raw markdown files into formatted, readable pages.
 It works on markdown files opened from your own disk and on raw files from GitHub, GitLab and Bitbucket.
 It asks for no browser permissions and makes no network requests unless you ask it to.
 
@@ -11,22 +11,23 @@ It asks for no browser permissions and makes no network requests unless you ask 
 
 - Renders markdown with tables, task lists, strikethrough and bare-URL links.
 - Cleans every rendered page with DOMPurify before it is shown.
-- Takes over markdown files opened from disk (`.md` and similar extensions) and raw files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket.
+- Renders markdown files opened from disk (`.md` and similar extensions) and raw files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket.
 - Shows a table of contents for documents with two or more headings.
 - Lets you sort, filter and copy tables.
 - Has light and dark themes and follows your system setting by default.
 - Blocks remote images until you choose to load them.
 - Has an app page, opened from the toolbar button, where you open a folder and browse its markdown files.
-- Can watch a file and update the view when it changes on disk.
-- While watching, keeps snapshots of the document on your device, which you can turn off.
-- Compares a document with one of its snapshots or with another file in the folder.
+- Can watch a document and update the view when it changes on disk, on the app page and in a tab showing a file opened from disk.
+- On the app page, while watching, keeps snapshots of the document on your device, which you can turn off.
+- On the app page, compares a document with one of its snapshots or with another file in the folder.
 - On the app page, draws Mermaid diagrams, renders math with Temml, and highlights code in JavaScript, Python, JSON, CSS, HTML and Bash.
-- Exports a standalone HTML file, prints to PDF, and copies the document as HTML, plain text or rich text.
-- Has a basic editor with a live preview and a Save button, and asks before discarding unsaved changes.
+- On the app page, exports a standalone HTML file, prints to PDF, and copies the document as HTML, plain text or rich text.
+- On the app page, has a basic editor with a live preview and a Save button, and asks before discarding unsaved changes.
 
 ### Limits
 
-- Diagrams, math and code highlighting work on the app page only, not when a file is opened directly in a tab.
+- In a tab, snapshots, comparison, diagrams, math, code highlighting, export and editing are not available; open the document on the app page for those.
+- Watching does not work for raw files from GitHub, GitLab or Bitbucket.
 - In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on.
 - Save writes the file back in Chromium-based browsers such as Chrome and Edge; in Firefox it downloads a copy instead.
 - In Firefox, watching does not work for a file opened directly from disk.
@@ -43,11 +44,16 @@ It asks for no browser permissions and makes no network requests unless you ask 
 
 ## Planned
 
-- Listings in the Chrome, Firefox and Edge stores, for the first public release.
-- For the first release: a check in CI that two builds of the same source produce the same files.
-- For the first release: a one-page threat model and attestations on release files.
-- For the first release: a privacy policy at https://peekover.dev/privacy/ and a website at https://peekover.dev, neither online yet.
-- Not scheduled: DOCX and ZIP export, on-device and bring-your-own-key AI features, and publishing.
+For the first public release:
+
+- Listings in the Chrome, Firefox and Edge stores.
+- A check in CI that two builds of the same source produce the same files.
+- A one-page threat model, and attestations on release files.
+- A privacy policy at https://peekover.dev/privacy/ and a website at https://peekover.dev, neither online yet.
+
+Later, not yet scheduled:
+
+- DOCX and ZIP export, AI features, and publishing.
 
 ## Build from source
 

@@ -45,6 +45,28 @@
     Planned section) are in the same authorized test file. (c) Font parity is not in place: `fc-match system-ui` is
     Inter here; the environment setup step has not run.
   Revisit-when: 1.3 (the site joins the ledger), 7.2 (PRIVACY, THREAT-MODEL, SECURITY final), 9.2 (the re-check).
+  - **ADDENDUM 2026-11-01 (the human's 1.2 review; a second commit on the branch, before the PR).**
+    **Surface accuracy, verified from the code:** both surfaces (tabs and the app page) — rendering, DOMPurify, the TOC
+    (`src/render/mount.ts`), table sort / filter / copy (`src/render/mountReader.ts` and `src/app/readerPane.ts` both
+    call the table enhancer), themes, remote-image blocking. Watching — the app page, and tabs only for a file opened
+    from disk (`src/watch/contentWatch.ts` + `src/watch/watchRelay.ts`, which refuses non-file:// URLs; not raw hosts,
+    `src/watch/watchAvailability.ts` case c; not Firefox tabs). App page ONLY — snapshots (the tab watcher has docId
+    null and captures nothing, `src/watch/contentWatch.ts`), compare with a snapshot and with another file (only
+    `src/app/appShell.ts` registers the diff context), diagrams / math / code (the import fences), export / print /
+    copy (`src/app/exportControls.ts`, from the app shell), the editor (the Edit control, from `src/app/readerPane.ts` /
+    `src/app/appShell.ts`), folder browsing. README now says "On the app page, …" in each app-page-only bullet, and
+    Limits gains "In a tab, snapshots, comparison, … are not available" and "Watching does not work for raw files from
+    GitHub, GitLab or Bitbucket" (the old diagrams/math/code limit folds into the first).
+    **Wording:** the opening sentence is the human's ("turns raw markdown files into formatted, readable pages");
+    "Takes over" → "Renders"; ONE "Planned" section with two labelled parts, "For the first public release:" and
+    "Later, not yet scheduled:" (DOCX and ZIP export, AI features, publishing) — truthPins' one-Planned-section case
+    stays green. The Firefox "not yet checked on a real install" limit stays; its ledger row says "REMOVE OR UPDATE
+    AFTER 8.1". **Spelling:** "Licence" kept — the repository's other markdown uses licence / Licence 65 times against
+    license 8 (the file stays `LICENSE`, the name GitHub looks for).
+    **Ledger:** 75 rows — 47 true now · 4 live at release · 9 planned · 15 withdrawn (README 45 live rows, SECURITY 15);
+    each feature row names its surface. truthPins 15 / 15; the ablation ("190+ languages") → 3 red, restored
+    byte-identical. Lint 0; unit 1438 / 1439 (the perf flake only, 214.4 ms). No shipped file changed (README and the
+    ledger are not packaged).
 
 - **2026-11-01 · M13 TASK 1.4 — CI green on Linux (DISCOVERED; landed on `claude/loving-turing-bpgzi0`).** Implements the
   ruling below, red-first on both engines in the Linux cloud session.

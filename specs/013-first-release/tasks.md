@@ -207,6 +207,9 @@ and date** (AGENTS.md, the M12 retro rule).
       false figures absent, every "true now" row's evidence path exists, exactly one README "Planned" section. The
       peekover.dev URLs sit under README's "Planned", marked not online yet (G-1 supersedes D-12's removal). Build
       identical to `main`'s, all 139 files per engine (the snapshot moved at 1.4, so the reference is `main`, not 1.1).
+      ★ *Review addendum 2026-11-01:* every README feature line names its surface (app-page-only items say "On the app
+      page, …"; Limits gains the tab and raw-host lines), the human's opening sentence, "Renders", one "Planned" section
+      in two labelled parts, "Licence" kept (the repo's spelling); ledger 75 rows (47 · 4 · 9 · 15).
 
 - [ ] **1.3 Site content pass: shipped features + "Planned", every dead link resolved, numbers checked (D-12; F-3).**
       TEST FIRST. `site/index.html`: on-device AI, BYOK, 30+ themes, publishing, presentation mode, command palette,
