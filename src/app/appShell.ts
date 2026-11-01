@@ -367,14 +367,24 @@ export interface AppDeps {
 // match `readerCss.ts`'s `:host` blocks token-for-token — that identity is what makes shell and
 // reader compute the SAME --paper/--ink under one theme (the coherence property, asserted in
 // tests/browser/themeRuntime.browser.test.ts). Change one side and you must change both.
-const LIGHT_TOKENS = /* css */ `
+/** The shell's copies of `design/tokens.css` (light and dark), pinned to it by
+ *  tests/designTokens.test.ts (M13 task 2.1, plan D-1). Exported for that test only. The full colour set
+ *  since 2.1 (`--code-bg --hl --ok --ok-soft --warn --del --del-soft` were missing), and the dark
+ *  `--shadow` ruled at gate 1 (Q2). The shell's named exceptions are listed in the test. */
+export const LIGHT_TOKENS = /* css */ `
   --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
-  --line:#E6E6DF; --accent:#16171F; --accent-soft:#ECECE3; --hl-soft:#FFF6BF;
+  --line:#E6E6DF; --code-bg:#F1F1EB; --accent:#16171F; --accent-soft:#ECECE3;
+  --hl:#FFE94A; --hl-soft:#FFF6BF; --ok:#1F9D55; --ok-soft:#E4F5EB; --warn:#B7791F;
+  --del:#B8512F; --del-soft:#F8E9E2;
 `;
-const DARK_TOKENS = /* css */ `
+export const DARK_TOKENS = /* css */ `
   --paper:#12141C; --panel:#181B26; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
-  --line:#262A38; --accent:#EAEBF3; --accent-soft:#232838; --hl-soft:#3A3413;
+  --line:#262A38; --code-bg:#1C2030; --accent:#EAEBF3; --accent-soft:#232838;
+  --hl:#FFD84D; --hl-soft:#3A3413; --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
+  --del:#E08663; --del-soft:#342016; --shadow:0 10px 30px rgba(0,0,0,.5);
 `;
+/** The theme-independent base the shell sets beside LIGHT_TOKENS — radius and the light shadow. */
+export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);`;
 
 /**
  * The shell stylesheet: design tokens (light + dark) + minimal layout.
@@ -466,7 +476,7 @@ const DARK_TOKENS = /* css */ `
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
   ${LIGHT_TOKENS}
-  --r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
+  ${APP_BASE_TOKENS}
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   position:fixed; inset:0; display:flex; flex-direction:column;
   background:var(--paper); color:var(--ink);

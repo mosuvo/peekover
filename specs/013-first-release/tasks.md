@@ -240,7 +240,7 @@ install link; numbers evidenced or gone; the ledger exists; CI pinned and trigge
 *The census (2.2) is written before any restyle, so its first run IS the inventory. Nothing in this group touches the
 toolbar.*
 
-- [ ] **2.1 `tokens.css` is the single source; every code copy pinned by one test (D-1; Q2, Q4).** TEST FIRST.
+- [x] **2.1 `tokens.css` is the single source; every code copy pinned by one test (D-1; Q2, Q4).** TEST FIRST.
       `tests/designTokens.test.ts` (node): parse `tokens.css` per theme; parse the three reader `:host` blocks out of
       `READER_CSS`; import `LIGHT_TOKENS` / `DARK_TOKENS` (exported from `appShell.ts` — the only production edit the
       test itself needs); scan the six app sheets' `var(--x,#hex)` fallbacks against the LIGHT value; map the Mermaid
@@ -261,6 +261,11 @@ toolbar.*
       content script expected to move by the dark `--shadow` declaration (tens of bytes) plus any named drift fix —
       stated, md5 under ablation of the shadow line restores the prior md5; app chunk delta stated. Full suite
       (production changed). Golden EMPTY · manifest 654 / 770 B · `permissions: []`. [D-1; gate-1 Q2, Q4]
+      ★ *Landed 2026-11-01 (`decisions.md`, "M13 TASK 2.1"):* no drift beyond the planned gaps; tokens.css dark gains the
+      mockup's shadow; the shell's full set; `LIGHT_TOKENS` / `DARK_TOKENS` / `APP_BASE_TOKENS` exported. The Mermaid
+      palette is read from source text (no export needed). Content script +39 B (the shadow line; its ablation restores
+      `b27e0c8b` / `16cd9bd7`), app chunk +318 B. Unit pin red at HEAD 3 / 7, browser 6 / 10; every kind ablated. The one
+      on-screen change: the dark shadow.
 
 - [ ] **2.2 One contrast helper, the census, the inventory; G-4 and G-5 applied (D-16; G-4, G-5).** TEST FIRST.
       `tests/browser/helpers/contrast.ts` replaces the two private copies (both tests re-pointed, their assertions

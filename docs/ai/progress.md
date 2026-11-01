@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-01 (M13 TASK 1.3 + review addendum — the site says only what ships; 17 dead links resolved; the ledger 291 rows; a go-live step carried for 7.6; no shipped byte; next the human merges the 1.3 PR, then task 2.1, tokens). Earlier: 2026-11-01 (M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger (75 rows, after the review addendum); no shipped byte; next the human merges the 1.2 PR, then task 1.3, the site pass). Earlier: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-11-01 (M13 TASK 2.1 — tokens.css the single source, every copy pinned; content script +39 B, app chunk +318 B; next the human merges the 2.1 PR, then task 2.2, the contrast census). Earlier: 2026-11-01 (M13 TASK 1.3 + review addendum — the site says only what ships; 17 dead links resolved; the ledger 291 rows; a go-live step carried for 7.6; no shipped byte; next the human merges the 1.3 PR, then task 2.1, tokens). Earlier: 2026-11-01 (M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger (75 rows, after the review addendum); no shipped byte; next the human merges the 1.2 PR, then task 1.3, the site pass). Earlier: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,18 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 2.1 LANDED (2026-11-01) — tokens.css is the single source; every copy pinned.** Record: `decisions.md`,
+"M13 TASK 2.1". Branch restarted from `main` at `9a4828e`. Font parity applied this session (`fc-match system-ui` →
+DejaVu Sans — the setup step is per session, the container being ephemeral).
+- `tests/designTokens.test.ts` (unit, 7) pins the reader's three `:host` blocks, the shell's sets, 57 fallbacks and
+  the Mermaid palette to `design/tokens.css`, and fails on any untracked colour literal in `src/`; named exceptions
+  (the shell's font and logo tokens, dormant sepia) each cite their ruling. `tests/browser/designTokens.browser.test.ts`
+  (10) checks the computed tokens on the reader host, shell and reader pane, light and dark, both engines.
+- Changed: tokens.css dark `--shadow` (the mockup's, Q2) and the reader and shell dark blocks; the shell's seven missing
+  tokens; brand.html one line. On screen: the dark shadow only.
+- Bytes: content script **344,317 B** (+39), md5 `71b096fd…` / `b2f85bb0…`; app chunk **532,505 B** (+318).
+- Verify: lint 0 · unit 1451 / 1452 (the perf flake only) · browser 1981 passed / 0 failed / 51 skipped (2032, 192 files, 380 s), EXIT 0 · golden EMPTY · audit EXIT 0.
 
 **M13 TASK 1.3 LANDED (2026-11-01) — the site says only what ships; dead links resolved; the site joins the ledger.**
 Record: `decisions.md`, "M13 TASK 1.3". Branch restarted from `main` at `5f83ba7` (PR #15's merge).
@@ -230,11 +242,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human reviews and merges task 1.3's pull request** (branch `claude/loving-turing-bpgzi0`; the site's
-visible text is in the report — the wording is the human's to approve), and rules on the font-parity setup step
-(`fc-match system-ui` is still Inter here).
-**Then M13: task 2.1 (`tokens.css` is the single source; every code copy pinned by one test — `tests/designTokens.test.ts`).**
-Group 1 is complete: 1.1, 1.4, 1.2 and 1.3 have landed. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human reviews and merges task 2.1's pull request** (branch `claude/loving-turing-bpgzi0`).
+**Then M13: task 2.2 (one contrast helper, the census, the inventory; G-4 and G-5 applied).** It STOPS with ONE batched
+question for the human for every below-AA pair outside G-4 / G-5 (gate-3 Q5), before 2.3. Font parity must be applied at
+the start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3 and 2.1
+have landed. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -258,7 +270,12 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Superseded by the 1.4 SECOND ADDENDUM (2026-11-01) — carry THESE to the next kickoff:** `.output` 5,831,081 B (Cr) /
+**Byte snapshot — M13 task 2.1 (2026-11-01, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+`.output` 5,831,438 B (Cr) / 5,831,554 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,508,594 / 1,508,478 B · zip
+1,842,948 / 1,843,006 B · content script **344,317 B** both engines, md5 `71b096fd…` (Cr) / `b2f85bb0…` (Fx) · app chunk
+532,505 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1452 (the perf flake known) · browser 1981 passed / 0 failed / 51 skipped (2032, 192 files, 380 s), EXIT 0 ·
+golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
+**Superseded by 2.1 — the 1.4 SECOND ADDENDUM's figures:** `.output` 5,831,081 B (Cr) /
 5,831,197 B (Fx) — headroom 1,508,951 / 1,508,835 B · zip 1,842,676 / 1,842,734 B · content script **344,278 B** both engines
 (unchanged), md5 `b27e0c8b…` / `16cd9bd7…` · app chunk 532,187 B (+40) · manifest 654 / 770 B, `permissions: []` · lint 0 ·
 unit 1423 / 1424 (the perf flake) · browser 1971 passed / 0 failed / 51 skipped (2022, 190 files, 374 s), EXIT 0 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
