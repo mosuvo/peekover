@@ -59,6 +59,7 @@ export const READER_CSS = /* css */ `
   --hl:#FFD84D; --hl-soft:#3A3413;
   --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
   --del:#E08663; --del-soft:#342016;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
 }
 :host([data-theme="sepia"]){
   --paper:#F6EEDF; --ink:#3B2F1E; --accent:#3B2F1E; --accent-soft:#E9DCC1;

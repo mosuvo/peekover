@@ -1,4 +1,5 @@
-/* Peekover design tokens — source of truth: design/brand.html. Do not hardcode colors elsewhere. */
+/* Peekover design tokens — source of truth: design/tokens.css (this file). brand.html and mockup.html illustrate
+   it; where they disagree, this file wins (gate-1 Q2). Every code copy is pinned to it by tests/designTokens.test.ts. */
 :root{
   --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
   --line:#E6E6DF; --code-bg:#F1F1EB;
@@ -18,6 +19,7 @@
   --hl:#FFD84D; --hl-soft:#3A3413;
   --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
   --del:#E08663; --del-soft:#342016;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
 }
 [data-theme="sepia"]{
   --paper:#F6EEDF; --ink:#3B2F1E; --accent:#3B2F1E; --accent-soft:#E9DCC1;

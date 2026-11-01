@@ -1,6 +1,55 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-01 · M13 TASK 2.1 — `design/tokens.css` is the single source; every code copy is pinned to it (D-1;
+  gate-1 Q2, Q4).** Branch restarted from `main` at `9a4828e` (PR #16's merge). Font parity applied this session (the
+  human's 2026-11-01 ruling: `rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`; `fc-match system-ui` →
+  DejaVu Sans).
+  - **The copy inventory (scanned, not assumed):** (1) the reader's three `READER_CSS` token blocks — `:host`,
+    `:host([data-theme="dark"])`, `:host([data-theme="sepia"])`; (2) the app shell's `LIGHT_TOKENS` / `DARK_TOKENS`
+    and its base `--r` / `--shadow` (now `APP_BASE_TOKENS`); (3) the Mermaid palette, `diagramEngine.ts`
+    `DIAGRAM_TOKENS` (read from the source text — not exported, no production edit); (4) 57 `var(--x,#hex)` fallbacks
+    in five app sheets (`exportControls`, `storageControls`, `treeView`, `recentsView`, `readerPane`; `appShell` has
+    none); (5) the allow-listed highlighter inks `#26210a` / `#191504` (`readerCss.ts`, the Mermaid `hlInk`). Every
+    other colour literal in `src/` sits in a `.ts` comment. **Drift found: none beyond the planned gaps** — every copy
+    already equalled tokens.css except the shell's seven missing tokens and the dark `--shadow` absent everywhere.
+  - **Changed:** `tokens.css` dark gains `--shadow:0 10px 30px rgba(0,0,0,.5)` (Q2, the mockup's value) and its
+    header now names itself the source of truth; the reader's dark `:host` block gains the same line; the shell's
+    `LIGHT_TOKENS` / `DARK_TOKENS` grow to the full colour set (`--code-bg --hl --ok --ok-soft --warn --del --del-soft`)
+    and `DARK_TOKENS` carries the dark `--shadow`; `LIGHT_TOKENS`, `DARK_TOKENS` and the new `APP_BASE_TOKENS` are
+    exported for the pin; `brand.html` gains one line under "Core tokens" pointing to tokens.css.
+  - **What changes on screen — dark theme only, one value:** `box-shadow` from `0 10px 30px rgba(22,23,31,.10)` to
+    `0 10px 30px rgba(0,0,0,.5)` on the reader's mode, theme, watch, remote-load and Edit pills, the watch note and
+    disclosure, the diff picker and status, the agent badge, the network indicator and the diagram lightbox panel, and
+    on the app page's code-theme picker, Stored data and Export panels and the unsaved-changes dialog. The shell's seven
+    new tokens are used by no shell rule yet, so nothing else moves.
+  - **Named exceptions (in the test, each with its ruling):** the shell's `--sans` (overridden with a system stack
+    until 2.4, plan D-3), `--serif` / `--mono` (no reading or code text in the shell; fonts arrive at 2.4),
+    `--logo-ink` / `--logo-eye` (spec A.2 "extra / unused"); no shell sepia set (sepia dormant, gate-1 Q6); the measure
+    (748 px, gate-1 Q7) is not a tokens.css token and so not pinned. Allow-list: `#26210a`, `#191504` (text on the
+    highlighter, the 2026-07-10 trap guard), and the logo's fixed `#16171F` / `#FBFBF8` (scoped to a logo/icon file;
+    none exists in `src/` yet).
+  - **brand.html disagrees with tokens.css (tokens.css wins, Q2):** `--accent-soft` `#EDEDE4` (tokens `#ECECE3`),
+    `--del` `#C43D3D` (tokens `#B8512F`), the night paper `--dark-paper` `#14161F` (tokens `#12141C`); brand.html also
+    lacks `--code-bg --ok-soft --del-soft` and most of the dark set. Left as illustration; its new line says so.
+  - **The tests:** `tests/designTokens.test.ts` (unit, 7 cases; DOM environment, asserted, because importing the shell
+    loads the sanitizer) and `tests/browser/designTokens.browser.test.ts` (10 cases across both engines; tokens.css
+    read at test time by a raw import). **Red at HEAD:** unit 3 of 7 (the header/dark-shadow ruling, the shell sets, the
+    untracked shell `--shadow` literal); browser 6 of 10 (the shell and reader pane, both themes, both engines; the dark
+    shadow). **Ablations, one per kind, each red naming the copy and the token, each restored byte-identical:** reader
+    `:host` (`--line` dark), shell (`--hl` dark), fallback (`treeView.ts` `--muted`), Mermaid (`dark.ink`), an untracked
+    literal (`src/render/tocView.ts:536: #123456`), and tokens.css (`--muted` → every copy of it red).
+  - **Bytes (clean two-engine build against a same-session `main` build):** content script 344,278 → **344,317 B
+    (+39 = the reader's dark `--shadow` line)**, md5 `71b096fd…` (Cr) / `b2f85bb0…` (Fx); removing that one line
+    restores `b27e0c8b…` / `16cd9bd7…` exactly. App chunk 532,187 → **532,505 B (+318 = 39 + `LIGHT_TOKENS` +121 +
+    `DARK_TOKENS` +158; each set is one string the sheet references twice)**. No other file changed. `.output`
+    5,831,438 / 5,831,554 B; zips 1,842,948 / 1,843,006 B; manifests 654 / 770 B; `permissions: []`. G-7 holds. The
+    `:host` pin (`htmlExport.test.ts`) stays **26** — a declaration added inside an existing block adds no rule site.
+  - **Verify:** lint 0 · unit 1451 / 1452 twice (only `pipeline.perf`) · the full browser suite alone, both engines,
+    under the CI font: 1981 passed / 0 failed / 51 skipped (2032, 192 files, 380 s), EXIT 0 · golden EMPTY · `pnpm audit --prod` EXIT 0, 2026-11-01.
+  Revisit-when: 2.4 (the shell's `--sans` exception goes; the font tokens join the shell), any tokens.css edit (the pin
+  names every copy to follow).
+
 - **2026-11-01 · M13 TASK 1.3 — the site says only what ships; dead links resolved; the site joins the claims ledger
   (D-12; G-1; F-3). No shipped byte changed.** Branch restarted from `main` at `5f83ba7` (PR #15's merge).
   - **Edited (text, links and the explorer's data only; layout, classes and styles kept — restyling and self-hosted
