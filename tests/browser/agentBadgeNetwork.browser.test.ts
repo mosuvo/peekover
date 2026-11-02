@@ -57,7 +57,8 @@
 // Therefore ANY http(s) entry inside a measured window is attributable, and the zeros are read with
 // the verbatim predicate rather than a token filter so a leak to ANY host would land in them.
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { registerUiFonts } from '../../src/theme/uiFonts';
 // 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
 import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { mount } from '../../src/render/mount';
@@ -342,6 +343,16 @@ function reset(): void {
   document.querySelectorAll('peekover-root').forEach((el) => el.remove());
   document.body.replaceChildren();
 }
+
+// 013 task 2.4: the app shell now registers the design faces (src/theme/uiFonts.ts). In this
+// harness their package URLs are same-origin dev-server fetches (http://localhost…); shipped, they are
+// chrome-extension:// / moz-extension:// URLs this file's predicate excludes by scheme. They are
+// loaded once here, before any measured window, so the shell's own call is the idempotent no-op it
+// is built to be and this file keeps measuring its own feature. The faces' own zero-network proof:
+// tests/browser/uiFontsNetwork.browser.test.ts.
+beforeAll(async () => {
+  await registerUiFonts();
+});
 
 beforeEach(reset);
 afterEach(reset);

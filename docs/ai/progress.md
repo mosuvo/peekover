@@ -11,6 +11,23 @@
 
 ## Now (start here)
 
+**M13 TASK 2.4 LANDED (2026-11-02) — the design fonts load on the app page from the package; one stack string; the fence;
+zero network.** Record: `decisions.md`, "M13 TASK 2.4". Branch restarted from `main` at `f70e337` (PR #19's merge); font
+parity applied.
+- `src/theme/uiFonts.ts` registers Bricolage 400 / 600 / 700 and Sometype 400 / 500 on `document.fonts` from the
+  package, called once by `appShell.ts`. Measured: an `@font-face` inside a shadow root is ignored on both engines; a
+  face on `document.fonts` reaches it. D-3's stacks in tokens.css, the reader and the shell; the shell override and
+  2.1's font-token exception are gone.
+- Tests: `uiFonts.test.ts` (5), `uiFontsImportFence.test.ts` (6), `uiFonts.browser.test.ts` (3 per engine),
+  `uiFontsNetwork.browser.test.ts` (4 per engine, firing control + slow case after `wireSettled()`). Red at HEAD on the
+  app-page arms; four ablations red on both engines.
+- Ripple: `reader.test.ts`'s literal `--sans` re-spelled (property: one value in all three themes); four network
+  guards load the faces in a `beforeAll` (harness-only same-origin font fetches; no assertion edited). No layout test
+  moved.
+- Bytes: content script **344,495 B** (+153 = the two stack strings), md5 `5b241f93…` / `8506e382…`; app chunk
+  **533,749 B** (+1,219); woff2 93,836 B; `.output` +95,208 B.
+- Verify: lint 0 · unit 1466 / 1467 (the perf flake only) · browser 2017 passed / 0 failed / 51 skipped (2068, 198 files, 391 s), EXIT 0 · golden EMPTY · audit EXIT 0.
+
 **M13 TASK 2.3 LANDED (2026-11-02) — font assets sourced and subset; OFL licences and NOTICE ship.** Record:
 `decisions.md`, "M13 TASK 2.3". Branch restarted from `main` at `b8eb6f1` (PR #18's merge); font parity applied.
 - `assets/fonts/`: Bricolage Grotesque 400 / 600 / 700 (static, `opsz` 12, `wdth` 100; provisional until 2.5) and Sometype
@@ -279,11 +296,14 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.3).
-**Then M13: task 2.4 (`uiFonts.ts`: the wiring, D-3's font stacks in tokens.css, the import fence, the zero-network
-tests).** Then 2.5 (the measurement; static vs variable Bricolage by bytes). Font parity at the
-start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1, 2.2 and 2.3
-have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.4).
+**Then M13: task 2.5 (the font measurement — numbers for the human, nothing chosen beyond its own bytes rule).** Carry
+into 2.5, both reported as numbers for the human: **(i)** static vs variable Bricolage — 72,816 vs 79,464 B, AND the
+static files' fixed `opsz` 12 against automatic optical size for the larger UI text (the mockup's 20–44 px headings);
+**(ii)** a measured option for Literata with Latin Extended in the content script (today 230 codepoints, 4 Latin
+Extended), its content-script byte and first-paint delta against the 165 ms gate. Font parity at the
+start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1, 2.2, 2.3
+and 2.4 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -307,7 +327,12 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 2.3 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+**Byte snapshot — M13 task 2.4 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+`.output` 5,944,407 B (Cr) / 5,944,523 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,395,625 / 1,395,509 B · zip
+1,946,848 / 1,946,907 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
+533,749 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1467 (the perf flake known) · browser 2017 passed / 0 failed / 51 skipped (2068, 198 files, 391 s), EXIT 0 ·
+golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
+**Superseded by 2.4 — the 2.3 figures:**
 `.output` 5,849,199 B (Cr) / 5,849,315 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,490,833 / 1,490,717 B · zip
 1,851,337 / 1,851,396 B · content script **344,342 B** both engines, md5 `12cdc950…` (Cr) / `bf0108c8…` (Fx) · app chunk
 532,530 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1456 (the perf flake known) · browser not re-run (2.2's
