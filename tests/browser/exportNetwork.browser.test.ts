@@ -71,7 +71,8 @@
 // lesson), then one cumulative check over the whole unclearedsince-arm buffer, then the control is
 // fired again to prove the observer stayed live through the entire run.
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { registerUiFonts } from '../../src/theme/uiFonts';
 // 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
 import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { userEvent, commands, cdp } from 'vitest/browser';
@@ -301,6 +302,16 @@ afterEach(async () => {
 });
 
 const COPY_KEYS = ['copy-html', 'copy-plain-text', 'copy-rich-text'] as const;
+
+// 013 task 2.4: the app shell now registers the design faces (src/theme/uiFonts.ts). In this
+// harness their package URLs are same-origin dev-server fetches (http://localhost…); shipped, they are
+// chrome-extension:// / moz-extension:// URLs this file's predicate excludes by scheme. They are
+// loaded once here, before any measured window, so the shell's own call is the idempotent no-op it
+// is built to be and this file keeps measuring its own feature. The faces' own zero-network proof:
+// tests/browser/uiFontsNetwork.browser.test.ts.
+beforeAll(async () => {
+  await registerUiFonts();
+});
 
 describe('9.2 — zero network across every export/copy/print action, against an ARMED control', () => {
   it('HTML export, Copy-as-HTML, Copy-as-plain-text, Copy-as-rich-text, PDF export: ZERO requests', async () => {

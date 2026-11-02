@@ -58,6 +58,7 @@
 // hand, under the same armed probe, rather than driving a control that does not exist.
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
+import { registerUiFonts } from '../../src/theme/uiFonts';
 // 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
 import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { userEvent, cdp } from 'vitest/browser';
@@ -236,6 +237,16 @@ async function warmEngine(): Promise<void> {
   host.remove();
   performance.clearResourceTimings();
 }
+
+// 013 task 2.4: the app shell now registers the design faces (src/theme/uiFonts.ts). In this
+// harness their package URLs are same-origin dev-server fetches (http://localhost…); shipped, they are
+// chrome-extension:// / moz-extension:// URLs this file's predicate excludes by scheme. They are
+// loaded once here, before any measured window, so the shell's own call is the idempotent no-op it
+// is built to be and this file keeps measuring its own feature. The faces' own zero-network proof:
+// tests/browser/uiFontsNetwork.browser.test.ts.
+beforeAll(async () => {
+  await registerUiFonts();
+});
 
 beforeAll(async () => {
   await warmEngine();

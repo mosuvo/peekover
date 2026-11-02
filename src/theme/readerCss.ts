@@ -49,8 +49,8 @@ export const READER_CSS = /* css */ `
   --del:#B8512F; --del-soft:#F8E9E2;
   --logo-ink:#16171F; --logo-eye:#FBFBF8;
   --r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
-  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",system-ui,sans-serif;
-  --mono:"Sometype Mono",ui-monospace,monospace;
+  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
+  --mono:"Sometype Mono",ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
 }
 :host([data-theme="dark"]){
   --paper:#12141C; --panel:#181B26; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
@@ -917,7 +917,7 @@ export const READER_CSS = /* css */ `
 // `:51`. Sepia overrides ONLY `--paper`, `--ink`, `--accent`, `--accent-soft`, so everything else
 // resolves to the LIGHT value on sepia paper. Run this session, per token, never assumed:
 //
-//   --sans    light "Bricolage Grotesque",system-ui,sans-serif · dark SAME · sepia SAME (declared
+//   --sans    light: plan D-3's stack (task 2.4) · dark SAME · sepia SAME (declared
 //             once in the light block; neither override touches it).
 //   --muted   light #5D6070 · dark #A0A4B8 · sepia #5D6070 (inherited light) on paper #F6EEDF.
 //   --panel   light #F4F4EF · dark #181B26 · sepia #F4F4EF (inherited light) on paper #F6EEDF.
@@ -981,7 +981,7 @@ export const READER_CSS = /* css */ `
 // `:51`. Sepia overrides ONLY `--paper`, `--ink`, `--accent`, `--accent-soft`, so every other token
 // resolves to its LIGHT value on sepia paper. Run this session, per token, never assumed:
 //
-//   --sans   light "Bricolage Grotesque",system-ui,sans-serif · dark SAME · sepia SAME (declared
+//   --sans   light: plan D-3's stack (task 2.4) · dark SAME · sepia SAME (declared
 //            once in the light block; neither override touches it).
 //   --muted  light #5D6070 · dark #A0A4B8 · sepia #5D6070 (inherited light) on paper #F6EEDF.
 //

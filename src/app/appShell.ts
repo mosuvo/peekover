@@ -97,6 +97,7 @@ import { registerThemeHost } from '../theme/themeRegistry';
 import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
+import { registerUiFonts } from '../theme/uiFonts';
 import { directPort } from '../settings/settingsPort';
 import {
   currentSettings,
@@ -383,8 +384,11 @@ export const DARK_TOKENS = /* css */ `
   --hl:#FFD84D; --hl-soft:#3A3413; --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
   --del:#E08663; --del-soft:#342016; --shadow:0 10px 30px rgba(0,0,0,.5);
 `;
-/** The theme-independent base the shell sets beside LIGHT_TOKENS — radius and the light shadow. */
-export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);`;
+/** The theme-independent base the shell sets beside LIGHT_TOKENS — radius, the light shadow and the
+ *  three font stacks (plan D-3: the design face first, then close system faces). */
+export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
+  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
+  --mono:"Sometype Mono",ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;`;
 
 /**
  * The shell stylesheet: design tokens (light + dark) + minimal layout.
@@ -477,7 +481,6 @@ const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
   ${LIGHT_TOKENS}
   ${APP_BASE_TOKENS}
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   position:fixed; inset:0; display:flex; flex-direction:column;
   background:var(--paper); color:var(--ink);
   font-family:var(--sans); font-size:15px; line-height:1.55;
@@ -918,6 +921,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, body);
   container.replaceChildren(shell);
+  // The design's interface and code faces, from the package (D-2); idempotent, never throws.
+  registerUiFonts();
 
   // --- drag-and-drop folder target (Chromium live handle / Firefox snapshot) ----------
   //

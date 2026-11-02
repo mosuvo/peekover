@@ -1,6 +1,74 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 2.4 — the design fonts load on the app page from the package; one stack string; the fence;
+  zero network (D-2, D-3; gate-1 Q3 / Q10).** Branch restarted from `main` at `f70e337` (PR #19's merge, containing
+  `731998a`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install
+  EXIT 0, Playwright browsers present, `pnpm audit --prod` EXIT 0 on 2026-11-02 (one low, ignored).
+  - **The mechanism — `document.fonts.add(new FontFace(…))`, not `@font-face`.** The kickoff said "declares
+    @font-face"; tasks.md 2.4 says the `mathFont.ts` twin. Followed the file (mismatch flagged) and measured why, both
+    engines, with the Bricolage 700 file: an `@font-face` INSIDE a shadow root is ignored — the text kept plain
+    monospace's width exactly (924.75 px Chromium, 924.80 px Firefox); an `@font-face` in a document-level `<style>`
+    and a face on `document.fonts` both reach the shadow root (871 / 865.9 px). `src/theme/uiFonts.ts` registers
+    Bricolage Grotesque 400 / 600 / 700 and Sometype Mono 400 / 500 from plain asset imports (Vite emits each as its
+    own package file), `display:'swap'`, idempotent, failure-swallowing; called once from `mountAppShell`
+    (`appShell.ts`, its only importer). No `web_accessible_resources`; same-origin package URLs.
+  - **The stacks (D-3), one string per token** in `tokens.css`, the reader's `:host` block and the shell's
+    `APP_BASE_TOKENS`: `--sans` "Bricolage Grotesque", ui-sans-serif, system-ui, "Segoe UI Variable Text", "Segoe
+    UI", -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif; `--mono` "Sometype Mono", ui-monospace,
+    "Cascadia Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace. `--serif` unchanged. The shell's
+    `--sans:system-ui,…` override is deleted, and the shell now carries `--serif` / `--sans` / `--mono`, so **2.1's
+    pin exception for the three font tokens ENDS** (`tests/designTokens.test.ts`: the three entries removed; red at
+    HEAD naming all three missing, green after). The content script draws system faces for chrome and code (nothing
+    registers the design faces there) and keeps Literata.
+  - **Tests (red at HEAD = this branch's tests against HEAD's `tokens.css`, `readerCss.ts`, `appShell.ts`):**
+    `uiFonts.test.ts` (unit, 5: the five faces, no-op without the API, idempotence, a rejecting `load()` swallowed);
+    `uiFontsImportFence.test.ts` (unit, 6: the mathImportFence shape — content graph reaches neither the module nor a
+    file; the app graph reaches all; one importer each; firing controls) — clauses B and C red at HEAD;
+    `uiFonts.browser.test.ts` (Cr+Fx, 3 each: content-script reader first — no UI face, no `@font-face` rule, chrome
+    and code draw a system face, Literata registered and drawn; app page — every face `loaded` and
+    `document.fonts.check()` true; the shell chrome draws Bricolage, code Sometype, prose Literata) — the two app-page
+    cases red at HEAD on both engines; `uiFontsNetwork.browser.test.ts` (Cr+Fx, 4 each: content script zero font
+    requests of any origin; app page zero off-origin requests; each with a firing control and a SLOW case — the served
+    Bricolage file fetched off-origin, issued 400 ms into the window — read after `wireSettled()`) — the app-page claim
+    red at HEAD on both engines. "Used face" is read by width (the element's stack against the same stack without its
+    first family), because computed `font-family` only echoes the declaration.
+  - **Ablations, each red on both engines and restored byte-identical (md5 shown at the time):** one face pointed
+    off-origin → the network claim red, naming `http://127.0.0.1:…/__peekover_ablation__/sometype-500.woff2` (an
+    off-origin loopback URL, not tasks.md's "an `https:` URL": AGENTS.md #1 forbids a real host and the harness has no
+    https loopback; the claim's first version checked load status first and swallowed this red, so the claim now
+    leads); the shell's `--sans` override restored → "expected 'system-ui' to be 'Bricolage Grotesque'"; one face
+    pointed at a missing package file → "Bricolage Grotesque 600 error"; `import './uiFonts'` added to `fonts.ts` → the
+    fence's clauses A and C red listing the module and all five files (tasks.md says cite the fence ablation; it was
+    cheap, so it was also run).
+  - **Necessary ripple (each required by Verify's full suite):** `src/theme/reader.test.ts` pins `--sans`'s resolved
+    value as a literal — re-spelled; property kept: `--sans` resolves to ONE value, the same in all three theme
+    blocks. Four network guards (`agentBadgeNetwork`, `codeNetwork`, `exportNetwork`, `tableNetwork`) went red on
+    Chromium, each listing the five `http://localhost:…/assets/fonts/*.woff2` URLs: they read an absolute zero over a
+    window that includes the shell's mount, which now registers the faces. **Classified a harness artifact, not a
+    leak:** in the shipped build those are `chrome-extension://` / `moz-extension://` URLs the guards' `/^https?:/`
+    predicate excludes by scheme (Firefox was green — its HTTP cache, shared between files, served them). Fixed with
+    no assertion edited: each file loads the faces once in a `beforeAll`, so the shell's call is the idempotent no-op
+    it is built to be; the faces' own zero-network proof is `uiFontsNetwork`. **No layout test moved** with the new
+    metrics. Two `//` audit comments in `readerCss.ts` quoting the old `--sans` value now point at D-3 (comments outside
+    the CSS literal; no shipped bytes).
+  - **Bytes (clean two-engine build against a same-session `main` build):** `.output` 5,849,199 → **5,944,407 B (Cr)**
+    and 5,849,315 → **5,944,523 B (Fx)**, +95,208 B = the five woff2 files 93,836 B (24,240 / 24,368 / 24,208 /
+    10,340 / 10,680) + app chunk 532,530 → **533,749 B (+1,219**: the stacks in the reader copy and the shell's base
+    set, `uiFonts.ts`, its import and call, less the deleted override) + content script 344,342 → **344,495 B (+153 =
+    the `--sans` string +94 and the `--mono` string +59)**, md5 `5b241f93…` (Cr) / `8506e382…` (Fx); with the two old
+    strings put back, both engines rebuild to `12cdc950…` / `bf0108c8…` exactly. Every other shipped file the same size.
+    Zips 1,946,848 / 1,946,907 B. Manifests 654 / 770 B, `permissions: []`, no `web_accessible_resources`. G-7 holds
+    (+153 against +2 KB).
+  - **Harness limit, stated:** the content-script arms run `runReader` on the runner's page, not on file:// or a raw
+    host's origin; fonts are registered by module reach, not by host, so the answer does not depend on the URL. The
+    real file:// surface is in the human walk.
+  - **Verify:** lint 0 · unit 1466 / 1467 (only `pipeline.perf`; green alone) · the full browser suite alone, both
+    engines, CI font: first run 2013 passed / 4 failed (the four guards above) / 51 skipped; after the fix
+    and on the final tree, 2017 passed / 0 failed / 51 skipped (2068, 198 files, 391 s), EXIT 0 · golden EMPTY · NUL check clean.
+  Revisit-when: 2.5 (static vs variable Bricolage, opsz; Literata's Latin Extended in the content script), 6.1
+  (onboarding becomes the second importer of `uiFonts.ts`; the fence's sole-importer clause changes with it).
+
 - **2026-11-02 · M13 TASK 2.3 — font assets sourced and subset; OFL licences and NOTICE ship (D-2's assets; G-6; F-5,
   F-8).** Branch restarted from `main` at `b8eb6f1` (PR #18's merge, containing `3e7b8d0`). Font parity applied
   (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0

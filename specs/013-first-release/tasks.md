@@ -326,7 +326,7 @@ toolbar.*
       after; ablated. `.output` +17,711 B on both engines = the four licence files only; content script and app chunk
       md5-identical. Necessary ripple: `docs/store/claims.md` row 292 (truthPins requires a row for the README line).
 
-- [ ] **2.4 `uiFonts.ts`, the one stack string, the fence, zero network (D-2, D-3).** TEST FIRST. `src/theme/uiFonts.ts`
+- [x] **2.4 `uiFonts.ts`, the one stack string, the fence, zero network (D-2, D-3).** TEST FIRST. `src/theme/uiFonts.ts`
       — the `mathFont.ts` twin: plain asset imports, `document.fonts.add(new FontFace(…))`, `display:'swap'`,
       idempotent, failure-swallowing. Imported by `appShell.ts` only (onboarding joins at 6.1). `tokens.css` `--sans` /
       `--mono` become D-3's stacks; the reader and shell copies follow (2.1's pin forces it); `appShell.ts:451`'s
@@ -345,6 +345,13 @@ toolbar.*
       assertion fails. Bytes: content script moves by the stack strings only (expected tens to low hundreds of bytes;
       the +2 KB tripwire applies) — decomposed, md5 under ablation; `.output` grows by the emitted woff2 files + module.
       Full suite. Golden EMPTY · manifest 654 / 770 B · `permissions: []`. [D-2, D-3]
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 2.4").* `document.fonts.add` — measured: an `@font-face` in the
+      shadow root is ignored on both engines. Stacks per D-3 in tokens.css, the reader and the shell; 2.1's font-token
+      exception ended. Red-first on the app-page arms; ablations: off-origin face (an off-origin loopback URL, not
+      `https:` — no real host), the `--sans` override, a missing file, the fence. Content script +153 B (the two stack
+      strings; md5 restored with them reverted), app chunk +1,219 B, woff2 93,836 B. Necessary ripple: `reader.test.ts`
+      (re-spelled, property named), `designTokens.test.ts`, and four network guards that read the shell's harness-only
+      same-origin font fetches (faces loaded in a `beforeAll`; no assertion edited). No layout test moved.
 
 - [ ] **2.5 The font measurement — numbers for the human, FORBIDDEN from choosing (D-4; §9-2(c)).** ★ **HUMAN GATE
       ONLY IF IT ARISES.** Both engines, A-B-A against a same-session HEAD control, floor beside median, firing control

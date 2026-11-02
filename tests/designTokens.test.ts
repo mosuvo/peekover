@@ -68,9 +68,6 @@ function diff(copy: string, actual: Tokens, expected: Tokens, keys: string[]): s
 // ── Named exceptions, each with its ruling ──────────────────────────────────────────────────────
 /** Tokens the app SHELL does not carry, deliberately. */
 const SHELL_EXCEPTIONS: Record<string, string> = {
-  '--sans': 'the shell overrides it with a system stack until task 2.4 bundles the face (plan D-3)',
-  '--serif': 'the shell sets no reading text; font tokens arrive with task 2.4 (plan D-2, D-3)',
-  '--mono': 'the shell sets no code text; font tokens arrive with task 2.4 (plan D-2, D-3)',
   '--logo-ink': 'the logo is drawn with fixed literals, not this token (spec A.2: "extra / unused")',
   '--logo-eye': 'the logo is drawn with fixed literals, not this token (spec A.2: "extra / unused")',
 };
