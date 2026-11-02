@@ -404,7 +404,7 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
 
 ## 3 — ★ The toolbar mock — HUMAN GATE (D-5; gate-1 Q8, §10-2)
 
-- [ ] **3.1 ★ `design/toolbar-mock.html`, approved in writing before any toolbar code.** A standalone static page that
+- [x] **3.1 ★ `design/toolbar-mock.html`, approved in writing before any toolbar code.** A standalone static page that
       links `tokens.css` and `@font-face`s 2.3's woff2 files by relative path (zero network; no Google Fonts), drawn from
       the mockup's own CSS vocabulary: the proposed toolbar in **light and dark at 1440, 1080 and 414 px** as fixed-width
       frames, in the states **reading, editing, watching, Compare open, the narrow "Files" overlay open, the one-time
@@ -438,6 +438,8 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
       "⋯" (More) and the toolbar keeps at most two rows; the 1080 two-row wrap stays. Group 4 builds the toolbar to the
       approved mock, this compact rule included (the shell's own width rule; the mock's container query stands in).
       Bricolage ships static (item 15).
+      ★ *2026-11-02 — CONFIRMED by the human; TICKED.* The 414 frame and the More menu approved in both themes; the
+      breakpoint 863 px approved over ~700; the compact layout approved as shown.
 
 ## 4 — Toolbar implementation (D-5 … D-10, D-17)
 

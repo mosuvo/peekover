@@ -43,6 +43,12 @@
     app controls behind “⋯”, at most two rows". For the
     menu: **State: "More (⋯) menu open"**, Width 414.
   Revisit-when: the human's confirmation of the 414 frame (then 3.1 is ticked); 4.x builds the compact rule; 8.1.
+  - **Addendum 2026-11-02 — CONFIRMED (HUMAN).** The 414 frame and the More menu are approved in both themes. The
+    breakpoint is **863 px** (compact toolbar at 863 and below), as measured — approved over ~700, accepting that
+    ordinary documents also get the compact toolbar between 700 and 863. The compact layout is approved as shown: no
+    "Peekover" word beside the mark, the file name truncating with "…", the badge as "Agent file", two fixed rows, the
+    four app controls behind "⋯". **3.1 is ticked.** Group 4 builds the toolbar to this approved mock, starting at 4.0
+    (the census) before any toolbar code.
 
 - **2026-11-02 · M13 TASK 3.1 — the static toolbar mock DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (D-5; D-6,
   D-9, D-10 drawn; gate-1 Q8).** Branch restarted from `main` at `26cc01e` (PR #22's merge, containing `618d893`). Font

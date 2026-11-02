@@ -11,6 +11,10 @@
 
 ## Now (start here)
 
+**M13 TASK 3.1 CLOSED (2026-11-02) — the toolbar mock CONFIRMED by the human and ticked.** Record: `decisions.md`, "M13
+GATE — 3.1 TOOLBAR MOCK APPROVED" and its confirmation addendum. The 414 frame and the More menu approved in both
+themes; the compact toolbar at **≤ 863 px** (approved over ~700); the compact layout approved as shown. Records only.
+
 **M13 GATE 3.1 — TOOLBAR MOCK APPROVED WITH ONE REDLINE (2026-11-02); the redline is in the mock, awaiting the human's
 confirmation of the 414 frame.** Record: `decisions.md`, "M13 GATE — 3.1 TOOLBAR MOCK APPROVED". 3.1 NOT ticked yet.
 - Redline (item 7): at **≤ 863 px** (measured — the agent-file state needs a third row below 864) the four app controls
@@ -354,11 +358,12 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human confirms the 414 frame with the "⋯" button** (branch `claude/loving-turing-bpgzi0`); then 3.1 is ticked
-and the branch goes to a pull request.
-**Then M13: task 4.0 (the census before any toolbar code), only after the written approval.** Timing gates are judged
-on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
-/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4 and 2.1–2.6 have landed; 3.1's mock is delivered. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 3.1 — the mock, its approval and
+confirmation).
+**Then M13: task 4.0 — the census, before any toolbar code.** Group 4 builds the toolbar to the approved mock
+(`design/toolbar-mock.html`), the compact rule at ≤ 863 px included. Timing gates are judged on same-session
+differences (ruling 3). Font parity at the start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf &&
+fc-cache -f`). 1.1–1.4, 2.1–2.6 and 3.1 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
