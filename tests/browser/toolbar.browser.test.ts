@@ -21,6 +21,12 @@ import { setThemeSetting } from '../../src/theme/reader';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { TEXT_BAR, backdropOf, gradientStops, inkOf, ratioOver } from './helpers/contrast';
+import { isWatching, resetWatchRegistryForTest, setWatchNote, stopWatch, watchNote } from '../../src/watch/watchRegistry';
+import { resetWatchControlsForTest, WATCH_NOTE_CLASS } from '../../src/watch/watchControl';
+import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { resetDocIdentityForTest } from '../../src/render/docIdentity';
+import { DIFF_HOST_ATTR } from '../../src/render/diffView';
+import { DEAD_READ_NOTE, CHANGED_AGAIN_NOTE } from '../../src/watch/watchController';
 
 const C = TOOLBAR_CLASS;
 const DOC_A = '# Alpha\n\nThe first document.\n\n## Second\n\nMore.\n';
@@ -36,14 +42,17 @@ async function until<T>(fn: () => T | null | undefined | false, tries = 200): Pr
   throw new Error('until: timed out');
 }
 
-function source(): FolderSource {
+/** A PERSISTABLE folder (4.2): the app page can then watch and compare, so the toolbar carries Watch
+ *  and Compare. `persistable: false` is the "cannot watch here" route the watch-note test takes. */
+function source(persistable = true): FolderSource {
   return {
     name: 'docs',
     truncated: false,
-    persistable: false,
+    persistable,
     files: [
       { path: 'alpha.md', name: 'alpha.md', read: async () => DOC_A },
       { path: 'beta.md', name: 'beta.md', read: async () => DOC_B },
+      { path: 'CLAUDE.md', name: 'CLAUDE.md', read: async () => DOC_B },
     ],
   };
 }
@@ -56,10 +65,10 @@ const store = (): AppStore => ({
 
 let container: HTMLElement;
 
-async function openShell(): Promise<HTMLElement> {
+async function openShell(persistable = true): Promise<HTMLElement> {
   container = document.createElement('div');
   document.body.appendChild(container);
-  const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source: source() }), store: store() });
+  const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source: source(persistable) }), store: store() });
   await app.openFolder();
   return container;
 }
@@ -87,11 +96,17 @@ const pressed = () =>
 beforeEach(async () => {
   resetThemeHostsForTest();
   resetThemeControlsForTest();
+  stopWatch();
+  resetWatchRegistryForTest();
+  resetWatchControlsForTest();
+  resetDiffRegistryForTest();
+  resetDocIdentityForTest();
   document.body.replaceChildren();
   await page.viewport(1280, 900);
 });
 
 afterEach(async () => {
+  stopWatch();
   document.body.replaceChildren();
   resetThemeHostsForTest();
   resetThemeControlsForTest();
@@ -106,9 +121,14 @@ describe('4.1 — the toolbar skeleton on the app page', () => {
     await open('alpha.md');
     const header = container.querySelector<HTMLElement>('.peekover-app__header')!;
     expect(header.firstElementChild, 'the toolbar is the header\'s first part').toBe(toolbar());
+    // KEEPS: the skeleton's parts in the mock's order (4.1's own test). RE-SPELLED at 4.2: the badge,
+    // Watch and Compare slots sit between the file name and Read / Raw.
     expect([...toolbar().children].map((el) => el.className.split(' ')[0])).toEqual([
       `${C}__brand`,
       `${C}__file`,
+      `${C}__badge`,
+      `${C}__watch`,
+      `${C}__compare`,
       `${C}__seg`,
     ]);
     expect(toolbar().querySelector(`.${C}__brand`)?.textContent).toBe('Peekover');
@@ -201,10 +221,12 @@ describe('4.1 — the header panels stay inside the window, their rows reachable
     { name: 'Export', toggle: '.peekover-app__export-toggle', panel: '.peekover-app__export-slot', rows: '.peekover-app__export-slot button' },
     { name: 'Code theme', toggle: '.peekover-code-theme-toggle', panel: '.peekover-code-theme-picker', rows: '.peekover-code-theme-picker__item' },
     { name: 'Stored data', toggle: '.peekover-app__storage-toggle', panel: '.peekover-app__storage-slot', rows: '.peekover-app__storage-slot button' },
+    // 4.2 — the toolbar's Compare picker joins the same property.
+    { name: 'Compare', toggle: '.peekover-toolbar .peekover-diff-affordance', panel: '.peekover-toolbar .peekover-diff-picker', rows: '.peekover-toolbar .peekover-diff-picker__item' },
   ];
 
   const cases = [414, 1080, 1440].flatMap((w) => (['light', 'dark'] as const).map((t) => [w, t] as const));
-  it.each(cases)('at %i px, %s: Export, Code theme and Stored data open fully inside the viewport', async (width, theme) => {
+  it.each(cases)('at %i px, %s: Export, Code theme, Stored data and Compare open fully inside the viewport', async (width, theme) => {
     await page.viewport(width, 900);
     await openShell();
     await open('alpha.md');
@@ -239,5 +261,153 @@ describe('4.1 — the header panels stay inside the window, their rows reachable
       await sleep(30);
     }
     expect(problems, `at ${width} px, ${theme}`).toEqual([]);
+  });
+});
+
+// ── 4.2 — Watch, Compare and the agent badge in the toolbar; the watch note below it ──────────────
+//
+// Each control comes from the SAME builder the reader's pill uses, so the state is shared, not
+// copied: the watch registry for Watch, the host's `data-diff` for Compare. Every sync is asserted in
+// BOTH directions (toolbar → pill, pill → toolbar), both engines, the pills still rendering (F-6).
+
+const shadowOfHost = () => container.querySelector<HTMLElement>('.peekover-app__reader__host')!.shadowRoot!;
+const tbWatch = () => toolbar().querySelector<HTMLButtonElement>('.peekover-watch')!;
+const pillWatch = () => shadowOfHost().querySelector<HTMLButtonElement>('.peekover-watch')!;
+const tbCompare = () => toolbar().querySelector<HTMLButtonElement>('.peekover-diff-affordance')!;
+const pillCompare = () => shadowOfHost().querySelector<HTMLButtonElement>('.peekover-diff-affordance')!;
+/** A token's colour as the engine computes it, where `el` sits (a probe span inheriting its tokens). */
+function rgb(token: string, el: Element): string {
+  const probe = document.createElement('span');
+  probe.style.color = `var(${token})`;
+  el.parentElement!.appendChild(probe);
+  const value = getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+}
+
+describe('4.2 — Watch, Compare and the agent badge in the toolbar', () => {
+  it('Watch: the toolbar and the pill toggle the SAME watch, each reflecting the other (both directions)', async () => {
+    await openShell();
+    await open('alpha.md');
+    expect(tbWatch(), 'the toolbar carries Watch on a watchable folder').not.toBeNull();
+    expect(pillWatch(), 'the pill still renders (F-6)').not.toBeNull();
+    expect([isWatching(), tbWatch().getAttribute('aria-pressed'), pillWatch().getAttribute('aria-pressed')]).toEqual([false, 'false', 'false']);
+
+    tbWatch().click(); // toolbar → pill
+    await until(() => isWatching());
+    await until(() => pillWatch()?.getAttribute('aria-pressed') === 'true');
+    expect([isWatching(), tbWatch().getAttribute('aria-pressed'), pillWatch().getAttribute('aria-pressed')], 'after the toolbar click').toEqual([true, 'true', 'true']);
+
+    pillWatch().click(); // pill → toolbar
+    await until(() => !isWatching());
+    await until(() => tbWatch().getAttribute('aria-pressed') === 'false');
+    expect([isWatching(), tbWatch().getAttribute('aria-pressed'), pillWatch().getAttribute('aria-pressed')], 'after the pill click').toEqual([false, 'false', 'false']);
+  });
+
+  it.each(['light', 'dark'] as const)('Watching looks per the mock in %s: ink text, green dot, green border, text at AA', async (theme) => {
+    await openShell();
+    await open('alpha.md');
+    setThemeSetting(theme);
+    tbWatch().click();
+    await until(() => tbWatch().getAttribute('aria-pressed') === 'true');
+    await sleep(450);
+    const w = tbWatch();
+    const cs = getComputedStyle(w);
+    expect(cs.color, 'ink text (G-4)').toBe(rgb('--ink', w));
+    expect(cs.borderTopColor, 'green border').toBe(rgb('--ok', w));
+    expect(getComputedStyle(w.querySelector('.peekover-watch__dot')!).backgroundColor, 'green dot').toBe(rgb('--ok', w));
+    const text = w.querySelector<HTMLElement>('.peekover-watch__text')!;
+    const ratio = ratioOver(inkOf(text), backdropOf(text)).ratio;
+    expect(ratio, `${theme}: "Watching" at ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(TEXT_BAR);
+  });
+
+  it('Compare: the picker opens under its own button; a comparison opened on either side closes from the other', async () => {
+    await openShell();
+    await open('alpha.md');
+    const host = container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+
+    tbCompare().click();
+    const picker = await until(() => {
+      const el = toolbar().querySelector<HTMLElement>('.peekover-diff-picker');
+      return el && !el.hidden && el.querySelector('.peekover-diff-picker__item') ? el : null;
+    });
+    const b = tbCompare().getBoundingClientRect();
+    const p = picker.getBoundingClientRect();
+    expect(p.top, 'the picker opens BELOW its button').toBeGreaterThanOrEqual(b.bottom - 1);
+    expect(p.left <= b.right && p.right >= b.left, 'the picker sits under its own button').toBe(true);
+
+    // Toolbar opens → both say "Close comparison"; the pill closes it.
+    picker.querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
+    await until(() => host.getAttribute(DIFF_HOST_ATTR) === 'active');
+    await until(() => pillCompare().dataset.diffOpen === 'true');
+    expect([tbCompare().textContent, pillCompare().textContent]).toEqual(['Close comparison', 'Close comparison']);
+    pillCompare().click();
+    await until(() => host.getAttribute(DIFF_HOST_ATTR) === null);
+    await until(() => tbCompare().textContent === 'Compare');
+    expect(tbCompare().dataset.diffOpen, 'the toolbar returned to Compare').toBeUndefined();
+
+    // The pill opens → the toolbar says "Close comparison"; the toolbar closes it.
+    pillCompare().click();
+    const pillPicker = await until(() => {
+      const el = shadowOfHost().querySelector<HTMLElement>('.peekover-diff-picker');
+      return el && !el.hidden && el.querySelector('[data-target-kind="file"]') ? el : null;
+    });
+    pillPicker.querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
+    await until(() => host.getAttribute(DIFF_HOST_ATTR) === 'active');
+    await until(() => tbCompare().textContent === 'Close comparison');
+    tbCompare().click();
+    await until(() => host.getAttribute(DIFF_HOST_ATTR) === null);
+    await until(() => pillCompare().textContent === 'Compare');
+    expect(tbCompare().textContent).toBe('Compare');
+  });
+
+  it('the agent badge shows for an agent file, with its full label, and not for a plain one — refreshed on a switch', async () => {
+    await openShell();
+    await open('CLAUDE.md');
+    const badge = () => toolbar().querySelector<HTMLElement>('.peekover-agent-badge');
+    expect(badge()?.textContent).toBe('Agent file · CLAUDE.md');
+    await open('alpha.md');
+    expect(badge(), 'a plain file carries no badge — the old one is gone').toBeNull();
+    await open('CLAUDE.md');
+    expect(badge()?.textContent).toBe('Agent file · CLAUDE.md');
+  });
+});
+
+describe('4.2 — the watch note in the notice area below the toolbar (ruling A)', () => {
+  const noticeNote = () => container.querySelector<HTMLElement>(`.peekover-app__notices .${WATCH_NOTE_CLASS}`)!;
+  const pillNote = () => shadowOfHost().querySelector<HTMLElement>(`.${WATCH_NOTE_CLASS}`);
+
+  it('says what the reader\'s own note says, for each case it covers: unavailable, stopped, changed again', async () => {
+    await openShell(false); // a folder this surface cannot watch — the real "not available" route
+    await open('alpha.md');
+    const unavailable = watchNote();
+    expect(unavailable, 'the route explains why watching is missing').toBeTruthy();
+    await until(() => noticeNote().textContent === unavailable);
+    expect(noticeNote().hidden).toBe(false);
+    expect(pillNote()?.textContent, 'the reader\'s own note says the same').toBe(unavailable);
+    for (const text of [DEAD_READ_NOTE, CHANGED_AGAIN_NOTE]) {
+      setWatchNote(text);
+      await until(() => noticeNote().textContent === text);
+      expect(pillNote()?.textContent).toBe(text);
+    }
+    setWatchNote(null);
+    await until(() => noticeNote().hidden);
+  });
+
+  it.each([414, 1080, 1440])('at %i px it sits in the page flow: below the header, above the reader, overlapping neither', async (width) => {
+    await page.viewport(width, 900);
+    await openShell(false);
+    await open('alpha.md');
+    await until(() => !noticeNote().hidden);
+    await document.fonts.ready;
+    const note = noticeNote().getBoundingClientRect();
+    const header = container.querySelector<HTMLElement>('.peekover-app__header')!.getBoundingClientRect();
+    const reader = container.querySelector<HTMLElement>('.peekover-app__reader')!.getBoundingClientRect();
+    expect(note.height, 'the note is laid out').toBeGreaterThan(0);
+    expect(note.top, 'below the header and toolbar').toBeGreaterThanOrEqual(header.bottom - 0.5);
+    expect(note.bottom, 'above the reading column — never over text').toBeLessThanOrEqual(reader.top + 0.5);
+    expect(note.left >= -0.5 && note.right <= innerWidth + 0.5, 'inside the window').toBe(true);
+    const el = document.elementFromPoint(note.left + note.width / 2, note.top + note.height / 2);
+    expect(el && noticeNote().contains(el), 'nothing covers it').toBe(true);
   });
 });

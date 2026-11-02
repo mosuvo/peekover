@@ -10,6 +10,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { createToolbar, TOOLBAR_CLASS } from './toolbar';
 import { setReaderMode } from '../render/readerMode';
+import { registerWatchTarget, resetWatchRegistryForTest, setWatchNote } from '../watch/watchRegistry';
+import { resetWatchControlsForTest } from '../watch/watchControl';
+import { createDiffContext, registerDiffContext, resetDiffRegistryForTest } from '../render/diffRegistry';
+import { registerDocIdentity, resetDocIdentityForTest } from '../render/docIdentity';
+import { mount } from '../render/mount';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -38,8 +43,17 @@ describe('the toolbar skeleton (4.1)', () => {
 
   it('composes the mark, the file name and Read / Raw, in that order', () => {
     const tb = createToolbar(document);
+    // KEEPS: the toolbar composes the mock's parts in the mock's order (4.1's own test). RE-SPELLED at
+    // 4.2: the badge, Watch and Compare slots join between the file name and Read / Raw.
     const parts = [...tb.element.children].map((el) => el.className.split(' ')[0]);
-    expect(parts).toEqual([`${TOOLBAR_CLASS}__brand`, `${TOOLBAR_CLASS}__file`, `${TOOLBAR_CLASS}__seg`]);
+    expect(parts).toEqual([
+      `${TOOLBAR_CLASS}__brand`,
+      `${TOOLBAR_CLASS}__file`,
+      `${TOOLBAR_CLASS}__badge`,
+      `${TOOLBAR_CLASS}__watch`,
+      `${TOOLBAR_CLASS}__compare`,
+      `${TOOLBAR_CLASS}__seg`,
+    ]);
     expect([...tb.element.querySelectorAll(`.${TOOLBAR_CLASS}__seg button`)].map((b) => b.textContent)).toEqual([
       'Read',
       'Raw',
@@ -126,5 +140,79 @@ describe('the toolbar skeleton (4.1)', () => {
     tb.element.querySelector<HTMLButtonElement>('[data-mode="raw"]')!.click();
     expect(b.getAttribute('data-mode')).toBe('raw');
     expect(a.getAttribute('data-mode')).toBe('raw'); // untouched by this click (it was set above)
+  });
+});
+
+describe('the toolbar — Watch, Compare, the badge, the notice area (4.2)', () => {
+  afterEach(() => {
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    resetDiffRegistryForTest();
+    resetDocIdentityForTest();
+  });
+
+  function registries(): void {
+    registerWatchTarget({ start: () => undefined, stop: () => undefined, isWatching: () => false });
+    registerDiffContext(
+      createDiffContext({
+        docId: 'f\u001fCLAUDE.md',
+        getCurrentSource: () => '# A',
+        fetchMeta: async () => [],
+        fetchText: async () => undefined,
+        showDiff: () => ({ ok: true }) as never,
+        hideDiff: () => undefined,
+      }),
+    );
+    registerDocIdentity('CLAUDE.md');
+  }
+
+  it('fills the badge, Watch and Compare slots from the same builders as the pills, and empties them with no document', () => {
+    registries();
+    const tb = createToolbar(document);
+    const h = document.createElement('div');
+    document.body.appendChild(h);
+    mount('# A', h, { contained: true });
+    tb.setDocument('CLAUDE.md', h);
+    expect(tb.element.querySelector('.peekover-agent-badge')?.textContent).toBe('Agent file · CLAUDE.md');
+    expect(tb.element.querySelector('.peekover-watch')?.getAttribute('aria-pressed')).toBe('false');
+    expect(tb.element.querySelector('.peekover-diff-affordance')?.textContent).toBe('Compare');
+    expect(tb.element.querySelector('.peekover-diff-picker'), 'the picker sits under Compare, in the toolbar').not.toBeNull();
+    // Compare's status line lives in the notice area, not the toolbar.
+    expect(tb.notices.querySelector('.peekover-diff-status')).not.toBeNull();
+    tb.setDocument(null, null);
+    for (const sel of ['.peekover-agent-badge', '.peekover-watch', '.peekover-diff-affordance']) {
+      expect(tb.element.querySelector(sel), `${sel} with no document`).toBeNull();
+    }
+  });
+
+  it('Compare follows the host\'s data-diff on BOTH controls — its own and the reader\'s pill', async () => {
+    registries();
+    const tb = createToolbar(document);
+    const h = document.createElement('div');
+    document.body.appendChild(h);
+    mount('# A', h, { contained: true });
+    tb.setDocument('CLAUDE.md', h);
+    const pill = h.shadowRoot!.querySelector<HTMLElement>('.peekover-diff-affordance')!;
+    const own = tb.element.querySelector<HTMLElement>('.peekover-diff-affordance')!;
+    h.setAttribute('data-diff', 'active'); // what diffView does when a comparison shows, from either control
+    await tick();
+    expect([own.textContent, own.dataset.diffOpen, pill.textContent, pill.dataset.diffOpen]).toEqual([
+      'Close comparison', 'true', 'Close comparison', 'true',
+    ]);
+    h.removeAttribute('data-diff');
+    await tick();
+    expect([own.textContent, own.dataset.diffOpen, pill.textContent, pill.dataset.diffOpen]).toEqual([
+      'Compare', undefined, 'Compare', undefined,
+    ]);
+  });
+
+  it('the notice area carries the watch note — hidden with nothing to say, shown when there is', () => {
+    const tb = createToolbar(document);
+    document.body.appendChild(tb.notices);
+    const note = tb.notices.querySelector<HTMLElement>('.peekover-watch-note')!;
+    expect(note.hidden).toBe(true);
+    setWatchNote('Watching stopped.');
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe('Watching stopped.');
   });
 });

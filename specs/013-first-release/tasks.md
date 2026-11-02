@@ -488,7 +488,7 @@ the app page shows some controls twice — unreleased, stated.*
       the three header panels drop from the header (+361 B); census C244 re-spelled here (was 4.4). Read / Raw disabled while
       editing until 4.3; the token pin's logo exceptions removed (both approved deviations).
 
-- [ ] **4.2 Watch, Compare + picker, agent badge in the toolbar (D-5).** TEST FIRST. The toolbar reuses
+- [x] **4.2 Watch, Compare + picker, agent badge in the toolbar (D-5).** TEST FIRST. The toolbar reuses
       `buildWatchControl(host)` (state via `aria-pressed`, styled by an app-sheet rule) and the diff registry's Compare,
       picker and status; the agent badge from the same source as the pill's. Pills still render (F-6).
       Files: `src/app/toolbar.ts` · `src/app/toolbar.test.ts` · `src/app/appShell.ts` ·
@@ -500,6 +500,12 @@ the app page shows some controls twice — unreleased, stated.*
       suite. Golden EMPTY · manifest · `permissions: []`. [D-5]
       ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **A** — the watch note is built here, in
       the notice area below the toolbar (in the page flow, never over text), alongside the toolbar's Watch.
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 4.2").* Watch, Compare + picker and the badge from the pills'
+      own builders; Watch shared through the registry, Compare through the host's `data-diff` (the toolbar writes it onto
+      both controls); synced both directions, both engines. The watch note and Compare's status in the notice area
+      (ruling A), in the page flow at 414 / 1080 / 1440. Content-script md5 identical to 4.1; app chunk +3,544 B. A
+      regression the full suite found (C061: the badge `<p>`'s UA margins grew an agent file's header 20 px) fixed here.
+      Necessary ripple: `diffChrome.ts` exports its three labels. Census C355 / C356 discovered and re-spelled.
 
 - [ ] **4.3 The Edit segment; the shadow-root edit control and `EDIT_CONTROL_CSS` removed (D-6).** TEST FIRST.
       `editorEnhancer.ts:115–140`'s enter/exit body is extracted to an exported `toggleEdit(host, options)`; the toolbar's

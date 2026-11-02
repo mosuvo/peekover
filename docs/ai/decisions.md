@@ -1,6 +1,64 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 4.2 — Watch, Compare and the agent badge in the toolbar; the watch note in the notice area
+  below it (D-5; F-6; ruling A).** Branch restarted from `main` at `f8dd026` (PR #26's merge, containing `549487e`). Font
+  parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit
+  --prod` EXIT 0 on 2026-11-02.
+  - **Watch** (`src/app/toolbar.ts`): the toolbar's Watch is `buildWatchControl(host)` — the pill's builder — bound to the
+    one watch registry, so the toolbar and the pill toggle the SAME watch and each reflects the other through the
+    registry's subscription; nothing is copied. The watching look per G-4 lives in an app-sheet rule on
+    `aria-pressed="true"`: ink text, `--ok` dot, `--ok` border (muted when off).
+  - **Compare** (`buildDiffChrome(host)`, the pill's builder): the pill sits in the toolbar with its picker directly
+    under it; the status line goes to the notice area. The builder keeps its open state LOCAL to each instance, so the
+    shared state is the host's `data-diff` (written by the diff view whichever control opened it): the toolbar's one
+    observer writes the label, `aria-label` and `data-diff-open` onto BOTH its own Compare and the reader's pill from
+    it. No builder changed — `diffChrome.ts` only exports its three copy constants so the toolbar writes the same words
+    (necessary ripple, outside the Files list: the Verify's "Compare opens the picker and the diff" on the shared state
+    needs those labels; exports only, content-script md5 unchanged). The toolbar does NOT import `diffView` — the
+    `diffEngine` import fence (the VIEW imported by exactly `appShell.ts`) went red on the first draft; it reads the
+    literal `data-diff` instead. At ≤ 863 px the Compare picker joins 4.1's rule (drops from the header, `.75rem` inset).
+  - **The badge**: `buildAgentBadge()` (the pill's source), full label ("Agent file · CLAUDE.md"; the compact label is
+    4.4's), rebuilt on every document switch (census note: the stale-name case).
+  - **The notice area** (ruling A): `toolbar.notices`, a row in the page flow between the header and the body, holding
+    `buildWatchNote()` (role=status, hidden when empty) and Compare's status. Never over text.
+  - **Tests.** Unit (`toolbar.test.ts`, +3): slots filled from the builders and emptied with no document; Compare follows
+    `data-diff` on both controls; the notice area carries the watch note. Browser (`toolbar.browser.test.ts`, +9 each
+    engine): Watch toolbar → pill and pill → toolbar (registry and both `aria-pressed` agree at each step); the watching
+    look in light and dark (ink / `--ok` / `--ok`, text at AA); Compare's picker under its button, a comparison opened
+    from the toolbar closed by the pill and one opened by the pill closed by the toolbar; the badge for an agent file,
+    gone for a plain one, back on the switch; the watch note in the notice area says what the reader's note says for
+    "unavailable" (the real `persistable:false` route), `DEAD_READ_NOTE` and `CHANGED_AGAIN_NOTE`, and at 414 / 1080 /
+    1440 px lies below the header, above the reading column, inside the window, hit-testable. 4.1's header-panel test
+    now also opens Compare (all rows hit-testable at all three widths, both themes). Every new test red at 4.1's
+    production code (restored md5-identical), green after.
+  - **Ablations, each red then restored md5-identical:** A1 the toolbar's Watch a copy, not the registry's control →
+    the Watch sync test red; A3 the notice area overlaid on the reader → the page-flow test red;
+    A4 the toolbar no longer writing the shared state onto the pill → "closes from the other" red;
+    A5 the badge not rebuilt on a switch → the badge test red. A2 (the picker's narrow rule removed)
+    stayed GREEN: at 300 px the toolbar's picker fits the 414 window from its anchor anyway; a 600 px picker with the
+    rule removed goes red ("Compare: panel [0,172,600,251] leaves the 414x900 viewport") — the rule is a guard for a
+    wider picker, and the test bites.
+  - **★ A REGRESSION THE FULL SUITE FOUND, FIXED IN THIS COMMIT.** `agentBadge`'s row-10 app arm (census **C061**: the
+    badge does not move the reading column's first block) went red at 1280 and 1400 px on both engines (h1 at 153 vs
+    133). Cause, by probe: the badge is a `<p>`, and in the light-DOM toolbar it kept the UA paragraph margins, so an
+    agent file's header grew 20 px. Fix: the toolbar's badge rule sets `margin:0` (a `flex` change tried first was not
+    the cause and was reverted). The property is kept and the test unchanged. Left for 4.4: at 1080 px an agent file's
+    header wraps to a second row (93 vs 53 px) — the compact toolbar's job, ruling C.
+  - **Census:** no row first-breaks at 4.2 (as the census said). Discovered and handled: **C355 / C356** (4.1's own order
+    tests in `toolbar.test.ts` / `toolbar.browser.test.ts`, re-spelled with `KEEPS:` — the badge, Watch and Compare
+    slots join). C061 property kept by the production fix above. C319–C321 (watch control → "owned by
+    toolbar.browser.test.ts, written 4.2") have their replacement tests here; the rows themselves move at 4.5.
+  - **Verify:** lint 0 · unit 1489 / 1490 (`pipeline.perf`, the listed flake) · browser, the FULL suite alone, both
+    engines, CI font: **2,059 passed / 0 failed / 51 skipped of 2,110** (200 files, 411 s), EXIT 0 — no red to classify ·
+    golden EMPTY · NUL 0 in every changed file (control fires 1 both ways).
+  - **Bytes (clean two-engine build):** content script **344,513 B, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) — identical
+    to 4.1** (no shared builder changed; `diffChrome.ts`'s exports add nothing to that graph); app chunk 537,567 →
+    **541,111 B (+3,544: `toolbar.ts` +3,471 — the three slots, the sync and the sheet; `appShell.ts` +73 — the notice
+    row and the picker in the narrow rule, measured with `appShell.ts` alone reverted)**; no other file changed;
+    `.output` 5,960,018 / 5,960,134 B (+3,544); zips 1,957,538 / 1,957,594 B; manifests **833 / 949 B** unchanged,
+    `permissions: []`. G-7 holds.
+
 - **2026-11-02 · M13 TASK 4.1 — the `pills` mount option and the toolbar skeleton: the mark, the file name, Read / Raw
   (D-5; F-1; gate-1 Q8; the approved 3.1 mock).** Branch restarted from `main` at `f4af87e` (PR #25's merge, containing
   `82d4414`). Font parity applied. Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on

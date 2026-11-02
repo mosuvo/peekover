@@ -156,6 +156,12 @@ retired while its function has no other test. Function by function:
   comment citing its row; and **C244** (`exportPanel`: "anchored under ITS OWN toggle") — moved up from 4.4 by the
   in-task fix that drops the three header panels from the header at ≤ 863 px; re-spelled to the wide viewport (ruling C).
   Not first-breaking at 4.1, unchanged: C287, C229–C231 (4.3).
+- **4.2** (2026-11-02): no row first-breaks here (as counted). **C355 / C356** (discovered: 4.1's own order tests in
+  `toolbar.test.ts` / `toolbar.browser.test.ts`) re-spelled, each with a `KEEPS:` comment. **C061** (`agentBadge` row 10,
+  app arm) went red in the full suite — the toolbar's badge `<p>` kept UA margins; fixed in production (`margin:0`), the
+  property kept and the test unchanged; the row still moves at 4.5. C319–C321's replacement tests are written here
+  (`toolbar.browser.test.ts`); the rows themselves move at 4.5. Ruling A's note rows (C020 … C345) move at 4.5; the
+  note's notice-area home is built and tested here.
 
 ### Checking 4.1–4.8 against this census
 
@@ -395,6 +401,13 @@ replaced 1
 |---|---|---|---|---|---|---|---|
 | C082 | at %s, every header control lies inside the viewport (it.each 414x896 / 1280x900) | header export, storage, theme, code-theme toggles present; every header button/brand/tag rect inside viewport | replaced | every app control reachable and unclipped at narrow and wide — toolbar.browser.test.ts (≤863 '⋯', two rows max); brand/tag may change at 4.1 | 4.4 | app | theme switching, code theme switching, Stored data opening, Export |
 | C354 | at %s, every header control lies inside the viewport — its header-part selector (DISCOVERED at 4.1) | the selector lists the brand text and the tag, both removed at 4.1 | re-spelled | every header part, text included, lies inside the viewport — the toolbar's brand and file name replace the brand and tag | 4.1 | app |  |
+
+### `src/app/toolbar.test.ts` and `tests/browser/toolbar.browser.test.ts` (written at 4.1 — rows DISCOVERED at 4.2)
+
+| ID | Test | Checks today | Class | Property kept / retired | Task | Surface | Function (Q1) |
+|---|---|---|---|---|---|---|---|
+| C355 | `toolbar.test.ts` › composes the mark, the file name and Read / Raw, in that order | the toolbar's children are exactly [brand, file, seg] | re-spelled | the toolbar composes the mock's parts in the mock's order — the badge, Watch and Compare slots join between the file name and Read / Raw | 4.2 | app |  |
+| C356 | `toolbar.browser.test.ts` › sits first in the header: the mark and word, the file name, Read / Raw — and the tag is gone | the toolbar's parts on screen are [brand, file, seg] | re-spelled | the same, on screen, both engines | 4.2 | app |  |
 
 ### `tests/browser/captureDisclosure.browser.test.ts`
 

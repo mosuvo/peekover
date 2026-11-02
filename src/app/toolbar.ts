@@ -17,10 +17,35 @@
 // unsaved-changes guard, which only the Edit control carries until the Edit segment arrives (4.3,
 // ruling E). A Read / Raw that bypassed it could lose an unsaved buffer.
 //
+// 4.2 adds Watch, Compare and the agent badge, each from the SAME builder the reader's pill uses
+// (`buildWatchControl`, `buildDiffChrome`, `buildAgentBadge`), rebuilt on every document switch:
+// - Watch rides the watch registry, so the toolbar's control and the pill reflect each other.
+// - Compare's "a diff is on screen" state is local to each builder instance (its label and
+//   `dataset.diffOpen`); the shared state is the host's `data-diff`, which the observer reads, and
+//   the toolbar writes that state onto BOTH instances — its own and, while it still renders, the
+//   reader's pill — so either one closes a comparison the other opened. App-side only: the builder
+//   is on the content script's graph and does not change.
+// - The NOTICE AREA (the 4.0 census ruling A) sits below the header, in the page flow, never over
+//   text: the watch note (stopped / unavailable / changed again) and Compare's status line.
+//
+// THE BADGE IS A <p> (the pill's own element): in the light DOM it carries the UA's paragraph
+// margins, which the reader's shadow sheet zeroes. The toolbar's rule zeroes them too — without it
+// an agent file's header grew 20 px and moved the reading column (census C061, found by the 4.2
+// full suite).
+//
 // THE MARK is drawn here (two lids that blink, only when the user allows motion), from tokens:
 // `--hl` for the document, `--logo-ink` / `--logo-eye` for the fixed ink and eye white (AGENTS.md:
 // the logo's internals use the FIXED ink in every theme; tokens.css carries both values).
 import { setReaderMode, type ReaderMode } from '../render/readerMode';
+import { buildWatchControl, buildWatchNote, WATCH_CONTROL_CLASS } from '../watch/watchControl';
+import {
+  buildDiffChrome,
+  ARIA_COMPARE,
+  DIFF_AFFORDANCE_CLASS,
+  LABEL_COMPARE,
+  LABEL_EXIT,
+} from '../render/diffChrome';
+import { buildAgentBadge } from '../render/agentBadge';
 
 /** The toolbar's class root; every part is `${TOOLBAR_CLASS}__part`. */
 export const TOOLBAR_CLASS = 'peekover-toolbar';
@@ -56,6 +81,34 @@ export function toolbarCss(shell: string): string {
 .${C}__seg button{font:600 12.5px/1 var(--sans); color:var(--muted); background:none; border:0; padding:7px 13px; cursor:pointer}
 .${C}__seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper)}
 .${C}__seg button:disabled{cursor:default}
+.${C} .peekover-agent-badge{margin:0; font:600 12px/1 var(--sans); letter-spacing:.02em; color:var(--muted); background:var(--panel);
+  border:1px solid var(--line); border-radius:999px; padding:6px 11px; white-space:nowrap; flex:none}
+.${C} .${WATCH_CONTROL_CLASS}{display:inline-flex; align-items:center; gap:7px; flex:none; cursor:pointer; white-space:nowrap;
+  font:600 12.5px/1 var(--sans); letter-spacing:.02em; color:var(--muted); background:var(--panel);
+  border:1px solid var(--line); border-radius:999px; padding:7px 13px}
+.${C} .${WATCH_CONTROL_CLASS}__dot{width:7px; height:7px; border-radius:50%; background:var(--muted); flex:none}
+.${C} .${WATCH_CONTROL_CLASS}[aria-pressed="true"]{color:var(--ink); border-color:var(--ok)}
+.${C} .${WATCH_CONTROL_CLASS}[aria-pressed="true"] .${WATCH_CONTROL_CLASS}__dot{background:var(--ok)}
+.${C}__badge,.${C}__watch,.${C}__status{display:contents}
+.${C}__compare{position:relative; display:inline-flex; flex:none}
+.${C} .${DIFF_AFFORDANCE_CLASS}{font:600 12.5px/1 var(--sans); color:var(--muted); background:var(--panel); cursor:pointer;
+  border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap}
+.${C} .${DIFF_AFFORDANCE_CLASS}[aria-expanded="true"],.${C} .${DIFF_AFFORDANCE_CLASS}[data-diff-open="true"]{color:var(--ink); border-color:var(--ink)}
+.${C} .peekover-diff-picker{position:absolute; top:calc(100% + 6px); left:0; z-index:6; box-sizing:border-box;
+  width:300px; max-width:calc(100vw - 1.5rem); max-height:min(60vh,calc(100vh - 6rem)); overflow:auto;
+  background:var(--paper); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:6px}
+.${C} .peekover-diff-picker[hidden]{display:none}
+.${C} .peekover-diff-picker [role="group"]::before{content:attr(aria-label); display:block; margin:6px 8px 4px;
+  font:700 11px/1.3 var(--sans); letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.${C} .peekover-diff-picker__item{display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
+  box-sizing:border-box; text-align:left; font:400 13px/1.4 var(--sans); color:var(--ink); background:none; border:0;
+  border-radius:7px; padding:7px 8px; cursor:pointer}
+.${C} .peekover-diff-picker__item:hover{background:var(--accent-soft)}
+.${C} .peekover-diff-picker__size,.${C} .peekover-diff-picker__kind{color:var(--muted); font-variant-numeric:tabular-nums}
+.${shell}__notices{flex:none}
+.${shell}__notices > *,.${shell}__notices > .${C}__status > *{margin:0; padding:.55rem 1rem; font:400 13px/1.45 var(--sans); color:var(--ink);
+  background:var(--panel); border-bottom:1px solid var(--line)}
+.${shell}__notices [hidden]{display:none}
 `;
 }
 
@@ -90,6 +143,8 @@ export interface ToolbarController {
   /** The open document's name and its reader host (both null when none is open). Re-binds the
    *  observer to the host, so a document switch is reflected at once. */
   setDocument(name: string | null, host: HTMLElement | null): void;
+  /** The notice area (ruling A): the shell places it below the header, in the page flow. */
+  readonly notices: HTMLElement;
 }
 
 /** Build the toolbar skeleton. */
@@ -126,14 +181,53 @@ export function createToolbar(doc: Document): ToolbarController {
     return b;
   });
 
-  element.append(brand, file, seg);
+  // 4.2 — the badge, Watch and Compare, each a slot refilled on every document switch.
+  const badgeSlot = doc.createElement('span');
+  badgeSlot.className = `${C}__badge`;
+  const watchSlot = doc.createElement('span');
+  watchSlot.className = `${C}__watch`;
+  const compareSlot = doc.createElement('span');
+  compareSlot.className = `${C}__compare`;
+
+  element.append(brand, file, badgeSlot, watchSlot, compareSlot, seg);
+
+  // The notice area: the watch note (always built; it hides itself with nothing to say) and,
+  // per document, Compare's status line.
+  const notices = doc.createElement('div');
+  notices.className = 'peekover-app__notices';
+  const statusSlot = doc.createElement('div');
+  statusSlot.className = `${C}__status`;
+  notices.append(buildWatchNote(), statusSlot);
+  let comparePill: HTMLButtonElement | null = null;
+  let compareStatus: HTMLElement | null = null;
 
   let host: HTMLElement | null = null;
+  let wasDiffOpen = false;
   const observer = new MutationObserver(() => sync());
 
   /** Show the bound host's state: which view is pressed, and whether the segment can act. */
+  /** Write the shared comparison state onto one Compare control (its label and its exit gesture). */
+  function showDiffState(pill: Element | null | undefined, open: boolean): void {
+    if (!(pill instanceof HTMLElement)) return;
+    if (open === (pill.dataset.diffOpen === 'true')) return;
+    pill.textContent = open ? LABEL_EXIT : LABEL_COMPARE;
+    pill.setAttribute('aria-label', open ? LABEL_EXIT : ARIA_COMPARE);
+    if (open) pill.dataset.diffOpen = 'true';
+    else delete pill.dataset.diffOpen;
+  }
+
   function sync(): void {
     const mode = host?.getAttribute('data-mode') ?? null;
+    // `data-diff="active"` is diffView's flag (its DIFF_HOST_ATTR); not imported — the diff import
+    // fence keeps diffView appShell's alone (diffImportFence: Clause C).
+    const diffOpen = host?.getAttribute('data-diff') === 'active';
+    showDiffState(comparePill, diffOpen);
+    showDiffState(host?.shadowRoot?.querySelector(`.${DIFF_AFFORDANCE_CLASS}`), diffOpen);
+    if (!diffOpen && compareStatus && wasDiffOpen) {
+      compareStatus.hidden = true;
+      compareStatus.textContent = '';
+    }
+    wasDiffOpen = diffOpen;
     const usable = host !== null && mode !== 'edit';
     for (const b of buttons) {
       b.disabled = !usable;
@@ -148,10 +242,19 @@ export function createToolbar(doc: Document): ToolbarController {
     else file.removeAttribute('title');
     observer.disconnect();
     host = next;
+    badgeSlot.replaceChildren(...(host ? buildAgentBadge() : []));
+    const watch = host ? buildWatchControl(host) : null;
+    watchSlot.replaceChildren(...(watch ? [watch] : []));
+    const [pill, picker, status] = host ? buildDiffChrome(host) : [];
+    comparePill = pill instanceof HTMLButtonElement ? pill : null;
+    compareStatus = status instanceof HTMLElement ? status : null;
+    compareSlot.replaceChildren(...[pill, picker].filter((n): n is Node => n !== undefined));
+    statusSlot.replaceChildren(...(compareStatus ? [compareStatus] : []));
+    wasDiffOpen = false;
     if (host) observer.observe(host, { attributes: true, attributeFilter: ['data-mode', 'data-watch', 'data-diff'] });
     sync();
   }
 
   sync();
-  return { element, setDocument };
+  return { element, setDocument, notices };
 }
