@@ -130,6 +130,33 @@ retired while its function has no other test. Function by function:
   header; `printMode`'s probe would otherwise pass on "Peekover 0.1.0" in the status line alone.
 - **4.5** — the `notices` row survives "Clear diagram cache" and "Erase snapshots" (only "Wipe all data" clears it).
 
+### The human's rulings on these questions (2026-11-02; `decisions.md` "M13 RULINGS — the 4.0 census questions")
+
+- **A — the watch note** goes below the toolbar, in the same notice area as the snapshot notice — in the page flow,
+  never over text — from 4.2. Settles the watch-note rows: C020, C326, C327, C328, C331, C334, C343, C344, C345
+  (re-spelled at 4.5 to the notice area; the note is built there from 4.2).
+- **B — 4.1's Verify** reads "the toolbar reflects a mode flip it did not make" (the mode pill, until 4.5); `\` stays
+  inert on the app page. Settles 4.1's own new test (`toolbar.browser.test.ts`); no existing row.
+- **C — the "⋯" collapse (≤ 863 px) belongs to 4.4.** Tests not ABOUT the compact toolbar widen their window instead of
+  opening "⋯"; the compact toolbar gets its own tests. Settles how every 4.4 row is re-spelled (C008 … C307, the 47
+  rows whose first task is 4.4).
+- **D — the remote-images "load" bar** joins the notice area below the toolbar on the APP PAGE; the file:// reader keeps it
+  where it is. Settles C031, C141, C143 (the bar's lane beside the Compare pill — retired at 4.5) and gives the bar its
+  app-page home before 4.5.
+- **E — the Edit segment:** Read and Raw leave edit through the unsaved-changes guard; "Editor unavailable" shows on the
+  Edit segment; focus returns to Edit after Escape. **RETIRED: C046** ("R3 — the exit returns to the mode edit was
+  entered from", named by the ruling) and **C174** (the same property in `editorRender`; re-classed here). Before 4.3.
+- **F — the header tag** "Zero network by default" is removed at 4.1; the status line's test-backed "No network calls"
+  carries the claim from 4.7. Settles C259.
+
+### Done — rows handled, by task
+
+- **4.1** (2026-11-02): C259 (`printMode`: the negative control now targets the header's "Stored data" text), C311
+  (`uiFonts`: probes the toolbar's word), C354 (discovered: `appHeaderNarrow`'s part selector) — each carries a `KEEPS:`
+  comment citing its row; and **C244** (`exportPanel`: "anchored under ITS OWN toggle") — moved up from 4.4 by the
+  in-task fix that drops the three header panels from the header at ≤ 863 px; re-spelled to the wide viewport (ruling C).
+  Not first-breaking at 4.1, unchanged: C287, C229–C231 (4.3).
+
 ### Checking 4.1–4.8 against this census
 
 tasks.md defines no lint for the comments, and 4.0 may not edit a test. Each group-4 task therefore checks, in its
@@ -142,6 +169,7 @@ they stay green.
 ## Retirements — for the human (shown again at group 4's end)
 
 | ID | File | Test | The property that ceases to exist, and why | Task |
+| C174 | `editorRender.browser.test.ts` | entered from raw, the exit returns to raw | leaving edit returns to the mode it was entered from — RETIRED by ruling E (2026-11-02) with C046: in the segment, the one you click is where you go | 4.3 |
 |---|---|---|---|---|
 | C030 | `diffChrome.test.ts` | THE LANE EXISTS, and it is the CONTAINED sheet that carries it (D-14: app page only) | the diff status's own lane under the open picker inside the reader pane — a CONTAINED_CSS pill override (:1360-1361) | 4.5 |
 | C031 | `diffChrome.test.ts` | the remote-load lane — declares left:176px BEFORE the anchored left, in the same CONTAINED_CSS rule | remote-load sits beside the Compare pill in the pane (anchor --peekover-diff); no Compare pill in the shadow root after 4.5 | 4.5 |
@@ -366,6 +394,7 @@ replaced 1
 | ID | Test | Checks today | Class | Property kept / retired | Task | Surface | Function (Q1) |
 |---|---|---|---|---|---|---|---|
 | C082 | at %s, every header control lies inside the viewport (it.each 414x896 / 1280x900) | header export, storage, theme, code-theme toggles present; every header button/brand/tag rect inside viewport | replaced | every app control reachable and unclipped at narrow and wide — toolbar.browser.test.ts (≤863 '⋯', two rows max); brand/tag may change at 4.1 | 4.4 | app | theme switching, code theme switching, Stored data opening, Export |
+| C354 | at %s, every header control lies inside the viewport — its header-part selector (DISCOVERED at 4.1) | the selector lists the brand text and the tag, both removed at 4.1 | re-spelled | every header part, text included, lies inside the viewport — the toolbar's brand and file name replace the brand and tag | 4.1 | app |  |
 
 ### `tests/browser/captureDisclosure.browser.test.ts`
 
@@ -611,7 +640,7 @@ re-spelled 5 · replaced 1 · retired 1
 |---|---|---|---|---|---|---|---|
 | C172 | %s: the control is hit-testable beside the pill and never under it, with either pill label (it.each NARROW/WIDE) | Edit pill left of mode pill, same top, disjoint, both hit at centre, for labels Raw and Reading | retired | Edit pill vs mode pill adjacency in the shadow root — no Edit pill (4.3), no mode pill on app page (4.5) | 4.3 | app |  |
 | C173 | activating the control presents a CodeMirror view (3 tests: LF, CRLF, typed/undo) | shadow Edit pill click -> CodeMirror in source slot holding the source; CRLF clean on entry; typing dirties, undo clears | re-spelled | entering edit shows CodeMirror holding the document; dirty tracks the buffer — enter via toggleEdit/segment (pane harness has no toolbar) | 4.3 | app | Edit entering |
-| C174 | entered from raw, the exit returns to raw | mode pill -> raw; Edit pill enter then exit; data-mode raw, raw view shown, no shell | re-spelled | leaving edit returns to the mode it was entered from — Edit via segment (4.3), Raw via toolbar (4.5) | 4.3, 4.5 | app | Edit entering/leaving |
+| C174 | entered from raw, the exit returns to raw | mode pill -> raw; Edit pill enter then exit; data-mode raw, raw view shown, no shell | retired (ruling E, 2026-11-02; was re-spelled) | leaving edit returns to the mode it was entered from — RETIRED with C046: in the segment, the one you click is where you go | 4.3 | app | Edit entering/leaving |
 | C175 | ★ edit -> reading -> edit runs the module loader ONCE; a second host runs it again | enhanceEditor(host,{loader}); Edit pill clicks; loader called once per host | re-spelled | the editor engine loads once per outer host — drive via exported toggleEdit(host,{loader}) | 4.3 | app | Edit entering |
 | C176 | ★ mountReader() — the content script's own mount — installs none; the app page's pane installs one | content-script reader has no edit control or Edit-labelled button; positive control: pane host has the Edit pill | re-spelled | content script never offers Edit (kept as-is); the app-page positive control moves to the toolbar segment | 4.3 | both | Edit entering |
 | C177 | ★ selected by class alone it is a <button>; Enter enters, Space exits; the name says which | Edit pill is a real button, tabIndex 0; Enter enters, Space exits; labels Edit / Stop editing | replaced | the Edit control is a real keyboard-operable button with its state in its name — toolbar.browser.test.ts (segment) | 4.3 | app | Edit entering/leaving |

@@ -80,6 +80,16 @@ export interface MountOptions {
    * host by the same branch a rail-less document takes.
    */
   chrome?: boolean;
+  /**
+   * Compose the reader's PILLS (013 task 4.1, plan D-5): the mode toggle, the theme control, the
+   * watch chrome, the diff chrome and the agent badge. ON by default — an omitted field is
+   * byte-identical to `true`, and the content script never passes it, so its floating pills stay.
+   * `false` drops those five and keeps the document-bound chrome (TOC rail, remote-load bar,
+   * network indicator; the failure banner is the fallback path's): the app page passes it once its
+   * toolbar carries the controls (4.5). Beside `chrome`, not instead of it (F-1): `chrome: false` is
+   * the nested preview's "no chrome at all" and still implies no pills.
+   */
+  pills?: boolean;
 }
 
 /** What a `preserveReading` mount carries across its own `replaceChildren`. */
@@ -171,7 +181,8 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     const children: Node[] = [buildReaderStyle()];
     if (options.contained) children.push(buildContainedStyle());
     const chrome = options.chrome !== false;
-    if (chrome) children.push(buildModeToggle(host));
+    const pills = chrome && options.pills !== false;
+    if (pills) children.push(buildModeToggle(host));
     // Theme control (task 5.1), composed through THIS one seam so both surfaces get it with no
     // per-surface branching — same discipline as the TOC rail below. It is chrome: pushed as a
     // SIBLING of the reading column, never inside `root`, so `.peekover-reader` stays
@@ -183,7 +194,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // here, INCLUDING chrome wrongly appended into `root`. The golden diff is therefore not the
     // guard people assume; the DOM sibling relationship is asserted directly in
     // tests/browser/themeControl.browser.test.ts (verified red by appending to `root`).
-    if (chrome) children.push(buildThemeControl());
+    if (pills) children.push(buildThemeControl());
     // Watch control (spec 005 task 4.1), composed through THIS one seam for the same reason the
     // theme control and the TOC rail are — both surfaces get it with no per-surface branching. A
     // SIBLING of the reading column, never inside `root`, so `.peekover-reader` stays
@@ -197,7 +208,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // disabled control. The control itself holds no controller reference — it reaches
     // start/stop through the module-level registry, because `replaceChildren` destroys it on every
     // render, INCLUDING the renders a running watch causes. See src/watch/watchRegistry.ts.
-    if (chrome) children.push(...buildWatchChrome(host));
+    if (pills) children.push(...buildWatchChrome(host));
     // Diff affordance (spec 006 task 6.2), composed through THIS same seam — and it is the ONLY
     // diff module this file imports (plan §1.4's import fence: `diffChrome.ts` reaches the engine
     // and the view through closures the app page provisions on the diff registry, so neither
@@ -205,14 +216,14 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // Returns `[]` — with NO explanatory note — on a surface that registered no diff context
     // (D-14, §3.2: the user never saw a history feature there, so there is nothing to be told they
     // are missing). Siblings of the reading column, like every other piece of chrome above.
-    if (chrome) children.push(...buildDiffChrome(host));
+    if (pills) children.push(...buildDiffChrome(host));
     // Agent-file badge (008 task 1.3, D-1/D-2) — the FIFTH instance of the pattern above, and the
     // whole cost in this file of not threading the document's name through MountOptions. It reads
     // the module-level identity registry at BUILD time and returns `[]` — with NO note — when the
     // name is absent or unrecognized, so this line is unconditional and mount() stays read-only
     // library (006 D-15): it reads a data holder, writes nothing, owns nothing, and branches on
     // nothing about the app. Why a registry and not MountOptions: src/render/docIdentity.ts.
-    if (chrome) children.push(...buildAgentBadge());
+    if (pills) children.push(...buildAgentBadge());
     if (chrome && blockedCount > 0) {
       children.push(buildRemoteLoadBar(host, blockedCount), buildNetworkIndicator());
     }

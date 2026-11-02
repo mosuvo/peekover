@@ -171,7 +171,9 @@ describe('app page — the design faces load from the package and are drawn', ()
     await Promise.all([...facesOf(UI_SANS_FAMILY), ...facesOf(UI_MONO_FAMILY)].map((f) => f.loaded.catch(() => undefined)));
     await document.fonts.ready;
 
-    const brand = container.querySelector('.peekover-app__brand')!;
+    // KEEPS: the app chrome draws Bricolage (census C311). RE-SPELLED at 013 task 4.1: the header's
+    // brand text is now the toolbar's word beside the mark.
+    const brand = container.querySelector('.peekover-toolbar__word')!;
     const chrome = drawsFirstFamily(brand);
     expect(chrome.family, 'the shell chrome stack leads with Bricolage Grotesque').toBe(UI_SANS_FAMILY);
     expect(chrome.uses, `app chrome did not draw Bricolage (${chrome.full} vs ${chrome.without} px)`).toBe(true);

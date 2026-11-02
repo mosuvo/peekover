@@ -203,6 +203,11 @@ describe('rows 3, 4, 5 — the export panel is an out-of-flow overlay anchored a
   });
 
   it('is anchored under ITS OWN toggle, not the storage toggle', async () => {
+    // KEEPS: above the compact breakpoint the Export panel anchors at its own trigger (census C244).
+    // RE-SPELLED at 013 task 4.1 (the census put it at 4.4; the in-task panel fix moved it): at 863 px
+    // and below the panel now drops from the header so it cannot leave the window — pinned in
+    // toolbar.browser.test.ts — so this test widens its window instead (the 4.0 ruling C).
+    await page.viewport(WIDE.width, WIDE.height);
     const { container, toggle, control } = await mountWithFile();
     const panel = await openPanel(container, toggle);
     const slot = panel.parentElement!; // .peekover-app__export-slot — the positioned box itself

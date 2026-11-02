@@ -11,6 +11,19 @@
 
 ## Now (start here)
 
+**M13 TASK 4.1 LANDED (2026-11-02) — the `pills` option and the toolbar skeleton (mark, file name, Read / Raw); the 4.0
+rulings, 4.0's tick and entry banked.** Record: `decisions.md`, "M13 TASK 4.1", "M13 RULINGS — the 4.0 census questions",
+"M13 TASK 4.0". Branch restarted from `main` at `f4af87e` (PR #25's merge); font parity applied.
+- `mount()` `pills` (default on; the content script never passes it) — +18 B content script, md5 restored with it reverted.
+- `src/app/toolbar.ts`: first in the header; the blinking mark (reduced-motion aware), the file chip, Read / Raw on the
+  same state as the mode pill, one observer; the tag gone (ruling F). Read / Raw disabled while editing until 4.3.
+- **Regression found by the full suite, fixed here (the human's ruling):** at 414 px the Export panel opened at x −195;
+  at ≤ 863 px the three header panels now drop from the header (x 12…402). New test: all three panels inside the
+  viewport with every row hit-testable at 414 / 1080 / 1440, light and dark, both engines.
+- Census rows done: C259, C311, C354 (discovered), C244 (moved up from 4.4).
+- Verify: lint 0 · unit 1485 / 1487 (`pipeline.perf`; a `diagramEnhancer` timing red green alone) · browser Chromium
+  1,045 / 1 skipped, Firefox 996 / 50, 0 failed after C244's re-spelling · golden EMPTY · audit EXIT 0.
+
 **M13 TASK 4.0 LANDED (2026-11-02) — the census of tests the toolbar move touches; QUESTIONS FOR THE HUMAN.** Record:
 `specs/013-first-release/census.md` (new). Branch restarted from `main` at `432cd02` (PR #24's merge); font parity
 applied; `pnpm audit --prod` EXIT 0, 2026-11-02. No production or test edit.
@@ -383,12 +396,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human rules on census.md's questions (Q-B and Q-F before 4.1; Q-E before 4.3; Q-A, Q-C, Q-D before 4.4 / 4.5)
-and merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 4.0, the census).
-**Then M13: task 4.1 — the `pills` mount option and the toolbar skeleton (mark, file name, Read / Raw)**, citing
-census.md's rows by ID (`KEEPS:` / `RETIRED:` with the row ID) and landing 4.0's tasks.md tick and decisions.md entry.
-Timing gates are judged on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
-/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4, 2.1–2.6, 3.1 and 4.0 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 4.1, with 4.0's records).
+**Then M13: task 4.2 — Watch, Compare + picker, the agent badge in the toolbar; the watch note in the notice area below
+the toolbar (ruling A).** Pills still render (F-6). Cite census rows by ID; the badge refreshes on a document switch (census
+note). Timing gates on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
+/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4, 2.1–2.6, 3.1, 4.0 and 4.1 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -412,7 +424,12 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 2.6 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+**Byte snapshot — M13 task 4.1 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+`.output` 5,956,474 B (Cr) / 5,956,590 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,383,558 / 1,383,442 B · zip
+1,956,656 / 1,956,712 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) · app chunk
+537,567 B · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1487 (the perf flake known) · browser 2,041 passed / 51
+skipped of 2,092 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
+**Superseded by 4.1 — the 2.6 figures:**
 `.output` 5,952,638 B (Cr) / 5,952,754 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,387,394 / 1,387,278 B · zip
 1,955,430 / 1,955,487 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
 533,749 B · **manifest 833 / 949 B**, `permissions: []` · lint 0 · unit 1476 (the perf flake known) · browser 2.4's
