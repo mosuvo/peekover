@@ -504,7 +504,10 @@ describe('Print mode — the @page margin-box fidelity PROBE, per engine (tasks 
     // NEGATIVE CONTROL: the app shell's own chrome text must NOT appear in the rendered PDF — proof
     // that the print CSS suppression is real in the ACTUAL print pipeline, not only under
     // emulateMedia's on-screen approximation.
-    expect(fullText).not.toContain('Zero network by default');
+    // KEEPS: the app chrome's own text never reaches the PDF (census C259). RE-SPELLED at 013 task 4.1:
+    // the header's "Zero network by default" tag is gone (ruling F), so the control targets the header's
+    // "Stored data" button instead — app-only text the print rules hide with the header.
+    expect(fullText).not.toContain('Stored data');
 
     // TASK 6.1's ORIGINAL FINDING (still true, and still why readerCss.ts's copy exists at all):
     // an `@page` rule whose OWN stylesheet lives INSIDE A SHADOW ROOT — where `readerCss.ts`'s

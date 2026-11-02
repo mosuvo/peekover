@@ -68,8 +68,9 @@ function diff(copy: string, actual: Tokens, expected: Tokens, keys: string[]): s
 // ── Named exceptions, each with its ruling ──────────────────────────────────────────────────────
 /** Tokens the app SHELL does not carry, deliberately. */
 const SHELL_EXCEPTIONS: Record<string, string> = {
-  '--logo-ink': 'the logo is drawn with fixed literals, not this token (spec A.2: "extra / unused")',
-  '--logo-eye': 'the logo is drawn with fixed literals, not this token (spec A.2: "extra / unused")',
+  // KEEPS: the shell's token sets equal tokens.css. 013 task 4.1 ENDS the --logo-ink / --logo-eye
+  // exceptions: the toolbar's mark draws with those tokens, so the shell now carries them and the
+  // pin checks them (AGENTS.md: a provisional exception goes when its mechanism becomes real).
 };
 /** Colour literals allowed outside the tracked copies, each with its reason. `files` scopes it. */
 const ALLOW_LIST: Array<{ value: string; files: RegExp; reason: string }> = [

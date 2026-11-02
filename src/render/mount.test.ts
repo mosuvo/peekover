@@ -7,8 +7,12 @@
 // and that the media seam is a no-op in M1. The throw -> raw-fallback path lives
 // in mount.fallback.test.ts (it needs a mocked stage).
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mount } from './mount';
+import { registerWatchTarget, resetWatchRegistryForTest } from '../watch/watchRegistry';
+import { resetWatchControlsForTest } from '../watch/watchControl';
+import { createDiffContext, registerDiffContext, resetDiffRegistryForTest } from './diffRegistry';
+import { registerDocIdentity, resetDocIdentityForTest } from './docIdentity';
 
 function makeHost(): HTMLElement {
   const host = document.createElement('peekover-root');
@@ -275,5 +279,78 @@ describe('mount — the `chrome` option', () => {
     const bare = makeHost();
     mount(DOC, bare, { chrome: false });
     expect([...bare.shadowRoot!.children].map((el) => el.tagName)).toEqual(['STYLE', 'DIV']);
+  });
+});
+
+// 013 task 4.1 (plan D-5; F-1) — the `pills` option. The app page will pass `pills: false` at 4.5,
+// when its toolbar carries these controls; the content script never passes it. The registries are
+// set so that every pill group really renders by default — without them the watch, diff and badge
+// builders return nothing, and "omitted" would be vacuous.
+describe('mount — the `pills` option', () => {
+  const DOC = '# One\n\ntext\n\n## Two\n\n![pic](https://example.com/pic.png)';
+  /** The five pill groups `pills: false` omits, each selected by class alone. */
+  const PILLS = [
+    '.peekover-mode-toggle',
+    '.peekover-theme-toggle',
+    '.peekover-watch',
+    '.peekover-diff-affordance',
+    '.peekover-agent-badge',
+  ];
+  /** The rest of those groups: the watch chrome's note and capture disclosure, the diff chrome's picker and status. */
+  const PILL_PARTS = ['.peekover-watch-note', '.peekover-watch-disclosure', '.peekover-diff-picker', '.peekover-diff-status'];
+  /** The document-bound chrome it keeps (the failure banner is the fallback path's, which takes no option). */
+  const KEPT = ['.peekover-toc', '.peekover-remote-load', '.peekover-net'];
+
+  beforeEach(() => {
+    registerWatchTarget({ start: () => undefined, stop: () => undefined, isWatching: () => false });
+    registerDiffContext(
+      createDiffContext({
+        docId: 'f\u001fCLAUDE.md',
+        getCurrentSource: () => DOC,
+        fetchMeta: async () => [],
+        fetchText: async () => undefined,
+        showDiff: () => ({ ok: true }) as never,
+        hideDiff: () => undefined,
+      }),
+    );
+    registerDocIdentity('CLAUDE.md');
+  });
+  afterEach(() => {
+    resetWatchRegistryForTest();
+    resetWatchControlsForTest();
+    resetDiffRegistryForTest();
+    resetDocIdentityForTest();
+  });
+
+  it('an omitted `pills` and `pills: true` commit the same serialised shadow root, with every pill', () => {
+    const omitted = makeHost();
+    const explicit = makeHost();
+    mount(DOC, omitted, { contained: true });
+    mount(DOC, explicit, { contained: true, pills: true });
+
+    // The equality first, so it is the assertion seen to fail when the default is wrong.
+    expect(omitted.shadowRoot!.innerHTML).toBe(explicit.shadowRoot!.innerHTML);
+    // Firing control: the comparison was over a root that really carries every pill and the rest.
+    for (const sel of [...PILLS, ...KEPT]) expect(omitted.shadowRoot!.querySelector(sel), sel).not.toBeNull();
+  });
+
+  it('`pills: false` omits exactly the five pill groups and keeps the document-bound chrome', () => {
+    const host = makeHost();
+    mount(DOC, host, { contained: true, pills: false });
+    const shadow = host.shadowRoot!;
+
+    for (const sel of [...PILLS, ...PILL_PARTS]) expect(shadow.querySelector(sel), `${sel} is still committed`).toBeNull();
+    for (const sel of KEPT) expect(shadow.querySelector(sel), `${sel} was dropped`).not.toBeNull();
+    // Nothing else moved: the same render with pills, minus exactly those nodes, is this render.
+    const withPills = makeHost();
+    mount(DOC, withPills, { contained: true });
+    for (const sel of [...PILLS, ...PILL_PARTS]) withPills.shadowRoot!.querySelectorAll(sel).forEach((el) => el.remove());
+    expect(shadow.innerHTML).toBe(withPills.shadowRoot!.innerHTML);
+  });
+
+  it('`chrome: false` implies no pills, whatever `pills` says', () => {
+    const host = makeHost();
+    mount(DOC, host, { contained: true, chrome: false, pills: true });
+    for (const sel of PILLS) expect(host.shadowRoot!.querySelector(sel), sel).toBeNull();
   });
 });

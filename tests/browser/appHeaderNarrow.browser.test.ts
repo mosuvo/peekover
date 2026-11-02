@@ -55,7 +55,10 @@ async function mountShell(): Promise<HTMLElement> {
 /** Every rendered control in the header (buttons and the brand/tag text), with its rect. */
 function headerParts(header: HTMLElement): [string, DOMRect][] {
   const parts: [string, DOMRect][] = [];
-  for (const el of header.querySelectorAll<HTMLElement>('button, .peekover-app__brand, .peekover-app__tag')) {
+  // KEEPS: every header part, text included, lies inside the viewport (census C354, discovered at 4.1).
+  // RE-SPELLED at 013 task 4.1: the brand text and the tag are gone; the toolbar's brand and file name
+  // are the header's non-button parts now (its Read / Raw are buttons, already in the list).
+  for (const el of header.querySelectorAll<HTMLElement>('button, .peekover-toolbar__brand, .peekover-toolbar__file')) {
     const r = el.getBoundingClientRect();
     if (r.width === 0 || r.height === 0) continue; // a closed popover's rows have no box
     parts.push([el.className.split(' ')[0] || el.tagName, r]);

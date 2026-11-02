@@ -98,6 +98,7 @@ import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { registerUiFonts } from '../theme/uiFonts';
+import { createToolbar, toolbarCss } from './toolbar';
 import { directPort } from '../settings/settingsPort';
 import {
   currentSettings,
@@ -384,9 +385,11 @@ export const DARK_TOKENS = /* css */ `
   --hl:#FFD84D; --hl-soft:#3A3413; --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
   --del:#E08663; --del-soft:#342016; --shadow:0 10px 30px rgba(0,0,0,.5);
 `;
-/** The theme-independent base the shell sets beside LIGHT_TOKENS — radius, the light shadow and the
- *  three font stacks (plan D-3: the design face first, then close system faces). */
+/** The theme-independent base the shell sets beside LIGHT_TOKENS — radius, the light shadow, the
+ *  three font stacks (plan D-3: the design face first, then close system faces), and the logo's
+ *  FIXED ink and eye white, the same in every theme (the toolbar's mark, 013 task 4.1). */
 export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
+  --logo-ink:#16171F; --logo-eye:#FBFBF8;
   --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
   --mono:"Sometype Mono",ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;`;
 
@@ -438,6 +441,17 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * `__code-theme-control` wrapper's own shape) and `__export-slot` is positioned against THAT
  * wrapper (`right:0`, not a header-relative constant) — genuinely anchored at its own trigger,
  * which also makes it independent of whatever else joins the header's right-hand group later.
+ *
+ * ≤ 863 px, THE THREE HEADER PANELS DROP FROM THE HEADER ITSELF (013 task 4.1 — a regression the
+ * full suite found in that task). With the toolbar in the header, the narrow header wraps into more
+ * rows and a trigger can land anywhere along them: at 414 px the Export button sat at x 121–186, so
+ * its panel — right-aligned to it, 380 px wide — opened at x −195…185, its rows unclickable. At the
+ * compact breakpoint the approved mock already sets (863 px; the "⋯" collapse joins at 4.4) the
+ * Export panel, the code-theme picker and the Stored data panel all anchor to the header — their
+ * wrappers lose `position:relative`, so the header is the containing block — and span it with a
+ * small inset, so none can leave the window. Two open at once overlap there, the later on top;
+ * each still closes from its own button. Above 863 px each keeps its anchor at its own trigger.
+ * Pinned by tests/browser/toolbar.browser.test.ts ("the header panels stay inside the window").
  *
  * ★ RATIONALE LIVES HERE, NOT IN THE CSS BELOW, AND THAT IS LOAD-BEARING: everything inside the
  * template literal is STRING CONTENT the minifier cannot strip, so a comment written in there
@@ -500,8 +514,11 @@ const APP_CSS = /* css */ `
   padding:.7rem 1rem; border-bottom:1px solid var(--line); background:var(--panel);
   position:relative; /* containing block for __storage-slot's overlay — see APP_CSS doc comment */
 }
-.${SHELL_CLASS}__brand{font-weight:650; letter-spacing:-.01em}
-.${SHELL_CLASS}__tag{color:var(--muted); font-size:.8rem}
+${toolbarCss(SHELL_CLASS)}
+/* Reduced motion, for the whole shell (013 task 4.1): no animation runs and no transition plays. */
+@media (prefers-reduced-motion:reduce){
+  .${SHELL_CLASS} *,.${SHELL_CLASS} *::before,.${SHELL_CLASS} *::after{animation:none!important; transition:none!important}
+}
 /* Theme control (task 5.2) — the same element the reader chrome uses, restyled as a header
    pill. It carries the margin-left:auto, so IT is the element that pushes the header's right-hand
    group over; the storage toggle then sits beside it with a plain gap. Tokens only, matching the
@@ -570,6 +587,13 @@ const APP_CSS = /* css */ `
   max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
   background:var(--paper); border:1px solid var(--line);
   border-radius:var(--r); box-shadow:var(--shadow);
+}
+/* ≤ 863 px: the three header panels drop from the header itself — see the doc comment above APP_CSS. */
+@media (max-width:863px){
+  .${SHELL_CLASS}__code-theme-control,.${SHELL_CLASS}__export-control{position:static}
+  .peekover-code-theme-picker,.${SHELL_CLASS}__export-slot:not(:empty),.${SHELL_CLASS}__storage-slot:not(:empty){
+    left:.75rem; right:.75rem; width:auto; max-width:none;
+  }
 }
 
 .${SHELL_CLASS}__body{flex:1 1 auto; display:flex; min-height:0}
@@ -738,12 +762,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const header = doc.createElement('header');
   header.className = `${SHELL_CLASS}__header`;
   header.setAttribute('role', 'banner');
-  const brand = doc.createElement('span');
-  brand.className = `${SHELL_CLASS}__brand`;
-  brand.textContent = 'Peekover';
-  const tag = doc.createElement('span');
-  tag.className = `${SHELL_CLASS}__tag`;
-  tag.textContent = 'Zero network by default';
+  // The toolbar (013 group 4, plan D-5), built to the approved mock: the mark, the open file's
+  // name and Read / Raw from 4.1. It replaces the brand text and the "Zero network by default"
+  // tag (the 4.0 census ruling F: the status line's test-backed statement carries that claim
+  // from 4.7). The app controls below join it at 4.4.
+  const toolbar = createToolbar(doc);
 
   // The always-visible "what's stored" affordance (task 6.0). It lives in the header so the
   // transparency + erase controls are discoverable BEFORE any folder is opened — storage
@@ -799,7 +822,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   exportPanel.className = `${SHELL_CLASS}__export-slot`;
   exportControl.append(exportToggle, exportPanel);
 
-  header.append(brand, tag, themeControl, codeThemeControl, storageToggle, storagePanel, exportControl);
+  header.append(toolbar.element, themeControl, codeThemeControl, storageToggle, storagePanel, exportControl);
 
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
@@ -1558,7 +1581,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   // --- reader/select seam (store-free; unchanged from group 1) -------------
   function selectFile(file: ReaderFile | null): Promise<void> {
-    return readerPane.select(file);
+    // The toolbar follows the selection once the pane has settled: the file's name, and the host it
+    // observes (null while a designed state shows — then Read / Raw have nothing to act on).
+    return readerPane.select(file).then(() => toolbar.setDocument(file?.name ?? null, readerHost()));
   }
 
   /** Select a folder file: render it AND record a recent (best-effort, dedup/capped via the

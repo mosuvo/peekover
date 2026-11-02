@@ -1,6 +1,104 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 4.1 — the `pills` mount option and the toolbar skeleton: the mark, the file name, Read / Raw
+  (D-5; F-1; gate-1 Q8; the approved 3.1 mock).** Branch restarted from `main` at `f4af87e` (PR #25's merge, containing
+  `82d4414`). Font parity applied. Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on
+  2026-11-02. This commit also banks 4.0's tick and entry and "M13 RULINGS — the 4.0 census questions" (the two-file rule).
+  - **`mount()`'s `pills` option** (`src/render/mount.ts`): default on — an omitted field is byte-identical to `true`;
+    `false` skips the mode toggle, theme control, watch chrome (control, note, capture disclosure), diff chrome (pill,
+    picker, status) and agent badge, and keeps the TOC rail, remote-load bar and network indicator (the failure banner is
+    the fallback path's, which takes no option); `chrome: false` implies it. Beside `chrome`, not instead (F-1). Nothing
+    passes `pills: false` yet but the tests — the app page does at 4.5, where `renderWithEnhancements` must force it for
+    the save and watch re-renders (census note). Unit (`mount.test.ts`, 3 new): omitted ≡ `true` (serialised roots equal,
+    every pill group present with the watch, diff and identity registries set — else "omitted" is vacuous); `false`
+    drops exactly those nodes and keeps the rest (the same render minus the pill nodes, byte-equal); `chrome:false` wins.
+    Red at HEAD: `pills: false` still committed the mode toggle.
+  - **The toolbar** (`src/app/toolbar.ts`, new): in the shell's light-DOM header, first; the mark (the 128 drawing,
+    built with `createElementNS`, drawn from tokens — `--hl`, and `--logo-ink` / `--logo-eye`, which the shell now
+    carries; the lids blink only under `prefers-reduced-motion: no-preference`), the file name in the highlighter (light:
+    the half-height marker; dark: the full highlighter with `--paper` text, the approved chip), Read / Raw calling
+    `setReaderMode` — the same state the mode pill uses. ONE MutationObserver on the active host's `data-mode` /
+    `data-watch` / `data-diff`, re-bound on every select (`appShell`'s `selectFile` hands it the name and host); outside
+    the shadow root, so a re-render cannot replace it. While editing, Read and Raw are DISABLED (approved deviation): the
+    unsaved-changes guard is the Edit control's until 4.3's segment (ruling E). The header's "Peekover" brand text and
+    "Zero network by default" tag are removed (ruling F). The shell sheet gains its own reduced-motion rule (no
+    animation, no transition).
+  - **Tests:** `toolbar.test.ts` (unit, 8: contents and order; the file name and its hidden state; disabled with no
+    document; Read / Raw drive `data-mode` and build the lazy Raw view; an outside `setReaderMode` flip reflected; disabled
+    while editing; a document switch re-binds). `toolbar.browser.test.ts` (Cr+Fx, 12 each): the skeleton first in the
+    header with the tag gone; Read / Raw and a click on the still-rendered mode pill reflected (ruling B); a document
+    switch with the toolbar element unchanged; the blink running without reduced motion and `none` under it, in one run;
+    the chip at AA in light and dark (2.2 helper, gradient stops included); and the header-panel geometry below.
+  - **Ablations, each red then restored md5-identical:** the observer never observing → "the toolbar missed the mode
+    pill's flip"; Read / Raw doing nothing → the mode stays `reading`; the dark chip rule removed → "dark: the file name
+    reads at 1.16:1"; the tag put back → the header-order assertion; the blink's media gate removed → STILL GREEN, because
+    the shell's own reduced-motion rule also stops it — with both removed, red ("the lids still blink under reduced
+    motion"): two mechanisms, each backing the other.
+  - **★ A REGRESSION THE FULL SUITE FOUND, FIXED IN THIS COMMIT (gate-3 Q1).** The first full browser run went red on
+    Chromium (`copyAsHtml`'s real-clipboard copy); a re-run of the clipboard group went red once more (`exportDegrade`'s
+    "Copied"). Main's code passed the same group twice in the same session; a hit-test probe found the cause: with the
+    toolbar first in the header, the 414 px header wraps into a third row (92.6 → 130.7 px tall) and the Export button
+    landed at x 121–186; the Export panel, right-aligned to it and 380 px wide, opened at **x −195…185** (both engines) —
+    its rows off-screen and unclickable. Stopped and asked; the human ruled (a): fix it in 4.1, covering all three
+    header-anchored panels. **Fix:** at ≤ 863 px (the approved compact breakpoint) the Export panel, the code-theme picker
+    and the Stored data panel drop from the header itself (their wrappers lose `position:relative`) with a `.75rem` inset
+    each side; above it each keeps its anchor at its own trigger. **After: x 12…402**, rows hit-testable. **Test** (in
+    `toolbar.browser.test.ts`): each of the three panels, opened alone, lies fully inside the viewport and every row is
+    hit-testable at its centre — 414, 1080 and 1440 px, light and dark, both engines (12 cases): red at the tree before the
+    fix (Export at 414 only, both engines, both themes), green after; ablated (the rule removed) → red again. Census
+    **C244** (`exportPanel`'s "anchored under ITS OWN toggle") went red in the follow-up full run, as the fix implies; it is
+    re-spelled HERE (the census had it at 4.4) to the file's wide viewport (ruling C), `KEEPS:` above 863 px.
+  - **Census rows handled:** C259 (`printMode`'s negative control → the header's "Stored data"), C311 (`uiFonts` → the
+    toolbar's word), C354 (discovered: `appHeaderNarrow`'s part selector → the toolbar's brand and file), C244 (above) —
+    each with `KEEPS:` citing its row. **Approved deviations:** Read / Raw disabled while editing (until 4.3); the token
+    pin's two "logo unused" exceptions removed (`tests/designTokens.test.ts`, `KEEPS:`), the mark now using the tokens.
+  - **Bytes (clean two-engine build against a same-session `main` build):** content script 344,495 → **344,513 B (+18,
+    the `pills` conditional)**, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) — with `mount.ts` reverted to HEAD both engines
+    rebuild to 2.6's `5b241f93…` / `8506e382…` exactly; app chunk 533,749 → **537,567 B (+3,818: the toolbar module and
+    sheet +3,457, the panel rule +361)**; no other file changed; `.output` 5,956,474 / 5,956,590 B (+3,836); zips
+    1,956,656 / 1,956,712 B; manifests **833 / 949 B** unchanged, `permissions: []`. G-7 holds.
+  - **Verify:** lint 0 · unit 1485 / 1487 — `pipeline.perf` (the listed flake) and once `diagramEnhancer`'s "adopts the
+    sanitized SVG" (5.4 s under a loaded full run on a just-restarted VM; green twice alone, 82 / 82) · full browser suite
+    alone, both engines, CI font: 2,039 passed / 2 failed / 51 skipped of 2,092 — the 2 are C244 (one per engine),
+    classified above and re-spelled; `exportPanel` then 34 / 34 — so Chromium 1,045 / 1 skipped, Firefox 996 / 50, 0
+    failed · golden EMPTY.
+  Revisit-when: 4.2 (Watch, Compare, the badge; the watch note in the notice area, ruling A), 4.3 (Read / Raw through the
+  guard, ruling E), 4.4 (the "⋯" collapse at ≤ 863 px, ruling C — the panels' narrow rule here is its first half).
+
+- **2026-11-02 · M13 RULINGS — the 4.0 census questions (HUMAN).** On `specs/013-first-release/census.md`'s six
+  questions; banked in 4.1's commit (the two-file rule moved them here with 4.0's tick and entry).
+  - **A — the watch note's home:** below the toolbar, in the same notice area as the snapshot notice — in the page flow,
+    never over text — from 4.2. (Census rows C020, C326–C328, C331, C334, C343–C345.)
+  - **B — 4.1's Verify:** read as "the toolbar reflects a mode flip it did not make" (e.g. a click on the existing mode
+    pill, which renders until 4.5). The `\` key stays inert on the app page (the 2026-07-17 ruling).
+  - **C — the "⋯" collapse at ≤ 863 px belongs to 4.4.** Tests that are not ABOUT the compact toolbar widen their window
+    instead of opening "⋯"; the compact toolbar gets its own dedicated tests.
+  - **D — the remote-images "load" bar:** on the APP PAGE it joins the notice area below the toolbar, like the watch note;
+    the file:// reader keeps it where it is today. Before 4.5. (Census rows C031, C141, C143 — the lane beside the Compare
+    pill — retire at 4.5.)
+  - **E — the Edit segment:** Read and Raw leave edit through the unsaved-changes guard (the "return to the mode you came
+    from" test is RETIRED, named — census C046; C174 tests the same property and is re-classed with it); "Editor
+    unavailable" shows on the Edit segment; focus returns to Edit after Escape. Before 4.3.
+  - **F — the header's "Zero network by default" tag** is removed at 4.1; the status line's test-backed "No network
+    calls" carries the claim from 4.7. (Census C259.)
+  Recorded in tasks.md as ★ notes on 4.1 (B, F), 4.2 (A), 4.3 (E), 4.4 (C), 4.5 (A, D) and 4.7 (F), and in census.md
+  ("The human's rulings on these questions").
+
+- **2026-11-02 · M13 TASK 4.0 — the census of tests the toolbar move touches (D-17; gate-1 Q8; gate-3 Q1, Q2).** Landed
+  as `82d4414` (records here per the two-file rule). `specs/013-first-release/census.md`: all 178 test files scanned for
+  the moved chrome (class strings, constants, builders, visible text); the 68 hits plus the 3 plan-named misses read in
+  full by four parallel read-only passes and classified test by test — **353 rows across 71 files: re-spelled 209,
+  unchanged 104, retired 27, replaced 13**; first breaks 4.1 2 · 4.3 99 · 4.4 47 · 4.5 101 (none at 4.2: the pills still
+  render). Plan §5.3 lists 47 files (its text says 45, tasks.md 48); all 47 covered, 11 of them all-unchanged; 24 files
+  it missed added. Baseline at `432cd02`, full browser suite alone: Chromium 1,033 passed / 1 skipped, Firefox 984 / 50,
+  0 failed. Q1 map: every function's tests move in the task that breaks them — except the watch note, whose home was
+  unnamed (question A, now ruled). Notes for implementers: 4.5 must force `pills:false` in `renderWithEnhancements`
+  (the save and watch re-renders), and several tests that mount `{contained:true}` directly will stay green after 4.5
+  while no longer matching production — they are re-spelled on purpose. `pipeline.perf` failed alone on that session's
+  machine (101–107 ms against 100) on code identical to main.
+  Revisit-when: each group-4 task cites its rows; a test edited without a row is a discovered row, added in that commit.
+
 - **2026-11-02 · M13 GATE — 3.1 TOOLBAR MOCK APPROVED (HUMAN; with one redline).** The human's written decision on
   `design/toolbar-mock.html`. Viewed: Reading, light and dark, at 1440 / 1080 / 414; the code-theme and optical-size
   sections.

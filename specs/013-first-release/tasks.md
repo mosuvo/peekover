@@ -447,7 +447,7 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
 4.5, with D-8, so no commit loses a function or the capture disclosure; the band follows in 4.6. Between 4.1 and 4.4
 the app page shows some controls twice — unreleased, stated.*
 
-- [ ] **4.0 The re-spelling census — before any toolbar code (D-17; gate-1 Q8's authorization).** Against the approved
+- [x] **4.0 The re-spelling census — before any toolbar code (D-17; gate-1 Q8's authorization).** Against the approved
       mock and plan §5.3's 48 candidate files (43 browser, 5 unit), classify every test that touches moved chrome:
       **unchanged**, **re-spelled** (selector or location moves; property kept), **retired** (the property ceases to
       exist), **replaced** (a new test owns it in the new home) — each row naming the property and the group-4 task that
@@ -457,8 +457,11 @@ the app page shows some controls twice — unreleased, stated.*
       Verify: every one of the 48 files has a row; every non-"unchanged" row names a property and a task; the baseline
       pass/skip counts recorded per engine; the retirements listed separately for the human (shown at group 4's end).
       `git diff --stat` touches only the two files. No production bytes. [D-17]
+      ★ *Landed 2026-11-02 (census.md; the two-file rule moved this tick and the `decisions.md` entry into 4.1's commit).*
+      353 rows across 71 test files (re-spelled 209, unchanged 104, retired 27, replaced 13); baseline 2,017 passed / 51
+      skipped / 0 failed; six questions, ruled the same day (A–F, recorded on each task they govern).
 
-- [ ] **4.1 The `pills` mount option + toolbar skeleton: mark, crumb, Read / Raw (D-5; F-1).** TEST FIRST.
+- [x] **4.1 The `pills` mount option + toolbar skeleton: mark, crumb, Read / Raw (D-5; F-1).** TEST FIRST.
       `MountOptions.pills?: boolean` (default `true`); when `false`, `mount()` skips the mode toggle, theme control,
       watch chrome, diff pill / picker / status and agent badge, and still builds the TOC rail, remote-load bar, network
       indicator, failure banner and every enhancer's in-document tools; `chrome: false` implies it. **The app page does
@@ -476,6 +479,14 @@ the app page shows some controls twice — unreleased, stated.*
       assertion. Every re-spelled assertion carries `KEEPS:`. Bytes: content script moves by the one conditional
       (expected tens of bytes) — decomposed, md5 under ablation; app chunk delta stated. Full suite. Golden EMPTY ·
       manifest (2.6's figures) · `permissions: []`. [D-5; D-17]
+      ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **B** — the Verify reads "the toolbar
+      reflects a mode flip it did not make" (e.g. the mode pill, which renders until 4.5); `\` stays inert on the app page
+      (2026-07-17). **F** — the header's "Zero network by default" tag is removed here.
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 4.1").* `pills` option (+18 B content script, md5 restored with it
+      reverted); the toolbar skeleton (+3,457 B app chunk); ablations red (the blink needs both mechanisms removed). A
+      regression the full suite found — the Export panel at x −195 at 414 px — fixed here by the human's ruling: at ≤ 863 px
+      the three header panels drop from the header (+361 B); census C244 re-spelled here (was 4.4). Read / Raw disabled while
+      editing until 4.3; the token pin's logo exceptions removed (both approved deviations).
 
 - [ ] **4.2 Watch, Compare + picker, agent badge in the toolbar (D-5).** TEST FIRST. The toolbar reuses
       `buildWatchControl(host)` (state via `aria-pressed`, styled by an app-sheet rule) and the diff registry's Compare,
@@ -487,6 +498,8 @@ the app page shows some controls twice — unreleased, stated.*
       agent file and not for a plain one; red-first: bind the toolbar's Watch to a fresh controller → the pill disagrees,
       in that assertion. `KEEPS:` on each re-spelling. Content-script md5 identical to 4.1 (all edits app-only). Full
       suite. Golden EMPTY · manifest · `permissions: []`. [D-5]
+      ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **A** — the watch note is built here, in
+      the notice area below the toolbar (in the page flow, never over text), alongside the toolbar's Watch.
 
 - [ ] **4.3 The Edit segment; the shadow-root edit control and `EDIT_CONTROL_CSS` removed (D-6).** TEST FIRST.
       `editorEnhancer.ts:115–140`'s enter/exit body is extracted to an exported `toggleEdit(host, options)`; the toolbar's
@@ -501,6 +514,9 @@ the app page shows some controls twice — unreleased, stated.*
       control (selected by class alone). Bytes: app chunk FALLS (stated); content-script md5 identical to 4.2
       (`EDIT_CONTROL_CSS` was not on that graph — proven by md5, not grep). Full suite. Golden EMPTY · manifest ·
       `permissions: []`. [D-6]
+      ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **E** — Read and Raw leave edit through
+      the unsaved-changes guard; "Editor unavailable" shows on the Edit segment; focus returns to Edit after Escape. RETIRED:
+      census C046 (R3, "the exit returns to the mode edit was entered from") and C174 (the same property in `editorRender`).
 
 - [ ] **4.4 App-level controls: one theme control, code theme, Stored data, Export (D-5).** TEST FIRST. Composed per the
       mock; the header's existing app controls move into the toolbar; ONE theme control (the reader pill's and the
@@ -511,6 +527,9 @@ the app page shows some controls twice — unreleased, stated.*
       reload (red-first: wire it to the shell only → the reader's computed `--paper` stays, in that assertion); each panel
       opens from the toolbar and keyboard order matches the mock's left-to-right. `KEEPS:` on re-spellings.
       Content-script md5 identical to 4.3. Full suite. Golden EMPTY · manifest · `permissions: []`. [D-5]
+      ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **C** — the "⋯" (More) collapse at
+      ≤ 863 px belongs HERE. Tests not about the compact toolbar widen their window instead of opening "⋯"; the compact
+      toolbar gets its own tests (census: the 47 rows whose first task is 4.4).
 
 - [ ] **4.5 The one-time snapshot notice + its permanent home; the app page drops the pills (D-8, D-5; G-15; F-6).**
       TEST FIRST. The toolbar module renders the capture disclosure once, below the toolbar and never over text, with
@@ -528,6 +547,11 @@ the app page shows some controls twice — unreleased, stated.*
       rect overlaps a text line box at 1440 / 1280 / 1080 / 414 (the hit-test is the assertion seen to fail; select by
       class alone). Bytes: content script moves by the `CONTAINED_CSS` deletion (falls) — stated, decomposed; zero
       `Settings` diff. Full suite. Golden EMPTY · manifest · `permissions: []`. [D-8, D-5; G-15]
+      ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **A** — the watch note lives in the
+      notice area below the toolbar (beside this notice, in the page flow, never over text); **D** — on the app page the
+      remote-images "load" bar joins the same notice area (the file:// reader keeps it where it is). Both before the pills
+      drop here. Census rows: A — C020, C326–C328, C331, C334, C343–C345; D — C031, C141, C143 (retired). The tasks.md
+      citation `readerCss.ts:1314–1335` has drifted: `CONTAINED_CSS` starts at 1343 (census.md notes).
 
 - [ ] **4.6 The 130 px band reclaimed on the app page (D-7; F-2).** TEST FIRST. `CONTAINED_CSS` sets the reading
       column's AND the diff's (`readerCss.ts:227`) bottom padding to the top value, and `--edit-bottom` to the gap the
@@ -551,6 +575,8 @@ the app page shows some controls twice — unreleased, stated.*
       early; red-first: drop the observer arm → the slow-image case still reads "No network calls". The out-of-order
       `readerPane.select` race is not claimed fixed (stated). Content-script md5 identical to 4.6. Full suite. Golden
       EMPTY · manifest · `permissions: []`. [D-9; G-3]
+      ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **F** — the status line's test-backed
+      "No network calls" carries the claim the removed header tag made (removed at 4.1).
 
 - [ ] **4.8 ≤ 1080 px: the folder pane becomes an overlay behind "Files" (D-10; gate-1 Q12); app-page first paint.**
       TEST FIRST. First re-measure the breakpoint on the shipped layout (the narrowest width keeping ≥ 60ch reader text
