@@ -1,6 +1,49 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 GATE — 3.1 TOOLBAR MOCK APPROVED (HUMAN; with one redline).** The human's written decision on
+  `design/toolbar-mock.html`. Viewed: Reading, light and dark, at 1440 / 1080 / 414; the code-theme and optical-size
+  sections.
+  1–2. Contents and order: **approved.**
+  3–6, 8. Editing, the Watching pill, the snapshot notice, the Compare picker, the Files overlay: **approved on the agent's
+     self-check** (54 / 54 combinations, both engines: no overflow, overlap, contrast failure or network). Their look is
+     judged again, working, at the design walk — **a named 8.1 check** (tasks.md 8.1 ★ note).
+  7. Wrapping — **REDLINE.** At 1080 the two-row wrap is approved. Below about 700 px the four app controls (Theme, Code
+     theme, Stored data, Export) collapse behind one "⋯" (More) button, so the toolbar is at most two rows, in both
+     themes; the exact breakpoint proposed from measurement and shown in the mock at 414 before group 4 builds it.
+  9. Dark file-name chip (full yellow, dark text): **approved.**
+  10. Status line, three statements: **approved.**
+  11. Blinking mark: **keep** (it already stops under reduced motion).
+  12–13. The three new light code colours `#197E44`, `#B34F2E`, `#966319`: **approved** — they join `tokens.css` at 5.8.
+  14. Functions and tags as default text; keywords in ink at weight 500: **approved.**
+  15. Bricolage: **the shipped STATIC files**; the variable font stays out of the extension (the site self-hosts its own,
+     per the 2.5 ruling).
+  3.1 is ticked only after the human confirms the 414 frame with the "⋯" button; group 4 waits for that.
+  - **The redline, as built in the mock (awaiting the human's confirmation of the 414 frame).** Measured on both engines
+    (the mock's own toolbar, every state, light and dark, widths 1440 → 320 in 2 px steps, rows counted by clustering
+    the controls' vertical centres): the expanded toolbar needs a THIRD row below **864 px in the agent-file state** (its
+    "Agent file · CLAUDE.md" badge is the widest item), below 698 px in reading / editing / Compare / Files / network,
+    below 668 px while watching. Collapsing ONLY the four app controls was not enough: at 414 the document controls
+    alone took three to four rows (5 rows at 414 expanded). So the compact toolbar also (a) drops the "Peekover" word
+    beside the mark (the mark stays, named "Peekover"), (b) lets the file name truncate, (c) shows the badge as "Agent
+    file" (the file name is beside it), (d) reflows into two fixed rows — Files, mark, file name, badge, "⋯" / Watch,
+    Compare, Read / Edit / Raw — and (e) tightens its paddings and gaps a little. **Proposed breakpoint: 863 px and
+    below** (the narrowest width at which every state still fits two rows expanded is 864). The human's "about 700"
+    holds for every state except an agent file; at 700–863 px a non-agent document also sees the compact toolbar —
+    the cost of one width rule for all states. The compact toolbar holds two rows **down to 404 px** (a third row
+    below 402); 1080 stays the approved two-row wrap. The "⋯" menu opens below the toolbar's right edge with the four
+    controls (a new mock state, "More (⋯) menu open").
+  - **Self-check after the redline (Chromium and Firefox from `file://`, 2 themes × 10 states × 3 widths = 60 frames
+    each):** zero non-`file:` requests; all 10 faces loaded; no overflow, no overlapping controls, no text below AA
+    (code worst 4.51:1); no toolbar over two rows in any frame; "⋯" present only at 414. One defect found on the way and
+    fixed: the "⋯" button showed at every width (a later `.btn{display:inline-flex}` beat `.more{display:none}` at equal
+    specificity); the breakpoint was re-measured after the fix — unchanged.
+  - **To see it:** open `design/toolbar-mock.html`; in the dashed strip choose **State: "Reading (welcome.md)"**,
+    **Width: "414"**, either theme — the frame caption reads "Reading (welcome.md) · Light · 414 px — compact toolbar (≤ 863 px):
+    app controls behind “⋯”, at most two rows". For the
+    menu: **State: "More (⋯) menu open"**, Width 414.
+  Revisit-when: the human's confirmation of the 414 frame (then 3.1 is ticked); 4.x builds the compact rule; 8.1.
+
 - **2026-11-02 · M13 TASK 3.1 — the static toolbar mock DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (D-5; D-6,
   D-9, D-10 drawn; gate-1 Q8).** Branch restarted from `main` at `26cc01e` (PR #22's merge, containing `618d893`). Font
   parity applied. Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-02. No

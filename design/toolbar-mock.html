@@ -48,13 +48,42 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);f
 .zoomed .frame{zoom:var(--fit,1)}
 
 /* ===================== The proposed app page, inside each frame ===================== */
-.frame{position:relative;height:640px;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--serif)}
+.frame{position:relative;height:640px;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--serif);container-type:inline-size}
 .frame *,.frame *::before,.frame *::after{box-sizing:border-box}
 .app{position:absolute;inset:0;display:flex;flex-direction:column}
 .tb{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:9px 14px;border-bottom:1px solid var(--line);
   background:var(--paper);font-family:var(--sans);font-size:13.5px;position:relative;z-index:5}
 .tb-doc,.tb-app{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;min-width:0}
-.tb-app{margin-left:auto}
+.tb-app{margin-left:auto;position:relative}
+.appctl{display:contents}
+.tb .more,.tb-break{display:none}
+.tb .more{font-size:15px;letter-spacing:.05em;padding:5px 11px}
+/* The 3.1 redline: below the measured breakpoint the four app controls collapse behind one "⋯" (More) button and
+   the toolbar settles into at most two rows — the mark without its word, the file name truncating, the badge
+   without the name already beside it. A container query on each frame stands in for the shell's own width rule. */
+@container (max-width: 863px){
+  .tb-doc,.tb-app{display:contents}
+  .appctl{display:none}
+  .brand .word{display:none}
+  .files-btn,.brand,.fname,.badge{order:1}
+  .fname{flex:0 1 auto;min-width:0}
+  .badge .bname{display:none}
+  .tb .more{display:inline-flex;order:2;margin-left:auto}
+  .tb-break{display:block;order:3;flex-basis:100%;height:0}
+  .pill,.cmpwrap,.seg{order:4}
+  .tb{gap:8px 6px;padding:8px 10px}
+  .seg button{padding:7px 10px}
+  .pill{padding:7px 10px}
+  .btn{padding:7px 9px}
+  .tb .btn.primary{order:1}
+  /* The Compare picker spans the toolbar (anchored to it, not to the button), so it stays inside the window. */
+  .cmpwrap{position:static!important}
+  .picker{left:12px;right:12px;width:auto}
+}
+.menu{position:absolute;top:calc(100% + 6px);right:0;z-index:20;min-width:220px;background:var(--paper);border:1px solid var(--line);
+  border-radius:12px;box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:2px}
+.menu button{font:600 13px/1.2 var(--sans);color:var(--ink);background:none;border:0;border-radius:7px;padding:9px 10px;text-align:left}
+.menu button:first-child{background:var(--accent-soft)}
 .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.01em;flex:none}
 .brand svg{width:30px;height:26px;display:block}
 .lid{transform-box:fill-box;transform-origin:center}
@@ -85,9 +114,6 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);f
 .picker div.item{display:flex;justify-content:space-between;gap:10px;padding:7px 8px;border-radius:7px;color:var(--ink)}
 .picker div.item:first-of-type{background:var(--accent-soft)}
 .picker small{color:var(--muted)}
-/* At 414 px the picker spans the toolbar's width (anchored to it, not to the button), so it stays inside the window. */
-.frame[data-width="414"] .cmpwrap{position:static!important}
-.frame[data-width="414"] .picker{left:12px;right:12px;width:auto}
 .notice{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:9px 16px;background:var(--panel);
   border-bottom:1px solid var(--line);font:400 13px/1.45 var(--sans);color:var(--ink)}
 .notice p{margin:0;flex:1 1 300px}
@@ -166,7 +192,7 @@ pre.code{font:400 13.5px/1.75 var(--mono);background:var(--code-bg);color:var(--
     <li><b>Watching: is the pill clear?</b> Ink text, green dot, green border (G-4). <span class="where">Watching · both themes.</span></li>
     <li><b>The one-time snapshot notice: right place and words?</b> Below the toolbar, never over text; "Got it" and a Stored data link. <span class="where">Snapshot notice · 1440 and 414.</span></li>
     <li><b>Compare: does the picker belong under its button?</b> Snapshots first, then other files. <span class="where">Compare open · 1440 and 414.</span></li>
-    <li><b>At 1080 and 414 the toolbar wraps into rows</b> (document controls, then app controls). Acceptable, or do you want something else (a decision, not a mock edit, if it changes the plan)? <span class="where">Reading · 1080 and 414.</span></li>
+    <li><b>The narrow toolbar (your item-7 redline).</b> At 1080 the two-row wrap stays (approved). At <b>863 px and below</b> the four app controls collapse behind one <b>“⋯”</b> (More) button and the toolbar keeps <b>at most two rows</b>: row 1 Files, the mark (without its word), the file name (truncating), the badge (“Agent file” — the name is beside it), “⋯”; row 2 Watch, Compare, Read / Edit / Raw. 863 is measured: the agent-file state needs a third row below 864 px (every other state below 698). Holds down to 404 px. <span class="where">Reading · 414 (and “More (⋯) menu open” · 414 to see the menu).</span></li>
     <li><b>The "Files" button and overlay below 1080 px</b> (the 1080 value is re-measured at task 4.8). <span class="where">Files overlay · 1080 and 414.</span></li>
     <li><b>The file name in the highlighter, dark theme:</b> the proposal uses a full highlighter chip with dark text (the mockup's half-height marker leaves dark-theme text on yellow at 1.2:1). OK? <span class="where">Reading · Dark.</span></li>
     <li><b>The status line says only three things</b> — the open file, "No network calls" / "Network: N requests you made", "Peekover 0.1.0". Enough? <span class="where">Reading, and Network used.</span></li>
@@ -213,9 +239,12 @@ const STATES = [
   ['compare', 'Compare open (picker)'],
   ['files', 'Files overlay open (≤ 1080)'],
   ['network', 'Network used (status line)'],
+  ['more', 'More (⋯) menu open (below the breakpoint)'],
   ['empty', 'No folder open'],
 ];
 const WIDTHS = [1440, 1080, 414];
+/* The measured breakpoint (3.1 redline): at 863 px and below the toolbar is compact — see the review guide, item 7. */
+const COMPACT_MAX = 863;
 const MARK = '<svg viewBox="0 0 60 52" aria-hidden="true"><rect x="4" y="26" width="52" height="24" rx="5" fill="#FFE94A" stroke="#16171F" stroke-width="2.5"/>' +
   '<line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>' +
   '<line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>' +
@@ -227,10 +256,9 @@ const DISCLOSURE = 'Snapshots of this file are stored on this device only, never
 function toolbar(s) {
   const file = s === 'agent' ? 'CLAUDE.md' : 'welcome.md';
   if (s === 'empty') {
-    return '<header class="tb"><div class="tb-doc"><div class="brand">' + MARK + 'Peekover</div>' +
+    return '<header class="tb"><div class="tb-doc"><div class="brand" aria-label="Peekover">' + MARK + '<span class="word">Peekover</span></div>' +
       '<button class="btn primary">Open a folder</button></div>' +
-      '<div class="tb-app"><button class="btn">Theme: Auto</button><button class="btn">Code theme: Peekover</button>' +
-      '<button class="btn">Stored data</button></div></header>';
+      appGroup(s, false) + '</header>';
   }
   const watching = s === 'watching' || s === 'notice';
   const mode = s === 'editing' ? 'edit' : 'read';
@@ -242,14 +270,23 @@ function toolbar(s) {
     : '';
   return '<header class="tb"><div class="tb-doc">' +
     '<button class="btn files-btn" aria-expanded="' + (s === 'files') + '">Files</button>' +
-    '<div class="brand">' + MARK + 'Peekover</div>' +
+    '<div class="brand" aria-label="Peekover">' + MARK + '<span class="word">Peekover</span></div>' +
     '<span class="fname" title="' + file + '">' + file + '</span>' +
-    (s === 'agent' ? '<span class="badge">Agent file · CLAUDE.md</span>' : '') +
+    (s === 'agent' ? '<span class="badge">Agent file<span class="bname"> · CLAUDE.md</span></span>' : '') +
     '<button class="pill' + (watching ? ' watching' : '') + '" aria-pressed="' + watching + '"><span class="dot"></span>' + (watching ? 'Watching' : 'Watch this file') + '</button>' +
     '<span class="cmpwrap" style="position:relative;display:inline-flex"><button class="btn" aria-expanded="' + (s === 'compare') + '">Compare</button>' + picker + '</span>' +
-    '<div class="seg" role="group" aria-label="View">' + seg + '</div></div>' +
-    '<div class="tb-app"><button class="btn">Theme: Auto</button><button class="btn">Code theme: Peekover</button>' +
-    '<button class="btn">Stored data</button><button class="btn">Export</button></div></header>';
+    '<span class="tb-break"></span><div class="seg" role="group" aria-label="View">' + seg + '</div></div>' +
+    appGroup(s, true) + '</header>';
+}
+
+/* The app controls, and the "⋯" (More) button that carries them below the breakpoint. */
+function appGroup(s, withExport) {
+  const ctl = '<button class="btn">Theme: Auto</button><button class="btn">Code theme: Peekover</button><button class="btn">Stored data</button>' +
+    (withExport ? '<button class="btn">Export</button>' : '');
+  const open = s === 'more';
+  const menu = open ? '<div class="menu" role="menu" aria-label="More">' + ctl.replace(/class="btn"/g, 'role="menuitem"') + '</div>' : '';
+  return '<div class="tb-app"><span class="appctl">' + ctl + '</span>' +
+    '<button class="btn more" aria-haspopup="menu" aria-expanded="' + open + '" aria-label="More: theme, code theme, stored data, export">⋯</button>' + menu + '</div>';
 }
 
 function body(s) {
@@ -274,7 +311,9 @@ function body(s) {
   return '<div class="body">' + nav + '<div class="col">' + col + '</div></div>';
 }
 
-function frameHtml(theme, s, w) {
+function frameHtml(theme, s0, w) {
+  // Above the breakpoint there is no More button, so its open menu cannot be shown: draw Reading instead.
+  const s = s0 === 'more' && w > COMPACT_MAX ? 'reading' : s0;
   const narrow = w <= 1080;
   const notice = s === 'notice' ? '<div class="notice" role="status"><p>' + DISCLOSURE + ' <a href="#">Stored data</a></p><button class="btn">Got it</button></div>' : '';
   const file = s === 'empty' ? '' : (s === 'agent' ? 'CLAUDE.md' : 'welcome.md');
@@ -294,6 +333,8 @@ function render() {
   document.getElementById('frames').innerHTML = ws.map((w) =>
     '<p class="framecap">' + label + ' · ' + (theme === 'dark' ? 'Dark' : 'Light') + ' · ' + w + ' px' +
     (s === 'files' && w > 1080 ? ' <span>(the overlay applies at ≤ 1080 px only; at 1440 the file list stays beside the text)</span>' : '') +
+    (s === 'more' && w > COMPACT_MAX ? ' <span>(no More button above 863 px — the app controls are in the toolbar; shown as Reading)</span>' : '') +
+    (w <= COMPACT_MAX ? ' <span>— compact toolbar (≤ 863 px): app controls behind “⋯”, at most two rows</span>' : '') +
     '</p><div class="framewrap">' + frameHtml(theme, s, w) + '</div>').join('');
   fit();
 }
