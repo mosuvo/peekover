@@ -353,7 +353,7 @@ toolbar.*
       (re-spelled, property named), `designTokens.test.ts`, and four network guards that read the shell's harness-only
       same-origin font fetches (faces loaded in a `beforeAll`; no assertion edited). No layout test moved.
 
-- [ ] **2.5 The font measurement — numbers for the human, FORBIDDEN from choosing (D-4; §9-2(c)).** ★ **HUMAN GATE
+- [x] **2.5 The font measurement — numbers for the human, FORBIDDEN from choosing (D-4; §9-2(c)).** ★ **HUMAN GATE
       ONLY IF IT ARISES.** Both engines, A-B-A against a same-session HEAD control, floor beside median, firing control
       included. **Arm (b), the default:** `.output` and zip deltas of the packaged faces (static vs variable Bricolage
       — the one choice this task may make, by bytes alone, stated rule: fewer bytes wins); app-page first paint against
@@ -365,6 +365,15 @@ toolbar.*
       noise floor, the numbers go to the human, who may choose it and set a ceiling — every later task waits on that
       ruling; otherwise the default stands with no gate, stated. No recommendation in the record. Content-script md5
       identical to 2.4 at commit. Golden EMPTY · manifest 654 / 770 B · `permissions: []`. [D-4]
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 2.5") — NO GATE.* Cloud VM, 4 vCPUs: absolute times run ~2.7× the
+      historical local figures, so the DIFFERENCES are the result. Content script, 30 warm runs per arm interleaved
+      with two HEAD arms (HEAD vs itself: −15.6 ms median, 95% CI [−41.9, +0.7]): arm (a) +71.6 ms median / +93.1 floor,
+      CI [+48, +110]; arm (c) +43.2 / +39.7, CI [+20, +67] — both OUTSIDE noise, so the default stands with no gate.
+      App page (48 runs per arm): the fonts' cost is inside noise (no-fonts arm −12.1 ms, CI [−32, +7]); the firing
+      control (126 KB inlined) fires at +48.5 ms. Static vs variable by bytes: static (72,816 vs 79,464 B) — no file
+      change. First paint is Chromium only (Playwright loads no Firefox extension); bytes on both engines. Scratch arms
+      discarded; content-script md5 `5b241f93…` / `8506e382…` = 2.4. Carried, information only: Literata Latin
+      Extended in the content script, +99,247 B, +24.0 ms median, CI [−16, +53] — not resolvable here.
 
 - [ ] **2.6 Icons: PNGs rendered from the committed SVGs; manifest and store assets (D-15; G-14; F-7).** TEST FIRST.
       Confirm `assets/icons/icon-{16,32,48,128}.svg` match `design/icons.html`'s size-specific drawings (shapes,
@@ -408,6 +417,11 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
       strings, numbers and constants, types and attributes, functions and tags) — in **light and dark**, coloured by task
       5.8's proposed mapping on `--code-bg`, so the human approves the Peekover code theme by eye at this gate, including
       its three flagged new light values (strings `#197E44`, numbers `#B34F2E`, types `#966319`).
+      ★ *2026-11-02 (task 2.5, `decisions.md` "M13 TASK 2.5"):* the mock also shows, side by side, the Bricolage text the
+      app draws above 16 px — the drop-zone message (20 px / 700) and the presentation-mode nav (20 px) — in the shipped
+      static files (`opsz` 12) and in the variable file with automatic optical size, plus one display line at 44 px /
+      700 for reference, so the human judges the optical-size difference by eye. Both forms load from scratch copies in
+      the mock only (`assets/fonts/README.md` has the variable command).
 
 ## 4 — Toolbar implementation (D-5 … D-10, D-17)
 
