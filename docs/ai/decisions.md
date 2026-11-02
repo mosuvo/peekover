@@ -1,6 +1,86 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 2.5 — the font measurement: numbers only; NO GATE (D-4; §9-2(c)).** Branch restarted from
+  `main` at `24e945d` (PR #20's merge, containing `7859779`). Font parity applied (`fc-match system-ui` → DejaVu Sans).
+  Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-02. No production change: six
+  scratch arms, each built on both engines and stored outside the tree; sources restored md5-identical after each.
+  - **Machine and method.** A cloud VM: 4 vCPUs (Intel Xeon @ 2.80 GHz), 15 GB, idle (load average 0.8). Absolute times
+    run about 2.7× the historical local figures (HEAD's content-script median here 411 ms against the standing 150 ms),
+    so **the differences are the result, not the times**; the 165 ms gate is not readable on this machine. The shipped
+    harnesses, unedited (`pnpm perf -- --size 50kb`, `pnpm perf:app`; 7 runs, run 1 cold and discarded), pointed at each
+    arm by a symlink; arms interleaved in rounds that alternate direction; HEAD runs twice per round, so HEAD-vs-itself
+    noise sits in the same interleave; warm runs pooled; median and floor; a bootstrap 95% interval on each median
+    difference against pooled HEAD ("outside noise" = the interval excludes 0). **First paint is Chromium only** —
+    Playwright cannot load an extension into Firefox (both harnesses say so); tasks.md says "both engines", so bytes are
+    reported for both and timings for Chromium (flagged).
+  - **The arms:** H = HEAD (2.4: static Bricolage on the app page); N = H without `uiFonts`; V = variable Bricolage
+    (one file, `wght` 400–700, `opsz` 12–96) in place of the three static files; L = Literata's Latin Extended files
+    added inline beside the shipped ones (`@fontsource/literata@5.3.0` `files/literata-latin-ext-{400,700}-{normal,italic}
+    .woff2`, 73,456 B raw, the package the shipped files are byte-identical to; registered with Fontsource's latin-ext
+    `unicode-range`); A = arm (a), all five UI faces inlined on the content-script path; C = arm (c), Bricolage 600 +
+    Sometype 400 inlined. (`fonts.ts` is on both surfaces, so L, A and C grow the app chunk by the same bytes.)
+  - **Bytes (`.output` / zip identical deltas on both engines; content script Cr = Fx):**
+
+    | Arm | `.output` Cr / Fx | Δ vs H | zip Cr / Fx | Δ zip | content script | app chunk |
+    |---|---|---|---|---|---|---|
+    | N (no UI fonts) | 5,849,731 / 5,849,847 | −94,676 | 1,851,725 / 1,851,784 | −95,123 | 344,495 | 532,909 |
+    | **H (shipped)** | **5,944,407 / 5,944,523** | — | **1,946,848 / 1,946,907** | — | **344,495** | **533,749** |
+    | V (variable) | 5,950,887 / 5,951,003 | +6,480 | 1,953,095 / 1,953,154 | +6,247 | 344,495 | 533,581 |
+    | L (Literata Latin Ext) | 6,142,901 / 6,143,017 | +198,494 | 2,096,618 / 2,096,676 | +149,770 | 443,742 (+99,247) | 632,996 |
+    | A (arm a) | 6,196,101 / 6,196,217 | +251,694 | 2,137,163 / 2,137,222 | +190,315 | 470,342 (+125,847) | 659,596 |
+    | C (arm c) | 6,037,809 / 6,037,925 | +93,402 | 2,018,509 / 2,018,567 | +71,661 | 391,196 (+46,701) | 580,450 |
+
+    The default's cost (H − N): `.output` +94,676 B (the five woff2 files 93,836 + app chunk +840), zip +95,123 B,
+    content script 0 against N (its +153 B stack strings landed at 2.4). V − H: woff2 +6,648, app chunk −168.
+  - **Content-script first paint (30 warm runs per arm; HEAD pooled n = 60: median 411.2, floor 339.0 ms).** Noise, HEAD
+    vs itself: −15.6 ms median, +22.4 ms floor, CI [−41.9, +0.7].
+
+    | Arm | median / floor (ms) | Δ median / Δ floor vs H | 95% CI of Δ median | reading |
+    |---|---|---|---|---|
+    | A (arm a) | 482.8 / 432.1 | +71.6 / +93.1 | [+48.0, +109.9] | outside noise |
+    | C (arm c) | 454.4 / 378.7 | +43.2 / +39.7 | [+20.0, +66.6] | outside noise |
+    | L (Literata Latin Ext) | 435.2 / 360.6 | +24.0 / +21.6 | [−15.8, +53.3] | inside noise — not resolved |
+
+    Scaled to the local machine by the 2.7× ratio (a rough reading, not a measurement): A ≈ +26 ms, C ≈ +16 ms, L ≈ +9
+    ms, against the standing 15.3 ms worst-arm headroom under 165 ms.
+  - **App-page first paint (48 warm runs per arm; HEAD pooled n = 96: median 342.6, floor 266.7 ms).** Noise, HEAD vs
+    itself: +7.4 ms median, −0.9 floor, CI [−17.1, +33.5].
+
+    | Arm | median / floor (ms) | Δ median / Δ floor vs H | 95% CI | reading |
+    |---|---|---|---|---|
+    | N (no UI fonts) | 330.5 / 266.5 | −12.1 / −0.2 | [−31.8, +7.1] | inside noise |
+    | V (variable) | 335.2 / 286.0 | −7.4 / +19.3 | [−23.9, +16.2] | inside noise |
+    | firing control: A on the app page (+125,847 B inline), separate interleave of 6 rounds, HEAD n = 72 | 400.0 / 313.0 | +48.5 / +44.2 | [+10.5, +82.1] | outside noise — the instrument fires |
+
+    The UI faces load with `display:'swap'`, off the paint path, so their app-page cost is not visible in first paint at
+    this resolution (about ±25 ms); what they add after paint is the swap re-layout, which this harness does not time.
+  - **Static vs variable — the one choice tasks.md lets 2.5 make, by bytes alone ("fewer bytes wins"):** static, 72,816
+    against 79,464 B (`.output` +6,480 B for variable). The kickoff said "choose nothing"; the file wins (flagged). No
+    file changes. **The design difference, measured not judged:** Bricolage text the APP draws above 16 px, from
+    `design/mockup.html` — the drop-zone message (20 px / 700, `:396`) and the presentation-mode nav buttons (20 px,
+    `:222`); every larger heading in the mockup (44 / 28 / 27 / 20 px) is set in the serif, Literata. **Correction** to
+    the 2.3 and 2.4 records, which said the mockup's 20–44 px headings would get Bricolage's text cut: they are Literata.
+    Where `opsz` does matter: **the site** (`site/index.html`) sets Bricolage on `body`, with headings at
+    clamp(44–86 px) (hero h1), 34–62 px, 30–48 px and a 64–180 px display word, all at weight **800**, from Google Fonts
+    with `opsz` 12–96 and `wght` 400–800. Plan D-12 says the site will self-host "the same subset woff2 files as D-2",
+    which are 400 / 600 / 700 at `opsz` 12: that would draw those headings at 700 in the small-text cut. Named for the
+    site task, not decided here. 3.1's ★ note now specifies the side-by-side by eye.
+  - **Literata today misses** (letters fall back per character to Georgia / serif): Polish (ą ć ę ł ń ś ź ż), Czech and
+    Slovak (č ď ě ň ř š ť ů ž ĺ ľ ŕ), Hungarian (ő ű), Romanian (ș ț), Turkish (ğ ş İ), Croatian, Bosnian and Serbian
+    Latin (č ć đ š ž), Slovenian, Latvian, Lithuanian, Estonian (š ž), Maltese (ċ ġ ħ ż), Welsh (ŵ ŷ) and Esperanto
+    (ĉ ĝ ĥ ĵ ŝ ŭ). The latin-ext files add all of them; Vietnamese stays incomplete even with them. Covered today:
+    French, German, Spanish, Portuguese, Italian, Dutch and the Nordic languages. Shipped cover: 230 codepoints, of
+    which Latin Extended only Ă ı Œ œ.
+  - **Gate verdict (tasks.md's rule: a gate only if arm (a) or (c) shows a first-paint delta inside the noise floor):
+    NO GATE.** Both cost first paint beyond noise; the default stands. Arm L is not a gate arm in tasks.md (carried
+    from the 2.3 / 2.4 kickoffs, information only); its delta is not resolvable on this machine. No recommendation.
+  - **Verify:** content-script md5 at commit `5b241f93…` (Cr) / `8506e382…` (Fx) = 2.4; manifests 654 / 770 B,
+    `permissions: []`; golden EMPTY; no production diff (lint and suites not re-run: records only). Measurement
+    scripts are scratch, not committed (tasks.md names no script); the method is stated here.
+  Revisit-when: the site's self-hosting task (weight 800 and `opsz` for display sizes); a ruling on Literata's Latin
+  Extended; the 3.1 mock's side-by-side.
+
 - **2026-11-02 · M13 TASK 2.4 — the design fonts load on the app page from the package; one stack string; the fence;
   zero network (D-2, D-3; gate-1 Q3 / Q10).** Branch restarted from `main` at `f70e337` (PR #19's merge, containing
   `731998a`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install

@@ -11,6 +11,26 @@
 
 ## Now (start here)
 
+**M13 TASK 2.5 LANDED (2026-11-02) — the font measurement: numbers only; NO GATE.** Record: `decisions.md`, "M13 TASK
+2.5" (full tables). Branch restarted from `main` at `24e945d` (PR #20's merge); font parity applied. No production change.
+- Machine: cloud VM, 4 vCPUs, idle; absolute times ~2.7× the local history, so the deltas are the result. Shipped
+  harnesses on six scratch arms, interleaved, HEAD twice per round, bootstrap 95% CIs. First paint Chromium only.
+- **Content script** (30 runs/arm; HEAD 411.2 / 339.0 ms; HEAD vs itself −15.6 ms, CI [−41.9, +0.7]):
+  arm (a) all UI faces inline +125,847 B, **+71.6 ms** median (CI [+48, +110]); arm (c) Bricolage 600 + Sometype 400
+  inline +46,701 B, **+43.2 ms** (CI [+20, +67]); Literata Latin Extended inline +99,247 B, +24.0 ms (CI [−16, +53],
+  not resolved).
+- **App page** (48 runs/arm; HEAD 342.6 / 266.7 ms): no-fonts −12.1 ms (CI [−32, +7]), variable Bricolage −7.4 ms
+  (CI [−24, +16]) — both inside noise; firing control (126 KB inline) +48.5 ms (CI [+10.5, +82.1]) — fires.
+- **Bytes of the default:** `.output` +94,676 B, zip +95,123 B (vs no UI fonts). Variable Bricolage would add +6,480 B
+  `.output`; by tasks.md's bytes rule static stays (no file change).
+- **Gate verdict: NO GATE** — arms (a) and (c) both cost first paint beyond noise; the default stands.
+- Findings for the human: the app draws Bricolage above 16 px only on the drop zone and presentation nav (20 px); the
+  mockup's big headings are Literata (corrects 2.3 / 2.4's note). **The site** draws Bricolage up to 180 px at weight
+  800 — the self-hosting task must not reuse the 400 / 600 / 700 `opsz` 12 files as-is. Literata misses Polish, Czech,
+  Slovak, Hungarian, Romanian, Turkish, Croatian, Slovenian, Baltic, Maltese, Welsh and Esperanto letters today.
+  3.1's ★ note now specifies the side-by-side `opsz` rendering for the mock.
+- Verify: content-script md5 `5b241f93…` / `8506e382…` = 2.4 · manifests 654 / 770 B · golden EMPTY · audit EXIT 0.
+
 **M13 TASK 2.4 LANDED (2026-11-02) — the design fonts load on the app page from the package; one stack string; the fence;
 zero network.** Record: `decisions.md`, "M13 TASK 2.4". Branch restarted from `main` at `f70e337` (PR #19's merge); font
 parity applied.
@@ -296,14 +316,12 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.4).
-**Then M13: task 2.5 (the font measurement — numbers for the human, nothing chosen beyond its own bytes rule).** Carry
-into 2.5, both reported as numbers for the human: **(i)** static vs variable Bricolage — 72,816 vs 79,464 B, AND the
-static files' fixed `opsz` 12 against automatic optical size for the larger UI text (the mockup's 20–44 px headings);
-**(ii)** a measured option for Literata with Latin Extended in the content script (today 230 codepoints, 4 Latin
-Extended), its content-script byte and first-paint delta against the 165 ms gate. Font parity at the
-start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1, 2.2, 2.3
-and 2.4 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.5).
+**Then M13: task 2.6 (icons: PNGs rendered from the committed SVGs; manifest and store assets).** 2.5 found no gate.
+Open questions carried for the human, numbers in `decisions.md` "M13 TASK 2.5" (none blocks 2.6): Literata's Latin
+Extended in the content script; the site's Bricolage at weight 800 / display sizes; the 3.1 side-by-side. Font parity at
+the start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1–2.5
+have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -327,7 +345,8 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 2.4 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+**Byte snapshot — M13 task 2.4 (2026-11-02, Linux cloud, clean two-engine build) — UNCHANGED by 2.5 (no production
+change; rebuilt, content-script md5 identical) — carry THESE to the next kickoff:**
 `.output` 5,944,407 B (Cr) / 5,944,523 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,395,625 / 1,395,509 B · zip
 1,946,848 / 1,946,907 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
 533,749 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1467 (the perf flake known) · browser 2017 passed / 0 failed / 51 skipped (2068, 198 files, 391 s), EXIT 0 ·
