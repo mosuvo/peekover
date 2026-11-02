@@ -1,6 +1,99 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 GATE — 3.1 TOOLBAR MOCK APPROVED (HUMAN; with one redline).** The human's written decision on
+  `design/toolbar-mock.html`. Viewed: Reading, light and dark, at 1440 / 1080 / 414; the code-theme and optical-size
+  sections.
+  1–2. Contents and order: **approved.**
+  3–6, 8. Editing, the Watching pill, the snapshot notice, the Compare picker, the Files overlay: **approved on the agent's
+     self-check** (54 / 54 combinations, both engines: no overflow, overlap, contrast failure or network). Their look is
+     judged again, working, at the design walk — **a named 8.1 check** (tasks.md 8.1 ★ note).
+  7. Wrapping — **REDLINE.** At 1080 the two-row wrap is approved. Below about 700 px the four app controls (Theme, Code
+     theme, Stored data, Export) collapse behind one "⋯" (More) button, so the toolbar is at most two rows, in both
+     themes; the exact breakpoint proposed from measurement and shown in the mock at 414 before group 4 builds it.
+  9. Dark file-name chip (full yellow, dark text): **approved.**
+  10. Status line, three statements: **approved.**
+  11. Blinking mark: **keep** (it already stops under reduced motion).
+  12–13. The three new light code colours `#197E44`, `#B34F2E`, `#966319`: **approved** — they join `tokens.css` at 5.8.
+  14. Functions and tags as default text; keywords in ink at weight 500: **approved.**
+  15. Bricolage: **the shipped STATIC files**; the variable font stays out of the extension (the site self-hosts its own,
+     per the 2.5 ruling).
+  3.1 is ticked only after the human confirms the 414 frame with the "⋯" button; group 4 waits for that.
+  - **The redline, as built in the mock (awaiting the human's confirmation of the 414 frame).** Measured on both engines
+    (the mock's own toolbar, every state, light and dark, widths 1440 → 320 in 2 px steps, rows counted by clustering
+    the controls' vertical centres): the expanded toolbar needs a THIRD row below **864 px in the agent-file state** (its
+    "Agent file · CLAUDE.md" badge is the widest item), below 698 px in reading / editing / Compare / Files / network,
+    below 668 px while watching. Collapsing ONLY the four app controls was not enough: at 414 the document controls
+    alone took three to four rows (5 rows at 414 expanded). So the compact toolbar also (a) drops the "Peekover" word
+    beside the mark (the mark stays, named "Peekover"), (b) lets the file name truncate, (c) shows the badge as "Agent
+    file" (the file name is beside it), (d) reflows into two fixed rows — Files, mark, file name, badge, "⋯" / Watch,
+    Compare, Read / Edit / Raw — and (e) tightens its paddings and gaps a little. **Proposed breakpoint: 863 px and
+    below** (the narrowest width at which every state still fits two rows expanded is 864). The human's "about 700"
+    holds for every state except an agent file; at 700–863 px a non-agent document also sees the compact toolbar —
+    the cost of one width rule for all states. The compact toolbar holds two rows **down to 404 px** (a third row
+    below 402); 1080 stays the approved two-row wrap. The "⋯" menu opens below the toolbar's right edge with the four
+    controls (a new mock state, "More (⋯) menu open").
+  - **Self-check after the redline (Chromium and Firefox from `file://`, 2 themes × 10 states × 3 widths = 60 frames
+    each):** zero non-`file:` requests; all 10 faces loaded; no overflow, no overlapping controls, no text below AA
+    (code worst 4.51:1); no toolbar over two rows in any frame; "⋯" present only at 414. One defect found on the way and
+    fixed: the "⋯" button showed at every width (a later `.btn{display:inline-flex}` beat `.more{display:none}` at equal
+    specificity); the breakpoint was re-measured after the fix — unchanged.
+  - **To see it:** open `design/toolbar-mock.html`; in the dashed strip choose **State: "Reading (welcome.md)"**,
+    **Width: "414"**, either theme — the frame caption reads "Reading (welcome.md) · Light · 414 px — compact toolbar (≤ 863 px):
+    app controls behind “⋯”, at most two rows". For the
+    menu: **State: "More (⋯) menu open"**, Width 414.
+  Revisit-when: the human's confirmation of the 414 frame (then 3.1 is ticked); 4.x builds the compact rule; 8.1.
+  - **Addendum 2026-11-02 — CONFIRMED (HUMAN).** The 414 frame and the More menu are approved in both themes. The
+    breakpoint is **863 px** (compact toolbar at 863 and below), as measured — approved over ~700, accepting that
+    ordinary documents also get the compact toolbar between 700 and 863. The compact layout is approved as shown: no
+    "Peekover" word beside the mark, the file name truncating with "…", the badge as "Agent file", two fixed rows, the
+    four app controls behind "⋯". **3.1 is ticked.** Group 4 builds the toolbar to this approved mock, starting at 4.0
+    (the census) before any toolbar code.
+
+- **2026-11-02 · M13 TASK 3.1 — the static toolbar mock DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (D-5; D-6,
+  D-9, D-10 drawn; gate-1 Q8).** Branch restarted from `main` at `26cc01e` (PR #22's merge, containing `618d893`). Font
+  parity applied. Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-02. No
+  production change; no toolbar code until the approval below is banked.
+  - **The file:** `design/toolbar-mock.html` — standalone; links `design/tokens.css` and `@font-face`s the 2.3 files by
+    relative path (`../assets/fonts/`); nothing remote. Design material: `design/` is not in `public/` and nothing in
+    `src/` or `entrypoints/` imports it, so it is outside the package. The variable Bricolage (scratch build from 2.3's
+    command, `wght` 400–700 / `opsz` 12–96, SHA-256 `691cb228…`) is embedded as a `data:` URI and used ONLY by the
+    optical-size panel — the human cannot open scratch, and a committed woff2 would be a file beyond 3.1's list.
+  - **What it shows:** the proposed toolbar in light and dark at 1440, 1080 and 414 px (fixed-width frames), in nine
+    states — reading; reading an agent file (badge on); editing (Edit active, Save as the ink primary); watching (G-4:
+    ink text, green dot, green border); the one-time snapshot notice (below the toolbar, "Got it", a Stored data link,
+    the shipped disclosure words); Compare open with its picker (snapshots, then other files); the ≤ 1080 "Files"
+    overlay; network used; no folder open — plus the status line with D-9's three statements only. Toolbar order:
+    Files (≤ 1080 only), the mark (fixed ink; blinks only under `prefers-reduced-motion: no-preference`), the file name
+    in the highlighter, the agent badge, the watch pill, Compare, Read / Edit / Raw — then Theme (ONE control: Auto /
+    Light / Dark; sepia dormant), Code theme, Stored data, Export. Shipped words throughout ("Watch this file" /
+    "Watching", "Compare", "Theme: Auto", "Agent file · CLAUDE.md"). Below the frames: the sample code block (the six
+    shipped languages — JavaScript, Python, JSON, CSS, HTML, bash — every main token kind, task 5.8's mapping, light and
+    dark), the three flagged light colours each beside `--ink`, `--muted` and today's failing token with ratios; and the
+    optical-size panel (drop-zone message 20 px / 700, presentation arrows 20 px, a 44 px / 700 line; static `opsz` 12
+    vs variable automatic). A dashed control strip (mock chrome, labelled "not a proposed UI") switches theme, state and
+    width, and can shrink frames to fit.
+  - **Proposals the human is asked about** (in the review guide): at 1080 and 414 the toolbar wraps into rows
+    (document controls, then app controls) rather than gaining a menu; in dark theme the file name sits on a full
+    highlighter chip in the reader's allow-listed `#191504` (12.9:1) because the mockup's half-height marker leaves
+    dark-theme text on yellow at 1.16:1; functions and tags take default text (the 5.8 mapping names no colour for
+    them); presentation mode is not shipped — its arrows appear only as type specimens.
+  - **Self-check (Playwright, `file://`, Chromium and Firefox, all 2 themes × 9 states × 3 widths = 54 frames per
+    engine):** zero requests other than `file:` (Chromium logged 9 `file:` loads — the stylesheet and font files;
+    Firefox reports none for `file:`); all 10 faces `loaded`; **overflow:** one defect found and fixed — at 414 px the
+    open Compare picker (300 px, anchored to its button) ran 42 px past the frame's right edge; it now spans the
+    toolbar's width at 414 — then zero; **overlap:** no two toolbar controls overlap in any frame; **contrast** (the 2.2
+    helper, bundled into the page; every text element, gradient stops included; the dimmed page behind the open
+    Files overlay excluded): zero below AA; code tokens worst 4.51:1 (light strings `#197E44`), all ≥ 4.5 in both
+    themes. PNGs of all 54 frames captured in scratch (Chromium), not committed.
+  - **Kickoff vs file, flagged:** the file asks for fixed-width frames, the kickoff a control strip — both (the strip
+    picks a theme and state; the three width frames draw for it); the kickoff's extra states (no folder, badge off)
+    are included; no open Stored data / Export panel is drawn (the plan names none).
+  - **Verify:** lint 0 · unit 1475 / 1476 (only `pipeline.perf`) · no production diff · golden EMPTY.
+  **The approval — as given, with any changes — is banked here before 4.0 starts** (tasks.md 3.1). A change that alters
+  D-5's architecture is a plan redline, not a mock edit.
+  Revisit-when: the human's approval or redlines.
+
 - **2026-11-02 · M13 TASK 2.6 — the icon, rendered from the design, in the manifest and the store assets (D-15; G-14;
   F-7).** Branch restarted from `main` at `a99798e` (PR #21's merge, containing `b965d26`). Font parity applied
   (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on

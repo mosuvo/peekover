@@ -404,7 +404,7 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
 
 ## 3 — ★ The toolbar mock — HUMAN GATE (D-5; gate-1 Q8, §10-2)
 
-- [ ] **3.1 ★ `design/toolbar-mock.html`, approved in writing before any toolbar code.** A standalone static page that
+- [x] **3.1 ★ `design/toolbar-mock.html`, approved in writing before any toolbar code.** A standalone static page that
       links `tokens.css` and `@font-face`s 2.3's woff2 files by relative path (zero network; no Google Fonts), drawn from
       the mockup's own CSS vocabulary: the proposed toolbar in **light and dark at 1440, 1080 and 414 px** as fixed-width
       frames, in the states **reading, editing, watching, Compare open, the narrow "Files" overlay open, the one-time
@@ -428,6 +428,18 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
       static files (`opsz` 12) and in the variable file with automatic optical size, plus one display line at 44 px /
       700 for reference, so the human judges the optical-size difference by eye. Both forms load from scratch copies in
       the mock only (`assets/fonts/README.md` has the variable command).
+      ★ *2026-11-02 — MOCK DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (`decisions.md`, "M13 TASK 3.1"); NOT
+      ticked.* `design/toolbar-mock.html`: 9 states × light / dark × 1440 / 1080 / 414, the code-theme sample and the
+      optical-size panel, a 15-point review guide at the top. Self-check, both engines from `file://`: zero non-`file:`
+      requests, no overflow (one 414 px picker overflow fixed), no overlap, no text below AA. The variable font for the
+      optical-size panel is embedded as a `data:` URI (not shipped). No group-4 task starts before the approval is banked.
+      ★ *2026-11-02 — APPROVED WITH ONE REDLINE (`decisions.md`, "M13 GATE — 3.1 TOOLBAR MOCK APPROVED"); NOT ticked
+      until the human confirms the 414 frame.* Item 7: at ≤ 863 px (measured) the four app controls collapse behind
+      "⋯" (More) and the toolbar keeps at most two rows; the 1080 two-row wrap stays. Group 4 builds the toolbar to the
+      approved mock, this compact rule included (the shell's own width rule; the mock's container query stands in).
+      Bricolage ships static (item 15).
+      ★ *2026-11-02 — CONFIRMED by the human; TICKED.* The 414 frame and the More menu approved in both themes; the
+      breakpoint 863 px approved over ~700; the compact layout approved as shown.
 
 ## 4 — Toolbar implementation (D-5 … D-10, D-17)
 
@@ -616,6 +628,9 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       `github-dark` as the default → the census reds on exactly those rows. A saved choice (e.g. `monokai`, in the real
       IndexedDB) survives the default change and a re-mount. Bytes: content script and theme chunk deltas stated and
       decomposed (tripwire applies). Full suite. Golden EMPTY · manifest · `permissions: []`. [D-16; the 2.2 ruling]
+      ★ *2026-11-02 (the 3.1 gate): the mapping is APPROVED as mocked* — the three new light values `#197E44` (strings),
+      `#B34F2E` (numbers / constants), `#966319` (types / attributes) join `tokens.css` here; functions and tags take
+      default text; keywords `--accent` (ink) at weight 500; comments `--muted`, italic.
 - [ ] **5.4 Panels, unsaved dialog, lightbox, diff + picker.** TEST FIRST. `.panelbox` card (radius 14, one shadow),
       header row, list rows with hints; the dialog as `.overlay` scrim + card + ink primary; lightbox per
       `mockup.html:226`; diff and picker restyled, still inline (006 D-15).
@@ -784,6 +799,10 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       list (2.2's contrast census, 5.1's native-control sweep) is either EMPTY, or each remaining row is accepted by the
       human BY NAME in this task's record.** Nothing is carried out of M13 silently; a row neither fixed nor accepted
       blocks the tick. The dry-run result recorded here follows the 7.4 note (Q6).
+      ★ *2026-11-02 (the 3.1 gate, `decisions.md` "M13 GATE — 3.1 TOOLBAR MOCK APPROVED") — A NAMED CHECK OF THIS WALK:*
+      the look of **Editing (Read / Edit / Raw while editing), the Watching pill, the one-time snapshot notice, the
+      Compare picker and the ≤ 1080 Files overlay** is judged again, WORKING, in both engines and both themes — the 3.1
+      approval of these took the agent's mock self-check, not the human's eye. Also the compact toolbar (≤ 863 px, "⋯").
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
