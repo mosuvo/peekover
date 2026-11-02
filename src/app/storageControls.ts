@@ -89,7 +89,7 @@ const SC_CSS = /* css */ `
 .${SC_CLASS}__group{display:flex; flex-direction:column; gap:.2rem; min-width:0}
 .${SC_CLASS}__group-title{
   font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
-  color:var(--faint,#9A9DAC); font-weight:650;
+  color:var(--muted,#5D6070); font-weight:650;
 }
 .${SC_CLASS}__row{
   display:flex; align-items:baseline; gap:.4rem; min-width:0; font-size:.85rem;

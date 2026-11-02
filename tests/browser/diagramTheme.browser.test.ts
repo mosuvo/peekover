@@ -68,6 +68,8 @@ import {
   resetEffectiveThemeListenersForTest,
 } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
+// WCAG luminance and the ratio come from the shared helper (013 task 2.2, D-16); assertions unchanged.
+import { contrastRatio } from './helpers/contrast';
 
 declare module 'vitest/internal/browser' {
   interface BrowserCommands {
@@ -482,14 +484,6 @@ const CANVAS_LABELS: ReadonlyArray<{
   { label: 'gantt section title', figure: 1, selector: '.sectionTitle', source: 'titleColor' },
 ];
 
-const toLinear = (c: number): number => {
-  const s = c / 255;
-  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-};
-
-/** WCAG relative luminance. */
-const luminance = ([r, g, b]: readonly [number, number, number]): number =>
-  0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 
 function parseRgb(value: string): [number, number, number] {
   const m = /(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)/.exec(value);
@@ -502,11 +496,6 @@ function parseRgb(value: string): [number, number, number] {
  *  every selector of the stylesheet it generates. */
 const normalizeRenderIds = (svg: string): string => svg.replace(/peekover-diagram-\d+/g, 'ID');
 
-function contrastRatio(a: readonly [number, number, number], b: readonly [number, number, number]): number {
-  const la = luminance(a);
-  const lb = luminance(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
 
 /**
  * The colour actually painted behind `el` — the nearest ancestor with a non-transparent
