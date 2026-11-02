@@ -451,7 +451,8 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * wrappers lose `position:relative`, so the header is the containing block — and span it with a
  * small inset, so none can leave the window. Two open at once overlap there, the later on top;
  * each still closes from its own button. Above 863 px each keeps its anchor at its own trigger.
- * Pinned by tests/browser/toolbar.browser.test.ts ("the header panels stay inside the window").
+ * 4.2 adds the toolbar's Compare picker to the same rule. Pinned by tests/browser/toolbar.browser.test.ts
+ * ("the header panels stay inside the window").
  *
  * ★ RATIONALE LIVES HERE, NOT IN THE CSS BELOW, AND THAT IS LOAD-BEARING: everything inside the
  * template literal is STRING CONTENT the minifier cannot strip, so a comment written in there
@@ -588,10 +589,10 @@ ${toolbarCss(SHELL_CLASS)}
   background:var(--paper); border:1px solid var(--line);
   border-radius:var(--r); box-shadow:var(--shadow);
 }
-/* ≤ 863 px: the three header panels drop from the header itself — see the doc comment above APP_CSS. */
+/* ≤ 863 px: the header's panels drop from the header itself — see the doc comment above APP_CSS. */
 @media (max-width:863px){
-  .${SHELL_CLASS}__code-theme-control,.${SHELL_CLASS}__export-control{position:static}
-  .peekover-code-theme-picker,.${SHELL_CLASS}__export-slot:not(:empty),.${SHELL_CLASS}__storage-slot:not(:empty){
+  .${SHELL_CLASS}__code-theme-control,.${SHELL_CLASS}__export-control,.peekover-toolbar__compare{position:static}
+  .peekover-code-theme-picker,.${SHELL_CLASS}__export-slot:not(:empty),.${SHELL_CLASS}__storage-slot:not(:empty),.peekover-toolbar .peekover-diff-picker{
     left:.75rem; right:.75rem; width:auto; max-width:none;
   }
 }
@@ -942,7 +943,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   );
 
   body.append(folders, readerPane.element);
-  shell.append(buildStyle(doc), header, body);
+  shell.append(buildStyle(doc), header, toolbar.notices, body);
   container.replaceChildren(shell);
   // The design's interface and code faces, from the package (D-2); idempotent, never throws.
   registerUiFonts();

@@ -233,9 +233,9 @@ export const DIFF_PICKER_CLASS = 'peekover-diff-picker';
 export const DIFF_STATUS_CLASS = 'peekover-diff-status';
 
 /** Copy, in one place so the tests and the UI cannot drift. */
-const LABEL_COMPARE = 'Compare';
-const ARIA_COMPARE = 'Compare this document with a saved snapshot';
-const LABEL_EXIT = 'Close comparison';
+export const LABEL_COMPARE = 'Compare';
+export const ARIA_COMPARE = 'Compare this document with a saved snapshot';
+export const LABEL_EXIT = 'Close comparison';
 /** The listbox's own label. It WIDENS with the picker (D-4): the list is no longer snapshots alone,
  *  and a label that still said so would misname what it contains for exactly the AT users who
  *  cannot see the two groups' shape. */
