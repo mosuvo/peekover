@@ -7,7 +7,8 @@ manifest declares **`permissions: []`** on both engines — re-proven every run 
 `tests/manifest.test.ts`, which asserts the config-derived manifest for Chrome *and* Firefox keeps
 `permissions: []`, adds no `host_permissions` / `web_accessible_resources` / `webRequest`, and never
 requests `tabs` / `activeTab` / `scripting`. The only manifest key M2 added is the toolbar `action`
-(documented below), which is not a permission.
+(documented below), which is not a permission; M13 added the icon keys `icons` and `action.default_icon`
+(also below), which are not permissions either.
 
 ## Why a manifest ledger became a *capability* ledger
 
@@ -124,6 +125,14 @@ manifest key, not a `permissions` entry; `tabs.create` needs no `tabs` permissio
 privileged tab fields does); and the page needs no `web_accessible_resources` because the extension
 opens **its own** URL. The `manifest.test.ts` trust-pin proves `action` is the only new key and
 `permissions: []` survives.
+
+### `icons` and `action.default_icon` — the extension icon (added M13 / task 2.6)
+The manifest declares `icons` at 16, 32, 48 and 128 px and `action.default_icon` at 16 and 32 px, all PNG files
+packaged under `icons/` (rendered from `design/icons.html`'s drawings by `scripts/render-icons.ts`). **This adds no
+permission:** both are manifest keys that only name image files inside the extension, read by the browser to draw
+the extension's own icon; they reach no page and no network, and need no `web_accessible_resources`.
+`tests/manifest.test.ts` pins both keys alongside `permissions: []`; `tests/icons.test.ts` checks that each file
+exists at its declared size.
 
 ### The app page (`app.html`) — a bundled extension page
 The second surface M2 introduces is an ordinary bundled extension page (`entrypoints/app/`). It is

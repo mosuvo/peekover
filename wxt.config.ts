@@ -22,7 +22,21 @@ export default defineConfig({
     // permission — the built manifest keeps `permissions: []` on both engines,
     // CI-pinned by tests/manifest.test.ts. The full-tab page (not a popup) is where
     // showDirectoryPicker/requestPermission actually work (spec §3, Task-0-verified).
-    action: { default_title: 'Open Peekover' },
+    action: {
+      default_title: 'Open Peekover',
+      // The toolbar icon (M13 task 2.6, plan D-15): the 16 and 32 drawings. Like `icons` below, a
+      // manifest key, not a permission (PERMISSIONS.md).
+      default_icon: { 16: 'icons/icon-16.png', 32: 'icons/icon-32.png' },
+    },
+    // The extension icon, each size its own drawing from design/icons.html, rendered to PNG by
+    // scripts/render-icons.ts into public/icons/ (WXT copies public/ into the build). Chrome takes no
+    // SVG or WebP here.
+    icons: {
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png',
+      48: 'icons/icon-48.png',
+      128: 'icons/icon-128.png',
+    },
     // Firefox-only keys. Gated on `browser` so they never appear in the Chrome
     // MV3 manifest (Chrome would warn "Unrecognized manifest key"). AGENTS.md #4.
     ...(browser === 'firefox'

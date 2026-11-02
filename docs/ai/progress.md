@@ -11,6 +11,22 @@
 
 ## Now (start here)
 
+**M13 TASK 2.6 LANDED (2026-11-02) — the icon, rendered from the design, in the manifest and the store assets; the
+three rulings after 2.5 banked.** Record: `decisions.md`, "M13 TASK 2.6" and "M13 RULINGS — after the font
+measurement". Branch restarted from `main` at `a99798e` (PR #21's merge); font parity applied.
+- `scripts/render-icons.ts` renders each size from its own `design/icons.html` drawing (the four SVGs match it) in
+  Playwright's Chromium: `public/icons/icon-{16,32,48,128}.png` (packaged) and `docs/store/assets/{cws-icon-128,
+  edge-logo-300}.png` (not packaged). Re-render byte-identical on this machine; the committed PNGs are the source.
+- `wxt.config.ts`: `icons` 16 / 32 / 48 / 128 and `action.default_icon` 16 / 32; `PERMISSIONS.md` records both keys.
+- Tests: `manifest.test.ts` (additive, G-14) and `icons.test.ts` (7) — red at HEAD, green; ablations red naming the
+  file or size.
+- Bytes: **manifests 833 / 949 B** (+179 each; carried from here); `.output` +8,231 B (PNGs 8,052 + manifest);
+  content script and app chunk md5-identical.
+- Verify: lint 0 · unit 1475 / 1476 (the perf flake only) · browser suite not run (nothing rendered changes; the three
+  built-manifest tests pass, 84 / 84) · golden EMPTY · audit EXIT 0.
+- **To view the PNGs before merging:** `public/icons/icon-16.png`, `icon-32.png`, `icon-48.png`, `icon-128.png`;
+  `docs/store/assets/cws-icon-128.png`, `edge-logo-300.png` on branch `claude/loving-turing-bpgzi0`.
+
 **M13 TASK 2.5 LANDED (2026-11-02) — the font measurement: numbers only; NO GATE.** Record: `decisions.md`, "M13 TASK
 2.5" (full tables). Branch restarted from `main` at `24e945d` (PR #20's merge); font parity applied. No production change.
 - Machine: cloud VM, 4 vCPUs, idle; absolute times ~2.7× the local history, so the deltas are the result. Shipped
@@ -316,12 +332,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.5).
-**Then M13: task 2.6 (icons: PNGs rendered from the committed SVGs; manifest and store assets).** 2.5 found no gate.
-Open questions carried for the human, numbers in `decisions.md` "M13 TASK 2.5" (none blocks 2.6): Literata's Latin
-Extended in the content script; the site's Bricolage at weight 800 / display sizes; the 3.1 side-by-side. Font parity at
-the start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1–2.5
-have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.6 and the rulings after 2.5).
+**Then M13: task 3.1 — ★ HUMAN GATE: `design/toolbar-mock.html`, the static toolbar mock, approved in writing before any
+toolbar code** (its ★ notes: the sample code block in light and dark; the side-by-side `opsz` rendering). Group 2 is
+complete. Timing gates from here are judged on same-session differences (ruling 3). Font parity at the start of each
+session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4 and 2.1–2.6 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -345,8 +360,12 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 2.4 (2026-11-02, Linux cloud, clean two-engine build) — UNCHANGED by 2.5 (no production
-change; rebuilt, content-script md5 identical) — carry THESE to the next kickoff:**
+**Byte snapshot — M13 task 2.6 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+`.output` 5,952,638 B (Cr) / 5,952,754 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,387,394 / 1,387,278 B · zip
+1,955,430 / 1,955,487 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
+533,749 B · **manifest 833 / 949 B**, `permissions: []` · lint 0 · unit 1476 (the perf flake known) · browser 2.4's
+2017 passed / 51 skipped stands · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
+**Superseded by 2.6 — the 2.4 figures (unchanged by 2.5):**
 `.output` 5,944,407 B (Cr) / 5,944,523 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,395,625 / 1,395,509 B · zip
 1,946,848 / 1,946,907 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
 533,749 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1467 (the perf flake known) · browser 2017 passed / 0 failed / 51 skipped (2068, 198 files, 391 s), EXIT 0 ·
@@ -378,6 +397,16 @@ unit 1423 / 1424 (the perf flake) · browser 1971 passed / 0 failed / 51 skipped
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
+
+#### POST-RELEASE (after M13) — FIRST ON THE LIST
+- **Literata with Latin Extended — Central / Eastern European and Turkish letters in the reading face.** Prefer
+  registering the extra subset only when a document contains those characters, so English documents pay nothing;
+  measure LOCALLY against the 165 ms gate before shipping. 2.5's numbers: `@fontsource/literata@5.3.0` latin-ext,
+  four files 73,456 B raw, +99,247 B content script inlined; first paint +24.0 ms median on the cloud machine, CI
+  [−15.8, +53.3] (not resolved). Missing today: Polish, Czech, Slovak, Hungarian, Romanian, Turkish, Croatian /
+  Bosnian / Serbian Latin, Slovenian, Latvian, Lithuanian, Estonian (š ž), Maltese, Welsh, Esperanto letters (the
+  per-language list: `decisions.md` "M13 RULINGS — after the font measurement"). *Source:* the human's ruling 1 after
+  2.5 (2026-11-02).
 
 #### FOR M13 TASK 8.1 — THE DESIGN WALK
 - **Non-text contrast (WCAG 1.4.11 — control boundaries and focus indicators, both themes)** — the 2.2 census measures

@@ -59,4 +59,21 @@ describe.each(['chrome', 'firefox'])('manifest zero-permission trust-pin (%s)', 
     // No default_popup: a click fires background action.onClicked → tabs.create.
     expect(action.default_popup).toBeUndefined();
   });
+
+  // 013 task 2.6 (plan D-15; gate-2 G-14 authorizes this ADDITIVE edit). `icons` and
+  // `action.default_icon` are manifest keys, not permissions (PERMISSIONS.md records both).
+  // PNG only: Chrome supports no SVG or WebP here. The files' pixel sizes: tests/icons.test.ts.
+  it('declares the icon as PNG at 16 / 32 / 48 / 128, and the toolbar icon at 16 / 32', () => {
+    expect(m.icons, 'icons key missing').toEqual({
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png',
+      48: 'icons/icon-48.png',
+      128: 'icons/icon-128.png',
+    });
+    const action = m.action as Record<string, unknown>;
+    expect(action.default_icon, 'action.default_icon missing').toEqual({
+      16: 'icons/icon-16.png',
+      32: 'icons/icon-32.png',
+    });
+  });
 });
