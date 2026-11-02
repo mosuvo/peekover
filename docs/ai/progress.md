@@ -11,6 +11,23 @@
 
 ## Now (start here)
 
+**M13 TASK 2.3 LANDED (2026-11-02) — font assets sourced and subset; OFL licences and NOTICE ship.** Record:
+`decisions.md`, "M13 TASK 2.3". Branch restarted from `main` at `b8eb6f1` (PR #18's merge); font parity applied.
+- `assets/fonts/`: Bricolage Grotesque 400 / 600 / 700 (static, `opsz` 12, `wdth` 100; provisional until 2.5) and Sometype
+  Mono 400 / 500, from `google/fonts` `6c1dbe2`, fontTools 4.68.0 (scratch venv, not a dependency). Ranges U+0000–024F,
+  U+2000–206F, € ™ − and the chrome's enumerated glyphs (Sometype + box drawing); `tnum` kept. 24,240 / 24,368 / 24,208
+  and 10,340 / 10,680 B. Provenance, commands and hashes: `assets/fonts/README.md`. Not imported yet — 2.4 wires them.
+- `public/licenses/` (four verbatim OFL texts), root `NOTICE`, a README credit line (+ ledger row 292), `OFL.txt` gains
+  the two copyright lines. `tests/fontLicences.test.ts` (4): red at HEAD on Literata and STIX, then all four, green;
+  ablated (a licence file, a NOTICE heading, a NOTICE copyright line, an unknown face — each red naming it).
+- Literata reused, not re-subset (byte-identical to @fontsource/literata 5.3.0); its 230-codepoint cover lacks most of
+  Latin Extended — flagged, not changed (the content-script md5 is this task's fence). STIX untouched.
+- Bytes: `.output` +17,711 B both engines = the licence files only; content script **344,342 B**, md5 `12cdc950…` /
+  `bf0108c8…` (identical); app chunk 532,530 B (identical).
+- Verify: lint 0 · unit 1455 / 1456 (the perf flake only; also red with the new test file removed, green alone) ·
+  browser suite not run — nothing in `src/` or `entrypoints/` changed and both bundles are md5-identical · golden EMPTY ·
+  NUL 0 · audit EXIT 0.
+
 **M13 TASK 2.2 CLOSED (2026-11-01) — the human ruled on the batched contrast question.** Record: `decisions.md`, "M13
 RULING — the Peekover code theme" and the 2.2 entry's addendum. A 20-theme measurement found only `light-plus` passing
 every emitted token and no dark theme; the mockup shows code following the page theme (`mockup.html:152, 157`). Ruling:
@@ -262,9 +279,10 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: 2.2 and its closing records).
-**Then M13: task 2.3 (font assets: source, subset, provenance, licences in the package, NOTICE).** Font parity at the
-start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1 and 2.2
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.3).
+**Then M13: task 2.4 (`uiFonts.ts`: the wiring, D-3's font stacks in tokens.css, the import fence, the zero-network
+tests).** Then 2.5 (the measurement; static vs variable Bricolage by bytes). Font parity at the
+start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1, 1.4, 1.2, 1.3, 2.1, 2.2 and 2.3
 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
@@ -289,7 +307,12 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 2.2 (2026-11-01, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+**Byte snapshot — M13 task 2.3 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+`.output` 5,849,199 B (Cr) / 5,849,315 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,490,833 / 1,490,717 B · zip
+1,851,337 / 1,851,396 B · content script **344,342 B** both engines, md5 `12cdc950…` (Cr) / `bf0108c8…` (Fx) · app chunk
+532,530 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1456 (the perf flake known) · browser not re-run (2.2's
+2003 passed / 51 skipped stands; no production change) · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
+**Superseded by 2.3 — the 2.2 figures:**
 `.output` 5,831,488 B (Cr) / 5,831,604 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,508,544 / 1,508,428 B · zip
 1,842,879 / 1,842,938 B · content script **344,342 B** both engines, md5 `12cdc950…` (Cr) / `bf0108c8…` (Fx) · app chunk
 532,530 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1452 (the perf flake known) · browser 2003 passed / 0 failed / 51 skipped (2054, 194 files, 388 s), EXIT 0 ·
