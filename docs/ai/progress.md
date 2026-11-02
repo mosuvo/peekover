@@ -11,6 +11,31 @@
 
 ## Now (start here)
 
+**M13 TASK 4.0 LANDED (2026-11-02) — the census of tests the toolbar move touches; QUESTIONS FOR THE HUMAN.** Record:
+`specs/013-first-release/census.md` (new). Branch restarted from `main` at `432cd02` (PR #24's merge); font parity
+applied; `pnpm audit --prod` EXIT 0, 2026-11-02. No production or test edit.
+- **353 rows across 71 test files** (all 178 scanned; 68 hit moved chrome, + the 3 plan-named that did not): re-spelled
+  **209** · unchanged **104** · retired **27** · replaced **13**. First breaks by task: 4.1 **2** · 4.3 **99** · 4.4
+  **47** · 4.5 **101** · (4.2, 4.6, 4.7, 4.8: none first — 4.6 and 4.8 are second steps of rows that break earlier).
+- **Plan vs found:** plan §5.3 lists 47 files (it says 45; tasks.md says 48); all 47 are in; 11 of them are all
+  unchanged; 24 files it missed (the Export-panel copy tests, `appHeaderNarrow`, `watchDiffDefer`, `contrastCensus`,
+  `uiFonts`, `tableCost`, `agentBadgeNetwork`, `diffChrome.test` and unchanged builder / tab tests).
+- **Baseline, full browser suite at `432cd02`:** Chromium 1,033 passed / 1 skipped, Firefox 984 / 50 (99 files, 1,034
+  tests each) — 2,017 / 51 / 2,068, 0 failed, EXIT 0.
+- **Q1 map:** every function's tests move in the task that breaks them (Edit and the guard 4.3; Export, Stored data,
+  theme, code theme 4.4; watch, Compare, Read / Raw, the capture disclosure 4.5) — no gap, EXCEPT the watch note (Q-A).
+- **Questions for the human** (census.md § Questions): **Q-A** the watch note's home after 4.5 (blocks 4.5); **Q-B**
+  4.1's "backslash-key flip" cannot be met — `\` is inert on the app page (blocks 4.1's Verify wording); **Q-C** the
+  "⋯" collapse has no task (proposed 4.4); **Q-D** the remote-load opt-in's anchor when the Compare pill goes (blocks
+  4.5); **Q-E** the Edit segment's exit / guard / failure / focus behaviour (blocks 4.3); **Q-F** confirm the header
+  tag "Zero network by default" goes at 4.1. Each has a proposal.
+- **Deviation from the kickoff, per the file:** tasks.md 4.0's Verify allows only `census.md` and `progress.md` in this
+  diff, so 4.0's tasks.md tick and its `decisions.md` entry land in 4.1's commit; the census itself carries the record.
+- Verify: lint 0 · unit 1475 / 1476 — only `pipeline.perf`, the listed flake; this session it also fails ALONE, three
+  runs at 104.8 / 101.7 / 106.8 ms against its 100 ms budget, on code byte-identical to `main` (this task changes no source)
+  — the machine, not 4.0; carried to the human · no source change, so the build is main's
+  (rebuilt this session for the baseline: `5b241f93…` / `8506e382…`) · NUL clean.
+
 **M13 TASK 3.1 CLOSED (2026-11-02) — the toolbar mock CONFIRMED by the human and ticked.** Record: `decisions.md`, "M13
 GATE — 3.1 TOOLBAR MOCK APPROVED" and its confirmation addendum. The 414 frame and the More menu approved in both
 themes; the compact toolbar at **≤ 863 px** (approved over ~700); the compact layout approved as shown. Records only.
@@ -358,12 +383,12 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 3.1 — the mock, its approval and
-confirmation).
-**Then M13: task 4.0 — the census, before any toolbar code.** Group 4 builds the toolbar to the approved mock
-(`design/toolbar-mock.html`), the compact rule at ≤ 863 px included. Timing gates are judged on same-session
-differences (ruling 3). Font parity at the start of each session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf &&
-fc-cache -f`). 1.1–1.4, 2.1–2.6 and 3.1 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human rules on census.md's questions (Q-B and Q-F before 4.1; Q-E before 4.3; Q-A, Q-C, Q-D before 4.4 / 4.5)
+and merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 4.0, the census).
+**Then M13: task 4.1 — the `pills` mount option and the toolbar skeleton (mark, file name, Read / Raw)**, citing
+census.md's rows by ID (`KEEPS:` / `RETIRED:` with the row ID) and landing 4.0's tasks.md tick and decisions.md entry.
+Timing gates are judged on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
+/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4, 2.1–2.6, 3.1 and 4.0 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
