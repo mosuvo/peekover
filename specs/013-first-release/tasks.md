@@ -428,6 +428,11 @@ the font numbers recorded (and ruled, if they argued); icons in the manifest.*
       static files (`opsz` 12) and in the variable file with automatic optical size, plus one display line at 44 px /
       700 for reference, so the human judges the optical-size difference by eye. Both forms load from scratch copies in
       the mock only (`assets/fonts/README.md` has the variable command).
+      ★ *2026-11-02 — MOCK DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (`decisions.md`, "M13 TASK 3.1"); NOT
+      ticked.* `design/toolbar-mock.html`: 9 states × light / dark × 1440 / 1080 / 414, the code-theme sample and the
+      optical-size panel, a 15-point review guide at the top. Self-check, both engines from `file://`: zero non-`file:`
+      requests, no overflow (one 414 px picker overflow fixed), no overlap, no text below AA. The variable font for the
+      optical-size panel is embedded as a `data:` URI (not shipped). No group-4 task starts before the approval is banked.
 
 ## 4 — Toolbar implementation (D-5 … D-10, D-17)
 

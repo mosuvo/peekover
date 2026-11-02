@@ -1,6 +1,50 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 3.1 — the static toolbar mock DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (D-5; D-6,
+  D-9, D-10 drawn; gate-1 Q8).** Branch restarted from `main` at `26cc01e` (PR #22's merge, containing `618d893`). Font
+  parity applied. Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-02. No
+  production change; no toolbar code until the approval below is banked.
+  - **The file:** `design/toolbar-mock.html` — standalone; links `design/tokens.css` and `@font-face`s the 2.3 files by
+    relative path (`../assets/fonts/`); nothing remote. Design material: `design/` is not in `public/` and nothing in
+    `src/` or `entrypoints/` imports it, so it is outside the package. The variable Bricolage (scratch build from 2.3's
+    command, `wght` 400–700 / `opsz` 12–96, SHA-256 `691cb228…`) is embedded as a `data:` URI and used ONLY by the
+    optical-size panel — the human cannot open scratch, and a committed woff2 would be a file beyond 3.1's list.
+  - **What it shows:** the proposed toolbar in light and dark at 1440, 1080 and 414 px (fixed-width frames), in nine
+    states — reading; reading an agent file (badge on); editing (Edit active, Save as the ink primary); watching (G-4:
+    ink text, green dot, green border); the one-time snapshot notice (below the toolbar, "Got it", a Stored data link,
+    the shipped disclosure words); Compare open with its picker (snapshots, then other files); the ≤ 1080 "Files"
+    overlay; network used; no folder open — plus the status line with D-9's three statements only. Toolbar order:
+    Files (≤ 1080 only), the mark (fixed ink; blinks only under `prefers-reduced-motion: no-preference`), the file name
+    in the highlighter, the agent badge, the watch pill, Compare, Read / Edit / Raw — then Theme (ONE control: Auto /
+    Light / Dark; sepia dormant), Code theme, Stored data, Export. Shipped words throughout ("Watch this file" /
+    "Watching", "Compare", "Theme: Auto", "Agent file · CLAUDE.md"). Below the frames: the sample code block (the six
+    shipped languages — JavaScript, Python, JSON, CSS, HTML, bash — every main token kind, task 5.8's mapping, light and
+    dark), the three flagged light colours each beside `--ink`, `--muted` and today's failing token with ratios; and the
+    optical-size panel (drop-zone message 20 px / 700, presentation arrows 20 px, a 44 px / 700 line; static `opsz` 12
+    vs variable automatic). A dashed control strip (mock chrome, labelled "not a proposed UI") switches theme, state and
+    width, and can shrink frames to fit.
+  - **Proposals the human is asked about** (in the review guide): at 1080 and 414 the toolbar wraps into rows
+    (document controls, then app controls) rather than gaining a menu; in dark theme the file name sits on a full
+    highlighter chip in the reader's allow-listed `#191504` (12.9:1) because the mockup's half-height marker leaves
+    dark-theme text on yellow at 1.16:1; functions and tags take default text (the 5.8 mapping names no colour for
+    them); presentation mode is not shipped — its arrows appear only as type specimens.
+  - **Self-check (Playwright, `file://`, Chromium and Firefox, all 2 themes × 9 states × 3 widths = 54 frames per
+    engine):** zero requests other than `file:` (Chromium logged 9 `file:` loads — the stylesheet and font files;
+    Firefox reports none for `file:`); all 10 faces `loaded`; **overflow:** one defect found and fixed — at 414 px the
+    open Compare picker (300 px, anchored to its button) ran 42 px past the frame's right edge; it now spans the
+    toolbar's width at 414 — then zero; **overlap:** no two toolbar controls overlap in any frame; **contrast** (the 2.2
+    helper, bundled into the page; every text element, gradient stops included; the dimmed page behind the open
+    Files overlay excluded): zero below AA; code tokens worst 4.51:1 (light strings `#197E44`), all ≥ 4.5 in both
+    themes. PNGs of all 54 frames captured in scratch (Chromium), not committed.
+  - **Kickoff vs file, flagged:** the file asks for fixed-width frames, the kickoff a control strip — both (the strip
+    picks a theme and state; the three width frames draw for it); the kickoff's extra states (no folder, badge off)
+    are included; no open Stored data / Export panel is drawn (the plan names none).
+  - **Verify:** lint 0 · unit 1475 / 1476 (only `pipeline.perf`) · no production diff · golden EMPTY.
+  **The approval — as given, with any changes — is banked here before 4.0 starts** (tasks.md 3.1). A change that alters
+  D-5's architecture is a plan redline, not a mock edit.
+  Revisit-when: the human's approval or redlines.
+
 - **2026-11-02 · M13 TASK 2.6 — the icon, rendered from the design, in the manifest and the store assets (D-15; G-14;
   F-7).** Branch restarted from `main` at `a99798e` (PR #21's merge, containing `b965d26`). Font parity applied
   (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on

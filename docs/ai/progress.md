@@ -11,6 +11,17 @@
 
 ## Now (start here)
 
+**M13 TASK 3.1 — MOCK DELIVERED, AWAITING THE HUMAN'S WRITTEN APPROVAL (2026-11-02).** Record: `decisions.md`, "M13 TASK
+3.1". Branch restarted from `main` at `26cc01e` (PR #22's merge); font parity applied. No production change.
+- `design/toolbar-mock.html` — open it from disk (`file://`) in Chrome and Firefox. The review guide (15 numbered
+  questions, each naming the state / width / theme to view) is at the top; a dashed strip switches theme, state, width.
+- Covers: 9 states × light / dark × 1440 / 1080 / 414; the status line's three statements; the mark's blink under
+  reduced-motion rules; the 5.8 code-theme sample (six languages, light and dark, the three flagged light colours
+  beside `--ink` / `--muted`); the optical-size panel (static `opsz` 12 vs variable, embedded for the mock only).
+- Self-check (both engines, 54 frames each): zero non-`file:` requests, no overflow (one 414 px picker overflow
+  fixed), no overlap, no text below AA (code worst 4.51:1).
+- Verify: lint 0 · unit 1475 / 1476 (the perf flake only) · golden EMPTY · audit EXIT 0.
+
 **M13 TASK 2.6 LANDED (2026-11-02) — the icon, rendered from the design, in the manifest and the store assets; the
 three rulings after 2.5 banked.** Record: `decisions.md`, "M13 TASK 2.6" and "M13 RULINGS — after the font
 measurement". Branch restarted from `main` at `a99798e` (PR #21's merge); font parity applied.
@@ -332,11 +343,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 2.6 and the rulings after 2.5).
-**Then M13: task 3.1 — ★ HUMAN GATE: `design/toolbar-mock.html`, the static toolbar mock, approved in writing before any
-toolbar code** (its ★ notes: the sample code block in light and dark; the side-by-side `opsz` rendering). Group 2 is
-complete. Timing gates from here are judged on same-session differences (ruling 3). Font parity at the start of each
-session (`rm -f /etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4 and 2.1–2.6 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human reviews `design/toolbar-mock.html` and approves in writing, or redlines it** (branch
+`claude/loving-turing-bpgzi0`: task 3.1's mock); the approval is banked in `decisions.md` before 4.0.
+**Then M13: task 4.0 (the census before any toolbar code), only after the written approval.** Timing gates are judged
+on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
+/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4 and 2.1–2.6 have landed; 3.1's mock is delivered. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
