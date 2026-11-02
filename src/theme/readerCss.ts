@@ -1445,8 +1445,8 @@ export const CONTAINED_CSS = /* css */ `
 // THE MODE PILL IS HIDDEN IN EDIT (012 task 3.2, human ruling R3). The pill's click is
 // toggleReaderMode, which leaves edit for Raw WITHOUT the edit view's teardown — the bypass 2.1
 // and 2.2 carried. While the host is in edit the pill is therefore not offered at all, and the
-// edit control (EDIT_CONTROL_CSS below) is the one way out. The rule is HERE, in the sheet that
-// exists only while an edit view does, and not in READER_CSS: a `:host([data-mode="edit"])` rule
+// toolbar's Read / Raw (013 D-6) are the way out. The rule is HERE, in the sheet that exists
+// only while an edit view does, and not in READER_CSS: a `:host([data-mode="edit"])` rule
 // there is a new `:host` site (htmlExport.test.ts pins the count) and would ship to the content
 // script, which has no edit mode.
 //
@@ -1458,7 +1458,7 @@ export const CONTAINED_CSS = /* css */ `
 // (<= 720px) the preview moves to a third row. `minmax(0,1fr)` rather than `1fr`: a pane is a
 // scroll box and must not grow the row to fit what it holds.
 //   - The button is the pill family's shape at the bar's scale, in --ink on --panel with a --line
-//     border; hover moves the border to --faint, as the edit control's does.
+//     border; hover moves the border to --faint, as the pills' do.
 //   - The status line is --ink text and nothing else. No outcome has a colour: what happened is
 //     said in words (the control's own text while a save is running, this line once it has ended),
 //     so there is no state here that colour alone carries.
@@ -1547,33 +1547,16 @@ export const EDITOR_CSS = /* css */ `
 `;
 
 // ============================================================================
-// EDIT CONTROL — the edit-entry button (012 task 3.2, D-1's control half).
+// CAPTURE NOTICE SEAT — one app-only rule (012 R29(d); kept by 013 task 4.3).
 // ============================================================================
-// A FOURTH string, injected by editorEnhancer.ts as its own <style> beside the control it styles.
-// The control is at REST in reading and raw mode, so EDITOR_CSS — present only while an edit view
-// is built — cannot carry it; and it is app-page-only, so neither READER_CSS nor CONTAINED_CSS may
-// (both ride into the content script; tasks.md 3.2 holds that bundle md5-identical). Nothing on the
-// content-script graph imports this export.
+// Injected by editorEnhancer.ts as its own <style> on every app-page reader host. It is all that is
+// left of the edit control's sheet, which 013 task 4.3 removed with the control (D-6: Edit is the
+// toolbar's segment now). It is app-page-only, so neither READER_CSS nor CONTAINED_CSS may carry it
+// (both ride into the content script, whose bytes 4.3 holds md5-identical). Nothing on the
+// content-script graph imports this export. It goes at 4.5, when the notice leaves the shadow root
+// for the notice area below the toolbar (D-8).
 //
 // All rationale is in this comment: the literal below ships as written.
-//
-// THE PILL FAMILY. Typography, fill, border, radius, padding, shadow and hover are the mode
-// toggle's own declarations (READER_CSS, `.peekover-mode-toggle`), so the two read as one group.
-//
-// PLACEMENT: on the mode pill's row, to its LEFT. `position:absolute` outright — this sheet is
-// only ever injected on the contained app-page host, whose :host CONTAINED_CSS makes the
-// positioning context, so there is no fixed→absolute override to pair with it. `right:116px` is
-// the pill's own 16px inset, plus the pill at its WIDER label ("Reading", in raw mode), plus a gap;
-// the two are asserted not to overlap, under both pill labels, on both engines, at a narrow and a
-// wide viewport (tests/browser/editorRender.browser.test.ts). It does not move in edit, when the
-// pill is hidden: the control the user just activated stays under the pointer as the exit.
-//
-// PRINT: the reader's print rule hides its chrome by an explicit class list in READER_CSS, which
-// this control is not on and cannot be added to from here — so it hides itself.
-//
-// No `:host` selector, so no new `:host` rule site anywhere. Tokens used, each present in
-// design/tokens.css and in READER_CSS's :host block: --sans, --muted, --panel, --line, --shadow,
-// --ink, --faint.
 //
 // THE CAPTURE NOTICE'S SEAT (012 R29(d), 7.1 walk). READER_CSS seats `.peekover-watch-disclosure`
 // at `bottom:176px; left:16px` — measured from the HOST's bottom, which on the contained pane is
@@ -1582,21 +1565,7 @@ export const EDITOR_CSS = /* css */ `
 // context), and this sheet is injected on exactly that page's hosts, so the override lives here and
 // the content-script bundle is untouched. It moves into the clearance band every column and split
 // already keeps (130px under the text; the pill stack takes the band's left 130px, so the notice
-// sits right of it, 176px in). The notice is ~110px tall at its own 34ch width, which the band's
-// 16px floor + 110 + the 4px left over the column's padding holds. Its NARROW seat is not solved:
-// the folder pane leaves a reader ~150px wide there, so the notice cannot fit beside the pills —
-// carried with the left sidebar to the post-M12 reader-polish task. Moving the notice into the
-// flow, or making it dismissible, is that task's too.
-export const EDIT_CONTROL_CSS = /* css */ `
-.peekover-edit-toggle{
-  position:absolute;top:16px;right:116px;z-index:2;
-  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
-  color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
-  transition:color .15s,background .15s,border-color .15s;
-}
-.peekover-edit-toggle:hover{color:var(--ink);border-color:var(--faint)}
+// sits right of it, 176px in).
+export const CAPTURE_NOTICE_SEAT_CSS = /* css */ `
 .peekover-watch-disclosure{bottom:16px;left:176px}
-@media print{.peekover-edit-toggle{display:none!important}}
 `;

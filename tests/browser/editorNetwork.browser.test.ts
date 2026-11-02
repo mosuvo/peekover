@@ -87,7 +87,6 @@ import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { DIAGRAM_ERROR_CLASS, DIAGRAM_STATE_ATTR } from '../../src/render/diagramView';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import {
   EDITOR_SAVE_CLASS,
   EDITOR_SHELL_CLASS,
@@ -111,6 +110,15 @@ import {
   isOffOrigin,
   offOriginProbeUrl,
 } from './helpers/diagramWindow';
+
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host?.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: each test's own property here (C169). RE-SPELLED at 4.3: the removed shadow-root control's
+ *  toggle is the toolbar's segment — Edit to enter, Read to leave (these sessions are entered from
+ *  Read, so the exit lands where the control's did; a dirty Read is guarded, ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 
 const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 const CHROMIUM = ENGINE === 'chromium';
@@ -421,7 +429,7 @@ async function mountAndSelect(file: MarkdownFile, persistable: boolean): Promise
     () => container.querySelector<HTMLElement>('.peekover-app__reader__host'),
     'the reader host',
   );
-  await waitFor(() => host.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`), 'the edit control');
+  await waitFor(() => segmentFor(host, 'edit')?.disabled === false, 'the Edit segment');
   return { app, container, host };
 }
 
@@ -444,8 +452,6 @@ async function appWatched(file: MarkdownFile): Promise<Rig> {
   return rig;
 }
 
-const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
 const shellIn = (host: HTMLElement): HTMLElement =>
   host.shadowRoot!.querySelector<HTMLElement>(`.${EDITOR_SHELL_CLASS}`)!;
 const saveButtonIn = (host: HTMLElement): HTMLElement =>
@@ -457,7 +463,7 @@ const outerColumn = (host: HTMLElement): HTMLElement =>
   [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
 
 async function enterEdit(host: HTMLElement): Promise<EditorSession> {
-  controlIn(host).click();
+  segmentToggle(host).click();
   await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
   const session = editorSessionFor(host);
   if (!session) throw new Error('entering edit left no live edit session');
@@ -717,7 +723,7 @@ describe.runIf(CHROMIUM)('012 task 5.7 — SAVE to the file: nothing off-origin 
     expect(await reported(host)).toBe('Saved.');
     expect(await readDisk(fh)).toBe(`${ON_DISK + TYPED} more`);
     // Leaving edit after a save re-renders the reading view from the saved text (R19).
-    controlIn(host).click();
+    segmentToggle(host).click();
     await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await waitFor(() => readerSourceFor(host) === `${ON_DISK + TYPED} more`, 'the reading view to show the saved text');
 

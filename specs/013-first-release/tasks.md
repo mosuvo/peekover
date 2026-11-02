@@ -507,7 +507,7 @@ the app page shows some controls twice — unreleased, stated.*
       regression the full suite found (C061: the badge `<p>`'s UA margins grew an agent file's header 20 px) fixed here.
       Necessary ripple: `diffChrome.ts` exports its three labels. Census C355 / C356 discovered and re-spelled.
 
-- [ ] **4.3 The Edit segment; the shadow-root edit control and `EDIT_CONTROL_CSS` removed (D-6).** TEST FIRST.
+- [x] **4.3 The Edit segment; the shadow-root edit control and `EDIT_CONTROL_CSS` removed (D-6).** TEST FIRST.
       `editorEnhancer.ts:115–140`'s enter/exit body is extracted to an exported `toggleEdit(host, options)`; the toolbar's
       Read / Edit / Raw gains Edit calling it (lazy loader, "Editor unavailable" retry state kept); the unsaved-changes
       guard's capture hook (`appShell.ts:871ff`) re-targets to the segment; `EDIT_CONTROL_CSS` and its injection go.
@@ -523,6 +523,11 @@ the app page shows some controls twice — unreleased, stated.*
       ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **E** — Read and Raw leave edit through
       the unsaved-changes guard; "Editor unavailable" shows on the Edit segment; focus returns to Edit after Escape. RETIRED:
       census C046 (R3, "the exit returns to the mode edit was entered from") and C174 (the same property in `editorRender`).
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 4.3").* `toggleEdit` / `leaveEdit` extracted; Read · Edit · Raw;
+      Read and Raw leave edit through the guard (hook moved to the toolbar); "Editor unavailable" on the segment; focus to
+      Edit on Keep / Escape. Control and `EDIT_CONTROL_CSS` gone; its notice-seat rule kept as `CAPTURE_NOTICE_SEAT_CSS`
+      until 4.5 (deviation). Content-script md5 identical; app chunk +44 B (D-6 −164, an in-task Export-panel fix at
+      1080 px +208). Census: 99 rows (89 / 7 / 3), C165 retired in part (deviation), C357–C361 discovered.
 
 - [ ] **4.4 App-level controls: one theme control, code theme, Stored data, Export (D-5).** TEST FIRST. Composed per the
       mock; the header's existing app controls move into the toolbar; ONE theme control (the reader pill's and the

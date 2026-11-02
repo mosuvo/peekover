@@ -1738,7 +1738,9 @@ describe('appShell (012 task 6.1 — the unsaved-changes guard)', () => {
   const DIALOG = '.peekover-unsaved';
   const dialog = (): HTMLElement | null => container.querySelector<HTMLElement>(DIALOG);
   const hostOf = (): HTMLElement => container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
-  const control = (): HTMLElement => hostOf().shadowRoot!.querySelector<HTMLElement>('.peekover-edit-toggle')!;
+  // 013 task 4.3 (D-6): Edit is the toolbar's segment; Read and Raw leave edit (ruling E).
+  const segment = (mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement =>
+    container.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`)!;
   const dropNow = (): boolean =>
     container.querySelector('.peekover-app')!.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
 
@@ -1785,8 +1787,10 @@ describe('appShell (012 task 6.1 — the unsaved-changes guard)', () => {
     calls.picker = 0;
     pickerOutcome = { ok: true, source: sourceOf('picked', []) };
     container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
-    await until(() => hostOf()?.shadowRoot?.querySelector('.peekover-edit-toggle'), 'the edit control');
-    control().click();
+    // KEEPS: the fixture enters a real edit session (C017–C019). RE-SPELLED at 4.3: through the
+    // toolbar's Edit segment — the shadow-root control is gone.
+    await until(() => segment('edit') && !segment('edit').disabled, 'the Edit segment');
+    segment('edit').click();
     await until(() => hostOf().getAttribute('data-mode') === 'edit', 'edit mode');
     const { editorSessionFor } = await import('../render/editorView');
     const session = editorSessionFor(hostOf())!;
@@ -1795,8 +1799,11 @@ describe('appShell (012 task 6.1 — the unsaved-changes guard)', () => {
   }
 
   type Rig = Awaited<ReturnType<typeof editing>>;
+  // KEEPS: every exit is a trigger — asks when dirty (C017), asks nothing when clean (C001).
+  // RE-SPELLED at 4.3: the edit control's exit is now Read and Raw in the toolbar (ruling E).
   const TRIGGERS: [string, (rig: Rig) => void][] = [
-    ['the edit control', () => control().click()],
+    ['Read in the toolbar', () => segment('reading').click()],
+    ['Raw in the toolbar', () => segment('raw').click()],
     ['a tree selection', () => container.querySelectorAll<HTMLElement>('[role="treeitem"][data-kind="file"]')[1].click()],
     ['Revoke', () => container.querySelector<HTMLElement>('.peekover-app__chip-revoke')!.click()],
     ['openFolder()', ({ app }) => void app.openFolder()],
@@ -1870,7 +1877,8 @@ describe('appShell (012 task 6.1 — the unsaved-changes guard)', () => {
 
   it('while the question is up, another trigger is ignored', async () => {
     const rig = await editing(true);
-    control().click();
+    // KEEPS: one question at a time (C016). RE-SPELLED at 4.3: the first trigger is Raw in the toolbar.
+    segment('raw').click();
     await flush();
     dropNow();
     void rig.app.openFolder();

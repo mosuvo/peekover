@@ -11,8 +11,8 @@
 //
 // Five proxies:
 //   1. CONTRAST of CodeMirror's own surfaces under the light and the dark effective theme.
-//   2. COLLISIONS at the top-right: the edit control, the mode pill, the TOC handle, the rail and
-//      the split pane, at a narrow and a wide viewport, rail open and collapsed.
+//   2. COLLISIONS at the top-right: the mode pill, the TOC handle, the rail and the split pane
+//      (the edit control's pairs retired at 013 task 4.3), at a narrow and a wide viewport, rail open and collapsed.
 //   3. GFM and R1's dialect AS DRAWN: which ranges get a highlight-styled span, and its style.
 //   4. The Ctrl/Cmd+S hazard 3.2 read from code, OBSERVED with `entrypoints/app/main.ts`'s
 //      listener installed.
@@ -99,7 +99,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { commands, page, userEvent } from 'vitest/browser';
 import { createReaderPane } from '../../src/app/readerPane';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
+import { toggleEdit } from '../../src/render/editorEnhancer';
 import {
   EDITOR_SHELL_CLASS,
   EDITOR_SOURCE_CLASS,
@@ -231,12 +231,13 @@ async function openInPane(text: string): Promise<HTMLElement> {
 /** By CLASS ALONE — a tag-qualified selector could not then be asked what tag it found. */
 const inHost = (host: HTMLElement, cls: string): HTMLElement | null =>
   host.shadowRoot!.querySelector<HTMLElement>(`.${cls}`);
-const controlIn = (host: HTMLElement): HTMLElement => inHost(host, EDIT_CONTROL_CLASS)!;
 const modeIs = (host: HTMLElement, mode: string) => (): boolean =>
   host.getAttribute('data-mode') === mode;
 
+/** KEEPS: each proxy's own property (C164, C166, C167). RE-SPELLED at 4.3: edit is entered by
+ *  `toggleEdit` — what the toolbar's Edit segment calls (D-6); this pane harness has no toolbar. */
 async function enterEdit(host: HTMLElement): Promise<void> {
-  controlIn(host).click();
+  void toggleEdit(host);
   await waitFor(modeIs(host, 'edit'), 'data-mode="edit"');
   await frames();
 }
@@ -704,13 +705,14 @@ describe('3.2 eyeball proxy 1 — contrast of CodeMirror’s own surfaces, light
 // rect intersection between a pill-family control and the rail's BOX is the design, not a
 // collision, and it is reported in px beside the mode pill's own identical figure as its
 // precedent. What IS asserted — a covered or covering control being the defect this proxy is for:
-//   • reading: the edit control, the mode pill and the TOC handle are pairwise disjoint, and a
-//     hit-test at each one's centre returns that control (the hit-test FIRST — it is the check
-//     that shows a covered control);
-//   • edit: the edit control ("Stop editing") and the TOC handle are disjoint and each is hit at
-//     its centre; the edit control does not reach the rail's LIST; and the split pane does not
-//     run under the rail — its right edge is at or left of the rail's left edge when the rail is
-//     open, and it is disjoint from the collapsed rail's handle when it is not.
+//   • reading: the mode pill and the TOC handle are disjoint, and a hit-test at each one's centre
+//     returns that control (the hit-test FIRST — it is the check that shows a covered control);
+//   • edit: at these widths the rail and its handle are hidden (R29(c)), and the split pane keeps
+//     its size.
+// RETIRED (C165, in part): every pair with the EDIT CONTROL in it — 013 task 4.3 (D-6) removed the
+// shadow-root control; Edit is the toolbar's segment, outside the reader. The pill × handle pair,
+// the hidden rail and the split's size are KEPT (census C165 classed the whole test retired; only
+// the control's pairs cease to exist — a deviation recorded at 4.3).
 // Every violation is collected and recorded before the one assertion, so a first red cannot hide
 // a second.
 //
@@ -769,7 +771,6 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
     await page.viewport(size.width, size.height);
     const host = await openInPane(COLLISION_DOC);
     const viewport = `${name} ${size.width}x${size.height}`;
-    const control = controlIn(host);
     const pill = inHost(host, 'peekover-mode-toggle')!;
     const handle = inHost(host, 'peekover-toc__toggle')!;
     const railEl = inHost(host, 'peekover-toc')!;
@@ -782,13 +783,11 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
     // ── reading ───────────────────────────────────────────────────────────────────────────────
     expect(host.getAttribute('data-mode')).toBe('reading');
     const reading = {
-      control: boxOf(control),
       pill: boxOf(pill),
       handle: boxOf(handle),
       rail: boxOf(railEl),
     };
     const readingHits = {
-      control: hitAtCentre(control) === control,
       pill: hitAtCentre(pill) === pill,
       handle: hitAtCentre(handle) === handle,
     };
@@ -796,8 +795,6 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
       if (!hit) violations.push(`reading: the ${who}'s centre does not hit the ${who}`);
     }
     const readingPairs = {
-      'control × pill': overlapPx(reading.control, reading.pill),
-      'control × handle': overlapPx(reading.control, reading.handle),
       'pill × handle': overlapPx(reading.pill, reading.handle),
     };
     for (const [pair, o] of Object.entries(readingPairs)) {
@@ -807,58 +804,39 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
       viewport,
       rail,
       mode: 'reading',
-      rects: { control: fmt(reading.control), pill: fmt(reading.pill), handle: fmt(reading.handle), rail: fmt(reading.rail) },
+      rects: { pill: fmt(reading.pill), handle: fmt(reading.handle), rail: fmt(reading.rail) },
       hitTests: readingHits,
       asserted: Object.fromEntries(Object.entries(readingPairs).map(([k, o]) => [k, px(o)])),
       reported: {
-        'control × rail BOX (pill-over-rail, by design)': px(overlapPx(reading.control, reading.rail)),
-        'pill × rail BOX (the precedent)': px(overlapPx(reading.pill, reading.rail)),
-        'control × rail LIST': rail === 'open' ? px(overlapPx(reading.control, boxOf(list))) : 'list hidden',
-        'control × theme control': themeControl ? px(overlapPx(reading.control, boxOf(themeControl))) : 'no theme control',
+        'pill × rail BOX (by design)': px(overlapPx(reading.pill, reading.rail)),
+        'pill × rail LIST': rail === 'open' ? px(overlapPx(reading.pill, boxOf(list))) : 'list hidden',
+        'pill × theme control': themeControl ? px(overlapPx(reading.pill, boxOf(themeControl))) : 'no theme control',
       },
     });
 
     // ── edit ──────────────────────────────────────────────────────────────────────────────────
     await enterEdit(host);
-    expect(control.textContent).toBe('Stop editing');
     const shellEl = inHost(host, EDITOR_SHELL_CLASS)!;
     const edit = {
-      control: boxOf(control),
       handle: boxOf(handle),
       rail: boxOf(railEl),
       shell: boxOf(shellEl),
     };
     // R29(c) (012 7.1-walk polish): at <= 1400px wide the rail is hidden while editing, so the rail
-    // and its handle are ABSENT here (this test's two viewports are 414 and 1400). What the edit view
-    // still shows must not collide: the control (Stop editing) is hit-testable and clear of the split.
-    const editHits = {
-      control: hitAtCentre(control) === control,
-    };
-    for (const [who, hit] of Object.entries(editHits)) {
-      if (!hit) violations.push(`edit: the ${who}'s centre does not hit the ${who}`);
-    }
+    // and its handle are ABSENT here (this test's two viewports are 414 and 1400).
     const hidden = (b: Box): boolean => b.right - b.left === 0 && b.bottom - b.top === 0;
     if (!hidden(edit.rail)) violations.push(`edit: the rail is still laid out (${fmt(edit.rail)}) at ${size.width}px`);
     if (!hidden(edit.handle)) violations.push(`edit: the rail handle is still laid out (${fmt(edit.handle)}) at ${size.width}px`);
-    const editPairs: Record<string, { w: number; h: number } | null> = {
-      'control × split pane': overlapPx(edit.control, edit.shell),
-    };
-    for (const [pair, o] of Object.entries(editPairs)) {
-      if (o) violations.push(`edit: ${pair} overlap ${px(o)}`);
-    }
     const paneClearance = Number((edit.rail.left - edit.shell.right).toFixed(1));
     const sourcePane = inHost(host, EDITOR_SOURCE_CLASS)!;
     record('collision', {
       viewport,
       rail,
       mode: 'edit',
-      rects: { control: fmt(edit.control), handle: fmt(edit.handle), rail: fmt(edit.rail), shell: fmt(edit.shell) },
-      hitTests: editHits,
-      asserted: Object.fromEntries(Object.entries(editPairs).map(([k, o]) => [k, px(o)])),
+      rects: { handle: fmt(edit.handle), rail: fmt(edit.rail), shell: fmt(edit.shell) },
       paneRightToRailLeft: `${paneClearance}px`,
       paneTopToHandleBottom: `${Number((edit.shell.top - edit.handle.bottom).toFixed(1))}px`,
       reported: {
-        'control × rail BOX (pill-over-rail, by design)': px(overlapPx(edit.control, edit.rail)),
         'split pane × collapsed rail BOX': rail === 'collapsed' ? px(overlapPx(edit.shell, edit.rail)) : 'n/a (open)',
         'split pane size': `${Math.round(edit.shell.right - edit.shell.left)}×${Math.round(edit.shell.bottom - edit.shell.top)}px`,
         'source pane width': `${Math.round(sourcePane.getBoundingClientRect().width)}px`,

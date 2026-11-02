@@ -15,6 +15,7 @@ import { resetWatchControlsForTest } from '../watch/watchControl';
 import { createDiffContext, registerDiffContext, resetDiffRegistryForTest } from '../render/diffRegistry';
 import { registerDocIdentity, resetDocIdentityForTest } from '../render/docIdentity';
 import { mount } from '../render/mount';
+import { enhanceEditor } from '../render/editorEnhancer';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -54,8 +55,10 @@ describe('the toolbar skeleton (4.1)', () => {
       `${TOOLBAR_CLASS}__compare`,
       `${TOOLBAR_CLASS}__seg`,
     ]);
+    // KEEPS: the segment's views in the mock's order (C358). RE-SPELLED at 4.3: Edit joins (D-6).
     expect([...tb.element.querySelectorAll(`.${TOOLBAR_CLASS}__seg button`)].map((b) => b.textContent)).toEqual([
       'Read',
+      'Edit',
       'Raw',
     ]);
     expect(tb.element.querySelector(`.${TOOLBAR_CLASS}__brand`)?.textContent).toBe('Peekover');
@@ -75,10 +78,12 @@ describe('the toolbar skeleton (4.1)', () => {
     expect(file.textContent).toBe('');
   });
 
-  it('with no document, Read and Raw are present but disabled and unpressed', () => {
+  it('with no document, Read, Edit and Raw are present but disabled and unpressed', () => {
     const tb = createToolbar(document);
+    // KEEPS: nothing to act on, nothing offered (C359). RE-SPELLED at 4.3: Edit joins.
     expect(seg(tb.element)).toEqual({
       reading: { pressed: 'false', disabled: true },
+      edit: { pressed: 'false', disabled: true },
       raw: { pressed: 'false', disabled: true },
     });
   });
@@ -106,25 +111,18 @@ describe('the toolbar skeleton (4.1)', () => {
     expect(seg(tb.element).reading.pressed).toBe('true');
     setReaderMode(h, 'raw'); // what the reader's own mode pill does
     await tick();
+    // KEEPS: the flip is reflected (C360). RE-SPELLED at 4.3: Edit joins — disabled on this host,
+    // which was never made editable (`enhanceEditor`).
     expect(seg(tb.element)).toEqual({
       reading: { pressed: 'false', disabled: false },
+      edit: { pressed: 'false', disabled: true },
       raw: { pressed: 'true', disabled: false },
     });
   });
 
-  it('while editing, Read and Raw are disabled and unpressed — the unsaved-changes guard is the Edit control\'s until 4.3', async () => {
-    const tb = createToolbar(document);
-    const h = host();
-    tb.setDocument('a.md', h);
-    h.setAttribute('data-mode', 'edit');
-    await tick();
-    expect(seg(tb.element)).toEqual({
-      reading: { pressed: 'false', disabled: true },
-      raw: { pressed: 'false', disabled: true },
-    });
-    tb.element.querySelector<HTMLButtonElement>('[data-mode="raw"]')!.click();
-    expect(h.getAttribute('data-mode')).toBe('edit');
-  });
+  // RETIRED: "while editing, Read and Raw are disabled" (C361) — 4.1's interim, ended by ruling E:
+  // Read and Raw leave edit through the unsaved-changes guard. Their behaviour while editing is
+  // the 4.3 describe below, and tests/browser/toolbar.browser.test.ts's.
 
   it('a document switch re-binds: the old host no longer drives it', async () => {
     const tb = createToolbar(document);
@@ -214,5 +212,32 @@ describe('the toolbar — Watch, Compare, the badge, the notice area (4.2)', () 
     setWatchNote('Watching stopped.');
     expect(note.hidden).toBe(false);
     expect(note.textContent).toBe('Watching stopped.');
+  });
+});
+
+describe('the toolbar — the Edit segment (4.3; ruling E)', () => {
+  it('Edit is offered only on an editable host; a failed load says "Editor unavailable" on it and keeps the mode', async () => {
+    const tb = createToolbar(document);
+    const h = document.createElement('div');
+    document.body.appendChild(h);
+    mount('# A', h, { contained: true });
+    tb.setDocument('a.md', h);
+    const edit = tb.element.querySelector<HTMLButtonElement>('[data-mode="edit"]')!;
+    expect(edit.disabled, 'not editable until enhanceEditor').toBe(true);
+
+    let calls = 0;
+    enhanceEditor(h, { loader: () => ((calls += 1), Promise.reject(new Error('chunk failed to load'))) });
+    tb.setDocument('a.md', h);
+    expect(edit.disabled).toBe(false);
+    expect([edit.textContent, edit.getAttribute('aria-label')]).toEqual(['Edit', 'Edit this document']);
+    edit.click();
+    edit.click(); // a second activation while the load is pending joins it
+    for (let i = 0; i < 5; i += 1) await tick();
+    expect(calls, 'one entry, one load').toBe(1);
+    expect(edit.textContent).toBe('Editor unavailable');
+    expect(edit.getAttribute('aria-label')).toBe('The editor could not be loaded. Activate to try again.');
+    expect(h.getAttribute('data-mode')).toBe('reading');
+    tb.setDocument('b.md', h);
+    expect(edit.textContent, 'a document switch starts the segment afresh').toBe('Edit');
   });
 });

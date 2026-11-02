@@ -5,7 +5,8 @@
 //
 // ══ THE EXITS (decisions.md, "M12 TASK 6.1 — LANDED") ═══════════════════════════════════════════
 //
-//   the edit control ("Stop editing") · selecting a file in the tree · Revoke · opening a folder ·
+//   Read and Raw in the toolbar (013 task 4.3, ruling E — before it, the edit control's "Stop
+//   editing") · selecting a file in the tree · Revoke · opening a folder ·
 //   a reopen-hub entry (a live handle; a re-pick; a re-pick that is then cancelled) · a drop (a
 //   folder; something that is not one) · the shell's store-free `selectFile` seam · and the tab
 //   closing or reloading, which is the browser's own `beforeunload` question.
@@ -21,7 +22,7 @@
 //
 // ══ WHAT IS REAL AND WHAT IS STOOD IN ═══════════════════════════════════════════════════════════
 //
-// REAL: the app shell, the tree, the grant chip, the reopen hub, the reader pane, the edit control,
+// REAL: the app shell, the tree, the grant chip, the reopen hub, the reader pane, the toolbar's segment,
 // the CodeMirror view, the dialog, focus, the keyboard, `inert`. STOOD IN: the folder picker, the
 // re-grant and the drop's routing, each an injected function that counts its calls and records
 // whether it was called during the event that should have reached it. The native picker, a real
@@ -47,7 +48,6 @@ import type { FolderSource, MarkdownFile, OpenFolderOutcome } from '../../src/ap
 import type { FolderRecord, PinRecord, RecentRecord } from '../../src/app/store';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import {
   EDITOR_DIRTY_ATTR,
   EDITOR_SAVE_CLASS,
@@ -282,7 +282,7 @@ async function select(container: HTMLElement, file: MarkdownFile): Promise<HTMLE
     () => container.querySelector<HTMLElement>('.peekover-app__reader__host'),
     'the reader host',
   );
-  await waitFor(() => host.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`), 'the edit control');
+  await waitFor(() => segmentFor(host, 'edit')?.disabled === false, 'the Edit segment');
   return host;
 }
 
@@ -299,8 +299,14 @@ const hubEntry = (container: HTMLElement, name: string): HTMLButtonElement => {
   return entry;
 };
 
-const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: HTMLElement, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: every test's own property here (C210–C221). RE-SPELLED at 4.3: the removed shadow-root
+ *  control's toggle is the toolbar's segment — Edit to enter, Read to leave (these sessions are
+ *  entered from Read). A dirty Read goes through the guard like every other exit (ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 /** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
 const outerColumn = (host: HTMLElement): HTMLElement =>
   [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
@@ -330,7 +336,7 @@ function countRemounts(host: HTMLElement): { count: () => number; stop: () => vo
 }
 
 async function enterEdit(host: HTMLElement): Promise<EditorSession> {
-  controlIn(host).click();
+  segmentToggle(host).click();
   await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
   const session = editorSessionFor(host);
   if (!session) throw new Error('entering edit left no live edit session');
@@ -413,19 +419,23 @@ const dropEvent = (): DragEvent =>
 const shellOf = (container: HTMLElement): HTMLElement => container.querySelector<HTMLElement>('.peekover-app')!;
 
 const PATHS: ExitPath[] = [
-  {
-    name: 'the edit control ("Stop editing")',
-    trigger: ({ host }) => controlIn(host).click(),
-    untouched: ({ host }) => {
-      expect(controlIn(host).textContent, 'the control still offers the way out').toBe('Stop editing');
-    },
-    happened: async ({ host, container }) => {
-      expect(host.getAttribute('data-mode'), 'edit is left').not.toBe('edit');
-      expect(controlIn(host).textContent).toBe('Edit');
-      expect(shownText(container), 'the reading view is the file as opened').toContain('zua');
-      expect(shownText(container)).not.toContain(TYPED.trim());
-    },
-  },
+  // KEEPS: the segment's exit is one of the guarded paths (C213–C215). RE-SPELLED at 4.3: the edit
+  // control's "Stop editing" becomes Read and Raw in the toolbar, each leaving for its own mode.
+  ...(['reading', 'raw'] as const).map(
+    (mode): ExitPath => ({
+      name: `${mode === 'reading' ? 'Read' : 'Raw'} in the toolbar`,
+      trigger: ({ host }) => segmentFor(host, mode)!.click(),
+      untouched: ({ host }) => {
+        expect(segmentFor(host, 'edit')!.getAttribute('aria-pressed'), 'Edit is still the pressed view').toBe('true');
+      },
+      happened: async ({ host, container }) => {
+        expect(host.getAttribute('data-mode'), `edit is left, for ${mode}`).toBe(mode);
+        expect(segmentFor(host, mode)!.getAttribute('aria-pressed')).toBe('true');
+        expect(readerSourceFor(host), 'the document is the file as opened').toContain('zua');
+        expect(shownText(container)).not.toContain(TYPED.trim());
+      },
+    }),
+  ),
   {
     name: 'selecting another file in the tree',
     trigger: ({ container, b }) => treeItem(container, b).click(),
@@ -627,7 +637,7 @@ describe('012 task 6.1 — what makes it ask', () => {
     session.view.dispatch({ changes: { from: length - TYPED.length, to: length, insert: '' } });
     expect(rig.host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
 
-    controlIn(rig.host).click();
+    segmentToggle(rig.host).click();
     await settle();
     expect(dialogIn(rig.container)).toBeNull();
     expect(rig.host.getAttribute('data-mode')).not.toBe('edit');
@@ -649,7 +659,7 @@ describe('012 task 6.1 — what makes it ask', () => {
       expect(rig.host.hasAttribute(EDITOR_DIRTY_ATTR), 'a download leaves the edit unsaved').toBe(true);
 
       for (const trigger of [
-        () => controlIn(rig.host).click(),
+        () => segmentToggle(rig.host).click(),
         () => treeItem(rig.container, rig.b).click(),
       ]) {
         trigger();
@@ -670,7 +680,7 @@ describe('012 task 6.1 — what makes it ask', () => {
     const session = await dirtyEdit(rig.host);
     const before = session.view.state.doc.toString();
 
-    controlIn(rig.host).click();
+    segmentToggle(rig.host).click();
     await settle();
     expect(liveBuffer(rig.host)).toBe(before);
     const first = dialogIn(rig.container);
@@ -697,8 +707,8 @@ describe('012 task 6.1 — the dialog (R23)', () => {
   async function asking(): Promise<Rig & { session: EditorSession; dialog: HTMLElement }> {
     const rig = await opened();
     const session = await dirtyEdit(rig.host);
-    controlIn(rig.host).focus();
-    controlIn(rig.host).click();
+    segmentToggle(rig.host).focus();
+    segmentToggle(rig.host).click();
     await settle();
     expect(liveBuffer(rig.host), 'the typed text survives the trigger').toContain(TYPED);
     const dialog = dialogIn(rig.container);
@@ -766,7 +776,7 @@ describe('012 task 6.1 — the dialog (R23)', () => {
       ['a tree item', treeItem(container, b)],
       ['Revoke', container.querySelector<HTMLElement>('.peekover-app__chip-revoke')!],
       ['the header’s Export control', container.querySelector<HTMLElement>('.peekover-app__export-toggle')!],
-      ['the edit control', controlIn(host)],
+      ['the toolbar’s Edit segment', segmentFor(host, 'edit')!],
       ['the editor', session.view.contentDOM],
     ];
     for (const [what, el] of behind) {
@@ -789,7 +799,9 @@ describe('012 task 6.1 — the dialog (R23)', () => {
     expect(dialogIn(container), 'closed').toBeNull();
     expect(host.getAttribute('data-mode')).toBe('edit');
     expect(liveBuffer(host)).toBe(before);
-    expect(deepActive(), 'focus returns to the control that was used').toBe(controlIn(host));
+    // KEEPS: Escape is Keep editing, and focus lands on a control (C218). RE-SPELLED at 4.3 (ruling
+    // E): focus returns to the Edit segment — the view still pressed — not the Read that asked.
+    expect(deepActive(), 'focus returns to the Edit segment').toBe(segmentFor(host, 'edit'));
 
     // And the page is live again: the control behind can take focus and be reached.
     const item = treeItem(container, b);
@@ -824,14 +836,14 @@ describe('012 task 6.1 — beforeunload: asked for only while an unsaved edit ex
       type(session, ' more');
       const added = count(adds);
 
-      controlIn(rig.host).click();
+      segmentToggle(rig.host).click();
       await settle();
       expect(liveBuffer(rig.host), 'the typed text survives the trigger').toContain(TYPED);
       answer(rig.container, KEEP).click();
       await settle();
       const afterKeep = unloadClaimed();
 
-      controlIn(rig.host).click();
+      segmentToggle(rig.host).click();
       await settle();
       answer(rig.container, DISCARD).click();
       await settle();
@@ -868,7 +880,7 @@ describe('012 task 6.1 — beforeunload: asked for only while an unsaved edit ex
 
       type(session, TYPED);
       session.view.dispatch({ changes: { from: length - TYPED.length, to: length, insert: '' } });
-      controlIn(rig.host).click();
+      segmentToggle(rig.host).click();
       await settle();
       expect(rig.host.getAttribute('data-mode')).not.toBe('edit');
       expect(unloadClaimed()).toBe(base);
@@ -922,7 +934,7 @@ describe.runIf(CHROMIUM)('012 task 6.1 — R6’s asymmetry on the app page’s 
     const remounts = countRemounts(rig.host);
 
     for (const [what, trigger] of [
-      ['the edit control', () => controlIn(rig.host).click()],
+      ['Read in the toolbar', () => segmentToggle(rig.host).click()],
       ['a file selection', () => treeItem(rig.container, rig.b).click()],
     ] as const) {
       trigger();
@@ -949,7 +961,7 @@ describe.runIf(CHROMIUM)('012 task 6.1 — R6’s asymmetry on the app page’s 
     const before = rig.session.view.state.doc.toString();
     const remounts = countRemounts(rig.host);
 
-    controlIn(rig.host).click();
+    segmentToggle(rig.host).click();
     await settle();
     expect(liveBuffer(rig.host), 'the typed text survives the exit attempt').toBe(before);
     expect(dialogIn(rig.container), 'the guard asked').not.toBeNull();

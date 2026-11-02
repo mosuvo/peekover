@@ -73,7 +73,7 @@ import {
   getSnapshotMeta,
   getSnapshotText,
 } from './snapshots';
-import { exitEditMode, readerSourceFor } from '../render/readerMode';
+import { readerSourceFor } from '../render/readerMode';
 import { registerDiffContext, createDiffContext } from '../render/diffRegistry';
 // The identity seam (008 task 1.4, D-1). Data only, imports nothing — the app page's half of the
 // same registry the content script writes from `runReader`.
@@ -98,7 +98,7 @@ import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { registerUiFonts } from '../theme/uiFonts';
-import { createToolbar, toolbarCss } from './toolbar';
+import { createToolbar, toolbarCss, TOOLBAR_CLASS } from './toolbar';
 import { directPort } from '../settings/settingsPort';
 import {
   currentSettings,
@@ -123,11 +123,10 @@ import {
 import { mount } from '../render/mount';
 import { enhanceDiagrams } from '../render/diagramEnhancer';
 import { enhanceMath } from '../render/mathEnhancer';
-import { EDIT_CONTROL_CLASS, enhanceEditor, type EditorSave } from '../render/editorEnhancer';
+import { enhanceEditor, leaveEdit, type EditorSave } from '../render/editorEnhancer';
 import {
   hasConflict,
   saveEditorSession,
-  teardownEditorShell,
   textForDisk,
   type EditorSaveOutcome,
   type EditorSaveRequest,
@@ -192,8 +191,9 @@ const SHELL_CLASS = 'peekover-app';
  * returning the render rather than the render itself (tasks.md F-5): the capability is built
  * inside `mountAppShell`, where the open file lives, and this const is module-level and cannot
  * close over it. The body is otherwise the same list in the same order, and the name still says
- * what it does. `mount()` rebuilds the chrome on every watch re-render, so without this line the
- * edit control would be gone after the first one.
+ * what it does. `mount()` rebuilds the shadow root on every watch re-render, so without this line
+ * the document would not be editable after the first one (013 4.3: the toolbar's Edit segment
+ * asks `isEditable`, which this call answers).
  */
 const renderWithEnhancements =
   (save: EditorSave): RenderFn =>
@@ -442,6 +442,13 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * wrapper (`right:0`, not a header-relative constant) — genuinely anchored at its own trigger,
  * which also makes it independent of whatever else joins the header's right-hand group later.
  *
+ * ABOVE 863 px THE EXPORT PANEL OPENS TOWARD THE SIDE WITH ROOM (013 task 4.3 — a regression the
+ * full suite found in that task). The Edit segment made the 1080 px header wrap, and Export — the
+ * last control — wrapped alone to the start of the second row; right-aligned to it, its panel
+ * opened at x −340. `toggleExport` measures as it opens: if the right-aligned panel would leave the
+ * window it sets `data-align="start"` and the panel is left-aligned under the same trigger. Still
+ * anchored at its own toggle (census C244). Pinned by the same header-panel test, at 1080 px.
+ *
  * ≤ 863 px, THE THREE HEADER PANELS DROP FROM THE HEADER ITSELF (013 task 4.1 — a regression the
  * full suite found in that task). With the toolbar in the header, the narrow header wraps into more
  * rows and a trigger can land anywhere along them: at 414 px the Export button sat at x 121–186, so
@@ -589,6 +596,7 @@ ${toolbarCss(SHELL_CLASS)}
   background:var(--paper); border:1px solid var(--line);
   border-radius:var(--r); box-shadow:var(--shadow);
 }
+@media (min-width:864px){.${SHELL_CLASS}__export-slot[data-align="start"]:not(:empty){left:0; right:auto}}
 /* ≤ 863 px: the header's panels drop from the header itself — see the doc comment above APP_CSS. */
 @media (max-width:863px){
   .${SHELL_CLASS}__code-theme-control,.${SHELL_CLASS}__export-control,.peekover-toolbar__compare{position:static}
@@ -897,7 +905,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    * R19 — ONCE EDIT IS LEFT, THE READING VIEW SHOWS WHAT WAS SAVED. The reading column is not
    * touched while a document is edited, so after a save it still holds the text from before it.
    * This re-renders it with the text the session last wrote — through the same render a watch
-   * update uses, so the document comes back enhanced and with its edit control.
+   * update uses, so the document comes back enhanced and editable.
    *
    * ★ THE NEWEST TEXT WINS, IN ONE RENDER (task 4.4, R24). A running watch flushes what it held
    * as edit is left — the text this session wrote (`ownWrite`), or an EXTERNAL change that
@@ -925,19 +933,28 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
 
-  // EXIT 1 OF THE GUARD — "Stop editing" (task 6.1). In CAPTURE, so the shell hears the click
-  // before the control inside the reader's shadow root does: with unsaved changes it goes no
-  // further until the user has answered, and "Keep editing" means it never arrives.
-  readerPane.element.addEventListener(
+  // EXIT 1 OF THE GUARD — Read and Raw in the toolbar (012 task 6.1; 013 task 4.3, ruling E: the
+  // hook moved here from the removed "Stop editing" control). In CAPTURE, so the shell hears the
+  // click before the segment does: with unsaved changes it goes no further until the user has
+  // answered, and "Keep editing" means it never arrives — and puts focus back on Edit (ruling E).
+  toolbar.element.addEventListener(
     'click',
     (event) => {
       if (passing || !hasUnsavedEdit(readerHost())) return;
       const control = event
         .composedPath()
-        .find((node) => (node as Partial<Element>).classList?.contains(EDIT_CONTROL_CLASS));
+        .find(
+          (node): node is HTMLElement =>
+            node instanceof HTMLElement &&
+            node.parentElement?.classList.contains(`${TOOLBAR_CLASS}__seg`) === true &&
+            (node.dataset.mode === 'reading' || node.dataset.mode === 'raw'),
+        );
       if (!control) return;
       event.stopPropagation();
-      askToDiscard(() => exitByControl(control as HTMLElement));
+      askToDiscard(
+        () => exitByControl(control),
+        () => toolbar.editSegment.focus(),
+      );
     },
     true,
   );
@@ -1424,6 +1441,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     exportOpen = !exportOpen;
     exportToggle.setAttribute('aria-expanded', String(exportOpen));
     if (exportOpen) {
+      // Toward the side with room (see the doc comment above APP_CSS): the panel's width is the
+      // sheet's `min(420px, 100vw - 2rem)`.
+      const room = exportControl.getBoundingClientRect().right - Math.min(420, innerWidth - 32);
+      if (room < 0) exportPanel.dataset.align = 'start';
+      else delete exportPanel.dataset.align;
       renderExport();
     } else {
       exportView = null; // task 9.1 — a promise settling after close is a graceful no-op
@@ -1447,9 +1469,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   /**
    * END ANY OPEN EDIT SESSION (task 5.3, route 2(ii)) — called where the folder is revoked, closed
    * or switched. The binding goes FIRST, so from this line no save can write or download (5.4),
-   * including one whose function was taken earlier; then edit is left the way the user leaves it — the edit control,
-   * whose click is exit + teardown and puts its own label back (ruling R3). The direct calls
-   * after it are the same two steps, for a host whose control is somehow not there.
+   * including one whose function was taken earlier; then edit is left the way the user leaves it —
+   * `leaveEdit`, the exit and the teardown together (ruling R3), back to the mode edit was entered
+   * from. The toolbar shows the mode it lands in.
    *
    * ★ IT DISCARDS AN UNSAVED BUFFER WITHOUT ASKING — the asking is done before it is called
    * (task 6.1, below). By the time a path reaches this the session is clean, or the user has
@@ -1460,10 +1482,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     editBinding = null;
     const host = readerHost();
     if (host?.getAttribute('data-mode') !== 'edit') return;
-    exitByControl(host.shadowRoot?.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`));
-    if (host.getAttribute('data-mode') !== 'edit') return;
-    exitEditMode(host);
-    teardownEditorShell(host);
+    leaveEdit(host);
   }
 
   // ── THE UNSAVED-CHANGES GUARD (012 task 6.1; rulings R6, R16, R23) ─────────────────────────
@@ -1474,7 +1493,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // a session is ENDING the thing that ended it is already done: the other file is being read,
   // the folder is switched, the re-pick was cancelled.
   //
-  //   the edit control ............ the capture listener on the reader pane (above)
+  //   Read / Raw in the toolbar ... the capture listener on the toolbar (above; 013 4.3)
   //   a file in the tree .......... `onSelect`, before `selectFolderFile` starts the read
   //   Revoke ...................... the chip's callback
   //   opening a folder ............ the CTA and `AppController.openFolder`, before the picker
@@ -1489,7 +1508,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // "DISCARD EDITS" ENDS THE SESSION, THEN ACTS — both inside the click, which is what gives a
   // picker or a permission request its user activation. On the shell's paths the ending is
   // `endEditSession`: the binding goes first, so nothing is written or downloaded afterwards.
-  // On the edit control it is the control's OWN exit and the binding is kept — R19 needs it:
+  // On Read / Raw it is the segment's OWN exit and the binding is kept — R19 needs it:
   // after Save, more typing and a discard, the reading view must still show what was saved, and
   // `showSaved` refuses a dropped binding. Either way the dirty attribute clears as edit is
   // left, and a watch then flushes what it held — the on-disk text (R6, the discard direction).
@@ -1497,8 +1516,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // A re-pick cancelled AFTER "Discard edits" closes the folder as it always did; the edit is
   // already gone, by the user's answer. While a question is up a further trigger is ignored.
 
-  /** Send a click to the edit control THROUGH the guard: an exit already answered for, or the
-   *  shell ending a session itself. */
+  /** Send a click to a toolbar segment THROUGH the guard: an exit already answered for. */
   function exitByControl(control: HTMLElement | null | undefined): void {
     passing = true;
     try {

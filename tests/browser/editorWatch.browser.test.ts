@@ -53,7 +53,6 @@ import type { FolderSource } from '../../src/app/folderSource';
 import { getSnapshotMeta, getSnapshotText } from '../../src/app/snapshots';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { getDiffContext, isDiffContextRegistered, resetDiffRegistryForTest } from '../../src/render/diffRegistry';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import {
   EDITOR_DIRTY_ATTR,
   editorSessionFor,
@@ -73,6 +72,15 @@ import {
   watchNote,
   type WatchTarget,
 } from '../../src/watch/watchRegistry';
+
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host?.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: each test's own property here (C229–C234). RE-SPELLED at 4.3: the removed shadow-root control's
+ *  toggle is the toolbar's segment — Edit to enter, Read to leave (these sessions are entered from
+ *  Read, so the exit lands where the control's did; a dirty Read is guarded, ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 
 const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 const record = (line: string): void => console.log(`[4.1][${ENGINE}] ${line}`);
@@ -151,8 +159,6 @@ const controllers: WatchTarget[] = [];
 /** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
 const outerColumn = (host: HTMLElement): HTMLElement =>
   [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
-const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
 
 /** Count mutations of the outer document: the shadow root's own child list (what `mount()`'s
  *  `replaceChildren` changes) and anything inside the outer reading column. */
@@ -230,7 +236,7 @@ async function watched(): Promise<Rig> {
 
 /** Enter edit through the real control and wait for the real editor. */
 async function enterEdit(host: HTMLElement): Promise<EditorSession> {
-  controlIn(host).click();
+  segmentToggle(host).click();
   await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
   const session = editorSessionFor(host);
   if (!session) throw new Error('entering edit left no live edit session');
@@ -323,7 +329,7 @@ describe('012 task 4.1 — an external change while editing a watched document i
 
     // ── A CLEAN EXIT: nothing was typed, so there is nothing to lose ───────────────────────────
     expect(host.hasAttribute(EDITOR_DIRTY_ATTR), 'the buffer is clean').toBe(false);
-    controlIn(host).click();
+    segmentToggle(host).click();
     await waitFor(
       () => outerColumn(host).textContent?.includes(ARRIVED_WHILE_EDITING),
       'the deferred text to reach the reading column after the exit',
@@ -394,7 +400,7 @@ describe('012 task 4.1 — an external change while editing a watched document i
     const columnNode = outerColumn(host);
     const snapshotsBefore = (await snapshotTexts(docId)).length;
 
-    controlIn(host).click();
+    segmentToggle(host).click();
     await waitFor(() => host.getAttribute('data-mode') === 'reading', 'the mode edit was entered from');
     await settle();
 
@@ -490,7 +496,7 @@ describe('012 task 4.2 — a change held during edit is marked on the outer host
 
     // ── THE EXIT (clean): the flush ends the hold, so the hint goes with it ────────────────────
     expect(host.hasAttribute(EDITOR_DIRTY_ATTR), 'the buffer is clean').toBe(false);
-    controlIn(host).click();
+    segmentToggle(host).click();
     await waitFor(
       () => outerColumn(host).textContent?.includes(ARRIVED_WHILE_EDITING),
       'the held text to reach the reading column after the exit',
@@ -581,7 +587,7 @@ describe('012 task 4.2 — a change held during edit is marked on the outer host
     await settle();
     expect(hinted(host), 'in edit, nothing held').toBe(false);
 
-    controlIn(host).click();
+    segmentToggle(host).click();
     await waitFor(() => host.getAttribute('data-mode') === 'reading', 'the mode edit was entered from');
     await settle();
     expect(hinted(host)).toBe(false);

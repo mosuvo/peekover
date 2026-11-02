@@ -26,7 +26,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { loadCodeMirror, type EditorModuleLoader } from '../../src/render/editorEngine';
-import { EDIT_CONTROL_CLASS, enhanceEditor } from '../../src/render/editorEnhancer';
+import { enhanceEditor } from '../../src/render/editorEnhancer';
+import { createToolbar } from '../../src/app/toolbar';
 import {
   EDITOR_DIRTY_ATTR,
   EDITOR_SHELL_CLASS,
@@ -84,9 +85,16 @@ function mountWith(loader: EditorModuleLoader): HTMLElement {
   hosts.push(host);
   mount(DOC, host, { contained: true });
   enhanceEditor(host, { loader });
+  // The app page's toolbar, bound to this host — Edit is its segment since 013 task 4.3 (D-6).
+  const toolbar = createToolbar(document);
+  document.body.prepend(toolbar.element);
+  hosts.push(toolbar.element);
+  toolbar.setDocument('degrade.md', host);
+  toolbars.set(host, toolbar.element);
   expectUnwatched(host);
   return host;
 }
+const toolbars = new WeakMap<HTMLElement, HTMLElement>();
 
 async function waitFor<T>(fn: () => T | null | undefined | false, what: string, ms = 15000): Promise<T> {
   const until = performance.now() + ms;
@@ -98,8 +106,13 @@ async function waitFor<T>(fn: () => T | null | undefined | false, what: string, 
   }
 }
 
+/** The host's toolbar segment. KEEPS: each test's own property here (C156, C157, C159–C162).
+ *  RE-SPELLED at 4.3: the removed shadow-root control is the toolbar's Edit segment (D-6) — it
+ *  enters, and it says "Editor unavailable" (ruling E); Read leaves (these sessions start in Read). */
+const segmentFor = (host: HTMLElement, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement =>
+  toolbars.get(host)!.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`)!;
 const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit');
 
 const onScreen = (el: Element): boolean => {
   const r = el.getBoundingClientRect();
@@ -134,8 +147,8 @@ function expectDegraded(host: HTMLElement, priorMode: string, before: Element[])
   expect([...shadow.children], 'the shadow root holds exactly what it held').toEqual(before);
   expect(editorSessionFor(host)).toBeUndefined();
   expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
-  // The control reports it, in TEXT and in its accessible name.
-  const control = controlIn(host);
+  // The Edit segment reports it, in TEXT and in its accessible name (ruling E).
+  const control = segmentFor(host, 'edit');
   expect(control.textContent).toBe('Editor unavailable');
   expect(control.getAttribute('aria-label')).toBe(
     'The editor could not be loaded. Activate to try again.',
@@ -238,7 +251,7 @@ describe('012 task 3.2 — degrade: the engine cannot load', () => {
     await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
 
     expect(host.shadowRoot!.querySelector('.cm-editor')).not.toBeNull();
-    expect(controlIn(host).textContent).toBe('Stop editing');
+    expect(segmentFor(host, 'edit').getAttribute('aria-pressed'), 'the segment shows Edit pressed').toBe('true');
     expectUnwatched(host);
   });
 
@@ -257,7 +270,8 @@ describe('012 task 3.2 — degrade: the engine cannot load', () => {
     await waitFor(() => host.getAttribute('data-mode') === 'edit', 'the retry enters edit');
     expect(loader).toHaveBeenCalledTimes(2);
     expect(host.shadowRoot!.querySelector('.cm-editor')).not.toBeNull();
-    expect(controlIn(host).textContent).toBe('Stop editing');
+    expect(segmentFor(host, 'edit').textContent, 'the segment says Edit again').toBe('Edit');
+    expect(segmentFor(host, 'edit').getAttribute('aria-pressed')).toBe('true');
     expectUnwatched(host);
   });
 });

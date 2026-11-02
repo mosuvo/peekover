@@ -60,7 +60,6 @@ import type { FolderSource, MarkdownFile, OpenFolderOutcome } from '../../src/ap
 import { getSnapshotMeta, getSnapshotText } from '../../src/app/snapshots';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { getDiffContext, isDiffContextRegistered, resetDiffRegistryForTest } from '../../src/render/diffRegistry';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import {
   EDITOR_DIRTY_ATTR,
   EDITOR_SAVE_CLASS,
@@ -189,7 +188,7 @@ async function select(container: HTMLElement, file: MarkdownFile): Promise<HTMLE
     () => container.querySelector<HTMLElement>('.peekover-app__reader__host'),
     'the reader host',
   );
-  await waitFor(() => host.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`), 'the edit control');
+  await waitFor(() => segmentFor(host, 'edit')?.disabled === false, 'the Edit segment');
   return host;
 }
 
@@ -201,8 +200,15 @@ async function opened(file: MarkdownFile, persistable = true): Promise<App & { h
   return { ...rig, host };
 }
 
-const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: HTMLElement, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: every test's own property here (C179–C209). RE-SPELLED at 4.3: the removed shadow-root
+ *  control's toggle is the toolbar's segment — Edit to enter, Read to leave ("Stop editing"; these
+ *  sessions are entered from Read, so the exit lands where the control's did). A dirty Read still
+ *  goes through the unsaved-changes guard (ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 /** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
 const outerColumn = (host: HTMLElement): HTMLElement =>
   [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
@@ -233,7 +239,7 @@ const statusIn = (host: HTMLElement): HTMLElement =>
   host.shadowRoot!.querySelector<HTMLElement>(`.${EDITOR_STATUS_CLASS}`)!;
 
 async function enterEdit(host: HTMLElement): Promise<EditorSession> {
-  controlIn(host).click();
+  segmentToggle(host).click();
   await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
   const session = editorSessionFor(host);
   if (!session) throw new Error('entering edit left no live edit session');
@@ -971,7 +977,7 @@ describe.runIf(CHROMIUM)('012 task 4.3 — a save’s own write, on a document t
       const docId = getDiffContext()!.docId;
       const remounts = countRemounts(host);
 
-      controlIn(host).click(); // Stop editing
+      segmentToggle(host).click(); // Stop editing
       await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
       await waitFor(() => readerSourceFor(host) === ON_DISK + TYPED, 'the reading view to take the saved text', 4000).catch(
         () => undefined,
@@ -1016,7 +1022,7 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
     expect(await readDisk(fh)).toBe(ON_DISK + TYPED);
     const remounts = countRemounts(host);
 
-    controlIn(host).click(); // Stop editing
+    segmentToggle(host).click(); // Stop editing
     await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await new Promise<void>((r) => setTimeout(r, 100));
     const rendered = remounts.count();
@@ -1028,7 +1034,7 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
     expect(readerSourceFor(host)).toBe(ON_DISK + TYPED);
     expect(host.getAttribute('data-mode'), 'in the mode it was left in').toBe('reading');
     expect(host.shadowRoot!.querySelector(`.${EDITOR_SHELL_CLASS}`)).toBeNull();
-    expect(controlIn(host).textContent, 'the edit control is back at rest').toBe('Edit');
+    expect(segmentFor(host, 'edit')!.getAttribute('aria-pressed'), 'Edit is back at rest').toBe('false');
     expect(isWatching()).toBe(false);
 
     const again = await enterEdit(host);
@@ -1044,7 +1050,7 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
     const session = await enterEdit(host);
     type(session, TYPED);
 
-    controlIn(host).click();
+    segmentToggle(host).click();
     await discardEdits(container); // 6.1: a dirty exit asks first
     await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await new Promise<void>((r) => setTimeout(r, 100));
@@ -1064,7 +1070,7 @@ describe.runIf(CHROMIUM)('012 task 4.3 — R19 on an UNWATCHED document (Chromiu
     const said = await clickSave(host).finally(downloads.restore);
     expect(said).toBe(downloadLine(file.name));
 
-    controlIn(host).click();
+    segmentToggle(host).click();
     await discardEdits(rig.container); // 6.1: after a download the edit is still unsaved, so it asks
     await waitFor(() => host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await new Promise<void>((r) => setTimeout(r, 100));
@@ -1201,7 +1207,7 @@ describe.runIf(CHROMIUM)('012 task 4.4 — leaving edit shows the NEWEST text, i
     remounts: { count: () => number; stop: () => void },
   ): Promise<{ source: string | undefined; column: string; disk: string; remounts: number; hint: boolean; asked: boolean }> {
     const { host, container, fh } = rig;
-    controlIn(host).click();
+    segmentToggle(host).click();
     await new Promise<void>((r) => setTimeout(r, 60));
     const discard = container.querySelector<HTMLElement>('.peekover-unsaved__discard');
     discard?.click();
@@ -1366,7 +1372,7 @@ describe.runIf(CHROMIUM)('012 task 4.4 — leaving edit shows the NEWEST text, i
     await waitFor(() => prompts === 2, 'the second write prompt');
     const remounts = countRemounts(rig.host);
 
-    controlIn(rig.host).click(); // dirty → the guard asks
+    segmentToggle(rig.host).click(); // dirty → the guard asks
     (await waitFor(() => rig.container.querySelector<HTMLElement>('.peekover-unsaved__discard'), 'the question')).click();
     await waitFor(() => rig.host.getAttribute('data-mode') !== 'edit', 'edit to be left');
     await waitFor(() => readerSourceFor(rig.host) === SAVED, 'the first save in the reading view', 4000).catch(() => undefined);

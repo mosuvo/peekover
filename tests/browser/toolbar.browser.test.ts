@@ -12,11 +12,15 @@
 // - the mark's lids blink only when the user allows motion, measured in the same run both ways;
 // - the file-name chip's contrast, light and dark, through the shared 2.2 helper.
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { page, commands } from 'vitest/browser';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { page, commands, userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
-import { TOOLBAR_CLASS } from '../../src/app/toolbar';
+import { TOOLBAR_CLASS, createToolbar } from '../../src/app/toolbar';
+import { mount } from '../../src/render/mount';
+import { enhanceEditor } from '../../src/render/editorEnhancer';
+import { loadCodeMirror, type EditorModuleLoader } from '../../src/render/editorEngine';
+import { EDITOR_DIRTY_ATTR, editorSessionFor, teardownEditorShell } from '../../src/render/editorView';
 import { setThemeSetting } from '../../src/theme/reader';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
@@ -107,6 +111,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   stopWatch();
+  document.querySelectorAll<HTMLElement>('.peekover-app__reader__host').forEach(teardownEditorShell);
   document.body.replaceChildren();
   resetThemeHostsForTest();
   resetThemeControlsForTest();
@@ -134,7 +139,9 @@ describe('4.1 — the toolbar skeleton on the app page', () => {
     expect(toolbar().querySelector(`.${C}__brand`)?.textContent).toBe('Peekover');
     expect(toolbar().querySelector(`.${C}__mark`)).not.toBeNull();
     expect(toolbar().querySelector(`.${C}__file`)?.textContent).toBe('alpha.md');
-    expect([...toolbar().querySelectorAll(`.${C}__seg button`)].map((b) => b.textContent)).toEqual(['Read', 'Raw']);
+    // KEEPS: the segment's views in the mock's order (C357). RE-SPELLED at 4.3: Edit joins, between
+    // Read and Raw (D-6).
+    expect([...toolbar().querySelectorAll(`.${C}__seg button`)].map((b) => b.textContent)).toEqual(['Read', 'Edit', 'Raw']);
     // Ruling F: the header's tag is removed; the status line carries the network claim from 4.7.
     expect(header.textContent).not.toContain('Zero network by default');
     // Outside the reader's shadow root — the reader's `replaceChildren` can never reach it.
@@ -409,5 +416,123 @@ describe('4.2 — the watch note in the notice area below the toolbar (ruling A)
     expect(note.left >= -0.5 && note.right <= innerWidth + 0.5, 'inside the window').toBe(true);
     const el = document.elementFromPoint(note.left + note.width / 2, note.top + note.height / 2);
     expect(el && noticeNote().contains(el), 'nothing covers it').toBe(true);
+  });
+});
+
+// ── 4.3 — the Edit segment (D-6; the 4.0 census ruling E) ───────────────────────────────────────
+//
+// Read · Edit · Raw. Edit enters edit through `toggleEdit` — the shadow-root control is gone. Read and
+// Raw stay offered while editing and leave edit for the mode clicked, through the unsaved-changes
+// guard: a clean buffer switches at once; a dirty one asks, "Keep editing" changes nothing, "Discard
+// edits" switches. Escape on the question puts focus back on Edit. A failed engine load says
+// "Editor unavailable" on the Edit segment, and a second activation retries. The guard over every
+// other exit is editorUnsaved.browser.test.ts's; these are the segment's own.
+
+const TYPED = ' zq43typed';
+const DIALOG = '.peekover-unsaved'; // by literal — unsavedGuard.test.ts pins it to the module
+const buffer = (host: HTMLElement): string => editorSessionFor(host)?.view.state.doc.toString() ?? '<no live edit session — the buffer is gone>';
+function deepActive(): Element | null {
+  let el: Element | null = document.activeElement;
+  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+  return el;
+}
+
+async function editViaSegment(host: HTMLElement): Promise<void> {
+  segButton('edit').click();
+  await until(() => host.getAttribute('data-mode') === 'edit' && editorSessionFor(host), 400);
+}
+
+function typeInto(host: HTMLElement, text: string): void {
+  const view = editorSessionFor(host)!.view;
+  view.dispatch({ changes: { from: view.state.doc.length, insert: text } });
+}
+
+describe('4.3 — the Edit segment (ruling E)', () => {
+  it('the segment is Read · Edit · Raw; Edit enters edit; Read and Raw stay offered while editing; no shadow-root control', async () => {
+    await openShell();
+    const host = await open('alpha.md');
+    expect([...toolbar().querySelectorAll(`.${C}__seg button`)].map((b) => b.textContent)).toEqual(['Read', 'Edit', 'Raw']);
+    expect(host.shadowRoot!.querySelector('.peekover-edit-toggle'), 'the shadow-root Edit control is gone (by class alone)').toBeNull();
+    await editViaSegment(host);
+    expect(pressed()).toEqual(['edit']);
+    expect([segButton('reading').disabled, segButton('raw').disabled], 'Read and Raw are offered while editing').toEqual([false, false]);
+    expect(host.shadowRoot!.querySelector('.peekover-edit-toggle')).toBeNull();
+  });
+
+  it.each(['reading', 'raw'] as const)('a CLEAN buffer: %s leaves edit at once, for that mode, asking nothing', async (mode) => {
+    await openShell();
+    const host = await open('alpha.md');
+    await editViaSegment(host);
+    segButton(mode).click();
+    await until(() => host.getAttribute('data-mode') === mode);
+    expect(container.querySelector(DIALOG), 'nothing is asked').toBeNull();
+    expect(editorSessionFor(host), 'the edit view is torn down').toBeFalsy();
+    expect(pressed()).toEqual([mode]);
+  });
+
+  it.each(['reading', 'raw'] as const)('a DIRTY buffer: %s asks first — Keep editing changes nothing; Discard edits goes there', async (mode) => {
+    await openShell();
+    const host = await open('alpha.md');
+    await editViaSegment(host);
+    typeInto(host, TYPED);
+    expect(host.hasAttribute(EDITOR_DIRTY_ATTR), 'the fixture is dirty').toBe(true);
+    segButton(mode).click();
+    await sleep(100);
+    // The instrument that sees a bypass: the typed text, read from the live session FIRST.
+    expect(buffer(host), 'the switch must not lose the buffer').toContain(TYPED);
+    const dialog = await until(() => container.querySelector<HTMLElement>(DIALOG));
+    expect(host.getAttribute('data-mode')).toBe('edit');
+    dialog.querySelector<HTMLElement>('.peekover-unsaved__keep')!.click();
+    await sleep(50);
+    expect([host.getAttribute('data-mode'), buffer(host).endsWith(TYPED)], 'Keep editing changes nothing').toEqual(['edit', true]);
+    segButton(mode).click();
+    (await until(() => container.querySelector<HTMLElement>(`${DIALOG} .peekover-unsaved__discard`))).click();
+    await until(() => host.getAttribute('data-mode') === mode);
+    expect(editorSessionFor(host), 'Discard edits ends the session').toBeFalsy();
+    expect(pressed()).toEqual([mode]);
+  });
+
+  it('Escape on the question keeps editing, and focus returns to the Edit segment', async () => {
+    await openShell();
+    const host = await open('alpha.md');
+    await editViaSegment(host);
+    typeInto(host, TYPED);
+    segButton('raw').focus();
+    segButton('raw').click();
+    await until(() => container.querySelector(DIALOG));
+    await userEvent.keyboard('{Escape}');
+    await until(() => !container.querySelector(DIALOG));
+    expect(host.getAttribute('data-mode')).toBe('edit');
+    expect(buffer(host)).toContain(TYPED);
+    expect(deepActive(), 'focus is on the Edit segment').toBe(segButton('edit'));
+  });
+});
+
+describe('4.3 — "Editor unavailable" on the Edit segment (ruling E)', () => {
+  it('a failed engine load says so on the segment, keeps the mode, and a second activation retries and enters', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    mount(DOC_A, host, { contained: true });
+    let fail = true;
+    const loader = vi.fn<EditorModuleLoader>(() => (fail ? Promise.reject(new Error('chunk failed to load')) : loadCodeMirror()));
+    enhanceEditor(host, { loader });
+    const tb = createToolbar(document);
+    container = document.createElement('div');
+    container.append(tb.element);
+    document.body.prepend(container);
+    tb.setDocument('alpha.md', host);
+
+    const edit = segButton('edit');
+    edit.click();
+    await until(() => edit.textContent === 'Editor unavailable');
+    expect(edit.getAttribute('aria-label'), 'the name says it can be tried again').toMatch(/could not be loaded.*try again/i);
+    expect([host.getAttribute('data-mode'), editorSessionFor(host) ?? null], 'the mode is kept, nothing built').toEqual(['reading', null]);
+
+    fail = false;
+    edit.click();
+    await until(() => host.getAttribute('data-mode') === 'edit', 400);
+    expect(loader).toHaveBeenCalledTimes(2);
+    expect(edit.textContent, 'the segment says Edit again').toBe('Edit');
+    expect(pressed()).toEqual(['edit']);
   });
 });

@@ -58,7 +58,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { createReaderPane } from '../../src/app/readerPane';
 import { readerSourceFor } from '../../src/render/readerMode';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
+import { toggleEdit } from '../../src/render/editorEnhancer';
 import {
   EDITOR_PREVIEW_HOST_CLASS,
   editorSessionFor,
@@ -206,8 +206,9 @@ async function openInPane(text: string): Promise<HTMLElement> {
   return host;
 }
 
-const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
+/** KEEPS: each test's own preview property (C171). RE-SPELLED at 4.3: edit is entered and left by
+ *  `toggleEdit` — what the toolbar's Edit segment calls (D-6); this pane harness has no toolbar. */
+const toggle = (host: HTMLElement): void => void toggleEdit(host);
 /** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
 const outerColumn = (host: HTMLElement): HTMLElement =>
   [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
@@ -226,7 +227,7 @@ interface Editing {
  *  the caret at the very start of the document. */
 async function edit(text: string): Promise<Editing> {
   const host = await openInPane(text);
-  controlIn(host).click();
+  toggle(host);
   await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
   await frames();
   const session = editorSessionFor(host);
@@ -475,7 +476,7 @@ describe('012 task 3.3 — leaving edit with a render pending', () => {
         // A render is owed at this instant: the buffer is ahead of what the preview last drew.
         state.owed = readerSourceFor(e.shell.previewHost) !== buffer(e);
         state.commitsAtExit = commitsInto(e.shell.previewHost);
-        controlIn(e.host).click();
+        toggle(e.host);
         andThen?.();
       });
     });
@@ -510,7 +511,7 @@ describe('012 task 3.3 — leaving edit with a render pending', () => {
     const watching = watchForErrors();
 
     // Out and straight back in, in the same task: the old session's timer is still due.
-    const { owed } = await exitWhilePending(e, () => controlIn(e.host).click());
+    const { owed } = await exitWhilePending(e, () => toggle(e.host));
     expect(owed, 'a render really was pending at the exit').toBe(true);
     await waitFor(() => e.host.getAttribute('data-mode') === 'edit', 'edit re-entered');
     const next = editorShellFor(e.host)!;
@@ -567,7 +568,7 @@ describe('012 task 3.4 — the reader’s four enhancers run in the preview (P-1
   };
 
   async function enterEdit(host: HTMLElement): Promise<Editing> {
-    controlIn(host).click();
+    toggle(host);
     await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
     const session = editorSessionFor(host)!;
     const shell = editorShellFor(host)!;
@@ -699,7 +700,7 @@ describe('012 task 3.4 — the reader’s four enhancers run in the preview (P-1
     let host: HTMLElement;
     try {
       host = await openInPane(FIDELITY_DOC);
-      controlIn(host).click();
+      toggle(host);
       // Bounded, and not a throw: when the build is lost, the assertion below says so.
       for (let i = 0; i < 250 && host.getAttribute('data-mode') !== 'edit'; i += 1) await sleep(20);
       expect(forced, 'the instrument fired during the build').toBeGreaterThan(0);
