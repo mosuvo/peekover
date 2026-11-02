@@ -1,6 +1,70 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 2.6 — the icon, rendered from the design, in the manifest and the store assets (D-15; G-14;
+  F-7).** Branch restarted from `main` at `a99798e` (PR #21's merge, containing `b965d26`). Font parity applied
+  (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on
+  2026-11-02.
+  - **Sizes and where each goes.** Packaged (`public/icons/`, copied by WXT to `icons/`): `icon-16`, `-32`, `-48`, `-128`
+    → manifest `icons` 16 / 32 / 48 / 128 and `action.default_icon` 16 / 32 (the toolbar gets the 16 and 32
+    drawings). Store only (`docs/store/assets/`, not packaged): `cws-icon-128.png` (Chrome Web Store, 128×128, artwork in
+    96×96 with 16 px transparent padding per side) and `edge-logo-300.png` (Edge, 300×300). The dark variants in
+    `icons.html` are not used (D-15: no per-theme manifest key).
+  - **The drawings.** `assets/icons/icon-{16,32,48,128}.svg` are the size-specific drawings in
+    `design/icons.html` (shapes, strokes and attributes compared after whitespace normalisation: no differences) — the
+    16 is its own outline-free mark; the 32 / 48 / 128 drop text lines and thicken strokes as they shrink. Each size is
+    rendered from its own drawing. The 32 / 48 / 128 drawings are not square (viewBox 60×52: 32×28, 48×42, 128×111),
+    so each is centred on a transparent square at whole-pixel offsets (top 2 / 3 / 8 px). The CWS icon is the 128
+    drawing re-rendered at 96×83, placed at (16, 22); the Edge logo is the 128 drawing re-rendered at 300×260, placed
+    at (0, 20) — vector re-renders, not bitmap scaling. Neither store page names a source drawing; the 128 is the
+    design's "master".
+  - **Render method.** `scripts/render-icons.ts` (new; run `pnpm exec tsx scripts/render-icons.ts`): the Playwright
+    Chromium already in the repo, `deviceScaleFactor` 1, the SVG absolutely positioned on a transparent page,
+    `screenshot({ omitBackground: true, clip })` at the exact size. Input SHA-256: icon-16 `54be92f0…`, icon-32
+    `5f7a8f2a…`, icon-48 `c1c9ab85…`, icon-128 `24040931…`. Outputs: icon-16 546 B, icon-32 1,268 B, icon-48 1,419 B,
+    icon-128 4,819 B, cws-icon-128 3,874 B, edge-logo-300 8,851 B (all 8-bit RGBA). **Reproducibility:** two renders on
+    this machine (Linux, Playwright 1.61.1 / Chromium 1228) are byte-identical; another OS or Chromium may differ in
+    anti-aliasing, so the committed PNGs are the source of truth. No new dependency (`tsx` and Playwright were there).
+  - **Tests (red at HEAD, green after):** `tests/manifest.test.ts` gains one case per engine — `icons` and
+    `action.default_icon` exactly as declared (an ADDITIVE edit, G-14: `git diff` shows 0 removed lines);
+    `tests/icons.test.ts` (new, 7): each declared icon exists in `public/` at size × size, 8-bit RGBA (IHDR read); the
+    two store assets at 128 / 300; the CWS icon's 16 px border has zero pixels with any alpha and the inside has visible
+    artwork (IDAT inflated and unfiltered by hand — no image library). Red at HEAD: 7 cases. **Ablations** (each red,
+    restored md5-identical): `icon-48.png` deleted → "icons[48]: public/icons/icon-48.png missing" (both engines); the
+    32 file declared at 16 → "action.default_icon[16]: public/icons/icon-32.png is 32×32"; the full-bleed 128 put in
+    place of the CWS icon → "pixels with any alpha inside the 16 px transparent border: expected 1663 to be 0".
+  - **`PERMISSIONS.md`** records both keys: manifest keys that name packaged images, no permission, no
+    `web_accessible_resources`, no network (spec §5; AGENTS.md #4).
+  - **Bytes (clean two-engine build against a same-session `main` build, every file md5-diffed):** the only changed
+    shipped files are the four PNGs (added) and the manifest, on both engines. **Manifests 654 → 833 B (Cr) and 770 →
+    949 B (Fx), +179 B each** — carried from here (F-7); `permissions: []`, no `web_accessible_resources`.
+    `.output` 5,944,407 → 5,952,638 B (Cr) and 5,944,523 → 5,952,754 B (Fx), +8,231 B = the PNGs 8,052 + manifest 179.
+    Zips 1,955,430 / 1,955,487 B (+8,582 / +8,580). Content script 344,495 B, md5 `5b241f93…` / `8506e382…` —
+    identical; app chunk 533,749 B — identical. The packaged PNGs are byte-identical to the committed ones.
+  - **Verify:** lint 0 · unit 1475 / 1476 (only `pipeline.perf`; green alone) · browser suite not run: nothing any page
+    renders changes; the three browser tests that read the built manifests (`diagramActions`, `copyAsHtml`,
+    `copyAsRichText`) pass on both engines against the new build (84 / 84) · golden EMPTY.
+  Revisit-when: 7.5 (the store listings take the two store assets); a design change to the mark (re-run the script,
+  commit the new PNGs).
+
+- **2026-11-02 · M13 RULINGS — after the font measurement (HUMAN; on 2.5's numbers).** Banked in the 2.6 commit.
+  1. **Literata with Latin Extended — CARRIED past M13, not built now.** First on the post-release list: render Central
+     / Eastern European and Turkish letters in Literata, preferably registering the extra subset only when a document
+     contains those characters, so English documents pay nothing; measured LOCALLY against the 165 ms gate before
+     shipping. 2.5's numbers: the four `@fontsource/literata@5.3.0` latin-ext files are 73,456 B raw, +99,247 B on the
+     content script inlined; content-script first paint +24.0 ms median / +21.6 ms floor on the cloud machine, 95% CI
+     [−15.8, +53.3] — not resolved from noise there. Missing today (falling back per letter to Georgia / serif):
+     Polish (ą ć ę ł ń ś ź ż), Czech and Slovak (č ď ě ň ř š ť ů ž ĺ ľ ŕ), Hungarian (ő ű), Romanian (ș ț), Turkish
+     (ğ ş İ), Croatian / Bosnian / Serbian Latin (č ć đ š ž), Slovenian, Latvian, Lithuanian, Estonian (š ž), Maltese
+     (ċ ġ ħ ż), Welsh (ŵ ŷ), Esperanto (ĉ ĝ ĥ ĵ ŝ ŭ); Vietnamese stays incomplete even with latin-ext. Home:
+     `progress.md` § Carried items.
+  2. **The site's Bricolage — for task 9.1.** The site self-hosts its OWN variable Bricolage Grotesque (`opsz` and
+     `wght`, covering weight 800 and the display sizes it uses), not the app's static subset. The site is not in the
+     extension package; zero Google Fonts holds. ★ note added to 9.1.
+  3. **Timing gates.** First-paint gates (4.8, 5.6 and any other) are judged on DIFFERENCES measured in the same
+     session (A-B-A); absolute gate figures need a local run by the human, recorded as such. ★ notes added to tasks.md's
+     sequencing and to 4.8 and 5.6.
+
 - **2026-11-02 · M13 TASK 2.5 — the font measurement: numbers only; NO GATE (D-4; §9-2(c)).** Branch restarted from
   `main` at `24e945d` (PR #20's merge, containing `7859779`). Font parity applied (`fc-match system-ui` → DejaVu Sans).
   Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-02. No production change: six

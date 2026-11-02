@@ -375,7 +375,7 @@ toolbar.*
       discarded; content-script md5 `5b241f93…` / `8506e382…` = 2.4. Carried, information only: Literata Latin
       Extended in the content script, +99,247 B, +24.0 ms median, CI [−16, +53] — not resolvable here.
 
-- [ ] **2.6 Icons: PNGs rendered from the committed SVGs; manifest and store assets (D-15; G-14; F-7).** TEST FIRST.
+- [x] **2.6 Icons: PNGs rendered from the committed SVGs; manifest and store assets (D-15; G-14; F-7).** TEST FIRST.
       Confirm `assets/icons/icon-{16,32,48,128}.svg` match `design/icons.html`'s size-specific drawings (shapes,
       strokes; differences named). `scripts/render-icons.ts` renders each in Chromium at its exact size, transparent
       background, into `public/icons/`; also the CWS 128 (96×96 artwork, 16 px transparent padding) and the Edge 300×300
@@ -391,6 +391,12 @@ toolbar.*
       it; declare a wrong size → red. `git diff tests/manifest.test.ts` shows additions only. Bytes: `.output` + the
       PNGs; **manifests grow** — new figures stated for both engines and carried from here (F-7); content-script md5
       identical. Full suite. Golden EMPTY. [D-15; G-14]
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 2.6").* The four SVGs equal `icons.html`'s size-specific drawings
+      (no differences). The non-square 32 / 48 / 128 drawings are centred on transparent squares at whole-pixel
+      offsets; CWS 128 = the 128 drawing at 96×83 inside a 16 px transparent border; Edge 300 = the 128 drawing
+      re-rendered at 300. Re-render byte-identical on this machine. Manifests **833 / 949 B** (were 654 / 770) —
+      carried from here (F-7); `.output` +8,231 B (PNGs 8,052 + manifest 179); content script and app chunk
+      md5-identical. Browser suite not run (nothing rendered changes); the three built-manifest browser tests pass.
 
 *Group-2 acceptance: tokens one-source and pinned; the census exists with its inventory and G-4/G-5 applied; faces
 packaged on the app page, system stacks on the content script, zero font requests anywhere; licences in the package;
@@ -545,6 +551,8 @@ the app page shows some controls twice — unreleased, stated.*
       column keeps its full measure; "Files" opens it, Escape and scrim close it, focus returns to "Files"; red-first:
       drop the focus return → that assertion fails. First paint A-B-A both engines, floor beside median, against 165 ms.
       Content-script md5 identical to 4.7. Full suite. Golden EMPTY · manifest · `permissions: []`. [D-10]
+      ★ *2026-11-02 (HUMAN RULING 3 after 2.5):* the first-paint gate is judged on the DIFFERENCE measured in the same
+      session (A-B-A); an absolute figure against 165 ms needs a local run by the human, recorded as such.
 
 *Group-4 acceptance: one toolbar per the approved mock; every reader function reachable from it; the pills gone from
 the app page only; the notice one-time, wipe-safe and permanent in Stored data; the band reclaimed; the status line's
@@ -631,6 +639,8 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       viewports (hit-test). First paint A-B-A, floor beside median — a delta outside the floor that breaches 165 ms is a
       STOP. Bytes: content script moves — stated, decomposed; tripwire applies. Full suite. Golden EMPTY · manifest ·
       `permissions: []`. [plan §3; gate-1 Q10]
+      ★ *2026-11-02 (HUMAN RULING 3 after 2.5):* judged on the same-session A-B-A DIFFERENCE; whether the absolute
+      median breaches 165 ms is read only from a local run by the human, recorded as such (a cloud run is ~2.7× slower).
 - [ ] **5.7 Editor details.** TEST FIRST. Save as an ink primary button, bar per `.edbar` (shape only — none of its
       unshipped tools, spec §6), faces via D-3; R11 unchanged.
       Files: `src/theme/readerCss.ts` (`EDITOR_CSS`) · `src/render/editor*.ts` (class names only if needed) ·
@@ -789,6 +799,10 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       `truthPins.test.ts`: no `fonts.googleapis.com` / `fonts.gstatic.com` in the site (red-first on today's file).
       Both site pages opened locally in Chromium with zero network after settle (one Playwright pass, firing control).
       No production bytes. [D-12; §9-1; gate-1 Q15(c)]
+      ★ *2026-11-02 (HUMAN RULING 2 after 2.5):* the site self-hosts its OWN variable Bricolage Grotesque (`opsz` and
+      `wght` axes, covering weight 800 and the display sizes it uses, up to 180 px) — not the app's static 400 / 600 /
+      700 `opsz` 12 subset. The site is not in the extension package; zero Google Fonts holds. Its licence and source are
+      recorded like 2.3's (`assets/fonts/README.md`'s method; `fontLicences.test.ts` covers the site's copies).
 - [ ] **9.2 ★ HUMAN GATE — the truth re-check.** Agent prep: the ledger walked against the walked build, every row's
       evidence re-run or re-read and marked, every row without evidence proposed for cutting. **The human** reads
       README, site, SECURITY, PRIVACY, THREAT-MODEL, CHANGELOG and the three listings against the ledger and signs off
@@ -872,6 +886,8 @@ dismissal → 4.5. Every clause has at least one task.
    token mapping.*
 5. **Group 5 after group 4** (the sweep and census rows shrink against the final toolbar); **5.6's first paint after
    2.4's stacks and the restyle.**
+   ★ *2026-11-02 (HUMAN RULING 3 after 2.5): every first-paint gate (4.8, 5.6, and any other) is judged on DIFFERENCES
+   measured in the same session (A-B-A); absolute gate figures need a local run by the human, recorded as such.*
 6. **Group 6 after group 5** (built once in the finished language, spec §3.10-5); 6.1 before 6.2 (the page exists
    before anything opens it).
 7. **Group 7:** 7.1 before 7.4 (the version the release builds); 7.2 before 7.3 (7.3 adjusts SECURITY's wording to its
