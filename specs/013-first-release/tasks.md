@@ -297,7 +297,7 @@ toolbar.*
       design check (code follows the page theme, `mockup.html:152,157`). The 8 pending rows stay on the census's list,
       each marked "→ resolved by task 5.8 (Peekover code theme)"; Q4 holds. Non-text contrast (1.4.11) is carried to 8.1.
 
-- [ ] **2.3 Font assets: source, subset, provenance, licences in the package, NOTICE (D-2's assets; G-6; F-5, F-8).**
+- [x] **2.3 Font assets: source, subset, provenance, licences in the package, NOTICE (D-2's assets; G-6; F-5, F-8).**
       TEST FIRST. Verify against current sources before acting: the OFL status of Bricolage Grotesque and Sometype Mono
       in `google/fonts`, a pinned commit, and WXT's public-directory behaviour (F-5). Download (a dev-time network act,
       G-6) and subset with fontTools: Bricolage 400 / 600 / 700, Sometype 400 / 500; ranges **at least U+0000–00FF and
@@ -318,6 +318,13 @@ toolbar.*
       verified, not assumed). Bytes: `.output` grows by the licence texts only (the woff2 files are not imported yet,
       so not emitted — verified); content-script md5 identical. Golden EMPTY · manifest 654 / 770 B ·
       `permissions: []`. [D-2; G-6]
+      ★ *Landed 2026-11-02 (`decisions.md`, "M13 TASK 2.3").* `google/fonts` pinned at `6c1dbe2`; fontTools 4.68.0 in a
+      throwaway venv. Bricolage 400 / 600 / 700 as static instances (`wdth` 100, `opsz` 12), committed provisionally —
+      2.5 rules static vs variable (72,816 vs 79,464 B); Sometype 400 / 500 with box drawing; `tnum` kept. Each cmap =
+      source ∩ ranges, nothing outside; rebuilds byte-identical. Literata reused, not re-subset (byte-identical to
+      @fontsource/literata 5.3.0); STIX untouched. Licence test red at HEAD on Literata and STIX, then on all four, green
+      after; ablated. `.output` +17,711 B on both engines = the four licence files only; content script and app chunk
+      md5-identical. Necessary ripple: `docs/store/claims.md` row 292 (truthPins requires a row for the README line).
 
 - [ ] **2.4 `uiFonts.ts`, the one stack string, the fence, zero network (D-2, D-3).** TEST FIRST. `src/theme/uiFonts.ts`
       — the `mathFont.ts` twin: plain asset imports, `document.fonts.add(new FontFace(…))`, `display:'swap'`,

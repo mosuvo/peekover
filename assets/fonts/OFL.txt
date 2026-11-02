@@ -5,6 +5,12 @@ Copyright 2001-2021 The STIX Fonts Project Authors (https://github.com/stipub/st
 Reserved Font Name "TM Math". STIX Fonts(tm) is a trademark of The Institute of Electrical and
 Electronics Engineers, Inc.
 
+bricolage-latin-*.woff2 (subsetted static instances of Bricolage Grotesque, M13 task 2.3):
+Copyright 2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)
+
+sometype-mono-latin-*.woff2 (subsetted static instances of Sometype Mono, M13 task 2.3):
+Copyright 2018 The Sometype Mono Project Authors (https://github.com/googlefonts/sometype-mono)
+
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
 http://scripts.sil.org/OFL

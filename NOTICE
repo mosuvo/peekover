@@ -1,0 +1,34 @@
+Peekover
+Copyright the Peekover contributors. Released under the MIT licence (see LICENSE).
+
+Peekover bundles the following fonts. Each is licensed under the SIL Open Font License,
+Version 1.1, whose full text ships inside the extension package at the path given for each
+font (and in this repository under public/licenses/). The fonts are not sold by themselves.
+Subsetting and instancing are described in assets/fonts/README.md.
+
+Literata
+  Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata)
+  Licence: SIL Open Font License, Version 1.1 - licenses/literata.txt
+  Source: the Latin files of @fontsource/literata 5.3.0 (https://www.npmjs.com/package/@fontsource/literata),
+  built from https://github.com/google/fonts/tree/main/ofl/literata
+  Use: the reading text (serif), regular and bold, upright and italic.
+
+STIX Two Math
+  Copyright 2001-2021 The STIX Fonts Project Authors (https://github.com/stipub/stixfonts),
+  with Reserved Font Name "TM Math". STIX Fonts(tm) is a trademark of The Institute of
+  Electrical and Electronics Engineers, Inc.
+  Licence: SIL Open Font License, Version 1.1 - licenses/stix-two-math.txt
+  Source: https://github.com/google/fonts/tree/main/ofl/stixtwomath
+  Use: math rendering on the app page (a subset).
+
+Bricolage Grotesque
+  Copyright 2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)
+  Licence: SIL Open Font License, Version 1.1 - licenses/bricolage-grotesque.txt
+  Source: https://github.com/google/fonts/tree/6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec/ofl/bricolagegrotesque
+  Use: interface text (a subset).
+
+Sometype Mono
+  Copyright 2018 The Sometype Mono Project Authors (https://github.com/googlefonts/sometype-mono)
+  Licence: SIL Open Font License, Version 1.1 - licenses/sometype-mono.txt
+  Source: https://github.com/google/fonts/tree/6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec/ofl/sometypemono
+  Use: code and metadata (a subset).

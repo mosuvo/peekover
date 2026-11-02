@@ -1,6 +1,73 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 2.3 — font assets sourced and subset; OFL licences and NOTICE ship (D-2's assets; G-6; F-5,
+  F-8).** Branch restarted from `main` at `b8eb6f1` (PR #18's merge, containing `3e7b8d0`). Font parity applied
+  (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0
+  on 2026-11-02 (one low, ignored).
+  - **Faces, weights, axes (tasks.md 2.3; brand.html loads Bricolage `opsz,wght@12..96,400..700` and Sometype
+    `wght@400;500`):** Bricolage Grotesque 400 / 600 / 700, upright; Sometype Mono 400 / 500, upright. The Bricolage
+    source has three axes (`opsz` 12–96, `wdth` 75–100, `wght` 200–800; default instance 96 / 100 / 800, a display cut);
+    `wdth` is pinned to 100 (the design uses no width). Sometype's only axis is `wght` 400–700.
+  - **Static vs variable — not chosen here.** The kickoff asked 2.3 to choose by bytes; tasks.md 2.3 leaves it to 2.5's
+    numbers and says commit the static set provisionally. Followed the file (mismatch flagged). Both forms built: three
+    static files 72,816 B; one variable file (`wght` 400–700, `opsz` 12–96 kept) 79,464 B. **For 2.5:** the forms
+    differ in more than bytes — the static files pin `opsz` 12 (the text end; the chrome's mockup sizes run 9.5–15 px,
+    median 12.5 px), so the mockup's few 20–44 px headings get the text cut; the variable file keeps optical sizing.
+  - **Sources:** `google/fonts` at commit `6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec` (from `git ls-remote`), over
+    raw.githubusercontent.com: `ofl/bricolagegrotesque/BricolageGrotesque[opsz,wdth,wght].ttf` (408,496 B, SHA-256
+    `413e7357…`), `ofl/sometypemono/SometypeMono[wght].ttf` (64,308 B, `4095fd32…`), and the four `OFL.txt` files.
+    `METADATA.pb` says `license: "OFL"` for all four families. Tools: fontTools 4.68.0 and brotli 1.2.1 in a scratch
+    venv (Python 3.13) — not in `package.json`.
+  - **Ranges:** U+0000–00FF, U+0100–024F (§9-2(b)), U+2000–206F, U+20AC, U+2122, U+2212, plus 43 chrome glyphs
+    enumerated from production string literals (TypeScript scanner, comments excluded), the CSS `content` escapes
+    (☰ U+2630, ▸ U+25B8) and `design/mockup.html`'s chrome copy (emoji and VS16 excluded); Sometype adds U+2500–257F.
+    Each subset's cmap = (source cmap ∩ ranges), checked with fontTools — nothing outside, nothing dropped. Bricolage:
+    343 codepoints (its source lacks 224 of the Latin floor, e.g. U+00AD, U+0108–0109, and every chrome symbol but
+    ← ↑ → ∑ ∫). Sometype: 355 (lacks 202 of the floor; has Δ ↗ ∑ ∫ and box drawing). A missing glyph falls back per
+    character to the next face in D-3's stack. Features: pyftsubset's defaults (`kern`, `locl`; Sometype's `calt`) plus
+    `tnum` (`readerCss.ts` `.peekover-diff-picker__size` sets `tabular-nums`); neither source has `liga`.
+  - **Outputs:** `bricolage-latin-{400,600,700}-normal.woff2` 24,240 / 24,368 / 24,208 B;
+    `sometype-mono-latin-{400,500}-normal.woff2` 10,340 / 10,680 B. `SOURCE_DATE_EPOCH=1793577600` fixes `head.modified`;
+    two runs, and a third from the README's own commands, were byte-identical. Names updated per instance
+    (`--update-name-table`). Hashes and commands: `assets/fonts/README.md`.
+  - **Literata: reused, not re-subset** (D-2: "keeps its existing path"). The four files are byte-identical to
+    `@fontsource/literata@5.3.0`'s `files/literata-latin-*.woff2` (checked over registry.npmjs.org) — the provenance the
+    repo never recorded. Coverage diff: none (files unchanged). Flag: their 230-codepoint cover has only 4 Latin
+    Extended codepoints, below §9-2(b)'s floor; tasks.md applies that floor to D-2's two new faces, and Literata is
+    inlined in the content script, whose md5 this task must keep — a later question, not changed here. **STIX Two
+    Math: not re-subset**; only its licence ships.
+  - **Licences:** `public/licenses/{literata,stix-two-math,bricolage-grotesque,sometype-mono}.txt` — the pinned commit's
+    `OFL.txt` files, byte-for-byte (SHA-256 equal). Root `NOTICE` credits each family (name, copyright line, licence,
+    source, licence file). README gains one credit line; `assets/fonts/OFL.txt` gains the two copyright lines.
+  - **WXT's public directory (F-5):** wxt.dev does not resolve in this session; verified instead in the installed WXT
+    0.20.27 (`resolve-config.mjs`: `publicDir = path.resolve(root, publicDir ?? "public")`; `copyPublicDirectory()` at
+    build) and in the output: both engines' `.output` and both zips contain `licenses/*.txt`, byte-identical to
+    `public/licenses/`.
+  - **The test:** `tests/fontLicences.test.ts` (4 cases): every font file in `assets/fonts/` maps to a family; every
+    font file production code imports lives there; each bundled family has `public/licenses/<family>.txt` with "SIL
+    OPEN FONT LICENSE Version 1.1" and its copyright line; NOTICE has the family's heading line, copyright line and
+    licence path. Red at HEAD on Literata and STIX (F-8); red on all four once the new files landed; green after.
+    Ablations, each red naming the family or file: a licence file removed; the NOTICE heading changed (the first version
+    of the check stayed green here because the name also sits in the copyright line — tightened to a heading line); a
+    NOTICE copyright line changed; an unknown `.woff2` added.
+  - **Necessary ripple:** `docs/store/claims.md` row 292 — `tests/truthPins.test.ts` requires a ledger row for every
+    README sentence, so the credit line needs one.
+  - **Bytes (clean two-engine build against a same-session `main` build, every file md5-diffed):** the only changed
+    shipped files are the four licence texts, on both engines; `.output` 5,831,488 → 5,849,199 B (Cr) and 5,831,604 →
+    5,849,315 B (Fx), +17,711 B = the licence texts exactly; zips 1,851,337 / 1,851,396 B (+8,458 each). Content script
+    344,342 B, md5 `12cdc950…` / `bf0108c8…` — identical; app chunk 532,530 B — identical; no `.woff2` emitted for the
+    new faces (nothing imports them). Manifests 654 / 770 B, `permissions: []`.
+  - **Verify:** lint 0 · unit 1455 / 1456 (only `pipeline.perf`, 110–135 ms against 100: red in three full runs today,
+    including one with the new test file removed; green twice alone — the listed flake, production code unchanged) ·
+    browser suite not run: no file in `src/` or `entrypoints/` changed and both bundles are md5-identical · golden
+    EMPTY · NUL check 0 / 0 on every changed text file, the control 1 / 1.
+  - **Hosts refused along the way (none was needed for sourcing):** wxt.dev (does not resolve), api.github.com (403),
+    cdn.jsdelivr.net (403). Not routed around; the facts came from the installed package, `git ls-remote` and the npm
+    registry.
+  Revisit-when: 2.4 (the faces are imported and emitted; NOTICE's "Use" lines become true of the package), 2.5 (static
+  vs variable Bricolage; the `opsz` difference above), a later ruling on Literata's Latin Extended cover.
+
 - **2026-11-01 · M13 RULING — the Peekover code theme (HUMAN; 2.2's batched question).** (1) The DEFAULT code theme
   becomes a Peekover code theme: a light/dark pair built from design tokens that follows the page theme, as
   `design/mockup.html` shows. Every token colour reaches 4.5:1 on `--code-bg` in light AND dark; where a design token
