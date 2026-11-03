@@ -35,6 +35,7 @@ import { DEAD_READ_NOTE, CHANGED_AGAIN_NOTE } from '../../src/watch/watchControl
 const C = TOOLBAR_CLASS;
 const DOC_A = '# Alpha\n\nThe first document.\n\n## Second\n\nMore.\n';
 const DOC_B = '# Beta\n\nThe second document.\n';
+const LONG_NAME = 'architecture-decisions-and-the-long-running-migration-notes.md';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function until<T>(fn: () => T | null | undefined | false, tries = 200): Promise<T> {
@@ -57,6 +58,8 @@ function source(persistable = true): FolderSource {
       { path: 'alpha.md', name: 'alpha.md', read: async () => DOC_A },
       { path: 'beta.md', name: 'beta.md', read: async () => DOC_B },
       { path: 'CLAUDE.md', name: 'CLAUDE.md', read: async () => DOC_B },
+      // 4.4 — a name long enough that the compact toolbar must truncate it.
+      { path: LONG_NAME, name: LONG_NAME, read: async () => DOC_A },
     ],
   };
 }
@@ -128,13 +131,20 @@ describe('4.1 — the toolbar skeleton on the app page', () => {
     expect(header.firstElementChild, 'the toolbar is the header\'s first part').toBe(toolbar());
     // KEEPS: the skeleton's parts in the mock's order (4.1's own test). RE-SPELLED at 4.2: the badge,
     // Watch and Compare slots sit between the file name and Read / Raw.
+    // RE-SPELLED again at 4.4 (C362): the Files slot leads (empty until 4.8), and the row break, the
+    // app controls' group, "⋯" and its menu follow Read · Edit · Raw.
     expect([...toolbar().children].map((el) => el.className.split(' ')[0])).toEqual([
+      `${C}__files`,
       `${C}__brand`,
       `${C}__file`,
       `${C}__badge`,
       `${C}__watch`,
       `${C}__compare`,
+      `${C}__break`,
       `${C}__seg`,
+      `${C}__app`,
+      `${C}__more`,
+      `${C}__menu`,
     ]);
     expect(toolbar().querySelector(`.${C}__brand`)?.textContent).toBe('Peekover');
     expect(toolbar().querySelector(`.${C}__mark`)).not.toBeNull();
@@ -246,7 +256,10 @@ describe('4.1 — the header panels stay inside the window, their rows reachable
       const toggle = container.querySelector<HTMLButtonElement>(p.toggle)!;
       expect(toggle, `${p.name}: its toggle is in the header`).not.toBeNull();
       await until(() => !toggle.disabled);
-      toggle.click();
+      // KEEPS: each panel, opened the way a user opens it, lies inside the window with every row
+      // reachable (4.1's own test; C364). RE-SPELLED at 4.4: at ≤ 863 px the four app controls are behind
+      // "⋯", so the panel is opened from its menu item there; Compare stays in the toolbar.
+      await openFromToolbar(toggle, p.name);
       const panel = await until(() => {
         const el = container.querySelector<HTMLElement>(p.panel);
         return el && el.getBoundingClientRect().height > 0 && container.querySelectorAll(p.rows).length > 0 ? el : null;
@@ -534,5 +547,218 @@ describe('4.3 — "Editor unavailable" on the Edit segment (ruling E)', () => {
     expect(loader).toHaveBeenCalledTimes(2);
     expect(edit.textContent, 'the segment says Edit again').toBe('Edit');
     expect(pressed()).toEqual(['edit']);
+  });
+});
+
+// ── 4.4 — the app controls in the toolbar; one theme control; the compact toolbar (D-5; ruling C) ──
+//
+// Above 863 px the four app controls — Theme, Code theme, Stored data, Export — sit in the toolbar's
+// right-hand group, in the mock's order. At ≤ 863 px (the approved compact breakpoint) they are behind
+// "⋯": the wordmark is hidden, the file name truncates, the badge reads "Agent file", and the toolbar
+// keeps two rows in every state — row 1 the mark, the file name, the badge and "⋯"; row 2 Watch,
+// Compare and Read · Edit · Raw. The menu's items open the same panels the buttons do.
+
+const appGroup = () => toolbar().querySelector<HTMLElement>(`.${C}__app`)!;
+const more = () => toolbar().querySelector<HTMLButtonElement>(`.${C}__more`)!;
+const menu = () => toolbar().querySelector<HTMLElement>(`.${C}__menu`)!;
+const menuItems = () => [...menu().querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+const shown = (el: Element | null | undefined): boolean => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden';
+};
+
+/** Open an app control's panel as a user would at this width: its own button, or its "⋯" item. */
+async function openFromToolbar(toggle: HTMLElement, name: string): Promise<void> {
+  if (shown(toggle)) {
+    toggle.click();
+    return;
+  }
+  expect(shown(more()), `${name}: hidden, so "⋯" must be offered`).toBe(true);
+  more().click();
+  const item = await until(() => menuItems().find((b) => b.dataset.control === toggle.dataset.toolbarControl));
+  item.click();
+}
+
+/** The toolbar's laid-out items and the distinct rows they sit on (tops within 6 px are one row). */
+function rowsOf(): { rows: number; tops: number[] } {
+  const items = [
+    ...toolbar().children,
+    ...toolbar().querySelectorAll(`.${C}__badge > *, .${C}__watch > *, .${C}__compare > button, .${C}__app > *`),
+  ].filter((el) => !['contents'].includes(getComputedStyle(el).display) && shown(el));
+  const tops: number[] = [];
+  for (const el of items) {
+    const top = el.getBoundingClientRect().top;
+    if (!tops.some((t) => Math.abs(t - top) < 6)) tops.push(top);
+  }
+  return { rows: tops.length, tops: tops.sort((a, b) => a - b).map(Math.round) };
+}
+
+describe('4.4 — the app controls in the toolbar, above 863 px', () => {
+  it.each([1080, 1440])('at %i px they sit in the right-hand group in the mock\'s order, no "⋯"; keyboard order runs left to right', async (width) => {
+    await page.viewport(width, 900);
+    await openShell();
+    await open('alpha.md');
+    await document.fonts.ready;
+    const labels = [...appGroup().querySelectorAll<HTMLElement>('button')].filter(shown).map((b) => b.textContent ?? '');
+    expect(labels.map((l) => l.replace(/:.*/, ':'))).toEqual(['Theme:', 'Code theme:', 'Stored data', 'Export']);
+    expect(shown(more()), 'no "⋯" above the compact breakpoint').toBe(false);
+    expect(container.querySelector('.peekover-app__header')!.contains(appGroup())).toBe(true);
+    expect(toolbar().contains(container.querySelector('.peekover-app__theme-toggle'))).toBe(true);
+    const tb = toolbar().getBoundingClientRect();
+    expect(Math.abs(appGroup().getBoundingClientRect().right - tb.right), 'the group ends at the toolbar\'s right edge').toBeLessThan(2);
+
+    // Tab order = reading order: the focusable controls, in DOM order, run left to right, row by row.
+    const focusable = [...toolbar().querySelectorAll<HTMLElement>('button')].filter((b) => shown(b) && !(b as HTMLButtonElement).disabled);
+    const reading = [...focusable].sort((a, b) => {
+      const ra = a.getBoundingClientRect();
+      const rb = b.getBoundingClientRect();
+      return Math.abs(ra.top - rb.top) < 6 ? ra.left - rb.left : ra.top - rb.top;
+    });
+    expect(focusable.map((b) => b.textContent)).toEqual(reading.map((b) => b.textContent));
+  });
+
+  it('the one theme control themes the shell and the reader together, on computed tokens', async () => {
+    await page.viewport(1280, 900);
+    await openShell();
+    const host = await open('alpha.md');
+    const theme = toolbar().querySelector<HTMLButtonElement>('.peekover-app__theme-toggle')!;
+    const shell = container.querySelector<HTMLElement>('.peekover-app')!;
+    const paper = (el: Element) => getComputedStyle(el).getPropertyValue('--paper').trim();
+    for (let i = 0; i < 3 && theme.textContent !== 'Theme: Dark'; i += 1) theme.click();
+    expect(theme.textContent).toBe('Theme: Dark');
+    await sleep(100);
+    const reader = getComputedStyle(host.shadowRoot!.querySelector('.peekover-reader')!).getPropertyValue('--paper').trim();
+    expect(reader, 'the reader follows the toolbar\'s theme control').toBe(paper(shell));
+    theme.click(); // Dark → Auto
+    for (let i = 0; i < 3 && theme.textContent !== 'Theme: Light'; i += 1) theme.click();
+    await sleep(100);
+    const light = getComputedStyle(host.shadowRoot!.querySelector('.peekover-reader')!).getPropertyValue('--paper').trim();
+    expect(light).toBe(paper(shell));
+    expect(light, 'and the two picks really differ').not.toBe(reader);
+  });
+});
+
+describe('4.4 — the compact toolbar at ≤ 863 px ("⋯"; two rows in every state)', () => {
+  const STATES: { name: string; file: string; arrange?: (host: HTMLElement) => Promise<void> }[] = [
+    { name: 'reading', file: 'alpha.md' },
+    { name: 'an agent file (the widest)', file: 'CLAUDE.md' },
+    { name: 'a long file name', file: LONG_NAME },
+    { name: 'watching', file: 'CLAUDE.md', arrange: async () => { tbWatch().click(); await until(() => tbWatch().getAttribute('aria-pressed') === 'true'); } },
+    { name: 'editing', file: 'CLAUDE.md', arrange: async (host) => editViaSegment(host) },
+    { name: 'the Compare picker open', file: 'CLAUDE.md', arrange: async () => { tbCompare().click(); await until(() => toolbar().querySelector('.peekover-diff-picker:not([hidden])')); } },
+    {
+      name: 'a comparison on screen',
+      file: 'CLAUDE.md',
+      arrange: async (host) => {
+        tbCompare().click();
+        (await until(() => toolbar().querySelector<HTMLButtonElement>('.peekover-diff-picker [data-target-kind="file"]'))).click();
+        await until(() => host.getAttribute(DIFF_HOST_ATTR) === 'active' && tbCompare().textContent === 'Close comparison');
+      },
+    },
+  ];
+  const cases = [414, 860, 863].flatMap((w) => STATES.map((s) => [w, s.name, s] as const));
+
+  it.each(cases)('at %i px, %s: two rows; the word hidden, the app controls behind "⋯"', async (width, _name, state) => {
+    await page.viewport(width, 900);
+    await openShell();
+    const host = await open(state.file);
+    await state.arrange?.(host);
+    await document.fonts.ready;
+    await sleep(60);
+    const { rows, tops } = rowsOf();
+    expect(rows, `rows at ${tops.join(', ')}`).toBe(2);
+    expect(shown(more()), '"⋯" is offered').toBe(true);
+    expect(shown(toolbar().querySelector(`.${C}__word`)), 'no wordmark beside the mark').toBe(false);
+    for (const sel of ['.peekover-app__theme-toggle', '.peekover-code-theme-toggle', '.peekover-app__storage-toggle', '.peekover-app__export-toggle']) {
+      expect(shown(container.querySelector(sel)), `${sel} is behind "⋯"`).toBe(false);
+    }
+    // The mock's order on each row, left to right: row 1 the mark, the file name, the badge, "⋯";
+    // row 2 Watch, Compare, Read · Edit · Raw.
+    const rowOf = (el: Element): number => (el.getBoundingClientRect().top < (tops[0] + tops[1]) / 2 ? 1 : 2);
+    const seq = [
+      ['mark', toolbar().querySelector(`.${C}__brand`)],
+      ['file', toolbar().querySelector(`.${C}__file`)],
+      ['badge', toolbar().querySelector('.peekover-agent-badge')],
+      ['⋯', more()],
+      ['Watch', tbWatch()],
+      ['Compare', tbCompare()],
+      ['Read · Edit · Raw', toolbar().querySelector(`.${C}__seg`)],
+    ].filter(([, el]) => shown(el as Element)) as [string, Element][];
+    const placed = seq.map(([n, el]) => `${rowOf(el)}:${n}`);
+    const byScreen = [...seq]
+      .sort(([, a], [, b]) => rowOf(a) - rowOf(b) || a.getBoundingClientRect().left - b.getBoundingClientRect().left)
+      .map(([n, el]) => `${rowOf(el)}:${n}`);
+    expect(byScreen, 'each row, left to right, in the mock\'s order').toEqual(placed);
+    expect(placed.filter((s) => s.startsWith('1:')).map((s) => s.slice(2)), 'row 1').toEqual(
+      ['mark', 'file', 'badge', '⋯'].filter((n) => seq.some(([m]) => m === n)),
+    );
+    const r = toolbar().getBoundingClientRect();
+    expect(r.right <= innerWidth + 0.5 && r.left >= -0.5, 'inside the window').toBe(true);
+    if (state.file === 'CLAUDE.md') {
+      const badge = toolbar().querySelector<HTMLElement>('.peekover-agent-badge')!;
+      expect(badge.innerText.trim(), 'the badge reads "Agent file" — the name is beside it').toBe('Agent file');
+    }
+    if (state.file === LONG_NAME) {
+      const file = toolbar().querySelector<HTMLElement>(`.${C}__file`)!;
+      expect(file.scrollWidth, 'the file name truncates').toBeGreaterThan(file.clientWidth);
+      expect(getComputedStyle(file).textOverflow).toBe('ellipsis');
+    }
+  });
+
+  it.each([414, 860])('at %i px "⋯" is a menu button: Enter opens it on the first item; arrows, Home / End and Tab move; Escape closes to "⋯"', async (width) => {
+    await page.viewport(width, 900);
+    await openShell();
+    await open('alpha.md');
+    expect(more().getAttribute('aria-haspopup')).toBe('menu');
+    expect(more().getAttribute('aria-expanded')).toBe('false');
+    more().focus();
+    await userEvent.keyboard('{Enter}');
+    await until(() => shown(menu()));
+    expect(more().getAttribute('aria-expanded')).toBe('true');
+    expect(menu().getAttribute('role')).toBe('menu');
+    const items = menuItems();
+    expect(items.map((b) => (b.textContent ?? '').replace(/:.*/, ':'))).toEqual(['Theme:', 'Code theme:', 'Stored data', 'Export']);
+    expect(document.activeElement, 'focus moves to the first item').toBe(items[0]);
+    await userEvent.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(items[1]);
+    await userEvent.keyboard('{End}');
+    expect(document.activeElement).toBe(items[3]);
+    await userEvent.keyboard('{ArrowDown}');
+    expect(document.activeElement, 'ArrowDown wraps').toBe(items[0]);
+    await userEvent.keyboard('{ArrowUp}');
+    expect(document.activeElement, 'ArrowUp wraps').toBe(items[3]);
+    await userEvent.keyboard('{Home}');
+    expect(document.activeElement).toBe(items[0]);
+    await userEvent.tab();
+    expect(document.activeElement, 'Tab moves through it too').toBe(items[1]);
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(items[0]);
+    await userEvent.keyboard('{Escape}');
+    await until(() => !shown(menu()));
+    expect(more().getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement, 'Escape returns focus to "⋯"').toBe(more());
+
+    // Space opens it too; a click outside closes it.
+    await userEvent.keyboard(' ');
+    await until(() => shown(menu()));
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    await until(() => !shown(menu()));
+  });
+
+  it('a menu item opens the same panel its button does — Export, inside the window — and the menu closes; closing Export returns focus to "⋯"', async () => {
+    await page.viewport(414, 900);
+    await openShell();
+    await open('alpha.md');
+    more().click();
+    const exportItem = await until(() => menuItems().find((b) => b.textContent === 'Export'));
+    exportItem.click();
+    const panel = await until(() => container.querySelector<HTMLElement>('.peekover-app__export-slot:not(:empty)'));
+    expect(shown(menu()), 'the menu closed').toBe(false);
+    const r = panel.getBoundingClientRect();
+    expect(r.left >= -0.5 && r.right <= innerWidth + 0.5, `panel [${Math.round(r.left)}, ${Math.round(r.right)}] inside the window`).toBe(true);
+    await userEvent.keyboard('{Escape}');
+    await until(() => !container.querySelector('.peekover-app__export-slot:not(:empty)'));
+    expect(document.activeElement, 'its button is behind "⋯", so focus returns there').toBe(more());
   });
 });

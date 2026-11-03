@@ -716,6 +716,9 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
     document.body.appendChild(container);
   });
 
+  // C012: UNCHANGED at 013 task 4.4 — the census expected this helper to move; it did not break. The
+  // Stored data toggle is still in the header (now inside the toolbar), and jsdom has no layout, so a
+  // click reaches it at any width. Where it sits at ≤ 863 px is toolbar.browser.test.ts's.
   function openPanel(): void {
     container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
   }
@@ -725,6 +728,9 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
     const toggle = container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle');
     expect(toggle).not.toBeNull();
     expect(toggle!.textContent).toContain('Stored data');
+    // KEEPS: discoverable before any folder is opened (C014). RE-SPELLED at 4.4: it is the toolbar's
+    // app control now — at ≤ 863 px behind "⋯", which a real engine shows (toolbar.browser.test.ts).
+    expect(toggle!.closest('.peekover-toolbar__app')).not.toBeNull();
     // No folder open, no panel yet — but the affordance is present.
     expect(container.querySelector('.peekover-storage')).toBeNull();
   });
@@ -928,6 +934,9 @@ describe('appShell (task 1.6 — the "erase snapshots" control)', () => {
     document.body.appendChild(container);
   });
 
+  // C008: UNCHANGED at 013 task 4.4 — the census expected this helper to move; it did not break. The
+  // Stored data toggle is still in the header (now inside the toolbar), and jsdom has no layout, so a
+  // click reaches it at any width. Where it sits at ≤ 863 px is toolbar.browser.test.ts's.
   function openPanel(): void {
     container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
   }
@@ -1108,6 +1117,9 @@ describe('appShell (task 4.3 — the "Clear diagram cache" control)', () => {
     document.body.appendChild(container);
   });
 
+  // C010: UNCHANGED at 013 task 4.4 — the census expected this helper to move; it did not break. The
+  // Stored data toggle is still in the header (now inside the toolbar), and jsdom has no layout, so a
+  // click reaches it at any width. Where it sits at ≤ 863 px is toolbar.browser.test.ts's.
   function openPanel(): void {
     container.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
   }

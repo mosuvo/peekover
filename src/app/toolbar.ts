@@ -38,6 +38,22 @@
 // an agent file's header grew 20 px and moved the reading column (census C061, found by the 4.2
 // full suite).
 //
+// 4.4 — THE APP CONTROLS AND THE COMPACT TOOLBAR (D-5; the 4.0 census ruling C; the 3.1 mock and its
+// addendum). The shell hands its four app controls — Theme (the one theme control: the same
+// `buildThemeControl` the reader's pill uses, one `setThemeSetting` broadcast), Code theme, Stored
+// data, Export — to `addAppControl`, in the mock's order; they sit in the right-hand group. At
+// ≤ 863 px (the approved compact breakpoint) they hide behind "⋯", a menu button whose items
+// activate the SAME buttons, so each panel opens exactly as it does at wide widths (and, at that
+// width, drops from the header — the shell's ≤ 863 rule). Compact: no wordmark beside the mark, the
+// file name truncating, the badge as "Agent file" (the name is beside it), and two fixed rows —
+// row 1 the Files slot (4.8), the mark, the file name, the badge, "⋯"; row 2 Watch, Compare,
+// Read · Edit · Raw. The menu's keyboard: Enter / Space on "⋯" open it on its first item; arrows,
+// Home / End and Tab / Shift+Tab move through it (wrapping); Escape closes it and returns focus to
+// "⋯"; a press outside closes it. Compact, an open comparison's Compare reads "Close" on screen
+// (its name stays "Close comparison"): the full label cannot share row 2 with Watch and Read · Edit ·
+// Raw at 414 px (measured at 4.4: 413 px of items in 382), and the mock's own Compare state keeps the
+// short label.
+//
 // THE MARK is drawn here (two lids that blink, only when the user allows motion), from tokens:
 // `--hl` for the document, `--logo-ink` / `--logo-eye` for the fixed ink and eye white (AGENTS.md:
 // the logo's internals use the FIXED ink in every theme; tokens.css carries both values).
@@ -57,6 +73,9 @@ import { buildAgentBadge } from '../render/agentBadge';
 export const TOOLBAR_CLASS = 'peekover-toolbar';
 const C = TOOLBAR_CLASS;
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** The compact breakpoint (approved at 3.1): at this width and below, the compact toolbar. */
+export const COMPACT_MAX = 863;
 
 /** The segment's views, in the mock's order. */
 const SEGMENTS: ReadonlyArray<readonly [ReaderMode, string]> = [
@@ -112,6 +131,39 @@ export function toolbarCss(shell: string): string {
   border-radius:7px; padding:7px 8px; cursor:pointer}
 .${C} .peekover-diff-picker__item:hover{background:var(--accent-soft)}
 .${C} .peekover-diff-picker__size,.${C} .peekover-diff-picker__kind{color:var(--muted); font-variant-numeric:tabular-nums}
+.${C}{flex:1 1 auto}
+.${C}__files[hidden],.${C}__break,.${C}__more,.${C}__menu[hidden]{display:none}
+.${C}__app{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .65rem; margin-left:auto; min-width:0}
+.${C}__app [data-toolbar-control]{margin:0; font:600 12.5px/1 var(--sans); letter-spacing:0; color:var(--muted); background:var(--panel);
+  border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap; cursor:pointer}
+.${C}__app [data-toolbar-control][aria-expanded="true"]{color:var(--ink); border-color:var(--ink)}
+.${C}__app [data-toolbar-control]:disabled{cursor:default}
+.${C}__menu{position:absolute; top:calc(100% + 6px); right:.75rem; z-index:7; min-width:220px; box-sizing:border-box;
+  display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--paper); border:1px solid var(--line);
+  border-radius:12px; box-shadow:var(--shadow)}
+.${C}__menu [role="menuitem"]{font:600 13px/1.2 var(--sans); color:var(--ink); background:none; border:0; border-radius:7px;
+  padding:9px 10px; text-align:left; cursor:pointer}
+.${C}__menu [role="menuitem"]:hover,.${C}__menu [role="menuitem"]:focus-visible{background:var(--accent-soft)}
+.${C}__menu [role="menuitem"]:disabled{color:var(--muted); cursor:default; background:none}
+@media (max-width:${COMPACT_MAX}px){
+  .${shell}__header{padding:.5rem .625rem}
+  .${C}{gap:8px 6px}
+  .${C}__word,.${C} .${C}__bname,.${C}__app [data-toolbar-control]{display:none}
+  .${C}__app,.${C}__app > *{display:contents}
+  .${C}__files,.${C}__brand,.${C}__file,.${C}__badge > *{order:1}
+  .${C}__file{min-width:0; max-width:min(240px, calc(100% - 180px))}
+  .${C}__more{display:inline-flex; order:2; margin-left:auto; font:600 15px/1 var(--sans); letter-spacing:.05em;
+    color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:5px 11px; cursor:pointer}
+  .${C}__more[aria-expanded="true"]{color:var(--ink); border-color:var(--ink)}
+  .${C}__break{display:block; order:3; flex-basis:100%; height:0}
+  .${C}__watch > *,.${C}__compare,.${C}__seg{order:4}
+  .${C}__compare{position:static}
+  .${C}__seg button{padding:7px 9px}
+  .${C} .${WATCH_CONTROL_CLASS}{padding:7px 9px}
+  .${C} .${DIFF_AFFORDANCE_CLASS}{padding:7px 9px}
+  .${C} .${DIFF_AFFORDANCE_CLASS}[data-diff-open="true"]{font-size:0}
+  .${C} .${DIFF_AFFORDANCE_CLASS}[data-diff-open="true"]::after{content:"Close"; font-size:12.5px}
+}
 .${shell}__notices{flex:none}
 .${shell}__notices > *,.${shell}__notices > .${C}__status > *{margin:0; padding:.55rem 1rem; font:400 13px/1.45 var(--sans); color:var(--ink);
   background:var(--panel); border-bottom:1px solid var(--line)}
@@ -147,6 +199,13 @@ function buildMark(doc: Document): SVGSVGElement {
 /** What the shell holds. */
 export interface ToolbarController {
   readonly element: HTMLElement;
+  /** Add one app control to the right-hand group, in the mock's order: `el` is what is placed (the
+   *  button, or the wrapper that holds it and its panel) and `trigger` the button the "⋯" menu's
+   *  item activates. */
+  addAppControl(el: HTMLElement, trigger: HTMLButtonElement): void;
+  /** Return focus to an app control's trigger as its panel closes — or to "⋯" when the trigger is
+   *  behind it (the compact toolbar). */
+  focusTrigger(trigger: HTMLElement): void;
   /** The Edit segment — where focus goes back after the unsaved-changes question is escaped. */
   readonly editSegment: HTMLButtonElement;
   /** The open document's name and its reader host (both null when none is open). Re-binds the
@@ -211,7 +270,96 @@ export function createToolbar(doc: Document): ToolbarController {
   const compareSlot = doc.createElement('span');
   compareSlot.className = `${C}__compare`;
 
-  element.append(brand, file, badgeSlot, watchSlot, compareSlot, seg);
+  // 4.4 — the Files slot (empty and hidden until 4.8's Files overlay), the compact toolbar's row
+  // break, and the right-hand group with "⋯" and its menu.
+  const filesSlot = doc.createElement('span');
+  filesSlot.className = `${C}__files`;
+  filesSlot.hidden = true;
+  const rowBreak = doc.createElement('span');
+  rowBreak.className = `${C}__break`;
+  rowBreak.setAttribute('aria-hidden', 'true');
+  const app = doc.createElement('div');
+  app.className = `${C}__app`;
+  const more = doc.createElement('button');
+  more.type = 'button';
+  more.className = `${C}__more`;
+  more.textContent = '⋯';
+  more.setAttribute('aria-haspopup', 'menu');
+  more.setAttribute('aria-expanded', 'false');
+  more.setAttribute('aria-label', 'More: theme, code theme, stored data, export');
+  const menu = doc.createElement('div');
+  menu.className = `${C}__menu`;
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'More');
+  menu.hidden = true;
+
+  element.append(filesSlot, brand, file, badgeSlot, watchSlot, compareSlot, rowBreak, seg, app, more, menu);
+
+  const triggers: HTMLButtonElement[] = [];
+  function addAppControl(el: HTMLElement, trigger: HTMLButtonElement): void {
+    trigger.dataset.toolbarControl = String(triggers.length);
+    triggers.push(trigger);
+    app.append(el);
+  }
+  const visible = (el: HTMLElement): boolean => el.getClientRects().length > 0;
+  const items = (): HTMLButtonElement[] =>
+    [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].filter((b) => !b.disabled);
+
+  function closeMenu(returnFocus: boolean): void {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    menu.replaceChildren();
+    more.setAttribute('aria-expanded', 'false');
+    if (returnFocus) more.focus();
+  }
+  function openMenu(): void {
+    menu.replaceChildren(
+      ...triggers.map((trigger) => {
+        const item = doc.createElement('button');
+        item.type = 'button';
+        item.setAttribute('role', 'menuitem');
+        item.tabIndex = -1;
+        item.dataset.control = trigger.dataset.toolbarControl;
+        item.textContent = trigger.textContent;
+        item.disabled = trigger.disabled;
+        item.addEventListener('click', () => {
+          closeMenu(false);
+          trigger.click(); // the same button, so the same panel, opened as at wide widths
+        });
+        return item;
+      }),
+    );
+    menu.hidden = false;
+    more.setAttribute('aria-expanded', 'true');
+    items()[0]?.focus();
+  }
+  more.addEventListener('click', () => (menu.hidden ? openMenu() : closeMenu(true)));
+  menu.addEventListener('keydown', (event) => {
+    const list = items();
+    const at = list.indexOf(doc.activeElement as HTMLButtonElement);
+    const go = (i: number): void => {
+      event.preventDefault();
+      list[(i + list.length) % list.length]?.focus();
+    };
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeMenu(true);
+    } else if (event.key === 'ArrowDown' || (event.key === 'Tab' && !event.shiftKey)) go(at + 1);
+    else if (event.key === 'ArrowUp' || (event.key === 'Tab' && event.shiftKey)) go(at - 1);
+    else if (event.key === 'Home') go(0);
+    else if (event.key === 'End') go(list.length - 1);
+  });
+  doc.addEventListener('pointerdown', (event) => {
+    const target = event.target as Node | null;
+    if (!menu.hidden && target && !menu.contains(target) && !more.contains(target)) closeMenu(false);
+  });
+
+  function focusTrigger(trigger: HTMLElement): void {
+    if (!trigger.isConnected) return;
+    if (visible(trigger)) trigger.focus();
+    else if (visible(more)) more.focus();
+  }
 
   // The notice area: the watch note (always built; it hides itself with nothing to say) and,
   // per document, Compare's status line.
@@ -270,7 +418,19 @@ export function createToolbar(doc: Document): ToolbarController {
     observer.disconnect();
     host = next;
     editState = 'rest';
-    badgeSlot.replaceChildren(...(host ? buildAgentBadge() : []));
+    const badge = host ? buildAgentBadge() : [];
+    // The compact toolbar shows "Agent file" alone (the 3.1 addendum): the name after the
+    // separator is wrapped so it can hide there. The text is unchanged.
+    for (const node of badge) {
+      const [label, ...rest] = (node.textContent ?? '').split(' · ');
+      if (!rest.length) continue;
+      const name = doc.createElement('span');
+      name.className = `${C}__bname`;
+      name.textContent = ` · ${rest.join(' · ')}`;
+      node.textContent = label;
+      node.appendChild(name);
+    }
+    badgeSlot.replaceChildren(...badge);
     const watch = host ? buildWatchControl(host) : null;
     watchSlot.replaceChildren(...(watch ? [watch] : []));
     const [pill, picker, status] = host ? buildDiffChrome(host) : [];
@@ -284,5 +444,5 @@ export function createToolbar(doc: Document): ToolbarController {
   }
 
   sync();
-  return { element, editSegment: buttons[1], setDocument, notices };
+  return { element, editSegment: buttons[1], setDocument, notices, addAppControl, focusTrigger };
 }

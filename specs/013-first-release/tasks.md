@@ -529,7 +529,7 @@ the app page shows some controls twice — unreleased, stated.*
       until 4.5 (deviation). Content-script md5 identical; app chunk +44 B (D-6 −164, an in-task Export-panel fix at
       1080 px +208). Census: 99 rows (89 / 7 / 3), C165 retired in part (deviation), C357–C361 discovered.
 
-- [ ] **4.4 App-level controls: one theme control, code theme, Stored data, Export (D-5).** TEST FIRST. Composed per the
+- [x] **4.4 App-level controls: one theme control, code theme, Stored data, Export (D-5).** TEST FIRST. Composed per the
       mock; the header's existing app controls move into the toolbar; ONE theme control (the reader pill's and the
       shell's merged, driving the theme runtime's setter). Pills still render.
       Files: `src/app/toolbar.ts` · `src/app/toolbar.test.ts` · `src/app/appShell.ts` · `src/app/exportControls.ts` /
@@ -541,6 +541,12 @@ the app page shows some controls twice — unreleased, stated.*
       ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **C** — the "⋯" (More) collapse at
       ≤ 863 px belongs HERE. Tests not about the compact toolbar widen their window instead of opening "⋯"; the compact
       toolbar gets its own tests (census: the 47 rows whose first task is 4.4).
+      ★ *Landed 2026-11-03 (`decisions.md`, "M13 TASK 4.4").* The four app controls in the toolbar's right-hand group
+      (the theme control is the same builder and broadcast — shell and reader together, red-first on `--paper`); ≤ 863 px:
+      "⋯" menu (Enter / Space, arrows, Home / End, Tab, Escape → "⋯"), no wordmark, the file name truncating, "Agent file",
+      two rows in every state at 414 / 860 / 863. Both stopgaps (4.1's inset, 4.3's Export flip) removed — re-measured
+      unneeded. Compact "Close" for an open comparison (deviation). C061's app arm moved to 1400 by the human's ruling.
+      Census 47 (43 re-spelled, 1 replaced, 3 unchanged) + C362–C364. Content script md5 identical; app chunk +3,845 B.
 
 - [ ] **4.5 The one-time snapshot notice + its permanent home; the app page drops the pills (D-8, D-5; G-15; F-6).**
       TEST FIRST. The toolbar module renders the capture disclosure once, below the toolbar and never over text, with

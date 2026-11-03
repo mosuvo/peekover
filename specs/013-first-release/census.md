@@ -170,6 +170,18 @@ retired while its function has no other test. Function by function:
   handled: **C357–C360** re-spelled, **C361** retired. Every file these rows name broke at 4.3, as the census predicted (each reached the removed control); no
   unexplained red. C228 (a 4.5 row)
   stays green because the notice's seat rule is kept as `CAPTURE_NOTICE_SEAT_CSS` (see decisions.md "M13 TASK 4.3").
+- **4.4** (2026-11-03): all **47** rows naming 4.4 handled — **re-spelled 43 · replaced 1 · unchanged 3**. Re-spelled by
+  ruling C (the window widened above 863 px, restored to 414 × 896 after each test), each file citing its rows in one
+  `KEEPS:` block: C086, C088, C098, C100–C102, C104, C106, C111, C113–C115, C235–C247, C249, C250, C255–C258, C269–C274,
+  C302, C303, C305–C307; C014 re-spelled in jsdom (the toggle is in the toolbar's app group). Replaced: **C082** (at
+  ≤ 863 px the four app controls are behind "⋯", which must be inside the window; above it, all four). **Unchanged — a
+  finding:** C008, C010, C012 (jsdom; the toggle is still in the header, now inside the toolbar, and a click reaches it at
+  any width) — each helper says so. Only 4 tests per engine actually went red (C082, C241 ×2, C272); the rest stayed green
+  at 414 px by clicking a toggle hidden behind "⋯" — harness drift ruling C exists to end, so all were widened.
+  Discovered: C362–C364 re-spelled. **And C061 (a 4.5 row) moved up:** the full suite went red on its app arm at 1280
+  (both engines; h1 168 vs 132) — the toolbar-wrap risk the row names: an agent file's toolbar is a few px too wide for one
+  row there. HUMAN RULING (2026-11-03): the second row is approved; the app arm is re-spelled to 1400 (`KEEPS:`); the
+  content-script arm keeps 1280 and 1400. No unexplained red.
 
 ### Checking 4.1–4.8 against this census
 
@@ -421,6 +433,9 @@ replaced 1
 | C359 | `toolbar.test.ts` › with no document, Read and Raw are present but disabled and unpressed (DISCOVERED at 4.3) | two buttons, both disabled and unpressed | re-spelled | nothing to act on, nothing offered — Edit joins, disabled too | 4.3 | app |  |
 | C360 | `toolbar.test.ts` › reflects a mode flip it did not make (ruling B) (DISCOVERED at 4.3) | two buttons' pressed / disabled after an outside flip | re-spelled | the flip is reflected — Edit joins, disabled on a host never made editable | 4.3 | app |  |
 | C361 | `toolbar.test.ts` › while editing, Read and Raw are disabled and unpressed (DISCOVERED at 4.3) | Read / Raw disabled in edit; a Raw click leaves the mode at edit | retired | 4.1's interim, ended by ruling E: Read and Raw leave edit through the guard (the 4.3 toolbar tests) | 4.3 | app | Edit leaving |
+| C362 | `toolbar.browser.test.ts` › sits first in the header … (its parts line; DISCOVERED at 4.4) | the toolbar's parts on screen are [brand, file, badge, watch, compare, seg] | re-spelled | the toolbar's parts in the mock's order — the Files slot leads; the row break, the app group, "⋯" and its menu follow | 4.4 | app |  |
+| C363 | `toolbar.test.ts` › composes the mark, the file name and Read / Raw, in that order (DISCOVERED at 4.4) | the toolbar's children are [brand, file, badge, watch, compare, seg] | re-spelled | the same, in jsdom | 4.4 | app |  |
+| C364 | `toolbar.browser.test.ts` › at %i px, %s: Export, Code theme, Stored data and Compare open fully inside the viewport (DISCOVERED at 4.4) | each panel opened by clicking its toggle | re-spelled | each panel, opened the way a user opens it (its "⋯" item at ≤ 863 px), lies inside the window with every row reachable | 4.4 | app | Export; Stored data; Code theme; Compare |
 
 ### `tests/browser/captureDisclosure.browser.test.ts`
 

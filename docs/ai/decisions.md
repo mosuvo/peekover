@@ -1,6 +1,72 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-03 · M13 RULING — C061 at 1280 (HUMAN).** Asked during task 4.4: with the four app controls in the toolbar, an
+  agent file's toolbar at 1280 px is ~0–6 px too wide for one row (a plain file fits), so it wraps to a second row and the
+  reading column drops 36 px — `agentBadge`'s row-10 app arm (census C061) went red there, both engines. **Ruled: accept
+  the wrap** — a second toolbar row for an agent file between the compact breakpoint and ~1290 px is approved behaviour,
+  as at 1080 in the mock; C061's app arm is re-spelled to 1400 (where the toolbar is one row with or without the badge),
+  the content-script arm unchanged. Rejected: tightening spacing to the mock's (~6 px of margin, engine-fragile);
+  dropping the badge's name at wide widths.
+
+- **2026-11-03 · M13 TASK 4.4 — the app controls in the toolbar; one theme control; the compact toolbar at ≤ 863 px with
+  "⋯" (D-5; ruling C; the 3.1 mock and its addendum).** Branch restarted from `main` at `6f679a9` (PR #28's merge, containing
+  `25e779d`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0,
+  `pnpm audit --prod` EXIT 0 on 2026-11-03.
+  - **ADDENDUM — the carried `watchRemount` CI flake (test-only; no test changed).** CI run 52 attempt 1 (`41566237805`,
+    the 4.3 PR, Chromium): "expected 334 to be less than 40" at line 290; 2,064 passed / 1 failed / 59 skipped of 2,124;
+    the re-run passed. Measured on `main` at `6f679a9`, CI font, Chromium: **0 reds in 10 runs of the file alone, 0 in one
+    full-suite-order run** (both engines, 2,073 passed / 0 failed). No failing run to compare, so no cause is claimed and
+    the 40 px tolerance is untouched: **recorded as a CI-only known flake, not reproduced** (progress.md § Carried items 4).
+    **Found on the way, unruled:** the 4.2 PR's CI (run 50, `41476619351`, never re-run) exited 1 on an unhandled
+    rejection — `InvalidStateError … The database connection is closing` from `storeSnapshot` (`snapshots.ts:332`) during
+    `editorSave`'s "R19, WATCHED" test, with all 200 files passing. Carried for the human; not investigated here.
+  - **The app controls (`toolbar.ts`, `appShell.ts`):** Theme, Code theme, Stored data, Export — the same elements as
+    before, handed to the toolbar's right-hand group (`addAppControl`) in the mock's order, styled as the mock's buttons.
+    ONE theme control: it already was the reader pill's builder and `setThemeSetting` broadcast; it now sits in the toolbar.
+    Each panel stays where it was and opens exactly as before. The Stored data slot stays in the header.
+  - **The compact toolbar (≤ 863 px):** "⋯" (`aria-haspopup="menu"`) opens a `role="menu"` of four `menuitem`s that
+    activate the SAME buttons (so the same panels); no wordmark; the file name capped and truncating with "…"; the badge as
+    "Agent file" (the name after the separator is wrapped and hidden — text unchanged); two rows: row 1 the Files slot
+    (an empty hidden span until 4.8), the mark, the file name, the badge, "⋯"; row 2 Watch, Compare, Read · Edit · Raw.
+    Keyboard (the file states no rule, so the WAI-ARIA menu button): Enter / Space open on the first item; ArrowUp / Down,
+    Home / End and Tab / Shift+Tab move, wrapping; Escape closes and returns focus to "⋯"; a press outside closes.
+    Export's close returns focus to its button, or to "⋯" when the button is behind it (`focusTrigger`).
+  - **Deviation:** in the compact toolbar an open comparison's Compare reads **"Close"** on screen (CSS; its name stays
+    "Close comparison", its text unchanged). Measured: row 2 at 414 px held 413 px of items in 382 with the full label;
+    the mock's own Compare state keeps the short label.
+  - **The stopgaps, re-measured — BOTH REMOVED.** 4.3's Export "toward the side with room": removed; the header-panel
+    test stays green at 414 / 1080 / 1440 (Export is always at the right edge now). 4.1's ≤ 863 panel inset: removed; the
+    same test stays green (the triggers' wrappers have no box there, so the header is the containing block and every
+    panel fits). What is still needed is the toolbar's own Compare rule (`position:static` at ≤ 863, moved into the toolbar
+    sheet): without it Compare's picker hangs from its button at x 140 and runs to 440 (both engines).
+  - **Tests (red-first, `toolbar.browser.test.ts`, both engines):** the group's order and no "⋯" above 863 at 1080 / 1440,
+    with tab order = reading order; the theme control themes shell and reader together on computed `--paper` (tasks.md's
+    red-first); two rows with the mock's order on each row in seven states (reading, an agent file, a long name, watching,
+    editing, the picker open, a comparison on screen) at 414 / 860 / 863; the "⋯" keyboard at 414 / 860; a menu item
+    opening Export inside the window, focus back to "⋯". All red on `main`'s code (e.g. "rows at 11, 45, 82: expected 3 to
+    be 2"; no "⋯"; no app group), green after. 4.1's header-panel test re-pointed (opens each panel the way a user would).
+  - **Ablations, each red then restored md5-identical (both engines):** "⋯" not opening → the menu tests time out;
+    Escape not returning focus → "Escape returns focus to ⋯: expected <body> …"; the compact rules short of 863 → red at
+    863 on "⋯ is offered" (an agent file still fits two rows there in the wide layout — no single ablation produces a
+    third row at 863); the slots' order lost → "each row … in the mock's order: expected ['1:badge', '1:mark', …]"; the file
+    name uncapped → "rows at 8, 42, 72, 115: expected 4 to be 2"; Compare's picker anchored at its button → "Compare: panel
+    leaves the 414x900 viewport"; the theme control wired to the shell only → "the reader follows the toolbar's theme
+    control: expected '#FBFBF8' to be '#12141C'".
+  - **Census (47 rows):** re-spelled 43 (ruling C: each of 15 files widened above 863 and restored to 414 × 896 after
+    each test, one `KEEPS:` block citing its rows; C014 in jsdom), replaced 1 (C082), **unchanged 3 — a finding** (C008,
+    C010, C012: jsdom, the toggle still in the header). Only 4 tests per engine went red (C082, C241 ×2, C272); the others
+    stayed green at 414 by clicking toggles hidden behind "⋯" — widened anyway, as ruling C intends. Discovered C362–C364.
+    **C061 (a 4.5 row) went red** in the full suite at 1280 — ruled above.
+  - **Verify:** lint 0 · unit 1489 / 1490 (`pipeline.perf`) · browser, the FULL suite alone, both engines, CI font: **2,127
+    passed / 0 failed / 51 skipped of 2,178** (200 files, 353 s), EXIT 0 — the one red of the first run (C061) ruled and
+    re-spelled; the contrast census green, its pending list unchanged · golden EMPTY · NUL 0 in every changed file.
+  - **Bytes (clean two-engine build):** content script **344,513 B, md5 `b72a093c…` / `c3c4b102…` — identical to 4.3** (the
+    theme control's shared code did not move); app chunk 541,155 → **545,000 B (+3,845: `toolbar.ts` +4,453 — the group,
+    "⋯" and its menu, the compact sheet; `appShell.ts` −608 — both stopgaps out, the controls handed over;** measured with
+    `appShell.ts` alone at HEAD: 545,608); `.output` 5,963,907 / 5,964,023 B; zips 1,958,529 / 1,958,585 B; manifests
+    **833 / 949 B** unchanged, `permissions: []`. G-7 holds.
+
 - **2026-11-02 · M13 TASK 4.3 — Edit in the toolbar; the shadow-root Edit control and `EDIT_CONTROL_CSS` removed (D-6;
   ruling E; gate-1 Q8; the approved 3.1 mock).** Branch restarted from `main` at `6ef8889` (PR #27's merge, containing
   `c80107f`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0,

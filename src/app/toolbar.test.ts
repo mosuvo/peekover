@@ -47,13 +47,20 @@ describe('the toolbar skeleton (4.1)', () => {
     // KEEPS: the toolbar composes the mock's parts in the mock's order (4.1's own test). RE-SPELLED at
     // 4.2: the badge, Watch and Compare slots join between the file name and Read / Raw.
     const parts = [...tb.element.children].map((el) => el.className.split(' ')[0]);
+    // RE-SPELLED again at 4.4 (C363): the Files slot leads (empty until 4.8), and the row break, the
+    // app controls' group, "⋯" and its menu follow Read · Edit · Raw.
     expect(parts).toEqual([
+      `${TOOLBAR_CLASS}__files`,
       `${TOOLBAR_CLASS}__brand`,
       `${TOOLBAR_CLASS}__file`,
       `${TOOLBAR_CLASS}__badge`,
       `${TOOLBAR_CLASS}__watch`,
       `${TOOLBAR_CLASS}__compare`,
+      `${TOOLBAR_CLASS}__break`,
       `${TOOLBAR_CLASS}__seg`,
+      `${TOOLBAR_CLASS}__app`,
+      `${TOOLBAR_CLASS}__more`,
+      `${TOOLBAR_CLASS}__menu`,
     ]);
     // KEEPS: the segment's views in the mock's order (C358). RE-SPELLED at 4.3: Edit joins (D-6).
     expect([...tb.element.querySelectorAll(`.${TOOLBAR_CLASS}__seg button`)].map((b) => b.textContent)).toEqual([

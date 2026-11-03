@@ -14,7 +14,8 @@
 // `settingsSeam.ts`'s own `registerSettingsSink` proves the control's half of the contract (it
 // persists, once, with the chosen theme); the message actually reaching the background is 8.1.
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { page } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import { mount } from '../../src/render/mount';
 import { enhanceCode, resetCodeHostsForTest } from '../../src/render/codeEnhancer';
@@ -33,6 +34,18 @@ import {
   currentSettings,
 } from '../../src/settings/settingsSeam';
 import type { Settings } from '../../src/settings/settings';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C086, C088); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 const WRAPPER_SELECTOR = `div.${CODE_WRAPPER_CLASS}`;
 const DOC = '```javascript\nfunction add(a, b) {\n  return a + b;\n}\n```\n';

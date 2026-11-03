@@ -52,12 +52,24 @@
 // "the count is exactly N" but "doing X changed the count by exactly this much."
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { commands } from 'vitest/browser';
+import { page, commands } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppController, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { currentSettings, resetSettingsSeamForTest, saveSettings } from '../../src/settings/settingsSeam';
 import { EDITOR_STATUS_CLASS, editorSessionFor } from '../../src/render/editorView';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C249, C250); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 /** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
 const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
