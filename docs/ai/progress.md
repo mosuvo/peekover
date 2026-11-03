@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-02 (M13 TASK 4.3 — Edit in the toolbar, the old Edit control removed (ruling E); content script md5 identical to 4.2, app chunk +44 B; next the human merges the 4.3 PR, then task 4.4). Earlier: 2026-11-02 (M13 TASK 4.2 — Watch, Compare and the agent badge in the toolbar; the watch note in the notice area; content script md5 identical to 4.1, app chunk +3,544 B; next the human merges the 4.2 PR, then task 4.3). Earlier: 2026-11-01 (M13 TASK 2.2 CLOSED — the human's ruling: a token-built Peekover code theme, discovered task 5.8 (42 tasks); next the merge, then task 2.3). Earlier: 2026-11-01 (M13 TASK 2.2 — contrast helper and census; G-4, G-5 applied; pending list of one cause awaiting the human's ruling; content script +25 B; next the human's 2.2 ruling, then task 2.3). Earlier: 2026-11-01 (M13 TASK 2.1 — tokens.css the single source, every copy pinned; content script +39 B, app chunk +318 B; next the human merges the 2.1 PR, then task 2.2, the contrast census). Earlier: 2026-11-01 (M13 TASK 1.3 + review addendum — the site says only what ships; 17 dead links resolved; the ledger 291 rows; a go-live step carried for 7.6; no shipped byte; next the human merges the 1.3 PR, then task 2.1, tokens). Earlier: 2026-11-01 (M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger (75 rows, after the review addendum); no shipped byte; next the human merges the 1.2 PR, then task 1.3, the site pass). Earlier: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
+*Updated: 2026-11-03 (M13 TASK 4.4 — the app controls in the toolbar, one theme control, the compact toolbar at ≤ 863 px; both stopgaps removed; the watchRemount CI flake recorded; content script md5 identical, app chunk +3,845 B; next the human merges the 4.4 PR, then task 4.5). Earlier: 2026-11-02 (M13 TASK 4.3 — Edit in the toolbar, the old Edit control removed (ruling E); content script md5 identical to 4.2, app chunk +44 B; next the human merges the 4.3 PR, then task 4.4). Earlier: 2026-11-02 (M13 TASK 4.2 — Watch, Compare and the agent badge in the toolbar; the watch note in the notice area; content script md5 identical to 4.1, app chunk +3,544 B; next the human merges the 4.2 PR, then task 4.3). Earlier: 2026-11-01 (M13 TASK 2.2 CLOSED — the human's ruling: a token-built Peekover code theme, discovered task 5.8 (42 tasks); next the merge, then task 2.3). Earlier: 2026-11-01 (M13 TASK 2.2 — contrast helper and census; G-4, G-5 applied; pending list of one cause awaiting the human's ruling; content script +25 B; next the human's 2.2 ruling, then task 2.3). Earlier: 2026-11-01 (M13 TASK 2.1 — tokens.css the single source, every copy pinned; content script +39 B, app chunk +318 B; next the human merges the 2.1 PR, then task 2.2, the contrast census). Earlier: 2026-11-01 (M13 TASK 1.3 + review addendum — the site says only what ships; 17 dead links resolved; the ledger 291 rows; a go-live step carried for 7.6; no shipped byte; next the human merges the 1.3 PR, then task 2.1, tokens). Earlier: 2026-11-01 (M13 TASK 1.2 — README and SECURITY.md say only what ships; the claims ledger (75 rows, after the review addendum); no shipped byte; next the human merges the 1.2 PR, then task 1.3, the site pass). Earlier: 2026-11-01 (M13 TASK 1.4, second addendum — PR #14's CI: the storage-panel header regression fixed, the OSV SARIF upload gated to a public repository on codeql-action v4, the font-parity finding; app chunk +40 B; next the human re-runs PR #14's CI and merges once green, then task 1.2). Earlier: 2026-11-01 (M13 TASK 1.4 — CI green on Linux: the Linux-reds rulings banked, 1.4 discovered and landed; content script +71 B, app chunk +87 B; next the human opens the PR and merges once CI is green, then task 1.2). Earlier: 2026-11-01 (M13 CLOUD ENVIRONMENT CHECK — Linux cloud session; toolchain green; browser 3 reds (CI #18 had 7), each with a cause and a proposed fix awaiting the human; unit 2 timing reds on this host; Linux build byte-identical to the Windows snapshot on every recorded figure; next the human's ruling on the reds, then task 1.2). Earlier: 2026-10-31 (handing off to a cloud session — the cloud-push HUMAN RULING banked, the local-memory sweep into AGENTS.md; next the cloud environment check, then task 1.2). Earlier: 2026-10-31 (M13 task 1.1 — CI on push to main, pnpm from packageManager, Node 22 from .nvmrc; next task 1.2). Earlier: 2026-10-31 (M13 GATE 3 APPROVED). Earlier: 2026-10-30 (task 7.3 — **M12 CLOSED**: Editor Mode's focused core shipped on both engines; 29 tasks, 31 rulings; 7.1's walk ticked (F, the 1 MB axis, not walked — R26 stands); the retro banked (7.2) and its five rules kept (R31); the post-M12 carried list consolidated below; the M12 narrative moved to `progress-archive.md`. Records: `decisions.md`'s "M12 CLOSED" and "M12 RULING R31". Nothing is in flight; the next milestone is not yet scheduled.) Current numbers: `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against ≤ 7 MiB, content script 344,195 B both engines (zero `codemirror` bytes), `dependencies` 11, `permissions: []`, unit 1417, browser 1961 / 51 skipped, `pnpm audit --prod` EXIT=0. M11 (math rendering) closed 2026-09-11 — summaries under § Closed milestones, narratives in `progress-archive.md`.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,26 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 4.4 LANDED (2026-11-03) — the app controls in the toolbar; one theme control; the compact toolbar at ≤ 863 px
+(D-5; ruling C).** Record: `decisions.md`, "M13 TASK 4.4" and "M13 RULING — C061 at 1280". Branch restarted from `main` at
+`6f679a9` (PR #28's merge); font parity applied; `pnpm audit --prod` EXIT 0, 2026-11-03.
+- Theme, Code theme, Stored data and Export sit in the toolbar's right-hand group; the theme control is the pill's own
+  builder and broadcast (shell and reader together). At ≤ 863 px they are behind "⋯" (a keyboard menu); no wordmark, the
+  file name truncating, "Agent file", two rows in every state at 414 / 860 / 863, both engines, both themes.
+- **Stopgaps:** 4.1's ≤ 863 panel inset and 4.3's Export "side with room" both REMOVED — re-measured unneeded.
+- **Deviations:** an open comparison's Compare reads "Close" in the compact toolbar (name unchanged); the "⋯" keyboard
+  rule follows the WAI-ARIA menu button (no file states one); the Files slot is an empty hidden span until 4.8.
+- **Human ruling:** C061's app arm moved from 1280 to 1400 — an agent file's toolbar wraps to a second row at 1280.
+- **Addendum — the watchRemount CI flake:** 0 / 10 alone and 0 / 1 in full-suite order on `main`; recorded as a CI-only
+  known flake (§ Carried items 4). A second CI item found on the way — run 50's IDB unhandled rejection — FIXED on this
+  branch (addendum below).
+- **Addendum (after the PR's CI, 2026-11-03):** `editorPreview`'s keystroke count failed CI twice on Firefox and passed
+  on the next run — recorded as a CI-only known flake (0 reds here), its failure message now diagnostic. `storeSnapshot`
+  no longer rejects when the connection closes mid-write (the unhandled rejection from runs 50 and the editorSave R19 test).
+- Census: 47 rows (43 re-spelled, 1 replaced, 3 unchanged) + C362–C364 discovered + C061 moved up.
+- Verify: lint 0 · unit 1489 / 1490 (`pipeline.perf`) · browser 2,127 passed / 0 failed / 51 skipped of 2,178, both
+  engines · golden EMPTY · content script md5 identical · app chunk 545,000 B (+3,845).
 
 **M13 TASK 4.3 LANDED (2026-11-02) — Edit in the toolbar; the shadow-root Edit control and `EDIT_CONTROL_CSS` removed
 (D-6, ruling E).** Record: `decisions.md`, "M13 TASK 4.3". Branch restarted from `main` at `6ef8889` (PR #27's merge);
@@ -424,12 +444,13 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 4.3).
-**Then M13: task 4.4 — the app controls (one theme control, Code theme, Stored data, Export) join the toolbar per the mock,
-with the ≤ 863 px "⋯" collapse (ruling C: tests not about the compact toolbar widen their window).** 47 census rows
-first-break there. Known going in: at 1080 px the header wraps (an agent file since 4.2; every file since 4.3's Edit
-segment), and 4.3's Export panel flip is a stopgap the toolbar layout should make unneeded. Timing gates on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
-/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4, 2.1–2.6, 3.1 and 4.0–4.3 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
+**First, the human merges this pull request** (branch `claude/loving-turing-bpgzi0`: task 4.4).
+**Then M13: task 4.5 — the app page drops the pills (`pills: false`), with the one-time snapshot notice and its permanent
+home in Stored data (D-8), the watch note and the remote-images load bar in the notice area (rulings A, D), and
+`pills: false` forced in the save and watch re-render paths (`renderWithEnhancements`).** 101 census rows first-break
+there. Carried into it from 4.3: `CAPTURE_NOTICE_SEAT_CSS` goes with the notice, and `readerPane.ts`'s stale comment at
+the `enhanceEditor` call. Timing gates on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
+/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4, 2.1–2.6, 3.1 and 4.0–4.4 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
 `docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
 proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
 the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
@@ -453,7 +474,13 @@ empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
 manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 4.3 (2026-11-02, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+**Byte snapshot — M13 task 4.4 (2026-11-03, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
+`.output` 5,964,007 B (Cr) / 5,964,123 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,376,025 / 1,375,909 B · content
+script **344,562 B** both engines (+49, the 4.4 addendum's `storeSnapshot` fix), md5 `fcfe06c1…` (Cr) / `20de200b…` (Fx) ·
+app chunk 545,051 B · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) · browser 2,129
+passed / 51 skipped of 2,180 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-03. (Before the addendum: `.output`
+5,963,907 / 5,964,023, zips 1,958,529 / 1,958,585, content script 344,513 `b72a093c…` / `c3c4b102…`, app chunk 545,000.)
+**Superseded by 4.4 — the 4.3 figures:**
 `.output` 5,960,062 B (Cr) / 5,960,178 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,379,970 / 1,379,854 B · zip
 1,957,728 / 1,957,784 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) (identical to
 4.2) · app chunk 541,155 B (+44) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) ·
@@ -590,8 +617,30 @@ R29's CARRY).
   addendum (2026-11-01), not a known flake** (the human ruled a TEST fix): a resting pointer over the figure was proven to
   start the hover reveal; the test now starts from a neutral pointer and a settled opacity 0. Red 2/6 → 0/6 on each
   engine (`decisions.md`, "M13 TASK 1.4", ADDENDUM).
-- **The known flakes, as they now stand: ONE — `pipeline.perf.test.ts`** (above). copyAsHtml and diagramActions are
-  resolved; nothing is unruled.
+- **`tests/browser/watchRemount.browser.test.ts` › preserveReading — 'full-page' surface › "a reader left in RAW,
+  scrolled mid-document, re-mounts still in Raw at the same place"** — a KNOWN FLAKE, **CI-only, not reproduced**
+  (recorded in M13 task 4.4's commit as a named addendum). CI run 52 attempt 1 (`41566237805`, the 4.3 PR, Chromium):
+  "expected 334 to be less than 40" at line 290 — 2,064 passed / 1 failed / 59 skipped of 2,124; the re-run (attempt 2)
+  passed. Measured on `main` at `6f679a9` (Linux cloud, CI font, Chromium): **0 reds in 10 runs alone, 0 in 1
+  full-suite-order run** — no failing run to compare, so no cause is claimed and the test is unchanged (its 40 px tolerance
+  is not loosened). Re-run on a red; if it recurs, log `readingAt`, `after`, the scroll container and the anchor.
+- **`tests/browser/editorPreview.browser.test.ts` › "★ a keystroke lands in the buffer while a preview render is pending in
+  the cooldown"** — a KNOWN FLAKE, **CI-only, Firefox, not reproduced**. CI run 54 (`41576398081`, the 4.4 PR at
+  `22b6386`) failed it on BOTH attempts: "the instrument saw every key: expected 1 to be 8" (line 357) — attempt 2: 1 failed
+  / 2,118 passed / 59 skipped of 2,178; run 55 (`41588859945`, at `fc71631`) passed it. Here: **0 reds** in 10 runs of the
+  file alone at 4.4, 10 with 4.3's production files, 10 under full CPU load, and 5 full-suite runs (cache order, CI order
+  with the results cache removed, `CI=true`); a probe at every keydown — idle, and with the main thread blocked 300 /
+  1,500 ms after the first key — kept focus in the editor (`cm-content`) with all 8 keys as 8 dispatches. 4.4's product code
+  is not on this file's graph. The test now reports, on a wrong count, the deep `activeElement`, `hasFocus()` and the
+  dispatch count per keydown, plus the viewport, the buffer's head and the test files loaded before it (`fc71631`) — keep
+  it: it is the evidence if it recurs.
+- ~~**Unruled, carried — an unhandled rejection in CI run 50**~~ — **RESOLVED on the 4.4 branch (2026-11-03,
+  `decisions.md` "M13 TASK 4.4", addendum):** `storeSnapshot` (fire-and-forget from `watchController`) rejected when the
+  shared connection closed mid-write (idbCore's `versionchange` close, or a test's connection reset) — `void` does not catch,
+  so it escaped. It now never rejects; the write is skipped quietly.
+- **The known flakes, as they now stand: THREE — `pipeline.perf.test.ts`, `watchRemount`'s Raw-place test (CI-only) and
+  `editorPreview`'s keystroke count (CI-only, Firefox)** (above). copyAsHtml and diagramActions are resolved; the run-50
+  unhandled rejection is fixed; nothing is unruled.
 
 **5 · SUPPLY CHAIN**
 - **Pin pnpm via `packageManager`** — CI's `version: 10` floats; a future 10.x could change where `auditConfig` is read and

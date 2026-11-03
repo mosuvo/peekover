@@ -352,9 +352,41 @@ describe('012 task 3.3 — keys land while a render waits; a burst costs fewer r
     const atBuild = commitsInto(e.shell.previewHost);
     const log = logKeystrokes(e);
 
-    await userEvent.keyboard(KEYS);
+    // DIAGNOSTICS ONLY (013 task 4.4 addendum, 2026-11-03): CI failed this count twice on Firefox
+    // ("expected 1 to be 8") and it never reproduced locally. Nothing asserted changes; when the
+    // count is wrong the message says, per keydown, where focus was, whether the document had it, and
+    // how many dispatches had landed — and, once, the viewport, the buffer's head and the test files
+    // this window loaded before this one (the Resource Timing buffer is shared across files).
+    const keydowns: string[] = [];
+    const onKeydown = (): void => {
+      let el: Element | null = document.activeElement;
+      const path: string[] = [];
+      while (el) {
+        path.push(typeof el.className === 'string' && el.className ? el.className.split(' ')[0] : el.tagName.toLowerCase());
+        el = el.shadowRoot?.activeElement ?? null;
+      }
+      keydowns.push(`${path.join('>')} hasFocus=${document.hasFocus()} dispatches=${log.length}`);
+    };
+    document.addEventListener('keydown', onKeydown, true);
+    await userEvent.keyboard(KEYS).finally(() => document.removeEventListener('keydown', onKeydown, true));
 
-    expect(log.length, 'the instrument saw every key').toBe(KEYS.length);
+    const diagnosis = (): string => {
+      const files = performance
+        .getEntriesByType('resource')
+        .map((r) => /\/tests\/browser\/([\w.-]+\.browser\.test\.ts)/.exec(r.name)?.[1])
+        .filter((f): f is string => !!f)
+        .filter((f, i, all) => all.indexOf(f) === i);
+      const here = files.indexOf('editorPreview.browser.test.ts');
+      // -1: this file's own entry is missing (a full buffer drops new entries) — report the last three seen.
+      const before = here >= 0 ? files.slice(Math.max(0, here - 3), here) : ['(this file not in the buffer)', ...files.slice(-3)];
+      return (
+        `the instrument saw every key — keydowns: ${JSON.stringify(keydowns)}; ` +
+        `viewport ${innerWidth}×${innerHeight}; buffer head ${JSON.stringify(buffer(e).slice(0, 12))}; ` +
+        `test files loaded before this one (Resource Timing, ${performance.getEntriesByType('resource').length} entries): ` +
+        `${JSON.stringify(before)}`
+      );
+    };
+    expect(log.length, log.length === KEYS.length ? 'the instrument saw every key' : diagnosis()).toBe(KEYS.length);
     expect(buffer(e), 'every key is in the buffer').toBe(`${KEYS}${BIG_DOC}`);
     // RE-SPELLED AT 6.4 (human ruling R26, spec §8-2). This was "The first key renders at once":
     // `expect(log[0].after - log[0].before, 'the first key rendered immediately').toBe(1)`. R26

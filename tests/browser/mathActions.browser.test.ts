@@ -104,7 +104,7 @@
 // honest verification (this task), route the gap as a carried item, build nothing new.
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { userEvent, cdp } from 'vitest/browser';
+import { page, userEvent, cdp } from 'vitest/browser';
 import { createReaderPane } from '../../src/app/readerPane';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
@@ -122,6 +122,18 @@ import {
 } from '../../src/render/mathView';
 import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C255, C256, C257); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 const FIGURE_SELECTOR = `figure.${MATH_FIGURE_CLASS}`;
 const MATHML_NS = 'http://www.w3.org/1998/Math/MathML';

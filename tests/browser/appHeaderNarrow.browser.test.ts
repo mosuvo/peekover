@@ -89,13 +89,17 @@ describe('M13 task 1.4 — the app header keeps every control inside the viewpor
     const parts = headerParts(header);
 
     // Non-vacuous: the controls the 414 red was about are really there and laid out.
+    // REPLACED (C082) at 013 task 4.4 — the property kept: every app control is REACHABLE and
+    // unclipped. Above 863 px the four sit in the toolbar; at ≤ 863 px (the approved compact toolbar)
+    // they are behind "⋯", which must be rendered inside the window (its menu: toolbar.browser.test.ts).
     const names = parts.map(([n]) => n);
-    for (const must of [
+    const APP_CONTROLS = [
       'peekover-app__export-toggle',
       'peekover-app__storage-toggle',
       'peekover-theme-toggle',
       'peekover-code-theme-toggle',
-    ]) {
+    ];
+    for (const must of width > 863 ? APP_CONTROLS : ['peekover-toolbar__more']) {
       expect(names, `${must} is rendered in the header`).toContain(must);
     }
 

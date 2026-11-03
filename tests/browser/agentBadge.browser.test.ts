@@ -801,7 +801,14 @@ describe.each(GEOMETRY_WIDTHS)('1.5 · row 10 — the badge is OUT OF FLOW at %s
     surfaceLabel,
     kind,
   ) => {
-    await page.viewport(size.width, size.height);
+    // KEEPS: the badge appearing does not move the reading column's first block (C061). RE-SPELLED
+    // at 013 task 4.4, the APP arm only, by the human's ruling (2026-11-03): with the four app
+    // controls in the toolbar, an agent file's toolbar at 1280 px is a few px too wide for one row
+    // and wraps to a second — approved behaviour between the compact breakpoint and ~1290 px, as at
+    // 1080 in the mock — so the app arm is held at 1400, where the toolbar is one row with or
+    // without the badge. The content-script arm keeps both widths.
+    const viewport = kind === 'app' ? { width: Math.max(size.width, 1400), height: size.height } : size;
+    await page.viewport(viewport.width, viewport.height);
 
     const open = async (name: string): Promise<HTMLElement> =>
       kind === 'cs' ? openContentScript(name, DOC_MEDIA) : openAppPage(name, DOC_MEDIA);

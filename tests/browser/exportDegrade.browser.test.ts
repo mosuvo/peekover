@@ -26,11 +26,23 @@
 // FAILURE report — a thrown serialization error has no native signal at all — but PDF gets neither
 // (`window.print()` has no promise/throw surface for `appShell.ts`'s guard to catch).
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { page, userEvent, commands, cdp } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { EXPORT_ROW_STATE_ATTR, EXPORT_STATUS_CLASS } from '../../src/app/exportControls';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C236); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 interface ExportDownloadProbe {
   suggestedFilename: string;

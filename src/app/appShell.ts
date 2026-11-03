@@ -442,23 +442,16 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * wrapper (`right:0`, not a header-relative constant) — genuinely anchored at its own trigger,
  * which also makes it independent of whatever else joins the header's right-hand group later.
  *
- * ABOVE 863 px THE EXPORT PANEL OPENS TOWARD THE SIDE WITH ROOM (013 task 4.3 — a regression the
- * full suite found in that task). The Edit segment made the 1080 px header wrap, and Export — the
- * last control — wrapped alone to the start of the second row; right-aligned to it, its panel
- * opened at x −340. `toggleExport` measures as it opens: if the right-aligned panel would leave the
- * window it sets `data-align="start"` and the panel is left-aligned under the same trigger. Still
- * anchored at its own toggle (census C244). Pinned by the same header-panel test, at 1080 px.
- *
- * ≤ 863 px, THE THREE HEADER PANELS DROP FROM THE HEADER ITSELF (013 task 4.1 — a regression the
- * full suite found in that task). With the toolbar in the header, the narrow header wraps into more
- * rows and a trigger can land anywhere along them: at 414 px the Export button sat at x 121–186, so
- * its panel — right-aligned to it, 380 px wide — opened at x −195…185, its rows unclickable. At the
- * compact breakpoint the approved mock already sets (863 px; the "⋯" collapse joins at 4.4) the
- * Export panel, the code-theme picker and the Stored data panel all anchor to the header — their
- * wrappers lose `position:relative`, so the header is the containing block — and span it with a
- * small inset, so none can leave the window. Two open at once overlap there, the later on top;
- * each still closes from its own button. Above 863 px each keeps its anchor at its own trigger.
- * 4.2 adds the toolbar's Compare picker to the same rule. Pinned by tests/browser/toolbar.browser.test.ts
+ * ≤ 863 px, THE HEADER PANELS (013 task 4.1 — a regression the full suite found in that task). With
+ * the toolbar in the header, the narrow header wrapped and a trigger could land anywhere along it: at
+ * 414 px the Export button sat at x 121–186, so its panel — right-aligned to it, 380 px wide —
+ * opened at x −195…185, its rows unclickable. 4.1 dropped the three panels from the header with a
+ * small inset; 4.3 added an Export "toward the side with room" measure for the 1080 px wrap.
+ * 4.4 RE-MEASURED BOTH AND REMOVED BOTH: with the app controls in the toolbar's right-hand group
+ * (right-aligned above 863 px; behind "⋯" at and below it, their wrappers boxless so the header is
+ * the panels' containing block), every panel opens inside the window at 414 / 1080 / 1440 with
+ * neither rule. The one narrow rule left is the toolbar's own: its Compare picker drops from the
+ * toolbar (`position:static` on its wrapper, toolbar.ts). Pinned by tests/browser/toolbar.browser.test.ts
  * ("the header panels stay inside the window").
  *
  * ★ RATIONALE LIVES HERE, NOT IN THE CSS BELOW, AND THAT IS LOAD-BEARING: everything inside the
@@ -527,12 +520,11 @@ ${toolbarCss(SHELL_CLASS)}
 @media (prefers-reduced-motion:reduce){
   .${SHELL_CLASS} *,.${SHELL_CLASS} *::before,.${SHELL_CLASS} *::after{animation:none!important; transition:none!important}
 }
-/* Theme control (task 5.2) — the same element the reader chrome uses, restyled as a header
-   pill. It carries the margin-left:auto, so IT is the element that pushes the header's right-hand
-   group over; the storage toggle then sits beside it with a plain gap. Tokens only, matching the
-   storage toggle's chrome exactly so the two read as one control group. */
+/* Theme control (task 5.2) — the same element the reader chrome uses. Since 013 task 4.4 it sits in
+   the toolbar's right-hand group (which carries the margin-left:auto) and the toolbar sheet gives the
+   four app controls the mock's button chrome; these rules are the base it overrides. */
 .${SHELL_CLASS}__theme-toggle{
-  margin-left:auto; font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
+  font:inherit; font-size:.8rem; color:var(--ink); background:var(--paper);
   border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; cursor:pointer;
 }
 .${SHELL_CLASS}__theme-toggle:hover{background:var(--accent-soft)}
@@ -595,14 +587,6 @@ ${toolbarCss(SHELL_CLASS)}
   max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
   background:var(--paper); border:1px solid var(--line);
   border-radius:var(--r); box-shadow:var(--shadow);
-}
-@media (min-width:864px){.${SHELL_CLASS}__export-slot[data-align="start"]:not(:empty){left:0; right:auto}}
-/* ≤ 863 px: the header's panels drop from the header itself — see the doc comment above APP_CSS. */
-@media (max-width:863px){
-  .${SHELL_CLASS}__code-theme-control,.${SHELL_CLASS}__export-control,.peekover-toolbar__compare{position:static}
-  .peekover-code-theme-picker,.${SHELL_CLASS}__export-slot:not(:empty),.${SHELL_CLASS}__storage-slot:not(:empty),.peekover-toolbar .peekover-diff-picker{
-    left:.75rem; right:.75rem; width:auto; max-width:none;
-  }
 }
 
 .${SHELL_CLASS}__body{flex:1 1 auto; display:flex; min-height:0}
@@ -831,7 +815,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   exportPanel.className = `${SHELL_CLASS}__export-slot`;
   exportControl.append(exportToggle, exportPanel);
 
-  header.append(toolbar.element, themeControl, codeThemeControl, storageToggle, storagePanel, exportControl);
+  // 013 task 4.4 (D-5): the four app controls join the toolbar's right-hand group, in the mock's
+  // order. Each panel stays where it was (the Stored data slot in the header, the others inside their
+  // wrappers), so it opens exactly as before; at ≤ 863 px the triggers are behind "⋯".
+  toolbar.addAppControl(themeControl, themeControl);
+  toolbar.addAppControl(codeThemeControl, codeThemeControl.querySelector<HTMLButtonElement>('.peekover-code-theme-toggle')!);
+  toolbar.addAppControl(storageToggle, storageToggle);
+  toolbar.addAppControl(exportControl, exportToggle);
+  header.append(toolbar.element, storagePanel);
 
   const body = doc.createElement('div');
   body.className = `${SHELL_CLASS}__body`;
@@ -1441,16 +1432,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     exportOpen = !exportOpen;
     exportToggle.setAttribute('aria-expanded', String(exportOpen));
     if (exportOpen) {
-      // Toward the side with room (see the doc comment above APP_CSS): the panel's width is the
-      // sheet's `min(420px, 100vw - 2rem)`.
-      const room = exportControl.getBoundingClientRect().right - Math.min(420, innerWidth - 32);
-      if (room < 0) exportPanel.dataset.align = 'start';
-      else delete exportPanel.dataset.align;
       renderExport();
     } else {
       exportView = null; // task 9.1 — a promise settling after close is a graceful no-op
       exportPanel.replaceChildren();
-      if (exportToggle.isConnected) exportToggle.focus();
+      toolbar.focusTrigger(exportToggle); // its button, or "⋯" when the button is behind it (4.4)
     }
   }
 

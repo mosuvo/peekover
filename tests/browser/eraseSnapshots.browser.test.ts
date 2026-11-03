@@ -19,6 +19,7 @@
 //     reddens exactly that store's survival assertion. Restored byte-identical.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { page } from 'vitest/browser';
 import { mountAppShell } from '../../src/app/appShell';
 import {
   putFolder,
@@ -41,6 +42,18 @@ import {
 import { storeSnapshot, getSnapshotMeta } from '../../src/app/snapshots';
 import { getAll } from '../../src/app/idbCore';
 import { SEP } from '../../src/app/recents';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C235); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 let uid = 0;
 const nextId = () => `t${(uid += 1)}-${Math.trunc(performance.now())}`;

@@ -21,12 +21,24 @@
 // mirror image of `copyAsHtml.browser.test.ts`'s own Q2 proof that ITS fallback is the render, not
 // the source.
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { page, userEvent, cdp } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { copyAsPlainText, type ReadableSource } from '../../src/export/copyPlainText';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C104); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 const HOST_TAG = 'peekover-root';
 const hosts: HTMLElement[] = [];

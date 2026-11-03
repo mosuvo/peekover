@@ -27,7 +27,7 @@ import {
   getSnapshotText,
   SNAPSHOT_COUNT_PER_DOC,
 } from '../../src/app/snapshots';
-import { wipeAll, describeStored, __resetConnectionForTest } from '../../src/app/store';
+import { wipeAll, describeStored, connection, __resetConnectionForTest } from '../../src/app/store';
 import { SEP } from '../../src/app/recents';
 import { WATCH_READ, type WatchMessage } from '../../src/watch/watchRelay';
 import type { ChangeDetector } from '../../src/watch/changeDetector';
@@ -285,5 +285,40 @@ describe('snapshot capture — wipeAll erases snapshots and the panel then repor
     const afterSummary = await describeStored();
     expect(afterSummary.snapshots).toEqual({ count: 0, docs: 0, bytes: 0 });
     expect(afterSummary.lines.join(' ')).not.toMatch(/snapshot/i);
+  });
+});
+
+// ── 013 task 4.4 addendum (2026-11-03): a write that meets a CLOSING connection ─────────────────
+//
+// `watchController` fires `void storeSnapshot(...)` on every watched re-render. When the shared
+// connection closes while that write is pending — idbCore's `versionchange` close (another context
+// upgrading the database), or a test's connection reset — `db.transaction()` throws
+// `InvalidStateError: … The database connection is closing`. Before this addendum that rejected the
+// fire-and-forget promise, an UNHANDLED rejection (CI runs 50 and 54/55 exited 1 on it, from
+// editorSave's "R19, WATCHED"). The property: the write is skipped quietly — the promise resolves,
+// nothing escapes — and what was already kept stays kept.
+describe('snapshot capture — a write that meets a closing connection is skipped quietly (4.4 addendum)', () => {
+  it('the connection closes while a snapshot write is pending: it resolves, no error escapes, the kept snapshot survives', async () => {
+    await storeSnapshot(DOC_ID, DOC_A);
+    const kept = await metaFor(DOC_ID);
+    expect(kept, 'the fixture keeps one snapshot').toHaveLength(1);
+
+    // The race, deterministically: start the write, then close the connection it is about to use —
+    // the same `close()` idbCore makes on `versionchange`.
+    const conn = await connection();
+    const pending = storeSnapshot(DOC_ID, DOC_B);
+    conn.close();
+    __resetConnectionForTest(); // the memo is dropped, as idbCore's versionchange hook drops it
+    let outcome = 'resolved';
+    await pending.catch((err: unknown) => {
+      outcome = `rejected: ${String(err)}`;
+    });
+    expect(outcome, 'a snapshot write never rejects — fire-and-forget callers must not leak it').toBe('resolved');
+
+    // What was kept is kept, readable on a fresh connection, and the next capture still works.
+    expect(await metaFor(DOC_ID), 'the kept snapshot survives the skipped write').toEqual(kept);
+    expect(await getSnapshotText(kept[0].id)).toBe(DOC_A);
+    await storeSnapshot(DOC_ID, DOC_C);
+    expect((await metaFor(DOC_ID)).length, 'a later write lands normally').toBe(2);
   });
 });

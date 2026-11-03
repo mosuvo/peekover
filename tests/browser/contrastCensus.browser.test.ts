@@ -26,6 +26,7 @@
 // name. It is separate from the M12 accepted list.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
@@ -49,6 +50,18 @@ import {
   parentAcrossShadow,
   ratioOver,
 } from './helpers/contrast';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C098); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 /** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
 const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>

@@ -294,10 +294,27 @@ export async function getSnapshotText(id: string): Promise<string | undefined> {
  *    ordering keeps every crash window failing toward a dangling meta entry (safe, self-reclaiming)
  *    rather than an orphaned content row (invisible bytes the accounting under-reports) — §1.2.
  *
- * Fire-and-forget at the call site (task 1.4's `void storeSnapshot(...)`): a rejection completes
+ * Fire-and-forget at the call site (task 1.4's `void storeSnapshot(...)`): a failure completes
  * the re-render normally rather than surfacing (§4). Callers pass the ALREADY-outgoing source.
+ *
+ * ★ IT NEVER REJECTS (013 task 4.4 addendum, 2026-11-03). `void` does not catch: until this, a
+ * write that met a CLOSING connection — idbCore's `versionchange` close (another context upgrading
+ * the database), or a test's connection reset — threw `InvalidStateError` from `db.transaction()`
+ * and escaped as an UNHANDLED rejection (CI runs 50, 54 and 55). The write is now skipped quietly:
+ * nothing is logged or reported (no telemetry, AGENTS.md #2), and nothing already kept is touched —
+ * the META FIRST order below means a write cut short leaves at worst a dangling meta entry, which
+ * is safe and self-reclaiming (§1.2). Pinned by snapshotCapture.browser.test.ts ("a write that
+ * meets a closing connection is skipped quietly").
  */
 export async function storeSnapshot(docId: string, text: string): Promise<void> {
+  try {
+    await writeSnapshot(docId, text);
+  } catch {
+    // Skipped quietly — see above. A snapshot is a convenience for Compare, never a gate.
+  }
+}
+
+async function writeSnapshot(docId: string, text: string): Promise<void> {
   const conn = await connection();
   const allMeta = await getAll<SnapshotMeta>(conn, STORES.snapshotMeta);
   const incomingId = newSnapshotId();

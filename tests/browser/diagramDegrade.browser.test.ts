@@ -55,6 +55,7 @@
 //      and requires N of them — then requires zero after. Resolved, not absent.
 
 import { describe, it, expect, afterEach, beforeEach, vi, type Mock } from 'vitest';
+import { page } from 'vitest/browser';
 import mermaid from 'mermaid';
 import { createReaderPane } from '../../src/app/readerPane';
 import { mount } from '../../src/render/mount';
@@ -86,6 +87,18 @@ import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+
+// RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
+// its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
+// instead of behind "⋯". KEEPS: each test's own property (C111, C113, C114, C115); RE-SPELLED at 4.4 by the
+// window alone. The harness default (414 × 896) is restored after each test — the window is shared
+// by every file that runs after this one.
+beforeEach(async () => {
+  await page.viewport(1280, 900);
+});
+afterEach(async () => {
+  await page.viewport(414, 896);
+});
 
 const FIGURE_SELECTOR = `figure.${DIAGRAM_FIGURE_CLASS}`;
 const PRE_SELECTOR = `pre[${DIAGRAM_STATE_ATTR}]`;
