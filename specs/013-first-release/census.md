@@ -196,6 +196,11 @@ retired while its function has no other test. Function by function:
   (`LANE_SELECTOR` matches by DOM order, which still holds; C030, the CONTAINED lane rule, retired). Discovered: **C365–C371** re-spelled. The first full suite went red only in
   rows named here (21 tests, 5 files); then green. No unexplained red.
 
+- **4.6** (2026-11-03): **C225** (`editorWalkPolish` R29(b)) — its second step, re-spelled (`KEEPS:`): the tolerance
+  162 → 28 (the pane's padding + 4; the band's allowance RETIRED — no pill stack on the app page since 4.5), at
+  1440 / 1080 / 414 × light / dark (was 414 / 1400). No row first-breaks at 4.6, as counted; the full suite went green
+  on its first run. New 4.6 tests sit beside it in the same file (no census row: written here).
+
 ### Checking 4.1–4.8 against this census
 
 tasks.md defines no lint for the comments, and 4.0 may not edit a test. Each group-4 task therefore checks, in its

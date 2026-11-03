@@ -579,7 +579,7 @@ the app page shows some controls twice — unreleased, stated.*
       unpredicted. Content script −736 B (the CSS deletion, as above); app chunk +2,209 B. The carried contrast-census
       item: the code-theme premise not proven; the census now supplies its own settings (hardening, kept).
 
-- [ ] **4.6 The 130 px band reclaimed on the app page (D-7; F-2).** TEST FIRST. `CONTAINED_CSS` sets the reading
+- [x] **4.6 The 130 px band reclaimed on the app page (D-7; F-2).** TEST FIRST. `CONTAINED_CSS` sets the reading
       column's AND the diff's (`readerCss.ts:227`) bottom padding to the top value, and `--edit-bottom` to the gap the
       status line needs; the content script keeps 130 px (its pills remain). `editorWalkPolish`'s bottom-gap tolerance
       (`24 + 130 + 8 = 162`, R29 Decision 2) re-spelled to the new geometry with `KEEPS:`.
@@ -588,6 +588,13 @@ the app page shows some controls twice — unreleased, stated.*
       of the pane's foot at 1440 and 414; on the content script the 130 px band is unchanged (red-first: apply the rule
       outside `CONTAINED_CSS` → the content-script assertion fails). Bytes: content script moves by the `CONTAINED_CSS`
       edit only — stated. Full suite. Golden EMPTY · manifest · `permissions: []`. [D-7]
+      ★ *Landed 2026-11-03 (`decisions.md`, "M13 TASK 4.6").* On the app page the column and the diff end at 56px
+      (`CONTAINED_CSS`, `@media screen`); the split's `--edit-bottom` is 0 (set in EDITOR_CSS — app-only, and later than
+      CONTAINED_CSS — a deviation from this line's wording), with 56px kept while the network indicator shows. Measured:
+      reading / diff ~80 px (24 + 56), the split ~24 px, at 1440 / 1080 / 414, both engines and themes; the file://
+      reader 130px (control; red-first A3). C225 re-spelled (162 → 28). Content script +74 B (the CONTAINED_CSS rule
+      only); app chunk +158 B. Finding: the TOC rail's own 130px bottom padding, unchanged. 4.7: add the status line
+      to `editorWalkPolish`'s 4.6 overlap set.
 
 - [ ] **4.7 The status line: three statements, each test-backed (D-9; G-3; gate-1 Q9).** TEST FIRST. App-page-only,
       `role="status"`, no `--faint`: the open file's name; "No network calls" / "Network: N requests you made" from the
