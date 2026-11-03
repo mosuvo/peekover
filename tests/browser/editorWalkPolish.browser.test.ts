@@ -27,6 +27,8 @@ import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { setThemeSetting } from '../../src/theme/reader';
 import { resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
+import { mount } from '../../src/render/mount';
+import { NETWORK_ATTR } from '../../src/render/remoteMediaUi';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
 
@@ -41,12 +43,26 @@ const segmentToggle = (host: HTMLElement): HTMLElement =>
 
 const NARROW = { width: 414, height: 896 }; // the harness default
 const WIDE = { width: 1400, height: 900 };
+/** 013 task 4.6's widths: 1440 × 900, 1080 × 900 and the stacked 414 × 896. */
+const SIZES = [
+  { width: 1440, height: 900 },
+  { width: 1080, height: 900 },
+  NARROW,
+] as const;
 const TEXT_BAR = 4.5; // WCAG 2.1 AA, 1.4.3
 
-/** How far the split's bottom edge may sit above the viewport's: the reader pane's own 1.5rem
- *  (24px) padding + the 130px bottom clearance the pill stack has always had + 8px of border and
- *  rounding. The fixed 60vh split left 227px at 900 high and ran 137px PAST the viewport stacked. */
-const BOTTOM_GAP_MAX = 24 + 130 + 8;
+/** The reader pane's own 1.5rem bottom padding (`.peekover-app__reader`). */
+const PANE_PAD = 24;
+/** How far the split's bottom edge may sit above the viewport's: the reader pane's own padding + 4px of
+ *  border and rounding. RE-SPELLED at 013 task 4.6 (C225; D-7): it was `24 + 130 + 8` (R29 Decision 2) — the
+ *  130px was the clearance the bottom-left pill stack had always had, and the app page has no pill stack since
+ *  4.5, so the band is RETIRED there and the split runs to the pane's own padding. (The fixed 60vh split left
+ *  227px at 900 high and ran 137px PAST the viewport stacked.) */
+const BOTTOM_GAP_MAX = PANE_PAD + 4;
+/** The reading column's and the diff's bottom padding on the app page since 013 task 4.6: their top value. */
+const COLUMN_FOOT = 56;
+/** The content script's band, unchanged: its pills remain. */
+const BAND = 130;
 /** A usable pane: the width below which the walk found the split unreadable (E-6 measured 100px). */
 const PANE_MIN = 360;
 /** The viewport width at or below which edit hides the rail — see EDITOR_CSS. At 1400 with the rail
@@ -262,12 +278,18 @@ describe('R29(a) — the Ctrl-F search panel is legible and drawn from tokens, b
 
 // ── (b) the split, its scrollbars, line wrapping ───────────────────────────────────────────────
 describe('R29(b), R28 — the split fills the pane; its scrollbars are themed; long lines wrap', () => {
+  // KEEPS: the split fills the pane to its foot (C225). RE-SPELLED at 013 task 4.6: the tolerance is the pane's
+  // own padding (the band's allowance RETIRED — see BOTTOM_GAP_MAX), at 1440 / 1080 / 414, both themes.
   it.each([
-    ['NARROW', NARROW],
-    ['WIDE', WIDE],
-  ] as const)('%s: the split’s bottom edge is within the pane padding of the viewport', async (_name, size) => {
+    ['1440', 'light', SIZES[0]],
+    ['1440', 'dark', SIZES[0]],
+    ['1080', 'light', SIZES[1]],
+    ['1080', 'dark', SIZES[1]],
+    ['414 (stacked)', 'light', SIZES[2]],
+    ['414 (stacked)', 'dark', SIZES[2]],
+  ] as const)('%s, %s: the split’s bottom edge is within the pane padding of the viewport', async (_name, theme, size) => {
     await page.viewport(size.width, size.height);
-    const { host } = await openFile();
+    const { host } = await openFile(theme);
     await enterEdit(host);
     const shell = inHost(host, EDITOR_SHELL_CLASS)!.getBoundingClientRect();
     const gap = window.innerHeight - shell.bottom;
@@ -348,3 +370,130 @@ describe('R29(c) — edit hides the TOC rail at or below the breakpoint; each pa
 // notice in the page flow ABOVE the reader pane, so it cannot sit over the text or the edit split. Its placement —
 // below the header, above the reader, over no line of text, at 1440 / 1280 / 1080 / 414 — is
 // tests/browser/snapshotNotice.browser.test.ts's.
+
+// ── 013 task 4.6 — the 130 px band reclaimed on the app page (D-7; F-2) ─────────────────────────
+//
+// The band was reserved in three places, each sized for the bottom-left pill stack: the reading column's bottom
+// padding and the diff's (READER_CSS, shared with the content script) and the split's bottom margin
+// (`--edit-bottom`, EDITOR_CSS, app page only). Since 4.5 the app page has no pill stack, so on the app page the
+// column and the diff end at their top value (CONTAINED_CSS) and the split at the pane's own padding; the
+// content script keeps 130px — its pills remain. The one piece of chrome still drawn at the reader's foot on the
+// app page is the network indicator, and only after the user loads something: while it shows, the split keeps
+// clearance for it.
+
+/** Two files, so the toolbar's Compare can open a diff against the other one. */
+const LONG_DOC = `${Array.from({ length: 70 }, (_, i) => `${i % 10 === 0 ? `## Section ${i / 10}\n\n` : ''}Paragraph ${i} of a long document, long enough to scroll.`).join('\n\n')}\n\nThe last line.\n`;
+/** The same, with one remote image: blocked by default (nothing is fetched), so the reader builds its network
+ *  indicator — the one piece of chrome still drawn at the reader's foot on the app page. */
+const REMOTE_DOC = `![remote](https://example.invalid/peekover-4-6.png)\n\n${LONG_DOC}`;
+function pairSource(first: string = LONG_DOC): FolderSource {
+  return {
+    name: 'docs',
+    truncated: false,
+    persistable: true,
+    files: [
+      { path: 'a.md', name: 'a.md', read: async () => first },
+      { path: 'b.md', name: 'b.md', read: async () => LONG_DOC.replace('Paragraph 3 ', 'Changed 3 ') },
+    ],
+  };
+}
+
+async function openLong(theme: 'light' | 'dark', first: string = LONG_DOC): Promise<{ host: HTMLElement; container: HTMLElement; pane: HTMLElement }> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  containers.push(container);
+  const app = mountAppShell(container, {
+    openFolder: async () => ({ ok: true, source: pairSource(first) }),
+    store: fakeStore(theme),
+  });
+  await app.openFolder();
+  (await waitFor(() => container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'), 'a file')).click();
+  const host = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader__host'), 'the reader host');
+  await waitFor(() => host.shadowRoot?.querySelector('.peekover-reader')?.textContent?.includes('The last line.'), 'the document');
+  await waitFor(() => host.getAttribute('data-theme') === theme, `data-theme="${theme}"`);
+  await frames();
+  return { host, container, pane: container.querySelector<HTMLElement>('.peekover-app__reader')! };
+}
+
+/** Scrolled to its end, how far the LAST block of `column` sits above the bottom of `foot`'s box, less the
+ *  block's own bottom margin — i.e. the band the column itself reserves, plus `foot`'s padding. */
+async function footGap(scroller: HTMLElement, foot: Element, column: Element): Promise<number> {
+  scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' }); // the reader may scroll smoothly
+  await frames();
+  const last = column.lastElementChild!;
+  return foot.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom - parseFloat(getComputedStyle(last).marginBottom);
+}
+
+const overlaps = (a: DOMRect, b: DOMRect): boolean =>
+  Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+const laidOut = (r: DOMRect): boolean => r.width > 0 && r.height > 0;
+
+describe('013 task 4.6 — the band reclaimed on the app page; the content script keeps it', () => {
+  const CASES = SIZES.flatMap((size) => (['light', 'dark'] as const).map((theme) => [`${size.width}`, theme, size] as const));
+
+  it.each(CASES)('%s, %s: the last line of a long document, and of a diff, sit within the new gap of the pane\'s foot', async (_w, theme, size) => {
+    await page.viewport(size.width, size.height);
+    const { host, container, pane } = await openLong(theme);
+    const reader = host.shadowRoot!.querySelector<HTMLElement>('.peekover-reader')!;
+    const reading = await footGap(pane, pane, reader);
+    expect(reading, `reading: the last line ends ${reading.toFixed(1)}px above the pane's foot`).toBeLessThanOrEqual(PANE_PAD + COLUMN_FOOT + 2);
+    expect(reading).toBeGreaterThanOrEqual(PANE_PAD + COLUMN_FOOT - 2);
+
+    container.querySelector<HTMLButtonElement>('.peekover-toolbar .peekover-diff-affordance')!.click();
+    const item = await waitFor(() => {
+      const picker = container.querySelector<HTMLElement>('.peekover-diff-picker');
+      return picker && !picker.hidden ? picker.querySelector<HTMLButtonElement>('[data-target-kind="file"]') : null;
+    }, 'a file to compare with');
+    item.click();
+    await waitFor(() => host.getAttribute('data-diff') === 'active', 'the diff');
+    const diff = host.shadowRoot!.querySelector<HTMLElement>('.peekover-diff')!;
+    const diffGap = await footGap(pane, pane, diff);
+    expect(diffGap, `diff: the last row ends ${diffGap.toFixed(1)}px above the pane's foot`).toBeLessThanOrEqual(PANE_PAD + COLUMN_FOOT + 2);
+    expect(diffGap).toBeGreaterThanOrEqual(PANE_PAD + COLUMN_FOOT - 2);
+  });
+
+  it.each(CASES)('%s, %s: in edit nothing overlaps — the notice area, the toolbar, the rail and the split', async (_w, theme, size) => {
+    await page.viewport(size.width, size.height);
+    const { host, container } = await openLong(theme);
+    await enterEdit(host);
+    const split = inHost(host, EDITOR_SHELL_CLASS)!.getBoundingClientRect();
+    const others: Array<[string, DOMRect]> = [
+      ['the header', container.querySelector('.peekover-app__header')!.getBoundingClientRect()],
+      ['the notice area', container.querySelector('.peekover-app__notices')!.getBoundingClientRect()],
+      ['the rail', inHost(host, 'peekover-toc')!.getBoundingClientRect()],
+    ];
+    const hits = others.filter(([, r]) => laidOut(r) && overlaps(split, r)).map(([name]) => name);
+    expect(hits, `${size.width}: the split overlaps`).toEqual([]);
+    // The split's bottom edge sits at the pane's foot (C225's property, at this test's widths too).
+    const gap = window.innerHeight - split.bottom;
+    expect(gap).toBeLessThanOrEqual(BOTTOM_GAP_MAX);
+    expect(gap).toBeGreaterThanOrEqual(0);
+  });
+
+  it.each(SIZES.map((s) => [`${s.width}`, s] as const))('%s: while the network indicator shows, the split keeps clear of it', async (_w, size) => {
+    await page.viewport(size.width, size.height);
+    const { host } = await openLong('light', REMOTE_DOC);
+    await enterEdit(host);
+    host.setAttribute(NETWORK_ATTR, 'active'); // the indicator's own state — set when the user loads remote media
+    await frames();
+    const net = inHost(host, 'peekover-net')!.getBoundingClientRect();
+    expect(laidOut(net), 'firing control: the indicator is drawn').toBe(true);
+    const split = inHost(host, EDITOR_SHELL_CLASS)!.getBoundingClientRect();
+    expect(overlaps(split, net), `the split (bottom ${split.bottom.toFixed(0)}) overlaps the indicator (top ${net.top.toFixed(0)})`).toBe(false);
+    expect(window.innerHeight - split.bottom, 'and it gives up no more than that clearance').toBeLessThanOrEqual(PANE_PAD + COLUMN_FOOT + 4);
+  });
+
+  it('CONTROL — the content script (file://, mount without `contained`) keeps its 130px band', async () => {
+    await page.viewport(SIZES[0].width, SIZES[0].height);
+    const host = document.createElement('peekover-root');
+    document.body.appendChild(host);
+    containers.push(host);
+    mount(LONG_DOC, host);
+    await frames();
+    const reader = host.shadowRoot!.querySelector<HTMLElement>('.peekover-reader')!;
+    expect(getComputedStyle(reader).paddingBottom).toBe(`${BAND}px`);
+    const gap = await footGap(host, host, reader);
+    expect(gap, `the last line ends ${gap.toFixed(1)}px above the viewport (${host.scrollTop}/${host.scrollHeight}/${host.clientHeight})`).toBeGreaterThanOrEqual(BAND - 2);
+    expect(gap).toBeLessThanOrEqual(BAND + 2);
+  });
+});

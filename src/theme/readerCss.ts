@@ -1340,10 +1340,23 @@ export const READER_CSS = /* css */ `
 // pill's own slot. So the same rule says `left:176px` and then the anchored `left`; a supporting
 // engine takes the later one. The order is pinned in src/render/diffChrome.test.ts. This is not a
 // provisional constant: it is what an older engine gets, for as long as no minimum version is set.
+//
+// ── M13 TASK 4.6: THE 130 PX BAND, RECLAIMED ON THE APP PAGE (D-7; F-2) ─────────────────────────
+//
+// The reading column's and the diff's bottom padding (`56px 32px 130px` in READER_CSS) reserved a 130px band
+// for the bottom-left pill stack. Since 4.5 the app page builds no pills (`pills: false`), so here both end at
+// their TOP value, 56px. READER_CSS is untouched: the content script keeps its band because its pills remain.
+// `@media screen` because READER_CSS's print block sets the column's padding to 0 at the same specificity,
+// and this later sheet would otherwise win in print too. The split's own band (`--edit-bottom`) is in
+// EDITOR_CSS, which ships to the app page alone.
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
 .peekover-net,
 .peekover-toc{ position:absolute; }
+@media screen{
+.peekover-reader,
+.peekover-diff{ padding-bottom:56px; }
+}
 `;
 
 // ============================================================================
@@ -1455,9 +1468,13 @@ export const CONTAINED_CSS = /* css */ `
 //     the host, and the split is that minus its own top and bottom margins. No percentage can do
 //     this — the host sits in `height:auto` wrappers — and the shell's header height is not a
 //     constant. With no scrolling pane (a bare pane in a test) the property is unset and the height
-//     falls back to `--edit-fallback`, 60vh as before (90vh stacked). The margins are kept: the top
-//     clears the corner chrome and the bottom 130px is the clearance the bottom-left pill stack
-//     (net 16, theme 56, watch 96) was always given; reclaiming it means moving that stack.
+//     falls back to `--edit-fallback`, 60vh as before (90vh stacked). The top margin clears the
+//     corner chrome. The bottom margin was 130px, the clearance the bottom-left pill stack (net 16,
+//     theme 56, watch 96) was always given; M13 task 4.6 (D-7) reclaimed it — the app page has had no
+//     pill stack since 4.5 — so the split now runs to the reader pane's own padding. The one piece of
+//     chrome still drawn at the reader's foot is the network indicator (16px from the host's bottom,
+//     shown only after the user loads remote media): while the host carries data-network="active"
+//     the split keeps 56px for it, the same clearance the reading column keeps.
 //   - SCROLLBARS. `scrollbar-color` (thumb --faint, transparent track) on the split, inherited by
 //     both scrollers, and `color-scheme` by theme so native controls and any scrollbar left at
 //     auto follow it. Both engines expose `scrollbar-color`; neither exposes the native bar's own
@@ -1474,7 +1491,7 @@ export const EDITOR_CSS = /* css */ `
 .peekover-editor{display:none}
 :host([data-mode="edit"]) .peekover-mode-toggle{display:none}
 :host([data-mode="edit"]) .peekover-editor{
-  --edit-top:56px;--edit-bottom:130px;--edit-fallback:60vh;
+  --edit-top:56px;--edit-bottom:0px;--edit-fallback:60vh;
   display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr);
   height:calc(var(--peekover-edit-avail,calc(var(--edit-fallback) + var(--edit-top) + var(--edit-bottom))) - var(--edit-top) - var(--edit-bottom));
   margin:var(--edit-top) 32px var(--edit-bottom);
@@ -1482,6 +1499,7 @@ export const EDITOR_CSS = /* css */ `
   color-scheme:light;scrollbar-color:var(--faint) transparent;
 }
 :host([data-mode="edit"][data-theme="dark"]) .peekover-editor{color-scheme:dark}
+:host([data-mode="edit"][data-network="active"]) .peekover-editor{--edit-bottom:56px}
 :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:calc(var(--toc-w) + 32px)}
 :host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{--edit-top:90px}
 @media (max-width:1400px){

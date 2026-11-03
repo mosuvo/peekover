@@ -1,6 +1,70 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-03 · M13 TASK 4.6 — the 130 px band reclaimed on the app page, in all three places; the split fills the
+  height (D-7; F-2; the human's M12 7.1 request).** Branch restarted from `main` at `9a37fd2` (PR #30's merge, containing
+  `b8af45f`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0,
+  `pnpm audit --prod` EXIT 0 on 2026-11-03.
+  - **The three places, and how each was reclaimed (app page only):**
+    1. **The reading column** (`.peekover-reader`, READER_CSS `padding:56px 32px 130px`, shared with the content
+       script) and
+    2. **the diff** (`.peekover-diff`, the same padding — F-2's third site): `CONTAINED_CSS` now sets both bottom
+       paddings to their top value, 56px, inside `@media screen` (READER_CSS's print block sets the column's padding to
+       0 at the same specificity; a later sheet would otherwise win in print too). READER_CSS is untouched, so the
+       file:// reader keeps 130px and its pills.
+    3. **The split** (`--edit-bottom`, EDITOR_CSS): 130px → 0px, so the split runs to the reader pane's own 1.5rem
+       padding. **Deviation from tasks.md's wording** ("`CONTAINED_CSS` sets … `--edit-bottom`"): set in EDITOR_CSS,
+       which ships to the app page alone (the edit view is app-only), and is injected after CONTAINED_CSS with a
+       higher-specificity selector, so a CONTAINED_CSS override would lose. tasks.md sized it to "the gap the status line
+       needs": D-9's status line is a footer at the window's foot, OUTSIDE the reader pane, so inside the pane it needs
+       none — 0. **Necessary ripple, stated:** the network indicator is still drawn in the reader on the app page (16px
+       above the host's foot, only after the user loads remote media); with a 0 band it covered the split's bottom-left
+       corner (ablation A4 below), so while the host carries `data-network="active"` the split keeps 56px for it.
+  - **Measured bottom gaps after the change** (scrolled to the end; last block to the pane's foot, less its own margin;
+    the split's bottom edge to the viewport's), identical in light and dark:
+
+    | Width | Reading (Cr / Fx) | Diff (Cr / Fx) | Split (Cr / Fx) | Split, indicator showing (Cr / Fx) |
+    |---|---|---|---|---|
+    | 1440 × 900 | 79.6 / 79.9 | 80.4 / 79.5 | 23.7 / 23.6 | 79.7 / 79.6 (indicator top 71.2 above the foot) |
+    | 1080 × 900 | 79.3 / 79.9 | 79.9 / 80.0 | 23.7 / 23.6 | 79.7 / 79.6 (71.2) |
+    | 414 × 896 | 79.9 / 80.0 | 79.8 / 79.9 | 24.1 / 24.1 | 80.1 / 80.1 (71.6) |
+
+    Before: reading ~170, diff ~175, split ~154 at every width, both engines. The reading column and the diff end at
+    24 + 56; the split at the pane's 24. **Kickoff mismatch, flagged:** the kickoff asked for the diff and "the third
+    place" at the pane padding (~24 px) like the split; tasks.md and plan D-7 set the column's and the diff's foot to the
+    TOP value (56), which is what was built. The file:// reader: 130px, unchanged.
+  - **Tests (`editorWalkPolish.browser.test.ts`, red-first, both engines):** C225 re-spelled — the tolerance is the
+    pane's padding + 4 (28; it was `24 + 130 + 8 = 162`, R29 Decision 2: the band's allowance RETIRED because the app
+    page has had no pill stack since 4.5), at 1440 / 1080 / 414 × light / dark (was 414 / 1400). New: the last line of a
+    long document and of a diff within 24 + 56 ± 2 of the pane's foot (6 cases); in edit, the split overlaps neither the
+    header (toolbar), the notice area nor the rail, and ends at the pane's foot (6 cases); with the network indicator
+    showing, the split keeps clear of it (3 widths); CONTROL — the content script keeps 130px, computed and measured.
+    All red on 4.5's CSS (e.g. "reading: the last line ends 154.2px above the pane's foot: expected … ≤ 82"; "the split
+    ends 154px above the viewport bottom (max 28)"), green after. The status line cannot be checked yet — it does not
+    exist until 4.7, whose Verify should add it to this overlap set.
+  - **Ablations, each red then restored md5-identical (both engines):** A1 the column and diff band restored on the app
+    page → 12 red ("… 153.8px … ≤ 82"); A2 the split's band restored → 24 red ("154.1 ≤ 28"); A3 the band removed on the
+    file:// reader (the rule outside CONTAINED_CSS — tasks.md's red-first) → the control red ("expected '56px' to be
+    '130px'"); A4 no clearance for the network indicator → 6 red ("the split (bottom 872) overlaps the indicator (top
+    824)").
+  - **Census:** C225, the one row whose second step is 4.6 — re-spelled (`KEEPS:`). No row first-breaks here, as counted;
+    the full suite found none.
+  - **Finding, not changed (outside the three sites):** the TOC rail's own padding is `56px 22px 130px` (READER_CSS) — a
+    130px tail inside the rail's own scroll box, which matters only when its list overflows. Left for the human / the
+    8.1 walk.
+  - **Verify:** lint 0 · unit 1,487 / 1,488 (`pipeline.perf`) · browser, the FULL suite alone, both engines, CI font:
+    **2,136 passed / 0 failed / 52 skipped of 2,188** (202 files, 364 s), EXIT 0, first run, no unhandled error; the four
+    known flakes re-run once alone — `pipeline.perf` 1 / 1, `watchRemount`, `editorPreview` and `contrastCensus` 70 / 70
+    both engines; the contrast census green, its pending list unchanged · golden EMPTY · zero `src/settings` diff · NUL 0
+    in both changed files.
+  - **Bytes (clean two-engine build):** content script 343,826 → **343,900 B (+74)**, md5 `23b30cde…` (Cr) /
+    `b14eee5c…` (Fx) — **the whole delta is the CONTAINED_CSS rule** (CONTAINED_CSS rides into the content script, so it
+    moves by that edit as tasks.md says; **the kickoff expected it unchanged — flagged**); with that rule alone reverted it
+    rebuilds to `75e5831d…` exactly. App chunk 547,260 → **547,418 B (+158):** the CONTAINED_CSS rule +74 · the
+    indicator's clearance +86 · `--edit-bottom` 130px → 0px −2 — sum exact; all three reverted (comments kept) rebuild
+    HEAD's 343,826 / 547,260, so no comment ships. `.output` 5,965,712 / 5,965,828 B; zips 1,959,050 / 1,959,106 B;
+    manifests **833 / 949 B** unchanged, `permissions: []`. G-7 holds.
+
 - **2026-11-03 · M13 RULING — C130, Compare's status while the picker is open (HUMAN).** Asked during task 4.5: Compare's
   status now lives in the notice area below the toolbar (4.2's placement). In the half-empty state the picker is open AND
   the status says the other half is empty ("No other markdown file in this folder…"); the open picker drops from the
