@@ -126,7 +126,7 @@ function mountContained(text: string): HTMLElement {
   host.style.display = 'block';
   document.body.prepend(host);
   cleanup.push(host);
-  mount(text, host, { contained: true });
+  mount(text, host, { contained: true, pills: false }); // the pane's own call since 013 task 4.5
   expectUnwatched(host);
   return host;
 }
@@ -139,8 +139,6 @@ function toolbarFor(host: HTMLElement): (mode: 'reading' | 'edit' | 'raw') => HT
   toolbar.setDocument('doc.md', host);
   return (mode) => toolbar.element.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`)!;
 }
-const pillIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>('.peekover-mode-toggle')!;
 /** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
 const columnIn = (host: HTMLElement): HTMLElement =>
   [...host.shadowRoot!.children].find((el) => el.classList.contains('peekover-reader')) as HTMLElement;
@@ -286,23 +284,19 @@ describe('013 task 4.3 — the Edit segment is a real button, keyboard-operable,
 // ── R3 — the pill in edit, and the exit ──────────────────────────────────────────────────────
 
 describe('012 task 3.2 (R3) — the pill is hidden in edit; Read exits with nothing left behind', () => {
-  // KEEPS: the pill is not a way out of edit, the exit is on screen and leaves no residue (C178).
+  // KEEPS: the exit is on screen and leaves no residue (C178).
   // RE-SPELLED at 4.3: the exit is the toolbar's Read (ruling E), not the removed control.
+  // RETIRED at 013 task 4.5 (C178's mode-pill clause, as the census said): "the pill is display:none while
+  // editing" — the app page mounts its reader with `pills: false`, so there is no pill to hide (asserted).
   it('★ the pill is display:none while editing, Read is the way out, and no shell residue remains', async () => {
     const host = await openInPane(LF_DOC);
     const shadow = host.shadowRoot!;
-    const pill = pillIn(host);
+    expect(shadow.querySelector('.peekover-mode-toggle'), 'the app page builds no mode pill (4.5)').toBeNull();
     const control = toolbarFor(host)('reading');
     const before = [...shadow.children];
     const column = columnIn(host);
 
-    // Positive control: at rest the instrument reads the pill as shown.
-    expect(getComputedStyle(pill).display).not.toBe('none');
-    expect(onScreen(pill)).toBe(true);
-
     await enterEdit(host);
-    expect(getComputedStyle(pill).display).toBe('none');
-    expect(onScreen(pill)).toBe(false);
     expect(onScreen(control), 'the exit is on screen').toBe(true);
     const c = centreOf(control);
     expect(deepElementAt(c.x, c.y)).toBe(control);
@@ -318,8 +312,7 @@ describe('012 task 3.2 (R3) — the pill is hidden in edit; Read exits with noth
     expect(shadow.querySelector('.cm-editor')).toBeNull();
     expect(editorSessionFor(host)).toBeUndefined();
     expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
-    // And the document is back on screen, the pill with it.
-    expect(getComputedStyle(pill).display).not.toBe('none');
+    // And the document is back on screen.
     expect(getComputedStyle(column).display).not.toBe('none');
     expect(onScreen(column)).toBe(true);
     expectUnwatched(host);

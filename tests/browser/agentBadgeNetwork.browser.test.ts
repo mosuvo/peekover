@@ -324,8 +324,13 @@ async function clickFile(container: HTMLElement, name: string): Promise<HTMLElem
 // ── Readers ───────────────────────────────────────────────────────────────────────────────────
 
 const shadowOf = (host: HTMLElement) => host.shadowRoot!;
+/** KEEPS: the badge lifecycle is zero-network (C079). RE-SPELLED at 013 task 4.5: on the APP PAGE the badge is the
+ *  toolbar's (the reader mounts with `pills: false`) — rebuilt on each document switch; the content script's is in
+ *  its shadow root. */
 const badgeIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLElement>(`.${AGENT_BADGE_CLASS}`);
+  (host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? shadowOf(host)).querySelector<HTMLElement>(
+    `.${AGENT_BADGE_CLASS}`,
+  );
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────────────────────
 

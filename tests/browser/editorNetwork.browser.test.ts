@@ -444,7 +444,8 @@ async function opened(file: MarkdownFile, persistable = true): Promise<Rig> {
  *  the shell's detector. Chromium only. */
 async function appWatched(file: MarkdownFile): Promise<Rig> {
   const rig = await mountAndSelect(file, true);
-  const pill = rig.host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`);
+  // KEEPS: the app page's own watch, started by its control (C170). RE-SPELLED at 013 task 4.5: the toolbar's Watch.
+  const pill = rig.container.querySelector<HTMLElement>(`.peekover-toolbar .${WATCH_CONTROL_CLASS}`);
   expect(pill, 'the app page offers its watch control for this file').not.toBeNull();
   pill!.click();
   await waitFor(() => isWatching(), 'the app page’s own watch to start');

@@ -548,7 +548,7 @@ the app page shows some controls twice — unreleased, stated.*
       unneeded. Compact "Close" for an open comparison (deviation). C061's app arm moved to 1400 by the human's ruling.
       Census 47 (43 re-spelled, 1 replaced, 3 unchanged) + C362–C364. Content script md5 identical; app chunk +3,845 B.
 
-- [ ] **4.5 The one-time snapshot notice + its permanent home; the app page drops the pills (D-8, D-5; G-15; F-6).**
+- [x] **4.5 The one-time snapshot notice + its permanent home; the app page drops the pills (D-8, D-5; G-15; F-6).**
       TEST FIRST. The toolbar module renders the capture disclosure once, below the toolbar and never over text, with
       "Got it" writing an app-only settings-store row (key `notices`, not a `Settings` field — G-15) and a "Stored data"
       link; `STORAGE_DISCLOSURE_NOTE` aligned to state every clause the notice states. **In the same commit** the app page
@@ -569,6 +569,15 @@ the app page shows some controls twice — unreleased, stated.*
       remote-images "load" bar joins the same notice area (the file:// reader keeps it where it is). Both before the pills
       drop here. Census rows: A — C020, C326–C328, C331, C334, C343–C345; D — C031, C141, C143 (retired). The tasks.md
       citation `readerCss.ts:1314–1335` has drifted: `CONTAINED_CSS` starts at 1343 (census.md notes).
+      ★ *Landed 2026-11-03 (`decisions.md`, "M13 TASK 4.5" and "M13 RULING — C130").* `pills: false` at every app-page
+      mount and re-render (select, the save and watch re-renders via `renderWithEnhancements`; a diff exit and a theme
+      change mount nothing) — no pill after any, both engines; the file:// reader keeps every pill. The snapshot notice
+      in the notice area ("Stored data", "Got it"), its dismissal in the app-only `notices` row, back after Wipe; the
+      Stored data note states every clause (Q13). The watch note and the load bar in the notice area; Compare's status
+      inside the picker's dropdown while it is open (the human's ruling on C130). `CAPTURE_NOTICE_SEAT_CSS` and the
+      `CONTAINED_CSS` overrides removed. Census 100 (70 / 21 / 9) + the 4.3 cells' 4.5 steps + C365–C371; C168
+      unpredicted. Content script −736 B (the CSS deletion, as above); app chunk +2,209 B. The carried contrast-census
+      item: the code-theme premise not proven; the census now supplies its own settings (hardening, kept).
 
 - [ ] **4.6 The 130 px band reclaimed on the app page (D-7; F-2).** TEST FIRST. `CONTAINED_CSS` sets the reading
       column's AND the diff's (`readerCss.ts:227`) bottom padding to the top value, and `--edit-bottom` to the gap the
@@ -846,6 +855,8 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       the look of **Editing (Read / Edit / Raw while editing), the Watching pill, the one-time snapshot notice, the
       Compare picker and the ≤ 1080 Files overlay** is judged again, WORKING, in both engines and both themes — the 3.1
       approval of these took the agent's mock self-check, not the human's eye. Also the compact toolbar (≤ 863 px, "⋯").
+      ★ *2026-11-03 (4.5's record; the C061 ruling) — ADDED TO THIS WALK:* an agent file at 1280 px gets a two-row toolbar
+      (C061 ruling) — judge it with the real thing.
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 

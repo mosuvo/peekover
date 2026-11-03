@@ -24,9 +24,6 @@ import type { SnapshotMetaEntry } from '../app/snapshots';
 // Registered here rather than transcribed: a caption built from a stale seam would read fine and be
 // wrong, and `resetDocIdentityForTest` keeps one case's name out of the next.
 import { registerDocIdentity, resetDocIdentityForTest } from './docIdentity';
-// 2.4's lane lives in the CONTAINED sheet, and the assertion that it exists reads the real export
-// rather than a copy of it — a transcribed selector could drift from the shipped one silently.
-import { CONTAINED_CSS, READER_CSS } from '../theme/readerCss';
 
 const ENTRIES: SnapshotMetaEntry[] = [
   { id: 'older', ts: 1_700_000_000_000, bytes: 512 },
@@ -588,17 +585,10 @@ describe('buildDiffChrome — the fallback (plan §1.5, §7-8): explain, never b
   // where geometry does not exist would be the vacuous green one layer down.
   const LANE_SELECTOR = '.peekover-diff-picker:not([hidden]) ~ .peekover-diff-status';
 
-  it('THE LANE EXISTS, and it is the CONTAINED sheet that carries it (D-14: app page only)', () => {
-    expect(CONTAINED_CSS).toContain(LANE_SELECTOR);
-    // Derived from the picker's OWN cap, so it clears at every height the picker can reach —
-    // never a fixed offset tuned against one content length (readerCss.ts's .ts block has the
-    // argument). The cap is the picker's own `max-height` token in READER_CSS.
-    expect(READER_CSS).toContain('max-height:min(46vh,320px)');
-    expect(CONTAINED_CSS).toContain('top:calc(50px + min(46vh,320px) + 6px)');
-    // READER_CSS gains no lane: diffChrome.ts:104's precedent — the chrome is app-page-only, so no
-    // full-page rule moves. A lane there would style chrome D-14 guarantees never renders.
-    expect(READER_CSS).not.toContain(LANE_SELECTOR);
-  });
+  // RETIRED (C030) at 013 task 4.5: "THE LANE EXISTS, and it is the CONTAINED sheet that carries it" — the app
+  // page no longer builds the diff chrome in the reader (`pills: false`, D-5), so CONTAINED_CSS's lane rule went
+  // with the pill overrides. The picker and status are the toolbar's now (the status in the notice area).
+  // C027–C029 below are UNCHANGED (a census finding): `LANE_SELECTOR` matches by DOM order, which still holds.
 
   it('HALF-EMPTY (snapshots, no other files) — BOTH open, and the status is IN the lane', async () => {
     // The state 2.4 adds: the snapshots are listed, and the empty half is NAMED IN TEXT beside
@@ -741,25 +731,7 @@ describe('buildDiffChrome — the seam: no context reference is captured', () =>
   });
 });
 
-// ── M13 task 1.4 addendum — the remote-load lane on an engine WITHOUT anchor positioning ──────
-// `anchor-name` / `anchor()` need Chrome and Edge 125+ and Firefox 147+ (MDN browser-compat-data,
-// checked 2026-11-01), and the manifests set no minimum version, so an older engine can install
-// Peekover. There the anchored `left` is an invalid declaration and is DROPPED at parse time; what
-// applies is whatever `left` the cascade held before it. That must be the old fixed lane (176px,
-// clear of the widest Windows label), not READER_CSS's `left:16px` (the pill's own slot, so the
-// two would overlap). jsdom applies no cascade, so this pins SOURCE ORDER inside the one rule: the
-// fixed value first, the anchored value after it. A supporting engine takes the later declaration.
-describe('the remote-load lane — fallback for engines without anchor positioning', () => {
-  it('declares left:176px BEFORE the anchored left, in the same CONTAINED_CSS rule', () => {
-    const rule = /\.peekover-remote-load\{([^}]*)\}/.exec(CONTAINED_CSS);
-    expect(rule, 'CONTAINED_CSS has a .peekover-remote-load rule').not.toBeNull();
-    const body = rule![1];
-    const fixed = body.indexOf('left:176px');
-    const anchored = body.indexOf('left:calc(anchor(--peekover-diff right');
-    expect(anchored, 'the anchored left is present').toBeGreaterThanOrEqual(0);
-    expect(fixed, 'the fixed fallback is present').toBeGreaterThanOrEqual(0);
-    expect(fixed, 'the fixed fallback comes first, so the anchored value wins where supported').toBeLessThan(anchored);
-    // Exactly one rule: a second .peekover-remote-load rule later in the sheet could re-order the cascade.
-    expect(CONTAINED_CSS.match(/\.peekover-remote-load\{/g)).toHaveLength(1);
-  });
-});
+// RETIRED (C031) at 013 task 4.5: "the remote-load lane — declares left:176px BEFORE the anchored left" (the M13
+// task 1.4 addendum's fallback for engines without anchor positioning) — on the app page the load bar leaves the
+// reader for the notice area below the toolbar (ruling D), so CONTAINED_CSS's lane beside the (gone) Compare pill
+// was deleted; the file:// reader keeps its own bar where it was.

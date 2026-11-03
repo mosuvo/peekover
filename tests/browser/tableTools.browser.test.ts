@@ -236,7 +236,9 @@ async function openViaWatchRerender(doc: string): Promise<HTMLElement> {
   // nothing ever re-renders, so the write waits on the read COUNT rather than on a sleep. `reads`
   // is already non-zero from the initial select; wait for one MORE than we have.
   const before = reads;
-  host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-watch')!.click();
+  // KEEPS (C289–C291): RE-SPELLED at 013 task 4.5 — on the app page, the toolbar's Watch (no reader pills); the
+  // content script keeps its pill.
+  (host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector<HTMLButtonElement>('.peekover-watch')!.click();
   expect(isWatching(), 'the watch must really be running or nothing re-renders').toBe(true);
   await waitFor(() => reads > before);
   text = doc;
@@ -315,14 +317,18 @@ describe('harness sanity — both app-page call sites really render a document (
   it('SITE 1 (initial select): the click chain puts a table on screen, with chrome beside it', async () => {
     const host = await openViaInitialSelect(TABLE_DOC);
     expect(tablesIn(host)).toHaveLength(1);
-    expect(host.shadowRoot!.querySelector('.peekover-theme-toggle')).not.toBeNull();
+    // KEEPS: the document arrives with the app page's chrome beside it (C288, C289). RE-SPELLED at 013 task 4.5:
+    // on the app page the chrome is the toolbar's (no reader pills) — its theme control stands for it.
+    expect((host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector('.peekover-theme-toggle')).not.toBeNull();
   });
 
   it('SITE 2 (watch re-render): the poll really replaces the document', async () => {
     const host = await openViaWatchRerender(TABLE_DOC);
     expect(columnOf(host).textContent).not.toMatch(/the seed render/);
     expect(tablesIn(host)).toHaveLength(1);
-    expect(host.shadowRoot!.querySelector('.peekover-theme-toggle')).not.toBeNull();
+    // KEEPS: the document arrives with the app page's chrome beside it (C288, C289). RE-SPELLED at 013 task 4.5:
+    // on the app page the chrome is the toolbar's (no reader pills) — its theme control stands for it.
+    expect((host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector('.peekover-theme-toggle')).not.toBeNull();
   });
 });
 
@@ -761,7 +767,9 @@ async function openViaContentWatchRerender(doc: string): Promise<HTMLElement> {
   // compare against"), so a write landing before it is absorbed and nothing ever re-renders. The
   // write therefore waits on the read COUNT rather than on a sleep.
   const before = reads;
-  host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-watch')!.click();
+  // KEEPS (C289–C291): RE-SPELLED at 013 task 4.5 — on the app page, the toolbar's Watch (no reader pills); the
+  // content script keeps its pill.
+  (host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector<HTMLButtonElement>('.peekover-watch')!.click();
   expect(isWatching(), 'the watch must really be running or nothing re-renders').toBe(true);
   await waitFor(() => reads > before);
   text = doc;
@@ -786,14 +794,18 @@ describe('4.1 · harness sanity — both content-script call sites really render
     const host = await openViaContentMount(TABLE_DOC);
     expect(tablesIn(host)).toHaveLength(1);
     expect(rawPre().style.display, 'the originals are hidden by the committed mount').toBe('none');
-    expect(host.shadowRoot!.querySelector('.peekover-theme-toggle')).not.toBeNull();
+    // KEEPS: the document arrives with the app page's chrome beside it (C288, C289). RE-SPELLED at 013 task 4.5:
+    // on the app page the chrome is the toolbar's (no reader pills) — its theme control stands for it.
+    expect((host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector('.peekover-theme-toggle')).not.toBeNull();
   });
 
   it('SITE 4 (watch re-render): the poll really replaces the document', async () => {
     const host = await openViaContentWatchRerender(TABLE_DOC);
     expect(columnOf(host).textContent).not.toMatch(/the seed render/);
     expect(tablesIn(host)).toHaveLength(1);
-    expect(host.shadowRoot!.querySelector('.peekover-theme-toggle')).not.toBeNull();
+    // KEEPS: the document arrives with the app page's chrome beside it (C288, C289). RE-SPELLED at 013 task 4.5:
+    // on the app page the chrome is the toolbar's (no reader pills) — its theme control stands for it.
+    expect((host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector('.peekover-theme-toggle')).not.toBeNull();
   });
 });
 

@@ -170,7 +170,12 @@ function openerOf(host: HTMLElement): HTMLButtonElement {
   return host.shadowRoot!.querySelector<HTMLButtonElement>('button.peekover-toc__toggle')!;
 }
 
+/** The control a reader in Reading is switched to Raw with. KEEPS: each test's own Raw-and-place property (C347,
+ *  C349, C350). RE-SPELLED at 013 task 4.5: on the app page it is the toolbar's Raw (the reader mounts with
+ *  `pills: false`); the full-page surface keeps its mode pill. Every caller goes Reading → Raw. */
 function modeToggleOf(host: HTMLElement): HTMLButtonElement {
+  const app = host.closest('.peekover-app');
+  if (app) return app.querySelector<HTMLButtonElement>('.peekover-toolbar__seg [data-mode="raw"]')!;
   return host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-mode-toggle')!;
 }
 

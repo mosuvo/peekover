@@ -268,7 +268,7 @@ export const WATCH_DISCLOSURE_CLASS = 'peekover-watch-disclosure';
  *  capture off-switch (1.5) and "Erase snapshots" control (1.6). It deliberately does NOT describe
  *  the diff view (6.1, unshipped), any future feature, or per-document erase (deferred, §6): a
  *  standing statement of what capture IS doing, phrased so it reads as disclosure, not as chrome. */
-const DISCLOSURE_TEXT =
+export const DISCLOSURE_TEXT =
   'Snapshots of this file are stored on this device only, never uploaded. Manage them in the ' +
   'Stored data panel — turn off capture, or erase all snapshots.';
 

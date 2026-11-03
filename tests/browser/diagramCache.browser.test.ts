@@ -605,8 +605,9 @@ describe('★ the cache under WATCH (task 4.4, §3.3) — production path, no ha
     ).toBe(1);
     expect((await describeStored()).diagrams.count).toBe(1);
 
-    // Start watching, through the shipped pill. Nothing polls until this happens.
-    const pill = await until(() => shadow.querySelector<HTMLButtonElement>('.peekover-watch'));
+    // Start watching. Nothing polls until this happens. KEEPS: the watch re-render's property (C108).
+    // RE-SPELLED at 013 task 4.5: through the toolbar's Watch — the app page has no reader pills (`pills: false`).
+    const pill = await until(() => (shadow.host as HTMLElement).closest('.peekover-app')?.querySelector<HTMLButtonElement>('.peekover-toolbar .peekover-watch'));
     const readsBeforeStart = disk.reads;
     pill.click();
     expect(pill.getAttribute('aria-pressed')).toBe('true');

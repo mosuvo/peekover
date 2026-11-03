@@ -921,7 +921,10 @@ describe.runIf(CHROMIUM)('012 task 4.3 — a save’s own write, on a document t
   async function appWatched(file: MarkdownFile): Promise<App & { host: HTMLElement }> {
     const rig = await mountApp([file]);
     const host = await select(rig.container, file);
-    const pill = host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`);
+    // KEEPS: the app page's own watch, started by the user's control (C181, C187, C195, C199–C202). RE-SPELLED at
+    // 013 task 4.5: the control is the toolbar's Watch — the reader is mounted with `pills: false` (none in it).
+    expect(host.shadowRoot!.querySelector(`.${WATCH_CONTROL_CLASS}`), 'no watch pill in the reader (4.5)').toBeNull();
+    const pill = host.closest('.peekover-app')?.querySelector<HTMLElement>(`.peekover-toolbar .${WATCH_CONTROL_CLASS}`) ?? null;
     expect(pill, 'the app page offers its watch control for this file').not.toBeNull();
     pill!.click();
     await waitFor(() => isWatching(), 'the app page’s own watch to start');
@@ -1179,7 +1182,10 @@ describe.runIf(CHROMIUM)('012 task 4.4 — leaving edit shows the NEWEST text, i
   const detected = (): Promise<void> => new Promise<void>((r) => setTimeout(r, 1600));
 
   async function startWatch(host: HTMLElement): Promise<void> {
-    const pill = host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`);
+    // KEEPS: the app page's own watch, started by the user's control (C181, C187, C195, C199–C202). RE-SPELLED at
+    // 013 task 4.5: the control is the toolbar's Watch — the reader is mounted with `pills: false` (none in it).
+    expect(host.shadowRoot!.querySelector(`.${WATCH_CONTROL_CLASS}`), 'no watch pill in the reader (4.5)').toBeNull();
+    const pill = host.closest('.peekover-app')?.querySelector<HTMLElement>(`.peekover-toolbar .${WATCH_CONTROL_CLASS}`) ?? null;
     expect(pill, 'the app page offers its watch control for this file').not.toBeNull();
     pill!.click();
     await waitFor(() => isWatching(), 'the app page’s own watch to start');

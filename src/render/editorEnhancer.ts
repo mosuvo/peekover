@@ -12,10 +12,6 @@
 // does nothing on a host with no `data-mode`: that is `mount()`'s render-failure fallback (a banner
 // over the raw source), where there is no document view to edit.
 //
-// It also injects ONE app-only rule, `CAPTURE_NOTICE_SEAT_CSS` (readerCss.ts): the capture
-// notice's seat, which shared the removed control's sheet. The notice leaves the shadow root at
-// 4.5 (D-8); the rule goes with it.
-//
 // ── ENTERING AND LEAVING (`toggleEdit`, `leaveEdit`) ───────────────────────────────────────────
 //
 // Entering loads the engine, builds the edit view, and only then flips the mode
@@ -64,12 +60,12 @@ import {
   teardownEditorShell,
   type EditorSave,
 } from './editorView';
-import { CAPTURE_NOTICE_SEAT_CSS } from '../theme/readerCss';
 
 export type { EditorSave, EditorSaveOutcome } from './editorView';
 
-/** Marks the app-only seat sheet, so a second call does not append a second one. */
-const SEAT_STYLE_MARKER = 'data-peekover-seat-style';
+/** The reading column each host was last made editable for: a different one means `mount()` ran
+ *  again since, so a session left behind by that re-mount is ended (once). */
+const enhancedFor = new WeakMap<HTMLElement, Element | null>();
 
 /** What `enhanceEditor` is handed. */
 export interface EditorEnhanceOptions {
@@ -110,12 +106,10 @@ export function enhanceEditor(host: HTMLElement, options: EditorEnhanceOptions =
   const shadow = host.shadowRoot;
   if (!shadow || !host.hasAttribute('data-mode')) return;
   editable.set(host, options);
-  if (!shadow.querySelector(`style[${SEAT_STYLE_MARKER}]`)) {
+  const column = shadow.querySelector('.peekover-reader');
+  if (enhancedFor.get(host) !== column || !enhancedFor.has(host)) {
     dropStaleEditorSession(host);
-    const style = document.createElement('style');
-    style.setAttribute(SEAT_STYLE_MARKER, '');
-    style.textContent = CAPTURE_NOTICE_SEAT_CSS;
-    shadow.appendChild(style);
+    enhancedFor.set(host, column);
   }
 }
 

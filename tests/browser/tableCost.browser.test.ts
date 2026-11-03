@@ -241,7 +241,7 @@ const AGENT_NAME = 'CLAUDE.md';
 
 const hosts: HTMLElement[] = [];
 
-/** The app page's own host shape: a plain `<div>` mounted `{contained: true}` (`readerPane.ts:181`). */
+/** The app page's own host shape: a plain `<div>` mounted `{contained: true, pills: false}` (`readerPane.ts`). */
 function makeHost(): HTMLElement {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -306,7 +306,7 @@ function runArm(doc: string, name: string, enhance: boolean): Arm {
   registerDocIdentity(name);
   const listeners = countListeners();
   try {
-    mount(doc, host, { contained: true });
+    mount(doc, host, { contained: true, pills: false });
     if (enhance) {
       enhanceDiagrams(host);
       enhanceTables(host);
@@ -348,7 +348,9 @@ const NO_M8_FOOTPRINT = {
   badges: 0,
 };
 
-/** One three-column table enhanced, plus the badge a recognized name earns. */
+/** One three-column table enhanced. KEEPS: the M8 footprint on the app page's reader (C278). RE-SPELLED at 013
+ *  task 4.5: the harness mounts as `readerPane.ts` does, with `pills: false`, so the agent badge a recognized name
+ *  earns is the TOOLBAR's, not the reader's — `badges` is 0 here (the badge itself: agentBadge.browser.test.ts). */
 const ENHANCED_M8_FOOTPRINT = {
   toolbars: 1,
   sortButtons: 3,
@@ -357,7 +359,7 @@ const ENHANCED_M8_FOOTPRINT = {
   copyButtons: 2,
   copyStatuses: 1,
   markedTables: 1,
-  badges: 1,
+  badges: 0,
 };
 
 // ── The three arms, run ONCE, before anything asserts ──────────────────────────────────────────
@@ -448,7 +450,7 @@ describe('the enhancer re-parses nothing, re-sanitizes nothing and reads no layo
     registerDocIdentity(AGENT_NAME);
 
     const start = { ...injected };
-    mount(DOC_TABLE, host, { contained: true });
+    mount(DOC_TABLE, host, { contained: true, pills: false });
     // THE CONTROL, and it is free: `mount()` reaches `sanitize(parse(source))` (`mount.ts:118`)
     // THROUGH THESE VERY WRAPPERS. A spy that was never wired reads zero here too.
     const afterMount = { ...injected };
@@ -458,7 +460,7 @@ describe('the enhancer re-parses nothing, re-sanitizes nothing and reads no layo
 
     const bare = makeHost();
     registerDocIdentity(BARE_NAME);
-    mount(DOC_BARE, bare, { contained: true });
+    mount(DOC_BARE, bare, { contained: true, pills: false });
     const afterBareMount = { ...injected };
     enhanceDiagrams(bare);
     enhanceTables(bare);
@@ -494,11 +496,11 @@ describe('the enhancer re-parses nothing, re-sanitizes nothing and reads no layo
   it('touches no layout-reading API — on either document — while the same spies record a probe', () => {
     const host = makeHost();
     registerDocIdentity(AGENT_NAME);
-    mount(DOC_TABLE, host, { contained: true });
+    mount(DOC_TABLE, host, { contained: true, pills: false });
 
     const bare = makeHost();
     registerDocIdentity(BARE_NAME);
-    mount(DOC_BARE, bare, { contained: true });
+    mount(DOC_BARE, bare, { contained: true, pills: false });
 
     const layout = installLayoutSpies();
     let onTableDoc!: LayoutCounts;

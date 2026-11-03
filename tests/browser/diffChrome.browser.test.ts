@@ -215,12 +215,22 @@ async function seedSnapshot(text = docV1()): Promise<string> {
 }
 
 const shadowOf = (host: HTMLElement) => host.shadowRoot!;
-const pillIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLButtonElement>(`.${DIFF_AFFORDANCE_CLASS}`);
-const pickerIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLElement>(`.${DIFF_PICKER_CLASS}`);
-const statusIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLElement>(`.${DIFF_STATUS_CLASS}`);
+/** KEEPS: each test's own Compare / picker / status property (C120–C127, C130, C132–C137, C144, C145,
+ *  C147–C150). RE-SPELLED at 013 task 4.5: on the APP PAGE the reader mounts with `pills: false`, so the
+ *  Compare control and its picker are the TOOLBAR's, and the status line the toolbar's dropdown's (under the open
+ *  picker) or the NOTICE AREA's (ruling A; the human's ruling on C130); the
+ *  content-script reader keeps them in its shadow root. One lookup per host, by which surface it is on. */
+const appOf = (host: HTMLElement): HTMLElement | null => host.closest<HTMLElement>('.peekover-app');
+const chromeIn = (host: HTMLElement, cls: string, where: string): HTMLElement | null => {
+  const app = appOf(host);
+  return app ? app.querySelector<HTMLElement>(`${where} .${cls}`) : shadowOf(host).querySelector<HTMLElement>(`.${cls}`);
+};
+/** Where a host's diff chrome lives: the app page's document, or the content-script reader's shadow root. */
+const scopeOf = (host: HTMLElement): ParentNode => appOf(host) ?? shadowOf(host);
+const pillIn = (host: HTMLElement) => chromeIn(host, DIFF_AFFORDANCE_CLASS, '.peekover-toolbar') as HTMLButtonElement | null;
+const pickerIn = (host: HTMLElement) => chromeIn(host, DIFF_PICKER_CLASS, '.peekover-toolbar');
+// The status: under the open picker in its dropdown, or in the notice area (the human's ruling on C130).
+const statusIn = (host: HTMLElement) => chromeIn(host, DIFF_STATUS_CLASS, '.peekover-app');
 const readerIn = (host: HTMLElement) =>
   shadowOf(host).querySelector<HTMLElement>('.peekover-reader')!;
 const diffIn = (host: HTMLElement) =>
@@ -332,28 +342,10 @@ describe('D-14 — the affordance exists exactly where a diff target is register
 
 // ── The structural DOM relationship the golden pin cannot see ─────────────────────────────────
 
-describe('the affordance is a SIBLING of the reading column, never inside it', () => {
-  it('pill, picker and status all sit beside .peekover-reader in the shadow root', async () => {
-    const host = await mountAppPage();
-    const shadow = shadowOf(host);
-    const reader = readerIn(host);
-
-    for (const [label, el] of [
-      ['pill', pillIn(host)!],
-      ['picker', pickerIn(host)!],
-      ['status', statusIn(host)!],
-    ] as const) {
-      expect(el, `${label} missing`).not.toBeNull();
-      // THE ASSERTION. Verified red by appending into `.peekover-reader` instead: the golden pin
-      // stays EMPTY (it snapshots sanitize(parse(source)), upstream of chrome entirely), and only
-      // this fails — which is precisely why it is written as a parent identity, not a `contains`.
-      expect(el.parentNode, `${label} is not a shadow-root child`).toBe(shadow);
-      expect(reader.contains(el), `${label} leaked INTO the reading column`).toBe(false);
-    }
-    // Non-vacuous: the reading column exists and has real content to have leaked into.
-    expect(reader.querySelector('h1')).not.toBeNull();
-  });
-});
+// RETIRED (C146) at 013 task 4.5: "pill, picker and status all sit beside .peekover-reader in the shadow root" —
+// on the app page they are not in the reader at all (`pills: false`): the toolbar holds Compare and its picker,
+// the notice area (or the picker's dropdown) the status. That none is in the reading column is
+// snapshotNotice.browser.test.ts's no-pill-in-the-reader test.
 
 // ── Placement (the M3 collision class; measured at 4.1, asserted here) ────────────────────────
 
@@ -371,87 +363,12 @@ describe('the affordance is a SIBLING of the reading column, never inside it', (
 // This mirrors watchControl.browser.test.ts's own scoped-to-WIDE column check and 004's 5.1
 // precedent ("clears the reading column at a WIDE viewport, where a gutter exists").
 describe('placement clears the existing chrome (measured, not chosen)', () => {
-  it.each(GEOMETRY_WIDTHS)('clears the aside stack, the mode toggle and the TOC rail at %s', async (_w, size) => {
-    await page.viewport(size.width, size.height);
-    const host = await mountAppPage();
-    await seedSnapshot();
+  // RETIRED (C139, C142) at 013 task 4.5: "clears the aside stack, the mode toggle and the TOC rail" and "the
+  // OPEN picker clears that chrome too" — the floating Compare and its picker among the app page's reader pills;
+  // there are no reader pills on the app page now (`pills: false`). Compare and its picker are the toolbar's.
 
-    // Force the rail OPEN and measure SYNCHRONOUSLY: tocView's width-derived initial state lands a
-    // frame later and stomps an early data-toc="open" back to "collapsed" (a stomp that silently
-    // hid the rail's entry list during the 6.2 placement probe and nearly cleared a candidate that
-    // in fact sat on the rail's entry list).
-    await flush();
-    host.setAttribute('data-toc', 'open');
-
-    const shadow = shadowOf(host);
-    const pill = pillIn(host)!;
-    const rect = pill.getBoundingClientRect();
-    // Non-vacuous: a zero-size or display:none pill would clear everything trivially.
-    expect(rect.width).toBeGreaterThan(0);
-    expect(rect.height).toBeGreaterThan(0);
-
-    for (const [name, sel] of [
-      ['mode-toggle', '.peekover-mode-toggle'],
-      ['theme pill', '.peekover-theme-toggle'],
-      ['watch pill', '.peekover-watch'],
-      ['watch note', '.peekover-watch-note'],
-      ['capture disclosure', '.peekover-watch-disclosure'],
-      ['TOC handle', '.peekover-toc__toggle'],
-      ['TOC list', '.peekover-toc__list'],
-    ] as const) {
-      const el = shadow.querySelector<HTMLElement>(sel);
-      if (!el || el.hidden) continue; // a hidden aside has no rect to clear
-      const other = el.getBoundingClientRect();
-      if (other.width === 0 || other.height === 0) continue;
-      expectNoOverlap('diff affordance', rect, name, other);
-    }
-    // The stack really was populated — otherwise the loop above cleared nothing.
-    expect(shadow.querySelector('.peekover-theme-toggle')).not.toBeNull();
-    expect(shadow.querySelector('.peekover-toc__toggle')).not.toBeNull();
-  });
-
-  it('the OPEN picker clears that chrome too — a pill whose list has nowhere to go is not a placement', async () => {
-    await page.viewport(WIDE.width, WIDE.height);
-    const host = await mountAppPage();
-    await seedSnapshot();
-    pillIn(host)!.click();
-    await waitFor(() => pickerIn(host)!.hidden === false);
-    await flush();
-    host.setAttribute('data-toc', 'open');
-
-    const shadow = shadowOf(host);
-    const rect = pickerIn(host)!.getBoundingClientRect();
-    expect(rect.height).toBeGreaterThan(0);
-    for (const [name, sel] of [
-      ['mode-toggle', '.peekover-mode-toggle'],
-      ['theme pill', '.peekover-theme-toggle'],
-      ['watch pill', '.peekover-watch'],
-      ['TOC handle', '.peekover-toc__toggle'],
-      ['TOC list', '.peekover-toc__list'],
-    ] as const) {
-      const el = shadow.querySelector<HTMLElement>(sel);
-      if (!el || el.hidden) continue;
-      const other = el.getBoundingClientRect();
-      if (other.width === 0 || other.height === 0) continue;
-      expectNoOverlap('diff picker', rect, name, other);
-    }
-  });
-
-  // ── THE ASSERTION 6.2 DROPPED IN TRANSCRIPTION (recovery B1, finding 2) ─────────────────────
-  // The loop above checks six sibling chromes and the rail. It did NOT check the READING COLUMN,
-  // and that omission IS finding 2: the pill shipped at top:56px and the column's padding-top is
-  // also 56px, so the pill's top edge was flush with the h1's — overlapping at every app-page width
-  // where the column's left margin fell under ~114px. watchControl.browser.test.ts:453-466 and
-  // themeControl.browser.test.ts:349 both DO check reader clearance; this file's header cites
-  // watchControl by name but borrowed only its SCOPING decision (assert at a wide viewport) and left
-  // the assertion itself behind. One line lost in transcription, one defect shipped.
-  //
-  // ★ WHY THE TARGET IS THE h1 AND NOT `.peekover-reader`'s OWN RECT. The fix puts the pill INSIDE
-  // the column's box deliberately — the top 56px of `padding:56px 32px 130px` is empty at every
-  // width, forever, and a 32px pill fits wholly within it. A whole-box assertion is therefore
-  // unsatisfiable BY CONSTRUCTION: it would forbid the fix rather than guard it. What must never be
-  // overlapped is the column's rendered CONTENT, and the h1 is both the topmost content box and the
-  // tightest case.
+  // REPLACED (C140) at 013 task 4.5: the property — the comparison control never covers the document's first
+  // block — now holds for the TOOLBAR's Compare (outside the reader); this test measures that control.
   it.each(GEOMETRY_WIDTHS)("clears the reading column's first content box at %s", async (_w, size) => {
     await page.viewport(size.width, size.height);
     const host = await mountAppPage();
@@ -516,91 +433,11 @@ describe('placement clears the existing chrome (measured, not chosen)', () => {
   // occupies, so the objection stops being a note and becomes a thing that must be answered: the two
   // get distinct LANES (pill at left:16, opt-in displaced to left:176 in CONTAINED_CSS). This is the
   // assertion that the lanes hold.
-  it.each(GEOMETRY_WIDTHS)('clears the remote-load opt-in that shares the top band at %s', async (_w, size) => {
-    await page.viewport(size.width, size.height);
-    const host = await mountAppPage(`${docV2()}\n\n![blocked](https://example.invalid/x.png)\n`);
-    await seedSnapshot();
-    await flush();
-    host.setAttribute('data-toc', 'open');
-
-    const remote = shadowOf(host).querySelector<HTMLElement>('.peekover-remote-load');
-    // Non-vacuous: the fixture's image really was blocked, so the opt-in really is on screen. Without
-    // this the whole case passes by the element being absent.
-    expect(remote, 'remote-load opt-in absent — the blocked-media fixture stopped working').not.toBeNull();
-    const remoteRect = remote!.getBoundingClientRect();
-    expect(remoteRect.width).toBeGreaterThan(0);
-    expect(remoteRect.height).toBeGreaterThan(0);
-
-    expectNoOverlap(
-      'diff affordance (Compare)',
-      pillIn(host)!.getBoundingClientRect(),
-      'remote-load',
-      remoteRect,
-    );
-
-    // The picker drops out of the pill's lane and must clear the opt-in too.
-    pillIn(host)!.click();
-    await waitFor(() => pickerIn(host)!.hidden === false);
-    expectNoOverlap('diff picker', pickerIn(host)!.getBoundingClientRect(), 'remote-load', remoteRect);
-
-    // ★ THE WIDE LABEL IS THE REAL CASE: "Close comparison" measures 136px against "Compare"'s 85px,
-    // so it is the only state that can reach across into the opt-in's lane. The 176px offset is set
-    // off the WIDER of the two, which is what makes it deterministic — both labels are fixed
-    // constants in diffChrome.ts, unlike remote-load's own count-dependent copy.
-    pickerIn(host)!.querySelector<HTMLButtonElement>('[role="option"]')!.click();
-    await waitFor(() => host.getAttribute('data-diff') === 'active');
-    expect(pillIn(host)!.textContent).toBe('Close comparison');
-    // M13 task 1.4 (human ruling, 2026-11-01): the opt-in is now anchored to the pill's laid-out
-    // edge, so it MOVES when the label widens — its rect is re-read here, not reused from the
-    // "Compare" state. The property is unchanged: no overlap in either label state.
-    expectNoOverlap(
-      'diff affordance (exit)',
-      pillIn(host)!.getBoundingClientRect(),
-      'remote-load',
-      remote!.getBoundingClientRect(),
-    );
-  });
-
-  // ── M13 TASK 1.4 — THE LANE FOLLOWS THE PILL'S LAID-OUT EDGE, ON ANY FONT ───────────────────
-  // CI's Linux runner (system face DejaVu Sans) laid "Close comparison" out 160.10px wide, so its
-  // right edge reached 520.10 against the opt-in's fixed left:176 (520.00 here): the case above went
-  // red on a font this machine does not use. A test that depends on the host's fonts cannot be
-  // red-first everywhere, so this one widens the pill ITSELF (min-width, a font-independent width
-  // well past 136 + 24) and asserts the property the ruling names: the opt-in sits a fixed 24px gap
-  // after the pill's right edge, wherever that edge is laid out. Red at the fixed offset (the pill
-  // runs under the opt-in); green once the opt-in is anchored to the pill (CONTAINED_CSS).
-  it.each(GEOMETRY_WIDTHS)(
-    "the opt-in's lane starts 24px after the pill's LAID-OUT edge, however wide the pill is, at %s",
-    async (_w, size) => {
-      await page.viewport(size.width, size.height);
-      const host = await mountAppPage(`${docV2()}\n\n![blocked](https://example.invalid/x.png)\n`);
-      await seedSnapshot();
-      await flush();
-      host.setAttribute('data-toc', 'open');
-
-      pillIn(host)!.click();
-      await waitFor(() => pickerIn(host)!.hidden === false);
-      pickerIn(host)!.querySelector<HTMLButtonElement>('[role="option"]')!.click();
-      await waitFor(() => host.getAttribute('data-diff') === 'active');
-      expect(pillIn(host)!.textContent).toBe('Close comparison');
-
-      for (const minWidth of ['', '320px']) {
-        pillIn(host)!.style.minWidth = minWidth;
-        const pill = pillIn(host)!.getBoundingClientRect();
-        const remote = shadowOf(host).querySelector<HTMLElement>('.peekover-remote-load');
-        expect(remote, 'remote-load opt-in absent — the blocked-media fixture stopped working').not.toBeNull();
-        const remoteRect = remote!.getBoundingClientRect();
-        // Non-vacuous: the widened arm really is wider than the old fixed lane allowed (152px).
-        if (minWidth) expect(pill.width).toBeGreaterThan(152);
-        expectNoOverlap(`diff affordance (exit, min-width ${minWidth || 'none'})`, pill, 'remote-load', remoteRect);
-        expect(remoteRect.left - pill.right, `gap after the pill (min-width ${minWidth || 'none'})`).toBeCloseTo(24, 1);
-      }
-      pillIn(host)!.style.minWidth = '';
-    },
-  );
+  // RETIRED (C141, C143) at 013 task 4.5: "clears the remote-load opt-in that shares the top band" and "the
+  // opt-in's lane starts 24px after the pill's LAID-OUT edge" — on the app page the load bar is in the notice area
+  // (ruling D) and Compare in the toolbar; the lane they shared is gone (snapshotNotice.browser.test.ts holds the
+  // bar's new place: in the page flow, never over text).
 });
-
-// ── The flow, end to end, through the REAL engine and the REAL view ───────────────────────────
 
 describe('the picker → diff → exit round trip (real computeDiff, real enterDiff)', () => {
   it('picks a snapshot and enters the diff: data-diff active, reader hidden, .peekover-diff present', async () => {
@@ -612,8 +449,8 @@ describe('the picker → diff → exit round trip (real computeDiff, real enterD
     const items = [...picker!.querySelectorAll<HTMLButtonElement>('[role="option"]')];
     expect(items).toHaveLength(1);
     // Divergence 1 again, on the real surface: an inline listbox, not a dialog.
-    expect(shadowOf(host).querySelector('[role="dialog"]')).toBeNull();
-    expect(shadowOf(host).querySelector('[aria-modal]')).toBeNull();
+    expect(scopeOf(host).querySelector('[role="dialog"]')).toBeNull();
+    expect(scopeOf(host).querySelector('[aria-modal]')).toBeNull();
 
     items[0].click();
     await waitFor(() => host.getAttribute('data-diff') === 'active');
@@ -771,7 +608,8 @@ describe('the picker carries TWO KINDS — one listbox, two groups (D-3, D-4)', 
 
     // ONE listbox. The groups are its DIRECT children — the ARIA ownership D-4 rests on, asserted
     // as a parent identity in a real engine rather than as a `contains`.
-    expect(shadowOf(host).querySelectorAll('[role="listbox"]')).toHaveLength(1);
+    // (On the app page the code-theme picker is a listbox too: Compare's own slot is the scope.)
+    expect((appOf(host)?.querySelector('.peekover-toolbar__compare') ?? shadowOf(host)).querySelectorAll('[role="listbox"]')).toHaveLength(1);
     const groups = [...picker!.querySelectorAll<HTMLElement>('[role="group"]')];
     expect(groups).toHaveLength(2);
     for (const g of groups) expect(g.parentNode).toBe(picker);
@@ -800,7 +638,8 @@ describe('the picker carries TWO KINDS — one listbox, two groups (D-3, D-4)', 
 
     // Grouping is the ARIA answer to "one list, two kinds", and it adds NO control: §3.2 rejected a
     // second pill and divergence 1 rejected the modal — both still hold with two kinds in the list.
-    const shadow = shadowOf(host);
+    // (On the app page the toolbar's "⋯" is a menu by design: Compare's own slot is the scope.)
+    const shadow = appOf(host)?.querySelector('.peekover-toolbar__compare') ?? shadowOf(host);
     expect(shadow.querySelector('[role="dialog"]')).toBeNull();
     expect(shadow.querySelector('[role="menu"]')).toBeNull();
     expect(shadow.querySelector('[aria-modal]')).toBeNull();
@@ -870,7 +709,8 @@ describe('the picker carries TWO KINDS — one listbox, two groups (D-3, D-4)', 
 /** What the engine would deliver a click to at `el`'s centre, inside `host`'s shadow tree. */
 function hitTestCentre(host: HTMLElement, el: HTMLElement): Element | null {
   const r = el.getBoundingClientRect();
-  return shadowOf(host).elementFromPoint(
+  // On the app page the rows are the toolbar's (light DOM); on the content-script reader, the shadow tree's.
+  return (appOf(host) ? document : shadowOf(host)).elementFromPoint(
     Math.round(r.left + r.width / 2),
     Math.round(r.top + r.height / 2),
   );
@@ -919,14 +759,14 @@ function expectLaneClears(host: HTMLElement, label: string): void {
   const statusRect = status.getBoundingClientRect();
   expectNoOverlap(`${label} status`, statusRect, 'picker', pickerRect);
 
-  const cap = parseFloat(getComputedStyle(picker).maxHeight);
-  expect(Number.isFinite(cap) && cap > 0, `${label}: the picker's max-height cap must resolve`).toBe(true);
-  expect(
-    statusRect.top >= pickerRect.top + cap,
-    `${label}: status top ${Math.round(statusRect.top)} must clear the picker's CAP ` +
-      `${Math.round(pickerRect.top + cap)} (top ${Math.round(pickerRect.top)} + cap ${Math.round(cap)}), ` +
-      'so the lane holds at every height the picker can reach — not just at this row count',
-  ).toBe(true);
+  // RE-SPELLED at 013 task 4.5 (C130; the human's ruling): the status no longer clears the picker's CAP in a
+  // lane of its own — it sits in the picker's dropdown, directly UNDER the list, in the flow of the same box, so
+  // it clears the list at every height the list can reach by construction. Asserted as that structure.
+  const drop = picker.parentElement!;
+  expect(drop.classList.contains('peekover-toolbar__drop'), `${label}: the picker drops in its own box`).toBe(true);
+  expect(status.parentElement, `${label}: the status is in that box while the picker is open`).toBe(drop);
+  expect(picker.nextElementSibling, `${label}: directly under the list`).toBe(status);
+  expect(statusRect.top, `${label}: below the list's bottom`).toBeGreaterThanOrEqual(pickerRect.bottom - 0.5);
 }
 
 describe('the HALF-EMPTY states: one kind listed, the other SAID — in a measured lane (2.4, D-4)', () => {
@@ -966,11 +806,9 @@ describe('the HALF-EMPTY states: one kind listed, the other SAID — in a measur
       expect(isHidden(readerIn(host))).toBe(false);
     });
 
-    it('★ BOTH-EMPTY is UNCHANGED: the picker closes and the status keeps its ORIGINAL slot', async () => {
-      // The lane is `.peekover-diff-picker:not([hidden]) ~ …`, so a closed picker means the rule
-      // does not match and 006's shipped branch is untouched — asserted as the resolved `top`
-      // rather than as an absence, because "the lane did not apply" is exactly what a resolved
-      // 50px says and an absence does not. A lane that leaked onto this path reds HERE.
+    it('★ BOTH-EMPTY: the picker closes and the status speaks from the notice area', async () => {
+      // KEEPS: both-empty closes the picker and says so in the status (C132). RE-SPELLED at 013 task 4.5: the
+      // status's home with the picker closed is the notice area below the toolbar, not CONTAINED_CSS's 50px slot.
       await page.viewport(size.width, size.height);
       const host = await mountAppPage(); // no snapshots, no siblings
       pillIn(host)!.click();
@@ -978,20 +816,14 @@ describe('the HALF-EMPTY states: one kind listed, the other SAID — in a measur
 
       expect(pickerIn(host)!.hidden).toBe(true); // closePicker() — today's shipped behaviour
       expect(statusIn(host)!.textContent).toContain('No snapshots yet');
-      expect(getComputedStyle(statusIn(host)!).top).toBe('50px'); // CONTAINED_CSS's original slot
+      await waitFor(() => statusIn(host)!.closest('.peekover-app__notices'));
+      expect(statusIn(host)!.closest('.peekover-toolbar__drop'), 'not in the closed dropdown').toBeNull();
       expect(host.hasAttribute('data-diff')).toBe(false);
       expect(readerIn(host).querySelector('h1')).not.toBeNull();
     });
 
-    it('the OPEN picker itself is still where 6.2 put it — the lane moved the STATUS only', async () => {
-      // The control for the three above: if the lane had been implemented by moving the PICKER
-      // instead, they would all pass while 6.2's measured placement had silently changed.
-      await page.viewport(size.width, size.height);
-      const host = await mountAppPage(docV2(), SIBLINGS);
-      await seedSnapshot();
-      const picker = await openPickerIn(host);
-      expect(getComputedStyle(picker!).top).toBe('50px');
-    });
+    // RETIRED (C131) at 013 task 4.5: "the OPEN picker itself is still where 6.2 put it" — CONTAINED_CSS's
+    // 50px placement of the picker in the reader went with the pills; the picker drops from the toolbar's Compare.
   });
 
   it('the status line KEEPS its "out of the a11y tree while empty" property (re-asserted, not assumed)', async () => {
@@ -1088,7 +920,7 @@ describe('2.5 — the file row is a GESTURE: one branch, the real engine, both s
     expect(caption).toContain("added lines are doc.md's");
     // It is the line that ALREADY EXISTS (D-5), not a new element: one status region, still polite.
     expect(status.getAttribute('role')).toBe('status');
-    expect(shadowOf(host).querySelectorAll(`.${DIFF_STATUS_CLASS}`)).toHaveLength(1);
+    expect(scopeOf(host).querySelectorAll(`.${DIFF_STATUS_CLASS}`)).toHaveLength(1);
   });
 
   it('★ A SNAPSHOT diff is UNCHANGED — no caption, an empty status, out of the a11y tree (Q1)', async () => {
@@ -1226,7 +1058,7 @@ describe('2.5 — the file row is a GESTURE: one branch, the real engine, both s
     // script does not — and the same selector that read `null` above reads a real row here.
     const app = await mountAppPage(docV2(), READABLE_SIBLING);
     await openPickerIn(app);
-    expect(shadowOf(app).querySelector('[data-target-kind="file"]')).not.toBeNull();
+    expect(scopeOf(app).querySelector('[data-target-kind="file"]')).not.toBeNull();
     expect(fileRowIn(app).dataset.filePath).toBe('sibling-one.md');
     // ...and it really is a gesture there, so what the content script lacks is a working feature.
     fileRowIn(app).click();

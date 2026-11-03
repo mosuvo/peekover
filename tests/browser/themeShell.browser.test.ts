@@ -207,18 +207,15 @@ describe('shell theme control — shell and reader pane stay coherent (spec §7-
     expect(token(shell, '--paper')).toBe('#FBFBF8');
   });
 
-  it('keeps the in-reader pill and the header control showing the SAME selection', async () => {
-    // The app page carries BOTH controls (5.1's pill ships through the mount() seam to the
-    // contained pane; 5.2 adds this header one). They must never disagree.
+  // RETIRED (C304) at 013 task 4.5: "keeps the in-reader pill and the header control showing the SAME selection" —
+  // the in-reader pill is gone from the app page (`pills: false`), so there are no two controls to agree. What
+  // takes its place is asserted: the app page carries exactly ONE theme control, the toolbar's.
+  it('the app page carries ONE theme control — the toolbar\'s — and no in-reader pill', async () => {
     const { reader, control } = await mountShell(fakeStore());
-    const pill = reader.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-theme-toggle')!;
-    expect(pill).toBeTruthy();
-
-    control.click(); // pick on the HEADER control
-    expect(pill.textContent).toBe('Theme: Light');
-
-    pill.click(); // pick on the IN-READER pill
-    expect(control.textContent).toBe('Theme: Dark');
+    expect(reader.shadowRoot!.querySelector('.peekover-theme-toggle'), 'no in-reader pill').toBeNull();
+    expect(document.querySelectorAll('.peekover-app .peekover-theme-toggle')).toHaveLength(1);
+    control.click();
+    expect(control.textContent).toBe('Theme: Light');
   });
 });
 

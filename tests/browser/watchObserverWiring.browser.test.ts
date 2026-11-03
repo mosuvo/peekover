@@ -304,10 +304,13 @@ afterEach(() => {
 const shadowText = (host: HTMLElement) => host.shadowRoot?.textContent ?? '';
 const readerText = (host: HTMLElement) =>
   host.shadowRoot?.querySelector<HTMLElement>('.peekover-reader')?.textContent ?? '';
+// KEEPS: each test's own watch property (C339–C345). RE-SPELLED at 013 task 4.5: the app page's Watch is the
+// toolbar's and its note the notice area's (`pills: false`; ruling A).
+const appOf = (host: HTMLElement) => host.closest<HTMLElement>('.peekover-app');
 const pillIn = (host: HTMLElement) =>
-  host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-watch');
+  (appOf(host)?.querySelector('.peekover-toolbar') ?? host.shadowRoot!).querySelector<HTMLButtonElement>('.peekover-watch');
 const noteIn = (host: HTMLElement) =>
-  host.shadowRoot!.querySelector<HTMLElement>('.peekover-watch-note');
+  (appOf(host)?.querySelector('.peekover-app__notices') ?? host.shadowRoot!).querySelector<HTMLElement>('.peekover-watch-note');
 
 /** Mount the real app shell over `source` and select its one file — the user's own route in,
  *  through the real tree, the real `selectFolderFile` and the real `installWatchForFile`. */

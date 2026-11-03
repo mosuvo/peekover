@@ -190,25 +190,22 @@ describe('the toolbar — Watch, Compare, the badge, the notice area (4.2)', () 
     }
   });
 
-  it('Compare follows the host\'s data-diff on BOTH controls — its own and the reader\'s pill', async () => {
+  // KEEPS: the toolbar's Compare follows the host's data-diff (C365). RE-SPELLED at 013 task 4.5: its half about
+  // the reader's own pill is RETIRED — the app page mounts with `pills: false`, so there is no pill to keep in step.
+  it('Compare follows the host\'s data-diff', async () => {
     registries();
     const tb = createToolbar(document);
     const h = document.createElement('div');
     document.body.appendChild(h);
-    mount('# A', h, { contained: true });
+    mount('# A', h, { contained: true, pills: false });
     tb.setDocument('CLAUDE.md', h);
-    const pill = h.shadowRoot!.querySelector<HTMLElement>('.peekover-diff-affordance')!;
     const own = tb.element.querySelector<HTMLElement>('.peekover-diff-affordance')!;
-    h.setAttribute('data-diff', 'active'); // what diffView does when a comparison shows, from either control
+    h.setAttribute('data-diff', 'active'); // what diffView does when a comparison shows
     await tick();
-    expect([own.textContent, own.dataset.diffOpen, pill.textContent, pill.dataset.diffOpen]).toEqual([
-      'Close comparison', 'true', 'Close comparison', 'true',
-    ]);
+    expect([own.textContent, own.dataset.diffOpen]).toEqual(['Close comparison', 'true']);
     h.removeAttribute('data-diff');
     await tick();
-    expect([own.textContent, own.dataset.diffOpen, pill.textContent, pill.dataset.diffOpen]).toEqual([
-      'Compare', undefined, 'Compare', undefined,
-    ]);
+    expect([own.textContent, own.dataset.diffOpen]).toEqual(['Compare', undefined]);
   });
 
   it('the notice area carries the watch note — hidden with nothing to say, shown when there is', () => {

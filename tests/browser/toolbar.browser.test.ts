@@ -18,6 +18,7 @@ import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
 import { TOOLBAR_CLASS, createToolbar } from '../../src/app/toolbar';
 import { mount } from '../../src/render/mount';
+import { setReaderMode } from '../../src/render/readerMode';
 import { enhanceEditor } from '../../src/render/editorEnhancer';
 import { loadCodeMirror, type EditorModuleLoader } from '../../src/render/editorEngine';
 import { EDITOR_DIRTY_ATTR, editorSessionFor, teardownEditorShell } from '../../src/render/editorView';
@@ -171,11 +172,14 @@ describe('4.1 — the toolbar skeleton on the app page', () => {
     expect(host.getAttribute('data-mode')).toBe('reading');
     await until(() => pressed()[0] === 'reading');
 
-    // Ruling B: an outside flip — the reader's own mode pill, still rendered until 4.5.
-    host.shadowRoot!.querySelector<HTMLButtonElement>('.peekover-mode-toggle')!.click();
+    // Ruling B: an outside flip. KEEPS: the toolbar reflects a mode change it did not make (C368). RE-SPELLED at
+    // 013 task 4.5: the reader's mode pill is gone from the app page (`pills: false`), so the outside flip is the
+    // programmatic one — `setReaderMode`, the call the pill made.
+    expect(host.shadowRoot!.querySelector('.peekover-mode-toggle'), 'no mode pill on the app page').toBeNull();
+    setReaderMode(host, 'raw');
     expect(host.getAttribute('data-mode')).toBe('raw');
     await sleep(50);
-    expect(pressed(), 'the toolbar missed the mode pill\'s flip').toEqual(['raw']);
+    expect(pressed(), 'the toolbar missed the outside flip').toEqual(['raw']);
   });
 
   it('a document switch: the toolbar names the new file, shows its mode, and survives the re-render', async () => {
@@ -287,14 +291,13 @@ describe('4.1 — the header panels stay inside the window, their rows reachable
 // ── 4.2 — Watch, Compare and the agent badge in the toolbar; the watch note below it ──────────────
 //
 // Each control comes from the SAME builder the reader's pill uses, so the state is shared, not
-// copied: the watch registry for Watch, the host's `data-diff` for Compare. Every sync is asserted in
-// BOTH directions (toolbar → pill, pill → toolbar), both engines, the pills still rendering (F-6).
+// copied: the watch registry for Watch, the host's `data-diff` for Compare. 4.2 asserted every sync in
+// both directions against the still-rendered pills (F-6); from 4.5 the app page has no pills, so the
+// other direction is the state changed from outside the toolbar (C368–C371).
 
 const shadowOfHost = () => container.querySelector<HTMLElement>('.peekover-app__reader__host')!.shadowRoot!;
 const tbWatch = () => toolbar().querySelector<HTMLButtonElement>('.peekover-watch')!;
-const pillWatch = () => shadowOfHost().querySelector<HTMLButtonElement>('.peekover-watch')!;
 const tbCompare = () => toolbar().querySelector<HTMLButtonElement>('.peekover-diff-affordance')!;
-const pillCompare = () => shadowOfHost().querySelector<HTMLButtonElement>('.peekover-diff-affordance')!;
 /** A token's colour as the engine computes it, where `el` sits (a probe span inheriting its tokens). */
 function rgb(token: string, el: Element): string {
   const probe = document.createElement('span');
@@ -306,22 +309,24 @@ function rgb(token: string, el: Element): string {
 }
 
 describe('4.2 — Watch, Compare and the agent badge in the toolbar', () => {
-  it('Watch: the toolbar and the pill toggle the SAME watch, each reflecting the other (both directions)', async () => {
+  // KEEPS: the toolbar's Watch is the SAME watch (the registry), in both directions (C369). RE-SPELLED at 013 task
+  // 4.5: the reader's watch pill is gone from the app page (`pills: false`), so the other direction is a stop made
+  // outside the toolbar — the registry's own `stopWatch()`, what the pill's click reached.
+  it('Watch: the toolbar toggles the registry\'s watch, and reflects a stop it did not make', async () => {
     await openShell();
-    await open('alpha.md');
+    const host = await open('alpha.md');
     expect(tbWatch(), 'the toolbar carries Watch on a watchable folder').not.toBeNull();
-    expect(pillWatch(), 'the pill still renders (F-6)').not.toBeNull();
-    expect([isWatching(), tbWatch().getAttribute('aria-pressed'), pillWatch().getAttribute('aria-pressed')]).toEqual([false, 'false', 'false']);
+    expect(host.shadowRoot!.querySelector('.peekover-watch'), 'no watch pill on the app page').toBeNull();
+    expect([isWatching(), tbWatch().getAttribute('aria-pressed')]).toEqual([false, 'false']);
 
-    tbWatch().click(); // toolbar → pill
+    tbWatch().click();
     await until(() => isWatching());
-    await until(() => pillWatch()?.getAttribute('aria-pressed') === 'true');
-    expect([isWatching(), tbWatch().getAttribute('aria-pressed'), pillWatch().getAttribute('aria-pressed')], 'after the toolbar click').toEqual([true, 'true', 'true']);
+    await until(() => tbWatch().getAttribute('aria-pressed') === 'true');
+    expect([isWatching(), tbWatch().getAttribute('aria-pressed')], 'after the toolbar click').toEqual([true, 'true']);
 
-    pillWatch().click(); // pill → toolbar
-    await until(() => !isWatching());
+    stopWatch(); // a stop the toolbar did not make
     await until(() => tbWatch().getAttribute('aria-pressed') === 'false');
-    expect([isWatching(), tbWatch().getAttribute('aria-pressed'), pillWatch().getAttribute('aria-pressed')], 'after the pill click').toEqual([false, 'false', 'false']);
+    expect([isWatching(), tbWatch().getAttribute('aria-pressed')], 'after the outside stop').toEqual([false, 'false']);
   });
 
   it.each(['light', 'dark'] as const)('Watching looks per the mock in %s: ink text, green dot, green border, text at AA', async (theme) => {
@@ -341,7 +346,7 @@ describe('4.2 — Watch, Compare and the agent badge in the toolbar', () => {
     expect(ratio, `${theme}: "Watching" at ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(TEXT_BAR);
   });
 
-  it('Compare: the picker opens under its own button; a comparison opened on either side closes from the other', async () => {
+  it('Compare: the picker opens under its own button; a comparison opens and closes from the toolbar', async () => {
     await openShell();
     await open('alpha.md');
     const host = container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
@@ -356,29 +361,17 @@ describe('4.2 — Watch, Compare and the agent badge in the toolbar', () => {
     expect(p.top, 'the picker opens BELOW its button').toBeGreaterThanOrEqual(b.bottom - 1);
     expect(p.left <= b.right && p.right >= b.left, 'the picker sits under its own button').toBe(true);
 
-    // Toolbar opens → both say "Close comparison"; the pill closes it.
+    // KEEPS: the toolbar's Compare opens a comparison and closes it, and shows the state (C370). RE-SPELLED at 013
+    // task 4.5: the reader's Compare pill is gone from the app page, so the round trip is the toolbar's own.
+    expect(shadowOfHost().querySelector('.peekover-diff-affordance'), 'no Compare pill on the app page').toBeNull();
     picker.querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
     await until(() => host.getAttribute(DIFF_HOST_ATTR) === 'active');
-    await until(() => pillCompare().dataset.diffOpen === 'true');
-    expect([tbCompare().textContent, pillCompare().textContent]).toEqual(['Close comparison', 'Close comparison']);
-    pillCompare().click();
+    await until(() => tbCompare().textContent === 'Close comparison');
+    expect(tbCompare().dataset.diffOpen).toBe('true');
+    tbCompare().click();
     await until(() => host.getAttribute(DIFF_HOST_ATTR) === null);
     await until(() => tbCompare().textContent === 'Compare');
     expect(tbCompare().dataset.diffOpen, 'the toolbar returned to Compare').toBeUndefined();
-
-    // The pill opens → the toolbar says "Close comparison"; the toolbar closes it.
-    pillCompare().click();
-    const pillPicker = await until(() => {
-      const el = shadowOfHost().querySelector<HTMLElement>('.peekover-diff-picker');
-      return el && !el.hidden && el.querySelector('[data-target-kind="file"]') ? el : null;
-    });
-    pillPicker.querySelector<HTMLButtonElement>('[data-target-kind="file"]')!.click();
-    await until(() => host.getAttribute(DIFF_HOST_ATTR) === 'active');
-    await until(() => tbCompare().textContent === 'Close comparison');
-    tbCompare().click();
-    await until(() => host.getAttribute(DIFF_HOST_ATTR) === null);
-    await until(() => pillCompare().textContent === 'Compare');
-    expect(tbCompare().textContent).toBe('Compare');
   });
 
   it('the agent badge shows for an agent file, with its full label, and not for a plain one — refreshed on a switch', async () => {
@@ -395,20 +388,21 @@ describe('4.2 — Watch, Compare and the agent badge in the toolbar', () => {
 
 describe('4.2 — the watch note in the notice area below the toolbar (ruling A)', () => {
   const noticeNote = () => container.querySelector<HTMLElement>(`.peekover-app__notices .${WATCH_NOTE_CLASS}`)!;
-  const pillNote = () => shadowOfHost().querySelector<HTMLElement>(`.${WATCH_NOTE_CLASS}`);
-
-  it('says what the reader\'s own note says, for each case it covers: unavailable, stopped, changed again', async () => {
+  // KEEPS: the notice area's watch note says what the watch registry has to say, for each case (C371). RE-SPELLED
+  // at 013 task 4.5: the reader's own note is gone from the app page (`pills: false`) — the registry's text is
+  // the reference now, and none is in the reader.
+  it('says what the watch has to say, for each case it covers: unavailable, stopped, changed again — and the reader says none', async () => {
     await openShell(false); // a folder this surface cannot watch — the real "not available" route
     await open('alpha.md');
     const unavailable = watchNote();
     expect(unavailable, 'the route explains why watching is missing').toBeTruthy();
     await until(() => noticeNote().textContent === unavailable);
     expect(noticeNote().hidden).toBe(false);
-    expect(pillNote()?.textContent, 'the reader\'s own note says the same').toBe(unavailable);
+    expect(shadowOfHost().querySelector(`.${WATCH_NOTE_CLASS}`), 'no note in the reader').toBeNull();
     for (const text of [DEAD_READ_NOTE, CHANGED_AGAIN_NOTE]) {
       setWatchNote(text);
       await until(() => noticeNote().textContent === text);
-      expect(pillNote()?.textContent).toBe(text);
+      expect(noticeNote().textContent).toBe(watchNote());
     }
     setWatchNote(null);
     await until(() => noticeNote().hidden);

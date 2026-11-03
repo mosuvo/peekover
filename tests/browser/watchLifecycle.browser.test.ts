@@ -29,6 +29,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mount } from '../../src/render/mount';
 import { createReaderPane } from '../../src/app/readerPane';
+import { createToolbar } from '../../src/app/toolbar';
 import { createWatchController, DEAD_AFTER_FAILURES } from '../../src/watch/watchController';
 import {
   registerWatchTarget,
@@ -99,10 +100,14 @@ function shadowOf(host: HTMLElement): ShadowRoot {
   return shadow;
 }
 
+// KEEPS: each test's own watch-control / note property (C328, C331, C333, C334, C336). RE-SPELLED at 013 task 4.5:
+// on the app page the control is the toolbar's and the note the notice area's (`pills: false`; ruling A); the
+// content script keeps both in the reader.
+const appOf = (host: HTMLElement) => host.closest<HTMLElement>('.peekover-app');
 const controlIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLButtonElement>('.peekover-watch');
+  (appOf(host)?.querySelector('.peekover-toolbar') ?? shadowOf(host)).querySelector<HTMLButtonElement>('.peekover-watch');
 const noteIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLElement>('.peekover-watch-note');
+  (appOf(host)?.querySelector('.peekover-app__notices') ?? shadowOf(host)).querySelector<HTMLElement>('.peekover-watch-note');
 const columnText = (host: HTMLElement) =>
   shadowOf(host).querySelector<HTMLElement>('.peekover-reader')?.textContent ?? '';
 
@@ -143,12 +148,19 @@ describe('watch lifecycle — switching documents stops the previous watch (task
     // The REAL app-page reader pane, in a scrolling wrapper exactly as appShell provides.
     const pane = createReaderPane(document);
     pane.element.style.cssText = 'display:block;overflow:auto;height:80vh;width:100%';
-    document.body.appendChild(pane.element);
+    // RE-SPELLED at 013 task 4.5 (C333, C336): the pane mounts with `pills: false`, so the Watch the user clicks
+    // is the app page's toolbar — built here and bound to the pane's host, as the shell binds it.
+    const app = document.createElement('div');
+    app.className = 'peekover-app';
+    const toolbar = createToolbar(document);
+    app.append(toolbar.element, pane.element);
+    document.body.appendChild(app);
 
     await pane.select({ name: 'a.md', read: async () => DOC_A });
     const host = await waitFor(() =>
       pane.element.querySelector<HTMLElement>('.peekover-app__reader__host'),
     );
+    toolbar.setDocument('a.md', host);
     expect(columnText(host)).toContain('File A');
 
     // Start watching A through the real control — the user gesture.
@@ -178,12 +190,19 @@ describe('watch lifecycle — switching documents stops the previous watch (task
 
     const pane = createReaderPane(document);
     pane.element.style.cssText = 'display:block;overflow:auto;height:80vh;width:100%';
-    document.body.appendChild(pane.element);
+    // RE-SPELLED at 013 task 4.5 (C333, C336): the pane mounts with `pills: false`, so the Watch the user clicks
+    // is the app page's toolbar — built here and bound to the pane's host, as the shell binds it.
+    const app = document.createElement('div');
+    app.className = 'peekover-app';
+    const toolbar = createToolbar(document);
+    app.append(toolbar.element, pane.element);
+    document.body.appendChild(app);
 
     await pane.select({ name: 'a.md', read: async () => DOC_A });
     const host = await waitFor(() =>
       pane.element.querySelector<HTMLElement>('.peekover-app__reader__host'),
     );
+    toolbar.setDocument('a.md', host);
     controlIn(host)!.click();
     expect(host.getAttribute('data-watch')).toBe('active');
 

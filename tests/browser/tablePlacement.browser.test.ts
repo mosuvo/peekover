@@ -443,7 +443,8 @@ describe.each(GEOMETRY_WIDTHS)('3.5 · row 8 — the toolbar clears the rail and
       ['TOC rail', '.peekover-toc'],
       ['TOC handle', '.peekover-toc__toggle'],
       ['TOC list', '.peekover-toc__list'],
-      ['mode-toggle', '.peekover-mode-toggle'],
+      // KEEPS: the table toolbar's band clears the TOC rail (C280). RE-SPELLED at 013 task 4.5: the mode-toggle
+      // entry is dropped — no mode pill on the app page (`pills: false`), and an absent entry would skip silently.
     ] as const) {
       const el = shadow.querySelector<HTMLElement>(sel);
       if (!el || el.hidden) continue;
@@ -467,19 +468,6 @@ describe.each(GEOMETRY_WIDTHS)('3.5 · row 8 — the toolbar clears the rail and
     expect(barRect.right).toBeLessThanOrEqual(content.right + EPS);
   });
 
-  it('the mode toggle is clear in BOTH rail states — it never shares the column`s band', async () => {
-    for (const toc of TOC_STATES) {
-      reset();
-      const host = await openAt(size, toc);
-      const barRect = toolbarOf(host).getBoundingClientRect();
-      const toggle = host.shadowRoot!.querySelector<HTMLElement>('.peekover-mode-toggle')!;
-      expect(toggle, 'the mode toggle is not on screen').not.toBeNull();
-      const other = toggle.getBoundingClientRect();
-      expect(other.width, 'the mode toggle has no rect').toBeGreaterThan(0);
-      expect(
-        barRect.left < other.right && other.left < barRect.right,
-        `x-band overlap at ${label} rail ${toc}: toolbar [${barRect.left.toFixed(1)},${barRect.right.toFixed(1)}] vs mode-toggle [${other.left.toFixed(1)},${other.right.toFixed(1)}]`,
-      ).toBe(false);
-    }
-  });
+  // RETIRED (C279) at 013 task 4.5: "the mode toggle is clear in BOTH rail states" — Read / Raw are the toolbar's,
+  // outside the reader pane; the app page builds no mode pill (`pills: false`).
 });

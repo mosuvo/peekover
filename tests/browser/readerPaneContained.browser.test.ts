@@ -62,7 +62,6 @@ async function renderSelectedFile(): Promise<{
   folders: HTMLElement;
   reader: HTMLElement;
   host: HTMLElement;
-  toggle: HTMLElement;
 }> {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -87,9 +86,8 @@ async function renderSelectedFile(): Promise<{
   // The file really rendered (grant→read→render is live), so the geometry we assert on
   // is the geometry of an actual rendered document, not an empty host.
   await waitFor(() => host.shadowRoot?.querySelector('h1'));
-  const toggle = await waitFor(() =>
-    host.shadowRoot?.querySelector<HTMLElement>('.peekover-mode-toggle'),
-  );
+  // KEEPS: the helper waits for the rendered reader before measuring (C264–C266). RE-SPELLED at 013 task 4.5: it
+  // waited for the mode pill too; the app page has none (`pills: false`) — the rendered h1 above is the signal.
 
   return {
     container,
@@ -97,7 +95,6 @@ async function renderSelectedFile(): Promise<{
     folders: container.querySelector<HTMLElement>('.peekover-app__folders')!,
     reader: container.querySelector<HTMLElement>('.peekover-app__reader')!,
     host,
-    toggle,
   };
 }
 
@@ -135,15 +132,6 @@ describe('app-page reader renders CONTAINED in the pane, not over the shell (bot
     expect(getComputedStyle(host).position).not.toBe('fixed');
   });
 
-  it('the Raw toggle sits inside the reader pane, not floating at a viewport corner', async () => {
-    const { reader, toggle } = await renderSelectedFile();
-
-    const pane = reader.getBoundingClientRect();
-    const pill = toggle.getBoundingClientRect();
-    const EPS = 1; // sub-pixel tolerance
-    expect(pill.left).toBeGreaterThanOrEqual(pane.left - EPS);
-    expect(pill.top).toBeGreaterThanOrEqual(pane.top - EPS);
-    expect(pill.right).toBeLessThanOrEqual(pane.right + EPS);
-    expect(pill.bottom).toBeLessThanOrEqual(pane.bottom + EPS);
-  });
+  // RETIRED (C263) at 013 task 4.5: "the Raw toggle sits inside the reader pane" — Read / Raw are the toolbar's
+  // (outside the pane); the app page builds no mode pill (`pills: false`).
 });

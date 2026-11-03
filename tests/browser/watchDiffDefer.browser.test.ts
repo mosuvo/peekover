@@ -121,16 +121,23 @@ const settle = () => new Promise<void>((r) => setTimeout(r, 250));
 const containers: HTMLElement[] = [];
 
 const shadowOf = (host: HTMLElement) => host.shadowRoot!;
+// KEEPS: the comparison is opened and closed by its control (C326, C327). RE-SPELLED at 013 task 4.5: on the app
+// page Compare and its picker are the toolbar's (the reader mounts with `pills: false`).
+const chromeOf = (host: HTMLElement): ParentNode => host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? shadowOf(host);
 const pillIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLButtonElement>(`.${DIFF_AFFORDANCE_CLASS}`)!;
+  chromeOf(host).querySelector<HTMLButtonElement>(`.${DIFF_AFFORDANCE_CLASS}`)!;
 const pickerIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLElement>(`.${DIFF_PICKER_CLASS}`)!;
+  chromeOf(host).querySelector<HTMLElement>(`.${DIFF_PICKER_CLASS}`)!;
 const readerIn = (host: HTMLElement) =>
   shadowOf(host).querySelector<HTMLElement>('.peekover-reader')!;
 const diffIn = (host: HTMLElement) =>
   shadowOf(host).querySelector<HTMLElement>(`.${DIFF_VIEW_CLASS}`);
+// KEEPS: the watch note's text and visibility (C326, C327). RE-SPELLED at 013 task 4.5: on the app page the note is
+// the notice area's (ruling A; the reader mounts with `pills: false`); elsewhere the reader's own.
 const noteIn = (host: HTMLElement) =>
-  shadowOf(host).querySelector<HTMLElement>(`.${WATCH_NOTE_CLASS}`);
+  (host.closest('.peekover-app')?.querySelector('.peekover-app__notices') ?? shadowOf(host)).querySelector<HTMLElement>(
+    `.${WATCH_NOTE_CLASS}`,
+  );
 
 const isHidden = (el: HTMLElement) => getComputedStyle(el).display === 'none';
 

@@ -195,7 +195,9 @@ export function createReaderPane(
       // :host as a full-page takeover (right for the content script, which covers the raw
       // document), which would otherwise paint over the shell here. See CONTAINED_CSS.
       content.replaceChildren(host);
-      mount(outcome.text, host, { contained: true });
+      // 013 task 4.5 (D-5): `pills: false` — the app page's controls are its toolbar's; no floating pill
+      // is built in the reader here. The re-render paths force the same (appShell's renderWithEnhancements).
+      mount(outcome.text, host, { contained: true, pills: false });
       // D-12's first call site: enhancement runs AFTER the mount has committed and is not a
       // branch inside it (`mount()` stays read-only library, 006 D-15). Synchronous and
       // pre-paint — it leaves D-15's degraded state behind, so a fence whose diagram never
@@ -204,12 +206,12 @@ export function createReaderPane(
       // M11 D-3-R — math enhancement, wired immediately after diagrams (D-3-R's own two call
       // sites); the "listed, never composed" discipline the note below states applies here too.
       enhanceMath(host);
-      // 012 D-3 SITE 1 — the edit control, immediately after math (D-3's own two call sites), and
-      // LISTED like the rest: `editorEnhancer` reaches the one CodeMirror importer, so a shared
-      // seam would carry that edge to the content script exactly as the note below describes for
-      // diagrams. It touches no fence and no table — it adds a control beside the mode pill — so
-      // it brings no ordering question of its own. `save` is the pane's injected capability,
-      // passed through untouched.
+      // 012 D-3 SITE 1 — the editor, immediately after math (D-3's own two call sites), and LISTED like
+      // the rest: `editorEnhancer` reaches the one CodeMirror importer, so a shared seam would carry
+      // that edge to the content script exactly as the note below describes for diagrams. It touches no
+      // fence and no table — it makes the host editable (the toolbar's Edit segment, 013 D-6) and adds
+      // no control of its own — so it brings no ordering question. `save` is the pane's injected
+      // capability, passed through untouched.
       enhanceEditor(host, { save });
       // 008 D-6 SITE 1 — the app page's initial select. The enhancers are LISTED, never composed:
       // a shared `enhance(host)` seam would be the tidy version and would put `diagramEnhancer`

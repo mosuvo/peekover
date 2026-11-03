@@ -51,11 +51,7 @@ import { resetWatchRegistryForTest, isWatching } from '../../src/watch/watchRegi
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
-import {
-  DIFF_AFFORDANCE_CLASS,
-  DIFF_PICKER_CLASS,
-  DIFF_STATUS_CLASS,
-} from '../../src/render/diffChrome';
+import { DIFF_AFFORDANCE_CLASS } from '../../src/render/diffChrome';
 import {
   createDiffContext,
   registerDiffContext,
@@ -174,9 +170,16 @@ async function openAppPage(basename: string, doc = DOC): Promise<HTMLElement> {
 // ── Readers ───────────────────────────────────────────────────────────────────────────────────
 
 const shadowOf = (host: HTMLElement) => host.shadowRoot!;
+/** KEEPS: each test's own badge property (C072, C074, C076, C077). RE-SPELLED at 013 task 4.5: on the APP PAGE the
+ *  reader mounts with `pills: false`, so the badge (and the chrome the non-vacuity checks read) is the TOOLBAR's;
+ *  the content-script reader keeps its own in the shadow root. One lookup per host, by its surface. */
+const appOf = (host: HTMLElement): HTMLElement | null => host.closest<HTMLElement>('.peekover-app');
 const badgesIn = (host: HTMLElement) => [
-  ...shadowOf(host).querySelectorAll<HTMLElement>(`.${AGENT_BADGE_CLASS}`),
+  ...(appOf(host)?.querySelector('.peekover-toolbar') ?? shadowOf(host)).querySelectorAll<HTMLElement>(`.${AGENT_BADGE_CLASS}`),
 ];
+/** The theme control the non-vacuity checks read: the toolbar's on the app page, the pill on the content script. */
+const themeControlIn = (host: HTMLElement) =>
+  (appOf(host)?.querySelector('.peekover-toolbar') ?? shadowOf(host)).querySelector('.peekover-theme-toggle');
 const badgeIn = (host: HTMLElement) => badgesIn(host)[0] ?? null;
 const readerIn = (host: HTMLElement) => shadowOf(host).querySelector<HTMLElement>('.peekover-reader')!;
 
@@ -223,6 +226,14 @@ function record(line: string): void {
 /** Every piece of chrome BESIDE the reading column, as text — the surface a stray explanatory
  *  note would have to appear on (row 2's "and no note" half). */
 function chromeText(host: HTMLElement): string {
+  const app = appOf(host);
+  if (app) {
+    const own = app.querySelectorAll('.peekover-toolbar, .peekover-app__notices');
+    return [...own, ...shadowOf(host).children]
+      .filter((el) => !el.classList.contains('peekover-reader') && el.tagName !== 'STYLE')
+      .map((el) => el.textContent ?? '')
+      .join(' ');
+  }
   return [...shadowOf(host).children]
     .filter((el) => !el.classList.contains('peekover-reader') && el.tagName !== 'STYLE')
     .map((el) => el.textContent ?? '')
@@ -268,7 +279,7 @@ describe('harness sanity — both surfaces really mount and really grow chrome (
   it('APP PAGE: the click chain puts a reader on screen, with chrome beside it', async () => {
     const host = await openAppPage(PLAIN_NAME);
     expect(readerIn(host).querySelector('h1')).not.toBeNull();
-    expect(shadowOf(host).querySelector('.peekover-theme-toggle')).not.toBeNull();
+    expect(themeControlIn(host), 'the chrome: the toolbar\'s theme control (C074)').not.toBeNull();
   });
 });
 
@@ -302,7 +313,7 @@ describe.each(SURFACES)('the agent-file badge is LIVE on the %s surface (row 23)
     // NON-VACUOUS: the surface really rendered and really grew OTHER chrome, so the absence above
     // is the predicate declining a name, not a reader that failed to mount.
     expect(readerIn(host).querySelector('h1')).not.toBeNull();
-    expect(shadowOf(host).querySelector('.peekover-theme-toggle')).not.toBeNull();
+    expect(themeControlIn(host)).not.toBeNull();
   });
 
   it('row 3 — RED-FIRST that the gate is the NAME, not an accident of the surface', async () => {
@@ -331,7 +342,10 @@ describe.each(SURFACES)('the agent-file badge is LIVE on the %s surface (row 23)
     // `parentNode`, not `parentElement`: the parent IS the shadow root, and a ShadowRoot is a
     // DocumentFragment rather than an Element — `parentElement` reads `null` for a correctly
     // placed badge, which would make this assertion pass for the wrong reason if inverted.
-    expect(badge.parentNode).toBe(shadowOf(host));
+    // RETIRED (C070), the APP arm's sibling clause: on the app page the badge is the toolbar's, outside the
+    // reader's shadow root altogether — that is what is asserted there; the content script keeps the clause.
+    if (appOf(host)) expect(shadowOf(host).contains(badge), 'app page: not in the reader at all').toBe(false);
+    else expect(badge.parentNode).toBe(shadowOf(host));
     expect(readerIn(host).contains(badge)).toBe(false);
     expect(readerIn(host).querySelector(`.${AGENT_BADGE_CLASS}`)).toBeNull();
   });
@@ -464,17 +478,18 @@ describe('row 14 — the badge built by render N+1 reads the CURRENT registry', 
     // faster engine happens to win. `reads` is already non-zero from the initial select, so the
     // baseline is the FIRST read after the gesture; wait for one more than we have.
     const before = reads;
-    shadowOf(host).querySelector<HTMLButtonElement>('.peekover-watch')!.click();
+    // RE-SPELLED at 013 task 4.5 (C077): started from the toolbar's Watch, and the badge is the toolbar's — it
+    // lives outside the reader, so the re-render no longer destroys it (the "old node detached" clause is gone);
+    // the property kept is that after a real re-render exactly one badge carries the right name.
+    container.querySelector<HTMLButtonElement>('.peekover-toolbar .peekover-watch')!.click();
     expect(isWatching()).toBe(true);
     await waitFor(() => reads > before);
     text = DOC_V2;
 
     await waitFor(() => readerIn(host).textContent?.includes('the agent rewrote this on disk'));
-    expect(first.isConnected).toBe(false); // the re-render destroyed the previous chrome
 
     const rebuilt = badgeIn(host);
     expect(rebuilt).not.toBeNull();
-    expect(rebuilt).not.toBe(first);
     expect(rebuilt!.textContent).toBe(`Agent file · ${AGENT_NAME}`);
     expect(badgesIn(host)).toHaveLength(1);
   });
@@ -617,7 +632,7 @@ afterEach(async () => {
 describe.each(GEOMETRY_WIDTHS)('1.5 · the badge’s own rect at %s (rows 7, 11)', (width, size) => {
   it.each([
     ['content script', 'cs'],
-    ['app page', 'app'],
+    // RETIRED (C067), the app arm: the floating badge's lane on the app page — the badge is the toolbar's (4.5).
   ] as const)(`row 11 — %s: the badge is ANCHORED to the lane it declares, all five labels`, async (
     surfaceLabel,
     kind,
@@ -762,8 +777,7 @@ describe.each(GEOMETRY_WIDTHS)('1.5 · rows 5 + 8 — the clearance reading at %
   it.each([
     ['content script', 'cs', 'open'],
     ['content script', 'cs', 'default'],
-    ['app page', 'app', 'open'],
-    ['app page', 'app', 'default'],
+    // RETIRED (C063), the app arms: the floating badge's clearance in the app pane — no badge or pills there (4.5).
   ] as const)('%s, rail %3$s, remote-load and network indicator present', async (
     surfaceLabel,
     kind,
@@ -916,65 +930,16 @@ describe.each(GEOMETRY_WIDTHS)('1.5 · (a) the full-page offset coincidence at %
 // picker's HEIGHT is content-dependent, so the worst case is measured too — its real left/top/width
 // with its real computed `max-height` — and both readings are recorded.
 
-describe.each(GEOMETRY_WIDTHS)('1.5 · (b) the contained pane’s top:50 slot at %s', (width, size) => {
-  it('the badge’s rect against the diff picker’s and status’s slot — MEASURED, not resolved', async () => {
-    await page.viewport(size.width, size.height);
-    const host = await openAppPage('CLAUDE.md', DOC_MEDIA);
-    await openTheBand(host);
-
-    const shadow = shadowOf(host);
-    const badge = realRect(badgeIn(host), 'badge (contained pane)');
-    const hostRect = host.getBoundingClientRect();
-    record(
-      `${width} contained · host ${fmt(hostRect)} · badge ${fmt(badge)} ` +
-        `position:${getComputedStyle(badgeIn(host)!).position}`,
-    );
-
-    const picker = shadow.querySelector<HTMLElement>(`.${DIFF_PICKER_CLASS}`);
-    const status = shadow.querySelector<HTMLElement>(`.${DIFF_STATUS_CLASS}`);
-    if (picker === null && status === null) {
-      // A designed state, recorded rather than skipped: this harness's folder source may not reach
-      // `appShell`'s `docId != null` block, in which case D-14's gate keeps the diff chrome off
-      // this pane too and the top:50 slot is EMPTY here. 6.1 needs to know which of the two it is.
-      record(`${width} contained · diff chrome NOT REGISTERED on this pane — top:50 slot is empty`);
-      expect(isDiffContextRegistered()).toBe(false);
-      return;
-    }
-
-    for (const [name, el] of [
-      ['diff picker', picker],
-      ['diff status', status],
-    ] as const) {
-      if (el === null) continue;
-      const wasHidden = el.hidden;
-      el.hidden = false; // the slot it occupies WHEN OPENED — the only way to read a hidden rect
-      const slot = realRect(el, `${name} (un-hidden for the probe)`);
-      const maxH = parseFloat(getComputedStyle(el).maxHeight);
-      const worst = new DOMRect(
-        slot.left,
-        slot.top,
-        slot.width,
-        Number.isFinite(maxH) ? Math.max(slot.height, maxH) : slot.height,
-      );
-      record(
-        `${width} contained · badge ${fmt(badge)} vs ${name} ${fmt(slot)} ` +
-          `(empty) overlap=${intersects(badge, slot)} · worst-case ${fmt(worst)} ` +
-          `overlap=${intersects(badge, worst)}`,
-      );
-      el.hidden = wasHidden;
-    }
-    // NO ASSERTION ON THE OUTCOME. Whether these overlap is the FINDING task 6.1 rules on; an
-    // assertion here would be this task quietly ratifying a lane, which gate-2 Q3 forbids. The
-    // firing control is `realRect` above: every rect written to the log is a real, non-zero one.
-  });
-});
+// RETIRED (C060) at 013 task 4.5: "(b) the contained pane's top:50 slot — the badge's rect against the diff picker's
+// and status's slot" — both left the app page's reader (`pills: false`): the badge is the toolbar's, the picker drops
+// from the toolbar's Compare, the status is in the notice area or the picker's dropdown.
 
 // ══ THE 414 READING — reported beside the wide ones, deliberately not asserted ═════════════════
 
 describe('1.5 · the 414x896 reading, RECORDED (diffChrome.ts:77-82’s pre-existing condition)', () => {
   it.each([
     ['content script', 'cs'],
-    ['app page', 'app'],
+    // RETIRED (C065), the app arm: the floating badge at 414 in the app pane — the badge is the toolbar's (4.5).
   ] as const)('%s: the badge’s rect and every band overlap it has at 414', async (surfaceLabel, kind) => {
     await page.viewport(NARROW.width, NARROW.height);
     const host =

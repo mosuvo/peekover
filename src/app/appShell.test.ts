@@ -1281,8 +1281,11 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
     return container.querySelector<HTMLElement>('.peekover-app__reader__host')!;
   }
 
-  const badgeIn = (host: HTMLElement) =>
-    host.shadowRoot!.querySelector<HTMLElement>('.peekover-agent-badge');
+  // KEEPS: the app page badges a recognized name on the first mount and never an unrecognized one
+  // (C002, C015, C020). RE-SPELLED at 013 task 4.5: the badge is the toolbar's — the reader is mounted
+  // with `pills: false`, so its shadow root holds none.
+  const badgeIn = () =>
+    container.querySelector<HTMLElement>('.peekover-toolbar .peekover-agent-badge');
 
   it('the FIRST file of a session is named BEFORE it mounts — 4.7’s defect, re-run on new chrome', async () => {
     // The ordering, and the only assertion that can see it. `installWatchForFile` runs before
@@ -1291,11 +1294,11 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
     // task 4.7 found and fixed for the watch control — the name would be right and THE FIRST
     // RENDER WOULD STILL CARRY NO BADGE. Asserting the registry alone would not catch that;
     // asserting the badge on the first-ever mount of a session does.
-    const host = await openFirstFile(sourceOf('notes', [mdFile('CLAUDE.md', '# Rules')]));
+    await openFirstFile(sourceOf('notes', [mdFile('CLAUDE.md', '# Rules')]));
 
     expect(getDocIdentity()).toBe('CLAUDE.md');
-    expect(badgeIn(host)).not.toBeNull();
-    expect(badgeIn(host)!.textContent).toBe('Agent file · CLAUDE.md');
+    expect(badgeIn()).not.toBeNull();
+    expect(badgeIn()!.textContent).toBe('Agent file · CLAUDE.md');
   });
 
   it('an unrecognized name is registered just the same — the registry names, the predicate judges', async () => {
@@ -1305,7 +1308,7 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
     const host = await openFirstFile(sourceOf('notes', [mdFile('intro.md', '# Intro')]));
 
     expect(getDocIdentity()).toBe('intro.md');
-    expect(badgeIn(host)).toBeNull();
+    expect(badgeIn()).toBeNull();
     // ...and no explanatory note anywhere in the chrome either (D-14, §3.8: absence is the
     // resting state). Checked over the shadow root's non-column children, so a note appended
     // beside the reader could not hide from it.
@@ -1314,6 +1317,7 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
       .map((el) => el.textContent ?? '')
       .join(' ');
     expect(chromeText).not.toMatch(/agent file/i);
+    expect(container.querySelector('.peekover-toolbar')!.textContent, 'nor in the toolbar').not.toMatch(/agent file/i);
   });
 
   it('★ registration survives the NOT-WATCHABLE early return — the reachable silent drop', async () => {
@@ -1324,18 +1328,19 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
     // the site plan D-1's table names — would never run here, and EVERY agent file opened through
     // a Firefox picker would go un-badged. Registering first is what makes this pass; moving the
     // call below the early return turns it red, with the badge simply absent.
-    const host = await openFirstFile(
+    await openFirstFile(
       sourceOf('notes', [mdFile('AGENTS.md', '# Rules')], { persistable: false }),
     );
 
     // THE CONTROL THAT FIRES: the early-return branch really was taken. Its designed note is on
     // screen and no watch toggle exists — so the assertion below is about a registration that
     // outlived a return, not about a branch the fixture failed to reach.
-    expect(host.shadowRoot!.querySelector('.peekover-watch')).toBeNull();
-    expect(host.shadowRoot!.querySelector('.peekover-watch-note')).not.toBeNull();
+    // RE-SPELLED at 4.5 (C020): the toggle is the toolbar's and the note the notice area's (ruling A).
+    expect(container.querySelector('.peekover-toolbar .peekover-watch')).toBeNull();
+    expect(container.querySelector('.peekover-app__notices .peekover-watch-note')?.hasAttribute('hidden')).toBe(false);
 
     expect(getDocIdentity()).toBe('AGENTS.md');
-    expect(badgeIn(host)!.textContent).toBe('Agent file · AGENTS.md');
+    expect(badgeIn()!.textContent).toBe('Agent file · AGENTS.md');
   });
 
   it('switching documents re-registers — the registry holds the CURRENT name, never the previous', async () => {
