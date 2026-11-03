@@ -66,6 +66,43 @@
     "⋯" and its menu, the compact sheet; `appShell.ts` −608 — both stopgaps out, the controls handed over;** measured with
     `appShell.ts` alone at HEAD: 545,608); `.output` 5,963,907 / 5,964,023 B; zips 1,958,529 / 1,958,585 B; manifests
     **833 / 949 B** unchanged, `permissions: []`. G-7 holds.
+  - **ADDENDUM 2026-11-03 (after the PR's CI) — two CI-only reds.**
+    **(1) `editorPreview` › "★ a keystroke lands in the buffer while a preview render is pending": a CI-only Firefox flake,
+    not reproduced.** CI run 54 (`41576398081`, at `22b6386`) failed it on both attempts ("the instrument saw every key:
+    expected 1 to be 8"; attempt 2: 1 failed / 2,118 passed / 59 skipped of 2,178); run 55 (`41588859945`, at `fc71631`)
+    passed. Here, Firefox, CI font: 0 reds in 10 runs alone at 4.4, 10 with 4.3's production files (`toolbar.ts`,
+    `appShell.ts` from the 4.3 merge), 10 under full CPU load, and 5 full-suite runs (cache order; CI order with the results
+    cache removed; `CI=true`). The suspicion (focus leaving the editor after the first key) was probed at every keydown,
+    idle and with the main thread blocked 300 / 1,500 ms after the first key: focus stayed in `cm-content`, all 8 keys as 8
+    dispatches, both engines. 4.4's product changes (`toolbar.ts`, `appShell.ts`) are not on this file's module graph.
+    Recorded as a known flake; the test's failure message now reports focus, `hasFocus()` and the dispatch count per keydown
+    plus the viewport, the buffer's head and the earlier test files (`fc71631`, test-only — kept as evidence).
+    **(2) The unhandled rejection — a PRODUCT defect, fixed.** `InvalidStateError: Failed to execute 'transaction' on
+    'IDBDatabase': The database connection is closing`, from `storeSnapshot` (`snapshots.ts`) → `idbCore` `put` /
+    `write`, during `editorSave`'s "★ R19, WATCHED" test (CI run 50 on 4.2, `41476619351`; reported by the human on this
+    PR's runs too — run 55 itself reads success through the API). **Cause:** `watchController` fires `void
+    storeSnapshot(...)` on every watched re-render, and `void` does not catch. When the shared connection closes while that
+    write is pending — in PRODUCTION, idbCore's `versionchange` close (another context opening a newer database version, e.g.
+    an extension update while the app page is open); in the HARNESS, `editorSave`'s `afterEach` `__resetConnectionForTest()`
+    closing it after the R19 test's re-render fired a snapshot — `db.transaction()` throws and the rejection escapes. Its
+    doc comment already promised "a rejection completes the re-render normally rather than surfacing" (§4); nothing made it
+    true. **Fix:** `storeSnapshot` never rejects — its body moved to a private `writeSnapshot`, awaited inside a
+    `try / catch` that skips the write quietly (no log, no report — AGENTS.md #2). Nothing kept is lost: META FIRST means a
+    write cut short leaves at worst a dangling meta entry, safe and self-reclaiming (§1.2). The harness needs no change once
+    the promise cannot reject. **Red-first** (`snapshotCapture.browser.test.ts`, new): store one snapshot, start a second,
+    close the connection while it is pending (idbCore's own `close()`, the memo dropped as its hook drops it) → before the
+    fix "a snapshot write never rejects: expected 'rejected: InvalidStateError: …' to be 'resolved'", both engines; after,
+    resolved, the kept snapshot intact and readable on a fresh connection, the next write landing. **Ablation:** the catch
+    re-throwing → the same red; restored md5-identical. **Proof:** `editorSave` × 10, both engines, every run exit 0 with no
+    unhandled error; the full suite, both engines: first run 1 red — Firefox's contrast-census INVENTORY ("pending rows that
+    now pass: firefox · app page · light · .line > span"), green 3 / 3 alone: harness-shared-state (the row exists because
+    the DEFAULT code theme's comment colour is below AA, so it "passes" only when another code theme is in effect — the
+    code-theme choice is persisted by several files and the census does not reset it; not caused by this fix, not a
+    census row) — re-run **2,129 passed / 0 failed / 51 skipped of 2,180**, EXIT 0, no unhandled error; unit 1489 / 1490
+    (`pipeline.perf`); lint 0. **Bytes:** `storeSnapshot` is on the content script's graph (`contentWatch` →
+    `watchController`), so the content script grows **344,513 → 344,562 B (+49)**, md5 `fcfe06c1…` (Cr) / `20de200b…` (Fx) —
+    with `snapshots.ts` alone reverted it rebuilds to `b72a093c…` exactly; app chunk 545,000 → **545,051 B (+51)**; `.output`
+    5,964,007 / 5,964,123 B; manifests 833 / 949 B, `permissions: []`. G-7 holds (+49 B against its +2 KB stop).
 
 - **2026-11-02 · M13 TASK 4.3 — Edit in the toolbar; the shadow-root Edit control and `EDIT_CONTROL_CSS` removed (D-6;
   ruling E; gate-1 Q8; the approved 3.1 mock).** Branch restarted from `main` at `6ef8889` (PR #27's merge, containing

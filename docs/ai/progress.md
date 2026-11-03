@@ -22,7 +22,11 @@
   rule follows the WAI-ARIA menu button (no file states one); the Files slot is an empty hidden span until 4.8.
 - **Human ruling:** C061's app arm moved from 1280 to 1400 — an agent file's toolbar wraps to a second row at 1280.
 - **Addendum — the watchRemount CI flake:** 0 / 10 alone and 0 / 1 in full-suite order on `main`; recorded as a CI-only
-  known flake (§ Carried items 4). A second CI item found on the way, unruled: run 50's IDB unhandled rejection.
+  known flake (§ Carried items 4). A second CI item found on the way — run 50's IDB unhandled rejection — FIXED on this
+  branch (addendum below).
+- **Addendum (after the PR's CI, 2026-11-03):** `editorPreview`'s keystroke count failed CI twice on Firefox and passed
+  on the next run — recorded as a CI-only known flake (0 reds here), its failure message now diagnostic. `storeSnapshot`
+  no longer rejects when the connection closes mid-write (the unhandled rejection from runs 50 and the editorSave R19 test).
 - Census: 47 rows (43 re-spelled, 1 replaced, 3 unchanged) + C362–C364 discovered + C061 moved up.
 - Verify: lint 0 · unit 1489 / 1490 (`pipeline.perf`) · browser 2,127 passed / 0 failed / 51 skipped of 2,178, both
   engines · golden EMPTY · content script md5 identical · app chunk 545,000 B (+3,845).
@@ -471,10 +475,11 @@ manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1
 2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
 `pnpm audit --prod` EXIT=0, 2026-11-01.
 **Byte snapshot — M13 task 4.4 (2026-11-03, Linux cloud, clean two-engine build) — carry THESE to the next kickoff:**
-`.output` 5,963,907 B (Cr) / 5,964,023 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,376,125 / 1,376,009 B · zip
-1,958,529 / 1,958,585 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) (identical to
-4.3) · app chunk 545,000 B (+3,845) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) ·
-browser 2,127 passed / 51 skipped of 2,178 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-03.
+`.output` 5,964,007 B (Cr) / 5,964,123 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,376,025 / 1,375,909 B · content
+script **344,562 B** both engines (+49, the 4.4 addendum's `storeSnapshot` fix), md5 `fcfe06c1…` (Cr) / `20de200b…` (Fx) ·
+app chunk 545,051 B · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) · browser 2,129
+passed / 51 skipped of 2,180 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-03. (Before the addendum: `.output`
+5,963,907 / 5,964,023, zips 1,958,529 / 1,958,585, content script 344,513 `b72a093c…` / `c3c4b102…`, app chunk 545,000.)
 **Superseded by 4.4 — the 4.3 figures:**
 `.output` 5,960,062 B (Cr) / 5,960,178 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,379,970 / 1,379,854 B · zip
 1,957,728 / 1,957,784 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) (identical to
@@ -619,13 +624,23 @@ R29's CARRY).
   passed. Measured on `main` at `6f679a9` (Linux cloud, CI font, Chromium): **0 reds in 10 runs alone, 0 in 1
   full-suite-order run** — no failing run to compare, so no cause is claimed and the test is unchanged (its 40 px tolerance
   is not loosened). Re-run on a red; if it recurs, log `readingAt`, `after`, the scroll container and the anchor.
-- **Unruled, carried — an unhandled rejection in CI run 50** (`41476619351`, the 4.2 PR, never re-run; 200 files passed,
-  2,051 passed / 59 skipped, but Vitest exited 1): `InvalidStateError: Failed to execute 'transaction' on 'IDBDatabase':
-  The database connection is closing` from `storeSnapshot` (`src/app/snapshots.ts:332` → `idbCore.ts` `put`), during
-  `editorSave.browser.test.ts`'s "★ R19, WATCHED: Save → Stop editing …". A snapshot write racing a store reset between
-  tests; not reproduced or investigated here (out of 4.4's scope). *Home:* the human's call.
-- **The known flakes, as they now stand: TWO — `pipeline.perf.test.ts` and `watchRemount`'s Raw-place test** (above).
-  copyAsHtml and diagramActions are resolved; the run-50 unhandled rejection is unruled.
+- **`tests/browser/editorPreview.browser.test.ts` › "★ a keystroke lands in the buffer while a preview render is pending in
+  the cooldown"** — a KNOWN FLAKE, **CI-only, Firefox, not reproduced**. CI run 54 (`41576398081`, the 4.4 PR at
+  `22b6386`) failed it on BOTH attempts: "the instrument saw every key: expected 1 to be 8" (line 357) — attempt 2: 1 failed
+  / 2,118 passed / 59 skipped of 2,178; run 55 (`41588859945`, at `fc71631`) passed it. Here: **0 reds** in 10 runs of the
+  file alone at 4.4, 10 with 4.3's production files, 10 under full CPU load, and 5 full-suite runs (cache order, CI order
+  with the results cache removed, `CI=true`); a probe at every keydown — idle, and with the main thread blocked 300 /
+  1,500 ms after the first key — kept focus in the editor (`cm-content`) with all 8 keys as 8 dispatches. 4.4's product code
+  is not on this file's graph. The test now reports, on a wrong count, the deep `activeElement`, `hasFocus()` and the
+  dispatch count per keydown, plus the viewport, the buffer's head and the test files loaded before it (`fc71631`) — keep
+  it: it is the evidence if it recurs.
+- ~~**Unruled, carried — an unhandled rejection in CI run 50**~~ — **RESOLVED on the 4.4 branch (2026-11-03,
+  `decisions.md` "M13 TASK 4.4", addendum):** `storeSnapshot` (fire-and-forget from `watchController`) rejected when the
+  shared connection closed mid-write (idbCore's `versionchange` close, or a test's connection reset) — `void` does not catch,
+  so it escaped. It now never rejects; the write is skipped quietly.
+- **The known flakes, as they now stand: THREE — `pipeline.perf.test.ts`, `watchRemount`'s Raw-place test (CI-only) and
+  `editorPreview`'s keystroke count (CI-only, Firefox)** (above). copyAsHtml and diagramActions are resolved; the run-50
+  unhandled rejection is fixed; nothing is unruled.
 
 **5 · SUPPLY CHAIN**
 - **Pin pnpm via `packageManager`** — CI's `version: 10` floats; a future 10.x could change where `auditConfig` is read and
