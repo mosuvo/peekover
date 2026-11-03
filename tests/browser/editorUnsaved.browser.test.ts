@@ -917,7 +917,10 @@ describe.runIf(CHROMIUM)('012 task 6.1 — R6’s asymmetry on the app page’s 
     const other = mem('b', TEXT_B);
     const rig = await opened({ a: disk.file, b: other.file, bReads: other.reads });
     // `opened()` asserted unwatched; start the app page's own watch now.
-    const pill = rig.host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_CONTROL_CLASS}`);
+    // KEEPS: the app page's own watch, started by the user's control (C210). RE-SPELLED at 013 task 4.5: the
+    // control is the toolbar's Watch — the reader is mounted with `pills: false` (none in it).
+    expect(rig.host.shadowRoot!.querySelector(`.${WATCH_CONTROL_CLASS}`), 'no watch pill in the reader (4.5)').toBeNull();
+    const pill = rig.host.closest('.peekover-app')?.querySelector<HTMLElement>(`.peekover-toolbar .${WATCH_CONTROL_CLASS}`) ?? null;
     expect(pill, 'the app page offers its watch control for this file').not.toBeNull();
     pill!.click();
     await waitFor(() => isWatching(), 'the app page’s own watch to start');

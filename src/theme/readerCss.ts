@@ -1342,24 +1342,8 @@ export const READER_CSS = /* css */ `
 // provisional constant: it is what an older engine gets, for as long as no minimum version is set.
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; }
-.peekover-mode-toggle,
-.peekover-theme-toggle,
-.peekover-watch,
-.peekover-watch-note,
-.peekover-watch-disclosure,
-.peekover-diff-affordance,
-.peekover-diff-picker,
-.peekover-diff-status,
-.peekover-remote-load,
 .peekover-net,
 .peekover-toc{ position:absolute; }
-/* B1 finding 2 — pill into the column's empty top band; remote-load beside it. Why: diffChrome.ts */
-.peekover-diff-affordance{ top:12px; anchor-name:--peekover-diff; }
-.peekover-diff-picker,
-.peekover-diff-status{ top:50px; }
-/* 2.4 — the status takes its own lane WHILE the picker is open. Why + derivation: the .ts above */
-.peekover-diff-picker:not([hidden]) ~ .peekover-diff-status{ top:calc(50px + min(46vh,320px) + 6px); }
-.peekover-remote-load{ left:176px; left:calc(anchor(--peekover-diff right,-8px) + 24px); }
 `;
 
 // ============================================================================
@@ -1546,26 +1530,3 @@ export const EDITOR_CSS = /* css */ `
 }
 `;
 
-// ============================================================================
-// CAPTURE NOTICE SEAT — one app-only rule (012 R29(d); kept by 013 task 4.3).
-// ============================================================================
-// Injected by editorEnhancer.ts as its own <style> on every app-page reader host. It is all that is
-// left of the edit control's sheet, which 013 task 4.3 removed with the control (D-6: Edit is the
-// toolbar's segment now). It is app-page-only, so neither READER_CSS nor CONTAINED_CSS may carry it
-// (both ride into the content script, whose bytes 4.3 holds md5-identical). Nothing on the
-// content-script graph imports this export. It goes at 4.5, when the notice leaves the shadow root
-// for the notice area below the toolbar (D-8).
-//
-// All rationale is in this comment: the literal below ships as written.
-//
-// THE CAPTURE NOTICE'S SEAT (012 R29(d), 7.1 walk). READER_CSS seats `.peekover-watch-disclosure`
-// at `bottom:176px; left:16px` — measured from the HOST's bottom, which on the contained pane is
-// the end of the DOCUMENT (or of the split), so it landed on the last lines of text and on the
-// split's lower-left corner. The notice exists on the app page alone (it needs a registered diff
-// context), and this sheet is injected on exactly that page's hosts, so the override lives here and
-// the content-script bundle is untouched. It moves into the clearance band every column and split
-// already keeps (130px under the text; the pill stack takes the band's left 130px, so the notice
-// sits right of it, 176px in).
-export const CAPTURE_NOTICE_SEAT_CSS = /* css */ `
-.peekover-watch-disclosure{bottom:16px;left:176px}
-`;

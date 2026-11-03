@@ -507,8 +507,11 @@ describe('rows 8 + 9 — the open lightbox panel clears the TOC rail, the mode t
     // The conditional chrome only exists when mount() actually blocked a remote image, and the
     // indicator ships CSS-hidden until a network action — `data-network` is forced, because a
     // hidden element has a zero rect and would be cleared vacuously (7.1's row-7 note).
+    // KEEPS: the open lightbox clears the document-bound chrome (C117). RE-SPELLED at 013 task 4.5: mounted as the app
+    // page mounts (`pills: false`), so the mode toggle and theme pill are not in this tree to clear — dropped below.
     mount(`${tocDocOf(FENCE_ONE)}\n![remote](https://example.invalid/x.png)\n`, host, {
       contained: true,
+      pills: false,
       preserveReading: true,
     });
     enhanceDiagrams(host);
@@ -524,8 +527,6 @@ describe('rows 8 + 9 — the open lightbox panel clears the TOC rail, the mode t
 
     for (const [name, sel] of [
       ['TOC rail', '.peekover-toc'],
-      ['mode toggle', '.peekover-mode-toggle'],
-      ['theme pill', '.peekover-theme-toggle'],
       ['network indicator', '.peekover-net'],
       ['remote-load pill', '.peekover-remote-load'],
     ] as const) {

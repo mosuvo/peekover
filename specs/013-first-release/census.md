@@ -183,6 +183,19 @@ retired while its function has no other test. Function by function:
   row there. HUMAN RULING (2026-11-03): the second row is approved; the app arm is re-spelled to 1400 (`KEEPS:`); the
   content-script arm keeps 1280 and 1400. No unexplained red.
 
+- **4.5** (2026-11-03): all **100** rows whose task is 4.5 handled, each cited in its test — **re-spelled 70 · retired 21 ·
+  replaced 9** — as counted (C061, re-spelled at 4.4 by the human's ruling, unchanged here). Replaced by new tests: C084,
+  C140, C228, C300 (`snapshotNotice.browser.test.ts`, the toolbar tests). **Deviation:** C315, C317, C319, C320, C321
+  (`watchControl`'s contained surface) re-spelled in place over the toolbar's control — the property kept in the same test —
+  rather than replaced. Also handled: the rows whose 4.3 cell named a 4.5 step — C181, C187, C195, C199–C202
+  (`editorSave`) and C210 (`editorUnsaved`): the Watch step is the toolbar's; C264 (4.5, 4.8); C165's remaining mode-pill
+  clauses and C178's mode-pill clause retired, as the rows said. **Unpredicted: C168** (`editorNestedHost`, counted
+  unchanged): its split tests mounted contained WITH pills — a shape the app page no longer produces — and with the seat
+  rules deleted those pills covered the preview at 414 px; the split tests now mount `pills: false` (`KEEPS:`), the hazard
+  tests keep the full chrome they need. Drift rows re-spelled on purpose: C112, C117, C278, C315–C325. C027–C029 unchanged
+  (`LANE_SELECTOR` matches by DOM order, which still holds; C030, the CONTAINED lane rule, retired). Discovered: **C365–C371** re-spelled. The first full suite went red only in
+  rows named here (21 tests, 5 files); then green. No unexplained red.
+
 ### Checking 4.1–4.8 against this census
 
 tasks.md defines no lint for the comments, and 4.0 may not edit a test. Each group-4 task therefore checks, in its
@@ -436,6 +449,13 @@ replaced 1
 | C362 | `toolbar.browser.test.ts` › sits first in the header … (its parts line; DISCOVERED at 4.4) | the toolbar's parts on screen are [brand, file, badge, watch, compare, seg] | re-spelled | the toolbar's parts in the mock's order — the Files slot leads; the row break, the app group, "⋯" and its menu follow | 4.4 | app |  |
 | C363 | `toolbar.test.ts` › composes the mark, the file name and Read / Raw, in that order (DISCOVERED at 4.4) | the toolbar's children are [brand, file, badge, watch, compare, seg] | re-spelled | the same, in jsdom | 4.4 | app |  |
 | C364 | `toolbar.browser.test.ts` › at %i px, %s: Export, Code theme, Stored data and Compare open fully inside the viewport (DISCOVERED at 4.4) | each panel opened by clicking its toggle | re-spelled | each panel, opened the way a user opens it (its "⋯" item at ≤ 863 px), lies inside the window with every row reachable | 4.4 | app | Export; Stored data; Code theme; Compare |
+| C365 | `toolbar.test.ts` › Compare follows the host's data-diff (DISCOVERED at 4.5) | the toolbar's Compare and the shadow pill both follow data-diff | re-spelled | the toolbar's own Compare follows data-diff; the reader is mounted `pills: false` (no pill to follow) | 4.5 | app | Compare/picker opening a diff |
+| C366 | `editorEnhancer.test.ts` › adds no edit control, no button and no sheet (DISCOVERED at 4.5) | enhanceEditor adds only the notice-seat sheet | re-spelled | enhanceEditor adds NOTHING to the shadow root — `CAPTURE_NOTICE_SEAT_CSS` is gone | 4.5 | app | Edit entering |
+| C367 | `editorEnhancer.test.ts` › R3 — the pill-hide rule lives in EDITOR_CSS (DISCOVERED at 4.5) | EDITOR_CSS hides the pill; the seat sheet seats the notice | re-spelled | the pill-hide rule is EDITOR_CSS's (the content script still has pills); the seat sheet's half retires with it | 4.5 | app |  |
+| C368 | `toolbar.browser.test.ts` › Read / Raw switch the reader, and the toolbar reflects a flip it did not make (DISCOVERED at 4.5) | the outside flip made by the shadow mode pill | re-spelled | the outside flip made by `setReaderMode` (ruling B) — no pill on the app page | 4.5 | app | Read / Raw |
+| C369 | `toolbar.browser.test.ts` › Watch: the toolbar toggles the registry's watch, and reflects a stop it did not make (DISCOVERED at 4.5) | toolbar ↔ shadow watch pill, both directions | re-spelled | the outside stop made by `stopWatch` — the registry is the one watch | 4.5 | app | Watch toggling |
+| C370 | `toolbar.browser.test.ts` › Compare: the picker opens under its own button; a comparison opens and closes from the toolbar (DISCOVERED at 4.5) | opened from the toolbar, closed from the pill and back | re-spelled | the toolbar's Compare round trip on its own | 4.5 | app | Compare/picker opening a diff |
+| C371 | `toolbar.browser.test.ts` › says what the watch has to say … — and the reader says none (DISCOVERED at 4.5) | the notice-area note equals the reader's own note | re-spelled | the note equals `watchNote()`; the reader builds none | 4.5 | app | Watch toggling |
 
 ### `tests/browser/captureDisclosure.browser.test.ts`
 

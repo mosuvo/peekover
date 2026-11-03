@@ -705,14 +705,16 @@ describe('3.2 eyeball proxy 1 — contrast of CodeMirror’s own surfaces, light
 // rect intersection between a pill-family control and the rail's BOX is the design, not a
 // collision, and it is reported in px beside the mode pill's own identical figure as its
 // precedent. What IS asserted — a covered or covering control being the defect this proxy is for:
-//   • reading: the mode pill and the TOC handle are disjoint, and a hit-test at each one's centre
-//     returns that control (the hit-test FIRST — it is the check that shows a covered control);
+//   • reading: a hit-test at the TOC handle's centre returns the handle (the check that shows a
+//     covered control; the mode pill it was paired with is gone from the app page since 4.5);
 //   • edit: at these widths the rail and its handle are hidden (R29(c)), and the split pane keeps
 //     its size.
 // RETIRED (C165, in part): every pair with the EDIT CONTROL in it — 013 task 4.3 (D-6) removed the
-// shadow-root control; Edit is the toolbar's segment, outside the reader. The pill × handle pair,
-// the hidden rail and the split's size are KEPT (census C165 classed the whole test retired; only
-// the control's pairs cease to exist — a deviation recorded at 4.3).
+// shadow-root control; Edit is the toolbar's segment, outside the reader. RETIRED at 013 task 4.5 (C165,
+// the rest of the census's retirement): every clause with the MODE PILL in it — the pill × handle pair,
+// the pill's hit-test and the pill's reported overlaps; the app page mounts its reader with
+// `pills: false`, so there is no pill (Read / Raw are the toolbar's). KEPT: the handle's own hit-test,
+// the hidden rail and handle in edit, and the split's size.
 // Every violation is collected and recorded before the one assertion, so a first red cannot hide
 // a second.
 //
@@ -771,11 +773,10 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
     await page.viewport(size.width, size.height);
     const host = await openInPane(COLLISION_DOC);
     const viewport = `${name} ${size.width}x${size.height}`;
-    const pill = inHost(host, 'peekover-mode-toggle')!;
     const handle = inHost(host, 'peekover-toc__toggle')!;
     const railEl = inHost(host, 'peekover-toc')!;
-    const list = inHost(host, 'peekover-toc__list')!;
-    const themeControl = inHost(host, THEME_CONTROL_CLASS);
+    expect(inHost(host, 'peekover-mode-toggle'), 'the app page builds no mode pill (4.5)').toBeNull();
+    expect(inHost(host, THEME_CONTROL_CLASS), 'nor a theme pill').toBeNull();
     expect(handle, 'a document with three headings has a rail').not.toBeNull();
     await setRail(host, rail);
     const violations: string[] = [];
@@ -783,35 +784,21 @@ describe('3.2 eyeball proxy 2 — nothing collides at the top-right', () => {
     // ── reading ───────────────────────────────────────────────────────────────────────────────
     expect(host.getAttribute('data-mode')).toBe('reading');
     const reading = {
-      pill: boxOf(pill),
       handle: boxOf(handle),
       rail: boxOf(railEl),
     };
     const readingHits = {
-      pill: hitAtCentre(pill) === pill,
       handle: hitAtCentre(handle) === handle,
     };
     for (const [who, hit] of Object.entries(readingHits)) {
       if (!hit) violations.push(`reading: the ${who}'s centre does not hit the ${who}`);
     }
-    const readingPairs = {
-      'pill × handle': overlapPx(reading.pill, reading.handle),
-    };
-    for (const [pair, o] of Object.entries(readingPairs)) {
-      if (o) violations.push(`reading: ${pair} overlap ${px(o)}`);
-    }
     record('collision', {
       viewport,
       rail,
       mode: 'reading',
-      rects: { pill: fmt(reading.pill), handle: fmt(reading.handle), rail: fmt(reading.rail) },
+      rects: { handle: fmt(reading.handle), rail: fmt(reading.rail) },
       hitTests: readingHits,
-      asserted: Object.fromEntries(Object.entries(readingPairs).map(([k, o]) => [k, px(o)])),
-      reported: {
-        'pill × rail BOX (by design)': px(overlapPx(reading.pill, reading.rail)),
-        'pill × rail LIST': rail === 'open' ? px(overlapPx(reading.pill, boxOf(list))) : 'list hidden',
-        'pill × theme control': themeControl ? px(overlapPx(reading.pill, boxOf(themeControl))) : 'no theme control',
-      },
     });
 
     // ── edit ──────────────────────────────────────────────────────────────────────────────────

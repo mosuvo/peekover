@@ -409,8 +409,9 @@ describe('3.9 · D-8 — the raw view grows none either, and the reason is stron
   it('holds the table`s SOURCE as text, zero <table> elements, and no enhancement', async () => {
     const { host } = await openDoc(DOC_A);
 
-    // The real gesture: the mode pill, not a direct `setReaderMode`.
-    shadowOf(host).querySelector<HTMLButtonElement>('.peekover-mode-toggle')!.click();
+    // The real gesture, not a direct `setReaderMode`. KEEPS: the raw view grows no table tools (C283).
+    // RE-SPELLED at 013 task 4.5: the gesture is the toolbar's Raw — the app page has no mode pill (`pills: false`).
+    host.closest('.peekover-app')!.querySelector<HTMLButtonElement>('.peekover-toolbar__seg [data-mode="raw"]')!.click();
     await waitFor(() => host.getAttribute('data-mode') === 'raw');
 
     const raw = rawOf(host)!;
@@ -507,7 +508,9 @@ describe('3.9 · D-8 — a diff round trip leaves the column`s own table STILL s
 // not under test, so both arms reach the instrument.
 
 async function startWatchAndRewrite(opened: Opened): Promise<void> {
-  const pill = shadowOf(opened.host).querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`);
+  // KEEPS: the watch re-render's property (C284, C285). RE-SPELLED at 013 task 4.5: started
+  // from the toolbar's Watch — the app page has no reader pills (`pills: false`).
+  const pill = opened.host.closest('.peekover-app')!.querySelector<HTMLButtonElement>(`.peekover-toolbar .${WATCH_CONTROL_CLASS}`);
   expect(pill, 'no watch pill — `persistable:true` should have made the app page watchable').not.toBeNull();
 
   const before = opened.reads();

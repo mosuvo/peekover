@@ -281,11 +281,12 @@ describe.each(GEOMETRY_WIDTHS)('row 8 — clears the TOC rail and the mode toggl
 
     const toolbar = shadow.querySelector<HTMLElement>(TOOLBAR_SELECTOR);
     const toc = shadow.querySelector<HTMLElement>('.peekover-toc');
-    const modeToggle = shadow.querySelector<HTMLElement>('.peekover-mode-toggle');
-    if (!toolbar || !toc || !modeToggle) throw new Error('expected the toolbar, TOC rail and mode toggle');
+    // KEEPS: the code toolbar never intersects the TOC rail (C091). RE-SPELLED at 013 task 4.5: its half about the
+    // mode toggle is RETIRED with the toggle — the app page has no reader pills (`pills: false`); asserted gone.
+    if (!toolbar || !toc) throw new Error('expected the toolbar and the TOC rail');
+    expect(shadow.querySelector('.peekover-mode-toggle'), 'no mode pill on the app page').toBeNull();
 
     expectNoOverlap('toolbar', rectOf(toolbar), 'TOC rail', rectOf(toc));
-    expectNoOverlap('toolbar', rectOf(toolbar), 'mode toggle', rectOf(modeToggle));
   });
 });
 

@@ -316,6 +316,36 @@ export async function setCaptureEnabled(enabled: boolean): Promise<void> {
   return put(await db(), STORES.settings, row);
 }
 
+// --- the snapshot notice's dismissal (013 task 4.5, D-8; G-15) --------------------------------
+//
+// The app page's one-time snapshot notice ("Got it") remembers its dismissal in a THIRD row of the
+// settings store, keyed `NOTICES_SETTINGS_ID`, by its own record type — not a `Settings` field: the
+// `Settings` shape rides to the content script through the settings channel, and the notice is never
+// shown there (G-15). Being a row of the settings store, it is cleared by `wipeAll()` (which clears the
+// store whole), so a user who wipes sees the notice again, as a new user would (D-12). `eraseSnapshots()`
+// does not touch it.
+
+/** The notices row's key in the settings store. */
+export const NOTICES_SETTINGS_ID = 'notices';
+
+interface NoticesRecord {
+  id: typeof NOTICES_SETTINGS_ID;
+  /** The one-time snapshot notice was dismissed ("Got it"). */
+  snapshotNoticeDismissed: boolean;
+}
+
+/** Was the snapshot notice dismissed? `false` when no row exists (never dismissed, or wiped). */
+export async function getSnapshotNoticeDismissed(): Promise<boolean> {
+  const row = await get<NoticesRecord>(await db(), STORES.settings, NOTICES_SETTINGS_ID);
+  return row?.snapshotNoticeDismissed === true;
+}
+
+/** Remember the snapshot notice's dismissal. Resolves once the write commits. */
+export async function setSnapshotNoticeDismissed(): Promise<void> {
+  const row: NoticesRecord = { id: NOTICES_SETTINGS_ID, snapshotNoticeDismissed: true };
+  return put(await db(), STORES.settings, row);
+}
+
 // --- trust controls (task 2.2) -----------------------------------------------
 //
 // Storage ships WITH the way to see and erase it — the first thing that stores anything

@@ -119,15 +119,23 @@ describe('theme control — ships to BOTH surfaces through the one mount() seam'
     expect(control!.type).toBe('button');
   });
 
-  it('renders on the app-page {contained} pane (the recurring two-surface gotcha)', () => {
-    const control = controlIn(mountContainedReader());
-    expect(control).toBeTruthy();
-    expect(control!.tagName).toBe('BUTTON');
+  // REPLACED (C300) at 013 task 4.5: "renders on the app-page {contained} pane" — the app page mounts its reader
+  // with `pills: false`, so the theme control that reaches it is the TOOLBAR's (the merged control, 4.4:
+  // toolbar.browser.test.ts and themeShell.browser.test.ts). What holds on the pane itself is asserted: the
+  // app page's mount builds NO theme pill there.
+  it('the app page\'s {contained, pills:false} pane builds no theme pill — its theme control is the toolbar\'s', () => {
+    const host = document.createElement('div');
+    host.style.display = 'block';
+    document.body.appendChild(host);
+    mount(DOC, host, { contained: true, pills: false });
+    expect(controlIn(host)).toBeNull();
+    host.remove();
   });
 
+  // RETIRED (C298), the CONTAINED arm: the theme pill's place in the app reader's shadow root — there is none on the
+  // app page after 4.5 (`pills: false`). The full-page arm stands.
   it.each([
     ['full-page', mountFullPageReader],
-    ['contained', mountContainedReader],
   ])('is a SIBLING of .peekover-reader, never inside the column (%s)', (_name, mountFn) => {
     const host = mountFn();
     const shadow = shadowOf(host);
@@ -328,15 +336,8 @@ describe('theme control — geometry: clears the existing chrome (the M3 defect 
     assertNoChromeCollision(host, `full-page/${_name}`);
   });
 
-  it.each([
-    ['narrow', NARROW],
-    ['wide', WIDE],
-  ])('contained app-page pane, %s viewport', async (_name, size) => {
-    await page.viewport(size.width, size.height);
-    const host = mountContainedReader();
-    host.setAttribute('data-toc', 'open');
-    assertNoChromeCollision(host, `contained/${_name}`);
-  });
+  // RETIRED (C296) at 013 task 4.5: "geometry — contained app-page pane" — the theme pill's clearance in the app
+  // pane; the pill and its CONTAINED_CSS override are gone from the app page (`pills: false`).
 
   it('clears the reading column at a WIDE viewport, where a gutter exists', async () => {
     await page.viewport(WIDE.width, WIDE.height);

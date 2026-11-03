@@ -25,7 +25,7 @@ import {
   normaliseLineBreaks,
 } from './editorView';
 import { enhanceEditor, isEditable, toggleEdit, type EditorSave } from './editorEnhancer';
-import { CAPTURE_NOTICE_SEAT_CSS, EDITOR_CSS, READER_CSS } from '../theme/readerCss';
+import { EDITOR_CSS, READER_CSS } from '../theme/readerCss';
 import { createReaderPane } from '../app/readerPane';
 import { mountAppShell, type AppStore } from '../app/appShell';
 import type { FolderSource, MarkdownFile } from '../app/folderSource';
@@ -320,13 +320,14 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
 // RETIRED: "R3 — the exit returns to the mode edit was entered from" (C046) — ruling E: in the
 // segment, the one you click is where you go (src/app/toolbar.test.ts, the browser toolbar suite).
 describe('enhanceEditor — makes a host editable; builds no control', () => {
-  it('adds no edit control and no button: the only thing it adds is the one seat sheet, once', () => {
+  // KEEPS: enhanceEditor builds no control (C366). RE-SPELLED at 013 task 4.5: it adds NOTHING to the
+  // shadow root now — the capture notice's seat sheet went with the notice (D-8).
+  it('adds no edit control, no button and no sheet: the shadow root is untouched', () => {
     const host = mountedHost();
     const before = [...host.shadowRoot!.children];
     enhanceEditor(host);
     enhanceEditor(host);
-    const added = [...host.shadowRoot!.children].filter((el) => !before.includes(el));
-    expect(added.map((el) => [el.tagName, el.textContent])).toEqual([['STYLE', CAPTURE_NOTICE_SEAT_CSS]]);
+    expect([...host.shadowRoot!.children]).toEqual(before);
     expect(host.shadowRoot!.querySelector('.peekover-edit-toggle')).toBeNull();
     expect(isEditable(host)).toBe(true);
   });
@@ -385,10 +386,11 @@ describe('enhanceEditor — makes a host editable; builds no control', () => {
   // RETIRED (C047): EDIT_CONTROL_CSS's shape — the constant is deleted (D-6). What stays true is
   // asserted: the pill-hide rule is EDITOR_CSS's, and the one app-only sheet left ships no :host and
   // no comment.
-  it('R3 — the pill-hide rule lives in EDITOR_CSS; the seat sheet is one rule, no :host, no comment', () => {
+  // KEEPS: the pill-hide rule is EDITOR_CSS's (C367). RE-SPELLED at 013 task 4.5: the seat sheet's half is
+  // RETIRED — CAPTURE_NOTICE_SEAT_CSS is deleted with the in-reader notice (D-8).
+  it('R3 — the pill-hide rule lives in EDITOR_CSS', () => {
     expect(EDITOR_CSS).toContain(':host([data-mode="edit"]) .peekover-mode-toggle{display:none}');
     expect(READER_CSS).not.toContain('peekover-edit-toggle');
-    expect(CAPTURE_NOTICE_SEAT_CSS.trim()).toBe('.peekover-watch-disclosure{bottom:16px;left:176px}');
   });
 
   it('a second activation while the engine is still loading starts no second entry', async () => {

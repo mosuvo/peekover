@@ -31,6 +31,7 @@ import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
+import { DEFAULT_SETTINGS } from '../../src/settings/settings';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { resetCodeThemeControlsForTest } from '../../src/theme/codeThemeControl';
@@ -285,9 +286,23 @@ function watchTarget(): WatchTarget {
 function mem(name: string, text: string): MarkdownFile {
   return { path: name, name, read: async () => text };
 }
-const store = (): AppStore => ({ putFolder: async () => undefined, deleteFolder: async () => undefined, putRecent: async () => undefined });
+/** The census's OWN settings (013 task 4.5, carried addendum). The app shell loads settings as it mounts and
+ *  APPLIES them (`setThemeSetting(resolved.theme)`) whenever that load resolves. Without a `getSettings` of its own
+ *  the census got the defaults' theme, "auto", which landed AFTER the test had set "light" or "dark" — a theme
+ *  change that can re-render the code block while the census reads it, so a pending code-comment row measured as
+ *  passing on Firefox, depending on timing and file order. The load now answers the test's own theme and the
+ *  default code theme, so applying it changes nothing; it saves nothing, so it leaves nothing behind. */
+let censusTheme: Theme = 'light';
+const store = (): AppStore => ({
+  putFolder: async () => undefined,
+  deleteFolder: async () => undefined,
+  putRecent: async () => undefined,
+  getSettings: async () => ({ ...DEFAULT_SETTINGS, theme: censusTheme }),
+  putSettings: async () => undefined,
+});
 
-async function appPage(): Promise<{ container: HTMLElement; host: HTMLElement }> {
+async function appPage(theme: Theme): Promise<{ container: HTMLElement; host: HTMLElement }> {
+  censusTheme = theme;
   const container = freshHost();
   const source: FolderSource = { name: 'docs', truncated: false, persistable: false, files: [mem('CLAUDE.md', DOC), mem('other.md', '# Other\n\nText.\n')] };
   const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store: store() });
@@ -355,7 +370,7 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       // The theme is set BEFORE the page mounts: a theme change after it can re-render the code block,
       // and a census read mid-swap misses its tokens.
       setThemeSetting(theme);
-      const { container, host } = await appPage();
+      const { container, host } = await appPage(theme);
       await themed(host, theme);
       census(container, 'app page', theme);
     });
@@ -364,7 +379,7 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       // The theme is set BEFORE the page mounts: a theme change after it can re-render the code block,
       // and a census read mid-swap misses its tokens.
       setThemeSetting(theme);
-      const { container, host } = await appPage();
+      const { container, host } = await appPage(theme);
       await themed(host, theme);
       for (const [name, toggle, panel] of [
         ['Stored data panel', '.peekover-app__storage-toggle', '.peekover-storage'],
@@ -383,7 +398,7 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       // The theme is set BEFORE the page mounts: a theme change after it can re-render the code block,
       // and a census read mid-swap misses its tokens.
       setThemeSetting(theme);
-      const { container, host } = await appPage();
+      const { container, host } = await appPage(theme);
       await themed(host, theme);
       segmentToggle(host).click();
       await waitFor(() => host.getAttribute('data-mode') === 'edit', 'edit mode');

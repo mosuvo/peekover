@@ -110,6 +110,8 @@ import { getSettings as defaultGetSettings, putSettings as defaultPutSettings } 
 import {
   getCaptureEnabled as defaultGetCaptureEnabled,
   setCaptureEnabled as defaultSetCaptureEnabled,
+  getSnapshotNoticeDismissed as defaultGetSnapshotNoticeDismissed,
+  setSnapshotNoticeDismissed as defaultSetSnapshotNoticeDismissed,
 } from './store';
 import { getCaptureFlag, setCaptureFlag } from './captureFlag';
 import { createTreeView } from './treeView';
@@ -196,14 +198,17 @@ const SHELL_CLASS = 'peekover-app';
  * asks `isEditable`, which this call answers).
  */
 const renderWithEnhancements =
-  (save: EditorSave): RenderFn =>
+  (save: EditorSave, onMount?: (host: HTMLElement) => void): RenderFn =>
   (text, target, options) => {
-    mount(text, target, options);
+    // 013 task 4.5 (D-5): FORCED, whatever the caller passed — the save and watch re-renders come
+    // through here, and without it the first update would bring the pills back (census note).
+    mount(text, target, { ...options, pills: false });
     enhanceDiagrams(target);
     enhanceMath(target); // M11 D-3-R — same order/site as readerPane.ts's own math call
     enhanceEditor(target, { save }); // 012 D-3 — same order/site as readerPane.ts's own editor call
     enhanceTables(target);
     enhanceCode(target);
+    onMount?.(target); // 4.5 (ruling D): the toolbar adopts the load bar this mount built
   };
 
 /** The file one edit session may write, fixed at edit entry — and dropped (`file` set to null,
@@ -349,6 +354,9 @@ export interface AppStore {
    *  the shell keeps the default (on) and the toggle is a best-effort no-op on persistence. */
   getCaptureEnabled?(): Promise<boolean>;
   setCaptureEnabled?(enabled: boolean): Promise<void>;
+  /** 013 task 4.5 (D-8): the one-time snapshot notice's dismissal — its own settings-store row. */
+  getSnapshotNoticeDismissed?(): Promise<boolean>;
+  setSnapshotNoticeDismissed?(): Promise<void>;
 }
 
 /** Injectable dependencies (defaults are the real picker seam, re-grant, and store). */
@@ -739,6 +747,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     putSettings: defaultPutSettings,
     getCaptureEnabled: defaultGetCaptureEnabled,
     setCaptureEnabled: defaultSetCaptureEnabled,
+    getSnapshotNoticeDismissed: defaultGetSnapshotNoticeDismissed,
+    setSnapshotNoticeDismissed: defaultSetSnapshotNoticeDismissed,
   };
 
   // --- shell scaffolding ---------------------------------------------------
@@ -920,7 +930,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     renderEnhanced(text, host, { contained: true, preserveReading: true });
     binding.mounted = host.shadowRoot?.firstChild; // a later save of this session starts from here
   }
-  const renderEnhanced = renderWithEnhancements(saveActiveDocument);
+  const renderEnhanced = renderWithEnhancements(saveActiveDocument, (host) => toolbar.adoptChrome(host));
 
   const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
 
@@ -1063,6 +1073,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // never blanks the page (AGENTS.md #5).
 
   let storageOpen = false;
+  // The one-time snapshot notice's dismissal (D-8): dismissed until its row has loaded (see below).
+  let snapshotNoticeDismissed = true;
 
   /** The designed empty summary, used when no `describeStored` reader is injected (a minimal
    *  fake store) or a read fails — matches store.describeStored()'s own "Nothing stored" line. */
@@ -1146,6 +1158,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       onToggleCapture: (enabled) => {
         setCaptureFlag(enabled);
         void tryStore(() => store.setCaptureEnabled?.(enabled) ?? Promise.resolve());
+        toolbar.refreshNotices(); // the snapshot notice speaks only while capture is on (D-8)
       },
       onWipe: () => void wipeAllData(),
       onEraseSnapshots: () => void eraseSnapshotsData(),
@@ -1166,6 +1179,10 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   /** Erase everything, then refresh the hub AND the open panel so the cleared state shows. */
   async function wipeAllData(): Promise<void> {
     await tryStore(() => store.wipeAll?.() ?? Promise.resolve());
+    // The wipe cleared the notice's dismissal row with the rest of the settings store: the one-time
+    // snapshot notice speaks again, as it would to a new user (D-8; D-12).
+    snapshotNoticeDismissed = false;
+    toolbar.refreshNotices();
     await refreshPersisted(); // the reopen hub empties
     if (storageOpen) await renderStorage(); // the panel repaints to "Nothing stored"
   }
@@ -2171,15 +2188,42 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     publishSettings(resolved);
   });
 
+  // 013 task 4.5 (D-8): the one-time snapshot notice. Its dismissal is the `notices` settings-store
+  // row (G-15) — loaded here, written by "Got it", cleared by "Wipe all data". Until it loads the
+  // notice treats itself as dismissed, so a returning user never sees it flash.
+  toolbar.configureSnapshotNotice({
+    dismissed: () => snapshotNoticeDismissed,
+    dismiss: () => {
+      snapshotNoticeDismissed = true;
+      void tryStore(() => store.setSnapshotNoticeDismissed?.() ?? Promise.resolve());
+    },
+    captureOn: () => getCaptureFlag(),
+    openStoredData: () => {
+      if (!storageOpen) void toggleStorage();
+    },
+  });
+  void Promise.resolve(store.getSnapshotNoticeDismissed?.()).then(
+    (dismissed) => {
+      snapshotNoticeDismissed = dismissed ?? false;
+      toolbar.refreshNotices();
+    },
+    () => {
+      snapshotNoticeDismissed = false;
+      toolbar.refreshNotices();
+    },
+  );
+
   // D-12 (task 1.5): load the persisted snapshot-capture flag into the live cache the watch
   // controller reads at render time. Best-effort — an absent reader or a failed read leaves the
   // default (on), the safe value: a controller that renders before this resolves captures rather
   // than silently dropping snapshots. The store's read-with-default is the wipe-reset mechanism, so
   // after a wipe this reloads the default automatically (Piece 4).
-  void Promise.resolve(store.getCaptureEnabled?.()).then(
-    (enabled) => setCaptureFlag(enabled ?? true),
-    () => setCaptureFlag(true),
-  );
+  void Promise.resolve(store.getCaptureEnabled?.())
+    .then(
+      (enabled) => setCaptureFlag(enabled ?? true),
+      () => setCaptureFlag(true),
+    )
+    .then(() => toolbar.refreshNotices());
 
   // Initial paint: the idle affordance (plain line + live CTA) — never a blank page. The
   // reopen hub fills in once the async load resolves (refresh repaints idle when still idle).

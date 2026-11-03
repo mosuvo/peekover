@@ -40,6 +40,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { commands, page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
+import { createToolbar } from '../../src/app/toolbar';
 import {
   registerWatchTarget,
   resetWatchRegistryForTest,
@@ -76,7 +77,10 @@ function shadowOf(host: HTMLElement): ShadowRoot {
   return shadow;
 }
 
-const controlIn = (host: HTMLElement) => shadowOf(host).querySelector<HTMLButtonElement>(CONTROL);
+/** The host's Watch control: the toolbar's on the app-page surface (013 task 4.5, `pills: false`), the reader's
+ *  own pill on the full-page surface. */
+const controlIn = (host: HTMLElement) =>
+  (host.closest('.peekover-app')?.querySelector('.peekover-toolbar') ?? shadowOf(host)).querySelector<HTMLButtonElement>(CONTROL);
 
 /**
  * A recording watch target, registered through the PRODUCTION seam the entrypoints use.
@@ -134,14 +138,23 @@ function mountFullPageReader(doc = DOC): HTMLElement {
  * not a production one.
  */
 function mountContainedReader(doc = DOC): HTMLElement {
+  // RE-SPELLED at 013 task 4.5 (harness drift, census C315–C317, C319–C321, C324, C325): the app page mounts its
+  // reader with `pills: false` and its Watch is the TOOLBAR's, bound to the host — so this surface does the same
+  // (the toolbar in a `.peekover-app` beside the pane, as the shell lays it out). Before, it mounted with the pills
+  // on and kept passing while no longer matching production.
+  const app = document.createElement('div');
+  app.className = 'peekover-app';
+  const toolbar = createToolbar(document);
   const pane = document.createElement('main');
   pane.className = 'peekover-app__reader';
   pane.style.cssText = 'display:block;overflow:auto;height:80vh;width:100%';
   const host = document.createElement('div');
   host.style.display = 'block';
   pane.appendChild(host);
-  document.body.appendChild(pane);
-  mount(doc, host, { contained: true });
+  app.append(toolbar.element, pane);
+  document.body.appendChild(app);
+  mount(doc, host, { contained: true, pills: false });
+  toolbar.setDocument('doc.md', host);
   return host;
 }
 
@@ -160,7 +173,7 @@ const SURFACES: Surface[] = [
   {
     name: 'contained',
     mount: mountContainedReader,
-    remount: (host, doc = DOC) => mount(doc, host, { contained: true, preserveReading: true }),
+    remount: (host, doc = DOC) => mount(doc, host, { contained: true, pills: false, preserveReading: true }),
   },
 ];
 
@@ -210,6 +223,12 @@ describe.each(SURFACES)('watch control — $name surface (task 4.1)', (surface) 
     const control = controlIn(host)!;
     const column = shadow.querySelector<HTMLElement>('.peekover-reader')!;
 
+    // RETIRED (C318), the CONTAINED arm: a shadow-root watch pill's place on the app page — the app page's Watch is
+    // the toolbar's, outside the reader altogether (asserted); the full-page arm keeps the sibling clause.
+    if (surface.name === 'contained') {
+      expect(shadow.contains(control), 'contained: the Watch is outside the reader').toBe(false);
+      return;
+    }
     expect(control.parentNode).toBe(shadow);
     expect(column.parentNode).toBe(shadow);
     expect(column.contains(control)).toBe(false);
@@ -423,7 +442,9 @@ function assertNoChromeCollision(host: HTMLElement, label: string): void {
   expectNoOverlap(`${label} watch`, rect, 'TOC list', railList.getBoundingClientRect());
 }
 
-describe.each(SURFACES)(
+// RETIRED (C322, C323), the CONTAINED arms: the floating watch pill's place in the app-page reader pane — there is
+// no pill there after 013 task 4.5 (`pills: false`); the full-page surface's geometry stands.
+describe.each(SURFACES.filter((s) => s.name === 'full-page'))(
   'watch control — geometry on the $name surface (the M3 defect class)',
   (surface) => {
     // VIEWPORT RESIZING IS SCOPED TO THE TESTS THAT NEED IT, and that is a deliberate harness

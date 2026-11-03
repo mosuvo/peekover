@@ -22,7 +22,7 @@ import {
 } from '../../src/render/editorView';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
 import { resetWatchRegistryForTest } from '../../src/watch/watchRegistry';
-import { WATCH_DISCLOSURE_CLASS, resetWatchControlsForTest } from '../../src/watch/watchControl';
+import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { setThemeSetting } from '../../src/theme/reader';
@@ -342,47 +342,9 @@ describe('R29(c) — edit hides the TOC rail at or below the breakpoint; each pa
 });
 
 // ── (d) the capture notice ──────────────────────────────────────────────────────────────────────
-const rectsOfText = (root: Element): DOMRect[] => {
-  const out: DOMRect[] = [];
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-    if (!(n.textContent ?? '').trim()) continue;
-    const r = document.createRange();
-    r.selectNodeContents(n);
-    out.push(...Array.from(r.getClientRects()).filter((q) => q.width > 0 && q.height > 0));
-  }
-  return out;
-};
-const intersects = (a: DOMRect, b: DOMRect): boolean =>
-  Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
 
-describe('R29(d) — the capture notice never sits on top of the document or the editor (WIDE only)', () => {
-  // The NARROW case is carried (decisions.md, R29 decision 1): the folder pane leaves a ~150px
-  // reader there, so the notice cannot fit beside the pills. The notice itself is app-page-only.
-  it('WIDE: reading, then edit', async () => {
-    await page.viewport(WIDE.width, WIDE.height);
-    const { host } = await openFile();
-    const notice = await waitFor(() => inHost(host, WATCH_DISCLOSURE_CLASS), 'the capture notice');
-    expect(notice.hidden).toBe(false);
-    const reader = inHost(host, 'peekover-reader')!;
-    const pane = host.closest<HTMLElement>('.peekover-app__reader')!;
-    const pills = ['peekover-watch', 'peekover-theme-toggle'].map((c) => inHost(host, c)).filter((e): e is HTMLElement => !!e);
-    expect(pills.length, 'the pill stack is present to be cleared').toBeGreaterThan(0);
-    const check = (mode: string): void => {
-      const n = notice.getBoundingClientRect();
-      for (const p of pills) expect(intersects(p.getBoundingClientRect(), n), `${mode}: the notice overlaps ${p.className}`).toBe(false);
-    };
-    pane.scrollTop = pane.scrollHeight;
-    await frames(2);
-    const hit = rectsOfText(reader).filter((r) => intersects(r, notice.getBoundingClientRect()));
-    expect(hit.length, `reading: ${hit.length} text line box(es) sit under the notice`).toBe(0);
-    check('reading');
-
-    await enterEdit(host);
-    pane.scrollTop = pane.scrollHeight;
-    await frames(2);
-    const shell = inHost(host, EDITOR_SHELL_CLASS)!.getBoundingClientRect();
-    expect(intersects(shell, notice.getBoundingClientRect()), 'edit: the notice overlaps the split').toBe(false);
-    check('edit');
-  });
-});
+// REPLACED (C228) at 013 task 4.5: "R29(d) — the capture notice never sits on top of the document or the editor".
+// The app page builds no in-reader notice now (`pills: false`): the capture disclosure is the one-time snapshot
+// notice in the page flow ABOVE the reader pane, so it cannot sit over the text or the edit split. Its placement —
+// below the header, above the reader, over no line of text, at 1440 / 1280 / 1080 / 414 — is
+// tests/browser/snapshotNotice.browser.test.ts's.

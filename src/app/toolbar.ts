@@ -59,7 +59,7 @@
 // the logo's internals use the FIXED ink in every theme; tokens.css carries both values).
 import { setReaderMode, type ReaderMode } from '../render/readerMode';
 import { EDIT_LABELS, isEditable, leaveEdit, toggleEdit, type EditState } from '../render/editorEnhancer';
-import { buildWatchControl, buildWatchNote, WATCH_CONTROL_CLASS } from '../watch/watchControl';
+import { buildWatchControl, buildWatchNote, DISCLOSURE_TEXT, WATCH_CONTROL_CLASS } from '../watch/watchControl';
 import {
   buildDiffChrome,
   ARIA_COMPARE,
@@ -120,10 +120,15 @@ export function toolbarCss(shell: string): string {
 .${C} .${DIFF_AFFORDANCE_CLASS}{font:600 12.5px/1 var(--sans); color:var(--muted); background:var(--panel); cursor:pointer;
   border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap}
 .${C} .${DIFF_AFFORDANCE_CLASS}[aria-expanded="true"],.${C} .${DIFF_AFFORDANCE_CLASS}[data-diff-open="true"]{color:var(--ink); border-color:var(--ink)}
-.${C} .peekover-diff-picker{position:absolute; top:calc(100% + 6px); left:0; z-index:6; box-sizing:border-box;
-  width:300px; max-width:calc(100vw - 1.5rem); max-height:min(60vh,calc(100vh - 6rem)); overflow:auto;
-  background:var(--paper); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:6px}
+.${C}__drop{position:absolute; top:calc(100% + 6px); left:0; z-index:6; box-sizing:border-box;
+  width:300px; max-width:calc(100vw - 1.5rem); background:var(--paper); border:1px solid var(--line); border-radius:12px;
+  box-shadow:var(--shadow); overflow:hidden}
+.${C}__drop[hidden]{display:none}
+.${C} .peekover-diff-picker{box-sizing:border-box; max-height:min(60vh,calc(100vh - 6rem)); overflow:auto; padding:6px}
 .${C} .peekover-diff-picker[hidden]{display:none}
+.${C}__drop .peekover-diff-status{margin:0; padding:.55rem .75rem; font:400 13px/1.45 var(--sans); color:var(--ink);
+  border-top:1px solid var(--line)}
+.${C}__drop .peekover-diff-status[hidden]{display:none}
 .${C} .peekover-diff-picker [role="group"]::before{content:attr(aria-label); display:block; margin:6px 8px 4px;
   font:700 11px/1.3 var(--sans); letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
 .${C} .peekover-diff-picker__item{display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
@@ -168,6 +173,15 @@ export function toolbarCss(shell: string): string {
 .${shell}__notices > *,.${shell}__notices > .${C}__status > *{margin:0; padding:.55rem 1rem; font:400 13px/1.45 var(--sans); color:var(--ink);
   background:var(--panel); border-bottom:1px solid var(--line)}
 .${shell}__notices [hidden]{display:none}
+.${shell}__notices > .${C}__load{display:contents}
+.${shell}__notices .peekover-remote-load{display:block; width:100%; box-sizing:border-box; margin:0; padding:.55rem 1rem; text-align:left;
+  font:600 13px/1.45 var(--sans); color:var(--ink); background:var(--panel); border:0; border-bottom:1px solid var(--line); cursor:pointer}
+.${shell}__notices .${C}__notice{display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px}
+.${shell}__notices .${C}__notice[hidden]{display:none}
+.${C}__notice p{margin:0; flex:1 1 300px}
+.${C}__notice-link{font:inherit; font-weight:600; color:var(--ink); background:none; border:0; padding:0; text-decoration:underline; cursor:pointer}
+.${C}__notice-ok{font:600 12.5px/1 var(--sans); color:var(--ink); background:var(--paper); border:1px solid var(--line);
+  border-radius:8px; padding:7px 11px; cursor:pointer; flex:none}
 `;
 }
 
@@ -213,6 +227,22 @@ export interface ToolbarController {
   setDocument(name: string | null, host: HTMLElement | null): void;
   /** The notice area (ruling A): the shell places it below the header, in the page flow. */
   readonly notices: HTMLElement;
+  /** 4.5 (ruling D): move the bound host's remote-images load bar, if its mount built one, from the
+   *  reader's shadow root into the notice area. The shell calls it after every app-page mount. */
+  adoptChrome(host: HTMLElement): void;
+  /** 4.5 (D-8): wire the one-time snapshot notice — whether it was dismissed, what "Got it" does
+   *  (remembers it), what "Stored data" does (opens the panel), whether capture is on. */
+  configureSnapshotNotice(notice: SnapshotNoticeWiring): void;
+  /** Re-evaluate the snapshot notice (after a wipe, a capture toggle, or the dismissal loading). */
+  refreshNotices(): void;
+}
+
+/** What the shell hands the toolbar for the one-time snapshot notice (D-8). */
+export interface SnapshotNoticeWiring {
+  dismissed(): boolean;
+  dismiss(): void;
+  captureOn(): boolean;
+  openStoredData(): void;
 }
 
 /** Build the toolbar skeleton. */
@@ -367,9 +397,52 @@ export function createToolbar(doc: Document): ToolbarController {
   notices.className = 'peekover-app__notices';
   const statusSlot = doc.createElement('div');
   statusSlot.className = `${C}__status`;
-  notices.append(buildWatchNote(), statusSlot);
+  // 4.5 (D-8) — the one-time snapshot notice: the capture disclosure's own words, a "Stored data"
+  // link and "Got it". Shown while the open document is watched with capture on, until dismissed;
+  // the Stored data panel carries the same clauses permanently. `role="status"`, in the page flow.
+  const notice = doc.createElement('div');
+  notice.className = `${C}__notice`;
+  notice.setAttribute('role', 'status');
+  notice.hidden = true;
+  const noticeText = doc.createElement('p');
+  const storedLink = doc.createElement('button');
+  storedLink.type = 'button';
+  storedLink.className = `${C}__notice-link`;
+  storedLink.textContent = 'Stored data';
+  noticeText.append(`${DISCLOSURE_TEXT} `, storedLink);
+  const gotIt = doc.createElement('button');
+  gotIt.type = 'button';
+  gotIt.className = `${C}__notice-ok`;
+  gotIt.textContent = 'Got it';
+  notice.append(noticeText, gotIt);
+  let wiring: SnapshotNoticeWiring | null = null;
+  storedLink.addEventListener('click', () => wiring?.openStoredData());
+  gotIt.addEventListener('click', () => {
+    wiring?.dismiss();
+    refreshNotices();
+  });
+  // 4.5 (ruling D) — the remote-images load bar, adopted from the reader on the app page.
+  const loadSlot = doc.createElement('div');
+  loadSlot.className = `${C}__load`;
+  notices.append(notice, buildWatchNote(), loadSlot, statusSlot);
   let comparePill: HTMLButtonElement | null = null;
   let compareStatus: HTMLElement | null = null;
+  // 4.5 (the human's ruling on census C130): Compare's picker drops in a box of its own, and WHILE THE PICKER IS
+  // OPEN its status line sits in that box, directly under the list — a half-empty picker's sentence ("no other
+  // markdown file…") is never covered by the list it explains, at any width. With the picker closed (a diff on
+  // screen, a failure, both-empty) the status speaks from the notice area. Same element either way; it moves.
+  const drop = doc.createElement('div');
+  drop.className = `${C}__drop`;
+  drop.hidden = true;
+  let pickerEl: HTMLElement | null = null;
+  const placeStatus = (): void => {
+    const open = !!pickerEl && !pickerEl.hidden;
+    drop.hidden = !open;
+    if (!compareStatus) return;
+    const home = open ? drop : statusSlot;
+    if (compareStatus.parentElement !== home) home.append(compareStatus);
+  };
+  const pickerWatch = new MutationObserver(placeStatus);
 
   let host: HTMLElement | null = null;
   let editState: EditState = 'rest';
@@ -387,13 +460,24 @@ export function createToolbar(doc: Document): ToolbarController {
     else delete pill.dataset.diffOpen;
   }
 
+  function refreshNotices(): void {
+    const watching = host?.getAttribute('data-watch') === 'active';
+    notice.hidden = !(wiring && watching && wiring.captureOn() && !wiring.dismissed());
+  }
+
+  function adoptChrome(from: HTMLElement): void {
+    if (from !== host) return;
+    const bar = from.shadowRoot?.querySelector('.peekover-remote-load');
+    loadSlot.replaceChildren(...(bar ? [bar] : []));
+  }
+
   function sync(): void {
+    refreshNotices();
     const mode = host?.getAttribute('data-mode') ?? null;
     // `data-diff="active"` is diffView's flag (its DIFF_HOST_ATTR); not imported — the diff import
     // fence keeps diffView appShell's alone (diffImportFence: Clause C).
     const diffOpen = host?.getAttribute('data-diff') === 'active';
     showDiffState(comparePill, diffOpen);
-    showDiffState(host?.shadowRoot?.querySelector(`.${DIFF_AFFORDANCE_CLASS}`), diffOpen);
     if (!diffOpen && compareStatus && wasDiffOpen) {
       compareStatus.hidden = true;
       compareStatus.textContent = '';
@@ -436,13 +520,33 @@ export function createToolbar(doc: Document): ToolbarController {
     const [pill, picker, status] = host ? buildDiffChrome(host) : [];
     comparePill = pill instanceof HTMLButtonElement ? pill : null;
     compareStatus = status instanceof HTMLElement ? status : null;
-    compareSlot.replaceChildren(...[pill, picker].filter((n): n is Node => n !== undefined));
+    pickerWatch.disconnect();
+    pickerEl = picker instanceof HTMLElement ? picker : null;
+    drop.replaceChildren(...(pickerEl ? [pickerEl] : []));
+    compareSlot.replaceChildren(...(pill ? [pill, drop] : []));
     statusSlot.replaceChildren(...(compareStatus ? [compareStatus] : []));
+    if (pickerEl) pickerWatch.observe(pickerEl, { attributes: true, attributeFilter: ['hidden'] });
+    placeStatus();
     wasDiffOpen = false;
+    loadSlot.replaceChildren();
+    if (host) adoptChrome(host);
     if (host) observer.observe(host, { attributes: true, attributeFilter: ['data-mode', 'data-watch', 'data-diff'] });
     sync();
   }
 
   sync();
-  return { element, editSegment: buttons[1], setDocument, notices, addAppControl, focusTrigger };
+  return {
+    element,
+    editSegment: buttons[1],
+    setDocument,
+    notices,
+    addAppControl,
+    focusTrigger,
+    adoptChrome,
+    configureSnapshotNotice: (w) => {
+      wiring = w;
+      refreshNotices();
+    },
+    refreshNotices,
+  };
 }

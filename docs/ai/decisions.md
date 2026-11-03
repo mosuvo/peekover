@@ -1,6 +1,91 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-03 · M13 RULING — C130, Compare's status while the picker is open (HUMAN).** Asked during task 4.5: Compare's
+  status now lives in the notice area below the toolbar (4.2's placement). In the half-empty state the picker is open AND
+  the status says the other half is empty ("No other markdown file in this folder…"); the open picker drops from the
+  Compare button over the notice area and covers part of that sentence at 1280 and most of it at ≤ 863 px (before 4.5 the
+  status had its own lane under the picker inside the reader). **Ruled: "Inside the dropdown"** — while the picker is
+  open the status sits directly under the list, in the same dropdown; when the picker is closed (a diff on screen, errors,
+  both-empty) it stays in the notice area. C130 is re-spelled to that. Rejected: keeping the status in the notice area and
+  dropping the picker below it; stopping to split 4.5.
+
+- **2026-11-03 · M13 TASK 4.5 — the pills leave the app page; the one-time snapshot notice; notices below the toolbar
+  (D-8, D-5; G-15; F-6; rulings A, D).** Branch restarted from `main` at `16f7577` (PR #29's merge, containing `c03e72c`).
+  Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0,
+  `pnpm audit --prod` EXIT 0 on 2026-11-03.
+  - **ADDENDUM — the carried contrast-census item (test-only).** The kickoff's premise was that the census is
+    order-dependent because it reads a code theme an earlier file persisted. **Measured, that premise is not proven.** The
+    pending row in question (`firefox · app page · light · .line > span`, the default code theme's comment at 3.05:1) was
+    seeded: a scratch `beforeAll` saving a non-default code theme ahead of HEAD's census went red 2 / 3 on Firefox, not 3 / 3;
+    HEAD's census alone was green 10 / 10; and the app page never reads the persisted row in the census at all — its
+    injected store has no `getSettings`, so the shell gives it the defaults. With the hardening below the seeded file was
+    green 3 / 3 on both engines and 5 / 5 more; with the hardening's theme half ablated it was **also** green 5 / 5. So the
+    red is an intermittent Firefox flake (about 3 in 31 runs this session, counting the 4.4 addendum's full-suite red) whose
+    cause is not found; red-before / green-after cannot be shown. **Kept anyway, as structural hardening:** the census now
+    supplies its own settings — `getSettings` returns the defaults with the theme it is measuring, `putSettings` writes
+    nothing — so no persisted row can reach what it measures. **Other readers of the persisted theme / code theme:**
+    `editorWalkPolish` already supplies its own (`getSettings` with its theme); `eraseSnapshots` reads `getSettings()` but
+    asserts the theme it just wrote; the settings-store and settings-port tests own their rows. None is order-dependent;
+    none changed. Recorded in progress.md's known flakes (now four).
+  - **`pills: false` everywhere the app page renders.** `readerPane.ts`'s select mounts `{ contained: true, pills: false }`;
+    `appShell.ts`'s `renderWithEnhancements` (the save re-render and the watch re-render) forces `pills: false` and hands the
+    host to the toolbar after each mount (`adoptChrome`). A diff exit restores nodes and a theme change re-mounts nothing,
+    so no other path builds chrome. The file:// reader never passes the option and keeps every pill.
+  - **The snapshot notice (D-8; G-15).** In the toolbar's notice area, first: the shared `DISCLOSURE_TEXT` (exported from
+    `watchControl.ts`), a "Stored data" link (opens the panel) and "Got it". Shown while watching with capture on and not
+    dismissed. "Got it" writes the app-only `notices` row (`snapshotNoticeDismissed: true`) in the settings object store —
+    not a `Settings` field, zero `Settings` diff — through `store.ts`'s `get/setSnapshotNoticeDismissed`. Wipe all data
+    clears that store, and the shell resets its copy and shows the notice again. `STORAGE_DISCLOSURE_NOTE` now also states
+    where to turn capture off or erase snapshots, so the Stored data panel states every clause the notice states (Q13).
+  - **The notice area (rulings A, D).** Order: the snapshot notice, the watch note, the remote-images load bar (adopted from
+    the reader's shadow root into the light DOM after each mount — `display: contents` slot), Compare's status. All in the
+    page flow under the header. The file:// reader keeps its own watch note and load bar. Compare's picker now hangs from a
+    `__drop` wrapper; while it is open Compare's status moves inside it (the human's ruling on C130, above).
+  - **Removed:** `CAPTURE_NOTICE_SEAT_CSS` (and its injection in `editorEnhancer.ts`, whose once-per-reader sentinel is now a
+    `WeakMap` of the reader it enhanced); `CONTAINED_CSS`'s pill, lane and notice-seat overrides (it keeps only
+    `:host{ position:relative; inset:auto; }` and the absolute TOC / net indicator); the toolbar's shadow-pill sync line.
+    `readerPane.ts`'s stale "control beside the mode pill" comment rewritten.
+  - **Tests (`snapshotNotice.browser.test.ts`, new, both engines):** no pill in the reader's shadow root after a first
+    mount, a file switch, a theme change, a diff exit and a watch re-render; after a save re-render (Chromium, a real
+    writable file); CONTROL: the file:// mount builds every pill. The notice on first watch with capture on, with its two
+    buttons; "Got it" hides it and it stays hidden across a re-mount over the same store; Wipe brings it back and the row
+    is gone; the Stored data panel states every clause, dismissed or not; capture off → no notice. The load bar in the
+    notice area, still there after a watch re-render; CONTROL: the file:// reader keeps its own. At 1440 / 1280 / 1080 /
+    414 the notice, note and load bar sit below the header and above the reader, over no text line box (hit-test first;
+    by class alone).
+  - **Ablations, each red then restored md5-identical (both engines unless named):** `renderWithEnhancements` without the
+    forced option → "after the save re-render: expected ['peekover-mode-toggle', …] to deeply equal []" (and the
+    watch-re-render arm); the Wipe not resetting the shell's copy → "timed out: the notice after the wipe"; the dismissal
+    stored in `localStorage` instead of the settings store (tasks.md's red-first) → "and the row is gone: expected true to
+    be false"; the note's new clause removed → "expected 'Peekover keeps…' to match /turn off capture/i"; the load bar not
+    adopted → "timed out: the load bar in the notice area" and red at all four widths.
+  - **Census:** all **100** rows whose task is 4.5 are handled and cited in their tests — **re-spelled 70** (C061 was
+    re-spelled at 4.4 by the human's ruling and is unchanged here) · **retired 21** · **replaced 9** (C084, C140, C228,
+    C300 by the new tests; C315, C317, C319, C320, C321 — **deviation:** re-spelled in place over the toolbar's control
+    rather than replaced, the property kept in the same test). Plus the rows a 4.3 cell said would break at 4.5 —
+    C181, C187, C195, C199–C202 (`editorSave`), C210 (`editorUnsaved`): the Watch step is the toolbar's — and C264 (4.5,
+    4.8). C165's remaining mode-pill clauses and C178's mode-pill clause retired, as the census said. **Unpredicted:** C168
+    (`editorNestedHost`, "unchanged") — its split tests mounted contained WITH pills, a shape the app page no longer
+    produces; with the seat rules gone those pills covered the preview at 414 px. Re-spelled: the split tests mount with
+    `pills: false`; the hazard tests keep the full chrome they need. Discovered: C365–C371 (4.2–4.4 toolbar tests, and
+    `editorEnhancer`'s, that read the pills or the seat sheet). Drift rows re-spelled on purpose: C112, C117, C278,
+    C315–C325.
+  - **Deviations:** the `notices` row is not listed by `describeStored` (Files said get / set only; the summary counts
+    folders, recents and snapshots, as before); Compare's status inside the dropdown while the picker is open (ruled).
+  - **Verify:** lint 0 · unit 1,487 / 1,488 (`pipeline.perf`) · browser, the FULL suite alone, both engines, CI font:
+    first run 21 reds in 5 files, every one a census row reaching a pill now gone (C165, C168, C178, C181, C187, C195,
+    C199–C202, C210) — re-spelled or retired as above, then **2,096 passed / 0 failed / 52 skipped of 2,148** (202 files,
+    378 s), EXIT 0, no unhandled error; the contrast census green, its pending list unchanged · golden EMPTY · zero
+    `src/settings` diff · NUL 0 in every changed file (control 1 / 1).
+  - **Bytes (clean two-engine build):** content script 344,562 → **343,826 B (−736)**, md5 `75e5831d…` (Cr) / `ab095612…`
+    (Fx) — **the whole fall is the `CONTAINED_CSS` deletion and `CAPTURE_NOTICE_SEAT_CSS`** (`readerCss.ts` +
+    `editorEnhancer.ts` reverted alone rebuild it to 344,562 exactly), as tasks.md says (the kickoff expected it
+    unchanged). App chunk 545,051 → **547,260 B (+2,209):** `toolbar.ts` +2,324 · `appShell.ts` with `store.ts` +670 ·
+    `storageControls.ts` +63 · `readerPane.ts` +9 · `readerCss.ts` + `editorEnhancer.ts` −852 · `watchControl.ts` 0 —
+    sum +2,214, residual −5 (minifier); all eight reverted rebuild HEAD's 344,562 / 545,051. `.output` 5,965,480 /
+    5,965,596 B; zips 1,958,988 / 1,959,044 B; manifests **833 / 949 B** unchanged, `permissions: []`.
+
 - **2026-11-03 · M13 RULING — C061 at 1280 (HUMAN).** Asked during task 4.4: with the four app controls in the toolbar, an
   agent file's toolbar at 1280 px is ~0–6 px too wide for one row (a plain file fits), so it wraps to a second row and the
   reading column drops 36 px — `agentBadge`'s row-10 app arm (census C061) went red there, both engines. **Ruled: accept

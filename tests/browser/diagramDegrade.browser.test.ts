@@ -58,6 +58,7 @@ import { describe, it, expect, afterEach, beforeEach, vi, type Mock } from 'vite
 import { page } from 'vitest/browser';
 import mermaid from 'mermaid';
 import { createReaderPane } from '../../src/app/readerPane';
+import { createToolbar } from '../../src/app/toolbar';
 import { mount } from '../../src/render/mount';
 import {
   DIAGRAM_MEASURE_CLASS,
@@ -204,7 +205,7 @@ function enhancedReader(
   const host = document.createElement('div');
   document.body.appendChild(host);
   cleanup.push(host);
-  mount(markdown, host, { contained: true });
+  mount(markdown, host, { contained: true, pills: false }); // as readerPane.ts mounts it (013 task 4.5)
   enhanceDiagrams(host, loader ? { loader } : {});
   if (!host.shadowRoot) throw new Error('expected a mounted host');
   return { host, shadow: host.shadowRoot };
@@ -335,18 +336,23 @@ describe('6.1 — the engine chunk never arrives: every fence stays a readable c
     const { host, shadow } = enhancedReader(MULTI_DIAGRAM_DOC, chunkUnavailable);
     await settleDiagrams(shadow);
 
-    // The Raw/Reading pill `mount()` commits into every reader, on both surfaces. Choosing the
-    // reader's OWN control rather than a synthetic event is what makes this an interactivity claim:
-    // a live listener, a live attribute flip, and a view that has to be built on demand.
-    const toggle = shadow.querySelector<HTMLButtonElement>('.peekover-mode-toggle');
-    expect(toggle, 'the Raw/Reading control').not.toBeNull();
+    // KEEPS: the reader is still interactive after the engine failed — the shipped control, really clicked, from the
+    // keyboard too (C112). RE-SPELLED at 013 task 4.5: on the app page that control is the TOOLBAR's Read / Raw (the
+    // reader mounts with `pills: false`) — a real toolbar bound to this host, as the shell binds it.
+    const toolbar = createToolbar(document);
+    document.body.prepend(toolbar.element);
+    cleanup.push(toolbar.element);
+    toolbar.setDocument('diagrams.md', host);
+    const rawSeg = toolbar.element.querySelector<HTMLButtonElement>('.peekover-toolbar__seg [data-mode="raw"]')!;
+    const readSeg = toolbar.element.querySelector<HTMLButtonElement>('.peekover-toolbar__seg [data-mode="reading"]')!;
+    expect(rawSeg, 'the Raw control').not.toBeNull();
 
     // Keyboard-reachable, not merely clickable (§3.5's affordance discipline).
-    toggle!.focus();
-    expect(shadow.activeElement).toBe(toggle);
+    rawSeg.focus();
+    expect(document.activeElement).toBe(rawSeg);
 
     expect(host.getAttribute('data-mode')).toBe('reading');
-    toggle!.click();
+    rawSeg.click();
     expect(host.getAttribute('data-mode')).toBe('raw');
 
     // The raw view was BUILT on that click — lazily, from the registered source — and it holds
@@ -355,7 +361,7 @@ describe('6.1 — the engine chunk never arrives: every fence stays a readable c
     expect(raw, 'the lazily built raw view').not.toBeNull();
     for (const diagram of DIAGRAMS) expect(raw!.textContent).toContain(diagram.source);
 
-    toggle!.click();
+    readSeg.click();
     expect(host.getAttribute('data-mode')).toBe('reading');
 
     // ...and the round trip did not disturb the degraded state: still N resolved, readable fences.

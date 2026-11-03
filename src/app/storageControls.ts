@@ -30,11 +30,15 @@ import type { StoredSummary } from './store';
  * states that never leave the device — while keeping the names-only posture for folders/recents/pins.
  * How MANY bytes are held is the panel's live snapshot line (`describeStored`), not this static note.
  * (The DOM hook stays `data-note="contents-never-stored"` — a stable selector, not a claim.)
+ * 013 task 4.5 (D-8; Q13): it states every clause the one-time snapshot notice states — on this
+ * device only, never uploaded, and where to turn off capture or erase — so once the notice is
+ * dismissed this panel still says all of it.
  */
 export const STORAGE_DISCLOSURE_NOTE =
   'Peekover keeps a bounded number of past text states (snapshots) of documents you watch, so you ' +
-  'can compare versions — stored on this device only and never uploaded. Folders, recents, and pins ' +
-  'remain names and paths only. Everything Peekover stores lives on this device.';
+  'can compare versions — stored on this device only and never uploaded. Turn off capture, or erase ' +
+  'all snapshots, here in Stored data. Folders, recents, and pins remain names and paths only. ' +
+  'Everything Peekover stores lives on this device.';
 
 export interface StorageViewOptions {
   /** The plain-language picture from `store.describeStored()`. */
