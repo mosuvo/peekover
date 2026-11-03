@@ -37,7 +37,6 @@ import { registerWatchTarget, resetWatchRegistryForTest, type WatchTarget } from
 import { resetWatchControlsForTest, WATCH_HOST_ATTR, WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
 import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import { editorSessionFor } from '../../src/render/editorView';
 import {
   TEXT_BAR,
@@ -50,6 +49,15 @@ import {
   parentAcrossShadow,
   ratioOver,
 } from './helpers/contrast';
+
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host?.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: each test's own property here (C097). RE-SPELLED at 4.3: the removed shadow-root control's
+ *  toggle is the toolbar's segment — Edit to enter, Read to leave (these sessions are entered from
+ *  Read, so the exit lands where the control's did; a dirty Read is guarded, ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 
 const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 type Theme = 'light' | 'dark';
@@ -364,13 +372,13 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       setThemeSetting(theme);
       const { container, host } = await appPage();
       await themed(host, theme);
-      host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      segmentToggle(host).click();
       await waitFor(() => host.getAttribute('data-mode') === 'edit', 'edit mode');
       const session = await waitFor(() => editorSessionFor(host), 'the edit session');
       await sleep(200);
       census(host, 'editor', theme);
       session.view.dispatch({ changes: { from: session.view.state.doc.length, insert: ' typed' } });
-      host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      segmentToggle(host).click();
       const dialog = await waitFor(() => container.querySelector<HTMLElement>('.peekover-unsaved'), 'the unsaved dialog');
       census(dialog, 'unsaved-changes dialog', theme);
     });

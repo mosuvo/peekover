@@ -162,6 +162,14 @@ retired while its function has no other test. Function by function:
   property kept and the test unchanged; the row still moves at 4.5. C319–C321's replacement tests are written here
   (`toolbar.browser.test.ts`); the rows themselves move at 4.5. Ruling A's note rows (C020 … C345) move at 4.5; the
   note's notice-area home is built and tested here.
+- **4.3** (2026-11-02): all **99** rows naming 4.3 handled, each cited in its test — **re-spelled 89 · retired 7 · replaced
+  3** (the count above said 90 / 6 / 3; ruling E moved C174 from re-spelled to retired). Retired: C046, C174 (ruling E),
+  C047, C050, C051 (the control and EDIT_CONTROL_CSS are gone), C172, and **C165 IN PART — a deviation**: only its pairs
+  with the edit control retire; the mode pill × TOC handle pair, the rail hidden in edit and the split's size are kept
+  (the census classed the whole test retired). Replaced: C052, C053, C177 (the segment's own tests). Discovered and
+  handled: **C357–C360** re-spelled, **C361** retired. Every file these rows name broke at 4.3, as the census predicted (each reached the removed control); no
+  unexplained red. C228 (a 4.5 row)
+  stays green because the notice's seat rule is kept as `CAPTURE_NOTICE_SEAT_CSS` (see decisions.md "M13 TASK 4.3").
 
 ### Checking 4.1–4.8 against this census
 
@@ -408,6 +416,11 @@ replaced 1
 |---|---|---|---|---|---|---|---|
 | C355 | `toolbar.test.ts` › composes the mark, the file name and Read / Raw, in that order | the toolbar's children are exactly [brand, file, seg] | re-spelled | the toolbar composes the mock's parts in the mock's order — the badge, Watch and Compare slots join between the file name and Read / Raw | 4.2 | app |  |
 | C356 | `toolbar.browser.test.ts` › sits first in the header: the mark and word, the file name, Read / Raw — and the tag is gone | the toolbar's parts on screen are [brand, file, seg] | re-spelled | the same, on screen, both engines | 4.2 | app |  |
+| C357 | `toolbar.browser.test.ts` › sits first in the header … (its segment line; DISCOVERED at 4.3) | the segment's buttons read [Read, Raw] | re-spelled | the segment's views in the mock's order — Edit joins between Read and Raw (D-6) | 4.3 | app |  |
+| C358 | `toolbar.test.ts` › composes the mark, the file name and Read / Raw, in that order (its segment line; DISCOVERED at 4.3) | the segment's buttons read [Read, Raw] | re-spelled | the same, in jsdom | 4.3 | app |  |
+| C359 | `toolbar.test.ts` › with no document, Read and Raw are present but disabled and unpressed (DISCOVERED at 4.3) | two buttons, both disabled and unpressed | re-spelled | nothing to act on, nothing offered — Edit joins, disabled too | 4.3 | app |  |
+| C360 | `toolbar.test.ts` › reflects a mode flip it did not make (ruling B) (DISCOVERED at 4.3) | two buttons' pressed / disabled after an outside flip | re-spelled | the flip is reflected — Edit joins, disabled on a host never made editable | 4.3 | app |  |
+| C361 | `toolbar.test.ts` › while editing, Read and Raw are disabled and unpressed (DISCOVERED at 4.3) | Read / Raw disabled in edit; a Raw click leaves the mode at edit | retired | 4.1's interim, ended by ruling E: Read and Raw leave edit through the guard (the 4.3 toolbar tests) | 4.3 | app | Edit leaving |
 
 ### `tests/browser/captureDisclosure.browser.test.ts`
 

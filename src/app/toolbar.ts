@@ -13,9 +13,14 @@
 // page — the 4.0 census ruling B). It lives in the shell's light-DOM header, outside the reader's
 // shadow root, so `mount()`'s `replaceChildren` never destroys it.
 //
-// WHILE EDITING, Read and Raw are disabled: leaving edit must go through the editor's exit and the
-// unsaved-changes guard, which only the Edit control carries until the Edit segment arrives (4.3,
-// ruling E). A Read / Raw that bypassed it could lose an unsaved buffer.
+// 4.3 — EDIT IS A SEGMENT (D-6; the 4.0 census ruling E): Read · Edit · Raw. Edit calls `toggleEdit`
+// — the shadow-root Edit control is gone. The segment you click is where you go: while editing,
+// Read and Raw stay offered and leave edit for their own mode (`leaveEdit` — the exit and the edit
+// view's teardown together). The unsaved-changes guard is the SHELL's: `appShell.ts` hears a Read /
+// Raw click first, in capture, and holds it while the user answers, so nothing here can lose a
+// buffer it was not told to. A failed engine load says "Editor unavailable" on the Edit segment;
+// activating it again retries. The Edit segment is unavailable (disabled) on a host that cannot be
+// edited — none open, or a failed render.
 //
 // 4.2 adds Watch, Compare and the agent badge, each from the SAME builder the reader's pill uses
 // (`buildWatchControl`, `buildDiffChrome`, `buildAgentBadge`), rebuilt on every document switch:
@@ -37,6 +42,7 @@
 // `--hl` for the document, `--logo-ink` / `--logo-eye` for the fixed ink and eye white (AGENTS.md:
 // the logo's internals use the FIXED ink in every theme; tokens.css carries both values).
 import { setReaderMode, type ReaderMode } from '../render/readerMode';
+import { EDIT_LABELS, isEditable, leaveEdit, toggleEdit, type EditState } from '../render/editorEnhancer';
 import { buildWatchControl, buildWatchNote, WATCH_CONTROL_CLASS } from '../watch/watchControl';
 import {
   buildDiffChrome,
@@ -52,9 +58,10 @@ export const TOOLBAR_CLASS = 'peekover-toolbar';
 const C = TOOLBAR_CLASS;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/** The view modes the segment offers in 4.1 (Edit joins at 4.3). */
-const SEGMENTS: ReadonlyArray<readonly [Exclude<ReaderMode, 'edit'>, string]> = [
+/** The segment's views, in the mock's order. */
+const SEGMENTS: ReadonlyArray<readonly [ReaderMode, string]> = [
   ['reading', 'Read'],
+  ['edit', EDIT_LABELS.rest.text],
   ['raw', 'Raw'],
 ];
 
@@ -140,6 +147,8 @@ function buildMark(doc: Document): SVGSVGElement {
 /** What the shell holds. */
 export interface ToolbarController {
   readonly element: HTMLElement;
+  /** The Edit segment — where focus goes back after the unsaved-changes question is escaped. */
+  readonly editSegment: HTMLButtonElement;
   /** The open document's name and its reader host (both null when none is open). Re-binds the
    *  observer to the host, so a document switch is reflected at once. */
   setDocument(name: string | null, host: HTMLElement | null): void;
@@ -173,8 +182,21 @@ export function createToolbar(doc: Document): ToolbarController {
     b.dataset.mode = mode;
     b.textContent = label;
     b.addEventListener('click', () => {
-      if (!host || host.getAttribute('data-mode') === 'edit') return;
-      setReaderMode(host, mode);
+      if (!host) return;
+      const current = host.getAttribute('data-mode');
+      if (mode === 'edit') {
+        if (current === 'edit') return; // the pressed segment: nothing to do
+        const target = host;
+        void toggleEdit(target).then((state) => {
+          if (host !== target) return; // a document switch while it loaded
+          editState = state === 'unavailable' ? 'unavailable' : 'rest';
+          sync();
+        });
+        return;
+      }
+      // Read / Raw. From edit, the exit and teardown; the shell's guard has already asked.
+      if (current === 'edit') leaveEdit(host, mode);
+      else setReaderMode(host, mode);
       sync();
     });
     seg.append(b);
@@ -202,6 +224,7 @@ export function createToolbar(doc: Document): ToolbarController {
   let compareStatus: HTMLElement | null = null;
 
   let host: HTMLElement | null = null;
+  let editState: EditState = 'rest';
   let wasDiffOpen = false;
   const observer = new MutationObserver(() => sync());
 
@@ -228,11 +251,15 @@ export function createToolbar(doc: Document): ToolbarController {
       compareStatus.textContent = '';
     }
     wasDiffOpen = diffOpen;
-    const usable = host !== null && mode !== 'edit';
     for (const b of buttons) {
+      const usable = b.dataset.mode === 'edit' ? isEditable(host) : host !== null && mode !== null;
       b.disabled = !usable;
       b.setAttribute('aria-pressed', String(usable && b.dataset.mode === mode));
     }
+    const edit = buttons[1];
+    const label = EDIT_LABELS[mode === 'edit' ? 'editing' : editState];
+    edit.textContent = label.text;
+    edit.setAttribute('aria-label', label.name);
   }
 
   function setDocument(name: string | null, next: HTMLElement | null): void {
@@ -242,6 +269,7 @@ export function createToolbar(doc: Document): ToolbarController {
     else file.removeAttribute('title');
     observer.disconnect();
     host = next;
+    editState = 'rest';
     badgeSlot.replaceChildren(...(host ? buildAgentBadge() : []));
     const watch = host ? buildWatchControl(host) : null;
     watchSlot.replaceChildren(...(watch ? [watch] : []));
@@ -256,5 +284,5 @@ export function createToolbar(doc: Document): ToolbarController {
   }
 
   sync();
-  return { element, setDocument, notices };
+  return { element, editSegment: buttons[1], setDocument, notices };
 }

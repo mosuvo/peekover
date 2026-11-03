@@ -1,6 +1,73 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-02 · M13 TASK 4.3 — Edit in the toolbar; the shadow-root Edit control and `EDIT_CONTROL_CSS` removed (D-6;
+  ruling E; gate-1 Q8; the approved 3.1 mock).** Branch restarted from `main` at `6ef8889` (PR #27's merge, containing
+  `c80107f`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0,
+  `pnpm audit --prod` EXIT 0 on 2026-11-02.
+  - **`editorEnhancer.ts`:** the enter/exit body is extracted. `toggleEdit(host, options?)` enters (load → build → flip,
+    `enterEditMode`'s order) and resolves the state the segment shows — `'editing'`, or `'unavailable'` when the engine
+    cannot load (nothing built, the mode kept, a second activation retries); a second activation while a load is pending
+    joins it (one entry, one load). `leaveEdit(host, to?)` is the exit and the teardown together, to the mode clicked
+    (ruling E) or, with no `to`, the mode edit was entered from (the shell's own session endings). `enhanceEditor` now
+    only makes a host editable (`isEditable`) and drops a stale session — it builds no control. `readerMode.ts` is
+    untouched (it is on the content script's graph).
+  - **The Edit segment (`toolbar.ts`):** Read · Edit · Raw, the mock's order. Edit calls `toggleEdit`; it is disabled
+    on a host that cannot be edited (none open, a failed render); it says "Editor unavailable" (with the retry name) after
+    a failed load, and "Edit" again on a document switch. Read and Raw are ENABLED while editing (4.1's interim disable
+    ends) and leave through `leaveEdit` for their own mode. Clicking the pressed Edit does nothing.
+  - **The guard (`appShell.ts`):** the capture hook moved from the removed control to the toolbar — a Read / Raw click
+    with unsaved changes is held while the dialog asks; "Keep editing" changes nothing and puts focus on the Edit segment
+    (ruling E: Escape is Keep editing, so focus returns to Edit after Escape); "Discard edits" leaves for the clicked
+    mode inside its own click. `endEditSession` calls `leaveEdit`. **Every exit in M12 6.1's list still asks first:**
+    Read in the toolbar · Raw in the toolbar (both new, replacing "Stop editing") · a file in the tree · Revoke · opening
+    a folder (the CTA and `openFolder`) · a reopen-hub entry (live handle; re-pick; a re-pick then cancelled) · a drop (a
+    folder; not a folder) · the `selectFile` seam · tab close / reload (`beforeunload`). Pinned by `editorUnsaved`'s
+    STAY / DISCARD / CLEAN table (11 paths, both engines) and `appShell.test.ts`'s trigger table (8).
+  - **Removed:** the shadow-root `peekover-edit-toggle` button, its "Stop editing" label and `EDIT_CONTROL_CSS` with
+    its injection. **★ Kept, renamed — a deviation from the task line:** `EDIT_CONTROL_CSS` also carried the app page's
+    seat for the capture notice (`.peekover-watch-disclosure{bottom:16px;left:176px}`, 012 R29(d)). It cannot move to
+    `CONTAINED_CSS` (on the content script's graph — md5 would change), and dropping it would put the notice back over
+    text (census C228 would go red, unpredicted). It is now `CAPTURE_NOTICE_SEAT_CSS`, the one rule, injected by
+    `enhanceEditor`; it goes at 4.5 with the notice (D-8).
+  - **★ A REGRESSION THE SUITE FOUND, FIXED IN THIS COMMIT:** the wider segment made the 1080 px header wrap; Export,
+    the last control, wrapped alone to the start of the second row and its right-aligned panel opened at **x −340**
+    (both engines, both themes) — 4.1's header-panel test went red. Fix within the 4.1 ruling (every panel inside the
+    window) and C244 (anchored under its own toggle above 863 px): as it opens, the Export panel measures; if the
+    right-aligned panel would leave the window it is left-aligned under the same button (`data-align="start"`, a rule
+    scoped above 863 px so the narrow rule still wins). Green at 414 / 1080 / 1440, light and dark.
+  - **Tests (red-first):** `toolbar.browser.test.ts` +7 per engine — the segment Read · Edit · Raw, Edit enters, Read /
+    Raw offered while editing, no shadow-root control (by class alone); a CLEAN buffer leaves for Read / for Raw without
+    asking; a DIRTY buffer asks for Read / for Raw (the live buffer read FIRST), Keep changes nothing, Discard goes
+    there; Escape keeps editing with focus on Edit; "Editor unavailable" on the segment, the mode kept, a second
+    activation retries and enters. All 14 red on 4.2's code (no Edit segment), green after. `toolbar.test.ts` +1 (the
+    segment's own state in jsdom: offered only when editable, "Editor unavailable", one load for two activations).
+  - **Ablations, each red then restored md5-identical (both engines):** A1 the Edit segment not entering → all 7 new
+    segment tests red; A2 Read / Raw bypassing the guard → the DIRTY tests red with **"the switch must not lose the
+    buffer: expected '<no live edit session — the buffer is gone>' to contain ' zq43typed'"**; A3 "Editor unavailable"
+    not shown → the degrade test red; A4 focus not returned → the Escape test red; A5 the Export flip removed → the 1080
+    panel test red (light and dark).
+  - **Census (99 rows named 4.3, every one cited in its test):** re-spelled **89** · retired **7** · replaced **3** (the
+    census said 90 / 6 / 3; ruling E moved C174). Retired: C046, C174 (ruling E), C047, C050, C051, C172, and **C165 in
+    part — a deviation**: only its pairs with the edit control retire; the pill × handle pair, the rail hidden in edit
+    and the split's size are kept. Replaced: C052, C053, C177 (the segment's own tests). Discovered: C357–C360
+    re-spelled, C361 retired (4.1's "Read / Raw disabled while editing"). App-shell harnesses enter through the Edit
+    segment and leave through Read; bare-pane harnesses through `toggleEdit` (no toolbar); `editorDegrade` and the
+    keyboard / exit tests in `editorRender` bind a real toolbar. No unexplained red.
+  - **Verify:** lint 0 · unit 1489 / 1490 (`pipeline.perf`, the listed flake; `editorImportFence` green, unchanged) ·
+    browser, the FULL suite alone, both engines, CI font: **2,073 passed / 0 failed / 51 skipped of 2,124** (200 files,
+    387 s), EXIT 0 — no red to classify; the contrast census's inventory green (pending list unchanged) · golden EMPTY ·
+    NUL 0 in every changed file (control fires 1).
+  - **Bytes (clean two-engine build; a same-session `main` build for the base):** content script **344,513 B, md5
+    `b72a093c…` (Cr) / `c3c4b102…` (Fx) — identical to 4.2** (`EDIT_CONTROL_CSS` was not on that graph, proven by md5); app
+    chunk 541,111 → **541,155 B (+44)**: **the D-6 work alone FALLS, −164 B** (measured with the Export fix removed:
+    540,947) — `EDIT_CONTROL_CSS`'s 561 B literal and the control out, the segment, `toggleEdit` / `leaveEdit` /
+    `isEditable` and the 55 B seat sheet in — and **the Export fix +208 B**. tasks.md's "app chunk FALLS" holds for D-6;
+    the net is up by the in-task regression fix. `.output` 5,960,062 / 5,960,178 B; zips 1,957,728 / 1,957,784 B;
+    manifests **833 / 949 B** unchanged, `permissions: []`. G-7 holds.
+  - **Carried to 4.5:** `readerPane.ts`'s comment at the `enhanceEditor` call still says "it adds a control beside the
+    mode pill" — not in this task's Files; 4.5 touches that render path.
+
 - **2026-11-02 · M13 TASK 4.2 — Watch, Compare and the agent badge in the toolbar; the watch note in the notice area
   below it (D-5; F-6; ruling A).** Branch restarted from `main` at `f8dd026` (PR #26's merge, containing `549487e`). Font
   parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit

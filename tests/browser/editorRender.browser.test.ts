@@ -1,16 +1,19 @@
 // The editor's first real render (012 task 3.2; D-1's control half, D-3) — Chromium AND Firefox.
 //
-// WHAT jsdom COULD NOT SAY, and this file does: that activating the control puts a CodeMirror view
-// ON SCREEN holding the document; that real typed keys land in it; that the control is operable
-// from the keyboard and never sits under the mode pill; that the pill is really hidden while
-// editing (R3) and nothing of the edit view is left after the exit; and that the content-script
-// reader has no edit control at all.
+// WHAT jsdom COULD NOT SAY, and this file does: that entering edit puts a CodeMirror view ON SCREEN
+// holding the document; that real typed keys land in it; that the toolbar's segment is operable
+// from the keyboard; that the pill is really hidden while editing (R3) and nothing of the edit view
+// is left after the exit; and that the content-script reader has no edit control at all.
+//
+// 013 task 4.3 (D-6) removed the shadow-root edit control: Edit is the app page's toolbar segment,
+// which calls `toggleEdit`. The keyboard and exit tests bind a real toolbar to the pane's host;
+// the rest enter through `toggleEdit` itself.
 //
 // ══ THE ROUTE ═══════════════════════════════════════════════════════════════════════════════════
 //
 // The render tests go through `createReaderPane(document).select(file)` — production's own
-// call site 1 (`readerPane.ts`), so the control under test is the one `enhanceEditor` installed
-// there, not one this file installed for itself. The tests that need to INJECT a module loader
+// call site 1 (`readerPane.ts`), so the host under test is the one `enhanceEditor` made editable
+// there, not one this file made editable for itself. The tests that need to INJECT a module loader
 // (R2's memo) call `enhanceEditor` on a host mounted the way the pane mounts it, because the pane
 // has no loader option and must not grow one for a test.
 //
@@ -40,7 +43,8 @@ import { mount } from '../../src/render/mount';
 import { mountReader } from '../../src/render/mountReader';
 import { removeHideStyle } from '../../src/render/runReader';
 import { loadCodeMirror, type EditorModuleLoader } from '../../src/render/editorEngine';
-import { EDIT_CONTROL_CLASS, enhanceEditor } from '../../src/render/editorEnhancer';
+import { enhanceEditor, isEditable, toggleEdit } from '../../src/render/editorEnhancer';
+import { createToolbar } from '../../src/app/toolbar';
 import {
   EDITOR_DIRTY_ATTR,
   EDITOR_SHELL_CLASS,
@@ -57,11 +61,7 @@ import {
 } from '../../src/watch/watchRegistry';
 import { WATCH_HOST_ATTR, resetWatchControlsForTest } from '../../src/watch/watchControl';
 
-const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
-const record = (line: string): void => console.log(`[3.2][${ENGINE}] ${line}`);
-
 const NARROW = { width: 414, height: 896 }; // the harness default, restored after each test
-const WIDE = { width: 1400, height: 900 };
 
 const LF_DOC = '# Sample document\n\nBody text.\n\n## Second heading\n\nMore body.\n';
 const CRLF_DOC = '# Sample document\r\n\r\nBody text.\r\n\r\n## Second heading\r\n\r\nMore body.\r\n';
@@ -131,9 +131,14 @@ function mountContained(text: string): HTMLElement {
   return host;
 }
 
-/** The control, by CLASS ALONE — a tag-qualified selector could not then be asked what tag it is. */
-const controlIn = (host: HTMLElement): HTMLElement =>
-  host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!;
+/** The app page's toolbar, bound to `host` (D-6: Edit is its segment); its segment for `mode`. */
+function toolbarFor(host: HTMLElement): (mode: 'reading' | 'edit' | 'raw') => HTMLButtonElement {
+  const toolbar = createToolbar(document);
+  document.body.prepend(toolbar.element);
+  cleanup.push(toolbar.element);
+  toolbar.setDocument('doc.md', host);
+  return (mode) => toolbar.element.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`)!;
+}
 const pillIn = (host: HTMLElement): HTMLElement =>
   host.shadowRoot!.querySelector<HTMLElement>('.peekover-mode-toggle')!;
 /** The OUTER reading column — a direct child of the host's shadow root, never the preview's. */
@@ -142,8 +147,10 @@ const columnIn = (host: HTMLElement): HTMLElement =>
 const modeIs = (host: HTMLElement, mode: string) => (): boolean =>
   host.getAttribute('data-mode') === mode;
 
+/** KEEPS: each test's own property (C173, C175, C178). RE-SPELLED at 4.3: entered by `toggleEdit` —
+ *  what the toolbar's Edit segment calls — not the removed shadow-root control. */
 async function enterEdit(host: HTMLElement): Promise<void> {
-  controlIn(host).click();
+  void toggleEdit(host);
   await waitFor(modeIs(host, 'edit'), 'data-mode="edit"');
   await frames();
 }
@@ -171,12 +178,6 @@ const centreOf = (el: Element): { x: number; y: number } => {
 const onScreen = (el: Element): boolean => {
   const r = el.getBoundingClientRect();
   return r.width > 0 && r.height > 0;
-};
-
-const overlaps = (a: Element, b: Element): boolean => {
-  const p = a.getBoundingClientRect();
-  const q = b.getBoundingClientRect();
-  return p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom;
 };
 
 // ── The view ─────────────────────────────────────────────────────────────────────────────────
@@ -249,76 +250,49 @@ describe('012 task 3.2 — activating the control presents a CodeMirror view hol
   });
 });
 
-// ── The control ──────────────────────────────────────────────────────────────────────────────
+// ── The Edit segment, from the keyboard ─────────────────────────────────────────────────────────
 
-describe('012 task 3.2 — the edit control is a real button, keyboard-operable, state in its name', () => {
-  it('★ selected by class alone it is a <button>; Enter enters, Space exits; the name says which', async () => {
+// RETIRED: "%s: the control is hit-testable beside the pill and never under it, with either pill
+// label" (C172) — there is no edit control in the shadow root to sit beside the pill (D-6).
+describe('013 task 4.3 — the Edit segment is a real button, keyboard-operable, its state in its name', () => {
+  // REPLACED (C177): the shadow-root control's Enter / Space and its "Stop editing" name. The
+  // property kept — a real, keyboard-operable control whose state is in its name — on the segment.
+  it('★ Edit is a <button>; Enter on it enters; Space on Read leaves; aria-pressed and the name say which', async () => {
     const host = await openInPane(LF_DOC);
-    const control = controlIn(host);
+    const segment = toolbarFor(host);
+    const edit = segment('edit');
 
-    expect(control.tagName).toBe('BUTTON');
-    expect((control as HTMLButtonElement).type).toBe('button');
-    expect(control.textContent).toBe('Edit');
-    expect(control.getAttribute('aria-label')).toBe('Edit this document');
-    expect(control.tabIndex).toBe(0);
+    expect(edit.tagName).toBe('BUTTON');
+    expect(edit.type).toBe('button');
+    expect([edit.textContent, edit.getAttribute('aria-label'), edit.getAttribute('aria-pressed')]).toEqual([
+      'Edit', 'Edit this document', 'false',
+    ]);
+    expect(edit.tabIndex).toBe(0);
 
-    control.focus();
-    expect(host.shadowRoot!.activeElement).toBe(control);
+    edit.focus();
     await userEvent.keyboard('{Enter}');
-    await waitFor(modeIs(host, 'edit'), 'Enter on the control enters edit');
-    expect(control.textContent).toBe('Stop editing');
-    expect(control.getAttribute('aria-label')).toBe('Stop editing and return to the document');
+    await waitFor(modeIs(host, 'edit'), 'Enter on Edit enters edit');
+    expect([edit.getAttribute('aria-pressed'), edit.getAttribute('aria-label')]).toEqual(['true', 'Editing this document']);
     expect(host.shadowRoot!.querySelector('.cm-editor')).not.toBeNull();
 
-    expect(host.shadowRoot!.activeElement, 'focus stayed on the control').toBe(control);
+    segment('reading').focus();
     await userEvent.keyboard(' ');
-    await waitFor(modeIs(host, 'reading'), 'Space on the control exits');
-    expect(control.textContent).toBe('Edit');
-    expect(control.getAttribute('aria-label')).toBe('Edit this document');
-    expectUnwatched(host);
-  });
-
-  it.each([
-    ['NARROW', NARROW],
-    ['WIDE', WIDE],
-  ])('%s: the control is hit-testable beside the pill and never under it, with either pill label', async (name, size) => {
-    await page.viewport(size.width, size.height);
-    const host = await openInPane(LF_DOC);
-    await frames();
-    const control = controlIn(host);
-    const pill = pillIn(host);
-
-    for (const pillLabel of ['Raw', 'Reading']) {
-      if (pill.textContent !== pillLabel) pill.click(); // 'Reading' is the label in raw mode
-      await frames(1);
-      expect(pill.textContent).toBe(pillLabel);
-      // The hit-test first: it is the check that shows a covered control.
-      const c = centreOf(control);
-      expect(deepElementAt(c.x, c.y), `${name}/${pillLabel}: the control's centre`).toBe(control);
-      const p = centreOf(pill);
-      expect(deepElementAt(p.x, p.y), `${name}/${pillLabel}: the pill's centre`).toBe(pill);
-      expect(overlaps(control, pill), `${name}/${pillLabel}: control and pill overlap`).toBe(false);
-      const cr = control.getBoundingClientRect();
-      const pr = pill.getBoundingClientRect();
-      expect(cr.right).toBeLessThanOrEqual(pr.left);
-      expect(Math.abs(cr.top - pr.top)).toBeLessThanOrEqual(1);
-      record(
-        `${name} ${size.width}x${size.height} pill="${pillLabel}": control ${Math.round(cr.left)}..${Math.round(cr.right)}, ` +
-          `pill ${Math.round(pr.left)}..${Math.round(pr.right)}, gap ${Math.round(pr.left - cr.right)}px`,
-      );
-    }
+    await waitFor(modeIs(host, 'reading'), 'Space on Read leaves edit');
+    expect([edit.getAttribute('aria-pressed'), segment('reading').getAttribute('aria-pressed')]).toEqual(['false', 'true']);
     expectUnwatched(host);
   });
 });
 
 // ── R3 — the pill in edit, and the exit ──────────────────────────────────────────────────────
 
-describe('012 task 3.2 (R3) — the pill is hidden in edit; the control exits with nothing left behind', () => {
-  it('★ the pill is display:none while editing, the control is the way out, and no shell residue remains', async () => {
+describe('012 task 3.2 (R3) — the pill is hidden in edit; Read exits with nothing left behind', () => {
+  // KEEPS: the pill is not a way out of edit, the exit is on screen and leaves no residue (C178).
+  // RE-SPELLED at 4.3: the exit is the toolbar's Read (ruling E), not the removed control.
+  it('★ the pill is display:none while editing, Read is the way out, and no shell residue remains', async () => {
     const host = await openInPane(LF_DOC);
     const shadow = host.shadowRoot!;
     const pill = pillIn(host);
-    const control = controlIn(host);
+    const control = toolbarFor(host)('reading');
     const before = [...shadow.children];
     const column = columnIn(host);
 
@@ -351,19 +325,8 @@ describe('012 task 3.2 (R3) — the pill is hidden in edit; the control exits wi
     expectUnwatched(host);
   });
 
-  it('entered from raw, the exit returns to raw', async () => {
-    const host = await openInPane(LF_DOC);
-    pillIn(host).click();
-    expect(host.getAttribute('data-mode')).toBe('raw');
-
-    await enterEdit(host);
-    controlIn(host).click();
-
-    expect(host.getAttribute('data-mode')).toBe('raw');
-    expect(getComputedStyle(host.shadowRoot!.querySelector<HTMLElement>('.peekover-raw')!).display).not.toBe('none');
-    expect(host.shadowRoot!.querySelector(`.${EDITOR_SHELL_CLASS}`)).toBeNull();
-    expectUnwatched(host);
-  });
+  // RETIRED: "entered from raw, the exit returns to raw" (C174) — ruling E (2026-11-02), with C046:
+  // in the segment, the one you click is where you go (tests/browser/toolbar.browser.test.ts).
 });
 
 // ── Absent on the content-script reader ──────────────────────────────────────────────────────
@@ -384,7 +347,8 @@ describe('012 task 3.2 — the content-script reader has no edit control', () =>
       expect(host?.shadowRoot?.querySelector('.peekover-reader h1')?.textContent).toBe('Sample document');
       expect(host!.shadowRoot!.querySelector('.peekover-mode-toggle'), 'it has its ordinary chrome').not.toBeNull();
 
-      expect(host!.shadowRoot!.querySelector(`.${EDIT_CONTROL_CLASS}`)).toBeNull();
+      expect(host!.shadowRoot!.querySelector('.peekover-edit-toggle')).toBeNull();
+      expect(isEditable(host), 'the content script never makes its host editable').toBe(false);
       // ...and nothing that reads as one under another class.
       expect(
         [...host!.shadowRoot!.querySelectorAll('button')]
@@ -398,9 +362,11 @@ describe('012 task 3.2 — the content-script reader has no edit control', () =>
       for (const [el, display] of displays) (el as HTMLElement).style.display = display;
     }
 
-    // POSITIVE CONTROL, same test: the same document on the app page's pane DOES get the control.
+    // POSITIVE CONTROL, same test: the same document on the app page's pane IS editable.
+    // KEEPS: the content script never offers Edit; the app page does (C176). RE-SPELLED at 4.3: read
+    // as `isEditable` — what the toolbar's Edit segment asks — the shadow-root control is gone.
     const appHost = await openInPane(LF_DOC);
-    expect(controlIn(appHost)).not.toBeNull();
+    expect(isEditable(appHost)).toBe(true);
   });
 });
 
@@ -414,7 +380,7 @@ describe('012 task 3.2 (R2) — the engine load is keyed on the outer host', () 
 
     await enterEdit(host);
     const firstView = editorSessionFor(host)!.view;
-    controlIn(host).click();
+    void toggleEdit(host);
     expect(host.getAttribute('data-mode')).toBe('reading');
     await enterEdit(host);
 

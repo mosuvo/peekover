@@ -13,7 +13,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import {
   EDITOR_PREVIEW_CLASS,
   EDITOR_SHELL_CLASS,
@@ -30,6 +29,15 @@ import { setThemeSetting } from '../../src/theme/reader';
 import { resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
+
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host?.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: each test's own property here (C222–C227). RE-SPELLED at 4.3: the removed shadow-root control's
+ *  toggle is the toolbar's segment — Edit to enter, Read to leave (these sessions are entered from
+ *  Read, so the exit lands where the control's did; a dirty Read is guarded, ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 
 const NARROW = { width: 414, height: 896 }; // the harness default
 const WIDE = { width: 1400, height: 900 };
@@ -135,7 +143,7 @@ async function openFile(
     () => container.querySelector<HTMLElement>('.peekover-app__reader__host'),
     'the reader host',
   );
-  await waitFor(() => host.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`), 'the edit control');
+  await waitFor(() => segmentFor(host, 'edit')?.disabled === false, 'the Edit segment');
   if (theme !== 'auto') await waitFor(() => host.getAttribute('data-theme') === theme, `data-theme="${theme}"`);
   await frames();
   return { host, container };
@@ -145,7 +153,7 @@ const inHost = (host: HTMLElement, cls: string): HTMLElement | null =>
   host.shadowRoot!.querySelector<HTMLElement>(`.${cls}`);
 
 async function enterEdit(host: HTMLElement): Promise<void> {
-  inHost(host, EDIT_CONTROL_CLASS)!.click();
+  segmentToggle(host).click();
   await waitFor(() => host.getAttribute('data-mode') === 'edit', 'data-mode="edit"');
   await waitFor(() => host.shadowRoot!.querySelector('.cm-editor'), 'the editor');
   await frames(4);
@@ -319,7 +327,7 @@ describe('R29(c) — edit hides the TOC rail at or below the breakpoint; each pa
     expect(source, 'source pane width').toBeGreaterThanOrEqual(PANE_MIN - 1);
     expect(preview, 'preview pane width').toBeGreaterThanOrEqual(PANE_MIN - 1);
     // Leaving edit brings the rail back.
-    inHost(host, EDIT_CONTROL_CLASS)!.click();
+    segmentToggle(host).click();
     await waitFor(() => host.getAttribute('data-mode') === 'reading', 'back to reading');
     await frames(3);
     expect(visible(inHost(host, 'peekover-toc')), 'after leaving edit').toBe(true);

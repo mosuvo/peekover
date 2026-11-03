@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 //
-// editorEnhancer — the edit control, the edit session behind it, and the save-capability
-// injection (012 task 3.2; D-1's control half, D-3; F-4, F-5).
+// editorEnhancer — entering and leaving edit (`toggleEdit`, `leaveEdit`), the edit session behind
+// it, and the save-capability injection (012 task 3.2; D-1, D-3; F-4, F-5). 013 task 4.3 (D-6)
+// removed the shadow-root edit control: the way in is the toolbar's Edit segment, which calls
+// `toggleEdit` — so the tests here drive `toggleEdit` itself, and the segment's own text, state and
+// guard are src/app/toolbar.test.ts's and tests/browser/toolbar.browser.test.ts's.
 //
 // jsdom-safe vs real-engine. Everything here is DOM shape, attributes, call counts, source text
 // read off disk, and CodeMirror's DOCUMENT MODEL (text in, text out — 3.1 established that a view
-// built in jsdom holds a document honestly). That the view RENDERS, takes typed input, that the
-// control is keyboard-operable, that the pill is really hidden and nothing is left on screen after
-// exit: tests/browser/editorRender.browser.test.ts and editorDegrade.browser.test.ts.
+// built in jsdom holds a document honestly). That the view RENDERS, takes typed input, that the pill
+// is really hidden and nothing is left on screen after exit: tests/browser/editorRender.browser.test.ts
+// and editorDegrade.browser.test.ts.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -21,8 +24,8 @@ import {
   editorSessionFor,
   normaliseLineBreaks,
 } from './editorView';
-import { EDIT_CONTROL_CLASS, enhanceEditor, type EditorSave } from './editorEnhancer';
-import { EDITOR_CSS, EDIT_CONTROL_CSS, READER_CSS } from '../theme/readerCss';
+import { enhanceEditor, isEditable, toggleEdit, type EditorSave } from './editorEnhancer';
+import { CAPTURE_NOTICE_SEAT_CSS, EDITOR_CSS, READER_CSS } from '../theme/readerCss';
 import { createReaderPane } from '../app/readerPane';
 import { mountAppShell, type AppStore } from '../app/appShell';
 import type { FolderSource, MarkdownFile } from '../app/folderSource';
@@ -48,16 +51,15 @@ function mountedHost(source = DOC): HTMLElement {
   return host;
 }
 
-const controlsIn = (host: HTMLElement): HTMLElement[] => [
-  ...host.shadowRoot!.querySelectorAll<HTMLElement>(`.${EDIT_CONTROL_CLASS}`),
-];
-const controlIn = (host: HTMLElement): HTMLElement => controlsIn(host)[0];
 const shellIn = (host: HTMLElement): Element | null =>
   host.shadowRoot!.querySelector(`.${EDITOR_SHELL_CLASS}`);
 
-/** Click the control and wait for the mode the click is expected to land in. */
+/** Toggle edit and wait for the mode it is expected to land in.
+ *  KEEPS: every session test's own property (C033, C036–C039, C042–C044, C048). RE-SPELLED at 4.3:
+ *  entered and left by `toggleEdit` — what the toolbar's Edit segment calls — not the removed
+ *  shadow-root control (D-6). */
 async function clickUntil(host: HTMLElement, mode: string): Promise<void> {
-  controlIn(host).click();
+  void toggleEdit(host);
   await vi.waitFor(() => expect(host.getAttribute('data-mode')).toBe(mode));
 }
 
@@ -209,7 +211,7 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
     container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')!.click();
     const host = await vi.waitFor(() => {
       const el = container.querySelector<HTMLElement>('.peekover-app__reader__host');
-      expect(el?.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`)).toBeTruthy();
+      expect(isEditable(el)).toBe(true); // KEEPS (C037, C038): the document is editable — 4.3: no control to wait for
       return el!;
     });
     await clickUntil(host, 'edit');
@@ -285,7 +287,7 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
     await app.selectFile({ name: 'loose.md', read: async () => DOC }); // sets no active file
     const host = await vi.waitFor(() => {
       const el = container.querySelector<HTMLElement>('.peekover-app__reader__host');
-      expect(el?.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`)).toBeTruthy();
+      expect(isEditable(el)).toBe(true); // KEEPS (C037, C038): the document is editable — 4.3: no control to wait for
       return el!;
     });
     await clickUntil(host, 'edit');
@@ -309,110 +311,87 @@ describe('D-3 — no render module names a file handle type; readerPane stays ca
   });
 });
 
-// ── The control (D-1's control half; R3) ─────────────────────────────────────────────────────
+// ── Making a host editable (D-1; R3; 013 D-6) ────────────────────────────────────────────────
 
-describe('the edit control — installed beside the mode pill, once, and after every outer mount', () => {
-  it('is one real <button> placed directly after the mode pill, with its own stylesheet', () => {
+// RETIRED: "is one real <button> placed directly after the mode pill, with its own stylesheet"
+// (C051) and "is idempotent: no second control and no second stylesheet" (C050) — 013 task 4.3
+// (D-6) removed the shadow-root control and EDIT_CONTROL_CSS; Edit is the toolbar's segment. The
+// test below holds what `enhanceEditor` still adds — no control, one app-only seat sheet, once.
+// RETIRED: "R3 — the exit returns to the mode edit was entered from" (C046) — ruling E: in the
+// segment, the one you click is where you go (src/app/toolbar.test.ts, the browser toolbar suite).
+describe('enhanceEditor — makes a host editable; builds no control', () => {
+  it('adds no edit control and no button: the only thing it adds is the one seat sheet, once', () => {
     const host = mountedHost();
-    expect(controlsIn(host)).toHaveLength(0); // mount() alone composes no edit control
-
+    const before = [...host.shadowRoot!.children];
     enhanceEditor(host);
-
-    const [control] = controlsIn(host);
-    expect(controlsIn(host)).toHaveLength(1);
-    expect(control.tagName).toBe('BUTTON');
-    expect((control as HTMLButtonElement).type).toBe('button');
-    expect(control.previousElementSibling?.className).toBe('peekover-mode-toggle');
-    const sheets = [...host.shadowRoot!.querySelectorAll('style')].filter(
-      (s) => s.textContent === EDIT_CONTROL_CSS,
-    );
-    expect(sheets).toHaveLength(1);
+    enhanceEditor(host);
+    const added = [...host.shadowRoot!.children].filter((el) => !before.includes(el));
+    expect(added.map((el) => [el.tagName, el.textContent])).toEqual([['STYLE', CAPTURE_NOTICE_SEAT_CSS]]);
+    expect(host.shadowRoot!.querySelector('.peekover-edit-toggle')).toBeNull();
+    expect(isEditable(host)).toBe(true);
   });
 
-  it('is idempotent: a second call adds no second control and no second stylesheet', () => {
+  // REPLACED (C053): "re-installs after an outer mount()" — there is no control to re-install; the
+  // property kept is that the document is still editable after a re-mount (the segment, outside
+  // the shadow root, survives it: tests/browser/toolbar.browser.test.ts).
+  it('★ stays editable after an outer mount(), which rebuilds the shadow root', async () => {
     const host = mountedHost();
     enhanceEditor(host);
-    const first = controlIn(host);
-    enhanceEditor(host);
-
-    expect(controlsIn(host)).toEqual([first]);
-    expect(
-      [...host.shadowRoot!.querySelectorAll('style')].filter((s) => s.textContent === EDIT_CONTROL_CSS),
-    ).toHaveLength(1);
-  });
-
-  it('★ re-installs after an outer mount(), which rebuilds the chrome and drops it', () => {
-    const host = mountedHost();
-    enhanceEditor(host);
-    const first = controlIn(host);
-
     mount(DOC, host, { contained: true });
-    // The firing control: the re-mount really did take the control and its stylesheet away.
-    expect(controlsIn(host)).toHaveLength(0);
-    expect(first.isConnected).toBe(false);
-
     enhanceEditor(host);
-    expect(controlsIn(host)).toHaveLength(1);
-    expect(controlIn(host)).not.toBe(first);
-    expect(controlIn(host).previousElementSibling?.className).toBe('peekover-mode-toggle');
+    expect(isEditable(host)).toBe(true);
+    await clickUntil(host, 'edit');
+    expect(editorSessionFor(host)).toBeDefined();
   });
 
-  it('installs nothing on a failed render (no data-mode) or on a host with no shadow root', () => {
+  it('a failed render (no data-mode) or a host with no shadow root is not editable', async () => {
+    // KEEPS: Edit is not offered where there is no document view (C049). RE-SPELLED at 4.3: read as
+    // `isEditable` (the segment's disabled state) and a `toggleEdit` that loads nothing.
+    const loader = vi.fn<EditorModuleLoader>(() => loadCodeMirror());
     const bare = document.createElement('div');
     document.body.appendChild(bare);
     hosts.push(bare);
-    enhanceEditor(bare);
+    enhanceEditor(bare, { loader });
     expect(bare.shadowRoot).toBeNull();
     expect(bare.childNodes).toHaveLength(0);
+    expect(isEditable(bare)).toBe(false);
 
     const failed = mountedHost();
     failed.removeAttribute('data-mode'); // the raw-fallback path's signature (mount.ts)
-    enhanceEditor(failed);
-    expect(controlsIn(failed)).toHaveLength(0);
+    enhanceEditor(failed, { loader });
+    expect(isEditable(failed)).toBe(false);
+    expect(await toggleEdit(failed)).toBe('rest');
+    expect(loader).not.toHaveBeenCalled();
   });
 
-  it('★ R3 — the label and the accessible name say Edit at rest, and say the exit while editing', async () => {
+  // REPLACED (C052): the label and accessible name are the Edit segment's (src/app/toolbar.test.ts);
+  // the property kept here is the exit's teardown.
+  it('★ R3 — toggleEdit enters ("editing"), and its exit tears the session down', async () => {
     const host = mountedHost();
     enhanceEditor(host);
-    const control = controlIn(host);
-    expect(control.textContent).toBe('Edit');
-    expect(control.getAttribute('aria-label')).toBe('Edit this document');
-
-    await clickUntil(host, 'edit');
-    expect(control.textContent).toBe('Stop editing');
-    expect(control.getAttribute('aria-label')).toBe('Stop editing and return to the document');
+    expect(await toggleEdit(host)).toBe('editing');
+    expect(host.getAttribute('data-mode')).toBe('edit');
     expect(shellIn(host)).not.toBeNull();
     expect(editorSessionFor(host)).toBeDefined();
 
-    await clickUntil(host, 'reading');
-    expect(control.textContent).toBe('Edit');
-    expect(control.getAttribute('aria-label')).toBe('Edit this document');
+    expect(await toggleEdit(host)).toBe('rest');
+    expect(host.getAttribute('data-mode')).toBe('reading');
     // The exit ran the teardown: no shell, no session, no dirty attribute.
     expect(shellIn(host)).toBeNull();
     expect(editorSessionFor(host)).toBeUndefined();
     expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
   });
 
-  it('R3 — the exit returns to the mode edit was entered from', async () => {
-    const host = mountedHost();
-    enhanceEditor(host);
-    host.shadowRoot!.querySelector<HTMLElement>('.peekover-mode-toggle')!.click();
-    expect(host.getAttribute('data-mode')).toBe('raw');
-
-    await clickUntil(host, 'edit');
-    await clickUntil(host, 'raw');
-    expect(shellIn(host)).toBeNull();
-  });
-
-  it('R3 — the pill-hide rule lives in EDITOR_CSS, and READER_CSS gains no rule for the control', () => {
+  // RETIRED (C047): EDIT_CONTROL_CSS's shape — the constant is deleted (D-6). What stays true is
+  // asserted: the pill-hide rule is EDITOR_CSS's, and the one app-only sheet left ships no :host and
+  // no comment.
+  it('R3 — the pill-hide rule lives in EDITOR_CSS; the seat sheet is one rule, no :host, no comment', () => {
     expect(EDITOR_CSS).toContain(':host([data-mode="edit"]) .peekover-mode-toggle{display:none}');
-    expect(READER_CSS).not.toContain(EDIT_CONTROL_CLASS);
-    expect(EDIT_CONTROL_CSS).toContain(`.${EDIT_CONTROL_CLASS}{`);
-    expect(EDIT_CONTROL_CSS).not.toContain(':host'); // no new :host site anywhere for the control
-    expect(EDIT_CONTROL_CSS).not.toContain('/*'); // rationale ships if it is written in the literal
+    expect(READER_CSS).not.toContain('peekover-edit-toggle');
+    expect(CAPTURE_NOTICE_SEAT_CSS.trim()).toBe('.peekover-watch-disclosure{bottom:16px;left:176px}');
   });
 
-  it('a second click while the engine is still loading starts no second entry', async () => {
+  it('a second activation while the engine is still loading starts no second entry', async () => {
     let release!: () => void;
     const gate = new Promise<void>((res) => (release = res));
     const loader = vi.fn<EditorModuleLoader>(async () => {
@@ -422,8 +401,10 @@ describe('the edit control — installed beside the mode pill, once, and after e
     const host = mountedHost();
     enhanceEditor(host, { loader });
 
-    controlIn(host).click();
-    controlIn(host).click();
+    // KEEPS: one entry per pending load (C048). RE-SPELLED at 4.3: two `toggleEdit` calls.
+    const first = toggleEdit(host);
+    const second = toggleEdit(host);
+    expect(second).toBe(first);
     expect(host.getAttribute('data-mode')).toBe('reading'); // never 'edit' while the load is pending
     release();
     await vi.waitFor(() => expect(host.getAttribute('data-mode')).toBe('edit'));
@@ -518,7 +499,7 @@ describe('the edit session — seeded from the registered source; originalText s
     expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
     expect(editorSessionFor(host)).toBeUndefined();
     expect(host.getAttribute('data-mode')).toBe('reading');
-    expect(controlIn(host).textContent).toBe('Edit');
+    expect(isEditable(host), 'KEEPS (C044): the new document is editable — 4.3: no control label').toBe(true);
 
     // And the next session seeds from the NEW document.
     await clickUntil(host, 'edit');
@@ -533,10 +514,11 @@ describe('degrade — the engine cannot load', () => {
     const loader = vi.fn<EditorModuleLoader>(() => Promise.reject(new Error('chunk failed to load')));
     const host = mountedHost();
     enhanceEditor(host, { loader });
-    const control = controlIn(host);
     const before = [...host.shadowRoot!.children];
 
-    control.click();
+    // KEEPS: the degrade, said in text (C041). RE-SPELLED at 4.3: `toggleEdit` resolves
+    // 'unavailable' — the Edit segment shows EDIT_LABELS.unavailable for it (toolbar tests).
+    const state = toggleEdit(host);
     // Wait on the LOAD settling, not on the control's text: a wait for the text would be the first
     // thing to fail under the defect, ahead of the assertion that actually shows it.
     await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(1));
@@ -545,13 +527,10 @@ describe('degrade — the engine cannot load', () => {
 
     // The half-mounted signature first: 'edit' with nothing behind it.
     expect(host.getAttribute('data-mode')).toBe('reading');
-    expect(control.textContent).toBe('Editor unavailable');
+    expect(await state).toBe('unavailable');
     expect(shellIn(host)).toBeNull();
     expect(host.shadowRoot!.querySelector('.cm-editor')).toBeNull();
     expect([...host.shadowRoot!.children]).toEqual(before);
-    expect(control.getAttribute('aria-label')).toBe(
-      'The editor could not be loaded. Activate to try again.',
-    );
     expect(host.hasAttribute(EDITOR_DIRTY_ATTR)).toBe(false);
   });
 
@@ -562,14 +541,13 @@ describe('degrade — the engine cannot load', () => {
       .mockImplementation(() => loadCodeMirror());
     const host = mountedHost();
     enhanceEditor(host, { loader });
-    const control = controlIn(host);
 
-    control.click();
-    await vi.waitFor(() => expect(control.textContent).toBe('Editor unavailable'));
-    await clickUntil(host, 'edit');
+    // KEEPS: retryable from the same activation (C040). RE-SPELLED at 4.3: `toggleEdit` twice.
+    expect(await toggleEdit(host)).toBe('unavailable');
+    expect(await toggleEdit(host)).toBe('editing');
 
     expect(loader).toHaveBeenCalledTimes(2);
-    expect(control.textContent).toBe('Stop editing');
+    expect(host.getAttribute('data-mode')).toBe('edit');
     expect(editorSessionFor(host)).toBeDefined();
   });
 });

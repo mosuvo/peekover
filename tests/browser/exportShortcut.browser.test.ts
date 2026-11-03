@@ -57,8 +57,16 @@ import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppController, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { currentSettings, resetSettingsSeamForTest, saveSettings } from '../../src/settings/settingsSeam';
-import { EDIT_CONTROL_CLASS } from '../../src/render/editorEnhancer';
 import { EDITOR_STATUS_CLASS, editorSessionFor } from '../../src/render/editorView';
+
+/** A segment of the app page's toolbar (013 task 4.3, D-6: Edit is the toolbar's segment). */
+const segmentFor = (host: Element | null | undefined, mode: 'reading' | 'edit' | 'raw'): HTMLButtonElement | null =>
+  host?.closest('.peekover-app')?.querySelector<HTMLButtonElement>(`.peekover-toolbar__seg [data-mode="${mode}"]`) ?? null;
+/** KEEPS: each test's own property here (C252). RE-SPELLED at 4.3: the removed shadow-root control's
+ *  toggle is the toolbar's segment — Edit to enter, Read to leave (these sessions are entered from
+ *  Read, so the exit lands where the control's did; a dirty Read is guarded, ruling E). */
+const segmentToggle = (host: HTMLElement): HTMLElement =>
+  segmentFor(host, host.getAttribute('data-mode') === 'edit' ? 'reading' : 'edit')!;
 
 function preventDefaultSpy(): ReturnType<typeof vi.spyOn> {
   return vi.spyOn(KeyboardEvent.prototype, 'preventDefault');
@@ -478,7 +486,7 @@ describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and export
       fileBtn.click();
       const host = await waitFor(() => {
         const el = appRoot!.querySelector<HTMLElement>('.peekover-app__reader__host');
-        return el?.shadowRoot?.querySelector(`.${EDIT_CONTROL_CLASS}`) ? el : null;
+        return segmentFor(el, 'edit')?.disabled === false ? el : null;
       });
       expect(host.getAttribute('data-mode')).toBe('reading');
 
@@ -488,7 +496,7 @@ describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and export
       expect(reading.exports, 'outside edit this page adds exactly one export').toBe(stray.exports + 1);
 
       // IN EDIT — a save, and no export.
-      host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      segmentToggle(host).click();
       await waitFor(() => host.getAttribute('data-mode') === 'edit');
       const session = editorSessionFor(host)!;
       session.view.dispatch({ changes: { from: session.view.state.doc.length, insert: TYPED } });
@@ -525,7 +533,7 @@ describe('012 task 5.3 (ruling B) — Ctrl/Cmd+S saves while editing, and export
       await waitFor(() => !status.hidden);
 
       // OUT OF EDIT AGAIN — the export is back.
-      host.shadowRoot!.querySelector<HTMLElement>(`.${EDIT_CONTROL_CLASS}`)!.click();
+      segmentToggle(host).click();
       // RE-SPELLED AT 6.1 (a step, not an assertion): where the save above was a DOWNLOAD — the
       // route an engine whose handles cannot ask for write access takes — the edit is still
       // unsaved, so leaving it now asks first. Answer "Discard edits" when asked; where the save
