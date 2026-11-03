@@ -596,7 +596,7 @@ the app page shows some controls twice — unreleased, stated.*
       only); app chunk +158 B. Finding: the TOC rail's own 130px bottom padding, unchanged. 4.7: add the status line
       to `editorWalkPolish`'s 4.6 overlap set.
 
-- [ ] **4.7 The status line: three statements, each test-backed (D-9; G-3; gate-1 Q9).** TEST FIRST. App-page-only,
+- [x] **4.7 The status line: three statements, each test-backed (D-9; G-3; gate-1 Q9).** TEST FIRST. App-page-only,
       `role="status"`, no `--faint`: the open file's name; "No network calls" / "Network: N requests you made" from the
       indicator state OR a `PerformanceObserver` on `http:`/`https:` resource entries; "Peekover <version>" from
       `runtime.getManifest().version`. Nothing else.
@@ -610,6 +610,13 @@ the app page shows some controls twice — unreleased, stated.*
       EMPTY · manifest · `permissions: []`. [D-9; G-3]
       ★ *2026-11-02 (HUMAN RULINGS on the 4.0 census, `decisions.md` "M13 RULINGS — the 4.0 census questions"):* **F** — the status line's test-backed
       "No network calls" carries the claim the removed header tag made (removed at 4.1).
+      ★ *Landed 2026-11-03 (`decisions.md`, "M13 TASK 4.7" and "M13 RULING — 4.7's network statement").* The line:
+      the open file (set in `selectFile`, every route), "No network calls" / **"Network used" — no count, by the human's
+      ruling** (Firefox writes no Resource Timing entry for a request whose connection fails), and "Peekover <version>"
+      from `runtime.getManifest()` (read in `entrypoints/app/main.ts` — necessary ripple). Zero, user-load and slow
+      (late, outside the load bar) cases on both engines, read after settle; red-first: the observer arm dropped → the
+      slow case reads "No network calls". `editorWalkPolish` measures the split to the pane's foot and checks the line.
+      Content script md5 identical to 4.6; app chunk +2,291 B.
 
 - [ ] **4.8 ≤ 1080 px: the folder pane becomes an overlay behind "Files" (D-10; gate-1 Q12); app-page first paint.**
       TEST FIRST. First re-measure the breakpoint on the shipped layout (the narrowest width keeping ≥ 60ch reader text

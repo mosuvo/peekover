@@ -201,6 +201,10 @@ retired while its function has no other test. Function by function:
   1440 / 1080 / 414 × light / dark (was 414 / 1400). No row first-breaks at 4.6, as counted; the full suite went green
   on its first run. New 4.6 tests sit beside it in the same file (no census row: written here).
 
+- **4.7** (2026-11-03): no row first-breaks at 4.7, as counted. **C225** re-spelled again, with 4.6's split tests in
+  the same file: they measure to the READER PANE's foot (the status line now sits below the pane, at the window's
+  foot), and the status line joins 4.6's overlap set (4.6's ★ note). The full suite went green on its first run.
+
 ### Checking 4.1–4.8 against this census
 
 tasks.md defines no lint for the comments, and 4.0 may not edit a test. Each group-4 task therefore checks, in its

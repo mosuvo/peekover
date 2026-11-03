@@ -1,6 +1,7 @@
 import { mountAppShell } from '../../src/app/appShell';
 import { folderSourceFromHandle } from '../../src/app/chromiumFolderSource';
 import type { OpenFolderOutcome } from '../../src/app/folderSource';
+import { browser } from 'wxt/browser';
 
 // Bootstrap for the bundled app page (spec 002). Side-effects only — the entrypoint
 // binds the DOM to the shell, mirroring how the content entrypoint only calls
@@ -62,10 +63,16 @@ if (root) {
     );
   }
 
+  // The status line's version (013 task 4.7, D-9): the BUILT manifest's, read at runtime — never a copy. Read
+  // defensively: a page outside the extension (the test harness imports this module) has no runtime, and then
+  // the line states no version rather than a guessed one.
+  const version = browser?.runtime?.getManifest?.()?.version;
+
   const app = mountAppShell(
     root,
     isHarness
       ? {
+          version,
           openFolder: async (): Promise<OpenFolderOutcome> => {
             if (!harnessHandle) {
               return { ok: false, reason: 'error', message: '__peekoverHarness: no handle provided' };
@@ -73,7 +80,7 @@ if (root) {
             return { ok: true, source: await folderSourceFromHandle(harnessHandle) };
           },
         }
-      : {},
+      : { version },
   );
 
   if (isHarness) {
