@@ -222,6 +222,13 @@ retired while its function has no other test. Function by function:
   corrected in both tables: the open Compare picker is C364's, not 4.5's notice-area sweep's. No row first-breaks at
   5.1. **Gate-1 Q8: the 28 retirements below were acknowledged by the human on 2026-11-04** (5.0's plain-words list).
 
+- **5.2** (2026-11-04 — the TOC look): no row first-breaks; the rail's left edge (what the column reserves) and the
+  collapsed handle's place are unchanged. **KEPT, unchanged and green:** C091, C280 (toolbars clear the rail), C117 (the
+  lightbox clears it), C226 (rail hidden in stacked edit), C260, C261 (print hides it), C297 (the theme pill clears the
+  handle and list), C308 (TOC actions fire no request), C309, C352 (open state and width persist / survive a re-mount).
+  **Retired:** none. Outside the census (no moved chrome): `tocScroll` gains 5.2's look tests; `nativeControls` (5.1's
+  file) loses its two 5.2 rows and sweeps the content-script reader at 1440 px.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).

@@ -193,6 +193,30 @@ function buildItem(entry: TocEntry): HTMLLIElement {
   return li;
 }
 
+/**
+ * The collapsed rail's tick column (013 task 5.2; G-12; `design/mockup.html:91–93`): one short bar per entry, in
+ * the same pre-order as the entry buttons, so the scroll-spy marks tick i with entry i. DECORATIVE ONLY — the
+ * column is `aria-hidden`, holds no text and nothing focusable, and takes no pointer (no hover card): the
+ * opener stays the one control. Shown only while collapsed (readerCss.ts keys it off the opener's
+ * `aria-expanded`, the state `setTocOpen` keeps in lockstep with `data-toc`).
+ */
+function buildTicks(entries: TocEntry[]): HTMLElement {
+  const column = document.createElement('div');
+  column.className = 'peekover-toc__ticks';
+  column.setAttribute('aria-hidden', 'true');
+  const add = (list: TocEntry[], depth: number): void => {
+    for (const e of list) {
+      const tick = document.createElement('span');
+      tick.className = 'peekover-toc__tick';
+      if (depth > 0) tick.dataset.nested = '';
+      column.append(tick);
+      add(e.children, depth + 1);
+    }
+  };
+  add(entries, 0);
+  return column;
+}
+
 /** Reflect the rail's open/collapsed state as `data-toc` on the host AND keep the opener's
  *  `aria-expanded` in lockstep — the single writer of both, so the visible chrome, the CSS
  *  key, and the a11y state can never drift. No scroll, no `location`/`history`.
@@ -557,7 +581,8 @@ export function buildTocView(
   // resize handle (3.4) is a position:absolute sibling on the rail's inner edge — DOM order is
   // immaterial to its placement, so it is appended last.
   const opener = buildOpener(host);
-  nav.append(opener, buildList(model), buildResizer(host));
+  const ticks = buildTicks(model);
+  nav.append(opener, ticks, buildList(model), buildResizer(host));
 
   // Task 6.1: subscribe ONCE (module-level) so a cold-start `load()` publishing after this mount
   // still reaches this rail — the normal path, not an edge case (see the LATE ARRIVAL note).
@@ -571,7 +596,8 @@ export function buildTocView(
   // observer only starts on the following frame (post-commit/post-layout) via installScrollSpy.
   const links = [...nav.querySelectorAll<HTMLElement>('button.peekover-toc__link')];
   const headings = flattenHeadings(model);
-  const pairs: SpyPair[] = links.map((link, i) => ({ heading: headings[i], link }));
+  const marks = [...ticks.children] as HTMLElement[];
+  const pairs: SpyPair[] = links.map((link, i) => ({ heading: headings[i], link, tick: marks[i] }));
   installScrollSpy(host, pairs, options.contained === true);
 
   return nav;
@@ -627,6 +653,8 @@ const SPY_BOTTOM_EPS = 2;
 interface SpyPair {
   heading: Element;
   link: HTMLElement;
+  /** The entry's decorative tick (013 task 5.2), marked with the link so the collapsed rail shows "here". */
+  tick?: HTMLElement;
 }
 
 /** Per-host scroll-spy teardown. mount() re-renders into the SAME shadow root (idempotent), so a
@@ -718,9 +746,11 @@ function installScrollSpy(host: HTMLElement, pairs: SpyPair[], contained: boolea
         if (i === idx) {
           p.link.setAttribute('aria-current', 'location');
           p.link.classList.add('is-active');
+          p.tick?.classList.add('is-here');
         } else {
           p.link.removeAttribute('aria-current');
           p.link.classList.remove('is-active');
+          p.tick?.classList.remove('is-here');
         }
       });
     };

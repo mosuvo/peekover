@@ -690,13 +690,19 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       pane). The sweep: 20 surface runs; PENDING 31 rows per engine, routed 5.2: 2 · 5.3: 16 · 5.4: 4 · 5.5: 4 (the app
       page's scroll areas — no task names them) · 5.6: 4 · 5.7: 1; the Compare picker and lightbox join at 5.4. The
       contrast census had no pane rows (none to delete). Content script md5 identical; app chunk +527 B.
-- [ ] **5.2 TOC look (gate-1 Q11; G-12).** TEST FIRST. Row, "here" highlighter gradient (`mockup.html:102–104`), card;
+- [x] **5.2 TOC look (gate-1 Q11; G-12).** TEST FIRST. Row, "here" highlighter gradient (`mockup.html:102–104`), card;
       collapsed state gains a decorative `aria-hidden` tick column — no hover card, no behaviour change.
       Files: `src/theme/readerCss.ts` · `src/render/toc*.ts` (markup for the ticks only) · census-named tests
       Verify: (**Cr+Fx**) the tick column is `aria-hidden` and absent from the a11y tree; the rail's keyboard and toggle
       tests unchanged (behaviour pinned, red-first: give a tick a tabindex → the order test fails). Bytes: content script
       moves (READER_CSS + markup) — stated, decomposed, tripwire applies. Full suite. Golden EMPTY · manifest ·
       `permissions: []`. [Q11; G-12]
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 5.2").* The open rail is the mock's card (inset 8 px from the right,
+      its left edge unchanged); rows, the "here" gradient and `--hl` bar per `:102–104`; collapsed, an `aria-hidden` tick
+      column under the toggle (the spy marks the current tick; hidden in edit and at ≤ 1080 px). Breakpoint unchanged,
+      measured (text identical to the pixel at 1189 / 1190 / 1440). The sweep's 2 rows deleted (29 per engine left); the
+      content-script reader now swept at 1440, its open rail included. Found, routed to the human: the app-page rail
+      scrolls away with the document (pre-existing). Content script +952 B, app chunk +1,030 B.
 - [ ] **5.3 Code, math and table buttons (gate-1 Q14; carried (f), (g)).** TEST FIRST. Code toolbar restyled to the
       mockup's copy button (`:151–156`), Line numbers / Wrap / Copy kept; display math loses the code-block toolbar and
       keeps Copy LaTeX / MathML styled like the copy button; table filter-clear and sort buttons from tokens.

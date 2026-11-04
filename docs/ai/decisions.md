@@ -1,6 +1,85 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 5.2 — the TOC restyled (gate-1 Q11; G-12).** Local, on `main` at `a2a5cf5` (5.1), up to date
+  with `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0
+  (one low, ignored) on 2026-11-04. **CI read with `gh`:** `a2a5cf5` — CI success (run 41819245402), Supply chain success
+  (41819245413); AI workflow hygiene runs on pull requests only.
+  - **The look** (`mockup.html:91–104`), tokens only, `READER_CSS` — so both surfaces (the content-script reader and the
+    app page, reading and editor): **the open rail is the mock's card** (`:95`) — `--paper`, a 1 px `--line` border all
+    round, radius 14, `--shadow`, padding 18, inset 8 px from the right / top / bottom, its width `--toc-w − 8 px`, so its
+    LEFT edge (what the column reserves against) is where it was; `scrollbar-color: var(--faint) transparent` (5.1's
+    precedent). **Rows** (`:102–103`): `--muted`, 12.5 px, 5 / 10 padding, radius 6, a transparent 2 px left bar; under
+    the pointer `--ink` (the old `--panel` hover fill dropped — the mock draws none). **The current section** (`:104`):
+    `--ink`, 600, `linear-gradient(90deg, --hl-soft, transparent 85%)`, the 2 px bar `--hl` (was an inset `--hl` shadow).
+    **Collapsed: a decorative tick column** (`:91–93`; G-12) under the existing toggle — one 3 px bar per entry (16 px,
+    10 px nested, `--line`), the current one 26 px `--hl`; `aria-hidden`, no text, nothing focusable, `pointer-events:
+    none`, no hover card. Markup in `tocView.ts` (`buildTicks`, pre-order like the entries); the scroll-spy's existing
+    `setActive` also marks tick i with entry i (`is-here`) — two lines, no new behaviour. Shown only while the opener's
+    `aria-expanded` is false (`.peekover-toc__toggle[aria-expanded="false"] ~ .peekover-toc__ticks`; `setTocOpen` keeps
+    it in lockstep with `data-toc`) — a sibling selector, so no new `:host` rule site (the pin stays 26); hidden in edit
+    (`EDITOR_CSS`, the split starts 8 px under the handle) and at ≤ 1080 px (at 414 the full-page text runs to 377 px and
+    the ticks would start at 372; the mock draws no TOC at ≤ 1080, `:72`). The collapsed rail resets the card (no border,
+    radius or shadow; top / right 0), so the handle sits where it did.
+  - **Contrast** (tokens; the tests measure the painted values, both engines): text — a row at rest 6.01 / 7.44 (light /
+    dark), under the pointer 17.22 / 15.47, the current section on `--hl-soft` 16.31 / 10.52 (the gradient's strongest
+    stop), a focused row 6.01 / 7.44 (the reader's `:focus-visible` ring), the toggle 5.64 / 6.94 (unchanged). **Non-text,
+    for 8.1 (WCAG 1.4.11):** the current section's bar `--hl` on `--paper` 1.19 / 13.29 and its fill 1.06 / 1.47 (it is also
+    told by colour, weight and `aria-current`); the card border `--line` 1.21 / 1.29; the scrollbar thumb `--faint` 2.60 /
+    3.70; the focus ring `--accent` 17.22 / 15.47. The ticks are decorative (`aria-hidden`): `--line` 1.21 / 1.29, the
+    current tick `--hl` 1.19 / 13.29.
+  - **The breakpoint — unchanged, measured** (scratch probe, not committed; the app page, rail open, both engines × both
+    themes, HEAD's sources against 5.2's in one session): the text at 1189 / 1190 / 1440 px is 684.00 / 600.00 / 684.00 px
+    in both arms, to the pixel; the rail's left edge identical (915.0 / 916.0 / 1166.0); only the drawn card is 242 px
+    (was 250) — the inset is taken from the right. Margin at 1190: +9.41 Cr / +9.00 Fx here, 0.00 under Linux Chromium's
+    600 px — as 5.1 recorded. Collapsed reserves nothing, as before. `FILES_OVERLAY_MAX` stays 1189; no ruling needed.
+  - **The sweep** (`nativeControls`): 5.2's 2 rows deleted (the rail's `scrollbar-color`, app page and editor); the
+    content-script reader is now swept at 1440 px, where its rail is OPEN (at 414 it was collapsed and never reached) —
+    that found the same `.peekover-toc` finding on both tab surfaces, fixed by the same rule, no row added; its other
+    findings there are 5.6's existing rows. **PENDING after 5.2: 29 rows per engine (58 keys)** — 5.3: 16 · 5.4: 4 · 5.5:
+    4 · 5.6: 4 · 5.7: 1. The contrast census green, its pending list unchanged (8 rows, 5.8's).
+  - **Tests** (`tocScroll.browser.test.ts`, the TOC's real-engine file — a new describe, 10 tests per engine): per
+    surface × theme, the current section first (the key rule's instrument), then a row at rest, under a real pointer and
+    focused by Tab, then the card — every text ≥ 4.5:1; per surface, the tick column (none while open; collapsed through
+    the real opener: `aria-hidden`, no text or focusable, no pointer, one tick per entry, the current one marked and
+    following the spy); **the Tab order** through the rail, open (the opener then every entry, in order) and collapsed
+    (the opener alone); the ticks over no text line at 1440 / 1280 (measured) and not drawn at 1080 / 414. Red at
+    `a2a5cf5`: 17 per run (no tick column; "the current section …" on every look test) and the sweep's 4 unlisted
+    `.peekover-toc` keys per engine. The seam is reset around each (collapsing through the opener saves `tocOpen`).
+    Firefox spends one Tab press after the last entry with focus reported unchanged (seen at `a2a5cf5` too) — the walk
+    collapses consecutive repeats, which a focusable tick would not be.
+  - **Ablations → red** (sources restored md5-identical): (A1) the entry button's `background` / `border` stripped → the
+    sweep names `.peekover-toc__link` — "native background rgb(240, 240, 240) [Fx rgb(233, 233, 237)]; native border
+    outset 2px" — on the app page, the editor and both tab surfaces, both engines; (A2) the current section's gradient and
+    bar removed → 8 red (2 surfaces × 2 themes × 2 engines), "the current section: --ink, 600, a gradient from --hl-soft,
+    a 2px solid --hl bar", the tick, order and over-text tests green; (A3) tasks.md's: the first tick given `tabIndex = 0`
+    → the order test red on both surfaces, both engines ("collapsed: the opener alone", the tick named).
+  - **Found, not fixed (for the human to route):** on the app page the rail is `position:absolute` inside the scrolling
+    reader pane (`CONTAINED_CSS`), so the whole rail scrolls away with the document — after a screen or so the current
+    section is no longer in view (seen in the "before" shots at `a2a5cf5`; pre-existing). Making it sticky is a behaviour
+    and layout change (5.2 is look-only, Q11) — a candidate for 8.1 or a discovered task.
+  - **Deviations, flagged:** (1) the spy's `setActive` marks the ticks (tasks.md: "markup for the ticks only") — the
+    mock's ticks show "here", and nothing else could; (2) the toggle keeps its pill (the mock's caps head + pin are the
+    hover-card / pin behaviour Q11 keeps out); (3) ticks hidden at ≤ 1080 px (above); (4) the content-script reader's mode
+    pill now sits inside the card's top-right corner (`top: 8px` vs the pill's 16) — for 8.1's eye; (5) the sweep's two
+    tab runs moved to 1440 px; (6) the tests live in `tocScroll` (tasks.md names "census-named tests"; the TOC has no
+    census row of its own).
+  - **Bytes** (clean two-engine build, rebuilt identically): content script **344,852 B (+952)**, md5 `787c942e…` /
+    `f906401d…` — a same-session CSS-only arm (5.2's CSS, `a2a5cf5`'s `tocView.ts`) 344,448 → CSS +548, tick markup and
+    spy +404; under the +2 KB tripwire. App chunk **553,875 B (+1,030)**: CSS +631 (`READER_CSS` and the `EDITOR_CSS`
+    line), `tocView` +399. `.output` 5,973,121 / 5,973,237 B (+1,982 each; headroom 1,366,911 / 1,366,795 B); zip
+    1,961,123 / 1,961,180 B; manifests 833 / 949 B, `permissions: []`; golden EMPTY; the `:host` pin 26.
+  - **Verify:** lint 0 · unit 1,499 / 1,499 · browser, alone, both engines, first run: **2,266 passed / 0 failed / 52
+    skipped of 2,318** (+20) — no red to classify; the build-gated files re-run green against the new build (218 + 32) ·
+    no control bytes in the changed files (both counts; the control fires) · no orphaned browser processes. Census rows
+    touching the TOC KEPT, unchanged: C091, C117, C226, C260, C261, C280, C297, C308, C309, C352; none retired.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.2\`:** `before-` / `after-` × `app-1440-light`,
+    `app-1440-dark` (a long document, rail open, a later section current — scrolled only a little, see "Found"),
+    `tab-1440-light`, `tab-1440-dark`; plus `after-tab-1440-collapsed-light` / `-dark` (the ticks). Chromium.
+  Why: Q11 keeps the TOC's behaviour and adopts the mock's look; G-12 adds the ticks and nothing else.
+  Revisit-when: 8.1's walk (the non-text states above, the card under the mode pill, the app-page rail scrolling away);
+  `--toc-w`'s default or the measure changes (re-measure the breakpoint).
+
 - **2026-11-04 · M13 TASK 5.1 — the folder pane restyled; the native-control sweep lands. HUMAN RULING: the Files
   overlay at ≤ 1189 px (supersedes 4.8 FIX's 1281).** Local, on `main` at `03a3f4f` (5.0), up to date with
   `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one

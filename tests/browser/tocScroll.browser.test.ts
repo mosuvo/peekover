@@ -23,13 +23,16 @@
 // SEE scroll at all (a control `scrollTop` write that is observed), so a zero/failed assertion
 // can never pass by the harness being blind.
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 // `commands` is vitest's bridge to the server-side browser commands registered in
 // vitest.config.ts; we use it for `emulateReducedMotion` (Playwright `page.emulateMedia`) —
 // the one cross-engine way to toggle prefers-reduced-motion (task 3.3). The augmentation
 // below types our custom command onto the extensible `BrowserCommands` interface.
-import { commands } from 'vitest/browser';
+import { commands, page, userEvent } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
+import { setThemeSetting } from '../../src/theme/reader';
+import { resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
+import { backdropOf, contrastRatio, flatten, gradientStops, inkOf, parseColor, ratioOver, TEXT_BAR } from './helpers/contrast';
 import { TOC_MIN_WIDTH, TOC_MAX_WIDTH } from '../../src/render/tocView';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
@@ -758,4 +761,261 @@ describe('TOC resize drag — real engine (task 3.4)', () => {
     await new Promise<void>((r) => setTimeout(r, 60));
     expect(tocWidthPx(host)).toBe(grown);
   });
+});
+
+// ── 013 TASK 5.2 — the TOC look (gate-1 Q11; G-12) ───────────────────────────────────────────────
+// The mock's rows and "here" mark (`design/mockup.html:102–104`), its card (`:95`), and — collapsed — a
+// decorative tick column beside the toggle (`:91–93`; G-12: no hover card, no behaviour change). Both surfaces,
+// both themes, painted values against the tokens the engine resolves; every text state >= 4.5:1.
+// The current-section mark is the restyle's key rule, so it is asserted first (its instrument runs first).
+
+type LookTheme = 'light' | 'dark';
+const LOOK_THEMES: readonly LookTheme[] = ['light', 'dark'];
+const LOOK_VIEWPORTS = [1440, 1280, 1080, 414] as const;
+
+/** A token of the reader, resolved by the engine inside the host's own shadow root. */
+function readerToken(shadow: ShadowRoot, name: string, prop: 'color' | 'box-shadow' = 'color'): string {
+  const probe = document.createElement('i');
+  probe.style.setProperty(prop, `var(${name})`);
+  shadow.append(probe);
+  const v = getComputedStyle(probe).getPropertyValue(prop);
+  probe.remove();
+  return v;
+}
+
+const pause = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+async function themedHost(host: HTMLElement, theme: LookTheme): Promise<void> {
+  setThemeSetting(theme);
+  await waitFor(() => host.getAttribute('data-theme') === theme || null, 150);
+  await pause(300); // colour transitions settle
+}
+
+/** One surface, mounted at the current viewport: the reader host, its shadow root and its scroll box. */
+interface LookSurface {
+  name: string;
+  host: HTMLElement;
+  shadow: ShadowRoot;
+  scroller: HTMLElement;
+}
+
+async function lookFullPage(theme: LookTheme): Promise<LookSurface> {
+  const { host } = mountFullPage();
+  await themedHost(host, theme);
+  await waitForScrollable(host);
+  return { name: 'full-page', host, shadow: host.shadowRoot!, scroller: host };
+}
+
+async function lookContained(theme: LookTheme): Promise<LookSurface> {
+  const { scroller } = await mountContained();
+  const host = scroller.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+  await themedHost(host, theme);
+  await waitForScrollable(scroller);
+  return { name: 'contained', host, shadow: host.shadowRoot!, scroller };
+}
+
+const LOOK_SURFACES = [
+  ['full-page', lookFullPage],
+  ['contained', lookContained],
+] as const;
+
+const railOf = (s: LookSurface): HTMLElement => s.shadow.querySelector<HTMLElement>('.peekover-toc')!;
+const openerOf = (s: LookSurface): HTMLButtonElement => s.shadow.querySelector<HTMLButtonElement>('.peekover-toc__toggle')!;
+const linksOf = (s: LookSurface): HTMLElement[] => [...s.shadow.querySelectorAll<HTMLElement>('.peekover-toc__link')];
+const ticksOf = (s: LookSurface): HTMLElement | null => s.shadow.querySelector<HTMLElement>('.peekover-toc__ticks');
+const currentLink = (s: LookSurface): HTMLElement | null => s.shadow.querySelector<HTMLElement>('.peekover-toc__link[aria-current="location"]');
+const drawn = (el: Element): boolean => el.getClientRects().length > 0 && getComputedStyle(el).display !== 'none';
+
+/** Text against what is painted behind it, a gradient's FIRST stop (its strongest) laid over the backdrop. */
+function textRatioWithGradient(el: HTMLElement): number {
+  const stops = gradientStops(el);
+  const backdrop = backdropOf(el);
+  if (!stops.length) return ratioOver(inkOf(el), backdrop).ratio;
+  const bg = flatten([...backdrop.layers, stops[0]]);
+  return contrastRatio(flatten([bg, inkOf(el)]), bg);
+}
+
+/** The order Tab walks through the rail, starting at its opener, until focus leaves it. */
+async function railTabOrder(s: LookSurface): Promise<Element[]> {
+  const rail = railOf(s);
+  openerOf(s).focus();
+  const order: Element[] = [];
+  for (let i = 0; i < 40; i += 1) {
+    // Focus can leave the shadow root altogether (Firefox tabs on to the light-DOM scroll pane), where the root's
+    // own activeElement can still name the last entry: the host must hold focus too.
+    const active = document.activeElement === s.host ? s.shadow.activeElement : null;
+    if (!active || !rail.contains(active)) break;
+    // Firefox spends one press after the last entry with focus reported unchanged (seen at a2a5cf5, before 5.2), so
+    // a repeat is not a new stop; a tick that took focus would be one.
+    if (order[order.length - 1] !== active) order.push(active);
+    await userEvent.tab();
+  }
+  return order;
+}
+
+/** The rail's own controls a keyboard user can reach, in DOM order: the opener, then every drawn button. */
+const railButtons = (s: LookSurface): Element[] =>
+  [...railOf(s).querySelectorAll<HTMLElement>('button')].filter((b) => drawn(b) && b.closest('[hidden]') === null);
+
+/** Collapse through the real control (the opener) and wait for the state to hold. */
+async function collapse(s: LookSurface): Promise<void> {
+  if (s.host.getAttribute('data-toc') !== 'collapsed') await userEvent.click(openerOf(s));
+  await waitFor(() => (s.host.getAttribute('data-toc') === 'collapsed' && openerOf(s).getAttribute('aria-expanded') === 'false') || null);
+  await pause(250);
+}
+
+/** Every rendered text line of the reading column, as client rects. */
+function textLineRects(s: LookSurface): DOMRect[] {
+  const out: DOMRect[] = [];
+  const reader = s.shadow.querySelector('.peekover-reader')!;
+  const walker = document.createTreeWalker(reader, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.textContent?.trim()) continue;
+    const range = document.createRange();
+    range.selectNodeContents(n);
+    out.push(...[...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0));
+  }
+  return out;
+}
+
+const intersects = (a: DOMRect, b: DOMRect): boolean =>
+  a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+
+describe('013 task 5.2 — the TOC look, both surfaces, both themes', () => {
+  // Collapsing through the opener saves `tocOpen` to the seam (the user's choice is remembered); each test starts
+  // from nothing remembered, so the width rule opens the rail at 1440.
+  beforeEach(() => resetSettingsSeamForTest());
+  afterEach(async () => {
+    resetSettingsSeamForTest();
+    setThemeSetting('auto');
+    await page.viewport(414, 896);
+  });
+
+  for (const [surfaceName, mountSurface] of LOOK_SURFACES) {
+    for (const theme of LOOK_THEMES) {
+      it(`${surfaceName} · ${theme}: the "here" mark, rows at rest / under the pointer / focused, the card — text >= 4.5:1`, async () => {
+        await page.viewport(1440, 900);
+        const s = await mountSurface(theme);
+        await waitFor(() => (s.host.getAttribute('data-toc') === 'open' ? true : null));
+        const here = await waitFor(() => currentLink(s));
+        const tk = (n: string): string => readerToken(s.shadow, n);
+
+        // THE KEY RULE — the current section: --ink, 600, the highlighter gradient from --hl-soft, a 2px --hl bar.
+        const hc = getComputedStyle(here);
+        expect(
+          [hc.color, hc.fontWeight, gradientStops(here)[0] ? `rgb(${gradientStops(here)[0].slice(0, 3).join(', ')})` : 'none', hc.borderLeftStyle, hc.borderLeftWidth, hc.borderLeftColor],
+          'the current section: --ink, 600, a gradient from --hl-soft, a 2px solid --hl bar (mockup.html:104)',
+        ).toEqual([tk('--ink'), '600', tk('--hl-soft'), 'solid', '2px', tk('--hl')]);
+        expect(textRatioWithGradient(here), 'the current section: text on the gradient').toBeGreaterThanOrEqual(TEXT_BAR);
+
+        // A row at rest (mockup.html:102): --muted, 12.5px, 5px 10px, radius 6, a transparent 2px left bar, no fill.
+        const rest = linksOf(s).find((l) => l !== here)!;
+        const rc = getComputedStyle(rest);
+        expect(
+          [rc.color, rc.fontSize, rc.paddingTop, rc.paddingLeft, rc.borderTopLeftRadius, rc.borderLeftWidth, parseColor(rc.borderLeftColor)[3], rc.backgroundImage, parseColor(rc.backgroundColor)[3]],
+          'a row at rest',
+        ).toEqual([tk('--muted'), '12.5px', '5px', '10px', '6px', '2px', 0, 'none', 0]);
+        expect(textRatioWithGradient(rest), 'a row at rest').toBeGreaterThanOrEqual(TEXT_BAR);
+
+        // Under a real pointer (mockup.html:103): --ink.
+        await userEvent.hover(rest);
+        await waitFor(() => (getComputedStyle(rest).color === tk('--ink') ? true : null));
+        expect(textRatioWithGradient(rest), 'a row under the pointer').toBeGreaterThanOrEqual(TEXT_BAR);
+        await userEvent.unhover(rest);
+
+        // Focused from the keyboard: the reader's ring, text unchanged.
+        openerOf(s).focus();
+        for (let i = 0; i < 20 && s.shadow.activeElement !== rest; i += 1) await userEvent.tab();
+        expect(s.shadow.activeElement, 'Tab reaches the row').toBe(rest);
+        expect(rest.matches(':focus-visible'), 'the row shows its focus ring').toBe(true);
+        expect(getComputedStyle(rest).outlineStyle).not.toBe('none');
+        expect(textRatioWithGradient(rest), 'a focused row').toBeGreaterThanOrEqual(TEXT_BAR);
+
+        // The card (mockup.html:95): --paper, a 1px --line border all round, radius 14, the --shadow token, a
+        // themed scrollbar; inside the rail's reservation (the column is unchanged).
+        const rail = railOf(s);
+        const c = getComputedStyle(rail);
+        expect(
+          [c.backgroundColor, c.borderTopStyle, c.borderTopWidth, c.borderTopColor, c.borderRightWidth, c.borderBottomWidth, c.borderLeftWidth, c.borderLeftColor, c.borderTopLeftRadius, c.boxShadow],
+          'the open rail is the card',
+        ).toEqual([tk('--paper'), 'solid', '1px', tk('--line'), '1px', '1px', '1px', tk('--line'), '14px', readerToken(s.shadow, '--shadow', 'box-shadow')]);
+        expect(c.getPropertyValue('scrollbar-color').trim(), 'the card scrolls with a themed scrollbar').not.toBe('auto');
+        const column = s.shadow.querySelector('.peekover-reader')!.getBoundingClientRect();
+        expect(column.right, 'the column clears the card').toBeLessThanOrEqual(rail.getBoundingClientRect().left + 0.5);
+      });
+    }
+
+    it(`${surfaceName}: collapsed, a decorative tick column — aria-hidden, one tick per entry, the current one marked; none while open`, async () => {
+      await page.viewport(1440, 900);
+      const s = await mountSurface('light');
+      await waitFor(() => (s.host.getAttribute('data-toc') === 'open' ? true : null));
+      await waitFor(() => currentLink(s));
+      const ticks = ticksOf(s);
+      expect(ticks, 'the rail carries a tick column').not.toBeNull();
+      expect(drawn(ticks!), 'no ticks while the rail is open').toBe(false);
+
+      await collapse(s);
+      expect(drawn(ticks!), 'the tick column is drawn while collapsed').toBe(true);
+      expect(ticks!.getAttribute('aria-hidden'), 'the tick column is aria-hidden').toBe('true');
+      expect(ticks!.querySelectorAll('[tabindex], button, a, input, select, textarea').length, 'nothing in it can take focus').toBe(0);
+      expect((ticks!.textContent ?? '').trim(), 'it carries no text').toBe('');
+      expect(getComputedStyle(ticks!).pointerEvents, 'it takes no pointer (no hover card)').toBe('none');
+      const marks = [...ticks!.children] as HTMLElement[];
+      expect(marks.length, 'one tick per entry').toBe(linksOf(s).length);
+      const tk = (n: string): string => readerToken(s.shadow, n);
+      const hereIdx = linksOf(s).indexOf(currentLink(s)!);
+      const hereTicks = marks.filter((m) => m.classList.contains('is-here'));
+      expect(hereTicks, 'exactly the current entry\'s tick is marked').toEqual([marks[hereIdx]]);
+      expect(getComputedStyle(marks[hereIdx]).backgroundColor, 'the current tick is the highlighter').toBe(tk('--hl'));
+      const other = marks.find((_, i) => i !== hereIdx)!;
+      expect(getComputedStyle(other).backgroundColor, 'the other ticks are --line').toBe(tk('--line'));
+      expect(marks[hereIdx].getBoundingClientRect().width, 'the current tick is the longer one').toBeGreaterThan(other.getBoundingClientRect().width);
+
+      // The mark follows the section being read (the spy's own update; no new behaviour).
+      s.scroller.scrollTop = s.scroller.scrollHeight;
+      await waitFor(() => (currentLink(s) && linksOf(s).indexOf(currentLink(s)!) !== hereIdx ? true : null), 200);
+      const nextIdx = linksOf(s).indexOf(currentLink(s)!);
+      await waitFor(() => (marks[nextIdx].classList.contains('is-here') ? true : null));
+      expect(marks.filter((m) => m.classList.contains('is-here')), 'the mark moved with the section').toEqual([marks[nextIdx]]);
+    });
+
+    it(`${surfaceName}: Tab walks the rail's own buttons, open and collapsed — never a tick`, async () => {
+      await page.viewport(1440, 900);
+      const s = await mountSurface('light');
+      await waitFor(() => (s.host.getAttribute('data-toc') === 'open' ? true : null));
+      const openOrder = await railTabOrder(s);
+      expect(openOrder, 'open: the opener, then every entry, in order').toEqual(railButtons(s));
+      expect(openOrder.length).toBeGreaterThan(SECTIONS);
+      await collapse(s);
+      const collapsedOrder = await railTabOrder(s);
+      expect(collapsedOrder, 'collapsed: the opener alone').toEqual([openerOf(s)]);
+    });
+
+    it(`${surfaceName}: the tick column never sits over the reading text (1440 / 1280 / 1080 / 414)`, async () => {
+      const measured: number[] = [];
+      for (const width of LOOK_VIEWPORTS) {
+        await page.viewport(width, 900);
+        const s = await mountSurface('light');
+        await waitFor(() => (s.host.hasAttribute('data-toc') ? true : null));
+        await pause(100);
+        await collapse(s);
+        const ticks = ticksOf(s)!;
+        // At <= 1080 px no ticks are drawn (the mock draws no TOC there, mockup.html:72): nothing can sit over text.
+        expect(drawn(ticks), `${width}: ticks drawn only above 1080 px`).toBe(width > 1080);
+        if (!drawn(ticks)) {
+          for (const h of fullPageHosts.splice(0)) h.remove();
+          for (const c of containers.splice(0)) c.remove();
+          continue;
+        }
+        measured.push(width);
+        const box = ticks.getBoundingClientRect();
+        expect(box.width * box.height, `${width}: the column has a box`).toBeGreaterThan(0);
+        const over = textLineRects(s).filter((r) => intersects(r, box));
+        expect(over.map((r) => `${r.left.toFixed(0)},${r.top.toFixed(0)} ${r.width.toFixed(0)}x${r.height.toFixed(0)}`), `${width}: text under the ticks`).toEqual([]);
+        for (const h of fullPageHosts.splice(0)) h.remove();
+        for (const c of containers.splice(0)) c.remove();
+      }
+      expect(measured, 'the widths where the ticks were drawn and measured').toEqual([1440, 1280]);
+    });
+  }
 });

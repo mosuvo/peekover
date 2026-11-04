@@ -536,17 +536,16 @@ export const READER_CSS = /* css */ `
 :host{ --toc-w:250px; }
 
 .peekover-toc{
-  position:fixed;top:0;right:0;z-index:1;
-  box-sizing:border-box;width:var(--toc-w);max-width:38vw;height:100%;
-  overflow:auto;padding:56px 22px 130px;
+  position:fixed;top:8px;right:8px;bottom:8px;z-index:1;
+  box-sizing:border-box;width:calc(var(--toc-w) - 8px);max-width:calc(38vw - 8px);
+  overflow:auto;padding:47px 18px 121px;
   /* OPAQUE surface (group-3 gate fix): without a background the rail is see-through and
-     the reading column's text shows THROUGH it. --paper matches the page, so the rail
-     reads as the same quiet paper divided only by its border-left — but it now occludes
-     anything behind it. (The collapsed handle is paper-on-paper = invisible box around the
-     --panel toggle pill, which is the intended look.) */
+     the reading column's text shows THROUGH it. --paper matches the page; the card's
+     border and shadow set it off. (Collapsed, the handle's box is paper-on-paper.) */
   background:var(--paper);
   font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted);
-  border-left:1px solid var(--line);
+  border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+  scrollbar-color:var(--faint) transparent;
 }
 
 /* Always-present opener/handle heading the rail — the single control that flips data-toc,
@@ -566,15 +565,24 @@ export const READER_CSS = /* css */ `
 
 /* Collapsed (narrow scrollport / toggled off) collapses the rail TO ITS HANDLE — the list
    body is hidden, but the opener stays visible and clickable so the TOC is never unreachable.
-   The nav shrinks to fit the handle and drops the full-height border; its top offset clears
+   The nav shrinks to fit the handle and drops the card; its top offset clears
    the top-right mode pill. The document stays the hero — the reading column is untouched. */
 :host([data-toc="collapsed"]) .peekover-toc{
-  width:auto;height:auto;overflow:visible;
-  padding:52px 16px 16px;border-left:none;
+  top:0;right:0;bottom:auto;width:auto;max-width:38vw;height:auto;overflow:visible;
+  padding:52px 16px 16px;border:none;border-radius:0;box-shadow:none;
 }
 :host([data-toc="collapsed"]) .peekover-toc__list{display:none}
 :host([data-toc="collapsed"]) .peekover-toc__toggle{margin:0}
 .peekover-toc [hidden]{display:none} /* collapsed subtree (childList.hidden) — explicit in shadow */
+.peekover-toc__ticks{display:none}
+.peekover-toc__toggle[aria-expanded="false"]~.peekover-toc__ticks{
+  display:flex;flex-direction:column;align-items:flex-end;gap:9px;width:max-content;margin:14px 0 0 auto;
+  max-height:50vh;overflow:hidden;pointer-events:none;
+}
+.peekover-toc__tick{display:block;width:16px;height:3px;border-radius:2px;background:var(--line);transition:width .2s,background .2s}
+.peekover-toc__tick[data-nested]{width:10px}
+.peekover-toc__tick.is-here{width:26px;background:var(--hl)}
+@media (max-width:1080px){.peekover-toc__toggle[aria-expanded="false"]~.peekover-toc__ticks{display:none}}
 
 /* Reserve the rail's width on the COLUMN so the now-opaque rail never CLIPS the reading text
    (group-3 gate fix, companion to the opaque background above). While OPEN the reading column
@@ -619,23 +627,22 @@ export const READER_CSS = /* css */ `
 .peekover-toc__twist[aria-expanded="true"]::before{transform:rotate(90deg)}
 
 /* Entry link: a full-width text button, single-line with ellipsis so long headings never
-   break the rail. Ink-on-hover echoes the reader's interactive language. */
+   break the rail. */
 .peekover-toc__link{
   flex:1 1 auto;min-width:0;
   display:block;text-align:left;
-  margin:1px 0;padding:4px 7px;
-  background:none;border:none;border-radius:6px;cursor:pointer;
-  font-family:var(--sans);font-size:13px;line-height:1.4;color:var(--muted);
+  margin:1px 0;padding:5px 10px;
+  background:none;border:none;border-left:2px solid transparent;border-radius:6px;cursor:pointer;
+  font-family:var(--sans);font-size:12.5px;line-height:1.4;color:var(--muted);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   transition:color .15s,background .15s;
 }
-.peekover-toc__link:hover{color:var(--ink);background:var(--panel)}
-/* Active section (scroll-spy sets aria-current="location" + .is-active in 3.2). The one
-   highlighter accent as a left bar — brand "interactive = ink + highlighter". */
+.peekover-toc__link:hover{color:var(--ink)}
+/* Active section (scroll-spy sets aria-current="location" + .is-active in 3.2). */
 .peekover-toc__link.is-active,
 .peekover-toc__link[aria-current="location"]{
   color:var(--ink);font-weight:600;
-  box-shadow:inset 2px 0 0 var(--hl);
+  background:linear-gradient(90deg,var(--hl-soft),transparent 85%);border-left-color:var(--hl);
 }
 
 /* Resize handle (3.4 wires the pointer drag that rewrites --toc-w; the rule ships here so
@@ -1502,6 +1509,7 @@ export const EDITOR_CSS = /* css */ `
 :host([data-mode="edit"][data-network="active"]) .peekover-editor{--edit-bottom:56px}
 :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:calc(var(--toc-w) + 32px)}
 :host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{--edit-top:90px}
+:host([data-mode="edit"]) .peekover-toc__toggle~.peekover-toc__ticks{display:none}
 @media (max-width:1400px){
   :host([data-mode="edit"]) .peekover-toc{display:none}
   :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:32px}

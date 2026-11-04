@@ -47,12 +47,10 @@ type Theme = 'light' | 'dark';
 /**
  * THE PENDING LIST — `surface · selector` → the task that restyles it; every row holds on BOTH engines (5.1 found
  * the same 31 on each), so each is listed once and keyed per engine below. Taken at 5.1 after the folder pane's
- * restyle: the pane's own controls and scrollbar are not on it. Each later group-5 task deletes its rows.
+ * restyle: the pane's own controls and scrollbar are not on it. Each later group-5 task deletes its rows. 5.2 deleted
+ * the TOC's 2 and sweeps the content-script reader at 1440 px, where its rail is open (at 414 it was collapsed).
  */
 const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
-  // 5.2 — the TOC look
-  ['app page · .peekover-toc', '5.2'],
-  ['editor · .peekover-toc', '5.2'],
   // 5.3 — code, math and table buttons
   ['app page · .shiki', '5.3'],
   ['app page · .peekover-math', '5.3'],
@@ -308,6 +306,7 @@ describe('the native-control sweep (013 task 5.1)', () => {
     it(`content-script reader, file:// fixture — ${theme}`, async () => {
       registerWatchTarget(watchTarget());
       registerDocIdentity('CLAUDE.md');
+      await page.viewport(1440, 900); // wide enough that the TOC rail opens (5.2)
       const host = freshHost();
       mount(DOC, host);
       await themed(host, theme);
@@ -317,6 +316,7 @@ describe('the native-control sweep (013 task 5.1)', () => {
     });
 
     it(`content-script reader, raw-host fixture — ${theme}`, async () => {
+      await page.viewport(1440, 900);
       const host = freshHost();
       mount(DOC, host);
       await themed(host, theme);
