@@ -76,6 +76,30 @@ function drawsFirstFamily(el: Element): { family: string; uses: boolean; full: n
   return { family: firstFamily(stack), uses: Math.abs(full - without) > 0.5, full, without };
 }
 
+/**
+ * 5.0 (F5): is `family` INSTALLED on this machine? With no face of it registered (the test's precondition), a family
+ * that changes the width of a clean element in this document can only be a locally installed copy. Firefox adds the
+ * per-user installed families to its font list late — measured on the human's Windows machine, where Bricolage
+ * Grotesque is installed: not drawn 40 s after the browser starts, drawn from ~60 s — so the content-script test drew
+ * it only late in a full suite (408.27 vs 387.27 px), and alone after a 70 s delay; never in a fresh browser, never on
+ * CI (none installed). A `local()` FontFace probe is rejected on both engines, so the width is the instrument.
+ */
+function installedLocally(family: string, generic: string, like: Element): { installed: boolean; named: number; generic: number } {
+  const cs = getComputedStyle(like);
+  const width = (stack: string): number => {
+    const span = document.createElement('span');
+    span.textContent = PROBE_TEXT;
+    span.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${stack}`;
+    document.body.appendChild(span);
+    const w = span.getBoundingClientRect().width;
+    span.remove();
+    return w;
+  };
+  const named = width(`"${family}", ${generic}`);
+  const plain = width(generic);
+  return { installed: Math.abs(named - plain) > 0.5, named, generic: plain };
+}
+
 const hosts: HTMLElement[] = [];
 const containers: HTMLElement[] = [];
 
@@ -142,8 +166,27 @@ describe('content-script reader — no design UI faces; system chrome and code; 
     const code = drawsFirstFamily(pre);
     expect(chrome.family, 'the chrome stack leads with the design face (D-3, one stack string)').toBe(UI_SANS_FAMILY);
     expect(code.family, 'the code stack leads with the design face (D-3)').toBe(UI_MONO_FAMILY);
-    expect(chrome.uses, `content-script chrome drew Bricolage (${chrome.full} vs ${chrome.without} px)`).toBe(false);
-    expect(code.uses, `content-script code drew Sometype (${code.full} vs ${code.without} px)`).toBe(false);
+    // 5.0 (F5): nothing is registered (asserted above), so a face drawn here can only be a locally installed copy —
+    // measured now, in a clean element. Where one is installed the draw is explained and named; where none is (CI, a
+    // fresh machine) the content script must draw a system face, as before.
+    const pageFontFaces = [...document.styleSheets].flatMap((sh) => {
+      try {
+        return [...sh.cssRules].filter((r) => r instanceof CSSFontFaceRule).map((r) => r.cssText.slice(0, 80));
+      } catch {
+        return [];
+      }
+    });
+    for (const [what, seen, family, generic] of [['chrome', chrome, UI_SANS_FAMILY, 'sans-serif'], ['code', code, UI_MONO_FAMILY, 'monospace']] as const) {
+      const local = installedLocally(family, generic, what === 'chrome' ? toggle : pre);
+      const why = `content-script ${what} drew ${family} (${seen.full} vs ${seen.without} px); installed locally: ${local.installed} (a clean element ${local.named.toFixed(2)} vs ${local.generic.toFixed(2)} px)`;
+      if (seen.uses && local.installed) {
+        // Drawn, and the machine has its own copy: the only source left once nothing is registered — proven here.
+        expect(facesOf(family), `${why} — and a ${family} face IS registered`).toEqual([]);
+        expect(pageFontFaces.filter((t) => t.includes(family)), `${why} — and an @font-face for it in the page`).toEqual([]);
+      } else {
+        expect(seen.uses, why).toBe(false);
+      }
+    }
 
     // Literata unchanged: registered (fonts.ts, inline) and drawn for prose.
     expect(facesOf('Literata').length, 'Literata faces registered on the content script').toBe(4);

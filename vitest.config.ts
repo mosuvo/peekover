@@ -393,7 +393,19 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-          exclude: ['tests/browser/**', '**/node_modules/**'],
+          exclude: ['tests/browser/**', '**/node_modules/**', '**/*.perf.test.ts'],
+        },
+      },
+      {
+        // unit-perf — the wall-clock budgets (`*.perf.test.ts`), run AFTER the unit project has finished
+        // (`groupOrder`), so no parallel worker shares the CPU while they time (013 task 5.0, F1: the
+        // parse+sanitize budget measured 25–28 ms/run alone and 62–71 ms inside the parallel unit run here,
+        // 112–152 ms on the Linux cloud host). `pnpm test` runs both projects.
+        test: {
+          name: 'unit-perf',
+          include: ['src/**/*.perf.test.ts'],
+          exclude: ['**/node_modules/**'],
+          sequence: { groupOrder: 1 },
         },
       },
       {

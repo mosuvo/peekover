@@ -1,6 +1,68 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 5.0 — the flake pass (DISCOVERED, the human's kickoff; before 5.1): three fixed with their
+  causes proven, one named, two not reproduced.** Local, on `main` at `8e9bf0c` (CI green on it, per the human), up to
+  date with `origin/main`, tree clean. **`gh` is not installed** — no CI history was read; every rate below is local
+  (Windows, i7-13700). Test-only: no product file changed (content script md5 `23b30cde…` / `b14eee5c…`, app chunk
+  552,318 B, md5 `e4093a72…` = a same-session build of `8e9bf0c`).
+  - **F1 · `pipeline.perf` (unit) — FIXED (isolation).** Rate before: green 10 / 10 alone (25.1–28.2 ms/run) and 10 / 10
+    in the unit suite here, but at **61.7–71.1 ms/run in-suite** against the 100 ms budget (the Linux cloud host's reds:
+    112–152 in-suite, 93–99 alone). Cause: the parallel unit workers share the CPU while it times (≈ 2.5× here).
+    Fix: `*.perf.test.ts` leaves the `unit` project for its own `unit-perf` project with `sequence.groupOrder: 1`, so it
+    runs after the unit project has finished, alone; `pnpm test` = `vitest run --project unit --project unit-perf` (CI
+    runs `pnpm test`, so it still runs there). Budget unchanged (ruled). After: **23.1–26.8 ms/run in 10 full `pnpm test`
+    runs**, 10 / 10 green. Ablation: the "before" loop (same session, the perf file back in `unit`): 61.7–71.1.
+  - **F6 · `diagramEnhancer` 5 s timeouts (unit) — FIXED (cause proven).** Before: green 10 / 10 alone and 10 / 10 in-suite
+    here, but its "happy path" first test took 0.87 s alone and **2.37–2.66 s in-suite** (5 s timeout; 4.8's two reds
+    were 15.5 s and 8.4 s — both in that block). Cause: the twelve "synchronous prologue" tests call `enhanceDiagrams(host)`
+    with no loader, so the enhancer used the production `import('mermaid')` — un-awaited — and the real engine loaded
+    (≈ 265 ms cold, measured), initialized and rendered in that jsdom worker while the next block's tests ran. Fix: those
+    tests pass `NEVER_LOADS`, a loader that never settles — what they assert is the state left synchronously ("nothing
+    further happens"), unchanged. After: the first happy test 0.25 s alone; **230–337 ms in 10 in-suite runs**. Found on
+    the way, not changed: `settle()`'s 20 × `setTimeout(0)` is ~300 ms per call on Windows (the 15.6 ms timer tick), ~20 ms
+    on Linux — slow, not a flake.
+  - **F5 · `uiFonts` "content-script chrome drew Bricolage" (Firefox; full suite only here; never on CI) — FIXED (cause
+    proven).** Before: green 6 / 6 alone (4.8); red in 3 of the last 4 full suites (4.7 FIX, 4.8 × 2; green at 4.8 FIX).
+    **Correction to the 4.8 FIX record:** Bricolage Grotesque is installed PER-USER (`%LOCALAPPDATA%\Microsoft\Windows\
+    Fonts`, 105 files; none in `C:\Windows\Fonts`). Cause, measured (a scratch probe, a fresh browser, the family vs a
+    generic in a clean element): **Firefox does not draw the installed family for the first 40 s after it starts, and
+    does from ~60 s** (302.4 vs 299.4 px); Chromium never does (60 s). The test runs first in its file: alone it runs
+    seconds after launch; minutes into a full suite the local copy is in Firefox's font list. **Reproduced alone** with a
+    70 s delay: the full suite's exact red (408.27 vs 387.27 px). A `local()` FontFace probe is rejected on both engines,
+    so width is the instrument. Fix (test-only): with no face registered and no `@font-face` in the shadow root (both
+    already asserted), a family drawn can only be a local copy; the test measures, at that moment, whether the family
+    draws in a clean element. If it does AND the content script drew it, it asserts the two things that make the local
+    copy the only source — no face of it in `document.fonts`, no `@font-face` for it in the page's own sheets (new) — and
+    the message names the local copy; otherwise (CI, a fresh browser) the original "draws a system face" assertion,
+    unchanged. After: the 70 s-delayed run green with "installed locally: true (a clean element 408.27 vs 406.27 px)";
+    5 / 5 alone. **Product note (no change):** a user with Bricolage installed sees their own copy in the content
+    script's chrome — the one-stack-string design (D-3) does that.
+  - **F2 · `watchRemount` Raw place (CI-only, Chromium) — NAMED; cause not found.** Rate: 5 / 5 alone here (+ 10 / 10 at
+    4.4); 0 in the full suites. Ruled out: CPU starvation — Chromium throttled 12× (5 runs) and 50× (3 runs) via CDP
+    `Emulation.setCPUThrottlingRate`: every reading exactly on target (0 px). Candidate, unproven: on the full-page
+    surface both the test's scroll and the restore are smooth (`scroll-behavior:smooth`), and `settle` calls a position
+    stable after 60 ms unchanged — a stalled animation would read early. The assertion now names: the target, both
+    readings and when they were taken, the position after, scroll sizes before / after, the viewport, the mode, and
+    every scroll event that arrived AFTER each reading (non-empty = read mid-animation). Message checked by forcing the
+    assertion red once (scratch).
+  - **F3 · `editorPreview` keystroke count (CI-only, Firefox) — NOT REPRODUCED; diagnostic kept.** 5 / 5 alone here (+ 35
+    runs at 4.4); 0 in the full suites. Its 4.4 message (deep `activeElement`, `hasFocus()`, dispatches per keydown,
+    the viewport, the files loaded before it) already names the state; unchanged.
+  - **F4 · contrast-census inventory (Firefox, intermittent) — NOT REPRODUCED since 4.5's hardening.** 5 / 5 alone here;
+    0 in every full suite since 4.5 (4.6, 4.7, 4.8 × 3, 4.8 FIX, and this task's two). Its recorded cause (the shell's
+    late settings load re-theming the code block mid-read) was removed at 4.5 (the census supplies its own settings);
+    the inventory already logs every CENSUS row. Kept on the list as "not seen since 4.5"; unchanged.
+  - **Records:** progress.md § Carried items 4 rewritten (each flake: fixed / named / not reproduced, with its rate);
+    tasks.md 5.0 added above 5.1 and ticked. The 28 group-4 retirements in plain words: in this task's report (the
+    kickoff), not a file. One finding there: C142's census note says 4.5's no-overlap sweep covers the open Compare picker
+    — it covers the notice area only; the picker is checked for staying inside the window with every row reachable (C364).
+  - **Verify:** lint 0 · unit 1,499 / 1,499 · browser, alone, both engines, twice: 2,210 passed / 0 failed / 52 skipped of
+    2,262 each · golden EMPTY · bytes identical (above) · no orphaned browser processes.
+  Why: a flake either has a cause that can be fixed in the test, or its next red has to explain itself.
+  Revisit-when: F2 or F3 recurs on CI (read the message); `gh` installed locally (count CI reds); a new `*.perf.test.ts`
+  (it joins `unit-perf` by its name).
+
 - **2026-11-04 · M13 TASK 4.8 FIX — filesOverlay's 60ch check red on CI: Chromium on Linux rounds Literata's "0" to a
   whole pixel. HUMAN RULING: the overlay starts at ≤ 1281 px (supersedes 4.8's 1272).** CI on `d18d1fc`: "at 1273 px,
   light|dark: … >= 60ch" failed on Chromium — "expected 591 to be greater than or equal to 600". Local, on `main`.

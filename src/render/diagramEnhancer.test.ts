@@ -101,13 +101,22 @@ describe('the fence predicate', () => {
   });
 });
 
+/**
+ * 5.0 (F6): the prologue's tests pass a loader that never settles. With none, the enhancer falls back to the production
+ * `import('mermaid')` — un-awaited, so the real engine loaded, initialized and rendered in this jsdom worker WHILE the
+ * next tests ran: the first test of the next block took 0.87 s alone (0.27 s with this loader) and 2.4–2.7 s in the full
+ * unit suite, and timed out at 5 s twice under load (4.8). These tests assert only what the call leaves behind
+ * synchronously — "nothing further ever happens" is exactly a loader that never answers.
+ */
+const NEVER_LOADS = (): Promise<never> => new Promise<never>(() => undefined);
+
 describe('the synchronous prologue', () => {
   it('leaves D-15 structure in the DOM before any microtask can run', () => {
     const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
 
     expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(0); // pre-state
 
-    const returned: unknown = enhanceDiagrams(host);
+    const returned: unknown = enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     // Already committed, in the SAME synchronous tick as the call — this is D-12's cooldown
     // constraint and §4's pre-paint half. A function that awaited anything would fail here.
@@ -118,7 +127,7 @@ describe('the synchronous prologue', () => {
 
   it('builds the figure as a SIBLING of the source pre, both marked pending', () => {
     const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     const pre = shadow.querySelector('pre');
     const figure = shadow.querySelector(FIGURE_SELECTOR);
@@ -140,7 +149,7 @@ describe('the synchronous prologue', () => {
 
   it('CONTROL: a fence-free document grows no structure at all', () => {
     const { host, shadow } = mountedHost('# Doc\n\n' + fence('js', 'const a = 1;'));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(0);
     expect(shadow.querySelectorAll(`[${DIAGRAM_STATE_ATTR}]`)).toHaveLength(0);
@@ -158,9 +167,9 @@ describe('the synchronous prologue', () => {
     expect(() => enhanceDiagrams(document.createElement('div'))).not.toThrow();
 
     const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
-    enhanceDiagrams(host);
-    enhanceDiagrams(host);
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
     expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(1);
   });
 
@@ -172,7 +181,7 @@ describe('the synchronous prologue', () => {
         '\n' +
         fence('mermaid', 'sequenceDiagram; A->>B: hi'),
     );
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
     expect(shadow.querySelectorAll(FIGURE_SELECTOR)).toHaveLength(2);
   });
 });
@@ -187,7 +196,7 @@ describe('the diagram source is read as TEXT, never as markup', () => {
 
   it('round-trips a markup payload through textContent with nothing parsed', () => {
     const { host, shadow } = mountedHost(fence('mermaid', PAYLOAD));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     const pre = shadow.querySelector('pre');
     if (!pre) throw new Error('expected the source fence to be retained');
@@ -223,7 +232,7 @@ describe('the diagram source is read as TEXT, never as markup', () => {
 describe("D-15's states", () => {
   it('rendered: content committed, source marked hidden, both still in the tree', () => {
     const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     const pre = shadow.querySelector('pre');
     const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
@@ -245,7 +254,7 @@ describe("D-15's states", () => {
 
   it('failed: the placeholder goes, the source fence stays visible', () => {
     const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     const pre = shadow.querySelector('pre');
     const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
@@ -267,7 +276,7 @@ describe("D-15's states", () => {
 
   it('a second failure replaces the marker rather than stacking a second one', () => {
     const { host, shadow } = mountedHost(fence('mermaid', 'graph TD; A-->B;'));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     const pre = shadow.querySelector('pre');
     const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR);
@@ -284,7 +293,7 @@ describe("D-15's states", () => {
     // The engine is not wired at 3.1, so this is literally what a user sees today — and what they
     // would still see if the engine never loaded (§3.8's first failure, group 6.1's subject).
     const { host, shadow } = mountedHost('Prose.\n\n' + fence('mermaid', 'graph TD; A-->B;'));
-    enhanceDiagrams(host);
+    enhanceDiagrams(host, { loader: NEVER_LOADS });
 
     const pre = shadow.querySelector('pre');
     expect(pre?.isConnected).toBe(true);

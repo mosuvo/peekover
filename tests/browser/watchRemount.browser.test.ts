@@ -278,21 +278,39 @@ describe.each(SURFACES)(
       await waitForStable(s.scroller);
 
       // ...and scrolled mid-document, genuinely away from the top.
-      s.scroller.scrollTop = Math.round((s.scroller.scrollHeight - s.scroller.clientHeight) / 2);
+      // 5.0 (F2, CI-only, cause not found): every scroll event is logged, so a red names whether a reading was taken
+      // while the (smooth, on the full-page surface) scroll was still moving — the candidate `settle`'s 60 ms window.
+      const t0 = performance.now();
+      const scrolls: number[] = [];
+      const onScroll = (): void => void scrolls.push(Math.round(performance.now() - t0));
+      s.scroller.addEventListener('scroll', onScroll);
+      const box = (): string => `${s.scroller.scrollHeight}/${s.scroller.clientHeight}`;
+      const target = Math.round((s.scroller.scrollHeight - s.scroller.clientHeight) / 2);
+      s.scroller.scrollTop = target;
       const readingAt = await settle(s.scroller);
+      const readAtMs = Math.round(performance.now() - t0);
+      const boxBefore = box();
       expect(readingAt).toBeGreaterThan(200);
 
       // The agent edits the file underneath the reader.
       s.remount(buildEditedDoc(), true);
       await waitForStable(s.scroller);
       const after = await settle(s.scroller);
+      const afterMs = Math.round(performance.now() - t0);
+      await new Promise((r) => setTimeout(r, 300)); // late scroll events, for the message only
+      s.scroller.removeEventListener('scroll', onScroll);
+      const state =
+        `target ${target}, readingAt ${readingAt} (read at +${readAtMs} ms), after ${after} (read at +${afterMs} ms), ` +
+        `now ${s.scroller.scrollTop}; scrollHeight/clientHeight ${boxBefore} -> ${box()}; viewport ${innerWidth}x${innerHeight}; ` +
+        `mode ${modeOf(s.host)}; scroll events after the first reading: [${scrolls.filter((t) => t > readAtMs).join(', ')}], ` +
+        `after the second: [${scrolls.filter((t) => t > afterMs).join(', ')}] (ms since the scroll)`;
 
       // MODE survives — the reader is not yanked back to Reading mid-edit.
       expect(modeOf(s.host)).toBe('raw');
       // PLACE survives. In Raw there are no visible headings to anchor to, so this is the
       // anchor's own scrollTop rung — asserted against the measured position, and the `> 200`
       // above is what makes "still there" distinguishable from "reset to 0".
-      expect(Math.abs(after - readingAt)).toBeLessThan(40);
+      expect(Math.abs(after - readingAt), `the Raw place moved — ${state}`).toBeLessThan(40);
       // THEME survives the path (it rides on the host, not on the replaced children).
       expect(s.host.getAttribute('data-theme')).toBeTruthy();
     });

@@ -658,6 +658,22 @@ are authorized, a retirement is shown).*
 that surface deleted, none added) and the native-control sweep. The sweep test lands in 5.1 with every
 not-yet-restyled surface on a named pending list that each later task shrinks; it is empty at 5.7 (Q4).*
 
+- [x] **5.0 Flake pass — DISCOVERED (2026-11-04, the human's kickoff after 4.8; before 5.1).** Test-only. For each known
+      flake (`pipeline.perf`, `watchRemount`'s Raw place, `editorPreview`'s keystroke count, the contrast-census
+      inventory, `uiFonts`' "chrome drew Bricolage", `diagramEnhancer`'s 5 s timeouts): the rate alone and in its suite,
+      the cause with evidence or "not found" with what was ruled out, a test-only fix (no `retry`, no skip, nothing a test
+      proves loosened) or a failure message naming the stalled step and the state it saw; the proof after. Plus the 28
+      group-4 retirements in plain words, in the report (gate-1 Q8).
+      Files: the flakes' own test files · `vitest.config.ts` / `package.json`'s `test` script (isolation only) ·
+      `docs/ai/decisions.md` · `docs/ai/progress.md` · this file
+      Verify: lint; unit; the full browser suite twice, both engines, every red classified; golden EMPTY; content-script
+      md5 and app chunk (552,318 B) identical to `8e9bf0c`.
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 5.0").* Three fixed with causes proven (`pipeline.perf` — parallel
+      workers' load, now its own project run after the unit project; `diagramEnhancer` — the real mermaid loading behind
+      the prologue's tests; `uiFonts` — Firefox adds the per-user installed Bricolage to its font list ~40–60 s after
+      start); `watchRemount` named (cause not found; its red now carries the scroll state); `editorPreview` and the
+      contrast census not reproduced (diagnostics kept). No product change.
+
 - [ ] **5.1 Folder pane; the native-control sweep lands.** TEST FIRST. Width 228, caps section heads, row / hover /
       active per `mockup.html:78–87`, search field, pin / revoke in the `.iconbtn` style.
       `tests/browser/nativeControls.browser.test.ts` (new): every `button` / `select` / `input` on every surface, both
