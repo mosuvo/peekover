@@ -6,7 +6,7 @@
 //   • the ZERO: a document with blocked remote media, code, math, a diagram and the editor engine — with no user
 //     action — reads "No network calls"; then `wireSettled()` proves nothing off-origin had been issued (Resource
 //     Timing records a request when it ENDS, so the zero is only trusted once the wire has settled). The settle is
-//     itself an off-origin request — the sentinel — and the line then reads "Network used": the firing control,
+//     followed by an off-origin request that LANDS (`answered()`), and the line then reads "Network used": the firing control,
 //     on the same instrument, that the observer is not blind. The extension's own loads over this harness's
 //     http origin (chunks, fonts, a same-origin fetch standing in for one) are seen in the buffer and never flip it;
 //   • the USER'S LOAD: the load bar's click restores the images, the indicator lights, the line says so. The
@@ -124,7 +124,7 @@ describe('4.7 — statement 1: the open file', () => {
 });
 
 describe('4.7 — statement 2: the network', () => {
-  it('ZERO: blocked remote media, code, math, a diagram and the editor — no user action → "No network calls"; settled, nothing off-origin; the settle itself flips it', { timeout: 60_000 }, async () => {
+  it('ZERO: blocked remote media, code, math, a diagram and the editor — no user action → "No network calls"; settled, nothing off-origin; a landed off-origin probe flips it', { timeout: 60_000 }, async () => {
     const t0 = performance.now();
     const doc = [
       '# Zero',
@@ -151,8 +151,15 @@ describe('4.7 — statement 2: the network', () => {
     expect(offOriginSince(t0), 'settled: nothing left the page').toEqual([]);
     const sameOrigin = performance.getEntriesByType('resource').filter((e) => e.startTime >= t0 && e.name.startsWith(`${location.origin}/`));
     expect(sameOrigin.length, 'firing control: the page DID load its own things over http meanwhile').toBeGreaterThan(0);
-    // The settle's sentinel IS an off-origin request: the line saw it (the instrument is live).
-    await until(() => netText(line) === NETWORK_USED_TEXT, 'the sentinel seen by the line');
+    // The firing control: an off-origin request that LANDS (4.8 P1). The settle's own sentinel goes to
+    // `127.0.0.1`, which is refused where `localhost` binds `[::1]` — whether a refused load is recorded at all is
+    // engine- and host-dependent (Firefox on Linux records none), so the sentinel cannot be what proves the line
+    // live. Where the sentinel was recorded the line has already flipped; this load flips it everywhere else.
+    const probe = answered();
+    const answer = await fetch(probe, { mode: 'no-cors' });
+    expect(answer.type, 'the probe was answered (an opaque response, not a refusal)').toBe('opaque');
+    await until(() => performance.getEntriesByName(probe).length > 0, 'the probe in the buffer');
+    await until(() => netText(line) === NETWORK_USED_TEXT, 'the landed probe seen by the line');
     expect(host.hasAttribute(NETWORK_ATTR)).toBe(false);
   });
 
@@ -188,16 +195,18 @@ describe('4.7 — statement 2: the network', () => {
     await flush();
     expect(netText(line), 'before').toBe(NO_NETWORK_TEXT);
     await new Promise((r) => setTimeout(r, 400));
-    const url = remote();
+    // 4.8 P1: to an address that ANSWERS — the test means a load that lands, not a refusal some engines record.
+    const url = answered();
     const img = new Image();
-    const landed = new Promise<void>((r) => {
-      img.onload = () => r();
-      img.onerror = () => r();
+    const landed = new Promise<string>((r) => {
+      img.onload = () => r('load');
+      img.onerror = () => r('error');
     });
     img.src = url;
     document.body.appendChild(img);
     try {
-      await landed;
+      expect(await landed, 'the slow image loaded').toBe('load');
+      expect(img.naturalWidth, 'the slow image loaded').toBeGreaterThan(0);
       await flush();
       expect(performance.getEntriesByName(url).length, 'the request is in the buffer').toBe(1);
       expect(document.querySelector(`[${NETWORK_ATTR}="active"]`), 'the indicator never lit').toBeNull();

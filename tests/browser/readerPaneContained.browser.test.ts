@@ -120,7 +120,15 @@ describe('app-page reader renders CONTAINED in the pane, not over the shell (bot
   });
 
   it('the folder tree stays on top at its own centre — the reader host does not cover it', async () => {
-    const { folders, host } = await renderSelectedFile();
+    const { container, folders, host } = await renderSelectedFile();
+    // KEEPS: the reader host never covers the folder tree (C264). RE-SPELLED at 013 task 4.8: at <= 1272 px with a
+    // document open the tree is a closed overlay behind "Files" — open it, then the tree must be on top.
+    const files = container.querySelector<HTMLButtonElement>('.peekover-toolbar__files-btn')!;
+    if (files.getClientRects().length > 0) {
+      files.click();
+      await waitFor(() => folders.getBoundingClientRect().width > 0);
+    }
+    expect(folders.getBoundingClientRect().width, 'the tree is on screen to be measured').toBeGreaterThan(0);
 
     const atFolders = topAtCentre(folders.getBoundingClientRect());
     expect(atFolders === folders || folders.contains(atFolders)).toBe(true);

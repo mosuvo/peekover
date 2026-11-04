@@ -1,6 +1,117 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 4.8 — the Files overlay at ≤ 1272 px (the measured breakpoint); app-page first-paint timing
+  (D-10; gate-1 Q12; the approved 3.1 mock; ruling 3 after 2.5). GROUP 4 COMPLETE.** Local, on `main` at `3291d57`
+  (PR #32's merge, containing `2e859ae` — the 4.7 fix — and `b2dd4f2`), up to date with `origin/main`, tree clean.
+  Windows 11, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, Playwright Chromium + Firefox present,
+  `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-04.
+  - **P1 — statusLine probes that must see a request LAND** (test only). The 4.7 fix moved the user's load to
+    `answered()` (`peekover-probe.localhost`); two more controls relied on `127.0.0.1:PORT`, which is refused where
+    `localhost` binds `[::1]` (here), and passed only because the engine wrote a Resource Timing entry for the refused
+    connection (both engines do here; Firefox on Linux writes none): (1) the ZERO test's firing control — "the settle's
+    sentinel flips the line" — now an `answered()` fetch that must resolve `opaque` (answered, not refused), be in the
+    buffer, and flip the line (the sentinel stays `wireSettled()`'s, refusal-wanted, untouched; where it is recorded it
+    flips the line first — stated in the test); (2) the SLOW case's image — now `answered()`, and the image must fire
+    `load` with `naturalWidth > 0`. The blocked image in the ZERO document stays on `127.0.0.1` (refusal-wanted). The
+    ZERO test's title now names the landed probe. **Ablation** (both back to `127.0.0.1`, new assertions kept): red on
+    both engines — Chromium "TypeError: Failed to fetch" / Firefox "NetworkError when attempting to fetch resource" on
+    the probe, and "the slow image loaded: expected 'error' to be 'load'" on each. (At `2e859ae` the same probes passed
+    here on both engines — on the refused connection's entry.) Green: 22 / 22, both engines.
+  - **P2 — `tests/fontLicences.test.ts`'s Windows-only red**: `relative()` wrote `assets\fonts\…`, compared against
+    `assets/fonts/`; the test now joins on `/` (`split(sep)`). On Linux `sep` is `/`, so the join is the identity.
+    Unit 4 / 4 here; product untouched.
+  - **The breakpoint, re-measured** (a scratch sweep, not committed: the app page with a 3-heading document, every
+    width 1500 → 860 px, the paragraph's width against a `60ch` probe in the same paragraph, both engines × both
+    themes, the TOC rail forced open and collapsed). Identical across themes; engines within 1 px:
+
+    | TOC rail | under the full measure (684 px of text) at ≤ | under 60ch at ≤ |
+    |---|---|---|
+    | collapsed | 1104 | 975 (Cr) / 976 (Fx) |
+    | open | 1365 | **1272** |
+
+    The rail opens by default whenever the reader's scrollport is ≥ 720 px, so beside the pane it is open across the
+    whole range: at 1080 the shipped layout gave 42ch. **HUMAN RULING (asked before any code): the overlay starts at
+    ≤ 1272 px** — the rail-open 60ch value (rejected: 976, the rail-collapsed value; 1080, the mock's). At 1280 the
+    pane stays beside 60.8ch; at 1272 with the pane out of the row the column keeps its full 684 px.
+  - **The overlay** (`appShell.ts`, `toolbar.ts`; `FILES_OVERLAY_MAX = 1272` in `toolbar.ts`). At ≤ 1272 px **while a
+    document is open** the folder pane leaves the row and sits over the reader's left edge, closed until "Files" opens
+    it — the mock's geometry: `min(300px, 86%)`, inside `__body` (the toolbar above and the status line below stay
+    clear and uncovered), a scrim over the rest of the body (`--logo-ink` at 45%, the fixed ink, so it darkens in both
+    themes), `screen`-only (print hides the pane as before). "Files" leads the toolbar (row 1 in the compact toolbar)
+    and shows only there. Pattern: the **WAI-ARIA APG disclosure button** (`aria-expanded`, `aria-controls` → the
+    pane's id) with the **APG modal dialog's** focus handling — opening moves focus to the tree's tab stop (else the
+    pane's first control); Tab / Shift+Tab wrap inside; the reader behind is `inert`; Escape closes and returns focus
+    to "Files"; a press on the scrim closes and returns focus to "Files"; a press on another control closes and leaves
+    focus to it; "Files" toggles. Choosing a file closes it (in `selectFile`, so every route that opens a file —
+    tree, recents, pins — does), after the unsaved-changes guard: "Keep editing" leaves the overlay open on the same
+    document, "Discard edits" opens the file and closes it (Q1). Widening past 1272 or closing the document closes it.
+    When the pane leaves the row under a first choice, focus in it goes to "Files" (not to the page).
+  - **Deviations / mismatches, flagged:** (1) **no document open → the pane stays in the row and "Files" is hidden**,
+    at every width: it is the only place "Open a folder" and the reopen hub live today (the mock's no-folder state puts
+    the CTA in the body; that restyle is 5.1's). For 8.1's walk. (2) tasks.md says "a fixed overlay"; it is positioned
+    in the body region, per the mock, so the toolbar and status line stay clear. (3) The kickoff's extra Verify items
+    (file choice closes it; the guard; the toolbar doesn't move; two compact rows; the status line) and P1 / P2 are
+    beyond tasks.md's Verify line; done as the kickoff asked. (4) Files beyond tasks.md's list: the P1 / P2 tests, and
+    three census-named re-spellings the full suite required (below). (5) Tests written after the code: the red at HEAD
+    is only "no such export" (vacuous), so the behavioural reds are the ablations.
+  - **Tests** (`tests/browser/filesOverlay.browser.test.ts`, new; real input via `userEvent`): 52 / 52, both engines,
+    both themes, at 414 / 1272 (overlay) and 1273 / 1440 (sidebar): "Files" shown / hidden, `aria-controls`; the pane
+    closed and out of the row, the reader the window's width, the full measure at 1272; above, the pane beside the
+    reader with ≥ 60ch; the overlay's place (left edge, mock width, below the toolbar, above the status line, the
+    status line hit-testable, the scrim over the reader, the reader inert); nothing else in the toolbar moves; focus in
+    and 8 × Tab / 8 × Shift+Tab inside; Escape, scrim and another control close it, focus as above; a file choice opens
+    it and closes the overlay; the guard (Keep / Discard) from the overlay while editing; the compact toolbar keeps
+    two rows with "Files" leading row 1 at 414 and 863 (an agent file). The existing `toolbar.browser.test.ts`
+    compact test (21 states) counts "Files" in its rows too and stayed green.
+  - **Ablations → red** (each alone, sources restored md5-identical): "Files" shown above the breakpoint → 8 red,
+    '"Files" is hidden above the breakpoint'; Escape not returning focus (tasks.md's red-first) → 8 red, 'Escape returns
+    focus to "Files"'; a file choice not closing it → 16 red, "the choice closes the overlay" / "Discard: the overlay
+    closes"; the guard bypassed from the tree → 8 red, "timed out: the guard asks".
+  - **Census:** the first full suite went red in 3 tests per engine, one cause (the pane closed at 414 px once a file
+    is open), each re-spelled to open "Files" where shown (`KEEPS:`): C264 (predicted), C218, C260 (unpredicted).
+  - **App-page first paint** (the shipped harness unedited, `scripts/perf-app-first-paint.ts`, 7 runs per invocation,
+    run 1 cold and discarded; Chromium only — Playwright cannot load an extension into Firefox). **Machine: the
+    human's** — Intel Core i7-13700 (24 logical), 64 GB, Windows 11, nothing else running. Arms: **H** = this task's
+    build (app chunk 552,318 B); **P** = `432cd02` (PR #24's merge: the 3.1 confirmation, the last pre-toolbar build;
+    built in a scratch worktree on the same lockfile; app chunk 533,749 B and content-script md5 `5b241f93…` = 2.5's
+    figures). 8 rounds, alternating `Ha P Hb` / `Hb P Ha`; warm runs pooled. The harness's viewport is Playwright's
+    default 1280 × 720 — above 1272, so it times the sidebar layout: the new code is on the path, the overlay's own
+    layout is not.
+
+    | Arm | n | median | floor |
+    |---|---|---|---|
+    | H (4.8) | 96 | 104.2 ms | 95.0 ms |
+    | P (`432cd02`, pre-toolbar) | 48 | 104.8 ms | 93.0 ms |
+    | **H − P** | | **−0.6 ms** (95% CI [−2.6, +2.0]) | +2.0 ms |
+    | noise: Ha − Hb | 48 / 48 | +0.7 ms (95% CI [−1.8, +3.4]) | +0.4 ms |
+
+    **The difference is inside the noise:** group 4 (the toolbar, the mark's blink, the notices, the status line and
+    this overlay) costs nothing measurable on the app page's first paint here. (tasks.md names a `backdrop-filter`;
+    none ships — the toolbar uses none, and the bundle's one occurrence is a math `@supports` query. Flagged.) **Absolute, against the
+    records:** 104.2 / 95.0 ms is ~61 ms under the 165 ms gate; the standing app-page baseline (M9 8.2, a44e17f) is
+    90.8–96.3 ms medians / 86.2–88.1 ms floors — today's figures sit ~8–13 ms above it, and the pre-toolbar arm sits
+    there too, so the rise predates group 4 (2.4's faces are the last app-page change between; this session cannot
+    say whether the machine is the one 8.2 ran on). The historical local gate figures (content script, 8 / 5.1):
+    149.7 / 146.3 ms medians — a different surface, not comparable. This is a local run on the human's machine, by
+    the agent: recorded as such under ruling 3. No firing control was run this session (2.5's resolved +48 ms on the
+    cloud machine; the noise here is ±3 ms).
+  - **Bytes** (clean two-engine build): content script **343,900 B, md5 `23b30cde…` / `b14eee5c…` — identical to
+    4.7**; app chunk 552,318 B (**+2,609**; same-session arms: HEAD 549,709 → toolbar part +561 → shell part +2,048;
+    in the bundle ≈ 498 B of overlay CSS and ≈ 302 B of "Files" CSS, the rest behaviour); `.output` 5,970,612 /
+    5,970,728 B (+2,609 each; headroom 1,369,420 / 1,369,304 B); zip 1,960,502 / 1,960,558 B (+717 each); manifests
+    833 / 949 B, `permissions: []`; golden EMPTY.
+  - **Verify:** lint 0 · unit 1,497 / 1,499 then 1,499 / 1,499 (the first run's two reds `diagramEnhancer` 5 s
+    timeouts, 82 / 82 alone; `pipeline.perf` green both runs; `fontLicences` green) · browser, alone, both engines:
+    run 1 — 2,203 passed / 7 failed / 52 skipped of 2,262 (the three census reds × 2, re-spelled above; Firefox
+    `uiFonts`); run 2 — **2,209 passed / 1 failed / 52 skipped** — the one red Firefox `uiFonts` "chrome drew
+    Bricolage" (the known local-font class; 6 / 6 alone; CI judges it). The contrast census green, its pending list
+    unchanged. No orphaned browser processes.
+  Why: the breakpoint is where the shipped default layout loses the measure, not where the mock drew it; and a
+  folder pane that the reading column has to share below that is what Q12 ruled against.
+  Revisit-when: 5.1 restyles the pane (the no-document state; the overlay's look); 8.1's walk (the overlay working,
+  both themes); the TOC rail's default or the measure changes (re-measure the breakpoint).
+
 - **2026-11-04 · HUMAN RULING — development back on local from here; the agent commits, never pushes; the human
   pushes.** Cloud credits ended; work returns to the human's Windows machine. The 2026-10-31 cloud-push ruling (the
   agent may push its own branch) applied only to cloud sessions and no longer applies; AGENTS.md's local rule stands

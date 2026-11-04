@@ -77,6 +77,11 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The compact breakpoint (approved at 3.1): at this width and below, the compact toolbar. */
 export const COMPACT_MAX = 863;
 
+/** 4.8 (D-10; gate-1 Q12): at this width and below, with a document open, the folder pane is an
+ *  overlay behind "Files". Measured at 4.8: the narrowest width keeping >= 60ch of reading text
+ *  beside the pane, with the TOC rail open (its default there), is 1273 px on both engines. */
+export const FILES_OVERLAY_MAX = 1272;
+
 /** The segment's views, in the mock's order. */
 const SEGMENTS: ReadonlyArray<readonly [ReaderMode, string]> = [
   ['reading', 'Read'],
@@ -137,7 +142,11 @@ export function toolbarCss(shell: string): string {
 .${C} .peekover-diff-picker__item:hover{background:var(--accent-soft)}
 .${C} .peekover-diff-picker__size,.${C} .peekover-diff-picker__kind{color:var(--muted); font-variant-numeric:tabular-nums}
 .${C}{flex:1 1 auto}
-.${C}__files[hidden],.${C}__break,.${C}__more,.${C}__menu[hidden]{display:none}
+.${C}__files,.${C}__break,.${C}__more,.${C}__menu[hidden]{display:none}
+@media (max-width:${FILES_OVERLAY_MAX}px){.${shell}[data-document] .${C}__files{display:inline-flex}}
+.${C}__files-btn{margin:0; font:600 12.5px/1 var(--sans); letter-spacing:0; color:var(--muted); background:var(--panel);
+  border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap; cursor:pointer}
+.${C}__files-btn[aria-expanded="true"]{color:var(--ink); border-color:var(--ink)}
 .${C}__app{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .65rem; margin-left:auto; min-width:0}
 .${C}__app [data-toolbar-control]{margin:0; font:600 12.5px/1 var(--sans); letter-spacing:0; color:var(--muted); background:var(--panel);
   border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap; cursor:pointer}
@@ -222,6 +231,8 @@ export interface ToolbarController {
   focusTrigger(trigger: HTMLElement): void;
   /** The Edit segment — where focus goes back after the unsaved-changes question is escaped. */
   readonly editSegment: HTMLButtonElement;
+  /** 4.8 — "Files": opens and closes the folder pane's overlay (the shell owns that behaviour). */
+  readonly filesButton: HTMLButtonElement;
   /** The open document's name and its reader host (both null when none is open). Re-binds the
    *  observer to the host, so a document switch is reflected at once. */
   setDocument(name: string | null, host: HTMLElement | null): void;
@@ -300,11 +311,17 @@ export function createToolbar(doc: Document): ToolbarController {
   const compareSlot = doc.createElement('span');
   compareSlot.className = `${C}__compare`;
 
-  // 4.4 — the Files slot (empty and hidden until 4.8's Files overlay), the compact toolbar's row
-  // break, and the right-hand group with "⋯" and its menu.
+  // 4.4 — the Files slot, the compact toolbar's row break, and the right-hand group with "⋯" and
+  // its menu. 4.8 — the slot holds "Files", shown only while the folder pane is an overlay (the
+  // shell wires it: `filesButton`).
   const filesSlot = doc.createElement('span');
   filesSlot.className = `${C}__files`;
-  filesSlot.hidden = true;
+  const filesButton = doc.createElement('button');
+  filesButton.type = 'button';
+  filesButton.className = `${C}__files-btn`;
+  filesButton.textContent = 'Files';
+  filesButton.setAttribute('aria-expanded', 'false');
+  filesSlot.append(filesButton);
   const rowBreak = doc.createElement('span');
   rowBreak.className = `${C}__break`;
   rowBreak.setAttribute('aria-hidden', 'true');
@@ -538,6 +555,7 @@ export function createToolbar(doc: Document): ToolbarController {
   return {
     element,
     editSegment: buttons[1],
+    filesButton,
     setDocument,
     notices,
     addAppControl,

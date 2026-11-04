@@ -804,6 +804,11 @@ describe('012 task 6.1 — the dialog (R23)', () => {
     expect(deepActive(), 'focus returns to the Edit segment').toBe(segmentFor(host, 'edit'));
 
     // And the page is live again: the control behind can take focus and be reached.
+    // KEEPS: the page behind the dialog is live again after Escape (C218). RE-SPELLED at 013 task 4.8: at <= 1272 px
+    // with a document open the tree is inside the closed Files overlay (not focusable while hidden) — open "Files"
+    // first, so the tree item is on screen; above the breakpoint "Files" is hidden and the tree is in the row.
+    const files = container.querySelector<HTMLButtonElement>('.peekover-toolbar__files-btn')!;
+    if (files.getClientRects().length > 0) files.click();
     const item = treeItem(container, b);
     item.focus();
     expect(deepActive(), 'the page behind is no longer inert').toBe(item);

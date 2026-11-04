@@ -98,7 +98,7 @@ import { applyColorScheme, setThemeSetting } from '../theme/reader';
 import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { registerUiFonts } from '../theme/uiFonts';
-import { createToolbar, toolbarCss, TOOLBAR_CLASS } from './toolbar';
+import { createToolbar, toolbarCss, FILES_OVERLAY_MAX, TOOLBAR_CLASS } from './toolbar';
 import { createStatusLine, statusLineCss } from './statusLine';
 import { directPort } from '../settings/settingsPort';
 import {
@@ -466,6 +466,14 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * toolbar (`position:static` on its wrapper, toolbar.ts). Pinned by tests/browser/toolbar.browser.test.ts
  * ("the header panels stay inside the window").
  *
+ * ≤ 1272 px, THE FILES OVERLAY (013 task 4.8, D-10; gate-1 Q12; the approved 3.1 mock). While a
+ * document is open the folder pane leaves the row and sits over the reader's left edge, closed until
+ * "Files" opens it: `min(300px, 86%)` wide (the mock's), inside `__body` — so the toolbar above and
+ * the status line below stay clear — with a scrim over the rest of the body (fixed ink, so it darkens
+ * in both themes). `data-document` on the shell (a file is open) and `data-files="open"` drive it;
+ * `screen` keeps print untouched. With no document open the pane stays in the row: it is the only
+ * place "Open a folder" and the reopen hub live. The value is measured (FILES_OVERLAY_MAX, toolbar.ts).
+ *
  * ★ RATIONALE LIVES HERE, NOT IN THE CSS BELOW, AND THAT IS LOAD-BEARING: everything inside the
  * template literal is STRING CONTENT the minifier cannot strip, so a comment written in there
  * ships to every user's browser. Writing this block as CSS cost **+1.5 KB on the app-page chunk**
@@ -608,6 +616,14 @@ ${statusLineCss(SHELL_CLASS)}
   border-right:1px solid var(--line); background:var(--panel); padding:1rem;
 }
 .${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; padding:1.5rem}
+@media screen and (max-width:${FILES_OVERLAY_MAX}px){
+  .${SHELL_CLASS}[data-document] .${SHELL_CLASS}__body{position:relative}
+  .${SHELL_CLASS}[data-document] .${SHELL_CLASS}__folders{display:none; position:absolute; inset:0 auto 0 0; z-index:9;
+    width:min(300px,86%); box-shadow:var(--shadow)}
+  .${SHELL_CLASS}[data-document][data-files="open"] .${SHELL_CLASS}__folders{display:block}
+  .${SHELL_CLASS}[data-document][data-files="open"] .${SHELL_CLASS}__body::before{content:""; position:absolute; inset:0; z-index:8;
+    background:color-mix(in srgb,var(--logo-ink) 45%,transparent)}
+}
 
 .${SHELL_CLASS}__empty{
   display:flex; flex-direction:column; align-items:flex-start;
@@ -846,6 +862,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
 
   const folders = doc.createElement('nav');
   folders.className = `${SHELL_CLASS}__folders`;
+  folders.id = `${SHELL_CLASS}-folders`;
   folders.setAttribute('aria-label', 'Folders');
 
   // The repainted region of the folder pane (idle affordance ⇄ granted folder view).
@@ -966,6 +983,78 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     },
     true,
   );
+
+  // ── THE FILES OVERLAY (013 task 4.8, D-10; gate-1 Q12) ────────────────────────────────────
+  //
+  // At ≤ FILES_OVERLAY_MAX px, while a document is open, the folder pane is an overlay that "Files"
+  // opens (the CSS: the doc comment above APP_CSS). The pattern is the WAI-ARIA APG disclosure
+  // button (`aria-expanded`, `aria-controls` on "Files") with the APG modal dialog's keyboard and
+  // focus: opening moves focus into the pane (its tree's tab stop, else its first control); Tab and
+  // Shift+Tab stay inside it; the reader behind is `inert`; Escape closes it and returns focus to
+  // "Files"; a press outside it closes it (on the scrim, focus returns to "Files"; on another control,
+  // that control keeps it); choosing a file closes it (in `selectFile`, so every route that opens a
+  // file does — after the unsaved-changes guard has let the choice through, so "Keep editing" leaves
+  // it open). Widening past the breakpoint or closing the document closes it.
+  const filesButton = toolbar.filesButton;
+  filesButton.setAttribute('aria-controls', folders.id);
+  const overlayQuery = doc.defaultView?.matchMedia?.(`(max-width:${FILES_OVERLAY_MAX}px)`) ?? null;
+  const overlayApplies = (): boolean => shell.hasAttribute('data-document') && overlayQuery?.matches === true;
+  const filesOpen = (): boolean => shell.getAttribute('data-files') === 'open';
+  const FOCUSABLE = 'button:not([disabled]),input:not([disabled]),select,textarea,a[href],[tabindex]:not([tabindex="-1"])';
+  const focusablesIn = (root: HTMLElement): HTMLElement[] =>
+    [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.tabIndex >= 0 && el.getClientRects().length > 0);
+
+  function openFiles(): void {
+    if (filesOpen() || !overlayApplies()) return;
+    shell.setAttribute('data-files', 'open');
+    filesButton.setAttribute('aria-expanded', 'true');
+    readerPane.element.setAttribute('inert', '');
+    const target = folders.querySelector<HTMLElement>('[role="treeitem"][tabindex="0"]') ?? focusablesIn(folders)[0];
+    (target ?? folders).focus();
+  }
+  function closeFiles(returnFocus: boolean): void {
+    if (!filesOpen()) return;
+    shell.removeAttribute('data-files');
+    filesButton.setAttribute('aria-expanded', 'false');
+    readerPane.element.removeAttribute('inert');
+    if (returnFocus && overlayApplies()) filesButton.focus();
+  }
+  filesButton.addEventListener('click', () => (filesOpen() ? closeFiles(true) : openFiles()));
+  folders.tabIndex = -1; // the fallback focus target when the pane holds no control
+  folders.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (!filesOpen() || asking) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeFiles(true);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const list = focusablesIn(folders);
+    if (list.length === 0) return;
+    const active = doc.activeElement;
+    if (event.shiftKey && (active === list[0] || active === folders)) {
+      event.preventDefault();
+      list[list.length - 1].focus();
+    } else if (!event.shiftKey && active === list[list.length - 1]) {
+      event.preventDefault();
+      list[0].focus();
+    }
+  });
+  // On `click`, not `pointerdown`: the press's own focus change runs between the two, and would undo
+  // the return to "Files".
+  doc.addEventListener(
+    'click',
+    (event) => {
+      if (!filesOpen() || asking || !shell.isConnected) return;
+      const path = event.composedPath();
+      if (path.includes(folders) || path.includes(filesButton)) return;
+      closeFiles(!path.includes(header));
+    },
+    true,
+  );
+  overlayQuery?.addEventListener?.('change', () => {
+    if (!overlayQuery.matches) closeFiles(false);
+  });
 
   body.append(folders, readerPane.element);
   shell.append(buildStyle(doc), header, toolbar.notices, body, statusLine.element);
@@ -1614,9 +1703,17 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // The toolbar follows the selection once the pane has settled: the file's name, and the host it
     // observes (null while a designed state shows — then Read / Raw have nothing to act on).
     // The status line's file statement follows at the same moment: it shows what the pane shows (4.7, D-9).
+    // 4.8: a file chosen while the Files overlay is open closes it — the choice is made (the guard,
+    // when there is one, has already let it through).
+    const chosenInPane = filesOpen() && folders.contains(doc.activeElement);
+    closeFiles(file !== null && chosenInPane);
     return readerPane.select(file).then(() => {
       toolbar.setDocument(file?.name ?? null, readerHost());
       statusLine.setFile(file?.name ?? null);
+      // The pane leaves the row once a file is open: focus that was in it goes to "Files".
+      const wasInPane = folders.contains(doc.activeElement);
+      shell.toggleAttribute('data-document', file !== null);
+      if (wasInPane && overlayApplies() && !filesOpen()) filesButton.focus();
     });
   }
 

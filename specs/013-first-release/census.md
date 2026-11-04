@@ -205,6 +205,20 @@ retired while its function has no other test. Function by function:
   the same file: they measure to the READER PANE's foot (the status line now sits below the pane, at the window's
   foot), and the status line joins 4.6's overlap set (4.6's ★ note). The full suite went green on its first run.
 
+- **4.8** (2026-11-04): the Files overlay at ≤ 1272 px (the measured breakpoint, not 1080 — the human's ruling). The
+  first full suite went red in three tests per engine, all the same cause — once a file is open at 414 px the folder
+  pane is a closed overlay — each re-spelled to open "Files" first where it is shown (`KEEPS:`): **C264**
+  (`readerPaneContained`, the tree on top — as this census predicted for 4.8), **C218** (`editorUnsaved`, the page
+  live after Escape — a later break of a 4.3 row) and **C260** (`printMode`, header and pane hidden in print —
+  **unpredicted**: counted unchanged; its before-print control now reads the OPEN overlay, which print must hide).
+  The census's 4.8 note for print holds: the pane (overlay or not) is `display:none` under print, the scrim is
+  `screen`-only. Outside the census's scope (no moved chrome): 4.8's P1 (`statusLine` probes) and P2 (`fontLicences`
+  separators), both test-only. The second full suite: one red, Firefox `uiFonts` (local-font class, green alone).
+
+**Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
+up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
+**28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).
+
 ### Checking 4.1–4.8 against this census
 
 tasks.md defines no lint for the comments, and 4.0 may not edit a test. Each group-4 task therefore checks, in its

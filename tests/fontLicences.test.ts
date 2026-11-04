@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, resolve, dirname } from 'node:path';
+import { join, relative, resolve, dirname, sep } from 'node:path';
 
 // THE FONT LICENCES (013 task 2.3; plan §9-2(a) / gate-2 G-6; tasks.md F-8). Every font family the
 // package carries ships its SIL OFL 1.1 text in `public/licenses/` (WXT copies `public/` verbatim into
@@ -80,7 +80,8 @@ function importedFonts(): string[] {
     for (const m of read(file).matchAll(spec)) {
       const target = (m[1] ?? m[2] ?? '').replace(/\?.*$/, '');
       if (!FONT_EXT.test(target)) continue;
-      found.push(relative(ROOT, resolve(ROOT, dirname(file), target)));
+      // `relative` writes the host's separator; the checks below compare POSIX paths (Windows wrote `\`).
+      found.push(relative(ROOT, resolve(ROOT, dirname(file), target)).split(sep).join('/'));
     }
   }
   return found;

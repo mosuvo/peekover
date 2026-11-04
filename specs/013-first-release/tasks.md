@@ -618,7 +618,7 @@ the app page shows some controls twice — unreleased, stated.*
       slow case reads "No network calls". `editorWalkPolish` measures the split to the pane's foot and checks the line.
       Content script md5 identical to 4.6; app chunk +2,291 B.
 
-- [ ] **4.8 ≤ 1080 px: the folder pane becomes an overlay behind "Files" (D-10; gate-1 Q12); app-page first paint.**
+- [x] **4.8 ≤ 1080 px: the folder pane becomes an overlay behind "Files" (D-10; gate-1 Q12); app-page first paint.**
       TEST FIRST. First re-measure the breakpoint on the shipped layout (the narrowest width keeping ≥ 60ch reader text
       beside the pane), state it, then fix it. Under the shell's `@media` block the folder `nav` becomes a fixed overlay
       (scrim, focus in, Escape and outside-click close, focus returned); "Files" shows only there. TOC rules untouched
@@ -631,6 +631,18 @@ the app page shows some controls twice — unreleased, stated.*
       Content-script md5 identical to 4.7. Full suite. Golden EMPTY · manifest · `permissions: []`. [D-10]
       ★ *2026-11-02 (HUMAN RULING 3 after 2.5):* the first-paint gate is judged on the DIFFERENCE measured in the same
       session (A-B-A); an absolute figure against 165 ms needs a local run by the human, recorded as such.
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 4.8").* **The breakpoint is 1272 px, not 1080** — measured on both
+      engines and themes: 60ch is lost at ≤ 1272 with the TOC rail open (its default beside the pane), ≤ 976 collapsed;
+      the HUMAN RULED 1272. At ≤ 1272, while a document is open, the pane is an overlay behind "Files" (APG disclosure
+      button + modal-dialog focus: in, held, Escape / scrim → focus back on "Files"; a file choice closes it, after the
+      guard). With no document open the pane stays in the row (deviation: it holds "Open a folder"). First paint (local,
+      the human's machine, Chromium): H − pre-toolbar `432cd02` = −0.6 ms median (CI [−2.6, +2.0]; H-vs-H +0.7) — inside
+      noise; 104.2 / 95.0 ms median / floor against 165. No `backdrop-filter` ships (flagged). Content-script md5
+      identical to 4.7; app chunk +2,609 B. P1 (statusLine probes that must land) and P2 (`fontLicences` separators)
+      test-only. Census: C264, C218, C260.
+
+*★ GROUP 4 COMPLETE (2026-11-04) — 4.0–4.8 landed. The census's 28 retirements are listed for the human in
+`census.md` § "Retirements" (gate-1 Q8), unchanged since 4.5.*
 
 *Group-4 acceptance: one toolbar per the approved mock; every reader function reachable from it; the pills gone from
 the app page only; the notice one-time, wipe-safe and permanent in Stored data; the band reclaimed; the status line's
