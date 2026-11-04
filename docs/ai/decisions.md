@@ -1,6 +1,92 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 5.3 — code, math and table buttons restyled (gate-1 Q14; carried (f), (g)).** Local, on `main` at
+  `071ddc3` (5.2a), up to date with `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0,
+  `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-04. **CI read with `gh`:** `071ddc3` — CI success (run
+  41853641077), Supply chain success (41853641216).
+  - **Carried items read and done:** (f) the native filter-clear / sort / math-action buttons (3.5 step 0 (f): 2px outset,
+    light grey, the system face, in dark too) — now from tokens; (g) the display-math block's code toolbar ("math · Line
+    numbers · Wrap · Copy", 3.5 step 0 (g)) — gone.
+  - **The look** (`mockup.html:151–156`; tokens only; `READER_CSS`, so both surfaces): Line numbers / Wrap / Copy, Copy
+    LaTeX / Copy MathML, Clear, Copy CSV / Copy Markdown are ONE grouped rule — the mock's `.copy`: `--paper`, 1 px
+    `--line`, radius 7, 11.5 px / 600 in `--sans`, padding 5 / 11, `--muted`, `--ink` under the pointer. States the mock
+    does not draw: a pressed toggle `--ink` on `--accent-soft`, border `--faint`; "Copied" `--ink` on `--ok-soft`, border
+    `--ok`; "Copy failed" `--del`, border `--del`. Focus: the reader's ring (`:host :focus-visible`, 2 px `--accent`),
+    unchanged. The language label 11 → 10.5 px, `.08em`, still `--muted` (the mock's `--faint` is 2.60:1). The filter field:
+    `--paper`, 1 px `--line` (`--faint` hovered), radius 7, `--ink` 12 px `--sans`, 12em wide; its "Filter" label beside it.
+    The sort button: the `<th>`'s own type and caps (`:145–147`), transparent, no border; `--ink` hovered and while sorted;
+    the glyph `--accent`; the painted direction text kept (D-12 divergence 2). The highlighted code pre and the math
+    figure (`MATH_CSS`, app-page only) get `scrollbar-color: var(--faint) transparent` (5.1's precedent).
+  - **Display math (attachment only):** `codeEnhancer.ts`'s `codeFencesIn` skips a `language-math` fence (`$$…$$` and
+    ```` ```math ````), as it already skips mermaid — a literal class check, no math import. The formula keeps its own two
+    actions and its source `<pre>` is again the figure's previous sibling (mathView's documented shape; Copy LaTeX reads
+    the same `code` text either way). A math-only document no longer reaches `loadCodeEngine` (the empty-list return).
+  - **Surfaces:** the code toolbar and math exist on the app page only (reading and the editor's preview); the table strip
+    on both (the content-script reader's `mountReader` enhances tables, nothing else). Kickoff item 1 names the
+    content-script reader for code blocks — it has no code toolbar (`enhanceCode` is app-page only, by its module graph);
+    flagged, nothing to restyle there. The content-script reader's tables were restyled and are tested.
+  - **Contrast** (the real engine, both themes; light / dark; text over what is painted behind it). Text: every button at
+    rest 6.01 / 7.44, hovered 17.22 / 15.47, focused 6.01 / 7.44, a pressed toggle 15.02 / 12.34, "Copied" 15.78 / 12.91,
+    "Copy failed" 4.76 / 6.79; the filter field's text 17.22 / 15.47 (every state); the "Filter" label 6.01 / 7.44; the
+    sort button at rest and focused 5.64 / 6.94, hovered and sorted 16.18 / 14.45. **Lowest 4.76** ("Copy failed", light).
+    **Non-text, for 8.1 (WCAG 1.4.11):** the button and field border `--line` on `--paper` 1.21 / 1.29; the field hovered
+    `--faint` 2.60 / 3.70; a pressed toggle's border `--faint` 2.60 / 3.70; "Copied"'s border `--ok` 3.37 / 8.30; "Copy
+    failed"'s `--del` 4.76 / 6.79; the focus ring `--accent` 17.22 / 15.47; the sort glyph `--accent` on `--panel` 16.18 /
+    14.45; the scrollbar thumb `--faint` 2.60 / 3.70.
+  - **Tests (red-first at `071ddc3`'s sources, both engines):** `codeToolbar` — per theme, the app page's reading view and
+    the editor's preview: Line numbers, Wrap and Copy at rest, under a real pointer, focused by keyboard (Tab, the ring),
+    pressed / Copied / Copy failed — the look first (the instrument), then text ≥ 4.5:1. `mathActions` — a `$$` block and
+    a ```` ```math ```` fence beside a code block: the code toolbars found BY CLASS ALONE are exactly `['javascript']`, each
+    formula's source `<pre>` is its previous sibling outside any code block, the two actions present, and the code block
+    is "Code block 1"; Copy LaTeX copies each formula's exact source beside a code block (real clipboard, specific
+    content: `E = mc^2\n`, `a^2 + b^2\n`); per theme, both actions equal the code toolbar's Copy at rest (read side by
+    side) and match the copy button in every state. `tableTools` — app page and content-script reader × light / dark:
+    Clear / Copy CSV / Copy Markdown, the field (typed into), the "Filter" label, the sort button (rest, hover, focus,
+    sorted, glyph). **Red at the old sources: 22** (11 per engine — the look tests on the native look; math: "expected
+    ['math', 'javascript', 'math'] to deeply equal ['javascript']"). The LaTeX byte test is green at both (behaviour pinned).
+    Harness note: the app shell's settings load resets the theme to "auto" (these files' stores carry none), so those arms
+    set it again after the reader is up.
+  - **Ablations → red** (sources restored md5-identical): **A1** Clear dropped from the grouped rule → the sweep names
+    `.peekover-table-filter__clear` — "native background rgb(240, 240, 240) [Fx rgb(233, 233, 237)]; native border outset
+    2px" — app page and editor, both engines. **A2** the `language-math` exclusion removed → `mathActions`' no-toolbar test
+    red on both engines ("expected ['math', 'javascript', 'math'] …"), every other test green. **A3** "Copied" back to the
+    mock's `--ok` text → 12 red (6 per engine: code reading / preview × 2 themes, math × 2 themes), "— done: the mockup's
+    copy button", colour `rgb(31, 157, 85)` where `--ink` was expected.
+  - **The sweep:** 5.3's 16 rows deleted; green with them gone, both engines. **PENDING 10 per engine** (5.4: 4 · 5.5: 2 ·
+    5.6: 4), as expected. No new finding in these controls.
+  - **Keyboard and screen readers:** every button keeps its tag, type, accessible name and tab stop; the ring is unchanged.
+    **Changed, as a consequence of (g):** a display formula no longer carries the code toolbar's three tab stops ("Code
+    block N. Activate to …") ahead of its own two; and a code block's ordinal counts code blocks only, so a code block
+    after a formula is now "Code block 1" (was 2). Focus order otherwise unchanged.
+  - **Not restyled, for 8.1:** the long-code "Show all" collapse button (`.peekover-code-toolbar__collapse`, a child of the
+    wrapper, not the toolbar) keeps its 009 look (`--panel`, radius 6) — not native, not named by 5.3.
+  - **Census:** no row first-breaks; KEPT unchanged and green: C090–C092, C254–C257, C282–C291. None retired (census.md, 5.3).
+  - **Bytes** (clean two-engine build; arms in one session, over-determined, residual 0): content script **346,714 B
+    (+1,496)**, md5 `531775a3…` / `f061a105…`; with `readerCss.ts` alone at `071ddc3` it rebuilds to 345,218 B, md5
+    `5a7fcd14…` / `7e9cddd5…` (5.2a's exactly), so the whole delta is `READER_CSS` (the content script reaches neither
+    `codeEnhancer` nor `MATH_CSS`). Under the +2 KB tripwire. App chunk **555,872 B (+1,583)** = `READER_CSS` +1,496 (the
+    readerCss-only arm: 555,785) + `codeEnhancer` +46 + `MATH_CSS` +41 (arms 554,335 / 554,376 against the same-session
+    baseline 554,289). `.output` 5,976,980 / 5,977,096 B (+3,079 each; headroom 1,363,052 / 1,362,936 B); manifests 833 /
+    949 B, `permissions: []`; golden EMPTY; the `:host` pin 26.
+  - **Verify:** lint 0 · unit 1,499 / 1,499 (the first run: 2 red in `reader.test.ts` — the table strip's host rules are
+    sliced to the first blank line and pinned as declaring no surface; the new control rules sat under them, so they now
+    follow a blank line; the pin unchanged) · browser, alone, both engines: **2,306 passed / 0 failed / 52 skipped of 2,358** (+24), first run, 542 s, EXIT 0 — no red to classify (the known flakes `watchRemount`, `editorPreview` and the contrast census did not recur; the census green, its pending list unchanged at 8, 5.8's); the build-gated files ran against the new build; a rebuild after the last `.ts`-comment edit gave the same md5s · no control bytes and LF only in
+    the changed files (both counts; the control fires) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.3\`:** `before-` / `after-` × `code-light`,
+    `code-dark` (the toolbar, the pointer on Copy), `math-light`, `math-dark` (the formula's buttons, the first focused),
+    `table-light`, `table-dark` (sorted by Value, "a" typed in the filter) — the app page at 1440, Chromium; plus
+    `tab-light` (the content-script reader's table).
+  - **Deviations, flagged:** (1) the toolbar stays in flow (§3.11), not over the pre; (2) "Copied" is `--ink` on `--ok-soft`,
+    not the mock's `--ok` text (AA); (3) the content-script reader has no code toolbar or math (above); (4) the math
+    actions' and table copy buttons carry no colour transition — only Copy does (row 19's pin); (5) the tests live in the
+    census-named files plus `nativeControls` (its rows); `tableScope` is unchanged (it exercises sort / filter behaviour,
+    not the look).
+  Why: Q14 — the code keeps its three tools in the mock's button; math keeps only its own two; the table's controls from
+  tokens; carried (f) and (g) closed.
+  Revisit-when: 8.1's walk (the non-text states above; the collapse button; the in-flow toolbar against the mock's
+  floating copy); 5.8 changes `--code-bg` / the code theme (the toolbar sits on `--paper`, not on the code).
+
 - **2026-11-04 · M13 TASK 5.2a — the app page's TOC rail stays in view while reading (DISCOVERED at 5.2; HUMAN RULING
   2026-11-04: fix now, before 5.3).** Local, on `main` at `230dd70` (5.2), up to date with `origin/main`, tree clean;
   Windows, Node 24.11.1, pnpm 10.33.0, `pnpm audit --prod` EXIT 0 on 2026-11-04. **CI read with `gh`:** `230dd70` — CI

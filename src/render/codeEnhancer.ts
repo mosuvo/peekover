@@ -79,6 +79,12 @@ import { currentSettings } from '../settings/settingsSeam';
 /** See the module header's "A MERMAID FENCE IS NEVER A CODE-HIGHLIGHTING CANDIDATE" section. */
 const MERMAID_FENCE_CLASS = 'language-mermaid';
 
+/** A display-math fence (`$$…$$` and ```` ```math ````, both `language-math` — `parse.ts`) belongs to
+ *  `mathEnhancer.ts`, the same way a mermaid fence belongs to the diagram enhancer: it gets the
+ *  formula's own Copy LaTeX / Copy MathML, never this module's code toolbar (013 task 5.3; gate-1
+ *  Q14; carried (g)). A literal class check, for the mermaid exclusion's reason (no math import). */
+const MATH_FENCE_CLASS = 'language-math';
+
 /** Options exist for the tests, and for two things: injecting the loader, and forcing a theme id
  *  that will not resolve (the "theme-apply failure" case, tasks.md 4.2's Verify). Production
  *  passes neither. Mirrors `diagramEnhancer.ts`'s own `EnhanceOptions` shape exactly. */
@@ -114,7 +120,8 @@ export const CODE_FENCE_SELECTOR = 'pre > code[class^="language-"]';
 
 /**
  * The source `<pre>` of every language-classed code fence under `root`, in document order — EXCEPT
- * a mermaid fence, which 007's `diagramEnhancer.ts` already owns (module header).
+ * a mermaid fence, which 007's `diagramEnhancer.ts` already owns (module header), and a display-math
+ * fence, which `mathEnhancer.ts` owns (013 task 5.3).
  *
  * The selector matches the `<code>`; the element this returns is its `<pre>` parent, because the
  * `<pre>` is what D-6's wrapper re-parents. `pre > code` guarantees the parent exists, so the cast
@@ -122,7 +129,7 @@ export const CODE_FENCE_SELECTOR = 'pre > code[class^="language-"]';
  */
 export function codeFencesIn(root: ParentNode): HTMLElement[] {
   return Array.from(root.querySelectorAll(CODE_FENCE_SELECTOR))
-    .filter((code) => !code.classList.contains(MERMAID_FENCE_CLASS))
+    .filter((code) => !code.classList.contains(MERMAID_FENCE_CLASS) && !code.classList.contains(MATH_FENCE_CLASS))
     .map((code) => code.parentElement as HTMLElement);
 }
 

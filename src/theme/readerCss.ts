@@ -198,6 +198,19 @@ export const READER_CSS = /* css */ `
 }
 .peekover-reader .peekover-table-tools + table{margin-top:0}
 
+.peekover-reader .peekover-table-filter__label{display:inline-flex;align-items:center;gap:6px}
+.peekover-reader .peekover-table-filter{
+  font-family:var(--sans);font-size:12px;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:7px;padding:5px 9px;margin:0;width:12em;
+}
+.peekover-reader .peekover-table-filter:hover{border-color:var(--faint)}
+.peekover-reader .peekover-table-sort{
+  font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;text-align:inherit;
+  background:transparent;border:0;border-radius:4px;padding:0;margin:0;cursor:pointer;
+}
+.peekover-reader .peekover-table-sort:hover,.peekover-reader th[aria-sort$="ending"] .peekover-table-sort{color:var(--ink)}
+.peekover-reader .peekover-table-sort__glyph{color:var(--accent);font-size:10px;margin-left:4px}
+
 /* ============ Raw fallback (never a blank page — AGENTS.md #5) ============ */
 .peekover-raw{
   max-width:76ch;margin:56px auto;padding:26px;
@@ -675,20 +688,27 @@ export const READER_CSS = /* css */ `
   font-family:var(--sans);font-size:12px;color:var(--muted);
 }
 .peekover-reader .peekover-code-toolbar__lang{
-  margin-right:auto;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+  margin-right:auto;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
 }
-.peekover-reader .peekover-code-toolbar button{
-  font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;
+.peekover-reader .peekover-code-toolbar button,.peekover-reader .peekover-math-action,
+.peekover-reader .peekover-table-copy,.peekover-reader .peekover-table-filter__clear{
+  font-family:var(--sans);font-size:11.5px;font-weight:600;line-height:normal;color:var(--muted);
+  background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin:0;
+  cursor:pointer;
 }
-.peekover-reader .peekover-code-toolbar button:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-reader .peekover-code-toolbar button:hover,.peekover-reader .peekover-math-action:hover,
+.peekover-reader .peekover-table-copy:hover,.peekover-reader .peekover-table-filter__clear:hover{color:var(--ink)}
 .peekover-reader .peekover-code-toolbar button[aria-pressed="true"]{
-  color:var(--ink);border-color:var(--faint);background:var(--code-bg);
+  color:var(--ink);border-color:var(--faint);background:var(--accent-soft);
 }
-.peekover-reader .peekover-code-toolbar__copy{transition:color 120ms ease,border-color 120ms ease}
-.peekover-reader .peekover-code-toolbar__copy[data-state="done"]{color:var(--ok);border-color:var(--ok)}
-.peekover-reader .peekover-code-toolbar__copy[data-state="failed"]{color:var(--del);border-color:var(--del)}
+.peekover-reader .peekover-code-toolbar__copy{transition:color 150ms ease,border-color 150ms ease,background-color 150ms ease}
+.peekover-reader .peekover-code-toolbar__copy[data-state="done"],
+.peekover-reader .peekover-math-action[data-state="done"]{color:var(--ink);border-color:var(--ok);background:var(--ok-soft)}
+.peekover-reader .peekover-code-toolbar__copy[data-state="failed"],
+.peekover-reader .peekover-math-action[data-state="failed"]{color:var(--del);border-color:var(--del)}
 @media (prefers-reduced-motion:reduce){.peekover-reader .peekover-code-toolbar__copy{transition:none}}
+.peekover-reader .peekover-code pre.shiki{scrollbar-color:var(--faint) transparent}
+.peekover-reader .peekover-math-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:8px}
 
 /* Line numbers (task 4.3) — CSS counters on the highlighted sibling's own .line spans, gated on
    the WRAPPER's data-line-numbers attribute (D-7: absent by default; codeView.ts never mutates
@@ -787,6 +807,27 @@ export const READER_CSS = /* css */ `
 // finding) DOES render. Task 7.1 additionally copies this text into appShell.ts's APP_CSS, a real
 // document-level sheet, so the LIVE app-page reader's own window.print() can reach a page box too.
 // Two copies, two distinct consumers — see appShell.ts's own comment on its copy.
+
+// ============================================================================
+// THE COPY BUTTON — 013 task 5.3 (gate-1 Q14; carried (f), (g))
+// ============================================================================
+// One look, `design/mockup.html:154–156`'s `.copy`, for every small action button inside the
+// column: the code toolbar's Line numbers / Wrap / Copy, display math's Copy LaTeX / Copy MathML,
+// and the table strip's Clear / Copy CSV / Copy Markdown. Grouped selectors, so "styled like the
+// copy button" is one rule, not four copies that can drift. The toolbar stays IN FLOW (§3.11's
+// routing, codeView.ts) — the mock floats its copy button over the pre; only the look is adopted.
+// States the mock does not draw, from tokens: a pressed toggle `--ink` on `--accent-soft` with a
+// `--faint` border; "Copied" `--ink` on `--ok-soft` with an `--ok` border — NOT the mock's `--ok`
+// text, which is 3.37:1 on `--paper` in light (below AA; G-5's logic, as 2.2 chose `--muted` over
+// `--faint`); "Copy failed" `--del` (4.76 / 6.79). Focus is the reader's own ring
+// (`:host :focus-visible`). Only the copy button keeps a colour transition: row 19 of
+// codeToolbar.browser.test.ts pins it and its reduced-motion neutraliser by shape.
+// The table strip: the field is a `--paper` box (`--faint` border under the pointer); the sort
+// button takes the `<th>`'s own type and colour (`mockup.html:145–147`), `--ink` under the pointer
+// and while it is the sorted column, its glyph `--accent`. These rules sit after a blank line, apart
+// from the strip's host rules, which reader.test.ts slices to the first blank line and pins as
+// declaring no surface. The math figure's own scroll box gets its scrollbar colour in MATH_CSS
+// (mathCss.ts, app-page only); the highlighted code pre gets it here.
 
 // ============================================================================
 // PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE — 010 D-7, task 6.1

@@ -51,25 +51,9 @@ type Theme = 'light' | 'dark';
  * the TOC's 2 and sweeps the content-script reader at 1440 px, where its rail is open (at 414 it was collapsed).
  * 5.2a deleted 3: the app page's reader hosts (the app page and the editor) and the editor's preview host are no
  * longer scroll areas. CONTAINED_CSS dropped their `:host{overflow:auto}` so the rail can stick, and they now pass.
+ * 5.3 deleted its 16: the code, math and table controls and the code and math scroll boxes (10 rows per engine left).
  */
 const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
-  // 5.3 — code, math and table buttons
-  ['app page · .shiki', '5.3'],
-  ['app page · .peekover-math', '5.3'],
-  ['app page · .peekover-math-action', '5.3'],
-  ['app page · .peekover-table-copy.peekover-table-copy--csv', '5.3'],
-  ['app page · .peekover-table-copy.peekover-table-copy--markdown', '5.3'],
-  ['app page · .peekover-table-filter[type=text]', '5.3'],
-  ['app page · .peekover-table-filter__clear', '5.3'],
-  ['app page · .peekover-table-sort', '5.3'],
-  ['editor · .shiki', '5.3'],
-  ['editor · .peekover-math', '5.3'],
-  ['editor · .peekover-math-action', '5.3'],
-  ['editor · .peekover-table-copy.peekover-table-copy--csv', '5.3'],
-  ['editor · .peekover-table-copy.peekover-table-copy--markdown', '5.3'],
-  ['editor · .peekover-table-filter[type=text]', '5.3'],
-  ['editor · .peekover-table-filter__clear', '5.3'],
-  ['editor · .peekover-table-sort', '5.3'],
   // 5.4 — panels (Stored data, Export, the code-theme picker)
   ['Stored data panel · .peekover-app__storage-slot', '5.4'],
   ['Stored data panel · .peekover-storage__capture-row > input[type=checkbox]', '5.4'],

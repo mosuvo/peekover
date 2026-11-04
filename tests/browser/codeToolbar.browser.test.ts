@@ -29,6 +29,9 @@ import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
+import { editorSessionFor, teardownEditorShell } from '../../src/render/editorView';
+import { backdropOf, inkOf, parseColor, ratioOver, TEXT_BAR } from './helpers/contrast';
 import {
   CODE_STATE_ATTR,
   CODE_WRAPPER_CLASS,
@@ -801,3 +804,188 @@ describe('real clipboard — unstubbed, consent-gated (D-10)', () => {
   });
 });
 
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// 013 TASK 5.3 — THE CODE TOOLBAR IS THE MOCKUP'S COPY BUTTON (gate-1 Q14; `mockup.html:154–156`)
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// Every button in the toolbar — Line numbers, Wrap, Copy — draws the mock's `.copy`: `--paper`, a
+// 1 px `--line` border, radius 7, 11.5 px / 600 in the UI face, 5 / 11 padding, `--muted` text,
+// `--ink` under the pointer. The states the mock does not draw are tokens too: a pressed toggle
+// `--ink` on `--accent-soft` with a `--faint` border; the "Copied" confirmation `--ink` on
+// `--ok-soft` with an `--ok` border (the mock's `--ok` TEXT is 3.37:1 on `--paper` in light — below
+// AA, G-5's logic); "Copy failed" `--del` (4.76 / 6.79). Focus is the reader's ring (`:host
+// :focus-visible`, 2 px `--accent`). Each state is read off the real engine, in both themes, on the
+// app page's reading view AND the editor's preview, and every text is >= 4.5:1 over what is painted
+// behind it. Behaviour is the file's other tests', unchanged.
+
+type Theme = 'light' | 'dark';
+type ButtonState = 'rest' | 'hover' | 'focus' | 'pressed' | 'done' | 'failed';
+
+/** A token's computed value, read off a probe beside `near` (so the theme in force there applies). */
+function tokenOf(near: Element, token: string, property: 'color' | 'font-family' = 'color'): string {
+  const probe = document.createElement('span');
+  probe.style.setProperty(property, `var(${token})`);
+  near.parentElement!.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const value = property === 'color' ? cs.color : cs.fontFamily;
+  probe.remove();
+  return value;
+}
+
+/** What the copy button looks like, as the engine paints it. Four borders must agree. */
+function lookOf(el: HTMLElement): Record<string, string> {
+  const cs = getComputedStyle(el);
+  const borders = new Set(
+    (['top', 'right', 'bottom', 'left'] as const).map(
+      (s) => `${cs.getPropertyValue(`border-${s}-style`)} ${cs.getPropertyValue(`border-${s}-width`)} ${cs.getPropertyValue(`border-${s}-color`)}`,
+    ),
+  );
+  return {
+    background: cs.backgroundColor,
+    border: [...borders].join(' | '),
+    radius: cs.borderTopLeftRadius,
+    font: `${cs.fontSize} ${cs.fontWeight}`,
+    padding: `${cs.paddingTop} ${cs.paddingRight}`,
+    face: cs.fontFamily,
+    colour: cs.color,
+  };
+}
+
+/** The mock's copy button in `state`, from the tokens in force beside `el`. */
+function copyButtonLook(el: HTMLElement, state: ButtonState): Record<string, string> {
+  const t = (name: string) => tokenOf(el, name);
+  const look = {
+    background: t('--paper'),
+    border: `solid 1px ${t('--line')}`,
+    radius: '7px',
+    font: '11.5px 600',
+    padding: '5px 11px',
+    face: tokenOf(el, '--sans', 'font-family'),
+    colour: t('--muted'),
+  };
+  if (state === 'hover') look.colour = t('--ink');
+  if (state === 'pressed') Object.assign(look, { colour: t('--ink'), background: t('--accent-soft'), border: `solid 1px ${t('--faint')}` });
+  if (state === 'done') Object.assign(look, { colour: t('--ink'), background: t('--ok-soft'), border: `solid 1px ${t('--ok')}` });
+  if (state === 'failed') Object.assign(look, { colour: t('--del'), border: `solid 1px ${t('--del')}` });
+  return look;
+}
+
+/** The text's contrast over what is painted behind it — the census's own measure. */
+const textRatio = (el: HTMLElement): number => ratioOver(inkOf(el), backdropOf(el)).ratio;
+/** Non-text (WCAG 1.4.11), recorded for 8.1: the border against what is behind the button. */
+const borderRatio = (el: HTMLElement): number =>
+  ratioOver(parseColor(getComputedStyle(el).borderTopColor), backdropOf(el, { skipSelf: true })).ratio;
+
+/** Put the pointer on a neutral node, so no state is a leftover hover. */
+async function pointerAway(shadow: ShadowRoot): Promise<void> {
+  await userEvent.hover(shadow.querySelector<HTMLElement>('h1, .peekover-reader p')!);
+}
+
+/** Focus `el` by keyboard: focus it, step back with Shift+Tab, then Tab onto it again. */
+async function tabOnto(el: HTMLElement): Promise<void> {
+  el.focus();
+  await userEvent.tab({ shift: true });
+  await userEvent.tab();
+}
+
+/** Assert one button in one state: the look first (the instrument), then its text's contrast. */
+async function expectCopyLook(label: string, el: HTMLElement, state: ButtonState): Promise<void> {
+  await sleep(220); // the copy button's colour transition (150 ms) settles
+  expect(lookOf(el), `${label} — ${state}: the mockup's copy button`).toEqual(copyButtonLook(el, state));
+  const ratio = textRatio(el);
+  console.log(`CONTRAST-5.3 ${label} · ${state} · text ${ratio.toFixed(2)} · border ${borderRatio(el).toFixed(2)}`);
+  expect(ratio, `${label} — ${state}: text >= 4.5:1 (${ratio.toFixed(2)})`).toBeGreaterThanOrEqual(TEXT_BAR);
+}
+
+/** Walk the three buttons of the first toolbar under `root` through every state they have. */
+async function walkToolbar(shadow: ShadowRoot, root: ParentNode, where: string): Promise<void> {
+  const toolbar = root.querySelector<HTMLElement>(`.${CODE_TOOLBAR_CLASS}`)!;
+  const buttons = [
+    ['Line numbers', toolbar.querySelector<HTMLButtonElement>(`.${CODE_LINE_NUMBERS_CLASS}`)!],
+    ['Wrap', toolbar.querySelector<HTMLButtonElement>(`.${CODE_WRAP_CLASS}`)!],
+    ['Copy', toolbar.querySelector<HTMLButtonElement>(`.${CODE_COPY_CLASS}`)!],
+  ] as const;
+  for (const [name, button] of buttons) {
+    const label = `${where} · ${name}`;
+    button.scrollIntoView({ block: 'center' });
+    await pointerAway(shadow);
+    await expectCopyLook(label, button, 'rest');
+    await userEvent.hover(button);
+    await expectCopyLook(label, button, 'hover');
+    await pointerAway(shadow);
+    await tabOnto(button);
+    expect(shadow.activeElement, `${label}: Tab reaches it`).toBe(button);
+    const ring = getComputedStyle(button);
+    expect(`${ring.outlineStyle} ${ring.outlineWidth} ${ring.outlineColor}`, `${label}: the focus ring`).toBe(
+      `solid 2px ${tokenOf(button, '--accent')}`,
+    );
+    await expectCopyLook(label, button, 'focus');
+    button.blur();
+    if (name === 'Copy') {
+      await userEvent.click(button);
+      await settled(() => expect(button.getAttribute(CODE_COPY_STATE_ATTR)).toBe('done'));
+      await pointerAway(shadow);
+      await expectCopyLook(label, button, 'done');
+      clipboard.refuse();
+      await userEvent.click(button);
+      await settled(() => expect(button.getAttribute(CODE_COPY_STATE_ATTR)).toBe('failed'));
+      await pointerAway(shadow);
+      await expectCopyLook(label, button, 'failed');
+    } else {
+      await userEvent.click(button);
+      expect(button.getAttribute('aria-pressed')).toBe('true');
+      await pointerAway(shadow);
+      await expectCopyLook(label, button, 'pressed');
+      await userEvent.click(button); // back to off — behaviour unchanged, only the look is under test
+      expect(button.getAttribute('aria-pressed')).toBe('false');
+    }
+  }
+}
+
+const LOOK_DOC = '# Look\n\nA paragraph.\n\n## Two\n\n' + fence('javascript', 'const answer = 42;');
+
+describe('013 5.3 — the code toolbar is the mockup’s copy button, every state, both themes', () => {
+  beforeEach(async () => {
+    await page.viewport(1440, 900);
+  });
+  afterEach(async () => {
+    setThemeSetting('auto');
+    resetThemeWatchForTest();
+    await page.viewport(414, 896);
+  });
+
+  for (const theme of ['light', 'dark'] as const satisfies readonly Theme[]) {
+    it(`the app page's reading view — ${theme}`, async () => {
+      setThemeSetting(theme);
+      const { host, shadow } = await appPageReader(LOOK_DOC);
+      setThemeSetting(theme); // again: the shell's settings load (this file's store has none) resets it
+      await waitFor(() => host.getAttribute('data-theme') === theme);
+      await allSettled(shadow);
+      await walkToolbar(shadow, shadow, `app page · ${theme}`);
+    });
+
+    it(`the editor's preview — ${theme}`, async () => {
+      setThemeSetting(theme);
+      const { host, shadow } = await appPageReader(LOOK_DOC);
+      setThemeSetting(theme); // again: the shell's settings load (this file's store has none) resets it
+      await waitFor(() => host.getAttribute('data-theme') === theme);
+      const shell = host.closest('.peekover-app')!;
+      shell.querySelector<HTMLButtonElement>('.peekover-toolbar__seg [data-mode="edit"]')!.click();
+      await waitFor(() => host.getAttribute('data-mode') === 'edit');
+      await waitFor(() => editorSessionFor(host));
+      // The preview is mount() on a NESTED host with its own shadow root (editorView.ts).
+      const previewShadow = await waitFor(() => {
+        const nested = shadow.querySelector<HTMLElement>('.peekover-editor__preview-host')?.shadowRoot;
+        const toolbar = nested?.querySelector<HTMLElement>(`.${CODE_TOOLBAR_CLASS}`);
+        return nested && toolbar && toolbar.getClientRects().length > 0 ? nested : null;
+      });
+      try {
+        await allSettled(previewShadow);
+        await walkToolbar(previewShadow, previewShadow, `editor preview · ${theme}`);
+      } finally {
+        teardownEditorShell(host);
+      }
+    });
+  }
+});

@@ -62,7 +62,7 @@
 // provisions it (`appShell.ts:939`). That line is what site 2's arm is really testing.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { userEvent } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
 import { TABLE_TOOLBAR_CLASS, TABLE_STATE_ATTR } from '../../src/render/tableEnhancer';
@@ -86,6 +86,8 @@ import { resetWatchControlsForTest } from '../../src/watch/watchControl';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
+import { backdropOf, inkOf, parseColor, ratioOver, TEXT_BAR } from './helpers/contrast';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────────────────────
 
@@ -968,4 +970,198 @@ describe('4.1 · site 4 — the controls reach the CURRENT table after a content
     expect(columnText(table, 2)).toEqual(['2', '9', '10']);
     expect(ariaSortOf(table)[2]).toBe('ascending');
   });
+});
+
+// ══ 013 TASK 5.3 — THE TABLE'S CONTROLS FROM TOKENS (gate-1 Q14; carried (f)) ═════════════════
+//
+// The filter field, its Clear, the sort buttons and Copy CSV / Copy Markdown used to be the
+// browser's own controls (2 px outset, light grey, the system face — in dark too). Now: Clear and
+// the two copies are the mock's copy button (`mockup.html:154–156`); the field is a `--paper` box
+// with a 1 px `--line` border, radius 7, `--ink` text in the UI face; the sort button is the mock's
+// header (`:145–147`) — it takes the `<th>`'s own type and colour, `--ink` under the pointer and
+// while it is the sorted column, its glyph `--accent`. Both surfaces that build the toolbar (the
+// app page and the content-script reader), both themes; every text >= 4.5:1 in every state.
+// Behaviour is the file's other tests', unchanged.
+
+type TableState = 'rest' | 'hover' | 'focus';
+
+function tokenOf(near: Element, token: string, property: 'color' | 'font-family' = 'color'): string {
+  const probe = document.createElement('span');
+  probe.style.setProperty(property, `var(${token})`);
+  near.parentElement!.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const value = property === 'color' ? cs.color : cs.fontFamily;
+  probe.remove();
+  return value;
+}
+
+function lookOf(el: HTMLElement): Record<string, string> {
+  const cs = getComputedStyle(el);
+  const borders = new Set(
+    (['top', 'right', 'bottom', 'left'] as const).map(
+      (s) => `${cs.getPropertyValue(`border-${s}-style`)} ${cs.getPropertyValue(`border-${s}-width`)} ${cs.getPropertyValue(`border-${s}-color`)}`,
+    ),
+  );
+  return {
+    background: cs.backgroundColor,
+    border: [...borders].join(' | '),
+    radius: cs.borderTopLeftRadius,
+    font: `${cs.fontSize} ${cs.fontWeight}`,
+    padding: `${cs.paddingTop} ${cs.paddingRight}`,
+    face: cs.fontFamily,
+    colour: cs.color,
+  };
+}
+
+/** The mock's copy button (codeToolbar.browser.test.ts's spec, this file's own copy). */
+function copyButtonLook(el: HTMLElement, state: TableState): Record<string, string> {
+  const t = (name: string) => tokenOf(el, name);
+  return {
+    background: t('--paper'),
+    border: `solid 1px ${t('--line')}`,
+    radius: '7px',
+    font: '11.5px 600',
+    padding: '5px 11px',
+    face: tokenOf(el, '--sans', 'font-family'),
+    colour: state === 'hover' ? t('--ink') : t('--muted'),
+  };
+}
+
+/** The filter field: a `--paper` box, `--line` border (`--faint` under the pointer), `--ink` text. */
+function fieldLook(el: HTMLElement, state: TableState): Record<string, string> {
+  const t = (name: string) => tokenOf(el, name);
+  return {
+    background: t('--paper'),
+    border: `solid 1px ${state === 'hover' ? t('--faint') : t('--line')}`,
+    radius: '7px',
+    font: '12px 400',
+    padding: '5px 9px',
+    face: tokenOf(el, '--sans', 'font-family'),
+    colour: t('--ink'),
+  };
+}
+
+const textRatio = (el: HTMLElement): number => ratioOver(inkOf(el), backdropOf(el)).ratio;
+const borderRatio = (el: HTMLElement): number =>
+  ratioOver(parseColor(getComputedStyle(el).borderTopColor), backdropOf(el, { skipSelf: true })).ratio;
+
+async function expectLook(label: string, el: HTMLElement, state: TableState, want: Record<string, string>): Promise<void> {
+  await sleep(220);
+  expect(lookOf(el), `${label} — ${state}`).toEqual(want);
+  const ratio = textRatio(el);
+  console.log(`CONTRAST-5.3 ${label} · ${state} · text ${ratio.toFixed(2)} · border ${borderRatio(el).toFixed(2)}`);
+  expect(ratio, `${label} — ${state}: text >= 4.5:1 (${ratio.toFixed(2)})`).toBeGreaterThanOrEqual(TEXT_BAR);
+}
+
+function expectRing(label: string, el: HTMLElement): void {
+  const cs = getComputedStyle(el);
+  expect(`${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`, `${label}: the focus ring`).toBe(
+    `solid 2px ${tokenOf(el, '--accent')}`,
+  );
+}
+
+async function tabOnto(shadow: ShadowRoot, el: HTMLElement, label: string): Promise<void> {
+  el.focus();
+  await userEvent.tab({ shift: true });
+  await userEvent.tab();
+  expect(shadow.activeElement, `${label}: Tab reaches it`).toBe(el);
+}
+
+const TABLE_SURFACES = [
+  ['app page', openViaInitialSelect],
+  ['content-script reader', openViaContentMount],
+] as const;
+
+describe('013 5.3 · the table’s controls are drawn from tokens, every state, both themes', () => {
+  beforeEach(async () => {
+    await page.viewport(1440, 900);
+  });
+  afterEach(async () => {
+    setThemeSetting('auto');
+    resetThemeWatchForTest();
+    await page.viewport(414, 896);
+  });
+
+  for (const [surface, open] of TABLE_SURFACES) {
+    for (const theme of ['light', 'dark'] as const) {
+      it(`${surface} — ${theme}`, async () => {
+        setThemeSetting(theme);
+        const host = await open(SORT_DOC);
+        setThemeSetting(theme); // again: the app shell's settings load (this file's store has none) resets it
+        await waitFor(() => host.getAttribute('data-theme') === theme);
+        const shadow = host.shadowRoot!;
+        const table = tablesIn(host)[0];
+        const toolbar = toolbarsIn(host)[0];
+        table.scrollIntoView({ block: 'center' });
+        const away = columnOf(host).querySelector<HTMLElement>('h1')!;
+        const where = `${surface} · ${theme}`;
+
+        // The buttons in the strip: Clear, Copy CSV, Copy Markdown — the copy button. By class alone.
+        for (const button of toolbar.querySelectorAll<HTMLElement>('.peekover-table-filter__clear, .peekover-table-copy')) {
+          const label = `${where} · ${button.textContent}`;
+          await userEvent.hover(away);
+          await expectLook(label, button, 'rest', copyButtonLook(button, 'rest'));
+          await userEvent.hover(button);
+          await expectLook(label, button, 'hover', copyButtonLook(button, 'hover'));
+          await userEvent.hover(away);
+          await tabOnto(shadow, button, label);
+          expectRing(label, button);
+          await expectLook(label, button, 'focus', copyButtonLook(button, 'focus'));
+          button.blur();
+        }
+
+        // The filter field, at rest, under the pointer, focused and typed into; its "Filter" label.
+        const field = toolbar.querySelector<HTMLInputElement>(`.${FILTER_FIELD_CLASS}`)!;
+        const fieldLabel = `${where} · the filter field`;
+        await expectLook(fieldLabel, field, 'rest', fieldLook(field, 'rest'));
+        await userEvent.hover(field);
+        await expectLook(fieldLabel, field, 'hover', fieldLook(field, 'hover'));
+        await userEvent.hover(away);
+        await tabOnto(shadow, field, fieldLabel);
+        expectRing(fieldLabel, field);
+        await userEvent.keyboard('e');
+        await expectLook(fieldLabel, field, 'focus', fieldLook(field, 'focus'));
+        await userEvent.keyboard('{Backspace}');
+        field.blur();
+        const labelText = field.closest('label')!.querySelector<HTMLElement>('span')!;
+        const labelRatio = textRatio(labelText);
+        console.log(`CONTRAST-5.3 ${where} · the "Filter" label · rest · text ${labelRatio.toFixed(2)}`);
+        expect(labelRatio, `${where}: the "Filter" label >= 4.5:1`).toBeGreaterThanOrEqual(TEXT_BAR);
+
+        // The sort buttons: the <th>'s own type and colour; --ink under the pointer and while sorted.
+        const th = headerCellsOf(table)[2];
+        const sort = sortButtonsIn(table)[2];
+        const sortLabel = `${where} · sort "${th.textContent?.trim()}"`;
+        const sortLook = (state: 'rest' | 'ink'): Record<string, string> => {
+          const thStyle = getComputedStyle(th);
+          return {
+            background: 'rgba(0, 0, 0, 0)',
+            border: `none 0px ${state === 'rest' ? tokenOf(sort, '--muted') : tokenOf(sort, '--ink')}`,
+            radius: '4px',
+            font: `${thStyle.fontSize} ${thStyle.fontWeight}`,
+            padding: '0px 0px',
+            face: thStyle.fontFamily,
+            colour: state === 'rest' ? tokenOf(sort, '--muted') : tokenOf(sort, '--ink'),
+          };
+        };
+        await userEvent.hover(away);
+        await expectLook(sortLabel, sort, 'rest', sortLook('rest'));
+        expect(getComputedStyle(sort).textTransform, `${sortLabel}: the header's caps`).toBe('uppercase');
+        await userEvent.hover(sort);
+        await expectLook(sortLabel, sort, 'hover', sortLook('ink'));
+        await userEvent.hover(away);
+        await tabOnto(shadow, sort, sortLabel);
+        expectRing(sortLabel, sort);
+        await expectLook(sortLabel, sort, 'focus', sortLook('rest'));
+        await userEvent.keyboard('{Enter}');
+        expect(th.getAttribute('aria-sort')).toBe('ascending');
+        sort.blur();
+        await expectLook(`${sortLabel} · sorted`, sort, 'rest', sortLook('ink'));
+        const glyph = sort.querySelector<HTMLElement>(`.${SORT_GLYPH_CLASS}`)!;
+        expect(getComputedStyle(glyph).color, `${sortLabel}: the glyph is --accent`).toBe(tokenOf(sort, '--accent'));
+        const state = sort.querySelector<HTMLElement>(`.${SORT_STATE_CLASS}`)!;
+        expect(state.textContent, 'the painted direction is kept (D-12 divergence 2)').toBe(' ascending');
+      });
+    }
+  }
 });

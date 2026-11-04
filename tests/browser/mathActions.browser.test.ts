@@ -122,6 +122,7 @@ import {
 } from '../../src/render/mathView';
 import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
+import { backdropOf, inkOf, parseColor, ratioOver, TEXT_BAR } from './helpers/contrast';
 
 // RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
 // its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
@@ -1001,4 +1002,169 @@ describe('6.1-R/6.2-R · the manifest asked for nothing, not even after a real c
       }
     },
   );
+});
+
+// ══ 013 TASK 5.3 — DISPLAY MATH LOSES THE CODE TOOLBAR; ITS TWO ACTIONS ARE THE COPY BUTTON ════
+//
+// gate-1 Q14, carried (g): a display formula (`$$…$$` or a ```` ```math ```` fence — both
+// `language-math`) used to be wrapped by the CODE enhancer too, so it wore "math · Line numbers ·
+// Wrap · Copy" above it. It now carries only its own Copy LaTeX / Copy MathML (carried (f)), drawn
+// exactly as the code toolbar's Copy (`mockup.html:154–156`) in every state. What is copied is
+// unchanged — the 6.1-R tests above, plus a byte check here beside a code block.
+
+/** A formula, a code block and a ```math fence — so the toolbar count can tell code from math. */
+const MIXED_DOC = '# Mixed\n\nText.\n\n$$\nE = mc^2\n$$\n\n```javascript\nconst a = 1;\n```\n\n```math\na^2 + b^2\n```\n';
+
+type LookState = 'rest' | 'hover' | 'focus' | 'done' | 'failed';
+
+/** A token's computed value, read off a probe beside `near`. */
+function tokenOf(near: Element, token: string, property: 'color' | 'font-family' = 'color'): string {
+  const probe = document.createElement('span');
+  probe.style.setProperty(property, `var(${token})`);
+  near.parentElement!.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const value = property === 'color' ? cs.color : cs.fontFamily;
+  probe.remove();
+  return value;
+}
+
+/** What a button looks like, as the engine paints it. Four borders must agree. */
+function lookOf(el: HTMLElement): Record<string, string> {
+  const cs = getComputedStyle(el);
+  const borders = new Set(
+    (['top', 'right', 'bottom', 'left'] as const).map(
+      (s) => `${cs.getPropertyValue(`border-${s}-style`)} ${cs.getPropertyValue(`border-${s}-width`)} ${cs.getPropertyValue(`border-${s}-color`)}`,
+    ),
+  );
+  return {
+    background: cs.backgroundColor,
+    border: [...borders].join(' | '),
+    radius: cs.borderTopLeftRadius,
+    font: `${cs.fontSize} ${cs.fontWeight}`,
+    padding: `${cs.paddingTop} ${cs.paddingRight}`,
+    face: cs.fontFamily,
+    colour: cs.color,
+  };
+}
+
+/** The mock's copy button in `state` (codeToolbar.browser.test.ts's spec, this file's own copy). */
+function copyButtonLook(el: HTMLElement, state: LookState): Record<string, string> {
+  const t = (name: string) => tokenOf(el, name);
+  const look = {
+    background: t('--paper'),
+    border: `solid 1px ${t('--line')}`,
+    radius: '7px',
+    font: '11.5px 600',
+    padding: '5px 11px',
+    face: tokenOf(el, '--sans', 'font-family'),
+    colour: t('--muted'),
+  };
+  if (state === 'hover') look.colour = t('--ink');
+  if (state === 'done') Object.assign(look, { colour: t('--ink'), background: t('--ok-soft'), border: `solid 1px ${t('--ok')}` });
+  if (state === 'failed') Object.assign(look, { colour: t('--del'), border: `solid 1px ${t('--del')}` });
+  return look;
+}
+
+const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+async function expectCopyLook(label: string, el: HTMLElement, state: LookState): Promise<void> {
+  await sleepMs(220);
+  expect(lookOf(el), `${label} — ${state}: the mockup's copy button`).toEqual(copyButtonLook(el, state));
+  const ratio = ratioOver(inkOf(el), backdropOf(el)).ratio;
+  const border = ratioOver(parseColor(getComputedStyle(el).borderTopColor), backdropOf(el, { skipSelf: true })).ratio;
+  console.log(`CONTRAST-5.3 ${label} · ${state} · text ${ratio.toFixed(2)} · border ${border.toFixed(2)}`);
+  expect(ratio, `${label} — ${state}: text >= 4.5:1 (${ratio.toFixed(2)})`).toBeGreaterThanOrEqual(TEXT_BAR);
+}
+
+/** A clipboard that refuses every write, for the "Copy failed" state; returns the restore. */
+function refusingClipboard(): () => void {
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: async () => Promise.reject(new Error('clipboard write refused')) },
+  });
+  return () => Reflect.deleteProperty(navigator, 'clipboard');
+}
+
+describe('013 5.3 · display math carries no code toolbar (gate-1 Q14; carried (g))', () => {
+  it('a $$ block and a ```math fence carry NONE; the code fence keeps its own, named Code block 1', async () => {
+    const { shadow } = await appPageReader(MIXED_DOC);
+    await settleMath(shadow, 2);
+    // Selected BY CLASS ALONE — a tag-qualified selector could not see a toolbar that changed tag.
+    const toolbars = [...shadow.querySelectorAll<HTMLElement>('.peekover-code-toolbar')];
+    const labels = toolbars.map((t) => t.querySelector('.peekover-code-toolbar__lang')?.textContent ?? '(no label)');
+    expect(labels, 'one code toolbar per CODE fence — display math carries none').toEqual(['javascript']);
+    const figures = [...shadow.querySelectorAll<HTMLElement>(FIGURE_SELECTOR)];
+    expect(figures).toHaveLength(2);
+    for (const [i, figure] of figures.entries()) {
+      expect(figure.getAttribute(MATH_STATE_ATTR), `formula ${i + 1} rendered`).toBe('rendered');
+      const source = figure.previousElementSibling;
+      expect(source?.tagName, `formula ${i + 1}: its source <pre> sits right before it, in no code wrapper`).toBe('PRE');
+      expect(source?.closest('.peekover-code'), `formula ${i + 1}: not inside a code block`).toBeNull();
+      expect(buttonsIn(figure).map((b) => b.textContent)).toEqual(['Copy LaTeX', 'Copy MathML']);
+    }
+    // The code block's names count code blocks only, so the one after a formula is "Code block 1".
+    expect(toolbars[0].querySelector('.peekover-code-toolbar__copy')?.getAttribute('aria-label')).toBe(
+      'Code block 1. Activate to copy it.',
+    );
+  });
+
+  it('Copy LaTeX still copies each formula’s exact retained source beside a code block (real clipboard)', async () => {
+    const { shadow } = await appPageReader(MIXED_DOC);
+    await settleMath(shadow, 2);
+    const [dollar, fenced] = [...shadow.querySelectorAll<HTMLElement>(FIGURE_SELECTOR)];
+    await ensureClipboardWritable();
+    expect(await clickAndSettle(dollar, latexButtonIn(dollar))).toBe('Formula 1 copied as LaTeX.');
+    expect(crlfToLf(await navigator.clipboard.readText())).toBe('E = mc^2\n');
+    expect(await clickAndSettle(fenced, latexButtonIn(fenced))).toBe('Formula 2 copied as LaTeX.');
+    expect(crlfToLf(await navigator.clipboard.readText())).toBe('a^2 + b^2\n');
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`Copy LaTeX / Copy MathML draw the code toolbar's Copy in every state — ${theme}`, async () => {
+      setThemeSetting(theme);
+      const { host, shadow } = await appPageReader(MIXED_DOC);
+      await waitFor(() => host.getAttribute('data-theme') === theme);
+      await settleMath(shadow, 2);
+      const away = shadow.querySelector<HTMLElement>('h1')!;
+      const codeCopy = shadow.querySelector<HTMLElement>('.peekover-code-toolbar__copy')!;
+      const figure = shadow.querySelector<HTMLElement>(FIGURE_SELECTOR)!;
+      figure.scrollIntoView({ block: 'center' });
+      for (const button of buttonsIn(figure)) {
+        const label = `math · ${button.textContent} · ${theme}`;
+        await userEvent.hover(away);
+        // "Styled like the copy button": its look at rest IS the code toolbar's Copy, read side by side.
+        expect(lookOf(button), `${label}: the code toolbar's Copy, at rest`).toEqual(lookOf(codeCopy));
+        await expectCopyLook(label, button, 'rest');
+        await userEvent.hover(button);
+        await expectCopyLook(label, button, 'hover');
+        await userEvent.hover(away);
+        // By keyboard: Tab off it and Shift+Tab back (nothing focusable precedes the first formula in
+        // this harness's bare pane, so stepping back first would leave the page).
+        button.focus();
+        await userEvent.tab();
+        await userEvent.tab({ shift: true });
+        expect(shadow.activeElement, `${label}: the keyboard reaches it`).toBe(button);
+        const ring = getComputedStyle(button);
+        expect(`${ring.outlineStyle} ${ring.outlineWidth} ${ring.outlineColor}`, `${label}: the focus ring`).toBe(
+          `solid 2px ${tokenOf(button, '--accent')}`,
+        );
+        await expectCopyLook(label, button, 'focus');
+        button.blur();
+        await ensureClipboardWritable();
+        await clickAndSettle(figure, button);
+        expect(button.getAttribute(MATH_ACTION_STATE_ATTR)).toBe('done');
+        await userEvent.hover(away);
+        await expectCopyLook(label, button, 'done');
+        const restore = refusingClipboard();
+        try {
+          await clickAndSettle(figure, button);
+        } finally {
+          restore();
+        }
+        expect(button.getAttribute(MATH_ACTION_STATE_ATTR)).toBe('failed');
+        await userEvent.hover(away);
+        await expectCopyLook(label, button, 'failed');
+      }
+    });
+  }
 });

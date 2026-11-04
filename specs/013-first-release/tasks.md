@@ -726,7 +726,7 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       pixel. **The sweep: pending 29 → 26 per engine.** The app page's and the editor's reader hosts (5.5) and the
       editor's preview host (5.7) are no longer scroll areas, so they pass. The kickoff expected 29 unchanged; flagged.
       Content script +366 B (CONTAINED_CSS only; with that file reverted it rebuilds to 5.2's md5), app chunk +414 B.
-- [ ] **5.3 Code, math and table buttons (gate-1 Q14; carried (f), (g)).** TEST FIRST. Code toolbar restyled to the
+- [x] **5.3 Code, math and table buttons (gate-1 Q14; carried (f), (g)).** TEST FIRST. Code toolbar restyled to the
       mockup's copy button (`:151–156`), Line numbers / Wrap / Copy kept; display math loses the code-block toolbar and
       keeps Copy LaTeX / MathML styled like the copy button; table filter-clear and sort buttons from tokens.
       Files: `src/theme/readerCss.ts` · the enhancer CSS / markup that attaches the toolbar to math (attachment only — no
@@ -734,6 +734,14 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       Verify: (**Cr+Fx**) a display-math block carries no code toolbar (selected by class alone; red-first: restore the
       attachment → present); Copy LaTeX still copies (specific-content clipboard match); sweep pending rows deleted.
       Bytes: content script moves — stated. Full suite. Golden EMPTY · manifest · `permissions: []`. [Q14]
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 5.3").* Line numbers / Wrap / Copy, Copy LaTeX / Copy MathML, Clear
+      and Copy CSV / Markdown are the mock's copy button (`--paper`, 1 px `--line`, radius 7, 11.5 px / 600, `--muted` →
+      `--ink`); the filter field a `--paper` box; the sort button the mock's header (`--ink` hovered or sorted, glyph
+      `--accent`). The "Copied" state is `--ink` on `--ok-soft` with an `--ok` border (the mock's `--ok` text is 3.37:1 in
+      light). Display math: `codeEnhancer.ts` skips a `language-math` fence as it skips mermaid (attachment only; the code
+      blocks' "Code block N" now count code blocks only). Text ≥ 4.5:1 in every state (lowest 4.76). **The sweep: its 16
+      rows deleted, 10 per engine left.** The toolbar stays in flow (§3.11), not over the pre as the mock draws it.
+      Content script +1,496 B (all `READER_CSS`), app chunk +1,583 B.
 - [ ] **5.8 The Peekover code theme — the default, built from design tokens, following the page theme (DISCOVERED
       2026-11-01; the human's 2.2 ruling, `decisions.md` "M13 RULING — the Peekover code theme"; count 41 → 42).** TEST
       FIRST. A light/dark code theme drawn from tokens, as `design/mockup.html` shows (`:152` `.codeblock pre` on

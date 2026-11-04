@@ -239,6 +239,15 @@ retired while its function has no other test. Function by function:
   Outside the census: `tocScroll` gains 5.2a's tests; `nativeControls` deletes 3 pending rows that now pass (the reader
   hosts and the preview host are no longer scroll areas) — 26 per engine.
 
+- **5.3** (2026-11-04 — code, math and table buttons): no row first-breaks. The code toolbar's buttons, the math actions
+  and the table controls change look only; display math loses the code toolbar (a `language-math` fence is no longer a
+  code-highlighting candidate). **KEPT, unchanged and green** (each still states its property): C090 (the code toolbar
+  above its pre), C091 (it clears the TOC rail), C092 (copy, line numbers, wrap, highlight, a11y, clipboard), C254 (the
+  math control group, LaTeX / MathML payloads, content-script absence), C255–C257 (the document-level formula actions),
+  C282–C285 (`tableScope`), C286–C291 (`tableTools`). **Retired:** none. Outside the census: `codeToolbar`,
+  `mathActions` and `tableTools` gain 5.3's look tests (and math's no-toolbar test); `nativeControls` deletes its 16
+  5.3 rows — 10 per engine left.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).
