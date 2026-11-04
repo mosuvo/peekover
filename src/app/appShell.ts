@@ -115,7 +115,7 @@ import {
   setSnapshotNoticeDismissed as defaultSetSnapshotNoticeDismissed,
 } from './store';
 import { getCaptureFlag, setCaptureFlag } from './captureFlag';
-import { createTreeView } from './treeView';
+import { createTreeView, type TreeViewController } from './treeView';
 import { detectorForFile } from '../watch/detectorForFile';
 import {
   createWatchController,
@@ -466,7 +466,7 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * toolbar (`position:static` on its wrapper, toolbar.ts). Pinned by tests/browser/toolbar.browser.test.ts
  * ("the header panels stay inside the window").
  *
- * ≤ 1281 px, THE FILES OVERLAY (013 task 4.8, D-10; gate-1 Q12; the approved 3.1 mock). While a
+ * ≤ 1189 px, THE FILES OVERLAY (013 task 4.8, D-10; gate-1 Q12; the approved 3.1 mock). While a
  * document is open the folder pane leaves the row and sits over the reader's left edge, closed until
  * "Files" opens it: `min(300px, 86%)` wide (the mock's), inside `__body` — so the toolbar above and
  * the status line below stay clear — with a scrim over the rest of the body (fixed ink, so it darkens
@@ -612,8 +612,8 @@ ${statusLineCss(SHELL_CLASS)}
 
 .${SHELL_CLASS}__body{flex:1 1 auto; display:flex; min-height:0}
 .${SHELL_CLASS}__folders{
-  flex:0 0 clamp(220px,28%,320px); min-width:0; overflow:auto;
-  border-right:1px solid var(--line); background:var(--panel); padding:1rem;
+  flex:0 0 228px; min-width:0; overflow:auto; scrollbar-color:var(--faint) transparent;
+  border-right:1px solid var(--line); background:var(--paper); padding:22px 12px;
 }
 .${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; padding:1.5rem}
 @media screen and (max-width:${FILES_OVERLAY_MAX}px){
@@ -652,20 +652,15 @@ ${statusLineCss(SHELL_CLASS)}
 }
 .${SHELL_CLASS}__chip-prefix{color:var(--muted)}
 .${SHELL_CLASS}__chip-name{color:var(--ink); font-weight:600; word-break:break-word}
-.${SHELL_CLASS}__chip-revoke{
-  font:inherit; font-size:.78rem; color:var(--ink); background:transparent;
-  border:1px solid var(--line); border-radius:999px; padding:.1rem .55rem; cursor:pointer;
+.${SHELL_CLASS}__chip-revoke,.${SHELL_CLASS}__pin{
+  font:600 12.5px/1 var(--sans); color:var(--muted); background:var(--panel);
+  border:1px solid var(--line); border-radius:8px; padding:7px 11px; cursor:pointer; transition:transform .15s,color .15s;
 }
-.${SHELL_CLASS}__chip-revoke:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__chip-revoke:hover,.${SHELL_CLASS}__pin:hover{color:var(--ink); transform:translateY(-1px)}
 
 /* Pin bar — "Pin this folder" / "Pin <file>" while a folder is open. */
 .${SHELL_CLASS}__pinbar{display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.7rem}
-.${SHELL_CLASS}__pin{
-  font:inherit; font-size:.78rem; color:var(--ink); background:var(--paper);
-  border:1px solid var(--line); border-radius:999px; padding:.15rem .6rem; cursor:pointer;
-}
-.${SHELL_CLASS}__pin:hover{background:var(--accent-soft)}
-.${SHELL_CLASS}__pin:disabled{opacity:.6; cursor:default}
+.${SHELL_CLASS}__pin:disabled{opacity:.6; cursor:default; transform:none}
 
 /* Print mode (010 D-7, task 6.1's necessary ripple — rationale: readerCss.ts's own print-mode .ts
    comment, "THE DE-CLIPPING FIX" section). readerCss.ts's shadow-scoped rules cannot reach these
@@ -1100,6 +1095,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // The open folder's source (for pinning) + the last-selected file (for pinning that file).
   let activeSource: FolderSource | null = null;
   let activeFile: MarkdownFile | null = null;
+  // The open folder's tree, so the open file's row can follow the reader (5.1: the open row).
+  let treeView: TreeViewController | null = null;
   // The folder file whose text the reader is SHOWING: set as each select's render commits, so the
   // last one painted wins. Behind `activeFile` while a newly selected file is still being read.
   let renderedFile: MarkdownFile | null = null;
@@ -1558,6 +1555,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
    *  every assignment site below goes through this instead of setting `activeFile` bare. */
   function setActiveFile(file: MarkdownFile | null): void {
     activeFile = file;
+    treeView?.setCurrent(file?.path ?? null);
     if (!file) renderedFile = null;
     exportToggle.disabled = activeFile == null;
   }
@@ -2049,6 +2047,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     activeSource = null;
     setActiveFile(null);
     pinBarEl = null;
+    treeView = null;
 
     const wrap = doc.createElement('div');
     wrap.className = `${SHELL_CLASS}__empty`;
@@ -2120,11 +2119,12 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     pinBarEl.className = `${SHELL_CLASS}__pinbar`;
     wrap.append(pinBarEl);
 
-    const treeView = createTreeView(doc, {
+    treeView = createTreeView(doc, {
       files: source.files,
       truncated: source.truncated,
       onSelect: (file) => void guarded(() => selectFolderFile(file)),
     });
+    treeView.setCurrent(activeFile?.path ?? null);
     wrap.append(treeView.element);
 
     // The reopen hub also shows here so pins/recents stay reachable while a folder is open.

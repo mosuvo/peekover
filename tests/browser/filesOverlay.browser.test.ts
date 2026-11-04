@@ -1,15 +1,16 @@
 // filesOverlay — the real-engine half of 013 task 4.8 (D-10; gate-1 Q12; the approved 3.1 mock), Chromium AND Firefox.
 //
 // THE BREAKPOINT, MEASURED (`decisions.md` "M13 TASK 4.8" and "M13 TASK 4.8 FIX"): the narrowest width keeping >= 60ch
-// of reading text beside the folder pane, with the TOC rail open (its default there), is 1282 px — set by Chromium on
-// Linux, which draws Literata's "0" at a whole 10 px (60ch = 600 px; 590.6 / 591 px on Windows). So at <= 1281 px,
+// of reading text beside the 228 px folder pane (013 task 5.1; 1282 beside 4.8's 320 px pane), with the TOC rail open
+// (its default there), is 1190 px — set by Chromium on Linux, which draws Literata's "0" at a whole 10 px (60ch = 600 px;
+// 590.6 / 591 px on Windows). So at <= 1189 px,
 // while a document is open, the pane is an overlay behind "Files". Above it the pane stays in the row, "Files" hidden.
 // Every ch-based check first proves the paragraph is DRAWN in Literata (`literataDrawn`), and its message names the
 // font it saw: a font-dependent red explains itself.
 //
-// What is proven, in both themes, at 414 and 1281 (overlay) and 1282 and 1440 (sidebar):
+// What is proven, in both themes, at 414 and 1189 (overlay) and 1190 and 1440 (sidebar):
 //   • "Files" shows exactly where the overlay applies; the pane is out of the row there and the reading column keeps
-//     its full measure (684 px of text) at 1281; above it the pane sits beside the reader;
+//     its full measure (684 px of text) at 1189; above it the pane sits beside the reader;
 //   • "Files" opens the pane over the reader: focus moves in, Tab and Shift+Tab stay inside, nothing in the toolbar
 //     moves, the status line is not covered; it closes three ways — Escape and the scrim (focus back on "Files"),
 //     and a press on another toolbar control (that control keeps it);
@@ -21,6 +22,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
+import type { FolderRecord, PinRecord, RecentRecord } from '../../src/app/store';
+import { backdropOf, contrastRatio, inkOf, parseColor, ratioOver } from './helpers/contrast';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
 import { FILES_OVERLAY_MAX, TOOLBAR_CLASS } from '../../src/app/toolbar';
 import { STATUS_LINE_CLASS } from '../../src/app/statusLine';
@@ -182,7 +185,7 @@ const SIDEBAR_WIDTHS = [FILES_OVERLAY_MAX + 1, 1440];
 
 describe('4.8 — the breakpoint: "Files" and the overlay only at <= the measured width', () => {
   it('the measured value is the one shipped', () => {
-    expect(FILES_OVERLAY_MAX).toBe(1281);
+    expect(FILES_OVERLAY_MAX).toBe(1189);
   });
 
   it.each(THEMES.flatMap((t) => OVERLAY_WIDTHS.map((w) => [w, t] as const)))(
@@ -373,5 +376,129 @@ describe('4.8 — the compact toolbar keeps two rows with "Files" present', () =
     expect(files().getBoundingClientRect().right, '"Files" leads row 1').toBeLessThanOrEqual(brand.left + 0.5);
     const r = toolbar().getBoundingClientRect();
     expect(r.right <= innerWidth + 0.5 && r.left >= -0.5, 'inside the window').toBe(true);
+  });
+});
+
+// ── 5.1 — THE FOLDER PANE, RESTYLED (013 task 5.1; `mockup.html:74–87` rows / hover / active; the approved 3.1 mock's
+// pane — `toolbar-mock.html:123–126`, caps heads in --muted). The pane is 228 px in the row; its section heads are
+// caps; a row is --muted, --ink on --panel under the pointer, and the open file is --accent on --accent-soft at 600;
+// the search field and the pin / revoke / unpin buttons wear the mock's `.iconbtn` (--panel, a --line border, radius 8).
+// Every one of those texts, in each state, is >= 4.5:1 over what is painted behind it.
+const memStore = (theme: 'light' | 'dark'): AppStore => {
+  const rows = { folders: new Map<string, FolderRecord>(), recents: new Map<string, RecentRecord>(), pins: new Map<string, PinRecord>() };
+  return {
+    ...store(theme),
+    putFolder: async (r) => void rows.folders.set(r.id, r),
+    deleteFolder: async (id) => void rows.folders.delete(id),
+    getFolders: async () => [...rows.folders.values()],
+    putRecent: async (r) => void rows.recents.set(r.id, r),
+    getRecents: async () => [...rows.recents.values()],
+    deleteRecent: async (id) => void rows.recents.delete(id),
+    putPin: async (r) => void rows.pins.set(r.id, r),
+    getPins: async () => [...rows.pins.values()],
+    deletePin: async (id) => void rows.pins.delete(id),
+  };
+};
+
+/** A design token of the shell, resolved to the colour the engine computes for it. */
+function token(name: string): string {
+  const probe = document.createElement('i');
+  probe.style.color = `var(${name})`;
+  shell().append(probe);
+  const c = getComputedStyle(probe).color;
+  probe.remove();
+  return c;
+}
+const textRatio = (el: Element): number => ratioOver(inkOf(el), backdropOf(el)).ratio;
+const settle = (ms = 300): Promise<unknown> => new Promise((r) => setTimeout(r, ms));
+
+describe('5.1 — the folder pane, restyled', () => {
+  it.each(THEMES)('%s: the open row; 228 px; rows at rest and under the pointer; caps heads; the search field; pin buttons — every text >= 4.5:1', async (theme) => {
+    await page.viewport(1440, 900);
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    containers.push(container);
+    const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source: source() }), store: memStore(theme) });
+    await app.openFolder();
+    (await until(() => treeItem('alpha.md'), 'alpha.md in the tree')).click();
+    await until(() => openFile() === 'alpha.md' && host()?.getAttribute('data-theme') === theme, 'alpha.md open, themed');
+    (await until(() => container.querySelector<HTMLButtonElement>('.peekover-app__pin[data-pin="folder"]:not(:disabled)'), 'Pin this folder')).click();
+    await until(() => container.querySelector('.peekover-recents__unpin'), 'the Pinned section');
+    await settle(); // the hub re-renders as its load lands; colour transitions settle
+
+    // The open file is the one row drawn as open (the restyle's key rule; its instrument runs first).
+    const open = treeItem('alpha.md')!;
+    const rest = treeItem('beta.md')!;
+    expect([...pane().querySelectorAll('[aria-current]')], 'exactly one row is marked open').toEqual([open]);
+    expect(open.getAttribute('aria-current')).toBe('page');
+    const o = getComputedStyle(open);
+    expect([o.backgroundColor, o.color, o.fontWeight], 'the open row: --accent on --accent-soft, 600').toEqual([token('--accent-soft'), token('--accent'), '600']);
+    expect(textRatio(open), 'the open row text').toBeGreaterThanOrEqual(4.5);
+
+    // The pane: 228 px in the row, on --paper.
+    expect(pane().getBoundingClientRect().width, 'the pane is 228 px').toBeCloseTo(228, 1);
+    expect(getComputedStyle(pane()).backgroundColor).toBe(token('--paper'));
+
+    // A row at rest, then under the pointer.
+    const r = getComputedStyle(rest);
+    expect([r.backgroundColor, r.color], 'a row at rest: --muted, no fill').toEqual(['rgba(0, 0, 0, 0)', token('--muted')]);
+    expect(textRatio(rest), 'a row at rest').toBeGreaterThanOrEqual(4.5);
+    await userEvent.hover(rest);
+    await settle(250);
+    const h = getComputedStyle(rest);
+    expect([h.backgroundColor, h.color], 'a row under the pointer: --ink on --panel').toEqual([token('--panel'), token('--ink')]);
+    expect(textRatio(rest), 'a row under the pointer').toBeGreaterThanOrEqual(4.5);
+    await userEvent.unhover(rest);
+
+    // The section head: caps, --muted, 700, tracked (queried now: the hub re-renders as each load lands).
+    const head = pane().querySelector<HTMLElement>('.peekover-recents__title')!;
+    expect(head.isConnected && head.textContent, 'the Pinned head').toBe('Pinned');
+    const hd = getComputedStyle(head);
+    expect([hd.textTransform, hd.color, hd.fontWeight], 'a section head').toEqual(['uppercase', token('--muted'), '700']);
+    expect(parseFloat(hd.letterSpacing), 'tracked').toBeGreaterThan(0);
+    expect(textRatio(head), 'the section head').toBeGreaterThanOrEqual(4.5);
+
+    // The search field: the .iconbtn fill and border; its placeholder in --muted at full opacity.
+    const search = pane().querySelector<HTMLInputElement>('.peekover-tree__search')!;
+    const s = getComputedStyle(search);
+    expect([s.backgroundColor, s.borderTopStyle, s.borderTopWidth, s.borderTopColor, s.borderTopLeftRadius], 'the search field').toEqual([token('--panel'), 'solid', '1px', token('--line'), '8px']);
+    const ph = getComputedStyle(search, '::placeholder');
+    expect([ph.color, ph.opacity], 'the placeholder').toEqual([token('--muted'), '1']);
+    expect(contrastRatio(parseColor(ph.color), parseColor(s.backgroundColor)), 'the placeholder text').toBeGreaterThanOrEqual(4.5);
+
+    // Pin / revoke / unpin: the mock's .iconbtn.
+    const buttons = [
+      pane().querySelector<HTMLElement>('.peekover-app__pin[data-pin="file"]')!,
+      pane().querySelector<HTMLElement>('.peekover-app__chip-revoke')!,
+      pane().querySelector<HTMLElement>('.peekover-recents__unpin')!,
+    ];
+    for (const b of buttons) {
+      const cs = getComputedStyle(b);
+      expect(
+        [cs.backgroundColor, cs.color, cs.borderTopStyle, cs.borderTopWidth, cs.borderTopColor, cs.borderTopLeftRadius, cs.fontWeight, cs.fontSize],
+        `${b.className} "${b.textContent}" is an .iconbtn`,
+      ).toEqual([token('--panel'), token('--muted'), 'solid', '1px', token('--line'), '8px', '600', '12.5px']);
+      expect(textRatio(b), `${b.className} text`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('the open row follows the open file, and a search repaint keeps it', async () => {
+    await page.viewport(1440, 900);
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    containers.push(container);
+    const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source: source() }), store: store('light') });
+    await app.openFolder();
+    await until(() => treeItem('alpha.md'), 'alpha.md');
+    expect(pane().querySelector('[aria-current]'), 'nothing is open yet').toBeNull();
+    treeItem('alpha.md')!.click();
+    await until(() => treeItem('alpha.md')?.getAttribute('aria-current') === 'page', 'alpha.md marked open');
+    treeItem('beta.md')!.click();
+    await until(() => treeItem('beta.md')?.getAttribute('aria-current') === 'page', 'beta.md marked open');
+    expect(treeItem('alpha.md')!.hasAttribute('aria-current'), 'the previous file is no longer marked').toBe(false);
+    const search = pane().querySelector<HTMLInputElement>('.peekover-tree__search')!;
+    await userEvent.type(search, 'bet');
+    await until(() => !treeItem('alpha.md'), 'the search filtered');
+    expect(treeItem('beta.md')!.getAttribute('aria-current'), 'repainted, still marked').toBe('page');
   });
 });

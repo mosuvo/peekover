@@ -61,28 +61,26 @@ const RV_CSS = /* css */ `
 .${RV_CLASS}{display:flex; flex-direction:column; gap:1rem; min-width:0; margin-top:1.1rem}
 .${RV_CLASS}__section{display:flex; flex-direction:column; gap:.3rem; min-width:0}
 .${RV_CLASS}__title{
-  font-size:.72rem; text-transform:uppercase; letter-spacing:.06em;
-  color:var(--muted,#5D6070); font-weight:650;
+  margin:4px 8px 6px; font:700 10.5px/1.3 var(--sans); text-transform:uppercase; letter-spacing:.14em; color:var(--muted);
 }
 .${RV_CLASS}__list{display:flex; flex-direction:column; gap:1px; min-width:0}
 .${RV_CLASS}__row{display:flex; align-items:center; gap:.3rem; min-width:0}
 .${RV_CLASS}__entry{
-  font:inherit; text-align:left; flex:1 1 auto; min-width:0;
-  color:var(--ink,#16171F); background:transparent; border:0; border-radius:6px;
-  padding:.3rem .5rem; cursor:pointer; display:flex; flex-direction:column; gap:.1rem;
+  font:inherit; font-size:13px; text-align:left; flex:1 1 auto; min-width:0;
+  color:var(--muted); background:transparent; border:0; border-radius:7px; transition:background-color .15s,color .15s;
+  padding:6px 8px; cursor:pointer; display:flex; flex-direction:column; gap:.1rem;
 }
-.${RV_CLASS}__entry:hover{background:var(--accent-soft,#ECECE3)}
+.${RV_CLASS}__entry:hover{background:var(--panel); color:var(--ink)}
 .${RV_CLASS}__name{
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; gap:.35rem; align-items:baseline;
 }
 .${RV_CLASS}__kind{color:var(--muted,#5D6070); font-size:.75em; flex:0 0 auto}
 .${RV_CLASS}__hint{color:var(--muted,#5D6070); font-size:.72rem}
 .${RV_CLASS}__unpin{
-  font:inherit; font-size:.75rem; flex:0 0 auto; color:var(--muted,#5D6070);
-  background:transparent; border:1px solid var(--line,#E6E6DF); border-radius:999px;
-  padding:.05rem .45rem; cursor:pointer;
+  flex:0 0 auto; font:600 12.5px/1 var(--sans); color:var(--muted); background:var(--panel);
+  border:1px solid var(--line); border-radius:8px; padding:7px 11px; cursor:pointer; transition:transform .15s,color .15s;
 }
-.${RV_CLASS}__unpin:hover{background:var(--accent-soft,#ECECE3); color:var(--ink,#16171F)}
+.${RV_CLASS}__unpin:hover{color:var(--ink); transform:translateY(-1px)}
 `;
 
 function buildStyle(doc: Document): HTMLStyleElement {

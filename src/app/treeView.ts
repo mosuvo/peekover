@@ -27,6 +27,8 @@ export interface TreeViewOptions {
 export interface TreeViewController {
   /** The view root — the caller slots this into the folder pane. */
   readonly element: HTMLElement;
+  /** Mark the file open in the reader (`aria-current="page"`), or none; kept across search repaints. */
+  setCurrent(path: string | null): void;
 }
 
 const TREE_CLASS = 'peekover-tree';
@@ -34,23 +36,24 @@ const TREE_CLASS = 'peekover-tree';
 const TREE_CSS = /* css */ `
 .${TREE_CLASS}{display:flex; flex-direction:column; gap:.6rem; min-width:0}
 .${TREE_CLASS}__search{
-  font:inherit; width:100%; color:var(--ink,#16171F); background:var(--paper,#FBFBF8);
-  border:1px solid var(--line,#E6E6DF); border-radius:8px; padding:.4rem .6rem;
+  font:inherit; font-size:13px; width:100%; color:var(--ink); background:var(--panel);
+  border:1px solid var(--line); border-radius:8px; padding:7px 10px; appearance:none;
 }
+.${TREE_CLASS}__search::placeholder{color:var(--muted); opacity:1}
 .${TREE_CLASS}__notice{
   color:var(--muted,#5D6070); font-size:.8rem; border-left:3px solid var(--accent,#16171F);
   padding:.35rem .6rem; background:var(--paper,#FBFBF8); border-radius:6px;
 }
 .${TREE_CLASS}__list{display:flex; flex-direction:column; gap:1px; min-width:0}
-.${TREE_CLASS}__group{display:flex; flex-direction:column; gap:1px}
+.${TREE_CLASS}__children{display:flex; flex-direction:column; gap:1px; margin-left:18px; border-left:1px dashed var(--line); padding-left:6px}
 .${TREE_CLASS}__item{
-  font:inherit; text-align:left; width:100%; color:var(--ink,#16171F); background:transparent;
-  border:0; border-radius:6px; padding:.28rem .5rem; cursor:pointer;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; gap:.35rem; align-items:center;
+  font:inherit; font-size:13px; text-align:left; width:100%; color:var(--muted); background:transparent;
+  border:0; border-radius:7px; padding:6px 8px; cursor:pointer; transition:background-color .15s,color .15s;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; gap:8px; align-items:center;
 }
-.${TREE_CLASS}__item:hover{background:var(--accent-soft,#ECECE3)}
-.${TREE_CLASS}__twist{display:inline-block; width:.8em; color:var(--faint,#9A9DAC); flex:0 0 auto}
-.${TREE_CLASS}__dir{font-weight:600}
+.${TREE_CLASS}__item:hover{background:var(--panel); color:var(--ink)}
+.${TREE_CLASS}__item[aria-current="page"]{background:var(--accent-soft); color:var(--accent); font-weight:600}
+.${TREE_CLASS}__twist{font-family:var(--mono); font-size:11px; color:var(--faint,#9A9DAC); width:14px; text-align:center; flex:0 0 auto}
 .${TREE_CLASS}__empty{color:var(--muted,#5D6070); font-size:.85rem}
 `;
 
@@ -97,6 +100,8 @@ export function createTreeView(doc: Document, opts: TreeViewOptions): TreeViewCo
   body.className = `${TREE_CLASS}__body`;
 
   const fullTree = buildTree(files);
+  // The file open in the reader — drawn as the open row, and re-marked on every repaint.
+  let current: string | null = null;
   // Element → node map, rebuilt each render, so key handlers can resolve a treeitem.
   let nodeOf = new Map<HTMLElement, TreeNode>();
 
@@ -151,14 +156,13 @@ export function createTreeView(doc: Document, opts: TreeViewOptions): TreeViewCo
     }
   }
 
-  /** Render one node into `parent` at nesting `level` (indent + a11y roles). */
-  function renderNode(node: TreeNode, parent: HTMLElement, level: number): void {
+  /** Render one node into `parent` (a11y roles; a folder's children nest in its group, which indents them). */
+  function renderNode(node: TreeNode, parent: HTMLElement): void {
     const item = doc.createElement('button');
     item.type = 'button';
     item.className = `${TREE_CLASS}__item ${node.kind === 'directory' ? `${TREE_CLASS}__dir` : ''}`.trim();
     item.setAttribute('role', 'treeitem');
     item.tabIndex = -1;
-    item.style.paddingInlineStart = `${0.5 + level * 0.9}rem`;
     item.dataset.path = node.path;
     nodeOf.set(item, node);
 
@@ -177,10 +181,11 @@ export function createTreeView(doc: Document, opts: TreeViewOptions): TreeViewCo
       const group = doc.createElement('div');
       group.setAttribute('role', 'group');
       group.className = `${TREE_CLASS}__children`;
-      for (const child of node.children) renderNode(child, group, level + 1);
+      for (const child of node.children) renderNode(child, group);
       parent.append(group);
     } else {
       item.dataset.kind = 'file';
+      if (node.path === current) item.setAttribute('aria-current', 'page');
       const label = doc.createElement('span');
       label.textContent = node.name;
       item.append(label);
@@ -216,7 +221,7 @@ export function createTreeView(doc: Document, opts: TreeViewOptions): TreeViewCo
     list.setAttribute('role', 'tree');
     list.setAttribute('aria-label', 'Files');
     list.className = `${TREE_CLASS}__list`;
-    for (const child of view.children) renderNode(child, list, 0);
+    for (const child of view.children) renderNode(child, list);
     body.replaceChildren(list);
 
     // Roving tabindex: the first visible treeitem is the single tab stop.
@@ -278,5 +283,13 @@ export function createTreeView(doc: Document, opts: TreeViewOptions): TreeViewCo
 
   paint('');
 
-  return { element };
+  function setCurrent(path: string | null): void {
+    current = path;
+    for (const it of body.querySelectorAll<HTMLElement>('[role="treeitem"][data-kind="file"]')) {
+      if (it.dataset.path === path) it.setAttribute('aria-current', 'page');
+      else it.removeAttribute('aria-current');
+    }
+  }
+
+  return { element, setCurrent };
 }

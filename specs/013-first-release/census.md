@@ -215,6 +215,13 @@ retired while its function has no other test. Function by function:
   `screen`-only. Outside the census's scope (no moved chrome): 4.8's P1 (`statusLine` probes) and P2 (`fontLicences`
   separators), both test-only. The second full suite: one red, Firefox `uiFonts` (local-font class, green alone).
 
+- **5.1** (2026-11-04, after group 4 — the folder pane): the breakpoint moved to ≤ 1189 px (the 228 px pane; the
+  human's ruling). Three 4.8 re-spellings carry the number in their comment only, updated: **C218** (`editorUnsaved`),
+  **C260** (`printMode`), **C264** (`readerPaneContained`) — their logic follows whether "Files" is shown, unchanged.
+  `filesOverlay` (4.8's own file, no census row) follows the constant and gains 5.1's pane tests. **C142**'s note
+  corrected in both tables: the open Compare picker is C364's, not 4.5's notice-area sweep's. No row first-breaks at
+  5.1. **Gate-1 Q8: the 28 retirements below were acknowledged by the human on 2026-11-04** (5.0's plain-words list).
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).
@@ -247,7 +254,7 @@ they stay green.
 | C131 | `diffChrome.browser.test.ts` | half-empty (describe.each) › the OPEN picker itself is still where 6.2 put it | the picker's CONTAINED_CSS placement (top 50px in the reader pane); toolbar picker is placed anew | 4.5 |
 | C139 | `diffChrome.browser.test.ts` | placement › clears the aside stack, the mode toggle and the TOC rail at %s (it.each 1280/1400) | floating Compare pill's position among the app-page pills; no pills remain to clear | 4.5 |
 | C141 | `diffChrome.browser.test.ts` | placement › clears the remote-load opt-in that shares the top band at %s (it.each) | the shared top-band lane between Compare pill and remote-load opt-in; pill leaves the shadow root | 4.5 |
-| C142 | `diffChrome.browser.test.ts` | placement › the OPEN picker clears that chrome too | floating picker's position among app-page pills; 4.5's whole-page no-overlap hit-test covers the toolbar picker | 4.5 |
+| C142 | `diffChrome.browser.test.ts` | placement › the OPEN picker clears that chrome too | floating picker's position among app-page pills; the open toolbar Compare picker is covered by **C364** (inside the window, every row reachable) — not by 4.5's no-overlap sweep, which covers the notice area only (corrected at 5.1, 2026-11-04) | 4.5 |
 | C143 | `diffChrome.browser.test.ts` | placement › the opt-in's lane starts 24px after the pill's LAID-OUT edge (it.each) | remote-load anchored to the Compare pill's edge (CONTAINED_CSS anchor rule); no pill to anchor to | 4.5 |
 | C146 | `diffChrome.browser.test.ts` | the affordance is a SIBLING › pill, picker and status all sit beside .peekover-reader | diff chrome is a shadow-root sibling of the column; with the toolbar in light DOM the relation ceases on the app page | 4.5 |
 | C165 | `editorEyeballProxy.browser.test.ts` | proxy 2 — nothing collides at the top-right (it.each NARROW/WIDE x rail open/collapsed) | Edit-pill/mode-pill/handle collisions in the shadow root — no Edit pill (4.3), no mode pill (4.5); rail-in-edit kept by editorWalkPolish R29(c) | 4.3 |
@@ -636,7 +643,7 @@ re-spelled 21 · replaced 1 · retired 6 · unchanged 3
 | C139 | placement › clears the aside stack, the mode toggle and the TOC rail at %s (it.each 1280/1400) | Compare pill rect overlaps no mode/theme/watch pill, note, disclosure, TOC handle/list | retired | floating Compare pill's position among the app-page pills; no pills remain to clear | 4.5 | app |  |
 | C140 | placement › clears the reading column's first content box at %s (it.each) | Compare and 'Close comparison' pill rects do not overlap the reader h1 | replaced | comparison control never covers document text — owned by 4.5's chrome-vs-text-line-box hit-test (toolbar/snapshotNotice browser test) | 4.5 | app | Compare/picker opening a diff |
 | C141 | placement › clears the remote-load opt-in that shares the top band at %s (it.each) | Compare pill, picker and exit pill do not overlap .peekover-remote-load | retired | the shared top-band lane between Compare pill and remote-load opt-in; pill leaves the shadow root | 4.5 | app |  |
-| C142 | placement › the OPEN picker clears that chrome too | open picker rect overlaps no mode/theme/watch pill or TOC handle/list at 1400 | retired | floating picker's position among app-page pills; 4.5's whole-page no-overlap hit-test covers the toolbar picker | 4.5 | app |  |
+| C142 | placement › the OPEN picker clears that chrome too | open picker rect overlaps no mode/theme/watch pill or TOC handle/list at 1400 | retired | floating picker's position among app-page pills; the open toolbar Compare picker is covered by **C364** (inside the window, every row reachable) — not by 4.5's no-overlap sweep, which covers the notice area only (corrected at 5.1, 2026-11-04) | 4.5 | app |  |
 | C143 | placement › the opt-in's lane starts 24px after the pill's LAID-OUT edge (it.each) | remote-load left is 24px past the (min-width-widened) exit pill's right edge | retired | remote-load anchored to the Compare pill's edge (CONTAINED_CSS anchor rule); no pill to anchor to | 4.5 | app |  |
 | C144 | round trip › picks a snapshot and enters the diff | pill→picker (inline listbox, no dialog)→option: data-diff active, column hidden, real hunks, picker/status hidden | re-spelled | picker → real computeDiff/enterDiff round trip; inline listbox, no modal; success silent | 4.5 | app | Compare/picker opening a diff |
 | C145 | round trip › the pill becomes EXIT, and exiting restores the document | pill reads 'Close comparison', data-diff-open; click restores column, removes diff, label 'Compare' | re-spelled | the Compare control becomes the exit and restores the untouched document | 4.5 | app | Compare/picker opening a diff |

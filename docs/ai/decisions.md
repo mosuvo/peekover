@@ -1,6 +1,99 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 5.1 — the folder pane restyled; the native-control sweep lands. HUMAN RULING: the Files
+  overlay at ≤ 1189 px (supersedes 4.8 FIX's 1281).** Local, on `main` at `03a3f4f` (5.0), up to date with
+  `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one
+  low, ignored) on 2026-11-04. **CI read with `gh` (now installed):** `03a3f4f` — CI success (run 41797040484), Supply
+  chain success (41797040269); AI workflow hygiene runs on pull requests only. **The lint red was Dependabot's PR #33**
+  (tooling group, 8 updates; run 41797876874, Lint: 1,140 TS2532 / TS18048 / TS2345 errors across scripts/, src/ and
+  tests/). Cause: `wxt` 0.20.27 → 0.21.5 — its generated `.wxt/tsconfig.json` (which `tsconfig.json` extends) now sets
+  `noUncheckedIndexedAccess: true` (`dist/internal/generate-wxt-dir.mjs:187`), with `verbatimModuleSyntax`,
+  `module: Preserve`, `noImplicitOverride` and `allowImportingTsExtensions`; TypeScript is not in the bump. Locally the
+  flag alone gives 1,130 errors in the same files. Reported only; carried (progress.md § 5).
+  - **The pane** (`mockup.html:74–87`; the approved 3.1 mock's pane, `toolbar-mock.html:123–126`): 228 px in the row
+    (`flex:0 0 228px`; was `clamp(220px,28%,320px)` — 320 px from 1143 up), on `--paper`, padding 22 / 12, the
+    `--line` border; section heads (Pinned, Recent) caps — 10.5 px / 700 / .14em, `--muted`; a row `--muted`, radius
+    7, 6 / 8 padding, 13 px; under the pointer `--ink` on `--panel`; **the open file** `--accent` on `--accent-soft` at
+    600 — new: the tree marks it `aria-current="page"` (`TreeViewController.setCurrent`, called from `setActiveFile`,
+    so every route that opens a file marks it; a search repaint keeps it); folders nest under a dashed `--line` guide
+    (`mockup.html:84`), replacing the per-level inline indent; the twisty in the mono face, `--faint` (G-5's decorative
+    exemption, unchanged). Search field: `--panel`, a 1 px `--line` border, radius 8, `appearance:none`, placeholder
+    `--muted` at full opacity. Pin / Revoke / Unpin: the mock's `.iconbtn` (600 12.5 px, `--muted` on `--panel`, 1 px
+    `--line`, radius 8, 7 / 11; `--ink` and −1 px under the pointer). `scrollbar-color: var(--faint) transparent` on
+    the pane (the editor split's precedent). Tokens only; no new hex literal (the new rules carry no fallbacks).
+  - **The Files overlay keeps `min(300px, 86%)`** — the approved 3.1 mock draws the overlay at that width
+    (`toolbar-mock.html:128`) beside a 228 px sidebar (`:121`), so it does not follow the pane. Its behaviour and
+    tests unchanged (52 / 52 + 6 new).
+  - **The breakpoint, re-measured** (scratch sweep, not committed: every width 1320 → 1100, the pane held in the row,
+    both engines × both themes, TOC rail open at every width, Literata DRAWN at every width — 0 exceptions): text
+    beside the pane = window − 590 px (was − 682). Identical across themes; engines within 0.4 px.
+
+    | | lost at ≤ | margin one pixel above |
+    |---|---|---|
+    | 60ch, this machine (590.6 Cr / 591.0 Fx) | 1180 | +0.4 / 0.0 px at 1181 |
+    | 60ch, Linux Chromium (whole-pixel 600 px) | **1189** | +9.4 / +9.0 here, 0.0 Linux at 1190 |
+    | the full measure (684 px) | 1273 | +93.4 / +93.0 here, +84.0 Linux at 1274 |
+
+    **HUMAN RULING (asked before the constant changed): `FILES_OVERLAY_MAX = 1189`** — 4.8 FIX's rule (60ch holds
+    under Linux Chromium too). Rejected: 1273 (full measure only), keep 1281, 1180 (fails Linux by up to 9 px). A
+    1280 px window now gets the pane beside the full measure. The contrast census (1280 px) now measures the pane in
+    the row — at 1281 it had been a closed overlay there, so 4.8 FIX's census never read the pane (found here).
+  - **The native-control sweep** (`tests/browser/nativeControls.browser.test.ts`, new): every rendered `button` /
+    `select` / `input`, both themes, both engines, against a twin of the same tag and type beside it with
+    `all: revert` (the browser's own look in that context) — a background-color or a whole border (style, width,
+    colour) equal to the twin's is native; every box with `overflow` auto / scroll must carry `scrollbar-color`.
+    Surfaces (20 = 10 × 2 themes): the content-script reader (file:// fixture, raw host), the app page with no
+    folder, the app page with a document open (toolbar, pane with pins and recents, reader pane with code, math, a
+    table, a task list), the Files overlay at 414, the three panels (swept from the slot each scrolls in), the
+    editor, the unsaved dialog. **Not reached, named:** the Compare picker (needs a snapshot) and the diagram
+    lightbox — 5.4 restyles both and adds them. Measured at HEAD before the restyle: 27 findings per engine, three
+    of them the pane's (its scrollbar on three surfaces; its buttons and search already had author fill and border).
+    **PENDING after 5.1: 31 rows, the same on both engines (62 keys)** — 5.2: 2 (the TOC) · 5.3: 16 (code, math and
+    table buttons, the table filter, code / math scrollers) · 5.4: 4 (two panel slots, the code-theme picker, the
+    capture checkbox) · 5.5: 4 (the app page's own scroll areas — **no task names them; routed with the app states,
+    for the human to re-route if wanted**) · 5.6: 4 (the content-script reader's host and code block) · 5.7: 1 (the
+    editor preview host). Shrink-only, like the census; empty at 5.7 (Q4).
+  - **Contrast** (`--x` pairs from tokens.css; the pane test measures the painted values in both engines): text —
+    a row 6.01 / 7.44 (light / dark), under the pointer 16.18 / 14.45, the open row 15.02 / 12.34, a head 6.01 / 7.44,
+    `.iconbtn` and placeholder on `--panel` 5.64 / 6.94. **Non-text, for 8.1 (WCAG 1.4.11):** the search field's
+    border `--line` on `--paper` 1.21 / 1.29; the open row's fill 1.15 / 1.25 (it is also told by colour, weight and
+    `aria-current`); the hover fill 1.06 / 1.07; the scrollbar thumb and twisty `--faint` 2.60 / 3.70.
+  - **Tests** (`filesOverlay.browser.test.ts` — 4.8's file, which owns the pane at both widths): per theme, the open
+    row first (one row, `aria-current="page"`, `--accent` on `--accent-soft`, 600), 228 px on `--paper`, a row at rest
+    and under a real pointer, the head, the search field and its placeholder, the three buttons as `.iconbtn` — each
+    text ≥ 4.5:1 painted; and the open row following the file across two choices and a search repaint. Red at HEAD
+    on both engines ("exactly one row is marked open: expected []"; "timed out: alpha.md marked open").
+  - **Ablations → red** (sources restored md5-identical): (A1) the search field's rule stripped → the sweep names
+    `.peekover-tree__search[type=search]` — "native background rgb(255, 255, 255); native border inset 2px" — on the
+    app page and in the overlay, both engines; (A2) the open-row rule removed (wiring kept) → 4 red (2 themes × 2
+    engines) "the open row: --accent on --accent-soft, 600" while the follow test stays green; (A3) the pane back to
+    the old clamp → 4 red "the pane is 228 px: expected 320".
+  - **Deviations, flagged:** (1) heads in `--muted`, not `mockup.html:77`'s `--faint` (2.60:1) — the approved 3.1 mock
+    and G-5; (2) no `#` glyph before a file name (`mockup.html:477`) — it would change every tree item's text, which
+    many tests read; folders lose their bold (the mock draws none); (3) the tree gets no head of its own (the mock's
+    "Project" / folder name) — the grant chip names the folder; (4) the pane tests live in `filesOverlay` (tasks.md
+    names no pane test file); (5) the comment-only 1281 → 1189 in three census-named tests (C218, C260, C264);
+    (6) empty states, the CTA and the chip's own shape are 5.5's — untouched.
+  - **Bytes** (clean two-engine build): content script **343,900 B, md5 `23b30cde…` / `b14eee5c…` — identical**; app
+    chunk 552,845 B (**+527**: a same-session CSS-only arm 552,570 → CSS +252, the open row's logic +275); `.output`
+    5,971,139 / 5,971,255 B (+527 each; headroom 1,368,893 / 1,368,777 B); manifests 833 / 949 B, `permissions: []`;
+    golden EMPTY.
+  - **Verify:** lint 0 · unit 1,499 / 1,499 · browser, alone, both engines, first run: **2,246 passed / 0 failed / 52
+    skipped of 2,298** (+36: the sweep 30, the pane 6) — no red to classify · the contrast census green, its pending
+    list unchanged (8 rows, 5.8's) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.1\`:** `before-` / `after-` × `1440-light`,
+    `1440-dark`, `414-overlay-open-light`, `414-overlay-open-dark` (Chromium; the shell mounted in the test harness
+    with a fixture folder, pins and recents — its records carry no handle, so each shows the Firefox re-pick hint).
+  Why: the pane is the first surface of group 5, and the sweep has to exist before the later tasks can shrink it.
+  Revisit-when: the measure, the rail's default or the pane width changes (re-measure the breakpoint); 8.1's walk
+  (the non-text states above; the overlay from 1190 down); 5.4 adds the Compare picker and lightbox to the sweep.
+
+- **2026-11-04 · HUMAN RECORD (gate-1 Q8) — the 28 group-4 retirements acknowledged.** The human acknowledged the 28
+  retirements on 2026-11-04, from 5.0's plain-words list, including its C142 wording note: the open Compare dropdown is
+  covered by **C364** (inside the window, every row reachable), not by 4.5's notice-area sweep. C142's census note is
+  corrected in both of `census.md`'s tables (5.1's commit).
+
 - **2026-11-04 · M13 TASK 5.0 — the flake pass (DISCOVERED, the human's kickoff; before 5.1): three fixed with their
   causes proven, one named, two not reproduced.** Local, on `main` at `8e9bf0c` (CI green on it, per the human), up to
   date with `origin/main`, tree clean. **`gh` is not installed** — no CI history was read; every rate below is local

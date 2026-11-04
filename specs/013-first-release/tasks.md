@@ -674,7 +674,7 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       start); `watchRemount` named (cause not found; its red now carries the scroll state); `editorPreview` and the
       contrast census not reproduced (diagnostics kept). No product change.
 
-- [ ] **5.1 Folder pane; the native-control sweep lands.** TEST FIRST. Width 228, caps section heads, row / hover /
+- [x] **5.1 Folder pane; the native-control sweep lands.** TEST FIRST. Width 228, caps section heads, row / hover /
       active per `mockup.html:78–87`, search field, pin / revoke in the `.iconbtn` style.
       `tests/browser/nativeControls.browser.test.ts` (new): every `button` / `select` / `input` on every surface, both
       themes, has an author `background-color` and `border-style` (not `buttonface` / `outset`); scrollbars carry
@@ -684,6 +684,12 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       Verify: (**Cr+Fx**) the pane's controls leave the pending list; red-first: strip one rule → the sweep names that
       control. Census pending rows for the pane deleted. Content-script md5 identical. Full suite. Golden EMPTY ·
       manifest · `permissions: []`. [plan §3; gate-1 Q12 kept]
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 5.1").* The pane 228 px with the mock's rows, caps heads, the
+      open file marked (`aria-current="page"`), search and pin buttons as `.iconbtn`; the overlay keeps `min(300px, 86%)`
+      (the 3.1 mock). **HUMAN RULING: `FILES_OVERLAY_MAX` 1281 → 1189** (60ch under Linux Chromium beside the 228 px
+      pane). The sweep: 20 surface runs; PENDING 31 rows per engine, routed 5.2: 2 · 5.3: 16 · 5.4: 4 · 5.5: 4 (the app
+      page's scroll areas — no task names them) · 5.6: 4 · 5.7: 1; the Compare picker and lightbox join at 5.4. The
+      contrast census had no pane rows (none to delete). Content script md5 identical; app chunk +527 B.
 - [ ] **5.2 TOC look (gate-1 Q11; G-12).** TEST FIRST. Row, "here" highlighter gradient (`mockup.html:102–104`), card;
       collapsed state gains a decorative `aria-hidden` tick column — no hover card, no behaviour change.
       Files: `src/theme/readerCss.ts` · `src/render/toc*.ts` (markup for the ticks only) · census-named tests

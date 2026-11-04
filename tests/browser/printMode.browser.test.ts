@@ -312,7 +312,7 @@ describe('Print mode — reader chrome hidden, both surfaces, both engines (task
     expect(folders).toBeTruthy();
 
     // KEEPS: the app shell's header and folder pane are hidden under print (C260). RE-SPELLED at 013 task 4.8: at
-    // <= 1281 px with a document open the pane is a closed overlay behind "Files" — open it, so the pane is on screen
+    // <= 1189 px (5.1; 1281 at 4.8) with a document open the pane is a closed overlay behind "Files" — open it, so the pane is on screen
     // before print (the control below) and the OPEN overlay is the one print must hide.
     const files = container.querySelector<HTMLButtonElement>('.peekover-toolbar__files-btn')!;
     if (files.getClientRects().length > 0) files.click();
