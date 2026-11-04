@@ -49,6 +49,8 @@ type Theme = 'light' | 'dark';
  * the same 31 on each), so each is listed once and keyed per engine below. Taken at 5.1 after the folder pane's
  * restyle: the pane's own controls and scrollbar are not on it. Each later group-5 task deletes its rows. 5.2 deleted
  * the TOC's 2 and sweeps the content-script reader at 1440 px, where its rail is open (at 414 it was collapsed).
+ * 5.2a deleted 3: the app page's reader hosts (the app page and the editor) and the editor's preview host are no
+ * longer scroll areas. CONTAINED_CSS dropped their `:host{overflow:auto}` so the rail can stick, and they now pass.
  */
 const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
   // 5.3 — code, math and table buttons
@@ -76,15 +78,11 @@ const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
   // 5.5 — the app page's own scroll areas (appShell.ts; no task names them — routed with the app states, flagged)
   ['app page (no folder) · .peekover-app__reader', '5.5'],
   ['app page · .peekover-app__reader', '5.5'],
-  ['app page · .peekover-app__reader__host', '5.5'],
-  ['editor · .peekover-app__reader__host', '5.5'],
   // 5.6 — the content-script reader (its host, which mount() makes a scroller, and its code block)
   ['tab reader (file) · body > div', '5.6'],
   ['tab reader (file) · .peekover-reader > pre', '5.6'],
   ['tab reader (raw host) · body > div', '5.6'],
   ['tab reader (raw host) · .peekover-reader > pre', '5.6'],
-  // 5.7 — editor details
-  ['editor · .peekover-editor__preview-host', '5.7'],
 ];
 const PENDING: ReadonlyMap<string, string> = new Map(
   ['chromium', 'firefox'].flatMap((engine) => PENDING_ROWS.map(([row, task]) => [`${engine} · ${row}`, task] as const)),

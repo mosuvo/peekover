@@ -81,6 +81,11 @@ const PANE_CLASS = 'peekover-app__reader';
  * inheritance, with plain fallbacks so the pane still reads sensibly if used outside the
  * shell (e.g. a focused unit test). No colors are hardcoded into the brand surface —
  * these mirror the shell tokens, matching how `readerCss.ts` copies from tokens.css.
+ *
+ * The mount host is `flow-root` (013 task 5.2a). The host used to be a block formatting context
+ * through the reader's `:host{overflow:auto}`, which CONTAINED_CSS now drops so the TOC rail can stick
+ * in this pane. `flow-root` keeps the BFC, so no child margin escapes the host. It is set here because
+ * a light-DOM `display` outranks the shadow root's `:host`.
  */
 const PANE_CSS = /* css */ `
 .${PANE_CLASS}__state{
@@ -90,7 +95,7 @@ const PANE_CSS = /* css */ `
 }
 .${PANE_CLASS}__state-title{font-weight:600}
 .${PANE_CLASS}__state-detail{color:var(--muted,#5D6070); font-size:.85rem; max-width:40ch}
-.${PANE_CLASS}__host{display:block}
+.${PANE_CLASS}__host{display:flow-root}
 `;
 
 /** Copy for each designed state — a title and a quiet detail line. */

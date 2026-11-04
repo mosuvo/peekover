@@ -229,6 +229,16 @@ retired while its function has no other test. Function by function:
   **Retired:** none. Outside the census (no moved chrome): `tocScroll` gains 5.2's look tests; `nativeControls` (5.1's
   file) loses its two 5.2 rows and sweeps the content-script reader at 1440 px.
 
+- **5.2a** (2026-11-04, discovered: the app page's rail stays in view; the human's ruling): no row first-breaks. The rail
+  moves on the app page only while scrolled. Its place at scroll 0, its left edge (what the column reserves) and the text
+  width are unchanged to the pixel. **KEPT, unchanged and green** (each still states its property): C091, C280 (the code
+  and table toolbars clear the rail), C117 (the lightbox clears it), C226 (rail hidden in stacked edit), C260, C261
+  (print hides it), C297 (the theme pill clears the handle and list — tab surface), C308 (TOC actions fire no request),
+  C309, C352 (open state and width persist / survive a re-mount), C264–C266 (`readerPaneContained`: the tree and header
+  stay on top; the host is not `position:fixed` — it is sticky's container now, still in flow). **Retired:** none.
+  Outside the census: `tocScroll` gains 5.2a's tests; `nativeControls` deletes 3 pending rows that now pass (the reader
+  hosts and the preview host are no longer scroll areas) — 26 per engine.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).

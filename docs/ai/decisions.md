@@ -1,6 +1,88 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 5.2a — the app page's TOC rail stays in view while reading (DISCOVERED at 5.2; HUMAN RULING
+  2026-11-04: fix now, before 5.3).** Local, on `main` at `230dd70` (5.2), up to date with `origin/main`, tree clean;
+  Windows, Node 24.11.1, pnpm 10.33.0, `pnpm audit --prod` EXIT 0 on 2026-11-04. **CI read with `gh`:** `230dd70` — CI
+  success (run 41834503687), Supply chain success (41834503944).
+  - **The ruling:** a behaviour change. On the app page, the open rail stays inside the reader pane's visible area at
+    every scroll position, as in the full-page reader. Its list scrolls inside the card when long, and the collapsed
+    opener and ticks stay in view too. Nothing else moves.
+  - **Measured before** (`230dd70`, 1440 × 900 and 1280 × 900, both engines; scratch probe, not committed). The
+    rail was `position:absolute` in the host, whose height is the whole document, so the open card spanned the document
+    (top 121.3 → bottom 18,547.9 px at 1440). The pane's visible box is 89.3 → 870.3. At 25 / 50 / 100 % the card's top
+    sat at −4,306.7 / −8,733.7 / −17,588.7, so its list was off-screen and the current entry did not hit-test. Its list
+    never scrolled inside itself (a 60-heading TOC was a 7,695 px card). Collapsed, the opener (165.3 at rest) and ticks
+    sat at −4,262.7 / −8,689.7 / −17,544.7. Firefox agrees within 0.5 px.
+  - **The fix (CSS only; the smallest that works):**
+    1. **CONTAINED_CSS** (`readerCss.ts`): the rail is `position:sticky; top:8px` against the pane, with
+       `height:calc(100cqh − 16px)` and `margin:8px 8px calc(8px − 100cqh) auto`. It stays in flow but takes no height,
+       and its left edge is the old `right:8px` edge. Collapsed: `top:0`, the pane's height, no fill, no pointer, with the
+       opener `pointer-events:auto`. `:host` adds `overflow:visible`. The full-page `overflow:auto` made the host the
+       rail's nearest scroll box, which never scrolls, so sticky did nothing.
+    2. **`appShell.ts`:** the pane gets `container-type:size`, so `100cqh` is the pane's content height. Print sets
+       `normal`, because print gives the pane `height:auto`.
+    3. **`readerPane.ts`:** the host is `display:flow-root`. Without `overflow:auto` the host was no longer a block
+       formatting context, and the rail's top margin left it (the host moved 8 px down — ablation A4). A light-DOM
+       `display` outranks `:host`, so the rule is set there.
+    Probed and rejected: `position:fixed` (the pane's place depends on the toolbar and notice area, and its scrollbar width
+    is unknown); a scroll listener (it lags the compositor); a float (it would move text beside the collapsed handle at
+    narrow widths). Sticky insets count from the pane's content edge, not its padding edge, in both engines (measured:
+    `top:calc(1.5rem + 8px)` stuck at +56).
+  - **Measured after:** at 0 / 25 / 50 / 100 %, the card is 121.3 → 838.0 at 1440 and 140.2 → 838.0 at 1280. That is the
+    pane's content top + 8 to its content foot − 8, the same place as before at scroll 0. The current entry hit-tests as
+    itself at every stop. The opener holds 165.3 / 184.2 and the ticks hold their place. Firefox agrees within 0.1 px.
+    A long TOC scrolls in the card (scrollHeight 1,978 in a 715 px card). A short document's card runs from the pane's
+    top + 8 to its foot − 8, as the full-page rail does; it used to end at the document's foot. It adds no scroll range
+    (781 / 781). A `position:fixed` box inside the pane still lays out against the viewport (0,0 → 1440,900), so size
+    containment does not trap the lightbox. Edit mode (rail shown above 1400 px): the rail and split are unchanged at
+    1440 / 1600 (the rail's foot 838.3 → 838.0, rounding), and the rail is hidden at 1400.
+  - **The text width: identical to the pixel** (both engines; rail open / collapsed): 1189 — 684.0 / 684.0 (p 127.5..811.5,
+    rail left 915.0); 1190 — 600.0 / 684.0 (p 284.0..884.0, rail left 916.0); 1440 — 684.0 / 684.0 (p 367.0..1051.0, rail
+    left 1166.0). Column and host boxes are identical, and `scrollWidth` is unchanged. `FILES_OVERLAY_MAX` stays 1189.
+  - **Item 3 of the ruling — the current section in a long list:** the full-page reader does not scroll the current
+    entry into view within the rail (the spy's `setActive` only marks it), so the app page does not either. Nothing added.
+  - **Consequence, for 8.1's eye:** at narrow widths the collapsed opener now stays at the pane's top-right while reading,
+    so text lines scroll under the pill. At 414 the pill spans 252 → 374 and the text runs to 358. This matches the
+    full-page reader's fixed handle. The collapsed box no longer has a paper fill (it now spans the pane), so only the
+    pill covers text, and text under the rest of the box stays visible and selectable. The collapsed resizer strip,
+    inside that box, takes no pointer.
+  - **Tests** (`tocScroll.browser.test.ts`, a new describe, 8 per engine): at 1440 and 1280, light and dark, scrolled to
+    the middle and the end. Open: the card inside the pane's visible box (the instrument, first), the current entry
+    hit-tests as itself, no text line under the card, and the toolbar, notice area and status line hit-test as
+    themselves; also the host and column start together. Collapsed: the opener and the ticks inside the pane, the opener
+    hit-tests as itself, no text under either, and the shell's chrome likewise. **Red at `230dd70`'s sources: 16 / 16**
+    ("the middle: the card [1166.0, −8733.7 → 1408.0, 9692.9] lies inside the pane's visible box [228.0, 89.3 → 1440.0,
+    870.3]"; the opener likewise).
+  - **Ablations → red** (sources restored md5-identical): **A1** the rail back to `position:absolute` → 16 red, the card
+    and opener named leaving the pane. **A2** no size container → 8 red (the open card falls back to the window's height,
+    [1166.0, 121.3 → 1408.0, 1005.3], over the status line); collapsed stays green, since the opener does not depend on
+    the height. **A3** the host keeps `overflow:auto` → 16 red (sticky inert, card [1166.0, −8733.7 → 1408.0, −8017.0]).
+    **A4** the host `display:block` → 8 red ("the host (top 121.3) and the column (top 113.3) start together").
+  - **The sweep** (`nativeControls`): the first full suite went red in that file alone, both engines: "pending rows that
+    now pass". These were the app page's and the editor's reader hosts (5.5) and the editor preview host (5.7). With no
+    `overflow:auto` they are not scroll areas. The editor preview still scrolls: its scroll box is the
+    `.peekover-editor__preview` wrapper (editorView.ts), and the editor tests are green. The 3 rows were deleted, so
+    **PENDING is 26 per engine** (5.3: 16 · 5.4: 4 · 5.5: 2 · 5.6: 4 · 5.7: 0). **Kickoff mismatch, flagged:** it expected 29
+    unchanged. The file is a necessary ripple ("sweep green" needs it). The contrast census stays green, its pending
+    list unchanged (8).
+  - **Census:** no row first-breaks. KEPT, unchanged and green: C091, C117, C226, C260, C261, C264–C266, C280, C297, C308,
+    C309, C352. None retired.
+  - **Bytes** (clean two-engine build): content script **345,218 B (+366)**, md5 `5a7fcd14…` / `7e9cddd5…`. With
+    `readerCss.ts` alone reverted to `230dd70`, it rebuilds to 344,852 B, md5 `787c942e…` / `f906401d…` (5.2's exactly). So
+    the whole content-script delta is the CONTAINED_CSS edit, which ships in the content script but applies only to the
+    pane. App chunk **554,289 B (+414)**: CONTAINED_CSS +366, APP_CSS and PANE_CSS +48 (the same-session arm: 553,923).
+    `.output` 5,973,901 / 5,974,017 B (+780 each); manifests 833 / 949 B, `permissions: []`; golden EMPTY.
+  - **Verify:** lint 0 · unit 1,499 / 1,499 · browser, alone, both engines: **2,282 passed / 0 failed / 52 skipped of 2,334** (+16) on the second run (500 s, EXIT 0). The first run had 2 red, the sweep's "pending rows that now pass" in both engines, classified above as a real consequence of the fix and resolved by deleting the rows; nothing else was red. The build-gated files ran against the new build · no control bytes in the changed
+    files (both counts; the control fires) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.2a\`:** `before-` / `after-app-1440-mid-light`
+    and `-dark` (the app page at 1440, scrolled to the middle; Chromium).
+  Why: the human's ruling — the app page's rail behaves as the full-page reader's does.
+  Revisit-when: 8.1's walk (the collapsed opener over text at narrow widths; the short-document card); a minimum browser
+  version (container units need Chrome 105 / Firefox 110, per MDN. Below that, the rail's `height` and `margin`
+  declarations are dropped, the rail takes its own height in flow, and the column starts below it on the app page. No
+  minimum version is set today); the pane's padding or layout changes.
+
 - **2026-11-04 · M13 TASK 5.2 — the TOC restyled (gate-1 Q11; G-12).** Local, on `main` at `a2a5cf5` (5.1), up to date
   with `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0
   (one low, ignored) on 2026-11-04. **CI read with `gh`:** `a2a5cf5` — CI success (run 41819245402), Supply chain success

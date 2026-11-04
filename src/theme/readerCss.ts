@@ -1356,10 +1356,34 @@ export const READER_CSS = /* css */ `
 // `@media screen` because READER_CSS's print block sets the column's padding to 0 at the same specificity,
 // and this later sheet would otherwise win in print too. The split's own band (`--edit-bottom`) is in
 // EDITOR_CSS, which ships to the app page alone.
+//
+// ── M13 TASK 5.2a: THE RAIL STAYS IN VIEW WHILE READING (the human's ruling, 2026-11-04) ────────
+//
+// Here the scroll box is the pane (`.peekover-app__reader`), outside the shadow root, and an absolute
+// rail scrolled away with the document. Now the rail is `position:sticky` against that pane, which
+// is the full-page reader's fixed rail in a box that scrolls:
+//   - `:host` drops the full-page `overflow:auto`. Otherwise the host is the rail's nearest scroll
+//     box (it never scrolls) and sticky does nothing. The host stays a block formatting context
+//     (`display:flow-root`, in readerPane.ts, because the light DOM's own `display` wins over `:host`),
+//     so no margin leaves it.
+//   - the pane is a size container (appShell.ts), so `100cqh` is its content box height. The open
+//     card is that height less 8 px above and below, and it scrolls its own list when the list is long.
+//     Sticky insets count from the pane's content edge in both engines (measured), so `top:8px` puts
+//     the card where the old absolute `top:8px` did.
+//   - the rail stays in flow but takes no height: its bottom margin cancels its top margin and its
+//     height. Its left edge (what the column reserves) is unchanged: `margin-left:auto` with
+//     `margin-right:8px` matches the old `right:8px`.
+//   - collapsed, the box spans the pane with no fill and no pointer, and only the opener takes the
+//     pointer. Text under that strip stays readable and selectable, and the opener and ticks stay
+//     where they were (`top:0`, flush right).
+// Edit mode and print still hide the rail (EDITOR_CSS, READER_CSS's print block). The content
+// script's rail is the fixed one in READER_CSS, and these rules do not reach it.
 export const CONTAINED_CSS = /* css */ `
-:host{ position:relative; inset:auto; }
-.peekover-net,
-.peekover-toc{ position:absolute; }
+:host{ position:relative; inset:auto; overflow:visible; }
+.peekover-net{ position:absolute; }
+.peekover-toc{ position:sticky; top:8px; right:auto; bottom:auto; height:calc(100cqh - 16px); margin:8px 8px calc(8px - 100cqh) auto; }
+:host([data-toc="collapsed"]) .peekover-toc{ top:0; height:100cqh; margin:0 0 -100cqh auto; width:max-content; background:none; pointer-events:none; }
+:host([data-toc="collapsed"]) .peekover-toc__toggle{ pointer-events:auto; }
 @media screen{
 .peekover-reader,
 .peekover-diff{ padding-bottom:56px; }

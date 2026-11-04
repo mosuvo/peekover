@@ -703,6 +703,29 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       measured (text identical to the pixel at 1189 / 1190 / 1440). The sweep's 2 rows deleted (29 per engine left); the
       content-script reader now swept at 1440, its open rail included. Found, routed to the human: the app-page rail
       scrolls away with the document (pre-existing). Content script +952 B, app chunk +1,030 B.
+- [x] **5.2a The app page's TOC rail stays in view while reading — DISCOVERED (found at 5.2; HUMAN RULING 2026-11-04:
+      fix now, before 5.3).** TEST FIRST. Behaviour change, ruled: on the app page the open rail stays inside the reader
+      pane's visible box at every scroll position, as in the full-page reader. Its list scrolls inside the card when the
+      TOC is long, and the collapsed opener and its ticks stay in view too. Nothing else moves: the column's reservation
+      and the text width are identical at 1189 / 1190 / 1440. The rail never covers the toolbar, the notice area or the
+      status line. Edit mode keeps 5.2's behaviour and print still hides the rail. The full-page reader is unchanged. The
+      current entry is not scrolled into view in a long list, because the full-page reader does not do that either.
+      Files: `src/theme/readerCss.ts` (CONTAINED_CSS) · `src/app/appShell.ts` (the pane a size container) ·
+      `src/app/readerPane.ts` (the host `flow-root`) · `tests/browser/tocScroll.browser.test.ts` ·
+      `tests/browser/nativeControls.browser.test.ts` (necessary ripple: "sweep green" needs its 3 rows that now pass
+      deleted)
+      Verify: (**Cr+Fx**, both themes) at 1440 and 1280, scrolled to the middle and the end, the open card lies inside the
+      pane's visible box and the current entry hit-tests as itself; collapsed likewise (opener and ticks); no text under
+      them; the toolbar, notice area and status line hit-test as themselves. Red-first at `230dd70`; ablate the fix → the
+      tests name the rail's box leaving the pane. Text width re-measured to the pixel. Full suite; census; sweep pending
+      unchanged (29). Bytes decomposed. Golden EMPTY · manifest · `permissions: []`. Not in gate 3's count (as 5.0).
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 5.2a").* The rail is `position:sticky` in the pane, sized from the
+      pane's height (`100cqh`), and takes no height in the flow. The host drops `overflow:auto` and stays a block
+      formatting context (`flow-root`). Measured before / after at 0 / 25 / 50 / 100 %, both engines: the card is fixed at
+      the pane's top + 8 to its foot − 8, the opener and ticks hold their scroll-0 place, and the text is identical to the
+      pixel. **The sweep: pending 29 → 26 per engine.** The app page's and the editor's reader hosts (5.5) and the
+      editor's preview host (5.7) are no longer scroll areas, so they pass. The kickoff expected 29 unchanged; flagged.
+      Content script +366 B (CONTAINED_CSS only; with that file reverted it rebuilds to 5.2's md5), app chunk +414 B.
 - [ ] **5.3 Code, math and table buttons (gate-1 Q14; carried (f), (g)).** TEST FIRST. Code toolbar restyled to the
       mockup's copy button (`:151–156`), Line numbers / Wrap / Copy kept; display math loses the code-block toolbar and
       keeps Copy LaTeX / MathML styled like the copy button; table filter-clear and sort buttons from tokens.

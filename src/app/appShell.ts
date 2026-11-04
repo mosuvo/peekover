@@ -511,6 +511,13 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * cannot change the header's height. The open panel itself was already anchored to the header's
  * actual bottom (`top:100%`), as are the export and code-theme popovers (against their own
  * triggers). Asserted by the header-width sweep in tests/browser/storagePanelOverlay.browser.test.ts.
+ *
+ * THE READER PANE IS A SIZE CONTAINER (M13 task 5.2a). The TOC rail sticks inside this pane and is
+ * sized from the pane's own height (`100cqh`, CONTAINED_CSS in readerCss.ts). The pane's size never
+ * came from its content: it is a stretched flex item with `min-width:0`. So size containment changes
+ * none of its layout, and `position:fixed` inside it still lays out against the viewport (measured in
+ * both engines). Print sets the pane's height to `auto`, where size containment would collapse it to
+ * nothing, so print turns the container off.
  */
 const APP_CSS = /* css */ `
 .${SHELL_CLASS}{
@@ -615,7 +622,7 @@ ${statusLineCss(SHELL_CLASS)}
   flex:0 0 228px; min-width:0; overflow:auto; scrollbar-color:var(--faint) transparent;
   border-right:1px solid var(--line); background:var(--paper); padding:22px 12px;
 }
-.${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; padding:1.5rem}
+.${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; padding:1.5rem; container-type:size}
 @media screen and (max-width:${FILES_OVERLAY_MAX}px){
   .${SHELL_CLASS}[data-document] .${SHELL_CLASS}__body{position:relative}
   .${SHELL_CLASS}[data-document] .${SHELL_CLASS}__folders{display:none; position:absolute; inset:0 auto 0 0; z-index:9;
@@ -670,7 +677,7 @@ ${statusLineCss(SHELL_CLASS)}
   .${SHELL_CLASS}{position:static; inset:auto; height:auto; overflow:visible; display:block}
   .${SHELL_CLASS}__header,.${SHELL_CLASS}__folders{display:none!important}
   .${SHELL_CLASS}__body{display:block; height:auto}
-  .${SHELL_CLASS}__reader{overflow:visible; height:auto; padding:0}
+  .${SHELL_CLASS}__reader{overflow:visible; height:auto; padding:0; container-type:normal}
 }
 /* @page relocation (010 D-7, task 7.1) — a COPY of readerCss.ts's own @page rule; rationale in
    the doc comment above APP_CSS. */

@@ -1019,3 +1019,111 @@ describe('013 task 5.2 — the TOC look, both surfaces, both themes', () => {
     });
   }
 });
+
+// ── 013 TASK 5.2a — the app page's rail stays in view while reading (the human's ruling, 2026-11-04) ─────
+// On the app page the scroll box is the reader pane, outside the shadow root, and the rail was positioned in the
+// host, so it scrolled away with the document. 5.2a gives the pane the full-page reader's behaviour: the open card,
+// and the collapsed opener and its ticks, stay inside the pane's visible box at every scroll position. The text is
+// still never under them, and the toolbar, the notice area and the status line still hit-test as themselves.
+// The rail's box against the pane's is the instrument that found the defect, so it runs first at each stop.
+
+/** The pane's visible box: its client area (no border, no scrollbar). */
+function paneBox(scroller: HTMLElement): DOMRect {
+  const r = scroller.getBoundingClientRect();
+  return new DOMRect(r.left + scroller.clientLeft, r.top + scroller.clientTop, scroller.clientWidth, scroller.clientHeight);
+}
+
+const within = (inner: DOMRect, outer: DOMRect): boolean =>
+  inner.width > 0 && inner.height > 0 &&
+  inner.left >= outer.left - 0.5 && inner.right <= outer.right + 0.5 && inner.top >= outer.top - 0.5 && inner.bottom <= outer.bottom + 0.5;
+
+const fmt = (r: DOMRect): string => `[${r.left.toFixed(1)}, ${r.top.toFixed(1)} → ${r.right.toFixed(1)}, ${r.bottom.toFixed(1)}]`;
+
+/** Whether the point at an element's centre lands on that element (or inside it), in the given tree. */
+function hitsItself(root: Document | ShadowRoot, el: Element): string | null {
+  const r = el.getBoundingClientRect();
+  const hit = root.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return hit && (hit === el || el.contains(hit)) ? null : `${hit ? `${hit.tagName.toLowerCase()}.${[...hit.classList].join('.')}` : 'nothing'} at ${fmt(r)}`;
+}
+
+/** The app page's own chrome around the pane: each must hit-test as itself at every scroll position. */
+function shellChromeHits(s: LookSurface): string[] {
+  const app = s.scroller.closest('.peekover-app')!;
+  const misses: string[] = [];
+  for (const [name, sel] of [['the toolbar', '.peekover-toolbar'], ['the notice area', '.peekover-app__notices'], ['the status line', '.peekover-status']] as const) {
+    const el = app.querySelector(sel);
+    if (!el || el.getBoundingClientRect().height === 0) {
+      misses.push(`${name}: not laid out`);
+      continue;
+    }
+    const miss = hitsItself(document, el);
+    if (miss) misses.push(`${name}: ${miss}`);
+  }
+  return misses;
+}
+
+const STOPS = [['the middle', 0.5], ['the end', 1]] as const;
+
+async function scrollPaneTo(s: LookSurface, frac: number): Promise<void> {
+  s.scroller.scrollTop = Math.round((s.scroller.scrollHeight - s.scroller.clientHeight) * frac);
+  await settle(s.scroller);
+  await pause(250); // the spy's rAF-coalesced update
+}
+
+describe('013 task 5.2a — the app page\'s rail stays in view while reading', () => {
+  beforeEach(() => resetSettingsSeamForTest());
+  afterEach(async () => {
+    resetSettingsSeamForTest();
+    setThemeSetting('auto');
+    await page.viewport(414, 896);
+  });
+
+  for (const width of [1440, 1280]) {
+    for (const theme of LOOK_THEMES) {
+      it(`${width} · ${theme}: the open card stays in the pane, the current entry hit-testable, over no text`, async () => {
+        await page.viewport(width, 900);
+        const s = await lookContained(theme);
+        await waitFor(() => (s.host.getAttribute('data-toc') === 'open' ? true : null));
+        const rail = railOf(s);
+        // The rail stays in flow but takes no height, and no margin of its own leaves the host: the host and the
+        // column start together (they did when the rail was out of flow), so chrome anchored to the host stays put.
+        const hostTop = s.host.getBoundingClientRect().top;
+        const columnTop = s.shadow.querySelector('.peekover-reader')!.getBoundingClientRect().top;
+        expect(Math.abs(hostTop - columnTop), `the host (top ${hostTop.toFixed(1)}) and the column (top ${columnTop.toFixed(1)}) start together`).toBeLessThanOrEqual(0.5);
+        for (const [stop, frac] of STOPS) {
+          await scrollPaneTo(s, frac);
+          const pane = paneBox(s.scroller);
+          const card = rail.getBoundingClientRect();
+          expect(within(card, pane), `${stop}: the card ${fmt(card)} lies inside the pane's visible box ${fmt(pane)}`).toBe(true);
+          const here = await waitFor(() => currentLink(s));
+          expect(here.textContent, `${stop}: the spy has moved on`).not.toBe('Section 1');
+          expect(hitsItself(s.shadow, here), `${stop}: the current entry (${here.textContent}) hit-tests as itself`).toBeNull();
+          const over = textLineRects(s).filter((r) => intersects(r, card));
+          expect(over.map(fmt), `${stop}: text under the card`).toEqual([]);
+          expect(shellChromeHits(s), `${stop}: the shell's chrome`).toEqual([]);
+        }
+      });
+
+      it(`${width} · ${theme}: collapsed, the opener and its ticks stay in the pane, over no text`, async () => {
+        await page.viewport(width, 900);
+        const s = await lookContained(theme);
+        await waitFor(() => (s.host.getAttribute('data-toc') === 'open' ? true : null));
+        await collapse(s);
+        const opener = openerOf(s);
+        const ticks = ticksOf(s)!;
+        for (const [stop, frac] of STOPS) {
+          await scrollPaneTo(s, frac);
+          const pane = paneBox(s.scroller);
+          const ob = opener.getBoundingClientRect();
+          const tb = ticks.getBoundingClientRect();
+          expect(within(ob, pane), `${stop}: the opener ${fmt(ob)} lies inside the pane's visible box ${fmt(pane)}`).toBe(true);
+          expect(within(tb, pane), `${stop}: the ticks ${fmt(tb)} lie inside the pane's visible box ${fmt(pane)}`).toBe(true);
+          expect(hitsItself(s.shadow, opener), `${stop}: the opener hit-tests as itself`).toBeNull();
+          const over = textLineRects(s).filter((r) => intersects(r, ob) || intersects(r, tb));
+          expect(over.map(fmt), `${stop}: text under the opener or the ticks`).toEqual([]);
+          expect(shellChromeHits(s), `${stop}: the shell's chrome`).toEqual([]);
+        }
+      });
+    }
+  }
+});
