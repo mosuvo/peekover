@@ -9,12 +9,13 @@
 //     itself an off-origin request — the sentinel — and the line then reads "Network used": the firing control,
 //     on the same instrument, that the observer is not blind. The extension's own loads over this harness's
 //     http origin (chunks, fonts, a same-origin fetch standing in for one) are seen in the buffer and never flip it;
-//   • the USER'S LOAD: the load bar's click restores the images, the indicator lights, the line says so;
+//   • the USER'S LOAD: the load bar's click restores the images, the indicator lights, the line says so. The
+//     images must LOAD, so they go to an off-origin name the server ANSWERS on — see `answered()`;
 //   • the SLOW case (AGENTS.md: a zero-guard's control includes a late one): an off-origin image issued 400 ms
 //     after the line first read zero, NOT through the load bar (so the indicator stays dark), still flips the
 //     line once it lands — the observer arm, which tasks.md's red-first removes.
-// Every probe URL is on the loopback (`helpers/diagramWindow.ts`): `127.0.0.1:PORT` is off-origin to the
-// `localhost:PORT` page and answered by the same local server. Nothing leaves the machine.
+// Every probe URL is on the loopback (`helpers/diagramWindow.ts`): `127.0.0.1:PORT` and
+// `peekover-probe.localhost:PORT` are off-origin to the `localhost:PORT` page. Nothing leaves the machine.
 //
 // THE VERSION. The real entrypoint (`entrypoints/app/main.ts`) is imported under a stand-in `browser` whose
 // `runtime.getManifest()` answers with the BUILT manifest (when `.output` exists) — the line shows that version,
@@ -32,9 +33,17 @@ import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { isOffOrigin, isSentinel, offOriginProbeUrl, wireSettled, flush } from './helpers/diagramWindow';
 import { backdropOf, inkOf, ratioOver, TEXT_BAR } from './helpers/contrast';
 
-const SERVED = '/public/icons/icon-128.png'; // a real file the dev server answers, so the image LOADS
+const SERVED = '/public/icons/icon-128.png'; // a real file the dev server serves
 let seq = 0;
 const remote = (): string => offOriginProbeUrl(`${SERVED}?status-line=${Date.now()}-${(seq += 1)}`);
+/**
+ * An off-origin URL for SERVED that LOADS on any host. `remote()`'s `127.0.0.1` only reaches the dev server
+ * where `localhost` binds IPv4: on Windows and on a GitHub Ubuntu runner it binds `[::1]` alone, and
+ * `127.0.0.1` is refused (measured: ~2 s, both engines). An `[::1]` literal cannot be used either: markdown-it
+ * writes it as `%5B::1%5D`, which Firefox rejects as a URL. Both engines resolve `*.localhost` to the loopback
+ * in both families, and it is a different origin from `localhost:PORT`.
+ */
+const answered = (): string => `http://peekover-probe.localhost:${location.port}${SERVED}?status-line=${Date.now()}-${(seq += 1)}`;
 
 const store = (theme: 'light' | 'dark' = 'light'): AppStore => ({
   putFolder: async () => undefined,
@@ -50,12 +59,12 @@ const sourceOf = (files: Record<string, string>): FolderSource => ({
   files: Object.entries(files).map(([name, text]) => ({ path: name, name, read: async () => text })),
 });
 
-async function until<T>(fn: () => T | null | undefined | false, what: string, ms = 15000): Promise<T> {
+async function until<T>(fn: () => T | null | undefined | false, what: string | (() => string), ms = 15000): Promise<T> {
   const end = performance.now() + ms;
   for (;;) {
     const v = fn();
     if (v) return v as T;
-    if (performance.now() > end) throw new Error(`timed out: ${what}`);
+    if (performance.now() > end) throw new Error(`timed out: ${typeof what === 'function' ? what() : what}`);
     await new Promise((r) => setTimeout(r, 20));
   }
 }
@@ -149,15 +158,24 @@ describe('4.7 — statement 2: the network', () => {
 
   it('the USER\'S LOAD: the load bar restores the images, the indicator lights, the line says "Network used"', async () => {
     const t0 = performance.now();
-    const urls = [remote(), remote()];
+    const urls = [answered(), answered()];
     const { container, line, host } = await openApp({ 'pics.md': `# Pics\n\n![one](${urls[0]})\n\n![two](${urls[1]})` }, 'pics.md');
     await flush();
     expect(netText(line)).toBe(NO_NETWORK_TEXT);
     container.querySelector<HTMLButtonElement>('.peekover-app__notices .peekover-remote-load')!.click();
-    const imgs = await until(() => {
-      const list = [...host.shadowRoot!.querySelectorAll<HTMLImageElement>('img')].filter((i) => urls.includes(i.src));
-      return list.length === 2 && list.every((i) => i.complete && i.naturalWidth > 0) ? list : null;
-    }, 'both images loaded');
+    const restored = (): HTMLImageElement[] =>
+      [...host.shadowRoot!.querySelectorAll<HTMLImageElement>('img')].filter((i) => urls.includes(i.src));
+    // 10 s, inside the 15 s test timeout, so a stall names the step and each image's state.
+    const imgs = await until(
+      () => {
+        const list = restored();
+        return list.length === 2 && list.every((i) => i.complete && i.naturalWidth > 0) ? list : null;
+      },
+      () =>
+        `both images loaded — restored ${restored().length}/2: ` +
+        JSON.stringify(restored().map((i) => ({ src: i.src, complete: i.complete, naturalWidth: i.naturalWidth }))),
+      10_000,
+    );
     expect(imgs.length).toBe(2);
     await flush();
     expect(host.getAttribute(NETWORK_ATTR)).toBe('active');

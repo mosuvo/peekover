@@ -1,6 +1,36 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · HUMAN RULING — development back on local from here; the agent commits, never pushes; the human
+  pushes.** Cloud credits ended; work returns to the human's Windows machine. The 2026-10-31 cloud-push ruling (the
+  agent may push its own branch) applied only to cloud sessions and no longer applies; AGENTS.md's local rule stands
+  and its Windows/Git-Bash notes apply again. The agent never pushes any branch, never merges, never force-pushes.
+  Revisit-when: the human moves development to a cloud session again.
+
+- **2026-11-04 · M13 TASK 4.7 FIX — the user's-load network test on CI (the off-origin probe address was refused).**
+  The 4.7 PR's CI (`b2dd4f2`) failed one test on both engines: statusLine's "the USER'S LOAD" timed out at 15 s (CI:
+  2 failed | 2148 passed | 60 skipped of 2210). **Reproduced locally, both engines** — not CI-only. Cause: the images
+  went to `127.0.0.1:PORT` (`offOriginProbeUrl`), and the test needs them to LOAD (`naturalWidth > 0`). Vitest's
+  server listens on `localhost`, which binds ONE loopback family: `[::1]` here (curl: `[::1]` 200, `127.0.0.1`
+  refused, ~2 s in both engines). Every earlier probe of that address wants a refusal or a 404, so nothing else
+  depended on it answering. The cloud host must have bound `localhost` to IPv4, so it passed there. A GitHub Ubuntu
+  runner prefers `::1` too (not confirmed from CI's log: `gh` was not available locally). The 15 s was
+  the image wait (`until`'s own 15 s deadline equalled the test timeout, so its message never showed).
+  Fix (test only): the images go to `http://peekover-probe.localhost:PORT` — both engines resolve `*.localhost` to
+  the loopback in both families, so it loads whichever one the server binds, and it is off-origin to
+  `localhost:PORT`. An `[::1]` literal was tried first and rejected: markdown-it writes it `%5B::1%5D`, which Chromium
+  accepts and Firefox rejects as a URL (the image is then neither blocked nor fetched — no load bar; zero network
+  holds; recorded as an observation, not fixed). The image wait now has a 10 s deadline and names each image's src /
+  complete / naturalWidth. Nothing the test proves was weakened: the two images reach the off-origin address (Resource
+  Timing), the indicator lights, the line reads "Network used". Ablation (back to `127.0.0.1`): red on both engines
+  with "timed out: both images loaded — restored 2/2: … naturalWidth 0" — CI's red, now named.
+  Skips: 60 on CI vs 52 in the cloud = 4 tests gated on a built `.output` manifest (diagramActions ×1, mathActions ×2,
+  tableCopy ×1) × 2 engines; `ci.yml` runs `pnpm test:browser` BEFORE `pnpm build`.
+  Observation: on Windows, Firefox wrote ONE Resource Timing entry for the refused `127.0.0.1` load; the 4.7 ruling
+  measured none on the Linux host. The ruling (no count) is the safe side either way.
+  Why: a test whose outcome depends on which loopback family the host's resolver prefers is not a test of the product.
+  Revisit-when: another test needs an off-origin probe that ANSWERS — use the `*.localhost` form, not `127.0.0.1`.
+
 - **2026-11-03 · M13 RULING — 4.7's network statement (HUMAN).** Asked during task 4.7, before any code: D-9's
   "Network: N requests you made" cannot be made exactly true on Firefox. Measured on both engines (one probe, Resource
   Timing buffer and a `PerformanceObserver`): a served off-origin image — 1 entry each; the same image again (cached) —
