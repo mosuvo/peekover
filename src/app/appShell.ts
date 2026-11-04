@@ -99,6 +99,7 @@ import { buildThemeControl } from '../theme/themeControl';
 import { buildCodeThemeControl } from '../theme/codeThemeControl';
 import { registerUiFonts } from '../theme/uiFonts';
 import { createToolbar, toolbarCss, TOOLBAR_CLASS } from './toolbar';
+import { createStatusLine, statusLineCss } from './statusLine';
 import { directPort } from '../settings/settingsPort';
 import {
   currentSettings,
@@ -370,6 +371,9 @@ export interface AppDeps {
    *  wiring is jsdom-testable without a native re-prompt; defaults to the real `reopenFromHandle`. */
   reopenFromHandle?: (handle: FileSystemDirectoryHandle, opts?: OpenFolderOptions) => Promise<OpenFolderOutcome>;
   store?: AppStore;
+  /** The extension's version, `runtime.getManifest().version`, read by the app entrypoint (013 task 4.7) — the
+   *  status line's third statement. Absent (a test page) → the line states no version. */
+  version?: string;
 }
 
 // The shell's light and dark token sets, each written ONCE and reused by every rule that needs
@@ -524,6 +528,7 @@ const APP_CSS = /* css */ `
   position:relative; /* containing block for __storage-slot's overlay — see APP_CSS doc comment */
 }
 ${toolbarCss(SHELL_CLASS)}
+${statusLineCss(SHELL_CLASS)}
 /* Reduced motion, for the whole shell (013 task 4.1): no animation runs and no transition plays. */
 @media (prefers-reduced-motion:reduce){
   .${SHELL_CLASS} *,.${SHELL_CLASS} *::before,.${SHELL_CLASS} *::after{animation:none!important; transition:none!important}
@@ -770,6 +775,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   // tag (the 4.0 census ruling F: the status line's test-backed statement carries that claim
   // from 4.7). The app controls below join it at 4.4.
   const toolbar = createToolbar(doc);
+  // The status line (013 task 4.7, D-9): the open file, the network, the version — at the window's foot.
+  const statusLine = createStatusLine(doc, { version: deps.version });
 
   // The always-visible "what's stored" affordance (task 6.0). It lives in the header so the
   // transparency + erase controls are discoverable BEFORE any folder is opened — storage
@@ -961,8 +968,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   );
 
   body.append(folders, readerPane.element);
-  shell.append(buildStyle(doc), header, toolbar.notices, body);
+  shell.append(buildStyle(doc), header, toolbar.notices, body, statusLine.element);
   container.replaceChildren(shell);
+  statusLine.watch(body);
   // The design's interface and code faces, from the package (D-2); idempotent, never throws.
   registerUiFonts();
 
@@ -1605,7 +1613,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   function selectFile(file: ReaderFile | null): Promise<void> {
     // The toolbar follows the selection once the pane has settled: the file's name, and the host it
     // observes (null while a designed state shows — then Read / Raw have nothing to act on).
-    return readerPane.select(file).then(() => toolbar.setDocument(file?.name ?? null, readerHost()));
+    // The status line's file statement follows at the same moment: it shows what the pane shows (4.7, D-9).
+    return readerPane.select(file).then(() => {
+      toolbar.setDocument(file?.name ?? null, readerHost());
+      statusLine.setFile(file?.name ?? null);
+    });
   }
 
   /** Select a folder file: render it AND record a recent (best-effort, dedup/capped via the

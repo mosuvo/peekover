@@ -59,6 +59,10 @@ const PANE_PAD = 24;
  *  4.5, so the band is RETIRED there and the split runs to the pane's own padding. (The fixed 60vh split left
  *  227px at 900 high and ran 137px PAST the viewport stacked.) */
 const BOTTOM_GAP_MAX = PANE_PAD + 4;
+/** The reader pane's foot — where the split is measured to. RE-SPELLED at 013 task 4.7 (C225 and 4.6's split
+ *  tests): it was the viewport's foot; the status line (D-9) now sits there, 30px tall, BELOW the pane, so the
+ *  pane — and the split in it — end at the line's top edge. KEEPS: the split fills the pane to its foot. */
+const paneFoot = (host: HTMLElement): number => host.closest('.peekover-app__reader')!.getBoundingClientRect().bottom;
 /** The reading column's and the diff's bottom padding on the app page since 013 task 4.6: their top value. */
 const COLUMN_FOOT = 56;
 /** The content script's band, unchanged: its pills remain. */
@@ -292,8 +296,8 @@ describe('R29(b), R28 — the split fills the pane; its scrollbars are themed; l
     const { host } = await openFile(theme);
     await enterEdit(host);
     const shell = inHost(host, EDITOR_SHELL_CLASS)!.getBoundingClientRect();
-    const gap = window.innerHeight - shell.bottom;
-    expect(gap, `the split ends ${gap.toFixed(0)}px above the viewport bottom (max ${BOTTOM_GAP_MAX})`).toBeLessThanOrEqual(BOTTOM_GAP_MAX);
+    const gap = paneFoot(host) - shell.bottom;
+    expect(gap, `the split ends ${gap.toFixed(0)}px above the pane's foot (max ${BOTTOM_GAP_MAX})`).toBeLessThanOrEqual(BOTTOM_GAP_MAX);
     expect(gap, 'and does not run past it').toBeGreaterThanOrEqual(0);
     // Both panes (side by side at WIDE, stacked at NARROW) are real boxes with height.
     expect(inHost(host, EDITOR_SOURCE_CLASS)!.getBoundingClientRect().height).toBeGreaterThan(150);
@@ -452,7 +456,7 @@ describe('013 task 4.6 — the band reclaimed on the app page; the content scrip
     expect(diffGap).toBeGreaterThanOrEqual(PANE_PAD + COLUMN_FOOT - 2);
   });
 
-  it.each(CASES)('%s, %s: in edit nothing overlaps — the notice area, the toolbar, the rail and the split', async (_w, theme, size) => {
+  it.each(CASES)('%s, %s: in edit nothing overlaps — the notice area, the toolbar, the rail, the status line and the split', async (_w, theme, size) => {
     await page.viewport(size.width, size.height);
     const { host, container } = await openLong(theme);
     await enterEdit(host);
@@ -461,11 +465,13 @@ describe('013 task 4.6 — the band reclaimed on the app page; the content scrip
       ['the header', container.querySelector('.peekover-app__header')!.getBoundingClientRect()],
       ['the notice area', container.querySelector('.peekover-app__notices')!.getBoundingClientRect()],
       ['the rail', inHost(host, 'peekover-toc')!.getBoundingClientRect()],
+      // 013 task 4.7 (4.6's ★ note): the status line at the window's foot.
+      ['the status line', container.querySelector('.peekover-status')!.getBoundingClientRect()],
     ];
     const hits = others.filter(([, r]) => laidOut(r) && overlaps(split, r)).map(([name]) => name);
     expect(hits, `${size.width}: the split overlaps`).toEqual([]);
     // The split's bottom edge sits at the pane's foot (C225's property, at this test's widths too).
-    const gap = window.innerHeight - split.bottom;
+    const gap = paneFoot(host) - split.bottom;
     expect(gap).toBeLessThanOrEqual(BOTTOM_GAP_MAX);
     expect(gap).toBeGreaterThanOrEqual(0);
   });
@@ -480,7 +486,7 @@ describe('013 task 4.6 — the band reclaimed on the app page; the content scrip
     expect(laidOut(net), 'firing control: the indicator is drawn').toBe(true);
     const split = inHost(host, EDITOR_SHELL_CLASS)!.getBoundingClientRect();
     expect(overlaps(split, net), `the split (bottom ${split.bottom.toFixed(0)}) overlaps the indicator (top ${net.top.toFixed(0)})`).toBe(false);
-    expect(window.innerHeight - split.bottom, 'and it gives up no more than that clearance').toBeLessThanOrEqual(PANE_PAD + COLUMN_FOOT + 4);
+    expect(paneFoot(host) - split.bottom, 'and it gives up no more than that clearance').toBeLessThanOrEqual(PANE_PAD + COLUMN_FOOT + 4);
   });
 
   it('CONTROL — the content script (file://, mount without `contained`) keeps its 130px band', async () => {

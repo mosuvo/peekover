@@ -1,6 +1,112 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · HUMAN RULING — development back on local from here; the agent commits, never pushes; the human
+  pushes.** Cloud credits ended; work returns to the human's Windows machine. The 2026-10-31 cloud-push ruling (the
+  agent may push its own branch) applied only to cloud sessions and no longer applies; AGENTS.md's local rule stands
+  and its Windows/Git-Bash notes apply again. The agent never pushes any branch, never merges, never force-pushes.
+  Revisit-when: the human moves development to a cloud session again.
+
+- **2026-11-04 · M13 TASK 4.7 FIX — the user's-load network test on CI (the off-origin probe address was refused).**
+  The 4.7 PR's CI (`b2dd4f2`) failed one test on both engines: statusLine's "the USER'S LOAD" timed out at 15 s (CI:
+  2 failed | 2148 passed | 60 skipped of 2210). **Reproduced locally, both engines** — not CI-only. Cause: the images
+  went to `127.0.0.1:PORT` (`offOriginProbeUrl`), and the test needs them to LOAD (`naturalWidth > 0`). Vitest's
+  server listens on `localhost`, which binds ONE loopback family: `[::1]` here (curl: `[::1]` 200, `127.0.0.1`
+  refused, ~2 s in both engines). Every earlier probe of that address wants a refusal or a 404, so nothing else
+  depended on it answering. The cloud host must have bound `localhost` to IPv4, so it passed there. A GitHub Ubuntu
+  runner prefers `::1` too (not confirmed from CI's log: `gh` was not available locally). The 15 s was
+  the image wait (`until`'s own 15 s deadline equalled the test timeout, so its message never showed).
+  Fix (test only): the images go to `http://peekover-probe.localhost:PORT` — both engines resolve `*.localhost` to
+  the loopback in both families, so it loads whichever one the server binds, and it is off-origin to
+  `localhost:PORT`. An `[::1]` literal was tried first and rejected: markdown-it writes it `%5B::1%5D`, which Chromium
+  accepts and Firefox rejects as a URL (the image is then neither blocked nor fetched — no load bar; zero network
+  holds; recorded as an observation, not fixed). The image wait now has a 10 s deadline and names each image's src /
+  complete / naturalWidth. Nothing the test proves was weakened: the two images reach the off-origin address (Resource
+  Timing), the indicator lights, the line reads "Network used". Ablation (back to `127.0.0.1`): red on both engines
+  with "timed out: both images loaded — restored 2/2: … naturalWidth 0" — CI's red, now named.
+  Skips: 60 on CI vs 52 in the cloud = 4 tests gated on a built `.output` manifest (diagramActions ×1, mathActions ×2,
+  tableCopy ×1) × 2 engines; `ci.yml` runs `pnpm test:browser` BEFORE `pnpm build`.
+  Observation: on Windows, Firefox wrote ONE Resource Timing entry for the refused `127.0.0.1` load; the 4.7 ruling
+  measured none on the Linux host. The ruling (no count) is the safe side either way.
+  Why: a test whose outcome depends on which loopback family the host's resolver prefers is not a test of the product.
+  Revisit-when: another test needs an off-origin probe that ANSWERS — use the `*.localhost` form, not `127.0.0.1`.
+
+- **2026-11-03 · M13 RULING — 4.7's network statement (HUMAN).** Asked during task 4.7, before any code: D-9's
+  "Network: N requests you made" cannot be made exactly true on Firefox. Measured on both engines (one probe, Resource
+  Timing buffer and a `PerformanceObserver`): a served off-origin image — 1 entry each; the same image again (cached) —
+  still 1; a 404 — 1 entry each; **a refused connection — 1 entry on Chromium, NONE on Firefox** (offline and DNS
+  failure fail the same way). So the count would undercount on Firefox whenever a request fails to connect. **Ruled:
+  "Network used", no count** — "No network calls" while the indicator is dark AND no off-origin request is seen;
+  otherwise "Network used" (the in-document indicator's own words). Both exactly true on both engines; the count left
+  off under Q9. Rejected: counting the images the user loaded ("Network: you loaded N remote images"); leaving
+  statement 2 off.
+
+- **2026-11-03 · M13 TASK 4.7 — the status line's three test-backed statements (D-9; G-3; gate-1 Q9; ruling F).**
+  Branch restarted from `main` at `07dd141` (PR #31's merge, containing `a5b431e`). Font parity applied (`fc-match
+  system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on
+  2026-11-03.
+  - **The line** (`src/app/statusLine.ts`, new): a `<footer role="status">` last in the shell, at the window's foot,
+    30px, to the 3.1 mock's `.status` (`--muted` on `--paper`, the dot `--warn` once used; hidden in print). Exactly
+    three statements; D-9's left-off list (encoding, "GFM + math + mermaid", word counts, "last change") stays off.
+    For assistive tech it is a polite live region (`role="status"`, as tasks.md says): the new file name is announced
+    on a switch and "Network used" once — never more often than its text changes.
+  - **Statement 1, the open file** — set in `selectFile`, the one place every route ends, after the pane settles,
+    beside the toolbar's own update. **Tests:** (unit, `statusLine.test.ts`) A then B shows B, no file clears it; the
+    tree (A, B, a fresh folder clears, revoke clears), a recent, a file pin, the `selectFile` seam (incl. an unreadable
+    file, which the pane names) and `null`. (Cr+Fx) A then B on the real page. The out-of-order `readerPane.select`
+    race is NOT claimed fixed: the line shows what the pane shows.
+  - **Statement 2, the network** (ruled above) — two arms OR-ed: a reader host with the indicator's own
+    `data-network="active"` (the user's Load click), watched by a MutationObserver on the shell body; and a
+    `PerformanceObserver` on Resource Timing entries that are http(s) AND off the page's origin, from the line's
+    creation. On the real page every http(s) request is off-origin and the extension's own loads are not http(s); the
+    origin test keeps the harness (served over http) honest too. Sticky for the page. **Tests (Cr+Fx,
+    `statusLine.browser.test.ts`):** ZERO — blocked remote media, code, math, a diagram, the editor engine and a
+    same-origin fetch standing in for a chunk or font, no user action → "No network calls"; then `wireSettled()`:
+    nothing off-origin in the buffer, same-origin loads present (the firing control that extension loads happened and
+    were not counted), and the settle's own off-origin sentinel flips the line (the instrument is live). USER LOAD —
+    the load bar restores two served images; both load; the indicator lights; "Network used"; both URLs in the
+    buffer. SLOW — an off-origin image issued 400 ms after the line first read zero, NOT through the load bar (the
+    indicator stays dark), flips it once it lands. Every probe is on the loopback (`127.0.0.1:PORT`, off-origin to the
+    `localhost:PORT` page).
+  - **Statement 3, the version** — `entrypoints/app/main.ts` reads `browser.runtime.getManifest().version`
+    (defensively: outside the extension, as in the harness, there is no runtime and the line states no version) and
+    passes it as `AppDeps.version`. **Tests:** (unit) the line shows the version it is given, package.json's is a plain
+    semver; (Cr+Fx) every BUILT manifest's version (`.output/*/manifest.json`, both engines' builds) equals
+    package.json's, and the REAL entrypoint, imported under a stand-in `browser` whose `getManifest()` answers with the
+    built manifest, shows "Peekover <that version>" — the line's slots are exactly file, spacer, network, version. The
+    number itself is 7.1's; 4.7 pins "matches the build".
+  - **Necessary ripple, stated:** `entrypoints/app/main.ts` (Files did not list it; the Verify line's
+    "from `runtime.getManifest().version`" needs the entrypoint, since `src/` never touches the extension API);
+    `tests/browser/editorWalkPolish.browser.test.ts` (4.6's ★ note: the status line joins its overlap set; and C225 and
+    4.6's split tests now measure to the READER PANE's foot — the line sits below the pane, so the viewport's foot is
+    30px lower; KEEPS: the split fills the pane to its foot).
+  - **Layout and contrast (Cr+Fx, 1440 / 1080 / 414 × light / dark):** the line's bottom is the window's; the reader
+    pane ends at its top; a hit-test every 24px across the line returns the line, reading and editing (the column and
+    the rail scroll inside the pane, which clips them — a rect test would read the clipped part); the notice area and
+    the split do not overlap it; every text span ≥ 4.5:1. The contrast census measures the whole app container, so the
+    line is in it: green, pending list unchanged.
+  - **Ablations, each red then restored md5-identical (both engines):** the file name not set on a switch → 4 unit
+    reds ("expected '' to be 'a.md'") and the browser A→B; the origin test removed (an extension-internal load counted)
+    → "before the settle: expected 'Network used' to be 'No network calls'"; the observer arm dropped (tasks.md's
+    red-first; a late load missed) → "the observer arm saw it: expected 'No network calls' to be 'Network used'"; the
+    version hard-coded → "expected 'Peekover 0.1.0' to be 'Peekover 0.0.0'".
+  - **Census:** no row first-breaks at 4.7, as counted. C225 re-spelled again (the pane's foot), with 4.6's split
+    tests. The claims ledger tracks published surfaces (README, SECURITY, site; PRIVACY and the store text later),
+    not in-app text, so the line's sentences are not ledger rows — unchanged.
+  - **Verify:** lint 0 · unit 1,498 / 1,499 (`pipeline.perf`) · browser, the FULL suite alone, both engines, CI font:
+    **2,158 passed / 0 failed / 52 skipped of 2,210** (204 files, 372 s), EXIT 0, first run, no unhandled error; the
+    four known flakes re-run once alone, green (`pipeline.perf` 1 / 1; `watchRemount`, `editorPreview`,
+    `contrastCensus` 70 / 70). One red during development, classified: the contrast census INVENTORY went red once in a
+    three-file targeted run (with `editorWalkPolish` and `snapshotNotice`, before `editorWalkPolish`'s re-spelling); it
+    was green alone right after (22 / 22), green in the same three-file order, in the full suite and alone again — not
+    reproduced, consistent with the known intermittent (its message was not captured) · golden EMPTY · zero
+    `src/settings` diff · NUL 0 in every changed file.
+  - **Bytes (clean two-engine build):** content script **343,900 B, md5 `23b30cde…` (Cr) / `b14eee5c…` (Fx) —
+    identical to 4.6** (the line is app-page only; unchanged in every arm). App chunk 547,418 → **549,709 B (+2,291):**
+    `statusLine.ts` with its shell wiring +2,156 · `main.ts`'s version read +135 — sum exact; both reverted rebuild
+    547,418 exactly. `.output` 5,968,003 / 5,968,119 B (the app chunk is the whole delta); zips 1,959,785 / 1,959,841
+    B; manifests **833 / 949 B** unchanged, `permissions: []`. G-7 holds.
+
 - **2026-11-03 · M13 TASK 4.6 — the 130 px band reclaimed on the app page, in all three places; the split fills the
   height (D-7; F-2; the human's M12 7.1 request).** Branch restarted from `main` at `9a37fd2` (PR #30's merge, containing
   `b8af45f`). Font parity applied (`fc-match system-ui` → DejaVu Sans). Node 22.23.4, pnpm 10.33.0, frozen install EXIT 0,
