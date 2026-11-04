@@ -78,9 +78,10 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 export const COMPACT_MAX = 863;
 
 /** 4.8 (D-10; gate-1 Q12): at this width and below, with a document open, the folder pane is an
- *  overlay behind "Files". Measured at 4.8: the narrowest width keeping >= 60ch of reading text
- *  beside the pane, with the TOC rail open (its default there), is 1273 px on both engines. */
-export const FILES_OVERLAY_MAX = 1272;
+ *  overlay behind "Files". The narrowest width keeping >= 60ch of reading text beside the pane, with
+ *  the TOC rail open (its default there), is 1282 px: Chromium on Linux draws Literata's "0" at a
+ *  whole 10 px (60ch = 600 px; 590.6 / 591 px on Windows) — the 4.8 FIX, by the human's ruling. */
+export const FILES_OVERLAY_MAX = 1281;
 
 /** The segment's views, in the mock's order. */
 const SEGMENTS: ReadonlyArray<readonly [ReaderMode, string]> = [

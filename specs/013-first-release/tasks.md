@@ -640,6 +640,9 @@ the app page shows some controls twice — unreleased, stated.*
       noise; 104.2 / 95.0 ms median / floor against 165. No `backdrop-filter` ships (flagged). Content-script md5
       identical to 4.7; app chunk +2,609 B. P1 (statusLine probes that must land) and P2 (`fontLicences` separators)
       test-only. Census: C264, C218, C260.
+      ★ *2026-11-04 (4.8 FIX; HUMAN RULING): the breakpoint is **1281 px** (supersedes 1272) — Chromium on Linux draws
+      Literata's "0" at a whole 10 px, so 60ch = 600 px and is lost beside the pane at ≤ 1281 (`decisions.md`, "M13
+      TASK 4.8 FIX"). A 1280 px window gets the overlay.*
 
 *★ GROUP 4 COMPLETE (2026-11-04) — 4.0–4.8 landed. The census's 28 retirements are listed for the human in
 `census.md` § "Retirements" (gate-1 Q8), unchanged since 4.5.*

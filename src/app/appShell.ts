@@ -466,7 +466,7 @@ export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22
  * toolbar (`position:static` on its wrapper, toolbar.ts). Pinned by tests/browser/toolbar.browser.test.ts
  * ("the header panels stay inside the window").
  *
- * ≤ 1272 px, THE FILES OVERLAY (013 task 4.8, D-10; gate-1 Q12; the approved 3.1 mock). While a
+ * ≤ 1281 px, THE FILES OVERLAY (013 task 4.8, D-10; gate-1 Q12; the approved 3.1 mock). While a
  * document is open the folder pane leaves the row and sits over the reader's left edge, closed until
  * "Files" opens it: `min(300px, 86%)` wide (the mock's), inside `__body` — so the toolbar above and
  * the status line below stay clear — with a scrim over the rest of the body (fixed ink, so it darkens

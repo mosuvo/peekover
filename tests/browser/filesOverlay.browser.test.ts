@@ -1,12 +1,15 @@
 // filesOverlay — the real-engine half of 013 task 4.8 (D-10; gate-1 Q12; the approved 3.1 mock), Chromium AND Firefox.
 //
-// THE BREAKPOINT, MEASURED (4.8 step 1; `decisions.md` "M13 TASK 4.8"): the narrowest width keeping >= 60ch of reading
-// text beside the folder pane is 1273 px with the TOC rail open (its default there) — so at <= 1272 px, while a
-// document is open, the pane is an overlay behind "Files". Above it the pane stays in the row and "Files" is hidden.
+// THE BREAKPOINT, MEASURED (`decisions.md` "M13 TASK 4.8" and "M13 TASK 4.8 FIX"): the narrowest width keeping >= 60ch
+// of reading text beside the folder pane, with the TOC rail open (its default there), is 1282 px — set by Chromium on
+// Linux, which draws Literata's "0" at a whole 10 px (60ch = 600 px; 590.6 / 591 px on Windows). So at <= 1281 px,
+// while a document is open, the pane is an overlay behind "Files". Above it the pane stays in the row, "Files" hidden.
+// Every ch-based check first proves the paragraph is DRAWN in Literata (`literataDrawn`), and its message names the
+// font it saw: a font-dependent red explains itself.
 //
-// What is proven, in both themes, at 414 and 1272 (overlay) and 1273 and 1440 (sidebar):
+// What is proven, in both themes, at 414 and 1281 (overlay) and 1282 and 1440 (sidebar):
 //   • "Files" shows exactly where the overlay applies; the pane is out of the row there and the reading column keeps
-//     its full measure (684 px of text) at 1272; above it the pane sits beside the reader;
+//     its full measure (684 px of text) at 1281; above it the pane sits beside the reader;
 //   • "Files" opens the pane over the reader: focus moves in, Tab and Shift+Tab stay inside, nothing in the toolbar
 //     moves, the status line is not covered; it closes three ways — Escape and the scrim (focus back on "Files"),
 //     and a press on another toolbar control (that control keeps it);
@@ -32,6 +35,7 @@ import { resetWatchRegistryForTest, stopWatch } from '../../src/watch/watchRegis
 
 const C = TOOLBAR_CLASS;
 const MEASURE_TEXT = 684; // --reader-measure 748 px less the column's 2 × 32 px padding (readerCss.ts)
+const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 const PARA = 'Peekover renders the markdown your tools and agents write, on this device, with nothing sent anywhere. '.repeat(6);
 const DOC = (title: string): string => [`# ${title}`, '## One', PARA, '## Two', PARA, '## Three', PARA].join('\n\n');
 const FILES: Record<string, string> = { 'alpha.md': DOC('Alpha'), 'beta.md': DOC('Beta'), 'CLAUDE.md': DOC('Agent') };
@@ -99,6 +103,44 @@ const treeItem = (name: string): HTMLElement | undefined =>
   [...container.querySelectorAll<HTMLElement>('[role="treeitem"][data-kind="file"]')].find((b) => b.textContent?.includes(name));
 const overlayOpen = (): boolean => shell().getAttribute('data-files') === 'open';
 
+/** The width of `n` ch in `el`'s own font, measured in place. */
+function chWidth(el: HTMLElement, n: number): number {
+  const probe = document.createElement('span');
+  probe.style.cssText = `display:inline-block;width:${n}ch;height:0`;
+  el.prepend(probe);
+  const w = probe.getBoundingClientRect().width;
+  probe.remove();
+  return w;
+}
+
+/**
+ * Before any ch-based check: the reader face is loaded and the paragraph is DRAWN in it — its text measured in its
+ * own stack differs from the same text without Literata. The message names what was seen, so a red that depends on
+ * the font (a load race, a fallback, an engine's rounding) says so.
+ */
+async function literataDrawn(p: HTMLElement): Promise<void> {
+  const faces = (): FontFace[] => [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Literata');
+  await Promise.all(faces().map((f) => f.loaded.catch(() => undefined)));
+  await frames(2);
+  const cs = getComputedStyle(p);
+  const width = (family: string): number => {
+    const span = document.createElement('span');
+    span.textContent = 'Peekover renders the markdown 0123456789';
+    span.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${family}`;
+    p.append(span);
+    const w = span.getBoundingClientRect().width;
+    span.remove();
+    return w;
+  };
+  const rest = cs.fontFamily.split(',').slice(1).join(',');
+  const seen =
+    `${ENGINE}: font-family ${cs.fontFamily}; Literata faces [${faces().map((f) => `${f.weight}/${f.style} ${f.status}`).join(', ')}]; ` +
+    `text ${width(cs.fontFamily).toFixed(1)} px in its stack vs ${width(rest).toFixed(1)} px without Literata; 60ch = ${chWidth(p, 60).toFixed(1)} px`;
+  expect(/^"?Literata"?,/.test(cs.fontFamily), `the paragraph's stack leads with Literata — ${seen}`).toBe(true);
+  expect(document.fonts.check(`${cs.fontSize} Literata`), `the Literata face is loaded — ${seen}`).toBe(true);
+  expect(Math.abs(width(cs.fontFamily) - width(rest)) > 0.5, `the paragraph is drawn in Literata — ${seen}`).toBe(true);
+}
+
 /** The app page at `width`, the folder open and `name` chosen from the pane — in the row, as a first choice is. */
 async function openApp(width: number, theme: 'light' | 'dark', name = 'alpha.md'): Promise<void> {
   await page.viewport(width, 900);
@@ -140,7 +182,7 @@ const SIDEBAR_WIDTHS = [FILES_OVERLAY_MAX + 1, 1440];
 
 describe('4.8 — the breakpoint: "Files" and the overlay only at <= the measured width', () => {
   it('the measured value is the one shipped', () => {
-    expect(FILES_OVERLAY_MAX).toBe(1272);
+    expect(FILES_OVERLAY_MAX).toBe(1281);
   });
 
   it.each(THEMES.flatMap((t) => OVERLAY_WIDTHS.map((w) => [w, t] as const)))(
@@ -156,8 +198,11 @@ describe('4.8 — the breakpoint: "Files" and the overlay only at <= the measure
       expect(reader.left, 'the reader starts at the window\'s left edge').toBeLessThan(1);
       expect(Math.abs(reader.width - innerWidth), 'and takes its width').toBeLessThan(1);
       if (width === FILES_OVERLAY_MAX) {
-        const text = host()!.shadowRoot!.querySelector<HTMLElement>('.peekover-reader p')!.getBoundingClientRect().width;
+        const p = host()!.shadowRoot!.querySelector<HTMLElement>('.peekover-reader p')!;
+        await literataDrawn(p);
+        const text = p.getBoundingClientRect().width;
         expect(text, 'at the breakpoint the column keeps its full measure').toBeCloseTo(MEASURE_TEXT, 0);
+        expect(text, `and that is more than 60ch (${chWidth(p, 60).toFixed(1)} px on ${ENGINE})`).toBeGreaterThan(chWidth(p, 60));
       }
     },
   );
@@ -172,11 +217,10 @@ describe('4.8 — the breakpoint: "Files" and the overlay only at <= the measure
       const reader = container.querySelector<HTMLElement>('.peekover-app__reader')!.getBoundingClientRect();
       expect(Math.abs(p.right - reader.left), 'beside the reader, not over it').toBeLessThan(1);
       const para = host()!.shadowRoot!.querySelector<HTMLElement>('.peekover-reader p')!;
-      const probe = document.createElement('span');
-      probe.style.cssText = 'display:inline-block;width:60ch;height:0';
-      para.prepend(probe);
-      expect(para.getBoundingClientRect().width, 'the text keeps >= 60ch beside the pane').toBeGreaterThanOrEqual(probe.getBoundingClientRect().width);
-      probe.remove();
+      await literataDrawn(para);
+      const text = para.getBoundingClientRect().width;
+      const ch60 = chWidth(para, 60);
+      expect(text, `the text keeps >= 60ch beside the pane (text ${text.toFixed(1)} px, 60ch ${ch60.toFixed(1)} px, ${ENGINE})`).toBeGreaterThanOrEqual(ch60);
       // Pressing where "Files" would be does nothing: there is no overlay to open.
       files().click();
       expect(overlayOpen()).toBe(false);

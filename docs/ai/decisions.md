@@ -1,6 +1,53 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 4.8 FIX — filesOverlay's 60ch check red on CI: Chromium on Linux rounds Literata's "0" to a
+  whole pixel. HUMAN RULING: the overlay starts at ≤ 1281 px (supersedes 4.8's 1272).** CI on `d18d1fc`: "at 1273 px,
+  light|dark: … >= 60ch" failed on Chromium — "expected 591 to be greater than or equal to 600". Local, on `main`.
+  - **Evidence.** (1) A scratch probe (not committed), a fresh mount at 1273 as the test does, both engines: at the
+    moment the first paragraph exists the paragraph's `font-family` is `Literata, Georgia, serif`, all four Literata
+    faces on `document.fonts` are `loaded` (`check('17px Literata')` true), 60ch = 590.6 px (Chromium) / 591.0
+    (Firefox), the paragraph 591.0 — and identical after `document.fonts.ready` and after every face's `load()`: **no
+    load race here** (the faces are inline `data:` URIs). With the Literata faces removed (the fallback): 60ch = 626.0
+    px (Georgia) on both. (2) The glyph advances, read from the font files with fontTools: Literata 400's "0" is
+    579/1000 em → 9.843 px at 17 px → 60ch = 590.6 px exact, **600 px if rounded to a whole pixel**; DejaVu Serif (the
+    Ubuntu `serif`, read from WSL's copy) 1303/2048 → 649.0 / 660 px; Georgia (not on a Linux runner) 626.0 / 600.
+    CI's 600 matches only Literata with whole-pixel advances — **CI drew Literata; the engine's `ch` is 600 px there**
+    (Chromium on Linux without subpixel glyph positioning). Not measured on Linux directly: WSL has no Node /
+    Playwright and none was installed; `--disable-font-subpixel-positioning` does not change Windows' text stack
+    (590.58 with and without). Literata applies on the app page everywhere (step 3 not triggered).
+  - **The breakpoint, re-verified** (the 4.8 sweep repeated, scratch, Literata 400 asserted loaded and the paragraph's
+    stack checked at every width 1500 → 860, both engines × both themes, rail open and collapsed; 0 widths unloaded):
+    60ch beside the pane holds at 1273 with **+0.4 px (Chromium) / 0.0 px (Firefox)** — 1272 was right for Windows, by
+    under half a pixel. Beside the pane the text is (window − 682) px from 1143 up (the pane at its 320 px clamp, the
+    rail 250, paddings 48 + 64), so with 60ch = 600 px it is lost at ≤ 1281. **Ruled (asked; the kickoff's step 4
+    stop): `FILES_OVERLAY_MAX = 1281`.** Rejected: keep 1272 and assert Literata's exact 60ch in px; keep 1272 and drop
+    the ch check. Margin at 1282: +9.4 px (Windows Chromium), +9.0 (Firefox), 0.0 (Linux Chromium, computed). Cost,
+    accepted with the ruling: a 1280 px window now gets the Files overlay.
+  - **The test** (`filesOverlay.browser.test.ts`): every ch-based check (the full measure at the breakpoint — which
+    now also asserts more than 60ch — and the >= 60ch check just over it) first runs `literataDrawn`: waits for the
+    Literata faces to settle, then asserts the stack leads with Literata, the face is loaded, and the paragraph is DRAWN
+    in it (sample text wider or narrower than the same text without Literata); each message names the engine, the
+    stack, the faces' states, both widths and 60ch in px. The 60ch message now carries both numbers and the engine.
+    The widths follow the constant (414 / 1281 overlay, 1282 / 1440 sidebar). **Ablation** (the Literata faces
+    removed just before the checks): 12 red (6 cases × 2 engines) with "the paragraph is drawn in Literata — chromium:
+    font-family Literata, Georgia, serif; Literata faces []; text 340.8 px in its stack vs 340.8 px without Literata;
+    60ch = 626.0 px". Finding: `document.fonts.check()` returned TRUE with no Literata face at all (nothing to load),
+    so the drawn-width comparison is the instrument; kept all three.
+  - **F5 (Firefox `uiFonts` "content-script chrome drew Bricolage", full-suite only) — NOT the same class; left for the
+    flake pass.** It asserts a face is NOT drawn, and its red is a face drawn (408.3 vs 387.3 px) while
+    `document.fonts` held no Bricolage face (its precondition passed): **Bricolage Grotesque is installed on this
+    machine** (`C:\Windows\Fonts\BricolageGrotesque-*.ttf`), so the content script's stack can reach the system copy.
+    A wait would not change that; CI has no such font. Why only in the full suite is not established.
+  - Comments updated to 1281 in the three C218 / C260 / C264 re-spellings and `appShell.ts`'s doc comment;
+    tasks.md's 4.8 ★ note gains a line (the ruled value moved — flagged: beyond the kickoff's record list).
+  - **Verify:** filesOverlay 52 / 52 both engines, both themes · lint 0 · unit 1,499 / 1,499 · browser 2,210 passed / 0 failed / 52 skipped of
+    2,262, both engines, alone, first run (F5 did not recur) · golden EMPTY · content script md5 `23b30cde…` / `b14eee5c…` unchanged · app chunk 552,318 B
+    (size unchanged: one constant, same digit count) · `.output` 5,970,612 / 5,970,728 B · manifests 833 / 949 B.
+  Why: the plan's rule (>= 60ch beside the pane) has to hold where users run Chrome on Linux too, and CI is that
+  platform; a breakpoint passing by 0.4 px on one OS was never robust.
+  Revisit-when: the measure, the pane's clamp or the rail's default width changes; a design walk (8.1) at 1280 px.
+
 - **2026-11-04 · M13 TASK 4.8 — the Files overlay at ≤ 1272 px (the measured breakpoint); app-page first-paint timing
   (D-10; gate-1 Q12; the approved 3.1 mock; ruling 3 after 2.5). GROUP 4 COMPLETE.** Local, on `main` at `3291d57`
   (PR #32's merge, containing `2e859ae` — the 4.7 fix — and `b2dd4f2`), up to date with `origin/main`, tree clean.
