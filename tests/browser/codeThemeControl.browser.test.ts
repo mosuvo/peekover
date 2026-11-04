@@ -34,6 +34,9 @@ import {
   currentSettings,
 } from '../../src/settings/settingsSeam';
 import type { Settings } from '../../src/settings/settings';
+import type { FolderSource } from '../../src/app/folderSource';
+import { getSettings, putSettings, __resetConnectionForTest, DB_NAME } from '../../src/app/store';
+import { setThemeSetting } from '../../src/theme/reader';
 
 // RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
 // its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
@@ -61,13 +64,13 @@ afterEach(() => {
 
 /** A host enhanced directly — `codeRender.browser.test.ts`'s own `directHost` idiom — registered
  *  as a themed host too, so the independence tests have a real `data-theme` attribute to check. */
-function directHost(markdown: string): ShadowRoot {
+function directHost(markdown: string, theme?: string): ShadowRoot {
   const host = document.createElement('div');
   document.body.appendChild(host);
   cleanup.push(host);
   mount(markdown, host, { contained: true });
   registerThemeHost(host);
-  enhanceCode(host);
+  enhanceCode(host, theme === undefined ? {} : { theme });
   if (!host.shadowRoot) throw new Error('mount produced no shadow root');
   return host.shadowRoot;
 }
@@ -234,8 +237,11 @@ describe('independence from the document theme — BOTH directions (§4, tasks.m
     expect(host.getAttribute('data-theme')).toBe('light'); // unchanged by the code-theme pick
   });
 
-  it('flipping the document theme leaves an already-rendered block\'s colours untouched', async () => {
-    const shadow = directHost(DOC);
+  // KEEPS the property for the 20 Shiki themes, each with its own fixed colours. RE-SPELLED at 013 5.8
+  // with an explicit Shiki theme: the default is now the Peekover theme, which FOLLOWS the page theme
+  // by the human's 2.2 ruling (its own tests are below).
+  it('flipping the document theme leaves an already-rendered block\'s colours untouched (a Shiki theme)', async () => {
+    const shadow = directHost(DOC, 'monokai');
     const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
     if (!wrapper) throw new Error('expected a wrapper');
     await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
@@ -247,5 +253,122 @@ describe('independence from the document theme — BOTH directions (§4, tasks.m
     applyTheme('dark'); // a real document-theme flip, both directions once for good measure
 
     expect(getComputedStyle(span).color).toBe(before); // untouched by the document-theme flip
+  });
+});
+
+// ── 013 task 5.8: the Peekover code theme ───────────────────────────────────────────────────────
+// Expected values are tokens.css's (light --code-bg #F1F1EB, dark #1C2030; --accent #16171F /
+// #EAEBF3); codeEngine.test.ts measures every token colour's contrast, the census measures them as
+// painted.
+const RGB = {
+  lightCodeBg: 'rgb(241, 241, 235)',
+  darkCodeBg: 'rgb(28, 32, 48)',
+  lightAccent: 'rgb(22, 23, 31)',
+  darkAccent: 'rgb(234, 235, 243)',
+  monokaiBg: 'rgb(39, 40, 34)',
+};
+const COMMENTED = '```javascript\n// a note\nconst a = 1;\n```\n';
+
+describe('the Peekover theme follows the page theme (013 5.8; the 2.2 ruling)', () => {
+  it('light → dark repaints the same rendered block from the tokens, with no re-highlight', async () => {
+    const shadow = directHost(COMMENTED);
+    const host = shadow.host as HTMLElement;
+    applyTheme('light');
+    await settled(() => expect(shadow.querySelector('[data-code="rendered"]')).not.toBeNull());
+    const pre = shadow.querySelector<HTMLElement>('pre.shiki')!;
+    const keyword = pre.querySelector<HTMLElement>('span[style*="--accent"]')!;
+    expect(keyword.textContent).toBe('const');
+    expect(getComputedStyle(pre).backgroundColor).toBe(RGB.lightCodeBg);
+    expect(getComputedStyle(keyword).color).toBe(RGB.lightAccent);
+
+    applyTheme('dark');
+    expect(host.getAttribute('data-theme')).toBe('dark');
+    expect(getComputedStyle(pre).backgroundColor).toBe(RGB.darkCodeBg);
+    expect(getComputedStyle(keyword).color).toBe(RGB.darkAccent);
+    expect(shadow.querySelector('pre.shiki'), 'the same block, not a re-highlight').toBe(pre);
+  });
+
+  it('keywords are weight 500 and comments italic (the 3.1 approval)', async () => {
+    const shadow = directHost(COMMENTED);
+    await settled(() => expect(shadow.querySelector('[data-code="rendered"]')).not.toBeNull());
+    const keyword = shadow.querySelector<HTMLElement>('pre.shiki span[style*="--accent"]')!;
+    const comment = shadow.querySelector<HTMLElement>('pre.shiki span[style*="--muted"]')!;
+    expect(comment.textContent).toBe('// a note');
+    expect(getComputedStyle(keyword).fontWeight).toBe('500');
+    expect(getComputedStyle(comment).fontStyle).toBe('italic');
+    // Default text is neither.
+    const plain = [...shadow.querySelectorAll<HTMLElement>('pre.shiki .line > span')].find((s) => s.style.color === 'var(--ink)')!;
+    expect(getComputedStyle(plain).fontWeight).toBe('400');
+    expect(getComputedStyle(plain).fontStyle).toBe('normal');
+  });
+});
+
+describe('the default and a saved choice on the app page — the real IndexedDB (013 5.8)', () => {
+  afterEach(async () => {
+    setThemeSetting('auto');
+    __resetConnectionForTest();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  });
+
+  /** The app page over the real settings store; opens one code-bearing file and waits for it. */
+  async function appPageCode(expectTheme: string): Promise<HTMLElement> {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    cleanup.push(container);
+    const store: AppStore = {
+      putFolder: async () => undefined,
+      deleteFolder: async () => undefined,
+      putRecent: async () => undefined,
+      getSettings,
+      putSettings,
+    };
+    const source: FolderSource = {
+      name: 'docs',
+      truncated: false,
+      persistable: false,
+      files: [{ path: 'a.md', name: 'a.md', read: async () => COMMENTED }],
+    };
+    const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store });
+    // The stored settings load as the page mounts; the file is opened once they have.
+    await settled(() => expect(currentSettings().codeTheme).toBe(expectTheme));
+    await app.openFolder();
+    const item = await vi.waitFor(() => {
+      const el = container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]');
+      if (!el) throw new Error('no tree item yet');
+      return el;
+    });
+    item.click();
+    const host = await vi.waitFor(() => {
+      const el = container.querySelector<HTMLElement>('.peekover-app__reader__host');
+      if (!el?.shadowRoot?.querySelector('[data-code="rendered"]')) throw new Error('not rendered yet');
+      return el;
+    }, { timeout: 5000, interval: 20 });
+    return host.shadowRoot!.querySelector<HTMLElement>('pre.shiki')!;
+  }
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`a user who never chose a code theme gets Peekover — ${theme}`, async () => {
+      await putSettings({ theme }); // a stored row, with a page theme and no code-theme choice
+      const pre = await appPageCode('peekover');
+      expect(getComputedStyle(pre).backgroundColor, 'the code sits on --code-bg').toBe(theme === 'light' ? RGB.lightCodeBg : RGB.darkCodeBg);
+      expect(pre.style.backgroundColor).toBe('var(--code-bg)');
+    });
+  }
+
+  it('a user who chose monokai keeps it — across the default change and a re-mount', async () => {
+    await putSettings({ codeTheme: 'monokai' });
+    await putSettings({ theme: 'dark' }); // a later save of another field
+    const first = await appPageCode('monokai');
+    expect(getComputedStyle(first).backgroundColor).toBe(RGB.monokaiBg);
+    for (const el of cleanup.splice(0)) el.remove();
+    resetSettingsSeamForTest();
+    const second = await appPageCode('monokai');
+    expect(getComputedStyle(second).backgroundColor).toBe(RGB.monokaiBg);
+    expect((await getSettings()).codeTheme).toBe('monokai');
   });
 });

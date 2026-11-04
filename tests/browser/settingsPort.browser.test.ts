@@ -116,7 +116,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'dark',
       tocOpen: true,
       tocWidth: 301,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
   });
@@ -132,7 +132,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'light',
       tocOpen: null,
       tocWidth: 264,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
     // …AND through the DIRECT port — proving the messaging SET hit the one real database that the
@@ -141,7 +141,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'light',
       tocOpen: null,
       tocWidth: 264,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
   });
@@ -153,7 +153,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'dark',
       tocOpen: false,
       tocWidth: null,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
   });
@@ -170,7 +170,7 @@ describe('settings ports — real-engine round-trip (both Chromium + Firefox)', 
       theme: 'dark',
       tocOpen: null,
       tocWidth: 288,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
 

@@ -133,6 +133,48 @@ describe('settings round-trip + merge (real engine)', () => {
     expect(s.theme).toBe('dark');
   });
 
+  // 013 task 5.8: "never chose" is a row with NO codeTheme field; "chose" is a row carrying one. The
+  // raw row is read straight from IndexedDB, so the store's own read-with-default cannot hide which.
+  async function rawSettingsRow(): Promise<Record<string, unknown> | undefined> {
+    await resetAndSettle();
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    try {
+      return await new Promise((resolve, reject) => {
+        const req = db.transaction('settings').objectStore('settings').get('reader');
+        req.onsuccess = () => resolve(req.result as Record<string, unknown> | undefined);
+        req.onerror = () => reject(req.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  it('a user who never chose a code theme gets Peekover, the default — saving other fields stores no code theme (013 5.8)', async () => {
+    await putSettings({ theme: 'dark', tocWidth: 300 });
+    await putSettings({ lastExportFormat: 'pdf' });
+    const row = await rawSettingsRow();
+    expect(row, 'a settings row was written').toBeDefined();
+    expect(row, 'the row says "never chose": no codeTheme field').not.toHaveProperty('codeTheme');
+    expect((await getSettings()).codeTheme, 'no choice reads as the Peekover theme').toBe('peekover');
+    expect((await describeStored()).settings?.codeTheme).toBe('peekover');
+  });
+
+  it('a user who chose a code theme keeps it — through other saves, and whatever the default is (013 5.8)', async () => {
+    await putSettings({ codeTheme: 'monokai' });
+    await putSettings({ theme: 'light' });
+    await putSettings({ tocOpen: true });
+    const row = await rawSettingsRow();
+    expect(row?.codeTheme, 'the row says "chose": the choice is stored').toBe('monokai');
+    expect((await getSettings()).codeTheme).toBe('monokai');
+    // Choosing the default theme itself is a choice too, and is stored as one.
+    await putSettings({ codeTheme: 'peekover' });
+    expect((await rawSettingsRow())?.codeTheme).toBe('peekover');
+  });
+
   it('putSettings({lastExportFormat}) writes, getSettings reads it back — the D-6 hand-enumeration trap task 8.2 filed and closed in the same task', async () => {
     // Red-first, same class as the codeTheme test above: before store.ts's getSettings() extended
     // its hand-enumeration to include lastExportFormat, this would write fine but read back
@@ -179,7 +221,7 @@ describe('settings store — additive upgrade (real engine; jsdom-blind)', () =>
       theme: 'dark',
       tocOpen: true,
       tocWidth: 321,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
 
@@ -216,7 +258,7 @@ describe('wipeAll + describeStored include settings (real engine)', () => {
       theme: 'dark',
       tocOpen: true,
       tocWidth: 300,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
     expect(before.total).toBe(2); // 1 folder + the settings row
@@ -315,7 +357,7 @@ describe('capture flag — its own settings row, getSettings untouched (D-12, ta
       theme: 'dark',
       tocOpen: null,
       tocWidth: null,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
     expect(both.total).toBe(2); // reader row + capture row

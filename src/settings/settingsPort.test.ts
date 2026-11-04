@@ -66,14 +66,14 @@ describe('directPort — cached snapshot + round-trip via the injected store', (
       theme: 'dark',
       tocOpen: true,
       tocWidth: 288,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
     expect(port.snapshot()).toEqual({
       theme: 'dark',
       tocOpen: true,
       tocWidth: 288,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
   });
@@ -105,7 +105,7 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
       theme: 'dark',
       tocOpen: null,
       tocWidth: 320,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
 
@@ -119,7 +119,7 @@ describe('messagingPort — cached snapshot + round-trip via the injected messen
       theme: 'dark',
       tocOpen: true,
       tocWidth: 320,
-      codeTheme: 'github-dark',
+      codeTheme: 'peekover',
       lastExportFormat: 'html',
     });
   });

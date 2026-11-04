@@ -18,7 +18,7 @@ import {
   CODE_THEME_PICKER_CLASS,
   CODE_THEME_ITEM_CLASS,
 } from './codeThemeControl';
-import { CODE_THEME_IDS } from '../render/codeEngine';
+import { CODE_THEME_IDS, PEEKOVER_CODE_THEME } from '../render/codeEngine';
 import { mount } from '../render/mount';
 import { enhanceCode, resetCodeHostsForTest } from '../render/codeEnhancer';
 import { CODE_STATE_ATTR, CODE_WRAPPER_CLASS } from '../render/codeView';
@@ -72,11 +72,16 @@ describe("CODE_THEME_IDS's own bg/fg — pinned against the AA 4.5:1 floor (§4 
     'vitesse-black': { bg: '#000', fg: '#dbd7cacc' },
   };
 
-  it('every id CODE_THEME_IDS carries has a fixture here, and vice versa', () => {
-    expect(Object.keys(KNOWN_CONTRAST).sort()).toEqual([...CODE_THEME_IDS].sort());
+  // 013 task 5.8: the Peekover theme is excluded BY NAME — its colours are design tokens, not hexes,
+  // and codeEngine.test.ts measures every one of them on --code-bg, light and dark, from tokens.css.
+  const SHIKI_THEME_IDS = CODE_THEME_IDS.filter((id) => id !== PEEKOVER_CODE_THEME);
+
+  it('every id CODE_THEME_IDS carries has a fixture here, and vice versa (Peekover excepted, by name)', () => {
+    expect(SHIKI_THEME_IDS).toHaveLength(CODE_THEME_IDS.length - 1);
+    expect(Object.keys(KNOWN_CONTRAST).sort()).toEqual([...SHIKI_THEME_IDS].sort());
   });
 
-  it.each(CODE_THEME_IDS)('%s meets AA 4.5:1 against its own background', (id) => {
+  it.each(SHIKI_THEME_IDS)('%s meets AA 4.5:1 against its own background', (id) => {
     const pair = KNOWN_CONTRAST[id];
     expect(contrastRatio(pair.bg, pair.fg)).toBeGreaterThanOrEqual(4.5);
   });

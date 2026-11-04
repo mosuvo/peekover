@@ -389,13 +389,14 @@ export const LIGHT_TOKENS = /* css */ `
   --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
   --line:#E6E6DF; --code-bg:#F1F1EB; --accent:#16171F; --accent-soft:#ECECE3;
   --hl:#FFE94A; --hl-soft:#FFF6BF; --ok:#1F9D55; --ok-soft:#E4F5EB; --warn:#B7791F;
-  --del:#B8512F; --del-soft:#F8E9E2;
+  --del:#B8512F; --del-soft:#F8E9E2; --code-str:#197E44; --code-num:#B34F2E; --code-type:#966319;
 `;
 export const DARK_TOKENS = /* css */ `
   --paper:#12141C; --panel:#181B26; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
   --line:#262A38; --code-bg:#1C2030; --accent:#EAEBF3; --accent-soft:#232838;
   --hl:#FFD84D; --hl-soft:#3A3413; --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
-  --del:#E08663; --del-soft:#342016; --shadow:0 10px 30px rgba(0,0,0,.5);
+  --del:#E08663; --del-soft:#342016; --code-str:#4CC38A; --code-num:#E08663; --code-type:#E0A83E;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
 `;
 /** The theme-independent base the shell sets beside LIGHT_TOKENS — radius, the light shadow, the
  *  three font stacks (plan D-3: the design face first, then close system faces), and the logo's

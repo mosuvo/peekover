@@ -742,7 +742,7 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       blocks' "Code block N" now count code blocks only). Text ≥ 4.5:1 in every state (lowest 4.76). **The sweep: its 16
       rows deleted, 10 per engine left.** The toolbar stays in flow (§3.11), not over the pre as the mock draws it.
       Content script +1,496 B (all `READER_CSS`), app chunk +1,583 B.
-- [ ] **5.8 The Peekover code theme — the default, built from design tokens, following the page theme (DISCOVERED
+- [x] **5.8 The Peekover code theme — the default, built from design tokens, following the page theme (DISCOVERED
       2026-11-01; the human's 2.2 ruling, `decisions.md` "M13 RULING — the Peekover code theme"; count 41 → 42).** TEST
       FIRST. A light/dark code theme drawn from tokens, as `design/mockup.html` shows (`:152` `.codeblock pre` on
       `--code-bg`; `:157` tokens coloured from page tokens), becomes the DEFAULT code theme in place of `github-dark`. The
@@ -771,6 +771,14 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       ★ *2026-11-02 (the 3.1 gate): the mapping is APPROVED as mocked* — the three new light values `#197E44` (strings),
       `#B34F2E` (numbers / constants), `#966319` (types / attributes) join `tokens.css` here; functions and tags take
       default text; keywords `--accent` (ink) at weight 500; comments `--muted`, italic.
+      ★ *Landed 2026-11-04 (`decisions.md`, "M13 TASK 5.8").* The dark values APPROVED by the human the same day ("Approve
+      as proposed"): `--ok` / `--del` / `--warn`'s values as `--code-str` / `--code-num` / `--code-type`. Shiki's own
+      theme object with `var(--token)` colours (its `colorReplacements`), so one theme follows the page theme; weight 500 and
+      italic from two `READER_CSS` rules; first in the picker. Necessary ripple `store.ts`: the row stores `codeTheme` only
+      once chosen — "never chose" is no field, so the default reaches that user and a saved choice stays. **The census's
+      pending list is EMPTY**, both engines, both themes; every token measured as painted (lowest 4.51, light strings). The
+      collapse button ("Show full code") takes 5.3's button look (5.3's deviation 4). Content script +96 B, app chunk
+      +1,522 B, `background.js` +99 B.
 - [ ] **5.4 Panels, unsaved dialog, lightbox, diff + picker.** TEST FIRST. `.panelbox` card (radius 14, one shadow),
       header row, list rows with hints; the dialog as `.overlay` scrim + card + ink primary; lightbox per
       `mockup.html:226`; diff and picker restyled, still inline (006 D-15).

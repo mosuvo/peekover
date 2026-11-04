@@ -40,8 +40,9 @@
 // 'mermaid')`. In THIS harness the Vitest dev server serves the same chunks over
 // `http://localhost`, so a COLD engine-load would fill the buffer with dev-server module URLs
 // that are same-origin harness traffic, not a product leak. `warmEngine()` below drives one
-// throwaway `enhanceCode` pass — the exact language (`javascript`) and theme (the provisional
-// default, `github-dark`) the measured fixture uses — before any probe is armed, so the later,
+// throwaway `enhanceCode` pass — the exact language (`javascript`) and theme (the default, the
+// Peekover theme since 013 5.8 — built inline in codeEngine.ts, so it has no chunk of its own) the
+// measured fixture uses — before any probe is armed, so the later,
 // MEASURED engine-load is a module-cache hit. This is a harness limitation compensated for
 // honestly, not a scope narrowed to hide a real gap: the measured fixture below still drives the
 // full production `enhanceCode` call, unstubbed.
@@ -222,8 +223,8 @@ async function armTheProbe(): Promise<void> {
 /**
  * Drive one throwaway `enhanceCode` pass — same language, same (provisional-default) theme the
  * measured fixture uses — so the dev server's own chunk URLs are a module-cache hit by the time
- * the probe is armed. Warms `shiki/core`, the `javascript` language chunk and the `github-dark`
- * theme chunk. See the module header's "harness-only warm-up" section for why this is honest
+ * the probe is armed. Warms `shiki/core` and the `javascript` language chunk (the default
+ * theme, Peekover, is inline — no theme chunk since 013 5.8). See the module header's "harness-only warm-up" section for why this is honest
  * rather than scope-narrowing: the measured fixture below still drives the real `enhanceCode`.
  */
 async function warmEngine(): Promise<void> {

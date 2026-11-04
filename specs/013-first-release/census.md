@@ -248,6 +248,22 @@ retired while its function has no other test. Function by function:
   `mathActions` and `tableTools` gain 5.3's look tests (and math's no-toolbar test); `nativeControls` deletes its 16
   5.3 rows — 10 per engine left.
 
+- **5.8** (2026-11-04 — the Peekover code theme, the default): **RE-SPELLED:** C056 (`codeThemeControl` unit) — the
+  bg/fg fixture table now covers the 20 Shiki themes and excepts Peekover BY NAME (its colours are tokens;
+  `codeEngine.test.ts` measures each on `--code-bg`, light and dark); KEEPS every Shiki theme's AA pin and the catalog /
+  listbox tests unchanged. C087 (`codeThemeControl` browser) — "flipping the document theme leaves an already-rendered
+  block's colours untouched" now runs on an explicit Shiki theme (`monokai`): KEEPS the property for the 20 Shiki themes;
+  for the default it is reversed by the human's 2.2 ruling (Peekover follows the page theme), and a new test there owns
+  that. **KEPT, unchanged in property and green:** C093 (INVENTORY — its pending list is now EMPTY, so any below-AA text is
+  a red), C094 / C097 (the app page and the editor — the fixture's code grows to every token kind in each shipped
+  language), C085 (a bad persisted `codeTheme` still leaves every fence plain), C089, C086, C088, C090–C092. **Retired:**
+  none. Outside the census (no moved chrome): `contrastCensus` gains a CODE test (every Peekover token kind measured as
+  painted, both code surfaces, both themes); `codeThemeControl` gains "Peekover follows the page theme", "keywords 500,
+  comments italic" and the real-IndexedDB "never chose → Peekover" / "chose monokai → kept across a re-mount" tests;
+  `settingsStore` gains the raw-row "never chose" / "chose" tests; `codeToolbar` gains the collapse button's look; the
+  old default spelled literally is re-spelled `'peekover'` in `settingsStore`, `settingsPort` (browser and unit) and
+  `settings.test.ts`; `codeNetwork`'s warm-up comments name the inline theme.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).

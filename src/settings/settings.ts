@@ -42,9 +42,11 @@ export interface Settings {
 }
 
 /** The default reading preferences: Auto theme, TOC state unset (defer to the 003 width-derived
- *  behavior). `codeTheme` is `'github-dark'` — M-4a's CHOSEN default (`decisions.md` 2026-08-19 ·
- *  M9 8.5: sits mid-table on WCAG contrast against all three `readerCss.ts` `--code-bg` values;
- *  kept as shipped), not a placeholder. `lastExportFormat` is `'html'` — Ruling M-1 (`decisions.md`
+ *  behavior). `codeTheme` is `'peekover'` — the Peekover code theme, built from the design tokens
+ *  and following the page theme (013 task 5.8; the human's 2.2 ruling, which replaced M-4a's
+ *  `'github-dark'`: its comments are 3.05:1). Only a user who has never chosen a code theme gets
+ *  it: `store.ts` stores `codeTheme` only when it is chosen, so a saved choice is untouched.
+ *  `lastExportFormat` is `'html'` — Ruling M-1 (`decisions.md`
  *  2026-09-04 · M10 10.4), the first-ever-Ctrl+S default: the walk-gate that D-6 left this null
  *  pending on has ruled, so the CHOSEN value is wired here rather than left placeholder. Used
  *  before anything is stored, after a wipe, and as the never-blank fallback when a settings read
@@ -53,7 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'auto',
   tocOpen: null,
   tocWidth: null,
-  codeTheme: 'github-dark',
+  codeTheme: 'peekover',
   lastExportFormat: 'html',
 };
 

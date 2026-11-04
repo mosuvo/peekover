@@ -21,9 +21,10 @@
 //     --faint text → --muted; decorative ones listed): the file tree's twisty glyph.
 //
 // THE PENDING LIST (gate-3 Q4): today's remaining failures, each row named. It may only SHRINK: a
-// failure not on it is a red, and a row on it that no longer fails is a red too ("remove it"). Every
-// row awaits the human's 2.2 ruling (Q5: one batched question) and, by 8.1, is fixed or accepted by
-// name. It is separate from the M12 accepted list.
+// failure not on it is a red, and a row on it that no longer fails is a red too ("remove it"). By 8.1
+// every row is fixed or accepted by name. It is separate from the M12 accepted list. EMPTY since
+// 013 task 5.8: its 8 rows (the old default code theme's comments) were resolved by the Peekover
+// code theme, now the default; the fixture's code blocks carry every token kind it paints.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { page } from 'vitest/browser';
@@ -107,6 +108,36 @@ const DOC = [
   'const answer = 42; // a comment',
   '```',
   '',
+  // 013 task 5.8: every token kind the code theme paints, in each shipped language — keywords,
+  // comments, strings, numbers and constants, types and attributes, functions and tags, default text.
+  '```javascript',
+  "import { render } from './reader.js';",
+  'export class Doc extends Base { greet(name) { return `Hi ${name}`.repeat(2) || null; } }',
+  '```',
+  '',
+  '```python',
+  '# count headings',
+  'def count(lines: list[str]) -> int:',
+  '    return sum(1 for l in lines if l.startswith("#")) or None',
+  '```',
+  '',
+  '```json',
+  '{ "name": "peekover", "private": true, "files": 42 }',
+  '```',
+  '',
+  '```html',
+  '<!-- one article --><article class="doc" lang="en">Hi &amp; bye</article>',
+  '```',
+  '',
+  '```css',
+  '/* the column */ .doc { max-width: 68ch; font-family: "Literata", serif; color: #fff !important; }',
+  '```',
+  '',
+  '```bash',
+  '# build',
+  'for b in chrome firefox; do pnpm exec wxt build -b "$b" --retries 3; done',
+  '```',
+  '',
   '$$',
   'E = mc^2',
   '$$',
@@ -149,29 +180,16 @@ export const G5_DECORATIVE_PSEUDO: Array<{ rule: string; reason: string }> = [
 ];
 
 /**
- * THE PENDING LIST (gate-3 Q4) — `engine · surface · theme · selector`. The human ruled on 2.2's batched
- * question (2026-11-01, decisions.md "M13 RULING — the Peekover code theme"): every row below is resolved by task
- * 5.8, which makes a token-built code theme the default. It may only shrink; by 8.1 it is empty or each row is
- * accepted by the human by name.
+ * THE PENDING LIST (gate-3 Q4) — `engine · surface · theme · selector`. EMPTY: its 8 rows (the old default code
+ * theme's comment colour, #6a737d on #24292e, 3.05:1 — app page and editor, light and dark, both engines) were
+ * resolved by task 5.8 (decisions.md "M13 RULING — the Peekover code theme"; "M13 TASK 5.8"). It may only shrink,
+ * so a failure anywhere is now a red.
  */
-const PENDING: ReadonlySet<string> = new Set<string>([
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'chromium · app page · light · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'chromium · app page · dark · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'chromium · editor · light · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'chromium · editor · dark · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'firefox · app page · light · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'firefox · app page · dark · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'firefox · editor · light · .line > span',
-  // → resolved by task 5.8 (Peekover code theme) — the human's 2.2 ruling; today's default code theme's comment colour (#6a737d on #24292e, 3.05:1)
-  'firefox · editor · dark · .line > span',
-]);
+const PENDING: ReadonlySet<string> = new Set<string>([]);
+
+/** 013 task 5.8: every Peekover code-token colour as painted — `surface · theme · token` → its lowest ratio. */
+const codeTokens = new Map<string, { fg: string; bg: string; ratio: number }>();
+const PEEKOVER_TOKENS = ['--accent', '--code-num', '--code-str', '--code-type', '--ink', '--muted'];
 
 // ── Measurement ─────────────────────────────────────────────────────────────────────────────────
 interface Row {
@@ -242,6 +260,12 @@ function measure(root: Element, surface: string, theme: Theme): Row[] {
     }
     const { ratio, drawn, bg } = ratioOver(inkOf(el), backdropOf(el));
     const bar = isLargeText(el) ? LARGE_TEXT_BAR : TEXT_BAR;
+    const token = el instanceof HTMLElement && el.closest('pre.shiki') ? /^var\((--[a-z0-9-]+)\)$/.exec(el.style.color)?.[1] : undefined;
+    if (token) {
+      const k = `${surface} · ${theme} · ${token}`;
+      const prior = codeTokens.get(k);
+      if (!prior || ratio < prior.ratio) codeTokens.set(k, { fg: hex(drawn), bg: hex(bg), ratio: Number(ratio.toFixed(2)) });
+    }
     if (ratio + 1e-9 >= bar) continue;
     const selector = selectorOf(el);
     const key = `${ENGINE} · ${surface} · ${theme} · ${selector}`;
@@ -423,5 +447,17 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);
     expect(nowPassing, 'pending rows that now pass — remove them (the list only shrinks)').toEqual([]);
+  });
+
+  it('CODE: the default (Peekover) theme paints every one of its token kinds on both code surfaces, both themes (013 5.8)', () => {
+    for (const [k, v] of [...codeTokens].sort()) console.log(`CENSUS-CODE ${ENGINE} · ${k} ${v.fg} on ${v.bg}: ${v.ratio}:1`);
+    for (const surface of ['app page', 'editor']) {
+      for (const theme of ['light', 'dark']) {
+        const painted = PEEKOVER_TOKENS.filter((t) => codeTokens.has(`${surface} · ${theme} · ${t}`));
+        expect(painted, `${surface} · ${theme}: the code tokens measured`).toEqual(PEEKOVER_TOKENS);
+      }
+    }
+    // Each is also held to the bar by the INVENTORY test above (any failure is unlisted); stated here too.
+    expect([...codeTokens].filter(([, v]) => v.ratio < TEXT_BAR).map(([k, v]) => `${k}: ${v.ratio}:1`)).toEqual([]);
   });
 });

@@ -108,9 +108,11 @@ export interface PinRecord {
 
 /** The stored settings row: the global {@link Settings} plus its fixed keyPath id. This is the
  *  PERSISTENCE shape (owned here); the `Settings` vocabulary + `DEFAULT_SETTINGS` live in the
- *  canonical `src/settings/settings.ts` (imported + re-exported above). */
-export interface SettingsRecord extends Settings {
+ *  canonical `src/settings/settings.ts` (imported + re-exported above). `codeTheme` is absent
+ *  until the user chooses one (013 task 5.8, {@link putSettings}). */
+export interface SettingsRecord extends Omit<Settings, 'codeTheme'> {
   id: string;
+  codeTheme?: string;
 }
 
 /** The one settings row's key — a single global reader-settings row (no per-doc settings). */
@@ -251,11 +253,22 @@ export async function getSettings(): Promise<Settings> {
 }
 
 /** Merge `patch` onto the current settings and write the single global row. Resolves once
- *  the write commits, so the next getSettings sees it. */
+ *  the write commits, so the next getSettings sees it.
+ *
+ *  `codeTheme` is written only once it has been CHOSEN — in this patch, or already in the row
+ *  (013 task 5.8). A row without it means "never chose", and {@link getSettings} gives that user
+ *  the current default, so changing the default reaches them while a saved choice stays. Without
+ *  this, saving any other field (the page theme, the TOC width, an export) would write the
+ *  default of the day into the row, and it would read back as a choice. A row written before 5.8
+ *  that carries `'github-dark'` cannot be told apart from a choice, and keeps it. */
 export async function putSettings(patch: Partial<Settings>): Promise<void> {
-  const current = await getSettings();
-  const merged: SettingsRecord = { id: SETTINGS_ID, ...current, ...patch };
-  return put(await db(), STORES.settings, merged);
+  const conn = await db();
+  const row = await get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID);
+  const merged: SettingsRecord = { id: SETTINGS_ID, ...(await getSettings()), ...patch };
+  const chosen = patch.codeTheme ?? row?.codeTheme;
+  if (chosen === undefined) delete merged.codeTheme;
+  else merged.codeTheme = chosen;
+  return put(conn, STORES.settings, merged);
 }
 
 // --- snapshot-capture flag (D-12, task 1.5) ----------------------------------

@@ -49,8 +49,13 @@ import {
   loadCodeEngine,
   languageInputFor,
   themeInputFor,
+  CODE_THEME_IDS,
+  PEEKOVER_CODE_THEME,
+  PEEKOVER_THEME,
   type CodeEngineModule,
 } from './codeEngine';
+import { contrastRatio } from '../theme/codeThemeControl';
+import { DEFAULT_SETTINGS } from '../settings/settings';
 
 /** A stand-in for the `shiki/core` module, carrying a `createHighlighterCore` spy that returns a
  *  fake highlighter — so "not called" is an assertion about a thing that EXISTS and could have
@@ -229,5 +234,78 @@ describe('codeToTokens — captured shape (plan risk 4, ground truth for a later
     // duplicate a character (the property a later task's DOM adoption depends on holding).
     const reassembled = result.tokens.map((line) => line.map((t) => t.content).join('')).join('\n');
     expect(reassembled).toBe("console.log('hi')");
+  });
+});
+
+// ── 013 task 5.8: the Peekover code theme ───────────────────────────────────────────────────────
+//
+// Every colour the theme can paint is a design token. The values are parsed from design/tokens.css
+// at test time (light = :root, dark = :root + [data-theme="dark"]) and each is measured on
+// --code-bg with the WCAG formula, bar 4.5:1. The real tokenizer then runs the six shipped
+// languages and every emitted colour must be one of the theme's own tokens — so no scope can paint
+// a colour this table did not measure.
+describe('the Peekover code theme (013 task 5.8)', () => {
+  const css = readFileSync(`${process.cwd()}/design/tokens.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const blockOf = (selector: string): Record<string, string> => {
+    const at = css.indexOf(`${selector}{`);
+    const body = css.slice(at + selector.length + 1, css.indexOf('}', at));
+    return Object.fromEntries([...body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)].map((m) => [m[1], m[2].trim()]));
+  };
+  const LIGHT = blockOf(':root');
+  const THEMES = { light: LIGHT, dark: { ...LIGHT, ...blockOf('[data-theme="dark"]') } };
+  const tokenOf = (value: string): string => {
+    const m = /^var\((--[a-z0-9-]+)\)$/.exec(value);
+    if (!m) throw new Error(`a Peekover theme colour that is not a design token: ${value}`);
+    return m[1];
+  };
+  const PAINTED = [
+    PEEKOVER_THEME.colors['editor.foreground'],
+    ...PEEKOVER_THEME.tokenColors.map((rule) => rule.settings.foreground),
+  ].map(tokenOf);
+
+  it('is the default code theme, and the first in the picker', () => {
+    expect(DEFAULT_SETTINGS.codeTheme).toBe(PEEKOVER_CODE_THEME);
+    expect(CODE_THEME_IDS[0]).toBe(PEEKOVER_CODE_THEME);
+    expect(themeInputFor(PEEKOVER_CODE_THEME)).toBeDefined();
+    expect(tokenOf(PEEKOVER_THEME.colors['editor.background'])).toBe('--code-bg');
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`every colour it paints reaches 4.5:1 on --code-bg — ${theme}`, () => {
+      const tokens = THEMES[theme];
+      const rows = [...new Set(PAINTED)].map((t) => ({
+        token: t,
+        value: tokens[t],
+        ratio: Math.round(contrastRatio(tokens[t], tokens['--code-bg']) * 100) / 100,
+      }));
+      for (const r of rows) expect(r.value, `${r.token} is in tokens.css`).toMatch(/^#[0-9a-f]{6}$/i);
+      const below = rows.filter((r) => r.ratio < 4.5);
+      expect(below.map((r) => `${r.token} ${r.value} on --code-bg ${tokens['--code-bg']}: ${r.ratio}:1 (${theme})`)).toEqual([]);
+    });
+  }
+
+  it("the six shipped languages emit only the theme's own token colours", async () => {
+    const { createHighlighterCore } = await import('shiki/core');
+    const actual = await vi.importActual<typeof import('shiki/engine/javascript')>('shiki/engine/javascript');
+    const hl = await createHighlighterCore({ engine: actual.createJavaScriptRegexEngine() });
+    await hl.loadTheme(themeInputFor(PEEKOVER_CODE_THEME)!);
+    const SAMPLES: Record<string, string> = {
+      javascript: "// c\nimport { a } from './a.js';\nconst MAX = 42;\nexport function f(x) { return `s ${x}` + null + /r/g; }\nclass A extends B {}",
+      python: '# c\ndef f(xs: list[str]) -> int:\n    return sum(1 for x in xs if x) or None',
+      json: '{ "a": "b", "c": true, "d": 1, "e": null }',
+      html: "<!-- c --><a class=\"x\" href='y'>t &amp; u</a>",
+      css: '/* c */ .a #b:hover { width: 68ch; font-family: "L", serif; color: #fff !important; }',
+      bash: '# c\nfor b in x y; do pnpm exec wxt -b "$b" --n 3; done',
+    };
+    const seen = new Set<string>();
+    for (const [lang, code] of Object.entries(SAMPLES)) {
+      await hl.loadLanguage(languageInputFor(lang)!);
+      for (const line of hl.codeToTokens(code, { lang, theme: PEEKOVER_CODE_THEME }).tokens) {
+        for (const token of line) seen.add(tokenOf(token.color ?? ''));
+      }
+    }
+    expect([...seen].filter((t) => !PAINTED.includes(t))).toEqual([]);
+    // Non-vacuous: every token kind the 3.1 mock shows was emitted.
+    expect([...seen].sort()).toEqual(['--accent', '--code-num', '--code-str', '--code-type', '--ink', '--muted']);
   });
 });

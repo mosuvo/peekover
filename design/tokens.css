@@ -7,6 +7,7 @@
   --hl:#FFE94A; --hl-soft:#FFF6BF;
   --ok:#1F9D55; --ok-soft:#E4F5EB; --warn:#B7791F;
   --del:#B8512F; --del-soft:#F8E9E2;
+  --code-str:#197E44; --code-num:#B34F2E; --code-type:#966319;  /* code text on --code-bg (013 5.8; 3.1 approval) */
   --logo-ink:#16171F; --logo-eye:#FBFBF8;            /* FIXED in all themes */
   --r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
   --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
@@ -19,6 +20,7 @@
   --hl:#FFD84D; --hl-soft:#3A3413;
   --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
   --del:#E08663; --del-soft:#342016;
+  --code-str:#4CC38A; --code-num:#E08663; --code-type:#E0A83E;
   --shadow:0 10px 30px rgba(0,0,0,.5);
 }
 [data-theme="sepia"]{

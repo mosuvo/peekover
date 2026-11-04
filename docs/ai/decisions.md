@@ -1,6 +1,104 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-04 · M13 TASK 5.8 — the Peekover code theme, from design tokens, as the default (the human's 2.2 ruling; the
+  3.1 approval, items 12–14; D-16; gate-3 Q4).** Local, on `main` at `d55bef5` (5.3), up to date with `origin/main`, tree
+  clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on
+  2026-11-04. **CI read with `gh`:** `d55bef5` — CI success (run 41858867354, job `verify`), Supply chain success
+  (41858866410).
+  - **HUMAN APPROVAL — the dark code colours (2026-11-04, AskUserQuestion, verbatim):** "Approve as proposed
+    (Recommended)". The question put six dark values, each the existing dark token of the same hue as its approved light
+    colour, with ratios on the dark `--code-bg` `#1C2030` and the screenshots in `D:\Dev\peekover-shots\5.8\proposal\`.
+    **Kickoff vs file, flagged:** the kickoff said 3.1's approval covered light only; tasks.md's 3.1 ★ note says "the
+    mapping is APPROVED as mocked", and the mock drew a dark sample with these same tokens — but the approval's written
+    items 12–14 name only the light values. The question was asked, so the dark values now rest on a written answer.
+  - **The tokens (`design/tokens.css`, new; every copy pinned per 2.1):** `--code-str` / `--code-num` / `--code-type` —
+    light `#197E44` / `#B34F2E` / `#966319` (approved at 3.1), dark `#4CC38A` / `#E08663` / `#E0A83E` (= `--ok` /
+    `--del` / `--warn`, approved above). The copies: `READER_CSS`'s `:host` and dark blocks, the shell's `LIGHT_TOKENS` /
+    `DARK_TOKENS` (2.1's rule — the shell carries the full colour set). Comments use `--muted`, keywords `--accent` (ink),
+    default text / functions / tags `--ink` — existing tokens, no new value.
+  - **Ratios on `--code-bg`, light `#F1F1EB` / dark `#1C2030`** (the unit test from tokens.css; the census as painted,
+    both engines, the app page and the editor's preview — identical): default text, functions, tags `--ink` 15.74 / 13.61;
+    keywords `--accent` 15.74 / 13.61 (weight 500); comments `--muted` 5.49 / 6.54 (italic); strings 4.51 / 7.30; numbers
+    and constants 4.55 / 5.98; types, attributes, property names 4.52 / 7.58. Lowest 4.51 (light strings).
+  - **The theme (`codeEngine.ts`, `PEEKOVER_THEME`):** a plain Shiki theme object whose every colour is `var(--token)`.
+    Mechanism chosen against the installed Shiki 4.4.3's source, not memory: `normalizeTheme` swaps a non-hex colour for a
+    placeholder and maps it back on each token (`colorReplacements`), so a token arrives as the `var(--…)` string. One
+    theme follows the page theme with no re-highlight (the reader's `:host` blocks resolve it). It is loaded inline (no
+    chunk, no request) and listed first in the picker ("Peekover"). Weight 500 and italic are two `READER_CSS` rules on
+    the token's inline colour (`pre.shiki span[style*="--accent"]` / `"--muted"`) — the Files list's "code-token rules,
+    if CSS-variable based"; `codeEnhancer.ts` is untouched. A 500 Sometype Mono face ships; italic is synthesised (no
+    italic face — as in the mock). The scope mapping was checked token by token on all six languages: JSON keys and CSS
+    properties take the type colour (as mocked); CSS selectors, bash bare arguments and options, template expressions,
+    operators and punctuation default text; `const`-declared names (`variable.other.constant`) the constants colour (the
+    mock drew `MAX` in the type colour — the mapping's "numbers and constants" wording was followed; for 8.1's eye).
+  - **The default, and "never chose" vs "chose":** `DEFAULT_SETTINGS.codeTheme` is `'peekover'`. **Necessary ripple,
+    `src/app/store.ts`** (not in the Files list; required by the kickoff's "a user with no explicit choice gets Peekover"):
+    `putSettings` wrote the whole merged row, so saving the page theme, the TOC width or an export wrote the default of
+    the day as `codeTheme`, and it read back as a choice. Now the row carries `codeTheme` only once it has been chosen —
+    in the patch, or already in the row; `SettingsRecord.codeTheme` is optional. **"Never chose" = no `codeTheme` field
+    in the stored row** (read: the current default); **"chose" = the field is present** (choosing Peekover itself is
+    stored too). A row written before 5.8 that carries `'github-dark'` cannot be told apart from a choice and keeps it —
+    nothing has shipped, so only development installs carry one. Tested in the real IndexedDB, both engines: the raw row
+    after three non-code saves has no `codeTheme` and reads Peekover; `monokai` survives later saves; on the app page a
+    stored row with only a page theme renders Peekover (light and dark), and a saved `monokai` renders monokai across a
+    re-mount.
+  - **Where the theme applies:** both surfaces that highlight code — the app page's reading view and the editor's preview
+    (the content-script reader highlights no code, by its module graph, 009 §3.8), light and dark. The Compare diff view
+    does not use the code theme (a text diff, not highlighted); the editor's own source pane is CodeMirror (its own
+    highlight style, M12) — neither changes. The 20 Shiki themes are selectable and unchanged.
+  - **The 2.2 pending list:** its 8 rows went green and the list is EMPTY (`PENDING` is an empty set; any below-AA text
+    is now a red). The census fixture's code grows to every token kind in each shipped language, and a new CODE test
+    requires all six token colours to be measured as painted on the app page and the editor, light and dark.
+  - **Folded in (5.3's deviation 4):** the long-code collapse button ("Show full code" / "Collapse code") joins 5.3's
+    shared button rule (`--paper`, 1 px `--line`, radius 7, 11.5 px / 600, `--muted` → `--ink`); it stays the full-width
+    bar under the block; tag, text, `aria-expanded`, `aria-label` and behaviour unchanged (tested). Red-first at `d55bef5`'s
+    CSS: "background rgb(244, 244, 239) … radius 6px, 12px 400" where the copy button's look was expected.
+  - **Tests (red-first):** unit — every Peekover colour ≥ 4.5:1 on `--code-bg` from tokens.css, light and dark; the six
+    languages emit only the theme's own tokens (all six kinds seen); the default and the picker's first entry. **The
+    tasks.md red:** comments pointed at `--faint` → "--faint #9A9DAC on --code-bg #F1F1EB: 2.38:1 (light)", "--faint
+    #6B6F84 on --code-bg #1C2030: 3.26:1 (dark)". Browser — listed in census.md, 5.8.
+  - **Ablations → red** (each restored md5-identical): **A1** the painted light `--code-str` → `#1F9D55` (`READER_CSS`)
+    → the census names it: "app page · light · .line > span — "'./reader.js'" #1f9d55 on #f1f1eb: 3.08:1 < 4.5" and the
+    editor's row, both engines, and the CODE test "--code-str: 3.08:1". **A2** the default back to `'github-dark'` → the
+    census reds on exactly the 8 old rows ("// a comment" #6a737d on #24292e, 3.05:1 — chromium and firefox × app page and
+    editor × light and dark), and "a user who never chose a code theme gets Peekover" fails (light and dark, both engines;
+    and the raw-row test: "expected 'github-dark' to be 'peekover'"). **A3** tokens.css `--code-type` light → `#8F5E17`, the
+    copies left stale → the pin: "READER_CSS :host: --code-type is #966319, tokens.css says #8F5E17", "appShell
+    LIGHT_TOKENS + base: --code-type is #966319, tokens.css says #8F5E17".
+  - **Bytes** (clean two-engine build; arms in one session, Chromium, each a set of files at 5.8 and the rest at `d55bef5`;
+    the two engines' sizes are identical): content script **346,810 B (+96)** = `READER_CSS` +99 (tokens light +63, dark
+    +63; the weight / italic rules +137; the collapse button −164: +108 joining the shared rule and its hover, −272 its own
+    rule) − 3 (`settings.ts`: `'github-dark'` → `'peekover'`); md5 `86d97b44…` (Cr) / `a200f845…` (Fx). Under the +2 KB
+    tripwire. App chunk **557,394 B (+1,522)** = theme data +1,198 (`codeEngine.ts`: the theme object and its loader) + CSS
+    +223 (`READER_CSS` +99, the shell's token sets +124) + logic +101 (`store.ts` +104, `settings.ts` −3). `background.js`
+    3,687 → **3,786 B (+99)** = `store.ts` +102, `settings.ts` −3 (the background writes settings). Arms: S0 346,714 /
+    555,872 / 3,687 · readerCss 346,813 / 555,971 · +appShell 556,095 · +codeEngine 557,293 · codeEngine alone 557,070 ·
+    store alone 555,976 / 3,789 · all 346,810 / 557,394 / 3,786 — over-determined, residual 0. No other output file
+    changed in size (every chunk compared by name). `.output` 5,978,697 / 5,978,813 B (+1,717 each); manifests 833 /
+    949 B, `permissions: []`.
+  - **Verify:** lint 0 · unit 1,503 / 1,503 · browser, alone, both engines: **2,326 passed / 0 failed / 52 skipped of
+    2,378** (+20), first run, 554 s, EXIT 0 — no red to classify (the known flakes `watchRemount`, `editorPreview` and the
+    contrast census did not recur) · the sweep green, PENDING unchanged at 10 per engine · the census pending list EMPTY ·
+    golden EMPTY · manifests unchanged · no control bytes and LF only in every changed file (two counts; the control
+    fires — it caught one 0x05 a heredoc wrote into progress.md, fixed) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.8\`:** `before-` / `after-` × `sample-light`,
+    `sample-dark` (the app page at 1440, Chromium: JavaScript, TypeScript, Python, JSON, HTML, CSS, bash, diff) and
+    `showall-light`, `showall-dark` (a 45-line block, collapsed); `proposal\` — the same sample, light and dark, Chromium
+    and Firefox.
+  - **Deviations, flagged:** (1) the kickoff's sample names TypeScript and diff — neither is a shipped language (six ship),
+    so both fences render plain, unhighlighted, before and after; adding languages is outside 5.8. (2) `store.ts` changed
+    — necessary ripple, above. (3) C087's "the document theme leaves a block's colours untouched" holds for the 20 Shiki
+    themes and is re-spelled on `monokai`; for the default it is reversed by the 2.2 ruling and a new test owns that. (4)
+    keywords use `--accent`, as tasks.md and the mock name it — the kickoff says `--ink`; the two are the same value in
+    every theme. (5) A pre-5.8 row carrying `'github-dark'` keeps it (above). (6) The kickoff calls the collapse button
+    "Show all"; its text is "Show full code" / "Collapse code", unchanged.
+  Why: the human's 2.2 ruling — no shipped theme passes AA in dark, so the default becomes a token-built pair that
+  follows the page theme, every colour ≥ 4.5:1; a saved choice is untouched.
+  Revisit-when: 8.1's walk (the theme by eye — the constants colour on `const` names, the synthesised italic; Q4: the
+  census's pending list is empty); a new shipped language (its scopes checked against this mapping); sepia, if revived
+  (it has no code tokens of its own — it would draw the light values on the light `--code-bg`).
+
 - **2026-11-04 · M13 TASK 5.3 — code, math and table buttons restyled (gate-1 Q14; carried (f), (g)).** Local, on `main` at
   `071ddc3` (5.2a), up to date with `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0,
   `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-04. **CI read with `gh`:** `071ddc3` — CI success (run

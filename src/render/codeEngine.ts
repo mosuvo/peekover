@@ -128,10 +128,44 @@ const LANGUAGE_LOADERS: Readonly<Record<string, LanguageLoader>> = {
   bash: () => import('shiki/langs/shellscript.mjs'),
 };
 
+/** The Peekover code theme's id — the DEFAULT code theme (013 task 5.8; the human's 2.2 ruling). */
+export const PEEKOVER_CODE_THEME = 'peekover';
+
+/**
+ * The Peekover code theme (013 task 5.8): every colour is a design token, `var(--…)`, so one theme
+ * follows the page theme — the reader's `:host` blocks (from `design/tokens.css`) resolve it to
+ * light or dark with no re-highlight. Shiki 4.4.3's `normalizeTheme` accepts a non-hex colour:
+ * it swaps in a placeholder for TextMate and maps it back on every token (`colorReplacements`),
+ * so a token's colour arrives as the `var(--…)` string itself.
+ *
+ * The mapping (the 3.1 approval): default text, functions and tags `--ink`; keywords `--accent`
+ * (ink; weight 500, `READER_CSS`); comments `--muted` (italic, `READER_CSS`); strings
+ * `--code-str`; numbers and constants `--code-num`; types, attributes and property names
+ * `--code-type`. A rule listed later wins over an earlier one with the same depth (TextMate), and a
+ * deeper scope wins over a shallower one — so the "default text" rules below carve operators,
+ * template expressions, CSS units and selectors back out of the broader keyword / string / type
+ * rules.
+ */
+export const PEEKOVER_THEME = {
+  name: PEEKOVER_CODE_THEME,
+  type: 'light',
+  colors: { 'editor.background': 'var(--code-bg)', 'editor.foreground': 'var(--ink)' },
+  tokenColors: [
+    { scope: ['comment', 'punctuation.definition.comment'], settings: { foreground: 'var(--muted)' } },
+    { scope: ['keyword', 'storage', 'keyword.operator.new', 'keyword.operator.expression', 'keyword.operator.logical.python', 'variable.language'], settings: { foreground: 'var(--accent)' } },
+    { scope: ['string', 'punctuation.definition.string'], settings: { foreground: 'var(--code-str)' } },
+    { scope: ['constant', 'support.constant', 'variable.other.constant', 'keyword.other.unit'], settings: { foreground: 'var(--code-num)' } },
+    { scope: ['entity.name.type', 'entity.name.class', 'entity.other.inherited-class', 'support.type', 'support.class', 'entity.other.attribute-name', 'punctuation.support.type.property-name'], settings: { foreground: 'var(--code-type)' } },
+    { scope: ['keyword.operator', 'punctuation', 'meta.template.expression', 'entity.name.function', 'support.function', 'entity.name.tag', 'entity.other.attribute-name.class', 'entity.other.attribute-name.id', 'entity.other.attribute-name.pseudo-class', 'variable', 'string.unquoted', 'constant.other.option'], settings: { foreground: 'var(--ink)' } },
+  ],
+};
+
 /** Same shape as {@link LANGUAGE_LOADERS}, for themes — see the module header's "THEME_LOADERS IS
  *  A DIFFERENT SHAPE" section for the selection rule (20 smallest bundled themes by byte size,
- *  contrast-filtered, not editorially curated). */
+ *  contrast-filtered, not editorially curated). The Peekover theme (013 task 5.8) comes first:
+ *  it is the default, built here from the design tokens rather than drawn from Shiki's set. */
 const THEME_LOADERS: Readonly<Record<string, ThemeLoader>> = {
+  [PEEKOVER_CODE_THEME]: async () => ({ default: PEEKOVER_THEME as ThemeRegistrationAny }),
   'min-dark': () => import('shiki/themes/min-dark.mjs'),
   red: () => import('shiki/themes/red.mjs'),
   'min-light': () => import('shiki/themes/min-light.mjs'),

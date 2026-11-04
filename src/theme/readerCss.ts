@@ -47,6 +47,7 @@ export const READER_CSS = /* css */ `
   --hl:#FFE94A; --hl-soft:#FFF6BF;
   --ok:#1F9D55; --ok-soft:#E4F5EB; --warn:#B7791F;
   --del:#B8512F; --del-soft:#F8E9E2;
+  --code-str:#197E44; --code-num:#B34F2E; --code-type:#966319;
   --logo-ink:#16171F; --logo-eye:#FBFBF8;
   --r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
   --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
@@ -59,6 +60,7 @@ export const READER_CSS = /* css */ `
   --hl:#FFD84D; --hl-soft:#3A3413;
   --ok:#4CC38A; --ok-soft:#15291F; --warn:#E0A83E;
   --del:#E08663; --del-soft:#342016;
+  --code-str:#4CC38A; --code-num:#E08663; --code-type:#E0A83E;
   --shadow:0 10px 30px rgba(0,0,0,.5);
 }
 :host([data-theme="sepia"]){
@@ -691,13 +693,15 @@ export const READER_CSS = /* css */ `
   margin-right:auto;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
 }
 .peekover-reader .peekover-code-toolbar button,.peekover-reader .peekover-math-action,
-.peekover-reader .peekover-table-copy,.peekover-reader .peekover-table-filter__clear{
+.peekover-reader .peekover-table-copy,.peekover-reader .peekover-table-filter__clear,
+.peekover-reader .peekover-code-toolbar__collapse{
   font-family:var(--sans);font-size:11.5px;font-weight:600;line-height:normal;color:var(--muted);
   background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin:0;
   cursor:pointer;
 }
 .peekover-reader .peekover-code-toolbar button:hover,.peekover-reader .peekover-math-action:hover,
-.peekover-reader .peekover-table-copy:hover,.peekover-reader .peekover-table-filter__clear:hover{color:var(--ink)}
+.peekover-reader .peekover-table-copy:hover,.peekover-reader .peekover-table-filter__clear:hover,
+.peekover-reader .peekover-code-toolbar__collapse:hover{color:var(--ink)}
 .peekover-reader .peekover-code-toolbar button[aria-pressed="true"]{
   color:var(--ink);border-color:var(--faint);background:var(--accent-soft);
 }
@@ -708,6 +712,8 @@ export const READER_CSS = /* css */ `
 .peekover-reader .peekover-math-action[data-state="failed"]{color:var(--del);border-color:var(--del)}
 @media (prefers-reduced-motion:reduce){.peekover-reader .peekover-code-toolbar__copy{transition:none}}
 .peekover-reader .peekover-code pre.shiki{scrollbar-color:var(--faint) transparent}
+.peekover-reader pre.shiki span[style*="--accent"]{font-weight:500}
+.peekover-reader pre.shiki span[style*="--muted"]{font-style:italic}
 .peekover-reader .peekover-math-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:8px}
 
 /* Line numbers (task 4.3) — CSS counters on the highlighted sibling's own .line spans, gated on
@@ -744,12 +750,7 @@ export const READER_CSS = /* css */ `
 .peekover-reader .peekover-code[data-code-state="collapsed"] pre.shiki{max-height:320px;overflow:hidden}
 .peekover-reader .peekover-code[data-code-state="expanded"] pre.shiki{max-height:none}
 @media (prefers-reduced-motion:reduce){.peekover-reader .peekover-code[data-code-state] pre.shiki{transition:none}}
-.peekover-reader .peekover-code-toolbar__collapse{
-  display:block;width:100%;margin-top:8px;
-  font-family:var(--sans);font-size:12px;color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;text-align:center;
-}
-.peekover-reader .peekover-code-toolbar__collapse:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-reader .peekover-code-toolbar__collapse{display:block;width:100%;margin-top:8px;text-align:center}
 
 /* Diagrams (007 D-15) — rationale: diagramView.ts */
 .peekover-reader .peekover-diagram{

@@ -45,6 +45,7 @@ import {
   CODE_LINE_NUMBERS_ATTR,
   CODE_WRAP_ATTR,
   CODE_LINE_HIGHLIGHT_CLASS,
+  CODE_COLLAPSE_CONTROL_CLASS,
 } from '../../src/render/codeView';
 
 const WRAPPER_SELECTOR = `div.${CODE_WRAPPER_CLASS}`;
@@ -986,6 +987,57 @@ describe('013 5.3 — the code toolbar is the mockup’s copy button, every stat
       } finally {
         teardownEditorShell(host);
       }
+    });
+  }
+});
+
+// 013 task 5.8 (folded in from 5.3's deviation 4): the long-code collapse button ("Show full code" /
+// "Collapse code") takes 5.3's shared button look; it stays a full-width bar under the block, and its
+// behaviour and accessible name are unchanged.
+const LONG_DOC = '# Long\n\n' + fence('javascript', Array.from({ length: 45 }, (_, i) => `const line${i} = ${i};`).join('\n'));
+
+describe('013 5.8 — the long-code collapse button is the mockup’s copy button, both themes', () => {
+  beforeEach(async () => {
+    await page.viewport(1440, 900);
+  });
+  afterEach(async () => {
+    setThemeSetting('auto');
+    resetThemeWatchForTest();
+    await page.viewport(414, 896);
+  });
+
+  for (const theme of ['light', 'dark'] as const satisfies readonly Theme[]) {
+    it(`the app page's reading view — ${theme}`, async () => {
+      setThemeSetting(theme);
+      const { host, shadow } = await appPageReader(LONG_DOC);
+      setThemeSetting(theme); // again: the shell's settings load (this file's store has none) resets it
+      await waitFor(() => host.getAttribute('data-theme') === theme);
+      await allSettled(shadow);
+      const button = await waitFor(() => shadow.querySelector<HTMLButtonElement>(`.${CODE_COLLAPSE_CONTROL_CLASS}`));
+      const label = `collapse · ${theme}`;
+      button.scrollIntoView({ block: 'center' });
+      await pointerAway(shadow);
+      await expectCopyLook(label, button, 'rest');
+      await userEvent.hover(button);
+      await expectCopyLook(label, button, 'hover');
+      await pointerAway(shadow);
+      await tabOnto(button);
+      expect(shadow.activeElement, `${label}: Tab reaches it`).toBe(button);
+      await expectCopyLook(label, button, 'focus');
+      // Still the full-width bar under the block.
+      const wrapper = button.closest<HTMLElement>(`.${CODE_WRAPPER_CLASS}`)!;
+      expect(button.getBoundingClientRect().width).toBeCloseTo(wrapper.getBoundingClientRect().width, 0);
+      // Behaviour and accessible name unchanged.
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.textContent).toBe('Show full code');
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(button.getAttribute('aria-label')).toBe('Code block 1 truncated at 40 lines. Activate to show the full block.');
+      await userEvent.click(button);
+      expect(wrapper.getAttribute('data-code-state')).toBe('expanded');
+      expect(button.textContent).toBe('Collapse code');
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.getAttribute('aria-label')).toBe('Code block 1 expanded. Activate to collapse it.');
+      button.blur();
     });
   }
 });
