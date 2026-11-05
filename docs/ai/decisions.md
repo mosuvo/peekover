@@ -1,6 +1,113 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.5 — empty, denied and unsupported app states restyled (plan §3). HUMAN RULING: the
+  no-document layout ("Mock + uniform").** Local, on `main` at `c07d3ee` (5.4), up to date with `origin/main`, tree
+  clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on
+  2026-11-05. **CI read with `gh`:** `c07d3ee` — CI success (run 41953681687, job `verify`), Supply chain success
+  (41953681585: SBOM, dependency audit, OSV scanner, no remote code).
+  - **HUMAN RULING — the no-document layout (2026-11-05, AskUserQuestion, verbatim):** "Mock + uniform (Recommended)".
+    The question put three options with screenshots (`D:\Dev\peekover-shots\5.5\proposal\`: today vs a prototype — no
+    folder / folder open, no file / a file open, at 1440 and 414): **(chosen)** no folder: no pane, the setup card
+    (title, the grant line, an ink-primary "Open a folder", the recent / pinned hub) centred in the body; a folder open:
+    4.8's rule made uniform — at ≤ 1189 px the pane is the overlay behind "Files" whether or not a file is open, and it
+    opens by itself until a file is picked; above 1189 px it stays in the row, unchanged. Rejected: the card with 4.8's
+    rule kept; today's layout. **This supersedes 4.8's deviation** ("with no document open the pane stays in the row
+    and Files is hidden at every width — Open a folder lives there").
+  - **The states (inventory, each with how a test reaches it):** (1) **first run** — the shell mounted, nothing opened;
+    (2) **the picker cancelled** ("No folder was opened." / a drop: "Drop a folder to open it.") — an injected `cancelled`
+    outcome, the painter the picker and drop routes reach; (3) **could not open** ("Could not open that folder. Please
+    try again."; reopen: "Could not check access …", "That folder couldn’t be reopened …") — an injected `error`;
+    (4) **access denied** ("Access to this folder wasn’t granted. Click it again to re-allow it.", the reopen route) — an
+    injected `denied`; (5) **unsupported** (the warn tone) — an injected `unsupported`: **no source in `src` produces
+    this outcome** (folderSource declares it, appShell handles it) — flagged, reachable only by injection; (6) **access
+    revoked** — Revoke on the chip; back to (1); (7) **a folder with no markdown files** — an empty source; (8) **a
+    search with no match** — typed in the search; (9) **a folder too large to list** — `truncated: true`; (10) **a
+    read-only snapshot** (Firefox) — `persistable: false`; (11) **a folder open, no file chosen**; (12) **an empty file**
+    — a blank read; (13) **an unreadable file** — a rejecting read. Not 5.5's: a render failure inside the reader host is
+    the reader's own banner (`READER_CSS`, 5.6's; tasks.md 5.5 pins the content script's md5).
+  - **The look (tokens only; `mockup.html:130–131`, `:380–381` the `.alert` and `.alert.warn`; `:327–329` the setup card
+    in the `.panelbox`, `:194`):** (1)–(6) the **start card** in the body — `--paper`, 1 px `--line`, radius 14,
+    `--shadow`, 440 px; its title the header row (700 13.5 px, a `--line` rule); body 13.5 px / 1.6 `--muted`; "Open a
+    folder" **5.4's ink primary** (one rule); a notice is the mock's **alert** under the title (the soft `--accent-soft`
+    fill at 55%, a 3 px `--accent` rule, square on the left, `--ink` text; **warn**: `--hl-soft` at 55%, a `--warn` rule);
+    the hub under it. (7)–(8) the tree's empty / no-match lines: the alert. (9) and (10): the warn alert. (11)–(13) the
+    reader's designed states: the setup card (title as the header row, the detail as its body). One alert rule in
+    APP_CSS serves the shell's notices and the tree's (the tree's own two rules deleted — it injects its sheet after the
+    shell's, so they would win).
+  - **Behaviour that changed (the ruling):** with no folder the pane and the reader pane are not drawn (the "Folders"
+    navigation landmark is absent until a folder is open); the card is in a new `__start` box in the body. A folder open
+    marks the shell `data-folder` (the overlay and "Files" now key off it, not `data-document`). At ≤ 1189 px a granted
+    folder with no file opens the overlay (focus moves into the pane, as "Files" does; the reader behind is inert);
+    choosing a file, Escape or a press outside closes it, as before. A document opened with no folder (the public
+    `AppController.selectFile` seam; the dev handle uses it) shows the reader and the card yields — the reader is hidden
+    only with neither a folder nor a document. **Accessible names unchanged.** The card's DOM order
+    is title, notice, grant line, button, hub (the notice was before the title) — reading order, no tab stop moved.
+  - **Copy — unchanged; flagged for the human:** (a) the reader's no-selection detail, "Open a folder, then pick a
+    markdown file to render it in the reader.", now only shows with a folder open (the start card replaces it when there
+    is none), so "Open a folder" there is stale; (b) the `unsupported` outcome has no producer, so its copy is never
+    written by the product. Not rewritten.
+  - **Contrast** (as painted, both engines identical; light / dark): the start card's lowest text 6.01 / 7.44 (the grant
+    line, `--muted`); its alerts 15.99 / 13.82 (`--ink` on the soft fill), warn 16.69 / 12.86; "Open a folder" 17.22 /
+    15.47 (5.4's ink primary); the tree's alerts 15.99 / 13.82; too large and read-only 16.69 / 12.86; the reader cards
+    6.01 / 7.44 lowest (the detail). **Lowest 6.01.** **Non-text, for 8.1 (WCAG 1.4.11):** the alert rule `--accent`
+    17.22 / 15.47; the warn rule `--warn` 3.51 / 8.61; the alert fills 1.08 / 1.12 (accent) and 1.03 / 1.21 (warn) — the
+    rule carries the boundary; the card border `--line` 1.21 / 1.29; the scrollbars `--faint` 2.60 / 3.70.
+  - **The sweep:** 5.5's 2 rows (the app page's reader pane — no folder and a document open) deleted: the reader pane
+    and the new start box carry `scrollbar-color`. **PENDING 4 per engine (5.6's)**, as expected.
+  - **The census:** the app states it did not measure — the first run, the four idle notices, an empty folder, no match,
+    too large, no file chosen, an empty file, an unreadable file — each its own surface, both themes (22 → 44 surface ×
+    theme; C093's count re-spelled, `KEEPS:`). The read-only note was already in "app page". **Pending stays EMPTY.**
+  - **Tests (red-first at `c07d3ee`'s sources, both engines): 70 red (35 per engine)**, only the new ones —
+    `filesOverlay`: "5.5 — the no-document layout" (no folder at 414 / 1440: "timed out: the card in the body"; a folder
+    and no file at 414 / 1189: "timed out: the overlay open by itself"; Escape) and "5.5 — every app state" (13 states ×
+    2 themes: the start states "the state on screen" timed out, the tree and reader states on their look — "empty folder:
+    the mock's .alert: expected '0px none …' to be '3px solid …'", "no selection: the setup card: expected '0px none …' to
+    be '14px …'"); the census's app states and INVENTORY (24, not 44); the sweep's INVENTORY (its 2 rows now pass). Green
+    after on the first run: the three files 196 passed. **RETIRED by the ruling:** 4.8's "with no document open the pane
+    stays in the row and Files is hidden" (`filesOverlay`, no census row) — its property reversed; "Open a folder" on
+    screen with no folder is kept in the new layout test.
+  - **Ablations → red** (each restored md5-identical): **A1** the start card's "Open a folder" taken out of the button
+    rule → the sweep: "app page (no folder) · .peekover-app__cta — native background rgb(240, 240, 240); native border
+    outset 2px" (Fx rgb(233, 233, 237)). **A2** the tree's old notice rule put back (the old vocabulary) → "too large:
+    the mock's .alert.warn: expected '3px solid rgb(22, 23, 31) | rgb(251, …' to be '3px solid rgb(183, 121, 31) | …'",
+    light and dark, both engines. **A3** (tasks.md's red-first) a throw in the reader's state builder → the never-blank
+    check: "timed out: an empty file: the state on screen", "… an unreadable file …", both themes, both engines.
+  - **Bytes** (clean two-engine build; arms in one session against `c07d3ee`, every other output identical in size):
+    content script **346,241 B, md5 `1f010928…` (Cr) / `75535b93…` (Fx) — identical** (tasks.md 5.5's Verify). App chunk
+    **557,671 B (+878)** = `appShell` +1,008 (the start box and the hide rules, the card, the one alert rule, the CTA
+    joining the primary, `data-folder`, the self-opening overlay: +953 in the arms; the no-folder-document fix below +55,
+    re-measured by a clean rebuild) + `readerPane` +116 (the state card) + `treeView` −244 (its two rules deleted) +
+    `toolbar` −2 (`data-document` → `data-folder`) — residual 0. `.output` 5,978,405 / 5,978,521 B (+878 each); manifests
+    833 / 949 B, `permissions: []`.
+  - **Found by the first full suite, fixed here:** `editorEyeballProxy` proxy 4 timed out on both engines — it opens a
+    document through `AppController.selectFile` with no folder, and the first cut hid the reader whenever no folder was
+    open (its failure screenshot: the start card under an Edit-pressed toolbar — a blank page, AGENTS.md #5). The hide
+    rule now also yields to `data-document`. A test pins it ("a document opened with no folder: the reader shows it, and
+    the card yields", 414 / 1440), red on the first cut ("the document is on screen: expected false to be true" — both
+    widths, both engines), green on the fix.
+  - **Necessary ripple:** `src/app/readerPane.ts`, `src/app/treeView.ts` (the state modules appShell composes — tasks.md's
+    "the state modules it composes"); `src/app/toolbar.ts` ("Files" shows with a folder open — required by the ruling's
+    layout test).
+  - **Carried items read:** "Wipe all data does not close an open folder" (a behaviour change; homed with the human) and
+    the failed-chunk "try again" copy (the editor control, 5.7's surface) — neither is 5.5's; untouched.
+  - **Verify:** lint 0 · unit 1,503 / 1,503 · browser, alone, both engines: **2,434 passed / 0 failed / 52 skipped of 2,486** (+72), 570 s, EXIT 0, on the second run; the first run (2,428 / 2 failed) was red only in `editorEyeballProxy` proxy 4, both engines — this task's defect, found and fixed above; no known flake recurred · the sweep green, PENDING 4 per
+    engine · the census green, pending EMPTY · golden EMPTY · manifests unchanged · no control bytes and LF only in every
+    changed file (two counts; the control fires) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.5\`:** `before-` (`c07d3ee`) / `after-` × each
+    state (`first-run`, `cancelled`, `could-not-open`, `denied`, `unsupported`, `empty-folder`, `too-large`, `read-only`,
+    `no-match`, `no-file`, `empty-file`, `unreadable`) `-1440-light` / `-dark`, and `first-run-414-light`; `proposal\` —
+    the ruling's screenshots.
+  - **Deviations, flagged:** (1) the alert is the mock's at 13 px with 10 / 14 padding (the mock's 15 px / 13 / 16 is
+    body-text size), with no `.tag` label (copy unchanged). (2) The mock's no-folder toolbar also carries an ink-primary
+    "Open a folder" — not built (the ruling drew the body card); and the Read / Edit / Raw segment still shows with no
+    document (the mock omits it) — both for 8.1. (3) The tree's empty and no-match lines are alerts (the mock has no
+    tree state). (4) `readerPane.ts` and `treeView.ts` lose their colour fallbacks (only ever drawn in the shell).
+  Why: tasks.md 5.5 — every app state from the mock's `.alert` and setup card, never blank; the human's ruling puts the
+  no-folder call to action where the approved mock draws it, and makes the narrow-window pane one rule.
+  Revisit-when: 8.1's walk (the non-text states above; the copy flags (a) and (b); the toolbar's no-folder primary and
+  segment); a new app state (it takes the start card or the alert, not its own look).
+
 - **2026-11-05 · M13 TASK 5.4 — panels and popovers restyled; Compare picker and lightbox swept (plan §3; 006 D-15).**
   Local, on `main` at `a652451` (5.8), up to date with `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0,
   frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-05. **CI read with `gh`:** `a652451` —

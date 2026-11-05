@@ -624,7 +624,7 @@ ${statusLineCss(SHELL_CLASS)}
 .peekover-storage__close:hover,.peekover-storage__btn:hover,.peekover-export__close:hover,.peekover-unsaved__discard:hover{color:var(--ink)}
 .peekover-storage__btn:disabled{opacity:.5; cursor:default; color:var(--muted)}
 .peekover-storage__btn[data-wipe="confirm"],.peekover-storage__btn[data-erase-snapshots="confirm"],
-.peekover-storage__btn[data-clear-diagrams="confirm"],.peekover-unsaved__keep{
+.peekover-storage__btn[data-clear-diagrams="confirm"],.peekover-unsaved__keep,.${SHELL_CLASS}__cta{
   font:600 11.5px/normal var(--sans); color:var(--paper); background:var(--ink);
   border:1px solid var(--ink); border-radius:7px; padding:5px 11px; margin:0; cursor:pointer;
 }
@@ -634,33 +634,38 @@ ${statusLineCss(SHELL_CLASS)}
   flex:0 0 228px; min-width:0; overflow:auto; scrollbar-color:var(--faint) transparent;
   border-right:1px solid var(--line); background:var(--paper); padding:22px 12px;
 }
-.${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; padding:1.5rem; container-type:size}
+.${SHELL_CLASS}__reader{flex:1 1 auto; min-width:0; overflow:auto; scrollbar-color:var(--faint) transparent; padding:1.5rem; container-type:size}
+.${SHELL_CLASS}__start{flex:1 1 auto; min-width:0; overflow:auto; scrollbar-color:var(--faint) transparent;
+  display:flex; justify-content:center; align-items:flex-start; padding:14vh 1rem 2rem}
+.${SHELL_CLASS}[data-folder] .${SHELL_CLASS}__start,.${SHELL_CLASS}[data-document] .${SHELL_CLASS}__start,
+.${SHELL_CLASS}:not([data-folder]) .${SHELL_CLASS}__folders,.${SHELL_CLASS}:not([data-folder]):not([data-document]) .${SHELL_CLASS}__reader{display:none}
 @media screen and (max-width:${FILES_OVERLAY_MAX}px){
-  .${SHELL_CLASS}[data-document] .${SHELL_CLASS}__body{position:relative}
-  .${SHELL_CLASS}[data-document] .${SHELL_CLASS}__folders{display:none; position:absolute; inset:0 auto 0 0; z-index:9;
+  .${SHELL_CLASS}[data-folder] .${SHELL_CLASS}__body{position:relative}
+  .${SHELL_CLASS}[data-folder] .${SHELL_CLASS}__folders{display:none; position:absolute; inset:0 auto 0 0; z-index:9;
     width:min(300px,86%); box-shadow:var(--shadow)}
-  .${SHELL_CLASS}[data-document][data-files="open"] .${SHELL_CLASS}__folders{display:block}
-  .${SHELL_CLASS}[data-document][data-files="open"] .${SHELL_CLASS}__body::before{content:""; position:absolute; inset:0; z-index:8;
+  .${SHELL_CLASS}[data-folder][data-files="open"] .${SHELL_CLASS}__folders{display:block}
+  .${SHELL_CLASS}[data-folder][data-files="open"] .${SHELL_CLASS}__body::before{content:""; position:absolute; inset:0; z-index:8;
     background:color-mix(in srgb,var(--logo-ink) 45%,transparent)}
 }
 
 .${SHELL_CLASS}__empty{
-  display:flex; flex-direction:column; align-items:flex-start;
-  gap:.55rem; text-align:left; color:var(--muted);
+  width:min(440px,100%); display:flex; flex-direction:column; align-items:flex-start; gap:14px; padding:0 22px 22px;
+  background:var(--paper); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
+  font-size:13.5px; line-height:1.6; color:var(--muted);
 }
-.${SHELL_CLASS}__cta{
-  font:inherit; color:var(--ink); background:var(--paper);
-  border:1px solid var(--line); border-radius:var(--r);
-  padding:.55rem 1rem; cursor:pointer;
-}
-.${SHELL_CLASS}__cta:hover{background:var(--accent-soft)}
+.${SHELL_CLASS}__empty > *{margin:0}
+.${SHELL_CLASS}__empty > .${SHELL_CLASS}__start-title{align-self:stretch; margin:0 -22px; padding:14px 18px;
+  border-bottom:1px solid var(--line); font:700 13.5px/1.3 var(--sans); color:var(--ink)}
+.${SHELL_CLASS}__empty > .${SHELL_CLASS}__notice,.${SHELL_CLASS}__empty > .${SHELL_CLASS}__hub{align-self:stretch}
 .${SHELL_CLASS}__cta:disabled{opacity:.6; cursor:default}
-.${SHELL_CLASS}__line{color:var(--muted); font-size:.82rem; max-width:34ch}
-.${SHELL_CLASS}__notice{
-  color:var(--muted); font-size:.82rem; border-left:3px solid var(--line);
-  padding:.35rem .6rem; background:var(--paper); border-radius:6px; max-width:34ch;
+.${SHELL_CLASS}__notice,.peekover-tree__notice,.peekover-tree__empty{
+  margin:0; padding:10px 14px; font-size:13px; line-height:1.5; color:var(--ink);
+  border-left:3px solid var(--accent); border-radius:0 var(--r) var(--r) 0;
+  background:color-mix(in srgb,var(--accent-soft) 55%,transparent);
 }
-.${SHELL_CLASS}__notice[data-tone="warn"]{border-left-color:var(--accent)}
+.${SHELL_CLASS}__notice[data-tone="warn"],.peekover-tree__notice{
+  border-left-color:var(--warn); background:color-mix(in srgb,var(--hl-soft) 55%,transparent);
+}
 
 /* Grant chip — "granted: <name> — revoke" (capability.ts). */
 .${SHELL_CLASS}__chip{
@@ -687,7 +692,7 @@ ${statusLineCss(SHELL_CLASS)}
    live here instead — the only file that can. */
 @media print{
   .${SHELL_CLASS}{position:static; inset:auto; height:auto; overflow:visible; display:block}
-  .${SHELL_CLASS}__header,.${SHELL_CLASS}__folders{display:none!important}
+  .${SHELL_CLASS}__header,.${SHELL_CLASS}__folders,.${SHELL_CLASS}__start{display:none!important}
   .${SHELL_CLASS}__body{display:block; height:auto}
   .${SHELL_CLASS}__reader{overflow:visible; height:auto; padding:0; container-type:normal}
 }
@@ -884,6 +889,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   foldersContent.className = `${SHELL_CLASS}__folders-content`;
   folders.append(foldersContent);
 
+  // 013 task 5.5 (HUMAN RULING 2026-11-05, "Mock + uniform"): with no folder open there is no pane — the start card
+  // ("Open a folder to begin", the grant line, "Open a folder", the reopen hub) is painted here, in the body.
+  const start = doc.createElement('div');
+  start.className = `${SHELL_CLASS}__start`;
+
   // ── THE EDITOR'S SAVE CAPABILITY (012 D-3; tasks.md F-5) ──────────────────────────────────
   //
   // Built HERE and handed down, never reached for from below: the reader pane and the editor
@@ -1012,7 +1022,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   const filesButton = toolbar.filesButton;
   filesButton.setAttribute('aria-controls', folders.id);
   const overlayQuery = doc.defaultView?.matchMedia?.(`(max-width:${FILES_OVERLAY_MAX}px)`) ?? null;
-  const overlayApplies = (): boolean => shell.hasAttribute('data-document') && overlayQuery?.matches === true;
+  // 5.5 (the human's ruling): the overlay applies whenever a folder is open, a file chosen or not (4.8: a file open).
+  const overlayApplies = (): boolean => shell.hasAttribute('data-folder') && overlayQuery?.matches === true;
   const filesOpen = (): boolean => shell.getAttribute('data-files') === 'open';
   const FOCUSABLE = 'button:not([disabled]),input:not([disabled]),select,textarea,a[href],[tabindex]:not([tabindex="-1"])';
   const focusablesIn = (root: HTMLElement): HTMLElement[] =>
@@ -1070,7 +1081,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (!overlayQuery.matches) closeFiles(false);
   });
 
-  body.append(folders, readerPane.element);
+  body.append(folders, start, readerPane.element);
   shell.append(buildStyle(doc), header, toolbar.notices, body, statusLine.element);
   container.replaceChildren(shell);
   statusLine.watch(body);
@@ -2067,9 +2078,18 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     setActiveFile(null);
     pinBarEl = null;
     treeView = null;
+    // No folder: the pane leaves the page and the start card takes the body (5.5, the human's ruling).
+    closeFiles(false);
+    shell.removeAttribute('data-folder');
 
     const wrap = doc.createElement('div');
     wrap.className = `${SHELL_CLASS}__empty`;
+
+    // The card's header row first, then the notice (if any) as the mock's alert under it.
+    const msg = doc.createElement('p');
+    msg.className = `${SHELL_CLASS}__start-title`;
+    msg.textContent = 'Open a folder to begin';
+    wrap.append(msg);
 
     if (notice) {
       const n = doc.createElement('p');
@@ -2078,9 +2098,6 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       n.textContent = notice.text;
       wrap.append(n);
     }
-
-    const msg = doc.createElement('p');
-    msg.textContent = 'Open a folder to begin';
 
     // The plain-language line shown BEFORE the picker — the trust moment (capability.ts).
     const line = doc.createElement('p');
@@ -2093,7 +2110,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     cta.textContent = 'Open a folder';
     cta.addEventListener('click', () => void guarded(runOpenFolder));
 
-    wrap.append(msg, line, cta);
+    wrap.append(line, cta);
 
     // The reopen hub (recents/pins) — the landing screen IS the one-gesture reopen surface.
     // It lives in its own slot, filled by renderHub (now, and again when the async load lands).
@@ -2101,7 +2118,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     hubSlotEl.className = `${SHELL_CLASS}__hub`;
     wrap.append(hubSlotEl);
 
-    foldersContent.replaceChildren(wrap);
+    foldersContent.replaceChildren();
+    start.replaceChildren(wrap);
     renderHub();
   }
 
@@ -2113,6 +2131,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   function paintGranted(source: FolderSource): void {
     grantState = grant(source.name);
     activeSource = source;
+    shell.setAttribute('data-folder', '');
+    start.replaceChildren();
 
     const wrap = doc.createElement('div');
     wrap.className = `${SHELL_CLASS}__folderview`;
@@ -2154,6 +2174,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     foldersContent.replaceChildren(wrap);
     renderHub();
     renderPinBar();
+    // At <= the breakpoint the pane is the Files overlay; with no file chosen yet it opens by itself (5.5's ruling).
+    if (!activeFile) openFiles();
   }
 
   // --- grant flow ----------------------------------------------------------

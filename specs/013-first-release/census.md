@@ -280,6 +280,16 @@ retired while its function has no other test. Function by function:
   view and the lightbox (22 surface × theme); `diagramActions` re-pins its shipped-diagram-block byte pin 4,111 → 3,968 B
   (the lightbox's rules; itemised in the test).
 
+- **5.5** (2026-11-05 — the app states; the human's no-document ruling): the states change look; with no folder the start
+  card is in the body and the pane is not drawn; at ≤ 1189 px the pane is the overlay whenever a folder is open. **KEPT,
+  unchanged and green** (each still states its property): C007 (`appShell` unit: the no-selection, empty and unreadable
+  designed states and a render), C097, C098 (the editor, the dialog, the panels meet AA). **RE-SPELLED:** C093
+  (`contrastCensus` INVENTORY) — its count 22 → 44, eleven app states added (`KEEPS:` in the test). **Retired:** none.
+  Outside the census (no row): `filesOverlay`'s 4.8 test "with no document open the pane stays in the row and Files is
+  hidden" is RETIRED by the human's ruling (its property reversed; "Open a folder" on screen with no folder is kept in the
+  new layout test); `filesOverlay` gains 5.5's layout and state tests; `nativeControls` deletes its 2 rows (4 per engine
+  left, 5.6's); `contrastCensus` adds the app states.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).

@@ -145,7 +145,7 @@ export function toolbarCss(shell: string): string {
 .${C} .peekover-diff-picker__size,.${C} .peekover-diff-picker__kind{color:var(--muted); font-variant-numeric:tabular-nums}
 .${C}{flex:1 1 auto}
 .${C}__files,.${C}__break,.${C}__more,.${C}__menu[hidden]{display:none}
-@media (max-width:${FILES_OVERLAY_MAX}px){.${shell}[data-document] .${C}__files{display:inline-flex}}
+@media (max-width:${FILES_OVERLAY_MAX}px){.${shell}[data-folder] .${C}__files{display:inline-flex}}
 .${C}__files-btn{margin:0; font:600 12.5px/1 var(--sans); letter-spacing:0; color:var(--muted); background:var(--panel);
   border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap; cursor:pointer}
 .${C}__files-btn[aria-expanded="true"]{color:var(--ink); border-color:var(--ink)}

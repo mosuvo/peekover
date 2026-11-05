@@ -796,12 +796,20 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       dialog's sheet) and `toolbar.ts` (the Compare picker's scrollbar). **The sweep: 4 rows deleted, the Compare picker
       and the lightbox added — 6 per engine left;** the census adds the Compare picker, the diff and the lightbox and stays
       EMPTY. Content script −569 B, app chunk −601 B.
-- [ ] **5.5 Empty / denied / unsupported app states.** TEST FIRST. Composed from `.alert` and the setup card — no new
+- [x] **5.5 Empty / denied / unsupported app states.** TEST FIRST. Composed from `.alert` and the setup card — no new
       vocabulary.
       Files: `src/app/appShell.ts` · the state modules it composes · census-named tests
       Verify: (**Cr+Fx**) each state renders its message, never blank (AGENTS.md #5; red-first: throw in the state
       builder → the never-blank assertion fails); census rows deleted. Content-script md5 identical. Full suite.
       Golden EMPTY · manifest · `permissions: []`. [plan §3]
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.5").* **HUMAN RULING ("Mock + uniform"):** with no folder there
+      is no pane — the setup card ("Open a folder to begin", the grant line, an ink-primary "Open a folder", the hub)
+      sits in the body (`toolbar-mock.html:296–298`); at ≤ 1189 px the pane is the overlay behind "Files" whenever a
+      folder is open, opening by itself until a file is picked (supersedes 4.8's deviation). Thirteen states inventoried;
+      notices and the tree's states are the mock's `.alert` (warn for unsupported, too large, read-only), the reader's
+      states the setup card. Copy unchanged; two flags for the human (the no-selection detail's stale "Open a folder";
+      `unsupported` has no producer). The sweep: 2 rows deleted, 4 per engine left; the census adds eleven states, EMPTY.
+      Content script md5 identical; app chunk +878 B. Necessary ripple `readerPane.ts`, `treeView.ts`, `toolbar.ts`.
 - [ ] **5.6 The content-script reader: pills restyled in place, network indicator, remote bar, failure banner;
       content-script first paint.** TEST FIRST. Pills restyled (Q10's default arm), the banner as `.alert`, 130 px band
       kept. Then the content-script first-paint A-B-A after 2.4's stacks and this restyle (165 ms, 15.3 ms headroom).

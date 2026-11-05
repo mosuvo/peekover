@@ -40,10 +40,6 @@ const TREE_CSS = /* css */ `
   border:1px solid var(--line); border-radius:8px; padding:7px 10px; appearance:none;
 }
 .${TREE_CLASS}__search::placeholder{color:var(--muted); opacity:1}
-.${TREE_CLASS}__notice{
-  color:var(--muted,#5D6070); font-size:.8rem; border-left:3px solid var(--accent,#16171F);
-  padding:.35rem .6rem; background:var(--paper,#FBFBF8); border-radius:6px;
-}
 .${TREE_CLASS}__list{display:flex; flex-direction:column; gap:1px; min-width:0}
 .${TREE_CLASS}__children{display:flex; flex-direction:column; gap:1px; margin-left:18px; border-left:1px dashed var(--line); padding-left:6px}
 .${TREE_CLASS}__item{
@@ -54,7 +50,6 @@ const TREE_CSS = /* css */ `
 .${TREE_CLASS}__item:hover{background:var(--panel); color:var(--ink)}
 .${TREE_CLASS}__item[aria-current="page"]{background:var(--accent-soft); color:var(--accent); font-weight:600}
 .${TREE_CLASS}__twist{font-family:var(--mono); font-size:11px; color:var(--faint,#9A9DAC); width:14px; text-align:center; flex:0 0 auto}
-.${TREE_CLASS}__empty{color:var(--muted,#5D6070); font-size:.85rem}
 `;
 
 /** Build the persistent style element. */

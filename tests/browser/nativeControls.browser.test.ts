@@ -56,11 +56,9 @@ type Theme = 'light' | 'dark';
  * 5.3 deleted its 16: the code, math and table controls and the code and math scroll boxes (10 rows per engine left).
  * 5.4 deleted its 4 (the two panel slots, the code-theme picker, the capture checkbox) and added two surfaces, the
  * Compare picker and the diagram lightbox, whose findings it fixed rather than listed (6 rows per engine left).
+ * 5.5 deleted its 2: the app page's reader pane scrolls with its own scrollbar colour (4 rows per engine left, 5.6's).
  */
 const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
-  // 5.5 — the app page's own scroll areas (appShell.ts; no task names them — routed with the app states, flagged)
-  ['app page (no folder) · .peekover-app__reader', '5.5'],
-  ['app page · .peekover-app__reader', '5.5'],
   // 5.6 — the content-script reader (its host, which mount() makes a scroller, and its code block)
   ['tab reader (file) · body > div', '5.6'],
   ['tab reader (file) · .peekover-reader > pre', '5.6'],

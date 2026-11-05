@@ -11,6 +11,25 @@
 
 ## Now (start here)
 
+**M13 TASK 5.5 LANDED (2026-11-05) — empty, denied and unsupported app states restyled; HUMAN RULING on the
+no-document layout.** Record: `decisions.md`, "M13 TASK 5.5". Local, one commit on `main` (from `c07d3ee`); not pushed.
+- **CI (`gh`):** `c07d3ee` green — CI (41953681687) and Supply chain (41953681585).
+- **The ruling ("Mock + uniform", 2026-11-05):** no folder → no pane; the setup card ("Open a folder to begin", the grant
+  line, an ink-primary "Open a folder", the recent / pinned hub) centred in the body. A folder open → at ≤ 1189 px the
+  pane is the overlay behind "Files" whether or not a file is open, and opens by itself until a file is picked; above
+  it, in the row. Supersedes 4.8's deviation. A document opened with no folder (the controller seam) shows the reader.
+- **The states (13):** first run, cancelled, could not open, access denied, unsupported, revoked (the start card, a notice
+  as the mock's alert); empty folder, no match, too large, read-only snapshot (alerts in the pane); no file chosen, empty
+  file, unreadable (the reader's setup card). Copy unchanged — flagged: the no-selection detail still says "Open a
+  folder" though a folder is open; `unsupported` has no producer in `src`.
+- **Contrast:** text ≥ 4.5:1 in every state, as painted, both engines (lowest 6.01); non-text listed for 8.1.
+- **The sweep:** 5.5's 2 rows deleted — **PENDING 4 per engine (5.6)**. The census adds eleven app states; EMPTY.
+- Verify: lint 0 · unit 1,503 / 1,503 · browser 2,434 passed / 0 failed / 52 skipped of 2,486, both engines, alone (second run; the first run's 2 reds were 5.5's own defect, fixed — `decisions.md`) · golden EMPTY · content script 346,241 B,
+  md5 `1f010928…` / `75535b93…` — **identical** · app chunk 557,671 B (+878) · manifests 833 / 949 B, `permissions: []`.
+- Screenshots (not committed): `D:\Dev\peekover-shots\5.5\` — before / after, every state, 1440, light / dark, and the
+  first run at 414; `proposal\` — the ruling's screenshots.
+- Next: the human pushes; then task 5.6.
+
 **M13 TASK 5.4 LANDED (2026-11-05) — panels and popovers restyled; Compare picker and lightbox swept.** Record:
 `decisions.md`, "M13 TASK 5.4". Local, one commit on `main` (from `a652451`); not pushed.
 - **CI (`gh`):** `a652451` green — CI (41866625589) and Supply chain (41866625592).
@@ -671,11 +690,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human pushes `main` (task 5.4's local commit) and reads its CI.** **Then task 5.5** (empty / denied /
-unsupported app states — the sweep's 2 rows, the app page's scroll areas), per tasks.md's sequencing. The census's pending
-list is empty (any below-AA text is a red); the sweep's is 6 per engine (5.5: 2 · 5.6: 4). **Open for the human:** the
-syntax-grammar question in § Carried items, "FOR THE HUMAN TO DECIDE".
-*(Earlier, done:)* the human pushes 5.8; task 5.4.
+**First, the human pushes `main` (task 5.5's local commit) and reads its CI.** **Then task 5.6** (the content-script
+reader: pills restyled in place, network indicator, remote bar, failure banner; its first paint — the sweep's last 4
+rows), per tasks.md's sequencing. The census's pending list is empty; the sweep's is 4 per engine (5.6's). **Open for the
+human:** the syntax-grammar question in § Carried items, "FOR THE HUMAN TO DECIDE"; 5.5's two copy flags (8.1 list).
+*(Earlier, done:)* the human pushes 5.4; task 5.5 (the no-document ruling). The human pushes 5.8; task 5.4.
 *(Earlier, done:)* the human pushes 5.3; task 5.8. Carried for 7.1: the minimum browser versions (§ Carried items).
 *(Earlier, done:)* the human pushes 5.2 / 5.2a; task 5.3. The app-page TOC rail (5.2's "Found") was fixed by 5.2a.
 *(Earlier, done:)* the human pushes 5.1; task 5.2. Read CI with `gh` when a task asks.
@@ -826,6 +845,14 @@ measurement-driven or explicitly deferred.*
 - **Non-text contrast (WCAG 1.4.11 — control boundaries and focus indicators, both themes)** — the 2.2 census measures
   text only; check it in the design walk or add a measured case. *Source:* the human's 2.2 ruling (2026-11-01,
   `decisions.md`, "M13 RULING — the Peekover code theme", item 5). *Home:* 8.1.
+- **Diff view: added text is told from unchanged text by its fill alone** (removed also has line-through) — consider a
+  non-colour marker for added (WCAG 1.4.1). *Source:* found at 5.4; the human's 5.5 kickoff (2026-11-05). *Home:* 8.1.
+- **5.5's copy flags** — (a) the reader's no-selection detail, "Open a folder, then pick a markdown file to render it in
+  the reader.", now shows only with a folder open, so "Open a folder" is stale; (b) the `unsupported` open outcome has no
+  producer in `src` (its copy is never written by the product). Unchanged at 5.5. *Source:* `decisions.md`, "M13 TASK
+  5.5". *Home:* 8.1, or the human's call before it.
+- **The no-folder toolbar** — the approved toolbar mock also draws an ink-primary "Open a folder" in the toolbar and no
+  Read / Edit / Raw segment with no document; 5.5 built the body card only. *Source:* 5.5. *Home:* 8.1.
 
 #### FOR M13 TASK 7.6 — THE GO-LIVE CHECKLIST (`docs/store/GO-LIVE.md` does not exist yet; 7.6 creates it)
 - **Replace the not-in-stores lines with the real store links** (the human's 1.3 review, 2026-11-01). Every "Not in

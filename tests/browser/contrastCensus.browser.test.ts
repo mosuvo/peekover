@@ -9,7 +9,7 @@
 // blocked image — and a raw-host fixture), the app shell, the reader pane (code highlighted, math
 // rendered), the editor, the three panels (Stored data, Export, the code-theme picker), the
 // unsaved-changes dialog and (013 task 5.4) the Compare picker with a snapshot, the diff view and the diagram
-// lightbox. NOT measured here: SVG text (diagram labels — diagramTheme.browser.test.ts
+// lightbox, and (5.5) every app state. NOT measured here: SVG text (diagram labels — diagramTheme.browser.test.ts
 // owns them), pseudo-element content (list markers, code line numbers, glyph icons), non-text UI
 // boundaries (WCAG 1.4.11 — the editor eyeball proxy measures CodeMirror's), and hover/focus states.
 //
@@ -31,7 +31,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
-import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
+import type { FolderSource, MarkdownFile, OpenFolderOutcome } from '../../src/app/folderSource';
 import { setThemeSetting, resetThemeWatchForTest } from '../../src/theme/reader';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
@@ -486,6 +486,68 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
         await clearDiagramCache();
       }
     }, 60_000);
+
+    // 013 task 5.5: every app state the census did not measure — the first run (no folder: the setup card in the body),
+    // the four idle notices (cancelled, could not open, access denied, unsupported), a folder with no markdown files, a
+    // search with no match, a folder too large to list, a folder open with no file chosen, an empty file and an
+    // unreadable file. Each is its own surface; the read-only-snapshot note is already in "app page" (persistable false).
+    it(`the app states — ${theme}`, async () => {
+      censusTheme = theme;
+      setThemeSetting(theme);
+      const memFile = (name: string, read: () => Promise<string>): MarkdownFile => ({ path: name, name, read });
+      const folder = (over: Partial<FolderSource> = {}): FolderSource => ({
+        name: 'docs', truncated: false, persistable: true, files: [mem('alpha.md', '# Alpha\n\nText.\n')], ...over,
+      });
+      const STATES: Array<{ name: string; outcome: OpenFolderOutcome | null; then?: (c: HTMLElement) => Promise<void>; root: string }> = [
+        { name: 'first run', outcome: null, root: '.peekover-app__start' },
+        { name: 'cancelled', outcome: { ok: false, reason: 'cancelled', message: 'No folder was opened.' }, root: '.peekover-app__start' },
+        { name: 'could not open', outcome: { ok: false, reason: 'error', message: 'Could not open that folder. Please try again.' }, root: '.peekover-app__start' },
+        { name: 'access denied', outcome: { ok: false, reason: 'denied', message: 'Access to this folder wasn’t granted. Click it again to re-allow it.' }, root: '.peekover-app__start' },
+        { name: 'unsupported', outcome: { ok: false, reason: 'unsupported', message: 'This browser cannot open folders.' }, root: '.peekover-app__start' },
+        { name: 'empty folder', outcome: { ok: true, source: folder({ files: [] }) }, root: '.peekover-app__body' },
+        { name: 'too large', outcome: { ok: true, source: folder({ truncated: true }) }, root: '.peekover-app__body' },
+        {
+          name: 'no match',
+          outcome: { ok: true, source: folder() },
+          then: async (c) => {
+            const search = await waitFor(() => c.querySelector<HTMLInputElement>('.peekover-tree__search'), 'the search');
+            search.value = 'zzz';
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+            await waitFor(() => c.querySelector('[data-state="no-matches"]'), 'no matches');
+          },
+          root: '.peekover-app__body',
+        },
+        { name: 'no file chosen', outcome: { ok: true, source: folder() }, root: '.peekover-app__body' },
+        {
+          name: 'empty file',
+          outcome: { ok: true, source: folder({ files: [memFile('blank.md', async () => '  \n')] }) },
+          then: async (c) => {
+            (await waitFor(() => c.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'), 'the file')).click();
+            await waitFor(() => c.querySelector('[data-state="empty-file"]'), 'the empty-file state');
+          },
+          root: '.peekover-app__body',
+        },
+        {
+          name: 'unreadable file',
+          outcome: { ok: true, source: folder({ files: [memFile('gone.md', () => Promise.reject(new Error('gone')))] }) },
+          then: async (c) => {
+            (await waitFor(() => c.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'), 'the file')).click();
+            await waitFor(() => c.querySelector('[data-state="unreadable"]'), 'the unreadable state');
+          },
+          root: '.peekover-app__body',
+        },
+      ];
+      for (const s of STATES) {
+        const container = freshHost();
+        const app = mountAppShell(container, { openFolder: async () => s.outcome!, store: store() });
+        await waitFor(() => container.querySelector('.peekover-app')?.getAttribute('data-theme') === theme, `${s.name}: data-theme`);
+        if (s.outcome) await app.openFolder();
+        await s.then?.(container);
+        await sleep(300);
+        census(container.querySelector<HTMLElement>(s.root)!, `state: ${s.name}`, theme);
+        container.remove();
+      }
+    });
   }
 
   it('INVENTORY: no failure off the pending list, and no pending row that now passes', () => {
@@ -494,8 +556,9 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     console.log(`CENSUS-COVERED ${JSON.stringify([...covered])}`);
     console.log(`CENSUS-EXEMPT ${JSON.stringify({ disabled: exempt.disabled, m12: Object.fromEntries(exempt.m12), g5: Object.fromEntries(exempt.g5) })}`);
     // Non-vacuous: every surface and theme was measured. KEEPS: every surface × theme measured (C093); RE-SPELLED at
-    // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added).
-    expect(covered.size, 'surfaces × themes measured').toBe(22);
+    // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added), and at 5.5,
+    // 22 → 44 (eleven app states).
+    expect(covered.size, 'surfaces × themes measured').toBe(44);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);

@@ -21,7 +21,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
-import type { FolderSource } from '../../src/app/folderSource';
+import type { FolderSource, OpenFolderOutcome } from '../../src/app/folderSource';
 import type { FolderRecord, PinRecord, RecentRecord } from '../../src/app/store';
 import { backdropOf, contrastRatio, inkOf, parseColor, ratioOver } from './helpers/contrast';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
@@ -230,16 +230,11 @@ describe('4.8 — the breakpoint: "Files" and the overlay only at <= the measure
     },
   );
 
-  it('with no document open the pane stays in the row and "Files" is hidden (it holds "Open a folder")', async () => {
-    await page.viewport(414, 900);
-    container = document.createElement('div');
-    document.body.appendChild(container);
-    containers.push(container);
-    mountAppShell(container, { openFolder: async () => ({ ok: true, source: source() }), store: store('light') });
-    const cta = await until(() => container.querySelector<HTMLElement>('.peekover-app__cta'), 'the CTA');
-    expect(shown(cta), '"Open a folder" is on screen').toBe(true);
-    expect(shown(files())).toBe(false);
-  });
+  // RETIRED at 013 task 5.5 by the HUMAN RULING (2026-11-05, "Mock + uniform"): "with no document open the pane stays
+  // in the row and Files is hidden (it holds Open a folder)" — 4.8's deviation. With no folder the call to action is
+  // now the setup card in the body and there is no pane; with a folder open and no file the pane is the overlay at
+  // <= the breakpoint. KEEPS the property that matters to it — "Open a folder" is always on screen with no folder —
+  // in "5.5 — the no-document layout" below, at 414 and 1440.
 });
 
 describe('4.8 — the overlay: open, hold focus, close three ways, return focus', () => {
@@ -500,5 +495,273 @@ describe('5.1 — the folder pane, restyled', () => {
     await userEvent.type(search, 'bet');
     await until(() => !treeItem('alpha.md'), 'the search filtered');
     expect(treeItem('beta.md')!.getAttribute('aria-current'), 'repainted, still marked').toBe('page');
+  });
+});
+
+// ── M13 task 5.5 — the empty / denied / unsupported app states (tasks.md 5.5: composed from the mock's `.alert`,
+// mockup.html:130-131 and :380-381, and the setup card, :327-329 in the `.panelbox`, :194 — no new vocabulary) ──
+//
+// HUMAN RULING (2026-11-05, 5.5's no-document question: "Mock + uniform"): with no folder there is no pane — the setup
+// card ("Open a folder to begin", the grant line, an ink-primary "Open a folder", the reopen hub) sits centred in the
+// body (the approved toolbar mock, toolbar-mock.html:296-298); with a folder open, at <= FILES_OVERLAY_MAX the pane is
+// the overlay behind "Files" whether or not a file is open, and it opens by itself until a file is picked.
+//
+// Every state the app page has, each reached the way a test can: the open outcome injected through `openFolder` (the
+// same painter the real picker, drop and reopen routes reach), the folder source shaped (empty, truncated, a file whose
+// read rejects or is blank, persistable false), or a gesture (revoke, a search). For each: NEVER BLANK first (its
+// message is on screen — AGENTS.md #5), then the look (an alert, or the card), then every text >= 4.5:1 as painted.
+
+type Outcome = OpenFolderOutcome;
+const NOT: (reason: 'cancelled' | 'error' | 'denied' | 'unsupported', message: string) => Outcome = (reason, message) => ({ ok: false, reason, message });
+
+/** A probe's computed value for a token expression, read inside the shell. */
+function tok(prop: 'color' | 'box-shadow' | 'background-color', value: string): string {
+  const probe = document.createElement('i');
+  probe.style.setProperty(prop, value);
+  shell().append(probe);
+  const out = getComputedStyle(probe).getPropertyValue(prop);
+  probe.remove();
+  return out;
+}
+const ratioOf = (el: Element): number => ratioOver(inkOf(el), backdropOf(el)).ratio;
+
+/** The mock's `.alert` (or `.alert.warn`): a 3 px left rule in --accent (--warn), the soft fill at 55%, square left. */
+function expectAlert(el: HTMLElement, name: string, warn = false): void {
+  const cs = getComputedStyle(el);
+  const [rule, soft] = warn ? ['--warn', '--hl-soft'] : ['--accent', '--accent-soft'];
+  expect(
+    `${cs.borderLeftWidth} ${cs.borderLeftStyle} ${cs.borderLeftColor} | ${cs.backgroundColor} | ${cs.borderTopLeftRadius} ${cs.borderTopRightRadius}`,
+    `${name}: the mock's .alert${warn ? '.warn' : ''}`,
+  ).toBe(`3px solid ${tok('color', `var(${rule})`)} | ${tok('background-color', `color-mix(in srgb,var(${soft}) 55%,transparent)`)} | 0px 10px`);
+}
+
+/** The setup card: the .panelbox — radius 14, the --shadow token, --paper, 1 px --line — with a header row. */
+function expectCard(el: HTMLElement, title: HTMLElement, name: string): void {
+  const cs = getComputedStyle(el);
+  expect(`${cs.borderTopLeftRadius} ${cs.boxShadow} ${cs.backgroundColor} ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}`, `${name}: the setup card`).toBe(
+    `14px ${tok('box-shadow', 'var(--shadow)')} ${tok('color', 'var(--paper)')} 1px solid ${tok('color', 'var(--line)')}`,
+  );
+  const ts = getComputedStyle(title);
+  expect(`${ts.fontWeight} ${ts.fontSize} ${ts.borderBottomWidth} ${ts.borderBottomStyle} ${ts.borderBottomColor}`, `${name}: its header row`).toBe(
+    `700 13.5px 1px solid ${tok('color', 'var(--line)')}`,
+  );
+}
+
+/** Every text-bearing element under `root` draws at >= 4.5:1; returns the lowest, for the record. */
+function expectText(root: HTMLElement, name: string): number {
+  let least = Infinity;
+  const low: string[] = [];
+  for (const el of [root, ...root.querySelectorAll('*')]) {
+    const own = [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim());
+    if (!own || !shown(el) || el.closest(':disabled')) continue;
+    const r = ratioOf(el);
+    least = Math.min(least, r);
+    if (r < 4.5) low.push(`${el.className || el.tagName} "${el.textContent!.trim().slice(0, 30)}" ${r.toFixed(2)}`);
+  }
+  expect(low, `${name}: text below 4.5:1`).toEqual([]);
+  return least;
+}
+
+/** Mount the shell at `width` in `theme`. `outcome` answers the first "Open a folder"; with none, nothing is opened. */
+async function mountState(width: number, theme: 'light' | 'dark', src: FolderSource | Outcome | null): Promise<ReturnType<typeof mountAppShell>> {
+  await page.viewport(width, 900);
+  container = document.createElement('div');
+  document.body.appendChild(container);
+  containers.push(container);
+  const outcome: Outcome | null = src && 'files' in src ? { ok: true, source: src } : (src as Outcome | null);
+  const app = mountAppShell(container, { openFolder: async () => outcome ?? NOT('cancelled', 'No folder was opened.'), store: store(theme) });
+  await until(() => shell().getAttribute('data-theme') === theme, `data-theme=${theme}`);
+  if (outcome) await app.openFolder();
+  await frames(2);
+  return app;
+}
+const folderOf = (over: Partial<FolderSource> = {}): FolderSource => ({ ...source(), ...over });
+const looks: string[] = [];
+afterEach(() => {
+  for (const l of looks.splice(0)) console.log(`LOOK-5.5 ${l}`);
+});
+
+describe('5.5 — the no-document layout (HUMAN RULING 2026-11-05: "Mock + uniform")', () => {
+  it.each([414, 1440])('at %i px, no folder: no pane, no "Files"; the setup card is in the body with "Open a folder"', async (width) => {
+    await mountState(width, 'light', null);
+    const card = await until(() => container.querySelector<HTMLElement>('.peekover-app__start .peekover-app__empty'), 'the card in the body');
+    expect(shown(card), 'the card is on screen').toBe(true);
+    expect(shown(pane()), 'no pane').toBe(false);
+    expect(shown(files()), 'no "Files"').toBe(false);
+    expect(shown(container.querySelector('.peekover-app__reader')), 'no reader pane behind the card').toBe(false);
+    const cta = card.querySelector<HTMLElement>('.peekover-app__cta')!;
+    expect(shown(cta), '"Open a folder" is in the card').toBe(true);
+    const r = card.getBoundingClientRect();
+    expect(Math.abs((r.left + r.right) / 2 - innerWidth / 2), 'centred in the body').toBeLessThan(2);
+  });
+
+  // Found by the full suite at 5.5 (editorEyeballProxy, proxy 4): `AppController.selectFile` opens a document with no
+  // folder, and the first cut of the rule hid the reader whenever no folder was open — a blank page (AGENTS.md #5).
+  it.each([414, 1440])('at %i px, a document opened with no folder: the reader shows it, and the card yields', async (width) => {
+    const app = await mountState(width, 'light', null);
+    await app.selectFile({ name: 'loose.md', read: async () => '# Loose\n\nA document with no folder.\n' });
+    const h1 = await until(() => host()?.shadowRoot?.querySelector<HTMLElement>('.peekover-reader h1'), 'the document rendered');
+    expect(shown(h1), 'the document is on screen').toBe(true);
+    expect(shown(container.querySelector('.peekover-app__start')), 'the start card has yielded').toBe(false);
+  });
+
+  it.each(OVERLAY_WIDTHS)('at %i px, a folder open and no file: the pane is the Files overlay, open; a pick closes it', async (width) => {
+    await mountState(width, 'light', folderOf());
+    await until(() => overlayOpen() && shown(pane()), 'the overlay open by itself');
+    expect(shown(files()), '"Files" is shown').toBe(true);
+    expect(files().getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector('.peekover-app__reader')!.hasAttribute('inert'), 'the reader behind is inert').toBe(true);
+    expect(inPane(), 'focus is in the pane').toBe(true);
+    await userEvent.click(treeItem('beta.md')!);
+    await until(() => openFile() === 'beta.md' && !overlayOpen(), 'beta.md open, the overlay closed');
+    expect(shown(pane())).toBe(false);
+  });
+
+  it('at <= the breakpoint, Escape closes the self-opened overlay and the reader says to pick a file', async () => {
+    await mountState(414, 'light', folderOf());
+    await until(() => overlayOpen(), 'the overlay open by itself');
+    await userEvent.keyboard('{Escape}');
+    await until(() => !overlayOpen(), 'closed');
+    expect(document.activeElement, 'focus returns to "Files"').toBe(files());
+    const state = container.querySelector<HTMLElement>('.peekover-app__reader__state[data-state="no-selection"]');
+    expect(shown(state), 'the no-selection card is on screen').toBe(true);
+  });
+
+  it.each(SIDEBAR_WIDTHS)('at %i px, a folder open and no file: the pane is in the row, no overlay, no "Files"', async (width) => {
+    await mountState(width, 'light', folderOf());
+    await until(() => shown(pane()), 'the pane');
+    expect(overlayOpen()).toBe(false);
+    expect(shown(files())).toBe(false);
+    const p = pane().getBoundingClientRect();
+    const reader = container.querySelector<HTMLElement>('.peekover-app__reader')!.getBoundingClientRect();
+    expect(Math.abs(p.right - reader.left), 'beside the reader').toBeLessThan(1);
+  });
+});
+
+describe('5.5 — every app state: never blank, the mock vocabulary, text >= 4.5:1 (1440, light and dark)', () => {
+  interface StateCase {
+    name: string;
+    arrange: (theme: 'light' | 'dark') => Promise<void>;
+    /** The element the state draws, its message, and its look. */
+    find: () => HTMLElement | null;
+    message: string;
+    look: (el: HTMLElement) => void;
+  }
+  const idleNotice = (name: string, outcome: Outcome, warn = false): StateCase => ({
+    name,
+    arrange: async (t) => void (await mountState(1440, t, outcome)),
+    find: () => container.querySelector<HTMLElement>('.peekover-app__start .peekover-app__notice'),
+    message: (outcome as { message: string }).message,
+    look: (el) => expectAlert(el, name, warn),
+  });
+  const card = (): HTMLElement => container.querySelector<HTMLElement>('.peekover-app__empty')!;
+  const readerState = (kind: string): (() => HTMLElement | null) => () => container.querySelector<HTMLElement>(`.peekover-app__reader__state[data-state="${kind}"]`);
+  const readerLook = (name: string) => (el: HTMLElement): void => expectCard(el, el.querySelector<HTMLElement>('.peekover-app__reader__state-title')!, name);
+  const pickFile = async (name: string): Promise<void> => {
+    (await until(() => treeItem(name), `${name} in the tree`)).click();
+    await frames(3);
+  };
+  const CASES: StateCase[] = [
+    {
+      name: 'first run (no folder)',
+      arrange: async (t) => void (await mountState(1440, t, null)),
+      find: () => container.querySelector<HTMLElement>('.peekover-app__start .peekover-app__empty'),
+      message: 'Open a folder to begin',
+      look: (el) => {
+        expectCard(el, el.querySelector<HTMLElement>('.peekover-app__start-title')!, 'first run');
+        const cta = el.querySelector<HTMLElement>('.peekover-app__cta')!;
+        const cs = getComputedStyle(cta);
+        expect(`${cs.backgroundColor} ${cs.color} ${cs.borderTopColor} ${cs.borderTopLeftRadius} ${cs.fontWeight} ${cs.fontSize}`, '"Open a folder": the ink primary').toBe(
+          `${tok('color', 'var(--ink)')} ${tok('color', 'var(--paper)')} ${tok('color', 'var(--ink)')} 7px 600 11.5px`,
+        );
+      },
+    },
+    idleNotice('the picker cancelled', NOT('cancelled', 'No folder was opened.')),
+    idleNotice('a folder that could not be opened', NOT('error', 'Could not open that folder. Please try again.')),
+    idleNotice('access denied', NOT('denied', 'Access to this folder wasn’t granted. Click it again to re-allow it.')),
+    idleNotice('unsupported', NOT('unsupported', 'This browser cannot open folders.'), true),
+    {
+      name: 'access revoked',
+      arrange: async (t) => {
+        await mountState(1440, t, folderOf());
+        (await until(() => container.querySelector<HTMLButtonElement>('.peekover-app__chip-revoke'), 'Revoke')).click();
+        await until(() => container.querySelector('.peekover-app__start .peekover-app__empty'), 'back to the start');
+      },
+      find: () => container.querySelector<HTMLElement>('.peekover-app__start .peekover-app__empty'),
+      message: 'Open a folder to begin',
+      look: (el) => expectCard(el, el.querySelector<HTMLElement>('.peekover-app__start-title')!, 'access revoked'),
+    },
+    {
+      name: 'a folder with no markdown files',
+      arrange: async (t) => void (await mountState(1440, t, folderOf({ files: [] }))),
+      find: () => container.querySelector<HTMLElement>('.peekover-tree__empty[data-state="empty-folder"]'),
+      message: 'No markdown files in this folder.',
+      look: (el) => expectAlert(el, 'empty folder'),
+    },
+    {
+      name: 'a search with no match',
+      arrange: async (t) => {
+        await mountState(1440, t, folderOf());
+        const search = await until(() => container.querySelector<HTMLInputElement>('.peekover-tree__search'), 'the search');
+        await userEvent.fill(search, 'zzz');
+        await frames(3);
+      },
+      find: () => container.querySelector<HTMLElement>('.peekover-tree__empty[data-state="no-matches"]'),
+      message: 'No files match “zzz”.',
+      look: (el) => expectAlert(el, 'no matches'),
+    },
+    {
+      name: 'a folder too large to list',
+      arrange: async (t) => void (await mountState(1440, t, folderOf({ truncated: true }))),
+      find: () => container.querySelector<HTMLElement>('.peekover-tree__notice[data-state="too-large"]'),
+      message: 'This folder is very large',
+      look: (el) => expectAlert(el, 'too large', true),
+    },
+    {
+      name: 'a read-only snapshot (Firefox)',
+      arrange: async (t) => void (await mountState(1440, t, folderOf({ persistable: false }))),
+      find: () => container.querySelector<HTMLElement>('.peekover-app__notice[data-state="read-only-snapshot"]'),
+      message: 'read-only, point-in-time snapshot',
+      look: (el) => expectAlert(el, 'read-only snapshot', true),
+    },
+    {
+      name: 'a folder open, no file chosen',
+      arrange: async (t) => void (await mountState(1440, t, folderOf())),
+      find: readerState('no-selection'),
+      message: 'Select a file to read it here',
+      look: readerLook('no selection'),
+    },
+    {
+      name: 'an empty file',
+      arrange: async (t) => {
+        await mountState(1440, t, folderOf({ files: [{ path: 'blank.md', name: 'blank.md', read: async () => '  \n' }] }));
+        await pickFile('blank.md');
+      },
+      find: readerState('empty-file'),
+      message: 'This file is empty',
+      look: readerLook('empty file'),
+    },
+    {
+      name: 'an unreadable file',
+      arrange: async (t) => {
+        await mountState(1440, t, folderOf({ files: [{ path: 'gone.md', name: 'gone.md', read: async () => Promise.reject(new Error('gone')) }] }));
+        await pickFile('gone.md');
+      },
+      find: readerState('unreadable'),
+      message: "Couldn't read this file",
+      look: readerLook('unreadable'),
+    },
+  ];
+
+  it.each(THEMES.flatMap((t) => CASES.map((c) => [c.name, t, c] as const)))('%s — %s', async (name, theme, c) => {
+    await c.arrange(theme);
+    // NEVER BLANK (the instrument tasks.md names; red-first by a throw in the state builder): the message is on screen.
+    const el = await until(() => {
+      const e = c.find();
+      return e && shown(e) ? e : null;
+    }, `${name}: the state on screen`, 4000);
+    expect(el.textContent, `${name}: its message`).toContain(c.message);
+    c.look(el);
+    looks.push(`${name} (${theme}): lowest text ${expectText(name === 'first run (no folder)' || name === 'access revoked' ? card() : el, name).toFixed(2)}`);
   });
 });

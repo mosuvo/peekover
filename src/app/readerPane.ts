@@ -77,10 +77,10 @@ const PANE_CLASS = 'peekover-app__reader';
  * The reader pane's designed-state stylesheet. Styles only the pane's INTERIOR (the
  * designed states + the mount host); the pane's outer layout (flex sizing, padding) is
  * owned by appShell, which places this element in the shell body. Reads the shell's
- * design tokens (`--muted`/`--faint`, defined by appShell on `.peekover-app`) via
- * inheritance, with plain fallbacks so the pane still reads sensibly if used outside the
- * shell (e.g. a focused unit test). No colors are hardcoded into the brand surface —
- * these mirror the shell tokens, matching how `readerCss.ts` copies from tokens.css.
+ * design tokens (defined by appShell on `.peekover-app`) via inheritance; no colour is
+ * written here. Since 013 task 5.5 each designed state is the setup card (the mock's
+ * `.panelbox`: radius 14, `--shadow`, `--paper`) with a header row — the old fallbacks went
+ * with the old rules, as the pane is only ever drawn inside the shell.
  *
  * The mount host is `flow-root` (013 task 5.2a). The host used to be a block formatting context
  * through the reader's `:host{overflow:auto}`, which CONTAINED_CSS now drops so the TOC rail can stick
@@ -89,12 +89,11 @@ const PANE_CLASS = 'peekover-app__reader';
  */
 const PANE_CSS = /* css */ `
 .${PANE_CLASS}__state{
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:.4rem; height:100%; min-height:12rem; text-align:center;
-  color:var(--muted,#5D6070);
+  width:min(440px,100%); margin:10vh auto 0; overflow:hidden; color:var(--muted); font-size:13.5px; line-height:1.6;
+  background:var(--paper); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
 }
-.${PANE_CLASS}__state-title{font-weight:600}
-.${PANE_CLASS}__state-detail{color:var(--muted,#5D6070); font-size:.85rem; max-width:40ch}
+.${PANE_CLASS}__state-title{margin:0; padding:14px 18px; border-bottom:1px solid var(--line); font:700 13.5px/1.3 var(--sans); color:var(--ink)}
+.${PANE_CLASS}__state-detail{margin:0; padding:18px 22px 20px}
 .${PANE_CLASS}__host{display:flow-root}
 `;
 
