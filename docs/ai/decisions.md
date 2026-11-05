@@ -1,6 +1,75 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.10 — DISCOVERED: the short font stacks (HUMAN RULING R1; D-3 AMENDED); content-script
+  first paint back to pre-M13.** Local, on `main` at `0dece28` (5.9), up to date with `origin/main`; Windows, Node
+  24.11.1, pnpm 10.33.0; `pnpm audit --prod` EXIT 0 on 2026-11-05 (5.9's preflight, same day, no dependency change).
+  **CI read with `gh`:** `0dece28` — CI success (42063957156) and Supply chain success (42063957129), both watched to
+  completion.
+  - **HUMAN RULING R1 (2026-11-05, on 5.9's numbers), verbatim:** *"Yes — return --sans and --mono to the pre-2.4 stacks
+    everywhere; this amends D-3."* **D-3 AMENDED:** `--sans:"Bricolage Grotesque",system-ui,sans-serif` and
+    `--mono:"Sometype Mono",ui-monospace,monospace` — the design face, then the generics. Plan D-3's longer stacks (the
+    named system faces between: `ui-sans-serif`, "Segoe UI Variable Text", "Segoe UI", `-apple-system`, "Helvetica
+    Neue", Roboto, Arial; "Cascadia Mono", "SF Mono", Menlo, Consolas, "Liberation Mono") are withdrawn. `plan.md`'s
+    body stays sealed (M7–M12 precedent); this entry is the amendment of record.
+  - **The change:** `design/tokens.css` (the single source), `READER_CSS`'s `:host` block (`src/theme/readerCss.ts:53–54`)
+    and the shell's `APP_BASE_TOKENS` (`src/app/appShell.ts:406–407`) — the three copies 2.1's pin holds equal (the
+    pin compares them; it needed no edit). **Tests that pin the stack string: one** — `src/theme/reader.test.ts`'s
+    toolbar-token test (its `SANS` literal), re-spelled with the property kept (one value, the same in all three theme
+    blocks). No other test names the stack: `uiFonts` (unit and browser) reads the first family and the drawn face
+    by width, `truthPins` and the census never name it (searched: `src`, `tests`, `entrypoints`, `scripts`). Two
+    comments in `readerCss.ts` and the `APP_BASE_TOKENS` doc comment now say "D-3 as amended at 5.10".
+  - **★ THE STOP, AND THE HUMAN'S ANSWER.** The face probe (below) found that the content-script reader's CODE face
+    changes on Windows: since 2.4 it drew **Cascadia Mono** (shipped with Windows 11, named in 2.4's stack); the
+    pre-2.4 stack falls through to `monospace` = **Consolas**. Every other element draws the same face. Work stopped
+    before any commit; screenshots shown (`D:\Dev\peekover-shots\5.10\`, both engines, the code block in each stack).
+    **The human chose "Proceed as ruled"** (2026-11-05): content-script code goes back to Consolas on Windows, as
+    before 2.4. **CORRECTION to 5.9:** its record said the generics "already resolve to the platform face" with the
+    rendered faces "not compared" — for `--mono` that was wrong on Windows: 2.4 had moved content-script code from
+    Consolas to Cascadia Mono, so the fix restores the pre-2.4 face rather than keeping today's.
+  - **FACES, measured on this machine, both engines** (a scratch browser test, never committed: the probe text in the
+    element's own stack, the long stack and the short stack, in the element's own tree at the same moment, matched to
+    named candidates by width; a missing named face falls back to a measured "Times New Roman"; run at `0dece28` and
+    again after the change). Cascadia Mono and Consolas present; Sometype Mono, Liberation Mono, Menlo, SF Mono and
+    DejaVu Sans Mono absent; Bricolage Grotesque installed per user.
+
+    | Element | before (`0dece28`) | after | same face? |
+    |---|---|---|---|
+    | content script — chrome (the mode toggle, 600 12.5 px) | Segoe UI (= `system-ui`) | Segoe UI | **yes** (427.67 / 427.68 px Cr / Fx, both) |
+    | content script — code (`pre`, 13.5 px) | **Cascadia Mono** (522.08 / 522.5 px) | **Consolas** (489.89 / 489.5 px) | **NO — ruled above** |
+    | app page — toolbar word, toolbar button | Bricolage Grotesque | Bricolage Grotesque | yes (to 0.01 px) |
+    | app page — code, highlighted and plain | Sometype Mono | Sometype Mono | yes |
+    | app page — editor source text | Sometype Mono | Sometype Mono | yes |
+    | app page — editor bar status | Bricolage Grotesque | Bricolage Grotesque | yes |
+
+    The app page loads its own Bricolage and Sometype (2.4's `uiFonts.ts`), so the rest of either stack is never
+    reached there. The content-script chrome would draw Bricolage where it is installed late in Firefox (5.0's F5) — the
+    same family leads both stacks, so that does not differ between them.
+  - **FIRST PAINT, A-B-A against `0dece28`** (the committed `scripts/perf-edit-never-entered.ts --skip-probe`, unedited:
+    the shipped `perf-first-paint.ts --size 50kb` and `perf-app-first-paint.ts`; 10 rounds, HEAD first and last, the
+    baseline a scratch worktree built in the same session; Chromium; quiet machine, CPU 4–10 %, no orphans):
+
+    | Gate | after (5.10), median / floor | `0dece28`, median / floor | Δ median / Δ floor | after's own spread (medians / floors) |
+    |---|---|---|---|---|
+    | content script | **145.2 / 137.1** (66 runs) | 153.6 / 145.6 (60) | **−8.4 / −8.5** | 7.6 / 7.5 |
+    | app page | 102.2 / 96.3 (66) | 102.4 / 95.1 (60) | −0.2 / +1.2 | 4.3 / 3.9 |
+
+    The content-script difference is outside the noise: the per-invocation medians do not overlap (after 140.6–148.3,
+    before 150.6–156.1). It agrees with 5.9's −10.2 ms (CI [−11.2, −9.4]) within this interleave's spread. The app page
+    is unchanged. **Headroom under 165 ms at HEAD (an agent's local run, ruling 3): 19.8 ms on the median** (was 9.7 at
+    5.9), 27.9 on the floor.
+  - **Bytes** (clean two-engine build): content script **345,049 B (−153)**, md5 `ee9f9279…` (Cr — identical to 5.9's
+    scratch "both stacks reverted" arm) / `317c6c51…` (Fx); **app chunk 556,249 B (−306)** = READER_CSS −153 +
+    APP_BASE_TOKENS −153 (`--sans` −94, `--mono` −59 each, 2.4's own split); `.output` 5,975,791 / 5,975,907 B (−459
+    each = −153 −306, residual 0; headroom under 7 MiB 1,364,241 / 1,364,125 B); zips 1,962,039 / 1,962,095 B (−392 /
+    −393); manifests 833 / 949 B, `permissions: []`; golden EMPTY.
+  - **Verify:** lint 0 · unit 1,502 / 1,502 · browser, the FULL suite alone, both engines: **2,530 passed / 0 failed /
+    52 skipped of 2,582**, 603 s, EXIT 0, first run (the census and the native-control sweep inside it, pending EMPTY) ·
+    golden EMPTY · the face probe green before and after · no control bytes and LF only in every changed file.
+  Why: R1 — 5.9 found 2.4's long stacks were the whole of M13's content-script first-paint rise (+10.9 ms).
+  Revisit-when: a design wish for a specific system face before the generic (measure its first paint first — each named
+  family cost time here); Cascadia Mono for code on Windows is wanted back (one name, measured alone first).
+
 - **2026-11-05 · M13 TASK 5.9 (measurement) — DISCOVERED: content-script first paint measured clean and bisected; the
   cost of more syntax grammars. No product change; nothing chosen.** Local, on `main` at `618d37b` (5.7), up to date
   with `origin/main`, tree clean; Windows 11 Pro 10.0.26300, Node 24.11.1, pnpm 10.33.0, Playwright Chromium;

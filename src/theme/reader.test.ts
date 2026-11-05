@@ -132,10 +132,9 @@ describe('reader theme — the table-tools toolbar (008 task 3.3, D-12)', () => 
     expect(used).toEqual(['--sans', '--muted']);
     // ★ Each token NAMED WITH ITS RESOLUTION in all three blocks (D-12's standing check), written
     // out rather than computed twice — a token whose value moves in any theme reds this.
-    // RE-SPELLED at 013 task 2.4: `--sans` became plan D-3's stack (the design face, then close
-    // system faces). Property kept: it resolves to ONE value, the same in all three theme blocks.
-    const SANS =
-      '"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif';
+    // RE-SPELLED at 013 task 2.4 (plan D-3's long stack), and again at 5.10 (the human's ruling R1: the
+    // short stack, D-3 amended). Property kept: it resolves to ONE value, the same in all three theme blocks.
+    const SANS = '"Bricolage Grotesque",system-ui,sans-serif';
     expect(Object.fromEntries(used.map((t) => [t, resolveInEveryTheme(t)]))).toEqual({
       '--sans': { light: SANS, dark: SANS, sepia: SANS },
       '--muted': { light: '#5D6070', dark: '#A0A4B8', sepia: '#5D6070' },

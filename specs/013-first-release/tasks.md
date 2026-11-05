@@ -866,6 +866,20 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       or the same bytes inside the app chunk eager; first paint unchanged either way; on-demand loads only the
       package's own files (checked at runtime). Recommended: on demand. Both are for the human.
 
+- [x] **5.10 The short font stacks — DISCOVERED (2026-11-05; HUMAN RULING R1 on 5.9's numbers; D-3 amended).**
+      `--sans:"Bricolage Grotesque",system-ui,sans-serif` and `--mono:"Sometype Mono",ui-monospace,monospace` in
+      `design/tokens.css` and every pinned copy; every test pinning the string updated. Faces proven on this machine,
+      both engines, per element, before and after (STOP with screenshots if one changes). First paint A-B-A against
+      `0dece28`, content script and app page.
+      Files: `design/tokens.css` · `src/theme/readerCss.ts` · `src/app/appShell.ts` · `src/theme/reader.test.ts` ·
+      `docs/ai/decisions.md` · `docs/ai/progress.md` · this file
+      Verify: bytes decomposed (content script and app chunk); golden EMPTY; census and sweep EMPTY; full suite both
+      engines; lint; unit.
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.10").* The stop fired: content-script code drew Cascadia Mono
+      since 2.4 and draws Consolas after (Windows); every other element the same face. The human chose "Proceed as
+      ruled". Content-script first paint −8.4 ms median (145.2 against 153.6; outside noise), app page −0.2 (unchanged);
+      headroom 19.8 ms. Content script −153 B, app chunk −306 B. One test re-spelled (`reader.test.ts`).
+
 *Group-5 acceptance: every surface restyled; no native-styled control; census pending list empty or each row routed;
 math without the code toolbar; content-script first paint inside 165 ms.*
 

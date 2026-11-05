@@ -399,12 +399,12 @@ export const DARK_TOKENS = /* css */ `
   --shadow:0 10px 30px rgba(0,0,0,.5);
 `;
 /** The theme-independent base the shell sets beside LIGHT_TOKENS — radius, the light shadow, the
- *  three font stacks (plan D-3: the design face first, then close system faces), and the logo's
+ *  three font stacks (D-3 as amended at 013 task 5.10: the design face, then the generic), and the logo's
  *  FIXED ink and eye white, the same in every theme (the toolbar's mark, 013 task 4.1). */
 export const APP_BASE_TOKENS = /* css */ `--r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
   --logo-ink:#16171F; --logo-eye:#FBFBF8;
-  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
-  --mono:"Sometype Mono",ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;`;
+  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",system-ui,sans-serif;
+  --mono:"Sometype Mono",ui-monospace,monospace;`;
 
 /**
  * The shell stylesheet: design tokens (light + dark) + minimal layout.

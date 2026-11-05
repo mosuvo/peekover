@@ -10,8 +10,8 @@
   --code-str:#197E44; --code-num:#B34F2E; --code-type:#966319;  /* code text on --code-bg (013 5.8; 3.1 approval) */
   --logo-ink:#16171F; --logo-eye:#FBFBF8;            /* FIXED in all themes */
   --r:10px; --shadow:0 10px 30px rgba(22,23,31,.10);
-  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
-  --mono:"Sometype Mono",ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --serif:"Literata",Georgia,serif; --sans:"Bricolage Grotesque",system-ui,sans-serif;
+  --mono:"Sometype Mono",ui-monospace,monospace;
 }
 [data-theme="dark"]{
   --paper:#12141C; --panel:#181B26; --ink:#EAEBF3; --muted:#A0A4B8; --faint:#6B6F84;
