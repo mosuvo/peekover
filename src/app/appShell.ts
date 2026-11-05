@@ -571,18 +571,18 @@ ${statusLineCss(SHELL_CLASS)}
 .peekover-code-theme-picker{
   position:absolute; top:100%; left:0; z-index:5; margin-top:.3rem;
   width:max-content; max-width:min(280px,calc(100vw - 2rem));
-  max-height:min(60vh,calc(100vh - 5rem)); overflow:auto;
+  max-height:min(60vh,calc(100vh - 5rem)); overflow:auto; scrollbar-color:var(--faint) transparent;
   background:var(--paper); border:1px solid var(--line);
-  border-radius:var(--r); box-shadow:var(--shadow);
-  display:flex; flex-direction:column; padding:.3rem;
+  border-radius:12px; box-shadow:var(--shadow);
+  display:flex; flex-direction:column; gap:2px; padding:6px;
 }
 /* An author display rule beats the UA [hidden] default (readerCss.ts's diffChrome picker hit
    this exact defect first) — without this, picker.hidden = true stays visually flex and keeps
    intercepting clicks on whatever the page renders underneath it. */
 .peekover-code-theme-picker[hidden]{display:none}
 .peekover-code-theme-picker__item{
-  font:inherit; font-size:.85rem; text-align:left; color:var(--ink); background:transparent;
-  border:none; border-radius:6px; padding:.4rem .6rem; cursor:pointer;
+  font:400 13px/1.4 var(--sans); text-align:left; color:var(--ink); background:transparent;
+  border:none; border-radius:7px; padding:7px 8px; cursor:pointer;
 }
 .peekover-code-theme-picker__item:hover{background:var(--accent-soft)}
 .peekover-code-theme-picker__item[aria-selected="true"]{background:var(--accent-soft); font-weight:600}
@@ -597,9 +597,9 @@ ${statusLineCss(SHELL_CLASS)}
 .${SHELL_CLASS}__storage-slot:not(:empty){
   position:absolute; top:100%; right:1rem; z-index:5;
   width:min(560px,calc(100vw - 2rem));
-  max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
+  max-height:min(70vh,calc(100vh - 5rem)); overflow:auto; scrollbar-color:var(--faint) transparent;
   background:var(--paper); border:1px solid var(--line);
-  border-radius:var(--r); box-shadow:var(--shadow);
+  border-radius:14px; box-shadow:var(--shadow);
 }
 /* "Export" toggle + panel (task 3.2) — anchoring rationale is in the doc comment above APP_CSS. */
 .${SHELL_CLASS}__export-toggle{
@@ -613,9 +613,20 @@ ${statusLineCss(SHELL_CLASS)}
 .${SHELL_CLASS}__export-slot:not(:empty){
   position:absolute; top:100%; right:0; z-index:5;
   width:min(420px,calc(100vw - 2rem));
-  max-height:min(70vh,calc(100vh - 5rem)); overflow:auto;
+  max-height:min(70vh,calc(100vh - 5rem)); overflow:auto; scrollbar-color:var(--faint) transparent;
   background:var(--paper); border:1px solid var(--line);
-  border-radius:var(--r); box-shadow:var(--shadow);
+  border-radius:14px; box-shadow:var(--shadow);
+}
+.peekover-storage__close,.peekover-storage__btn,.peekover-export__close,.peekover-unsaved__discard{
+  font:600 11.5px/normal var(--sans); color:var(--muted); background:var(--paper);
+  border:1px solid var(--line); border-radius:7px; padding:5px 11px; margin:0; cursor:pointer;
+}
+.peekover-storage__close:hover,.peekover-storage__btn:hover,.peekover-export__close:hover,.peekover-unsaved__discard:hover{color:var(--ink)}
+.peekover-storage__btn:disabled{opacity:.5; cursor:default; color:var(--muted)}
+.peekover-storage__btn[data-wipe="confirm"],.peekover-storage__btn[data-erase-snapshots="confirm"],
+.peekover-storage__btn[data-clear-diagrams="confirm"],.peekover-unsaved__keep{
+  font:600 11.5px/normal var(--sans); color:var(--paper); background:var(--ink);
+  border:1px solid var(--ink); border-radius:7px; padding:5px 11px; margin:0; cursor:pointer;
 }
 
 .${SHELL_CLASS}__body{flex:1 1 auto; display:flex; min-height:0}

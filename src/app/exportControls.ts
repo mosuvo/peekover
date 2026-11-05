@@ -133,28 +133,20 @@ export const EXPORT_ROW_STATE_ATTR = 'data-state';
 export const EXPORT_STATUS_CLASS = `${EC_CLASS}__status`;
 
 const EC_CSS = /* css */ `
-.${EC_CLASS}{
-  display:flex; flex-direction:column; gap:.4rem; min-width:0;
-  padding:.7rem .8rem; background:var(--panel,#F4F4EF); color:var(--ink,#16171F);
-}
-.${EC_CLASS}__head{display:flex; align-items:baseline; gap:.6rem; padding:0 .1rem .3rem}
-.${EC_CLASS}__title{font-size:.9rem; font-weight:650; letter-spacing:-.01em; flex:1 1 auto}
-.${EC_CLASS}__close{
-  font:inherit; font-size:.78rem; color:var(--ink,#16171F); background:transparent;
-  border:1px solid var(--line,#E6E6DF); border-radius:999px; padding:.1rem .6rem; cursor:pointer;
-}
-.${EC_CLASS}__close:hover{background:var(--accent-soft,#ECECE3)}
+.${EC_CLASS}{display:flex; flex-direction:column; gap:2px; min-width:0; padding:0 8px 8px; color:var(--ink)}
+.${EC_CLASS}__head{display:flex; align-items:center; gap:10px; margin:0 -8px 6px; padding:14px 18px; border-bottom:1px solid var(--line)}
+.${EC_CLASS}__title{flex:1 1 auto; margin:0; font:700 13.5px/1.3 var(--sans)}
 .${EC_CLASS}__row{
-  display:flex; align-items:center; gap:.6rem; width:100%; text-align:left;
-  font:inherit; color:var(--ink,#16171F); background:var(--paper,#FBFBF8);
-  border:1px solid var(--line,#E6E6DF); border-radius:8px; padding:.5rem .7rem; cursor:pointer;
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left; margin:0;
+  font:400 13.5px/1.35 var(--sans); color:var(--muted); background:none;
+  border:0; border-radius:8px; padding:9px 12px; cursor:pointer;
 }
-.${EC_CLASS}__row:hover{background:var(--accent-soft,#ECECE3)}
-.${EC_CLASS}__row:disabled{opacity:.5; cursor:default}
-.${EC_CLASS}__row-glyph{flex:0 0 auto; font-size:1rem; color:var(--muted,#5D6070)}
-.${EC_CLASS}__row-text{display:flex; flex-direction:column; gap:.05rem; min-width:0}
+.${EC_CLASS}__row:hover{background:var(--accent-soft); color:var(--ink)}
+.${EC_CLASS}__row:disabled{opacity:.5; cursor:default; background:none; color:var(--muted)}
+.${EC_CLASS}__row-glyph{flex:0 0 auto; width:1.2em; text-align:center}
+.${EC_CLASS}__row-text{display:flex; flex-direction:column; gap:1px; min-width:0}
 .${EC_CLASS}__row-title{font-weight:600}
-.${EC_CLASS}__row-sub{color:var(--muted,#5D6070); font-size:.78rem}
+.${EC_CLASS}__row-sub{color:var(--muted); font-size:11.5px}
 `;
 
 function buildStyle(doc: Document): HTMLStyleElement {

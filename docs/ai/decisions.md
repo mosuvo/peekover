@@ -1,6 +1,125 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.4 — panels and popovers restyled; Compare picker and lightbox swept (plan §3; 006 D-15).**
+  Local, on `main` at `a652451` (5.8), up to date with `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0,
+  frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-05. **CI read with `gh`:** `a652451` —
+  CI success (run 41866625589, job `verify`), Supply chain success (41866625592: SBOM, dependency audit, OSV scanner, no
+  remote code); AI workflow hygiene runs on pull requests only.
+  - **Kickoff vs file, flagged:** (1) tasks.md's Files list names `appShell.ts` for the dialog; its markup and sheet live
+    in `src/app/unsavedGuard.ts` — **necessary ripple** (Verify: "the dialog's computed radius / shadow equal the
+    tokens"). (2) **Necessary ripple, `src/app/toolbar.ts`:** on the app page the Compare picker is the toolbar's (4.5),
+    so the sweep's finding on it (Verify: "sweep … rows deleted"; kickoff: the new surfaces' findings are fixed here)
+    lives in `toolbarCss`. (3) The kickoff's "the capture checkbox" is 5.1's pending row inside Stored data — done here.
+    (4) Test files: the look tests sit in the census-named files that own each surface (`storagePanelOverlay` — the
+    three header panels; `editorUnsaved` — the dialog; `diagramLightbox` — the lightbox), plus the sweep and the census.
+  - **The panels (`mockup.html:194`, `.panelbox`; `:351–356` and `:395–400` for the header row and list rows).** Stored
+    data and Export: the slot is the card — `--paper`, 1 px `--line`, **radius 14** (was `--r`, 10), `--shadow`, and
+    `scrollbar-color: var(--faint) transparent`; the inner `--panel` band is gone. A header row (14 / 18 px, a `--line`
+    rule under it; the title 700 13.5 px). Stored data's body is 13 px: its lines, tags, notes and prompts `--muted`;
+    group heads caps 10.5 px / 700 / .14em `--muted` (5.1's pane heads); the disclosure note a `--panel` box, radius 8.
+    **The capture checkbox** is the mock's task box (`:135–137`) at 16 px — `appearance:none`, a 2 px border, radius 5,
+    `--paper`; on: `--ink` with a `--paper` tick. Its border is **`--muted`, not the mock's `--faint`**: an active
+    control's boundary needs 3:1 (1.4.11), and `--faint` is 2.60 on `--paper` in light. Export's rows are the mock's
+    list rows (`.exports li`): transparent, no border, radius 8, 13.5 px `--muted`; under the pointer `--ink` on
+    `--accent-soft`. The hint keeps its place under the title (11.5 px `--muted` — the mock's `em` is `--faint`, 10.5 px:
+    G-5). **The code-theme picker** follows the approved 3.1 toolbar mock's popover (`toolbar-mock.html:111–115`, as the
+    Compare picker did at 4.5): radius 12 (not `.panelbox`'s 14 — flagged), padding 6, options 400 13 px / 1.4 `--ink`,
+    radius 7, 7 / 8 px; under the pointer and chosen `--accent-soft` (chosen also 600); its own scrollbar colour.
+  - **The buttons:** one APP_CSS rule gives the panels' Close, Erase / Clear / Wipe and Cancel, Export's Close and the
+    dialog's Discard **5.3's look** (`--paper`, 1 px `--line`, radius 7, 600 11.5 px `--sans`, `--muted` → `--ink`); the
+    three confirms ("Yes, …") and the dialog's Keep editing are **the ink primary** — the same box inverted (`--ink` fill
+    and border, `--paper` text), so a confirm and its Cancel match in size (the mock's `.go` is 12.5 px, 9 / 18 px —
+    flagged). The modules' own button rules are deleted (one source). A focused control takes the focus ring's 4 px
+    radius (`mockup.html:30`; the shell's and the reader's `:focus-visible`) — unchanged; the tests read the rest look
+    with the control blurred.
+  - **The unsaved dialog (`:192–194` the `.overlay`; `:413–415` the primary):** the scrim is the mock's dark one from the
+    fixed ink, `color-mix(--logo-ink 45%)` + `blur(3px)` (was `--paper` at 72%), the card top-aligned at 14vh (was
+    centred); the card a `.panelbox` (`--paper`, was `--panel`; radius 14, was 10), the title a header row, the body 13 px
+    / 1.65 `--muted`, the actions a footer with a `--line` rule. Keep editing ink primary; Discard edits 5.3's look.
+  - **The lightbox (`:226`):** the overlay is the mock's dark scrim from the fixed ink, `color-mix(--logo-ink 75%)` (was
+    `--paper` at 76%), with the zoom-out cursor (a backdrop click already closed it); the diagram **keeps its card**
+    (radius 12 → 14, `--paper`, `--shadow`, cursor `auto`) — the mock floats the bare SVG, but a diagram's colours are
+    drawn for the page's paper (flagged). Close joins 5.3's shared rule in `READER_CSS` (was `--ink` on `--panel`,
+    radius 6, 12 px, `--hl-soft` hovered); the pan box gets `scrollbar-color`. Its place (rows 8 + 9, C117) unchanged.
+  - **The diff (`:204–212`; still inline, 006 D-15).** Adding it to the census found it below AA in light: added text
+    `--ok` on `--ok-soft` **3.09:1**, removed `--del` on `--del-soft` **4.17:1**, and a link in a hunk the browser's
+    `#0000EE` — **1.63:1** on the dark added fill. Now: each hunk's fill as before, text **`--ink`** (15.78 / 12.91 on
+    `--ok-soft`, 15.08 / 12.96 on `--del-soft`) — the mock's `.add` / `.del` text colours fail AA, 5.3's "Copied"
+    precedent; removed still struck through; unchanged `--muted`; links take the hunk's colour; rows radius 5, 12 px
+    side padding. 6.1's "--del double meaning" note no longer applies to text (`--del` is no longer drawn as the removed
+    text). **Found and fixed on this surface (the before screenshot):** the diff ran under the open TOC card — its
+    measure was `76ch` and it never took the rail's reservation. It now uses `--reader-measure` and the same
+    `:host([data-toc="open"])` reservation as the reading column, so it reads at the document's width beside the rail.
+    The long shipped comments in those rules moved here (−bytes, below).
+  - **Keyboard and screen readers: no change.** No markup changed: every control keeps its tag, type, accessible name,
+    ARIA and tab stop; the Export trap, the dialog's trap and Escape, the lightbox's trap, Escape and restore are the
+    existing tests, unchanged and green. The capture checkbox is still `<input type="checkbox">` in its `<label>`.
+  - **Contrast** (as painted, both engines identical; light / dark). Text: panel Close, Erase snapshots, Cancel, Export's
+    Close — rest and focused 6.01 / 7.44, hovered 17.22 / 15.47; the ink primary (Yes, wipe everything; Keep editing)
+    17.22 / 15.47 in every state; Export rows — title and hint at rest 6.01 / 7.44, hovered: title 15.02 / 12.34, hint
+    5.24 / 5.93; Stored data's lowest text 5.64 / 6.94 (the note on `--panel`); Export's lowest 6.01 / 7.44; the
+    code-theme picker 15.02 / 12.34 lowest (an option hovered); the dialog: title 17.22 / 15.47, body 6.01 / 7.44,
+    Discard 6.01 / 7.44 (hovered 17.22 / 15.47); the lightbox's Close 6.01 / 7.44 (hovered 17.22 / 15.47); the diff
+    (census): added 15.78 / 12.91, removed 15.08 / 12.96, unchanged 6.01 / 7.44; the Compare picker (census, unchanged
+    look): rows `--ink` on `--paper` 17.22 / 15.47, hovered on `--accent-soft` 15.02 / 12.34, group heads and sizes
+    `--muted` 6.01 / 7.44. **Lowest 5.24** (an Export row's hint under the pointer, light).
+    **Non-text, for 8.1 (WCAG 1.4.11):** button and card borders `--line` on `--paper` 1.21 / 1.29; the capture box's
+    border `--muted` 6.01 / 7.44, on `--ink` 17.22 / 15.47 (tick `--paper` on `--ink` the same); the ink primary's fill
+    17.22 / 15.47; the focus ring `--accent` 17.22 / 15.47; the hover fill `--accent-soft` 1.15 / 1.25 (text changes
+    too); the diff fills `--ok-soft` 1.09 / 1.20 and `--del-soft` 1.14 / 1.19 on `--paper` (removed is also struck
+    through); scrollbar thumbs `--faint` 2.60 / 3.70; the scrims (dark in both themes) are not boundaries.
+  - **The sweep (`nativeControls`):** 5.4's 4 rows deleted; **two surfaces added, both themes, both engines** — the
+    Compare picker open with a snapshot seeded as diffChrome's tests seed one (`storeSnapshot` on the docId the app page
+    registered; erased after), and the diagram lightbox open on a rendered diagram (the production mermaid load; the
+    cache cleared after). **They found:** `.peekover-diff-picker` (the toolbar's) and `.peekover-diagram-lightbox__view`
+    — `scrollbar-color auto`, both engines — fixed here, not listed. The INVENTORY now names every surface × theme it
+    expects (24) instead of counting. **PENDING 6 per engine (5.5: 2 · 5.6: 4)**, as expected.
+  - **The census (`contrastCensus`):** three surfaces it did not cover — **the Compare picker** (with a snapshot), **the
+    diff view** (a snapshot opened: removed, added and unchanged hunks, a link and inline code in each changed kind) and
+    **the diagram lightbox** — both themes (16 → 22 surface × theme). Red-first it named the diff's rows above (4 per
+    engine); the picker and the lightbox passed. **Its pending list stays EMPTY.** C093's count re-spelled 16 → 22
+    (`KEEPS:`).
+  - **Tests (red-first at `a652451`'s sources, both engines): 24 red (12 per engine)** — the panels' look ("Stored data:
+    radius and shadow: expected '10px …' to be '14px …'"; the picker's '10px' for '12px'), the dialog's and the lightbox's
+    scrim ("expected 'color(srgb 0.984 0.984 0.973 …' to be 'color(srgb 0.086 0.090 0.122 …'"), the sweep's INVENTORY
+    (the 4 deleted rows and the two new surfaces' scroll boxes unlisted) and the census's INVENTORY (the diff's rows).
+    Nothing else red. Green after: the five files 232 passed / 2 skipped.
+  - **Ablations → red** (each restored md5-identical): **A1** the capture checkbox's rule stripped → the sweep names it:
+    "chromium · Stored data panel · .peekover-storage__capture-row > input[type=checkbox] — native border none 0px" (and
+    firefox). **A2** the Compare picker's `record()` dropped → the INVENTORY: "surfaces × themes swept" missing "Compare
+    picker · dark", "Compare picker · light", both engines. **A3** the diff's added text back to the mock's `--ok` → the
+    census names "diff view · light · .diff-added > p … #1f9d55 on #e4f5eb: 3.09:1 < 4.5" (and the link and inline code
+    in it), both engines.
+  - **Bytes** (clean two-engine build; arms in one session, Chromium, each the six files at `a652451` with the named one
+    at 5.4; every other output file identical in size, 138 names compared): content script **346,241 B (−569)** — all
+    `READER_CSS` (the readerCss-only arm 346,241; every other arm 346,810, `86d97b44…`; the string itself 45,697 →
+    45,128 B): the diff −540 (its shipped comments −595, rules +55), the rail reservation +40, 5.3's shared rule gaining
+    the lightbox's Close +74, the lightbox block −143 — residual 0; md5 `1f010928…` (Cr) / `75535b93…` (Fx).
+    **Re-pinned:** `diagramActions`' shipped-diagram-block pin 4,111 → 3,968 B (a rule change, as its message allows; the
+    −143 B itemised in the test). The first full suite was red only there (both engines) — classified: this task's own
+    rule change moving a byte pin, not a regression. App chunk **556,793 B (−601)** =
+    `READER_CSS` −569 + APP_CSS +973 (the shared button and primary rules, the card and picker) + `storageControls`
+    −631 + `exportControls` −273 + `unsavedGuard` −143 + `toolbar` +42 — residual 0 (S0 557,394 re-measured). `.output`
+    5,977,527 / 5,977,643 B (−1,170 each); manifests 833 / 949 B, `permissions: []`; `background.js` unchanged.
+  - **Verify:** lint 0 · unit 1,503 / 1,503 · browser, alone, both engines: **2,362 passed / 0 failed / 52 skipped of 2,414** (+36), 559 s, EXIT 0, on the second run; the first run (2,360 / 2 failed) was red only in `diagramActions`' byte pin (both engines), re-pinned above — no known flake recurred · the sweep green, PENDING 6 per
+    engine · the census green, pending EMPTY · golden EMPTY · manifests unchanged · no control bytes and LF only in every
+    changed file (two counts; the control fires) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.4\`:** `before-` (`a652451`) / `after-` ×
+    `stored-data`, `export`, `code-theme`, `compare` (a snapshot in the picker), `diff` (that snapshot opened),
+    `lightbox`, `unsaved` — each `-light` / `-dark`, the app page at 1440, Chromium — and `stored-data-414-light` (opened
+    from "⋯").
+  - **Deviations, flagged:** (1) `unsavedGuard.ts` and `toolbar.ts` changed — necessary ripple, above. (2) The popovers
+    (code theme, Compare) are radius 12, the approved toolbar mock's, not `.panelbox`'s 14. (3) The ink primary keeps 5.3's
+    box (11.5 px), not the mock's 12.5 px `.go`. (4) The diff's text is `--ink`, not the mock's `--ok` / `--del` (AA).
+    (5) The lightbox keeps a card under the diagram. (6) The capture box's border is `--muted`, not the mock's `--faint`.
+    (7) Export's hint stays under the title in `--muted`, not the mock's right-aligned `--faint` `em`. (8) The diff's
+    measure and rail reservation — a pre-existing defect on this task's surface, fixed here (no task named it).
+  Why: plan §3 — the panels and popovers in the mock's vocabulary from tokens; the two surfaces 5.1 could not reach are
+  now swept and measured, and the diff they revealed meets AA.
+  Revisit-when: 8.1's walk (the non-text states above; the dark scrims; the lightbox's card; the popovers' radius 12);
+  a new panel (it takes the APP_CSS button rule, not its own).
+
 - **2026-11-04 · M13 TASK 5.8 — the Peekover code theme, from design tokens, as the default (the human's 2.2 ruling; the
   3.1 approval, items 12–14; D-16; gate-3 Q4).** Local, on `main` at `d55bef5` (5.3), up to date with `origin/main`, tree
   clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on

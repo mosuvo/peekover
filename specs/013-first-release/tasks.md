@@ -779,7 +779,7 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       pending list is EMPTY**, both engines, both themes; every token measured as painted (lowest 4.51, light strings). The
       collapse button ("Show full code") takes 5.3's button look (5.3's deviation 4). Content script +96 B, app chunk
       +1,522 B, `background.js` +99 B.
-- [ ] **5.4 Panels, unsaved dialog, lightbox, diff + picker.** TEST FIRST. `.panelbox` card (radius 14, one shadow),
+- [x] **5.4 Panels, unsaved dialog, lightbox, diff + picker.** TEST FIRST. `.panelbox` card (radius 14, one shadow),
       header row, list rows with hints; the dialog as `.overlay` scrim + card + ink primary; lightbox per
       `mockup.html:226`; diff and picker restyled, still inline (006 D-15).
       Files: `src/app/exportControls.ts` · `src/app/storageControls.ts` · `src/theme/codeThemeControl.ts` ·
@@ -787,6 +787,15 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       Verify: (**Cr+Fx**) each panel's and the dialog's computed radius / shadow equal the tokens; focus trap and Escape
       tests unchanged; sweep and census pending rows deleted. Bytes: content script moves (lightbox, diff) — stated.
       Full suite. Golden EMPTY · manifest · `permissions: []`. [plan §3]
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.4").* Stored data and Export are the `.panelbox` card (radius
+      14, `--shadow`, `--paper`) with a header row; their buttons and the dialog's Discard 5.3's look, the confirms and
+      Keep editing an ink primary; Export's rows the mock's list rows; the capture box the mock's task box. The code-theme
+      picker takes the approved toolbar mock's popover (radius 12). The dialog: the dark `.overlay` scrim, a `.panelbox`
+      card. The lightbox: the mock's dark scrim, zoom-out, the diagram on a card. The diff: `--ink` on its fill (the mock's
+      text colours fail AA), the document's measure, clear of the open TOC card. Necessary ripple `unsavedGuard.ts` (the
+      dialog's sheet) and `toolbar.ts` (the Compare picker's scrollbar). **The sweep: 4 rows deleted, the Compare picker
+      and the lightbox added — 6 per engine left;** the census adds the Compare picker, the diff and the lightbox and stays
+      EMPTY. Content script −569 B, app chunk −601 B.
 - [ ] **5.5 Empty / denied / unsupported app states.** TEST FIRST. Composed from `.alert` and the setup card — no new
       vocabulary.
       Files: `src/app/appShell.ts` · the state modules it composes · census-named tests

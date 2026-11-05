@@ -240,24 +240,16 @@ export const READER_CSS = /* css */ `
 /* The diff occupies the reading column's space — same centered measure and padding as
    .peekover-reader, so a diff reads at the width the document did. */
 .peekover-diff{
-  max-width:76ch;margin:0 auto;padding:56px 32px 130px;width:100%;
+  max-width:var(--reader-measure);margin:0 auto;padding:56px 32px 130px;width:100%;
   font-family:var(--serif);color:var(--ink);
 }
 .peekover-diff > :first-child{margin-top:0}
-/* Each hunk is one block carrying its change KIND. Colour is NEVER the only signal (§5 a11y):
-   removed also carries line-through, and added/removed use distinct fills as well as hue.
-   Matches design/mockup.html:210-211 (.diff .add / .del). */
-.peekover-diff .diff-added{background:var(--ok-soft);color:var(--ok);border-radius:6px;padding:2px 8px;margin:2px 0}
-.peekover-diff .diff-removed{
-  /* ★ --del DOUBLE-MEANING (design judgement gated at 9.1, plan §1.7): --del is ALSO the lit
-     network indicator's "one warm accent" (see .peekover-net__dot below). Using it for diff-removed
-     is its SECOND meaning. 6.1 uses --del to match the mockup; a dedicated token is 9.1's call, not
-     6.1's — do NOT silently substitute a nearby token. line-through is the non-colour a11y signal. */
-  background:var(--del-soft);color:var(--del);text-decoration:line-through;
-  border-radius:6px;padding:2px 8px;margin:2px 0;
-}
-/* Unchanged recedes so added/removed stand out. */
-.peekover-diff .diff-unchanged{color:var(--muted);padding:2px 8px;margin:2px 0}
+/* Hunks: the kind's fill, --ink text (AA), removed struck through; rationale: decisions.md, M13 TASK 5.4. */
+.peekover-diff .diff-added,.peekover-diff .diff-removed,.peekover-diff .diff-unchanged{border-radius:5px;padding:2px 12px;margin:2px 0}
+.peekover-diff .diff-added{background:var(--ok-soft);color:var(--ink)}
+.peekover-diff .diff-removed{background:var(--del-soft);color:var(--ink);text-decoration:line-through}
+.peekover-diff .diff-unchanged{color:var(--muted)}
+.peekover-diff a{color:inherit}
 
 /* One minimal pill, fixed in an unobtrusive corner. Styled from tokens (panel/ink/
    line) — NOT the mockup's full toolbar. Stays put while the column scrolls; its
@@ -618,7 +610,7 @@ export const READER_CSS = /* css */ `
    margin-left negative and shoves the column off-screen left. width:auto lets the column shrink to
    fill exactly the space LEFT of the rail (still capped at the base max-width), so on a narrow
    scrollport it takes what remains and on a wide one it caps at the measure. */
-:host([data-toc="open"]) .peekover-reader{
+:host([data-toc="open"]) .peekover-reader,:host([data-toc="open"]) .peekover-diff{
   width:auto;
   margin-right:var(--toc-w);
   margin-left:max(0px,calc((100% - var(--reader-measure) - var(--toc-w)) / 2));
@@ -694,14 +686,14 @@ export const READER_CSS = /* css */ `
 }
 .peekover-reader .peekover-code-toolbar button,.peekover-reader .peekover-math-action,
 .peekover-reader .peekover-table-copy,.peekover-reader .peekover-table-filter__clear,
-.peekover-reader .peekover-code-toolbar__collapse{
+.peekover-reader .peekover-code-toolbar__collapse,.peekover-diagram-lightbox__close{
   font-family:var(--sans);font-size:11.5px;font-weight:600;line-height:normal;color:var(--muted);
   background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin:0;
   cursor:pointer;
 }
 .peekover-reader .peekover-code-toolbar button:hover,.peekover-reader .peekover-math-action:hover,
 .peekover-reader .peekover-table-copy:hover,.peekover-reader .peekover-table-filter__clear:hover,
-.peekover-reader .peekover-code-toolbar__collapse:hover{color:var(--ink)}
+.peekover-reader .peekover-code-toolbar__collapse:hover,.peekover-diagram-lightbox__close:hover{color:var(--ink)}
 .peekover-reader .peekover-code-toolbar button[aria-pressed="true"]{
   color:var(--ink);border-color:var(--faint);background:var(--accent-soft);
 }
@@ -773,12 +765,11 @@ export const READER_CSS = /* css */ `
 /* Lightbox trigger + the modal itself (007 §3.11, task 7.2) — rationale: below this literal */
 .peekover-reader .peekover-diagram-open{position:absolute;inset:0;z-index:0;display:block;width:100%;padding:0;background:none;border:0;border-radius:8px;cursor:zoom-in}
 .peekover-reader .peekover-diagram-open:focus-visible{outline:2px solid var(--hl);outline-offset:2px}
-.peekover-diagram-lightbox{position:fixed;inset:0;z-index:3;display:flex;background:color-mix(in srgb,var(--paper) 76%,transparent)}
-.peekover-diagram-lightbox__panel{position:absolute;top:64px;right:calc(min(var(--toc-w),38vw) + 16px);bottom:96px;left:16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;padding:14px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);animation:peekover-diagram-zoom 180ms ease-out}
+.peekover-diagram-lightbox{position:fixed;inset:0;z-index:3;display:flex;background:color-mix(in srgb,var(--logo-ink) 75%,transparent);cursor:zoom-out}
+.peekover-diagram-lightbox__panel{position:absolute;top:64px;right:calc(min(var(--toc-w),38vw) + 16px);bottom:96px;left:16px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;padding:14px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);cursor:auto;animation:peekover-diagram-zoom 180ms ease-out}
 @keyframes peekover-diagram-zoom{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
-.peekover-diagram-lightbox__close{align-self:flex-end;font:600 12px/1 var(--sans);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer}
-.peekover-diagram-lightbox__close:hover{background:var(--hl-soft)}
-.peekover-diagram-lightbox__view{flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center}
+.peekover-diagram-lightbox__close{align-self:flex-end}
+.peekover-diagram-lightbox__view{flex:1;min-height:0;overflow:auto;scrollbar-color:var(--faint) transparent;display:flex;align-items:center;justify-content:center}
 .peekover-diagram-lightbox__view svg{max-width:none;height:auto}
 
 /* Print mode (010 D-7, task 6.1) — chrome hidden, document de-clipped, page-break rules; the

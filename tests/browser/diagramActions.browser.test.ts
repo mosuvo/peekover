@@ -803,13 +803,19 @@ describe('the shipped diagram CSS block', () => {
   // AFTER the diagram block (readerCss.ts's own tail), so this slice-to-end-of-string pin
   // legitimately grows by the whole addition. Content-script delta accounted at this same +1,184 B
   // (progress.md's own task 6.1 entry — READER_CSS ships to BOTH graphs by construction, D-2).
-  it('is exactly 4,111 B — the pin that keeps prose out of the literal', () => {
+  //
+  // Re-pinned by 013 task 5.4: 4,111 -> 3,968 B, −143 B, all the lightbox's rules (mockup.html:226): the overlay
+  // +19 (the --logo-ink scrim, zoom-out), the panel +12 (radius 14, cursor auto), Close −160 (its look moved into
+  // 5.3's shared button rule, which sits ABOVE this block; it keeps only align-self here), the pan box +41
+  // (scrollbar-color). Lines removed 875 B, added 732 B. The content-script delta is decomposed in decisions.md,
+  // "M13 TASK 5.4" (−569 B in all; this block's −143 B is part of it).
+  it('is exactly 3,968 B — the pin that keeps prose out of the literal', () => {
     expect(READER_CSS.indexOf(BLOCK_START)).toBeGreaterThan(0);
     expect(
       bytes,
       'the shipped diagram CSS moved. If that is a rule change, re-pin it here and account the ' +
         'content-script delta to the byte; if it is a comment, move it below the literal',
-    ).toBe(4111);
+    ).toBe(3968);
   });
 
   it('uses no `ch` in a layout-blocking property (retro finding 6)', () => {

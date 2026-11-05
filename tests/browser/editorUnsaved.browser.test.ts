@@ -59,6 +59,8 @@ import {
 } from '../../src/render/editorView';
 import { readerSourceFor } from '../../src/render/readerMode';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
+import { setThemeSetting } from '../../src/theme/reader';
+import { TEXT_BAR, backdropOf, inkOf, nameOf, ratioOver } from './helpers/contrast';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetWatchControlsForTest, WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
 import { CHANGED_IN_EDIT_ATTR } from '../../src/watch/watchController';
@@ -813,6 +815,59 @@ describe('012 task 6.1 — the dialog (R23)', () => {
     item.focus();
     expect(deepActive(), 'the page behind is no longer inert').toBe(item);
   });
+
+  // M13 task 5.4 (tasks.md 5.4; mockup.html:192–194, the .overlay scrim and .panelbox card; :413–415 the ink
+  // primary). Look only: the behaviour, the focus trap and Escape above are unchanged. Per theme: the scrim is the
+  // mock's dark one from the fixed ink (--logo-ink at 45%), the card radius 14 with the --shadow token, Keep editing
+  // the ink primary, Discard the 5.3 button look; every text >= 4.5:1 as painted, at rest and under a real pointer.
+  for (const theme of ['light', 'dark'] as const) {
+    it(`5.4 — the look: the scrim, the card, an ink primary — ${theme}`, async () => {
+      const { container, dialog } = await asking();
+      setThemeSetting(theme);
+      await waitFor(() => shellOf(container).getAttribute('data-theme') === theme, `data-theme=${theme}`);
+      await new Promise((r) => setTimeout(r, 200));
+      const token = (prop: 'color' | 'box-shadow' | 'background-color', value: string): string => {
+        const probe = document.createElement('i');
+        probe.style.setProperty(prop, value);
+        shellOf(container).append(probe);
+        const out = getComputedStyle(probe).getPropertyValue(prop);
+        probe.remove();
+        return out;
+      };
+      const ratio = (el: Element): number => ratioOver(inkOf(el), backdropOf(el)).ratio;
+      expect(getComputedStyle(dialog).backgroundColor, 'the scrim: --logo-ink at 45%').toBe(
+        token('background-color', 'color-mix(in srgb,var(--logo-ink) 45%,transparent)'),
+      );
+      const card = dialog.querySelector<HTMLElement>('.peekover-unsaved__card')!;
+      const cs = getComputedStyle(card);
+      expect(`${cs.borderTopLeftRadius} ${cs.boxShadow} ${cs.backgroundColor} ${cs.borderTopColor}`, 'the card').toBe(
+        `14px ${token('box-shadow', 'var(--shadow)')} ${token('color', 'var(--paper)')} ${token('color', 'var(--line)')}`,
+      );
+      const keep = answer(container, KEEP);
+      const discard = answer(container, DISCARD);
+      keep.blur(); // at rest: the focused control takes the ring's 4 px radius (mockup.html:30)
+      const k = getComputedStyle(keep);
+      const d = getComputedStyle(discard);
+      expect(`${k.backgroundColor} ${k.color} ${k.borderTopLeftRadius}`, 'Keep editing: the ink primary').toBe(`${token('color', 'var(--ink)')} ${token('color', 'var(--paper)')} 7px`);
+      expect(`${d.backgroundColor} ${d.color} ${d.borderTopColor} ${d.borderTopLeftRadius} ${d.fontSize}`, 'Discard edits: the 5.3 button look').toBe(
+        `${token('color', 'var(--paper)')} ${token('color', 'var(--muted)')} ${token('color', 'var(--line)')} 7px 11.5px`,
+      );
+      const seen: string[] = [];
+      for (const el of [dialog.querySelector('.peekover-unsaved__title')!, dialog.querySelector('.peekover-unsaved__body')!, keep, discard]) {
+        seen.push(`${nameOf(el)} ${ratio(el).toFixed(2)}`);
+      }
+      for (const b of [keep, discard]) {
+        await userEvent.hover(b);
+        await new Promise((r) => setTimeout(r, 60));
+        seen.push(`${nameOf(b)}:hover ${ratio(b).toFixed(2)}`);
+      }
+      await userEvent.unhover(discard);
+      record(`5.4 dialog ${theme}: ${seen.join(' · ')}`);
+      const low = seen.filter((s) => Number(s.split(' ').pop()) < TEXT_BAR);
+      expect(low, 'text below 4.5:1').toEqual([]);
+      setThemeSetting('auto');
+    });
+  }
 });
 
 // ── Tab close and reload ──────────────────────────────────────────────────────────────────────

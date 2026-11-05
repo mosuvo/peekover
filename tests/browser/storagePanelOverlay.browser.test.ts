@@ -21,9 +21,11 @@
 // cross-engine quirks with positioned descendants.
 
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
+import { setThemeSetting } from '../../src/theme/reader';
+import { TEXT_BAR, backdropOf, inkOf, nameOf, ratioOver } from './helpers/contrast';
 
 // RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
 // its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
@@ -224,4 +226,186 @@ describe('the storage panel opens as an OVERLAY — the page under it does not m
       'header widths at which opening the panel changed the header height',
     ).toEqual([]);
   });
+});
+
+// ── M13 task 5.4 — the header panels' look (tasks.md 5.4; mockup.html:194, the .panelbox card; the approved 3.1
+// toolbar mock's .picker for the popover). Stored data and Export are the mock's card — radius 14, one --shadow,
+// --paper, a 1 px --line border — with a header row and the 5.3 button look; Export's rows are the mock's list rows
+// (--muted, --ink on --accent-soft under the pointer) with their hint under the title. The code-theme picker is the
+// toolbar mock's popover (radius 12). Every text >= 4.5:1 as painted, at rest, under a real pointer and focused.
+// The look is asserted FIRST (the instrument); contrast after it.
+describe('013 task 5.4 — the header panels: card, header row, buttons, rows (light and dark)', () => {
+  /** A store with something in it, so the erase / wipe buttons are live and a confirm can be armed. */
+  function fullStore(): AppStore {
+    return {
+      ...fakeStore(),
+      describeStored: async () => ({
+        folders: [{ id: 'f1', name: 'docs', persisted: false, addedAt: 0, lastOpenedAt: 0 }],
+        recents: [],
+        pins: [],
+        settings: null,
+        snapshots: { count: 2, docs: 1, bytes: 2048 },
+        captureFlag: null,
+        diagrams: { count: 1, bytes: 512 },
+        total: 4,
+        lines: ['1 folder remembered (name only).', '2 snapshots of 1 document (2.0 KB).'],
+      }),
+    } as AppStore;
+  }
+
+  async function shellWithFile(theme: 'light' | 'dark'): Promise<HTMLElement> {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    containers.push(container);
+    const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source: memorySource() }), store: fullStore() });
+    await app.openFolder();
+    (await waitFor(() => container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'))).click();
+    await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader__host')?.shadowRoot?.querySelector('.peekover-reader h1'));
+    // The shell's settings load applies "auto" once it resolves (this store has no settings): set the theme after it.
+    await new Promise((r) => setTimeout(r, 50));
+    setThemeSetting(theme);
+    await waitFor(() => container.querySelector('.peekover-app')?.getAttribute('data-theme') === theme || null);
+    await new Promise((r) => setTimeout(r, 250));
+    return container;
+  }
+
+  /** A token's computed value in the shell, read from a probe that uses it. */
+  function token(container: HTMLElement, prop: 'color' | 'box-shadow', value: string): string {
+    const probe = document.createElement('i');
+    probe.style.setProperty(prop, value);
+    container.querySelector('.peekover-app')!.append(probe);
+    const out = getComputedStyle(probe).getPropertyValue(prop);
+    probe.remove();
+    return out;
+  }
+  const ratio = (el: Element): number => ratioOver(inkOf(el), backdropOf(el)).ratio;
+  const looks: string[] = [];
+
+  /** The card: the given radius, the --shadow token, --paper, 1 px --line, and a scrollbar of its own. */
+  function expectCard(c: HTMLElement, el: HTMLElement, name: string, radius: string): void {
+    const cs = getComputedStyle(el);
+    expect(`${cs.borderTopLeftRadius} ${cs.boxShadow}`, `${name}: radius and shadow`).toBe(`${radius} ${token(c, 'box-shadow', 'var(--shadow)')}`);
+    expect(`${cs.backgroundColor} ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor}`, `${name}: the card`).toBe(
+      `${token(c, 'color', 'var(--paper)')} 1px solid ${token(c, 'color', 'var(--line)')}`,
+    );
+    expect(cs.getPropertyValue('scrollbar-color').trim(), `${name}: its scrollbar`).not.toBe('auto');
+  }
+
+  /** 5.3's button look (the mock's copy button), read on the app page: --paper, 1 px --line, radius 7, 600 11.5 px. */
+  async function expectButton(c: HTMLElement, b: HTMLButtonElement, name: string, primary = false): Promise<void> {
+    b.blur(); // at rest: a focused control takes the ring's 4 px radius (mockup.html:30, the shell's :focus-visible)
+    const cs = getComputedStyle(b);
+    const [fill, ink] = primary ? ['--ink', '--paper'] : ['--paper', '--muted'];
+    expect(
+      `${cs.backgroundColor} ${cs.color} ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor} ${cs.borderTopLeftRadius} ${cs.fontWeight} ${cs.fontSize}`,
+      `${name}: ${primary ? 'the ink primary' : 'the 5.3 button look'}`,
+    ).toBe(
+      `${token(c, 'color', `var(${fill})`)} ${token(c, 'color', `var(${ink})`)} 1px solid ${token(c, 'color', primary ? 'var(--ink)' : 'var(--line)')} 7px 600 11.5px`,
+    );
+    const rest = ratio(b);
+    await userEvent.hover(b);
+    await new Promise((r) => setTimeout(r, 60));
+    expect(getComputedStyle(b).color, `${name}: under the pointer`).toBe(token(c, 'color', primary ? 'var(--paper)' : 'var(--ink)'));
+    const hover = ratio(b);
+    await userEvent.unhover(b);
+    b.focus();
+    const focus = ratio(b);
+    looks.push(`${name}: rest ${rest.toFixed(2)} · hover ${hover.toFixed(2)} · focus ${focus.toFixed(2)}`);
+    for (const [state, r] of [['rest', rest], ['hover', hover], ['focus', focus]] as const) {
+      expect(r, `${name} (${state}): ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(TEXT_BAR);
+    }
+  }
+
+  /** Every text-bearing element under `root` draws at >= 4.5:1. */
+  function expectText(root: HTMLElement, name: string): void {
+    const low: string[] = [];
+    let least = Infinity;
+    for (const el of [root, ...root.querySelectorAll('*')]) {
+      const own = [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim());
+      if (!own || el.closest(':disabled') || !el.getClientRects().length) continue;
+      const r = ratio(el);
+      least = Math.min(least, r);
+      if (r < TEXT_BAR) low.push(`${nameOf(el)} "${el.textContent!.trim().slice(0, 30)}" ${r.toFixed(2)}`);
+    }
+    looks.push(`${name}: lowest text ${least.toFixed(2)}`);
+    expect(low, `${name}: text below 4.5:1`).toEqual([]);
+  }
+
+  afterEach(() => {
+    setThemeSetting('auto');
+    for (const l of looks.splice(0)) console.log(`LOOK-5.4 ${l}`);
+  });
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`Stored data — ${theme}`, async () => {
+      const c = await shellWithFile(theme);
+      c.querySelector<HTMLButtonElement>('.peekover-app__storage-toggle')!.click();
+      const panel = await waitFor(() => c.querySelector<HTMLElement>('.peekover-storage'));
+      expectCard(c, c.querySelector<HTMLElement>('.peekover-app__storage-slot')!, 'Stored data', '14px');
+      const head = panel.querySelector<HTMLElement>('.peekover-storage__head')!;
+      const title = panel.querySelector<HTMLElement>('.peekover-storage__title')!;
+      const hs = getComputedStyle(head);
+      expect(`${hs.borderBottomWidth} ${hs.borderBottomStyle} ${hs.borderBottomColor}`, 'the header row').toBe(`1px solid ${token(c, 'color', 'var(--line)')}`);
+      expect(`${getComputedStyle(title).fontWeight} ${getComputedStyle(title).fontSize}`, 'the header title').toBe('700 13.5px');
+      // The capture checkbox: the mock's task box (mockup.html:135-137), its border --muted (3:1 as a control), --ink when on.
+      const box = panel.querySelector<HTMLInputElement>('[data-capture-toggle]')!;
+      const on = getComputedStyle(box);
+      expect(`${on.appearance} ${on.backgroundColor} ${on.borderTopColor} ${on.borderTopWidth}`, 'the capture box, on').toBe(`none ${token(c, 'color', 'var(--ink)')} ${token(c, 'color', 'var(--ink)')} 2px`);
+      box.checked = false; // the look only: no change event, so nothing is persisted
+      const off = getComputedStyle(box);
+      expect(`${off.backgroundColor} ${off.borderTopColor}`, 'the capture box, off').toBe(`${token(c, 'color', 'var(--paper)')} ${token(c, 'color', 'var(--muted)')}`);
+      box.checked = true;
+      await expectButton(c, panel.querySelector<HTMLButtonElement>('.peekover-storage__close')!, 'Stored data · Close');
+      await expectButton(c, panel.querySelector<HTMLButtonElement>('[data-erase-snapshots="start"]')!, 'Stored data · Erase snapshots');
+      panel.querySelector<HTMLButtonElement>('[data-wipe="start"]')!.click();
+      await expectButton(c, await waitFor(() => panel.querySelector<HTMLButtonElement>('[data-wipe="confirm"]')), 'Stored data · Yes, wipe everything', true);
+      await expectButton(c, panel.querySelector<HTMLButtonElement>('[data-wipe="cancel"]')!, 'Stored data · Cancel');
+      expectText(panel, `Stored data (${theme})`);
+    });
+
+    it(`Export — ${theme}`, async () => {
+      const c = await shellWithFile(theme);
+      c.querySelector<HTMLButtonElement>('.peekover-app__export-toggle')!.click();
+      const panel = await waitFor(() => c.querySelector<HTMLElement>('.peekover-export'));
+      expectCard(c, c.querySelector<HTMLElement>('.peekover-app__export-slot')!, 'Export', '14px');
+      const title = panel.querySelector<HTMLElement>('.peekover-export__title')!;
+      expect(`${getComputedStyle(title).fontWeight} ${getComputedStyle(title).fontSize}`, 'the header title').toBe('700 13.5px');
+      await expectButton(c, panel.querySelector<HTMLButtonElement>('.peekover-export__close')!, 'Export · Close');
+      const row = panel.querySelector<HTMLButtonElement>('[data-export="copy-plain-text"]')!;
+      const head = row.querySelector<HTMLElement>('.peekover-export__row-title')!;
+      const sub = row.querySelector<HTMLElement>('.peekover-export__row-sub')!;
+      const rest = getComputedStyle(row);
+      expect(`${rest.backgroundColor} ${rest.borderTopStyle} ${rest.color} ${rest.borderTopLeftRadius}`, 'a row at rest: the mock list row').toBe(`rgba(0, 0, 0, 0) none ${token(c, 'color', 'var(--muted)')} 8px`);
+      const restTitle = ratio(head);
+      const restSub = ratio(sub);
+      await userEvent.hover(row);
+      await new Promise((r) => setTimeout(r, 60));
+      expect(`${getComputedStyle(row).backgroundColor} ${getComputedStyle(row).color}`, 'a row under the pointer').toBe(`${token(c, 'color', 'var(--accent-soft)')} ${token(c, 'color', 'var(--ink)')}`);
+      const hoverTitle = ratio(head);
+      const hoverSub = ratio(sub);
+      await userEvent.unhover(row);
+      looks.push(`Export row title: rest ${restTitle.toFixed(2)} · hover ${hoverTitle.toFixed(2)}; hint: rest ${restSub.toFixed(2)} · hover ${hoverSub.toFixed(2)}`);
+      for (const r of [restTitle, restSub, hoverTitle, hoverSub]) expect(r).toBeGreaterThanOrEqual(TEXT_BAR);
+      expectText(panel, `Export (${theme})`);
+    });
+
+    it(`the code-theme picker — ${theme}`, async () => {
+      const c = await shellWithFile(theme);
+      c.querySelector<HTMLButtonElement>('.peekover-code-theme-toggle')!.click();
+      const picker = await waitFor(() => c.querySelector<HTMLElement>('.peekover-code-theme-picker:not([hidden])'));
+      expectCard(c, picker, 'code-theme picker', '12px');
+      const item = picker.querySelector<HTMLButtonElement>('.peekover-code-theme-picker__item[aria-selected="false"]')!;
+      const cs = getComputedStyle(item);
+      expect(`${cs.color} ${cs.fontSize} ${cs.borderTopLeftRadius}`, 'an option: the toolbar mock picker row').toBe(`${token(c, 'color', 'var(--ink)')} 13px 7px`);
+      const chosen = picker.querySelector<HTMLElement>('[aria-selected="true"]')!;
+      expect(`${getComputedStyle(chosen).backgroundColor} ${getComputedStyle(chosen).fontWeight}`, 'the chosen option').toBe(`${token(c, 'color', 'var(--accent-soft)')} 600`);
+      await userEvent.hover(item);
+      await new Promise((r) => setTimeout(r, 60));
+      const hover = ratio(item);
+      await userEvent.unhover(item);
+      looks.push(`code-theme option under the pointer ${hover.toFixed(2)}`);
+      expect(hover).toBeGreaterThanOrEqual(TEXT_BAR);
+      expectText(picker, `code-theme picker (${theme})`);
+    });
+  }
 });

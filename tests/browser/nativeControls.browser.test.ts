@@ -15,8 +15,8 @@
 // watching, the agent badge, a blocked image — and a raw-host fixture), the app page with no folder, the app page
 // with a document open (toolbar, folder pane with pins and recents, reader pane with code, math, a table and a
 // task list), the Files overlay at 414 px, the three panels (Stored data, Export, the code-theme picker), the
-// editor, and the unsaved-changes dialog. NOT reached here, named so the gap is visible: the Compare picker
-// (needs a snapshot) and the diagram lightbox (needs a rendered diagram) — 5.4 restyles both and adds them.
+// editor, the unsaved-changes dialog, and (013 task 5.4) the Compare picker open with a seeded snapshot and the
+// diagram lightbox open on a rendered diagram. The INVENTORY names every surface × theme it expects (SURFACES).
 //
 // THE PENDING LIST (gate-3 Q4): every not-yet-restyled control, `engine · surface · selector`, each routed to the
 // task that restyles it. It may only SHRINK: a finding not on it is a red, and a row on it that no longer fails
@@ -36,7 +36,9 @@ import { resetCodeThemeControlsForTest } from '../../src/theme/codeThemeControl'
 import { registerWatchTarget, resetWatchRegistryForTest, stopWatch, type WatchTarget } from '../../src/watch/watchRegistry';
 import { resetWatchControlsForTest, WATCH_HOST_ATTR, WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
 import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
-import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { getDiffContext, resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { storeSnapshot } from '../../src/app/snapshots';
+import { clearDiagramCache, eraseSnapshots } from '../../src/app/store';
 import { editorSessionFor, teardownEditorShell } from '../../src/render/editorView';
 import { FILES_OVERLAY_MAX } from '../../src/app/toolbar';
 import { nameOf, parentAcrossShadow } from './helpers/contrast';
@@ -52,13 +54,10 @@ type Theme = 'light' | 'dark';
  * 5.2a deleted 3: the app page's reader hosts (the app page and the editor) and the editor's preview host are no
  * longer scroll areas. CONTAINED_CSS dropped their `:host{overflow:auto}` so the rail can stick, and they now pass.
  * 5.3 deleted its 16: the code, math and table controls and the code and math scroll boxes (10 rows per engine left).
+ * 5.4 deleted its 4 (the two panel slots, the code-theme picker, the capture checkbox) and added two surfaces, the
+ * Compare picker and the diagram lightbox, whose findings it fixed rather than listed (6 rows per engine left).
  */
 const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
-  // 5.4 — panels (Stored data, Export, the code-theme picker)
-  ['Stored data panel · .peekover-app__storage-slot', '5.4'],
-  ['Stored data panel · .peekover-storage__capture-row > input[type=checkbox]', '5.4'],
-  ['Export panel · .peekover-app__export-slot', '5.4'],
-  ['code-theme picker · .peekover-code-theme-picker', '5.4'],
   // 5.5 — the app page's own scroll areas (appShell.ts; no task names them — routed with the app states, flagged)
   ['app page (no folder) · .peekover-app__reader', '5.5'],
   ['app page · .peekover-app__reader', '5.5'],
@@ -174,6 +173,25 @@ const DOC = [
   '![a blocked image](https://example.invalid/a.png)',
   '',
 ].join('\n');
+
+/** 013 task 5.4: a document with one diagram, for the lightbox. */
+const DIAGRAM_DOC = '# Diagram\n\n```mermaid\ngraph LR; Raw-->Peekover-->Reading;\n```\n';
+
+/** Every surface the sweep covers, each in light and dark (the INVENTORY checks this list by name). */
+const SURFACES = [
+  'tab reader (file)',
+  'tab reader (raw host)',
+  'app page (no folder)',
+  'app page',
+  'files overlay',
+  'Stored data panel',
+  'Export panel',
+  'code-theme picker',
+  'editor',
+  'unsaved-changes dialog',
+  'Compare picker',
+  'diagram lightbox',
+];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitFor<T>(fn: () => T | null | undefined | false, what: string, tries = 300): Promise<T> {
@@ -360,13 +378,55 @@ describe('the native-control sweep (013 task 5.1)', () => {
       const dialog = await waitFor(() => container.querySelector<HTMLElement>('.peekover-unsaved'), 'the unsaved dialog');
       record(dialog, 'unsaved-changes dialog', theme);
     });
+
+    // 013 task 5.4: the Compare picker, open, with a snapshot seeded as diffChrome's tests seed one — through the
+    // production capture function and the docId the app page registered (the folder is persistable, so it does).
+    it(`the Compare picker, open with a snapshot — ${theme}`, async () => {
+      const { container } = await appPage(theme);
+      try {
+        const ctx = await waitFor(() => getDiffContext(), 'the diff context');
+        await storeSnapshot(ctx.docId, DOC.replace('## Two', '## Two, before'));
+        for (let i = 0; i < 100 && (await ctx.fetchMeta()).length === 0; i += 1) await sleep(20);
+        container.querySelector<HTMLButtonElement>('.peekover-toolbar .peekover-diff-affordance')!.click();
+        await waitFor(() => container.querySelector('.peekover-toolbar .peekover-diff-picker:not([hidden]) [data-target-kind="snapshot"]'), 'a snapshot row');
+        record(container.querySelector<HTMLElement>('.peekover-toolbar__drop')!, 'Compare picker', theme);
+      } finally {
+        await eraseSnapshots();
+      }
+    });
+
+    // 013 task 5.4: the diagram lightbox, open on a rendered diagram (the production mermaid load, as the lightbox's
+    // own tests run it).
+    it(`the diagram lightbox, open — ${theme}`, async () => {
+      sweepTheme = theme;
+      setThemeSetting(theme);
+      await page.viewport(1440, 900);
+      const container = freshHost();
+      const source: FolderSource = { name: 'docs', truncated: false, persistable: false, files: [mem('diagram.md', DIAGRAM_DOC)] };
+      const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store: memStore() });
+      try {
+        await app.openFolder();
+        (await waitFor(() => container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'), 'the tree item')).click();
+        const host = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader__host'), 'the reader pane');
+        await themed(host, theme); // before the diagram is read: a theme change re-renders it
+        const open = await waitFor(() => host.shadowRoot?.querySelector<HTMLButtonElement>('.peekover-diagram[data-diagram="rendered"] .peekover-diagram-open'), 'a rendered diagram', 1500);
+        open.click();
+        const box = await waitFor(() => host.shadowRoot!.querySelector<HTMLElement>('.peekover-diagram-lightbox'), 'the lightbox');
+        await sleep(250);
+        record(box, 'diagram lightbox', theme);
+      } finally {
+        await clearDiagramCache();
+      }
+    }, 60_000);
   }
 
   it('INVENTORY: no finding off the pending list, and no pending row that now passes', () => {
     const findings = new Map(results.map((r) => [r.key, r]));
     for (const r of [...findings.values()].sort((a, b) => a.key.localeCompare(b.key))) console.log(`SWEEP ${JSON.stringify(r)}`);
     console.log(`SWEEP-PENDING-SIZE ${[...PENDING.keys()].filter((k) => k.startsWith(`${ENGINE} ·`)).length} (${ENGINE}), ${PENDING.size} (both engines)`);
-    expect(covered.size, 'surfaces × themes swept').toBe(20);
+    // Every surface × theme by name (5.4): a surface dropped from the sweep is named here, not just counted.
+    const expected = SURFACES.flatMap((s) => (['light', 'dark'] as const).map((t) => `${s} · ${t}`)).sort();
+    expect([...covered].sort(), 'surfaces × themes swept').toEqual(expected);
     const unlisted = [...findings.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — ${r.what}`);
     const nowPassing = [...PENDING.keys()].filter((k) => k.startsWith(`${ENGINE} ·`) && !findings.has(k));
     expect(unlisted, 'native-styled controls or scrollbars not on the pending list').toEqual([]);

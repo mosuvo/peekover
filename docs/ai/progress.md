@@ -11,6 +11,28 @@
 
 ## Now (start here)
 
+**M13 TASK 5.4 LANDED (2026-11-05) — panels and popovers restyled; Compare picker and lightbox swept.** Record:
+`decisions.md`, "M13 TASK 5.4". Local, one commit on `main` (from `a652451`); not pushed.
+- **CI (`gh`):** `a652451` green — CI (41866625589) and Supply chain (41866625592).
+- **The look:** Stored data and Export are the mock's card (`--paper`, 1 px `--line`, radius 14, `--shadow`) with a header
+  row; their buttons and the dialog's Discard take 5.3's button look (one APP_CSS rule); the confirms and Keep editing
+  the ink primary; Export's rows the mock's list rows; the capture checkbox the mock's task box (`--muted` border for
+  3:1). The code-theme picker follows the approved toolbar mock's popover (radius 12). The unsaved dialog: the dark
+  scrim from `--logo-ink`, a `.panelbox` card. The lightbox: the mock's dark scrim, zoom-out; the diagram keeps a card.
+- **The diff:** text `--ink` on its fill (the mock's `--ok` / `--del` text was 3.09 / 4.17:1 in light; a link in a hunk
+  was the browser's blue, 1.63:1 in dark); it now reads at the document's measure and clears the open TOC card (it ran
+  under it — found in the before screenshot).
+- **Contrast:** text ≥ 4.5:1 in every state, both themes, as painted (lowest 5.24, an Export hint hovered, light);
+  non-text listed for 8.1. No accessible name, focus order or behaviour changed.
+- **The sweep:** 5.4's 4 rows deleted; the Compare picker (with a snapshot) and the lightbox added, both themes, both
+  engines — they found 2 unstyled scrollbars, fixed. **PENDING 6 per engine (5.5: 2 · 5.6: 4).** The census covers the
+  Compare picker, the diff view and the lightbox; its pending list stays EMPTY.
+- Verify: lint 0 · unit 1,503 / 1,503 · browser 2,362 passed / 0 failed / 52 skipped of 2,414, both engines, alone (second run; the first run's 2 reds were `diagramActions`' byte pin, re-pinned) · golden EMPTY · content script 346,241 B (−569; md5
+  `1f010928…` / `75535b93…`) · app chunk 556,793 B (−601) · manifests 833 / 949 B, `permissions: []`.
+- Screenshots (not committed): `D:\Dev\peekover-shots\5.4\` — before / after, each panel and popover open on the app page
+  at 1440, light / dark, and Stored data at 414.
+- Next: the human pushes; then task 5.5.
+
 **M13 TASK 5.8 LANDED (2026-11-04) — the Peekover code theme, from design tokens, as the default (the 2.2 ruling; 3.1
 items 12–14).** Record: `decisions.md`, "M13 TASK 5.8". Local, one commit on `main` (from `d55bef5`); not pushed.
 - **CI (`gh`):** `d55bef5` green — CI (41858867354) and Supply chain (41858866410).
@@ -649,9 +671,11 @@ ledger decomposed across every task, the task count reconciled).
 
 ## Up next
 
-**First, the human pushes `main` (task 5.8's local commit) and reads its CI.** **Then task 5.4** (panels, dialog,
-lightbox, diff + picker — the sweep's 4 rows) …, per tasks.md's sequencing. The 2.2 pending list is closed (5.8): the
-census's pending list is empty, so any below-AA text is a red.
+**First, the human pushes `main` (task 5.4's local commit) and reads its CI.** **Then task 5.5** (empty / denied /
+unsupported app states — the sweep's 2 rows, the app page's scroll areas), per tasks.md's sequencing. The census's pending
+list is empty (any below-AA text is a red); the sweep's is 6 per engine (5.5: 2 · 5.6: 4). **Open for the human:** the
+syntax-grammar question in § Carried items, "FOR THE HUMAN TO DECIDE".
+*(Earlier, done:)* the human pushes 5.8; task 5.4.
 *(Earlier, done:)* the human pushes 5.3; task 5.8. Carried for 7.1: the minimum browser versions (§ Carried items).
 *(Earlier, done:)* the human pushes 5.2 / 5.2a; task 5.3. The app-page TOC rail (5.2's "Found") was fixed by 5.2a.
 *(Earlier, done:)* the human pushes 5.1; task 5.2. Read CI with `gh` when a task asks.
@@ -776,6 +800,11 @@ unit 1423 / 1424 (the perf flake) · browser 1971 passed / 0 failed / 51 skipped
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
 measurement-driven or explicitly deferred.*
+
+#### FOR THE HUMAN TO DECIDE
+- **Syntax grammars** — only six languages ship; TypeScript, TSX, diff, YAML and Markdown fences render plain (found at
+  5.8). Proposed: a discovered task after group 5 that measures the byte cost of adding them (eager vs loaded on demand)
+  and the human decides. *Source:* the human's 5.4 kickoff (2026-11-05); `decisions.md`, "M13 TASK 5.8", deviation 1.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
 - **Literata with Latin Extended — Central / Eastern European and Turkish letters in the reading face.** Prefer

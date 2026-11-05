@@ -50,22 +50,16 @@ const DISCARD_LABEL = 'Discard edits';
 
 const UNSAVED_CSS = /* css */ `
 .${UNSAVED_DIALOG_CLASS}{
-  position:absolute; inset:0; z-index:20; display:grid; place-items:center; padding:1rem;
-  background:color-mix(in srgb,var(--paper) 72%,transparent);
+  position:absolute; inset:0; z-index:20; display:flex; align-items:flex-start; justify-content:center;
+  padding:14vh 1rem 1rem; background:color-mix(in srgb,var(--logo-ink) 45%,transparent); backdrop-filter:blur(3px);
 }
 .${UNSAVED_DIALOG_CLASS}__card{
-  max-width:26rem; padding:1.1rem 1.2rem; background:var(--panel); color:var(--ink);
-  border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow);
+  width:min(430px,100%); background:var(--paper); color:var(--ink); font-family:var(--sans);
+  border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); overflow:hidden;
 }
-.${UNSAVED_DIALOG_CLASS}__title{margin:0 0 .4rem; font-size:1rem; font-weight:650; letter-spacing:-.01em}
-.${UNSAVED_DIALOG_CLASS}__body{margin:0 0 1rem; color:var(--muted); overflow-wrap:anywhere}
-.${UNSAVED_DIALOG_CLASS}__actions{display:flex; flex-wrap:wrap; gap:.5rem; justify-content:flex-end}
-.${UNSAVED_DIALOG_CLASS}__actions button{
-  font:inherit; font-size:.85rem; color:var(--ink); background:var(--paper);
-  border:1px solid var(--line); border-radius:999px; padding:.3rem .9rem; cursor:pointer;
-}
-.${UNSAVED_DIALOG_CLASS}__actions button:hover{background:var(--accent-soft)}
-.${UNSAVED_DIALOG_CLASS}__actions .${UNSAVED_KEEP_CLASS}{background:var(--accent); color:var(--paper); border-color:var(--accent)}
+.${UNSAVED_DIALOG_CLASS}__title{margin:0; padding:14px 18px; border-bottom:1px solid var(--line); font:700 13.5px/1.3 var(--sans)}
+.${UNSAVED_DIALOG_CLASS}__body{margin:0; padding:18px; font-size:13px; line-height:1.65; color:var(--muted); overflow-wrap:anywhere}
+.${UNSAVED_DIALOG_CLASS}__actions{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; padding:14px 18px; border-top:1px solid var(--line)}
 `;
 
 /** Is `host` a document being edited with changes that are not saved? */

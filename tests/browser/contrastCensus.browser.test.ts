@@ -7,8 +7,9 @@
 //
 // SCOPE (tasks.md 2.2): the content-script reader (a file:// fixture — watching, the agent badge, a
 // blocked image — and a raw-host fixture), the app shell, the reader pane (code highlighted, math
-// rendered), the editor, the three panels (Stored data, Export, the code-theme picker) and the
-// unsaved-changes dialog. NOT measured here: SVG text (diagram labels — diagramTheme.browser.test.ts
+// rendered), the editor, the three panels (Stored data, Export, the code-theme picker), the
+// unsaved-changes dialog and (013 task 5.4) the Compare picker with a snapshot, the diff view and the diagram
+// lightbox. NOT measured here: SVG text (diagram labels — diagramTheme.browser.test.ts
 // owns them), pseudo-element content (list markers, code line numbers, glyph icons), non-text UI
 // boundaries (WCAG 1.4.11 — the editor eyeball proxy measures CodeMirror's), and hover/focus states.
 //
@@ -39,7 +40,9 @@ import { resetCodeThemeControlsForTest } from '../../src/theme/codeThemeControl'
 import { registerWatchTarget, resetWatchRegistryForTest, type WatchTarget } from '../../src/watch/watchRegistry';
 import { resetWatchControlsForTest, WATCH_HOST_ATTR, WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
 import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
-import { resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { getDiffContext, resetDiffRegistryForTest } from '../../src/render/diffRegistry';
+import { storeSnapshot } from '../../src/app/snapshots';
+import { clearDiagramCache, eraseSnapshots } from '../../src/app/store';
 import { editorSessionFor } from '../../src/render/editorView';
 import {
   TEXT_BAR,
@@ -145,6 +148,9 @@ const DOC = [
   '![a blocked image](https://example.invalid/a.png)',
   '',
 ].join('\n');
+
+/** 013 task 5.4: a document with one diagram, for the lightbox. */
+const DIAGRAM_DOC = '# Diagram\n\n```mermaid\ngraph LR; Raw-->Peekover-->Reading;\n```\n';
 
 // ── Exemptions, by name ─────────────────────────────────────────────────────────────────────────
 /** M12's accepted below-AA list (text members), matched by element. */
@@ -325,10 +331,10 @@ const store = (): AppStore => ({
   putSettings: async () => undefined,
 });
 
-async function appPage(theme: Theme): Promise<{ container: HTMLElement; host: HTMLElement }> {
+async function appPage(theme: Theme, persistable = false): Promise<{ container: HTMLElement; host: HTMLElement }> {
   censusTheme = theme;
   const container = freshHost();
-  const source: FolderSource = { name: 'docs', truncated: false, persistable: false, files: [mem('CLAUDE.md', DOC), mem('other.md', '# Other\n\nText.\n')] };
+  const source: FolderSource = { name: 'docs', truncated: false, persistable, files: [mem('CLAUDE.md', DOC), mem('other.md', '# Other\n\nText.\n')] };
   const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store: store() });
   await app.openFolder();
   const item = await waitFor(() => [...container.querySelectorAll<HTMLButtonElement>('[role="treeitem"][data-kind="file"]')].find((b) => b.textContent === 'CLAUDE.md'), 'the tree item');
@@ -434,6 +440,52 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       const dialog = await waitFor(() => container.querySelector<HTMLElement>('.peekover-unsaved'), 'the unsaved dialog');
       census(dialog, 'unsaved-changes dialog', theme);
     });
+
+    // 013 task 5.4: the Compare picker open with a seeded snapshot (diffChrome's way: the production capture
+    // function, the docId the app page registered — the folder is persistable so it registers one), then the diff
+    // view that snapshot opens. The snapshot differs in a heading and in the paragraph with the link, so the diff
+    // holds removed, added and unchanged hunks, a link in each changed kind.
+    it(`the Compare picker and the diff view — ${theme}`, async () => {
+      setThemeSetting(theme);
+      const { container, host } = await appPage(theme, true);
+      await themed(host, theme);
+      try {
+        const ctx = await waitFor(() => getDiffContext(), 'the diff context');
+        await storeSnapshot(ctx.docId, DOC.replace('## Heading two', '## Heading 2').replace('A paragraph with a [link]', 'An older paragraph with a [link]'));
+        for (let i = 0; i < 100 && (await ctx.fetchMeta()).length === 0; i += 1) await sleep(20);
+        container.querySelector<HTMLButtonElement>('.peekover-toolbar .peekover-diff-affordance')!.click();
+        const row = await waitFor(() => container.querySelector<HTMLButtonElement>('.peekover-toolbar .peekover-diff-picker:not([hidden]) [data-target-kind="snapshot"]'), 'a snapshot row');
+        census(container.querySelector<HTMLElement>('.peekover-toolbar__drop')!, 'Compare picker', theme);
+        row.click();
+        const diff = await waitFor(() => host.getAttribute('data-diff') === 'active' && host.shadowRoot!.querySelector<HTMLElement>('.peekover-diff'), 'the diff view');
+        await waitFor(() => diff.querySelector('.diff-added') && diff.querySelector('.diff-removed'), 'added and removed hunks');
+        census(diff, 'diff view', theme);
+      } finally {
+        await eraseSnapshots();
+      }
+    });
+
+    // 013 task 5.4: the diagram lightbox, open (the production mermaid load, as its own tests run it).
+    it(`the diagram lightbox — ${theme}`, async () => {
+      censusTheme = theme;
+      setThemeSetting(theme);
+      const container = freshHost();
+      const source: FolderSource = { name: 'docs', truncated: false, persistable: false, files: [mem('diagram.md', DIAGRAM_DOC)] };
+      const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source }), store: store() });
+      try {
+        await app.openFolder();
+        (await waitFor(() => container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'), 'the tree item')).click();
+        const host = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader__host'), 'the reader pane');
+        await themed(host, theme);
+        const open = await waitFor(() => host.shadowRoot?.querySelector<HTMLButtonElement>('.peekover-diagram[data-diagram="rendered"] .peekover-diagram-open'), 'a rendered diagram', 1500);
+        open.click();
+        const box = await waitFor(() => host.shadowRoot!.querySelector<HTMLElement>('.peekover-diagram-lightbox'), 'the lightbox');
+        await sleep(250);
+        census(box, 'diagram lightbox', theme);
+      } finally {
+        await clearDiagramCache();
+      }
+    }, 60_000);
   }
 
   it('INVENTORY: no failure off the pending list, and no pending row that now passes', () => {
@@ -441,8 +493,9 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     for (const r of [...failing.values()].sort((a, b) => a.key.localeCompare(b.key))) console.log(`CENSUS ${JSON.stringify(r)}`);
     console.log(`CENSUS-COVERED ${JSON.stringify([...covered])}`);
     console.log(`CENSUS-EXEMPT ${JSON.stringify({ disabled: exempt.disabled, m12: Object.fromEntries(exempt.m12), g5: Object.fromEntries(exempt.g5) })}`);
-    // Non-vacuous: every surface and theme was measured.
-    expect(covered.size, 'surfaces × themes measured').toBe(16);
+    // Non-vacuous: every surface and theme was measured. KEEPS: every surface × theme measured (C093); RE-SPELLED at
+    // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added).
+    expect(covered.size, 'surfaces × themes measured').toBe(22);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);

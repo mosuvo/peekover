@@ -264,6 +264,22 @@ retired while its function has no other test. Function by function:
   old default spelled literally is re-spelled `'peekover'` in `settingsStore`, `settingsPort` (browser and unit) and
   `settings.test.ts`; `codeNetwork`'s warm-up comments name the inline theme.
 
+- **5.4** (2026-11-05 — panels and popovers; the Compare picker and lightbox swept): no row first-breaks. The panels, the
+  dialog, the lightbox and the diff change look only; no markup, name, focus order or position changes. **KEPT, unchanged
+  and green** (each still states its property): C097 (the editor and the unsaved dialog meet AA), C098 (the three panels meet AA), C008, C010, C012,
+  C014 (Stored data's content, erase / clear / wipe flows), C111, C113–C115 (the panel reports the diagram cache), C104,
+  C106 (the Export panel's rows work), C244 (Export anchored under its own toggle), C269–C274 (`storagePanelOverlay`: the
+  panel out of flow, anchored, the header's height unchanged), C364 (every panel inside the window, every row reachable),
+  C086, C088 (the code-theme picker under the real cascade), C116 (the lightbox's trap, restore, Escape, live artifact,
+  reduced motion), C117 (the open lightbox clears the chrome), C001, C016–C019, C218 (the unsaved guard: asks, Keep
+  editing, Discard inside its click, Escape). **RE-SPELLED:** C093 (`contrastCensus` INVENTORY) — its count 16 → 22, the three
+  surfaces added (`KEEPS:` in the test); every surface × theme measured, the pending list EMPTY. **Retired:** none.
+  Outside the census (no moved chrome): `storagePanelOverlay`,
+  `editorUnsaved` and `diagramLightbox` gain 5.4's look tests; `nativeControls` deletes its 4 rows, adds the Compare
+  picker and the lightbox and names its surfaces (6 per engine left); `contrastCensus` adds the Compare picker, the diff
+  view and the lightbox (22 surface × theme); `diagramActions` re-pins its shipped-diagram-block byte pin 4,111 → 3,968 B
+  (the lightbox's rules; itemised in the test).
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).

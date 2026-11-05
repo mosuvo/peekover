@@ -33,6 +33,7 @@
 
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { page, userEvent, commands } from 'vitest/browser';
+import { TEXT_BAR, backdropOf, inkOf, ratioOver } from './helpers/contrast';
 import { mount } from '../../src/render/mount';
 import {
   DIAGRAM_MEASURE_CLASS,
@@ -617,4 +618,63 @@ describe('row 16 — the trigger is a real <button>, and both input paths open i
     await sleep(50);
     expect(shadow.querySelectorAll(`.${DIAGRAM_LIGHTBOX_CLASS}`)).toHaveLength(1);
   });
+});
+
+async function waitForTheme(host: HTMLElement, theme: string): Promise<void> {
+  for (let i = 0; i < 200 && host.getAttribute('data-theme') !== theme; i += 1) await sleep(20);
+  expect(host.getAttribute('data-theme'), 'the theme applied').toBe(theme);
+}
+
+// ── M13 task 5.4 — the lightbox's look (tasks.md 5.4; mockup.html:226 — the dark scrim, zoom-out) ──────────────
+// Look only: the trap, Escape, the restore and where the panel sits (rows 8 + 9, 21) are the tests above, unchanged.
+// Per theme: the overlay is the mock's dark scrim drawn from the fixed ink (--logo-ink at 75%, so it is dark in both
+// themes) with the zoom-out cursor; the diagram keeps its card — radius 14, the --shadow token, --paper, 1 px --line —
+// because the diagram's colours are drawn for the page; Close is the 5.3 button look; the pan box carries its own
+// scrollbar colour. Close's text >= 4.5:1 as painted, at rest and under a real pointer.
+describe('013 task 5.4 — the lightbox: the mock scrim, the card, the 5.3 button', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    it(`the look — ${theme}`, async () => {
+      await page.viewport(WIDE.width, WIDE.height);
+      setThemeSetting(theme);
+      const { host, shadow, trigger } = await oneFigure();
+      await waitForTheme(host, theme);
+      trigger.click();
+      const box = lightboxIn(shadow)!;
+      await sleep(250); // the zoom animation ends
+      const token = (prop: 'color' | 'box-shadow' | 'background-color', value: string): string => {
+        const probe = document.createElement('i');
+        probe.style.setProperty(prop, value);
+        shadow.append(probe);
+        const out = getComputedStyle(probe).getPropertyValue(prop);
+        probe.remove();
+        return out;
+      };
+      const bs = getComputedStyle(box);
+      expect(`${bs.backgroundColor} ${bs.cursor}`, 'the overlay: the mock scrim, zoom-out').toBe(
+        `${token('background-color', 'color-mix(in srgb,var(--logo-ink) 75%,transparent)')} zoom-out`,
+      );
+      const ps = getComputedStyle(panelIn(shadow));
+      expect(`${ps.borderTopLeftRadius} ${ps.boxShadow} ${ps.backgroundColor} ${ps.borderTopColor}`, 'the card').toBe(
+        `14px ${token('box-shadow', 'var(--shadow)')} ${token('color', 'var(--paper)')} ${token('color', 'var(--line)')}`,
+      );
+      const close = closeIn(shadow);
+      close.blur(); // at rest: the focused control takes the ring's 4 px radius (the reader's :focus-visible)
+      const cs = getComputedStyle(close);
+      expect(`${cs.backgroundColor} ${cs.color} ${cs.borderTopColor} ${cs.borderTopLeftRadius} ${cs.fontWeight} ${cs.fontSize}`, 'Close: the 5.3 button look').toBe(
+        `${token('color', 'var(--paper)')} ${token('color', 'var(--muted)')} ${token('color', 'var(--line)')} 7px 600 11.5px`,
+      );
+      const view = shadow.querySelector<HTMLElement>(`.${DIAGRAM_LIGHTBOX_VIEW_CLASS}`)!;
+      expect(getComputedStyle(view).getPropertyValue('scrollbar-color').trim(), 'the pan box: its scrollbar').not.toBe('auto');
+      const rest = ratioOver(inkOf(close), backdropOf(close)).ratio;
+      await userEvent.hover(close);
+      await sleep(60);
+      expect(getComputedStyle(close).color, 'Close under the pointer').toBe(token('color', 'var(--ink)'));
+      const hover = ratioOver(inkOf(close), backdropOf(close)).ratio;
+      await userEvent.unhover(close);
+      console.log(`LOOK-5.4 lightbox ${theme}: Close rest ${rest.toFixed(2)} · hover ${hover.toFixed(2)}`);
+      expect(rest).toBeGreaterThanOrEqual(TEXT_BAR);
+      expect(hover).toBeGreaterThanOrEqual(TEXT_BAR);
+      setThemeSetting('light');
+    }, 60_000);
+  }
 });

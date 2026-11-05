@@ -131,7 +131,7 @@ export function toolbarCss(shell: string): string {
   width:300px; max-width:calc(100vw - 1.5rem); background:var(--paper); border:1px solid var(--line); border-radius:12px;
   box-shadow:var(--shadow); overflow:hidden}
 .${C}__drop[hidden]{display:none}
-.${C} .peekover-diff-picker{box-sizing:border-box; max-height:min(60vh,calc(100vh - 6rem)); overflow:auto; padding:6px}
+.${C} .peekover-diff-picker{box-sizing:border-box; max-height:min(60vh,calc(100vh - 6rem)); overflow:auto; scrollbar-color:var(--faint) transparent; padding:6px}
 .${C} .peekover-diff-picker[hidden]{display:none}
 .${C}__drop .peekover-diff-status{margin:0; padding:.55rem .75rem; font:400 13px/1.45 var(--sans); color:var(--ink);
   border-top:1px solid var(--line)}
