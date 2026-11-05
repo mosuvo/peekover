@@ -791,7 +791,10 @@ describe.each(GEOMETRY_WIDTHS)('1.5 · rows 5 + 8 — the clearance reading at %
     // of leaving it to the log. If a reading changes without the lane changing — a copy edit that
     // widens the label, a column-margin change — this reds carrying both rects. 6.1 is free to
     // invalidate the whole table by choosing a lane; that is what choosing means.
-    const OCCUPIED = new Set(['1280 cs open', '1280 cs default']);
+    // RE-SPELLED at 013 task 5.6 (census C064): the badge, restyled to the toolbar's (12px, 6 / 11 padding), and the
+    // column's first line clearing the top chrome at <= 1280 px (the human's ruling) leave NO overlap at 1280 either —
+    // the table is now empty; any overlap at a measured width reds with its rects.
+    const OCCUPIED = new Set<string>([]);
     expect(
       hits.length > 0,
       `the measured overlap set changed: ${hits.length === 0 ? 'NONE' : hits.join(' · ')}`,

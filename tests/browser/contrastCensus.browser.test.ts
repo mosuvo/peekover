@@ -6,7 +6,8 @@
 // source-over). The bar is WCAG 2.1 AA 1.4.3 — 4.5:1, or 3:1 for large text (24px, or 18.66px bold).
 //
 // SCOPE (tasks.md 2.2): the content-script reader (a file:// fixture — watching, the agent badge, a
-// blocked image — and a raw-host fixture), the app shell, the reader pane (code highlighted, math
+// blocked image — and a raw-host fixture; from 013 task 5.6 also the network used, the Raw view and the
+// render-failure banner), the app shell, the reader pane (code highlighted, math
 // rendered), the editor, the three panels (Stored data, Export, the code-theme picker), the
 // unsaved-changes dialog and (013 task 5.4) the Compare picker with a snapshot, the diff view and the diagram
 // lightbox, and (5.5) every app state. NOT measured here: SVG text (diagram labels — diagramTheme.browser.test.ts
@@ -396,6 +397,43 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       census(host, 'tab reader (raw host)', theme);
     });
 
+    // 013 task 5.6: the tab reader's states the fixtures above do not reach — the load bar used (the network
+    // indicator lit, the watch pill at rest), the user's Raw view, and the render-failure banner.
+    it(`content-script reader, network used and the Raw view — ${theme}`, async () => {
+      registerWatchTarget(watchTarget());
+      const host = freshHost();
+      mount(DOC, host);
+      await themed(host, theme);
+      host.shadowRoot!.querySelector<HTMLElement>('.peekover-remote-load')!.click();
+      await waitFor(() => host.getAttribute('data-network') === 'active', 'the network indicator lit');
+      await sleep(250);
+      census(host, 'tab reader (network used)', theme);
+      host.shadowRoot!.querySelector<HTMLElement>('.peekover-mode-toggle')!.click();
+      await waitFor(() => host.getAttribute('data-mode') === 'raw', 'the Raw view');
+      await sleep(250);
+      census(host, 'tab reader (Raw view)', theme);
+    });
+
+    it(`content-script reader, the render-failure banner — ${theme}`, async () => {
+      const host = freshHost();
+      const root = host.attachShadow({ mode: 'open' });
+      const commit = ShadowRoot.prototype.replaceChildren;
+      root.replaceChildren = function forced(this: ShadowRoot, ...nodes: (Node | string)[]): void {
+        if (nodes.some((n) => n instanceof Element && n.classList.contains('peekover-reader'))) throw new Error('forced render failure');
+        commit.apply(this, nodes);
+      };
+      const warn = console.warn;
+      console.warn = () => undefined;
+      try {
+        mount(DOC, host);
+      } finally {
+        console.warn = warn;
+      }
+      await themed(host, theme);
+      await waitFor(() => host.shadowRoot!.querySelector('.peekover-alert'), 'the banner');
+      census(host, 'tab reader (render failure)', theme);
+    });
+
     it(`app shell and reader pane — ${theme}`, async () => {
       // The theme is set BEFORE the page mounts: a theme change after it can re-render the code block,
       // and a census read mid-swap misses its tokens.
@@ -488,7 +526,7 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     }, 60_000);
 
     // 013 task 5.5: every app state the census did not measure — the first run (no folder: the setup card in the body),
-    // the four idle notices (cancelled, could not open, access denied, unsupported), a folder with no markdown files, a
+    // the idle notices (cancelled, could not open, access denied; 5.6 removed `unsupported`, which nothing produced), a folder with no markdown files, a
     // search with no match, a folder too large to list, a folder open with no file chosen, an empty file and an
     // unreadable file. Each is its own surface; the read-only-snapshot note is already in "app page" (persistable false).
     it(`the app states — ${theme}`, async () => {
@@ -503,7 +541,6 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
         { name: 'cancelled', outcome: { ok: false, reason: 'cancelled', message: 'No folder was opened.' }, root: '.peekover-app__start' },
         { name: 'could not open', outcome: { ok: false, reason: 'error', message: 'Could not open that folder. Please try again.' }, root: '.peekover-app__start' },
         { name: 'access denied', outcome: { ok: false, reason: 'denied', message: 'Access to this folder wasn’t granted. Click it again to re-allow it.' }, root: '.peekover-app__start' },
-        { name: 'unsupported', outcome: { ok: false, reason: 'unsupported', message: 'This browser cannot open folders.' }, root: '.peekover-app__start' },
         { name: 'empty folder', outcome: { ok: true, source: folder({ files: [] }) }, root: '.peekover-app__body' },
         { name: 'too large', outcome: { ok: true, source: folder({ truncated: true }) }, root: '.peekover-app__body' },
         {
@@ -557,8 +594,9 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     console.log(`CENSUS-EXEMPT ${JSON.stringify({ disabled: exempt.disabled, m12: Object.fromEntries(exempt.m12), g5: Object.fromEntries(exempt.g5) })}`);
     // Non-vacuous: every surface and theme was measured. KEEPS: every surface × theme measured (C093); RE-SPELLED at
     // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added), and at 5.5,
-    // 22 → 44 (eleven app states).
-    expect(covered.size, 'surfaces × themes measured').toBe(44);
+    // 22 → 44 (eleven app states), and at 5.6, 44 → 42 (`unsupported` removed: no browser Peekover supports produces it)
+    // → 48 (the tab reader's network-used, Raw-view and render-failure states).
+    expect(covered.size, 'surfaces × themes measured').toBe(48);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);

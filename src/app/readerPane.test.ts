@@ -75,6 +75,8 @@ describe('reader pane (DOM controller)', () => {
     const state = pane.element.querySelector('[data-state="no-selection"]');
     expect(state).not.toBeNull();
     expect(pane.element.textContent?.trim()).not.toBe('');
+    // The detail copy (human-approved 2026-11-05: it shows only with a folder open).
+    expect(state!.textContent).toContain('Pick a file to start reading.');
     // Nothing has been mounted yet.
     expect(pane.element.querySelector('.peekover-app__reader__host')).toBeNull();
   });

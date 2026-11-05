@@ -498,7 +498,7 @@ describe('5.1 — the folder pane, restyled', () => {
   });
 });
 
-// ── M13 task 5.5 — the empty / denied / unsupported app states (tasks.md 5.5: composed from the mock's `.alert`,
+// ── M13 task 5.5 — the empty and denied app states (tasks.md 5.5: composed from the mock's `.alert`,
 // mockup.html:130-131 and :380-381, and the setup card, :327-329 in the `.panelbox`, :194 — no new vocabulary) ──
 //
 // HUMAN RULING (2026-11-05, 5.5's no-document question: "Mock + uniform"): with no folder there is no pane — the setup
@@ -512,7 +512,7 @@ describe('5.1 — the folder pane, restyled', () => {
 // message is on screen — AGENTS.md #5), then the look (an alert, or the card), then every text >= 4.5:1 as painted.
 
 type Outcome = OpenFolderOutcome;
-const NOT: (reason: 'cancelled' | 'error' | 'denied' | 'unsupported', message: string) => Outcome = (reason, message) => ({ ok: false, reason, message });
+const NOT: (reason: 'cancelled' | 'error' | 'denied', message: string) => Outcome = (reason, message) => ({ ok: false, reason, message });
 
 /** A probe's computed value for a token expression, read inside the shell. */
 function tok(prop: 'color' | 'box-shadow' | 'background-color', value: string): string {
@@ -647,12 +647,12 @@ describe('5.5 — every app state: never blank, the mock vocabulary, text >= 4.5
     message: string;
     look: (el: HTMLElement) => void;
   }
-  const idleNotice = (name: string, outcome: Outcome, warn = false): StateCase => ({
+  const idleNotice = (name: string, outcome: Outcome): StateCase => ({
     name,
     arrange: async (t) => void (await mountState(1440, t, outcome)),
     find: () => container.querySelector<HTMLElement>('.peekover-app__start .peekover-app__notice'),
     message: (outcome as { message: string }).message,
-    look: (el) => expectAlert(el, name, warn),
+    look: (el) => expectAlert(el, name),
   });
   const card = (): HTMLElement => container.querySelector<HTMLElement>('.peekover-app__empty')!;
   const readerState = (kind: string): (() => HTMLElement | null) => () => container.querySelector<HTMLElement>(`.peekover-app__reader__state[data-state="${kind}"]`);
@@ -679,7 +679,6 @@ describe('5.5 — every app state: never blank, the mock vocabulary, text >= 4.5
     idleNotice('the picker cancelled', NOT('cancelled', 'No folder was opened.')),
     idleNotice('a folder that could not be opened', NOT('error', 'Could not open that folder. Please try again.')),
     idleNotice('access denied', NOT('denied', 'Access to this folder wasn’t granted. Click it again to re-allow it.')),
-    idleNotice('unsupported', NOT('unsupported', 'This browser cannot open folders.'), true),
     {
       name: 'access revoked',
       arrange: async (t) => {

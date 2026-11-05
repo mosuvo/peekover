@@ -12,7 +12,7 @@ import { TABLE_TOOLBAR_CLASS, TABLE_STATE_ATTR } from '../render/tableEnhancer';
 // Task 1.2: the shell wires selection → the reader pane (unchanged M1 mount()).
 // Task 3.2: the "Open a folder" CTA is now LIVE — the grant flow (plain line → picker →
 // chip → folder body) with a DESIGNED never-blank state for every non-grant outcome
-// (cancelled / unsupported / error / empty / too-large). The native picker itself is the
+// (cancelled / error / empty / too-large). The native picker itself is the
 // human gate (6.3); the real handle→walk→read path is the OPFS browser test. Here we drive
 // the flow through an INJECTED opener (jsdom has no native picker) and an injected store
 // (jsdom has no IndexedDB) to prove the DOM-shape wiring: chip, states, reader, recents.
@@ -290,24 +290,6 @@ describe('appShell (task 3.2 folder grant flow)', () => {
     await app.openFolder();
 
     expect(container.querySelector('[data-state="read-only-snapshot"]')).toBeNull();
-  });
-
-  it('an injected UNSUPPORTED outcome still degrades to an honest state (defensive, never blank)', async () => {
-    const app = mountAppShell(container, {
-      openFolder: openerReturning({
-        ok: false,
-        reason: 'unsupported',
-        message: 'This browser cannot open a live folder.',
-      }),
-      store: fakeStore(),
-    });
-
-    await app.openFolder();
-
-    const notice = container.querySelector('.peekover-app__notice');
-    expect(notice).not.toBeNull();
-    expect(notice!.textContent).toContain('cannot open a live folder');
-    expect(container.querySelector('.peekover-app__cta')).not.toBeNull();
   });
 
   it('REVOKE drops the record and returns to the affordance, clearing the reader', async () => {

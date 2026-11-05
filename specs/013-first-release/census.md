@@ -290,6 +290,22 @@ retired while its function has no other test. Function by function:
   new layout test); `filesOverlay` gains 5.5's layout and state tests; `nativeControls` deletes its 2 rows (4 per engine
   left, 5.6's); `contrastCensus` adds the app states.
 
+- **5.6** (2026-11-05 — the browser-tab reader restyled; the `unsupported` outcome removed; the copy fix): the tab
+  reader's controls change look, the open contents card starts below the mode pill, and at ≤ 1280 px its column starts
+  lower (the human's at-rest ruling). **RE-SPELLED:** C064 (`agentBadge` rows 5 + 8 at 1280: the measured pin kept, its
+  OCCUPIED table now empty — the badge no longer overlaps the h1); C009 (`appShell` unit: its injected `unsupported`
+  test RETIRED with the outcome — see Retirements); C093 (`contrastCensus` INVENTORY) — its count 44 → 42 (the
+  `unsupported` state gone) → 48 (the tab reader's network-used, Raw-view and render-failure states; `KEEPS:` in the
+  test). **KEPT, unchanged and green** (each still states its property): C021 (`readerPane` unit — it also pins the new
+  no-file copy), C054, C055 (direct mount, the Raw / Reading toggle), C062, C066, C068, C069, C071, C073 (the badge out of
+  flow, its rect on its lane, the sibling, the gate), C075, C078, C080, C083, C095, C096 (the tab reader at AA), C128,
+  C129, C151–C153, C176, C248, C253, C254, C261 (print hides the chrome), C267, C268, C275, C287, C292–C301 (the theme
+  pill: a11y, labels, clears its neighbours), C308, C309, C312 (system faces on the content script), C313, C314 (the
+  watch pill), C329–C337, C346, C348, C351, C352. **Retired:** C009's `unsupported` case (below). Outside the census:
+  `tabReaderChrome` (new — the look, every state's contrast, the corner, no chrome over text at rest, the tab order);
+  `nativeControls` deletes its last 4 rows — **its pending list is EMPTY**; `filesOverlay` drops its `unsupported`
+  state case. The census's pending list stays EMPTY.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).
@@ -315,6 +331,7 @@ they stay green.
 | C050 | `editorEnhancer.test.ts` | the edit control › is idempotent: no second control and no second stylesheet | idempotent install of the shadow-root Edit pill; pill removed | 4.3 |
 | C051 | `editorEnhancer.test.ts` | the edit control › is one real <button> placed directly after the mode pill, with its own stylesheet | the shadow-root Edit pill and EDIT_CONTROL_CSS are removed (D-6) | 4.3 |
 | C060 | `agentBadge.browser.test.ts` | 1.5 · (b) the contained pane's top:50 slot at %s — badge vs diff picker/status (MEASURED) | Badge-vs-diff-picker lane collision inside the app reader pane; both leave the shadow root | 4.5 |
+| C009 (part) | `appShell.test.ts` | an injected UNSUPPORTED outcome still degrades to an honest state | the `unsupported` open outcome and its warn notice — removed at 5.6: no browser Peekover supports can lack a folder route (only Firefox for Android does; the human: not supported, 2026-11-05) | 5.6 |
 | C063 | `agentBadge.browser.test.ts` | 1.5 · rows 5 + 8 — the clearance reading at %s [app page, rail open + default] | Floating badge clearance vs text and pills on the app page; no badge or pills in the app shadow root | 4.5 |
 | C065 | `agentBadge.browser.test.ts` | 1.5 · the 414x896 reading, RECORDED [app page arm] | Floating badge reading in the app pane at 414; badge leaves the shadow root | 4.5 |
 | C067 | `agentBadge.browser.test.ts` | 1.5 · the badge's own rect at %s — row 11 anchored to its lane [app page arm, 1280 + 1400] | Floating-badge lane position on the app page; badge moves to the toolbar | 4.5 |
@@ -352,7 +369,7 @@ re-spelled 12 · unchanged 8
 | C006 | appShell (task 1.1 skeleton) — all 3 tests (renders header/folder/reader; CTA + plain line; idempotent mount) | Header, folder pane, reader pane exist; CTA live with trust line; second mount replaces | unchanged |  |  | app |  |
 | C007 | appShell (task 1.2 reader wiring + designed states) — all 4 tests | No-selection state; selectFile renders h1 in host shadow root; empty and unreadable designed states | unchanged |  |  | app |  |
 | C008 | appShell (task 1.6 — the "erase snapshots" control) — all 6 tests | Erase-snapshots button disabled/enabled by count, arm/confirm/cancel, confirm copy names erased and kept | re-spelled | Erase-snapshots control inside Stored data; only the `openPanel()` helper (line 931-933) moves | 4.4 | app | Stored data opening/wipe |
-| C009 | appShell (task 3.2 folder grant flow) — all 9 tests | Grant chip + tree, recents, too-large/empty/cancelled/unsupported/snapshot states, revoke clears and erases snapshots first | unchanged |  |  | app |  |
+| C009 | appShell (task 3.2 folder grant flow) — all 9 tests | Grant chip + tree, recents, too-large/empty/cancelled/unsupported/snapshot states, revoke clears and erases snapshots first | re-spelled | 8 tests: the injected `unsupported` test RETIRED with the outcome (no supported browser produces it; the human, 2026-11-05); every other state kept | 5.6 | app |  |
 | C010 | appShell (task 4.3 — the "Clear diagram cache" control) — all 6 tests | Verbatim 'Clear diagram cache' label, disabled at zero, arm/confirm/cancel, confirm copy | re-spelled | Clear-diagram-cache control inside Stored data; only the `openPanel()` helper (line 1111-1113) moves | 4.4 | app | Stored data opening/wipe |
 | C011 | appShell (task 5.2 recents/pins reopen hub) — all 6 tests | Hub surfaces recents/pins; Chromium regrant vs Firefox repick; pin/unpin folder and file; denied reopen notice | unchanged |  |  | app |  |
 | C012 | appShell (task 6.0 what's-stored + wipe controls) — the other 5 tests (summary, empty state, wipe confirm, wipe copy, cancel) | Panel opened via header storage toggle: summary lines, Nothing-stored state, inline wipe confirm/cancel, wipe copy | re-spelled | Stored data panel content and inline wipe flow; only the `openPanel()` helper (line 719-721) moves | 4.4 | app | Stored data opening/wipe |
@@ -498,7 +515,7 @@ re-spelled 5 · retired 5 · unchanged 10
 | C061 | 1.5 · row 10 — the badge is OUT OF FLOW at %s [app page arm] | App-page h1 rect identical with and without the shadow-root badge | re-spelled | The badge appearing (now in the toolbar) does not move the reading column's first block (toolbar wrap risk) | 4.5 | app |  |
 | C062 | 1.5 · row 10 — the badge is OUT OF FLOW at %s [content script arm] | h1 rect identical with and without the badge | unchanged |  |  | tab |  |
 | C063 | 1.5 · rows 5 + 8 — the clearance reading at %s [app page, rail open + default] | App-page badge clears text and band pills (pinned NONE); requires shadow-root mode toggle present | retired | Floating badge clearance vs text and pills on the app page; no badge or pills in the app shadow root | 4.5 | app |  |
-| C064 | 1.5 · rows 5 + 8 — the clearance reading at %s [content script, rail open + default] | Measured badge overlaps vs h1/p/band siblings; pinned OCCUPIED set (1280 cs) | unchanged |  |  | tab |  |
+| C064 | 1.5 · rows 5 + 8 — the clearance reading at %s [content script, rail open + default] | Measured badge overlaps vs h1/p/band siblings; pinned OCCUPIED set (1280 cs) | re-spelled | The measured pin KEPT; its table is now EMPTY — the restyled badge and the at-rest top clearance leave no overlap at 1280 | 5.6 | tab |  |
 | C065 | 1.5 · the 414x896 reading, RECORDED [app page arm] | Records app-page shadow-root badge rect and collisions at 414 | retired | Floating badge reading in the app pane at 414; badge leaves the shadow root | 4.5 | app |  |
 | C066 | 1.5 · the 414x896 reading, RECORDED [content script arm] | Records badge rect and band collisions at 414; only realRect asserted | unchanged |  |  | tab |  |
 | C067 | 1.5 · the badge's own rect at %s — row 11 anchored to its lane [app page arm, 1280 + 1400] | App-page shadow-root badge rect equals its declared inset for all five names | retired | Floating-badge lane position on the app page; badge moves to the toolbar | 4.5 | app |  |

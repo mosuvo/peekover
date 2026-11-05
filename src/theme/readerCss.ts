@@ -79,6 +79,7 @@ export const READER_CSS = /* css */ `
   overflow:auto;
   background:var(--paper);
   color:var(--ink);
+  scrollbar-color:var(--faint) transparent;
   font-family:var(--serif);
   font-size:17px;
   line-height:1.7;
@@ -104,6 +105,7 @@ export const READER_CSS = /* css */ `
   width:100%;
 }
 .peekover-reader > :first-child{margin-top:0}
+@media screen and (max-width:1280px){.peekover-mode-toggle~.peekover-reader{padding-top:112px}}
 
 /* ---- headings ---- */
 .peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
@@ -251,18 +253,18 @@ export const READER_CSS = /* css */ `
 .peekover-diff .diff-unchanged{color:var(--muted)}
 .peekover-diff a{color:inherit}
 
-/* One minimal pill, fixed in an unobtrusive corner. Styled from tokens (panel/ink/
-   line) — NOT the mockup's full toolbar. Stays put while the column scrolls; its
-   transition is neutralised under prefers-reduced-motion by the global rule above. */
-.peekover-mode-toggle{
-  position:fixed;top:16px;right:16px;z-index:2;
-  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
+.peekover-mode-toggle,.peekover-theme-toggle,.peekover-watch,.peekover-agent-badge,.peekover-remote-load,.peekover-net{
+  position:fixed;left:16px;z-index:2;margin:0;
+  font:600 12.5px/1 var(--sans);white-space:nowrap;
   color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
+  border:1px solid var(--line);border-radius:8px;
+  padding:7px 11px;box-shadow:var(--shadow);
   transition:color .15s,background .15s,border-color .15s;
 }
-.peekover-mode-toggle:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-mode-toggle,.peekover-theme-toggle,.peekover-watch,.peekover-remote-load{cursor:pointer}
+.peekover-mode-toggle:hover,.peekover-theme-toggle:hover,.peekover-watch:hover,.peekover-remote-load:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-mode-toggle{top:16px;left:auto;right:16px}
+.peekover-watch,.peekover-agent-badge,.peekover-net{border-radius:999px}
 
 /* ============ Theme control (task 5.1 — auto/light/dark) ============ */
 /* The same pill chrome as the mode toggle, in the BOTTOM-LEFT, stacked above the network
@@ -276,15 +278,7 @@ export const READER_CSS = /* css */ `
    That leaves the bottom-left, which only the network indicator uses (bottom:16px, and hidden
    until the user triggers a network action) — so this sits one pill-height above it at 56px and
    the two never intersect whether or not the indicator is lit. Tokens ONLY. */
-.peekover-theme-toggle{
-  position:fixed;bottom:56px;left:16px;z-index:2;
-  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
-  color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
-  transition:color .15s,background .15s,border-color .15s;
-}
-.peekover-theme-toggle:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-theme-toggle{bottom:56px}
 
 /* ============ Watch control (spec 005 task 4.1 — "watching") ============ */
 /* THE MOCKUP'S BADGE, TRANSLATED INTO THIS READER'S CHROME FAMILY — not its toolbar.
@@ -311,16 +305,7 @@ export const READER_CSS = /* css */ `
    pill family's own var(--line) border is used instead. Nothing is lost: the --ok semantic is
    carried by the TEXT and the DOT, which are also the two carriers a colour-blind user reads via
    the label change rather than the hue (a11y — state is never colour-only). */
-.peekover-watch{
-  position:fixed;bottom:96px;left:16px;z-index:2;
-  display:inline-flex;align-items:center;gap:7px;
-  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
-  color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
-  transition:color .15s,background .15s,border-color .15s;
-}
-.peekover-watch:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-watch{bottom:96px;display:inline-flex;align-items:center;gap:7px;padding:7px 13px}
 /* ACTIVE: the mockup's green. Driven off the HOST attribute, so it survives replaceChildren —
    which matters precisely because watching is what causes the re-render. */
 :host([data-watch="active"]) .peekover-watch{color:var(--ink);border-color:var(--ok)}
@@ -328,7 +313,7 @@ export const READER_CSS = /* css */ `
 
 .peekover-watch__dot{
   flex:none;width:7px;height:7px;border-radius:50%;
-  background:var(--faint);
+  background:var(--muted);
 }
 /* The pulse — an expanding ring that then vanishes, the mockup's @keyframes pulse with the
    color-mix ring replaced by the --ok-soft token. INFINITE, and therefore the strongest possible
@@ -466,14 +451,7 @@ export const READER_CSS = /* css */ `
 .peekover-diff-status[hidden]{display:none}
 
 /* Agent-file badge (008 task 1.3, D-1/D-2/D-12) — PROVISIONAL LANE, rationale: below this literal */
-.peekover-agent-badge{
-  position:fixed;top:56px;left:16px;z-index:2;
-  margin:0;
-  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
-  color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:7px 15px;box-shadow:var(--shadow);
-}
+.peekover-agent-badge{top:56px;font-size:12px;padding:6px 11px}
 
 /* ============ Remote-resource policy (block-by-default) ============ */
 /* A blocked remote image becomes this inert, themed placeholder (no src → cannot
@@ -493,29 +471,14 @@ export const READER_CSS = /* css */ `
 
 /* Opt-in affordance: one pill in the top-left, mirroring the mode-toggle chrome
    (top-right). Removes itself once clicked — a one-shot; reload re-blocks. */
-.peekover-remote-load{
-  position:fixed;top:16px;left:16px;z-index:2;
-  font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;
-  color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:6px 15px;cursor:pointer;box-shadow:var(--shadow);
-  transition:color .15s,background .15s,border-color .15s;
-}
-.peekover-remote-load:hover{color:var(--ink);border-color:var(--faint)}
+.peekover-remote-load{top:16px}
 
 /* Network indicator: the "this view has now used the network" light. Ships HIDDEN
    and is revealed ONLY when the host carries data-network="active" (set the moment
    the user opts into a network action) — then it stays for the rest of the view. It
    never shows otherwise (AGENTS.md #1). --del is the one warm accent — a deliberate,
    honest signal that the zero-network default has been left. */
-.peekover-net{
-  position:fixed;bottom:16px;left:16px;z-index:2;display:none;
-  align-items:center;gap:8px;
-  font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.03em;
-  color:var(--muted);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;
-  padding:5px 12px 5px 11px;box-shadow:var(--shadow);
-}
+.peekover-net{bottom:16px;display:none;align-items:center;gap:8px;font-size:12px;padding:6px 11px}
 :host([data-network="active"]) .peekover-net{display:inline-flex}
 .peekover-net__dot{
   flex:none;width:8px;height:8px;border-radius:50%;
@@ -527,9 +490,9 @@ export const READER_CSS = /* css */ `
    filled box. Shown ONLY on the failure path, above the raw source; a user-chosen
    Raw view (via the toggle) has NO banner. */
 .peekover-alert{
-  max-width:76ch;margin:26px auto 0;padding:12px 16px;
-  font-family:var(--sans);font-size:14px;color:var(--ink);
-  background:var(--hl-soft);
+  max-width:76ch;margin:26px auto 0;padding:10px 14px;
+  font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--ink);
+  background:color-mix(in srgb,var(--hl-soft) 55%,transparent);
   border-left:3px solid var(--warn);border-radius:0 var(--r) var(--r) 0;
 }
 
@@ -543,9 +506,9 @@ export const READER_CSS = /* css */ `
 :host{ --toc-w:250px; }
 
 .peekover-toc{
-  position:fixed;top:8px;right:8px;bottom:8px;z-index:1;
+  position:fixed;top:54px;right:8px;bottom:8px;z-index:1;
   box-sizing:border-box;width:calc(var(--toc-w) - 8px);max-width:calc(38vw - 8px);
-  overflow:auto;padding:47px 18px 121px;
+  overflow:auto;padding:18px 18px 121px;
   /* OPAQUE surface (group-3 gate fix): without a background the rail is see-through and
      the reading column's text shows THROUGH it. --paper matches the page; the card's
      border and shadow set it off. (Collapsed, the handle's box is paper-on-paper.) */
@@ -820,6 +783,27 @@ export const READER_CSS = /* css */ `
 // from the strip's host rules, which reader.test.ts slices to the first blank line and pins as
 // declaring no surface. The math figure's own scroll box gets its scrollbar colour in MATH_CSS
 // (mathCss.ts, app-page only); the highlighted code pre gets it here.
+
+// ============================================================================
+// THE BROWSER-TAB READER'S CHROME — 013 task 5.6 (gate-1 Q10's default arm: the pills, in place)
+// ============================================================================
+// The floating controls take the approved toolbar's look for the same controls (toolbar.ts draws
+// them on the app page): Raw / Reading, Theme and the load bar are its buttons (`--panel`, 1 px
+// `--line`, radius 8, 600 12.5px, `--muted` → `--ink` under the pointer); the watch pill, the agent
+// badge and the network indicator its round pills (radius 999; the badge and the indicator 12px).
+// One shared rule carries the look; each control keeps only its lane (top / bottom, left or right).
+// They keep `--shadow` because they float over the page. The watch dot at rest is `--muted` (the
+// toolbar's; `--faint` was 2.60:1). The render-failure banner is the mock's `.alert.warn`, as 5.5
+// drew the app page's alerts (13px, 10 / 14 padding, the `--hl-soft` fill at 55%, the `--warn` rule).
+// The full-page host carries `scrollbar-color`; it inherits, so the page and every pre scroll with it.
+// THE CORNER (5.2's note): the open contents card starts at 54px, below the mode pill (16 + 28.5)
+// with the card's own 18px padding — it sat under the pill's corner from 8px with 47px padding.
+// CONTAINED_CSS puts the 47px back on the app page's rail (its own `top:8px` already wins there).
+// AT REST (the human's ruling, 2026-11-05): at <= 1280px the column starts at 112px, so its first
+// line clears the top chrome — the agent badge (56 + 26) and, at 414, the collapsed contents box,
+// which paints `--paper` to 98px. Keyed to the mode pill as a preceding sibling, so it reaches only
+// the full-page reader: the app page (`pills: false`), the editor preview (`chrome: false`) and an
+// HTML export (which clones `.peekover-reader` alone) draw no pill and keep their 56px.
 
 // ============================================================================
 // PRINT MODE + THE @page MARGIN-BOX FIDELITY PROBE — 010 D-7, task 6.1
@@ -1414,7 +1398,7 @@ export const READER_CSS = /* css */ `
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; overflow:visible; }
 .peekover-net{ position:absolute; }
-.peekover-toc{ position:sticky; top:8px; right:auto; bottom:auto; height:calc(100cqh - 16px); margin:8px 8px calc(8px - 100cqh) auto; }
+.peekover-toc{ position:sticky; top:8px; right:auto; bottom:auto; height:calc(100cqh - 16px); margin:8px 8px calc(8px - 100cqh) auto; padding-top:47px; }
 :host([data-toc="collapsed"]) .peekover-toc{ top:0; height:100cqh; margin:0 0 -100cqh auto; width:max-content; background:none; pointer-events:none; }
 :host([data-toc="collapsed"]) .peekover-toc__toggle{ pointer-events:auto; }
 @media screen{

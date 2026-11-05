@@ -57,14 +57,10 @@ type Theme = 'light' | 'dark';
  * 5.4 deleted its 4 (the two panel slots, the code-theme picker, the capture checkbox) and added two surfaces, the
  * Compare picker and the diagram lightbox, whose findings it fixed rather than listed (6 rows per engine left).
  * 5.5 deleted its 2: the app page's reader pane scrolls with its own scrollbar colour (4 rows per engine left, 5.6's).
+ * 5.6 deleted the last 4: the full-page reader's host carries the scrollbar colour, inherited by its code block.
+ * THE LIST IS EMPTY (gate-3 Q4): any native-styled control or scrollbar on a swept surface is a red.
  */
-const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [
-  // 5.6 — the content-script reader (its host, which mount() makes a scroller, and its code block)
-  ['tab reader (file) · body > div', '5.6'],
-  ['tab reader (file) · .peekover-reader > pre', '5.6'],
-  ['tab reader (raw host) · body > div', '5.6'],
-  ['tab reader (raw host) · .peekover-reader > pre', '5.6'],
-];
+const PENDING_ROWS: ReadonlyArray<readonly [string, string]> = [];
 const PENDING: ReadonlyMap<string, string> = new Map(
   ['chromium', 'firefox'].flatMap((engine) => PENDING_ROWS.map(([row, task]) => [`${engine} · ${row}`, task] as const)),
 );

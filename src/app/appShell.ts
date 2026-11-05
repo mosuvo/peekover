@@ -2070,7 +2070,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   /** Paint the idle affordance: the plain-language line + the live CTA + the reopen hub,
    *  optionally above a designed notice (e.g. "No folder was opened." after a cancel). Never
    *  blank. */
-  function paintIdle(notice?: { text: string; tone?: 'warn' }): void {
+  function paintIdle(notice?: string): void {
     endEditSession(); // the folder is closed: no session may outlive it (5.3, route 2(ii))
     grantState = IDLE_GRANT;
     activeFolderId = null;
@@ -2094,8 +2094,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (notice) {
       const n = doc.createElement('p');
       n.className = `${SHELL_CLASS}__notice`;
-      if (notice.tone) n.setAttribute('data-tone', notice.tone);
-      n.textContent = notice.text;
+      n.textContent = notice;
       wrap.append(n);
     }
 
@@ -2193,13 +2192,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     existingFolderId?: string,
   ): Promise<FolderSource | null> {
     if (!outcome.ok) {
-      // Designed never-blank states for every non-grant outcome. `unsupported` is a firmer
-      // message (this engine can't yet); cancel/error/denied return to the affordance + hub.
-      if (outcome.reason === 'unsupported') {
-        paintIdle({ text: outcome.message, tone: 'warn' });
-      } else {
-        paintIdle({ text: outcome.message });
-      }
+      // Designed never-blank states for every non-grant outcome: cancel/error/denied return to
+      // the affordance + hub with the outcome's message as a notice.
+      paintIdle(outcome.message);
       return null;
     }
 

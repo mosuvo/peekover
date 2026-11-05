@@ -101,7 +101,7 @@ const PANE_CSS = /* css */ `
 const STATE_COPY: Record<Exclude<ReaderOutcome['kind'], 'render'>, { title: string; detail: string }> = {
   'no-selection': {
     title: 'Select a file to read it here',
-    detail: 'Open a folder, then pick a markdown file to render it in the reader.',
+    detail: 'Pick a file to start reading.',
   },
   'empty-file': {
     title: 'This file is empty',

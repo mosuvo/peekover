@@ -1,6 +1,129 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.6 — the browser-tab reader restyled; the sweep's pending list empty (plan §3; gate-1 Q10's
+  default arm). HUMAN RULINGS: Firefox for Android is not a supported browser (the `unsupported` outcome removed); "no
+  chrome over text" read AT REST.** Local, on `main` at `1dbb0c5` (5.5), up to date with `origin/main`, tree clean;
+  Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on
+  2026-11-05. **CI read with `gh`:** `1dbb0c5` — CI success (run 41959150441, job `verify`; watched to completion),
+  Supply chain success (41959150633).
+  - **PART A (a) — THE `unsupported` OPEN OUTCOME: REMOVED.** 5.5 found no code path producing it. Every folder route,
+    each engine (MDN browser-compat-data 6.0.0, read 2026-11-05): **the picker** — Chromium with `showDirectoryPicker`
+    (86+) takes it; without it (Brave, a flag) and on Firefox, `<input webkitdirectory>` (Chrome 7, Edge 13, Opera 15,
+    Firefox 50); a cancel is `cancelled`, a throw `error`. **The drop** — Chromium `getAsFileSystemHandle` (86+), else
+    `webkitGetAsEntry` (Chrome 13, Firefox 50); a drop with no folder entry is `cancelled` ("Drop a folder to open it.").
+    **The reopen** — only a persistable (Chromium) handle is reopened; no permission API → granted, a declined re-ask
+    `denied`, a failed walk `error`. So no browser Peekover supports (spec.md §58: Chrome, Edge, Brave, Opera, Vivaldi,
+    Firefox; the manifest declares no `gecko_android`) can lack a folder route. **Only Firefox for Android lacks both
+    `webkitdirectory` and `webkitGetAsEntry`** (`version_added: false`). **HUMAN RULING (2026-11-05, AskUserQuestion,
+    verbatim): "No — remove it (Recommended)"** — Firefox for Android is not a supported browser. Removed: the reason from
+    `OpenFolderOutcome` (`folderSource.ts`, with the finding in its doc comment), `applyOutcome`'s warn branch and
+    `paintIdle`'s `tone` argument (`appShell.ts`; the `[data-tone="warn"]` rule stays — the read-only note uses it), the
+    injected-only tests: `appShell.test.ts` "an injected UNSUPPORTED outcome …", `filesOverlay`'s "unsupported" state
+    case, the census's "unsupported" app state (its INVENTORY 44 → 42). Its copy ("This browser cannot open …") lived
+    only in those tests. **Revisit-when:** Android is ever added — a real feature-detect (`'webkitdirectory' in
+    HTMLInputElement.prototype`) would be the producer.
+  - **PART A (b) — THE COPY FIX (HUMAN-APPROVED 2026-11-05):** the reader's no-file-chosen detail, which since 5.5 shows
+    only with a folder open, is now "Pick a file to start reading." (was "Open a folder, then pick a markdown file to
+    render it in the reader."). `readerPane.test.ts` pins it. No other copy changed.
+  - **Kickoff vs tasks.md, flagged:** tasks.md 5.6 also requires the content-script first-paint A-B-A (the kickoff
+    omits it) — run, below. The kickoff's "5.3's buttons" read as the approved toolbar's buttons for these same controls
+    (the app page draws them so); 5.3's copy button is the in-document tool look. tasks.md names no watch note or
+    capture disclosure — left as they are.
+  - **HUMAN RULING — "no chrome over text" (2026-11-05, AskUserQuestion, verbatim): "At rest + fix the top
+    (Recommended)".** Measured at 5.5 (both engines, every pill showing): 1440 clear; at a document's end the bottom-left
+    stack clears at every width (the 130 px band); at the top the agent badge covered the h1 at 1280 / 1080 / 414, and at
+    1080 / 414 the bottom-left stack covered body text; mid-scroll floating pills overlap by design (C309; C064 pinned
+    the badge's). The ruling: hit-test the top chrome (mode pill, load bar, agent badge, the contents card or button)
+    with the document at its top and the bottom-left stack (Theme, watch, network) at its end, at 1440 / 1280 / 1080 /
+    414; fix the top at ≤ 1280 px with the smallest layout change; the bottom-left stack over mid-page text at 1080 / 414
+    is recorded for 8.1 as inherent to floating pills.
+  - **The look (tokens only; `toolbar-mock.html` as `toolbar.ts` draws these controls; `mockup.html:130`, `:380`):**
+    Raw / Reading, Theme and the load bar are the toolbar's buttons — `--panel`, 1 px `--line`, radius 8, 600 12.5px/1 in
+    the system UI stack (Q3+Q10), `--muted` → `--ink` with a `--faint` border under the pointer; the watch pill, the agent
+    badge and the network indicator the toolbar's round pills (radius 999; the badge and the indicator 12px; watching
+    `--ink` with the `--ok` border and dot, `--ok-soft` under the pointer — unchanged); the watch dot at rest `--muted`
+    (was `--faint`, 2.60:1). They keep `--shadow` (they float). One shared rule carries the look; each control keeps only
+    its lane — positions unchanged. **The render-failure banner** is the mock's `.alert.warn` as 5.5 drew the app's: 13px
+    / 1.5, 10 / 14 padding, the `--hl-soft` fill at 55%, the 3 px `--warn` rule, `--ink`; copy unchanged, no `.tag`.
+    **Scrollbars:** the full-page host carries `scrollbar-color: --faint transparent`, which inherits to every scroller
+    inside (the page, a code or raw pre). **Behaviour, accessible names and the tab order unchanged** (pinned: mode,
+    Theme, watch, load bar, the contents button). Dropped: the old `.02em` letter-spacing (the toolbar's buttons have none).
+  - **THE CORNER (5.2's deviation 4).** Before, both engines: the mode pill [1367.5,16 → 1424,46] inside the open card
+    [1190,8 → 1432,892] at 1440; the same at 1280 ([1207.5,16 → 1264,46] in [1030,8 → 1272,892]) and 1080 ([1007.5,16 →
+    1064,46] in [830,8 → 1072,892]). Fix: the open card starts at **54 px** (the pill ends at 44.5) with the card's own 18
+    px top padding (was 8 px + 47 px under the pill). After: pill [1376.2,16 → 1424,44.5], card from 54 — a 9.5 px gap,
+    no overlap, at 1440 / 1280 / 1080, both engines. The contents button moves from 56 to 73 px while open (collapsed:
+    52, unchanged). **Text width at 1440: 684.00 px before and after, to the pixel**, both engines (also 1280 / 1080).
+    CONTAINED_CSS puts the 47 px back on the app page's rail. **The app page, re-measured against `1dbb0c5` in one
+    session (rail, contents button, h1, column, text width at 1440 / 1280 / 1189 / 1080 / 414, both engines):
+    identical to the hundredth of a pixel.**
+  - **AT REST.** At ≤ 1280 px the full-page column starts at **112 px** (was 56), so its first line clears the top
+    chrome: the agent badge (to 82) and, at 414, the collapsed contents box, which paints `--paper` to 98 (100 px was
+    measured and left the h1 under it). Keyed `.peekover-mode-toggle ~ .peekover-reader`, so only the full-page reader
+    takes it: the app page (`pills: false`), the editor preview (`chrome: false`) and an HTML export (it clones the
+    column alone) keep 56 — a first cut on `.peekover-reader` would have reached exported files; changed before
+    commit. After: no chrome over text at rest at 1440 / 1280 / 1080 / 414, file:// and raw host, both engines. **For
+    8.1:** mid-scroll, and at 1080 / 414 with the document at its top, the bottom-left stack floats over text.
+  - **Contrast** (as painted, `tabReaderChrome`, both engines; light / dark): text ≥ 4.5:1 in every state, both engines identical — at rest (Raw, Theme, the load bar, the watch pill, the badge: `--muted` on `--panel`) **5.64 / 6.94**, the lowest; under the pointer `--ink`; watching 16.18 / 14.45, hovered 15.78 / 12.91; network used 5.64 / 6.94; the Raw view's "Reading" 5.64 / 6.94; focused unchanged (the ring only); the render-failure banner 16.69 / 12.86. **Lowest 5.64.** **Non-text, for 8.1 (WCAG
+    1.4.11, from the tokens):** the buttons' and pills' border `--line` 1.21 / 1.29 on `--paper` and their `--panel` fill
+    1.06 / 1.07 (the text and `--shadow` carry them); hovered `--faint` 2.60 / 3.70; on the `--panel` fill the watch dot at
+    rest `--muted` 5.64 / 6.94 (was `--faint`), watching `--ok` 3.17 / 7.75, the network dot `--del` 4.47 / 6.34; the
+    banner's `--warn` rule 3.51 / 8.61; the scrollbar thumb `--faint` 2.60 / 3.70; the focus ring `--accent` 17.22 / 15.47.
+  - **The sweep:** 5.6's 4 rows (the full-page host and its code block's `scrollbar-color`, file:// and raw host)
+    deleted — **THE PENDING LIST IS EMPTY on both engines** (gate-3 Q4; 5.7's Verify expected it empty there — it is
+    empty one task early; 5.7 had no rows left since 5.2a). **The census** adds the tab reader's three unmeasured states —
+    the network used (the indicator lit, the watch pill at rest), the user's Raw view, the render-failure banner — both
+    themes (42 → 48 surface × theme); its pending list stays **EMPTY**.
+  - **Tests (red-first at `1dbb0c5`'s styles, both engines): 26 red (13 per engine)** in the new
+    `tests/browser/tabReaderChrome.browser.test.ts`, each its own signature — "the toolbar's button: expected '… 999px …'
+    to be '… 8px …'", the banner "expected '… rgb(255, 246, 191) … 14px' to be '… color(srgb 1 0.9647 0.749 / 0.55) …
+    13px'", "the mode pill [1367.5,16.0 → 1424.0,46.0] overlaps the open contents card [1190.0,8.0 → 1432.0,892.0]" (1440
+    / 1280 / 1080), and the at-rest hit-test at 1280 / 1080 / 414 (file) and 414 (raw host). The tab-order pin and 1440's
+    hit-test green at 5.5 (kept properties). Green after: 36 / 36. **Necessary ripple:** `agentBadge`'s C064 pin (its
+    OCCUPIED table 1280 → empty: the overlap it recorded is gone — the suite's only red on the first full run, both
+    engines, 4 tests; re-spelled); `appShell.test.ts`, `filesOverlay`, `contrastCensus` (Part A, the census states).
+  - **Ablations → red** (each restored md5-identical, `efae6fe6…` at the time): **A1** the load bar dropped from the
+    shared rule → the sweep: "tab reader (file) · .peekover-remote-load — native background rgb(240, 240, 240); native
+    border outset 2px" (Fx rgb(233, 233, 237)), file:// and raw host. **A2** 5.5's card top and padding back → 6 red,
+    "the mode pill [1376.2,16.0 → 1424.0,44.5] overlaps the open contents card [1190.0,8.0 → 1432.0,892.0]" at 1440 /
+    1280 / 1080, both engines. **A3** the at-rest padding removed → 6 red: ".peekover-agent-badge [16.0,56.0 →
+    168.1,82.0] over 1 line(s)" at 1080 / 414 and ".peekover-toc [262.9,0.0 → 414.0,98.0]" at 414, both engines (at 1280
+    the restyled, narrower badge already clears the text — 168 vs 173).
+  - **Bytes** (clean two-engine build; arms in one session against `1dbb0c5`, every other output identical in size):
+    content script **344,851 B (−1,390)**, md5 `05d63476…` (Cr) / `63646355…` (Fx) — under the +2 KB tripwire (a
+    decrease) = `READER_CSS` −1,408 + `CONTAINED_CSS` +18, itemised: the shared chrome rule and the five lanes it
+    replaced −1,600 · the host's `scrollbar-color` +44 · the banner +51 · the corner +1 (+18, CONTAINED's 47 px) · the
+    at-rest clearance +96 — residual 0. **App chunk 556,129 B (−1,542)** = the same CSS −1,390 + **Part A −152** (its own
+    arm: Part A alone, 5.5's CSS → app chunk 557,519, content script md5 `1f010928…` identical): the copy −39, the
+    outcome's removal −113. `.output` 5,975,473 / 5,975,589 B (−2,932 each; headroom 1,364,559 / 1,364,443 B); zips
+    1,962,188 / 1,962,244 B; manifests 833 / 949 B, `permissions: []`; `background.js` 3,786 B unchanged; golden EMPTY;
+    the `:host` pin 26 (one declaration added to an existing `:host` block).
+  - **Content-script first paint, A-B-A** (tasks.md 5.6; `perf-edit-never-entered.ts`, 5 rounds, the 50.4 KB gate
+    document, Chromium, this Windows machine, HEAD vs `1dbb0c5` built in one session): HEAD **161.3 ms median / 153.3
+    floor** (6 invocations), 5.5 161.7 / 151.6 (5) — **HEAD − 5.5: median −0.4 ms, floor +1.7 ms**, inside HEAD's own
+    spread (medians 4.6 ms, floors 4.0 ms): no difference measured. App page: −4.3 / −2.0 ms (HEAD spread 10.5 / 7.2).
+    Under the 2.5 ruling the gate is the difference; the absolute is an agent's local run, not the human's — recorded
+    as such (161.3 ms against 165, 3.7 ms of headroom on this machine).
+  - **Verify:** lint 0 · unit 1,502 / 1,502 (−1: the retired `unsupported` test) · browser, alone, both engines:
+    **2,474 passed / 0 failed / 52 skipped of 2,526** (+40), 588 s, EXIT 0, on the second run; the first run (2,470 / 4 failed) was red only in `agentBadge`'s C064 pin at 1280, both engines × two rail states — this task's own change, re-spelled above (between the runs the at-rest rule was also re-keyed off exported HTML); no known flake recurred · the sweep green, PENDING **EMPTY** · the census green, pending EMPTY · golden EMPTY · manifests unchanged ·
+    no control bytes and LF only in every changed file (two counts; the control fires) · no orphaned browser processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.6\`:** `before-` (`1dbb0c5`) / `after-` ×
+    `tab-1440-light` / `-dark` (contents open, a blocked image with the load bar, the agent badge on a CLAUDE.md
+    fixture), `tab-414-light` / `-dark`, and `banner-1440-light` / `-dark` (the render-failure banner). Chromium.
+  - **Carried reader-polish items this surface concerns:** the 130 px band (kept on the content script, D-7 — it is
+    what clears the bottom-left stack at a document's end) and the native buttons (the sweep — this surface's last rows).
+    The other three (code toolbar on math, snapshot notice, narrow sidebar) are app-page items, done earlier.
+  - **Deviations, flagged:** (1) the contents button sits 17 px lower while the card is open (73 vs 56; collapsed 52) —
+    the card starts below the pill; (2) the column starts at 112 px at ≤ 1280 px on the tab reader (the ruling); (3) the
+    watch note and capture disclosure keep their look (tasks.md does not name them); (4) the toolbar's watch pill draws
+    its dot `--muted` at rest — adopted (on `--panel`, 2.44 → 5.64:1 light); (5) the badge and pills keep `--shadow` (the toolbar's have none
+    — they sit in a bar).
+  Why: tasks.md 5.6 and gate-1 Q10's default arm — the tab reader's pills in place, in the toolbar's vocabulary; the
+  human's two rulings settle what the product can open and what "no chrome over text" means for floating pills.
+  Revisit-when: 8.1's walk (the non-text states above; the bottom-left stack over mid-page text at 1080 / 414; the
+  contents button's open offset); Firefox for Android is ever supported (a real `unsupported` producer).
+
 - **2026-11-05 · M13 TASK 5.5 — empty, denied and unsupported app states restyled (plan §3). HUMAN RULING: the
   no-document layout ("Mock + uniform").** Local, on `main` at `c07d3ee` (5.4), up to date with `origin/main`, tree
   clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 (one low, ignored) on

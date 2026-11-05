@@ -810,7 +810,7 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       states the setup card. Copy unchanged; two flags for the human (the no-selection detail's stale "Open a folder";
       `unsupported` has no producer). The sweep: 2 rows deleted, 4 per engine left; the census adds eleven states, EMPTY.
       Content script md5 identical; app chunk +878 B. Necessary ripple `readerPane.ts`, `treeView.ts`, `toolbar.ts`.
-- [ ] **5.6 The content-script reader: pills restyled in place, network indicator, remote bar, failure banner;
+- [x] **5.6 The content-script reader: pills restyled in place, network indicator, remote bar, failure banner;
       content-script first paint.** TEST FIRST. Pills restyled (Q10's default arm), the banner as `.alert`, 130 px band
       kept. Then the content-script first-paint A-B-A after 2.4's stacks and this restyle (165 ms, 15.3 ms headroom).
       Files: `src/theme/readerCss.ts` · `src/render/remoteMediaUi.ts` (markup only if needed) · census-named tests ·
@@ -821,6 +821,16 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       `permissions: []`. [plan §3; gate-1 Q10]
       ★ *2026-11-02 (HUMAN RULING 3 after 2.5):* judged on the same-session A-B-A DIFFERENCE; whether the absolute
       median breaches 165 ms is read only from a local run by the human, recorded as such (a cloud run is ~2.7× slower).
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.6").* The pills stay in place in the approved toolbar's look
+      (buttons radius 8; the watch pill, badge and network indicator round), the banner the mock's `.alert.warn`, the
+      host's `scrollbar-color` — **the sweep's pending list EMPTY**; the census adds three tab-reader states, EMPTY. The
+      open contents card starts below the mode pill (5.2's note; text 684 px at 1440 unchanged; the app page identical).
+      **HUMAN RULING: "no chrome over text" is read AT REST** (top chrome at the document's top, the bottom-left stack
+      at its end); at ≤ 1280 px the tab reader's column starts at 112 px. First paint A-B-A: −0.4 ms median / +1.7 ms
+      floor against `1dbb0c5`, inside HEAD's own spread. Content script −1,390 B, app chunk −1,542 B. With it, the
+      kickoff's Part A: the `unsupported` open outcome removed (**HUMAN RULING:** Firefox for Android, the only browser
+      lacking a folder route, is not supported) and the no-file copy "Pick a file to start reading.". Necessary ripple:
+      `agentBadge` (C064's pin), `appShell.test.ts`, `filesOverlay`, `contrastCensus`, `nativeControls`.
 - [ ] **5.7 Editor details.** TEST FIRST. Save as an ink primary button, bar per `.edbar` (shape only — none of its
       unshipped tools, spec §6), faces via D-3; R11 unchanged.
       Files: `src/theme/readerCss.ts` (`EDITOR_CSS`) · `src/render/editor*.ts` (class names only if needed) ·

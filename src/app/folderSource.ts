@@ -10,7 +10,7 @@
 // boolean (Chromium true + handle; Firefox false, no handle), not bolted on downstream.
 //
 // Every non-grant outcome is a DESIGNED result, never a throw the UI has to guess about
-// (AGENTS.md #5): a cancelled picker, an unsupported engine, or an unexpected error each
+// (AGENTS.md #5): a cancelled picker, a denied re-grant, or an unexpected error each
 // come back as a typed `{ ok: false, reason }` the app page turns into a never-blank
 // state. The real cancel/deny behaviour on a real chooser is confirmed at the human gate
 // (6.3) — headless engines cannot drive the native dialog (Task 0).
@@ -81,10 +81,14 @@ export interface FolderSource {
  *  `denied` is the re-grant case (spec §5.1): a rehydrated handle whose re-ask was declined —
  *  distinct from `cancelled` (no picker opened) so the app page can frame it as "re-allow",
  *  never a dead end. It routes through the SAME designed-notice path as the other non-grant
- *  reasons (appShell.applyOutcome), so no new UI branch is needed. */
+ *  reasons (appShell.applyOutcome), so no new UI branch is needed.
+ *  There is no `unsupported` reason (removed at 013 task 5.6): every browser Peekover supports
+ *  has a folder route on every path — the picker falls back to `<input webkitdirectory>` and the
+ *  drop to `webkitGetAsEntry`, both in Chromium and desktop Firefox; only Firefox for Android
+ *  lacks them, and it is not a supported browser (decisions.md, "M13 TASK 5.6"). */
 export type OpenFolderOutcome =
   | { ok: true; source: FolderSource }
-  | { ok: false; reason: 'cancelled' | 'unsupported' | 'error' | 'denied'; message: string };
+  | { ok: false; reason: 'cancelled' | 'error' | 'denied'; message: string };
 
 /** Options threaded down to the bounded walk (limits + a cancel token). */
 export interface OpenFolderOptions {
@@ -111,7 +115,7 @@ function isAbort(err: unknown): boolean {
  * The single grant entry the app page calls on a user gesture. Feature-detects the
  * engine, opens the native picker (Chromium) — the ONE gesture — then runs the eager,
  * markdown-filtered, bounded, interruptible walk (walkPolicy) and returns a `FolderSource`.
- * Never throws: a cancelled picker, an unsupported engine, or an error each return a typed
+ * Never throws: a cancelled picker or an error each return a typed
  * `{ ok: false }` the caller renders as a designed state.
  *
  * The native OS dialog cannot be driven headlessly (Task 0), so real-engine tests exercise
