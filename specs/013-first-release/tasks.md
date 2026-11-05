@@ -846,12 +846,33 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       is never disabled (the kickoff named one — flagged). The census adds the bar's saving and outcome states (52),
       EMPTY; the sweep EMPTY. Content script md5 identical; app chunk 556,555 B (+75). **GROUP 5 COMPLETE.**
 
+- [x] **5.9 Measurement — content-script first paint, clean and bisected; the cost of more syntax grammars —
+      DISCOVERED (2026-11-05, the human's kickoff after 5.7).** MEASUREMENT ONLY: no product change, nothing chosen.
+      (1) The content-script first paint (the shipped `perf-first-paint.ts --size 50kb`, unedited) on a quiet machine,
+      interleaved A-B-A against the last pre-M13 commit and the checkpoints that changed the content script; if the
+      rise is real, bisect it to a commit or a cause, propose a fix with its expected saving, and do not apply it.
+      (2) The grammars: which ship and how they load; for TypeScript, TSX, diff, YAML, Markdown (and quick adds) the
+      byte cost eager vs on demand, to the content script and the app chunk, by building both; any first-paint effect;
+      whether on-demand loading keeps zero network; a recommendation for the human.
+      Files: `docs/ai/decisions.md` · `docs/ai/progress.md` · this file (records only; scratch worktrees, never committed)
+      Verify: `git diff --stat` records only; scratch worktrees removed; lint; unit.
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.9 (measurement)").* **The rise is real and is one commit:** 2.4
+      (`7859779`) +10.9 ms median against pre-M13 (`14f20d7`), CI [+8.7, +12.5], HEAD's own noise 1.6 ms; every later
+      checkpoint (group 4, 5.3, 5.6, the 5.6 FIX, HEAD) is flat within 0.6 ms of it, so the 5.6 FIX's +351 B costs
+      nothing measurable. The cause: D-3's longer `--sans` / `--mono` stacks in READER_CSS (2.4's whole +153 B);
+      reverting both at HEAD measured −10.2 ms (CI [−11.2, −9.4]), back to pre-M13. Proposed, not applied. HEAD 155.3 ms
+      median here: 9.7 ms of headroom. **Grammars:** six ship, each a chunk loaded on demand, on the app page only (the
+      content script highlights nothing); the five named cost +428,991 B of chunks and +0 B content script on demand,
+      or the same bytes inside the app chunk eager; first paint unchanged either way; on-demand loads only the
+      package's own files (checked at runtime). Recommended: on demand. Both are for the human.
+
 *Group-5 acceptance: every surface restyled; no native-styled control; census pending list empty or each row routed;
 math without the code toolbar; content-script first paint inside 165 ms.*
 
 **GROUP 5 COMPLETE (2026-11-05, at 5.7).** Every 5.x row ticked (5.0–5.8 with 5.2a and the 5.6 FIX); the census's
 and the sweep's pending lists EMPTY on both engines. First paint was measured at 5.6 (inside 165 ms on an agent's
-local run); the 5.6 FIX's +351 B of READER_CSS has not been re-measured — flagged in `decisions.md`, 5.7.
+local run); the 5.6 FIX's +351 B of READER_CSS has not been re-measured — flagged in `decisions.md`, 5.7. **Re-measured
+at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom); the 5.6 FIX costs nothing measurable.
 
 ## 6 — Onboarding (D-11; gate-1 Q18; G-10)
 

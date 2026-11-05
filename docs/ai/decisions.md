@@ -1,6 +1,160 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.9 (measurement) — DISCOVERED: content-script first paint measured clean and bisected; the
+  cost of more syntax grammars. No product change; nothing chosen.** Local, on `main` at `618d37b` (5.7), up to date
+  with `origin/main`, tree clean; Windows 11 Pro 10.0.26300, Node 24.11.1, pnpm 10.33.0, Playwright Chromium;
+  `pnpm audit --prod` EXIT 0 on 2026-11-05 (one low, ignored). **CI read with `gh`:** `618d37b` — CI success
+  (41972934782) and Supply chain success (41972934715), both watched to completion.
+  - **Machine state (before any run):** i7-13700 (16 cores / 24 threads), 64 GB, 44 GB free; CPU load 2–8 %; no node,
+    Playwright or Chromium process left from earlier runs. Open but idle: Brave (about 4 GB across its processes), LM
+    Studio, WhatsApp, the monitor and mouse utilities. Nothing heavy, so the run went ahead. The machine was left alone
+    during every timed run.
+  - **The historical content-script figures (all the 50.4 KB gate document, Chromium):** M8, 2026-08-03 at `757f953`:
+    138.1 / 134.3 / 137.0 ms medians (A-vs-A 3.8 ms); M8 task 5.1 at `bdcb2ad`: **149.7 / 146.3 ms** medians, floors
+    145.7 / 143.4 (a later non-interleaved shipped-harness reading 155.4 / 145.2) — both local, quiesced, the machine
+    not recorded. M9 8.2 (`a44e17f`) is an **app-page** figure (90.8–96.3 ms), not the content script (the kickoff listed
+    it with them — flagged). M13 2.5 (code of `7859779`): a 4-vCPU cloud VM, 411.2 ms median — readable only as
+    differences. M13 5.6 (`97e3fe2`): **161.3 ms median / 153.3 floor**, this Windows machine, A-B-A against 5.5.
+    Ruling 3 of 2026-11-02 applies: a gate is read off same-session differences; an absolute is a local run by the agent
+    on the human's machine, recorded as such.
+  - **Method:** the shipped harness unedited — `scripts/perf-first-paint.ts --size 50kb` (= `pnpm perf -- --size
+    50kb`; 7 runs per invocation, run 1 cold and discarded), started from `main`'s checkout with its working directory
+    at each arm's build. Each arm is a scratch `git worktree` at its commit, `pnpm install --frozen-lockfile` and
+    `wxt build`. **The lockfile is identical in every arm** (blob `0ab19af9`); `package.json` differs only in
+    `packageManager`, `engines` and the `test` script, so every arm is comparable. Every content-script md5 matched its
+    recorded figure. Arms interleaved in rounds of alternating direction, HEAD twice per round (Ha first, Hb last) so
+    HEAD's own noise sits in the same interleave. Warm runs pooled; median and floor; a bootstrap 95 % interval on each
+    median difference. Three interleaves: the checkpoints (16 rounds), the bisect (16 rounds) and the fix arm (12
+    rounds). Scratch driver and statistics: not committed (the method is stated here).
+  - **Table 1 — checkpoints (16 rounds; 96 warm runs per arm; HEAD pooled n = 192).**
+
+    | Arm | commit | content script | median / floor, ms | Δ median / Δ floor vs pre-M13 | 95 % CI of Δ median |
+    |---|---|---|---|---|---|
+    | pre-M13 (M12 closed) | `14f20d7` | 344,195 `b0ff62df` | **145.6 / 138.1** | — | — |
+    | after 2.4 (faces) | `7859779` | 344,495 `5b241f93` | 156.5 / 150.4 | **+10.9 / +12.3** | [+8.7, +12.5] |
+    | after group 4 | `8e9bf0c` | 343,900 `23b30cde` | 156.0 / 147.5 | +10.4 / +9.4 | [+8.3, +12.0] |
+    | after 5.3 | `d55bef5` | 346,714 `531775a3` | 156.1 / 148.2 | +10.4 / +10.1 | [+8.2, +12.8] |
+    | after 5.6 | `97e3fe2` | 344,851 `05d63476` | 156.6 / 149.8 | +11.0 / +11.7 | [+8.6, +13.2] |
+    | 5.6 FIX | `da5a077` | 345,202 `bb73c30c` | 156.0 / 148.3 | +10.4 / +10.2 | [+8.3, +11.8] |
+    | **HEAD (5.7), pooled** | `618d37b` | 345,202 `bb73c30c` | **155.3 / 147.2** | **+9.7 / +9.1** | Ha +10.6, Hb +9.0 |
+
+    Noise, HEAD against itself (Ha − Hb): median +1.6 ms, floor −1.1 ms, CI [+0.1, +3.2]. `da5a077` and HEAD are
+    byte-identical and read 0.7 ms apart: a second same-bytes control.
+  - **READING — the rise is real, and it is one commit.** Pre-M13 → 2.4 is +10.9 ms median (CI [+8.7, +12.5]), about
+    seven times HEAD's own noise. Every later arm (group 4, 5.3 — the largest READER_CSS growth, +1,496 B — 5.6, 5.6 FIX,
+    HEAD) sits within ±0.6 ms of 2.4. Group 4 and group 5 cost nothing measurable, and **the 5.6 FIX's +351 B costs
+    nothing measurable** (5.6 → 5.6 FIX −0.6 ms; 5.7's flag is answered). The ~150 → 161 ms of the kickoff is two
+    things: about +10 ms of real cost from 2.4, and ~6 ms of machine state between 5.6's session (161.3) and this quiet
+    one (HEAD 155.3). The "~150" is M8's 149.7 on an older build (`bdcb2ad`, 329,233 B) and is not this baseline.
+  - **Table 2 — bisect inside `14f20d7..7859779` (16 rounds; 96 warm runs per arm; HEAD pooled n = 192, 155.1 /
+    146.3; noise Ha − Hb +1.3 median, −1.9 floor, CI [−0.9, +3.6]).** The product commits in the interval: 1.4 (three
+    commits), 2.1, 2.2, 2.4 (2.3 changed no content-script source).
+
+    | Arm | what | median / floor, ms | Δ median vs pre-M13 | 95 % CI | Δ median vs 2.4 | 95 % CI |
+    |---|---|---|---|---|---|---|
+    | pre-M13 | `14f20d7` | 145.3 / 137.4 | — | — | −11.1 | [−13.0, −9.2] |
+    | after 1.4 | `c49a070` (344,278 B) | 148.8 / 138.9 | +3.5 | [+0.5, +5.4] | −7.6 | |
+    | after 2.1 | `83e5164` (344,317 B) | 145.8 / 137.6 | +0.6 | [−1.3, +2.5] | −10.5 | |
+    | after 2.2 | `788de3e` (344,342 B) | 145.2 / 136.8 | −0.1 | [−1.7, +2.0] | −11.2 | [−12.8, −9.4] |
+    | **2.4** | `7859779` (344,495 B) | **156.3 / 147.9** | **+11.1** | [+9.2, +13.0] | — | — |
+    | 2.4, `--mono` reverted (scratch) | 344,436 B | 151.2 / 144.8 | +5.9 | | **−5.2** | [−7.0, −3.2] |
+    | 2.4, `--sans` reverted (scratch) | 344,401 B | 147.3 / 141.5 | +2.0 | | **−9.1** | [−10.4, −6.6] |
+    | HEAD, `--mono` reverted (scratch) | 345,143 B | 150.9 / 145.3 | | | HEAD −4.1 | [−5.2, −3.2] |
+
+    1.4's +3.5 ms (its interval just excludes 0) is gone at 2.1 and does not reach HEAD; it is named, not chased.
+  - **Table 3 — the fix arm at HEAD (12 rounds; 72 warm runs per arm; HEAD pooled n = 144, 153.9 / 147.0; noise
+    +0.3 median, −2.1 floor, CI [−0.6, +1.2]).** HEAD with both stacks reverted (scratch, 345,049 B): **143.7 / 137.7
+    ms, −10.2 ms median against HEAD (CI [−11.2, −9.4]), +0.1 against pre-M13 (CI [−1.1, +0.8])** — it removes the
+    whole rise. HEAD with `--mono` alone reverted: −4.1 (CI [−4.7, −3.4]), as in Table 2. Pre-M13 143.6 / 139.2.
+  - **THE CAUSE — one commit, one change:** 2.4 (`7859779`) put plan D-3's long font stacks into READER_CSS's `:host`
+    block (`src/theme/readerCss.ts:53–54`; the same strings are in `design/tokens.css` and the shell's
+    `APP_BASE_TOKENS`, pinned equal by 2.1's token pin): `--sans` from `"Bricolage Grotesque",system-ui,sans-serif` to
+    `"Bricolage Grotesque",ui-sans-serif,system-ui,"Segoe UI Variable Text","Segoe UI",-apple-system,"Helvetica Neue",
+    Roboto,Arial,sans-serif`, and `--mono` from `"Sometype Mono",ui-monospace,monospace` to `"Sometype
+    Mono",ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,"Liberation Mono",monospace`. These +153 B are
+    2.4's whole content-script change (its own record). The content script never registers Bricolage or Sometype (2.4
+    loads them on the app page only). **Mechanism — a hypothesis, not isolated:** each named family that is not
+    installed costs Chromium a system font lookup when a fresh page first lays out text. On this machine Bricolage is
+    installed (per-user) and Literata, Sometype Mono, Cascadia Mono, SF Mono, Menlo and Liberation Mono are not. The
+    two halves are not additive (9.1 + 5.2 > 11.1). A machine without Bricolage walks further down `--sans` in both
+    arms, so the size of the cost there is not measured.
+  - **PROPOSED FIX (not applied; the human decides):** return the two stacks to their pre-2.4 values,
+    `--sans:"Bricolage Grotesque",system-ui,sans-serif` and `--mono:"Sometype Mono",ui-monospace,monospace`, in the
+    single source and every pinned copy (`design/tokens.css`, READER_CSS, `APP_BASE_TOKENS`). The generic families
+    already resolve to the platform face (`system-ui` → Segoe UI / SF; `monospace` → Consolas on Windows Chrome).
+    **Expected saving: −10.2 ms median at HEAD (measured, Table 3)**, about back to pre-M13. A partial fix,
+    `--mono` alone, measured −4.1 ms. What it gives up: D-3's explicit fallbacks before the generics (e.g. Linux would
+    draw code in its default monospace, not Liberation Mono). The rendered faces of the two arms were not compared
+    pixel for pixel (not measured here). The stacks are D-3's design decision, so this is the human's call (2.4's
+    revisit), not a silent revert.
+  - **HEADROOM at HEAD (this machine, quiet, an agent's local run under ruling 3):** 165 − 155.3 = **9.7 ms on the
+    median** (the other two interleaves: 9.9 and 11.1), **17.8 ms on the floor** (147.2). With the proposed fix,
+    about 20 ms.
+  - **GRAMMARS — what ships today and how it loads.** Six languages: `javascript`, `python`, `json`, `css`, `html`,
+    `bash` (Shiki's `shellscript`), in `LANGUAGE_LOADERS` (`src/render/codeEngine.ts:122–129`). Each is its own literal
+    `import('shiki/langs/<name>.mjs')`, so each is a separate chunk loaded **on demand**, only when a fence of that
+    language is highlighted (`languageInputFor`, `codeEnhancer.ts:305`). Shiki's core (`chunks/core-*.js`) also loads
+    only when a document has a fence (`loadCodeEngine`). **The content script highlights nothing:** it has no Shiki and no
+    grammar (the built `peekover.js` holds 0 grammar scopes and 0 `createHighlighterCore`; its only "shiki" strings
+    are CSS). Highlighting is the app page's alone. **Found:** the keys are matched exactly, with no aliases — a fence
+    labelled `js`, `ts`, `sh`, `shell`, `zsh`, `py`, `yml` or `md` renders plain today even where its grammar ships.
+  - **Table 4 — the cost of each candidate, built both ways** (scratch worktrees from HEAD, all seven candidates per
+    variant; Chromium build; per-language figures are the on-demand build's new chunk files).
+
+    | Language | grammar source | on-demand chunk | gzip -9 of it | content script |
+    |---|---|---|---|---|
+    | TypeScript | 190,678 | 181,073 | 15,676 | 0 |
+    | TSX | 185,567 | 175,529 | 16,107 | 0 |
+    | Markdown | 65,304 | 59,328 | 5,583 | 0 |
+    | SQL | 24,520 | 23,421 | 7,437 | 0 |
+    | YAML | 11,581 | 10,499 | 2,254 | 0 |
+    | TOML | 7,192 | 6,419 | 1,279 | 0 |
+    | diff | 2,861 | 2,562 | 695 | 0 |
+    | **all seven** | 487,703 | **458,831** | 49,031 | **0 (md5 `bb73c30c` both variants)** |
+
+    | Variant | app chunk | Δ app chunk | `.output` | Δ `.output` | Chrome zip | Δ zip |
+    |---|---|---|---|---|---|---|
+    | HEAD | 556,555 | — | 5,976,250 | — | 1,962,431 | — |
+    | **on demand** (seven new loader entries) | 556,907 | **+352** | 6,435,433 | +459,183 | 2,012,121 | +49,690 |
+    | **eager** (static imports in `codeEngine.ts`) | 1,015,499 | **+458,944** | 6,435,194 | +458,944 | 2,009,659 | +47,228 |
+
+    Residual check: the seven chunks (458,831) + the loader entries (+352) = the on-demand `.output` delta (459,183),
+    residual 0. Eager = the grammars + 113 B. Bash / sh already ships (45,421 B source). Because none of the
+    candidates imports another grammar, each costs only its own bytes. `.output` headroom under 7 MiB at HEAD
+    1,363,782 B; after all seven, ~904,600 B.
+  - **First paint of the grammar variants** (the committed `scripts/perf-edit-never-entered.ts --skip-probe`, unedited,
+    from a HEAD worktree; 6 rounds, A-B-A): content script — HEAD 153.8 / 148.1, eager 152.5 / 148.7 (HEAD − eager +1.3
+    median), on demand 153.6 / 147.9 (+0.1), HEAD's own spread 6.1 ms; app page — HEAD 102.5 / 96.9, eager 102.2 / 96.5
+    (+0.3), on demand 102.5 / 97.9 (0.0), HEAD's spread 2.0 ms. **Neither variant moves first paint on either surface.**
+    The content script cannot move (its bytes are identical). On the app page, +459 KB of eager grammar in the app
+    chunk does not show at this resolution.
+  - **ZERO NETWORK, on-demand loading — how it was checked:** (1) every dynamic import in the built app chunk is a
+    relative path to the package's own file (`import(\`./typescript-….js\`)`); (2) the manifest declares no CSP, so MV3's
+    default for extension pages (`script-src 'self'`) refuses any remote script, and `permissions: []`; (3) at runtime,
+    on the on-demand build, the app page opened a document with `typescript`, `yaml`, `sql`, `json` and `rust` fences and
+    every request was recorded (Playwright's request event sees every scheme): 12 requests, **0 outside
+    `chrome-extension://<id>/`**; each language fetched exactly its own `/chunks/<lang>-*.js`; `rust` (unlisted) fetched
+    nothing, and four blocks were highlighted. Firing control: on HEAD the same probe fetched `json`'s chunk and no
+    TypeScript chunk, with one block highlighted. The check is Chromium only; Firefox loads the same relative
+    chunk files from its own package.
+  - **RECOMMENDATION (the human decides):** **on demand, the mechanism already in use** — add TypeScript, TSX, diff, YAML
+    and Markdown (the five named) as five more loader entries: **content script +0 B, app chunk ≈ +250 B, `.output`
+    +428,991 B of chunks (zip ≈ +40 KB), first paint unchanged**, and a document pays only for the languages its fences
+    use. Eager costs the same package bytes, makes every app-page load carry +459 KB (the app chunk +82 %) for documents
+    with no such fence, and gains nothing measurable at first paint. Cheap optional additions: TOML (+6,419) and SQL
+    (+23,421). Alongside them, at no measured chunk cost: aliases (`ts`, `js`, `sh`, `shell`, `py`, `yml`, `md`) pointing
+    at the existing loaders; their app-chunk bytes were not built. Not recommended: highlighting `.ts` with the TSX
+    grammar to save 181 KB, since it misreads TypeScript's `<T>x` casts as JSX.
+  - **Verify:** `git diff --stat` shows records only (this file, `progress.md`, `tasks.md`); every scratch worktree
+    removed (`git worktree list` = `main` only) and no orphaned node / browser process; lint 0; unit (below, in
+    `progress.md`).
+  Why: tasks.md 5.9 (discovered, the human's kickoff after 5.7) — the 5.6 FIX's unmeasured +351 B, a rise from ~150 to
+  161 ms on record, and the grammar question carried since 5.8, all needing numbers before any choice.
+  Revisit-when: the human rules on the stack fix (then the first-paint A-B-A against this record's HEAD); the human
+  rules on grammars (then a build task, re-measured); a machine without Bricolage installed is measured (the stacks'
+  cost there is unknown).
+
 - **2026-11-05 · M13 TASK 5.7 — editor details: Save the ink primary, the bar per `.edbar`'s shape; GROUP 5 COMPLETE
   (plan §3; R11).** Local, on `main` at `da5a077` (5.6 FIX), up to date with `origin/main`; Windows, Node 24.11.1, pnpm
   10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-05. **CI read with `gh`:** `da5a077` — CI
