@@ -880,6 +880,24 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       ruled". Content-script first paint −8.4 ms median (145.2 against 153.6; outside noise), app page −0.2 (unchanged);
       headroom 19.8 ms. Content script −153 B, app chunk −306 B. One test re-spelled (`reader.test.ts`).
 
+- [x] **5.11 More syntax grammars, on demand; fence aliases — DISCOVERED (2026-11-05; HUMAN RULING R2 on 5.9's
+      numbers).** TEST FIRST. `LANGUAGE_LOADERS` gains typescript, tsx, diff, yaml, markdown, toml, sql (each its own
+      dynamic import); aliases map to existing loaders (ts, js/mjs/cjs, sh/shell/zsh, py, yml, md), case-insensitive;
+      unknown labels stay plain. The Peekover theme colours the new scopes from existing tokens. Licences checked.
+      Files: `src/render/codeEngine.ts` · `src/render/codeEnhancer.ts` · `src/render/codeEngine.test.ts` ·
+      `tests/browser/codeLanguages.browser.test.ts` (new) · `tests/browser/codeNetwork.browser.test.ts` ·
+      `tests/browser/contrastCensus.browser.test.ts` · ripple: `src/render/codeImportFence.test.ts`,
+      `tests/browser/editorPreview.browser.test.ts` · claims (the human's ruling): `README.md`, `site/index.html`,
+      `docs/store/claims.md` · `docs/ai/decisions.md` · `docs/ai/progress.md` · this file
+      Verify: (**Cr+Fx**) each language and alias highlights; unknown plain; zero network with a firing control;
+      census and sweep EMPTY; content-script md5 identical; app chunk ≈ loader entries; chunks itemised; first paint
+      A-B-A vs 5.10 (app page); full suite; golden EMPTY; lint; unit.
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.11").* 13 languages; 10 aliases (`console`, `jsx` left out,
+      with reasons). Theme: YAML / TOML keys `--code-type`, headings `--accent`, diff +/- `--code-str` / `--code-num`.
+      Found: a `constructor` label resolved through `Object.prototype` — guarded. Content script identical; app chunk
+      +1,043 B (loaders +352, aliases +282, theme +409); chunks +458,831 B. Zero network packaged and in the harness.
+      Licences MIT / TextMate-permissive; the bundled-JS notice gap carried. README / site / ledger name the 13.
+
 *Group-5 acceptance: every surface restyled; no native-styled control; census pending list empty or each row routed;
 math without the code toolbar; content-script first paint inside 165 ms.*
 

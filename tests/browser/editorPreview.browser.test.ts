@@ -607,9 +607,9 @@ describe('012 task 3.4 — the reader’s four enhancers run in the preview (P-1
     return { host, shell, session, view: session.view };
   }
 
-  // TWO code fences. `js` is what the task names; it is not a key the highlighter knows, so the
-  // OUTER reader leaves it un-highlighted too (state `failed`). `javascript` is, and is the code
-  // row's firing control.
+  // TWO code fences. `js` is what the task names; since 013 task 5.11 it is an alias of `javascript`, so
+  // BOTH fences are highlighted, on the outer reader and in the preview alike (before 5.11 the `js`
+  // fence stayed plain, state `failed`, and this count was 1). `javascript` is the code row's firing control.
   it('★ a mermaid fence, inline math, two code fences and a table: enhanced in the preview at build, and again after a keystroke', async () => {
     const host = await openInPane(FIDELITY_DOC);
     const outer = outerColumn(host);
@@ -664,7 +664,7 @@ describe('012 task 3.4 — the reader’s four enhancers run in the preview (P-1
       expect(seen.diagramSvg, `${when}: the figure holds an SVG`).toBe(1);
       expect(seen.mathRendered, `${when}: $x^2$ is a <math> element`).toBeGreaterThan(0);
       expect(seen.codeWrapper, `${when}: both code fences are wrapped`).toBe(2);
-      expect(seen.codeHighlighted, `${when}: the javascript fence is highlighted`).toBe(1);
+      expect(seen.codeHighlighted, `${when}: both fences are highlighted (js is an alias since 5.11)`).toBe(2);
       expect(seen.tableToolbar, `${when}: the table has its toolbar`).toBe(1);
       // And, taken whole, the preview holds what the reader holds for this document.
       expect(seen, `${when}: the preview's census equals the outer document's`).toEqual(outerCensus);

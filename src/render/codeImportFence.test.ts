@@ -387,7 +387,8 @@ describe('the code import fence — clause C, the chunk stays LAZY (D-2, D-3)', 
         'grammar/theme into the eager app-page chunk regardless of whether the language is ever used:',
     ).toEqual([]);
 
-    // Six curated languages + twenty themes = 26 loader edges today (codeEngine.ts's own header:
+    // Thirteen languages + twenty themes = 33 loader edges (013 task 5.11 added seven languages, each a
+    // dynamic edge — the property this test holds; before it, six + twenty = 26. codeEngine.ts's own header:
     // languages stay PROVISIONAL AND EXPLICITLY BOUNDED, expected to move at task 8.5; the theme
     // set is task 5.2's byte-budget/contrast-filtered selection — see that module's header for the
     // full rule). This count is the expected mutation point for whichever task next changes either
@@ -395,11 +396,18 @@ describe('the code import fence — clause C, the chunk stays LAZY (D-2, D-3)', 
     expect(loaderEdges.map((p) => p.spec).sort()).toEqual(
       [
         'shiki/langs/css.mjs',
+        'shiki/langs/diff.mjs',
         'shiki/langs/html.mjs',
         'shiki/langs/javascript.mjs',
         'shiki/langs/json.mjs',
+        'shiki/langs/markdown.mjs',
         'shiki/langs/python.mjs',
         'shiki/langs/shellscript.mjs',
+        'shiki/langs/sql.mjs',
+        'shiki/langs/toml.mjs',
+        'shiki/langs/tsx.mjs',
+        'shiki/langs/typescript.mjs',
+        'shiki/langs/yaml.mjs',
         'shiki/themes/andromeeda.mjs',
         'shiki/themes/aurora-x.mjs',
         'shiki/themes/dark-plus.mjs',

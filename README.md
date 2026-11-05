@@ -20,7 +20,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 - Can watch a document and update the view when it changes on disk, on the app page and in a tab showing a file opened from disk.
 - On the app page, while watching, keeps snapshots of the document on your device, which you can turn off.
 - On the app page, compares a document with one of its snapshots or with another file in the folder.
-- On the app page, draws Mermaid diagrams, renders math with Temml, and highlights code in JavaScript, Python, JSON, CSS, HTML and Bash.
+- On the app page, draws Mermaid diagrams, renders math with Temml, and highlights code in JavaScript, TypeScript, TSX, Python, JSON, CSS, HTML, Bash, diff, YAML, Markdown, TOML and SQL.
 - On the app page, exports a standalone HTML file, prints to PDF, and copies the document as HTML, plain text or rich text.
 - On the app page, has a basic editor with a live preview and a Save button, and asks before discarding unsaved changes.
 

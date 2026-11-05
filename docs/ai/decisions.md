@@ -1,6 +1,98 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.11 — DISCOVERED: TypeScript, TSX, diff, YAML, Markdown, TOML and SQL highlighting, on
+  demand; fence aliases (HUMAN RULING R2).** Local, on `main` at `bd0172a` (5.10); not pushed. Same session as 5.10.
+  - **HUMAN RULING R2 (2026-11-05, on 5.9's numbers), verbatim:** *"Yes — on demand: TypeScript, TSX, diff, YAML,
+    Markdown, TOML, SQL; plus fence aliases."*
+  - **The change (`src/render/codeEngine.ts`, `src/render/codeEnhancer.ts`):** `LANGUAGE_LOADERS` gains `typescript`,
+    `tsx`, `diff`, `yaml`, `markdown`, `toml`, `sql`, each its own literal `import('shiki/langs/<name>.mjs')` — a
+    chunk fetched only when a fence of that language is highlighted, as before. New `LANGUAGE_ALIASES` and
+    `grammarKeyFor(label)`: the label lowercased, an alias mapped to its key, own properties only; anything else
+    `undefined`, so an unknown label keeps its one failure surface (the fence stays plain, state `failed`).
+    `languageInputFor` resolves through it, and the enhancer asks `codeToTokens` for the resolved KEY (an alias then
+    tokenizes exactly as its grammar). **Aliases included:** `ts`→typescript; `js`, `mjs`, `cjs`→javascript;
+    `sh`, `shell`, `zsh`→bash (Shiki's own aliases of `shellscript`); `py`→python; `yml`→yaml; `md`→markdown.
+    **Left out, and why:** `console` (a transcript mixes prompts with program output; the shell grammar would colour
+    output as code — Shiki's `shellsession` is a different grammar, not shipped); `jsx` (Shiki's `jsx` is its own
+    grammar; mapping it to `javascript` would misread tags), `mts` / `cts` / `patch` (not asked; a one-line add each if
+    wanted). **Case-insensitive:** safe, since every key and alias is lowercase and none collide. **Found and fixed on
+    the way:** `LANGUAGE_LOADERS[label]` on a plain object resolved `constructor` / `__proto__` / `toString` through
+    `Object.prototype` (a fence labelled `constructor` reached `loadLanguage` with `Object`); `Object.hasOwn` now
+    guards both lookups (pinned).
+  - **The theme (`PEEKOVER_THEME`), from the existing six tokens only:** four rules, each deeper than the rule it would
+    otherwise fall under — YAML and TOML keys (`entity.name.tag.yaml`, `variable.other.key.toml`) `--code-type`, as
+    JSON's property names; a Markdown heading with its `#` (`markup.heading`, `punctuation.definition.heading.markdown`)
+    `--accent` (ink, weight 500 by READER_CSS's existing rule); a diff's added line `--code-str` and removed line
+    `--code-num`, each with its +/- marker (`markup.inserted` / `markup.deleted` and their punctuation). TypeScript
+    types (`entity.name.type`, `support.type`), TSX components and attributes, and SQL keywords already mapped
+    (`--code-type`, `--accent`). Before the rules (measured in the red run): YAML keys, TOML keys, headings and diff
+    lines all drew plain `--ink`.
+  - **★ SQL UPPERCASE, MEASURED PER RUNTIME:** under Node (the unit runner) Shiki's JS regex engine leaves UPPERCASE
+    `SELECT` / `FROM` / `WHERE` unscoped (the grammar's `(?i:\b(select|…|from|where|…)\b)` group; Oniguruma, compared
+    in a scratch script, scopes both cases). **Chromium and Firefox scope both cases** (`--accent`) — the product is
+    right; the browser test samples uppercase SQL, the unit test lowercase (each says why).
+  - **TESTS, red → green, both engines:** `src/render/codeEngine.test.ts` +6 (labels → keys: new languages, aliases,
+    case, unknown and `Object.prototype` names; each new grammar tokenizes with named tokens in their design tokens and
+    only the theme's colours; an alias tokenizes identically to its key) — all 6 red before, 20 / 20 after.
+    `tests/browser/codeLanguages.browser.test.ts` (new, 3 cases × 2 engines): each new language highlights with a
+    named token checked twice (the inline `var(--…)` and the computed colour against the host's resolved token);
+    every alias and a capitalised label (`TypeScript`) highlight; `rust`, `console`, `jsx` stay plain, source
+    visible — red on both engines with the production change stashed (languages and aliases; the plain case green,
+    as it must be), green after. `tests/browser/codeNetwork.browser.test.ts` +2: (1) each new language, cold, one at a
+    time against a freshly armed probe — its own grammar module and no other (`shiki_langs_<name>__mjs` in this
+    harness; seeing it IS the firing control), and no request but that same-origin module (the harness's dev server
+    is the one place module traffic meets the http(s) predicate — the file header's warm-up section); (2) all new
+    languages and every alias in one document, after an unmeasured warm: no grammar module fetched, ZERO on the wire;
+    both re-arm the fetch and subresource lanes at the end. Red with the production change stashed, green after.
+  - **ZERO NETWORK, packaged:** the built extension (Chromium), the app page on a document with the seven languages,
+    four aliases and `rust`: **16 requests, 0 outside `chrome-extension://<id>/`**; each language fetched exactly its
+    own `chunks/<lang>-*.js`; the aliases fetched nothing of their own (their grammar already loaded); 11 of 12 fences
+    highlighted, `rust` plain.
+  - **Census:** the fixture gains a sample of each new grammar (types, keys, a heading, +/- lines, uppercase SQL);
+    green on both engines (48 / 48), **pending EMPTY**. The new scopes paint only the six tokens the census and the
+    unit contrast table already measure (lowest unchanged).
+  - **LICENCES:** `@shikijs/langs` 4.4.3 is MIT (Shiki's). Upstream sources, read from `tm-grammars`'s README
+    (2026-11-05): TypeScript, TSX, diff, Markdown, SQL — `microsoft/vscode`, **MIT** (as the six already shipped);
+    YAML and TOML — `textmate/yaml.tmbundle`, `textmate/toml.tmbundle`, licence blank in tm-grammars; their own
+    READMEs grant *"Permission to copy, use, modify, sell and distribute this software is granted. This software is
+    provided "as is" without express or implied warranty, and with no claim as to its suitability for any purpose."*
+    — permissive, no notice required. All compatible with Peekover's MIT. **NOTICE, SECURITY: no line added.**
+    **FINDING, carried (not fixed here):** the package ships no MIT notices for ANY bundled JavaScript (Shiki and its
+    grammars, DOMPurify, markdown-it, Mermaid, Temml, CodeMirror, …) — minification strips their licence comments and
+    NOTICE covers fonts only. The five MIT grammars join an existing class; a one-off line for them would be
+    inconsistent. Routed to the release-hygiene group (progress.md § Carried items).
+  - **CLAIMS (the human's ruling, 2026-11-05: "Yes, in 5.11"):** README line 23 and the site's Code card
+    (`site/index.html:384`) now name the 13 languages; the site's feature list (`:574`) says "13 languages"; ledger
+    rows 17, 98, 227 updated in step (evidence: `LANGUAGE_LOADERS`, `codeLanguages.browser.test.ts`), row 256's evidence
+    note "thirteen languages ship". `truthPins` green.
+  - **Necessary ripple (the full-suite Verify):** `src/render/codeImportFence.test.ts` — its pinned list of lazy loader
+    edges gains the seven (33; the property — every grammar edge dynamic — unchanged). `tests/browser/
+    editorPreview.browser.test.ts` — its `js` fence was chosen as "not a key the highlighter knows"; it is an alias
+    now, so both fences highlight (count 1 → 2, the comment says why; the preview-equals-outer property unchanged) —
+    red on both engines in the first full run, green after. `codeEngine.ts`'s header no longer calls the catalog
+    PROVISIONAL (AGENTS.md: remove the provisional marker when the mechanism becomes real).
+  - **Bytes** (clean two-engine build): content script **IDENTICAL** — 345,049 B, md5 `ee9f9279…` / `317c6c51…`.
+    **App chunk 557,292 B (+1,043)**, itemised by arms on a 5.10 worktree: the seven loader entries +352 · the alias
+    map, `grammarKeyFor` and the enhancer's one line +282 · the four theme rules +409 — residual 0 (the full arm's app
+    chunk md5 `0fac666f` = this tree's). **The seven chunks** (as 5.9): typescript 181,073 · tsx 175,529 · markdown
+    59,328 · sql 23,421 · yaml 10,499 · toml 6,419 · diff 2,562 = 458,831 B. **`.output` 6,435,665 / 6,435,781 B
+    (+459,874 each = 458,831 + 1,043, residual 0)**, 159 files (+7); headroom under 7 MiB **904,367 / 904,251 B**. No
+    `.output` budget test exists (searched); the ceiling is read here. Zips 2,011,967 / 2,012,023 B (+49,928 each).
+    Manifests 833 / 949 B, `permissions: []`.
+  - **First paint, A-B-A against 5.10** (`perf-edit-never-entered.ts --skip-probe`, 8 rounds, Chromium): app page
+    106.7 / 96.9 vs 103.7 / 96.5 — **+3.0 median, +0.4 floor**, inside HEAD's own spread (15.4 ms: one invocation read
+    117.9; the human's Chrome had opened since 5.10's run, CPU 6–13 %) — unchanged; content script +0.9 / +0.7 (bytes
+    identical).
+  - **Verify:** lint 0 · unit 1,508 / 1,508 · browser, the FULL suite, both engines — first run 2,538 passed / 2
+    failed (`editorPreview`, the ripple above) / 52 skipped of 2,592; after the fix `editorPreview` 24 / 24, then the
+    full suite again: **2,540 passed / 0 failed / 52 skipped of 2,592**, 624 s, EXIT 0 · census and sweep EMPTY ·
+    golden EMPTY · no control bytes, LF only.
+  Why: R2 — 5.9 measured the seven at +0 B content script and no first-paint cost on demand.
+  Revisit-when: a fence language users ask for (one loader line, its chunk measured); the bundled-licence notice gap
+  is taken up (then the grammars' MIT notices with the rest); Shiki's JS engine scopes uppercase SQL under Node (the
+  unit sample can go uppercase).
+
 - **2026-11-05 · M13 TASK 5.10 — DISCOVERED: the short font stacks (HUMAN RULING R1; D-3 AMENDED); content-script
   first paint back to pre-M13.** Local, on `main` at `0dece28` (5.9), up to date with `origin/main`; Windows, Node
   24.11.1, pnpm 10.33.0; `pnpm audit --prod` EXIT 0 on 2026-11-05 (5.9's preflight, same day, no dependency change).

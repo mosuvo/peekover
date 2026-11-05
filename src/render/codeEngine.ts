@@ -35,12 +35,12 @@
 // listed — proportional cost, not the whole catalog. Each loader is handed to `HighlighterCore`'s
 // own `loadLanguage`/`loadTheme` UNRESOLVED (verified this session: both accept the bare lazy
 // function directly, the same shape Shiki's own bundled-key loaders use, so no `.default`
-// unwrapping is needed here). ★ **LANGUAGE_LOADERS IS PROVISIONAL AND EXPLICITLY BOUNDED** — six
-// languages (`javascript`, `python`, `json`, `css`, `html`, `bash`) chosen only to cover this
-// task's own fixtures plus a few very common real-world fence languages; the real catalog breadth
-// (how many languages 009 ships with, whether it grows to Shiki's near-700-language range or
-// stays curated) is a genuine product question this task does NOT decide, left for a later
-// measurement-driven task. An unlisted language degrades exactly like an unresolvable one always
+// unwrapping is needed here). ★ **LANGUAGE_LOADERS IS A CURATED, EXPLICITLY BOUNDED SET** — six
+// languages (`javascript`, `python`, `json`, `css`, `html`, `bash`) at 009; seven more at 013 task
+// 5.11 (`typescript`, `tsx`, `diff`, `yaml`, `markdown`, `toml`, `sql` — the human's ruling R2 on
+// 5.9's measured costs: each its own on-demand chunk, the content script untouched), plus fence
+// aliases ({@link grammarKeyFor}). Growing it is a product decision made on measured bytes, one
+// language at a time — never Shiki's whole catalog. An unlisted language degrades exactly like an unresolvable one always
 // has (module header, below): `loadLanguage` no-ops on `undefined`, `codeToTokens` then raises,
 // the caller's per-fence `try`/`catch` reads it the same way it reads any other tokenize failure —
 // no special case.
@@ -116,7 +116,7 @@ type LanguageLoader = () => Promise<{ default: LanguageRegistration | LanguageRe
 /** Same idea for `shiki/themes/<name>.mjs`. */
 type ThemeLoader = () => Promise<{ default: ThemeRegistrationAny }>;
 
-/** See the module header's "LANGUAGE/THEME REGISTRATION" section — PROVISIONAL, explicitly
+/** See the module header's "LANGUAGE/THEME REGISTRATION" section — curated, explicitly
  *  bounded. Each value is its own literal `import()` specifier so Vite only chunks THESE
  *  languages, never Shiki's full ~700-language catalog. */
 const LANGUAGE_LOADERS: Readonly<Record<string, LanguageLoader>> = {
@@ -126,6 +126,33 @@ const LANGUAGE_LOADERS: Readonly<Record<string, LanguageLoader>> = {
   css: () => import('shiki/langs/css.mjs'),
   html: () => import('shiki/langs/html.mjs'),
   bash: () => import('shiki/langs/shellscript.mjs'),
+  // 013 task 5.11 (the human's ruling R2, on 5.9's measured costs): seven more, each its own chunk,
+  // fetched only when a fence of that language is highlighted. None imports another grammar.
+  typescript: () => import('shiki/langs/typescript.mjs'),
+  tsx: () => import('shiki/langs/tsx.mjs'),
+  diff: () => import('shiki/langs/diff.mjs'),
+  yaml: () => import('shiki/langs/yaml.mjs'),
+  markdown: () => import('shiki/langs/markdown.mjs'),
+  toml: () => import('shiki/langs/toml.mjs'),
+  sql: () => import('shiki/langs/sql.mjs'),
+};
+
+/**
+ * Fence labels that name a shipped grammar by another common name (013 task 5.11). Each maps to a
+ * {@link LANGUAGE_LOADERS} key, never to a new chunk. `console` is deliberately absent: a console
+ * transcript mixes prompts with program output, which the shell grammar would colour as code.
+ */
+const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
+  ts: 'typescript',
+  js: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  sh: 'bash',
+  shell: 'bash',
+  zsh: 'bash',
+  py: 'python',
+  yml: 'yaml',
+  md: 'markdown',
 };
 
 /** The Peekover code theme's id — the DEFAULT code theme (013 task 5.8; the human's 2.2 ruling). */
@@ -157,6 +184,14 @@ export const PEEKOVER_THEME = {
     { scope: ['constant', 'support.constant', 'variable.other.constant', 'keyword.other.unit'], settings: { foreground: 'var(--code-num)' } },
     { scope: ['entity.name.type', 'entity.name.class', 'entity.other.inherited-class', 'support.type', 'support.class', 'entity.other.attribute-name', 'punctuation.support.type.property-name'], settings: { foreground: 'var(--code-type)' } },
     { scope: ['keyword.operator', 'punctuation', 'meta.template.expression', 'entity.name.function', 'support.function', 'entity.name.tag', 'entity.other.attribute-name.class', 'entity.other.attribute-name.id', 'entity.other.attribute-name.pseudo-class', 'variable', 'string.unquoted', 'constant.other.option'], settings: { foreground: 'var(--ink)' } },
+    // 013 task 5.11 — the new grammars' own scopes, from the same six tokens. Each is deeper than the
+    // rule it would otherwise fall under, so it wins: YAML and TOML keys are property names
+    // (`--code-type`, as JSON's); a Markdown heading, its `#` included, is `--accent` (ink, 500);
+    // a diff's added line `--code-str` and removed line `--code-num`, each with its +/- marker.
+    { scope: ['entity.name.tag.yaml', 'variable.other.key.toml'], settings: { foreground: 'var(--code-type)' } },
+    { scope: ['markup.heading', 'punctuation.definition.heading.markdown'], settings: { foreground: 'var(--accent)' } },
+    { scope: ['markup.inserted', 'punctuation.definition.inserted'], settings: { foreground: 'var(--code-str)' } },
+    { scope: ['markup.deleted', 'punctuation.definition.deleted'], settings: { foreground: 'var(--code-num)' } },
   ],
 };
 
@@ -255,7 +290,20 @@ export function hasCodeFence(root: ParentNode): boolean {
  * what actually raises for an unloaded language — one failure surface, not two.
  */
 export function languageInputFor(lang: string): LanguageLoader | undefined {
-  return LANGUAGE_LOADERS[lang];
+  const key = grammarKeyFor(lang);
+  return key === undefined ? undefined : LANGUAGE_LOADERS[key];
+}
+
+/**
+ * A fence label → the shipped grammar key it names, or `undefined` (013 task 5.11). Lowercased
+ * first (every key and alias is lowercase, so no two labels collide), then an alias is mapped to its
+ * key. Own properties only, so `constructor` or `__proto__` never resolve through `Object.prototype`.
+ * The highlighter is asked for this KEY, not the raw label, so an alias tokenizes exactly as its grammar.
+ */
+export function grammarKeyFor(lang: string): string | undefined {
+  const label = lang.toLowerCase();
+  const key = Object.hasOwn(LANGUAGE_ALIASES, label) ? LANGUAGE_ALIASES[label] : label;
+  return Object.hasOwn(LANGUAGE_LOADERS, key) ? key : undefined;
 }
 
 /**

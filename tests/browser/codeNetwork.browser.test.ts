@@ -471,3 +471,101 @@ describe('4.4 · row 22 — every stage, each measured against a probe armed jus
     60_000,
   );
 });
+
+// ══ 013 task 5.11 — THE SEVEN NEW GRAMMARS, ON DEMAND, AND THE ALIASES ═════════════════════════
+//
+// The same instrument, armed in each test's own body. Two claims. (1) Each new language, the FIRST
+// time a fence needs it, fetches ITS OWN grammar module and no other — read off the same-origin
+// Resource Timing buffer, where this harness's dev server records each grammar as
+// `shiki_langs_<name>__mjs.js` (shipped: `chunks/<name>-<hash>.js` inside the package, excluded from
+// the off-origin predicate by its extension scheme). Seeing that one request IS the firing control:
+// a buffer blind to module loads would read an empty list, not the language's own name. (2) Every
+// new language and every alias, together, puts nothing on the wire. These run after the 4.4 blocks
+// and before anything else loads the new grammars, so each module load here is cold.
+
+const NEW_GRAMMARS: [string, string][] = [
+  ['typescript', 'interface Doc { size: number }'],
+  ['tsx', 'const el = <Note title="x">hi</Note>;'],
+  ['diff', '-old line\n+new line'],
+  ['yaml', 'name: peekover'],
+  ['markdown', '# Heading'],
+  ['toml', 'name = "peekover"'],
+  ['sql', 'SELECT name FROM docs;'],
+];
+const ALIAS_FENCES: [string, string][] = [
+  ['ts', 'const n: number = 1;'],
+  ['js', 'const n = 42;'],
+  ['mjs', 'const n = 42;'],
+  ['cjs', 'const n = 42;'],
+  ['sh', 'echo hi'],
+  ['shell', 'echo hi'],
+  ['zsh', 'echo hi'],
+  ['py', 'def f(): pass'],
+  ['yml', 'a: 1'],
+  ['md', '# h'],
+];
+
+/** The grammar modules in the buffer, by language name (dev-server and packaged spellings both). */
+function grammarModulesFetched(): string[] {
+  return performance
+    .getEntriesByType('resource')
+    .map((e) => /shiki_langs_([a-z]+)__mjs|\/langs\/([a-z]+)\.mjs|\/chunks\/([a-z]+)-[\w-]+\.js$/.exec(e.name))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => m[1] ?? m[2] ?? m[3]);
+}
+
+async function renderedFences(shadow: ShadowRoot, count: number): Promise<void> {
+  await allSettled(shadow);
+  const states = [...shadow.querySelectorAll<HTMLElement>(`.${CODE_WRAPPER_CLASS}`)].map((w) => w.getAttribute(CODE_STATE_ATTR));
+  expect(states, 'every fence highlighted — a window over a failed fence measures less').toEqual(Array(count).fill('rendered'));
+}
+
+describe('5.11 — each new grammar loads on demand: its own module only, and nothing on the wire', () => {
+  it(
+    'typescript, tsx, diff, yaml, markdown, toml, sql — one at a time, each against a freshly armed probe',
+    async () => {
+      for (const [lang, body] of NEW_GRAMMARS) {
+        await armTheProbe();
+        const shadow = await openDoc(`# ${lang}\n\n` + fence(lang, body));
+        await renderedFences(shadow, 1);
+        await wireSettled();
+        expect(grammarModulesFetched(), `${lang}: the grammar modules this fence fetched`).toEqual([lang]);
+        // A COLD load is the one place this harness's own module traffic reaches the http(s)
+        // predicate (the module header's warm-up section): the dev server serves the grammar over
+        // http://localhost. So the claim here is exact — the only request is this language's own
+        // grammar module, from this page's own origin; anything else, anywhere, is a red.
+        await flush();
+        const ownModule = (u: string): boolean => new URL(u).origin === location.origin && new RegExp(`shiki_langs_${lang}__mjs`).test(u);
+        expect(networkedUrls().filter((u) => !ownModule(u)), `${lang}: a request other than its own grammar module`).toEqual([]);
+        reset();
+      }
+      await armFetchLane();
+      await armSubresourceLane();
+    },
+    90_000,
+  );
+
+  it(
+    'every new language and every alias in one document: no new grammar module, nothing on the wire',
+    async () => {
+      // Warm, unmeasured: every grammar the aliases name (python and bash are not warmed above), so
+      // the measured window below is a module-cache hit throughout — the harness-only warm-up shape.
+      const warm = await openDoc('# Warm\n\n' + fence('python', 'pass') + '\n' + fence('bash', 'echo') + '\n' + NEW_GRAMMARS.map(([l, b]) => fence(l, b)).join('\n'));
+      await renderedFences(warm, NEW_GRAMMARS.length + 2);
+      reset();
+
+      await armTheProbe();
+      const fences = [...NEW_GRAMMARS, ...ALIAS_FENCES];
+      const shadow = await openDoc('# All\n\n' + fences.map(([l, b]) => fence(l, b)).join('\n'));
+      await renderedFences(shadow, fences.length);
+      await wireSettled();
+      // Every grammar these fences need is already loaded (above, or by the 4.4 blocks and the
+      // warm-up), so an alias that fetched a module of its own would show here.
+      expect(grammarModulesFetched(), 'an alias or a reload fetched a grammar module').toEqual([]);
+      await assertNoNetwork('all new languages and aliases');
+      await armFetchLane();
+      await armSubresourceLane();
+    },
+    90_000,
+  );
+});

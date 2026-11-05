@@ -68,6 +68,7 @@ import {
 } from './codeView';
 import {
   loadCodeEngine,
+  grammarKeyFor,
   languageInputFor,
   themeInputFor,
   type EngineLoader,
@@ -306,7 +307,9 @@ async function tokenizeAndAdopt(
   if (langInput) await engine.loadLanguage(langInput);
   const themeInput = themeInputFor(theme);
   if (themeInput) await engine.loadTheme(themeInput);
-  const tokens = engine.codeToTokens(source, { lang, theme });
+  // 013 task 5.11: the grammar's own key (an alias or a capitalised label resolved), else the raw
+  // label, which `codeToTokens` rejects as before — one failure surface for an unknown language.
+  const tokens = engine.codeToTokens(source, { lang: grammarKeyFor(lang) ?? lang, theme });
   const highlightedLines = parseLineRanges(code?.dataset.fenceMeta);
   return adoptHighlighted(doc, tokens, highlightedLines);
 }

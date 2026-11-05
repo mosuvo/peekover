@@ -48,6 +48,7 @@ import {
   hasCodeFence,
   loadCodeEngine,
   languageInputFor,
+  grammarKeyFor,
   themeInputFor,
   CODE_THEME_IDS,
   PEEKOVER_CODE_THEME,
@@ -307,5 +308,112 @@ describe('the Peekover code theme (013 task 5.8)', () => {
     expect([...seen].filter((t) => !PAINTED.includes(t))).toEqual([]);
     // Non-vacuous: every token kind the 3.1 mock shows was emitted.
     expect([...seen].sort()).toEqual(['--accent', '--code-num', '--code-str', '--code-type', '--ink', '--muted']);
+  });
+});
+
+// ── 013 task 5.11: seven more grammars, on demand; fence aliases (the human's ruling R2) ────────
+//
+// A fence label resolves to a shipped grammar key through ONE function, `grammarKeyFor`: the label
+// lowercased, an alias mapped to its key, anything else undefined, so an unknown label keeps the
+// one failure surface it always had (plain text). `console` is deliberately NOT an alias of bash:
+// a console transcript mixes prompts and program output, which the shell grammar would colour as
+// code (Shiki ships a separate `shellsession` grammar for it, not shipped here).
+describe('fence labels → grammar keys (013 task 5.11)', () => {
+  const NEW = ['typescript', 'tsx', 'diff', 'yaml', 'markdown', 'toml', 'sql'];
+  const ALIASES: Record<string, string> = {
+    ts: 'typescript',
+    js: 'javascript',
+    mjs: 'javascript',
+    cjs: 'javascript',
+    sh: 'bash',
+    shell: 'bash',
+    zsh: 'bash',
+    py: 'python',
+    yml: 'yaml',
+    md: 'markdown',
+  };
+
+  it('every new language resolves to itself, with a loader', () => {
+    for (const lang of NEW) {
+      expect(grammarKeyFor(lang), lang).toBe(lang);
+      expect(languageInputFor(lang), lang).toBeTypeOf('function');
+    }
+  });
+
+  it('every alias resolves to its grammar key, and to that key’s own loader', () => {
+    for (const [alias, key] of Object.entries(ALIASES)) {
+      expect(grammarKeyFor(alias), alias).toBe(key);
+      expect(languageInputFor(alias), alias).toBe(languageInputFor(key));
+    }
+  });
+
+  it('matches regardless of case', () => {
+    expect(grammarKeyFor('TypeScript')).toBe('typescript');
+    expect(grammarKeyFor('YML')).toBe('yaml');
+    expect(grammarKeyFor('Bash')).toBe('bash');
+  });
+
+  it('an unknown label, an empty one and an Object.prototype name resolve to nothing', () => {
+    for (const label of ['rust', 'console', 'jsx', 'notarealanguage', '', 'constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+      expect(grammarKeyFor(label), JSON.stringify(label)).toBeUndefined();
+      expect(languageInputFor(label), JSON.stringify(label)).toBeUndefined();
+    }
+  });
+});
+
+describe('the seven new grammars tokenize, in the Peekover theme’s own colours (013 task 5.11)', () => {
+  const tokenOf = (value: string): string => {
+    const m = /^var\((--[a-z0-9-]+)\)$/.exec(value);
+    if (!m) throw new Error(`a colour that is not a design token: ${value}`);
+    return m[1];
+  };
+  const PAINTED = [PEEKOVER_THEME.colors['editor.foreground'], ...PEEKOVER_THEME.tokenColors.map((r) => r.settings.foreground)].map(tokenOf);
+
+  /** label → [sample, [token text, the design token it must be painted in]...] */
+  const CASES: Record<string, [string, [string, string][]]> = {
+    typescript: ['interface Doc { size: number }\nconst d: Doc = { size: 1 };', [['Doc', '--code-type'], ['number', '--code-type'], ['interface', '--accent']]],
+    tsx: ['const el = <Note title="x">hi</Note>;\ntype P = { n: number };', [['Note', '--code-type'], ['title', '--code-type'], ['number', '--code-type']]],
+    diff: ['--- a/doc.md\n+++ b/doc.md\n@@ -1 +1 @@\n-old line\n+new line', [['-old line', '--code-num'], ['+new line', '--code-str']]],
+    yaml: ['name: peekover\nfiles: 42\nprivate: true', [['name', '--code-type'], ['files', '--code-type'], ['42', '--code-num']]],
+    markdown: ['# Heading one\n\nSome *text* and `code`.', [['# Heading one', '--accent']]],
+    toml: ['[package]\nname = "peekover"\nfiles = 42', [['name', '--code-type'], ['files', '--code-type'], ['"peekover"', '--code-str'], ['42', '--code-num']]],
+    // Lowercase keywords: UNDER NODE the JS regex engine leaves UPPERCASE `SELECT` / `FROM` / `WHERE`
+    // unscoped (the grammar's `(?i:…)` group); Chromium and Firefox scope both, which
+    // tests/browser/codeLanguages.browser.test.ts proves — decisions.md, "M13 TASK 5.11".
+    sql: ['select name from docs where size > 42;', [['select', '--accent'], ['from', '--accent'], ['where', '--accent'], ['42', '--code-num']]],
+  };
+
+  it('each sample paints its named tokens, and only the theme’s own colours', async () => {
+    const { createHighlighterCore } = await import('shiki/core');
+    const actual = await vi.importActual<typeof import('shiki/engine/javascript')>('shiki/engine/javascript');
+    const hl = await createHighlighterCore({ engine: actual.createJavaScriptRegexEngine() });
+    await hl.loadTheme(themeInputFor(PEEKOVER_CODE_THEME)!);
+    const wrong: string[] = [];
+    const stray = new Set<string>();
+    for (const [lang, [code, expected]] of Object.entries(CASES)) {
+      await hl.loadLanguage(languageInputFor(lang)!);
+      const tokens = hl.codeToTokens(code, { lang: grammarKeyFor(lang)!, theme: PEEKOVER_CODE_THEME }).tokens.flat();
+      for (const t of tokens) if (!PAINTED.includes(tokenOf(t.color ?? ''))) stray.add(`${lang}: "${t.content}" ${t.color}`);
+      for (const [text, want] of expected) {
+        const hit = tokens.find((t) => t.content.trim() === text);
+        const got = hit ? tokenOf(hit.color ?? '') : 'NO SUCH TOKEN';
+        if (got !== want) wrong.push(`${lang}: "${text}" painted ${got}, want ${want}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+    expect([...stray]).toEqual([]);
+  });
+
+  it('an alias tokenizes exactly as its grammar does', async () => {
+    const { createHighlighterCore } = await import('shiki/core');
+    const actual = await vi.importActual<typeof import('shiki/engine/javascript')>('shiki/engine/javascript');
+    const hl = await createHighlighterCore({ engine: actual.createJavaScriptRegexEngine() });
+    await hl.loadTheme(themeInputFor(PEEKOVER_CODE_THEME)!);
+    const code = 'const n: number = 42;';
+    await hl.loadLanguage(languageInputFor('ts')!);
+    const viaAlias = hl.codeToTokens(code, { lang: grammarKeyFor('ts')!, theme: PEEKOVER_CODE_THEME }).tokens;
+    const viaKey = hl.codeToTokens(code, { lang: 'typescript', theme: PEEKOVER_CODE_THEME }).tokens;
+    expect(viaAlias).toEqual(viaKey);
+    expect(viaAlias.flat().some((t) => t.color === 'var(--code-type)'), 'the alias produced no type colour').toBe(true);
   });
 });
