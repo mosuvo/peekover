@@ -306,6 +306,14 @@ retired while its function has no other test. Function by function:
   `nativeControls` deletes its last 4 rows — **its pending list is EMPTY**; `filesOverlay` drops its `unsupported`
   state case. The census's pending list stays EMPTY.
 
+- **5.6 FIX** (2026-11-05 — the tab reader's top clearance no longer depends on the system font; CI run 41965319733):
+  **RE-SPELLED:** C022 (`htmlExport` unit: READER_CSS's `:host` site count 26 → 28 — the two collapsed-handle sites, both
+  DROPPED in an export; carried 10 now pinned too). **KEPT, unchanged and green:** C064 (`agentBadge`'s clearance pin at
+  1280 — its OCCUPIED table still empty), C312 (system faces on the content script), and every 5.6 row above.
+  **Retired:** none. Outside the census: `tabReaderChrome` gains 36 font-independence cases (three forced arms — a wide
+  system face, letter-spaced wide, a tall face — × file / raw host × 1280 / 1080 / 414, both engines); its 1440 / 1280 /
+  1080 / 414 at-rest checks unchanged. The census's pending list stays EMPTY.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).
@@ -392,11 +400,11 @@ unchanged 1
 
 ### `src/export/htmlExport.test.ts`
 
-unchanged 1
+re-spelled 1
 
 | ID | Test | Checks today | Class | Property kept / retired | Task | Surface | Function (Q1) |
 |---|---|---|---|---|---|---|---|
-| C022 | (all 13 tests) | serialize/translate/wrap of a mounted reader; READER_CSS :host site count pinned at 26 | unchanged |  |  | unit-builder |  |
+| C022 | (all 13 tests) | serialize/translate/wrap of a mounted reader; READER_CSS :host site count pinned at 26 | re-spelled | The pin KEPT, its count 26 → 28: two `:host([data-toc="collapsed"])` sites hold the tab reader's collapsed contents handle to one fixed-height line; both DROPPED in an export, carried stays 10 (now pinned too) | 5.6 FIX | unit-builder |  |
 
 ### `src/render/agentBadge.test.ts`
 

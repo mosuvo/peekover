@@ -105,7 +105,7 @@ export const READER_CSS = /* css */ `
   width:100%;
 }
 .peekover-reader > :first-child{margin-top:0}
-@media screen and (max-width:1280px){.peekover-mode-toggle~.peekover-reader{padding-top:112px}}
+@media screen and (max-width:1280px){.peekover-mode-toggle~.peekover-reader{padding-top:calc(var(--toc-handle-top) + var(--toc-handle-h) + 30px)}}
 
 /* ---- headings ---- */
 .peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
@@ -503,7 +503,7 @@ export const READER_CSS = /* css */ `
    property --toc-w that the resize drag (3.4) rewrites; open/collapsed keys off data-toc on
    the host (initialTocOpen sets it in 2.1; the backtick toggle flips it in 2.3). Tokens
    ONLY — panel/line for the surface, muted/faint/ink for text, hl for the active mark. */
-:host{ --toc-w:250px; }
+:host{ --toc-w:250px; --toc-handle-top:52px; --toc-handle-h:30px; }
 
 .peekover-toc{
   position:fixed;top:54px;right:8px;bottom:8px;z-index:1;
@@ -539,10 +539,12 @@ export const READER_CSS = /* css */ `
    the top-right mode pill. The document stays the hero — the reading column is untouched. */
 :host([data-toc="collapsed"]) .peekover-toc{
   top:0;right:0;bottom:auto;width:auto;max-width:38vw;height:auto;overflow:visible;
-  padding:52px 16px 16px;border:none;border-radius:0;box-shadow:none;
+  padding:var(--toc-handle-top) 16px 16px;border:none;border-radius:0;box-shadow:none;
 }
 :host([data-toc="collapsed"]) .peekover-toc__list{display:none}
 :host([data-toc="collapsed"]) .peekover-toc__toggle{margin:0}
+:host([data-toc="collapsed"]) .peekover-mode-toggle~.peekover-toc{max-width:none}
+:host([data-toc="collapsed"]) .peekover-mode-toggle~.peekover-toc .peekover-toc__toggle{box-sizing:border-box;height:var(--toc-handle-h);white-space:nowrap}
 .peekover-toc [hidden]{display:none} /* collapsed subtree (childList.hidden) — explicit in shadow */
 .peekover-toc__ticks{display:none}
 .peekover-toc__toggle[aria-expanded="false"]~.peekover-toc__ticks{
@@ -801,7 +803,15 @@ export const READER_CSS = /* css */ `
 // CONTAINED_CSS puts the 47px back on the app page's rail (its own `top:8px` already wins there).
 // AT REST (the human's ruling, 2026-11-05): at <= 1280px the column starts at 112px, so its first
 // line clears the top chrome — the agent badge (56 + 26) and, at 414, the collapsed contents box,
-// which paints `--paper` to 98px. Keyed to the mode pill as a preceding sibling, so it reaches only
+// which paints `--paper` to 98px. 5.6 FIX: that box's height must not follow the system face (the
+// chrome draws in one, D-3) — on Linux its label wrapped inside the old 38vw cap and the box grew
+// to 110-112px over the first line. The collapsed handle is now one line (`nowrap`, no 38vw cap)
+// at a fixed `--toc-handle-h` below `--toc-handle-top`, and the column's top is DERIVED from the
+// two: top + handle + the box's 16px foot + a 14px gap = 112px. Both keyed like the column's top
+// (after the mode pill), so the app page's rail — packaged faces, no pill — is untouched. The
+// other top chrome (mode pill, load bar, badge) is `line-height:1` and `nowrap` already, so its
+// height is the font size's.
+// Keyed to the mode pill as a preceding sibling, so it reaches only
 // the full-page reader: the app page (`pills: false`), the editor preview (`chrome: false`) and an
 // HTML export (which clones `.peekover-reader` alone) draw no pill and keep their 56px.
 

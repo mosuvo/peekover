@@ -317,6 +317,36 @@ describe('013 task 5.6 — the browser-tab reader restyled', () => {
     }
   }
 
+  // 5.6 FIX — FONT INDEPENDENCE. The tab reader's chrome draws in SYSTEM faces (D-3), so CI on Linux (no Bricolage)
+  // and real users differ from this machine: CI's run 41965319733 measured the collapsed contents box to 110 / 112 px at
+  // 414 — its label wrapped to two lines inside the 38vw cap — over the h1's first line (103). The same at-rest
+  // hit-test, with the chrome forced into a WIDE face (Verdana here, DejaVu Sans on Linux: the instrument that
+  // reproduced CI's 112 locally), independent of any installed face letter-spaced wide, and TALL — the handle's
+  // `normal` line height as a face with tall metrics gives it (2em; the pills set `line-height:1` themselves).
+  // The tall arm is the fixed height's instrument: the wide arms stay one line without it (nothing caps the handle).
+  const FORCED = {
+    'a wide system face': ':host{--sans:Verdana,"DejaVu Sans",sans-serif}',
+    'letter-spaced wide': '.peekover-toc__toggle,.peekover-mode-toggle,.peekover-remote-load,.peekover-agent-badge{letter-spacing:.2em}',
+    'a tall face': '.peekover-toc__toggle{line-height:2}',
+  } as const;
+  for (const [arm, css] of Object.entries(FORCED)) {
+    for (const fixture of ['file', 'raw host'] as const) {
+      for (const width of [1280, 1080, 414]) {
+        it(`no chrome over text at rest, whatever the system face — ${arm}, ${fixture}, ${width}`, async () => {
+          const host = await tabReader(fixture, 'light', width);
+          const forced = document.createElement('style');
+          forced.textContent = css;
+          host.shadowRoot!.append(forced);
+          lightNetworkIndicator(host);
+          host.scrollTop = 0;
+          await sleep(50);
+          const top = overText(host, ['.peekover-toc', '.peekover-mode-toggle', '.peekover-remote-load', '.peekover-agent-badge']);
+          expect(top, `${arm}, ${fixture} at ${width}: top chrome over the reading column's text`).toEqual([]);
+        });
+      }
+    }
+  }
+
   it('behaviour, names and tab order unchanged: the chrome is reached in DOM order (file://)', async () => {
     const host = await tabReader('file', 'light');
     const seen: string[] = [];

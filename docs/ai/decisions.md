@@ -1,6 +1,69 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.6 FIX — the tab reader's top clearance no longer depends on the system font (CI run
+  41965319733 on `97e3fe2`).** Local, on `main` at `97e3fe2` (5.6), tree clean after the 5.7 work-in-progress was
+  stashed (`stash@{0}`, kept for 5.7); Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod`
+  EXIT 0 on 2026-11-05. **CI read with `gh`:** `97e3fe2` — Supply chain success (41965319718); **CI failure**
+  (41965319733, job `verify`, step "Browser security tests": 4 failed / 2,462 passed / 60 skipped of 2,526; lint and
+  unit green; Build skipped).
+  - **THE RED:** `tabReaderChrome` › "no chrome over text at rest" at **414 only**, file and raw host, both engines:
+    ".peekover-toc [256.7,0.0 → 414.0,110.0] over 1 line(s), first [33.0,103.0 → 302.1,169.0]" (Chromium; Firefox
+    "→ 414.0,112.0", first line from 103.6). On this machine 5.6 measured the same box to **98 px**.
+  - **THE CAUSE, WITH EVIDENCE.** The collapsed contents box is the nav's 52 px top padding + its handle + 16 px foot.
+    The handle is `line-height:normal`, may wrap, and the collapsed nav was capped at `max-width:38vw` (157 px at 414,
+    a 125 px content box). The tab reader's chrome draws in SYSTEM faces (D-3): here `--sans` resolves to Bricolage
+    Grotesque, **installed per-user on this machine** (the 5.0 finding), and "☰ On this page" fits on one line (handle
+    30 px, box to 98). CI has no Bricolage; the fallback is wider, the label WRAPS inside the cap, and the handle grows
+    to 42–44 px. **Reproduced locally (a probe, both engines):** `--sans` forced to Verdana → box `[256.7,0.0 → 414.0,
+    112.0]` — CI Firefox's numbers exactly, including the 256.7 left edge (the cap); letter-spaced .2em → 114. At 1440
+    / 1280 / 1080 the rail is the open card, so only 414 moved. The h1's first glyph box (103.0 / 103.6) is identical
+    here and on CI. **The other top chrome is not font-dependent:** the mode pill, load bar and agent badge are
+    `font:… /1` and `nowrap` (their height is the font size's) — under Verdana the mode pill still measures 16 → 44.5.
+  - **WHY FONT INDEPENDENCE, NOT A BIGGER GAP.** The face is the user's, not ours: any gap sized to one machine's
+    fallback is wrong on the next (CI is one sample of real users). A taller column top would also cost every narrow
+    reader text space for a box that needn't grow.
+  - **THE FIX (READER_CSS only, +351 B):** `:host` gains `--toc-handle-top:52px; --toc-handle-h:30px`. On the full-page
+    reader, while collapsed, the handle is ONE line at a fixed height (`box-sizing:border-box; height:var(--toc-handle-h);
+    white-space:nowrap`) and the nav drops its 38vw cap (`max-width:none`; a one-line label must not overflow the
+    viewport). The collapsed padding reads `var(--toc-handle-top)`, and the column's ≤ 1280 px top is DERIVED:
+    `calc(var(--toc-handle-top) + var(--toc-handle-h) + 30px)` (16 px foot + 14 px gap) = 112 px, as before. Both new
+    rules are keyed `.peekover-mode-toggle ~ .peekover-toc` — the column's own key — so they reach only the full-page tab
+    reader. **A first cut put the height and `nowrap` on every handle; the app-page re-measure caught it** (its handle
+    28 → 30 px at every width — the packaged Bricolage's line metrics — and at 414 the open card's handle stopped
+    wrapping and ran into the card's padding); changed before commit.
+  - **TEST (red-first, both engines):** `tabReaderChrome` gains "no chrome over text at rest, whatever the system face"
+    — the same at-rest hit-test with the chrome forced into three arms: **a wide system face** (`--sans: Verdana,
+    "DejaVu Sans"` — the instrument that reproduced CI's 112), **letter-spaced wide** (.2em on the top chrome;
+    independent of any installed face) and **a tall face** (the handle's `normal` line height as 2em) × file / raw host
+    × 1280 / 1080 / 414 — 36 cases. **At `97e3fe2`'s CSS: 12 red** (every arm at 414, both fixtures, both engines; the
+    box to 112 / 114 / 106). After: 36 / 36. The 1440 / 1280 / 1080 / 414 at-rest checks unchanged and green.
+  - **ABLATION → red:** the fixed height removed (`nowrap` and the uncapped nav kept) → 4 red, the tall-face arm at 414:
+    ".peekover-toc [262.9,0.0 → 414.0,106.0] over 1 line(s), first [33.0,103.0 → 302.3,169.0]" (Firefox: first
+    103.6); restored md5-identical (`3e554d58…`). **Finding:** either half alone holds a WIDE face — the uncapped
+    `nowrap` handle stays one line, and the fixed height clamps a wrapped one — so the wide arms stay green under a
+    single-half ablation; the tall arm is the fixed height's own instrument (why it was added).
+  - **The app page, re-measured against `97e3fe2` in one session** (the rail, its handle, the h1, the column, the text
+    width; 1440 / 1280 / 1189 / 1080 / 414; rail open and collapsed; both engines): **identical to the hundredth of a
+    pixel**. The editor preview (`chrome: false`, no mode pill) and an HTML export (it clones the column alone) draw
+    neither keyed rule. **Necessary ripple:** `htmlExport.test.ts`'s `:host` pin 26 → 28 (both new sites DROPPED in an
+    export, as every `data-toc` site is; `carried` stays 10, now pinned too) — the export stylesheet carries the two
+    custom properties (+95 B of text), nothing it renders moves; census C022 re-spelled.
+  - **Bytes** (clean two-engine build; 5.6's recorded figures from the same tree): content script **345,202 B (+351)**,
+    md5 `bb73c30c…` (Cr) / `7b3d5f17…` (Fx) — under the +2 KB tripwire = `READER_CSS` +351: the `:host` properties +44,
+    the column's derived top +51, the collapsed padding's variable +17, the uncapped rule +82, the handle rule +157 —
+    residual 0. **App chunk 556,480 B (+351)**, the same CSS. `.output` 5,976,175 / 5,976,291 B (+702 each; headroom
+    1,363,857 / 1,363,741 B under 7 MiB); manifests 833 / 949 B, `permissions: []`; `background.js` 3,786 B unchanged;
+    golden EMPTY.
+  - **Verify:** lint 0 · unit 1,502 / 1,502 · browser, alone, both engines: **2,510 passed / 0 failed / 52 skipped of
+    2,562** (+36), 595 s, EXIT 0, first run; no known flake recurred · the sweep green, PENDING EMPTY · the census green,
+    pending EMPTY · golden EMPTY · manifests unchanged · no control bytes and LF only in every changed file (two counts;
+    the control fires).
+  Why: CI is the first reader on a machine without the design faces; the tab reader draws in the user's system face by
+  design (D-3), so its chrome's vertical extent must not follow it.
+  Revisit-when: a top-chrome element gains `line-height:normal` or wrapping text; the handle's label changes (it must
+  fit one line in the derived 30 px); 8.1's walk on a machine without Bricolage installed.
+
 - **2026-11-05 · M13 TASK 5.6 — the browser-tab reader restyled; the sweep's pending list empty (plan §3; gate-1 Q10's
   default arm). HUMAN RULINGS: Firefox for Android is not a supported browser (the `unsupported` outcome removed); "no
   chrome over text" read AT REST.** Local, on `main` at `1dbb0c5` (5.5), up to date with `origin/main`, tree clean;
