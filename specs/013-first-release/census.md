@@ -314,6 +314,18 @@ retired while its function has no other test. Function by function:
   system face, letter-spaced wide, a tall face — × file / raw host × 1280 / 1080 / 414, both engines); its 1440 / 1280 /
   1080 / 414 at-rest checks unchanged. The census's pending list stays EMPTY.
 
+- **5.7** (2026-11-05 — editor details: Save the ink primary, the bar `.edbar`'s shape): the save bar's look only.
+  **RE-SPELLED:** C093 (`contrastCensus` INVENTORY) — its count 48 → 52 (the save bar saving, and with a save's
+  outcome; `KEEPS:` in the test). **KEPT, unchanged and green** (each still states its property): C097 (the editor and
+  the unsaved dialog meet AA), C156 (a resolving loader enters edit), C210, C218 (`editorUnsaved`), C225
+  (`editorWalkPolish`), the `editorSave` rows (the write path, the download, the status copy, Ctrl/Cmd+S) and R11's pin
+  (`editorEngine.test.ts`, the token highlight). **Retired:** none. Outside the census: `editorBar` (new — the ink
+  primary, every save state, the shape, faces, the split, the shipped-controls pin). The census's pending list stays
+  EMPTY; the sweep's stays EMPTY.
+
+**Group 5 — final state (2026-11-05, after 5.7).** Every 5.x row is handled (5.0 – 5.8, 5.2a, the 5.6 FIX). Both pending
+lists — the contrast census's and the native-control sweep's — are EMPTY on both engines.
+
 **Group 4 — final state (2026-11-04, after 4.8).** Every 4.x row is handled: 4.1 – 2, 4.3 – 99, 4.4 – 47 (+ C061 moved
 up), 4.5 – 100, 4.6 / 4.7 – C225's later steps, 4.8 – C264 plus C218 and C260 (above); discovered rows C354–C371. The
 **28 retirements** are the table below, unchanged since 4.5 — shown to the human at group 4's end (gate-1 Q8).

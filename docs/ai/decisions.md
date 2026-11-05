@@ -1,6 +1,88 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-05 · M13 TASK 5.7 — editor details: Save the ink primary, the bar per `.edbar`'s shape; GROUP 5 COMPLETE
+  (plan §3; R11).** Local, on `main` at `da5a077` (5.6 FIX), up to date with `origin/main`; Windows, Node 24.11.1, pnpm
+  10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0 on 2026-11-05. **CI read with `gh`:** `da5a077` — CI
+  success (run 41969694869, job `verify`; watched to completion), Supply chain success (41969694961). `97e3fe2`'s CI red
+  (41965319733, the tab reader's at-rest hit-test at 414 on Linux) was fixed by `da5a077` ("M13 TASK 5.6 FIX"). This
+  task's work began on `97e3fe2`, was stashed for the fix, and popped onto `da5a077` with no conflict (EDITOR_CSS and the
+  TOC rules are different regions); editorBar and tabReaderChrome re-run green (88 / 88) before anything else.
+  - **Kickoff vs tasks.md, flagged:** (1) the kickoff calls the split "R11"; R11 is the editor's TWO-TONE PALETTE
+    (tasks.md's Verify: "R11's two-tone palette unchanged (pinned)"). Both are honoured: the palette is untouched (its
+    pin, `editorEngine.test.ts` › "tokenHighlightSpecs over the REAL default style", green), and the split was measured
+    (below). (2) The kickoff names a **disabled** Save state: Save is never disabled — a save is allowed at any time,
+    clean or dirty; adding one would be a behaviour change, so none was added. The states that exist — at rest, saving,
+    an outcome, a failure — are each styled and pinned. (3) The kickoff's "census row IDs" for KEEPS / RETIRED: no
+    census row moved except C093's count (below).
+  - **`.edbar`'s items** (`mockup.html:674–683`; `toolbar-mock.html:141`, `:302`), against spec §6 ("the editor's
+    formatting/lint/table/snapshot bar" is out of scope): **B** (bold), **I** (italic), **`</>`** (code), **☐ task**,
+    **▦ table**, **⌕ replace**, **⟲ snapshots**, **✓ lint & format** — each NOT SHIPPED, omitted; the **"● 0 issues ·
+    autosaved"** line — not shipped (no lint, no autosave), omitted; **Save** (`toolbar-mock.html`'s `.btn.primary`) —
+    shipped, kept; the mock's status span ("Not saved yet") — the shipped status line, kept (its copy unchanged: it
+    says a save's outcome, never a standing state). The bar holds exactly Save and the status line (pinned).
+  - **The look (EDITOR_CSS only; tokens only):** **Save is 5.4's ink primary** — the declarations APP_CSS gives the
+    confirms and the unsaved dialog's Keep editing (`--ink` fill and border, `--paper` text, 600 11.5px/normal `--sans`,
+    radius 7, 5 / 11 px), repeated in EDITOR_CSS because APP_CSS does not reach the reader's shadow root; a test holds
+    the two to ONE computed box in the same page (no third look). While a save runs (`aria-busy`) the pointer is
+    `progress`. The old hover (border to `--faint`) is gone with the pill look — 5.4's primaries have none. **The bar
+    takes `.edbar`'s shape:** a centred, wrapping flex row 10 px apart (the approved `toolbar-mock.html:141`; `mockup.html`'s
+    `flex-wrap`), on `--paper` (was `--panel`), `400 12.5px/1.4 --sans`, the status line `--muted` (the mock's; was
+    `--ink`). It stays inside the split's border as its first row — the mock draws it above the editor; moving it out
+    would move the panes (flagged). **Faces via D-3:** the bar, Save and the status `--sans`, the source `--mono`, the
+    preview's text `--serif` — pinned per element against the tokens (already so; nothing changed).
+  - **The split, measured before (`97e3fe2`, re-measured at 1440 on `da5a077`: identical) and after, both engines:**
+    at 1440 the split 850 × 677, the bar 848 × 40.5, source and preview each **424 × 634.5** from y 210.81 (Fx 210.85);
+    at 1600 the split 1010 × 677, source and preview **504 × 634.5**; at 414 (stacked) 300 × 267.75 each from 305.47 /
+    573.22. **After: identical to the hundredth of a pixel** at all three widths, both themes. How: `min-height:40.5px`
+    holds the bar at its pre-5.7 height (6 + 27.5 + 6 + 1); Save itself is 50.9 × 26 (was 59.2 × 27.5, the pill).
+  - **Behaviour, keyboard, names, focus order: unchanged.** No `editorView.ts` change: Save's click and Ctrl/Cmd+S run
+    the same `run()`; the button's name "Save" / "Saving…", `aria-busy`, the `role="status"` line and the order (Save,
+    then the source) pinned; the unsaved guard and its dialog untouched (Keep editing is the test's reference and still
+    keeps edit).
+  - **Contrast** (as painted, `editorBar`, both engines identical; light / dark): Save at rest and saving `--paper` on
+    `--ink` **17.22 / 15.47**; the status after a save and after a failure `--muted` on `--paper` **6.01 / 7.44** — the
+    lowest. **Non-text, for 8.1 (WCAG 1.4.11):** Save's box `--ink` on the bar's `--paper` 17.22 / 15.47; the bar's
+    rule `--line` 1.21 / 1.29 (as the split's border, unchanged); the focus ring `--accent` 17.22 / 15.47.
+  - **The census** adds the save bar's two unmeasured states — **saving** and **a save's outcome** — both themes (48 →
+    52 surface × theme; the bar at rest was already measured in "the editor and the unsaved-changes dialog"); its
+    pending list stays **EMPTY**. **The sweep** stays **EMPTY** (the editor run already sweeps Save; it now has an
+    author background and border by the new rule).
+  - **Tests (red-first at `97e3fe2`'s styles, both engines): 12 red / 4 green of 16** in the new
+    `tests/browser/editorBar.browser.test.ts` — "Save: expected {…} to deeply equal {…}" (vs Keep editing), "saving:
+    the pointer says busy: expected 'pointer' to be 'progress'", "the .edbar shape: expected {…}" (gap 12, no wrap);
+    the shipped-controls pin green at 5.6 (a kept property). Green after: 16 / 16.
+  - **Ablations → red** (each on both engines, restored md5-identical): **A1** Save back to 5.3's plain button (`--paper`
+    / `--line` / `--muted`) → 4 red, "Save: expected { …(12) } to deeply equal { …(12) }"; **A2** an unshipped tool (a
+    "B" bold button, title "Bold") added to the bar in `addSaveBar` → 4 red, "the bar's children: expected [ Array(3) ]
+    to deeply equal [ Array(2) ]"; **A3** (mine) the bar's `min-height` removed → 4 red, "the bar height (the panes
+    start 40.5 px into the split, as before 5.7): expected 39 to be 40.5" — the split's pixel identity is pinned.
+  - **Bytes** (clean two-engine build): content script **345,202 B, md5 `bb73c30c…` (Cr) / `7b3d5f17…` (Fx) —
+    IDENTICAL** to `da5a077` (EDITOR_CSS ships to the app page alone). **App chunk 556,555 B (+75)** = `EDITOR_CSS` +75,
+    itemised by the literal's line diff: the bar +61 (`flex-wrap` and the 10 px gap +15; `box-sizing` and the 40.5 px
+    `min-height` +40; `--paper`, `--muted` and the 400 weight +6), Save +12 (the ink primary's declarations for the
+    pill's), the hover rule replaced by `[aria-busy]` +2 — residual 0. `.output` 5,976,250 / 5,976,366 B (+75 each); manifests 833 / 949 B,
+    `permissions: []`; golden EMPTY.
+  - **Verify:** lint 0 · unit 1,502 / 1,502 · browser, alone, both engines: **2,530 passed / 0 failed / 52 skipped of 2,582 (+20)**, EXIT 0, first run; no known flake recurred ·
+    the sweep green, PENDING EMPTY · the census green, pending EMPTY · golden EMPTY · manifests unchanged · no control
+    bytes and LF only in every changed file (two counts; the control fires).
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\5.7\`:** `before\` (`97e3fe2`) / `after\` ×
+    `editor-1440` / `-1600` / `-414` × `light` / `dark` × `-unsaved` (Save live) / `-saved` (just after a save: the
+    download route's status line). Chromium.
+  - **GROUP 5 CLOSE-OUT:** every 5.x row ticked (5.0, 5.1, 5.2, 5.2a, 5.3, 5.8, 5.4, 5.5, 5.6 with its FIX, 5.7). The
+    census's pending list and the native-control sweep's are both **EMPTY on both engines** (this task's full run). The
+    group-5 acceptance: every surface restyled · no native-styled control · census pending empty · math without the code
+    toolbar (5.3) · content-script first paint inside 165 ms — measured at 5.6 (161.3 ms median, an agent's local run;
+    A-B-A inside noise); **5.6 FIX later added 351 B of READER_CSS and first paint was not re-measured** — flagged. The
+    8.1 items group 5 added are consolidated in progress.md's § Carried items, "FOR M13 TASK 8.1".
+  - **Deviations, flagged:** (1) the bar stays inside the split (the mock's sits above it); (2) no disabled state
+    (above); (3) Save has no hover change (5.4's primaries have none); (4) EDITOR_CSS repeats the ink primary's
+    declarations (APP_CSS cannot reach the shadow root) — held to one computed look by the test.
+  Why: tasks.md 5.7 — Save in the one primary look the app already uses, the bar in the mock's shape without the tools
+  spec §6 leaves out, the split and R11 untouched.
+  Revisit-when: 8.1's walk (the bar inside the split; the non-text states above); the ink primary changes in APP_CSS
+  (EDITOR_CSS's copy follows — the test reds first); a save ever becomes disallowed in some state (then a disabled look).
+
 - **2026-11-05 · M13 TASK 5.6 FIX — the tab reader's top clearance no longer depends on the system font (CI run
   41965319733 on `97e3fe2`).** Local, on `main` at `97e3fe2` (5.6), tree clean after the 5.7 work-in-progress was
   stashed (`stash@{0}`, kept for 5.7); Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod`

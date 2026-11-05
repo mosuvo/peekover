@@ -1512,13 +1512,20 @@ export const CONTAINED_CSS = /* css */ `
 // them to their content. With no bar that first row is simply empty and takes no height. Stacked
 // (<= 720px) the preview moves to a third row. `minmax(0,1fr)` rather than `1fr`: a pane is a
 // scroll box and must not grow the row to fit what it holds.
-//   - The button is the pill family's shape at the bar's scale, in --ink on --panel with a --line
-//     border; hover moves the border to --faint, as the pills' do.
-//   - The status line is --ink text and nothing else. No outcome has a colour: what happened is
-//     said in words (the control's own text while a save is running, this line once it has ended),
-//     so there is no state here that colour alone carries.
+//   - 013 TASK 5.7: the bar takes `.edbar`'s SHAPE only (toolbar-mock.html:141, mockup.html:309):
+//     a centred, wrapping flex row 10px apart on --paper, in --sans. None of the mock's tools
+//     (spec §6: the formatting / lint / table / snapshot bar is not shipped). `min-height` holds
+//     the bar at its pre-5.7 height (6 + 27.5 + 6 + 1 = 40.5px), so the panes below it keep their
+//     boxes to the pixel.
+//   - Save is the INK PRIMARY, 5.4's look (APP_CSS's confirms and the unsaved dialog's Keep
+//     editing): --ink fill and border, --paper text, 600 11.5px --sans, radius 7, 5px 11px. APP_CSS
+//     does not reach this shadow root, so the declarations are repeated here; a browser test holds
+//     the two to one computed box. While a save runs (`aria-busy`) the pointer says busy.
+//   - The status line is --muted text (the mock's) and nothing else. No outcome has a colour: what
+//     happened is said in words (the control's own text while a save is running, this line once
+//     it has ended), so there is no state here that colour alone carries.
 //   - `min-width:0` lets a long status line wrap inside the bar instead of widening the grid.
-// Tokens used, each already in this sheet's set: --line, --panel, --ink, --faint, --sans.
+// Tokens used, each already in this sheet's set: --line, --paper, --ink, --muted, --sans.
 //
 // THE 7.1 WALK'S POLISH (012 R28, R29; decisions.md "M12 TASK 3.5").
 //   - HEIGHT. The split was a fixed 60vh. It now fills the reader pane: editorView.ts measures the
@@ -1567,15 +1574,15 @@ export const EDITOR_CSS = /* css */ `
   :host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{--edit-top:56px}
 }
 .peekover-editor__bar{
-  grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:12px;
-  padding:6px 10px;border-bottom:1px solid var(--line);
-  background:var(--panel);color:var(--ink);font:12.5px/1.4 var(--sans);
+  grid-column:1/-1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  box-sizing:border-box;min-height:40.5px;padding:6px 10px;border-bottom:1px solid var(--line);
+  background:var(--paper);color:var(--muted);font:400 12.5px/1.4 var(--sans);
 }
 .peekover-editor__save{
-  flex:none;font:inherit;font-weight:600;color:var(--ink);background:var(--panel);
-  border:1px solid var(--line);border-radius:999px;padding:4px 14px;cursor:pointer;
+  flex:none;margin:0;font:600 11.5px/normal var(--sans);color:var(--paper);background:var(--ink);
+  border:1px solid var(--ink);border-radius:7px;padding:5px 11px;cursor:pointer;
 }
-.peekover-editor__save:hover{border-color:var(--faint)}
+.peekover-editor__save[aria-busy="true"]{cursor:progress}
 .peekover-editor__status{margin:0;min-width:0}
 .peekover-editor__source,.peekover-editor__preview{grid-row:2}
 .peekover-editor__source{

@@ -831,16 +831,27 @@ not-yet-restyled surface on a named pending list that each later task shrinks; i
       kickoff's Part A: the `unsupported` open outcome removed (**HUMAN RULING:** Firefox for Android, the only browser
       lacking a folder route, is not supported) and the no-file copy "Pick a file to start reading.". Necessary ripple:
       `agentBadge` (C064's pin), `appShell.test.ts`, `filesOverlay`, `contrastCensus`, `nativeControls`.
-- [ ] **5.7 Editor details.** TEST FIRST. Save as an ink primary button, bar per `.edbar` (shape only — none of its
+- [x] **5.7 Editor details.** TEST FIRST. Save as an ink primary button, bar per `.edbar` (shape only — none of its
       unshipped tools, spec §6), faces via D-3; R11 unchanged.
       Files: `src/theme/readerCss.ts` (`EDITOR_CSS`) · `src/render/editor*.ts` (class names only if needed) ·
       census-named tests
       Verify: (**Cr+Fx**) Save computes the ink primary's tokens; R11's two-tone palette unchanged (pinned); the sweep's
       pending list is **empty**, the census's pending list holds no row this milestone could fix (each remaining row
       named and routed). Content-script md5 identical. Full suite. Golden EMPTY · manifest · `permissions: []`. [R11]
+      ★ *Landed 2026-11-05 (`decisions.md`, "M13 TASK 5.7").* Save is 5.4's ink primary — one computed box with the
+      unsaved dialog's Keep editing (EDITOR_CSS repeats APP_CSS's declarations: the shadow root is out of its reach);
+      the bar `.edbar`'s shape (a centred, wrapping row on `--paper`, the status `--muted`), holding only Save and the
+      status line — the mock's eight tools and its lint line are spec §6's, omitted. The split identical to the pixel
+      at 1440 / 1600 / 414 (the bar held at 40.5 px); R11's palette untouched (its pin green). No disabled state: Save
+      is never disabled (the kickoff named one — flagged). The census adds the bar's saving and outcome states (52),
+      EMPTY; the sweep EMPTY. Content script md5 identical; app chunk 556,555 B (+75). **GROUP 5 COMPLETE.**
 
 *Group-5 acceptance: every surface restyled; no native-styled control; census pending list empty or each row routed;
 math without the code toolbar; content-script first paint inside 165 ms.*
+
+**GROUP 5 COMPLETE (2026-11-05, at 5.7).** Every 5.x row ticked (5.0–5.8 with 5.2a and the 5.6 FIX); the census's
+and the sweep's pending lists EMPTY on both engines. First paint was measured at 5.6 (inside 165 ms on an agent's
+local run); the 5.6 FIX's +351 B of READER_CSS has not been re-measured — flagged in `decisions.md`, 5.7.
 
 ## 6 — Onboarding (D-11; gate-1 Q18; G-10)
 

@@ -28,7 +28,7 @@
 // 013 task 5.8: its 8 rows (the old default code theme's comments) were resolved by the Peekover
 // code theme, now the default; the fixture's code blocks carry every token kind it paints.
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
@@ -479,6 +479,30 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       census(dialog, 'unsaved-changes dialog', theme);
     });
 
+    // 013 task 5.7: the editor's save bar in the two states the case above does not reach — a save RUNNING (Save reads
+    // "Saving…"; measured in the click's own task, before the save's first await) and a save's OUTCOME in the status
+    // line (the download route; the anchor's click is swallowed, nothing leaves the page).
+    it(`the editor's save bar: saving, and a save's outcome — ${theme}`, async () => {
+      setThemeSetting(theme);
+      const { host } = await appPage(theme);
+      await themed(host, theme);
+      segmentToggle(host).click();
+      await waitFor(() => host.getAttribute('data-mode') === 'edit', 'edit mode');
+      const session = await waitFor(() => editorSessionFor(host), 'the edit session');
+      await sleep(200);
+      session.view.dispatch({ changes: { from: session.view.state.doc.length, insert: ' typed' } });
+      const bar = host.shadowRoot!.querySelector<HTMLElement>('.peekover-editor__bar')!;
+      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      try {
+        bar.querySelector<HTMLButtonElement>('.peekover-editor__save')!.click();
+        census(bar, 'editor save bar (saving)', theme);
+        await waitFor(() => !bar.querySelector<HTMLElement>('.peekover-editor__status')!.hidden, 'the status line');
+        census(bar, 'editor save bar (a save’s outcome)', theme);
+      } finally {
+        click.mockRestore();
+      }
+    });
+
     // 013 task 5.4: the Compare picker open with a seeded snapshot (diffChrome's way: the production capture
     // function, the docId the app page registered — the folder is persistable so it registers one), then the diff
     // view that snapshot opens. The snapshot differs in a heading and in the paragraph with the link, so the diff
@@ -595,8 +619,9 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     // Non-vacuous: every surface and theme was measured. KEEPS: every surface × theme measured (C093); RE-SPELLED at
     // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added), and at 5.5,
     // 22 → 44 (eleven app states), and at 5.6, 44 → 42 (`unsupported` removed: no browser Peekover supports produces it)
-    // → 48 (the tab reader's network-used, Raw-view and render-failure states).
-    expect(covered.size, 'surfaces × themes measured').toBe(48);
+    // → 48 (the tab reader's network-used, Raw-view and render-failure states), and at 5.7, 48 → 52 (the editor's save bar
+    // saving, and with a save's outcome).
+    expect(covered.size, 'surfaces × themes measured').toBe(52);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);
