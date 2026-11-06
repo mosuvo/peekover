@@ -15,7 +15,8 @@ import { join } from 'node:path';
 const ROOT = process.cwd();
 const read = (p: string): string => readFileSync(join(ROOT, p), 'utf8').replace(/\r\n/g, '\n');
 
-const SURFACES = { README: 'README.md', SECURITY: 'docs/trust/SECURITY.md' } as const;
+// 7.1: CHANGELOG.md joins (tasks.md 7.1: each CHANGELOG line has a ledger row).
+const SURFACES = { README: 'README.md', SECURITY: 'docs/trust/SECURITY.md', CHANGELOG: 'CHANGELOG.md' } as const;
 type Surface = keyof typeof SURFACES;
 const LEDGER = 'docs/store/claims.md';
 const STATUSES = ['true now', 'live at release', 'planned', 'withdrawn'] as const;

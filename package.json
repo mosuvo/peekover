@@ -1,6 +1,6 @@
 {
   "name": "peekover",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Free, open-source browser extension that renders raw markdown into beautiful, private reading. Zero network by default.",
   "license": "MIT",
   "private": true,

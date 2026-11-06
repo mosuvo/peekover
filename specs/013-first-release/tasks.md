@@ -981,7 +981,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
 
 ## 7 — Release hygiene (D-14; G-1, G-8, G-9, G-13; §9-4, §9-5, §9-7)
 
-- [ ] **7.1 Version 0.1.0 + CHANGELOG (gate-1 Q1).** TEST FIRST. `package.json` `0.1.0` (the manifest follows);
+- [x] **7.1 Version 0.1.0 + CHANGELOG (gate-1 Q1).** TEST FIRST. `package.json` `0.1.0` (the manifest follows);
       `CHANGELOG.md` Keep-a-Changelog, one 0.1.0 entry assembled from the M1–M12 close records plus M13's shipped work,
       every line traceable to a close record (no unshipped feature).
       Files: `package.json` · `CHANGELOG.md` (new) · `tests/manifest.test.ts` (ADDITIVE: version, G-14) ·
@@ -989,6 +989,14 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       Verify: (**unit**) the built manifests' `version` is `0.1.0` and equals `package.json`'s (red-first before the
       bump); 4.7's status-line test still green. Each CHANGELOG line has a ledger row. Bytes: manifests length-neutral
       (F-7) — stated; content-script md5 identical. Golden EMPTY · `permissions: []`. [gate-1 Q1]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.1").* `package.json` 0.1.0 is the one source (both manifests,
+      the status line at runtime, the zip names). **Minimum versions, measured (MDN browser-compat-data 8.1.8, both
+      built packages scanned): Chrome 121 (CSS `scrollbar-color`, HUMAN RULING "121"), Firefox 127 (`ClipboardItem` /
+      `Clipboard.write()` for the copy actions — the STOP fired against the 115 floor; HUMAN RULING "Raise to 127").**
+      `tests/browserFloor.test.ts` pins both to the inventory's maximum (ablation: `light-dark()` → red at 123).
+      CHANGELOG.md approved by the human as written; ledger rows 307–335; `truthPins` reads it. **Not length-neutral
+      (flagged):** the carried floors add two keys — manifests +31 / +29 B (864 / 978); content script and every chunk
+      identical. Ripple: `wxt.config.ts`, `tests/browserFloor.test.ts`, `tests/truthPins.test.ts`.
 - [ ] **7.2 PRIVACY.md, THREAT-MODEL.md, SECURITY.md final (D-14's documents; G-1).** PRIVACY: no collection, no
       transmission, what is stored locally and how to wipe it, the only network is user-triggered remote media.
       THREAT-MODEL, one page: assets, adversaries, out of scope, where each defence is proven (test file names).

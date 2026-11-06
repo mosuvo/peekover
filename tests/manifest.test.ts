@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import config from '../wxt.config';
+import pkg from '../package.json';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // The zero-permission TRUST PIN (AGENTS.md #4 · spec 002 §9 built-manifest).
 //
@@ -75,5 +78,31 @@ describe.each(['chrome', 'firefox'])('manifest zero-permission trust-pin (%s)', 
       16: 'icons/icon-16.png',
       32: 'icons/icon-32.png',
     });
+  });
+});
+
+// 013 task 7.1 (gate-1 Q1; ADDITIVE, G-14). The version has ONE source, `package.json`: the config writes no
+// `version` / `version_name`, so WXT copies package.json's into both built manifests. When `.output` holds a
+// build, each built manifest's version is read and must equal package.json's (CI builds after the unit run, so
+// there the built half finds nothing to read; locally both engines are built before Verify).
+describe('the version (013 task 7.1)', () => {
+  it('package.json says 0.1.0', () => {
+    expect(pkg.version).toBe('0.1.0');
+  });
+
+  it.each(['chrome', 'firefox'])('the %s config writes no version of its own', (browser) => {
+    const m = manifestFor(browser);
+    expect(m.version).toBeUndefined();
+    expect(m.version_name).toBeUndefined();
+  });
+
+  it('every built manifest under .output carries package.json\'s version', () => {
+    const dir = join(__dirname, '..', '.output');
+    const built = existsSync(dir)
+      ? readdirSync(dir).map((d) => join(dir, d, 'manifest.json')).filter((p) => existsSync(p))
+      : [];
+    for (const p of built) {
+      expect((JSON.parse(readFileSync(p, 'utf8')) as { version: string }).version, p).toBe(pkg.version);
+    }
   });
 });

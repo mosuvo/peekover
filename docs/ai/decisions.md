@@ -1,6 +1,90 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.1 — version 0.1.0, CHANGELOG, minimum browser versions (gate-1 Q1; the carried "FOR M13
+  TASK 7.1" item). THREE HUMAN RULINGS.** Local, on `main` at `8b1f3c6` (6.2a); `pnpm audit --prod` EXIT 0 (one low,
+  ignored) on 2026-11-06.
+  - **Mismatches, flagged:** (a) tasks.md 7.1 says "manifests length-neutral (F-7)"; the carried item (the human's
+    direction, 2026-11-04) adds two manifest keys, so they are not — +31 / +29 B, each key stated below; the kickoff
+    expected it. (b) tasks.md's Files list omits what the carried item and Verify require — necessary ripple:
+    `wxt.config.ts` (the two keys), `tests/browserFloor.test.ts` (new; the pin the kickoff asks for),
+    `tests/truthPins.test.ts` (CHANGELOG as a surface — the mechanism for "each CHANGELOG line has a ledger row").
+    (c) The kickoff's Firefox floor 115 is overridden by the human (below) after the STOP it provided for.
+  - **THE VERSION — one source, `package.json` `0.1.0`.** Sites: `package.json`; both built manifests' `version` (WXT
+    copies it; the config writes none — pinned); the app page's status line (`runtime.getManifest().version` at runtime,
+    `entrypoints/app/main.ts`; no literal in any chunk); the store zips' names (`peekover-0.1.0-chrome.zip` /
+    `-firefox.zip` / `-sources.zip`, WXT); `CHANGELOG.md`'s heading. Tests read package.json, never a literal, except
+    the one that pins the bump (`tests/manifest.test.ts`, "package.json says 0.1.0"). No test pinned 0.0.0
+    (`diagramCache.browser.test.ts`'s `0.0.0-not-the-real-version` is a deliberately fake engine version, untouched).
+  - **THE INVENTORY (MDN browser-compat-data 8.1.8, 2026-11-02, fetched with `npm pack` to a scratch folder — not a
+    dependency; first unflagged, unprefixed version).** Found by a scan of BOTH built packages (every .js / .css / .html,
+    dependencies included) against a watch-list of ~150 features, each high hit read in context, plus a scan of
+    Peekover's own source. Relied on (sets or bounds a floor):
+
+    | Feature | Where | Chrome | Firefox |
+    |---|---|---|---|
+    | CSS `scrollbar-color` | READER_CSS, app page, setup guide | **121** | 64 |
+    | `ClipboardItem` + `Clipboard.write()` | Copy as HTML, Copy as rich text, Copy diagram as PNG | 76 | **127** |
+    | `URL.canParse()` | @braintree/sanitize-url (Mermaid links), unconditional | 120 | 115 |
+    | CSS `color-mix()` | setup guide notices | 111 | 113 |
+    | CSS container queries / `cqh` units | app page TOC rail (5.2a) | 105 | 110 |
+    | `Object.hasOwn()` · `accent-color` | code aliases · editor search | 93 | 92 |
+    | `crypto.randomUUID()` | snapshots, app page | 92 | 95 |
+    | JS syntax, every shipped file (esbuild 0.28.1, `\p{…}` aside — MDN: Cr 64 / Fx 78) | all | 91 | 93 |
+    | `structuredClone()` | Mermaid, unconditional | 98 | 94 |
+    | MV3 `action`; background service worker (Chromium) | manifest | 88 | 109 |
+    | `aspect-ratio` · `inset` · `replaceChildren()` · `:focus-visible` · flex `gap` | own CSS / DOM | 84–88 | 63–89 |
+    | File System Access (picker, drop handle, `createWritable`) | Chromium branch only | 86 | — |
+    | `HTMLDialogElement.showModal()` | unsaved dialog, lightbox | 37 | 98 |
+
+    Excluded, with reasons: `font-size-adjust` (Cr 127; Temml's math reset sets it to `none`, its initial value);
+    `FileSystemObserver` (Cr 133; feature-detected, polling fallback); `Selection.getComposedRanges` (Cr 137 / Fx 142),
+    `EditContext` (Cr 121), `Intl.Segmenter` (Fx 125), `Error.captureStackTrace` (Fx 138) — each feature-detected in
+    CodeMirror / Mermaid / jsdiff / chevrotain / js-yaml; `light-dark()` (Shiki, only under a `defaultColor` option
+    Peekover does not set); `@scope`, `@starting-style`, `white-space-collapse`, `text-wrap` — keyword lists in a grammar,
+    CodeMirror's CSS language or Mermaid's at-rule allowlist; `.union()` — Cytoscape's collection method, not `Set`;
+    `inert` — DOMPurify's attribute allowlist; Shiki's regexes — oniguruma-to-es picks its target at runtime (`auto`,
+    ES2018 fallback); `data_collection_permissions` (Fx 140 — unknown and ignored before; "none" needs no consent
+    screen, Extension Workshop, read 2026-11-06). CSS nesting: none in Peekover's CSS (CodeMirror's `&` is expanded by
+    style-mod in JS).
+  - **STOP (Firefox) → HUMAN RULING, verbatim: "Raise to 127 (Recommended)".** The ClipboardItem copies need 127; on
+    115–126 they would show "Copy failed". **HUMAN RULING (Chrome), verbatim: "121 (Recommended)"** — the rule: the newest
+    feature whose absence changes behaviour or appearance (scrollbar-color; native scrollbars otherwise). So
+    `minimum_chrome_version: "121"` (Chromium manifest only) and `browser_specific_settings.gecko.strict_min_version:
+    "127.0"` (Firefox only).
+  - **The pin, `tests/browserFloor.test.ts` (new, 5):** the inventory as data — each row MDN's versions and a detector
+    over Peekover's own shipped source (comments stripped), plus fixed rows for what a unit run cannot see (the
+    dependencies' canParse, the syntax level, the platform keys) and a 24-row watch-list of newer features (Set methods,
+    iterator helpers, `light-dark()`, `@starting-style`, `@scope`, `:has()`, nesting, `@property`, popover, anchor
+    positioning, `URL.parse`, `Promise.withResolvers` / `try`, `Object.groupBy`, `Array.fromAsync`, `RegExp.escape`,
+    regex modifiers, Float16Array, …). Floors = max over firing, non-excluded rows; the manifests must equal them, and
+    each floor names the feature that sets it. Red before the keys (`expected undefined to be '121'` / `'127.0'`).
+    **Ablation:** `light-dark()` swapped into the setup guide's sheet → Chrome red, `expected { version: 123 … } to
+    deeply equal { version: 121 … }`; restored. Limit: a feature outside the table, or a dependency's new use, is
+    caught only by re-running 7.1's package scan.
+  - **The version tests (`tests/manifest.test.ts`, additive, +4):** package.json says 0.1.0 (red before the bump); the
+    config writes no `version` / `version_name` (both engines); every built manifest under `.output` equals package.json
+    (red on the stale 0.0.0 build before the rebuild — the control fired; CI builds after the unit run, so there it reads
+    none). 4.7's status-line tests green (they read package.json).
+  - **CHANGELOG.md — HUMAN APPROVAL, verbatim: "Approve as written".** Keep a Changelog; one entry, "0.1.0 -
+    Unreleased" (the date is the human's at release); "Added" (19 lines) and "Known limits" (7); no release link (the
+    repository is private and has no tag). 25 lines are README sentences already in the ledger; four are new (the Stored
+    data panel, the setup guide once, `permissions: []`, the two floors). The approval dialog's preview showed the two
+    links as plain names and `permissions: []` without backticks; the file carries the links and backticks.
+  - **Claims ledger:** rows 307–335, surface CHANGELOG (copied lines cite their README row's evidence and status);
+    `truthPins.test.ts` reads CHANGELOG.md as a surface — every sentence ledgered, no install link, no false figure.
+  - **Bytes** (clean two-engine builds): **content script identical** (345,049 B, `ee9f9279…` / `317c6c51…`); every chunk,
+    `background.js` and both HTML pages identical. **Manifests:** Chromium 833 → **864 B (+31)** = `,"minimum_chrome_version":"121"`;
+    Firefox 949 → **978 B (+29)** = `"strict_min_version":"127.0",`; `version` 0.0.0 → 0.1.0 length-neutral;
+    `permissions: []`, no `host_permissions`, no `web_accessible_resources`. md5 `0eab0347…` / `f59eeaef…`. `.output`
+    6,446,441 / 6,446,297 B (+31 / +29; headroom 893,591 / 893,735). Zips 2,017,183 / 2,017,134 B; sources 4,902,942 B.
+  - **Verify:** lint 0 · unit 1,561 / 1,561 (+15) · browser full suite both engines (progress.md) · golden EMPTY ·
+    truthPins / ledger green · no control bytes, LF only.
+  Why: gate-1 Q1 (a releasable version); the human's 2026-11-04 direction to set both floors from measurement; a
+  CHANGELOG that says only what ships.
+  Revisit-when: any new web feature, dependency bump or grammar — re-run the package scan (the pin sees own source
+  only); 8.1 (the floors on real installs, Edge); 7.4 (the release date and link in the CHANGELOG).
+
 - **2026-11-06 · M13 TASK 6.2a (DISCOVERED) — the setup guide opens at most once. HUMAN DIRECTION + two HUMAN
   RULINGS.** Local, on `main` at `da5af53` (6.2), tree clean at start; Windows, Node 24.11.1, pnpm 10.33.0,
   `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-06.
