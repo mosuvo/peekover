@@ -159,7 +159,23 @@ needs a permission:
 - **No network.** Its fonts are the app page's, from the package; `tests/browser/onboarding.browser.test.ts`
   reads zero off-origin requests after the wire settles, with a slow firing control.
 
-*(Task 6.2 adds the `runtime.onInstalled` listener that opens this page once on install.)*
+- **The saved theme (task 6.2)** — the page reads the user's saved Peekover theme (light / dark / auto)
+  from Peekover's own settings store (IndexedDB on the extension's origin), exactly as the app page does.
+  Same-origin storage the extension already owns: no `storage` permission, no request.
+
+### `runtime.onInstalled` — open the setup guide once, on install (added M13 / task 6.2)
+The background registers a `runtime.onInstalled` listener. When the browser reports the reason
+`"install"` — Peekover was just installed — it opens the setup guide in a new tab with
+`tabs.create({ url: runtime.getURL('/onboarding.html') })`. For every other reason it does nothing: an
+extension update (`"update"`), a browser update (`"chrome_update"` in Chrome, `"browser_update"` in
+Firefox) or a shared-module update (`"shared_module_update"`). **This adds no permission:** `onInstalled`
+needs none (Chrome's `runtime` reference names a permission only for native messaging), and
+`tabs.create` with the extension's **own** URL reads no tab field, like the toolbar action above.
+Nothing is fetched. Both built manifests are byte-identical before and after (833 / 949 B,
+`permissions: []`); `tests/background.test.ts` runs the real background against a fake browser API
+and checks each reason. *Measured on a command-line-loaded Chromium 149 (`--load-extension`): every
+browser start reports `"install"` for such an install, so a developer sees the guide at each launch; a
+store install is expected to report it once — the 8.1 walk checks it.*
 
 ### `content_scripts.run_at` — `document_start`
 The content script runs at `run_at: "document_start"` (both builds), not the default

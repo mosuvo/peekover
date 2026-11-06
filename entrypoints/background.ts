@@ -4,10 +4,11 @@ import { createSettingsListener } from '@/src/settings/settingsPort';
 import { createWatchListener } from '@/src/watch/watchRelay';
 
 // Minimal background service worker. Peekover makes zero network calls by default
-// (AGENTS.md non-negotiable #1). It registers THREE listeners and no other logic:
+// (AGENTS.md non-negotiable #1). It registers FOUR listeners and no other logic:
 //   1. the toolbar action (spec 002),
-//   2. the settings message handler (spec 004, the second listener — task 2.3), and
-//   3. the watch relay (spec 005, the third listener — task 2.2).
+//   2. the settings message handler (spec 004, the second listener — task 2.3),
+//   3. the watch relay (spec 005, the third listener — task 2.2), and
+//   4. the install listener that opens the setup guide (M13 task 6.2).
 //
 // (1) The toolbar action has no popup, so a click dispatches `action.onClicked` here;
 // we open the bundled app page in a FULL TAB. A full-tab extension page — not a popup —
@@ -32,9 +33,18 @@ import { createWatchListener } from '@/src/watch/watchRelay';
 // is not a `file://` markdown URL, so this can never become a general read oracle — that
 // validation, not this comment, is the guarantee (src/watch/watchRelay.ts). Still no
 // permission required, so `permissions: []` holds (CI-pinned by tests/manifest.test.ts).
+// (4) The setup guide (M13 task 6.2; plan D-11; G-10): opened in a new tab when Peekover is first
+// installed, and ONLY then — not on an extension update, a browser update ("chrome_update" in
+// Chrome, "browser_update" in Firefox) or a shared-module update. Like (1), `tabs.create` with the
+// extension's own URL needs no permission, and nothing is fetched. tests/background.test.ts.
 export default defineBackground(() => {
   browser.action.onClicked.addListener(() => {
     void browser.tabs.create({ url: browser.runtime.getURL('/app.html') });
+  });
+
+  browser.runtime.onInstalled.addListener(({ reason }) => {
+    if (reason !== 'install') return;
+    void browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
   });
 
   browser.runtime.onMessage.addListener(createSettingsListener({ getSettings, putSettings }));

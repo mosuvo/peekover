@@ -9,7 +9,9 @@
 // links to it at 1440 (the toolbar) and at 414 (the "⋯" menu).
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { page, userEvent } from 'vitest/browser';
+import { page, userEvent, commands } from 'vitest/browser';
+import { putSettings, __resetConnectionForTest, DB_NAME } from '../../src/app/store';
+import type { ThemeSetting } from '../../src/settings/settings';
 import { mountOnboarding, ONBOARDING_CLASS, ONBOARDING_COPY, type OnboardingController, type OnboardingDeps } from '../../src/app/onboarding';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import { TOOLBAR_CLASS } from '../../src/app/toolbar';
@@ -238,4 +240,64 @@ describe('6.1 — reachable from the app page ("Setup guide")', () => {
     items.at(-1)!.click();
     expect(followed).toBe(1);
   });
+});
+
+// 6.2 (folded in from 6.1's flagged deviation): the guide follows the user's SAVED Peekover theme, as
+// the app page does — a manual light or dark wins over the system, Auto follows it. The setting is read
+// from the settings store, which this extension page reaches directly (its own origin, no permission).
+describe('6.2 — the saved Peekover theme, not only the system one', () => {
+  const PAPER = { light: 'rgb(251, 251, 248)', dark: 'rgb(18, 20, 28)' } as const;
+  const paper = (el: Element): string => getComputedStyle(el).backgroundColor;
+  afterEach(async () => {
+    await commands.emulateColorScheme(null);
+    __resetConnectionForTest();
+    await sleep(0);
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  });
+
+  const CASES: Array<{ saved: ThemeSetting; system: 'light' | 'dark'; paints: 'light' | 'dark' }> = [
+    { saved: 'dark', system: 'light', paints: 'dark' },
+    { saved: 'light', system: 'dark', paints: 'light' },
+    { saved: 'auto', system: 'light', paints: 'light' },
+    { saved: 'auto', system: 'dark', paints: 'dark' },
+  ];
+  for (const k of CASES) {
+    it(`saved ${k.saved} on a ${k.system} system paints ${k.paints} (the page's own sheet, step numbers too)`, async () => {
+      await commands.emulateColorScheme(k.system);
+      const ctl = open({ engine: 'chromium', readFileAccess: async () => false, loadTheme: async () => k.saved });
+      await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.off, 'off');
+      await waitFor(() => paper(ctl.element) === PAPER[k.paints], `--paper ${k.paints}`, 50).catch(() => undefined);
+      expect(paper(ctl.element), `the saved setting "${k.saved}" on a ${k.system} system`).toBe(PAPER[k.paints]);
+      const n = ctl.element.querySelector(`.${C}__n`)!;
+      expect(getComputedStyle(n).color, 'the step number keeps its pair').toBe(k.paints === 'dark' ? PAPER.dark : 'rgb(22, 23, 31)');
+    });
+  }
+
+  it('a saved setting that cannot be read leaves the system theme, and the page is still there', async () => {
+    await commands.emulateColorScheme('dark');
+    const ctl = open({ engine: 'firefox', loadTheme: () => Promise.reject(new Error('no store')) });
+    await sleep(50);
+    expect(paper(ctl.element)).toBe(PAPER.dark);
+    expect(shown(ctl.element.querySelector(`.${C}__card`))).toBe(true);
+  });
+
+  // The real entry over the real settings store — the wiring, not only the module.
+  for (const k of CASES.slice(0, 2)) {
+    it(`the real entry: a saved ${k.saved} setting on a ${k.system} system paints ${k.paints}`, async () => {
+      await commands.emulateColorScheme(k.system);
+      await putSettings({ theme: k.saved });
+      const root = host();
+      root.id = 'onboarding';
+      const spec = `../../entrypoints/onboarding/main.ts?theme-${k.saved}`;
+      await import(/* @vite-ignore */ spec);
+      const main = await waitFor(() => root.querySelector<HTMLElement>(`.${C}`), 'the entry mounted the page');
+      await waitFor(() => paper(main) === PAPER[k.paints], `--paper ${k.paints}`, 100).catch(() => undefined);
+      root.removeAttribute('id');
+      expect(paper(main), `the entry with "${k.saved}" saved`).toBe(PAPER[k.paints]);
+    });
+  }
 });

@@ -939,7 +939,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       live update cannot happen there; the copy says so (8.1 walks a store install, other Chromium browsers and Firefox).
       Red-first shown by ablation (the module was drafted first — flagged). Content script and manifests identical;
       `.output` +9,374 / +9,126 B (the entry 7,974 / 7,726, a shared chunk 1,607 moved out of the app chunk, −1,048).
-- [ ] **6.2 Open once on install, never on update (D-11; G-10; gate-1 Q18).** TEST FIRST. `background.ts` gains
+- [x] **6.2 Open once on install, never on update (D-11; G-10; gate-1 Q18).** TEST FIRST. `background.ts` gains
       `runtime.onInstalled` → `tabs.create({ url: runtime.getURL('/onboarding.html') })` only when `reason ===
       'install'`. `PERMISSIONS.md` records the listener (no `tabs` permission — the extension's own URL).
       Files: `entrypoints/background.ts` · `entrypoints/background.test.ts` (new or extended) ·
@@ -948,6 +948,20 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       `shared_module_update` open nothing (red-first: drop the reason check → `update` opens a tab). `manifest.test.ts`
       green, `permissions: []`. Bytes: background chunk delta stated; content-script md5 identical. Full suite. Golden
       EMPTY. [D-11; G-10]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 6.2").* `runtime.onInstalled` opens `onboarding.html` in a new tab
+      for "install" only — "update", "chrome_update", Firefox's "browser_update", "shared_module_update" and any unknown
+      reason open nothing. No permission, no network; manifests identical (833 / 949 B, `permissions: []`). **Test file
+      moved (flagged):** `tests/background.test.ts`, not `entrypoints/background.test.ts` — WXT would build an
+      `entrypoints/*.ts` as an unlisted script, and the unit project does not include `entrypoints/`; it runs the real
+      background against a fake `browser`. **Measured on a real command-line-loaded Chromium 149:** flipping "Allow access
+      to file URLs" either way closes the guide, fires no `onInstalled`, and leaves Peekover blocked until the browser
+      restarts; such an install reports "install" at EVERY browser start. **The human: the guide stays closed after a
+      flip; the listener stays as written here** (8.1 walks a store install). **Folded in (the kickoff; 6.1's flag):** the
+      guide follows the saved Peekover theme, read from the settings store as the app page reads it. Background +124 B;
+      the store and settings port moved into the shared chunk (app chunk −5,714, shared chunk +6,088); onboarding chunk
+      +290 / +280 B; `.output` +788 / +778 B; content script identical.
+
+**GROUP 6 COMPLETE (2026-11-06).** 6.1 and 6.2 have landed; both pending lists are EMPTY on both engines.
 
 ## 7 — Release hygiene (D-14; G-1, G-8, G-9, G-13; §9-4, §9-5, §9-7)
 

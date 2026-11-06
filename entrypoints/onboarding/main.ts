@@ -1,5 +1,7 @@
 import { mountOnboarding, ONBOARDING_COPY, type OnboardingDeps } from '../../src/app/onboarding';
 import { browser } from 'wxt/browser';
+import { getSettings, putSettings } from '../../src/app/store';
+import { directPort } from '../../src/settings/settingsPort';
 
 // Bootstrap for the setup guide (M13 task 6.1; plan D-11). Side effects only: the page lives in
 // src/app/onboarding.ts. Relative imports, as the app entry's (its header says why).
@@ -25,10 +27,14 @@ function chromiumDeps(): OnboardingDeps {
   };
 }
 
+// The saved theme (6.2): this page is extension-origin, so it reads the settings store directly —
+// the app page's `directPort` (bounded, falls back to Auto). No permission, no request.
+const loadTheme = (): Promise<unknown> => directPort({ getSettings, putSettings }).load().then((s) => s.theme);
+
 const root = document.getElementById('onboarding');
 if (root) {
   try {
-    mountOnboarding(root, import.meta.env.FIREFOX ? { engine: 'firefox' } : chromiumDeps());
+    mountOnboarding(root, import.meta.env.FIREFOX ? { engine: 'firefox', loadTheme } : { ...chromiumDeps(), loadTheme });
   } catch {
     // Never a blank page (AGENTS.md #5): plain text, no sheet needed.
     const p = document.createElement('p');

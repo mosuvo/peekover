@@ -19,8 +19,9 @@
 // THE SHEET mirrors the app shell's: the token sets (pinned to `design/tokens.css` by
 // `tests/designTokens.test.ts`), the light base, the OS dark default before any script decides,
 // and an explicit `data-theme` override on the root, which beats the media rule by specificity
-// (`appShell.ts`, the APP_CSS doc comment). Nothing on this page writes `data-theme` today: it follows
-// the system theme (flagged in decisions.md 6.1). The card, its header row, the alert and the ink
+// (`appShell.ts`, the APP_CSS doc comment). Since 6.2 the injected `loadTheme` (the entry reads the
+// saved setting from the settings store, as the app page does) writes `data-theme` for a manual light
+// or dark; Auto leaves it off and the OS rule decides. The card, its header row, the alert and the ink
 // primary button are the app page's start card, `.alert` and 5.4's primary, copied rule for rule
 // (5.5's record). The step numbers are the mock's circles on the highlighter, their text in the
 // toolbar file name's pair (`--ink` light, `--paper` dark) instead of the mock's untracked colour.
@@ -41,6 +42,8 @@ export interface OnboardingDeps {
   readFileAccess?: () => Promise<unknown>;
   /** Chromium: opens Peekover's details on the extensions page. Absent or rejecting → the address. */
   openDetails?: () => Promise<unknown>;
+  /** Both: resolves the user's saved theme setting. Absent, rejecting or not light/dark → the system's. */
+  loadTheme?: () => Promise<unknown>;
 }
 
 export interface OnboardingController {
@@ -276,6 +279,20 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
 
   paint('unknown');
   root.replaceChildren(page);
+  // The saved theme (6.2): a manual light or dark is written to `data-theme`, which beats the OS
+  // rule; Auto, a failure or anything else leaves the attribute off, so the OS rule decides — the
+  // app page's cascade. The first paint above never waits for it.
+  if (typeof deps.loadTheme === 'function') {
+    const load = deps.loadTheme;
+    void Promise.resolve()
+      .then(() => load())
+      .then((saved) => {
+        if (destroyed) return;
+        if (saved === 'light' || saved === 'dark') page.dataset.theme = saved;
+        else delete page.dataset.theme;
+      })
+      .catch(() => undefined);
+  }
   if (chromium) {
     doc.defaultView?.addEventListener('focus', onFocus);
     doc.addEventListener('visibilitychange', onVisible);

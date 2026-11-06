@@ -335,6 +335,20 @@ retired while its function has no other test. Function by function:
   4.4 wide test (the app group's buttons in the mock's order; the link is not a button). **Retired:** none. Both pending
   lists stay EMPTY.
 
+- **6.2** (2026-11-06 — the setup guide opens on install; D-11; G-10; the saved theme folded in from 6.1's flag): no
+  census row is touched — the toolbar, the reader chrome and the guide's states are unchanged. **New:**
+  `tests/background.test.ts` (8, unit — the real background against a fake browser API: "install" opens one tab at the
+  extension's own `onboarding.html`; "update", "chrome_update", "browser_update", "shared_module_update" and an unknown
+  reason open nothing; the toolbar action still opens `app.html`). **Added to** `onboarding.browser.test.ts` (+7 per
+  engine: a saved dark / light / auto on a light / dark system, the page's `--paper` and the step number's pair; an
+  unreadable setting leaves the system theme; the real entry over the real settings store, dark on light and light on
+  dark). **KEPT, unchanged and green:** every 6.1 test in that file, the census (60) and the sweep's "setup guide" rows
+  (light, dark — the sheet is unchanged; only `data-theme` is now written). **Retired:** none. Both pending lists stay
+  EMPTY.
+
+**Group 6 — final state (2026-11-06, after 6.2).** Both 6.x rows are handled (6.1, 6.2). Both pending lists are EMPTY
+on both engines.
+
 **Group 5 — final state (2026-11-05, after 5.7).** Every 5.x row is handled (5.0 – 5.8, 5.2a, the 5.6 FIX). Both pending
 lists — the contrast census's and the native-control sweep's — are EMPTY on both engines.
 

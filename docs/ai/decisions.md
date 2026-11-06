@@ -1,6 +1,83 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 6.2 — the setup guide opens on install, never on an update (D-11; G-10; gate-1 Q18); the
+  saved theme folded in. HUMAN RULINGS (re-open, the listener).** Local, on `main` at `ba14a5e` (6.1), up to date with
+  `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0
+  (one low, ignored) on 2026-11-06.
+  - **PART A — CI (`gh`):** `ba14a5e` (6.1) — CI success (run 42141604979, job `verify`, watched to completion) and
+    Supply chain success (42141605181).
+  - **Docs re-verified (2026-11-06):** Chrome's `runtime` reference — `OnInstalledReason` is "install" | "update" |
+    "chrome_update" | "shared_module_update"; a permission is named only for native messaging. MDN — the same four,
+    with "browser_update" where Chrome says "chrome_update". So the listener tests all five names.
+  - **THE LISTENER (`entrypoints/background.ts`):** `runtime.onInstalled` → `tabs.create({ url:
+    runtime.getURL('/onboarding.html') })` when `reason === 'install'`, else nothing. The fourth listener; the header
+    says so. `tabs.create` with the extension's own URL needs no `tabs` permission (the toolbar action's precedent).
+  - **MEASURED ON A REAL CHROMIUM 149.0.7827.55 — A COMMAND-LINE INSTALL** (Playwright `launchPersistentContext`,
+    `--load-extension` of the built `.output/chrome-mv3`, a fresh profile; a temporary probe in the background logged
+    every worker start and every `onInstalled` call to the extension's own IndexedDB — removed before the commit,
+    `background.ts` md5 `1f5ad586…` restored): (1) **first launch:** reason **"install"** fired and the guide opened by
+    itself. (2) **a plain restart, no flip:** reason **"install" again**, the guide opened again — on this install type
+    EVERY browser start reports "install" (4 launches, 4 "install"). (3) **flip on → off:** the open guide **closed at
+    once**; **no `onInstalled` fired**; no service worker and every extension page `ERR_BLOCKED_BY_CLIENT` for the 30 s
+    and 62 s watched; the row read "Changes to this setting will be applied once Chromium restarts". (4) **flip off →
+    on:** the same — closed at once, no event, still blocked after 76 s. (5) **after a restart** the extension is back,
+    the new setting kept (off, then on), and reason "install" fired — as in (2), indistinguishable from any restart. So
+    there is nothing to hook at flip time, and the only later signal is the next browser start. A store install's
+    behaviour is not measurable here (8.1).
+  - **HUMAN RULINGS (2026-11-06, AskUserQuestion, verbatim):** on whether the guide should re-open after the toggle —
+    *"Stay closed (Recommended)"* (only a first install opens it; after a flip the user reaches it through "Setup
+    guide"; no stored value, no startup check). On the every-start "install" of a command-line install — *"As tasks.md
+    (Recommended)"* (`reason === 'install'` only; no "shown" flag; 8.1 confirms a store install opens it once).
+  - **FOLDED IN (the kickoff; 6.1's flagged deviation): the saved theme.** The guide is an extension-origin page, so it
+    reads the settings store directly, as the app page does — no permission. `src/app/onboarding.ts` gains an injected
+    `loadTheme`: a saved "light" or "dark" is written to `data-theme` (the sheet's override, unchanged since 6.1); Auto, a
+    failure or any other value leaves the attribute off, so the OS rule decides (the app page's cascade — it paints the
+    same, including a live OS flip under Auto). The first paint never waits for it. `entrypoints/onboarding/main.ts`
+    wires it through `directPort({ getSettings, putSettings }).load()` (the app page's port: bounded, falls back to Auto)
+    on both engines. Sepia (deferred, not offered) is left to the system theme.
+  - **Mismatches, flagged:** (a) tasks.md names `entrypoints/background.test.ts`; it is **`tests/background.test.ts`** —
+    WXT's entrypoint globs build any `entrypoints/*.ts` as an unlisted script (it would ship), and the unit project
+    includes only `src/` and `tests/`. It mocks `#imports` (and stubs the other listeners' `@/` modules) and runs the
+    REAL background's `main()`. (b) The theme fold-in and the toggle measurement are the kickoff's, beyond tasks.md
+    6.2's Files list (`src/app/onboarding.ts`, `entrypoints/onboarding/main.ts`, `tests/browser/onboarding.browser.test.ts`
+    join) — followed as the human's direction, not on judgment. (c) The kickoff's "9.1 truth re-check list" — the truth
+    re-check is tasks.md **9.2**; the line is recorded there, verbatim (`progress.md` § Carried items).
+  - **Tests, red → green.** `tests/background.test.ts` (new, 8): red 2 / 8 before the listener ("runtime.onInstalled
+    listeners: expected 0 to be greater than or equal to 1"; "install" opened 0 tabs), 8 / 8 after.
+    `tests/browser/onboarding.browser.test.ts` +7 per engine (saved dark / light / auto on a light / dark system — the
+    page's `--paper` and the step number's colour; an unreadable setting keeps the system theme; the real entry over the
+    real settings store, dark on light and light on dark): red 8 (the four manual cases, both engines) before, 50 / 50
+    after.
+  - **Ablations → red** (each restored md5-identical: `background.ts` `1f5ad586…`, `onboarding.ts` `9a675f54…`, `main.ts`
+    `ed2278f5…`): **A1** the guide opens on "update" too → `"update" opens nothing — tabs opened on "update": expected
+    [ Array(1) ] to deeply equal []`. **A2** the module's theme block disabled → 8 red, both engines: `the saved setting
+    "dark" on a light system: expected 'rgb(251, 251, 248)' to be 'rgb(18, 20, 28)'` (and the reverse; the entry
+    cases). **A3** (chosen) the entry's `loadTheme` wiring dropped, the module intact → only the real-entry cases red, 4
+    (both engines): `the entry with "dark" saved: expected 'rgb(251, 251, 248)' to be 'rgb(18, 20, 28)'` — the entry
+    tests prove the wiring, not just the module.
+  - **Bytes** (clean two-engine builds, this tree and `ba14a5e` in one session; the baseline reproduced 6.1's totals
+    exactly; hash-only renames of equal size ignored): **content script identical** — 345,049 B, md5 `ee9f9279…` (Cr) /
+    `317c6c51…` (Fx). **Manifests identical** — 833 / 949 B (md5 `40853afb…` / `be59433f…`), `permissions: []`, no
+    `host_permissions`, no `optional_permissions`: a listener and a same-origin store read are not manifest keys.
+    **Changed:** `background.js` **+124 B** (3,786 → 3,910, both engines — the listener); the shared chunk
+    `chunks/browser-*.js` **+6,088** (1,607 → 7,695) and the app chunk **−5,714** (556,244 → **550,530**) — the settings
+    store, `idbCore`, the settings vocabulary and port now serve two pages, so Vite moved them out of the app chunk;
+    `chunks/onboarding-*.js` **+290 (Cr, 8,264) / +280 (Fx, 8,006)** — the theme block and the entry's wiring. Sum: Cr
+    +788 → `.output` **6,445,827 B**; Fx +778 → **6,445,685 B**; residual 0 both. Headroom under 7 MiB: 894,205 /
+    894,347 B. Files 162 both. A rebuild reproduced every file's size and md5. The file-access API's name: in 1
+    Chromium file, in no Firefox file (6.1's invariant holds).
+  - **Verify:** lint 0 · unit 1,537 / 1,537 (+8) · browser, alone, both engines: **2,598 passed / 0 failed / 52 skipped
+    of 2,650** (+14), 633 s, EXIT 0, on the first run — no red to classify · census (60) and sweep EMPTY · golden EMPTY
+    · manifests identical · no control bytes and LF only in every changed file (two counts; the control fires) · no
+    orphaned browser processes.
+  Why: tasks.md 6.2 / D-11 / G-10 — show the setup guide to a new user once, with no permission and no request; the
+  toggle cannot be followed live on Chromium (measured), so the guide stays closed after it by the human's ruling; and
+  the guide now wears the theme the user chose.
+  Revisit-when: 8.1's walk (a store install: "install" once, not at each start; the flip's behaviour there; Edge /
+  Brave / Opera / Vivaldi; real Firefox); Peekover ever needs to tell a toggle change apart at startup (the "re-open at
+  next start" option, declined here).
+
 - **2026-11-06 · M13 TASK 6.1 — the onboarding page: the setup guide, detection per engine, reachable from the app
   page (D-11; gate-1 Q18; G-10). HUMAN COPY APPROVAL.** Local, on `main` at `805a358` (5.11), up to date with
   `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0
