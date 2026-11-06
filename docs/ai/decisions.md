@@ -1,6 +1,36 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.2 — PRIVACY.md, THREAT-MODEL.md, SECURITY.md final (D-14's documents; G-1). TWO HUMAN
+  RULINGS.** Local, on `main` at `f5151a5` (7.2a); docs and tests only, no product byte.
+  - **Authority:** tasks.md 7.2; plan D-14 (Documents), §9 notes 1 (G-1: contacts, the privacy URL, no `hello@`), 3
+    (G-8, set by 7.3) and 4 (G-9: attestations "from the first public release"); the ledger's rules. Facts read from
+    the code and PERMISSIONS.md: zero network and its tests, `permissions: []`, the eight IndexedDB stores (folders,
+    recents, pins, settings with the guide mark and the notices row, snapshotMeta / snapshots, diagramMeta / diagrams),
+    the remote-images opt-in (per view; a reload blocks again).
+  - **The documents:** `docs/trust/PRIVACY.md` (new) — nothing collected, no network of its own, the images opt-in,
+    what is stored and where, how to see and delete it, files, permissions, contact. `docs/trust/THREAT-MODEL.md` (new,
+    one page) — assets, adversaries, nine defences each with its test files, out of scope, attestations under
+    "Planned". `docs/trust/SECURITY.md` — links both; the threat-model line leaves "Planned"; the privacy-URL line
+    re-worded. Ledger rows 337–407 (SECURITY 3, PRIVACY 35, THREAT-MODEL 33); rows 58 and 60 withdrawn.
+  - **truthPins:** PRIVACY and THREAT-MODEL join the surfaces (every rule: ledger rows, no `hello@`, no store link,
+    peekover.dev URLs "live at release", unbuilt items only under "Planned"); "threat model" leaves the unbuilt list
+    (it is built); NEW — every backticked path THREAT-MODEL.md names exists, and it names >= 10 test files. Red-first:
+    `watchRelai.test.ts` and `check-dynamic-imports.tz` → red naming both (the first, narrower match let `.tz` through;
+    widened to every path).
+  - **Kickoff mismatch, flagged:** "the raw-host fetches" — no record of Peekover fetching from a raw host; the browser
+    loads the page, Peekover reads its text, and a raw page's relative images are remote (blocked). PRIVACY says only
+    that.
+  - **Gaps stated (shown to the human):** the Stored data panel omits the notices row (in PRIVACY.md; carried 9.2); no
+    `externally_connectable` is true but not test-pinned (carried, below); store-install behaviours and Firefox file://
+    unwalked (8.1); uninstall-deletes-data not claimed (unchecked); the privacy URL, private reporting and issues not
+    live (marked); reproducibility (7.3) and attestations (7.4) "Planned".
+  - **HUMAN RULING (2026-11-06), verbatim: "Approve as written (Recommended)"** — every new and changed sentence of the
+    three documents (the diagrams line aligned to the wording shown). **HUMAN RULING (2026-11-06), verbatim: "Carry it to
+    9.2 (Recommended)"** — pin `externally_connectable` in manifest.test.ts's forbidden keys at the truth re-check.
+  - **Bytes:** none — no file under `src/`, `entrypoints/`, `public/` or the build config changed.
+  - Revisit when: 7.3 (SECURITY's reproducibility wording), 9.1 (`site/privacy/` mirrors PRIVACY.md), 9.2.
+
 - **2026-11-06 · M13 TASK 7.2a — DISCOVERED (REQUIRED by the human's direction of 2026-11-05): third-party licence
   notices ship in the package. FOUR HUMAN RULINGS.** Local, on `main` at `288a6a8` (7.1); CI on `288a6a8` green —
   CI (42151255162) and Supply chain (42151254894); `8b1f3c6` (6.2a) has no run of its own (pushed with 7.1). `pnpm

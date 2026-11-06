@@ -16,7 +16,14 @@ const ROOT = process.cwd();
 const read = (p: string): string => readFileSync(join(ROOT, p), 'utf8').replace(/\r\n/g, '\n');
 
 // 7.1: CHANGELOG.md joins (tasks.md 7.1: each CHANGELOG line has a ledger row).
-const SURFACES = { README: 'README.md', SECURITY: 'docs/trust/SECURITY.md', CHANGELOG: 'CHANGELOG.md' } as const;
+// 7.2: PRIVACY.md and THREAT-MODEL.md join (tasks.md 7.2: every sentence has a ledger row).
+const SURFACES = {
+  README: 'README.md',
+  SECURITY: 'docs/trust/SECURITY.md',
+  CHANGELOG: 'CHANGELOG.md',
+  PRIVACY: 'docs/trust/PRIVACY.md',
+  'THREAT-MODEL': 'docs/trust/THREAT-MODEL.md',
+} as const;
 type Surface = keyof typeof SURFACES;
 const LEDGER = 'docs/store/claims.md';
 const STATUSES = ['true now', 'live at release', 'planned', 'withdrawn'] as const;
@@ -115,6 +122,16 @@ describe('the claims ledger (013 task 1.2, D-12)', () => {
   });
 });
 
+describe('THREAT-MODEL.md names only tests and checks that exist (013 task 7.2)', () => {
+  it('every path it names exists, and it names at least ten test files', () => {
+    // Every backticked path (anything with a `/` or a file extension), not only known extensions:
+    // a misspelt extension is a missing file too (the red-first control, `.tz`, slipped a narrower match).
+    const paths = [...docs['THREAT-MODEL'].matchAll(/`([^`\s]+(?:\/[^`\s]*|\.[a-z]+))`/g)].map((m) => m[1]);
+    expect(paths.filter((p) => /\.test\.ts$/.test(p)).length).toBeGreaterThanOrEqual(10);
+    expect(paths.filter((p) => !existsSync(join(ROOT, p))), 'paths THREAT-MODEL.md names that do not exist').toEqual([]);
+  });
+});
+
 describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
   it.each(Object.keys(SURFACES) as Surface[])('%s names no hello@peekover.dev address (G-1: not a working channel)', (surface) => {
     expect(docs[surface]).not.toMatch(/hello@peekover\.dev/i);
@@ -137,7 +154,8 @@ describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
   it.each(Object.keys(SURFACES) as Surface[])(
     '%s presents nothing unbuilt as current: reproducibility, threat model, attestations, signed tags, audits only under "Planned"',
     (surface) => {
-      const UNBUILT = /reproducib|threat model|attestation|signed tag|community audit|verified in CI/i;
+      // 7.2: "threat model" left this list — docs/trust/THREAT-MODEL.md exists now (its own test below).
+      const UNBUILT = /reproducib|attestation|signed tag|community audit|verified in CI/i;
       const outside = linesWithSection(docs[surface])
         .filter((l) => UNBUILT.test(l.text) && !isPlanned(l.section))
         .map((l) => `[${l.section || 'top'}] ${l.text.trim()}`);

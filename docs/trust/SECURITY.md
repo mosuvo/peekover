@@ -16,10 +16,11 @@ For anything that is not a security problem, open a GitHub issue once the reposi
 - CI checks that every code import in the shipped code is fixed at build time, so no code is loaded from outside the extension package.
 - CI fails on a known advisory in the production dependencies, except one recorded exception in a dependency of the diagram library.
 - CI generates a software bill of materials.
+- What Peekover stores, and how to delete it, is in [PRIVACY.md](PRIVACY.md).
+- What Peekover defends against, and the tests behind each defence, is in [THREAT-MODEL.md](THREAT-MODEL.md).
 
 ## Planned for the first public release
 
 - A check in CI that two builds of the same source produce the same files, with the steps written down.
-- A one-page threat model naming the tests behind each defence.
 - Build attestations on release files.
-- A privacy policy at https://peekover.dev/privacy/, not online yet.
+- The privacy policy published at https://peekover.dev/privacy/, which is not online yet.

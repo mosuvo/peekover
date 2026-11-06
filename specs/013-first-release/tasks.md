@@ -1013,7 +1013,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       Apache-2.0 (HUMAN RULING). 212,720 B; `wxt build` fails naming a package whose entry is missing; every entry
       ablated in the test. Links: NOTICE and README only (HUMAN RULING). Content script and manifests identical;
       `.output` +199,006 B both.
-- [ ] **7.2 PRIVACY.md, THREAT-MODEL.md, SECURITY.md final (D-14's documents; G-1).** PRIVACY: no collection, no
+- [x] **7.2 PRIVACY.md, THREAT-MODEL.md, SECURITY.md final (D-14's documents; G-1).** PRIVACY: no collection, no
       transmission, what is stored locally and how to wipe it, the only network is user-triggered remote media.
       THREAT-MODEL, one page: assets, adversaries, out of scope, where each defence is proven (test file names).
       SECURITY.md: reports via GitHub private vulnerability reporting (live when the repo is public), contact via
@@ -1025,6 +1025,10 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       Verify: `truthPins.test.ts` extended to PRIVACY and SECURITY (no address; every peekover.dev URL "live at
       release"; every test file THREAT-MODEL names exists — red-first with a misspelt name). Every sentence has a
       ledger row. No production bytes. [D-14; G-1]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.2").* PRIVACY.md and THREAT-MODEL.md new, SECURITY.md links
+      both; every sentence approved by the human ("Approve as written"); ledger rows 337–407. truthPins: both join the
+      surfaces, and every path THREAT-MODEL names must exist (red-first: two misspelt names). Gaps stated; the
+      untested `externally_connectable` absence carried to 9.2 (HUMAN RULING). No production bytes.
 - [ ] **7.3 Reproducibility spike → the CI double build → REPRODUCING.md (D-14; G-8, G-13).** Build twice from clean
       checkouts with the same `SOURCE_DATE_EPOCH`; compare zip SHA-256; if they differ, find the cause (entry mtimes,
       ordering, chunk hashes) and fix it in config. If byte-identical zips are not reached within the task, compare the
