@@ -175,9 +175,11 @@ describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
       expect(text, `${surface} claims ${what}`).not.toMatch(re);
     }
     // Not built: DOCX / ZIP export, AI features, publishing — allowed only under "Planned".
-    const NOT_BUILT = /\bDOCX\b|\bZIP\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|AI (rewrite|features?|assist)|\bpublish(ing)?\b/i;
+    // "ZIP" (the export) is matched by case: a lower-case "zip" is the extension's own package (REPRODUCING, 7.3).
+    const NOT_BUILT = /\bDOCX\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|AI (rewrite|features?|assist)|\bpublish(ing)?\b/i;
+    const ZIP_EXPORT = /\bZIP\b/;
     const outside = linesWithSection(text)
-      .filter((l) => NOT_BUILT.test(l.text) && !isPlanned(l.section))
+      .filter((l) => (NOT_BUILT.test(l.text) || ZIP_EXPORT.test(l.text)) && !isPlanned(l.section))
       .map((l) => `[${l.section || 'top'}] ${l.text.trim()}`);
     expect(outside, `unbuilt features presented outside "Planned" in ${surface}`).toEqual([]);
   });

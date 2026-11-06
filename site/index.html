@@ -411,7 +411,7 @@ flowchart LR
     <div>
       <h2 class="sec rv">Not built yet.</h2>
       <ul class="checks rv">
-        <li><b>For the first public release:</b> listings in the Chrome, Firefox and Edge stores; a check in CI that two builds of the same source produce the same files; a one-page threat model; attestations on release files; a privacy policy at https://peekover.dev/privacy/ and this website at https://peekover.dev, neither online yet.</li>
+        <li><b>For the first public release:</b> listings in the Chrome, Firefox and Edge stores; attestations on release files; a privacy policy at https://peekover.dev/privacy/ and this website at https://peekover.dev, neither online yet.</li>
         <li><b>Later, not yet scheduled:</b> on-device and bring-your-own-key AI features, DOCX and ZIP export, publishing, presentation mode, read-aloud, and other raw file types such as JSON, YAML, TOML and CSV.</li>
       </ul>
     </div>
@@ -429,7 +429,7 @@ flowchart LR
         <li><b>No servers.</b> There is no backend, no database and no account.</li>
         <li><b>No network by default.</b> The only requests are ones you trigger, such as loading remote images, and the page shows an indicator when that happens.</li>
         <li><b>No permissions.</b> The manifest requests none; <code>PERMISSIONS.md</code> lists each capability used without one.</li>
-        <li><b>Open source (MIT).</b> CI checks that no code is loaded from outside the package, audits the production dependencies, and generates a software bill of materials.</li>
+        <li><b>Open source (MIT).</b> CI checks that no code is loaded from outside the package, audits the production dependencies, generates a software bill of materials, and checks that two builds of the same source are identical.</li>
         <li><b>No ads, no paid tier, no telemetry.</b> The code has none, and the tests check that the extension makes no network requests by default.</li>
       </ul>
     </div>

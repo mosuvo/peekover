@@ -39,6 +39,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 - The extension requests no browser permissions: its manifest says `permissions: []`.
 - It makes no network requests by default.
 - It has no telemetry and no analytics.
+- Two builds of the same commit produce identical files; CI checks this on every push to `main` and every pull request, and [REPRODUCING.md](docs/trust/REPRODUCING.md) gives the steps to check it yourself.
 - Each capability it uses without a permission, such as reading a folder you pick, is listed in [PERMISSIONS.md](docs/trust/PERMISSIONS.md).
 - How to report a security problem is in [SECURITY.md](docs/trust/SECURITY.md).
 
@@ -47,8 +48,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 For the first public release:
 
 - Listings in the Chrome, Firefox and Edge stores.
-- A check in CI that two builds of the same source produce the same files.
-- A one-page threat model, and attestations on release files.
+- Attestations on release files.
 - A privacy policy at https://peekover.dev/privacy/ and a website at https://peekover.dev, neither online yet.
 
 Later, not yet scheduled:
