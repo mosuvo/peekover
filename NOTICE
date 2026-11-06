@@ -1,6 +1,11 @@
 Peekover
 Copyright the Peekover contributors. Released under the MIT licence (see LICENSE).
 
+Peekover bundles open-source code from other projects. Each one, with its version, its licence
+and the full licence text, is listed in THIRD_PARTY_LICENSES.txt, which ships at the root of the
+extension package (and in this repository under public/). The build generates the list from the
+code it bundles and fails if the file is out of date.
+
 Peekover bundles the following fonts. Each is licensed under the SIL Open Font License,
 Version 1.1, whose full text ships inside the extension package at the path given for each
 font (and in this repository under public/licenses/). The fonts are not sold by themselves.

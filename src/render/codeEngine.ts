@@ -64,6 +64,9 @@
 // exports the id list for `codeThemeControl.ts` to build its picker from, so that module never
 // duplicates this one's catalog. Count and set are still open to 8.5's own future ruling, same as
 // LANGUAGE_LOADERS above — this task fixes the SELECTION RULE, not a permanent catalog.
+// 013 task 7.2a (HUMAN RULING "Remove it"): `aurora-x` is removed — its upstream (marqu3ss/Aurora-X, per
+// tm-themes 1.12.3's NOTICE) is GPL-3.0, and Peekover ships permissive licences only. 19 Shiki themes remain;
+// a licence check now joins the size and contrast criteria (THIRD_PARTY_LICENSES.txt lists every theme shipped).
 //
 // ── THE DYNAMIC/STATIC EDGE COUNT — TASK 4.5's OWN PROSPECTIVE TEXT DOES NOT YET SURVIVE
 //    CONTACT, NAMED HERE RATHER THAN SILENTLY CARRIED (task 4.2 finding) ──────────────────────
@@ -197,7 +200,7 @@ export const PEEKOVER_THEME = {
 
 /** Same shape as {@link LANGUAGE_LOADERS}, for themes — see the module header's "THEME_LOADERS IS
  *  A DIFFERENT SHAPE" section for the selection rule (20 smallest bundled themes by byte size,
- *  contrast-filtered, not editorially curated). The Peekover theme (013 task 5.8) comes first:
+ *  contrast-filtered, not editorially curated; `aurora-x` removed at 013 task 7.2a, GPL-3.0 upstream). The Peekover theme (013 task 5.8) comes first:
  *  it is the default, built here from the design tokens rather than drawn from Shiki's set. */
 const THEME_LOADERS: Readonly<Record<string, ThemeLoader>> = {
   [PEEKOVER_CODE_THEME]: async () => ({ default: PEEKOVER_THEME as ThemeRegistrationAny }),
@@ -218,7 +221,6 @@ const THEME_LOADERS: Readonly<Record<string, ThemeLoader>> = {
   'github-light': () => import('shiki/themes/github-light.mjs'),
   'github-dark': () => import('shiki/themes/github-dark.mjs'),
   vesper: () => import('shiki/themes/vesper.mjs'),
-  'aurora-x': () => import('shiki/themes/aurora-x.mjs'),
   'vitesse-light': () => import('shiki/themes/vitesse-light.mjs'),
   'vitesse-black': () => import('shiki/themes/vitesse-black.mjs'),
 };

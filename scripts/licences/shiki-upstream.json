@@ -1,0 +1,258 @@
+[
+  {
+    "file": "@shikijs/langs/dist/css.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/diff.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/html.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/javascript.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/json.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/markdown.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/python.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/shellscript.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/sql.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/toml.mjs",
+    "upstream": "textmate/toml.tmbundle",
+    "spdx": "LicenseRef-TextMate-bundle",
+    "licenceUrl": "https://github.com/textmate/toml.tmbundle#license",
+    "text": "shiki/textmate-toml.txt",
+    "from": "https://github.com/textmate/toml.tmbundle README"
+  },
+  {
+    "file": "@shikijs/langs/dist/tsx.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/typescript.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-grammars 1.32.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/langs/dist/yaml.mjs",
+    "upstream": "textmate/yaml.tmbundle",
+    "spdx": "LicenseRef-TextMate-bundle",
+    "licenceUrl": "https://github.com/textmate/yaml.tmbundle#license",
+    "text": "shiki/textmate-yaml.txt",
+    "from": "https://github.com/textmate/yaml.tmbundle README"
+  },
+  {
+    "file": "@shikijs/themes/dist/andromeeda.mjs",
+    "upstream": "EliverLara/Andromeda",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/EliverLara/Andromeda/master/LICENSE.md",
+    "text": "shiki/eliverlara-andromeda.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/dark-plus.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/github-dark.mjs",
+    "upstream": "primer/github-vscode-theme",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/primer/github-vscode-theme/main/LICENSE",
+    "text": "shiki/primer-github-vscode-theme.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/github-light.mjs",
+    "upstream": "primer/github-vscode-theme",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/primer/github-vscode-theme/main/LICENSE",
+    "text": "shiki/primer-github-vscode-theme.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/horizon-bright.mjs",
+    "upstream": "alexandernanberg/horizon-theme-vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/alexandernanberg/horizon-theme-vscode/master/LICENSE",
+    "text": "shiki/alexandernanberg-horizon-theme-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/horizon.mjs",
+    "upstream": "alexandernanberg/horizon-theme-vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/alexandernanberg/horizon-theme-vscode/master/LICENSE",
+    "text": "shiki/alexandernanberg-horizon-theme-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/laserwave.mjs",
+    "upstream": "Jaredk3nt/laserwave",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/Jaredk3nt/laserwave/master/LICENSE",
+    "text": "shiki/jaredk3nt-laserwave.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/light-plus.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/min-dark.mjs",
+    "upstream": "miguelsolorio/min-theme",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/miguelsolorio/min-theme/master/LICENSE",
+    "text": "shiki/miguelsolorio-min-theme.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/min-light.mjs",
+    "upstream": "miguelsolorio/min-theme",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/miguelsolorio/min-theme/master/LICENSE",
+    "text": "shiki/miguelsolorio-min-theme.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/monokai.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/plastic.mjs",
+    "upstream": "will-stone/plastic",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/will-stone/plastic/main/LICENSE",
+    "text": "shiki/will-stone-plastic.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/red.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/slack-dark.mjs",
+    "upstream": "slack-theme/visual-studio-code",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/slack-theme/visual-studio-code/master/License",
+    "text": "shiki/slack-theme-visual-studio-code.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/slack-ochin.mjs",
+    "upstream": "slack-theme/visual-studio-code",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/slack-theme/visual-studio-code/master/License",
+    "text": "shiki/slack-theme-visual-studio-code.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/solarized-dark.mjs",
+    "upstream": "microsoft/vscode",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/microsoft/vscode/main/LICENSE.txt",
+    "text": "shiki/microsoft-vscode.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/vesper.mjs",
+    "upstream": "raunofreiberg/vesper",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/raunofreiberg/vesper/main/LICENSE.md",
+    "text": "shiki/raunofreiberg-vesper.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/vitesse-black.mjs",
+    "upstream": "antfu/vscode-theme-vitesse",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/antfu/vscode-theme-vitesse/main/LICENSE.md",
+    "text": "shiki/antfu-vscode-theme-vitesse.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  },
+  {
+    "file": "@shikijs/themes/dist/vitesse-light.mjs",
+    "upstream": "antfu/vscode-theme-vitesse",
+    "spdx": "MIT",
+    "licenceUrl": "https://raw.githubusercontent.com/antfu/vscode-theme-vitesse/main/LICENSE.md",
+    "text": "shiki/antfu-vscode-theme-vitesse.txt",
+    "from": "tm-themes 1.12.3 NOTICE"
+  }
+]

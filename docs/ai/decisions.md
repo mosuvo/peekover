@@ -1,6 +1,73 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.2a — DISCOVERED (REQUIRED by the human's direction of 2026-11-05): third-party licence
+  notices ship in the package. FOUR HUMAN RULINGS.** Local, on `main` at `288a6a8` (7.1); CI on `288a6a8` green —
+  CI (42151255162) and Supply chain (42151254894); `8b1f3c6` (6.2a) has no run of its own (pushed with 7.1). `pnpm
+  audit --prod` EXIT 0 (one low, ignored) on 2026-11-06.
+  - **HOW THE INVENTORY IS DERIVED — the build itself, not package.json and not the SBOM.** A Vite plugin
+    (`scripts/licenceInventory.ts`, wired in `wxt.config.ts` with WXT's `build:before` / `build:done` hooks) reads every
+    output chunk's `modules` in every build step (entrypoints, content script, every on-demand grammar / theme chunk),
+    keeps modules that rendered > 0 bytes, and maps each to its package directory (`node_modules/<name>`, pnpm's real
+    path) or, for bundler runtime ids, to its author (`vite/preload-helper`, `vite/modulepreload-polyfill` → vite;
+    `rolldown/runtime` → rolldown; `virtual:wxt-*` → wxt). An id that is neither Peekover's source nor attributable fails
+    the build. Packages a dependency PRE-BUNDLED before publishing are invisible to the module graph; they are read from
+    the source maps of the shipped files (`scripts/licenceNotices.ts` `bundledVia`) — found: 14 inside
+    `@mermaid-js/parser` (chevrotain ×4, langium, chevrotain-allstar, lodash-es ×2, vscode-jsonrpc / -protocol / -types /
+    -textdocument, and vscode-uri's own webpack bundle of path-browserify and webpack's runtime) and js-yaml inside mermaid.
+    Packages with no source map are scanned for notice comments; each must be accounted for by its own licence text, a
+    pre-bundled package's, or a curated EMBEDDED row (`scripts/licenceSources.ts`) — found: cytoscape (Promises/A+
+    thenable, Engelschall; Bezier, Renaudeau; spring physics, Koen Bok — MIT), DOMPurify (regenerator-runtime, Facebook —
+    MIT), temml (mhchem, MathJax Consortium / Martin Hensel; a MathJax extension, Kolen Cheung — Apache-2.0), layout-base
+    2.0.1 (JamaJS SVD — Apache-2.0). Shiki's grammar and theme files each come from another project: their upstreams and
+    texts are copied from `tm-grammars` 1.32.3 / `tm-themes` 1.12.3's NOTICE files (the versions Shiki 4.4.3's lockfile
+    pins) by `scripts/extract-tm-notices.ts` into `scripts/licences/shiki/`.
+  - **THE INVENTORY:** both engines ship the SAME 108 packages; with the 15 pre-bundled, **123 entries**: MIT 91, ISC 20,
+    BSD-3-Clause 6, BSD-2-Clause 1, Apache-2.0 5 (dompurify, chevrotain ×4 — and embedded code in temml / layout-base);
+    grammars: 11 microsoft/vscode MIT, YAML / TOML the TextMate bundles' grant (no SPDX id, as 5.11 recorded); themes: 19,
+    all MIT. Against the SBOM (`pnpm sbom`, 191 components): the build ships 108 of them plus 4 the SBOM cannot see
+    (wxt, @wxt-dev/browser, vite, rolldown — dev tools whose runtime code ships); 87 SBOM components ship no byte (types,
+    tree-shaken d3 modules, shiki's facade). Fonts stay in NOTICE (the file cross-references `licenses/`).
+  - **LICENCE CHECK — THE STOP FIRED:** the `aurora-x` code theme is converted from marqu3ss/Aurora-X, **GPL-3.0**
+    (tm-themes 1.12.3 NOTICE). **HUMAN RULING (2026-11-06), verbatim: "Remove it (Recommended)".** Removed from
+    `THEME_LOADERS` (Peekover + 19 Shiki themes; no surface counts themes); the two fixtures that named it updated
+    (`codeImportFence.test.ts` edges 33 → 32, `codeThemeControl.test.ts`'s contrast table). Found: a saved `aurora-x`
+    choice resolves no loader and code then stays plain (the 4.2 theme-apply-failure path), not the default — only
+    possible on a pre-release install; recorded, not changed. `PERMISSIVE` in licenceSources.ts now stops generation on
+    any other licence.
+  - **HUMAN RULING (2026-11-06), verbatim: "Approve all five (Recommended)"** — (1) DOMPurify `(MPL-2.0 OR Apache-2.0)`:
+    Peekover takes **Apache-2.0** (obliges: the licence text and DOMPurify's notice "(c) Cure53 and other contributors";
+    no NOTICE file, unmodified); (2) one shared copy of the Apache-2.0 text for every Apache-licensed part, each notice
+    kept; (3) the TextMate grant for YAML / TOML; (4) wxt / @wxt-dev/browser's MIT text from the wxt repository at
+    `wxt-v0.20.27` (the npm packages carry none); (5) MIT / ISC / BSD texts verbatim per package, no deduplication.
+    Also: vite's LICENSE.md (111 KB) is cut to its first section — Vite's own licence; the rest lists code inside Vite's
+    build tooling, none of which ships.
+  - **THE FILE:** `public/THIRD_PARTY_LICENSES.txt` → the package root of both engines (WXT copies `public/`);
+    **212,720 B**, LF, no control bytes; header, a contents list, one entry per package (`Package:` / `Ships in:` /
+    licence / npm source / where the text came from / what it contains), then the shared Apache-2.0 and MIT texts.
+    `pnpm licences` (`scripts/third-party-licences.ts`) builds both engines in record mode and regenerates it. **The build
+    fails when it is stale:** at `build:done` the committed file must equal what that engine's build renders, entry for
+    entry (`checkFile`); ablation — `diff@9.0.0`'s entry removed → `wxt build` exit 1, "diff@9.0.0 ships in the chrome
+    build but has no entry for it in the file".
+  - **TEST:** `tests/thirdPartyLicences.test.ts` (16): LF / no control bytes / all permissive; the file equals the
+    renderer's output; NOTICE and README point at it; no GPL, no aurora-x; per engine against the last build's inventory —
+    the guard green, every graph and pre-bundled package listed, **every one of the 123 entries ablated in turn → red
+    naming it**, a changed licence text and a moved version red; byte-identical in `.output/<engine>-mv3/` and in both
+    zips. CI runs unit before build, so the `.output` half skips there and the build step's guard enforces it (the
+    manifest.test precedent).
+  - **PLACEMENT — HUMAN RULING (2026-11-06), verbatim: "NOTICE + README only (Recommended)".** No in-product link (no
+    footer or link row exists to hold one). Every changed user-facing sentence approved: **"Approve as written
+    (Recommended)"** — the file's header, NOTICE's new paragraph, README's Licence-section sentence (ledger row 336).
+  - **Files beyond the kickoff (necessary ripple):** `wxt.config.ts` (the plugin and hooks), `package.json` (`licences`
+    script), `scripts/licences/` (texts the build cannot read from node_modules), the aurora-x removal's three files.
+  - **Bytes:** content script **identical** (345,049 B, `ee9f9279…` / `317c6c51…`); manifests **identical** (864 / 978 B,
+    `permissions: []`); app chunk **550,486 B (−58**, the aurora-x loader); `.output` 6,645,447 / 6,645,303 B
+    (**+199,006** both = +212,720 the file − 13,656 the aurora-x chunk − 58; a probe build with aurora-x restored measured
+    6,659,161 = 7.1's 6,446,441 + 212,720 exactly); headroom 694,585 / 694,729 B; zips 2,031,809 / 2,031,760 B
+    (+14,626 both; the file deflates to 16,963 B).
+  - Revisit when: a dependency or grammar / theme is added or upgraded (the build fails until `pnpm licences` and, for a
+    new pre-bundled package, embedded notice or Shiki file, a licenceSources.ts / extract-tm-notices.ts row).
+
 - **2026-11-06 · M13 TASK 7.1 — version 0.1.0, CHANGELOG, minimum browser versions (gate-1 Q1; the carried "FOR M13
   TASK 7.1" item). THREE HUMAN RULINGS.** Local, on `main` at `8b1f3c6` (6.2a); `pnpm audit --prod` EXIT 0 (one low,
   ignored) on 2026-11-06.

@@ -1,9 +1,17 @@
 import { defineConfig } from 'wxt';
+import { licenceInventoryPlugin, onBuildBefore, onBuildDone } from './scripts/licenceInventory';
 
 // Peekover — zero network by default. Auto-imports are disabled so that lint and
 // typecheck stay fully explicit: WXT helpers are imported from '#imports'.
 export default defineConfig({
   imports: false,
+  // Third-party licence notices (M13 task 7.2a): every build step reports the packages whose code it bundled, and
+  // a production build fails when public/THIRD_PARTY_LICENSES.txt does not list exactly those (scripts/licenceInventory.ts).
+  vite: () => ({ plugins: [licenceInventoryPlugin()] }),
+  hooks: {
+    'build:before': (wxt) => onBuildBefore(wxt),
+    'build:done': (wxt) => onBuildDone(wxt),
+  },
   // Target Manifest V3 on every browser. WXT defaults Firefox (and Safari) to
   // MV2, but our security posture (spec §6) claims MV3 + a non-persistent
   // background, so the Firefox build must be MV3 too. This is a no-op for

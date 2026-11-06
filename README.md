@@ -76,3 +76,4 @@ To load it in Firefox, open `about:debugging`, choose "This Firefox", then "Load
 Peekover is released under the MIT licence (see [LICENSE](LICENSE)).
 It is free: there is no price, no paid tier and no ads.
 The fonts in this repository (Literata, STIX Two Math, Bricolage Grotesque and Sometype Mono) are under the SIL Open Font License 1.1; see [NOTICE](NOTICE).
+The open-source code Peekover bundles from other projects is listed, each with its licence in full, in [THIRD_PARTY_LICENSES.txt](public/THIRD_PARTY_LICENSES.txt), which ships inside the extension.

@@ -997,6 +997,22 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       CHANGELOG.md approved by the human as written; ledger rows 307–335; `truthPins` reads it. **Not length-neutral
       (flagged):** the carried floors add two keys — manifests +31 / +29 B (864 / 978); content script and every chunk
       identical. Ripple: `wxt.config.ts`, `tests/browserFloor.test.ts`, `tests/truthPins.test.ts`.
+- [x] **7.2a DISCOVERED (REQUIRED — the human's direction of 2026-11-05): third-party licence notices ship in the
+      package.** A generated `THIRD_PARTY_LICENSES.txt` at the package root, every bundled package with its notice and
+      full licence text, derived from the build itself; a script regenerates it and the build fails when it is stale.
+      Files: `public/THIRD_PARTY_LICENSES.txt` (new) · `scripts/licenceInventory.ts`, `scripts/licenceNotices.ts`,
+      `scripts/licenceSources.ts`, `scripts/third-party-licences.ts`, `scripts/extract-tm-notices.ts` (new) ·
+      `scripts/licences/` (new) · `wxt.config.ts` · `package.json` · `NOTICE` · `README.md` · `docs/store/claims.md` ·
+      `tests/thirdPartyLicences.test.ts` (new)
+      Verify: (**unit**) every package the built bundles carry has an entry (red by ablation, naming it); the file in
+      both `.output` trees and both zips; lint; unit; both engines built; content script and manifests unchanged; ledger
+      green.
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.2a").* 123 entries (108 packages from the module graph, both
+      engines the same, + 15 pre-bundled, from source maps), all permissive. **The STOP fired: `aurora-x` is GPL-3.0
+      upstream — HUMAN RULING "Remove it"** (19 Shiki themes; app chunk −58 B, its chunk −13,656 B). DOMPurify under
+      Apache-2.0 (HUMAN RULING). 212,720 B; `wxt build` fails naming a package whose entry is missing; every entry
+      ablated in the test. Links: NOTICE and README only (HUMAN RULING). Content script and manifests identical;
+      `.output` +199,006 B both.
 - [ ] **7.2 PRIVACY.md, THREAT-MODEL.md, SECURITY.md final (D-14's documents; G-1).** PRIVACY: no collection, no
       transmission, what is stored locally and how to wipe it, the only network is user-triggered remote media.
       THREAT-MODEL, one page: assets, adversaries, out of scope, where each defence is proven (test file names).

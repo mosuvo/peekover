@@ -237,7 +237,7 @@ describe('independence from the document theme — BOTH directions (§4, tasks.m
     expect(host.getAttribute('data-theme')).toBe('light'); // unchanged by the code-theme pick
   });
 
-  // KEEPS the property for the 20 Shiki themes, each with its own fixed colours. RE-SPELLED at 013 5.8
+  // KEEPS the property for the 19 Shiki themes (aurora-x removed at 013 7.2a), each with its own fixed colours. RE-SPELLED at 013 5.8
   // with an explicit Shiki theme: the default is now the Peekover theme, which FOLLOWS the page theme
   // by the human's 2.2 ruling (its own tests are below).
   it('flipping the document theme leaves an already-rendered block\'s colours untouched (a Shiki theme)', async () => {

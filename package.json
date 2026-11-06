@@ -28,7 +28,8 @@
     "perf:export": "tsx scripts/perf-export.ts",
     "perf:edit-preview": "tsx scripts/perf-edit-preview.ts",
     "lint": "eslint . && tsc --noEmit",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "licences": "tsx scripts/third-party-licences.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

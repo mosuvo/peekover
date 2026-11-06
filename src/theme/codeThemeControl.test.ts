@@ -67,7 +67,6 @@ describe("CODE_THEME_IDS's own bg/fg — pinned against the AA 4.5:1 floor (§4 
     'github-light': { bg: '#fff', fg: '#24292e' },
     'github-dark': { bg: '#24292e', fg: '#e1e4e8' },
     vesper: { bg: '#101010', fg: '#FFF' },
-    'aurora-x': { bg: '#07090F', fg: '#bbbbbb' },
     'vitesse-light': { bg: '#ffffff', fg: '#393a34' },
     'vitesse-black': { bg: '#000', fg: '#dbd7cacc' },
   };
