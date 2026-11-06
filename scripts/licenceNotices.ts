@@ -303,6 +303,24 @@ export interface FileEntry extends Entry {
   engines: Engine[];
 }
 
+/**
+ * Both engines' entries as one list, each naming the engines that ship it. An entry both engines ship must render
+ * identically in each. The one source of the file's entries (`pnpm licences`) and of the SBOM's components
+ * (scripts/generate-sbom.ts, 013 task 7.3a).
+ */
+export function mergedEntries(root: string, inventories: readonly Inventory[]): FileEntry[] {
+  const merged = new Map<string, FileEntry>();
+  for (const inv of inventories) {
+    for (const e of entriesFor(root, inv)) {
+      const prev = merged.get(e.key);
+      if (!prev) merged.set(e.key, { ...e, engines: [inv.engine] });
+      else if (prev.body !== e.body) throw new Error(`${e.key} renders differently for ${prev.engines.join(', ')} and ${inv.engine}`);
+      else prev.engines.push(inv.engine);
+    }
+  }
+  return [...merged.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
 export function renderFile(root: string, entries: readonly FileEntry[]): string {
   const sorted = [...entries].sort((a, b) => a.key.localeCompare(b.key));
   const width = Math.max(...sorted.map((e) => e.key.length)) + 2;

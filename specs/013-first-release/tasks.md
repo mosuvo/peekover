@@ -1029,6 +1029,22 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       both; every sentence approved by the human ("Approve as written"); ledger rows 337–407. truthPins: both join the
       surfaces, and every path THREAT-MODEL names must exist (red-first: two misspelt names). Gaps stated; the
       untested `externally_connectable` absence carried to 9.2 (HUMAN RULING). No production bytes.
+- [x] **7.3a DISCOVERED (found at 7.2a): an unknown saved code theme falls back to Peekover; the SBOM lists what
+      ships.** (a) A saved `codeTheme` this build does not ship (e.g. `aurora-x`, removed at 7.2a) draws the Peekover
+      theme, as "never chose" does; the saved value is not rewritten. (b) `scripts/generate-sbom.ts` reads its
+      components from 7.2a's build-derived inventory (both engines, pre-bundled packages included), not the dependency
+      tree; it fails unless they equal THIRD_PARTY_LICENSES.txt's packages.
+      Files: `src/render/codeEngine.ts` · `src/render/codeEnhancer.ts` · `src/theme/codeThemeControl.ts` ·
+      `scripts/generate-sbom.ts` · `scripts/licenceNotices.ts`, `scripts/third-party-licences.ts` (the shared merge) ·
+      `.github/workflows/supply-chain.yml` · `tests/sbom.test.ts` (new; replaces `tests/sbomWalk.test.ts`) ·
+      `tests/browser/codeThemeControl.browser.test.ts`, `tests/browser/codeDegrade.browser.test.ts`,
+      `src/render/codeEnhancer.test.ts`, `src/render/codeEngine.test.ts`
+      Verify: saved `aurora-x` → code in Peekover colours, picker names Peekover, the value kept — red first, both
+      engines, ablated; SBOM components == the licences file's packages (red on a mismatch, every package ablated);
+      lint; unit; the code browser tests both engines; both engines built — content script and manifests unchanged.
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.3a").* Saved value left as is (no rewrite). SBOM 123
+      components (108 module graph + 15 pre-bundled) = the licences file; the four build tools ship runtime code
+      (wxt, @wxt-dev/browser, vite, rolldown — each listed). Content script and manifests identical; app chunk +63 B.
 - [ ] **7.3 Reproducibility spike → the CI double build → REPRODUCING.md (D-14; G-8, G-13).** Build twice from clean
       checkouts with the same `SOURCE_DATE_EPOCH`; compare zip SHA-256; if they differ, find the cause (entry mtimes,
       ordering, chunk hashes) and fix it in config. If byte-identical zips are not reached within the task, compare the

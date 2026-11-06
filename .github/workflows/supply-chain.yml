@@ -147,9 +147,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The SBOM lists what SHIPS (013 task 7.3a): the generator builds both engines (Chrome, then
+      # Firefox — the build's licence guard runs in each), reads the components from the build's own
+      # inventory, and fails unless they equal THIRD_PARTY_LICENSES.txt's packages.
       # SOURCE_DATE_EPOCH pinned to the commit date so the SBOM is byte-reproducible from the
       # tag alone — anyone can re-derive the published artifact and compare (§6-10).
-      - name: Generate SBOM
+      - name: Generate SBOM (builds both engines)
         run: |
           SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" pnpm exec tsx scripts/generate-sbom.ts
           echo '### SBOM' >> "$GITHUB_STEP_SUMMARY"

@@ -343,11 +343,14 @@ describe('the default and a saved choice on the app page — the real IndexedDB 
       return el;
     });
     item.click();
+    // Settled either way — rendered or failed — so a block left plain reads as that, not as a timeout.
     const host = await vi.waitFor(() => {
       const el = container.querySelector<HTMLElement>('.peekover-app__reader__host');
-      if (!el?.shadowRoot?.querySelector('[data-code="rendered"]')) throw new Error('not rendered yet');
+      if (!el?.shadowRoot?.querySelector('div[data-code="rendered"], div[data-code="failed"]')) throw new Error('not settled yet');
       return el;
     }, { timeout: 5000, interval: 20 });
+    const state = host.shadowRoot!.querySelector<HTMLElement>(`div.${CODE_WRAPPER_CLASS}`)!.getAttribute(CODE_STATE_ATTR);
+    expect(state, 'the block is highlighted, not left plain').toBe('rendered');
     return host.shadowRoot!.querySelector<HTMLElement>('pre.shiki')!;
   }
 
@@ -371,4 +374,25 @@ describe('the default and a saved choice on the app page — the real IndexedDB 
     expect(getComputedStyle(second).backgroundColor).toBe(RGB.monokaiBg);
     expect((await getSettings()).codeTheme).toBe('monokai');
   });
+
+  // 013 task 7.3a: a saved id this build does not ship — aurora-x, removed at 7.2a — gets the default, as "never
+  // chose" does. The saved value stays as it is (no silent rewrite): only a pick in the picker changes it.
+  for (const theme of ['light', 'dark'] as const) {
+    it(`a saved code theme this build does not ship (aurora-x) gets Peekover, and stays saved — ${theme}`, async () => {
+      await putSettings({ theme, codeTheme: 'aurora-x' });
+      const pre = await appPageCode('aurora-x');
+      expect(getComputedStyle(pre).backgroundColor, 'the code sits on --code-bg').toBe(theme === 'light' ? RGB.lightCodeBg : RGB.darkCodeBg);
+      expect(pre.style.backgroundColor).toBe('var(--code-bg)');
+      const keyword = pre.querySelector<HTMLElement>('span[style*="--accent"]')!;
+      expect(keyword.textContent).toBe('const');
+      expect(getComputedStyle(keyword).color).toBe(theme === 'light' ? RGB.lightAccent : RGB.darkAccent);
+      // The picker names what is drawn.
+      const control = document.querySelector<HTMLElement>(`.${CODE_THEME_CONTROL_CLASS}`)!;
+      expect(control.textContent).toBe('Code theme: Peekover');
+      const selected = [...document.querySelectorAll<HTMLElement>(`.${CODE_THEME_ITEM_CLASS}[aria-selected="true"]`)];
+      expect(selected.map((el) => el.dataset.themeId)).toEqual(['peekover']);
+      // No silent rewrite.
+      expect((await getSettings()).codeTheme).toBe('aurora-x');
+    });
+  }
 });

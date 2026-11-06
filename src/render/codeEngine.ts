@@ -230,6 +230,13 @@ const THEME_LOADERS: Readonly<Record<string, ThemeLoader>> = {
  *  loader map can never drift apart into two lists naming different themes. */
 export const CODE_THEME_IDS: readonly string[] = Object.freeze(Object.keys(THEME_LOADERS));
 
+/** The code theme drawn for a saved id: the id when this build ships it, else the Peekover theme — what a user
+ *  who never chose gets (013 task 7.3a; e.g. `aurora-x`, removed at 7.2a). The saved value is not rewritten.
+ *  Own properties only, so `constructor` never resolves through `Object.prototype`. */
+export function shippedCodeTheme(id: string): string {
+  return Object.hasOwn(THEME_LOADERS, id) ? id : PEEKOVER_CODE_THEME;
+}
+
 /** Re-exported so `codeEnhancer.ts` (D-3) never names a `shiki/…` specifier of its own — it gets
  *  the engine handle's type and `codeToTokens`'s return shape through this module's own exports,
  *  the same as it already gets {@link loadCodeEngine}'s value. */

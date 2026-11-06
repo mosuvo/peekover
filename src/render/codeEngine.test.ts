@@ -50,6 +50,7 @@ import {
   languageInputFor,
   grammarKeyFor,
   themeInputFor,
+  shippedCodeTheme,
   CODE_THEME_IDS,
   PEEKOVER_CODE_THEME,
   PEEKOVER_THEME,
@@ -184,6 +185,15 @@ describe('languageInputFor / themeInputFor — resolving a bundled key (task 4.2
   it('resolves an unknown key to undefined — no throw, the caller decides what that means', () => {
     expect(languageInputFor('notarealanguage')).toBeUndefined();
     expect(themeInputFor('notarealtheme')).toBeUndefined();
+  });
+});
+
+describe('shippedCodeTheme — a saved id this build does not ship draws Peekover (013 task 7.3a)', () => {
+  it('keeps every shipped id, and maps an unknown one (aurora-x, removed at 7.2a) to the default', () => {
+    for (const id of CODE_THEME_IDS) expect(shippedCodeTheme(id)).toBe(id);
+    expect(shippedCodeTheme('aurora-x')).toBe(PEEKOVER_CODE_THEME);
+    expect(shippedCodeTheme('')).toBe(PEEKOVER_CODE_THEME);
+    expect(shippedCodeTheme('constructor'), 'never through Object.prototype').toBe(PEEKOVER_CODE_THEME);
   });
 });
 

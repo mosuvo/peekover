@@ -70,6 +70,7 @@ import {
   loadCodeEngine,
   grammarKeyFor,
   languageInputFor,
+  shippedCodeTheme,
   themeInputFor,
   type EngineLoader,
   type HighlighterCore,
@@ -363,7 +364,7 @@ export function enhanceCode(host: HTMLElement, options: EnhanceOptions = {}): vo
     shadow,
     pairs,
     options.loader,
-    options.theme ?? currentSettings().codeTheme,
+    options.theme ?? shippedCodeTheme(currentSettings().codeTheme),
   );
 }
 

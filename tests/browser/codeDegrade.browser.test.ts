@@ -33,6 +33,15 @@
 // flash, never a thrown error visible to the user, across every block, in a real engine), which is
 // this file's job, mirroring 7.1's own case immediately below but driving the failure through
 // `saveSettings` instead of an injected loader.
+//
+// ── 013 TASK 7.3a: THE STALE SAVED ID NOW DRAWS THE DEFAULT ───────────────────────────────────────
+//
+// The paragraph above is 009's. Since 013 task 5.8 "the reader's default presentation" for code (009 tasks.md
+// 7.2's own words) is the Peekover theme, not plain code; 7.3a (the human's direction, after 7.2a removed
+// aurora-x) makes a saved id this build does not ship draw it — `enhanceCode` passes
+// `shippedCodeTheme(currentSettings().codeTheme)`. The 7.2 case below now proves that, page-wide. A theme that
+// resolves but fails to APPLY still leaves its block plain: 4.2's per-fence override case in
+// `codeRender.browser.test.ts` (an `EnhanceOptions.theme` id is not mapped).
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount } from '../../src/render/mount';
@@ -112,28 +121,25 @@ describe('7.2 — theme-apply failure at the selection level, page-wide (§3.9)'
     resetCodeHostsForTest();
   });
 
-  it('an unresolvable PERSISTED codeTheme falls back to the plain retained pre on every block, page intact', async () => {
+  it('an unresolvable PERSISTED codeTheme falls back to the default presentation — the Peekover theme — on every block, page intact (013 7.3a)', async () => {
     saveSettings({ codeTheme: 'not-a-real-theme-id' }); // invalid on purpose — a stale/corrupted value
     // No `theme` override, no injected `loader` — production's own call shape (`enhanceCode(host)`),
-    // so the engine loads for real and the failure is read from the SELECTION (settings), never a
+    // so the engine loads for real and the id is read from the SELECTION (settings), never a
     // per-fence override (that's 4.2's own, already-distinct, test).
     const shadow = directHost(DOC);
 
     const wrappers = Array.from(shadow.querySelectorAll<HTMLElement>(WRAPPER_SELECTOR));
     expect(wrappers).toHaveLength(2);
-    // The revert-and-fail signature lives HERE: with the per-fence guard removed, `codeToTokens`'s
-    // throw propagates instead of being caught, `markCodeFailed` is never called, and every wrapper
-    // is stuck at `pending` forever — this assertion times out rather than passing.
+    // Settled either way, then read: without the fallback every block reads `failed` (left plain).
     for (const wrapper of wrappers) {
-      await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+      await settled(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).not.toBe('pending'));
+      expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered');
     }
-    expect(shadow.querySelectorAll('pre.shiki')).toHaveLength(0); // never an unstyled highlighted sibling
-
-    // AGENTS.md #5 — no blank/broken state, no unstyled flash: the retained source stays visible...
-    const pres = Array.from(shadow.querySelectorAll<HTMLElement>('pre[data-code]'));
-    expect(pres).toHaveLength(2);
-    for (const pre of pres) {
-      expect(getComputedStyle(pre).display).not.toBe('none');
+    // Every block in the Peekover theme — drawn from the tokens, never an unstyled flash.
+    const highlighted = Array.from(shadow.querySelectorAll<HTMLElement>('pre.shiki'));
+    expect(highlighted).toHaveLength(2);
+    for (const pre of highlighted) {
+      expect(pre.style.backgroundColor).toBe('var(--code-bg)');
       expect(pre.textContent?.length ?? 0).toBeGreaterThan(0);
     }
     // ...and PAGE-WIDE, not just the fences: the surrounding reading column is untouched.

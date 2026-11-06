@@ -1,6 +1,58 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.3a — DISCOVERED (found at 7.2a): an unknown saved code theme falls back to Peekover; the
+  SBOM lists what ships.** Local, on `main` at `254e271` (7.2). **CI (`gh`) on `254e271` green** — CI (42158926218),
+  Supply chain (42158926254); `f5151a5` (7.2a) rode with it. `pnpm audit --prod` EXIT 0 on 2026-11-06.
+  - **(a) THE FALLBACK.** `shippedCodeTheme(id)` (`codeEngine.ts`): the id when `THEME_LOADERS` has it (own property),
+    else `peekover`. `enhanceCode` highlights with `shippedCodeTheme(currentSettings().codeTheme)`; the picker
+    (`codeThemeControl.ts` `syncControl`) names and marks the theme drawn. **The saved value is left as is — no silent
+    rewrite**: nothing in tasks.md or decisions.md directs one (5.8: "a saved choice stays"); a pick in the picker is
+    the only write. An explicit `EnhanceOptions.theme` (test-only) is not mapped, so 4.2's theme-failure path still
+    leaves a block plain. Red first (`codeThemeControl.browser.test.ts`, light / dark, both engines: `failed` — the
+    block left plain, 7.2a's finding); green; ablated twice — the enhancer's fallback alone → "expected 'failed' to
+    be 'rendered'", the picker's alone → "'Code theme: Aurora X'", both engines.
+  - **Flagged — an older pin reversed.** 009's codeDegrade "7.2" case pinned "an unresolvable PERSISTED codeTheme
+    falls back to the plain retained pre", and its file header said a silent fallback "was deliberately rejected"
+    (a test comment; no ruling in decisions.md). 009 tasks.md 7.2's own Verify reads "falls back to the reader's
+    default presentation" — since 013 5.8 that presentation is the Peekover theme, so the case is re-spelt to it
+    (every block rendered on `var(--code-bg)`, page intact; ablation red both engines). 009 spec §3.9's "its theme
+    fails to resolve: that block stays plain" no longer holds for a SAVED id; it still holds for a theme that fails
+    to apply. `codeEnhancer.test.ts`'s settings-read case re-spelt with monokai (its old proof used a failing id).
+  - **(b) THE SBOM FROM THE BUILD.** `scripts/generate-sbom.ts` rewritten: components = `mergedEntries(inventories)`
+    (new in `licenceNotices.ts`, shared with `pnpm licences` — the file regenerates byte-identical), i.e. 7.2a's
+    build-derived inventory of both engines + the packages pre-bundled inside them; licence = the file's SPDX choice
+    (DOMPurify Apache-2.0); `integrity` from pnpm-lock.yaml for the 108 installed (missing → the script fails);
+    pre-bundled ones carry `peekover:bundled-inside` and no hash (never installed; `webpack@5.x` — the version its
+    source map gives); `peekover:ships-in` per component; `dependencies`: the package → the 108, each host → its
+    pre-bundled. It builds both engines (`--no-build` reuses `.output`) and **refuses to write unless its components
+    equal THIRD_PARTY_LICENSES.txt's packages** (`compareWithLicences`). The pnpm-tree walk (`collect`) and
+    `tests/sbomWalk.test.ts` are removed — the tree is no longer an input.
+  - **SBOM vs licences:** 123 = 123 (108 module graph + 15 pre-bundled). Was 191 from the tree: 87 shipped nothing,
+    and 19 that ship were missing (the four tools + 15 pre-bundled).
+  - **THE FOUR — each is runtime code in both packages, listed:** **wxt@0.20.27** (7,944 B: `wxt/browser`, the
+    content-script context, define-background / define-content-script, custom events, location watcher, logger —
+    `wxt:content-script-started` is in the content script); **@wxt-dev/browser@0.2.2** (599 B: the
+    `globalThis.browser ?? chrome` shim, in 3 files per engine); **vite@8.1.4** (3,350 B: the modulepreload polyfill
+    and preload helper — `rel="modulepreload"` in the shared chunk); **rolldown@1.1.5** (2,814 B: the module runtime —
+    its `Symbol.toStringTag` `Module` helper is in the content script).
+  - **TEST:** `tests/sbom.test.ts` (15): `compareWithLicences` green on the file's own list, red naming a missing, an
+    extra (`@types/markdown-it`) and a moved version; on the real `.output` inventories — equal to the file, **every
+    one of the 123 ablated → red naming it**, the four from the graph with hashes, pre-bundled hosts present;
+    `buildBom` order-independent and epoch-stamped. Ablation of the generator (drop pre-bundled) → the test red
+    naming 15, and `pnpm sbom` itself exits naming chevrotain. CI's unit run precedes any build, so the `.output`
+    half skips there (the 7.2a precedent); the SBOM job enforces it.
+  - **WORKFLOW:** `supply-chain.yml`'s SBOM step is unchanged in command (`pnpm exec tsx scripts/generate-sbom.ts`);
+    it now builds both engines inside that job (each build's licence guard runs), then fails on a mismatch. Renamed
+    "Generate SBOM (builds both engines)", comment updated. CI on the human's push is the check: the Supply chain
+    workflow's `sbom` job. Local `pnpm sbom` both builds: ~5 s.
+  - **Bytes:** content script **identical** (345,049 B, `ee9f9279…` / `317c6c51…`); manifests **identical** (864 /
+    978 B); app chunk **550,549 B (+63**, `shippedCodeTheme` and its two call sites); `.output` 6,645,510 / 6,645,366 B
+    (+63 both).
+  - Verify: lint 0 · unit 1,600 / 1,600 · browser full suite both engines 2,612 passed / 0 failed / 52 skipped of 2,664,
+    first run · code browser files (8) both engines green.
+  - Revisit when: a code theme is removed again (the fallback covers it; the saved id remains).
+
 - **2026-11-06 · M13 TASK 7.2 — PRIVACY.md, THREAT-MODEL.md, SECURITY.md final (D-14's documents; G-1). TWO HUMAN
   RULINGS.** Local, on `main` at `f5151a5` (7.2a); docs and tests only, no product byte.
   - **Authority:** tasks.md 7.2; plan D-14 (Documents), §9 notes 1 (G-1: contacts, the privacy URL, no `hello@`), 3

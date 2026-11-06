@@ -30,7 +30,7 @@
 
 import { currentSettings, onSettingsChange, saveSettings } from '../settings/settingsSeam';
 import { reapplyCodeTheme } from '../render/codeEnhancer';
-import { CODE_THEME_IDS } from '../render/codeEngine';
+import { CODE_THEME_IDS, shippedCodeTheme } from '../render/codeEngine';
 
 /** Class on the trigger `<button>` — APP_CSS styles it as a header pill, matching
  *  `themeControl.ts`'s own toggle chrome. */
@@ -88,7 +88,8 @@ function pruneControls(): void {
 }
 
 /** Re-label one control's trigger and re-mark its selected row for the CURRENT `codeTheme`. */
-function syncControl(control: HTMLElement, codeTheme: string): void {
+function syncControl(control: HTMLElement, saved: string): void {
+  const codeTheme = shippedCodeTheme(saved); // what is drawn (013 task 7.3a)
   const trigger = control.querySelector<HTMLButtonElement>(`.${CODE_THEME_CONTROL_CLASS}`);
   if (trigger) trigger.textContent = `Code theme: ${labelFor(codeTheme)}`;
   for (const item of control.querySelectorAll<HTMLElement>(`.${CODE_THEME_ITEM_CLASS}`)) {

@@ -23,7 +23,7 @@ import {
 } from './codeEnhancer';
 import { CODE_FENCE_SELECTOR as ENGINE_FENCE_SELECTOR, type CodeEngineModule } from './codeEngine';
 import { CODE_STATE_ATTR, CODE_WRAPPER_CLASS, markCodeRendered } from './codeView';
-import { saveSettings, resetSettingsSeamForTest } from '../settings/settingsSeam';
+import { saveSettings, resetSettingsSeamForTest, currentSettings } from '../settings/settingsSeam';
 
 const HOST_TAG = 'peekover-root';
 const WRAPPER_SELECTOR = `div.${CODE_WRAPPER_CLASS}`;
@@ -403,15 +403,30 @@ describe('task 5.2 — settings wiring + reapplyCodeTheme', () => {
     await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
   });
 
+  // 013 task 7.3a re-spelt this: it proved the read with an unknown saved id that FAILED; an unknown id now draws the
+  // Peekover theme (below), so the read is proven with a saved non-default theme instead.
   it('falls back to settings.codeTheme when no override is passed — a real read, not a hard-coded literal', async () => {
-    saveSettings({ codeTheme: 'not-a-real-theme-id' }); // invalid on purpose
+    saveSettings({ codeTheme: 'monokai' });
     const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
     enhanceCode(host); // no options at all — production's own call shape
 
     const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
     if (!wrapper) throw new Error('expected a wrapper');
-    // A hard-coded fallback would have rendered fine; only a genuine settings read can fail here.
-    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('failed'));
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+    // Only a genuine settings read draws monokai's background; the default would draw var(--code-bg).
+    expect(shadow.querySelector<HTMLElement>('pre.shiki')?.style.backgroundColor).toBe('rgb(39, 40, 34)');
+  });
+
+  it('a saved code theme this build does not ship draws the Peekover theme (013 task 7.3a)', async () => {
+    saveSettings({ codeTheme: 'aurora-x' }); // removed at 7.2a
+    const { host, shadow } = mountedHost(fence('javascript', 'const a = 1;'));
+    enhanceCode(host);
+
+    const wrapper = shadow.querySelector<HTMLElement>(WRAPPER_SELECTOR);
+    if (!wrapper) throw new Error('expected a wrapper');
+    await vi.waitFor(() => expect(wrapper.getAttribute(CODE_STATE_ATTR)).toBe('rendered'));
+    expect(shadow.querySelector<HTMLElement>('pre.shiki')?.style.backgroundColor).toBe('var(--code-bg)');
+    expect(currentSettings().codeTheme, 'the saved value is not rewritten').toBe('aurora-x');
   });
 
   it('reapplyCodeTheme swaps the highlighted content in place — never a second .shiki sibling', async () => {
