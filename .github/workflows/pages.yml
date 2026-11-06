@@ -1,0 +1,41 @@
+# Website (M13 task 7.4): publishes site/ to GitHub Pages, by hand only, from main.
+#
+# There is no push trigger: the site goes live when the human runs this (docs/store/GO-LIVE.md). On GitHub Free, Pages
+# works on public repositories only, so it can run once the repository is public (decisions.md, "M13 TASK 7.4").
+# The custom domain is the repository's Pages setting; a custom Actions workflow needs no CNAME file, and GitHub
+# ignores one (docs.github.com, "Managing a custom domain for your GitHub Pages site").
+# Every action is pinned by full commit SHA; the only token is GITHUB_TOKEN.
+
+name: Pages
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish site/
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

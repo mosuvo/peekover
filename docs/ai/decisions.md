@@ -1,6 +1,80 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.4 — the release and Pages workflows; SOURCE_CODE_REVIEW.md (D-14; §9-1, §9-4; G-9, G-13).
+  TWO HUMAN RULINGS + ONE APPROVAL.** Local, on `main` at `010f9a7`; not pushed. `pnpm audit --prod` EXIT 0 on
+  2026-11-06 (1 low, ignored). Budget: `.output` 6,645,510 / 6,645,366 B of 7,340,032 (headroom 694,522 / 694,666).
+  - **Before it — CI on `89deef8` (7.3):** CI 42164163720 green (verify, reproducible) and Supply chain 42164163852
+    green. The reproducible job's 327 hashes = the local 7.3 list, line for line and in order (327 of 327; Node
+    22.23.4 on the runner). Then `010f9a7`: the CI check left "Planned" in SECURITY / README / site, the threat model
+    left README's and the site's Planned (built at 7.2); ledger 34, 35, 57, 131, 144 withdrawn, 430–434 added, 422's
+    evidence the run. HUMAN RULINGS (2026-11-06), verbatim: "Approve as written (Recommended)" and "Fix it in this
+    commit (Recommended)". truthPins' ZIP-export check now matches "ZIP" by case (the packages' "zip" tripped it);
+    red-first with "offers ZIP export" in README.
+  - **Authority:** tasks.md 7.4; the G-9 ruling (gate 3); 7.3's job. **Kickoff mismatches, flagged:** (a) the kickoff
+    asked to stop if attestations need a public repository; tasks.md already makes the step conditional (G-9) — not
+    re-asked. (b) tasks.md names job-scoped `contents: write, id-token: write, attestations: write`; split per job
+    (build `contents: read`, attest `contents: read, id-token: write, attestations: write`, release `contents: write`),
+    the kickoff's least privilege. (c) "every action SHA-pinned" is pinned for release.yml and pages.yml; ci.yml and
+    supply-chain.yml still use tags — moving them is beyond 7.4's Files. (d) private vulnerability reporting is 7.6's.
+  - **1 · PRIVATE REPOSITORY (docs read 2026-11-06).** The repo is private, owned by a personal account; the plan is not
+    readable (the token has no `user` scope). *Attestations:* "If you are on a GitHub Free, GitHub Pro, or GitHub Team
+    plan, artifact attestations are only available for public repositories" (docs.github.com/en/code-security/
+    getting-started/github-security-features; the attest-build-provenance README says the same) — conditional, as
+    ruled. *Pages:* Free lists "GitHub Pages in public repositories"; Pro lists Pages among private-repository tools
+    (docs.github.com/en/get-started/learning-about-github/githubs-plans). *Releases:* "Anyone with read access to a
+    repository can view and compare releases" (…/releasing-projects-on-github/about-releases) — works private.
+    *Private vulnerability reporting:* the configuring page names only "Owners and administrators of public
+    repositories" — opens at release (7.6), as SECURITY.md says. *CNAME:* for a custom Actions workflow "any existing
+    `CNAME` file is ignored and is not required" (…/managing-a-custom-domain-for-your-github-pages-site) — no
+    `site/CNAME`; the domain is the Pages setting. **HUMAN RULING (2026-11-06), verbatim: "Build it; runs once public
+    (Recommended)"** — pages.yml built; on Free it can run only after the repository is public, so 7.6's go-live list
+    puts "make the repository public" before "run pages.yml". **HUMAN RULING, verbatim: "Proceed (Recommended)"** —
+    the other findings, no change.
+  - **2 · release.yml.** `push: tags: ['v*']` and `workflow_dispatch` (`dry_run`, boolean, default true); top-level
+    `permissions: {}`; `concurrency` per ref, never cancelled. **build:** checkout (no persisted credentials), pnpm
+    from `packageManager`, Node from `.nvmrc`, no dependency cache; the tag = `v` + package.json's version (on a tag;
+    skipped and printed on a branch), before install; frozen install; `pnpm zip` + `pnpm zip -b firefox` FIRST, on the
+    fresh checkout (the sources zip takes every non-dot file; scratch goes to `RUNNER_TEMP`); SBOM `--no-build` from
+    those builds with `SOURCE_DATE_EPOCH` = the commit time; lint; unit; `compare-builds.ts --twice`; each zip must
+    equal the clean-clone build's hash; `dist/` = three zips, `sbom.cdx.json`, `THIRD_PARTY_LICENSES.txt`,
+    `SHA256SUMS`; the summary lists them and says "Attestation: skipped" when private; artifact `release-files`
+    (7 days). **attest:** `if: ${{ !github.event.repository.private }}`, attest-build-provenance on `dist/*`.
+    **release:** only from a tag and (`push` or `dry_run` off), after build and attest (success or skipped): `gh
+    release create --draft --verify-tag` with GITHUB_TOKEN — no third-party release action, never published, no store
+    upload. The setup actions are pinned to the commits CI 42164163720 ran (checkout v4.4.0, pnpm/action-setup v4.3.0,
+    setup-node v4.4.0), so the release build is the verified build; upload-artifact v7.0.2, download-artifact v8.0.2,
+    attest-build-provenance v4.2.2 (a wrapper on actions/attest since v4) — current releases, each over two weeks old.
+  - **3 · pages.yml.** `workflow_dispatch` only; job `deploy` only on `refs/heads/main`; `contents: read, pages: write,
+    id-token: write`; environment `github-pages`; checkout v7.0.1, upload-pages-artifact v5.0.0 (`path: site`),
+    deploy-pages v5.0.1 (its README's permissions). supply-chain.yml's "Attach SBOM to release" step removed (Q17).
+  - **4 · SOURCE_CODE_REVIEW.md** at the repository root (WXT's publishing guide: "a `README.md` or
+    `SOURCE_CODE_REVIEW.md` file with the above commands"; no location given — the root, where README is, inside the
+    sources zip). Needs, Mozilla's default (Ubuntu 24.04.4 ARM64, Node 24.14.0, npm 11.9.0) and how Peekover differs,
+    two commands, the result; links REPRODUCING.md instead of repeating it. **Run as written:** the sources zip of a
+    probe commit (`refs/tmp/r74`, deleted) extracted on WSL Ubuntu 24.04.3 x86_64, Node 22.23.4, npm 10.9.9, no `.git`
+    → `.output/peekover-0.1.0-firefox.zip` `d74715ca7a4b0a94f257f0eea3c2909ff539fbdcfe7b73610559d808b93cc1ab` = the
+    shipped one, `cmp`: no differences. **HUMAN APPROVAL (2026-11-06), verbatim: "Approve as written (Recommended)".**
+    Its ledger rows: **HUMAN RULING, verbatim: "Carry it to 9.2 (Recommended)"**.
+  - **5 · The build job, simulated** in a clean clone of the probe (its run blocks verbatim): tag check v0.0.9 → exit 1,
+    v0.1.0 → pass, branch → skipped; REPRODUCIBLE; the three workspace zips = the clean-clone builds; `sha256sum -c
+    SHA256SUMS` OK for all five; the sources zip holds SOURCE_CODE_REVIEW.md and no scratch.
+  - **6 · Tests.** `ciConfig.test.ts` +12 (19): triggers; dry run by default and no release from it; draft only, no
+    publish, no store; the tag check before install; build contents; attest conditional and reported; permissions per
+    job and `{}`; no secret but GITHUB_TOKEN; pages dispatch-only, main-only, its permissions; SHA pins in both new
+    files; no "Attach SBOM" step. **Ablations, each red in exactly one test naming it:** A1 `branches: [main]` under
+    release's push (push filters `['branches','tags']`); A2 `actions/download-artifact@v8` (named); A3 attest condition
+    removed; A4 pages push trigger; A5 the Attach SBOM step back (`supply-chain.yml`); A6 `--draft` removed; A7 the tag
+    check removed; A8 build `contents: write` (job named); A9 a hand run releases whatever `dry_run`. **actionlint
+    1.7.12** (official binary, checksum verified) EXIT 0 on all five workflows; a firing control reported its error;
+    shellcheck not installed, so not run.
+  - **Bytes:** Chrome zip `9ed349c2…`, Firefox zip `d74715ca…` — identical to `89deef8`; the sources zip changes (it
+    carries the repository's docs). No file under `src/`, `entrypoints/`, `public/` or the build config changed.
+  - Verify: lint 0 · unit 1,624 / 1,624 · actionlint 0 · truthPins green · no control bytes, LF only. **The dry run is
+    the human's (G-9), after the push** — recorded at 8.1.
+  - Revisit when: the dry run (8.1); the repository goes public (attest runs; pages.yml can run); the first `v*` tag
+    (a tag checkout through compare-builds is simulated only on a branch); ci.yml / supply-chain.yml SHA pins.
+
 - **2026-11-06 · M13 TASK 7.3 — reproducible builds: BYTE-IDENTICAL, zips included (D-14; G-8 not needed, G-13).
   ONE HUMAN RULING.** Local, on `main` at `15e2dc3` (7.3a). `pnpm audit --prod` EXIT 0 on 2026-11-06.
   - **Authority:** tasks.md 7.3; plan D-14 ("Reproducibility first", "AMO sources"), §9 notes 3 (G-8) and 5 (G-13);

@@ -129,3 +129,159 @@ describe('CI config (013 task 1.1, D-13)', () => {
     expect(text).not.toMatch(new RegExp(`${COUNT}librar`, 'i'));
   });
 });
+
+// ── M13 task 7.4 (D-14; G-9): the release and Pages workflows. ──────────────────────────────────────────────────
+
+/** A job's indented body under `jobs:`. */
+function jobBlock(text: string, name: string): string {
+  return new RegExp(`^ {2}${name}:\\n((?: {4,}.*\\n|\\s*\\n)*)`, 'm').exec(text)?.[1] ?? '';
+}
+
+/** The names under a block, at the given indent, e.g. the triggers under `on:`. */
+function keysAt(block: string, indent: number): string[] {
+  return [...block.matchAll(new RegExp(`^ {${indent}}([\\w-]+):`, 'gm'))].map((m) => m[1]);
+}
+
+/** A job's `permissions:` as sorted `scope: level` lines; null when the job has none. */
+function jobPermissions(job: string): string[] | null {
+  const m = /^ {4}permissions:\n((?: {6}.*\n)*)/m.exec(job);
+  return m ? m[1].split('\n').map((l) => l.trim()).filter(Boolean).sort() : null;
+}
+
+const RELEASE = '.github/workflows/release.yml';
+const PAGES = '.github/workflows/pages.yml';
+
+describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
+  const text = (): string => read(RELEASE);
+
+  it('runs only on a v* tag and by hand — no branch, pull request or schedule trigger', () => {
+    const on = topLevelBlock(text(), 'on');
+    expect(on, 'release.yml has an `on:` block').not.toBe('');
+    expect(keysAt(on, 2).sort(), 'release.yml triggers').toEqual(['push', 'workflow_dispatch']);
+    const push = /^ {2}push:\n((?: {4,}.*\n)*)/m.exec(on)?.[1] ?? '';
+    expect(keysAt(push, 4), 'release.yml push filters').toEqual(['tags']);
+    expect(push).toMatch(/^ {4}tags: \['v\*'\]\s*$/m);
+  });
+
+  it('a hand run is a dry run by default, and a dry run creates no release', () => {
+    const on = topLevelBlock(text(), 'on');
+    expect(on).toMatch(/^ {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean\n(?: {8}.*\n)*? {8}default: true\n/m);
+    const release = jobBlock(text(), 'release');
+    expect(release, 'release.yml has a release job').not.toBe('');
+    const cond = /^ {4}if: >-\n((?: {6}.*\n)*)/m.exec(release)?.[1].replace(/\s+/g, ' ') ?? '';
+    expect(cond, 'the release job runs only from a tag').toContain("github.ref_type == 'tag'");
+    expect(cond, 'a hand run creates a release only with dry_run off').toContain("(github.event_name == 'push' || !inputs.dry_run)");
+  });
+
+  it('creates a DRAFT release only — never publishes, never uploads to a store', () => {
+    const t = text();
+    const creates = t.match(/gh release create\b[^\n]*/g) ?? [];
+    expect(creates, 'one gh release create').toHaveLength(1);
+    expect(creates[0]).toMatch(/--draft\b/);
+    expect(creates[0]).toMatch(/--verify-tag\b/);
+    expect(t, 'a release action other than gh').not.toMatch(/action-gh-release|create-release@/);
+    expect(t, 'a step that publishes a release').not.toMatch(/gh release edit|--draft=false|draft: false|--latest\b/);
+    expect(t, 'a store upload').not.toMatch(/web-ext sign|chrome-webstore|webstore-upload|addons\.mozilla\.org|microsoftedge|AMO_|CWS_/i);
+  });
+
+  it('checks the tag equals package.json\'s version before building', () => {
+    const t = text();
+    const check = steps(t).find((s) => /^\s*- name: Check the tag equals package\.json's version/m.test(s));
+    expect(check, 'the tag/version check step').toBeDefined();
+    expect(check!).toMatch(/require\('\.\/package\.json'\)\.version/);
+    expect(check!).toMatch(/"\$REF_NAME" != "v\$version"/);
+    expect(check!).toMatch(/exit 1/);
+    // It runs before the dependencies are installed, so a wrong tag fails first.
+    expect(t.indexOf("Check the tag equals package.json's version")).toBeLessThan(t.indexOf('pnpm install --frozen-lockfile'));
+  });
+
+  it('builds both engines from a frozen install, runs lint and unit, proves the build reproducible, ships the files', () => {
+    const build = jobBlock(text(), 'build');
+    expect(build, 'release.yml has a build job').not.toBe('');
+    for (const [what, re] of [
+      ['a frozen install', /pnpm install --frozen-lockfile/],
+      ['the Chrome zip', /^\s*pnpm zip\s*$/m],
+      ['the Firefox zip and sources zip', /^\s*pnpm zip -b firefox\s*$/m],
+      ['the SBOM at the commit time', /SOURCE_DATE_EPOCH="\$\(git log -1 --format=%ct\)" pnpm exec tsx scripts\/generate-sbom\.ts/],
+      ['lint', /run: pnpm lint\s*$/m],
+      ['unit tests', /run: pnpm test\s*$/m],
+      ['the clean-clone comparison', /scripts\/compare-builds\.ts --twice/],
+      ['the sources zip', /peekover-\$version-sources\.zip/],
+      ['THIRD_PARTY_LICENSES', /THIRD_PARTY_LICENSES\.txt/],
+      ['SHA256SUMS', /sha256sum -- [^\n]*> SHA256SUMS/],
+      ['the zips checked against the comparison', /differs from the clean-clone build/],
+    ] as const) {
+      expect(build, `the build job: ${what}`).toMatch(re);
+    }
+  });
+
+  it('attests only when the repository is public, and reports it skipped otherwise', () => {
+    const t = text();
+    const attest = jobBlock(t, 'attest');
+    expect(attest, 'release.yml has an attest job').not.toBe('');
+    expect(attest).toMatch(/^ {4}if: \$\{\{ !github\.event\.repository\.private \}\}\s*$/m);
+    expect(attest).toMatch(/uses: actions\/attest-build-provenance@/);
+    expect(attest).toMatch(/subject-path: 'dist\/\*'/);
+    expect(jobBlock(t, 'build'), 'the skip is reported in the run summary').toMatch(/Attestation: skipped/);
+  });
+
+  it('grants each job only what it needs, and nothing at the top level', () => {
+    const t = text();
+    expect(t, 'top-level permissions').toMatch(/^permissions: \{\}\s*$/m);
+    const want: Record<string, string[]> = {
+      build: ['contents: read'],
+      attest: ['attestations: write', 'contents: read', 'id-token: write'],
+      release: ['contents: write'],
+    };
+    const jobs = keysAt(topLevelBlock(t, 'jobs'), 2);
+    expect(jobs.sort(), 'release.yml jobs').toEqual(Object.keys(want).sort());
+    for (const job of jobs) {
+      expect(jobPermissions(jobBlock(t, job)), `permissions of job ${job}`).toEqual(want[job]);
+    }
+  });
+
+  it('uses no secret but GITHUB_TOKEN', () => {
+    for (const p of [RELEASE, PAGES]) {
+      const secrets = [...read(p).matchAll(/secrets\.(\w+)/g)].map((m) => m[1]).filter((s) => s !== 'GITHUB_TOKEN');
+      expect(secrets, `secrets used in ${p}`).toEqual([]);
+    }
+  });
+});
+
+describe('the Pages workflow (013 task 7.4)', () => {
+  it('runs by hand only — no push trigger — and deploys only from main', () => {
+    const t = read(PAGES);
+    expect(keysAt(topLevelBlock(t, 'on'), 2), 'pages.yml triggers').toEqual(['workflow_dispatch']);
+    const deploy = jobBlock(t, 'deploy');
+    expect(deploy, 'pages.yml has a deploy job').not.toBe('');
+    expect(deploy).toMatch(/^ {4}if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}\s*$/m);
+    expect(deploy).toMatch(/^ {10}path: site\s*$/m);
+  });
+
+  it('grants the deploy job only Pages and OIDC, and nothing at the top level', () => {
+    const t = read(PAGES);
+    expect(t, 'top-level permissions').toMatch(/^permissions: \{\}\s*$/m);
+    expect(keysAt(topLevelBlock(t, 'jobs'), 2), 'pages.yml jobs').toEqual(['deploy']);
+    expect(jobPermissions(jobBlock(t, 'deploy'))).toEqual(['contents: read', 'id-token: write', 'pages: write']);
+  });
+});
+
+describe('release-path workflow hygiene (013 task 7.4)', () => {
+  it('every action in release.yml and pages.yml is pinned by full commit SHA, with its version noted', () => {
+    const offenders = [RELEASE, PAGES].flatMap((p) =>
+      [...read(p).matchAll(/^\s*(?:- )?uses: (.+)$/gm)]
+        .map((m) => m[1].trim())
+        .filter((u) => !/^[\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/.test(u))
+        .map((u) => `${p}: ${u}`),
+    );
+    // Firing control: the scan sees the actions it governs.
+    expect([RELEASE, PAGES].map((p) => (read(p).match(/uses: /g) ?? []).length).every((n) => n >= 3)).toBe(true);
+    expect(offenders, 'actions not pinned by full commit SHA').toEqual([]);
+  });
+
+  it('no workflow still attaches the SBOM to a release itself — release.yml does', () => {
+    const offenders = workflows.filter(({ text: t }) => /Attach SBOM to release/i.test(t)).map((w) => w.file);
+    expect(offenders, 'workflows with an "Attach SBOM to release" step').toEqual([]);
+    expect(read('.github/workflows/supply-chain.yml')).not.toMatch(/action-gh-release/);
+  });
+});

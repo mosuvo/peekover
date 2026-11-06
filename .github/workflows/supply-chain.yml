@@ -169,10 +169,5 @@ jobs:
           path: sbom.cdx.json
           if-no-files-found: error
 
-      # "SBOM published per release" (§6-9): on a tag, the SBOM rides with the release
-      # artifacts rather than living only in a CI run that expires.
-      - name: Attach SBOM to release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: sbom.cdx.json
+      # "SBOM published per release" (§6-9): release.yml makes the release's SBOM and attaches it to the draft
+      # release (M13 task 7.4).

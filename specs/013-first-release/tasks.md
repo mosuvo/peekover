@@ -1064,7 +1064,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       Linux clone identical; the sources zip alone rebuilds the identical Firefox zip. `ci.yml` job `reproducible`.
       REPRODUCING.md approved by the human ("Approve as written"); ledger rows 408–429. SECURITY's Planned line kept
       until the CI job has run. Packages identical to 7.3a.
-- [ ] **7.4 The release workflow, conditional attestations, the Pages workflow, AMO sources README (D-14; §9-1, §9-4;
+- [x] **7.4 The release workflow, conditional attestations, the Pages workflow, AMO sources README (D-14; §9-1, §9-4;
       G-9).** `release.yml` on `push: tags: ['v*']` and `workflow_dispatch` (`dry_run`): pnpm via `packageManager`,
       Node 22, frozen install, lint + unit, both zips + the Firefox sources zip, SBOM with `SOURCE_DATE_EPOCH` = the
       tag's commit time, `SHA256SUMS`, `actions/attest-build-provenance` **only when the repository is public**
@@ -1086,6 +1086,12 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       ★ *Gate-3 note, 2026-10-31 (Q6; `decisions.md`, "M13 GATE 3 APPROVED"): when 7.4 lands, the human pushes — a
       `workflow_dispatch` workflow must be on the default branch to be run — and triggers the dry run then; 8.1
       records the result, and a failure becomes a discovered task. The agent never pushes.*
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.4").* `release.yml` (v* tags + dispatch, `dry_run` default
+      true; jobs build / attest (public only) / release (draft, tag only); permissions per job, top level `{}`; every
+      action SHA-pinned). `pages.yml` (dispatch only, main only; no CNAME — GitHub ignores one for an Actions deploy;
+      on Free it runs once the repository is public — HUMAN RULING). `SOURCE_CODE_REVIEW.md` at the root, approved; the
+      sources zip rebuilt on Linux with no git = the Firefox zip, `d74715ca…`, "no differences". ciConfig +12, nine
+      ablations red; actionlint 1.7.12 EXIT 0. Chrome / Firefox zips identical to 89deef8.
 - [ ] **7.5 Store listing text for Chrome, Firefox, Edge (gate-1 Q19, Q20).** Each meets that store's documented
       length rules (re-read at the task, cited); each links `https://peekover.dev/privacy/` ("live at release");
       Edge = text + assets, the Chrome zip; every sentence in the ledger.
