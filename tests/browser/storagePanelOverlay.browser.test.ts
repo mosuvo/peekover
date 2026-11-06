@@ -247,6 +247,7 @@ describe('013 task 5.4 — the header panels: card, header row, buttons, rows (l
         snapshots: { count: 2, docs: 1, bytes: 2048 },
         captureFlag: null,
         diagrams: { count: 1, bytes: 512 },
+        guideShown: false,
         total: 4,
         lines: ['1 folder remembered (name only).', '2 snapshots of 1 document (2.0 KB).'],
       }),

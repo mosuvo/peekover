@@ -1,5 +1,5 @@
 import { defineBackground, browser } from '#imports';
-import { getSettings, putSettings } from '@/src/app/store';
+import { claimGuideShown, getSettings, putSettings } from '@/src/app/store';
 import { createSettingsListener } from '@/src/settings/settingsPort';
 import { createWatchListener } from '@/src/watch/watchRelay';
 
@@ -37,6 +37,10 @@ import { createWatchListener } from '@/src/watch/watchRelay';
 // installed, and ONLY then — not on an extension update, a browser update ("chrome_update" in
 // Chrome, "browser_update" in Firefox) or a shared-module update. Like (1), `tabs.create` with the
 // extension's own URL needs no permission, and nothing is fetched. tests/background.test.ts.
+// M13 task 6.2a (the human: "it never opens twice whatever reason the browser reports"): it opens
+// only if Peekover's own IndexedDB holds no "guide shown" mark, and stores the mark as it opens.
+// IndexedDB on the extension's origin needs no permission on either engine (unlike
+// `browser.storage`, which needs "storage"). "Wipe all data" clears the mark but opens nothing.
 export default defineBackground(() => {
   browser.action.onClicked.addListener(() => {
     void browser.tabs.create({ url: browser.runtime.getURL('/app.html') });
@@ -44,7 +48,14 @@ export default defineBackground(() => {
 
   browser.runtime.onInstalled.addListener(({ reason }) => {
     if (reason !== 'install') return;
-    void browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
+    // 6.2a: and only if the guide was never shown here — the mark is stored as the tab opens, so
+    // the guide opens at most once whatever the browser reports. Storage unusable → no tab.
+    void claimGuideShown().then(
+      (first) => {
+        if (first) return browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html') });
+      },
+      () => undefined,
+    );
   });
 
   browser.runtime.onMessage.addListener(createSettingsListener({ getSettings, putSettings }));

@@ -2,14 +2,14 @@
 //
 // The locked-minimal-dependency posture (AGENTS.md stack; plan.md §Libraries) says: the
 // storage surface Peekover touches is small — one database, three keyPath object stores,
-// and get/getAll/put/delete/clear — so it is owned here as ~a screen of auditable code
+// and get/getAll/put/add/delete/clear — so it is owned here as ~a screen of auditable code
 // rather than pulling in the `idb` package. If this file starts sprouting real edge-case
 // complexity (cursors, indexes, versioned migrations, blocked-upgrade choreography),
 // that is the STOP-and-flag signal: `idb` is the honest fallback, but raw+local is the
 // default and the whole point of the decision.
 //
 // Two deliberate correctness choices, not gold-plating:
-//   1. WRITES (put/delete/clear) resolve on `transaction.oncomplete`, not merely on the
+//   1. WRITES (put/add/delete/clear) resolve on `transaction.oncomplete`, not merely on the
 //      request's `onsuccess`. A request succeeds before its transaction commits; resolving
 //      on request-success would let a caller (e.g. wipeAll → read-back-zero) observe the
 //      DB before the write is durable. oncomplete is the real "it landed" signal.
@@ -121,6 +121,20 @@ export function getAll<T>(db: IDBDatabase, store: string): Promise<T[]> {
 /** Put (insert or replace by keyPath) one record; resolves once the write commits. */
 export function put<T>(db: IDBDatabase, store: string, value: T): Promise<void> {
   return write(db, store, (s) => s.put(value));
+}
+
+/** Insert one record that must be new; rejects with a `ConstraintError` if its key is already
+ *  stored. The check and the write are one transaction, so of two racing adds exactly one lands. */
+export function add<T>(db: IDBDatabase, store: string, value: T): Promise<void> {
+  // Not `write()`: when a request fails, `tx.error` is still null as its `error` event reaches the
+  // transaction (measured on both engines, 013 task 6.2a), so `write()` would reject with null. The
+  // request's own error names the cause; the abort that follows carries it.
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    const request = tx.objectStore(store).add(value);
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(request.error ?? tx.error ?? new Error(`IndexedDB add aborted: ${store}`));
+  });
 }
 
 /** Delete one record by key; resolves once the write commits. */

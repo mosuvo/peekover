@@ -43,6 +43,7 @@ function lines(over: {
   snapshots?: { count: number; docs: number; bytes: number };
   captureFlag?: boolean | null;
   diagrams?: { count: number; bytes: number };
+  guideShown?: boolean;
 }): string[] {
   const folders = over.folders ?? [];
   const recents = over.recents ?? [];
@@ -51,6 +52,7 @@ function lines(over: {
   const snapshots = over.snapshots ?? { count: 0, docs: 0, bytes: 0 };
   const captureFlag = over.captureFlag ?? null;
   const diagrams = over.diagrams ?? { count: 0, bytes: 0 };
+  const guideShown = over.guideShown ?? false;
   const total =
     folders.length +
     recents.length +
@@ -58,8 +60,9 @@ function lines(over: {
     (settings ? 1 : 0) +
     snapshots.count +
     (captureFlag !== null ? 1 : 0) +
-    diagrams.count;
-  return buildStoredLines({ folders, recents, pins, settings, snapshots, captureFlag, diagrams, total });
+    diagrams.count +
+    (guideShown ? 1 : 0);
+  return buildStoredLines({ folders, recents, pins, settings, snapshots, captureFlag, diagrams, guideShown, total });
 }
 
 // Task 1.1 — the SCHEMA shape at the bumped DB_VERSION. Pure constant assertions (no engine):
@@ -294,5 +297,33 @@ describe('buildStoredLines — diagram-cache line (D-14, task 4.3)', () => {
     expect(out).toHaveLength(7);
     expect(out[4]).toMatch(/2 snapshots of 1 watched document/); // the snapshot disclosure
     expect(out[6]).toContain('Diagrams cached: 5 rendered (~10.0 KB)'); // beneath it
+  });
+});
+
+// ── The setup guide's "shown" mark (013 task 6.2a) ────────────────────────────────────────────
+//
+// The mark is a stored row (the settings store, key `guide`), so the panel that shows everything
+// held names it. Wording approved by the human (2026-11-06).
+describe('buildStoredLines — the setup guide mark (013 task 6.2a)', () => {
+  const GUIDE_LINE = 'The setup guide was shown — remembered so it opens only once.';
+
+  it('names the mark, in the approved words, when it is stored', () => {
+    const out = lines({ guideShown: true });
+    expect(out).toContain(GUIDE_LINE);
+    // A stored mark IS a record → not "nothing stored".
+    expect(out.join(' ')).not.toMatch(NOTHING);
+  });
+
+  it('says nothing of the guide when no mark is stored (never installed here, or wiped)', () => {
+    const out = lines({ guideShown: false }).join(' ');
+    expect(out).not.toMatch(/setup guide/i);
+    expect(out).toMatch(NOTHING);
+  });
+
+  it('places the guide line last, below the diagram line', () => {
+    const out = lines({ settings: DEFAULT_SETTINGS, diagrams: { count: 1, bytes: 10 }, guideShown: true });
+    expect(out).toHaveLength(3);
+    expect(out[1]).toContain('Diagrams cached: 1 rendered');
+    expect(out[2]).toBe(GUIDE_LINE);
   });
 });

@@ -1,6 +1,53 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 6.2a (DISCOVERED) — the setup guide opens at most once. HUMAN DIRECTION + two HUMAN
+  RULINGS.** Local, on `main` at `da5af53` (6.2), tree clean at start; Windows, Node 24.11.1, pnpm 10.33.0,
+  `pnpm audit --prod` EXIT 0 (one low, ignored) on 2026-11-06.
+  - **PART A — CI (`gh`):** `da5af53` (6.2, pushed by the human) — CI success (run 42146604716, watched to completion)
+    and Supply chain success (42146604631).
+  - **HUMAN DIRECTION (2026-11-06), verbatim:** "Belt and braces — remember that the guide was shown, so it never opens
+    twice whatever reason the browser reports."
+  - **The mark:** a fourth row of the `settings` store in Peekover's own IndexedDB (`peekover`, key `guide`,
+    `{ id: 'guide', shown: true }`; `store.ts` `claimGuideShown()`), by its own record type like the notices row.
+    **Storage API: IndexedDB on the extension's origin — no permission on either engine** (the `storage` permission is
+    for `browser.storage`, which Peekover does not use; the same store the background already reads for settings with
+    `permissions: []`). The check and the write are ONE IndexedDB `add` (new `idbCore.add()`): of racing claims exactly
+    one wins (proven, three at once, both engines). The listener opens the guide for "install" only AND only when the
+    claim wins; any other reason never touches storage. **Storage unusable → no tab** (never twice outranks once).
+  - **FOUND (both engines):** when an IndexedDB request fails, `transaction.error` is still `null` as the request's
+    `error` event reaches the transaction, so `idbCore`'s shared `write()` rejects with `null` (seen as "Unknown Error:
+    null"). `add()` rejects with the request's own error on abort instead. `write()` (put/delete/clear) is unchanged —
+    its callers never inspect the error; carried as a note, not fixed.
+  - **Wipe (decided, per the kickoff's recommendation):** "Wipe all data" clears the mark with the settings store; the
+    wipe opens nothing — it only re-arms the guide for a real future install.
+  - **HUMAN RULING — the panel line ("Shown once"):** the Stored data panel names the mark while stored: *"The setup
+    guide was shown — remembered so it opens only once."* (`StoredSummary.guideShown`, REQUIRED; counted in `total`;
+    the last line). Every user sees it after install, until a wipe.
+  - **HUMAN RULING — the notices row ("Carry it"):** the snapshot notice's dismissal row (4.5) is stored but not listed
+    by the panel, so "shows everything held" was already not quite true; carried to 9.2's truth re-check.
+  - **Tests, red → green.** `tests/background.test.ts` +6 (install twice → one tab; mark present → none; opening stores
+    the mark; every other reason → none and no storage call; wipe clears but opens nothing, a later install opens one;
+    storage failing → none): red 4 before the code (the wipe and other-reason cases passed vacuously at HEAD).
+    `src/app/store.test.ts` +3 (the line, its absence, its place): red 2. `tests/browser/guideMark.browser.test.ts`
+    (new, 5, both engines, real IndexedDB: first claim wins / second loses; three at once → one; survives a new
+    connection; wipe re-arms; the panel names it, counts it, drops it after a wipe).
+  - **Ablations → red:** (1) the mark check removed from the listener → "install twice opens ONE tab" and "the mark
+    already stored" red; (2) the store's `add` replaced by `put` → the three claim tests red on both engines. Each
+    restored.
+  - **Necessary ripple:** every `StoredSummary` literal gains `guideShown: false` (the type checker named them):
+    `appShell.ts`'s EMPTY_SUMMARY, four in `appShell.test.ts`, `captureToggle`, `diagramDegrade`, `storagePanelOverlay`
+    browser tests. `PERMISSIONS.md` (the listener's section and the storage row).
+  - **Bytes** (clean two-engine builds): **content script identical** (345,049 B, md5 `ee9f9279…` / `317c6c51…`);
+    **manifests identical** (833 / 949 B, md5 `40853afb…` / `be59433f…`, `permissions: []`). `background.js` +398
+    (3,910 → 4,308; the claim and `add`, found only there), shared chunk `browser-*` +171 (7,695 → 7,866; the panel's
+    read and line), app chunk +14 (550,530 → 550,544; EMPTY_SUMMARY), onboarding identical. `.output` +583 both:
+    6,446,410 / 6,446,268 B (headroom 893,622 / 893,764).
+  - **Verify:** lint 0 · unit 1,546 / 1,546 (+9) · browser full suite both engines (see progress.md) · golden EMPTY.
+  Why: the human's direction; a command-line Chromium reports "install" at every start (6.2's measurement), and a
+  store install's behaviour is unwalked (8.1).
+  Revisit-when: 8.1's store-install walk; 9.2 (the notices row); `write()`'s null rejection, if a caller ever needs it.
+
 - **2026-11-06 · M13 TASK 6.2 — the setup guide opens on install, never on an update (D-11; G-10; gate-1 Q18); the
   saved theme folded in. HUMAN RULINGS (re-open, the listener).** Local, on `main` at `ba14a5e` (6.1), up to date with
   `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0

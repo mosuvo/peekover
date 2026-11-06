@@ -39,19 +39,44 @@ vi.mock('#imports', () => ({
 }));
 // The other two listeners' modules, by the entry's own `@/` specifiers (WXT's alias, not the unit
 // project's): stubbed, as this file tests only the install listener.
-vi.mock('@/src/app/store', () => ({ getSettings: vi.fn(), putSettings: vi.fn() }));
+//
+// 6.2a: the store's guide mark is faked by its contract — `claimGuideShown()` resolves true when THIS
+// call stored the mark, false when it was already there (the real one is an IndexedDB `add`, proven on
+// both engines in tests/browser/guideMark.browser.test.ts); `wipe()` stands for "Wipe all data".
+const mark = vi.hoisted(() => {
+  const state = { stored: false, broken: false, claims: 0 };
+  return {
+    state,
+    claimGuideShown: async () => {
+      state.claims += 1;
+      if (state.broken) throw new Error('IndexedDB unavailable');
+      if (state.stored) return false;
+      state.stored = true;
+      return true;
+    },
+    wipe: () => {
+      state.stored = false;
+    },
+  };
+});
+vi.mock('@/src/app/store', () => ({ getSettings: vi.fn(), putSettings: vi.fn(), claimGuideShown: mark.claimGuideShown }));
 vi.mock('@/src/settings/settingsPort', () => ({ createSettingsListener: () => () => false }));
 vi.mock('@/src/watch/watchRelay', () => ({ createWatchListener: () => () => false }));
 
 async function startBackground(): Promise<void> {
   fake.installed.length = 0;
   fake.created.length = 0;
+  mark.state.stored = false;
+  mark.state.broken = false;
+  mark.state.claims = 0;
   const mod = (await import('../entrypoints/background')) as unknown as { default: { main: () => void } };
   mod.default.main();
 }
 
 async function fire(reason: string): Promise<Array<{ url?: string }>> {
   for (const listener of fake.installed) await listener({ reason, previousVersion: reason === 'update' ? '0.0.9' : undefined });
+  // The listener's storage work is not awaited by the browser; let it settle before reading tabs.
+  for (let i = 0; i < 5; i += 1) await new Promise((r) => setTimeout(r, 0));
   return fake.created.slice();
 }
 
@@ -78,6 +103,47 @@ describe('6.2 — the setup guide opens on install, never on an update (D-11; G-
 
   it('a reason it does not know opens nothing', async () => {
     expect(await fire('something_new')).toEqual([]);
+  });
+
+  // ── 6.2a — at most once, whatever the browser reports (HUMAN DIRECTION, 2026-11-06) ──────────────
+  // A command-line-loaded Chromium reports "install" at every browser start (6.2's measurement).
+
+  it('6.2a: "install" twice opens ONE tab — the second finds the guide mark', async () => {
+    await fire('install');
+    const tabs = await fire('install');
+    expect(tabs, 'tabs opened by two "install" events').toHaveLength(1);
+  });
+
+  it('6.2a: the mark already stored → "install" opens no tab', async () => {
+    mark.state.stored = true;
+    expect(await fire('install'), 'tabs opened with the mark present').toEqual([]);
+  });
+
+  it('6.2a: opening the guide stores the mark', async () => {
+    await fire('install');
+    expect(mark.state.stored, 'the mark after the guide opened').toBe(true);
+  });
+
+  it('6.2a: every other reason opens no tab and leaves the mark alone', async () => {
+    for (const reason of ['update', 'chrome_update', 'browser_update', 'shared_module_update', 'something_new']) {
+      expect(await fire(reason), `tabs opened on "${reason}"`).toEqual([]);
+    }
+    expect(mark.state.claims, 'mark reads/writes on a non-install reason').toBe(0);
+    expect(mark.state.stored).toBe(false);
+  });
+
+  it('6.2a: "Wipe all data" clears the mark but opens nothing; a later real install opens the guide again', async () => {
+    await fire('install');
+    expect(fake.created).toHaveLength(1);
+    mark.wipe();
+    for (let i = 0; i < 5; i += 1) await new Promise((r) => setTimeout(r, 0));
+    expect(fake.created, 'tabs opened by the wipe itself').toHaveLength(1);
+    expect(await fire('install'), 'after a wipe, a real install re-arms the guide').toHaveLength(2);
+  });
+
+  it('6.2a: storage that cannot be read opens no tab (never twice outranks once)', async () => {
+    mark.state.broken = true;
+    expect(await fire('install')).toEqual([]);
   });
 
   it('the toolbar action still opens the app page (unchanged)', async () => {

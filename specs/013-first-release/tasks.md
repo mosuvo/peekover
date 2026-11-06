@@ -960,6 +960,22 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       guide follows the saved Peekover theme, read from the settings store as the app page reads it. Background +124 B;
       the store and settings port moved into the shared chunk (app chunk −5,714, shared chunk +6,088); onboarding chunk
       +290 / +280 B; `.output` +788 / +778 B; content script identical.
+- [x] **6.2a The setup guide opens at most once — DISCOVERED (2026-11-06; HUMAN DIRECTION: "Belt and braces — remember
+      that the guide was shown, so it never opens twice whatever reason the browser reports.").** TEST FIRST. The
+      install listener opens the guide only for "install" AND only if Peekover's own storage has no "guide shown" mark;
+      it stores the mark as it opens the tab. No permission, no network. "Wipe all data" clears the mark and opens
+      nothing. The Stored data panel names the mark.
+      Files: `entrypoints/background.ts` · `src/app/store.ts` · `src/app/idbCore.ts` · `tests/background.test.ts` ·
+      `src/app/store.test.ts` · `tests/browser/guideMark.browser.test.ts` (new) · `docs/trust/PERMISSIONS.md` · ripple:
+      every `StoredSummary` literal (`appShell.ts`, `appShell.test.ts`, three browser tests)
+      Verify: (**unit**) "install" twice → one tab; mark present → no tab; every other reason → no tab; wipe as decided;
+      ablate the mark check → "install twice" red. (**Cr+Fx**) the mark on real IndexedDB; the onboarding and storage
+      tests; full suite (a panel test changed). Manifests unchanged, `permissions: []`; bytes stated. Golden EMPTY.
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 6.2a").* The mark is a `settings`-store row (`guide`) in the
+      extension origin's IndexedDB — no permission on either engine; claimed with one IndexedDB `add`, so racing claims
+      open one tab; storage unusable → no tab. Wipe clears it, opens nothing. Panel line (human-approved): "The setup
+      guide was shown — remembered so it opens only once." The notices row's absence from the panel carried to 9.2.
+      Content script and manifests identical; `.output` +583 B both engines.
 
 **GROUP 6 COMPLETE (2026-11-06).** 6.1 and 6.2 have landed; both pending lists are EMPTY on both engines.
 

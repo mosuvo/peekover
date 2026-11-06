@@ -685,6 +685,7 @@ function summarize(
     snapshots: { count: 0, docs: 0, bytes: 0 },
     captureFlag: null,
     diagrams: { count: 0, bytes: 0 },
+    guideShown: false,
     total,
     lines,
   };
@@ -733,6 +734,7 @@ describe('appShell (task 6.0 what’s-stored + wipe controls)', () => {
         snapshots: { count: 0, docs: 0, bytes: 0 },
         captureFlag: null,
         diagrams: { count: 0, bytes: 0 },
+        guideShown: false,
         total: 4,
         lines: ['1 remembered folder — names only.'],
       }),
@@ -905,7 +907,7 @@ function snapSummary(snapshotCount: number): StoredSummary {
   } else {
     lines.push('Nothing stored — Peekover is holding no folders, recents, or pins on this device.');
   }
-  return { folders: [], recents: [], pins: [], settings: null, snapshots, captureFlag: null, diagrams: { count: 0, bytes: 0 }, total, lines };
+  return { folders: [], recents: [], pins: [], settings: null, snapshots, captureFlag: null, diagrams: { count: 0, bytes: 0 }, guideShown: false, total, lines };
 }
 
 describe('appShell (task 1.6 — the "erase snapshots" control)', () => {
@@ -1086,6 +1088,7 @@ function diagramSummary(n: number): StoredSummary {
     snapshots: { count: 0, docs: 0, bytes: 0 },
     captureFlag: null,
     diagrams,
+    guideShown: false,
     total: diagrams.count,
     lines,
   };

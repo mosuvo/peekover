@@ -1215,6 +1215,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // cached" while a cache is filling is exactly the hidden state D-14 exists to forbid, and this
     // is the compile error that makes forgetting it impossible. Nothing cached → no diagram line.
     diagrams: { count: 0, bytes: 0 },
+    guideShown: false, // no guide mark → no guide line (013 task 6.2a)
     total: 0,
     lines: ['Nothing stored — Peekover is holding no folders, recents, or pins on this device.'],
   };

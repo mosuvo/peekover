@@ -40,7 +40,7 @@
 // global); it is exercised in the real-engine browser project, never jsdom (storage
 // persistence + the schema upgrade are jsdom-blind properties — retro standing rule).
 
-import { openDb, get, getAll, put, del, clear, type IdbSchema } from './idbCore';
+import { openDb, get, getAll, put, add, del, clear, type IdbSchema } from './idbCore';
 import { DEFAULT_SETTINGS, type Settings } from '../settings/settings';
 
 // The settings VOCABULARY (the `Settings` shape + its default) is owned by the canonical,
@@ -359,6 +359,36 @@ export async function setSnapshotNoticeDismissed(): Promise<void> {
   return put(await db(), STORES.settings, row);
 }
 
+// --- the setup guide's "shown" mark (013 task 6.2a; D-11) ---------------------------------------
+//
+// The background opens the setup guide on "install" only if this mark is not stored, and stores it
+// as it opens the tab, so the guide opens at most once whatever reason the browser reports (a
+// command-line-loaded Chromium reports "install" at every start — 6.2). A FOURTH row of the settings
+// store, by its own record type, like the notices row. Cleared by `wipeAll()` with the store; a wipe
+// opens nothing, it only re-arms the guide for a real future install. The Stored data panel names it.
+
+/** The guide mark's key in the settings store. */
+export const GUIDE_SETTINGS_ID = 'guide';
+
+interface GuideRecord {
+  id: typeof GUIDE_SETTINGS_ID;
+  shown: true;
+}
+
+/** Store the guide mark if it is not stored yet. Resolves `true` when THIS call stored it (open the
+ *  guide), `false` when it was already there. One IndexedDB `add`: of two racing claims exactly one
+ *  resolves `true`. Rejects if storage cannot be used. */
+export async function claimGuideShown(): Promise<boolean> {
+  const row: GuideRecord = { id: GUIDE_SETTINGS_ID, shown: true };
+  try {
+    await add(await db(), STORES.settings, row);
+    return true;
+  } catch (error) {
+    if ((error as { name?: string } | null)?.name === 'ConstraintError') return false;
+    throw error;
+  }
+}
+
 // --- trust controls (task 2.2) -----------------------------------------------
 //
 // Storage ships WITH the way to see and erase it — the first thing that stores anything
@@ -499,6 +529,9 @@ export interface StoredSummary {
    *  the panel cannot see is precisely the hidden state D-14 binds this field to the first cached
    *  SVG to prevent. `count === 0` ⇒ no diagram line. */
   diagrams: { count: number; bytes: number };
+  /** Whether the setup guide's "shown" mark is stored (013 task 6.2a). REQUIRED like the fields
+   *  above, so a summary literal cannot forget it. `true` ⇒ counted in `total`, and a line names it. */
+  guideShown: boolean;
   total: number;
   /** Plain-language, trust-facing description — one line per non-empty record class. */
   lines: string[];
@@ -533,9 +566,10 @@ export function buildStoredLines(input: {
   snapshots: { count: number; docs: number; bytes: number };
   captureFlag: boolean | null;
   diagrams: { count: number; bytes: number };
+  guideShown: boolean;
   total: number;
 }): string[] {
-  const { folders, recents, pins, settings, snapshots, captureFlag, diagrams, total } = input;
+  const { folders, recents, pins, settings, snapshots, captureFlag, diagrams, guideShown, total } = input;
   const lines: string[] = [];
   if (folders.length) {
     const remembered = folders.filter((f) => f.persisted).length;
@@ -586,6 +620,10 @@ export function buildStoredLines(input: {
     // other. `humanBytes` is REUSED (not a second size formatter) so the panel speaks one figure.
     lines.push(`Diagrams cached: ${diagrams.count} rendered (~${humanBytes(diagrams.bytes)})`);
   }
+  if (guideShown) {
+    // 013 task 6.2a — wording approved by the human (2026-11-06).
+    lines.push('The setup guide was shown — remembered so it opens only once.');
+  }
   if (total === 0) {
     // Kept verbatim (folders/recents/pins) to stay identical to the shell's designed
     // EMPTY_SUMMARY literal — when total is 0 there are no settings either, so the
@@ -615,13 +653,14 @@ export async function describeStored(): Promise<StoredSummary> {
   // bounded stores — no cursor needed" (idbCore.ts:116-119) and this function materialises whole
   // stores, so an inline SVG would make EVERY trust-panel open deserialise EVERY cached diagram.
   // The meta row carries `bytes`, which is all the panel needs to speak the size honestly.
-  const [folderRows, recents, pins, settingsRow, captureRow, snapshotMetaRows, diagramMetaRows] =
+  const [folderRows, recents, pins, settingsRow, captureRow, guideRow, snapshotMetaRows, diagramMetaRows] =
     await Promise.all([
       getAll<FolderRecord>(conn, STORES.folders),
       getAll<RecentRecord>(conn, STORES.recents),
       getAll<PinRecord>(conn, STORES.pins),
       get<SettingsRecord>(conn, STORES.settings, SETTINGS_ID),
       get<CaptureRecord>(conn, STORES.settings, CAPTURE_SETTINGS_ID),
+      get<GuideRecord>(conn, STORES.settings, GUIDE_SETTINGS_ID),
       getAll<{ docId: string; entries: { id: string; ts: number; bytes: number }[] }>(
         conn,
         STORES.snapshotMeta,
@@ -669,6 +708,8 @@ export async function describeStored(): Promise<StoredSummary> {
     bytes: diagramMetaRows.reduce((n, r) => n + r.bytes, 0),
   };
 
+  const guideShown = guideRow !== undefined;
+
   const total =
     folders.length +
     recents.length +
@@ -676,7 +717,8 @@ export async function describeStored(): Promise<StoredSummary> {
     (settings ? 1 : 0) +
     snapshots.count +
     (captureFlag !== null ? 1 : 0) +
-    diagrams.count;
+    diagrams.count +
+    (guideShown ? 1 : 0);
   const lines = buildStoredLines({
     folders,
     recents,
@@ -685,8 +727,9 @@ export async function describeStored(): Promise<StoredSummary> {
     snapshots,
     captureFlag,
     diagrams,
+    guideShown,
     total,
   });
 
-  return { folders, recents, pins, settings, snapshots, captureFlag, diagrams, total, lines };
+  return { folders, recents, pins, settings, snapshots, captureFlag, diagrams, guideShown, total, lines };
 }
