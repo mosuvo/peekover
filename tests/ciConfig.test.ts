@@ -96,14 +96,15 @@ describe('CI config (013 task 1.1, D-13)', () => {
     expect(scan, 'the scan step').toBeDefined();
     expect(scan!).toMatch(/^\s*continue-on-error: true\s*$/m);
     expect(upload, 'the upload step').toBeDefined();
-    expect(upload!).toMatch(/uses: github\/codeql-action\/upload-sarif@v4\s*$/m);
+    // Pinned by SHA since 7.4a; the trailing comment names the version.
+    expect(upload!).toMatch(/uses: github\/codeql-action\/upload-sarif@[0-9a-f]{40} # v4\.\d+\.\d+\s*$/m);
     expect(upload!).toMatch(/^\s*if: .*!github\.event\.repository\.private/m);
     expect(artifact, 'the SARIF is kept as a workflow artifact').toBeDefined();
     expect(artifact!).toMatch(/osv-results\.sarif/);
     // Least privilege: the job grants what the upload needs on a public repository, nothing broader.
     expect(job).toMatch(/^ {4}permissions:\n {6}contents: read\n {6}security-events: write\n/m);
     // No workflow still uses CodeQL Action v3.
-    const v3 = workflows.filter(({ text: t }) => /uses: github\/codeql-action\/[\w-]+@v3\b/.test(t)).map((w) => w.file);
+    const v3 = workflows.filter(({ text: t }) => /uses: github\/codeql-action\/[\w-]+@(?:v3\b|[0-9a-f]{40} # v3\.)/.test(t)).map((w) => w.file);
     expect(v3, 'workflows still on codeql-action v3').toEqual([]);
   });
 
@@ -266,16 +267,18 @@ describe('the Pages workflow (013 task 7.4)', () => {
   });
 });
 
-describe('release-path workflow hygiene (013 task 7.4)', () => {
-  it('every action in release.yml and pages.yml is pinned by full commit SHA, with its version noted', () => {
-    const offenders = [RELEASE, PAGES].flatMap((p) =>
-      [...read(p).matchAll(/^\s*(?:- )?uses: (.+)$/gm)]
+describe('workflow hygiene (013 tasks 7.4, 7.4a)', () => {
+  // 7.4a: every workflow file, not only the release path.
+  it('every action in every workflow is pinned by full commit SHA, with its version noted', () => {
+    const offenders = workflows.flatMap(({ file, text: t }) =>
+      [...t.matchAll(/^\s*(?:- )?uses: (.+)$/gm)]
         .map((m) => m[1].trim())
         .filter((u) => !/^[\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d+\.\d+\.\d+$/.test(u))
-        .map((u) => `${p}: ${u}`),
+        .map((u) => `${file}: ${u}`),
     );
-    // Firing control: the scan sees the actions it governs.
-    expect([RELEASE, PAGES].map((p) => (read(p).match(/uses: /g) ?? []).length).every((n) => n >= 3)).toBe(true);
+    // Firing control: the scan sees every workflow, and the actions in each.
+    expect([...workflowFiles].sort()).toEqual(['ai-hygiene.yml', 'ci.yml', 'pages.yml', 'release.yml', 'supply-chain.yml']);
+    expect(workflows.every(({ text: t }) => /uses: /.test(t)), 'each workflow uses an action').toBe(true);
     expect(offenders, 'actions not pinned by full commit SHA').toEqual([]);
   });
 

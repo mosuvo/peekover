@@ -1092,6 +1092,16 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       on Free it runs once the repository is public — HUMAN RULING). `SOURCE_CODE_REVIEW.md` at the root, approved; the
       sources zip rebuilt on Linux with no git = the Firefox zip, `d74715ca…`, "no differences". ciConfig +12, nine
       ablations red; actionlint 1.7.12 EXIT 0. Chrome / Firefox zips identical to 89deef8.
+- [x] **7.4a DISCOVERED (2026-11-06, the human's kickoff after 7.4) — every workflow action pinned by SHA; the unit
+      flake checked.** (a) Every `uses:` in `ci.yml`, `supply-chain.yml` and `ai-hygiene.yml` pinned by full commit SHA
+      with its version as a trailing comment, to the exact commits the last green runs used. (b) `pnpm test` five times
+      alone; every failure reported with its name and message, fixed test-only, or recorded as unidentified.
+      Files: `.github/workflows/{ci,supply-chain,ai-hygiene}.yml` · `tests/ciConfig.test.ts`
+      Verify: ciConfig checks EVERY workflow for SHA pins (red with one tag-pinned action, naming it); actionlint EXIT 0;
+      lint; unit; no production bytes.
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.4a").* All 5 workflows pinned (ai-hygiene.yml added: necessary
+      ripple, the every-workflow check needs it); ablations red in ci.yml and ai-hygiene.yml, each named. The flake:
+      0 failures in 5 runs alone — unidentified, 1 in 10, on the known-flakes list.
 - [ ] **7.5 Store listing text for Chrome, Firefox, Edge (gate-1 Q19, Q20).** Each meets that store's documented
       length rules (re-read at the task, cited); each links `https://peekover.dev/privacy/` ("live at release");
       Edge = text + assets, the Chrome zip; every sentence in the ledger.

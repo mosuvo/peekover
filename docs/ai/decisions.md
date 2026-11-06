@@ -1,6 +1,30 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.4a — DISCOVERED: every workflow action pinned by SHA; the unit flake checked.** Local, on
+  `main` at `14c274f`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-06).
+  - **Before it — CI and the release dry run on `14c274f`:** Supply chain 42171122708 green; CI 42171122700 green.
+    Two hand-run Release runs (42171130695, 42171186611): build green, attest skipped (private), release skipped. Each
+    `release-files` artifact = three zips, `sbom.cdx.json`, `THIRD_PARTY_LICENSES.txt`, `SHA256SUMS`; `sha256sum -c`
+    OK for all five; the two runs' SHA256SUMS identical. Chrome `9ed349c2…`, Firefox `d74715ca…` = the expected.
+    Moved, explained: the sources zip `5488d79c…` (7.4's probe `78252e77…`) — entry for entry, only
+    `docs/ai/decisions.md`, `docs/ai/progress.md`, `specs/013-first-release/tasks.md` differ, the three files committed
+    after the probe; the SBOM `1d9e345e…` (probe `a46f5511…`) — only its `timestamp`, 05:46:42Z → 05:52:15Z, each
+    commit's time (SOURCE_DATE_EPOCH).
+  - **(a) Pins.** Every `uses:` in ci.yml, supply-chain.yml and ai-hygiene.yml → the exact commit the last green runs
+    downloaded (read from their logs): checkout v4.4.0 `11d5960a…`, pnpm/action-setup v4.3.0 `b906affc…`, setup-node
+    v4.4.0 `49933ea5…`, upload-artifact v4.6.2 `ea165f8d…`, osv-scanner-action v2.2.4 `9bb69575…`, codeql-action
+    upload-sarif v4.39.3 `33d7b85d…` (released 2026-11-04; what v4 resolved to on the green run; its step is skipped while
+    private). No behaviour change. **Necessary ripple, flagged:** the kickoff names ci.yml and supply-chain.yml; the
+    every-workflow check (its Verify) also needs ai-hygiene.yml. ciConfig: the SHA check now covers every workflow, with
+    a firing control on the five file names; the OSV test reads the SHA-pinned v4 line; the v3 guard reads tags and
+    comments. Ablations: ci.yml `actions/setup-node@v4` → red naming "ci.yml: actions/setup-node@v4"; ai-hygiene.yml
+    `actions/checkout@v4` → red naming it. actionlint 1.7.12 EXIT 0.
+  - **(b) The flake.** `pnpm test` five times alone: 1,624 / 1,624 each, 0 failures. With 7.4's runs: 1 failure in 10,
+    test unknown (its output was not kept). On the known-flakes list as "unidentified, 1 in 10".
+  - **Bytes:** none (workflows and tests only). Verify: lint 0 · unit 1,624 / 1,624 · actionlint 0.
+  - Revisit when: the flake's next red (keep the output); Dependabot bumps a pinned action (the comment follows).
+
 - **2026-11-06 · M13 TASK 7.4 — the release and Pages workflows; SOURCE_CODE_REVIEW.md (D-14; §9-1, §9-4; G-9, G-13).
   TWO HUMAN RULINGS + ONE APPROVAL.** Local, on `main` at `010f9a7`; not pushed. `pnpm audit --prod` EXIT 0 on
   2026-11-06 (1 low, ignored). Budget: `.output` 6,645,510 / 6,645,366 B of 7,340,032 (headroom 694,522 / 694,666).
