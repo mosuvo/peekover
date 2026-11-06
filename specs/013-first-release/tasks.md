@@ -1102,12 +1102,17 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.4a").* All 5 workflows pinned (ai-hygiene.yml added: necessary
       ripple, the every-workflow check needs it); ablations red in ci.yml and ai-hygiene.yml, each named. The flake:
       0 failures in 5 runs alone — unidentified, 1 in 10, on the known-flakes list.
-- [ ] **7.5 Store listing text for Chrome, Firefox, Edge (gate-1 Q19, Q20).** Each meets that store's documented
+- [x] **7.5 Store listing text for Chrome, Firefox, Edge (gate-1 Q19, Q20).** Each meets that store's documented
       length rules (re-read at the task, cited); each links `https://peekover.dev/privacy/` ("live at release");
       Edge = text + assets, the Chrome zip; every sentence in the ledger.
       Files: `docs/store/{chrome,firefox,edge}.md` (new) · `docs/store/claims.md` · `tests/truthPins.test.ts`
       Verify: `truthPins.test.ts` extended: each listing's fields within the cited limits (red-first with an over-long
       summary); each links the privacy URL; no unshipped feature named; no address. No production bytes. [Q19, Q20]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.5").* `docs/store/{chrome,firefox,edge}.md`, one section per
+      store field with its cited limit; every field approved by the human, Chrome's summary (the manifest description)
+      kept; data usage on Chrome and Edge: Website content only (HUMAN RULING). Every sentence in the ledger; truthPins
+      +11, six ablations red. For 7.6: the repository public, the site live and every "live at release" URL resolving
+      BEFORE any store submission (Edge requires the privacy URL reachable); screenshots (3.9) before Chrome.
 - [ ] **7.6 The go-live checklist, `docs/store/GO-LIVE.md` (§9-7).** Written by M13, run by the human. Items, each with
       the evidence that shows it done: point DNS at GitHub Pages and set the custom domain; run `pages.yml`; verify every
       "live at release" URL in `claims.md` resolves; send and confirm a test message to `hello@peekover.dev`, then decide

@@ -351,3 +351,87 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
     expect(unmarked, 'site URLs without a "live at release" row').toEqual([]);
   });
 });
+
+// ── M13 task 7.5 (gate-1 Q19, Q20): the store listings. Each `## ` section of docs/store/<store>.md is one store field,
+// pasted as written; its heading names the field and its limit, read from that store's current docs (decisions.md,
+// "M13 TASK 7.5"). Sections marked "not published" or "not displayed", and the file's own preamble, are not listing text.
+const LISTINGS = { chrome: 'docs/store/chrome.md', firefox: 'docs/store/firefox.md', edge: 'docs/store/edge.md' } as const;
+type Listing = keyof typeof LISTINGS;
+type Field = { heading: string; body: string };
+
+function fields(md: string): Field[] {
+  return md
+    .split(/^## /m)
+    .slice(1)
+    .map((chunk) => {
+      const [heading, ...rest] = chunk.split('\n');
+      return { heading: heading.trim(), body: rest.join('\n').trim() };
+    });
+}
+
+const unpublished = (heading: string): boolean => /not published|not displayed/.test(heading) || /listing — Peekover$/.test(heading);
+const listingText = (l: Listing): string => read(LISTINGS[l]);
+const publishedFields = (l: Listing): Field[] => fields(listingText(l)).filter((f) => !unpublished(f.heading));
+const num = (s: string): number => Number(s.replace(/,/g, ''));
+const manifestDescription = /description:\s*\n?\s*'([^']+)'/.exec(read('wxt.config.ts'))?.[1] ?? '';
+
+describe('the store listings say only what ships, within each store\'s limits (013 task 7.5)', () => {
+  const all = Object.keys(LISTINGS) as Listing[];
+
+  it.each(all)('every field of the %s listing is within the limit its heading cites', (l) => {
+    const over: string[] = [];
+    for (const f of fields(listingText(l))) {
+      const len = [...f.body].length;
+      const max = /max ([\d,]+) characters/.exec(f.heading);
+      if (max && len > num(max[1])) over.push(`${f.heading}: ${len} > ${max[1]}`);
+      const range = /([\d,]+) to ([\d,]+) characters/.exec(f.heading);
+      if (range && (len < num(range[1]) || len > num(range[2]))) over.push(`${f.heading}: ${len} not in ${range[1]}–${range[2]}`);
+      const terms = /at most (\d+) terms, each at most (\d+) characters, (\d+) words/.exec(f.heading);
+      if (terms) {
+        const list = f.body.split('\n').map((t) => t.trim()).filter(Boolean);
+        if (list.length > num(terms[1])) over.push(`${f.heading}: ${list.length} terms`);
+        for (const t of list) if (t.length > num(terms[2])) over.push(`${f.heading}: "${t}" is ${t.length} characters`);
+        const words = list.join(' ').split(/\s+/).length;
+        if (words > num(terms[3])) over.push(`${f.heading}: ${words} words`);
+      }
+    }
+    // Firing control: the limits this task cites are parsed.
+    expect(fields(listingText(l)).some((f) => /characters/.test(f.heading)), `${l} cites a limit`).toBe(true);
+    expect(over, `${l} fields over their limit`).toEqual([]);
+  });
+
+  it('the Chrome summary and the Edge short description are the manifest description, word for word', () => {
+    expect(manifestDescription.length, 'the manifest description is read').toBeGreaterThan(0);
+    const chrome = fields(listingText('chrome')).find((f) => /^Summary/.test(f.heading));
+    const edge = fields(listingText('edge')).find((f) => /^Short description/.test(f.heading));
+    expect(chrome?.body).toBe(manifestDescription);
+    expect(edge?.body).toBe(manifestDescription);
+  });
+
+  it.each(all)('every sentence of the %s listing has a ledger row for that store', (l) => {
+    const rows = ledgerRows().filter((r) => r.surface === l && r.status !== 'withdrawn');
+    const known = new Set(rows.map((r) => r.sentence));
+    const text = sentences(listingText(l)).filter((s) => !unpublished(s.section)).map((s) => s.text);
+    expect(text.length, `${l} has listing sentences`).toBeGreaterThan(20);
+    expect(text.filter((t) => !known.has(t)), `${l} sentences with no ledger row`).toEqual([]);
+  });
+
+  it.each(all)('the %s listing links the privacy policy, names no address, and has no superlative or unbuilt feature', (l) => {
+    const published = publishedFields(l).map((f) => f.body).join('\n');
+    expect(published, 'the privacy policy URL').toContain('https://peekover.dev/privacy/');
+    expect(listingText(l), 'an email address').not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
+    const SUPERLATIVE = /\b(best|fastest|greatest|most (secure|private|powerful|advanced)|number one|ultimate|revolutionary|blazing|world'?s|unmatched|perfect|military[- ]grade)\b|#1\b/i;
+    expect(published.split('\n').filter((t) => SUPERLATIVE.test(t)), 'superlatives').toEqual([]);
+    const NOT_BUILT = /\bDOCX\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|\bAI (rewrite|features?|assist)|\bpublish(ing)?\b|reproducible build|attestation|signed release|presentation mode|read-aloud/i;
+    expect(published.split('\n').filter((t) => NOT_BUILT.test(t) || /\bZIP\b/.test(t)), 'unbuilt features').toEqual([]);
+    const urls = [...published.matchAll(/https?:\/\/(?:[\w-]+\.)*peekover\.dev[^\s)>\]]*/gi)].map((m) => m[0].replace(/[.,;]$/, ''));
+    const live = ledgerRows().filter((r) => r.surface === l && r.status === 'live at release');
+    expect([...new Set(urls)].filter((u) => !live.some((r) => r.sentence.includes(u))), 'peekover.dev URLs without a "live at release" row').toEqual([]);
+  });
+
+  it('the Firefox listing claims no direct opening of a file from disk (unchecked on a real install, README)', () => {
+    const lines = publishedFields('firefox').flatMap((f) => f.body.split('\n'));
+    const fromDisk = lines.filter((t) => /from (your own )?disk/i.test(t) && !/not yet been checked/.test(t));
+    expect(fromDisk, 'Firefox lines claiming files opened from disk').toEqual([]);
+  });
+});

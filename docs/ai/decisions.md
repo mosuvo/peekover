@@ -1,6 +1,72 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.5 — store listing text for Chrome, Firefox and Edge (gate-1 Q19, Q20). FOUR HUMAN
+  APPROVALS.** Local, on `main` after 7.4a; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-06). Budget unchanged:
+  `.output` 6,645,510 / 6,645,366 B of 7,340,032.
+  - **Authority:** tasks.md 7.5; spec §3.8, Appendix B; plan §9 note 1 (G-1: the privacy URL
+    `https://peekover.dev/privacy/`, no `hello@`); PRIVACY.md and PERMISSIONS.md; the ledger's rules. **Mismatches,
+    flagged:** (a) spec Q19 wrote "its GitHub URL serves the store forms"; tasks.md (after G-1) says each listing links
+    `https://peekover.dev/privacy/` — followed tasks.md. (b) The kickoff asks the data answers to say "nothing
+    collected"; Chrome's user-data FAQ requires disclosing local handling — routed to the human (below). (c) The
+    kickoff lists a Chrome "summary ≤ 132" as a field; the store takes it from the manifest `description` (and Edge's
+    short description is read-only from it) — the listings carry it word for word and a test pins that.
+  - **Store requirements read 2026-11-06 (cited):**
+    - Chrome: developer.chrome.com/docs/webstore/cws-dashboard-listing (description, category, icon 128, screenshots
+      1280×800 at least one, homepage / support URLs); …/best-listing ("summary … 132 characters or less", plain text,
+      no "superlatives like 'greatest' and 'fastest'", overview + feature list, no keyword stuffing);
+      …/extensions/reference/manifest/description ("no more than 132 characters", shown in the store);
+      …/best-practices (the 17 categories; "Workflow & Planning" includes "document editors");
+      …/cws-dashboard-privacy (single purpose, permission justifications, remote code, data usage + certifications,
+      privacy policy URL); …/program-policies/user-data-faq ("Extensions are required to disclose how they handle user
+      data, even when data is processed or stored locally"; a privacy policy for all that handle user information);
+      …/program-policies/listing-requirements (no misleading or inaccurate metadata; keyword spam; no anonymous
+      testimonials). Not in the docs: the data categories and certification wording (read in the dashboard at
+      submission — the listing says so).
+    - Firefox: extensionworkshop.com/documentation/develop/create-an-appealing-listing/ ("summary … limited to 250
+      characters"; description not practically limited, limited Markdown; up to two categories; privacy policy full
+      text in the listing when personal data is used; homepage, support email, support URL); …/publish/add-on-policies/
+      (the listing must say "what the add-on does, and what information it transmits"); …/develop/firefox-builtin-data-
+      consent/ (`data_collection_permissions` `none`; transmission = data outside the add-on or the local browser); AMO's
+      categories from addons.mozilla.org/api/v5/addons/categories/ (15 for extensions).
+    - Edge: learn.microsoft.com/microsoft-edge/extensions/publish/publish-extension (updated 2026-09-02): description
+      "Minimum 250 characters, maximum 10,000"; short description and name from the manifest, read-only; logo 1:1,
+      300×300 recommended; search terms ≤ 7, each ≤ 30 characters, ≤ 21 words; Privacy page: single purpose,
+      permission justification, remote code (MV3: none), data usage + certification, privacy policy URL ("Ensure that
+      the policy URL can be accessed"). Categories not listed — "Productivity" proposed, confirmed in Partner Center.
+  - **The files:** `docs/store/chrome.md`, `firefox.md`, `edge.md` — one `## ` section per store field, its heading
+    naming the field and its limit; a "Submission notes — not published" section each. The same core facts in all
+    three, from the README's ledgered lines and PRIVACY.md. Firefox differs where the facts do: no claim of opening a
+    file from disk (unchecked, README row 26 — listed as a limit), watching only for a dragged-in folder, Save downloads.
+    Lengths: Chrome summary 77 / 132, description 2,552; Firefox summary 196 / 250, description 2,691; Edge short
+    description 77 / 132, description 2,552 (250–10,000).
+  - **HUMAN APPROVALS (2026-11-06), verbatim:** Chrome — "Approve; keep the summary (Recommended)" (the manifest
+    description's "beautiful" kept: a judgement, not a store-banned superlative; changing it changes both packages);
+    Firefox — "Approve as written (Recommended)"; Edge — "Approve as written (Recommended)"; data usage — "Tick
+    Website content (Recommended)" (Chrome and Edge: only Website content, explained as read to show it, partly stored
+    on the device, none of it leaves the device; all certifications).
+  - **Cannot be answered truthfully yet — 7.6's go-live order:** the privacy URL, `https://peekover.dev`, the repository
+    URL and its issues page are "live at release" (ledger); Edge requires the policy URL reachable, Chrome and AMO link
+    it. So GO-LIVE: make the repository public → set DNS and the custom domain → run `pages.yml` (Pages is public-only
+    on Free, 7.4) → verify every "live at release" URL resolves → only then submit to any store. Also before
+    submitting: screenshots (spec §3.9, after the design walk; Chrome needs at least one); a support email only once
+    an address is confirmed working (AMO suggests one; G-1); the dashboards' data-category and certification wording
+    read and compared with the files; the 8.1 walk's Firefox file:// result folded into firefox.md (9.2).
+  - **Ledger:** rows for every listing sentence, surfaces chrome / firefox / edge (README's ledgered lines reuse their
+    evidence; the rest cite PRIVACY.md, PERMISSIONS.md, the manifest and its test, the zero-network guards).
+  - **Tests (`truthPins.test.ts`, +11):** each field within the limit its heading cites (max, range, search terms);
+    the Chrome summary and the Edge short description = the manifest description; every listing sentence has a row
+    for its store; each links the privacy URL, names no email address, no superlative, no unbuilt feature, and every
+    peekover.dev URL has a "live at release" row; the Firefox listing claims no direct opening from disk. **Red first:**
+    with no rows the three ledger checks and the three URL checks were red. **Ablations:** B1 the Firefox summary at
+    296 → "Summary — max 250 characters: 296 > 250"; B2 "Syncs your reading position across devices." → unledgered,
+    named; B3 `hello@peekover.dev` as Edge's support → the address check; B4 "Renders markdown files opened from your
+    own disk." in Firefox → the disk check; B5 Edge's short description ≠ the manifest → red; B6 Chrome without the
+    privacy URL → red.
+  - **Bytes:** none (docs and tests). Verify: lint 0 · unit (truthPins green) · no control bytes, LF only.
+  - Revisit when: 8.1 (Firefox file://); 3.9 (screenshots); 9.2 (the truth re-check of every listing row); submission
+    (the dashboards' own wording).
+
 - **2026-11-06 · M13 TASK 7.4a — DISCOVERED: every workflow action pinned by SHA; the unit flake checked.** Local, on
   `main` at `14c274f`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-06).
   - **Before it — CI and the release dry run on `14c274f`:** Supply chain 42171122708 green; CI 42171122700 green.
