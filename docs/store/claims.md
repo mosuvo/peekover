@@ -1,7 +1,8 @@
 # Claims ledger — Peekover
 
 Every factual sentence Peekover publishes, with its evidence and its status (M13 task 1.2; plan D-12).
-Surfaces so far: README.md (README), docs/trust/SECURITY.md (SECURITY) and site/index.html (site, task 1.3),
+Surfaces so far: README.md (README), docs/trust/SECURITY.md (SECURITY), site/index.html (site, task 1.3) and the
+setup guide, `src/app/onboarding.ts` (onboarding, task 6.1; its copy approved by the human at 6.1),
 with PRIVACY.md and THREAT-MODEL.md at 7.2 and the store text at 7.5. Group 9 (task 9.2) re-checks every row
 against the finished build, and a sentence without evidence is cut.
 
@@ -305,3 +306,17 @@ path named as evidence exists.
 | 290 | SECURITY | Hall of fame below. | no reporting channel is open yet | withdrawn |
 | 291 | SECURITY | Architecture promises (no servers, zero network default, no telemetry, no remote code, reproducible builds) are documented in the spec §6 and verified in CI as they land. | reproducible builds are not built (7.3); each true item is now listed with its own evidence | withdrawn |
 | 292 | README | The fonts in this repository (Literata, STIX Two Math, Bricolage Grotesque and Sometype Mono) are under the SIL Open Font License 1.1; see NOTICE (NOTICE). | `assets/fonts/OFL.txt`, `assets/fonts/README.md`, `NOTICE`, `public/licenses/literata.txt`, `public/licenses/stix-two-math.txt`, `public/licenses/bricolage-grotesque.txt`, `public/licenses/sometype-mono.txt`; `tests/fontLicences.test.ts` | true now |
+| 293 | onboarding | Peekover shows markdown files as formatted pages. | `src/render/runReader.ts`, `src/render/mount.ts` | true now |
+| 294 | onboarding | Raw files on the web need no setup. | `entrypoints/peekover.content.ts` (the four raw-host matches need no browser setting), `tests/manifest.test.ts` | true now |
+| 295 | onboarding | Files on your computer need one browser setting. | Chromium build only (`entrypoints/onboarding/main.ts`); `docs/trust/PERMISSIONS.md` ("file:// access note") | true now |
+| 296 | onboarding | In Firefox, nothing needs setting up. | Firefox build only; `specs/013-first-release/plan.md` (D-11; §9 note 6: the project record, unverified for MV3, walked at 8.1). REMOVE OR UPDATE AFTER 8.1 | true now |
+| 297 | onboarding | Peekover can read files on your computer: “Allow access to file URLs” is on. | shown only when `extension.isAllowedFileSchemeAccess()` answers true (`entrypoints/onboarding/main.ts`); `src/app/onboarding.test.ts`, `tests/browser/onboarding.browser.test.ts`; the real loaded Chromium 149 probe, `docs/ai/decisions.md` ("M13 TASK 6.1") | true now |
+| 298 | onboarding | Open a markdown file in a tab to read it. | `entrypoints/peekover.content.ts` (file:// matches), `tests/manifest.test.ts` | true now |
+| 299 | onboarding | Peekover can’t read files on your computer yet: “Allow access to file URLs” is off. | shown only when the API answers false; `src/app/onboarding.test.ts`, `tests/browser/onboarding.browser.test.ts` | true now |
+| 300 | onboarding | Peekover couldn’t check whether it can read files on your computer. | shown when the API is missing, throws or answers a non-boolean; `src/app/onboarding.test.ts`, `tests/browser/onboarding.browser.test.ts` | true now |
+| 301 | onboarding | Open Peekover’s details on your browser’s extensions page; or type chrome://extensions in the address bar and choose Details under Peekover. | the button's `tabs.create('chrome://extensions/?id=…')` opened Peekover's Details on the real loaded Chromium 149 probe, `docs/ai/decisions.md` ("M13 TASK 6.1"); Edge, Brave, Opera and Vivaldi walked at 8.1 | true now |
+| 302 | onboarding | Turn on “Allow access to file URLs”. | the toggle's label on Peekover's Details page, read on the real loaded Chromium 149 probe, `docs/ai/decisions.md` ("M13 TASK 6.1"); other Chromium browsers walked at 8.1 | true now |
+| 303 | onboarding | Your browser may restart Peekover and close this page. | flipping the toggle closed the open Peekover page on the real loaded Chromium 149 probe, `docs/ai/decisions.md` ("M13 TASK 6.1") (a command-line-loaded install); a store install walked at 8.1 | true now |
+| 304 | onboarding | In Firefox, markdown files you open from your computer are shown with no setup. | Firefox build: `entrypoints/onboarding/main.ts` asks nothing; `specs/013-first-release/plan.md` (D-11; §9 note 6, the project record, unverified for MV3). REMOVE OR UPDATE AFTER 8.1 | true now |
+| 305 | onboarding | Raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket are shown with no setup. | `entrypoints/peekover.content.ts` (matches), `tests/manifest.test.ts` | true now |
+| 306 | onboarding | To read files on your computer in Chrome or Edge, turn on “Allow access to file URLs” for Peekover on your browser’s extensions page. | the page-failed fallback (`entrypoints/onboarding/main.ts`); `docs/trust/PERMISSIONS.md` ("file:// access note"), README row 22 | true now |

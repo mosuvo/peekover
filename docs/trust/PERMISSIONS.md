@@ -140,6 +140,27 @@ served from the extension's own origin, opened by URL (above), and holds the fol
 UI. It requests nothing: no host access, no network, no manifest entry of its own beyond being a
 bundled asset.
 
+### The setup guide (`onboarding.html`) — a bundled extension page (added M13 / task 6.1)
+A second bundled extension page (`entrypoints/onboarding/`), like the app page: served from the
+extension's own origin, reached from the app page's **"Setup guide"** link (a new tab). It adds **no
+manifest key and no permission** — both built manifests are byte-identical before and after it
+(833 / 949 B, `permissions: []`, re-proven by `tests/manifest.test.ts`). What it uses, and why none of it
+needs a permission:
+- **`extension.isAllowedFileSchemeAccess()`** (Chromium build only) — reads whether the user has turned
+  on "Allow access to file URLs" for Peekover, so the page can say whether local files will open. It
+  only *reads* the user's own toggle; it cannot change it. Chrome's reference lists no permission for
+  the `extension` API, and says its utilities can be used by any extension page. Read when the page
+  opens and again when it regains focus. The **Firefox build never calls it** (a build-time branch;
+  `src/app/onboarding.test.ts` checks both engines' bundles).
+- **`tabs.create({ url: 'chrome://extensions/?id=<Peekover's id>' })`** (Chromium build only) — the
+  "Open Peekover's details" button, one click, opens Peekover's own Details page so the user can flip
+  the toggle themselves. Like the toolbar action above, `tabs.create` reads no tab field and needs no
+  `tabs` permission.
+- **No network.** Its fonts are the app page's, from the package; `tests/browser/onboarding.browser.test.ts`
+  reads zero off-origin requests after the wire settles, with a slow firing control.
+
+*(Task 6.2 adds the `runtime.onInstalled` listener that opens this page once on install.)*
+
 ### `content_scripts.run_at` — `document_start`
 The content script runs at `run_at: "document_start"` (both builds), not the default
 `document_idle`. This is the earliest injection point into a matched page, and we need it to

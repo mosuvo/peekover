@@ -908,7 +908,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
 
 ## 6 — Onboarding (D-11; gate-1 Q18; G-10)
 
-- [ ] **6.1 The onboarding page: detection per engine, the setup card, reachable from the app page (D-11).** TEST FIRST.
+- [x] **6.1 The onboarding page: detection per engine, the setup card, reachable from the app page (D-11).** TEST FIRST.
       Re-verify `extension.isAllowedFileSchemeAccess` against Chrome's and MDN's current docs. `entrypoints/onboarding/`
       (`index.html` + `main.ts`) + `src/app/onboarding.ts`: its own sheet (tokens pinned by 2.1's test, D-2's faces,
       reduced-motion rule, theme before JS); Chromium detection with re-check on `focus` / `visibilitychange`, a throw or
@@ -929,6 +929,16 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       without reload (red-first: drop the listener → stale state). Manifest unchanged by the page (a bundled page is not
       a key) — `permissions: []`. Bytes: `.output` grows by the entry; content-script md5 identical. Full suite. Golden
       EMPTY. [D-11; §7-9 sibling checklist]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 6.1").* The setup guide: one card (5.5's card and alert, 5.4's
+      primary, the mock's numbered steps). Chromium reads "Allow access to file URLs" (on / off / unknown) and re-reads
+      on focus and on becoming visible; Firefox never asks — the API's name is in no Firefox file (an esbuild bundle of
+      each engine in the unit test, and the real WXT build). **Deep link verified on a real Chromium 149: a button**
+      (`tabs.create` opens Peekover's Details). Edge wording not attempted (no Edge to check `userAgentData` against):
+      "your browser's extensions page". "Setup guide" last in the toolbar (new tab) and in "⋯". Copy approved by the
+      human, every sentence; ledger rows 293–306. **FOUND:** flipping the toggle on that Chromium closed the page — D-11's
+      live update cannot happen there; the copy says so (8.1 walks a store install, other Chromium browsers and Firefox).
+      Red-first shown by ablation (the module was drafted first — flagged). Content script and manifests identical;
+      `.output` +9,374 / +9,126 B (the entry 7,974 / 7,726, a shared chunk 1,607 moved out of the app chunk, −1,048).
 - [ ] **6.2 Open once on install, never on update (D-11; G-10; gate-1 Q18).** TEST FIRST. `background.ts` gains
       `runtime.onInstalled` → `tabs.create({ url: runtime.getURL('/onboarding.html') })` only when `reason ===
       'install'`. `PERMISSIONS.md` records the listener (no `tabs` permission — the extension's own URL).

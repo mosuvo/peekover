@@ -712,16 +712,18 @@ describe('4.4 — the compact toolbar at ≤ 863 px ("⋯"; two rows in every st
     expect(more().getAttribute('aria-expanded')).toBe('true');
     expect(menu().getAttribute('role')).toBe('menu');
     const items = menuItems();
-    expect(items.map((b) => (b.textContent ?? '').replace(/:.*/, ':'))).toEqual(['Theme:', 'Code theme:', 'Stored data', 'Export']);
+    // KEEPS: the menu holds the app controls in the mock's order. RE-SPELLED at 6.1: "Setup guide" joins last (D-11).
+    expect(items.map((b) => (b.textContent ?? '').replace(/:.*/, ':'))).toEqual(['Theme:', 'Code theme:', 'Stored data', 'Export', 'Setup guide']);
+    const last = items.length - 1;
     expect(document.activeElement, 'focus moves to the first item').toBe(items[0]);
     await userEvent.keyboard('{ArrowDown}');
     expect(document.activeElement).toBe(items[1]);
     await userEvent.keyboard('{End}');
-    expect(document.activeElement).toBe(items[3]);
+    expect(document.activeElement).toBe(items[last]);
     await userEvent.keyboard('{ArrowDown}');
     expect(document.activeElement, 'ArrowDown wraps').toBe(items[0]);
     await userEvent.keyboard('{ArrowUp}');
-    expect(document.activeElement, 'ArrowUp wraps').toBe(items[3]);
+    expect(document.activeElement, 'ArrowUp wraps').toBe(items[last]);
     await userEvent.keyboard('{Home}');
     expect(document.activeElement).toBe(items[0]);
     await userEvent.tab();

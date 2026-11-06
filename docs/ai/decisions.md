@@ -1,6 +1,135 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 6.1 — the onboarding page: the setup guide, detection per engine, reachable from the app
+  page (D-11; gate-1 Q18; G-10). HUMAN COPY APPROVAL.** Local, on `main` at `805a358` (5.11), up to date with
+  `origin/main`, tree clean; Windows, Node 24.11.1, pnpm 10.33.0, frozen install EXIT 0, `pnpm audit --prod` EXIT 0
+  (one low, ignored) on 2026-11-06.
+  - **PART A — CI (`gh`):** `805a358` (5.11) — CI success (run 42134537171, watched to completion), Supply chain
+    success (42134537518). **`bd0172a` (5.10) has no run of its own:** the human pushed 5.10 and 5.11 together, so only
+    the tip ran; `805a358`'s green run tests a tree that contains 5.10. Flagged, not a red.
+  - **HUMAN DIRECTION (2026-11-05), recorded verbatim:** *"Third-party licence notices for bundled JavaScript (found at
+    5.11) are REQUIRED before release — a group-7 task, not optional; a generated third-party licences file in the
+    package from the SBOM, with a test that every bundled package is listed."* Moved in `progress.md` from "the
+    human's call" to required (§ Carried items, group 7).
+  - **API re-verified (tasks.md 6.1), 2026-11-06:** Chrome's reference — `extension.isAllowedFileSchemeAccess()`,
+    "Retrieves the state of the extension's access to the 'file://' scheme", `Promise<boolean>`, Chrome 99+
+    (`browser.*` since 148), no permission listed for the `extension` API, "utilities that can be used by any extension
+    page". MDN — `Promise<boolean>`; says nothing of Firefox's answer. So the Firefox build does not call it (D-11).
+  - **THE DETECTION INVENTORY (each check, its engine, how a test reaches every outcome):** (1) **file access,
+    Chromium** — `extension.isAllowedFileSchemeAccess()` through the injected `readFileAccess`: `true` → on, `false` →
+    off, a throw / a rejection / a non-boolean / the API missing → unknown (the steps; never blank). Reached by stubs in
+    `onboarding.test.ts` (six cases) and in `onboarding.browser.test.ts` (on, off, throws, missing — both engines);
+    on a real loaded Chromium 149 the built page read **on** (a command-line-loaded install starts with the toggle on).
+    Re-read on window `focus` and on `visibilitychange` to visible. (2) **file access, Firefox** — not detected: the
+    entry's `import.meta.env.FIREFOX` branch never wires the API; the page says local files open with no setup (pending
+    8.1). (3) **the deep link, Chromium** — `tabs.create({ url: 'chrome://extensions/?id=<id>' })` behind "Open
+    Peekover's details"; resolves → nothing more; rejects, throws or is missing → the "use the address" fallback.
+    Stubbed both ways in both tests. (4) **raw hosts, both** — static: no detection exists or is needed (the four
+    hosts are content-script matches, no browser setting). Nothing here needs a permission or a request.
+  - **VERIFIED ON A REAL LOADED CHROMIUM 149 (Playwright, `--load-extension`, the built `.output/chrome-mv3`):** (a)
+    from an extension page, `tabs.create('chrome://extensions/?id=<id>')` **opens Peekover's Details view directly**
+    (`extensions-detail-view`, name "Peekover") — **so a button, per tasks.md**; (b) the toggle there is labelled
+    exactly **"Allow access to file URLs"** (`#allow-on-file-urls`); (c) **flipping it CLOSED the open Peekover
+    extension page**, and every later load of the extension's pages was `ERR_BLOCKED_BY_CLIENT` for the next 20 s; the
+    row's sub-label read "Changes to this setting will be applied once Chromium restarts". **This contradicts D-11's
+    premise** that the re-check "updates the page without a reload": on this arm the page is gone before it could
+    regain focus. The re-check is built and tested as tasks.md requires (it serves a browser that keeps the page
+    open), and the copy promises no live update — step 3 says the browser "may restart Peekover and close this page".
+    **Not verifiable here (8.1 walk):** a store install's default and its flip behaviour; Edge / Brave / Opera /
+    Vivaldi (label, `chrome://extensions` in the address bar, `tabs.create` to it); Firefox's real-install file://.
+    (d) the built page, its button and the app page's link worked end to end; 58 requests, **0 outside the
+    extension**; no console errors.
+  - **Edge wording:** not attempted. `navigator.userAgentData.brands` on this Chromium is `Chromium` / `Not)A;Brand` —
+    no Edge to check reliability against; tasks.md's else-branch applies: "your browser's extensions page", with the
+    `chrome://extensions` address shown.
+  - **THE PAGE (`entrypoints/onboarding/` + `src/app/onboarding.ts`):** one card, the mock's setup card and 5.5's
+    start card rule for rule — `--paper`, 1 px `--line`, radius 14, `--shadow`, `min(440px,100%)`; the title the
+    header row (700 13.5 px over a `--line` rule); body 13.5 / 1.6 `--muted`; section labels the picker's group-label
+    style (700 11 px, uppercase, `--muted`); the state is 5.5's alert (accent for on / Firefox, warn for off / unknown);
+    "Open Peekover's details" is 5.4's ink primary; the steps are the mock's numbered circles on `--hl`, their text
+    `--ink` in light and `--paper` in dark (the toolbar file name's pair — **the mock's `#3d3200` is an untracked colour,
+    not used**; flagged). Constructed DOM only. Its own sheet: the token sets pinned by `designTokens.test.ts`, the
+    light base, the OS-dark default before any script, and `[data-theme]` overrides; the reduced-motion rule; D-2's faces
+    (`uiFonts.ts`, its second importer). `position:fixed; inset:0` like the shell, with a 16 px gutter. Never blank: the
+    first paint is synchronous (the unknown card before any answer); a throw while mounting leaves a plain sentence.
+    **Reachable:** "Setup guide" — last in the toolbar's right-hand group (a link, new tab, so an open folder or an
+    unsaved edit is not navigated away from) and last in "⋯" when compact. **Theme (flagged):** the page follows the
+    system theme; nothing writes its `data-theme` (reading the stored setting would bring the store or the settings
+    channel onto this page — not asked).
+  - **HUMAN COPY APPROVAL (2026-11-06, AskUserQuestion, verbatim):** *"Approve as written (Recommended)"* — and on the
+    Firefox sentence, *"Keep it, pending 8.1 (Recommended)"*. The approved copy (`ONBOARDING_COPY`): tab title "Peekover
+    setup guide"; "Set up Peekover"; Chromium intro "Peekover shows markdown files as formatted pages. Raw files on the
+    web need no setup. Files on your computer need one browser setting."; Firefox intro "Peekover shows markdown files
+    as formatted pages. In Firefox, nothing needs setting up."; "Files on your computer"; on "Peekover can read files on
+    your computer: “Allow access to file URLs” is on. Open a markdown file in a tab to read it."; off "Peekover can’t
+    read files on your computer yet: “Allow access to file URLs” is off."; unknown "Peekover couldn’t check whether it
+    can read files on your computer. Here is how to check."; step 1 "Open Peekover’s details on your browser’s
+    extensions page." / button "Open Peekover’s details" / "Or type chrome://extensions in the address bar and choose
+    Details under Peekover." / refused "Your browser didn’t open the page. Use the address above instead."; step 2 "Turn
+    on “Allow access to file URLs”." (unknown: "Check that “Allow access to file URLs” is on."); step 3 "Your browser
+    may restart Peekover and close this page. Then open your markdown file again."; Firefox "In Firefox, markdown files
+    you open from your computer are shown with no setup."; "Raw files on the web" / "Raw markdown files on
+    raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket are shown with no setup."; page failed
+    "Peekover’s setup guide couldn’t be shown. To read files on your computer in Chrome or Edge, turn on “Allow access
+    to file URLs” for Peekover on your browser’s extensions page."; the link "Setup guide". **Claims:** ledger rows
+    293–306 (surface "onboarding"), the two Firefox rows marked REMOVE OR UPDATE AFTER 8.1. **Flag:** README row 26
+    ("…has not yet been checked on a real install") and the page's Firefox sentence now say different things about the
+    same unverified fact, by the human's ruling; 8.1 resolves both.
+  - **Contrast** (as painted; light / dark): lowest text 6.01 / 7.44 (`--muted` body, section labels); the alerts as
+    5.5's (15.99 / 13.82 accent, 16.69 / 12.86 warn); the button 17.22 / 15.47; the step numbers 14.46 / 13.29; the
+    address `code` 15.74 / 13.61. The census adds the guide's four states × two themes (52 → 60); pending EMPTY. The
+    sweep adds "setup guide" (its button and fallback on screen), light and dark; pending EMPTY.
+  - **Tests, red → green.** **Deviation, flagged:** the module was drafted before its tests, so "red first" is shown by
+    ablation on the finished code, not by a pre-code run. `onboarding.test.ts` (new, 20): detection six ways; four
+    pages distinct; never blank; Firefox never asks; focus and visibility re-read; the deep link three failure shapes;
+    no HTML writes (with a firing sample); **the bundle** — `entrypoints/onboarding/main.ts` bundled by esbuild (tsx's
+    own copy) with `import.meta.env.FIREFOX` true / false: the Chromium bundle names `isAllowedFileSchemeAccess` (the
+    firing control), the Firefox bundle does not and does carry the page's copy. **Also measured on the real WXT
+    build:** the API's name is in `chrome-mv3/chunks/onboarding-*.js` (1 file in the tree) and in **no file** of
+    `firefox-mv3`, whose onboarding chunk carries the Firefox copy. `onboarding.browser.test.ts` (new, 18 per engine):
+    the five outcomes on screen; 414 / 1440 × light / dark (16 px gutters, no sideways scroll, `--paper` per theme); the
+    focus re-check; keyboard (one control, first in Tab order, Enter activates) and names (main, h1, region, button,
+    status; step numbers `aria-hidden`); the refused link's fallback; never blank, including the real entry run outside
+    an extension (the unknown card); zero off-origin requests after `wireSettled()` with a fast and a SLOW firing
+    control; the app page's link at 1440 and its "⋯" item at 414.
+  - **Ablations → red** (each restored md5-identical: `onboarding.ts` `8a2ce531…`, `main.ts` `26fe5f75…`): **R
+    (tasks.md's red-first)** the focus listener dropped → unit "focus re-reads: expected 'Peekover can’t read…' to be
+    'Peekover can read…'", browser "the state after a focus — stale means the listener is gone", both engines. **A1** a
+    `false` answer read as on → unit "false → off", "four distinct pages", the re-check; browser "Chromium, access off"
+    timed out on its copy, both engines. **A2** the button's rule renamed (unstyled) → the sweep: "chromium · setup
+    guide · .peekover-onboard__cta — native background rgb(240, 240, 240); native border outset 2px" (Fx rgb(233, 233,
+    237)). **A3** (chosen) the Firefox build wired to the Chromium dependencies → "the Firefox bundle does not: expected
+    '…' not to contain 'isAllowedFileSchemeAccess'".
+  - **Necessary ripple** (each tied to a Verify clause): `src/theme/uiFontsImportFence.test.ts` — clause C pinned
+    `appShell.ts` as uiFonts' only importer; tasks.md makes onboarding the second (the full suite). 
+    `tests/browser/toolbar.browser.test.ts` — the "⋯" keyboard test pinned four items; the link joins as the fifth
+    ("keyboard order", the full suite). `tests/browser/contrastCensus.browser.test.ts`,
+    `tests/browser/nativeControls.browser.test.ts` — "census and sweep green on it". `docs/store/claims.md` — the
+    kickoff's "any claim joins the ledger". `specs/013-first-release/census.md` — the records.
+  - **Bytes** (clean two-engine build; arms in one session against `805a358`, every other output identical in size;
+    hash-only renames ignored): **content script identical** — 345,049 B, md5 `ee9f9279…` (Cr) / `317c6c51…` (Fx).
+    **Manifests identical**, 833 / 949 B, `permissions: []` — a bundled page is not a manifest key. **New:**
+    `onboarding.html` 605 B; `chunks/onboarding-*.js` **7,974 B (Cr) / 7,726 B (Fx)** (Fx −248: the Chromium
+    dependencies dropped); `chunks/browser-*.js` **1,607 B**, a chunk the two pages now share — Vite's modulepreload
+    polyfill, `wxt/browser` and `uiFonts.ts`, all moved out of the app chunk. **Changed:** app chunk **556,244 B
+    (−1,048**, what moved to the shared chunk); `app.html` +78 (its modulepreload link to the shared chunk);
+    `mermaid.core` +121 and `chunk-J7OUQ5F2` +37 (each chunk's Vite preload-dependency list now names the shared chunk —
+    the byte diff is file names only). Sum: Cr +9,374 → `.output` **6,445,039 B**; Fx +9,126 → **6,444,907 B**; residual
+    0 both. Headroom under 7 MiB: 894,993 / 895,125 B. Files 159 → 162.
+  - **Verify:** lint 0 · unit 1,529 / 1,529 (+21) · browser, alone, both engines: **2,584 passed / 0 failed / 52 skipped of 2,636** (+44), 634 s, EXIT 0, on the first run — no red to classify · census and sweep EMPTY · golden EMPTY · manifests
+    unchanged · no control bytes and LF only in every changed file (two counts; the control fires) · no orphaned browser
+    processes.
+  - **Screenshots for the human (not committed), `D:\Dev\peekover-shots\6.1\`:** `chromium-{on,off,unknown,
+    off-link-refused}-{1440,414}-{light,dark}.png`, `firefox-firefox-{1440,414}-{light,dark}.png` (the harness, both
+    engines; the frame scales 1440 to a 1152 px image); `real-install\chromium-149-on-{1440,414}-{light,dark}.png` (the
+    built page on a real loaded Chromium).
+  Why: tasks.md 6.1 / D-11 — tell the user, per engine and truthfully, what each kind of file needs, without a
+  permission or a request; the human approved every sentence.
+  Revisit-when: 8.1's walk (a store install's default and flip behaviour; Edge / Brave / Opera / Vivaldi; Firefox
+  file:// on a real install — then ledger rows 296 and 304 and README row 26); the page ever follows the stored theme;
+  6.2 opens it on install.
+
 - **2026-11-05 · M13 TASK 5.11 — DISCOVERED: TypeScript, TSX, diff, YAML, Markdown, TOML and SQL highlighting, on
   demand; fence aliases (HUMAN RULING R2).** Local, on `main` at `bd0172a` (5.10); not pushed. Same session as 5.10.
   - **HUMAN RULING R2 (2026-11-05, on 5.9's numbers), verbatim:** *"Yes — on demand: TypeScript, TSX, diff, YAML,

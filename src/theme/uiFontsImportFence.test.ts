@@ -18,7 +18,8 @@ const SHIPPED_ROOTS = ['src', 'entrypoints'] as const;
 const CONTENT_ENTRY = 'entrypoints/peekover.content.ts';
 const APP_ENTRY = 'entrypoints/app/main.ts';
 const MODULE = 'src/theme/uiFonts.ts';
-const SOLE_IMPORTER = 'src/app/appShell.ts';
+/** The importers, sorted: the app shell and (013 task 6.1, D-11) the setup guide — app pages both. */
+const IMPORTERS = ['src/app/appShell.ts', 'src/app/onboarding.ts'];
 /** The 2.3 font files this module owns. */
 const isUiFontAsset = (p: string): boolean => /assets\/fonts\/(bricolage|sometype)-[^/]*\.woff2$/.test(p);
 
@@ -181,10 +182,11 @@ describe('the UI-fonts import fence — clause B, the app-page graph is the cont
   });
 });
 
-describe('the UI-fonts import fence — clause C, one importer each (the whole shipped tree)', () => {
-  it(`uiFonts.ts is imported by ${SOLE_IMPORTER} alone, and the font files by uiFonts.ts alone`, () => {
+describe('the UI-fonts import fence — clause C, the named importers (the whole shipped tree)', () => {
+  // KEEPS: the module's importers are named, none else. RE-SPELLED at 6.1: the setup guide is the second (D-11).
+  it(`uiFonts.ts is imported by ${IMPORTERS.join(' and ')} alone, and the font files by uiFonts.ts alone`, () => {
     const found = importersIn(tree);
-    expect(found.module).toEqual([SOLE_IMPORTER]);
+    expect([...found.module].sort()).toEqual(IMPORTERS);
     expect([...new Set(found.asset)]).toEqual([MODULE]);
   });
 

@@ -42,6 +42,7 @@ import { clearDiagramCache, eraseSnapshots } from '../../src/app/store';
 import { editorSessionFor, teardownEditorShell } from '../../src/render/editorView';
 import { FILES_OVERLAY_MAX } from '../../src/app/toolbar';
 import { nameOf, parentAcrossShadow } from './helpers/contrast';
+import { mountOnboarding } from '../../src/app/onboarding';
 
 const ENGINE = navigator.userAgent.includes('Firefox') ? 'firefox' : 'chromium';
 type Theme = 'light' | 'dark';
@@ -185,6 +186,7 @@ const SURFACES = [
   'unsaved-changes dialog',
   'Compare picker',
   'diagram lightbox',
+  'setup guide',
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -412,6 +414,23 @@ describe('the native-control sweep (013 task 5.1)', () => {
         await clearDiagramCache();
       }
     }, 60_000);
+  }
+
+  // 013 task 6.1: the setup guide (D-11) with its controls on screen — access off, the steps, the deep link's
+  // button and its fallback.
+  for (const theme of ['light', 'dark'] as const) {
+    it(`the setup guide — ${theme}`, async () => {
+      await page.viewport(1440, 900);
+      const container = freshHost();
+      const ctl = mountOnboarding(container, { engine: 'chromium', readFileAccess: async () => false, openDetails: () => Promise.reject(new Error('x')) });
+      ctl.element.dataset.theme = theme;
+      await waitFor(() => ctl.element.dataset.access === 'off', 'access off');
+      ctl.element.querySelector<HTMLButtonElement>('.peekover-onboard__cta')!.click();
+      await waitFor(() => !ctl.element.querySelector<HTMLElement>('[data-part="open-failed"]')!.hidden, 'the fallback');
+      await sleep(300);
+      record(ctl.element, 'setup guide', theme);
+      ctl.destroy();
+    });
   }
 
   it('INVENTORY: no finding off the pending list, and no pending row that now passes', () => {

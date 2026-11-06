@@ -152,6 +152,8 @@ export function toolbarCss(shell: string): string {
 .${C}__app{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .65rem; margin-left:auto; min-width:0}
 .${C}__app [data-toolbar-control]{margin:0; font:600 12.5px/1 var(--sans); letter-spacing:0; color:var(--muted); background:var(--panel);
   border:1px solid var(--line); border-radius:8px; padding:7px 11px; white-space:nowrap; cursor:pointer}
+.${C}__guide{display:inline-block; text-decoration:none}
+.${C}__guide:hover{color:var(--ink)}
 .${C}__app [data-toolbar-control][aria-expanded="true"]{color:var(--ink); border-color:var(--ink)}
 .${C}__app [data-toolbar-control]:disabled{cursor:default}
 .${C}__menu{position:absolute; top:calc(100% + 6px); right:.75rem; z-index:7; min-width:220px; box-sizing:border-box;
@@ -335,12 +337,22 @@ export function createToolbar(doc: Document): ToolbarController {
   more.textContent = '⋯';
   more.setAttribute('aria-haspopup', 'menu');
   more.setAttribute('aria-expanded', 'false');
-  more.setAttribute('aria-label', 'More: theme, code theme, stored data, export');
+  more.setAttribute('aria-label', 'More: theme, code theme, stored data, export, setup guide');
   const menu = doc.createElement('div');
   menu.className = `${C}__menu`;
   menu.setAttribute('role', 'menu');
   menu.setAttribute('aria-label', 'More');
   menu.hidden = true;
+  // 6.1 (D-11) — the setup guide, last in the right-hand group; behind "⋯" when compact. A new tab, so
+  // an open folder or an unsaved edit on this page is not navigated away from.
+  const guide = doc.createElement('a');
+  guide.className = `${C}__guide`;
+  guide.href = '/onboarding.html';
+  guide.target = '_blank';
+  guide.rel = 'noopener';
+  guide.textContent = 'Setup guide';
+  guide.dataset.toolbarControl = 'guide';
+  app.append(guide);
 
   element.append(filesSlot, brand, file, badgeSlot, watchSlot, compareSlot, rowBreak, seg, app, more, menu);
 
@@ -348,7 +360,7 @@ export function createToolbar(doc: Document): ToolbarController {
   function addAppControl(el: HTMLElement, trigger: HTMLButtonElement): void {
     trigger.dataset.toolbarControl = String(triggers.length);
     triggers.push(trigger);
-    app.append(el);
+    app.insertBefore(el, guide);
   }
   const visible = (el: HTMLElement): boolean => el.getClientRects().length > 0;
   const items = (): HTMLButtonElement[] =>
@@ -378,6 +390,17 @@ export function createToolbar(doc: Document): ToolbarController {
         return item;
       }),
     );
+    const guideItem = doc.createElement('button');
+    guideItem.type = 'button';
+    guideItem.setAttribute('role', 'menuitem');
+    guideItem.tabIndex = -1;
+    guideItem.dataset.control = 'guide';
+    guideItem.textContent = guide.textContent;
+    guideItem.addEventListener('click', () => {
+      closeMenu(false);
+      guide.click(); // the same link, so the same new tab
+    });
+    menu.append(guideItem);
     menu.hidden = false;
     more.setAttribute('aria-expanded', 'true');
     items()[0]?.focus();

@@ -323,6 +323,18 @@ retired while its function has no other test. Function by function:
   primary, every save state, the shape, faces, the split, the shipped-controls pin). The census's pending list stays
   EMPTY; the sweep's stays EMPTY.
 
+- **6.1** (2026-11-06 — the setup guide, `onboarding.html`; D-11): a new page, plus a "Setup guide" link last in the
+  toolbar's right-hand group and last in "⋯". **RE-SPELLED:** C093 (`contrastCensus` INVENTORY) — its count 52 → 60
+  (the guide's four states: access on, off with the deep link's fallback showing, unknown, Firefox; `KEEPS:` in the
+  test). Outside the census: `toolbar.browser.test.ts`'s "⋯ is a menu button" (4.4's) — the menu's items gain
+  "Setup guide", last; End and the wraps read the last item, not index 3 (`KEEPS:` / `RE-SPELLED` in the test);
+  `uiFontsImportFence` clause C — the module's importers are named, now two (`appShell.ts`, `onboarding.ts`);
+  `designTokens` gains the guide's token pin; `nativeControls` adds the surface "setup guide" (light, dark — its
+  button and its fallback on screen); `onboarding.browser.test.ts` and `onboarding.test.ts` are new. **KEPT, unchanged
+  and green:** C362 / C363 (the toolbar's parts line — the link sits inside `__app`, so the parts are unchanged), and the
+  4.4 wide test (the app group's buttons in the mock's order; the link is not a button). **Retired:** none. Both pending
+  lists stay EMPTY.
+
 **Group 5 — final state (2026-11-05, after 5.7).** Every 5.x row is handled (5.0 – 5.8, 5.2a, the 5.6 FIX). Both pending
 lists — the contrast census's and the native-control sweep's — are EMPTY on both engines.
 

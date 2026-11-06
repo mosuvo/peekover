@@ -4,6 +4,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { READER_CSS } from '../src/theme/readerCss';
 import { LIGHT_TOKENS, DARK_TOKENS, APP_BASE_TOKENS } from '../src/app/appShell';
+import { ONBOARDING_LIGHT_TOKENS, ONBOARDING_DARK_TOKENS, ONBOARDING_BASE_TOKENS, ONBOARDING_CSS } from '../src/app/onboarding';
 
 // THE TOKEN PIN (013 task 2.1; plan D-1; gate-1 Q2, Q4). `design/tokens.css` is the single source of
 // every colour, radius and shadow value. The code carries COPIES of it — the reader's three `:host`
@@ -117,6 +118,28 @@ describe('design/tokens.css is the single source (013 task 2.1, D-1)', () => {
     // Sepia is dormant (gate-1 Q6): the shell carries no sepia set, and that is the ruling, not drift.
   });
 
+  // 013 task 6.1 (D-11): the setup guide's own sheet carries its own copies — the same three sets.
+  it("the setup guide's token sets equal tokens.css, light and dark, and its sheet uses them", () => {
+    const light = { ...declarations(ONBOARDING_LIGHT_TOKENS), ...declarations(ONBOARDING_BASE_TOKENS) };
+    const dark = declarations(ONBOARDING_DARK_TOKENS);
+    const extra = [...Object.keys(light), ...Object.keys(dark)].filter((k) => !(k in LIGHT));
+    expect([
+      ...diff('onboarding LIGHT + base', light, LIGHT, Object.keys(LIGHT)),
+      ...diff('onboarding DARK', dark, DARK_OVERRIDES, Object.keys(DARK_OVERRIDES)),
+      ...extra.map((k) => `onboarding: ${k} is not in tokens.css`),
+    ]).toEqual([]);
+    // The three layers (appShell's cascade): the light base, the OS dark default, the explicit overrides.
+    const css = ONBOARDING_CSS.replace(/\s+/g, '');
+    for (const [what, sel, body] of [
+      ['base', '.peekover-onboard{', ONBOARDING_LIGHT_TOKENS],
+      ['OS dark', '@media(prefers-color-scheme:dark){.peekover-onboard{', ONBOARDING_DARK_TOKENS],
+      ['explicit light', '.peekover-onboard[data-theme="light"]{', ONBOARDING_LIGHT_TOKENS],
+      ['explicit dark', '.peekover-onboard[data-theme="dark"]{', ONBOARDING_DARK_TOKENS],
+    ] as const) {
+      expect(css, what).toContain(sel + body.replace(/\s+/g, ''));
+    }
+  });
+
   it('every var(--x,#hex) fallback in the app sheets equals the LIGHT value of --x', () => {
     const SHEETS = ['exportControls', 'storageControls', 'treeView', 'recentsView', 'readerPane', 'appShell'].map((f) => `src/app/${f}.ts`);
     const bad: string[] = [];
@@ -173,6 +196,7 @@ describe('design/tokens.css is the single source (013 task 2.1, D-1)', () => {
       if (f === 'src/app/appShell.ts') {
         text = text.replace(/const (LIGHT|DARK)_TOKENS = \/\* css \*\/ `[^`]*`;/g, '').replace(/const APP_BASE_TOKENS = \/\* css \*\/ `[^`]*`;/, '');
       }
+      if (f === 'src/app/onboarding.ts') text = text.replace(/const ONBOARDING_(LIGHT|DARK|BASE)_TOKENS = \/\* css \*\/ `[^`]*`;/g, '');
       if (f === 'src/render/diagramEngine.ts') text = text.replace(/const DIAGRAM_TOKENS[^=]*=\s*Object\.freeze\(\{[\s\S]*?\n\}\);/, '');
       text = text.replace(/var\(--[a-z0-9-]+\s*,\s*#[0-9a-f]{3,8}\)/gi, '');
       text = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');

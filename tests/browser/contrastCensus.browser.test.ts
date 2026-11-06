@@ -45,6 +45,7 @@ import { getDiffContext, resetDiffRegistryForTest } from '../../src/render/diffR
 import { storeSnapshot } from '../../src/app/snapshots';
 import { clearDiagramCache, eraseSnapshots } from '../../src/app/store';
 import { editorSessionFor } from '../../src/render/editorView';
+import { mountOnboarding, type OnboardingDeps } from '../../src/app/onboarding';
 import {
   TEXT_BAR,
   LARGE_TEXT_BAR,
@@ -645,6 +646,34 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     });
   }
 
+  // 013 task 6.1: the setup guide (D-11), each detection state its own surface — on, off (with the deep link's
+  // fallback showing, so its alert is measured), unknown and Firefox. Its own page and sheet, themed by its
+  // own data-theme.
+  for (const theme of ['light', 'dark'] as const) {
+    it(`the setup guide — ${theme}`, async () => {
+      const STATES: Array<[string, OnboardingDeps, boolean]> = [
+        ['on', { engine: 'chromium', readFileAccess: async () => true }, false],
+        ['off', { engine: 'chromium', readFileAccess: async () => false, openDetails: () => Promise.reject(new Error('x')) }, true],
+        ['unknown', { engine: 'chromium' }, false],
+        ['firefox', { engine: 'firefox' }, false],
+      ];
+      for (const [name, deps, clickOpen] of STATES) {
+        const container = freshHost();
+        const ctl = mountOnboarding(container, deps);
+        ctl.element.dataset.theme = theme;
+        await waitFor(() => name === 'firefox' || ctl.element.dataset.access === name, `setup guide: ${name}`);
+        if (clickOpen) {
+          ctl.element.querySelector<HTMLButtonElement>('.peekover-onboard__cta')!.click();
+          await waitFor(() => !ctl.element.querySelector<HTMLElement>('[data-part="open-failed"]')!.hidden, 'the fallback');
+        }
+        await sleep(300);
+        census(ctl.element, `setup guide: ${name}`, theme);
+        ctl.destroy();
+        container.remove();
+      }
+    });
+  }
+
   it('INVENTORY: no failure off the pending list, and no pending row that now passes', () => {
     const failing = new Map(results.map((r) => [r.key, r]));
     for (const r of [...failing.values()].sort((a, b) => a.key.localeCompare(b.key))) console.log(`CENSUS ${JSON.stringify(r)}`);
@@ -654,8 +683,8 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added), and at 5.5,
     // 22 → 44 (eleven app states), and at 5.6, 44 → 42 (`unsupported` removed: no browser Peekover supports produces it)
     // → 48 (the tab reader's network-used, Raw-view and render-failure states), and at 5.7, 48 → 52 (the editor's save bar
-    // saving, and with a save's outcome).
-    expect(covered.size, 'surfaces × themes measured').toBe(52);
+    // saving, and with a save's outcome), and at 6.1, 52 → 60 (the setup guide's four states).
+    expect(covered.size, 'surfaces × themes measured').toBe(60);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);

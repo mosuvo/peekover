@@ -2,7 +2,7 @@
 // APP PAGE only (M13 plan D-2; gate-1 Q3 / Q10). The twin of `mathFont.ts`: plain asset imports,
 // registered on `document.fonts`, zero network.
 //
-// ★ APP PAGE ONLY. Imported by `appShell.ts` alone (onboarding joins at 6.1). The content-script
+// ★ APP PAGES ONLY. Imported by `appShell.ts` and the setup guide's `onboarding.ts` (6.1). The content-script
 // reader never reaches this module (`uiFontsImportFence.test.ts`), so it adds no font bytes there:
 // `tokens.css`'s `--sans` / `--mono` lead with these families and fall through to close system
 // faces when nothing registered them (plan D-3).
