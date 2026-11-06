@@ -435,3 +435,65 @@ describe('the store listings say only what ships, within each store\'s limits (0
     expect(fromDisk, 'Firefox lines claiming files opened from disk').toEqual([]);
   });
 });
+
+// ── M13 task 7.6 (plan §9 note 7): the go-live checklist. Every §9-7 item is a step with an evidence ("Check") line,
+// and the URL-resolution step names every "live at release" ledger row, and every URL in those rows — a row added to
+// the ledger later must be added to the walk too.
+const GO_LIVE = 'docs/store/GO-LIVE.md';
+
+/** The checklist's steps: each top-level "- [ ] **n.n …**" item with its body, up to the next one or heading. */
+function goLiveSteps(md: string): Array<{ title: string; body: string }> {
+  return md
+    .split(/^(?=- \[ \] \*\*|## )/m)
+    .filter((chunk) => chunk.startsWith('- [ ] **'))
+    .map((chunk) => ({ title: /^- \[ \] \*\*([^*]+)\*\*/.exec(chunk)?.[1] ?? '', body: chunk }));
+}
+
+describe('the go-live checklist covers §9-7 and every "live at release" row (013 task 7.6)', () => {
+  const steps = goLiveSteps(existsSync(join(ROOT, GO_LIVE)) ? read(GO_LIVE) : '');
+
+  const ITEMS: Array<[string, RegExp]> = [
+    ['point DNS at GitHub Pages', /Point DNS at GitHub Pages/],
+    ['set the custom domain', /Set the custom domain/],
+    ['run pages.yml', /Run the Pages workflow/],
+    ['every "live at release" URL resolves', /Every "live at release" URL resolves/],
+    ['a test message to the address', /Test `hello@peekover\.dev`/],
+    ['make the repository public', /Make the repository public/],
+    ['private vulnerability reporting', /private vulnerability reporting/i],
+    ['the v0.1.0 tag pushed', /Tag the release commit and push the tag/],
+    ['the release run attests', /release run is green, with attestations/],
+    ['gh attestation verify', /attestation of each file/],
+    ['the zips against SHA256SUMS', /check every file/],
+    ['publish the release', /Publish the release/],
+    ['Chrome Web Store', /^\d+\.\d+ Chrome Web Store/],
+    ['AMO', /^\d+\.\d+ Firefox Add-ons \(AMO\)/],
+    ['Edge Add-ons', /^\d+\.\d+ Microsoft Edge Add-ons\.$/],
+  ];
+
+  it.each(ITEMS)('has a step for "%s", with a Check line', (_name, title) => {
+    const step = steps.find((s) => title.test(s.title));
+    expect(step, `no step titled ${title}`).toBeDefined();
+    expect(step?.body).toMatch(/\*\*Check:\*\*/);
+  });
+
+  it('the commands that make the evidence are spelt out', () => {
+    const text = steps.map((s) => s.body).join('\n');
+    expect(text).toContain('git push origin v0.1.0');
+    expect(text).toContain('sha256sum -c SHA256SUMS');
+    expect(text).toContain('gh attestation verify');
+    expect(text).toContain('gh workflow run pages.yml --ref main');
+    expect(steps.find((s) => /^\d+\.\d+ Firefox Add-ons \(AMO\)\.$/.test(s.title))?.body, 'AMO gets the sources zip').toContain('peekover-0.1.0-sources.zip');
+  });
+
+  it('the URL-resolution step names every "live at release" ledger row and every URL in them', () => {
+    const live = ledgerRows().filter((r) => r.status === 'live at release');
+    expect(live.length, 'the ledger has "live at release" rows').toBeGreaterThan(20);
+    const step = steps.find((s) => /Every "live at release" URL resolves/.test(s.title))?.body ?? '';
+    const named = new Set([...step.matchAll(/#(\d+)\b/g)].map((m) => m[1]));
+    expect(live.filter((r) => !named.has(r.n)).map((r) => `#${r.n} (${r.surface})`), 'rows the step does not name').toEqual([]);
+    const urls = live.flatMap((r) => [...r.sentence.matchAll(/https?:\/\/[^\s)|`]+/g)].map((m) => m[0].replace(/[.,;]+$/, '')));
+    const listed = new Set([...step.matchAll(/^\s*\| (https:\/\/\S+) \|/gm)].map((m) => m[1]));
+    expect([...new Set(urls)].filter((u) => !listed.has(u)), 'URLs the step does not list').toEqual([]);
+    expect([...named].filter((n) => !live.some((r) => r.n === n)), 'rows named that are not "live at release"').toEqual([]);
+  });
+});

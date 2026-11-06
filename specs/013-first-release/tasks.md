@@ -1113,7 +1113,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       kept; data usage on Chrome and Edge: Website content only (HUMAN RULING). Every sentence in the ledger; truthPins
       +11, six ablations red. For 7.6: the repository public, the site live and every "live at release" URL resolving
       BEFORE any store submission (Edge requires the privacy URL reachable); screenshots (3.9) before Chrome.
-- [ ] **7.6 The go-live checklist, `docs/store/GO-LIVE.md` (§9-7).** Written by M13, run by the human. Items, each with
+- [x] **7.6 The go-live checklist, `docs/store/GO-LIVE.md` (§9-7).** Written by M13, run by the human. Items, each with
       the evidence that shows it done: point DNS at GitHub Pages and set the custom domain; run `pages.yml`; verify every
       "live at release" URL in `claims.md` resolves; send and confirm a test message to `hello@peekover.dev`, then decide
       the two-file email edit; make the repository public; enable private vulnerability reporting; cut and push the
@@ -1124,6 +1124,14 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       Verify: every §9-7 item present with an evidence line; every "live at release" ledger row is referenced by the
       URL-resolution item (a unit check in `truthPins.test.ts`, red-first with a row omitted). No production bytes.
       [§9-7; G-1, G-9]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.6").* `docs/store/GO-LIVE.md`, 37 steps in ten sections, each with
+      Do / Where / Check / If it fails; approved as written. Public before DNS and pages.yml (the 7.4 / 7.5 notes; flagged).
+      The history scanned first (gitleaks 8.30.1, every ref): no secrets; the personal email in commit metadata accepted
+      ("Proceed as is"). truthPins +17 (necessary ripple): every §9-7 item with a Check line, the URL step naming all 31
+      "live at release" rows; red with the file absent, five ablations red. No production bytes.
+
+**GROUP 7 COMPLETE (2026-11-06).** 7.1, 7.2a, 7.2, 7.3a, 7.3, 7.4, 7.4a, 7.5 and 7.6 have landed. Go-live itself is the
+human's, after 8.1 and group 9 (`docs/store/GO-LIVE.md`, section 0).
 
 ## 8 — ★ The design walk — HUMAN GATE (spec §3.6; §9-6)
 

@@ -1,6 +1,86 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.6 — the go-live checklist, `docs/store/GO-LIVE.md` (§9-7; G-1, G-9); the history scanned
+  before going public. TWO HUMAN RULINGS.** Local, on `main` after 7.5; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-06; 1 low,
+  ignored). Budget unchanged: `.output` 6,645,510 / 6,645,366 B of 7,340,032.
+  - **CI first (`gh`):** `ae02561` (7.5, with 7.4a's `2875b56`, pushed together — `2875b56` has no run of its own) green:
+    CI 42192311564 (verify, reproducible) and Supply chain 42192311525.
+  - **Authority:** tasks.md 7.6; plan §9 note 7; progress.md's go-live notes (7.4: Pages and attestations once public,
+    private vulnerability reporting public-only; 7.5: public → DNS / domain → pages.yml → URLs → screenshots →
+    dashboards → submit; the support email only once working; Edge "Productivity" to confirm); 8.1 and group 9 as gates.
+    **Mismatches, flagged:** (a) tasks.md 7.6 lists DNS and pages.yml before "make the repository public"; the later 7.4
+    / 7.5 notes put public first (Pages is public-only on Free) — followed the notes; the account-level domain
+    verification moved before both (it needs no public repo). (b) The kickoff adds accounts and 2FA, review timelines,
+    rollback and a history scan beyond tasks.md's line — included, as the human's kickoff asks. (c) Necessary ripple:
+    `tests/truthPins.test.ts` is not in 7.6's Files list but its Verify names it. (d) Plan §9 note 1 calls the email
+    change "a two-file edit"; truthPins forbids the address on every surface, so it is larger — left as an agent task
+    in GO-LIVE step 4.1.
+  - **1 · THE HISTORY SCAN (report only; no history rewritten, nothing force-pushed).** Every ref fetched first
+    (`git fetch origin '+refs/heads/*:refs/remotes/origin/*' '+refs/pull/*/head:refs/remotes/pr/*' --tags`): main, 9
+    remote branches (one `claude/…`, eight Dependabot) and every PR head; no tags; 536 commits (517 non-merge, 19 merge).
+    - **Tool:** gitleaks **8.30.1** (GitHub release `gitleaks/gitleaks` v8.30.1, 2026-03-21; windows_x64 zip SHA-256
+      `d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e` = the release's checksums file), run as
+      `gitleaks git . --log-opts="--all" --report-format json --redact=50`: **517 commits scanned, no leaks.**
+      Firing control: a scratch repo with a planted AWS key and GitHub token, deleted in the next commit — gitleaks
+      found both (`aws-access-token`, `github-pat`) in history.
+    - **Targeted pass** (a script over `git log --all -m -p`, so merges are covered too, every added line): emails,
+      `C:\Users\…` / `/home/…` / `/Users/…` paths, `D:\Dev\…`, private-key headers, password / secret / token
+      assignments, token shapes (AKIA, AIza, ghp_, github_pat_, sk-, sk-ant-, xox), `.env` files, the human's name,
+      the machine name (`DESKTOP-R0RLEK9`) and the Windows user (`User`).
+    - **Findings by severity:**
+      - **Secrets: none.** No `.env`, no private key, no token or key shape; the 10 password / token hits are code
+        (`const token = nextToken()`, `pass: stripped` in a test title, "pass:" in progress prose).
+      - **HIGH (privacy, not a secret):** commit metadata — the human's personal Gmail is author and committer of
+        474 commits. Distinct author / committer emails: the human's personal Gmail (474), `93656238+mosuvo@users.noreply.github.com`
+        (19, committer `noreply@github.com`), `49699333+dependabot[bot]@users.noreply.github.com` (7),
+        `noreply@anthropic.com` (28). Only a history rewrite removes it.
+      - **LOW:** the name "Mo Suvo" (`LICENSE` copyright, author name — intended); the local path `D:\Dev\peekover`
+        in `docs/ai/decisions.md` (ba14a5e:123, 12fd62a:13), `docs/ai/progress.md` (ba14a5e:38),
+        `specs/recon-006-gate2.md` (d7f424c:7), `src/render/diffEngine.test.ts` (ff5f128:108, a comment) and
+        `src/render/agentFile.test.ts` (6553790:80, a fixture URL) — drive and folder only; the machine name and the
+        Windows user appear nowhere.
+      - **INFO:** `docs/ai/**` carries the human's rulings and quotes verbatim (e.g. Q15's "not gonna buy a domain")
+        and the 2026-07-11 plan (an org `peekover` as "dormant insurance", one publisher account for future tools).
+      - **False positives:** test fixtures (`/home/u/…`, `file:///C:/Users/dev/…`, `/home/user/…`); third-party
+        copyright emails in licence texts (`public/THIRD_PARTY_LICENSES.txt`, `scripts/licences/…` — required);
+        `hello@peekover.dev` and `peekover@peekover.dev` (the project's own); `a@b.com`, `hi@example.com` (tests).
+    - **HUMAN RULING (verbatim, the option chosen):** **"Proceed as is"** — the Gmail in commit metadata and the rest
+      accepted; GO-LIVE.md gains a step to set the commit email to the noreply address (step 1.2).
+  - **2 · GO-LIVE.md:** ten sections, 37 checkbox steps, each with Do / Where / Check / If it fails: 0 gates (8.1,
+    group 9 incl. the 9.2 Firefox blocker and the screenshots, CI green on the release commit, `pnpm audit --prod`);
+    1 accounts (GitHub 2FA, the commit email, the domain verified at the account, Chrome / AMO / Edge accounts with 2FA
+    and fees); 2 public (the scan re-run on the release commit, visibility, private vulnerability reporting); 3 the site
+    (Actions source, pages.yml, custom domain, A / AAAA / www, HTTPS, every "live at release" URL — a table naming all
+    31 rows); 4 the email test; 5 the release (tag command, the run with attest RUN, `sha256sum -c`, `gh attestation
+    verify`, publish); 6 the dashboards' wording against the files; 7 Chrome / AMO (with the sources zip and
+    SOURCE_CODE_REVIEW.md) / Edge, each with files, fields, data answers and review times; 8 store links and the
+    "not in stores" lines (the 1.3 carry); 9 rollback per store, release, site, repository.
+  - **Store / GitHub facts read 2026-11-06 (cited in the file):** docs.github.com — custom domain (A / AAAA, www
+    CNAME, no CNAME file for a custom workflow, verify first, no wildcards, HTTPS up to 24 h), verifying a domain
+    (TXT `_github-pages-challenge-<user>`), publishing source, repository visibility (effects both ways; Free unpublishes
+    Pages when private), private vulnerability reporting (Settings → Advanced Security), 2FA, the commit email (past
+    commits unchanged), managing releases; cli.github.com — `gh attestation verify --repo`, `gh release edit
+    --draft=false`, `gh release delete --cleanup-tag`, `gh release download`. Chrome — register (one-time fee; the
+    amount not on the page), 2-Step Verification "required for all developer accounts prior to publishing", publish
+    (Add new item, tabs, deferred publishing 30 days), listing (one 1280×800 screenshot at least), review ("within a few
+    days … up to a few weeks"; three weeks → support), rollback (a new version number, no review), unpublish
+    (account-deletion page). AMO — submitting (no fee mentioned, no timeline), source code submission, 2FA since
+    2021-03-15 (Mozilla Add-ons blog), retiring (Manage Status & Versions → Invisible). Edge — no registration fee;
+    certification "up to seven business days"; Unpublish keeps existing users. Not found: AMO's current review times
+    (stated as unpublished); Chrome's fee amount (stated as "shown at payment").
+  - **Test (`tests/truthPins.test.ts`, +17):** a step for each §9-7 item (15) with a **Check:** line; the evidence
+    commands spelt out (tag push, `sha256sum -c`, `gh attestation verify`, `gh workflow run pages.yml`, AMO's sources
+    zip); the URL step names every "live at release" row and every URL in them, and no other row. **Red first:** with
+    GO-LIVE.md absent every case was red. **Ablations, each red in its own test:** A1 row #46 dropped → the
+    URL-resolution test; A2 the releases URL dropped → the same, URLs clause; A3 "Publish the release" without its
+    Check → its item; A4 "Make the repository public" renamed → its item; A5 AMO without the sources zip → the
+    commands test.
+  - **HUMAN APPROVAL (verbatim, the option chosen):** GO-LIVE.md **"Approve as written"**.
+  - **Bytes:** none (a new doc, one test file). Verify: lint 0 · unit 1,652 / 1,652 · no control bytes, LF only.
+  - Revisit when: release day (the human runs it); 9.1 (the site's privacy page); 9.2 (every "live at release" row);
+    an added "live at release" row (the test asks for it in step 3.6).
+
 - **2026-11-06 · M13 TASK 7.5 — store listing text for Chrome, Firefox and Edge (gate-1 Q19, Q20). FOUR HUMAN
   APPROVALS.** Local, on `main` after 7.4a; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-06). Budget unchanged:
   `.output` 6,645,510 / 6,645,366 B of 7,340,032.
