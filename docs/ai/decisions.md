@@ -1,6 +1,81 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-06 · M13 TASK 7.3 — reproducible builds: BYTE-IDENTICAL, zips included (D-14; G-8 not needed, G-13).
+  ONE HUMAN RULING.** Local, on `main` at `15e2dc3` (7.3a). `pnpm audit --prod` EXIT 0 on 2026-11-06.
+  - **Authority:** tasks.md 7.3; plan D-14 ("Reproducibility first", "AMO sources"), §9 notes 3 (G-8) and 5 (G-13);
+    Mozilla's source-code-submission page (extensionworkshop.com/documentation/publish/source-code-submission/, read
+    2026-11-06): source is required for bundled/minified code; a README with OS, tool versions and "all the commands to
+    generate an identical copy"; the lockfile; the reviewer diffs the rebuild — "There must be no differences"; default
+    environment **Ubuntu 24.04.4 LTS, ARM64**, 10 GB / 6 vCPU, **Node 24.14.0, npm 11.9.0**, and a differing environment
+    must be stated. **Flagged:** the plan cited "Ubuntu 24.04 / Node 24.14.0 / npm 11.9.0" — the page now also names
+    ARM64 (and 24.04.4).
+  - **Kickoff mismatches, flagged:** (a) the kickoff's step 3 asks for reviewer build instructions; tasks.md 7.3's file
+    is `docs/trust/REPRODUCING.md`, and `SOURCE_CODE_REVIEW.md` (in the sources zip) is 7.4's — REPRODUCING.md carries a
+    sources-zip section; SOURCE_CODE_REVIEW.md stays at 7.4. (b) tasks.md says "with the same `SOURCE_DATE_EPOCH`"; the
+    fix needs none — the two compared builds differ in it on purpose (A unset, B the commit time). (c) Files beyond
+    tasks.md's list (necessary ripple): `scripts/normalizeZip.ts` (the cause's fix, tasks.md allows "build config only if
+    a cause needs it"), `tests/compareBuilds.test.ts` (the firing control tasks.md's Verify asks for, as a test),
+    `tests/ciConfig.test.ts` (named in Verify), `docs/store/claims.md` (the kickoff's ledger rows).
+  - **1 · DETERMINISM — measured, then fixed.** `scripts/compare-builds.ts --twice`: two `git clone --no-local` of the
+    commit into a temp folder, `pnpm install --frozen-lockfile`, `pnpm zip` + `pnpm zip -b firefox` in each, compared:
+    every file of both unpacked packages (SHA-256), each zip's entries (names, contents, order, stored date / attributes)
+    and its bytes. **Baseline (HEAD `15e2dc3`, both with the commit's epoch): both unpacked trees IDENTICAL; all three
+    zips differ** — "same entries, different order" and 160 / 160 / 165 entries with different stored date/time. Causes
+    (WXT 0.20.27 `zip.mjs`): JSZip stamps each entry with the build's time; entries are added in tinyglobby's crawl
+    order, which varied between two runs on one machine. No difference from absolute paths, chunk hashes, line endings
+    or ordering of anything else. **Fix:** `scripts/normalizeZip.ts`, run from WXT's `zip:extension:done` and
+    `zip:sources:done` hooks — repack sorted by name (byte order), every DOS date/time = 1980-01-01 00:00, compressed
+    data copied unchanged (no recompression, so no zlib version enters); refuses data descriptors, zip64 or a comment
+    (JSZip writes none here). **After (a working-tree probe on a temporary ref, `refs/tmp/repro`, deleted): IDENTICAL —
+    every packaged file and all three zips, A without SOURCE_DATE_EPOCH, B with it;** 43 s for both. Python's `zipfile`
+    validates all three (`testzip` None). Sizes unchanged by the repack (headers and data keep their lengths).
+  - **2 · CROSS-MACHINE.** The packages hold no machine strings: 0 hits for the temp folder, `AppData`, `Users`, `C:\`,
+    `D:\`, `Dev/peekover`, `/home/`, the account name (control "Peekover" 8 files). Hits explained: `D:/` once and
+    `../../node_modules/.pnpm/vscode-…` paths are inside @mermaid-js/parser's and mermaid's PUBLISHED files (a grammar
+    regex; their own bundler's relative paths); `node_modules` also in Peekover's folder-skip list and the licences
+    text. CR bytes only in fonts and PNGs (binary); text files 0 (control fires); `.gitattributes` `* text=auto eol=lf`
+    overrides this machine's `core.autocrlf=true`. **WSL Ubuntu 24.04.3 x86_64, Node 22.23.4, pnpm 10.33.0 (corepack),
+    a fresh clone of the same probe: IDENTICAL to the Windows build (Node 24.11.1)** — every packaged file, all three
+    zips. (A first Linux run put its three log files into the clone; the sources zip took them — the "fresh clone"
+    rule, stated in REPRODUCING.md.) Locale: no build output differs between the two systems.
+  - **3 · THE AMO SOURCE PACKAGE.** `wxt zip -b firefox` writes `peekover-0.1.0-sources.zip`: the working folder minus
+    WXT's defaults (`**/node_modules`, `**/.*` — so no `.env`, `.git`, `.github` —, test files, `.output`). The local one
+    held 379 entries including gitignored `tests/browser/__screenshots__/` and was stale (no PRIVACY / THREAT-MODEL);
+    `wxt.config.ts` `zip`: `includeSources: ['.nvmrc']` (the Node pin), `excludeSources` for the non-dot gitignored
+    scratch (`**/__screenshots__/**`, `**/*.local.md`, `sbom.cdx.json`). From a clean clone: 355 entries, `.nvmrc`
+    present, no test file, no secret, no scratch; the two tracked `harness/math-fidelity/screenshots/*.png` are
+    committed evidence and stay. Holds `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `patches/temml.patch`,
+    the scripts the build imports. **Rebuilt from the sources zip alone** (WSL, extracted, no `.git`, Node 22.23.4, npm
+    10.9.9, `npx --yes pnpm@10.33.0 install --frozen-lockfile` + `zip -b firefox`): the Firefox zip's SHA-256
+    `d74715ca…` = the Linux and Windows builds'.
+  - **REPRODUCING.md** (`docs/trust/`, new): what is identical, what you need (Node 22, pnpm 10.33.0 or `npx --yes
+    pnpm@10.33.0`, git), tested systems and the untested (ARM64, macOS), the repository steps, the fresh-clone rule, no
+    clock setting, the three comparator commands, CI's job, the sources-zip steps, Mozilla's default environment and how
+    Peekover differs (G-13), how the zips are made identical; "Planned": SHA256SUMS (7.4). **HUMAN RULING (2026-11-06),
+    verbatim: "Approve as written (Recommended)".** Afterwards the two code fences were given a language (`bash`,
+    `text`) — `codeDetect.test.ts` scans the repository's unlabelled fences — no wording changed. Ledger rows 408–429.
+  - **SECURITY / README / site / CHANGELOG unchanged:** byte-identical was reached, so no "file-identical" wording (G-8);
+    "a check in CI that two builds of the same source produce the same files" stays under Planned — the job has not run
+    in CI yet (it first runs at the human's push). Moving it is for after that run (7.4 or 9.2).
+  - **4 · THE GUARD.** `ci.yml` job `reproducible` (every push to `main` and every pull request): frozen install, then
+    `compare-builds.ts --twice` (`shell: bash`, pipefail through `tee`), hashes and the verdict in the run summary. The
+    clone checks out exactly the source commit (CI's detached, shallow checkout clones correctly — simulated) and fails
+    otherwise. Locally 43–63 s; CI's time is read at the push. `tests/ciConfig.test.ts` +1 (red first: "ci.yml has a
+    reproducible job"). `tests/compareBuilds.test.ts` (11): repack — the fixture differs as two builds did (firing
+    control), two such zips normalise to the same bytes with contents kept, idempotent, a one-byte change survives, an
+    unsupported shape refused; comparator — clean, **a one-byte change red naming the file**, an extra file red; the
+    real zips sorted / 1980-dated / in normal form / == their unpacked tree. Ablations: the zip hooks removed → the
+    real-zip test red; on the real outputs a one-byte flip in `firefox-mv3/content-scripts/peekover.js` → exit 1 naming
+    it, and in the Chrome zip → red naming the entry.
+  - **Bytes:** unpacked packages **identical to 7.3a** — content script 345,049 B (`ee9f9279…` / `317c6c51…`); manifests
+    864 / 978 B unchanged (`permissions: []`); app chunk 550,549 B; `.output` 6,645,510 / 6,645,366 B; zips 2,031,864 /
+    2,031,815 B (the repack is size-neutral; +55 vs 7.2a's figures is 7.3a's app chunk).
+  - Verify: lint 0 · unit 1,612 / 1,612 · browser full suite both engines 2,612 passed / 0 failed / 52 skipped of 2,664,
+    first run (census, sweep and golden inside it, green) · truthPins green · no control bytes, LF only.
+  - Revisit when: WXT's zip writer changes (the repack refuses shapes it does not know); an ARM64 or macOS build is run;
+    the CI job's first run (then SECURITY / README / site may move the claim out of Planned, with approval).
+
 - **2026-11-06 · M13 TASK 7.3a — DISCOVERED (found at 7.2a): an unknown saved code theme falls back to Peekover; the
   SBOM lists what ships.** Local, on `main` at `254e271` (7.2). **CI (`gh`) on `254e271` green** — CI (42158926218),
   Supply chain (42158926254); `f5151a5` (7.2a) rode with it. `pnpm audit --prod` EXIT 0 on 2026-11-06.

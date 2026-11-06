@@ -107,6 +107,20 @@ describe('CI config (013 task 1.1, D-13)', () => {
     expect(v3, 'workflows still on codeql-action v3').toEqual([]);
   });
 
+  // M13 task 7.3 (D-14; G-8): a job builds the commit twice from clean clones and fails on any difference.
+  it('ci.yml has the double-build job: two clean builds compared, the hashes in the run summary', () => {
+    const text = read('.github/workflows/ci.yml');
+    const job = /^ {2}reproducible:\n((?: {4,}.*\n|\s*\n)*)/m.exec(text)?.[1] ?? '';
+    expect(job, 'ci.yml has a reproducible job').not.toBe('');
+    const jobSteps = steps(job);
+    const compare = jobSteps.find((s) => s.includes('scripts/compare-builds.ts --twice'));
+    expect(compare, 'a step runs compare-builds.ts --twice').toBeDefined();
+    // pipefail, so a mismatch fails the step through `tee`.
+    expect(compare!).toMatch(/^\s*shell: bash\s*$/m);
+    expect(jobSteps.some((s) => s.includes('GITHUB_STEP_SUMMARY')), 'the hashes go to the run summary').toBe(true);
+    expect(jobSteps.some((s) => /pnpm install --frozen-lockfile/.test(s)), 'a frozen install').toBe(true);
+  });
+
   it('dependabot.yml states no runtime-dependency count', () => {
     const text = read('.github/dependabot.yml');
     const COUNT = '\\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|\\d+)\\s+';

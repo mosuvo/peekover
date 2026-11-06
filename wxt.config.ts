@@ -1,5 +1,9 @@
 import { defineConfig } from 'wxt';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { licenceInventoryPlugin, onBuildBefore, onBuildDone } from './scripts/licenceInventory';
+import { normalizeZip } from './scripts/normalizeZip';
+
+const repackZip = (zipPath: string): void => writeFileSync(zipPath, normalizeZip(readFileSync(zipPath)));
 
 // Peekover — zero network by default. Auto-imports are disabled so that lint and
 // typecheck stay fully explicit: WXT helpers are imported from '#imports'.
@@ -11,6 +15,17 @@ export default defineConfig({
   hooks: {
     'build:before': (wxt) => onBuildBefore(wxt),
     'build:done': (wxt) => onBuildDone(wxt),
+    // Reproducible zips (M13 task 7.3): WXT's zips carry the build's time and a crawl-order entry list; each is
+    // repacked sorted, with one fixed date, its compressed data unchanged (scripts/normalizeZip.ts).
+    'zip:extension:done': (_wxt, zipPath) => repackZip(zipPath),
+    'zip:sources:done': (_wxt, zipPath) => repackZip(zipPath),
+  },
+  // The Firefox sources zip (M13 task 7.3). WXT zips the working directory, dotfiles excluded: `.nvmrc` (the Node pin
+  // a reviewer builds with) is added back; gitignored scratch that is not a dotfile is kept out, so a local zip holds
+  // what a clean clone holds.
+  zip: {
+    includeSources: ['.nvmrc'],
+    excludeSources: ['**/__screenshots__/**', '**/*.local.md', 'sbom.cdx.json'],
   },
   // Target Manifest V3 on every browser. WXT defaults Firefox (and Safari) to
   // MV2, but our security posture (spec §6) claims MV3 + a non-persistent

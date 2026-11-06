@@ -4,7 +4,8 @@ Every factual sentence Peekover publishes, with its evidence and its status (M13
 Surfaces so far: README.md (README), docs/trust/SECURITY.md (SECURITY), site/index.html (site, task 1.3) and the
 setup guide, `src/app/onboarding.ts` (onboarding, task 6.1; its copy approved by the human at 6.1),
 CHANGELOG.md (CHANGELOG, task 7.1; approved by the human at 7.1),
-docs/trust/PRIVACY.md (PRIVACY) and docs/trust/THREAT-MODEL.md (THREAT-MODEL), task 7.2, and the store text at 7.5. Group 9 (task 9.2) re-checks every row
+docs/trust/PRIVACY.md (PRIVACY) and docs/trust/THREAT-MODEL.md (THREAT-MODEL), task 7.2, docs/trust/REPRODUCING.md (REPRODUCING),
+task 7.3, and the store text at 7.5. Group 9 (task 9.2) re-checks every row
 against the finished build, and a sentence without evidence is cut.
 
 Status is one of: **true now** (evidence is a test, a code path or a record), **live at release** (a
@@ -422,3 +423,25 @@ path named as evidence exists.
 | 405 | THREAT-MODEL | Someone who can use your device or read your browser profile: Peekover's storage is not encrypted. | out of scope: `src/app/store.ts` (plain IndexedDB rows, no encryption) | true now |
 | 406 | THREAT-MODEL | A change to a file in the instant between Save's check and its write. | out of scope: `docs/trust/PERMISSIONS.md` (edit save-back row: "the check and the write are two steps") | true now |
 | 407 | THREAT-MODEL | Build attestations on release files, from the first public release, so that a download can be checked against the source. | task 7.4 in `specs/013-first-release/tasks.md` (attestations need a public repository on this plan, G-9) | planned |
+| 408 | REPRODUCING | Two builds of the same commit produce byte-identical output: the unpacked Chrome and Firefox packages, the Chrome zip, the Firefox zip and the Firefox sources zip. | `scripts/compare-builds.ts`, `scripts/normalizeZip.ts`, `tests/compareBuilds.test.ts`; two clean clones compared, Windows and Linux (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 409 | REPRODUCING | This page gives the steps to rebuild Peekover and check that for yourself. | `docs/trust/REPRODUCING.md` (the steps below, each run at M13 task 7.3) | true now |
+| 410 | REPRODUCING | Node.js 22, the version in .nvmrc; CI builds with it. | `.nvmrc`, `.github/workflows/ci.yml` (node-version-file), `tests/ciConfig.test.ts` | true now |
+| 411 | REPRODUCING | pnpm 10.33.0, the version in package.json. | `package.json` (packageManager), `tests/ciConfig.test.ts` | true now |
+| 412 | REPRODUCING | With only npm installed, run each pnpm command below as npx --yes pnpm@10.33.0. | the sources-zip rebuild with npm 10.9.9 and npx (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 413 | REPRODUCING | git, and network access to install the dependencies from the npm registry. | `pnpm-lock.yaml` (registry tarballs); `scripts/compare-builds.ts` (clones with git) | true now |
+| 414 | REPRODUCING | Tested on Windows 11 (x64, Node 24.11.1) and on Ubuntu 24.04 (x64, Node 22.23.4); both gave the same bytes. | the Windows double build and the WSL build, compared (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 415 | REPRODUCING | Not yet tested on ARM64 or macOS. | no build on either recorded (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 416 | REPRODUCING | The output is in .output/: chrome-mv3/, firefox-mv3/, and peekover-<version>-chrome.zip, -firefox.zip and -sources.zip. | `package.json` (version), WXT's zip names (`docs/ai/decisions.md`, "M13 TASK 7.1"); `tests/compareBuilds.test.ts` | true now |
+| 417 | REPRODUCING | Build in a fresh clone: the sources zip takes every file in the folder except dotfiles (.nvmrc is kept), node_modules, .output, test files and a few ignored files, so an extra file changes it. | `wxt.config.ts` (zip.includeSources / excludeSources), WXT's default excludes; three log files in a clone changed the sources zip (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 418 | REPRODUCING | No clock setting is needed: builds with and without SOURCE_DATE_EPOCH are identical, and every file in the zips is dated 1 January 1980. | `scripts/compare-builds.ts` (`--twice`: one build without, one with), `scripts/normalizeZip.ts` (FIXED_DOS_DATE), `tests/compareBuilds.test.ts` | true now |
+| 419 | REPRODUCING | pnpm exec tsx scripts/compare-builds.ts --twice clones the current commit twice into a temporary folder, builds both, and compares every file and every zip; it prints each file's SHA-256 and exits with an error on any difference. | `scripts/compare-builds.ts`; the one-byte firing control (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 420 | REPRODUCING | pnpm exec tsx scripts/compare-builds.ts <first>/.output <second>/.output compares two builds you already have. | `scripts/compare-builds.ts`, `tests/compareBuilds.test.ts` | true now |
+| 421 | REPRODUCING | pnpm exec tsx scripts/compare-builds.ts --hashes prints the SHA-256 of every packaged file and every zip in .output/. | `scripts/compare-builds.ts` (hashLines), `tests/compareBuilds.test.ts` | true now |
+| 422 | REPRODUCING | CI runs the --twice comparison on every push to main and on every pull request, and puts the hashes in the run summary. | `.github/workflows/ci.yml` (job reproducible), `tests/ciConfig.test.ts`; its first CI run is at the human's push | true now |
+| 423 | REPRODUCING | This is what a Firefox add-ons reviewer does with the sources zip; it needs no git. | extensionworkshop.com/documentation/publish/source-code-submission/ (read 2026-11-06); the rebuild ran with no .git (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 424 | REPRODUCING | .output/peekover-<version>-firefox.zip is then byte-identical to the Firefox zip built from the same commit. | the sources-zip rebuild in WSL, sha256 equal (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 425 | REPRODUCING | Mozilla's default review environment is Ubuntu 24.04.4 on ARM64 with Node 24.14.0 and npm 11.9.0. | extensionworkshop.com/documentation/publish/source-code-submission/ (read 2026-11-06) | true now |
+| 426 | REPRODUCING | Peekover differs: it is built with pnpm 10.33.0, on Node 22, and has been tested on x64 only. | `package.json`, `.nvmrc`; rows 414–415 | true now |
+| 427 | REPRODUCING | WXT writes each zip with the time of the build and in the order it finds the files. | WXT 0.20.27, its zip module (JSZip, tinyglobby); the first double build (`docs/ai/decisions.md`, "M13 TASK 7.3") | true now |
+| 428 | REPRODUCING | After each zip is written, scripts/normalizeZip.ts sorts its entries by name and gives every entry the same date; the compressed data is not changed. | `scripts/normalizeZip.ts`, `wxt.config.ts` (zip hooks), `tests/compareBuilds.test.ts` | true now |
+| 429 | REPRODUCING | A SHA256SUMS file with each release, to compare a rebuild against. | task 7.4 in `specs/013-first-release/tasks.md` | planned |

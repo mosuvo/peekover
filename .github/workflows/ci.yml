@@ -25,3 +25,33 @@ jobs:
         run: pnpm test:browser
       - name: Build
         run: pnpm build
+
+  # Reproducible builds (M13 task 7.3, D-14): clone this commit twice, build and zip both engines in each (one build
+  # without SOURCE_DATE_EPOCH, one with it), and fail on any difference — every packaged file and every zip. The
+  # hashes go to the run summary, to compare with a local build of the same commit (docs/trust/REPRODUCING.md).
+  reproducible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build twice from clean clones and compare
+        shell: bash
+        run: pnpm exec tsx scripts/compare-builds.ts --twice 2>&1 | tee compare-builds.txt
+      - name: Hashes to the run summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Build hashes ($(git rev-parse HEAD), Node $(node -v))"
+            echo ''
+            echo '```'
+            grep -E '^[0-9a-f]{64}  ' compare-builds.txt || echo 'no hashes (the build failed)'
+            grep -E '^(REPRODUCIBLE|NOT REPRODUCIBLE)' compare-builds.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

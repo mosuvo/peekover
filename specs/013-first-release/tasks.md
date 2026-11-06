@@ -1045,7 +1045,7 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.3a").* Saved value left as is (no rewrite). SBOM 123
       components (108 module graph + 15 pre-bundled) = the licences file; the four build tools ship runtime code
       (wxt, @wxt-dev/browser, vite, rolldown — each listed). Content script and manifests identical; app chunk +63 B.
-- [ ] **7.3 Reproducibility spike → the CI double build → REPRODUCING.md (D-14; G-8, G-13).** Build twice from clean
+- [x] **7.3 Reproducibility spike → the CI double build → REPRODUCING.md (D-14; G-8, G-13).** Build twice from clean
       checkouts with the same `SOURCE_DATE_EPOCH`; compare zip SHA-256; if they differ, find the cause (entry mtimes,
       ordering, chunk hashes) and fix it in config. If byte-identical zips are not reached within the task, compare the
       sorted per-file SHA-256 of the extracted trees and word every claim exactly "file-identical" (G-8: SECURITY.md,
@@ -1058,6 +1058,12 @@ at 5.9:** HEAD 155.3 ms median on a quiet machine (inside 165, 9.7 ms headroom);
       change in one tree makes the comparator fail (red); `ciConfig.test.ts` extended: the double-build job exists.
       If config changed, full suite and every byte figure re-stated; otherwise content-script md5 identical. Golden
       EMPTY · `permissions: []`. [D-14; G-8, G-13]
+      ★ *Landed 2026-11-06 (`decisions.md`, "M13 TASK 7.3").* **Byte-identical, zips included** (G-8 not needed): the
+      unpacked trees matched from the start; the zips differed in entry order and stored dates (JSZip in WXT) and are
+      repacked by `scripts/normalizeZip.ts` (sorted, 1980-01-01, data unchanged). Two clean Windows clones and a WSL
+      Linux clone identical; the sources zip alone rebuilds the identical Firefox zip. `ci.yml` job `reproducible`.
+      REPRODUCING.md approved by the human ("Approve as written"); ledger rows 408–429. SECURITY's Planned line kept
+      until the CI job has run. Packages identical to 7.3a.
 - [ ] **7.4 The release workflow, conditional attestations, the Pages workflow, AMO sources README (D-14; §9-1, §9-4;
       G-9).** `release.yml` on `push: tags: ['v*']` and `workflow_dispatch` (`dry_run`): pnpm via `packageManager`,
       Node 22, frozen install, lint + unit, both zips + the Firefox sources zip, SBOM with `SOURCE_DATE_EPOCH` = the
