@@ -1,6 +1,113 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 8.1 — preparation (the walk script's section 0): builds, fresh profiles, the store-style-install
+  research, reference screenshots and the walk table. THREE HUMAN RULINGS. The walk itself is the human's.** Local, on
+  `main` at `67ce7b9` (7.6); not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored). Budget unchanged:
+  `.output` 6,645,510 / 6,645,366 B of 7,340,032 (headroom 694,522 / 694,666 B); content script md5 `ee9f9279…` /
+  `317c6c51…`; `permissions: []` both engines.
+  - **Part A — CI (`gh`):** the human pushed `67ce7b9`; CI 42217671355 (jobs `verify`, `reproducible`) and Supply chain
+    42217671570 **green**. `git config user.email` = `93656238+mosuvo@users.noreply.github.com` (GO-LIVE 1.2 done); this
+    commit is the first under it.
+  - **Authority and mismatches, flagged:** tasks.md 8.1's agent prep is "clean builds, zips, the checklist table filled
+    with surfaces and blank verdicts"; Files: `docs/ai/progress.md` (verdicts). The kickoff adds fresh-profile steps,
+    the store-install research, reference screenshots and a separate table file with pre-filled verdicts. (a) The table
+    file and (b) pre-filled verdicts against "blank verdicts" were put to the human (rulings 2 and 3 below). (c) The
+    screenshot naming: the progress.md walk script names fix screenshots `<surface>-<theme>-<engine>-<width>.png` flat in
+    `8.1\`; the kickoff's reference shots use `<section>\<surface>\<cell>.png` — both kept (different purposes).
+    (d) Necessary ripple, none beyond the kickoff: `scripts/walk-shots.ts` and `scripts/walk-profiles.ps1` are the
+    kickoff's "a script if useful"; no test file changes (no product change).
+  - **1 · BUILDS.** Clean `pnpm build`, `pnpm exec wxt build -b firefox`, `pnpm zip`, `wxt zip -b firefox` at `67ce7b9`:
+    327 hashes (`compare-builds.ts --hashes`). **Against CI's `reproducible` job for this commit (job 127891633785,
+    "REPRODUCIBLE"): 326 / 327 equal** — every packaged file and both store zips (Chrome `9ed349c2…`, Firefox
+    `d74715ca…`). The one difference is the **sources zip** built from the working folder (`270f6b21…` vs CI's
+    `d285b162…`) — REPRODUCING.md's fresh-clone rule. Checked, not assumed: `compare-builds.ts --twice` here (two fresh
+    clones, Windows, Node 24.11.1) = **327 / 327 equal to CI**, sources zip `d285b162…` included, "REPRODUCIBLE".
+  - **2 · FRESH PROFILES — browsers on this machine:** Chrome 156.0.8078.80, Edge 157.0.4341.42, Brave 157.1.99.55,
+    Firefox 159.0.1; **Opera and Vivaldi not installed** (paths and the App Paths registry checked). Measured in
+    throwaway profiles: **Edge and Brave load the extension from `--load-extension`** (Edge: the guide opened, the
+    service worker running; Brave: registered in the profile's Secure Preferences); **Chrome 156 ignores it** (Google's
+    PSA: removed from branded Chrome in 137 — https://groups.google.com/a/chromium.org/g/chromium-extensions/c/1-g8EFx2BBY).
+    `scripts/walk-profiles.ps1 -Browser chrome|edge|brave|firefox|firefox-signed|list`: a fresh profile under
+    `D:\Dev\peekover-walk-profiles\<browser>\` (deleted first unless `-Keep`), a separate instance, never a normal
+    profile; Chrome opens chrome://extensions for one manual Load unpacked; Firefox opens about:debugging (Load Temporary
+    Add-on; limits: removed on restart, no install prompts — https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/);
+    `firefox-signed -Xpi` installs a signed file. ASCII only (Windows PowerShell 5 misread a UTF-8 dash).
+  - **3 · STORE-STYLE INSTALL BEFORE RELEASE — research (proposed, not done):**
+    - **(a) AMO unlisted ("On your own", self-distribution).** Signed after automated validation, "up to 24 hours";
+      "subject to a manual code review at any time" (https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/).
+      Source code must be uploaded for bundled / minified code, "attached to every extension version", with build
+      instructions, lockfile, reproducible output (https://extensionworkshop.com/documentation/publish/source-code-submission/)
+      — the 7.3 sources zip and SOURCE_CODE_REVIEW.md. Users install the signed `.xpi` from a file; with no `update_url`
+      Firefox later updates from AMO's LISTED channel to a higher version (https://extensionworkshop.com/documentation/publish/self-distribution/).
+      Reserves `peekover@peekover.dev` under the account. **Unconfirmed in Mozilla's docs:** whether a later listed
+      release may reuse 0.1.0 — community answers point to bumping the version (https://discourse.mozilla.org/t/how-can-i-change-an-add-on-from-unlisted-to-listed/7300;
+      Bugzilla 1122107). Answers: guide-once across restarts, Firefox `file://` (§9-6) on a real signed install, update
+      behaviour (once a later version exists).
+    - **(b) Chrome Web Store private / unlisted / trusted testers.** Public, Unlisted (anyone with the URL) or Private
+      (trusted testers on the account, or Google Groups); "All visibility settings have the same policy requirements and
+      will go through the same review process" (https://developer.chrome.com/docs/webstore/cws-dashboard-distribution);
+      review "within a few days, but it can take up to a few weeks" (https://developer.chrome.com/docs/webstore/review-process);
+      a one-time registration fee (https://developer.chrome.com/docs/webstore/register — the amount not on that page; $5
+      per Chrome's "What's new", unconfirmed for 2026); 2-Step Verification required (GO-LIVE 1.4). The private item IS
+      the later public item (same ID). Blocker: the listing wants the privacy-policy URL, not live until the repository is
+      public (GO-LIVE order). Answers: the toggle's default and label on a store install, guide-once, the flip.
+    - **(c) Edge Add-ons "Hidden".** Public or Hidden (listing URL only); certification "up to seven business days";
+      Public → Hidden documented, Hidden → Public not (https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/publish-extension).
+      Same privacy-URL blocker.
+    - **HUMAN RULING (2026-11-07, AskUserQuestion), verbatim: "AMO unlisted only (Recommended)".** The human does the
+      account steps: (1) GO-LIVE 1.5 (AMO account + 2FA); (2) Developer Hub → Submit a New Add-on → "On your own" →
+      upload `peekover-0.1.0-firefox.zip` (`d74715ca…`); (3) source code: Yes → upload the sources zip **from a fresh
+      clone** (`d285b162…` — not the working folder's) with SOURCE_CODE_REVIEW.md inside; (4) wait for the signing email,
+      download the signed `.xpi`; (5) `walk-profiles.ps1 -Browser firefox-signed -Xpi <file>` for items I-1 and I-3;
+      `-Keep` for the restart. The 0.1.0 reuse question is open — the human decides at signing whether to sign 0.1.0
+      (accepting a possible bump at release) or wait. Chromium store installs wait for go-live.
+  - **HUMAN RULING 2 (verbatim): "walk-8.1.md + pointer (Recommended)"** — the table lives in `docs/ai/walk-8.1.md`;
+    progress.md's walk script points to it and records the outcome.
+  - **HUMAN RULING 3 (verbatim): "Proposed, you confirm (Recommended)"** — known differences pre-filled as "proposed:
+    differs by ruling — <ruling, cited>"; every verdict stays the human's.
+  - **4 · REFERENCE SCREENSHOTS (`D:\Dev\peekover-shots\8.1\`, not committed; `scripts/walk-shots.ts`).** The BUILT
+    extension in throwaway profiles, one fresh profile per (engine, theme, width): Chromium = Playwright's Chromium
+    (`--load-extension`, `colorScheme`); Firefox = the installed Firefox 159 over WebDriver BiDi (`webExtension.install`,
+    `MOZ_REMOTE_ALLOW_SYSTEM_ACCESS` for extension pages, a fixed moz-extension UUID, the theme by
+    `layout.css.prefers-color-scheme.content-override`; the window sized until the page's own innerWidth matches). Folders
+    open through the `__peekoverHarness` seam with an OPFS folder; fixtures local; mock pages with `http(s)` aborted.
+    **36 surfaces × 16 cells: 532 captured, 20 n/a (the state does not exist at that width — "⋯" above 863, the Files
+    overlay above 1189), 16 failed, 8 absent (the Chromium-only file-access-off guide in Firefox); plus 112 mock frames
+    (14 surfaces with a mock × 8) and 204 side-by-side pairs — 864 PNGs.** The 16 failed: Firefox `diff-view` × 8 (the
+    harness's watch never saw the OPFS edit in Firefox — no snapshot), Firefox `tab-reader-contents-open` × 8 (the
+    reader did not mount, below). Firefox's 414 cells lay out at 414 CSS px drawn at 500 / 414 device pixels (a Firefox
+    window is ≥ 500 px wide).
+  - **FOUND during prep (each in walk-8.1.md's "What the prep found"; none fixed — the walk judges):**
+    1. **Chromium: an unpacked (`--load-extension`) install starts with "Allow access to file URLs" ON** (measured: the
+       toggle's `checked` true before any click); a store install starts OFF — so the "default" question waits for go-live.
+       The flip blocks the extension's pages (`ERR_BLOCKED_BY_CLIENT`) until restart (6.2's finding, re-observed).
+    2. **Firefox, temporary add-on over BiDi: a `file://` `.md` stayed the browser's plain-text `<pre>`** (no reader;
+       a normal tab; 4 s). One probe on a temporary install — NOT the §9-6 verdict; the signed install decides (I-3).
+    3. **The harness is not a Firefox folder route:** real Firefox opens a folder by the picker (read-only snapshot,
+       watch unavailable, `FIREFOX_PICKER_NOTE`) or by drag (watch works); the Firefox folder / watch / compare / diff
+       cells are harness-only states — marked in the table; item I-11 walks both real routes.
+    4. **The Recent list repeats one file** (every scripted re-open adds a row) — to judge (II-4).
+    5. **The editor's search panel** draws CodeMirror's default controls (lowercase "next", native checkboxes) — to judge (II-8).
+    6. **The diff view draws the document plainer than the reader** (no blockquote bar, native task checkboxes, plain
+       inline code) — to judge (II-6).
+  - **5 · THE TABLE, `docs/ai/walk-8.1.md`:** a one-page guide (3–4 h in three sittings; order; how to record; fix →
+    8.1a…), the prep findings, the consolidated items (I live × 11, II judgement × 10, III contrast × 6, IV pending lists
+    × 2), the live-look list, and 36 surface tables × 16 cells = 576 rows (screenshot path, Verdict, Ruling / fix,
+    Notes); **169 cells pre-filled "proposed: …"** (rulings cited: 5.5 "Mock + uniform", C061, C130, 5.1's ≤ 1189, 5.6
+    "at rest"; the 5.7 deviations marked "flagged, not ruled"; the Firefox harness and temporary-install caveats; n/a).
+  - **The unidentified unit flake, probably identified:** `pnpm test` right after `pnpm lint` → 1 failed / 1,651:
+    `tests/thirdPartyLicences.test.ts` › "matches what the build shipped, entry for entry" — **timed out (16,242 ms
+    against 5,000)**. Alone 16 / 16; the full suite again 1,652 / 1,652. Same shape as 7.4's red (also right after
+    lint); recorded on the known-flakes list as this test, cause "timeout under load", not fixed (a test change, not prep).
+  - **Verify:** lint EXIT 0 · unit 1,652 / 1,652 (second run; the first red above) · no product file changed (records
+    and two scripts; `.output` and the content script identical to 7.6) · no NUL / CR in the new files (two counts) ·
+    no orphaned browser processes · 864 PNGs.
+  Why: tasks.md 8.1's prep and the kickoff; the walk is HUMAN-ONLY (AGENTS.md) — this session makes it fast and
+  comparable, not judged.
+  Revisit-when: the human's walk (every verdict, each fix → 8.1a…); AMO signs the unlisted build (then I-1, I-3); the
+  first store install of Chrome / Edge at go-live (the toggle default).
+
 - **2026-11-06 · M13 TASK 7.6 — the go-live checklist, `docs/store/GO-LIVE.md` (§9-7; G-1, G-9); the history scanned
   before going public. TWO HUMAN RULINGS.** Local, on `main` after 7.5; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-06; 1 low,
   ignored). Budget unchanged: `.output` 6,645,510 / 6,645,366 B of 7,340,032.
