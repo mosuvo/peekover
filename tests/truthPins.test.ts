@@ -352,6 +352,41 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
   });
 });
 
+// ── 013 task 9.1 (D-12; §9-1): the site loads nothing from another origin. Fonts are self-hosted from `site/fonts/`;
+// no Google Fonts host appears in either page at all, and no resource-loading markup (a <link href>, a src=, a CSS
+// url() or @import) points at an http(s) URL. Plain links (<a href>) navigate; they load nothing, so they are allowed.
+const SITE_PAGES = ['site/index.html', 'site/privacy/index.html'] as const;
+
+/** Resource-loading references to an absolute http(s) URL (or a protocol-relative one) in a page. */
+export function thirdPartyLoads(html: string): string[] {
+  const found: string[] = [];
+  for (const m of html.matchAll(/<link\b[^>]*\bhref\s*=\s*["']((?:https?:)?\/\/[^"']+)["'][^>]*>/gi)) found.push(`<link> ${m[1]}`);
+  for (const m of html.matchAll(/<(?!a\b)[a-z][a-z0-9]*\b[^>]*\b(?:src|srcset|poster|data)\s*=\s*["']((?:https?:)?\/\/[^"']+)["']/gi)) found.push(`src ${m[1]}`);
+  for (const m of html.matchAll(/url\(\s*["']?((?:https?:)?\/\/[^"')]+)["']?\s*\)/gi)) found.push(`url() ${m[1]}`);
+  for (const m of html.matchAll(/@import\s+(?:url\()?\s*["']?((?:https?:)?\/\/[^"')\s;]+)/gi)) found.push(`@import ${m[1]}`);
+  return found;
+}
+
+describe('the site makes no third-party request (013 task 9.1, D-12; §9-1)', () => {
+  for (const page of SITE_PAGES) {
+    it(`${page}: no fonts.googleapis.com / fonts.gstatic.com, and no resource loaded from another origin`, () => {
+      expect(existsSync(join(ROOT, page)), `${page} exists`).toBe(true);
+      const html = read(page);
+      expect(html.match(/fonts\.googleapis\.com|fonts\.gstatic\.com/gi) ?? [], 'a Google Fonts host').toEqual([]);
+      expect(thirdPartyLoads(html), 'resource-loading markup pointing off-site').toEqual([]);
+    });
+  }
+
+  it('the instrument fires on each loading shape, and not on a plain link', () => {
+    expect(thirdPartyLoads('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?x">')).toHaveLength(1);
+    expect(thirdPartyLoads('<img src="//cdn.example.com/a.png">')).toHaveLength(1);
+    expect(thirdPartyLoads('<style>@font-face{src:url(https://x.example/f.woff2)}</style>')).toHaveLength(1);
+    expect(thirdPartyLoads('<style>@import "https://x.example/a.css";</style>')).toHaveLength(1);
+    expect(thirdPartyLoads('<script src="https://x.example/a.js"></script>')).toHaveLength(1);
+    expect(thirdPartyLoads('<a href="https://github.com/mosuvo/peekover">x</a><link rel="icon" href="fonts/a.woff2">')).toEqual([]);
+  });
+});
+
 // ── M13 task 7.5 (gate-1 Q19, Q20): the store listings. Each `## ` section of docs/store/<store>.md is one store field,
 // pasted as written; its heading names the field and its limit, read from that store's current docs (decisions.md,
 // "M13 TASK 7.5"). Sections marked "not published" or "not displayed", and the file's own preamble, are not listing text.

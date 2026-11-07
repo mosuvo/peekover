@@ -1,6 +1,69 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 9.1 — the site: self-hosted fonts, `site/privacy/`, the privacy pin, the "live at release"
+  sweep (D-12; §9-1). THREE HUMAN RULINGS.** Local, on `main` after `9f871a5`; not pushed. CI on `0e71419` green first
+  (CI 42333059054 — verify, reproducible; Supply chain 42333059015). `pnpm audit --prod` EXIT 0 (2026-11-07).
+  - **Tests first (red on today's files, 7 red):** `tests/privacyPage.test.ts` (new): PRIVACY.md rendered by
+    `src/render/parse.ts` = the page's `<main>`, as normalized text line for line, the first differing line named;
+    `truthPins`: neither site page names a Google Fonts host or loads any resource (`<link href>`, `src`, CSS `url()`,
+    `@import`) from an http(s) URL — instrument cases fire, a plain `<a href>` does not; `fontLicences`: every font in
+    `site/fonts/` maps to a family with its OFL text and copyright line beside it and a README row, and every
+    `@font-face` in a site page loads from `site/fonts/` only. **Ablation:** one word changed in PRIVACY.md, then in
+    the page → red, "line 18 differs" both ways; files restored.
+  - **Fonts (`site/fonts/`, provenance in its README):** from `google/fonts` `6c1dbe2` (2.3's commit; Bricolage and
+    Sometype source SHA-256 = 2.3's), fontTools 4.68.0 + brotli 1.2.1 in a throwaway venv: `bricolage-grotesque-var`
+    96,184 B (`opsz` 12–96, `wght` 400–800, `wdth` 100 — HUMAN RULING 2 after 2.5), `literata-var` 139,804 B (`opsz`
+    7–72, `wght` 400–600), `literata-italic-var` 87,924 B (`opsz` 7–72, 400), `sometype-mono-var` 19,860 B (400–600);
+    each `cmap` = source ∩ ranges (2.3's ranges + the site's own glyphs, enumerated from the rendered page). **Flagged
+    against tasks.md ("2.3's subsets + Literata"): Literata and Sometype are variable too, at the axes Google served —
+    HUMAN RULING (AskUserQuestion), verbatim: "Keep the same-look variable fonts (Recommended)".** Measured, Chromium,
+    timers frozen, before (Google Fonts) vs after: no layout shift from the fonts (every element's top and height
+    equal at 414 except the changed footer line); ≈ 0.3 % of pixels differ at 1440 — the marquee and the demo's dot
+    (CSS animations), glyphs equal.
+  - **`site/privacy/index.html` (new):** the home page's tokens, fonts, nav and theme toggle; `<main>` = PRIVACY.md
+    through Peekover's parser; its one relative link (`SECURITY.md`) points at the GitHub file. Both themes, 1440 and
+    414 checked by eye; 414 fits exactly.
+  - **Zero third-party requests (one Playwright pass, Chromium, both pages, both themes, 1440 / 414, network ALLOWED,
+    every request recorded, read after load + scroll-through + 1.2 s settle):** after — **0 off-site requests**, all
+    self-hosted faces loaded; **firing control** — the same pass on the pre-9.1 page: **5 requests each** to
+    fonts.googleapis.com / fonts.gstatic.com.
+  - **Mobile width — HUMAN RULING (verbatim): "Fix it in 9.1 (Recommended)".** Found: the tilted marquee made the home
+    page 439 px wide at 414 (pre-existing); on Pixel 7 emulation the layout widened to 437 px (≈ 6 % zoomed out).
+    `html{overflow-x:clip}`: now 414 / 412 exactly, no sideways scroll.
+  - **Sentences — HUMAN RULING (verbatim): "Approve as written (Recommended)".** Home footer: "This site is one page."
+    → "This site has two pages: this one and the privacy policy." (row 201 withdrawn → 553). Privacy page: "Peekover's
+    privacy policy: what the extension collects, stores and sends." (556), "The same text is in the repository as
+    docs/trust/PRIVACY.md." (554, live at release — the repository is private), "Back to Peekover" (555, a label).
+  - **"Live at release" sweep:** README, site, SECURITY, PRIVACY and the three listings re-read: every URL row still
+    not reachable (repository private, no DNS) — markings unchanged; rows 36, 339, 434 note that the page is built and
+    pinned. Necessary ripple: `docs/store/GO-LIVE.md` step 3.6 names row 554's URL (truthPins' URL-step pin requires it).
+  - **Pending walk / AMO test (not guessed):** the site's Firefox lines ("Firefox has some limits; the README lists
+    them", the Chromium-only setup step) depend on the §9-6 verdict; left as they are.
+  - **Bytes:** `.output` packaged files and both store zips identical to 7.6 (326 / 327 hashes; only the working-folder
+    sources zip moves — it carries `site/` and `tests/`). Content script, manifests, `permissions: []` unchanged.
+  - **Verify:** lint EXIT 0 · unit 1,661 / 1,661 (+9) — truthPins, fontLicences, privacyPage green · no NUL / CR in
+    changed files. Screenshots (not committed): `D:\Dev\peekover-shots\9.1\` (before, after-index, after-privacy, the
+    frozen pair and diffs, the Pixel 7 shot).
+  Why: tasks.md 9.1; D-12 (the site says only what ships, loads nothing third-party); §9-1.
+  Revisit-when: a walk fix touches the site (progress.md's list); the AMO test settles Firefox `file://`; go-live
+  publishes the site (step 3.x).
+
+- **2026-11-07 · M13 — the AMO test-signing kit (HUMAN DIRECTION: a throwaway 0.0.9, not 0.1.0).** Branch
+  `amo-test-0.0.9` (commit `d0d18e6`, from `9f871a5`; package.json version 0.0.9 only; LOCAL — never pushed, never
+  merged). `compare-builds.ts --twice` on it: two fresh clones, **REPRODUCIBLE**. Manifest: version 0.0.9,
+  `peekover@peekover.dev`, `strict_min_version` 127.0, `permissions: []`, `data_collection_permissions` none, no
+  `update_url`. In `D:\Dev\peekover-amo-test\` with `SHA256SUMS`: `peekover-0.0.9-firefox.zip`
+  `f71dfe9a5374ee9d641a78eafd6c52859cc7e15f828f0acff5fe80f33c20bd67`, `peekover-0.0.9-sources.zip`
+  `1980ab34d31892debc23413c41ef3e9d676480bf2c857479f801a0b6444e6de9` (holds SOURCE_CODE_REVIEW.md), and
+  `AMO-STEPS.md` — the click-by-click steps (cited: Extension Workshop "Submitting an add-on", "Signing and
+  distribution overview", "Source code submission"; 2FA per the Mozilla Add-ons blog): sign in → **Submit a New
+  Add-on** → **On your own** → **Select a file** → source code **Yes** → **Continue** → Version Signature Pending →
+  the email → **View All** → 0.0.9 → **Save Link As…**. Validation messages come back to the agent unchanged.
+  0.0.9 < 0.1.0, so the release never reuses a signed version. **Next (the human, then an agent):** once the signed
+  `.xpi` is saved, install it in a fresh profile and test `file://`, guide-once across a restart, and both folder routes;
+  record here — it settles the 9.2 Firefox BLOCKER without the walk.
+
 - **2026-11-07 · M13 RULING — the 8.1 walk moves after group 9 (HUMAN).** Verbatim: *"I will walk at the very end,
   after group 9."* Order: 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 8.1's walk → its fix tasks (8.1a …) → go-live. 8.1's prep
   (`0e71419`) stands. **The walk still gates go-live** — `docs/store/GO-LIVE.md`'s section-0 gates unchanged. **Accepted

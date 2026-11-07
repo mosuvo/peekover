@@ -1166,7 +1166,7 @@ loaded extension and has NO agent substitute (AGENTS.md).*
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
-- [ ] **9.1 The site: self-hosted fonts, `site/privacy/`, the privacy pin, the "live at release" sweep (D-12; §9-1).**
+- [x] **9.1 The site: self-hosted fonts, `site/privacy/`, the privacy pin, the "live at release" sweep (D-12; §9-1).**
       TEST FIRST. `site/fonts/` gets 2.3's subsets + Literata; `@font-face` in the page; the Google Fonts links go.
       `site/privacy/index.html` carries `PRIVACY.md`'s text; `tests/privacyPage.test.ts` renders `PRIVACY.md` through
       the project's own parser and compares normalized text with the page's `<main>` (one source, pinned — the D-1
@@ -1182,6 +1182,11 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       `wght` axes, covering weight 800 and the display sizes it uses, up to 180 px) — not the app's static 400 / 600 /
       700 `opsz` 12 subset. The site is not in the extension package; zero Google Fonts holds. Its licence and source are
       recorded like 2.3's (`assets/fonts/README.md`'s method; `fontLicences.test.ts` covers the site's copies).
+      ★ *2026-11-07 (9.1 landed; `decisions.md`, "M13 TASK 9.1"):* `site/fonts/` holds variable Bricolage, Literata
+      (roman + italic) and Sometype Mono at the axes Google served — HUMAN RULING "Keep the same-look variable fonts"
+      (not 2.3's static subsets for Literata / Sometype; flagged against this line). `site/privacy/index.html` = PRIVACY.md
+      (pinned). Folded in by HUMAN RULING: the home page's mobile overflow (`html{overflow-x:clip}`). The footer's "This
+      site is one page." replaced (approved). Firefox `file://` sentences: unchanged, pending the AMO test / the walk.
 - [ ] **9.2 ★ HUMAN GATE — the truth re-check.** Agent prep: the ledger walked against the walked build, every row's
       evidence re-run or re-read and marked, every row without evidence proposed for cutting. **The human** reads
       README, site, SECURITY, PRIVACY, THREAT-MODEL, CHANGELOG and the three listings against the ledger and signs off

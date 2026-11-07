@@ -147,3 +147,56 @@ describe('font licences ship with the fonts (G-6)', () => {
     expect(problems).toEqual([]);
   });
 });
+
+// The site's own font copies (013 task 9.1; D-12; HUMAN RULING 2 after 2.5: the site self-hosts its own variable
+// Bricolage). The site is not in the extension package, so its fonts travel with the site: every font file in
+// `site/fonts/` maps to a family, that family's OFL text sits beside it as `site/fonts/<slug>.txt`, the provenance is
+// in `site/fonts/README.md`, and every @font-face in a site page loads from `site/fonts/` only.
+const SITE_FONT_DIR = 'site/fonts';
+const SITE_PAGES = ['site/index.html', 'site/privacy/index.html'];
+
+describe("the site's font copies carry their licences (013 task 9.1)", () => {
+  it('site/fonts/ holds font files, each mapped to a known family', () => {
+    expect(existsSync(join(ROOT, SITE_FONT_DIR)), `${SITE_FONT_DIR}/ exists`).toBe(true);
+    const files = readdirSync(join(ROOT, SITE_FONT_DIR)).filter((f) => FONT_EXT.test(f));
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.filter((f) => !familyOf(f))).toEqual([]);
+  });
+
+  it('every family in site/fonts/ has its OFL 1.1 text and copyright line beside it, and a README row', () => {
+    const files = readdirSync(join(ROOT, SITE_FONT_DIR)).filter((f) => FONT_EXT.test(f));
+    const readme = existsSync(join(ROOT, SITE_FONT_DIR, 'README.md')) ? read(`${SITE_FONT_DIR}/README.md`) : '';
+    const problems: string[] = [];
+    for (const fam of new Set(files.map(familyOf).filter((f): f is Family => !!f))) {
+      const path = `${SITE_FONT_DIR}/${fam.slug}.txt`;
+      if (!existsSync(join(ROOT, path))) problems.push(`${fam.name}: ${path} missing`);
+      else {
+        const text = read(path);
+        if (!text.includes(OFL_TITLE)) problems.push(`${fam.name}: ${path} lacks "${OFL_TITLE}"`);
+        if (!text.includes(fam.copyright)) problems.push(`${fam.name}: ${path} lacks its copyright line`);
+      }
+    }
+    for (const f of files) if (!readme.includes(`\`${f}\``)) problems.push(`${f}: no row in ${SITE_FONT_DIR}/README.md`);
+    expect(problems).toEqual([]);
+  });
+
+  it("every @font-face src in a site page points into the site's fonts folder, at a file that exists", () => {
+    const problems: string[] = [];
+    for (const page of SITE_PAGES) {
+      if (!existsSync(join(ROOT, page))) {
+        problems.push(`${page} missing`);
+        continue;
+      }
+      const faces = [...read(page).matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
+      if (faces.length === 0) problems.push(`${page}: no @font-face`);
+      for (const face of faces) {
+        for (const u of face.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+          const target = resolve(ROOT, dirname(page), u[1]);
+          const rel = relative(ROOT, target).split(sep).join('/');
+          if (!rel.startsWith(`${SITE_FONT_DIR}/`) || !existsSync(target)) problems.push(`${page}: ${u[1]} → ${rel}`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+});

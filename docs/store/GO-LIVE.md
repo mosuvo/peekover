@@ -163,6 +163,7 @@ Pages works on public repositories only on this plan, so this comes after step 2
     | https://github.com/mosuvo/peekover#build-from-source | The README, scrolled to "Build from source" | #70 |
     | https://github.com/mosuvo/peekover/blob/main/docs/trust/SECURITY.md | SECURITY.md | #197 |
     | https://github.com/mosuvo/peekover/blob/main/docs/trust/PERMISSIONS.md | PERMISSIONS.md | #198 |
+    | https://github.com/mosuvo/peekover/blob/main/docs/trust/PRIVACY.md | PRIVACY.md (linked from the privacy page's footer, 9.1) | #554 |
     | https://github.com/mosuvo/peekover/releases | The releases page (empty until step 5) | #199 |
     | https://github.com/mosuvo/peekover/issues | The issues page, with **New issue** | #200, #466, #509, #543 |
     | Private vulnerability reporting | **Report a vulnerability** on the Advisories page (step 2.3) | #46 |

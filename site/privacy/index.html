@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy — Peekover</title>
+<meta name="description" content="Peekover's privacy policy: what the extension collects, stores and sends.">
+<style>
+/* Self-hosted fonts (../fonts/README.md), the same files as the home page. */
+@font-face{font-family:"Bricolage Grotesque";src:url("../fonts/bricolage-grotesque-var.woff2") format("woff2");font-weight:400 800;font-style:normal;font-display:swap}
+@font-face{font-family:"Literata";src:url("../fonts/literata-var.woff2") format("woff2");font-weight:400 600;font-style:normal;font-display:swap}
+@font-face{font-family:"Literata";src:url("../fonts/literata-italic-var.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Sometype Mono";src:url("../fonts/sometype-mono-var.woff2") format("woff2");font-weight:400 600;font-style:normal;font-display:swap}
+/* The home page's tokens, light and dark. */
+:root{
+  --paper:#FBFBF8;--panel:#F4F4EF;--ink:#16171F;--muted:#5D6070;--faint:#9A9DAC;
+  --line:#E6E6DF;--code-bg:#F1F1EB;
+  --accent:#16171F;--hl:#FFE94A;
+  --sans:"Bricolage Grotesque",system-ui,sans-serif;
+  --serif:"Literata",Georgia,serif;
+  --mono:"Sometype Mono",ui-monospace,monospace;
+}
+[data-theme="dark"]{
+  --paper:#12141C;--panel:#181B26;--ink:#EAEBF3;--muted:#A0A4B8;--faint:#6B6F84;
+  --line:#262A38;--code-bg:#1C2030;
+  --accent:#EAEBF3;--hl:#FFD84D;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;transition-duration:.001s!important}}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;transition:background .3s,color .3s;overflow-x:hidden}
+a{color:inherit}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+nav{position:sticky;top:0;height:64px;z-index:50;display:flex;align-items:center;gap:18px;padding:0 min(5vw,44px);background:color-mix(in srgb, var(--paper) 86%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.01em;text-decoration:none;flex:none}
+.logo svg{width:32px;height:28px}
+nav .right{margin-left:auto;display:flex;gap:9px;align-items:center}
+.mode{width:38px;height:38px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;display:grid;place-items:center;transition:.2s}
+.mode:hover{border-color:var(--ink);transform:rotate(20deg)}
+main{max-width:68ch;margin:0 auto;padding:56px min(5vw,24px) 72px;font-family:var(--serif);font-size:17px;line-height:1.7}
+main h1{font-family:var(--sans);font-weight:800;font-size:clamp(32px,6vw,48px);letter-spacing:-.025em;line-height:1.05;margin-bottom:22px}
+main h2{font-family:var(--sans);font-weight:800;font-size:clamp(20px,3vw,24px);letter-spacing:-.015em;line-height:1.2;margin:40px 0 12px}
+main p{margin-bottom:14px}
+main ul{margin:0 0 14px 1.2em}
+main li{margin-bottom:6px;padding-left:4px}
+main li::marker{color:var(--faint)}
+main a{text-decoration:none;background:linear-gradient(transparent 86%, var(--hl) 86%)}
+main a:hover{background:var(--hl);color:#26210a}
+footer{border-top:1.5px solid var(--line);padding:28px min(5vw,44px) 40px;font-size:13px;color:var(--muted);text-align:center}
+footer a{text-decoration:none;border-bottom:1px solid var(--line)}
+footer a:hover{border-color:var(--ink);color:var(--ink)}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="../">
+    <svg viewBox="0 0 60 52" aria-hidden="true">
+      <rect x="4" y="26" width="52" height="24" rx="5" fill="var(--hl)" stroke="#16171F" stroke-width="2.5"/>
+      <line x1="14" y1="36" x2="46" y2="36" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+      <line x1="14" y1="43" x2="36" y2="43" stroke="#16171F" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+      <circle cx="21" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="23" cy="19" r="3.4" fill="#16171F"/>
+      <circle cx="41" cy="17" r="9" fill="#FBFBF8" stroke="#16171F" stroke-width="2.5"/><circle cx="43" cy="19" r="3.4" fill="#16171F"/>
+    </svg>
+    Peekover
+  </a>
+  <div class="right">
+    <button class="mode" onclick="flipTheme()" aria-label="Toggle dark mode" id="modeBtn">☾</button>
+  </div>
+</nav>
+
+<!-- The text below is docs/trust/PRIVACY.md rendered by Peekover's own parser (src/render/parse.ts);
+     tests/privacyPage.test.ts fails if a word differs. Only the SECURITY.md link points at the repository. -->
+<main>
+<h1>Privacy — Peekover</h1>
+<p>Peekover is a browser extension that shows markdown files as formatted pages.
+This page says what it does with your information, as of version 0.1.0.</p>
+<h2>What Peekover collects</h2>
+<p>Nothing.
+Peekover has no accounts, no analytics, no telemetry and no error reporting.
+It sends nothing about you, your files or your settings to Peekover or to anyone else.</p>
+<h2>When Peekover uses the network</h2>
+<p>Peekover makes no network requests of its own unless you ask it to; browser tests check this for each feature.
+A document can contain images hosted on the web.
+Peekover blocks them and shows a button to load them instead.
+If you click it, your browser downloads those images from the sites that host them, and those sites see that request as they would for any web page.
+Peekover then shows &quot;Network used&quot;.
+The images load for that view only; reloading the page blocks them again.
+When you open a raw markdown file on GitHub, GitLab or Bitbucket, your browser loads the page as it always does; Peekover reads the text already in the page.</p>
+<h2>What Peekover stores on your device</h2>
+<p>Peekover keeps what it stores in the browser's storage for the extension (IndexedDB), on this device only.
+None of it is uploaded.</p>
+<ul>
+<li>Folders you open: their names, and in Chrome and Edge the browser's access to the folder, so you can reopen it in one click. Not the files in them.</li>
+<li>Files you opened recently and items you pinned: their path and name.</li>
+<li>Your settings, once you change one: the theme, the contents panel's state and width, the code theme, the last export format, and whether snapshots are on.</li>
+<li>Snapshots: while you watch a document from a folder on the app page, Peekover keeps earlier versions of its text so that you can compare them.</li>
+<li>Snapshots are the one place Peekover stores the contents of your files.</li>
+<li>It keeps a limited number and removes older ones by itself, and you can turn snapshots off.</li>
+<li>Diagrams: drawings of the diagrams in your documents, kept so that they show faster next time; a limited number, with the oldest removed by itself.</li>
+<li>Two marks: that the setup guide was shown, and that you closed the note about snapshots.</li>
+</ul>
+<h2>Seeing and deleting it</h2>
+<p>The &quot;Stored data&quot; panel on the app page lists what Peekover holds, except the mark for the note about snapshots.
+&quot;Wipe all data&quot; in that panel deletes everything Peekover has stored.
+The same panel can erase all snapshots, or clear the diagram drawings, on their own.
+&quot;Revoke&quot; on an open folder forgets that folder and deletes its snapshots.</p>
+<h2>Your files</h2>
+<p>Peekover reads a file on your computer only when you open it, and a folder only when you choose it or drop it on the app page.
+While you watch a file, Peekover reads that one file again each time it checks for changes.
+It changes a file on your disk only when you click Save in the editor, and only that file.
+Exporting saves a file through your browser's downloads, and copying puts content on your clipboard; both happen only when you click them.</p>
+<h2>Permissions</h2>
+<p>Peekover asks your browser for no permissions, on Chrome and on Firefox.
+In Chrome and Edge, reading files from your computer needs the &quot;Allow access to file URLs&quot; setting, which you turn on yourself.</p>
+<h2>Questions</h2>
+<p>For a question about privacy, open an issue on Peekover's GitHub repository once it is public.
+To report a security problem, see <a href="https://github.com/mosuvo/peekover/blob/main/docs/trust/SECURITY.md">SECURITY.md</a>.</p>
+</main>
+
+<footer>
+  <p>The same text is in the repository as <a href="https://github.com/mosuvo/peekover/blob/main/docs/trust/PRIVACY.md">docs/trust/PRIVACY.md</a>. <a href="../">Back to Peekover</a></p>
+</footer>
+
+<script>
+function flipTheme(){
+  const h=document.documentElement;
+  h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';
+  document.getElementById('modeBtn').textContent=h.dataset.theme==='dark'?'☀':'☾';
+}
+</script>
+</body>
+</html>
