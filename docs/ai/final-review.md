@@ -68,12 +68,15 @@ app page from the screenshots (~90 min), **C** the tab reader, contrast and the 
 - **Already investigated: the Firefox drag-folder note (item I-11(b); `decisions.md` "M13 — 9.3 finding: Firefox
   drag-folder watch").** Measured in a real Firefox: on a dragged folder **Watch is offered and works** — an edit on disk
   reaches the reader (4 runs of 4; a firing control over a frozen file never updates) — so **ledger row 25 is true and
-  the pane's note is wrong** where it says "Watch mode and snapshot capture are also unavailable here". **Your decision
-  (before or at the walk):** approve the proposed drag-route note, word for word in that entry —
-  *"…reopening this folder means dragging it in again. That is a Firefox platform limitation, not a Peekover choice.
-  Watching still works here: Peekover re-reads a watched file from disk."* — or give your own words. **Record:**
-  "drag note: approve" or the words you want. The agent then lands it as a discovered task (one string, one condition,
-  the two tests that pin the note). In the walk, judge the I-11(b) cells against the approved wording.
+  the pane's note is wrong** where it says "Watch mode and snapshot capture are also unavailable here". **Your words
+  were checked clause by clause and two failed** (`decisions.md` "M13 — the drag note's clauses"): a file deleted after
+  the drop STAYS listed (opening it says "Couldn't read this file"), and after a reload the folder's file IS remembered
+  in Recent, where clicking it starts the folder picker (no Watch there). **Your decision:** approve the corrected
+  sentence — *"Firefox shows this folder as it was when you dragged it in: files added later won't appear, and files
+  deleted later stay listed but can't be opened. Next time Peekover can only ask you to pick the folder again, and a
+  picked folder can't be watched — drag it in instead. Watching still works here: a watched file is re-read from
+  disk."* — or give other words. **Record:** "drag note: approve corrected" or your words. In the walk, judge the
+  I-11(b) cells against the wording that lands.
 - The named checks still stand: Editing, the Watching pill, the snapshot notice, the Compare picker, the ≤ 1189 px
   Files overlay (their mock approval used the agent's self-check, not your eye); the two-row toolbar for an agent file
   at 1280; the reader's untouched surfaces in both themes; both pending lists (2.2's contrast census, 5.1's

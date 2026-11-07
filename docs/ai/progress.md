@@ -20,7 +20,9 @@ and record it.
 **M13 — 9.3 FINDING INVESTIGATED (2026-11-07): Firefox drag-folder watch.** Record: `decisions.md`, "M13 — 9.3
 finding: Firefox drag-folder watch". Measured (`tests/browser/firefoxDragWatch.browser.test.ts`, firing control):
 on a dragged folder Watch is offered and an on-disk edit reaches the reader — **row 25 true, the pane note false**.
-The fix (a drag-route note) is PROPOSED, **awaiting the human's approval of its wording** — no product byte changed.
+The human's wording was checked clause by clause: (a) true; (b) deleted files stay listed (not "won't appear");
+(c) FALSE — the folder's file is remembered in Recent and reopens through the picker. **STOPPED: a corrected sentence
+awaits the human** (`decisions.md` "M13 — the drag note's clauses"); no product byte changed.
 Second finding: the picker route also read fresh bytes in Playwright's Firefox — to confirm with a real picker
 (final-review step 1(c)).
 

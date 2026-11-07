@@ -181,3 +181,151 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     expect(await notes.read()).toBe(BEFORE + APPENDED);
   }, 20000);
 });
+
+// ── The drag note's clauses (the human's wording, 2026-11-07), each measured on the drag route ──────────────────────
+// "Firefox shows this folder as it was when you dragged it in: files added or removed later won't appear, and Peekover
+//  can't reopen it next time — drag it in again. Watching still works: a watched file is re-read from disk."
+
+/** A dropped folder whose listing is LIVE: `readEntries` reads `listing` at call time and counts every walk. */
+function liveFolder(name: string, listing: { name: string; file: () => File }[]) {
+  const counter = { walks: 0 };
+  const dirEntry = {
+    isFile: false,
+    isDirectory: true,
+    name,
+    createReader: () => {
+      counter.walks += 1;
+      let done = false;
+      return {
+        readEntries: (ok: (e: unknown[]) => void) =>
+          ok(
+            done
+              ? []
+              : ((done = true),
+                listing.map((l) => ({ isFile: true, isDirectory: false, name: l.name, file: (cb: (f: File) => void) => cb(l.file()) }))),
+          ),
+      };
+    },
+  };
+  const items = [{ kind: 'file', webkitGetAsEntry: () => dirEntry }] as unknown as DataTransferItemList;
+  return { items, counter };
+}
+
+function treeNames(container: HTMLElement): string[] {
+  return [...container.querySelectorAll('[role="treeitem"][data-kind="file"]')].map((e) => (e.textContent ?? '').trim());
+}
+
+async function mountAndDrop(items: () => DataTransferItemList, deps: Record<string, unknown> = {}): Promise<HTMLElement> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  cleanup.push(() => container.remove());
+  const dropToOutcome = async (): Promise<{ ok: true; source: FolderSource }> => ({
+    ok: true,
+    source: await folderSourceFromDataTransfer(items()),
+  });
+  mountAppShell(container, { dropToOutcome, store: fakeStore(), ...deps });
+  container
+    .querySelector<HTMLElement>('.peekover-app')!
+    .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
+  await waitFor(() => container.querySelector('[role="treeitem"][data-kind="file"]'));
+  return container;
+}
+
+describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
+  it('(a) a file ADDED after the drop does not appear — the listing is read once, at the drop; a re-drag shows it', async () => {
+    const listing = [{ name: 'notes.md', file: () => new File([BEFORE], 'notes.md') }];
+    const folder = liveFolder('clause-a', listing);
+    const container = await mountAndDrop(() => folder.items);
+    expect(treeNames(container)).toEqual(['notes.md']);
+
+    listing.push({ name: 'added.md', file: () => new File(['# Added later\n'], 'added.md') });
+    container.querySelector<HTMLElement>('[role="treeitem"][data-kind="file"]')!.click();
+    await new Promise<void>((r) => setTimeout(r, 2500));
+    expect(treeNames(container)).toEqual(['notes.md']);
+    expect(folder.counter.walks).toBe(1); // nothing re-reads the listing after the drop
+
+    // FIRING CONTROL: the same live listing, dragged in again, DOES show the added file.
+    const again = await mountAndDrop(() => folder.items);
+    expect(treeNames(again).sort()).toEqual(['added.md', 'notes.md']);
+  }, 20000);
+
+  it('(b) a file REMOVED from disk after the drop stays in the list; opening it shows the "could not read" state', async () => {
+    const { dir, file } = await diskFolder();
+    await commands.diskFixture('append', `${dir}${sep}keep.md`, '# Keep\n\nStays on disk.\n');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.id = `disk-b-${Math.trunc(performance.now() * 1000)}`;
+    document.body.appendChild(input);
+    cleanup.push(() => input.remove());
+    await commands.setInputFromDisk(`#${input.id}`, [file, `${dir}${sep}keep.md`]);
+    const [notes, keep] = [...input.files!].sort((x, y) => x.name.localeCompare(y.name)).reverse();
+    expect([notes.name, keep.name]).toEqual(['notes.md', 'keep.md']);
+
+    const folder = liveFolder('clause-b', [
+      { name: 'notes.md', file: () => notes },
+      { name: 'keep.md', file: () => keep },
+    ]);
+    const container = await mountAndDrop(() => folder.items);
+    await commands.diskFixture('remove', file);
+
+    const item = (n: string) =>
+      [...container.querySelectorAll<HTMLElement>('[role="treeitem"][data-kind="file"]')].find((e) => e.textContent?.trim() === n)!;
+    item('keep.md').click();
+    await new Promise<void>((r) => setTimeout(r, 800));
+    item('notes.md').click();
+    await new Promise<void>((r) => setTimeout(r, 1500));
+    // MEASURED (Firefox): the removed file is still listed; its File's read now fails (AbortError); opening it shows the
+    // designed "Couldn't read this file … It may have moved, or access was revoked." state — not a blank page.
+    await expect(notes.text()).rejects.toThrow();
+    const state = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader [data-state="unreadable"]'));
+    expect(state.textContent).toContain("Couldn't read this file");
+    expect(treeNames(container).sort()).toEqual(['keep.md', 'notes.md']);
+  }, 20000);
+
+  it('(c) after a reload the dragged folder IS remembered (Recent, "pick it again"), and reopening starts the picker', async () => {
+    const name = `clause-c-${Math.trunc(performance.now())}`;
+    const doc = `${name}.md`;
+    const folder = liveFolder(name, [{ name: doc, file: () => new File([BEFORE], doc) }]);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const dropToOutcome = async (): Promise<{ ok: true; source: FolderSource }> => ({
+      ok: true,
+      source: await folderSourceFromDataTransfer(folder.items),
+    });
+    // The REAL store (IndexedDB): what a reload would read back.
+    mountAppShell(container, { dropToOutcome });
+    container
+      .querySelector<HTMLElement>('.peekover-app')!
+      .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
+    (await waitFor(() => container.querySelector<HTMLElement>('[role="treeitem"][data-kind="file"]'))).click();
+    await new Promise<void>((r) => setTimeout(r, 1000));
+    container.remove();
+
+    // "Reload": a fresh shell over the same stored state.
+    let pickerOpened = 0;
+    const fresh = document.createElement('div');
+    document.body.appendChild(fresh);
+    cleanup.push(() => fresh.remove());
+    mountAppShell(fresh, {
+      dropToOutcome,
+      openFolder: async () => {
+        pickerOpened += 1;
+        return { ok: false, reason: 'cancelled', message: 'No folder was opened.' } as never;
+      },
+    });
+    const entry = await waitFor(
+      () => [...fresh.querySelectorAll<HTMLButtonElement>('[data-reopen]')].find((b) => b.textContent?.includes(doc)) ?? null,
+      5000,
+    ).catch(() => null);
+    // MEASURED (Firefox): the dragged folder's file IS remembered — a Recent entry marked "repick" with the hint
+    // "Firefox can't remember folder access — click to pick it again." — and opening it starts the FOLDER PICKER
+    // (a picker-route copy: Watch is not offered there), not a re-drag.
+    expect(entry, 'the file of the dragged folder is listed under Recent after a reload').not.toBeNull();
+    expect(entry!.dataset.reopen).toBe('repick');
+    expect(entry!.textContent).toContain('click to pick it again');
+    entry!.click();
+    await waitFor(() => pickerOpened > 0);
+    expect(pickerOpened).toBe(1);
+  }, 20000);
+});

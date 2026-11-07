@@ -1,6 +1,34 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 — the drag note's clauses, measured: (c) FALSE, (b) mis-worded → STOPPED, the note NOT landed;
+  a corrected sentence proposed.** The human approved the drag-route note "WITH MY WORDS, after you verify each
+  claim": *"Firefox shows this folder as it was when you dragged it in: files added or removed later won't appear, and
+  Peekover can't reopen it next time — drag it in again. Watching still works: a watched file is re-read from disk."*
+  Each clause measured on the drag route with the new test's setup (`tests/browser/firefoxDragWatch.browser.test.ts`,
+  "the drag note, clause by clause"; Firefox, the browser harness):
+  - **(a) "files added … later won't appear" — TRUE.** A dropped folder whose listing is LIVE (its `readEntries` reads
+    the list at call time): a file added after the drop never appears, after a file click and 2.5 s; the listing is
+    walked exactly ONCE (at the drop). Firing control: the same live listing dragged in again DOES show the added file.
+  - **(b) "files … removed later won't appear" — the list part is TRUE, the words are not.** A file deleted on disk
+    after the drop **stays in the list**; its `File` read then fails (`AbortError`); opening it shows the designed
+    state "Couldn't read this file notes.md — The file could not be opened. It may have moved, or access was revoked."
+    "Removed files won't appear" reads as "they disappear", which is the opposite of what happens.
+  - **(c) "Peekover can't reopen it next time" — FALSE.** After a reload (a fresh shell over the real IndexedDB store),
+    the dragged folder's file **is remembered**: a Recent entry marked `repick` with "Firefox can't remember folder
+    access — click to pick it again."; clicking it **starts the folder picker** (1 call) — a picker-route copy, where
+    Watch is not offered. So Peekover does reopen it, by asking for a re-pick; only a re-drag keeps watching.
+  - **"Watching still works: a watched file is re-read from disk" — TRUE** (test (A), 4 of 4, with its firing control).
+  - **Corrected sentence, PROPOSED (awaiting the human):** *"Firefox shows this folder as it was when you dragged it in:
+    files added later won't appear, and files deleted later stay listed but can't be opened. Next time Peekover can
+    only ask you to pick the folder again, and a picked folder can't be watched — drag it in instead. Watching still
+    works here: a watched file is re-read from disk."* The picker note stays unchanged.
+  - **Files:** the three clause tests (assertions of what was measured) in `firefoxDragWatch.browser.test.ts`; this
+    entry; `final-review.md` step 2; `progress.md`. No product file. Verify: the file 6 / 6 on Firefox (Chromium skips);
+    lint EXIT 0.
+  Why: the human's instruction — "If any clause is false, STOP and show me the evidence with a corrected sentence."
+  Revisit-when: the human's answer on the corrected sentence (then the note lands as its own discovered task).
+
 - **2026-11-07 · M13 — 9.3 finding: Firefox drag-folder watch (INVESTIGATED by measurement; the fix PROPOSED, awaiting
   the human's approval of its wording — no product byte changed).** Local, on `main` after `468ccc2`; not pushed.
   **The question (9.3, code reading):** on a Firefox folder opened by DRAG, the pane shows `READ_ONLY_SNAPSHOT_NOTE`
