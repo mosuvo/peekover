@@ -1,6 +1,133 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 9.5 — records reconciled (everything that does not wait on the human; the rest marked
+  "pending end review"). NOT TICKED: its close figures re-run after any walk fix.** Local, on `main` after `b926ce6`;
+  not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored — GHSA-238p-pmpm-9mq7, recorded).
+  - **(1) `progress.md`'s M13 narrative → `progress-archive.md`.** Every LANDED M13 task block (1.1 … 9.4, the gates,
+    the cloud check), verbatim, newest first, under "M13 · … · IN FLIGHT (narrative moved at task 9.5, BEFORE the
+    close)", with the pre-§ Now byline chain (its tail still quoted M12's close numbers). Kept in `progress.md` § Now:
+    9.5, 9.3 and 9.2 (partial), the AMO kit, the walk ruling and 8.1 prep (the walk's start). The M13 close summary is
+    **pending end review** (written at the close, after the walk).
+  - **(2) The D-value audit (D-1…D-17)**, each against the commit that ADDED its landing entry to `decisions.md`
+    (`git log -S` on the entry heading — M12 7.3's method):
+    | D | What (plan) | Landing entry → commit |
+    | --- | --- | --- |
+    | D-1 | `tokens.css` the single source | "M13 TASK 2.1" → `83e5164` |
+    | D-2 | design fonts as packaged assets | "M13 TASK 2.3" → `731998a`; "M13 TASK 2.4" → `7859779` |
+    | D-3 | fallback stacks in `tokens.css`, one string | "M13 TASK 2.4" → `7859779`; AMENDED "M13 TASK 5.10" (R1, the short stacks) → `bd0172a` |
+    | D-4 | the font measurement, numbers only | "M13 TASK 2.5" → `b965d26` |
+    | D-5 | the toolbar merge | mock "M13 TASK 3.1" → `409a058`, "M13 GATE — 3.1 … APPROVED" → `b68d8cd`; built "M13 TASK 4.1 / 4.2 / 4.4 / 4.5" → `549487e` / `c80107f` / `22b6386` / `b8af45f` |
+    | D-6 | Edit only in the toolbar | "M13 TASK 4.3" → `25e779d` |
+    | D-7 | the 130 px band reclaimed | "M13 TASK 4.6" → `a5b431e` |
+    | D-8 | the one-time snapshot notice | "M13 TASK 4.5" → `b8af45f` |
+    | D-9 | the status line's three statements | "M13 RULING — 4.7's network statement" and "M13 TASK 4.7" → `b2dd4f2` |
+    | D-10 | the Files overlay | "M13 TASK 4.8" → `d18d1fc`; "4.8 FIX" (≤ 1281) → `8e9bf0c`; "M13 TASK 5.1" (HUMAN RULING ≤ 1189) → `a2a5cf5` |
+    | D-11 | onboarding, opened once on install | "M13 TASK 6.1" → `ba14a5e`; "M13 TASK 6.2" → `da5af53` (+ 6.2a `8b1f3c6`) |
+    | D-12 | the claims ledger, re-checked at the end | "M13 TASK 1.2" → `5f67c1e`; "1.3" → `0a37936`; "9.1" → `aecd075`; "9.2" → `5ac0112` |
+    | D-13 | CI: three exact edits | "M13 TASK 1.1" → `02e9fae` |
+    | D-14 | release workflow, reproducibility first | "M13 TASK 7.2" → `254e271`; "7.3" → `89deef8`; "7.4" → `14c274f` |
+    | D-15 | icons rendered from the SVGs | "M13 TASK 2.6" → `618d893` |
+    | D-16 | one contrast helper and census | "M13 TASK 2.2" → `788de3e`; the census closed by "M13 TASK 5.8" → `a652451` |
+    | D-17 | census-first re-spellings | "M13 TASK 4.0" → `549487e` |
+    **GAPS, NAMED.** Every D-value has a landing entry and a commit. **D-17:** 4.0's work landed as `82d4414`, but its
+    `decisions.md` entry arrived in **4.1's commit** (`549487e` — the entry says "records here per the two-file rule").
+    **D-3 and D-10 were amended after landing** (5.10's R1; 4.8 FIX and 5.1's ruling) — each amendment is its own
+    entry. **Open, pending end review:** D-12 (9.2's sign-off and the PENDING SIGNED INSTALL rows); D-11's Firefox half
+    (the signed install — the release BLOCKER); D-14's attestations (public repository only — GO-LIVE); D-5's mock items
+    3–6 and 8 (the walk's named check).
+  - **(3) `spec-coverage.md` re-scored — F7, F11, §6-9, §6-10, §6-13 only** (a dated "RE-AUDITED 2026-11-07" note):
+    F7 6% → **12%** (contrast-checked ✗ → ✓); F11 11% → **39%** (setup guide ✗ → ✓, deep link ✗ → ✓, file-access
+    detection ✗ → ~ — its Firefox half **pending end review**); §6-10 ✗ → ~ (reproducible ✓, hashes ✓, attestations
+    public-only, signed tags ✗); §6-13 ✗ → ✓ (THREAT-MODEL.md); §6-9 stays ~ (SBOM now reachable from a `v*` tag, not
+    yet published — no tag cut). §5 34% → **35%**, §6 59% → **68%**, whole spec 37% → **39%**. Seen, not re-scored:
+    §6-7's "no CHANGELOG" is now false.
+  - **(4) The byte ledger — every product-affecting M13 commit REBUILT, both engines, in a scratch worktree** (39
+    commits: every commit whose diff touches anything outside docs, specs, tests, site, `.github` and the walk / capture
+    scripts; frozen install per commit). **Control: the baseline `3ad539a` (M12's close) rebuilt to its recorded
+    figures exactly** — `.output` 5,830,859 / 5,830,975 B, content script 344,195 B `b0ff62df` / `3413dae0`. **Every
+    measured delta below equals the delta its own task recorded** (read against each task's entry; 5.8's `.output`
+    +1,717 = content script +96 + app chunk +1,522 + 99 in other chunks, as its entry says) — the rebuild and the
+    records are independent, so their agreement is a check, not an identity.
+    | Task | Commit | Δ `.output` Cr | Δ Fx | `.output` after (Cr / Fx) | Δ content script | content script after, md5 Cr / Fx | manifest |
+    | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+    | start (M12 close) | `3ad539a` | | | 5830859 / 5830975 | | 344,195 `b0ff62df` / `3413dae0` | 654 / 770 |
+    | 1.1 | `02e9fae` | 0 | 0 | 5830859 / 5830975 | 0 | 344,195 `b0ff62df` / `3413dae0` | |
+    | 1.4 | `4b9b667` | +158 | +158 | 5831017 / 5831133 | +71 | 344,266 `2ef5a824` / `47017c73` | |
+    | 1.4 addendum | `838ebf0` | +24 | +24 | 5831041 / 5831157 | +12 | 344,278 `b27e0c8b` / `16cd9bd7` | |
+    | 1.4 second addendum | `c49a070` | +40 | +40 | 5831081 / 5831197 | 0 | 344,278 `b27e0c8b` / `16cd9bd7` | |
+    | 2.1 | `83e5164` | +357 | +357 | 5831438 / 5831554 | +39 | 344,317 `71b096fd` / `b2f85bb0` | |
+    | 2.2 | `788de3e` | +50 | +50 | 5831488 / 5831604 | +25 | 344,342 `12cdc950` / `bf0108c8` | |
+    | 2.3 | `731998a` | +17,711 | +17,711 | 5849199 / 5849315 | 0 | 344,342 `12cdc950` / `bf0108c8` | |
+    | 2.4 | `7859779` | +95,208 | +95,208 | 5944407 / 5944523 | +153 | 344,495 `5b241f93` / `8506e382` | |
+    | 2.6 | `618d893` | +8,231 | +8,231 | 5952638 / 5952754 | 0 | 344,495 `5b241f93` / `8506e382` | 833 / 949 |
+    | 4.1 | `549487e` | +3,836 | +3,836 | 5956474 / 5956590 | +18 | 344,513 `b72a093c` / `c3c4b102` | |
+    | 4.2 | `c80107f` | +3,544 | +3,544 | 5960018 / 5960134 | 0 | 344,513 `b72a093c` / `c3c4b102` | |
+    | 4.3 | `25e779d` | +44 | +44 | 5960062 / 5960178 | 0 | 344,513 `b72a093c` / `c3c4b102` | |
+    | 4.4 | `22b6386` | +3,845 | +3,845 | 5963907 / 5964023 | 0 | 344,513 `b72a093c` / `c3c4b102` | |
+    | 4.4 addendum | `c03e72c` | +100 | +100 | 5964007 / 5964123 | +49 | 344,562 `fcfe06c1` / `20de200b` | |
+    | 4.5 | `b8af45f` | +1,473 | +1,473 | 5965480 / 5965596 | -736 | 343,826 `75e5831d` / `ab095612` | |
+    | 4.6 | `a5b431e` | +232 | +232 | 5965712 / 5965828 | +74 | 343,900 `23b30cde` / `b14eee5c` | |
+    | 4.7 | `b2dd4f2` | +2,291 | +2,291 | 5968003 / 5968119 | 0 | 343,900 `23b30cde` / `b14eee5c` | |
+    | 4.8 | `d18d1fc` | +2,609 | +2,609 | 5970612 / 5970728 | 0 | 343,900 `23b30cde` / `b14eee5c` | |
+    | 4.8 FIX | `8e9bf0c` | 0 | 0 | 5970612 / 5970728 | 0 | 343,900 `23b30cde` / `b14eee5c` | |
+    | 5.0 | `03a3f4f` | 0 | 0 | 5970612 / 5970728 | 0 | 343,900 `23b30cde` / `b14eee5c` | |
+    | 5.1 | `a2a5cf5` | +527 | +527 | 5971139 / 5971255 | 0 | 343,900 `23b30cde` / `b14eee5c` | |
+    | 5.2 | `230dd70` | +1,982 | +1,982 | 5973121 / 5973237 | +952 | 344,852 `787c942e` / `f906401d` | |
+    | 5.2a | `071ddc3` | +780 | +780 | 5973901 / 5974017 | +366 | 345,218 `5a7fcd14` / `7e9cddd5` | |
+    | 5.3 | `d55bef5` | +3,079 | +3,079 | 5976980 / 5977096 | +1,496 | 346,714 `531775a3` / `f061a105` | |
+    | 5.8 | `a652451` | +1,717 | +1,717 | 5978697 / 5978813 | +96 | 346,810 `86d97b44` / `a200f845` | |
+    | 5.4 | `c07d3ee` | -1,170 | -1,170 | 5977527 / 5977643 | -569 | 346,241 `1f010928` / `75535b93` | |
+    | 5.5 | `1dbb0c5` | +878 | +878 | 5978405 / 5978521 | 0 | 346,241 `1f010928` / `75535b93` | |
+    | 5.6 | `97e3fe2` | -2,932 | -2,932 | 5975473 / 5975589 | -1,390 | 344,851 `05d63476` / `63646355` | |
+    | 5.6 FIX | `da5a077` | +702 | +702 | 5976175 / 5976291 | +351 | 345,202 `bb73c30c` / `7b3d5f17` | |
+    | 5.7 | `618d37b` | +75 | +75 | 5976250 / 5976366 | 0 | 345,202 `bb73c30c` / `7b3d5f17` | |
+    | 5.10 | `bd0172a` | -459 | -459 | 5975791 / 5975907 | -153 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 5.11 | `805a358` | +459,874 | +459,874 | 6435665 / 6435781 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 6.1 | `ba14a5e` | +9,374 | +9,126 | 6445039 / 6444907 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 6.2 | `da5af53` | +788 | +778 | 6445827 / 6445685 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 6.2a | `8b1f3c6` | +583 | +583 | 6446410 / 6446268 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 7.1 | `288a6a8` | +31 | +29 | 6446441 / 6446297 | 0 | 345,049 `ee9f9279` / `317c6c51` | 864 / 978 |
+    | 7.2a | `f5151a5` | +199,006 | +199,006 | 6645447 / 6645303 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 7.3a | `15e2dc3` | +63 | +63 | 6645510 / 6645366 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 7.3 | `89deef8` | 0 | 0 | 6645510 / 6645366 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 9.x (docs) → HEAD | `b926ce6` | 0 | 0 | 6645510 / 6645366 | 0 | 345,049 `ee9f9279` / `317c6c51` | 864 / 978 |
+    | **sum** | | **+814,651** | **+814,391** | | **+854** | 344,195 → **345,049** | |
+    Not rebuilt (no product file in their diff — zero by construction): 2.5, 3.1, 4.0, 5.9, 7.2, 7.4, 7.4a, 7.5, 7.6,
+    8.1 prep, 9.1 (the site is not packaged), 9.2–9.4 and every merge. HEAD's row is the 9.3 build in the working tree
+    (the scratch tree's "HEAD" label resolved to its own checkout, `89deef8` — identical bytes, stated).
+    **The close (at this writing).** `.output` **6,645,510 B (Cr) / 6,645,366 B (Fx)** of 7,340,032: headroom **694,522
+    / 694,666 B** — **814,651 / 814,391 B** of the 1,509,173 / 1,509,057 B starting headroom spent (**54.0%** each).
+    The big four: 5.11's grammars on demand **+459,874** (lazy chunks, not on first paint), 7.2a's licence notices
+    **+199,006**, 2.4's fonts **+95,208**, 2.3's font assets / licences **+17,711** — 771,799 B of the 814,651. The
+    engines part at 6.1 (the onboarding page differs per engine: Fx −248 there, −10 at 6.2, −2 at 7.1).
+    **Content script:** +854 B over the milestone, every move a named task's, the per-task deltas summing to the close
+    (+71 +12 +39 +25 +153 +18 +49 −736 +74 +952 +366 +1,496 +96 −569 −1,390 +351 −153 = +854). Largest single task:
+    5.3 +1,496 (under G-7's +2 KB stop). **Manifests:** 654 / 770 → 833 / 949 (2.6, icons) → **864 / 978** (7.1,
+    version and minimums). **`permissions: []`, no `host_permissions`, no `web_accessible_resources` in EVERY one of
+    the 40 builds, both engines.**
+    **Pending end review:** any walk fix (8.1a …) adds rows here; the close figures are re-run then.
+  - **(5) Golden's milestone diff.** `git diff 3ad539a HEAD -- tests/golden/`: **one file, `golden.test.ts`, +8 / −1 —
+    the ~1 MB case's per-test timeout (30 s) from 1.4, by the HUMAN RULING "the Linux reds" item (4) ("TEST: a per-test
+    timeout … the SHA-256 unchanged").** No fixture, expected output or pinned hash moved: golden's OUTPUTS are
+    unchanged across M13 — stated this way, not as "EMPTY", because the directory's diff is not empty.
+  - **(6) The task count, reconciled by counting `tasks.md`:** **51 task lines** — gate 3's 40 (1 (3) · 2 (6) · 3 (1)
+    · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) · 9 (5)) + **11 discovered** (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a,
+    7.2a, 7.3a, 7.4a). By group: 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13) · 6 (3) · 7 (9) · 8 (1) · 9 (5) = 51. **47
+    ticked**; open: 8.1, 9.2, 9.3, 9.5 — each pending end review. FIX / addendum commits (1.4 ×2, 4.4, 4.7, 4.8, 5.6)
+    are inside their tasks, not tasks. **Drift found and fixed:** `tasks.md`'s count line stopped at "42 tasks" (the
+    2.2 ruling, 2026-11-01) — a ★ note now gives 51.
+  - **(7) `AGENTS.md`'s current-milestone line** — said "task 1.1 landed (`02e9fae`)"; now 51 tasks, 47 ticked, the four
+    open items and `docs/ai/final-review.md`.
+  - **Pending end review (the list `docs/ai/final-review.md` walks):** the Firefox signed install (rows 26, 296, 304,
+    335, 500 + the Firefox halves; the BLOCKER); the 8.1 walk and its fixes; 9.2's sign-off; 9.3's pick; 9.4's
+    addendum; this task's close figures, the M13 close summary and the tick.
+  - **Verify:** every D-value's landing commit named, gaps named ✓ · `.output` ≤ 7,340,032 B both engines, every build
+    ✓ · `permissions: []` throughout (40 builds × 2) ✓ · golden: outputs unchanged, the one test-file change named ·
+    task count 51 by counting ✓ · lint EXIT 0 · unit 1,678 / 1,678 · truthPins green · no NUL / CR in changed files.
+  Why: tasks.md 9.5; the kickoff's "everything except what genuinely waits on the human's end review".
+  Revisit-when: the end-of-round review (then the close figures, the summary and the tick).
+
 - **2026-11-07 · M13 TASK 9.3 — captures (store screenshots; CAPTURES ONLY — the pick is the human's, at the end-of-round
   review, with the walk: HUMAN RULING 2026-11-07).** Local, on `main` after `5ac0112`; not pushed. CI on `5ac0112` green
   first (CI 42358267992, Supply chain 42358268049). `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).

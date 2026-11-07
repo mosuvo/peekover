@@ -1233,6 +1233,14 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       `docs/ai/decisions.md` · `AGENTS.md`
       Verify: every D-value's landing commit named, gaps named; `.output` ≤ 7,340,032 B both engines; `permissions: []`
       throughout; golden's milestone diff EMPTY; the task count reconciled by counting this file.
+      ★ *2026-11-07 — PARTIAL (`decisions.md`, "M13 TASK 9.5"): everything not waiting on the human — the landed M13
+      narrative in `progress-archive.md`; D-1…D-17 each with its landing commit (gap: D-17's entry came with 4.1's
+      commit); `spec-coverage.md` F7 / F11 / §6-9 / §6-10 / §6-13 re-scored; the byte ledger REBUILT for all 39 product
+      commits, both engines (control: M12's close reproduced exactly; every delta = its task's record): `.output`
+      6,645,510 / 6,645,366 B, 814,651 / 814,391 B of the starting headroom (54.0%), content script +854 B, per-task
+      deltas summing to it; `permissions: []` in all 40 builds; golden's OUTPUTS unchanged (its one diff is 1.4's ruled
+      timeout in `golden.test.ts` — named, not "EMPTY"); 51 tasks by count; `AGENTS.md`'s line. **Open, so not ticked:**
+      the close figures after any walk fix, the M13 close summary — pending end review (`docs/ai/final-review.md`).*
 
 ---
 
@@ -1307,7 +1315,9 @@ dismissal → 4.5. Every clause has at least one task.
    cost:** any walk fix re-runs the 9.x work it touches (progress.md, "Up next", lists which). No task deleted.*
 
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
-9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
+discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

@@ -169,6 +169,8 @@ count is corrected to **19** here, which moves §5's item total **197 → 198** 
 **226 → 227**. This changes no other section's marks and no rule; it makes F2's denominator larger,
 i.e. its coverage figure *lower*, which is the direction this document's own tie-break prefers.
 
+***★ RE-AUDITED 2026-11-07 · HEAD `b926ce6`** (M13 / spec 013 task 9.5, the records reconcile — tasks.md 9.5 names the rows). **Targeted re-verification of F7, F11, §6-9, §6-10 and §6-13 ONLY**, against shipped code and its tests. F7 1 → 2 ✓ (contrast-checked); F11 1 → 3 ✓ + 1 ~ (the setup guide, the deep link; detection ~ until the Firefox signed install); §6-10 ✗ → ~; §6-13 ✗ → ✓; §6-9 stays ~ (its note updated). **Seen, not re-scored** (outside 9.5's list): §6-7's "no `CHANGELOG.md`" is now false (M13 7.1), and F5 / §7 rows the restyle touched. Rows marked **pending end review** wait on the human's end-of-round review (the signed install, the walk).*
+
 **Status legend.** `✓ SHIPPED` — implementation exists and is either test-covered or demonstrably
 reachable from a production entrypoint. `~ PARTIAL` — exists but incomplete, untested, or reaches
 only some of the stated surfaces. `✗ NOT` — no implementation (absence evidenced by missing
@@ -183,23 +185,23 @@ the bottom with the question a human walk would settle.
 | F4 File sources | 11 | 2 | 2 | 7 | 0 | 3.0 | **27%** |
 | F5 Navigation & reading UX *(re-audited 2026-09-06, print mode)* | 39 | 14 | 2 | 23 | 0 | 15.0 | **38%** |
 | F6 Live updating & AI-workflow *(re-audited 2026-08-13)* | 13 | 7 | 2 | 4 | 0 | 8.0 | **62%** |
-| F7 Theming & appearance | 17 | 1 | 0 | 16 | 0 | 1.0 | **6%** |
+| F7 Theming & appearance *(re-audited 2026-11-07, M13 9.5)* | 17 | 2 | 0 | 15 | 0 | 2.0 | **12%** |
 | F8 Editor mode *(re-audited 2026-10-30, M12 close)* | 21 | 1 | 5 | 15 | 0 | 3.5 | **17%** |
 | F9 Export & publishing *(re-audited 2026-09-06, M10 close)* | 13 | 4 | 2 | 7 | 0 | 5.0 | **38%** |
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
-| F11 Setup & onboarding | 9 | 1 | 0 | 8 | 0 | 1.0 | **11%** |
+| F11 Setup & onboarding *(re-audited 2026-11-07, M13 9.5)* | 9 | 3 | 1 | 5 | 0 | 3.5 | **39%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **54** | **25** | **119** | **0** | **66.5** | **34%** |
-| §6 Security & privacy | 17 | 7 | 6 | 4 | 0 | 10.0 | **59%** |
+| **§5 total** | **198** | **57** | **26** | **115** | **0** | **70.0** | **35%** |
+| §6 Security & privacy *(items 9, 10, 13 re-audited 2026-11-07, M13 9.5)* | 17 | 8 | 7 | 2 | 0 | 11.5 | **68%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **67** | **35** | **125** | **0** | **84.5** | **37%** |
+| **Whole spec** | **227** | **71** | **37** | **119** | **0** | **89.5** | **39%** |
 
 *Every row except F2, F3, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
 HEAD `174b94a`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
 below) without moving that item off `~`, since two of its three named sub-surfaces are still absent. F5
 and F6 moved at M8 (2026-08-13) — three rows in each, six total, all cited below in their own sections.
 F3 moved at M9 (2026-08-22) — six rows ✗→✓, two ✗→~, cited in full at F3 below. **F2 moved again at M11
-(2026-09-11)** — four rows ✗→✓, two ✗→~, cited in full at F2 above. **F8 moved at M12 (2026-10-30)** — one row ✗→✓, three ✗→~, cited in full at F8 below.*
+(2026-09-11)** — four rows ✗→✓, two ✗→~, cited in full at F2 above. **F8 moved at M12 (2026-10-30)** — one row ✗→✓, three ✗→~, cited in full at F8 below. **F7, F11 and §6 moved at M13 (2026-11-07, task 9.5)** — F7 one row ✗→✓; F11 two ✗→✓, one ✗→~; §6-10 ✗→~, §6-13 ✗→✓ — cited in their sections; §6's "59%" prose below is the earlier reading (now 68%).*
 
 The shape is the finding: §6 and §7 — the trust story and the design system — are the best-covered
 sections in the document, and they are the two that no competitor can copy in an afternoon.
@@ -416,7 +418,7 @@ milestone now (F3's own re-audit above already moved it off this list at M9's cl
 | Light / dark / auto (system) | ✅ | ✓ | `src/settings/settings.ts:18-22,50`; `src/theme/reader.ts:87,134`; `src/theme/themeRegistry.ts:42-67`; `tests/browser/themeRuntime.browser.test.ts` | OS flips re-theme every registered host; manual beats media rule both directions. |
 | GitHub-identical light & dark themes | ✅ | ✗ | Three themes exist (`settings.ts:18` — `light\|dark\|sepia`); no GitHub palette | — |
 | ≥30 built-in document themes | ✅ | ✗ | Three (`settings.ts:18`) | 10% of the stated parity bar. |
-| Themes contrast-checked | ✅ | ✗ | No contrast tooling, fixture, or test in the repo | The tokens were designed with contrast in mind (`readerCss.ts:24`) but nothing verifies it. |
+| Themes contrast-checked | ✅ | ✓ | `tests/browser/helpers/contrast.ts` (one helper, M13 2.2 — D-16); `tests/browser/contrastCensus.browser.test.ts` (every text pair on the app page and the tab reader, both themes, both engines; the pending list EMPTY at 5.8) | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ✓. AA (4.5:1) checked, not a parity "contrast-checked theme gallery" — there is one design, light and dark. |
 | Custom CSS — global | ✅ | ✗ | 0 hits; no settings key | — |
 | Custom CSS — per-origin | ✅ | ✗ | 0 hits | — |
 | Custom CSS — per-document | ✅ | ✗ | 0 hits | — |
@@ -517,9 +519,9 @@ feature-detection, no WebCrypto usage (0 `webcrypto` hits).
 
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
-| Auto-opening interactive setup guide on install | ✅ | ✗ | No `runtime.onInstalled` listener in `entrypoints/background.ts:35-58` (three listeners: action, settings, watch relay) | — |
-| Detects "Allow access to file URLs" grant | ✅ | ✗ | 0 hits; `isAllowedFileSchemeAccess` never called | **The category's #1 friction, and the spec's own best-in-class claim.** See uncertain-items §2. |
-| Deep-links to the exact toggle | ✅ | ✗ | As above | — |
+| Auto-opening interactive setup guide on install | ✅ | ✓ | `entrypoints/background.ts` (`runtime.onInstalled`, reason "install" only — never an update; M13 6.2), at most once (6.2a, a mark in the settings store); `onboarding.html` / `src/app/onboarding.ts` (6.1); `tests/browser/onboarding.browser.test.ts` | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ✓. Seen on a command-line Chromium (6.2); on a real Firefox install **pending end review** (the AMO 0.0.9 signed-install test). |
+| Detects "Allow access to file URLs" grant | ✅ | ~ | `src/app/onboarding.ts` (Chromium: `extension.isAllowedFileSchemeAccess()`, re-read on focus — no permission; M13 6.1); `tests/browser/onboarding.browser.test.ts` | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ~. Chromium ✓. The Firefox branch ("nothing needs setting up") is the open release BLOCKER — **pending end review** (the signed install decides it; a temporary add-on did not render `file://` at 8.1 prep). |
+| Deep-links to the exact toggle | ✅ | ✓ | `src/app/onboarding.ts` (a button to `chrome://extensions/?id=…`, verified on a real Chromium at 6.1); Firefox has no toggle to link to | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ✓ (Chromium; the only engine with the toggle). |
 | Zero-config: remote `.md` works before any permission | ✅ | ✓ | `wxt.config.ts:18` (`permissions: []`, CI-pinned by `tests/manifest.test.ts`); `peekover.content.ts:35-39` | Structurally true — the four raw hosts render with no grant at all. |
 | Demo document showcasing every feature | ✅ | ✗ | `tests/fixtures/hello.md` and `tests/golden/fixtures/*` are test inputs, not a demo doc; no bundled `.md` asset | Spec calls this the visual QA page **and** the marketing screenshot (§7 process req 3). |
 | Command palette (Ctrl/Cmd+K) | ✅ | ✗ | 0 hits | §7-5 names it "the spine" of the keyboard story. |
@@ -553,11 +555,11 @@ feature-detection, no WebCrypto usage (0 `webcrypto` hits).
 | 6 | Minimal permissions; per-origin host access requested at moment of use; `PERMISSIONS.md` | ~ | `wxt.config.ts:18` — `permissions: []`, **byte-pinned by `tests/manifest.test.ts` (2975 B, unmodified since M2)**; `docs/trust/PERMISSIONS.md` exists | Permission surface is smaller than the spec asks for ✓. But host access is **static manifest `matches`**, not optional and not requested at use — the "per-origin, at moment of use" half is unbuilt. |
 | 7 | Permission-diff policy (never silently add; changelog + in-product notice) | ~ | AGENTS.md #4 + the manifest byte-pin enforce the *process*; every milestone re-proved `permissions: []` | **No `CHANGELOG.md` in the repo and no in-product notice mechanism.** The discipline is real; the two user-facing artifacts are not. |
 | 8 | Sanitization: DOMPurify strict allowlist, SVG sanitized, strict CSP, sandboxed embeds, block remote images | ~ | Allow-list `sanitize.ts:22-65`; `data:` hook `:131-135`; SVG/iframe/object **excluded entirely** from `ALLOWED_TAGS`; remote-image blocking `mediaPolicy.ts:138` with opt-in bar `remoteMediaUi.ts:60`; `tests/browser/sanitize.browser.test.ts` | Four of five sub-claims hold, some by denial rather than sanitization (stronger). **No `content_security_policy` key is declared** in `wxt.config.ts` — the property rides on MV3's platform default rather than an explicit, auditable line. |
-| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **5 runtime dependencies** *(4 at the `d470ab2` audit; `mermaid ^11.16.0` added at M7 as the fifth, a governed act — spec 007 §3.12)* — still minimal; `.github/workflows/supply-chain.yml` (`audit`, `osv`, `sbom` jobs); `.github/dependabot.yml`; `scripts/generate-sbom.ts` | **Re-audited at `d470ab2` — a STRONG partial now, not the weak one above: 4 of 5 sub-clauses SHIPPED.** Locked/minimal ✓ · `pnpm audit --prod --audit-level low` **blocking** ✓ (full tree advisory by a recorded call, `decisions.md` 2026-07-27 (a)) · OSV ✓ by CI wiring (`google/osv-scanner-action@v2.2.4` + SARIF upload; not locally verifiable — it runs on GitHub, and workflow wiring is "demonstrably wired into a production entrypoint" under this document's own legend) · no install scripts ✓ (**0 `requiresBuild: true` in `pnpm-lock.yaml`**; the only `postinstall` is Peekover's own `wxt prepare`) · **SBOM published per release ✗ — the item still fails, and the reason changed.** See the §6-9 note below. |
-| 10 | Reproducible builds; release hashes; signed tags; attestations | ✗ | No release workflow; `ci.yml` runs on `pull_request` only; no attestation config | No release has happened yet, but nothing is in place for one. |
+| 9 | Locked minimal deps; `npm audit` + OSV in CI; no install scripts; Dependabot; SBOM per release | ~ | `pnpm-lock.yaml` present; **5 runtime dependencies** *(4 at the `d470ab2` audit; `mermaid ^11.16.0` added at M7 as the fifth, a governed act — spec 007 §3.12)* — still minimal; `.github/workflows/supply-chain.yml` (`audit`, `osv`, `sbom` jobs); `.github/dependabot.yml`; `scripts/generate-sbom.ts` | **Re-audited at `d470ab2` — a STRONG partial now, not the weak one above: 4 of 5 sub-clauses SHIPPED.** Locked/minimal ✓ · `pnpm audit --prod --audit-level low` **blocking** ✓ (full tree advisory by a recorded call, `decisions.md` 2026-07-27 (a)) · OSV ✓ by CI wiring (`google/osv-scanner-action@v2.2.4` + SARIF upload; not locally verifiable — it runs on GitHub, and workflow wiring is "demonstrably wired into a production entrypoint" under this document's own legend) · no install scripts ✓ (**0 `requiresBuild: true` in `pnpm-lock.yaml`**; the only `postinstall` is Peekover's own `wxt prepare`) · **SBOM published per release ✗ — the item still fails, and the reason changed.** See the §6-9 note below. *Re-audited 2026-11-07 (M13 9.5): stays ~.* Runtime `dependencies` now **11**. The SBOM is now reachable from a tag: `release.yml` runs on `v*` tags, reads the SBOM from the build (`generate-sbom.ts --no-build`, M13 7.3a) and lists `sbom.cdx.json` in `SHA256SUMS`; the 7.4a dry run produced it. **Published per release ✗ still** — no tag has been cut (the release is GO-LIVE's). The "no `tags:` key" discrepancy below is resolved by `release.yml`. |
+| 10 | Reproducible builds; release hashes; signed tags; attestations | ~ | `ci.yml` job `reproducible` + `scripts/compare-builds.ts` (two clean builds byte-identical, zips included — M13 7.3; `docs/trust/REPRODUCING.md`); `.github/workflows/release.yml` (on `v*` tags + a dry-run dispatch: `SHA256SUMS` over every release file; `attest` job, public repository only — M13 7.4); the 7.4a dry run: `sha256sum -c` OK, attest skipped (private) | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ~. Reproducible ✓ · hashes ✓ (mechanism, dry-run proven) · attestations written but skipped until the repository is public (GO-LIVE) · **signed tags ✗** — nothing signs a tag; `git tag -l` is empty. No release has been cut. |
 | 11 | Publisher account security (passkeys/2FA + recovery plan) | ✗ | No such document in `docs/trust/` (contains `PERMISSIONS.md`, `SECURITY.md` only) | Named by the spec as where extension hijacks usually start. |
 | 12 | Open source (MIT/Apache-2.0), full source incl. build scripts | ✓ | `LICENSE` (MIT, 2026 Mo Suvo); `wxt.config.ts`, `scripts/`, `.github/workflows/` all tracked | — |
-| 13 | Threat model document published in the repo | ✗ | Zero occurrences of "threat model" outside `spec.md` itself | — |
+| 13 | Threat model document published in the repo | ✓ | `docs/trust/THREAT-MODEL.md` (M13 7.2; every sentence a ledger row, every path it names checked by `tests/truthPins.test.ts`) | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ✓. |
 | 14 | `SECURITY.md` — disclosure channel, response-time commitment, hall of fame | ✓ | `docs/trust/SECURITY.md` — `hello@peekover.dev`, 48 h ack target, hall-of-fame section | All three sub-clauses present. |
 | 15 | Community audit invitation + third-party scanner reports | ✗ | 0 hits in `README.md`, `site/index.html`, `docs/trust/` | Launch-time item. |
 | 16 | Ownership pledge in README **and** site | ✓ | `README.md:9` ("never sold — an ownership change voids the listing"); `site/index.html` carries the same pledge language | Both surfaces. |
