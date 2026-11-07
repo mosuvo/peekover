@@ -1215,11 +1215,16 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       app-page captures are NOT store candidates (the harness's live handle is a Chromium-only state); no Firefox tab
       capture (PENDING SIGNED INSTALL). Not packaged (both engines). **Open, so not ticked:** the human's picks →
       `docs/store/assets/`. Necessary ripple: `scripts/walk-shots.ts` (exports + a run guard, the shared engine seam).
-- [ ] **9.4 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s prior entries first.
+- [x] **9.4 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s prior entries first.
       Includes: whether mock-first saved re-work; whether the census predicted group 4's re-spellings; whether the
       ledger kept the truth pass to one re-check.
       Files: `docs/ai/retro.md` (+ `AGENTS.md` / `WORKFLOW.md` only for a rule the retro places)
       Verify: banked, dated, real task numbers; every answer ends in an action or "none".
+      ★ *2026-11-07 (9.4 landed; `retro.md`, "M13 retro"):* written from the record before the walk (HUMAN RULING: the
+      walk is last); the three questions answered (A mock-first: yes for shape, not breakpoints; B the census: 3
+      pre-existing misses in 371 rows; C the ledger: one pass for the texts, not in-app copy). One rule placed in
+      `AGENTS.md` (the font-fallback trap). **An "addendum after the 8.1 walk" is reserved** in the entry — written
+      after the walk, not a reason to re-open this task.
 - [ ] **9.5 Records reconcile.** `progress.md`'s M13 narrative to `progress-archive.md`; every D-value (D-1…D-17)
       audited against the commit that landed its `decisions.md` entry; `spec-coverage.md` re-scored (F7, F11, §6-9,
       §6-10, §6-13); the byte ledger decomposed across every task against the 1,509,173 / 1,509,057 B starting headroom

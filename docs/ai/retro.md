@@ -1,4 +1,102 @@
 # Retro log — Peekover
+- **2026-11-07 · M13 retro (spec 013 — a truthful, on-design first release: CI on Linux, the claims ledger, tokens /
+  contrast / fonts / icon, the toolbar from an approved mock, every surface restyled, onboarding, release hygiene,
+  the site; `/retro`, per WORKFLOW.md §7.5, task 9.4).
+  ★ M13 IS NOT CLOSED — written BEFORE the 8.1 walk, by HUMAN RULING (2026-11-07, "I will walk at the very end, after
+  group 9."). 8.1, 9.2 (the sign-off), 9.3 (the pick) and the Firefox signed-install test are open; the ADDENDUM
+  below is reserved for the walk.** **Written from the record, NOT as an interview** — the M12 precedent (`retro.md`
+  2026-10-30): the human's end-of-round review is batched, so every claim cites a `decisions.md` entry, a task or a
+  commit, and the human reads this at that review. Scale: 89 commits from the spec draft (`ed9bd5c`, 2026-10-30) to
+  `8ff71d8`; 51 task lines in `tasks.md` (40 at gate 3 + 11 discovered: 1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a,
+  7.2a, 7.3a, 7.4a), 46 ticked, 5 open (8.1, 9.2–9.5).
+  **THE HEADLINE: THE ENVIRONMENT WAS THE BIGGEST SOURCE OF WRONG GREENS — AND THE HUMAN STEPS PILED UP AT THE END.**
+  Local Windows runs passed what CI on Linux failed three times over for one reason — fonts (below, "what went
+  wrong" 1); and every step that needs a human with a loaded extension (the walk, the Firefox signed install, the
+  9.2 sign-off, the 9.3 pick) now waits for one sitting, so the 9.x work done before it is provisional by design.
+  **THE THREE QUESTIONS `tasks.md` 9.4 ASKS.**
+  A. **Did mock-first save re-work?** YES for the toolbar's shape; NOT for its breakpoints; the final word is the
+     walk's. The mock (3.1) settled the order, the compact rule and its 863 px breakpoint by measurement before any
+     toolbar code (`decisions.md` "M13 GATE — 3.1 TOOLBAR MOCK APPROVED", addendum CONFIRMED); group 4 (4.1–4.8) built
+     to it with no redesign — its four mid-build rulings (C061 at 1280, C130, 4.7's network statement, the overlay
+     breakpoint) were about states and widths the mock did not draw, not about its look. The Files-overlay breakpoint
+     moved three times: ≤ 1272 (4.8, measured), ≤ 1281 (4.8 FIX — Linux rounds Literata's "0"), ≤ 1189 (5.1, HUMAN
+     RULING). Items 3–6 and 8 of the mock were approved on the agent's self-check, not the human's eye — a named check
+     of the walk. → **Action: none to the rule. Next milestone's mock states each breakpoint it fixes AND the font it
+     was measured in (the 4.8 FIX lesson); the walk addendum gives the verdict on 3–6 / 8.**
+  B. **Did the census predict group 4's re-spellings?** YES, closely. 353 rows at 4.0 (`82d4414`: re-spelled 209,
+     unchanged 104, retired 27, replaced 13). Group 4 added 18 (C354–C371) — **15 were tests group 4 itself wrote after
+     the census** (C355–C365, C368–C371: `toolbar.test.ts`, `toolbar.browser.test.ts`); **3 were pre-existing tests the
+     census missed** (C354 `appHeaderNarrow`'s part selector, C366 / C367 `editorEnhancer`). Two were mis-timed or
+     mis-classed: C061 broke at 4.4, not 4.5 (ruled), and C168 "unchanged" needed a re-spelling at 4.5. Retirements:
+     27 predicted, 28 acknowledged by the human (2026-11-04, "HUMAN RECORD (gate-1 Q8)"). At 4.5 the first full suite
+     went red in 21 tests — every one a census row (`decisions.md` "M13 TASK 4.5"). → **Action: none; keep the census
+     before any move of shared chrome. A census row for a test the moving task itself writes is bookkeeping, not
+     prediction — count them apart next time.**
+  C. **Did the ledger keep the truth pass to one re-check?** YES for the published texts; NO for one thing outside
+     them. 9.2 re-verified all 579 rows in one pass: 0 evidence problems (control 3 / 3), 5 rows of stale evidence
+     re-pointed without a wording change, 2 drifted rows (#301 withdrawn, #554 fixed), and three surfaces that had
+     never been ledgered checked sentence by sentence (`decisions.md` "M13 TASK 9.2"). What it could NOT do: settle the
+     Firefox `file://` rows (an engine fact, PENDING SIGNED INSTALL since 6.1) — and it did not cover in-app copy (HUMAN
+     RULING "Checked, not ledgered"). 9.3 then found, by code reading, an in-app note that contradicts ledger row 25:
+     a Firefox DRAGGED folder shows `READ_ONLY_SNAPSHOT_NOTE` ("Watch mode … also unavailable here") while Watch is
+     offered for that route (`decisions.md` "M13 TASK 9.3 — captures"). 9.2 read the note against the texts, not
+     against the route it shows on. → **Action: proposed to the human, not placed (it reverses a ruling): a
+     claim-bearing in-app string gets a test that pins it to the state it is shown in — here, the note per route.**
+  **WHAT WENT WELL.**
+  1. **The product's trust posture held through 89 commits:** `permissions: []`, no `host_permissions`, golden EMPTY,
+     zero network in the package and on the site (9.1: 0 off-site requests vs the control's 5); the content script
+     moved only where a task named and proved it (344,195 → 345,049 B at 5.10, identical since; 9.5 decomposes it).
+  2. **Reproducible builds became real and stayed real:** byte-identical zips (7.3), Linux = Windows, the sources zip
+     rebuilds the Firefox zip; the same Chrome / Firefox zip hashes (`9ed349c2…` / `d74715ca…`) from 7.4a's dry run to
+     8.1 prep to 9.3's build.
+  3. **Measure, then rule:** 2.5 (fonts), 5.9 (first paint bisected to 2.4's stacks: +10.9 ms, then 5.10 cut it),
+     6.2 (the toggle closes the guide), 7.1 (minimum versions from browser-compat-data; the Firefox STOP fired and the
+     human raised the floor). Each ruling was banked in its task's commit.
+  4. **The ledger made truth checkable:** `truthPins.test.ts` pins every surface's sentences to rows; a cut or a new
+     sentence goes red. 9.2's single pass (above) is the payoff.
+  5. **Stopping on a premise:** 1.4 (CI was red on `main` — fixed before any truth work), 7.1's Firefox floor, 7.2a's
+     licence direction (aurora-x removed, GPL-3.0), 9.1's same-look fonts flagged against its own task line.
+  **WHAT WENT WRONG.**
+  1. **Font-dependent CI reds — three, one class.** 4.8 FIX (CI: "expected 591 to be ≥ 600" — Chromium on Linux rounds
+     Literata's "0" to a whole pixel, so 60ch = 600 px there and 590.6 here); 5.0 F5 (`uiFonts` red only in local full
+     suites: Bricolage is installed PER-USER on this machine, and Firefox starts drawing it ~60 s after launch); 5.6 FIX
+     (CI run 41965319733: the tab reader's contents handle wrapped at 414 in CI's fallback face and fit on one line in
+     the locally installed Bricolage). Each passed here first. The 1.4 Linux reds (five, `decisions.md` "M13 RULING —
+     the Linux reds") were the same shape: conditions Windows could not show. → **Action: placed in `AGENTS.md`
+     (Verification traps) — a local green on text that wraps or measures in `ch` / px is not trusted until the face
+     is forced to its fallback or CI has run.**
+  2. **The flake history is long and only partly closed.** Fixed with causes proven: `pipeline.perf` (CPU sharing →
+     its own project), `diagramEnhancer` (an un-awaited real mermaid import), `uiFonts` (above) — all 5.0. Named, not
+     fixed: `watchRemount` (5.0), `thirdPartyLicences` timing out after lint (8.1 prep), the unit flake "unidentified,
+     1 in 10" (7.4a). Not reproduced: `editorPreview`, the contrast census INVENTORY (a code theme persisted by other
+     files — harness-shared-state, the group-4 records). 5.0 ran with no `gh`, so its rates are local only. → **Action:
+     carried, not placed: the next milestone's first task reads CI history with `gh` for each named flake and either
+     fixes it or deletes it from the "known" list — a flake that is "known" for two milestones is a defect.**
+  3. **The human gates batched at the end.** The walk moved after 9.x by ruling (2026-11-07); 9.2's sign-off, 9.3's
+     pick and the Firefox signed install wait with it. The cost is visible already: 9.3's 10 Firefox captures are not
+     store candidates (the harness cannot open a Firefox folder route; the tab reader waits on the signed install),
+     and any walk fix re-runs parts of 9.1–9.5 (progress.md "Up next" lists which). The Firefox `file://` BLOCKER has
+     been open since 6.1 (2026-11-06) because only a signed install can settle it — no agent work could. → **Action:
+     proposed to the human, not placed: next milestone schedules any engine-only human check (a signed install, a
+     walk of a new surface) in the group that creates it, and leaves only the final look for the end.**
+  4. **Kickoff / task-line mismatches recurred** (9.1's fonts vs 2.3's subsets; 9.3's "the build that passed 8.1" after
+     the walk moved; 9.3's "records + script only" vs its Files list). Each was flagged and the body followed, as
+     `AGENTS.md` says. → **Action: none; the rule held.**
+  5. **Tooling friction, again:** a heredoc collapsed doubled backslashes in a patch script at 9.3 (caught: the
+     assertion failed before any write) — `AGENTS.md` already says to use the file tool. → **Action: none new.**
+  **WHAT TO CHANGE NEXT MILESTONE (summary of the actions above).** Placed: the font-fallback trap (`AGENTS.md`).
+  Proposed for the human: engine-only human checks in the group that needs them (3); a test pinning claim-bearing
+  in-app strings to their state (C). Carried: the flake read with `gh` (2). Kept: the census before a chrome move (B);
+  the mock before code, with the font named (A).
+  **THE NUMBERS** are 9.5's (the byte ledger decomposed against the 1,509,173 / 1,509,057 B starting headroom). At
+  this writing: `.output` 6,645,510 B (Cr) / 6,645,366 B (Fx) of 7,340,032; content script 345,049 B; unit 1,678.
+  Metrics: tasks=51 (40 + 11 discovered) · commits=89 · first-try verification pass=no — CI went red after local
+  greens at 4.7, 4.8 and 5.6 · corrections=not counted · sessions=not counted.
+  **ADDENDUM AFTER THE 8.1 WALK — RESERVED (to be written when the walk is done; do not fill before).** For: the walk's
+  verdicts against this retro's question A (mock items 3–6, 8), each "fix" (8.1a …) and what it re-ran in 9.x, the
+  Firefox signed-install result, the 9.2 sign-off and the 9.3 pick — and whether batching the gates (wrong 3) cost
+  more than it saved.
+
 - **2026-10-30 · M12 retro (spec 012 — Editor Mode: edit → live preview → save-back via CodeMirror 6,
   lazy-loaded, nested-host preview, watch/edit collision, the unsaved-changes guard; `/retro`, per
   WORKFLOW.md §7.5, task 7.2).

@@ -87,6 +87,9 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
   the manifest, and pin the off arm.
 - Firefox: a CSS-owning CodeMirror extension (`HighlightStyle`, theme) built per host stops applying from the
   second host on. Build it once per page.
+- A local green on text that wraps or is measured (`ch`, px) is not a CI green: a design face installed per-user
+  here (Bricolage) is absent on the runner, and Chromium on Linux rounds glyph advances to whole pixels. Force the
+  face to its fallback in a probe, or wait for CI, before trusting it (M13 4.8 FIX, 5.0 F5, 5.6 FIX; M13 retro).
 
 ## Workflow (the short version — full: WORKFLOW.md)
 
