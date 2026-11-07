@@ -21,6 +21,7 @@ import { isDirectoryPickerSupported, type FolderSource } from '../../src/app/fol
 import {
   folderSourceFromDataTransfer,
   folderSourceFromFileList,
+  DRAGGED_SNAPSHOT_NOTE,
   READ_ONLY_SNAPSHOT_NOTE,
 } from '../../src/app/firefoxFolderSource';
 import { FIREFOX_PICKER_NOTE } from '../../src/watch/watchAvailability';
@@ -157,9 +158,10 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     expect(seen.watchOffered).toBe(true);
     expect(seen.watchPressed).toBe('true');
     expect(seen.pickerNoteShown).toBe(false);
-    // RECORDED, not endorsed: the pane's note still says Watch is unavailable on this route. The fix awaits the
-    // human's approval of its wording (`decisions.md`, "M13 — 9.3 finding"); this line moves with it.
-    expect(seen.snapshotNote).toBe(READ_ONLY_SNAPSHOT_NOTE);
+    // M13 9.3b (HUMAN RULING "drag note: approve corrected"): the drag route's note says Watch works — and it does
+    // (the assertion above). The old note, which said Watch was unavailable, must not show here.
+    expect(seen.snapshotNote).toBe(DRAGGED_SNAPSHOT_NOTE);
+    expect(seen.snapshotNote).not.toBe(READ_ONLY_SNAPSHOT_NOTE);
     // A file entry's File keeps its drop-time size; only its text is read fresh (spec 005's TRAP 2, re-measured).
     expect(disk.size).toBe(BEFORE.length);
   }, 20000);

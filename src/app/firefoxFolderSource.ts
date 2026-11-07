@@ -47,6 +47,21 @@ export const READ_ONLY_SNAPSHOT_NOTE =
   'picking it again. That is a Firefox platform limitation, not a Peekover choice. Watch mode ' +
   'and snapshot capture are also unavailable here for the same reason.';
 
+/**
+ * The note for a folder DRAGGED onto the app page (M13 task 9.3b; HUMAN RULING "drag note: approve corrected",
+ * 2026-11-07). On this route Watch works — a watched file is re-read from disk (measured in Firefox,
+ * `tests/browser/firefoxDragWatch.browser.test.ts`) — so `READ_ONLY_SNAPSHOT_NOTE`'s "Watch mode … unavailable here" was
+ * false here. Every clause was measured on the drag route before it landed: files added later never appear (the listing
+ * is walked once); a file deleted later stays listed and opens to "Couldn't read this file"; after a reload the folder
+ * is offered again only through the picker. "A picked folder can't be watched" rests on the OPEN real-picker check
+ * (`docs/ai/final-review.md` step 1(c)): if a real picker reads fresh files, this sentence changes together with ledger
+ * rows 25, 334 and 498.
+ */
+export const DRAGGED_SNAPSHOT_NOTE =
+  'Firefox shows this folder as it was when you dragged it in: files added later won’t appear, and files deleted ' +
+  'later stay listed but can’t be opened. Next time Peekover can only ask you to pick the folder again, and a picked ' +
+  'folder can’t be watched — drag it in instead. Watching still works here: a watched file is re-read from disk.';
+
 // --- (A) the `<input webkitdirectory>` FileList adapter --------------------------
 //
 // A directory `<input>` returns a FLAT FileList the browser has already fully enumerated;

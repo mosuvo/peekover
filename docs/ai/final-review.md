@@ -37,8 +37,12 @@ validator shows errors or warnings, **paste every message to the agent and chang
 with the signed install, then (a) does a local `file://` `.md` open in Peekover's reader, (b) does the setup guide open
 on install and not again after a restart, (c) do the folder picker and drag routes work — **and, with a REAL picker:
 does a folder chosen with "Open a folder" see a file edited on disk?** (Playwright's Firefox says yes; spec 005 said
-no on Firefox 152 — `decisions.md` "M13 — 9.3 finding: Firefox drag-folder watch", its second finding.) (d) The
-drag-route note found at 9.3 is **already settled** (step 2) — on the signed install, just see the note's wording.
+no on Firefox 152 — `decisions.md` "M13 — 9.3 finding: Firefox drag-folder watch", its second finding.)
+**If the real picker reads fresh files, update together, in one task:** the drag note's "a picked folder can't be
+watched" (`DRAGGED_SNAPSHOT_NOTE`, task 9.3b), README row 25 and its ledger twins — CHANGELOG row 334 and the Firefox
+listing's row 498 — and `FIREFOX_PICKER_NOTE`; whether the picker route then becomes watchable is its own decision.
+(d) The drag-route note is **landed** (task 9.3b, your approved wording) — on the signed install, see it on a dragged
+folder.
 
 **What the result decides:**
 - **Firefox renders `file://`:** rows 26 / 296 / 304 / 335 / 500 are re-worded to say it works (the agent proposes the
@@ -71,12 +75,13 @@ app page from the screenshots (~90 min), **C** the tab reader, contrast and the 
   the pane's note is wrong** where it says "Watch mode and snapshot capture are also unavailable here". **Your words
   were checked clause by clause and two failed** (`decisions.md` "M13 — the drag note's clauses"): a file deleted after
   the drop STAYS listed (opening it says "Couldn't read this file"), and after a reload the folder's file IS remembered
-  in Recent, where clicking it starts the folder picker (no Watch there). **Your decision:** approve the corrected
-  sentence — *"Firefox shows this folder as it was when you dragged it in: files added later won't appear, and files
-  deleted later stay listed but can't be opened. Next time Peekover can only ask you to pick the folder again, and a
-  picked folder can't be watched — drag it in instead. Watching still works here: a watched file is re-read from
-  disk."* — or give other words. **Record:** "drag note: approve corrected" or your words. In the walk, judge the
-  I-11(b) cells against the wording that lands.
+  in Recent, where clicking it starts the folder picker (no Watch there). **Decided and landed** ("drag note: approve
+  corrected", task 9.3b): a dragged folder now shows *"Firefox shows this folder as it was when you dragged it in: files
+  added later won't appear, and files deleted later stay listed but can't be opened. Next time Peekover can only ask you
+  to pick the folder again, and a picked folder can't be watched — drag it in instead. Watching still works here: a
+  watched file is re-read from disk."*; a picked folder keeps the old note. **Check it in the walk:** drag a folder onto
+  the app page in Firefox, read the note, and judge the I-11(b) cells against it. Its "a picked folder can't be watched"
+  waits on step 1(c).
 - **Fixed since the prep — check it in the walk: a save made right after pressing Watch now shows** (task 9.3a,
   `decisions.md` "M13 TASK 9.3a"). Before, the first second after pressing Watch was absorbed and the reader kept the
   older text. In a live browser (both engines, the app page; and Chromium's tab reader on a `file://` file): open a

@@ -1,6 +1,41 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 9.3b — DISCOVERED: the drag-route note (HUMAN RULING, verbatim: "drag note: approve
+  corrected."). A dragged Firefox folder no longer tells the user Watch is unavailable.** Local, on `main` after
+  `9659765`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).
+  - **The words (the corrected sentence, every clause measured on the drag route first — `decisions.md` "M13 — the drag
+    note's clauses"):** `DRAGGED_SNAPSHOT_NOTE` = *"Firefox shows this folder as it was when you dragged it in: files
+    added later won’t appear, and files deleted later stay listed but can’t be opened. Next time Peekover can only ask
+    you to pick the folder again, and a picked folder can’t be watched — drag it in instead. Watching still works here:
+    a watched file is re-read from disk."* Typographic apostrophes, as the app's other copy ("Firefox can’t remember
+    folder access"); the words are the approved ones.
+  - **The change:** `src/app/firefoxFolderSource.ts` exports the string; `src/app/appShell.ts` `paintGranted` picks the
+    note by route — `activeRoute === 'drop'` → the drag note, else `READ_ONLY_SNAPSHOT_NOTE` (**the picker note is
+    unchanged**; a reopen from Recent sets the picker route first, so it keeps the old note).
+  - **The link the human asked for:** "a picked folder can’t be watched" rests on the OPEN real-picker check
+    (`final-review.md` step 1(c)). That step now says: if a real picker reads fresh files, update together the drag
+    note, README row 25 and its ledger twins — CHANGELOG row 334, the Firefox listing's row 498 — and
+    `FIREFOX_PICKER_NOTE`. The same dependency is in the constant's doc comment.
+  - **Red first:** the drag-route assertions flipped to the new string before the shell was wired —
+    `folderDrop.browser.test.ts` (the full drop flow; re-spelled, marked) red on BOTH engines and
+    `firefoxDragWatch` (A) red on Firefox, each receiving the old "…Watch mode and snapshot capture are also
+    unavailable here…" text; `firefoxFallback.browser.test.ts` (the picker route) green throughout, still pinning the
+    old note. After the wiring: 30 passed / 6 skipped across the three files. (A) also asserts the old note is NOT
+    shown on the drag route.
+  - **Bytes (same-session A-B-A, both engines):** app chunk **550,549 → 550,911 B (+362)**, md5 `8503fa07…` →
+    **`3e57f97e…`** — the sentence (UTF-8) and the route condition; **content script identical** (345,049 B,
+    `bc2232f4…` / `73443061…`); `.output` **6,645,872 / 6,645,728 B** (+362 each) of 7,340,032; manifests unchanged,
+    `permissions: []`. 9.5's byte ledger gains this row at its re-run.
+  - **Ledger:** no row changes — in-app copy is "Checked, not ledgered" (9.2 HUMAN RULING); row 25 (and 334, 491, 498)
+    are true as written today.
+  - **Files:** `src/app/firefoxFolderSource.ts`, `src/app/appShell.ts`, `tests/browser/folderDrop.browser.test.ts`,
+    `tests/browser/firefoxDragWatch.browser.test.ts`; records (`decisions.md`, `tasks.md`, `progress.md`,
+    `final-review.md` steps 1(c) / (d) and 2, `AGENTS.md`'s count).
+  - **Verify:** lint EXIT 0 · unit **1,680 / 1,680** · browser, the FULL suite, both engines: **2,620 passed / 0 failed / 60 skipped** of 2,680 (222 files) · golden untouched · `permissions: []` · no NUL / CR in changed files.
+  Why: the human's approval of the corrected sentence, with the link to step 1(c).
+  Revisit-when: the real-picker check (step 1(c)); the 8.1 walk (I-11(b), judged against this wording).
+
 - **2026-11-07 · M13 TASK 9.3a — DISCOVERED (the human's direction): the watch baseline is taken AT THE CLICK, so a save
   made right after pressing Watch is shown. Every polling route.** Local, on `main` after `2044b21`; not pushed.
   `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).

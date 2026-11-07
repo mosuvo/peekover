@@ -28,7 +28,7 @@ import { openFolderFromDrop, isDirectoryPickerSupported } from '../../src/app/fo
 import { folderSourceFromDataTransfer } from '../../src/app/firefoxFolderSource';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
-import { READ_ONLY_SNAPSHOT_NOTE } from '../../src/app/firefoxFolderSource';
+import { DRAGGED_SNAPSHOT_NOTE } from '../../src/app/firefoxFolderSource';
 
 let seq = 0;
 const nextName = () => `peekover-drop-${(seq += 1)}-${Math.trunc(performance.now())}`;
@@ -222,7 +222,9 @@ describe('drag-and-drop folder target — the browser default is PREVENTED (the 
       const chip = await waitFor(() => container.querySelector('.peekover-app__chip'));
       expect(chip.textContent).toContain('granted:');
       const note = container.querySelector('[data-state="read-only-snapshot"]');
-      expect(note?.textContent).toBe(READ_ONLY_SNAPSHOT_NOTE);
+      // RE-SPELLED at M13 9.3b: a DROPPED folder gets the drag note (Watch works here); the picker keeps the old one
+      // (`firefoxFallback.browser.test.ts`).
+      expect(note?.textContent).toBe(DRAGGED_SNAPSHOT_NOTE);
       const fileBtn = await waitFor(() =>
         container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
       );

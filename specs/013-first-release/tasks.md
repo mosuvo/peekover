@@ -1224,6 +1224,14 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       then green; full suite; content-script and app-chunk bytes stated.
       ★ *2026-11-07 (landed; `decisions.md`, "M13 TASK 9.3a"): red → green on all four; content script and app chunk
       +0 B each, both md5s moved (one call target swapped); five unit tests re-spelled to the new timing.*
+- [x] **9.3b The drag-route note (DISCOVERED at the 9.3 finding; HUMAN RULING "drag note: approve corrected").** A
+      folder dragged onto the app page shows `DRAGGED_SNAPSHOT_NOTE` (Watch works there); the picker keeps
+      `READ_ONLY_SNAPSHOT_NOTE`.
+      Files: `src/app/firefoxFolderSource.ts` · `src/app/appShell.ts` · `tests/browser/folderDrop.browser.test.ts` ·
+      `tests/browser/firefoxDragWatch.browser.test.ts`
+      Verify: each clause measured on the drag route first; red first on the drag-route assertions, the picker test
+      green throughout; full suite; bytes stated. Linked to final-review step 1(c) (the real-picker check).
+      ★ *2026-11-07 (landed; `decisions.md`, "M13 TASK 9.3b"): red → green; app chunk +362 B, content script identical.*
 - [x] **9.4 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s prior entries first.
       Includes: whether mock-first saved re-work; whether the census predicted group 4's re-spellings; whether the
       ledger kept the truth pass to one re-check.
@@ -1326,7 +1334,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

@@ -42,7 +42,7 @@ import {
   GRANT_PROMPT_LINE,
   type GrantState,
 } from './capability';
-import { READ_ONLY_SNAPSHOT_NOTE } from './firefoxFolderSource';
+import { DRAGGED_SNAPSHOT_NOTE, READ_ONLY_SNAPSHOT_NOTE } from './firefoxFolderSource';
 import {
   putFolder as defaultPutFolder,
   deleteFolder as defaultDeleteFolder,
@@ -2149,7 +2149,9 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       note.className = `${SHELL_CLASS}__notice`;
       note.setAttribute('data-state', 'read-only-snapshot');
       note.setAttribute('data-tone', 'warn');
-      note.textContent = READ_ONLY_SNAPSHOT_NOTE;
+      // The ROUTE picks the words (M13 9.3b): a DRAGGED folder can be watched (Firefox re-reads its files), so it gets
+      // the drag note; the picker route keeps the original. `activeRoute` is set before `applyOutcome` runs.
+      note.textContent = activeRoute === 'drop' ? DRAGGED_SNAPSHOT_NOTE : READ_ONLY_SNAPSHOT_NOTE;
       wrap.append(note);
     }
 

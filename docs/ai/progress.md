@@ -17,6 +17,13 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 9.3b LANDED (2026-11-07) — DISCOVERED: the drag-route note (HUMAN RULING "drag note: approve
+corrected").** Record: `decisions.md`, "M13 TASK 9.3b". A dragged Firefox folder now shows the approved note (Watch
+works there); the picker note is unchanged. Its "a picked folder can't be watched" waits on final-review step 1(c) —
+if the real picker reads fresh files, the note, README row 25, rows 334 / 498 and `FIREFOX_PICKER_NOTE` change
+together. App chunk +362 B (`3e57f97e`), content script identical; `.output` 6,645,872 / 6,645,728 B. Tasks: 53, 49
+ticked.
+
 **M13 TASK 9.3a LANDED (2026-11-07) — DISCOVERED: the watch baseline at the click.** Record: `decisions.md`, "M13 TASK
 9.3a". A save made right after pressing Watch is now shown on every polling route (`pollingDetector.start()` reads at
 once). Red → green: Firefox drag test (no wait), Chromium polling route, two unit tests. Content script and app chunk
@@ -26,8 +33,8 @@ once). Red → green: Firefox drag test (no wait), Chromium polling route, two u
 finding: Firefox drag-folder watch". Measured (`tests/browser/firefoxDragWatch.browser.test.ts`, firing control):
 on a dragged folder Watch is offered and an on-disk edit reaches the reader — **row 25 true, the pane note false**.
 The human's wording was checked clause by clause: (a) true; (b) deleted files stay listed (not "won't appear");
-(c) FALSE — the folder's file is remembered in Recent and reopens through the picker. **STOPPED: a corrected sentence
-awaits the human** (`decisions.md` "M13 — the drag note's clauses"); no product byte changed.
+(c) FALSE — the folder's file is remembered in Recent and reopens through the picker. The corrected sentence was
+approved and LANDED as task 9.3b (above).
 Second finding: the picker route also read fresh bytes in Playwright's Firefox — to confirm with a real picker
 (final-review step 1(c)).
 
