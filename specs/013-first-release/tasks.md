@@ -1208,6 +1208,13 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       (the human's picks only)
       Verify: each PNG is 1280×800 (unit size check); nothing in `docs/store/` appears in `.output` (both engines); the
       human's picks recorded. No production bytes.
+      ★ *2026-11-07 — PARTIAL, CAPTURES ONLY (`decisions.md`, "M13 TASK 9.3 — captures"; HUMAN RULING: the human picks
+      at the end-of-round review, with the walk):* 22 PNGs at 1280×800 from HEAD's build (`5ac0112` — not "the build
+      that passed 8.1": the walk is after 9.x by ruling, so any walk fix re-captures what it touches) in
+      `D:\Dev\peekover-shots\9.3\` with a contact sheet. **12 candidates** (Chromium → Chrome · Edge); the 10 Firefox
+      app-page captures are NOT store candidates (the harness's live handle is a Chromium-only state); no Firefox tab
+      capture (PENDING SIGNED INSTALL). Not packaged (both engines). **Open, so not ticked:** the human's picks →
+      `docs/store/assets/`. Necessary ripple: `scripts/walk-shots.ts` (exports + a run guard, the shared engine seam).
 - [ ] **9.4 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s prior entries first.
       Includes: whether mock-first saved re-work; whether the census predicted group 4's re-spellings; whether the
       ledger kept the truth pass to one re-check.

@@ -1,6 +1,67 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 9.3 — captures (store screenshots; CAPTURES ONLY — the pick is the human's, at the end-of-round
+  review, with the walk: HUMAN RULING 2026-11-07).** Local, on `main` after `5ac0112`; not pushed. CI on `5ac0112` green
+  first (CI 42358267992, Supply chain 42358268049). `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).
+  Budget unchanged: `.output` 6,645,510 / 6,645,366 B of 7,340,032 (headroom 694,522 / 694,666).
+  - **The build.** tasks.md reads "from the build that passed 8.1"; by the 2026-11-07 ruling the walk comes after 9.x,
+    so these are from **HEAD's build** (clean, both engines, at `5ac0112`) — re-checked after the walk; **any walk fix
+    that changes a shown surface re-captures it** (a token / font / toolbar-wide fix re-captures all; progress.md "Up
+    next"). That build = 8.1 prep's: zips `9ed349c2…` (Chrome) / `d74715ca…` (Firefox), content script `ee9f9279…` /
+    `317c6c51…`.
+  - **What exists.** `scripts/capture-screenshots.ts` (new) drives the built extension through walk-shots' engine seam,
+    each capture in a FRESH profile, the app page through the `__peekoverHarness` seam; `docs/store/assets/sample.md`
+    (new) is the sample — a neutral "Search index rollout" plan (checklist, table, Mermaid, math, TS + Python), **no
+    sentence about Peekover**, so the document text cannot outrun the ledger. Output `D:\Dev\peekover-shots\9.3\`:
+    **22 PNGs, all 1280×800** (IHDR check in the script; control: `cws-icon-128.png` reads 128×128 — fires), the
+    contact sheet (`contact-sheet.png` / `.html`, one page, each numbered with what it shows and which store it suits)
+    and `manifest.json`.
+  - **12 store candidates (Chromium → Chrome Web Store · Edge Add-ons):** 01–06 light, 07–12 dark — reading (top of
+    the document), table + diagram, math + code, the agent file (CLAUDE.md badge), the editor, the tab reader (a `.md`
+    from disk in a tab).
+  - **Excluded, and why:**
+    1. **Firefox app-page captures 13–22 — "NOT FOR A STORE" (kept as Firefox drawing references).** The harness opens
+       an OPFS directory handle: a live handle, the Chromium state. Every real Firefox folder route (picker or drag) is
+       a `persistable:false` snapshot whose pane always shows `READ_ONLY_SNAPSHOT_NOTE`; the captures lack it, so they
+       show Firefox a state it never has. Tried once to drive the real picker (BiDi `input.fileDialogOpened` +
+       `input.setFiles`, then with `unhandledPromptBehavior.file: 'ignore'`): the chooser was dismissed both times
+       (no picker input left in the page) — not pursued further; reverted.
+    2. **The Firefox tab reader — not captured.** The Firefox half of "files opened from disk" is PENDING SIGNED
+       INSTALL (ledger rows 2, 8; 9.2).
+    3. **A reused profile — replaced by fresh profiles.** The first run reused one profile per engine × theme, and the
+       Recent list repeated the open file (×3–4) — the 8.1 prep's "Recent repeats a file", unjudged; a store image
+       must not show it. Each capture now starts fresh (Recent holds the open file once).
+  - **Each candidate checked against the ledger.** Features shown: rendering, task lists, tables + filter / copy (rows
+    6, 10), TOC (9), themes (11), app page + folder (13), Watch / Compare controls (14, 16), diagrams / math / code on
+    the app page (17), export control (18), editor + Save (19), agent badge (88, 221), version 0.1.0 (309, 341), the tab
+    reader on Chromium (2, 8 — Chromium half true now; row 22's file-URL setting). On-screen copy is shipped in-app
+    copy (9.2's HUMAN RULING "Checked, not ledgered"): "No network calls" = `src/app/statusLine.ts` (4.7, test-backed).
+    No candidate shows an unshipped feature, a code-highlighted / math / diagram block in a TAB (row 20), or text the
+    ledger does not back.
+  - **Store limits (re-checked today against each store's page):** Chrome 1–5, 1280×800 or 640×400
+    (developer.chrome.com/docs/webstore/images); Edge 0–6, 640×480 or 1280×800 (learn.microsoft.com … publish-extension,
+    "maximum of 6"); AMO no practical limit, 1280×800 / 1.6:1 (extensionworkshop.com … create-an-appealing-listing).
+    `docs/store/edge.md` says only "optional, 1280×800" — consistent, no edit.
+  - **Not packaged (Verify):** both clean engine builds: "Search index rollout" / "bm25" 0 files, every `docs/store/`
+    file name 0; control: "No network calls" found 1 per engine, the sample text found in its source.
+  - **FOUND (code reading, not observed in an engine; routed to the walk's I-11(b), not fixed — captures only):** a
+    Firefox folder opened by DRAG gets `READ_ONLY_SNAPSHOT_NOTE` ("Watch mode and snapshot capture are also unavailable
+    here…", `appShell.ts` `paintGranted`, every `persistable:false` source), while `watchAvailability.ts` offers Watch
+    for that route (`route === 'drop'` → watchable) and ledger row 25 says watching works for a dragged folder. 9.2's
+    in-app check read the note against the published texts, not against the route it shows on.
+  - **Flagged against the kickoff (the body followed):** the kickoff named "the repo's sample document" — none existed;
+    tasks.md's Files list makes `docs/store/assets/sample.md` new, so it is committed (the kickoff said "records + any
+    capture script only"). `scripts/walk-shots.ts` gains exports and a run-when-invoked guard only (the capture script
+    reuses its engine seam instead of a 300-line copy; walk-shots' behaviour unchanged) — capture-script ripple, named.
+    No PNG is committed: the picks are the human's (tasks.md: `docs/store/assets/*.png`, the picks only).
+  - **Verify:** each PNG 1280×800 (22 / 22); nothing in `docs/store/` in `.output` (both engines); lint EXIT 0; unit
+    1,678 / 1,678 (the four zip checks need `pnpm zip` + the Firefox zip — run, 27 / 27); package bytes identical to 7.6.
+    **Open:** the human's picks (tasks.md 9.3 not ticked).
+  Why: tasks.md 9.3; the HUMAN RULING that the pick waits for the end-of-round review.
+  Revisit-when: the end-of-round review (the pick); any walk fix touching a shown surface; the signed install (a
+  Firefox capture through a real Firefox route becomes possible — by hand at the walk, or a fixed script).
+
 - **2026-11-07 · M13 TASK 9.2 — the truth re-check (agent prep and fixes; PARTIAL: the Firefox `file://` rows pending
   the signed install, the human's sign-off to come). TWO HUMAN RULINGS.** Local, on `main` after `aecd075`; not pushed.
   `pnpm audit --prod` EXIT 0 (2026-11-07). CI on `aecd075`: Supply chain 42337298999 green; CI 42337298882 (read

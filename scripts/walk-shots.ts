@@ -23,6 +23,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium, type BrowserContext, type Page } from 'playwright';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -35,8 +36,8 @@ const GECKO_ID = 'peekover@peekover.dev';
 const WIDTHS = [1440, 1280, 1080, 414] as const;
 const HEIGHT: Record<number, number> = { 1440: 900, 1280: 800, 1080: 800, 414: 896 };
 const THEMES = ['light', 'dark'] as const;
-type Theme = (typeof THEMES)[number];
-type EngineName = 'chromium' | 'firefox';
+export type Theme = (typeof THEMES)[number];
+export type EngineName = 'chromium' | 'firefox';
 
 const arg = (name: string): string | undefined => {
   const i = process.argv.indexOf(name);
@@ -45,7 +46,7 @@ const arg = (name: string): string | undefined => {
 const OUT = arg('--out') ?? 'D:\\Dev\\peekover-shots\\8.1';
 const ONLY_ENGINE = arg('--engine') as EngineName | undefined;
 const ONLY_SURFACE = arg('--only');
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ const FILES: Record<string, string> = {
 
 // ── The engine seam ──────────────────────────────────────────────────────────────────────────────────────────────
 
-interface Engine {
+export interface Engine {
   readonly name: EngineName;
   /** Navigate the working tab to an extension page path, e.g. `/app.html`. */
   ext(p: string): Promise<void>;
@@ -160,7 +161,7 @@ interface Engine {
   close(): Promise<void>;
 }
 
-async function chromiumEngine(theme: Theme, width: number): Promise<Engine> {
+export async function chromiumEngine(theme: Theme, width: number): Promise<Engine> {
   const udd = fs.mkdtempSync(path.join(os.tmpdir(), 'peekover-walk-cr-'));
   const launch = () =>
     chromium.launchPersistentContext(udd, {
@@ -233,7 +234,7 @@ const BIDI_KEYS: Record<string, string> = { Control: '\uE009', Shift: '\uE008', 
 /** Firefox's smallest window is 500 px: a narrower cell is drawn at this device-pixel scale (the PNG is 500 px wide). */
 const fxScale = (width: number): number => (width < 500 ? 500 / width : 1);
 
-async function firefoxEngine(theme: Theme, width: number, port: number): Promise<Engine> {
+export async function firefoxEngine(theme: Theme, width: number, port: number): Promise<Engine> {
   const prof = fs.mkdtempSync(path.join(os.tmpdir(), 'peekover-walk-fx-'));
   fs.writeFileSync(
     path.join(prof, 'user.js'),
@@ -390,9 +391,9 @@ const H = String.raw`(() => {
   const one = (sel) => deep().find((e) => e.matches(sel)) || null;
   return { deep, vis, find, click, one };
 })()`;
-const inPage = (body: string): string => `(async () => { const H = ${H}; ${body} })()`;
+export const inPage = (body: string): string => `(async () => { const H = ${H}; ${body} })()`;
 
-async function waitFor(E: Engine, cond: string, ms = 8000): Promise<boolean> {
+export async function waitFor(E: Engine, cond: string, ms = 8000): Promise<boolean> {
   for (let t = 0; t < ms; t += 200) {
     try {
       if (await E.evaluate<boolean>(inPage(`return !!(${cond});`))) return true;
@@ -422,7 +423,7 @@ async function seedOpfs(E: Engine): Promise<void> {
 }
 
 /** A fresh app page with the `notes` folder open and `file` selected (or none). */
-async function freshApp(E: Engine, file: string | null, folder = 'notes'): Promise<void> {
+export async function freshApp(E: Engine, file: string | null, folder = 'notes'): Promise<void> {
   await E.ext('/app.html?__peekoverHarness');
   if (!(await waitFor(E, `window.__peekoverHarness && typeof window.__peekoverHarness.openFromHandle === 'function'`))) {
     throw new Error('harness seam missing');
@@ -846,7 +847,7 @@ const SURFACES: Surface[] = [
   },
 ];
 
-const fileUrl = (p: string): string => 'file:///' + p.replace(/\\/g, '/');
+export const fileUrl = (p: string): string => 'file:///' + p.replace(/\\/g, '/');
 
 // ── Mock frames (Chromium, engine-independent) ───────────────────────────────────────────────────────────────────
 
@@ -1005,7 +1006,10 @@ async function main(): Promise<void> {
   console.log(`[walk-shots] done: ${JSON.stringify(counts)}; side-by-side ${pairs.length}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Run only when invoked directly: scripts/capture-screenshots.ts (task 9.3) imports the engine seam above.
+if (process.argv[1] && path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
