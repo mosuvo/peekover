@@ -13,7 +13,7 @@
 
 **THE HUMAN'S NEXT STEP: `docs/ai/final-review.md`** — every remaining human step in one sitting order: (1) the Firefox
 signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3) the 9.2 sign-off, (4) the 9.3 pick,
-(5) what the agent does after. About 5½–6½ h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
+(5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
