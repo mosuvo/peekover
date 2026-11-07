@@ -77,6 +77,11 @@ app page from the screenshots (~90 min), **C** the tab reader, contrast and the 
   picked folder can't be watched — drag it in instead. Watching still works here: a watched file is re-read from
   disk."* — or give other words. **Record:** "drag note: approve corrected" or your words. In the walk, judge the
   I-11(b) cells against the wording that lands.
+- **Fixed since the prep — check it in the walk: a save made right after pressing Watch now shows** (task 9.3a,
+  `decisions.md` "M13 TASK 9.3a"). Before, the first second after pressing Watch was absorbed and the reader kept the
+  older text. In a live browser (both engines, the app page; and Chromium's tab reader on a `file://` file): open a
+  file, press **Watch**, save a change in your editor straight away — the reader should show it within about a second.
+  **Record** it in the watch rows of `walk-8.1.md` like any cell (matches / fix).
 - The named checks still stand: Editing, the Watching pill, the snapshot notice, the Compare picker, the ≤ 1189 px
   Files overlay (their mock approval used the agent's self-check, not your eye); the two-row toolbar for an agent file
   at 1280; the reader's untouched surfaces in both themes; both pending lists (2.2's contrast census, 5.1's

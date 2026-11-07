@@ -65,15 +65,16 @@ export interface ChangeDetector {
  *
  * ── Baseline semantics: the FIRST read establishes the baseline and does NOT fire ────────────
  *
- * A detector reports *changes*, so the first poll has nothing to compare against and is silent.
+ * A detector reports *changes*, so the first read has nothing to compare against and is silent.
  * This is deliberate and is what makes "identical content fires nothing" true from a cold start:
  * watch is switched on for a document that is ALREADY rendered, and firing on the first tick
  * would re-render the reader for no reason on every single start.
  *
- * The residual window, stated rather than papered over: a change landing between the render and
- * the first poll is absorbed into the baseline and never reported. It is bounded by one
- * interval, and closing it needs the caller's already-rendered text seeded as the baseline —
- * which the controller (4.2) owns, not this module.
+ * The first read is taken AT START (M13 discovered task, "baseline at the click"): before it, the
+ * baseline waited one interval, so a save made in the first second after pressing Watch became
+ * the baseline and was never shown. The residual window, stated rather than papered over: a change
+ * landing between the RENDER and the click is still absorbed; closing it needs the caller's
+ * already-rendered text seeded as the baseline — which the controller (4.2) owns, not this module.
  *
  * ── Why a self-scheduling timeout chain and not `setInterval` ────────────────────────────────
  *
@@ -136,7 +137,7 @@ export function pollingDetector(read: () => Promise<string>, intervalMs: number)
       running = true;
       callback = cb;
       errback = onError ?? null;
-      schedule();
+      tick(); // the baseline read happens NOW, at the click — not one interval later (M13 9.3a)
     },
     stop() {
       running = false;

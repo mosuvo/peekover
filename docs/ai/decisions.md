@@ -1,6 +1,43 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 9.3a — DISCOVERED (the human's direction): the watch baseline is taken AT THE CLICK, so a save
+  made right after pressing Watch is shown. Every polling route.** Local, on `main` after `2044b21`; not pushed.
+  `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).
+  - **The defect (found at the 9.3-finding investigation, `decisions.md` "M13 — 9.3 finding"):** `pollingDetector.start()`
+    only SCHEDULED its first read, one interval (1 s) later, and that read is the silent baseline. A save made in that
+    first second became the baseline and was never shown; the reader kept the older text until the next change.
+  - **The fix:** `src/watch/changeDetector.ts` — `start()` calls `tick()` (read now) instead of `schedule()`. One function
+    serves every polling route: the app page without an observer (Firefox always; Chromium where `FileSystemObserver` is
+    absent), the tab reader's relay (`contentWatch.ts`), and the observer's own fallback (`observerDetector.ts`, comment
+    updated: its window is now one read's latency). The event-driven observer route had no silent baseline and is
+    unchanged. Residual window, stated: a change between the RENDER and the click is still absorbed (seeding the
+    rendered text as the baseline is the controller's, not done here).
+  - **Red first, the defect's own signature, then green:**
+    | Check | Before (HEAD `2044b21`) | After |
+    | --- | --- | --- |
+    | Firefox — `firefoxDragWatch` (A), the edit right after Watch (its 1.5 s wait REMOVED) | **red**: "the appended heading reached the reader through Watch: expected false to be true" | green, 3 runs of 3 |
+    | Chromium — `watchBaselineAtClick` (new), the POLLING route (`FileSystemObserver` hidden; detector asserted `polling`), an OPFS handle rewritten right after Watch | **red**: "the save made at once reached the reader through the polled detector: expected false to be true" | green, 3 of 3 |
+    | Chromium — the same file, the engine's own route (observer) | green (event-driven: no silent baseline) | green |
+    | Unit — `changeDetector.test.ts` "reads once at start" / "a save made inside the first interval fires on the first poll" (new) | **red** 2 of 2 | green |
+    Firing control unchanged and still green: `firefoxDragWatch` (B), an in-memory File, never updates.
+  - **Re-spelled (the old timing, each property kept, each line marked "RE-SPELLED at M13 9.3a"):** five
+    `changeDetector.test.ts` tests counted reads or ticks from "first read = first tick" — the content-compare test and
+    the throwing-callback test take the baseline `atStart()`; stop() reads 4 not 3; start-twice 4 not 3 (two loops = 8);
+    the rejecting-read test reaches its three failures with `tick(2)` (the start read + two polls).
+  - **Bytes (same-session A-B-A, both engines: FIX → the two src files at HEAD → FIX):** content script **345,049 B,
+    +0 B** — md5 `ee9f9279…` → **`bc2232f4…`** (Cr), `317c6c51…` → **`73443061…`** (Fx); app chunk **550,549 B, +0 B** —
+    md5 `c76a951b…` → **`8503fa07…`** (both engines); `.output` 6,645,510 / 6,645,366 B unchanged; manifests
+    unchanged, `permissions: []`. Why 0 B: one call target swapped (`schedule` → `tick`), both minified to one-letter
+    names; the md5 moves prove the change is in both bundles. 9.5's byte ledger gains this row at its re-run.
+  - **Files:** `src/watch/changeDetector.ts`, `src/watch/observerDetector.ts` (a comment), `src/watch/changeDetector.test.ts`,
+    `tests/browser/watchBaselineAtClick.browser.test.ts` (new), `tests/browser/firefoxDragWatch.browser.test.ts` (A's
+    wait removed), records (`decisions.md`, `tasks.md`, `progress.md`, `final-review.md`, `AGENTS.md`'s count).
+  - **Verify:** lint EXIT 0 · unit **1,680 / 1,680** (1,676 + the 4 zip checks, run after re-zipping) · browser, the FULL suite, both engines: **2,620 passed / 0 failed / 60 skipped** of 2,680 (222 files) · the two browser checks 3 runs of 3 · golden untouched · `permissions: []` · no NUL / CR in changed files.
+  Why: the human's direction — "take the baseline read immediately (at the click) … every polling route".
+  Revisit-when: the 8.1 walk (final-review step 2 names it: press Watch, save at once, see it); seeding the rendered
+  text as the baseline, if the render-to-click window ever matters.
+
 - **2026-11-07 · M13 — the drag note's clauses, measured: (c) FALSE, (b) mis-worded → STOPPED, the note NOT landed;
   a corrected sentence proposed.** The human approved the drag-route note "WITH MY WORDS, after you verify each
   claim": *"Firefox shows this folder as it was when you dragged it in: files added or removed later won't appear, and

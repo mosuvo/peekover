@@ -123,9 +123,11 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number): 
   const watchOffered = !!control && !control.disabled && control.getClientRects().length > 0;
   control?.click();
   const watchPressed = control?.getAttribute('aria-pressed') ?? null;
-  // Let the watcher take its baseline read first (one 1 s poll + margin): an edit inside that window would BE the
-  // baseline and could never read as a change. A person does not edit within milliseconds of pressing Watch.
-  await new Promise<void>((r) => setTimeout(r, 1500));
+  // NO wait: the edit lands right after pressing Watch — a save made at once must still show. Before the M13
+  // discovered task "baseline at the click", the first poll (~1 s later) took the edited text as its baseline and the
+  // change was never shown; this test was red without a 1.5 s wait here (`decisions.md`, "M13 TASK 9.3a").
+  // Yield once so the click's synchronous start (and its immediate baseline read) has begun.
+  await new Promise<void>((r) => setTimeout(r, 0));
 
   await commands.diskFixture('append', diskPath, APPENDED);
   let updated = false;

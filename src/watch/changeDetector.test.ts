@@ -26,6 +26,9 @@ const INTERVAL = 1000;
 /** Advance exactly one poll interval, flushing the read promise chain in between. */
 const tick = (times = 1) => vi.advanceTimersByTimeAsync(INTERVAL * times);
 
+/** Flush the read `start()` takes at once (the baseline, at the click — M13 9.3a) without advancing an interval. */
+const atStart = () => vi.advanceTimersByTimeAsync(0);
+
 /** A `read` that walks a script of texts, repeating the last one forever, counting its calls. */
 function scriptedRead(texts: string[]) {
   let i = 0;
@@ -73,7 +76,7 @@ describe('pollingDetector — compares CONTENT, never metadata', () => {
     const detector = pollingDetector(read, INTERVAL);
     detector.start(cb);
 
-    await tick(); // baseline read — deliberately silent
+    await atStart(); // baseline read, taken at start — deliberately silent (RE-SPELLED at M13 9.3a: was the first tick)
     expect(cb).not.toHaveBeenCalled();
 
     await tick(); // content changed
@@ -113,7 +116,7 @@ describe('pollingDetector — lifecycle', () => {
 
     await tick(3);
     const readsAtStop = read.mock.calls.length;
-    expect(readsAtStop).toBe(3); // non-vacuous: the instrument was live before stop
+    expect(readsAtStop).toBe(4); // the start read + three polls (RE-SPELLED at M13 9.3a: was 3) — the instrument is live
 
     detector.stop();
     await tick(10);
@@ -152,7 +155,7 @@ describe('pollingDetector — lifecycle', () => {
 
     await tick(3);
 
-    expect(read.mock.calls.length).toBe(3); // one loop, not two
+    expect(read.mock.calls.length).toBe(4); // one loop (start read + 3 polls), not two (8) — RE-SPELLED at M13 9.3a: was 3
     detector.stop();
   });
 });
@@ -175,7 +178,7 @@ describe('pollingDetector — a failing read is transient, not fatal', () => {
       const detector = pollingDetector(read, INTERVAL);
       detector.start(cb);
 
-      await tick(3); // three consecutive failures
+      await tick(2); // three consecutive failures: the start read + two polls (RE-SPELLED at M13 9.3a: was tick(3))
       await realTurn();
       expect(cb).not.toHaveBeenCalled();
       expect(read.mock.calls.length).toBe(3); // the loop SURVIVED every failure
@@ -209,7 +212,7 @@ describe('pollingDetector — a failing read is transient, not fatal', () => {
       const detector = pollingDetector(read, INTERVAL);
       detector.start(cb);
 
-      await tick(); // baseline 'one'
+      await atStart(); // baseline 'one', at start (RE-SPELLED at M13 9.3a: was the first tick)
       await tick(); // 'two' -> fires, cb throws
       expect(cb).toHaveBeenCalledTimes(1);
 
@@ -223,5 +226,33 @@ describe('pollingDetector — a failing read is transient, not fatal', () => {
     } finally {
       process.off('unhandledRejection', onUnhandled);
     }
+  });
+});
+
+// M13 discovered task (`decisions.md`, "M13 TASK 9.3a"): the baseline is read AT START — at the click — not on the
+// first poll an interval later. Before it, a save made within the first interval after pressing Watch BECAME the
+// baseline and was never shown. One function serves every polling route (the app page without an observer, the tab
+// reader's relay, the observer's own fallback), so these two tests cover all of them.
+describe('pollingDetector — the baseline is taken at start', () => {
+  it('reads once at start, before any interval passes', async () => {
+    useTimers();
+    const read = scriptedRead(['# before']);
+    const detector = pollingDetector(read, INTERVAL);
+    detector.start(vi.fn());
+    await atStart();
+    expect(read).toHaveBeenCalledTimes(1);
+    detector.stop();
+  });
+
+  it('a save made inside the first interval fires on the first poll', async () => {
+    useTimers();
+    const read = scriptedRead(['# before', '# saved right after Watch']);
+    const cb = vi.fn();
+    const detector = pollingDetector(read, INTERVAL);
+    detector.start(cb);
+    await tick();
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledWith('# saved right after Watch');
+    detector.stop();
   });
 });

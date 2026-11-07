@@ -17,6 +17,11 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 9.3a LANDED (2026-11-07) — DISCOVERED: the watch baseline at the click.** Record: `decisions.md`, "M13 TASK
+9.3a". A save made right after pressing Watch is now shown on every polling route (`pollingDetector.start()` reads at
+once). Red → green: Firefox drag test (no wait), Chromium polling route, two unit tests. Content script and app chunk
++0 B, md5s moved (`bc2232f4` / `73443061`; app `8503fa07`). Tasks: 52 (40 + 12), 48 ticked.
+
 **M13 — 9.3 FINDING INVESTIGATED (2026-11-07): Firefox drag-folder watch.** Record: `decisions.md`, "M13 — 9.3
 finding: Firefox drag-folder watch". Measured (`tests/browser/firefoxDragWatch.browser.test.ts`, firing control):
 on a dragged folder Watch is offered and an on-disk edit reaches the reader — **row 25 true, the pane note false**.

@@ -167,9 +167,9 @@ export function observerDetector(
     onFallback?.(detail);
     fallback = pollingDetector(readText, fallbackIntervalMs);
     fallback.start(deliver);
-    // NOTE the residual window, same as the polled path's: pollingDetector's first read is a
-    // silent baseline, so a change landing between the death and the first poll is absorbed.
-    // Bounded by one interval, and only on an already-degraded path.
+    // NOTE the residual window: pollingDetector's first read (taken at once, at start) is a
+    // silent baseline, so a change landing between the death and that read is absorbed — one
+    // read's latency, only on an already-degraded path.
   };
 
   const observe = async (): Promise<void> => {
