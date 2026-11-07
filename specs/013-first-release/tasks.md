@@ -1275,6 +1275,11 @@ dismissal → 4.5. Every clause has at least one task.
 8. **8.1 after groups 1–7**, from fresh builds; every "fix" and the Firefox branch (if needed) are discovered tasks
    that run before group 9.
 9. **9.1 → 9.2 → 9.3 → 9.4 → 9.5.** Screenshots last, from the walked build (spec §3.9).
+   ★ *2026-11-07 (HUMAN RULING, verbatim: "I will walk at the very end, after group 9."): **8.1's walk moves after
+   9.x** — order now 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → **8.1 (the walk)** → its fixes (8.1a …) → go-live. 8.1's prep
+   (`0e71419`) stands; the walk still gates go-live (GO-LIVE.md's section-0 gates unchanged). "The walked build" and
+   "the build that passed 8.1" in 9.2 / 9.3 now read: the build at that task, re-checked after the walk. **Accepted
+   cost:** any walk fix re-runs the 9.x work it touches (progress.md, "Up next", lists which). No task deleted.*
 
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk

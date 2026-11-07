@@ -1,6 +1,15 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 RULING — the 8.1 walk moves after group 9 (HUMAN).** Verbatim: *"I will walk at the very end,
+  after group 9."* Order: 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 8.1's walk → its fix tasks (8.1a …) → go-live. 8.1's prep
+  (`0e71419`) stands. **The walk still gates go-live** — `docs/store/GO-LIVE.md`'s section-0 gates unchanged. **Accepted
+  cost:** a walk fix re-runs the 9.x work it touches — listed in progress.md "Up next" (the site sentences and ledger
+  rows, the 9.2 sign-off rows, the store screenshots, the retro, the reconcile). The Firefox `file://` question (§9-6)
+  may be settled earlier by the AMO-signed test build (0.0.9, never merged), without the walk. No task deleted;
+  tasks.md's sequencing note 9 carries a ★.
+  Why: the human's scheduling call. Revisit-when: a walk fix lands (re-run the listed 9.x outputs).
+
 - **2026-11-07 · M13 TASK 8.1 — preparation (the walk script's section 0): builds, fresh profiles, the store-style-install
   research, reference screenshots and the walk table. THREE HUMAN RULINGS. The walk itself is the human's.** Local, on
   `main` at `67ce7b9` (7.6); not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored). Budget unchanged:
