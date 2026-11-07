@@ -30,8 +30,10 @@ function manifestFor(browser: string): Record<string, unknown> {
   return (fn as ManifestFn)({ browser });
 }
 
-/** Manifest keys that would each represent a capability escalation — none may appear. */
-const FORBIDDEN_KEYS = ['host_permissions', 'web_accessible_resources', 'webRequest'] as const;
+/** Manifest keys that would each represent a capability escalation — none may appear.
+ *  013 task 9.2 (HUMAN RULING at 7.2, "Carry it to 9.2"): `externally_connectable` joins — THREAT-MODEL.md's "a website
+ *  cannot message Peekover" rests on its absence (with no key, no web page may connect). */
+const FORBIDDEN_KEYS = ['host_permissions', 'web_accessible_resources', 'webRequest', 'externally_connectable'] as const;
 
 describe.each(['chrome', 'firefox'])('manifest zero-permission trust-pin (%s)', (browser) => {
   const m = manifestFor(browser);
@@ -41,7 +43,7 @@ describe.each(['chrome', 'firefox'])('manifest zero-permission trust-pin (%s)', 
     expect(m.permissions).toEqual([]);
   });
 
-  it('grants no host_permissions / web_accessible_resources / webRequest', () => {
+  it('grants no host_permissions / web_accessible_resources / webRequest / externally_connectable', () => {
     for (const key of FORBIDDEN_KEYS) {
       expect(m[key], `forbidden manifest key present: ${key}`).toBeUndefined();
     }
@@ -85,6 +87,21 @@ describe.each(['chrome', 'firefox'])('manifest zero-permission trust-pin (%s)', 
 // `version` / `version_name`, so WXT copies package.json's into both built manifests. When `.output` holds a
 // build, each built manifest's version is read and must equal package.json's (CI builds after the unit run, so
 // there the built half finds nothing to read; locally both engines are built before Verify).
+describe('built manifests carry no forbidden key (013 task 9.2)', () => {
+  // The config pin above is the guard CI runs; this reads whatever was last built, so a key added by a build hook or a
+  // WXT default (not by the config) is caught locally too. Vacuous when nothing is built (CI's unit job).
+  it('no manifest under .output has a forbidden key', () => {
+    const dir = join(__dirname, '..', '.output');
+    const built = existsSync(dir)
+      ? readdirSync(dir).map((d) => join(dir, d, 'manifest.json')).filter((p) => existsSync(p))
+      : [];
+    for (const p of built) {
+      const m = JSON.parse(readFileSync(p, 'utf8')) as Record<string, unknown>;
+      for (const key of FORBIDDEN_KEYS) expect(m[key], `${p}: forbidden manifest key present: ${key}`).toBeUndefined();
+    }
+  });
+});
+
 describe('the version (013 task 7.1)', () => {
   it('package.json says 0.1.0', () => {
     expect(pkg.version).toBe('0.1.0');

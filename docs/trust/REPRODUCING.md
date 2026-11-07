@@ -1,7 +1,6 @@
 # Reproducing a build — Peekover
 
-Two builds of the same commit produce byte-identical output: the unpacked Chrome and Firefox packages, the Chrome
-zip, the Firefox zip and the Firefox sources zip.
+Two builds of the same commit produce byte-identical output: the unpacked Chrome and Firefox packages, the Chrome zip, the Firefox zip and the Firefox sources zip.
 This page gives the steps to rebuild Peekover and check that for yourself.
 
 ## What you need

@@ -1193,6 +1193,14 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       (or names cuts).
       Files: `docs/store/claims.md` · the files the human's cuts touch · `docs/ai/decisions.md` (the sign-off)
       Verify: every ledger row has evidence or is cut; the sign-off banked; `truthPins.test.ts` green.
+      ★ *2026-11-07 — PARTIAL (`decisions.md`, "M13 TASK 9.2"): agent prep and fixes landed — every row re-verified at
+      HEAD (0 problems, firing control 3 / 3); REPRODUCING, SOURCE_CODE_REVIEW and the setup guide checked sentence by
+      sentence; a ledger → surface check (#301 withdrawn, #554 fixed); `externally_connectable` pinned; PERMISSIONS.md
+      and CHANGELOG.md reworded (approved). **Open, so not ticked:** rows 26 / 296 / 304 / 335 / 500 (and the Firefox
+      half of 2, 8, 112, 185, 209, 312) PENDING SIGNED INSTALL, the release BLOCKER open; the human's sign-off. Necessary
+      ripple beyond Files: `tests/truthPins.test.ts`, `tests/manifest.test.ts` (the carried pin), `docs/trust/
+      REPRODUCING.md` (a line join), `docs/store/firefox.md` (its unpublished note), PERMISSIONS.md and CHANGELOG.md
+      (approved wording).*
 - [ ] **9.3 ★ Store screenshots — scripted captures, the human picks (G-11; spec §3.9).** 1280×800, light and dark,
       through the app-page harness from the build that passed 8.1, of a sample document kept in the repo and not
       packaged.

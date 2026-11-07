@@ -76,7 +76,7 @@ The manifest declares that Peekover collects no data: data_collection_permission
 - Licence: MIT. Platforms: Firefox for desktop (Windows, macOS, Linux); Firefox for Android is not supported (the human's
   ruling at M13 task 5.6).
 - Icon and screenshots: AMO's icon is from the package; screenshots (1280×800) come at spec §3.9.
-- "Opening a markdown file directly from disk in Firefox has not yet been checked" stays until the 8.1 walk checks it;
-  re-read this file then (9.2).
+- "Opening a markdown file directly from disk in Firefox has not yet been checked" stays until the AMO-signed 0.0.9
+  test (a fresh profile; 9.2: pending signed install) or the walk checks it; re-read this file then.
 - Live at release, so submit only after go-live makes them reachable (7.6): the privacy URL, the homepage, the
   repository and its issues page.

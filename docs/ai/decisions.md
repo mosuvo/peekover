@@ -1,6 +1,74 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 TASK 9.2 — the truth re-check (agent prep and fixes; PARTIAL: the Firefox `file://` rows pending
+  the signed install, the human's sign-off to come). TWO HUMAN RULINGS.** Local, on `main` after `aecd075`; not pushed.
+  `pnpm audit --prod` EXIT 0 (2026-11-07). CI on `aecd075`: Supply chain 42337298999 green; CI 42337298882 (read
+  before the commit, below).
+  - **0 · Everything carried "to 9.2", with its source and outcome:**
+    1. **The release BLOCKER** — the setup guide's "In Firefox, nothing needs setting up." / "…shown with no setup."
+       (rows 296 / 304) vs README row 26 "…has not yet been checked on a real install." (6.1 Flag; the human's line at
+       6.2; progress.md "FOR M13 TASK 9.2"). **PENDING SIGNED INSTALL** — rows 296 / 304 / 26 / 335 (CHANGELOG) / 500
+       (firefox listing) marked; the Firefox half of rows 2, 8, 112, 185, 209, 312 (each surface carries its own
+       caveat) marked. The blocker stays OPEN; the AMO 0.0.9 test decides it (a temporary add-on did not render, 8.1
+       prep — a probe, not the verdict). Nothing guessed.
+    2. **`externally_connectable` absent but unpinned** (7.2, HUMAN RULING "Carry it to 9.2"). **DONE:**
+       `tests/manifest.test.ts` FORBIDDEN_KEYS + a built-manifest check (below); row 381's evidence cites it.
+    3. **The Stored data panel does not list the snapshot notice's dismissal mark** (6.2a, the human: "Carry it" —
+       not listed). Every published text checked: PRIVACY.md already says "except the mark…"; **PERMISSIONS.md**
+       ("shows *everything* held") and **CHANGELOG.md** ("lists what Peekover keeps") implied otherwise → reworded,
+       HUMAN RULING below. Site, store listings ("Wipe all data … deletes everything Peekover has stored" — true: the
+       mark is in the settings store) and in-app copy agree.
+    4. **SOURCE_CODE_REVIEW.md's ledger rows** (7.4, HUMAN RULING "Carry it to 9.2"). **DONE:** the file joins
+       truthPins' surfaces; rows 557–567 for its 11 sentences (text approved at 7.4; evidence: the run as written at
+       7.4, `.nvmrc`, `package.json`, `pnpm-lock.yaml`, `scripts/compare-builds.ts`).
+    5. **firefox.md's "not yet been checked" line** (7.5, "re-read at 9.2"). PENDING SIGNED INSTALL (row 500); the
+       unpublished submission note now names the AMO test.
+    6. **Every "live at release" row** (7.3 / 7.4 revisit). Re-read: 31 rows (+554 at 9.1); the repository is
+       private and no DNS exists — every marking still right; GO-LIVE 3.6 names every one (truthPins).
+    7. **Every store-listing row** (7.5 revisit) — covered by item 8's checks; no drift.
+  - **8 · Every row re-verified at HEAD.** A script over all 579 rows (557 → 579 after this task): for each row not
+    withdrawn (499 at the run), every backticked evidence path exists, every symbol named in the parentheses after a
+    path occurs in that file, every `file:N` reference is within the file — **0 problems**; firing control (a copy
+    with a renamed symbol, a missing path, an out-of-range line): **3 of 3 found**. Every row whose sentence states a
+    number re-read against HEAD: 13 languages (`LANGUAGE_LOADERS`), Chrome 121 / Firefox 127 (both built manifests),
+    under 7 MB (6,645,510 B), Node 22 / pnpm 10.33.0, the test environments — all true. **Stale evidence fixed** (no
+    wording change): rows 33 (listing text written at 7.5; submitting is go-live), 59 / 407 / 432 (attestations: built
+    in release.yml, public-only), 429 (SHA256SUMS: written by release.yml, checked in the 7.4a dry run).
+  - **Every surface against the ledger, both directions.** Surface → ledger: README, SECURITY, CHANGELOG, PRIVACY,
+    THREAT-MODEL, the site (both pages), the listings, and — new at 9.2 — **REPRODUCING, SOURCE_CODE_REVIEW and the
+    setup guide** sentence by sentence. Found: REPRODUCING's first sentence wrapped over two source lines (joined, same
+    words); SOURCE_CODE_REVIEW 11 sentences without rows (added); the setup guide 12 sentences without rows (added,
+    568–579; copy approved at 6.1). Ledger → surface (**new**): no live row whose sentence has left its surface — found
+    **#301** (the setup guide's old combined deep-link sentence, split in the copy: withdrawn → 571, 573) and **#554**
+    (the privacy-page footer, written "text (url)" like every site link). **In-app copy:** the claim-bearing sentences
+    (the snapshot disclosure `STORAGE_DISCLOSURE_NOTE`, the panel's lines in `store.ts`, the status line's "No network
+    calls" / "Network used", `READ_ONLY_SNAPSHOT_NOTE`, the Firefox watch notes, the remote-image button) checked
+    against the published texts — all agree.
+  - **HUMAN RULING (verbatim): "Approve both as written (Recommended)".** PERMISSIONS.md: "The "Stored data" panel
+    (`describeStored()`) shows everything held except one row, the snapshot notice's dismissal mark — folders as…";
+    CHANGELOG.md: "On the app page, a Stored data panel lists what Peekover keeps on your device, except the mark for
+    the note about snapshots, and "Wipe all data" erases all of it." (row 324).
+  - **HUMAN RULING (verbatim): "Checked, not ledgered (Recommended)"** — in-app copy stays outside the ledger's
+    surfaces (D-12); the agreement check above is its record.
+  - **New tests (red first) and ablations:**
+    - `tests/manifest.test.ts`: `externally_connectable` in FORBIDDEN_KEYS (both engines, config) and a check of every
+      built manifest under `.output`. Ablation, three arms: the key in `wxt.config.ts` → **2 red** (chrome, firefox),
+      naming the key; the key in `.output/chrome-mv3/manifest.json` → **1 red**, naming the file; off → 15 / 15 green;
+      files restored byte for byte.
+    - `tests/truthPins.test.ts`: REPRODUCING and SOURCE_CODE_REVIEW as surfaces (red: 2 + 11 sentences); the setup
+      guide sentence by sentence (red: 12; its reader fires on a changed title); every live row still named by its
+      surface (red: #301, #554; fires on a planted stale row).
+  - **Pending (not guessed):** SIGNED INSTALL — rows 26, 296, 304, 335, 500 and the Firefox half of 2, 8, 112, 185,
+    209, 312; the release BLOCKER open. WALK — no row depends on a walk verdict today; a walk fix re-runs the rows it
+    touches (progress.md, "Up next", the accepted cost). THE HUMAN'S SIGN-OFF — 9.2's gate (README, site, SECURITY,
+    PRIVACY, THREAT-MODEL, CHANGELOG and the three listings read against the ledger) is still to come.
+  - **Bytes:** packaged files and both store zips identical to 7.6 (only the working-folder sources zip moves).
+  - **Verify:** lint EXIT 0 · unit **1,678 / 1,678** (+17) · truthPins 87 · manifest 15 · no NUL / CR in changed files.
+  Why: tasks.md 9.2 — every row has evidence or is cut; the carried items closed or held open in the open.
+  Revisit-when: the signed 0.0.9 install test (then rows 26 / 296 / 304 / 335 / 500 and the blocker); the human's
+  sign-off; any walk fix.
+
 - **2026-11-07 · M13 TASK 9.1 — the site: self-hosted fonts, `site/privacy/`, the privacy pin, the "live at release"
   sweep (D-12; §9-1). THREE HUMAN RULINGS.** Local, on `main` after `9f871a5`; not pushed. CI on `0e71419` green first
   (CI 42333059054 — verify, reproducible; Supply chain 42333059015). `pnpm audit --prod` EXIT 0 (2026-11-07).

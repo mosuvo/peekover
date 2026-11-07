@@ -23,6 +23,10 @@ const SURFACES = {
   CHANGELOG: 'CHANGELOG.md',
   PRIVACY: 'docs/trust/PRIVACY.md',
   'THREAT-MODEL': 'docs/trust/THREAT-MODEL.md',
+  // 9.2: REPRODUCING.md (rows since 7.3, never checked sentence by sentence) and SOURCE_CODE_REVIEW.md (approved at
+  // 7.4; its rows carried to 9.2 by HUMAN RULING) join.
+  REPRODUCING: 'docs/trust/REPRODUCING.md',
+  SOURCE_CODE_REVIEW: 'SOURCE_CODE_REVIEW.md',
 } as const;
 type Surface = keyof typeof SURFACES;
 const LEDGER = 'docs/store/claims.md';
@@ -352,6 +356,38 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
   });
 });
 
+// ── 013 task 9.2: the setup guide (`src/app/onboarding.ts`, surface "onboarding", rows since 6.1) sentence by sentence.
+// Its copy is one object literal, `ONBOARDING_COPY`; its string values are read from the source text (no import: the
+// module is browser code), split into sentences as the other surfaces are, and each must have an "onboarding" row.
+// `addressCode` is a code token shown inside `address`, not a sentence of its own.
+const ONBOARDING = 'src/app/onboarding.ts';
+
+export function onboardingSentences(src: string): string[] {
+  const block = /export const ONBOARDING_COPY = \{([\s\S]*?)\n\}(?: as const)?;/.exec(src)?.[1];
+  if (!block) throw new Error(`${ONBOARDING}: no ONBOARDING_COPY literal`);
+  const out: string[] = [];
+  for (const m of block.matchAll(/^\s*(\w+):\s*'((?:[^'\\]|\\.)*)',?\s*$/gm)) {
+    if (m[1] === 'addressCode') continue;
+    out.push(...m[2].replace(/\\'/g, "'").split(/(?<=\.)\s+(?=[A-Z])/).map((t) => t.trim()).filter(Boolean));
+  }
+  return out;
+}
+
+describe('the setup guide says only what the ledger holds (013 task 9.2)', () => {
+  it('every sentence of ONBOARDING_COPY has an "onboarding" ledger row', () => {
+    const sentences = onboardingSentences(read(ONBOARDING));
+    expect(sentences.length, 'the copy was read').toBeGreaterThan(10);
+    const known = new Set(ledgerRows().filter((r) => r.surface === 'onboarding' && r.status !== 'withdrawn').map((r) => r.sentence));
+    expect(sentences.filter((t) => !known.has(t)), 'setup-guide sentences with no ledger row').toEqual([]);
+  });
+
+  it('the reader fires on a changed sentence', () => {
+    const changed = read(ONBOARDING).replace("title: 'Set up Peekover'", "title: 'Set up Peekover now'");
+    const known = new Set(ledgerRows().filter((r) => r.surface === 'onboarding').map((r) => r.sentence));
+    expect(onboardingSentences(changed).filter((t) => !known.has(t))).toEqual(['Set up Peekover now']);
+  });
+});
+
 // ── 013 task 9.1 (D-12; §9-1): the site loads nothing from another origin. Fonts are self-hosted from `site/fonts/`;
 // no Google Fonts host appears in either page at all, and no resource-loading markup (a <link href>, a src=, a CSS
 // url() or @import) points at an http(s) URL. Plain links (<a href>) navigate; they load nothing, so they are allowed.
@@ -530,5 +566,47 @@ describe('the go-live checklist covers §9-7 and every "live at release" row (01
     const listed = new Set([...step.matchAll(/^\s*\| (https:\/\/\S+) \|/gm)].map((m) => m[1]));
     expect([...new Set(urls)].filter((u) => !listed.has(u)), 'URLs the step does not list').toEqual([]);
     expect([...named].filter((n) => !live.some((r) => r.n === n)), 'rows named that are not "live at release"').toEqual([]);
+  });
+});
+
+// ── 013 task 9.2 — the other direction: no live row whose sentence has left its surface. The checks above prove every
+// published sentence has a row; this proves every row that is not withdrawn still names a sentence its surface says, so
+// a drifted or deleted sentence cannot leave a stale "true now" row behind. The site's rows may also name the privacy
+// page's own words (site/privacy/index.html, outside the PRIVACY.md text).
+function surfaceSentences(surface: string): Set<string> | null {
+  if (surface in SURFACES) return new Set(sentences(docs[surface as Surface]).map((s) => s.text));
+  if (surface in LISTINGS) return new Set(sentences(listingText(surface as Listing)).map((s) => s.text));
+  if (surface === 'onboarding') return new Set(onboardingSentences(read(ONBOARDING)));
+  if (surface === 'site') {
+    const privacy = siteBlocks(read('site/privacy/index.html')).flatMap((b) => b.text.split(/(?<=\.)\s+(?=[A-Z])/));
+    // The privacy page's meta description is shown by search engines; it is the one <head> text with a row.
+    const description = /<meta name="description" content="([^"]+)">/.exec(read('site/privacy/index.html'))?.[1] ?? '';
+    return new Set([...siteSentences().map((s) => s.text), ...privacy.map((t) => t.trim()), decode(description)]);
+  }
+  return null;
+}
+
+export function staleRows(rows: Row[], said: (surface: string) => Set<string> | null): string[] {
+  const cache = new Map<string, Set<string> | null>();
+  return rows
+    .filter((r) => r.status !== 'withdrawn')
+    .filter((r) => {
+      if (!cache.has(r.surface)) cache.set(r.surface, said(r.surface));
+      const set = cache.get(r.surface);
+      return set !== null && set !== undefined && !set.has(r.sentence);
+    })
+    .map((r) => `#${r.n} (${r.surface}): ${r.sentence}`);
+}
+
+describe('every live ledger row still names a sentence of its surface (013 task 9.2)', () => {
+  it('no row that is not withdrawn names a sentence its surface no longer says', () => {
+    const unknown = [...new Set(ledgerRows().map((r) => r.surface))].filter((s) => surfaceSentences(s) === null);
+    expect(unknown, 'ledger surfaces this check cannot read').toEqual([]);
+    expect(staleRows(ledgerRows(), surfaceSentences), 'stale rows').toEqual([]);
+  });
+
+  it('the check fires on a row whose sentence has drifted', () => {
+    const planted: Row = { n: '0', surface: 'README', sentence: 'Peekover is a paid extension.', evidence: 'x', status: 'true now' };
+    expect(staleRows([planted], surfaceSentences)).toEqual(['#0 (README): Peekover is a paid extension.']);
   });
 });

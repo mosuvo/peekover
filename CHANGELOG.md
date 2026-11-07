@@ -23,7 +23,7 @@ The first release.
 - On the app page, draws Mermaid diagrams, renders math with Temml, and highlights code in JavaScript, TypeScript, TSX, Python, JSON, CSS, HTML, Bash, diff, YAML, Markdown, TOML and SQL.
 - On the app page, exports a standalone HTML file, prints to PDF, and copies the document as HTML, plain text or rich text.
 - On the app page, has a basic editor with a live preview and a Save button, and asks before discarding unsaved changes.
-- On the app page, a Stored data panel lists what Peekover keeps on your device, and "Wipe all data" erases it.
+- On the app page, a Stored data panel lists what Peekover keeps on your device, except the mark for the note about snapshots, and "Wipe all data" erases all of it.
 - A setup guide opens once, when Peekover is first installed, and the app page links to it.
 - Asks for no browser permissions: the manifest says `permissions: []`.
 - Makes no network requests by default, and has no telemetry and no analytics.
