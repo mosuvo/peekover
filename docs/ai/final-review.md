@@ -35,9 +35,10 @@ validator shows errors or warnings, **paste every message to the agent and chang
 
 **Then say "the signed .xpi is saved".** The agent runs the kit's step 11 before anything else: a fresh Firefox profile
 with the signed install, then (a) does a local `file://` `.md` open in Peekover's reader, (b) does the setup guide open
-on install and not again after a restart, (c) do the folder picker and drag routes work, with one more check found at
-9.3 (d): **on a dragged folder, does the pane's note say "Watch mode … unavailable" while Watch is offered?** (Read in
-the code at 9.3, never seen in an engine; `decisions.md` "M13 TASK 9.3 — captures".)
+on install and not again after a restart, (c) do the folder picker and drag routes work — **and, with a REAL picker:
+does a folder chosen with "Open a folder" see a file edited on disk?** (Playwright's Firefox says yes; spec 005 said
+no on Firefox 152 — `decisions.md` "M13 — 9.3 finding: Firefox drag-folder watch", its second finding.) (d) The
+drag-route note found at 9.3 is **already settled** (step 2) — on the signed install, just see the note's wording.
 
 **What the result decides:**
 - **Firefox renders `file://`:** rows 26 / 296 / 304 / 335 / 500 are re-worded to say it works (the agent proposes the
@@ -64,7 +65,15 @@ app page from the screenshots (~90 min), **C** the tab reader, contrast and the 
   one re-runs the 9.x work it touches (section 5 below).
 - **Item I-3 (the Firefox `file://` check) is step 1's result.** If step 1 is done, confirm it. If not, do it here
   with `scripts\walk-profiles.ps1 -Browser firefox-signed -Xpi <file>`.
-- **Item I-11(b) (Firefox drag route): look for the note in 1(d).**
+- **Already investigated: the Firefox drag-folder note (item I-11(b); `decisions.md` "M13 — 9.3 finding: Firefox
+  drag-folder watch").** Measured in a real Firefox: on a dragged folder **Watch is offered and works** — an edit on disk
+  reaches the reader (4 runs of 4; a firing control over a frozen file never updates) — so **ledger row 25 is true and
+  the pane's note is wrong** where it says "Watch mode and snapshot capture are also unavailable here". **Your decision
+  (before or at the walk):** approve the proposed drag-route note, word for word in that entry —
+  *"…reopening this folder means dragging it in again. That is a Firefox platform limitation, not a Peekover choice.
+  Watching still works here: Peekover re-reads a watched file from disk."* — or give your own words. **Record:**
+  "drag note: approve" or the words you want. The agent then lands it as a discovered task (one string, one condition,
+  the two tests that pin the note). In the walk, judge the I-11(b) cells against the approved wording.
 - The named checks still stand: Editing, the Watching pill, the snapshot notice, the Compare picker, the ≤ 1189 px
   Files overlay (their mock approval used the agent's self-check, not your eye); the two-row toolbar for an agent file
   at 1280; the reader's untouched surfaces in both themes; both pending lists (2.2's contrast census, 5.1's

@@ -17,6 +17,13 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 — 9.3 FINDING INVESTIGATED (2026-11-07): Firefox drag-folder watch.** Record: `decisions.md`, "M13 — 9.3
+finding: Firefox drag-folder watch". Measured (`tests/browser/firefoxDragWatch.browser.test.ts`, firing control):
+on a dragged folder Watch is offered and an on-disk edit reaches the reader — **row 25 true, the pane note false**.
+The fix (a drag-route note) is PROPOSED, **awaiting the human's approval of its wording** — no product byte changed.
+Second finding: the picker route also read fresh bytes in Playwright's Firefox — to confirm with a real picker
+(final-review step 1(c)).
+
 **M13 TASK 9.5 — PARTIAL (2026-11-07): records reconciled.** Record: `decisions.md`, "M13 TASK 9.5". Local, on `main`;
 not pushed. Not ticked: the close figures after any walk fix and the close summary — **pending end review**.
 - **Archive:** every landed M13 task block (1.1 … 9.4) and the old byline chain → `progress-archive.md`, "M13 · … ·

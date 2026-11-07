@@ -1,6 +1,63 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-07 · M13 — 9.3 finding: Firefox drag-folder watch (INVESTIGATED by measurement; the fix PROPOSED, awaiting
+  the human's approval of its wording — no product byte changed).** Local, on `main` after `468ccc2`; not pushed.
+  **The question (9.3, code reading):** on a Firefox folder opened by DRAG, the pane shows `READ_ONLY_SNAPSHOT_NOTE`
+  ("…Watch mode and snapshot capture are also unavailable here for the same reason.") while the toolbar offers Watch
+  (`watchCapability`: route `drop` → watchable) and ledger row 25 says watching works for a dragged folder.
+  - **THE ANSWER: row 25 and the Watch control are TRUE; the pane note is FALSE on the drag route.**
+  - **Evidence 1 — the product, in the real engine** (`tests/browser/firefoxDragWatch.browser.test.ts`, new; Firefox via
+    the browser harness = Playwright Firefox 151; Chromium skips: its drop is a live handle). The real app shell, Entries
+    adapter, walk, watch controller and polled detector, over a **disk-backed `File`** (handed over by Playwright's
+    `setInputFiles` through a new test-only command) that is then **appended to on disk**; only the entry wrapper and
+    the drop's DataTransfer are fabricated (the OS drag cannot be driven — `folderDrop.browser.test.ts`'s same limit).
+    Observed: the pane shows `READ_ONLY_SNAPSHOT_NOTE`; the picker note is NOT shown; Watch is offered and turns on
+    (`aria-pressed="true"`); **the on-disk append reaches the reader** (the new `##` heading renders) — 4 runs of 4.
+    The File's `size` stays at its drop-time value while its text is read fresh (spec 005's TRAP 2, re-measured).
+  - **Firing control (same file, B):** the identical flow over an in-memory `File` → Watch on, the disk append, **no
+    update** in 4 s — so (A)'s update came from the disk, not from the harness.
+  - **A red on the way, classified:** the first run of (A) did NOT update — the test appended within milliseconds of
+    pressing Watch, and `pollingDetector.start()` only schedules: its first read (~1 s later) is the BASELINE, so the
+    append became the baseline. Waiting 1.5 s before the append (as a person would) → green 4 / 4. **Side observation,
+    not fixed (every polled route):** an edit made in the first ~1 s after pressing Watch is absorbed into the baseline;
+    the reader keeps the older text until the next change.
+  - **Evidence 2 — the installed Firefox 159.0.1** (WebDriver BiDi `input.setFiles`, a scratch probe, not committed): a
+    file handed over from disk, then 3 appends: `File.size` stayed 21 B, `.text()` returned 31 → 41 → 51 B (= disk) each
+    time; a re-pick (control) read size 51. BiDi on 159 refuses a FOLDER ("NS_ERROR_FILE_IS_DIRECTORY"), so the folder
+    routes were measured on Playwright's Firefox only.
+  - **"Snapshot capture … unavailable here" is also false on the drag route — CODE READING, not measured:** every opened
+    folder gets an id (`applyOutcome`, `activeFolderId = existingFolderId ?? newId()`), so a watched document has a
+    `docId` and capture runs (`appShell.ts`, the `docId != null` gate).
+  - **A SECOND FINDING — the picker route also reads fresh bytes now (test C, Playwright Firefox 151):** a cached `File`
+    from `<input webkitdirectory>` (Playwright `setInputFiles` with a folder) returned the on-disk append through
+    `folderSourceFromFileList`'s `read()`. Spec 005 measured this route "PERMANENTLY STALE" by hand on Firefox 152
+    (`decisions.md` 2026-07-19). If a REAL picker on Firefox 159 agrees, `FIREFOX_PICKER_NOTE` ("…a frozen copy … later
+    changes on disk never arrive") and the second half of row 25 / 334 ("…but not for one chosen with the folder
+    picker") describe a limit the browser no longer has — today they stay TRUE of the product (it does not offer Watch
+    there), but the reason given is not. **Not acted on:** Playwright's file-setting is not a person's pick; settle it
+    with a real picker on the signed install (`final-review.md` step 1(c)), then decide whether the picker route
+    becomes watchable (a product change, its own task).
+  - **THE PROPOSED FIX (smallest; awaiting approval — STOPPED here):** one new string and one condition. On the DRAG
+    route the pane shows a drag-specific note; the picker route keeps `READ_ONLY_SNAPSHOT_NOTE` unchanged.
+    - `src/app/firefoxFolderSource.ts`: `DRAGGED_SNAPSHOT_NOTE` = **"This is a read-only, point-in-time snapshot of
+      the folder. Firefox cannot grant a live folder handle, so there is no persistence and no write-back — reopening
+      this folder means dragging it in again. That is a Firefox platform limitation, not a Peekover choice. Watching
+      still works here: Peekover re-reads a watched file from disk."**
+    - `src/app/appShell.ts` `paintGranted`: `activeRoute === 'drop' ? DRAGGED_SNAPSHOT_NOTE : READ_ONLY_SNAPSHOT_NOTE`.
+    - Tests: (A)'s note assertion flips to the new string, red-first on today's code; `folderDrop.browser.test.ts`'s
+      drop-flow assertion (it pins the old note on a drop) re-spelled to the new one.
+    - Ledger: no row changes — in-app copy is "Checked, not ledgered" (9.2 HUMAN RULING); row 25 is true as written.
+      Bytes: the app chunk only (one string, one condition); the content script does not import `appShell`.
+  - **Files (this commit):** `tests/browser/firefoxDragWatch.browser.test.ts` (new) · `vitest.config.ts` (two
+    test-only commands: `diskFixture`, `setInputFromDisk`) · this entry · `docs/ai/final-review.md` (step 1(d), step 2)
+    · `docs/ai/progress.md` (Now). No product file.
+  - **Verify:** the new file 3 / 3 on Firefox (4 runs), skipped on Chromium; `folderDrop`, `firefoxFallback` and
+    `htmlExport` (the existing custom commands) green both engines — 35 passed / 3 skipped; lint EXIT 0.
+  Why: the human's instruction to settle 9.3's finding with evidence and stop before any user-facing text.
+  Revisit-when: the human's answer on the wording (then the fix as its own discovered task); the signed install's
+  real-picker check (the second finding).
+
 - **2026-11-07 · M13 TASK 9.5 — records reconciled (everything that does not wait on the human; the rest marked
   "pending end review"). NOT TICKED: its close figures re-run after any walk fix.** Local, on `main` after `b926ce6`;
   not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored — GHSA-238p-pmpm-9mq7, recorded).

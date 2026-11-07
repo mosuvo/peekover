@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import type { BrowserCommand } from 'vitest/node';
 import type { Page, Download } from 'playwright';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, appendFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -318,6 +318,39 @@ interface StandaloneRenderProbe {
 // instances (Chromium + Firefox) running this same file never share state.
 const pendingDownloads = new WeakMap<Page, Promise<Download>>();
 
+// ── Disk-backed files for the Firefox drag-folder watch test (M13, the 9.3 finding) ────────────
+// The in-page code cannot write to disk, and a `new File([...])` is a frozen in-memory copy — so it
+// can never show whether Firefox re-reads a dropped file from disk. These two commands give the test
+// (a) a real folder on disk it can create, append to and remove, and (b) a REAL disk-backed `File`:
+// Playwright's `setInputFiles` on an `<input type=file>` inside the test frame, the same kind of
+// Gecko `File` a drop's entry hands over. The OS drag gesture itself still cannot be driven.
+const diskFixture: BrowserCommand<
+  [action: 'create' | 'append' | 'remove', target: string | Record<string, string>, text?: string]
+> = async (_ctx, action, target, text) => {
+  if (action === 'create') {
+    const dir = mkdtempSync(join(tmpdir(), 'peekover-drag-watch-'));
+    for (const [name, body] of Object.entries(target as Record<string, string>)) {
+      writeFileSync(join(dir, name), body, 'utf8');
+    }
+    return dir;
+  }
+  if (action === 'append') {
+    appendFileSync(target as string, text ?? '', 'utf8');
+    return readFileSync(target as string, 'utf8').length;
+  }
+  rmSync(target as string, { recursive: true, force: true });
+  return true;
+};
+
+const setInputFromDisk: BrowserCommand<[selector: string, paths: string | string[]]> = async (
+  ctx,
+  selector,
+  paths,
+) => {
+  await ctx.iframe.locator(selector).setInputFiles(paths);
+  return true;
+};
+
 const armExportDownload: BrowserCommand<[]> = async ({ page }) => {
   pendingDownloads.set(page, page.waitForEvent('download'));
   return true;
@@ -449,6 +482,8 @@ export default defineConfig({
               probeFileUrlClipboard,
               armExportDownload,
               collectExportDownload,
+              diskFixture,
+              setInputFromDisk,
             },
             instances: [
               { browser: 'chromium' },
