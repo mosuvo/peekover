@@ -476,6 +476,61 @@
   0.0.9 < 0.1.0, so the release never reuses a signed version. **Next (the human, then an agent):** once the signed
   `.xpi` is saved, install it in a fresh profile and test `file://`, guide-once across a restart, and both folder routes;
   record here — it settles the 9.2 Firefox BLOCKER without the walk.
+  - **2026-11-09 · AMO validation of 0.0.9: 0 errors, 19 warnings, 0 notices (pasted by the human; NO ACTION NOW).**
+    Traced against the kit's own zip (sha256 `f71dfe9a…` re-checked, unpacked outside the repo), each flagged
+    line:column read in place. Mermaid and its libraries load only on the extension page (`app.html` →
+    `chunks/app-*`). The content script loads no chunks, so it carries only our own sites and DOMPurify. MV3's
+    extension CSP has no `'unsafe-eval'` (`wxt.config.ts` sets no `content_security_policy`; see (b) of the
+    CI-scanner entry: "MV3's CSP blocks both").
+    - **(1) `data_collection_permissions` vs `strict_min_version` 127 — 2 warnings (desktop 140, Android 142).**
+      *Source:* our manifest (`wxt.config.ts:75,78`). The 127 floor is set by ClipboardItem (HUMAN RULING "Raise
+      to 127"). *CSP:* not applicable. *Mozilla's guidance* (Extension Workshop "firefox-builtin-data-consent",
+      read 2026-11-09): every new extension must state its data collection, and `required: ["none"]` is that
+      statement. On 139-or-older desktop / 141-or-older Android, an extension that COLLECTS data needs its own
+      consent screen. Three options are offered: (1) raise the floor to 140/142, (2) turn collection off where
+      the key is unsupported, (3) build a custom consent screen. Peekover collects nothing, so on 127–139 there
+      is nothing to ask consent for, and the warning does not affect behaviour. The page does not say what an
+      older Firefox does with the key itself (not measured here). The Android line appears because there is no
+      `gecko_android` key, so the gecko floor applies to Android too.
+      *Before 0.1.0:* nothing required. **Open for the human (not decided):** keep 127, so the warning stays on
+      every upload and Firefox 127–139 users can install; or raise to 140 (and 142 for Android, or declare
+      Android unsupported), so the warning goes and 127–139 users are cut off. 140 already covers the
+      ClipboardItem floor, so either way the copy features keep working.
+    - **(2) "The Function constructor is eval" — 4 warnings.** *Source:* libraries only, all in lodash's
+      global-object check `freeGlobal || freeSelf || Function('return this')()`. They are
+      `graphlib-*` 1:137 (dagre's graphlib with bundled lodash-es), `cytoscape.esm-*` 4:9317 (cytoscape's
+      bundled lodash), and `chunk-KEIR6QF5-*` 46:8481 and 147:1855 (two lodash-es copies in Mermaid's Langium
+      parser chunk). None of these is in our code, and none is in the content script.
+      *Under the CSP:* the `Function` part never runs. On `app.html`, `self` is the window and
+      `self.Object === Object`, so the `||` chain stops before `Function`. If it ever ran, MV3's CSP would throw
+      an `EvalError`; it could not run code. This comes from reading the source, not from a run under the
+      extension CSP. *Before 0.1.0:* nothing, unless an upstream fix arrives with a normal version bump.
+    - **(3) "Unsafe assignment to innerHTML" — 13 warnings; the paste lists 12 locations.**
+      *Ours (5, of which 4 are listed):* each assignment writes into an inert `<template>` (a `createDocument`
+      document for DOMPurify), never into a live element, and only after sanitizing.
+      - `content-scripts/peekover.js` 744:136322 and `app-*` 808:136462: `mount.ts:159`, `sanitize(parse(source))`.
+      - `app-*` 809:10113: `diagramEnhancer.ts:314` `adoptSanitizedSvg`.
+      - `app-*` 812:2639: `mathEnhancer.ts:165`, `sanitizeMath(...)`.
+      - The 13th warning's location is cut off in the paste. It is INFERRED to be `app-*` 974:51 (`diffView.ts:124`,
+        sanitized, template): the only `innerHTML=` in the validated files left unaccounted for.
+      *DOMPurify (2):* `peekover.js` 15:20830 and `app-*` 16:20699, its `_initDocument` fallback. It writes into
+      a `createDocument` document and only runs when `DOMParser` fails.
+      *Mermaid and d3, on the extension page only (6):*
+      - `mermaid.core-*` 11:1411: Mermaid's generated diagram CSS written into a `<style>` in the off-screen
+        render container. The SVG then goes through our sanitize and template steps.
+      - `mermaid.core-*` 11:4177: `mermaid.run()`'s `t.innerHTML = svg`. Not reached, because we call `render()`
+        only (`diagramEnhancer.ts:402`).
+      - `chunk-I66GZJ75-*` 2:2890: Mermaid's KaTeX label path. Not reached, because a `$$` fence never reaches
+        `render()` (R15, `diagramEnhancer.ts:348`).
+      - `chunk-NSK5VX7P-*` 2:5865: Mermaid's `entityDecode`. Its input is `escape()`d first, so no tag reaches
+        the parser.
+      - `src-*` 1:18614 and 1:18695: d3-selection's `selection.html()`.
+      *Under the CSP:* all of them run normally. innerHTML is not a script source, and inline scripts or handlers
+      in parsed markup cannot run under the extension CSP. *Before 0.1.0:* no code change. This list could be
+      cited in `SOURCE_CODE_REVIEW.md` for the AMO reviewer. That is optional, a human call, and not done here.
+    Why: the human's direction (record the warnings, no action). Revisit-when: the 0.1.0 upload returns its own
+    validation (compare its list against this one; a new site means a new source); the human rules on the floor
+    in (1).
 
 - **2026-11-07 · M13 RULING — the 8.1 walk moves after group 9 (HUMAN).** Verbatim: *"I will walk at the very end,
   after group 9."* Order: 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 8.1's walk → its fix tasks (8.1a …) → go-live. 8.1's prep
