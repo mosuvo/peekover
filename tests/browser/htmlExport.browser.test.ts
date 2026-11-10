@@ -17,8 +17,9 @@
 // a download-triggering control) is established by this file being the first of its kind.
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { commands } from 'vitest/browser';
+import { commands, page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
+import { createReaderPane } from '../../src/app/readerPane';
 import { exportHtml } from '../../src/export/htmlExport';
 import { setThemeSetting } from '../../src/theme/reader';
 import sampleMd from '../../docs/store/assets/sample.md?raw';
@@ -31,12 +32,13 @@ interface ExportDownloadProbe {
   hostSelectorLiteralPresent: boolean;
   h1Text: string | null;
   consoleErrors: string[];
+  extra: unknown;
 }
 
 declare module 'vitest/internal/browser' {
   interface BrowserCommands {
     armExportDownload(): Promise<true>;
-    collectExportDownload(): Promise<ExportDownloadProbe>;
+    collectExportDownload(script?: string): Promise<ExportDownloadProbe>;
     printToPdfAndExtractText(html: string): Promise<{
       ok: boolean;
       error: string | null;
@@ -75,7 +77,7 @@ describe('exportHtml — the real download codepath, opened bare', () => {
 
     expect(probe.suggestedFilename).toBe('exported-title.html');
     expect(probe.consoleErrors).toEqual([]);
-    expect(probe.bodyPosition).toBe('fixed'); // readerCss.ts's base, carried onto body
+    expect(probe.bodyPosition).toBe('static'); // the export is the page: it scrolls (walk fix 8.1d)
     expect(probe.bodyBackgroundColor).toBe('rgb(251, 251, 248)'); // light --paper #FBFBF8
     expect(probe.hostSelectorLiteralPresent).toBe(false); // no dead :host text shipped
     expect(probe.h1Text).toBe('Exported Title');
@@ -174,6 +176,142 @@ describe('exportHtml - the sample document, both themes (walk fix 8.1a)', () => 
       expect(probe.bodyBackgroundColor).toBe(PAPER[theme]);
 
       // (b) Printed to PDF (Chromium only: Playwright has no Firefox pdf()).
+      const pdf = await commands.printToPdfAndExtractText(probe.html);
+      if (!pdf.ok) {
+        expect(pdf.error).toContain('Headless Chromium');
+        return;
+      }
+      expect(pdf.pageCount).toBeGreaterThan(1);
+      expect(pdf.perPageText[pdf.pageCount - 1]).toContain('Rollback');
+    });
+  }
+});
+
+// Walk fix 8.1d (walk-8.1.md I-9, re-check of 8.1a): the human's exported sample opened to one screen
+// and would not scroll. The reader's base rule (`:host{position:fixed;inset:0;overflow:auto}`) rides
+// onto body; on the root's body the overflow goes to the viewport, and a fixed body adds nothing for
+// the viewport to scroll. Same file: the display-math source showed above its formula (that hide rule
+// is in the math sheet, which the export did not carry), and every control shipped with no script to
+// run it. The sample is opened through the real reader pane, so all four enhancers have run.
+const PROBE_OPENED_FILE = `(() => {
+  const se = document.scrollingElement;
+  const viewport = innerHeight;
+  const scrollHeight = se.scrollHeight;
+  scrollTo({ top: 400, behavior: 'instant' });
+  const scrolledTo = scrollY;
+  const last = [...document.querySelectorAll('h2')].pop();
+  last.scrollIntoView({ block: 'center', behavior: 'instant' });
+  const r = last.getBoundingClientRect();
+  const hit = document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + r.height / 2);
+  const shown = (el) => getComputedStyle(el).display !== 'none';
+  const sources = [...document.querySelectorAll('pre[data-math], pre[data-diagram], pre[data-code]')];
+  const figures = [...document.querySelectorAll('figure.peekover-math')];
+  return {
+    viewport, scrollHeight, scrolledTo,
+    lastText: last.textContent,
+    hitIsLast: !!hit && (hit === last || last.contains(hit)),
+    sourcesShown: sources.filter(shown).map((el) => el.outerHTML.slice(0, 60)),
+    sourceCount: sources.length,
+    mathSourceCount: document.querySelectorAll('pre[data-math]').length,
+    mathPerFigure: figures.map((f) => [...f.querySelectorAll('math')].filter((m) => m.getBoundingClientRect().height > 0).length),
+  };
+})()`;
+
+interface OpenedFileProbe {
+  viewport: number;
+  scrollHeight: number;
+  scrolledTo: number;
+  lastText: string;
+  hitIsLast: boolean;
+  sourcesShown: string[];
+  sourceCount: number;
+  mathSourceCount: number;
+  mathPerFigure: number[];
+}
+
+async function until<T>(fn: () => T | null | undefined | false): Promise<T> {
+  for (let i = 0; i < 300; i++) {
+    const v = fn();
+    if (v) return v;
+    await new Promise<void>((r) => setTimeout(r, 25));
+  }
+  throw new Error('until: timed out');
+}
+
+describe('exportHtml - the enhanced sample scrolls, hides its sources, ships no controls (walk fix 8.1d)', () => {
+  const panes: HTMLElement[] = [];
+  afterEach(async () => {
+    for (const el of panes.splice(0)) el.remove();
+    setThemeSetting('auto');
+    await page.viewport(414, 896);
+  });
+
+  const PAPER = { light: 'rgb(251, 251, 248)', dark: 'rgb(18, 20, 28)' } as const;
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`${theme}: scrolls to "Rollback", one formula per source and every source hidden, no controls; 8.1a still holds`, async () => {
+      await page.viewport(1280, 900);
+      setThemeSetting(theme);
+      const pane = createReaderPane(document);
+      document.body.appendChild(pane.element);
+      panes.push(pane.element);
+      await pane.select({ name: 'sample.md', read: async () => sampleMd });
+      const host = pane.element.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+      const sr = host.shadowRoot!;
+      await until(
+        () =>
+          sr.querySelector('figure.peekover-math[data-math="rendered"]') &&
+          sr.querySelector(`figure.peekover-diagram[data-diagram-theme="${theme}"]`) &&
+          sr.querySelectorAll('.peekover-code[data-code="rendered"]').length === 2 &&
+          sr.querySelector('.peekover-table-tools'),
+      );
+      expect(host.getAttribute('data-theme')).toBe(theme);
+      // The live reader keeps its controls: only the export loses them.
+      expect(sr.querySelectorAll('.peekover-reader button').length).toBeGreaterThan(0);
+
+      await commands.armExportDownload();
+      exportHtml(host, `sample-${theme}`);
+      const probe = await commands.collectExportDownload(PROBE_OPENED_FILE);
+      const opened = probe.extra as OpenedFileProbe;
+      expect(probe.consoleErrors).toEqual([]);
+
+      // (a) The page scrolls, and the last heading can be brought into view and hit-tested.
+      expect(opened.scrollHeight).toBeGreaterThan(opened.viewport);
+      expect(opened.scrolledTo).toBeGreaterThan(0);
+      expect(opened.lastText).toBe('Rollback');
+      expect(opened.hitIsLast).toBe(true);
+
+      // (b) Every enhancer's source <pre> is hidden; each formula draws once.
+      expect(opened.mathSourceCount).toBeGreaterThan(0);
+      expect(opened.sourcesShown).toEqual([]);
+      expect(opened.mathPerFigure).toEqual(Array(opened.mathSourceCount).fill(1));
+
+      // (c) No controls ship. The task-list checkboxes are the document's own content (disabled;
+      // the checked state is the data), so they stay; the table's header text, which lives inside
+      // the sort buttons in the reader, stays as plain header text.
+      const doc = new DOMParser().parseFromString(probe.html, 'text/html');
+      expect(doc.querySelectorAll('button').length).toBe(0);
+      expect(doc.querySelectorAll('[role="group"], [role="toolbar"]').length).toBe(0);
+      const inputs = [...doc.querySelectorAll('input')];
+      expect(inputs.every((i) => i.classList.contains('task-list-item-checkbox') && i.disabled)).toBe(true);
+      expect(inputs.length).toBe(4);
+      expect(inputs.filter((i) => i.checked).length).toBe(2);
+      expect([...doc.querySelectorAll('th')].map((th) => th.textContent)).toEqual([
+        'Phase',
+        'Traffic',
+        'Duration',
+        'p95 latency',
+      ]);
+      expect(doc.querySelectorAll('tbody tr').length).toBe(4);
+      expect(doc.querySelector('.peekover-code-toolbar__lang')?.textContent).toBe('ts');
+
+      // (d) 8.1a: every @media parses; light/dark paper; the PDF runs past one page to "Rollback".
+      const css = /<style>([\s\S]*?)<\/style>/.exec(probe.html)?.[1] ?? '';
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      const parsedMedia = [...sheet.cssRules].filter((r) => r instanceof CSSMediaRule).length;
+      expect(parsedMedia).toBe((css.match(/@media/g) ?? []).length);
+      expect(probe.bodyBackgroundColor).toBe(PAPER[theme]);
       const pdf = await commands.printToPdfAndExtractText(probe.html);
       if (!pdf.ok) {
         expect(pdf.error).toContain('Headless Chromium');

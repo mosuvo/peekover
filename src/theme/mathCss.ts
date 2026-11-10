@@ -9,7 +9,8 @@
 // 348,778 (+8,286 B), because a STRING constant baked into an always-loaded module cannot be
 // tree-shaken the way `enhanceMath`'s own dynamic `import('temml')` can — D-2-R's single-
 // importer gate protects CODE, not a CSS literal sitting in a shared module. This module is
-// imported ONLY by `mathEnhancer.ts` (app-page-only, per D-3-R's own two call sites), and
+// imported by `mathEnhancer.ts` (app-page-only, per D-3-R's own two call sites) and by
+// `export/htmlExport.ts` (app-page-only too: a math export carries this sheet, walk fix 8.1d), and
 // injects its own SECOND `<style>` element into the shadow root at enhancement time —
 // mirroring `mount.ts`'s own `buildContainedStyle()` pattern (an additional style sheet
 // alongside the base one, never replacing it) — so the content-script graph never reaches

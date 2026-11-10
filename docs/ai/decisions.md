@@ -1,6 +1,44 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1d — WALK FIX (8.1 item I-9, the re-check of 8.1a): the exported HTML scrolls, hides
+  its math source, and ships no controls.** The human, 2026-11-10: the downloaded `sample.html` opened in Chrome shows
+  one screen and cannot be scrolled (it stops at "Ranking"); the file carried 8.1a's fix, so a different cause. Local,
+  on `main`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).
+  - **Cause CONFIRMED (the human's diagnosis):** `translateReaderStylesheet` carries `:host{position:fixed;inset:0;
+    overflow:auto}` onto `body`. On the root's body the overflow passes to the viewport (body's own becomes visible),
+    and a fixed body adds no scrollable overflow to the viewport: nothing scrolls. Measured before the fix: the opened
+    file's `scrollHeight` 720 = the viewport, both engines. 8.1a's test opened the file but never scrolled it.
+  - **Fix (`src/export/htmlExport.ts`, `wrapInStandaloneDocument`):** (1) `body{position:static}` appended after the
+    translated sheet, the export's own override (the move `CONTAINED_CSS` makes for the app pane). Chosen over a
+    scrolling wrapper: smaller (20 B of CSS), and body stays the one box the theme and print rules already target.
+    (2) The display-math source showed because its hide rule is in `MATH_CSS` (app page only); when the clone has
+    `[data-math]` the export now carries `MATH_CSS` verbatim (already `.peekover-reader`-scoped, no `:host`). The
+    diagram and code hide rules were already in `READER_CSS`, so carried. The math font is not shipped: formulas use
+    the `math` fallback in the file. (3) `stripControls` removes from the clone every `<button>`, `[role=group]`,
+    `[role=toolbar]`, `[role=status]`, the table tool row and its empty-filter row; a table's sort button is unwrapped
+    to its header text (the text lives inside it); rows a filter hid and a collapsed code block ship whole. **HUMAN
+    RULING (both departures APPROVED):** the task-list checkboxes stay (disabled; the checked state is content) and
+    are asserted to be the only inputs; sort buttons unwrap to header text.
+  - **Red first** (`tests/browser/htmlExport.browser.test.ts`, new describe "walk fix 8.1d"): the sample opened through
+    the real reader pane (all four enhancers run), theme set through the setting, exported through the real download,
+    opened standalone; light AND dark x Chromium AND Firefox. Before the fix: 4 / 4 red at (a), `expected 720 to be
+    greater than 720`. Per-part ablations after the fix, each red alone in all 4 cases: no body override -> (a)
+    (with the two height checks removed, the hit-test alone reads `false`); no math sheet -> (b), one source `<pre>`
+    shown; no strip -> (c), 18 buttons; strip without the unwrap -> four empty `<th>`. Green: 16 / 16 in the file.
+    The existing `bodyPosition` assertion read `fixed` (it pinned the bug); now `static`. Unit
+    (`htmlExport.test.ts`): filtered rows and a collapsed block ship whole; the math sheet only with math (red on
+    ablation). Harness: `collectExportDownload` takes an optional script run in the opened file (`vitest.config.ts`).
+  - **Copy as HTML is affected the same way** (same `wrapInStandaloneDocument`): it scrolls, hides the source, carries
+    no controls, and its `text/plain` fallback (taken after the wrap) no longer lists control labels. **Copy as rich
+    text is not** (`clone.outerHTML`, no wrap): it still carries the controls -> 8.1e.
+  - **Bytes (same-session A-B, both engines; A reproduced 9.2b's recorded `.output` exactly):** app chunk **551,348 ->
+    551,982 B (+634)**, md5 `a9e746a1` -> **`369153fa`** (both engines); **content script identical** (345,424 B,
+    `ff67c713` / `aa45b1c3`); `.output` **6,648,311 / 6,648,297 B** (+634 each) of 7,340,032, headroom 691,721 /
+    691,735; manifests 864 / 978 B, `permissions: []`. `MATH_CSS` was already in the app chunk (no duplicate).
+  - **Verify:** lint clean; unit 1,685 / 1,685; browser 2,670 passed, 64 skipped, 0 failed (both engines, including
+    `exportNetwork`, `copyAsHtml`, `copyAsRichText`). The 9.3 screenshots are not affected (none captures an export).
+  - **Re-check (the human):** export the sample, open it, scroll to the bottom, Ctrl+P.
 - **2026-11-10 · M13 — walk prep: the human's walk notes banked; the table one verdict per surface.** Records only;
   no product change. Local, on `main`; not pushed. HUMAN RULING, verbatim: "(b) Restructure the scoring table to ONE
   verdict per surface (36 rows), plus a column for per-cell exceptions. Pre-fill "walked: OK (notes)" only where the

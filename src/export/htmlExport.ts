@@ -50,6 +50,7 @@
 // pane; it is a THIRD context this module owns. Only `READER_CSS`'s text is ever translated here.
 
 import { READER_CSS } from '../theme/readerCss';
+import { MATH_CSS } from '../theme/mathCss';
 import type { EffectiveTheme } from '../settings/settings';
 
 export interface SerializedReaderDocument {
@@ -314,14 +315,51 @@ export function translateReaderStylesheet(
 }
 
 /**
+ * The export's own override, appended after the translated sheet (walk fix 8.1d) — the same move
+ * `CONTAINED_CSS` makes for the app page's pane. The reader's base rule puts its box at
+ * `position:fixed;inset:0;overflow:auto`; translated onto the root's body, the overflow passes to
+ * the viewport, and a fixed body gives the viewport nothing to scroll, so the file showed one screen.
+ * A static body is the normal page and scrolls the normal way. Smaller than a scrolling wrapper,
+ * and it leaves the body that the theme and print rules already target as the one box.
+ */
+const EXPORT_BODY_CSS = 'body{position:static}';
+
+/**
+ * Strip the reader's controls out of a detached clone (walk fix 8.1d): a static file has no script
+ * to run them. Every `<button>` goes, except that a table's sort button is unwrapped to its header
+ * text (the text lives inside it). Groups, live-status regions and the table tool row go too. What
+ * a removed control was hiding comes back: rows a filter hid, and a code block's collapse. The
+ * task-list checkboxes stay — disabled, they are the document's own content, not a control.
+ */
+function stripControls(clone: HTMLElement): void {
+  for (const sort of clone.querySelectorAll('th > button.peekover-table-sort')) {
+    sort.querySelectorAll('.peekover-table-sort__state, .peekover-table-sort__glyph').forEach((s) => s.remove());
+    sort.replaceWith(...sort.childNodes);
+  }
+  clone
+    .querySelectorAll(
+      'button, [role="group"], [role="toolbar"], [role="status"], .peekover-table-tools, .peekover-table-filter__empty',
+    )
+    .forEach((el) => el.remove());
+  clone.querySelectorAll('table tr[hidden]').forEach((row) => row.removeAttribute('hidden'));
+  clone.querySelectorAll('[data-code-state]').forEach((el) => el.removeAttribute('data-code-state'));
+}
+
+/**
  * Wrap a serialized clone into a standalone HTML document: doctype, a `<style>` carrying the
  * TRANSLATED stylesheet (per the module-level doc comment), and the clone itself. `:host`
  * translates to `body` (see `classifyRule`), so the wrapper IS the document's own `<body>` — no
  * extra wrapper element, matching D-3's interpretation note ("a bundled `<style>` block, never
  * per-node inline `style` attributes").
+ *
+ * The clone is stripped of its controls in place (`stripControls`). When it carries math, the math
+ * sheet rides along verbatim (every selector is already `.peekover-reader`-scoped, no `:host`): it
+ * holds the rule that hides a rendered formula's source `<pre>`, and Temml's layout rules.
  */
 export function wrapInStandaloneDocument(clone: HTMLElement, theme: EffectiveTheme): string {
-  const { css } = translateReaderStylesheet(theme);
+  stripControls(clone);
+  const math = clone.querySelector('[data-math]') ? `\n${MATH_CSS}` : '';
+  const css = `${translateReaderStylesheet(theme).css}\n${EXPORT_BODY_CSS}${math}`;
   return (
     '<!doctype html>\n' +
     '<html>\n<head>\n<meta charset="utf-8">\n' +

@@ -1166,7 +1166,7 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       ★ *2026-11-10 (walk prep; `decisions.md`, "M13 — walk prep"; HUMAN RULING "ONE verdict per surface"):* the human's
       walk notes (Chrome 1–15, Edge E1–E4, Firefox) are banked in `docs/ai/walk-8.1.md`; the table is one verdict per
       surface (36) with per-cell exceptions; 17 surfaces walked on Chromium by the notes, 19 not; Firefox's current build
-      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, and 9.2b / 9.3c from its Firefox items.
+      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, 8.1d, and 9.2b / 9.3c from its Firefox items.
 - [x] **8.1a The exported HTML prints whole (WALK FIX, 8.1 item I-9; the human: the export "gets cut off at the
       middle").** `translateReaderStylesheet` wrote `@media${condition}` with the condition trimmed, so `@media print`
       and `@media screen and (max-width:1280px)` came out as `@mediaprint` / `@mediascreen …` — unknown at-rules, dropped.
@@ -1201,6 +1201,21 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       stopped-watch note stays fixed beside the control; then green; full suite; bytes stated.
       ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1c"): red 24 / 24 note cases in both engines → green 26 / 26;
       content script and app chunk +362 B each.*
+- [x] **8.1d The exported HTML scrolls, hides its math source, and ships no controls (WALK FIX, 8.1 item I-9; the
+      re-check of 8.1a: the file "shows only the first screen and cannot be scrolled").** The body carried the reader's
+      `position:fixed`; the math hide rule was not in the export; every control shipped with no script. Now
+      `body{position:static}` after the translated sheet, `MATH_CSS` when the document has math, and the controls
+      stripped from the clone (sort buttons unwrapped to header text; filtered rows and collapsed code restored; the
+      task-list checkboxes kept, HUMAN RULING).
+      Files: `src/export/htmlExport.ts` · `src/export/htmlExport.test.ts` · `tests/browser/htmlExport.browser.test.ts` ·
+      `vitest.config.ts` (necessary ripple: the download probe runs a script in the opened file, for (a) and (b)) ·
+      `src/theme/mathCss.ts` (its importer comment)
+      Verify: red first — the sample through the real pane and download, opened standalone, light AND dark, both
+      engines: (a) it scrolls and "Rollback" scrolls into view and hit-tests as itself; (b) every source `<pre>` hidden,
+      one formula per figure; (c) no `<button>`, no group/toolbar, the only inputs the task-list checkboxes; (d) 8.1a's
+      checks; then green; Copy as HTML said; full suite; bytes stated.
+      ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1d"): red 4 / 4 at (a) → green 16 / 16; each part ablated red
+      alone; app chunk +634 B, content script identical.*
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
@@ -1399,7 +1414,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* ★ *2026-11-10: **59 tasks** — 8.1d discovered (walk fix: the exported HTML scrolls; no controls).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

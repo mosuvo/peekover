@@ -361,9 +361,15 @@ interface ExportDownloadProbe extends StandaloneRenderProbe {
   /** The downloaded file's own raw HTML text — for structural assertions (e.g. the local-`<img>`
    *  passthrough) the computed-style probe above can't express. */
   html: string;
+  /** What `script` returned, evaluated in the opened file after load (walk fix 8.1d: scroll,
+   *  hit-test, computed display). `null` when no script was passed. */
+  extra: unknown;
 }
 
-const collectExportDownload: BrowserCommand<[]> = async ({ page }): Promise<ExportDownloadProbe> => {
+const collectExportDownload: BrowserCommand<[script?: string]> = async (
+  { page },
+  script,
+): Promise<ExportDownloadProbe> => {
   const pending = pendingDownloads.get(page);
   if (!pending) {
     throw new Error('collectExportDownload: no download was armed — call armExportDownload() first');
@@ -396,7 +402,8 @@ const collectExportDownload: BrowserCommand<[]> = async ({ page }): Promise<Expo
       hostSelectorLiteralPresent: document.documentElement.outerHTML.includes(':host'),
       h1Text: document.querySelector('h1')?.textContent ?? null,
     })`)) as Omit<StandaloneRenderProbe, 'consoleErrors'>;
-    return { ...result, consoleErrors, suggestedFilename, html };
+    const extra = script ? await probe.evaluate(script) : null;
+    return { ...result, consoleErrors, suggestedFilename, html, extra };
   } finally {
     await context.close();
     rmSync(dir, { recursive: true, force: true });
