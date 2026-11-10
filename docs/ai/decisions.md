@@ -1,6 +1,26 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 — I-10 MEASURED: CI and Supply chain green on `a2ddc67`; the release dry run green; no tag, no
+  release.** Local records commit; not pushed. The human pushed `main` (`origin/main` = local = `a2ddc67`).
+  - **CI** 42866301850 success (verify, reproducible) and **Supply chain** 42866301860 success (No remote code, OSV
+    scanner, Dependency audit, SBOM), both on `a2ddc67`; `gh run watch --exit-status` EXIT 0 each.
+  - **Then** `gh workflow run release.yml --ref main -f dry_run=true` (dispatch EXIT 0) → **Release 42868591628** on
+    `a2ddc67`, watch EXIT 0: "Build, test and package" success; "Attest the release files (public repository only)"
+    skipped (private: "Attestation: skipped — the repository is private"); "Create the draft release" skipped. The run's
+    own line: "REPRODUCIBLE — every packaged file and every zip is byte-identical."
+  - **Release / tag check:** `git ls-remote --tags origin` 0 before, 0 after; `gh release list` 0 before, 0 after.
+  - **Artifact** `release-files`, 8,854,789 B: SHA256SUMS 449 B, THIRD_PARTY_LICENSES.txt 212,720, peekover-0.1.0-chrome.zip
+    2,034,882, -firefox.zip 2,034,879, -sources.zip 4,802,703, sbom.cdx.json 117,357. **Chrome and Firefox zips: SHA-256
+    equal to the local `.output` zips** (`c1ff6d8d452b…`, `47d1d6a929c7…`). **Sources zip: differs from the local one**
+    (CI `641e1ba3…`, local `e15db176…`) — 380 entries each, 9 differ: `docs/ai/decisions.md`, `progress.md`,
+    `specs/013-first-release/tasks.md` (committed after the local zip was made) and `LICENSE`, `scripts/perf-watch.ts`,
+    `specs/004-themes-settings/tasks.md`, `specs/005-watch-diff/spec.md`, `src/theme/reader.ts`,
+    `src/theme/themeControl.ts` — CRLF in this Windows working copy (`core.autocrlf=true`; the index and CI's clean clone
+    are LF; byte-equal after CR removal). Not a product or repository difference; CI's sources zip is authoritative.
+    (A clean re-checkout would make the local copy LF; not done — read-only on the repo.)
+  - **Recorded:** `walk-8.1.md` I-10 ("measured by CC", not a human verdict); GO-LIVE.md Done notes 0.3 (box left
+    unticked: 0.3 is checked on the release commit, and this records commit itself moves `main`).
 - **2026-11-10 · M13 TASK 8.1i FOLLOW-UP — CI FOUND AN UNHANDLED ERROR FROM `f86a01e`; FIXED (`0ea5c6d`). I-10 NOT
   YET MEASURED.** Local, on `main`; not pushed.
   - **What CI found (run 42857163617, `1af79a7`, job `verify`, step 7 "Test"):** `Test Files 87 passed (87)`, `Tests

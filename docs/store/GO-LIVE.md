@@ -347,3 +347,5 @@ file are for you, not the store.
 ## Done notes
 
 *One line per step: the step number, the date, and the evidence seen (a run id, a URL, "all OK").*
+
+- **0.3 · 2026-11-10 · measured by CC (before release day; box left for the release commit):** `a2ddc67` — CI 42866301850 and Supply chain 42866301860 both `completed success` (https://github.com/mosuvo/peekover/actions/runs/42866301850, …/42866301860). The release dry run on the same commit, 42868591628: build success, attestation and draft release skipped, no tag, no release. **Re-check 0.3 on the commit you release** — any later push (this note's own commit included) needs its own green CI.

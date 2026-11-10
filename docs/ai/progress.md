@@ -17,6 +17,12 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 — I-10 MEASURED (2026-11-10).** Record: `decisions.md`, "M13 — I-10 MEASURED". On `a2ddc67`: CI 42866301850 and
+Supply chain 42866301860 green (EXIT 0); the release dry run 42868591628 green — build passed, attestation skipped
+(private), no draft release, no tag; "REPRODUCIBLE". The Chrome / Firefox zips' SHA-256 equal the local builds; the
+sources zip differs only by this Windows copy's CRLF and later records. GO-LIVE 0.3's Done note written (box left for the
+release commit).
+
 **M13 TASK 8.1i FOLLOW-UP (2026-11-10) — CI RED ON `1af79a7`, FIXED AT `0ea5c6d`; I-10 STILL OPEN.** Record:
 `decisions.md`, "M13 TASK 8.1i FOLLOW-UP". CI run 42857163617: every unit test passed, vitest exited 1 on an unhandled
 error from 8.1i (f)'s frame callback (`f86a01e`); the dry run was not dispatched. Fixed: the band's tracker and the
