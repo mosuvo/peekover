@@ -1,6 +1,31 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1i — CLOSED: the held looks approved by the human and landed; the rest decided by the
+  REVIEWER under the human's delegation.** Local, on `main`; not pushed.
+  - **The human (2026-11-10):** the four held looks approved as shown on the contact sheet — (a) + (d) the narrow
+    opener, the contents sheet and the editor's gap; (f) the pills at rest; (g) the active line, both themes — and
+    surface 36's Firefox cells (re-captured mid-scroll) ok: "All good on my end for the previous issues." The human
+    then **delegated** the remaining calls: "The rest is up to you."
+  - **REVIEWER DECISIONS under that delegation (not human verdicts):**
+    - **G-7 EXCEPTION, BY NAME — task 8.1i's content script: 345,378 → 349,530 B (+4,152 B), over G-7's +2 KB stop.**
+      Why: the human approved the sheet's look as built; a lighter (a) (no sheet script) would need a second build and
+      review for a smaller UX; the package keeps ~682 KB of headroom under 7,340,032 B. The exception covers this task's
+      bytes only; G-7 stands for later tasks. Revisit if a later task needs the room.
+    - **Items II-1 … II-10 closed:** every surface under them was judged ok by the human, the fixed ones (5, 6, 7, 17,
+      25, 29) approved after the fix. Each marked "ok (human, by surface verdicts 2026-11-10)" in `walk-8.1.md`.
+  - **Landed:** `local/8.1i-approval` rebased onto `main` (only `1100243`, records and tooling, lay between) and
+    fast-forwarded; no merge commit; the branch deleted. New hashes: `1d55778` (g), `a7762b4` (a) + (d), `d1b3f52` (f)
+    (were `507cfb7`, `a9a0ae0`, `dbbb088`; their subjects keep the "[PENDING APPROVAL]" tag they were written with —
+    approved here). With `7c4f978` (e), `c59a0a7` (c), `1916cc3` (b), `1100243` (records).
+  - **Verify on `main` (`d1b3f52`):** lint clean; unit 1,697 / 1,697 (87 files; `truthPins` and `compareBuilds` among
+    them, re-zipped first: 99 / 99 in their own run); browser full suite **2,747 passed, 65 skipped, 0 failed** (both
+    engines; the contrast census in it, green).
+  - **Bytes (both engines):** content script **349,530 B** (`6a1b0166` / `c0dbdc10`; +4,152 over 345,378 — the G-7
+    exception above); app chunk **556,187 B** (`15789eb6`; +4,463 over 551,724); onboarding 11,170 / 11,042 B
+    (unchanged); `.output` **6,658,535 / 6,658,521 B** of 7,340,032, headroom 681,497 / 681,511; zips 2,034,662 /
+    2,034,663 B (`7ba4121e` / `b8cfda9a`); `permissions: []`.
+  - Tasks: 64, **60 ticked**. Open: 8.1 itself (the walk's remaining items), 9.2's sign-off, 9.3's pick, 9.5's figures.
 - **2026-11-10 · M13 TASK 8.1i — WALK D'S FIXES (HUMAN 2026-11-10: surfaces 5, 6, 7, 17, 25, 29 = fix; every other
   surface ok; CC flags 1–6 → fix). (b), (c), (e) LANDED; (a) + (d), (f), (g) built, green, HELD for the human's look and
   a byte ruling.** Local, on `main`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored). Bundle
