@@ -1235,6 +1235,21 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       ripple beyond Files: `tests/truthPins.test.ts`, `tests/manifest.test.ts` (the carried pin), `docs/trust/
       REPRODUCING.md` (a line join), `docs/store/firefox.md` (its unpublished note), PERMISSIONS.md and CHANGELOG.md
       (approved wording).*
+- [x] **9.2b The Firefox local-file setting; the floor to 153 (DISCOVERED at the signed install, AMO kit step 11;
+      HUMAN RULINGS 2026-11-10 "FIREFOX WORDING + FLOOR: APPROVED exactly as drafted" and "ROW 477: use your shortened
+      version"; PERMISSIONS.md "APPROVED as proposed").** Since Firefox 153 local files render only with "Access local
+      files on your computer" on; the guide said "nothing needs setting up". The guide's Firefox branch now reads the
+      setting (`isAllowedFileSchemeAccess()`, no permission) and gives the steps; `strict_min_version` 153.0 (the
+      current ESR); rows 26 / 296 / 304 / 306 / 328 / 335 / 477 / 500 re-worded or re-evidenced, rows 580–585 added;
+      PERMISSIONS.md's two lines; the listing guard requires a from-disk claim to name the setting. **Closes the 9.2
+      release BLOCKER.**
+      Files: `src/app/onboarding.ts` · `entrypoints/onboarding/main.ts` · `wxt.config.ts` · `README.md` · `CHANGELOG.md` ·
+      `docs/store/firefox.md` · `docs/trust/PERMISSIONS.md` · `docs/store/claims.md` · `src/app/onboarding.test.ts` ·
+      `tests/browser/onboarding.browser.test.ts` · `tests/browserFloor.test.ts` · `tests/truthPins.test.ts`
+      Verify: red first — the floor test's MDN row (153), the guide's Firefox outcomes and the bundle flip; then
+      green; the listing within AMO's limits; full suite; bytes stated; `permissions: []`.
+      ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 9.2b"): red → green; content script and app chunk identical;
+      the guide's chunk carries the Firefox branch.*
 - [ ] **9.3 ★ Store screenshots — scripted captures, the human picks (G-11; spec §3.9).** 1280×800, light and dark,
       through the app-page harness from the build that passed 8.1, of a sample document kept in the repo and not
       packaged.
@@ -1380,7 +1395,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

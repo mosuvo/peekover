@@ -8,11 +8,15 @@
 //   `focus` and on `visibilitychange` to visible, so the page follows a change made elsewhere.
 //   A missing reader, a throw, a rejection or a non-boolean answer is "unknown": the steps, never a
 //   blank card (AGENTS.md #5).
-// - Firefox: no detection (the entry never wires the API on that build) and no steps.
+// - Firefox (153+, HUMAN RULING 2026-11-10): the same detection — Firefox 153 made local-file access a
+//   separate, default-off setting, "Access local files on your computer", and the same call reports it —
+//   with steps to the add-on's Permissions and data tab in about:addons (no button: an extension cannot
+//   open that page for the user). Measured on the AMO-signed 0.0.9, Firefox 159 (decisions.md, "the
+//   AMO-signed 0.0.9 on a real Firefox").
 // - Both: raw files on the four hosts need no setup.
 //
-// The dependency names here never spell the browser API: this module ships on both engines, and the
-// Firefox chunk must not reference it (tasks.md 6.1; `onboarding.test.ts` bundles both engines).
+// The dependency names here never spell the browser API: the entry wires it (`onboarding.test.ts`
+// bundles both engines; only the Chromium bundle carries the extensions-page deep link).
 //
 // Constructed DOM only — every string is `textContent`; nothing is parsed as HTML.
 //
@@ -38,7 +42,7 @@ export type FileAccessState = 'on' | 'off' | 'unknown';
 export interface OnboardingDeps {
   /** Which build is running (`import.meta.env.FIREFOX` in the entry). */
   engine: 'chromium' | 'firefox';
-  /** Chromium: resolves whether the extension may read file:// URLs. Absent → "unknown". */
+  /** Both engines: resolves whether the extension may read file:// URLs. Absent → "unknown". */
   readFileAccess?: () => Promise<unknown>;
   /** Chromium: opens Peekover's details on the extensions page. Absent or rejecting → the address. */
   openDetails?: () => Promise<unknown>;
@@ -59,7 +63,7 @@ export interface OnboardingController {
 export const ONBOARDING_COPY = {
   title: 'Set up Peekover',
   introChromium: 'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need one browser setting.',
-  introFirefox: 'Peekover shows markdown files as formatted pages. In Firefox, nothing needs setting up.',
+  introFirefox: 'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need one Firefox setting.',
   localHeading: 'Files on your computer',
   on: 'Peekover can read files on your computer: “Allow access to file URLs” is on. Open a markdown file in a tab to read it.',
   off: 'Peekover can’t read files on your computer yet: “Allow access to file URLs” is off.',
@@ -72,10 +76,17 @@ export const ONBOARDING_COPY = {
   step2Off: 'Turn on “Allow access to file URLs”.',
   step2Unknown: 'Check that “Allow access to file URLs” is on.',
   step3: 'Your browser may restart Peekover and close this page. Then open your markdown file again.',
-  firefoxLocal: 'In Firefox, markdown files you open from your computer are shown with no setup.',
+  onFirefox: 'Peekover can read files on your computer: “Access local files on your computer” is on. Open a markdown file in a tab to read it.',
+  offFirefox: 'Peekover can’t read files on your computer yet: “Access local files on your computer” is off.',
+  step1Firefox: 'Open about:addons (type it in the address bar) and choose Peekover.',
+  addonsCode: 'about:addons',
+  step2Firefox: 'Open the Permissions and data tab.',
+  step3OffFirefox: 'Turn on “Access local files on your computer”.',
+  step3UnknownFirefox: 'Check that “Access local files on your computer” is on.',
+  step4Firefox: 'Then open your markdown file again.',
   webHeading: 'Raw files on the web',
   web: 'Raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket are shown with no setup.',
-  failed: 'Peekover’s setup guide couldn’t be shown. To read files on your computer in Chrome or Edge, turn on “Allow access to file URLs” for Peekover on your browser’s extensions page.',
+  failed: 'Peekover’s setup guide couldn’t be shown. To read files on your computer in Chrome or Edge, turn on “Allow access to file URLs” for Peekover on your browser’s extensions page. In Firefox, turn on “Access local files on your computer” under Peekover’s Permissions and data in about:addons.',
 } as const;
 
 /** The page's copies of `design/tokens.css`, pinned by tests/designTokens.test.ts. */
@@ -169,8 +180,8 @@ function installSheet(doc: Document): void {
 }
 
 /**
- * Build the setup guide into `root` and, on Chromium, read file access (then again on focus and on
- * becoming visible). The first paint is synchronous: before the first answer the Chromium page shows
+ * Build the setup guide into `root` and read file access (then again on focus and on becoming
+ * visible). The first paint is synchronous: before the first answer the page shows
  * the "unknown" card, so it is never blank while the browser answers.
  */
 export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): OnboardingController {
@@ -203,19 +214,19 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
   state.setAttribute('role', 'status');
   body.append(intro, localHeading, state);
 
-  // Chromium only: the steps.
+  // The steps, per engine. `turnOnText` is the step whose words follow the answer (off / unknown).
   const steps = el('ol', 'steps');
-  const step2Text = el('p');
+  const turnOnText = el('p');
+  const step = (n: number, ...content: HTMLElement[]): HTMLLIElement => {
+    const li = el('li', 'step');
+    const num = el('span', 'n', String(n));
+    num.setAttribute('aria-hidden', 'true');
+    const text = el('div');
+    text.append(...content);
+    li.append(num, text);
+    return li;
+  };
   if (chromium) {
-    const step = (n: number, ...content: HTMLElement[]): HTMLLIElement => {
-      const li = el('li', 'step');
-      const num = el('span', 'n', String(n));
-      num.setAttribute('aria-hidden', 'true');
-      const text = el('div');
-      text.append(...content);
-      li.append(num, text);
-      return li;
-    };
     const open = el('button', 'cta', ONBOARDING_COPY.openDetails);
     open.type = 'button';
     const address = el('p');
@@ -241,32 +252,42 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
     });
     steps.append(
       step(1, el('p', undefined, ONBOARDING_COPY.step1), open, address, failure),
-      step(2, step2Text),
+      step(2, turnOnText),
       step(3, el('p', undefined, ONBOARDING_COPY.step3)),
     );
-    body.append(steps);
+  } else {
+    // Firefox (153+): the setting lives on the add-on's own page in about:addons, which an extension
+    // cannot open for the user — so the steps say where it is, with no button.
+    const first = el('p');
+    const [before, after] = ONBOARDING_COPY.step1Firefox.split(ONBOARDING_COPY.addonsCode);
+    first.append(before, el('code', undefined, ONBOARDING_COPY.addonsCode), after);
+    steps.append(
+      step(1, first),
+      step(2, el('p', undefined, ONBOARDING_COPY.step2Firefox)),
+      step(3, turnOnText),
+      step(4, el('p', undefined, ONBOARDING_COPY.step4Firefox)),
+    );
   }
+  body.append(steps);
 
   const webHeading = el('h2', 'h', ONBOARDING_COPY.webHeading);
   body.append(webHeading, el('p', 'web', ONBOARDING_COPY.web));
 
   function paint(access: FileAccessState): void {
-    if (!chromium) {
-      state.textContent = ONBOARDING_COPY.firefoxLocal;
-      return;
-    }
     page.dataset.access = access;
-    state.textContent = ONBOARDING_COPY[access];
+    if (access === 'unknown') state.textContent = ONBOARDING_COPY.unknown;
+    else if (chromium) state.textContent = ONBOARDING_COPY[access];
+    else state.textContent = access === 'on' ? ONBOARDING_COPY.onFirefox : ONBOARDING_COPY.offFirefox;
     if (access === 'on') delete state.dataset.tone;
     else state.dataset.tone = 'warn';
     steps.hidden = access === 'on';
-    step2Text.textContent = access === 'off' ? ONBOARDING_COPY.step2Off : ONBOARDING_COPY.step2Unknown;
+    if (chromium) turnOnText.textContent = access === 'off' ? ONBOARDING_COPY.step2Off : ONBOARDING_COPY.step2Unknown;
+    else turnOnText.textContent = access === 'off' ? ONBOARDING_COPY.step3OffFirefox : ONBOARDING_COPY.step3UnknownFirefox;
   }
 
   let seq = 0;
   let destroyed = false;
   async function recheck(): Promise<FileAccessState> {
-    if (!chromium) return 'unknown';
     const mine = (seq += 1);
     const access = await detectFileAccess(deps.readFileAccess);
     if (!destroyed && mine === seq) paint(access); // a later read wins
@@ -293,11 +314,9 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
       })
       .catch(() => undefined);
   }
-  if (chromium) {
-    doc.defaultView?.addEventListener('focus', onFocus);
-    doc.addEventListener('visibilitychange', onVisible);
-    void recheck();
-  }
+  doc.defaultView?.addEventListener('focus', onFocus);
+  doc.addEventListener('visibilitychange', onVisible);
+  void recheck();
 
   return {
     element: page,

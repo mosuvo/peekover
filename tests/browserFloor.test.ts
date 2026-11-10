@@ -14,8 +14,9 @@
 // MDN dates to Chrome 64 / Firefox 78). A watch-list row only catches the feature it names.
 //
 // THE RULE (HUMAN RULING, 2026-11-06): Chrome's floor is the newest feature whose absence changes behaviour or
-// appearance; Firefox's is the newest feature Peekover needs there (127 — the human raised it from 115, since the
-// clipboard copies need ClipboardItem). Excluded rows say why.
+// appearance; Firefox's is the newest feature Peekover needs there (153 since 2026-11-10: the local-file setting and
+// the call that reads it; before that 127 — the human raised it from 115, since the clipboard copies need
+// ClipboardItem). Excluded rows say why.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -44,6 +45,11 @@ const ROWS: Row[] = [
   // ── relied on (fire today) ──────────────────────────────────────────────────────────────────────────────
   { feature: 'CSS scrollbar-color', bcd: 'css.properties.scrollbar-color', chrome: 121, firefox: 64, detect: /scrollbar-color\s*:/ },
   { feature: 'ClipboardItem', bcd: 'api.ClipboardItem', chrome: 76, firefox: 127, detect: /new ClipboardItem\(/ },
+  // M13 (HUMAN RULING 2026-11-10, "raise the Firefox floor to strict_min_version 153.0"): the setting's existence sets
+  // Firefox's floor. Since 153, local-file access is its own default-off setting ("Access local files on your
+  // computer") and this call reports it; before 153 it always returned false (MDN browser-compat-data,
+  // webextensions/api/extension.json: firefox 153 "reflects the … option", 48–153 "Always returns `false`").
+  { feature: 'extension.isAllowedFileSchemeAccess() (the local-file setting)', bcd: 'webextensions.api.extension.isAllowedFileSchemeAccess', chrome: 12, firefox: 153, detect: /isAllowedFileSchemeAccess/ },
   { feature: 'Clipboard.write()', bcd: 'api.Clipboard.write', chrome: 76, firefox: 127, detect: /clipboard\??\.write\(/ },
   { feature: 'CSS color-mix()', bcd: 'css.types.color.color-mix', chrome: 111, firefox: 113, detect: /color-mix\(/ },
   { feature: 'CSS container-type', bcd: 'css.properties.container-type', chrome: 105, firefox: 110, detect: /container-type\s*:/ },
@@ -129,6 +135,7 @@ describe('7.1 — the minimum browser versions are the inventory\'s maximum', ()
     expect(SOURCE.length).toBeGreaterThan(100_000);
     expect(fires(ROWS.find((r) => r.feature === 'CSS scrollbar-color')!)).toBe(true);
     expect(fires(ROWS.find((r) => r.feature === 'ClipboardItem')!)).toBe(true);
+    expect(fires(ROWS.find((r) => r.feature.startsWith('extension.isAllowedFileSchemeAccess'))!)).toBe(true);
     // A comment is not a use: READER_CSS's comment names color-mix(); the onboarding sheet uses it.
     expect(/color-mix\(/.test(SOURCE)).toBe(true);
   });
@@ -145,7 +152,7 @@ describe('7.1 — the minimum browser versions are the inventory\'s maximum', ()
 
   it('Firefox: browser_specific_settings.gecko.strict_min_version is the inventory\'s maximum', () => {
     const { version, set } = floor('firefox');
-    expect({ version, set }).toEqual({ version: 127, set: ['ClipboardItem', 'Clipboard.write()'] });
+    expect({ version, set }).toEqual({ version: 153, set: ['extension.isAllowedFileSchemeAccess() (the local-file setting)'] });
     const gecko = (manifestFor('firefox').browser_specific_settings as { gecko: Record<string, unknown> }).gecko;
     expect(gecko.strict_min_version, 'gecko.strict_min_version').toBe(`${version}.0`);
   });

@@ -64,7 +64,9 @@ const OUTCOMES: Array<{ name: string; deps: OnboardingDeps; text: string; steps:
   { name: 'Chromium, access off', deps: { engine: 'chromium', readFileAccess: async () => false }, text: ONBOARDING_COPY.off, steps: true, tone: 'warn' },
   { name: 'Chromium, the API throws', deps: { engine: 'chromium', readFileAccess: () => Promise.reject(new Error('no')) }, text: ONBOARDING_COPY.unknown, steps: true, tone: 'warn' },
   { name: 'Chromium, the API is missing', deps: { engine: 'chromium' }, text: ONBOARDING_COPY.unknown, steps: true, tone: 'warn' },
-  { name: 'Firefox', deps: { engine: 'firefox' }, text: ONBOARDING_COPY.firefoxLocal, steps: false, tone: undefined },
+  { name: 'Firefox, access on', deps: { engine: 'firefox', readFileAccess: async () => true }, text: ONBOARDING_COPY.onFirefox, steps: false, tone: undefined },
+  { name: 'Firefox, access off', deps: { engine: 'firefox', readFileAccess: async () => false }, text: ONBOARDING_COPY.offFirefox, steps: true, tone: 'warn' },
+  { name: 'Firefox, the API throws', deps: { engine: 'firefox', readFileAccess: () => Promise.reject(new Error('no')) }, text: ONBOARDING_COPY.unknown, steps: true, tone: 'warn' },
 ];
 
 describe('6.1 — every detection outcome, on screen', () => {

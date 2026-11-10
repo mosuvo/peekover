@@ -38,6 +38,9 @@ below applies. (b) The guide opens once and not again across restarts — TRUE. 
    folder from Explorer onto the app page and read the note under the folder list ("…drag it in instead. Watching
    still works here…").
 
+**THE BLOCKER IS CLOSED (2026-11-10, task 9.2b):** the guide's Firefox branch, floor 153, and every Firefox
+sentence re-worded with the human's approval (`decisions.md`, "M13 TASK 9.2b"). Step 1 is complete.
+
 **(c) and (d) DONE by the human, 2026-11-10** ("picker: fresh" — an edit shows when the file is opened again; "drag:
 works as tested"). The picker-route claims were then measured one by one and the corrected wording proposed
 (`decisions.md`, "M13 — the picker route, measured").

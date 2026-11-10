@@ -146,12 +146,13 @@ extension's own origin, reached from the app page's **"Setup guide"** link (a ne
 manifest key and no permission** — both built manifests are byte-identical before and after it
 (833 / 949 B, `permissions: []`, re-proven by `tests/manifest.test.ts`). What it uses, and why none of it
 needs a permission:
-- **`extension.isAllowedFileSchemeAccess()`** (Chromium build only) — reads whether the user has turned
-  on "Allow access to file URLs" for Peekover, so the page can say whether local files will open. It
+- **`extension.isAllowedFileSchemeAccess()`** (both builds) — reads whether the user has turned on "Allow access to
+  file URLs" (Chromium) or "Access local files on your computer" (Firefox 153+) for Peekover, so the page can say
+  whether local files will open. It
   only *reads* the user's own toggle; it cannot change it. Chrome's reference lists no permission for
   the `extension` API, and says its utilities can be used by any extension page. Read when the page
-  opens and again when it regains focus. The **Firefox build never calls it** (a build-time branch;
-  `src/app/onboarding.test.ts` checks both engines' bundles).
+  opens and again when it regains focus. `src/app/onboarding.test.ts` checks both engines' bundles; only the
+  Chromium one carries the extensions-page link.
 - **`tabs.create({ url: 'chrome://extensions/?id=<Peekover's id>' })`** (Chromium build only) — the
   "Open Peekover's details" button, one click, opens Peekover's own Details page so the user can flip
   the toggle themselves. Like the toolbar action above, `tabs.create` reads no tab field and needs no
@@ -242,7 +243,8 @@ carries no capability implication, and is recorded here for completeness.
 
 ### file:// access note
 Injecting on `file://` pages requires the user to grant "Allow access to file URLs"
-in the browser's extension settings — a binary, user-controlled toggle. Peekover
+in the browser's extension settings — a binary, user-controlled toggle. In Firefox (153+) the matching setting is
+"Access local files on your computer", on Peekover's Permissions and data tab in about:addons. Peekover
 requests no additional permission for this; it only declares the `file:///*.<ext>`
 match patterns above, which take effect once the user grants that access. (This governs the
 *content script* on `file://` pages; the app page's folder read is the separate user-gesture

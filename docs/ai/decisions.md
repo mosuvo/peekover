@@ -1,6 +1,35 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 9.2b — the Firefox local-file setting; the floor to 153. THE 9.2 RELEASE BLOCKER IS
+  CLOSED.** HUMAN RULINGS, verbatim: "FIREFOX WORDING (…): APPROVED as proposed, PLUS: raise the Firefox floor to
+  strict_min_version 153.0." · "1. FIREFOX WORDING + FLOOR: APPROVED exactly as drafted (…including the new "Check
+  that…" line for a failed check…)" · "1(a). ROW 477: use your shortened version (247 characters)" · "1(b).
+  PERMISSIONS.md: APPROVED as proposed, both edits. The listing guard test change is APPROVED: a Firefox listing claim
+  about files from disk must name the setting." Local, on `main`; not pushed.
+  - **Why:** the signed install (`decisions.md`, "the AMO-signed 0.0.9 on a real Firefox") measured that since Firefox
+    153 local files render only with "Access local files on your computer" on (off after install). **153 is the
+    current Firefox ESR** (153.0esr 2026-07-21; 153.6.0esr 2026-10-27 — Mozilla release notes, Wikipedia), so the floor
+    drops no supported Firefox. MDN browser-compat-data (`webextensions/api/extension.json`): Firefox's
+    `isAllowedFileSchemeAccess` reflects the setting from 153 and "Always returns `false`" 48–153.
+  - **What changed:** the guide's Firefox branch reads the setting (the same call as Chromium; no permission, no
+    manifest key) on load and on focus, and shows on / off / unknown with Firefox's own words and four steps
+    (`about:addons` as code; no button — an extension cannot open that page). `strict_min_version` 127.0 → **153.0**.
+    Published: README row 26, CHANGELOG rows 328 / 335, the Firefox listing rows 477 (the Summary, now 247 of 250
+    characters) / 500, the guide rows 296 / 304 (re-worded), 306 (re-evidenced), 580–585 (new: off, the four step
+    sentences, the fallback's Firefox half); PERMISSIONS.md's two lines. `truthPins.test.ts`: the onboarding reader
+    skips every `…Code` key; the listing guard now requires a from-disk line to name the setting (with a firing
+    control).
+  - **Red first:** `browserFloor.test.ts` (the MDN row → "expected '127.0' to be '153.0'"); `onboarding.test.ts` (the
+    Firefox outcomes and the bundle flip: 3 red); the listing guard (red on the new lines until flipped). Then green.
+    A first attempt at row 477 failed the Summary-limit pin (298 > 250) — stopped and brought back; the human chose
+    the 247-character version.
+  - **Verify:** lint 0; unit 1,683 / 1,683; browser suite both engines (see the commit); `permissions: []`; the
+    Firefox manifest 978 B (`153.0` is as long as `127.0`), Chrome 864 B.
+  - **Bytes:** content script **identical** (345,424 B; `ff67c713` / `aa45b1c3`); app chunk **identical** (551,348 B,
+    `a9e746a1`); the guide's chunk `onboarding-*.js` 9,257 B (`031437a4`, Chrome) / 9,129 B (`f9da75d2`, Firefox);
+    `.output` **6,647,677 / 6,647,663 B** (+993 / +1,123) of 7,340,032.
+  - **The 9.3 screenshots are not affected** (none shows the setup guide).
 - **2026-11-10 · M13 TASK 9.3c — the picker-route wording (DISCOVERED at final-review step 1(c)).** HUMAN RULING,
   verbatim: "2(b). PICKER-ROUTE WORDING: APPROVED, with one change. FIREFOX_PICKER_NOTE: as proposed.
   READ_ONLY_SNAPSHOT_NOTE: as proposed, EXCEPT replace the last sentence with: "To watch a file for changes, drag the

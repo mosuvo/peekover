@@ -32,7 +32,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 - Save writes the file back in Chromium-based browsers such as Chrome and Edge; in Firefox it downloads a copy instead.
 - In Firefox, watching does not work for a file opened directly from disk.
 - In Firefox, on the app page, watching works for a folder dragged in but not for one chosen with the folder picker.
-- Opening a markdown file directly from disk in Firefox has not yet been checked on a real install.
+- In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons.
 
 ## Privacy and permissions
 

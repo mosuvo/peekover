@@ -27,7 +27,7 @@ The first release.
 - A setup guide opens once, when Peekover is first installed, and the app page links to it.
 - Asks for no browser permissions: the manifest says `permissions: []`.
 - Makes no network requests by default, and has no telemetry and no analytics.
-- Needs Chrome 121 or later, or Firefox 127 or later.
+- Needs Chrome 121 or later, or Firefox 153 or later.
 
 ### Known limits
 
@@ -37,4 +37,4 @@ The first release.
 - Save writes the file back in Chromium-based browsers such as Chrome and Edge; in Firefox it downloads a copy instead.
 - In Firefox, watching does not work for a file opened directly from disk.
 - In Firefox, on the app page, watching works for a folder dragged in but not for one chosen with the folder picker.
-- Opening a markdown file directly from disk in Firefox has not yet been checked on a real install.
+- In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons.

@@ -12,10 +12,17 @@
 ## Now (start here)
 
 **THE HUMAN'S NEXT STEP: `docs/ai/final-review.md`** — every remaining human step in one sitting order: (1) the Firefox
-signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3) the 9.2 sign-off, (4) the 9.3 pick,
+signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, (3) the 9.2 sign-off, (4) the 9.3 pick,
 (5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
+
+**M13 TASK 9.2b LANDED (2026-11-10) — the Firefox local-file setting; floor 153. THE 9.2 RELEASE BLOCKER IS
+CLOSED.** Record: `decisions.md`, "M13 TASK 9.2b". The setup guide's Firefox branch reads "Access local files on your
+computer" and gives the steps; `strict_min_version` 153.0 (the current ESR); README / CHANGELOG / the Firefox listing /
+PERMISSIONS.md say it; ledger rows re-worded, 580–585 added. Content script and app chunk identical; the guide's chunk
+9,257 / 9,129 B; `.output` 6,647,677 / 6,647,663 B. Tasks: 58, 54 ticked. **Walk prep waits on the human's notes file**
+(`D:\Dev\walk-notes.txt` was not found).
 
 **M13 TASK 9.3c LANDED (2026-11-10) — the picker-route wording (HUMAN RULING, approved with one change).** Record:
 `decisions.md`, "M13 TASK 9.3c". `FIREFOX_PICKER_NOTE`, `READ_ONLY_SNAPSHOT_NOTE` and the drag note's picker clause
@@ -522,7 +529,8 @@ reader's floating pills, the no-folder toolbar — are group 5's too and are not
 #### FOR M13 TASK 9.2 — THE TRUTH RE-CHECK
 *(The kickoff named this "the 9.1 truth re-check list"; in `tasks.md` the truth re-check is 9.2 — 9.1 is the site.)*
 - **STILL OPEN at 9.2 (2026-11-07): rows marked PENDING SIGNED INSTALL; decided by the AMO 0.0.9 test.**
-- **BLOCKER for release: the onboarding page's Firefox sentence and README row 26 disagree pending the 8.1 real-Firefox
+- ~~**BLOCKER**~~ **CLOSED 2026-11-10 at task 9.2b** (`decisions.md`, "M13 TASK 9.2b": the guide, README row 26 and
+  the listing now say what the signed install measured). Original: **BLOCKER for release: the onboarding page's Firefox sentence and README row 26 disagree pending the 8.1 real-Firefox
   walk (found at 6.1). 9.1 must find them agreeing and both true, or release stops.** *(The human's line, verbatim,
   recorded at 6.2.)* The two: ledger rows 296 / 304 ("In Firefox, nothing needs setting up." / "…shown with no setup.")
   and row 26 ("…has not yet been checked on a real install."). *Source:* 6.1 (`decisions.md`, "M13 TASK 6.1", Flag).

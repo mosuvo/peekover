@@ -62,7 +62,8 @@ export default defineConfig({
     },
     // The minimum browser versions (M13 task 7.1): the newest feature each engine needs, from the inventory in
     // tests/browserFloor.test.ts (MDN browser-compat-data), which pins both. Chrome 121: CSS scrollbar-color.
-    // Firefox 127: ClipboardItem / Clipboard.write(), the copy actions. Each engine's key in its own manifest only.
+    // Firefox 153: the local-file setting and the call that reads it (HUMAN RULING 2026-11-10; 153 is the current
+    // ESR). Each engine's key in its own manifest only.
     ...(browser === 'firefox' ? {} : { minimum_chrome_version: '121' }),
     // Firefox-only keys. Gated on `browser` so they never appear in the Chrome
     // MV3 manifest (Chrome would warn "Unrecognized manifest key"). AGENTS.md #4.
@@ -72,7 +73,7 @@ export default defineConfig({
             gecko: {
               // Stable extension ID — required for an MV3 AMO submission.
               id: 'peekover@peekover.dev',
-              strict_min_version: '127.0',
+              strict_min_version: '153.0',
               // Peekover collects no data (AGENTS.md #1/#2). Mozilla requires new
               // extensions to declare this; "none" is the collects-nothing value.
               data_collection_permissions: { required: ['none'] },

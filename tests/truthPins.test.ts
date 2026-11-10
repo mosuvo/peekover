@@ -359,7 +359,7 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
 // ── 013 task 9.2: the setup guide (`src/app/onboarding.ts`, surface "onboarding", rows since 6.1) sentence by sentence.
 // Its copy is one object literal, `ONBOARDING_COPY`; its string values are read from the source text (no import: the
 // module is browser code), split into sentences as the other surfaces are, and each must have an "onboarding" row.
-// `addressCode` is a code token shown inside `address`, not a sentence of its own.
+// `addressCode` / `addonsCode` are code tokens shown inside a step, not sentences of their own.
 const ONBOARDING = 'src/app/onboarding.ts';
 
 export function onboardingSentences(src: string): string[] {
@@ -367,7 +367,7 @@ export function onboardingSentences(src: string): string[] {
   if (!block) throw new Error(`${ONBOARDING}: no ONBOARDING_COPY literal`);
   const out: string[] = [];
   for (const m of block.matchAll(/^\s*(\w+):\s*'((?:[^'\\]|\\.)*)',?\s*$/gm)) {
-    if (m[1] === 'addressCode') continue;
+    if (m[1].endsWith('Code')) continue;
     out.push(...m[2].replace(/\\'/g, "'").split(/(?<=\.)\s+(?=[A-Z])/).map((t) => t.trim()).filter(Boolean));
   }
   return out;
@@ -500,10 +500,18 @@ describe('the store listings say only what ships, within each store\'s limits (0
     expect([...new Set(urls)].filter((u) => !live.some((r) => r.sentence.includes(u))), 'peekover.dev URLs without a "live at release" row').toEqual([]);
   });
 
-  it('the Firefox listing claims no direct opening of a file from disk (unchecked on a real install, README)', () => {
+  // HUMAN RULING 2026-11-10 ("a Firefox listing claim about files from disk must name the setting"): since Firefox 153,
+  // files from disk render only with "Access local files on your computer" on (measured on the AMO-signed 0.0.9).
+  it('every Firefox listing line about files from disk names the "Access local files on your computer" setting', () => {
     const lines = publishedFields('firefox').flatMap((f) => f.body.split('\n'));
-    const fromDisk = lines.filter((t) => /from (your own )?disk/i.test(t) && !/not yet been checked/.test(t));
-    expect(fromDisk, 'Firefox lines claiming files opened from disk').toEqual([]);
+    const fromDisk = lines.filter((t) => /from (your own )?disk/i.test(t));
+    expect(fromDisk.length, 'the listing does speak of files from disk (non-vacuous)').toBeGreaterThan(0);
+    expect(fromDisk.filter((t) => !t.includes('Access local files on your computer')), 'from-disk lines without the setting').toEqual([]);
+  });
+
+  it('the from-disk guard fires on a line that omits the setting', () => {
+    const planted = ['Opens markdown files from disk.', 'Files from disk once "Access local files on your computer" is on.'];
+    expect(planted.filter((t) => /from (your own )?disk/i.test(t) && !t.includes('Access local files on your computer'))).toEqual(['Opens markdown files from disk.']);
   });
 });
 

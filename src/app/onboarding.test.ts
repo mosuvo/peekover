@@ -4,13 +4,13 @@
 //
 // (1) detection: true / false / a throw / a rejection / a missing reader / a non-boolean — each
 //     its own state, and the four that matter render distinct copy;
-// (2) the Firefox page never asks, and has no steps;
+// (2) the Firefox page asks too (since Firefox 153 the local-file setting exists) and shows its own steps;
 // (3) a focus or a return to visible re-reads, so a toggled answer repaints without a reload;
 // (4) the deep link: a rejecting or missing opener shows the fallback, a working one does not;
 // (5) constructed DOM only — the module never writes HTML;
 // (6) THE BUNDLE: `entrypoints/onboarding/main.ts`, bundled for each engine with WXT's build-time
 //     `import.meta.env.FIREFOX`, references the file-access API on Chromium (the firing control)
-//     and not on Firefox.
+//     and, since the floor moved to Firefox 153, on Firefox too (without the Chromium deep link).
 import { describe, it, expect, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { createRequire } from 'node:module';
@@ -105,18 +105,45 @@ describe('detection (D-11)', () => {
   });
 });
 
-describe('Firefox (D-11)', () => {
-  it('never asks — even when a reader is handed in — and shows no steps', async () => {
-    let asked = 0;
-    const { doc, win } = mount({ engine: 'firefox', readFileAccess: async () => (asked += 1, true), openDetails: async () => undefined });
+describe('Firefox (D-11; since 2026-11-10 the local-file setting, Firefox 153+)', () => {
+  it('asks, and renders on / off / unknown with Firefox\'s own setting and steps; no button', async () => {
+    const cases: Array<[string, OnboardingDeps['readFileAccess']]> = [
+      ['true', async () => true],
+      ['false', async () => false],
+      ['throw', () => { throw new Error('no'); }],
+      ['missing', undefined],
+    ];
+    const pages: Record<string, string> = {};
+    for (const [name, read] of cases) {
+      const { doc } = mount({ engine: 'firefox', readFileAccess: read });
+      await flush();
+      pages[name] = seen(doc);
+      expect(doc.querySelector(`.${C}__intro`)?.textContent).toBe(ONBOARDING_COPY.introFirefox);
+      expect(doc.querySelector(`.${C}__cta`), 'no "Open Peekover\'s details" button on Firefox').toBeNull();
+      expect(doc.body.textContent).toContain(ONBOARDING_COPY.web);
+    }
+    expect(pages.true).toBe(`${ONBOARDING_COPY.onFirefox} | (no steps)`);
+    expect(pages.false).toContain(ONBOARDING_COPY.offFirefox);
+    expect(pages.false).toContain(ONBOARDING_COPY.step1Firefox);
+    expect(pages.false).toContain(ONBOARDING_COPY.step2Firefox);
+    expect(pages.false).toContain(ONBOARDING_COPY.step3OffFirefox);
+    expect(pages.false).toContain(ONBOARDING_COPY.step4Firefox);
+    expect(pages.throw).toContain(ONBOARDING_COPY.unknown);
+    expect(pages.throw).toContain(ONBOARDING_COPY.step3UnknownFirefox);
+    expect(pages.missing).toBe(pages.throw);
+    // Chromium's words never appear on the Firefox page.
+    for (const p of Object.values(pages)) expect(p).not.toContain('Allow access to file URLs');
+  });
+
+  it('re-reads on focus, so turning the setting on in about:addons repaints the page', async () => {
+    let value = false;
+    const { doc, win } = mount({ engine: 'firefox', readFileAccess: async () => value });
     await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.offFirefox);
+    value = true;
     win.dispatchEvent(new win.Event('focus'));
     await flush();
-    expect(asked).toBe(0);
-    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.firefoxLocal);
-    expect(stepsOf(doc)).toBeNull();
-    expect(doc.querySelector(`.${C}__cta`)).toBeNull();
-    expect(doc.body.textContent).toContain(ONBOARDING_COPY.web);
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.onFirefox);
   });
 });
 
@@ -188,7 +215,7 @@ describe('constructed DOM only', () => {
   });
 });
 
-describe('the bundle: the Firefox build never references the file-access API (tasks.md 6.1)', () => {
+describe('the bundle: both builds reference the file-access API; only Chromium the deep link (tasks.md 6.1)', () => {
   const API = 'isAllowedFileSchemeAccess';
   // esbuild is tsx's own dependency (pnpm keeps it out of the root); the same transform WXT's Vite uses.
   // Only the call this file makes, typed here: esbuild is not a direct dependency, so its types are not either.
@@ -217,9 +244,12 @@ describe('the bundle: the Firefox build never references the file-access API (ta
   it('FIRING CONTROL: the Chromium bundle references it', async () => {
     expect(await bundle(false)).toContain(API);
   }, 30_000);
-  it('the Firefox bundle does not', async () => {
+  // 2026-11-10 (HUMAN RULING, floor 153): the Firefox build now reads the setting too — the same call, no permission.
+  it('the Firefox bundle references it too (Firefox 153+ reports the local-file setting)', async () => {
     const fx = await bundle(true);
-    expect(fx, 'the bundle is the page (non-vacuous)').toContain(ONBOARDING_COPY.firefoxLocal);
-    expect(fx).not.toContain(API);
+    expect(fx, 'the bundle is the Firefox page (non-vacuous)').toContain(ONBOARDING_COPY.step2Firefox);
+    expect(fx).toContain(API);
+    // …and never the Chromium-only deep link.
+    expect(fx).not.toContain('chrome://extensions/?id=');
   }, 30_000);
 });

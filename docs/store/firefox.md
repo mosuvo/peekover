@@ -10,7 +10,7 @@ Peekover
 
 ## Summary — max 250 characters
 
-Turns raw markdown files into formatted, readable pages: raw files on GitHub, GitLab and Bitbucket, and folders you open on its app page.
+Turns raw markdown into formatted, readable pages: raw files on GitHub, GitLab and Bitbucket, folders on its app page, and files from disk once "Access local files on your computer" is on.
 No network requests unless you ask, and no data collected.
 
 ## Categories — up to two
@@ -41,7 +41,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 - In a tab, snapshots, comparison, diagrams, math, code highlighting, export and editing are not available; open the document on the app page for those.
 - Watching does not work for raw files from GitHub, GitLab or Bitbucket, or for a folder chosen with the folder picker.
 - In Firefox, Save downloads a copy of the file instead of writing it back.
-- Opening a markdown file directly from disk in Firefox has not yet been checked on a real install.
+- In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons.
 
 Peekover collects nothing: it has no accounts, no analytics, no telemetry and no error reporting.
 It sends nothing about you, your files or your settings to Peekover or to anyone else.
