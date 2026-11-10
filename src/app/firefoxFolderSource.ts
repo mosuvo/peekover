@@ -56,11 +56,13 @@ export const READ_ONLY_SNAPSHOT_NOTE =
  * is offered again only through the picker. The picker clause was re-worded after the real-picker check
  * (final-review step 1(c), "picker: fresh"; HUMAN RULING 2026-11-10): Watch isn't OFFERED for a picked folder —
  * Peekover's choice for 0.1.0, not a platform limit. Ledger rows 25 / 334 / 498 stay as they are (still true).
+ * Re-worded at walk fix 8.1g (HUMAN COPY APPROVAL 2026-11-10): shorter, and it names the way to refresh the listing —
+ * a second drag of the same folder shows the files added and removed since (measured on Firefox 159 with the built
+ * extension, a real Gecko drag session; `decisions.md`, "M13 TASK 8.1g"; clause (d) in the test above).
  */
 export const DRAGGED_SNAPSHOT_NOTE =
-  'Firefox shows this folder as it was when you dragged it in: files added later won’t appear, and files deleted ' +
-  'later stay listed but can’t be opened. Next time Peekover can only ask you to pick the folder again, and Watch ' +
-  'isn’t offered for a picked folder — drag it in instead. Watching still works here: a watched file is re-read from disk.';
+  'Firefox shows this folder as it was when you dragged it in. To see new or removed files, drag it in again. ' +
+  'Watching works here.';
 
 // --- (A) the `<input webkitdirectory>` FileList adapter --------------------------
 //

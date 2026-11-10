@@ -656,7 +656,9 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
         // 8.1f: site access off — the file-URL step gives way to the site step (its `file:///*` code) and the
         // raw-hosts line becomes a warning sentence.
         ['blocked', { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async () => false }, false],
-        ['off', { engine: 'chromium', readFileAccess: async () => false, openDetails: () => Promise.reject(new Error('x')) }, true],
+        // 8.1g: with the toggle off the browser answers false for file sites, so the off state shows its conditional
+        // site line (`file:///*` code) — measured here; the same state, so the count does not move.
+        ['off', { engine: 'chromium', readFileAccess: async () => false, readSiteAccess: async (w) => w === 'web', openDetails: () => Promise.reject(new Error('x')) }, true],
         ['unknown', { engine: 'chromium' }, false],
         ['firefox', { engine: 'firefox' }, false],
       ];

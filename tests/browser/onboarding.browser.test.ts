@@ -102,14 +102,31 @@ describe('8.1f — site access off, on screen', () => {
     });
   }
 
-  it('chromium, both off at 414 px: step 2 names both settings, file:///* as code, no sideways scroll', async () => {
+  // 8.1g (HUMAN COPY APPROVAL 2026-11-10; CC's Edge B10 finding 1): with the toggle off the browser reports file sites
+  // as not allowed whatever site access says, so the off state's site line is conditional; "blocked" keeps the direct
+  // step. Both name Chrome AND Edge.
+  it('chromium, both off at 414 px: step 2 is the toggle step and the CONDITIONAL site line, file:///* as code, no sideways scroll', async () => {
     await page.viewport(414, 896);
     const ctl = open({ engine: 'chromium', readFileAccess: async () => false, readSiteAccess: async () => false });
     await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.off, 'off');
     const step2 = ctl.element.querySelectorAll<HTMLElement>(`.${C}__step`)[1]!;
     const lines = [...step2.querySelectorAll('p')].filter(shown).map((p) => p.textContent);
-    expect(lines).toEqual([ONBOARDING_COPY.step2Off, ONBOARDING_COPY.stepSite]);
-    expect([...step2.querySelectorAll('code')].map((c) => c.textContent)).toEqual([ONBOARDING_COPY.siteCode]);
+    expect(lines).toEqual([
+      ONBOARDING_COPY.step2Off,
+      'If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”).',
+    ]);
+    expect([...step2.querySelectorAll('code')].filter(shown).map((c) => c.textContent)).toEqual([ONBOARDING_COPY.siteCode]);
+    expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
+  });
+
+  it('chromium, site access off (blocked) at 414 px: step 2 is the direct site step alone, file:///* as code', async () => {
+    await page.viewport(414, 896);
+    const ctl = open({ engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async (w) => w === 'web' });
+    await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.siteOff, 'blocked');
+    const step2 = ctl.element.querySelectorAll<HTMLElement>(`.${C}__step`)[1]!;
+    const lines = [...step2.querySelectorAll('p')].filter(shown).map((p) => p.textContent);
+    expect(lines).toEqual(['Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”).']);
+    expect([...step2.querySelectorAll('code')].filter(shown).map((c) => c.textContent)).toEqual([ONBOARDING_COPY.siteCode]);
     expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
   });
 });

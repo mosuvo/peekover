@@ -1166,7 +1166,8 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       ★ *2026-11-10 (walk prep; `decisions.md`, "M13 — walk prep"; HUMAN RULING "ONE verdict per surface"):* the human's
       walk notes (Chrome 1–15, Edge E1–E4, Firefox) are banked in `docs/ai/walk-8.1.md`; the table is one verdict per
       surface (36) with per-cell exceptions; 17 surfaces walked on Chromium by the notes, 19 not; Firefox's current build
-      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, 8.1d, 8.1e, 8.1f, and 9.2b / 9.3c from its Firefox items.
+      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, 8.1d, 8.1e, 8.1f, 8.1g, and 9.2b / 9.3c from its Firefox items;
+      8.1h open (stopped, back to the human).
 - [x] **8.1a The exported HTML prints whole (WALK FIX, 8.1 item I-9; the human: the export "gets cut off at the
       middle").** `translateReaderStylesheet` wrote `@media${condition}` with the condition trimmed, so `@media print`
       and `@media screen and (max-width:1280px)` came out as `@mediaprint` / `@mediascreen …` — unknown at-rules, dropped.
@@ -1240,6 +1241,38 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       build, temporary) turns its web line after a host is revoked; full suite; bytes stated.
       ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1f"): red 10 unit, 4 / 4 browser per engine → green;
       onboarding chunk +1,659 B both engines, content script identical; `permissions: []` unchanged.*
+- [x] **8.1g The Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's
+      Edge notes (WALK FIXES, Firefox walk C14 and CC's Edge B10 findings; HUMAN COPY APPROVAL 2026-11-10, parts 2–4 —
+      part 1 is 8.1h).** (2) `DRAGGED_SNAPSHOT_NOTE`: "Firefox shows this folder as it was when you dragged it in. To see
+      new or removed files, drag it in again. Watching works here." (3) step 2's site line: "blocked" keeps the direct
+      step, its label "in Chrome and Edge"; "off" says "If site access for file:///* is off, turn it on too (…)" — with
+      the toggle off the browser reports file sites as not allowed whatever site access says. (4) `walk-profiles.ps1`:
+      Edge disables a command-line-loaded extension on a `-Keep` relaunch unless Developer mode is on (Brave does not);
+      Edge signs a fresh profile into the machine's Microsoft account and no launch flag stops it.
+      Files: `src/app/firefoxFolderSource.ts` · `tests/browser/firefoxDragWatch.browser.test.ts` · `src/app/onboarding.ts`
+      · `src/app/onboarding.test.ts` · `tests/browser/onboarding.browser.test.ts` · `scripts/walk-profiles.ps1` ·
+      necessary ripple: `tests/browser/contrastCensus.browser.test.ts` (the off state's real site answer, so the new
+      line is measured; count unchanged), `docs/store/claims.md` (row 587 re-worded, row 592 added; truthPins)
+      Verify: (2) BEFORE landing, a second drag of the same folder shows added and removed files on Firefox 159 with the
+      built extension; red first on the pinned sentence; (3) red first, unit and browser, both engines; census; (4)
+      Edge and Brave measured on fresh profiles; the Edge shots checked for the account; full suite; bytes stated
+      (content script: G-7 stop over +2 KB).
+      ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1g"): (2) verified by a real Gecko drag session on Firefox
+      159.0.1 — drag 2 showed the added files and dropped the removed one; red → green, clause (d) added; (3) red 3 unit,
+      2 / 2 browser per engine → green; census 62; (4) Edge disables on relaunch, Brave does not; no flag stops Edge's
+      sign-in (5 arms); the four `b10d` shots cropped. Content script identical; onboarding chunk +254 B, app chunk
+      −221 B.*
+- [ ] **8.1h The "can't watch here" notes back in the bottom-left stack (WALK FIX, Firefox walk C13; HUMAN COPY
+      APPROVAL 2026-11-10, part 1 of 8.1g) — STOPPED by the brief's own rule, back to the human.** Approved: under
+      the Theme button, one line, "Watching isn't available here. To watch, open the folder in Peekover's app page."
+      (Firefox `file://`) / "Watching isn't available for files on the web." (raw web files); hard requirement: never
+      over document text at 414 / 1280 / 1440, both themes, middle and bottom. Measured (both engines, identical): a
+      one-line note there covers 1–2 text lines at rest and mid-scroll at every width; the column's text starts at x =
+      32 / 73 / 173 / 253 (414 / 1080 / 1280 / 1440) and the notes are 446 / 258 px wide. Proposal: `progress.md`.
+      Files (when decided): `src/watch/watchAvailability.ts` · `src/watch/watchControl.ts` · `src/render/mount.ts` ·
+      `src/theme/readerCss.ts` · `src/watch/watchAvailability.test.ts` · `tests/browser/watchNoteAside.browser.test.ts`
+      Verify: as the human's brief — the hit-test at 414 / 1280 / 1440, both themes, middle and bottom, both engines;
+      red first; full suite; bytes stated (content script: G-7).
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
@@ -1438,7 +1471,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* ★ *2026-11-10: **59 tasks** — 8.1d discovered (walk fix: the exported HTML scrolls; no controls).* ★ *2026-11-10: **60 tasks** — 8.1e discovered (walk fix: Copy as rich text, no control labels).* ★ *2026-11-10: **61 tasks** — 8.1f discovered (walk fix: the setup guide checks site access).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* ★ *2026-11-10: **59 tasks** — 8.1d discovered (walk fix: the exported HTML scrolls; no controls).* ★ *2026-11-10: **60 tasks** — 8.1e discovered (walk fix: Copy as rich text, no control labels).* ★ *2026-11-10: **61 tasks** — 8.1f discovered (walk fix: the setup guide checks site access).* ★ *2026-11-10: **63 tasks** — 8.1g discovered (walk fixes: the drag note, the guide's conditional site line, the launcher's Edge notes) and 8.1h (the watch notes in the stack; stopped, open).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

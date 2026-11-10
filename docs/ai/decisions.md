@@ -1,6 +1,66 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1g — WALK FIXES (Firefox walk C13 / C14; CC's Edge B10 findings), HUMAN COPY APPROVAL
+  2026-11-10. Parts 2, 3, 4 LANDED; part 1 STOPPED (task 8.1h, back to the human).** Local, on `main`; not pushed.
+  `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).
+  - **Part 1 — the "can't watch here" notes back in the bottom-left stack: STOPPED, not landed (the brief's own
+    stop rule).** Measured before any code (a throwaway probe, deleted; Chromium and Firefox gave identical boxes):
+    the note fixed at `left:16px`, one line, with the approved texts, at `bottom:96px` (the empty watch-pill slot,
+    directly above Theme) and at `bottom:16px` (below it), on 8.1c's long test document (headings, so the contents
+    rail is on), light and dark, at rest / mid / end. One-line widths: the Firefox note 446 px (x 16→462), the web
+    note 258 px (16→274). The column's text starts at **x = 32 (414), 73 (1080), 173 (1280), 253 (1440)**. Result:
+    **both notes cover 1–2 text lines at rest and mid-scroll at EVERY width, both themes, both slots** (clear only at
+    the end of the document). No width holds either note on one line; a wrapped note would fit only beside the column
+    at 1280+ (≤ 149 px wide at 1280, ≤ 229 px at 1440 — the Firefox text 4–5 lines) and nowhere at 1080 or 414.
+    For scale: the Theme button itself (16→114) covers text mid-scroll at 414 and 1080 today. Options and a
+    recommendation for the human: `docs/ai/progress.md`, task 8.1h. Nothing of part 1 is in the tree (the note
+    texts and placement are unchanged; `watchNoteAside.browser.test.ts` unchanged).
+  - **Part 2 — the Firefox drag note: LANDED.** `DRAGGED_SNAPSHOT_NOTE` = "Firefox shows this folder as it was when
+    you dragged it in. To see new or removed files, drag it in again. Watching works here." **Verified before landing,
+    Firefox 159.0.1, the built extension (`.output/firefox-mv3`), its app page:** a Gecko drag session started in the
+    parent process over WebDriver BiDi (system access, chrome scope: `nsIDragService.startDragSessionForTests`, a
+    DataTransfer holding the REAL folder `D:\Dev\walk-scratch\drag-again\notes` as `application/x-moz-file`,
+    dragenter / dragover / drop dispatched to the app tab's `<browser>`) — the cross-process path an OS drag takes;
+    only the mouse gesture is synthetic. Drag 1: `alpha.md`, `beta.md`, `sub/delta.md`. On disk: `gamma.md` and
+    `sub/epsilon.md` added, `beta.md` removed. Before drag 2 the list was unchanged (the snapshot); **drag 2 of the
+    same folder: `alpha.md`, `gamma.md`, `sub/delta.md`, `sub/epsilon.md` — added shown, removed gone.** Shots
+    `D:\Dev\peekover-shots\8.1\firefox\8.1g-drag-again-1-first-drag.png`, `…-2-second-drag.png`. (Two routes that
+    did not work, for the record: BiDi `input.setFiles` refuses extension pages ("privileged scope") and refuses a
+    directory on a content page — `NS_ERROR_FILE_IS_DIRECTORY`.) Red first: `firefoxDragWatch.browser.test.ts` (A)
+    pinned to the approved sentence → red on HEAD's constant → green; new clause **(d)**, a second drop on the SAME
+    shell shows the added and removed files (walks: 2). Picker note unchanged.
+  - **Part 3 — setup guide step 2: LANDED.** "blocked" (toggle on, site answer false): "Under site access, turn on
+    file:///* (in Chrome and Edge: “Automatically allow access on the following sites”)." "off" (and "unknown") with
+    the site answer false: "If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically
+    allow access on the following sites”)." Why conditional: with the toggle off the browser answers false for file
+    sites whatever site access says (Edge 157, B10 (b) 2), so the page cannot tell. Red first: unit 3 red → green
+    (34 / 34 in the file); browser 2 / 2 per engine red → green. Census: no new surface — the "off" state now gets the
+    site answer a real browser gives (false), so the new line is measured; count stays 62, no below-AA pair. Ledger:
+    row 587 re-worded and re-evidenced (Edge's labels), row 592 added; truthPins green.
+  - **Part 4 — the launcher (no product change).** Measured headless on fresh profiles (two launches on one profile,
+    the second as `-Keep` would, Developer mode off): **Edge 157.0.4341.42** — launch 2 sets Peekover's
+    `disable_reasons` 16777216 (1<<24; CC's B10 (e), reproduced = the control fires); **Brave 1.99.55 (157)** — no
+    disable reason after launch 2; Peekover stays enabled. **Edge's automatic sign-in:** every fresh profile had a
+    non-empty `account_info` after 30 s — control, `--disable-features=msImplicitSignin`, `--allow-browser-signin=false`,
+    `--edge-sso-ignore-profile`, and a seeded `signin.allowed=false` alike (switch names taken from `msedge.dll`'s
+    strings). The remaining lever is the `BrowserSignin` policy, machine- or user-wide — it would change the human's
+    own Edge, so not set; documented in `scripts/walk-profiles.ps1` (header and the Edge launch lines) and
+    `walk-8.1.md` items 10 / 11. **Edge shots:** the four `b10d-*` (toolbar and window, light and dark) showed the
+    account's avatar; every other Edge shot is a page-only capture (no browser chrome). A recapture without the avatar
+    is not possible (every fresh profile signs in), so each was cropped to x < 1668 (the Peekover icon kept, the
+    avatar out) as `b10d-*-cropped.png`; the originals moved to `D:\Dev\peekover-shots\8.1\edge\_originals-with-account\`
+    for the human to delete.
+  - **Bytes (same-session A-B, both engines, HEAD `05eeb35` stashed vs the tree):** **content script identical**
+    (345,424 B, `ff67c713` / `aa45b1c3`; G-7 not touched); onboarding chunk **10,916 → 11,170 B (+254)** Cr (`96b13e4c`),
+    **10,788 → 11,042 B (+254)** Fx (`e9f5ad02`); app chunk **551,991 → 551,770 B (−221)** both (`87a34c72`, the
+    shorter drag note; the mermaid chunks re-hash with it, sizes unchanged); `.output` **6,650,012 / 6,649,998 B**
+    (+33 each) of 7,340,032, headroom 690,020 / 690,034; manifests 864 / 978 B, `permissions: []`. Zips 2,033,119 /
+    2,033,121 B (`9df5db6b` / `67c33ef7`).
+  - **Verify:** lint clean; unit 1,697 / 1,697; browser 2,685 passed, 65 skipped, 0 failed (both engines).
+  - **Re-check (the human):** Firefox — drag a folder in, add and remove a file, drag it in again; Chrome / Edge — the
+    guide with only "Allow access to file URLs" off reads the "If site access … is off" line.
+
 - **2026-11-10 · M13 TASK 8.1f — WALK FIX (8.1 item I-2): the setup guide checks site access, not only the file-URL
   toggle.** The human, Chrome (unpacked, current build), kept profile relaunched: with file access turned off on
   Peekover's Details page the `file://` tab is plain text, yet the guide says "'Allow access to file URLs' is on".

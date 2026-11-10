@@ -14,6 +14,9 @@
 //   "on" needs the injected `readSiteAccess('files')` to answer true as well: false is its own state
 //   ("blocked": the site step instead of the toggle step), anything else is "unknown" — never "on" unsure.
 //   Both off: the off notice, step 2 naming both settings. (HUMAN COPY APPROVAL 2026-11-10.)
+//   8.1g (CC's Edge B10 finding, Chrome too): with the toggle OFF the site answer for files reads false even
+//   when site access is on, so "off" cannot tell — its site line is conditional ("If site access … is off, turn
+//   it on too"); "blocked" keeps the direct step. Both labels name Chrome and Edge (HUMAN COPY APPROVAL 2026-11-10).
 // - Firefox (153+, HUMAN RULING 2026-11-10): the same detection — Firefox 153 made local-file access a
 //   separate, default-off setting, "Access local files on your computer", and the same call reports it —
 //   with steps to the add-on's Permissions and data tab in about:addons (no button: an extension cannot
@@ -90,7 +93,8 @@ export const ONBOARDING_COPY = {
   step2Off: 'Turn on “Allow access to file URLs”.',
   step2Unknown: 'Check that “Allow access to file URLs” is on.',
   siteOff: 'Peekover can’t read files on your computer yet: its site access for file:///* is turned off.',
-  stepSite: 'Under site access, turn on file:///* (in Chrome: “Automatically allow access on the following sites”).',
+  stepSite: 'Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”).',
+  stepSiteIfOff: 'If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”).',
   siteCode: 'file:///*',
   step3: 'Your browser may restart Peekover and close this page. Then open your markdown file again.',
   onFirefox: 'Peekover can read files on your computer: “Access local files on your computer” is on. Open a markdown file in a tab to read it.',
@@ -236,10 +240,17 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
   // The steps, per engine. `turnOnText` is the step whose words follow the answer (off / unknown).
   const steps = el('ol', 'steps');
   const turnOnText = el('p');
-  // Chromium's site step (8.1f), `file:///*` as code; shown while site access for files is off.
-  const siteText = el('p');
-  const [siteBefore, siteAfter] = ONBOARDING_COPY.stepSite.split(ONBOARDING_COPY.siteCode);
-  siteText.append(siteBefore, el('code', undefined, ONBOARDING_COPY.siteCode), siteAfter);
+  // Chromium's site line (8.1f), `file:///*` as code; shown while the site answer for files is false. Two
+  // wordings (8.1g): "blocked" (the toggle on) gives the direct step; otherwise the toggle is off or unknown, and
+  // then the browser reports file sites as not allowed whatever site access says — so the line is conditional.
+  const withSiteCode = (text: string): HTMLElement => {
+    const p = el('p');
+    const [before, after] = text.split(ONBOARDING_COPY.siteCode);
+    p.append(before, el('code', undefined, ONBOARDING_COPY.siteCode), after);
+    return p;
+  };
+  const siteText = withSiteCode(ONBOARDING_COPY.stepSite);
+  const siteIfOffText = withSiteCode(ONBOARDING_COPY.stepSiteIfOff);
   const step = (n: number, ...content: HTMLElement[]): HTMLLIElement => {
     const li = el('li', 'step');
     const num = el('span', 'n', String(n));
@@ -275,7 +286,7 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
     });
     steps.append(
       step(1, el('p', undefined, ONBOARDING_COPY.step1), open, address, failure),
-      step(2, turnOnText, siteText),
+      step(2, turnOnText, siteText, siteIfOffText),
       step(3, el('p', undefined, ONBOARDING_COPY.step3)),
     );
   } else {
@@ -309,7 +320,9 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
     page.dataset.access = access;
     webLine.textContent =
       webSite === false ? (chromium ? ONBOARDING_COPY.webOff : ONBOARDING_COPY.webOffFirefox) : ONBOARDING_COPY.web;
-    siteText.hidden = !(chromium && filesSite === false);
+    const siteLine = chromium && filesSite === false;
+    siteText.hidden = !(siteLine && access === 'blocked');
+    siteIfOffText.hidden = !(siteLine && access !== 'blocked');
     turnOnText.hidden = access === 'blocked';
     if (access === 'blocked') state.textContent = ONBOARDING_COPY.siteOff;
     else if (access === 'unknown') state.textContent = ONBOARDING_COPY.unknown;

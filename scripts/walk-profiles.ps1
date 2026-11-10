@@ -11,6 +11,15 @@
 # 137), so Chrome needs "Load unpacked" by hand; Edge 157 and Brave 157 load it from the command line. Opera and Vivaldi
 # are not installed here. A --load-extension (unpacked) install starts with "Allow access to file URLs" ON in Chromium;
 # a store install starts OFF.
+#
+# Measured 2026-11-10 (8.1g; decisions.md, "M13 TASK 8.1g"): EDGE 157 DISABLES the command-line-loaded Peekover on a -Keep
+# relaunch unless Developer mode is on ("To use this extension, turn on developer mode.", disable_reasons 1<<24) - so
+# turn on Developer mode on edge://extensions BEFORE closing Edge if you will relaunch with -Keep. Brave 1.99.55 (157)
+# does NOT: Peekover stays enabled on the relaunch with Developer mode off. EDGE SIGNS A FRESH PROFILE INTO THIS
+# MACHINE'S MICROSOFT ACCOUNT by itself (the account's avatar in the toolbar, synced favorites). No launch flag stops it
+# (measured, fresh profiles: --allow-browser-signin=false, --edge-sso-ignore-profile, --disable-features=msImplicitSignin,
+# a seeded signin.allowed=false - all still signed in); the only lever is the BrowserSignin policy, which is machine-
+# or user-wide and would change your own Edge, so the launcher does not set it. Keep the avatar out of any shot.
 
 param(
   [ValidateSet('chrome', 'edge', 'brave', 'firefox', 'firefox-signed', 'list')]
@@ -58,6 +67,9 @@ switch ($Browser) {
   'edge' {
     Start-Process $exe.edge -ArgumentList "--user-data-dir=`"$dir`"", '--no-first-run', '--no-default-browser-check', "--load-extension=`"$chromeExt`"", 'edge://extensions/'
     "Edge (fresh profile $dir): Peekover is loaded unpacked; the setup guide opens on its own."
+    "  Before closing: turn on Developer mode (edge://extensions) if you will relaunch with -Keep - otherwise Edge"
+    "  disables Peekover on the relaunch. Edge signs this profile into the machine's Microsoft account by itself;"
+    "  keep the account's avatar out of screenshots."
   }
   'brave' {
     Start-Process $exe.brave -ArgumentList "--user-data-dir=`"$dir`"", '--no-first-run', '--no-default-browser-check', "--load-extension=`"$chromeExt`"", 'brave://extensions/'

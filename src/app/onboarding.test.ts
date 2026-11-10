@@ -212,6 +212,10 @@ describe('the deep link (D-11)', () => {
 // tab stayed plain text while the guide said "can read files". "On" now needs both answers; the raw-hosts line
 // follows its own site-access answer. Firefox: `file:///*` is always granted there (measured, 159), so only
 // its web line asks.
+// The approved step-2 site lines, as written (HUMAN COPY APPROVAL 2026-11-10, walk fix 8.1g).
+const SITE_STEP = 'Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”).';
+const SITE_STEP_IF_OFF = 'If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”).';
+
 describe('8.1f — site access (Chromium file:// and the raw hosts on both engines)', () => {
   type Site = OnboardingDeps['readSiteAccess'];
   const sites = (files: unknown, web: unknown): Site => async (which) => (which === 'files' ? files : web);
@@ -226,6 +230,9 @@ describe('8.1f — site access (Chromium file:// and the raw hosts on both engin
     expect(part(doc, 'access')?.dataset.tone).toBe('warn');
     const s = seen(doc);
     expect(s).toContain(ONBOARDING_COPY.stepSite);
+    // 8.1g (HUMAN COPY APPROVAL 2026-11-10; CC's Edge B10 finding): the label is Chrome's AND Edge's.
+    expect(ONBOARDING_COPY.stepSite).toBe(SITE_STEP);
+    expect(s).not.toContain(SITE_STEP_IF_OFF);
     expect(s).toContain(ONBOARDING_COPY.step1);
     expect(s).toContain(ONBOARDING_COPY.step3);
     expect(s).not.toContain(ONBOARDING_COPY.step2Off);
@@ -233,19 +240,33 @@ describe('8.1f — site access (Chromium file:// and the raw hosts on both engin
     expect([...doc.querySelectorAll(`.${C}__steps code`)].map((c) => c.textContent)).toContain(ONBOARDING_COPY.siteCode);
   });
 
-  it('Chromium: both off → the off notice, and step 2 names both settings', async () => {
+  // 8.1g (CC's Edge B10 finding 1, Chrome too): with the file-URL toggle off the browser reports file sites as not
+  // allowed even when site access is on, so the off state cannot tell — its site line is conditional.
+  it('Chromium: file URLs off, site answer false → the off notice; step 2 the toggle step and the CONDITIONAL site line', async () => {
     const { doc } = mount({ engine: 'chromium', readFileAccess: async () => false, readSiteAccess: sites(false, true) });
     await flush();
     expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.off);
     const s = seen(doc);
     expect(s).toContain(ONBOARDING_COPY.step2Off);
-    expect(s).toContain(ONBOARDING_COPY.stepSite);
+    expect(s).toContain(SITE_STEP_IF_OFF);
+    expect(s).not.toContain(SITE_STEP);
+    expect([...doc.querySelectorAll(`.${C}__steps code`)].map((c) => c.textContent)).toContain(ONBOARDING_COPY.siteCode);
+  });
+
+  it('Chromium: the file-URL answer unknown, site answer false → the conditional site line, not the direct one', async () => {
+    const { doc } = mount({ engine: 'chromium', readFileAccess: async () => 'yes', readSiteAccess: sites(false, true) });
+    await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.unknown);
+    const s = seen(doc);
+    expect(s).toContain(SITE_STEP_IF_OFF);
+    expect(s).not.toContain(SITE_STEP);
   });
 
   it('Chromium: file URLs off, site access on → the off page without the site step', async () => {
     const { doc } = mount({ engine: 'chromium', readFileAccess: async () => false, readSiteAccess: sites(true, true) });
     await flush();
     expect(seen(doc)).not.toContain(ONBOARDING_COPY.stepSite);
+    expect(seen(doc)).not.toContain(SITE_STEP_IF_OFF);
   });
 
   it.each([

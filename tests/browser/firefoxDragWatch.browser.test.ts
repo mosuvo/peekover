@@ -161,8 +161,9 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     // M13 9.3b (HUMAN RULING "drag note: approve corrected"): the drag route's note says Watch works — and it does
     // (the assertion above). The old note, which said Watch was unavailable, must not show here.
     expect(seen.snapshotNote).toBe(DRAGGED_SNAPSHOT_NOTE);
-    // HUMAN RULING 2026-11-10 (picker-route wording): the drag note's picker clause, pinned as written.
-    expect(seen.snapshotNote).toBe("Firefox shows this folder as it was when you dragged it in: files added later won’t appear, and files deleted later stay listed but can’t be opened. Next time Peekover can only ask you to pick the folder again, and Watch isn’t offered for a picked folder — drag it in instead. Watching still works here: a watched file is re-read from disk.");
+    // HUMAN COPY APPROVAL 2026-11-10 (walk fix 8.1g): the drag note, pinned as written. Its "drag it in again" clause is
+    // clause (d) below, and was measured on Firefox 159 with the built extension (decisions.md, "M13 TASK 8.1g").
+    expect(seen.snapshotNote).toBe('Firefox shows this folder as it was when you dragged it in. To see new or removed files, drag it in again. Watching works here.');
     expect(seen.snapshotNote).not.toBe(READ_ONLY_SNAPSHOT_NOTE);
     // A file entry's File keeps its drop-time size; only its text is read fresh (spec 005's TRAP 2, re-measured).
     expect(disk.size).toBe(BEFORE.length);
@@ -333,6 +334,29 @@ describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
     entry!.click();
     await waitFor(() => pickerOpened > 0);
     expect(pickerOpened).toBe(1);
+  }, 20000);
+
+  it('(d) dragging the same folder in AGAIN, on the same page, shows the files added and removed since (8.1g)', async () => {
+    const listing = [
+      { name: 'alpha.md', file: () => new File(['# Alpha\n'], 'alpha.md') },
+      { name: 'beta.md', file: () => new File(['# Beta\n'], 'beta.md') },
+    ];
+    const folder = liveFolder('clause-d', listing);
+    const container = await mountAndDrop(() => folder.items);
+    expect(treeNames(container).sort()).toEqual(['alpha.md', 'beta.md']);
+
+    listing.splice(1, 1, { name: 'gamma.md', file: () => new File(['# Gamma\n'], 'gamma.md') });
+    await new Promise<void>((r) => setTimeout(r, 300));
+    expect(treeNames(container).sort(), 'as it was until the next drag').toEqual(['alpha.md', 'beta.md']);
+
+    // The second drag: the SAME shell, its own drop handler.
+    container
+      .querySelector<HTMLElement>('.peekover-app')!
+      .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
+    await waitFor(() => (treeNames(container).includes('gamma.md') ? true : null));
+    expect(treeNames(container).sort()).toEqual(['alpha.md', 'gamma.md']);
+    expect(folder.counter.walks).toBe(2);
+    expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe(DRAGGED_SNAPSHOT_NOTE);
   }, 20000);
 });
 
