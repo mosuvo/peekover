@@ -14,6 +14,7 @@ import { setThemeSetting } from '../../src/theme/reader';
 import { resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
+import { contrastRatio, flatten, hex, luminance, parseColor } from './helpers/contrast';
 
 const DOC = [
   '# Search index rollout',
@@ -164,6 +165,38 @@ describe('8.1i (c) — the diagram lightbox fills a narrow viewport', () => {
         card.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
       const svg = panel.querySelector('svg')!.getBoundingClientRect();
       expect(svg.width, `diagram ${svg.width} in a card ${inner} wide inside`).toBeGreaterThanOrEqual(0.9 * inner);
+    });
+  }
+});
+
+// ── (g) The editor's active-line gutter cell — CC flag 6 ───────────────────────────────────────
+// Nothing styled `.cm-activeLineGutter`, so the cell kept CodeMirror's light-page default (#e2f2ff)
+// in the dark editor, and the active line its default translucent blue (#cceeff44). Both now draw
+// one band from Peekover's tokens: the cell matches the line, in dark it is not lighter than the
+// editor's background, and the gutter numbers read no worse on it than on the plain gutter (E-4).
+describe('8.1i (g) — the active line and its gutter cell are one band from the tokens', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    it(`${theme}: cell = line; no CodeMirror default; dark not lighter than the editor`, async () => {
+      await page.viewport(1440, 900);
+      const { host, container } = await openFile(theme);
+      segment(container, 'edit').click();
+      const sr = host.shadowRoot!;
+      await waitFor(() => sr.querySelector('.cm-activeLineGutter') && sr.querySelector('.cm-activeLine'), 'the active line');
+      await frames(3);
+      const pane = sr.querySelector<HTMLElement>('.peekover-editor__source')!;
+      const base = parseColor(getComputedStyle(pane).backgroundColor);
+      const cellEl = sr.querySelector<HTMLElement>('.cm-activeLineGutter')!;
+      const cellRaw = getComputedStyle(cellEl).backgroundColor;
+      const lineRaw = getComputedStyle(sr.querySelector<HTMLElement>('.cm-activeLine')!).backgroundColor;
+      for (const raw of [cellRaw, lineRaw]) {
+        expect(['rgb(226, 242, 255)', 'rgba(204, 238, 255, 0.267)'], `a CodeMirror default: ${raw}`).not.toContain(raw);
+      }
+      const cell = flatten([base, parseColor(cellRaw)]);
+      const line = flatten([base, parseColor(lineRaw)]);
+      expect(hex(cell), `the cell ${cellRaw} vs the line ${lineRaw}`).toBe(hex(line));
+      if (theme === 'dark') expect(luminance(cell), `${hex(cell)} lighter than the editor ${hex(base)}`).toBeLessThanOrEqual(luminance(base));
+      const ink = parseColor(getComputedStyle(cellEl).color);
+      expect(contrastRatio(ink, cell), 'the numbers on the cell vs on the plain gutter').toBeGreaterThanOrEqual(contrastRatio(ink, base) - 0.01);
     });
   }
 });

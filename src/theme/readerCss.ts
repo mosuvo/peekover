@@ -1485,6 +1485,12 @@ export const CONTAINED_CSS = /* css */ `
 // sheet the cascade meets last. What is left at the engine's defaults, and so is still light-page
 // colouring in the dark theme — the active-line band, the search panel — is a design-walk item
 // (7.1), reported at this task, not decided here.
+//
+// THE ACTIVE LINE (M13 walk fix 8.1i (g), CC flag 6). The band and its gutter cell were the engine's
+// light-page defaults (#cceeff44 on the line, an opaque #e2f2ff cell): a light cell in the dark
+// editor. Both now draw ONE band, --paper at 50 % over the pane's --code-bg: lighter than the pane in
+// light, darker in dark (so the gutter numbers, E-4, read no worse on it). Half-transparent, as the
+// engine's own is, so a selection on the active line still shows through. Token used: --paper.
 // Tokens used: --faint, --line, --ink.
 //
 // THREE MORE OF THE ENGINE'S SURFACES, FROM TOKENS (012 task 3.4 — finding E-2). The engine has no
@@ -1613,6 +1619,7 @@ export const EDITOR_CSS = /* css */ `
 .peekover-editor__source .cm-editor .cm-gutters{background:transparent;color:var(--faint);border-right-color:var(--line)}
 .peekover-editor__source .cm-editor .cm-content{caret-color:var(--ink)}
 .peekover-editor__source .cm-editor .cm-cursor{border-left-color:var(--ink)}
+.peekover-editor__source .cm-editor .cm-activeLine,.peekover-editor__source .cm-editor .cm-activeLineGutter{background:color-mix(in srgb,var(--paper) 50%,transparent)}
 .peekover-editor .peekover-editor__source .cm-editor .cm-scroller .cm-selectionLayer .cm-selectionBackground{background:var(--hl-soft)}
 .peekover-editor__source .cm-editor .cm-searchMatch-selected{background:var(--hl-soft);box-shadow:inset 0 -2px 0 var(--ink)}
 .peekover-editor__source .cm-editor .cm-tooltip{background:var(--panel);color:var(--ink);border-color:var(--line)}
