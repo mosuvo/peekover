@@ -20,6 +20,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { commands } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { exportHtml } from '../../src/export/htmlExport';
+import { setThemeSetting } from '../../src/theme/reader';
+import sampleMd from '../../docs/store/assets/sample.md?raw';
 
 interface ExportDownloadProbe {
   suggestedFilename: string;
@@ -35,6 +37,12 @@ declare module 'vitest/internal/browser' {
   interface BrowserCommands {
     armExportDownload(): Promise<true>;
     collectExportDownload(): Promise<ExportDownloadProbe>;
+    printToPdfAndExtractText(html: string): Promise<{
+      ok: boolean;
+      error: string | null;
+      pageCount: number;
+      perPageText: string[];
+    }>;
   }
 }
 
@@ -128,4 +136,51 @@ describe('exportHtml — the real download codepath, opened bare', () => {
     expect(probe.html).toContain('data-peekover-src="https://example.com/pic.png"');
     expect(probe.html).not.toContain('<img');
   });
+});
+
+// Walk fix 8.1a (walk-8.1.md I-9): the human's exported file printed only its first viewport. The
+// export's stylesheet glued each @media condition straight onto the keyword, so the two whose
+// condition starts with a word came out as `@mediaprint{` and `@mediascreen and (...)` - unknown
+// at-rules, dropped whole. The print block is the one that takes body off position:fixed, so
+// printing the export captured one page. The theme is set through the real setting, not by hand.
+describe('exportHtml - the sample document, both themes (walk fix 8.1a)', () => {
+  afterEach(() => setThemeSetting('auto'));
+
+  const PAPER = { light: 'rgb(251, 251, 248)', dark: 'rgb(18, 20, 28)' } as const;
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`${theme}: every @media rule parses, it prints past one page to the last heading, and it paints ${theme} paper`, async () => {
+      const host = document.createElement(HOST_TAG);
+      document.body.appendChild(host);
+      hosts.push(host);
+      mount(sampleMd, host, { contained: true });
+      setThemeSetting(theme);
+      expect(host.getAttribute('data-theme')).toBe(theme);
+
+      const probe = await driveExportHtml(host, `sample-${theme}`);
+      const css = /<style>([\s\S]*?)<\/style>/.exec(probe.html)?.[1] ?? '';
+      expect(css.length).toBeGreaterThan(0);
+
+      // (a) Every @media in the text survives a real CSS parse as a media rule.
+      expect(css).not.toMatch(/@media[a-z]/i);
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      const parsedMedia = [...sheet.cssRules].filter((r) => r instanceof CSSMediaRule).length;
+      expect(parsedMedia).toBe((css.match(/@media/g) ?? []).length);
+      expect(parsedMedia).toBeGreaterThan(0);
+
+      // (c) The opened file paints this theme's paper.
+      expect(probe.consoleErrors).toEqual([]);
+      expect(probe.bodyBackgroundColor).toBe(PAPER[theme]);
+
+      // (b) Printed to PDF (Chromium only: Playwright has no Firefox pdf()).
+      const pdf = await commands.printToPdfAndExtractText(probe.html);
+      if (!pdf.ok) {
+        expect(pdf.error).toContain('Headless Chromium');
+        return;
+      }
+      expect(pdf.pageCount).toBeGreaterThan(1);
+      expect(pdf.perPageText[pdf.pageCount - 1]).toContain('Rollback');
+    });
+  }
 });

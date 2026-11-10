@@ -1163,6 +1163,17 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       approval of these took the agent's mock self-check, not the human's eye. Also the compact toolbar (≤ 863 px, "⋯").
       ★ *2026-11-03 (4.5's record; the C061 ruling) — ADDED TO THIS WALK:* an agent file at 1280 px gets a two-row toolbar
       (C061 ruling) — judge it with the real thing.
+- [x] **8.1a The exported HTML prints whole (WALK FIX, 8.1 item I-9; the human: the export "gets cut off at the
+      middle").** `translateReaderStylesheet` wrote `@media${condition}` with the condition trimmed, so `@media print`
+      and `@media screen and (max-width:1280px)` came out as `@mediaprint` / `@mediascreen …` — unknown at-rules, dropped.
+      The print block is what takes `body` off `position:fixed`, so the exported file printed one page. Now
+      `@media ${condition}`.
+      Files: `src/export/htmlExport.ts` · `tests/browser/htmlExport.browser.test.ts`
+      Verify: red first — the sample document (`docs/store/assets/sample.md`) exported through the real download in light
+      AND dark asserts (a) every `@media` survives a real CSS parse, (b) the Chromium PDF has more than one page and the
+      last holds "Rollback", (c) the body paints that theme's paper; then green; full suite; bytes stated.
+      ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1a"): red → green; app chunk +1 B, content script identical. The
+      walk's second finding (a light export comes out dark) did NOT reproduce — (c) was green before the fix.*
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
@@ -1334,7 +1345,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

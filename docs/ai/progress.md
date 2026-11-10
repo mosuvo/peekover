@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -16,6 +16,13 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 (5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
+
+**M13 TASK 8.1a LANDED (2026-11-10) — WALK FIX (8.1 item I-9): the exported HTML prints whole.** Record:
+`decisions.md`, "M13 TASK 8.1a". The export wrote `@mediaprint` / `@mediascreen …` (the space lost), so its print rule
+was dropped and the file printed one page; now `@media ${condition}`. Copy as HTML shares the fix; the app page's PDF
+(`window.print()`) never used this CSS. "A light export comes out dark" did NOT reproduce (tested, green before the
+fix). App chunk +1 B (`2156293e`), content script identical; `.output` 6,645,873 / 6,645,729 B. READER_CSS unchanged, so
+the 9.3 screenshots are not affected. Tasks: 54, 50 ticked. The walk continues from `walk-8.1.md`.
 
 **M13 — THE SIGNED INSTALL, RUN (2026-11-10; AMO kit step 11): the BLOCKER is settled — `file://` does NOT render out
 of the box on Firefox 159; the fix waits on the human's wording (STOPPED).** Record: `decisions.md`, "the AMO-signed

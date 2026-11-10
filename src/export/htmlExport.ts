@@ -301,7 +301,9 @@ export function translateReaderStylesheet(
         return c;
       });
       const rendered = renderRules(inner);
-      return rendered ? `@media${block.condition}{${rendered}}` : '';
+      // The space is load-bearing: `condition` is trimmed, so `@media${condition}` gave
+      // `@mediaprint` / `@mediascreen and …` — unknown at-rules the engine drops (walk fix 8.1a).
+      return rendered ? `@media ${block.condition}{${rendered}}` : '';
     })
     .filter((s) => s !== '');
 

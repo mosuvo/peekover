@@ -67,6 +67,47 @@
     already-open tab was not tested).
   - **Evidence kept:** `D:\Dev\peekover-amo-test\step11-evidence\` (guide on install; `file://` before; the
     about:addons toggle OFF; `file://` rendered after).
+- **2026-11-10 · M13 TASK 8.1a — WALK FIX (8.1 item I-9): the exported HTML prints whole.** The human: the exported
+  HTML "gets cut off at the middle"; every section was in the file, so the CSS was the suspect. Local, on `main` after
+  `01f7f76`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).
+  - **Cause:** `translateReaderStylesheet` (`src/export/htmlExport.ts`) rebuilt each `@media` block as
+    `@media${condition}` with `condition` trimmed. A condition starting with `(` survived; the two starting with a word
+    did not — `@mediaprint{…}` and `@mediascreen and (max-width:1280px){…}`, unknown at-rules the engine drops whole.
+    The print block is the one that sets `body{position:static;inset:auto;overflow:visible}`, so printing the exported
+    file captured the fixed body's one viewport. **Fix:** `@media ${condition}` (one space). On screen the body stays a
+    fixed scroll box (unchanged; not separately measured here); the lost screen rule was only the ≤1280 px top padding.
+  - **The human's second finding did NOT reproduce:** "both theme token blocks are emitted as `body{…}`, light then
+    dark, so a light export comes out dark." A light export carries no dark block (four `body{}` rules, base tokens
+    only); light-then-dark appears only in a DARK export, where dark last is correct. The exported theme is the reader
+    host's `data-theme`, written by the same theme registry that paints the shell (`applyColorScheme`), so the export
+    matches what was on screen. Most likely the human's file was exported while the reader was dark (e.g. Auto on a
+    dark OS). Clause (c) of the new test drives the theme through `setThemeSetting`, not a hand-set attribute, and was
+    green BEFORE the fix in both themes and engines.
+  - **Question (3) — does the app page's Print/PDF use the rewritten CSS? No.** Its PDF row is `window.print()` on the
+    live page, whose reader CSS sits in the shadow root untranslated (`printMode.browser.test.ts` covers it). **Copy as
+    HTML does** use it (same `wrapInStandaloneDocument`), so the fix reaches it too.
+  - **Red first** (`tests/browser/htmlExport.browser.test.ts`, new describe "walk fix 8.1a"): `docs/store/assets/
+    sample.md` mounted, theme set, exported through the REAL download, opened bare; light AND dark × Chromium AND
+    Firefox. (a) no `@media[a-z]` in the shipped `<style>`, and a real `CSSStyleSheet.replaceSync` parse yields one
+    `CSSMediaRule` per `@media` in the text; (b) the file printed to PDF (`printToPdfAndExtractText`, Chromium only —
+    Firefox asserts Playwright's "Headless Chromium" refusal) has more than one page and the last holds "Rollback";
+    (c) the body paints that theme's paper. Before the fix: 4 / 4 red at (a). With (a) ablated: (b) red on Chromium
+    in both themes (`expected 1 to be greater than 1` — one page), (c) green. After: 12 / 12 in the file, and
+    `copyAsHtml` + `exportNetwork` (the zero-network guard on the exported file) green.
+  - **Bytes (same-session A-B, both engines; A reproduced 9.3b's recorded figures exactly as the control):** app chunk
+    **550,911 → 550,912 B (+1)**, md5 `3e57f97e…` → **`2156293e…`**; **content script identical** (345,049 B,
+    `bc2232f4…` / `73443061…`); `.output` **6,645,873 / 6,645,729 B** (+1 each) of 7,340,032; manifests 864 / 978 B,
+    `permissions: []`. 9.5's byte ledger gains this row at its re-run.
+  - **What it re-runs:** READER_CSS is unchanged, so the 9.3 screenshots (the live reader and app page) are NOT
+    affected. 9.2: ledger rows 18 / 128 / 235 / 322 / 453 / 495 / 530 ("exports a standalone HTML file") stay true as
+    written; their evidence file is the one that grew — re-sign them with the rest. 9.5: bytes, task count.
+  - **Verify:** lint 0 · unit 1,680 / 1,680 (the first run read 2 stale-zip reds in `compareBuilds.test.ts` — my byte builds replaced `.output` without re-zipping; green after `wxt zip` both engines) · browser 2,624 passed / 60 skipped, 220 files (exit 0) · both engines built, `permissions: []`.
+  - **Not this task's:** `docs/store/assets/sample.md` was modified in the working tree during the session (H1 "Search
+    index awesome rollout", the Phases table re-padded — the editor's table format); not made by the agent, left
+    as found and NOT committed.
+  - **Files:** `src/export/htmlExport.ts`, `tests/browser/htmlExport.browser.test.ts`; records (`decisions.md`,
+    `tasks.md`, `walk-8.1.md` I-9, `progress.md`, `AGENTS.md`'s count).
+
 - **2026-11-07 · M13 TASK 9.3b — DISCOVERED: the drag-route note (HUMAN RULING, verbatim: "drag note: approve
   corrected."). A dragged Firefox folder no longer tells the user Watch is unavailable.** Local, on `main` after
   `9659765`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).
