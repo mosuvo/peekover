@@ -153,6 +153,13 @@ needs a permission:
   the `extension` API, and says its utilities can be used by any extension page. Read when the page
   opens and again when it regains focus. `src/app/onboarding.test.ts` checks both engines' bundles; only the
   Chromium one carries the extensions-page link.
+- **`permissions.contains({ origins })`** and **`runtime.getManifest()`** (both builds; added M13 / walk fix
+  8.1f) — read whether Peekover still holds the sites its content script runs on, so the page does not say
+  "on" while the browser withholds them. In Chromium, site access ("Automatically allow access on the
+  following sites") can be off while "Allow access to file URLs" stays on; in Firefox each raw site's
+  permission can be turned off in about:addons. The patterns are the manifest's own content-script
+  matches. Both only *read*; nothing is requested or changed. Measured with `permissions: []` on Chrome
+  157, Chromium 149 and Firefox 159 (`docs/ai/decisions.md`, "M13 TASK 8.1f").
 - **`tabs.create({ url: 'chrome://extensions/?id=<Peekover's id>' })`** (Chromium build only) — the
   "Open Peekover's details" button, one click, opens Peekover's own Details page so the user can flip
   the toggle themselves. Like the toolbar action above, `tabs.create` reads no tab field and needs no

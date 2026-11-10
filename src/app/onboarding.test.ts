@@ -46,10 +46,16 @@ afterEach(() => {
 
 const part = (doc: Document, name: string): HTMLElement | null => doc.querySelector(`[data-part="${name}"]`);
 const stepsOf = (doc: Document): HTMLElement | null => doc.querySelector(`.${C}__steps`);
-/** What the user sees of the file-access section: the state line, and the steps' text if shown. */
+/** What the user sees of the file-access section: the state line, and the steps' text if shown (hidden parts dropped). */
 function seen(doc: Document): string {
   const steps = stepsOf(doc);
-  return [part(doc, 'access')?.textContent, steps && !steps.hidden ? steps.textContent : '(no steps)'].join(' | ');
+  let shownSteps = '(no steps)';
+  if (steps && !steps.hidden) {
+    const copy = steps.cloneNode(true) as HTMLElement;
+    for (const h of copy.querySelectorAll('[hidden]')) h.remove();
+    shownSteps = copy.textContent ?? '';
+  }
+  return [part(doc, 'access')?.textContent, shownSteps].join(' | ');
 }
 
 describe('the environment', () => {
@@ -84,7 +90,7 @@ describe('detection (D-11)', () => {
     ];
     const pages: Record<string, string> = {};
     for (const [name, read] of cases) {
-      const { doc } = mount({ engine: 'chromium', readFileAccess: read });
+      const { doc } = mount({ engine: 'chromium', readFileAccess: read, readSiteAccess: async () => true });
       await flush();
       pages[name] = seen(doc);
     }
@@ -150,7 +156,7 @@ describe('Firefox (D-11; since 2026-11-10 the local-file setting, Firefox 153+)'
 describe('re-check on focus and visibility (D-11)', () => {
   it('a toggled answer repaints on focus, and on visibilitychange to visible, without a reload', async () => {
     let value = false;
-    const { doc, win } = mount({ engine: 'chromium', readFileAccess: async () => value });
+    const { doc, win } = mount({ engine: 'chromium', readFileAccess: async () => value, readSiteAccess: async () => true });
     await flush();
     expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.off);
     value = true;
@@ -201,6 +207,100 @@ describe('the deep link (D-11)', () => {
   });
 });
 
+// 8.1f (walk I-2): "Allow access to file URLs" was ON and the API said so, but Peekover's SITE ACCESS was off
+// (Chrome 157, the kept walk profile: `permissions.contains({ origins: ['file:///*.md'] })` false), so the file
+// tab stayed plain text while the guide said "can read files". "On" now needs both answers; the raw-hosts line
+// follows its own site-access answer. Firefox: `file:///*` is always granted there (measured, 159), so only
+// its web line asks.
+describe('8.1f — site access (Chromium file:// and the raw hosts on both engines)', () => {
+  type Site = OnboardingDeps['readSiteAccess'];
+  const sites = (files: unknown, web: unknown): Site => async (which) => (which === 'files' ? files : web);
+  const web = (doc: Document): string | null | undefined => doc.querySelector(`.${C}__web`)?.textContent;
+
+  it('Chromium: file URLs on, site access off → its own state, the site step, no file-URL step', async () => {
+    const { doc } = mount({ engine: 'chromium', readFileAccess: async () => true, readSiteAccess: sites(false, true) });
+    await flush();
+    const page = doc.querySelector<HTMLElement>(`.${C}`)!;
+    expect(page.dataset.access).toBe('blocked');
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.siteOff);
+    expect(part(doc, 'access')?.dataset.tone).toBe('warn');
+    const s = seen(doc);
+    expect(s).toContain(ONBOARDING_COPY.stepSite);
+    expect(s).toContain(ONBOARDING_COPY.step1);
+    expect(s).toContain(ONBOARDING_COPY.step3);
+    expect(s).not.toContain(ONBOARDING_COPY.step2Off);
+    expect(s).not.toContain(ONBOARDING_COPY.step2Unknown);
+    expect([...doc.querySelectorAll(`.${C}__steps code`)].map((c) => c.textContent)).toContain(ONBOARDING_COPY.siteCode);
+  });
+
+  it('Chromium: both off → the off notice, and step 2 names both settings', async () => {
+    const { doc } = mount({ engine: 'chromium', readFileAccess: async () => false, readSiteAccess: sites(false, true) });
+    await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.off);
+    const s = seen(doc);
+    expect(s).toContain(ONBOARDING_COPY.step2Off);
+    expect(s).toContain(ONBOARDING_COPY.stepSite);
+  });
+
+  it('Chromium: file URLs off, site access on → the off page without the site step', async () => {
+    const { doc } = mount({ engine: 'chromium', readFileAccess: async () => false, readSiteAccess: sites(true, true) });
+    await flush();
+    expect(seen(doc)).not.toContain(ONBOARDING_COPY.stepSite);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['throws', () => { throw new Error('no'); }],
+    ['rejects', () => Promise.reject(new Error('no'))],
+    ['a non-boolean', async () => 'yes'],
+  ] as Array<[string, Site]>)('Chromium: file URLs on but the site answer %s → never "on" (unknown)', async (_n, site) => {
+    const { doc } = mount({ engine: 'chromium', readFileAccess: async () => true, readSiteAccess: site });
+    await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.unknown);
+  });
+
+  it('the raw-hosts line: granted → no setup; denied → the engine\'s own sentence; unknown → as before', async () => {
+    const lines: Record<string, unknown> = {};
+    for (const engine of ['chromium', 'firefox'] as const) {
+      for (const [k, v] of [['granted', true], ['denied', false], ['unknown', undefined]] as const) {
+        const { doc } = mount({ engine, readFileAccess: async () => true, readSiteAccess: v === undefined ? undefined : sites(true, v) });
+        await flush();
+        lines[`${engine} ${k}`] = web(doc);
+      }
+    }
+    expect(lines).toEqual({
+      'chromium granted': ONBOARDING_COPY.web,
+      'chromium denied': ONBOARDING_COPY.webOff,
+      'chromium unknown': ONBOARDING_COPY.web,
+      'firefox granted': ONBOARDING_COPY.web,
+      'firefox denied': ONBOARDING_COPY.webOffFirefox,
+      'firefox unknown': ONBOARDING_COPY.web,
+    });
+  });
+
+  it('Firefox asks only about the raw hosts: its file state follows the local-files setting alone', async () => {
+    const asked: string[] = [];
+    const { doc } = mount({ engine: 'firefox', readFileAccess: async () => true, readSiteAccess: async (w) => (asked.push(w), false) });
+    await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.onFirefox);
+    expect(asked).toEqual(['web']);
+  });
+
+  it('a site-access change repaints on focus, both the notice and the web line', async () => {
+    let granted = false;
+    const { doc, win } = mount({ engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async () => granted });
+    await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.siteOff);
+    expect(web(doc)).toBe(ONBOARDING_COPY.webOff);
+    granted = true;
+    win.dispatchEvent(new win.Event('focus'));
+    await flush();
+    expect(part(doc, 'access')?.textContent).toBe(ONBOARDING_COPY.on);
+    expect(web(doc)).toBe(ONBOARDING_COPY.web);
+    expect(stepsOf(doc)!.hidden).toBe(true);
+  });
+});
+
 const ROOT = process.cwd();
 const read = (p: string): string => readFileSync(join(ROOT, p), 'utf8');
 
@@ -243,6 +343,15 @@ describe('the bundle: both builds reference the file-access API; only Chromium t
   }
   it('FIRING CONTROL: the Chromium bundle references it', async () => {
     expect(await bundle(false)).toContain(API);
+  }, 30_000);
+  // 8.1f: both builds ask about site access through the permissions API (no permission needed), with the
+  // patterns read from the manifest's own content-script matches.
+  it('both bundles read site access (permissions.contains over the manifest\'s matches)', async () => {
+    for (const fx of [false, true]) {
+      const b = await bundle(fx);
+      expect(b, `firefox=${fx}`).toMatch(/permissions\.contains\(/);
+      expect(b, `firefox=${fx}`).toMatch(/getManifest\?\.\(\)/);
+    }
   }, 30_000);
   // 2026-11-10 (HUMAN RULING, floor 153): the Firefox build now reads the setting too — the same call, no permission.
   it('the Firefox bundle references it too (Firefox 153+ reports the local-file setting)', async () => {

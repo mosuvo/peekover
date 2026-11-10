@@ -23,10 +23,24 @@ function fileAccessReader(): OnboardingDeps['readFileAccess'] {
   return typeof ext?.isAllowedFileSchemeAccess === 'function' ? () => ext.isAllowedFileSchemeAccess!() : undefined;
 }
 
+// Site access (8.1f, walk I-2): whether Peekover still holds its content-script sites. Chrome's site access can
+// withhold them while "Allow access to file URLs" stays on (Chrome 157, measured); Firefox lets the user turn
+// each raw host's permission off. `permissions.contains` and `runtime.getManifest` need no permission; the
+// patterns are the manifest's own content-script matches, so there is no second list to drift.
+function siteAccessReader(): OnboardingDeps['readSiteAccess'] {
+  const contains = browser?.permissions?.contains;
+  const manifest = browser?.runtime?.getManifest?.();
+  if (typeof contains !== 'function' || !manifest) return undefined;
+  const matches = (manifest.content_scripts ?? []).flatMap((c) => c.matches ?? []);
+  const of = { files: matches.filter((m) => m.startsWith('file:')), web: matches.filter((m) => !m.startsWith('file:')) };
+  return (sites) => (of[sites].length ? browser.permissions.contains({ origins: of[sites] }) : Promise.resolve(undefined));
+}
+
 function chromiumDeps(): OnboardingDeps {
   return {
     engine: 'chromium',
     readFileAccess: fileAccessReader(),
+    readSiteAccess: siteAccessReader(),
     openDetails: () =>
       browser.tabs.create({ url: `chrome://extensions/?id=${encodeURIComponent(browser.runtime.id)}` }),
   };
@@ -41,7 +55,7 @@ if (root) {
   try {
     mountOnboarding(
       root,
-      import.meta.env.FIREFOX ? { engine: 'firefox', readFileAccess: fileAccessReader(), loadTheme } : { ...chromiumDeps(), loadTheme },
+      import.meta.env.FIREFOX ? { engine: 'firefox', readFileAccess: fileAccessReader(), readSiteAccess: siteAccessReader(), loadTheme } : { ...chromiumDeps(), loadTheme },
     );
   } catch {
     // Never a blank page (AGENTS.md #5): plain text, no sheet needed.

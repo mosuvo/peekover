@@ -60,7 +60,9 @@ const shown = (el: Element | null): boolean => !!el && el.getClientRects().lengt
 
 /** Every outcome D-11 names, with the deps that reach it and what must be on screen. */
 const OUTCOMES: Array<{ name: string; deps: OnboardingDeps; text: string; steps: boolean; tone: string | undefined }> = [
-  { name: 'Chromium, access on', deps: { engine: 'chromium', readFileAccess: async () => true }, text: ONBOARDING_COPY.on, steps: false, tone: undefined },
+  { name: 'Chromium, access on', deps: { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async () => true }, text: ONBOARDING_COPY.on, steps: false, tone: undefined },
+  // 8.1f: file URLs on, site access off (the kept Chrome 157 walk profile's state).
+  { name: 'Chromium, site access off', deps: { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async (w) => w === 'web' }, text: ONBOARDING_COPY.siteOff, steps: true, tone: 'warn' },
   { name: 'Chromium, access off', deps: { engine: 'chromium', readFileAccess: async () => false }, text: ONBOARDING_COPY.off, steps: true, tone: 'warn' },
   { name: 'Chromium, the API throws', deps: { engine: 'chromium', readFileAccess: () => Promise.reject(new Error('no')) }, text: ONBOARDING_COPY.unknown, steps: true, tone: 'warn' },
   { name: 'Chromium, the API is missing', deps: { engine: 'chromium' }, text: ONBOARDING_COPY.unknown, steps: true, tone: 'warn' },
@@ -82,6 +84,34 @@ describe('6.1 — every detection outcome, on screen', () => {
       expect(shown(ctl.element.querySelector(`.${C}__title`))).toBe(true);
     });
   }
+});
+
+describe('8.1f — site access off, on screen', () => {
+  for (const engine of ['chromium', 'firefox'] as const) {
+    it(`${engine}: the raw hosts denied → the engine's own sentence, shown and fitting at 414 px`, async () => {
+      await page.viewport(414, 896);
+      const ctl = open({ engine, readFileAccess: async () => true, readSiteAccess: async (w) => w === 'files' });
+      const want = engine === 'chromium' ? ONBOARDING_COPY.webOff : ONBOARDING_COPY.webOffFirefox;
+      const line = await waitFor(() => {
+        const el = ctl.element.querySelector<HTMLElement>(`.${C}__web`);
+        return el?.textContent === want ? el : null;
+      }, 'the denied web line');
+      expect(shown(line)).toBe(true);
+      expect(ctl.element.textContent).not.toContain(ONBOARDING_COPY.web);
+      expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
+    });
+  }
+
+  it('chromium, both off at 414 px: step 2 names both settings, file:///* as code, no sideways scroll', async () => {
+    await page.viewport(414, 896);
+    const ctl = open({ engine: 'chromium', readFileAccess: async () => false, readSiteAccess: async () => false });
+    await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.off, 'off');
+    const step2 = ctl.element.querySelectorAll<HTMLElement>(`.${C}__step`)[1]!;
+    const lines = [...step2.querySelectorAll('p')].filter(shown).map((p) => p.textContent);
+    expect(lines).toEqual([ONBOARDING_COPY.step2Off, ONBOARDING_COPY.stepSite]);
+    expect([...step2.querySelectorAll('code')].map((c) => c.textContent)).toEqual([ONBOARDING_COPY.siteCode]);
+    expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
+  });
 });
 
 describe('6.1 — layout at 414 and 1440 px, both themes', () => {
@@ -107,7 +137,7 @@ describe('6.1 — layout at 414 and 1440 px, both themes', () => {
 describe('6.1 — re-check on focus and on becoming visible (D-11)', () => {
   it('a toggled answer repaints on window focus, without a reload', async () => {
     let value = false;
-    const ctl = open({ engine: 'chromium', readFileAccess: async () => value });
+    const ctl = open({ engine: 'chromium', readFileAccess: async () => value, readSiteAccess: async () => true });
     await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.off, 'off');
     value = true;
     window.dispatchEvent(new Event('focus'));

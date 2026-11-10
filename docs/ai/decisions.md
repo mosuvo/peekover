@@ -1,6 +1,58 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1f — WALK FIX (8.1 item I-2): the setup guide checks site access, not only the file-URL
+  toggle.** The human, Chrome (unpacked, current build), kept profile relaunched: with file access turned off on
+  Peekover's Details page the `file://` tab is plain text, yet the guide says "'Allow access to file URLs' is on".
+  Local, on `main`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).
+  - **Cause — ours, not Chrome's (measured, read-only, on the kept profile `D:\Dev\peekover-walk-profiles\chrome`,
+    Chrome 157.0.8103.39, over CDP; no toggle touched):** (1) `Secure Preferences` for Peekover: `newAllowFileAccess:
+    true`, `withholding_permissions: true`, `runtime_granted_permissions` empty. (2) From the guide page:
+    `isAllowedFileSchemeAccess()` → **true** (promise and callback forms alike); `permissions.getAll().origins` → `[]`;
+    `permissions.contains({ origins: ['file:///*.md'] })` → **false**. (3) The Details page: "Allow access to file URLs"
+    **checked**; "Automatically allow access on the following sites" **off**, and every row under it (`file:///*` and
+    the four raw hosts) off. (4) A `file://` `.md` tab: the browser's `<pre>`, no Peekover. So the setting that was off
+    is SITE ACCESS; the toggle the guide reads was on, and the API reported it truthfully — no caching (the page
+    re-reads on focus / visibility, no stored answer), no early read, no misread, and no stale Chrome value to cite.
+    The flaw: "can read files on your computer" needs two settings and the guide checked one. **Control (granted):**
+    Playwright Chromium 149, unpacked load — `contains(file:///*.md)` **true**, `getAll` lists the nine file and four
+    raw-host matches. **Firefox 159.0.1, the AMO-signed 0.0.9 (BiDi, permanent install):** `file:///*.md` is granted
+    even with "Access local files" off (the local-files permission is Firefox's only file gate — already read); a raw
+    host revoked through `permissions.remove` (the store about:addons writes) → `contains` **false**.
+  - **HUMAN COPY APPROVAL (2026-11-10, AskUserQuestion, as previewed):** (a) a new state — notice "Peekover can't read
+    files on your computer yet: its site access for file:///* is turned off.", step 2 "Under site access, turn on
+    file:///* (in Chrome: 'Automatically allow access on the following sites')."; (b) both off → the approved off
+    notice, step 2 naming both settings; (c) the raw-hosts line when any raw host is not granted — Chromium "…its site
+    access for at least one of them is turned off. Turn them on under site access in Peekover's details on your
+    browser's extensions page."; Firefox "…its permission for at least one of them is turned off. Turn them on under
+    Peekover's Permissions and data in about:addons."; (d) scope: the web line and the Firefox branch too.
+  - **Fix:** the entry wires `readSiteAccess('files' | 'web')` — `permissions.contains` over the manifest's own
+    content-script matches (`runtime.getManifest()`; no second list), no permission, no manifest change. The page:
+    Chromium "on" only when the toggle AND site access say yes; site false → `blocked`; site missing / throwing /
+    non-boolean → `unknown` (never "on" unsure). Firefox asks only `web`. The web line: false → the engine's sentence;
+    true or no answer → as before (FLAGGED: "no answer" keeps the old "no setup" line — no approved copy for an unknown
+    web state). `data-access` gains `blocked`.
+  - **Red first:** unit 10 red (new describe "8.1f", plus the bundle's `permissions.contains` / `getManifest`) → green
+    32 / 32; browser 4 / 4 red per engine on HEAD's production files (the new state, both web lines, both off at 414 px)
+    → green. Ablation: `combine` ignoring the site answer → 6 unit red. Two instrument fixes on the way, both in the
+    test: `seen()` now drops `[hidden]` parts; the bundle regex reads `getManifest?.()`.
+  - **The built page, real engines:** the kept Chrome 157 profile now reads `blocked` — "…its site access for file:///*
+    is turned off.", the web line's Chromium sentence, steps 1 / site step / 3; granted Chromium 149 reads "on" and "no
+    setup"; Firefox 159 with the build (temporary) reads "no setup", then the Firefox sentence after a host is revoked
+    (so `contains` answers path-style patterns such as `bitbucket.org/*/raw/*` rather than throwing).
+  - **Necessary ripple:** `contrastCensus.browser.test.ts` (the new state is a surface: 60 → 62, no below-AA pair);
+    `docs/store/claims.md` rows 586–591 (truthPins), rows 297 / 305 re-evidenced; `docs/trust/PERMISSIONS.md` (the two
+    read-only APIs). `.output` zips repacked (`compareBuilds.test.ts` reads them).
+  - **Bytes (same-session A-B, both engines):** onboarding chunk **9,257 → 10,916 B (+1,659)** Cr, md5 `6759e447`;
+    **9,129 → 10,788 B (+1,659)** Fx, md5 `8378ee65`; **content script identical** (345,424 B, `ff67c713` / `aa45b1c3`);
+    `.output` **6,649,979 / 6,649,965 B** (+1,659 each) of 7,340,032, headroom 690,053 / 690,067; manifests 864 / 978 B,
+    `permissions: []`. Zips 2,033,155 / 2,033,156 B (`57787ce9` / `b3057814`).
+  - **Verify:** lint clean; unit 1,696 / 1,696; browser 2,682 passed, 64 skipped, 0 failed (both engines).
+  - **Not changed (flagged):** the page-failed fallback (row 306 / 585) still names only the file-URL / local-files
+    setting; the intro's "Raw files on the web need no setup." (row 294) is true of a default install.
+  - **Re-check (the human):** reopen the guide in the kept Chrome profile: "site access for file:///* is turned off";
+    turn on the `file:///*` row (and the master toggle) → focus the guide → "on"; the `file://` tab renders.
+
 - **2026-11-10 · M13 TASK 8.1e — WALK FIX (found at 8.1d): Copy as rich text pastes no control labels.** 8.1d's
   report: `copyAsRichText` copies `clone.outerHTML` without `wrapInStandaloneDocument`, so it still carried "Copy CSV",
   "Line numbers", "Copy image", "Copy LaTeX", "Filter", "Clear" into the paste target. HUMAN RULING: use the SAME

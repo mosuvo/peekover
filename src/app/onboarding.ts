@@ -8,12 +8,22 @@
 //   `focus` and on `visibilitychange` to visible, so the page follows a change made elsewhere.
 //   A missing reader, a throw, a rejection or a non-boolean answer is "unknown": the steps, never a
 //   blank card (AGENTS.md #5).
+//   SITE ACCESS (8.1f, walk I-2): the file-URL toggle is not the only gate. Chrome's site access ("Automatically
+//   allow access on the following sites", Chrome 157) can withhold `file:///*` while the toggle stays on — the
+//   API then truthfully answers true and the tab stays plain text (measured on the kept walk profile). So
+//   "on" needs the injected `readSiteAccess('files')` to answer true as well: false is its own state
+//   ("blocked": the site step instead of the toggle step), anything else is "unknown" — never "on" unsure.
+//   Both off: the off notice, step 2 naming both settings. (HUMAN COPY APPROVAL 2026-11-10.)
 // - Firefox (153+, HUMAN RULING 2026-11-10): the same detection — Firefox 153 made local-file access a
 //   separate, default-off setting, "Access local files on your computer", and the same call reports it —
 //   with steps to the add-on's Permissions and data tab in about:addons (no button: an extension cannot
 //   open that page for the user). Measured on the AMO-signed 0.0.9, Firefox 159 (decisions.md, "the
 //   AMO-signed 0.0.9 on a real Firefox").
-// - Both: raw files on the four hosts need no setup.
+//   Firefox asks no site question for files: `file:///*` is always granted there (measured, Firefox 159 on
+//   the signed install); the local-files setting is its only gate.
+// - Both: the raw-hosts line asks `readSiteAccess('web')`. True or no answer keeps "shown with no setup";
+//   false (Chromium: site access withheld; Firefox: a host's permission turned off in about:addons) is the
+//   engine's own sentence saying where to turn it on (8.1f).
 //
 // The dependency names here never spell the browser API: the entry wires it (`onboarding.test.ts`
 // bundles both engines; only the Chromium bundle carries the extensions-page deep link).
@@ -37,13 +47,17 @@ export const ONBOARDING_CLASS = 'peekover-onboard';
 const C = ONBOARDING_CLASS;
 
 /** What the page knows about file access on this engine. */
-export type FileAccessState = 'on' | 'off' | 'unknown';
+export type FileAccessState = 'on' | 'off' | 'unknown' | 'blocked';
+type Answer = 'on' | 'off' | 'unknown';
 
 export interface OnboardingDeps {
   /** Which build is running (`import.meta.env.FIREFOX` in the entry). */
   engine: 'chromium' | 'firefox';
   /** Both engines: resolves whether the extension may read file:// URLs. Absent → "unknown". */
   readFileAccess?: () => Promise<unknown>;
+  /** Both: resolves whether the extension holds its content-script sites: `files` (the file:// matches,
+   *  asked on Chromium only) or `web` (the raw hosts). Absent, failing or not a boolean → not known. */
+  readSiteAccess?: (sites: 'files' | 'web') => Promise<unknown>;
   /** Chromium: opens Peekover's details on the extensions page. Absent or rejecting → the address. */
   openDetails?: () => Promise<unknown>;
   /** Both: resolves the user's saved theme setting. Absent, rejecting or not light/dark → the system's. */
@@ -75,6 +89,9 @@ export const ONBOARDING_COPY = {
   openFailed: 'Your browser didn’t open the page. Use the address above instead.',
   step2Off: 'Turn on “Allow access to file URLs”.',
   step2Unknown: 'Check that “Allow access to file URLs” is on.',
+  siteOff: 'Peekover can’t read files on your computer yet: its site access for file:///* is turned off.',
+  stepSite: 'Under site access, turn on file:///* (in Chrome: “Automatically allow access on the following sites”).',
+  siteCode: 'file:///*',
   step3: 'Your browser may restart Peekover and close this page. Then open your markdown file again.',
   onFirefox: 'Peekover can read files on your computer: “Access local files on your computer” is on. Open a markdown file in a tab to read it.',
   offFirefox: 'Peekover can’t read files on your computer yet: “Access local files on your computer” is off.',
@@ -86,6 +103,8 @@ export const ONBOARDING_COPY = {
   step4Firefox: 'Then open your markdown file again.',
   webHeading: 'Raw files on the web',
   web: 'Raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket are shown with no setup.',
+  webOff: 'Peekover can’t show raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket yet: its site access for at least one of them is turned off. Turn them on under site access in Peekover’s details on your browser’s extensions page.',
+  webOffFirefox: 'Peekover can’t show raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket yet: its permission for at least one of them is turned off. Turn them on under Peekover’s Permissions and data in about:addons.',
   failed: 'Peekover’s setup guide couldn’t be shown. To read files on your computer in Chrome or Edge, turn on “Allow access to file URLs” for Peekover on your browser’s extensions page. In Firefox, turn on “Access local files on your computer” under Peekover’s Permissions and data in about:addons.',
 } as const;
 
@@ -157,7 +176,7 @@ export const ONBOARDING_CSS = /* css */ `
 `;
 
 /** Read file access through `read`; anything but a boolean answer is "unknown". Never throws. */
-export async function detectFileAccess(read: (() => Promise<unknown>) | undefined): Promise<FileAccessState> {
+export async function detectFileAccess(read: (() => Promise<unknown>) | undefined): Promise<Answer> {
   if (typeof read !== 'function') return 'unknown';
   try {
     const value = await read();
@@ -217,6 +236,10 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
   // The steps, per engine. `turnOnText` is the step whose words follow the answer (off / unknown).
   const steps = el('ol', 'steps');
   const turnOnText = el('p');
+  // Chromium's site step (8.1f), `file:///*` as code; shown while site access for files is off.
+  const siteText = el('p');
+  const [siteBefore, siteAfter] = ONBOARDING_COPY.stepSite.split(ONBOARDING_COPY.siteCode);
+  siteText.append(siteBefore, el('code', undefined, ONBOARDING_COPY.siteCode), siteAfter);
   const step = (n: number, ...content: HTMLElement[]): HTMLLIElement => {
     const li = el('li', 'step');
     const num = el('span', 'n', String(n));
@@ -252,7 +275,7 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
     });
     steps.append(
       step(1, el('p', undefined, ONBOARDING_COPY.step1), open, address, failure),
-      step(2, turnOnText),
+      step(2, turnOnText, siteText),
       step(3, el('p', undefined, ONBOARDING_COPY.step3)),
     );
   } else {
@@ -271,11 +294,25 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
   body.append(steps);
 
   const webHeading = el('h2', 'h', ONBOARDING_COPY.webHeading);
-  body.append(webHeading, el('p', 'web', ONBOARDING_COPY.web));
+  const webLine = el('p', 'web', ONBOARDING_COPY.web);
+  body.append(webHeading, webLine);
 
-  function paint(access: FileAccessState): void {
+  /** The page's file state from the two answers: on Chromium, "on" only when both say yes. */
+  function combine(file: Answer, filesSite: boolean | undefined): FileAccessState {
+    if (!chromium || file !== 'on') return file;
+    if (filesSite === true) return 'on';
+    return filesSite === false ? 'blocked' : 'unknown';
+  }
+
+  function paint(file: Answer, filesSite?: boolean, webSite?: boolean): void {
+    const access = combine(file, filesSite);
     page.dataset.access = access;
-    if (access === 'unknown') state.textContent = ONBOARDING_COPY.unknown;
+    webLine.textContent =
+      webSite === false ? (chromium ? ONBOARDING_COPY.webOff : ONBOARDING_COPY.webOffFirefox) : ONBOARDING_COPY.web;
+    siteText.hidden = !(chromium && filesSite === false);
+    turnOnText.hidden = access === 'blocked';
+    if (access === 'blocked') state.textContent = ONBOARDING_COPY.siteOff;
+    else if (access === 'unknown') state.textContent = ONBOARDING_COPY.unknown;
     else if (chromium) state.textContent = ONBOARDING_COPY[access];
     else state.textContent = access === 'on' ? ONBOARDING_COPY.onFirefox : ONBOARDING_COPY.offFirefox;
     if (access === 'on') delete state.dataset.tone;
@@ -285,13 +322,24 @@ export function mountOnboarding(root: HTMLElement, deps: OnboardingDeps): Onboar
     else turnOnText.textContent = access === 'off' ? ONBOARDING_COPY.step3OffFirefox : ONBOARDING_COPY.step3UnknownFirefox;
   }
 
+  /** One site answer: true / false, anything else (missing, a throw, a non-boolean) not known. Never throws. */
+  async function siteAnswer(which: 'files' | 'web'): Promise<boolean | undefined> {
+    const read = deps.readSiteAccess;
+    const a = await detectFileAccess(typeof read === 'function' ? () => read(which) : undefined);
+    return a === 'unknown' ? undefined : a === 'on';
+  }
+
   let seq = 0;
   let destroyed = false;
   async function recheck(): Promise<FileAccessState> {
     const mine = (seq += 1);
-    const access = await detectFileAccess(deps.readFileAccess);
-    if (!destroyed && mine === seq) paint(access); // a later read wins
-    return access;
+    const [file, filesSite, webSite] = await Promise.all([
+      detectFileAccess(deps.readFileAccess),
+      chromium ? siteAnswer('files') : undefined,
+      siteAnswer('web'),
+    ]);
+    if (!destroyed && mine === seq) paint(file, filesSite, webSite); // a later read wins
+    return combine(file, filesSite);
   }
   const onFocus = (): void => void recheck();
   const onVisible = (): void => {

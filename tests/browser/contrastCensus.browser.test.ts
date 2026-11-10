@@ -652,7 +652,10 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
   for (const theme of ['light', 'dark'] as const) {
     it(`the setup guide — ${theme}`, async () => {
       const STATES: Array<[string, OnboardingDeps, boolean]> = [
-        ['on', { engine: 'chromium', readFileAccess: async () => true }, false],
+        ['on', { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async () => true }, false],
+        // 8.1f: site access off — the file-URL step gives way to the site step (its `file:///*` code) and the
+        // raw-hosts line becomes a warning sentence.
+        ['blocked', { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async () => false }, false],
         ['off', { engine: 'chromium', readFileAccess: async () => false, openDetails: () => Promise.reject(new Error('x')) }, true],
         ['unknown', { engine: 'chromium' }, false],
         ['firefox', { engine: 'firefox' }, false],
@@ -683,8 +686,9 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     // 013 task 5.4 by the count alone, 16 → 22 (the Compare picker, the diff view and the lightbox added), and at 5.5,
     // 22 → 44 (eleven app states), and at 5.6, 44 → 42 (`unsupported` removed: no browser Peekover supports produces it)
     // → 48 (the tab reader's network-used, Raw-view and render-failure states), and at 5.7, 48 → 52 (the editor's save bar
-    // saving, and with a save's outcome), and at 6.1, 52 → 60 (the setup guide's four states).
-    expect(covered.size, 'surfaces × themes measured').toBe(60);
+    // saving, and with a save's outcome), and at 6.1, 52 → 60 (the setup guide's four states), and at 8.1f, 60 → 62
+    // (the setup guide's site-access-off state).
+    expect(covered.size, 'surfaces × themes measured').toBe(62);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);

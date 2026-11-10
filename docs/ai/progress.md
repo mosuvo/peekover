@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -16,6 +16,14 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 (5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
+
+**M13 TASK 8.1f LANDED (2026-11-10) — WALK FIX (I-2): the setup guide checks site access, not only the file-URL
+toggle.** Record: `decisions.md`, "M13 TASK 8.1f". Measured on the kept Chrome 157 profile: the toggle was ON (the API
+said so truthfully); SITE ACCESS was off, so the `file://` tab stayed plain text. The guide now also asks
+`permissions.contains` (no permission): a "site access off" state, both-off steps, and the raw-hosts line on both
+engines (HUMAN COPY APPROVAL). Red 10 unit + 4 / 4 browser per engine → green. Onboarding chunk +1,659 B both engines,
+content script identical; `.output` 6,649,979 / 6,649,965 B. Tasks: 61, 57 ticked. **The human re-checks:** the guide
+in the kept Chrome profile, then turn site access back on.
 
 **M13 TASK 8.1e LANDED (2026-11-10) — WALK FIX (found at 8.1d): Copy as rich text pastes no control labels.**
 Record: `decisions.md`, "M13 TASK 8.1e". The strip step moved into `serializeReaderDocument`, shared by all three exits
