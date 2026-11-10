@@ -1266,6 +1266,18 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       Verify: each clause measured on the drag route first; red first on the drag-route assertions, the picker test
       green throughout; full suite; bytes stated. Linked to final-review step 1(c) (the real-picker check).
       ★ *2026-11-07 (landed; `decisions.md`, "M13 TASK 9.3b"): red → green; app chunk +362 B, content script identical.*
+- [x] **9.3c The picker-route wording (DISCOVERED at final-review step 1(c), "picker: fresh"; HUMAN RULING
+      2026-11-10 "PICKER-ROUTE WORDING: APPROVED, with one change").** A picked Firefox folder reads files fresh, so
+      `FIREFOX_PICKER_NOTE`'s "frozen copy … never arrive" and `READ_ONLY_SNAPSHOT_NOTE`'s "platform limitation … for the
+      same reason" were false. Both re-worded, and the drag note's clause becomes "Watch isn’t offered for a picked
+      folder"; Watch is still not offered there (carried, progress.md). Rows 25 / 334 / 498 unchanged; their evidence
+      cites the hand check and p1–p4.
+      Files: `src/watch/watchAvailability.ts` · `src/app/firefoxFolderSource.ts` · `src/app/appShell.ts` (comments) ·
+      `src/watch/watchAvailability.test.ts` · `src/app/appShell.test.ts` · `tests/browser/firefoxDragWatch.browser.test.ts` ·
+      `tests/browser/firefoxFallback.browser.test.ts` · `tests/browser/filesOverlay.browser.test.ts` · `docs/store/claims.md`
+      Verify: red first — the approved strings pinned as literals (unit; Firefox drag A and picker p1) before the
+      constants change; then green; full suite; bytes stated.
+      ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 9.3c"): red 3 → green; content script −8 B, app chunk +53 B.*
 - [x] **9.4 `/retro` — the milestone retrospective (WORKFLOW §7.5).** Read `docs/ai/retro.md`'s prior entries first.
       Includes: whether mock-first saved re-work; whether the census predicted group 4's re-spellings; whether the
       ledger kept the truth pass to one re-check.
@@ -1368,7 +1380,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

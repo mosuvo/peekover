@@ -720,7 +720,7 @@ describe('5.5 — every app state: never blank, the mock vocabulary, text >= 4.5
       name: 'a read-only snapshot (Firefox)',
       arrange: async (t) => void (await mountState(1440, t, folderOf({ persistable: false }))),
       find: () => container.querySelector<HTMLElement>('.peekover-app__notice[data-state="read-only-snapshot"]'),
-      message: 'read-only, point-in-time snapshot',
+      message: 'Firefox shows this folder as it was when you picked it', // the approved wording (9.3c)
       look: (el) => expectAlert(el, 'read-only snapshot', true),
     },
     {

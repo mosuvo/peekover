@@ -148,7 +148,10 @@ describe('Firefox read-only fallback — real FileList → walk → tree → ren
       // …the read-only-snapshot honesty note is shown (the exact copy the impl exports)…
       const note = container.querySelector('[data-state="read-only-snapshot"]');
       expect(note?.textContent).toBe(READ_ONLY_SNAPSHOT_NOTE);
-      expect(note?.textContent).toMatch(/Firefox platform limitation/i);
+      // HUMAN RULING 2026-11-10 (picker-route wording): files read fresh, so the note no longer calls the missing
+      // Watch a platform limitation; it names the route that watches.
+      expect(note?.textContent).not.toMatch(/platform limitation/i);
+      expect(note?.textContent).toMatch(/drag the folder in instead/i);
       // …and the walked file appears as a file treeitem.
       const fileBtn = container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]');
       expect(fileBtn?.textContent).toBe('hello.md');

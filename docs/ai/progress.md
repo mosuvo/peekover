@@ -17,6 +17,13 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 9.3c LANDED (2026-11-10) — the picker-route wording (HUMAN RULING, approved with one change).** Record:
+`decisions.md`, "M13 TASK 9.3c". `FIREFOX_PICKER_NOTE`, `READ_ONLY_SNAPSHOT_NOTE` and the drag note's picker clause
+now say what p1–p4 measured; Watch is still not offered for a picked folder (carried, POST-RELEASE). Rows 25 / 334 /
+498 unchanged, evidence re-pointed. Content script −8 B, app chunk +53 B; `.output` 6,646,684 / 6,646,540 B. 9.3
+screenshots not affected. Tasks: 57, 53 ticked. **Item 1 (Firefox setting, floor 153) is STASHED, not landed:** row
+477's approved sentence makes the AMO Summary 298 characters (limit 250) — back to the human.
+
 **M13 TASK 8.1c LANDED (2026-11-10) — WALK FIX (OPTION A): the "can't watch here" notes are an aside after the
 document.** Record: `decisions.md`, "M13 TASK 8.1c". On raw web pages and Firefox `file://` the watch note now flows
 after the last line instead of floating over the text; the stopped-watch note stays by the control. Red 24 / 24 → green
@@ -410,6 +417,17 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
+- **Watch for a folder picked in Firefox (HUMAN RULING 2026-11-10: "NOT for 0.1.0 … Revisit after 0.1.0, once
+  freshness is measured on the floor version").** A picked Firefox folder reads files fresh (the human's hand check
+  on Firefox 159; `firefoxDragWatch.browser.test.ts` p1), but Watch is not offered there (`FIREFOX_PICKER_NOTE`, task
+  9.3c). **What it would take:** `watchCapability`'s picker branch returns watchable (`src/watch/watchAvailability.ts`
+  + its unit test); `FIREFOX_PICKER_NOTE` retired (4 files reference it); the picker and drag notes merged or
+  re-worded; a Firefox Watch test on the picker route with a frozen-File firing control (the drag route's A / B);
+  ledger rows 25 / 334 / 498 and README / CHANGELOG / the Firefox listing re-worded. **Size:** likely net negative
+  (a ~250 B note string goes). **Risk:** freshness is unmeasured on Firefox 153 ESR (the floor), on Linux and on
+  macOS; where a picked File reads stale, the pill would show "Watching" with no update and no warning (the dead-watch
+  note fires only on a failed read). **First step when revisited:** measure freshness on 153 ESR, Linux and macOS.
+  *Source:* `decisions.md`, "M13 — the picker route, measured" and "M13 TASK 9.3c".
 - **Literata with Latin Extended — Central / Eastern European and Turkish letters in the reading face.** Prefer
   registering the extra subset only when a document contains those characters, so English documents pay nothing;
   measure LOCALLY against the 165 ms gate before shipping. 2.5's numbers: `@fontsource/literata@5.3.0` latin-ext,

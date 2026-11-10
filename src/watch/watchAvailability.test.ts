@@ -110,7 +110,7 @@ describe('watchCapability — the app-page surface (task 4.4 case a)', () => {
     });
   });
 
-  it('explains instead for a PICKED snapshot — frozen through and through (Firefox)', () => {
+  it('explains instead for a PICKED snapshot — Watch not offered (Firefox)', () => {
     const decision = watchCapability({
       surface: 'app-page',
       persistable: false,
@@ -138,11 +138,18 @@ describe('the explanations themselves (task 4.4)', () => {
     // The last clause is what makes these worth shipping rather than merely honest: in BOTH cases
     // a working route exists, so a note that only apologised would leave the user stuck. This is
     // the shape M2's READ_ONLY_SNAPSHOT_NOTE established.
-    expect(note).toMatch(/isn't available/i);
+    expect(note).toMatch(/isn't (available|offered)/i);
     expect(note).toMatch(/Firefox/);
     expect(note).toMatch(/instead/i);
     // Plain language: no error codes, no API names leaking to the user.
     expect(note).not.toMatch(/moz-extension|NetworkError|file:\/\/\/|undefined/);
+  });
+});
+
+describe('the picker-route wording (HUMAN RULING 2026-11-10, after the real-picker check: "picker: fresh")', () => {
+  it('FIREFOX_PICKER_NOTE is the approved sentence, and no longer says the files are frozen', () => {
+    expect(FIREFOX_PICKER_NOTE).toBe("Watching isn't offered for folders opened with the file picker in Firefox. Opening a file again shows its latest saved version, but the page won't update on its own. Drag the folder onto this page instead and watching will work.");
+    expect(FIREFOX_PICKER_NOTE).not.toMatch(/frozen|never arrive/i);
   });
 });
 

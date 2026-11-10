@@ -161,6 +161,8 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     // M13 9.3b (HUMAN RULING "drag note: approve corrected"): the drag route's note says Watch works — and it does
     // (the assertion above). The old note, which said Watch was unavailable, must not show here.
     expect(seen.snapshotNote).toBe(DRAGGED_SNAPSHOT_NOTE);
+    // HUMAN RULING 2026-11-10 (picker-route wording): the drag note's picker clause, pinned as written.
+    expect(seen.snapshotNote).toBe("Firefox shows this folder as it was when you dragged it in: files added later won’t appear, and files deleted later stay listed but can’t be opened. Next time Peekover can only ask you to pick the folder again, and Watch isn’t offered for a picked folder — drag it in instead. Watching still works here: a watched file is re-read from disk.");
     expect(seen.snapshotNote).not.toBe(READ_ONLY_SNAPSHOT_NOTE);
     // A file entry's File keeps its drop-time size; only its text is read fresh (spec 005's TRAP 2, re-measured).
     expect(disk.size).toBe(BEFORE.length);
@@ -336,7 +338,7 @@ describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
 
 // ── The PICKER route, claim by claim (final-review step 1(c); the human's real-picker check, 2026-11-10: "picker:
 // fresh") ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-// What its texts say today: FIREFOX_PICKER_NOTE ("…a frozen copy of each file, so later changes on disk never
+// What its texts said until the 2026-11-10 ruling: FIREFOX_PICKER_NOTE ("…a frozen copy of each file, so later changes on disk never
 // arrive"), READ_ONLY_SNAPSHOT_NOTE ("a read-only, point-in-time snapshot … reopening this folder means picking it
 // again … Watch mode and snapshot capture are also unavailable here"), and the drag note's "a picked folder can't be
 // watched". Real here: the engine, the shell, the FileList adapter and the FileList itself — Playwright fills an
@@ -394,6 +396,9 @@ describe.runIf(isFirefox)('Firefox — the picker route, claim by claim', () => 
     expect(!!control && !control.disabled && control.getClientRects().length > 0, 'Watch offered').toBe(false);
     expect(container.textContent).toContain(FIREFOX_PICKER_NOTE);
     expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe(READ_ONLY_SNAPSHOT_NOTE);
+    // HUMAN RULING 2026-11-10 (picker-route wording): what this route shows, pinned as written — true of p1–p4.
+    expect(container.textContent).toContain("Watching isn't offered for folders opened with the file picker in Firefox. Opening a file again shows its latest saved version, but the page won't update on its own. Drag the folder onto this page instead and watching will work.");
+    expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe("Firefox shows this folder as it was when you picked it: files added later won’t appear, and files deleted later stay listed but can’t be opened. Opening a file again shows its latest saved version. Firefox can’t give Peekover lasting access to the folder, so there is no write-back, and next time you’ll pick the folder again. To watch a file for changes, drag the folder in instead.");
   }, 20000);
 
   it('(p2) a file ADDED after picking does not appear; picking the folder again shows it (firing control)', async () => {

@@ -2143,7 +2143,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     // The read-only-snapshot honesty note, driven by the SEAM's `persistable` bit — never by
     // sniffing the engine (plan.md §seam). Chromium sources are `persistable` and show
     // nothing here; a Firefox (or picker-disabled) snapshot is `persistable:false` and gets
-    // the plain "point-in-time, re-pick to reopen — a Firefox platform limitation" note.
+    // its note: the picker route's READ_ONLY_SNAPSHOT_NOTE, or the drag route's DRAGGED_SNAPSHOT_NOTE.
     if (!source.persistable) {
       const note = doc.createElement('p');
       note.className = `${SHELL_CLASS}__notice`;
@@ -2231,8 +2231,8 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     if (busy) return;
     busy = true;
     try {
-      // The PICKER route (task 4.4): on Firefox this yields a frozen copy of every file, so a
-      // watch here would never fire. Recorded before applyOutcome so the watch decision sees it.
+      // The PICKER route (task 4.4): Watch is not offered here (a choice for 0.1.0 since the real-picker check
+      // found files read fresh — carried in progress.md). Recorded before applyOutcome so the watch decision sees it.
       activeRoute = 'picker';
       await applyOutcome(await openFolderFn());
     } finally {

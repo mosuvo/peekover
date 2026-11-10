@@ -1,6 +1,36 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 9.3c — the picker-route wording (DISCOVERED at final-review step 1(c)).** HUMAN RULING,
+  verbatim: "2(b). PICKER-ROUTE WORDING: APPROVED, with one change. FIREFOX_PICKER_NOTE: as proposed.
+  READ_ONLY_SNAPSHOT_NOTE: as proposed, EXCEPT replace the last sentence with: "To watch a file for changes, drag the
+  folder in instead." The drag note's clause: as proposed ("and Watch isn't offered for a picked folder — drag it in
+  instead"). README row 25, CHANGELOG row 334, listing row 498: unchanged; update their evidence to cite the four
+  measurements and my hand check." And: "2(c). Making a picked folder watchable: NOT for 0.1.0. Record it in
+  progress.md § Carried items … Revisit after 0.1.0, once freshness is measured on the floor version." Local, on
+  `main`; not pushed.
+  - **Landed (exact strings):** `FIREFOX_PICKER_NOTE` = "Watching isn't offered for folders opened with the file picker
+    in Firefox. Opening a file again shows its latest saved version, but the page won't update on its own. Drag the
+    folder onto this page instead and watching will work." · `READ_ONLY_SNAPSHOT_NOTE` = "Firefox shows this folder as
+    it was when you picked it: files added later won’t appear, and files deleted later stay listed but can’t be opened.
+    Opening a file again shows its latest saved version. Firefox can’t give Peekover lasting access to the folder, so
+    there is no write-back, and next time you’ll pick the folder again. To watch a file for changes, drag the folder in
+    instead." · `DRAGGED_SNAPSHOT_NOTE`'s clause → "and Watch isn’t offered for a picked folder — drag it in instead".
+    Every clause is p1–p4's (`decisions.md`, "M13 — the picker route, measured"). Rows 25 / 334 / 498: sentences
+    unchanged, evidence re-pointed to the hand check and p1–p4.
+  - **Red first:** the approved strings pinned as literals before the constants changed — `watchAvailability.test.ts`
+    (the picker note, and no "frozen" / "never arrive"), the Firefox drag test (A, the drag note) and picker test (p1,
+    both picker notes as shown on the app page). Red: 1 unit + 2 Firefox browser. Then green. Three older pins that
+    encoded the retired wording were flipped with it: `filesOverlay.browser.test.ts` (5.5's app-state message, "read-only,
+    point-in-time snapshot" → the new opening; the first full run's only red, 4 tests); `firefoxFallback.browser.test.ts` (`/Firefox platform
+    limitation/` → not that, and "drag the folder in instead") and `appShell.test.ts` (`/read-only|snapshot|Firefox
+    platform limitation/` → the new opening); the "isn't available" shape test accepts "isn't offered".
+  - **Bytes (both engines):** content script 345,432 → **345,424 B (−8**, the shorter picker note), md5 `ff67c713`
+    (Chrome) / `aa45b1c3` (Firefox); app chunk 551,295 → **551,348 B (+53)**, `a9e746a1` (both); `.output`
+    **6,646,684 / 6,646,540 B** (+45 each). `permissions: []`.
+  - **The 9.3 screenshots are not affected:** no capture shows a Firefox folder note (the Firefox app-page captures
+    13–22 use a live handle; the Chromium ones have none).
+  - **Carried (2(c)):** `progress.md` § Carried items, POST-RELEASE, "Watch for a folder picked in Firefox".
 - **2026-11-10 · M13 TASK 8.1c — WALK FIX (the human's walk "item 13"; recorded at 8.1 I-6): the "can't watch
   here" notes are an aside after the document.** HUMAN RULING, verbatim: "8.1c — OPTION A: move the two "can't watch
   here" notes (raw web pages and Firefox file://) out of the floating bottom-left stack into the page, as a quiet aside

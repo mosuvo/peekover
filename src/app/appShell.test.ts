@@ -273,7 +273,8 @@ describe('appShell (task 3.2 folder grant flow)', () => {
 
     const note = container.querySelector('[data-state="read-only-snapshot"]');
     expect(note).not.toBeNull();
-    expect(note!.textContent).toMatch(/read-only|snapshot|Firefox platform limitation/i);
+    // HUMAN RULING 2026-11-10: the picker-route note names what Firefox shows and the route that watches.
+    expect(note!.textContent).toMatch(/Firefox shows this folder as it was when you picked it/);
     // The chip + tree still render (a folder IS open, just not persistable).
     expect(container.querySelector('.peekover-app__chip')).not.toBeNull();
     expect(container.querySelector('[role="treeitem"][data-kind="file"]')).not.toBeNull();

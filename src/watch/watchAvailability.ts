@@ -99,10 +99,15 @@ export const FIREFOX_CONTENT_SCRIPT_NOTE =
   'Firefox does not let extensions re-read a file:// page, so Peekover cannot see changes here. ' +
   "Open the file's folder in Peekover's app page instead — watching works there.";
 
-/** (a) The Firefox app page, folder chosen through the file picker rather than dragged. */
+/**
+ * (a) The Firefox app page, folder chosen through the file picker rather than dragged. HUMAN RULING 2026-11-10: a
+ * real picker on Firefox 159 reads files fresh (the human's hand check; `firefoxDragWatch.browser.test.ts` p1), so
+ * "a frozen copy … never arrive" was false. Watch is still not offered on this route — a choice for 0.1.0, carried
+ * in progress.md until freshness is measured on the floor version (Firefox 153 ESR), Linux and macOS.
+ */
 export const FIREFOX_PICKER_NOTE =
-  "Watching isn't available for folders opened with the file picker in Firefox — the browser " +
-  'hands Peekover a frozen copy of each file, so later changes on disk never arrive. ' +
+  "Watching isn't offered for folders opened with the file picker in Firefox. " +
+  "Opening a file again shows its latest saved version, but the page won't update on its own. " +
   'Drag the folder onto this page instead and watching will work.';
 
 /**
