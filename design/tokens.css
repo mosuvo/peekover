@@ -1,7 +1,7 @@
 /* Peekover design tokens — source of truth: design/tokens.css (this file). brand.html and mockup.html illustrate
    it; where they disagree, this file wins (gate-1 Q2). Every code copy is pinned to it by tests/designTokens.test.ts. */
 :root{
-  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
+  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#8F91A0;
   --line:#E6E6DF; --code-bg:#F1F1EB;
   --accent:#16171F; --accent-soft:#ECECE3;           /* interactive = ink + highlighter underline */
   --hl:#FFE94A; --hl-soft:#FFF6BF;

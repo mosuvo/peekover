@@ -52,7 +52,7 @@
 export const READER_CSS = /* css */ `
 /* ============ Design tokens (design/tokens.css — verbatim) ============ */
 :host{
-  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
+  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#8F91A0;
   --line:#E6E6DF; --code-bg:#F1F1EB;
   --accent:#16171F; --accent-soft:#ECECE3;
   --hl:#FFE94A; --hl-soft:#FFF6BF;

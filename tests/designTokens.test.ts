@@ -92,6 +92,27 @@ describe('design/tokens.css is the single source (013 task 2.1, D-1)', () => {
     expect(DARK_OVERRIDES['--shadow'], 'tokens.css dark --shadow (Q2: the mockup\'s value)').toBe('0 10px 30px rgba(0,0,0,.5)');
   });
 
+  // M13 walk item III-3 (HUMAN 2026-11-10, FIX): `--faint` draws boundaries (scrollbar thumbs, the tree's twisty, a
+  // hovered border, a pressed toggle), so it must reach WCAG 1.4.11's 3:1 on the paper in BOTH themes. It was 2.60:1
+  // in light (#9A9DAC); dark (3.70) is unchanged. The source is checked here; the copies by the pins below.
+  it('--faint reaches 3:1 (WCAG 1.4.11) on --paper, light and dark', () => {
+    const lin = (v: number): number => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    const lum = (hex: string): number => {
+      const [r, g, b] = [1, 3, 5].map((i) => lin(parseInt(hex.slice(i, i + 2), 16) / 255));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a: string, b: string): number => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    expect(ratio('#FFFFFF', '#000000'), 'the arithmetic (control)').toBeCloseTo(21, 5);
+    for (const theme of ['light', 'dark'] as const) {
+      const t = THEMES[theme];
+      const r = ratio(t['--faint'], t['--paper']);
+      expect(r, `${theme}: --faint ${t['--faint']} on --paper ${t['--paper']} = ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it("the reader's :host blocks equal tokens.css, light, dark and sepia", () => {
     const light = declarations(block(READER_CSS, ':host'));
     const dark = declarations(block(READER_CSS, ':host([data-theme="dark"])'));

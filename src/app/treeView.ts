@@ -49,7 +49,7 @@ const TREE_CSS = /* css */ `
 }
 .${TREE_CLASS}__item:hover{background:var(--panel); color:var(--ink)}
 .${TREE_CLASS}__item[aria-current="page"]{background:var(--accent-soft); color:var(--accent); font-weight:600}
-.${TREE_CLASS}__twist{font-family:var(--mono); font-size:11px; color:var(--faint,#9A9DAC); width:14px; text-align:center; flex:0 0 auto}
+.${TREE_CLASS}__twist{font-family:var(--mono); font-size:11px; color:var(--faint,#8F91A0); width:14px; text-align:center; flex:0 0 auto}
 `;
 
 /** Build the persistent style element. */

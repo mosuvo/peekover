@@ -114,7 +114,7 @@ export const ONBOARDING_COPY = {
 
 /** The page's copies of `design/tokens.css`, pinned by tests/designTokens.test.ts. */
 export const ONBOARDING_LIGHT_TOKENS = /* css */ `
-  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
+  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#8F91A0;
   --line:#E6E6DF; --code-bg:#F1F1EB; --accent:#16171F; --accent-soft:#ECECE3;
   --hl:#FFE94A; --hl-soft:#FFF6BF; --ok:#1F9D55; --ok-soft:#E4F5EB; --warn:#B7791F;
   --del:#B8512F; --del-soft:#F8E9E2; --code-str:#197E44; --code-num:#B34F2E; --code-type:#966319;

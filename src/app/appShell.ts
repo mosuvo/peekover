@@ -386,7 +386,7 @@ export interface AppDeps {
  *  since 2.1 (`--code-bg --hl --ok --ok-soft --warn --del --del-soft` were missing), and the dark
  *  `--shadow` ruled at gate 1 (Q2). The shell's named exceptions are listed in the test. */
 export const LIGHT_TOKENS = /* css */ `
-  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#9A9DAC;
+  --paper:#FBFBF8; --panel:#F4F4EF; --ink:#16171F; --muted:#5D6070; --faint:#8F91A0;
   --line:#E6E6DF; --code-bg:#F1F1EB; --accent:#16171F; --accent-soft:#ECECE3;
   --hl:#FFE94A; --hl-soft:#FFF6BF; --ok:#1F9D55; --ok-soft:#E4F5EB; --warn:#B7791F;
   --del:#B8512F; --del-soft:#F8E9E2; --code-str:#197E44; --code-num:#B34F2E; --code-type:#966319;
