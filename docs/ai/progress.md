@@ -17,6 +17,13 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 — THE PICKER ROUTE, MEASURED (2026-11-10; final-review step 1(c)/(d) closed by the human's hand check).**
+Record: `decisions.md`, "M13 — the picker route, measured". A picked Firefox folder reads files fresh (the human;
+test p1); files added later are not listed (p2); deleted ones stay listed and open to "Couldn't read this file" (p3);
+after a reload the folder is offered through the picker (p4). `FIREFOX_PICKER_NOTE` and `READ_ONLY_SNAPSHOT_NOTE`
+are false in their "frozen" / "platform limitation" clauses; **corrected wording PROPOSED, waiting on the human**;
+rows 25 / 334 / 498 stay true. Making the picker route watchable: scoped, not built.
+
 **M13 TASK 8.1b LANDED (2026-11-10) — WALK FIX (the human's "item 13", at I-6): a hovered link stays readable in
 dark.** Record: `decisions.md`, "M13 TASK 8.1b". The dark thin-underline rule out-specified the hover fill, leaving
 `#191504` on the dark page (1.01:1, every link, both reader surfaces, both engines); the dark hover rule now repeats

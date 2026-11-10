@@ -333,3 +333,131 @@ describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
     expect(pickerOpened).toBe(1);
   }, 20000);
 });
+
+// ── The PICKER route, claim by claim (final-review step 1(c); the human's real-picker check, 2026-11-10: "picker:
+// fresh") ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+// What its texts say today: FIREFOX_PICKER_NOTE ("…a frozen copy of each file, so later changes on disk never
+// arrive"), READ_ONLY_SNAPSHOT_NOTE ("a read-only, point-in-time snapshot … reopening this folder means picking it
+// again … Watch mode and snapshot capture are also unavailable here"), and the drag note's "a picked folder can't be
+// watched". Real here: the engine, the shell, the FileList adapter and the FileList itself — Playwright fills an
+// `<input webkitdirectory>` from a real folder on disk (the human confirmed the native dialog behaves the same for
+// re-reads). Each clause is read through the app page, as a person would: the tree, a click, the reader.
+
+/** The picker route's `openFolder`: each call is a fresh pick of `dir` (a new FileList, as a re-pick would give). */
+function pickerOf(dir: string): { openFolder: () => Promise<{ ok: true; source: FolderSource }>; picks: () => number } {
+  let picks = 0;
+  return {
+    openFolder: async () => {
+      picks += 1;
+      return { ok: true, source: await folderSourceFromFileList(await diskBackedFile(dir, true)) };
+    },
+    picks: () => picks,
+  };
+}
+
+async function mountAndPick(dir: string, deps: Record<string, unknown> = {}): Promise<{ container: HTMLElement; picker: ReturnType<typeof pickerOf> }> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  cleanup.push(() => container.remove());
+  const picker = pickerOf(dir);
+  const app = mountAppShell(container, { openFolder: picker.openFolder, store: fakeStore(), ...deps });
+  await app.openFolder();
+  await waitFor(() => container.querySelector('[role="treeitem"][data-kind="file"]'));
+  return { container, picker };
+}
+
+const itemIn = (container: HTMLElement, n: string): HTMLElement =>
+  [...container.querySelectorAll<HTMLElement>('[role="treeitem"][data-kind="file"]')].find((e) => e.textContent?.trim() === n)!;
+const readerOf = (container: HTMLElement) => container.querySelector('.peekover-app__reader__host')?.shadowRoot ?? null;
+const pause = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+describe.runIf(isFirefox)('Firefox — the picker route, claim by claim', () => {
+  it('(p1) an opened file is re-read from disk: an edit shows when the file is opened again; Watch is still not offered', async () => {
+    const { dir, file } = await diskFolder();
+    await commands.diskFixture('append', `${dir}${sep}other.md`, '# Other\n');
+    const { container } = await mountAndPick(dir);
+    itemIn(container, 'notes.md').click();
+    await waitFor(() => readerOf(container)?.querySelector('h1'));
+    expect([...readerOf(container)!.querySelectorAll('h2')].some((h) => h.textContent?.includes('Appended on disk'))).toBe(false);
+
+    await commands.diskFixture('append', file, APPENDED);
+    itemIn(container, 'other.md').click();
+    await pause(800);
+    itemIn(container, 'notes.md').click();
+    const fresh = await waitFor(
+      () => [...(readerOf(container)?.querySelectorAll('h2') ?? [])].find((h) => h.textContent?.includes('Appended on disk')) ?? null,
+    ).catch(() => null);
+    // The instrument that answers the question first: FIREFOX_PICKER_NOTE says "later changes on disk never arrive".
+    expect(fresh, 'the on-disk edit reached the reader on re-opening the file').not.toBeNull();
+    // What the product does today, unchanged: no Watch control on this route; the two picker notes are shown.
+    const control = container.querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`);
+    expect(!!control && !control.disabled && control.getClientRects().length > 0, 'Watch offered').toBe(false);
+    expect(container.textContent).toContain(FIREFOX_PICKER_NOTE);
+    expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe(READ_ONLY_SNAPSHOT_NOTE);
+  }, 20000);
+
+  it('(p2) a file ADDED after picking does not appear; picking the folder again shows it (firing control)', async () => {
+    const { dir } = await diskFolder();
+    const { container, picker } = await mountAndPick(dir);
+    expect(treeNames(container)).toEqual(['notes.md']);
+    await commands.diskFixture('append', `${dir}${sep}added.md`, '# Added later\n');
+    itemIn(container, 'notes.md').click();
+    await pause(2500);
+    expect(treeNames(container)).toEqual(['notes.md']);
+    expect(picker.picks()).toBe(1);
+
+    const again = await mountAndPick(dir);
+    expect(treeNames(again.container).sort()).toEqual(['added.md', 'notes.md']);
+  }, 20000);
+
+  it('(p3) a file DELETED after picking stays listed; opening it shows "Couldn\'t read this file"', async () => {
+    const { dir, file } = await diskFolder();
+    await commands.diskFixture('append', `${dir}${sep}keep.md`, '# Keep\n\nStays on disk.\n');
+    const { container } = await mountAndPick(dir);
+    expect(treeNames(container).sort()).toEqual(['keep.md', 'notes.md']);
+    await commands.diskFixture('remove', file);
+    itemIn(container, 'keep.md').click();
+    await pause(800);
+    itemIn(container, 'notes.md').click();
+    const state = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader [data-state="unreadable"]'));
+    expect(state.textContent).toContain("Couldn't read this file");
+    expect(treeNames(container).sort()).toEqual(['keep.md', 'notes.md']);
+  }, 20000);
+
+  it('(p4) after a reload the picked folder is remembered (Recent, "pick it again"), and reopening starts the picker', async () => {
+    const name = `picker-p4-${Math.trunc(performance.now())}`;
+    const dir = await commands.diskFixture('create', { [`${name}.md`]: BEFORE });
+    cleanup.push(() => commands.diskFixture('remove', dir));
+    const doc = `${name}.md`;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    // The REAL store (IndexedDB): what a reload would read back.
+    const first = pickerOf(dir);
+    const app = mountAppShell(container, { openFolder: first.openFolder });
+    await app.openFolder();
+    (await waitFor(() => container.querySelector<HTMLElement>('[role="treeitem"][data-kind="file"]'))).click();
+    await pause(1000);
+    container.remove();
+
+    let pickerOpened = 0;
+    const fresh = document.createElement('div');
+    document.body.appendChild(fresh);
+    cleanup.push(() => fresh.remove());
+    mountAppShell(fresh, {
+      openFolder: async () => {
+        pickerOpened += 1;
+        return { ok: false, reason: 'cancelled', message: 'No folder was opened.' } as never;
+      },
+    });
+    const entry = await waitFor(
+      () => [...fresh.querySelectorAll<HTMLButtonElement>('[data-reopen]')].find((b) => b.textContent?.includes(doc)) ?? null,
+      5000,
+    ).catch(() => null);
+    expect(entry, 'the picked folder\'s file is listed under Recent after a reload').not.toBeNull();
+    expect(entry!.dataset.reopen).toBe('repick');
+    expect(entry!.textContent).toContain('click to pick it again');
+    entry!.click();
+    await waitFor(() => pickerOpened > 0);
+    expect(pickerOpened).toBe(1);
+  }, 20000);
+});

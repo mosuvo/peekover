@@ -38,6 +38,10 @@ below applies. (b) The guide opens once and not again across restarts — TRUE. 
    folder from Explorer onto the app page and read the note under the folder list ("…drag it in instead. Watching
    still works here…").
 
+**(c) and (d) DONE by the human, 2026-11-10** ("picker: fresh" — an edit shows when the file is opened again; "drag:
+works as tested"). The picker-route claims were then measured one by one and the corrected wording proposed
+(`decisions.md`, "M13 — the picker route, measured").
+
 *Before the run:* **the signed `.xpi` was NOT saved yet.** **This was the blocker.** Until a signed build is tested, the setup guide's "In Firefox, nothing needs setting
 up." (ledger rows 296, 304) may be false, and rows 26, 335 and 500 plus the Firefox half of 2, 8, 112, 185, 209 and 312
 stay PENDING SIGNED INSTALL.

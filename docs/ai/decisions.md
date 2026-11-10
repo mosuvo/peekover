@@ -1,6 +1,54 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 — the picker route, measured (final-review step 1(c) and (d)): a picked Firefox folder reads
+  fresh files; the "frozen" texts are false; corrected wording PROPOSED (STOPPED for the human).** Tests and records
+  only; no product byte changed. Local, on `main`; not pushed.
+  - **HUMAN RULING / evidence, verbatim:** "picker: fresh. Human hand check, 2026-11-10, Firefox 159, the AMO-signed
+    0.0.9: folder opened with "Open a folder"; sample.md edited in Notepad and saved; clicking the file again in
+    Peekover showed the edit. drag: works as tested (same session, Watch updated after a save)." This closes
+    final-review step 1(c) and (d) as evidence. Spec 005's "PERMANENTLY STALE" (Firefox 152, by hand,
+    `decisions.md` 2026-07-19) no longer holds on 159 (Windows) nor in Playwright's Firefox 151.
+  - **Each picker-route claim, measured** (`tests/browser/firefoxDragWatch.browser.test.ts`, new describe "the picker
+    route, claim by claim"; Playwright Firefox; a real folder on disk read through a real `<input webkitdirectory>`,
+    the app shell, the FileList adapter, the tree, a click, the reader — only the OS dialog is bypassed, which the
+    human's check covers):
+    - **(p1) re-reading an opened file — FRESH:** an edit on disk shows when the file is opened again. Today's
+      product, unchanged: Watch is NOT offered; `FIREFOX_PICKER_NOTE` and `READ_ONLY_SNAPSHOT_NOTE` are both shown.
+    - **(p2) a file ADDED after picking — NOT listed**; picking the folder again lists it (the firing control).
+    - **(p3) a file DELETED after picking — stays listed; opening it shows "Couldn't read this file"** (the designed
+      unreadable state).
+    - **(p4) after a reload — the folder's file is remembered in Recent, marked "pick it again"; clicking it starts
+      the picker.** (The same as the drag route's clause (c).)
+    - Snapshot capture runs only from the watch controller (`watchController.ts`, `storeSnapshot` on a watched update),
+      so with no Watch on this route "snapshot capture … unavailable" is true today — code reading.
+  - **What is false today:** `FIREFOX_PICKER_NOTE`'s "the browser hands Peekover a frozen copy of each file, so later
+    changes on disk never arrive" (p1); `READ_ONLY_SNAPSHOT_NOTE`'s "That is a Firefox platform limitation, not a
+    Peekover choice. Watch mode and snapshot capture are also unavailable here for the same reason." (files are read
+    fresh, so not offering Watch is now Peekover's choice). **Still true:** README row 25 / CHANGELOG row 334
+    ("watching works for a folder dragged in but not for one chosen with the folder picker") and the listing's row
+    498 ("Watching does not work … for a folder chosen with the folder picker") — they state what the product does,
+    not why. The drag note's "a picked folder can't be watched" is true of the product but reads as a platform
+    limit.
+  - **Wording PROPOSED (not landed; shown to the human; each true of today's product — Watch still not offered):**
+    - `FIREFOX_PICKER_NOTE` → "Watching isn't offered for folders opened with the file picker in Firefox. Opening a
+      file again shows its latest saved version, but the page won't update on its own. Drag the folder onto this page
+      instead and watching will work."
+    - `READ_ONLY_SNAPSHOT_NOTE` (the picker route's pane note) → "Firefox shows this folder as it was when you picked
+      it: files added later won’t appear, and files deleted later stay listed but can’t be opened. Opening a file again
+      shows its latest saved version. Firefox can’t give Peekover lasting access to the folder, so there is no
+      write-back, and next time you’ll pick the folder again. Watch mode and snapshot capture aren’t offered for a
+      picked folder — drag it in instead."
+    - `DRAGGED_SNAPSHOT_NOTE`'s clause "and a picked folder can’t be watched — drag it in instead" → "and Watch isn’t
+      offered for a picked folder — drag it in instead".
+    - README row 25, CHANGELOG row 334, listing row 498: **unchanged** (still true); their ledger evidence gains p1–p4.
+  - **Making a picked folder watchable (NOT built; the human decides):** `watchCapability`'s picker branch returns
+    watchable (`src/watch/watchAvailability.ts` + its unit test), `FIREFOX_PICKER_NOTE` retired (4 files reference it),
+    the two snapshot notes merged or re-worded, a Firefox Watch test on the picker route with a frozen-File firing
+    control (the drag route's A / B pattern), ledger rows 25 / 334 / 498 + README / CHANGELOG / listing re-worded.
+    Bytes: likely net NEGATIVE (a ~250 B note string goes). Risk: freshness is measured on 159 (Windows, by hand) and
+    Playwright 151 only — not on the new floor, 153 ESR, nor on Linux / macOS; where a picked File is stale, Watch
+    would sit "on" and never update, with no signal (the 4.3 dead-watch note fires only on a failed read).
 - **2026-11-10 · M13 TASK 8.1b — WALK FIX (the human's walk "item 13"; recorded at 8.1 I-6): a hovered link stays
   readable in dark.** The human: "in DARK theme, hovering a link makes its text unreadable (dark text on dark page)".
   Local, on `main` after `25f8732`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).
