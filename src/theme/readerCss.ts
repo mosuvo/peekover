@@ -643,6 +643,20 @@ export const READER_CSS = /* css */ `
   padding:0;background:none;border:none;cursor:ew-resize;touch-action:none;
 }
 .peekover-toc__resizer:hover{background:var(--line)}
+.peekover-toc__close{display:none}
+@media (max-width:863px){
+:host([data-toc="open"]) .peekover-toc,:host([data-toc="collapsed"]) .peekover-toc{position:static;width:auto;max-width:var(--reader-measure);height:auto;margin:0 auto;padding:56px 32px 0;overflow:visible;text-align:right;background:none;border:0;border-radius:0;box-shadow:none}
+.peekover-toc__toggle{margin:0}
+.peekover-toc__list,.peekover-toc__resizer{display:none}
+:host([data-toc="open"]) .peekover-reader,:host([data-toc="open"]) .peekover-diff{width:100%;margin:0 auto}
+:host([data-toc="open"]) .peekover-toc~.peekover-raw{margin-left:32px;margin-right:32px}
+:host([data-toc="open"]) .peekover-watch-note[data-place="aside"]{width:100%;margin:0 auto 130px}
+.peekover-toc~.peekover-reader{padding-top:16px}
+.peekover-toc~.peekover-raw{margin-top:16px}
+:host([data-toc-sheet="open"]) .peekover-toc{position:fixed;inset:0;z-index:4;max-width:none;padding:16px 16px 32px;overflow:auto;text-align:left;background:var(--paper)}
+:host([data-toc-sheet="open"]) .peekover-toc__list{display:block;margin-top:16px}
+:host([data-toc-sheet="open"]) .peekover-toc__close{display:block;position:absolute;top:16px;right:16px}
+}
 
 /* scroll-margin-top so a TOC click's scrollIntoView (3.1) lands the heading below the top
    chrome, not flush against the scrollport edge. Container-relative → engine-correct on both
@@ -669,14 +683,14 @@ export const READER_CSS = /* css */ `
 }
 .peekover-reader .peekover-code-toolbar button,.peekover-reader .peekover-math-action,
 .peekover-reader .peekover-table-copy,.peekover-reader .peekover-table-filter__clear,
-.peekover-reader .peekover-code-toolbar__collapse,.peekover-diagram-lightbox__close{
+.peekover-reader .peekover-code-toolbar__collapse,.peekover-diagram-lightbox__close,.peekover-toc__close{
   font-family:var(--sans);font-size:11.5px;font-weight:600;line-height:normal;color:var(--muted);
   background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:5px 11px;margin:0;
   cursor:pointer;
 }
 .peekover-reader .peekover-code-toolbar button:hover,.peekover-reader .peekover-math-action:hover,
 .peekover-reader .peekover-table-copy:hover,.peekover-reader .peekover-table-filter__clear:hover,
-.peekover-reader .peekover-code-toolbar__collapse:hover,.peekover-diagram-lightbox__close:hover{color:var(--ink)}
+.peekover-reader .peekover-code-toolbar__collapse:hover,.peekover-diagram-lightbox__close:hover,.peekover-toc__close:hover{color:var(--ink)}
 .peekover-reader .peekover-code-toolbar button[aria-pressed="true"]{
   color:var(--ink);border-color:var(--faint);background:var(--accent-soft);
 }
@@ -1427,9 +1441,17 @@ export const READER_CSS = /* css */ `
 export const CONTAINED_CSS = /* css */ `
 :host{ position:relative; inset:auto; overflow:visible; }
 .peekover-net{ position:absolute; }
+@media (min-width:864px){
 .peekover-toc{ position:sticky; top:8px; right:auto; bottom:auto; height:calc(100cqh - 16px); margin:8px 8px calc(8px - 100cqh) auto; padding-top:47px; }
 :host([data-toc="collapsed"]) .peekover-toc{ top:0; height:100cqh; margin:0 0 -100cqh auto; width:max-content; background:none; pointer-events:none; }
 :host([data-toc="collapsed"]) .peekover-toc__toggle{ pointer-events:auto; }
+}
+@media (max-width:863px){
+:host([data-toc="open"]) .peekover-toc,:host([data-toc="collapsed"]) .peekover-toc{ padding-top:0; }
+:host([data-toc-sheet="open"]) .peekover-toc{ padding-top:16px; }
+.peekover-reader{ padding-top:0; }
+.peekover-raw{ margin-top:0; }
+}
 @media screen{
 .peekover-reader,
 .peekover-diff{ padding-bottom:56px; }
@@ -1597,6 +1619,9 @@ export const EDITOR_CSS = /* css */ `
   :host([data-mode="edit"]) .peekover-toc{display:none}
   :host([data-mode="edit"][data-toc="open"]) .peekover-editor{margin-right:32px}
   :host([data-mode="edit"][data-toc="collapsed"]) .peekover-editor{--edit-top:56px}
+}
+@media (max-width:863px){
+  :host([data-mode="edit"]) .peekover-editor,:host([data-mode="edit"][data-toc]) .peekover-editor{--edit-top:0px}
 }
 .peekover-editor__bar{
   grid-column:1/-1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px;

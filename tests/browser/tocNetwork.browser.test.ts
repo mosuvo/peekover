@@ -35,7 +35,8 @@
 // is SAME-ORIGIN, so even a regression would hit the vitest dev server (a 404), never the public
 // internet — but http(s) still classifies as an on-wire entry exactly as a CDN URL would.
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { page } from 'vitest/browser';
 // 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
 import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import { mount } from '../../src/render/mount';
@@ -259,6 +260,15 @@ function memorySource(name: string, text: string): FolderSource {
 }
 
 describe('TOC zero-network guard — no TOC action touches the wire (task 4.1, both surfaces)', () => {
+  // M13 8.1i (a): at <= 863 px the opener toggles the narrow SHEET (unsaved) instead of the rail, so the rail's own
+  // behaviour is exercised at a wide viewport; the harness default (414) is restored after each test.
+  beforeEach(async () => {
+    await page.viewport(1280, 900);
+  });
+  afterEach(async () => {
+    await page.viewport(414, 896);
+  });
+
   it('full-page host: build + click + spy + collapse + opener + backtick + resize fire ZERO requests', async () => {
     const host = document.createElement('peekover-root');
     document.body.appendChild(host);

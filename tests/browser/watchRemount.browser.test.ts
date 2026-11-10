@@ -28,6 +28,7 @@
 // settled content height, not merely a scrollable one.
 
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
@@ -459,6 +460,14 @@ async function widthDerivedDefault(
 describe.each(SURFACES)(
   'TOC re-decide across a preserveReading re-mount — $name surface (task 3.4)',
   ({ mount: mountSurface }) => {
+    // M13 8.1i (a): at <= 863 px the opener toggles the narrow SHEET (unsaved) instead of the rail, so the rail's
+    // persisted state is driven at a wide viewport; the harness default (414) is restored after each test.
+    beforeEach(async () => {
+      await page.viewport(1280, 900);
+    });
+    afterEach(async () => {
+      await page.viewport(414, 896);
+    });
     it('a rail the user COLLAPSED stays collapsed across the re-mount, and the stored width survives', async () => {
       const widthDefault = await widthDerivedDefault(mountSurface);
 

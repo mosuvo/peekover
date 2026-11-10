@@ -14,6 +14,9 @@ import { setThemeSetting } from '../../src/theme/reader';
 import { resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
+import { mount } from '../../src/render/mount';
+import { registerWatchTarget } from '../../src/watch/watchRegistry';
+import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { contrastRatio, flatten, hex, luminance, parseColor } from './helpers/contrast';
 
 const DOC = [
@@ -68,6 +71,7 @@ function resetAll(): void {
   resetThemeHostsForTest();
   resetThemeControlsForTest();
   resetSettingsSeamForTest();
+  resetDocIdentityForTest();
 }
 beforeEach(async () => {
   resetAll();
@@ -199,4 +203,164 @@ describe('8.1i (g) — the active line and its gutter cell are one band from the
       expect(contrastRatio(ink, cell), 'the numbers on the cell vs on the plain gutter').toBeGreaterThanOrEqual(contrastRatio(ink, base) - 0.01);
     });
   }
+});
+
+// ── (a) Narrow widths — surfaces 5, 6, 17 + CC flag 2 (app page) and the tab reader ───────────
+// At ≤ 863 px (the compact toolbar's breakpoint) the collapsed "On this page" opener floated over
+// the document's top right — over the title, the code toolbar, the table's controls. It now sits in
+// the document flow above the title; opened, the contents list is a full-width sheet over the page
+// with a Close button, and the reading column keeps its width.
+const deepActive = (): Element | null => {
+  let el: Element | null = document.activeElement;
+  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+  return el;
+};
+
+/** Every text line box and control in the document under `sr` that is NOT part of the contents nav. */
+function textAndControls(sr: ShadowRoot): { what: string; r: DOMRect }[] {
+  const out: { what: string; r: DOMRect }[] = [];
+  const nav = sr.querySelector('.peekover-toc');
+  for (const root of sr.querySelectorAll(':scope > *')) {
+    if (root === nav || root.tagName === 'STYLE') continue;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.textContent?.trim()) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      for (const r of range.getClientRects()) if (r.width > 0 && r.height > 0) out.push({ what: `text "${n.textContent.trim().slice(0, 24)}"`, r });
+    }
+    const controls = root.matches('button, input, a') ? [root] : [...root.querySelectorAll('button, input, a')];
+    for (const c of controls) {
+      const r = c.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) out.push({ what: `control .${c.className || c.tagName}`, r });
+    }
+  }
+  return out;
+}
+
+async function narrowChecks(host: HTMLElement, sr: ShadowRoot, viewport: number): Promise<void> {
+  const opener = sr.querySelector<HTMLButtonElement>('.peekover-toc__toggle')!;
+  const o = opener.getBoundingClientRect();
+  expect(o.width, 'the opener is drawn').toBeGreaterThan(0);
+  const h1 = sr.querySelector('.peekover-reader h1')!.getBoundingClientRect();
+  expect(o.bottom, `the opener (${o.top}–${o.bottom}) is above the title (${h1.top})`).toBeLessThanOrEqual(h1.top);
+  const under = textAndControls(sr).filter(({ r }) => intersects(o, r)).map(({ what, r }) => `${what} [${r.left.toFixed(0)},${r.top.toFixed(0)}–${r.right.toFixed(0)},${r.bottom.toFixed(0)}]`);
+  expect(under, `under the opener [${o.left.toFixed(0)},${o.top.toFixed(0)}–${o.right.toFixed(0)},${o.bottom.toFixed(0)}]`).toEqual([]);
+  // The hit-test itself: the opener is the topmost element across its own box.
+  for (const [fx, fy] of [[0.1, 0.5], [0.5, 0.5], [0.9, 0.5]]) {
+    const hit = sr.elementFromPoint(o.left + o.width * fx, o.top + o.height * fy);
+    expect(hit === opener || opener.contains(hit), `topmost at the opener's ${fx}: ${hit?.className}`).toBe(true);
+  }
+
+  // Open: a full-width sheet; the column keeps its width; focus moves into the list.
+  const column = sr.querySelector<HTMLElement>('.peekover-reader')!;
+  const before = column.getBoundingClientRect().width;
+  opener.click();
+  await frames(3);
+  const nav = sr.querySelector<HTMLElement>('.peekover-toc')!.getBoundingClientRect();
+  expect(nav.width, 'the sheet spans the viewport').toBeGreaterThanOrEqual(viewport - 1);
+  expect(column.getBoundingClientRect().width, "the reading column's width").toBe(before);
+  expect(opener.getAttribute('aria-expanded')).toBe('true');
+  const inList = deepActive();
+  expect(inList?.classList.contains('peekover-toc__link'), `focus in the list: ${inList?.className}`).toBe(true);
+  const close = sr.querySelector<HTMLButtonElement>('.peekover-toc__close')!;
+  expect(close.getBoundingClientRect().width, 'a visible Close').toBeGreaterThan(0);
+  expect(close.textContent).toBe('Close');
+
+  // Close: focus back on the opener; the sheet gone; the list hidden.
+  close.click();
+  await frames(3);
+  expect(deepActive(), 'focus back on the opener').toBe(opener);
+  expect(opener.getAttribute('aria-expanded')).toBe('false');
+  expect(sr.querySelector('.peekover-toc__list')!.getClientRects().length, 'the list hidden again').toBe(0);
+  expect(column.getBoundingClientRect().width).toBe(before);
+
+  // Escape closes it too.
+  opener.click();
+  await frames(2);
+  deepActive()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+  await frames(2);
+  expect(deepActive(), 'Escape: focus back on the opener').toBe(opener);
+  expect(opener.getAttribute('aria-expanded')).toBe('false');
+}
+
+/** Choosing an entry in the sheet closes it, lands on the heading, and gives focus back to the opener. */
+async function entryCloses(sr: ShadowRoot): Promise<void> {
+  const opener = sr.querySelector<HTMLButtonElement>('.peekover-toc__toggle')!;
+  opener.click();
+  await frames(2);
+  const links = [...sr.querySelectorAll<HTMLButtonElement>('.peekover-toc__link')];
+  links[links.length - 1].click();
+  await frames(3);
+  expect(opener.getAttribute('aria-expanded'), 'an entry closes the sheet').toBe('false');
+  expect(sr.querySelector('.peekover-toc__list')!.getClientRects().length).toBe(0);
+  expect(deepActive(), 'focus back on the opener').toBe(opener);
+}
+
+describe('8.1i (a) — at narrow widths the opener is in the flow; the list opens as a sheet (app page)', () => {
+  for (const width of [414, 600]) {
+    it(`${width}px, app page`, async () => {
+      await page.viewport(width, 896);
+      const { host } = await openFile('light');
+      await frames(3);
+      await narrowChecks(host, host.shadowRoot!, width);
+      await entryCloses(host.shadowRoot!);
+    });
+  }
+  it('414px: a remembered OPEN rail does not open the sheet on load', async () => {
+    await page.viewport(414, 896);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    containers.push(container);
+    const store: AppStore = { ...fakeStore('light'), getSettings: async () => ({ ...DEFAULT_SETTINGS, theme: 'light', tocOpen: true }) };
+    const app = mountAppShell(container, { openFolder: async () => ({ ok: true, source: memorySource(DOC) }), store });
+    await app.openFolder();
+    (await waitFor(() => container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'), 'the file')).click();
+    const host = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader__host'), 'the host');
+    await waitFor(() => host.getAttribute('data-toc') === 'open', 'the remembered open state applied');
+    await frames(4);
+    const sr = host.shadowRoot!;
+    expect(sr.querySelector('.peekover-toc__toggle')!.getAttribute('aria-expanded')).toBe('false');
+    expect(sr.querySelector('.peekover-toc__list')!.getClientRects().length, 'no list on load').toBe(0);
+    expect(getComputedStyle(sr.querySelector('.peekover-toc')!).position).toBe('static');
+  });
+});
+
+const TAB_DOC = `${DOC}\n![a picture from the web](https://example.invalid/p.png)\n\n${'More text under phases. '.repeat(40)}\n`;
+
+describe('8.1i (a) — the same on the tab reader', () => {
+  for (const width of [414, 600]) {
+    it(`${width}px, tab reader (file://: Watch, the agent badge, a blocked image)`, async () => {
+      await page.viewport(width, 896);
+      registerWatchTarget({ start: () => undefined, stop: () => undefined, isWatching: () => false });
+      registerDocIdentity('CLAUDE.md');
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      containers.push(host);
+      mount(TAB_DOC, host);
+      await frames(4);
+      await narrowChecks(host, host.shadowRoot!, width);
+      await entryCloses(host.shadowRoot!);
+    });
+  }
+});
+
+// ── (d) The editor at 414 — surface 29 ─────────────────────────────────────────────────────────
+// The split started 56 px below the pane's top (the column's old top padding, kept to clear the
+// floating opener): an empty band under the toolbar. With the opener in the flow, the editor
+// starts where Read view's first box (the opener) starts.
+describe('8.1i (d) — at 414 the editor starts under the toolbar like Read view', () => {
+  it('the gap toolbar → editor equals the gap toolbar → Read view’s first box', async () => {
+    await page.viewport(414, 896);
+    const { host, container } = await openFile('light');
+    const sr = host.shadowRoot!;
+    const header = container.querySelector<HTMLElement>('.peekover-app__header')!.getBoundingClientRect().bottom;
+    const readGap = sr.querySelector('.peekover-toc__toggle')!.getBoundingClientRect().top - header;
+    segment(container, 'edit').click();
+    await waitFor(() => sr.querySelector('.cm-editor'), 'the editor');
+    await frames(4);
+    const editGap = sr.querySelector('.peekover-editor')!.getBoundingClientRect().top - header;
+    expect(Math.abs(editGap - readGap), `edit ${editGap} vs read ${readGap}`).toBeLessThanOrEqual(0.5);
+    expect(editGap, 'no band: the pane padding only').toBeLessThanOrEqual(32);
+  });
 });

@@ -84,7 +84,7 @@ describe('serializeReaderDocument', () => {
 });
 
 describe('translateReaderStylesheet — the :host translation (finding (b))', () => {
-  it('pins the LIVE READER_CSS at exactly 30 :host-scoped rule sites', () => {
+  it('pins the LIVE READER_CSS at exactly 37 :host-scoped rule sites', () => {
     // Task 2.1's own finding (decisions.md, progress.md) counted 26 :host rule sites over the
     // WHOLE FILE (which also exports CONTAINED_CSS); this module only ever translates READER_CSS's
     // own text (module doc comment: CONTAINED_CSS is out of scope BY CONSTRUCTION), so at 2.1 it
@@ -108,10 +108,15 @@ describe('translateReaderStylesheet — the :host translation (finding (b))', ()
     // M13 walk fix 8.1i (b) moves it 29 → 30, DELIBERATELY: `:host([data-toc="open"]) .peekover-toc~.peekover-raw` gives
     // the Raw view the reading column's box beside an open rail. DROPPED like every other `data-toc` site (an export is
     // the reading view, never Raw) — carried stays 10.
+    //
+    // M13 walk fix 8.1i (a) moves it 30 → 37, DELIBERATELY: the narrow (≤ 863 px) contents — the opener in the flow
+    // whatever `data-toc` says (two sites), the column, the diff, the raw block and the footnote at full width beside a
+    // remembered open rail (four), and the sheet (`data-toc-sheet="open"`, three; one shares a rule). Each is a VALUE
+    // predicate, so each is DROPPED like every other `data-toc` site — carried stays 10.
     const { diagnostics } = translateReaderStylesheet('light');
-    expect(diagnostics.hostSiteCount).toBe(30);
+    expect(diagnostics.hostSiteCount).toBe(37);
     expect(diagnostics.carried, 'carried unchanged by 5.6 FIX, 8.1h and 8.1i').toBe(10);
-    expect(diagnostics.carried + diagnostics.resolved + diagnostics.dropped).toBe(30);
+    expect(diagnostics.carried + diagnostics.resolved + diagnostics.dropped).toBe(37);
   });
 
   it('CARRY: translates bare :host to body, unconditionally, in every theme', () => {

@@ -33,6 +33,7 @@
 // width, RELOAD, see it remembered) is the named 8.1 human-gate item.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { page } from 'vitest/browser';
 import { mount } from '../../src/render/mount';
 import { TOC_MIN_WIDTH, TOC_MAX_WIDTH } from '../../src/render/tocView';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
@@ -221,6 +222,15 @@ async function widthDerivedDefault(
 // ── The suite ───────────────────────────────────────────────────────────────────────────────
 
 describe.each(SURFACES)('TOC carry-over — $name surface (task 6.1)', ({ mount: mountSurface }) => {
+  // M13 8.1i (a): at <= 863 px the opener toggles the narrow SHEET (unsaved) instead of the rail, so the rail's own
+  // behaviour is exercised at a wide viewport; the harness default (414) is restored after each test.
+  beforeEach(async () => {
+    await page.viewport(1280, 900);
+  });
+  afterEach(async () => {
+    await page.viewport(414, 896);
+  });
+
   it('a persisted tocOpen OPPOSING the width rule SURVIVES the rAF (D-F, adversarial by construction)', async () => {
     // THE D-F TEST, and the reason this suite exists. The stored value is chosen to CONTRADICT
     // whatever the width rule decides on this viewport, so the rAF — which re-runs that rule one

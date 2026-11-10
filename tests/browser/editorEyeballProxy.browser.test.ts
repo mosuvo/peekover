@@ -756,7 +756,12 @@ const hitAtCentre = (el: Element): Element | null => {
 
 async function setRail(host: HTMLElement, state: 'open' | 'collapsed'): Promise<void> {
   await frames(); // the rail's own width-derived first-frame decision lands before it is driven
-  if (host.getAttribute('data-toc') !== state) inHost(host, 'peekover-toc__toggle')!.click();
+  if (host.getAttribute('data-toc') !== state) {
+    // M13 8.1i (a): at <= 863 px the opener drives the narrow sheet, not the rail; an OPEN rail there is a
+    // remembered state, applied the way the settings restore applies it.
+    if (window.innerWidth <= 863) host.setAttribute('data-toc', state);
+    else inHost(host, 'peekover-toc__toggle')!.click();
+  }
   await frames();
   expect(host.getAttribute('data-toc'), `the rail is ${state}`).toBe(state);
 }

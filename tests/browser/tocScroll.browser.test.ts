@@ -667,6 +667,15 @@ function assertOccludesAndReserves(shadow: ShadowRoot, sizeHost: HTMLElement): v
 }
 
 describe('TOC rail occludes + column reserves — real engine, both surfaces (group-3 gate fix)', () => {
+  // M13 8.1i (a): at <= 863 px the opener toggles the narrow SHEET (unsaved) instead of the rail, so the rail's own
+  // behaviour is exercised at a wide viewport; the harness default (414) is restored after each test.
+  beforeEach(async () => {
+    await page.viewport(1280, 900);
+  });
+  afterEach(async () => {
+    await page.viewport(414, 896);
+  });
+
   it('full-page host: rail is opaque and the column never underlaps it (:host is the scrollport)', async () => {
     const { host } = mountFullPage();
     await waitForScrollable(host);

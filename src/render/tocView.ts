@@ -229,7 +229,47 @@ function buildTicks(entries: TocEntry[]): HTMLElement {
  *  below), not one path with a suppression flag. */
 function setTocOpen(host: HTMLElement, opener: HTMLButtonElement, open: boolean): void {
   host.setAttribute('data-toc', open ? 'open' : 'collapsed');
-  opener.setAttribute('aria-expanded', String(open));
+  syncExpanded(host, opener);
+}
+
+// ── M13 walk fix 8.1i (a): THE NARROW SHEET ────────────────────────────────────────────────────
+// At or below the compact toolbar's breakpoint the opener sits in the document flow above the
+// title (readerCss.ts), and opening shows the list as a full-screen SHEET over the page instead of
+// a rail beside a narrowed column. The sheet is its own host attribute, NOT `data-toc`: `data-toc`
+// is the remembered, persisted rail state (6.1, one global preference), and a phone-width glance
+// at the contents must neither be saved nor be re-opened as a sheet on the next load. So at narrow
+// widths `data-toc` is ignored by the CSS and only `data-toc-sheet` opens anything; crossing the
+// breakpoint closes the sheet and the remembered state shows again. `aria-expanded` follows
+// whichever of the two is on screen.
+
+/** The compact toolbar's breakpoint (appShell.ts: ≤ 863 px) — the same line readerCss.ts keys on. */
+const NARROW_QUERY = '(max-width:863px)';
+const SHEET_ATTR = 'data-toc-sheet';
+const isNarrow = (): boolean => typeof matchMedia === 'function' && matchMedia(NARROW_QUERY).matches;
+
+/** The opener's `aria-expanded`: the sheet at narrow widths, the rail otherwise. */
+function syncExpanded(host: HTMLElement, opener: HTMLButtonElement): void {
+  opener.setAttribute('aria-expanded', String(isNarrow() ? host.hasAttribute(SHEET_ATTR) : host.getAttribute('data-toc') === 'open'));
+}
+
+/** Open or close the narrow sheet. With `focus`, opening moves focus into the list (the entry
+ *  being read, else the first) and closing returns it to the opener without scrolling the page. */
+function setSheet(host: HTMLElement, open: boolean, focus = true): void {
+  const opener = tocOpenerFor(host);
+  if (!opener) return;
+  if (open) host.setAttribute(SHEET_ATTR, 'open');
+  else host.removeAttribute(SHEET_ATTR);
+  syncExpanded(host, opener);
+  if (!focus) return;
+  const root = host.shadowRoot!;
+  if (open) (root.querySelector<HTMLElement>('.peekover-toc__link[aria-current]') ?? root.querySelector<HTMLElement>('.peekover-toc__link'))?.focus();
+  else opener.focus({ preventScroll: true });
+}
+
+/** The user's toggle (the opener, the backtick): the sheet at narrow widths, the rail otherwise. */
+function toggleByUser(host: HTMLElement, opener: HTMLButtonElement): void {
+  if (isNarrow()) setSheet(host, !host.hasAttribute(SHEET_ATTR));
+  else setTocOpenByUser(host, opener, host.getAttribute('data-toc') !== 'open');
 }
 
 /** The USER-INITIATED half of the open/collapsed change (task 6.1): apply it through the single
@@ -270,9 +310,7 @@ function buildOpener(host: HTMLElement): HTMLButtonElement {
   opener.className = 'peekover-toc__toggle';
   opener.textContent = 'On this page';
   opener.setAttribute('aria-expanded', String(DEFAULT_TOC_OPEN));
-  opener.addEventListener('click', () => {
-    setTocOpenByUser(host, opener, host.getAttribute('data-toc') !== 'open');
-  });
+  opener.addEventListener('click', () => toggleByUser(host, opener));
   return opener;
 }
 
@@ -453,6 +491,17 @@ let settingsSubscribed = false;
 function ensureSettingsSubscribed(): void {
   if (settingsSubscribed) return;
   settingsSubscribed = true;
+  // 8.1i (a): crossing the narrow breakpoint closes any sheet and re-derives `aria-expanded`.
+  if (typeof matchMedia === 'function') {
+    matchMedia(NARROW_QUERY).addEventListener('change', () => {
+      for (const host of tocHosts) {
+        if (!host.isConnected) continue;
+        host.removeAttribute(SHEET_ATTR);
+        const opener = tocOpenerFor(host);
+        if (opener) syncExpanded(host, opener);
+      }
+    });
+  }
   onSettingsChange((settings) => {
     for (const host of tocHosts) {
       if (!host.isConnected) {
@@ -567,6 +616,7 @@ export function buildTocView(
   // tears the old observer down. Idempotent; no-op the first time (task 3.2 lifecycle).
   teardownScrollSpy(host);
 
+  host.removeAttribute(SHEET_ATTR); // a fresh render starts with the narrow sheet closed (8.1i)
   if (countHeadings(model) < 2) return null; // threshold omit — no rail below 2 headings
 
   const nav = document.createElement('nav');
@@ -582,7 +632,32 @@ export function buildTocView(
   // immaterial to its placement, so it is appended last.
   const opener = buildOpener(host);
   const ticks = buildTicks(model);
-  nav.append(opener, ticks, buildList(model), buildResizer(host));
+  // 8.1i (a): the narrow sheet's Close (shown only while the sheet is open, readerCss.ts), and its
+  // keys: Escape closes; Tab wraps inside the sheet, which covers the page; an entry closes it.
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'peekover-toc__close';
+  close.textContent = 'Close';
+  close.setAttribute('aria-label', 'Close contents');
+  close.addEventListener('click', () => setSheet(host, false));
+  nav.append(opener, close, ticks, buildList(model), buildResizer(host));
+  nav.addEventListener('click', (e) => {
+    if (host.hasAttribute(SHEET_ATTR) && (e.target as Element).closest?.('.peekover-toc__link')) setSheet(host, false);
+  });
+  nav.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (!host.hasAttribute(SHEET_ATTR)) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setSheet(host, false);
+    } else if (e.key === 'Tab') {
+      const stops = [...nav.querySelectorAll<HTMLElement>('button')].filter((b) => b.getClientRects().length > 0);
+      const edge = e.shiftKey ? stops[0] : stops[stops.length - 1];
+      if (host.shadowRoot?.activeElement === edge) {
+        e.preventDefault();
+        (e.shiftKey ? stops[stops.length - 1] : stops[0]).focus();
+      }
+    }
+  });
 
   // Task 6.1: subscribe ONCE (module-level) so a cold-start `load()` publishing after this mount
   // still reaches this rail — the normal path, not an edge case (see the LATE ARRIVAL note).
@@ -900,10 +975,9 @@ function resolveActiveTocHost(): HTMLElement | null {
 function toggleTocHost(host: HTMLElement): void {
   const opener = tocOpenerFor(host);
   if (!opener) return;
-  // The backtick is a USER change, exactly like clicking the opener, so it persists through the
-  // same `setTocOpenByUser` path (task 6.1). If it used the bare writer, the rail would remember
-  // clicks but silently forget keyboard toggles.
-  setTocOpenByUser(host, opener, host.getAttribute('data-toc') !== 'open');
+  // The backtick is a USER change, exactly like clicking the opener, so it goes through the same
+  // path (task 6.1: it persists the rail; 8.1i: at narrow widths it toggles the sheet instead).
+  toggleByUser(host, opener);
 }
 
 /** The bare key that toggles the rail. A backtick — chosen at the plan gate over `t` to
