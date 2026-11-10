@@ -84,7 +84,7 @@ describe('serializeReaderDocument', () => {
 });
 
 describe('translateReaderStylesheet — the :host translation (finding (b))', () => {
-  it('pins the LIVE READER_CSS at exactly 28 :host-scoped rule sites', () => {
+  it('pins the LIVE READER_CSS at exactly 29 :host-scoped rule sites', () => {
     // Task 2.1's own finding (decisions.md, progress.md) counted 26 :host rule sites over the
     // WHOLE FILE (which also exports CONTAINED_CSS); this module only ever translates READER_CSS's
     // own text (module doc comment: CONTAINED_CSS is out of scope BY CONSTRUCTION), so at 2.1 it
@@ -100,10 +100,14 @@ describe('translateReaderStylesheet — the :host translation (finding (b))', ()
     // 013 task 5.6 FIX moves it again, 26 → 28, DELIBERATELY: two `:host([data-toc="collapsed"])` sites that hold the
     // tab reader's collapsed contents handle to one fixed-height line (its top clearance no longer follows the system
     // face). Both are DROPPED (an export has no contents rail), as every other `data-toc` site is — carried stays 10.
+    //
+    // M13 walk fix 8.1h moves it 28 → 29, DELIBERATELY: `:host([data-toc="open"]) .peekover-watch-note[data-place="aside"]`
+    // keeps the can't-watch footnote on the column's text edge beside an open contents rail. DROPPED like every other
+    // `data-toc` site (the footnote is tab-reader only; the export runs from the app page) — carried stays 10.
     const { diagnostics } = translateReaderStylesheet('light');
-    expect(diagnostics.hostSiteCount).toBe(28);
-    expect(diagnostics.carried, 'carried unchanged by 5.6 FIX').toBe(10);
-    expect(diagnostics.carried + diagnostics.resolved + diagnostics.dropped).toBe(28);
+    expect(diagnostics.hostSiteCount).toBe(29);
+    expect(diagnostics.carried, 'carried unchanged by 5.6 FIX and 8.1h').toBe(10);
+    expect(diagnostics.carried + diagnostics.resolved + diagnostics.dropped).toBe(29);
   });
 
   it('CARRY: translates bare :host to body, unconditionally, in every theme', () => {

@@ -27,7 +27,11 @@
 // WATCH NOTE AS AN ASIDE (walk fix 8.1c): a watch note with no Watch control beside it (a raw web
 // page; Firefox file://) is placed after the reading column by mount() and marked
 // data-place="aside"; it flows after the last line, aligned to the column's text edge, so it never
-// covers text. The column's 130px bottom room for the floating pills moves below the aside. (The task-list checkmark uses var(--paper) on
+// covers text. The column's 130px bottom room for the floating pills moves below the aside.
+// 8.1h (HUMAN RULING, option A): a quiet footnote, not a card — its box mirrors the reading column
+// (the same measure, padding and margins, the contents-rail rule included), so its text starts at
+// the paragraphs' left x at every width; no fill, border, accent bar or shadow; the note's own muted
+// 12px UI face. 8.1c's margin formula ignored the rail (298px vs the text's 173px at 1280). (The task-list checkmark uses var(--paper) on
 // var(--accent): those two ALWAYS contrast — opposite ends of the theme — so that
 // pairing is safe and is not a trap case.)
 
@@ -371,7 +375,8 @@ export const READER_CSS = /* css */ `
   padding:9px 13px;box-shadow:var(--shadow);
 }
 .peekover-watch-note[hidden]{display:none}
-.peekover-watch-note[data-place="aside"]{position:static;margin:0 0 130px max(32px,calc((100% - var(--reader-measure))/2 + 32px))}
+.peekover-watch-note[data-place="aside"]{position:static;max-width:var(--reader-measure);width:100%;margin:0 auto 130px;padding:0 32px;background:none;border:0;border-radius:0;box-shadow:none}
+:host([data-toc="open"]) .peekover-watch-note[data-place="aside"]{width:auto;margin-right:var(--toc-w);margin-left:max(0px,calc((100% - var(--reader-measure) - var(--toc-w)) / 2))}
 .peekover-reader:has(+.peekover-watch-note[data-place="aside"]){padding-bottom:24px}
 
 /* The persistent capture disclosure (task 3.1, D-3) — a SEPARATE channel from the watch note,

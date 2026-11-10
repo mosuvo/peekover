@@ -39,7 +39,8 @@ import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { resetCodeThemeControlsForTest } from '../../src/theme/codeThemeControl';
 import { registerWatchTarget, resetWatchRegistryForTest, type WatchTarget } from '../../src/watch/watchRegistry';
-import { resetWatchControlsForTest, WATCH_HOST_ATTR, WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
+import { resetWatchControlsForTest, WATCH_HOST_ATTR, WATCH_CONTROL_CLASS, WATCH_NOTE_CLASS } from '../../src/watch/watchControl';
+import { installContentWatch } from '../../src/watch/contentWatch';
 import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { getDiffContext, resetDiffRegistryForTest } from '../../src/render/diffRegistry';
 import { storeSnapshot } from '../../src/app/snapshots';
@@ -432,6 +433,18 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
       census(host, 'tab reader (raw host)', theme);
     });
 
+    // 8.1h: the "can't watch here" footnote after the last line (Firefox file://; the raw-web one is the same element
+    // and style) — muted small text straight on the paper, so its own surface.
+    it(`content-script reader, the can't-watch footnote — ${theme}`, async () => {
+      installContentWatch({ url: 'file:///D:/notes/rollout.md', send: async () => ({ ok: false, error: 'not used' }), backgroundCanReadFileUrls: false });
+      const host = freshHost();
+      mount(DOC, host);
+      await themed(host, theme);
+      const note = host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_NOTE_CLASS}`);
+      expect(note?.dataset.place, 'the footnote is rendered').toBe('aside');
+      census(host, 'tab reader (can’t-watch footnote)', theme);
+    });
+
     // 013 task 5.6: the tab reader's states the fixtures above do not reach — the load bar used (the network
     // indicator lit, the watch pill at rest), the user's Raw view, and the render-failure banner.
     it(`content-script reader, network used and the Raw view — ${theme}`, async () => {
@@ -689,8 +702,8 @@ describe('the contrast census (013 task 2.2, D-16)', () => {
     // 22 → 44 (eleven app states), and at 5.6, 44 → 42 (`unsupported` removed: no browser Peekover supports produces it)
     // → 48 (the tab reader's network-used, Raw-view and render-failure states), and at 5.7, 48 → 52 (the editor's save bar
     // saving, and with a save's outcome), and at 6.1, 52 → 60 (the setup guide's four states), and at 8.1f, 60 → 62
-    // (the setup guide's site-access-off state).
-    expect(covered.size, 'surfaces × themes measured').toBe(62);
+    // (the setup guide's site-access-off state), and at 8.1h, 62 → 64 (the tab reader's can't-watch footnote).
+    expect(covered.size, 'surfaces × themes measured').toBe(64);
     const unlisted = [...failing.values()].filter((r) => !PENDING.has(r.key)).map((r) => `${r.key} — "${r.text}" ${r.fg} on ${r.bg}: ${r.ratio}:1 < ${r.bar}`);
     const nowPassing = [...PENDING].filter((k) => k.startsWith(`${ENGINE} ·`) && !failing.has(k));
     expect(unlisted, 'below-AA text not on the pending list').toEqual([]);

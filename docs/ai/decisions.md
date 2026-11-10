@@ -1,6 +1,43 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1h — WALK FIX (Firefox walk C13), HUMAN RULING option A: the "can't watch here" notes
+  are a quiet footnote after the last line.** Local, on `main`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10;
+  1 low, ignored).
+  - **Ruling (after 8.1g's measurement that no stack placement clears the text):** the notes stay in 8.1c's place,
+    with the approved wording — `FIREFOX_CONTENT_SCRIPT_NOTE` "Watching isn't available here. To watch, open the folder
+    in Peekover's app page."; `REMOTE_DOCUMENT_NOTE` "Watching isn't available for files on the web." — restyled as a
+    footnote: text on the column's text edge, no box / border / shadow / accent bar, muted small text in the UI face,
+    one modest gap. The stopped-watch note by the Watch button is unchanged.
+  - **Found on the way (before shots, Firefox 159):** 8.1c's aside margin ignored the contents rail — the note sat at
+    x = 298 while the paragraphs start at 173 (1280). **Fix (`readerCss.ts`):** the aside's box mirrors the reading
+    column — `max-width:var(--reader-measure); width:100%; margin:0 auto 130px; padding:0 32px` and the same
+    `:host([data-toc="open"])` rule (`width:auto`, rail-aware margins); `background:none; border:0; border-radius:0;
+    box-shadow:none`; the note's own font (`var(--sans)`, 12px, `var(--muted)` = the Theme button's family and colour).
+    The 130px room moved from padding to margin so the box hugs the text (Firefox read the padded box 0.4 px off screen).
+  - **Red first:** `watchAvailability.test.ts` 2 red (the sentences pinned; its old REMOTE "shape" test, which required
+    "local files" / "network" and forbade "isn't available", retired by the ruling; the pairwise-distinct test kept);
+    `watchNoteAside.browser.test.ts` 16 / 16 per engine red (now 414 / 1080 / 1280 / 1440 × light / dark × both notes:
+    the text; its first line's left x = the first paragraph's ±0.5 px; border 0 on all sides, transparent
+    background, no shadow; the Theme button's font family and colour, ≤ 13px; a gap of 8–64 px below the last line;
+    the hit-test at rest / mid / end kept) → green. **Ablation:** HEAD's CSS with the new strings → the left-edge check
+    red at every width (16 px off at 414, 141 px at 1080 / 1280 / 1440).
+  - **Census:** the footnote is a new surface ("tab reader (can't-watch footnote)", Firefox `file://`), 62 → 64; no
+    below-AA pair in either theme. **Necessary ripple:** `htmlExport.test.ts`'s `:host` site pin 28 → 29 (the new
+    rail-open rule; dropped by the export like every `data-toc` site; carried stays 10).
+  - **Claims ledger:** no rows change — the tab reader's notes are not a ledger surface (no row named either old
+    sentence; no published document quotes them).
+  - **Shots (Firefox 159.0.1, the built extension, `sample.md` over `file://`, 1280 × 800, scrolled to the end; a
+    throwaway profile with `extensions.webextensions.fileSchemeAccess.requireOptIn` false = "Access local files" on):**
+    `D:\Dev\peekover-shots\8.1\firefox\8.1h-before-file-bottom-{light,dark}.png` (the amber-barred card at x = 298),
+    `8.1h-after-file-bottom-{light,dark}.png` (one muted line, text at x = 173 with the paragraphs; computed border
+    0px, background transparent, shadow none).
+  - **Bytes (same-session A-B, both engines, HEAD `ddbafec` stashed vs the tree):** content script **345,424 → 345,378
+    B (−46)** (`391caf0f` / `b386acc7`; G-7 not approached); app chunk **551,770 → 551,724 B (−46)** (`944b599f`);
+    onboarding unchanged; `.output` **6,649,920 / 6,649,906 B** (−92 each) of 7,340,032, headroom 690,112 / 690,126;
+    `permissions: []`. Zips 2,032,886 / 2,032,887 B (`610d7a31` / `7f1c4fb4`).
+  - **Verify:** lint clean; unit 1,697 / 1,697; browser 2,697 passed, 65 skipped, 0 failed (both engines).
+
 - **2026-11-10 · M13 TASK 8.1g — WALK FIXES (Firefox walk C13 / C14; CC's Edge B10 findings), HUMAN COPY APPROVAL
   2026-11-10. Parts 2, 3, 4 LANDED; part 1 STOPPED (task 8.1h, back to the human).** Local, on `main`; not pushed.
   `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).

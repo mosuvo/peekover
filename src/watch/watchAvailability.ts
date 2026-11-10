@@ -93,11 +93,12 @@ export interface WatchDecision {
   note: string | null;
 }
 
-/** (b) The Firefox content-script reader — a `file://` page opened from the file manager. */
-export const FIREFOX_CONTENT_SCRIPT_NOTE =
-  "Watching isn't available for files opened directly from your file manager in Firefox. " +
-  'Firefox does not let extensions re-read a file:// page, so Peekover cannot see changes here. ' +
-  "Open the file's folder in Peekover's app page instead — watching works there.";
+/**
+ * (b) The Firefox content-script reader — a `file://` page opened from the file manager. Firefox does not let an
+ * extension re-read a file:// page, so the tab cannot watch; the app page can. Shortened to a footnote at walk fix
+ * 8.1h (HUMAN RULING 2026-11-10, option A): what is not happening here, and where watching works.
+ */
+export const FIREFOX_CONTENT_SCRIPT_NOTE = "Watching isn't available here. To watch, open the folder in Peekover's app page.";
 
 /**
  * (a) The Firefox app page, folder chosen through the file picker rather than dragged. HUMAN RULING 2026-11-10: a
@@ -120,11 +121,10 @@ export const FIREFOX_PICKER_NOTE =
  * platform limit that names a working alternative) and unlike 4.3's dead-read note (a failure the
  * file suffered), this names NEITHER a fault the user made NOR a fix they could apply: there simply
  * is no local file behind a network document to follow. Saying that plainly is why it must not be
- * interchangeable with the other two — swapping any pair should read as wrong.
+ * interchangeable with the other two — swapping any pair should read as wrong. Shortened to a one-line footnote at
+ * walk fix 8.1h (HUMAN RULING 2026-11-10, option A); still no fault and no fix.
  */
-export const REMOTE_DOCUMENT_NOTE =
-  'Peekover watches local files for changes. This document is loaded over the network, so there is ' +
-  'no file on disk to follow — you are seeing it as it loaded.';
+export const REMOTE_DOCUMENT_NOTE = "Watching isn't available for files on the web.";
 
 /**
  * PURE: can this surface watch, and if not, what should the user be told?

@@ -132,7 +132,6 @@ describe('watchCapability — the app-page surface (task 4.4 case a)', () => {
 
 describe('the explanations themselves (task 4.4)', () => {
   it.each([
-    ['content script', FIREFOX_CONTENT_SCRIPT_NOTE],
     ['picker', FIREFOX_PICKER_NOTE],
   ])('%s: says what is not happening, why, AND what to do instead', (_name, note) => {
     // The last clause is what makes these worth shipping rather than merely honest: in BOTH cases
@@ -153,21 +152,19 @@ describe('the picker-route wording (HUMAN RULING 2026-11-10, after the real-pick
   });
 });
 
-describe('the REMOTE note is a SCOPE statement, a different shape (task 4.6-rescope)', () => {
-  it('names the scope (local files / network), NOT a fault or a fix', () => {
-    // A scope boundary, not a platform limit and not a failure. It must therefore read UNLIKE the
-    // Firefox notes: it names no engine, offers no alternative route ("instead"), and — critically —
-    // does not imply the user did something wrong or could turn something on.
-    expect(REMOTE_DOCUMENT_NOTE).toMatch(/local files/i);
-    expect(REMOTE_DOCUMENT_NOTE).toMatch(/network/i);
-    // Not a platform-limit note: no engine name, no "isn't available", no "do X instead".
-    expect(REMOTE_DOCUMENT_NOTE).not.toMatch(/Firefox|Chrome|isn't available|instead/i);
-    // Not a fault or a fix the user could apply.
-    expect(REMOTE_DOCUMENT_NOTE).not.toMatch(/could not|couldn't|error|failed|enable|turn on|allow/i);
-    // Plain language, no jargon.
-    expect(REMOTE_DOCUMENT_NOTE).not.toMatch(/http|file:\/\/\/|URL|undefined/i);
+// 8.1h (HUMAN RULING 2026-11-10, option A): the two tab-reader notes are short footnotes. Firefox file:// says what is
+// not happening and where watching works; the raw-web one states the scope in one line. Pinned as approved.
+describe('the tab reader\'s can\'t-watch footnotes (walk fix 8.1h)', () => {
+  it('FIREFOX_CONTENT_SCRIPT_NOTE is the approved sentence: not here, and where watching works', () => {
+    expect(FIREFOX_CONTENT_SCRIPT_NOTE).toBe("Watching isn't available here. To watch, open the folder in Peekover's app page.");
   });
+  it('REMOTE_DOCUMENT_NOTE is the approved sentence: a scope line, no fault and no fix', () => {
+    expect(REMOTE_DOCUMENT_NOTE).toBe("Watching isn't available for files on the web.");
+    expect(REMOTE_DOCUMENT_NOTE).not.toMatch(/could not|couldn't|error|failed|enable|turn on|allow|Firefox|Chrome/i);
+  });
+});
 
+describe('the content-script notes stay distinct (task 4.6-rescope; its old REMOTE shape test retired at 8.1h)', () => {
   it('the three content-script notes are NOT interchangeable — pairwise distinct', () => {
     // The discrimination check the browser suite proves at the RENDER level; asserted here on the
     // strings themselves so a future edit that collapses two of them fails loudly. Swapping any pair

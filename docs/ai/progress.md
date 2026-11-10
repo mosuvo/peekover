@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. 8.1h (the watch notes in the stack) STOPPED, back to the human. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -17,16 +17,13 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
-**M13 TASK 8.1h — STOPPED (2026-11-10), THE HUMAN DECIDES: the "can't watch here" notes back in the bottom-left
-stack.** Record: `decisions.md`, "M13 TASK 8.1g" (part 1). Measured, both engines identical: under the Theme button a
-one-line note covers 1–2 text lines at rest and mid-scroll at **every** width (414 / 1080 / 1280 / 1440), both themes —
-the column's text starts at x = 32 / 73 / 173 / 253 and the notes are 446 px (Firefox) / 258 px (web) wide from x = 16.
-Nothing landed; the approved texts are not in the tree. **Options:** **(A, recommended)** the new, shorter texts in
-8.1c's place (the aside after the last line) — never over text, no new placement; **(B)** in the stack only where a
-WRAPPED note clears the column (≥ 1280 with ≤ 149 / 229 px width — the Firefox note 4–5 lines), the aside below that:
-two placements to keep true; **(C)** a short pill in the stack (Theme-button size, "Not watching") that opens the
-sentence on click — clear at 1280 / 1440, but at 414 / 1080 it covers text as the Theme button already does, so it
-fails the hard requirement as written. **The human:** pick A, B or C (or another), then an agent runs 8.1h.
+**M13 TASK 8.1h LANDED (2026-11-10) — WALK FIX (C13), HUMAN RULING option A: the "can't watch here" notes are a
+quiet footnote after the last line.** Record: `decisions.md`, "M13 TASK 8.1h". The approved short wording ("Watching
+isn't available here. To watch, open the folder in Peekover's app page." / "Watching isn't available for files on the
+web."), one muted line whose text starts with the paragraphs (8.1c's margin had ignored the contents rail: x = 298 vs
+173 at 1280), no box, border, bar or shadow. Red 2 unit, 16 / 16 per engine → green; census 64, AA both themes.
+Content script −46 B. Shots `D:\Dev\peekover-shots\8.1\firefox\8.1h-{before,after}-file-bottom-{light,dark}.png`.
+Tasks: 63, 59 ticked. **The human re-checks:** a Firefox `file://` tab and a raw GitHub file, scrolled to the end.
 
 **M13 TASK 8.1g LANDED (2026-11-10) — WALK FIXES (Firefox walk C14; CC's Edge B10): the drag note, the guide's
 conditional site line, the launcher's Edge notes.** Record: `decisions.md`, "M13 TASK 8.1g". (2) The drag note now
@@ -36,7 +33,7 @@ keeps the direct site step ("in Chrome and Edge"); "off" says "If site access fo
 (4) `walk-profiles.ps1`: Edge disables Peekover on a `-Keep` relaunch unless Developer mode is on (Brave does not);
 Edge signs a fresh profile into the machine's Microsoft account and no flag stops it; the four `b10d` Edge shots
 cropped (originals in `_originals-with-account\` for the human to delete). Content script identical; onboarding
-chunk +254 B, app chunk −221 B; `.output` 6,650,012 / 6,649,998 B. Tasks: 63, 58 ticked. **The human re-checks:**
+chunk +254 B, app chunk −221 B; `.output` 6,650,012 / 6,649,998 B. Tasks: 63, 58 ticked then. **The human re-checks:**
 Firefox drag → change the folder → drag again; Chrome / Edge guide with only the file-URL toggle off.
 
 **M13 TASK 8.1f LANDED (2026-11-10) — WALK FIX (I-2): the setup guide checks site access, not only the file-URL

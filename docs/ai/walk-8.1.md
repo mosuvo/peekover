@@ -232,8 +232,11 @@ guide-once-across-restarts check stays the signed 0.0.9's (done).*
 13. **I-3 + surfaces 34–36 on Firefox** — `file://` sample.md with the setting on, light and dark: the reader, the
     contents list, scrolling; **8.1c**: the "Watching isn't available…" note below the last line; **8.1b**: dark link
     hover. *8 min*
-   - *The human's C13 finding → HUMAN COPY APPROVAL 2026-11-10 (move the note back under Theme, new words) → task
-     8.1h, STOPPED: under Theme, the note covers text at every width (measured); options in `progress.md`.*
+   - *The human's C13 finding → HUMAN COPY APPROVAL 2026-11-10 (move the note back under Theme, new words) → 8.1h,
+     STOPPED (under Theme it covers text at every width, measured) → HUMAN RULING option A → 8.1h landed: the short
+     wording as a quiet footnote after the last line, its text on the paragraphs' left edge (8.1c's had ignored the
+     contents rail), no box. Shots `D:\Dev\peekover-shots\8.1\firefox\8.1h-{before,after}-file-bottom-{light,dark}.png`.
+     Re-check: the Firefox `file://` tab and a raw GitHub file, scrolled to the end.*
 14. **I-11 + 9.3b + 9.3a** — drag a folder onto the app page: read the note ("…Watch isn't offered for a picked folder —
     drag it in instead. Watching still works here…"); open a file, press Watch, save in your editor at once: the
     change shows within ~1 s. Then "Open a folder" (the picker): read both notes (9.3c). *8 min*

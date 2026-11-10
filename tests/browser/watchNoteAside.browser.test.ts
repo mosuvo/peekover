@@ -3,6 +3,10 @@
 // FIREFOX_CONTENT_SCRIPT_NOTE) are a quiet aside after the document's last line, not a floating panel over the text.
 // The stopped-watch note (a watch that died, with the Watch control still beside it) keeps its place by the control.
 //
+// 8.1h (HUMAN RULING 2026-11-10, option A): the same place, the approved short wording, and a quiet footnote rather
+// than a card — its text starts at the paragraphs' left x (the column's text edge, the contents rail open or not), no
+// box / border / shadow / accent bar, the reader's UI face in muted small text, one modest gap below the last line.
+//
 // The hit-test is 5.6's (tabReaderChrome.browser.test.ts): the note's box against every line box of the reading
 // column, in one coordinate space — at rest, mid-scroll and at the end; 414 / 1080 / 1440; light and dark; both
 // engines run every case (the content-script state is set the way the content script sets it, installContentWatch).
@@ -36,8 +40,9 @@ const DOC = [
 ].join('\n');
 
 const CASES = [
-  { name: 'raw web page', url: 'https://raw.githubusercontent.com/o/r/main/README.md', canRead: true, note: REMOTE_DOCUMENT_NOTE },
-  { name: 'Firefox file://', url: 'file:///D:/notes/rollout.md', canRead: false, note: FIREFOX_CONTENT_SCRIPT_NOTE },
+  // The approved sentences, as written (8.1h), and the constants that must carry them.
+  { name: 'raw web page', url: 'https://raw.githubusercontent.com/o/r/main/README.md', canRead: true, note: REMOTE_DOCUMENT_NOTE, text: "Watching isn't available for files on the web." },
+  { name: 'Firefox file://', url: 'file:///D:/notes/rollout.md', canRead: false, note: FIREFOX_CONTENT_SCRIPT_NOTE, text: "Watching isn't available here. To watch, open the folder in Peekover's app page." },
 ] as const;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -77,6 +82,19 @@ function textLines(host: HTMLElement): DOMRect[] {
   }
   return out;
 }
+/** The left x of an element's first line of text (its first text node's first line box). */
+function textLeft(el: Element): number {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.textContent?.trim()) continue;
+    const range = document.createRange();
+    range.selectNodeContents(n);
+    const first = [...range.getClientRects()].find((r) => r.width > 0);
+    if (first) return first.left;
+  }
+  return Number.NaN;
+}
+
 const overlaps = (a: DOMRect, b: DOMRect): boolean => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 const box = (r: DOMRect): string => `[${r.left.toFixed(1)},${r.top.toFixed(1)} → ${r.right.toFixed(1)},${r.bottom.toFixed(1)}]`;
 
@@ -114,12 +132,13 @@ afterEach(async () => {
 
 describe('walk fix 8.1c — a "can\'t watch here" note covers no text', () => {
   for (const c of CASES) {
-    for (const width of [414, 1080, 1440]) {
+    for (const width of [414, 1080, 1280, 1440]) {
       for (const theme of ['light', 'dark'] as const) {
         it(`${c.name} · ${width} · ${theme}`, async () => {
           const host = await tabReader(c.url, c.canRead, theme, width);
           const note = host.shadowRoot!.querySelector<HTMLElement>(`.${WATCH_NOTE_CLASS}`)!;
-          expect(note.textContent).toBe(c.note);
+          expect(note.textContent).toBe(c.text);
+          expect(c.note).toBe(c.text);
           expect(note.hidden).toBe(false);
           expect(host.shadowRoot!.querySelector(`.${WATCH_CONTROL_CLASS}`), 'no Watch control here').toBeNull();
           expect(host.scrollHeight, 'the document is long enough to scroll').toBeGreaterThan(host.clientHeight * 2);
@@ -133,6 +152,25 @@ describe('walk fix 8.1c — a "can\'t watch here" note covers no text', () => {
           const last = textLines(host).at(-1)!;
           expect(r.top, 'below the last line').toBeGreaterThanOrEqual(last.bottom);
           expect(r.bottom <= host.clientHeight && r.top >= 0, `on screen at the end ${box(r)}`).toBe(true);
+          // 8.1h — a footnote, not a card. Its text starts at the paragraphs' left edge…
+          const para = host.shadowRoot!.querySelector('.peekover-reader p')!;
+          expect(Math.abs(textLeft(note) - textLeft(para)), `note text x ${textLeft(note)} vs paragraph x ${textLeft(para)}`).toBeLessThanOrEqual(0.5);
+          // …with no box around it…
+          const cs = getComputedStyle(note);
+          for (const side of ['Top', 'Right', 'Bottom', 'Left'] as const) {
+            expect(cs.getPropertyValue(`border-${side.toLowerCase()}-width`), `border-${side}`).toBe('0px');
+          }
+          expect(cs.backgroundColor, 'no background').toBe('rgba(0, 0, 0, 0)');
+          expect(cs.boxShadow, 'no shadow').toBe('none');
+          // …in the reader's UI face (the Theme button's), muted, small…
+          const ui = getComputedStyle(host.shadowRoot!.querySelector('.peekover-theme-toggle')!);
+          expect(cs.fontFamily).toBe(ui.fontFamily);
+          expect(cs.color, 'muted (the UI pills’ text colour)').toBe(ui.color);
+          expect(parseFloat(cs.fontSize)).toBeLessThanOrEqual(13);
+          // …one modest gap below the last line.
+          const gap = r.top - last.bottom;
+          expect(gap, 'the gap below the last line').toBeGreaterThanOrEqual(8);
+          expect(gap, 'the gap below the last line').toBeLessThanOrEqual(64);
         });
       }
     }
