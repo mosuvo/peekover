@@ -1,6 +1,34 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1j — WALK SECTION E: THE HUMAN'S VERDICTS; light `--faint` to 3:1 LANDED.** Local, on
+  `main`; not pushed.
+  - **The human's verdicts (2026-11-10):** **III-1** accept by name, with a post-release item: non-text contrast of
+    borders, inputs first (`progress.md`); **III-2** accept by name; **III-3 FIX** ("light --faint #9A9DAC → the nearest
+    value ≥ 3:1 on paper, ~#8E919F; dark unchanged"); **III-4** accept by name; **III-5** accept (decorative,
+    `aria-hidden`); **IV-1 / IV-2** closed (empty, both engines, current main); **I-8** accept as tested-only; **I-5**
+    accept as tested-only, **"macOS not checked"**. Recorded per row in `walk-8.1.md`.
+  - **IV-1 / IV-2, re-run on `82b8fa2` (both engines):** the census 64 surface × theme cells per engine, no failure,
+    pending list 0; the native-control sweep 13 surfaces × 2 themes per engine, no finding, pending list 0 (98 / 98).
+  - **8.1j (`70a7d01`) — the III-3 fix.** **#8F91A0**: the lightest value at or above 3:1 on `--paper` #FBFBF8 that keeps
+    `--faint`'s hue (mixed toward `--ink`): **3.01:1** (#8E919F, the human's "~", is 3.02; #8F92A0 is 2.985). The
+    unconstrained nearest values shift the hue to purple (#958EAC), so they were not used. Dark `--faint` #6B6F84
+    unchanged (3.70). Changed at the source (`design/tokens.css`) and every PINNED copy: `readerCss.ts` (the reader's
+    `:host`), `appShell.ts`, `onboarding.ts`, `treeView.ts`'s `var(--faint,…)` fallback. **Not changed (not pinned, out
+    of the brief):** the illustrative copies in `design/brand.html`, `design/icons.html`, `design/mockup.html`,
+    `site/index.html`, `site/privacy/index.html` and `harness/math-fidelity/app.js` (tokens.css wins where they
+    disagree). Red first: `designTokens.test.ts` "--faint reaches 3:1 (WCAG 1.4.11) on --paper, light and dark" —
+    light 2.60 → green (the arithmetic's control: white on black = 21).
+  - **Verify (`70a7d01`):** lint clean; unit 1,698 / 1,698; browser full suite **2,747 passed, 65 skipped, 0 failed**
+    (both engines; the census green); `compareBuilds` + `truthPins` 99 / 99 after re-zipping.
+  - **Bytes:** content script **349,530 B, ±0** (a same-length hex swap; hashes `6a1b0166` → `dbf7ab4d` (Chrome) /
+    `0b5822a8` (Firefox) — the control that the value reached the graph); app chunk 556,187 B ±0 (`15789eb6` →
+    `a31d2bae`); onboarding 11,170 / 11,042 B ±0 (hashes moved); `.output` 6,658,535 / 6,658,521 B; zips 2,034,747 /
+    2,034,745 B (`c91ea8c5` / `a5e14573`); `permissions: []`.
+  - **Also in these records:** the stale commit hashes from before the reword (`1d55778` / `a7762b4` / `d1b3f52`) are now
+    `b98b79b` / `13d7792` / `f86a01e` wherever they were cited (the reword: same trees, titles without "[PENDING
+    APPROVAL]", one approval line each).
+  - Tasks: 65, 61 ticked. Left in the walk: I-10 (push → CI green → the release dry run) and the rest of items I.
 - **2026-11-10 · M13 TASK 8.1i — CLOSED: the held looks approved by the human and landed; the rest decided by the
   REVIEWER under the human's delegation.** Local, on `main`; not pushed.
   - **The human (2026-11-10):** the four held looks approved as shown on the contact sheet — (a) + (d) the narrow
@@ -15,10 +43,10 @@
     - **Items II-1 … II-10 closed:** every surface under them was judged ok by the human, the fixed ones (5, 6, 7, 17,
       25, 29) approved after the fix. Each marked "ok (human, by surface verdicts 2026-11-10)" in `walk-8.1.md`.
   - **Landed:** `local/8.1i-approval` rebased onto `main` (only `1100243`, records and tooling, lay between) and
-    fast-forwarded; no merge commit; the branch deleted. New hashes: `1d55778` (g), `a7762b4` (a) + (d), `d1b3f52` (f)
+    fast-forwarded; no merge commit; the branch deleted. New hashes: `b98b79b` (g), `13d7792` (a) + (d), `f86a01e` (f)
     (were `507cfb7`, `a9a0ae0`, `dbbb088`; their subjects keep the "[PENDING APPROVAL]" tag they were written with —
     approved here). With `7c4f978` (e), `c59a0a7` (c), `1916cc3` (b), `1100243` (records).
-  - **Verify on `main` (`d1b3f52`):** lint clean; unit 1,697 / 1,697 (87 files; `truthPins` and `compareBuilds` among
+  - **Verify on `main` (`f86a01e`):** lint clean; unit 1,697 / 1,697 (87 files; `truthPins` and `compareBuilds` among
     them, re-zipped first: 99 / 99 in their own run); browser full suite **2,747 passed, 65 skipped, 0 failed** (both
     engines; the contrast census in it, green).
   - **Bytes (both engines):** content script **349,530 B** (`6a1b0166` / `c0dbdc10`; +4,152 over 345,378 — the G-7

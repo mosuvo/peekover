@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-10 (M13 TASK 8.1i CLOSED - the human approved the held looks; all seven parts on main; reviewer decisions under the human's delegation: a named G-7 exception (+4,152 B content script) and II-1 ... II-10 closed. Before that: 2026-11-10 (M13 TASK 8.1i - walk D's fixes: the human's verdicts recorded; (b) raw box, (c) narrow lightbox, (e) collapsed code scrolls LANDED; (a)+(d) narrow contents sheet + editor gap, (f) pills at rest, (g) active-line cell HELD on local/8.1i-approval for the human's look and a byte ruling (G-7 passed: +4,152 B). Before that: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-10 (M13 walk section E - the human's verdicts: III-1 / III-2 / III-4 accepted by name, III-5 accepted, III-3 FIXED as 8.1j (light --faint #8F91A0, 3.01:1), IV-1 / IV-2 closed, I-8 and I-5 accepted as tested-only (macOS not checked). Before that: 2026-11-10 (M13 TASK 8.1i CLOSED - the human approved the held looks; all seven parts on main; reviewer decisions under the human's delegation: a named G-7 exception (+4,152 B content script) and II-1 ... II-10 closed. Before that: 2026-11-10 (M13 TASK 8.1i - walk D's fixes: the human's verdicts recorded; (b) raw box, (c) narrow lightbox, (e) collapsed code scrolls LANDED; (a)+(d) narrow contents sheet + editor gap, (f) pills at rest, (g) active-line cell HELD on local/8.1i-approval for the human's look and a byte ruling (G-7 passed: +4,152 B). Before that: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -17,10 +17,17 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 — WALK SECTION E DECIDED (2026-11-10, the human) + TASK 8.1j LANDED.** Record: `decisions.md`, "M13 TASK 8.1j".
+III-1, III-2, III-4 accepted by name; III-5 accepted (decorative); **III-3 fixed as 8.1j**: light `--faint` #9A9DAC →
+#8F91A0 (2.60 → 3.01:1; dark unchanged), source and every pinned copy, content script ±0 B. IV-1 / IV-2 closed (empty,
+both engines, current main). I-8 and I-5 accepted as tested-only, **macOS not checked**. Post-release: borders' non-text
+contrast (III-1). Tasks: 65, 61 ticked. Left in the walk: I-10 (push, CI, the release dry run — the human's commands are
+in the review chat) and what `walk-8.1.md` still lists for items I.
+
 **M13 TASK 8.1i CLOSED (2026-11-10) — ALL SEVEN PARTS ON `main`.** Record: `decisions.md`, "M13 TASK 8.1i — CLOSED".
 The human approved the four held looks ((a) + (d), (f), (g)) and surface 36's Firefox cells, and delegated the rest; the
 **reviewer** decided a **named G-7 exception** (content script 349,530 B, +4,152 over 345,378) and **closed II-1 … II-10**
-(ok by the human's surface verdicts). The branch rebased and fast-forwarded (`1d55778`, `a7762b4`, `d1b3f52`), deleted.
+(ok by the human's surface verdicts). The branch rebased and fast-forwarded (`b98b79b`, `13d7792`, `f86a01e`), deleted.
 `main` green: lint, unit 1,697, browser 2,747 / 65 skipped (census in it), truthPins, compareBuilds. `.output`
 6,658,535 / 6,658,521 B. Tasks: 64, **60 ticked**. Open in the walk: what `walk-8.1.md`'s checklist still lists (items I,
 III, IV); then 9.2's sign-off, 9.3's pick, 9.5's figures.
@@ -486,6 +493,11 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
+- **Non-text contrast of borders — inputs first (the human, walk item III-1, 2026-11-10: "accept by name", with this
+  item).** `--line` on `--paper` is 1.21 light / 1.29 dark (WCAG 1.4.11 asks 3:1 for a control's boundary). For 3:1
+  the token would be about #929291 light / #5F626E dark — every border heavier. Start with inputs (the search field,
+  the table filter, the editor's search field), where the border is the only boundary. *Source:* `decisions.md`,
+  "M13 TASK 8.1j" (the section-E verdicts).
 - **Full page mode for Read / Edit / Raw (the human's walk-D request on surface 29, 2026-11-10).** Not for 0.1.0;
   needs its own design (what "full page" hides — the toolbar, the files pane, the status line — how it is entered and
   left, and both surfaces). *Source:* the human's walk-D verdicts (`decisions.md`, "M13 TASK 8.1i").
