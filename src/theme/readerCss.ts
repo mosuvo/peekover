@@ -290,6 +290,9 @@ export const READER_CSS = /* css */ `
    until the user triggers a network action) — so this sits one pill-height above it at 56px and
    the two never intersect whether or not the indicator is lit. Tokens ONLY. */
 .peekover-theme-toggle{bottom:56px}
+.peekover-rest-band{display:none;position:fixed;left:0;right:0;bottom:0;height:136px;z-index:1;background:var(--paper)}
+@media (max-width:983px){.peekover-rest-band[data-rest="top"]{display:block}}
+@media (max-width:1233px){:host([data-toc="open"]) .peekover-rest-band[data-rest="top"]{display:block}}
 
 /* ============ Watch control (spec 005 task 4.1 — "watching") ============ */
 /* THE MOCKUP'S BADGE, TRANSLATED INTO THIS READER'S CHROME FAMILY — not its toolbar.

@@ -15,6 +15,7 @@ import { resetSettingsSeamForTest } from '../../src/settings/settingsSeam';
 import { wipeAll, __resetConnectionForTest } from '../../src/app/store';
 import { DEFAULT_SETTINGS } from '../../src/settings/settings';
 import { mount } from '../../src/render/mount';
+import { lightNetworkIndicator } from '../../src/render/remoteMediaUi';
 import { registerWatchTarget } from '../../src/watch/watchRegistry';
 import { registerDocIdentity, resetDocIdentityForTest } from '../../src/render/docIdentity';
 import { contrastRatio, flatten, hex, luminance, parseColor } from './helpers/contrast';
@@ -363,4 +364,82 @@ describe('8.1i (d) — at 414 the editor starts under the toolbar like Read view
     expect(Math.abs(editGap - readGap), `edit ${editGap} vs read ${readGap}`).toBeLessThanOrEqual(0.5);
     expect(editGap, 'no band: the pane padding only').toBeLessThanOrEqual(32);
   });
+});
+
+// ── (f) The tab reader's floating pills at rest — CC flags 4 + 5 (II-9) ────────────────────────
+// At the top of the page, before any scroll, the bottom-left stack (Watch, Theme, the network
+// indicator) sat over the first screen's text where the column reaches the left gutter: the
+// "Phases" heading at 414, the table's Filter and header at 1080 with the contents open. While the
+// page is at its top a plain band of paper now reserves the stack's corner of the viewport (the
+// page reads as ending above it); from the first scroll on the pills float as ruled at 5.6.
+const PILLS = ['.peekover-theme-toggle', '.peekover-watch', '.peekover-net'];
+const REST_DOC = [
+  DOC,
+  '| Phase | Traffic | Duration |',
+  '| --- | --- | --- |',
+  ...Array.from({ length: 8 }, (_, i) => `| ${i + 1} · Step | ${i * 10}% | ${i + 2} days |`),
+  '',
+  ...Array.from({ length: 12 }, (_, i) => `## Section ${i + 1}\n\n${'Body text that wraps across the reading column. '.repeat(12)}\n`),
+].join('\n');
+
+/** What the pills hide at rest: every text line and control of the page whose box meets a pill's,
+ *  hit-tested with the pills themselves hidden — a hit on page content means the pill covers it. */
+function coveredAtRest(sr: ShadowRoot): string[] {
+  const pills = PILLS.map((s) => sr.querySelector<HTMLElement>(s)).filter((el): el is HTMLElement => !!el && el.getClientRects().length > 0);
+  const boxes = pills.map((p) => [p, p.getBoundingClientRect()] as const);
+  for (const p of pills) p.style.visibility = 'hidden';
+  const content = [...sr.querySelectorAll<HTMLElement>('.peekover-reader, .peekover-watch-note[data-place="aside"]')];
+  const found: string[] = [];
+  try {
+    for (const root of content) {
+      const items: DOMRect[] = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (!n.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        items.push(...[...range.getClientRects()].filter((r) => r.width > 0 && r.height > 0));
+      }
+      for (const c of root.querySelectorAll('button, input')) items.push(c.getBoundingClientRect());
+      for (const r of items) {
+        for (const [p, b] of boxes) {
+          if (!intersects(r, b)) continue;
+          const x = (Math.max(r.left, b.left) + Math.min(r.right, b.right)) / 2;
+          const y = (Math.max(r.top, b.top) + Math.min(r.bottom, b.bottom)) / 2;
+          const hit = sr.elementFromPoint(x, y);
+          if (hit && content.some((c) => c.contains(hit))) found.push(`${p.className} over ${hit.tagName.toLowerCase()} at ${x.toFixed(0)},${y.toFixed(0)}`);
+        }
+      }
+    }
+  } finally {
+    for (const p of pills) p.style.visibility = '';
+  }
+  return found;
+}
+
+describe('8.1i (f) — at rest the tab reader’s pills cover no text or control', () => {
+  for (const width of [414, 1080, 1280, 1440]) {
+    for (const contents of ['closed', 'open'] as const) {
+      it(`${width}px, contents ${contents}`, async () => {
+        await page.viewport(width, width === 414 ? 896 : 800);
+        registerWatchTarget({ start: () => undefined, stop: () => undefined, isWatching: () => false });
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        containers.push(host);
+        mount(REST_DOC, host);
+        host.style.scrollBehavior = 'auto';
+        await frames(4);
+        const sr = host.shadowRoot!;
+        lightNetworkIndicator(host);
+        const opener = sr.querySelector<HTMLButtonElement>('.peekover-toc__toggle')!;
+        if ((opener.getAttribute('aria-expanded') === 'true') !== (contents === 'open')) opener.click();
+        host.scrollTop = 0;
+        await frames(4);
+        expect(opener.getAttribute('aria-expanded'), 'the contents state').toBe(String(contents === 'open'));
+        expect(host.scrollHeight, 'the page scrolls (non-vacuous)').toBeGreaterThan(host.clientHeight + 200);
+        expect(sr.querySelector('.peekover-watch')!.getClientRects().length, 'the Watch pill is drawn').toBeGreaterThan(0);
+        expect(coveredAtRest(sr), `at rest, ${width}px, contents ${contents}`).toEqual([]);
+      });
+    }
+  }
 });

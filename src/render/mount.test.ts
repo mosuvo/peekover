@@ -297,7 +297,8 @@ describe('mount — the `pills` option', () => {
     '.peekover-agent-badge',
   ];
   /** The rest of those groups: the watch chrome's note and capture disclosure, the diff chrome's picker and status. */
-  const PILL_PARTS = ['.peekover-watch-note', '.peekover-watch-disclosure', '.peekover-diff-picker', '.peekover-diff-status'];
+  // M13 8.1i (f) adds the at-rest band behind the bottom-left stack: it exists only for the pills, so it goes with them.
+  const PILL_PARTS = ['.peekover-watch-note', '.peekover-watch-disclosure', '.peekover-diff-picker', '.peekover-diff-status', '.peekover-rest-band'];
   /** The document-bound chrome it keeps (the failure banner is the fallback path's, which takes no option). */
   const KEPT = ['.peekover-toc', '.peekover-remote-load', '.peekover-net'];
 

@@ -241,6 +241,10 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     const tocRail = chrome
       ? buildTocView(host, buildTocModel(root), { contained: options.contained })
       : null;
+    // M13 walk fix 8.1i (f): the band that keeps the bottom-left pills' corner clear AT REST — a
+    // plain, decorative stretch of paper shown (readerCss.ts) only while the page is at its top and
+    // only where the pills meet the column. Before the rail, so an open rail paints over it.
+    if (pills) children.push(buildRestBand());
     if (tocRail) children.push(tocRail);
     children.push(root, ...watchAside);
 
@@ -250,6 +254,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     const carried = options.preserveReading ? captureReading(shadow, host, options) : null;
 
     shadow.replaceChildren(...children);
+    if (pills) trackRest(host);
     registerReaderSource(host, source); // stash source for the lazy Raw view
     // Default view = the rendered document. UNCONDITIONAL unless the caller asked to preserve:
     // `readerPane.select()` depends on this reset to land a newly-selected file in Reading even
@@ -354,4 +359,32 @@ function mountRawFallback(
   children.push(banner, pre);
   shadow.replaceChildren(...children);
   initReaderRuntime(host);
+}
+
+/** 8.1i (f): the at-rest band (styled and shown by readerCss.ts). Decorative: no text, no role. */
+function buildRestBand(): HTMLElement {
+  const band = document.createElement('div');
+  band.className = 'peekover-rest-band';
+  band.setAttribute('aria-hidden', 'true');
+  return band;
+}
+
+/** 8.1i (f): `data-rest="top"` on the band while its page scrolls AND sits at its top — the only
+ *  state in which the band shows. A page that does not scroll needs none (the column's 130 px foot
+ *  already clears the pills), and from the first scroll the pills float as ruled (5.6). One passive
+ *  listener per host, re-read after every render. */
+const restTracked = new WeakSet<HTMLElement>();
+function trackRest(host: HTMLElement): void {
+  const read = (): void => {
+    const band = host.shadowRoot?.querySelector('.peekover-rest-band');
+    if (!band) return;
+    if (host.scrollTop <= 0 && host.scrollHeight > host.clientHeight) band.setAttribute('data-rest', 'top');
+    else band.removeAttribute('data-rest');
+  };
+  if (!restTracked.has(host)) {
+    restTracked.add(host);
+    host.addEventListener('scroll', read, { passive: true });
+    if (typeof window !== 'undefined') window.addEventListener('resize', read, { passive: true });
+  }
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(read);
 }
