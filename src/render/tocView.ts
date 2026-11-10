@@ -493,12 +493,20 @@ function ensureSettingsSubscribed(): void {
   settingsSubscribed = true;
   // 8.1i (a): crossing the narrow breakpoint closes any sheet and re-derives `aria-expanded`.
   if (typeof matchMedia === 'function') {
+    // Guarded per host (the 8.1i (f) follow-up's rule): a broken or removed reader is skipped, never thrown out of.
     matchMedia(NARROW_QUERY).addEventListener('change', () => {
       for (const host of tocHosts) {
-        if (!host.isConnected) continue;
-        host.removeAttribute(SHEET_ATTR);
-        const opener = tocOpenerFor(host);
-        if (opener) syncExpanded(host, opener);
+        try {
+          if (!host.isConnected) {
+            tocHosts.delete(host);
+            continue;
+          }
+          host.removeAttribute(SHEET_ATTR);
+          const opener = tocOpenerFor(host);
+          if (opener) syncExpanded(host, opener);
+        } catch {
+          // a reader whose shadow root cannot be read keeps its last state
+        }
       }
     });
   }

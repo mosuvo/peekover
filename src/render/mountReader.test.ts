@@ -12,8 +12,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mutable stub, so each test decides how the render behaves. Hoisted above the
 // import of ./mountReader so mountReader() binds to this mock.
 let mountImpl: (source: string, host: HTMLElement) => void;
+// M13 8.1i (f) follow-up: the teardown also stops the at-rest band's tracking (its frame and listeners).
+const stopped: HTMLElement[] = [];
 vi.mock('./mount', () => ({
   mount: (source: string, host: HTMLElement) => mountImpl(source, host),
+  stopRestTracking: (host: HTMLElement) => void stopped.push(host),
 }));
 
 import { mountReader } from './mountReader';
@@ -68,6 +71,8 @@ describe('mountReader — never leaves the page hidden with nothing shown', () =
     // ...and our host was torn back out (full restore of the browser's rendering).
     expect(document.querySelector(HOST_TAG)).toBeNull();
     expect(warn).toHaveBeenCalled();
+    // ...with its at-rest tracking stopped first (8.1i (f) follow-up).
+    expect(stopped.at(-1)?.tagName.toLowerCase()).toBe(HOST_TAG);
   });
 
   it('bails and restores when the render produces EMPTY content', () => {

@@ -15,7 +15,7 @@
 // rendering exactly as it was. The invariant: the user is never left with the
 // original page hidden AND nothing valid shown.
 
-import { mount } from './mount';
+import { mount, stopRestTracking } from './mount';
 import { enhanceTables } from './tableEnhancer';
 
 /** The custom-element tag whose shadow root hosts the rendered reader. */
@@ -129,6 +129,7 @@ export function mountReader(): boolean {
     // signal; the user-facing error banner arrives with task 4.2. Not committed —
     // the caller's never-blank floor (timer / final attempt) reveals the raw text.
     console.warn('[peekover] reader mount failed; leaving original page', err);
+    stopRestTracking(host); // 8.1i (f): the band's frame and listeners go with the reader
     host.remove();
     return false;
   }

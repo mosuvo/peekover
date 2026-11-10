@@ -372,19 +372,57 @@ function buildRestBand(): HTMLElement {
 /** 8.1i (f): `data-rest="top"` on the band while its page scrolls AND sits at its top — the only
  *  state in which the band shows. A page that does not scroll needs none (the column's 130 px foot
  *  already clears the pills), and from the first scroll the pills float as ruled (5.6). One passive
- *  listener per host, re-read after every render. */
-const restTracked = new WeakSet<HTMLElement>();
+ *  scroll listener on the host and one resize listener on the window per host, re-read after every
+ *  render.
+ *
+ *  THE BAND IS DECORATIVE, SO ITS TRACKER MAY NEVER THROW OR OUTLIVE ITS READER (CI run 42857163617:
+ *  a frame read a host's `shadowRoot` after a test had made it throw, and the throw escaped). Every
+ *  read is guarded — a disconnected host stops its own tracking, any error is swallowed — a new render
+ *  cancels the previous render's pending frame, and `stopRestTracking` (mountReader's teardown)
+ *  cancels the frame and removes both listeners. */
+interface RestTracker {
+  read: () => void;
+  frame: number;
+}
+const restTrackers = new WeakMap<HTMLElement, RestTracker>();
 function trackRest(host: HTMLElement): void {
-  const read = (): void => {
-    const band = host.shadowRoot?.querySelector('.peekover-rest-band');
-    if (!band) return;
-    if (host.scrollTop <= 0 && host.scrollHeight > host.clientHeight) band.setAttribute('data-rest', 'top');
-    else band.removeAttribute('data-rest');
-  };
-  if (!restTracked.has(host)) {
-    restTracked.add(host);
-    host.addEventListener('scroll', read, { passive: true });
-    if (typeof window !== 'undefined') window.addEventListener('resize', read, { passive: true });
+  let t = restTrackers.get(host);
+  if (!t) {
+    const tracker: RestTracker = {
+      frame: 0,
+      read: () => {
+        tracker.frame = 0;
+        try {
+          if (!host.isConnected) {
+            stopRestTracking(host);
+            return;
+          }
+          const band = host.shadowRoot?.querySelector('.peekover-rest-band');
+          if (!band) return;
+          if (host.scrollTop <= 0 && host.scrollHeight > host.clientHeight) band.setAttribute('data-rest', 'top');
+          else band.removeAttribute('data-rest');
+        } catch {
+          // decorative: a failure here only leaves the band as it was
+        }
+      },
+    };
+    t = tracker;
+    restTrackers.set(host, t);
+    host.addEventListener('scroll', t.read, { passive: true });
+    if (typeof window !== 'undefined') window.addEventListener('resize', t.read, { passive: true });
   }
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(read);
+  if (typeof requestAnimationFrame !== 'function') return;
+  if (t.frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(t.frame);
+  t.frame = requestAnimationFrame(t.read);
+}
+
+/** 8.1i (f): stop a host's at-rest tracking — cancel its pending frame, remove its listeners. Idempotent;
+ *  called when a reader is torn down (mountReader) and by the tracker itself on a disconnected host. */
+export function stopRestTracking(host: HTMLElement): void {
+  const t = restTrackers.get(host);
+  if (!t) return;
+  restTrackers.delete(host);
+  if (t.frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(t.frame);
+  host.removeEventListener('scroll', t.read);
+  if (typeof window !== 'undefined') window.removeEventListener('resize', t.read);
 }
