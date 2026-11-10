@@ -206,6 +206,38 @@ describe('row 12 — a collapse/expand cycle returns to the EXACT same rect', ()
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
+// M13 8.1i (e) — walk D, CC flag 1 + II-5: the collapsed block scrolls SIDEWAYS like the expanded one
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+//
+// The collapsed clamp was `overflow:hidden` on both axes, so a line wider than the box was cut at
+// the right edge with no way to reach its end until "Show full code" was pressed. The clamp is a
+// HEIGHT clamp only: sideways the collapsed block behaves as the expanded one does.
+
+describe('8.1i (e) — a collapsed long block scrolls sideways; its longest line is reachable', () => {
+  it('collapsed: still clamped in height, but a line wider than the box can be scrolled to its end', async () => {
+    const wide = `const longest = "${'x'.repeat(300)}";`;
+    const lines = Array.from({ length: CODE_COLLAPSE_LINE_THRESHOLD + 20 }, (_, i) => `const line${i + 1} = ${i + 1};`);
+    lines.splice(3, 0, wide);
+    const { shadow } = directHost('```javascript\n' + lines.join('\n') + '\n```\n');
+    const wrapper = await rendered(shadow);
+    expect(wrapper.getAttribute(CODE_COLLAPSE_ATTR)).toBe('collapsed');
+    const pre = wrapper.querySelector<HTMLElement>('pre.shiki');
+    if (!pre) throw new Error('expected the highlighted pre');
+
+    // The control for non-vacuity: the line really is wider than the box.
+    expect(pre.scrollWidth).toBeGreaterThan(pre.clientWidth + 100);
+    // Still a height clamp (the collapse itself is unchanged).
+    expect(getComputedStyle(pre).overflowY).toBe('hidden');
+    expect(pre.getBoundingClientRect().height).toBeLessThanOrEqual(321);
+    // Sideways it scrolls, the same as the expanded block's `overflow:auto`.
+    expect(['auto', 'scroll']).toContain(getComputedStyle(pre).overflowX);
+    pre.scrollLeft = pre.scrollWidth;
+    expect(pre.scrollLeft).toBeGreaterThan(100);
+    expect(pre.scrollLeft + pre.clientWidth).toBeGreaterThanOrEqual(pre.scrollWidth - 1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
 // "No second parse, no second highlight pass, no second copy of the block" (tasks.md 6.1)
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 

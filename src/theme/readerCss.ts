@@ -709,16 +709,16 @@ export const READER_CSS = /* css */ `
 .peekover-reader .peekover-code-line--highlighted{background:var(--ok-soft);border-radius:3px}
 
 /* Collapsible long blocks (009 D-10, task 6.1) — rationale: codeView.ts's §6 section. Two rules
-   only match ONE at a time (data-code-state is a single value), so the collapsed rule's
-   overflow:hidden never needs an expanded-side override — the base '.peekover-reader pre' rule's
-   overflow:auto above governs once the attribute reads "expanded". The max-height is a
+   only match ONE at a time (data-code-state is a single value). Collapsed clamps the HEIGHT only
+   and still scrolls sideways (8.1i); expanded, the base '.peekover-reader pre' overflow:auto
+   governs. The max-height is a
    FIXED length, never JS-measured, so a collapse/expand/collapse cycle always returns to the
    EXACT same rect (§3.11 row 12) — nothing cached to drift from. The transition mirrors
    .peekover-code-toolbar__copy's own shape above (its own explicit reduced-motion neutraliser,
    not the sheet-wide :host * rule alone) rather than the storage panel's dead-control finding
    further down this file — this control sits in the SAME toolbar family the copy button does. */
 .peekover-reader .peekover-code[data-code-state] pre.shiki{transition:max-height 200ms ease}
-.peekover-reader .peekover-code[data-code-state="collapsed"] pre.shiki{max-height:320px;overflow:hidden}
+.peekover-reader .peekover-code[data-code-state="collapsed"] pre.shiki{max-height:320px;overflow:auto hidden}
 .peekover-reader .peekover-code[data-code-state="expanded"] pre.shiki{max-height:none}
 @media (prefers-reduced-motion:reduce){.peekover-reader .peekover-code[data-code-state] pre.shiki{transition:none}}
 .peekover-reader .peekover-code-toolbar__collapse{display:block;width:100%;margin-top:8px;text-align:center}
