@@ -20,7 +20,9 @@
 // highlighter must use a LITERAL dark hex for its text, NEVER var(--ink). --hl stays
 // yellow in every theme, but --ink INVERTS to near-white in dark mode — so var(--ink)
 // text on --hl would vanish in dark. `mark` and link:hover text below use literal
-// hex for exactly this reason. (The task-list checkmark uses var(--paper) on
+// hex for exactly this reason. The dark link:hover rule repeats the solid --hl fill: the dark
+// thin-underline rule for links is more specific than the plain a:hover, so without it the dark
+// text sat on the dark page (walk fix 8.1b). (The task-list checkmark uses var(--paper) on
 // var(--accent): those two ALWAYS contrast — opposite ends of the theme — so that
 // pairing is safe and is not a trap case.)
 
@@ -137,7 +139,7 @@ export const READER_CSS = /* css */ `
 }
 .peekover-reader a:hover{background:var(--hl);color:#26210a}   /* literal: text on highlighter */
 :host([data-theme="dark"]) .peekover-reader a{background:linear-gradient(transparent 88%, var(--hl) 88%)}
-:host([data-theme="dark"]) .peekover-reader a:hover{color:#191504} /* literal: text on highlighter */
+:host([data-theme="dark"]) .peekover-reader a:hover{background:var(--hl);color:#191504} /* literal: text on highlighter */
 
 /* highlight: literal dark text — --hl is yellow in every theme, so NEVER var(--ink) */
 .peekover-reader mark{background:var(--hl);color:#26210a;padding:0 3px;border-radius:3px}

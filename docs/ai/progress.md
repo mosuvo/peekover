@@ -17,6 +17,14 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 8.1b LANDED (2026-11-10) — WALK FIX (the human's "item 13", at I-6): a hovered link stays readable in
+dark.** Record: `decisions.md`, "M13 TASK 8.1b". The dark thin-underline rule out-specified the hover fill, leaving
+`#191504` on the dark page (1.01:1, every link, both reader surfaces, both engines); the dark hover rule now repeats
+`background:var(--hl)`. Red 4 / 8 → green 8 / 8 (`linkHoverContrast.browser.test.ts`). Content script and app chunk
++21 B each; `.output` 6,645,915 / 6,645,771 B. The 9.3 screenshots are not affected (no capture hovers a link).
+Tasks: 55, 51 ticked. **Waiting on the human:** item 1's sentences (Firefox setting, floor 153), item 2's picker
+result (the kickoff's placeholder was not filled), 8.1c's placement choice.
+
 **M13 TASK 8.1a LANDED (2026-11-10) — WALK FIX (8.1 item I-9): the exported HTML prints whole.** Record:
 `decisions.md`, "M13 TASK 8.1a". The export wrote `@mediaprint` / `@mediascreen …` (the space lost), so its print rule
 was dropped and the file printed one page; now `@media ${condition}`. Copy as HTML shares the fix; the app page's PDF

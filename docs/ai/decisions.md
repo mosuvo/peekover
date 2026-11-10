@@ -1,6 +1,27 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1b — WALK FIX (the human's walk "item 13"; recorded at 8.1 I-6): a hovered link stays
+  readable in dark.** The human: "in DARK theme, hovering a link makes its text unreadable (dark text on dark page)".
+  Local, on `main` after `25f8732`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored).
+  - **Cause (`src/theme/readerCss.ts`, the link rules):** `.peekover-reader a:hover{background:var(--hl);color:#26210a}`
+    is (0,2,1); the dark thin-underline rule `:host([data-theme="dark"]) .peekover-reader a{background:linear-gradient(…)}`
+    is (0,3,1) and wins on hover too, while the dark hover rule set only `color:#191504` — the literal for text ON the
+    highlighter. So every link, on every surface that uses READER_CSS (tab reader, app page reader pane, and the
+    exported HTML, which translates the same sheet), drew near-black text on the dark page when hovered. Light was
+    never affected (no competing rule). **Fix:** the dark hover rule repeats the fill —
+    `:host([data-theme="dark"]) .peekover-reader a:hover{background:var(--hl);color:#191504}`. Rationale in the
+    module's header comment (a CSS comment inside the literal would ship).
+  - **Red first** (`tests/browser/linkHoverContrast.browser.test.ts`, new): a real pointer hover (`userEvent.hover`) on
+    a rendered link, on the tab reader (`mount`) and the app page's reader pane (`mountAppShell`, a folder opened, the
+    file clicked), light and dark, Chromium and Firefox; the link's text over what is painted behind it
+    (`helpers/contrast.ts`, the census's instrument) ≥ 4.5:1 hovered, and at rest. **Before: 4 of 8 red — every dark
+    case, both engines, both surfaces: 1.01:1 (`#191504` on `#12141c`).** After: 8 / 8. The census does not measure
+    hover states (its header says so), which is how this passed 2.2.
+  - **Bytes (both engines built):** content script 345,049 → **345,070 B (+21**, `background:var(--hl);`), md5
+    `4fbe5390` (Chrome) / `73b45ec2` (Firefox); app chunk 550,912 → **550,933 B (+21)**, `ce16a0b7` (both);
+    `.output` **6,645,915 / 6,645,771 B** (+42 each) of 7,340,032 — headroom 694,117 / 694,261. `permissions: []`.
+  - **The 9.3 screenshots are not affected:** the rule applies only under the pointer, and no capture hovers a link.
 - **2026-11-10 · M13 — the AMO-signed 0.0.9 on a real Firefox (AMO kit step 11; final-review step 1): `file://` does
   NOT render out of the box on Firefox 159 — the release BLOCKER is settled as FALSE; the fix needs the human's wording
   (STOPPED).** Records only; no product byte changed. Local, on `main`; not pushed. The human's kickoff said "step 5 of
