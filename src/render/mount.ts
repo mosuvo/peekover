@@ -208,7 +208,11 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
     // disabled control. The control itself holds no controller reference — it reaches
     // start/stop through the module-level registry, because `replaceChildren` destroys it on every
     // render, INCLUDING the renders a running watch causes. See src/watch/watchRegistry.ts.
-    if (pills) children.push(...buildWatchChrome(host));
+    // Walk fix 8.1c: a note shown with NO Watch control (a raw web page; Firefox file://) is an aside after
+    // the reading column, in the page flow, so it never sits over the text; it is placed after `root` below.
+    const watchChrome = pills ? buildWatchChrome(host) : [];
+    const watchAside = watchChrome.filter((n) => n instanceof HTMLElement && n.dataset.place === 'aside');
+    children.push(...watchChrome.filter((n) => !watchAside.includes(n)));
     // Diff affordance (spec 006 task 6.2), composed through THIS same seam — and it is the ONLY
     // diff module this file imports (plan §1.4's import fence: `diffChrome.ts` reaches the engine
     // and the view through closures the app page provisions on the diff registry, so neither
@@ -238,7 +242,7 @@ export function mount(source: string, host: HTMLElement, options: MountOptions =
       ? buildTocView(host, buildTocModel(root), { contained: options.contained })
       : null;
     if (tocRail) children.push(tocRail);
-    children.push(root);
+    children.push(root, ...watchAside);
 
     // CONTINUITY CAPTURE (task 3.3), taken from the LIVE pre-commit DOM — the last moment the
     // previous render still exists. Only when the caller opted in; every existing caller omits

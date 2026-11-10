@@ -1,6 +1,33 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1c — WALK FIX (the human's walk "item 13"; recorded at 8.1 I-6): the "can't watch
+  here" notes are an aside after the document.** HUMAN RULING, verbatim: "8.1c — OPTION A: move the two "can't watch
+  here" notes (raw web pages and Firefox file://) out of the floating bottom-left stack into the page, as a quiet aside
+  after the document's last line. Same words, same look. The stopped-watch note stays beside the Watch button."
+  Local, on `main`; not pushed.
+  - **What it was:** on a raw GitHub / Gist / GitLab / Bitbucket page (`REMOTE_DOCUMENT_NOTE`) and on Firefox
+    `file://` (`FIREFOX_CONTENT_SCRIPT_NOTE`) the note showed from load, always, `position:fixed` at
+    `bottom:136px; left:16px`, 34ch wide, with no close control — over the text wherever the column reaches the left
+    edge (the same stack II-9 flags mid-scroll).
+  - **Fix:** `buildWatchChrome` marks a note that has no Watch control beside it `data-place="aside"`; `mount()` puts
+    it after the reading column (`children.push(root, ...watchAside)`); READER_CSS makes it `position:static`, aligned
+    to the column's text edge (`margin-left:max(32px, (100% − measure)/2 + 32px)`), with the column's 130 px bottom room
+    moved below it (`.peekover-reader:has(+ aside){padding-bottom:24px}`). Same text, same box. The stopped-watch note
+    (a control beside it) is unchanged. Rationale in readerCss.ts's header (CSS comments in the literal ship).
+  - **Red first** (`tests/browser/watchNoteAside.browser.test.ts`, new; the state set as the content script sets it,
+    `installContentWatch`): both notes × 414 / 1080 / 1440 × light / dark × both engines; the note's box against every
+    line box of the column (5.6's hit-test) at rest, mid-scroll and at the end; then below the last line and on screen
+    at the end. **Before: 24 / 24 note cases red in both engines** — at 414 and 1080 the note covered 3–6 lines at
+    rest; at 1440 it covered none but floated above the last line. After: 26 / 26 (with the stopped-watch guard: still
+    `position:fixed` beside the control).
+  - **Verify:** lint 0; unit 1,680 / 1,680 (the first run read 3 red in `compareBuilds` / `thirdPartyLicences`: the
+    `.output` zips were from 09:23, older than the folders rebuilt at 8.1b — re-zipped, green; harness state, not code).
+  - **Bytes (both engines):** content script 345,070 → **345,432 B (+362)**, md5 `60069bae` (Chrome) / `9c3c6473`
+    (Firefox); app chunk 550,933 → **551,295 B (+362)**, `0eece9db` (both); `.output` **6,646,639 / 6,646,495 B**
+    (+724 each) of 7,340,032 — headroom 693,393 / 693,537. `permissions: []`.
+  - **The 9.3 screenshots are not affected:** the tab-reader shots (06, 12) are Chromium `file://`, which can watch
+    (the pill, no note); every other shot is the app page, which shows no tab-reader watch note.
 - **2026-11-10 · M13 — the picker route, measured (final-review step 1(c) and (d)): a picked Firefox folder reads
   fresh files; the "frozen" texts are false; corrected wording PROPOSED (STOPPED for the human).** Tests and records
   only; no product byte changed. Local, on `main`; not pushed.

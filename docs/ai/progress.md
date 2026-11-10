@@ -17,6 +17,13 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 8.1c LANDED (2026-11-10) — WALK FIX (OPTION A): the "can't watch here" notes are an aside after the
+document.** Record: `decisions.md`, "M13 TASK 8.1c". On raw web pages and Firefox `file://` the watch note now flows
+after the last line instead of floating over the text; the stopped-watch note stays by the control. Red 24 / 24 → green
+26 / 26 (`watchNoteAside.browser.test.ts`). Content script and app chunk +362 B each; `.output` 6,646,639 / 6,646,495 B.
+9.3 screenshots not affected. Tasks: 56, 52 ticked. **Waiting on the human:** row 477's sentence (item 1 then lands as
+one task) and the picker-route wording.
+
 **M13 — THE PICKER ROUTE, MEASURED (2026-11-10; final-review step 1(c)/(d) closed by the human's hand check).**
 Record: `decisions.md`, "M13 — the picker route, measured". A picked Firefox folder reads files fresh (the human;
 test p1); files added later are not listed (p2); deleted ones stay listed and open to "Couldn't read this file" (p3);

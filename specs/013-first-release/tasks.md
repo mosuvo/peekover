@@ -1184,6 +1184,19 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       green; full suite; bytes stated.
       ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1b"): red 4 / 8 (every dark case, 1.01:1) → green 8 / 8;
       content script and app chunk +21 B each.*
+- [x] **8.1c The "can't watch here" notes are an aside after the document (WALK FIX, the human's walk "item 13";
+      recorded at 8.1 I-6; HUMAN RULING "8.1c — OPTION A").** On a raw web page and on Firefox `file://` the tab reader's
+      watch note (`REMOTE_DOCUMENT_NOTE`, `FIREFOX_CONTENT_SCRIPT_NOTE`) floated at bottom-left over the text, with no way
+      to close it. A note with no Watch control beside it is now marked `data-place="aside"` and placed after the reading
+      column, in the page flow, aligned to the column's text edge; same words, same look. The stopped-watch note (with
+      the control) keeps its place.
+      Files: `src/watch/watchControl.ts` · `src/render/mount.ts` · `src/theme/readerCss.ts` ·
+      `tests/browser/watchNoteAside.browser.test.ts` (new)
+      Verify: red first — both notes, 414 / 1080 / 1440, light and dark, both engines: the note's box covers no text
+      line at rest, mid-scroll or at the end (5.6's hit-test), and sits below the last line, on screen at the end; the
+      stopped-watch note stays fixed beside the control; then green; full suite; bytes stated.
+      ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 8.1c"): red 24 / 24 note cases in both engines → green 26 / 26;
+      content script and app chunk +362 B each.*
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
@@ -1355,7 +1368,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

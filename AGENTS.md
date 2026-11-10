@@ -132,8 +132,8 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - **Pushing.** Locally, an agent never pushes; the human pushes. In a cloud session (M13 onward) the agent MAY push
   its OWN working branch — never `main` — so the human can review and merge it through a pull request (which runs
   `ci.yml`). Merging to `main` is always the human's. Never force-push. (`decisions.md`, 2026-10-31 HUMAN RULING.)
-- Current milestone: **M13 (`specs/013-first-release/`) in flight — a truthful, on-design first release.** 55 tasks
-  (40 at gate 3 + 15 discovered); 51 ticked; open, pending the human's end-of-round review
+- Current milestone: **M13 (`specs/013-first-release/`) in flight — a truthful, on-design first release.** 56 tasks
+  (40 at gate 3 + 16 discovered); 52 ticked; open, pending the human's end-of-round review
   (`docs/ai/final-review.md`): the 8.1 walk (last, by HUMAN RULING 2026-11-07), 9.2's sign-off, 9.3's pick, the
   Firefox signed-install test — and 9.5's close figures, re-run after any walk fix. Where tasks stand and what is next: `docs/ai/progress.md`. M12 (Editor Mode) CLOSED 2026-10-30 — `decisions.md`'s "M12 CLOSED", `retro.md`'s "M12
   retro". Spec, plan and tasks status lines stay sealed/"draft" per the M7–M12 precedent.

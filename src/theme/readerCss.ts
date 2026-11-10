@@ -22,7 +22,12 @@
 // text on --hl would vanish in dark. `mark` and link:hover text below use literal
 // hex for exactly this reason. The dark link:hover rule repeats the solid --hl fill: the dark
 // thin-underline rule for links is more specific than the plain a:hover, so without it the dark
-// text sat on the dark page (walk fix 8.1b). (The task-list checkmark uses var(--paper) on
+// text sat on the dark page (walk fix 8.1b).
+//
+// WATCH NOTE AS AN ASIDE (walk fix 8.1c): a watch note with no Watch control beside it (a raw web
+// page; Firefox file://) is placed after the reading column by mount() and marked
+// data-place="aside"; it flows after the last line, aligned to the column's text edge, so it never
+// covers text. The column's 130px bottom room for the floating pills moves below the aside. (The task-list checkmark uses var(--paper) on
 // var(--accent): those two ALWAYS contrast — opposite ends of the theme — so that
 // pairing is safe and is not a trap case.)
 
@@ -366,6 +371,8 @@ export const READER_CSS = /* css */ `
   padding:9px 13px;box-shadow:var(--shadow);
 }
 .peekover-watch-note[hidden]{display:none}
+.peekover-watch-note[data-place="aside"]{position:static;margin:0 0 130px max(32px,calc((100% - var(--reader-measure))/2 + 32px))}
+.peekover-reader:has(+.peekover-watch-note[data-place="aside"]){padding-bottom:24px}
 
 /* The persistent capture disclosure (task 3.1, D-3) — a SEPARATE channel from the watch note,
    sitting one 40px step above it in the same bottom-left column (net 16 · theme 56 · watch pill 96

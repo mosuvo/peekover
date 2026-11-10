@@ -351,7 +351,12 @@ export function buildWatchChrome(host: HTMLElement): Node[] {
   const chrome: Node[] = [];
   const control = buildWatchControl(host);
   if (control) chrome.push(control);
-  if (control || watchNote() !== null) chrome.push(buildWatchNote());
+  if (control || watchNote() !== null) {
+    const note = buildWatchNote();
+    // No control to stand beside: the note is an aside after the document (walk fix 8.1c; `mount()` places it).
+    if (!control) note.dataset.place = 'aside';
+    chrome.push(note);
+  }
   if (shouldShowDisclosure()) chrome.push(buildDisclosure());
   return chrome;
 }
