@@ -750,6 +750,7 @@ export const READER_CSS = /* css */ `
 .peekover-diagram-lightbox__close{align-self:flex-end}
 .peekover-diagram-lightbox__view{flex:1;min-height:0;overflow:auto;scrollbar-color:var(--faint) transparent;display:flex;align-items:center;justify-content:center}
 .peekover-diagram-lightbox__view svg{max-width:none;height:auto}
+@media (max-width:863px){.peekover-diagram-lightbox__panel{inset:16px}.peekover-diagram-lightbox__view svg{width:100%}}
 
 /* Print mode (010 D-7, task 6.1) — chrome hidden, document de-clipped, page-break rules; the
    @page margin-box fidelity PROBE follows below. Rationale: the .ts comment after this literal. */

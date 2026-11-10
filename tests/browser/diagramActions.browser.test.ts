@@ -809,13 +809,17 @@ describe('the shipped diagram CSS block', () => {
   // 5.3's shared button rule, which sits ABOVE this block; it keeps only align-self here), the pan box +41
   // (scrollbar-color). Lines removed 875 B, added 732 B. The content-script delta is decomposed in decisions.md,
   // "M13 TASK 5.4" (−569 B in all; this block's −143 B is part of it).
-  it('is exactly 3,968 B — the pin that keeps prose out of the literal', () => {
+  //
+  // Re-pinned by M13 walk fix 8.1i (c): 3,968 -> 4,088 B, +120 B, one rule line: at ≤ 863 px the lightbox panel takes
+  // 16 px insets and the enlarged diagram the card's width (`@media (max-width:863px){…}`, 119 B + its newline).
+  // Accounted in decisions.md, "M13 TASK 8.1i".
+  it('is exactly 4,088 B — the pin that keeps prose out of the literal', () => {
     expect(READER_CSS.indexOf(BLOCK_START)).toBeGreaterThan(0);
     expect(
       bytes,
       'the shipped diagram CSS moved. If that is a rule change, re-pin it here and account the ' +
         'content-script delta to the byte; if it is a comment, move it below the literal',
-    ).toBe(3968);
+    ).toBe(4088);
   });
 
   it('uses no `ch` in a layout-blocking property (retro finding 6)', () => {
