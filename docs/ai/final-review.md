@@ -23,8 +23,22 @@ Mozilla to sign the test build:
 
 ## 1 · The Firefox signed install (do this FIRST: it is the release blocker, and it waits on Mozilla)
 
-**Status now: the signed `.xpi` is NOT saved yet** (`D:\Dev\peekover-amo-test\` holds the zips and `AMO-STEPS.md`, no
-`.xpi`). **This is the blocker.** Until a signed build is tested, the setup guide's "In Firefox, nothing needs setting
+**RESULT (2026-11-10, the agent ran the kit's step 11 on the signed `.xpi`; `decisions.md` "the AMO-signed 0.0.9 on a
+real Firefox"):** (a) **`file://` does NOT render out of the box on Firefox 159** — since Firefox 153 a separate,
+default-off setting, "Access local files on your computer" (about:addons → Peekover → Permissions and data), must be
+on; with it on, the reader renders. So "In Firefox, nothing needs setting up." is FALSE, and the "It does not" branch
+below applies. (b) The guide opens once and not again across restarts — TRUE. **Left for you:**
+1. **Approve or change the proposed wording** (the guide's Firefox branch and rows 26 / 296 / 304 / 335 / 500: in the
+   decisions entry, "Wording PROPOSED"). Nothing is re-worded until you do.
+2. **(c) + (d) by hand, ~3 min** (the native dialog and an OS drag could not be automated): run
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\walk-profiles.ps1 -Browser firefox-signed -Xpi
+   D:\Dev\peekover-amo-test\c349a766463540d89ff5-0.0.9.xpi`, accept the install, click Peekover's toolbar button →
+   **Open a folder** → pick a folder holding a `.md` file → open the file → **edit and save it in your editor** → click
+   another file, then the edited one again. Say "picker: fresh" (the edit shows) or "picker: stale". Then **drag** a
+   folder from Explorer onto the app page and read the note under the folder list ("…drag it in instead. Watching
+   still works here…").
+
+*Before the run:* **the signed `.xpi` was NOT saved yet.** **This was the blocker.** Until a signed build is tested, the setup guide's "In Firefox, nothing needs setting
 up." (ledger rows 296, 304) may be false, and rows 26, 335 and 500 plus the Firefox half of 2, 8, 112, 185, 209 and 312
 stay PENDING SIGNED INSTALL.
 

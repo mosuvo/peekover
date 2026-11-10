@@ -17,6 +17,16 @@ signed install (the BLOCKER; the `.xpi` is not saved yet), (2) the 8.1 walk, (3)
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 — THE SIGNED INSTALL, RUN (2026-11-10; AMO kit step 11): the BLOCKER is settled — `file://` does NOT render out
+of the box on Firefox 159; the fix waits on the human's wording (STOPPED).** Record: `decisions.md`, "the AMO-signed
+0.0.9 on a real Firefox". The `.xpi` is our 0.0.9 + Mozilla's signature (manifest re-serialized, equal when parsed).
+(a) Since Firefox 153, local-file access is a separate, default-off permission ("Access local files on your computer",
+about:addons → Peekover → Permissions and data); turned on, the reader renders. (b) The guide opens once, not again
+across 2 restarts — TRUE. (c)/(d) The real picker and the real drag could not be automated — **a ~3-min hand check for
+the human** (final-review step 1). Ledger: 296 / 304 FALSE; 26 / 335 / 500 FALSE ("not yet checked"); the Firefox half
+of 2, 8, 112, 185, 209, 312 true once the setting is on; 25 / 334 / 498 still pending (c). **Next, after the human's
+wording:** a discovered task — the guide's Firefox branch (`isAllowedFileSchemeAccess()`, no new permission) + those rows.
+
 **M13 TASK 9.3b LANDED (2026-11-07) — DISCOVERED: the drag-route note (HUMAN RULING "drag note: approve
 corrected").** Record: `decisions.md`, "M13 TASK 9.3b". A dragged Firefox folder now shows the approved note (Watch
 works there); the picker note is unchanged. Its "a picked folder can't be watched" waits on final-review step 1(c) —

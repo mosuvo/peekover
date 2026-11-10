@@ -1,6 +1,72 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 — the AMO-signed 0.0.9 on a real Firefox (AMO kit step 11; final-review step 1): `file://` does
+  NOT render out of the box on Firefox 159 — the release BLOCKER is settled as FALSE; the fix needs the human's wording
+  (STOPPED).** Records only; no product byte changed. Local, on `main`; not pushed. The human's kickoff said "step 5 of
+  the AMO kit"; the kit's agent step is **11** (5 is "Continue" in the upload flow) — followed the body, flagged here.
+  - **The file (`D:\Dev\peekover-amo-test\c349a766463540d89ff5-0.0.9.xpi`, sha256 `2da9b084…ae90b`) is our 0.0.9 plus
+    Mozilla's signature.** `SHA256SUMS` OK for both zips. 162 of 162 entries of `peekover-0.0.9-firefox.zip` are in the
+    `.xpi`; 161 byte-identical; `manifest.json` differs in BYTES only (978 → 1,355 B: AMO re-serialized it
+    pretty-printed; parsed, the two are equal). Added: `META-INF/{cose.manifest, cose.sig, manifest.mf, mozilla.rsa,
+    mozilla.sf}`. Signer: `CN=peekover@peekover.dev, OU=Production`, issued by `signingca1.addons.mozilla.org` (Mozilla
+    AMO Production Signing Service) ← `root-ca-production-amo`. Note: the signed file is therefore NOT byte-identical to
+    our build; only the UPLOAD is (SOURCE_CODE_REVIEW's claim is about the upload, so it stands).
+  - **How it was run.** The installed Firefox **159.0.1** (not Playwright's), a fresh profile
+    (`D:\Dev\peekover-walk-profiles\firefox-signed`), driven over WebDriver BiDi (scratch probes, not committed).
+    Installed with `webExtension.install` + `moz:permanent: true` — a real, signature-checked install (a temporary
+    install would not survive a restart). Profile prefs: only `remote.prefs.recommended=false` (so the automation does
+    not change browser defaults) and no default-browser check; no extension pref touched. Not a person's
+    click-through install prompt: Firefox's own code (159's `omni.ja`) grants the file opt-in from about:addons ONLY
+    (`addon-card.mjs`, type `file_scheme_access`), never from the install prompt, so the prompt path ends in the same
+    state — code reading, not measured.
+  - **(a) `file://` — NOT rendered by default.** `note.md` opened in a tab: Firefox's plain-text view
+    (`text/plain`, `<pre>`), no `peekover-root`, no hide style — the content script never ran. **Cause, measured:**
+    `extensions.webextensions.fileSchemeAccess.requireOptIn = true` (default); the add-on's policy holds `file:///*`
+    in `allowedOrigins` and the content script's pattern matches, but `contentScript.matchesURI()` and
+    `policy.canAccessURI(file:…)` are false until the internal permission `internal:fileSchemeAllowed` is granted.
+    about:addons → Peekover → **Permissions and data** lists it under "Optional:" as **"Access local files on your
+    computer" — OFF** after install (the four raw-site entries are ON). **Turned on** (a trusted pointer click on that
+    toggle) → `browser.extension.isAllowedFileSchemeAccess()` false → **true**, and `note.md` in a new tab **renders**
+    (the reader's `h1` "Signed install heading"; screenshot) — so the "not rendered" reading is not a blind instrument:
+    the same check, same file, reads the reader once the toggle is on. Mozilla's own
+    record: Firefox **153** made local-file access a separate, default-off permission, for every extension, existing ones
+    included (blog.mozilla.org/addons 2026-07-23 "Firefox 153 WebExtensions API updates"; bugzilla 2034168), and
+    `isAllowedFileSchemeAccess()` now answers truthfully. Firefox 127–152 (our `strict_min_version` 127): not measured.
+  - **(b) The setup guide — TRUE.** It opened once on install (`moz-extension://…/onboarding.html`, next to Firefox's
+    `about:welcome`) and **not again across two restarts**; after them the add-on is still installed, active, signed
+    (`signedState` 2), not temporary. Its text is the Firefox copy: "In Firefox, nothing needs setting up." — which
+    (a) makes false.
+  - **(c) Folder routes with a REAL picker — NOT SETTLED (the automation could not complete the native dialog).**
+    "Open a folder" opens Windows' "Select Folder to Upload" dialog (a trusted click reaches `input.click()` on the
+    `webkitdirectory` input). Driving it: UI Automation does not expose its Folder box or buttons; Win32 messages did set
+    the box and click its button ("**Upload**"), yet the page received no folder (a page screenshot cannot show any
+    browser-chrome prompt that may follow). Stopped there as a rabbit hole. The real OS drag (d) has the harness's
+    standing limit. **Both go to the human as a ~3-minute hand check** (final-review step 1). Rows 25 / 334 / 498,
+    `DRAGGED_SNAPSHOT_NOTE`'s "a picked folder can't be watched" and `FIREFOX_PICKER_NOTE` stay as they are until then.
+  - **A process fault, recorded:** while driving the dialog, one attempt used `SendKeys`; Windows refused the background
+    process the foreground, so the keys (Alt+D, the folder path, Enter, Alt+N, Enter) went to whatever window the human
+    had focused. Replaced by Win32 messages to the dialog's own controls. The human was told.
+  - **Ledger verdicts (no row re-worded — wording waits on the human):**
+    - **FALSE on Firefox 159:** rows **296** ("In Firefox, nothing needs setting up.") and **304** ("In Firefox, markdown
+      files you open from your computer are shown with no setup.").
+    - **FALSE now (it HAS been checked):** rows **26 / 335 / 500** ("…has not yet been checked on a real install.").
+    - **TRUE once the setting is on** (the Firefox half of 2, 8, 112, 185, 209, 312: "files opened from disk") — the
+      same footing as Chrome's "Allow access to file URLs"; they stay true if the guide tells Firefox users the setting.
+    - **Still pending (step 1(c)):** 25 / 334 / 498.
+  - **What it decides (final-review step 1, "It does not"):** onboarding gains a **Firefox branch** as a discovered task —
+    detection through `browser.extension.isAllowedFileSchemeAccess()` (the Chromium branch's own call; **no new
+    permission**, no manifest change), with steps to about:addons. **Wording PROPOSED for the human (not landed):** the
+    guide's intro "Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your
+    computer need one Firefox setting."; on / off lines naming "Access local files on your computer"; steps "Open
+    about:addons (type it in the address bar) and choose Peekover." → "Open the Permissions and data tab." → "Turn on
+    'Access local files on your computer'." → "Then open your markdown file again."; rows 26 / 335 / 500: "In Firefox,
+    files opened from disk need one setting: 'Access local files on your computer', under Peekover's Permissions and
+    data in about:addons." Open for the task: whether `tabs.create('about:addons')` is allowed to an extension (not
+    measured, so the steps say to type it); a reload is not needed (a NEW tab rendered right after the toggle; an
+    already-open tab was not tested).
+  - **Evidence kept:** `D:\Dev\peekover-amo-test\step11-evidence\` (guide on install; `file://` before; the
+    about:addons toggle OFF; `file://` rendered after).
 - **2026-11-07 · M13 TASK 9.3b — DISCOVERED: the drag-route note (HUMAN RULING, verbatim: "drag note: approve
   corrected."). A dragged Firefox folder no longer tells the user Watch is unavailable.** Local, on `main` after
   `9659765`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-07; 1 low, ignored).
