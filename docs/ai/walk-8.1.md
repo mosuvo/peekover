@@ -153,7 +153,64 @@ Firefox-only folder notes (9.3c) and the setup guide (9.2b). Launcher: `powershe
 
 **B · EDGE and BRAVE** (`-Browser edge`, `-Browser brave`) · ~10 min
 9. **8.1b on Edge** — dark link hover (E4 did not check it). *2 min*
+   - *Measured by CC, 2026-11-10, Edge 157.0.4341.42 (build `bdcc418`, rebuilt); human not walked.* Driven over CDP
+     (the launcher's Edge flags plus `--remote-debugging-port`); pass bar and arithmetic as
+     `linkHoverContrast.browser.test.ts` (WCAG 4.5:1, `helpers/contrast.ts`'s backdrop walk). **Finding:**
+     `docs/store/assets/sample.md` has **no link**, so nothing there can be hovered; measured on a scratch copy
+     outside the repo, `D:\Dev\walk-scratch\edge-b9\sample-with-link.md` (sample.md plus the test's line "Read the
+     [rollout plan](https://example.invalid/plan) before Friday."). Reader set to Dark with its own Theme button.
+     (a) **tab reader, `file://`:** hovered `color` rgb(25, 21, 4) on `background-color` rgb(255, 216, 77) — `#191504`
+     on `#ffd84d`, **13.2:1** (at rest `#eaebf3` on `#12141c`, 15.47:1). (b) **app page**, folder opened through the
+     `__peekoverHarness` seam with an OPFS copy of the same file (no native picker): the same values, **13.2:1** (rest
+     15.47:1). Both above the bar. Shots: `D:\Dev\peekover-shots\8.1\edge\b9a-tab-reader-dark-hovered.png`,
+     `b9b-app-page-dark-hovered.png`.
 10. **I-1 / I-2 / I-4 on Edge** — restart with `-Keep`: no second guide; `edge://extensions` label; the icon. *4 min*
+   - *Measured by CC, 2026-11-10, Edge 157.0.4341.42; human not walked.* Shots in `D:\Dev\peekover-shots\8.1\edge\`.
+     **(a) Details page** (`edge://extensions/?id=ghadahcfacdjcapbfgmadjoknbkmjedf`): the toggle reads **"Allow access
+     to file URLs"**. Edge HAS a site-access section like Chrome 157's: heading **"Site access"**, text "This extension
+     can read and change your data on sites you open. Control how this extension can access your data on sites from
+     the below settings. Learn more", a switch **"Automatically allow access on the following sites"**, and rows
+     `file:///*`, `https://bitbucket.org/*`, `https://gist.githubusercontent.com/*`, `https://gitlab.com/*`,
+     `https://raw.githubusercontent.com/*`. While the main switch is on, every row is on and **disabled** (greyed);
+     with it off, the rows are off and editable. (`b10a-edge-extensions-details.png`)
+     **(b) The guide per state** (each read from the guide tab, plus a `file://` sample.md):
+     1. site on + file URLs on → `data-access="on"`, "…'Allow access to file URLs' is on…", steps hidden, web line
+        "…shown with no setup."; `file://` **renders**.
+     2. site on + file URLs **off** → `off`, "Peekover can't read files on your computer yet: 'Allow access to file
+        URLs' is off."; steps 1 / 2 / 3, and step 2 shows BOTH "Turn on 'Allow access to file URLs'." AND "Under site
+        access, turn on file:///* (in Chrome: 'Automatically allow access on the following sites')."; web line "no
+        setup"; `file://` **plain text**. **Finding:** site access was ON here, yet the guide asks to turn it on —
+        with the file-URL toggle off, `permissions.contains(file:///*)` reads false, so this state paints the same as
+        "both off" (8.1f's approved "both off" copy).
+     3. site **off** + file URLs off → as 2, and the web line becomes "…its site access for at least one of them is
+        turned off…"; `file://` **plain text**.
+     4. site off + file URLs **on** (on the way back) → `blocked`, "…its site access for file:///* is turned off.",
+        step 2 the site step only; `file://` **plain text**.
+     5. then only the `file:///*` row turned on (main switch still off), as the guide's step says → `on`; `file://`
+        **renders** (web line stays "site access off" — the hosts were still off).
+     6. restored: main switch on, file URLs on → `on`, "no setup"; `file://` **renders**. Both restored to ON.
+     Flipping "Allow access to file URLs" reloaded Peekover (the open guide and app tabs closed); the extension's pages
+     and `file://` worked straight after each flip — **no browser restart needed** on Edge 157. The step-2 label in
+     quotes matches Edge's word for word. Shots `b10b-*.png`.
+     **(c) "Open Peekover's details"** (clicked in state 2): opens a new tab at
+     **`edge://extensions/?id=ghadahcfacdjcapbfgmadjoknbkmjedf`**, Peekover's Details page; the failure note stayed
+     hidden (`b10c-open-details-result.png`). Navigating to `chrome://extensions` loads `edge://extensions/` (over CDP,
+     not typed into the address bar; `b10c-typed-chrome-extensions.png`).
+     **(d) Toolbar icon:** Peekover pinned (written to the profile's `extensions.pinned_extensions`, as Edge's menus
+     are out of reach), Edge "Overall appearance" Light, then Dark (put back to System after):
+     `b10d-edge-light-toolbar.png` / `-window.png`, `b10d-edge-dark-toolbar.png` / `-window.png`. Not judged.
+     **(e) Restart with `-Keep`:** **Finding:** with Developer mode **off** (the launcher's state), the relaunch
+     DISABLES Peekover — Details reads "To use this extension, turn on developer mode.", the on/off switch off and
+     greyed, `Secure Preferences` `disable_reasons: [16777216]` (1<<24); no guide, and `file://` stays plain text
+     (reproduced on a second fresh profile, `b10e-extensions-after-keep-relaunch.png`). So "no second guide" proves
+     nothing in that state. With Developer mode **on**, Peekover re-enabled itself (no guide opened); a `-Keep`
+     relaunch then kept it enabled, `file://` rendered, and **the guide did not reopen**. Why: not a fresh install —
+     across launches `first_install_time` stayed `13438778644822829` while `last_update_time` moved each launch
+     (location 8, command line), and the IndexedDB folder survived; Edge re-loads the existing install. The guide's
+     IndexedDB mark (6.2a) would also hold it shut; from outside the two cannot be told apart.
+     **Also seen:** Edge signed the fresh throwaway profile into the machine's Microsoft account by itself (a
+     sync-confirmation page, the account's avatar, the synced favorites bar on new tabs) — the launcher profile is not
+     isolated from the account.
 11. **I-1 / I-2 / I-4 on Brave** — the same three (not walked at all), or accept Chrome + Edge for it by name. *4 min*
 
 **C · FIREFOX — the CURRENT build as a temporary add-on** (`-Browser firefox` → Load Temporary Add-on →
@@ -195,10 +252,10 @@ Each item: what to look at → what "good" looks like → record. Items I are li
 
 | # | Look at | Good looks like | Verdict | Notes |
 | --- | --- | --- | --- | --- |
-| I-1 | **Install and the setup guide, per browser** (Chrome by Load unpacked; Edge, Brave from the launcher; Firefox signed): does the guide open once on install, and not again after a browser restart (`-Keep`) or a toggle flip? | Opens exactly once. (Chromium unpacked loads re-install on every launch of `--load-extension` — judge "once" on Chrome's Load unpacked + restart, and on the signed Firefox.) | walked (notes): Chrome OK; Edge, Firefox (signed) partly | Chrome: opens once (1), stays closed after a restart with `-Keep` (15). Edge: opens (E1); restart not noted. Firefox signed 0.0.9: once, and not again across restarts (AMO step 11 + the human). **Not walked:** Brave; the toggle-flip case; the CURRENT build's Firefox guide (9.2b). |
-| I-2 | **The file-URL toggle in each Chromium browser** (Chrome, Edge, Brave): its label as the browser shows it; typing `chrome://extensions` (or `edge://`, `brave://`); "Open Peekover's details" opening the Details page; flip off → on with the guide open: does the guide update on focus; does Peekover need a restart after? | Each step's words match what the browser shows; the guide's state follows the toggle; record what the flip did. **The default (off on a store install) is not checkable before go-live** (prep finding). | walked (notes): partly | Only the "on" state, Chrome (1) and Edge (E1). **Not walked:** the label in each browser, typing `chrome://extensions` / `edge://`, "Open Peekover's details", flip off → on with the guide open, Brave. **2026-11-10, Chrome (kept profile): FIX → 8.1f (landed):** the human turned access off and the `file://` tab went plain text while the guide still said "on" — the setting off was SITE ACCESS ("Automatically allow access on the following sites"), the file-URL toggle stayed on; the guide now checks both (`decisions.md`, "M13 TASK 8.1f"). Re-check the guide, then the flip off → on. |
+| I-1 | **Install and the setup guide, per browser** (Chrome by Load unpacked; Edge, Brave from the launcher; Firefox signed): does the guide open once on install, and not again after a browser restart (`-Keep`) or a toggle flip? | Opens exactly once. (Chromium unpacked loads re-install on every launch of `--load-extension` — judge "once" on Chrome's Load unpacked + restart, and on the signed Firefox.) | walked (notes): Chrome OK; Edge, Firefox (signed) partly | Chrome: opens once (1), stays closed after a restart with `-Keep` (15). Edge: opens (E1); restart not noted. Firefox signed 0.0.9: once, and not again across restarts (AMO step 11 + the human). **Not walked:** Brave; the toggle-flip case; the CURRENT build's Firefox guide (9.2b). **Edge — measured by CC, 2026-11-10, Edge 157.0.4341.42; human not walked** (checklist item 10 (e)): the guide opened on a fresh launcher install; after a `-Keep` restart with Developer mode OFF, Edge **disabled** Peekover ("To use this extension, turn on developer mode.") — no guide, no rendering; with Developer mode ON, a `-Keep` restart kept it enabled and the guide did not reopen (Edge re-loads the existing install: `first_install_time` unchanged). Flipping the file-URL toggle reloaded Peekover and opened no guide. Shot `D:\Dev\peekover-shots\8.1\edge\b10e-extensions-after-keep-relaunch.png`. |
+| I-2 | **The file-URL toggle in each Chromium browser** (Chrome, Edge, Brave): its label as the browser shows it; typing `chrome://extensions` (or `edge://`, `brave://`); "Open Peekover's details" opening the Details page; flip off → on with the guide open: does the guide update on focus; does Peekover need a restart after? | Each step's words match what the browser shows; the guide's state follows the toggle; record what the flip did. **The default (off on a store install) is not checkable before go-live** (prep finding). | walked (notes): partly | Only the "on" state, Chrome (1) and Edge (E1). **Not walked:** the label in each browser, typing `chrome://extensions` / `edge://`, "Open Peekover's details", flip off → on with the guide open, Brave. **2026-11-10, Chrome (kept profile): FIX → 8.1f (landed):** the human turned access off and the `file://` tab went plain text while the guide still said "on" — the setting off was SITE ACCESS ("Automatically allow access on the following sites"), the file-URL toggle stayed on; the guide now checks both (`decisions.md`, "M13 TASK 8.1f"). Re-check the guide, then the flip off → on. **Edge — measured by CC, 2026-11-10, Edge 157.0.4341.42; human not walked** (checklist item 10 (a)–(c)): the label is "Allow access to file URLs"; Edge has the same site-access switch, "Automatically allow access on the following sites", with per-site rows. The guide followed each state (on / off / blocked / on), and `file://` rendered only when both allowed it; no browser restart needed after a flip. "Open Peekover's details" opened `edge://extensions/?id=ghadahcfacdjcapbfgmadjoknbkmjedf`; `chrome://extensions` loads `edge://extensions/`. **Finding:** with only the file-URL toggle off, step 2 also asks to turn on site access, which is already on. Shots `D:\Dev\peekover-shots\8.1\edge\b10a-*.png`, `b10b-*.png`, `b10c-*.png`. |
 | I-3 | **Firefox `file://` (§9-6)** on the SIGNED unlisted install, fresh profile: open a local `.md` by `file://` directly (not the app page). Also look in about:addons → Peekover → Permissions. | It renders with no setup. If Firefox asks for access, or it stays plain text → a discovered task (detection or instructions, no new permission — or STOP if a permission would be needed). This decides ledger rows 26 / 296 / 304 and the Firefox listing's "not yet been checked" line (9.2). | fix — 9.2b (landed) | Signed 0.0.9: `file://` stayed plain text until "Access local files on your computer" was turned on → 9.2b (the guide's Firefox branch, floor 153). **Re-check on the current build:** the guide's Firefox section, then a `file://` .md with the setting on. |
-| I-4 | **The toolbar icon** in Chrome, Edge, Brave and Firefox, with the browser's own light and dark themes. | Crisp at toolbar size; legible on both. | | |
+| I-4 | **The toolbar icon** in Chrome, Edge, Brave and Firefox, with the browser's own light and dark themes. | Crisp at toolbar size; legible on both. | | **Edge — shots by CC, 2026-11-10, Edge 157.0.4341.42; human not walked; not judged:** Peekover pinned, Edge appearance Light and Dark — `D:\Dev\peekover-shots\8.1\edge\b10d-edge-light-toolbar.png`, `b10d-edge-dark-toolbar.png` (whole windows: `…-window.png`). |
 | I-5 | **System font stacks by eye** on the tab reader (content script) on Windows — and macOS if available (D-3); once on a machine WITHOUT the design faces installed (CI's case: the chrome draws in the system face). Code draws Consolas on Windows (5.10, R1 — the human chose to proceed). | Reads as designed in the system face; nothing falls back to a serif or to Courier. | | |
 | I-6 | **The tab reader on a raw GitHub / GitLab / Bitbucket file** (a real network page — your choice of file). | Same reader as on `file://`; the network indicator and "Network used" read true. | fix | The human's walk "item 13", two findings: (1) dark theme, a hovered link's text is unreadable — FIXED as 8.1b (`decisions.md` "M13 TASK 8.1b"; every link, both reader surfaces); (2) on a raw web file the "Peekover watches local files…" note sits over the text at bottom-left — FIXED as 8.1c (`decisions.md` "M13 TASK 8.1c": OPTION A, the note is an aside after the document; see II-9). **Walk notes:** 8.1b and 8.1c landed. **Not noted:** the network indicator and "Network used" on the raw page; dark link hover on Edge (E4). |
 | I-7 | **The folder picker and the denied state**: "Open a folder" (the OS dialog), cancel it, deny it. **Network used**: load a remote image with "Load" and read the status line ("Network used", no count — 4.7 ruling). | Each state is the restyled one (5.5); the status line changes from "No network calls" to "Network used". | walked (notes): partly | Chrome: "Open a folder", the listing, a file opened (6). **Not walked:** cancel, deny, "Network used" after Load on a remote image. |
