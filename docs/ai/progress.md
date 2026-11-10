@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -17,12 +17,17 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 8.1e LANDED (2026-11-10) — WALK FIX (found at 8.1d): Copy as rich text pastes no control labels.**
+Record: `decisions.md`, "M13 TASK 8.1e". The strip step moved into `serializeReaderDocument`, shared by all three exits
+(HUMAN RULING: one function). Red 4 / 4 → green. App chunk +9 B (`84574dea`), content script identical; `.output`
+6,648,320 / 6,648,306 B. Tasks: 60, 56 ticked. **The human re-checks:** Copy as rich text, paste into Docs / Word.
+
 **M13 TASK 8.1d LANDED (2026-11-10) — WALK FIX (I-9, the re-check of 8.1a): the exported HTML scrolls, hides its
 math source, ships no controls.** Record: `decisions.md`, "M13 TASK 8.1d". The body carried the reader's
 `position:fixed` (cause confirmed: `scrollHeight` = the viewport); now `body{position:static}`; `MATH_CSS` rides with
 math; controls stripped (sort buttons to header text, checklist kept — HUMAN RULING). Red 4 / 4 → green 16 / 16. App
 chunk +634 B (`369153fa`), content script identical; `.output` 6,648,311 / 6,648,297 B. Copy as HTML shares it; Copy as
-rich text does not (8.1e, next). Tasks: 59, 55 ticked. **The human re-checks:** export, open, scroll, Ctrl+P.
+rich text did not (8.1e, landed). Tasks: 59, 55 ticked. **The human re-checks:** export, open, scroll, Ctrl+P.
 
 **M13 — WALK PREP (2026-11-10, records only): the human's walk notes banked; the table one verdict per surface.**
 Record: `decisions.md`, "M13 — walk prep". `docs/ai/walk-8.1.md` now holds the notes (Chrome 1–15, Edge E1–E4,

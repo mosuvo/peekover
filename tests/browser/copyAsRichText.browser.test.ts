@@ -52,6 +52,9 @@ import { mount } from '../../src/render/mount';
 import { copyAsHtml, copyAsRichText } from '../../src/export/htmlExport';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource, MarkdownFile } from '../../src/app/folderSource';
+import { createReaderPane } from '../../src/app/readerPane';
+import { setThemeSetting } from '../../src/theme/reader';
+import sampleMd from '../../docs/store/assets/sample.md?raw';
 
 // RULING C (the 4.0 census, 2026-11-02; 013 task 4.4): this file is not about the compact toolbar, so
 // its window is WIDE — above the 863 px breakpoint, where the app controls sit in the toolbar
@@ -379,4 +382,69 @@ describe('the export panel — Copy as rich text row goes live at this task (pdf
       expect(Array.isArray(manifest.permissions) ? manifest.permissions : ['MISSING']).toEqual([]);
     }
   });
+});
+
+// Walk fix 8.1e: Copy as rich text pasted the reader's control labels ("Copy CSV", "Line numbers",
+// ...) into the target, because it copies the clone without the export's strip step. Both exits now
+// take the clone from `serializeReaderDocument`, which strips once for every exit. The sample runs
+// through the real reader pane (all enhancers), and its table is filtered first: the copy must
+// still carry every row, and the headers (whose text lives inside the sort buttons) keep their text.
+describe('copyAsRichText - no control labels, headers kept, a filtered table copies whole (walk fix 8.1e)', () => {
+  const LABELS = ['Copy CSV', 'Copy Markdown', 'Line numbers', 'Copy image', 'Download SVG', 'Copy LaTeX', 'Filter', 'Clear'];
+
+  afterEach(() => setThemeSetting('auto'));
+
+  for (const theme of ['light', 'dark'] as const) {
+    it(`${theme}: text/html and text/plain carry none of the control labels, and all four rows`, async () => {
+      setThemeSetting(theme);
+      const pane = createReaderPane(document);
+      document.body.appendChild(pane.element);
+      containers.push(pane.element);
+      await pane.select({ name: 'sample.md', read: async () => sampleMd });
+      const host = pane.element.querySelector<HTMLElement>('.peekover-app__reader__host')!;
+      const sr = host.shadowRoot!;
+      await until(
+        () =>
+          sr.querySelector('figure.peekover-math[data-math="rendered"]') &&
+          sr.querySelector(`figure.peekover-diagram[data-diagram-theme="${theme}"]`) &&
+          sr.querySelectorAll('.peekover-code[data-code="rendered"]').length === 2 &&
+          sr.querySelector('.peekover-table-filter'),
+      );
+      expect(host.getAttribute('data-theme')).toBe(theme);
+
+      // Filter the live table down to one row, then copy.
+      const field = sr.querySelector<HTMLInputElement>('.peekover-table-filter')!;
+      field.value = 'Canary';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      await until(() => sr.querySelectorAll('.peekover-reader tbody tr[hidden]').length >= 3);
+
+      const clipboard = stubClipboard();
+      try {
+        await copyAsRichText(host);
+        const html = await blobText(clipboard.written[0][0], 'text/html');
+        const plain = await blobText(clipboard.written[0][0], 'text/plain');
+
+        for (const label of LABELS) {
+          expect(html, `text/html carries "${label}"`).not.toContain(label);
+          expect(plain, `text/plain carries "${label}"`).not.toContain(label);
+        }
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        expect(doc.querySelectorAll('button, [role="group"], [role="toolbar"]').length).toBe(0);
+        expect([...doc.querySelectorAll('th')].map((th) => th.textContent)).toEqual([
+          'Phase',
+          'Traffic',
+          'Duration',
+          'p95 latency',
+        ]);
+        const rows = [...doc.querySelectorAll('tbody tr')];
+        expect(rows.length).toBe(4);
+        expect(rows.filter((r) => r.hasAttribute('hidden')).length).toBe(0);
+        for (const phase of ['Shadow', 'Canary', 'Half', 'Full']) expect(plain).toContain(phase);
+      } finally {
+        clipboard.restore();
+      }
+      // The live reader is untouched: its filter still holds.
+      expect(sr.querySelectorAll('.peekover-reader tbody tr[hidden]').length).toBeGreaterThanOrEqual(3);
+    });
+  }
 });

@@ -54,7 +54,7 @@ import { MATH_CSS } from '../theme/mathCss';
 import type { EffectiveTheme } from '../settings/settings';
 
 export interface SerializedReaderDocument {
-  /** A DETACHED clone of `.peekover-reader` — the live tree is never mutated (only read). */
+  /** A DETACHED clone of `.peekover-reader`, its controls stripped — the live tree is never mutated (only read). */
   clone: HTMLElement;
   /** The theme painting on `host` at serialization time — `wrapInStandaloneDocument`'s theme arg. */
   theme: EffectiveTheme;
@@ -85,6 +85,9 @@ export function serializeReaderDocument(host: HTMLElement): SerializedReaderDocu
     throw new Error("serializeReaderDocument: no '.peekover-reader' in this host's shadow root");
   }
   const clone = column.cloneNode(true) as HTMLElement;
+  // Every exit (download, Copy as HTML, Copy as rich text) takes its clone from here, so the
+  // controls are stripped once, the same way for all of them (walk fixes 8.1d, 8.1e).
+  stripControls(clone);
   return { clone, theme: currentTheme(host) };
 }
 
@@ -352,12 +355,11 @@ function stripControls(clone: HTMLElement): void {
  * extra wrapper element, matching D-3's interpretation note ("a bundled `<style>` block, never
  * per-node inline `style` attributes").
  *
- * The clone is stripped of its controls in place (`stripControls`). When it carries math, the math
+ * The clone arrives already stripped of its controls (`serializeReaderDocument`). When it carries math, the math
  * sheet rides along verbatim (every selector is already `.peekover-reader`-scoped, no `:host`): it
  * holds the rule that hides a rendered formula's source `<pre>`, and Temml's layout rules.
  */
 export function wrapInStandaloneDocument(clone: HTMLElement, theme: EffectiveTheme): string {
-  stripControls(clone);
   const math = clone.querySelector('[data-math]') ? `\n${MATH_CSS}` : '';
   const css = `${translateReaderStylesheet(theme).css}\n${EXPORT_BODY_CSS}${math}`;
   return (

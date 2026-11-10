@@ -1,6 +1,29 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1e — WALK FIX (found at 8.1d): Copy as rich text pastes no control labels.** 8.1d's
+  report: `copyAsRichText` copies `clone.outerHTML` without `wrapInStandaloneDocument`, so it still carried "Copy CSV",
+  "Line numbers", "Copy image", "Copy LaTeX", "Filter", "Clear" into the paste target. HUMAN RULING: use the SAME
+  strip step as the export, one function, with the same restores. Local, on `main`; not pushed. `pnpm audit --prod`
+  EXIT 0 (2026-11-10; 1 low, ignored).
+  - **Fix (`src/export/htmlExport.ts`):** `stripControls` now runs inside `serializeReaderDocument`, the one function
+    all three exits (download, Copy as HTML, Copy as rich text) already take their clone from; `wrapInStandaloneDocument`
+    no longer calls it. One call site, so the exits cannot drift. The live reader is never touched (the clone is
+    detached; the test checks the live filter still holds).
+  - **Red first** (`tests/browser/copyAsRichText.browser.test.ts`, new describe "walk fix 8.1e"): the sample through
+    the real reader pane (all enhancers), its table filtered to one row ("Canary") through the real filter field, then
+    `copyAsRichText` (stubbed clipboard); light AND dark x Chromium AND Firefox. Asserts neither `text/html` nor
+    `text/plain` holds any of the labels (plus "Copy Markdown", "Download SVG"), no button/group/toolbar, the four
+    headers keep their text, all four rows ship unhidden. Before: 4 / 4 red (`text/html carries "Copy CSV"`). After:
+    green; with the row restore ablated, 4 / 4 red (`expected 3 to be +0`, three rows still hidden). The unit test for
+    the restores now goes through `serializeReaderDocument` (`htmlExport.test.ts`).
+  - **Bytes (same-session A-B, both engines; A reproduced 8.1d exactly):** app chunk **551,982 -> 551,991 B (+9)**,
+    md5 `369153fa` -> **`84574dea`**; **content script identical** (345,424 B, `ff67c713` / `aa45b1c3`); `.output`
+    **6,648,320 / 6,648,306 B** (+9 each) of 7,340,032, headroom 691,712 / 691,726; manifests 864 / 978 B,
+    `permissions: []`.
+  - **Verify:** lint clean; unit 1,685 / 1,685; browser 2,674 passed, 64 skipped, 0 failed (both engines).
+  - **Re-check (the human):** Copy as rich text from the sample, paste into Google Docs or Word: no button labels; the
+    table has its headers and all rows.
 - **2026-11-10 · M13 TASK 8.1d — WALK FIX (8.1 item I-9, the re-check of 8.1a): the exported HTML scrolls, hides
   its math source, and ships no controls.** The human, 2026-11-10: the downloaded `sample.html` opened in Chrome shows
   one screen and cannot be scrolled (it stops at "Ranking"); the file carried 8.1a's fix, so a different cause. Local,

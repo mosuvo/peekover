@@ -209,18 +209,24 @@ describe('wrapInStandaloneDocument', () => {
 
   // Walk fix 8.1d: with the controls gone, what they were hiding must ship. The sample document in
   // the browser test has no filtered table and no collapsed block, so these two are pinned here.
+  // 8.1e: the strip lives in serializeReaderDocument, so every exit's clone gets it.
   it('ships rows a filter hid and a collapsed code block whole, with their controls removed', () => {
-    const clone = document.createElement('div');
-    clone.className = 'peekover-reader';
-    clone.innerHTML =
+    const host = mountedHost('# Doc\n');
+    const column = host.shadowRoot!.querySelector('.peekover-reader')!;
+    const extra = document.createElement('div');
+    extra.innerHTML =
       '<table><tbody><tr><td>kept</td></tr><tr hidden=""><td>filtered out</td></tr></tbody></table>' +
       '<div class="peekover-code" data-code-state="collapsed"><pre class="shiki">x</pre>' +
       '<button type="button" class="peekover-code-toolbar__collapse">Show all</button></div>';
-    const doc = new DOMParser().parseFromString(wrapInStandaloneDocument(clone, 'light'), 'text/html');
-    expect(doc.querySelectorAll('tr[hidden]').length).toBe(0);
-    expect(doc.querySelectorAll('tr').length).toBe(2);
-    expect(doc.querySelector('[data-code-state]')).toBeNull();
-    expect(doc.querySelector('button')).toBeNull();
+    column.append(...extra.childNodes);
+    const { clone } = serializeReaderDocument(host);
+    expect(clone.querySelectorAll('tr[hidden]').length).toBe(0);
+    expect(clone.querySelectorAll('tr').length).toBe(2);
+    expect(clone.querySelector('[data-code-state]')).toBeNull();
+    expect(clone.querySelector('button')).toBeNull();
+    // The live reader keeps its state and its control.
+    expect(column.querySelectorAll('tr[hidden]').length).toBe(1);
+    expect(column.querySelector('button')).not.toBeNull();
   });
 
   it('carries the math sheet only when the document has math', () => {
