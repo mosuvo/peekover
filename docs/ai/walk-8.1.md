@@ -254,6 +254,47 @@ guide-once-across-restarts check stays the signed 0.0.9's (done).*
     the same frames, so most are a quick compare. *~1 min each, ~30 min*
 19. **II-2, II-3, II-4, II-9, II-10 (app page TOC), and the open halves of II-1, II-5, II-7, II-8** — one line each;
     several are "accept by name". *~15 min* (II-6 judged fine in the notes.)
+   - *17–19: captured by CC 2026-11-10, Chrome 157.0.8103.39 and Firefox 159.0.1 (build `6888a98`, both engines
+     rebuilt there); awaiting the human's verdicts.* **Open the contact sheet: `D:\Dev\peekover-shots\8.1\D\index.html`**
+     — one row per surface (the table's ruling / exceptions / notes and the items II text that names it), Chromium and
+     Firefox × light and dark side by side, click to enlarge. Shots `D:\Dev\peekover-shots\8.1\D\<engine>\<surface>-
+     <theme>[-414|-1080].png`: all 36 surfaces on BOTH engines (so item 17's 19 are there, and item 18's 36), at 1280
+     and 414, plus 1080 for `reading`, `toc-open` and the two tab-reader states (II-9 / II-10), plus two states for
+     item 19: `recent-list` (II-4: three harness opens of one folder, then the page with no folder) and
+     `long-code-expanded` (II-5: "Show full code" pressed). 156 captured per engine; 4 n/a per engine (`more-menu`
+     and `files-overlay` do not exist at 1280); none failed. Tooling: `scripts/walk-shots.ts --walk-d` (Chrome is the
+     installed Chrome, the build loaded unpacked over CDP; Firefox the build as a temporary add-on),
+     `scripts/walk-probe.ts`, `scripts/walk-sheet.ts`. Content: `docs/store/assets/sample.md` as is, and a scratch copy
+     outside the repo (`…\D\_fixtures\rollout-notes.md`: plus a link, a remote image at `example.invalid`, a 60-line
+     code block). Every guide shot's own `data-access` was read back and matches its state (on / off).
+   - **Seen while capturing (not verdicts):** (a) Firefox: about:addons DOES show "Access local files on your
+     computer" for a temporary add-on (item 12's open question); turning it on made
+     `extension.isAllowedFileSchemeAccess()` read true and `file://` render. (b) Chrome 157, unpacked load: flipping
+     "Allow access to file URLs" with Developer mode OFF reloads Peekover and leaves it switched **Off** (a relaunch
+     keeps it off) — as Edge's B10 (e); with Developer mode on, the guide reads "off" at once, no restart. (c) The
+     contents card's open state is a saved setting: a click in one state carries into later ones (at 1280 a click
+     CLOSES the rail); the capture opens it only when closed and puts it back after.
+   - **CC flags (measured, not judged; each with its shots on the sheet):** (1) the collapsed long code block clips
+     its longest line at the right with no sideways scroll (`long-code`, `remote-media`; both engines; expanded it
+     scrolls) — II-5; (2) app page at 414, the collapsed "On this page" opener floats over the code toolbar's Wrap /
+     Copy, the table's Clear / Copy CSV, or a line of text (`code-blocks`, `math`, `table-tools`, `table-filtered`)
+     — II-10; (3) Raw view at 1280 (Chromium), the contents rail card overlaps the raw block's right edge (`raw`);
+     (4) tab reader at rest, 414 (Chromium), the "Theme: Auto" pill over the "Phases" heading (`tab-reader`) — II-9;
+     (5) tab reader at rest with the contents card open, 1080 and 414, the Watch / Theme pills over the table's
+     "Filter" label and header (`tab-reader-contents-open`) — II-9; (6) dark theme, the editor's active-line gutter
+     cell paints CodeMirror's default light `#e2f2ff` (nothing in `src/` styles `.cm-activeLineGutter`; the numbers
+     on it are E-4) (`editing`, `editing-unsaved`, `editor-search`). Nine more measured groups are listed on the
+     sheet as explained by their state or a named acceptance (open menus / panels, the Files overlay, E-4 / R12,
+     the 5.6 mid-scroll ruling, Chromium-only controls, Recent-list rows). No sideways page scroll and no text drawn
+     through text anywhere.
+   - **Not captured (a real OS dialog, the browser's own UI, or the network):** "Open a folder" (the OS picker, its
+     Cancel, a denied permission — I-7); Firefox's real folder routes, the file picker and a folder drag (I-11; the
+     Firefox folder / watch cells are the harness state); Export's Save dialog, the downloaded file and its print
+     preview (I-9 — the Export panel IS captured); print preview of either reader; Copy as … pasted into another
+     program; "Network used" after Load (I-7, needs a real request); a raw GitHub / GitLab / Bitbucket page (I-6);
+     chrome://extensions and about:addons themselves and the toolbar icon (I-1, I-2, I-4); the guide across a restart
+     and a store install's toggle default (I-1, I-2); the render-failure banner (I-8); fonts without the design
+     faces or on macOS (I-5).
 
 **E · CONTRAST AND THE LISTS** · ~10 min
 20. **III-1 … III-5** — accept by name or fix, judged on the shots you have just walked. *~6 min*

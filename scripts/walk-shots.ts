@@ -18,13 +18,28 @@
 // The app page opens its folder through the `__peekoverHarness` seam (task 2.1) with an OPFS directory written here.
 // Nothing reaches the network: every fixture is local; mock pages have outside requests blocked.
 // Each width runs in a FRESH profile, so the one-time setup guide and the one-time snapshot notice appear every time.
+//
+// WALK D (`--walk-d`, walk-8.1.md items 17–19): a flat set for a contact sheet, captured by CC for the human to judge.
+//
+//   pnpm exec tsx scripts/walk-shots.ts --walk-d [--out D:\Dev\peekover-shots\8.1\D] [--engine …] [--only <surface>]
+//   pnpm exec tsx scripts/walk-sheet.ts [--out …]                       then the contact sheet, index.html
+//
+//   <out>/<engine>/<surface>-<theme>.png        1280 wide; `-414` (and `-1080` for the II-9 / II-10 states) suffixed
+//   <out>/manifest.json, <out>/metrics.json     every cell's outcome; scripts/walk-probe.ts's checks per shot
+// Chromium here is the INSTALLED Chrome (branded, not Playwright's build): `--load-extension` is ignored there since
+// 137, so the build goes in over CDP `Extensions.loadUnpacked` (needs `--enable-unsafe-extension-debugging` and
+// Playwright's `--disable-extensions` default dropped). Firefox: the build as a temporary add-on, as above, with
+// "Access local files on your computer" turned on by clicking its toggle on about:addons (privileged over BiDi)
+// after the guide's off state is captured. Content: docs/store/assets/sample.md as is, plus a scratch copy with a
+// link, a remote image and a long code block — both written to <out>/_fixtures, outside the repo.
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type BrowserContext, type Page } from 'playwright';
+import { PROBE } from './walk-probe';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CHROME_EXT = path.join(ROOT, '.output', 'chrome-mv3');
@@ -43,9 +58,12 @@ const arg = (name: string): string | undefined => {
   const i = process.argv.indexOf(name);
   return i > 0 ? process.argv[i + 1] : undefined;
 };
-const OUT = arg('--out') ?? 'D:\\Dev\\peekover-shots\\8.1';
+const WALK_D = process.argv.includes('--walk-d');
+const OUT = arg('--out') ?? (WALK_D ? 'D:\\Dev\\peekover-shots\\8.1\\D' : 'D:\\Dev\\peekover-shots\\8.1');
 const ONLY_ENGINE = arg('--engine') as EngineName | undefined;
 const ONLY_SURFACE = arg('--only');
+/** Walk D: e.g. `--widths 1080,414`. */
+const ONLY_WIDTHS = arg('--widths')?.split(',').map(Number);
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -143,6 +161,72 @@ const FILES: Record<string, string> = {
   'short.md': SHORT,
 };
 
+/** What the surfaces open and look for: the 8.1 prep's own document, or walk D's sample.md set. */
+interface Fixture {
+  files: Record<string, string>;
+  /** The document most surfaces open. */
+  doc: string;
+  /** The document carrying the long code block and the remote image. */
+  longDoc: string;
+  /** Headings the surfaces scroll to. */
+  h: { code: string; long: string; table: string; math: string; diagram: string; remote: string };
+  /** Typed into the table filter. */
+  filter: string;
+  /** The tab reader's file. */
+  tabDoc: string;
+  /** The watched document after its nth on-disk edit (a snapshot for Compare / the diff). */
+  edited(n: 1 | 2): string;
+}
+
+const LEGACY: Fixture = {
+  files: FILES,
+  doc: 'welcome.md',
+  longDoc: 'welcome.md',
+  h: { code: 'Code', long: 'A long block', table: 'Tables that behave', math: 'Math', diagram: 'Diagram', remote: 'Remote media' },
+  filter: 'des',
+  tabDoc: 'welcome.md',
+  edited: (n) =>
+    WELCOME.replace(
+      'every part of the reader appears once',
+      n === 1
+        ? 'every part of the reader appears once, and this sentence changed while it was watched'
+        : 'every part of the reader appears once, and this sentence changed while it was watched, a second time for the diff',
+    ),
+};
+
+/** Walk D: docs/store/assets/sample.md unchanged, and a scratch copy with what sample.md lacks. */
+function walkDFixture(): Fixture {
+  const sample = fs.readFileSync(path.join(ROOT, 'docs', 'store', 'assets', 'sample.md'), 'utf8');
+  const lead = 'Each phase ships behind a flag and is reversible within one deploy.';
+  const extended =
+    sample.replace(lead, `${lead} The [rollback steps](#rollback) are at the end; the [design note](https://example.invalid/search-index) has the background.`) +
+    `
+## Latency chart
+
+![p95 latency per phase](https://example.invalid/latency.png)
+
+### A long block
+
+\`\`\`ts
+// Every shard's warm-up, one line each, so the block is longer than the reader shows at first.
+export function warmUp(shards: Shard[]): void {
+${Array.from({ length: 60 }, (_, i) => `  shards[${i}].prime({ queries: topQueries.slice(${i * 10}, ${i * 10 + 10}), timeoutMs: 250 });`).join('\n')}
+}
+\`\`\`
+`;
+  return {
+    files: { 'sample.md': sample, 'rollout-notes.md': extended, 'CLAUDE.md': AGENT, 'short.md': SHORT, 'changelog.md': FILES['changelog.md'] },
+    doc: 'sample.md',
+    longDoc: 'rollout-notes.md',
+    h: { code: 'The flag', long: 'A long block', table: 'Phases', math: 'Ranking', diagram: 'How a query flows', remote: 'Latency chart' },
+    filter: 'can',
+    tabDoc: 'sample.md',
+    edited: (n) => sample.replace(lead, n === 1 ? `${lead} This sentence changed while it was watched.` : `${lead} This sentence changed while it was watched, a second time.`),
+  };
+}
+
+let FX: Fixture = LEGACY;
+
 // ── The engine seam ──────────────────────────────────────────────────────────────────────────────────────────────
 
 export interface Engine {
@@ -158,22 +242,45 @@ export interface Engine {
   type(text: string): Promise<void>;
   /** Chromium only: flip "Allow access to file URLs" on chrome://extensions, then restart the same profile. */
   flipFileAccess?(): Promise<void>;
+  /** Firefox only: set "Access local files on your computer" by its toggle on about:addons; returns what it read. */
+  setFileAccess?(on: boolean): Promise<string>;
+  /** The browser's own version string. */
+  version?: string;
   close(): Promise<void>;
 }
 
-export async function chromiumEngine(theme: Theme, width: number): Promise<Engine> {
+/** `branded`: the installed Chrome, the build loaded over CDP (walk D) — else Playwright's Chromium by flag. */
+export async function chromiumEngine(theme: Theme, width: number, opts: { branded?: boolean } = {}): Promise<Engine> {
   const udd = fs.mkdtempSync(path.join(os.tmpdir(), 'peekover-walk-cr-'));
-  const launch = () =>
-    chromium.launchPersistentContext(udd, {
-      channel: 'chromium',
+  const launch = async (): Promise<BrowserContext> => {
+    if (!opts.branded) {
+      return chromium.launchPersistentContext(udd, {
+        channel: 'chromium',
+        colorScheme: theme,
+        viewport: { width, height: HEIGHT[width] },
+        args: [`--disable-extensions-except=${CHROME_EXT}`, `--load-extension=${CHROME_EXT}`],
+      });
+    }
+    const c = await chromium.launchPersistentContext(udd, {
+      channel: 'chrome',
       colorScheme: theme,
       viewport: { width, height: HEIGHT[width] },
-      args: [`--disable-extensions-except=${CHROME_EXT}`, `--load-extension=${CHROME_EXT}`],
+      args: ['--enable-unsafe-extension-debugging'],
+      ignoreDefaultArgs: ['--disable-extensions'],
     });
+    // A relaunch of the same profile may bring the install back by itself; load it only when no worker shows.
+    const back = c.serviceWorkers()[0] ?? (await c.waitForEvent('serviceworker', { timeout: 4000 }).catch(() => undefined));
+    if (!back) {
+      const cdp = await c.browser()!.newBrowserCDPSession();
+      await cdp.send('Extensions.loadUnpacked' as never, { path: CHROME_EXT } as never);
+    }
+    return c;
+  };
   let ctx: BrowserContext = await launch();
   let [sw] = ctx.serviceWorkers();
   if (!sw) sw = await ctx.waitForEvent('serviceworker', { timeout: 30_000 });
   const id = new URL(sw.url()).host;
+  const version = ctx.browser()?.version();
   // The install opens the setup guide in its own tab; work in one tab of our own.
   await sleep(1500);
   let page: Page = await ctx.newPage();
@@ -192,6 +299,7 @@ export async function chromiumEngine(theme: Theme, width: number): Promise<Engin
   };
   return {
     name: 'chromium',
+    version: opts.branded ? `Chrome ${version}` : `Chromium ${version}`,
     async ext(p) {
       await (await live()).goto(`chrome-extension://${id}${p}`, { waitUntil: 'load' });
     },
@@ -210,10 +318,29 @@ export async function chromiumEngine(theme: Theme, width: number): Promise<Engin
     },
     async flipFileAccess() {
       await page.goto(`chrome://extensions/?id=${id}`, { waitUntil: 'load' });
+      if (opts.branded) {
+        // Chrome 157: the flip reloads Peekover, and with Developer mode off the reload leaves it switched OFF (and
+        // a relaunch keeps it off) — measured walk D, as Edge's B10. Developer mode on first; then no restart needed.
+        const dev = page.locator('#devMode');
+        if (!(await dev.evaluate((e) => (e as HTMLInputElement).checked))) await dev.click();
+        await sleep(600);
+      }
       await page.locator('#allow-on-file-urls').click();
       await sleep(1500);
       // A --load-extension profile starts with the toggle ON (measured, Playwright Chromium); a store install starts
       // OFF. The flip blocks Peekover's pages until the browser restarts (measured at 6.2) — restart the same profile.
+      // Edge 157 needed no restart (walk B10); so a branded Chrome first tries the guide, and restarts only if blocked.
+      if (opts.branded) {
+        try {
+          page = await ctx.newPage();
+          watchCrash(page);
+          await page.goto(`chrome-extension://${id}/onboarding.html`, { waitUntil: 'load' });
+          for (const p of ctx.pages()) if (p !== page) await p.close();
+          return;
+        } catch {
+          // ERR_BLOCKED_BY_CLIENT: restart below
+        }
+      }
       await ctx.close();
       ctx = await launch();
       await sleep(1500);
@@ -288,7 +415,7 @@ export async function firefoxEngine(theme: Theme, width: number, port: number): 
     if (d.type === 'error') throw new Error(`${method}: ${d.error} ${d.message}`);
     return d.result as T;
   };
-  await call('session.new', { capabilities: {} });
+  const sess = await call<{ capabilities: { browserVersion?: string } }>('session.new', { capabilities: {} });
   await call('webExtension.install', { extensionData: { type: 'path', path: FIREFOX_EXT } });
   // The install opens the setup guide: an extension page, the only kind of tab the driver may point at moz-extension.
   let extCtx = '';
@@ -341,6 +468,36 @@ export async function firefoxEngine(theme: Theme, width: number, port: number): 
   };
   return {
     name: 'firefox',
+    version: `Firefox ${sess.capabilities.browserVersion ?? '?'}`,
+    async setFileAccess(on) {
+      // The user's route: about:addons → Peekover → Permissions and data → the toggle. about:addons is privileged;
+      // the remote agent's system access lets this script read and click it (the toggle shows for a temporary add-on).
+      const tab = (await call<{ context: string }>('browsingContext.create', { type: 'tab', background: true })).context;
+      try {
+        await call('browsingContext.navigate', { context: tab, url: 'about:addons', wait: 'complete' });
+        await sleep(800);
+        await evalIn(tab, `window.gViewController.loadView('addons://detail/${encodeURIComponent(GECKO_ID)}/permissions')`);
+        const LABEL = 'Access local files on your computer';
+        const find = `(() => { const out = []; const walk = (n) => { for (const e of n.querySelectorAll('*')) { out.push(e); if (e.shadowRoot) walk(e.shadowRoot); } }; walk(document);
+          return out.find((e) => e.localName === 'moz-toggle' && (e.label || e.getAttribute('label')) === ${JSON.stringify(LABEL)}); })()`;
+        let state = '';
+        for (let i = 0; i < 20; i++) {
+          await sleep(300);
+          state = await evalIn<string>(tab, `(() => { const t = ${find}; return t ? String(t.pressed) : ''; })()`);
+          if (state) break;
+        }
+        if (!state) throw new Error(`about:addons shows no "${LABEL}" toggle`);
+        if (state !== String(on)) {
+          await evalIn(tab, `(() => { const t = ${find}; (t.buttonEl || t.shadowRoot.querySelector('button')).click(); return true; })()`);
+          await sleep(1200);
+          state = await evalIn<string>(tab, `(() => { const t = ${find}; return String(t.pressed); })()`);
+        }
+        const fsa = await evalIn<boolean>(extCtx, `browser.extension.isAllowedFileSchemeAccess()`).catch(() => null);
+        return `about:addons "${LABEL}" pressed=${state}; extension.isAllowedFileSchemeAccess()=${fsa}`;
+      } finally {
+        await call('browsingContext.close', { context: tab }).catch(() => undefined);
+      }
+    },
     async ext(p) {
       current = extCtx;
       await evalIn(extCtx, `(location.assign(${JSON.stringify(p)}), true)`);
@@ -412,7 +569,7 @@ async function seedOpfs(E: Engine): Promise<void> {
     inPage(`
       const root = await navigator.storage.getDirectory();
       const dir = await root.getDirectoryHandle('notes', { create: true });
-      const files = ${JSON.stringify(FILES)};
+      const files = ${JSON.stringify(FX.files)};
       for (const [name, text] of Object.entries(files)) {
         const fh = await dir.getFileHandle(name, { create: true });
         const w = await fh.createWritable(); await w.write(text); await w.close();
@@ -487,8 +644,36 @@ interface Surface {
   /** Mock frame: [file, state] for toolbar-mock.html, or [file, selector] for mockup.html. */
   mock?: ['toolbar-mock', string] | ['mockup', string];
   engines?: EngineName[];
+  /** Walk D only (not in the 8.1 prep set). */
+  dOnly?: boolean;
+  /** Walk D: the widths this surface is captured at (default 1280 and 414). */
+  dWidths?: number[];
   /** Arrange the state; return a string to mark the cell n/a with that reason. */
   run(c: Ctx): Promise<void | string>;
+  /** Walk D: undo what `run` left behind that later states would inherit (after the shot). */
+  after?(c: Ctx): Promise<void>;
+}
+
+// The contents card's open state is a SAVED setting (tocView's `saveSettings({ tocOpen })`): a click in one state
+// carries into every later state of the same profile — at 1280 a click even CLOSES the rail, open by default. Walk D
+// opens it only when closed, and puts it back afterwards.
+let tocBefore: string | null = null;
+const tocState = (E: Engine) =>
+  E.evaluate<string | null>(inPage(`const b = H.find('button.peekover-toc__toggle')[0]; return b ? b.getAttribute('aria-expanded') : null;`));
+async function openToc(E: Engine): Promise<void> {
+  tocBefore = await tocState(E);
+  if (tocBefore === null) throw new Error('no contents opener (the reader did not mount?)');
+  if (tocBefore !== 'true') {
+    await E.evaluate(inPage(`return H.click('button.peekover-toc__toggle');`));
+    await sleep(600);
+  }
+}
+async function restoreToc(E: Engine): Promise<void> {
+  if (tocBefore !== null && (await tocState(E)) !== tocBefore) {
+    await E.evaluate(inPage(`return H.click('button.peekover-toc__toggle');`));
+    await sleep(500);
+  }
+  tocBefore = null;
 }
 
 const NA_WIDE_MORE = 'no "⋯" above 863 px — the app controls are in the toolbar';
@@ -499,14 +684,29 @@ const SURFACES: Surface[] = [
   { section: '1-install', id: 'setup-guide', run: async ({ E }) => void (await E.ext('/onboarding.html'), await sleep(800)) },
   // 3 · App page — toolbar and chrome
   { section: '3-app-chrome', id: 'no-folder', mock: ['toolbar-mock', 'empty'], run: async ({ E }) => void (await E.ext('/app.html'), await sleep(800)) },
+  {
+    // II-4: the Recent list after a short, known history, captured before any other surface adds to it (walk D).
+    // Each open of the folder through the harness is a new remembered folder, as in the prep's shots: three opens
+    // of the same folder — sample.md, sample.md again, then CLAUDE.md — then the page with no folder open.
+    section: '3-app-chrome',
+    id: 'recent-list',
+    dOnly: true,
+    run: async ({ E }) => {
+      await freshApp(E, FX.doc);
+      await freshApp(E, FX.doc);
+      await freshApp(E, 'CLAUDE.md');
+      await E.ext('/app.html');
+      await sleep(1000);
+    },
+  },
   { section: '3-app-chrome', id: 'folder-granted', run: async ({ E }) => void (await freshApp(E, null), await sleep(500)) },
-  { section: '3-app-chrome', id: 'reading', mock: ['toolbar-mock', 'reading'], run: async ({ E }) => void (await freshApp(E, 'welcome.md')) },
+  { section: '3-app-chrome', id: 'reading', mock: ['toolbar-mock', 'reading'], dWidths: [1280, 1080, 414], run: async ({ E }) => void (await freshApp(E, FX.doc)) },
   { section: '3-app-chrome', id: 'agent-file', mock: ['toolbar-mock', 'agent'], run: async ({ E }) => void (await freshApp(E, 'CLAUDE.md')) },
   {
     section: '3-app-chrome',
     id: 'raw',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('[role="group"][aria-label="View"] button', 'Raw');`));
       await sleep(600);
     },
@@ -516,7 +716,7 @@ const SURFACES: Surface[] = [
     id: 'more-menu',
     mock: ['toolbar-mock', 'more'],
     run: async ({ E, width }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (width > 863) return NA_WIDE_MORE;
       await E.evaluate(inPage(`return H.click('button[aria-haspopup="menu"]', '⋯');`));
       await sleep(400);
@@ -527,7 +727,7 @@ const SURFACES: Surface[] = [
     id: 'files-overlay',
     mock: ['toolbar-mock', 'files'],
     run: async ({ E, width }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (width > 1189) return NA_WIDE_FILES;
       await E.evaluate(inPage(`return H.click('button', 'Files');`));
       await sleep(500);
@@ -537,7 +737,7 @@ const SURFACES: Surface[] = [
     section: '3-app-chrome',
     id: 'folder-search',
     run: async ({ E, width }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (width <= 1189) await E.evaluate(inPage(`return H.click('button', 'Files');`));
       await sleep(300);
       const ok = await E.evaluate<boolean>(
@@ -554,7 +754,7 @@ const SURFACES: Surface[] = [
     id: 'watch-first-notice',
     mock: ['toolbar-mock', 'notice'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (!(await E.evaluate<boolean>(inPage(`return H.click('button', 'Watch this file');`)))) throw new Error('no Watch control');
       await sleep(1200);
     },
@@ -564,7 +764,7 @@ const SURFACES: Surface[] = [
     id: 'watching',
     mock: ['toolbar-mock', 'watching'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('button', 'Watch this file');`));
       await sleep(800);
       await E.evaluate(inPage(`return H.click('button', 'Got it');`));
@@ -576,15 +776,15 @@ const SURFACES: Surface[] = [
     id: 'compare-picker',
     mock: ['toolbar-mock', 'compare'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('button', 'Watch this file');`));
       await sleep(800);
       await E.evaluate(inPage(`return H.click('button', 'Got it');`));
       // An edit to the watched file on disk, so a snapshot exists to compare with.
       await E.evaluate(
         inPage(`const root = await navigator.storage.getDirectory(); const dir = await root.getDirectoryHandle('notes');
-          const fh = await dir.getFileHandle('welcome.md'); const w = await fh.createWritable();
-          await w.write(${JSON.stringify(WELCOME.replace('every part of the reader appears once', 'every part of the reader appears once, and this sentence changed while it was watched'))});
+          const fh = await dir.getFileHandle(${JSON.stringify(FX.doc)}); const w = await fh.createWritable();
+          await w.write(${JSON.stringify(FX.edited(1))});
           await w.close(); return true;`),
       );
       await sleep(4000);
@@ -596,14 +796,14 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'diff-view',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('button', 'Watch this file');`));
       await sleep(800);
       await E.evaluate(inPage(`return H.click('button', 'Got it');`));
       await E.evaluate(
         inPage(`const root = await navigator.storage.getDirectory(); const dir = await root.getDirectoryHandle('notes');
-          const fh = await dir.getFileHandle('welcome.md'); const w = await fh.createWritable();
-          await w.write(${JSON.stringify(WELCOME.replace('every part of the reader appears once', 'every part of the reader appears once, and this sentence changed while it was watched, a second time for the diff'))});
+          const fh = await dir.getFileHandle(${JSON.stringify(FX.doc)}); const w = await fh.createWritable();
+          await w.write(${JSON.stringify(FX.edited(2))});
           await w.close(); return true;`),
       );
       await sleep(4000);
@@ -624,7 +824,7 @@ const SURFACES: Surface[] = [
     section: '3-app-chrome',
     id: 'no-folder-pinned',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (!(await E.evaluate<boolean>(inPage(`return H.click('button', 'Pin this folder');`)))) {
         // ≤ 1189 px: the pane is the overlay behind "Files".
         await E.evaluate(inPage(`return H.click('button', 'Files');`));
@@ -640,10 +840,11 @@ const SURFACES: Surface[] = [
     section: '3-app-chrome',
     id: 'remote-media',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.longDoc);
       if (!(await scrollTo(E, '.peekover-reader h2#remote-media, .peekover-reader [id="remote-media"]', 'start'))) {
-        await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Remote media')[0]; if (h) h.scrollIntoView(); return !!h;`));
+        const ok = await E.evaluate<boolean>(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.remote)})[0]; if (h) h.scrollIntoView(); return !!h;`));
         await sleep(400);
+        if (!ok) throw new Error(`no heading "${FX.h.remote}"`);
       }
     },
   },
@@ -652,13 +853,16 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'toc-open',
     mock: ['mockup', 'top'],
+    dWidths: [1280, 1080, 414],
     run: async ({ E, width }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
+      if (WALK_D) return void (await openToc(E));
       if (width <= 1080) {
         await E.evaluate(inPage(`return H.click('button', 'On this page');`));
         await sleep(500);
       }
     },
+    after: async ({ E }) => restoreToc(E),
   },
   { section: '4-reader', id: 'short-document', run: async ({ E }) => void (await freshApp(E, 'short.md')) },
   {
@@ -666,8 +870,8 @@ const SURFACES: Surface[] = [
     id: 'code-blocks',
     mock: ['mockup', 'pre'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Code')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.doc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.code)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       await sleep(500);
     },
   },
@@ -675,9 +879,25 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'long-code',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h3', 'A long block')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.longDoc);
+      const ok = await E.evaluate<boolean>(inPage(`const h = H.find('.peekover-reader h3', ${JSON.stringify(FX.h.long)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       await sleep(500);
+      if (!ok) throw new Error(`no heading "${FX.h.long}"`);
+    },
+  },
+  {
+    // II-5: "Show full code" pressed — the long block opened in full (walk D).
+    section: '4-reader',
+    id: 'long-code-expanded',
+    dOnly: true,
+    run: async ({ E }) => {
+      await freshApp(E, FX.longDoc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h3', ${JSON.stringify(FX.h.long)})[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await sleep(300);
+      if (!(await E.evaluate<boolean>(inPage(`return H.click('button', 'Show full code');`)))) throw new Error('no "Show full code" control');
+      await sleep(600);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h3', ${JSON.stringify(FX.h.long)})[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await sleep(400);
     },
   },
   {
@@ -685,8 +905,8 @@ const SURFACES: Surface[] = [
     id: 'math',
     mock: ['mockup', '#s4'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Math')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.doc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.math)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       await sleep(600);
     },
   },
@@ -695,8 +915,8 @@ const SURFACES: Surface[] = [
     id: 'table-tools',
     mock: ['mockup', '#tTable'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Tables that behave')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.doc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.table)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       await sleep(500);
     },
   },
@@ -704,10 +924,10 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'table-filtered',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Tables that behave')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.doc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.table)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       const ok = await E.evaluate<boolean>(
-        inPage(`const f = H.find('.peekover-reader input')[0]; if (!f) return false; f.focus(); f.value = 'des';
+        inPage(`const f = H.find('.peekover-reader input[type="text"]')[0]; if (!f) return false; f.focus(); f.value = ${JSON.stringify(FX.filter)};
           f.dispatchEvent(new Event('input', { bubbles: true })); return true;`),
       );
       await sleep(500);
@@ -719,8 +939,8 @@ const SURFACES: Surface[] = [
     id: 'diagram',
     mock: ['mockup', '#flowSvg'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Diagram')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.doc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.diagram)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       await waitFor(E, `H.one('.peekover-reader svg[id^="mermaid"], .peekover-reader .peekover-diagram svg')`, 6000);
       await sleep(600);
     },
@@ -729,8 +949,8 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'diagram-lightbox',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
-      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', 'Diagram')[0]; if (h) h.scrollIntoView(); return !!h;`));
+      await freshApp(E, FX.doc);
+      await E.evaluate(inPage(`const h = H.find('.peekover-reader h2', ${JSON.stringify(FX.h.diagram)})[0]; if (h) h.scrollIntoView(); return !!h;`));
       await waitFor(E, `H.one('.peekover-reader .peekover-diagram svg, .peekover-reader svg[id^="mermaid"]')`, 6000);
       const ok = await E.evaluate<boolean>(inPage(`const b = H.find('[class*="diagram"] button', '')[0]; if (!b) return false; b.click(); return true;`));
       await sleep(800);
@@ -741,7 +961,7 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'stored-data-panel',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (!(await appControl(E, 'Stored data'))) throw new Error('no Stored data control');
       await sleep(700);
     },
@@ -750,7 +970,7 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'export-panel',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (!(await appControl(E, 'Export'))) throw new Error('no Export control');
       await sleep(700);
     },
@@ -759,7 +979,7 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'code-theme-panel',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       if (!(await appControl(E, 'Code theme'))) throw new Error('no Code theme control');
       await sleep(700);
     },
@@ -769,7 +989,7 @@ const SURFACES: Surface[] = [
     id: 'editing',
     mock: ['toolbar-mock', 'editing'],
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('[role="group"][aria-label="View"] button', 'Edit');`));
       if (!(await waitFor(E, `H.one('.cm-editor')`, 10000))) throw new Error('the editor did not open');
       await sleep(900);
@@ -779,7 +999,7 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'editing-unsaved',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('[role="group"][aria-label="View"] button', 'Edit');`));
       if (!(await waitFor(E, `H.one('.cm-content')`, 10000))) throw new Error('the editor did not open');
       await E.evaluate(inPage(`const c = H.one('.cm-content'); c.focus(); return true;`));
@@ -792,7 +1012,7 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'unsaved-guard',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('[role="group"][aria-label="View"] button', 'Edit');`));
       if (!(await waitFor(E, `H.one('.cm-content')`, 10000))) throw new Error('the editor did not open');
       await E.evaluate(inPage(`const c = H.one('.cm-content'); c.focus(); return true;`));
@@ -807,7 +1027,7 @@ const SURFACES: Surface[] = [
     section: '4-reader',
     id: 'editor-search',
     run: async ({ E }) => {
-      await freshApp(E, 'welcome.md');
+      await freshApp(E, FX.doc);
       await E.evaluate(inPage(`return H.click('[role="group"][aria-label="View"] button', 'Edit');`));
       if (!(await waitFor(E, `H.one('.cm-content')`, 10000))) throw new Error('the editor did not open');
       await E.evaluate(inPage(`const c = H.one('.cm-content'); c.focus(); return true;`));
@@ -821,27 +1041,31 @@ const SURFACES: Surface[] = [
     section: '5-tab-reader',
     id: 'tab-reader',
     run: async ({ E, fixtures }) => {
-      await E.file(fileUrl(path.join(fixtures, 'welcome.md')));
+      await E.file(fileUrl(path.join(fixtures, FX.tabDoc)));
       await sleep(2500);
     },
   },
   {
     section: '5-tab-reader',
     id: 'tab-reader-contents-open',
+    dWidths: [1280, 1080, 414],
     run: async ({ E, fixtures }) => {
-      await E.file(fileUrl(path.join(fixtures, 'welcome.md')));
+      await E.file(fileUrl(path.join(fixtures, FX.tabDoc)));
       await sleep(2500);
+      if (WALK_D) return void (await openToc(E));
       if (!(await E.evaluate<boolean>(inPage(`return H.click('button', 'On this page');`)))) throw new Error('no contents opener (the reader did not mount?)');
       await sleep(600);
     },
+    after: async ({ E }) => restoreToc(E),
   },
   {
     section: '5-tab-reader',
     id: 'tab-reader-reading',
+    dWidths: [1280, 1080, 414],
     run: async ({ E, fixtures }) => {
-      await E.file(fileUrl(path.join(fixtures, 'welcome.md')));
+      await E.file(fileUrl(path.join(fixtures, FX.tabDoc)));
       await sleep(2500);
-      await E.evaluate(inPage(`const h = H.find('h2', 'Tables that behave')[0]; if (h) h.scrollIntoView({ block: 'center' }); return !!h;`));
+      await E.evaluate(inPage(`const h = H.find('h2', ${JSON.stringify(FX.h.table)})[0]; if (h) h.scrollIntoView({ block: 'center' }); return !!h;`));
       await sleep(500);
     },
   },
@@ -920,7 +1144,7 @@ async function main(): Promise<void> {
   for (const [n, t] of Object.entries(FILES)) fs.writeFileSync(path.join(fixtures, n), t);
   const manifestPath = path.join(OUT, 'manifest.json');
   const manifest: Record<string, Outcome> = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
-  const surfaces = SURFACES.filter((s) => !ONLY_SURFACE || s.id === ONLY_SURFACE);
+  const surfaces = SURFACES.filter((s) => !s.dOnly && (!ONLY_SURFACE || s.id === ONLY_SURFACE));
   const engines: EngineName[] = ONLY_ENGINE ? [ONLY_ENGINE] : ['chromium', 'firefox'];
   let port = 9420;
 
@@ -1006,9 +1230,133 @@ async function main(): Promise<void> {
   console.log(`[walk-shots] done: ${JSON.stringify(counts)}; side-by-side ${pairs.length}`);
 }
 
+// ── Walk D: the flat set for the contact sheet ───────────────────────────────────────────────────────────────────
+
+const D_WIDTHS = [1280, 1080, 414] as const;
+const OFF_GUIDE: Surface = {
+  section: '1-install',
+  id: 'setup-guide-file-access-off',
+  run: async ({ E }) => void (await E.ext('/onboarding.html'), await sleep(800)),
+};
+export interface WalkDCell {
+  status: 'captured' | 'n/a' | 'failed';
+  why?: string;
+  /** What the page itself said about the state, where that is the point (the guide's `data-access`). */
+  note?: string;
+}
+
+async function mainD(): Promise<void> {
+  FX = walkDFixture();
+  for (const d of [CHROME_EXT, FIREFOX_EXT]) if (!fs.existsSync(path.join(d, 'manifest.json'))) throw new Error(`build first: ${d}`);
+  const fixtures = path.join(OUT, '_fixtures');
+  fs.mkdirSync(fixtures, { recursive: true });
+  for (const [n, t] of Object.entries(FX.files)) fs.writeFileSync(path.join(fixtures, n), t);
+  const read = <T>(f: string, empty: T): T => (fs.existsSync(f) ? (JSON.parse(fs.readFileSync(f, 'utf8')) as T) : empty);
+  const manifestPath = path.join(OUT, 'manifest.json');
+  const metricsPath = path.join(OUT, 'metrics.json');
+  const runPath = path.join(OUT, 'run.json');
+  const manifest = read<Record<string, WalkDCell>>(manifestPath, {});
+  const metrics = read<Record<string, unknown>>(metricsPath, {});
+  const run = read<{ versions: Record<string, string>; notes: string[]; started?: string; commit?: string }>(runPath, { versions: {}, notes: [] });
+  run.started ??= new Date().toISOString();
+  run.commit ??= execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
+  const surfaces = SURFACES.filter((s) => !ONLY_SURFACE || s.id === ONLY_SURFACE);
+  const engines: EngineName[] = ONLY_ENGINE ? [ONLY_ENGINE] : ['chromium', 'firefox'];
+  const wantOff = !ONLY_SURFACE || ONLY_SURFACE === OFF_GUIDE.id;
+  let port = 9440;
+
+  const save = () => {
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 1));
+    fs.writeFileSync(metricsPath, JSON.stringify(metrics));
+    fs.writeFileSync(runPath, JSON.stringify(run, null, 1));
+  };
+
+  for (const engine of engines) {
+    fs.mkdirSync(path.join(OUT, engine), { recursive: true });
+    for (const theme of THEMES) {
+      for (const width of D_WIDTHS.filter((w) => !ONLY_WIDTHS || ONLY_WIDTHS.includes(w))) {
+        const list = surfaces.filter((s) => (s.dWidths ?? [1280, 414]).includes(width) && (!s.engines || s.engines.includes(engine)));
+        const offGuide = wantOff && width !== 1080;
+        if (!list.length && !offGuide) continue;
+        console.log(`[walk-shots D] ${engine} ${theme} ${width}`);
+        const E = engine === 'chromium' ? await chromiumEngine(theme, width, { branded: true }) : await firefoxEngine(theme, width, port++);
+        if (E.version) run.versions[engine] = E.version;
+        const capture = async (s: Surface): Promise<void> => {
+          const key = `${engine}/${s.id}-${theme}${width === 1280 ? '' : `-${width}`}`;
+          const out = path.join(OUT, `${key}.png`);
+          fs.rmSync(out.replace(/\.png$/, '.failed.png'), { force: true });
+          try {
+            const na = await s.run({ E, width, fixtures });
+            if (typeof na === 'string') {
+              manifest[key] = { status: 'n/a', why: na };
+              fs.rmSync(out, { force: true });
+              return;
+            }
+            await E.shot(out);
+            const cell: WalkDCell = { status: 'captured' };
+            if (s.section === '1-install') {
+              cell.note = `data-access="${await E.evaluate<string>(`document.querySelector('[data-access]')?.getAttribute('data-access') ?? ''`)}"`;
+            }
+            manifest[key] = cell;
+            try {
+              metrics[key] = await E.evaluate(PROBE);
+            } catch (e) {
+              metrics[key] = { probeError: e instanceof Error ? e.message : String(e) };
+            }
+            if (s.after) {
+              await s.after({ E, width, fixtures }).catch((e: unknown) => {
+                cell.note = `${cell.note ? `${cell.note}; ` : ''}after-step failed: ${e instanceof Error ? e.message : String(e)}`;
+              });
+            }
+          } catch (e) {
+            manifest[key] = { status: 'failed', why: e instanceof Error ? e.message : String(e) };
+            fs.rmSync(out, { force: true });
+            try {
+              await E.shot(out.replace(/\.png$/, '.failed.png'));
+            } catch {
+              // the tab is gone
+            }
+            console.log(`  ✗ ${s.id}: ${manifest[key].why}`);
+          }
+        };
+        try {
+          await E.ext('/app.html');
+          await seedOpfs(E);
+          if (E.setFileAccess) {
+            // Firefox: a fresh install starts with "Access local files" OFF — the guide's off state first, then on.
+            if (offGuide) await capture(OFF_GUIDE);
+            const said = await E.setFileAccess(true);
+            run.notes.push(`${engine} ${theme} ${width}: ${said}`);
+          }
+          for (const s of list) await capture(s);
+          if (E.flipFileAccess && offGuide) {
+            // Chromium: an unpacked load starts ON; the off state is the flip, last.
+            await E.flipFileAccess();
+            await capture(OFF_GUIDE);
+          }
+        } catch (e) {
+          run.notes.push(`${engine} ${theme} ${width}: run stopped — ${e instanceof Error ? e.message : String(e)}`);
+          console.log(`  ✗ run: ${e instanceof Error ? e.message : String(e)}`);
+        } finally {
+          await E.close();
+          save();
+        }
+      }
+    }
+  }
+  run.notes = [...new Set(run.notes)];
+  save();
+  const counts = Object.entries(manifest).reduce<Record<string, number>>((a, [k, o]) => {
+    const c = `${k.split('/')[0]} ${o.status}`;
+    a[c] = (a[c] ?? 0) + 1;
+    return a;
+  }, {});
+  console.log(`[walk-shots D] done: ${JSON.stringify(counts)}`);
+}
+
 // Run only when invoked directly: scripts/capture-screenshots.ts (task 9.3) imports the engine seam above.
 if (process.argv[1] && path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) {
-  main().catch((err) => {
+  (WALK_D ? mainD() : main()).catch((err) => {
     console.error(err);
     process.exit(1);
   });
