@@ -11,6 +11,10 @@
 // "CC flags" at the top are MEASUREMENTS grouped from scripts/walk-probe.ts's output — never a design verdict.
 // <out>/cc-notes.json (optional, hand-written after looking at the shots) adds a note to a flag by its id and may
 // move it to "measured, and the state itself explains it" (an open menu over text is what that state is).
+//
+// `--after <folder>` (M13 8.1i): a second walk-shots run written to <out>/<folder> (its own manifest / metrics /
+// run.json). Every surface it captured gets a BEFORE row and an AFTER row per width; each after shot carries its own
+// probe summary. <out>/<folder>/notes.json (optional: a list of lines, inline markdown) heads the page.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -52,6 +56,12 @@ const run = read<{ versions: Record<string, string>; notes: string[]; started?: 
 );
 if (!run.commit && arg('--commit')) run.commit = arg('--commit');
 const ccNotes = read<Record<string, { note: string; expected?: boolean }>>(path.join(OUT, 'cc-notes.json'), {});
+const AFTER = arg('--after');
+const afterDir = AFTER ? path.join(OUT, AFTER) : '';
+const afterManifest = AFTER ? read<Record<string, Cell>>(path.join(afterDir, 'manifest.json'), {}) : {};
+const afterMetrics = AFTER ? read<Record<string, Metrics>>(path.join(afterDir, 'metrics.json'), {}) : {};
+const afterRun = AFTER ? read<{ versions: Record<string, string>; commit?: string; started?: string }>(path.join(afterDir, 'run.json'), { versions: {} }) : null;
+const afterNotes = AFTER ? read<string[]>(path.join(afterDir, 'notes.json'), []) : [];
 
 /** What walk D could not capture: each needs a real OS dialog, the browser's own UI, or the network. */
 const UNREACHABLE = [
@@ -226,14 +236,28 @@ const flagList = (fs_: Flag[]) => {
 };
 const groupCount = (fs_: Flag[]) => new Set(fs_.map(groupOf)).size;
 
-const thumb = (k: string) => {
-  const c = manifest[k];
+/** One after shot's probe, in words: the mechanical checks walk-probe.ts ran on its page. */
+const probeLine = (m: Metrics | undefined): string => {
+  if (!m) return '';
+  if (m.probeError) return `probe error: ${m.probeError}`;
+  const parts = [
+    m.hScroll ? 'sideways scroll' : '',
+    m.clipped?.length ? `${m.clipped.length} cut off` : '',
+    m.overlaps?.length ? `${m.overlaps.length} text over text` : '',
+    m.occluded?.length ? `${m.occluded.length} under chrome (${[...new Set(m.occluded.map((o) => o.by))].join(', ')})` : '',
+  ].filter(Boolean);
+  return `probe: ${parts.length ? parts.join(' · ') : 'clean (no sideways scroll, nothing cut off, no text over text or under chrome)'}`;
+};
+const thumb = (k: string, after = false) => {
+  const c = (after ? afterManifest : manifest)[k];
+  const pre = after ? `${AFTER}/` : '';
   if (!c) return `<div class="cell none">not captured</div>`;
   if (c.status === 'captured') {
-    const note = c.note ? `<div class="cnote">${esc(c.note)}</div>` : '';
-    return `<a class="cell" href="${esc(img(k))}" data-big><img loading="lazy" style="aspect-ratio: ${k.endsWith('-414') ? '414 / 896' : k.endsWith('-1080') ? '1080 / 800' : '1280 / 800'}" src="${esc(img(k))}" alt="${esc(cellLabel(k))}"></a>${note}`;
+    const words = [c.note, after ? probeLine(afterMetrics[k]) : ''].filter(Boolean).join('; ');
+    const note = words ? `<div class="cnote">${esc(words)}</div>` : '';
+    return `<a class="cell" href="${esc(pre + img(k))}" data-big><img loading="lazy" style="aspect-ratio: ${k.endsWith('-414') ? '414 / 896' : k.endsWith('-1080') ? '1080 / 800' : '1280 / 800'}" src="${esc(pre + img(k))}" alt="${esc(`${cellLabel(k)}${after ? ' · after' : ''}`)}"></a>${note}`;
   }
-  const failed = fs.existsSync(path.join(OUT, `${k}.failed.png`)) ? ` <a href="${esc(k)}.failed.png" data-big>last frame</a>` : '';
+  const failed = fs.existsSync(path.join(after ? afterDir : OUT, `${k}.failed.png`)) ? ` <a href="${esc(pre + k)}.failed.png" data-big>last frame</a>` : '';
   return `<div class="cell none"><strong>${c.status}</strong> — ${esc(c.why ?? '')}${failed}</div>`;
 };
 
@@ -259,14 +283,19 @@ const sections = order
       good.push(`<div><span class="lab">Mock frame (8.1 prep)</span> ${mocks.map((p) => `<a href="${esc(path.relative(OUT, p).replace(/\\/g, '/'))}" data-big>${esc(path.basename(p))}</a>`).join(' · ')}</div>`);
     }
     const sflags = open.filter((f) => f.surface === r.id).length;
-    const widthRows = WIDTHS.filter((w) => ENGINES.some((e) => THEMES.some((t) => manifest[cellKey(e, r.id, t, w)])))
-      .map(
-        (w) => `<div class="wrow"><div class="w">${w}${w === 414 ? '<br><small>(Firefox drawn at 500)</small>' : ''}</div>${ENGINES.flatMap((e) => THEMES.map((t) => `<div>${thumb(cellKey(e, r.id, t, w))}</div>`)).join('')}</div>`,
-      )
+    const hasAfter = (w: number) => ENGINES.some((e) => THEMES.some((t) => afterManifest[cellKey(e, r.id, t, w)]));
+    const widthRows = WIDTHS.filter((w) => ENGINES.some((e) => THEMES.some((t) => manifest[cellKey(e, r.id, t, w)] || afterManifest[cellKey(e, r.id, t, w)])))
+      .map((w) => {
+        const label = (tag: string) => `<div class="w">${w}${tag}${w === 414 ? '<br><small>(Firefox drawn at 500)</small>' : ''}</div>`;
+        const row = (after: boolean, tag: string) =>
+          `<div class="wrow${after ? ' after' : ''}">${label(tag)}${ENGINES.flatMap((e) => THEMES.map((t) => `<div>${thumb(cellKey(e, r.id, t, w), after)}</div>`)).join('')}</div>`;
+        return hasAfter(w) ? row(false, '<br><small>before</small>') + row(true, '<br><small><b>after 8.1i</b></small>') : row(false, '');
+      })
       .join('');
+    const afterTag = ENGINES.some((e) => THEMES.some((t) => WIDTHS.some((w) => afterManifest[cellKey(e, r.id, t, w)])));
     return `<section id="s-${esc(r.id)}">
 <h2>${r.n ? `${r.n} · ` : ''}<code>${esc(r.id)}</code> <small>${esc(r.section)}</small>${sflags ? ` <a class="fc" href="#flags">${sflags} flag${sflags > 1 ? 's' : ''}</a>` : ''}</h2>
-<div class="tags">${tags.map((t) => `<span>${esc(t)}</span>`).join('')}</div>
+<div class="tags">${tags.map((t) => `<span>${esc(t)}</span>`).join('')}${afterTag ? '<span class="aft">re-captured after 8.1i</span>' : ''}</div>
 <div class="good">${good.join('\n')}</div>
 <div class="grid"><div class="wrow head"><div></div><div>Chromium · light</div><div>Chromium · dark</div><div>Firefox · light</div><div>Firefox · dark</div></div>${widthRows}</div>
 </section>`;
@@ -297,6 +326,7 @@ section, .box { background: var(--card); border: 1px solid var(--line); border-r
 .cnote { font-size: 11px; }
 #flags li { margin: 6px 0; } .kind { font-weight: 600; color: var(--flag); } .shots a { font-size: 12px; margin-right: 6px; } .ccnote { font-size: 13px; } .ex { font-size: 12px; color: var(--mut); }
 .fc { font-size: 12px; color: var(--flag); font-weight: 400; }
+.wrow.after { border-left: 3px solid var(--flag); padding-left: 4px; } .tags span.aft { background: var(--flag); color: var(--card); }
 nav.toc { font-size: 12px; line-height: 1.9; } nav.toc a { margin-right: 8px; white-space: nowrap; }
 #big { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; overflow: auto; z-index: 9; cursor: zoom-out; }
 #big.on { display: block; } #big img { display: block; margin: 16px auto; max-width: none; } #big p { color: #fff; text-align: center; margin: 10px; font-size: 13px; }
@@ -309,6 +339,9 @@ nav.toc { font-size: 12px; line-height: 1.9; } nav.toc a { margin-right: 8px; wh
 <p>Chromium = the installed Chrome, the build loaded unpacked over CDP (its details page shows the "can't verify where this extension comes from" banner, as any unpacked load). Firefox = the build as a temporary add-on, "Access local files on your computer" turned on by its about:addons toggle after the guide's off state was captured. Viewport only, no browser chrome. 1280 × 800, 1080 × 800 (the II-9 / II-10 states), 414 × 896 (Firefox draws 414 CSS px at 500 device px: its PNG is 500 wide).</p>
 <p>Content: <code>docs/store/assets/sample.md</code> as is, and a scratch copy (<code>_fixtures/rollout-notes.md</code>: sample.md plus a link, a remote image at <code>example.invalid</code> and a 60-line code block) for <code>long-code</code>, <code>long-code-expanded</code> and <code>remote-media</code>. The app page opens its folder through the <code>__peekoverHarness</code> seam (the Chromium route) in both engines — the prep's finding still holds: the Firefox folder / watch cells are a harness state, not a Firefox route.</p>
 </div>
+${AFTER ? `<div class="box" id="after"><h2>After 8.1i — before / after</h2>
+<p class="meta">Re-captured by CC at <code>${esc(afterRun?.commit ?? '?')}</code> (${esc((afterRun?.started ?? '').slice(0, 10))}; ${esc(ENGINES.map((e) => afterRun?.versions[e] ?? e).join(' · '))}). Each re-captured surface below shows its <strong>before</strong> row (walk D, above) and its <strong>after</strong> row (marked at the left), with the after shot's own probe line.</p>
+<ul>${afterNotes.map((n) => `<li>${mdInline(n)}</li>`).join('')}</ul></div>` : ''}
 <div class="box" id="flags"><h2>CC flags — measured, not judged (${groupCount(open)})</h2>
 <p class="meta">Mechanical checks only (scripts/walk-probe.ts, run on each shot's page): sideways scroll, text cut off, text drawn over text, text under floating chrome, text below WCAG AA (4.5:1, 3:1 large; topmost text), and controls / structure present in one engine and not the other. Each lists its shots.</p>
 <ul>${flagList(open) || '<li>None.</li>'}</ul>

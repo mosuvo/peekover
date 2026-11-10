@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-10 (M13 TASK 8.1i - walk D's fixes: the human's verdicts recorded; (b) raw box, (c) narrow lightbox, (e) collapsed code scrolls LANDED; (a)+(d) narrow contents sheet + editor gap, (f) pills at rest, (g) active-line cell HELD on local/8.1i-approval for the human's look and a byte ruling (G-7 passed: +4,152 B). Before that: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -16,6 +16,17 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 (5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
+
+**M13 TASK 8.1i (2026-11-10) — WALK D'S FIXES: THREE LANDED, FOUR HELD FOR THE HUMAN.** Record: `decisions.md`, "M13
+TASK 8.1i". The human's walk-D verdicts are in `walk-8.1.md` (surfaces 5, 6, 7, 17, 25, 29 = fix; the rest matches /
+differs by ruling; CC flags 1–6 → fix; items II still open). **Landed:** (e) a collapsed code block scrolls sideways
+(`7c4f978`); (c) the lightbox fills a narrow viewport (`c59a0a7`); (b) the Raw view takes the column's box (`1916cc3`).
+Content script +459 B. **Held on the local branch `local/8.1i-approval` (not pushed):** (g) the active line and its gutter
+cell one token band (`507cfb7`, 0 B); (a) + (d) the narrow opener in the flow, a full-screen contents sheet, the editor
+under the toolbar (`a9a0ae0`, +2,817 B); (f) a paper band behind the pills at rest (`dbbb088`, +876 B). **THE HUMAN'S
+NEXT STEP:** the before / after rows on `D:\Dev\peekover-shots\8.1\D\index.html`; approve the looks and rule on the
+bytes (+4,152 B on the content script passes G-7's +2 KB stop). On approval the branch is rebased onto `main` and lands. Tasks: 64,
+59 ticked.
 
 **M13 TASK 8.1h LANDED (2026-11-10) — WALK FIX (C13), HUMAN RULING option A: the "can't watch here" notes are a
 quiet footnote after the last line.** Record: `decisions.md`, "M13 TASK 8.1h". The approved short wording ("Watching
@@ -467,6 +478,9 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
+- **Full page mode for Read / Edit / Raw (the human's walk-D request on surface 29, 2026-11-10).** Not for 0.1.0;
+  needs its own design (what "full page" hides — the toolbar, the files pane, the status line — how it is entered and
+  left, and both surfaces). *Source:* the human's walk-D verdicts (`decisions.md`, "M13 TASK 8.1i").
 - **Watch for a folder picked in Firefox (HUMAN RULING 2026-11-10: "NOT for 0.1.0 … Revisit after 0.1.0, once
   freshness is measured on the floor version").** A picked Firefox folder reads files fresh (the human's hand check
   on Firefox 159; `firefoxDragWatch.browser.test.ts` p1), but Watch is not offered there (`FIREFOX_PICKER_NOTE`, task

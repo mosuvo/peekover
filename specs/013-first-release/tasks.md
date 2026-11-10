@@ -1166,7 +1166,7 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       ★ *2026-11-10 (walk prep; `decisions.md`, "M13 — walk prep"; HUMAN RULING "ONE verdict per surface"):* the human's
       walk notes (Chrome 1–15, Edge E1–E4, Firefox) are banked in `docs/ai/walk-8.1.md`; the table is one verdict per
       surface (36) with per-cell exceptions; 17 surfaces walked on Chromium by the notes, 19 not; Firefox's current build
-      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, 8.1d, 8.1e, 8.1f, 8.1g, 8.1h, and 9.2b / 9.3c from its Firefox
+      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, 8.1d, 8.1e, 8.1f, 8.1g, 8.1h, 8.1i (walk D; part held), and 9.2b / 9.3c from its Firefox
       items.
 - [x] **8.1a The exported HTML prints whole (WALK FIX, 8.1 item I-9; the human: the export "gets cut off at the
       middle").** `translateReaderStylesheet` wrote `@media${condition}` with the condition trimmed, so `@media print`
@@ -1279,6 +1279,31 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       (the footnote is a surface: 62 → 64), `src/export/htmlExport.test.ts` (the `:host` site pin 28 → 29, the new
       rail-open rule, dropped). Landed: red 2 unit and 16 / 16 per engine → green; the left-edge check ablated red at
       every width; census AA both themes; content script −46 B, app chunk −46 B.*
+- [ ] **8.1i Walk D's fixes (HUMAN 2026-11-10: surfaces 5, 6, 7, 17, 25, 29 = fix; CC flags 1–6 → fix).** (a) At
+      ≤ 863 px, app page and tab reader, the collapsed "On this page" opener sits in the document flow above the title;
+      opened, the list is a full-width sheet with a clear close, the column's width unchanged (5, 6, 17, flag 2).
+      (b) The Raw view uses the reading column's box (7, flag 3). (c) The diagram lightbox fills a narrow viewport
+      (25). (d) The editor at 414 starts under the toolbar like Read view (29). (e) A collapsed long code block
+      scrolls sideways (flag 1, II-5). (f) At rest the tab reader's pills cover no text or control (flags 4, 5, II-9).
+      (g) `.cm-activeLineGutter` from the tokens in both themes (flag 6). Design changes the mocks do not speak to:
+      STOP before landing, before / after shots, both engines, light / dark.
+      Files: `src/theme/readerCss.ts` · `src/render/tocView.ts` · `src/render/mount.ts` ·
+      `tests/browser/walkFixes81i.browser.test.ts` (new) · `tests/browser/codeCollapse.browser.test.ts` · tooling:
+      `scripts/walk-shots.ts` (`--only` takes a list), `scripts/walk-sheet.ts` (`--after`: before / after rows) ·
+      necessary ripple (each a pin or a wide-rail test the change moves): `src/export/htmlExport.test.ts` (the `:host`
+      site count), `tests/browser/diagramActions.browser.test.ts` (the shipped diagram block's bytes),
+      `src/render/mount.test.ts` (the pill parts), `tests/browser/{tocNetwork,tocPersist,tocScroll,watchRemount,
+      editorEyeballProxy}.browser.test.ts` (the wide rail tested at a wide viewport)
+      Verify: red first per part, the brief's own measures (the hit-test under the opener at 414 / 600; the column's
+      width with the list open; focus in and back; raw's left edge = Read's at 1080 / 1280 / 1440, rail open or not,
+      no overlap; the lightbox card ≥ viewport − 32 and the diagram ≥ 90 % of it at 414 / 600; the editor's gap =
+      Read's at 414; the collapsed block's longest line reachable; the pills over nothing at rest at 414 / 1080 /
+      1280 / 1440, contents open or closed; the gutter cell = the line, not lighter than the editor in dark), both
+      engines; full suites; census; bytes (content script: G-7 stop over +2 KB); the affected surfaces re-captured.
+      ★ *2026-11-10 (`decisions.md`, "M13 TASK 8.1i"): **(b), (c), (e) LANDED** (content script +459 B). **(a) + (d),
+      (f), (g) built and green, HELD** on the local branch `local/8.1i-approval` (not pushed) for the human's look —
+      and a byte ruling: (a) + (d) +2,817 B and (f) +876 B on the content script pass G-7's +2 KB stop ((g) 0 B).
+      Before / after shots: `D:\Dev\peekover-shots\8.1\D\index.html`.*
 
 ## 9 — ★ Truth re-check, then screenshots, then close (spec §3.9; §9-1, §9-8)
 
@@ -1477,7 +1502,7 @@ dismissal → 4.5. Every clause has at least one task.
 **Count proposed for gate 3: NINE groups, 40 tasks** — 1 (3) · 2 (6) · 3 (1) · 4 (9) · 5 (7) · 6 (2) · 7 (6) · 8 (1) ·
 9 (5). ★ *2026-11-01: **41 tasks** — 1.4 discovered (CI green on Linux), so group 1 has 4; the other groups unchanged.* ★ *2026-11-01 (the 2.2 ruling): **42 tasks** — 5.8 discovered (the Peekover code theme), so group 5 has 8.* ★ *2026-11-07 (9.5, counted): **51 tasks** — 40 + 11
 discovered (1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a); by group 1 (4) · 2 (6) · 3 (1) · 4 (9) · 5 (13)
-· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* ★ *2026-11-10: **59 tasks** — 8.1d discovered (walk fix: the exported HTML scrolls; no controls).* ★ *2026-11-10: **60 tasks** — 8.1e discovered (walk fix: Copy as rich text, no control labels).* ★ *2026-11-10: **61 tasks** — 8.1f discovered (walk fix: the setup guide checks site access).* ★ *2026-11-10: **63 tasks** — 8.1g discovered (walk fixes: the drag note, the guide's conditional site line, the launcher's Edge notes) and 8.1h (the watch notes in the stack; stopped, open).* ★ *2026-11-10: 8.1h ticked (HUMAN RULING option A): **63 tasks, 59 ticked**.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
+· 6 (3) · 7 (9) · 8 (1) · 9 (5). This line had stopped at 42.* ★ *2026-11-07: **52 tasks** — 9.3a discovered (the watch baseline at the click).* ★ *2026-11-07: **53 tasks** — 9.3b discovered (the drag-route note).* ★ *2026-11-10: **54 tasks** — 8.1a discovered (walk fix: the exported HTML prints whole).* ★ *2026-11-10: **55 tasks** — 8.1b discovered (walk fix: a hovered link in dark).* ★ *2026-11-10: **56 tasks** — 8.1c discovered (walk fix: the watch note as an aside).* ★ *2026-11-10: **57 tasks** — 9.3c discovered (the picker-route wording).* ★ *2026-11-10: **58 tasks** — 9.2b discovered (the Firefox local-file setting; floor 153).* ★ *2026-11-10: **59 tasks** — 8.1d discovered (walk fix: the exported HTML scrolls; no controls).* ★ *2026-11-10: **60 tasks** — 8.1e discovered (walk fix: Copy as rich text, no control labels).* ★ *2026-11-10: **61 tasks** — 8.1f discovered (walk fix: the setup guide checks site access).* ★ *2026-11-10: **63 tasks** — 8.1g discovered (walk fixes: the drag note, the guide's conditional site line, the launcher's Edge notes) and 8.1h (the watch notes in the stack; stopped, open).* ★ *2026-11-10: 8.1h ticked (HUMAN RULING option A): **63 tasks, 59 ticked**.* ★ *2026-11-10: **64 tasks** — 8.1i discovered (walk D's fixes; (b) (c) (e) landed, (a) (d) (f) (g) held): **64 tasks, 59 ticked**.* **Human gates (★):** 3.1 the toolbar mock · 2.5 the font ruling, **only if it arises** · 8.1 the design walk
 (incl. the Firefox file:// check, onboarding on a real install, the dry run) · 9.2 the truth re-check · 9.3 the
 screenshot pick. **Conditional stops that route to the human without being gates:** a below-AA pair outside G-4/G-5
 (2.2); a content-script task over +2 KB (G-7); a census retirement (shown at group 4's end); a Firefox grant needing a

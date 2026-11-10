@@ -61,7 +61,9 @@ const arg = (name: string): string | undefined => {
 const WALK_D = process.argv.includes('--walk-d');
 const OUT = arg('--out') ?? (WALK_D ? 'D:\\Dev\\peekover-shots\\8.1\\D' : 'D:\\Dev\\peekover-shots\\8.1');
 const ONLY_ENGINE = arg('--engine') as EngineName | undefined;
-const ONLY_SURFACE = arg('--only');
+/** `--only a,b,c`: one surface or a comma-separated list (8.1i's re-capture names several). */
+const ONLY_SURFACES = arg('--only')?.split(',');
+const only = (id: string): boolean => !ONLY_SURFACES || ONLY_SURFACES.includes(id);
 /** Walk D: e.g. `--widths 1080,414`. */
 const ONLY_WIDTHS = arg('--widths')?.split(',').map(Number);
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -1065,7 +1067,12 @@ const SURFACES: Surface[] = [
     run: async ({ E, fixtures }) => {
       await E.file(fileUrl(path.join(fixtures, FX.tabDoc)));
       await sleep(2500);
-      await E.evaluate(inPage(`const h = H.find('h2', ${JSON.stringify(FX.h.table)})[0]; if (h) h.scrollIntoView({ block: 'center' }); return !!h;`));
+      // 8.1i: scroll the reader's own scroll box, instantly — walk D's smooth `scrollIntoView` never moved Firefox's
+      // reader, so its "mid-scroll" cells were the page at rest.
+      const moved = await E.evaluate<number>(
+        inPage(`const h = H.find('h2', ${JSON.stringify(FX.h.table)})[0]; if (!h) return -1; const box = h.getRootNode().host; box.scrollTo({ top: box.scrollTop + h.getBoundingClientRect().top - innerHeight / 2, behavior: 'instant' }); return box.scrollTop;`),
+      );
+      if (!(moved > 0)) throw new Error(`the reader did not scroll (scrollTop ${moved})`);
       await sleep(500);
     },
   },
@@ -1144,7 +1151,7 @@ async function main(): Promise<void> {
   for (const [n, t] of Object.entries(FILES)) fs.writeFileSync(path.join(fixtures, n), t);
   const manifestPath = path.join(OUT, 'manifest.json');
   const manifest: Record<string, Outcome> = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : {};
-  const surfaces = SURFACES.filter((s) => !s.dOnly && (!ONLY_SURFACE || s.id === ONLY_SURFACE));
+  const surfaces = SURFACES.filter((s) => !s.dOnly && only(s.id));
   const engines: EngineName[] = ONLY_ENGINE ? [ONLY_ENGINE] : ['chromium', 'firefox'];
   let port = 9420;
 
@@ -1183,7 +1190,7 @@ async function main(): Promise<void> {
             }
           }
           // Chromium, last: the guide with "Allow access to file URLs" OFF — the state a store install starts in.
-          if (E.flipFileAccess && (!ONLY_SURFACE || ONLY_SURFACE === 'setup-guide-file-access-off')) {
+          if (E.flipFileAccess && only('setup-guide-file-access-off')) {
             const k = `1-install/setup-guide-file-access-off/${cell}`;
             const g = path.join(OUT, '1-install', 'setup-guide-file-access-off', `${cell}.png`);
             fs.mkdirSync(path.dirname(g), { recursive: true });
@@ -1260,9 +1267,9 @@ async function mainD(): Promise<void> {
   const run = read<{ versions: Record<string, string>; notes: string[]; started?: string; commit?: string }>(runPath, { versions: {}, notes: [] });
   run.started ??= new Date().toISOString();
   run.commit ??= execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim();
-  const surfaces = SURFACES.filter((s) => !ONLY_SURFACE || s.id === ONLY_SURFACE);
+  const surfaces = SURFACES.filter((s) => only(s.id));
   const engines: EngineName[] = ONLY_ENGINE ? [ONLY_ENGINE] : ['chromium', 'firefox'];
-  const wantOff = !ONLY_SURFACE || ONLY_SURFACE === OFF_GUIDE.id;
+  const wantOff = only(OFF_GUIDE.id);
   let port = 9440;
 
   const save = () => {

@@ -1,6 +1,81 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1i — WALK D'S FIXES (HUMAN 2026-11-10: surfaces 5, 6, 7, 17, 25, 29 = fix; every other
+  surface ok; CC flags 1–6 → fix). (b), (c), (e) LANDED; (a) + (d), (f), (g) built, green, HELD for the human's look and
+  a byte ruling.** Local, on `main`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10; 1 low, ignored). Bundle
+  before: content script 345,378 B; app chunk 551,724 B; `.output` 6,649,920 / 6,649,906 B of 7,340,032.
+  - **Verdicts recorded** (`walk-8.1.md`, the scoring table, one per surface): "ok" → **matches**, or **differs by
+    ruling** where the sheet's row named one (3: 5.5; 14: C130; 36: 5.6; 6's 1280 cell: C061; 8 / 9's n/a cells).
+    Items II-1 … II-10 got no verdict from this message and stay open.
+  - **(e) LANDED (`7c4f978`) — CC flag 1, II-5.** The collapsed code block's clamp was `overflow:hidden` both ways;
+    now `overflow:auto hidden` (height clamped, sideways scroll as when expanded). Red 2/2 → green
+    (`codeCollapse.browser.test.ts`).
+  - **(c) LANDED (`c59a0a7`) — surface 25.** At ≤ 863 px the lightbox panel kept the wide insets (64 / 96 and the
+    rail's width): a 215 px card at 414. Now `inset:16px` and the enlarged SVG `width:100%`. Red at 414 / 600 (card 215 /
+    328 px) → green (card ≥ viewport − 32, diagram ≥ 90 % of its inner width). The test waits for the 180 ms zoom-in
+    (it scales the card). Ripple: `diagramActions`' shipped-block pin 3,968 → 4,088 B (+120, the one rule).
+  - **(b) LANDED (`1916cc3`) — surface 7, CC flag 3.** The raw block had its own 76ch box, blind to the open rail
+    (1280: the card over its right edge). Its margins now follow the column's arithmetic (base: `max(0,(100% −
+    measure)/2) + 32px` each side; rail open: the column's open-rail margins + 32px, gated on the rail being present),
+    and its top follows the column's on the tab reader at ≤ 1280. Red: 1080 / 1280 / 1440 × rail open / collapsed,
+    both engines, raw 55–180 px off Read's text edge → green (edge equal; no overlap with the card or opener). Ripple:
+    `htmlExport.test.ts`'s `:host` pin 29 → 30 (dropped; carried 10).
+  - **Verify (main, `1916cc3`):** lint clean; unit 1,697 / 1,697 (after re-zipping — `compareBuilds` reads the
+    zips); browser full suite 2,713 passed, 65 skipped, 2 failed — the diagram block pin, re-pinned (+120 B, the rule)
+    and re-run green (54 / 54); census in the suite, green. **Bytes (both engines):** content script **345,378 →
+    345,837 B (+459)**; app chunk **551,724 → 552,183 B (+459)**; `.output` **6,650,838 / 6,650,824 B**, headroom
+    689,194 / 689,208; zips 2,033,031 / 2,033,033 B (`e5a6d664` / `d4b84264`); `permissions: []`.
+  - **HELD on the local branch `local/8.1i-approval`** (not pushed; `507cfb7`, `a9a0ae0`, `dbbb088` on top of
+    `1916cc3`). Each is a look the mocks do not speak to (the brief's STOP rule), and together they pass G-7:
+    - **(g) `507cfb7` — CC flag 6.** `.cm-activeLine` and `.cm-activeLineGutter` both draw `color-mix(in srgb,
+      var(--paper) 50%, transparent)` over `--code-bg`: one band, lighter in light, darker in dark; half-transparent so
+      a selection on the line still shows. **The line band changes too** — it was CodeMirror's `#cceeff44` (dark: blends
+      to `#4b5767`, R12's backdrop), so "match the line" and "not lighter than the editor in dark" could not both hold
+      otherwise. Red 4/4 (the default `#e2f2ff`) → green: cell = line, no default, dark ≤ the editor's luminance, the
+      numbers' contrast on it ≥ on the plain gutter (E-4 not worsened). Content script 0 B; app chunk +168 B.
+    - **(a) + (d) `a9a0ae0` — surfaces 5, 6, 17, flag 2; surface 29.** At ≤ 863 px, both surfaces: the nav is
+      static in the flow above the column, its opener on the column's right text edge (the tab reader's top-left
+      belongs to the load bar and the agent badge); 16 px to the title. Opening shows the list as a full-screen sheet
+      (`data-toc-sheet="open"` on the host, z 4, `--paper`) with a **Close** button (the lightbox Close's look), Escape,
+      a Tab wrap, an entry closing it; focus into the list (the current entry, else the first) and back to the opener
+      (`preventScroll`). The sheet is never persisted and `data-toc` is ignored at that width, so a remembered open
+      rail never opens a sheet on load; crossing the breakpoint closes it. The column, diff, raw and footnote keep full
+      width whatever `data-toc` says. App page: CONTAINED_CSS's sticky rail moves under `min-width:864px`; at ≤ 863 the
+      column / raw start at the pane's padding (no rail: the title; rail: the opener). (d): the editor's `--edit-top`
+      0 at ≤ 863, so its gap under the toolbar = Read's first box (24 px both, was 80). Red 12 (5 + 1 per engine) →
+      green. Ripple: the wide rail's own tests at a wide viewport (tocNetwork, tocPersist, tocScroll, watchRemount) or
+      the remembered state set as a restore does (editorEyeballProxy NARROW-open); the `:host` pin 30 → 37 — first
+      written with valueless predicates, which the export's classifier CARRIED as invalid `body([…])` selectors (16
+      carried), so every predicate is a value one (all dropped; carried 10).
+    - **(f) `dbbb088` — CC flags 4, 5, II-9.** At the top of a page that scrolls, before any scroll, a plain paper
+      band (fixed, 136 px, z 1, before the rail so an open rail paints over it) reserves the pills' corner where the
+      stack meets the column (< 984 px; < 1234 px with the rail open); from the first scroll it goes (the 5.6 ruling
+      unchanged). The flag `data-rest="top"` is on the band (a two-predicate `:host` would carry). Red: 414 closed and
+      1080 contents open, both engines (Watch / Theme over the table's cells) → green at 414 / 1080 / 1280 / 1440 ×
+      open / closed (pills hidden, every text line and control under a pill hit-tested: band or empty page only).
+      Ripple: `mount.test.ts`'s pill parts gain the band; `:host` pin 37 → 38.
+    - **Verify (branch):** lint clean; unit 1,697 / 1,697 (zips aside, as above); browser full suite 2,741 passed, 65
+      skipped, 6 failed — the two narrow-rail assumptions (editorEyeballProxy NARROW-open, watchRemount's collapse),
+      fixed as above and re-run green (46 / 46). **Bytes, content script vs 345,378 (same session, Chrome build at each
+      commit; Firefox identical):** (b)(c)(e) **+459**; (g) **0**; (a)+(d) **+2,817** (348,654); (f) **+876**
+      (349,530). **Total +4,152 B: G-7's +2 KB STOP is passed by (a) alone** — the sheet's CSS (~1.3 KB, a static-flow
+      reset of the fixed / sticky rail plus the sheet), its JS (~1 KB: the sheet, focus, keys, the breakpoint
+      listener), CONTAINED_CSS's narrow rules (they ride into the content script). App chunk 556,187 B; `.output`
+      6,658,535 / 6,658,521 B.
+  - **Shots (CC, 2026-11-10, Chrome 157.0.8103.39 / Firefox 159.0.1, the branch build `dbbb088` = all seven
+    parts):** `D:\Dev\peekover-shots\8.1\D\after-8.1i\<engine>\…`; the contact sheet `D:\Dev\peekover-shots\8.1\D\index.html`
+    shows each re-captured surface's before (walk D) and after rows, each after shot with its own probe line.
+    80 cells per engine, none failed. **Found on the way:** walk D's Firefox `tab-reader-reading` cells never scrolled
+    (a smooth `scrollIntoView` did not move Firefox's reader): they were the page at rest. `walk-shots.ts` now scrolls
+    the reader's own box, instantly, and fails the cell if it did not move; the after cells are mid-scroll on both.
+    Tooling: `walk-shots.ts` `--only` takes a list; `walk-sheet.ts` `--after <folder>` (before / after rows, a probe line
+    per after shot, `notes.json`).
+  - **POST-RELEASE (the human's surface-29 request):** "Full page mode for Read / Edit / Raw" — not for 0.1.0; needs
+    its own design (`progress.md`, Carried items POST-RELEASE).
+  - **For the human:** (1) look at (a)/(d), (f), (g) on the sheet; (2) rule on the bytes — accept +4,152 B on the content
+    script, or ask for a lighter (a) (e.g. no sheet JS: a plain in-flow list below the opener) or (f). On approval the
+    branch is rebased onto `main` (only records and tooling lie between) and lands; records then tick 8.1i.
 - **2026-11-10 · M13 TASK 8.1h — WALK FIX (Firefox walk C13), HUMAN RULING option A: the "can't watch here" notes
   are a quiet footnote after the last line.** Local, on `main`; not pushed. `pnpm audit --prod` EXIT 0 (2026-11-10;
   1 low, ignored).
